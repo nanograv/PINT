@@ -62,7 +62,7 @@ def ITRF2GEO(posITRF):
 	latDeg = spice.convrt(lat, "RADIANS", "DEGREES")
 	return lon,lonDeg,lat,latDeg,alt
 
-DDDDD
+
 
 	
 
