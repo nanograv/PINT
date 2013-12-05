@@ -76,22 +76,24 @@ class Parameter(object):
 
 class TimingModel(object):
 
-    def __init__(self, filename=None):
-        pass
+    def __init__(self):
+        self.params = []
 
     def add_param(self, param):
         setattr(self, param.name, param)
+        self.params += [param.name,]
 
     def __add__(self, other):
         # Combine two timing model objects into one
         # TODO: Check for conflicts in parameter names?
         result = TimingModel()
         result.__dict__ = dict(self.__dict__.items() + other.__dict__.items())
+        result.params = self.params + other.params
         return result
 
     def __str__(self):
         result = ""
-        for par in self.__dict__.keys():
+        for par in self.params:
             result += str(getattr(self,par)) + "\n"
         return result
 
@@ -100,7 +102,7 @@ class TimingModel(object):
         Returns a parfile representation of the entire mode as a string.
         """
         result = ""
-        for par in self.__dict__.keys():
+        for par in self.params:
             result += getattr(self,par).parfile_line() + '\n'
         return result
 
@@ -126,7 +128,7 @@ class TimingModel(object):
             if hasattr(self,name):
                 par_name = name
             else:
-                for par in self.__dict__.keys():
+                for par in self.params:
                     if name in getattr(self,par).aliases:
                         par_name = par
             if par_name:
