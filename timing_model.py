@@ -19,15 +19,15 @@ class Parameter(object):
 
         uncertainty is the current uncertainty of the value.
 
-        frozen is a flag specifying whether "fitters" should modify the
-          value or leave it fixed.
+        frozen is a flag specifying whether "fitters" should adjust the
+          value of this parameter or leave it fixed.
 
         aliases is an optional list of strings specifying alternate names
           that can also be accepted for this parameter.
 
         parse_value is a function that converts string input into the
           appropriate internal representation of the parameter (typically
-          floating-point).
+          floating-point but could be any datatype).
 
         print_value is a function that converts the internal value to
           a string for output.
@@ -68,16 +68,19 @@ class Parameter(object):
         """
         Return a parfile line giving the current state of the parameter.
         """
-        line = "%-10s %25s %d" % (self.name, self.print_value(self.value),
-                0 if self.frozen else 1)  
+        line = "%-10s %25s" % (self.name, self.print_value(self.value))
         if self.uncertainty != None:
-            line += " %s" % (str(self.uncertainty))
+            line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty))
+        elif not self.frozen:
+            line += " 1" 
         return line
 
 class TimingModel(object):
 
     def __init__(self):
-        self.params = []
+        self.params = []  # List of model parameter names
+        self.delay_funcs = [] # List of delay component functions
+        self.phase_funcs = [] # List of phase component functions
 
     def add_param(self, param):
         setattr(self, param.name, param)
@@ -85,11 +88,37 @@ class TimingModel(object):
 
     def __add__(self, other):
         # Combine two timing model objects into one
-        # TODO: Check for conflicts in parameter names?
+        # TODO: How to deal with conflicts in names/etc...
         result = TimingModel()
         result.__dict__ = dict(self.__dict__.items() + other.__dict__.items())
         result.params = self.params + other.params
+        result.phase_funcs = self.phase_funcs + other.phase_funcs
+        result.delay_funcs = self.delay_funcs + other.delay_funcs
         return result
+
+    def compute_phase(self, toa):
+        """
+        Compute the model-predicted pulse phase for the given toa.
+        """
+        # First compute the delay to "pulsar time"
+        delay = self.compute_delay(toa)
+
+        # Then compute the relevant pulse phase
+        for pf in self.phase_funcs:
+            phase += pf(toa - delay) # This is just a placeholder until we
+                                     # define what datatype 'toa' has, and
+                                     # how to add/subtract from it, etc.
+        return phase
+
+    def compute_delay(self, toa):
+        """
+        Compute the total delay which will be subtracted from the given
+        TOA to get time of emission at the pulsar.
+        """
+        delay = 0.0
+        for df in self.delay_funcs:
+            delay += getattr(self,df)(toa)
+        return delay
 
     def __str__(self):
         result = ""
@@ -150,14 +179,16 @@ class Astrometry(TimingModel):
             description="Right ascension (J2000)",
             aliases=["RAJ"],
             parse_value=lambda x: Angle(x+'h').hour,
-            print_value=lambda x: Angle(x,unit='h').to_string(sep=':')))
+            print_value=lambda x: Angle(x,unit='h').to_string(sep=':', 
+                precision=8)))
 
         self.add_param(Parameter(name="DEC",
             units="D:M:S",
             description="Declination (J2000)",
             aliases=["DECJ"],
             parse_value=lambda x: Angle(x+'deg').degree,
-            print_value=lambda x: Angle(x,unit='deg').to_string(sep=':')))
+            print_value=lambda x: Angle(x,unit='deg').to_string(sep=':',
+                alwayssign=True, precision=8)))
 
         # etc, also add PM, PX, ...
 
@@ -176,4 +207,27 @@ class Spindown(TimingModel):
             units="Hz/s", 
             description="Spin-down rate"))
 
+        self.add_param(Parameter(name="TZRMJD",
+            units="MJD", 
+            description="Reference epoch for phase"))
 
+        self.add_param(Parameter(name="PEPOCH",
+            units="MJD", 
+            description="Reference epoch for spin-down"))
+
+    def simple_spindown_phase(self,toa):
+        """
+        Placeholder function for simple spindown phase.
+        Still need to figure out data types for toa, mjd, make
+        sure the right precision is in use, etc.  This is just here
+        to show the structure of how this should work.
+
+        Also still need to figure out a straightforward way to get
+        this function into the generic TimingModel class as required.
+        """
+        # If TZRMJD is not defined, use the toa itself
+        if self.TZRMJD.value==None:
+            self.TZRMJD.value = toa
+        dt = toa - self.TZRMJD.value
+        phase = dt*self.F0.value + 0.5*dt*dt*self.F1.value
+        return phase
