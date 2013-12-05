@@ -64,7 +64,7 @@ class Parameter(object):
         """
         aliases.append(alias)
 
-    def parfile_line(self):
+    def as_parfile_line(self):
         """
         Return a parfile line giving the current state of the parameter.
         """
@@ -99,11 +99,11 @@ class TimingModel(object):
 
     def as_parfile(self):
         """
-        Returns a parfile representation of the entire mode as a string.
+        Returns a parfile representation of the entire model as a string.
         """
         result = ""
         for par in self.params:
-            result += getattr(self,par).parfile_line() + '\n'
+            result += getattr(self,par).as_parfile_line() + '\n'
         return result
 
     def read_parfile(self, filename):
