@@ -16,7 +16,7 @@ def objPosVel2SSB(objName,et):
 # Requires SPK,LPSK kernels
 # In J2000 ssb coordinate 
 	objName.upper()    # Make the object name upper level
-	state,lt = spice.spkzer(objName,et,"J2000","NONE","SSB")   
+	state,lt = spice.spkezr(objName,et,"J2000","NONE","SSB")   
 	# Reading the position and velocity for a solar system object
 	# CALL SPKEZR(TARGET,ET,COORDINATE,CORRECTION,OBSERVOR)
 	# State is a vector. First three elements are position [x,y,z] in J2000 ssb
