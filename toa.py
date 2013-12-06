@@ -1,14 +1,14 @@
-import astropy.constants as c
 import astropy.time as t
-import re
-import struct
+import re, sys
 import numpy
+from observatories import read_observatories
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "FMIN", "INCLUDE", "INFO", "JUMP", "MODE", "NOSKIP", "PHA1",
                 "PHA2", "PHASE", "SEARCH", "SIGMA", "SIM", "SKIP", "TIME",
                 "TRACK", "ZAWGT", "FORMAT")
 
+obss, obscode1s, obscode2s = read_observatories()
 
 def toa_format(line):
     """Identifies a TOA line as one of the following types:  Comment, Command,
@@ -33,6 +33,46 @@ def toa_format(line):
     except:
         return "Unknown"
 
+def parse_TOA_line(line):
+    MJD = None
+    d = {}
+    fmt = toa_format(line)
+    d["format"] = fmt
+    if fmt=="Command":
+        MJD = "Command"
+        d["command"] = line.split()
+    elif fmt=="Princeton":
+        fields = line.split()
+        d["obs"] = obscode1s[line[0]]
+        d["freq"] = float(fields[1])
+        d["error"] = float(fields[3])
+        ii, ff = fields[2].split('.')
+        MJD = (int(ii), float("0."+ff))
+        try:
+            d["ddm"] = float(fields[4])
+        except:
+            d["ddm"] = 0.0
+    elif fmt=="Tempo2":
+        # This could use more error catching...
+        fields = line.split()
+        d["name"] = fields[0]
+        d["freq"] = float(fields[1])
+        ii, ff = fields[2].split('.')
+        MJD = (int(ii), float("0."+ff))
+        d["error"] = float(fields[3])
+        ocode = fields[4].upper()
+        if ocode in obscode2s.keys():
+            d["obs"] = obscode2s[ocode]
+        elif ocode in obss.keys():
+            d["obs"] = ocode
+        # All the rest should be flags
+        flags = fields[5:]
+        for i in range(0, len(flags), 2):
+            d[flags[i].lstrip('-')] = flags[i+1]
+    elif fmt=="Parkes" or fmt=="ITOA":
+        raise RuntimeError, \
+            "TOA format '%s' not implemented yet" % self.format
+    return MJD, d
 
 class toa(object):
     """
@@ -63,80 +103,29 @@ class toa(object):
                  **kwargs):  # keyword args that are completely optional
         if type(MJD) is tuple:
             self.mjd = t.Time(*MJD, scale=scale, format='mjd', precision=9)
+            self.info = None
+            self.error = error
+            self.obs = obs
+            self.freq = freq
         else:
-            if type(MJD) is not str:
-                sys.stderr.write("Warning:  possibly loss of precision with %s" %
-                                 str(type(MJD)))
-            self.mjd = t.Time(MJD, scale=scale, format='mjd', precision=9)
-        # set the other three required values
-        self.obs = obs
-        self.freq = freq
-        self.error = error
+            if MJD is "Command":
+                self.format = "Command"
+            elif MJD is None: # Blank line, comment, unknown
+                pass
         # set any other optional params
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
     def __str__(self):
-        s = str(self.mjd) + ": %.3f us at '%s' at %.4f MHz" % \
-            (self.error, self.obs, self.freq)
+        if self.format in ("Tempo2", "Princeton", "Parkes", "ITOA"):
+            s = str(self.mjd) + ": %.3f us at '%s' at %.4f MHz" % \
+                (self.error, self.obs, self.freq)
+        else:
+            s = self.format
         other_keys = [k for k in self.__dict__.keys() if k not in self.__std_params]
         if len(other_keys):
             s += "\n" + str(dict([(k,self.__dict__[k]) for k in other_keys]))
         return s
-
-    def parse_line(self):
-        self.command = None
-        self.arg = None
-        self.site = None
-        self.freq = None
-        self.mjd = None
-        self.imjd = None
-        self.fmjd = None
-        self.error = None
-        self.ddm = None
-        self.res = None
-        self.fname = None
-        self.info = None
-        self.flags = {}
-        self.format = toa_format(self.line)
-        if self.format=="Command":
-            tmp = self.line.split()
-            if len(tmp)==1:
-                self.command = tmp[0]
-            elif len(tmp)>1:
-                self.command = tmp[0]
-                self.arg = tmp[1]
-        elif self.format=="Princeton":
-            self.site = self.line[0]
-            self.freq = float(self.line[15:24])
-            self.mjd = float(self.line[24:44])
-            self.imjd = int(self.mjd)
-            if self.line[29]=='.':
-                self.fmjd = float(self.line[29:44])
-            elif self.line[30]=='.':
-                self.fmjd = float(self.line[30:44])
-            self.error = float(self.line[44:53])
-            try:
-                self.ddm = float(self.line[68:78])
-            except:
-                self.ddm = 0.0
-        elif self.format=="Tempo2":
-            # This could use more error catching...
-            fields = self.line.split()
-            self.name = fields.pop(0)
-            self.freq = float(fields.pop(0))
-            mjdstr = fields.pop(0)
-            self.mjd = float(mjdstr)
-            self.imjd = int(self.mjd)
-            self.fmjd = float(mjdstr[mjdstr.find('.'):])
-            self.error = float(fields.pop(0))
-            self.site = fields.pop(0)
-            # All the rest should be flags
-            for i in range(0,len(fields),2):
-                self.flags[fields[i].lstrip('-')] = fields[i+1]
-        elif self.format=="Parkes" or self.format=="ITOA":
-            raise RuntimeError, \
-                "TOA format '%s' not implemented yet" % self.format
 
     def is_toa(self):
         if self.format in ("Tempo2", "Princeton", "Parkes", "ITOA"):
@@ -145,59 +134,67 @@ class toa(object):
             return False
 
 
-class TOAs(list):
+class TOAs(object):
 
-    def get_resids(self,units='us'):
-        if units=='us':
-            return numpy.array([t.res.res_us for t in self if t.is_toa()])
-        elif units=='phase':
-            return numpy.array([t.res.res_phase for t in self if t.is_toa()])
+    def __init__(self, toafile):
+        if type(toafile) in [tuple, list]:
+            for infile in toafile:
+                self.read_toa_file(infile)
+        else:
+            self.read_toa_file(toafile)
 
-    def get_freq(self):
+    def get_freqs(self):
         return numpy.array([t.freq for t in self if t.is_toa()])
 
-    def get_mjd(self):
+    def get_mjds(self):
         return numpy.array([t.mjd for t in self if t.is_toa()])
 
-    def get_err(self):
+    def get_errs(self):
         return numpy.array([t.error for t in self if t.is_toa()])
 
-    def get_flag(self,flag,f=lambda x: x):
+    def get_flags(self,flag,f=lambda x: x):
         return numpy.array([f(t.flags[flag]) for t in self if t.is_toa()])
 
-
-    def read_toa_file(filename, process_includes=True, ignore_blanks=True, top=True):
-        """Read the given filename and return a list of toa objects 
-        parsed from it.  Will recurse to process INCLUDE-d files unless
-        process_includes is set to False.  top is used internally for
-        processing INCLUDEs and should always be set to True."""
-        f = open(filename, "r")
-        toas = toalist([])
-        skip = False
-        if top: read_toa_file.info = None
-        for l in f.readlines():
-            newtoa = toa(l)
-            if newtoa.format=="Command":
-                if newtoa.command=="SKIP":
-                    skip = True
-                elif newtoa.command=="NOSKIP":
-                    skip = False
+    def read_toa_file(self, filename, process_includes=True,
+                      ignore_blanks=True, top=True):
+        """
+        read_toa_file(filename, process_includes=True, ignore_blanks=True)
+            Read the given filename and return a list of toa objects 
+            parsed from it.  Will recurse to process INCLUDE-d files unless
+            process_includes is set to False.
+        """
+        if top:
+            self.info = None
+            self.toas = []
+        with open(filename, "r") as f:
+            skip = False
+            for l in f.readlines():
+                MJD, d = parse_TOA_line(l)
+                newtoa = toa(MJD, **d)
+                if newtoa.format=="Command":
+                    if newtoa.command[0]=="SKIP":
+                        skip = True
+                    elif newtoa.command[0]=="NOSKIP":
+                        skip = False
+                        continue
+                    if skip: continue
+                    if newtoa.command[0]=="INFO":
+                        self.info = newtoa.command[1]
+                    if newtoa.command[0]=="INCLUDE" and process_includes:
+                        self.toas += self.read_toa_file(newtoa.command[1],
+                                                        ignore_blanks=ignore_blanks,
+                                                        top=False)
+                    else:
+                        self.toas.append(newtoa)
+                elif skip:
                     continue
-                if skip: continue
-                if newtoa.command=="INFO":
-                    read_toa_file.info = newtoa.arg
-                if newtoa.command=="INCLUDE" and process_includes:
-                    toas += read_toa_file(newtoa.arg,
-                            ignore_blanks=ignore_blanks,top=False)
+                elif newtoa.format in ("Blank", "Unknown", "Comment"):
+                    if not ignore_blanks:
+                        self.toas.append(newtoa)
                 else:
-                    toas += [newtoa]
-            elif skip:
-                continue
-            elif newtoa.format in ("Blank", "Unknown"):
-                if not ignore_blanks:
-                    toas += [newtoa]
-            else:
-                newtoa.info = read_toa_file.info
-                toas += [newtoa]
-        f.close()
-        return toas
+                    newtoa.info = self.info
+                    self.toas.append(newtoa)
+                # print newtoa
+            f.close()
+            if not top:
+                return self.toas
