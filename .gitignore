@@ -31,3 +31,9 @@ nosetests.xml
 
 # Translations
 *.mo
+
+# Ephemerides and clock stuff
+datafiles/de405.bsp
+datafiles/de421.bsp
+datafiles/de430t.bsp
+datafiles/earth_latest_high_prec.bpc
