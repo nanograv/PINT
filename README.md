@@ -27,7 +27,7 @@ early stages of development.
    - JPL SPICE
    - astropy
    - optimization libraries
- - GUI not be required
+ - GUI will not be required
  - Strong isolation of parts needing extended precision
  - Full use of docstrings
  - Self-describing objects
