@@ -1,7 +1,20 @@
-import spice as spc
+import spice
+import os
 
-
-spc.furnsh("/Users/jingluo/Research_codes/Data_simulator/simulate_toa_py/simulate_toa2/kernel/PCK/pck00008.tpc")
-spc.furnsh("/Users/jingluo/Research_codes/Data_simulator/simulate_toa_py/simulate_toa2/kernel/LPSK/naif0009.tls")
-spc.furnsh("/Users/jingluo/Research_codes/Data_simulator/simulate_toa_py/simulate_toa2/kernel/PCK/earth_000101_130422_130130.bpc")
-spc.furnsh("/Users/jingluo/Research_codes/Data_simulator/simulate_toa_py/simulate_toa2/kernel/Peph/de405.bsp")
+# Load the PINT environment variable to get the top level directory
+pintdir = os.getenv("PINT")
+if pintdir is None:
+    print "Could not load the PINT environment variable pointing to the PINT directory!"
+    os.sys.exit()
+    
+try:
+    spice.furnsh(os.path.join(pintdir, "datafiles/pck00010.tpc"))
+    print "SPICE loaded planetary constants."
+    spice.furnsh(os.path.join(pintdir, "datafiles/naif0010.tls"))
+    print "SPICE loaded leap seconds."
+    spice.furnsh(os.path.join(pintdir, "datafiles/earth_latest_high_prec.bpc"))
+    print "SPICE loaded Earth rotation parameters."
+    spice.furnsh(os.path.join(pintdir, "datafiles/de405.bsp"))
+    print "SPICE loaded DE405 Planetary Ephemeris."
+except:
+    print "Could not load SPICE kernel!"
