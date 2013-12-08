@@ -27,6 +27,10 @@ class Spindown(TimingModel):
 
         self.phase_funcs += [self.simple_spindown_phase,]
 
+    def setup(self):
+        super(Spindown,self).setup()
+        print "Spindown setup"
+
     def simple_spindown_phase(self,toa):
         """
         Placeholder function for simple spindown phase.
