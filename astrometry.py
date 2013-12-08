@@ -7,7 +7,7 @@ from timing_model import Parameter, TimingModel
 class Astrometry(TimingModel):
 
     def __init__(self):
-        TimingModel.__init__(self)
+        super(Astrometry, self).__init__()
 
         self.add_param(Parameter(name="RA",
             units="H:M:S",

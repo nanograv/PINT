@@ -93,22 +93,13 @@ class TimingModel(object):
         setattr(self, param.name, param)
         self.params += [param.name,]
 
-    def __add__(self, other):
-        # Combine two timing model objects into one
-        # TODO: How to deal with conflicts in names/etc...
-        result = TimingModel()
-        result.__dict__ = dict(self.__dict__.items() + other.__dict__.items())
-        result.params = self.params + other.params
-        result.phase_funcs = self.phase_funcs + other.phase_funcs
-        result.delay_funcs = self.delay_funcs + other.delay_funcs
-        return result
-
     def compute_phase(self, toa):
         """
         Compute the model-predicted pulse phase for the given toa.
         """
         # First compute the delay to "pulsar time"
         delay = self.compute_delay(toa)
+        phase = 0.0
 
         # Then compute the relevant pulse phase
         for pf in self.phase_funcs:
@@ -175,4 +166,19 @@ class TimingModel(object):
                 # unrecognized parameter, could
                 # print a warning or something
                 pass
+
+def generate_timing_model(name,components):
+    """
+    Returns a timing model class generated from the specified 
+    sub-components.  The return value is a class type, not an instance,
+    so needs to be called to generate a usable instance.  For example:
+
+    MyModel = generate_timing_model("MyModel",(Astrometry,Spindown))
+    my_model = MyModel()
+    my_model.read_parfile("J1234+1234.par")
+    """
+    ## TODO could test here that all the components are derived from 
+    ## TimingModel.
+    return type(name, components, {})
+
 

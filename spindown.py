@@ -5,7 +5,7 @@ from timing_model import Parameter, TimingModel
 class Spindown(TimingModel):
 
     def __init__(self):
-        TimingModel.__init__(self)
+        super(Spindown,self).__init__()
 
         self.add_param(Parameter(name="F0",
             units="Hz", 
@@ -24,6 +24,8 @@ class Spindown(TimingModel):
         self.add_param(Parameter(name="PEPOCH",
             units="MJD", 
             description="Reference epoch for spin-down"))
+
+        self.phase_funcs += [self.simple_spindown_phase,]
 
     def simple_spindown_phase(self,toa):
         """
