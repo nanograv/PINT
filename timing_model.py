@@ -1,4 +1,5 @@
-from astropy.coordinates.angles import Angle
+# timing_model.py
+# Defines the basic timing model interface classes
 
 class Parameter(object):
     """
@@ -74,6 +75,12 @@ class Parameter(object):
         elif not self.frozen:
             line += " 1" 
         return line
+
+    def from_parfile_line(self,line):
+        """
+        Parse a parfile line into the current state of the parameter.
+        """
+        pass # Not implemeted yet
 
 class TimingModel(object):
 
@@ -169,65 +176,3 @@ class TimingModel(object):
                 # print a warning or something
                 pass
 
-class Astrometry(TimingModel):
-
-    def __init__(self):
-        TimingModel.__init__(self)
-
-        self.add_param(Parameter(name="RA",
-            units="H:M:S",
-            description="Right ascension (J2000)",
-            aliases=["RAJ"],
-            parse_value=lambda x: Angle(x+'h').hour,
-            print_value=lambda x: Angle(x,unit='h').to_string(sep=':', 
-                precision=8)))
-
-        self.add_param(Parameter(name="DEC",
-            units="D:M:S",
-            description="Declination (J2000)",
-            aliases=["DECJ"],
-            parse_value=lambda x: Angle(x+'deg').degree,
-            print_value=lambda x: Angle(x,unit='deg').to_string(sep=':',
-                alwayssign=True, precision=8)))
-
-        # etc, also add PM, PX, ...
-
-class Spindown(TimingModel):
-
-    def __init__(self):
-        TimingModel.__init__(self)
-
-        self.add_param(Parameter(name="F0",
-            units="Hz", 
-            description="Spin frequency",
-            aliases=["F"],
-            print_value=lambda x: '%.15f'%x))
-
-        self.add_param(Parameter(name="F1",
-            units="Hz/s", 
-            description="Spin-down rate"))
-
-        self.add_param(Parameter(name="TZRMJD",
-            units="MJD", 
-            description="Reference epoch for phase"))
-
-        self.add_param(Parameter(name="PEPOCH",
-            units="MJD", 
-            description="Reference epoch for spin-down"))
-
-    def simple_spindown_phase(self,toa):
-        """
-        Placeholder function for simple spindown phase.
-        Still need to figure out data types for toa, mjd, make
-        sure the right precision is in use, etc.  This is just here
-        to show the structure of how this should work.
-
-        Also still need to figure out a straightforward way to get
-        this function into the generic TimingModel class as required.
-        """
-        # If TZRMJD is not defined, use the toa itself
-        if self.TZRMJD.value==None:
-            self.TZRMJD.value = toa
-        dt = toa - self.TZRMJD.value
-        phase = dt*self.F0.value + 0.5*dt*dt*self.F1.value
-        return phase
