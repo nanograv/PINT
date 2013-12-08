@@ -70,36 +70,38 @@ class Parameter(object):
         """
         Return a parfile line giving the current state of the parameter.
         """
+        # Don't print unset parameters
+        if self.value==None: 
+            return ""
         line = "%-10s %25s" % (self.name, self.print_value(self.value))
         if self.uncertainty != None:
             line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty))
         elif not self.frozen:
             line += " 1" 
-        return line
+        return line + "\n"
 
     def from_parfile_line(self,line):
         """
         Parse a parfile line into the current state of the parameter.
         Returns True if line was successfully parsed, False otherwise.
         """
-        k = line.split()
-        name = k[0].upper()
+        try:
+            k = line.split()
+            name = k[0].upper()
+        except:
+            return False
         # Test that name matches
         if (name != self.name) and (name not in self.aliases):
             return False
-        val = None
-        fit = False
-        err = None
+        if len(k)<2:
+            return False
         if len(k)>=2:
-            val = k[1]
+            self.set(k[1])
         if len(k)>=3:
             if int(k[2])>0: 
-                fit = True
+                self.frozen = False
         if len(k)==4:
-            err = k[3]
-        self.set(val)
-        self.uncertainty = err
-        self.frozen = not fit
+            self.uncertainty = float(k[3])
         return True
 
 class TimingModel(object):
@@ -108,6 +110,9 @@ class TimingModel(object):
         self.params = []  # List of model parameter names
         self.delay_funcs = [] # List of delay component functions
         self.phase_funcs = [] # List of phase component functions
+
+    def setup(self):
+        print "TimingModel setup"
 
     def add_param(self, param):
         setattr(self, param.name, param)
@@ -150,7 +155,7 @@ class TimingModel(object):
         """
         result = ""
         for par in self.params:
-            result += getattr(self,par).as_parfile_line() + '\n'
+            result += getattr(self,par).as_parfile_line()
         return result
 
     def read_parfile(self, filename):
