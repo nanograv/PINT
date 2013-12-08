@@ -1,5 +1,6 @@
 # timing_model.py
 # Defines the basic timing model interface classes
+import string
 
 class Parameter(object):
     """
@@ -79,8 +80,27 @@ class Parameter(object):
     def from_parfile_line(self,line):
         """
         Parse a parfile line into the current state of the parameter.
+        Returns True if line was successfully parsed, False otherwise.
         """
-        pass # Not implemeted yet
+        k = line.split()
+        name = k[0].upper()
+        # Test that name matches
+        if (name != self.name) and (name not in self.aliases):
+            return False
+        val = None
+        fit = False
+        err = None
+        if len(k)>=2:
+            val = k[1]
+        if len(k)>=3:
+            if int(k[2])>0: 
+                fit = True
+        if len(k)==4:
+            err = k[3]
+        self.set(val)
+        self.uncertainty = err
+        self.frozen = not fit
+        return True
 
 class TimingModel(object):
 
@@ -138,34 +158,17 @@ class TimingModel(object):
         Read values from the specified parfile into the model parameters.
         """
         pfile = open(filename,'r')
-        for l in pfile.readlines():
-            k = l.split()
-            name = k[0]
-            val = None
-            fit = False
-            err = None
-            if len(k)>=2:
-                val = k[1]
-            if len(k)>=3:
-                if int(k[2])>0: 
-                    fit = True
-            if len(k)==4:
-                err = k[3]
-            par_name = None
-            if hasattr(self,name):
-                par_name = name
-            else:
-                for par in self.params:
-                    if name in getattr(self,par).aliases:
-                        par_name = par
-            if par_name:
-                getattr(self,par_name).set(val)
-                getattr(self,par_name).uncertainty = err
-                getattr(self,par_name).frozen = not fit
-            else:
-                # unrecognized parameter, could
-                # print a warning or something
-                pass
+        for l in map(string.strip,pfile.readlines()):
+            # Skip blank lines
+            if not l: continue
+            # Skip commented lines
+            if l.startswith('#'): continue
+            parsed = False
+            for par in self.params:
+                if getattr(self,par).from_parfile_line(l):
+                    parsed = True
+            if not parsed:
+                print "warning: unrecognized parfile line '%s'" % l
 
 def generate_timing_model(name,components):
     """
