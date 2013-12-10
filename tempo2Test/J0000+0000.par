@@ -1,0 +1,18 @@
+PSRJ           J0000+0000
+RAJ            00:00:00.0000            0  0.0
+DECJ           +00:00:00.0000            0  0.0
+F0             200                      0  0.0
+#F1            0.5                     0  0.0
+#P0            1080.000                  0  0.0
+PX             0.1 0 0.0
+PMRA           0 0 0.0
+PMDEC          0 0 0.0
+PEPOCH         53000                       
+POSEPOCH       53000                       
+DMEPOCH        53000                       
+#EPHVER         5                           
+CLK            UNCORR
+EPHEM          DE405
+NITS           1
+UNITS          TDB
+T2CMETHOD      IAU2000B
