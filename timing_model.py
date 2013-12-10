@@ -64,7 +64,7 @@ class Parameter(object):
         """
         Add a name to the list of aliases for this parameter.
         """
-        aliases.append(alias)
+        self.aliases.append(alias)
 
     def as_parfile_line(self):
         """
