@@ -165,7 +165,7 @@ class TOAs(object):
         if top:
             self.toas = []
             self.commands = []
-            self.cdict = {"EFAC": 1.0, "EQUAD":1.0,
+            self.cdict = {"EFAC": 1.0, "EQUAD": 0.0,
                           "EMIN": 0.0, "EMAX": 1e100,
                           "FMIN": 0.0, "FMAX": 1e100,
                           "INFO": None, "SKIP": False,
