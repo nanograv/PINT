@@ -1,3 +1,5 @@
+*~
+
 *.py[cod]
 
 # C extensions
@@ -30,7 +32,10 @@ nosetests.xml
 # Translations
 *.mo
 
-# Mr Developer
-.mr.developer.cfg
-.project
-.pydevproject
+# Ephemerides and clock stuff
+datafiles/de405.bsp
+datafiles/de421.bsp
+datafiles/de430t.bsp
+datafiles/earth_latest_high_prec.bpc
+datafiles/naif0010.tls
+datafiles/pck00010.tpc
