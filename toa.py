@@ -11,7 +11,7 @@ toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
 
 obss, obscode1s, obscode2s = read_observatories()
 
-def toa_format(line):
+def toa_format(line, fmt="Unknown"):
     """Identifies a TOA line as one of the following types:  Comment, Command,
     Blank, Tempo2, Princeton, ITOA, Parkes, Unknown."""
     try:
@@ -21,23 +21,23 @@ def toa_format(line):
             return "Command"
         elif re.match("^\s+$", line):
             return "Blank"
-        elif len(line) > 80: 
-            return "Tempo2"
         elif re.match("[0-9a-z@] ",line):
             return "Princeton"
-        elif re.match("\S\S",line) and line[14]=='.':
-            return "ITOA"
         elif re.match("  ",line) and line[41]=='.':
             return "Parkes"
+        elif len(line) > 80 or fmt=="Tempo2":
+            return "Tempo2"
+        elif re.match("\S\S",line) and line[14]=='.':  # This needs to be better
+            return "ITOA"
         else:
             return "Unknown"
     except:
         return "Unknown"
 
-def parse_TOA_line(line):
+def parse_TOA_line(line, fmt="Unknown"):
     MJD = None
     d = {}
-    fmt = toa_format(line)
+    fmt = toa_format(line, fmt)
     d["format"] = fmt
     if fmt=="Command":
         d[fmt] = line.split()
@@ -78,7 +78,7 @@ def parse_TOA_line(line):
                     d[k] = v
     elif fmt=="Parkes" or fmt=="ITOA":
         raise RuntimeError, \
-            "TOA format '%s' not implemented yet" % self.format
+            "TOA format '%s' not implemented yet" % fmt
     return MJD, d
 
 class toa(object):
@@ -145,6 +145,9 @@ class TOAs(object):
     def get_errors(self):
         return numpy.array([t.error for t in self.toas])
 
+    def get_obss(self):
+        return numpy.array([t.obs for t in self.toas])
+
     def get_flags(self):
         return numpy.array([t.flags for t in self.toas])
 
@@ -161,8 +164,10 @@ class TOAs(object):
 
     def to_table(self):
         self.table = table.Table([self.get_mjds(), self.get_errors(),
-                                  self.get_freqs(), self.get_flags()],
-                                 names = ("mjds", "errors", "freqs", "flags"))
+                                  self.get_freqs(), self.get_obss(),
+                                  self.get_flags()],
+                                 names = ("mjds", "errors", "freqs",
+                                          "obss", "flags"))
 
     def read_toa_file(self, filename, process_includes=True, top=True):
         """
@@ -180,12 +185,13 @@ class TOAs(object):
                           "INFO": None, "SKIP": False,
                           "TIME": 0.0, "PHASE": 0,
                           "PHA1": None, "PHA2": None,
-                          "MODE": 1, "JUMP": [False, 0]}
+                          "MODE": 1, "JUMP": [False, 0],
+                          "FORMAT": "Unknown"}
             self.observatories = set()
         with open(filename, "r") as f:
             skip = False
             for l in f.readlines():
-                MJD, d = parse_TOA_line(l)
+                MJD, d = parse_TOA_line(l, fmt=self.cdict["FORMAT"])
                 # print MJD, d
                 if d["format"]=="Command":
                     cmd = d["Command"][0]
@@ -207,6 +213,9 @@ class TOAs(object):
                     elif cmd=="INFO":
                         self.cdict[cmd] = d["Command"][1]
                         d[cmd] = d["Command"][1]
+                    elif cmd=="FORMAT":
+                        if d["Command"][1] == "1":
+                            self.cdict[cmd] = "Tempo2"
                     elif cmd=="JUMP":
                         if (self.cdict[cmd][0]):
                             self.cdict[cmd][0] = False
@@ -214,7 +223,12 @@ class TOAs(object):
                         else:
                             self.cdict[cmd][0] = True
                     elif cmd=="INCLUDE" and process_includes:
+                        # Save FORMAT in a tmp
+                        fmt = self.cdict["FORMAT"]
+                        self.cdict["FORMAT"] = "Unknown"
                         self.read_toa_file(d["Command"][1], top=False)
+                        # re-set FORMAT
+                        self.cdict["FORMAT"] = fmt
                     else:
                         continue
                 if d["format"] in ("Blank", "Unknown", "Comment"):
@@ -230,13 +244,13 @@ class TOAs(object):
                         newtoa.error *= self.cdict["EFAC"]
                         newtoa.error = numpy.hypot(newtoa.error, self.cdict["EQUAD"])
                         if self.cdict["INFO"]:
-                            newtoa.flags["INFO"] = self.cdict["INFO"]
+                            newtoa.flags["info"] = self.cdict["INFO"]
                         if self.cdict["JUMP"][0]:
-                            newtoa.flags["JUMP"] = self.cdict["JUMP"][1]
+                            newtoa.flags["jump"] = self.cdict["JUMP"][1]
                         if self.cdict["PHASE"] != 0:
-                            newtoa.flags["PHASE"] = self.cdict["PHASE"]
+                            newtoa.flags["phase"] = self.cdict["PHASE"]
                         if self.cdict["TIME"] != 0.0:
-                            newtoa.flags["TIME"] = self.cdict["TIME"]
+                            newtoa.flags["time"] = self.cdict["TIME"]
                         self.observatories.add(newtoa.obs)
                         self.toas.append(newtoa)
             if top:
