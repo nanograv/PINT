@@ -100,5 +100,7 @@ for i in range(len(statespk)):
     diff2.append(stateInterpy[i]-mp.mpf(earth2[i])*mp.mpf(spice.clight()))
 
 plt.figure(1)
+plt.title("T2 output and interpolated spice out put difference in (km)")
+plt.ylabel("y axis Position difference in km")
 plt.plot(diff2)
 plt.show()
