@@ -1,4 +1,6 @@
-from astropy.coordinates.angles import Angle
+# timing_model.py
+# Defines the basic timing model interface classes
+import string
 
 class Parameter(object):
     """
@@ -62,18 +64,45 @@ class Parameter(object):
         """
         Add a name to the list of aliases for this parameter.
         """
-        aliases.append(alias)
+        self.aliases.append(alias)
 
     def as_parfile_line(self):
         """
         Return a parfile line giving the current state of the parameter.
         """
+        # Don't print unset parameters
+        if self.value==None: 
+            return ""
         line = "%-10s %25s" % (self.name, self.print_value(self.value))
         if self.uncertainty != None:
             line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty))
         elif not self.frozen:
             line += " 1" 
-        return line
+        return line + "\n"
+
+    def from_parfile_line(self,line):
+        """
+        Parse a parfile line into the current state of the parameter.
+        Returns True if line was successfully parsed, False otherwise.
+        """
+        try:
+            k = line.split()
+            name = k[0].upper()
+        except:
+            return False
+        # Test that name matches
+        if (name != self.name) and (name not in self.aliases):
+            return False
+        if len(k)<2:
+            return False
+        if len(k)>=2:
+            self.set(k[1])
+        if len(k)>=3:
+            if int(k[2])>0: 
+                self.frozen = False
+        if len(k)==4:
+            self.uncertainty = float(k[3])
+        return True
 
 class TimingModel(object):
 
@@ -82,19 +111,12 @@ class TimingModel(object):
         self.delay_funcs = [] # List of delay component functions
         self.phase_funcs = [] # List of phase component functions
 
+    def setup(self):
+        print "TimingModel setup"
+
     def add_param(self, param):
         setattr(self, param.name, param)
         self.params += [param.name,]
-
-    def __add__(self, other):
-        # Combine two timing model objects into one
-        # TODO: How to deal with conflicts in names/etc...
-        result = TimingModel()
-        result.__dict__ = dict(self.__dict__.items() + other.__dict__.items())
-        result.params = self.params + other.params
-        result.phase_funcs = self.phase_funcs + other.phase_funcs
-        result.delay_funcs = self.delay_funcs + other.delay_funcs
-        return result
 
     def compute_phase(self, toa):
         """
@@ -102,6 +124,7 @@ class TimingModel(object):
         """
         # First compute the delay to "pulsar time"
         delay = self.compute_delay(toa)
+        phase = 0.0
 
         # Then compute the relevant pulse phase
         for pf in self.phase_funcs:
@@ -132,7 +155,7 @@ class TimingModel(object):
         """
         result = ""
         for par in self.params:
-            result += getattr(self,par).as_parfile_line() + '\n'
+            result += getattr(self,par).as_parfile_line()
         return result
 
     def read_parfile(self, filename):
@@ -140,94 +163,30 @@ class TimingModel(object):
         Read values from the specified parfile into the model parameters.
         """
         pfile = open(filename,'r')
-        for l in pfile.readlines():
-            k = l.split()
-            name = k[0]
-            val = None
-            fit = False
-            err = None
-            if len(k)>=2:
-                val = k[1]
-            if len(k)>=3:
-                if int(k[2])>0: 
-                    fit = True
-            if len(k)==4:
-                err = k[3]
-            par_name = None
-            if hasattr(self,name):
-                par_name = name
-            else:
-                for par in self.params:
-                    if name in getattr(self,par).aliases:
-                        par_name = par
-            if par_name:
-                getattr(self,par_name).set(val)
-                getattr(self,par_name).uncertainty = err
-                getattr(self,par_name).frozen = not fit
-            else:
-                # unrecognized parameter, could
-                # print a warning or something
-                pass
+        for l in map(string.strip,pfile.readlines()):
+            # Skip blank lines
+            if not l: continue
+            # Skip commented lines
+            if l.startswith('#'): continue
+            parsed = False
+            for par in self.params:
+                if getattr(self,par).from_parfile_line(l):
+                    parsed = True
+            if not parsed:
+                print "warning: unrecognized parfile line '%s'" % l
 
-class Astrometry(TimingModel):
+def generate_timing_model(name,components):
+    """
+    Returns a timing model class generated from the specified 
+    sub-components.  The return value is a class type, not an instance,
+    so needs to be called to generate a usable instance.  For example:
 
-    def __init__(self):
-        TimingModel.__init__(self)
+    MyModel = generate_timing_model("MyModel",(Astrometry,Spindown))
+    my_model = MyModel()
+    my_model.read_parfile("J1234+1234.par")
+    """
+    ## TODO could test here that all the components are derived from 
+    ## TimingModel.
+    return type(name, components, {})
 
-        self.add_param(Parameter(name="RA",
-            units="H:M:S",
-            description="Right ascension (J2000)",
-            aliases=["RAJ"],
-            parse_value=lambda x: Angle(x+'h').hour,
-            print_value=lambda x: Angle(x,unit='h').to_string(sep=':', 
-                precision=8)))
 
-        self.add_param(Parameter(name="DEC",
-            units="D:M:S",
-            description="Declination (J2000)",
-            aliases=["DECJ"],
-            parse_value=lambda x: Angle(x+'deg').degree,
-            print_value=lambda x: Angle(x,unit='deg').to_string(sep=':',
-                alwayssign=True, precision=8)))
-
-        # etc, also add PM, PX, ...
-
-class Spindown(TimingModel):
-
-    def __init__(self):
-        TimingModel.__init__(self)
-
-        self.add_param(Parameter(name="F0",
-            units="Hz", 
-            description="Spin frequency",
-            aliases=["F"],
-            print_value=lambda x: '%.15f'%x))
-
-        self.add_param(Parameter(name="F1",
-            units="Hz/s", 
-            description="Spin-down rate"))
-
-        self.add_param(Parameter(name="TZRMJD",
-            units="MJD", 
-            description="Reference epoch for phase"))
-
-        self.add_param(Parameter(name="PEPOCH",
-            units="MJD", 
-            description="Reference epoch for spin-down"))
-
-    def simple_spindown_phase(self,toa):
-        """
-        Placeholder function for simple spindown phase.
-        Still need to figure out data types for toa, mjd, make
-        sure the right precision is in use, etc.  This is just here
-        to show the structure of how this should work.
-
-        Also still need to figure out a straightforward way to get
-        this function into the generic TimingModel class as required.
-        """
-        # If TZRMJD is not defined, use the toa itself
-        if self.TZRMJD.value==None:
-            self.TZRMJD.value = toa
-        dt = toa - self.TZRMJD.value
-        phase = dt*self.F0.value + 0.5*dt*dt*self.F1.value
-        return phase
