@@ -1,4 +1,5 @@
-import astropy.time as t
+import astropy.time as time
+import astropy.table as table
 import re, sys
 import numpy
 from observatories import read_observatories
@@ -106,7 +107,7 @@ class toa(object):
                  error=0.0, obs='bary', freq=float("inf"), scale='utc', # with defaults
                  **kwargs):  # keyword args that are completely optional
         try:
-            self.mjd = t.Time(*MJD, scale=scale, format='mjd', precision=9)
+            self.mjd = time.Time(*MJD, scale=scale, format='mjd', precision=9)
         except:
             "Error processing MJD for TOA:", MJD
         self.error = error
@@ -141,8 +142,11 @@ class TOAs(object):
     def get_mjds(self):
         return numpy.array([t.mjd for t in self.toas])
 
-    def get_errs(self):
+    def get_errors(self):
         return numpy.array([t.error for t in self.toas])
+
+    def get_flags(self):
+        return numpy.array([t.flags for t in self.toas])
 
     def summary(self):
         print "There are %d observatories:" % len(self.observatories), \
@@ -154,6 +158,11 @@ class TOAs(object):
         print "Min / Max TOA errors:", min(errs), max(errs)
         print "Mean / Median / StDev TOA error:", errs.mean(), \
               numpy.median(errs), errs.std()
+
+    def to_table(self):
+        self.table = table.Table([self.get_mjds(), self.get_errors(),
+                                  self.get_freqs(), self.get_flags()],
+                                 names = ("mjds", "errors", "freqs", "flags"))
 
     def read_toa_file(self, filename, process_includes=True, top=True):
         """
