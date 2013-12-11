@@ -22,7 +22,6 @@ def mjd2et(mjd,tt2tdb):
 #### Read tempo2 tim file
 fname1 = "J0000+0000.tim"
 fp1 = open(fname1,"r")
-
 toa = [] 
 # Read TOA column to toa array
 for l in fp1.readlines():
@@ -64,6 +63,7 @@ for i in range(len(toa)):
 et = []
 
 for i in range(len(toa)):
+#    toa[i] = float(toa[i])
     et.append(mjd2et(toa[i],tt2tdb[i]))
 ###### calculate earth position
 stateInterp = []     # interpolated earth position   in (km)    
