@@ -157,7 +157,7 @@ class TOAs(object):
         print "There are %d TOAs" % len([x for x in self.toas])
         print "There are %d commands" % \
               len([x for x in self.commands])
-        errs = self.get_errs()
+        errs = self.get_errors()
         print "Min / Max TOA errors:", min(errs), max(errs)
         print "Mean / Median / StDev TOA error:", errs.mean(), \
               numpy.median(errs), errs.std()
