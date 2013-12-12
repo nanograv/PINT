@@ -35,13 +35,10 @@ class Spindown(TimingModel):
         """
         Placeholder function for simple spindown phase.
         Still need to figure out data types for toa, mjd, make
-        sure the right precision is in use, etc.  This is just here
-        to show the structure of how this should work.
-
-        Also still need to figure out a straightforward way to get
-        this function into the generic TimingModel class as required.
+        sure the right precision is in use, etc.  For now, this is 
+        here to show the structure of how this will work.
         """
-        # If TZRMJD is not defined, use the toa itself
+        # If TZRMJD is not defined, use this toa for phase reference
         if self.TZRMJD.value==None:
             self.TZRMJD.value = toa
         dt = toa - self.TZRMJD.value
