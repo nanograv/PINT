@@ -1,8 +1,9 @@
 # astrometry.py
 # Defines Astrometry timing model class
-import math
+import numpy
 import astropy 
 import astropy.coordinates as coords
+import astropy.units as u
 from astropy.coordinates.angles import Angle
 from timing_model import Parameter, TimingModel
 
@@ -15,16 +16,16 @@ class Astrometry(TimingModel):
             units="H:M:S",
             description="Right ascension (J2000)",
             aliases=["RAJ"],
-            parse_value=lambda x: Angle(x+'h').hour,
-            print_value=lambda x: Angle(x,unit='h').to_string(sep=':', 
+            parse_value=lambda x: Angle(x+'h'),
+            print_value=lambda x: x.to_string(sep=':', 
                 precision=8)))
 
         self.add_param(Parameter(name="DEC",
             units="D:M:S",
             description="Declination (J2000)",
             aliases=["DECJ"],
-            parse_value=lambda x: Angle(x+'deg').degree,
-            print_value=lambda x: Angle(x,unit='deg').to_string(sep=':',
+            parse_value=lambda x: Angle(x+'deg'),
+            print_value=lambda x: x.to_string(sep=':',
                 alwayssign=True, precision=8)))
 
         self.add_param(Parameter(name="POSEPOCH",
@@ -43,36 +44,42 @@ class Astrometry(TimingModel):
             units="mas", value=0.0,
             description="Parallax"))
 
-        # etc, also add  PX, ...
-
     def setup(self):
         super(Astrometry,self).setup()
         print "Astrometry setup"
+        # If PM is included, check for POSEPOCH
+        if self.PMRA.value!=0.0 or self.PMDEC.value!=0.0: 
+            if self.POSEPOCH.value==None:
+                if self.PEPOCH.value==None:
+                    # TODO: define our own exception classes?
+                    raise RuntimeError("PM is set but no POSEPOCH is specified")
+                else:
+                    self.POSEPOCH.value = self.PEPOCH.value
+
+    def as_ICRS(self,epoch=None):
+        """
+        as_ICRS(epoch=None)
+
+        Returns coordinates as an astropy ICRS instance.  If epoch (MJD) is
+        specified, proper motion is included to return the position at
+        the given epoch.
+        """
+        if epoch==None:
+            return coords.ICRS(ra=self.RA.value, dec=self.DEC.value)
+        else:
+            dt = (epoch - self.POSEPOCH.value) * u.day
+            dRA = self.PMRA.value*(u.mas/u.yr) * dt / numpy.cos(self.DEC.value)
+            dDEC = self.PMDEC.value*(u.mas/u.yr) * dt
+            return coords.ICRS(ra=self.RA.value+dRA, dec=self.DEC.value+dDEC)
     
     def ssb2psb_xyz(self,epoch=None):
         """
         ssb_to_bbc(epoch=None)
 
         Returns a XYZ unit vector pointing from the solar system barycenter
-        to the pulsar system barycenter.   If epoch is given, proper motion
-        is included in the calculation.
+        to the pulsar system barycenter.   If epoch (MJD) is given, proper 
+        motion is included in the calculation.
         """
-        d_ra = 0.0
-        d_dec = 0.0
-        day2year = 1.0/365.24 # We need to make a place for these..
-        deg2rad = math.pi / 180.0
-        if epoch!=None and \
-                (self.PMRA.value!=0.0 and self.PMDEC.value!=0.0):
-            if self.POSEPOCH.value==None:
-                self.POSEPOCH.value = self.PEPOCH.value
-            dt = epoch - self.POSEPOCH.value
-            # TODO: Check this formula for cos(dec).  Would be nice if astropy
-            # could do proper motion, but I didn't see it so far..
-            d_ra = self.PMRA.value * day2year * dt / math.cos(
-                    self.DEC.value * deg2rad)
-            d_dec = self.PMDEC.value * day2year * dt
-        radec = coords.ICRS(ra=self.RA.value + d_ra,
-                dec=self.DEC.value + d_dec,
-                unit=('h','deg'))
-        return radec.cartesian
+        # TODO: would it be better for this to return a 6-vector (pos, vel)?
+        return self.as_ICRS(epoch=epoch).cartesian
 
