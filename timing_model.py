@@ -175,6 +175,11 @@ class TimingModel(object):
             if not parsed:
                 print "warning: unrecognized parfile line '%s'" % l
 
+        # The "setup" functions contain tests for required parameters or
+        # combinations of parameters, etc, that can only be done
+        # after the entire parfile is read
+        self.setup()
+
 def generate_timing_model(name,components):
     """
     Returns a timing model class generated from the specified 
