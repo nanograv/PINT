@@ -51,5 +51,6 @@ class Spindown(TimingModel):
         if self.TZRMJD.value==None:
             self.TZRMJD.value = toa
         dt = toa - self.TZRMJD.value
-        phase = dt*self.F0.value + 0.5*dt*dt*self.F1.value
+        dt_pepoch = self.PEPOCH.value - self.TZRMJD.value
+        phase = self.F0.value*dt + 0.5*self.F1.value*dt*(dt-2.0*dt_pepoch)
         return phase
