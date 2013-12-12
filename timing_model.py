@@ -190,8 +190,34 @@ def generate_timing_model(name,components):
     my_model = MyModel()
     my_model.read_parfile("J1234+1234.par")
     """
-    ## TODO could test here that all the components are derived from 
-    ## TimingModel.
+    # TODO could test here that all the components are derived from 
+    # TimingModel?
     return type(name, components, {})
 
+class TimingModelError(Exception):
+    """
+    Generic base class for timing model errors.
+    """
+    pass
+
+class MissingParameter(TimingModelError):
+    """
+    This exception should be raised if a required model parameter was 
+    not included.
+
+    Attributes:
+      module = name of the model class that raised the error
+      param = name of the missing parameter
+      msg = additional message
+    """
+    def __init__(self,module,param,msg=None):
+        self.module = module
+        self.param = param
+        self.msg = msg
+
+    def __str__(self):
+        result = self.module + "." + self.param
+        if self.msg != None:
+            result += "\n  " + self.msg
+        return result
 

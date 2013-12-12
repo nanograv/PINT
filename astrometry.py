@@ -5,7 +5,7 @@ import astropy
 import astropy.coordinates as coords
 import astropy.units as u
 from astropy.coordinates.angles import Angle
-from timing_model import Parameter, TimingModel
+from timing_model import Parameter, TimingModel, MissingParameter
 
 class Astrometry(TimingModel):
 
@@ -47,12 +47,16 @@ class Astrometry(TimingModel):
     def setup(self):
         super(Astrometry,self).setup()
         print "Astrometry setup"
+        # RA/DEC are required
+        for p in ("RA","DEC"):
+            if getattr(self,p).value==None:
+                raise MissingParameter("Astrometry",p)
         # If PM is included, check for POSEPOCH
         if self.PMRA.value!=0.0 or self.PMDEC.value!=0.0: 
             if self.POSEPOCH.value==None:
                 if self.PEPOCH.value==None:
-                    # TODO: define our own exception classes?
-                    raise RuntimeError("PM is set but no POSEPOCH is specified")
+                    raise MissingParameter("Astrometry","POSEPOCH",
+                            "POSEPOCH or PEPOCH are required if PM is set.")
                 else:
                     self.POSEPOCH.value = self.PEPOCH.value
 
@@ -74,7 +78,7 @@ class Astrometry(TimingModel):
     
     def ssb2psb_xyz(self,epoch=None):
         """
-        ssb_to_bbc(epoch=None)
+        ssb_to_psb(epoch=None)
 
         Returns a XYZ unit vector pointing from the solar system barycenter
         to the pulsar system barycenter.   If epoch (MJD) is given, proper 
