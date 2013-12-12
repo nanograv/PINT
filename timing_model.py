@@ -71,6 +71,15 @@ class Parameter(object):
         """
         self.aliases.append(alias)
 
+    def help_line(self):
+        """
+        Return a help line containing param name, description and units.
+        """
+        out = "%-12s %s" % (self.name, self.description)
+        if self.units != None:
+            out += ' (' + str(self.units) + ')'
+        return out
+
     def as_parfile_line(self):
         """
         Return a parfile line giving the current state of the parameter.
@@ -128,6 +137,14 @@ class TimingModel(object):
     def add_param(self, param):
         setattr(self, param.name, param)
         self.params += [param.name,]
+
+    def param_help(self):
+        """
+        Print help lines for all available parameters in model.
+        """
+        print "Available parameters for ", self.__class__
+        for par in self.params:
+            print getattr(self,par).help_line()
 
     def compute_phase(self, toa):
         """
