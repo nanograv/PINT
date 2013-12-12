@@ -1,6 +1,6 @@
 # spindown.py
 # Defines Spindown timing model class
-from timing_model import Parameter, TimingModel
+from timing_model import Parameter, TimingModel, MissingParameter
 
 class Spindown(TimingModel):
 
@@ -14,7 +14,7 @@ class Spindown(TimingModel):
             print_value=lambda x: '%.15f'%x))
 
         self.add_param(Parameter(name="F1",
-            units="Hz/s", 
+            units="Hz/s", value=0.0, 
             description="Spin-down rate"))
 
         self.add_param(Parameter(name="TZRMJD",
@@ -30,6 +30,15 @@ class Spindown(TimingModel):
     def setup(self):
         super(Spindown,self).setup()
         print "Spindown setup"
+        # Check for required params
+        for p in ("F0",):
+            if getattr(self,p).value==None:
+                raise MissingParameter("Spindown",p)
+        # If F1 is set, we need PEPOCH
+        if self.F1.value!=0.0:
+            if self.PEPOCH.value==None:
+                raise MissingParameter("Spindown","PEPOCH",
+                        "PEPOCH is required if F1 is set")
 
     def simple_spindown_phase(self,toa):
         """
