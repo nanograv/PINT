@@ -50,8 +50,13 @@ class Parameter(object):
         self.print_value=print_value
 
     def __str__(self):
-        return self.name + " (" + self.units + ") " \
-            + self.print_value(self.value) + " +/- " + str(self.uncertainty)
+        out = self.name
+        if self.units!=None:
+            out += " (" + str(self.units) + ")"
+        out += " " + self.print_value(self.value)
+        if self.uncertainty!=None:
+            out += " +/- " + str(self.uncertainty)
+        return out
 
     def set(self,value):
         """
@@ -110,6 +115,12 @@ class TimingModel(object):
         self.params = []  # List of model parameter names
         self.delay_funcs = [] # List of delay component functions
         self.phase_funcs = [] # List of phase component functions
+
+        self.add_param(Parameter(name="PSR",
+            units=None,
+            description="Source name",
+            aliases=["PSRJ","PSRB"],
+            parse_value=str))
 
     def setup(self):
         print "TimingModel setup"
