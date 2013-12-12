@@ -4,8 +4,12 @@ import numpy
 import astropy 
 import astropy.coordinates as coords
 import astropy.units as u
+import astropy.constants as const
 from astropy.coordinates.angles import Angle
 from timing_model import Parameter, TimingModel, MissingParameter
+
+# No light-seconds in astropy, WTF? ;)
+ls = u.def_unit('ls', const.c * 1.0 * u.s)
 
 class Astrometry(TimingModel):
 
@@ -44,6 +48,8 @@ class Astrometry(TimingModel):
             units="mas", value=0.0,
             description="Parallax"))
 
+        self.delay_funcs += [self.solar_system_geometric_delay,]
+
     def setup(self):
         super(Astrometry,self).setup()
         # RA/DEC are required
@@ -59,13 +65,13 @@ class Astrometry(TimingModel):
                 else:
                     self.POSEPOCH.value = self.PEPOCH.value
 
-    def as_ICRS(self,epoch=None):
+    def coords_as_ICRS(self,epoch=None):
         """
-        as_ICRS(epoch=None)
+        coords_as_ICRS(epoch=None)
 
-        Returns coordinates as an astropy ICRS instance.  If epoch (MJD) is
-        specified, proper motion is included to return the position at
-        the given epoch.
+        Returns pulsar sky coordinates as an astropy ICRS object instance.  
+        If epoch (MJD) is specified, proper motion is included to return 
+        the position at the given epoch.
         """
         if epoch==None:
             return coords.ICRS(ra=self.RA.value, dec=self.DEC.value)
@@ -84,5 +90,24 @@ class Astrometry(TimingModel):
         motion is included in the calculation.
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
-        return self.as_ICRS(epoch=epoch).cartesian
+        return self.coords_as_ICRS(epoch=epoch).cartesian
+
+    def solar_system_geometric_delay(self,toa):
+        """
+        solar_system_geometric_delay(toa)
+
+        Returns geometric delay (in sec) due to position of site in 
+        solar system.  This includes Roemer delay and parallax.
+
+        NOTE: currently assumes XYZ location of TOA relative to SSB is
+        available as 3-vector toa.xyz, in units of light-seconds.
+        """
+        L_hat = self.ssb_to_psb_xyz(epoch=toa.mjd.mjd)
+        re_dot_L_ls = numpy.dot(L_hat,toa.xyz)
+        delay = -re_dot_L_ls
+        if self.PX.value!=0.0:
+            L_ls = ((1.0/self.PX.value)*u.kpc).to(ls).value
+            re_ls_sqr = numpy.dot(toa.xyz,toa.xyz)
+            delay += 0.5*(re_ls_sqr/L_ls)*(1.0-re_dot_L_ls**2)
+        return delay
 
