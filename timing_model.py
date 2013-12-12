@@ -132,7 +132,7 @@ class TimingModel(object):
             parse_value=str))
 
     def setup(self):
-        print "TimingModel setup"
+        pass
 
     def add_param(self, param):
         setattr(self, param.name, param)

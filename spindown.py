@@ -29,7 +29,6 @@ class Spindown(TimingModel):
 
     def setup(self):
         super(Spindown,self).setup()
-        print "Spindown setup"
         # Check for required params
         for p in ("F0",):
             if getattr(self,p).value==None:
@@ -40,17 +39,21 @@ class Spindown(TimingModel):
                 raise MissingParameter("Spindown","PEPOCH",
                         "PEPOCH is required if F1 is set")
 
-    def simple_spindown_phase(self,toa):
+    def simple_spindown_phase(self,t_pulsar):
         """
         Placeholder function for simple spindown phase.
-        Still need to figure out data types for toa, mjd, make
+
+        Note t_pulsar is the time of emission at the pulsar, not
+        the time of arrival at earth.
+
+        Still need to figure out data types for times, make
         sure the right precision is in use, etc.  For now, this is 
         here to show the structure of how this will work.
         """
-        # If TZRMJD is not defined, use this toa for phase reference
+        # If TZRMJD is not defined, use the first time as phase reference
         if self.TZRMJD.value==None:
-            self.TZRMJD.value = toa
-        dt = toa - self.TZRMJD.value
+            self.TZRMJD.value = t_pulsar
+        dt = t_pulsar - self.TZRMJD.value
         dt_pepoch = self.PEPOCH.value - self.TZRMJD.value
         phase = self.F0.value*dt + 0.5*self.F1.value*dt*(dt-2.0*dt_pepoch)
         return phase

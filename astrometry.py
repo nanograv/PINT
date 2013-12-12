@@ -46,7 +46,6 @@ class Astrometry(TimingModel):
 
     def setup(self):
         super(Astrometry,self).setup()
-        print "Astrometry setup"
         # RA/DEC are required
         for p in ("RA","DEC"):
             if getattr(self,p).value==None:
@@ -76,7 +75,7 @@ class Astrometry(TimingModel):
             dDEC = self.PMDEC.value*(u.mas/u.yr) * dt
             return coords.ICRS(ra=self.RA.value+dRA, dec=self.DEC.value+dDEC)
     
-    def ssb2psb_xyz(self,epoch=None):
+    def ssb_to_psb_xyz(self,epoch=None):
         """
         ssb_to_psb(epoch=None)
 
