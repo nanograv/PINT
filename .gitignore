@@ -1,4 +1,6 @@
+# Temporary editor files
 *~
+.*.swp
 
 *.py[cod]
 

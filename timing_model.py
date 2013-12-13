@@ -50,8 +50,13 @@ class Parameter(object):
         self.print_value=print_value
 
     def __str__(self):
-        return self.name + " (" + self.units + ") " \
-            + self.print_value(self.value) + " +/- " + str(self.uncertainty)
+        out = self.name
+        if self.units!=None:
+            out += " (" + str(self.units) + ")"
+        out += " " + self.print_value(self.value)
+        if self.uncertainty!=None:
+            out += " +/- " + str(self.uncertainty)
+        return out
 
     def set(self,value):
         """
@@ -65,6 +70,15 @@ class Parameter(object):
         Add a name to the list of aliases for this parameter.
         """
         self.aliases.append(alias)
+
+    def help_line(self):
+        """
+        Return a help line containing param name, description and units.
+        """
+        out = "%-12s %s" % (self.name, self.description)
+        if self.units != None:
+            out += ' (' + str(self.units) + ')'
+        return out
 
     def as_parfile_line(self):
         """
@@ -111,12 +125,26 @@ class TimingModel(object):
         self.delay_funcs = [] # List of delay component functions
         self.phase_funcs = [] # List of phase component functions
 
+        self.add_param(Parameter(name="PSR",
+            units=None,
+            description="Source name",
+            aliases=["PSRJ","PSRB"],
+            parse_value=str))
+
     def setup(self):
-        print "TimingModel setup"
+        pass
 
     def add_param(self, param):
         setattr(self, param.name, param)
         self.params += [param.name,]
+
+    def param_help(self):
+        """
+        Print help lines for all available parameters in model.
+        """
+        print "Available parameters for ", self.__class__
+        for par in self.params:
+            print getattr(self,par).help_line()
 
     def compute_phase(self, toa):
         """
@@ -175,6 +203,11 @@ class TimingModel(object):
             if not parsed:
                 print "warning: unrecognized parfile line '%s'" % l
 
+        # The "setup" functions contain tests for required parameters or
+        # combinations of parameters, etc, that can only be done
+        # after the entire parfile is read
+        self.setup()
+
 def generate_timing_model(name,components):
     """
     Returns a timing model class generated from the specified 
@@ -185,8 +218,34 @@ def generate_timing_model(name,components):
     my_model = MyModel()
     my_model.read_parfile("J1234+1234.par")
     """
-    ## TODO could test here that all the components are derived from 
-    ## TimingModel.
+    # TODO could test here that all the components are derived from 
+    # TimingModel?
     return type(name, components, {})
 
+class TimingModelError(Exception):
+    """
+    Generic base class for timing model errors.
+    """
+    pass
+
+class MissingParameter(TimingModelError):
+    """
+    This exception should be raised if a required model parameter was 
+    not included.
+
+    Attributes:
+      module = name of the model class that raised the error
+      param = name of the missing parameter
+      msg = additional message
+    """
+    def __init__(self,module,param,msg=None):
+        self.module = module
+        self.param = param
+        self.msg = msg
+
+    def __str__(self):
+        result = self.module + "." + self.param
+        if self.msg != None:
+            result += "\n  " + self.msg
+        return result
 
