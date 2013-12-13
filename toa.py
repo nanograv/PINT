@@ -7,7 +7,7 @@ from observatories import read_observatories
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "FMIN", "INCLUDE", "INFO", "JUMP", "MODE", "NOSKIP", "PHA1",
                 "PHA2", "PHASE", "SEARCH", "SIGMA", "SIM", "SKIP", "TIME",
-                "TRACK", "ZAWGT", "FORMAT")
+                "TRACK", "ZAWGT", "FORMAT", "END")
 
 obss, obscode1s, obscode2s = read_observatories()
 
@@ -186,7 +186,7 @@ class TOAs(object):
                           "TIME": 0.0, "PHASE": 0,
                           "PHA1": None, "PHA2": None,
                           "MODE": 1, "JUMP": [False, 0],
-                          "FORMAT": "Unknown"}
+                          "FORMAT": "Unknown", "END": False}
             self.observatories = set()
         with open(filename, "r") as f:
             skip = False
@@ -198,15 +198,17 @@ class TOAs(object):
                     self.commands.append((d["Command"], len(self.toas)))
                     if cmd=="SKIP":
                         self.cdict[cmd] = True
-                    elif cmd=="NOSKIP":
-                        self.cdict[cmd] = False
-                    if self.cdict["SKIP"]:
                         continue
-                    if cmd=="END":
+                    elif cmd=="NOSKIP":
+                        self.cdict["SKIP"] = False
+                        continue
+                    elif cmd=="END":
+                        self.cdict[cmd] = True
                         break
+                    elif cmd in ("TIME", "PHASE"):
+                        self.cdict[cmd] += float(d["Command"][1])
                     elif cmd in ("EMIN", "EMAX", "EFAC", "EQUAD",\
-                                 "PHA1", "PHA2", "TIME", "PHASE",\
-                                 "FMIN", "FMAX"):
+                                 "PHA1", "PHA2", "FMIN", "FMAX"):
                         self.cdict[cmd] = float(d["Command"][1])
                         if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
                             d[cmd] = d["Command"][1]
@@ -231,8 +233,14 @@ class TOAs(object):
                         self.cdict["FORMAT"] = fmt
                     else:
                         continue
-                if d["format"] in ("Blank", "Unknown", "Comment"):
+                if (self.cdict["SKIP"] or
+                    d["format"] in ("Blank", "Unknown", "Comment")):
                     continue
+                elif self.cdict["END"]:
+                    if top:
+                        # Clean up our temporaries used when reading TOAs
+                        del(self.cdict)
+                    return
                 else:
                     newtoa = toa(MJD, **d)
                     if ((self.cdict["EMIN"] > newtoa.error) or \
