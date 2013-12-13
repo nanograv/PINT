@@ -205,9 +205,10 @@ class TOAs(object):
                     elif cmd=="END":
                         self.cdict[cmd] = True
                         break
+                    elif cmd in ("TIME", "PHASE"):
+                        self.cdict[cmd] += float(d["Command"][1])
                     elif cmd in ("EMIN", "EMAX", "EFAC", "EQUAD",\
-                                 "PHA1", "PHA2", "TIME", "PHASE",\
-                                 "FMIN", "FMAX"):
+                                 "PHA1", "PHA2", "FMIN", "FMAX"):
                         self.cdict[cmd] = float(d["Command"][1])
                         if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
                             d[cmd] = d["Command"][1]
