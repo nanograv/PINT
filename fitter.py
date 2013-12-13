@@ -11,5 +11,7 @@ class resids(object):
         self.toas=toas
         self.model=model
 
-    def calc_resids(self):
+    def get_resids(self):
         
+        # Compute predicted phase for given input model and TOAs
+
