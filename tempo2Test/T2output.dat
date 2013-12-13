@@ -1,13 +1,3 @@
-This program comes with ABSOLUTELY NO WARRANTY.
-This is free software, and you are welcome to redistribute it
-under conditions of GPL license.
-
-WARNING [TROP2]: Assume standard atmospheric pressure (no data) for site ao at MJD 52544.5
-WARNING [TROP1]: Assume zero zenith wet delay (no data) for site ao  at MJD 52544.5
-WARNING: duplicated warnings have been supressed.
-Complete return
-Looking for /Users/jingluo/Research_soft/Tempo/psrsoft/usr/tempo2runtime/plugins//general2_darwin12_plug.t2
-Starting general2 plugin
 499.13185783733035805 31.091388725834324447 13.492624762406448369 -0.0016128134214535194864
 498.30038608521147125 38.913242219584901704 16.883310683162182642 -0.0016164414686641766228
 497.32255326605042001 46.723665041019600608 20.2690542974251251 -0.0016195282680285469096
@@ -738,5 +728,3 @@ Starting general2 plugin
 502.66107865719078518 5.4674038257573611688 2.3199877238706627658 -0.0016159212540790403399
 502.33525446380650692 13.314527675017993502 5.7219781569717751424 -0.0016210293163527289117
 501.86325648148812206 21.157023001924443406 9.1218748531057141093 -0.0016257213821808857903
-Finished general2 plugin
-Finishing off: time taken = 1.57 (s)
