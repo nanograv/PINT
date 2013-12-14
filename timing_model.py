@@ -2,6 +2,10 @@
 # Defines the basic timing model interface classes
 import string
 
+# For parsing Fortran exponential notation
+def fortran_float(x):
+    return float(x.translate(string.maketrans('Dd','ee')))
+
 class Parameter(object):
     """
     Parameter(name=None, value=None, units=None, description=None, 
@@ -38,7 +42,7 @@ class Parameter(object):
 
     def __init__(self, name=None, value=None, units=None, description=None, 
             uncertainty=None, frozen=True, aliases=[],
-            parse_value=float, print_value=str):
+            parse_value=fortran_float, print_value=str):
         self.value = value
         self.name = name
         self.units = units
