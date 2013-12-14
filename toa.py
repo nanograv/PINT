@@ -61,8 +61,10 @@ def parse_TOA_line(line, fmt="Unknown"):
         MJD = (int(ii), float("0."+ff))
         d["error"] = float(fields[3])
         ocode = fields[4].upper()
-        if ocode in obscode2s.keys():
+        if len(ocode)==2 and ocode in obscode2s.keys():
             d["obs"] = obscode2s[ocode]
+        elif len(ocode)==1 and ocode in obscode1s.keys():
+            d["obs"] = obscode1s[ocode]
         elif ocode in obss.keys():
             d["obs"] = ocode
         # All the rest should be flags
