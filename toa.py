@@ -3,6 +3,10 @@ import astropy.table as table
 import re, sys
 import numpy
 import observatories as obs
+import astropy.utils
+from astropy.utils.iers import IERS_A, IERS_A_URL
+from astropy.utils.data import download_file
+
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "FMIN", "INCLUDE", "INFO", "JUMP", "MODE", "NOSKIP", "PHA1",
@@ -10,6 +14,8 @@ toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "TRACK", "ZAWGT", "FORMAT", "END")
 
 observatories = obs.read_observatories()
+iers_a_file = download_file(IERS_A_URL, cache=True)
+iers_a = IERS_A.open(iers_a_file)
 
 def toa_format(line, fmt="Unknown"):
     """Identifies a TOA line as one of the following types:  Comment, Command,
@@ -112,7 +118,11 @@ class toa(object):
                  error=0.0, obs='bary', freq=float("inf"), scale='utc', # with defaults
                  **kwargs):  # keyword args that are completely optional
         try:
-            self.mjd = time.Time(*MJD, scale=scale, format='mjd', precision=9)
+            self.mjd = time.Time(*MJD, scale=scale, format='mjd',
+                                 lat=observatories[obs].geo[0].deg,
+                                 lon=observatories[obs].geo[1].deg,
+                                 precision=9)
+            self.mjd.delta_ut1_utc = self.mjd.get_delta_ut1_utc(iers_a)
         except:
             "Error processing MJD for TOA:", MJD
         self.error = error
