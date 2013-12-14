@@ -2,14 +2,14 @@ import astropy.time as time
 import astropy.table as table
 import re, sys
 import numpy
-from observatories import read_observatories
+import observatories as obs
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "FMIN", "INCLUDE", "INFO", "JUMP", "MODE", "NOSKIP", "PHA1",
                 "PHA2", "PHASE", "SEARCH", "SIGMA", "SIM", "SKIP", "TIME",
                 "TRACK", "ZAWGT", "FORMAT", "END")
 
-obss, obscode1s, obscode2s = read_observatories()
+observatories = obs.read_observatories()
 
 def toa_format(line, fmt="Unknown"):
     """Identifies a TOA line as one of the following types:  Comment, Command,
@@ -34,6 +34,15 @@ def toa_format(line, fmt="Unknown"):
     except:
         return "Unknown"
 
+def get_obs(obscode):
+    global observatories
+    for name in observatories:
+        if obscode in observatories[name].aliases:
+            return name
+    else:
+        "Error:  cannot identify observatory '%s'!" % obscode
+        return None
+
 def parse_TOA_line(line, fmt="Unknown"):
     MJD = None
     d = {}
@@ -43,7 +52,7 @@ def parse_TOA_line(line, fmt="Unknown"):
         d[fmt] = line.split()
     elif fmt=="Princeton":
         fields = line.split()
-        d["obs"] = obscode1s[line[0]]
+        d["obs"] = get_obs(line[0].upper())
         d["freq"] = float(fields[1])
         d["error"] = float(fields[3])
         ii, ff = fields[2].split('.')
@@ -60,13 +69,7 @@ def parse_TOA_line(line, fmt="Unknown"):
         ii, ff = fields[2].split('.')
         MJD = (int(ii), float("0."+ff))
         d["error"] = float(fields[3])
-        ocode = fields[4].upper()
-        if len(ocode)==2 and ocode in obscode2s.keys():
-            d["obs"] = obscode2s[ocode]
-        elif len(ocode)==1 and ocode in obscode1s.keys():
-            d["obs"] = obscode1s[ocode]
-        elif ocode in obss.keys():
-            d["obs"] = ocode
+        d["obs"] = get_obs(fields[4].upper())
         # All the rest should be flags
         flags = fields[5:]
         for i in range(0, len(flags), 2):
