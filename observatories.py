@@ -16,7 +16,7 @@ def ITRF_to_GEO_WGS84(xyz):
     # see http://en.wikipedia.org/wiki/World_Geodetic_System for constants
     Re_wgs84, f_wgs84 = 6378137.0, 1.0/298.257223563
     lat, lon, hgt = spice.recgeo(xyz, Re_wgs84, f_wgs84)
-    return [Angle(lat, unit=u.rad), Angle(lat, unit=u.rad), hgt * u.m]
+    return [Angle(lat, unit=u.rad), Angle(lon, unit=u.rad), hgt * u.m]
 
 def read_observatories():
     observatories = {}
@@ -31,7 +31,6 @@ def read_observatories():
                 obs.XYZ = [a * u.m for a in xyz_vals]
                 obs.geo = ITRF_to_GEO_WGS84(xyz_vals)
                 obs.aliases = [obs.name.upper()]+vals[4:]
-                print obs.name, obs.XYZ, obs.geo
                 observatories[obs.name] = obs
     return observatories
 
