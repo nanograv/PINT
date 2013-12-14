@@ -156,9 +156,9 @@ class TimingModel(object):
 
         # Then compute the relevant pulse phase
         for pf in self.phase_funcs:
-            phase += pf(toa - delay) # This is just a placeholder until we
-                                     # define what datatype 'toa' has, and
-                                     # how to add/subtract from it, etc.
+            phase += pf(toa - delay,self) # This is just a placeholder until we
+                                          # define what datatype 'toa' has, and
+                                          # how to add/subtract from it, etc.
         return phase
 
     def compute_delay(self, toa):
