@@ -136,6 +136,18 @@ class TOAs(object):
             self.toas = []
             self.commands = []
 
+    def __add__(self,x):
+        if type(x) in [int,float]:
+            if not x:
+                # Adding zero. Do nothing
+                return self
+
+    def __sub__(self,x):
+        if type(x) in [int,float]:
+            if not x:
+                # Subtracting zero. Do nothing
+                return self
+
     def get_freqs(self):
         return numpy.array([t.freq for t in self.toas])
 
