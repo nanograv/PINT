@@ -9,15 +9,18 @@ class resids(object):
     """
 
     def __init__(self, toas=None, model=None):
-        self.toas=toas
-        self.model=model
+        self.toas = toas
+        self.model = model
+        self.resids = self.calc_resids();
+        self.chi2 = self.calc_chi2()
+        self.chi2reduced = self.get_reduced_chi2()
 
     def get_phase(self):
         
         # Compute predicted phase for given input model and TOAs. Right now, the
         # function compute_phase doesn't return an array for an array of input
         # TOAs, so we must loop. We might want to change this.
-        return numpy.array([self.model.compute_phase(t.mjd) for t in self.toas.get_mjds()])
+        return self.model.compute_phase(self.toas)
 
     def intPhase(self,ph):
         
@@ -27,7 +30,7 @@ class resids(object):
     def get_PSR_freq(self):
 
         # All residuals require the model pulsar frequency to be defined
-        F0names=['F0','nu'] # recognized parameter names
+        F0names=['F0','nu'] # recognized parameter names, needs to be changed
         nF0=0;
         for n in F0names:
             if n in self.model.params:
@@ -46,14 +49,16 @@ class resids(object):
 
     def calc_resids(self):
 
+        # Phase
         ph = self.get_phase();
         
+        # Return residuals in seconds
         return (ph - self.intPhase(ph))/self.get_PSR_freq();
 
     def calc_chi2(self):
         
         # Residual units are in seconds. Error units are in microseconds.
-        return sum(self.calc_resids()/(self.toas.get_errors()*1e-6))
+        return sum((self.resids/(self.toas.get_errors()*1e-6))**2)
 
     def get_dof(self):
         
@@ -64,9 +69,9 @@ class resids(object):
             
         return dof
 
-    def get_reduced_chi2(self,chi2,dof):
+    def get_reduced_chi2(self):
 
-        return chi2/dof
+        return self.chi2/self.get_dof()
 
     
 
