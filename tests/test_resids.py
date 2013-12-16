@@ -17,6 +17,6 @@ m.add_param(p1)
 m.add_param(p2)
 m.phase_funcs=[tmtestfuncs.F0]
 
-t=toa.TOAs("tests/NGC6440E.tim")
+t=toa.TOAs("tempo2Test/J0000+0000.tim")
 r=f.resids(toas=t,model=m)
 
