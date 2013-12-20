@@ -30,7 +30,7 @@ def read_observatories():
                 xyz_vals = (float(vals[1]), float(vals[2]), float(vals[3]))
                 obs.XYZ = [a * u.m for a in xyz_vals]
                 obs.geo = ITRF_to_GEO_WGS84(xyz_vals)
-                obs.aliases = [obs.name.upper()]+vals[4:]
+                obs.aliases = [obs.name.upper()]+[x.upper() for x in vals[4:]]
                 observatories[obs.name] = obs
     return observatories
 
