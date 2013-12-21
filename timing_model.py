@@ -1,7 +1,7 @@
 # timing_model.py
 # Defines the basic timing model interface classes
 import string
-from utils import fortran_float
+from utils import fortran_float, time_from_mjd_string, time_to_mjd_string
 
 class Parameter(object):
     """
@@ -86,10 +86,10 @@ class Parameter(object):
         Return a parfile line giving the current state of the parameter.
         """
         # Don't print unset parameters
-        if self.value==None: 
+        if self.value is None: 
             return ""
         line = "%-10s %25s" % (self.name, self.print_value(self.value))
-        if self.uncertainty != None:
+        if self.uncertainty is not None:
             line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty))
         elif not self.frozen:
             line += " 1" 
@@ -118,6 +118,24 @@ class Parameter(object):
         if len(k)==4:
             self.uncertainty = float(k[3])
         return True
+
+class MJDParameter(Parameter):
+    """
+    MJDParameter(self, name=None, value=None, units=None, description=None, 
+            uncertainty=None, frozen=True, aliases=[],
+            parse_value=fortran_float, print_value=str):
+
+    This is a Parameter type that is specific to MJD values.
+    """
+
+    def __init__(self, name=None, value=None, description=None, 
+            uncertainty=None, frozen=True, aliases=[],
+            parse_value=fortran_float, print_value=str):
+        super(MJDParameter,self).__init__(name=name,value=value,
+                units="MJD", description=description, 
+                uncertainty=uncertainty, frozen=frozen, aliases=aliases,
+                parse_value=time_from_mjd_string,
+                print_value=time_to_mjd_string)
 
 class TimingModel(object):
 
@@ -246,7 +264,7 @@ class MissingParameter(TimingModelError):
 
     def __str__(self):
         result = self.module + "." + self.param
-        if self.msg != None:
+        if self.msg is not None:
             result += "\n  " + self.msg
         return result
 

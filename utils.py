@@ -22,5 +22,19 @@ def time_from_mjd_string(s):
     imjd_s,fmjd_s = s.split('.')
     imjd = int(imjd_s)
     fmjd = float("0." + fmjd_s)
+    # TODO: what to do about scale?
     return astropy.time.Time(imjd,fmjd,scale='utc',format='mjd',
             precision=9)
+
+def time_to_mjd_string(t):
+    """
+    time_to_mjd_string(t)
+
+    print an MJD time with lots of digits.  astropy does not
+    seem to provide this capability..
+    """
+    # XXX Assume that that jd1 represents an integer MJD, and jd2 
+    # is the frac part.. is this legit??
+    imjd = int(t.jd1 - astropy.time.core.MJD_ZERO)
+    fmjd = t.jd2
+    return str(imjd) + ('%.15f'%fmjd)[1:]

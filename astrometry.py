@@ -54,12 +54,12 @@ class Astrometry(TimingModel):
         super(Astrometry,self).setup()
         # RA/DEC are required
         for p in ("RA","DEC"):
-            if getattr(self,p).value==None:
+            if getattr(self,p).value is None:
                 raise MissingParameter("Astrometry",p)
         # If PM is included, check for POSEPOCH
         if self.PMRA.value!=0.0 or self.PMDEC.value!=0.0: 
-            if self.POSEPOCH.value==None:
-                if self.PEPOCH.value==None:
+            if self.POSEPOCH.value is None:
+                if self.PEPOCH.value is None:
                     raise MissingParameter("Astrometry","POSEPOCH",
                             "POSEPOCH or PEPOCH are required if PM is set.")
                 else:
@@ -73,7 +73,7 @@ class Astrometry(TimingModel):
         If epoch (MJD) is specified, proper motion is included to return 
         the position at the given epoch.
         """
-        if epoch==None:
+        if epoch is None:
             return coords.ICRS(ra=self.RA.value, dec=self.DEC.value)
         else:
             dt = (epoch - self.POSEPOCH.value) * u.day

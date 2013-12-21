@@ -1,6 +1,7 @@
 # spindown.py
 # Defines Spindown timing model class
-from timing_model import Parameter, TimingModel, MissingParameter
+import astropy.units as u
+from timing_model import Parameter, MJDParameter, TimingModel, MissingParameter
 
 class Spindown(TimingModel):
 
@@ -17,12 +18,10 @@ class Spindown(TimingModel):
             units="Hz/s", value=0.0, 
             description="Spin-down rate"))
 
-        self.add_param(Parameter(name="TZRMJD",
-            units="MJD", 
+        self.add_param(MJDParameter(name="TZRMJD",
             description="Reference epoch for phase"))
 
-        self.add_param(Parameter(name="PEPOCH",
-            units="MJD", 
+        self.add_param(MJDParameter(name="PEPOCH",
             description="Reference epoch for spin-down"))
 
         self.phase_funcs += [self.simple_spindown_phase,]
@@ -31,15 +30,15 @@ class Spindown(TimingModel):
         super(Spindown,self).setup()
         # Check for required params
         for p in ("F0",):
-            if getattr(self,p).value==None:
+            if getattr(self,p).value is None:
                 raise MissingParameter("Spindown",p)
         # If F1 is set, we need PEPOCH
         if self.F1.value!=0.0:
-            if self.PEPOCH.value==None:
+            if self.PEPOCH.value is None:
                 raise MissingParameter("Spindown","PEPOCH",
                         "PEPOCH is required if F1 is set")
 
-    def simple_spindown_phase(self,t_pulsar):
+    def simple_spindown_phase(self,toa,delay):
         """
         Placeholder function for simple spindown phase.
 
@@ -51,9 +50,11 @@ class Spindown(TimingModel):
         here to show the structure of how this will work.
         """
         # If TZRMJD is not defined, use the first time as phase reference
-        if self.TZRMJD.value==None:
-            self.TZRMJD.value = t_pulsar
-        dt = t_pulsar - self.TZRMJD.value
+        if self.TZRMJD.value is None:
+            self.TZRMJD.value = toa.mjd
+        dt = toa.mjd - self.TZRMJD.value
+        dt = dt - delay*u.s
         dt_pepoch = self.PEPOCH.value - self.TZRMJD.value
-        phase = self.F0.value*dt + 0.5*self.F1.value*dt*(dt-2.0*dt_pepoch)
+        phase = self.F0.value*dt.sec + 0.5*self.F1.value*dt.sec*(dt.sec 
+                - 2.0*dt_pepoch.sec)
         return phase
