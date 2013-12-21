@@ -48,10 +48,12 @@ def time_to_mjd_string(t, prec=15):
     Print an MJD time with lots of digits (number is 'prec').  astropy
     does not seem to provide this capability (yet?).
     """
-    xx = t.jd1 - astropy.time.core.MJD_ZERO
-    imjd = int(xx)
-    assert(imjd==float(xx))
-    fmjd = t.jd2
+    jd1 = t.jd1 - astropy.time.core.MJD_ZERO
+    imjd = int(jd1)
+    fjd1 = jd1 - imjd
+    fmjd = t.jd2 + fjd1
+    if fmjd >= 1.0:
+        imjd += 1
+        fmjd -= 1.0
     fmt = "%."+"%sf"%prec
     return str(imjd) + (fmt%fmjd)[1:]
-
