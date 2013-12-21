@@ -1,5 +1,6 @@
 # utils.py
 # Miscellaneous potentially-helpful functions
+import math
 import string
 import astropy.time
 
@@ -52,6 +53,7 @@ def time_to_mjd_string(t, prec=15):
     imjd = int(jd1)
     fjd1 = jd1 - imjd
     fmjd = t.jd2 + fjd1
+    assert(math.fabs(fmjd) < 2.0)
     if fmjd >= 1.0:
         imjd += 1
         fmjd -= 1.0
