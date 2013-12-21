@@ -55,5 +55,8 @@ def time_to_mjd_string(t, prec=15):
     if fmjd >= 1.0:
         imjd += 1
         fmjd -= 1.0
+    if fmjd < 0.0:
+        imjd -= 1
+        fmjd += 1.0
     fmt = "%."+"%sf"%prec
     return str(imjd) + (fmt%fmjd)[1:]
