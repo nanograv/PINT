@@ -1,5 +1,6 @@
 import re, sys
 import numpy
+import utils
 import observatories as obs
 import astropy.utils
 import astropy.time as time
@@ -132,7 +133,8 @@ class toa(object):
         self.flags = kwargs
 
     def __str__(self):
-        s = str(self.mjd) + ": %6.3f us error from '%s' at %.4f MHz " % \
+        s = utils.time_to_mjd_string(self.mjd) + \
+            ": %6.3f us error from '%s' at %.4f MHz " % \
             (self.error, self.obs, self.freq)
         if len(self.flags):
             s += str(self.flags)
@@ -228,7 +230,9 @@ class TOAs(object):
         corrections are available.  This routine actually changes
         the value of the TOA, although the correction is also listed
         as a new flag for the TOA called 'clkcorr' so that it can be
-        reversed if necessary.
+        reversed if necessary.  This routine also applies all 'TIME'
+        commands and treats them exactly as if they were a part of the
+        observatory clock corrections.
         """
         for obsname in self.observatories:
             mjds, ccorr = obs.get_clock_corr_vals(obsname)
@@ -238,8 +242,11 @@ class TOAs(object):
             tvals = [t.mjd.value for t in toas] 
             corrs = numpy.interp(tvals, mjds, ccorr)
             for corr, toa in zip(corrs, toas):
-                toa.flags["clkcorr"] = corr * u.us
-                toa.mjd += time.TimeDelta(corr * u.us)
+                corr *= u.us # the clock corrections are in microseconds
+                if "time" in toa.flags:
+                    corr += toa.flags["time"] * u.s # TIME commands are in sec
+                toa.flags["clkcorr"] = corr
+                toa.mjd += time.TimeDelta(corr)
 
     def to_table(self):
         """
