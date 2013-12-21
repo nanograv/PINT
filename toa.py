@@ -1,9 +1,10 @@
-import astropy.time as time
-import astropy.table as table
 import re, sys
 import numpy
 import observatories as obs
 import astropy.utils
+import astropy.time as time
+import astropy.table as table
+import astropy.units as u
 from astropy.utils.iers import IERS_A, IERS_A_URL
 from astropy.utils.data import download_file
 
@@ -164,21 +165,51 @@ class TOAs(object):
                 return self
 
     def get_freqs(self):
+        """
+        get_freqs()
+
+        Return a numpy array of the observing frequencies for the TOAs.
+        """
         return numpy.array([t.freq for t in self.toas])
 
     def get_mjds(self):
+        """
+        get_mjds()
+
+        Return a numpy array of the astropy.time MJDs of the TOAs.
+        """
         return numpy.array([t.mjd for t in self.toas])
 
     def get_errors(self):
+        """
+        get_errors()
+
+        Return a numpy array of the TOA errors.
+        """
         return numpy.array([t.error for t in self.toas])
 
     def get_obss(self):
+        """
+        get_obss()
+
+        Return a numpy array of the observatories for rach TOA.
+        """
         return numpy.array([t.obs for t in self.toas])
 
     def get_flags(self):
+        """
+        get_flags()
+
+        Return a numpy array of the TOA flags.
+        """
         return numpy.array([t.flags for t in self.toas])
 
     def summary(self):
+        """
+        summary()
+
+        Print a short summary of the TOAs.
+        """
         print "There are %d observatories:" % len(self.observatories), \
               list(self.observatories)
         print "There are %d TOAs" % len([x for x in self.toas])
@@ -189,7 +220,33 @@ class TOAs(object):
         print "Mean / Median / StDev TOA error:", errs.mean(), \
               numpy.median(errs), errs.std()
 
+    def apply_clock_corrections(self):
+        """
+        apply_clock_corrections()
+
+        Apply observatory clock corrections to all the TOAs where
+        corrections are available.  This routine actually changes
+        the value of the TOA, although the correction is also listed
+        as a new flag for the TOA called 'clkcorr' so that it can be
+        reversed if necessary.
+        """
+        for obsname in self.observatories:
+            mjds, ccorr = obs.get_clock_corr_vals(obsname)
+            # select the TOAs we will apply corrections to
+            toas = [t for t in self.toas if t.obs==obsname and
+                    "clkcorr" not in t.flags]
+            tvals = [t.mjd.value for t in toas] 
+            corrs = numpy.interp(tvals, mjds, ccorr)
+            for corr, toa in zip(corrs, toas):
+                toa.flags["clkcorr"] = corr * u.us
+                toa.mjd += time.TimeDelta(corr * u.us)
+
     def to_table(self):
+        """
+        to_table()
+
+        Convert the list of TOAs to an astropy table and store it in self.table
+        """
         self.table = table.Table([self.get_mjds(), self.get_errors(),
                                   self.get_freqs(), self.get_obss(),
                                   self.get_flags()],
@@ -199,9 +256,10 @@ class TOAs(object):
     def read_toa_file(self, filename, process_includes=True, top=True):
         """
         read_toa_file(filename, process_includes=True)
-            Read the given filename and return a list of toa objects 
-            parsed from it.  Will recurse to process INCLUDE-d files unless
-            process_includes is set to False.
+
+        Read the given filename and return a list of toa objects 
+        parsed from it.  Will recurse to process INCLUDE-d files unless
+        process_includes is set to False.
         """
         if top:
             self.toas = []
