@@ -2,69 +2,87 @@ import spice
 import sys
 import numpy as np
 
-###### load kernels  #######
-def loadKernel(fileName):  # fileName is a list of all the kernels with directoryneeded
-	for name in fileName:
-		if(fileName!=[]):
-			spice.furnsh(name)     # Load the kernels
-		else:
-			print "No Kernels has been loaded."
-		
+def loadKernel(filenames):
+    """
+    loadKernel(filenames)
 
-def objPosVel2SSB(objName,et):
-# Returns a solar system object position and velocity in J2000 ssb coordinate
-# Requires SPK,LPSK kernels
-# In J2000 ssb coordinate 
-	objName.upper()    # Make the object name upper level
-	state,lt = spice.spkezr(objName,et,"J2000","NONE","SSB")   
-	# Reading the position and velocity for a solar system object
-	# CALL SPKEZR(TARGET,ET,COORDINATE,CORRECTION,OBSERVOR)
-	# State is a vector. First three elements are position [x,y,z] in J2000 ssb
-	# Second three elements are velocity [dx/dt,dy/dt,dz/dt] in j2000
-	# Lt is the light time
-	
-	return state,lt
+    Read SPICE kernels in filenames (including full paths)
+    """
+    if type(filenames) is str:
+        spice.furnsh(filenames)
+    else:
+        for name in filenames:
+            spice.furnsh(name)
+
+def objPosVel2SSB(objname, et):
+    """
+    objPosVel2SSB(objname, et)
+    
+    Returns a solar system object position and velocity in J2000 SSB
+    coordinates.  Requires SPK and LPSK kernels in J2000 SSB coordinates.
+    """
+	# Reading the position and velocity for a solar system object CALL
+	# SPKEZR(TARGET,ET,COORDINATE,CORRECTION,OBSERVOR).
+	return spice.spkezr(objname.upper(), et, "J2000", "NONE", "SSB")
+
 
 def getobsJ2000(posITRF,et):
-# Returns observatory rectangular coordinates in J2000 Earth centered coordinate
-# Requires PCK kernels.
-# posITRF is a double vector of [x,y,z] in ITRF coordinate in km
+    """
+    getobsJ2000(posITRF,et)
+
+    Returns observatory rectangular coordinates in J2000 Earth
+    centered coordinates.  Requires PCK kernels.  posITRF is a double
+    precision vector of [x,y,z] in ITRF coordinate in km.
+    """
 	state = np.array(posITRF+[0,0,0])
-	xform = spice.sxform("ITRF93","J2000",et) 
 	# Transformation matrix from ITRF93 to J2000
 	# CALL SXFORM(COORDINATE FROM, COORDINATE TO, ET)
-	xform = np.matrix(xform)
-	jstate = np.dot(xform,state)
-	# Coordinate transformation.
-	# jstate is a vector. First three elements are position [x,y,z] in J2000 	earth centered
-        # Second three elements are velocity [dx/dt,dy/dt,dz/dt] in j2000 earth centered 
+	xform = np.matrix(spice.sxform("ITRF93", "J2000", et))
+	# Coordinate transformation.  jstate is a vector.  First three
+	# elements are position [x,y,z] in J2000 earth centered,
+    # second three elements are velocity [dx/dt,dy/dt,dz/dt] in J2000
+    # earth centered
+	jstate = np.dot(xform, state)
 	return jstate
 
 
 def ITRF2GEO(posITRF):
 	'''
-	Converts from earth rectangular coordinate to Geodetic coordinate, In put will be the rectangular three coordinates [x,y,z]
-	Kernerl file PCK is required .
+    ITRF2GEO(posITRF)
+    
+	Converts from earth rectangular coordinate to Geodetic coordinate,
+	Input will be the rectangular three coordinates [x,y,z].  Kernel
+	file PCK is required.
 	'''
-	dim,value = spice.bodvcd(399, "RADII", 3)
-	# Reuturns Earh radii [larger equatorial radius,smaller equatorial radius,polar radius]
-	# dim is the dimension of returned values
-	# Value is the returned values
- 	rEquatr   =  value[0]; 
-      	rPolar    =  value[2];
-	print rEquatr,rPolar
-	 # Calculate the flattening factor for earth 
-        f = (rEquatr - rPolar) / rEquatr
-	# Calculate the geodetic coordinate on earth. lon,lat are in radius. alt is the same unit with in put posITRF
-	lon,lat,alt = spice.recgeo(posITRF,rEquatr,f)
+	dim, value = spice.bodvcd(399, "RADII", 3)
+	# Reuturns Earh radii [larger equatorial radius, smaller
+	# equatorial radius, polar radius] dim is the dimension of
+	# returned values Value is the returned values
+ 	rEquatr = value[0]; 
+    rPolar = value[2];
+    # Calculate the flattening factor for earth 
+    f = (rEquatr - rPolar) / rEquatr
+	# Calculate the geodetic coordinate on earth. lon,lat are in
+	# radius. alt is the same unit with in put posITRF
+	lon, lat, alt = spice.recgeo(posITRF, rEquatr, f)
 	# Return longitude and latitude in degree
 	lonDeg = spice.convrt(lon, "RADIANS", "DEGREES")
 	latDeg = spice.convrt(lat, "RADIANS", "DEGREES")
-	return lon,lonDeg,lat,latDeg,alt
+	return lon, lonDeg, lat, latDeg, alt
 
 
+def ITRF_to_GEO_WGS84(xyz):
+    """
+    ITRF_to_GEO_WGS84(xyz)
 
-	
+    Convert ITRF x,y,z rectangular coords (m) to WGS-84 referenced
+    lat, lon, height (using astropy units).
+    """
+    # see http://en.wikipedia.org/wiki/World_Geodetic_System for constants
+    Re_wgs84, f_wgs84 = 6378137.0, 1.0/298.257223563
+    lat, lon, hgt = spice.recgeo(xyz, Re_wgs84, f_wgs84)
+    return [Angle(lat, unit=u.rad), Angle(lon, unit=u.rad), hgt * u.m]
+
 
 
  
