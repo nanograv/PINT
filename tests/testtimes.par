@@ -1,0 +1,11 @@
+PSRJ           J0000+0000
+RAJ            00:00:00.0000
+DECJ           +00:00:00.0000
+F0             100           
+PEPOCH         53000                       
+POSEPOCH       53000                       
+DMEPOCH        53000                       
+CLK            TT(TAI)
+EPHEM          DE405
+NITS           1
+UNITS          TDB
