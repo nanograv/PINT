@@ -1,6 +1,7 @@
 # utils.py
 # Miscellaneous potentially-helpful functions
 import string
+import mpmath
 import astropy.time
 
 def fortran_float(x):
@@ -38,3 +39,24 @@ def time_to_mjd_string(t):
     imjd = int(t.jd1 - astropy.time.core.MJD_ZERO)
     fmjd = t.jd2
     return str(imjd) + ('%.15f'%fmjd)[1:]
+
+def time_to_mjd_mpf(t):
+    """
+    time_to_mjd_mpf(t)
+
+    Return an astropy Time value as MJD in mpmath float format.  
+    mpmath.mp.dps needs to be set to the desired precision before 
+    calling this.
+    """
+    return mpmath.mpf(t.jd1 - astropy.time.core.MJD_ZERO) \
+            + mpmath.mpf(t.jd2)
+
+def timedelta_to_mpf_sec(t):
+    """
+    timedelta_to_mpf_sec(t):
+
+    Return astropy TimeDelta as mpmath value in seconds.
+    """
+    return (mpmath.mpf(t.jd1) 
+            + mpmath.mpf(t.jd2))*astropy.time.core.SECS_PER_DAY
+
