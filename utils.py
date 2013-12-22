@@ -14,9 +14,9 @@ def fortran_float(x):
     """
     return float(x.translate(string.maketrans('Dd','ee')))
 
-def time_from_mjd_string(s):
+def time_from_mjd_string(s, scale='utc'):
     """
-    timse_from_mjd_string(s)
+    timse_from_mjd_string(s, scale='utc')
 
     Returns an astropy Time object generated from a MJD string input.
     """
@@ -38,8 +38,7 @@ def time_from_mjd_string(s):
         imjd_s, fmjd_s = ss.split('.')
         imjd = int(imjd_s)
         fmjd = float("0." + fmjd_s)
-    # TODO: what to do about scale?
-    return astropy.time.Time(imjd, fmjd, scale='utc', format='mjd',
+    return astropy.time.Time(imjd, fmjd, scale=scale, format='mjd',
                              precision=9)
 
 def time_to_mjd_string(t, prec=15):
