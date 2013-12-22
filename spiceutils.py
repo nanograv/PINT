@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import astropy.units as u
 from astropy.coordinates.angles import Angle
+from astropy.coordinates import Longitude, Latitude
 
 def loadKernel(filenames):
     """
@@ -70,14 +71,18 @@ def ITRF2GEO(posITRF):
     return lon, lonDeg, lat, latDeg, alt
 
 
-def ITRF_to_GEO_WGS84(xyz):
+def ITRF_to_GEO_WGS84(x, y, z):
     """
-    ITRF_to_GEO_WGS84(xyz)
+    ITRF_to_GEO_WGS84(x, y, z)
 
-    Convert ITRF x,y,z rectangular coords (m) to WGS-84 referenced
+    Convert ITRF x, y, z rectangular coords (m) to WGS-84 referenced
     lon, lat, height (using astropy units).
     """
     # see http://en.wikipedia.org/wiki/World_Geodetic_System for constants
     Re_wgs84, f_wgs84 = 6378137.0, 1.0/298.257223563
-    lon, lat, hgt = spice.recgeo(xyz, Re_wgs84, f_wgs84)
-    return Angle(lon, unit=u.rad), Angle(lat, unit=u.rad), hgt * u.m
+    lon, lat, hgt = spice.recgeo((x.to(u.m).value,
+                                  y.to(u.m).value,
+                                  z.to(u.m).value), Re_wgs84, f_wgs84)
+    return Longitude(lon, 'radian', wrap_angle='180d'), \
+           Latitude(lat, 'radian'), hgt * u.m
+

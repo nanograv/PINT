@@ -3,6 +3,7 @@
 import math
 import string
 import astropy.time
+import astropy.units as u
 
 def fortran_float(x):
     """
@@ -61,3 +62,18 @@ def time_to_mjd_string(t, prec=15):
         fmjd += 1.0
     fmt = "%."+"%sf"%prec
     return str(imjd) + (fmt%fmjd)[1:]
+
+
+def GEO_WGS84_to_ITRF(lon, lat, hgt):
+    """
+    GEO_WGS84_to_ITRF(lon, lat, hgt):
+
+    Convert WGS-84 references lon, lat, height (using astropy
+    units) to ITRF x,y,z rectangular coords (m)
+    .
+    """
+    x, y, z = astropy.time.erfa_time.era_gd2gc(1, lon.to(u.rad).value,
+                                               lat.to(u.rad).value,
+                                               hgt.to(u.m).value)
+    return x * u.m, y * u.m, z * u.m
+

@@ -53,7 +53,7 @@ def read_observatories():
                 obs.name = vals[0]
                 xyz_vals = (float(vals[1]), float(vals[2]), float(vals[3]))
                 obs.xyz = [a * u.m for a in xyz_vals]
-                obs.geo = spiceutils.ITRF_to_GEO_WGS84(xyz_vals)
+                obs.geo = spiceutils.ITRF_to_GEO_WGS84(*obs.xyz)
                 obs.aliases = [obs.name.upper()]+[x.upper() for x in vals[4:]]
                 observatories[obs.name] = obs
     return observatories
