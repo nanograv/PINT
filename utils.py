@@ -1,8 +1,10 @@
 # utils.py
 # Miscellaneous potentially-helpful functions
+import math
 import string
 import mpmath
 import astropy.time
+import astropy.units as u
 
 def fortran_float(x):
     """
@@ -14,31 +16,53 @@ def fortran_float(x):
     """
     return float(x.translate(string.maketrans('Dd','ee')))
 
-def time_from_mjd_string(s):
+def time_from_mjd_string(s, scale='utc'):
     """
-    time_from_mjd_string(s)
+    timse_from_mjd_string(s, scale='utc')
 
     Returns an astropy Time object generated from a MJD string input.
     """
-    imjd_s,fmjd_s = s.split('.')
-    imjd = int(imjd_s)
-    fmjd = float("0." + fmjd_s)
-    # TODO: what to do about scale?
-    return astropy.time.Time(imjd,fmjd,scale='utc',format='mjd',
-            precision=9)
+    ss = s.lower()
+    if ("e" in ss or "d" in ss):
+        ss = ss.translate(string.maketrans("d", "e"))
+        num, expon = ss.split("e")
+        expon = int(expon)
+        if (expon < 0):
+            print "Warning:  likely bogus sci notation input in time_from_mjd_string ('%s')!" % s
+            # This could cause a loss of precision...
+            # maybe throw an exception instead?
+            imjd, fmjd = 0, float(ss)
+        else:
+            imjd_s, fmjd_s = num.split('.')
+            imjd = int(imjd_s + fmjd_s[:expon])
+            fmjd = float("0."+fmjd_s[expon:])
+    else:
+        imjd_s, fmjd_s = ss.split('.')
+        imjd = int(imjd_s)
+        fmjd = float("0." + fmjd_s)
+    return astropy.time.Time(imjd, fmjd, scale=scale, format='mjd',
+                             precision=9)
 
-def time_to_mjd_string(t):
+def time_to_mjd_string(t, prec=15):
     """
-    time_to_mjd_string(t)
+    time_to_mjd_string(t, prec=15)
 
-    print an MJD time with lots of digits.  astropy does not
-    seem to provide this capability..
+    Print an MJD time with lots of digits (number is 'prec').  astropy
+    does not seem to provide this capability (yet?).
     """
-    # XXX Assume that that jd1 represents an integer MJD, and jd2 
-    # is the frac part.. is this legit??
-    imjd = int(t.jd1 - astropy.time.core.MJD_ZERO)
-    fmjd = t.jd2
-    return str(imjd) + ('%.15f'%fmjd)[1:]
+    jd1 = t.jd1 - astropy.time.core.MJD_ZERO
+    imjd = int(jd1)
+    fjd1 = jd1 - imjd
+    fmjd = t.jd2 + fjd1
+    assert(math.fabs(fmjd) < 2.0)
+    if fmjd >= 1.0:
+        imjd += 1
+        fmjd -= 1.0
+    if fmjd < 0.0:
+        imjd -= 1
+        fmjd += 1.0
+    fmt = "%."+"%sf"%prec
+    return str(imjd) + (fmt%fmjd)[1:]
 
 def time_to_mjd_mpf(t):
     """
@@ -59,4 +83,17 @@ def timedelta_to_mpf_sec(t):
     """
     return (mpmath.mpf(t.jd1) 
             + mpmath.mpf(t.jd2))*astropy.time.core.SECS_PER_DAY
+
+def GEO_WGS84_to_ITRF(lon, lat, hgt):
+    """
+    GEO_WGS84_to_ITRF(lon, lat, hgt):
+
+    Convert WGS-84 references lon, lat, height (using astropy
+    units) to ITRF x,y,z rectangular coords (m)
+    .
+    """
+    x, y, z = astropy.time.erfa_time.era_gd2gc(1, lon.to(u.rad).value,
+                                               lat.to(u.rad).value,
+                                               hgt.to(u.m).value)
+    return x * u.m, y * u.m, z * u.m
 
