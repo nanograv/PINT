@@ -75,9 +75,9 @@ def ITRF_to_GEO_WGS84(xyz):
     ITRF_to_GEO_WGS84(xyz)
 
     Convert ITRF x,y,z rectangular coords (m) to WGS-84 referenced
-    lat, lon, height (using astropy units).
+    lon, lat, height (using astropy units).
     """
     # see http://en.wikipedia.org/wiki/World_Geodetic_System for constants
     Re_wgs84, f_wgs84 = 6378137.0, 1.0/298.257223563
-    lat, lon, hgt = spice.recgeo(xyz, Re_wgs84, f_wgs84)
-    return Angle(lat, unit=u.rad), Angle(lon, unit=u.rad), hgt * u.m
+    lon, lat, hgt = spice.recgeo(xyz, Re_wgs84, f_wgs84)
+    return Angle(lon, unit=u.rad), Angle(lat, unit=u.rad), hgt * u.m
