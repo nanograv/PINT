@@ -12,22 +12,18 @@ class Phase(namedtuple('Phase','int frac')):
     float or mpmath value), or separately provided integer and fractional
     parts, depending on what precision is required.  For example:
 
-    # Set the precision to 20 digits:
-    mpmath.mp.dps = 20
-    # Phase from mpmath float:
-    p1 = Phase(mpmath.mpf("12345.12345678901234567890"))
-
-    # Phase from integer and fractional components:
-    p2 = Phase(12345,0.12345678901234567890)
-
-    # Phase from standard python float:
-    p3 = Phase(12345.12345678901234567890)
-
-    print p1 - p2
-    >>> Phase(int=0, frac=0.0)
-
-    print p1 - p3
-    >>> Phase(int=0, frac=8.752859548266656e-13)
+    >>> # Set the precision to 20 digits:
+    >>> mpmath.mp.dps = 20
+    >>> # Phase from mpmath float:
+    >>> p1 = Phase(mpmath.mpf("12345.12345678901234567890"))
+    >>> # Phase from integer and fractional components:
+    >>> p2 = Phase(12345,0.12345678901234567890)
+    >>> # Phase from standard python float:
+    >>> p3 = Phase(12345.12345678901234567890)
+    >>> print p1 - p2
+    Phase(int=0, frac=0.0)
+    >>> print p1 - p3
+    Phase(int=0, frac=8.752859548266656e-13)
 
     """
     __slots__ = ()
