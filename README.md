@@ -18,6 +18,14 @@ early stages of development.
  - Michele Vallisneri
  - Rutget van Haasteren
 
+## Required pacakges/libraries
+
+ - numpy
+ - mpmath
+ - astropy, http://astropy.org
+ - PySPICE, http://github.com/rca/PySPICE
+ - python ERFA interface (?)
+
 ## Some design philosophy
 
  - Emphasis on modularity
