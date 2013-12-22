@@ -1,10 +1,14 @@
 # spindown.py
 # Defines Spindown timing model class
+import mpmath
 import astropy.units as u
 from timing_model import Parameter, MJDParameter, TimingModel, MissingParameter
+from phase import Phase
+from utils import timedelta_to_mpf_sec
 
 class Spindown(TimingModel):
 
+    @mpmath.workdps(20)
     def __init__(self):
         super(Spindown,self).__init__()
 
@@ -12,6 +16,7 @@ class Spindown(TimingModel):
             units="Hz", 
             description="Spin frequency",
             aliases=["F"],
+            parse_value=mpmath.mpf,
             print_value=lambda x: '%.15f'%x))
 
         self.add_param(Parameter(name="F1",
@@ -38,23 +43,27 @@ class Spindown(TimingModel):
                 raise MissingParameter("Spindown","PEPOCH",
                         "PEPOCH is required if F1 is set")
 
+    @mpmath.workdps(20)
     def simple_spindown_phase(self,toa,delay):
         """
         Placeholder function for simple spindown phase.
 
-        Note t_pulsar is the time of emission at the pulsar, not
-        the time of arrival at earth.
+        toa is a single toa object
+        
+        delay is the time delay from the TOA to time of pulse emission
+          at the pulsar, in seconds.
 
-        Still need to figure out data types for times, make
-        sure the right precision is in use, etc.  For now, this is 
-        here to show the structure of how this will work.
+        returns a Phase object
+
+        TODO:
+          make delay input have astropy units?
+          mpmath used internally but need to check for precision issues
         """
         # If TZRMJD is not defined, use the first time as phase reference
         if self.TZRMJD.value is None:
             self.TZRMJD.value = toa.mjd
         dt = toa.mjd - self.TZRMJD.value
-        dt = dt - delay*u.s
-        dt_pepoch = self.PEPOCH.value - self.TZRMJD.value
-        phase = self.F0.value*dt.sec + 0.5*self.F1.value*dt.sec*(dt.sec 
-                - 2.0*dt_pepoch.sec)
-        return phase
+        dt = timedelta_to_mpf_sec(dt - delay*u.s)
+        dt_pepoch = timedelta_to_mpf_sec(self.PEPOCH.value-self.TZRMJD.value)
+        phase = (self.F0.value + 0.5*self.F1.value*(dt-2.0*dt_pepoch))*dt
+        return Phase(phase)

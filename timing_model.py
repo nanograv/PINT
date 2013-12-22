@@ -2,6 +2,7 @@
 # Defines the basic timing model interface classes
 import string
 from utils import fortran_float, time_from_mjd_string, time_to_mjd_string
+from phase import Phase
 
 class Parameter(object):
     """
@@ -171,7 +172,7 @@ class TimingModel(object):
         """
         # First compute the delay to "pulsar time"
         delay = self.compute_delay(toa)
-        phase = 0.0
+        phase = Phase(0,0.0)
 
         # Then compute the relevant pulse phase
         for pf in self.phase_funcs:
