@@ -2,6 +2,7 @@ import re, sys
 import numpy
 import utils
 import observatories as obs
+import erfautils
 import astropy.utils
 import astropy.time as time
 import astropy.table as table
@@ -255,6 +256,17 @@ class TOAs(object):
                 toa.mjd.lon = toa.lon
                 toa.mjd.lat = toa.lat
                 toa.mjd.precision = 9
+
+    def compute_posvels(self):
+        """
+        compute_posvels()
+
+        Compute the positions and velocities of the observatories
+        for each TOA.  The units are meters and meters / UT1 sec.
+        """
+        for toa in self.toas:
+            xyz = observatories[toa.obs].xyz
+            toa.pos, toa.vel = erfautils.topo_posvels(xyz, toa.mjd)
 
     def to_table(self):
         """
