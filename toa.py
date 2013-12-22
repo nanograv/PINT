@@ -121,10 +121,14 @@ class toa(object):
                  **kwargs):  # keyword args that are completely optional
         try:
             self.mjd = time.Time(*MJD, scale=scale, format='mjd',
-                                 lat=observatories[obs].geo[0].deg,
-                                 lon=observatories[obs].geo[1].deg,
+                                 lon=observatories[obs].geo[0],
+                                 lat=observatories[obs].geo[1],
                                  precision=9)
-            self.mjd.delta_ut1_utc = self.mjd.get_delta_ut1_utc(iers_a)
+            self.delta_ut1_utc = self.mjd.get_delta_ut1_utc(iers_a)
+            self.lon = observatories[obs].geo[0]
+            self.lat = observatories[obs].geo[1]
+            # Note:  Everytime we update the toas, we need to reset this!
+            self.mjd.delta_ut1_utc = self.delta_ut1_utc
         except:
             "Error processing MJD for TOA:", MJD
         self.error = error
@@ -247,6 +251,10 @@ class TOAs(object):
                     corr += toa.flags["time"] * u.s # TIME commands are in sec
                 toa.flags["clkcorr"] = corr
                 toa.mjd += time.TimeDelta(corr)
+                toa.mjd.delta_ut1_utc = toa.delta_ut1_utc
+                toa.mjd.lon = toa.lon
+                toa.mjd.lat = toa.lat
+                toa.mjd.precision = 9
 
     def to_table(self):
         """
