@@ -1,4 +1,4 @@
-import re, sys, os
+import re, sys, os, mpmath
 import numpy
 import utils
 import observatories as obs
@@ -258,6 +258,7 @@ class TOAs(object):
                 toa.mjd.lat = toa.lat
                 toa.mjd.precision = 9
 
+    @mpmath.workdps(20)
     def compute_posvels(self, ephem="DE405"):
         """
         compute_posvels(ephem='DE405')
@@ -271,16 +272,17 @@ class TOAs(object):
         # Load the appropriate JPL ephemeris
         pth = os.path.join(os.getenv("PINT"), "datafiles")
         spice.furnsh(os.path.join(pth, "%s.bsp"%ephem.lower()))
-        j2000 = time.Time('2000-01-01 00:00:00', scale='utc')
+        j2000 = time.Time('2000-01-01 12:00:00', scale='utc')
         for toa in self.toas:
             xyz = observatories[toa.obs].xyz
             toa.obs_pvs = erfautils.topo_posvels(xyz, toa.mjd)
             # SPICE expects ephemeris time to be in sec past J2000 TDB
             # We need to figure out how to get the correct time...
-            #et = (toa.mjd.tdb.mjd - j2000.tdb.mjd) * 86400.0
-            et = (toa.mjd.tdb.mjd - j2000.mjd) * 86400.0
-            #et = (toa.mjd.tdb - j2000).sec
-            pvs, lt = spice.spkezr("EARTH", et, "J2000", "NONE", "SSB")
+            #et = (toa.mjd.tdb.mjd - j2000.mjd) * 86400.0
+            tdb_toa = utils.time_to_mjd_mpf(toa.mjd.tdb)
+            j2000_mjd = utils.time_to_mjd_mpf(j2000)
+            et = (tdb_toa - j2000_mjd) * 86400.0
+            pvs, lt = spice.spkezr("EARTH", float(et), "J2000", "NONE", "SSB")
             pos = pvs[:3] * u.Unit('km')
             vel = pvs[3:] * u.Unit('km / s')
             toa.earth_pvs = utils.PosVel(pos, vel)

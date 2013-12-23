@@ -42,16 +42,14 @@ for line, toa in zip(goodlines, ts.toas):
     print "SSB-Earth:"
     print "   T2:", t2_epv.pos.to(ls), t2_epv.vel.to(ls/u.s)
     print " PINT:", toa.earth_pvs.pos.to(ls), toa.earth_pvs.vel.to(ls/u.s)
+    dssb = toa.earth_pvs - t2_epv
+    print " diff:", dssb.pos.to(ls), dssb.vel.to(ls/u.s)
 
     print "topocenter:"
     print "   T2:", t2_opv.pos.to(u.m), t2_opv.vel.to(u.m/u.s)
     print " PINT:", toa.obs_pvs.pos.to(u.m), toa.obs_pvs.vel.to(u.m/u.s)
-
-    #dssb = toa.earth_pvs - t2_epv
-    #print "SSB:", dssb.pos.to(ls), dssb.vel.to(u.km/u.s)
-
-    #dgeo = toa.obs_pvs - t2_opv
-    #print "GEO:", dgeo.pos.to(u.km), dgeo.vel.to(u.km/u.s)
+    dgeo = toa.obs_pvs - t2_opv
+    print " diff:", dgeo.pos.to(u.m), dgeo.vel.to(u.m/u.s)
 
     # Where in the heck is TEMPO2's ut1-utc correction?!?
     #print toa.mjd.delta_ut1_utc[0], ut1_utc, ttcorr-tai_utc-tt_tai, \
