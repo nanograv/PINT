@@ -1,10 +1,52 @@
 # utils.py
 # Miscellaneous potentially-helpful functions
 import math
+import numpy
 import string
 import mpmath
 import astropy.time
 import astropy.units as u
+
+class PosVel(object):
+    """
+    PosVel(pos, vel)
+
+    The class is used to represent the 6 values describing position
+    and velocity vectors.  Instances have 'pos' and 'vel' attributes
+    that are numpy arrays of floats (and can have attached astropy
+    units).  The 'pos' and 'vel' params are 3-vectors of the positions
+    and velocities respectively.
+    """
+    def __init__(self, pos, vel):
+        try:
+            assert(len(pos)==3)
+            if isinstance(pos, u.Quantity):
+                self.pos = pos
+            else:
+                self.pos = numpy.asarray(pos)
+        except:
+            print "PosVel: input pos vector is not in correct format!", pos
+        try:
+            assert(len(vel)==3)
+            if isinstance(vel, u.Quantity):
+                self.vel = vel
+            else:
+                self.vel = numpy.asarray(vel)
+        except:
+            print "PosVel: input vel vector is not in correct format!", vel
+
+    def __neg__(self):
+        return PosVel(-self.pos, -self.vel)
+
+    def __add__(self, other):
+        return PosVel(self.pos + other.pos, self.vel + other.vel)
+
+    def __sub__(self, other):
+        return self.__add__(other.__neg__())
+
+    def __str__(self):
+        return str(self.pos)+", "+str(self.vel)
+
 
 def fortran_float(x):
     """
@@ -15,6 +57,7 @@ def fortran_float(x):
     notation in tempo1-generated parfiles.
     """
     return float(x.translate(string.maketrans('Dd','ee')))
+
 
 def time_from_mjd_string(s, scale='utc'):
     """
@@ -43,6 +86,7 @@ def time_from_mjd_string(s, scale='utc'):
     return astropy.time.Time(imjd, fmjd, scale=scale, format='mjd',
                              precision=9)
 
+
 def time_to_mjd_string(t, prec=15):
     """
     time_to_mjd_string(t, prec=15)
@@ -64,6 +108,7 @@ def time_to_mjd_string(t, prec=15):
     fmt = "%."+"%sf"%prec
     return str(imjd) + (fmt%fmjd)[1:]
 
+
 def time_to_mjd_mpf(t):
     """
     time_to_mjd_mpf(t)
@@ -75,6 +120,7 @@ def time_to_mjd_mpf(t):
     return mpmath.mpf(t.jd1 - astropy.time.core.MJD_ZERO) \
             + mpmath.mpf(t.jd2)
 
+
 def timedelta_to_mpf_sec(t):
     """
     timedelta_to_mpf_sec(t):
@@ -83,6 +129,7 @@ def timedelta_to_mpf_sec(t):
     """
     return (mpmath.mpf(t.jd1) 
             + mpmath.mpf(t.jd2))*astropy.time.core.SECS_PER_DAY
+
 
 def GEO_WGS84_to_ITRF(lon, lat, hgt):
     """

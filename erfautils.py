@@ -1,4 +1,4 @@
-import math
+import math, utils, numpy
 import astropy.units as u
 import erfa
 
@@ -6,7 +6,7 @@ def topo_posvels(xyz, toa):
     """
     topo_posvels(xyz, toa)
 
-    This routine returns a tuple of 2 tuples, containing
+    This routine returns a PosVel instance , containing
     the positions (m) and velocities (m / UT1 s) at the
     time of the toa and referenced to the ITRF geocentric
     coordinates.  This routine is basically SOFA's Pvtob().
@@ -29,12 +29,13 @@ def topo_posvels(xyz, toa):
     s, c = math.sin(theta), math.cos(theta)
 
     # Position
-    pos = c*x - s*y, s*x + c*y, z
+    pos = numpy.asarray([c*x - s*y, s*x + c*y, z]) * u.m
 
     # Earth rotation rate in radians per UT1 second
     OM = 1.00273781191135448 * 2 * math.pi / erfa.DAYSEC
 
     # Velocity
-    vel = OM * (-s*x - c*y), OM * (c*x - s*y), 0.0
+    vel = numpy.asarray([OM * (-s*x - c*y),
+                         OM * (c*x - s*y), 0.0]) * u.Unit("m / s")
 
-    return pos, vel
+    return utils.PosVel(pos, vel)

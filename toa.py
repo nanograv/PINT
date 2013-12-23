@@ -1,8 +1,9 @@
-import re, sys
+import re, sys, os
 import numpy
 import utils
 import observatories as obs
 import erfautils
+import spice
 import astropy.utils
 import astropy.time as time
 import astropy.table as table
@@ -257,16 +258,33 @@ class TOAs(object):
                 toa.mjd.lat = toa.lat
                 toa.mjd.precision = 9
 
-    def compute_posvels(self):
+    def compute_posvels(self, ephem="DE405"):
         """
-        compute_posvels()
+        compute_posvels(ephem='DE405')
 
-        Compute the positions and velocities of the observatories
-        for each TOA.  The units are meters and meters / UT1 sec.
+        Compute the positions and velocities of the observatory (wrt
+        the Geocenter) and the center of the Earth (referenced to the
+        SSB) for each TOA.  The JPL solar system ephemeris can be set
+        using the 'ephem' parameter.  The positions and velocities are
+        set with PosVel class instances which have astropy units.
         """
+        # Load the appropriate JPL ephemeris
+        pth = os.path.join(os.getenv("PINT"), "datafiles")
+        spice.furnsh(os.path.join(pth, "%s.bsp"%ephem.lower()))
+        j2000 = time.Time('2000-01-01 00:00:00', scale='utc')
         for toa in self.toas:
             xyz = observatories[toa.obs].xyz
-            toa.pos, toa.vel = erfautils.topo_posvels(xyz, toa.mjd)
+            toa.obs_pvs = erfautils.topo_posvels(xyz, toa.mjd)
+            # SPICE expects ephemeris time to be in sec past J2000 TDB
+            # We need to figure out how to get the correct time...
+            #et = (toa.mjd.tdb.mjd - j2000.tdb.mjd) * 86400.0
+            et = (toa.mjd.tdb.mjd - j2000.mjd) * 86400.0
+            #et = (toa.mjd.tdb - j2000).sec
+            pvs, lt = spice.spkezr("EARTH", et, "J2000", "NONE", "SSB")
+            pos = pvs[:3] * u.Unit('km')
+            vel = pvs[3:] * u.Unit('km / s')
+            toa.earth_pvs = utils.PosVel(pos, vel)
+            toa.pvs = toa.obs_pvs + toa.earth_pvs
 
     def to_table(self):
         """
