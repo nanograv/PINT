@@ -13,7 +13,7 @@ ts.compute_posvels()
 # print ts.summary()
 
 #cmd = 'tempo2 -output general2 -f tests/testtimes.par tests/testtimes.tim -s "XXX {clock0} {clock1} {clock2} {clock3} {tt} {t2tb} {telSSB} {telVel} {Ttt}\n"'
-cmd = 'tempo2 -output general2 -f tests/testtimes.par tests/testtimes.tim -s "XXX {clock0} {clock1} {clock2} {clock3} {tt} {t2tb} {earth_ssb1} {earth_ssb2} {earth_ssb3} {earth_ssb4} {earth_ssb5} {earth_ssb6} {telSSB} {telVel} {Ttt}\n"'
+cmd = 'tempo2 -output general2 -f tests/testtimes.par tests/testtimes.tim -s "XXX {clock0} {clock1} {clock2} {clock3} {tt} {t2tb} {earth_ssb1} {earth_ssb2} {earth_ssb3} {earth_ssb4} {earth_ssb5} {earth_ssb6} {telEpos} {telEVel} {Ttt}\n"'
 args = shlex.split(cmd)
 
 tout = subprocess.check_output(args)
@@ -30,7 +30,7 @@ for line, toa in zip(goodlines, ts.toas):
     t2_epv = utils.PosVel(numpy.asarray([ep0, ep1, ep2]) * ls,
                           numpy.asarray([ev0, ev1, ev2]) * ls/u.s)
     t2_opv = utils.PosVel(numpy.asarray([tp0, tp1, tp2]) * ls,
-                          numpy.asarray([tv0, tv1, tv2]) * ls/u.s) - t2_epv
+                          numpy.asarray([tv0, tv1, tv2]) * ls/u.s)
     # print utils.time_toq_mjd_string(toa.mjd.tt), line.split()[-1]
     tempo_tt = utils.time_from_mjd_string(line.split()[-1], scale='tt') 
     # Ensure that the clock corrections are accurate to better than 0.1 ns
@@ -49,6 +49,9 @@ for line, toa in zip(goodlines, ts.toas):
     print "   T2:", t2_opv.pos.to(u.m), t2_opv.vel.to(u.m/u.s)
     print " PINT:", toa.obs_pvs.pos.to(u.m), toa.obs_pvs.vel.to(u.m/u.s)
     dgeo = toa.obs_pvs - t2_opv
+    xx = dgeo.pos / numpy.sqrt(numpy.dot(toa.obs_pvs.pos, toa.obs_pvs.pos))
+    xx = numpy.sqrt(numpy.dot(xx, xx))
+    print (xx * u.rad).to(u.arcsec)
     print " diff:", dgeo.pos.to(u.m), dgeo.vel.to(u.m/u.s)
 
     # Where in the heck is TEMPO2's ut1-utc correction?!?
