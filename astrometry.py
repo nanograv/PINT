@@ -92,6 +92,16 @@ class Astrometry(TimingModel):
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
         return self.coords_as_ICRS(epoch=epoch).cartesian
 
+    def barycentric_radio_freq(self,toa):
+        """
+        barycentric_radio_freq(toa)
+
+        Return radio freq of TOA corrected for Earth motion
+        """
+        L_hat = self.ssb_to_psb_xyz(epoch=toa.mjd)
+        v_dot_L = toa.pvs.vel.dot(L_hat)
+        return toa.freq * (1.0 - v_dot_L / const.c)
+
     def solar_system_geometric_delay(self,toa):
         """
         solar_system_geometric_delay(toa)
