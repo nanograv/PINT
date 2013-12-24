@@ -117,7 +117,7 @@ class Parameter(object):
             if int(k[2])>0: 
                 self.frozen = False
         if len(k)==4:
-            self.uncertainty = float(k[3])
+            self.uncertainty = fortran_float(k[3])
         return True
 
 class MJDParameter(Parameter):
