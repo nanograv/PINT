@@ -166,12 +166,12 @@ class TimingModel(object):
         for par in self.params:
             print getattr(self,par).help_line()
 
-    def compute_phase(self, toa):
+    def phase(self, toa):
         """
-        Compute the model-predicted pulse phase for the given toa.
+        Return the model-predicted pulse phase for the given toa.
         """
         # First compute the delay to "pulsar time"
-        delay = self.compute_delay(toa)
+        delay = self.delay(toa)
         phase = Phase(0,0.0)
 
         # Then compute the relevant pulse phase
@@ -181,9 +181,9 @@ class TimingModel(object):
                                     # how to add/subtract from it, etc.
         return phase
 
-    def compute_delay(self, toa):
+    def delay(self, toa):
         """
-        Compute the total delay which will be subtracted from the given
+        Return the total delay which will be subtracted from the given
         TOA to get time of emission at the pulsar.
         """
         delay = 0.0

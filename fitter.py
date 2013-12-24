@@ -18,9 +18,9 @@ class resids(object):
     def get_phase(self):
         
         # Compute predicted phase for given input model and TOAs. Right now, the
-        # function compute_phase doesn't return an array for an array of input
+        # function phase() doesn't return an array for an array of input
         # TOAs, so we must loop. We might want to change this.
-        return self.model.compute_phase(self.toas)
+        return self.model.phase(self.toas)
 
     def intPhase(self,ph):
         
