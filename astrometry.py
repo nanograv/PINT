@@ -78,7 +78,6 @@ class Astrometry(TimingModel):
             dt = epoch - self.POSEPOCH.value
             dRA = dt * self.PMRA.value*(u.mas/u.yr) / numpy.cos(self.DEC.value)
             dDEC = dt * self.PMDEC.value*(u.mas/u.yr)
-            print dRA.__repr__()
             return coords.ICRS(ra=self.RA.value+dRA, dec=self.DEC.value+dDEC)
     
     def ssb_to_psb_xyz(self,epoch=None):
