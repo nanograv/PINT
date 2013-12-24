@@ -6,7 +6,7 @@ import astropy.coordinates as coords
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
-from timing_model import Parameter, TimingModel, MissingParameter
+from timing_model import Parameter, MJDParameter, TimingModel, MissingParameter
 
 # No light-seconds in astropy, WTF? ;)
 ls = u.def_unit('ls', const.c * 1.0 * u.s)
@@ -32,8 +32,7 @@ class Astrometry(TimingModel):
             print_value=lambda x: x.to_string(sep=':',
                 alwayssign=True, precision=8)))
 
-        self.add_param(Parameter(name="POSEPOCH",
-            units="MJD",
+        self.add_param(MJDParameter(name="POSEPOCH",
             description="Reference epoch for position"))
 
         self.add_param(Parameter(name="PMRA",
@@ -76,9 +75,10 @@ class Astrometry(TimingModel):
         if epoch is None:
             return coords.ICRS(ra=self.RA.value, dec=self.DEC.value)
         else:
-            dt = (epoch - self.POSEPOCH.value) * u.day
-            dRA = self.PMRA.value*(u.mas/u.yr) * dt / numpy.cos(self.DEC.value)
-            dDEC = self.PMDEC.value*(u.mas/u.yr) * dt
+            dt = epoch - self.POSEPOCH.value
+            dRA = dt * self.PMRA.value*(u.mas/u.yr) / numpy.cos(self.DEC.value)
+            dDEC = dt * self.PMDEC.value*(u.mas/u.yr)
+            print dRA.__repr__()
             return coords.ICRS(ra=self.RA.value+dRA, dec=self.DEC.value+dDEC)
     
     def ssb_to_psb_xyz(self,epoch=None):
@@ -102,8 +102,8 @@ class Astrometry(TimingModel):
         NOTE: currently assumes XYZ location of TOA relative to SSB is
         available as 3-vector toa.xyz, in units of light-seconds.
         """
-        L_hat = self.ssb_to_psb_xyz(epoch=toa.mjd.mjd)
-        re_dot_L_ls = numpy.dot(L_hat,toa.xyz)
+        L_hat = self.ssb_to_psb_xyz(epoch=toa.mjd)
+        re_dot_L_ls = numpy.dot(L_hat,toa.obs_pvs.pos)
         delay = -re_dot_L_ls
         if self.PX.value!=0.0:
             L_ls = ((1.0/self.PX.value)*u.kpc).to(ls).value
