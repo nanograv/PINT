@@ -53,10 +53,10 @@ class Parameter(object):
 
     def __str__(self):
         out = self.name
-        if self.units!=None:
+        if self.units is not None:
             out += " (" + str(self.units) + ")"
         out += " " + self.print_value(self.value)
-        if self.uncertainty!=None:
+        if self.uncertainty is not None:
             out += " +/- " + str(self.uncertainty)
         return out
 
@@ -78,7 +78,7 @@ class Parameter(object):
         Return a help line containing param name, description and units.
         """
         out = "%-12s %s" % (self.name, self.description)
-        if self.units != None:
+        if self.units is not None:
             out += ' (' + str(self.units) + ')'
         return out
 
