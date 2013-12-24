@@ -76,8 +76,9 @@ class Astrometry(TimingModel):
             return coords.ICRS(ra=self.RA.value, dec=self.DEC.value)
         else:
             dt = epoch - self.POSEPOCH.value
-            dRA = dt * self.PMRA.value*(u.mas/u.yr) / numpy.cos(self.DEC.value)
-            dDEC = dt * self.PMDEC.value*(u.mas/u.yr)
+            dRA = (dt * self.PMRA.value * (u.mas/u.yr)
+                    / numpy.cos(self.DEC.value)).to(u.mas)
+            dDEC = (dt * self.PMDEC.value * (u.mas/u.yr)).to(u.mas)
             return coords.ICRS(ra=self.RA.value+dRA, dec=self.DEC.value+dDEC)
     
     def ssb_to_psb_xyz(self,epoch=None):
@@ -102,11 +103,11 @@ class Astrometry(TimingModel):
         available as 3-vector toa.xyz, in units of light-seconds.
         """
         L_hat = self.ssb_to_psb_xyz(epoch=toa.mjd)
-        re_dot_L_ls = numpy.dot(L_hat,toa.obs_pvs.pos)
-        delay = -re_dot_L_ls
+        re_dot_L = toa.obs_pvs.pos.dot(L_hat)
+        delay = -re_dot_L.to(ls).value
         if self.PX.value!=0.0:
-            L_ls = ((1.0/self.PX.value)*u.kpc).to(ls).value
-            re_ls_sqr = numpy.dot(toa.xyz,toa.xyz)
-            delay += 0.5*(re_ls_sqr/L_ls)*(1.0-re_dot_L_ls**2)
+            L = ((1.0/self.PX.value)*u.kpc)
+            re_sqr = toa.obs_pvs.pos.dot(toa.obs_pvs.pos)
+            delay += (0.5*(re_sqr/L)*(1.0-re_dot_L**2/re_sqr)).to(ls).value
         return delay
 
