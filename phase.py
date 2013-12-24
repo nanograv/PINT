@@ -37,6 +37,12 @@ class Phase(namedtuple('Phase','int frac')):
         else:
             ii = int(arg1) + int(arg2)
             ff = float(arg2 - int(arg2))
+        if ff<-0.5:
+            ff+=1.0
+            ii-=1
+        elif ff>0.5:
+            ff-=1.0
+            ii+=1
         return super(Phase,cls).__new__(cls,ii,ff)
 
     def __neg__(self):
