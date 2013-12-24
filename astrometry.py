@@ -103,11 +103,11 @@ class Astrometry(TimingModel):
         available as 3-vector toa.xyz, in units of light-seconds.
         """
         L_hat = self.ssb_to_psb_xyz(epoch=toa.mjd)
-        re_dot_L = toa.obs_pvs.pos.dot(L_hat)
+        re_dot_L = toa.pvs.pos.dot(L_hat)
         delay = -re_dot_L.to(ls).value
         if self.PX.value!=0.0:
             L = ((1.0/self.PX.value)*u.kpc)
-            re_sqr = toa.obs_pvs.pos.dot(toa.obs_pvs.pos)
+            re_sqr = toa.pvs.pos.dot(toa.pvs.pos)
             delay += (0.5*(re_sqr/L)*(1.0-re_dot_L**2/re_sqr)).to(ls).value
         return delay
 
