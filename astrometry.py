@@ -100,7 +100,7 @@ class Astrometry(TimingModel):
         """
         L_hat = self.ssb_to_psb_xyz(epoch=toa.mjd)
         v_dot_L = toa.pvs.vel.dot(L_hat)
-        return toa.freq * (1.0 - v_dot_L / const.c)
+        return toa.freq * (1.0 - v_dot_L / const.c).value
 
     def solar_system_geometric_delay(self,toa):
         """
