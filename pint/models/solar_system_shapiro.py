@@ -2,7 +2,7 @@
 # Add in Shapiro delays due to solar system objects
 from warnings import warn
 import astropy.units as u
-from timing_model import Parameter, TimingModel, MissingParameter
+from .timing_model import Parameter, TimingModel, MissingParameter
 
 class SolarSystemShapiro(TimingModel):
 

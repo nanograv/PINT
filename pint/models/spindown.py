@@ -3,9 +3,9 @@
 import mpmath
 import astropy.units as u
 from astropy.time.core import SECS_PER_DAY
-from timing_model import Parameter, MJDParameter, TimingModel, MissingParameter
-from phase import Phase
-from utils import timedelta_to_mpf_sec, time_to_mjd_mpf
+from .timing_model import Parameter, MJDParameter, TimingModel, MissingParameter
+from ..phase import Phase
+from ..utils import timedelta_to_mpf_sec, time_to_mjd_mpf
 
 class Spindown(TimingModel):
 
