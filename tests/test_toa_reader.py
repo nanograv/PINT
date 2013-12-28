@@ -1,4 +1,4 @@
-import toa
+from pint import toa
 
 x = toa.TOAs("tests/test1.tim")
 
