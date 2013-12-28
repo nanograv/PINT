@@ -1,8 +1,6 @@
 #! /usr/bin/env python
 import sys
-import timing_model as tm
-from astrometry import Astrometry
-from spindown import Spindown
+import pint.models as tm
 
 try:
     parfile
@@ -16,7 +14,7 @@ if parfile==None:
         print "usage: test_parfile.py (parfile)"
         sys.exit(0)
 
-TestModel = tm.generate_timing_model("TestModel",(Astrometry,Spindown))
+TestModel = tm.generate_timing_model("TestModel",(tm.Astrometry,tm.Spindown))
 m = TestModel()
 
 print "model.param_help():"
