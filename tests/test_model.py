@@ -1,12 +1,12 @@
 #! /usr/bin/env python
 
-import timing_model as tm
-from astrometry import Astrometry
-from spindown import Spindown
-from dispersion import Dispersion
+import models as tm
 from phase import Phase
 
-Model = tm.generate_timing_model("Model",(Spindown,Astrometry,Dispersion))
+Model = tm.generate_timing_model("Model",(
+    tm.Spindown,
+    tm.Astrometry,
+    tm.Dispersion))
 m = Model()
 m.read_parfile('J1744-1134.basic.par')
 
