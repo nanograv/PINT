@@ -2,9 +2,10 @@
 # Defines Spindown timing model class
 import mpmath
 import astropy.units as u
+from astropy.time.core import SECS_PER_DAY
 from timing_model import Parameter, MJDParameter, TimingModel, MissingParameter
 from phase import Phase
-from utils import timedelta_to_mpf_sec
+from utils import timedelta_to_mpf_sec, time_to_mjd_mpf
 
 class Spindown(TimingModel):
 
@@ -60,10 +61,14 @@ class Spindown(TimingModel):
           mpmath used internally but need to check for precision issues
         """
         # If TZRMJD is not defined, use the first time as phase reference
+        # NOTE, all of this ignores TZRSITE and TZRFRQ for the time being.
         if self.TZRMJD.value is None:
-            self.TZRMJD.value = toa.mjd
-        dt = toa.mjd - self.TZRMJD.value
-        dt = timedelta_to_mpf_sec(dt - delay*u.s)
+            self.TZRMJD.value = toa.mjd - delay*u.s
+        dt = (time_to_mjd_mpf(toa.mjd.tdb) 
+                - time_to_mjd_mpf(self.TZRMJD.value.tdb)) * SECS_PER_DAY
+        dt -= delay
+        # TODO: what timescale should we use for pepoch calculation?
+        # Does this even matter?
         dt_pepoch = timedelta_to_mpf_sec(self.PEPOCH.value-self.TZRMJD.value)
         phase = (self.F0.value + 0.5*self.F1.value*(dt-2.0*dt_pepoch))*dt
         return Phase(phase)
