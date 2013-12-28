@@ -1,5 +1,6 @@
 # dispersion.py
 # Simple (constant) ISM dispersion measure
+from warnings import warn
 import astropy 
 import astropy.units as u
 from timing_model import Parameter, TimingModel, MissingParameter
@@ -22,7 +23,7 @@ class Dispersion(TimingModel):
         try:
             bfreq = self.barycentric_radio_freq(toa)
         except AttributeError:
-            print "warning: using topocentric frequency for dedispersion!"
+            warn("Using topocentric frequency for dedispersion!")
             bfreq = toa.freq
 
         # TODO: name DM constant

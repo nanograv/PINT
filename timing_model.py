@@ -1,6 +1,7 @@
 # timing_model.py
 # Defines the basic timing model interface classes
 import string
+from warnings import warn
 from utils import fortran_float, time_from_mjd_string, time_to_mjd_string
 from phase import Phase
 
@@ -221,7 +222,7 @@ class TimingModel(object):
                 if getattr(self,par).from_parfile_line(l):
                     parsed = True
             if not parsed:
-                print "warning: unrecognized parfile line '%s'" % l
+                warn("Unrecognized parfile line '%s'" % l)
 
         # The "setup" functions contain tests for required parameters or
         # combinations of parameters, etc, that can only be done

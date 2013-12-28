@@ -3,6 +3,7 @@
 import math
 import numpy
 import string
+from warnings import warn
 import mpmath
 import astropy.time
 import astropy.units as u
@@ -71,7 +72,7 @@ def time_from_mjd_string(s, scale='utc'):
         num, expon = ss.split("e")
         expon = int(expon)
         if (expon < 0):
-            print "Warning:  likely bogus sci notation input in time_from_mjd_string ('%s')!" % s
+            warn("Likely bogus sci notation input in time_from_mjd_string ('%s')!" % s)
             # This could cause a loss of precision...
             # maybe throw an exception instead?
             imjd, fmjd = 0, float(ss)
