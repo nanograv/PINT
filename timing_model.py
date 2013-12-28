@@ -90,7 +90,7 @@ class Parameter(object):
         # Don't print unset parameters
         if self.value is None: 
             return ""
-        line = "%-10s %25s" % (self.name, self.print_value(self.value))
+        line = "%-15s %25s" % (self.name, self.print_value(self.value))
         if self.uncertainty is not None:
             line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty))
         elif not self.frozen:
