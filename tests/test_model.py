@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
-import models as tm
-from phase import Phase
+import pint.models as tm
+from pint.phase import Phase
 
 Model = tm.generate_timing_model("Model",(
     tm.Spindown,
@@ -13,7 +13,7 @@ m.read_parfile('J1744-1134.basic.par')
 print "model.as_parfile():"
 print m.as_parfile()
 
-import toa
+from pint import toa
 t = toa.TOAs('J1744-1134.Rcvr1_2.GASP.8y.x.tim')
 t.apply_clock_corrections()
 t.compute_posvels()
