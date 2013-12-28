@@ -1,4 +1,4 @@
-import toa, utils
+from pint import toa, utils
 import math, shlex, subprocess, numpy
 import astropy.constants as const
 import astropy.units as u
