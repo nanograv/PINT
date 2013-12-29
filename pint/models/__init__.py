@@ -9,3 +9,6 @@ from .dispersion import Dispersion
 from .spindown import Spindown
 from .solar_system_shapiro import SolarSystemShapiro
 
+# Define a standard basic model
+StandardTimingModel = generate_timing_model("StandardTimingModel",
+        (Astrometry, Spindown, Dispersion, SolarSystemShapiro))
