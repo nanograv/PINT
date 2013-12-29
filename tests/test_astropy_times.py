@@ -27,11 +27,11 @@ y = '2006-01-15 21:25:43.322690'
 assert(x==y)
 print "Checking TT-TDB"
 x = t.tdb.iso
-y = '2006-01-15 21:25:42.683799'
+y = '2006-01-15 21:25:42.684372'
 assert(x==y)
 print "Checking TT-TCB"
 x = t.tcb.iso
-y = '2006-01-15 21:25:56.893378'
+y = '2006-01-15 21:25:56.893951'
 assert(x==y)
 
 
