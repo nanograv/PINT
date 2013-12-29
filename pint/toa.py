@@ -289,13 +289,11 @@ class TOAs(object):
             toa.pvs = toa.obs_pvs + toa.earth_pvs
 
             # Obs to Sun PV:
-            # TODO check sign of these..
-            toa.obs_sun_pvs = objPosVel("SUN","EARTH",et) + toa.obs_pvs
+            toa.obs_sun_pvs = objPosVel("SUN","EARTH",et) - toa.obs_pvs
             if planets:
-                # TODO do planet vectors also
-                pass
-
-            
+                for p in ('jupiter','saturn','venus','uranus'):
+                    pv = objPosVel(p.upper(),"EARTH",et) - toa.obs_pvs
+                    setattr(toa, 'obs_'+p+'_pvs', pv)
 
     def to_table(self):
         """
