@@ -10,6 +10,7 @@ import astropy.table as table
 import astropy.units as u
 from astropy.utils.iers import IERS_A, IERS_A_URL
 from astropy.utils.data import download_file
+from spiceutils import objPosVel
 
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
@@ -259,7 +260,7 @@ class TOAs(object):
                 toa.mjd.precision = 9
 
     @mpmath.workdps(20)
-    def compute_posvels(self, ephem="DE405"):
+    def compute_posvels(self, ephem="DE405", planets=False):
         """
         compute_posvels(ephem='DE405')
 
@@ -282,11 +283,19 @@ class TOAs(object):
             tdb_toa = utils.time_to_mjd_mpf(toa.mjd.tdb)
             j2000_mjd = utils.time_to_mjd_mpf(j2000)
             et = (tdb_toa - j2000_mjd) * 86400.0
-            pvs, lt = spice.spkezr("EARTH", float(et), "J2000", "NONE", "SSB")
-            pos = pvs[:3] * u.Unit('km')
-            vel = pvs[3:] * u.Unit('km / s')
-            toa.earth_pvs = utils.PosVel(pos, vel)
+
+            # SSB to observatory position/velocity:
+            toa.earth_pvs = objPosVel("EARTH","SSB",et)
             toa.pvs = toa.obs_pvs + toa.earth_pvs
+
+            # Obs to Sun PV:
+            # TODO check sign of these..
+            toa.obs_sun_pvs = objPosVel("SUN","EARTH",et) + toa.obs_pvs
+            if planets:
+                # TODO do planet vectors also
+                pass
+
+            
 
     def to_table(self):
         """

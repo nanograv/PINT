@@ -4,6 +4,7 @@ import numpy as np
 import astropy.units as u
 from astropy.coordinates.angles import Angle
 from astropy.coordinates import Longitude, Latitude
+from .utils import PosVel
 
 def loadKernel(filenames):
     """
@@ -16,7 +17,22 @@ def loadKernel(filenames):
     else:
         for name in filenames:
             spice.furnsh(name)
-            
+
+def objPosVel(obj1, obj2, et):
+    """
+    objPosVel(obj1, obj2, et)
+
+    Returns position/velocity vectors between obj1 and obj2 as a 
+    PosVel object at the given time.
+
+    et is in spice format (TDB seconds past J2000 epoch)
+    """
+    # TODO: 
+    #  - maybe this should be a PosVel __init__ method instead?
+    #  - accept an astropy time rather than et as input?
+    pv, lt = spice.spkezr(obj1, float(et), "J2000", "NONE", obj2)
+    return PosVel(pv[:3]*u.km, pv[3:]*u.km/u.s)
+
 
 def objPosVel2SSB(objname, et):
     """
