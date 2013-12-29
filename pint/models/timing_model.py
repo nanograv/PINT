@@ -1,6 +1,7 @@
 # timing_model.py
 # Defines the basic timing model interface classes
 import string
+import functools
 from warnings import warn
 from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string
 from ..phase import Phase
@@ -139,12 +140,20 @@ class MJDParameter(Parameter):
                 parse_value=time_from_mjd_string,
                 print_value=time_to_mjd_string)
 
+class Cache(object):
+    """
+    The Cache class is for temporarily caching timing model parameter
+    results.  By itself it does not do anything.
+    """
+    pass
+
 class TimingModel(object):
 
     def __init__(self):
         self.params = []  # List of model parameter names
         self.delay_funcs = [] # List of delay component functions
         self.phase_funcs = [] # List of phase component functions
+        self.cache = None
 
         self.add_param(Parameter(name="PSR",
             units=None,
@@ -167,10 +176,34 @@ class TimingModel(object):
         for par in self.params:
             print getattr(self,par).help_line()
 
+    def enable_cache(self):
+        """
+        Run once to initialize a cache in which intermediate results
+        can be stored.  To have a function cache its result, define
+        it with @TimingModel.cache_result.
+        """
+        if self.cache is not None:
+            # A cache exists already.. should this raise an exception,
+            # use the existing cache, or clear the existing cache??
+            # For now, use existing one.
+            pass
+        else:
+            self.cache = Cache()
+
+    def disable_cache(self):
+        """
+        Clear/disable the function result cache.
+        """
+        self.cache = None
+
     def phase(self, toa):
         """
         Return the model-predicted pulse phase for the given toa.
         """
+
+        # Use the cache while in here
+        self.enable_cache()
+
         # First compute the delay to "pulsar time"
         delay = self.delay(toa)
         phase = Phase(0,0.0)
@@ -180,6 +213,10 @@ class TimingModel(object):
             phase += pf(toa,delay)  # This is just a placeholder until we
                                     # define what datatype 'toa' has, and
                                     # how to add/subtract from it, etc.
+
+        # Delete the cache when we're done
+        self.disable_cache()
+
         return phase
 
     def delay(self, toa):
@@ -228,6 +265,42 @@ class TimingModel(object):
         # combinations of parameters, etc, that can only be done
         # after the entire parfile is read
         self.setup()
+
+    @classmethod
+    def cache_result(cls,function):
+        """
+        This can be applied as a decorator to any timing model method
+        for which it might be useful to store the value, once computed
+        for a given TOA.  Note that the cache must be manually enabled
+        and cleared when appropriate, so this functionality should be
+        used with care.
+        """
+        the_func = function.__name__
+        the_cache = "cache"
+        @functools.wraps(function)
+        def get_cached_result(*args,**kwargs):
+            #print "Checking for cached value of", the_func
+            # What to do about checking for a change of arguments?
+            # args[0] should be a "self"
+            if hasattr(args[0], the_cache):
+                cache = getattr(args[0], the_cache)
+                if isinstance(cache, Cache):
+                    if hasattr(cache, the_func):
+                        # Return the cached value
+                        #print " ... using cached result"
+                        return getattr(cache, the_func)
+                    else:
+                        # Evaluate the function and cache the results
+                        #print " ... computing new result"
+                        result = function(*args, **kwargs)
+                        setattr(cache, the_func, result)
+                        return result
+            # Couldn't access the cache, just return the result
+            # without caching it.
+            #print " ... no cache found"
+            return function(*args, **kwargs)
+        return get_cached_result
+
 
 def generate_timing_model(name,components):
     """
