@@ -16,15 +16,15 @@ early stages of development.
  - Scott Ransom
  - Chris Sheehy
  - Michele Vallisneri
- - Rutget van Haasteren
+ - Rutger van Haasteren
 
-## Required pacakges/libraries
+## Required packages/libraries
 
  - numpy
  - mpmath
- - astropy, http://astropy.org
- - PySPICE, http://github.com/rca/PySPICE
- - python ERFA interface (?)
+ - astropy (development version): http://github.com/astropy/astropy
+ - PySPICE: http://github.com/rca/PySPICE
+ - ERFA python: http://github.com/nirinA/erfa_python
 
 ## Some design philosophy
 
@@ -44,5 +44,3 @@ early stages of development.
  - Backwards compatible with TEMPO
  - Use of defined constants
  - Unittests (hopefully.  Volunteers for this would be appreciated.)
-
-

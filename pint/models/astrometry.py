@@ -8,9 +8,7 @@ import astropy.constants as const
 from astropy.coordinates.angles import Angle
 from .timing_model import Parameter, MJDParameter, TimingModel, \
         MissingParameter, Cache
-
-# No light-seconds in astropy, WTF? ;)
-ls = u.def_unit('ls', const.c * 1.0 * u.s)
+from pint import ls
 
 class Astrometry(TimingModel):
 

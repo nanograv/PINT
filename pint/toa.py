@@ -292,7 +292,8 @@ class TOAs(object):
             toa.obs_sun_pvs = objPosVel("SUN","EARTH",et) - toa.obs_pvs
             if planets:
                 for p in ('jupiter','saturn','venus','uranus'):
-                    pv = objPosVel(p.upper(),"EARTH",et) - toa.obs_pvs
+                    pv = objPosVel(p.upper()+" BARYCENTER",
+                            "EARTH",et) - toa.obs_pvs
                     setattr(toa, 'obs_'+p+'_pvs', pv)
 
     def to_table(self):

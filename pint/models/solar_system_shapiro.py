@@ -2,26 +2,12 @@
 # Add in Shapiro delays due to solar system objects
 from warnings import warn
 import numpy
-import astropy.units as u
 import astropy.constants as const
 from .timing_model import Parameter, TimingModel, MissingParameter
-
-# TODO: define this in a single place somewhere
-ls = u.def_unit('ls', const.c * 1.0 * u.s)
+from .. import Tsun, Tmercury, Tvenus, Tearth, Tmars, \
+        Tjupiter, Tsaturn, Turanus, Tneptune
 
 class SolarSystemShapiro(TimingModel):
-
-    # Masses for relevant solar system bodies in seconds, copied
-    # from tempo2.h.
-    # TODO: read these from a more standardized place (ephem files?)
-    ss_mass_sec = {
-            'sun': 4.925490947e-6,
-            'jupiter': 4.70255e-9,
-            'saturn': 1.40797e-9,
-            'venus': 1.2061e-11,
-            'uranus': 2.14539e-10,
-            'neptune': 2.54488e-10
-            }
 
     def __init__(self):
         super(SolarSystemShapiro, self).__init__()
@@ -36,6 +22,18 @@ class SolarSystemShapiro(TimingModel):
 
     def setup(self):
         super(SolarSystemShapiro,self).setup()
+
+
+    # Put masses in a convenient dictionary
+    _ss_mass_sec = {"sun": Tsun.value,
+                   "mercury": Tmercury.value,
+                   "venus": Tvenus.value,
+                   "earth": Tearth.value,
+                   "mars": Tmars.value,
+                   "jupiter": Tjupiter.value,
+                   "saturn": Tsaturn.value,
+                   "uranus": Turanus.value,
+                   "neptune": Tneptune.value}
 
     @staticmethod
     def ss_obj_shapiro_delay(obj_pos, psr_dir, T_obj):
@@ -75,15 +73,15 @@ class SolarSystemShapiro(TimingModel):
 
         # Sun
         delay += self.ss_obj_shapiro_delay(toa.obs_sun_pvs.pos, 
-                psr_dir,
-                self.ss_mass_sec['sun'])
-
+                                           psr_dir,
+                                           self._ss_mass_sec['sun'])
+        
         if self.PLANET_SHAPIRO.value:
             for pl in ('jupiter','saturn','venus','uranus'):
                 delay += self.ss_obj_shapiro_delay(
-                        getattr(toa, 'obs_'+pl+'_pvs').pos,
-                        psr_dir,
-                        self.ss_mass_sec[pl])
-
+                    getattr(toa, 'obs_'+pl+'_pvs').pos,
+                    psr_dir,
+                    self._ss_mass_sec[pl])
+                
         return delay
 
