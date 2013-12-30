@@ -18,7 +18,7 @@ early stages of development.
  - Michele Vallisneri
  - Rutger van Haasteren
 
-## Required pacakges/libraries
+## Required packages/libraries
 
  - numpy
  - mpmath
@@ -44,5 +44,3 @@ early stages of development.
  - Backwards compatible with TEMPO
  - Use of defined constants
  - Unittests (hopefully.  Volunteers for this would be appreciated.)
-
-
