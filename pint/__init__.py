@@ -26,14 +26,3 @@ Tjupiter = Tsun / 1047.3486
 Tsaturn = Tsun / 3497.898
 Turanus = Tsun / 22902.98
 Tneptune = Tsun / 19412.24
-
-# For use in models.solar_system_shapiro
-ss_mass_sec = {"sun": Tsun.value,
-               "mercury": Tmercury.value,
-               "venus": Tvenus.value,
-               "earth": Tearth.value,
-               "mars": Tmars.value,
-               "jupiter": Tjupiter.value,
-               "saturn": Tsaturn.value,
-               "uranus": Turanus.value,
-               "neptune": Tneptune.value}

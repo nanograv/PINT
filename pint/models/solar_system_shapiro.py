@@ -4,7 +4,8 @@ from warnings import warn
 import numpy
 import astropy.constants as const
 from .timing_model import Parameter, TimingModel, MissingParameter
-from pint import ss_mass_sec
+from .. import Tsun, Tmercury, Tvenus, Tearth, Tmars, \
+        Tjupiter, Tsaturn, Turanus, Tneptune
 
 class SolarSystemShapiro(TimingModel):
 
@@ -21,6 +22,18 @@ class SolarSystemShapiro(TimingModel):
 
     def setup(self):
         super(SolarSystemShapiro,self).setup()
+
+
+    # Put masses in a convenient dictionary
+    _ss_mass_sec = {"sun": Tsun.value,
+                   "mercury": Tmercury.value,
+                   "venus": Tvenus.value,
+                   "earth": Tearth.value,
+                   "mars": Tmars.value,
+                   "jupiter": Tjupiter.value,
+                   "saturn": Tsaturn.value,
+                   "uranus": Turanus.value,
+                   "neptune": Tneptune.value}
 
     @staticmethod
     def ss_obj_shapiro_delay(obj_pos, psr_dir, T_obj):
@@ -61,14 +74,14 @@ class SolarSystemShapiro(TimingModel):
         # Sun
         delay += self.ss_obj_shapiro_delay(toa.obs_sun_pvs.pos, 
                                            psr_dir,
-                                           ss_mass_sec['sun'])
+                                           self._ss_mass_sec['sun'])
         
         if self.PLANET_SHAPIRO.value:
             for pl in ('jupiter','saturn','venus','uranus'):
                 delay += self.ss_obj_shapiro_delay(
                     getattr(toa, 'obs_'+pl+'_pvs').pos,
                     psr_dir,
-                    ss_mass_sec[pl])
+                    self._ss_mass_sec[pl])
                 
         return delay
 
