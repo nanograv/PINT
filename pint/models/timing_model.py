@@ -8,7 +8,7 @@ from ..phase import Phase
 class Parameter(object):
     """
     Parameter(name=None, value=None, units=None, description=None, 
-                uncertainty=None, frozen=True, aliases=[],
+                uncertainty=None, frozen=True, continuous=True, aliases=[],
                 parse_value=float, print_value=str)
 
         Class describing a single timing model parameter.  Takes the following
@@ -27,6 +27,9 @@ class Parameter(object):
         frozen is a flag specifying whether "fitters" should adjust the
           value of this parameter or leave it fixed.
 
+        continuous is flag specifying whether phase derivatives with 
+          respect to this parameter exist.
+
         aliases is an optional list of strings specifying alternate names
           that can also be accepted for this parameter.
 
@@ -40,7 +43,7 @@ class Parameter(object):
     """
 
     def __init__(self, name=None, value=None, units=None, description=None, 
-            uncertainty=None, frozen=True, aliases=[],
+            uncertainty=None, frozen=True, aliases=[], continuous=True,
             parse_value=fortran_float, print_value=str):
         self.value = value
         self.name = name
@@ -48,6 +51,7 @@ class Parameter(object):
         self.description = description
         self.uncertainty = uncertainty
         self.frozen = frozen
+        self.continuous = continuous
         self.aliases = aliases
         self.parse_value=parse_value
         self.print_value=print_value
@@ -131,11 +135,13 @@ class MJDParameter(Parameter):
     """
 
     def __init__(self, name=None, value=None, description=None, 
-            uncertainty=None, frozen=True, aliases=[],
+            uncertainty=None, frozen=True, continuous=True, aliases=[],
             parse_value=fortran_float, print_value=str):
         super(MJDParameter,self).__init__(name=name,value=value,
-                units="MJD", description=description, 
-                uncertainty=uncertainty, frozen=frozen, aliases=aliases,
+                units="MJD", description=description,
+                uncertainty=uncertainty, frozen=frozen, 
+                continuous=continuous,
+                aliases=aliases,
                 parse_value=time_from_mjd_string,
                 print_value=time_to_mjd_string)
 
@@ -145,6 +151,12 @@ class TimingModel(object):
         self.params = []  # List of model parameter names
         self.delay_funcs = [] # List of delay component functions
         self.phase_funcs = [] # List of phase component functions
+
+        # Derivatives of phase and delay with respect to params
+        self.delay_derivs = {}
+        self.phase_derivs = {}
+        # Derivative of phase with respect to pulsar time
+        self.d_phase_funcs = []
 
         self.add_param(Parameter(name="PSR",
             units=None,
@@ -156,8 +168,15 @@ class TimingModel(object):
         pass
 
     def add_param(self, param):
+        # If the parameter has already been defined this is an error
+        if hasattr(self,param.name):
+            raise DuplicateParameter(param.name)
         setattr(self, param.name, param)
         self.params += [param.name,]
+        if param.continuous:
+            # Set up entries for derivative functions
+            self.delay_derivs[param.name] = []
+            self.phase_derivs[param.name] = []
 
     def param_help(self):
         """
@@ -191,6 +210,41 @@ class TimingModel(object):
         for df in self.delay_funcs:
             delay += df(toa)
         return delay
+
+    def d_phase_d_tpulsar(self,toa):
+        """
+        Return the derivative of phase wrt time at the pulsar.
+        NOT Implemented
+        """
+        pass
+
+    def d_phase_d_toa(self,toa):
+        """
+        Return the derivative of phase wrt TOA (ie the current apparent
+        spin freq of the pulsar at the observatory).
+        NOT Implemented yet.
+        """
+        pass
+
+    def d_phase_d_param(self,toa,param):
+        """
+        Return the derivative of phase with respect to the parameter.
+        NOTE, not implemented yet
+        """
+        result = 0.0
+        # TODO need to do correct chain rule stuff wrt delay derivs, etc
+        # Is it safe to assume that any param affecting delay only affects
+        # phase indirectly (and vice-versa)??
+        return result
+
+    def d_delay_d_param(self,toa,param):
+        """
+        Return the derivative of delay with respect to the parameter.
+        """
+        result = 0.0
+        for f in self.delay_derivs[param]:
+            result += f(toa)
+        return result
 
     def __str__(self):
         result = ""
@@ -266,6 +320,21 @@ class MissingParameter(TimingModelError):
 
     def __str__(self):
         result = self.module + "." + self.param
+        if self.msg is not None:
+            result += "\n  " + self.msg
+        return result
+
+class DuplicateParameter(TimingModelError):
+    """
+    This exception is raised if a model parameter is defined (added)
+    multiple times.
+    """
+    def __init__(self,param,msg=None):
+        self.param = param
+        self.msg = msg
+
+    def __str__(self):
+        result = self.param
         if self.msg is not None:
             result += "\n  " + self.msg
         return result
