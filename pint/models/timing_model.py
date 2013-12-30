@@ -142,10 +142,81 @@ class MJDParameter(Parameter):
 
 class Cache(object):
     """
-    The Cache class is for temporarily caching timing model parameter
-    results.  By itself it does not do anything.
+    The Cache class is for temporarily caching timing model internal 
+    computation results.  It defines two decorators, use_cache
+    and cache_result.
     """
-    pass
+
+    # The name of the cache attribute
+    the_cache = "cache"
+
+    @classmethod
+    def cache_result(cls,function):
+        """
+        This can be applied as a decorator to any timing model method
+        for which it might be useful to store the value, once computed
+        for a given TOA.  Note that the cache must be manually enabled
+        and cleared when appropriate, so this functionality should be
+        used with care.
+        """
+        the_func = function.__name__
+        @functools.wraps(function)
+        def get_cached_result(*args,**kwargs):
+            #print "Checking for cached value of", the_func
+            # What to do about checking for a change of arguments?
+            # args[0] should be a "self"
+            if hasattr(args[0], cls.the_cache):
+                cache = getattr(args[0], cls.the_cache)
+                if isinstance(cache, cls):
+                    if hasattr(cache, the_func):
+                        # Return the cached value
+                        #print " ... using cached result"
+                        return getattr(cache, the_func)
+                    else:
+                        # Evaluate the function and cache the results
+                        #print " ... computing new result"
+                        result = function(*args, **kwargs)
+                        setattr(cache, the_func, result)
+                        return result
+            # Couldn't access the cache, just return the result
+            # without caching it.
+            #print " ... no cache found"
+            return function(*args, **kwargs)
+        return get_cached_result
+
+    @classmethod
+    def use_cache(cls,function):
+        """
+        This can be applied as a decorator to a function that should
+        internally use caching of function return values.  The cache
+        will be deleted when the function exits.  If the top-level function
+        calls other functions that have caching enabled they will share 
+        the cache, and it will only be deleted when the top-level function
+        exits.
+        """
+        @functools.wraps(function)
+        def use_cached_results(*args,**kwargs):
+            # args[0] should be a "self"
+            # Test whether a cache attribute is present
+            if hasattr(args[0],cls.the_cache):
+                cache = getattr(args[0], cls.the_cache)
+                # Test whether caching is already enabled
+                if isinstance(cache, cls):
+                    # Yes, just execute the function
+                    return function(*args,**kwargs)
+                else:
+                    # Init the cache, excute the function, then delete cache
+                    cache = cls()
+                    result = function(*args,**kwargs)
+                    cache = None
+                    return result
+            else:
+                # no "self.cache" attrib is found.  Could raise an error, or
+                # just execute the function normally.
+                return function(*args,**kwargs)
+        return use_cached_results
+
+
 
 class TimingModel(object):
 
@@ -176,34 +247,11 @@ class TimingModel(object):
         for par in self.params:
             print getattr(self,par).help_line()
 
-    def enable_cache(self):
-        """
-        Run once to initialize a cache in which intermediate results
-        can be stored.  To have a function cache its result, define
-        it with @TimingModel.cache_result.
-        """
-        if self.cache is not None:
-            # A cache exists already.. should this raise an exception,
-            # use the existing cache, or clear the existing cache??
-            # For now, use existing one.
-            pass
-        else:
-            self.cache = Cache()
-
-    def disable_cache(self):
-        """
-        Clear/disable the function result cache.
-        """
-        self.cache = None
-
+    @Cache.use_cache
     def phase(self, toa):
         """
         Return the model-predicted pulse phase for the given toa.
         """
-
-        # Use the cache while in here
-        self.enable_cache()
-
         # First compute the delay to "pulsar time"
         delay = self.delay(toa)
         phase = Phase(0,0.0)
@@ -214,11 +262,9 @@ class TimingModel(object):
                                     # define what datatype 'toa' has, and
                                     # how to add/subtract from it, etc.
 
-        # Delete the cache when we're done
-        self.disable_cache()
-
         return phase
 
+    @Cache.use_cache
     def delay(self, toa):
         """
         Return the total delay which will be subtracted from the given
@@ -265,42 +311,6 @@ class TimingModel(object):
         # combinations of parameters, etc, that can only be done
         # after the entire parfile is read
         self.setup()
-
-    @classmethod
-    def cache_result(cls,function):
-        """
-        This can be applied as a decorator to any timing model method
-        for which it might be useful to store the value, once computed
-        for a given TOA.  Note that the cache must be manually enabled
-        and cleared when appropriate, so this functionality should be
-        used with care.
-        """
-        the_func = function.__name__
-        the_cache = "cache"
-        @functools.wraps(function)
-        def get_cached_result(*args,**kwargs):
-            #print "Checking for cached value of", the_func
-            # What to do about checking for a change of arguments?
-            # args[0] should be a "self"
-            if hasattr(args[0], the_cache):
-                cache = getattr(args[0], the_cache)
-                if isinstance(cache, Cache):
-                    if hasattr(cache, the_func):
-                        # Return the cached value
-                        #print " ... using cached result"
-                        return getattr(cache, the_func)
-                    else:
-                        # Evaluate the function and cache the results
-                        #print " ... computing new result"
-                        result = function(*args, **kwargs)
-                        setattr(cache, the_func, result)
-                        return result
-            # Couldn't access the cache, just return the result
-            # without caching it.
-            #print " ... no cache found"
-            return function(*args, **kwargs)
-        return get_cached_result
-
 
 def generate_timing_model(name,components):
     """
