@@ -206,9 +206,9 @@ class Cache(object):
                     return function(*args,**kwargs)
                 else:
                     # Init the cache, excute the function, then delete cache
-                    cache = cls()
+                    setattr(args[0], cls.the_cache, cls())
                     result = function(*args,**kwargs)
-                    cache = None
+                    setattr(args[0], cls.the_cache, None)
                     return result
             else:
                 # no "self.cache" attrib is found.  Could raise an error, or
