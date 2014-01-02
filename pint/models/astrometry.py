@@ -6,7 +6,8 @@ import astropy.coordinates as coords
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
-from .timing_model import Parameter, MJDParameter, TimingModel, MissingParameter
+from .parameter import Parameter, MJDParameter
+from .timing_model import TimingModel, MissingParameter
 from pint import ls
 
 class Astrometry(TimingModel):
