@@ -63,6 +63,6 @@ def topo_posvels(xyz, toa):
 
     # Velocity
     vel = numpy.asarray([OM * (-s*x - c*y), OM * (c*x - s*y), 0.0])
-    vel = erfa.trxp(rc2i, vel) * u.Unit("m / s")
+    vel = erfa.trxp(rc2i, vel) * u.m / u.s
 
     return utils.PosVel(pos, vel)

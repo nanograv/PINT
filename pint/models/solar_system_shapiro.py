@@ -3,7 +3,8 @@
 from warnings import warn
 import numpy
 import astropy.constants as const
-from .timing_model import Parameter, TimingModel, MissingParameter
+from .parameter import Parameter
+from .timing_model import TimingModel, MissingParameter
 from .. import Tsun, Tmercury, Tvenus, Tearth, Tmars, \
         Tjupiter, Tsaturn, Turanus, Tneptune
 

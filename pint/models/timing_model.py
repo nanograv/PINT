@@ -2,7 +2,7 @@
 # Defines the basic timing model interface classes
 import string
 from warnings import warn
-from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string
+from .parameter import Parameter
 from ..phase import Phase
 
 class Parameter(object):

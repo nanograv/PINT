@@ -3,7 +3,8 @@
 from warnings import warn
 import astropy 
 import astropy.units as u
-from .timing_model import Parameter, TimingModel, MissingParameter
+from .parameter import Parameter
+from .timing_model import TimingModel, MissingParameter
 
 class Dispersion(TimingModel):
 
