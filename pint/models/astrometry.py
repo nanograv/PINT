@@ -7,7 +7,7 @@ import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
 from .parameter import Parameter, MJDParameter
-from .timing_model import TimingModel, MissingParameter
+from .timing_model import TimingModel, MissingParameter, Cache
 from pint import ls
 
 class Astrometry(TimingModel):
@@ -63,6 +63,7 @@ class Astrometry(TimingModel):
                 else:
                     self.POSEPOCH.value = self.PEPOCH.value
 
+    @Cache.cache_result
     def coords_as_ICRS(self,epoch=None):
         """
         coords_as_ICRS(epoch=None)
@@ -80,6 +81,7 @@ class Astrometry(TimingModel):
             dDEC = (dt * self.PMDEC.value * (u.mas/u.yr)).to(u.mas)
             return coords.ICRS(ra=self.RA.value+dRA, dec=self.DEC.value+dDEC)
     
+    @Cache.cache_result
     def ssb_to_psb_xyz(self,epoch=None):
         """
         ssb_to_psb(epoch=None)
@@ -91,6 +93,7 @@ class Astrometry(TimingModel):
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
         return self.coords_as_ICRS(epoch=epoch).cartesian
 
+    @Cache.cache_result
     def barycentric_radio_freq(self,toa):
         """
         barycentric_radio_freq(toa)

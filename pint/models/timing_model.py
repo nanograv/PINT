@@ -1,9 +1,88 @@
 # timing_model.py
 # Defines the basic timing model interface classes
 import string
+import functools
 from warnings import warn
 from .parameter import Parameter
 from ..phase import Phase
+
+class Cache(object):
+    """
+    The Cache class is for temporarily caching timing model internal 
+    computation results.  It defines two decorators, use_cache
+    and cache_result.
+    """
+
+    # The name of the cache attribute
+    the_cache = "cache"
+
+    @classmethod
+    def cache_result(cls,function):
+        """
+        This can be applied as a decorator to any timing model method
+        for which it might be useful to store the value, once computed
+        for a given TOA.  Note that the cache must be manually enabled
+        and cleared when appropriate, so this functionality should be
+        used with care.
+        """
+        the_func = function.__name__
+        @functools.wraps(function)
+        def get_cached_result(*args,**kwargs):
+            #print "Checking for cached value of", the_func
+            # What to do about checking for a change of arguments?
+            # args[0] should be a "self"
+            if hasattr(args[0], cls.the_cache):
+                cache = getattr(args[0], cls.the_cache)
+                if isinstance(cache, cls):
+                    if hasattr(cache, the_func):
+                        # Return the cached value
+                        #print " ... using cached result"
+                        return getattr(cache, the_func)
+                    else:
+                        # Evaluate the function and cache the results
+                        #print " ... computing new result"
+                        result = function(*args, **kwargs)
+                        setattr(cache, the_func, result)
+                        return result
+            # Couldn't access the cache, just return the result
+            # without caching it.
+            #print " ... no cache found"
+            return function(*args, **kwargs)
+        return get_cached_result
+
+    @classmethod
+    def use_cache(cls,function):
+        """
+        This can be applied as a decorator to a function that should
+        internally use caching of function return values.  The cache
+        will be deleted when the function exits.  If the top-level function
+        calls other functions that have caching enabled they will share 
+        the cache, and it will only be deleted when the top-level function
+        exits.
+        """
+        @functools.wraps(function)
+        def use_cached_results(*args,**kwargs):
+            # args[0] should be a "self"
+            # Test whether a cache attribute is present
+            if hasattr(args[0],cls.the_cache):
+                cache = getattr(args[0], cls.the_cache)
+                # Test whether caching is already enabled
+                if isinstance(cache, cls):
+                    # Yes, just execute the function
+                    return function(*args,**kwargs)
+                else:
+                    # Init the cache, excute the function, then delete cache
+                    setattr(args[0], cls.the_cache, cls())
+                    result = function(*args,**kwargs)
+                    setattr(args[0], cls.the_cache, None)
+                    return result
+            else:
+                # no "self.cache" attrib is found.  Could raise an error, or
+                # just execute the function normally.
+                return function(*args,**kwargs)
+        return use_cached_results
+
+
 
 class TimingModel(object):
 
@@ -11,6 +90,7 @@ class TimingModel(object):
         self.params = []  # List of model parameter names
         self.delay_funcs = [] # List of delay component functions
         self.phase_funcs = [] # List of phase component functions
+        self.cache = None
 
         self.add_param(Parameter(name="PSR",
             units=None,
@@ -33,6 +113,7 @@ class TimingModel(object):
         for par in self.params:
             print getattr(self,par).help_line()
 
+    @Cache.use_cache
     def phase(self, toa):
         """
         Return the model-predicted pulse phase for the given toa.
@@ -48,6 +129,7 @@ class TimingModel(object):
                                     # how to add/subtract from it, etc.
         return phase
 
+    @Cache.use_cache
     def delay(self, toa):
         """
         Return the total delay which will be subtracted from the given
