@@ -31,7 +31,7 @@ def objPosVel(obj1, obj2, et):
     #  - maybe this should be a PosVel __init__ method instead?
     #  - accept an astropy time rather than et as input?
     pv, lt = spice.spkezr(obj1, float(et), "J2000", "NONE", obj2)
-    return PosVel(pv[:3]*u.km, pv[3:]*u.km/u.s)
+    return PosVel(pv[:3]*u.km, pv[3:]*u.km/u.s, obj=obj1, origin=obj2)
 
 
 def objPosVel2SSB(objname, et):

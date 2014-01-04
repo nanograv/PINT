@@ -276,7 +276,7 @@ class TOAs(object):
         j2000 = time.Time('2000-01-01 12:00:00', scale='utc')
         for toa in self.toas:
             xyz = observatories[toa.obs].xyz
-            toa.obs_pvs = erfautils.topo_posvels(xyz, toa.mjd)
+            toa.obs_pvs = erfautils.topo_posvels(xyz, toa)
             # SPICE expects ephemeris time to be in sec past J2000 TDB
             # We need to figure out how to get the correct time...
             #et = (toa.mjd.tdb.mjd - j2000.mjd) * 86400.0

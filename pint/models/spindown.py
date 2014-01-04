@@ -6,7 +6,7 @@ from astropy.time.core import SECS_PER_DAY
 from .parameter import Parameter, MJDParameter
 from .timing_model import TimingModel, MissingParameter
 from ..phase import Phase
-from ..utils import timedelta_to_mpf_sec, time_to_mjd_mpf
+from ..utils import timedelta_to_mpf_sec, time_to_mjd_mpf, time_from_mjd_string
 
 class Spindown(TimingModel):
 
@@ -29,6 +29,7 @@ class Spindown(TimingModel):
             description="Reference epoch for phase"))
 
         self.add_param(MJDParameter(name="PEPOCH",
+            parse_value=lambda x: time_from_mjd_string(x, scale='tdb'),
             description="Reference epoch for spin-down"))
 
         self.phase_funcs += [self.simple_spindown_phase,]
@@ -70,6 +71,7 @@ class Spindown(TimingModel):
         dt -= delay
         # TODO: what timescale should we use for pepoch calculation?
         # Does this even matter?
-        dt_pepoch = timedelta_to_mpf_sec(self.PEPOCH.value-self.TZRMJD.value)
+        dt_pepoch = (time_to_mjd_mpf(self.PEPOCH.value.tdb)
+                - time_to_mjd_mpf(self.TZRMJD.value.tdb)) * SECS_PER_DAY
         phase = (self.F0.value + 0.5*self.F1.value*(dt-2.0*dt_pepoch))*dt
         return Phase(phase)

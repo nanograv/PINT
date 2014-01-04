@@ -21,27 +21,30 @@ def topo_posvels(xyz, toa):
     basically SOFA's pvtob() with an extra rotation from c2ixys.
     """
     # All the times are passed as TT
-    tt = toa.tt.jd1, toa.tt.jd2
+    tt = toa.mjd.tt.jd1, toa.mjd.tt.jd2
+
+    # Get a floating-point MJD to use for interpolating IERS values
+    mjd = toa.mjd.utc.mjd
 
     # Gets x,y coords of Celestial Intermediate Pole and CIO locator s
     X, Y, S = erfa.xys00a(*tt)
     # Get dX and dY from IERS A
-    #dX = numpy.interp(toa.utc.mjd, iers_tab['MJD'], iers_tab['dX_2000A_B']) * u.arcsec
-    #dY = numpy.interp(toa.utc.mjd, iers_tab['MJD'], iers_tab['dY_2000A_B']) * u.arcsec
+    #dX = numpy.interp(mjd, iers_tab['MJD'], iers_tab['dX_2000A_B']) * u.arcsec
+    #dY = numpy.interp(mjd, iers_tab['MJD'], iers_tab['dY_2000A_B']) * u.arcsec
     # Get dX and dY from IERS B
-    dX = numpy.interp(toa.utc.mjd, iers_tab['MJD'], iers_tab['dX_2000A']) * u.arcsec
-    dY = numpy.interp(toa.utc.mjd, iers_tab['MJD'], iers_tab['dY_2000A']) * u.arcsec
+    dX = numpy.interp(mjd, iers_tab['MJD'], iers_tab['dX_2000A']) * u.arcsec
+    dY = numpy.interp(mjd, iers_tab['MJD'], iers_tab['dY_2000A']) * u.arcsec
     # Get GCRS to CIRS matrix
     rc2i = erfa.c2ixys(X+dX.to(u.rad).value, Y+dY.to(u.rad).value, S)
 
     # Gets the TIO locator s'
     sp = erfa.sp00(*tt)
     # Get X and Y from IERS A
-    #xp = numpy.interp(toa.utc.mjd, iers_tab['MJD'], iers_tab['PM_X_B']) * u.arcsec
-    #yp = numpy.interp(toa.utc.mjd, iers_tab['MJD'], iers_tab['PM_Y_B']) * u.arcsec
+    #xp = numpy.interp(mjd, iers_tab['MJD'], iers_tab['PM_X_B']) * u.arcsec
+    #yp = numpy.interp(mjd, iers_tab['MJD'], iers_tab['PM_Y_B']) * u.arcsec
     # Get X and Y from IERS B
-    xp = numpy.interp(toa.utc.mjd, iers_tab['MJD'], iers_tab['PM_x']) * u.arcsec
-    yp = numpy.interp(toa.utc.mjd, iers_tab['MJD'], iers_tab['PM_y']) * u.arcsec
+    xp = numpy.interp(mjd, iers_tab['MJD'], iers_tab['PM_x']) * u.arcsec
+    yp = numpy.interp(mjd, iers_tab['MJD'], iers_tab['PM_y']) * u.arcsec
     # Get the polar motion matrix
     rpm = erfa.pom00(xp.to(u.rad).value, yp.to(u.rad).value, sp)
 
@@ -50,7 +53,7 @@ def topo_posvels(xyz, toa):
     x, y, z = erfa.trxp(rpm, xyzm)
 
     # Functions of Earth Rotation Angle
-    ut1 = toa.ut1.jd1, toa.ut1.jd2
+    ut1 = toa.mjd.ut1.jd1, toa.mjd.ut1.jd2
     theta = erfa.era00(*ut1)
     s, c = math.sin(theta), math.cos(theta)
 
@@ -65,4 +68,4 @@ def topo_posvels(xyz, toa):
     vel = numpy.asarray([OM * (-s*x - c*y), OM * (c*x - s*y), 0.0])
     vel = erfa.trxp(rc2i, vel) * u.m / u.s
 
-    return utils.PosVel(pos, vel)
+    return utils.PosVel(pos, vel, obj=toa.obs, origin="EARTH")

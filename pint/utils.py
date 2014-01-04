@@ -17,8 +17,13 @@ class PosVel(object):
     that are numpy arrays of floats (and can have attached astropy
     units).  The 'pos' and 'vel' params are 3-vectors of the positions
     and velocities respectively.
+
+    The 'obj' and 'origin' components are strings that can optionally
+    be used to specify names for endpoints of the vectors.  If present,
+    addition/subtraction will check that vectors are being combined in 
+    a consistent way.
     """
-    def __init__(self, pos, vel):
+    def __init__(self, pos, vel, obj=None, origin=None):
         try:
             assert(len(pos)==3)
             if isinstance(pos, u.Quantity):
@@ -36,18 +41,44 @@ class PosVel(object):
         except:
             print "PosVel: input vel vector is not in correct format!", vel
 
+        self.obj = obj
+        self.origin = origin
+
+    def _has_labels(self):
+        return (self.obj is not None) and (self.origin is not None)
+
     def __neg__(self):
-        return PosVel(-self.pos, -self.vel)
+        return PosVel(-self.pos, -self.vel, obj=self.origin, origin=self.obj)
 
     def __add__(self, other):
-        return PosVel(self.pos + other.pos, self.vel + other.vel)
+        obj = None
+        origin = None
+        if self._has_labels() and other._has_labels():
+            # here we check that the addition "makes sense", ie the endpoint
+            # of self is the origin of other (or vice-versa)
+            if self.obj == other.origin:
+                origin = self.origin
+                obj = other.obj
+            elif self.origin == other.obj:
+                origin = other.origin
+                obj = self.obj
+            else:
+                raise RuntimeError("Attempting to add incompatible vectors: " +
+                        "%s->%s + %s->%s" % (self.origin, self.obj,
+                            other.origin, other.obj))
+
+        return PosVel(self.pos + other.pos, self.vel + other.vel,
+                obj=obj, origin=origin)
 
     def __sub__(self, other):
         return self.__add__(other.__neg__())
 
     def __str__(self):
-        return str(self.pos)+", "+str(self.vel)
-
+        if self._has_labels():
+            return (str(self.pos)+", "+str(self.vel) 
+                    + " " + self.origin + "->" + self.obj)
+        else:
+            return str(self.pos)+", "+str(self.vel) 
 
 def fortran_float(x):
     """
@@ -62,7 +93,7 @@ def fortran_float(x):
 
 def time_from_mjd_string(s, scale='utc'):
     """
-    timse_from_mjd_string(s, scale='utc')
+    time_from_mjd_string(s, scale='utc')
 
     Returns an astropy Time object generated from a MJD string input.
     """
