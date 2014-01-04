@@ -99,6 +99,6 @@ def ITRF_to_GEO_WGS84(x, y, z):
     lon, lat, hgt = spice.recgeo((x.to(u.m).value,
                                   y.to(u.m).value,
                                   z.to(u.m).value), Re_wgs84, f_wgs84)
-    return Longitude(lon, 'radian', wrap_angle='180d'), \
+    return Longitude(lon, 'radian', wrap_angle=180.0*u.degree), \
            Latitude(lat, 'radian'), hgt * u.m
 
