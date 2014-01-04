@@ -1,4 +1,4 @@
-import re, sys, os, mpmath
+import re, sys, os, mpmath, cPickle
 import numpy
 import utils
 import observatories as obs
@@ -153,13 +153,19 @@ class TOAs(object):
     def __init__(self, toafile=None):
         if toafile:
             if type(toafile) in [tuple, list]:
+                self.filename = None
                 for infile in toafile:
                     self.read_toa_file(infile)
             else:
+                pth, ext = os.path.splitext(toafile)
+                if ext==".pickle":
+                    toafile = pth
                 self.read_toa_file(toafile)
+                self.filename = toafile
         else:
             self.toas = []
             self.commands = []
+            self.filename = None
 
     def __add__(self,x):
         if type(x) in [int,float]:
@@ -212,6 +218,14 @@ class TOAs(object):
         Return a numpy array of the TOA flags.
         """
         return numpy.array([t.flags for t in self.toas])
+
+    def pickle(self, filename=None):
+        if filename is not None:
+            cPickle.dump(self, open(filename, "wb"))
+        elif self.filename is not None:
+            cPickle.dump(self, open(self.filename+".pickle", "wb"))
+        else:
+            sys.stderr.write("Warning: pickle needs a filename\n")
 
     def summary(self):
         """
@@ -317,6 +331,19 @@ class TOAs(object):
         process_includes is set to False.
         """
         if top:
+            # Read from a pickle file if available
+            if os.path.isfile(filename+".pickle"):
+                if (os.path.getmtime(filename+".pickle") >
+                    os.path.getmtime(filename)):
+                    sys.stderr.write("Reading toas from '%s'...\n" % \
+                                     (filename+".pickle"))
+                    # Pickle file is newer, assume it is good and load it
+                    tmp = cPickle.load(open(filename+".pickle"))
+                    self.filename = tmp.filename
+                    self.toas = tmp.toas
+                    self.commands = tmp.commands
+                    self.observatories = tmp.observatories
+                    return
             self.toas = []
             self.commands = []
             self.cdict = {"EFAC": 1.0, "EQUAD": 0.0,

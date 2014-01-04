@@ -20,10 +20,12 @@ except AttributeError:
 sys.stderr.write("Reading TOAs...\n")
 t0 = time.time()
 t = toa.TOAs('J1744-1134.Rcvr1_2.GASP.8y.x.tim')
-sys.stderr.write("Applying clock corrections...\n")
-t.apply_clock_corrections()
-sys.stderr.write("Computing observatory positions and velocities...\n")
-t.compute_posvels(planets=planet_ephems)
+if not "clkcorr" in t.toas[0].flags:
+    sys.stderr.write("Applying clock corrections...\n")
+    t.apply_clock_corrections()
+if not hasattr(t.toas[0], "pvs"):
+    sys.stderr.write("Computing observatory positions and velocities...\n")
+    t.compute_posvels(planets=planet_ephems)
 time_toa = time.time() - t0
 sys.stderr.write("Read/corrected TOAs in %.3f sec\n" % time_toa)
 
