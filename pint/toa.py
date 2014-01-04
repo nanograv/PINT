@@ -6,6 +6,7 @@ import erfautils
 import spice
 import astropy.utils
 import astropy.time as time
+from astropy.time.core import SECS_PER_DAY
 import astropy.table as table
 import astropy.units as u
 from astropy.utils.iers import IERS_A, IERS_A_URL
@@ -127,11 +128,11 @@ class toa(object):
                                  lon=observatories[obs].geo[0],
                                  lat=observatories[obs].geo[1],
                                  precision=9)
-            self.delta_ut1_utc = self.mjd.get_delta_ut1_utc(iers_a)
-            self.lon = observatories[obs].geo[0]
-            self.lat = observatories[obs].geo[1]
-            # Note:  Everytime we update the toas, we need to reset this!
-            self.mjd.delta_ut1_utc = self.delta_ut1_utc
+            # Note:  Everytime we update the toas, we should reset these two
+            self.mjd.delta_ut1_utc = self.mjd.get_delta_ut1_utc(iers_a)
+            # This is effectively a "cached" value so that we don't need to
+            # keep converting from UTC->TDB when we often need TDB
+            self.mjd.TDB = utils.time_to_mjd_mpf(self.mjd.tdb)
         except:
             "Error processing MJD for TOA:", MJD
         self.error = error
@@ -268,10 +269,8 @@ class TOAs(object):
                     corr += toa.flags["time"] * u.s # TIME commands are in sec
                 toa.flags["clkcorr"] = corr
                 toa.mjd += time.TimeDelta(corr)
-                toa.mjd.delta_ut1_utc = toa.delta_ut1_utc
-                toa.mjd.lon = toa.lon
-                toa.mjd.lat = toa.lat
-                toa.mjd.precision = 9
+                toa.mjd.delta_ut1_utc = toa.mjd.get_delta_ut1_utc(iers_a)
+                toa.mjd.TDB = utils.time_to_mjd_mpf(toa.mjd.tdb)
 
     @mpmath.workdps(20)
     def compute_posvels(self, ephem="DE405", planets=False):
@@ -288,15 +287,13 @@ class TOAs(object):
         pth = os.path.join(os.getenv("PINT"), "datafiles")
         spice.furnsh(os.path.join(pth, "%s.bsp"%ephem.lower()))
         j2000 = time.Time('2000-01-01 12:00:00', scale='utc')
+        j2000_mjd = utils.time_to_mjd_mpf(j2000)
         for toa in self.toas:
             xyz = observatories[toa.obs].xyz
             toa.obs_pvs = erfautils.topo_posvels(xyz, toa)
             # SPICE expects ephemeris time to be in sec past J2000 TDB
             # We need to figure out how to get the correct time...
-            #et = (toa.mjd.tdb.mjd - j2000.mjd) * 86400.0
-            tdb_toa = utils.time_to_mjd_mpf(toa.mjd.tdb)
-            j2000_mjd = utils.time_to_mjd_mpf(j2000)
-            et = (tdb_toa - j2000_mjd) * 86400.0
+            et = (toa.mjd.TDB - j2000_mjd) * SECS_PER_DAY
 
             # SSB to observatory position/velocity:
             toa.earth_pvs = objPosVel("EARTH","SSB",et)

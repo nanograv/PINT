@@ -47,7 +47,7 @@ class Spindown(TimingModel):
                         "PEPOCH is required if F1 is set")
 
     @mpmath.workdps(20)
-    def simple_spindown_phase(self,toa,delay):
+    def simple_spindown_phase(self, toa, delay):
         """
         Placeholder function for simple spindown phase.
 
@@ -66,8 +66,8 @@ class Spindown(TimingModel):
         # NOTE, all of this ignores TZRSITE and TZRFRQ for the time being.
         if self.TZRMJD.value is None:
             self.TZRMJD.value = toa.mjd - delay*u.s
-        dt = (time_to_mjd_mpf(toa.mjd.tdb) 
-                - time_to_mjd_mpf(self.TZRMJD.value.tdb)) * SECS_PER_DAY
+        dt = (toa.mjd.TDB
+              - time_to_mjd_mpf(self.TZRMJD.value.tdb)) * SECS_PER_DAY
         dt -= delay
         # TODO: what timescale should we use for pepoch calculation?
         # Does this even matter?
