@@ -63,8 +63,8 @@ def ITRF2GEO(posITRF):
 	return lon,lonDeg,lat,latDeg,alt
 
 
-
-	
-
-
- 
+def TTminusTDB(et):
+	state,lt = spice.spkezr("1000000000",et,"J2000","NONE","1000000001")
+	TTmTDB = state[0]
+	dTTmTDB = state[3]
+	return TTmTDB,dTTmTDB

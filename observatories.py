@@ -1,6 +1,6 @@
 import os
 import numpy
-
+import spice
 def read_observatories():
     obss = {}
     obscode1s = {}
@@ -14,4 +14,8 @@ def read_observatories():
                 obscode1s[code1] = name.upper()
                 obscode2s[code2] = name.upper()
     return obss, obscode1s, obscode2s
+
+#def ITRF2Geo()
+
+
 
