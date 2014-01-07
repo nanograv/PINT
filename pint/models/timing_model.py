@@ -140,6 +140,41 @@ class TimingModel(object):
             delay += df(toa)
         return delay
 
+    def d_phase_d_tpulsar(self,toa):
+        """
+        Return the derivative of phase wrt time at the pulsar.
+        NOT Implemented
+        """
+        pass
+
+    def d_phase_d_toa(self,toa):
+        """
+        Return the derivative of phase wrt TOA (ie the current apparent
+        spin freq of the pulsar at the observatory).
+        NOT Implemented yet.
+        """
+        pass
+
+    def d_phase_d_param(self,toa,param):
+        """
+        Return the derivative of phase with respect to the parameter.
+        NOTE, not implemented yet
+        """
+        result = 0.0
+        # TODO need to do correct chain rule stuff wrt delay derivs, etc
+        # Is it safe to assume that any param affecting delay only affects
+        # phase indirectly (and vice-versa)??
+        return result
+
+    def d_delay_d_param(self,toa,param):
+        """
+        Return the derivative of delay with respect to the parameter.
+        """
+        result = 0.0
+        for f in self.delay_derivs[param]:
+            result += f(toa)
+        return result
+
     def __str__(self):
         result = ""
         for par in self.params:
@@ -214,6 +249,21 @@ class MissingParameter(TimingModelError):
 
     def __str__(self):
         result = self.module + "." + self.param
+        if self.msg is not None:
+            result += "\n  " + self.msg
+        return result
+
+class DuplicateParameter(TimingModelError):
+    """
+    This exception is raised if a model parameter is defined (added)
+    multiple times.
+    """
+    def __init__(self,param,msg=None):
+        self.param = param
+        self.msg = msg
+
+    def __str__(self):
+        result = self.param
         if self.msg is not None:
             result += "\n  " + self.msg
         return result
