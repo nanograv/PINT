@@ -1,9 +1,9 @@
 import os
 import numpy
-import spiceutils
+from . import spiceutils
 import astropy.units as u
 
-class observatory:
+class observatory(object):
     pass
 
 def get_clock_corr_vals(obsname, **kwargs):
@@ -33,7 +33,7 @@ def get_clock_corr_vals(obsname, **kwargs):
     # The following works for simple linear interpolation
     # of normal TEMPO-style clock correction files
     mjds, ccorr = numpy.loadtxt(filenm, skiprows=2,
-                                usecols=(0,2), unpack=True)
+                                usecols=(0, 2), unpack=True)
     return mjds, ccorr
 
 def read_observatories():
@@ -47,7 +47,7 @@ def read_observatories():
     filenm = os.path.join(os.getenv("PINT"), "datafiles/observatories.txt")
     with open(filenm) as f:
         for line in f.readlines():
-            if line[0]!="#":
+            if line[0] != "#":
                 vals = line.split()
                 obs = observatory()
                 obs.name = vals[0]

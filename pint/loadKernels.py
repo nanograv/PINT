@@ -1,12 +1,15 @@
+"""This module loads basic ephemeris data when imported."""
 import spice
 import os
 
+# FIXME: use logging and exceptions instead of print and exit
 # Load the PINT environment variable to get the top level directory
 pintdir = os.getenv("PINT")
 if pintdir is None:
-    print "Could not load the PINT environment variable pointing to the PINT directory!"
+    print "Could not find the PINT environment variable. It should " \
+      "point to the PINT directory!"
     os.sys.exit()
-    
+
 try:
     spice.furnsh(os.path.join(pintdir, "datafiles/pck00010.tpc"))
     print "SPICE loaded planetary constants."
@@ -16,5 +19,5 @@ try:
     print "SPICE loaded Earth rotation parameters."
     spice.furnsh(os.path.join(pintdir, "datafiles/de405.bsp"))
     print "SPICE loaded DE405 Planetary Ephemeris."
-except:
+except spice.SpiceException:
     print "Could not load SPICE kernel!"

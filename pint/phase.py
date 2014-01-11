@@ -3,12 +3,11 @@
 # parts.
 from collections import namedtuple
 
-class Phase(namedtuple('Phase','int frac')):
+class Phase(namedtuple('Phase', 'int frac')):
     """
-    Phase(arg1,arg2=None)
 
     Class representing pulse phase internally as integer and fractional
-    parts.  Can be initialized from a single numerical input (for example 
+    parts.  Can be initialized from a single numerical input (for example
     float or mpmath value), or separately provided integer and fractional
     parts, depending on what precision is required.  For example:
 
@@ -28,7 +27,7 @@ class Phase(namedtuple('Phase','int frac')):
     """
     __slots__ = ()
 
-    def __new__(cls,arg1,arg2=None):
+    def __new__(cls, arg1, arg2=None):
         # Assume inputs are numerical, could add an extra
         # case to parse strings as input.
         if arg2 is None:
@@ -37,22 +36,22 @@ class Phase(namedtuple('Phase','int frac')):
         else:
             ii = int(arg1) + int(arg2)
             ff = float(arg2 - int(arg2))
-        if ff<-0.5:
-            ff+=1.0
-            ii-=1
-        elif ff>0.5:
-            ff-=1.0
-            ii+=1
-        return super(Phase,cls).__new__(cls,ii,ff)
+        if ff < -0.5:
+            ff += 1.0
+            ii -= 1
+        elif ff > 0.5:
+            ff -= 1.0
+            ii += 1
+        return super(Phase, cls).__new__(cls, ii, ff)
 
     def __neg__(self):
-        return Phase(-self.int,-self.frac)
+        return Phase(-self.int, -self.frac)
 
-    def __add__(self,other):
+    def __add__(self, other):
         ff = self.frac + other.frac
         ii = int(ff)
         return Phase(self.int + other.int + ii, ff - ii)
 
-    def __sub__(self,other):
+    def __sub__(self, other):
         return self.__add__(other.__neg__())
 

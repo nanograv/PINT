@@ -1,17 +1,16 @@
 import re, sys, os, mpmath, cPickle
 import numpy
-import utils
-import observatories as obs
-import erfautils
+from . import utils
+from . import observatories as observatories_module
+from . import erfautils
 import spice
-import astropy.utils
 import astropy.time as time
 from astropy.time.core import SECS_PER_DAY
 import astropy.table as table
 import astropy.units as u
 from astropy.utils.iers import IERS_A, IERS_A_URL
 from astropy.utils.data import download_file
-from spiceutils import objPosVel
+from .spiceutils import objPosVel
 
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
@@ -19,50 +18,47 @@ toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "PHA2", "PHASE", "SEARCH", "SIGMA", "SIM", "SKIP", "TIME",
                 "TRACK", "ZAWGT", "FORMAT", "END")
 
-observatories = obs.read_observatories()
+observatories = observatories_module.read_observatories()
 iers_a_file = download_file(IERS_A_URL, cache=True)
 iers_a = IERS_A.open(iers_a_file)
 
 def toa_format(line, fmt="Unknown"):
     """Identifies a TOA line as one of the following types:  Comment, Command,
     Blank, Tempo2, Princeton, ITOA, Parkes, Unknown."""
-    try:
-        if line[0]=='C' or line[0]=='#':
-            return "Comment"
-        elif line.startswith(toa_commands):
-            return "Command"
-        elif re.match("^\s+$", line):
-            return "Blank"
-        elif re.match("[0-9a-z@] ",line):
-            return "Princeton"
-        elif re.match("  ",line) and line[41]=='.':
-            return "Parkes"
-        elif len(line) > 80 or fmt=="Tempo2":
-            return "Tempo2"
-        elif re.match("\S\S",line) and line[14]=='.':  # This needs to be better
-            return "ITOA"
-        else:
-            return "Unknown"
-    except:
+    if line[0] == 'C' or line[0] == '#':
+        return "Comment"
+    elif line.startswith(toa_commands):
+        return "Command"
+    elif re.match(r"^\s+$", line):
+        return "Blank"
+    elif re.match(r"[0-9a-z@] ", line):
+        return "Princeton"
+    elif re.match(r"  ", line) and len(line) > 41 and line[41] == '.':
+        return "Parkes"
+    elif len(line) > 80 or fmt == "Tempo2":
+        return "Tempo2"
+    elif re.match(r"\S\S", line) and len(line) > 14 and line[14] == '.':
+        # FIXME: This needs to be better
+        return "ITOA"
+    else:
         return "Unknown"
 
 def get_obs(obscode):
-    global observatories
     for name in observatories:
         if obscode in observatories[name].aliases:
             return name
-    else:
-        "Error:  cannot identify observatory '%s'!" % obscode
-        return None
+    # FIXME: no print!
+    print "Error:  cannot identify observatory '%s'!" % obscode
+    return None
 
 def parse_TOA_line(line, fmt="Unknown"):
     MJD = None
     d = {}
     fmt = toa_format(line, fmt)
     d["format"] = fmt
-    if fmt=="Command":
+    if fmt == "Command":
         d[fmt] = line.split()
-    elif fmt=="Princeton":
+    elif fmt == "Princeton":
         fields = line.split()
         d["obs"] = get_obs(line[0].upper())
         d["freq"] = float(fields[1])
@@ -71,9 +67,9 @@ def parse_TOA_line(line, fmt="Unknown"):
         MJD = (int(ii), float("0."+ff))
         try:
             d["ddm"] = float(fields[4])
-        except:
+        except ValueError:
             d["ddm"] = 0.0
-    elif fmt=="Tempo2":
+    elif fmt == "Tempo2":
         # This could use more error catching...
         fields = line.split()
         d["name"] = fields[0]
@@ -93,11 +89,12 @@ def parse_TOA_line(line, fmt="Unknown"):
                     d[k] = float(v)
                 except ValueError:
                     d[k] = v
-    elif fmt=="Parkes" or fmt=="ITOA":
-        raise RuntimeError, \
-            "TOA format '%s' not implemented yet" % fmt
+    elif fmt == "Parkes" or fmt == "ITOA":
+        raise RuntimeError(
+            "TOA format '%s' not implemented yet" % fmt)
     return MJD, d
 
+# FIXME: lower-case class names are not standard
 class toa(object):
     """
     toa(MJD, error=0.0, obs='bary', freq=float("inf"), scale='utc',...)
@@ -121,20 +118,20 @@ class toa(object):
 
     """
     def __init__(self, MJD, # required
-                 error=0.0, obs='bary', freq=float("inf"), scale='utc', # with defaults
+                 error=0.0, obs='bary', freq=float("inf"),
+                 scale='utc', # with defaults
                  **kwargs):  # keyword args that are completely optional
-        try:
-            self.mjd = time.Time(*MJD, scale=scale, format='mjd',
-                                 lon=observatories[obs].geo[0],
-                                 lat=observatories[obs].geo[1],
-                                 precision=9)
-            # Note:  Everytime we update the toas, we should reset these two
-            self.mjd.delta_ut1_utc = self.mjd.get_delta_ut1_utc(iers_a)
-            # This is effectively a "cached" value so that we don't need to
-            # keep converting from UTC->TDB when we often need TDB
-            self.mjd.TDB = utils.time_to_mjd_mpf(self.mjd.tdb)
-        except:
-            "Error processing MJD for TOA:", MJD
+        self.mjd = time.Time(MJD[0], MJD[1],
+                             scale=scale, format='mjd',
+                             lon=observatories[obs].geo[0],
+                             lat=observatories[obs].geo[1],
+                             precision=9)
+        # Note:  Every time we update the toas, we should reset these two
+        self.mjd.delta_ut1_utc = self.mjd.get_delta_ut1_utc(iers_a)
+        # This is effectively a "cached" value so that we don't need to
+        # keep converting from UTC->TDB when we often need TDB
+        self.mjd.TDB = utils.time_to_mjd_mpf(self.mjd.tdb)
+
         self.error = error
         self.obs = obs
         self.freq = freq
@@ -159,7 +156,7 @@ class TOAs(object):
                     self.read_toa_file(infile)
             else:
                 pth, ext = os.path.splitext(toafile)
-                if ext==".pickle":
+                if ext == ".pickle":
                     toafile = pth
                 self.read_toa_file(toafile)
                 self.filename = toafile
@@ -168,14 +165,14 @@ class TOAs(object):
             self.commands = []
             self.filename = None
 
-    def __add__(self,x):
-        if type(x) in [int,float]:
+    def __add__(self, x):
+        if type(x) in [int, float]:
             if not x:
                 # Adding zero. Do nothing
                 return self
 
-    def __sub__(self,x):
-        if type(x) in [int,float]:
+    def __sub__(self, x):
+        if type(x) in [int, float]:
             if not x:
                 # Subtracting zero. Do nothing
                 return self
@@ -259,9 +256,9 @@ class TOAs(object):
         for obsname in self.observatories:
             mjds, ccorr = obs.get_clock_corr_vals(obsname)
             # select the TOAs we will apply corrections to
-            toas = [t for t in self.toas if t.obs==obsname and
+            toas = [t for t in self.toas if t.obs == obsname and
                     "clkcorr" not in t.flags]
-            tvals = [t.mjd.value for t in toas] 
+            tvals = [t.mjd.value for t in toas]
             corrs = numpy.interp(tvals, mjds, ccorr)
             for corr, toa in zip(corrs, toas):
                 corr *= u.us # the clock corrections are in microseconds
@@ -296,15 +293,15 @@ class TOAs(object):
             et = (toa.mjd.TDB - j2000_mjd) * SECS_PER_DAY
 
             # SSB to observatory position/velocity:
-            toa.earth_pvs = objPosVel("EARTH","SSB",et)
+            toa.earth_pvs = objPosVel("EARTH", "SSB", et)
             toa.pvs = toa.obs_pvs + toa.earth_pvs
 
             # Obs to Sun PV:
-            toa.obs_sun_pvs = objPosVel("SUN","EARTH",et) - toa.obs_pvs
+            toa.obs_sun_pvs = objPosVel("SUN", "EARTH", et) - toa.obs_pvs
             if planets:
-                for p in ('jupiter','saturn','venus','uranus'):
+                for p in ('jupiter', 'saturn', 'venus', 'uranus'):
                     pv = objPosVel(p.upper()+" BARYCENTER",
-                            "EARTH",et) - toa.obs_pvs
+                            "EARTH", et) - toa.obs_pvs
                     setattr(toa, 'obs_'+p+'_pvs', pv)
 
     def to_table(self):
@@ -316,14 +313,14 @@ class TOAs(object):
         self.table = table.Table([self.get_mjds(), self.get_errors(),
                                   self.get_freqs(), self.get_obss(),
                                   self.get_flags()],
-                                 names = ("mjds", "errors", "freqs",
-                                          "obss", "flags"))
+                                 names=("mjds", "errors", "freqs",
+                                        "obss", "flags"))
 
     def read_toa_file(self, filename, process_includes=True, top=True):
         """
         read_toa_file(filename, process_includes=True)
 
-        Read the given filename and return a list of toa objects 
+        Read the given filename and return a list of toa objects
         parsed from it.  Will recurse to process INCLUDE-d files unless
         process_includes is set to False.
         """
@@ -353,20 +350,19 @@ class TOAs(object):
                           "FORMAT": "Unknown", "END": False}
             self.observatories = set()
         with open(filename, "r") as f:
-            skip = False
             for l in f.readlines():
                 MJD, d = parse_TOA_line(l, fmt=self.cdict["FORMAT"])
                 # print MJD, d
-                if d["format"]=="Command":
+                if d["format"] == "Command":
                     cmd = d["Command"][0]
                     self.commands.append((d["Command"], len(self.toas)))
-                    if cmd=="SKIP":
+                    if cmd == "SKIP":
                         self.cdict[cmd] = True
                         continue
-                    elif cmd=="NOSKIP":
+                    elif cmd == "NOSKIP":
                         self.cdict["SKIP"] = False
                         continue
-                    elif cmd=="END":
+                    elif cmd == "END":
                         self.cdict[cmd] = True
                         break
                     elif cmd in ("TIME", "PHASE"):
@@ -376,19 +372,19 @@ class TOAs(object):
                         self.cdict[cmd] = float(d["Command"][1])
                         if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
                             d[cmd] = d["Command"][1]
-                    elif cmd=="INFO":
+                    elif cmd == "INFO":
                         self.cdict[cmd] = d["Command"][1]
                         d[cmd] = d["Command"][1]
-                    elif cmd=="FORMAT":
+                    elif cmd == "FORMAT":
                         if d["Command"][1] == "1":
                             self.cdict[cmd] = "Tempo2"
-                    elif cmd=="JUMP":
-                        if (self.cdict[cmd][0]):
+                    elif cmd == "JUMP":
+                        if self.cdict[cmd][0]:
                             self.cdict[cmd][0] = False
                             self.cdict[cmd][1] += 1
                         else:
                             self.cdict[cmd][0] = True
-                    elif cmd=="INCLUDE" and process_includes:
+                    elif cmd == "INCLUDE" and process_includes:
                         # Save FORMAT in a tmp
                         fmt = self.cdict["FORMAT"]
                         self.cdict["FORMAT"] = "Unknown"
@@ -403,18 +399,19 @@ class TOAs(object):
                 elif self.cdict["END"]:
                     if top:
                         # Clean up our temporaries used when reading TOAs
-                        del(self.cdict)
+                        del self.cdict
                     return
                 else:
                     newtoa = toa(MJD, **d)
-                    if ((self.cdict["EMIN"] > newtoa.error) or \
-                        (self.cdict["EMAX"] < newtoa.error) or \
-                        (self.cdict["FMIN"] > newtoa.freq) or \
+                    if ((self.cdict["EMIN"] > newtoa.error) or
+                        (self.cdict["EMAX"] < newtoa.error) or
+                        (self.cdict["FMIN"] > newtoa.freq) or
                         (self.cdict["FMAX"] < newtoa.freq)):
                         continue
                     else:
                         newtoa.error *= self.cdict["EFAC"]
-                        newtoa.error = numpy.hypot(newtoa.error, self.cdict["EQUAD"])
+                        newtoa.error = numpy.hypot(newtoa.error,
+                                                   self.cdict["EQUAD"])
                         if self.cdict["INFO"]:
                             newtoa.flags["info"] = self.cdict["INFO"]
                         if self.cdict["JUMP"][0]:
@@ -427,4 +424,4 @@ class TOAs(object):
                         self.toas.append(newtoa)
             if top:
                 # Clean up our temporaries used when reading TOAs
-                del(self.cdict)
+                del self.cdict

@@ -1,3 +1,5 @@
+"""This module implements a simple spindown model for an isolated pulsar.
+"""
 # spindown.py
 # Defines Spindown timing model class
 import mpmath
@@ -6,23 +8,24 @@ from astropy.time.core import SECS_PER_DAY
 from .parameter import Parameter, MJDParameter
 from .timing_model import TimingModel, MissingParameter
 from ..phase import Phase
-from ..utils import timedelta_to_mpf_sec, time_to_mjd_mpf, time_from_mjd_string
+from ..utils import time_to_mjd_mpf, time_from_mjd_string
 
 class Spindown(TimingModel):
-
+    """This class provides a simple timing model for an isolated pulsar.
+    """
     @mpmath.workdps(20)
     def __init__(self):
-        super(Spindown,self).__init__()
+        super(Spindown, self).__init__()
 
         self.add_param(Parameter(name="F0",
-            units="Hz", 
+            units="Hz",
             description="Spin frequency",
             aliases=["F"],
             parse_value=mpmath.mpf,
             print_value=lambda x: '%.15f'%x))
 
         self.add_param(Parameter(name="F1",
-            units="Hz/s", value=0.0, 
+            units="Hz/s", value=0.0,
             description="Spin-down rate"))
 
         self.add_param(MJDParameter(name="TZRMJD",
@@ -35,15 +38,15 @@ class Spindown(TimingModel):
         self.phase_funcs += [self.simple_spindown_phase,]
 
     def setup(self):
-        super(Spindown,self).setup()
+        super(Spindown, self).setup()
         # Check for required params
         for p in ("F0",):
-            if getattr(self,p).value is None:
-                raise MissingParameter("Spindown",p)
+            if getattr(self, p).value is None:
+                raise MissingParameter("Spindown", p)
         # If F1 is set, we need PEPOCH
-        if self.F1.value!=0.0:
+        if self.F1.value != 0.0:
             if self.PEPOCH.value is None:
-                raise MissingParameter("Spindown","PEPOCH",
+                raise MissingParameter("Spindown", "PEPOCH",
                         "PEPOCH is required if F1 is set")
 
     @mpmath.workdps(20)
@@ -52,7 +55,7 @@ class Spindown(TimingModel):
         Placeholder function for simple spindown phase.
 
         toa is a single toa object
-        
+
         delay is the time delay from the TOA to time of pulse emission
           at the pulsar, in seconds.
 

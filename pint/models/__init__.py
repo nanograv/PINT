@@ -1,5 +1,6 @@
 # __init__.py for PINT models/ directory
-
+"""This module contains implementations of pulsar timing models.
+"""
 # Import the main timing model classes
 from .timing_model import TimingModel, generate_timing_model
 
