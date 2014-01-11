@@ -30,6 +30,8 @@ early stages of development.
 
  - pylint
  - nosetests
+ - sphinx
+ - coverage
 
 ## Some design philosophy
 
