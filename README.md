@@ -26,6 +26,11 @@ early stages of development.
  - PySPICE: http://github.com/rca/PySPICE
  - ERFA python: http://github.com/nirinA/erfa_python
 
+## Additional packages/libraries for developers
+
+ - pylint
+ - nosetests
+
 ## Some design philosophy
 
  - Emphasis on modularity
@@ -43,4 +48,4 @@ early stages of development.
     (i.e. text reading, parsing, simple DB, binary search, etc)
  - Backwards compatible with TEMPO
  - Use of defined constants
- - Unittests (hopefully.  Volunteers for this would be appreciated.)
+ - Unittests
