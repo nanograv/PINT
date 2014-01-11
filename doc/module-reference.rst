@@ -1,5 +1,6 @@
 PINT Module Reference
 =====================
 
-.. automodule:: pint
-   :members:
+.. automodapi:: pint
+
+
