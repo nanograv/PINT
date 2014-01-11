@@ -42,7 +42,8 @@ and reusable. We therefore have the following requests for new
 (and existing!) code:
 
  - All code should be documented with docstrings, and with 
-    additional explanation where appropriate
+    additional explanation where appropriate; please follow the AstroPy
+    documentation guidelines_
  - All code should be tested by unit tests
     - Brief doctests in the docstring should provide usage examples
     - More complex unit tests should go in the tests/ directory
@@ -62,6 +63,8 @@ are stylistic warnings: if it thinks your method takes too many arguments,
 for example, but you can't figure out how to reduce their number, leave 
 the warning as a reminder until you or somebody else figure out how to 
 break up the method into simpler pieces.
+
+.. _guidelines: http://docs.astropy.org/en/stable/development/docguide.html
 
 ## Some design philosophy
 

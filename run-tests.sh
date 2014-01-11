@@ -39,7 +39,8 @@ if [[ ! -f "$PYLINT" ]] ; then
     echo 'Cannot find pylint';
 else
     python $PYLINT --output-format=colorized \
-                   --reports=n --disable=C0103 $MODULE;
+	           --rcfile=pylint.rc \
+                   --reports=n $MODULE;
 fi
 
 echo ''
