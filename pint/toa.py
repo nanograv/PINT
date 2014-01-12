@@ -254,7 +254,7 @@ class TOAs(object):
         observatory clock corrections.
         """
         for obsname in self.observatories:
-            mjds, ccorr = obs.get_clock_corr_vals(obsname)
+            mjds, ccorr = observatories_module.get_clock_corr_vals(obsname)
             # select the TOAs we will apply corrections to
             toas = [t for t in self.toas if t.obs == obsname and
                     "clkcorr" not in t.flags]

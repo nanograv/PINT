@@ -24,7 +24,7 @@ def get_clock_corr_vals(obsname, **kwargs):
                  "Effelsberg": "bonn",
                  "WSRT": "wsrt"}
     if obsname in fileparts.keys():
-        filenm = os.path.join(os.getenv("TEMPO"),
+        filenm = os.path.join(os.environ["TEMPO"],
                               "clock/time_%s.dat" % \
                               fileparts[obsname])
     else:
