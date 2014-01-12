@@ -37,11 +37,20 @@ early stages of development.
 
 ## Data files
 
-PINT requires detailed ephemerides for the Solar System motion and for the Earth's rotation. Files containing this information can be automatically downloaded using datafiles/download_data.sh; the total volume is a few hundred megabytes. PINT also requires observatory clock correction data; these are currently read from the clock correction database of an installed copy of TEMPO (which it locates using the TEMPO environment variable; see below).
+PINT requires detailed ephemerides for the Solar System motion and for 
+the Earth's rotation. Files containing this information can be 
+automatically downloaded using datafiles/download_data.sh; the total volume 
+is a few hundred megabytes. PINT also requires observatory clock correction 
+data; these are currently read from the clock correction database of an 
+installed copy of TEMPO (which it locates using the TEMPO environment 
+variable; see below).
 
 ## Environment variables
 
-In order to locate its data files, PINT requires that an environment variable named PINT be set to the location of the PINT distribution; in particular, it will look for its data files in $PINT/datafiles. It also requires access to clock correction files, which it looks for in $TEMPO/clock.
+In order to locate its data files, PINT requires that an environment variable
+named PINT be set to the location of the PINT distribution; in particular, it 
+will look for its data files in $PINT/datafiles. It also requires access to 
+clock correction files, which it looks for in $TEMPO/clock.
 
 ## Development
 
@@ -53,10 +62,14 @@ and reusable. We therefore have the following requests for new
 
  - All code should be documented with docstrings, and with 
     additional explanation where appropriate; please follow the AstroPy
-    documentation guidelines_
+    documentation guidelines_ for "finished" functions and at least
+    include a one-sentence summary plus an explanation even if the
+    function is still under development. Check Sphinx output to see if
+    it makes sensse.
  - All code should be tested by unit tests
     - Brief doctests in the docstring should provide usage examples
     - More complex unit tests should go in the tests/ directory
+    - Use the nose testing framework so tests are as independent as possible
     - When fixing a bug, please write a unit test that triggers the bug, 
        and keep it around to make sure the bug is not reintroduced.
  - All code should have as consistent a style as possible
@@ -67,7 +80,7 @@ Brentjens). This generates the documentation, runs the test suite, and
 runs pylint. The goal is to have pylint return a clean bill of health, 
 all the tests pass, and all the documentation clear and intelligible. It 
 is probably a good idea to run this script (and clean up the results!) 
-on every test run. While it is possible to disable particular warnings 
+before every commit to git. While it is possible to disable particular warnings 
 from pylint, please be very reluctant to do so, especially if they 
 are stylistic warnings: if it thinks your method takes too many arguments, 
 for example, but you can't figure out how to reduce their number, leave 
@@ -84,7 +97,7 @@ break up the method into simpler pieces.
  - Heavy use of well-debugged libraries
    - JPL SPICE
    - astropy
-   - optimization libraries
+   - optimization libraries (scipy, pyMinuit, emcee)
  - GUI will not be required
  - Strong isolation of parts needing extended precision
  - Full use of docstrings
@@ -94,5 +107,5 @@ break up the method into simpler pieces.
  - Backwards compatible with TEMPO
  - Code independence from TEMPO and TEMPO2
  - Use of defined constants
- - Unittests
+ - Unit tests
 
