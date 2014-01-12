@@ -67,7 +67,7 @@ def parse_TOA_line(line, fmt="Unknown"):
         MJD = (int(ii), float("0."+ff))
         try:
             d["ddm"] = float(fields[4])
-        except ValueError:
+        except IndexError:
             d["ddm"] = 0.0
     elif fmt == "Tempo2":
         # This could use more error catching...
@@ -149,6 +149,7 @@ class TOAs(object):
 
     def __init__(self, toafile=None):
         if toafile:
+            # FIXME: work with file-like objects
             if type(toafile) in [tuple, list]:
                 self.filename = None
                 for infile in toafile:
