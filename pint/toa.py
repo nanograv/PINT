@@ -94,7 +94,6 @@ def parse_TOA_line(line, fmt="Unknown"):
             "TOA format '%s' not implemented yet" % fmt)
     return MJD, d
 
-# FIXME: lower-case class names are not standard
 class TOA(object):
     """A time of arrival class.
 
