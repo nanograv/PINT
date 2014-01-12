@@ -23,7 +23,9 @@ iers_a_file = download_file(IERS_A_URL, cache=True)
 iers_a = IERS_A.open(iers_a_file)
 
 def toa_format(line, fmt="Unknown"):
-    """Identifies a TOA line as one of the following types:  Comment, Command,
+    """Determine the type of a TOA line.
+
+    Identifies a TOA line as one of the following types:  Comment, Command,
     Blank, Tempo2, Princeton, ITOA, Parkes, Unknown."""
     if line[0] == 'C' or line[0] == '#':
         return "Comment"
@@ -93,10 +95,8 @@ def parse_TOA_line(line, fmt="Unknown"):
     return MJD, d
 
 # FIXME: lower-case class names are not standard
-class toa(object):
-    """
-    toa(MJD, error=0.0, obs='bary', freq=float("inf"), scale='utc',...)
-        A time of arrival class.
+class TOA(object):
+    """A time of arrival class.
 
         MJD will be stored in astropy.time.Time format, and can be
             passed as a double (not recommended), a string, a
@@ -108,7 +108,7 @@ class toa(object):
         other keyword/value pairs can be specified as needed
 
     Example:
-        >>> a = toa((54567, 0.876876876876876), 4.5, freq=1400.0,
+        >>> a = TOA((54567, 0.876876876876876), 4.5, freq=1400.0,
         ...         obs="GBT", backend="GUPPI")
         >>> print a
         54567.876876876876876:  4.500 us error from 'GBT' at 1400.0000 MHz {'backend': 'GUPPI'}
@@ -144,6 +144,9 @@ class toa(object):
 
 
 class TOAs(object):
+    """TOAs loaded from zero or more files.
+
+    """
 
     def __init__(self, toafile=None):
         if toafile:
@@ -176,42 +179,27 @@ class TOAs(object):
                 return self
 
     def get_freqs(self):
-        """
-        get_freqs()
-
-        Return a numpy array of the observing frequencies for the TOAs.
+        """Return a numpy array of the observing frequencies for the TOAs.
         """
         return numpy.array([t.freq for t in self.toas])
 
     def get_mjds(self):
-        """
-        get_mjds()
-
-        Return a numpy array of the astropy.time MJDs of the TOAs.
+        """Return a numpy array of the astropy.time MJDs of the TOAs.
         """
         return numpy.array([t.mjd for t in self.toas])
 
     def get_errors(self):
-        """
-        get_errors()
-
-        Return a numpy array of the TOA errors.
+        """Return a numpy array of the TOA errors.
         """
         return numpy.array([t.error for t in self.toas])
 
     def get_obss(self):
-        """
-        get_obss()
-
-        Return a numpy array of the observatories for rach TOA.
+        """Return a numpy array of the observatories for rach TOA.
         """
         return numpy.array([t.obs for t in self.toas])
 
     def get_flags(self):
-        """
-        get_flags()
-
-        Return a numpy array of the TOA flags.
+        """Return a numpy array of the TOA flags.
         """
         return numpy.array([t.flags for t in self.toas])
 
@@ -237,13 +225,12 @@ class TOAs(object):
         s += "Mean / Median / StDev TOA error:\t%g\t%g\t%g\tus\n" % \
               (errs.mean(), numpy.median(errs), errs.std())
         return s
-              
-    def apply_clock_corrections(self):
-        """
-        apply_clock_corrections()
 
-        Apply observatory clock corrections to all the TOAs where
-        corrections are available.  This routine actually changes
+    def apply_clock_corrections(self):
+        """Apply observatory clock corrections.
+
+        Apply clock corrections to all the TOAs where corrections
+        are available.  This routine actually changes
         the value of the TOA, although the correction is also listed
         as a new flag for the TOA called 'clkcorr' so that it can be
         reversed if necessary.  This routine also applies all 'TIME'
@@ -268,8 +255,7 @@ class TOAs(object):
 
     @mpmath.workdps(20)
     def compute_posvels(self, ephem="DE405", planets=False):
-        """
-        compute_posvels(ephem='DE405')
+        """Compute positions and velocities of observatory and Earth.
 
         Compute the positions and velocities of the observatory (wrt
         the Geocenter) and the center of the Earth (referenced to the
@@ -302,10 +288,9 @@ class TOAs(object):
                     setattr(toa, 'obs_'+p+'_pvs', pv)
 
     def to_table(self):
-        """
-        to_table()
+        """Convert the list of TOAs to an astropy table.
 
-        Convert the list of TOAs to an astropy table and store it in self.table
+        The result is stored in self.table.
         """
         self.table = table.Table([self.get_mjds(), self.get_errors(),
                                   self.get_freqs(), self.get_obss(),
@@ -314,11 +299,9 @@ class TOAs(object):
                                         "obss", "flags"))
 
     def read_toa_file(self, filename, process_includes=True, top=True):
-        """
-        read_toa_file(filename, process_includes=True)
+        """Read the given filename and return a list of TOA objects.
 
-        Read the given filename and return a list of toa objects
-        parsed from it.  Will recurse to process INCLUDE-d files unless
+        Will recurse to process INCLUDE-d files unless
         process_includes is set to False.
         """
         if top:
@@ -398,7 +381,7 @@ class TOAs(object):
                         del self.cdict
                     return
                 else:
-                    newtoa = toa(MJD, **d)
+                    newtoa = TOA(MJD, **d)
                     if ((self.cdict["EMIN"] > newtoa.error) or
                         (self.cdict["EMAX"] < newtoa.error) or
                         (self.cdict["FMIN"] > newtoa.freq) or
