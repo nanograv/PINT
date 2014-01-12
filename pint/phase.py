@@ -11,6 +11,7 @@ class Phase(namedtuple('Phase', 'int frac')):
     float or mpmath value), or separately provided integer and fractional
     parts, depending on what precision is required.  For example:
 
+    >>> import mpmath
     >>> # Set the precision to 20 digits:
     >>> mpmath.mp.dps = 20
     >>> # Phase from mpmath float:

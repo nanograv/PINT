@@ -111,10 +111,9 @@ class toa(object):
 
     Example:
         >>> a = toa((54567, 0.876876876876876), 4.5, freq=1400.0,
-                    obs="GBT", backend="GUPPI")
+        ...         obs="GBT", backend="GUPPI")
         >>> print a
-        54567.876876876876876: 4.500 us at 'GBT' at 1400.0000 MHz
-        {'backend': 'GUPPI'}
+        54567.876876876876876:  4.500 us error from 'GBT' at 1400.0000 MHz {'backend': 'GUPPI'}
 
     """
     def __init__(self, MJD, # required
@@ -394,7 +393,7 @@ class TOAs(object):
                     else:
                         continue
                 if (self.cdict["SKIP"] or
-                    d["format"] in ("Blank", "Unknown", "Comment")):
+                    d["format"] in ("Blank", "Unknown", "Comment", "Command")):
                     continue
                 elif self.cdict["END"]:
                     if top:
