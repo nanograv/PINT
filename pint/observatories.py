@@ -2,6 +2,7 @@ import os
 import numpy
 from . import spiceutils
 import astropy.units as u
+from astropy import log
 
 class observatory(object):
     pass
@@ -28,7 +29,7 @@ def get_clock_corr_vals(obsname, **kwargs):
                               "clock/time_%s.dat" % \
                               fileparts[obsname])
     else:
-        print "No clock correction valus for %s" % obsname
+        log.error("No clock correction valus for %s" % obsname)
         return (numpy.array([0.0, 100000.0]), numpy.array([0.0, 0.0]))
     # The following works for simple linear interpolation
     # of normal TEMPO-style clock correction files

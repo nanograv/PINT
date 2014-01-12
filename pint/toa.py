@@ -47,9 +47,7 @@ def get_obs(obscode):
     for name in observatories:
         if obscode in observatories[name].aliases:
             return name
-    # FIXME: no print!
-    print "Error:  cannot identify observatory '%s'!" % obscode
-    return None
+    raise ValueError("cannot identify observatory '%s'!" % obscode)
 
 def parse_TOA_line(line, fmt="Unknown"):
     MJD = None
@@ -226,21 +224,20 @@ class TOAs(object):
             sys.stderr.write("Warning: pickle needs a filename\n")
 
     def summary(self):
+        """Print a short summary of the TOAs.
         """
-        summary()
-
-        Print a short summary of the TOAs.
-        """
-        print "There are %d observatories:" % len(self.observatories), \
-              list(self.observatories)
-        print "There are %d TOAs" % len([x for x in self.toas])
-        print "There are %d commands" % \
+        s = ""
+        s += "There are %d observatories:\t%s\n" % (len(self.observatories),
+                                                    list(self.observatories))
+        s += "There are %d TOAs\n" % len([x for x in self.toas])
+        s += "There are %d commands\n" % \
               len([x for x in self.commands])
         errs = self.get_errors()
-        print "Min / Max TOA errors:", min(errs), max(errs)
-        print "Mean / Median / StDev TOA error:", errs.mean(), \
-              numpy.median(errs), errs.std()
-
+        s += "Min / Max TOA errors:\t%g\t%g\tus\n" % (min(errs), max(errs))
+        s += "Mean / Median / StDev TOA error:\t%g\t%g\t%g\tus\n" % \
+              (errs.mean(), numpy.median(errs), errs.std())
+        return s
+              
     def apply_clock_corrections(self):
         """
         apply_clock_corrections()
@@ -352,7 +349,6 @@ class TOAs(object):
         with open(filename, "r") as f:
             for l in f.readlines():
                 MJD, d = parse_TOA_line(l, fmt=self.cdict["FORMAT"])
-                # print MJD, d
                 if d["format"] == "Command":
                     cmd = d["Command"][0]
                     self.commands.append((d["Command"], len(self.toas)))

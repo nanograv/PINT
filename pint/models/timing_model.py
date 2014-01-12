@@ -4,6 +4,7 @@ import functools
 from warnings import warn
 from .parameter import Parameter
 from ..phase import Phase
+from astropy import log
 
 class Cache(object):
     """
@@ -27,7 +28,7 @@ class Cache(object):
         the_func = function.__name__
         @functools.wraps(function)
         def get_cached_result(*args, **kwargs):
-            #print "Checking for cached value of", the_func
+            log.debug("Checking for cached value of %s" % the_func)
             # What to do about checking for a change of arguments?
             # args[0] should be a "self"
             if hasattr(args[0], cls.the_cache):
@@ -35,17 +36,17 @@ class Cache(object):
                 if isinstance(cache, cls):
                     if hasattr(cache, the_func):
                         # Return the cached value
-                        #print " ... using cached result"
+                        log.debug(" ... using cached result")
                         return getattr(cache, the_func)
                     else:
                         # Evaluate the function and cache the results
-                        #print " ... computing new result"
+                        log.debug(" ... computing new result")
                         result = function(*args, **kwargs)
                         setattr(cache, the_func, result)
                         return result
             # Couldn't access the cache, just return the result
             # without caching it.
-            #print " ... no cache found"
+            log.debug(" ... no cache found")
             return function(*args, **kwargs)
         return get_cached_result
 
@@ -105,12 +106,11 @@ class TimingModel(object):
         self.params += [param.name,]
 
     def param_help(self):
+        """Print help lines for all available parameters in model.
         """
-        Print help lines for all available parameters in model.
-        """
-        print "Available parameters for ", self.__class__
+        s = "Available parameters for %s\n" % self.__class__
         for par in self.params:
-            print getattr(self, par).help_line()
+            s += "%s\n" % getattr(self, par).help_line()
 
     @Cache.use_cache
     def phase(self, toa):
