@@ -7,10 +7,9 @@ from ..phase import Phase
 from astropy import log
 
 class Cache(object):
-    """
-    The Cache class is for temporarily caching timing model internal
-    computation results.  It defines two decorators, use_cache
-    and cache_result.
+    """Temporarily cache timing model internal computation results.
+
+    The Cache class defines two decorators, use_cache and cache_result.
     """
 
     # The name of the cache attribute
@@ -18,7 +17,8 @@ class Cache(object):
 
     @classmethod
     def cache_result(cls, function):
-        """
+        """Caching decorator for functions.
+
         This can be applied as a decorator to any timing model method
         for which it might be useful to store the value, once computed
         for a given TOA.  Note that the cache must be manually enabled
@@ -52,7 +52,8 @@ class Cache(object):
 
     @classmethod
     def use_cache(cls, function):
-        """
+        """Caching decorator for functions.
+
         This can be applied as a decorator to a function that should
         internally use caching of function return values.  The cache
         will be deleted when the function exits.  If the top-level function
@@ -114,8 +115,7 @@ class TimingModel(object):
 
     @Cache.use_cache
     def phase(self, toa):
-        """
-        Return the model-predicted pulse phase for the given toa.
+        """Return the model-predicted pulse phase for the given toa.
         """
         # First compute the delay to "pulsar time"
         delay = self.delay(toa)
@@ -130,7 +130,8 @@ class TimingModel(object):
 
     @Cache.use_cache
     def delay(self, toa):
-        """
+        """Total delay for a given TOA.
+
         Return the total delay which will be subtracted from the given
         TOA to get time of emission at the pulsar.
         """
@@ -146,8 +147,7 @@ class TimingModel(object):
         return result
 
     def as_parfile(self):
-        """
-        Returns a parfile representation of the entire model as a string.
+        """Returns a parfile representation of the entire model as a string.
         """
         result = ""
         for par in self.params:
@@ -155,8 +155,7 @@ class TimingModel(object):
         return result
 
     def read_parfile(self, filename):
-        """
-        Read values from the specified parfile into the model parameters.
+        """Read values from the specified parfile into the model parameters.
         """
         pfile = open(filename, 'r')
         for l in [pl.strip() for pl in pfile.readlines()]:
@@ -179,7 +178,8 @@ class TimingModel(object):
         self.setup()
 
 def generate_timing_model(name, components):
-    """
+    """Build a timing model from components.
+
     Returns a timing model class generated from the specified
     sub-components.  The return value is a class type, not an instance,
     so needs to be called to generate a usable instance.  For example:
@@ -193,15 +193,12 @@ def generate_timing_model(name, components):
     return type(name, components, {})
 
 class TimingModelError(Exception):
-    """
-    Generic base class for timing model errors.
+    """Generic base class for timing model errors.
     """
     pass
 
 class MissingParameter(TimingModelError):
-    """
-    This exception should be raised if a required model parameter was
-    not included.
+    """A required model parameter was not included.
 
     Attributes:
       module = name of the model class that raised the error
