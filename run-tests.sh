@@ -22,7 +22,7 @@ if [[ ! -f "$NOSETESTS" ]] ; then
     echo 'Cannot find nosetests or nosetests2';
 else
    echo "Using $NOSETESTS"
-   python $NOSETESTS \
+   $NOSETESTS \
               --with-doctest --with-coverage \
               --cover-package="$MODULE" \
               --cover-tests \
@@ -38,7 +38,7 @@ echo ''
 if [[ ! -f "$PYLINT" ]] ; then
     echo 'Cannot find pylint';
 else
-    python $PYLINT --output-format=colorized \
+    $PYLINT --output-format=colorized \
 	           --rcfile=pylint.rc \
                    --reports=n $MODULE;
 fi
