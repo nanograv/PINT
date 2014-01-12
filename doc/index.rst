@@ -12,8 +12,10 @@ Contents:
    :maxdepth: 2
 
    intro
-   module-reference
-
+   fitter
+   phase
+   models
+   utils
 
 Indices and tables
 ==================

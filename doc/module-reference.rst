@@ -1,6 +1,7 @@
 PINT Module Reference
 =====================
 
-.. automodapi:: pint
+.. automodapi:: pint.utils
+    :no-inheritance-diagram:
 
 
