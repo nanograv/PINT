@@ -32,6 +32,16 @@ early stages of development.
  - nosetests
  - sphinx
  - coverage
+ - tempo
+ - tempo2
+
+## Data files
+
+PINT requires detailed ephemerides for the Solar System motion and for the Earth's rotation. Files containing this information can be automatically downloaded using datafiles/download_data.sh; the total volume is a few hundred megabytes. PINT also requires observatory clock correction data; these are currently read from the clock correction database of an installed copy of TEMPO (which it locates using the TEMPO environment variable; see below).
+
+## Environment variables
+
+In order to locate its data files, PINT requires that an environment variable named PINT be set to the location of the PINT distribution; in particular, it will look for its data files in $PINT/datafiles. It also requires access to clock correction files, which it looks for in $TEMPO/clock.
 
 ## Development
 
