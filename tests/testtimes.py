@@ -23,6 +23,8 @@ assert(len(goodlines)==len(ts.toas))
 
 # Get the output lines from the TOAs
 for line, toa in zip(goodlines, ts.toas):
+    assert len(line.split()) == 20, \
+      "tempo2 general2 does not support all needed outputs"
     oclk, ut1_utc, tai_utc, tt_tai, ttcorr, tt2tb, \
           ep0, ep1, ep2, ev0, ev1, ev2, \
           tp0, tp1, tp2, tv0, tv1, tv2, Ttt = \
@@ -32,7 +34,7 @@ for line, toa in zip(goodlines, ts.toas):
     t2_opv = utils.PosVel(numpy.asarray([tp0, tp1, tp2]) * ls,
                           numpy.asarray([tv0, tv1, tv2]) * ls/u.s)
     # print utils.time_toq_mjd_string(toa.mjd.tt), line.split()[-1]
-    tempo_tt = utils.time_from_mjd_string(line.split()[-1], scale='tt') 
+    tempo_tt = utils.time_from_mjd_string(line.split()[-1], scale='tt')
     # Ensure that the clock corrections are accurate to better than 0.1 ns
     assert(math.fabs((oclk*u.s - toa.flags["clkcorr"]).to(u.ns).value) < 0.1)
 
