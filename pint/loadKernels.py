@@ -2,12 +2,7 @@
 import spice
 import os
 from astropy import log
-
-# Load the PINT environment variable to get the top level directory
-pintdir = os.getenv("PINT")
-if pintdir is None:
-    raise ValueError("Could not find the PINT environment variable. " \
-                     "It should point to the PINT directory!")
+from pint import pintdir
 
 spice.furnsh(os.path.join(pintdir, "datafiles/pck00010.tpc"))
 log.info("SPICE loaded planetary constants.")

@@ -3,6 +3,7 @@ import numpy
 from . import spiceutils
 import astropy.units as u
 from astropy import log
+from pint import pintdir
 
 class observatory(object):
     pass
@@ -38,14 +39,13 @@ def get_clock_corr_vals(obsname, **kwargs):
     return mjds, ccorr
 
 def read_observatories():
-    """
-    read_observatories()
+    """Load observatory data files and return them.
 
     Return a dictionary of instances of the observatory class that are
     stored in the $PINT/datafiles/observatories.txt file.
     """
     observatories = {}
-    filenm = os.path.join(os.getenv("PINT"), "datafiles/observatories.txt")
+    filenm = os.path.join(pintdir, "datafiles/observatories.txt")
     with open(filenm) as f:
         for line in f.readlines():
             if line[0] != "#":

@@ -11,6 +11,7 @@ import astropy.units as u
 from astropy.utils.iers import IERS_A, IERS_A_URL
 from astropy.utils.data import download_file
 from .spiceutils import objPosVel
+from pint import pintdir
 
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
@@ -263,7 +264,7 @@ class TOAs(object):
         set with PosVel class instances which have astropy units.
         """
         # Load the appropriate JPL ephemeris
-        pth = os.path.join(os.getenv("PINT"), "datafiles")
+        pth = os.path.join(pintdir, "datafiles")
         spice.furnsh(os.path.join(pth, "%s.bsp"%ephem.lower()))
         j2000 = time.Time('2000-01-01 12:00:00', scale='utc')
         j2000_mjd = utils.time_to_mjd_mpf(j2000)

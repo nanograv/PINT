@@ -47,10 +47,11 @@ variable; see below).
 
 ## Environment variables
 
-In order to locate its data files, PINT requires that an environment variable
+In order to locate its data files, PINT allows an environment variable
 named PINT be set to the location of the PINT distribution; in particular, it 
-will look for its data files in $PINT/datafiles. It also requires access to 
-clock correction files, which it looks for in $TEMPO/clock.
+will look for its data files in $PINT/datafiles. If this is not set it will 
+look in a directory near the directory containing the source code. PINT also 
+requires access to  clock correction files, which it looks for in $TEMPO/clock.
 
 ## Development
 
