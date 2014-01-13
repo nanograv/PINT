@@ -10,7 +10,7 @@ import astropy.table as table
 import astropy.units as u
 from astropy.utils.iers import IERS_A, IERS_A_URL
 from astropy.utils.data import download_file
-from .spiceutils import objPosVel
+from .spiceutils import objPosVel, load_kernels
 from pint import pintdir
 
 
@@ -264,6 +264,7 @@ class TOAs(object):
         set with PosVel class instances which have astropy units.
         """
         # Load the appropriate JPL ephemeris
+        load_kernels()
         pth = os.path.join(pintdir, "datafiles")
         spice.furnsh(os.path.join(pth, "%s.bsp"%ephem.lower()))
         j2000 = time.Time('2000-01-01 12:00:00', scale='utc')

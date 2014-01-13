@@ -3,22 +3,31 @@ import numpy as np
 import astropy.units as u
 from astropy.coordinates import Longitude, Latitude
 from .utils import PosVel
+from astropy import log
 
-def loadKernel(filenames):
-    """
-    loadKernel(filenames)
+kernels_loaded = False
+def load_kernels():
+    """Ensure all kernels are loaded.
 
-    Read SPICE kernels in filenames (including full paths)
+    State is kept in the kernels_loaded module-global variable, so that this
+    function can (should!) be called any time the user anticipates needing
+    SPICE kernels.
     """
-    if type(filenames) is str:
-        spice.furnsh(filenames)
-    else:
-        for name in filenames:
-            spice.furnsh(name)
+    global kernels_loaded
+    if not kernels_loaded:
+        spice.furnsh(os.path.join(pintdir, "datafiles/pck00010.tpc"))
+        log.info("SPICE loaded planetary constants.")
+        spice.furnsh(os.path.join(pintdir, "datafiles/naif0010.tls"))
+        log.info("SPICE loaded leap seconds.")
+        spice.furnsh(os.path.join(pintdir,
+                                  "datafiles/earth_latest_high_prec.bpc"))
+        log.info("SPICE loaded Earth rotation parameters.")
+        spice.furnsh(os.path.join(pintdir, "datafiles/de405.bsp"))
+        log.info("SPICE loaded DE405 Planetary Ephemeris.")
+        kernels_loaded = True
 
 def objPosVel(obj1, obj2, et):
-    """
-    objPosVel(obj1, obj2, et)
+    """Compute the difference of PosVel objects.
 
     Returns position/velocity vectors between obj1 and obj2 as a
     PosVel object at the given time.
@@ -33,23 +42,23 @@ def objPosVel(obj1, obj2, et):
 
 
 def objPosVel2SSB(objname, et):
-    """
-    objPosVel2SSB(objname, et)
+    """Convert a PosVel object to solar system barycenter coordinates.
 
     Returns a solar system object position and velocity in J2000 SSB
     coordinates.  Requires SPK and LPSK kernels in J2000 SSB coordinates.
     """
+    load_kernels()
     return spice.spkezr(objname.upper(), et, "J2000", "NONE", "SSB")
 
 
 def getobsJ2000(posITRF, et):
-    """
-    getobsJ2000(posITRF, et)
+    """Convert observatory coordinates to Earth centered coordinates.
 
     Returns observatory rectangular coordinates in J2000 Earth
     centered coordinates.  Requires PCK kernels.  posITRF is a double
     precision vector of [x,y,z] in ITRF coordinate in km.
     """
+    load_kernels()
     state = np.array(posITRF+[0, 0, 0])
     # Transformation matrix from ITRF93 to J2000
     # CALL SXFORM(COORDINATE FROM, COORDINATE TO, ET)
@@ -61,13 +70,12 @@ def getobsJ2000(posITRF, et):
 
 
 def ITRF2GEO(posITRF):
-    '''
-    ITRF2GEO(posITRF)
+    '''Converts from earth rectangular coordinate to Geodetic coordinate.
 
-    Converts from earth rectangular coordinate to Geodetic coordinate,
     Input will be the rectangular three coordinates [x,y,z].  Kernel
     file PCK is required.
     '''
+    load_kernels()
     _, value = spice.bodvcd(399, "RADII", 3)
     # Reuturns Earh radii [larger equatorial radius, smaller
     # equatorial radius, polar radius] dim is the dimension of
@@ -86,8 +94,7 @@ def ITRF2GEO(posITRF):
 
 
 def ITRF_to_GEO_WGS84(x, y, z):
-    """
-    ITRF_to_GEO_WGS84(x, y, z)
+    """Convert rectangular coordinates to lat/long/height.
 
     Convert ITRF x, y, z rectangular coords (m) to WGS-84 referenced
     lon, lat, height (using astropy units).
