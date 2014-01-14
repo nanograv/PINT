@@ -5,7 +5,7 @@ from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string
 class Parameter(object):
     """
     Parameter(name=None, value=None, units=None, description=None, 
-                uncertainty=None, frozen=True, aliases=[],
+                uncertainty=None, frozen=True, continuous=True, aliases=[],
                 parse_value=float, print_value=str)
 
         Class describing a single timing model parameter.  Takes the following
@@ -24,6 +24,9 @@ class Parameter(object):
         frozen is a flag specifying whether "fitters" should adjust the
           value of this parameter or leave it fixed.
 
+        continuous is flag specifying whether phase derivatives with 
+          respect to this parameter exist.
+
         aliases is an optional list of strings specifying alternate names
           that can also be accepted for this parameter.
 
@@ -37,7 +40,7 @@ class Parameter(object):
     """
 
     def __init__(self, name=None, value=None, units=None, description=None, 
-            uncertainty=None, frozen=True, aliases=[],
+            uncertainty=None, frozen=True, aliases=[], continuous=True,
             parse_value=fortran_float, print_value=str):
         self.value = value
         self.name = name
@@ -45,6 +48,7 @@ class Parameter(object):
         self.description = description
         self.uncertainty = uncertainty
         self.frozen = frozen
+        self.continuous = continuous
         self.aliases = aliases
         self.parse_value=parse_value
         self.print_value=print_value
@@ -122,18 +126,19 @@ class MJDParameter(Parameter):
     """
     MJDParameter(self, name=None, value=None, units=None, description=None, 
             uncertainty=None, frozen=True, aliases=[],
-            parse_value=time_from_mjd_string,
-            print_value=time_to_mjd_string)
+            parse_value=fortran_float, print_value=str):
 
     This is a Parameter type that is specific to MJD values.
     """
 
     def __init__(self, name=None, value=None, description=None, 
-            uncertainty=None, frozen=True, aliases=[],
+            uncertainty=None, frozen=True, continuous=True, aliases=[],
             parse_value=time_from_mjd_string,
             print_value=time_to_mjd_string):
         super(MJDParameter,self).__init__(name=name,value=value,
-                units="MJD", description=description, 
-                uncertainty=uncertainty, frozen=frozen, aliases=aliases,
+                units="MJD", description=description,
+                uncertainty=uncertainty, frozen=frozen, 
+                continuous=continuous,
+                aliases=aliases,
                 parse_value=parse_value,
                 print_value=print_value)
