@@ -114,11 +114,20 @@ class TOA(object):
         >>> print a
         54567.876876876876876:  4.500 us error from 'GBT' at 1400.0000 MHz {'backend': 'GUPPI'}
 
+    What happens if IERS data is not available for the date:
+        >>> a = TOA((154567, 0.876876876876876), 4.5, freq=1400.0,
+        ...         obs="GBT", backend="GUPPI")
+        Traceback (most recent call last):
+          omitted
+        IndexError: (some) times are outside of range covered by IERS table.
+
     """
     def __init__(self, MJD, # required
                  error=0.0, obs='bary', freq=float("inf"),
                  scale='utc', # with defaults
                  **kwargs):  # keyword args that are completely optional
+        if obs not in observatories:
+            raise ValueError("Unknown observatory %s" % obs)
         self.mjd = time.Time(MJD[0], MJD[1],
                              scale=scale, format='mjd',
                              lon=observatories[obs].geo[0],
@@ -238,12 +247,20 @@ class TOAs(object):
         commands and treats them exactly as if they were a part of the
         observatory clock corrections.
         """
+        for t in self.toas:
+            # any TOAs from an unknown observatory will not have TIME applied
+            assert t.obs in self.observatories
         for obsname in self.observatories:
             mjds, ccorr = observatories_module.get_clock_corr_vals(obsname)
             # select the TOAs we will apply corrections to
             toas = [t for t in self.toas if t.obs == obsname and
                     "clkcorr" not in t.flags]
-            tvals = [t.mjd.value for t in toas]
+            tvals = numpy.array([t.mjd.value for t in toas])
+            if numpy.any((tvals<mjds[0]) | (tvals>mjds[-1])):
+                # FIXME: check the user sees this! should it be an exception?
+                log.error("Some TOAs are not covered by the %s clock correction"
+                    +" file, treating clock corrections as constant"
+                    +" past the ends." % obsname)
             corrs = numpy.interp(tvals, mjds, ccorr)
             for corr, toa in zip(corrs, toas):
                 corr *= u.us # the clock corrections are in microseconds
