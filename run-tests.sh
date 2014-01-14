@@ -1,7 +1,8 @@
 #!/bin/bash
 
 MODULE=pint
-(cd doc && make html && make latexpdf)
+#(cd doc && make html && make latexpdf)
+(cd doc && make html)
 
 PYTHONPATH="`pwd`:$PYTHONPATH"
 NOSETESTS=`which nosetests 2> /dev/null`

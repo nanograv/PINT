@@ -2,6 +2,7 @@
 
 All times are in days, distances in light-seconds, and masses in solar masses.
 """
+from __future__ import division
 import collections
 import numpy as np
 from scipy.optimize import newton, fsolve
@@ -133,7 +134,7 @@ def kepler_2d(params, t):
     if e == 0:
         d_om = np.array([0, 0, 0, 0, 0, 0])
     else:
-        d_om = np.array([0, 0, -eps1/e**2, eps2/e**2, 0, 0])
+        d_om = np.array([0, 0, eps2/e**2, -eps1/e**2, 0, 0])
     #return om, d_om
 
     true_anomaly_0 = -om
@@ -153,17 +154,18 @@ def kepler_2d(params, t):
     d_mean_anomaly_0 = (d_eccentric_anomaly_0
             -d_e*np.sin(eccentric_anomaly_0)
             -e*np.cos(eccentric_anomaly_0)*d_eccentric_anomaly_0)
+    #return mean_anomaly_0, d_mean_anomaly_0
 
     mean_anomaly = 2*np.pi*t/pb + mean_anomaly_0
     d_mean_anomaly = \
       (2*np.pi*np.array([0, -t/pb**2, 0, 0, -pb**(-1), pb**(-1)])
             + d_mean_anomaly_0)
+    #return mean_anomaly, d_mean_anomaly
 
     mean_anomaly_dot = 2*np.pi/pb
     d_mean_anomaly_dot = 2*np.pi*np.array([0, -pb**(-2), 0, 0, 0, 0])
     #return ([mean_anomaly, mean_anomaly_dot],
     #        [d_mean_anomaly, d_mean_anomaly_dot])
-    #return mean_anomaly, d_mean_anomaly
 
     eccentric_anomaly, (eccentric_anomaly_de, eccentric_anomaly_prime) = \
        eccentric_from_mean(e, mean_anomaly)

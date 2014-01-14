@@ -2,6 +2,7 @@ import astropy.units as u
 import pint.orbital.kepler as kepler
 from pint import ls
 from numpy.testing import assert_allclose
+from pint.utils import check_all_partials
 
 def test_mass_solar():
     a = u.au.to(ls)
@@ -21,4 +22,16 @@ def test_kepler_2d_t0_pb():
     assert xyv[0]>0
     assert_allclose(xyv[1],0,atol=1e-8)
 
-    
+
+def flatten_namedtuple(f,tupletype):
+    l = len(tupletype._fields)
+    def new_f(*args):
+        new_args = [tupletype(*args[:l])] + list(args[l:])
+        return f(*new_args)
+    return new_f
+
+def test_kepler_2d_derivs():
+    p = kepler.Kepler2DParameters(a=2, pb=3, eps1=0.2, eps2=0.1, t0=-1)
+    check_all_partials(
+        flatten_namedtuple(kepler.kepler_2d,kepler.Kepler2DParameters),
+                       list(p)+[4])
