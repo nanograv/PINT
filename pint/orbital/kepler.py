@@ -282,3 +282,240 @@ def inverse_kepler_2d(xv, m, t):
     return Kepler2DParameters(a=a, pb=pb, eps1=eps1, eps2=eps2,
                               t0=t-(mean_anomaly-mean_anomaly_0)*pb/(2*np.pi))
     #mean_anomaly*pb/(2*np.pi)
+
+
+
+class Kepler3DParameters(
+        collections.namedtuple("Kepler3DParameters",
+                               "a pb eps1 eps2 i lan t0")):
+    """Parameters to describe a one-object 3D Keplerian orbit.
+
+    a - semimajor axis
+    pb - binary period
+    eps1, eps2 - eccentricity parameters
+    i - inclination angle
+    lan - longitude of the ascending node
+    t0 - time of the ascending node
+    """
+    __slots__ = ()
+
+
+
+
+
+def kepler_3d(params,t):
+    """One-body Kepler problem in 3D.
+
+    This function simply uses kepler_2d and rotates it into 3D.
+    """
+    a = params.a
+    pb = params.pb
+    eps1 = params.eps1
+    eps2 = params.eps2
+    i = params.i
+    lan = params.lan
+
+    p2 = Kepler2DParameters(a=a, pb=pb, eps1=eps1, eps2=eps2, t0=params.t0)
+    xv, jac = kepler_2d(p2,t)
+    xyv = np.zeros(6)
+    xyv[:2] = xv[:2]
+    xyv[3:5] = xv[2:]
+
+    jac2 = np.zeros((6,8))
+    t = np.zeros((6,6))
+    t[:2] = jac[:2]
+    t[3:5] = jac[2:]
+    jac2[:,:4] = t[:,:4]
+    jac2[:,-2:] = t[:,-2:]
+
+    r_i = np.array([[1,0,0],
+                    [0,np.cos(i),-np.sin(i)],
+                    [0,np.sin(i), np.cos(i)]])
+    d_r_i = np.array([[0,0,0],
+                      [0,-np.sin(i),-np.cos(i)],
+                      [0, np.cos(i),-np.sin(i)]])
+    r_i_6 = block_diag(r_i,r_i)
+    d_r_i_6 = block_diag(d_r_i,d_r_i)
+    xyv3 = np.dot(r_i_6,xyv)
+    jac3 = np.dot(r_i_6,jac2)
+    jac3[:,4] += np.dot(d_r_i_6, xyv)
+
+    r_lan = np.array([[ np.cos(lan),np.sin(lan),0],
+                      [-np.sin(lan),np.cos(lan),0],
+                      [0,0,1]])
+    d_r_lan = np.array([[-np.sin(lan), np.cos(lan),0],
+                        [-np.cos(lan),-np.sin(lan),0],
+                        [0,0,0]])
+    r_lan_6 = block_diag(r_lan,r_lan)
+    d_r_lan_6 = block_diag(d_r_lan,d_r_lan)
+    xyv4 = np.dot(r_lan_6,xyv3)
+    jac4 = np.dot(r_lan_6,jac3)
+    jac4[:,5] += np.dot(d_r_lan_6, xyv3)
+
+    return xyv4, jac4
+
+def inverse_kepler_3d(xyv, m, t):
+    """Inverse Kepler one-body calculation.
+    """
+    L = np.cross(xyv[:3],xyv[3:])
+    i = np.arccos(L[2]/np.sqrt(np.dot(L,L)))
+    lan = (-np.arctan2(L[0],-L[1])) % (2*np.pi)
+
+    r_lan = np.array([[ np.cos(lan),np.sin(lan),0],
+                      [-np.sin(lan),np.cos(lan),0],
+                      [0,0,1]])
+    r_lan_6 = block_diag(r_lan,r_lan)
+    xyv2 = np.dot(r_lan_6.T,xyv)
+
+    r_i = np.array([[1,0,0],
+                    [0,np.cos(i),-np.sin(i)],
+                    [0,np.sin(i), np.cos(i)]])
+    r_i_6 = block_diag(r_i,r_i)
+    xyv3 = np.dot(r_i_6.T,xyv2)
+
+    xv = xyv3[np.array([True,True,False,True,True,False])]
+    p2 = inverse_kepler_2d(xv, m, t)
+
+    return Kepler3DParameters(a=p2.a,pb=p2.pb,eps1=p2.eps1,eps2=p2.eps2,
+                              i=i,lan=lan,t0=p2.t0)
+
+
+
+
+
+# Two body forward and back
+# Additional parameters: mass_ratio, cm_x[3], cm_v[3]
+# FIXME: define when center of mass is at x_cm
+class KeplerTwoBodyParameters(
+        collections.namedtuple("KeplerTwoBodyParameters",
+            "a pb eps1 eps2 i lan q x_cm y_cm z_cm vx_cm vy_cm vz_cm tasc")):
+    """Parameters to describe a one-object 3D Keplerian orbit.
+
+    a - semimajor axis
+    pb - binary period
+    eps1, eps2 - eccentricity parameters
+    i - inclination angle
+    lan - longitude of the ascending node
+    q - mass ratio of bodies (companion over primary)
+    x_cm, y_cm, z_cm - position of the center of mass
+    vx_cm, vy_cm, vz_cm - velocity of the center of mass
+    tasc - time of the ascending node
+    """
+    __slots__ = ()
+
+def kepler_two_body(params,t):
+    """Set up two bodies in a Keplerian orbit
+
+    Most orbital parameters describe the orbit of the
+    primary; the secondary's parameters are inferred
+    from the fact that its mass is q times that of the
+    primary. x_cm and v_cm are the position and velocity
+    of the center of mass of the system.
+
+    The system is observed at time t, and tasc is the
+    the time of the ascending node.
+
+    Includes derivatives.
+    """
+    a = params.a
+    pb = params.pb
+    eps1 = params.eps1
+    eps2 = params.eps2
+    i = params.i
+    lan = params.lan
+    q = params.q
+    x_cm = np.array([params.x_cm, params.y_cm, params.z_cm])
+    v_cm = np.array([params.vx_cm, params.vy_cm, params.vz_cm])
+    tasc = params.tasc
+
+    e = np.zeros((14,15))
+    e[:, :14] = np.eye(14)
+    (d_a, d_pb, d_eps1, d_eps2, d_i, d_lan, d_q) = e[:7]
+    d_x_cm = e[7:10]
+    d_v_cm = e[10:13]
+    d_tasc = e[13]
+
+    a_c = a/q
+    a_tot = a+a_c
+    d_a_c = d_a/q-a*d_q/q**2
+    d_a_tot = d_a + d_a_c
+
+    m_tot, m_tot_prime = mass_partials(a_tot, pb)
+    m = m_tot/(1+q)
+    m_c = q*m
+    d_m_tot = (m_tot_prime[0]*d_a_tot
+              +m_tot_prime[1]*d_pb)
+    d_m = d_m_tot/(1+q) - m_tot*d_q/(1+q)**2
+    d_m_c = d_q*m + q*d_m
+
+    p2 = Kepler3DParameters(a=a_tot, pb=params.pb,
+                            eps1=params.eps1, eps2=params.eps2,
+                            i=params.i, lan=params.lan,
+                            t0=params.tasc)
+    xv_tot, jac_one = kepler_3d(p2,t)
+    d_xv_tot = np.dot(jac_one,
+            np.array([d_a_tot,
+                      d_pb,
+                      d_eps1,
+                      d_eps2,
+                      d_i,
+                      d_lan,
+                      -d_tasc,
+                      d_tasc]))
+
+    xv = xv_tot/(1+1./q)
+    d_xv = d_xv_tot/(1+1./q) + xv_tot[:,None]*d_q[None,:]/(1+q)**2
+
+    xv_c = -xv/q
+    d_xv_c = -d_xv/q+xv[:,None]*d_q[None,:]/q**2
+
+    xv[:3] += x_cm # FIXME: when, if t is actually t0?
+    xv[3:] += v_cm
+    xv_c[:3] += x_cm
+    xv_c[3:] += v_cm
+    d_xv[:3] += d_x_cm
+    d_xv[3:] += d_v_cm
+    d_xv_c[:3] += d_x_cm
+    d_xv_c[3:] += d_v_cm
+
+    total_state = np.zeros(14)
+    total_state[:6] = xv
+    total_state[6] = m
+    total_state[7:13] = xv_c
+    total_state[13] = m_c
+    d_total_state = np.zeros((14,15))
+    d_total_state[:6] = d_xv
+    d_total_state[6] = d_m
+    d_total_state[7:13] = d_xv_c
+    d_total_state[13] = d_m_c
+
+    return total_state, d_total_state
+
+def inverse_kepler_two_body(total_state, t):
+    x_p = total_state[:3]
+    v_p = total_state[3:6]
+    m_p = total_state[6]
+
+    x_c = total_state[7:10]
+    v_c = total_state[10:13]
+    m_c = total_state[13]
+
+    x_cm = (m_p*x_p+m_c*x_c)/(m_c+m_p)
+    v_cm = (m_p*v_p+m_c*v_c)/(m_c+m_p)
+
+    x = x_p-x_c
+    v = v_p-v_c
+
+    xv = np.concatenate((x,v))
+
+    p2 = inverse_kepler_3d(xv,m_c+m_p,t)
+    a_tot,pb,eps1,eps2,i,lan,t0 = p2
+    q = m_c/m_p
+    a = a_tot/(1+1./q)
+
+    return KeplerTwoBodyParameters(
+        a=a, pb=pb, eps1=eps1, eps2=eps2,
+        i=i, lan=lan, q=q,
+        x_cm=x_cm[0], y_cm=x_cm[1], z_cm=x_cm[2],
+        vx_cm=v_cm[0], vy_cm=v_cm[1], vz_cm=v_cm[2],
+        tasc=t0)
