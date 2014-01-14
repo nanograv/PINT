@@ -4,6 +4,8 @@ import astropy.units as u
 from astropy.coordinates import Longitude, Latitude
 from .utils import PosVel
 from astropy import log
+import os
+from pint import pintdir
 
 kernels_loaded = False
 def load_kernels():
