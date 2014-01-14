@@ -255,6 +255,8 @@ def inverse_kepler_2d(xv, m, t):
 
     No partial derivatives are computed (even though it would be much easier)
     because you can use the partials for kepler_2d and invert the matrix.
+
+    The value of t0 computed is the value within one half-period of t.
     """
     mu = G*m
     #a_guess = np.hypot(xv[0], xv[1])
@@ -278,5 +280,5 @@ def inverse_kepler_2d(xv, m, t):
     mean_anomaly_0 = eccentric_anomaly_0 - e*np.sin(eccentric_anomaly_0)
 
     return Kepler2DParameters(a=a, pb=pb, eps1=eps1, eps2=eps2,
-                              t0=(mean_anomaly-mean_anomaly_0)*pb/(2*np.pi))
+                              t0=t-(mean_anomaly-mean_anomaly_0)*pb/(2*np.pi))
     #mean_anomaly*pb/(2*np.pi)

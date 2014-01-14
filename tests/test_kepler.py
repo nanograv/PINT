@@ -35,3 +35,13 @@ def test_kepler_2d_derivs():
     check_all_partials(
         flatten_namedtuple(kepler.kepler_2d,kepler.Kepler2DParameters),
                        list(p)+[4])
+
+def test_kepler_2d_inverse():
+    t = 23
+    p = kepler.Kepler2DParameters(a=2, pb=3, eps1=0.2, eps2=0.1, t0=t-1)
+    xyv, _ = kepler.kepler_2d(p,t)
+    m = kepler.mass(p.a, p.pb)
+    p2 = kepler.inverse_kepler_2d(xyv, m, t)
+
+    assert_allclose(p,p2,atol=1e-8)
+
