@@ -17,6 +17,7 @@ Contents:
    phase
    models
    utils
+   orbital
 
 Indices and tables
 ==================
