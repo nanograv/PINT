@@ -8,3 +8,17 @@ def test_mass_solar():
     pb = u.year.to(u.day)
     m = kepler.mass(a,pb)
     assert_allclose(m,1,rtol=1e-4) # Earth+Sun mass
+
+def test_kepler_2d_t0():
+    p = kepler.Kepler2DParameters(a=2, pb=3, eps1=0.2, eps2=0.1, t0=1)
+    xyv, _ = kepler.kepler_2d(p, p.t0)
+    assert xyv[0]>0
+    assert_allclose(xyv[1],0,atol=1e-8)
+
+def test_kepler_2d_t0_pb():
+    p = kepler.Kepler2DParameters(a=2, pb=3, eps1=0.1, eps2=0.2, t0=1)
+    xyv, _ = kepler.kepler_2d(p, p.t0+p.pb)
+    assert xyv[0]>0
+    assert_allclose(xyv[1],0,atol=1e-8)
+
+    

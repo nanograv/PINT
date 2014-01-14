@@ -160,7 +160,7 @@ def kepler_2d(params, t):
             + d_mean_anomaly_0)
 
     mean_anomaly_dot = 2*np.pi/pb
-    d_mean_anomaly_dot = 2*np.pi*np.array([0, -pb**(-2), 0, 0, 0])
+    d_mean_anomaly_dot = 2*np.pi*np.array([0, -pb**(-2), 0, 0, 0, 0])
     #return ([mean_anomaly, mean_anomaly_dot],
     #        [d_mean_anomaly, d_mean_anomaly_dot])
     #return mean_anomaly, d_mean_anomaly
@@ -227,7 +227,7 @@ def kepler_2d(params, t):
     xyv[3] = (r_dot*np.sin(true_anomaly+om)
             +r*true_anomaly_dot*np.cos(true_anomaly+om))
 
-    partials = np.zeros((4, 5))
+    partials = np.zeros((4, 6))
 
     partials[0, :] = (d_r*np.cos(true_anomaly+om)
                      -(d_true_anomaly+d_om)*r*np.sin(true_anomaly+om))
