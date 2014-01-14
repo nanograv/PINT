@@ -256,7 +256,7 @@ class TOAs(object):
             toas = [t for t in self.toas if t.obs == obsname and
                     "clkcorr" not in t.flags]
             tvals = numpy.array([t.mjd.value for t in toas])
-            if numpy.any((tvals<mjds[0]) | (tvals>mjds[-1])):
+            if numpy.any((tvals < mjds[0]) | (tvals > mjds[-1])):
                 # FIXME: check the user sees this! should it be an exception?
                 log.error("Some TOAs are not covered by the %s clock correction"
                     +" file, treating clock corrections as constant"
