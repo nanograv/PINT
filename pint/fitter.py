@@ -3,8 +3,7 @@
 import numpy
 
 class resids(object):
-    """
-    resids(toas=None,model=None)
+    """Class for computing residuals.
 
     """
 
