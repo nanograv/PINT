@@ -12,6 +12,7 @@ from astropy.utils.iers import IERS_A, IERS_A_URL
 from astropy.utils.data import download_file
 from .spiceutils import objPosVel, load_kernels
 from pint import pintdir
+from astropy import log
 
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
@@ -266,7 +267,9 @@ class TOAs(object):
         # Load the appropriate JPL ephemeris
         load_kernels()
         pth = os.path.join(pintdir, "datafiles")
-        spice.furnsh(os.path.join(pth, "%s.bsp"%ephem.lower()))
+        ephem_file = os.path.join(pth, "%s.bsp"%ephem.lower())
+        spice.furnsh(ephem_file)
+        log.info("Loaded ephemeris from %s" % ephem_file)
         j2000 = time.Time('2000-01-01 12:00:00', scale='utc')
         j2000_mjd = utils.time_to_mjd_mpf(j2000)
         for toa in self.toas:
