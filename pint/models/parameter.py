@@ -130,7 +130,7 @@ class MJDParameter(Parameter):
             uncertainty=None, frozen=True, continuous=True, aliases=None,
             parse_value=time_from_mjd_string,
             print_value=time_to_mjd_string):
-        super(MJDParameter,self).__init__(name=name,value=value,
+        super(MJDParameter, self).__init__(name=name, value=value,
                 units="MJD", description=description,
                 uncertainty=uncertainty, frozen=frozen, 
                 continuous=continuous,

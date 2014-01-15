@@ -140,14 +140,14 @@ class TimingModel(object):
             delay += df(toa)
         return delay
 
-    def d_phase_d_tpulsar(self,toa):
+    def d_phase_d_tpulsar(self, toa):
         """
         Return the derivative of phase wrt time at the pulsar.
         NOT Implemented
         """
         pass
 
-    def d_phase_d_toa(self,toa):
+    def d_phase_d_toa(self, toa):
         """
         Return the derivative of phase wrt TOA (ie the current apparent
         spin freq of the pulsar at the observatory).
@@ -155,7 +155,7 @@ class TimingModel(object):
         """
         pass
 
-    def d_phase_d_param(self,toa,param):
+    def d_phase_d_param(self, toa, param):
         """
         Return the derivative of phase with respect to the parameter.
         NOTE, not implemented yet
@@ -166,7 +166,7 @@ class TimingModel(object):
         # phase indirectly (and vice-versa)??
         return result
 
-    def d_delay_d_param(self,toa,param):
+    def d_delay_d_param(self, toa, param):
         """
         Return the derivative of delay with respect to the parameter.
         """
@@ -257,7 +257,7 @@ class DuplicateParameter(TimingModelError):
     This exception is raised if a model parameter is defined (added)
     multiple times.
     """
-    def __init__(self,param,msg=None):
+    def __init__(self, param, msg=None):
         self.param = param
         self.msg = msg
 
