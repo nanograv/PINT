@@ -2,6 +2,7 @@
 """
 PINT Is Not TEMPO3!
 """
+import os
 
 # Define a few important constants
 import astropy.units as u
@@ -26,3 +27,11 @@ Tjupiter = Tsun / 1047.3486
 Tsaturn = Tsun / 3497.898
 Turanus = Tsun / 22902.98
 Tneptune = Tsun / 19412.24
+
+# setup environment
+# Load the PINT environment variable to get the top level directory
+pintdir = os.getenv("PINT")
+if pintdir is None:
+    filedir = os.path.split(os.path.realpath(__file__))[0]
+    pintdir = os.path.abspath(os.path.join(filedir, ".."))
+    del filedir
