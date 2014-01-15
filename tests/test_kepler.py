@@ -11,6 +11,11 @@ def test_mass_solar():
     m = kepler.mass(a,pb)
     assert_allclose(m,1,rtol=1e-4) # Earth+Sun mass
 
+def test_mass_derivs():
+    a = 2
+    pb = 3
+    check_all_partials(kepler.mass_partials, [a, pb])
+
 def test_kepler_2d_t0():
     p = kepler.Kepler2DParameters(a=2, pb=3, eps1=0.2, eps2=0.1, t0=1)
     xyv, _ = kepler.kepler_2d(p, p.t0)

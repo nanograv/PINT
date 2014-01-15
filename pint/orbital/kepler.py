@@ -428,12 +428,12 @@ def kepler_two_body(params,t):
     v_cm = np.array([params.vx_cm, params.vy_cm, params.vz_cm])
     tasc = params.tasc
 
-    e = np.zeros((14,15))
-    e[:, :14] = np.eye(14)
+    e = np.eye(15)
     (d_a, d_pb, d_eps1, d_eps2, d_i, d_lan, d_q) = e[:7]
     d_x_cm = e[7:10]
     d_v_cm = e[10:13]
     d_tasc = e[13]
+    d_t = e[14]
 
     a_c = a/q
     a_tot = a+a_c
@@ -460,8 +460,9 @@ def kepler_two_body(params,t):
                       d_eps2,
                       d_i,
                       d_lan,
-                      -d_tasc,
-                      d_tasc]))
+                      d_tasc,
+                      d_t]))
+
 
     xv = xv_tot/(1+1./q)
     d_xv = d_xv_tot/(1+1./q) + xv_tot[:,None]*d_q[None,:]/(1+q)**2
