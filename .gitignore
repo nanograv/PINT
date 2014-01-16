@@ -33,6 +33,10 @@ nosetests.xml
 
 # Translations
 *.mo
+# Mac OS file
+.DS_Stroe
+
+
 
 # Ephemerides and clock stuff
 datafiles/de405.bsp
