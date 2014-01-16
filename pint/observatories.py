@@ -1,9 +1,11 @@
 import os
 import numpy
-import spiceutils
+from . import spiceutils
 import astropy.units as u
+from astropy import log
+from pint import pintdir
 
-class observatory:
+class observatory(object):
     pass
 
 def get_clock_corr_vals(obsname, **kwargs):
@@ -24,30 +26,29 @@ def get_clock_corr_vals(obsname, **kwargs):
                  "Effelsberg": "bonn",
                  "WSRT": "wsrt"}
     if obsname in fileparts.keys():
-        filenm = os.path.join(os.getenv("TEMPO"),
+        filenm = os.path.join(os.environ["TEMPO"],
                               "clock/time_%s.dat" % \
                               fileparts[obsname])
     else:
-        print "No clock correction valus for %s" % obsname
+        log.error("No clock correction valus for %s" % obsname)
         return (numpy.array([0.0, 100000.0]), numpy.array([0.0, 0.0]))
     # The following works for simple linear interpolation
     # of normal TEMPO-style clock correction files
     mjds, ccorr = numpy.loadtxt(filenm, skiprows=2,
-                                usecols=(0,2), unpack=True)
+                                usecols=(0, 2), unpack=True)
     return mjds, ccorr
 
 def read_observatories():
-    """
-    read_observatories()
+    """Load observatory data files and return them.
 
     Return a dictionary of instances of the observatory class that are
     stored in the $PINT/datafiles/observatories.txt file.
     """
     observatories = {}
-    filenm = os.path.join(os.getenv("PINT"), "datafiles/observatories.txt")
+    filenm = os.path.join(pintdir, "datafiles/observatories.txt")
     with open(filenm) as f:
         for line in f.readlines():
-            if line[0]!="#":
+            if line[0] != "#":
                 vals = line.split()
                 obs = observatory()
                 obs.name = vals[0]

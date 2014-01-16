@@ -4,7 +4,7 @@ from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string
 
 class Parameter(object):
     """
-    Parameter(name=None, value=None, units=None, description=None, 
+    Parameter(name=None, value=None, units=None, description=None,
                 uncertainty=None, frozen=True, continuous=True, aliases=[],
                 parse_value=float, print_value=str)
 
@@ -40,7 +40,7 @@ class Parameter(object):
     """
 
     def __init__(self, name=None, value=None, units=None, description=None, 
-            uncertainty=None, frozen=True, aliases=[], continuous=True,
+            uncertainty=None, frozen=True, aliases=None, continuous=True,
             parse_value=fortran_float, print_value=str):
         self.value = value
         self.name = name
@@ -49,9 +49,9 @@ class Parameter(object):
         self.uncertainty = uncertainty
         self.frozen = frozen
         self.continuous = continuous
-        self.aliases = aliases
-        self.parse_value=parse_value
-        self.print_value=print_value
+        self.aliases = [] if aliases is None else aliases
+        self.parse_value = parse_value
+        self.print_value = print_value
 
     def __str__(self):
         out = self.name
@@ -62,7 +62,7 @@ class Parameter(object):
             out += " +/- " + str(self.uncertainty)
         return out
 
-    def set(self,value):
+    def set(self, value):
         """
         Parses a string 'value' into the appropriate internal representation
         of the parameter.
@@ -89,16 +89,16 @@ class Parameter(object):
         Return a parfile line giving the current state of the parameter.
         """
         # Don't print unset parameters
-        if self.value is None: 
+        if self.value is None:
             return ""
         line = "%-15s %25s" % (self.name, self.print_value(self.value))
         if self.uncertainty is not None:
             line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty))
         elif not self.frozen:
-            line += " 1" 
+            line += " 1"
         return line + "\n"
 
-    def from_parfile_line(self,line):
+    def from_parfile_line(self, line):
         """
         Parse a parfile line into the current state of the parameter.
         Returns True if line was successfully parsed, False otherwise.
@@ -106,36 +106,31 @@ class Parameter(object):
         try:
             k = line.split()
             name = k[0].upper()
-        except:
+        except IndexError:
             return False
         # Test that name matches
         if (name != self.name) and (name not in self.aliases):
             return False
-        if len(k)<2:
+        if len(k) < 2:
             return False
-        if len(k)>=2:
+        if len(k) >= 2:
             self.set(k[1])
-        if len(k)>=3:
-            if int(k[2])>0: 
+        if len(k) >= 3:
+            if int(k[2]) > 0:
                 self.frozen = False
-        if len(k)==4:
+        if len(k) == 4:
             self.uncertainty = fortran_float(k[3])
         return True
 
 class MJDParameter(Parameter):
-    """
-    MJDParameter(self, name=None, value=None, units=None, description=None, 
-            uncertainty=None, frozen=True, aliases=[],
-            parse_value=fortran_float, print_value=str):
-
-    This is a Parameter type that is specific to MJD values.
+    """This is a Parameter type that is specific to MJD values.
     """
 
     def __init__(self, name=None, value=None, description=None, 
-            uncertainty=None, frozen=True, continuous=True, aliases=[],
+            uncertainty=None, frozen=True, continuous=True, aliases=None,
             parse_value=time_from_mjd_string,
             print_value=time_to_mjd_string):
-        super(MJDParameter,self).__init__(name=name,value=value,
+        super(MJDParameter, self).__init__(name=name, value=value,
                 units="MJD", description=description,
                 uncertainty=uncertainty, frozen=frozen, 
                 continuous=continuous,
