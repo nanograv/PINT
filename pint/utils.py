@@ -176,3 +176,14 @@ def GEO_WGS84_to_ITRF(lon, lat, hgt):
                                                hgt.to(u.m).value)
     return x * u.m, y * u.m, z * u.m
 
+
+def has_astropy_unit(x):
+    """
+    has_astropy_unit(x):
+
+    Return True/False if x has an astropy unit type associated with it. This is
+    useful, because different data types can still have units associated with
+    them.
+    """
+
+    return hasattr(x,'unit') and type(x.unit) is type(u.J)
