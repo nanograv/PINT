@@ -45,7 +45,7 @@ def general2(parfile, timfile, params):
         # Note, assumes single output column per requested param
         # and that all values are numerical
         result[p] = numpy.zeros(nline)
-
+   
     for i in range(nline):
         vals = goodlines[i].split()
         for ip in range(len(params)):
