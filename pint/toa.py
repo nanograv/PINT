@@ -24,6 +24,25 @@ observatories = observatories_module.read_observatories()
 iers_a_file = download_file(IERS_A_URL, cache=True)
 iers_a = IERS_A.open(iers_a_file)
 
+def get_TOAs(timfile):
+    """
+    Convenience function to load and prepare TOAs for PINT use.
+
+    Loads TOAs from a '.tim' file, applies clock corrections, computes the
+    position and velocity vectors, and pickles the file for later use.
+    """
+    t = TOAs(timfile)
+    if not "clkcorr" in t.toas[0].flags:
+        sys.stderr.write("Applying clock corrections...\n")
+        t.apply_clock_corrections()
+    if not hasattr(t.toas[0], "pvs"):
+        sys.stderr.write("Computing observatory positions and velocities...\n")
+        t.compute_posvels(planets=planet_ephems)
+    if not os.path.isfile(timfile+".pickle"):
+        sys.stderr.write("Pickling TOAs...\n")
+        t.pickle()
+    return t
+
 def toa_format(line, fmt="Unknown"):
     """Determine the type of a TOA line.
 
@@ -272,7 +291,7 @@ class TOAs(object):
                 toa.mjd.TDB = utils.time_to_mjd_mpf(toa.mjd.tdb)
 
     @mpmath.workdps(20)
-    def compute_posvels(self, ephem="DE405", planets=False):
+    def compute_posvels(self, ephem="DE421", planets=False):
         """Compute positions and velocities of observatory and Earth.
 
         Compute the positions and velocities of the observatory (wrt
@@ -282,7 +301,7 @@ class TOAs(object):
         set with PosVel class instances which have astropy units.
         """
         # Load the appropriate JPL ephemeris
-        load_kernels()
+        load_kernels(ephem)
         pth = os.path.join(pintdir, "datafiles")
         ephem_file = os.path.join(pth, "%s.bsp"%ephem.lower())
         spice.furnsh(ephem_file)

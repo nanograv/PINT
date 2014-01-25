@@ -8,7 +8,7 @@ import os
 from pint import pintdir
 
 kernels_loaded = False
-def load_kernels():
+def load_kernels(ephem="DE421"):
     """Ensure all kernels are loaded.
 
     State is kept in the kernels_loaded module-global variable, so that this
@@ -24,8 +24,8 @@ def load_kernels():
         spice.furnsh(os.path.join(pintdir,
                                   "datafiles/earth_latest_high_prec.bpc"))
         log.info("SPICE loaded Earth rotation parameters.")
-        spice.furnsh(os.path.join(pintdir, "datafiles/de405.bsp"))
-        log.info("SPICE loaded DE405 Planetary Ephemeris.")
+        spice.furnsh(os.path.join(pintdir, "datafiles/%s.bsp" % ephem.lower()))
+        log.info("SPICE loaded DE%s Planetary Ephemeris." % ephem[2:])
         kernels_loaded = True
 
 def objPosVel(obj1, obj2, et):
