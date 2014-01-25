@@ -24,7 +24,7 @@ observatories = observatories_module.read_observatories()
 iers_a_file = download_file(IERS_A_URL, cache=True)
 iers_a = IERS_A.open(iers_a_file)
 
-def get_TOAs(timfile):
+def get_TOAs(timfile, ephem="DE421", planets=False):
     """
     Convenience function to load and prepare TOAs for PINT use.
 
@@ -37,7 +37,7 @@ def get_TOAs(timfile):
         t.apply_clock_corrections()
     if not hasattr(t.toas[0], "pvs"):
         sys.stderr.write("Computing observatory positions and velocities...\n")
-        t.compute_posvels(planets=planet_ephems)
+        t.compute_posvels(ephem, planets)
     if not os.path.isfile(timfile+".pickle"):
         sys.stderr.write("Pickling TOAs...\n")
         t.pickle()
