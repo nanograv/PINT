@@ -318,6 +318,7 @@ class TOAs(object):
             # SSB to observatory position/velocity:
             toa.earth_pvs = objPosVel("EARTH", "SSB", et)
             toa.pvs = toa.obs_pvs + toa.earth_pvs
+            toa.ephem = ephem
 
             # Obs to Sun PV:
             toa.obs_sun_pvs = objPosVel("SUN", "EARTH", et) - toa.obs_pvs
