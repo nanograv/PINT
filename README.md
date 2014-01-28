@@ -119,15 +119,15 @@ we hope will happen).  You can use the following "script" to compile
 and install it.
 
 --------------------------
-export INSTDIR=/home/sransom
-git clone https://github.com/liberfa/erfa-fetch.git
-cd erfa-fetch
-python sofa_deriver.py
-cd erfa
-gcc -O2 -I. -c -fPIC *.c
-gcc -shared -o liberfa.so *.o -lm
-cp erfa*.h $INSTDIR/include/
-cp liberfa.so $INSTDIR/lib/liberfa.so.1.0.0
-ln -sf $INSTDIR/lib/liberfa.so.1.0.0 $INSTDIR/lib/liberfa.so
-ln -sf $INSTDIR/lib/liberfa.so.1.0.0 $INSTDIR/lib/liberfa.so.1
+    export INSTDIR=/home/sransom
+    git clone https://github.com/liberfa/erfa-fetch.git
+    cd erfa-fetch
+    python sofa_deriver.py
+    cd erfa
+    gcc -O2 -I. -c -fPIC *.c
+    gcc -shared -o liberfa.so *.o -lm
+    cp erfa*.h $INSTDIR/include/
+    cp liberfa.so $INSTDIR/lib/liberfa.so.1.0.0
+    ln -sf $INSTDIR/lib/liberfa.so.1.0.0 $INSTDIR/lib/liberfa.so
+    ln -sf $INSTDIR/lib/liberfa.so.1.0.0 $INSTDIR/lib/liberfa.so.1
 --------------------------
