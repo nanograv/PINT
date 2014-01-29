@@ -69,7 +69,7 @@ class Spindown(TimingModel):
         # NOTE, all of this ignores TZRSITE and TZRFRQ for the time being.
         if self.TZRMJD.value is None:
             self.TZRMJD.value = toa.mjd - delay*u.s
-        dt = (toa.mjd.TDB
+        dt = (time_to_mjd_mpf(toa.mjd.tdb)
               - time_to_mjd_mpf(self.TZRMJD.value.tdb)) * SECS_PER_DAY
         dt -= delay
         # TODO: what timescale should we use for pepoch calculation?
