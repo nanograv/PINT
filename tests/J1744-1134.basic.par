@@ -11,7 +11,7 @@ PEPOCH        50434.000000
 START            53216.126
 FINISH           55122.747
 DM                3.138800
-SOLARN0              10.00
+SOLARN0              0.00
 EPHEM             DE405
 CLK               TT(BIPM)
 NTOA                    15
@@ -19,5 +19,5 @@ TRES                  0.62
 TZRMJD  53694.61354110236401
 TZRFRQ             760.000
 TZRSITE                  1
-NITS                     9
+NITS                     1
 TEMPO1
