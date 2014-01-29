@@ -24,6 +24,7 @@ early stages of development.
  - mpmath
  - astropy (development version): http://github.com/astropy/astropy
  - PySPICE: http://github.com/rca/PySPICE
+ - Latest ERFA: http://github.com/liberfa/erfa-fetch  See below to compile.
  - ERFA python: http://github.com/nirinA/erfa_python
 
 ## Additional packages/libraries for developers
@@ -98,6 +99,7 @@ break up the method into simpler pieces.
  - Heavy use of well-debugged libraries
    - JPL SPICE
    - astropy
+   - ERFA (i.e. "freed" version of SOFA)
    - optimization libraries (scipy, pyMinuit, emcee)
  - GUI will not be required
  - Strong isolation of parts needing extended precision
@@ -110,3 +112,22 @@ break up the method into simpler pieces.
  - Use of defined constants
  - Unit tests
 
+## NOTE:  Compiling ERFA from scratch
+
+This can be a kind of a PITA, so until ERFA is part of astropy (which
+we hope will happen).  You can use the following "script" to compile
+and install it.
+
+--------------------------
+    export INSTDIR=/home/sransom
+    git clone https://github.com/liberfa/erfa-fetch.git
+    cd erfa-fetch
+    python sofa_deriver.py
+    cd erfa
+    gcc -O2 -I. -c -fPIC *.c
+    gcc -shared -o liberfa.so *.o -lm
+    cp erfa*.h $INSTDIR/include/
+    cp liberfa.so $INSTDIR/lib/liberfa.so.1.0.0
+    ln -sf $INSTDIR/lib/liberfa.so.1.0.0 $INSTDIR/lib/liberfa.so
+    ln -sf $INSTDIR/lib/liberfa.so.1.0.0 $INSTDIR/lib/liberfa.so.1
+--------------------------

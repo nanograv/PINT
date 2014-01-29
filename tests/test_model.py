@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-import time, sys
+import time, sys, os
 import pint.models as tm
 from pint.phase import Phase
 from pint import toa
@@ -24,13 +24,7 @@ except AttributeError:
 
 sys.stderr.write("Reading TOAs...\n")
 t0 = time.time()
-t = toa.TOAs(timfile)
-if not "clkcorr" in t.toas[0].flags:
-    sys.stderr.write("Applying clock corrections...\n")
-    t.apply_clock_corrections()
-if not hasattr(t.toas[0], "pvs"):
-    sys.stderr.write("Computing observatory positions and velocities...\n")
-    t.compute_posvels(planets=planet_ephems)
+t = toa.get_TOAs(timfile)
 time_toa = time.time() - t0
 sys.stderr.write("Read/corrected TOAs in %.3f sec\n" % time_toa)
 
@@ -54,9 +48,12 @@ sys.stderr.write("Computed phases in %.3f sec\n" % time_phase)
 
 # resids in (approximate) us:
 resids_us = resids / float(m.F0.value) * 1e6
+sys.stderr.write("RMS PINT residuals are %.3f us\n" % resids_us.std())
 
 # Get some general2 stuff
-tempo2_vals = tempo2_utils.general2(parfile,timfile,['tt2tb','roemer','post_phase','shapiro','shapiroJ'])
+tempo2_vals = tempo2_utils.general2(parfile, timfile,
+                                    ['tt2tb', 'roemer', 'post_phase',
+                                     'shapiro', 'shapiroJ'])
 t2_resids = tempo2_vals['post_phase'] / float(m.F0.value) * 1e6
 diff_t2 = resids_us - t2_resids
 diff_t2 -= diff_t2.mean()
@@ -65,7 +62,7 @@ diff_t2 -= diff_t2.mean()
 try:
     import tempo_utils
     t1_toas = tempo_utils.read_toa_file(timfile)
-    tempo_utils.run_tempo(t1_toas,t1_parfile)
+    tempo_utils.run_tempo(t1_toas, t1_parfile)
     t1_resids = t1_toas.get_resids(units='phase') / float(m.F0.value) * 1e6
     diff_t1 = resids_us - t1_resids
     diff_t1 -= diff_t1.mean()
@@ -88,9 +85,11 @@ def do_plot():
     plt.subplot(212)
     plt.plot(mjds,diff_t2*1e3,label='PINT - T2')
     plt.hold(True)
-    plt.plot(mjds,diff_t1*1e3,label='PINT - T1')
+#    plt.plot(mjds,diff_t1*1e3,label='PINT - T1')
     plt.grid()
     plt.xlabel('MJD')
     plt.ylabel('Residual diff (ns)')
     plt.legend()
 
+do_plot()
+plt.show()
