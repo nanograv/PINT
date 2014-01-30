@@ -126,6 +126,8 @@ and install it.
     cd erfa
     gcc -O2 -I. -c -fPIC *.c
     gcc -shared -o liberfa.so *.o -lm
+    # On Mac, do the following instead
+    # gcc -shared -Wl,-compatibility_version,2.0.0,-current_version,2.0.0 -o liberfa.so *.o -lm
     cp erfa*.h $INSTDIR/include/
     cp liberfa.so $INSTDIR/lib/liberfa.so.1.0.0
     ln -sf $INSTDIR/lib/liberfa.so.1.0.0 $INSTDIR/lib/liberfa.so
