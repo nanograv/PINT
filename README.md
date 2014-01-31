@@ -35,6 +35,7 @@ early stages of development.
  - coverage
  - tempo
  - tempo2
+ - tempo_utils
 
 ## Data files
 
