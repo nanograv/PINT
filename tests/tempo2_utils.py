@@ -4,7 +4,9 @@
 
 import numpy
 import subprocess
+import mpmath as mp
 
+mp.mp.dps = 25
 def general2(parfile, timfile, params):
     """
     general2(parfile, timfile, params):
@@ -44,7 +46,11 @@ def general2(parfile, timfile, params):
     for p in params:
         # Note, assumes single output column per requested param
         # and that all values are numerical
-        result[p] = numpy.zeros(nline)
+        if(p=='bat' or p=='sat' or p=='fmjdu'):
+            result[p] = mp.matrix(1,nline) 
+            result[p].tolist()
+        else:
+            result[p] = numpy.zeros(nline)
    
     for i in range(nline):
         vals = goodlines[i].split()
