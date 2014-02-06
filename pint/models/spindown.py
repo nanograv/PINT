@@ -36,7 +36,9 @@ class Spindown(TimingModel):
             description="Reference epoch for spin-down"))
 
         self.phase_funcs += [self.simple_spindown_phase,]
-
+        
+        self.bat1 = []
+        self.bat2 = []
     def setup(self):
         super(Spindown, self).setup()
         # Check for required params
@@ -71,7 +73,9 @@ class Spindown(TimingModel):
             self.TZRMJD.value = toa.mjd - delay*u.s
         dt = (time_to_mjd_mpf(toa.mjd.tdb)
               - time_to_mjd_mpf(self.TZRMJD.value.tdb)) * SECS_PER_DAY
+        self.bat1.append(dt)      
         dt -= delay
+        self.bat2.append(dt)
         # TODO: what timescale should we use for pepoch calculation?
         # Does this even matter?
         dt_pepoch = (time_to_mjd_mpf(self.PEPOCH.value.tdb)
