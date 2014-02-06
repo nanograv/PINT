@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy
 import tempo2_utils
 
-parfile = 'J1744-1134.basic.par'
+parfile = 'J1744-1134.basic2.par'
 t1_parfile = 'J1744-1134.t1.par'
 timfile = 'J1744-1134.Rcvr1_2.GASP.8y.x.tim'
 
@@ -24,7 +24,7 @@ except AttributeError:
 
 sys.stderr.write("Reading TOAs...\n")
 t0 = time.time()
-t = toa.get_TOAs(timfile)
+t = toa.get_TOAs(timfile,ephem='DE405')
 time_toa = time.time() - t0
 sys.stderr.write("Read/corrected TOAs in %.3f sec\n" % time_toa)
 
@@ -91,5 +91,5 @@ def do_plot():
     plt.ylabel('Residual diff (ns)')
     plt.legend()
 
-do_plot()
-plt.show()
+#do_plot()
+#plt.show()
