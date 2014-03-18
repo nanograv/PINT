@@ -208,7 +208,14 @@ class TOAs(object):
                 return self
 
     def get_freqs(self):
+<<<<<<< HEAD
         """Return a numpy array of the observing frequencies for the TOAs.
+=======
+        """
+        get_freqs()
+
+        Return a numpy array of the observing frequencies in Hz for the TOAs.
+>>>>>>> chris
         """
         return numpy.array([t.freq for t in self.toas])
 
@@ -218,7 +225,14 @@ class TOAs(object):
         return numpy.array([t.mjd for t in self.toas])
 
     def get_errors(self):
+<<<<<<< HEAD
         """Return a numpy array of the TOA errors.
+=======
+        """
+        get_errors()
+
+        Return a numpy array of the TOA errors in us.
+>>>>>>> chris
         """
         return numpy.array([t.error for t in self.toas])
 
@@ -359,6 +373,7 @@ class TOAs(object):
                     self.commands = tmp.commands
                     self.observatories = tmp.observatories
                     return
+
             self.toas = []
             self.commands = []
             self.cdict = {"EFAC": 1.0, "EQUAD": 0.0,
@@ -370,6 +385,7 @@ class TOAs(object):
                           "MODE": 1, "JUMP": [False, 0],
                           "FORMAT": "Unknown", "END": False}
             self.observatories = set()
+
         with open(filename, "r") as f:
             for l in f.readlines():
                 MJD, d = parse_TOA_line(l, fmt=self.cdict["FORMAT"])
@@ -413,6 +429,7 @@ class TOAs(object):
                         self.cdict["FORMAT"] = fmt
                     else:
                         continue
+
                 if (self.cdict["SKIP"] or
                     d["format"] in ("Blank", "Unknown", "Comment", "Command")):
                     continue
@@ -441,7 +458,9 @@ class TOAs(object):
                         if self.cdict["TIME"] != 0.0:
                             newtoa.flags["time"] = self.cdict["TIME"]
                         self.observatories.add(newtoa.obs)
+                        
                         self.toas.append(newtoa)
+
             if top:
                 # Clean up our temporaries used when reading TOAs
                 del self.cdict
