@@ -165,7 +165,6 @@ def GEO_WGS84_to_ITRF(lon, lat, hgt):
     return x * u.m, y * u.m, z * u.m
 
 
-<<<<<<< HEAD
 
 def numeric_partial(f, args, ix=0, delta=1e-6):
     """Compute the partial derivative of f numerically.
@@ -216,7 +215,6 @@ def check_all_partials(f, args, delta=1e-6, atol=1e-4, rtol=1e-4):
         print "max fail:", np.amax(d), "at", worst_ix
         print "jac there:", jac[worst_ix], "njac there:", njac[worst_ix]
         raise
-=======
 def has_astropy_unit(x):
     """
     has_astropy_unit(x):
@@ -227,4 +225,3 @@ def has_astropy_unit(x):
     """
 
     return hasattr(x,'unit') and type(x.unit) is type(u.J)
->>>>>>> chris
