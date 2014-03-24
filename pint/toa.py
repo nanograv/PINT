@@ -194,7 +194,8 @@ class TOAs(object):
             self.toas = []
             self.commands = []
             self.filename = None
-
+            self.mjdld = []
+            self.tdbld = []
     def __add__(self, x):
         if type(x) in [int, float]:
             if not x:
@@ -208,14 +209,10 @@ class TOAs(object):
                 return self
 
     def get_freqs(self):
-<<<<<<< HEAD
-        """Return a numpy array of the observing frequencies for the TOAs.
-=======
         """
         get_freqs()
 
-        Return a numpy array of the observing frequencies in Hz for the TOAs.
->>>>>>> chris
+        Return a numpy array of the observing frequencies in Hz for the TOAs
         """
         return numpy.array([t.freq for t in self.toas])
 
@@ -225,14 +222,10 @@ class TOAs(object):
         return numpy.array([t.mjd for t in self.toas])
 
     def get_errors(self):
-<<<<<<< HEAD
-        """Return a numpy array of the TOA errors.
-=======
         """
         get_errors()
 
         Return a numpy array of the TOA errors in us.
->>>>>>> chris
         """
         return numpy.array([t.error for t in self.toas])
 
@@ -245,7 +238,29 @@ class TOAs(object):
         """Return a numpy array of the TOA flags.
         """
         return numpy.array([t.flags for t in self.toas])
+    def get_tdb_longdouble(self):
+        """
+        get_tdb_longdouble()
 
+        Return a numpy array with long double data type or float128
+        """
+        jd1ld = numpy.longdouble([t.mjd.tdb.jd1 for t in self.toas])
+        jd2ld = numpy.longdouble([t.mjd.tdb.jd2 for t in self.toas])
+        mjdld = jd1ld - numpy.longdouble(2400000.5) + jd2ld
+        self.tdbld = mjdld
+        return mjdld
+    def get_mjd_longdouble(self):
+        """
+        get_mjd_longdouble()
+    
+        Return a numpy array with long double data type or float128
+        """
+        jd1ld = numpy.longdouble([t.mjd.jd1 for t in self.toas])
+        jd2ld = numpy.longdouble([t.mjd.jd2 for t in self.toas])
+        mjdld = jd1ld - numpy.longdouble(2400000.5) + jd2ld
+        self.mjdld = mjdld
+        return mjdld
+    
     def pickle(self, filename=None):
         if filename is not None:
             cPickle.dump(self, open(filename, "wb"))
