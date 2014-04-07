@@ -1,7 +1,9 @@
 # parameter.py
 # Defines Parameter class for timing model parameters
-from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string
-
+from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
+                    time_to_longdouble
+import numpy 
+import inspect
 class Parameter(object):
     """
     Parameter(name=None, value=None, units=None, description=None,
@@ -41,7 +43,7 @@ class Parameter(object):
 
     def __init__(self, name=None, value=None, units=None, description=None, 
             uncertainty=None, frozen=True, aliases=None, continuous=True,
-            parse_value=fortran_float, print_value=str):
+            parse_value=fortran_float, print_value=str,longdoubleV = False):
         self.value = value
         self.name = name
         self.units = units
@@ -52,6 +54,13 @@ class Parameter(object):
         self.aliases = [] if aliases is None else aliases
         self.parse_value = parse_value
         self.print_value = print_value
+        self.longd_value = None
+        
+        if longdoubleV == True:
+            if inspect.isclass(value) == True:
+                self.longd_value = time_to_longdouble(value) 
+            else:
+                self.longd_value = numpy.longdouble(value)
 
     def __str__(self):
         out = self.name
@@ -137,3 +146,4 @@ class MJDParameter(Parameter):
                 aliases=aliases,
                 parse_value=parse_value,
                 print_value=print_value)
+       
