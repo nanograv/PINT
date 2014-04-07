@@ -8,7 +8,7 @@ from astropy.coordinates.angles import Angle
 from .parameter import Parameter, MJDParameter
 from .timing_model import TimingModel, MissingParameter, Cache
 from pint import ls
-
+from pint import utils
 class Astrometry(TimingModel):
 
     def __init__(self):
@@ -74,12 +74,28 @@ class Astrometry(TimingModel):
         if epoch is None:
             return coords.ICRS(ra=self.RA.value, dec=self.DEC.value)
         else:
-            dt = epoch - self.POSEPOCH.value
-            dRA = (dt * self.PMRA.value * (u.mas/u.yr)
-                    / numpy.cos(self.DEC.value)).to(u.mas)
-            dDEC = (dt * self.PMDEC.value * (u.mas/u.yr)).to(u.mas)
-            return coords.ICRS(ra=self.RA.value+dRA, dec=self.DEC.value+dDEC)
+            epochld = utils.ddouble2ldouble(epoch.jd1,epoch.jd2)
+            POSEPOCHld = utils.ddouble2ldouble(self.POSEPOCH.value.jd1,
+                        self.POSEPOCH.value.jd2)
 
+            dt = epochld - POSEPOCHld
+
+            dRA = (dt*u.day * self.PMRA.value * (u.mas/u.yr)
+                    / numpy.cos(self.DEC.value)).to(u.mas)
+            dDEC = (dt*u.day * self.PMDEC.value * (u.mas/u.yr)).to(u.mas)
+            return coords.ICRS(ra=self.RA.value+dRA, dec=self.DEC.value+dDEC)
+    
+    def coords_as_ICRS_ld(self,epoch= None):
+        """
+        coords_as_ICRS_ld(epoch = None)
+        Takes a long double tdb array, has the same function of coords_as_ICRS
+        
+        """
+        if epoch is None:
+            return coords.ICRS(ra=self.RA.value, dec=self.DEC.value)
+        else:
+            
+                
     @Cache.cache_result
     def ssb_to_psb_xyz(self, epoch=None):
         """
@@ -121,4 +137,5 @@ class Astrometry(TimingModel):
             re_sqr = toa.pvs.pos.dot(toa.pvs.pos)
             delay += (0.5*(re_sqr/L)*(1.0-re_dot_L**2/re_sqr)).to(ls).value
         return delay
-
+   
+        
