@@ -5,7 +5,7 @@ from warnings import warn
 from .parameter import Parameter
 from ..phase import Phase
 from astropy import log
-
+import numpy as np
 class Cache(object):
     """Temporarily cache timing model internal computation results.
 
@@ -139,7 +139,17 @@ class TimingModel(object):
         for df in self.delay_funcs:
             delay += df(toa)
         return delay
-
+    
+    def delay_ld_array(self,TOA):
+        """
+        Total delay for a given TOA long double numpy array
+        """
+        delay = np.zeros_like(TOA.tdbld)
+        for df in self.delay_funcs:
+            delay += df(TOA)
+        return delay
+        
+            
     def d_phase_d_tpulsar(self, toa):
         """
         Return the derivative of phase wrt time at the pulsar.
