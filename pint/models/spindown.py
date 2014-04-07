@@ -9,7 +9,8 @@ from .parameter import Parameter, MJDParameter
 from .timing_model import TimingModel, MissingParameter
 from ..phase import Phase
 from ..utils import time_to_mjd_mpf, time_from_mjd_string
-
+from pint import utils
+import numpy
 class Spindown(TimingModel):
     """This class provides a simple timing model for an isolated pulsar.
     """
@@ -69,10 +70,17 @@ class Spindown(TimingModel):
         # NOTE, all of this ignores TZRSITE and TZRFRQ for the time being.
         if self.TZRMJD.value is None:
             self.TZRMJD.value = toa.mjd - delay*u.s
-        dt = (toa.mjd.tdb - self.TZRMJD.value.tdb).sec
+        toaTDBld = utils.ddouble2ldouble(toa.mjd.tdb.jd1,toa.mjd.tdb.jd2)
+        TZRMJDtdbld = utils.ddouble2ldouble(self.TZRMJD.value.tdb.jd1,\
+                       self.TZRMJD.value.tdb.jd2)
+        dt = ((toaTDBld - TZRMJDtdbld)*u.day).to(u.s).value
         dt -= delay
+       
         # TODO: what timescale should we use for pepoch calculation?
         # Does this even matter?
-        dt_pepoch = (self.PEPOCH.value.tdb - self.TZRMJD.value.tdb).sec
+        PEPOCHtdbld = utils.ddouble2ldouble(self.PEPOCH.value.tdb.jd1,\
+                    self.PEPOCH.value.tdb.jd2)
+        dt_pepoch = ((PEPOCHtdbld - TZRMJDtdbld)*u.day).to(u.s).value
+        self.F0.value = numpy.longdouble(self.F0.value)
         phase = (self.F0.value + 0.5*self.F1.value*(dt-2.0*dt_pepoch))*dt
         return Phase(phase)
