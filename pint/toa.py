@@ -162,7 +162,7 @@ class TOA(object):
         self.obs = obs
         self.freq = freq
         self.flags = kwargs
-
+        self.tdblongd = utils.ddouble2ldouble(self.mjd.tdb.jd1, self.mjd.tdb.jd2)
     def __str__(self):
         s = utils.time_to_mjd_string(self.mjd) + \
             ": %6.3f us error from '%s' at %.4f MHz " % \
@@ -170,7 +170,7 @@ class TOA(object):
         if len(self.flags):
             s += str(self.flags)
         return s
-
+ 
 
 class TOAs(object):
     """TOAs loaded from zero or more files.
@@ -260,7 +260,7 @@ class TOAs(object):
         mjdld = jd1ld - numpy.longdouble(2400000.5) + jd2ld
         self.mjdld = mjdld
         return mjdld
-    
+
     def pickle(self, filename=None):
         if filename is not None:
             cPickle.dump(self, open(filename, "wb"))
