@@ -196,6 +196,11 @@ class TOAs(object):
             self.filename = None
             self.mjdld = []
             self.tdbld = []
+        
+        self.earth_pvs = []
+        self.pvs = []
+        self.obs_sun_pvs = []
+        self.freq = []
     def __add__(self, x):
         if type(x) in [int, float]:
             if not x:
@@ -260,7 +265,13 @@ class TOAs(object):
         mjdld = jd1ld - numpy.longdouble(2400000.5) + jd2ld
         self.mjdld = mjdld
         return mjdld
-
+    def get_freq_array(self):
+        """
+        get_freq_array() return a numpy array of observing freq
+        """
+        self.freq = [t.freq for t in self.toas] 
+        return self.freq
+           
     def pickle(self, filename=None):
         if filename is not None:
             cPickle.dump(self, open(filename, "wb"))
@@ -356,7 +367,45 @@ class TOAs(object):
                     pv = objPosVel(p.upper()+" BARYCENTER",
                             "EARTH", et) - toa.obs_pvs
                     setattr(toa, 'obs_'+p+'_pvs', pv)
+    
+    def compute_posvels_ld(self,ephem="DE421",planets = False):
+        """
+        Long double version of compute position and velocities
+        """
+        load_kernels(ephem)
+        pth = os.path.join(pintdir, "datafiles")
+        ephem_file = os.path.join(pth, "%s.bsp"%ephem.lower())
+        spice.furnsh(ephem_file)
+        log.info("Loaded ephemeris from %s" % ephem_file)
+        j2000 = time.Time('2000-01-01 12:00:00', scale='utc')
+        j2000_mjdld = utils.time_to_longdouble(j2000.tdb)
+        if planets:
+            for p in ('jupiter', 'saturn', 'venus', 'uranus'):
+                setattr(self,'obs_'+p+'_pvs_ld',[])
+        for toa, toatdb in zip(self.toas, self.tdbld):
+            xyz = observatories[toa.obs].xyz
+            toa.obs_pvs = erfautils.topo_posvels(xyz, toa)
+            et = (toatdb-j2000_mjdld)*SECS_PER_DAY
+            toa.earth_pvs = objPosVel("EARTH", "SSB", et)
+            self.earth_pvs.append(toa.earth_pvs)
+            toa.pvs = toa.obs_pvs + toa.earth_pvs
+            self.pvs.append(toa.pvs)
+            toa.ephem = ephem
+            
+            #Obs to Sun PV:
+            toa.obs_sun_pvs = objPosVel("SUN", "EARTH", et) - toa.obs_pvs
+            self.obs_sun_pvs.append(toa.obs_sun_pvs)
+            if planets:
+                for p in ('jupiter', 'saturn', 'venus', 'uranus'):
+                    pv = objPosVel(p.upper()+" BARYCENTER",
+                            "EARTH", et) - toa.obs_pvs
+                    setattr(toa, 'obs_'+p+'_pvs', pv)        
+                    getattr(self,'obs_'+p+'_pvs_ld').append(pv)
 
+    
+    
+    
+    
     def to_table(self):
         """Convert the list of TOAs to an astropy table.
 
