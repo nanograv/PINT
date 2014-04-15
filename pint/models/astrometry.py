@@ -9,6 +9,7 @@ from .parameter import Parameter, MJDParameter
 from .timing_model import TimingModel, MissingParameter, Cache
 from pint import ls
 from pint import utils
+import time
 class Astrometry(TimingModel):
 
     def __init__(self):
@@ -31,7 +32,8 @@ class Astrometry(TimingModel):
                 alwayssign=True, precision=8)))
 
         self.add_param(MJDParameter(name="POSEPOCH",
-            description="Reference epoch for position"))
+            description="Reference epoch for position",
+            longdoubleV = True))
 
         self.add_param(Parameter(name="PMRA",
             units="mas/year", value=0.0,
@@ -46,7 +48,7 @@ class Astrometry(TimingModel):
             description="Parallax"))
 
         self.delay_funcs += [self.solar_system_geometric_delay,]
-
+        self.delay_funcs_ld += [self.solar_system_geometric_delay_ld,]
     def setup(self):
         super(Astrometry, self).setup()
         # RA/DEC are required
@@ -94,6 +96,12 @@ class Astrometry(TimingModel):
         if epoch is None:
             return coords.ICRS(ra=self.RA.value, dec=self.DEC.value)
         else:
+            epoch = numpy.longdouble(epoch)
+            dt = epoch - self.POSEPOCH.longd_value
+            dRA = (dt*u.day * self.PMRA.value * (u.mas/u.yr) /
+                    numpy.cos(self.DEC.value)).to(u.mas)
+            dDEC = (dt*u.day * self.PMDEC.value * (u.mas/u.yr)).to(u.mas)
+            return coords.ICRS(ra=self.RA.value+dRA, dec=self.DEC.value+dDEC)
             
                 
     @Cache.cache_result
@@ -107,6 +115,13 @@ class Astrometry(TimingModel):
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
         return self.coords_as_ICRS(epoch=epoch).cartesian
+    def ssb_to_psb_xyzld(self,epoch=None):
+        """
+        ssb_to_psb_ld(epoch=None)
+        
+        Takes a long double array of epoch
+        """
+        return self.coords_as_ICRS_ld(epoch=epoch).cartesian
 
     @Cache.cache_result
     def barycentric_radio_freq(self, toa):
@@ -118,6 +133,19 @@ class Astrometry(TimingModel):
         L_hat = self.ssb_to_psb_xyz(epoch=toa.mjd)
         v_dot_L = toa.pvs.vel.dot(L_hat)
         return toa.freq * (1.0 - v_dot_L / const.c).value
+    
+    def barycentric_radio_freq_array(self,TOAs):
+        """
+        Array version of barcentric_radio_freq()
+        """
+        L_hat = self.ssb_to_psb_xyzld(epoch=TOAs.tdbld)
+        v_dot_L_array = numpy.zeros_like(TOAs.tdbld)
+        for ii in range(len(TOAs.tdbld)):
+            v_dot_L = TOAs.pvs[ii].vel.dot(L_hat.value[:,ii])
+            v_dot_L_array[ii] = v_dot_L.value
+        v_dot_L_array = v_dot_L_array*u.m/u.s
+        
+        return TOAs.freq*(1.0 - v_dot_L_array / const.c).value
 
     def solar_system_geometric_delay(self, toa):
         """
@@ -137,5 +165,23 @@ class Astrometry(TimingModel):
             re_sqr = toa.pvs.pos.dot(toa.pvs.pos)
             delay += (0.5*(re_sqr/L)*(1.0-re_dot_L**2/re_sqr)).to(ls).value
         return delay
-   
-        
+  
+    def solar_system_geometric_delay_ld(self,TOAs):
+        """
+        Long double array version for solar_system_geometric_delay(toa)
+        """
+        #FIXME, need to speed up
+        L_hat = self.ssb_to_psb_xyzld(epoch=TOAs.tdbld)
+        delay_ld_array = []
+        for ii in range(len(TOAs.tdbld)): 
+            re_dot_L = TOAs.pvs[ii].pos.dot(L_hat.value[:,ii])
+            delay = -re_dot_L.to(ls).value
+            if self.PX.value != 0.0:
+                L = ((1.0/self.PX.value)*u.kpc)
+                re_sqr = TOAs.pvs[ii].pos.dot(TOAs.pvs[ii].pos)
+                delay += (0.5*(re_sqr/L)*(1.0-re_dot_L**2/re_sqr)).to(ls).value
+            delay_ld_array.append(delay) 
+        delay_ld_array = numpy.longdouble(delay_ld_array) 
+        return delay_ld_array
+       
+            
