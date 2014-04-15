@@ -137,8 +137,8 @@ def time_to_mjd_string(t, prec=15):
 def time_to_longdouble(t):
     """ Return an astropy Time value as MJD in longdouble
     """
-    return numpy.longdouble(t.jd1-astropy.time.core.MJD_ZERO) \
-            + numpy.longdouble(t.jd2)
+    return np.longdouble(t.jd1-astropy.time.core.MJD_ZERO) \
+            + np.longdouble(t.jd2)
 
 def time_to_mjd_mpf(t):
     """Return an astropy Time value as MJD in mpmath float format.
