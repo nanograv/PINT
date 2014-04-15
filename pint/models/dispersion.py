@@ -18,6 +18,7 @@ class Dispersion(TimingModel):
             description="Dispersion measure"))
 
         self.delay_funcs += [self.dispersion_delay,]
+        self.delay_funcs_ld += [self.dispersion_delay_ld,]
 
     def setup(self):
         super(Dispersion, self).setup()
@@ -32,3 +33,11 @@ class Dispersion(TimingModel):
         # TODO: name DM constant
         return self.DM.value/2.41e-4/bfreq/bfreq
 
+    def dispersion_delay_ld(self,TOAs):
+        try:
+            bfreq = self.barycentric_radio_freq_array(TOAs)
+        except AttributeError:
+            warn("Using topocentric frequency for dedispersion!")
+            bfreq = TOAs.freq
+
+        return self.DM.value/2.41e-4/bfreq/bfreq
