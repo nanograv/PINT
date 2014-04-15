@@ -13,13 +13,13 @@ class SolarSystemShapiro(TimingModel):
         super(SolarSystemShapiro, self).__init__()
 
         self.add_param(Parameter(name="PLANET_SHAPIRO",
-            units=None, value=False, continuous=False,
+            units=None, value=True, continuous=False,
             description="Include planetary Shapiro delays (Y/N)",
             parse_value=lambda x: x.upper() == 'Y',
             print_value=lambda x: 'Y' if x else 'N'))
 
         self.delay_funcs += [self.solar_system_shapiro_delay,]
-
+        self.delay_funcs_ld += [self.solar_system_shapiro_delay_ld,]
     def setup(self):
         super(SolarSystemShapiro, self).setup()
 
@@ -84,4 +84,27 @@ class SolarSystemShapiro(TimingModel):
                     self._ss_mass_sec[pl])
 
         return delay
-
+    def solar_system_shapiro_delay_ld(self, TOAs):
+        """
+        long double version of solar_system_shapiro_delay_ld
+        """
+        psr_dir = self.ssb_to_psb_xyzld(epoch = TOAs.tdbld)
+        delay = numpy.zeros_like(TOAs.tdbld)
+        
+        for ii in range(len(TOAs.tdbld)):
+            #SUN
+            delay[ii] += self.ss_obj_shapiro_delay(TOAs.obs_sun_pvs[ii].pos,
+                                                    psr_dir.value[:,ii],
+                                                    self._ss_mass_sec['sun'])
+            if self.PLANET_SHAPIRO.value:
+                for pl in ('jupiter', 'saturn', 'venus', 'uranus'):
+                    delay[ii] += self.ss_obj_shapiro_delay(
+                        getattr(TOAs, 'obs_'+pl+'_pvs_ld')[ii].pos,
+                        psr_dir.value[:,ii],
+                        self._ss_mass_sec[pl])
+        return delay
+        
+        
+        
+        
+        
