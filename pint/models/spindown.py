@@ -23,11 +23,11 @@ class Spindown(TimingModel):
             description="Spin frequency",
             aliases=["F"],
             parse_value=mpmath.mpf,
-            print_value=lambda x: '%.15f'%x))
+            print_value=lambda x: '%.15f'%x,longdoubleV = True))
 
         self.add_param(Parameter(name="F1",
             units="Hz/s", value=0.0,
-            description="Spin-down rate"))
+            description="Spin-down rate",longdoubleV = True))
 
         self.add_param(MJDParameter(name="TZRMJD",
             description="Reference epoch for phase",longdoubleV = True))
@@ -90,15 +90,20 @@ class Spindown(TimingModel):
         ld doubld arry version of simple_spindow_phase()
         """
         if self.TZRMJD.value is None:
-            self.TZRMJD.longd_value = TOAs.tdbld[0]*u.s - delay_array[0]*u.s
-        dt = ((TOAs.tdbld-self.TZRMJD)*u.day).to(u.s).value
+            self.TZRMJD.value = TOAs.tdbld[0]*u.s -\
+                                (delay_array[0]*u.s).to(u.day)
+
+        dt = ((TOAs.tdbld-self.TZRMJD.longd_value)*u.day).to(u.s).value
         dt-=delay_array
 
-        dt_pepoch = ((self.PEPOCH - self.TZRMJD)*u.day).to(u.s).value
+        dt_pepoch = ((self.PEPOCH.longd_value - self.TZRMJD.longd_value)\
+                    *u.day).to(u.s).value
+        print type(self.F0.value)
+        print dt_pepoch 
+        phase = (self.F0.value + 0.5*self.F1.longd_value*(dt-2.0*dt_pepoch))*dt
+                
+        return phase
         
-        phase = (self.F0.value + 0.5*self.F1.value*(dt-2.0*dt_pepoch))*dt
-
-        return Phase(phase)
 
 
 
