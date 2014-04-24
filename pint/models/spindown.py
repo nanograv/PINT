@@ -7,7 +7,7 @@ import astropy.units as u
 from astropy.time.core import SECS_PER_DAY
 from .parameter import Parameter, MJDParameter
 from .timing_model import TimingModel, MissingParameter
-from ..phase import Phase
+from ..phase import *
 from ..utils import time_to_mjd_mpf, time_from_mjd_string
 from pint import utils
 import numpy
@@ -38,6 +38,10 @@ class Spindown(TimingModel):
 
         self.phase_funcs += [self.simple_spindown_phase,]
         self.phase_funcs_ld += [self.simple_spindown_phase_ld,]
+        self.dt = []
+        self.dt_ld = None
+        self.dt_pepoch_ld = None
+        self.dt_pepoch = []
     def setup(self):
         super(Spindown, self).setup()
         # Check for required params
@@ -75,13 +79,15 @@ class Spindown(TimingModel):
                        self.TZRMJD.value.tdb.jd2)
         dt = ((toaTDBld - TZRMJDtdbld)*u.day).to(u.s).value
         dt -= delay
-       
+        self.dt.append(dt)
+       # print "dt not long double array",dt       
         # TODO: what timescale should we use for pepoch calculation?
         # Does this even matter?
         PEPOCHtdbld = utils.ddouble2ldouble(self.PEPOCH.value.tdb.jd1,\
                     self.PEPOCH.value.tdb.jd2)
         dt_pepoch = ((PEPOCHtdbld - TZRMJDtdbld)*u.day).to(u.s).value
         self.F0.value = numpy.longdouble(self.F0.value)
+        self.dt_pepoch.append(dt_pepoch)
         phase = (self.F0.value + 0.5*self.F1.value*(dt-2.0*dt_pepoch))*dt
         return Phase(phase)
     
@@ -95,14 +101,14 @@ class Spindown(TimingModel):
 
         dt = ((TOAs.tdbld-self.TZRMJD.longd_value)*u.day).to(u.s).value
         dt-=delay_array
-
+        self.dt_ld = dt
         dt_pepoch = ((self.PEPOCH.longd_value - self.TZRMJD.longd_value)\
                     *u.day).to(u.s).value
-        print type(self.F0.value)
-        print dt_pepoch 
-        phase = (self.F0.value + 0.5*self.F1.longd_value*(dt-2.0*dt_pepoch))*dt
+        self.dt_pepoch_ld = dt_pepoch
+      #  print "dt Long Double Array",dt
+        phase = (self.F0.longd_value + 0.5*self.F1.longd_value*(dt-2.0*dt_pepoch))*dt
                 
-        return phase
+        return Phase_array(phase)
         
 
 
