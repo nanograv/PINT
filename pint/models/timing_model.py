@@ -3,7 +3,7 @@
 import functools
 from warnings import warn
 from .parameter import Parameter
-from ..phase import Phase
+from ..phase import *
 from astropy import log
 import numpy as np
 class Cache(object):
@@ -89,6 +89,7 @@ class TimingModel(object):
 
     def __init__(self):
         self.params = []  # List of model parameter names
+        self.params = []  # List of model parameter names
         self.delay_funcs = [] # List of delay component functions
         self.delay_funcs_ld = [] # List of delay component function long double
         self.phase_funcs = [] # List of phase component functions
@@ -129,7 +130,17 @@ class TimingModel(object):
                                      # define what datatype 'toa' has, and
                                      # how to add/subtract from it, etc.
         return phase
-
+    def phase_ld(self,TOAs):
+        """
+        Return the model-predicted pulsa phase for given toa array
+        """
+        delay = self.delay_ld_array(TOAs)
+        phase = Phase_array(np.zeros_like(TOAs.tdbld))
+        for pf in self.phase_funcs_ld:
+            phase += pf(TOAs,delay)
+        
+        
+        return phase    
     @Cache.use_cache
     def delay(self, toa):
         """Total delay for a given TOA.
@@ -262,21 +273,6 @@ class MissingParameter(TimingModelError):
 
     def __str__(self):
         result = self.module + "." + self.param
-        if self.msg is not None:
-            result += "\n  " + self.msg
-        return result
-
-class DuplicateParameter(TimingModelError):
-    """
-    This exception is raised if a model parameter is defined (added)
-    multiple times.
-    """
-    def __init__(self, param, msg=None):
-        self.param = param
-        self.msg = msg
-
-    def __str__(self):
-        result = self.param
         if self.msg is not None:
             result += "\n  " + self.msg
         return result
