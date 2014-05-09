@@ -265,7 +265,7 @@ class TOAs(object):
         
         if clock_correction == True:
             pass
-        i = 1
+        
         for ii,obsname in  enumerate(self.dataTable.groups.keys._data):
             # set up astropy object
             obsname = obsname[0]    # make obsname a string not a (obsname,) 
