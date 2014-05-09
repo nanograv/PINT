@@ -121,13 +121,15 @@ class TOAs(object):
                     toafile = pth
                 self.read_toa_file_table(toafile)
                 self.filename = toafile
-                self.get_table()
-                self.get_time_convert()
+            
+            self.get_table()
+            self.get_time_convert()    
+                    
         else:
             self.commands = []
             self.filename = None
+          
            
-            
     def read_toa_file_table(self, filename, process_includes=True, top=True):
         """Read the given filename and return a table of toas.
 
@@ -222,7 +224,7 @@ class TOAs(object):
         self.dataTable = table.Table([ numpy.array(self.toas,dtype = float),
                                      numpy.array(self.freq), self.obs, 
                                      numpy.array(self.error) ],
-                                     names = ('toa', 'freq', 'obs', 'error'),
+                                     names = ('toa_utc', 'freq', 'obs', 'error'),
                                      meta = {'filename':self.filename})   
 
         return
@@ -256,21 +258,30 @@ class TOAs(object):
         3. Creat time object with input of toa and time scale and formate 
            and observatory     
         """
+        self.dataTable['tt'] = numpy.zeros((1,2))
+        self.dataTable['tdb'] = numpy.zeros((1,2))
+         
         self.dataTable = self.dataTable.group_by('obs')
         
         if clock_correction == True:
             pass
-        
-        for obsname in self.dataTable.groups.keys._data[0]:  # set up astropy object
-            
+        i = 1
+        for ii,obsname in  enumerate(self.dataTable.groups.keys._data):
+            # set up astropy object
+            obsname = obsname[0]    # make obsname a string not a (obsname,) 
             mask = self.dataTable.groups.keys['obs'] == obsname
-            mjdtoa = time.Time(self.dataTable['toa'][:,0],\
-                               self.dataTable['toa'][:,1], scale = 'utc',\
-                               format='mjd',lon = observatories[obsname].geo[0],\
+            mjdtoa = time.Time(self.dataTable.groups[mask]['toa_utc'][:,0],\
+                               self.dataTable.groups[mask]['toa_utc'][:,1], 
+                               scale = 'utc', format='mjd',\
+                               lon = observatories[obsname].geo[0],\
                                lat=observatories[obsname].geo[1],precision=9) 
                             
             setattr(self,'time_at_'+obsname,mjdtoa)       
-    
+            # add tt and tdb to table
+            self.dataTable.groups[ii]['tt'][:,0] = mjdtoa.tt.jd1
+            self.dataTable.groups[ii]['tt'][:,1] = mjdtoa.tt.jd2
+            self.dataTable.groups[ii]['tdb'][:,0] = mjdtoa.tdb.jd1
+            self.dataTable.groups[ii]['tdb'][:,1] = mjdtoa.tdb.jd2
         return
 
 
