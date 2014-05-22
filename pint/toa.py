@@ -391,7 +391,7 @@ class TOAs(object):
             toa.obs_pvs = erfautils.topo_posvels(xyz, toa)
             et = (toatdb-j2000_mjdld)*SECS_PER_DAY
             toa.earth_pvs = objPosVel("EARTH", "SSB", et)
-            print type(toa.earth_pvs)
+           # print type(toa.earth_pvs)
            # self.earth_pvs[ii] = toa.earth_pvs
             toa.pvs = toa.obs_pvs + toa.earth_pvs
            # self.pvs[ii] = toa.pvs
