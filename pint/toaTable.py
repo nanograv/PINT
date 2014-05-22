@@ -123,8 +123,8 @@ class TOAs(object):
                 self.filename = toafile
             
             self.get_table()
-            self.get_time_convert()    
-                    
+            self.get_time_convert(clock_correction=True)    
+                   
         else:
             self.commands = []
             self.filename = None
@@ -210,6 +210,7 @@ class TOAs(object):
                     self.obs.append(d['obs'])
                     self.freq.append(d['freq'])
                     self.error.append(d['error'])
+                    self.NumToa = len(self.toas)
         return      
 
     def get_table(self):
@@ -221,14 +222,23 @@ class TOAs(object):
         obs: 1D string list, toa observatory ID
         error: 1D numpy array, toa error 
         """
-        self.dataTable = table.Table([ numpy.array(self.toas,dtype = float),
-                                     numpy.array(self.freq), self.obs, 
-                                     numpy.array(self.error) ],
+        self.dataTable = table.Table([numpy.array(self.toas,dtype = float)*u.day,
+                                     numpy.array(self.freq)*u.MHz, self.obs, 
+                                     numpy.array(self.error)*u.us ],
                                      names = ('toa_utc', 'freq', 'obs', 'error'),
                                      meta = {'filename':self.filename})   
 
         return
-    def apply_clock_corrections(self):
+    def get_longdouble_array(self,JDint,JDfrac):
+        """
+        get_longdouble_array
+        """
+        JD1 = numpy.longdouble(JDint)
+        JD2 = numpy.longdouble(JDfrac)
+        return JD1-numpy.longdouble(240000.5)+JD2
+
+
+    def apply_clock_corrections_table(self,targetTime,obs):
         """Apply observatory clock corrections.
         
         Apply clock corrections to all the TOAs where corrections
@@ -239,7 +249,17 @@ class TOAs(object):
         commands and treats them exactly as if they were a part of the
         observatory clock corrections.
         """
-        return
+        targetTime = numpy.array(targetTime)
+        #assert obsname in self.observatories 
+        mjds,ccorr = observatories_module.get_clock_corr_vals(obs)
+        if numpy.any((targetTime < mjds[0]) | (targetTime > mjds[-1])):
+            # FIXME: check the user sees this! should it be an exception?
+            log.error("Some TOAs are not covered by the "+obs+" clock correction"
+                      +" file, treating clock corrections as constant"
+                      +" past the ends.")
+        corrs = numpy.interp(targetTime,mjds,ccorr)
+        corrs *= u.us    
+        return corrs
 
 
 
@@ -260,18 +280,28 @@ class TOAs(object):
         """
         self.dataTable['tt'] = numpy.zeros((1,2))
         self.dataTable['tdb'] = numpy.zeros((1,2))
+        self.dataTable['ut1'] = numpy.zeros((1,2))
+        self.dataTable['clock_corr'] = numpy.zeros(self.NumToa)
+        # Should here be long double???
+        self.dataTable['utc'] = (self.dataTable['toa_utc'][:,0])\
+                                  +(self.dataTable['toa_utc'][:,1]) 
          
         self.dataTable = self.dataTable.group_by('obs')
         
-        if clock_correction == True:
-            pass
-        
-        for ii,obsname in  enumerate(self.dataTable.groups.keys._data):
+        for ii,obsname in  enumerate(self.dataTable.groups.keys._data):       
             # set up astropy object
             obsname = obsname[0]    # make obsname a string not a (obsname,) 
             mask = self.dataTable.groups.keys['obs'] == obsname
-            mjdtoa = time.Time(self.dataTable.groups[mask]['toa_utc'][:,0],\
-                               self.dataTable.groups[mask]['toa_utc'][:,1], 
+            UTCint = self.dataTable.groups[ii]['toa_utc'][:,0]
+            UTCfrac = self.dataTable.groups[ii]['toa_utc'][:,1]
+            # Apply clock correction
+            if clock_correction == True:
+                self.dataTable.groups[ii]['clock_corr'] = \
+                           self.apply_clock_corrections_table(\
+                           self.dataTable.groups[mask]['utc'],obsname).to(u.day)
+                UTCfrac += self.dataTable.groups[mask]['clock_corr']
+     
+            mjdtoa = time.Time(UTCint, UTCfrac, \
                                scale = 'utc', format='mjd',\
                                lon = observatories[obsname].geo[0],\
                                lat=observatories[obsname].geo[1],precision=9) 
@@ -282,7 +312,70 @@ class TOAs(object):
             self.dataTable.groups[ii]['tt'][:,1] = mjdtoa.tt.jd2
             self.dataTable.groups[ii]['tdb'][:,0] = mjdtoa.tdb.jd1
             self.dataTable.groups[ii]['tdb'][:,1] = mjdtoa.tdb.jd2
+            self.dataTable.groups[ii]['ut1'][:,0] = mjdtoa.ut1.jd1
+            self.dataTable.groups[ii]['ut1'][:,1] = mjdtoa.ut1.jd2
+        self.dataTable['tt_ld']=self.get_longdouble_array(self.dataTable['tt'][:,0],
+                                                          self.dataTable['tt'][:,1])
+        self.dataTable['tdb_ld']=self.get_longdouble_array(self.dataTable['tdb'][:,0],
+                                                           self.dataTable['tdb'][:,1])
         return
+   
+    def compute_planet_posvel_table(self,ephem = "DE421",planets = False):
+        """
+        compute_planet_posvel_table()
+        Takes an list of toa in tdb scale and returns the position and velocity 
+        of the planets. 
+        If the planets == Falus. Only the earth postion velocity are calculated
+        If the planets == True. Jupiter, Saturn, Venus, Uranus position and
+                          velocity are calculated 
+        """
+        # Load the appropriate JPL ephemeris
+        load_kernels(ephem)
+        pth = os.path.join(pintdir,"datafiles")
+        ephem_file = os.path.join(pth, "%s.bsp"%ephem.lower())
+        spice.furnsh(ephem_file)
+        log.info("Loaded ephemeris from %s" % ephem_file)
+        # Set up the j2000 start time for calcluat spice formate et
+        j2000 = time.Time('2000-01-01 12:00:00', scale='utc') 
+        j2000_mjd = j2000.utc.jd1- 240000.5 + j2000.utc.jd2
+        self.dataTable['earth_posvel'] = numpy.zeros((self.NumToa,6))
+        self.dataTable['sun_posvel'] = numpy.zeros((self.NumToa,6))
+        self.dataTable['obs_posvel'] = numpy.zeros((self.NumToa,6))
+        tdbld = numpy.longdouble(self.dataTable['tdb'][:,0]) \
+                -numpy.longdouble(240000.5) \
+                +numpy.longdouble(self.dataTable['tdb'][:,1])       
+        et = (tdbld-j2000_mjd)*SECS_PER_DAY 
+        # get obseroatory xyz coords ITRF
+        for obsname in self.dataTable.groups.keys._data:
+            obsname = obsname[0]
+            xyz = observatories[obsname].xyz
+            setattr(self,'xyz_'+obsname,xyz)
+
+
+        if planets:
+            for p in ('jupiter', 'saturn', 'venus', 'uranus'):
+                self.dataTable[p+'_posvel'] = numpy.zeros((self.NumToa,6))
+        
+        self.dataTable['obs_posvel']  = erfautils.topo_posvels_array(self)      
+        
+        for ii in range(self.NumToa):
+            obs_pvs = self.dataTable['obs_posvel'][ii]
+            pv, lt = spice.spkezr("EARTH",et[ii],"J2000","NONE","SSB")
+            self.dataTable['earth_posvel'][ii] = pv
+            pv, lt = spice.spkezr("SUN",et[ii],"J2000","NONE","EARTH") 
+            self.dataTable['sun_posvel'][ii] = pv - obs_pvs     
+            
+            if planets:
+                for p in ('jupiter', 'saturn', 'venus', 'uranus'):
+                    pv, lt = spice.spkezr(p.upper()+" BARYCENTER",et[ii],"J2000",
+                                          "NONE","EARTH") 
+                    self.dataTable[p+'_posvel'][ii] = pv - obs_pvs
+            
+        self.dataTable['obs_ssb'] = self.dataTable['obs_posvel']/1000.0+ \
+                                    self.dataTable['earth_posvel']
+                                    
+        return
+        
 
 
 
