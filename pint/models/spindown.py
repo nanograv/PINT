@@ -38,6 +38,7 @@ class Spindown(TimingModel):
 
         self.phase_funcs += [self.simple_spindown_phase,]
         self.phase_funcs_ld += [self.simple_spindown_phase_ld,]
+        self.phase_funcs_table += [self.simple_spindown_phase_table,]
         self.dt = []
         self.dt_ld = None
         self.dt_pepoch_ld = None
@@ -96,7 +97,7 @@ class Spindown(TimingModel):
         ld doubld arry version of simple_spindow_phase()
         """
         if self.TZRMJD.value is None:
-            self.TZRMJD.value = TOAs.tdbld[0]*u.s -\
+            self.TZRMJD.value = TOAs.tdbld[0]*u.d -\
                                 (delay_array[0]*u.s).to(u.day)
 
         dt = ((TOAs.tdbld-self.TZRMJD.longd_value)*u.day).to(u.s).value
@@ -110,6 +111,28 @@ class Spindown(TimingModel):
                 
         return Phase_array(phase)
         
+    def simple_spindown_phase_table(self, TOAs, delay_array):
+        """
+        Table version of simple_spindow_phase()
+        """
+        if self.TZRMJD.value is None:
+            self.TZRMJD.value = TOAs.dataTable['tdb_ld'][0]*u.day -\
+                                (delay_array[0]*u.s).to(u.day)
+        dt = ((TOAs.dataTable['tdb_ld']-      
+                self.TZRMJD.longd_value)*u.day).to(u.s).value    
+                                
+        dt-=delay_array
+        self.total_delay = dt
+        dt_pepoch = ((self.PEPOCH.longd_value - self.TZRMJD.longd_value)\
+                    *u.day).to(u.s).value
+        phase = (self.F0.longd_value + 0.5*self.F1.longd_value*(dt-2.0*dt_pepoch))*dt
+
+        return Phase_array(phase)
+             
+
+
+
+
 
 
 
