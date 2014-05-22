@@ -77,8 +77,7 @@ class Phase_array(namedtuple('Phase_array', 'int frac')):
         ii[index] -= 1
         index = numpy.where(ff > 0.5)
         ff[index] -= 1.0
-        ii[index] += 1   
-        print ff,ii 
+        ii[index] += 1    
         return super(Phase_array, cls).__new__(cls, ii, ff)
     def __neg__(self):
         return Phase_array(-self.int, -self.frac)
