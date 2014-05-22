@@ -19,7 +19,7 @@ class Dispersion(TimingModel):
 
         self.delay_funcs += [self.dispersion_delay,]
         self.delay_funcs_ld += [self.dispersion_delay_ld,]
-
+        self.delay_funcs_table += [self.dispersion_delay_table,]
     def setup(self):
         super(Dispersion, self).setup()
 
@@ -41,3 +41,16 @@ class Dispersion(TimingModel):
             bfreq = TOAs.freq
 
         return self.DM.value/2.41e-4/bfreq/bfreq
+
+
+
+    def dispersion_delay_table(self,TOAs):
+        try:
+            bfreq = self.barycentric_radio_freq_table(TOAs)
+        except AttributeError:
+            warn("Using topocentric frequency for dedispersion!")
+            bfreq = TOAs.dataTable['freq'] 
+        return (self.DM.value/2.41e-4/bfreq/bfreq).data    
+        
+        
+           
