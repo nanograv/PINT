@@ -3,7 +3,8 @@
 import functools
 from warnings import warn
 from .parameter import Parameter
-from ..phase import *
+from ..phase import Phase
+from ..phase import Phase_array
 from astropy import log
 import numpy as np
 class Cache(object):
@@ -92,8 +93,10 @@ class TimingModel(object):
         self.params = []  # List of model parameter names
         self.delay_funcs = [] # List of delay component functions
         self.delay_funcs_ld = [] # List of delay component function long double
+        self.delay_funcs_table = []
         self.phase_funcs = [] # List of phase component functions
         self.phase_funcs_ld = [] # List of phase function long double
+        self.phase_funcs_table = []
         self.cache = None
       
         self.add_param(Parameter(name="PSR",
@@ -140,6 +143,14 @@ class TimingModel(object):
             phase += pf(TOAs,delay)
         
         
+        return phase
+    def phase_table(self,TOAs):
+    
+        delay = self.delay_table(TOAs)
+        phase = Phase_array(np.zeros_like(TOAs.dataTable['tdb_ld']))
+        for pf in self.phase_funcs_table:
+            phase += pf(TOAs,delay)
+
         return phase    
     @Cache.use_cache
     def delay(self, toa):
@@ -161,7 +172,12 @@ class TimingModel(object):
         for df in self.delay_funcs_ld:
             delay += df(TOAs) 
         return delay
-        
+    
+    def delay_table(self,TOAs):
+        delay = np.zeros_like(TOAs.dataTable['tdb_ld'])
+        for df in self.delay_funcs_table:
+            delay += df(TOAs)
+        return delay        
             
     def d_phase_d_tpulsar(self, toa):
         """
