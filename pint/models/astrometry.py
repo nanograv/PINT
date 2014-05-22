@@ -4,6 +4,7 @@ import numpy
 import astropy.coordinates as coords
 import astropy.units as u
 import astropy.constants as const
+import astropy.table as table
 from astropy.coordinates.angles import Angle
 from .parameter import Parameter, MJDParameter
 from .timing_model import TimingModel, MissingParameter, Cache
@@ -49,6 +50,7 @@ class Astrometry(TimingModel):
 
         self.delay_funcs += [self.solar_system_geometric_delay,]
         self.delay_funcs_ld += [self.solar_system_geometric_delay_ld,]
+        self.delay_funcs_table += [self.solar_system_geometric_delay_table,]
     def setup(self):
         super(Astrometry, self).setup()
         # RA/DEC are required
@@ -102,8 +104,7 @@ class Astrometry(TimingModel):
                     numpy.cos(self.DEC.value)).to(u.mas)
             dDEC = (dt*u.day * self.PMDEC.value * (u.mas/u.yr)).to(u.mas)
             return coords.ICRS(ra=self.RA.value+dRA, dec=self.DEC.value+dDEC)
-            
-                
+    
     @Cache.cache_result
     def ssb_to_psb_xyz(self, epoch=None):
         """
@@ -118,7 +119,7 @@ class Astrometry(TimingModel):
     def ssb_to_psb_xyzld(self,epoch=None):
         """
         ssb_to_psb_ld(epoch=None)
-        
+        e
         Takes a long double array of epoch
         """
         return self.coords_as_ICRS_ld(epoch=epoch).cartesian
@@ -146,6 +147,16 @@ class Astrometry(TimingModel):
         v_dot_L_array = v_dot_L_array*u.m/u.s
         
         return TOAs.freq*(1.0 - v_dot_L_array / const.c).value
+    def barycentric_radio_freq_table(self,TOAs):
+        """
+        Astropy table version of barcentric_radio_freq()
+        """
+        L_hat = self.ssb_to_psb_xyzld(epoch=TOAs.dataTable['tdb_ld'])
+        v_dot_L_array = (numpy.dot(TOAs.dataTable['obs_ssb'][:,3:6],L_hat))[:,0]
+        v_dot_L_array *= u.km/u.s
+        return TOAs.dataTable['freq']*(1.0-v_dot_L_array / const.c).value 
+         
+
 
     def solar_system_geometric_delay(self, toa):
         """
@@ -184,4 +195,19 @@ class Astrometry(TimingModel):
         delay_ld_array = numpy.longdouble(delay_ld_array) 
         return delay_ld_array
        
-            
+
+    def solar_system_geometric_delay_table(self,TOAs):       
+        """
+        Long double version but interact with data table. 
+        """    
+        delay_ld_array = numpy.zeros_like(TOAs.dataTable['tdb_ld']) 
+        L_hat = self.ssb_to_psb_xyzld(epoch=TOAs.dataTable['tdb_ld'])
+        re_dot_L = numpy.diag((numpy.dot(TOAs.dataTable['obs_ssb'][:,0:3],L_hat))).copy()
+        re_dot_L*= u.km                     
+        delay_ld_array = -re_dot_L.to(ls).value
+        if self.PX.value != 0.0:
+            L = ((1.0/self.PX.value)*u.kpc)
+            re_sqr = ((TOAs.dataTable['obs_ssb'][:,0:3]**2).sum(axis=1))*(u.km)**2
+            px_delay = (0.5*(re_sqr/L)*(1.0-re_dot_L**2/re_sqr)).to(ls).value
+            delay_ld_array += px_delay
+        return delay_ld_array
