@@ -10,10 +10,10 @@ import astropy.table as table
 import astropy.units as u
 from astropy.utils.iers import IERS_A, IERS_A_URL
 from astropy.utils.data import download_file
-from .spiceutils import objPosVel, load_kernels
+from .spiceutils import objPosVel, load_kernels_cython
 from pint import pintdir
 from astropy import log
-
+from spice_util_cython import spice_util_py as cspc 
 
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
@@ -377,7 +377,64 @@ class TOAs(object):
         return
         
 
+    def compute_planet_posvel_c(self,ephem = "DE421",planets = False):
+        """
+        compute_planet_posvel_table()
+        Takes an list of toa in tdb scale and returns the position and velocity
+        of the planets.
+        If the planets == Falus. Only the earth postion velocity are calculated
+        If the planets == True. Jupiter, Saturn, Venus, Uranus position and
+                          velocity are calculated
+        """
+        # Load the appropriate JPL ephemeris
+        #load_kernels_cython(ephem)
+        pth = os.path.join(pintdir,"datafiles")
+        ephem_file = os.path.join(pth, "%s.bsp"%ephem.lower())
+        cspc.furnsh_py(ephem_file)
+        log.info("Loaded ephemeris from %s" % ephem_file)
+        cspc.furnsh_py(os.path.join(pth, "naif0010.tls"))
+        log.info("Loaded naif0010.tls")
+        # Set up the j2000 start time for calcluat spice formate et
+        j2000 = time.Time('2000-01-01 12:00:00', scale='utc')
+        j2000_mjd = j2000.utc.jd1- 240000.5 + j2000.utc.jd2
+        self.dataTable['earth_posvel'] = numpy.zeros((self.NumToa,6))
+        self.dataTable['sun_posvel'] = numpy.zeros((self.NumToa,6))
+        self.dataTable['obs_posvel'] = numpy.zeros((self.NumToa,6))
+        tdbld = numpy.longdouble(self.dataTable['tdb'][:,0]) \
+                -numpy.longdouble(240000.5) \
+                +numpy.longdouble(self.dataTable['tdb'][:,1])
+        et = (tdbld-j2000_mjd)*SECS_PER_DAY
+        et = numpy.double(et.data)
+        # get obseroatory xyz coords ITRF
+        for obsname in self.dataTable.groups.keys._data:
+            obsname = obsname[0]
+            xyz = observatories[obsname].xyz
+            setattr(self,'xyz_'+obsname,xyz)
 
+        if planets:
+            for p in ('jupiter', 'saturn', 'venus', 'uranus'):
+                self.dataTable[p+'_posvel'] = numpy.zeros((self.NumToa,6))
 
+        obs_pvs = erfautils.topo_posvels_array(self)
+        self.dataTable['obs_posvel']  = obs_pvs
 
+        pvEarth= cspc.spkezr_array_np("EARTH","SSB",et,len(et))
+       
+        
+        self.dataTable['earth_posvel'] = pvEarth
+        
+        pvSun = cspc.spkezr_array_np("SUN","SSB",et,len(et))
+        self.dataTable['sun_posvel'] = pvSun - obs_pvs
+        
+
+        if planets:
+            for p in ('jupiter', 'saturn', 'venus', 'uranus'):
+                pvPlanet = cspc.spkezr_array_np(p.upper()+" BARYCENTER","EARTH",et,
+                                             len(et))
+                self.dataTable[p+'_posvel'] = pvPlanet - obs_pvs
+               
+        self.dataTable['obs_ssb'] = self.dataTable['obs_posvel']/1000.0+ \
+                                    self.dataTable['earth_posvel']
+               
+        return
 
