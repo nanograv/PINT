@@ -155,7 +155,6 @@ class TOAs(object):
         with open(filename,"r") as f:
             for l in f.readlines():
                 MJD, d = parse_TOA_line(l, fmt=self.cdict["FORMAT"]) 
-               
 
                 if d["format"] == "Command":
                     cmd = d["Command"][0]
@@ -222,6 +221,7 @@ class TOAs(object):
         obs: 1D string list, toa observatory ID
         error: 1D numpy array, toa error 
         """
+        self.testToa = numpy.array(self.toas,dtype = float)*u.day
         self.dataTable = table.Table([numpy.array(self.toas,dtype = float)*u.day,
                                      numpy.array(self.freq)*u.MHz, self.obs, 
                                      numpy.array(self.error)*u.us ],
@@ -233,9 +233,9 @@ class TOAs(object):
         """
         get_longdouble_array
         """
-        JD1 = numpy.longdouble(JDint)
+        JD1 = numpy.longdouble(JDint-2400000.5)
         JD2 = numpy.longdouble(JDfrac)
-        return JD1-numpy.longdouble(240000.5)+JD2
+        return JD1+JD2
 
 
     def apply_clock_corrections_table(self,targetTime,obs):
@@ -423,15 +423,16 @@ class TOAs(object):
         
         self.dataTable['earth_posvel'] = pvEarth
         
-        pvSun = cspc.spkezr_array_np("SUN","SSB",et,len(et))
-        self.dataTable['sun_posvel'] = pvSun - obs_pvs
+        pvSun = cspc.spkezr_array_np("SUN","EARTH",et,len(et))
+       
+        self.dataTable['sun_posvel'] = pvSun - obs_pvs/1000.0
         
 
         if planets:
             for p in ('jupiter', 'saturn', 'venus', 'uranus'):
                 pvPlanet = cspc.spkezr_array_np(p.upper()+" BARYCENTER","EARTH",et,
                                              len(et))
-                self.dataTable[p+'_posvel'] = pvPlanet - obs_pvs
+                self.dataTable[p+'_posvel'] = pvPlanet - obs_pvs/1000.0
                
         self.dataTable['obs_ssb'] = self.dataTable['obs_posvel']/1000.0+ \
                                     self.dataTable['earth_posvel']

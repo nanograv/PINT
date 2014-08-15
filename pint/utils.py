@@ -251,12 +251,12 @@ def ddouble2ldouble(t1,t2,format='jd'):
     """
     if format=='jd':
     # determine if the two double are JD time
-        t1 = t1 - 2400000.0
-        t = np.longdouble([t1,t2])
-        return t[0]+t[1] 
+        t1 = np.longdouble(t1) -np.longdouble(2400000.5)
+        t = np.longdouble(t1) + np.longdouble(t2)
+        return t
     else:
         t = np.longdouble([t1,t2])
-        return t[0]+t[1]
+    return t[0]+t[1]
     
 
 
