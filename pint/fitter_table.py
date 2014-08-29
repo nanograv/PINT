@@ -45,7 +45,7 @@ class fitter_table(object):
         if method == None:
             res = opt.minimize(self.fit_func,fit_value)
         else:     
-            res = opt.minimize(self.fit_func,fit_value,method = method, options={'gtol': 1e-6, 'disp': True})
+            res = opt.minimize(self.fit_func,fit_value,method = method)
         print res
         for par,new_value in zip(self.model.params,res.x):
             getattr(self.new_model,par).value = new_value
