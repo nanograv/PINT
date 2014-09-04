@@ -1,7 +1,9 @@
 # parameter.py
 # Defines Parameter class for timing model parameters
-from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string
-
+from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
+                    time_to_longdouble
+import numpy 
+import inspect
 class Parameter(object):
     """
     Parameter(name=None, value=None, units=None, description=None,
@@ -41,7 +43,7 @@ class Parameter(object):
 
     def __init__(self, name=None, value=None, units=None, description=None, 
             uncertainty=None, frozen=True, aliases=None, continuous=True,
-            parse_value=fortran_float, print_value=str):
+            parse_value=fortran_float, print_value=str,longdoubleV = False):
         self.value = value
         self.name = name
         self.units = units
@@ -52,6 +54,17 @@ class Parameter(object):
         self.aliases = [] if aliases is None else aliases
         self.parse_value = parse_value
         self.print_value = print_value
+        self.longdoubleV = longdoubleV
+                
+    @property
+    def longd_value(self):
+        if self.longdoubleV == True:
+            print "add long double to ",self.name,self.value
+            try:
+                longd_value = time_to_longdouble(self.value.tdb)
+            except:
+                longd_value = numpy.longdouble(self.value)
+            return longd_value            
 
     def __str__(self):
         out = self.name
@@ -129,11 +142,13 @@ class MJDParameter(Parameter):
     def __init__(self, name=None, value=None, description=None, 
             uncertainty=None, frozen=True, continuous=True, aliases=None,
             parse_value=time_from_mjd_string,
-            print_value=time_to_mjd_string):
+            print_value=time_to_mjd_string,longdoubleV = True):
         super(MJDParameter, self).__init__(name=name, value=value,
                 units="MJD", description=description,
                 uncertainty=uncertainty, frozen=frozen, 
                 continuous=continuous,
                 aliases=aliases,
                 parse_value=parse_value,
-                print_value=print_value)
+                print_value=print_value,
+                longdoubleV = True)
+       

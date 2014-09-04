@@ -162,7 +162,7 @@ class TOA(object):
         self.obs = obs
         self.freq = freq
         self.flags = kwargs
-
+        self.tdblongd = utils.ddouble2ldouble(self.mjd.tdb.jd1, self.mjd.tdb.jd2)
     def __str__(self):
         s = utils.time_to_mjd_string(self.mjd) + \
             ": %6.3f us error from '%s' at %.4f MHz " % \
@@ -170,16 +170,17 @@ class TOA(object):
         if len(self.flags):
             s += str(self.flags)
         return s
-
+ 
 
 class TOAs(object):
     """TOAs loaded from zero or more files.
 
     """
-
     def __init__(self, toafile=None):
+		
+        self.table = None
         if toafile:
-            # FIXME: work with file-like objects
+        # FIXME: work with file-like objects
             if type(toafile) in [tuple, list]:
                 self.filename = None
                 for infile in toafile:
@@ -194,7 +195,13 @@ class TOAs(object):
             self.toas = []
             self.commands = []
             self.filename = None
-
+            self.mjdld = []
+            self.tdbld = []
+        
+        self.earth_pvs = []
+        self.pvs = []
+        self.obs_sun_pvs = []
+        self.freq = []
     def __add__(self, x):
         if type(x) in [int, float]:
             if not x:
@@ -208,7 +215,10 @@ class TOAs(object):
                 return self
 
     def get_freqs(self):
-        """Return a numpy array of the observing frequencies for the TOAs.
+        """
+        get_freqs()
+
+        Return a numpy array of the observing frequencies in Hz for the TOAs
         """
         return numpy.array([t.freq for t in self.toas])
 
@@ -218,7 +228,10 @@ class TOAs(object):
         return numpy.array([t.mjd for t in self.toas])
 
     def get_errors(self):
-        """Return a numpy array of the TOA errors.
+        """
+        get_errors()
+
+        Return a numpy array of the TOA errors in us.
         """
         return numpy.array([t.error for t in self.toas])
 
@@ -231,7 +244,35 @@ class TOAs(object):
         """Return a numpy array of the TOA flags.
         """
         return numpy.array([t.flags for t in self.toas])
+    def get_tdb_longdouble(self):
+        """
+        get_tdb_longdouble()
 
+        Return a numpy array with long double data type or float128
+        """
+        jd1ld = numpy.longdouble([t.mjd.tdb.jd1 for t in self.toas])
+        jd2ld = numpy.longdouble([t.mjd.tdb.jd2 for t in self.toas])
+        mjdld = jd1ld - numpy.longdouble(2400000.5) + jd2ld
+        self.tdbld = mjdld
+        return mjdld
+    def get_mjd_longdouble(self):
+        """
+        get_mjd_longdouble()
+    
+        Return a numpy array with long double data type or float128
+        """
+        jd1ld = numpy.longdouble([t.mjd.jd1 for t in self.toas])
+        jd2ld = numpy.longdouble([t.mjd.jd2 for t in self.toas])
+        mjdld = jd1ld - numpy.longdouble(2400000.5) + jd2ld
+        self.mjdld = mjdld
+        return mjdld
+    def get_freq_array(self):
+        """
+        get_freq_array() return a numpy array of observing freq
+        """
+        self.freq = [t.freq for t in self.toas] 
+        return self.freq
+           
     def pickle(self, filename=None):
         if filename is not None:
             cPickle.dump(self, open(filename, "wb"))
@@ -327,7 +368,49 @@ class TOAs(object):
                     pv = objPosVel(p.upper()+" BARYCENTER",
                             "EARTH", et) - toa.obs_pvs
                     setattr(toa, 'obs_'+p+'_pvs', pv)
+    
+    def compute_posvels_ld(self,ephem="DE421",planets = False):
+        """
+        Long double version of compute position and velocities
+        """
+        load_kernels(ephem)
+        pth = os.path.join(pintdir, "datafiles")
+        ephem_file = os.path.join(pth, "%s.bsp"%ephem.lower())
+        spice.furnsh(ephem_file)
+        log.info("Loaded ephemeris from %s" % ephem_file)
+        j2000 = time.Time('2000-01-01 12:00:00', scale='utc')
+        j2000_mjdld = utils.time_to_longdouble(j2000.tdb)
+        self.earth_pvs = numpy.zeros_like(self.tdbld)
+        self.pvs = numpy.zeros_like(self.tdbld)
+        if planets:
+            for p in ('jupiter', 'saturn', 'venus', 'uranus'):
+                setattr(self,'obs_'+p+'_pvs_ld',[])
+        
+        for ii, toa, toatdb in zip(range(len(self.tdbld)),self.toas, self.tdbld):
+            xyz = observatories[toa.obs].xyz
+            toa.obs_pvs = erfautils.topo_posvels(xyz, toa)
+            et = (toatdb-j2000_mjdld)*SECS_PER_DAY
+            toa.earth_pvs = objPosVel("EARTH", "SSB", et)
+           # print type(toa.earth_pvs)
+           # self.earth_pvs[ii] = toa.earth_pvs
+            toa.pvs = toa.obs_pvs + toa.earth_pvs
+           # self.pvs[ii] = toa.pvs
+            toa.ephem = ephem
+            
+            #Obs to Sun PV:
+            toa.obs_sun_pvs = objPosVel("SUN", "EARTH", et) - toa.obs_pvs
+            self.obs_sun_pvs.append(toa.obs_sun_pvs)
+            if planets:
+                for p in ('jupiter', 'saturn', 'venus', 'uranus'):
+                    pv = objPosVel(p.upper()+" BARYCENTER",
+                            "EARTH", et) - toa.obs_pvs
+                    setattr(toa, 'obs_'+p+'_pvs', pv)        
+                    getattr(self,'obs_'+p+'_pvs_ld').append(pv)
 
+    
+    
+    
+    
     def to_table(self):
         """Convert the list of TOAs to an astropy table.
 
@@ -359,6 +442,7 @@ class TOAs(object):
                     self.commands = tmp.commands
                     self.observatories = tmp.observatories
                     return
+
             self.toas = []
             self.commands = []
             self.cdict = {"EFAC": 1.0, "EQUAD": 0.0,
@@ -370,6 +454,7 @@ class TOAs(object):
                           "MODE": 1, "JUMP": [False, 0],
                           "FORMAT": "Unknown", "END": False}
             self.observatories = set()
+
         with open(filename, "r") as f:
             for l in f.readlines():
                 MJD, d = parse_TOA_line(l, fmt=self.cdict["FORMAT"])
@@ -413,6 +498,7 @@ class TOAs(object):
                         self.cdict["FORMAT"] = fmt
                     else:
                         continue
+
                 if (self.cdict["SKIP"] or
                     d["format"] in ("Blank", "Unknown", "Comment", "Command")):
                     continue
@@ -441,7 +527,122 @@ class TOAs(object):
                         if self.cdict["TIME"] != 0.0:
                             newtoa.flags["time"] = self.cdict["TIME"]
                         self.observatories.add(newtoa.obs)
+                        
                         self.toas.append(newtoa)
+
+            if top:
+                # Clean up our temporaries used when reading TOAs
+                del self.cdict
+
+    def read_toa_file_table(self, filename, process_includes=True, top=True):
+        """Read the given filename and return a astropy table of TOAs.
+
+        Will recurse to process INCLUDE-d files unless
+        process_includes is set to False.
+        """
+        if top:
+            # Read from a pickle file if available
+            if os.path.isfile(filename+".pickle"):
+                if (os.path.getmtime(filename+".pickle") >
+                    os.path.getmtime(filename)):
+                    sys.stderr.write("Reading toas from '%s'...\n" % \
+                                     (filename+".pickle"))
+                    # Pickle file is newer, assume it is good and load it
+                    tmp = cPickle.load(open(filename+".pickle"))
+                    self.filename = tmp.filename
+                    self.toas = tmp.toas
+                    self.commands = tmp.commands
+                    self.observatories = tmp.observatories
+                    return
+
+            self.toas = []
+            self.commands = []
+            self.cdict = {"EFAC": 1.0, "EQUAD": 0.0,
+                          "EMIN": 0.0, "EMAX": 1e100,
+                          "FMIN": 0.0, "FMAX": 1e100,
+                          "INFO": None, "SKIP": False,
+                          "TIME": 0.0, "PHASE": 0,
+                          "PHA1": None, "PHA2": None,
+                          "MODE": 1, "JUMP": [False, 0],
+                          "FORMAT": "Unknown", "END": False}
+            self.observatories = set()
+
+        with open(filename, "r") as f:
+            for l in f.readlines():
+                MJD, d = parse_TOA_line(l, fmt=self.cdict["FORMAT"])
+                if d["format"] == "Command":
+                    cmd = d["Command"][0]
+                    self.commands.append((d["Command"], len(self.toas)))
+                    if cmd == "SKIP":
+                        self.cdict[cmd] = True
+                        continue
+                    elif cmd == "NOSKIP":
+                        self.cdict["SKIP"] = False
+                        continue
+                    elif cmd == "END":
+                        self.cdict[cmd] = True
+                        break
+                    elif cmd in ("TIME", "PHASE"):
+                        self.cdict[cmd] += float(d["Command"][1])
+                    elif cmd in ("EMIN", "EMAX", "EFAC", "EQUAD",\
+                                 "PHA1", "PHA2", "FMIN", "FMAX"):
+                        self.cdict[cmd] = float(d["Command"][1])
+                        if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
+                            d[cmd] = d["Command"][1]
+                    elif cmd == "INFO":
+                        self.cdict[cmd] = d["Command"][1]
+                        d[cmd] = d["Command"][1]
+                    elif cmd == "FORMAT":
+                        if d["Command"][1] == "1":
+                            self.cdict[cmd] = "Tempo2"
+                    elif cmd == "JUMP":
+                        if self.cdict[cmd][0]:
+                            self.cdict[cmd][0] = False
+                            self.cdict[cmd][1] += 1
+                        else:
+                            self.cdict[cmd][0] = True
+                    elif cmd == "INCLUDE" and process_includes:
+                        # Save FORMAT in a tmp
+                        fmt = self.cdict["FORMAT"]
+                        self.cdict["FORMAT"] = "Unknown"
+                        self.read_toa_file(d["Command"][1], top=False)
+                        # re-set FORMAT
+                        self.cdict["FORMAT"] = fmt
+                    else:
+                        continue
+
+                if (self.cdict["SKIP"] or
+                    d["format"] in ("Blank", "Unknown", "Comment", "Command")):
+                    continue
+                elif self.cdict["END"]:
+                    if top:
+                    # Clean up our temporaries used when reading TOAs
+                        del self.cdict
+                    return
+                else:
+                    newtoa = TOA(MJD, **d)
+                    if ((self.cdict["EMIN"] > newtoa.error) or
+                        (self.cdict["EMAX"] < newtoa.error) or
+                        (self.cdict["FMIN"] > newtoa.freq) or
+                        (self.cdict["FMAX"] < newtoa.freq)):
+                        continue
+                    else:
+                        newtoa.error *= self.cdict["EFAC"]
+                        newtoa.error = numpy.hypot(newtoa.error,
+                                                   self.cdict["EQUAD"])
+                        if self.cdict["INFO"]:
+                            newtoa.flags["info"] = self.cdict["INFO"]
+                        if self.cdict["JUMP"][0]:
+                            newtoa.flags["jump"] = self.cdict["JUMP"][1]
+                        if self.cdict["PHASE"] != 0:
+                            newtoa.flags["phase"] = self.cdict["PHASE"]
+                        if self.cdict["TIME"] != 0.0:
+                            newtoa.flags["time"] = self.cdict["TIME"]
+                        self.observatories.add(newtoa.obs)
+                        
+                        self.toas.append(MJD)
+                        print MJD
+
             if top:
                 # Clean up our temporaries used when reading TOAs
                 del self.cdict

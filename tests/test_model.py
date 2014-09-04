@@ -85,7 +85,7 @@ def do_plot():
     plt.subplot(212)
     plt.plot(mjds,diff_t2*1e3,label='PINT - T2')
     plt.hold(True)
-    plt.plot(mjds,diff_t1*1e3,label='PINT - T1')
+#    plt.plot(mjds,diff_t1*1e3,label='PINT - T1')
     plt.grid()
     plt.xlabel('MJD')
     plt.ylabel('Residual diff (ns)')

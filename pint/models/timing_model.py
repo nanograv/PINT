@@ -4,8 +4,9 @@ import functools
 from warnings import warn
 from .parameter import Parameter
 from ..phase import Phase
+from ..phase import Phase_array
 from astropy import log
-
+import numpy as np
 class Cache(object):
     """Temporarily cache timing model internal computation results.
 
@@ -89,10 +90,15 @@ class TimingModel(object):
 
     def __init__(self):
         self.params = []  # List of model parameter names
+        self.params = []  # List of model parameter names
         self.delay_funcs = [] # List of delay component functions
+        self.delay_funcs_ld = [] # List of delay component function long double
+        self.delay_funcs_table = []
         self.phase_funcs = [] # List of phase component functions
+        self.phase_funcs_ld = [] # List of phase function long double
+        self.phase_funcs_table = []
         self.cache = None
-
+      
         self.add_param(Parameter(name="PSR",
             units=None,
             description="Source name",
@@ -127,7 +133,25 @@ class TimingModel(object):
                                      # define what datatype 'toa' has, and
                                      # how to add/subtract from it, etc.
         return phase
+    def phase_ld(self,TOAs):
+        """
+        Return the model-predicted pulsa phase for given toa array
+        """
+        delay = self.delay_ld_array(TOAs)
+        phase = Phase_array(np.zeros_like(TOAs.tdbld))
+        for pf in self.phase_funcs_ld:
+            phase += pf(TOAs,delay)
+        
+        
+        return phase
+    def phase_table(self,TOAs):
+    
+        delay = self.delay_table(TOAs)
+        phase = Phase_array(np.zeros_like(TOAs.dataTable['tdb_ld']))
+        for pf in self.phase_funcs_table:
+            phase += pf(TOAs,delay)
 
+        return phase    
     @Cache.use_cache
     def delay(self, toa):
         """Total delay for a given TOA.
@@ -139,7 +163,22 @@ class TimingModel(object):
         for df in self.delay_funcs:
             delay += df(toa)
         return delay
-
+    
+    def delay_ld_array(self,TOAs):
+        """
+        Total delay for a given TOA long double numpy array
+        """
+        delay = np.zeros_like(TOAs.tdbld)
+        for df in self.delay_funcs_ld:
+            delay += df(TOAs) 
+        return delay
+    
+    def delay_table(self,TOAs):
+        delay = np.zeros_like(TOAs.dataTable['tdb_ld'])
+        for df in self.delay_funcs_table:
+            delay += df(TOAs)
+        return delay        
+            
     def d_phase_d_tpulsar(self, toa):
         """
         Return the derivative of phase wrt time at the pulsar.
@@ -212,10 +251,10 @@ class TimingModel(object):
         # after the entire parfile is read
         self.setup()
 
-def generate_timing_model(name, components):
+def generate_timing_model(name, components,longdouble = False):
     """Build a timing model from components.
 
-    Returns a timing model class generated from the specified
+    Returns a timing model class generated from the specifiied
     sub-components.  The return value is a class type, not an instance,
     so needs to be called to generate a usable instance.  For example:
 
@@ -225,8 +264,10 @@ def generate_timing_model(name, components):
     """
     # TODO could test here that all the components are derived from
     # TimingModel?
-    return type(name, components, {})
-
+    if longdouble == False:  #  space for a numpy longdouble flag
+        return type(name, components, {})
+    else:
+        return type(name, components, {})
 class TimingModelError(Exception):
     """Generic base class for timing model errors.
     """
@@ -248,21 +289,6 @@ class MissingParameter(TimingModelError):
 
     def __str__(self):
         result = self.module + "." + self.param
-        if self.msg is not None:
-            result += "\n  " + self.msg
-        return result
-
-class DuplicateParameter(TimingModelError):
-    """
-    This exception is raised if a model parameter is defined (added)
-    multiple times.
-    """
-    def __init__(self, param, msg=None):
-        self.param = param
-        self.msg = msg
-
-    def __str__(self):
-        result = self.param
         if self.msg is not None:
             result += "\n  " + self.msg
         return result

@@ -134,6 +134,11 @@ def time_to_mjd_string(t, prec=15):
     fmt = "%."+"%sf"%prec
     return str(imjd) + (fmt%fmjd)[1:]
 
+def time_to_longdouble(t):
+    """ Return an astropy Time value as MJD in longdouble
+    """
+    return np.longdouble(t.jd1-astropy.time.core.MJD_ZERO) \
+            + np.longdouble(t.jd2)
 
 def time_to_mjd_mpf(t):
     """Return an astropy Time value as MJD in mpmath float format.
@@ -215,3 +220,43 @@ def check_all_partials(f, args, delta=1e-6, atol=1e-4, rtol=1e-4):
         print "max fail:", np.amax(d), "at", worst_ix
         print "jac there:", jac[worst_ix], "njac there:", njac[worst_ix]
         raise
+def has_astropy_unit(x):
+    """
+    has_astropy_unit(x):
+
+    Return True/False if x has an astropy unit type associated with it. This is
+    useful, because different data types can still have units associated with
+    them.
+    """
+
+    return hasattr(x,'unit') and type(x.unit) is type(u.J)
+
+
+def longdouble2string(x):
+    """
+    longdouble2string(x):
+    Conver numpy longdouble to string
+    """    
+    xsplt = np.modf(x)
+    xdec = "%.15f" % xsplt[0]
+    xint = str(xsplt[1])   
+    xdec = xdec[1:]
+    xint = xint[:-2]
+    return xint+xdec
+
+def ddouble2ldouble(t1,t2,format='jd'):
+    """
+    ddouble2ldouble(t1,t2)
+    inputs two double number convert it to long double
+    """
+    if format=='jd':
+    # determine if the two double are JD time
+        t1 = np.longdouble(t1) -np.longdouble(2400000.5)
+        t = np.longdouble(t1) + np.longdouble(t2)
+        return t
+    else:
+        t = np.longdouble([t1,t2])
+    return t[0]+t[1]
+    
+
+

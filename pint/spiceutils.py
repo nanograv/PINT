@@ -6,6 +6,7 @@ from .utils import PosVel
 from astropy import log
 import os
 from pint import pintdir
+from spice_util_cython import spice_util_py as cspc
 
 kernels_loaded = False
 def load_kernels(ephem="DE421"):
@@ -25,6 +26,20 @@ def load_kernels(ephem="DE421"):
                                   "datafiles/earth_latest_high_prec.bpc"))
         log.info("SPICE loaded Earth rotation parameters.")
         spice.furnsh(os.path.join(pintdir, "datafiles/%s.bsp" % ephem.lower()))
+        log.info("SPICE loaded DE%s Planetary Ephemeris." % ephem[2:])
+        kernels_loaded = True
+
+def load_kernels_cython(ephem="DE421"):
+    global kernels_loaded
+    if not kernels_loaded:
+        cspc.furnsh_py(os.path.join(pintdir, "datafiles/pck00010.tpc"))
+        log.info("SPICE loaded planetary constants.")
+        cspc.furnsh_py(os.path.join(pintdir, "datafiles/naif0010.tls"))
+        log.info("SPICE loaded leap seconds.")
+        cspc.furnsh_py(os.path.join(pintdir,
+                                  "datafiles/earth_latest_high_prec.bpc"))
+        log.info("SPICE loaded Earth rotation parameters.")
+        cspc.furnsh_py(os.path.join(pintdir, "datafiles/%s.bsp" % ephem.lower()))
         log.info("SPICE loaded DE%s Planetary Ephemeris." % ephem[2:])
         kernels_loaded = True
 
