@@ -108,7 +108,12 @@ def time_from_mjd_string(s, scale='utc'):
             imjd = int(imjd_s + fmjd_s[:expon])
             fmjd = float("0."+fmjd_s[expon:])
     else:
-        imjd_s, fmjd_s = ss.split('.')
+        mjd_s = ss.split('.')
+        # If input was given as an integer, add floating "0"
+        if len(mjd_s) == 1:
+            mjd_s.append("0")
+
+        imjd_s, fmjd_s = mjd_s
         imjd = int(imjd_s)
         fmjd = float("0." + fmjd_s)
     return astropy.time.Time(imjd, fmjd, scale=scale, format='mjd',
