@@ -11,6 +11,7 @@ from .timing_model import TimingModel, MissingParameter, Cache
 from pint import ls
 from pint import utils
 import time
+
 class Astrometry(TimingModel):
 
     def __init__(self):
@@ -51,6 +52,7 @@ class Astrometry(TimingModel):
         self.delay_funcs += [self.solar_system_geometric_delay,]
         self.delay_funcs_ld += [self.solar_system_geometric_delay_ld,]
         self.delay_funcs_table += [self.solar_system_geometric_delay_table,]
+
     def setup(self):
         super(Astrometry, self).setup()
         # RA/DEC are required
@@ -78,22 +80,19 @@ class Astrometry(TimingModel):
         if epoch is None:
             return coords.ICRS(ra=self.RA.value, dec=self.DEC.value)
         else:
-            epochld = utils.ddouble2ldouble(epoch.jd1,epoch.jd2)
+            epochld = utils.ddouble2ldouble(epoch.jd1, epoch.jd2)
             POSEPOCHld = utils.ddouble2ldouble(self.POSEPOCH.value.jd1,
                         self.POSEPOCH.value.jd2)
-
             dt = epochld - POSEPOCHld
-
             dRA = (dt*u.day * self.PMRA.value * (u.mas/u.yr)
                     / numpy.cos(self.DEC.value)).to(u.mas)
             dDEC = (dt*u.day * self.PMDEC.value * (u.mas/u.yr)).to(u.mas)
             return coords.ICRS(ra=self.RA.value+dRA, dec=self.DEC.value+dDEC)
     
-    def coords_as_ICRS_ld(self,epoch= None):
+    def coords_as_ICRS_ld(self, epoch=None):
         """
         coords_as_ICRS_ld(epoch = None)
         Takes a long double tdb array, has the same function of coords_as_ICRS
-        
         """
         if epoch is None:
             return coords.ICRS(ra=self.RA.value, dec=self.DEC.value)
@@ -115,14 +114,15 @@ class Astrometry(TimingModel):
         motion is included in the calculation.
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
-        return self.coords_as_ICRS(epoch=epoch).cartesian
+        return self.coords_as_ICRS(epoch=epoch).cartesian.xyz
+
     def ssb_to_psb_xyzld(self,epoch=None):
         """
         ssb_to_psb_ld(epoch=None)
         e
         Takes a long double array of epoch
         """
-        return self.coords_as_ICRS_ld(epoch=epoch).cartesian
+        return self.coords_as_ICRS_ld(epoch=epoch).cartesian.xyz
 
     @Cache.cache_result
     def barycentric_radio_freq(self, toa):
@@ -145,8 +145,8 @@ class Astrometry(TimingModel):
             v_dot_L = TOAs.pvs[ii].vel.dot(L_hat.value[:,ii])
             v_dot_L_array[ii] = v_dot_L.value
         v_dot_L_array = v_dot_L_array*u.m/u.s
-        
         return TOAs.freq*(1.0 - v_dot_L_array / const.c).value
+
     def barycentric_radio_freq_table(self,TOAs):
         """
         Astropy table version of barcentric_radio_freq()
@@ -155,8 +155,6 @@ class Astrometry(TimingModel):
         v_dot_L_array = (numpy.dot(TOAs.dataTable['obs_ssb'][:,3:6],L_hat))[:,0]
         v_dot_L_array *= u.km/u.s
         return TOAs.dataTable['freq']*(1.0-v_dot_L_array / const.c).value 
-         
-
 
     def solar_system_geometric_delay(self, toa):
         """
@@ -176,7 +174,7 @@ class Astrometry(TimingModel):
             re_sqr = toa.pvs.pos.dot(toa.pvs.pos)
             delay += (0.5*(re_sqr/L)*(1.0-re_dot_L**2/re_sqr)).to(ls).value
         return delay
-  
+
     def solar_system_geometric_delay_ld(self,TOAs):
         """
         Long double array version for solar_system_geometric_delay(toa)
@@ -194,12 +192,11 @@ class Astrometry(TimingModel):
             delay_ld_array.append(delay) 
         delay_ld_array = numpy.longdouble(delay_ld_array) 
         return delay_ld_array
-       
 
-    def solar_system_geometric_delay_table(self,TOAs):       
+    def solar_system_geometric_delay_table(self,TOAs):
         """
-        Long double version but interact with data table. 
-        """    
+        Long double version but interact with data table.
+        """
         delay_ld_array = numpy.zeros_like(TOAs.dataTable['tdb_ld']) 
         L_hat = self.ssb_to_psb_xyzld(epoch=TOAs.dataTable['tdb_ld'])
         re_dot_L = numpy.diag((numpy.dot(TOAs.dataTable['obs_ssb'][:,0:3],L_hat))).copy()
