@@ -3,7 +3,7 @@ import numpy
 from . import utils
 from . import observatories as observatories_module
 from . import erfautils
-import spice
+import spice, spice_util
 import astropy.time as time
 from astropy.time.core import SECS_PER_DAY
 import astropy.table as table
@@ -13,8 +13,6 @@ from astropy.utils.data import download_file
 from .spiceutils import objPosVel, load_kernels_cython
 from pint import pintdir
 from astropy import log
-from spice_util_cython import spice_util_py as cspc 
-
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "FMIN", "INCLUDE", "INFO", "JUMP", "MODE", "NOSKIP", "PHA1",
@@ -390,9 +388,9 @@ class TOAs(object):
         #load_kernels_cython(ephem)
         pth = os.path.join(pintdir,"datafiles")
         ephem_file = os.path.join(pth, "%s.bsp"%ephem.lower())
-        cspc.furnsh_py(ephem_file)
+        spice_util.furnsh_py(ephem_file)
         log.info("Loaded ephemeris from %s" % ephem_file)
-        cspc.furnsh_py(os.path.join(pth, "naif0010.tls"))
+        spice_util.furnsh_py(os.path.join(pth, "naif0010.tls"))
         log.info("Loaded naif0010.tls")
         # Set up the j2000 start time for calcluat spice formate et
         j2000 = time.Time('2000-01-01 12:00:00', scale='utc')
@@ -418,20 +416,19 @@ class TOAs(object):
         obs_pvs = erfautils.topo_posvels_array(self)
         self.dataTable['obs_posvel']  = obs_pvs
 
-        pvEarth= cspc.spkezr_array_np("EARTH","SSB",et,len(et))
+        pvEarth= spice_util.spkezr_array_np("EARTH","SSB",et,len(et))
        
         
         self.dataTable['earth_posvel'] = pvEarth
         
-        pvSun = cspc.spkezr_array_np("SUN","EARTH",et,len(et))
+        pvSun = spice_util.spkezr_array_np("SUN","EARTH",et,len(et))
        
         self.dataTable['sun_posvel'] = pvSun - obs_pvs/1000.0
-        
 
         if planets:
             for p in ('jupiter', 'saturn', 'venus', 'uranus'):
-                pvPlanet = cspc.spkezr_array_np(p.upper()+" BARYCENTER","EARTH",et,
-                                             len(et))
+                pvPlanet = spice_util.spkezr_array_np(p.upper()+" BARYCENTER",
+                                                      "EARTH", et, len(et))
                 self.dataTable[p+'_posvel'] = pvPlanet - obs_pvs/1000.0
                
         self.dataTable['obs_ssb'] = self.dataTable['obs_posvel']/1000.0+ \
