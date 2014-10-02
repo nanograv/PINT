@@ -88,7 +88,6 @@ def fortran_float(x):
     """
     return float(x.translate(string.maketrans('Dd', 'ee')))
 
-
 def time_from_mjd_string(s, scale='utc'):
     """Returns an astropy Time object generated from a MJD string input.
     """
@@ -113,7 +112,6 @@ def time_from_mjd_string(s, scale='utc'):
         fmjd = float("0." + fmjd_s)
     return astropy.time.Time(imjd, fmjd, scale=scale, format='mjd',
                              precision=9)
-
 
 def time_to_mjd_string(t, prec=15):
     """Print an MJD time with lots of digits (number is 'prec').
@@ -149,13 +147,11 @@ def time_to_mjd_mpf(t):
     return mpmath.mpf(t.jd1 - astropy.time.core.MJD_ZERO) \
             + mpmath.mpf(t.jd2)
 
-
 def timedelta_to_mpf_sec(t):
     """Return astropy TimeDelta as mpmath value in seconds.
     """
     return (mpmath.mpf(t.jd1)
             + mpmath.mpf(t.jd2))*astropy.time.core.SECS_PER_DAY
-
 
 def GEO_WGS84_to_ITRF(lon, lat, hgt):
     """Convert lat/long/height to rectangular.
@@ -168,8 +164,6 @@ def GEO_WGS84_to_ITRF(lon, lat, hgt):
                                                lat.to(u.rad).value,
                                                hgt.to(u.m).value)
     return x * u.m, y * u.m, z * u.m
-
-
 
 def numeric_partial(f, args, ix=0, delta=1e-6):
     """Compute the partial derivative of f numerically.
@@ -220,6 +214,7 @@ def check_all_partials(f, args, delta=1e-6, atol=1e-4, rtol=1e-4):
         print "max fail:", np.amax(d), "at", worst_ix
         print "jac there:", jac[worst_ix], "njac there:", njac[worst_ix]
         raise
+
 def has_astropy_unit(x):
     """
     has_astropy_unit(x):
@@ -228,14 +223,12 @@ def has_astropy_unit(x):
     useful, because different data types can still have units associated with
     them.
     """
-
     return hasattr(x,'unit') and type(x.unit) is type(u.J)
-
 
 def longdouble2string(x):
     """
     longdouble2string(x):
-    Conver numpy longdouble to string
+        Convert numpy longdouble to string
     """    
     xsplt = np.modf(x)
     xdec = "%.15f" % xsplt[0]
@@ -244,19 +237,17 @@ def longdouble2string(x):
     xint = xint[:-2]
     return xint+xdec
 
-def ddouble2ldouble(t1,t2,format='jd'):
+def ddouble2ldouble(t1, t2, format='jd'):
     """
-    ddouble2ldouble(t1,t2)
-    inputs two double number convert it to long double
+    ddouble2ldouble(t1, t2, format='jd'):
+        inputs two double-precision numbers representing JD times,
+        converts them to a single long double MJD value
     """
     if format=='jd':
     # determine if the two double are JD time
-        t1 = np.longdouble(t1) -np.longdouble(2400000.5)
+        t1 = np.longdouble(t1) - np.longdouble(2400000.5)
         t = np.longdouble(t1) + np.longdouble(t2)
         return t
     else:
         t = np.longdouble([t1,t2])
     return t[0]+t[1]
-    
-
-

@@ -244,6 +244,7 @@ class TOAs(object):
         """Return a numpy array of the TOA flags.
         """
         return numpy.array([t.flags for t in self.toas])
+
     def get_tdb_longdouble(self):
         """
         get_tdb_longdouble()
@@ -255,6 +256,7 @@ class TOAs(object):
         mjdld = jd1ld - numpy.longdouble(2400000.5) + jd2ld
         self.tdbld = mjdld
         return mjdld
+
     def get_mjd_longdouble(self):
         """
         get_mjd_longdouble()
@@ -266,6 +268,7 @@ class TOAs(object):
         mjdld = jd1ld - numpy.longdouble(2400000.5) + jd2ld
         self.mjdld = mjdld
         return mjdld
+
     def get_freq_array(self):
         """
         get_freq_array() return a numpy array of observing freq
@@ -355,12 +358,10 @@ class TOAs(object):
             # SPICE expects ephemeris time to be in sec past J2000 TDB
             # We need to figure out how to get the correct time...
             et = (toa.mjd.TDB - j2000_mjd) * SECS_PER_DAY
-
             # SSB to observatory position/velocity:
             toa.earth_pvs = objPosVel("EARTH", "SSB", et)
             toa.pvs = toa.obs_pvs + toa.earth_pvs
             toa.ephem = ephem
-
             # Obs to Sun PV:
             toa.obs_sun_pvs = objPosVel("SUN", "EARTH", et) - toa.obs_pvs
             if planets:
@@ -385,18 +386,16 @@ class TOAs(object):
         if planets:
             for p in ('jupiter', 'saturn', 'venus', 'uranus'):
                 setattr(self,'obs_'+p+'_pvs_ld',[])
-        
         for ii, toa, toatdb in zip(range(len(self.tdbld)),self.toas, self.tdbld):
             xyz = observatories[toa.obs].xyz
             toa.obs_pvs = erfautils.topo_posvels(xyz, toa)
             et = (toatdb-j2000_mjdld)*SECS_PER_DAY
             toa.earth_pvs = objPosVel("EARTH", "SSB", et)
-           # print type(toa.earth_pvs)
-           # self.earth_pvs[ii] = toa.earth_pvs
+            # print type(toa.earth_pvs)
+            # self.earth_pvs[ii] = toa.earth_pvs
             toa.pvs = toa.obs_pvs + toa.earth_pvs
-           # self.pvs[ii] = toa.pvs
+            # self.pvs[ii] = toa.pvs
             toa.ephem = ephem
-            
             #Obs to Sun PV:
             toa.obs_sun_pvs = objPosVel("SUN", "EARTH", et) - toa.obs_pvs
             self.obs_sun_pvs.append(toa.obs_sun_pvs)
@@ -407,10 +406,6 @@ class TOAs(object):
                     setattr(toa, 'obs_'+p+'_pvs', pv)        
                     getattr(self,'obs_'+p+'_pvs_ld').append(pv)
 
-    
-    
-    
-    
     def to_table(self):
         """Convert the list of TOAs to an astropy table.
 
@@ -442,7 +437,6 @@ class TOAs(object):
                     self.commands = tmp.commands
                     self.observatories = tmp.observatories
                     return
-
             self.toas = []
             self.commands = []
             self.cdict = {"EFAC": 1.0, "EQUAD": 0.0,
@@ -454,7 +448,6 @@ class TOAs(object):
                           "MODE": 1, "JUMP": [False, 0],
                           "FORMAT": "Unknown", "END": False}
             self.observatories = set()
-
         with open(filename, "r") as f:
             for l in f.readlines():
                 MJD, d = parse_TOA_line(l, fmt=self.cdict["FORMAT"])
@@ -498,7 +491,6 @@ class TOAs(object):
                         self.cdict["FORMAT"] = fmt
                     else:
                         continue
-
                 if (self.cdict["SKIP"] or
                     d["format"] in ("Blank", "Unknown", "Comment", "Command")):
                     continue
@@ -529,7 +521,6 @@ class TOAs(object):
                         self.observatories.add(newtoa.obs)
                         
                         self.toas.append(newtoa)
-
             if top:
                 # Clean up our temporaries used when reading TOAs
                 del self.cdict
@@ -554,7 +545,6 @@ class TOAs(object):
                     self.commands = tmp.commands
                     self.observatories = tmp.observatories
                     return
-
             self.toas = []
             self.commands = []
             self.cdict = {"EFAC": 1.0, "EQUAD": 0.0,
@@ -566,7 +556,6 @@ class TOAs(object):
                           "MODE": 1, "JUMP": [False, 0],
                           "FORMAT": "Unknown", "END": False}
             self.observatories = set()
-
         with open(filename, "r") as f:
             for l in f.readlines():
                 MJD, d = parse_TOA_line(l, fmt=self.cdict["FORMAT"])
@@ -610,7 +599,6 @@ class TOAs(object):
                         self.cdict["FORMAT"] = fmt
                     else:
                         continue
-
                 if (self.cdict["SKIP"] or
                     d["format"] in ("Blank", "Unknown", "Comment", "Command")):
                     continue
@@ -639,10 +627,8 @@ class TOAs(object):
                         if self.cdict["TIME"] != 0.0:
                             newtoa.flags["time"] = self.cdict["TIME"]
                         self.observatories.add(newtoa.obs)
-                        
                         self.toas.append(MJD)
                         print MJD
-
             if top:
                 # Clean up our temporaries used when reading TOAs
                 del self.cdict
