@@ -1,4 +1,4 @@
-import re, sys, os, cPickle, numpy
+import re, sys, os, cPickle, numpy, gzip
 from . import utils
 from . import observatories as obsmod
 from . import erfautils
@@ -36,7 +36,8 @@ def get_TOAs(timfile, ephem="DE421", planets=False):
     if 'pvs' not in t.table.colnames:
         log.info("Computing observatory positions and velocities.")
         t.compute_posvels(ephem, planets)
-    if not os.path.isfile(timfile+".pickle"):
+    if not (os.path.isfile(timfile+".pickle") or
+            os.path.isfile(timfile+".pickle.gz")):
         log.info("Pickling TOAs.")
         t.pickle()
     return t
@@ -189,6 +190,10 @@ class TOAs(object):
                 pth, ext = os.path.splitext(toafile)
                 if ext == ".pickle":
                     toafile = pth
+                elif ext == ".gz":
+                    pth0, ext0 = os.path.splitext(pth)
+                    if ext0 == ".pickle":
+                        toafile = pth0
                 self.read_toa_file(toafile, usepickle=usepickle)
                 self.filename = toafile
         # FIXME: work with file-like objects
@@ -259,7 +264,7 @@ class TOAs(object):
         if filename is not None:
             cPickle.dump(self, open(filename, "wb"))
         elif self.filename is not None:
-            cPickle.dump(self, open(self.filename+".pickle", "wb"))
+            cPickle.dump(self, gzip.open(self.filename+".pickle.gz", "wb"))
         else:
             sys.stderr.write("Warning: pickle needs a filename\n")
 
@@ -464,13 +469,19 @@ class TOAs(object):
         """
         if top:
             # Read from a pickle file if available
-            if usepickle and os.path.isfile(filename+".pickle"):
-                if (os.path.getmtime(filename+".pickle") >
+            if usepickle and (os.path.isfile(filename+".pickle") or
+                              os.path.isfile(filename+".pickle.gz")):
+                ext = ".pickle.gz" if \
+                  os.path.isfile(filename+".pickle.gz") else ".pickle"
+                if (os.path.getmtime(filename+ext) >
                     os.path.getmtime(filename)):
-                    sys.stderr.write("Reading toas from '%s'...\n" % \
-                                     (filename+".pickle"))
+                    log.info("Reading toas from '%s'...\n" % \
+                             (filename+ext))
                     # Pickle file is newer, assume it is good and load it
-                    tmp = cPickle.load(open(filename+".pickle"))
+                    if ext==".pickle.gz":
+                        tmp = cPickle.load(gzip.open(filename+ext))
+                    else:
+                        tmp = cPickle.load(open(filename+ext))
                     self.filename = tmp.filename
                     if hasattr(tmp, 'toas'):
                         self.toas = tmp.toas
