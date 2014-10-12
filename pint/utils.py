@@ -237,6 +237,14 @@ def longdouble2string(x):
     xint = xint[:-2]
     return xint+xdec
 
+def MJD_string2longdouble(s):
+    """
+    MJD_string2longdouble(s):
+        Convert a MJD string to a numpy longdouble
+    """
+    ii,ff = s.split(".")
+    return np.longfloat(ii) + np.longfloat("0."+ff)
+
 def ddouble2ldouble(t1, t2, format='jd'):
     """
     ddouble2ldouble(t1, t2, format='jd'):

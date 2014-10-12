@@ -70,30 +70,23 @@ class Astrometry(TimingModel):
 
     @Cache.cache_result
     def coords_as_ICRS(self, epoch=None):
-        """
-        coords_as_ICRS(epoch=None)
+        """Returns pulsar sky coordinates as an astropy ICRS object instance.
 
-        Returns pulsar sky coordinates as an astropy ICRS object instance.
         If epoch (MJD) is specified, proper motion is included to return
         the position at the given epoch.
         """
         if epoch is None:
             return coords.ICRS(ra=self.RA.value, dec=self.DEC.value)
         else:
-            epochld = utils.ddouble2ldouble(epoch.jd1, epoch.jd2)
-            POSEPOCHld = utils.ddouble2ldouble(self.POSEPOCH.value.jd1,
-                        self.POSEPOCH.value.jd2)
-            dt = epochld - POSEPOCHld
-            dRA = (dt*u.day * self.PMRA.value * (u.mas/u.yr)
-                    / numpy.cos(self.DEC.value)).to(u.mas)
-            dDEC = (dt*u.day * self.PMDEC.value * (u.mas/u.yr)).to(u.mas)
+            mas_yr = (u.mas / u.yr)
+            dt = (epoch - self.POSEPOCH.value.mjd) * u.d
+            dRA = (dt * self.PMRA.value * mas_yr / \
+                    numpy.cos(self.DEC.value)).to(u.mas)
+            dDEC = (dt * self.PMDEC.value * mas_yr).to(u.mas)
             return coords.ICRS(ra=self.RA.value+dRA, dec=self.DEC.value+dDEC)
     
     def coords_as_ICRS_ld(self, epoch=None):
-        """
-        coords_as_ICRS_ld(epoch = None)
-        Takes a long double tdb array, has the same function of coords_as_ICRS
-        """
+        """Takes a long double tdb array, has the same function of coords_as_ICRS"""
         if epoch is None:
             return coords.ICRS(ra=self.RA.value, dec=self.DEC.value)
         else:
@@ -106,10 +99,7 @@ class Astrometry(TimingModel):
     
     @Cache.cache_result
     def ssb_to_psb_xyz(self, epoch=None):
-        """
-        ssb_to_psb(epoch=None)
-
-        Returns a XYZ unit vector pointing from the solar system barycenter
+        """Returns a XYZ unit vector pointing from the solar system barycenter
         to the pulsar system barycenter.   If epoch (MJD) is given, proper
         motion is included in the calculation.
         """
@@ -117,35 +107,34 @@ class Astrometry(TimingModel):
         return self.coords_as_ICRS(epoch=epoch).cartesian.xyz
 
     def ssb_to_psb_xyzld(self,epoch=None):
-        """
-        ssb_to_psb_ld(epoch=None)
-        e
+        """ssb_to_psb_ld(epoch=None)
+
         Takes a long double array of epoch
         """
         return self.coords_as_ICRS_ld(epoch=epoch).cartesian.xyz
 
     @Cache.cache_result
     def barycentric_radio_freq(self, toa):
-        """
-        barycentric_radio_freq(toa)
+        """barycentric_radio_freq(toa)
 
         Return radio freq of TOA corrected for Earth motion
         """
-        L_hat = self.ssb_to_psb_xyz(epoch=toa.mjd)
-        v_dot_L = toa.pvs.vel.dot(L_hat)
-        return toa.freq * (1.0 - v_dot_L / const.c).value
+        L_hat = self.ssb_to_psb_xyz(epoch=toa['mjd'].value)
+        v_dot_L = toa['pvs'].vel.dot(L_hat)
+        return toa['freq'] * (1.0 - v_dot_L / const.c).value
     
-    def barycentric_radio_freq_array(self,TOAs):
+    def barycentric_radio_freq_array(self, TOAs):
         """
         Array version of barcentric_radio_freq()
         """
-        L_hat = self.ssb_to_psb_xyzld(epoch=TOAs.tdbld)
-        v_dot_L_array = numpy.zeros_like(TOAs.tdbld)
-        for ii in range(len(TOAs.tdbld)):
-            v_dot_L = TOAs.pvs[ii].vel.dot(L_hat.value[:,ii])
-            v_dot_L_array[ii] = v_dot_L.value
-        v_dot_L_array = v_dot_L_array*u.m/u.s
-        return TOAs.freq*(1.0 - v_dot_L_array / const.c).value
+        L_hat = self.ssb_to_psb_xyzld(epoch=TOAs['mjd'])
+        #v_dot_L_array = numpy.zeros_like(TOAs.tdbld)
+        v_dot_L_array = (numpy.dot(TOAs['obs_ssb'][:,3:6],L_hat))[:,0] * u.m / u.s
+        #for ii, toa in enumerate(TOAs):
+        #    v_dot_L = toa['pvs'].vel.dot(L_hat.value[:,ii])
+        #    v_dot_L_array[ii] = v_dot_L.value
+        # v_dot_L_array = v_dot_L_array * u.m / u.s
+        return TOAs['freq'] * (1.0 - v_dot_L_array / const.c).value
 
     def barycentric_radio_freq_table(self,TOAs):
         """
@@ -157,54 +146,52 @@ class Astrometry(TimingModel):
         return TOAs.dataTable['freq']*(1.0-v_dot_L_array / const.c).value 
 
     def solar_system_geometric_delay(self, toa):
-        """
-        solar_system_geometric_delay(toa)
-
-        Returns geometric delay (in sec) due to position of site in
+        """Returns geometric delay (in sec) due to position of site in
         solar system.  This includes Roemer delay and parallax.
 
         NOTE: currently assumes XYZ location of TOA relative to SSB is
         available as 3-vector toa.xyz, in units of light-seconds.
         """
-        L_hat = self.ssb_to_psb_xyz(epoch=toa.mjd)
-        re_dot_L = toa.pvs.pos.dot(L_hat)
+        pos = toa['pvs'].pos
+        L_hat = self.ssb_to_psb_xyz(epoch=toa['mjd'].value)
+        re_dot_L = pos.dot(L_hat)
         delay = -re_dot_L.to(ls).value
         if self.PX.value != 0.0:
-            L = ((1.0/self.PX.value)*u.kpc)
-            re_sqr = toa.pvs.pos.dot(toa.pvs.pos)
-            delay += (0.5*(re_sqr/L)*(1.0-re_dot_L**2/re_sqr)).to(ls).value
+            L = ((1.0 / self.PX.value) * u.kpc)
+            re_sqr = pos.dot(pos)
+            delay += (0.5 * (re_sqr / L) * (1.0 - re_dot_L**2 / re_sqr)).to(ls).value
         return delay
 
-    def solar_system_geometric_delay_ld(self,TOAs):
+    def solar_system_geometric_delay_ld(self, TOAs):
         """
         Long double array version for solar_system_geometric_delay(toa)
         """
         #FIXME, need to speed up
-        L_hat = self.ssb_to_psb_xyzld(epoch=TOAs.tdbld)
+        L_hat = self.ssb_to_psb_xyzld(epoch=TOAs['tdbld'])
         delay_ld_array = []
-        for ii in range(len(TOAs.tdbld)): 
-            re_dot_L = TOAs.pvs[ii].pos.dot(L_hat.value[:,ii])
+        for ii, toa in enumerate(TOAs): 
+            re_dot_L = toa['pvs'].pos.dot(L_hat.value[:,ii])
             delay = -re_dot_L.to(ls).value
             if self.PX.value != 0.0:
-                L = ((1.0/self.PX.value)*u.kpc)
-                re_sqr = TOAs.pvs[ii].pos.dot(TOAs.pvs[ii].pos)
+                L = ((1.0 / self.PX.value)*u.kpc)
+                re_sqr = toa['pvs'].pos.dot(TOAs['pvs'][ii].pos)
                 delay += (0.5*(re_sqr/L)*(1.0-re_dot_L**2/re_sqr)).to(ls).value
             delay_ld_array.append(delay) 
         delay_ld_array = numpy.longdouble(delay_ld_array) 
         return delay_ld_array
 
-    def solar_system_geometric_delay_table(self,TOAs):
+    def solar_system_geometric_delay_table(self, TOAs):
         """
         Long double version but interact with data table.
         """
-        delay_ld_array = numpy.zeros_like(TOAs.dataTable['tdb_ld']) 
-        L_hat = self.ssb_to_psb_xyzld(epoch=TOAs.dataTable['tdb_ld'])
-        re_dot_L = numpy.diag((numpy.dot(TOAs.dataTable['obs_ssb'][:,0:3],L_hat))).copy()
-        re_dot_L*= u.km                     
+        delay_ld_array = numpy.zeros_like(TOAs['tdbld']) 
+        L_hat = self.ssb_to_psb_xyzld(epoch=TOAs['tdbld'])
+        re_dot_L = numpy.diag((numpy.dot(TOAs['obs_ssb'][:,0:3],L_hat))).copy()
+        re_dot_L *= u.km                     
         delay_ld_array = -re_dot_L.to(ls).value
         if self.PX.value != 0.0:
-            L = ((1.0/self.PX.value)*u.kpc)
-            re_sqr = ((TOAs.dataTable['obs_ssb'][:,0:3]**2).sum(axis=1))*(u.km)**2
-            px_delay = (0.5*(re_sqr/L)*(1.0-re_dot_L**2/re_sqr)).to(ls).value
+            L = ((1.0/self.PX.value) * u.kpc)
+            re_sqr = ((TOAs['obs_ssb'][:,0:3]**2).sum(axis=1)) * (u.km)**2
+            px_delay = (0.5 * (re_sqr / L) * (1.0 - re_dot_L**2 / re_sqr)).to(ls).value
             delay_ld_array += px_delay
         return delay_ld_array

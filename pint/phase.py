@@ -3,9 +3,9 @@
 # parts.
 from collections import namedtuple
 import numpy
+
 class Phase(namedtuple('Phase', 'int frac')):
     """
-
     Class representing pulse phase internally as integer and fractional
     parts.  Can be initialized from a single numerical input (for example
     float or mpmath value), or separately provided integer and fractional
@@ -79,14 +79,14 @@ class Phase_array(namedtuple('Phase_array', 'int frac')):
         ff[index] -= 1.0
         ii[index] += 1    
         return super(Phase_array, cls).__new__(cls, ii, ff)
+
     def __neg__(self):
         return Phase_array(-self.int, -self.frac)
-
 
     def __add__(self, other):
         ff = self.frac + other.frac
         ii = numpy.modf(ff)[1]
         return Phase_array(self.int + other.int + ii, ff - ii)
-    
+
     def __sub__(self, other):
         return self.__add__(other.__neg__())    

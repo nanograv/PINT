@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 import numpy
 import tempo2_utils
 
-parfile = 'J1744-1134.basic.par'
-t1_parfile = 'J1744-1134.t1.par'
-timfile = 'J1744-1134.Rcvr1_2.GASP.8y.x.tim'
+parfile = 'tests/J1744-1134.basic.par'
+t1_parfile = 'tests/J1744-1134.t1.par'
+timfile = 'tests/J1744-1134.Rcvr1_2.GASP.8y.x.tim'
 
 m = tm.StandardTimingModel()
 m.read_parfile(parfile)
@@ -22,14 +22,14 @@ try:
 except AttributeError:
     planet_ephems = False
 
-sys.stderr.write("Reading TOAs...\n")
 t0 = time.time()
 t = toa.get_TOAs(timfile)
 time_toa = time.time() - t0
+
 sys.stderr.write("Read/corrected TOAs in %.3f sec\n" % time_toa)
 
-mjds = numpy.array([x.mjd.value for x in t.toas])
-d_tdbs = numpy.array([x.mjd.tdb.delta_tdb_tt[0] for x in t.toas])
+mjds = t.get_mjds()
+d_tdbs = numpy.array([x.tdb.delta_tdb_tt for x in t.table['mjd']])
 errs = t.get_errors()
 resids = numpy.zeros_like(mjds)
 ss_roemer = numpy.zeros_like(mjds)
@@ -37,7 +37,7 @@ ss_shapiro = numpy.zeros_like(mjds)
 
 sys.stderr.write("Computing residuals...\n")
 t0 = time.time()
-for ii, tt in enumerate(t.toas):
+for ii, tt in enumerate(t.table):
     p = m.phase(tt)
     resids[ii] = p.frac
     ss_roemer[ii] = m.solar_system_geometric_delay(tt)

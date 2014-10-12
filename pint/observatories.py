@@ -1,7 +1,7 @@
 import os
 import numpy
-from . import spiceutils
 import astropy.units as u
+from astropy.coordinates import EarthLocation
 from astropy import log
 from pint import pintdir
 
@@ -52,9 +52,8 @@ def read_observatories():
                 vals = line.split()
                 obs = observatory()
                 obs.name = vals[0]
-                xyz_vals = (float(vals[1]), float(vals[2]), float(vals[3]))
-                obs.xyz = [a * u.m for a in xyz_vals]
-                obs.geo = spiceutils.ITRF_to_GEO_WGS84(*obs.xyz)
+                xyz = numpy.asarray([float(x) for x in vals[1:4]]) * u.m
+                obs.loc = EarthLocation(*xyz)
                 obs.aliases = [obs.name.upper()]+[x.upper() for x in vals[4:]]
                 observatories[obs.name] = obs
     return observatories

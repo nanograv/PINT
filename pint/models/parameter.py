@@ -43,7 +43,7 @@ class Parameter(object):
 
     def __init__(self, name=None, value=None, units=None, description=None, 
             uncertainty=None, frozen=True, aliases=None, continuous=True,
-            parse_value=fortran_float, print_value=str,longdoubleV = False):
+            parse_value=fortran_float, print_value=str, longdoubleV=False):
         self.value = value
         self.name = name
         self.units = units
@@ -59,7 +59,6 @@ class Parameter(object):
     @property
     def longd_value(self):
         if self.longdoubleV == True:
-            print "add long double to ",self.name,self.value
             try:
                 longd_value = time_to_longdouble(self.value.tdb)
             except:

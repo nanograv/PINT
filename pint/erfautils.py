@@ -11,32 +11,30 @@ iers_b = IERS_B.open(iers_b_file)
 IERS.iers_table = iers_b
 iers_tab = IERS.iers_table
 
-def topo_posvels(xyz, toa):
-    """
-    topo_posvels(xyz, toa)
+def topo_posvels(xyz, toarow):
+    """Return a PosVel instance for the observatory at the time of the TOA
 
-    This routine returns a PosVel instance , containing the positions
+    This routine returns a PosVel instance, containing the positions
     (m) and velocities (m / UT1 s) at the time of the toa and
     referenced to the ITRF geocentric coordinates.  This routine is
     basically SOFA's pvtob() with an extra rotation from c2ixys.
     """
-    # All the times are passed as TT
-    tt = toa.mjd.tt.jd1, toa.mjd.tt.jd2
-
-    # Get a floating-point MJD to use for interpolating IERS values
-    mjd = toa.mjd.utc.mjd
+    toa = toarow['mjd']
+    tt = toa.tt.jd1, toa.tt.jd2
+    mjd = toa.mjd
 
     # Gets x,y coords of Celestial Intermediate Pole and CIO locator s
     X, Y, S = erfa.xys00a(*tt)
+
     # Get dX and dY from IERS A
     #dX = numpy.interp(mjd, iers_tab['MJD'], iers_tab['dX_2000A_B']) * u.arcsec
     #dY = numpy.interp(mjd, iers_tab['MJD'], iers_tab['dY_2000A_B']) * u.arcsec
     # Get dX and dY from IERS B
     dX = numpy.interp(mjd, iers_tab['MJD'], iers_tab['dX_2000A']) * u.arcsec
     dY = numpy.interp(mjd, iers_tab['MJD'], iers_tab['dY_2000A']) * u.arcsec
+
     # Get GCRS to CIRS matrix
     rc2i = erfa.c2ixys(X+dX.to(u.rad).value, Y+dY.to(u.rad).value, S)
-
     # Gets the TIO locator s'
     sp = erfa.sp00(*tt)
     # Get X and Y from IERS A
@@ -53,7 +51,7 @@ def topo_posvels(xyz, toa):
     x, y, z = erfa.trxp(rpm, xyzm)
 
     # Functions of Earth Rotation Angle
-    ut1 = toa.mjd.ut1.jd1, toa.mjd.ut1.jd2
+    ut1 = toa.ut1.jd1, toa.ut1.jd2
     theta = erfa.era00(*ut1)
     s, c = math.sin(theta), math.cos(theta)
 
@@ -68,7 +66,7 @@ def topo_posvels(xyz, toa):
     vel = numpy.asarray([OM * (-s*x - c*y), OM * (c*x - s*y), 0.0])
     vel = erfa.trxp(rc2i, vel) * u.m / u.s
 
-    return utils.PosVel(pos, vel, obj=toa.obs, origin="EARTH")
+    return utils.PosVel(pos, vel, obj=toarow['obs'], origin="EARTH")
 
 def topo_posvels_array(TOAs):
     """

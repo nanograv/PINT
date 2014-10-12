@@ -11,9 +11,9 @@ from ..phase import *
 from ..utils import time_to_mjd_mpf, time_from_mjd_string
 from pint import utils
 import numpy
+
 class Spindown(TimingModel):
-    """This class provides a simple timing model for an isolated pulsar.
-    """
+    """This class provides a simple timing model for an isolated pulsar."""
     @mpmath.workdps(20)
     def __init__(self):
         super(Spindown, self).__init__()
@@ -43,6 +43,7 @@ class Spindown(TimingModel):
         self.dt_ld = None
         self.dt_pepoch_ld = None
         self.dt_pepoch = []
+
     def setup(self):
         super(Spindown, self).setup()
         # Check for required params
@@ -74,19 +75,17 @@ class Spindown(TimingModel):
         # If TZRMJD is not defined, use the first time as phase reference
         # NOTE, all of this ignores TZRSITE and TZRFRQ for the time being.
         if self.TZRMJD.value is None:
-            self.TZRMJD.value = toa.mjd - delay*u.s
-        toaTDBld = utils.ddouble2ldouble(toa.mjd.tdb.jd1,toa.mjd.tdb.jd2)
-        TZRMJDtdbld = utils.ddouble2ldouble(self.TZRMJD.value.tdb.jd1,\
-                       self.TZRMJD.value.tdb.jd2)
-        dt = ((toaTDBld - TZRMJDtdbld)*u.day).to(u.s).value
+            self.TZRMJD.value = toa['mjd'] - delay*u.s
+        toaTDBld = toa['tdbld']
+        TZRMJDtdbld = self.TZRMJD.longd_value
+        dt = (toaTDBld - TZRMJDtdbld) * SECS_PER_DAY
         dt -= delay
         self.dt.append(dt)
-       # print "dt not long double array",dt       
+        # print "dt not long double array",dt       
         # TODO: what timescale should we use for pepoch calculation?
         # Does this even matter?
-        PEPOCHtdbld = utils.ddouble2ldouble(self.PEPOCH.value.tdb.jd1,\
-                    self.PEPOCH.value.tdb.jd2)
-        dt_pepoch = ((PEPOCHtdbld - TZRMJDtdbld)*u.day).to(u.s).value
+        PEPOCHtdbld = self.PEPOCH.longd_value
+        dt_pepoch = (PEPOCHtdbld - TZRMJDtdbld) * SECS_PER_DAY
         self.F0.value = numpy.longdouble(self.F0.value)
         self.dt_pepoch.append(dt_pepoch)
         phase = (self.F0.value + 0.5*self.F1.value*(dt-2.0*dt_pepoch))*dt

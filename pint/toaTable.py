@@ -19,7 +19,6 @@ toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "PHA2", "PHASE", "SEARCH", "SIGMA", "SIM", "SKIP", "TIME",
                 "TRACK", "ZAWGT", "FORMAT", "END")
 
-
 observatories = observatories_module.read_observatories()
 iers_a_file = download_file(IERS_A_URL, cache=True)
 iers_a = IERS_A.open(iers_a_file)
@@ -46,8 +45,6 @@ def toa_format(line, fmt="Unknown"):
         return "ITOA"
     else:
         return "Unknown"
-
-
 
 def get_obs(obscode):
     for name in observatories:
@@ -98,12 +95,10 @@ def parse_TOA_line(line, fmt="Unknown"):
             "TOA format '%s' not implemented yet" % fmt)
     return MJD,d                           
 
-
 class TOAs(object):
     """
     A container for toas
     """
-
     def __init__(self,toafile=None):
         self.toaTable = None     # initialize a table varible but put as None 
         if toafile:
@@ -225,8 +220,8 @@ class TOAs(object):
                                      numpy.array(self.error)*u.us ],
                                      names = ('toa_utc', 'freq', 'obs', 'error'),
                                      meta = {'filename':self.filename})   
-
         return
+
     def get_longdouble_array(self,JDint,JDfrac):
         """
         get_longdouble_array
@@ -234,7 +229,6 @@ class TOAs(object):
         JD1 = numpy.longdouble(JDint-2400000.5)
         JD2 = numpy.longdouble(JDfrac)
         return JD1+JD2
-
 
     def apply_clock_corrections_table(self,targetTime,obs):
         """Apply observatory clock corrections.
@@ -259,21 +253,16 @@ class TOAs(object):
         corrs *= u.us    
         return corrs
 
-
-
-    def get_time_convert(self,clock_correction = False):
+    def get_time_convert(self, clock_correction=False):
         """
         get_time_convert() takes utc time in mjd convert to different time
-        formate. 
+        format. 
         clock_correction is an optional varible for apply observatory specified
         clock correction
         Step:
         1. Group data by observatory
-        2. If clock_correction is true
-           Apply clock_correction, 
-           If not, 
-           do nothing
-        3. Creat time object with input of toa and time scale and formate 
+        2. If clock_correction==True, apply clock_correction
+        3. Create time object with input of toa and time scale and format
            and observatory     
         """
         self.dataTable['tt'] = numpy.zeros((1,2))
@@ -283,10 +272,8 @@ class TOAs(object):
         # Should here be long double???
         self.dataTable['utc'] = (self.dataTable['toa_utc'][:,0])\
                                   +(self.dataTable['toa_utc'][:,1]) 
-         
         self.dataTable = self.dataTable.group_by('obs')
-        
-        for ii,obsname in  enumerate(self.dataTable.groups.keys._data):       
+        for ii, obsname in enumerate(self.dataTable.groups.keys._data):       
             # set up astropy object
             obsname = obsname[0]    # make obsname a string not a (obsname,) 
             mask = self.dataTable.groups.keys['obs'] == obsname
@@ -298,12 +285,10 @@ class TOAs(object):
                            self.apply_clock_corrections_table(\
                            self.dataTable.groups[mask]['utc'],obsname).to(u.day)
                 UTCfrac += self.dataTable.groups[mask]['clock_corr']
-     
             mjdtoa = time.Time(UTCint, UTCfrac, \
-                               scale = 'utc', format='mjd',\
-                               lon = observatories[obsname].geo[0],\
-                               lat=observatories[obsname].geo[1],precision=9) 
-                            
+                               scale='utc', format='mjd',\
+                               lon=observatories[obsname].loc.longitude,\
+                               lat=observatories[obsname].loc.latitude, precision=9) 
             setattr(self,'time_at_'+obsname,mjdtoa)       
             # add tt and tdb to table
             self.dataTable.groups[ii]['tt'][:,0] = mjdtoa.tt.jd1
@@ -346,7 +331,7 @@ class TOAs(object):
         # get obseroatory xyz coords ITRF
         for obsname in self.dataTable.groups.keys._data:
             obsname = obsname[0]
-            xyz = observatories[obsname].xyz
+            xyz = observatories[obsname].loc.geodetic
             setattr(self,'xyz_'+obsname,xyz)
 
 
@@ -406,7 +391,7 @@ class TOAs(object):
         # get obseroatory xyz coords ITRF
         for obsname in self.dataTable.groups.keys._data:
             obsname = obsname[0]
-            xyz = observatories[obsname].xyz
+            xyz = observatories[obsname].loc.geodetic
             setattr(self,'xyz_'+obsname,xyz)
 
         if planets:

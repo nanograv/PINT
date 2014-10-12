@@ -7,6 +7,8 @@ import os
 # Define a few important constants
 import astropy.units as u
 import astropy.constants as c
+import astropy.time as time
+from . import utils
 
 # light-second unit
 ls = u.def_unit('ls', c.c * 1.0 * u.s)
@@ -27,6 +29,10 @@ Tjupiter = Tsun / 1047.3486
 Tsaturn = Tsun / 3497.898
 Turanus = Tsun / 22902.98
 Tneptune = Tsun / 19412.24
+
+# The Epoch J2000
+J2000 = time.Time('2000-01-01 12:00:00', scale='utc')
+J2000ld = utils.time_to_longdouble(J2000)
 
 # setup environment
 # Load the PINT environment variable to get the top level directory

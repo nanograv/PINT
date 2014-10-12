@@ -82,12 +82,11 @@ class SolarSystemShapiro(TimingModel):
         If planets are to be included, TOAs.compute_posvels() must
         have been called with the planets=True argument.
         """
-        psr_dir = self.ssb_to_psb_xyz(epoch=toa.mjd)
-        delay = 0.0
+        psr_dir = self.ssb_to_psb_xyz(epoch=toa['mjd'].mjd)
         # Sun
-        delay += self.ss_obj_shapiro_delay(toa.obs_sun_pvs.pos,
-                                           psr_dir,
-                                           self._ss_mass_sec['sun'])
+        delay = self.ss_obj_shapiro_delay(toa['obs_sun_pvs'].pos,
+                                          psr_dir,
+                                          self._ss_mass_sec['sun'])
         if self.PLANET_SHAPIRO.value:
             for pl in ('jupiter', 'saturn', 'venus', 'uranus'):
                 delay += self.ss_obj_shapiro_delay(
