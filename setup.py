@@ -7,10 +7,10 @@ except ImportError:
     use_cython = False
 else:
     use_cython = True
-    
+
 # The following needs to be set to point to the top-level directory
 # of the PySPICE installation.
-pyspice = "/home/sransom/git/PySPICE"
+pyspice = "/Users/vhaaster/research/code/PySPICE"
 
 # The following is the command to use for building in-place for development
 # python setup.py build_ext --inplace
@@ -34,6 +34,23 @@ if use_cython:
     cmdclass.update({'build_ext': build_ext})
 
 setup(
+    name="pint",
+    version = '0.0.1',
+    description = 'Pulsar Timing Package',
+
+    author = 'AUTHORS',
+    author_email = 'replace@this.now',
+    url = 'https://github.com/nanograv/PINT',
+
+    packages=['pint'],
+    package_dir = {'pint': 'pint'},
+
+    py_modules = ['pint.models.timing_model', 'pint.models.astrometry',
+        'pint.models.dispersion', 'pint.models.spindown',
+        'pint.models.solar_system_ephemeris', 'pint.models.parameter',
+        'pint.models.solar_system_shapiro'],
+
+    include_package_data=True,
     cmdclass = cmdclass,
     ext_modules=ext_modules,
 )
