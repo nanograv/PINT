@@ -36,10 +36,10 @@ if use_cython:
 setup(
     name="pint",
     version = '0.0.1',
-    description = 'Pulsar Timing Package',
+    description = 'A Pulsar Timing Package, written in Python from scratch',
 
-    author = 'AUTHORS',
-    author_email = 'replace@this.now',
+    author = 'Luo Jing, Scott Ransom, et al.',
+    author_email = 'sransom@nrao.edu',
     url = 'https://github.com/nanograv/PINT',
 
     packages=['pint'],
