@@ -34,8 +34,10 @@ def general2(parfile, timfile, params):
         s_arg += " {%s}" % p
     s_arg += "\\n"
 
-    t2output = subprocess.check_output(["tempo2", "-output", "general2", 
-        "-f", parfile, timfile, "-s", s_arg])
+    t2output = subprocess.check_output(["tempo2", "-nobs", "20000", 
+        "-output", "general2", 
+        "-f", parfile, timfile, 
+        "-s", s_arg])
 
     goodlines = [x for x in t2output.split('\n') if x.startswith(id_str)]
     nline = len(goodlines)
@@ -72,6 +74,24 @@ def chi2(parfile,timfile):
 
     return chi2
 
+def stats(parfile,timfile):
+    """
+    Run tempo2, get chi2, ndof, rms (as reported by 'general' plugin)
+    """
+
+    id_str = 'ABCD'
+    t2output = subprocess.check_output(["tempo2", "-nobs", "20000", "-output", "general",
+        "-s", id_str+' ', "-f", parfile, timfile])
+
+    goodlines = [x for x in t2output.split('\n') if x.startswith(id_str)]
+
+    chi2 = 0.0
+    for l in goodlines:
+        vals = l.split()
+        if vals[1]=='chisq' and vals[2]=='=':
+            chi2 = float(vals[3])
+
+    return chi2
 
 
 
