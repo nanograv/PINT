@@ -479,9 +479,9 @@ class TOAs(object):
                              (filename+ext))
                     # Pickle file is newer, assume it is good and load it
                     if ext==".pickle.gz":
-                        tmp = cPickle.load(gzip.open(filename+ext))
+                        tmp = cPickle.load(gzip.open(filename+ext, 'rb'))
                     else:
-                        tmp = cPickle.load(open(filename+ext))
+                        tmp = cPickle.load(open(filename+ext, 'rb'))
                     self.filename = tmp.filename
                     if hasattr(tmp, 'toas'):
                         self.toas = tmp.toas
