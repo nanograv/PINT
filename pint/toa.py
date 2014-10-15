@@ -371,9 +371,9 @@ class TOAs(object):
                 for toa, dut1 in zip(grp['mjd'], utcs.delta_ut1_utc):
                     toa.delta_ut1_utc = dut1
                 tdbs = utcs.tdb
-            elif key['obs'] is "Barycenter":
+            elif key['obs'] == "Barycenter":
                 # copy the times to the tdb column
-                tdbs = grp['mjd'].tdb
+                tdbs = [t.tdb for t in grp['mjd']]
             col_tdb[loind:hiind] = numpy.asarray([t for t in tdbs])
             col_tdbld[loind:hiind] = numpy.asarray([utils.time_to_longdouble(t) for t in tdbs])
         # Now add the new columns to the table
