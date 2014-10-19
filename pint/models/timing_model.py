@@ -4,9 +4,9 @@ import functools
 from warnings import warn
 from .parameter import Parameter
 from ..phase import Phase
-from ..phase import Phase_array
 from astropy import log
 import numpy as np
+
 class Cache(object):
     """Temporarily cache timing model internal computation results.
 
@@ -92,13 +92,8 @@ class TimingModel(object):
         self.params = []  # List of model parameter names
         self.params = []  # List of model parameter names
         self.delay_funcs = [] # List of delay component functions
-        self.delay_funcs_ld = [] # List of delay component function long double
-        self.delay_funcs_table = []
         self.phase_funcs = [] # List of phase component functions
-        self.phase_funcs_ld = [] # List of phase function long double
-        self.phase_funcs_table = []
         self.cache = None
-      
         self.add_param(Parameter(name="PSR",
             units=None,
             description="Source name",
@@ -120,73 +115,36 @@ class TimingModel(object):
             s += "%s\n" % getattr(self, par).help_line()
 
     @Cache.use_cache
-    def phase(self, toa):
-        """Return the model-predicted pulse phase for the given toa.
-        """
-        # First compute the delay to "pulsar time"
-        delay = self.delay(toa)
-        phase = Phase(0, 0.0)
-
-        # Then compute the relevant pulse phase
+    def phase(self, toas):
+        """Return the model-predicted pulse phase for the given TOAs."""
+        # First compute the delays to "pulsar time"
+        delay = self.delay(toas)
+        phase = Phase(np.zeros(len(toas)), np.zeros(len(toas)))
+        # Then compute the relevant pulse phases
         for pf in self.phase_funcs:
-            phase += pf(toa, delay)  # This is just a placeholder until we
-                                     # define what datatype 'toa' has, and
-                                     # how to add/subtract from it, etc.
+            phase += Phase(pf(toas, delay))
         return phase
-    def phase_ld(self,TOAs):
-        """
-        Return the model-predicted pulsa phase for given toa array
-        """
-        delay = self.delay_ld_array(TOAs)
-        phase = Phase_array(np.zeros_like(TOAs.tdbld))
-        for pf in self.phase_funcs_ld:
-            phase += pf(TOAs,delay)
-        
-        
-        return phase
-    def phase_table(self,TOAs):
-    
-        delay = self.delay_table(TOAs)
-        phase = Phase_array(np.zeros_like(TOAs.dataTable['tdb_ld']))
-        for pf in self.phase_funcs_table:
-            phase += pf(TOAs,delay)
 
-        return phase    
     @Cache.use_cache
-    def delay(self, toa):
-        """Total delay for a given TOA.
+    def delay(self, toas):
+        """Total delay for the TOAs.
 
         Return the total delay which will be subtracted from the given
         TOA to get time of emission at the pulsar.
         """
-        delay = 0.0
+        delay = np.zeros(len(toas))
         for df in self.delay_funcs:
-            delay += df(toa)
+            delay += df(toas)
         return delay
-    
-    def delay_ld_array(self,TOAs):
-        """
-        Total delay for a given TOA long double numpy array
-        """
-        delay = np.zeros_like(TOAs.tdbld)
-        for df in self.delay_funcs_ld:
-            delay += df(TOAs) 
-        return delay
-    
-    def delay_table(self,TOAs):
-        delay = np.zeros_like(TOAs.dataTable['tdb_ld'])
-        for df in self.delay_funcs_table:
-            delay += df(TOAs)
-        return delay        
-            
-    def d_phase_d_tpulsar(self, toa):
+
+    def d_phase_d_tpulsar(self, toas):
         """
         Return the derivative of phase wrt time at the pulsar.
         NOT Implemented
         """
         pass
 
-    def d_phase_d_toa(self, toa):
+    def d_phase_d_toa(self, toas):
         """
         Return the derivative of phase wrt TOA (ie the current apparent
         spin freq of the pulsar at the observatory).
@@ -194,7 +152,7 @@ class TimingModel(object):
         """
         pass
 
-    def d_phase_d_param(self, toa, param):
+    def d_phase_d_param(self, toas, param):
         """
         Return the derivative of phase with respect to the parameter.
         NOTE, not implemented yet
@@ -205,13 +163,13 @@ class TimingModel(object):
         # phase indirectly (and vice-versa)??
         return result
 
-    def d_delay_d_param(self, toa, param):
+    def d_delay_d_param(self, toas, param):
         """
         Return the derivative of delay with respect to the parameter.
         """
-        result = 0.0
+        result = numpy.zeros(len(toas))
         for f in self.delay_derivs[param]:
-            result += f(toa)
+            result += f(toas)
         return result
 
     def __str__(self):
@@ -251,7 +209,7 @@ class TimingModel(object):
         # after the entire parfile is read
         self.setup()
 
-def generate_timing_model(name, components,longdouble = False):
+def generate_timing_model(name, components):
     """Build a timing model from components.
 
     Returns a timing model class generated from the specifiied
@@ -264,10 +222,8 @@ def generate_timing_model(name, components,longdouble = False):
     """
     # TODO could test here that all the components are derived from
     # TimingModel?
-    if longdouble == False:  #  space for a numpy longdouble flag
-        return type(name, components, {})
-    else:
-        return type(name, components, {})
+    return type(name, components, {})
+
 class TimingModelError(Exception):
     """Generic base class for timing model errors.
     """
@@ -292,4 +248,3 @@ class MissingParameter(TimingModelError):
         if self.msg is not None:
             result += "\n  " + self.msg
         return result
-

@@ -25,24 +25,16 @@ except AttributeError:
 t0 = time.time()
 t = toa.get_TOAs(timfile)
 time_toa = time.time() - t0
-
+t.print_summary()
 sys.stderr.write("Read/corrected TOAs in %.3f sec\n" % time_toa)
 
 mjds = t.get_mjds()
-d_tdbs = numpy.array([x.tdb.delta_tdb_tt for x in t.table['mjd']])
 errs = t.get_errors()
-resids = numpy.zeros_like(mjds)
-ss_roemer = numpy.zeros_like(mjds)
-ss_shapiro = numpy.zeros_like(mjds)
 
 sys.stderr.write("Computing residuals...\n")
 t0 = time.time()
-for ii, tt in enumerate(t.table):
-    p = m.phase(tt)
-    resids[ii] = p.frac
-    ss_roemer[ii] = m.solar_system_geometric_delay(tt)
-    ss_shapiro[ii] = m.solar_system_shapiro_delay(tt)
-
+phases = m.phase(t.table)
+resids = phases.frac
 time_phase = time.time() - t0
 sys.stderr.write("Computed phases in %.3f sec\n" % time_phase)
 
@@ -85,7 +77,7 @@ def do_plot():
     plt.subplot(212)
     plt.plot(mjds,diff_t2*1e3,label='PINT - T2')
     plt.hold(True)
-#    plt.plot(mjds,diff_t1*1e3,label='PINT - T1')
+    plt.plot(mjds,diff_t1*1e3,label='PINT - T1')
     plt.grid()
     plt.xlabel('MJD')
     plt.ylabel('Residual diff (ns)')
