@@ -43,19 +43,9 @@ def load_kernels_cython(ephem="DE421"):
         kernels_loaded = True
 
 def objPosVel(obj1, obj2, et):
-    """Compute the difference of PosVel objects.
-
-    Returns position/velocity vectors between obj1 and obj2 as a
-    PosVel object at the given time.
-
-    et is in spice format (TDB seconds past J2000 epoch)
-    """
-    # TODO:
-    #  - maybe this should be a PosVel __init__ method instead?
-    #  - accept an astropy time rather than et as input?
-    pv, _ = spice.spkezr(obj1, float(et), "J2000", "NONE", obj2)
-    return PosVel(pv[:3]*u.km, pv[3:]*u.km/u.s, obj=obj1, origin=obj2)
-
+    """Returns PosVel instance from obj1 to obj2 at et (TDB sec past J2000)"""
+    pv, _ = spice.spkezr(obj2, float(et), "J2000", "NONE", obj1)
+    return PosVel(pv[:3]*u.km, pv[3:]*u.km/u.s, origin=obj1, obj=obj2)
 
 def objPosVel2SSB(objname, et):
     """Convert a PosVel object to solar system barycenter coordinates.
@@ -65,7 +55,6 @@ def objPosVel2SSB(objname, et):
     """
     load_kernels()
     return spice.spkezr(objname.upper(), et, "J2000", "NONE", "SSB")
-
 
 def getobsJ2000(posITRF, et):
     """Convert observatory coordinates to Earth centered coordinates.
@@ -83,7 +72,6 @@ def getobsJ2000(posITRF, et):
     # [x,y,z] in J2000 earth centered, second three elements are
     # velocity [dx/dt,dy/dt,dz/dt] in J2000 earth centered
     return np.dot(xform, state)
-
 
 def ITRF2GEO(posITRF):
     '''Converts from earth rectangular coordinate to Geodetic coordinate.

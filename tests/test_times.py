@@ -2,6 +2,7 @@ from pint import toa, utils
 import math, shlex, subprocess, numpy
 import astropy.constants as const
 import astropy.units as u
+from pint.utils import PosVel
 
 ls = u.def_unit('ls', const.c * 1.0 * u.s)
 ts = toa.get_TOAs("tests/testtimes.tim")
@@ -29,6 +30,7 @@ for line, toa in zip(goodlines, ts.table):
                           numpy.asarray([ev0, ev1, ev2]) * ls/u.s)
     t2_opv = utils.PosVel(numpy.asarray([tp0, tp1, tp2]) * ls,
                           numpy.asarray([tv0, tv1, tv2]) * ls/u.s)
+    t2_ssb2obs = t2_epv + t2_opv
     # print utils.time_toq_mjd_string(toa.mjd.tt), line.split()[-1]
     tempo_tt = utils.time_from_mjd_string(line.split()[-1], scale='tt')
     # Ensure that the clock corrections are accurate to better than 0.1 ns
@@ -37,17 +39,19 @@ for line, toa in zip(goodlines, ts.table):
     print "\nTOA in tt difference is:", \
           ((toa['mjd'].tt - tempo_tt.tt).sec * u.s).to(u.ns)
 
-    print "SSB-Earth:"
-    print "   T2:", t2_epv.pos.to(ls), t2_epv.vel.to(ls/u.s)
-    print " PINT:", toa['earth_pvs'].pos.to(ls), toa['earth_pvs'].vel.to(ls/u.s)
-    dssb = toa['earth_pvs'] - t2_epv
-    print " diff:", dssb.pos.to(ls), dssb.vel.to(ls/u.s)
+    #print "SSB-OBS:"
+    #print "   T2:", t2_epv.pos.to(ls), t2_epv.vel.to(ls/u.s)
+    #print " PINT:", toa['ssb_earth_pos'].to(ls), toa['ssb_earth_vel'].vel.to(ls/u.s)
+    #dssb = toa['earth_pvs'] - t2_epv
+    #print " diff:", dssb.pos.to(ls), dssb.vel.to(ls/u.s)
 
     print "topocenter:"
-    print "   T2:", t2_opv.pos.to(u.m), t2_opv.vel.to(u.m/u.s)
-    print " PINT:", toa['obs_pvs'].pos.to(u.m), toa['obs_pvs'].vel.to(u.m/u.s)
-    dgeo = toa['obs_pvs'] - t2_opv
-    xx = dgeo.pos / numpy.sqrt(numpy.dot(toa['obs_pvs'].pos, toa['obs_pvs'].pos))
+    print "   T2:", t2_ssb2obs.pos.to(u.m), t2_ssb2obs.vel.to(u.m/u.s)
+    print " PINT:", toa['ssb_obs_pos'], toa['ssb_obs_vel']
+    pint_ssb2obs = PosVel(toa['ssb_obs_pos']*u.km, toa['ssb_obs_vel']*u.km/u.s, origin='SSB', obj='OBS')
+    print pint_ssb2obs    
+    dgeo = pint_ssb2obs - t2_ssb2obs
+    xx = dgeo.pos / numpy.sqrt(numpy.dot(pint_ssb2obs.pos, pint_ssb2obs.pos))
     xx = numpy.sqrt(numpy.dot(xx, xx))
     print (xx * u.rad).to(u.arcsec)
     print " diff:", dgeo.pos.to(u.m), dgeo.vel.to(u.m/u.s)

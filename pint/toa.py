@@ -8,7 +8,7 @@ import astropy.table as table
 import astropy.units as u
 from astropy.time.core import SECS_PER_DAY
 from spiceutils import objPosVel, load_kernels
-from pint import pintdir, J2000, J2000ld
+from pint import ls, pintdir, J2000, J2000ld
 from astropy import log
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
@@ -33,7 +33,7 @@ def get_TOAs(timfile, ephem="DE421", planets=False):
     if 'tdb' not in t.table.colnames:
         log.info("Getting IERS params and computing TDBs.")
         t.compute_TDBs()
-    if 'pvs' not in t.table.colnames:
+    if 'ssb_obs_pos' not in t.table.colnames:
         log.info("Computing observatory positions and velocities.")
         t.compute_posvels(ephem, planets)
     if not (os.path.isfile(timfile+".pickle") or
@@ -371,9 +371,9 @@ class TOAs(object):
                 for toa, dut1 in zip(grp['mjd'], utcs.delta_ut1_utc):
                     toa.delta_ut1_utc = dut1
                 tdbs = utcs.tdb
-            elif key['obs'] is "Barycenter":
+            elif key['obs'] == "Barycenter":
                 # copy the times to the tdb column
-                tdbs = grp['mjd'].tdb
+                tdbs = [t.tdb for t in grp['mjd']]
             col_tdb[loind:hiind] = numpy.asarray([t for t in tdbs])
             col_tdbld[loind:hiind] = numpy.asarray([utils.time_to_longdouble(t) for t in tdbs])
         # Now add the new columns to the table
@@ -381,38 +381,6 @@ class TOAs(object):
         col_tdbld = table.Column(name='tdbld', data=col_tdbld)
         self.table.add_columns([col_tdb, col_tdbld])
 
-    def compute_posvels_old(self, ephem="DE421", planets=False):
-        """Compute positions and velocities of observatory and Earth.
-
-        Compute the positions and velocities of the observatory (wrt
-        the Geocenter) and the center of the Earth (referenced to the
-        SSB) for each TOA.  The JPL solar system ephemeris can be set
-        using the 'ephem' parameter.  The positions and velocities are
-        set with PosVel class instances which have astropy units.
-        """
-        # Load the appropriate JPL ephemeris
-        load_kernels(ephem)
-        pth = os.path.join(pintdir, "datafiles")
-        ephem_file = os.path.join(pth, "%s.bsp"%ephem.lower())
-        log.info("Loading %s ephemeris." % ephem_file)
-        spice.furnsh(ephem_file)
-        for toa in self.toas:
-            xyz = observatories[toa.obs].xyz
-            toa.obs_pvs = erfautils.topo_posvels(xyz, toa)
-            # SPICE expects ephemeris time to be in sec past J2000 TDB
-            # We need to figure out how to get the correct time...
-            et = (toa.mjd.TDB - j2000_mjd) * SECS_PER_DAY
-            # SSB to observatory position/velocity:
-            toa.earth_pvs = objPosVel("EARTH", "SSB", et)
-            toa.pvs = toa.obs_pvs + toa.earth_pvs
-            # Obs to Sun PV:
-            toa.obs_sun_pvs = objPosVel("SUN", "EARTH", et) - toa.obs_pvs
-            if planets:
-                for p in ('jupiter', 'saturn', 'venus', 'uranus'):
-                    pv = objPosVel(p.upper()+" BARYCENTER",
-                            "EARTH", et) - toa.obs_pvs
-                    setattr(toa, 'obs_'+p+'_pvs', pv)
-    
     def compute_posvels(self, ephem="DE421", planets=False):
         """Compute positions and velocities of the observatories and Earth.
 
@@ -428,15 +396,22 @@ class TOAs(object):
         log.info("Loading %s ephemeris." % ephem_file)
         spice.furnsh(ephem_file)
         self.table.meta['ephem'] = ephem
-        pvs = table.Column(name='pvs', data=numpy.zeros_like(self.table['mjd']))
-        obs_pvs = table.Column(name='obs_pvs', data=numpy.zeros_like(pvs))
-        earth_pvs = table.Column(name='earth_pvs', data=numpy.zeros_like(pvs))
-        obs_sun_pvs = table.Column(name='obs_sun_pvs', data=numpy.zeros_like(pvs))
+        ssb_obs_pos = table.Column(name='ssb_obs_pos',
+                                    data=numpy.zeros((self.ntoas, 3), dtype=numpy.float64),
+                                    unit=u.km, meta={'origin':'SSB', 'obj':'OBS'})
+        ssb_obs_vel = table.Column(name='ssb_obs_vel',
+                                    data=numpy.zeros((self.ntoas, 3), dtype=numpy.float64),
+                                    unit=u.km/u.s, meta={'origin':'SSB', 'obj':'OBS'})
+        obs_sun_pos = table.Column(name='obs_sun_pos',
+                                    data=numpy.zeros((self.ntoas, 3), dtype=numpy.float64),
+                                    unit=u.km, meta={'origin':'OBS', 'obj':'SUN'})
         if planets:
-            plan_pvs = {}
+            plan_poss = {}
             for p in ('jupiter', 'saturn', 'venus', 'uranus'):
-                pstr = 'obs_'+p+'_pvs'
-                plan_pvs[pstr] = table.Column(name=pstr, data=numpy.zeros_like(pvs))
+                name = 'obs_'+p+'_pos'
+                plan_poss[name] = table.Column(name=name,
+                                    data=numpy.zeros((self.ntoas, 3), dtype=numpy.float64),
+                                    unit=u.km, meta={'origin':'OBS', 'obj':p})
         # Now step through in observatory groups
         for ii, key in enumerate(self.table.groups.keys):
             grp = self.table.groups[ii]
@@ -445,22 +420,25 @@ class TOAs(object):
             xyz = observatories[obs].loc.geocentric
             if (key['obs'] in observatories):
                 for jj, grprow in enumerate(grp):
-                    obs_pvs[jj+loind] = erfautils.topo_posvels(xyz, grprow)
+                    ind = jj+loind
+                    earth_obs = erfautils.topo_posvels(xyz, grprow)
                     et = float((grprow['tdbld'] - J2000ld) * SECS_PER_DAY)
-                    earth_pvs[jj+loind] = objPosVel("EARTH", "SSB", et)
-                    pvs[jj+loind] = obs_pvs[jj+loind] + earth_pvs[jj+loind]
-                    obs_sun_pvs[jj+loind] = objPosVel("SUN", "EARTH", et) - \
-                        obs_pvs[jj+loind]
+                    ssb_earth = objPosVel("SSB", "EARTH", et)
+                    obs_sun = objPosVel("EARTH", "SUN", et) - earth_obs
+                    obs_sun_pos[ind,:] = obs_sun.pos
+                    ssb_obs = ssb_earth + earth_obs
+                    ssb_obs_pos[ind,:] = ssb_obs.pos
+                    ssb_obs_vel[ind,:] = ssb_obs.vel
                     if planets:
                         for p in ('jupiter', 'saturn', 'venus', 'uranus'):
-                            pstr = 'obs_'+p+'_pvs'
-                            pv = objPosVel(p.upper()+"BARYCENTER",
-                                           "EARTH", et) - obs_pvs[jj+loind]
-                            plan_pvs[pstr][jj+loind] = pv
-        cols_to_add = [pvs, obs_pvs, earth_pvs, obs_sun_pvs]
+                            name = 'obs_'+p+'_pos'
+                            dest = p.upper()+"BARYCENTER"
+                            pv = objPosVel("EARTH", dest, et) - earth_obs
+                            plan_pvs[name][ind,:] = pv.pos
+        cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
         if planets:
             cols_to_add += plan_pvs.values()
-        self.table.add_columns([pvs, obs_pvs, earth_pvs, obs_sun_pvs])
+        self.table.add_columns(cols_to_add)
 
     def read_toa_file(self, filename, process_includes=True, top=True, usepickle=True):
         """Read the given filename and return a list of TOA objects.
@@ -479,9 +457,9 @@ class TOAs(object):
                              (filename+ext))
                     # Pickle file is newer, assume it is good and load it
                     if ext==".pickle.gz":
-                        tmp = cPickle.load(gzip.open(filename+ext))
+                        tmp = cPickle.load(gzip.open(filename+ext, 'rb'))
                     else:
-                        tmp = cPickle.load(open(filename+ext))
+                        tmp = cPickle.load(open(filename+ext, 'rb'))
                     self.filename = tmp.filename
                     if hasattr(tmp, 'toas'):
                         self.toas = tmp.toas

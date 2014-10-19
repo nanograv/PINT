@@ -4,6 +4,12 @@
 from warnings import warn
 from .parameter import Parameter
 from .timing_model import TimingModel
+import astropy.units as u
+
+# The units on this are not completely correct
+# as we don't really use the "pc cm^3" units on DM.
+# But the time and freq portions are correct
+DMconst = 1.0/2.41e-4 * u.MHz * u.MHz * u.s
 
 class Dispersion(TimingModel):
     """This class provides a timing model for a simple constant
@@ -16,41 +22,16 @@ class Dispersion(TimingModel):
         self.add_param(Parameter(name="DM",
             units="pc cm^-3", value=0.0,
             description="Dispersion measure"))
-
         self.delay_funcs += [self.dispersion_delay,]
-        self.delay_funcs_ld += [self.dispersion_delay_ld,]
-        self.delay_funcs_table += [self.dispersion_delay_table,]
+
     def setup(self):
         super(Dispersion, self).setup()
 
-    def dispersion_delay(self, toa):
+    def dispersion_delay(self, toas):
+        """Return the dispersion delay at each toa."""
         try:
-            bfreq = self.barycentric_radio_freq(toa)
+            bfreq = self.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
-            bfreq = toa.freq
-
-        # TODO: name DM constant
-        return self.DM.value/2.41e-4/bfreq/bfreq
-
-    def dispersion_delay_ld(self,TOAs):
-        try:
-            bfreq = self.barycentric_radio_freq_array(TOAs)
-        except AttributeError:
-            warn("Using topocentric frequency for dedispersion!")
-            bfreq = TOAs.freq
-
-        return self.DM.value/2.41e-4/bfreq/bfreq
-
-
-
-    def dispersion_delay_table(self,TOAs):
-        try:
-            bfreq = self.barycentric_radio_freq_table(TOAs)
-        except AttributeError:
-            warn("Using topocentric frequency for dedispersion!")
-            bfreq = TOAs.dataTable['freq'] 
-        return (self.DM.value/2.41e-4/bfreq/bfreq).data    
-        
-        
-           
+            bfreq = toas['freq']
+        return self.DM.value * DMconst / bfreq**2

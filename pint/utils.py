@@ -1,13 +1,12 @@
 """Miscellaneous potentially-helpful functions.
 
 """
-import math
 import numpy as np
 import string
 from warnings import warn
-import mpmath
 import astropy.time
 import astropy.units as u
+from spice_util import str2ldarr1
 
 class PosVel(object):
     """Position/Velocity class.
@@ -122,7 +121,7 @@ def time_to_mjd_string(t, prec=15):
     imjd = int(jd1)
     fjd1 = jd1 - imjd
     fmjd = t.jd2 + fjd1
-    assert math.fabs(fmjd) < 2.0
+    assert np.fabs(fmjd) < 2.0
     if fmjd >= 1.0:
         imjd += 1
         fmjd -= 1.0
@@ -137,21 +136,6 @@ def time_to_longdouble(t):
     """
     return np.longdouble(t.jd1-astropy.time.core.MJD_ZERO) \
             + np.longdouble(t.jd2)
-
-def time_to_mjd_mpf(t):
-    """Return an astropy Time value as MJD in mpmath float format.
-    
-    mpmath.mp.dps needs to be set to the desired precision before
-    calling this.
-    """
-    return mpmath.mpf(t.jd1 - astropy.time.core.MJD_ZERO) \
-            + mpmath.mpf(t.jd2)
-
-def timedelta_to_mpf_sec(t):
-    """Return astropy TimeDelta as mpmath value in seconds.
-    """
-    return (mpmath.mpf(t.jd1)
-            + mpmath.mpf(t.jd2))*astropy.time.core.SECS_PER_DAY
 
 def GEO_WGS84_to_ITRF(lon, lat, hgt):
     """Convert lat/long/height to rectangular.
@@ -226,16 +210,8 @@ def has_astropy_unit(x):
     return hasattr(x,'unit') and type(x.unit) is type(u.J)
 
 def longdouble2string(x):
-    """
-    longdouble2string(x):
-        Convert numpy longdouble to string
-    """    
-    xsplt = np.modf(x)
-    xdec = "%.15f" % xsplt[0]
-    xint = str(xsplt[1])   
-    xdec = xdec[1:]
-    xint = xint[:-2]
-    return xint+xdec
+    """Convert numpy longdouble to string"""
+    return repr(x)
 
 def MJD_string2longdouble(s):
     """
@@ -259,3 +235,7 @@ def ddouble2ldouble(t1, t2, format='jd'):
     else:
         t = np.longdouble([t1,t2])
     return t[0]+t[1]
+
+def str2longdouble(str):
+    """Return a numpy long double scalar from the input string, using strtold()"""
+    return str2ldarr1(str)[0]
