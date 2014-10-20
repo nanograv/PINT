@@ -432,12 +432,12 @@ class TOAs(object):
                     if planets:
                         for p in ('jupiter', 'saturn', 'venus', 'uranus'):
                             name = 'obs_'+p+'_pos'
-                            dest = p.upper()+"BARYCENTER"
+                            dest = p.upper()+" BARYCENTER"
                             pv = objPosVel("EARTH", dest, et) - earth_obs
-                            plan_pvs[name][ind,:] = pv.pos
+                            plan_poss[name][ind,:] = pv.pos
         cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
         if planets:
-            cols_to_add += plan_pvs.values()
+            cols_to_add += plan_poss.values()
         self.table.add_columns(cols_to_add)
 
     def read_toa_file(self, filename, process_includes=True, top=True, usepickle=True):
