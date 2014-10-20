@@ -113,6 +113,7 @@ class TimingModel(object):
         s = "Available parameters for %s\n" % self.__class__
         for par in self.params:
             s += "%s\n" % getattr(self, par).help_line()
+        return s
 
     @Cache.use_cache
     def phase(self, toas):
