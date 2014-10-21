@@ -28,8 +28,9 @@ def get_TOAs(timfile, ephem="DE421", planets=False):
     vectors, and pickles the file for later use.
     """
     t = TOAs(timfile)
-    log.info("Applying clock corrections.")
-    t.apply_clock_corrections()
+    if len([f.has_key('clkcorr') for f in t.table['flags']])==0:
+        log.info("Applying clock corrections.")
+        t.apply_clock_corrections()
     if 'tdb' not in t.table.colnames:
         log.info("Getting IERS params and computing TDBs.")
         t.compute_TDBs()
@@ -266,7 +267,7 @@ class TOAs(object):
         elif self.filename is not None:
             cPickle.dump(self, gzip.open(self.filename+".pickle.gz", "wb"))
         else:
-            sys.stderr.write("Warning: pickle needs a filename\n")
+            log.warn("TOA pickle method needs a filename.\n")
 
     def get_summary(self):
         """Return a short ASCII summary of the TOAs."""
@@ -302,7 +303,7 @@ class TOAs(object):
         flags = self.table['flags']
         for tfs in flags:
             if 'clkcorr' in tfs:
-                log.info("Some TOAs have 'clkcorr' flag.  Not applying new clock corrections.")
+                log.warn("Some TOAs have 'clkcorr' flag.  Not applying new clock corrections.")
                 return
         # An array of all the time corrections, one for each TOA
         corr = numpy.zeros(self.ntoas) * u.s

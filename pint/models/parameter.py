@@ -3,7 +3,7 @@
 from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
                     time_to_longdouble
 import numpy 
-import inspect
+
 class Parameter(object):
     """
     Parameter(name=None, value=None, units=None, description=None,
@@ -130,4 +130,3 @@ class MJDParameter(Parameter):
                 aliases=aliases,
                 parse_value=parse_value,
                 print_value=print_value)
-       

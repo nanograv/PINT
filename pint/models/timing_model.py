@@ -1,11 +1,17 @@
 # timing_model.py
 # Defines the basic timing model interface classes
 import functools
-from warnings import warn
 from .parameter import Parameter
 from ..phase import Phase
 from astropy import log
 import numpy as np
+
+# parameters or lines in parfiles to ignore (for now?), or at
+# least not to complain about
+ignore_params = ['START', 'FINISH', 'SOLARN0', 'EPHEM', 'CLK', 'UNITS',
+                 'TIMEEPH', 'T2CMETHOD', 'CORRECT_TROPOSPHERE', 'DILATEFREQ',
+                 'NTOA', 'CLOCK', 'TRES', 'TZRMJD', 'TZRFRQ', 'TZRSITE',
+                 'NITS', 'IBOOT']
 
 class Cache(object):
     """Temporarily cache timing model internal computation results.
@@ -139,24 +145,24 @@ class TimingModel(object):
         return delay
 
     def d_phase_d_tpulsar(self, toas):
-        """
-        Return the derivative of phase wrt time at the pulsar.
-        NOT Implemented
+        """Return the derivative of phase wrt time at the pulsar.
+
+        NOT implemented yet.
         """
         pass
 
     def d_phase_d_toa(self, toas):
-        """
-        Return the derivative of phase wrt TOA (ie the current apparent
-        spin freq of the pulsar at the observatory).
-        NOT Implemented yet.
+        """Return the derivative of phase wrt TOA
+
+        (i.e. the apparent spin freq of the pulsar at the observatory).
+        NOT implemented yet.
         """
         pass
 
     def d_phase_d_param(self, toas, param):
-        """
-        Return the derivative of phase with respect to the parameter.
-        NOTE, not implemented yet
+        """ Return the derivative of phase with respect to the parameter.
+
+        NOT implemented yet.
         """
         result = 0.0
         # TODO need to do correct chain rule stuff wrt delay derivs, etc
@@ -180,30 +186,28 @@ class TimingModel(object):
         return result
 
     def as_parfile(self):
-        """Returns a parfile representation of the entire model as a string.
-        """
+        """Returns a parfile representation of the entire model as a string."""
         result = ""
         for par in self.params:
             result += getattr(self, par).as_parfile_line()
         return result
 
     def read_parfile(self, filename):
-        """Read values from the specified parfile into the model parameters.
-        """
+        """Read values from the specified parfile into the model parameters."""
         pfile = open(filename, 'r')
         for l in [pl.strip() for pl in pfile.readlines()]:
             # Skip blank lines
             if not l:
                 continue
             # Skip commented lines
-            if l.startswith('#'):
+            if l.startswith('#') or l[:2]=="C ":
                 continue
             parsed = False
             for par in self.params:
                 if getattr(self, par).from_parfile_line(l):
                     parsed = True
-            if not parsed:
-                warn("Unrecognized parfile line '%s'" % l)
+            if not parsed and l.split()[0] not in ignore_params:
+                log.warn("Unrecognized parfile line '%s'" % l)
 
         # The "setup" functions contain tests for required parameters or
         # combinations of parameters, etc, that can only be done
@@ -226,8 +230,7 @@ def generate_timing_model(name, components):
     return type(name, components, {})
 
 class TimingModelError(Exception):
-    """Generic base class for timing model errors.
-    """
+    """Generic base class for timing model errors."""
     pass
 
 class MissingParameter(TimingModelError):

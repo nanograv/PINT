@@ -1,11 +1,9 @@
-"""Miscellaneous potentially-helpful functions.
-
-"""
+"""Miscellaneous potentially-helpful functions."""
 import numpy as np
 import string
-from warnings import warn
 import astropy.time
 import astropy.units as u
+from astropy import log
 from spice_util import str2ldarr1
 
 class PosVel(object):
@@ -88,16 +86,15 @@ def fortran_float(x):
     return float(x.translate(string.maketrans('Dd', 'ee')))
 
 def time_from_mjd_string(s, scale='utc'):
-    """Returns an astropy Time object generated from a MJD string input.
-    """
+    """Returns an astropy Time object generated from a MJD string input."""
     ss = s.lower()
     if "e" in ss or "d" in ss:
         ss = ss.translate(string.maketrans("d", "e"))
         num, expon = ss.split("e")
         expon = int(expon)
         if expon < 0:
-            warn("Likely bogus sci notation input in "+
-                 "time_from_mjd_string ('%s')!" % s)
+            log.warn("Likely bogus sci notation input in "+
+                    "time_from_mjd_string ('%s')!" % s)
             # This could cause a loss of precision...
             # maybe throw an exception instead?
             imjd, fmjd = 0, float(ss)
@@ -110,7 +107,6 @@ def time_from_mjd_string(s, scale='utc'):
         # If input was given as an integer, add floating "0"
         if len(mjd_s) == 1:
             mjd_s.append("0")
-
         imjd_s, fmjd_s = mjd_s
         imjd = int(imjd_s)
         fmjd = float("0." + fmjd_s)

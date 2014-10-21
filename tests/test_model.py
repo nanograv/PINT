@@ -7,15 +7,18 @@ import matplotlib.pyplot as plt
 import numpy
 import tempo2_utils
 
+from astropy import log
+log.setLevel('ERROR')
+# for nice output info, set the following instead
+#log.setLevel('INFO')
+
 parfile = 'tests/J1744-1134.basic.par'
 t1_parfile = 'tests/J1744-1134.t1.par'
 timfile = 'tests/J1744-1134.Rcvr1_2.GASP.8y.x.tim'
 
 m = tm.StandardTimingModel()
 m.read_parfile(parfile)
-
-print "model.as_parfile():"
-print m.as_parfile()
+log.info("model.as_parfile():\n%s"%m.as_parfile())
 
 try:
     planet_ephems = m.PLANET_SHAPIRO.value
@@ -25,44 +28,62 @@ except AttributeError:
 t0 = time.time()
 t = toa.get_TOAs(timfile)
 time_toa = time.time() - t0
-t.print_summary()
-sys.stderr.write("Read/corrected TOAs in %.3f sec\n" % time_toa)
+if log.level < 25:
+    t.print_summary()
+log.info("Read/corrected TOAs in %.3f sec" % time_toa)
 
 mjds = t.get_mjds()
 errs = t.get_errors()
 
-sys.stderr.write("Computing residuals...\n")
+log.info("Computing residuals...")
 t0 = time.time()
 phases = m.phase(t.table)
 resids = phases.frac
 time_phase = time.time() - t0
-sys.stderr.write("Computed phases in %.3f sec\n" % time_phase)
+log.info("Computed phases in %.3f sec" % time_phase)
 
 # resids in (approximate) us:
 resids_us = resids / float(m.F0.value) * 1e6
-sys.stderr.write("RMS PINT residuals are %.3f us\n" % resids_us.std())
+log.info("RMS PINT residuals are %.3f us" % resids_us.std())
 
 # Get some general2 stuff
+log.info("Running TEMPO2...")
 tempo2_vals = tempo2_utils.general2(parfile, timfile,
                                     ['tt2tb', 'roemer', 'post_phase',
                                      'shapiro', 'shapiroJ'])
 t2_resids = tempo2_vals['post_phase'] / float(m.F0.value) * 1e6
 diff_t2 = resids_us - t2_resids
 diff_t2 -= diff_t2.mean()
+diff_t2 *= 1e3 # convert to ns
+log.info("Max resid diff between PINT and T2: %.2f ns" % diff_t2.max())
+log.info("Std resid diff between PINT and T2: %.2f ns" % diff_t2.std())
+
+assert numpy.fabs(diff_t2).max() < 18.0 # Check that all resids are < 18 ns
 
 # run tempo1 also, if the tempo_utils module is available
+did_tempo1 = False
 try:
     import tempo_utils
+    log.info("Running TEMPO1...")
     t1_toas = tempo_utils.read_toa_file(timfile)
     tempo_utils.run_tempo(t1_toas, t1_parfile)
     t1_resids = t1_toas.get_resids(units='phase') / float(m.F0.value) * 1e6
+    did_tempo1 = True
     diff_t1 = resids_us - t1_resids
     diff_t1 -= diff_t1.mean()
-
+    diff_t1 *= 1e3 # convert to ns
+    log.info("Max resid diff between PINT and T1: %.2f ns" % numpy.fabs(diff_t1).max())
+    log.info("Std resid diff between PINT and T1: %.2f ns" % diff_t1.std())
     diff_t2_t1 = t2_resids - t1_resids
     diff_t2_t1 -= diff_t2_t1.mean()
+    diff_t2_t1 *= 1e3 # convert to ns
+    log.info("Max resid diff between T1 and T2: %.2f ns" % numpy.fabs(diff_t2_t1).max())
+    log.info("Std resid diff between T1 and T2: %.2f ns" % diff_t2_t1.std())
 except:
     pass
+
+if did_tempo1:
+    assert numpy.fabs(diff_t1).max() < 22.0 # Check that all resids are < 22 ns
 
 def do_plot():
     plt.clf()
@@ -75,13 +96,15 @@ def do_plot():
     plt.legend()
     plt.grid()
     plt.subplot(212)
-    plt.plot(mjds,diff_t2*1e3,label='PINT - T2')
+    plt.plot(mjds,diff_t2,label='PINT - T2')
     plt.hold(True)
-    plt.plot(mjds,diff_t1*1e3,label='PINT - T1')
+    if did_tempo1:
+        plt.plot(mjds,diff_t1,label='PINT - T1')
     plt.grid()
     plt.xlabel('MJD')
     plt.ylabel('Residual diff (ns)')
     plt.legend()
 
-do_plot()
-plt.show()
+if log.level < 25:
+    do_plot()
+    plt.show()
