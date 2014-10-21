@@ -74,6 +74,6 @@ class SolarSystemShapiro(TimingModel):
                                           psr_dir, self._ss_mass_sec['sun'])
         if self.PLANET_SHAPIRO.value:
             for pl in ('jupiter', 'saturn', 'venus', 'uranus'):
-                delay += self.ss_obj_shapiro_delay(toas['obs_'+pl+'_poss'],
+                delay += self.ss_obj_shapiro_delay(toas['obs_'+pl+'_pos'],
                                                    psr_dir, self._ss_mass_sec[pl])
         return delay

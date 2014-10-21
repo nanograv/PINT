@@ -28,7 +28,7 @@ def get_TOAs(timfile, ephem="DE421", planets=False):
     vectors, and pickles the file for later use.
     """
     t = TOAs(timfile)
-    if len([f.has_key('clkcorr') for f in t.table['flags']])==0:
+    if not any([f.has_key('clkcorr') for f in t.table['flags']]):
         log.info("Applying clock corrections.")
         t.apply_clock_corrections()
     if 'tdb' not in t.table.colnames:
@@ -301,10 +301,9 @@ class TOAs(object):
         """
         # First make sure that we haven't already applied clock corrections
         flags = self.table['flags']
-        for tfs in flags:
-            if 'clkcorr' in tfs:
-                log.warn("Some TOAs have 'clkcorr' flag.  Not applying new clock corrections.")
-                return
+        if any([f.has_key('clkcorr') for f in flags]):
+            log.warn("Some TOAs have 'clkcorr' flag.  Not applying new clock corrections.")
+            return
         # An array of all the time corrections, one for each TOA
         corr = numpy.zeros(self.ntoas) * u.s
         times = self.table['mjd']
@@ -351,7 +350,7 @@ class TOAs(object):
         for tfs in self.table['flags']:
             if 'clkcorr' in tfs: ccs = True
         if ccs is False:
-            log.info("No TOAs have clock corrections.  Use .apply_clock_corrections() first.")
+            log.warn("No TOAs have clock corrections.  Use .apply_clock_corrections() first.")
         # These will be the new table columns
         col_tdb = numpy.zeros_like(self.table['mjd'])
         col_tdbld = numpy.zeros(self.ntoas, dtype=numpy.longdouble)

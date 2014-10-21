@@ -6,11 +6,11 @@ from pint import toa
 import matplotlib.pyplot as plt
 import numpy
 import tempo2_utils
-
 from astropy import log
+
 log.setLevel('ERROR')
 # for nice output info, set the following instead
-#log.setLevel('INFO')
+# log.setLevel('INFO')
 
 parfile = 'tests/J1744-1134.basic.par'
 t1_parfile = 'tests/J1744-1134.t1.par'
@@ -21,12 +21,12 @@ m.read_parfile(parfile)
 log.info("model.as_parfile():\n%s"%m.as_parfile())
 
 try:
-    planet_ephems = m.PLANET_SHAPIRO.value
+    planets = m.PLANET_SHAPIRO.value
 except AttributeError:
-    planet_ephems = False
+    planets = False
 
 t0 = time.time()
-t = toa.get_TOAs(timfile)
+t = toa.get_TOAs(timfile, planets=planets)
 time_toa = time.time() - t0
 if log.level < 25:
     t.print_summary()
@@ -55,7 +55,7 @@ t2_resids = tempo2_vals['post_phase'] / float(m.F0.value) * 1e6
 diff_t2 = resids_us - t2_resids
 diff_t2 -= diff_t2.mean()
 diff_t2 *= 1e3 # convert to ns
-log.info("Max resid diff between PINT and T2: %.2f ns" % diff_t2.max())
+log.info("Max resid diff between PINT and T2: %.2f ns" % numpy.fabs(diff_t2).max())
 log.info("Std resid diff between PINT and T2: %.2f ns" % diff_t2.std())
 
 assert numpy.fabs(diff_t2).max() < 18.0 # Check that all resids are < 18 ns
@@ -82,7 +82,7 @@ try:
 except:
     pass
 
-if did_tempo1:
+if did_tempo1 and not planets:
     assert numpy.fabs(diff_t1).max() < 22.0 # Check that all resids are < 22 ns
 
 def do_plot():
