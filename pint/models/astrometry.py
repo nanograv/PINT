@@ -16,7 +16,7 @@ class Astrometry(TimingModel):
     def __init__(self):
         super(Astrometry, self).__init__()
 
-        self.add_param(Parameter(name="RA",
+        self.add_param(Parameter(name="RAJ",
             units="H:M:S",
             description="Right ascension (J2000)",
             aliases=["RAJ"],
@@ -24,7 +24,7 @@ class Astrometry(TimingModel):
             print_value=lambda x: x.to_string(sep=':',
                 precision=8)))
 
-        self.add_param(Parameter(name="DEC",
+        self.add_param(Parameter(name="DECJ",
             units="D:M:S",
             description="Declination (J2000)",
             aliases=["DECJ"],
@@ -52,7 +52,7 @@ class Astrometry(TimingModel):
     def setup(self):
         super(Astrometry, self).setup()
         # RA/DEC are required
-        for p in ("RA", "DEC"):
+        for p in ("RAJ", "DECJ"):
             if getattr(self, p).value is None:
                 raise MissingParameter("Astrometry", p)
         # If PM is included, check for POSEPOCH
@@ -72,14 +72,14 @@ class Astrometry(TimingModel):
         the position at the given epoch.
         """
         if epoch is None:
-            return coords.ICRS(ra=self.RA.value, dec=self.DEC.value)
+            return coords.ICRS(ra=self.RAJ.value, dec=self.DECJ.value)
         else:
             mas_yr = (u.mas / u.yr)
             dt = (epoch - self.POSEPOCH.value.mjd) * u.d
             dRA = (dt * self.PMRA.value * mas_yr / \
-                    numpy.cos(self.DEC.value)).to(u.mas)
+                    numpy.cos(self.DECJ.value)).to(u.mas)
             dDEC = (dt * self.PMDEC.value * mas_yr).to(u.mas)
-            return coords.ICRS(ra=self.RA.value+dRA, dec=self.DEC.value+dDEC)
+            return coords.ICRS(ra=self.RAJ.value+dRA, dec=self.DECJ.value+dDEC)
     
     @Cache.cache_result
     def ssb_to_psb_xyz(self, epoch=None):

@@ -1,0 +1,11 @@
+PSR              1748-2021E
+RAJ        17:48:52.7  1
+DECJ      -20:21:29.3  1
+F0       61.485476554  1
+F1         -1.181D-15  1
+PEPOCH        53750.000000
+POSEPOCH      53750.000000
+DM              223.9  1
+EPHEM            DE421
+CLK              TT(BIPM)
+UNITS            TDB

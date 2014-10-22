@@ -13,9 +13,15 @@ class resids(object):
     def __init__(self, toas=None, model=None):
         self.toas = toas
         self.model = model
-        self.time_resids = self.calc_time_resids()
-        self.chi2 = self.calc_chi2()
-        self.chi2_reduced = self.get_reduced_chi2()
+        if toas is not None and model is not None:
+            self.phase_resids = self.calc_phase_resids()
+            self.time_resids = self.calc_time_resids()
+            self.chi2 = self.calc_chi2()
+            self.dof = self.get_dof()
+            self.chi2_reduced = self.chi2 / self.dof
+        else:
+            self.phase_resids = None
+            self.time_resids = None
 
     def calc_phase_resids(self):
         """Return timing model residuals in pulse phase."""
@@ -23,7 +29,9 @@ class resids(object):
 
     def calc_time_resids(self):
         """Return timing model residuals in time (seconds)."""
-        return (self.calc_phase_resids() / self.get_PSR_freq()).to(u.s)
+        if self.phase_resids==None:
+            self.phase_resids = self.calc_phase_resids()
+        return (self.phase_resids / self.get_PSR_freq()).to(u.s)
 
     def get_PSR_freq(self):
         """Return pulsar rotational frequency in Hz. model.F0 must be defined."""
@@ -47,7 +55,7 @@ class resids(object):
     def calc_chi2(self):
         """Return the weighted chi-squared for the model and toas."""
         # Residual units are in seconds. Error units are in microseconds.
-        return ((self.time_resids / self.toas.get_errors())**2.0).sum()
+        return ((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()
 
     def get_dof(self):
         """Return number of degrees of freedom for the model."""
