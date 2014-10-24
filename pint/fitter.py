@@ -1,9 +1,8 @@
 # fitter.py
 # Defines the basic TOA fitter class
-import numpy
+import copy, numpy
 import astropy.units as u
-import astropy.coordinates.angles
-import copy
+import astropy.coordinates.angles as ang
 import scipy.optimize as opt
 from utils import has_astropy_unit
 
@@ -101,8 +100,8 @@ class fitter(object):
         fitp = [p for p in self.model.params if not getattr(self.model,p).frozen]
         fitval = []
         for p in fitp:
-            fitval.append(getattr(self.model,p).value)
-        return {k: v for k,v in zip(fitp,fitval)}
+            fitval.append(getattr(self.model, p).value)
+        return {k: v for k, v in zip(fitp, fitval)}
 
     def set_params(self, fitp):
         """Set the model parameters to the value contained in the input dict.
@@ -112,16 +111,16 @@ class fitter(object):
         for p, val in zip(fitp.keys(), fitp.values()):
             # If value is unitless but model parameter is not, interpret the
             # value as being in the same units as the model
-            modval=getattr(self.model,p).value
+            modval = getattr(self.model, p).value
             # Right now while the code below preserves the unit, Angle types
             # become generic astropy quantities. Still, the timing model appears
             # to work.
             if not has_astropy_unit(val) and has_astropy_unit(modval):
-                if type(modval) is astropy.coordinates.angles.Angle:
-                    val=astropy.coordinates.angles.Angle(val, unit=modval.unit)
+                if type(modval) is ang.Angle:
+                    val = ang.Angle(val, unit=modval.unit)
                 else:
-                    val=val*modval.unit
-            getattr(self.model,p).value = val
+                    val = val * modval.unit
+            getattr(self.model, p).value = val
 
     def minimize_func(self, x, *args):
         """Wrapper function for the residual class, meant to be passed to
@@ -145,9 +144,9 @@ class fitter(object):
         # Initial guesses are model params
         fitp = self.get_fitparams()
         # Input variables must be unitless
-        for k,v in zip(fitp.keys(),fitp.values()):
+        for k, v in zip(fitp.keys(), fitp.values()):
             if has_astropy_unit(v):
-                fitp[k]=v.value
+                fitp[k] = v.value
         self.fitresult=opt.minimize(self.minimize_func, fitp.values(),
                                     args=tuple(fitp.keys()),
                                     options={'maxiter':maxiter},
@@ -155,4 +154,3 @@ class fitter(object):
         # Update model and resids, as the last iteration of minimize is not
         # necessarily the one that yields the best fit
         self.minimize_func(numpy.atleast_1d(self.fitresult.x), *fitp.keys())
-
