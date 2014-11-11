@@ -417,8 +417,8 @@ class TOAs(object):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
-            xyz = observatories[obs].loc.geocentric
             if (key['obs'] in observatories):
+                xyz = observatories[obs].loc.geocentric
                 for jj, grprow in enumerate(grp):
                     ind = jj+loind
                     earth_obs = erfautils.topo_posvels(xyz, grprow)
