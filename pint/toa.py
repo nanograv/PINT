@@ -154,9 +154,9 @@ class TOA(object):
                  error=0.0, obs='bary', freq=float("inf"),
                  scale='utc', # with defaults
                  **kwargs):  # keyword args that are completely optional
-        if obs not in observatories:
+        if obs not in observatories and obs != "Barycenter":
             raise ValueError("Unknown observatory %s" % obs)
-        if obs is "Barycenter":
+        if obs == "Barycenter":
             self.mjd = time.Time(MJD[0], MJD[1],
                                 scale='tdb', format='mjd',
                                 precision=9)
