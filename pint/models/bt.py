@@ -159,15 +159,13 @@ class BT(TimingModel):
         # Check if it even makes sense to keep it here.
         xpbdot = 0
         omdot = self.OMDOT.value
-        omega = self.OM.value
+        omega = self.OM.value + omdot*tt0*(np.pi/180.0)/(SECS_PER_DAY*365.25)
         gamma = self.GAMMA.value
         torb = 0
 
         orbits = tt0 / pb - 0.5 * (pbdot + xpbdot) * (tt0 / pb) ** 2
-
         norbits = np.array(np.floor(orbits), dtype=np.long)
         phase = 2 * np.pi * (orbits - norbits)
-
         bige = self.eccentric_anomaly(ecc, phase)
 
         tt = 1.0 - ecc ** 2;
