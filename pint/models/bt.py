@@ -163,7 +163,9 @@ class BT(TimingModel):
         gamma = self.GAMMA.value
         torb = 0
 
-        phase = np.fmod(tt0, pb) * 2*np.pi/pb
+        orbits = tt0 / pb - 0.5 * (pbdot + xpbdot) * (tt0 / pb) ** 2
+        norbits = np.array(np.floor(orbits), dtype=np.long)
+        phase = 2 * np.pi * (orbits - norbits)
         bige = self.eccentric_anomaly(ecc, phase)
 
         tt = 1.0 - ecc ** 2;
