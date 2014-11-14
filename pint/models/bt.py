@@ -130,9 +130,11 @@ class BT(TimingModel):
         return ecc_anom
 
     def BT_delay(self, toas):
-        """Actual delay calculation of the BT model
-            From BTmodel.C in TEMPO2, and so in turn from bnrybt.f in TEMPO
-            toas are really toas.table"""
+        """Actual delay calculation of the BT model (equation 5 of Taylor &
+            Weisberg, 1989, ApJ, 345, 434-450)
+            From BTmodel.C in TEMPO2, and so in turn from bnrybt.f in TEMPO.
+            toas are really toas.table
+            """
 
         # *****************************************
         #  FROM HERE I'm working on ARRAYS
