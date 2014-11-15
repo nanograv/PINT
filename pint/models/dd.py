@@ -92,13 +92,10 @@ def DD_delay_func(t, PB, T0, A1, OM=0.0, ECC=0.0, EDOT=0.0, PBDOT=0.0, XDOT=0.0,
     ecc = ECC + edot*tt0
     er, eth = ecc*(1.0+dr), ecc*(1.0+dth)
 
-    print(si, m2, pb, an, k, time_to_longdouble(t0), ct[0], omz, xdot, pbdot, \
-            edot, x[0], ecc[0], k)
-
     assert np.all(np.logical_and(ecc >= 0, ecc <= 1)), \
         "DD model: Eccentricity goes out of range"
 
-    orbits = tt0/pb - 0.5*(pbdot+xpbdot)*(tt0/pb)*(tt0/pb)**2
+    orbits = tt0/pb - 0.5*(pbdot+xpbdot)*(tt0/pb)**2
     norbits = np.array(np.floor(orbits), dtype=np.long)
     phase = 2 * np.pi * (orbits - norbits)
     u = eccentric_anomaly(ecc, phase)
@@ -191,6 +188,7 @@ class DD(TimingModel):
         self.add_param(Parameter(name="XDOT",
             units="s/s",
             description="Rate of change of semi-major axis",
+            aliases = ["A1DOT"],
             parse_value=np.double))
 
         self.add_param(Parameter(name="EDOT",
@@ -266,8 +264,22 @@ class DD(TimingModel):
 
         t = np.array([ti for ti in toas['tdbld']], dtype=np.longdouble)
 
+        # Tempo2 uses some unit conversions, with the following comments:
+        # /* Check units: DO BETTER JOB */  :(
+        edot = self.EDOT.value
+        if edot > 1.0e-7:
+            edot *= 1.0e-12
+
+        pbdot = self.PBDOT.value
+        if pbdot > 1.0e-7:
+            pbdot *= 1.0e-12
+
+        xdot = self.XDOT.value
+        if xdot > 1.0e-7:
+            xdot *= 1.0e-12
+
         return DD_delay_func(t, self.PB.value, self.T0.value, self.A1.value, \
-                self.OM.value, self.E.value, self.EDOT.value, \
-                self.PBDOT.value, self.XDOT.value, self.OMDOT.value, \
+                self.OM.value, self.E.value, edot, \
+                pbdot, xdot, self.OMDOT.value, \
                 self.M2.value, self.GAMMA.value, \
                 sini=self.SINI.value, kin=self.KIN.value, XPBDOT=0.0)
