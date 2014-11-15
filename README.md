@@ -4,8 +4,10 @@ PINT
 ## PINT is not TEMPO3
 
 PINT is a project to develop a new pulsar timing solution based on
-python and modern libraries.  It is in the _extremely_ early stages of
-development.
+python and modern libraries.  It is in the very early stages of
+development, but it can already produce residuals from most "normal"
+timing models that agree with Tempo and Tempo2 to within ~10
+nanoseconds.
 
 The primary reasons we are developing PINT are:
   - To have a robust system to check high-precision timing results that is completely independent of TEMPO and TEMPO2
@@ -33,6 +35,7 @@ The primary reasons we are developing PINT are:
 
 ## Team members or interested parties include (alphabetical order):
  - Anne Archibald
+ - Matteo Bachetti
  - Paul Demorest
  - Luo Jing
  - Rick Jenet
@@ -43,7 +46,6 @@ The primary reasons we are developing PINT are:
 
 ## Required packages/libraries
  - numpy
- - mpmath (the hope is to phase out this requirement)
  - astropy (development version): http://github.com/astropy/astropy
  - PySPICE: http://github.com/rca/PySPICE
  - Latest ERFA: http://github.com/liberfa/erfa-fetch  See below to compile.
