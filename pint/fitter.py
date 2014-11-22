@@ -5,68 +5,7 @@ import astropy.units as u
 import astropy.coordinates.angles as ang
 import scipy.optimize as opt
 from utils import has_astropy_unit
-
-class resids(object):
-    """resids(toa=None, model=None)"""
-
-    def __init__(self, toas=None, model=None):
-        self.toas = toas
-        self.model = model
-        if toas is not None and model is not None:
-            self.phase_resids = self.calc_phase_resids()
-            self.time_resids = self.calc_time_resids()
-            self.chi2 = self.calc_chi2()
-            self.dof = self.get_dof()
-            self.chi2_reduced = self.chi2 / self.dof
-        else:
-            self.phase_resids = None
-            self.time_resids = None
-
-    def calc_phase_resids(self):
-        """Return timing model residuals in pulse phase."""
-        return self.model.phase(self.toas.table).frac
-
-    def calc_time_resids(self):
-        """Return timing model residuals in time (seconds)."""
-        if self.phase_resids==None:
-            self.phase_resids = self.calc_phase_resids()
-        return (self.phase_resids / self.get_PSR_freq()).to(u.s)
-
-    def get_PSR_freq(self):
-        """Return pulsar rotational frequency in Hz. model.F0 must be defined."""
-        if self.model.F0.units != 'Hz':
-            ValueError('F0 units must be Hz')
-        # All residuals require the model pulsar frequency to be defined
-        F0names = ['F0', 'nu'] # recognized parameter names, needs to be changed
-        nF0 = 0
-        for n in F0names:
-            if n in self.model.params:
-                F0 = getattr(self.model, n).value
-                nF0 += 1
-        if nF0 == 0:
-            raise ValueError('no PSR frequency parameter found; ' +
-                             'valid names are %s' % F0names)
-        if nF0 > 1:
-            raise ValueError('more than one PSR frequency parameter found; ' +
-                             'should be only one from %s' % F0names)
-        return F0 * u.Hz
-
-    def calc_chi2(self):
-        """Return the weighted chi-squared for the model and toas."""
-        # Residual units are in seconds. Error units are in microseconds.
-        return ((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()
-
-    def get_dof(self):
-        """Return number of degrees of freedom for the model."""
-        dof = self.toas.ntoas
-        for p in self.model.params:
-            dof -= bool(not getattr(self.model, p).frozen)
-        return dof
-
-    def get_reduced_chi2(self):
-        """Return the weighted reduced chi-squared for the model and toas."""
-        return self.calc_chi2() / self.get_dof()
-
+from .residuals import resids
 
 class fitter(object):
     """fitter(toas=None, model=None)"""
@@ -115,7 +54,7 @@ class fitter(object):
             # Right now while the code below preserves the unit, Angle types
             # become generic astropy quantities. Still, the timing model appears
             # to work.
-            if not has_astropy_unit(val) and has_astropy_unit(modval):
+            if (not has_astropy_unit(val)) and has_astropy_unit(modval):
                 if type(modval) is ang.Angle:
                     val = ang.Angle(val, unit=modval.unit)
                 else:
@@ -130,6 +69,8 @@ class fitter(object):
         """
         # Minimze takes array of dimensionless input variables. Put back into
         # dict form and set the model.
+        if type(x) is u.Quantity:
+            x = x.value
         fitp = {k: v for k, v in zip(args, x)}
         self.set_params(fitp)
         # Get new residuals

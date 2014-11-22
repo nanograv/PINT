@@ -230,7 +230,8 @@ class TOAs(object):
         if hasattr(self, "toas"):
             return numpy.array([t.freq for t in self.toas])
         else:
-            return self.table['freq']
+            x = self.table['freq']
+            return numpy.asarray(x) * x.unit
 
     def get_mjds(self):
         """Return a list of the astropy.times (UTC) of the TOAs"""
@@ -244,7 +245,8 @@ class TOAs(object):
         if hasattr(self, "toas"):
             return numpy.array([t.error for t in self.toas])
         else:
-            return self.table['error']
+            x = self.table['error']
+            return numpy.asarray(x) * x.unit
 
     def get_obss(self):
         """Return a numpy array of the observatories for each TOA"""

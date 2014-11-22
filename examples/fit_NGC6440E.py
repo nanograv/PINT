@@ -1,9 +1,11 @@
 #! /usr/bin/env python
-import numpy as np
 import pint.toa
 import pint.models
 import pint.fitter
+import pint.residuals
 import matplotlib.pyplot as plt
+import astropy.units as u
+import sys
 
 parfile = 'examples/NGC6440E.par'
 timfile = 'examples/NGC6440E.tim'
@@ -15,14 +17,32 @@ m.read_parfile(parfile)
 # Read in the TOAs
 t = pint.toa.get_TOAs(timfile)
 
+# These are pre-fit residuals
+rs = pint.residuals.resids(t, m).phase_resids
+plt.plot(t.get_mjds(), rs, 'x')
+plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
+plt.xlabel('MJD')
+plt.ylabel('Residual (phase)')
+plt.grid()
+plt.show()
+
 # Now do the fit
+print "Fitting..."
 f = pint.fitter.fitter(t, m)
 f.call_minimize()
 
-#plt.errorbar(t.get_MJDs(), f.residuals.time_residuals(),
-#             t.get_errors(), fmt=None)
-#plt.title("%s timing" % m.)
-#plt.xlabel('MJD')
-#plt.ylabel('Residual (us)')
-#plt.grid()
-#plt.show()
+# Print some basic params
+print "Best fit has reduced chi^2 of", f.resids.chi2_reduced
+print "RMS in phase is", f.resids.phase_resids.std()
+print "RMS in time is", f.resids.time_resids.std().to(u.us)
+print "\n Best model is:"
+print f.model.as_parfile()
+
+plt.errorbar(t.get_mjds(),
+             f.resids.time_resids.to(u.us).value,
+             t.get_errors().to(u.us).value, fmt='x')
+plt.title("%s Post-Fit Timing Residuals" % m.PSR.value)
+plt.xlabel('MJD')
+plt.ylabel('Residual (us)')
+plt.grid()
+plt.show()
