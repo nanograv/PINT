@@ -10,7 +10,7 @@ else:
 
 # The following needs to be set to point to the top-level directory
 # of the PySPICE installation.
-pyspice = "/Users/vhaaster/research/code/PySPICE"
+pyspice = "/usr/local/src/PySPICE"
 
 # The following is the command to use for building in-place for development
 # python setup.py build_ext --inplace
@@ -47,7 +47,7 @@ setup(
 
     py_modules = ['pint.models.timing_model', 'pint.models.astrometry',
         'pint.models.dispersion', 'pint.models.spindown',
-        'pint.models.solar_system_ephemeris', 'pint.models.parameter',
+        'pint.models.parameter',
         'pint.models.solar_system_shapiro',
         'pint.models.bt', 'pint.models.dd',
         'pint.orbital.kepler'],
