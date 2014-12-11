@@ -38,7 +38,7 @@ def topo_posvels(xyz, toarow):
     dY = np.interp(mjd, iers_tab['MJD'], iers_tab['dY_2000A']) * u.arcsec
 
     # Get GCRS to CIRS matrix
-    rc2i = np.matrix(erfa.c2ixys(X+dX.to(u.rad).value, Y+dY.to(u.rad).value, S))
+    rc2i = erfa.c2ixys(X+dX.to(u.rad).value, Y+dY.to(u.rad).value, S)
     # Gets the TIO locator s'
     sp = erfa.sp00(*tt)
     # Get X and Y from IERS A
@@ -48,11 +48,11 @@ def topo_posvels(xyz, toarow):
     xp = np.interp(mjd, iers_tab['MJD'], iers_tab['PM_x']) * u.arcsec
     yp = np.interp(mjd, iers_tab['MJD'], iers_tab['PM_y']) * u.arcsec
     # Get the polar motion matrix
-    rpm = np.matrix(erfa.pom00(xp.to(u.rad).value, yp.to(u.rad).value, sp))
+    rpm = erfa.pom00(xp.to(u.rad).value, yp.to(u.rad).value, sp)
 
     # Observatory XYZ coords in meters
     xyzm = np.array([a.to(u.m).value for a in xyz])
-    x, y, z = (xyzm * rpm).A1  # matrix rot, return 1D vec
+    x, y, z = np.dot(xyzm, rpm)
 
     # Functions of Earth Rotation Angle
     ut1 = toa.ut1.jd1, toa.ut1.jd2
@@ -61,11 +61,11 @@ def topo_posvels(xyz, toarow):
 
     # Position
     pos = np.asarray([c*x - s*y, s*x + c*y, z])
-    pos = (pos * rc2i).A1 * u.m # matrix rot, return 1D vec
+    pos = np.dot(pos, rc2i) * u.m
 
     # Velocity
     vel = np.asarray([OM * (-s*x - c*y), OM * (c*x - s*y), 0.0])
-    vel = (vel * rc2i).A1 * u.m / u.s # matrix rot, return 1D vec
+    vel = np.dot(vel, rc2i) * u.m / u.s
 
     return utils.PosVel(pos, vel, obj=toarow['obs'], origin="EARTH")
 
