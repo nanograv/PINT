@@ -1,4 +1,4 @@
-import utils, math
+import utils
 import numpy as np
 import astropy.units as u
 import astropy.erfa as erfa
@@ -18,7 +18,7 @@ iers_tab = IERS.iers_table
 observatories = obsmod.read_observatories()
 
 # Earth rotation rate in radians per UT1 second
-OM = 1.00273781191135448 * 2.0 * math.pi / 86400.0
+OM = 1.00273781191135448 * 2.0 * np.pi / 86400.0
 
 # arcsec to radians
 asec2rad = 4.84813681109536e-06
