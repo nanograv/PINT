@@ -47,9 +47,8 @@ The primary reasons we are developing PINT are:
 ## Required packages/libraries
  - numpy
  - astropy (development version): http://github.com/astropy/astropy
+   - Note that astropy now contains ERFA bindings, so we do *not* need to install it separately.
  - PySPICE: http://github.com/rca/PySPICE
- - Latest ERFA: http://github.com/liberfa/erfa-fetch  See below to compile.
- - ERFA python: http://github.com/nirinA/erfa_python
 
 ## Additional packages/libraries for developers
  - pylint
@@ -110,24 +109,3 @@ the warning as a reminder until you or somebody else figure out how to
 break up the method into simpler pieces.
 
 [guidelines]: http://docs.astropy.org/en/stable/development/docguide.html
-
-## NOTE:  Compiling ERFA from scratch
-This can be a kind of a PITA, so until ERFA is part of astropy (which
-we hope will happen).  You can use the following "script" to compile
-and install it.
-
---------------------------
-    export INSTDIR=/home/sransom
-    git clone https://github.com/liberfa/erfa-fetch.git
-    cd erfa-fetch
-    python sofa_deriver.py
-    cd erfa
-    gcc -O2 -I. -c -fPIC *.c
-    gcc -shared -o liberfa.so *.o -lm
-    # On Mac, do the following instead
-    # gcc -shared -Wl,-compatibility_version,2.0.0,-current_version,2.0.0 -o liberfa.so *.o -lm
-    cp erfa*.h $INSTDIR/include/
-    cp liberfa.so $INSTDIR/lib/liberfa.so.1.0.0
-    ln -sf $INSTDIR/lib/liberfa.so.1.0.0 $INSTDIR/lib/liberfa.so
-    ln -sf $INSTDIR/lib/liberfa.so.1.0.0 $INSTDIR/lib/liberfa.so.1
---------------------------
