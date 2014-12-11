@@ -1,6 +1,7 @@
-import math, utils, numpy
+import utils
+import numpy as np
 import astropy.units as u
-import erfa
+import astropy.erfa as erfa
 
 from astropy.utils.iers import IERS_A, IERS_A_URL, IERS_B, IERS_B_URL, IERS
 from astropy.utils.data import download_file
@@ -10,6 +11,9 @@ iers_b_file = download_file(IERS_B_URL, cache=True)
 iers_b = IERS_B.open(iers_b_file)
 IERS.iers_table = iers_b
 iers_tab = IERS.iers_table
+
+# Earth rotation rate in radians per UT1 second
+OM = 1.00273781191135448 * 2.0 * np.pi / 86400.0
 
 def topo_posvels(xyz, toarow):
     """Return a PosVel instance for the observatory at the time of the TOA
@@ -27,44 +31,41 @@ def topo_posvels(xyz, toarow):
     X, Y, S = erfa.xys00a(*tt)
 
     # Get dX and dY from IERS A
-    #dX = numpy.interp(mjd, iers_tab['MJD'], iers_tab['dX_2000A_B']) * u.arcsec
-    #dY = numpy.interp(mjd, iers_tab['MJD'], iers_tab['dY_2000A_B']) * u.arcsec
+    #dX = np.interp(mjd, iers_tab['MJD'], iers_tab['dX_2000A_B']) * u.arcsec
+    #dY = np.interp(mjd, iers_tab['MJD'], iers_tab['dY_2000A_B']) * u.arcsec
     # Get dX and dY from IERS B
-    dX = numpy.interp(mjd, iers_tab['MJD'], iers_tab['dX_2000A']) * u.arcsec
-    dY = numpy.interp(mjd, iers_tab['MJD'], iers_tab['dY_2000A']) * u.arcsec
+    dX = np.interp(mjd, iers_tab['MJD'], iers_tab['dX_2000A']) * u.arcsec
+    dY = np.interp(mjd, iers_tab['MJD'], iers_tab['dY_2000A']) * u.arcsec
 
     # Get GCRS to CIRS matrix
-    rc2i = erfa.c2ixys(X+dX.to(u.rad).value, Y+dY.to(u.rad).value, S)
+    rc2i = np.matrix(erfa.c2ixys(X+dX.to(u.rad).value, Y+dY.to(u.rad).value, S))
     # Gets the TIO locator s'
     sp = erfa.sp00(*tt)
     # Get X and Y from IERS A
-    #xp = numpy.interp(mjd, iers_tab['MJD'], iers_tab['PM_X_B']) * u.arcsec
-    #yp = numpy.interp(mjd, iers_tab['MJD'], iers_tab['PM_Y_B']) * u.arcsec
+    #xp = np.interp(mjd, iers_tab['MJD'], iers_tab['PM_X_B']) * u.arcsec
+    #yp = np.interp(mjd, iers_tab['MJD'], iers_tab['PM_Y_B']) * u.arcsec
     # Get X and Y from IERS B
-    xp = numpy.interp(mjd, iers_tab['MJD'], iers_tab['PM_x']) * u.arcsec
-    yp = numpy.interp(mjd, iers_tab['MJD'], iers_tab['PM_y']) * u.arcsec
+    xp = np.interp(mjd, iers_tab['MJD'], iers_tab['PM_x']) * u.arcsec
+    yp = np.interp(mjd, iers_tab['MJD'], iers_tab['PM_y']) * u.arcsec
     # Get the polar motion matrix
-    rpm = erfa.pom00(xp.to(u.rad).value, yp.to(u.rad).value, sp)
+    rpm = np.matrix(erfa.pom00(xp.to(u.rad).value, yp.to(u.rad).value, sp))
 
     # Observatory XYZ coords in meters
-    xyzm = [a.to(u.m).value for a in xyz]
-    x, y, z = erfa.trxp(rpm, xyzm)
+    xyzm = np.array([a.to(u.m).value for a in xyz])
+    x, y, z = (xyzm * rpm).A1  # matrix rot, return 1D vec
 
     # Functions of Earth Rotation Angle
     ut1 = toa.ut1.jd1, toa.ut1.jd2
     theta = erfa.era00(*ut1)
-    s, c = math.sin(theta), math.cos(theta)
+    s, c = np.sin(theta), np.cos(theta)
 
     # Position
-    pos = numpy.asarray([c*x - s*y, s*x + c*y, z])
-    pos = erfa.trxp(rc2i, pos) * u.m
-
-    # Earth rotation rate in radians per UT1 second
-    OM = 1.00273781191135448 * 2 * math.pi / erfa.DAYSEC
+    pos = np.asarray([c*x - s*y, s*x + c*y, z])
+    pos = (pos * rc2i).A1 * u.m # matrix rot, return 1D vec
 
     # Velocity
-    vel = numpy.asarray([OM * (-s*x - c*y), OM * (c*x - s*y), 0.0])
-    vel = erfa.trxp(rc2i, vel) * u.m / u.s
+    vel = np.asarray([OM * (-s*x - c*y), OM * (c*x - s*y), 0.0])
+    vel = (vel * rc2i).A1 * u.m / u.s # matrix rot, return 1D vec
 
     return utils.PosVel(pos, vel, obj=toarow['obs'], origin="EARTH")
 
@@ -82,13 +83,13 @@ def topo_posvels_array(TOAs):
         
     # Interp the IERS table        
     # Get dX and dY from IERS B
-    dX = numpy.interp(mjd, iers_tab['MJD'], iers_tab['dX_2000A']) * u.arcsec
-    dY = numpy.interp(mjd, iers_tab['MJD'], iers_tab['dY_2000A']) * u.arcsec
+    dX = np.interp(mjd, iers_tab['MJD'], iers_tab['dX_2000A']) * u.arcsec
+    dY = np.interp(mjd, iers_tab['MJD'], iers_tab['dY_2000A']) * u.arcsec
     # Get the TIO locator s'
-    xp = numpy.interp(mjd, iers_tab['MJD'], iers_tab['PM_x']) * u.arcsec
-    yp = numpy.interp(mjd, iers_tab['MJD'], iers_tab['PM_y']) * u.arcsec
+    xp = np.interp(mjd, iers_tab['MJD'], iers_tab['PM_x']) * u.arcsec
+    yp = np.interp(mjd, iers_tab['MJD'], iers_tab['PM_y']) * u.arcsec
         
-    posvel = numpy.zeros((TOAs.NumToa,6))
+    posvel = np.zeros((TOAs.NumToa,6))
     for ii in range(TOAs.NumToa):
         obsname = TOAs.dataTable['obs'][ii]
         # Get GCRS to CIRS matrix
@@ -108,21 +109,18 @@ def topo_posvels_array(TOAs):
         # Functions of earth Roatation Angle
 
         theta = erfa.era00(*(ut1[ii,0],ut1[ii,1]))
-        s, c = math.sin(theta), math.cos(theta)
+        s, c = np.sin(theta), np.cos(theta)
             
         # Position 
 
-        pos = numpy.asarray([c*x - s*y, s*x + c*y, z])
+        pos = np.asarray([c*x - s*y, s*x + c*y, z])
         pos = erfa.trxp(rc2i,pos)*u.m
 
-        # Earth rotation rate in radians per UT1 second
-        OM = 1.00273781191135448 * 2 * math.pi / erfa.DAYSEC
-
         # Velocity
-        vel = numpy.asarray([OM * (-s*x - c*y), OM * (c*x - s*y), 0.0])
+        vel = np.asarray([OM * (-s*x - c*y), OM * (c*x - s*y), 0.0])
         vel = erfa.trxp(rc2i, vel)*u.m/u.s 
         
-        posvel[ii] = numpy.hstack((pos,vel))
+        posvel[ii] = np.hstack((pos,vel))
     
     return posvel  
 
