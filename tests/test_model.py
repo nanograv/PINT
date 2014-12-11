@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 import tempo2_utils
 from astropy import log
 
-#log.setLevel('ERROR')
+log.setLevel('ERROR')
 # for nice output info, set the following instead
-log.setLevel('INFO')
+#log.setLevel('INFO')
 
 parfile = 'tests/J1744-1134.basic.par'
 t1_parfile = 'tests/J1744-1134.t1.par'

@@ -420,22 +420,21 @@ class TOAs(object):
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
             if (key['obs'] in observatories):
-                xyz = observatories[obs].loc.geocentric
+                earth_obss = erfautils.topo_posvels(obs, grp)
                 for jj, grprow in enumerate(grp):
                     ind = jj+loind
-                    earth_obs = erfautils.topo_posvels(xyz, grprow)
                     et = float((grprow['tdbld'] - J2000ld) * SECS_PER_DAY)
                     ssb_earth = objPosVel("SSB", "EARTH", et)
-                    obs_sun = objPosVel("EARTH", "SUN", et) - earth_obs
+                    obs_sun = objPosVel("EARTH", "SUN", et) - earth_obss[jj]
                     obs_sun_pos[ind,:] = obs_sun.pos
-                    ssb_obs = ssb_earth + earth_obs
+                    ssb_obs = ssb_earth + earth_obss[jj]
                     ssb_obs_pos[ind,:] = ssb_obs.pos
                     ssb_obs_vel[ind,:] = ssb_obs.vel
                     if planets:
                         for p in ('jupiter', 'saturn', 'venus', 'uranus'):
                             name = 'obs_'+p+'_pos'
                             dest = p.upper()+" BARYCENTER"
-                            pv = objPosVel("EARTH", dest, et) - earth_obs
+                            pv = objPosVel("EARTH", dest, et) - earth_obss[jj]
                             plan_poss[name][ind,:] = pv.pos
         cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
         if planets:
