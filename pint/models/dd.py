@@ -1,9 +1,8 @@
 """This model provides the DD (Damour & Deruelle 1986, AIHS, 44, 263-292) model.
     Based on DDmodel.C in TEMPO2
     """
-
 import astropy.units as u
-from astropy.time.core import SECS_PER_DAY
+from astropy.erfa import DAYSEC as SECS_PER_DAY
 from .parameter import Parameter, MJDParameter
 from .timing_model import TimingModel, MissingParameter
 from ..phase import Phase

@@ -5,6 +5,8 @@ import astropy.erfa as erfa
 import astropy.table as table
 from . import observatories as obsmod
 
+SECS_PER_DAY = erfa.DAYSEC
+
 from astropy.utils.iers import IERS_A, IERS_A_URL, IERS_B, IERS_B_URL, IERS
 from astropy.utils.data import download_file
 # iers_a_file = download_file(IERS_A_URL, cache=True)
@@ -18,7 +20,7 @@ iers_tab = IERS.iers_table
 observatories = obsmod.read_observatories()
 
 # Earth rotation rate in radians per UT1 second
-OM = 1.00273781191135448 * 2.0 * np.pi / 86400.0
+OM = 1.00273781191135448 * 2.0 * np.pi / SECS_PER_DAY
 
 # arcsec to radians
 asec2rad = 4.84813681109536e-06

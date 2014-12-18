@@ -4,7 +4,7 @@
 # Defines Spindown timing model class
 import numpy
 import astropy.units as u
-from astropy.time.core import SECS_PER_DAY
+from astropy.erfa import DAYSEC as SECS_PER_DAY
 from .parameter import Parameter, MJDParameter
 from .timing_model import TimingModel, MissingParameter
 from ..phase import *
