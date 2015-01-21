@@ -2,6 +2,7 @@
 import numpy as np
 import string
 import astropy.time
+import astropy.erfa
 import astropy.units as u
 from astropy import log
 from spice_util import str2ldarr1
