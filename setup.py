@@ -10,7 +10,7 @@ else:
 
 # The following needs to be set to point to the top-level directory
 # of the PySPICE installation.
-pyspice = "/usr/local/src/PySPICE"
+pyspice = "/Users/jingluo/Research_codes/PySPICE/PySPICE"
 
 # The following is the command to use for building in-place for development
 # python setup.py build_ext --inplace
