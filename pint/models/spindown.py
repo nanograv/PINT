@@ -91,4 +91,4 @@ class Spindown(TimingModel):
             F0t = F0 + F1*((toas.data 
                     - time_to_longdouble(self.PEPOCH.value))*SECS_PER_DAY-delay)
         
-            return F0t
+            return numpy.longdouble(1.0)/F0t
