@@ -88,7 +88,9 @@ class Spindown(TimingModel):
         else:
             F0 = self.F0.value
             F1 = self.F1.value
+            dt = numpy.gradient(toas.data*SECS_PER_DAY)
+            dDelay = numpy.gradient(delay,dt)
             F0t = F0 + F1*((toas.data 
-                    - time_to_longdouble(self.PEPOCH.value))*SECS_PER_DAY-delay)
+                    - time_to_longdouble(self.PEPOCH.value))*SECS_PER_DAY-delay)*(1-dDelay)
         
-            return numpy.longdouble(1.0)/F0t
+            return F0t,1-dDelay
