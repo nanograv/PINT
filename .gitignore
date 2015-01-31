@@ -40,6 +40,7 @@ datafiles/de421.bsp
 datafiles/de430t.bsp
 datafiles/earth_latest_high_prec.bpc
 datafiles/naif0010.tls
+datafiles/naif0011.tls
 datafiles/pck00010.tpc
 datafiles/de-403-masses.tpc
 
