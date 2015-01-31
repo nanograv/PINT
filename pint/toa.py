@@ -203,8 +203,11 @@ class TOAs(object):
             self.commands = []
             self.filename = None
         if not hasattr(self, 'table'):
+            mjds = self.get_mjds()
+            self.first_MJD = mjds.min()
+            self.last_MJD = mjds.max()
             # The table is grouped by observatory
-            self.table = table.Table([numpy.arange(self.ntoas), self.get_mjds(),
+            self.table = table.Table([numpy.arange(self.ntoas), mjds,
                                       self.get_errors()*u.us, self.get_freqs()*u.MHz,
                                       self.get_obss(), self.get_flags()],
                                       names=("index", "mjd", "error", "freq",
@@ -325,9 +328,10 @@ class TOAs(object):
                 tvals = numpy.array([t.mjd for t in grp['mjd']])
                 if numpy.any((tvals < mjds[0]) | (tvals > mjds[-1])):
                     # FIXME: check the user sees this! should it be an exception?
-                    log.error("Some TOAs are not covered by the %s clock correction"
+                    log.error(
+                        "Some TOAs are not covered by the %s clock correction"%key['obs']
                         +" file, treating clock corrections as constant"
-                        +" past the ends." % obsname)
+                        +" past the ends.")
                 gcorr = numpy.interp(tvals, mjds, ccorr) * u.us
                 for jj, cc in enumerate(gcorr):
                     grp['mjd'][jj] += time.TimeDelta(cc)
@@ -345,7 +349,7 @@ class TOAs(object):
         rotation corrections for UT1.
         """
         from astropy.utils.iers import IERS_A, IERS_A_URL
-        from astropy.utils.data import download_file
+        from astropy.utils.data import download_file, clear_download_cache
         global iers_a_file, iers_a
         # First make sure that we have already applied clock corrections
         ccs = False
@@ -356,8 +360,17 @@ class TOAs(object):
         # These will be the new table columns
         col_tdb = numpy.zeros_like(self.table['mjd'])
         col_tdbld = numpy.zeros(self.ntoas, dtype=numpy.longdouble)
-        # Read the IERS for ut1_utc corrections
+        # Read the IERS for ut1_utc corrections, if needed
         iers_a_file = download_file(IERS_A_URL, cache=True)
+        # Check to see if the cached file is older than any of the TOAs
+        iers_file_time = time.Time(os.path.getctime(iers_a_file), format="unix")
+        if (iers_file_time.mjd < self.last_MJD.mjd):
+            clear_download_cache(iers_a_file)
+            try:
+                log.warn("Cached IERS A file is out-of-date.  Re-downloading.")
+                iers_a_file = download_file(IERS_A_URL, cache=True)
+            except:
+                pass
         iers_a = IERS_A.open(iers_a_file)
         # Now step through in observatory groups to compute TDBs
         for ii, key in enumerate(self.table.groups.keys):
