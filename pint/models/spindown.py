@@ -71,26 +71,3 @@ class Spindown(TimingModel):
         F1 = self.F1.value
         phase = (F0 + 0.5 * F1 * (dt - 2.0 * dt_pepoch)) * dt
         return phase
-
-
-
-    def get_period(self, toas, delay):
-        """A function to get sping frequency at any time.
-        Give a time. the return will be the pulsar F0 at that time.
-        """
-
-        toas = toas['tdbld']
-
-        # if F1 is not provided
-        if self.F1.value is None:
-            return 1.0/self.F0.value
-        # F1 is provided
-        else:
-            F0 = self.F0.value
-            F1 = self.F1.value
-            dt = numpy.gradient(toas.data*SECS_PER_DAY)
-            dDelay = numpy.gradient(delay,dt)
-            F0t = F0 + F1*((toas.data 
-                    - time_to_longdouble(self.PEPOCH.value))*SECS_PER_DAY-delay)*(1-dDelay)
-        
-            return F0t,1-dDelay
