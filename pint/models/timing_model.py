@@ -153,17 +153,31 @@ class TimingModel(object):
 
     def d_phase_d_toa(self, toas, maxStep = 3):
         """Return the derivative of phase wrt TOA
+        Time sample
+        --------------------------------------------------
+        Toa0-n*dt, Toa0-(n-1)*dt, ... Toa0, ..., Toa0+n*dt
+                                      Toa1,
+                                        .
+                                        .
+                                        .    
+        --------------------------------------------------    
+        x = [Toa0-n*dt, Toa0-(n-1)*dt, ... Toa0, ..., Toa0+n*dt]
+        y = phaes([Toa0-n*dt, Toa0-(n-1)*dt, ... Toa0, ..., Toa0+n*dt])
+        
+        dy/dx will be calculated using numpy gradient. 
+        d_phase_d_toa = dy/dx(toa) 
 
-        (i.e. the apparent spin freq of the pulsar at the observatory).
-        NOT implemented yet.
         """
     
         # Using finite difference, resample near the toas
         dt = np.longdouble(1.0)/self.F0.value*10000
         sampleArray = np.linspace(-maxStep*dt,maxStep*dt,2*maxStep+1)
-        toas_Temp = toas
+        toas_Temp = toas # Add a temp toa table
+        # matrix for new time sample and phase value
         time_tdb = np.longdouble(np.zeros((len(toas),len(sampleArray))))
         p = np.zeros_like(time_tdb)
+        # Calculate the phase for each time sample
+        
         for i,timeStep in enumerate(sampleArray):
             toas_Temp['tdbld'] = toas['tdbld']+timeStep/86400.0
             ph = self.phase(toas_Temp)
@@ -171,11 +185,12 @@ class TimingModel(object):
             time_tdb[:,i] = toas_Temp['tdbld']
 
         dy = np.zeros_like(p)
-
+        # Do derivative on time samples near toas. 
         for i in range(len(toas)):
             dx = np.gradient(time_tdb[i,:]*86400.0)
             y = p[i,:]
             dy[i,:] = np.gradient(y-np.mean(y),dx)
+        # Return derivative value on toa.
         return dy[:,maxStep]
 
         
