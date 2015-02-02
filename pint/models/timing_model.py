@@ -151,13 +151,34 @@ class TimingModel(object):
         """
         pass
 
-    def d_phase_d_toa(self, toas):
+    def d_phase_d_toa(self, toas, maxStep = 3):
         """Return the derivative of phase wrt TOA
 
         (i.e. the apparent spin freq of the pulsar at the observatory).
         NOT implemented yet.
         """
-        pass
+    
+        # Using finite difference, resample near the toas
+        dt = np.longdouble(1.0)/self.F0.value*10000
+        sampleArray = np.linspace(-maxStep*dt,maxStep*dt,2*maxStep+1)
+        toas_Temp = toas
+        time_tdb = np.longdouble(np.zeros((len(toas),len(sampleArray))))
+        p = np.zeros_like(time_tdb)
+        for i,timeStep in enumerate(sampleArray):
+            toas_Temp['tdbld'] = toas['tdbld']+timeStep/86400.0
+            ph = self.phase(toas_Temp)
+            p[:,i] = ph.frac+ph.int
+            time_tdb[:,i] = toas_Temp['tdbld']
+
+        dy = np.zeros_like(p)
+
+        for i in range(len(toas)):
+            dx = np.gradient(time_tdb[i,:]*86400.0)
+            y = p[i,:]
+            dy[i,:] = np.gradient(y-np.mean(y),dx)
+        return dy[:,maxStep]
+
+        
 
     def d_phase_d_param(self, toas, param):
         """ Return the derivative of phase with respect to the parameter.
