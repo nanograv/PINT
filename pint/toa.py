@@ -138,7 +138,12 @@ class TOA(object):
         freq is the observatory-centric frequency in MHz
         freq
         other keyword/value pairs can be specified as needed
-
+        
+        # SUGGESTION(paulr): Here, or in a higher level document, the time system
+        # philosophy should be specified.  It looks like TOAs are assumed to be
+        # input as UTC(observatory) and then are converted to UTC(???) using the 
+        # observatory clock correction file.
+                
     Example:
         >>> a = TOA((54567, 0.876876876876876), 4.5, freq=1400.0,
         ...         obs="GBT", backend="GUPPI")
@@ -306,6 +311,13 @@ class TOAs(object):
         called 'clkcorr' so that it can be reversed if necessary.  This
         routine also applies all 'TIME' commands and treats them exactly
         as if they were a part of the observatory clock corrections.
+        
+        # SUGGESTION(paulr): Somewhere in this docstring, or in a higher level
+        # documentation, the assumptions about the timescales should be specified.
+        # The docstring says apply "correction" but does not say what it is correcting.
+        # Be more specific.
+
+        
         """
         # First make sure that we haven't already applied clock corrections
         flags = self.table['flags']
