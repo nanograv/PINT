@@ -138,6 +138,12 @@ def time_to_mjd_string(t, prec=15):
 
 def time_to_longdouble(t):
     """ Return an astropy Time value as MJD in longdouble
+    
+    ## SUGGESTION(paulr): This function is at least partly redundant with
+    ## ddouble2ldouble() below...
+    
+    ## Also, is it certain that this calculation retains the full precision?
+    
     """
     return np.longdouble(t.jd1 - erfa.DJM0) \
             + np.longdouble(t.jd2)
