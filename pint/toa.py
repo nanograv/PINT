@@ -6,7 +6,10 @@ import spice
 import astropy.time as time
 import astropy.table as table
 import astropy.units as u
-from astropy.erfa import DAYSEC as SECS_PER_DAY
+try:
+    from astropy.erfa import DAYSEC as SECS_PER_DAY
+except ImportError:
+    from astropy._erfa import DAYSEC as SECS_PER_DAY
 from spiceutils import objPosVel, load_kernels
 from pint import ls, pintdir, J2000, J2000ld
 from astropy import log

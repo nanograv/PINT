@@ -2,7 +2,10 @@
 import numpy as np
 import string
 import astropy.time
-import astropy.erfa
+try:
+    import astropy.erfa as erfa
+except ImportError:
+    import astropy._erfa as erfa
 import astropy.units as u
 from astropy import log
 from spice_util import str2ldarr1
@@ -119,7 +122,7 @@ def time_to_mjd_string(t, prec=15):
 
     astropy does not seem to provide this capability (yet?).
     """
-    jd1 = t.jd1 - astropy.erfa.DJM0
+    jd1 = t.jd1 - erfa.DJM0
     imjd = int(jd1)
     fjd1 = jd1 - imjd
     fmjd = t.jd2 + fjd1
@@ -136,7 +139,7 @@ def time_to_mjd_string(t, prec=15):
 def time_to_longdouble(t):
     """ Return an astropy Time value as MJD in longdouble
     """
-    return np.longdouble(t.jd1-astropy.erfa.DJM0) \
+    return np.longdouble(t.jd1 - erfa.DJM0) \
             + np.longdouble(t.jd2)
 
 def GEO_WGS84_to_ITRF(lon, lat, hgt):

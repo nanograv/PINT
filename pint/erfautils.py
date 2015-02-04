@@ -1,7 +1,10 @@
 import utils
 import numpy as np
 import astropy.units as u
-import astropy.erfa as erfa
+try:
+    import astropy.erfa as erfa
+except ImportError:
+    import astropy._erfa as erfa
 import astropy.table as table
 from . import observatories as obsmod
 
