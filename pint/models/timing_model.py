@@ -5,6 +5,8 @@ from .parameter import Parameter
 from ..phase import Phase
 from astropy import log
 import numpy as np
+import pint.toa as toa 
+import pint.utils as utils
 
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
@@ -193,7 +195,33 @@ class TimingModel(object):
         # Return derivative value on toa.
         return dy[:,maxStep]
 
-        
+    def d_phase_d_toa_chebyshev(self,toas,n = 12):
+        """Return the derivative of phase wrt TOA.
+
+           The derivation will be performed on the scale of one hour. 
+        """
+
+        step = np.longdouble(1.0)/self.F0.value*100
+        d_p_d_toa = []
+        for time,obs in zip(toas['mjd'],toas['obs']):
+            toa_utc_ld = utils.time_to_longdouble(time)
+            domain = (toa_utc_ld - np.longdouble(0.5)*3600.0/86400.0, 
+                      toa_utc_ld + np.longdouble(0.5)*3600.0/86400.0)
+            numData = np.longdouble(3600.0)/step
+            resmpl_time = np.linspace(domain[0],domain[1],numData)
+            toa_filelike = toa.TOA_file_like((np.modf(resmpl_time)[1],np.modf(resmpl_time)[0]),
+                            obs = obs)
+            resmpl_toas = toa.get_TOAs_filelike(toa_filelike)
+            ph = self.phase(resmpl_toas.table)
+            p = ph.int-ph.int.min()+ph.frac
+            p = np.array(p,dtype='float64')
+            resmpl_time = np.array((resmpl_time-resmpl_time.min())*86400.0,dtype = 'float64')
+            print resmpl_time.dtype
+            coeff = np.polynomial.chebyshev.chebfit(resmpl_time, p,n)
+            dcoeff = np.polynomial.chebyshev.chebder(coeff)
+            dy =  np.polynomial.chebyshev.chebval(resmpl_time,dcoeff)
+            d_p_d_toa.append(dy[len(resmpl_time)/2+1])
+        return np.array(d_p_d_toa)
 
     def d_phase_d_param(self, toas, param):
         """ Return the derivative of phase with respect to the parameter.
