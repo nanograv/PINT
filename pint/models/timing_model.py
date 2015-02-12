@@ -172,7 +172,7 @@ class TimingModel(object):
         """
     
         # Using finite difference, resample near the toas
-        dt = np.longdouble(1.0)/self.F0.value*10000
+        dt = np.longdouble(1.0)/self.F0.value/10
         sampleArray = np.linspace(-maxStep*dt,maxStep*dt,2*maxStep+1)
         toas_Temp = toas # Add a temp toa table
         # matrix for new time sample and phase value
@@ -201,13 +201,13 @@ class TimingModel(object):
            The derivation will be performed on the scale of one hour. 
         """
 
-        step = np.longdouble(1.0)/self.F0.value*100
+        step = np.longdouble(1.0)/self.F0.value/10
         d_p_d_toa = []
         for time,obs in zip(toas['mjd'],toas['obs']):
             toa_utc_ld = utils.time_to_longdouble(time)
-            domain = (toa_utc_ld - np.longdouble(0.5)*3600.0/86400.0, 
-                      toa_utc_ld + np.longdouble(0.5)*3600.0/86400.0)
-            numData = np.longdouble(3600.0)/step
+            domain = (toa_utc_ld - np.longdouble(0.5)*1.0/86400.0, 
+                      toa_utc_ld + np.longdouble(0.5)*1.0/86400.0)
+            numData = np.longdouble(1.0)/step
             resmpl_time = np.linspace(domain[0],domain[1],numData)
             toa_filelike = toa.TOA_file_like((np.modf(resmpl_time)[1],np.modf(resmpl_time)[0]),
                             obs = obs)
