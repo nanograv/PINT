@@ -153,7 +153,64 @@ class TimingModel(object):
         """
         pass
 
-    def d_phase_d_toa(self, toas, maxStep = 3):
+    def d_phase_d_toa(self, toas, time_intval = 60 ,method = None, 
+                      num_sample = 20, order = None):
+        """Return the derivative of phase wrt TOA
+            time_intval: is in seconds
+            method: with finite difference and chebyshev interpolation
+
+
+        """
+        d_phase_d_toa = np.zeros(len(toas))
+
+        if method is None or "FDM":  
+        # Using finite difference to calculate the derivitve  
+            dt = np.longdouble(time_intval)/np.longdouble(num_sample)
+            num_sample = int(num_sample)/2*2+1
+            for time,obs,i in zip(toas['mjd'],toas['obs'],range(len(toas))):
+                toa_utc_ld = utils.time_to_longdouble(time)
+                domain = (toa_utc_ld-time_intval/2.0,toa_utc_ld+time_intval/2.0)
+                sample = np.linspace(domain[0],domain[1],num_sample)
+                toa_filelike = toa.TOA_file_like((np.modf(sample)[1],np.modf(sample)[0]),
+                            obs = obs)
+                sample_time = toa.get_TOAs_filelike(toa_filelike)
+                ph = self.phase(sample_time.table)
+                p = ph.int-ph.int.min()+ph.frac
+                p = np.array(p,dtype='float64')
+
+                reduce_samepl = np.array((sample-sample.min())*86400.0,dtype = 'float64')
+                dx = np.gradient(reduce_samepl)
+                dp = np.gradient(p-p.mean(),dx)
+                d_phase_d_toa[i] = dp[num_sample/2]            
+
+        if method is "chebyshev":
+            if order is None:
+                raise ValueError, "Order is required."
+
+            for time,obs,i in zip(toas['mjd'],toas['obs'],range(len(toas))):
+                toa_utc_ld = utils.time_to_longdouble(time)
+                domain = (toa_utc_ld-time_intval/2.0,toa_utc_ld+time_intval/2.0)
+                sample = np.linspace(domain[0],domain[1],num_sample)
+                toa_filelike = toa.TOA_file_like((np.modf(sample)[1],np.modf(sample)[0]),
+                            obs = obs)
+                sample_time = toa.get_TOAs_filelike(toa_filelike)
+                ph = self.phase(sample_time.table)
+                p = ph.int-ph.int.min()+ph.frac
+                p = np.array(p,dtype='float64')
+
+                reduce_samepl = np.array((sample-sample.min())*86400.0,dtype = 'float64')
+                coeff = np.polynomial.chebyshev.chebfit(reduce_samepl, p,order)
+                dcoeff = np.polynomial.chebyshev.chebder(coeff)
+                dy =  np.polynomial.chebyshev.chebval(reduce_samepl,dcoeff)
+                d_phase_d_toa[i] = dy[num_sample/2]
+
+        return d_phase_d_toa
+
+
+
+        
+
+    def d_phase_d_toa_r(self, toas, maxStep = 3):
         """Return the derivative of phase wrt TOA
         Time sample
         --------------------------------------------------
@@ -191,6 +248,7 @@ class TimingModel(object):
         for i in range(len(toas)):
             dx = np.gradient(time_tdb[i,:]*86400.0)
             y = p[i,:]
+            print y
             dy[i,:] = np.gradient(y-np.mean(y),dx)
         # Return derivative value on toa.
         return dy[:,maxStep]
@@ -216,7 +274,6 @@ class TimingModel(object):
             p = ph.int-ph.int.min()+ph.frac
             p = np.array(p,dtype='float64')
             resmpl_time = np.array((resmpl_time-resmpl_time.min())*86400.0,dtype = 'float64')
-            print resmpl_time.dtype
             coeff = np.polynomial.chebyshev.chebfit(resmpl_time, p,n)
             dcoeff = np.polynomial.chebyshev.chebder(coeff)
             dy =  np.polynomial.chebyshev.chebval(resmpl_time,dcoeff)
