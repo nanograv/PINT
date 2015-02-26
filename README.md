@@ -40,6 +40,7 @@ The primary reasons we are developing PINT are:
  - Luo Jing
  - Rick Jenet
  - Scott Ransom
+ - Paul Ray
  - Chris Sheehy
  - Michele Vallisneri
  - Rutger van Haasteren
