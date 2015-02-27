@@ -173,8 +173,6 @@ class TOA(object):
                                 scale=scale, format='mjd',
                                 location=observatories[obs].loc,
                                 precision=9)
-        # SUGGESTION(paulr): I think all the quantities in a TOA object
-        # should have units, instead of adding them when making a TOAs object.
         if hasattr(error,'unit'):
             self.error = error
         else:
