@@ -48,3 +48,6 @@ datafiles/de-403-masses.tpc
 *matrix.tmp
 *resid2.tmp
 *tempo.lis
+
+# ipython notebook temps
+.ipynb_checkpoints
