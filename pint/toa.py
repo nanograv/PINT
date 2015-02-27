@@ -175,9 +175,15 @@ class TOA(object):
                                 precision=9)
         # SUGGESTION(paulr): I think all the quantities in a TOA object
         # should have units, instead of adding them when making a TOAs object.
-        self.error = error
+        if hasattr(error,'unit'):
+            self.error = error
+        else:
+            self.error = error * u.microsecond
         self.obs = obs
-        self.freq = freq
+        if hasattr(freq,'unit'):
+            self.freq = freq
+        else:
+            self.freq = freq * u.MHz
         self.flags = kwargs
 
     def __str__(self):
@@ -230,7 +236,7 @@ class TOAs(object):
             self.last_MJD = mjds.max()
             # The table is grouped by observatory
             self.table = table.Table([numpy.arange(self.ntoas), mjds,
-                                      self.get_errors()*u.us, self.get_freqs()*u.MHz,
+                                      self.get_errors(), self.get_freqs(),
                                       self.get_obss(), self.get_flags()],
                                       names=("index", "mjd", "error", "freq",
                                               "obs", "flags"),
@@ -253,7 +259,7 @@ class TOAs(object):
     def get_freqs(self):
         """Return a numpy array of the observing frequencies in MHz for the TOAs"""
         if hasattr(self, "toas"):
-            return numpy.array([t.freq for t in self.toas])
+            return numpy.array([t.freq.to(u.MHz).value for t in self.toas])*u.MHz
         else:
             x = self.table['freq']
             return numpy.asarray(x) * x.unit
@@ -268,7 +274,7 @@ class TOAs(object):
     def get_errors(self):
         """Return a numpy array of the TOA errors in us"""
         if hasattr(self, "toas"):
-            return numpy.array([t.error for t in self.toas])
+            return numpy.array([t.error.to(u.us).value for t in self.toas])*u.us
         else:
             x = self.table['error']
             return numpy.asarray(x) * x.unit
@@ -522,9 +528,9 @@ class TOAs(object):
             self.ntoas = 0
             self.toas = []
             self.commands = []
-            self.cdict = {"EFAC": 1.0, "EQUAD": 0.0,
-                          "EMIN": 0.0, "EMAX": 1e100,
-                          "FMIN": 0.0, "FMAX": 1e100,
+            self.cdict = {"EFAC": 1.0, "EQUAD": 0.0*u.us,
+                          "EMIN": 0.0*u.us, "EMAX": 1e100*u.us,
+                          "FMIN": 0.0*u.MHz, "FMAX": 1e100*u.MHz,
                           "INFO": None, "SKIP": False,
                           "TIME": 0.0, "PHASE": 0,
                           "PHA1": None, "PHA2": None,
@@ -548,7 +554,9 @@ class TOAs(object):
                         break
                     elif cmd in ("TIME", "PHASE"):
                         self.cdict[cmd] += float(d["Command"][1])
-                    elif cmd in ("EMIN", "EMAX", "EFAC", "EQUAD",\
+                    elif cmd in ("EMIN", "EMAX","EQUAD"):
+                        self.cdict[cmd] = float(d["Command"][1])*u.us
+                    elif cmd in ("EFAC", \
                                  "PHA1", "PHA2", "FMIN", "FMAX"):
                         self.cdict[cmd] = float(d["Command"][1])
                         if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
