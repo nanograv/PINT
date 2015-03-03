@@ -15,4 +15,4 @@ toa4  104.000 55336.989701996723497   3.842  gb   -fe Rcvr1_2 -be GASP
 JUMP
 
 INFO test2
-INCLUDE tests/test2.tim
+INCLUDE test2.tim
