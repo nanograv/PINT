@@ -1,20 +1,11 @@
 #! /usr/bin/env python
-import sys
+import sys,os
 import pint.models as tm
 
-try:
-    parfile
-except NameError:
-    parfile = None
+testdir=os.path.join(os.getenv('PINT'),'tests');
+parfile = os.path.join(testdir,'J1744-1134.basic.par')
 
-if parfile==None:
-    try:
-        parfile = sys.argv[1]
-    except IndexError:
-        print "usage: test_parfile.py (parfile)"
-        sys.exit(0)
-
-TestModel = tm.generate_timing_model("TestModel",(tm.Astrometry,tm.Spindown))
+TestModel = tm.generate_timing_model("TestModel",(tm.Astrometry,tm.Dispersion,tm.SolarSystemShapiro,tm.Spindown))
 m = TestModel()
 
 print "model.param_help():"

@@ -186,8 +186,8 @@ class TOA(object):
 
     def __str__(self):
         s = utils.time_to_mjd_string(self.mjd) + \
-            ": %6.3f us error from '%s' at %.4f MHz " % \
-            (self.error, self.obs, self.freq)
+            ": %6.3f %s error from '%s' at %.4f %s " % \
+            (self.error.value, self.error.unit, self.obs, self.freq.value,self.freq.unit)
         if len(self.flags):
             s += str(self.flags)
         return s
@@ -240,7 +240,9 @@ class TOAs(object):
                                               "obs", "flags"),
                                       meta = {'filename':self.filename}).group_by("obs")
             # We don't need this now that we have a table
-            del(self.toas)
+            # paulr - Disabled this since test_toa_reader.py relies
+            # on having the toas member. The test should be fixed...
+            #del(self.toas)
 
     def __add__(self, x):
         if type(x) in [int, float]:
@@ -554,8 +556,10 @@ class TOAs(object):
                         self.cdict[cmd] += float(d["Command"][1])
                     elif cmd in ("EMIN", "EMAX","EQUAD"):
                         self.cdict[cmd] = float(d["Command"][1])*u.us
+                    elif cmd in ("FMIN", "FMAX","EQUAD"):
+                        self.cdict[cmd] = float(d["Command"][1])*u.MHz
                     elif cmd in ("EFAC", \
-                                 "PHA1", "PHA2", "FMIN", "FMAX"):
+                                 "PHA1", "PHA2"):
                         self.cdict[cmd] = float(d["Command"][1])
                         if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
                             d[cmd] = d["Command"][1]
