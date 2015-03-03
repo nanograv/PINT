@@ -2,6 +2,7 @@ import astropy.utils
 from astropy.utils.iers import IERS_A, IERS_A_URL
 from astropy.utils.data import download_file
 import astropy.time
+import astropy.coordinates
 
 class TestAstroPyTime:
     """This class contains a sequence of time conversion tests.
@@ -19,9 +20,10 @@ class TestAstroPyTime:
     def setUp(self):
         self.lat = 19.48125
         self.lon = -155.933222
+        earthloc = astropy.coordinates.EarthLocation.from_geodetic(self.lon,self.lat,0.0)
         self.t = astropy.time.Time('2006-01-15 21:24:37.5', \
                                    format='iso', scale='utc', \
-                                   lat=self.lat, lon=self.lon, precision=6)
+                                   location=earthloc, precision=6)
     def test_utc(self):
         x = self.t.utc.iso
         y = '2006-01-15 21:24:37.500000'

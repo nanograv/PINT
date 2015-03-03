@@ -23,14 +23,14 @@ observatories = obsmod.read_observatories()
 iers_a_file = None
 iers_a = None
 
-def get_TOAs(timfile, ephem="DE421", planets=False):
+def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=True):
     """Convenience function to load and prepare TOAs for PINT use.
 
     Loads TOAs from a '.tim' file, applies clock corrections, computes
     key values (like TDB), computes the observatory position and velocity
     vectors, and pickles the file for later use.
     """
-    t = TOAs(timfile)
+    t = TOAs(timfile,usepickle=usepickle)
     if not any([f.has_key('clkcorr') for f in t.table['flags']]):
         log.info("Applying clock corrections.")
         t.apply_clock_corrections()
@@ -138,23 +138,31 @@ class TOA(object):
         freq is the observatory-centric frequency in MHz
         freq
         other keyword/value pairs can be specified as needed
-
+        
+        # SUGGESTION(paulr): Here, or in a higher level document, the time system
+        # philosophy should be specified.  It looks like TOAs are assumed to be
+        # input as UTC(observatory) and then are converted to UTC(???) using the 
+        # observatory clock correction file.
+                
     Example:
         >>> a = TOA((54567, 0.876876876876876), 4.5, freq=1400.0,
         ...         obs="GBT", backend="GUPPI")
         >>> print a
         54567.876876876876876:  4.500 us error from 'GBT' at 1400.0000 MHz {'backend': 'GUPPI'}
 
+
     What happens if IERS data is not available for the date:
         >>> a = TOA((154567, 0.876876876876876), 4.5, freq=1400.0,
         ...         obs="GBT", backend="GUPPI")
+ 
         Traceback (most recent call last):
           omitted
         IndexError: (some) times are outside of range covered by IERS table.
 
+
     """
     def __init__(self, MJD, # required
-                 error=0.0, obs='bary', freq=float("inf"),
+                 error=0.0, obs='Barycenter', freq=float("inf"),
                  scale='utc', # with defaults
                  **kwargs):  # keyword args that are completely optional
         if obs not in observatories and obs != "Barycenter":
@@ -168,15 +176,21 @@ class TOA(object):
                                 scale=scale, format='mjd',
                                 location=observatories[obs].loc,
                                 precision=9)
-        self.error = error
+        if hasattr(error,'unit'):
+            self.error = error
+        else:
+            self.error = error * u.microsecond
         self.obs = obs
-        self.freq = freq
+        if hasattr(freq,'unit'):
+            self.freq = freq
+        else:
+            self.freq = freq * u.MHz
         self.flags = kwargs
 
     def __str__(self):
         s = utils.time_to_mjd_string(self.mjd) + \
-            ": %6.3f us error from '%s' at %.4f MHz " % \
-            (self.error, self.obs, self.freq)
+            ": %6.3f %s error from '%s' at %.4f %s " % \
+            (self.error.value, self.error.unit, self.obs, self.freq.value,self.freq.unit)
         if len(self.flags):
             s += str(self.flags)
         return s
@@ -184,8 +198,16 @@ class TOA(object):
 
 class TOAs(object):
     """A class of multiple TOAs, loaded from zero or more files."""
-    def __init__(self, toafile=None, usepickle=True):
-        if toafile:
+    def __init__(self, toafile=None, toalist=None, usepickle=True):
+        # First, just make an empty container
+        self.toas = []
+        self.commands = []
+        self.observatories = set()
+        self.filename = None
+        if (toalist is not None) and (toafile is not None):
+            log.error('Can not initialize TOAs from both file and list')
+        if toafile is not None:
+            # FIXME: work with file-like objects as well
             if type(toafile) in [tuple, list]:
                 self.filename = None
                 for infile in toafile:
@@ -200,24 +222,30 @@ class TOAs(object):
                         toafile = pth0
                 self.read_toa_file(toafile, usepickle=usepickle)
                 self.filename = toafile
-        # FIXME: work with file-like objects
-        else:
-            self.toas = []
+        if toalist is not None:
+            if not isinstance(toalist,(list,tuple)):
+                log.error('Trying to initialize from a non-list class')
+            self.toas = toalist
+            self.ntoas = len(toalist)
             self.commands = []
             self.filename = None
+            self.observatories.update([t.obs for t in toalist])
+            
         if not hasattr(self, 'table'):
             mjds = self.get_mjds()
             self.first_MJD = mjds.min()
             self.last_MJD = mjds.max()
             # The table is grouped by observatory
             self.table = table.Table([numpy.arange(self.ntoas), mjds,
-                                      self.get_errors()*u.us, self.get_freqs()*u.MHz,
+                                      self.get_errors(), self.get_freqs(),
                                       self.get_obss(), self.get_flags()],
                                       names=("index", "mjd", "error", "freq",
                                               "obs", "flags"),
                                       meta = {'filename':self.filename}).group_by("obs")
             # We don't need this now that we have a table
-            del(self.toas)
+            # paulr - Disabled this since test_toa_reader.py relies
+            # on having the toas member. The test should be fixed...
+            #del(self.toas)
 
     def __add__(self, x):
         if type(x) in [int, float]:
@@ -234,7 +262,7 @@ class TOAs(object):
     def get_freqs(self):
         """Return a numpy array of the observing frequencies in MHz for the TOAs"""
         if hasattr(self, "toas"):
-            return numpy.array([t.freq for t in self.toas])
+            return numpy.array([t.freq.to(u.MHz).value for t in self.toas])*u.MHz
         else:
             x = self.table['freq']
             return numpy.asarray(x) * x.unit
@@ -249,7 +277,7 @@ class TOAs(object):
     def get_errors(self):
         """Return a numpy array of the TOA errors in us"""
         if hasattr(self, "toas"):
-            return numpy.array([t.error for t in self.toas])
+            return numpy.array([t.error.to(u.us).value for t in self.toas])*u.us
         else:
             x = self.table['error']
             return numpy.asarray(x) * x.unit
@@ -306,6 +334,13 @@ class TOAs(object):
         called 'clkcorr' so that it can be reversed if necessary.  This
         routine also applies all 'TIME' commands and treats them exactly
         as if they were a part of the observatory clock corrections.
+        
+        # SUGGESTION(paulr): Somewhere in this docstring, or in a higher level
+        # documentation, the assumptions about the timescales should be specified.
+        # The docstring says apply "correction" but does not say what it is correcting.
+        # Be more specific.
+
+        
         """
         # First make sure that we haven't already applied clock corrections
         flags = self.table['flags']
@@ -452,6 +487,12 @@ class TOAs(object):
                             dest = p.upper()+" BARYCENTER"
                             pv = objPosVel("EARTH", dest, et) - earth_obss[jj]
                             plan_poss[name][ind,:] = pv.pos
+            if (key['obs'] == 'Barycenter'):
+                for jj, grprow in enumerate(grp):
+                    ind = jj+loind
+                    et = float((grprow['tdbld'] - J2000ld) * SECS_PER_DAY)
+                    obs_sun = objPosVel("SSB", "SUN", et)
+                    obs_sun_pos[ind,:] = obs_sun.pos
         cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
         if planets:
             cols_to_add += plan_poss.values()
@@ -490,9 +531,9 @@ class TOAs(object):
             self.ntoas = 0
             self.toas = []
             self.commands = []
-            self.cdict = {"EFAC": 1.0, "EQUAD": 0.0,
-                          "EMIN": 0.0, "EMAX": 1e100,
-                          "FMIN": 0.0, "FMAX": 1e100,
+            self.cdict = {"EFAC": 1.0, "EQUAD": 0.0*u.us,
+                          "EMIN": 0.0*u.us, "EMAX": 1e100*u.us,
+                          "FMIN": 0.0*u.MHz, "FMAX": 1e100*u.MHz,
                           "INFO": None, "SKIP": False,
                           "TIME": 0.0, "PHASE": 0,
                           "PHA1": None, "PHA2": None,
@@ -516,8 +557,12 @@ class TOAs(object):
                         break
                     elif cmd in ("TIME", "PHASE"):
                         self.cdict[cmd] += float(d["Command"][1])
-                    elif cmd in ("EMIN", "EMAX", "EFAC", "EQUAD",\
-                                 "PHA1", "PHA2", "FMIN", "FMAX"):
+                    elif cmd in ("EMIN", "EMAX","EQUAD"):
+                        self.cdict[cmd] = float(d["Command"][1])*u.us
+                    elif cmd in ("FMIN", "FMAX","EQUAD"):
+                        self.cdict[cmd] = float(d["Command"][1])*u.MHz
+                    elif cmd in ("EFAC", \
+                                 "PHA1", "PHA2"):
                         self.cdict[cmd] = float(d["Command"][1])
                         if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
                             d[cmd] = d["Command"][1]
@@ -575,3 +620,4 @@ class TOAs(object):
             if top:
                 # Clean up our temporaries used when reading TOAs
                 del self.cdict
+
