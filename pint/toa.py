@@ -150,12 +150,15 @@ class TOA(object):
         >>> print a
         54567.876876876876876:  4.500 us error from 'GBT' at 1400.0000 MHz {'backend': 'GUPPI'}
 
+
     What happens if IERS data is not available for the date:
         >>> a = TOA((154567, 0.876876876876876), 4.5, freq=1400.0,
         ...         obs="GBT", backend="GUPPI")
+ 
         Traceback (most recent call last):
           omitted
         IndexError: (some) times are outside of range covered by IERS table.
+
 
     """
     def __init__(self, MJD, # required

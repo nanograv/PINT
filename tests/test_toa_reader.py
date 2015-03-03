@@ -7,7 +7,7 @@ class TestTOAReader:
         self.x.compute_TDBs()
 
     def test_commands(self):
-        assert len(self.x.commands) == 16
+        assert len(self.x.commands) == 18
     def test_count(self):
         assert self.x.ntoas == 9
     def test_info(self):
