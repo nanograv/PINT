@@ -30,6 +30,9 @@ pip-log.txt
 .coverage
 .tox
 nosetests.xml
+coverage
+doc/_build
+doc/api
 
 # Translations
 *.mo
@@ -43,6 +46,9 @@ datafiles/naif0010.tls
 datafiles/naif0011.tls
 datafiles/pck00010.tpc
 datafiles/de-403-masses.tpc
+
+# Pickles of .tim files
+*.tim.pickle.gz
 
 # TEMPO stuff
 *matrix.tmp
