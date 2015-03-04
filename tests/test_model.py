@@ -27,7 +27,7 @@ except AttributeError:
     planets = False
 
 t0 = time.time()
-t = toa.get_TOAs(timfile, planets=planets)
+t = toa.get_TOAs(timfile, planets=planets,usepickle=False)
 time_toa = time.time() - t0
 if log.level < 25:
     t.print_summary()
