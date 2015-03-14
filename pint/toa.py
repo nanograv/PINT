@@ -46,6 +46,23 @@ def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=True):
         t.pickle()
     return t
 
+def get_TOAs_filelike(toa_filelike,ephem="DE421", planets=False):
+    """Fuctions for load and prepare TOA file like objects
+    """
+    t = TOAs(toafilelike = toa_filelike)
+
+    if not any([f.has_key('clkcorr') for f in t.table['flags']]):
+        log.info("Applying clock corrections.")
+        t.apply_clock_corrections()
+    if 'tdb' not in t.table.colnames:
+        log.info("Getting IERS params and computing TDBs.")
+        t.compute_TDBs()
+    if 'ssb_obs_pos' not in t.table.colnames:
+        log.info("Computing observatory positions and velocities.")
+        t.compute_posvels(ephem, planets)
+
+    return t
+
 def toa_format(line, fmt="Unknown"):
     """Determine the type of a TOA line.
 
@@ -187,6 +204,7 @@ class TOA(object):
             self.freq = freq * u.MHz
         self.flags = kwargs
 
+
     def __str__(self):
         s = utils.time_to_mjd_string(self.mjd) + \
             ": %6.3f %s error from '%s' at %.4f %s " % \
@@ -196,18 +214,67 @@ class TOA(object):
         return s
  
 
+class TOA_file_like(object):
+
+
+    """A time of arrival time like object
+
+
+    MJD will be stored in astropy.time.Time format, and can be
+        passed as a double (not recommended), a string, a
+        tuple of component parts (day and fraction of day).
+    error is the TOA uncertainty in microseconds
+    obs is the observatory name as defined in XXX
+    freq is the observatory-centric frequency in MHz
+    freq
+    other keyword/value pairs can be specified as needed
+
+    """
+
+    def __init__(self, MJD, # required
+                 error=0.0, obs='bary', freq=float("inf"),
+                 scale='utc', # with defaults
+                 **kwargs):  # keyword args that are completely optional
+        MJD0 = numpy.array(MJD[0])
+        MJD1 = numpy.array(MJD[1])
+        if len(MJD0) != len(MJD1):
+            raise ValueError("MJD fractional part should has the same lenght\
+                              with integer part.\n");
+        error_array = numpy.array(error)
+        freq_array = numpy.array(freq)
+        if obs not in observatories and obs != "Barycenter":
+            raise ValueError("Unknown observatory %s" % obs)
+        if obs == "Barycenter":
+            self.mjd = time.Time(MJD[0], MJD[1],
+                                scale='tdb', format='mjd',
+                                precision=9)
+        else:
+            self.mjd = time.Time(MJD[0], MJD[1],
+                                scale=scale, format='mjd',
+                                location=observatories[obs].loc,
+                                precision=9)
+        self.ntoas = len(MJD0)
+        self.error = numpy.array(error)
+        self.obs = obs
+        self.freq = numpy.array(freq)
+        self.flags = kwargs
+
+    def __str__(self):
+        mjd_string = utils.time_to_mjd_string_array(self.mjd)
+        s = ""
+        for mjd in mjd_string:
+            s = s + mjd + ": %6.3f us error from '%s' at %.4f MHz " % \
+                (self.error, self.obs, self.freq)
+            if len(self.flags):
+                s += str(self.flags)
+            s+="\n"
+        return s
+
+
 class TOAs(object):
     """A class of multiple TOAs, loaded from zero or more files."""
-    def __init__(self, toafile=None, toalist=None, usepickle=True):
-        # First, just make an empty container
-        self.toas = []
-        self.commands = []
-        self.observatories = set()
-        self.filename = None
-        if (toalist is not None) and (toafile is not None):
-            log.error('Can not initialize TOAs from both file and list')
-        if toafile is not None:
-            # FIXME: work with file-like objects as well
+    def __init__(self, toafile=None, toafilelike=None, usepickle=True):
+        if toafile:
             if type(toafile) in [tuple, list]:
                 self.filename = None
                 for infile in toafile:
@@ -222,15 +289,15 @@ class TOAs(object):
                         toafile = pth0
                 self.read_toa_file(toafile, usepickle=usepickle)
                 self.filename = toafile
-        if toalist is not None:
-            if not isinstance(toalist,(list,tuple)):
-                log.error('Trying to initialize from a non-list class')
-            self.toas = toalist
-            self.ntoas = len(toalist)
+        # FIXME: work with file-like objects
+        elif toafilelike:
+            self.toas = self.read_toa_filelike(toafilelike)
+            self.filename = "file_like"
+        else:
+            self.toas = []
             self.commands = []
             self.filename = None
-            self.observatories.update([t.obs for t in toalist])
-            
+
         if not hasattr(self, 'table'):
             mjds = self.get_mjds()
             self.first_MJD = mjds.min()
@@ -620,4 +687,28 @@ class TOAs(object):
             if top:
                 # Clean up our temporaries used when reading TOAs
                 del self.cdict
+
+    def read_toa_filelike(self,TOA_flike):
+
+        """Read a toa file like object.  
+           Input will be a TOA_file_like object. 
+           All the toas are coming from the same backend
+        """
+        self.ntoas = TOA_flike.ntoas
+        toas = []
+        # Need to change it here when final table format set up
+        for jd1,jd2 in zip(TOA_flike.mjd.jd1, TOA_flike.mjd.jd2):
+            mjd = (jd1-2400000.5,jd2)
+            newtoa = TOA(mjd,error=TOA_flike.error, obs=TOA_flike.obs, 
+                            freq=TOA_flike.freq)
+            toas.append(newtoa)
+
+        return toas
+
+        
+
+
+
+
+
 

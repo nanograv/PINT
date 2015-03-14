@@ -6,6 +6,8 @@
 
 # C extensions
 *.so
+#pickle
+*.pickle.gz
 
 # Packages
 *.egg
