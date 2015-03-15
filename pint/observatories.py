@@ -17,6 +17,11 @@ def get_clock_corr_vals(obsname, **kwargs):
     a more exact clock correction for a TOA.  the kwargs are
     used if there are other things which determine the values
     (for example, backend specific corrections)
+    
+    # SUGGESTION(paulr): This docstring should specify exactly what is expected of
+    # the clock correction files (i.e. the source and destination timescales.
+    # Also, a routine should probably be provided to actually use the corrections, with
+    # proper interpolation, instead of the current manual calculation that toa.py does
     """
     fileparts = {"GBT": "gbt",
                  "Arecibo": "ao",

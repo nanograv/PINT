@@ -1,7 +1,10 @@
 import utils
 import numpy as np
 import astropy.units as u
-import astropy.erfa as erfa
+try:
+    import astropy.erfa as erfa
+except ImportError:
+    import astropy._erfa as erfa
 import astropy.table as table
 from . import observatories as obsmod
 
@@ -20,6 +23,12 @@ iers_tab = IERS.iers_table
 observatories = obsmod.read_observatories()
 
 # Earth rotation rate in radians per UT1 second
+#
+# This is from Capitaine, Guinot, McCarthy, 2000 and is
+# in IAU Resolution B1.8 on the Earth Rotation Angle (ERA)
+# and the relation of it to UT1.  The number 1.00273781191135448
+# below is a defining constant.  See here:
+# http://iau-c31.nict.go.jp/pdf/2009_IAUGA_JD6/JD06_capitaine_wallace.pdf
 OM = 1.00273781191135448 * 2.0 * np.pi / SECS_PER_DAY
 
 # arcsec to radians

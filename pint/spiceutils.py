@@ -4,7 +4,7 @@ import astropy.units as u
 from astropy.coordinates import Longitude, Latitude
 from .utils import PosVel
 from astropy import log
-import os
+import os, sys
 from pint import pintdir
 
 kernels_loaded = False
@@ -19,7 +19,12 @@ def load_kernels(ephem="DE421"):
     if not kernels_loaded:
         spice.furnsh(os.path.join(pintdir, "datafiles/pck00010.tpc"))
         log.info("SPICE loaded planetary constants.")
-        spice.furnsh(os.path.join(pintdir, "datafiles/naif0010.tls"))
+        try:
+            spice.furnsh(os.path.join(pintdir, "datafiles/naif0011.tls"))
+        except:
+            log.error("Download updated leap second file (naif0011.tls)"+
+                      " using download script in $PINT/datafiles directory.")
+            sys.exit()
         log.info("SPICE loaded leap seconds.")
         spice.furnsh(os.path.join(pintdir,
                                   "datafiles/earth_latest_high_prec.bpc"))

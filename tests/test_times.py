@@ -15,7 +15,7 @@ observatories = obsmod.read_observatories()
 ls = u.def_unit('ls', const.c * 1.0 * u.s)
 
 log.info("Reading TOAs into PINT")
-ts = toa.get_TOAs("tests/testtimes.tim")
+ts = toa.get_TOAs("tests/testtimes.tim",usepickle=False)
 if log.level < 25:
     ts.print_summary()
 ts.table.sort('index')

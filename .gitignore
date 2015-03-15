@@ -32,6 +32,9 @@ pip-log.txt
 .coverage
 .tox
 nosetests.xml
+coverage
+doc/_build
+doc/api
 
 # Translations
 *.mo
@@ -42,10 +45,17 @@ datafiles/de421.bsp
 datafiles/de430t.bsp
 datafiles/earth_latest_high_prec.bpc
 datafiles/naif0010.tls
+datafiles/naif0011.tls
 datafiles/pck00010.tpc
 datafiles/de-403-masses.tpc
+
+# Pickles of .tim files
+*.tim.pickle.gz
 
 # TEMPO stuff
 *matrix.tmp
 *resid2.tmp
 *tempo.lis
+
+# ipython notebook temps
+.ipynb_checkpoints

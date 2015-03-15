@@ -2,7 +2,10 @@
     Based on BTmodel.C in TEMPO2
     """
 import astropy.units as u
-from astropy.erfa import DAYSEC as SECS_PER_DAY
+try:
+    from astropy.erfa import DAYSEC as SECS_PER_DAY
+except ImportError:
+    from astropy._erfa import DAYSEC as SECS_PER_DAY
 from .parameter import Parameter, MJDParameter
 from .timing_model import TimingModel, MissingParameter
 from ..phase import Phase

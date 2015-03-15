@@ -19,7 +19,8 @@ t = pint.toa.get_TOAs(timfile)
 
 # These are pre-fit residuals
 rs = pint.residuals.resids(t, m).phase_resids
-plt.plot(t.get_mjds(), rs, 'x')
+xt=[x.value for x in t.get_mjds()]
+plt.plot(xt, rs, 'x')
 plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
 plt.xlabel('MJD')
 plt.ylabel('Residual (phase)')
@@ -38,7 +39,7 @@ print "RMS in time is", f.resids.time_resids.std().to(u.us)
 print "\n Best model is:"
 print f.model.as_parfile()
 
-plt.errorbar(t.get_mjds(),
+plt.errorbar(xt,
              f.resids.time_resids.to(u.us).value,
              t.get_errors().to(u.us).value, fmt='x')
 plt.title("%s Post-Fit Timing Residuals" % m.PSR.value)
