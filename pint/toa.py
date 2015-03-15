@@ -273,8 +273,18 @@ class TOA_file_like(object):
 
 class TOAs(object):
     """A class of multiple TOAs, loaded from zero or more files."""
-    def __init__(self, toafile=None, toafilelike=None, usepickle=True):
-        if toafile:
+
+    def __init__(self, toafile=None, toalist=None, usepickle=True):
+        # First, just make an empty container
+        self.toas = []
+        self.commands = []
+        self.observatories = set()
+        self.filename = None
+        if (toalist is not None) and (toafile is not None):
+            log.error('Can not initialize TOAs from both file and list')
+        if toafile is not None:
+            # FIXME: work with file-like objects as well
+
             if type(toafile) in [tuple, list]:
                 self.filename = None
                 for infile in toafile:
@@ -289,14 +299,16 @@ class TOAs(object):
                         toafile = pth0
                 self.read_toa_file(toafile, usepickle=usepickle)
                 self.filename = toafile
-        # FIXME: work with file-like objects
-        elif toafilelike:
-            self.toas = self.read_toa_filelike(toafilelike)
-            self.filename = "file_like"
-        else:
-            self.toas = []
+
+        if toalist is not None:
+            if not isinstance(toalist,(list,tuple)):
+                log.error('Trying to initialize from a non-list class')
+            self.toas = toalist
+            self.ntoas = len(toalist)
             self.commands = []
             self.filename = None
+            self.observatories.update([t.obs for t in toalist])
+            
 
         if not hasattr(self, 'table'):
             mjds = self.get_mjds()
@@ -688,6 +700,7 @@ class TOAs(object):
                 # Clean up our temporaries used when reading TOAs
                 del self.cdict
 
+
     def read_toa_filelike(self,TOA_flike):
 
         """Read a toa file like object.  
@@ -706,9 +719,3 @@ class TOAs(object):
         return toas
 
         
-
-
-
-
-
-
