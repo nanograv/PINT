@@ -48,7 +48,7 @@ class BT(TimingModel):
         self.add_param(Parameter(name="OM",
             units="deg",
             description="Longitude of periastron",
-            parse_value=lambda x: np.double(x) / 180 * np.pi))
+            parse_value=lambda x: np.double(x)))
 
         self.add_param(MJDParameter(name="T0",
             parse_value=lambda x: time_from_mjd_string(x, scale='tdb'),
@@ -163,7 +163,8 @@ class BT(TimingModel):
         # Check if it even makes sense to keep it here.
         xpbdot = 0
         omdot = self.OMDOT.value
-        omega = self.OM.value + omdot*tt0*(np.pi/180.0)/(SECS_PER_DAY*365.25)
+        omega0 = self.OM.value / 180 * np.pi
+        omega = omega0 + omdot*tt0*(np.pi/180.0)/(SECS_PER_DAY*365.25)
         gamma = self.GAMMA.value
         torb = 0
 
