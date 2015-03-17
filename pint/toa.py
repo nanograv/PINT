@@ -365,12 +365,25 @@ class TOAs(object):
             x = self.table['freq']
             return numpy.asarray(x) * x.unit
 
-    def get_mjds(self):
-        """Return a list of the astropy.times (UTC) of the TOAs"""
-        if hasattr(self, "toas"):
-            return numpy.array([t.mjd for t in self.toas])
+    def get_mjds(self, high_precision = True):
+        """ With high_precision is True
+            Return a list of the astropy.times (UTC) of the TOAs
+
+            With high_precision is Faluse
+            Return a list of toas in mjd with double precision
+        """
+        if high_precision is True:
+            if hasattr(self, "toas"):
+                return numpy.array([t.mjd for t in self.toas])
+            else:
+                return numpy.array([t.mjd for t in self.table['mjd']])
         else:
-            return numpy.array([t.mjd for t in self.table['mjd']])
+            if hasattr(self, "toas"):
+                return numpy.array([t.mjd.value for t in self.toas])
+            else:
+                return numpy.array([t.mjd.value for t in self.table['mjd']])
+
+
 
     def get_errors(self):
         """Return a numpy array of the TOA errors in us"""
