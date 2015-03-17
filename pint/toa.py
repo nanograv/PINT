@@ -46,6 +46,25 @@ def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=True):
         t.pickle()
     return t
 
+def get_TOAs_list(toa_list,ephem="DE421", planets=False,usepickle=True):
+    """Load TOAs from a list of TOA objects. 
+
+       Compute the TDB time and observatory positions and velocity 
+       vectors.
+    """
+    t = TOAs(toalist = toa_list)
+    if not any([f.has_key('clkcorr') for f in t.table['flags']]):
+        log.info("Applying clock corrections.")
+        t.apply_clock_corrections()
+    if 'tdb' not in t.table.colnames:
+        log.info("Getting IERS params and computing TDBs.")
+        t.compute_TDBs()
+    if 'ssb_obs_pos' not in t.table.colnames:
+        log.info("Computing observatory positions and velocities.")
+        t.compute_posvels(ephem, planets)
+    return t
+
+
 def get_TOAs_filelike(toa_filelike,ephem="DE421", planets=False):
     """Fuctions for load and prepare TOA file like objects
     """
