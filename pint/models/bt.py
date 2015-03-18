@@ -163,8 +163,8 @@ class BT(TimingModel):
         # Check if it even makes sense to keep it here.
         xpbdot = 0
         omdot = self.OMDOT.value
-        omega0 = self.OM.value / 180 * np.pi
-        omega = omega0 + omdot*tt0*(np.pi/180.0)/(SECS_PER_DAY*365.25)
+        omega0 = self.OM.value
+        omega = np.radians(omega0 + omdot*tt0/(SECS_PER_DAY*365.25))
         gamma = self.GAMMA.value
         torb = 0
 
