@@ -6,6 +6,8 @@ try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
+SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
+
 from .parameter import Parameter, MJDParameter
 from .timing_model import TimingModel, MissingParameter
 from ..phase import Phase
@@ -164,7 +166,7 @@ class BT(TimingModel):
         xpbdot = 0
         omdot = self.OMDOT.value
         omega0 = self.OM.value
-        omega = np.radians(omega0 + omdot*tt0/(SECS_PER_DAY*365.25))
+        omega = np.radians(omega0 + omdot*tt0/SECS_PER_JUL_YEAR)
         gamma = self.GAMMA.value
         torb = 0
 
