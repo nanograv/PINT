@@ -46,6 +46,26 @@ def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=True):
         t.pickle()
     return t
 
+def get_TOAs_list(toa_list,ephem="DE421", planets=False):
+    """Load TOAs from a list of TOA objects. 
+
+       Compute the TDB time and observatory positions and velocity 
+       vectors.
+    """
+    t = TOAs(toalist = toa_list)
+    if not any([f.has_key('clkcorr') for f in t.table['flags']]):
+        log.info("Applying clock corrections.")
+        t.apply_clock_corrections()
+    if 'tdb' not in t.table.colnames:
+        log.info("Getting IERS params and computing TDBs.")
+        t.compute_TDBs()
+    if 'ssb_obs_pos' not in t.table.colnames:
+        log.info("Computing observatory positions and velocities.")
+        t.compute_posvels(ephem, planets)
+    return t
+
+
+
 def toa_format(line, fmt="Unknown"):
     """Determine the type of a TOA line.
 
@@ -187,6 +207,7 @@ class TOA(object):
             self.freq = freq * u.MHz
         self.flags = kwargs
 
+
     def __str__(self):
         s = utils.time_to_mjd_string(self.mjd) + \
             ": %6.3f %s error from '%s' at %.4f %s " % \
@@ -196,8 +217,10 @@ class TOA(object):
         return s
  
 
+
 class TOAs(object):
     """A class of multiple TOAs, loaded from zero or more files."""
+
     def __init__(self, toafile=None, toalist=None, usepickle=True):
         # First, just make an empty container
         self.toas = []
@@ -208,6 +231,7 @@ class TOAs(object):
             log.error('Can not initialize TOAs from both file and list')
         if toafile is not None:
             # FIXME: work with file-like objects as well
+
             if type(toafile) in [tuple, list]:
                 self.filename = None
                 for infile in toafile:
@@ -222,6 +246,7 @@ class TOAs(object):
                         toafile = pth0
                 self.read_toa_file(toafile, usepickle=usepickle)
                 self.filename = toafile
+
         if toalist is not None:
             if not isinstance(toalist,(list,tuple)):
                 log.error('Trying to initialize from a non-list class')
@@ -231,6 +256,7 @@ class TOAs(object):
             self.filename = None
             self.observatories.update([t.obs for t in toalist])
             
+
         if not hasattr(self, 'table'):
             mjds = self.get_mjds()
             self.first_MJD = mjds.min()
@@ -267,12 +293,25 @@ class TOAs(object):
             x = self.table['freq']
             return numpy.asarray(x) * x.unit
 
-    def get_mjds(self):
-        """Return a list of the astropy.times (UTC) of the TOAs"""
-        if hasattr(self, "toas"):
-            return numpy.array([t.mjd for t in self.toas])
+    def get_mjds(self, high_precision = True):
+        """ With high_precision is True
+            Return a list of the astropy.times (UTC) of the TOAs
+
+            With high_precision is Faluse
+            Return a list of toas in mjd with double precision
+        """
+        if high_precision is True:
+            if hasattr(self, "toas"):
+                return numpy.array([t.mjd for t in self.toas])
+            else:
+                return numpy.array([t.mjd for t in self.table['mjd']])
         else:
-            return numpy.array([t.mjd for t in self.table['mjd']])
+            if hasattr(self, "toas"):
+                return numpy.array([t.mjd.value for t in self.toas])
+            else:
+                return numpy.array([t.mjd.value for t in self.table['mjd']])
+
+
 
     def get_errors(self):
         """Return a numpy array of the TOA errors in us"""
@@ -621,3 +660,4 @@ class TOAs(object):
                 # Clean up our temporaries used when reading TOAs
                 del self.cdict
 
+        

@@ -136,6 +136,30 @@ def time_to_mjd_string(t, prec=15):
     fmt = "%."+"%sf"%prec
     return str(imjd) + (fmt%fmjd)[1:]
 
+def time_to_mjd_string_array(t,prec = 15):
+    """Print and MJD time array from an astropy time object as array in 
+       time.
+    """
+    jd1 = np.array(t.jd1)
+    jd2 = np.array(t.jd2)
+    jd1 = jd1 - astropy.erfa.DJM0
+    imjd = jd1.astype(int)
+    fjd1 = jd1 - imjd
+    fmjd = jd2 + fjd1
+    
+    assert np.fabs(fmjd).max() < 2.0
+    s = []
+    for i,f in zip(imjd,fmjd):
+        if f >= 1.0:
+            i += 1
+            f -= 1.0
+        if f < 0.0:
+            i -= 1
+            f += 1.0
+        fmt = "%."+"%sf"%prec
+        s.append(str(i) + (fmt%f)[1:])
+    return s
+
 def time_to_longdouble(t):
     """ Return an astropy Time value as MJD in longdouble
     
