@@ -11,6 +11,7 @@ from .spindown import Spindown
 from .dd import DD
 from .bt import BT
 from .solar_system_shapiro import SolarSystemShapiro
+from .bt import BT
 
 # Define a standard basic model
 StandardTimingModel = generate_timing_model("StandardTimingModel",
