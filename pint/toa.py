@@ -366,7 +366,7 @@ class TOAs(object):
             # We don't need this now that we have a table
             # paulr - Disabled this since test_toa_reader.py relies
             # on having the toas member. The test should be fixed...
-            #del(self.toas)
+            del(self.toas)
 
     def __add__(self, x):
         if type(x) in [int, float]:

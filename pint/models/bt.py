@@ -1,3 +1,4 @@
+
 """This model provides the BT (Blandford & Teukolsky 1976, ApJ, 205, 580) model.
     """
 import astropy.units as u
@@ -16,6 +17,7 @@ from .btmodel import BTmodel
 import astropy.time
 import numpy as np
 import time
+from astropy import log
 
 class BT(TimingModel):
     """This class provides an implementation of the BT model
@@ -47,6 +49,10 @@ class BT(TimingModel):
             description="Eccentricity",
             parse_value=np.double))
 
+        # Warning(paulr): This says the units on OM are deg (which is correct)
+        # But then it converts the value to radians!
+        # This may work OK in here, but when printing the value to a new
+        # par file, it comes out wrong!
         self.add_param(Parameter(name="OM",
             units="deg",
             description="Longitude of periastron",
