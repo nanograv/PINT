@@ -139,7 +139,7 @@ class BT(TimingModel):
             From BTmodel.C in TEMPO2, and so in turn from bnrybt.f in TEMPO.
             toas are really toas.table
             """
-        tt0 = np.array([t for t in toas['tdbld']], dtype=np.longdouble) * SECS_PER_DAY
+        tt0 = toas['tdbld'] * SECS_PER_DAY
 
         # Apply all the delay terms, except for the binary model itself
         for df in self.delay_funcs:
