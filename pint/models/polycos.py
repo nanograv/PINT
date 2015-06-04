@@ -13,6 +13,8 @@ from .parameter import Parameter
 from .timing_model import TimingModel, MissingParameter, Cache
 import astropy.table as table
 from astropy.io import registry
+import numpy.polynomial.chebyshev as cheb
+import math 
 
 class polycoEntry:
     """
@@ -39,12 +41,12 @@ class polycoEntry:
     def __init__(self,tmid,mjdspan,rphase,f0,ncoeff,coeffs,obs):
         self.tmid = tmid
         self.mjdspan = mjdspan
-        self.tstart = tmid - float(mjdspan)/2
-        self.tstop = tmid + float(mjdspan)/2
-        self.rphase = rphase
-        self.f0 = f0
+        self.tstart = np.longdouble(tmid) - np.longdouble(mjdspan)/2.0
+        self.tstop = np.longdouble(tmid) + np.longdouble(mjdspan)/2.0
+        self.rphase = np.longdouble(rphase)
+        self.f0 = np.longdouble(f0)
         self.ncoeff = ncoeff
-        self.coeffs = coeffs
+        self.coeffs = np.longdouble(coeffs)
         self.obs = obs
     
     def __str__(self):
@@ -160,22 +162,22 @@ def tempo_polyco_table_reader(filename):
         psrname = fields[0].strip()
         date = fields[1].strip()
         utc = fields[2]
-        tmid = float(fields[3])
+        tmid = np.longdouble(fields[3])
         dm = float(fields[4])
         doppler = float(fields[5])
         logrms = float(fields[6])
         # Read second line
         line2 = f.readline()
         fields = line2.split()
-        refPhase = float(fields[0])
-        refF0 = float(fields[1])
+        refPhase = np.longdouble(fields[0])
+        refF0 = np.longdouble(fields[1])
         obs = fields[2]
-        mjdSpan = float(fields[3])/(60*24)   # Here change to constant
+        mjdSpan = np.longdouble(fields[3])/(60*24)   # Here change to constant
         nCoeff = int(fields[4])
         obsfreq = float(fields[5].strip())
 
         try:
-            binaryPhase = float(fields[6])
+            binaryPhase = np.longdouble(fields[6])
         except:
             binaryPhase = 0.0
 
@@ -189,7 +191,7 @@ def tempo_polyco_table_reader(filename):
         for i in range(nCoeffLines):
             line = f.readline()
             for c in line.split():
-                coeffs.append(float(c))
+                coeffs.append(np.longdouble(c))
         coeffs = np.array(coeffs)
         entry = polycoEntry(tmid,mjdSpan,refPhase,refF0,nCoeff,coeffs,obs)
 
@@ -227,6 +229,7 @@ class Polycos(TimingModel):
         self.fileName = None
         self.fileFormat = None
         self.newFileName = None
+        self.dataTable = None
         self.polycoFormat = [{'format': 'tempo', 
                             'read_method' : tempo_polyco_table_reader,
                             'write_method' : None},]
@@ -318,7 +321,9 @@ class Polycos(TimingModel):
         self.polycoFormat.append(pFormat)
         
 
-    def generate_polycos(self, tmjd, method = "TEMPO"):
+    def generate_polycos(self, mjdStart, mjdEnd, parFile, obs, 
+                         segLength, ncoeff, obsFreq, maxha,
+                         method = "TEMPO"):
         """
         Generate the polyco file data file. 
 
@@ -327,18 +332,76 @@ class Polycos(TimingModel):
         mjd : 
 
         """
-       # if 
+        self.read_parfile(parFile)
+        mjdStart = mjdStart*u.day
+        mjdEnd = mjdEnd*u.day
+        timeLength = mjdEnd-mjdStart
+        segLength = segLength*u.min
+
+        coeffsList = []
+        nodesList = []
+        refPhaseList = []
+        entryList = []
+        numSeg = timeLength/segLength.to('day')
+        domainList = []
+        domain = [mjdStart, mjdStart+segLength]
+        domainList.append((domain[0],domain[1]))
+
+
+        while domain[1]<mjdEnd:
+            domain[0] = domain[1]
+
+            if mjdEnd-domain[0]< segLength:
+                domain[1] = mjdEnd
+            else:
+                domain[1] = domain[1] +segLength
+            domainList.append((domain[0],domain[1]))
+        
     	# generate the ploynomial coefficents
-    	if method == "TEMPO1":
-    		# Using tempo1 method to create polycos
-    		pass
+    	if method == "TEMPO":
+            nodeCoeff = np.zeros(ncoeff)
+            nodeCoeff[-1] = 1.0
+    	# Using tempo1 method to create polycos
+            for i in range(len(domainList)):
+                tmid = (np.longdouble(domainList[i][1])+np.longdouble(domainList[i][0]))/2.0
+                print tmid
+                toaMid = toa.get_TOAs_list([toa.TOA((np.modf(tmid)[1], 
+                                    np.modf(tmid)[0]),obs = obs,
+                                    freq = obsFreq),])
+                refPhase = self.phase(toaMid.table)
+                refF0 = self.d_phase_d_toa(toaMid.table)
+                #tmid,mjdSpan,refPhase,refF0,nCoeff,coeffs,obs
+                mjdSpan = (domainList[i][1]-domainList[i][0])
+
+                nodes = cheb.chebroots(nodeCoeff)  # Here nodes is in the interval (-1,1)
+                nodesMjd = ((np.longdouble(nodes)-(-1.0))*(domainList[i][1]
+                            -domainList[i][0]))/2.0 + domainList[i][0] # Rescale to the domain
+                toaList = []
+                for toaNode in nodesMjd.value:
+                    toaList.append(toa.TOA((np.modf(toaNode)[1], 
+                                    np.modf(toaNode)[0]),obs = obs,
+                                    freq = obsFreq))
+                toas = toa.get_TOAs_list(toaList)
+
+                ph = self.phase(toas.table)
+                rdcPhase = ph-refPhase
+                dnodesMjd = nodesMjd.value.astype(float)  # Trancate to double
+                drdcPhase = (rdcPhase.int+rdcPhase.frac).astype(float)
+                coeffs = cheb.chebfit(dnodesMjd,drdcPhase,ncoeff)
+
+                entry = polycoEntry(tmid,mjdSpan.value,refPhase.frac+refPhase.int,refF0,ncoeff,coeffs,obs)
+                entryList.append((self.PSR.value, '27-Dec-03', 10000.00, tmid, self.DM.value,0,0,0,obsFreq,entry))
+
+            pTable = table.Table(rows = entryList, names = ('psr','date','utc','tmid','dm',
+                                        'dopper','logrms','binary_phase',
+                                        'obsfreq','entry'), 
+                                        meta={'name': 'Ployco Data Table'})
+            self.dataTable = pTable
+                
     	else:
     		#  Reading from an old polycofile
     		pass
-
-
-    def evl_polycos(self):
-        pass
+        
 
     def read_polyco_file(self,filename,format):
         """
@@ -360,10 +423,55 @@ class Polycos(TimingModel):
         else:
             self.fileFormat = format
 
-        data = table.Table.read(filename, format = format) 
+        self.dataTable = table.Table.read(filename, format = format) 
         
-        return data
+    def find_entry(self,t):
+        # Check if polyco table exist 
+        try:
+            lenEntry = len(self.dataTable)
+            if lenEntry == 0:
+                errorMssg = "No sufficent polyco data. Plese read or generate polyco data correctlly."
+                raise AttributeError(errorMssg)
 
+        except: 
+            errorMssg = "No sufficent polyco data. Plese read or generate polyco data correctlly."
+            raise AttributeError(errorMssg)
 
+        domain = [self.dataTable['tmid'][0]- self.dataTable['entry'][0].mjdspan/2, 
+                  self.dataTable['tmid'][-1]+ self.dataTable['entry'][-1].mjdspan/2]     
+
+        # Check if t in the polyco domain
+        
+        if t < domain[0] or t > domain[1]:
+            errorMssg = "Input time should be in the range of "+str(domain[0])+" and "+str(domain[1])
+            raise ValueError(errorMssg)
+
+        entryIndex = np.searchsorted(self.dataTable['tmid'].data,t)
+
+        if entryIndex == len(self.dataTable):
+            entryIndex = entryIndex-1
+        entryBeginT = self.dataTable['tmid'][entryIndex] - self.dataTable['entry'][entryIndex].mjdspan/2
+
+        if t < entryBeginT:
+            entryIndex = entryIndex - 1
+
+        return entryIndex
+        
+    def eval_phase(self,t):
+        entryIndex = self.find_entry(t)
+
+        phase = self.dataTable['entry'][entryIndex].evalphase(t)
+
+        return phase
+
+    def eval_abs_phase(self,t):
+        entryIndex = self.find_entry(t)
+        absPhase = self.dataTable['entry'][entryIndex].evalabsphase(t)
+        return absPhase
+
+    def eval_spin_freq(self,t):
+        entryIndex = self.find_entry(t)
+        spinFreq = self.dataTable['entry'][entryIndex].evalfreq(t)
+        return spinFreq
 
 
