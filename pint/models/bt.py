@@ -9,7 +9,7 @@ except ImportError:
 SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
 
 from .parameter import Parameter, MJDParameter
-from .timing_model import TimingModel, MissingParameter
+from .timing_model import Cache, TimingModel, MissingParameter
 from ..phase import Phase
 from ..utils import time_from_mjd_string, time_to_longdouble
 from ..orbital.kepler import eccentric_from_mean
@@ -82,8 +82,7 @@ class BT(TimingModel):
             parse_value=np.double))
 
         self.delay_funcs += [self.BT_delay,]
-#        self.phase_funcs += [self.BT_phase,]
-#
+
     def setup(self):
         super(BT, self).setup()
 
@@ -133,30 +132,32 @@ class BT(TimingModel):
             ecc_anom = ma + eccentricity * np.sin(ecc_anom_old)
         return ecc_anom
 
+    @Cache.use_cache
     def BT_delay(self, toas):
         """Actual delay calculation of the BT model (equation 5 of Taylor &
             Weisberg, 1989, ApJ, 345, 434-450)
             From BTmodel.C in TEMPO2, and so in turn from bnrybt.f in TEMPO.
             toas are really toas.table
             """
-
-        # *****************************************
-        #  FROM HERE I'm working on ARRAYS
-        # *****************************************
         tt0 = np.array([t for t in toas['tdbld']], dtype=np.longdouble) * SECS_PER_DAY
-        T0 = time_to_longdouble(self.T0.value) * SECS_PER_DAY
-        tt0 -= T0
+
+        # Apply all the delay terms, except for the binary model itself
+        for df in self.delay_funcs:
+            if df != self.BT_delay:
+                tt0 -= df(toas)
+
+        tt0 -= time_to_longdouble(self.T0.value) * SECS_PER_DAY
 
         pb = self.PB.value * SECS_PER_DAY
         edot = self.EDOT.value
         ecc = self.E.value + edot * tt0
+
         # TODO: Check this assertion. This mechanism is probably too strong
         # Probably better to create a BadParameter signal to raise,
         # catch it and give a new value to eccentricity?
-
         assert np.all(np.logical_and(ecc >= 0, ecc <= 1)), \
             "BT model: Eccentricity goes out of range"
-        #
+
         pbdot = self.PBDOT.value
         xdot = self.XDOT.value
         asini  = self.A1.value + xdot * tt0
@@ -168,26 +169,22 @@ class BT(TimingModel):
         omega0 = self.OM.value
         omega = np.radians(omega0 + omdot*tt0/SECS_PER_JUL_YEAR)
         gamma = self.GAMMA.value
-        torb = 0
 
         orbits = tt0 / pb - 0.5 * (pbdot + xpbdot) * (tt0 / pb) ** 2
         norbits = np.array(np.floor(orbits), dtype=np.long)
         phase = 2 * np.pi * (orbits - norbits)
         bige = self.eccentric_anomaly(ecc, phase)
 
-        tt = 1.0 - ecc ** 2;
-        som = np.sin(omega);
-        com = np.cos(omega);
+        tt = 1.0 - ecc ** 2
+        som = np.sin(omega)
+        com = np.cos(omega)
 
-        alpha = asini * som;
-        beta = asini * com * np.sqrt(tt);
-        sbe = np.sin(bige);
-        cbe = np.cos(bige);
-        q = alpha * (cbe - ecc) + (beta + gamma) * sbe;
-        r = -alpha * sbe + beta * cbe;
-        s = 1.0 / (1.0 - ecc * cbe);
+        alpha = asini * som
+        beta = asini * com * np.sqrt(tt)
+        sbe = np.sin(bige)
+        cbe = np.cos(bige)
+        q = alpha * (cbe - ecc) + (beta + gamma) * sbe
+        r = -alpha * sbe + beta * cbe
+        s = 1.0 / (1.0 - ecc * cbe)
 
-        torb = -q + (2 * np.pi / pb) * q * r * s + torb;
-
-        return torb
-
+        return q - (2 * np.pi / pb) * q * r * s

@@ -56,7 +56,7 @@ def DD_delay_func(t, PB, T0, A1, OM=0.0, ECC=0.0, EDOT=0.0, PBDOT=0.0, XDOT=0.0,
     @param sini:    Sine of inclination angle
     """
     # TODO (RvH): How do I get the solMass in seconds using astropy?
-    SUNMASS         = np.float96('4.925490947e-6')
+    SUNMASS         = np.float128('4.925490947e-6')
 
     # TODO (RvH):
     # - XPBDOT is completely covariant with PBDOT. Why is it included in Tempo2?
@@ -266,6 +266,11 @@ class DD(TimingModel):
 
         t = np.array([ti for ti in toas['tdbld']], dtype=np.longdouble)
 
+        # Apply all the delay terms, except for the binary model itself
+        for df in self.delay_funcs:
+            if df != self.DD_delay:
+                t -= df(toas) / SECS_PER_DAY
+
         # Tempo2 uses some unit conversions, with the following comments:
         # /* Check units: DO BETTER JOB */  :(
         edot = self.EDOT.value
@@ -280,7 +285,7 @@ class DD(TimingModel):
         if xdot > 1.0e-7:
             xdot *= 1.0e-12
 
-        return DD_delay_func(t, self.PB.value, self.T0.value, self.A1.value, \
+        return -DD_delay_func(t, self.PB.value, self.T0.value, self.A1.value, \
                 self.OM.value, self.E.value, edot, \
                 pbdot, xdot, self.OMDOT.value, \
                 self.M2.value, self.GAMMA.value, \
