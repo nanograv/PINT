@@ -297,7 +297,7 @@ class TOAs(object):
         """ With high_precision is True
             Return a list of the astropy.times (UTC) of the TOAs
 
-            With high_precision is Faluse
+            With high_precision is False
             Return a list of toas in mjd with double precision
         """
         if high_precision is True:
