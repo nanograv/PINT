@@ -62,7 +62,7 @@ class Spindown(TimingModel):
         # If TZRMJD is not defined, use the first time as phase reference
         # NOTE, all of this ignores TZRSITE and TZRFRQ for the time being.
         if self.TZRMJD.value is None:
-            self.TZRMJD.value = toas['tdb'][0] - delay*u.s
+            self.TZRMJD.value = toas['tdb'][0] - delay[0]*u.s
 
         toas = toas['tdbld']
         TZRMJD = time_to_longdouble(self.TZRMJD.value)
