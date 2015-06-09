@@ -1,2 +1,5 @@
+2015-06-09 (vhaasteren) Created a libstempo-compatible interface, called ltinterface
+2015-06-09 (vhaasteren) Added the designmatrix function to the TimingModel class
+2015-06-09 (vhaasteren) Added d_phase_d_param for all parameters in Astrometry & Spindown models
 2015-03-02 (paulr) Made TOA() class have units on TOA.freq and TOA.error instance variables
 2015-03-02 (paulr) Allow TOAs() class to be initialized from a list or tuple of TOA() objects
