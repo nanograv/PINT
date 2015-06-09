@@ -144,7 +144,7 @@ class Astrometry(TimingModel):
         rd['ssb_obs_y'] = ssb_obs[:,1]
         rd['in_psr_obs'] = numpy.sum(ssb_obs * ssb_psr, axis=1)
 
-        # Earth azimuthal and polar angles
+        # Earth right ascension and declination
         rd['earth_dec'] = numpy.arctan2(rd['ssb_obs_z'], rd['ssb_obs_xy'])
         rd['earth_ra'] = numpy.arctan2(rd['ssb_obs_y'], rd['ssb_obs_x'])
 
@@ -204,7 +204,7 @@ class Astrometry(TimingModel):
     def d_phase_d_PMRA(self, toas):
         """Calculate the derivative wrt PMRA
         
-        Definitions as in d_phase_d_RAJ. Now we have a derivative in max/yr for
+        Definitions as in d_phase_d_RAJ. Now we have a derivative in mas/yr for
         the pulsar RA
         """
         rd = self.get_d_phase_quantities(toas)
@@ -225,7 +225,7 @@ class Astrometry(TimingModel):
     def d_phase_d_PMDEC(self, toas):
         """Calculate the derivative wrt PMDEC
         
-        Definitions as in d_phase_d_RAJ. Now we have a derivative in max/yr for
+        Definitions as in d_phase_d_RAJ. Now we have a derivative in mas/yr for
         the pulsar DEC
         """
         rd = self.get_d_phase_quantities(toas)
