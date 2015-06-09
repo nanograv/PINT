@@ -47,7 +47,8 @@ setup(
 
     py_modules = ['pint.models.timing_model', 'pint.models.astrometry',
         'pint.models.dispersion', 'pint.models.spindown',
-        'pint.models.parameter',
+        'pint.models.parameter', 'pint.fitter',
+        'pint.ltinterface',
         'pint.models.solar_system_shapiro',
         'pint.models.bt', 'pint.models.dd',
         'pint.orbital.kepler'],

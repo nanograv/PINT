@@ -7,9 +7,15 @@ import astropy.constants as const
 from astropy.coordinates.angles import Angle
 from .parameter import Parameter, MJDParameter
 from .timing_model import TimingModel, MissingParameter, Cache
+from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble
 from pint import ls
 from pint import utils
 import time
+
+try:
+    from astropy.erfa import DAYSEC as SECS_PER_DAY
+except ImportError:
+    from astropy._erfa import DAYSEC as SECS_PER_DAY
 
 class Astrometry(TimingModel):
 
@@ -113,3 +119,160 @@ class Astrometry(TimingModel):
             re_sqr = numpy.sum(toas['ssb_obs_pos']**2, axis=1) * toas['ssb_obs_pos'].unit**2
             delay += (0.5 * (re_sqr / L) * (1.0 - re_dot_L**2 / re_sqr)).to(ls).value
         return delay
+
+    @Cache.use_cache
+    def get_d_phase_quantities(self, toas):
+        """Calculate values needed for many d_phase_d_param functions """
+        rd = dict()
+
+        # TODO: Should delay not have units of u.second?
+        delay = self.delay(toas)
+
+        # TODO: toas['tdbld'].quantity should have units of u.day
+        # NOTE: Do we need to include the delay here?
+        rd['epoch'] = toas['tdbld'].quantity * u.day #- delay * u.second
+
+        # Distance from SSB to observatory, and from SSB to psr
+        ssb_obs = toas['ssb_obs_pos'].quantity
+        ssb_psr = self.ssb_to_psb_xyz(epoch=numpy.array(rd['epoch']))
+
+        # Cartesian coordinates, and derived quantities
+        rd['ssb_obs_r'] = numpy.sqrt(numpy.sum(ssb_obs**2, axis=1))
+        rd['ssb_obs_z'] = ssb_obs[:,2]
+        rd['ssb_obs_xy'] = numpy.sqrt(ssb_obs[:,0]**2 + ssb_obs[:,1]**2)
+        rd['ssb_obs_x'] = ssb_obs[:,0]
+        rd['ssb_obs_y'] = ssb_obs[:,1]
+        rd['in_psr_obs'] = numpy.sum(ssb_obs * ssb_psr, axis=1)
+
+        # Earth azimuthal and polar angles
+        rd['earth_dec'] = numpy.arctan2(rd['ssb_obs_z'], rd['ssb_obs_xy'])
+        rd['earth_ra'] = numpy.arctan2(rd['ssb_obs_y'], rd['ssb_obs_x'])
+
+        return rd
+
+
+    @Cache.use_cache
+    def d_phase_d_RAJ(self, toas):
+        """Calculate the derivative wrt RAJ
+
+        For the RAJ and DEC derivatives, use the following approximate model for
+        the pulse phase. (Inner-product between two Cartesian vectors)
+
+        de = Earth declination (wrt SSB)
+        ae = Earth right ascension
+        dp = pulsar declination
+        aa = pulsar right ascension
+        r = distance from SSB to Earh
+        c = speed of light
+
+        phase = r*[cos(de)*cos(dp)*cos(ae-aa)+sin(de)*sin(dp)]/c
+        """
+        rd = self.get_d_phase_quantities(toas)
+
+        # TODO: F0 does not have a unit. Other parameters do have a unit
+        F0 = self.F0.value * u.Hz
+        psr_ra = self.RAJ.value
+        psr_dec = self.DECJ.value
+
+        geom = numpy.cos(rd['earth_dec'])*numpy.cos(psr_dec)*\
+                numpy.sin(psr_ra-rd['earth_ra'])
+        dp_draj = rd['ssb_obs_r'] * geom * F0 / (const.c * u.radian)
+
+        return dp_draj.decompose(u.si.bases)
+
+    @Cache.use_cache
+    def d_phase_d_DECJ(self, toas):
+        """Calculate the derivative wrt DECJ
+        
+        Definitions as in d_phase_d_RAJ
+        """
+        rd = self.get_d_phase_quantities(toas)
+
+        # TODO: F0 does not have a unit. Other parameters do have a unit
+        F0 = self.F0.value * u.Hz
+        psr_ra = self.RAJ.value
+        psr_dec = self.DECJ.value
+
+        geom = numpy.cos(rd['earth_dec'])*numpy.sin(psr_dec)*\
+                numpy.cos(psr_ra-rd['earth_ra']) - numpy.sin(rd['earth_dec'])*\
+                numpy.cos(psr_dec)
+        dp_ddecj = rd['ssb_obs_r'] * geom * F0 / (const.c * u.radian)
+
+        return dp_ddecj.decompose(u.si.bases)
+
+    @Cache.use_cache
+    def d_phase_d_PMRA(self, toas):
+        """Calculate the derivative wrt PMRA
+        
+        Definitions as in d_phase_d_RAJ. Now we have a derivative in max/yr for
+        the pulsar RA
+        """
+        rd = self.get_d_phase_quantities(toas)
+
+        # TODO: F0 does not have a unit. Other parameters do have a unit
+        F0 = self.F0.value * u.Hz
+        psr_ra = self.RAJ.value
+
+        te = rd['epoch'] - time_to_longdouble(self.POSEPOCH.value) * u.day
+        geom = numpy.cos(rd['earth_dec'])*numpy.sin(psr_ra-rd['earth_ra'])
+
+        deriv = rd['ssb_obs_r'] * geom * F0 * te * u.s / (const.c * u.radian)
+        dp_dpmra = deriv * u.mas / u.year
+
+        return dp_dpmra.decompose(u.si.bases)
+
+    @Cache.use_cache
+    def d_phase_d_PMDEC(self, toas):
+        """Calculate the derivative wrt PMDEC
+        
+        Definitions as in d_phase_d_RAJ. Now we have a derivative in max/yr for
+        the pulsar DEC
+        """
+        rd = self.get_d_phase_quantities(toas)
+
+        # TODO: F0 does not have a unit. Other parameters do have a unit
+        F0 = self.F0.value * u.Hz
+        psr_ra = self.RAJ.value
+        psr_dec = self.DECJ.value
+
+        te = rd['epoch'] - time_to_longdouble(self.POSEPOCH.value) * u.day
+        geom = numpy.cos(rd['earth_dec'])*numpy.sin(psr_dec)*\
+                numpy.cos(psr_ra-rd['earth_ra']) - numpy.cos(psr_dec)*\
+                numpy.sin(rd['earth_dec'])
+
+        deriv = rd['ssb_obs_r'] * geom * F0 * te * u.s / (const.c * u.radian)
+        dp_dpmdec = deriv * u.mas / u.year
+
+        return dp_dpmdec.decompose(u.si.bases)
+
+    @Cache.use_cache
+    def d_phase_d_PX(self, toas):
+        """Calculate the derivative wrt PX
+
+        Roughly following Smart, 1977, chapter 9.
+
+        px_r:   Extra distance to Earth, wrt SSB, from pulsar
+        r_e:    Position of earth (vector) wrt SSB
+        u_p:    Unit vector from SSB pointing to pulsar
+        t_d:    Parallax delay
+        c:      Speed of light
+        delta:  Parallax
+
+        The parallax delay is due to a distance orthogonal to the line of sight
+        to the pulsar from the SSB:
+
+        px_r = sqrt( r_e**2 - (r_e.u_p)**2 ),
+
+        with delay
+
+        t_d = 0.5 * px_r * delta'/ c,  and delta = delta' * px_r / (1 AU)
+        
+        """
+        rd = self.get_d_phase_quantities(toas)
+
+        F0 = self.F0.value * u.Hz
+
+        px_r = numpy.sqrt(rd['ssb_obs_r']**2-rd['in_psr_obs']**2)
+        dp_dpx = 0.5*(px_r**2 / (u.AU*const.c)) * F0 * (u.mas / u.radian)
+
+        return dp_dpx.decompose(u.si.bases) / u.mas

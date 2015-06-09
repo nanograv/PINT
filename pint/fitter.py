@@ -3,7 +3,7 @@
 import copy, numpy
 import astropy.units as u
 import astropy.coordinates.angles as ang
-import scipy.optimize as opt
+import scipy.optimize as opt, scipy.linalg as sl
 from utils import has_astropy_unit
 from .residuals import resids
 
@@ -95,3 +95,37 @@ class fitter(object):
         # Update model and resids, as the last iteration of minimize is not
         # necessarily the one that yields the best fit
         self.minimize_func(numpy.atleast_1d(self.fitresult.x), *fitp.keys())
+
+class wls_fitter(fitter):
+    """fitter(toas=None, model=None)"""
+
+    def __init__(self, toas=None, model=None):
+        super(wls_fitter, self).__init__(toas=toas, model=model)
+
+    def call_minimize(self, method='weighted', maxiter=20):
+        """Run a linear weighted least-squared fitting method"""
+        fitp = self.get_fitparams()
+
+        # Input variables must be unitless
+        for k, v in zip(fitp.keys(), fitp.values()):
+            if has_astropy_unit(v):
+                fitp[k] = v.value
+
+        parvals = numpy.array([0.0] + [fitp[par] for par in fitp])
+
+        # Define the linear system
+        M, params = self.model.designmatrix(toas=self.toas.table,
+                incfrozen=False, incoffset=True)
+        Nvec = numpy.array(self.toas.get_errors().to(u.s))**2
+        self.update_resids()
+        residuals = self.resids.time_resids.to(u.s)
+
+        # Weighted linear fit
+        # TODO: should use SVD instead of Cholesky, like tempo(2) does?
+        Sigma_inv = numpy.dot(M.T / Nvec, M)
+        Sigma_cf = sl.cho_factor(Sigma_inv)
+        dpars = sl.cho_solve(Sigma_cf, numpy.dot(M.T, residuals / Nvec))
+
+        # Set the new parameter values
+        newpars = parvals[1:] + dpars[1:]
+        chi2 = self.minimize_func(newpars, *fitp.keys())

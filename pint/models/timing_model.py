@@ -220,12 +220,31 @@ class TimingModel(object):
         return d_phase_d_toa
 
 
+    @Cache.use_cache
     def d_phase_d_param(self, toas, param):
+        """ Return the derivative of phase with respect to the parameter.
+
+        Either analytically, or numerically
+        """
+        result = 0.0
+
+        an_funcname = "d_phase_d_" + param
+        if hasattr(self, an_funcname):
+            # Have an analytic function for this parameter
+            result = getattr(self, an_funcname)(toas)
+        else:
+            result = self.d_phase_d_param_num(toas, param)
+
+        return result
+
+    @Cache.use_cache
+    def d_phase_d_param_num(self, toas, param):
         """ Return the derivative of phase with respect to the parameter.
 
         NOT implemented yet.
         """
         result = 0.0
+
         # TODO need to do correct chain rule stuff wrt delay derivs, etc
         # Is it safe to assume that any param affecting delay only affects
         # phase indirectly (and vice-versa)??
@@ -239,6 +258,34 @@ class TimingModel(object):
         for f in self.delay_derivs[param]:
             result += f(toas)
         return result
+
+    @Cache.use_cache
+    def designmatrix(self, toas, incfrozen=False, incoffset=True):
+        """
+        Return the design matrix: the matrix with columns of d_phase_d_param/F0
+        """
+        params = ['Offset',] if incoffset else []
+        params += [par for par in self.params if incfrozen or
+                not getattr(self, par).frozen]
+
+        F0 = self.F0.value
+        ntoas = len(toas)
+        nparams = len(params)
+        delay = self.delay(toas)
+
+        # Apply all delays ?
+        #tt = toas['tdbld']
+        #for df in self.delay_funcs:
+        #    tt -= df(toas)
+
+        M = np.zeros((ntoas, nparams))
+        for ii, param in enumerate(params):
+            if param == 'Offset':
+                M[:,ii] = 1.0
+            else:
+                M[:,ii] = self.d_phase_d_param(toas, param) / F0
+
+        return M, params
 
     def __str__(self):
         result = ""

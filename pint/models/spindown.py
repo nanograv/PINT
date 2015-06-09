@@ -61,6 +61,9 @@ class Spindown(TimingModel):
         """
         # If TZRMJD is not defined, use the first time as phase reference
         # NOTE, all of this ignores TZRSITE and TZRFRQ for the time being.
+        # TODO: TZRMJD should be set by default somewhere in a standard place,
+        #       after the TOAs are loaded (RvH -- June 2, 2015)
+        # NOTE: Should we be using barycentric arrival times, instead of TDB?
         if self.TZRMJD.value is None:
             self.TZRMJD.value = toas['tdb'][0] - delay[0]*u.s
 
@@ -74,3 +77,38 @@ class Spindown(TimingModel):
         F1 = self.F1.value
         phase = (F0 + 0.5 * F1 * (dt - 2.0 * dt_pepoch)) * dt
         return phase
+
+    def d_phase_d_F0(self, toas):
+        """Calculate the derivative wrt F0"""
+        # If TZRMJD is not defined, use the first time as phase reference
+        # TODO: TZRMJD should be set by default somewhere in a standard place,
+        #       after the TOAs are loaded (RvH -- June 2, 2015)
+        # NOTE: Should we be using barycentric arrival times, instead of TDB?
+        if self.TZRMJD.value is None:
+            self.TZRMJD.value = toas['tdb'][0] - delay[0]*u.s
+
+        tdb = toas['tdbld']
+        delay = self.delay(toas)
+        TZRMJD = time_to_longdouble(self.TZRMJD.value)
+        dpdF0 = -(tdb - TZRMJD) * SECS_PER_DAY - delay
+        return dpdF0
+
+    def d_phase_d_F1(self, toas):
+        """Calculate the derivative wrt F1"""
+        # If TZRMJD is not defined, use the first time as phase reference
+        # TODO: TZRMJD should be set by default somewhere in a standard place,
+        #       after the TOAs are loaded (RvH -- June 2, 2015)
+        # NOTE: Should we be using barycentric arrival times, instead of TDB?
+        if self.TZRMJD.value is None:
+            self.TZRMJD.value = toas['tdb'][0] - delay[0]*u.s
+
+        tdb = toas['tdbld']
+        delay = self.delay(toas)
+        TZRMJD = time_to_longdouble(self.TZRMJD.value)
+        dt = (tdb - TZRMJD) * SECS_PER_DAY - delay
+
+        # TODO: what timescale should we use for pepoch calculation? Does this even matter?
+        dt_pepoch = (time_to_longdouble(self.PEPOCH.value) - TZRMJD) * SECS_PER_DAY
+
+        dpdF1 = -0.5 * (dt - 2.0 * dt_pepoch) * dt
+        return dpdF1
