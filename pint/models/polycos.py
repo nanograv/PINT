@@ -77,10 +77,13 @@ class polycoEntry:
     def evalabsphase(self,t):
         '''Return the phase at time t, computed with this polyco entry'''
         dt = (t-self.tmid)*1440.0
+        print dt
         # Compute polynomial by factoring out the dt's
         phase = self.coeffs[self.ncoeff-1]
         for i in range(self.ncoeff-2,-1,-1):
+            print self.coeffs[i],phase
             phase = self.coeffs[i] + dt*phase
+            print phase
         # Add DC term
         phase += self.rphase + dt*60.0*self.f0
         return(phase)
@@ -221,8 +224,8 @@ class Polycos(TimingModel):
         super(Polycos, self).__init__()
         self.mjdMid = None
         self.mjdSpan = None
-        self.tstart = None
-        self.tstop = None
+        self.tStart = None
+        self.tStop = None
         self.ncoeff = None
         self.coeffs = None
         self.obs = None
@@ -369,7 +372,7 @@ class Polycos(TimingModel):
                                     np.modf(tmid)[0]),obs = obs,
                                     freq = obsFreq),])
                 refPhase = self.phase(toaMid.table)
-                refF0 = self.d_phase_d_toa(toaMid.table)
+                #refF0 = self.d_phase_d_toa(toaMid.table)  FIXME ???
                 #tmid,mjdSpan,refPhase,refF0,nCoeff,coeffs,obs
                 mjdSpan = (domainList[i][1]-domainList[i][0])
 
@@ -384,12 +387,14 @@ class Polycos(TimingModel):
                 toas = toa.get_TOAs_list(toaList)
 
                 ph = self.phase(toas.table)
+                print ph
                 rdcPhase = ph-refPhase
+                print rdcPhase
                 dnodesMjd = nodesMjd.value.astype(float)  # Trancate to double
                 drdcPhase = (rdcPhase.int+rdcPhase.frac).astype(float)
-                coeffs = cheb.chebfit(dnodesMjd,drdcPhase,ncoeff)
+                coeffs = cheb.chebfit(dnodesMjd*86400.0,drdcPhase,ncoeff)
 
-                entry = polycoEntry(tmid,mjdSpan.value,refPhase.frac+refPhase.int,refF0,ncoeff,coeffs,obs)
+                entry = polycoEntry(tmid,mjdSpan.value,refPhase.frac+refPhase.int,self.F0.value,ncoeff,coeffs,obs)
                 entryList.append((self.PSR.value, '27-Dec-03', 10000.00, tmid, self.DM.value,0,0,0,obsFreq,entry))
 
             pTable = table.Table(rows = entryList, names = ('psr','date','utc','tmid','dm',
@@ -436,24 +441,22 @@ class Polycos(TimingModel):
         except: 
             errorMssg = "No sufficent polyco data. Plese read or generate polyco data correctlly."
             raise AttributeError(errorMssg)
-
-        domain = [self.dataTable['tmid'][0]- self.dataTable['entry'][0].mjdspan/2, 
-                  self.dataTable['tmid'][-1]+ self.dataTable['entry'][-1].mjdspan/2]     
-
+   
+        if self.tStart is None or self.tStop is None:
+            self.tStart = np.array([self.dataTable['entry'][i].tstart for i in range(lenEntry)])
+            self.tStop = np.array([self.dataTable['entry'][i].tstop for i in range(lenEntry)])
         # Check if t in the polyco domain
         
-        if t < domain[0] or t > domain[1]:
-            errorMssg = "Input time should be in the range of "+str(domain[0])+" and "+str(domain[1])
+        if t < self.tStart[0] or t > self.tStop[-1]:
+            errorMssg = "Input time should be in the range of "+str(self.tStart[0])+" and "+str(self.tStop[-1])
             raise ValueError(errorMssg)
 
-        entryIndex = np.searchsorted(self.dataTable['tmid'].data,t)
-
-        if entryIndex == len(self.dataTable):
-            entryIndex = entryIndex-1
-        entryBeginT = self.dataTable['tmid'][entryIndex] - self.dataTable['entry'][entryIndex].mjdspan/2
-
-        if t < entryBeginT:
-            entryIndex = entryIndex - 1
+        startIndex = np.searchsorted(self.tStart,t)
+      
+        entryIndex = startIndex-1
+        if t > self.tStop[entryIndex]:
+            errorMssg = "Input time may be not coverd by entry start with "+str(self.tStart[0])+" and end with "+str(self.tStop[-1])
+            raise ValueError(errorMssg)
 
         return entryIndex
         
