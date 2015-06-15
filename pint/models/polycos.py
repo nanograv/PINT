@@ -78,17 +78,6 @@ class polycoEntry:
         phase += self.rphase +Phase(dt*60.0*self.f0)
         return(phase)
 
-    def evalabsphaseB(self,t):
-        '''Return the phase at time t, computed with this polyco entry'''
-        dt = (t-self.tmid)*1440.0
-        # Compute polynomial by factoring out the dt's
-        phase = self.coeffs[self.ncoeff-1]
-        for i in range(self.ncoeff-2,-1,-1):
-            phase = self.coeffs[i] + dt*phase
-        # Add DC term
-        phase += self.rphase + dt*60.0*self.f0
-        return(phase)
-
     def evalphase(self,t):
         '''Return the phase at time t, computed with this polyco entry'''
         return(self.evalabsphase(t).frac)
@@ -482,7 +471,7 @@ class Polycos(TimingModel):
         entryIndex = self.find_entry(t)
         phase = np.longdouble(np.zeros((len(t),1)))
         for i,time in enumerate(t):
-            absPhase[i] = self.dataTable['entry'][entryIndex[i]].evalabsphase(time).frac[0]
+            phase[i] = self.dataTable['entry'][entryIndex[i]].evalabsphase(time).frac[0]
         return phase
 
     def eval_abs_phase(self,t):
@@ -499,8 +488,13 @@ class Polycos(TimingModel):
         return Phase(absPhase[:,0],absPhase[:,1])
 
     def eval_spin_freq(self,t):
+        if not isinstance(t, np.ndarray) and not isinstance(t,list):
+            t = np.array([t,])
+
         entryIndex = self.find_entry(t)
-        spinFreq = self.dataTable['entry'][entryIndex].evalfreq(t)
+        spinFreq = np.longdouble(np.zeros((len(t),1)))
+        for i,time in enumerate(t):
+            spinFreq[i] = self.dataTable['entry'][entryIndex].evalfreq(t)
         return spinFreq
 
 
