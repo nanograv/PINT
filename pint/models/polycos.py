@@ -38,12 +38,12 @@ class polycoEntry:
     obs : str
         Observatory code
     """
-    def __init__(self,tmid,mjdspan,rphase,f0,ncoeff,coeffs,obs):
+    def __init__(self,tmid,mjdspan,rphaseInt,rphaseFrac,f0,ncoeff,coeffs,obs):
         self.tmid = tmid
         self.mjdspan = mjdspan
         self.tstart = np.longdouble(tmid) - np.longdouble(mjdspan)/2.0
         self.tstop = np.longdouble(tmid) + np.longdouble(mjdspan)/2.0
-        self.rphase = np.longdouble(rphase)
+        self.rphase = Phase(rphaseInt,rphaseFrac)
         self.f0 = np.longdouble(f0)
         self.ncoeff = ncoeff
         self.coeffs = np.longdouble(coeffs)
@@ -60,20 +60,33 @@ class polycoEntry:
         '''Return True if this polyco entry is valid for the time given (MJD)'''
         return t>=(self.tmid-self.mjdspan/2.0) and t<(self.tmid+self.mjdspan/2.0)
 
-     def evalabsphase(self,t):
+    def evalabsphase(self,t):
         '''Return the phase at time t, computed with this polyco entry'''
         dt = (t-self.tmid)*1440.0
         # Compute polynomial by factoring out the dt's
+        p = self.coeffs[self.ncoeff-1]
         phase = Phase(self.coeffs[self.ncoeff-1])
         for i in range(self.ncoeff-2,-1,-1):
-            print self.coeffs[i],phase
+            p = self.coeffs[i]+dt*p
             pI = Phase(dt*phase.int)
             pF = Phase(dt*phase.frac)
             c = Phase(self.coeffs[i])
             phase = pI+pF+c
-
+            print self.coeffs[i],phase.int,p
+         
         # Add DC term
-        phase += Phase(self.rphase)+Phase(dt*60.0*self.f0)
+        phase += self.rphase +Phase(dt*60.0*self.f0)
+        return(phase)
+
+    def evalabsphaseB(self,t):
+        '''Return the phase at time t, computed with this polyco entry'''
+        dt = (t-self.tmid)*1440.0
+        # Compute polynomial by factoring out the dt's
+        phase = self.coeffs[self.ncoeff-1]
+        for i in range(self.ncoeff-2,-1,-1):
+            phase = self.coeffs[i] + dt*phase
+        # Add DC term
+        phase += self.rphase + dt*60.0*self.f0
         return(phase)
 
     def evalphase(self,t):
@@ -85,7 +98,7 @@ class polycoEntry:
         dt = (t-self.tmid)*1440.0
         s = 0.0
         for i in range(1,self.ncoeff):
-            s += float(i) * self.coeffs[i] * dt**(i-1)
+            s += np.longdouble(i) * self.coeffs[i] * dt**(i-1)
         freq = self.f0 + s/60.0
         return(freq)
 
@@ -164,7 +177,12 @@ def tempo_polyco_table_reader(filename):
         # Read second line
         line2 = f.readline()
         fields = line2.split()
-        refPhase = np.longdouble(fields[0])
+        refPhaseInt,refPhaseFrac = fields[0].split('.')
+        refPhaseInt = np.longdouble(refPhaseInt)
+        refPhaseFrac = np.longdouble('.'+refPhaseFrac)
+        if refPhaseInt<0:
+            refPhaseFrac = -refPhaseFrac
+
         refF0 = np.longdouble(fields[1])
         obs = fields[2]
         mjdSpan = np.longdouble(fields[3])/(60*24)   # Here change to constant
@@ -188,7 +206,7 @@ def tempo_polyco_table_reader(filename):
             for c in line.split():
                 coeffs.append(np.longdouble(c))
         coeffs = np.array(coeffs)
-        entry = polycoEntry(tmid,mjdSpan,refPhase,refF0,nCoeff,coeffs,obs)
+        entry = polycoEntry(tmid,mjdSpan,refPhaseInt,refPhaseFrac,refF0,nCoeff,coeffs,obs)
 
         entries.append((psrname, date, utc, tmid, dm, doppler, logrms,
                         binaryPhase, obsfreq,entry))
@@ -458,6 +476,9 @@ class Polycos(TimingModel):
         return entryIndex
         
     def eval_phase(self,t):
+        if not isinstance(t, np.ndarray) and not isinstance(t,list):
+            t = np.array([t,])
+
         entryIndex = self.find_entry(t)
         phase = np.longdouble(np.zeros((len(t),1)))
         for i,time in enumerate(t):
@@ -465,11 +486,16 @@ class Polycos(TimingModel):
         return phase
 
     def eval_abs_phase(self,t):
+        if not isinstance(t, np.ndarray) and not isinstance(t,list):
+            t = np.array([t,])
+
         entryIndex = self.find_entry(t)
         absPhase = np.longdouble(np.zeros((len(t),2)))
+        
         for i,time in enumerate(t):
             absPhase[i][0] = self.dataTable['entry'][entryIndex[i]].evalabsphase(time).int[0]
             absPhase[i][1] = self.dataTable['entry'][entryIndex[i]].evalabsphase(time).frac[0]
+        
         return Phase(absPhase[:,0],absPhase[:,1])
 
     def eval_spin_freq(self,t):
