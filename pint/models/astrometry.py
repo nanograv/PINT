@@ -216,10 +216,11 @@ class Astrometry(TimingModel):
         te = rd['epoch'] - time_to_longdouble(self.POSEPOCH.value) * u.day
         geom = numpy.cos(rd['earth_dec'])*numpy.sin(psr_ra-rd['earth_ra'])
 
-        deriv = rd['ssb_obs_r'] * geom * F0 * te * u.s / (const.c * u.radian)
+        deriv = rd['ssb_obs_r'] * geom * F0 * te / (const.c * u.radian)
         dp_dpmra = deriv * u.mas / u.year
 
-        return dp_dpmra.decompose(u.si.bases)
+        # We want to return sec / (mas / yr)
+        return dp_dpmra.decompose(u.si.bases) / (u.mas / u.year)
 
     @Cache.use_cache
     def d_phase_d_PMDEC(self, toas):
@@ -240,10 +241,11 @@ class Astrometry(TimingModel):
                 numpy.cos(psr_ra-rd['earth_ra']) - numpy.cos(psr_dec)*\
                 numpy.sin(rd['earth_dec'])
 
-        deriv = rd['ssb_obs_r'] * geom * F0 * te * u.s / (const.c * u.radian)
+        deriv = rd['ssb_obs_r'] * geom * F0 * te / (const.c * u.radian)
         dp_dpmdec = deriv * u.mas / u.year
 
-        return dp_dpmdec.decompose(u.si.bases)
+        # We want to return sec / (mas / yr)
+        return dp_dpmdec.decompose(u.si.bases) / (u.mas / u.year)
 
     @Cache.use_cache
     def d_phase_d_PX(self, toas):
@@ -275,4 +277,5 @@ class Astrometry(TimingModel):
         px_r = numpy.sqrt(rd['ssb_obs_r']**2-rd['in_psr_obs']**2)
         dp_dpx = 0.5*(px_r**2 / (u.AU*const.c)) * F0 * (u.mas / u.radian)
 
+        # We want to return sec / mas
         return dp_dpx.decompose(u.si.bases) / u.mas

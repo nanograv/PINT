@@ -7,6 +7,7 @@ from astropy import log
 import numpy as np
 import pint.toa as toa 
 import pint.utils as utils
+import astropy.units as u
 
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
@@ -268,10 +269,11 @@ class TimingModel(object):
         params += [par for par in self.params if incfrozen or
                 not getattr(self, par).frozen]
 
-        F0 = self.F0.value
+        F0 = self.F0.value / u.s        # 1/sec
         ntoas = len(toas)
         nparams = len(params)
         delay = self.delay(toas)
+        units = []
 
         # Apply all delays ?
         #tt = toas['tdbld']
@@ -282,10 +284,13 @@ class TimingModel(object):
         for ii, param in enumerate(params):
             if param == 'Offset':
                 M[:,ii] = 1.0
+                units.append(u.s/u.s)
             else:
-                M[:,ii] = self.d_phase_d_param(toas, param) / F0
+                q = self.d_phase_d_param(toas, param) / F0
+                M[:,ii] = q
+                units.append(q.unit)
 
-        return M, params
+        return M, params, units
 
     def __str__(self):
         result = ""

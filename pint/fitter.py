@@ -111,10 +111,8 @@ class wls_fitter(fitter):
             if has_astropy_unit(v):
                 fitp[k] = v.value
 
-        parvals = numpy.array([0.0] + [fitp[par] for par in fitp])
-
         # Define the linear system
-        M, params = self.model.designmatrix(toas=self.toas.table,
+        M, params, units = self.model.designmatrix(toas=self.toas.table,
                 incfrozen=False, incoffset=True)
         Nvec = numpy.array(self.toas.get_errors().to(u.s))**2
         self.update_resids()
@@ -126,6 +124,21 @@ class wls_fitter(fitter):
         Sigma_cf = sl.cho_factor(Sigma_inv)
         dpars = sl.cho_solve(Sigma_cf, numpy.dot(M.T, residuals / Nvec))
 
+        # Uncertainties
+        Sigma = sl.cho_solve(Sigma_cf, numpy.eye(len(Sigma_inv)))
+        errs = numpy.sqrt(numpy.diag(Sigma))
+
         # Set the new parameter values
-        newpars = parvals[1:] + dpars[1:]
-        chi2 = self.minimize_func(newpars, *fitp.keys())
+        # TODO: Now have to do the units manually
+        conv = {'F0': u.Hz, 'F1': u.Hz/u.s, 'RAJ':u.hourangle,
+                'DECJ':u.degree, 'PMRA':u.mas/u.yr, 'PMDEC':u.mas/u.yr,
+                'PX':u.mas}
+
+        # TODO: units and fitp have a different ordering. That is confusing
+        for ii, pn in enumerate(fitp.keys()):
+            uind = params.index(pn)             # Index of designmatrix
+            un = 1.0 /  (units[uind]/u.s)       # Unit in designmatrix
+            pv, dpv = fitp[pn] * conv[pn], dpars[uind] * un
+            fitp[pn] = float( (pv+dpv) / conv[pn] )
+
+        chi2 = self.minimize_func(list(fitp.values()), *fitp.keys())

@@ -87,11 +87,12 @@ class Spindown(TimingModel):
         if self.TZRMJD.value is None:
             self.TZRMJD.value = toas['tdb'][0] - delay[0]*u.s
 
-        tdb = toas['tdbld']
-        delay = self.delay(toas)
-        TZRMJD = time_to_longdouble(self.TZRMJD.value)
-        dpdF0 = -(tdb - TZRMJD) * SECS_PER_DAY - delay
-        return dpdF0
+        # TODO: toas should have units from the table
+        tdb = toas['tdbld'].quantity * u.day
+        delay = self.delay(toas) * u.s
+        TZRMJD = time_to_longdouble(self.TZRMJD.value) * u.day
+        dpdF0 = -(tdb - TZRMJD) - delay
+        return dpdF0.decompose()
 
     def d_phase_d_F1(self, toas):
         """Calculate the derivative wrt F1"""
@@ -102,13 +103,13 @@ class Spindown(TimingModel):
         if self.TZRMJD.value is None:
             self.TZRMJD.value = toas['tdb'][0] - delay[0]*u.s
 
-        tdb = toas['tdbld']
-        delay = self.delay(toas)
-        TZRMJD = time_to_longdouble(self.TZRMJD.value)
-        dt = (tdb - TZRMJD) * SECS_PER_DAY - delay
+        tdb = toas['tdbld'] * u.day
+        delay = self.delay(toas) * u.s
+        TZRMJD = time_to_longdouble(self.TZRMJD.value) * u.day
+        dt = (tdb - TZRMJD) - delay
 
         # TODO: what timescale should we use for pepoch calculation? Does this even matter?
-        dt_pepoch = (time_to_longdouble(self.PEPOCH.value) - TZRMJD) * SECS_PER_DAY
+        dt_pepoch = (time_to_longdouble(self.PEPOCH.value) * u.day - TZRMJD)
 
         dpdF1 = -0.5 * (dt - 2.0 * dt_pepoch) * dt
-        return dpdF1
+        return dpdF1.decompose()

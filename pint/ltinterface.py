@@ -7,10 +7,13 @@ import pint.models as tm
 from pint.phase import Phase
 from pint import toa
 from pint.residuals import resids
+from pint import fitter
+from utils import has_astropy_unit
 import astropy.units as u
+import astropy.coordinates.angles as ang
 import matplotlib.pyplot as plt
 from astropy import log
-import time
+import time, copy
 
 import collections
 
@@ -19,8 +22,7 @@ try:
 except ImportError:
     from ordereddict import OrderedDict
 
-
-class pintpar:
+class pintpar(object):
     """
     Similar to the parameter class defined in libstempo, this class gives a nice
     interface to the timing model parameters
@@ -357,7 +359,7 @@ class pintpulsar(object):
         corresponding to FX (F0, F1, ...) and JUMP parameters, so that
         they match finite-difference derivatives. If incoffset=False, the
         constant phaseoffset column is not included in the designmatrix."""
-        M, params = self.model.designmatrix(self.t.table, incfrozen=False,
+        M, params, units = self.model.designmatrix(self.t.table, incfrozen=False,
                 incoffset=incoffset)
         return M
     
@@ -439,7 +441,23 @@ class pintpulsar(object):
 
         Runs `iters` iterations of the tempo2 fit, recomputing
         barycentric TOAs and residuals each time."""
-        pass
+        f = fitter.wls_fitter(toas=self.t, model=self.model)
+
+        for ii in range(iters+1):
+            f.call_minimize()
+        
+        fitp = f.get_fitparams()
+        # TODO: handle these units correctly
+        for p, val in zip(fitp.keys(), fitp.values()):
+            modval = getattr(f.model, p).value
+
+            if (not has_astropy_unit(val)) and has_astropy_unit(modval):
+                if type(modval) is ang.Angle:
+                    val = ang.Angle(val, unit=modval.unit)
+                else:
+                    val = val * modval.unit
+
+            self[p].val = val
 
     def chisq(self,removemean='weighted'):
         """tempopulsar.chisq(removemean='weighted')
