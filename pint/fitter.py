@@ -119,13 +119,12 @@ class wls_fitter(fitter):
         residuals = self.resids.time_resids.to(u.s)
 
         # Weighted linear fit
-        # TODO: should use SVD instead of Cholesky, like tempo(2) does?
         Sigma_inv = numpy.dot(M.T / Nvec, M)
-        Sigma_cf = sl.cho_factor(Sigma_inv)
-        dpars = sl.cho_solve(Sigma_cf, numpy.dot(M.T, residuals / Nvec))
+        U, s, Vt = sl.svd(Sigma_inv)
+        Sigma = numpy.dot(Vt.T / s, U.T)
+        dpars = numpy.dot(Sigma, numpy.dot(M.T, residuals.value / Nvec))
 
         # Uncertainties
-        Sigma = sl.cho_solve(Sigma_cf, numpy.eye(len(Sigma_inv)))
         errs = numpy.sqrt(numpy.diag(Sigma))
 
         # Set the new parameter values
