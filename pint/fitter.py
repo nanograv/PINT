@@ -128,10 +128,12 @@ class wls_fitter(fitter):
         errs = numpy.sqrt(numpy.diag(Sigma))
 
         # Set the new parameter values
-        # TODO: Now have to do the units manually
+        # TODO: Now have to do the units manually, because not all parameters
+        #       have units everywhere in the code yet. Eventually, this can be
+        #       removed
         conv = {'F0': u.Hz, 'F1': u.Hz/u.s, 'RAJ':u.hourangle,
                 'DECJ':u.degree, 'PMRA':u.mas/u.yr, 'PMDEC':u.mas/u.yr,
-                'PX':u.mas}
+                'PX':u.mas, 'DM':u.s/u.s}
 
         # TODO: units and fitp have a different ordering. That is confusing
         for ii, pn in enumerate(fitp.keys()):
@@ -139,5 +141,7 @@ class wls_fitter(fitter):
             un = 1.0 /  (units[uind]/u.s)       # Unit in designmatrix
             pv, dpv = fitp[pn] * conv[pn], dpars[uind] * un
             fitp[pn] = float( (pv+dpv) / conv[pn] )
+
+        # TODO: Also record the uncertainties in minimize_func
 
         chi2 = self.minimize_func(list(fitp.values()), *fitp.keys())

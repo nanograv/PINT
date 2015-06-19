@@ -264,6 +264,7 @@ class TimingModel(object):
     def designmatrix(self, toas, incfrozen=False, incoffset=True):
         """
         Return the design matrix: the matrix with columns of d_phase_d_param/F0
+        or d_toa_d_param
         """
         params = ['Offset',] if incoffset else []
         params += [par for par in self.params if incfrozen or
@@ -282,11 +283,18 @@ class TimingModel(object):
 
         M = np.zeros((ntoas, nparams))
         for ii, param in enumerate(params):
+            dpdp = "d_phase_d_" + param
+            dddp = "d_delay_d_" + param
             if param == 'Offset':
                 M[:,ii] = 1.0
                 units.append(u.s/u.s)
-            else:
-                q = self.d_phase_d_param(toas, param) / F0
+            elif hasattr(self, dpdp):
+                q = getattr(self, dpdp)(toas) / F0
+                #q = self.d_phase_d_param(toas, param) / F0
+                M[:,ii] = q
+                units.append(q.unit)
+            elif hasattr(self, dddp):
+                q = getattr(self, dddp)(toas)
                 M[:,ii] = q
                 units.append(q.unit)
 
