@@ -242,7 +242,7 @@ def has_astropy_unit(x):
     useful, because different data types can still have units associated with
     them.
     """
-    return hasattr(x,'unit') and type(x.unit) is type(u.J)
+    return hasattr(x,'unit') and isinstance(x.unit, u.core.UnitBase)
 
 def longdouble2string(x):
     """Convert numpy longdouble to string"""
