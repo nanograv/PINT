@@ -22,6 +22,22 @@ try:
 except ImportError:
     from ordereddict import OrderedDict
 
+# Make sure we have the minuteangle and secondangle units
+u.minuteangle = u.def_unit('minuteangle', u.hourangle / 60)
+u.secondangle = u.def_unit('secondangle', u.minuteangle / 60)
+
+# Setting units, in case of bulk access to parameters
+par_units = {'RAJ': u.radian,
+             'DECJ': u.radian}
+par_units_set = {'RAJ': u.hourangle,
+             'DECJ': u.degree}
+err_units = {'RAJ': u.radian,
+             'DECJ': u.radian}
+err_units_set = {'RAJ': u.secondangle,
+             'DECJ': u.arcsecond}
+
+err_conv = ['RAJ', 'DECJ']          # Error units that need to be converted
+
 class pintpar(object):
     """
     Similar to the parameter class defined in libstempo, this class gives a nice
@@ -33,21 +49,52 @@ class pintpar(object):
         self._par = par
         self._set = True
 
+        # Convert the error
+        # TODO: Units should of course be handled in the PINT interface
+        if parname in err_conv:
+            if has_astropy_unit(self._par.uncertainty):
+                raise NotImplementedError("Deprecated conversion stuff!")
+            ev = self._par.uncertainty * err_units_set[parname]
+            self._par.uncertainty = ev.to(err_units[parname]).value
+
     @property
     def val(self):
-        return self._par.value
+        if has_astropy_unit(self._par.value):
+            return self._par.value.to(par_units[self.name]).value
+        else:
+            return self._par.value
 
     @val.setter
     def val(self, value):
-        self._par.value = value
+        if not has_astropy_unit(value) and self.name in par_units_set:
+            self._par.value = \
+                    (value * par_units[self.name]).to(par_units_set[self.name])
+        elif has_astropy_unit(value) and self.name in par_units_set:
+            self._par.value = value.to(par_units_set[self.name])
+        elif not has_astropy_unit(value):
+            self._par.value = value
+        else:
+            self._par.value = value
 
     @property
     def err(self):
-        return self._par.uncertainty
+        if has_astropy_unit(self._par.uncertainty):
+            return self._par.uncertainty.to(err_units[self.name]).value
+        else:
+            return self._par.uncertainty
 
     @err.setter
     def err(self, value):
-        self._par.uncertainty = value
+        #self._par.uncertainty = value
+        if not has_astropy_unit(value) and self.name in err_units_set:
+            self._par.uncertainty = \
+                    (value * err_units[self.name]).to(err_units_set[self.name])
+        elif has_astropy_unit(value) and self.name in err_units_set:
+            self._par.uncertainty = value.to(err_units_set[self.name])
+        elif not has_astropy_unit(value):
+            self._par.uncertainty = value
+        else:
+            self._par.uncertainty = value
 
     @property
     def fit(self):
@@ -69,6 +116,10 @@ class pintpar(object):
     @property
     def set(self):
         return self._set
+
+    @set.setter
+    def set(self, value):
+        self._set = value
 
 
 class pintpulsar(object):
@@ -322,14 +373,14 @@ class pintpulsar(object):
         - Setting an unset parameter sets its `set` flag (obviously).
         - Unlike in earlier libstempo versions, setting a parameter does not set its error to zero."""
         if values is None:
-            return np.fromiter((getattr(self.model, par).value for par in
+            return np.fromiter((self[par].val for par in
                     self.pars(which)),np.longdouble)
         elif isinstance(values,collections.Mapping):
             for par in values:
-                getattr(self.model, par).value = values[par]
+                self[par].val = values[par]
         elif isinstance(values,collections.Iterable):
             for par,val in zip(self.pars(which), values):
-                getattr(self.model, par).value = val
+                self[par].val = val
         else:
             raise TypeError
 
@@ -338,14 +389,16 @@ class pintpulsar(object):
 
         Same as `vals()`, but for parameter errors."""
         if values is None:
-            return np.fromiter((getattr(self.model, par).uncertainty for par in
+            #return np.fromiter((getattr(self.model, par).uncertainty for par in
+            #        self.pars(which)),np.longdouble)
+            return np.fromiter((self[par].err for par in
                     self.pars(which)),np.longdouble)
         elif isinstance(values,collections.Mapping):
             for par in values:
-                getattr(self.model, par).uncertainty = values[par]
+                self[par].err = values[par]
         elif isinstance(values,collections.Iterable):
             for par,val in zip(self.pars(which), values):
-                getattr(self.model, par).uncertainty = val
+                self[par].err = val
         else:
             raise TypeError
 
@@ -424,7 +477,7 @@ class pintpulsar(object):
         
         WARNING: Will be deprecated in the future. Use `pulsenumbers`.
         """
-        pass
+        return self.model.phase(self.t.table).int.quantity.value
 
     def pulsenumbers(self,updatebats=True,formresiduals=True,removemean=True):
         """Return the pulse number relative to PEPOCH, as detected by tempo2
@@ -434,7 +487,7 @@ class pintpulsar(object):
         (default for both). If that is requested, the residual mean is removed
         `removemean` is True. All this just like in `residuals`.
         """
-        pass
+        return self.model.phase(self.t.table).int.quantity.value
 
     def fit(self,iters=1):
         """tempopulsar.fit(iters=1)
@@ -465,7 +518,9 @@ class pintpulsar(object):
         Computes the chisq of current residuals vs errors,
         removing the noise-weighted residual, unless
         specified otherwise."""
-        pass
+        res, err = self.residuals(removemean=removemean), self.toaerrs
+
+        return np.sum(res * res / (1e-12 * err * err))
 
     def rms(self,removemean='weighted'):
         """tempopulsar.rms(removemean='weighted')
@@ -473,7 +528,10 @@ class pintpulsar(object):
         Computes the current residual rms, 
         removing the noise-weighted residual, unless
         specified otherwise."""
-        pass
+        err = self.toaerrs
+        norm = np.sum(1.0 / (1e-12 * err * err))
+
+        return np.sqrt(self.chisq(removemean=removemean) / norm)
 
     def savepar(self,parfile):
         """tempopulsar.savepar(parfile)
