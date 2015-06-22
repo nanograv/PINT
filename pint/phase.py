@@ -12,6 +12,7 @@ class Phase(namedtuple('Phase', 'int frac')):
     def __new__(cls, arg1, arg2=None):
         # Assume inputs are numerical, could add an extra
         # case to parse strings as input.
+        # if it is not a list, convert to a list
         if not isinstance(arg1, numpy.ndarray) and not isinstance(arg1,list):
             arg1 = numpy.array([arg1,])
         if arg2 is None:
