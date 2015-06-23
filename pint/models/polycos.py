@@ -41,7 +41,6 @@ class polycoEntry:
     """
     def __init__(self,tmid,mjdspan,rphaseInt,rphaseFrac,f0,ncoeff,coeffs,obs):
         self.tmid = tmid*u.day
-        print self.tmid
         self.mjdspan = mjdspan*u.day
         self.tstart = np.longdouble(self.tmid) - np.longdouble(self.mjdspan)/2.0
         self.tstop = np.longdouble(self.tmid) + np.longdouble(self.mjdspan)/2.0
@@ -161,7 +160,6 @@ def tempo_polyco_table_reader(filename):
         date = fields[1].strip()
         utc = fields[2]
         tmid = utils.MJD_string2longdouble(fields[3])
-        print tmid
         dm = float(fields[4])
         doppler = float(fields[5])
         logrms = float(fields[6])
