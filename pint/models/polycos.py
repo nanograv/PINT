@@ -560,17 +560,37 @@ class Polycos(TimingModel):
         return phase
 
     def eval_abs_phase(self,t):
+        '''
+        Polyco evalate absolute phase for a time array.
+        Parameters
+        ---------
+        t: numpy.ndarray or a single number.
+           An time array in MJD. Time sample should be in order
+        Returns
+        ---------
+        out: PINT Phase class
+             Polyco evaluated absolute phase for t. 
+        '''
         if not isinstance(t, np.ndarray) and not isinstance(t,list):
             t = np.array([t,])
 
         entryIndex = self.find_entry(t)
-        absPhase = np.longdouble(np.zeros((len(t),2)))
-        
-        for i,time in enumerate(t):
-            absPhase[i][0] = self.polycoTable['entry'][entryIndex[i]].evalabsphase(time).int[0]
-            absPhase[i][1] = self.polycoTable['entry'][entryIndex[i]].evalabsphase(time).frac[0]
-        
-        return Phase(absPhase[:,0],absPhase[:,1])
+        phaseInt = np.array([])
+        phaseFrac= np.array([])
+        # Compute phase for time in each entry
+        for i in range(len(self.polycoTable)):
+            mask = np.where(entryIndex==i) # Build mask for time in each entry
+            t_in_entry = t[mask]
+            if len(t_in_entry) == 0:
+                continue
+            # Calculate the phase as an array
+            absp = self.polycoTable['entry'][i].evalabsphase(t_in_entry)
+            phaseInt = np.hstack((phaseInt,absp.int))
+            phaseFrac = np.hstack((phaseFrac,absp.frac))
+            # Maybe add sort function here, since the time has been masked. 
+        absPhase = Phase(phaseInt,phaseFrac)
+       
+        return absPhase
 
     def eval_spin_freq(self,t):
         if not isinstance(t, np.ndarray) and not isinstance(t,list):
