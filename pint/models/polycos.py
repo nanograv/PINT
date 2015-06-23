@@ -74,7 +74,6 @@ class polycoEntry:
          
         # Add DC term
         phase += self.rphase +Phase(dt*60.0*self.f0)
-        print Phase(dt).frac[0],Phase(dt).int[0]
         return(phase)
 
     def evalphase(self,t):
