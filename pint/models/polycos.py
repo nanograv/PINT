@@ -82,8 +82,8 @@ class polycoEntry:
 
     def evalfreq(self,t):
         '''Return the freq at time t, computed with this polyco entry'''
-        dt = (t-self.tmid)*1440.0
-        s = 0.0
+        dt = (np.longdouble(t)-self.tmid.value)*np.longdouble(1440.0)
+        s = np.longdouble(0.0)
         for i in range(1,self.ncoeff):
             s += np.longdouble(i) * self.coeffs[i] * dt**(i-1)
         freq = self.f0 + s/60.0
@@ -91,8 +91,8 @@ class polycoEntry:
 
     def evalfreqderiv(self,t):
         """ Return the frequency derivative at time t."""
-        dt = (t-self.tmid)*1440.0
-        s = 0.0
+        dt = (np.longdouble(t)-self.tmid.value)*np.longdouble(1440.0)
+        s = np.longdouble(0.0)
         for i in range(2,self.ncoeff):
             # Change to long double 
             s += np.longdouble(i) * np.longdouble(i-1) * self.coeffs[i] * dt**(i-2)
@@ -521,7 +521,8 @@ class Polycos(TimingModel):
         try:
             lenEntry = len(self.polycoTable)
             if lenEntry == 0:
-                errorMssg = "No sufficent polyco data. Plese read or generate polyco data correctlly."
+                errorMssg = ("No sufficent polyco data."
+                             "Plese read or generate polyco data correctlly.")
                 raise AttributeError(errorMssg)
 
         except: 
@@ -543,8 +544,10 @@ class Polycos(TimingModel):
         entryIndex = startIndex-1
         overFlow = np.where(t > self.tStop[entryIndex])[0]
         if overFlow.size!=0: 
-            errorMssg = ("Input time"+str(t[overFlow])+"may be not coverd by entry start with "
-                        +str(self.tStart[entryIndex[overFlow]])+ " and end with "+str(self.tStop[entryIndex[overFlow]]))
+            errorMssg = ("Input time"+str(t[overFlow])+
+                        "may be not coverd by entry start with "
+                        +str(self.tStart[entryIndex[overFlow]])+ 
+                        " and end with "+str(self.tStop[entryIndex[overFlow]]))
             raise ValueError(errorMssg)
 
         return entryIndex
@@ -552,12 +555,7 @@ class Polycos(TimingModel):
     def eval_phase(self,t):
         if not isinstance(t, np.ndarray) and not isinstance(t,list):
             t = np.array([t,])
-
-        entryIndex = self.find_entry(t)
-        phase = np.longdouble(np.zeros((len(t),1)))
-        for i,time in enumerate(t):
-            phase[i] = self.polycoTable['entry'][entryIndex[i]].evalabsphase(time).frac[0]
-        return phase
+        return self.eval_abs_phase(t).frac
 
     def eval_abs_phase(self,t):
         '''
@@ -597,9 +595,18 @@ class Polycos(TimingModel):
             t = np.array([t,])
 
         entryIndex = self.find_entry(t)
-        spinFreq = np.longdouble(np.zeros((len(t),1)))
-        for i,time in enumerate(t):
-            spinFreq[i] = self.polycoTable['entry'][entryIndex].evalfreq(t)
+        spinFreq = np.array([])
+        for i in range(len(self.polycoTable)):
+            mask = np.where(entryIndex==i) # Build mask for time in each entry
+            t_in_entry = t[mask]
+            if len(t_in_entry) == 0:
+                continue    
+            sfreq = self.polycoTable['entry'][i].evalfreq(t_in_entry)
+            spinFreq = np.hstack((spinFreq,sfreq))
+       
         return spinFreq
+ 
+
+
 
 
