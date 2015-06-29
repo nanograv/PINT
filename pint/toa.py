@@ -127,7 +127,8 @@ def read_fake_TOAs(time_mjd1,time_mjd2 = None, error = 0.0, obs='Barycenter',
     tb = table.Table([numpy.arange(ntoas), timeList,error_list, freq_list,obs,
                     flag_list],names=("index", "mjd", "error", "freq","obs", 
                     "flags"), meta = {'TOA Type':'Fake toa time sample' }).group_by("obs")
-    t = TOAs(toaTable = tb)
+    
+    t = TOAs(toaTable = tb) # Create TOAs class using a table
 
     if not any([f.has_key('clkcorr') for f in t.table['flags']]):
         log.info("Applying clock corrections.")
