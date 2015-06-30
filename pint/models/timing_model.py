@@ -13,7 +13,7 @@ import pint.utils as utils
 ignore_params = ['START', 'FINISH', 'SOLARN0', 'EPHEM', 'CLK', 'UNITS',
                  'TIMEEPH', 'T2CMETHOD', 'CORRECT_TROPOSPHERE', 'DILATEFREQ',
                  'NTOA', 'CLOCK', 'TRES', 'TZRMJD', 'TZRFRQ', 'TZRSITE',
-                 'NITS', 'IBOOT']
+                 'NITS', 'IBOOT','BINARY']
 
 class Cache(object):
     """Temporarily cache timing model internal computation results.
@@ -333,8 +333,22 @@ def generate_timing_model(name, components):
     my_model = MyModel()
     my_model.read_parfile("J1234+1234.par")
     """
-    # TODO could test here that all the components are derived from
-    # TimingModel?
+    # Test that all the components are derived from
+    # TimingModel
+    try:
+        numComp = len(components)
+    except:
+        components = (components,)
+
+    for c in components:
+        try:
+            if not issubclass(c,TimingModel):
+                raise(TypeError("Class "+c.__name__+
+                                 " is not a subclass of TimingModel"))
+        except:
+            raise(TypeError("generate_timing_model() Arg 2"+
+                            "has to be a tuple of classes"))
+
     return type(name, components, {})
 
 class TimingModelError(Exception):
