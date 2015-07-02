@@ -430,9 +430,7 @@ class Polycos(TimingModel):
             numNodes = ncoeff+1   
     	# generate the ploynomial coefficents
     	if method == "TEMPO":
-            
-           
-    	# Using tempo1 method to create polycos
+    	    # Using tempo1 method to create polycos
             for i in range(len(entryIntvl)-1):
                 tStart = entryIntvl[i]
                 tStop = entryIntvl[i+1]
