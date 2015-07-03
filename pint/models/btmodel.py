@@ -14,7 +14,7 @@ Calculations
 [v] Pulse period (Pobs)
 [v] Pulse delay (delay)
 [v] Derivatives of Pobs (d_Pobs_d_xxx)
-[x] Derivatives of delay (d_delay_d_xxx)
+[v] Derivatives of delay (d_delay_d_xxx)
 
 Interface
 =========
@@ -35,6 +35,7 @@ Open issues
     -- RvH: July 2, 2015
 [ ] We are ignoring the derivatives of delayR() at the moment. This is a decent
     approximation for non-relativistic orbital velocities (1 part in ~10^6)
+[ ] Tempo2 BTmodel automatically sets EDOT to zero
 
 """
 
@@ -369,7 +370,7 @@ class BTmodel(object):
 
     @Cache.use_cache
     def d_delayL2_d_E(self):
-        return (self.a1()*np.cos(self.om())*np.sqrt(1-self.ecc()**2)+self.GAMMA)
+        return (self.a1()*np.cos(self.om())*np.sqrt(1-self.ecc()**2)+self.GAMMA) * np.cos(self.E())
 
     @Cache.use_cache
     def d_delayL1_d_A1(self):
@@ -393,19 +394,19 @@ class BTmodel(object):
 
     @Cache.use_cache
     def d_delayL1_d_OMDOT(self):
-        return self.tt0() * self.d_delayL1_d_OM() / self.SECS_PER_DAY
+        return self.tt0() * self.d_delayL1_d_OM() / self.SECS_PER_YEAR
 
     @Cache.use_cache
     def d_delayL2_d_OM(self):
-        return self.a1()*np.sin(self.om())*np.sqrt(1-self.ecc()**2)*np.sin(self.E())*self.DEG2RAD
+        return -self.a1()*np.sin(self.om())*np.sqrt(1-self.ecc()**2)*np.sin(self.E())*self.DEG2RAD
 
     @Cache.use_cache
     def d_delayL2_d_OMDOT(self):
-        return self.tt0() * self.d_delayL2_d_OM() / self.SECS_PER_DAY
+        return self.tt0() * self.d_delayL2_d_OM() / self.SECS_PER_YEAR
 
     @Cache.use_cache
     def d_delayL1_d_ECC(self):
-        return self.a1()*np.sin(self.om()) + \
+        return -self.a1()*np.sin(self.om()) + \
                 self.d_delayL1_d_E() * self.d_E_d_ECC()
 
     @Cache.use_cache
@@ -493,6 +494,10 @@ class BTmodel(object):
     @Cache.use_cache
     def d_delay_d_T0(self):
         return self.delayR() * (self.d_delayL1_d_T0() + self.d_delayL2_d_T0())
+
+    @Cache.use_cache
+    def d_delay_d_GAMMA(self):
+        return self.delayR() * (self.d_delayL1_d_GAMMA() + self.d_delayL2_d_GAMMA())
 
     @Cache.use_cache
     def Pobs_designmatrix(self, params):
