@@ -23,4 +23,5 @@ DDTimingModel = generate_timing_model("DDTimingModel",
 PolycosModel = generate_timing_model("PolycosModel",
         (Astrometry, Spindown, Dispersion, SolarSystemShapiro, Polycos))
 
-
+ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro, BT, DD, 
+                  Polycos]
