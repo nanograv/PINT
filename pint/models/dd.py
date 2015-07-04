@@ -150,7 +150,7 @@ class DD(TimingModel):
 
         # Parameters are mostly defined as numpy doubles.
         # Some might become long doubles in the future.
-
+        self.BinaryModelName = 'DD'
         self.add_param(Parameter(name="PB",
             units="s",
             description="Orbital period",
