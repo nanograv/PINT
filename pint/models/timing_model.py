@@ -322,6 +322,67 @@ class TimingModel(object):
         # after the entire parfile is read
         self.setup()
 
+    def is_in_parfile(self,para_dict):
+        """ Check if this subclass inclulded in parfile.
+            Parameters 
+            ------------
+            para_dict : dictionary 
+                A dictionary contain all the parameters with values in string 
+                from one parfile
+            Return
+            ------------
+            True : bool
+                The subclass is inculded in the parfile.
+            False : bool
+                The subclass is not inculded in the parfile.
+        """
+        pNames_inpar = para_dict.keys()
+
+        pNames_inModel = self.params
+
+        # Remove the common parameter PSR 
+        try:
+            del pNames_inModel[pNames_inModel.index('PSR')]
+        except:
+            pass
+
+        # For solar system shapiro delay component
+        if hasattr(self,'PLANET_SHAPIRO'): 
+            if "NO_SS_SHAPIRO" in pNames_inpar:
+                return False
+            else:
+                return True
+
+        
+        # For Binary model component
+        try:
+            if getattr(self,'BinaryModelName') == para_dict['BINARY'][0]:
+                return True
+            else:
+                return False
+        except:
+            pass
+        
+        # Compare the componets parameter names with par file parameters
+        compr = list(set(pNames_inpar).intersection(pNames_inModel))
+
+        if compr==[]:
+            # Check aliases 
+            for p in pNames_inModel:
+                al = getattr(self,p).aliases
+                # No aliase in parameters
+                if al == []:
+                    continue
+                # Find alise check if match any of parameter name in parfile    
+                if list(set(pNames_inpar).intersection(al)):
+                    return True
+                else:
+                    continue
+            
+            return False
+
+        return True
+
 def generate_timing_model(name, components):
     """Build a timing model from components.
 
