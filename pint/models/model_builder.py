@@ -24,7 +24,7 @@ class model_builder(object):
         ---------
         Read model from parfile :
         mc = model_constructor("PulsarJ1955", parfile ="J1955.par" )
-        psrJ1955 = mc.result_model()
+        psrJ1955 = mc.model_instance
 
         Build model from sketch:
         from .polycos import Polycos 
@@ -41,16 +41,21 @@ class model_builder(object):
         self.comps = md.ComponentsList
         self.select_comp = []
         if parfile is not None:
+            self.parfile = parfile
             self.get_model_from_parfile(parfile)
             model = self.build_model()
             self.model_instance = model()
             self.model_instance.read_parfile(parfile)
 
     def __str__(self):
-        result = ""
+        result = 'Model name : ' + self.name + '\n'
+        result += 'Components in the model : \n'
         for c in self.select_comp:
-            result += 'Components in the model: '+str(c)+'\n'
-        result += str(self.model)
+            result += '    '+str(c)+'\n'
+        if self.model_instance is not None:
+            result += 'Read parameters from : '+ self.parfile +'\n'
+            result += 'The model instance is :\n'+str(self.model_instance)
+            
         return result
 
     def preprocess_parfile(self,parfile):
