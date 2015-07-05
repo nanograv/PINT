@@ -299,7 +299,7 @@ def tempo_polyco_table_writer(polycoTable, filename = 'polyco.dat'):
     f.close()
 
 
-class Polycos(TimingModel):
+class Polycos(object):
     """
     A class for polycos model. Ployco is a fast phase calculator. It fits a set 
     of data using polynomials.
@@ -307,7 +307,6 @@ class Polycos(TimingModel):
 
     """
     def __init__(self): 
-        super(Polycos, self).__init__()
         self.mjdMid = None
         self.mjdSpan = None
         self.tStart = None
@@ -333,12 +332,6 @@ class Polycos(TimingModel):
                 if fmt['write_method'] != None:
                     registry.register_writer(fmt['format'], table.Table, 
                                             fmt['write_method'])
-               
-        
-        
-
-    def setup(self): #, ncoeff, mjd_mid, mjd_span, oldPolycoFile = None):
-        super(Polycos, self).setup()
         
     def add_polyco_file_format(self, formatName, methodMood, readMethod = None, 
                                 writeMethod = None):
@@ -398,7 +391,7 @@ class Polycos(TimingModel):
         self.polycoFormat.append(pFormat)
         
 
-    def generate_polycos(self, mjdStart, mjdEnd, parFile, obs, 
+    def generate_polycos(self, model,mjdStart, mjdEnd, parFile, obs, 
                          segLength, ncoeff, obsFreq, maxha,
                          method = "TEMPO",numNodes = 20):
         """
