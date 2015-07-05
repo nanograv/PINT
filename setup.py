@@ -50,6 +50,7 @@ setup(
         'pint.models.parameter', 'pint.fitter',
         'pint.ltinterface',
         'pint.models.solar_system_shapiro',
+        'pint.models.btmodel', 'pint.models.polycos',
         'pint.models.bt', 'pint.models.dd',
         'pint.orbital.kepler'],
 

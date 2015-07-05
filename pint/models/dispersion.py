@@ -3,7 +3,7 @@
 # Simple (constant) ISM dispersion measure
 from warnings import warn
 from .parameter import Parameter
-from .timing_model import TimingModel
+from .timing_model import TimingModel, Cache
 import astropy.units as u
 
 # The units on this are not completely correct
@@ -35,3 +35,13 @@ class Dispersion(TimingModel):
             warn("Using topocentric frequency for dedispersion!")
             bfreq = toas['freq']
         return self.DM.value * DMconst / bfreq**2
+
+    @Cache.use_cache
+    def d_delay_d_DM(self, toas):
+        """Return the dispersion delay at each toa."""
+        try:
+            bfreq = self.barycentric_radio_freq(toas)
+        except AttributeError:
+            warn("Using topocentric frequency for dedispersion!")
+            bfreq = toas['freq']
+        return DMconst / bfreq**2

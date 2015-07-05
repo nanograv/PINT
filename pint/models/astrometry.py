@@ -121,8 +121,9 @@ class Astrometry(TimingModel):
         return delay
 
     @Cache.use_cache
-    def get_d_phase_quantities(self, toas):
-        """Calculate values needed for many d_phase_d_param functions """
+    def get_d_delay_quantities(self, toas):
+        """Calculate values needed for many d_delay_d_param functions """
+        # TODO: Move all these calculations in a separate class for elegance
         rd = dict()
 
         # TODO: Should delay not have units of u.second?
@@ -152,11 +153,11 @@ class Astrometry(TimingModel):
 
 
     @Cache.use_cache
-    def d_phase_d_RAJ(self, toas):
+    def d_delay_d_RAJ(self, toas):
         """Calculate the derivative wrt RAJ
 
         For the RAJ and DEC derivatives, use the following approximate model for
-        the pulse phase. (Inner-product between two Cartesian vectors)
+        the pulse delay. (Inner-product between two Cartesian vectors)
 
         de = Earth declination (wrt SSB)
         ae = Earth right ascension
@@ -165,73 +166,66 @@ class Astrometry(TimingModel):
         r = distance from SSB to Earh
         c = speed of light
 
-        phase = r*[cos(de)*cos(dp)*cos(ae-aa)+sin(de)*sin(dp)]/c
+        delay = r*[cos(de)*cos(dp)*cos(ae-aa)+sin(de)*sin(dp)]/c
         """
-        rd = self.get_d_phase_quantities(toas)
+        rd = self.get_d_delay_quantities(toas)
 
-        # TODO: F0 does not have a unit. Other parameters do have a unit
-        F0 = self.F0.value * u.Hz
         psr_ra = self.RAJ.value
         psr_dec = self.DECJ.value
 
         geom = numpy.cos(rd['earth_dec'])*numpy.cos(psr_dec)*\
                 numpy.sin(psr_ra-rd['earth_ra'])
-        dp_draj = rd['ssb_obs_r'] * geom * F0 / (const.c * u.radian)
+        dd_draj = rd['ssb_obs_r'] * geom / (const.c * u.radian)
 
-        return dp_draj.decompose(u.si.bases)
+        return dd_draj.decompose(u.si.bases)
 
     @Cache.use_cache
-    def d_phase_d_DECJ(self, toas):
+    def d_delay_d_DECJ(self, toas):
         """Calculate the derivative wrt DECJ
         
-        Definitions as in d_phase_d_RAJ
+        Definitions as in d_delay_d_RAJ
         """
-        rd = self.get_d_phase_quantities(toas)
+        rd = self.get_d_delay_quantities(toas)
 
-        # TODO: F0 does not have a unit. Other parameters do have a unit
-        F0 = self.F0.value * u.Hz
         psr_ra = self.RAJ.value
         psr_dec = self.DECJ.value
 
         geom = numpy.cos(rd['earth_dec'])*numpy.sin(psr_dec)*\
                 numpy.cos(psr_ra-rd['earth_ra']) - numpy.sin(rd['earth_dec'])*\
                 numpy.cos(psr_dec)
-        dp_ddecj = rd['ssb_obs_r'] * geom * F0 / (const.c * u.radian)
+        dd_ddecj = rd['ssb_obs_r'] * geom / (const.c * u.radian)
 
-        return dp_ddecj.decompose(u.si.bases)
+        return dd_ddecj.decompose(u.si.bases)
 
     @Cache.use_cache
-    def d_phase_d_PMRA(self, toas):
+    def d_delay_d_PMRA(self, toas):
         """Calculate the derivative wrt PMRA
         
-        Definitions as in d_phase_d_RAJ. Now we have a derivative in mas/yr for
+        Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
         the pulsar RA
         """
-        rd = self.get_d_phase_quantities(toas)
+        rd = self.get_d_delay_quantities(toas)
 
-        # TODO: F0 does not have a unit. Other parameters do have a unit
-        F0 = self.F0.value * u.Hz
         psr_ra = self.RAJ.value
 
         te = rd['epoch'] - time_to_longdouble(self.POSEPOCH.value) * u.day
         geom = numpy.cos(rd['earth_dec'])*numpy.sin(psr_ra-rd['earth_ra'])
 
-        deriv = rd['ssb_obs_r'] * geom * F0 * te * u.s / (const.c * u.radian)
-        dp_dpmra = deriv * u.mas / u.year
+        deriv = rd['ssb_obs_r'] * geom * te / (const.c * u.radian)
+        dd_dpmra = deriv * u.mas / u.year
 
-        return dp_dpmra.decompose(u.si.bases)
+        # We want to return sec / (mas / yr)
+        return dd_dpmra.decompose(u.si.bases) / (u.mas / u.year)
 
     @Cache.use_cache
-    def d_phase_d_PMDEC(self, toas):
+    def d_delay_d_PMDEC(self, toas):
         """Calculate the derivative wrt PMDEC
         
-        Definitions as in d_phase_d_RAJ. Now we have a derivative in mas/yr for
+        Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
         the pulsar DEC
         """
-        rd = self.get_d_phase_quantities(toas)
+        rd = self.get_d_delay_quantities(toas)
 
-        # TODO: F0 does not have a unit. Other parameters do have a unit
-        F0 = self.F0.value * u.Hz
         psr_ra = self.RAJ.value
         psr_dec = self.DECJ.value
 
@@ -240,13 +234,14 @@ class Astrometry(TimingModel):
                 numpy.cos(psr_ra-rd['earth_ra']) - numpy.cos(psr_dec)*\
                 numpy.sin(rd['earth_dec'])
 
-        deriv = rd['ssb_obs_r'] * geom * F0 * te * u.s / (const.c * u.radian)
-        dp_dpmdec = deriv * u.mas / u.year
+        deriv = rd['ssb_obs_r'] * geom * te / (const.c * u.radian)
+        dd_dpmdec = deriv * u.mas / u.year
 
-        return dp_dpmdec.decompose(u.si.bases)
+        # We want to return sec / (mas / yr)
+        return dd_dpmdec.decompose(u.si.bases) / (u.mas / u.year)
 
     @Cache.use_cache
-    def d_phase_d_PX(self, toas):
+    def d_delay_d_PX(self, toas):
         """Calculate the derivative wrt PX
 
         Roughly following Smart, 1977, chapter 9.
@@ -268,11 +263,10 @@ class Astrometry(TimingModel):
         t_d = 0.5 * px_r * delta'/ c,  and delta = delta' * px_r / (1 AU)
         
         """
-        rd = self.get_d_phase_quantities(toas)
-
-        F0 = self.F0.value * u.Hz
+        rd = self.get_d_delay_quantities(toas)
 
         px_r = numpy.sqrt(rd['ssb_obs_r']**2-rd['in_psr_obs']**2)
-        dp_dpx = 0.5*(px_r**2 / (u.AU*const.c)) * F0 * (u.mas / u.radian)
+        dd_dpx = 0.5*(px_r**2 / (u.AU*const.c)) * (u.mas / u.radian)
 
-        return dp_dpx.decompose(u.si.bases) / u.mas
+        # We want to return sec / mas
+        return dd_dpx.decompose(u.si.bases) / u.mas

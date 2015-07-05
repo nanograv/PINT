@@ -111,21 +111,37 @@ class wls_fitter(fitter):
             if has_astropy_unit(v):
                 fitp[k] = v.value
 
-        parvals = numpy.array([0.0] + [fitp[par] for par in fitp])
-
         # Define the linear system
-        M, params = self.model.designmatrix(toas=self.toas.table,
+        M, params, units = self.model.designmatrix(toas=self.toas.table,
                 incfrozen=False, incoffset=True)
         Nvec = numpy.array(self.toas.get_errors().to(u.s))**2
         self.update_resids()
         residuals = self.resids.time_resids.to(u.s)
 
         # Weighted linear fit
-        # TODO: should use SVD instead of Cholesky, like tempo(2) does?
         Sigma_inv = numpy.dot(M.T / Nvec, M)
-        Sigma_cf = sl.cho_factor(Sigma_inv)
-        dpars = sl.cho_solve(Sigma_cf, numpy.dot(M.T, residuals / Nvec))
+        U, s, Vt = sl.svd(Sigma_inv)
+        Sigma = numpy.dot(Vt.T / s, U.T)
+        dpars = numpy.dot(Sigma, numpy.dot(M.T, residuals.value / Nvec))
+
+        # Uncertainties
+        errs = numpy.sqrt(numpy.diag(Sigma))
 
         # Set the new parameter values
-        newpars = parvals[1:] + dpars[1:]
-        chi2 = self.minimize_func(newpars, *fitp.keys())
+        # TODO: Now have to do the units manually, because not all parameters
+        #       have units everywhere in the code yet. Eventually, this can be
+        #       removed
+        conv = {'F0': u.Hz, 'F1': u.Hz/u.s, 'RAJ':u.hourangle,
+                'DECJ':u.degree, 'PMRA':u.mas/u.yr, 'PMDEC':u.mas/u.yr,
+                'PX':u.mas, 'DM':u.s/u.s}
+
+        # TODO: units and fitp have a different ordering. That is confusing
+        for ii, pn in enumerate(fitp.keys()):
+            uind = params.index(pn)             # Index of designmatrix
+            un = 1.0 /  (units[uind]/u.s)       # Unit in designmatrix
+            pv, dpv = fitp[pn] * conv[pn], dpars[uind] * un
+            fitp[pn] = float( (pv+dpv) / conv[pn] )
+
+        # TODO: Also record the uncertainties in minimize_func
+
+        chi2 = self.minimize_func(list(fitp.values()), *fitp.keys())

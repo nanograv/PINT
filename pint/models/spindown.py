@@ -80,35 +80,21 @@ class Spindown(TimingModel):
 
     def d_phase_d_F0(self, toas):
         """Calculate the derivative wrt F0"""
-        # If TZRMJD is not defined, use the first time as phase reference
-        # TODO: TZRMJD should be set by default somewhere in a standard place,
-        #       after the TOAs are loaded (RvH -- June 2, 2015)
         # NOTE: Should we be using barycentric arrival times, instead of TDB?
-        if self.TZRMJD.value is None:
-            self.TZRMJD.value = toas['tdb'][0] - delay[0]*u.s
-
-        tdb = toas['tdbld']
-        delay = self.delay(toas)
-        TZRMJD = time_to_longdouble(self.TZRMJD.value)
-        dpdF0 = -(tdb - TZRMJD) * SECS_PER_DAY - delay
-        return dpdF0
+        # TODO: toas should have units from the table
+        tdb = toas['tdbld'].quantity * u.day
+        dt_pepoch = time_to_longdouble(self.PEPOCH.value) * u.day
+        delay = self.delay(toas) * u.s
+        dpdF0 = -(tdb - dt_pepoch) - delay
+        return dpdF0.decompose()
 
     def d_phase_d_F1(self, toas):
         """Calculate the derivative wrt F1"""
-        # If TZRMJD is not defined, use the first time as phase reference
-        # TODO: TZRMJD should be set by default somewhere in a standard place,
-        #       after the TOAs are loaded (RvH -- June 2, 2015)
         # NOTE: Should we be using barycentric arrival times, instead of TDB?
-        if self.TZRMJD.value is None:
-            self.TZRMJD.value = toas['tdb'][0] - delay[0]*u.s
-
-        tdb = toas['tdbld']
-        delay = self.delay(toas)
-        TZRMJD = time_to_longdouble(self.TZRMJD.value)
-        dt = (tdb - TZRMJD) * SECS_PER_DAY - delay
-
         # TODO: what timescale should we use for pepoch calculation? Does this even matter?
-        dt_pepoch = (time_to_longdouble(self.PEPOCH.value) - TZRMJD) * SECS_PER_DAY
-
-        dpdF1 = -0.5 * (dt - 2.0 * dt_pepoch) * dt
-        return dpdF1
+        tdb = toas['tdbld'] * u.day
+        delay = self.delay(toas) * u.s
+        dt_pepoch = time_to_longdouble(self.PEPOCH.value) * u.day
+        dt = tdb - dt_pepoch - delay
+        dpdF1 = -0.5 * dt ** 2
+        return dpdF1.decompose()
