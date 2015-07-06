@@ -27,9 +27,9 @@ class model_builder(object):
         psrJ1955 = mc.model_instance
 
         Build model from sketch:
-        from .polycos import Polycos 
-        mc = model_constructor("polyco_model")
-        mc.add_components(Polycos)
+        from .bt import BT 
+        mc = model_constructor("BT_model")
+        mc.add_components(BT)
         model = mc.build_model()
         MyModer = model()
         MyModel.read_parfile('parfile')
