@@ -335,14 +335,14 @@ class TimingModel(object):
         # after the entire parfile is read
         self.setup()
 
-def generate_timing_model(name, components):
+def generate_timing_model(name, components, attributes={}):
     """Build a timing model from components.
 
     Returns a timing model class generated from the specifiied
     sub-components.  The return value is a class type, not an instance,
     so needs to be called to generate a usable instance.  For example:
 
-    MyModel = generate_timing_model("MyModel",(Astrometry,Spindown))
+    MyModel = generate_timing_model("MyModel",(Astrometry,Spindown),{})
     my_model = MyModel()
     my_model.read_parfile("J1234+1234.par")
     """
@@ -362,7 +362,7 @@ def generate_timing_model(name, components):
             raise(TypeError("generate_timing_model() Arg 2"+
                             "has to be a tuple of classes"))
 
-    return type(name, components, {})
+    return type(name, components, attributes)
 
 class TimingModelError(Exception):
     """Generic base class for timing model errors."""
