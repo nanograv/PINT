@@ -113,7 +113,7 @@ class Parameter(object):
         if len(k) >= 3:
             if int(k[2]) > 0:
                 self.frozen = False
-        if len(k) == 4:
+        if len(k) >= 4:
             self.uncertainty = fortran_float(k[3])
         return True
     def name_matches(self, name):
