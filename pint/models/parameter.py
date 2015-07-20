@@ -104,7 +104,7 @@ class Parameter(object):
         except IndexError:
             return False
         # Test that name matches
-        if (name != self.name) and (name not in self.aliases):
+        if not self.name_matches(name):
             return False
         if len(k) < 2:
             return False
@@ -116,6 +116,10 @@ class Parameter(object):
         if len(k) >= 4:
             self.uncertainty = fortran_float(k[3])
         return True
+    def name_matches(self, name):
+        """Whether or not the parameter name matches the provided name
+        """
+        return (name == self.name) or (name in self.aliases)
 
 class MJDParameter(Parameter):
     """This is a Parameter type that is specific to MJD values."""

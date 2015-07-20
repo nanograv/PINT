@@ -299,7 +299,7 @@ def tempo_polyco_table_writer(polycoTable, filename = 'polyco.dat'):
     f.close()
 
 
-class Polycos(TimingModel):
+class Polycos(object):
     """
     A class for polycos model. Ployco is a fast phase calculator. It fits a set 
     of data using polynomials.
@@ -307,7 +307,6 @@ class Polycos(TimingModel):
 
     """
     def __init__(self): 
-        super(Polycos, self).__init__()
         self.mjdMid = None
         self.mjdSpan = None
         self.tStart = None
@@ -333,12 +332,6 @@ class Polycos(TimingModel):
                 if fmt['write_method'] != None:
                     registry.register_writer(fmt['format'], table.Table, 
                                             fmt['write_method'])
-               
-        
-        
-
-    def setup(self): #, ncoeff, mjd_mid, mjd_span, oldPolycoFile = None):
-        super(Polycos, self).setup()
         
     def add_polyco_file_format(self, formatName, methodMood, readMethod = None, 
                                 writeMethod = None):
@@ -398,7 +391,7 @@ class Polycos(TimingModel):
         self.polycoFormat.append(pFormat)
         
 
-    def generate_polycos(self, mjdStart, mjdEnd, parFile, obs, 
+    def generate_polycos(self, model, mjdStart, mjdEnd, obs, 
                          segLength, ncoeff, obsFreq, maxha,
                          method = "TEMPO",numNodes = 20):
         """
@@ -406,10 +399,44 @@ class Polycos(TimingModel):
 
         Parameters
         ---------
-        mjd : 
+        model : TimingModel
+            TimingModel for generate the Polycos with parameters
+            setup.
+
+        mjdStart : float / nump longdouble
+            Start time of polycos in mjd
+
+        mjdEnd : float / nump longdouble
+            Ending time of polycos in mjd
+
+        obs : str
+            Observatory code
+
+        segLength : 
+            Length of polyco segement [unit: minutes]
+
+        ncoeff : 
+            number of coefficents
+
+        obsFreq : 
+            observing frequency
+
+        maxha :
+            Maximum hour angle
+
+        method : sting optional ['TEMPO','TEMPO2',...] Default TEMPO
+            Method to generate polycos. Now it is only support the TEMPO method. 
+
+        numNodes : int optional. Default 20
+            Number of nodes for fitting. It can not be less then the number of 
+            coefficents.
+        Return 
+        ---------
+
+        A polyco table. 
+
 
         """
-        self.read_parfile(parFile)   # Read Parfile
         mjdStart = np.longdouble(mjdStart)*u.day
         mjdEnd = np.longdouble(mjdEnd)*u.day
         timeLength = mjdEnd-mjdStart
@@ -439,7 +466,7 @@ class Polycos(TimingModel):
                 toaMid = toa.get_TOAs_list([toa.TOA((np.modf(tmid.value)[1], 
                                     np.modf(tmid.value)[0]),obs = obs,
                                     freq = obsFreq),])
-                refPhase = self.phase(toaMid.table)
+                refPhase = model.phase(toaMid.table)
                 mjdSpan = ((tStop-tStart)*u.day).to('min')
                 # Create node toas(Time sample using TOA class)
                 toaList = [toa.TOA((np.modf(toaNode)[1], 
@@ -448,10 +475,10 @@ class Polycos(TimingModel):
                
                 toas = toa.get_TOAs_list(toaList)
 
-                ph = self.phase(toas.table)
+                ph = model.phase(toas.table)
                 dt = (nodes*u.day - tmid).to('min') # Use constant
                 rdcPhase = ph-refPhase
-                rdcPhase = rdcPhase.int-dt.value*self.F0.value*60.0+rdcPhase.frac
+                rdcPhase = rdcPhase.int-dt.value*model.F0.value*60.0+rdcPhase.frac
                 dtd = dt.value.astype(float)  # Trancate to double
                 rdcPhased = rdcPhase.astype(float)
                 coeffs = np.polyfit(dtd,rdcPhased,ncoeff-1)
@@ -463,10 +490,10 @@ class Polycos(TimingModel):
                 date = dd+'-'+month[int(mm)-1]+'-'+yy[2:4]
                 hms = hms.replace(':',"")
                 entry = polycoEntry(tmid.value,mjdSpan.to('day').value,
-                                refPhase.int,refPhase.frac,self.F0.value,ncoeff,
+                                refPhase.int,refPhase.frac, model.F0.value, ncoeff,
                                 coeffs,obs)
-                entryList.append((self.PSR.value, date, hms, tmid.value, 
-                                  self.DM.value,0.0,0.0,0.0,obsFreq,entry))
+                entryList.append((model.PSR.value, date, hms, tmid.value, 
+                                  model.DM.value,0.0,0.0,0.0,obsFreq,entry))
 
             pTable = table.Table(rows = entryList, names = ('psr','date','utc',
                                   'tmid','dm','dopper','logrms','binary_phase',
@@ -489,6 +516,10 @@ class Polycos(TimingModel):
             The name of the polyco file.
         format : str
             The format of the file.
+
+        Return
+        ---------
+        Polycos Table with read_in data.
         """
         self.fileName = filename
 
@@ -502,6 +533,8 @@ class Polycos(TimingModel):
         self.polycoTable = table.Table.read(filename, format = format) 
 
     def write_polyco_file(self,format,filename=None):
+        """ Write Polyco table to a file. 
+        """
 
         if format not in [f['format'] for f in self.polycoFormat]:
              raise Exception('Unknown polyco file format \''+ format +'\'\n'
@@ -513,6 +546,8 @@ class Polycos(TimingModel):
             self.polycoTable.write(format = format)
         
     def find_entry(self,t):
+        """Find the right entry for the input time.
+        """
         if not isinstance(t, np.ndarray) and not isinstance(t,list):
             t = np.array([t,])
         # Check if polyco table exist 
