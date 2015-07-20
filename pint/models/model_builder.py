@@ -1,5 +1,6 @@
 # model_builder.py
 # Defines the automatic timing model generator interface
+import os
 
 # The timing models that we will be using
 from .timing_model import generate_timing_model
@@ -141,7 +142,7 @@ class model_builder(object):
         return self.model_instance
 
 
-def get_model(name, parfile):
+def get_model(parfile):
     """A one step function to build model from a parfile
         Parameters
         ---------
@@ -154,6 +155,7 @@ def get_model(name, parfile):
         ---------
         Model instance get from parfile.  
     """
+    name = os.path.basename(os.path.splitext(parfile)[0])
 
     mb = model_builder(name,parfile)
     return mb.model_instance
