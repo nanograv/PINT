@@ -12,6 +12,7 @@ from .dd import DD
 from .bt import BT
 from .solar_system_shapiro import SolarSystemShapiro
 from .polycos import Polycos
+from .model_builder import get_model
 
 # Define a standard basic model
 StandardTimingModel = generate_timing_model("StandardTimingModel",
@@ -21,5 +22,3 @@ BTTimingModel = generate_timing_model("BTTimingModel",
 DDTimingModel = generate_timing_model("DDTimingModel",
         (Astrometry, Spindown, Dispersion, SolarSystemShapiro, DD))
 
-
-ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro, BT, DD]

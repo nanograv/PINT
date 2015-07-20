@@ -1,6 +1,18 @@
-# Import the main timing model classes
-import pint.models as md
+# model_builder.py
+# Defines the automatic timing model generator interface
 
+# The timing models that we will be using
+from .timing_model import generate_timing_model
+from .astrometry import Astrometry
+from .dispersion import Dispersion
+from .spindown import Spindown
+from .dd import DD
+from .bt import BT
+from .solar_system_shapiro import SolarSystemShapiro
+
+# List with all timing model components we will consider when pre-processing a
+# parfile
+ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro, BT, DD]
 
 
 class model_builder(object):
@@ -42,7 +54,7 @@ class model_builder(object):
         self.name = name
         self.model_instance = None
         self.param_inparF = None
-        self.comps = md.ComponentsList
+        self.comps = ComponentsList
         self.select_comp = []
         if parfile is not None:
             self.parfile = parfile
@@ -101,7 +113,7 @@ class model_builder(object):
         if self.select_comp ==[]:
             raise(RuntimeError("No timing model components selected."))
 
-        return md.generate_timing_model(self.name,tuple(self.select_comp))
+        return generate_timing_model(self.name,tuple(self.select_comp))
 
     def add_components(self,components):
         """ Add new components to constructing model. 
