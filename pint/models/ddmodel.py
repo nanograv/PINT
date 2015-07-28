@@ -8,24 +8,37 @@ import astropy.units as u
 import astropy.constants as c
 from pint import ls,GMsun,Tsun
 class DDmodel(object):
-    """A frist test of DD model. 
-        See T. Damour and N. Deruelle Annales de l' I.H.P.(1986)
-        Parameters
-        @n
-        @PB
-        @ECC
-        @T0
-        @eT
-        @ar 
-        @sini
-        @omg0
-        @k
-        @deltaR
-        @deltaTheta
-        @gamma
-        @mpr
-        @A
-        @B
+    """The 'DD' binary model. Model as in 
+    1. T. Damour and N. Deruelle, General relativistic celestial
+    mechanics of binary systems. I. the post-Newtonian timing
+    formula, Annales de l' I.H.P.,section A, tome 44,n 1 (1985), p. 107-132
+    Parameters
+    2. T. Damour and N. Deruelle, General relativistic celestial
+    mechanics of binary systems. II. the post-Newtonian timing
+    formula, Annales de l' I.H.P.,section A, tome 44,n 3 (1986), p. 263-292
+    Parameters:
+    @param P0:          The pulse period [sec]
+    @param P1:          The pulse period derivative [sec/sec]
+    @param PEPOCH:      Position EPOCH
+    @param PB:          Binary period [days]
+    @param ECC:         Eccentricity
+    @param A1:          Projected semi-major axis (lt-sec) a*sin(i)
+    @param A1DOT:       Time-derivative of A1 (lt-sec/sec)
+    @param T0:          Time of ascending node (TASC)
+    @param OM:          Omega (longitude of periastron) [deg]
+    @param SINI:
+    @param A0:
+    @param B0:
+    @param GAMMA:
+    @param Dr:
+    @param Dth:
+    @param M2:
+    @param RA_RAD:      Pulsar position (right ascension) [rad]
+    @param DEC_RAD:     Pulsar position (declination) [rad]
+    @param EDOT:        Time-derivative of ECC [0.0]
+    @param PBDOT:       Time-derivative of PB [0.0]
+    @param XPBDOT:
+    @param OMDOT:       Time-derivative of OMEGA [0.0]
     """
     def __init__(self,t, **kwargs):
         self.binaryName = 'DD'
@@ -58,7 +71,7 @@ class DDmodel(object):
         self.B0 = 0.0*u.Unit(1)          # -
         self.OM=0.0*u.deg                # Deg
         self.OMDOT=0.0*u.deg/u.year      # Deg/year 
-        self.MC = 0.0*u.M_sun            # Mass of companian in the unit Sun mass
+        self.M2 = 0.0*u.M_sun            # Mass of companian in the unit Sun mass
         self.XPBDOT = 0.0*u.day/u.day    # Day/Day
         self.Dr = 0.0*u.Unit('')         # - 
         self.Dtheta = 0.0*u.Unit('')     # - 
@@ -95,7 +108,7 @@ class DDmodel(object):
            @ ar
            @ omega
     	"""
-        setattr(self,'TMC',self.MC.value*Tsun)
+        setattr(self,'TM2',self.MC.value*Tsun)
     	setattr(self,'tt0', self.get_tt0())
     	setattr(self,'ecct',self.ecc())
     	orbits = self.tt0/self.PB -  \
@@ -121,8 +134,9 @@ class DDmodel(object):
         setattr(self,'omega',self.omega())
 
     @Cache.use_cache
-    def binary_romoer_delay(self):
-        """T. Damour and N. Deruelle(1986)equation [24]
+    def delayR(self):
+        """Binary Romoer delay
+            T. Damour and N. Deruelle(1986)equation [24]
         """
     	sOmg = np.sin(self.omega)
         cOmg = np.cos(self.omega)
@@ -131,24 +145,27 @@ class DDmodel(object):
                  +(1-self.eTheta**2)**0.5*cOmg*self.sinEcc_A)
         return rDelay.decompose()
     @Cache.use_cache
-    def binary_shapiro_delay(self):
-        """T. Damour and N. Deruelle(1986)equation [26]
+    def delayS(self):
+        """Binary shapiro delay
+           T. Damour and N. Deruelle(1986)equation [26]
         """
         sOmg = np.sin(self.omega)
         cOmg = np.cos(self.omega)
-        sDelay = -2*self.TMC * np.log(1-self.ecct*self.cosEcc_A-
+        sDelay = -2*self.TM2 * np.log(1-self.ecct*self.cosEcc_A-
         	                           self.SINI*(sOmg*(self.cosEcc_A
         	                           -self.ecct)+(1-self.ecct**2)**0.5
         	                           *cOmg*self.sinEcc_A))
         return sDelay 
     @Cache.use_cache
-    def binary_einsten_delay(self):
-        """T. Damour and N. Deruelle(1986)equation [25]
+    def delayE(self):
+        """Binary Einstein delay
+            T. Damour and N. Deruelle(1986)equation [25]
         """
         return self.GAMMA*self.sinEcc_A
     @Cache.use_cache
-    def abberation_delay(self):
-        """T. Damour and N. Deruelle(1986)equation [27]
+    def delayA(self):
+        """Binary Abberation delay
+            T. Damour and N. Deruelle(1986)equation [27]
         """
         omgPlusAe = self.omega+self.Ae 
         aDelay = self.A0*(np.sin(omgPlusAe)+self.ecct*np.sin(self.omega))+\
@@ -158,8 +175,7 @@ class DDmodel(object):
     @Cache.use_cache
     def delay(self):
         """Full DD model delay"""
-        return self.binary_romoer_delay()+self.binary_shapiro_delay() \
-               +self.binary_einsten_delay()
+        return self.delayR()+self.delayS()+self.delayE()+self.delayA()
 
     @Cache.use_cache
     def get_tt0(self):
@@ -182,3 +198,58 @@ class DDmodel(object):
         """
         k = self.OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/self.PB)
         return self.OM + self.Ae*k
+    
+    def M(self):
+        """Obit phase
+        """
+        orbits = self.tt0/self.PB -  \
+                 0.5*(self.PBDOT+self.XPBDOT)*(self.tt0/self.PB)**2#?
+        orbits = orbits.decompose()
+        norbits = np.array(np.floor(orbits), dtype=np.long)
+        phase = 2 * np.pi * (orbits - norbits)
+        return phase
+
+    def E(self):
+        """Eccentric Anomaly
+        """
+        return self.compute_eccentric_anomaly(self.ecc(),self.M())
+
+    # Analytically calculate derivtives. 
+    def d_E_d_ECC(self):
+        return np.sin(self.E()) / (1 - self.ecc()*np.cos(self.E()))
+    def d_E_d_EDOT(self):
+        return
+    def d_E_d_PB(self):
+        return
+    def d_E_d_PBDOT(self):
+        return
+    def d_E_d_T0(self):
+        return
+
+
+    def d_delayR_d_A1(self):
+        return 1.0/c.c*(sOmg*(self.cosEcc_A-self.er)   \
+                 +(1-self.eTheta**2)**0.5*cOmg*self.sinEcc_A)
+
+    def d_delayR_d_ECC(self):
+        # Since d_r d_th is not clear, This does not code yet
+        pass
+    
+    def d_delayR_d_OM(self):
+        pass
+    
+    def d_delayR_d_OMDOT(self):
+        pass
+    
+    def d_delayR_d_Dr(self):
+        pass
+    def d_delayR_d_Dth(self):
+        pass
+    # For Shaprio Delay
+    def d_delayS_d_M2(self):
+        return 
+    # For Einstein delay
+    def d_delayE_d_GAMMA(self):
+        return self.sinEcc_A
+
+   
