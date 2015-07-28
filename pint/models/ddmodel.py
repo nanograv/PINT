@@ -5,65 +5,180 @@ from astropy import log
 from .timing_model import Cache
 from scipy.optimize import newton
 import astropy.units as u 
-from pint import ls
-class DDmdoel(object):
-	"""A frist test of DD model. 
-	   See T. Damour and N. Deruelle Annales de l' I.H.P.(1986)
-	   Parameters
-	   @n
-	   @PB
-	   @ECC
-	   @T0
-	   @eT
-	   @ar 
-	   @sini
-	   @omg0
-	   @k
-	   @deltaR
-	   @deltaTheta
-       @gamma
-       @mpr
-       @A
-       @B
-	"""
-	def __init__(self,):
-		self.binaryName = 'DD'
-		self.PB = 0.0*u.day
-		self.ECC = 0.0
-		self.T0 = 54000.0*u.day
-		self.EDOT = 0.0/u.second
-		self.A1 = 10.0*ls        # Light-Sec
-        self.A1DOT = 0.0*ls/u.second        # Light-Sec / Sec
-		self.A0 = 0.0
-		self.B0 = 0.0
- 
+import astropy.constants as c
+from pint import ls,GMsun,Tsun
+class DDmodel(object):
+    """A frist test of DD model. 
+        See T. Damour and N. Deruelle Annales de l' I.H.P.(1986)
+        Parameters
+        @n
+        @PB
+        @ECC
+        @T0
+        @eT
+        @ar 
+        @sini
+        @omg0
+        @k
+        @deltaR
+        @deltaTheta
+        @gamma
+        @mpr
+        @A
+        @B
+    """
+    def __init__(self,t, **kwargs):
+        self.binaryName = 'DD'
+        if not isinstance(t, np.ndarray) and not isinstance(t,list):
+            self.t = np.array([t,])
+        else:
+            self.t = t
+        self.params = ['PEPOCH', 'P0', 'P1', 'PB', 'PBDOT', 'ECC', 'EDOT', \
+                       'OM', 'OMDOT', 'A1', 'A1DOT','A0','B0', 'T0', 'GAMMA']
 
-	def compute_eccentric_anomalies(self,t):
-        self.t = t
-        Eest = 2*np.pi*(self.t-self.T0)/self.PB
-        E = netwon.(self.ecc_anmls,Eest, maxiter=500)
+        self.set_default_values()
+        for key, value in kwargs.iteritems():
+            if key.upper() in self.params:
+                setattr(self, key.upper(), value[0]*value[1])
+                # How to get units work
+        self.compute_inter_vars(self.t)
+   
+    def set_default_values(self):
+        self.PEPOCH = 54000.0*u.day      # MJDs (Period epoch)
+        self.P0 = 1.0*u.second           # Sec
+        self.P1 = 0.0                    # Sec/Sec      
+        self.PB = 10.0*u.day             # Day
+        self.PBDOT = 0.0*u.day/u.day     # Day/Day
+        self.ECC =0.9*u.Unit(1)         # -
+        self.T0 = 54000.0*u.day          # Day
+        self.EDOT = 0.0/u.second         # 1/Sec
+        self.A1 = 10.0*ls                # Light-Sec  ar*sin(i)
+        self.A1DOT = 0.0*ls/u.second     # Light-Sec / Sec
+        self.A0 = 0.0*u.Unit(1)          # -
+        self.B0 = 0.0*u.Unit(1)          # -
+        self.OM=0.0*u.deg                # Deg
+        self.OMDOT=0.0*u.deg/u.year      # Deg/year 
+        self.MC = 0.0*u.M_sun            # Mass of companian in the unit Sun mass
+        self.XPBDOT = 0.0*u.day/u.day    # Day/Day
+        self.Dr = 0.0*u.Unit('')         # - 
+        self.Dtheta = 0.0*u.Unit('')     # - 
+        self.SINI = 0.0 *u.Unit('')      # -
+        self.GAMMA = 0.0*u.second        # Sec
+
+    def compute_eccentric_anomaly(self, eccentricity, mean_anomaly):
+        """compute eccentric anomaly solve for Kepler Equation
+        Parameter
+        eccentric_anomaly(mean_anomaly):
+        Return the eccentric anomaly in radians, given a set of mean_anomalies
+        in radians.
+        """
+        e = np.longdouble(eccentricity).value
+        ma = np.longdouble(mean_anomaly).value
+        k = lambda E: E-e*np.sin(E)-ma   # Kepler Equation
+        dk = lambda E: 1-e*np.cos(E)     # Derivitive Kepler Equation 
+        U = ma
+        while(np.max(abs(k(U)))>5e-16):  # Newton-Raphson method 
+            U = U-k(U)/dk(U)
+        return U*u.rad    
 
     @Cache.use_cache
-    def binary_romoer_delay(self,t):
-    	tt0 = self.tt0()
+    def compute_inter_vars(self,t):
+    	"""Set up inter-step variables 
+    	   @ tt0
+           @ ecct
+           @ eccentric_anomaly
+    	   @ cos(eccentric_anomaly)
+    	   @ sin(eccentric_anomaly)
+    	   @ Ae(eccentric_anomaly)
+           @ er
+           @ eTheta
+           @ ar
+           @ omega
+    	"""
+        setattr(self,'TMC',self.MC.value*Tsun)
+    	setattr(self,'tt0', self.get_tt0())
+    	setattr(self,'ecct',self.ecc())
+    	orbits = self.tt0/self.PB -  \
+                 0.5*(self.PBDOT+self.XPBDOT)*(self.tt0/self.PB)**2#?
+        orbits = orbits.decompose()
+        norbits = np.array(np.floor(orbits), dtype=np.long)
+        phase = 2 * np.pi * (orbits - norbits)
+        # Solve Kepler equation
+        setattr(self,'ecc_anom', self.compute_eccentric_anomaly(self.ecct,phase))
 
-    	pass
+        # Obtain T. Damour and N. Deruelle equation 17a-17c
+        setattr(self,'cosEcc_A',np.cos(self.ecc_anom))
+        setattr(self,'sinEcc_A',np.sin(self.ecc_anom))
+        cosAe = (self.cosEcc_A - self.ecct)/(1-self.ecct*self.cosEcc_A)
+        sinAe = (1-self.ecct**2)**(1.0/2)*self.sinEcc_A/(1-self.ecct*self.cosEcc_A)
+        setattr(self,'Ae',np.arctan2(sinAe,cosAe))
+        # Obtain T. Damour and N. Deruelle equation er and etheta
 
-	def binary_shapiro_delay(self):
-		pass
-	def binary_E_delay(self):
-		pass 
+        setattr(self,'er',self.ecct+self.Dr)  #???
+        setattr(self,'eTheta',self.ecct+self.Dtheta)  #???
+        setattr(self,'A1',self.a1())  
+        # # Obtain T. Damour and N. Deruelle equation [29]
+        setattr(self,'omega',self.omega())
 
     @Cache.use_cache
-    def tt0(self,t):
-    	if not hasattr(t,'unit'):
-    		t = t*u.day
-        return (t-self.T0).to('second')
+    def binary_romoer_delay(self):
+        """T. Damour and N. Deruelle(1986)equation [24]
+        """
+    	sOmg = np.sin(self.omega)
+        cOmg = np.cos(self.omega)
+    	
+        rDelay = self.A1/c.c*(sOmg*(self.cosEcc_A-self.er)   \
+                 +(1-self.eTheta**2)**0.5*cOmg*self.sinEcc_A)
+        return rDelay.decompose()
+    @Cache.use_cache
+    def binary_shapiro_delay(self):
+        """T. Damour and N. Deruelle(1986)equation [26]
+        """
+        sOmg = np.sin(self.omega)
+        cOmg = np.cos(self.omega)
+        sDelay = -2*self.TMC * np.log(1-self.ecct*self.cosEcc_A-
+        	                           self.SINI*(sOmg*(self.cosEcc_A
+        	                           -self.ecct)+(1-self.ecct**2)**0.5
+        	                           *cOmg*self.sinEcc_A))
+        return sDelay 
+    @Cache.use_cache
+    def binary_einsten_delay(self):
+        """T. Damour and N. Deruelle(1986)equation [25]
+        """
+        return self.GAMMA*self.sinEcc_A
+    @Cache.use_cache
+    def abberation_delay(self):
+        """T. Damour and N. Deruelle(1986)equation [27]
+        """
+        omgPlusAe = self.omega+self.Ae 
+        aDelay = self.A0*(np.sin(omgPlusAe)+self.ecct*np.sin(self.omega))+\
+                 self.B0*(np.cos(omgPlusAe)+self.ecct*np.cos(self.omega)) 
+        return aDelay
 
-    def ecct(self,t):
-        return self.ECC + self.tt0(t)*self.EDOT
+    @Cache.use_cache
+    def delay(self):
+        """Full DD model delay"""
+        return self.binary_romoer_delay()+self.binary_shapiro_delay() \
+               +self.binary_einsten_delay()
 
+    @Cache.use_cache
+    def get_tt0(self):
+    	if not hasattr(self.t,'unit'):
+            self.t = self.t*u.day
+        if not hasattr(self.T0,'unit'):
+            self.T0 = self.T0*u.day 
+        return (self.t-self.T0).to('second')
+    @Cache.use_cache
+    def ecc(self):
+        return self.ECC + self.get_tt0()*self.EDOT
+    @Cache.use_cache
     def a1(self):
-        return self.A1 + self.tt0()*self.A1DOT
-
-
+        return self.A1 + self.get_tt0()*self.A1DOT
+    @Cache.use_cache
+    def omega(self):
+        """T. Damour and N. Deruelle(1986)equation [25]
+           k = OMDOT/n  (T. Damour and N. Deruelle(1986)equation between Eq 16 
+                         Eq 17)
+        """
+        k = self.OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/self.PB)
+        return self.OM + self.Ae*k
