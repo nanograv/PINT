@@ -26,7 +26,7 @@ class DDmodel(object):
     @param A1DOT:       Time-derivative of A1 (lt-sec/sec)
     @param T0:          Time of ascending node (TASC)
     @param OM:          Omega (longitude of periastron) [deg]
-    @param SINI:
+    @param SINI:           
     @param A0:
     @param B0:
     @param GAMMA:
@@ -55,7 +55,11 @@ class DDmodel(object):
                 setattr(self, key.upper(), value[0]*value[1])
                 # How to get units work
         self.compute_inter_vars(self.t)
-   
+    
+    def pars(self):
+        """Parameter names in model"""
+        return self.params
+
     def set_default_values(self):
         self.PEPOCH = 54000.0*u.day      # MJDs (Period epoch)
         self.P0 = 1.0*u.second           # Sec
@@ -212,19 +216,19 @@ class DDmodel(object):
     def E(self):
         """Eccentric Anomaly
         """
-        return self.compute_eccentric_anomaly(self.ecc(),self.M())
+        return self.ecc_anom
 
     # Analytically calculate derivtives. 
     def d_E_d_ECC(self):
         return np.sin(self.E()) / (1 - self.ecc()*np.cos(self.E()))
     def d_E_d_EDOT(self):
-        return
+        return self.tt0 * self.d_E_d_ECC()
     def d_E_d_PB(self):
-        return
+        pass
     def d_E_d_PBDOT(self):
-        return
+        pass
     def d_E_d_T0(self):
-        return
+        pass
 
 
     def d_delayR_d_A1(self):
@@ -247,7 +251,7 @@ class DDmodel(object):
         pass
     # For Shaprio Delay
     def d_delayS_d_M2(self):
-        return 
+        pass 
     # For Einstein delay
     def d_delayE_d_GAMMA(self):
         return self.sinEcc_A
