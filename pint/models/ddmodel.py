@@ -64,15 +64,15 @@ class DDmodel(object):
         self.PEPOCH = 54000.0*u.day      # MJDs (Period epoch)
         self.P0 = 1.0*u.second           # Sec
         self.P1 = 0.0                    # Sec/Sec      
-        self.PB = 10.0*u.day             # Day
+        self.PB = np.longdouble(10.0)*u.day             # Day
         self.PBDOT = 0.0*u.day/u.day     # Day/Day
         self.ECC =0.9*u.Unit(1)         # -
         self.T0 = 54000.0*u.day          # Day
         self.EDOT = 0.0/u.second         # 1/Sec
         self.A1 = 10.0*ls                # Light-Sec  ar*sin(i)
         self.A1DOT = 0.0*ls/u.second     # Light-Sec / Sec
-        self.A0 = 0.0*u.Unit(1)          # -
-        self.B0 = 0.0*u.Unit(1)          # -
+        self.A0 = 0.0*u.second           # Sec
+        self.B0 = 0.0*u.second           # Sec
         self.OM=0.0*u.deg                # Deg
         self.OMDOT=0.0*u.deg/u.year      # Deg/year 
         self.M2 = 0.0*u.M_sun            # Mass of companian in the unit Sun mass
@@ -112,14 +112,15 @@ class DDmodel(object):
            @ ar
            @ omega
     	"""
-        setattr(self,'TM2',self.MC.value*Tsun)
+        setattr(self,'TM2',self.M2.value*Tsun)
     	setattr(self,'tt0', self.get_tt0())
     	setattr(self,'ecct',self.ecc())
-    	orbits = self.tt0/self.PB -  \
+    	orbits = self.tt0/self.PB.to('second') -  \
                  0.5*(self.PBDOT+self.XPBDOT)*(self.tt0/self.PB)**2#?
         orbits = orbits.decompose()
         norbits = np.array(np.floor(orbits), dtype=np.long)
         phase = 2 * np.pi * (orbits - norbits)
+        setattr(self,'phase',phase)
         # Solve Kepler equation
         setattr(self,'ecc_anom', self.compute_eccentric_anomaly(self.ecct,phase))
 
@@ -135,30 +136,28 @@ class DDmodel(object):
         setattr(self,'eTheta',self.ecct+self.Dtheta)  #???
         setattr(self,'A1',self.a1())  
         # # Obtain T. Damour and N. Deruelle equation [29]
-        setattr(self,'omega',self.omega())
-
+        setattr(self,'Omega',self.omega())
+        setattr(self,'sOmg',np.sin(self.Omega))
+        setattr(self,'cOmg',np.cos(self.Omega))
     @Cache.use_cache
     def delayR(self):
         """Binary Romoer delay
             T. Damour and N. Deruelle(1986)equation [24]
         """
-    	sOmg = np.sin(self.omega)
-        cOmg = np.cos(self.omega)
     	
-        rDelay = self.A1/c.c*(sOmg*(self.cosEcc_A-self.er)   \
-                 +(1-self.eTheta**2)**0.5*cOmg*self.sinEcc_A)
+        rDelay = self.A1/c.c*(self.sOmg*(self.cosEcc_A-self.er)   \
+                 +(1-self.eTheta**2)**0.5*self.cOmg*self.sinEcc_A)
         return rDelay.decompose()
     @Cache.use_cache
     def delayS(self):
         """Binary shapiro delay
            T. Damour and N. Deruelle(1986)equation [26]
         """
-        sOmg = np.sin(self.omega)
-        cOmg = np.cos(self.omega)
+
         sDelay = -2*self.TM2 * np.log(1-self.ecct*self.cosEcc_A-
-        	                           self.SINI*(sOmg*(self.cosEcc_A
+        	                           self.SINI*(self.sOmg*(self.cosEcc_A
         	                           -self.ecct)+(1-self.ecct**2)**0.5
-        	                           *cOmg*self.sinEcc_A))
+        	                           *self.cOmg*self.sinEcc_A))
         return sDelay 
     @Cache.use_cache
     def delayE(self):
@@ -171,15 +170,29 @@ class DDmodel(object):
         """Binary Abberation delay
             T. Damour and N. Deruelle(1986)equation [27]
         """
-        omgPlusAe = self.omega+self.Ae 
-        aDelay = self.A0*(np.sin(omgPlusAe)+self.ecct*np.sin(self.omega))+\
-                 self.B0*(np.cos(omgPlusAe)+self.ecct*np.cos(self.omega)) 
+        omgPlusAe = self.Omega+self.Ae 
+        aDelay = self.A0*(np.sin(omgPlusAe)+self.ecct*self.sOmg)+\
+                 self.B0*(np.cos(omgPlusAe)+self.ecct*self.cOmg) 
         return aDelay
 
     @Cache.use_cache
     def delay(self):
         """Full DD model delay"""
+        print self.delayR()[0],self.delayS()[0],self.delayE()[0],self.delayA()[0]
         return self.delayR()+self.delayS()+self.delayE()+self.delayA()
+
+    def delayInverse(self):
+        alpha = self.A1/c.c*self.sOmg
+        beta = self.A1/c.c*(1-self.eTheta**2)**0.5*self.cOmg
+        Dre = alpha*(self.cosEcc_A-self.er)+(beta+self.GAMMA)*self.sinEcc_A
+        Drep = -alpha*self.sinEcc_A+(beta+self.GAMMA)*self.cosEcc_A
+        Drepp = -alpha*self.cosEcc_A-(beta+self.GAMMA)*self.sinEcc_A
+        nHat = 2.0*np.pi/self.PB.to('second')/(1-self.ecct*self.cosEcc_A)
+
+        return (Dre*(1-nHat*Drep+(nHat*Drep)**2+1.0/2*nHat**2*Dre*Drepp-\
+                1.0/2*self.ecct*self.sinEcc_A/(1-self.ecct*self.cosEcc_A)*\
+                nHat**2*Dre*Drep)).decompose()
+
 
     @Cache.use_cache
     def get_tt0(self):
@@ -201,7 +214,7 @@ class DDmodel(object):
                          Eq 17)
         """
         k = self.OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/self.PB)
-        return self.OM + self.Ae*k
+        return (self.OM + self.Ae*k).to(u.rad)
     
     def M(self):
         """Obit phase
