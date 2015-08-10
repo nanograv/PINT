@@ -165,6 +165,7 @@ class DDmodel(object):
             T. Damour and N. Deruelle(1986)equation [25]
         """
         return self.GAMMA*self.sinEcc_A
+
     @Cache.use_cache
     def delayA(self):
         """Binary Abberation delay
@@ -216,6 +217,17 @@ class DDmodel(object):
         k = self.OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/self.PB)
         return (self.OM + self.Ae*k).to(u.rad)
     
+    @Cache.use_cache
+    def E(self):
+        """Eccentric Anomaly
+        """
+        return self.ecc_anom
+
+    @Cache.use_cache
+    def Ae(self):
+        """True anomaly"""
+        return 2*np.arctan(np.sqrt((1.0+self.ecc())/(1.0-self.ecc()))*np.tan(self.E()/2.0))
+    
     def M(self):
         """Obit phase
         """
@@ -226,10 +238,7 @@ class DDmodel(object):
         phase = 2 * np.pi * (orbits - norbits)
         return phase
 
-    def E(self):
-        """Eccentric Anomaly
-        """
-        return self.ecc_anom
+    
 
     # Analytically calculate derivtives. 
     def d_E_d_ECC(self):
@@ -237,7 +246,7 @@ class DDmodel(object):
     def d_E_d_EDOT(self):
         return self.tt0 * self.d_E_d_ECC()
     def d_E_d_PB(self):
-        pass
+        return 
     def d_E_d_PBDOT(self):
         pass
     def d_E_d_T0(self):
