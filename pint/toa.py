@@ -43,7 +43,7 @@ def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=True):
     if not (os.path.isfile(timfile+".pickle") or
             os.path.isfile(timfile+".pickle.gz")):
         log.info("Pickling TOAs.")
-        t.pickle()
+        #t.pickle()
     return t
 
 def get_TOAs_list(toa_list,ephem="DE421", planets=False):
