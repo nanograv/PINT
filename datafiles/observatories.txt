@@ -1,4 +1,5 @@
 # Name      ITRF:  X(m)          Y(m)            Z(m)        Old TEMPO codes
+Geocenter           0.0            1.0             0.0         0  COE
 GBT            882589.65    -4924872.32      3943729.348       1  GB
 Arecibo       2390490.0     -5564764.0       1994727.0         3  AO
 JVLA         -1601192.0     -5041981.4       3554871.4         6  VL
