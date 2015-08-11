@@ -32,13 +32,14 @@ def measure_phase(profile, template, rotate_prof=True):
     shift,eshift,snr,esnr,b,errb,ngood = fftfit.fftfit(profile,amp,pha)
     return shift,eshift,snr,esnr,b,errb,ngood
 
-def profile_likelihood(phs, otherargs):
+def profile_likelihood(phs, *otherargs):
     """
     A single likelihood calc for matching phases to a template
     """
     xvals, phases, lntemplate = otherargs
     trials = phases.astype(np.float64) + phs
     trials[trials > 1.0] -= 1.0 # ensure that all the phases are within 0-1
+    trials[trials < 0.0] += 1.0 # ensure that all the phases are within 0-1
     return -(np.interp(trials, xvals, lntemplate, right=lntemplate[0])).sum()
 
 def marginalize_over_phase(phases, template, resolution=1.0/1024,
@@ -57,11 +58,10 @@ def marginalize_over_phase(phases, template, resolution=1.0/1024,
         phs, like = marginalize_over_phase(phases, template, resolution=1.0/64,
             minimize=False, showplot=showplot)
         phs = 1.0 - phs / ltemp
-        hwidth = 0.05
-        lophs = phs - hwidth if phs > hwidth else phs + (1.0 - hwidth)
-        hiphs = phs + hwidth if phs < 1.0 - hwidth else phs - (1.0 - hwidth)
+        hwidth = 0.03
+        lophs, hiphs = phs - hwidth, phs + hwidth
         result = op.minimize(profile_likelihood, [phs],
-            args=[xtemp, phases, lntemplate], bounds=[[lophs, hiphs]])
+            args=(xtemp, phases, lntemplate), bounds=[[lophs, hiphs]])
         return ltemp - result['x'] * ltemp, -result['fun']
     if fftfit:
         deltabin = 2
@@ -255,23 +255,29 @@ ftr = emcee_fitter(ts, modelin, gtemplate)
 
 # Now compute the photon phases and see if we see a pulse
 phss = ftr.get_event_phases()
-print "Starting pulse likelihood:", marginalize_over_phase(phss, gtemplate,
-    minimize=True, showplot=True)[1]
+maxbin, like_start = marginalize_over_phase(phss, gtemplate,
+    minimize=True, showplot=True)
+print "Starting pulse likelihood:", like_start
 ftr.phaseogram(file=ftr.model.PSR.value+"_pre.png")
 ftr.phaseogram()
 
 # Try normal optimization first to see how it goes
 result = op.minimize(ftr.minimize_func, np.zeros_like(ftr.fitvals))
 newfitvals = np.asarray(result['x']) * ftr.fiterrs + ftr.fitvals
+like_optmin = -result['fun']
+print "Optimization likelihood:", like_optmin
 ftr.set_params(dict(zip(ftr.fitkeys, newfitvals)))
 ftr.phaseogram()
 
-# Set up the initial conditions for the emcee walkers.  Could use the
-# scipy.optimize newfitvals instead if they are much better
+# Set up the initial conditions for the emcee walkers.  Use the
+# scipy.optimize newfitvals instead if they are better
 ndim = ftr.n_fit_params
-#pos = [ftr.fitvals + ftr.fiterrs*np.random.randn(ndim)
-pos = [newfitvals + ftr.fiterrs*np.random.randn(ndim)
-    for i in range(nwalkers)]
+if like_start > like_optmin:
+    pos = [ftr.fitvals + ftr.fiterrs * np.random.randn(ndim)
+        for i in range(nwalkers)]
+else:
+    pos = [newfitvals + ftr.fiterrs*np.random.randn(ndim)
+        for i in range(nwalkers)]
 
 import emcee
 sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
