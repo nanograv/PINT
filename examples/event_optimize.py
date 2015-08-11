@@ -11,6 +11,11 @@ import sys, os, copy, fftfit
 eventfile, parfile, gaussianfile = sys.argv[1:]
 nbins = 128  # for fast correlation to marginalize over pulse phase
 
+maxlike = -9e99
+numcalls = 0
+nwalkers = 100
+nsteps = 1500
+
 def measure_phase(profile, template, rotate_prof=True):
     """
     measure_phase(profile, template):
@@ -27,7 +32,7 @@ def measure_phase(profile, template, rotate_prof=True):
     return shift,eshift,snr,esnr,b,errb,ngood
 
 def marginalize_over_phase(phases, template, resolution=1.0/1024,
-    fast=True, showplot=False, deltabin=8):
+    fast=True, showplot=False, deltabin=2):
     """
     marginalize_over_phase(phases, template, resolution=1.0/1024,
         fast=True, showplot=False, deltabin=8):
@@ -89,9 +94,10 @@ class emcee_fitter(fitter.fitter):
         for p in fitkeys:
             fitvals.append(getattr(self.model, p).value)
             fiterrs.append(getattr(self.model, p).uncertainty * errfact)
-            if p in ["RAJ", "DECJ"]:
+            if p in ["RAJ", "DECJ", "T0"]:
                 fitvals[-1] = fitvals[-1].value
-                fiterrs[-1] = fiterrs[-1].value
+                if p != "T0":
+                    fiterrs[-1] = fiterrs[-1].value
         return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
     def lnprior(self, theta):
@@ -108,10 +114,19 @@ class emcee_fitter(fitter.fitter):
         """
         The log posterior (priors * likelihood)
         """
+        global maxlike, numcalls
         self.set_params(dict(zip(self.fitkeys, theta)))
         phases = self.get_event_phases()
         lnlikelihood = marginalize_over_phase(phases, self.template)[1]
-        print self.lnprior(theta), lnlikelihood
+        numcalls += 1
+        if lnlikelihood > maxlike:
+            print "New max: ", lnlikelihood
+            for name, val in zip(ftr.fitkeys, theta):
+                    print "  %8s: %25.15g" % (name, val)
+            maxlike = lnlikelihood
+            self.maxlike_fitvals = theta
+        if numcalls % (nwalkers * nsteps / 100) == 0:
+            print "~%d%% complete" % (numcalls / (nwalkers * nsteps / 100))
         return self.lnprior(theta) + lnlikelihood
 
     def minimize_func(self, theta):
@@ -186,10 +201,30 @@ modelin = pint.models.get_model(parfile)
 # Remove the dispersion delay as it is unnecessary
 modelin.delay_funcs.remove(modelin.dispersion_delay)
 
+# Save the PM and PX values to put them back in later.  Do convert from
+# barycenter to geocenter, we need to use the constant RA, DEC that was
+# used to do the barycentering originally
+if hasattr(modelin, "PMRA"):
+    pmra = modelin.PMRA.value
+    modelin.PMRA.value = 0.0
+if hasattr(modelin, "PMDEC"):
+    pmdec = modelin.PMDEC.value
+    modelin.PMDEC.value = 0.0
+if hasattr(modelin, "PX"):
+    px = modelin.PX.value
+    modelin.PX.value = 0.0
+
 # Now remove the SS Roemer and Shapiro delays from the event times
 # This makes them true "Geocenter" times
 ts.table['tdbld'] += (modelin.solar_system_geometric_delay(ts.table) +
     modelin.solar_system_shapiro_delay(ts.table)) / toa.SECS_PER_DAY
+
+# Now reset the PM and PX values
+if hasattr(modelin, "PMRA"): modelin.PMRA.value = pmra
+if hasattr(modelin, "PMDEC"): modelin.PMDEC.value = pmdec
+if hasattr(modelin, "PX"): modelin.PX.value = px
+
+modelin.PMRA.value, modelin.PMDEC.value, modelin.PX.value = pmra, pmdec, px
 
 # Now load in the gaussian template and normalize it
 gtemplate = pu.read_gaussfitfile(gaussianfile, nbins)
@@ -214,14 +249,14 @@ ftr.phaseogram()
 
 # Set up the initial conditions for the emcee walkers.  Could use the
 # scipy.optimize newfitvals instead if they are much better
-ndim, nwalkers = ftr.n_fit_params, 100
+ndim = ftr.n_fit_params
 pos = [ftr.fitvals + ftr.fiterrs*np.random.randn(ndim)
     for i in range(nwalkers)]
 
 import emcee
 sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
 # The number is the number of points in the chain
-sampler.run_mcmc(pos, 800)
+sampler.run_mcmc(pos, nsteps)
 
 def chains_to_dict(names, sampler):
     chains = [sampler.chain[:,:,ii].T for ii in range(len(names))]
