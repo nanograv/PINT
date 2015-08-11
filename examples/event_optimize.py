@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import astropy.table
 import astropy.units as u
 import psr_utils as pu
+import scipy.optimize as op
 import sys, os, copy, fftfit
 
 eventfile, parfile, gaussianfile = sys.argv[1:]
@@ -31,8 +32,17 @@ def measure_phase(profile, template, rotate_prof=True):
     shift,eshift,snr,esnr,b,errb,ngood = fftfit.fftfit(profile,amp,pha)
     return shift,eshift,snr,esnr,b,errb,ngood
 
+def profile_likelihood(phs, otherargs):
+    """
+    A single likelihood calc for matching phases to a template
+    """
+    xvals, phases, lntemplate = otherargs
+    trials = phases.astype(np.float64) + phs
+    trials[trials > 1.0] -= 1.0 # ensure that all the phases are within 0-1
+    return -(np.interp(trials, xvals, lntemplate, right=lntemplate[0])).sum()
+
 def marginalize_over_phase(phases, template, resolution=1.0/1024,
-    fast=True, showplot=False, deltabin=2):
+    fftfit=False, showplot=False, minimize=True, lophs=0.0, hiphs=1.0):
     """
     marginalize_over_phase(phases, template, resolution=1.0/1024,
         fast=True, showplot=False, deltabin=8):
@@ -41,7 +51,20 @@ def marginalize_over_phase(phases, template, resolution=1.0/1024,
             are returned.
     """
     ltemp = len(template)
-    if fast:
+    xtemp = np.arange(ltemp) * 1.0/ltemp
+    lntemplate = np.log(template)
+    if minimize:
+        phs, like = marginalize_over_phase(phases, template, resolution=1.0/64,
+            minimize=False, showplot=showplot)
+        phs = 1.0 - phs / ltemp
+        hwidth = 0.05
+        lophs = phs - hwidth if phs > hwidth else phs + (1.0 - hwidth)
+        hiphs = phs + hwidth if phs < 1.0 - hwidth else phs - (1.0 - hwidth)
+        result = op.minimize(profile_likelihood, [phs],
+            args=[xtemp, phases, lntemplate], bounds=[[lophs, hiphs]])
+        return ltemp - result['x'] * ltemp, -result['fun']
+    if fftfit:
+        deltabin = 2
         h, x = np.histogram(phases.astype(np.float64), ltemp, range=[0.0, 1.0])
         s,es,snr,esnr,b,errb,ngood = measure_phase(h, template,
             rotate_prof=False)
@@ -49,9 +72,6 @@ def marginalize_over_phase(phases, template, resolution=1.0/1024,
         lophs = (ltemp - s - deltabin) / float(ltemp)  # bins below
         if lophs < 0.0:  lophs += 1.0
         hiphs = lophs + 2.0 * deltabin / float(ltemp)  # bins above
-    else:
-        lophs, hiphs = 0.0, 1.0
-    xtemp = np.arange(ltemp) * 1.0/ltemp
     dphss = np.arange(lophs, hiphs, resolution)
     trials = phases.astype(np.float64) + dphss[:,np.newaxis]
     # ensure that all the phases are within 0-1
@@ -236,12 +256,11 @@ ftr = emcee_fitter(ts, modelin, gtemplate)
 # Now compute the photon phases and see if we see a pulse
 phss = ftr.get_event_phases()
 print "Starting pulse likelihood:", marginalize_over_phase(phss, gtemplate,
-    fast=False, showplot=True)[1]
+    minimize=True, showplot=True)[1]
 ftr.phaseogram(file=ftr.model.PSR.value+"_pre.png")
 ftr.phaseogram()
 
 # Try normal optimization first to see how it goes
-import scipy.optimize as op
 result = op.minimize(ftr.minimize_func, np.zeros_like(ftr.fitvals))
 newfitvals = np.asarray(result['x']) * ftr.fiterrs + ftr.fitvals
 ftr.set_params(dict(zip(ftr.fitkeys, newfitvals)))
@@ -250,7 +269,8 @@ ftr.phaseogram()
 # Set up the initial conditions for the emcee walkers.  Could use the
 # scipy.optimize newfitvals instead if they are much better
 ndim = ftr.n_fit_params
-pos = [ftr.fitvals + ftr.fiterrs*np.random.randn(ndim)
+#pos = [ftr.fitvals + ftr.fiterrs*np.random.randn(ndim)
+pos = [newfitvals + ftr.fiterrs*np.random.randn(ndim)
     for i in range(nwalkers)]
 
 import emcee
