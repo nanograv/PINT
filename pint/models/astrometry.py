@@ -12,6 +12,8 @@ from pint import ls
 from pint import utils
 import time
 
+mas_yr = (u.mas / u.yr)
+
 try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
@@ -80,13 +82,11 @@ class Astrometry(TimingModel):
         if epoch is None:
             return coords.ICRS(ra=self.RAJ.value, dec=self.DECJ.value)
         else:
-            mas_yr = (u.mas / u.yr)
-            dt = (epoch - self.POSEPOCH.value.mjd) * u.d
-            dRA = (dt * self.PMRA.value * mas_yr / \
-                    numpy.cos(self.DECJ.value)).to(u.mas)
-            dDEC = (dt * self.PMDEC.value * mas_yr).to(u.mas)
+            dt = (epoch - self.POSEPOCH.value.mjd) * u.d * mas_yr
+            dRA = dt * self.PMRA.value / numpy.cos(self.DECJ.value.radian)
+            dDEC = dt * self.PMDEC.value
             return coords.ICRS(ra=self.RAJ.value+dRA, dec=self.DECJ.value+dDEC)
-    
+
     @Cache.cache_result
     def ssb_to_psb_xyz(self, epoch=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter.
@@ -182,7 +182,7 @@ class Astrometry(TimingModel):
     @Cache.use_cache
     def d_delay_d_DECJ(self, toas):
         """Calculate the derivative wrt DECJ
-        
+
         Definitions as in d_delay_d_RAJ
         """
         rd = self.get_d_delay_quantities(toas)
@@ -200,7 +200,7 @@ class Astrometry(TimingModel):
     @Cache.use_cache
     def d_delay_d_PMRA(self, toas):
         """Calculate the derivative wrt PMRA
-        
+
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
         the pulsar RA
         """
@@ -220,7 +220,7 @@ class Astrometry(TimingModel):
     @Cache.use_cache
     def d_delay_d_PMDEC(self, toas):
         """Calculate the derivative wrt PMDEC
-        
+
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
         the pulsar DEC
         """
@@ -261,7 +261,7 @@ class Astrometry(TimingModel):
         with delay
 
         t_d = 0.5 * px_r * delta'/ c,  and delta = delta' * px_r / (1 AU)
-        
+
         """
         rd = self.get_d_delay_quantities(toas)
 
