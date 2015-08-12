@@ -115,14 +115,9 @@ class DDmodel(object):
         setattr(self,'TM2',self.M2.value*Tsun)
     	setattr(self,'tt0', self.get_tt0())
     	setattr(self,'ecct',self.ecc())
-    	orbits = self.tt0/self.PB.to('second') -  \
-                 0.5*(self.PBDOT+self.XPBDOT)*(self.tt0/self.PB)**2#?
-        orbits = orbits.decompose()
-        norbits = np.array(np.floor(orbits), dtype=np.long)
-        phase = 2 * np.pi * (orbits - norbits)
-        setattr(self,'phase',phase)
+        setattr(self,'phase',self.M())
         # Solve Kepler equation
-        setattr(self,'ecc_anom', self.compute_eccentric_anomaly(self.ecct,phase))
+        setattr(self,'ecc_anom', self.E())
 
         # Obtain T. Damour and N. Deruelle equation 17a-17c
         setattr(self,'cosEcc_A',np.cos(self.ecc_anom))
@@ -204,10 +199,11 @@ class DDmodel(object):
         return (self.t-self.T0).to('second')
     @Cache.use_cache
     def ecc(self):
-        return self.ECC + self.get_tt0()*self.EDOT
+        return self.ECC + self.tt0*self.EDOT
+
     @Cache.use_cache
     def a1(self):
-        return self.A1 + self.get_tt0()*self.A1DOT
+        return self.A1 + self.tt0*self.A1DOT
     @Cache.use_cache
     def omega(self):
         """T. Damour and N. Deruelle(1986)equation [25]
@@ -216,41 +212,159 @@ class DDmodel(object):
         """
         k = self.OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/self.PB)
         return (self.OM + self.Ae*k).to(u.rad)
+
+    @Cache.use_cache
+    def pbprime(self):
+        return self.PB - self.PBDOT * self.tt0
+
+    @Cache.use_cache
+    def Pobs(self):
+        if not np.all(np.logical_and(self.ecc() >= 0.0, self.ecc() <= 1.0)):
+            return np.inf
+
+        # Projected velocity of the pulsar in the direction of the line-of-sight
+        # (Divided by speed of light due to units of A1)
+        vl = 2*np.pi*self.a1()/(self.pbprime()*np.sqrt(1-self.ecc()**2))
+
+        return self.P() * (1.0 + vl*((np.cos(self.nu())+self.ecc())*np.cos(self.om())-np.sin(self.nu())*np.sin(self.om())))
+    ############################################################
+    @Cache.use_cache
+    def M(self):
+        """Orbit phase, this could be a generic function
+        """
+        orbits = (self.tt0/self.PB.to('second') -  \
+               0.5*(self.PBDOT+self.XPBDOT)*(self.tt0/self.PB)**2).decompose()
+        norbits = np.array(np.floor(orbits), dtype=np.long)
+        phase = (orbits - norbits)*2*np.pi
+
+        return phase
+    @Cache.use_cache    
+    def d_M_d_T0(self):
+        """dM/dT0  this could be a generic function
+        """
+        return ((self.PBDOT-self.XPBDOT)*self.tt0/self.PB-1.0)*2*np.pi/self.PB
     
+    @Cache.use_cache
+    def d_M_d_PB(self):
+        """dM/dPB this could be a generic function
+        """
+        return 2*np.pi*((self.PBDOT+self.XPBDOT)*self.tt0**2/self.PB**3 - \
+                        self.tt0/self.PB**2)
+
+    @Cache.use_cache
+    def d_M_d_PBDOT(self):
+        """dM/dPBDOT this could be a generic function
+        """
+
+        return -np.pi * self.tt0**2/self.PB**2
+    
+    @Cache.use_cache
+    def d_M_d_XPBDOT(self):
+        """dM/dPBDOT this could be a generic function
+        """
+        return -np.pi * self.tt0**2/self.PB**2
+    ##########################################################
     @Cache.use_cache
     def E(self):
         """Eccentric Anomaly
         """
-        return self.ecc_anom
+        return self.compute_eccentric_anomaly(self.ecc(),self.M())
 
+    # Analytically calculate derivtives.
     @Cache.use_cache
-    def Ae(self):
+    def d_E_d_T0(self):
+        """d(E-e*sinE)/dT0 = dM/dT0
+           dE/dT0(1-cosE*e)-de/dT0*sinE = dM/dT0
+           dE/dT0(1-cosE*e)+eDot*sinE = dM/dT0
+        """
+        RHS = self.d_M_d_T0()
+        
+        return (RHS-self.EDOT*np.sin(self.E())/(1.0-np.cos(self.E())*self.ecc())
+    @Cache.use_cache
+    def d_E_d_PB(self):
+        """d(E-e*sinE)/dPB = dM/dPB
+           dE/dPB(1-cosE*e)-de/dPB*sinE = dM/dPB
+           dE/dPB(1-cosE*e) = dM/dPB 
+        """
+        RHS = self.d_M_d_PB()
+        return RHS/(1.0-np.cos(self.E())*self.ecc())
+    @Cache.use_cache
+    def d_E_d_PBDOT(self):
+        RHS = self.d_M_d_PBDOT()
+        return RHS/(1.0-np.cos(self.E())*self.ecc())
+    @Cache.use_cache
+    def d_E_d_XPBDOT(self):
+        RHS = self.d_M_d_XPBDOT()
+        return RHS/(1.0-np.cos(self.E())*self.ecc())
+    @Cache.use_cache
+    def d_E_d_ECC(self):
+        return np.sin(self.E()) / (1.0 - self.ecc()*np.cos(self.E()))
+    @Cache.use_cache
+    def d_E_d_EDOT(self):
+        return self.tt0 * self.d_E_d_ECC()
+    
+
+    #########################################################
+    @Cache.use_cache
+    def nu(self):
         """True anomaly"""
         return 2*np.arctan(np.sqrt((1.0+self.ecc())/(1.0-self.ecc()))*np.tan(self.E()/2.0))
     
-    def M(self):
-        """Obit phase
-        """
-        orbits = self.tt0/self.PB -  \
-                 0.5*(self.PBDOT+self.XPBDOT)*(self.tt0/self.PB)**2#?
-        orbits = orbits.decompose()
-        norbits = np.array(np.floor(orbits), dtype=np.long)
-        phase = 2 * np.pi * (orbits - norbits)
-        return phase
+    @Cache.use_cache
+    def d_nu_d_E(self):
+        brack1 = (1 + self.ecc()*np.cos(self.nu())) / (1 - self.ecc()*np.cos(self.E()))
+        brack2 = np.sin(self.E()) / np.sin(self.nu())
+        return brack1*brack2
 
+    @Cache.use_cache
+    def d_nu_d_ecc(self):
+        return np.sin(self.E())**2/(self.ecc()*np.cos(self.E())-1)**2/np.sin(self.nu())
     
+    @Cache.use_cache
+    def d_nu_d_T0(self):
+        """dnu/dT0 = dnu/de*de/dT0+dnu/dE*dE/dT0
+           de/dT0 = -EDOT
+        """
+        return self.d_nu_d_ecc()*(-self.EDOT)+self.d_nu_d_E()*self.d_E_d_T0()
+    
+    @Cache.use_cache
+    def d_nu_d_PB(self):
+        """dnu(e,E)/dPB = dnu/de*de/dPB+dnu/dE*dE/dPB
+           de/dPB = 0
+           dnu/dPB = dnu/dE*dE/dPB
+        """
+        return self.d_nu_d_E()*self.d_E_d_PB()
+    
+    @Cache.use_cache
+    def d_nu_d_PBDOT(self):
+        """dnu(e,E)/dPBDOT = dnu/de*de/dPBDOT+dnu/dE*dE/dPBDOT
+           de/dPBDOT = 0
+           dnu/dPBDOT = dnu/dE*dE/dPBDOT
+        """
+        return self.d_nu_d_E()*self.d_E_d_PBDOT()
+    @Cache.use_cache
+    def d_nu_d_XPBDOT(self):
+        """dnu/dPBDOT = dnu/dE*dE/dPBDOT
+        """
+        return self.d_nu_d_E()*self.d_E_d_XPBDOT()
 
-    # Analytically calculate derivtives. 
-    def d_E_d_ECC(self):
-        return np.sin(self.E()) / (1 - self.ecc()*np.cos(self.E()))
-    def d_E_d_EDOT(self):
-        return self.tt0 * self.d_E_d_ECC()
-    def d_E_d_PB(self):
-        return 
-    def d_E_d_PBDOT(self):
-        pass
-    def d_E_d_T0(self):
-        pass
+    @Cache.use_cache
+    def d_nu_d_ECC2(self):
+        """dnu(e,E)/dECC = dnu/de*de/dECC+dnu/dE*dE/dECC
+           de/dECC = 1
+           dnu/dPBDOT = dnu/dE*dE/dECC+dnu/de
+        """
+        return self.d_nu_d_ecc()+self.d_nu_d_E()*self.d_E_d_ECC
+    
+    @Cache.use_cache
+    def d_nu_d_EDOT(self):
+        return self.tt0() * self.d_nu_d_ECC()
+
+
+    ########################################################
+    @Cache.use_cache
+    def Doppler(self):
+        return 2*np.pi*self.a1() / (self.pbprime()*np.sqrt(1-self.ecc()**2))
 
 
     def d_delayR_d_A1(self):
