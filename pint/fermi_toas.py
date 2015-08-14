@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 
 from astropy import log
 
-def phaseogram(mjds, phases, weights=None, bins=100, rotate=0.0, size=5, alpha=0.25, file=False):
+def phaseogram(mjds, phases, weights=None, bins=100, rotate=0.0, size=5,
+    alpha=0.25, file=False):
     """
     Make a nice 2-panel phaseogram
     """
