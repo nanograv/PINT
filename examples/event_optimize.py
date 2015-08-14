@@ -34,37 +34,43 @@ def measure_phase(profile, template, rotate_prof=True):
 
 def profile_likelihood(phs, *otherargs):
     """
-    A single likelihood calc for matching phases to a template
+    A single likelihood calc for matching phases to a template.
+    Likelihood is calculated as per eqn 2 in Pletsch & Clark 2015.
     """
-    xvals, phases, lntemplate = otherargs
-    trials = phases.astype(np.float64) + phs
-    trials[trials > 1.0] -= 1.0 # ensure that all the phases are within 0-1
-    trials[trials < 0.0] += 1.0 # ensure that all the phases are within 0-1
-    return -(np.interp(trials, xvals, lntemplate, right=lntemplate[0])).sum()
+    xvals, phases, template, weights = otherargs
+    phss = phases.astype(np.float64) + phs
+    # ensure that all the phases are within 0-1
+    phss[phss > 1.0] -= 1.0
+    phss[phss < 0.0] += 1.0
+    probs = np.interp(phss, xvals, template, right=template[0])
+    if weights is None:
+        return -np.log(probs).sum()
+    else:
+        return -np.log(weights*probs + 1.0-weights).sum()
 
-def marginalize_over_phase(phases, template, resolution=1.0/1024,
-    fftfit=False, showplot=False, minimize=True, lophs=0.0, hiphs=1.0):
+def marginalize_over_phase(phases, template, weights=None, resolution=1.0/1024,
+    minimize=True, fftfit=False, showplot=False, lophs=0.0, hiphs=1.0):
     """
-    marginalize_over_phase(phases, template, resolution=1.0/1024,
-        fast=True, showplot=False, deltabin=8):
+    def marginalize_over_phase(phases, template, weights=None, resolution=1.0/1024,
+        minimize=True, fftfit=False, showplot=False, lophs=0.0, hiphs=1.0):
             a pulse profile comprised of combined photon phases.  A maximum
             likelood technique is used.  The shift and the max log likehood
-            are returned.
+            are returned.  You probably want to use "minimize" rathre than
+            "fftfit" unless you are only sampling very close to your known min.
     """
     ltemp = len(template)
     xtemp = np.arange(ltemp) * 1.0/ltemp
-    lntemplate = np.log(template)
     if minimize:
-        phs, like = marginalize_over_phase(phases, template, resolution=1.0/64,
-            minimize=False, showplot=showplot)
+        phs, like = marginalize_over_phase(phases, template, weights,
+            resolution=1.0/64, minimize=False, showplot=showplot)
         phs = 1.0 - phs / ltemp
         hwidth = 0.03
         lophs, hiphs = phs - hwidth, phs + hwidth
         result = op.minimize(profile_likelihood, [phs],
-            args=(xtemp, phases, lntemplate), bounds=[[lophs, hiphs]])
+            args=(xtemp, phases, template, weights), bounds=[[lophs, hiphs]])
         return ltemp - result['x'] * ltemp, -result['fun']
     if fftfit:
-        deltabin = 2
+        deltabin = 3
         h, x = np.histogram(phases.astype(np.float64), ltemp, range=[0.0, 1.0])
         s,es,snr,esnr,b,errb,ngood = measure_phase(h, template,
             rotate_prof=False)
@@ -76,8 +82,11 @@ def marginalize_over_phase(phases, template, resolution=1.0/1024,
     trials = phases.astype(np.float64) + dphss[:,np.newaxis]
     # ensure that all the phases are within 0-1
     trials[trials > 1.0] -= 1.0
-    lnlikes = (np.interp(trials, xtemp, np.log(template),
-        right=np.log(template[0]))).sum(axis=1)
+    probs = np.interp(trials, xtemp, template), right=template[0])
+    if weights is None:
+        lnlikes = (np.log(probs)).sum(axis=1)
+    else:
+        lnlikes = (np.log(weights*probs + 1.0-weights)).sum(axis=1)
     if showplot:
         plt.plot(dphss, lnlikes)
         plt.xlabel("Pulse Phase")
