@@ -24,7 +24,7 @@ nwalkers = 100
 nsteps = 1500
 nbins = 256
 maxMJD = 57210.0 # latest MJD to use (limited by IERS file usually)
-minWeight = 0.5  # if using weights, this is the minimum to include
+minWeight = 0.1  # if using weights, this is the minimum to include
 
 # initialization values
 maxlike = -9e99
@@ -84,7 +84,8 @@ def marginalize_over_phase(phases, template, weights=None, resolution=1.0/1024,
         return ltemp - result['x'] * ltemp, -result['fun']
     if fftfit:
         deltabin = 3
-        h, x = np.histogram(phases.astype(np.float64), ltemp, range=[0.0, 1.0])
+        h, x = np.histogram(phases.astype(np.float64), ltemp, range=[0.0, 1.0],
+            weights=weights)
         s,es,snr,esnr,b,errb,ngood = measure_phase(h, template,
             rotate_prof=False)
         # s is in bins based on the template size
