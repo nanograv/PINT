@@ -17,11 +17,14 @@ elif len(sys.argv[1:])==3:
     weightcol=None
 else:
     print "usage:  python event_optimize.py eventfile parfile gaussianfile [weightcol]"
+    sys.exit()
 
 # Params you might want to edit
 nwalkers = 100
-nsteps = 500
-nbins = 128  # FFT corr len to marginalize over phase.  Likely not used.
+nsteps = 1500
+nbins = 256
+maxMJD = 57210.0 # latest MJD to use (limited by IERS file usually)
+minWeight = 0.5  # if using weights, this is the minimum to include
 
 # initialization values
 maxlike = -9e99
@@ -156,6 +159,9 @@ class emcee_fitter(fitter.fitter):
         """
         global maxlike, numcalls
         self.set_params(dict(zip(self.fitkeys, theta)))
+        # Make sure parallax is positive if we are fitting for it
+        if 'PX' in self.fitkeys and self.model.PX.value < 0.0:
+            return -np.inf
         phases = self.get_event_phases()
         lnlikelihood = marginalize_over_phase(phases, self.template,
             weights=self.weights)[1]
@@ -177,6 +183,8 @@ class emcee_fitter(fitter.fitter):
         # first scale the params based on the errors
         ntheta = (theta * self.fiterrs) + self.fitvals
         self.set_params(dict(zip(self.fitkeys, ntheta)))
+        if 'PX' in self.fitkeys and self.model.PX.value < 0.0:
+            return np.inf
         phases = self.get_event_phases()
         lnlikelihood = marginalize_over_phase(phases, self.template,
             weights=self.weights)[1]
@@ -190,13 +198,18 @@ class emcee_fitter(fitter.fitter):
         """
         mjds = self.toas.table['tdbld'].astype(np.float64)
         phss = self.get_event_phases()
-        fermi.phaseogram(mjds, phss, weights=self.weights)
+        fermi.phaseogram(mjds, phss, weights=self.weights, bins=bins,
+            rotate=rotate, size=size, alpha=alpha, file=file)
 
 # TODO: make this properly handle long double
 if 1 or not (os.path.isfile(eventfile+".pickle") or
     os.path.isfile(eventfile+".pickle.gz")):
     # Read event file and return list of TOA objects
     tl = fermi.load_Fermi_TOAs(eventfile, weightcolumn=weightcol)
+    # Limit the TOAs to ones where we have IERS corrections for
+    tl = [tl[ii] for ii in range(len(tl)) if tl[ii].mjd.value < maxMJD and
+        tl[ii].flags['weight'] > minWeight]
+    print "There are %d events we will use" % len(tl)
     # Now convert to TOAs object and compute TDBs and posvels
     ts = toa.TOAs(toalist=tl)
     ts.filename = eventfile
@@ -207,39 +220,10 @@ if 1 or not (os.path.isfile(eventfile+".pickle") or
     else:
         weights = None
 
-# Note: need to correct barycentric times to geocenter times
-# Keep a backup copy in case we screw up
-tdbs_bak = copy.copy(ts.table['tdbld'])
-
 # Read in initial model
 modelin = pint.models.get_model(parfile)
-
 # Remove the dispersion delay as it is unnecessary
 modelin.delay_funcs.remove(modelin.dispersion_delay)
-
-# Save the PM and PX values to put them back in later.  Do convert from
-# barycenter to geocenter, we need to use the constant RA, DEC that was
-# used to do the barycentering originally
-#if hasattr(modelin, "PMRA"):
-#    pmra = modelin.PMRA.value
-#    modelin.PMRA.value = 0.0
-#if hasattr(modelin, "PMDEC"):
-#    pmdec = modelin.PMDEC.value
-#    modelin.PMDEC.value = 0.0
-#if hasattr(modelin, "PX"):
-#    px = modelin.PX.value
-#    modelin.PX.value = 0.0
-
-# Now remove the SS Roemer and Shapiro delays from the event times
-# This makes them true "Geocenter" times
-#ts.table['tdbld'] += (modelin.solar_system_geometric_delay(ts.table) +
-#    modelin.solar_system_shapiro_delay(ts.table)) / toa.SECS_PER_DAY
-
-# Now reset the PM and PX values
-#if hasattr(modelin, "PMRA"): modelin.PMRA.value = pmra
-#if hasattr(modelin, "PMDEC"): modelin.PMDEC.value = pmdec
-#if hasattr(modelin, "PX"): modelin.PX.value = px
-#modelin.PMRA.value, modelin.PMDEC.value, modelin.PX.value = pmra, pmdec, px
 
 # Now load in the gaussian template and normalize it
 gtemplate = pu.read_gaussfitfile(gaussianfile, nbins)
@@ -251,12 +235,11 @@ ftr = emcee_fitter(ts, modelin, gtemplate, weights)
 # Now compute the photon phases and see if we see a pulse
 phss = ftr.get_event_phases()
 maxbin, like_start = marginalize_over_phase(phss, gtemplate,
-    weights=weights, minimize=True, showplot=True)
+    weights=ftr.weights, minimize=True, showplot=False)
 print "Starting pulse likelihood:", like_start
 ftr.phaseogram(file=ftr.model.PSR.value+"_pre.png")
 plt.close()
-ftr.phaseogram()
-plt.close()
+#ftr.phaseogram()
 
 # Try normal optimization first to see how it goes
 result = op.minimize(ftr.minimize_func, np.zeros_like(ftr.fitvals))
@@ -264,7 +247,7 @@ newfitvals = np.asarray(result['x']) * ftr.fiterrs + ftr.fitvals
 like_optmin = -result['fun']
 print "Optimization likelihood:", like_optmin
 ftr.set_params(dict(zip(ftr.fitkeys, newfitvals)))
-ftr.phaseogram()
+#ftr.phaseogram()
 
 # Set up the initial conditions for the emcee walkers.  Use the
 # scipy.optimize newfitvals instead if they are better
@@ -275,6 +258,14 @@ if like_start > like_optmin:
 else:
     pos = [newfitvals + ftr.fiterrs*np.random.randn(ndim)
         for i in range(nwalkers)]
+
+# If we are fitting for PX, make sure that the initial conditions
+# are positive for all walkers, since we heavily penalize PX < 0
+if 'PX' in ftr.fitkeys:
+    idx = ftr.fitkeys.index('PX')
+    for xs in pos:
+        if xs[idx] < 0.0:
+            xs[idx] = np.fabs(xs[idx])
 
 import emcee
 sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
@@ -298,6 +289,7 @@ def plot_chains(chain_dict, file=False):
         plt.close()
     else:
         plt.show()
+        plt.close()
 
 chains = chains_to_dict(ftr.fitkeys, sampler)
 plot_chains(chains, file=ftr.model.PSR.value+"_chains.png")
@@ -308,6 +300,14 @@ burnin = 200
 samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
 fig = triangle.corner(samples, labels=ftr.fitkeys)
 fig.savefig(ftr.model.PSR.value+"_triangle.png")
+plt.close()
+
+# Make a phaseogram with the 50th percentile values
+#ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
+# Make a phaseogram with the best MCMC result
+ftr.set_params(dict(zip(ftr.fitkeys, ftr.maxlike_fitvals)))
+ftr.phaseogram(file=ftr.model.PSR.value+"_post.png")
+plt.close()
 
 # Print the best MCMC values and ranges
 ranges = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
@@ -316,6 +316,5 @@ print "Post-MCMC values (50th percentile +/- (16th/84th percentile):"
 for name, vals in zip(ftr.fitkeys, ranges):
     print "%8s:"%name, "%25.15g (+ %12.5g  / - %12.5g)"%vals
 
-# Make a phaseogram with the 50th percentile values
-ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
-ftr.phaseogram(file=ftr.model.PSR.value+"_post.png")
+import cPickle
+cPickle.dump(samples, open(ftr.model.PSR.value+"_samples.pickle", "wb"))
