@@ -752,9 +752,10 @@ class DDmodel(object):
         dDrepp_dpar = self.d_Drepp_d_par(par)
         dnhat_dpar = self.d_nhat_d_par(par)
         oneMeccTcosE = (1-e*cE) # 1-e*cos(E)
+
         x =  -1.0/2.0*e*sE/oneMeccTcosE # -1/2*e*sin(E)/(1-e*cos(E))
-        dx_dpar = (-e*cE*dE_dpar-sE*decc_dpar+
-                   e*sE*(-cE*decc_dpar+e*sE*dE_dpar)/oneMeccTcosE)/(2*oneMeccTcosE)
+        
+        dx_dpar = -sE/(2*oneMeccTcosE**2)*decc_dpar+e*(e-cE)/(2*oneMeccTcosE**2)*dE_dpar
         #First half
         H1 = dDre_dpar*delayI/Dre
         # For second half
@@ -788,17 +789,20 @@ class DDmodel(object):
         dDrepp_dpar = self.d_Drepp_d_par(par)
         dnhat_dpar = self.d_nhat_d_par(par)
         oneMeccTcosE = (1-e*cE) # 1-e*cos(E)
-        x =  -1.0/2.0*e*sE/oneMeccTcosE # -1/2*e*sin(E)/(1-e*cos(E))
-        dx_dpar = (-e*cE*dE_dpar-sE*decc_dpar+
-                   e*sE*(-cE*decc_dpar+e*sE*dE_dpar)/oneMeccTcosE)/(2*oneMeccTcosE)
 
-        diDelay_dDre = 1+(Drep*nHat)**2+Dre*Drepp*nHat**2-Drep*nHat*(1+2*Dre*nHat*x)
-        diDelay_dDrep = -Dre*nHat*(1-2*Drep*nHat+Dre*nHat*x)
+        x =  -1.0/2.0*e*sE/oneMeccTcosE # -1/2*e*sin(E)/(1-e*cos(E))
+
+        dx_dpar = -sE/(2*oneMeccTcosE**2)*decc_dpar+e*(e-cE)/(2*oneMeccTcosE**2)*dE_dpar
+
+        diDelay_dDre = 1+(Drep*nHat)**2+Dre*Drepp*nHat**2+Drep*nHat*(2*Dre*nHat*x-1)
+        diDelay_dDrep = Dre*nHat*(2*Drep*nHat+Dre*nHat*x-1)
         diDelay_dDrepp = (Dre*nHat)**2/2
-        diDelay_dx = -(Dre*nHat)**2*Drep
+        diDelay_dnhat = Dre*(-Drep+2*Drep**2*nHat+nHat*Dre*Drepp+2*x*nHat*Dre*Drep)
+        diDelay_dx = (Dre*nHat)**2*Drep
 
         return dDre_dpar*diDelay_dDre + dDrep_dpar*diDelay_dDrep + \
-               dDrepp_dpar*diDelay_dDrepp + dx_dpar*diDelay_dx
+               dDrepp_dpar*diDelay_dDrepp + dx_dpar*diDelay_dx+ \
+               dnhat_dpar*diDelay_dnhat
 
     #################################################
     @Cache.use_cache
