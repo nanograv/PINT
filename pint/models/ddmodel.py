@@ -754,7 +754,7 @@ class DDmodel(object):
         oneMeccTcosE = (1-e*cE) # 1-e*cos(E)
 
         x =  -1.0/2.0*e*sE/oneMeccTcosE # -1/2*e*sin(E)/(1-e*cos(E))
-        
+
         dx_dpar = -sE/(2*oneMeccTcosE**2)*decc_dpar+e*(e-cE)/(2*oneMeccTcosE**2)*dE_dpar
         #First half
         H1 = dDre_dpar*delayI/Dre
@@ -923,9 +923,19 @@ class DDmodel(object):
         rDelay = self.A1/c.c*(self.sOmg*(self.cosEcc_A-self.er)   \
                  +(1-self.eTheta**2)**0.5*self.cOmg*self.sinEcc_A)
         return rDelay.decompose()
-
+    @Cache.use_cache
     def d_delay_d_par(self,par):
         """Full DD model delay derivtive
         """
         return self.d_delayI_d_par(par)+self.d_delayS_d_par(par)+ \
                self.d_delayA_d_par(par)
+
+    @Cache.use_cache
+    def delay_designmatrix(self, params):
+        npars = len(params)
+        M = np.zeros((len(self.t), npars))
+
+        for ii, par in enumerate(params):
+            M[:,ii] = getattr(self, 'd_delay_d_par')(par)
+
+        return M
