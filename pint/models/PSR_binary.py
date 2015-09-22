@@ -41,19 +41,19 @@ class PSRbinary(TimingModel):
         self.add_param(Parameter(name="PB",
             units=u.day,
             description="Orbital period",
-            parse_value=np.longdouble),binary_param = True)
+            parse_value=utils.data2longdouble),binary_param = True)
 
 
         self.add_param(Parameter(name="PBDOT",
-            units=u.s/u.s,
+            units=u.day/u.day,
             description="Orbital period derivitve respect to time",
-            parse_value=np.longdouble),binary_param = True)
+            parse_value=utils.data2longdouble),binary_param = True)
 
 
         self.add_param(Parameter(name="XPBDOT",
             units=u.s/u.s,
             description="Rate of change of orbital period minus GR prediction",
-            parse_value=np.longdouble),binary_param = True)
+            parse_value=utils.data2longdouble),binary_param = True)
 
 
         self.add_param(Parameter(name="A1",
@@ -99,7 +99,7 @@ class PSRbinary(TimingModel):
         self.tt0 = None
         self.parDefault = {'PB':10.0, 'PBDOT':0.0, 'PBDOT' : 0.0, 'ECC': 0.0,
                            'EDOT':0.0, 'A1':10.0,'A1DOT':0.0, 'T0':'54000.0',
-                           'OM':10.0,'OMDOT':0.0,'XPBDOT':0.0,'M2':1}
+                           'OM':10.0,'OMDOT':0.0,'XPBDOT':0.0,'M2':0.0}
 
     def setup(self):
         super(PSRbinary, self).setup()# How to set up heres
@@ -135,7 +135,7 @@ class PSRbinary(TimingModel):
         setattr(self,'sinNu',np.sin(self.nu()))
         setattr(self,'cosNu',np.cos(self.nu()))
         setattr(self,'sinOmg',np.sin(self.omega()))
-        setattr(self,'cosOmg',np.sin(self.omega()))
+        setattr(self,'cosOmg',np.cos(self.omega()))
         setattr(self,'TM2',self.M2.value.value*Tsun)
     def der(self,y,x):
         """Find the derivitives in binary model
