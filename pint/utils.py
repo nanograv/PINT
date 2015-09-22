@@ -137,7 +137,7 @@ def time_to_mjd_string(t, prec=15):
     return str(imjd) + (fmt%fmjd)[1:]
 
 def time_to_mjd_string_array(t,prec = 15):
-    """Print and MJD time array from an astropy time object as array in 
+    """Print and MJD time array from an astropy time object as array in
        time.
     """
     jd1 = np.array(t.jd1)
@@ -146,7 +146,7 @@ def time_to_mjd_string_array(t,prec = 15):
     imjd = jd1.astype(int)
     fjd1 = jd1 - imjd
     fmjd = jd2 + fjd1
-    
+
     assert np.fabs(fmjd).max() < 2.0
     s = []
     for i,f in zip(imjd,fmjd):
@@ -162,12 +162,12 @@ def time_to_mjd_string_array(t,prec = 15):
 
 def time_to_longdouble(t):
     """ Return an astropy Time value as MJD in longdouble
-    
+
     ## SUGGESTION(paulr): This function is at least partly redundant with
     ## ddouble2ldouble() below...
-    
+
     ## Also, is it certain that this calculation retains the full precision?
-    
+
     """
     return np.longdouble(t.jd1 - erfa.DJM0) \
             + np.longdouble(t.jd2)
@@ -274,3 +274,18 @@ def ddouble2ldouble(t1, t2, format='jd'):
 def str2longdouble(str):
     """Return a numpy long double scalar from the input string, using strtold()"""
     return str2ldarr1(str)[0]
+
+
+def data2longdouble(data):
+    """Return a numpy long double scalar form different type of data
+       Parameters
+       ---------
+       data : str, ndarray, or a number
+       Return
+       ---------
+       numpy long double type of data.
+    """
+    if type(data) is str:
+        return str2longdouble(data)
+    else:
+        return np.longdouble(data)
