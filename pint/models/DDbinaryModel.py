@@ -549,12 +549,4 @@ class DD(PSRbinary):
         return self.d_delayI_d_par(par)+self.d_delayS_d_par(par)+ \
                self.d_delayA_d_par(par)
 
-    @Cache.use_cache
-    def delay_designmatrix(self, params):
-        npars = len(params)
-        M = np.zeros((len(self.t), npars))
-
-        for ii, par in enumerate(params):
-            M[:,ii] = getattr(self, 'd_delay_d_par')(par)
-
-        return M
+    

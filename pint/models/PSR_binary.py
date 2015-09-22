@@ -520,3 +520,12 @@ class PSRbinary(TimingModel):
         return self.P0.value + self.P1.value*(self.t - self.PEPOCH).to('second')
 
     ############################################################
+    @Cache.use_cache
+    def delay_designmatrix(self, params):
+        npars = len(params)
+        M = np.zeros((len(self.t), npars))
+
+        for ii, par in enumerate(params):
+            M[:,ii] = getattr(self, 'd_delay_d_par')(par)
+
+        return M
