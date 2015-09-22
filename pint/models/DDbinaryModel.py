@@ -52,24 +52,29 @@ class DD(PSRbinary):
 
         self.binary_delays += [self.DDdelay,]
         self.delay_funcs += [self.DDdelay,]
+        self.inter_vars += ['er','eTheta','beta','alpha']
+
     def setup(self):
         super(DD,self).setup()
+        for par in self.binary_params:
+            if getattr(self,par).value == None:
+                print getattr(self,par).name
 
     #################################################
     # Derivity for delays in DD model
     @Cache.use_cache
     def er(self):
-        return self.ecc()+self.Dr
+        return self.ecc()+self.DR.value
     @Cache.use_cache
-    def d_er_d_Dr(self):
-        return np.longdouble(np.ones(len(self.t)))
+    def d_er_d_DR(self):
+        return np.longdouble(np.ones(len(self.tt0)))
     @Cache.use_cache
     def d_er_d_par(self,par):
         if par not in self.pars():
             errorMesg = par + "is not in parameter list."
             raise ValueError(errorMesg)
 
-        if par in ['Dr']:
+        if par in ['DR']:
             dername = 'd_er_d_'+par
             return getattr(self,dername)()
         else:
@@ -77,15 +82,15 @@ class DD(PSRbinary):
             if hasattr(self,dername):
                 return getattr(self,dername)()
             else:
-                return np.longdouble(np.zeros(len(self.t),1))
+                return np.longdouble(np.zeros(len(self.tt0)))
 
     ##########
     @Cache.use_cache
     def eTheta(self):
-        return self.ecc()+self.Dtheta
+        return self.ecc()+self.Dtheta.value
     @Cache.use_cache
     def d_eTheta_d_Dtheta(self):
-        return np.longdouble(np.ones(len(self.t)))
+        return np.longdouble(np.ones(len(self.tt0)))
     @Cache.use_cache
     def d_eTheta_d_par(self,par):
         if par not in self.pars():
@@ -100,7 +105,7 @@ class DD(PSRbinary):
             if hasattr(self,dername):
                 return getattr(self,dername)()
             else:
-                return np.longdouble(np.zeros(len(self.t),1))
+                return np.longdouble(np.zeros(len(self.tt0)))
     ##########
     @Cache.use_cache
     def alpha(self):
@@ -108,7 +113,7 @@ class DD(PSRbinary):
            T. Damour and N. Deruelle(1986)equation [46]
            alpha = A1/c*sin(omega)
         """
-        return self.A1/c.c*self.sOmg
+        return self.a1()/c.c*self.sinOmg
     @Cache.use_cache
     def d_alpha_d_par(self,par):
         """T. Damour and N. Deruelle(1986)equation [46]
