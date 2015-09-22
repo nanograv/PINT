@@ -37,7 +37,7 @@ class PSRbinary(TimingModel):
         #                      'KOM','KIN','SHAPMAX','MTOT']
         self.binary_delays = []
         self.binary_params = []
-        self.inter_vars = ['E','M','nu','ecc','om','a1']
+        self.inter_vars = ['E','M','nu','ecc','omega','a1']
         self.add_param(Parameter(name="PB",
             units=u.day,
             description="Orbital period",
@@ -66,9 +66,9 @@ class PSRbinary(TimingModel):
             description="Derivitve of projected semi-major axis, da*sin(i)/dt",
             parse_value=np.double),binary_param = True)
 
-        self.add_param(Parameter(name="E",
+        self.add_param(Parameter(name="ECC",
             units="",
-            aliases = ["ECC"],
+            aliases = ["E"],
             description="Eccentricity",
             parse_value=np.double),binary_param = True)
 
@@ -92,32 +92,42 @@ class PSRbinary(TimingModel):
             parse_value=lambda x: np.double(x)),binary_param = True)
 
         self.tt0 = None
-        self.set_default_values()
 
 
     def setup(self):
         super(PSRbinary, self).setup()# How to set up heres
+        self.apply_units()
+        self.set_default_values()
+
+    def apply_units(self):
+        for bpar in self.binary_params:
+            bparObj = getattr(self,bpar)
+            if bparObj.value == None:
+                continue
+            if type(bparObj).__name__ == 'MJDParameter':
+                continue
+
+            bparObj.value = bparObj.value*u.Unit(bparObj.units)
 
     def set_default_values(self):
-        #self.PEPOCH.value = 54000.0*u.day      # MJDs (Period epoch)
-        #self.P0 = 1.0*u.second           # Sec
-        #self.P1 = 0.0                    # Sec/Sec
-        paramsDict = {'PB':10.0, 'PBDOT':0.0, 'PBDOT' : 0.0, 'E': 0.0,
+        parDefault = {'PB':10.0, 'PBDOT':0.0, 'PBDOT' : 0.0, 'ECC': 0.0,
                       'EDOT':0.0, 'A1':10.0,'A1DOT':0.0,
                       'OM':10.0,'OMDOT':0.0,'XPBDOT':0.0}
-        MJDparamsDict = {'T0':'54000.0',}
+        MJDparamsDefault = {'T0':'54000.0',}
         #TODO add alias part
-        for key in paramsDict.keys():
+        for key in parDefault.keys():
             par = getattr(self,key)
-            par.set(paramsDict[key],with_unit = True)
+            if par.value == None:
+                par.set(parDefault[key],with_unit = True)
 
-        for key in MJDparamsDict.keys():
+        for key in MJDparamsDefault.keys():
             MJDpar = getattr(self,key)
-            MJDpar.set(MJDparamsDict[key])
+            if MJDpar.value == None:
+                MJDpar.set(MJDparamsDefault[key])
 
-    def set_inter_vals(self,barycentricTOA):
+    def set_inter_vars(self,barycentricTOA):
         self.barycentricTime = barycentricTOA
-        setattr(self,'tt0', self.get_tt0())
+        setattr(self,'tt0', self.get_tt0(barycentricTOA))
         setattr(self,'sinE',np.sin(self.E()))
         setattr(self,'cosE',np.cos(self.E()))
         setattr(self,'sinNu',np.sin(self.nu()))
@@ -125,46 +135,65 @@ class PSRbinary(TimingModel):
         setattr(self,'sinOmg',np.sin(self.omega()))
         setattr(self,'cosOmg',np.sin(self.omega()))
 
-    def der(self,varName,parName):
-        if parName not in self.binary_params:
-            errorMesg = parName + "is not in binary parameter list."
+    def der(self,y,x):
+        """Find the derivitives in binary model
+           dy/dx
+           Parameters
+           ---------
+           y : str
+               Name of variable to be differentiated
+           x : str
+               Name of variable the derivitive respect to
+           Return
+           ---------
+           dy/dx : The derivitives
+        """
+        if y not in self.binary_params+self.inter_vars:
+            errorMesg = y + " is not in binary parameter and variables list."
             raise ValueError(errorMesg)
 
-        if varName not in self.inter_vars+self.pars():
-            errorMesg = varName + "is not in variables list."
+        if x not in self.inter_vars+self.binary_params:
+            errorMesg = x + " is not in binary parameters and variables list."
             raise ValueError(errorMesg)
         # Derivitive to itself
-        if varName == parName:
-            return np.longdouble(np.ones(len(self.t)))*u.Unit('')
+        if x == y:
+            return np.longdouble(np.ones(len(self.tt0)))*u.Unit('')
         # Get the unit right
-        var = getattr(self,varName)
-        par = getattr(self,parName)
 
-        if hasattr(var, '__call__'):
-            varU = var().unit
-        else:
-            varU = var.unit
+        yAttr = getattr(self,y)
+        xAttr = getattr(self,x)
+        U = [None,None]
+        for i,attr in enumerate([yAttr, xAttr]):
+            if type(attr).__name__ == 'Parameter':  # If attr is a Parameter class type
+                U[i] = u.Unit(attr.units)
+            elif type(attr).__name__ == 'MJDParameter': # If attr is a MJDParameter class type
+                U[i] = u.Unit('day')
+            elif hasattr(attr,'unit'):  # If attr is a Quantity type
+                U[i] = attr.unit
+            elif hasattr(attr,'__call__'):  # If attr is a method
+                U[i] = attr().unit
+            else:
+                raise TypeError(type(attr)+'can not get unit')
+            U[i] = 1*U[i]
 
-        if hasattr(par,'unit'):
-            parU = par.unit
-        else:
-            parU = par().unit
-        varU = 1*varU
-        parU = 1*parU
-        if varU in [u.rad, u.deg]:
-            varU = varU.to('', equivalencies=u.dimensionless_angles())
-
-        if parU in [u.rad, u.deg]:
-            parU = parU.to('', equivalencies=u.dimensionless_angles())
+            if U[i] in [u.rad, u.deg]:
+                U[i] = U[i].to('', equivalencies=u.dimensionless_angles())
+        yU = U[0]
+        xU = U[1]
         # Call derivtive functions
-        derU =  ((1*varU/(1*parU)).decompose()).unit
-        dername = 'd_'+varName+'_d_'+parName
+        derU =  ((yU/xU).decompose()).unit
 
-        if hasattr(self,dername):
+
+        if hasattr(self,'d_'+y+'_d_'+x):
+            dername = 'd_'+y+'_d_'+x
             return getattr(self,dername)().to(derU, \
                                          equivalencies=u.dimensionless_angles())
+        elif hasattr(self,'d_'+y+'_d_par'):
+            dername = 'd_'+y+'_d_par'
+            return getattr(self,dername)(x).to(derU, \
+                                         equivalencies=u.dimensionless_angles())
         else:
-            return (np.longdouble(np.zeros(len(self.t)))*derU).decompose()
+            return (np.longdouble(np.zeros(len(self.tt0)))*derU).decompose()
 
     @Cache.use_cache
     def compute_eccentric_anomaly(self, eccentricity, mean_anomaly):
@@ -181,11 +210,11 @@ class PSRbinary(TimingModel):
                 The eccentric anomaly in radians, given a set of mean_anomalies
                 in radians.
         """
-        if hasattr(eccentricity,unit):
+        if hasattr(eccentricity,'unit'):
             e = np.longdouble(eccentricity).value
         else:
             e = eccentricity
-        if hasattr(mean_anomaly,unit):
+        if hasattr(mean_anomaly,'unit'):
             ma = np.longdouble(mean_anomaly).value
         else:
             ma = mean_anomaly
@@ -208,7 +237,7 @@ class PSRbinary(TimingModel):
     ####################################
     @Cache.use_cache
     def ecc(self):
-        ECC = self.E.value
+        ECC = self.ECC.value
         EDOT = self.EDOT.value
         return ECC + (self.tt0*EDOT).decompose()
 
@@ -220,7 +249,7 @@ class PSRbinary(TimingModel):
 
     @Cache.use_cache
     def d_ecc_d_ECC(self):
-        return np.longdouble(np.ones(len(self.tt0)))
+        return np.longdouble(np.ones(len(self.tt0)))*u.Unit("")
 
     @Cache.use_cache
     def d_ecc_d_EDOT(self):
@@ -275,7 +304,7 @@ class PSRbinary(TimingModel):
         PBDOT = self.PBDOT.value
         XPBDOT = self.XPBDOT.value
 
-        return 2*np.pi*u.rad*((PBDOT+XPBDOT)*self.tt0**2/PB**3 - Sself.tt0/PB**2)
+        return 2*np.pi*u.rad*((PBDOT+XPBDOT)*self.tt0**2/PB**3 - self.tt0/PB**2)
 
     @Cache.use_cache
     def d_M_d_PBDOT(self):
@@ -358,7 +387,7 @@ class PSRbinary(TimingModel):
         """dnu/dT0 = dnu/de*de/dT0+dnu/dE*dE/dT0
            de/dT0 = -EDOT
         """
-        return self.d_nu_d_ecc()*(-self.EDOT)+self.d_nu_d_E()*self.d_E_d_T0()
+        return self.d_nu_d_ecc()*(-self.EDOT.value)+self.d_nu_d_E()*self.d_E_d_T0()
 
     @Cache.use_cache
     def d_nu_d_PB(self):
