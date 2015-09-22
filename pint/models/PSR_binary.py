@@ -91,13 +91,20 @@ class PSRbinary(TimingModel):
             description="Longitude of periastron",
             parse_value=lambda x: np.double(x)),binary_param = True)
 
-        self.tt0 = None
+        self.add_param(Parameter(name="M2",
+             units=u.M_sun,
+             description="Mass of companian in the unit Sun mass",
+             parse_value=np.double),binary_param = True)
 
+        self.tt0 = None
+        self.parDefault = {'PB':10.0, 'PBDOT':0.0, 'PBDOT' : 0.0, 'ECC': 0.0,
+                           'EDOT':0.0, 'A1':10.0,'A1DOT':0.0, 'T0':'54000.0',
+                           'OM':10.0,'OMDOT':0.0,'XPBDOT':0.0,'M2':1}
 
     def setup(self):
         super(PSRbinary, self).setup()# How to set up heres
         self.apply_units()
-        self.set_default_values()
+
 
     def apply_units(self):
         for bpar in self.binary_params:
@@ -109,21 +116,16 @@ class PSRbinary(TimingModel):
 
             bparObj.value = bparObj.value*u.Unit(bparObj.units)
 
-    def set_default_values(self):
-        parDefault = {'PB':10.0, 'PBDOT':0.0, 'PBDOT' : 0.0, 'ECC': 0.0,
-                      'EDOT':0.0, 'A1':10.0,'A1DOT':0.0,
-                      'OM':10.0,'OMDOT':0.0,'XPBDOT':0.0}
-        MJDparamsDefault = {'T0':'54000.0',}
+    def set_default_values(self,defaultDict):
         #TODO add alias part
-        for key in parDefault.keys():
+        for key in defaultDict.keys():
             par = getattr(self,key)
             if par.value == None:
-                par.set(parDefault[key],with_unit = True)
+                if type(par).__name__ == 'MJDParameter':
+                    par.set(defaultDict[key])
+                else:
+                    par.set(defaultDict[key],with_unit = True)
 
-        for key in MJDparamsDefault.keys():
-            MJDpar = getattr(self,key)
-            if MJDpar.value == None:
-                MJDpar.set(MJDparamsDefault[key])
 
     def set_inter_vars(self,barycentricTOA):
         self.barycentricTime = barycentricTOA
@@ -134,7 +136,7 @@ class PSRbinary(TimingModel):
         setattr(self,'cosNu',np.cos(self.nu()))
         setattr(self,'sinOmg',np.sin(self.omega()))
         setattr(self,'cosOmg',np.sin(self.omega()))
-
+        setattr(self,'TM2',self.M2.value.value*Tsun)
     def der(self,y,x):
         """Find the derivitives in binary model
            dy/dx
@@ -186,14 +188,20 @@ class PSRbinary(TimingModel):
 
         if hasattr(self,'d_'+y+'_d_'+x):
             dername = 'd_'+y+'_d_'+x
-            return getattr(self,dername)().to(derU, \
-                                         equivalencies=u.dimensionless_angles())
+            result = getattr(self,dername)()
+
         elif hasattr(self,'d_'+y+'_d_par'):
             dername = 'd_'+y+'_d_par'
-            return getattr(self,dername)(x).to(derU, \
-                                         equivalencies=u.dimensionless_angles())
+            result = getattr(self,dername)(x)
+
         else:
-            return (np.longdouble(np.zeros(len(self.tt0)))*derU).decompose()
+           result = np.longdouble(np.zeros(len(self.tt0)))
+
+        if hasattr(result,'unit'):
+            return result.to(derU,equivalencies=u.dimensionless_angles())
+        else:
+            return (result*derU).decompose()
+
 
     @Cache.use_cache
     def compute_eccentric_anomaly(self, eccentricity, mean_anomaly):
@@ -450,8 +458,8 @@ class PSRbinary(TimingModel):
            ----------
            Derivitve of omega respect to par
         """
-        if par not in self.pars():
-            errorMesg = par + "is not in parameter list."
+        if par not in self.binary_params:
+            errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
 
         PB = self.PB.value
@@ -468,7 +476,7 @@ class PSRbinary(TimingModel):
             if hasattr(self,dername):
                 return k*getattr(self,dername)()
             else:
-                return np.longdouble(np.zeros(len(self.t)))
+                return np.longdouble(np.zeros(len(self.tt0)))
 
     @Cache.use_cache
     def d_omega_d_OM(self):
