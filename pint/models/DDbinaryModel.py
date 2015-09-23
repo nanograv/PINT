@@ -239,7 +239,7 @@ class DD(PSRbinary):
         # Third term
         term3 = (self.der('beta',par)+self.der('GAMMA',par))*self.sinE
         # Fourth term
-        term4 = (self.beta()+self.GAMMA)*self.cosE*self.der('E',par)
+        term4 = (self.beta()+self.GAMMA.value)*self.cosE*self.der('E',par)
 
         return term1 + term2 + term3 +term4
     #################################################
@@ -264,7 +264,7 @@ class DD(PSRbinary):
         term1 = -self.sinE*self.der('alpha',par)
         # second term
         term2 = -(self.alpha()*self.cosE+  \
-                (self.beta()+self.GAMMA)*self.sinE)*self.der('E',par)
+                (self.beta()+self.GAMMA.value)*self.sinE)*self.der('E',par)
         # Third term
         term3 = self.cosE*(self.der('beta',par)+self.der('GAMMA',par))
 
@@ -293,7 +293,7 @@ class DD(PSRbinary):
         term1 = -self.cosE*self.der('alpha',par)
         # second term
         term2 = (self.alpha()*self.sinE -  \
-                (self.beta()+self.GAMMA)*self.cosE)*self.der('E',par)
+                (self.beta()+self.GAMMA.value)*self.cosE)*self.der('E',par)
         # Third term
         term3 = -self.sinE*(self.der('beta',par)+self.der('GAMMA',par))
 
@@ -318,9 +318,9 @@ class DD(PSRbinary):
                         (-cos(E)*decc/dPar+ecc*sin(E)*dE/dpar)/(1-e*cos(E)))
         """
         oneMeccTcosE = (1-self.ecc()*self.cosE)
-        fctr = -2*np.pi/self.PB/oneMeccTcosE
+        fctr = -2*np.pi/self.PB.value/oneMeccTcosE
 
-        return fctr*(self.der('PB',par)/self.PB - \
+        return fctr*(self.der('PB',par)/self.PB.value - \
                (self.cosE*self.der('ecc',par)+ \
                 self.ecc()*self.sinE*self.der('E',par))/oneMeccTcosE)
     #################################################
@@ -449,19 +449,19 @@ class DD(PSRbinary):
         e = self.ecc()
         cE = self.cosE
         sE = self.sinE
-        sOmega = self.sOmg
-        cOmega = self.cOmg
+        sOmega = self.sinOmg
+        cOmega = self.cosOmg
 
-        logNum = 1-e*cE-self.SINI*(sOmega*(cE-e)+
+        logNum = 1-e*cE-self.SINI.value*(sOmega*(cE-e)+
                  (1-e**2)**0.5*cOmega*sE)
         dTM2_dpar = self.der('TM2',par)
         dsDelay_dTM2 = -2*np.log(logNum)
         decc_dpar = self.der('ecc',par)
-        dsDelay_decc = -2*self.TM2/logNum*(-cE-self.SINI*(-e*cOmega*sE/np.sqrt(1-e**2)-sOmega))
+        dsDelay_decc = -2*self.TM2/logNum*(-cE-self.SINI.value*(-e*cOmega*sE/np.sqrt(1-e**2)-sOmega))
         dE_dpar = self.der('E',par)
-        dsDelay_dE =  -2*self.TM2/logNum*(e*sE-self.SINI*(np.sqrt(1-e**2)*cE*cOmega-sE*sOmega))
+        dsDelay_dE =  -2*self.TM2/logNum*(e*sE-self.SINI.value*(np.sqrt(1-e**2)*cE*cOmega-sE*sOmega))
         domega_dpar = self.der('omega',par)
-        dsDelay_domega = -2*self.TM2/logNum*self.SINI*((cE-e)*cOmega-np.sqrt(1-e**2)*sE*sOmega)
+        dsDelay_domega = -2*self.TM2/logNum*self.SINI.value*((cE-e)*cOmega-np.sqrt(1-e**2)*sE*sOmega)
         dSINI_dpar = self.der('SINI',par)
         dsDelay_dSINI = -2*self.TM2/logNum*(-np.sqrt(1-e**2)*cOmega*sE-(cE-e)*sOmega)
         return dTM2_dpar*dsDelay_dTM2 + decc_dpar*dsDelay_decc + \
@@ -483,7 +483,7 @@ class DD(PSRbinary):
         cE = self.cosE
         sE = self.sinE
 
-        return sE*self.der('GAMMA',par)+self.GAMMA*cE*self.der('E',par)
+        return sE*self.der('GAMMA',par)+self.GAMMA.value*cE*self.der('E',par)
     #################################################
     @Cache.use_cache
     def delayA(self):
@@ -510,21 +510,23 @@ class DD(PSRbinary):
         cOmega = self.cosOmg
         snu = np.sin(self.nu())
         cnu = np.cos(self.nu())
-        omgPlusAe = self.Omega+self.nu()
+        A0 = self.A0.value
+        B0 = self.B0.value
+        omgPlusAe = self.omega()+self.nu()
         if par =='A0':
             return e*sOmega+np.sin(omgPlusAe)
         elif par == 'B0':
             return e*cOmega+np.cos(omgPlusAe)
         else:
             domega_dpar = self.der('omega',par)
-            daDelay_domega = self.A0*(np.cos(omgPlusAe)+e*cOmega)- \
-                             self.B0*(np.sin(omgPlusAe)+e*sOmega)
+            daDelay_domega = A0*(np.cos(omgPlusAe)+e*cOmega)- \
+                             B0*(np.sin(omgPlusAe)+e*sOmega)
 
             dnu_dpar = self.der('nu',par)
-            daDelay_dnu = self.A0*np.cos(omgPlusAe)-self.B0*np.sin(omgPlusAe)
+            daDelay_dnu = A0*np.cos(omgPlusAe)-B0*np.sin(omgPlusAe)
 
             decc_dpar = self.der('ecc',par)
-            daDelay_decc = self.A0*sOmega+self.B0*cOmega
+            daDelay_decc = A0*sOmega+B0*cOmega
 
             return domega_dpar*daDelay_domega + dnu_dpar*daDelay_dnu + decc_dpar*daDelay_decc
     #################################################
@@ -548,5 +550,3 @@ class DD(PSRbinary):
         """
         return self.d_delayI_d_par(par)+self.d_delayS_d_par(par)+ \
                self.d_delayA_d_par(par)
-
-    

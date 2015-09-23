@@ -37,7 +37,7 @@ class PSRbinary(TimingModel):
         #                      'KOM','KIN','SHAPMAX','MTOT']
         self.binary_delays = []
         self.binary_params = []
-        self.inter_vars = ['E','M','nu','ecc','omega','a1']
+        self.inter_vars = ['E','M','nu','ecc','omega','a1','TM2']
         self.add_param(Parameter(name="PB",
             units=u.day,
             description="Orbital period",
@@ -137,6 +137,7 @@ class PSRbinary(TimingModel):
         setattr(self,'sinOmg',np.sin(self.omega()))
         setattr(self,'cosOmg',np.cos(self.omega()))
         setattr(self,'TM2',self.M2.value.value*Tsun)
+
     def der(self,y,x):
         """Find the derivitives in binary model
            dy/dx
@@ -184,7 +185,7 @@ class PSRbinary(TimingModel):
         xU = U[1]
         # Call derivtive functions
         derU =  ((yU/xU).decompose()).unit
-
+        print derU,yU,xU
 
         if hasattr(self,'d_'+y+'_d_'+x):
             dername = 'd_'+y+'_d_'+x
@@ -438,6 +439,7 @@ class PSRbinary(TimingModel):
                          Eq 17)
         """
         PB = self.PB.value
+        PB = PB.to('second')
         OMDOT = self.OMDOT.value
         OM = self.OM.value
         nu = self.nu()
@@ -490,10 +492,10 @@ class PSRbinary(TimingModel):
            n = 2*pi/PB
            dOmega/dOMDOT = PB/2*pi*nu
         """
-        PB = self.PB.value
+        PB = (self.PB.value).to('second')
         nu = self.nu()
 
-        return PB/2*np.pi*u.rad*nu
+        return PB/(2*np.pi*u.rad)*nu
 
 
     @Cache.use_cache
@@ -523,7 +525,7 @@ class PSRbinary(TimingModel):
     @Cache.use_cache
     def delay_designmatrix(self, params):
         npars = len(params)
-        M = np.zeros((len(self.t), npars))
+        M = np.zeros((len(self.tt0), npars))
 
         for ii, par in enumerate(params):
             M[:,ii] = getattr(self, 'd_delay_d_par')(par)
