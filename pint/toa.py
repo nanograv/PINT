@@ -43,7 +43,7 @@ def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=True):
     if not (os.path.isfile(timfile+".pickle") or
             os.path.isfile(timfile+".pickle.gz")):
         log.info("Pickling TOAs.")
-        t.pickle()
+        #t.pickle()
     return t
 
 def get_TOAs_list(toa_list,ephem="DE421", planets=False):
@@ -171,6 +171,8 @@ def get_obs(obscode):
     """Search for an observatory by obscode in the PINT observatories.txt file."""
     if obscode in ['@', 'SSB', 'BARY', 'BARYCENTER']:
         return "Barycenter"
+    elif obscode in ['COE', 'GEO', 'GEOCENTER']:
+        return "Geocenter"
     for name in observatories:
         if obscode in observatories[name].aliases:
             return name
@@ -265,14 +267,23 @@ class TOA(object):
         if obs not in observatories and obs != "Barycenter":
             raise ValueError("Unknown observatory %s" % obs)
         if obs == "Barycenter":
-            self.mjd = time.Time(MJD[0], MJD[1],
-                                scale='tdb', format='mjd',
-                                precision=9)
+            if type(MJD) in [float, numpy.float64, numpy.float128]:
+                self.mjd = time.Time(MJD, scale='tdb', format='mjd',
+                                    precision=9)
+            else:
+                self.mjd = time.Time(MJD[0], MJD[1],
+                                    scale='tdb', format='mjd',
+                                    precision=9)
         else:
-            self.mjd = time.Time(MJD[0], MJD[1],
-                                scale=scale, format='mjd',
-                                location=observatories[obs].loc,
-                                precision=9)
+            if type(MJD) in [float, numpy.float64, numpy.float128]:
+                self.mjd = time.Time(MJD, scale=scale, format='mjd',
+                                    location=observatories[obs].loc,
+                                    precision=9)
+            else:
+                self.mjd = time.Time(MJD[0], MJD[1],
+                                    scale=scale, format='mjd',
+                                    location=observatories[obs].loc,
+                                    precision=9)
         if hasattr(error,'unit'):
             self.error = error
         else:
@@ -484,7 +495,7 @@ class TOAs(object):
                     corr[jj] = flags[jj]['time'] * u.s
                     times[jj] += time.TimeDelta(corr[jj])
             # These are observatory clock corrections.  Do in groups.
-            if (key['obs'] in observatories):
+            if (key['obs'] in observatories and key['obs'] != "Geocenter"):
                 mjds, ccorr = obsmod.get_clock_corr_vals(key['obs'])
                 tvals = numpy.array([t.mjd for t in grp['mjd']])
                 if numpy.any((tvals < mjds[0]) | (tvals > mjds[-1])):
@@ -538,7 +549,7 @@ class TOAs(object):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
-            if (key['obs'] in observatories):
+            if (key['obs'] in observatories and key['obs'] != "Geocenter"):
                 utcs = time.Time([t.isot for t in grp['mjd']],
                                 format='isot', scale='utc', precision=9,
                                 location=observatories[obs].loc)
@@ -547,7 +558,7 @@ class TOAs(object):
                 for toa, dut1 in zip(grp['mjd'], utcs.delta_ut1_utc):
                     toa.delta_ut1_utc = dut1
                 tdbs = utcs.tdb
-            elif key['obs'] == "Barycenter":
+            elif key['obs'] in ["Barycenter", "Geocenter"]:
                 # copy the times to the tdb column
                 tdbs = [t.tdb for t in grp['mjd']]
             col_tdb[loind:hiind] = numpy.asarray([t for t in tdbs])

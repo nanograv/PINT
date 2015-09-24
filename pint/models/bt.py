@@ -13,6 +13,7 @@ from ..phase import Phase
 from ..utils import time_from_mjd_string, time_to_longdouble
 from ..orbital.kepler import eccentric_from_mean
 from .btmodel import BTmodel
+import astropy.time
 import numpy as np
 import time
 
@@ -130,7 +131,8 @@ class BT(TimingModel):
             key = par if not par in aliases else aliases[par]
 
             # T0 needs to be converted to long double
-            if key in ['T0']:
+            if key in ['T0'] and \
+                type(getattr(self, key).value) is astropy.time.core.Time:
                 pardict[par] = time_to_longdouble(getattr(self, key).value)
             else:
                 pardict[par] = getattr(self, key).value

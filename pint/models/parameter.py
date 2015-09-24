@@ -1,10 +1,14 @@
 # parameter.py
 # Defines Parameter class for timing model parameters
-from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
-                    time_to_longdouble
+from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\ 
+time_to_longdouble
 import numpy
 import astropy.units as u
 from pint import ls,GMsun,Tsun
+import astropy.units as u
+import astropy.constants as const
+from astropy.coordinates.angles import Angle
+
 
 class Parameter(object):
     """
@@ -57,7 +61,10 @@ class Parameter(object):
         self.parse_value = parse_value
         self.print_value = print_value
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> master
     def __str__(self):
         out = self.name
         if self.units is not None:
@@ -118,8 +125,13 @@ class Parameter(object):
         if len(k) >= 3:
             if int(k[2]) > 0:
                 self.frozen = False
-        if len(k) >= 4:
-            self.uncertainty = fortran_float(k[3])
+        if len(k) == 4:
+            if name=="RAJ":
+                self.uncertainty = Angle("0:0:%.15fh" % fortran_float(k[3]))
+            elif name=="DECJ":
+                self.uncertainty = Angle("0:0:%.15fd" % fortran_float(k[3]))
+            else:
+                self.uncertainty = fortran_float(k[3])
         return True
     def name_matches(self, name):
         """Whether or not the parameter name matches the provided name
