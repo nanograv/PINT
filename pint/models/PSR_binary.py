@@ -179,13 +179,19 @@ class PSRbinary(TimingModel):
                 raise TypeError(type(attr)+'can not get unit')
             U[i] = 1*U[i]
 
-            if U[i] in [u.rad, u.deg]:
-                U[i] = U[i].to('', equivalencies=u.dimensionless_angles())
+            commonU = list(set(U[i].unit.bases).intersection([u.rad,u.deg]))
+            if commonU != []:
+                strU = U[i].unit.to_string()
+                for cu in commonU:
+                    scu = cu.to_string()
+                    strU = strU.replace(scu,'1')
+                U[i] = U[i].to(strU, equivalencies=u.dimensionless_angles())
+
         yU = U[0]
         xU = U[1]
         # Call derivtive functions
         derU =  ((yU/xU).decompose()).unit
-        print derU,yU,xU
+
 
         if hasattr(self,'d_'+y+'_d_'+x):
             dername = 'd_'+y+'_d_'+x
