@@ -1,6 +1,6 @@
 # parameter.py
 # Defines Parameter class for timing model parameters
-from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\ 
+from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
 time_to_longdouble
 import numpy
 import astropy.units as u
@@ -61,10 +61,6 @@ class Parameter(object):
         self.parse_value = parse_value
         self.print_value = print_value
 
-<<<<<<< HEAD
-
-=======
->>>>>>> master
     def __str__(self):
         out = self.name
         if self.units is not None:
