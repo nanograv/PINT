@@ -113,19 +113,20 @@ class DD(PSRbinary):
     @Cache.use_cache
     def d_alpha_d_par(self,par):
         """T. Damour and N. Deruelle(1986)equation [46]
-           alpha = A1/c*sin(omega)
+           alpha = a1/c*sin(omega)
 
            dAlpha/dA1 = 1.0/c*sin(omega)
 
-           dAlpha/dPar = A1/c*cos(omega)*dOmega/dPar
+           dAlpha/dPar = a1/c*cos(omega)*dOmega/dPar
         """
 
         if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
 
-        if par in ['A1']:
-            return 1.0/c.c*self.sinOmg
+        if par in ['A1','A1DOT']:
+            dername = 'd_alpha_d_'+par
+            return getattr(self,dername)()
 
         else:
             dername = 'd_omega_d_'+par # For parameters only in Ae
@@ -134,6 +135,13 @@ class DD(PSRbinary):
             else:
                 return np.longdouble(np.zeros(len(self.tt0)))
 
+    @Cache.use_cache
+    def d_alpha_d_A1(self):
+        return 1.0/c.c*self.sinOmg
+
+    @Cache.use_cache
+    def d_alpha_d_A1DOT(self):
+        return self.tt0/c.c*self.sinOmg
     ##############################################
     @Cache.use_cache
     def beta(self):
@@ -160,7 +168,7 @@ class DD(PSRbinary):
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
 
-        if par in ['A1','ECC','EDOT','Dth']:
+        if par in ['A1','ECC','EDOT','Dth','A1DOT']:
             dername = 'd_beta_d_'+par
             return getattr(self,dername)()
 
@@ -178,6 +186,14 @@ class DD(PSRbinary):
         """
         eTheta = self.eTheta()
         return 1.0/c.c*(1-eTheta**2)**0.5*self.cosOmg
+
+    @Cache.use_cache
+    def d_beta_d_A1DOT(self):
+        """dBeta/dA1DOT = (t-T0)/c*(1-eTheta**2)**0.5*cos(omega)
+        """
+        eTheta = self.eTheta()
+        return self.tt0/c.c*(1-eTheta**2)**0.5*self.cosOmg
+
     @Cache.use_cache
     def d_beta_d_ECC(self):
         """dBeta/dECC = A1/c*((-(e+dtheta)/sqrt((e+dtheta)**2)*cos(omega)*de/dECC-
