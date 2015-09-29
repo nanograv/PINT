@@ -144,10 +144,26 @@ class TimingModel(object):
         Return the total delay which will be subtracted from the given
         TOA to get time of emission at the pulsar.
         """
+        toasObs = toas['tdbld']
+        delay = np.zeros(len(toas))
+
+        for df in self.delay_funcs:
+            delay += df(toas)
+
+        baryToa = toasObs*u.day - delay*u.second
+        if hasattr(self,'binary_delay'):
+            bdelay = getattr(self,'binary_delay')(baryToa)
+
+        return delay + (bdelay.to('second')).value
+
+    @Cache.use_cache
+    def get_barycentric_toas(self,toas):
+        toasObs = toas['tdbld']
         delay = np.zeros(len(toas))
         for df in self.delay_funcs:
             delay += df(toas)
-        return delay
+        toasBary = toasObs*u.day - delay*u.second
+        return toasBary
 
     def d_phase_d_tpulsar(self, toas):
         """Return the derivative of phase wrt time at the pulsar.
