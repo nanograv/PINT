@@ -35,7 +35,7 @@ class PSRbinary(TimingModel):
         #                      'OMDOT','A1', 'A1DOT','SINI','M2','A0','B0', 'T0',
         #                      'GAMMA','DR','DTH','BP','BPP','DTHETA','XOMDOT',
         #                      'KOM','KIN','SHAPMAX','MTOT']
-        self.binary_delays = []
+        self.binary_delay_funcs= []
         self.binary_params = []
         self.inter_vars = ['E','M','nu','ecc','omega','a1','TM2']
         self.add_param(Parameter(name="PB",
@@ -137,6 +137,23 @@ class PSRbinary(TimingModel):
         setattr(self,'sinOmg',np.sin(self.omega()))
         setattr(self,'cosOmg',np.cos(self.omega()))
         setattr(self,'TM2',self.M2.value.value*Tsun)
+
+    def binary_delay(self,barycentricTOA):
+        """Returns total pulsar binary delay.
+           Parameters
+           ----------
+           barycentricToa : ndarray
+               barycentricTOA is the pulse arrival time at solar system
+               barycenter. Unit is in MJD
+           Return
+           ----------
+           Pulsar binary delay in the units of second
+        """
+        bdelay = np.longdouble(np.zeros(len(barycentricTOA)))*u.s
+        self.set_inter_vars(barycentricTOA)
+        for bdf in self.binary_delay_funcs:
+            bdelay+= bdf()
+        return bdelay
 
     def der(self,y,x):
         """Find the derivitives in binary model
@@ -244,7 +261,7 @@ class PSRbinary(TimingModel):
     @Cache.use_cache
     def get_tt0(self,barycentricTOA):
         T0 = utils.time_to_longdouble(self.T0.value)*u.day
-    	if not hasattr(barycentricTOA,'unit'):
+    	if not hasattr(barycentricTOA,'unit') or barycentricTOA.unit == None:
             barycentricTOA = barycentricTOA*u.day
         self.tt0 = (barycentricTOA - T0).to('second')
         return self.tt0

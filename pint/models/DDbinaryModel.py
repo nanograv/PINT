@@ -46,8 +46,7 @@ class DD(PSRbinary):
              description="Sine of inclination angle",
              parse_value=np.double),binary_param = True)
 
-        self.binary_delays += [self.DDdelay,]
-        self.delay_funcs += [self.DDdelay,]
+        self.binary_delay_funcs += [self.DDdelay,]
         self.inter_vars += ['er','eTheta','beta','alpha']
         self.parDefault.update({'A0':0,'B0':0,'DR':0,'DTH':0,'GAMMA':0,'SINI':0})
     def setup(self):
