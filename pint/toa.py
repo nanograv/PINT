@@ -47,9 +47,9 @@ def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=True):
     return t
 
 def get_TOAs_list(toa_list,ephem="DE421", planets=False):
-    """Load TOAs from a list of TOA objects. 
+    """Load TOAs from a list of TOA objects.
 
-       Compute the TDB time and observatory positions and velocity 
+       Compute the TDB time and observatory positions and velocity
        vectors.
     """
     t = TOAs(toalist = toa_list)
@@ -64,20 +64,20 @@ def get_TOAs_list(toa_list,ephem="DE421", planets=False):
         t.compute_posvels(ephem, planets)
     return t
 
-def read_fake_TOAs(time_mjd1,time_mjd2 = None, error = 0.0, obs='Barycenter', 
+def read_fake_TOAs(time_mjd1,time_mjd2 = None, error = 0.0, obs='Barycenter',
                   freq=float("inf"), scale='utc', ephem="DE421",planets=False,
                   **kwargs):
     '''
-    A fast way to create TOAs table from set of fake 
+    A fast way to create TOAs table from set of fake
     mjd time samples
     Parameters
     ---------
     time_mjd1 : array_like
-        Time samples in mjd. If time_mjd2 is not given, time_mjd1 will be take 
-        as full mjd time samples. If the time_mjd2 is give, time_mjd1 should be 
+        Time samples in mjd. If time_mjd2 is not given, time_mjd1 will be take
+        as full mjd time samples. If the time_mjd2 is give, time_mjd1 should be
         the integer part of mjd.
     time_mjd1 : array_like , optional
-        Fractional part of mjd. 
+        Fractional part of mjd.
     obs : str , optional
         Observatory code.
     freq : float, optional
@@ -89,23 +89,23 @@ def read_fake_TOAs(time_mjd1,time_mjd2 = None, error = 0.0, obs='Barycenter',
     planets : bool, optional
         If the planets positions and velocities are calculated
     '''
- 
+
     if time_mjd2 == None:
         MJD1,MJD0 = numpy.modf(numpy.longdouble(time_mjd1))
     else:
         MJD0,MJD1 = (time_mjd1,time_mjd2)
 
-    try: 
+    try:
         ntoas = len(MJD0)
     except:
-        ntoas = 1  
+        ntoas = 1
 
-      
+
 
     fakeToa = TOA((MJD0,MJD1),error=error, obs=obs, freq=freq,
                  scale=scale)
     flags = kwargs
-    try: 
+    try:
         len_error = len(error)
         len_freq = len(freq)
         len_flags = len(flags)
@@ -125,9 +125,9 @@ def read_fake_TOAs(time_mjd1,time_mjd2 = None, error = 0.0, obs='Barycenter',
         timeList = [fakeToa.mjd,]
     print len(timeList),len(error_list),len(freq_list)
     tb = table.Table([numpy.arange(ntoas), timeList,error_list, freq_list,obs,
-                    flag_list],names=("index", "mjd", "error", "freq","obs", 
+                    flag_list],names=("index", "mjd", "error", "freq","obs",
                     "flags"), meta = {'TOA Type':'Fake toa time sample' }).group_by("obs")
-    
+
     t = TOAs(toaTable = tb) # Create TOAs class using a table
 
     if not any([f.has_key('clkcorr') for f in t.table['flags']]):
@@ -139,7 +139,7 @@ def read_fake_TOAs(time_mjd1,time_mjd2 = None, error = 0.0, obs='Barycenter',
     if 'ssb_obs_pos' not in t.table.colnames:
         log.info("Computing observatory positions and velocities.")
         t.compute_posvels(ephem, planets)
-   
+
     return t
 
 
@@ -237,12 +237,12 @@ class TOA(object):
         freq is the observatory-centric frequency in MHz
         freq
         other keyword/value pairs can be specified as needed
-        
+
         # SUGGESTION(paulr): Here, or in a higher level document, the time system
         # philosophy should be specified.  It looks like TOAs are assumed to be
-        # input as UTC(observatory) and then are converted to UTC(???) using the 
+        # input as UTC(observatory) and then are converted to UTC(???) using the
         # observatory clock correction file.
-                
+
     Example:
         >>> a = TOA((54567, 0.876876876876876), 4.5, freq=1400.0,
         ...         obs="GBT", backend="GUPPI")
@@ -253,7 +253,7 @@ class TOA(object):
     What happens if IERS data is not available for the date:
         >>> a = TOA((154567, 0.876876876876876), 4.5, freq=1400.0,
         ...         obs="GBT", backend="GUPPI")
- 
+
         Traceback (most recent call last):
           omitted
         IndexError: (some) times are outside of range covered by IERS table.
@@ -303,7 +303,7 @@ class TOA(object):
         if len(self.flags):
             s += str(self.flags)
         return s
- 
+
 
 
 class TOAs(object):
@@ -350,7 +350,7 @@ class TOAs(object):
             self.commands = []
             self.filename = None
             self.observatories.update([t.obs for t in toalist])
-            
+
 
         if not hasattr(self, 'table'):
             mjds = self.get_mjds()
@@ -468,13 +468,13 @@ class TOAs(object):
         called 'clkcorr' so that it can be reversed if necessary.  This
         routine also applies all 'TIME' commands and treats them exactly
         as if they were a part of the observatory clock corrections.
-        
+
         # SUGGESTION(paulr): Somewhere in this docstring, or in a higher level
         # documentation, the assumptions about the timescales should be specified.
         # The docstring says apply "correction" but does not say what it is correcting.
         # Be more specific.
 
-        
+
         """
         # First make sure that we haven't already applied clock corrections
         flags = self.table['flags']
@@ -754,5 +754,3 @@ class TOAs(object):
             if top:
                 # Clean up our temporaries used when reading TOAs
                 del self.cdict
-
-        
