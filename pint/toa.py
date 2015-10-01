@@ -366,7 +366,8 @@ class TOAs(object):
             # We don't need this now that we have a table
             # paulr - Disabled this since test_toa_reader.py relies
             # on having the toas member. The test should be fixed...
-            #del(self.toas)
+            # If we Disable del(self.toas) get_errors() need to be modifide.
+            del(self.toas)
 
     def __add__(self, x):
         if type(x) in [int, float]:
@@ -410,6 +411,7 @@ class TOAs(object):
 
     def get_errors(self):
         """Return a numpy array of the TOA errors in us"""
+        #FIXME temporarily disable reading errors from toas
         if hasattr(self, "toas"):
             return numpy.array([t.error.to(u.us).value for t in self.toas])*u.us
         else:
