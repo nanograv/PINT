@@ -150,11 +150,12 @@ class TimingModel(object):
         for df in self.delay_funcs:
             delay += df(toas)
 
-        baryToa = toasObs*u.day - delay*u.second
         if hasattr(self,'binary_delay'):
+            baryToa = toasObs*u.day - delay*u.second
             bdelay = getattr(self,'binary_delay')(baryToa)
-
-        return delay + (bdelay.to('second')).value
+            return delay + (bdelay.to('second')).value
+        else:
+            return delay
 
     @Cache.use_cache
     def get_barycentric_toas(self,toas):
