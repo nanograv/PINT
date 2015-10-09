@@ -20,11 +20,12 @@ else:
     sys.exit()
 
 # Params you might want to edit
-nwalkers = 100
-nsteps = 1500
+nwalkers = 200
+nsteps = 1000
 nbins = 256
-maxMJD = 57210.0 # latest MJD to use (limited by IERS file usually)
+maxMJD = 58000.0 # latest MJD to use (limited by IERS file usually)
 minWeight = 0.1  # if using weights, this is the minimum to include
+burnin = 100
 
 # initialization values
 maxlike = -9e99
@@ -127,7 +128,7 @@ class emcee_fitter(fitter.fitter):
         # ensure all postive
         return np.where(phss < 0.0, phss + 1.0, phss)
 
-    def get_lnprior_vals(self, errfact=1.5):
+    def get_lnprior_vals(self, errfact=2.0):
         """
         By default use Gaussian priors on fit params of errfact * TEMPO errors
         """
@@ -297,7 +298,6 @@ plot_chains(chains, file=ftr.model.PSR.value+"_chains.png")
 
 # Make the triangle plot.
 import triangle
-burnin = 200
 samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
 fig = triangle.corner(samples, labels=ftr.fitkeys)
 fig.savefig(ftr.model.PSR.value+"_triangle.png")
@@ -310,12 +310,27 @@ ftr.set_params(dict(zip(ftr.fitkeys, ftr.maxlike_fitvals)))
 ftr.phaseogram(file=ftr.model.PSR.value+"_post.png")
 plt.close()
 
+# Write out the output pulse profile
+vs, xs = np.histogram(ftr.get_event_phases(), 100, 
+                      range=[0,1], weights=ftr.weights)
+f = open(ftr.model.PSR.value+"_prof.txt", 'w')
+for x, v in zip(xs, vs):
+    f.write("%.5f  %12.5f\n" % (x, v))
+f.close()
+
 # Print the best MCMC values and ranges
 ranges = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
     zip(*np.percentile(samples, [16, 50, 84], axis=0)))
 print "Post-MCMC values (50th percentile +/- (16th/84th percentile):"
 for name, vals in zip(ftr.fitkeys, ranges):
     print "%8s:"%name, "%25.15g (+ %12.5g  / - %12.5g)"%vals
+
+# Put the same stuff in a file
+f = open(ftr.model.PSR.value+"_results.txt", 'w')
+f.write("Post-MCMC values (50th percentile +/- (16th/84th percentile):\n")
+for name, vals in zip(ftr.fitkeys, ranges):
+    f.write("%8s:"%name + " %25.15g (+ %12.5g  / - %12.5g)\n"%vals)
+f.close()
 
 import cPickle
 cPickle.dump(samples, open(ftr.model.PSR.value+"_samples.pickle", "wb"))
