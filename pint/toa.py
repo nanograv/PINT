@@ -6,6 +6,7 @@ import spice
 import astropy.time as time
 import astropy.table as table
 import astropy.units as u
+from astropy.coordinates import EarthLocation
 try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
@@ -47,9 +48,9 @@ def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=True):
     return t
 
 def get_TOAs_list(toa_list,ephem="DE421", planets=False):
-    """Load TOAs from a list of TOA objects. 
+    """Load TOAs from a list of TOA objects.
 
-       Compute the TDB time and observatory positions and velocity 
+       Compute the TDB time and observatory positions and velocity
        vectors.
     """
     t = TOAs(toalist = toa_list)
@@ -64,20 +65,20 @@ def get_TOAs_list(toa_list,ephem="DE421", planets=False):
         t.compute_posvels(ephem, planets)
     return t
 
-def read_fake_TOAs(time_mjd1,time_mjd2 = None, error = 0.0, obs='Barycenter', 
+def read_fake_TOAs(time_mjd1,time_mjd2 = None, error = 0.0, obs='Barycenter',
                   freq=float("inf"), scale='utc', ephem="DE421",planets=False,
                   **kwargs):
     '''
-    A fast way to create TOAs table from set of fake 
+    A fast way to create TOAs table from set of fake
     mjd time samples
     Parameters
     ---------
     time_mjd1 : array_like
-        Time samples in mjd. If time_mjd2 is not given, time_mjd1 will be take 
-        as full mjd time samples. If the time_mjd2 is give, time_mjd1 should be 
+        Time samples in mjd. If time_mjd2 is not given, time_mjd1 will be take
+        as full mjd time samples. If the time_mjd2 is give, time_mjd1 should be
         the integer part of mjd.
     time_mjd1 : array_like , optional
-        Fractional part of mjd. 
+        Fractional part of mjd.
     obs : str , optional
         Observatory code.
     freq : float, optional
@@ -89,23 +90,23 @@ def read_fake_TOAs(time_mjd1,time_mjd2 = None, error = 0.0, obs='Barycenter',
     planets : bool, optional
         If the planets positions and velocities are calculated
     '''
- 
+
     if time_mjd2 == None:
         MJD1,MJD0 = numpy.modf(numpy.longdouble(time_mjd1))
     else:
         MJD0,MJD1 = (time_mjd1,time_mjd2)
 
-    try: 
+    try:
         ntoas = len(MJD0)
     except:
-        ntoas = 1  
+        ntoas = 1
 
-      
+
 
     fakeToa = TOA((MJD0,MJD1),error=error, obs=obs, freq=freq,
                  scale=scale)
     flags = kwargs
-    try: 
+    try:
         len_error = len(error)
         len_freq = len(freq)
         len_flags = len(flags)
@@ -125,9 +126,9 @@ def read_fake_TOAs(time_mjd1,time_mjd2 = None, error = 0.0, obs='Barycenter',
         timeList = [fakeToa.mjd,]
     print len(timeList),len(error_list),len(freq_list)
     tb = table.Table([numpy.arange(ntoas), timeList,error_list, freq_list,obs,
-                    flag_list],names=("index", "mjd", "error", "freq","obs", 
+                    flag_list],names=("index", "mjd", "error", "freq","obs",
                     "flags"), meta = {'TOA Type':'Fake toa time sample' }).group_by("obs")
-    
+
     t = TOAs(toaTable = tb) # Create TOAs class using a table
 
     if not any([f.has_key('clkcorr') for f in t.table['flags']]):
@@ -139,7 +140,7 @@ def read_fake_TOAs(time_mjd1,time_mjd2 = None, error = 0.0, obs='Barycenter',
     if 'ssb_obs_pos' not in t.table.colnames:
         log.info("Computing observatory positions and velocities.")
         t.compute_posvels(ephem, planets)
-   
+
     return t
 
 
@@ -235,14 +236,13 @@ class TOA(object):
         error is the TOA uncertainty in microseconds
         obs is the observatory name as defined in XXX
         freq is the observatory-centric frequency in MHz
-        freq
         other keyword/value pairs can be specified as needed
-        
+
         # SUGGESTION(paulr): Here, or in a higher level document, the time system
         # philosophy should be specified.  It looks like TOAs are assumed to be
-        # input as UTC(observatory) and then are converted to UTC(???) using the 
+        # input as UTC(observatory) and then are converted to UTC(???) using the
         # observatory clock correction file.
-                
+
     Example:
         >>> a = TOA((54567, 0.876876876876876), 4.5, freq=1400.0,
         ...         obs="GBT", backend="GUPPI")
@@ -253,7 +253,7 @@ class TOA(object):
     What happens if IERS data is not available for the date:
         >>> a = TOA((154567, 0.876876876876876), 4.5, freq=1400.0,
         ...         obs="GBT", backend="GUPPI")
- 
+
         Traceback (most recent call last):
           omitted
         IndexError: (some) times are outside of range covered by IERS table.
@@ -264,9 +264,8 @@ class TOA(object):
                  error=0.0, obs='Barycenter', freq=float("inf"),
                  scale='utc', # with defaults
                  **kwargs):  # keyword args that are completely optional
-        if obs not in observatories and obs != "Barycenter":
-            raise ValueError("Unknown observatory %s" % obs)
         if obs == "Barycenter":
+            # Barycenter overrides the scale argument with 'tdb' always.
             if type(MJD) in [float, numpy.float64, numpy.float128]:
                 self.mjd = time.Time(MJD, scale='tdb', format='mjd',
                                     precision=9)
@@ -274,7 +273,43 @@ class TOA(object):
                 self.mjd = time.Time(MJD[0], MJD[1],
                                     scale='tdb', format='mjd',
                                     precision=9)
-        else:
+        elif obs == "Geocenter":
+            # Warning(paulr): The location is used in the TT->TDB
+            # conversion, and I'm not actually sure what the right
+            # answer is for Fermi photon times that have been
+            # corrected to the Geocenter with gtbary tcorrect=GEO
+            # Certainly (0,0,0) is the right answer for the solar system
+            # delays and such.
+            if type(MJD) in [float, numpy.float64, numpy.float128]:
+                self.mjd = time.Time(MJD, scale=scale, format='mjd',
+                                    location=EarthLocation(0.0,0.0,0.0),
+                                    precision=9)
+            else:
+                self.mjd = time.Time(MJD[0], MJD[1],
+                                    location=EarthLocation(0.0,0.0,0.0),
+                                    scale=scale, format='mjd',
+                                    precision=9)
+        elif obs == "Spacecraft":
+            # For TOAs from a spacecraft, a gcrslocation argument is
+            # required, and gcrsvelocity should be provided, if available
+            # Warning: Need to think about what the 'location' should be
+            # set to for the Time() value, as it will be used in the TT->TDB
+            # conversion. The default is lat=0,lon=0, which is certainly wrong.
+            # I believe error is up to a couple of microseconds (paulr)
+            if kwargs['gcrslocation'] is None:
+                raise ValueError("Spacecraft TOAs require gcrslocation to be specified.")
+            if not isinstance(kwargs['gcrslocation'],coord.GCRS):
+                raise ValueError("gcrslocation must be an astropy.coordinates.GCRS instance")
+            if type(MJD) in [float, numpy.float64, numpy.float128]:
+                self.mjd = time.Time(MJD, scale=scale, format='mjd',
+                                    precision=9)
+            else:
+                self.mjd = time.Time(MJD[0], MJD[1],
+                                    scale=scale, format='mjd',
+                                    precision=9)
+        elif obs in observatories:
+            if  location is not None:
+                raise ValueError("Specifying location for observatory TOAs is not currently supported.")
             if type(MJD) in [float, numpy.float64, numpy.float128]:
                 self.mjd = time.Time(MJD, scale=scale, format='mjd',
                                     location=observatories[obs].loc,
@@ -284,6 +319,9 @@ class TOA(object):
                                     scale=scale, format='mjd',
                                     location=observatories[obs].loc,
                                     precision=9)
+        else:
+            raise ValueError("Unknown observatory %s" % obs)
+
         if hasattr(error,'unit'):
             self.error = error
         else:
@@ -303,7 +341,7 @@ class TOA(object):
         if len(self.flags):
             s += str(self.flags)
         return s
- 
+
 
 
 class TOAs(object):
@@ -350,7 +388,7 @@ class TOAs(object):
             self.commands = []
             self.filename = None
             self.observatories.update([t.obs for t in toalist])
-            
+
 
         if not hasattr(self, 'table'):
             mjds = self.get_mjds()
@@ -366,7 +404,7 @@ class TOAs(object):
             # We don't need this now that we have a table
             # paulr - Disabled this since test_toa_reader.py relies
             # on having the toas member. The test should be fixed...
-            #del(self.toas)
+            del(self.toas)
 
     def __add__(self, x):
         if type(x) in [int, float]:
@@ -394,6 +432,11 @@ class TOAs(object):
 
             With high_precision is False
             Return a list of toas in mjd with double precision
+
+            WARNING: Depending on the situation, you may get MJDs in a
+            different scales (e.g. UTC, TT, or TDB) or even a mixture
+            of scales if some TOAs are barycentred and some are not (a
+            perfectly valid situation when fitting both Fermi and radio TOAs)
         """
         if high_precision is True:
             if hasattr(self, "toas"):
@@ -468,13 +511,13 @@ class TOAs(object):
         called 'clkcorr' so that it can be reversed if necessary.  This
         routine also applies all 'TIME' commands and treats them exactly
         as if they were a part of the observatory clock corrections.
-        
+
         # SUGGESTION(paulr): Somewhere in this docstring, or in a higher level
         # documentation, the assumptions about the timescales should be specified.
         # The docstring says apply "correction" but does not say what it is correcting.
         # Be more specific.
 
-        
+
         """
         # First make sure that we haven't already applied clock corrections
         flags = self.table['flags']
@@ -549,18 +592,27 @@ class TOAs(object):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
-            if (key['obs'] in observatories and key['obs'] != "Geocenter"):
+            if key['obs'] in ["Barycenter", "Geocenter", "Spacecraft"]:
+                # For these special cases, convert the times to TDB.
+                # For Barycenter this will be
+                # a null conversion, but for Geocenter the scale will Likely
+                # be TT (if they came from a spacecraft like Fermi, RXTE or NICER)
+                tdbs = [t.tdb for t in grp['mjd']]
+            elif key['obs'] in observatories:
+                # For a normal observatory, convert to Time in UTC
+                # with location specified as observatory,
+                # and then convert to TDB
                 utcs = time.Time([t.isot for t in grp['mjd']],
                                 format='isot', scale='utc', precision=9,
                                 location=observatories[obs].loc)
                 utcs.delta_ut1_utc = utcs.get_delta_ut1_utc(iers_a)
-                # Now set the delta_ut1_utc for all the TOAs for later use
+                # Also save delta_ut1_utc for these TOAs for later use
                 for toa, dut1 in zip(grp['mjd'], utcs.delta_ut1_utc):
                     toa.delta_ut1_utc = dut1
                 tdbs = utcs.tdb
-            elif key['obs'] in ["Barycenter", "Geocenter"]:
-                # copy the times to the tdb column
-                tdbs = [t.tdb for t in grp['mjd']]
+            else:
+                log.error("Unknown observatory ({0})".format(key['obs']))
+
             col_tdb[loind:hiind] = numpy.asarray([t for t in tdbs])
             col_tdbld[loind:hiind] = numpy.asarray([utils.time_to_longdouble(t) for t in tdbs])
         # Now add the new columns to the table
@@ -604,7 +656,34 @@ class TOAs(object):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
-            if (key['obs'] in observatories):
+            if (key['obs'] == 'Barycenter'):
+                for jj, grprow in enumerate(grp):
+                    ind = jj+loind
+                    et = float((grprow['tdbld'] - J2000ld) * SECS_PER_DAY)
+                    obs_sun = objPosVel("SSB", "SUN", et)
+                    obs_sun_pos[ind,:] = obs_sun.pos
+            elif (key['obs'] == 'Spacecraft'):
+                # For a time recorded at a spacecraft, use the position of
+                # the spacecraft recorded in the TOA to compute the needed
+                # vectors.
+                pass
+            elif (key['obs'] == 'Geocenter'):
+                for jj, grprow in enumerate(grp):
+                    ind = jj+loind
+                    et = float((grprow['tdbld'] - J2000ld) * SECS_PER_DAY)
+                    ssb_earth = objPosVel("SSB", "EARTH", et)
+                    obs_sun = objPosVel("EARTH", "SUN", et)
+                    obs_sun_pos[ind,:] = obs_sun.pos
+                    ssb_obs = ssb_earth
+                    ssb_obs_pos[ind,:] = ssb_obs.pos
+                    ssb_obs_vel[ind,:] = ssb_obs.vel
+                    if planets:
+                        for p in ('jupiter', 'saturn', 'venus', 'uranus'):
+                            name = 'obs_'+p+'_pos'
+                            dest = p.upper()+" BARYCENTER"
+                            pv = objPosVel("EARTH", dest, et)
+                            plan_poss[name][ind,:] = pv.pos
+            elif (key['obs'] in observatories):
                 earth_obss = erfautils.topo_posvels(obs, grp)
                 for jj, grprow in enumerate(grp):
                     ind = jj+loind
@@ -621,12 +700,8 @@ class TOAs(object):
                             dest = p.upper()+" BARYCENTER"
                             pv = objPosVel("EARTH", dest, et) - earth_obss[jj]
                             plan_poss[name][ind,:] = pv.pos
-            if (key['obs'] == 'Barycenter'):
-                for jj, grprow in enumerate(grp):
-                    ind = jj+loind
-                    et = float((grprow['tdbld'] - J2000ld) * SECS_PER_DAY)
-                    obs_sun = objPosVel("SSB", "SUN", et)
-                    obs_sun_pos[ind,:] = obs_sun.pos
+            else:
+                log.error("Unknown observatory {0}".format(key['obs']))
         cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
         if planets:
             cols_to_add += plan_poss.values()
@@ -754,5 +829,3 @@ class TOAs(object):
             if top:
                 # Clean up our temporaries used when reading TOAs
                 del self.cdict
-
-        

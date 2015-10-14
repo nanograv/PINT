@@ -68,6 +68,8 @@ class Spindown(TimingModel):
             self.TZRMJD.value = toas['tdb'][0] - delay[0]*u.s
 
         toas = toas['tdbld']
+        # Warning(paulr): This looks wrong.  You need to use the
+        # TZRFREQ and TZRSITE to compute a proper TDB reference time.
         TZRMJD = time_to_longdouble(self.TZRMJD.value)
         dt = (toas - TZRMJD) * SECS_PER_DAY - delay
 
