@@ -492,7 +492,7 @@ class PSRbinary(TimingModel):
         OM = self.OM.value
         nu = self.nu()
         k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
-
+        
         if par in ['OM','OMDOT','PB']:
             dername = 'd_omeg_d_' + par
             return getattr(self,dername)()
