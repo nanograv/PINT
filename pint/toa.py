@@ -308,8 +308,9 @@ class TOA(object):
                                     scale=scale, format='mjd',
                                     precision=9)
         elif obs in observatories:
-            if  location is not None:
-                raise ValueError("Specifying location for observatory TOAs is not currently supported.")
+            # Not sure what I was trying to test for with this. -- paulr
+            #if  location is not None:
+            #    raise ValueError("Specifying location for observatory TOAs is not currently supported.")
             if type(MJD) in [float, numpy.float64, numpy.float128]:
                 self.mjd = time.Time(MJD, scale=scale, format='mjd',
                                     location=observatories[obs].loc,
