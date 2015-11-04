@@ -21,11 +21,13 @@ else:
 
 # Params you might want to edit
 nwalkers = 200
+burnin = 100
 nsteps = 1000
 nbins = 256
-maxMJD = 58000.0 # latest MJD to use (limited by IERS file usually)
+outprof_nbins = 256
+maxMJD = 57210.0 # latest MJD to use (limited by IERS file usually)
 minWeight = 0.1  # if using weights, this is the minimum to include
-burnin = 100
+errfact = 10.0
 
 # initialization values
 maxlike = -9e99
@@ -128,7 +130,7 @@ class emcee_fitter(fitter.fitter):
         # ensure all postive
         return np.where(phss < 0.0, phss + 1.0, phss)
 
-    def get_lnprior_vals(self, errfact=2.0):
+    def get_lnprior_vals(self, errfact=errfact):
         """
         By default use Gaussian priors on fit params of errfact * TEMPO errors
         """
@@ -243,6 +245,14 @@ ftr.phaseogram(file=ftr.model.PSR.value+"_pre.png")
 plt.close()
 #ftr.phaseogram()
 
+# Write out the starting pulse profile
+vs, xs = np.histogram(ftr.get_event_phases(), outprof_nbins, \
+    range=[0,1], weights=ftr.weights)
+f = open(ftr.model.PSR.value+"_prof_pre.txt", 'w')
+for x, v in zip(xs, vs):
+    f.write("%.5f  %12.5f\n" % (x, v))
+f.close()
+
 # Try normal optimization first to see how it goes
 result = op.minimize(ftr.minimize_func, np.zeros_like(ftr.fitvals))
 newfitvals = np.asarray(result['x']) * ftr.fiterrs + ftr.fitvals
@@ -297,9 +307,9 @@ chains = chains_to_dict(ftr.fitkeys, sampler)
 plot_chains(chains, file=ftr.model.PSR.value+"_chains.png")
 
 # Make the triangle plot.
-import triangle
+import corner
 samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
-fig = triangle.corner(samples, labels=ftr.fitkeys)
+fig = corner.corner(samples, labels=ftr.fitkeys, bins=50)
 fig.savefig(ftr.model.PSR.value+"_triangle.png")
 plt.close()
 
@@ -311,9 +321,9 @@ ftr.phaseogram(file=ftr.model.PSR.value+"_post.png")
 plt.close()
 
 # Write out the output pulse profile
-vs, xs = np.histogram(ftr.get_event_phases(), 100, 
-                      range=[0,1], weights=ftr.weights)
-f = open(ftr.model.PSR.value+"_prof.txt", 'w')
+vs, xs = np.histogram(ftr.get_event_phases(), outprof_nbins, \
+    range=[0,1], weights=ftr.weights)
+f = open(ftr.model.PSR.value+"_prof_post.txt", 'w')
 for x, v in zip(xs, vs):
     f.write("%.5f  %12.5f\n" % (x, v))
 f.close()
