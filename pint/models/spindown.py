@@ -11,12 +11,18 @@ except ImportError:
 from .parameter import Parameter, MJDParameter
 from .timing_model import TimingModel, MissingParameter
 from ..phase import *
-from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble
+from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, taylor_horner
+
+# The maximum number of spin frequency derivs we allow
+maxderivs = 20
 
 class Spindown(TimingModel):
     """This class provides a simple timing model for an isolated pulsar."""
     def __init__(self):
         super(Spindown, self).__init__()
+
+        # The number of terms in the taylor exapansion of spin freq (F0...FN)
+        self.num_spin_terms = maxderivs
 
         self.add_param(Parameter(name="F0",
             units="Hz",
@@ -29,6 +35,11 @@ class Spindown(TimingModel):
             units="Hz/s", value=0.0,
             description="Spin-down rate"))
 
+        for ii in range(2, self.num_spin_terms + 1):
+            self.add_param(Parameter(name="F%d"%ii,
+                units="Hz/s^%s"%ii, value=0.0,
+                description="Spin-frequency %d derivative"%ii))
+
         self.add_param(MJDParameter(name="TZRMJD",
             description="Reference epoch for phase = 0.0",
             parse_value=lambda x: time_from_mjd_string(x, scale='tdb')))
@@ -37,7 +48,7 @@ class Spindown(TimingModel):
             description="Reference epoch for spin-down",
             parse_value=lambda x: time_from_mjd_string(x, scale='tdb')))
 
-        self.phase_funcs += [self.simple_spindown_phase,]
+        self.phase_funcs += [self.spindown_phase,]
 
     def setup(self):
         super(Spindown, self).setup()
@@ -49,10 +60,26 @@ class Spindown(TimingModel):
         if self.F1.value != 0.0:
             if self.PEPOCH.value is None:
                 raise MissingParameter("Spindown", "PEPOCH",
-                        "PEPOCH is required if F1 is set")
+                        "PEPOCH is required if F1 or higher are set")
+        # Remove all unused freq derivs
+        for ii in range(self.num_spin_terms, -1, -1):
+            term = "F%d"%ii
+            if getattr(self, term).value==0.0 and \
+                    getattr(self, term).uncertainty is None:
+                delattr(self, term)
+                self.params.remove(term)
+            else:
+                break
+        # Add a shortcut for the number of spin terms there are
+        self.num_spin_terms = ii + 1
 
-    def simple_spindown_phase(self, toas, delay):
-        """Very simple spindown phase function.
+    def get_spin_terms(self):
+        """Return a list of the spin term values in the model: [F0, F1, ..., FN]
+        """
+        return [getattr(self, "F%d"%ii).value for ii in range(self.num_spin_terms)]
+
+    def spindown_phase(self, toas, delay):
+        """Spindown phase function.
 
         delay is the time delay from the TOA to time of pulse emission
           at the pulsar, in seconds.
@@ -66,19 +93,22 @@ class Spindown(TimingModel):
         # NOTE: Should we be using barycentric arrival times, instead of TDB?
         if self.TZRMJD.value is None:
             self.TZRMJD.value = toas['tdb'][0] - delay[0]*u.s
-
-        toas = toas['tdbld']
         # Warning(paulr): This looks wrong.  You need to use the
         # TZRFREQ and TZRSITE to compute a proper TDB reference time.
-        TZRMJD = time_to_longdouble(self.TZRMJD.value)
-        dt = (toas - TZRMJD) * SECS_PER_DAY - delay
+        if not hasattr(self, "TZRMJDld"):
+            self.TZRMJDld = time_to_longdouble(self.TZRMJD.value)
 
+        # Add the [0.0] because that is the constant phase term
+        fterms = [0.0] + self.get_spin_terms()
+
+        dt_tzrmjd = (toas['tdbld'] - self.TZRMJDld) * SECS_PER_DAY - delay
         # TODO: what timescale should we use for pepoch calculation? Does this even matter?
-        dt_pepoch = (time_to_longdouble(self.PEPOCH.value) - TZRMJD) * SECS_PER_DAY
-        F0 = self.F0.value
-        F1 = self.F1.value
-        phase = (F0 + 0.5 * F1 * (dt - 2.0 * dt_pepoch)) * dt
-        return phase
+        dt_pepoch = (time_to_longdouble(self.PEPOCH.value) - self.TZRMJDld) * SECS_PER_DAY
+
+        phs_tzrmjd = taylor_horner(dt_tzrmjd-dt_pepoch, fterms)
+        phs_pepoch = taylor_horner(-dt_pepoch, fterms)
+        print phs_tzrmjd - phs_pepoch 
+        return phs_tzrmjd - phs_pepoch 
 
     def d_phase_d_F0(self, toas):
         """Calculate the derivative wrt F0"""

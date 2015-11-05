@@ -274,3 +274,26 @@ def ddouble2ldouble(t1, t2, format='jd'):
 def str2longdouble(str):
     """Return a numpy long double scalar from the input string, using strtold()"""
     return str2ldarr1(str)[0]
+
+def taylor_horner(x, coeffs):
+    """Evaluate a Taylor series of coefficients at x via the Horner scheme.
+
+    For example, if we want: 10 + 3*x/1! + 4*x^2/2! + 12*x^3/3! with
+    x evaluated at 2.0, we would do:
+
+    In [1]: taylor_horner(2.0, [10, 3, 4, 12])
+    Out[1]: 40.0
+
+    """
+    result = 0.0
+    fact = float(len(coeffs))
+    for coeff in coeffs[::-1]:
+        result = result * x / fact + coeff
+        fact -= 1.0
+    return result
+
+if __name__=="__main__":
+    assert taylor_horner(2.0, [10]) == 10
+    assert taylor_horner(2.0, [10, 3]) == 10 + 3*2.0
+    assert taylor_horner(2.0, [10, 3, 4]) == 10 + 3*2.0 + 4*2.0**2 / 2.0
+    assert taylor_horner(2.0, [10, 3, 4, 12]) == 10 + 3*2.0 + 4*2.0**2 / 2.0 + 12*2.0**3/(3.0*2.0)
