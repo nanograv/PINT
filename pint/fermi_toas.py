@@ -171,6 +171,6 @@ if __name__ == '__main__':
     phss = modelin.phase(ts.table)[1]
     # ensure all postive
     phases = np.where(phss < 0.0, phss + 1.0, phss)
-    mjds = ts.get_mjds(high_precision=False)
+    mjds = ts.get_mjds()
     weights = np.array([w['weight'] for w in ts.table['flags']])
     phaseogram(mjds,phases,weights)

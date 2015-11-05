@@ -392,7 +392,7 @@ class TOAs(object):
 
 
         if not hasattr(self, 'table'):
-            mjds = self.get_mjds()
+            mjds = self.get_mjds(high_precision=True)
             self.first_MJD = mjds.min()
             self.last_MJD = mjds.max()
             # The table is grouped by observatory
@@ -403,8 +403,6 @@ class TOAs(object):
                                               "obs", "flags"),
                                       meta = {'filename':self.filename}).group_by("obs")
             # We don't need this now that we have a table
-            # paulr - Disabled this since test_toa_reader.py relies
-            # on having the toas member. The test should be fixed...
             del(self.toas)
 
     def __add__(self, x):
@@ -427,7 +425,7 @@ class TOAs(object):
             x = self.table['freq']
             return numpy.asarray(x) * x.unit
 
-    def get_mjds(self, high_precision = True):
+    def get_mjds(self, high_precision=False):
         """ With high_precision is True
             Return a list of the astropy.times (UTC) of the TOAs
 
@@ -439,17 +437,16 @@ class TOAs(object):
             of scales if some TOAs are barycentred and some are not (a
             perfectly valid situation when fitting both Fermi and radio TOAs)
         """
-        if high_precision is True:
+        if high_precision:
             if hasattr(self, "toas"):
                 return numpy.array([t.mjd for t in self.toas])
             else:
-                return numpy.array([t.mjd for t in self.table['mjd']])
+                return numpy.array([t for t in self.table['mjd']])
         else:
             if hasattr(self, "toas"):
                 return numpy.array([t.mjd.value for t in self.toas])
             else:
-                return numpy.array([t.mjd.value for t in self.table['mjd']])
-
+                return numpy.array([t.mjd for t in self.table['mjd']])
 
 
     def get_errors(self):
