@@ -107,7 +107,6 @@ class Spindown(TimingModel):
 
         phs_tzrmjd = taylor_horner(dt_tzrmjd-dt_pepoch, fterms)
         phs_pepoch = taylor_horner(-dt_pepoch, fterms)
-        print phs_tzrmjd - phs_pepoch 
         return phs_tzrmjd - phs_pepoch 
 
     def d_phase_d_F0(self, toas):
