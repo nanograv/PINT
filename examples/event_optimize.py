@@ -23,11 +23,14 @@ else:
 nwalkers = 200
 burnin = 100
 nsteps = 1000
-nbins = 256
-outprof_nbins = 256
+nbins = 256 # For likelihood calculation based on gaussians file
+outprof_nbins = 256 # in the text file, for pygaussfit.py, for instance
 maxMJD = 57210.0 # latest MJD to use (limited by IERS file usually)
-minWeight = 0.1  # if using weights, this is the minimum to include
-errfact = 10.0
+# Set minWeight to 0.0 to get plots about how significant the
+# pulsations are before doing an expensive MCMC.  This allows
+# you to set minWeight intelligently.
+minWeight = 0.1 # if using weights, this is the minimum to include
+errfact = 10.0 # multiplier for gaussian priors based TEMPO errors
 
 # initialization values
 maxlike = -9e99
@@ -110,6 +113,33 @@ def marginalize_over_phase(phases, template, weights=None, resolution=1.0/1024,
         plt.ylabel("Log likelihood")
         plt.show()
     return ltemp - dphss[lnlikes.argmax()]*ltemp, lnlikes.max()
+
+def Htest_exact(phases, maxnumharms=20, weights=None):
+    """
+    Htest_exact(phases, maxnumharms=20, weights=None):
+       Return an exactly computed (i.e. unbinned) H-test statistic
+       for periodicity for the events with folded phases 'phases' [0,1).
+       Also return the best number of harmonics.  The H-statistic and
+       harmonic number are returned as a tuple: (hstat, harmnum).
+       This routine returns the Leahy normalized H-statistic, and the
+       best number of harmonics summed.  If weights are set to be
+       fractional photon weights, then the weighted Htest is returned 
+       (see Kerr 2011: http://arxiv.org/pdf/1103.2128.pdf)
+    """
+    N = len(phases)
+    Zm2s = np.zeros(maxnumharms, dtype=np.float)
+    rad_phases = 2.0*np.pi*phases
+    weightfact = 1.0/(np.sum(weights**2.0) / N) if \
+                 weights is not None else 1.0
+    for harmnum in range(1, maxnumharms+1):
+        phss = harmnum*rad_phases
+        Zm2s[harmnum-1] = 2.0/N*(np.add.reduce(np.sin(phss))**2.0+
+                                 np.add.reduce(np.cos(phss))**2.0)
+        Zm2s[harmnum-1] *= weightfact
+    hs = np.add.accumulate(Zm2s) - \
+         4.0*np.arange(1.0, maxnumharms+1)+4.0
+    bestharm = hs.argmax()
+    return (hs[bestharm], bestharm+1)
 
 class emcee_fitter(fitter.fitter):
 
@@ -205,6 +235,48 @@ class emcee_fitter(fitter.fitter):
         fermi.phaseogram(mjds, phss, weights=self.weights, bins=bins,
             rotate=rotate, size=size, alpha=alpha, file=file)
 
+    def prof_vs_weights(self, nbins=50, use_weights=False):
+        """
+        Show binned profiles (and H-test values) as a function
+        of the minimum weight used. nbins is only for the plots.
+        """
+        f, ax = plt.subplots(3, 3, sharex=True)
+        phss = ftr.get_event_phases()
+        htests = []
+        weights = np.linspace(0.0, 0.95, 20)
+        for ii, minwgt in enumerate(weights):
+            good = ftr.weights > minwgt
+            nphotons = np.sum(good)
+            wgts = ftr.weights[good] if use_weights else None
+            hval, nharm = Htest_exact(phss[good], weights=wgts)
+            htests.append(hval)
+            if ii > 0 and ii%2==0 and ii<20:
+                r, c = ((ii-2)/2)/3, ((ii-2)/2)%3
+                ax[r][c].hist(phss[good], nbins, range=[0,1],
+                              weights=wgts, color='k',
+                              histtype='step')
+                ax[r][c].set_title("%.1f / %.1f / %.0f" %
+                                   (minwgt, hval, nphotons),
+                                   fontsize=11)
+                if c==0: ax[r][c].set_ylabel("Htest")
+                if r==2: ax[r][c].set_xlabel("Phase")
+                f.suptitle("%s:  Minwgt / H-test / Approx # events" %
+                           self.model.PSR.value, fontweight='bold')
+        if use_weights:
+            plt.savefig(ftr.model.PSR.value+"_profs_v_wgtcut.png")
+        else:
+            plt.savefig(ftr.model.PSR.value+"_profs_v_wgtcut_unweighted.png")
+        plt.close()
+        plt.plot(weights, htests, 'k')
+        plt.xlabel("Min Weight")
+        plt.ylabel("H-test")
+        plt.title(self.model.PSR.value)
+        if use_weights:
+            plt.savefig(ftr.model.PSR.value+"_htest_v_wgtcut.png")
+        else:
+            plt.savefig(ftr.model.PSR.value+"_htest_v_wgtcut_unweighted.png")
+        plt.close()
+                
 # TODO: make this properly handle long double
 if 1 or not (os.path.isfile(eventfile+".pickle") or
     os.path.isfile(eventfile+".pickle.gz")):
@@ -235,6 +307,12 @@ gtemplate /= gtemplate.sum()
 
 # Now define the requirements for emcee
 ftr = emcee_fitter(ts, modelin, gtemplate, weights)
+
+# Use this if you want to see the effect of setting minWeight
+if minWeight == 0.0:
+    ftr.prof_vs_weights(use_weights=True)
+    ftr.prof_vs_weights(use_weights=False)
+    sys.exit()
 
 # Now compute the photon phases and see if we see a pulse
 phss = ftr.get_event_phases()
