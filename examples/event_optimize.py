@@ -31,6 +31,7 @@ maxMJD = 57210.0 # latest MJD to use (limited by IERS file usually)
 # you to set minWeight intelligently.
 minWeight = 0.1 # if using weights, this is the minimum to include
 errfact = 10.0 # multiplier for gaussian priors based TEMPO errors
+do_opt_first = False
 
 # initialization values
 maxlike = -9e99
@@ -171,9 +172,9 @@ class emcee_fitter(fitter.fitter):
         for p in fitkeys:
             fitvals.append(getattr(self.model, p).value)
             fiterrs.append(getattr(self.model, p).uncertainty * errfact)
-            if p in ["RAJ", "DECJ", "T0"]:
+            if p in ["RAJ", "DECJ", "T0", "GLEP_1"]:
                 fitvals[-1] = fitvals[-1].value
-                if p != "T0":
+                if p not in ["T0", "GLEP_1"]:
                     fiterrs[-1] = fiterrs[-1].value
         return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
@@ -181,10 +182,18 @@ class emcee_fitter(fitter.fitter):
         """
         The log prior (in this case, gaussian based on initial param errors)
         """
+        use_uniform = ["GLEP_1", "GLPH_1"]
         lnsum = 0.0
-        for val, mn, sig in zip(theta, self.fitvals, self.fiterrs):
-            lnsum += (-np.log(sig * np.sqrt(2.0 * np.pi)) -
-                (val-mn)**2.0/(2.0*sig**2.0))
+        for val, mn, sig, key in \
+            zip(theta, self.fitvals, self.fiterrs, self.fitkeys):
+            if key not in use_uniform:
+                lnsum += (-np.log(sig * np.sqrt(2.0 * np.pi)) -
+                          (val-mn)**2.0/(2.0*sig**2.0))
+            else: # uniform priors here
+                if key=="GLEP_1":
+                    lnsum += 0.0 if 54680.0 < val < maxMJD else -np.inf
+                elif key=="GLPH_1":
+                    lnsum += 0.0 if 0.0 < val < 1.0 else -np.inf
         return lnsum
 
     def lnposterior(self, theta):
@@ -332,12 +341,15 @@ for x, v in zip(xs, vs):
 f.close()
 
 # Try normal optimization first to see how it goes
-result = op.minimize(ftr.minimize_func, np.zeros_like(ftr.fitvals))
-newfitvals = np.asarray(result['x']) * ftr.fiterrs + ftr.fitvals
-like_optmin = -result['fun']
-print "Optimization likelihood:", like_optmin
-ftr.set_params(dict(zip(ftr.fitkeys, newfitvals)))
-#ftr.phaseogram()
+if do_opt_first:
+    result = op.minimize(ftr.minimize_func, np.zeros_like(ftr.fitvals))
+    newfitvals = np.asarray(result['x']) * ftr.fiterrs + ftr.fitvals
+    like_optmin = -result['fun']
+    print "Optimization likelihood:", like_optmin
+    ftr.set_params(dict(zip(ftr.fitkeys, newfitvals)))
+    #ftr.phaseogram()
+else:
+    like_optmin = -np.inf
 
 # Set up the initial conditions for the emcee walkers.  Use the
 # scipy.optimize newfitvals instead if they are better
