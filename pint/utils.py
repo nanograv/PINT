@@ -169,8 +169,10 @@ def time_to_longdouble(t):
     ## Also, is it certain that this calculation retains the full precision?
     
     """
-    return np.longdouble(t.jd1 - erfa.DJM0) \
-            + np.longdouble(t.jd2)
+    try:
+        return np.longdouble(t.jd1 - erfa.DJM0) + np.longdouble(t.jd2)
+    except:
+        return np.longdouble(t)
 
 def GEO_WGS84_to_ITRF(lon, lat, hgt):
     """Convert lat/long/height to rectangular.
