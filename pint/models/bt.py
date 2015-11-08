@@ -107,7 +107,7 @@ class BT(TimingModel):
 
             if getattr(self, p).value is not None:
                 if self.T0.value is None:
-                    raise MissingParameter("Spindown", "T0",
+                    raise MissingParameter("BT", "T0",
                         "T0 is required if *DOT is set")
 
         if self.GAMMA.value is None:
