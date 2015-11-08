@@ -193,7 +193,7 @@ class emcee_fitter(fitter.fitter):
                 if key=="GLEP_1":
                     lnsum += 0.0 if 54680.0 < val < maxMJD else -np.inf
                 elif key=="GLPH_1":
-                    lnsum += 0.0 if 0.0 < val < 1.0 else -np.inf
+                    lnsum += 0.0 if -0.5 < val < 0.5 else -np.inf
         return lnsum
 
     def lnposterior(self, theta):
