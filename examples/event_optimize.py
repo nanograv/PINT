@@ -34,7 +34,7 @@ errfact = 10.0 # multiplier for gaussian priors based TEMPO errors
 do_opt_first = False
 
 # initialization values
-maxlike = -9e99
+maxpost = -9e99
 numcalls = 0
 
 def measure_phase(profile, template, rotate_prof=True):
@@ -180,27 +180,27 @@ class emcee_fitter(fitter.fitter):
 
     def lnprior(self, theta):
         """
-        The log prior (in this case, gaussian based on initial param errors)
+        The log prior
         """
-        use_uniform = ["GLEP_1", "GLPH_1"]
         lnsum = 0.0
         for val, mn, sig, key in \
             zip(theta, self.fitvals, self.fiterrs, self.fitkeys):
-            if key not in use_uniform:
+            # Do uniform priors first
+            if key=="GLEP_1":
+                # Don't allow a glitch within the first/last 100 days
+                lnsum += 0.0 if 54680.0+100 < val < maxMJD-100 else -np.inf
+            elif key=="GLPH_1":
+                lnsum += 0.0 if -0.5 < val < 0.5 else -np.inf
+            else:  # gaussian prior based on initial param errors
                 lnsum += (-np.log(sig * np.sqrt(2.0 * np.pi)) -
                           (val-mn)**2.0/(2.0*sig**2.0))
-            else: # uniform priors here
-                if key=="GLEP_1":
-                    lnsum += 0.0 if 54680.0 < val < maxMJD else -np.inf
-                elif key=="GLPH_1":
-                    lnsum += 0.0 if -0.5 < val < 0.5 else -np.inf
         return lnsum
 
     def lnposterior(self, theta):
         """
         The log posterior (priors * likelihood)
         """
-        global maxlike, numcalls
+        global maxpost, numcalls
         self.set_params(dict(zip(self.fitkeys, theta)))
         # Make sure parallax is positive if we are fitting for it
         if 'PX' in self.fitkeys and self.model.PX.value < 0.0:
@@ -209,15 +209,16 @@ class emcee_fitter(fitter.fitter):
         lnlikelihood = marginalize_over_phase(phases, self.template,
             weights=self.weights)[1]
         numcalls += 1
-        if lnlikelihood > maxlike:
-            print "New max: ", lnlikelihood
-            for name, val in zip(ftr.fitkeys, theta):
-                    print "  %8s: %25.15g" % (name, val)
-            maxlike = lnlikelihood
-            self.maxlike_fitvals = theta
         if numcalls % (nwalkers * nsteps / 100) == 0:
             print "~%d%% complete" % (numcalls / (nwalkers * nsteps / 100))
-        return self.lnprior(theta) + lnlikelihood
+        lnpost = self.lnprior(theta) + lnlikelihood
+        if lnpost > maxpost:
+            print "New max: ", lnpost
+            for name, val in zip(ftr.fitkeys, theta):
+                    print "  %8s: %25.15g" % (name, val)
+            maxpost = lnpost
+            self.maxpost_fitvals = theta
+        return lnpost
 
     def minimize_func(self, theta):
         """
@@ -356,7 +357,17 @@ else:
 ndim = ftr.n_fit_params
 if like_start > like_optmin:
     pos = [ftr.fitvals + ftr.fiterrs * np.random.randn(ndim)
-        for i in range(nwalkers)]
+        for ii in range(nwalkers)]
+    # Set starting params with uniform priors to uniform in the prior
+    for param in ["GLPH_1", "GLEP_1"]:
+        if param in ftr.fitkeys:
+            idx = ftr.fitkeys.index(param)
+            if param=="GLPH_1":
+                svals = np.random.uniform(-0.5, 0.5, nwalkers)
+            elif param=="GLEP_1":
+                svals = np.random.uniform(54680.0+100, maxMJD-100, nwalkers)
+            for ii in range(nwalkers):
+                pos[ii][idx] = svals[ii]
 else:
     pos = [newfitvals + ftr.fiterrs*np.random.randn(ndim)
         for i in range(nwalkers)]
@@ -406,7 +417,7 @@ plt.close()
 # Make a phaseogram with the 50th percentile values
 #ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
 # Make a phaseogram with the best MCMC result
-ftr.set_params(dict(zip(ftr.fitkeys, ftr.maxlike_fitvals)))
+ftr.set_params(dict(zip(ftr.fitkeys, ftr.maxpost_fitvals)))
 ftr.phaseogram(file=ftr.model.PSR.value+"_post.png")
 plt.close()
 
