@@ -124,7 +124,7 @@ def Htest_exact(phases, maxnumharms=20, weights=None):
        harmonic number are returned as a tuple: (hstat, harmnum).
        This routine returns the Leahy normalized H-statistic, and the
        best number of harmonics summed.  If weights are set to be
-       fractional photon weights, then the weighted Htest is returned 
+       fractional photon weights, then the weighted Htest is returned
        (see Kerr 2011: http://arxiv.org/pdf/1103.2128.pdf)
     """
     N = len(phases)
@@ -286,15 +286,15 @@ class emcee_fitter(fitter.fitter):
         else:
             plt.savefig(ftr.model.PSR.value+"_htest_v_wgtcut_unweighted.png")
         plt.close()
-                
+
 # TODO: make this properly handle long double
 if 1 or not (os.path.isfile(eventfile+".pickle") or
     os.path.isfile(eventfile+".pickle.gz")):
     # Read event file and return list of TOA objects
     tl = fermi.load_Fermi_TOAs(eventfile, weightcolumn=weightcol)
     # Limit the TOAs to ones where we have IERS corrections for
-    tl = [tl[ii] for ii in range(len(tl)) if tl[ii].mjd.value < maxMJD and
-        tl[ii].flags['weight'] > minWeight]
+    tl = [tl[ii] for ii in range(len(tl)) if (tl[ii].mjd.value < maxMJD
+        and (weightcol is None or tl[ii].flags['weight'] > minWeight))]
     print "There are %d events we will use" % len(tl)
     # Now convert to TOAs object and compute TDBs and posvels
     ts = toa.TOAs(toalist=tl)
@@ -366,6 +366,7 @@ if like_start > like_optmin:
                 svals = np.random.uniform(-0.5, 0.5, nwalkers)
             elif param=="GLEP_1":
                 svals = np.random.uniform(54680.0+100, maxMJD-100, nwalkers)
+                #svals = 55422.0 + np.random.randn(nwalkers)
             for ii in range(nwalkers):
                 pos[ii][idx] = svals[ii]
 else:
