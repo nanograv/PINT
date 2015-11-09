@@ -22,8 +22,9 @@ def phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.0, siz
     fig = plt.figure(figsize=(6,8))
     ax1 = plt.subplot2grid((3, 1), (0, 0))
     ax2 = plt.subplot2grid((3, 1), (1, 0), rowspan=2)
+    wgts = None if weights is None else np.concatenate((weights, weights))
     h, x, p = ax1.hist(np.concatenate((phss, phss+1.0)),
-        2*bins, range=[0,2], weights=np.concatenate((weights, weights)),
+        2*bins, range=[0,2], weights=wgts,
         color='k', histtype='step', fill=False, lw=2)
     ax1.set_xlim([0.0, 2.0]) # show 2 pulses
     ax1.set_ylim([0.0, 1.1*h.max()])
