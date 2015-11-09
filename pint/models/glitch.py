@@ -17,18 +17,7 @@ from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, ta
 maxglitches = 10
 
 class Glitch(TimingModel):
-    """This class provides simple glitches.
-    
-    TEMPO has the following glitch params.  This class currently
-    only adds GLEP_n and GLF0_n
-    
-    GLEP_n   Epoch of glitch n, n=1..9 (MJD) (not fit)
-    GLPH_n   Glitch n phase increment
-    GLF0_n   Permanent glitch n pulse frequency increment (s^-1)
-    GLF1_n   Permanent glitch n frequency derivative increment (s^-2)
-    GLF0D_n  Decaying glitch n frequency increment (s^-1)
-    GLDT_n   Decay time constant for glitch n (days)
-    """
+    """This class provides glitches."""
     def __init__(self):
         super(Glitch, self).__init__()
 
@@ -39,26 +28,36 @@ class Glitch(TimingModel):
             self.add_param(Parameter(name="GLPH_%d"%ii,
                 units="pulse phase", value=0.0,
                 description="Phase change for glitch %d"%ii))
-            self.add_param(Parameter(name="GLF0_%d"%ii,
-                units="Hz", value=0.0,
-                description="Permanent frequency change for glitch %d"%ii))
             self.add_param(MJDParameter(name="GLEP_%d"%ii,
                 description="Epoch of glitch %d"%ii,
                 parse_value=lambda x: time_from_mjd_string(x, scale='tdb')))
+            self.add_param(Parameter(name="GLF0_%d"%ii,
+                units="Hz", value=0.0,
+                description="Permanent frequency change for glitch %d"%ii))
+            self.add_param(Parameter(name="GLF1_%d"%ii,
+                units="Hz/s", value=0.0,
+                description="Permanent frequency-derivative change for glitch %d"%ii))
+            self.add_param(Parameter(name="GLF0D_%d"%ii,
+                units="Hz", value=0.0,
+                description="Decaying frequency change for glitch %d"%ii))
+            self.add_param(Parameter(name="GLTD_%d"%ii,
+                units="days", value=0.0,
+                description="Decay time constant for glitch %d"%ii))
 
         self.phase_funcs += [self.glitch_phase,]
 
     def setup(self):
         super(Glitch, self).setup()
         # Check for required params, at least for first glitch
+        ps = ["GLPH_%d", "GLEP_%d", "GLF0_%d", "GLF1_%d", "GLF0D_%d", "GLTD_%d"]
         for ii in range(1, 2):
-            for p in ("GLPH_%d", "GLF0_%d", "GLEP_%d"):
+            for p in ps:
                 term = p%ii
                 if getattr(self, term).value is None:
                     raise MissingParameter("Glitch", term)
         # Remove all unused glitch params
         for ii in range(self.num_glitches, 0, -1):
-            for p in ("GLPH_%d", "GLF0_%d", "GLEP_%d"):
+            for p in ps:
                 term = p%ii
                 if getattr(self, term).value==0.0 and \
                    getattr(self, term).uncertainty is None:
@@ -79,13 +78,21 @@ class Glitch(TimingModel):
         """
         phs = numpy.zeros_like(toas, dtype=numpy.longdouble)
         for ii in range(1, self.num_glitches + 1):
-            dF0 = getattr(self, "GLF0_%d"%ii).value
             dphs = getattr(self, "GLPH_%d"%ii).value
+            dF0 = getattr(self, "GLF0_%d"%ii).value
+            dF1 = getattr(self, "GLF1_%d"%ii).value
             eph = time_to_longdouble(getattr(self, "GLEP_%d"%ii).value)
             dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
             affected = dt > 0.0 # TOAs affected by glitch
+            dF0D = getattr(self, "GLF0D_%d"%ii).value
+            if dF0D != 0.0:
+                tau = getattr(self, "GLTD_%d"%ii).value * SECS_PER_DAY
+                decayterm = dF0D * tau * (1.0 - numpy.exp(-dt[affected]/tau))
+            else:
+                decayterm = 0.0
             # print ii, dphs, dF0, dt[:5], len(dt[affected]), len(phs[affected])
-            phs[affected] += dphs + dF0 * dt[affected]
+            phs[affected] += dphs + dt[affected] * \
+                (dF0 + 0.5 * dt[affected] * dF1) + decayterm
         return phs
 
     def d_phase_d_GLF0_1(self, toas):
