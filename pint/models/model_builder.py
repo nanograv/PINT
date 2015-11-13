@@ -8,13 +8,14 @@ from .astrometry import Astrometry
 from .dispersion import Dispersion
 from .spindown import Spindown
 from .DDbinaryModel import DD
+from .glitch import Glitch
 from .bt import BT
 from .solar_system_shapiro import SolarSystemShapiro
 
 # List with all timing model components we will consider when pre-processing a
 # parfile
-ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro, BT, DD]
-
+ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro,
+                  BT, DD, Glitch]
 
 class model_builder(object):
     """A class for model construction interface.

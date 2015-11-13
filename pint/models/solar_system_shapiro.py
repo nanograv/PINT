@@ -3,6 +3,7 @@
 import numpy
 import astropy.units as u
 import astropy.constants as const
+from astropy import log
 from .parameter import Parameter
 from .timing_model import TimingModel
 from .. import Tsun, Tmercury, Tvenus, Tearth, Tmars, \
@@ -70,11 +71,21 @@ class SolarSystemShapiro(TimingModel):
         If planets are to be included, TOAs.compute_posvels() must
         have been called with the planets=True argument.
         """
-        psr_dir = self.ssb_to_psb_xyz(epoch=toas['tdbld'].astype(numpy.float64))
-        delay = self.ss_obj_shapiro_delay(toas['obs_sun_pos'],
-                                          psr_dir, self._ss_mass_sec['sun'])
-        if self.PLANET_SHAPIRO.value:
-            for pl in ('jupiter', 'saturn', 'venus', 'uranus'):
-                delay += self.ss_obj_shapiro_delay(toas['obs_'+pl+'_pos'],
+        # Start out with 0 delay with units of seconds
+        delay = numpy.zeros(len(toas))
+        for ii, key in enumerate(toas.groups.keys):
+            grp = toas.groups[ii]
+            obs = toas.groups.keys[ii]['obs']
+            loind, hiind = toas.groups.indices[ii:ii+2]
+            if key['obs'] == 'Barycenter':
+                log.info("Skipping Shapiro delay for Barycentric TOAs")
+                continue
+
+            psr_dir = self.ssb_to_psb_xyz(epoch=grp['tdbld'].astype(numpy.float64))
+            delay[loind:hiind] += self.ss_obj_shapiro_delay(grp['obs_sun_pos'],
+                                    psr_dir, self._ss_mass_sec['sun'])
+            if self.PLANET_SHAPIRO.value:
+                for pl in ('jupiter', 'saturn', 'venus', 'uranus'):
+                    delay[loind:hiind] += self.ss_obj_shapiro_delay(grp['obs_'+pl+'_pos'],
                                                    psr_dir, self._ss_mass_sec[pl])
         return delay
