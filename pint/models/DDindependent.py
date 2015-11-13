@@ -29,7 +29,8 @@ class PSRdd(PSRbin):
 
         for key, value in kwargs.iteritems():
             if key.upper() in self.params:
-                setattr(self, key.upper(), value)
+                if value is not None:
+                    setattr(self, key.upper(), value)
 
         self.set_inter_vars()
         self.binary_delay_funcs+= [self.DDdelay]

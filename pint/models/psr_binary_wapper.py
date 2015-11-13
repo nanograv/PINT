@@ -11,7 +11,11 @@ from .timing_model import Cache, TimingModel, MissingParameter
 from ..phase import Phase
 from ..utils import time_from_mjd_string, time_to_longdouble
 from ..orbital.kepler import eccentric_from_mean
-
+from .btmodel import BTmodel
+import numpy as np
+import time
+from pint import ls,GMsun,Tsun
+from pint import utils
 
 
 class PSRbinaryWapper(TimingModel):
@@ -90,7 +94,7 @@ class PSRbinaryWapper(TimingModel):
 
 
     def setup(self):
-        super(PSRbinary, self).setup()
+        super(PSRbinaryWapper, self).setup()
 
 
 
@@ -103,3 +107,18 @@ class PSRbinaryWapper(TimingModel):
                 continue
 
             bparObj.value = bparObj.value*u.Unit(bparObj.units)
+
+
+    def binary_delay(self,toas):
+        """Returns total pulsar binary delay.
+           Parameters
+           ----------
+           toas : PINT toas table
+           Return
+           ----------
+           Pulsar binary delay in the units of second
+        """
+        bdelay = np.longdouble(np.zeros(len(toas)))*u.s
+        for bdf in self.binary_delay_funcs:
+            bdelay+= bdf(toas)
+        return bdelay
