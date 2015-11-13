@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 from astropy import log
 
-def phaseogram(mjds, phases, weights=None, bins=100, rotate=0.0, size=5,
+def phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.0, size=5,
     alpha=0.25, file=False):
     """
     Make a nice 2-panel phaseogram
@@ -22,13 +22,18 @@ def phaseogram(mjds, phases, weights=None, bins=100, rotate=0.0, size=5,
     fig = plt.figure(figsize=(6,8))
     ax1 = plt.subplot2grid((3, 1), (0, 0))
     ax2 = plt.subplot2grid((3, 1), (1, 0), rowspan=2)
+    wgts = None if weights is None else np.concatenate((weights, weights))
     h, x, p = ax1.hist(np.concatenate((phss, phss+1.0)),
-        2*bins, range=[0,2], weights=np.concatenate((weights, weights)),
+        2*bins, range=[0,2], weights=wgts,
         color='k', histtype='step', fill=False, lw=2)
     ax1.set_xlim([0.0, 2.0]) # show 2 pulses
     ax1.set_ylim([0.0, 1.1*h.max()])
-    ax1.set_ylabel("Counts")
-    #ax1.set_title(self.model.PSR.value)
+    if weights is not None:
+        ax1.set_ylabel("Weighted Counts")
+    else:
+        ax1.set_ylabel("Counts")
+    if title is not None:
+        ax1.set_title(title)
     if weights is None:
         ax2.scatter(phss, mjds, s=size, color='k', alpha=alpha)
         ax2.scatter(phss+1.0, mjds, s=size, color='k', alpha=alpha)
@@ -115,7 +120,10 @@ def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None):
             log.info('LOCAL TOAs not implemented yet')
             if ft2name is None:
                 log.error('FT2 file required to process raw Fermi times.')
-            toalist = []
+            if weightcolumn is None:
+                toalist=[toa.TOA(m, obs='Spacecraft', scale='tt',energy=e) for m,e in zip(mjds,energies)]
+            else:
+                toalist=[toa.TOA(m, obs='Spacecraft', scale='tt',energy=e,weight=w) for m,e,w in zip(mjds,energies,weights)]
         else:
             log.info("Building geocentered TOAs")
             if weightcolumn is None:
@@ -164,6 +172,6 @@ if __name__ == '__main__':
     phss = modelin.phase(ts.table)[1]
     # ensure all postive
     phases = np.where(phss < 0.0, phss + 1.0, phss)
-    mjds = ts.get_mjds(high_precision=False)
+    mjds = ts.get_mjds()
     weights = np.array([w['weight'] for w in ts.table['flags']])
     phaseogram(mjds,phases,weights)

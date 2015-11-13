@@ -33,7 +33,7 @@ if log.level < 25:
     t.print_summary()
 log.info("Read/corrected TOAs in %.3f sec" % time_toa)
 
-mjds = t.get_mjds(high_precision=False)
+mjds = t.get_mjds()
 errs = t.get_errors()
 
 log.info("Computing residuals...")

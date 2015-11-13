@@ -169,8 +169,10 @@ def time_to_longdouble(t):
     ## Also, is it certain that this calculation retains the full precision?
 
     """
-    return np.longdouble(t.jd1 - erfa.DJM0) \
-            + np.longdouble(t.jd2)
+    try:
+        return np.longdouble(t.jd1 - erfa.DJM0) + np.longdouble(t.jd2)
+    except:
+        return np.longdouble(t)
 
 def GEO_WGS84_to_ITRF(lon, lat, hgt):
     """Convert lat/long/height to rectangular.
@@ -276,6 +278,7 @@ def str2longdouble(str):
     return str2ldarr1(str)[0]
 
 
+
 def data2longdouble(data):
     """Return a numpy long double scalar form different type of data
        Parameters
@@ -289,3 +292,26 @@ def data2longdouble(data):
         return str2longdouble(data)
     else:
         return np.longdouble(data)
+
+def taylor_horner(x, coeffs):
+    """Evaluate a Taylor series of coefficients at x via the Horner scheme.
+
+    For example, if we want: 10 + 3*x/1! + 4*x^2/2! + 12*x^3/3! with
+    x evaluated at 2.0, we would do:
+
+    In [1]: taylor_horner(2.0, [10, 3, 4, 12])
+    Out[1]: 40.0
+
+    """
+    result = 0.0
+    fact = float(len(coeffs))
+    for coeff in coeffs[::-1]:
+        result = result * x / fact + coeff
+        fact -= 1.0
+    return result
+
+if __name__=="__main__":
+    assert taylor_horner(2.0, [10]) == 10
+    assert taylor_horner(2.0, [10, 3]) == 10 + 3*2.0
+    assert taylor_horner(2.0, [10, 3, 4]) == 10 + 3*2.0 + 4*2.0**2 / 2.0
+    assert taylor_horner(2.0, [10, 3, 4, 12]) == 10 + 3*2.0 + 4*2.0**2 / 2.0 + 12*2.0**3/(3.0*2.0)
