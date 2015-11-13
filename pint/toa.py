@@ -44,7 +44,7 @@ def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=True):
     if not (os.path.isfile(timfile+".pickle") or
             os.path.isfile(timfile+".pickle.gz")):
         log.info("Pickling TOAs.")
-        #t.pickle()
+        t.pickle()
     return t
 
 def get_TOAs_list(toa_list,ephem="DE421", planets=False):
@@ -90,18 +90,14 @@ def read_fake_TOAs(time_mjd1,time_mjd2 = None, error = 0.0, obs='Barycenter',
     planets : bool, optional
         If the planets positions and velocities are calculated
     '''
-
     if time_mjd2 == None:
         MJD1,MJD0 = numpy.modf(numpy.longdouble(time_mjd1))
     else:
         MJD0,MJD1 = (time_mjd1,time_mjd2)
-
     try:
         ntoas = len(MJD0)
     except:
         ntoas = 1
-
-
 
     fakeToa = TOA((MJD0,MJD1),error=error, obs=obs, freq=freq,
                  scale=scale)
@@ -402,8 +398,9 @@ class TOAs(object):
                                       names=("index", "mjd", "error", "freq",
                                               "obs", "flags"),
                                       meta = {'filename':self.filename}).group_by("obs")
-            # We don't need this now that we have a table
-            del(self.toas)
+
+        # We don't need this now that we have a table
+        del(self.toas)
 
     def __add__(self, x):
         if type(x) in [int, float]:
@@ -454,8 +451,7 @@ class TOAs(object):
         if hasattr(self, "toas"):
             return numpy.array([t.error.to(u.us).value for t in self.toas])*u.us
         else:
-            x = self.table['error']
-            return numpy.asarray(x) * x.unit
+            return self.table['error']
 
     def get_obss(self):
         """Return a numpy array of the observatories for each TOA"""
