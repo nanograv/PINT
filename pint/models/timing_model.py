@@ -151,8 +151,7 @@ class TimingModel(object):
             delay += df(toas)
 
         if hasattr(self,'binary_delay'):
-            baryToa = toasObs*u.day - delay*u.second
-            bdelay = getattr(self,'binary_delay')(baryToa)
+            bdelay = getattr(self,'binary_delay')(toas)
             return delay + (bdelay.to('second')).value
         else:
             return delay

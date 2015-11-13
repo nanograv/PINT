@@ -7,13 +7,13 @@ from .timing_model import generate_timing_model
 from .astrometry import Astrometry
 from .dispersion import Dispersion
 from .spindown import Spindown
-from .DDbinaryModel import DD
+#from .DDbinaryModel import DD
 from .bt import BT
 from .solar_system_shapiro import SolarSystemShapiro
-
+from .dd_wapper import DDwapper
 # List with all timing model components we will consider when pre-processing a
 # parfile
-ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro, BT, DD]
+ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro, BT, DDwapper]
 
 
 class model_builder(object):
