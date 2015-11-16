@@ -278,7 +278,6 @@ def str2longdouble(str):
     return str2ldarr1(str)[0]
 
 
-
 def data2longdouble(data):
     """Return a numpy long double scalar form different type of data
        Parameters
