@@ -44,7 +44,7 @@ def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=True):
     if not (os.path.isfile(timfile+".pickle") or
             os.path.isfile(timfile+".pickle.gz")):
         log.info("Pickling TOAs.")
-        #t.pickle()
+        t.pickle()
     return t
 
 def get_TOAs_list(toa_list,ephem="DE421", planets=False):
@@ -90,18 +90,14 @@ def read_fake_TOAs(time_mjd1,time_mjd2 = None, error = 0.0, obs='Barycenter',
     planets : bool, optional
         If the planets positions and velocities are calculated
     '''
-
     if time_mjd2 == None:
         MJD1,MJD0 = numpy.modf(numpy.longdouble(time_mjd1))
     else:
         MJD0,MJD1 = (time_mjd1,time_mjd2)
-
     try:
         ntoas = len(MJD0)
     except:
         ntoas = 1
-
-
 
     fakeToa = TOA((MJD0,MJD1),error=error, obs=obs, freq=freq,
                  scale=scale)
@@ -392,7 +388,7 @@ class TOAs(object):
 
 
         if not hasattr(self, 'table'):
-            mjds = self.get_mjds()
+            mjds = self.get_mjds(high_precision=True)
             self.first_MJD = mjds.min()
             self.last_MJD = mjds.max()
             # The table is grouped by observatory
@@ -402,10 +398,9 @@ class TOAs(object):
                                       names=("index", "mjd", "error", "freq",
                                               "obs", "flags"),
                                       meta = {'filename':self.filename}).group_by("obs")
-            # We don't need this now that we have a table
-            # paulr - Disabled this since test_toa_reader.py relies
-            # on having the toas member. The test should be fixed...
-            del(self.toas)
+
+        # We don't need this now that we have a table
+        del(self.toas)
 
     def __add__(self, x):
         if type(x) in [int, float]:
@@ -427,7 +422,7 @@ class TOAs(object):
             x = self.table['freq']
             return numpy.asarray(x) * x.unit
 
-    def get_mjds(self, high_precision = True):
+    def get_mjds(self, high_precision=False):
         """ With high_precision is True
             Return a list of the astropy.times (UTC) of the TOAs
 
@@ -439,17 +434,16 @@ class TOAs(object):
             of scales if some TOAs are barycentred and some are not (a
             perfectly valid situation when fitting both Fermi and radio TOAs)
         """
-        if high_precision is True:
+        if high_precision:
             if hasattr(self, "toas"):
                 return numpy.array([t.mjd for t in self.toas])
             else:
-                return numpy.array([t.mjd for t in self.table['mjd']])
+                return numpy.array([t for t in self.table['mjd']])
         else:
             if hasattr(self, "toas"):
                 return numpy.array([t.mjd.value for t in self.toas])
             else:
-                return numpy.array([t.mjd.value for t in self.table['mjd']])
-
+                return numpy.array([t.mjd for t in self.table['mjd']])
 
 
     def get_errors(self):
@@ -457,8 +451,7 @@ class TOAs(object):
         if hasattr(self, "toas"):
             return numpy.array([t.error.to(u.us).value for t in self.toas])*u.us
         else:
-            x = self.table['error']
-            return numpy.asarray(x) * x.unit
+            return self.table['error']
 
     def get_obss(self):
         """Return a numpy array of the observatories for each TOA"""

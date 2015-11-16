@@ -23,14 +23,18 @@ else:
 nwalkers = 200
 burnin = 100
 nsteps = 1000
-nbins = 256
-outprof_nbins = 256
+nbins = 256 # For likelihood calculation based on gaussians file
+outprof_nbins = 256 # in the text file, for pygaussfit.py, for instance
 maxMJD = 57210.0 # latest MJD to use (limited by IERS file usually)
-minWeight = 0.1  # if using weights, this is the minimum to include
-errfact = 10.0
+# Set minWeight to 0.0 to get plots about how significant the
+# pulsations are before doing an expensive MCMC.  This allows
+# you to set minWeight intelligently.
+minWeight = 0.1 # if using weights, this is the minimum to include
+errfact = 10.0 # multiplier for gaussian priors based TEMPO errors
+do_opt_first = False
 
 # initialization values
-maxlike = -9e99
+maxpost = -9e99
 numcalls = 0
 
 def measure_phase(profile, template, rotate_prof=True):
@@ -111,6 +115,33 @@ def marginalize_over_phase(phases, template, weights=None, resolution=1.0/1024,
         plt.show()
     return ltemp - dphss[lnlikes.argmax()]*ltemp, lnlikes.max()
 
+def Htest_exact(phases, maxnumharms=20, weights=None):
+    """
+    Htest_exact(phases, maxnumharms=20, weights=None):
+       Return an exactly computed (i.e. unbinned) H-test statistic
+       for periodicity for the events with folded phases 'phases' [0,1).
+       Also return the best number of harmonics.  The H-statistic and
+       harmonic number are returned as a tuple: (hstat, harmnum).
+       This routine returns the Leahy normalized H-statistic, and the
+       best number of harmonics summed.  If weights are set to be
+       fractional photon weights, then the weighted Htest is returned
+       (see Kerr 2011: http://arxiv.org/pdf/1103.2128.pdf)
+    """
+    N = len(phases)
+    Zm2s = np.zeros(maxnumharms, dtype=np.float)
+    rad_phases = 2.0*np.pi*phases
+    weightfact = 1.0/(np.sum(weights**2.0) / N) if \
+                 weights is not None else 1.0
+    for harmnum in range(1, maxnumharms+1):
+        phss = harmnum*rad_phases
+        Zm2s[harmnum-1] = 2.0/N*(np.add.reduce(np.sin(phss))**2.0+
+                                 np.add.reduce(np.cos(phss))**2.0)
+        Zm2s[harmnum-1] *= weightfact
+    hs = np.add.accumulate(Zm2s) - \
+         4.0*np.arange(1.0, maxnumharms+1)+4.0
+    bestharm = hs.argmax()
+    return (hs[bestharm], bestharm+1)
+
 class emcee_fitter(fitter.fitter):
 
     def __init__(self, toas=None, model=None, template=None, weights=None):
@@ -141,27 +172,35 @@ class emcee_fitter(fitter.fitter):
         for p in fitkeys:
             fitvals.append(getattr(self.model, p).value)
             fiterrs.append(getattr(self.model, p).uncertainty * errfact)
-            if p in ["RAJ", "DECJ", "T0"]:
+            if p in ["RAJ", "DECJ", "T0", "GLEP_1"]:
                 fitvals[-1] = fitvals[-1].value
-                if p != "T0":
+                if p not in ["T0", "GLEP_1"]:
                     fiterrs[-1] = fiterrs[-1].value
         return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
     def lnprior(self, theta):
         """
-        The log prior (in this case, gaussian based on initial param errors)
+        The log prior
         """
         lnsum = 0.0
-        for val, mn, sig in zip(theta, self.fitvals, self.fiterrs):
-            lnsum += (-np.log(sig * np.sqrt(2.0 * np.pi)) -
-                (val-mn)**2.0/(2.0*sig**2.0))
+        for val, mn, sig, key in \
+            zip(theta, self.fitvals, self.fiterrs, self.fitkeys):
+            # Do uniform priors first
+            if key=="GLEP_1":
+                # Don't allow a glitch within the first/last 100 days
+                lnsum += 0.0 if 54680.0+100 < val < maxMJD-100 else -np.inf
+            elif key=="GLPH_1":
+                lnsum += 0.0 if -0.5 < val < 0.5 else -np.inf
+            else:  # gaussian prior based on initial param errors
+                lnsum += (-np.log(sig * np.sqrt(2.0 * np.pi)) -
+                          (val-mn)**2.0/(2.0*sig**2.0))
         return lnsum
 
     def lnposterior(self, theta):
         """
         The log posterior (priors * likelihood)
         """
-        global maxlike, numcalls
+        global maxpost, numcalls
         self.set_params(dict(zip(self.fitkeys, theta)))
         # Make sure parallax is positive if we are fitting for it
         if 'PX' in self.fitkeys and self.model.PX.value < 0.0:
@@ -170,15 +209,16 @@ class emcee_fitter(fitter.fitter):
         lnlikelihood = marginalize_over_phase(phases, self.template,
             weights=self.weights)[1]
         numcalls += 1
-        if lnlikelihood > maxlike:
-            print "New max: ", lnlikelihood
-            for name, val in zip(ftr.fitkeys, theta):
-                    print "  %8s: %25.15g" % (name, val)
-            maxlike = lnlikelihood
-            self.maxlike_fitvals = theta
         if numcalls % (nwalkers * nsteps / 100) == 0:
             print "~%d%% complete" % (numcalls / (nwalkers * nsteps / 100))
-        return self.lnprior(theta) + lnlikelihood
+        lnpost = self.lnprior(theta) + lnlikelihood
+        if lnpost > maxpost:
+            print "New max: ", lnpost
+            for name, val in zip(ftr.fitkeys, theta):
+                    print "  %8s: %25.15g" % (name, val)
+            maxpost = lnpost
+            self.maxpost_fitvals = theta
+        return lnpost
 
     def minimize_func(self, theta):
         """
@@ -205,14 +245,56 @@ class emcee_fitter(fitter.fitter):
         fermi.phaseogram(mjds, phss, weights=self.weights, bins=bins,
             rotate=rotate, size=size, alpha=alpha, file=file)
 
+    def prof_vs_weights(self, nbins=50, use_weights=False):
+        """
+        Show binned profiles (and H-test values) as a function
+        of the minimum weight used. nbins is only for the plots.
+        """
+        f, ax = plt.subplots(3, 3, sharex=True)
+        phss = ftr.get_event_phases()
+        htests = []
+        weights = np.linspace(0.0, 0.95, 20)
+        for ii, minwgt in enumerate(weights):
+            good = ftr.weights > minwgt
+            nphotons = np.sum(good)
+            wgts = ftr.weights[good] if use_weights else None
+            hval, nharm = Htest_exact(phss[good], weights=wgts)
+            htests.append(hval)
+            if ii > 0 and ii%2==0 and ii<20:
+                r, c = ((ii-2)/2)/3, ((ii-2)/2)%3
+                ax[r][c].hist(phss[good], nbins, range=[0,1],
+                              weights=wgts, color='k',
+                              histtype='step')
+                ax[r][c].set_title("%.1f / %.1f / %.0f" %
+                                   (minwgt, hval, nphotons),
+                                   fontsize=11)
+                if c==0: ax[r][c].set_ylabel("Htest")
+                if r==2: ax[r][c].set_xlabel("Phase")
+                f.suptitle("%s:  Minwgt / H-test / Approx # events" %
+                           self.model.PSR.value, fontweight='bold')
+        if use_weights:
+            plt.savefig(ftr.model.PSR.value+"_profs_v_wgtcut.png")
+        else:
+            plt.savefig(ftr.model.PSR.value+"_profs_v_wgtcut_unweighted.png")
+        plt.close()
+        plt.plot(weights, htests, 'k')
+        plt.xlabel("Min Weight")
+        plt.ylabel("H-test")
+        plt.title(self.model.PSR.value)
+        if use_weights:
+            plt.savefig(ftr.model.PSR.value+"_htest_v_wgtcut.png")
+        else:
+            plt.savefig(ftr.model.PSR.value+"_htest_v_wgtcut_unweighted.png")
+        plt.close()
+
 # TODO: make this properly handle long double
 if 1 or not (os.path.isfile(eventfile+".pickle") or
     os.path.isfile(eventfile+".pickle.gz")):
     # Read event file and return list of TOA objects
     tl = fermi.load_Fermi_TOAs(eventfile, weightcolumn=weightcol)
     # Limit the TOAs to ones where we have IERS corrections for
-    tl = [tl[ii] for ii in range(len(tl)) if tl[ii].mjd.value < maxMJD and
-        tl[ii].flags['weight'] > minWeight]
+    tl = [tl[ii] for ii in range(len(tl)) if (tl[ii].mjd.value < maxMJD
+        and (weightcol is None or tl[ii].flags['weight'] > minWeight))]
     print "There are %d events we will use" % len(tl)
     # Now convert to TOAs object and compute TDBs and posvels
     ts = toa.TOAs(toalist=tl)
@@ -236,6 +318,12 @@ gtemplate /= gtemplate.sum()
 # Now define the requirements for emcee
 ftr = emcee_fitter(ts, modelin, gtemplate, weights)
 
+# Use this if you want to see the effect of setting minWeight
+if minWeight == 0.0:
+    ftr.prof_vs_weights(use_weights=True)
+    ftr.prof_vs_weights(use_weights=False)
+    sys.exit()
+
 # Now compute the photon phases and see if we see a pulse
 phss = ftr.get_event_phases()
 maxbin, like_start = marginalize_over_phase(phss, gtemplate,
@@ -254,19 +342,33 @@ for x, v in zip(xs, vs):
 f.close()
 
 # Try normal optimization first to see how it goes
-result = op.minimize(ftr.minimize_func, np.zeros_like(ftr.fitvals))
-newfitvals = np.asarray(result['x']) * ftr.fiterrs + ftr.fitvals
-like_optmin = -result['fun']
-print "Optimization likelihood:", like_optmin
-ftr.set_params(dict(zip(ftr.fitkeys, newfitvals)))
-#ftr.phaseogram()
+if do_opt_first:
+    result = op.minimize(ftr.minimize_func, np.zeros_like(ftr.fitvals))
+    newfitvals = np.asarray(result['x']) * ftr.fiterrs + ftr.fitvals
+    like_optmin = -result['fun']
+    print "Optimization likelihood:", like_optmin
+    ftr.set_params(dict(zip(ftr.fitkeys, newfitvals)))
+    #ftr.phaseogram()
+else:
+    like_optmin = -np.inf
 
 # Set up the initial conditions for the emcee walkers.  Use the
 # scipy.optimize newfitvals instead if they are better
 ndim = ftr.n_fit_params
 if like_start > like_optmin:
     pos = [ftr.fitvals + ftr.fiterrs * np.random.randn(ndim)
-        for i in range(nwalkers)]
+        for ii in range(nwalkers)]
+    # Set starting params with uniform priors to uniform in the prior
+    for param in ["GLPH_1", "GLEP_1"]:
+        if param in ftr.fitkeys:
+            idx = ftr.fitkeys.index(param)
+            if param=="GLPH_1":
+                svals = np.random.uniform(-0.5, 0.5, nwalkers)
+            elif param=="GLEP_1":
+                svals = np.random.uniform(54680.0+100, maxMJD-100, nwalkers)
+                #svals = 55422.0 + np.random.randn(nwalkers)
+            for ii in range(nwalkers):
+                pos[ii][idx] = svals[ii]
 else:
     pos = [newfitvals + ftr.fiterrs*np.random.randn(ndim)
         for i in range(nwalkers)]
@@ -316,7 +418,7 @@ plt.close()
 # Make a phaseogram with the 50th percentile values
 #ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
 # Make a phaseogram with the best MCMC result
-ftr.set_params(dict(zip(ftr.fitkeys, ftr.maxlike_fitvals)))
+ftr.set_params(dict(zip(ftr.fitkeys, ftr.maxpost_fitvals)))
 ftr.phaseogram(file=ftr.model.PSR.value+"_post.png")
 plt.close()
 
