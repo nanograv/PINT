@@ -19,7 +19,7 @@ t = pint.toa.get_TOAs(timfile)
 
 # These are pre-fit residuals
 rs = pint.residuals.resids(t, m).phase_resids
-xt = t.get_mjds(high_precision=False)
+xt = t.get_mjds()
 plt.plot(xt, rs, 'x')
 plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
 plt.xlabel('MJD')
