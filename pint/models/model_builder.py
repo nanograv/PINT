@@ -37,19 +37,19 @@ class model_builder(object):
         Examples:
         ---------
         Read model from parfile :
-        >>>mb = model_builder("PulsarJ1955", parfile ="J1955.par" )
-        >>>psrJ1955 = mb.model_instance
+        [1] mb = model_builder("PulsarJ1955", parfile ="J1955.par" )
+        [2] psrJ1955 = mb.model_instance
 
         Build model from sketch and read parfile:
-        >>>from .bt import BT 
-        >>>mb = model_builder("BT_model")
-        >>>mb.add_components(BT)
-        >>>psrJ1955 = mb.get_model_instance('J1955.par')
+        [1] from .bt import BT 
+        [2] mb = model_builder("BT_model")
+        [3] mb.add_components(BT)
+        [4] psrJ1955 = mb.get_model_instance('J1955.par')
 
         Build model instance without reading parfile:
-        >>>mb = model_builder("BT_model")
-        >>>mb.add_components(BT)
-        >>>myModel = mb.get_model_instance()
+        [1] mb = model_builder("BT_model")
+        [2] mb.add_components(BT)
+        [3] myModel = mb.get_model_instance()
 
     """
     def __init__(self, name, parfile = None):
