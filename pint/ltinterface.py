@@ -238,7 +238,7 @@ class pintpulsar(object):
     @property
     def stoas(self):
         """Return site arrival times"""
-        return np.array(self.t.get_mjds(high_precision=False))[~self.deleted]
+        return np.array(self.t.get_mjds())[~self.deleted]
 
     @property
     def toaerrs(self):

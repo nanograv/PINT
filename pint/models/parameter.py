@@ -2,7 +2,9 @@
 # Defines Parameter class for timing model parameters
 from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
                     time_to_longdouble
-import numpy 
+import astropy.units as u
+import astropy.constants as const
+from astropy.coordinates.angles import Angle
 
 class Parameter(object):
     """
@@ -26,7 +28,7 @@ class Parameter(object):
         frozen is a flag specifying whether "fitters" should adjust the
           value of this parameter or leave it fixed.
 
-        continuous is flag specifying whether phase derivatives with 
+        continuous is flag specifying whether phase derivatives with
           respect to this parameter exist.
 
         aliases is an optional list of strings specifying alternate names
@@ -41,7 +43,7 @@ class Parameter(object):
 
     """
 
-    def __init__(self, name=None, value=None, units=None, description=None, 
+    def __init__(self, name=None, value=None, units=None, description=None,
             uncertainty=None, frozen=True, aliases=None, continuous=True,
             parse_value=fortran_float, print_value=str):
         self.value = value
@@ -54,7 +56,7 @@ class Parameter(object):
         self.aliases = [] if aliases is None else aliases
         self.parse_value = parse_value
         self.print_value = print_value
-                
+
     def __str__(self):
         out = self.name
         if self.units is not None:
@@ -113,8 +115,13 @@ class Parameter(object):
         if len(k) >= 3:
             if int(k[2]) > 0:
                 self.frozen = False
-        if len(k) >= 4:
-            self.uncertainty = fortran_float(k[3])
+        if len(k) == 4:
+            if name=="RAJ":
+                self.uncertainty = Angle("0:0:%.15fh" % fortran_float(k[3]))
+            elif name=="DECJ":
+                self.uncertainty = Angle("0:0:%.15fd" % fortran_float(k[3]))
+            else:
+                self.uncertainty = fortran_float(k[3])
         return True
     def name_matches(self, name):
         """Whether or not the parameter name matches the provided name
@@ -123,13 +130,13 @@ class Parameter(object):
 
 class MJDParameter(Parameter):
     """This is a Parameter type that is specific to MJD values."""
-    def __init__(self, name=None, value=None, description=None, 
+    def __init__(self, name=None, value=None, description=None,
             uncertainty=None, frozen=True, continuous=True, aliases=None,
             parse_value=time_from_mjd_string,
             print_value=time_to_mjd_string):
         super(MJDParameter, self).__init__(name=name, value=value,
                 units="MJD", description=description,
-                uncertainty=uncertainty, frozen=frozen, 
+                uncertainty=uncertainty, frozen=frozen,
                 continuous=continuous,
                 aliases=aliases,
                 parse_value=parse_value,

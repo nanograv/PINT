@@ -1,3 +1,4 @@
+
 """This model provides the BT (Blandford & Teukolsky 1976, ApJ, 205, 580) model.
     """
 import astropy.units as u
@@ -13,8 +14,10 @@ from ..phase import Phase
 from ..utils import time_from_mjd_string, time_to_longdouble
 from ..orbital.kepler import eccentric_from_mean
 from .btmodel import BTmodel
+import astropy.time
 import numpy as np
 import time
+from astropy import log
 
 class BT(TimingModel):
     """This class provides an implementation of the BT model
@@ -46,6 +49,10 @@ class BT(TimingModel):
             description="Eccentricity",
             parse_value=np.double))
 
+        # Warning(paulr): This says the units on OM are deg (which is correct)
+        # But then it converts the value to radians!
+        # This may work OK in here, but when printing the value to a new
+        # par file, it comes out wrong!
         self.add_param(Parameter(name="OM",
             units="deg",
             description="Longitude of periastron",
@@ -100,7 +107,7 @@ class BT(TimingModel):
 
             if getattr(self, p).value is not None:
                 if self.T0.value is None:
-                    raise MissingParameter("Spindown", "T0",
+                    raise MissingParameter("BT", "T0",
                         "T0 is required if *DOT is set")
 
         if self.GAMMA.value is None:
@@ -130,7 +137,8 @@ class BT(TimingModel):
             key = par if not par in aliases else aliases[par]
 
             # T0 needs to be converted to long double
-            if key in ['T0']:
+            if key in ['T0'] and \
+                type(getattr(self, key).value) is astropy.time.core.Time:
                 pardict[par] = time_to_longdouble(getattr(self, key).value)
             else:
                 pardict[par] = getattr(self, key).value

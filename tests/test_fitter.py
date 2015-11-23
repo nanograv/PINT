@@ -29,7 +29,7 @@ f=fitter.fitter(toas=t,model=m)
 print('chi^2 is initially %0.2f' % f.resids.chi2)
 
 # Plot initial residuals
-xt=[x.value for x in f.resids.toas.get_mjds()]
+xt=[x for x in f.resids.toas.get_mjds()]
 yerr=t.get_errors()*1e-6
 plt.close()
 p1=plt.errorbar(xt,f.resids.time_resids.value,yerr.value,fmt='bo');
