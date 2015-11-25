@@ -8,6 +8,22 @@ from pint import pintdir
 class observatory(object):
     pass
 
+def read_clock_file(filen):
+    file = open(filen)
+    mjds = []
+    ccorr = []
+    for l in file.readlines():
+        try:
+            m = float(l[0:9])
+            c = float(l[24:33])
+            mjds.append(m)
+            ccorr.append(c)
+        except:
+            pass
+
+    return numpy.asarray(mjds), numpy.asarray(ccorr)
+
+
 def get_clock_corr_vals(obsname, **kwargs):
     """
     get_clock_corr_vals(obsname, **kwargs)
@@ -39,9 +55,11 @@ def get_clock_corr_vals(obsname, **kwargs):
         return (numpy.array([0.0, 100000.0]), numpy.array([0.0, 0.0]))
     # The following works for simple linear interpolation
     # of normal TEMPO-style clock correction files
-    mjds, ccorr = numpy.loadtxt(filenm, skiprows=2,
-                                usecols=(0, 2), unpack=True)
+
+    mjds, ccorr = read_clock_file(filenm)
+
     return mjds, ccorr
+
 
 def read_observatories():
     """Load observatory data files and return them.
