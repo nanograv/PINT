@@ -80,6 +80,13 @@ class PosVel(object):
         else:
             return str(self.pos)+", "+str(self.vel)
 
+def compute_bats(tt,m):
+    '''Compute barycentric arrival times. This is the MJD of the TOA converted
+    to TDB, with the delay terms from the model applied (Solar System and
+    dispersion delays). The result is MJD(TDB) at infinite frequency.
+    Inputs are tt: TOAs table and m (model object)'''
+    return tt['tdbld'] - m.delay(tt)/86400.0
+
 def fortran_float(x):
     """Convert Fortran-format floating-point strings.
 
@@ -137,7 +144,7 @@ def time_to_mjd_string(t, prec=15):
     return str(imjd) + (fmt%fmjd)[1:]
 
 def time_to_mjd_string_array(t,prec = 15):
-    """Print and MJD time array from an astropy time object as array in 
+    """Print and MJD time array from an astropy time object as array in
        time.
     """
     jd1 = np.array(t.jd1)
@@ -146,7 +153,7 @@ def time_to_mjd_string_array(t,prec = 15):
     imjd = jd1.astype(int)
     fjd1 = jd1 - imjd
     fmjd = jd2 + fjd1
-    
+
     assert np.fabs(fmjd).max() < 2.0
     s = []
     for i,f in zip(imjd,fmjd):
@@ -162,12 +169,12 @@ def time_to_mjd_string_array(t,prec = 15):
 
 def time_to_longdouble(t):
     """ Return an astropy Time value as MJD in longdouble
-    
+
     ## SUGGESTION(paulr): This function is at least partly redundant with
     ## ddouble2ldouble() below...
-    
+
     ## Also, is it certain that this calculation retains the full precision?
-    
+
     """
     try:
         return np.longdouble(t.jd1 - erfa.DJM0) + np.longdouble(t.jd2)
