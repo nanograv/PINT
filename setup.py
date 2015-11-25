@@ -46,7 +46,7 @@ setup(
     package_dir = {'pint': 'pint'},
 
     py_modules = ['pint.models.timing_model', 'pint.models.model_builder',
-        'pint.models.astrometry',
+        'pint.models.astrometry', 'pint.models.glitch',
         'pint.models.dispersion', 'pint.models.spindown',
         'pint.models.parameter', 'pint.fitter',
         'pint.ltinterface',
