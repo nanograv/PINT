@@ -3,13 +3,15 @@ An interface for pint compatible to the interface of libstempo
 """
 
 import numpy as np
-import pint.models as tm
+import pint.models as pm
+import pint.toa as pt
+
 from pint.phase import Phase
-from pint import toa
 from pint.residuals import resids
 from pint import fitter
 from utils import has_astropy_unit
 import astropy.units as u
+import astropy.constants as ac
 import astropy.coordinates.angles as ang
 import matplotlib.pyplot as plt
 from astropy import log
@@ -25,6 +27,62 @@ except ImportError:
 # Make sure we have the minuteangle and secondangle units
 u.minuteangle = u.def_unit('minuteangle', u.hourangle / 60)
 u.secondangle = u.def_unit('secondangle', u.minuteangle / 60)
+u.lts = u.def_unit(['lightsecond','ls','lts'], ac.c * u.s)
+
+# In the case of a unitless interface, we need to make sure we provide the
+# 'correct' tempo2-like units
+map_units = {
+             'F0': u.Hz,
+             'F1': u.Hz/u.s,
+             'F2': u.Hz/u.s**2, 
+             'F3': u.Hz/u.s**3, 
+             'F4': u.Hz/u.s**4, 
+             'F5': u.Hz/u.s**5, 
+             'F6': u.Hz/u.s**6, 
+             'F7': u.Hz/u.s**7, 
+             'F8': u.Hz/u.s**8, 
+             'F9': u.Hz/u.s**9, 
+             'F10': u.Hz/u.s**10, 
+             'F11': u.Hz/u.s**11, 
+             'F12': u.Hz/u.s**12, 
+             'RAJ': u.rad,
+             'DECJ': u.rad,
+             'ELONG': u.deg,
+             'ELAT': u.deg,
+             'PMRA': u.mas / u.yr,
+             'PMDEC': u.mas / u.yr,
+             'PMELONG': u.mas / u.yr,
+             'PMELAT': u.mas / u.yr,
+             'PX': u.mas,
+             'PB': u.d,
+             'E': u.dimensionless_unscaled,         # == ECC
+             'ECC': u.dimensionless_unscaled,
+             'A1': lts,
+             'OM': u.deg,
+             'EPS1': u.dimensionless_unscaled,
+             'EPS2': u.dimensionless_unscaled,
+             # KOM, KIN?
+             'SHAPMAX': u.dimensionless_unscaled,
+             'OMDOT': u.deg/u.yr,
+             # PBDOT?
+             'ECCDOT': 1/u.s,
+             'A1DOT': lts/u.s,                      # == XDOT
+             'XDOT': lts/u.s,
+             'GAMMA': u.s,
+             # XPBDOT?
+             # EPS1DOT, EPS2DOT?
+             'MTOT': u.Msun,'M2': u.Msun,
+             # DTHETA, XOMDOT
+             'SIN1': u.dimensionless_unscaled,
+             # DR, A0, B0, BP, BPP, AFAC
+             'DM': u.cm**-3 * u.pc,
+             'DM1': u.cm**-3 * u.pc * u.yr**-1, # how many should we do?
+             'POSEPOCH': u.day,
+             'T0': u.day,
+             'TASC': u.day
+             }
+
+
 
 # Setting units, in case of bulk access to parameters
 par_units = {'RAJ': u.radian,
@@ -43,8 +101,17 @@ class pintpar(object):
     Similar to the parameter class defined in libstempo, this class gives a nice
     interface to the timing model parameters
     """
+
     def __init__(self, par, parname, *args, **kwargs):
-        # Do something else here?
+        """Initialize parameter object
+
+        :param par:
+            The PINT parameter object
+
+        :param parname:
+            The name (key) of the parameter
+        """
+
         self.name = parname
         self._par = par
         self._set = True
@@ -129,7 +196,7 @@ class pintpulsar(object):
 
     def __init__(self, parfile, timfile=None, warnings=False,
             fixprefiterrors=True, dofit=False, maxobs=None,
-            model='Standard'):
+            units=False):
         """
         The same init function as used in libstempo
 
@@ -143,14 +210,21 @@ class pintpulsar(object):
             Whether we are shoing warnings
 
         :param fixprefiterrors:
-            d
+            TODO: check what this should do
+
+        :param maxobs:
+            PINT has no need for a maxobs parameter. Included here for
+            compatibility
+
+        :param units:
+            Whether or not we are using the 'units' interface of libstempo
         """
         if warnings:
             log.setLevel('INFO')
         else:
             log.setLevel('ERROR')
 
-        self.loadparfile(parfile, model=model)
+        self.loadparfile(parfile)
 
         if timfile is not None:
             self.loadtimfile(timfile)
@@ -158,23 +232,21 @@ class pintpulsar(object):
             self.t = None
             self.deleted = None
 
+        if dofit and self.t is not None:
+            self.fit()
 
-    def loadparfile(self, parfile, model='Standard'):
+        self._units = units
+
+
+    def loadparfile(self, parfile):
         """
         Load a parfile with pint
 
         :param parfile:
             Name of the parfile
         """
-        # TODO: determine the timing model
-        log.warn('Only using a standard timing model now...')
-        if model=='Standard':
-            self.model = tm.StandardTimingModel()
-        elif model=='BT':
-            self.model = tm.BTTimingModel()
-        elif model=='DD':
-            self.model = tm.DDTimingModel()
-        self.model.read_parfile(parfile)
+
+        self.model = pm.get_model(parfile)
         log.info("model.as_parfile():\n%s"%self.model.as_parfile())
 
         try:
@@ -200,8 +272,9 @@ class pintpulsar(object):
         :param timfile:
             Name of the timfile, if we want to load it
         """
+
         t0 = time.time()
-        self.t = toa.get_TOAs(timfile, planets=self.planets,usepickle=False)
+        self.t = pt.get_TOAs(timfile, planets=self.planets,usepickle=False)
         time_toa = time.time() - t0
         log.info("Read/corrected TOAs in %.3f sec" % time_toa)
 
@@ -213,6 +286,7 @@ class pintpulsar(object):
 
     def _readflags(self):
         """Process the pint flags to be in the same format as in libstempo"""
+
         self.flagnames_ = []
         self.flags_ = dict()
 
@@ -231,6 +305,7 @@ class pintpulsar(object):
 
     def toas(self, updatebats=False):
         """Return TDB arrival times in MJDs"""
+
         # TODO: do high-precision as np.longdouble
 
         return np.array(self.t.table['tdbld'])[~self.deleted]
@@ -238,19 +313,24 @@ class pintpulsar(object):
     @property
     def stoas(self):
         """Return site arrival times"""
+
         return np.array(self.t.get_mjds())[~self.deleted]
 
     @property
     def toaerrs(self):
         """Return the TOA uncertainty in microseconds"""
+
         return np.array(self.t.get_errors().to(u.us))[~self.deleted]
 
     @property
     def freqs(self):
         """Returns observation frequencies in units of MHz as a numpy.double array."""
+
         return np.array(self.t.get_freqs())
 
     def ssbfreqs(self):
+        """Return SSB frequencies"""
+
         log.warn('Not using freqSSB just yet.')
         return np.array(self.t.get_freqs())
 
@@ -259,6 +339,7 @@ class pintpulsar(object):
 
         Returns a numpy.bool array of the delection station of observations.
         You get a copy of the current values."""
+
         return self.deleted
 
     def flags(self):
@@ -277,9 +358,8 @@ class pintpulsar(object):
             raise NotImplementedError("Flag-setting capabilities are coming soon.")
 
     def formresiduals(self):
-        """
-        Form the residuals
-        """
+        """Form the residuals"""
+
         log.info("Computing residuals...")
         t0 = time.time()
         self.resids_us = resids(self.t, self.model).time_resids.to(u.us)
@@ -298,13 +378,15 @@ class pintpulsar(object):
     @property
     def name(self):
         """Get or set pulsar name."""
+
         return self.model.PSR.value
 
     @property
     def binarymodel(self):
         """Return the binary model"""
-        """
 
+        # Obtain the binary model from PINT
+        """
         def __get__(self):
             return self.psr[0].binaryModel.decode('ascii')
 
@@ -320,6 +402,7 @@ class pintpulsar(object):
 
     def pars(self,which='fit'):
         """Return parameter keys"""
+
         if which == 'fit':
             return [par for par in self.model.params
                     if not getattr(self.model, par).frozen]
@@ -334,11 +417,13 @@ class pintpulsar(object):
     @property
     def nobs(self):
         """Number of observations"""
+
         return self.t.ntoas - np.sum(self.deleted)
 
     @property
     def ndim(self, incoffset=True):
         """Number of dimensions."""
+
         return int(incoffset) + len(self.pars(which='fit'))
 
     # --- dictionary access to parameters
@@ -372,6 +457,7 @@ class pintpulsar(object):
         - Not all parameters in the selection need to be set.
         - Setting an unset parameter sets its `set` flag (obviously).
         - Unlike in earlier libstempo versions, setting a parameter does not set its error to zero."""
+
         if values is None:
             return np.fromiter((self[par].val for par in
                     self.pars(which)),np.longdouble)
