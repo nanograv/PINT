@@ -1,10 +1,14 @@
 # parameter.py
 # Defines Parameter class for timing model parameters
 from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
-                    time_to_longdouble
+time_to_longdouble
+import numpy
+import astropy.units as u
+from pint import ls,GMsun,Tsun
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
+
 
 class Parameter(object):
     """
@@ -66,11 +70,13 @@ class Parameter(object):
             out += " +/- " + str(self.uncertainty)
         return out
 
-    def set(self, value):
+    def set(self, value, with_unit = False):
         """Parses a string 'value' into the appropriate internal representation
         of the parameter.
         """
         self.value = self.parse_value(value)
+        if with_unit is True:
+            self.value = self.value*u.Unit(self.units)
 
     def add_alias(self, alias):
         """Add a name to the list of aliases for this parameter."""

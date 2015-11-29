@@ -1,4 +1,4 @@
-PSR              1744-1134   
+PSR              1744-1134
 RAJ      17:44:29.39171911  0          0.00002312
 DECJ     -11:34:54.5671567  0           0.0010157
 PMRA               18.6744  0              0.0308
@@ -19,4 +19,4 @@ TRES                  0.62
 NITS                     1
 UNITS TDB
 TIMEEPH FB90
-PLANET_SHAPIRO N
+#PLANET_SHAPIRO Y
