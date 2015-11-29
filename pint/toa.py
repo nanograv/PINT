@@ -425,10 +425,10 @@ class TOAs(object):
 
     def get_mjds(self, high_precision=False):
         """ With high_precision is True
-            Return a list of the astropy.times (UTC) of the TOAs
+            Return an array of the astropy.times (UTC) of the TOAs
 
             With high_precision is False
-            Return a list of toas in mjd with double precision
+            Return an array of toas in mjd as double precision floats
 
             WARNING: Depending on the situation, you may get MJDs in a
             different scales (e.g. UTC, TT, or TDB) or even a mixture
