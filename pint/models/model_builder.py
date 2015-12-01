@@ -57,6 +57,8 @@ class model_builder(object):
         self.name = name
         self.model_instance = None
         self.param_inparF = None
+        self.param_unrcgnz = {}
+        self.param_inModel = []
         self.comps = ComponentsList
         self.select_comp = []
         if parfile is not None:
@@ -138,6 +140,20 @@ class model_builder(object):
             model = self.build_model()
 
         self.model_instance = model()
+        self.param_inModel = self.model_instance.params
+
+        # Find unrecognised parameters in par file.
+
+        if self.param_inparF is not None:
+            parName = []
+            for p in self.param_inModel:
+                parName+= getattr(self.model_instance,p).aliases
+
+            parName += self.param_inModel
+            for pp in self.param_inparF.keys():
+                if pp not in parName:
+                    self.param_unrcgnz[pp] = self.param_inparF[pp]
+
         if parfile is not None:
             self.model_instance.read_parfile(parfile)
 
