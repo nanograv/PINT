@@ -59,8 +59,9 @@ class Glitch(TimingModel):
         for ii in range(self.num_glitches, 0, -1):
             for p in ps:
                 term = p%ii
-                if getattr(self, term).value==0.0 and \
-                   getattr(self, term).uncertainty is None:
+                if hasattr(self, term) and \
+                        getattr(self, term).value==0.0 and \
+                        getattr(self, term).uncertainty is None:
                     delattr(self, term)
                     self.params.remove(term)
                 else:

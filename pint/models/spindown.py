@@ -64,7 +64,8 @@ class Spindown(TimingModel):
         # Remove all unused freq derivs
         for ii in range(self.num_spin_terms, -1, -1):
             term = "F%d"%ii
-            if getattr(self, term).value==0.0 and \
+            if hasattr(self, term) and \
+                    getattr(self, term).value==0.0 and \
                     getattr(self, term).uncertainty is None:
                 delattr(self, term)
                 self.params.remove(term)
@@ -107,7 +108,7 @@ class Spindown(TimingModel):
 
         phs_tzrmjd = taylor_horner(dt_tzrmjd-dt_pepoch, fterms)
         phs_pepoch = taylor_horner(-dt_pepoch, fterms)
-        return phs_tzrmjd - phs_pepoch 
+        return phs_tzrmjd - phs_pepoch
 
     def d_phase_d_F0(self, toas):
         """Calculate the derivative wrt F0"""
