@@ -16,22 +16,22 @@ from .solar_system_shapiro import SolarSystemShapiro
 # parfile
 ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro,
                   BT, DD, Glitch]
-
+prefixName = ['DMX_','F','DMXR1_','DMXR2_','DMXF1_','DMXF2_','DMXEP_']
 class model_builder(object):
     """A class for model construction interface.
         Parameters
         ---------
         name : str
             Name for the model.
-        parfile : str optional 
-            The .par file input for select components. If the parfile is 
+        parfile : str optional
+            The .par file input for select components. If the parfile is
             provided the self.model_instance will be put model instance
             with .par file read in. If it is not provided, self.model_instance
             will return as None.
 
         Return
         ---------
-        A class contains the result model instance if parfile is provided and 
+        A class contains the result model instance if parfile is provided and
         method to build the model.
 
         Examples:
@@ -41,7 +41,7 @@ class model_builder(object):
         [2] psrJ1955 = mb.model_instance
 
         Build model from sketch and read parfile:
-        [1] from .bt import BT 
+        [1] from .bt import BT
         [2] mb = model_builder("BT_model")
         [3] mb.add_components(BT)
         [4] psrJ1955 = mb.get_model_instance('J1955.par')
@@ -56,7 +56,11 @@ class model_builder(object):
         self.name = name
         self.model_instance = None
         self.param_inparF = None
+        self.param_inModel = []
+        self.param_unknown = {}
         self.comps = ComponentsList
+        self.prefix_names = prefixName
+        self.param_prefix = {}
         self.select_comp = []
         if parfile is not None:
             self.parfile = parfile
@@ -71,7 +75,7 @@ class model_builder(object):
         if self.model_instance is not None:
             result += 'Read parameters from : '+ self.parfile +'\n'
             result += 'The model instance is :\n'+str(self.model_instance)
-            
+
         return result
 
     def preprocess_parfile(self,parfile):
@@ -85,7 +89,7 @@ class model_builder(object):
         for l in [pl.strip() for pl in pfile.readlines()]:
             # Skip blank lines
             if not l:
-                continue            
+                continue
                 # Skip commented lines
             if l.startswith('#') or l[:2]=="C ":
                 continue
@@ -109,7 +113,7 @@ class model_builder(object):
                     self.select_comp.append(c)
 
     def build_model(self):
-        """ Return a model with all components listed in the self.components 
+        """ Return a model with all components listed in the self.components
         list.
         """
         if self.select_comp ==[]:
@@ -118,13 +122,24 @@ class model_builder(object):
         return generate_timing_model(self.name,tuple(self.select_comp))
 
     def add_components(self,components):
-        """ Add new components to constructing model. 
+        """ Add new components to constructing model.
         """
         if not isinstance(components,list):
     	   components = [components,]
         for c in components:
     	    if c not in self.select_comp:
     	       self.select_comp.append(c)
+
+    def check_prefix_param(self):
+        """ Check if the unknown parameter has prefix parameter
+        """
+        for pn in self.prefix_names:
+            self.param_prefix[pn] = []
+            pnlen = len(pn)
+            for p in self.param_unknown.keys():
+                if p.startswith(pn):
+                    self.param_prefix[pn].append(p)
+
 
     def get_model_instance(self,parfile=None):
         """Read parfile using the model_instance attribute.
@@ -137,6 +152,19 @@ class model_builder(object):
             model = self.build_model()
 
         self.model_instance = model()
+        self.param_inModel = self.model_instance.params
+
+        if self.param_inparF is not None:
+            parName = []
+            for p in self.param_inModel:
+                parName+= getattr(self.model_instance,p).aliases
+
+            parName += self.param_inModel
+
+            for pp in self.param_inparF.keys():
+                if pp not in parName:
+                    self.param_unknown[pp] = self.param_inparF[pp]
+
         if parfile is not None:
             self.model_instance.read_parfile(parfile)
 
@@ -154,7 +182,7 @@ def get_model(parfile):
 
         Return
         ---------
-        Model instance get from parfile.  
+        Model instance get from parfile.
     """
     name = os.path.basename(os.path.splitext(parfile)[0])
 
