@@ -141,3 +141,21 @@ class MJDParameter(Parameter):
                 aliases=aliases,
                 parse_value=parse_value,
                 print_value=print_value)
+class prefixParameter(Parameter):
+    """ This is a Parameter type for prefix parameters, for example DMX_"""
+    def __init__(self,name=None, prefix = None ,value=None,unit = None,description=None,
+            uncertainty=None, frozen=True, continuous=True, aliases=None,
+            parse_value=fortran_float,print_value=None):
+
+        super(prefixParameter, self).__init__(name=name, value=value,
+                units=unit, description=description,
+                uncertainty=uncertainty, frozen=frozen,
+                continuous=continuous,
+                aliases=aliases,
+                parse_value=parse_value,
+                print_value=print_value)
+
+        self.prefix = prefix
+        if unit == 'MJD':
+             parse_value = time_from_mjd_string
+             print_value=time_to_mjd_string
