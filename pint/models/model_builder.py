@@ -16,7 +16,6 @@ from .solar_system_shapiro import SolarSystemShapiro
 # parfile
 ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro,
                   BT, DD, Glitch]
-prefixName = ['DMX_','F','DMXR1_','DMXR2_','DMXF1_','DMXF2_','DMXEP_']
 class model_builder(object):
     """A class for model construction interface.
         Parameters
@@ -59,7 +58,7 @@ class model_builder(object):
         self.param_inModel = []
         self.param_unknown = {}
         self.comps = ComponentsList
-        self.prefix_names = prefixName
+        self.prefix_names = None
         self.param_prefix = {}
         self.select_comp = []
         if parfile is not None:
@@ -138,7 +137,11 @@ class model_builder(object):
             pnlen = len(pn)
             for p in self.param_unknown.keys():
                 if p.startswith(pn):
-                    self.param_prefix[pn].append(p)
+                    if p[pnlen-1]!='_':
+                        if p[pnlen].isdigit():
+                            self.param_prefix[pn].append(p)
+                    else:
+                        self.param_prefix[pn].append(p)
 
 
     def get_model_instance(self,parfile=None):
@@ -153,7 +156,7 @@ class model_builder(object):
 
         self.model_instance = model()
         self.param_inModel = self.model_instance.params
-
+        self.prefix_names = self.model_instance.prefix_params
         if self.param_inparF is not None:
             parName = []
             for p in self.param_inModel:
