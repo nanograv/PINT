@@ -48,6 +48,7 @@ class Spindown(TimingModel):
             description="Reference epoch for spin-down",
             parse_value=lambda x: time_from_mjd_string(x, scale='tdb')))
 
+        self.prefix_params+= ['F',]
         self.phase_funcs += [self.spindown_phase,]
 
     def setup(self):
