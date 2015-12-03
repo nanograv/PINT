@@ -23,6 +23,11 @@ class Dispersion(TimingModel):
             units="pc cm^-3", value=0.0,
             description="Dispersion measure"))
         self.delay_funcs += [self.dispersion_delay,]
+        self.prefix_params += ['DMX_','DMXR1_','DMXR2_','DMXF1_','DMXF2_',
+                               'DMXEP_']
+        self.prefix_params_units.update({'DMX_':'pc cm^-3','DMXR1_':'MJD',
+                                         'DMXR2_' : 'MJD', 'DMXF1_':'MHz',
+                                         'DMXF1_' : 'MHz', 'DMXEP' :'MJD'})
 
     def setup(self):
         super(Dispersion, self).setup()
@@ -35,6 +40,7 @@ class Dispersion(TimingModel):
             warn("Using topocentric frequency for dedispersion!")
             bfreq = toas['freq']
         return self.DM.value * DMconst / bfreq**2
+
 
     @Cache.use_cache
     def d_delay_d_DM(self, toas):
