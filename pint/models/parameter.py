@@ -5,6 +5,7 @@ from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
+import re
 
 class Parameter(object):
     """
@@ -123,6 +124,7 @@ class Parameter(object):
             else:
                 self.uncertainty = fortran_float(k[3])
         return True
+        
     def name_matches(self, name):
         """Whether or not the parameter name matches the provided name
         """
@@ -141,11 +143,55 @@ class MJDParameter(Parameter):
                 aliases=aliases,
                 parse_value=parse_value,
                 print_value=print_value)
+
 class prefixParameter(Parameter):
-    """ This is a Parameter type for prefix parameters, for example DMX_"""
-    def __init__(self,name=None, prefix = None ,value=None,unit = None,description=None,
-            uncertainty=None, frozen=True, continuous=True, aliases=None,
-            parse_value=fortran_float,print_value=None):
+    """ This is a Parameter type for prefix parameters, for example DMX_
+        Parameter
+        ---------
+        name : optional
+        prefix : optional
+            Paremeter prefix, not is only support 'prefix_' type and 'prefix0' type.
+        indexformate : optional
+        index : optional
+    """
+
+    def __init__(self,name=None, prefix = None ,indexformat = None,index = 0,
+            value=None,unit = None,description=None,uncertainty=None, frozen=True,
+            continuous=True, aliases=None,prefix_aliases = [],parse_value=fortran_float,
+            print_value=None):
+
+        if name is None:
+            if prefix is None or indexformat is None:
+                errorMsg = 'When prefix parameter name is not give, the prefix'
+                errorMsg += 'and indexformat are both needed.'
+                raise ValueError(errorMsg)
+            else:
+                # Get format fields
+                digitLen = 0
+                for i in range(len(indexformat)-1,-1,-1):
+                    if indexformat[i].isdigit():
+                        digitLen+=1
+                self.indexformat_field = indexformat[0:len(indexformat)-digitLen]\
+                                    + '{0:0' +str(digitLen)+'d}'
+
+                name = prefix+self.indexformat_field.format(index)
+                self.prefix = prefix
+                self.indexformat = self.indexformat_field.format(0)
+        else: # Detect prefix and indexformat from name.
+            namefield = re.split('(\d+)',name)
+            if len(namefield)<2 or namefield[-2].isdigit() is False:
+            #When Name has no index in the end or no prefix part.
+                errorMsg = 'Prefix parameter name needs a perfix part'\
+                           +' and an index part in the end. '
+                errorMsg += 'If you meant to set up with prefix, please use prefix '\
+                           +'and indexformat optional agruments. Leave name argument alone.'
+                raise ValueError(errorMsg)
+            else: # When name has index in the end and prefix in front.
+                indexPart = namefield[-2]
+                prefixPart = namefield[0:-2]
+                self.indexformat_field = '{0:0' +str(len(indexPart))+'d}'
+                self.indexformat = self.indexformat_field.format(0)
+                self.prefix = ''.join(prefixPart)
 
         super(prefixParameter, self).__init__(name=name, value=value,
                 units=unit, description=description,
@@ -155,7 +201,12 @@ class prefixParameter(Parameter):
                 parse_value=parse_value,
                 print_value=print_value)
 
-        self.prefix = prefix
         if unit == 'MJD':
              parse_value = time_from_mjd_string
              print_value=time_to_mjd_string
+
+        self.prefix_aliases = prefix_aliases
+
+
+    def prefix_matches(self,prefix):
+        return (prefix == self.perfix) or (prefix in self.prefix_aliases)
