@@ -129,20 +129,19 @@ class model_builder(object):
     	    if c not in self.select_comp:
     	       self.select_comp.append(c)
 
-    def check_prefix_param(self):
+    def check_prefix_param(self,paramList,prefixList):
         """ Check if the unknown parameter has prefix parameter
         """
-        for pn in self.prefix_names:
+        for pn in prefixList:
             self.param_prefix[pn] = []
             pnlen = len(pn)
-            for p in self.param_unknown.keys():
+            for p in paramList:
                 if p.startswith(pn):
                     if p[pnlen-1]!='_':
                         if p[pnlen].isdigit():
                             self.param_prefix[pn].append(p)
                     else:
                         self.param_prefix[pn].append(p)
-
 
     def get_model_instance(self,parfile=None):
         """Read parfile using the model_instance attribute.
@@ -167,6 +166,10 @@ class model_builder(object):
             for pp in self.param_inparF.keys():
                 if pp not in parName:
                     self.param_unknown[pp] = self.param_inparF[pp]
+
+            self.check_prefix_param(self.param_unknown[pp].keys(),self.prefix_names)
+
+            for 
 
         if parfile is not None:
             self.model_instance.read_parfile(parfile)
