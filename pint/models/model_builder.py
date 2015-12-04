@@ -11,7 +11,8 @@ from .glitch import Glitch
 from .dd import DD
 from .bt import BT
 from .solar_system_shapiro import SolarSystemShapiro
-
+from pint.utils import split_prefixed_name
+from .parameter import prefixParameter
 # List with all timing model components we will consider when pre-processing a
 # parfile
 ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro,
@@ -129,19 +130,19 @@ class model_builder(object):
     	    if c not in self.select_comp:
     	       self.select_comp.append(c)
 
-    def check_prefix_param(self,paramList,prefixList):
+    def search_prefix_param(self,paramList,prefixList):
         """ Check if the unknown parameter has prefix parameter
         """
         for pn in prefixList:
             self.param_prefix[pn] = []
             pnlen = len(pn)
             for p in paramList:
-                if p.startswith(pn):
-                    if p[pnlen-1]!='_':
-                        if p[pnlen].isdigit():
-                            self.param_prefix[pn].append(p)
-                    else:
-                        self.param_prefix[pn].append(p)
+                try:
+                    pre,idxstr,idxV = split_prefixed_name(p)
+                except:
+                    continue
+                if pre == pn:
+                    self.param_prefix[pn].append(p)
 
     def get_model_instance(self,parfile=None):
         """Read parfile using the model_instance attribute.
@@ -167,9 +168,11 @@ class model_builder(object):
                 if pp not in parName:
                     self.param_unknown[pp] = self.param_inparF[pp]
 
-            self.check_prefix_param(self.param_unknown[pp].keys(),self.prefix_names)
+            self.search_prefix_param(self.param_unknown.keys(),self.prefix_names)
 
-            for 
+            if self.param_prefix != {}:
+                for p in self.param_prefix.keys():
+                    add_prefixed_param(self.model_instance,self.param_prefix[p])
 
         if parfile is not None:
             self.model_instance.read_parfile(parfile)
@@ -194,3 +197,13 @@ def get_model(parfile):
 
     mb = model_builder(name,parfile)
     return mb.model_instance
+
+def add_prefixed_param(modelIns,names):
+    for n in names:
+        prefix,indexformat,indexV = split_prefixed_name(n)
+        if prefix in modelIns.prefix_params:
+            units = modelIns.prefix_params_units[prefix]
+            des = modelIns.prefix_params_description[prefix]
+
+        modelIns.add_param(prefixParameter(name = n,units = units,value = 0.0,
+                           description = des))
