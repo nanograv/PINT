@@ -286,6 +286,20 @@ def str2longdouble(str):
     return str2ldarr1(str)[0]
 
 def split_prefixed_name(name):
+    """A utility function that splits a prefixed name.
+       Parameter
+       ----------
+       name : str
+           Prefixed name
+       Return
+       ----------
+       prefixPart : str
+           The prefix part of the name
+       indexPart : str
+           The index part from the name
+       indexValue : int
+           The absolute index valeu
+    """
     namefield = re.split('(\d+)',name)
     if len(namefield)<2 or namefield[-2].isdigit() is False or namefield[-1]!='':
         errorMsg = "A prefixed name should have prefix part and index value part. "

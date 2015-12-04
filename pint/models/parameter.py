@@ -149,11 +149,15 @@ class prefixParameter(Parameter):
     """ This is a Parameter type for prefix parameters, for example DMX_
         Parameter
         ---------
-        name : optional
-        prefix : optional
-            Paremeter prefix, not is only support 'prefix_' type and 'prefix0' type.
-        indexformate : optional
-        index : optional
+        name : str optional
+            The name of the parameter. If it is not provided, the prefix and index
+            format are needed.
+        prefix : str optional
+            Paremeter prefix, now it is only supporting 'prefix_' type and 'prefix0' type.
+        indexformat : str optional
+            The format for parameter index
+        index : int optional [default 1]
+            The index number for the prefixed parameter.
     """
 
     def __init__(self,name=None, prefix = None ,indexformat = None,index = 1,
@@ -196,7 +200,7 @@ class prefixParameter(Parameter):
                 self.indexformat = self.indexformat_field.format(0)
                 self.prefix = ''.join(prefixPart)
                 self.index = int(indexPart)
-                
+
         super(prefixParameter, self).__init__(name=name, value=value,
                 units=units, description=description,
                 uncertainty=uncertainty, frozen=frozen,

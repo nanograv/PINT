@@ -199,6 +199,17 @@ def get_model(parfile):
     return mb.model_instance
 
 def add_prefixed_param(modelIns,names):
+    """Add a prefixed parameter into the timing model.
+       Parameter
+       ----------
+       modelIns : PINT Timing_model class
+           The timing model of parameters adding to
+       names : []
+           The name list of prefixed parameters.
+       TODO :
+       Get it more robust. It should not reqire modelIns has one prefixed
+       parameter in it. 
+    """
     for n in names:
         prefix,indexformat,indexV = split_prefixed_name(n)
         if prefix in modelIns.prefix_params:

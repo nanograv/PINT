@@ -116,6 +116,9 @@ class TimingModel(object):
         pass
 
     def add_param(self, param):
+        """Add a parameter to the timing model. If it is a prefixe parameter,
+           it will add prefix information to the prefix information attributes.
+        """
         setattr(self, param.name, param)
         self.params += [param.name,]
         if param.is_prefix is True:
@@ -138,6 +141,16 @@ class TimingModel(object):
 
     @Cache.use_cache
     def get_prefix_mapping(self,prefix):
+        """Get the index mapping for the prefix parameters.
+           Parameter
+           ----------
+           prefix : str
+               Name of prefix.
+           Return
+           ----------
+           A dictionary with prefix pararameter real index as key and parameter
+           name as value.
+        """
         parnames = [x for x in self.params if x.startswith(prefix)]
         mapping = dict()
         for parname in parnames:
@@ -416,7 +429,7 @@ class TimingModel(object):
                     return True
                 else:
                     continue
-            # Check prefix parameter
+            # TODO Check prefix parameter
 
             return False
 
