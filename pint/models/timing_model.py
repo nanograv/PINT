@@ -100,7 +100,9 @@ class TimingModel(object):
     def __init__(self):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
-        self.prefix_params_units = {}
+        self.prefix_params_units = {}  # Unit for prefixed parameters
+        self.prefix_params_description = {}
+        self.num_prefix_params = {}
         self.delay_funcs = [] # List of delay component functions
         self.phase_funcs = [] # List of phase component functions
         self.cache = None
@@ -116,6 +118,15 @@ class TimingModel(object):
     def add_param(self, param):
         setattr(self, param.name, param)
         self.params += [param.name,]
+        if param.is_prefix is True:
+            self.prefix_params.append(param.prefix)
+            self.prefix_params_units[param.prefix]=param.units
+            if self.num_prefix_params.has_key(param.prefix):
+                self.num_prefix_params[param.prefix]+=1
+            else:
+                self.num_prefix_params[param.prefix]=1
+
+            self.prefix_params_description[param.prefix]=param.description
 
     def param_help(self):
         """Print help lines for all available parameters in model.
@@ -124,6 +135,18 @@ class TimingModel(object):
         for par in self.params:
             s += "%s\n" % getattr(self, par).help_line()
         return s
+
+    @Cache.use_cache
+    def get_prefix_mapping(self,prefix):
+        parnames = [x for x in self.params if x.startswith(prefix)]
+        mapping = dict()
+        for parname in parnames:
+            par = getattr(self,parname)
+            if par.is_prefix == True:
+                mapping[par.index] = parname
+
+        setattr(self,prefix+'mapping',mapping)
+
 
     @Cache.use_cache
     def phase(self, toas):
@@ -354,7 +377,7 @@ class TimingModel(object):
         pNames_inpar = para_dict.keys()
 
         pNames_inModel = self.params
-
+        prefix_inModel = self.prefix_params
         # Remove the common parameter PSR
         try:
             del pNames_inModel[pNames_inModel.index('PSR')]
@@ -393,6 +416,7 @@ class TimingModel(object):
                     return True
                 else:
                     continue
+            # Check prefix parameter
 
             return False
 
