@@ -9,6 +9,7 @@ except ImportError:
 import astropy.units as u
 from astropy import log
 from spice_util import str2ldarr1
+import re
 
 class PosVel(object):
     """Position/Velocity class.
@@ -283,6 +284,18 @@ def ddouble2ldouble(t1, t2, format='jd'):
 def str2longdouble(str):
     """Return a numpy long double scalar from the input string, using strtold()"""
     return str2ldarr1(str)[0]
+
+def split_prefixed_name(name):
+    namefield = re.split('(\d+)',name)
+    if len(namefield)<2 or namefield[-2].isdigit() is False or namefield[-1]!='':
+        errorMsg = "A prefixed name should have prefix part and index value part. "
+        errorMsg += "For example: DMX_0001 or F20. "
+        raise ValueError(errorMsg)
+    else: # When name has index in the end and prefix in front.
+        indexPart = namefield[-2]
+        prefixPart = ''.join(namefield[0:-2])
+        indexValue = int(indexPart)
+    return prefixPart, indexPart ,indexValue
 
 def taylor_horner(x, coeffs):
     """Evaluate a Taylor series of coefficients at x via the Horner scheme.
