@@ -57,6 +57,7 @@ class Parameter(object):
         self.aliases = [] if aliases is None else aliases
         self.parse_value = parse_value
         self.print_value = print_value
+        self.is_prefix = False
 
     def __str__(self):
         out = self.name
@@ -124,7 +125,7 @@ class Parameter(object):
             else:
                 self.uncertainty = fortran_float(k[3])
         return True
-        
+
     def name_matches(self, name):
         """Whether or not the parameter name matches the provided name
         """
@@ -155,8 +156,8 @@ class prefixParameter(Parameter):
         index : optional
     """
 
-    def __init__(self,name=None, prefix = None ,indexformat = None,index = 0,
-            value=None,unit = None,description=None,uncertainty=None, frozen=True,
+    def __init__(self,name=None, prefix = None ,indexformat = None,index = 1,
+            value=None,units = None,description=None,uncertainty=None, frozen=True,
             continuous=True, aliases=None,prefix_aliases = [],parse_value=fortran_float,
             print_value=None):
 
@@ -171,15 +172,17 @@ class prefixParameter(Parameter):
                 for i in range(len(indexformat)-1,-1,-1):
                     if indexformat[i].isdigit():
                         digitLen+=1
-                self.indexformat_field = indexformat[0:len(indexformat)-digitLen]\
-                                    + '{0:0' +str(digitLen)+'d}'
+                self.indexformat_field = indexformat[0:len(indexformat)-digitLen]
+                self.indexformat_field += '{0:0' +str(digitLen)+'d}'
 
                 name = prefix+self.indexformat_field.format(index)
                 self.prefix = prefix
                 self.indexformat = self.indexformat_field.format(0)
+                self.index = index
         else: # Detect prefix and indexformat from name.
             namefield = re.split('(\d+)',name)
-            if len(namefield)<2 or namefield[-2].isdigit() is False:
+            if len(namefield)<2 or namefield[-2].isdigit() is False\
+               or namefield[-1]!='':
             #When Name has no index in the end or no prefix part.
                 errorMsg = 'Prefix parameter name needs a perfix part'\
                            +' and an index part in the end. '
@@ -192,21 +195,24 @@ class prefixParameter(Parameter):
                 self.indexformat_field = '{0:0' +str(len(indexPart))+'d}'
                 self.indexformat = self.indexformat_field.format(0)
                 self.prefix = ''.join(prefixPart)
-
+                self.index = int(indexPart)
+                
         super(prefixParameter, self).__init__(name=name, value=value,
-                units=unit, description=description,
+                units=units, description=description,
                 uncertainty=uncertainty, frozen=frozen,
                 continuous=continuous,
                 aliases=aliases,
                 parse_value=parse_value,
                 print_value=print_value)
 
-        if unit == 'MJD':
-             parse_value = time_from_mjd_string
-             print_value=time_to_mjd_string
+        if units == 'MJD':
+            self.parse_value = time_from_mjd_string
+            self.print_value=time_to_mjd_string
+        else:
+            self.print_value = str
 
         self.prefix_aliases = prefix_aliases
-
+        self.is_prefix = True
 
     def prefix_matches(self,prefix):
         return (prefix == self.perfix) or (prefix in self.prefix_aliases)
