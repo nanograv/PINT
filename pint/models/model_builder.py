@@ -204,12 +204,11 @@ def add_prefixed_param(modelIns,names):
        ----------
        modelIns : PINT Timing_model class
            The timing model of parameters adding to
-       names : []
-           The name list of prefixed parameters.
-       TODO :
-       Get it more robust. It should not reqire modelIns has one prefixed
-       parameter in it. 
+       names : string or list of strings
+           The name list of prefixed parameters.s
     """
+    if type(names) is str:
+        names = [names,]
     for n in names:
         prefix,indexformat,indexV = split_prefixed_name(n)
         if prefix in modelIns.prefix_params:
