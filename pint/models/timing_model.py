@@ -14,7 +14,8 @@ import astropy.units as u
 ignore_params = ['START', 'FINISH', 'SOLARN0', 'EPHEM', 'CLK', 'UNITS',
                  'TIMEEPH', 'T2CMETHOD', 'CORRECT_TROPOSPHERE', 'DILATEFREQ',
                  'NTOA', 'CLOCK', 'TRES', 'TZRMJD', 'TZRFRQ', 'TZRSITE',
-                 'NITS', 'IBOOT','BINARY']
+                 'NITS', 'IBOOT','BINARY','DMX']
+ignore_prefix = ['DMXF1_','DMXF2_','DMXEP_'] # DMXEP_ for now. 
 
 class Cache(object):
     """Temporarily cache timing model internal computation results.
@@ -364,8 +365,14 @@ class TimingModel(object):
             for par in self.params:
                 if getattr(self, par).from_parfile_line(l):
                     parsed = True
-            if not parsed and l.split()[0] not in ignore_params:
-                log.warn("Unrecognized parfile line '%s'" % l)
+            if not parsed:
+                try:
+                    prefix,f,v = utils.split_prefixed_name(l.split()[0])
+                    if prefix not in ignore_prefix:
+                        log.warn("Unrecognized parfile line '%s'" % l)
+                except:
+                    if l.split()[0] not in ignore_params:
+                        log.warn("Unrecognized parfile line '%s'" % l)
 
         # The "setup" functions contain tests for required parameters or
         # combinations of parameters, etc, that can only be done
