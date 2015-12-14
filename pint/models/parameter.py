@@ -60,7 +60,7 @@ class Parameter(object):
         self.aliases = [] if aliases is None else aliases
         self.parse_value = parse_value
         self.print_value = print_value
-
+        self.paramType = 'Parameter'
     def __str__(self):
         out = self.name
         if self.units is not None:
@@ -147,3 +147,4 @@ class MJDParameter(Parameter):
                 aliases=aliases,
                 parse_value=parse_value,
                 print_value=print_value)
+        self.paramType = 'MJDParameter'
