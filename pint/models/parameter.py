@@ -147,9 +147,3 @@ class MJDParameter(Parameter):
                 aliases=aliases,
                 parse_value=parse_value,
                 print_value=print_value)
-
-class prefixParameter(Parameter):
-    """ This is a Parameter type that is for the parameters with prefix """
-    def __init__(self, name=None, value=None, description=None,
-            uncertainty=None, frozen=True, continuous=True, aliases=None,
-            )
