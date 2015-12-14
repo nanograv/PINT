@@ -227,13 +227,13 @@ class PSRdd(PSRbin):
             er = e + Dr
         """
         # First term
-        term1 = self.alpha()*(-self.der('er',par)-self.der('E',par)*self.sinE)
+        term1 = self.alpha()*(-self.prtl_der('er',par)-self.prtl_der('E',par)*self.sinE)
         # Second term
-        term2 = (self.cosE-self.er())*self.der('alpha',par)
+        term2 = (self.cosE-self.er())*self.prtl_der('alpha',par)
         # Third term
-        term3 = (self.der('beta',par)+self.der('GAMMA',par))*self.sinE
+        term3 = (self.prtl_der('beta',par)+self.prtl_der('GAMMA',par))*self.sinE
         # Fourth term
-        term4 = (self.beta()+self.GAMMA)*self.cosE*self.der('E',par)
+        term4 = (self.beta()+self.GAMMA)*self.cosE*self.prtl_der('E',par)
 
         return term1 + term2 + term3 +term4
     #################################################
@@ -255,12 +255,12 @@ class PSRdd(PSRbin):
 
         """
         # first term
-        term1 = -self.sinE*self.der('alpha',par)
+        term1 = -self.sinE*self.prtl_der('alpha',par)
         # second term
         term2 = -(self.alpha()*self.cosE+  \
-                (self.beta()+self.GAMMA)*self.sinE)*self.der('E',par)
+                (self.beta()+self.GAMMA)*self.sinE)*self.prtl_der('E',par)
         # Third term
-        term3 = self.cosE*(self.der('beta',par)+self.der('GAMMA',par))
+        term3 = self.cosE*(self.prtl_der('beta',par)+self.prtl_der('GAMMA',par))
 
         return term1+term2+term3
 
@@ -284,12 +284,12 @@ class PSRdd(PSRbin):
         """
 
         # first term
-        term1 = -self.cosE*self.der('alpha',par)
+        term1 = -self.cosE*self.prtl_der('alpha',par)
         # second term
         term2 = (self.alpha()*self.sinE -  \
-                (self.beta()+self.GAMMA)*self.cosE)*self.der('E',par)
+                (self.beta()+self.GAMMA)*self.cosE)*self.prtl_der('E',par)
         # Third term
-        term3 = -self.sinE*(self.der('beta',par)+self.der('GAMMA',par))
+        term3 = -self.sinE*(self.prtl_der('beta',par)+self.prtl_der('GAMMA',par))
 
         return term1+term2+term3
     #################################################
@@ -314,9 +314,9 @@ class PSRdd(PSRbin):
         oneMeccTcosE = (1-self.ecc()*self.cosE)
         fctr = -2*np.pi/self.PB/oneMeccTcosE
 
-        return fctr*(self.der('PB',par)/self.PB - \
-               (self.cosE*self.der('ecc',par)+ \
-                self.ecc()*self.sinE*self.der('E',par))/oneMeccTcosE)
+        return fctr*(self.prtl_der('PB',par)/self.PB - \
+               (self.cosE*self.prtl_der('ecc',par)+ \
+                self.ecc()*self.sinE*self.prtl_der('E',par))/oneMeccTcosE)
     #################################################
     @Cache.use_cache
     def delayInverse(self):
@@ -350,8 +350,8 @@ class PSRdd(PSRbin):
         e = self.ecc()
         sE = self.sinE
         cE = self.cosE
-        dE_dpar = self.der('E',par)
-        decc_dpar = self.der('ecc',par)
+        dE_dpar = self.prtl_der('E',par)
+        decc_dpar = self.prtl_der('ecc',par)
 
         Dre = self.Dre()
         Drep = self.Drep()
@@ -387,8 +387,8 @@ class PSRdd(PSRbin):
         e = self.ecc()
         sE = self.sinE
         cE = self.cosE
-        dE_dpar = self.der('E',par)
-        decc_dpar = self.der('ecc',par)
+        dE_dpar = self.prtl_der('E',par)
+        decc_dpar = self.prtl_der('ecc',par)
 
         Dre = self.Dre()
         Drep = self.Drep()
@@ -448,15 +448,15 @@ class PSRdd(PSRbin):
 
         logNum = 1-e*cE-self.SINI*(sOmega*(cE-e)+
                  (1-e**2)**0.5*cOmega*sE)
-        dTM2_dpar = self.der('TM2',par)
+        dTM2_dpar = self.prtl_der('TM2',par)
         dsDelay_dTM2 = -2*np.log(logNum)
-        decc_dpar = self.der('ecc',par)
+        decc_dpar = self.prtl_der('ecc',par)
         dsDelay_decc = -2*self.TM2/logNum*(-cE-self.SINI*(-e*cOmega*sE/np.sqrt(1-e**2)-sOmega))
-        dE_dpar = self.der('E',par)
+        dE_dpar = self.prtl_der('E',par)
         dsDelay_dE =  -2*self.TM2/logNum*(e*sE-self.SINI*(np.sqrt(1-e**2)*cE*cOmega-sE*sOmega))
-        domega_dpar = self.der('omega',par)
+        domega_dpar = self.prtl_der('omega',par)
         dsDelay_domega = -2*self.TM2/logNum*self.SINI*((cE-e)*cOmega-np.sqrt(1-e**2)*sE*sOmega)
-        dSINI_dpar = self.der('SINI',par)
+        dSINI_dpar = self.prtl_der('SINI',par)
         dsDelay_dSINI = -2*self.TM2/logNum*(-np.sqrt(1-e**2)*cOmega*sE-(cE-e)*sOmega)
         return dTM2_dpar*dsDelay_dTM2 + decc_dpar*dsDelay_decc + \
                dE_dpar*dsDelay_dE +domega_dpar*dsDelay_domega +  \
@@ -477,7 +477,7 @@ class PSRdd(PSRbin):
         cE = self.cosE
         sE = self.sinE
 
-        return sE*self.der('GAMMA',par)+self.GAMMA*cE*self.der('E',par)
+        return sE*self.prtl_der('GAMMA',par)+self.GAMMA*cE*self.prtl_der('E',par)
     #################################################
     @Cache.use_cache
     def delayA(self):
@@ -512,14 +512,14 @@ class PSRdd(PSRbin):
         elif par == 'B0':
             return e*cOmega+np.cos(omgPlusAe)
         else:
-            domega_dpar = self.der('omega',par)
+            domega_dpar = self.prtl_der('omega',par)
             daDelay_domega = A0*(np.cos(omgPlusAe)+e*cOmega)- \
                              B0*(np.sin(omgPlusAe)+e*sOmega)
 
-            dnu_dpar = self.der('nu',par)
+            dnu_dpar = self.prtl_der('nu',par)
             daDelay_dnu = A0*np.cos(omgPlusAe)-B0*np.sin(omgPlusAe)
 
-            decc_dpar = self.der('ecc',par)
+            decc_dpar = self.prtl_der('ecc',par)
             daDelay_decc = A0*sOmega+B0*cOmega
 
             return domega_dpar*daDelay_domega + dnu_dpar*daDelay_dnu + decc_dpar*daDelay_decc

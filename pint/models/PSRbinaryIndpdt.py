@@ -87,18 +87,18 @@ class PSRbin(object):
             bdelay+= bdf()
         return bdelay
 
-    def der(self,y,x):
-        """Find the derivitives in binary model
-           dy/dx
+    def prtl_der(self,y,x):
+        """Find the partial derivatives in binary model
+           pdy/pdx
            Parameters
            ---------
            y : str
                Name of variable to be differentiated
            x : str
-               Name of variable the derivitive respect to
+               Name of variable the derivative respect to
            Return
            ---------
-           dy/dx : The derivitives
+           pdy/pdx : The derivatives
         """
         if y not in self.params+self.inter_vars:
             errorMesg = y + " is not in binary parameter and variables list."
@@ -107,7 +107,7 @@ class PSRbin(object):
         if x not in self.inter_vars+self.params:
             errorMesg = x + " is not in binary parameters and variables list."
             raise ValueError(errorMesg)
-        # Derivitive to itself
+        # derivative to itself
         if x == y:
             return np.longdouble(np.ones(len(self.tt0)))*u.Unit('')
         # Get the unit right
@@ -183,7 +183,7 @@ class PSRbin(object):
         else:
             ma = mean_anomaly
         k = lambda E: E-e*np.sin(E)-ma   # Kepler Equation
-        dk = lambda E: 1-e*np.cos(E)     # Derivitive Kepler Equation
+        dk = lambda E: 1-e*np.cos(E)     # derivative Kepler Equation
         U = ma
         while(np.max(abs(k(U)))>5e-15):  # Newton-Raphson method
             U = U-k(U)/dk(U)
@@ -300,7 +300,7 @@ class PSRbin(object):
            dE/dT0(1-cosE*e)-de/dT0*sinE = dM/dT0
            dE/dT0(1-cosE*e)+eDot*sinE = dM/dT0
         """
-        RHS = self.der('M','T0')
+        RHS = self.prtl_der('M','T0')
         E = self.E()
         EDOT = self.EDOT
         ecc = self.ecc()
@@ -405,7 +405,7 @@ class PSRbin(object):
 
     @Cache.use_cache
     def d_omega_d_par(self,par):
-        """Derivitive for omega respect to user input Parameter.
+        """derivative for omega respect to user input Parameter.
            if par is not 'OM','OMDOT','PB'
            dOmega/dPar =  k*dAe/dPar
            k = OMDOT/n
