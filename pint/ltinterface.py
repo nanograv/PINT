@@ -57,7 +57,7 @@ map_units = {
              'PB': u.d,
              'E': u.dimensionless_unscaled,         # == ECC
              'ECC': u.dimensionless_unscaled,
-             'A1': lts,
+             'A1': u.lts,
              'OM': u.deg,
              'EPS1': u.dimensionless_unscaled,
              'EPS2': u.dimensionless_unscaled,
@@ -66,8 +66,8 @@ map_units = {
              'OMDOT': u.deg/u.yr,
              # PBDOT?
              'ECCDOT': 1/u.s,
-             'A1DOT': lts/u.s,                      # == XDOT
-             'XDOT': lts/u.s,
+             'A1DOT': u.lts/u.s,                      # == XDOT
+             'XDOT': u.lts/u.s,
              'GAMMA': u.s,
              # XPBDOT?
              # EPS1DOT, EPS2DOT?
