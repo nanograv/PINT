@@ -96,7 +96,7 @@ def phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.0, siz
     else:
         plt.show()
 
-def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,logeref=4.1, logesig=0.5):
+def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,logeref=4.1, logesig=0.5,minweight=0.0):
     '''
     TOAlist = load_Fermi_TOAs(ft1name,ft2name=None)
       Read photon event times out of a Fermi FT1 file and return
@@ -109,6 +109,8 @@ def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,loge
       as in Philippe Bruel's SearchPulsation code. 
       logeref and logesig are parameters for the weight computation and are only
       used when weightcolumn='CALC'.
+      
+      When weights are loaded, or computed, events are filtered by weight >= minweight
     '''
     import pyfits
     # Load photon times from FT1 file
@@ -148,13 +150,18 @@ def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,loge
     #print >>outfile, "# MJDREF = ",MJDREF
     log.info("MJDREF = {0}".format(MJDREF))
     mjds = np.array(ft1dat.field('TIME'),dtype=np.float128)/86400.0 + MJDREF + TIMEZERO
+    energies = ft1dat.field('ENERGY')*u.MeV
     if weightcolumn is not None:
         if weightcolumn == 'CALC':
             photoncoords = SkyCoord(ft1dat.field('RA')*u.degree,ft1dat.field('DEC')*u.degree,frame='icrs')
             weights = calc_lat_weights(ft1dat.field('ENERGY'), photoncoords.separation(targetcoord), logeref=4.1, logesig=0.5)
         else:
             weights = ft1dat.field(weightcolumn)
-    energies = ft1dat.field('ENERGY')*u.MeV
+        if minweight > 0.0:
+            idx = np.where(weights>minweight)[0]
+            mjds = mjds[idx]
+            energies = energies[idx]
+            weights = weights[idx]
 
     if timesys == 'TDB':
         log.info("Building barycentered TOAs")
