@@ -191,6 +191,10 @@ class emcee_fitter(fitter.fitter):
                 lnsum += 0.0 if 54680.0+100 < val < maxMJD-100 else -np.inf
             elif key=="GLPH_1":
                 lnsum += 0.0 if -0.5 < val < 0.5 else -np.inf
+            elif key=="SINI":
+                lnsum += 0.0 if 0.0 < val < 1.0 else -np.inf
+            elif key=="M2":
+                lnsum += 0.0 if 0.1 < val < 0.6 else -np.inf
             else:  # gaussian prior based on initial param errors
                 lnsum += (-np.log(sig * np.sqrt(2.0 * np.pi)) -
                           (val-mn)**2.0/(2.0*sig**2.0))
@@ -204,6 +208,10 @@ class emcee_fitter(fitter.fitter):
         self.set_params(dict(zip(self.fitkeys, theta)))
         # Make sure parallax is positive if we are fitting for it
         if 'PX' in self.fitkeys and self.model.PX.value < 0.0:
+            return -np.inf
+        if 'SINI' in self.fitkeys and (self.model.SINI.value > 1.0 or self.model.SINI.value < 0.0):
+            return -np.inf
+        if 'E' in self.fitkeys and self.model.E.value < 0.0:
             return -np.inf
         phases = self.get_event_phases()
         lnlikelihood = marginalize_over_phase(phases, self.template,
@@ -288,7 +296,7 @@ class emcee_fitter(fitter.fitter):
         plt.close()
 
 # TODO: make this properly handle long double
-if 1 or not (os.path.isfile(eventfile+".pickle") or
+if not (os.path.isfile(eventfile+".pickle") or
     os.path.isfile(eventfile+".pickle.gz")):
     # Read event file and return list of TOA objects
     tl = fermi.load_Fermi_TOAs(eventfile, weightcolumn=weightcol)
@@ -301,10 +309,17 @@ if 1 or not (os.path.isfile(eventfile+".pickle") or
     ts.filename = eventfile
     ts.compute_TDBs()
     ts.compute_posvels(ephem="DE421", planets=False)
-    if weightcol is not None:
-        weights = np.asarray([x['weight'] for x in ts.table['flags']])
-    else:
-        weights = None
+    ts.pickle()
+else:
+    import cPickle, gzip
+    ts = cPickle.load(gzip.open(eventfile+".pickle.gz"))
+
+if weightcol is not None:
+    weights = np.asarray([x['weight'] for x in ts.table['flags']])
+    print "There are %d events, with minimum weight %.3f" % (len(weights), weights.min())
+else:
+    weights = None
+    print "There are %d events, no weights are being used." % (len(weights))
 
 # Read in initial model
 modelin = pint.models.get_model(parfile)
@@ -367,6 +382,10 @@ if like_start > like_optmin:
             elif param=="GLEP_1":
                 svals = np.random.uniform(54680.0+100, maxMJD-100, nwalkers)
                 #svals = 55422.0 + np.random.randn(nwalkers)
+            elif param=="SINI":
+                svals = np.random.uniform(0.0, 1.0, nwalkers)
+            elif param=="M2":
+                svals = np.random.uniform(0.1, 0.6, nwalkers)
             for ii in range(nwalkers):
                 pos[ii][idx] = svals[ii]
 else:
@@ -382,6 +401,7 @@ if 'PX' in ftr.fitkeys:
             xs[idx] = np.fabs(xs[idx])
 
 import emcee
+#sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior, threads=10)
 sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
 # The number is the number of points in the chain
 sampler.run_mcmc(pos, nsteps)
