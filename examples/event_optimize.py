@@ -9,12 +9,13 @@ import astropy.units as u
 import psr_utils as pu
 import scipy.optimize as op
 import sys, os, copy, fftfit
-
+from astropy.coordinates import SkyCoord
+        
 if len(sys.argv[1:])==4:
     eventfile, parfile, gaussianfile, weightcol = sys.argv[1:]
 elif len(sys.argv[1:])==3:
     eventfile, parfile, gaussianfile = sys.argv[1:]
-    weightcol=None
+    weightcol='CALC'
 else:
     print "usage:  python event_optimize.py eventfile parfile gaussianfile [weightcol]"
     sys.exit()
@@ -25,11 +26,11 @@ burnin = 100
 nsteps = 1000
 nbins = 256 # For likelihood calculation based on gaussians file
 outprof_nbins = 256 # in the text file, for pygaussfit.py, for instance
-maxMJD = 57210.0 # latest MJD to use (limited by IERS file usually)
+maxMJD = 57250.0 # latest MJD to use (limited by IERS file usually)
 # Set minWeight to 0.0 to get plots about how significant the
 # pulsations are before doing an expensive MCMC.  This allows
 # you to set minWeight intelligently.
-minWeight = 0.1 # if using weights, this is the minimum to include
+minWeight = 0.03 # if using weights, this is the minimum to include
 errfact = 10.0 # multiplier for gaussian priors based TEMPO errors
 do_opt_first = False
 
@@ -295,11 +296,20 @@ class emcee_fitter(fitter.fitter):
             plt.savefig(ftr.model.PSR.value+"_htest_v_wgtcut_unweighted.png")
         plt.close()
 
+# Read in initial model
+modelin = pint.models.get_model(parfile)
+# Remove the dispersion delay as it is unnecessary
+modelin.delay_funcs.remove(modelin.dispersion_delay)
+# Set the target coords for automatic weighting if necessary
+target = SkyCoord(modelin.RAJ.value, modelin.DECJ.value, \
+    frame='icrs') if weightcol=='CALC' else None
+
 # TODO: make this properly handle long double
 if not (os.path.isfile(eventfile+".pickle") or
     os.path.isfile(eventfile+".pickle.gz")):
     # Read event file and return list of TOA objects
-    tl = fermi.load_Fermi_TOAs(eventfile, weightcolumn=weightcol)
+    tl = fermi.load_Fermi_TOAs(eventfile, weightcolumn=weightcol,
+                               targetcoord=target, minweight=minWeight)
     # Limit the TOAs to ones where we have IERS corrections for
     tl = [tl[ii] for ii in range(len(tl)) if (tl[ii].mjd.value < maxMJD
         and (weightcol is None or tl[ii].flags['weight'] > minWeight))]
@@ -310,9 +320,8 @@ if not (os.path.isfile(eventfile+".pickle") or
     ts.compute_TDBs()
     ts.compute_posvels(ephem="DE421", planets=False)
     ts.pickle()
-else:
-    import cPickle, gzip
-    ts = cPickle.load(gzip.open(eventfile+".pickle.gz"))
+else:  # read the events in as a picke file
+    ts = toa.TOAs(eventfile, usepickle=True)
 
 if weightcol is not None:
     weights = np.asarray([x['weight'] for x in ts.table['flags']])
@@ -320,11 +329,6 @@ if weightcol is not None:
 else:
     weights = None
     print "There are %d events, no weights are being used." % (len(weights))
-
-# Read in initial model
-modelin = pint.models.get_model(parfile)
-# Remove the dispersion delay as it is unnecessary
-modelin.delay_funcs.remove(modelin.dispersion_delay)
 
 # Now load in the gaussian template and normalize it
 gtemplate = pu.read_gaussfitfile(gaussianfile, nbins)

@@ -344,7 +344,7 @@ class TOA(object):
 class TOAs(object):
     """A class of multiple TOAs, loaded from zero or more files."""
 
-    def __init__(self, toafile=None, toalist=None, toaTable = None, usepickle=True):
+    def __init__(self, toafile=None, toalist=None, toaTable=None, usepickle=True):
         # First, just make an empty container
         self.toas = []
         self.commands = []
