@@ -378,7 +378,7 @@ if like_start > like_optmin:
     pos = [ftr.fitvals + ftr.fiterrs * np.random.randn(ndim)
         for ii in range(nwalkers)]
     # Set starting params with uniform priors to uniform in the prior
-    for param in ["GLPH_1", "GLEP_1"]:
+    for param in ["GLPH_1", "GLEP_1", "SINI", "M2", "E", "PX"]:
         if param in ftr.fitkeys:
             idx = ftr.fitkeys.index(param)
             if param=="GLPH_1":
@@ -390,6 +390,10 @@ if like_start > like_optmin:
                 svals = np.random.uniform(0.0, 1.0, nwalkers)
             elif param=="M2":
                 svals = np.random.uniform(0.1, 0.6, nwalkers)
+            elif param in ["E", "PX"]:
+                # Ensure all positive
+                svals = ftr.fitvals[idx] + ftr.fiterrs[idx] * \
+                    np.fabs(np.random.randn(nwalkers))
             for ii in range(nwalkers):
                 pos[ii][idx] = svals[ii]
 else:
