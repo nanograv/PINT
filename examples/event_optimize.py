@@ -382,7 +382,8 @@ if __name__ == '__main__':
     # scipy.optimize newfitvals instead if they are better
     ndim = ftr.n_fit_params
     if like_start > like_optmin:
-        pos = [ftr.fitvals + ftr.fiterrs * np.random.randn(ndim)
+        # Keep the starting deviations small...
+        pos = [ftr.fitvals + ftr.fiterrs/errfact * np.random.randn(ndim)
             for ii in range(nwalkers)]
         # Set starting params with uniform priors to uniform in the prior
         for param in ["GLPH_1", "GLEP_1", "SINI", "M2", "E", "ECC", "PX"]:
@@ -404,8 +405,11 @@ if __name__ == '__main__':
                 for ii in range(nwalkers):
                     pos[ii][idx] = svals[ii]
     else:
-        pos = [newfitvals + ftr.fiterrs*np.random.randn(ndim)
+        pos = [newfitvals + ftr.fiterrs/errfact*np.random.randn(ndim)
             for i in range(nwalkers)]
+    # Set the 0th walker to have the initial pre-fit solution
+    # This way, one walker should always be in a good position
+    pos[0] = ftr.fitvals
 
     import emcee
     #sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior, threads=10)
