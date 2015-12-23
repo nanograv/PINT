@@ -11,21 +11,13 @@ import scipy.optimize as op
 import sys, os, copy, fftfit
 from astropy.coordinates import SkyCoord
         
-if len(sys.argv[1:])==4:
-    eventfile, parfile, gaussianfile, weightcol = sys.argv[1:]
-elif len(sys.argv[1:])==3:
-    eventfile, parfile, gaussianfile = sys.argv[1:]
-    weightcol='CALC'
-else:
-    print "usage:  python event_optimize.py eventfile parfile gaussianfile [weightcol]"
-    sys.exit()
-
 # Params you might want to edit
 nwalkers = 200
 burnin = 100
 nsteps = 1000
 nbins = 256 # For likelihood calculation based on gaussians file
 outprof_nbins = 256 # in the text file, for pygaussfit.py, for instance
+minMJD = 54680.0 # Earliest MJD (limited by LAT data)
 maxMJD = 57250.0 # latest MJD to use (limited by IERS file usually)
 # Set minWeight to 0.0 to get plots about how significant the
 # pulsations are before doing an expensive MCMC.  This allows
@@ -173,6 +165,7 @@ class emcee_fitter(fitter.fitter):
         for p in fitkeys:
             fitvals.append(getattr(self.model, p).value)
             fiterrs.append(getattr(self.model, p).uncertainty * errfact)
+            # I think the following is just to strip off units from those params
             if p in ["RAJ", "DECJ", "T0", "GLEP_1"]:
                 fitvals[-1] = fitvals[-1].value
                 if p not in ["T0", "GLEP_1"]:
@@ -212,7 +205,10 @@ class emcee_fitter(fitter.fitter):
             return -np.inf
         if 'SINI' in self.fitkeys and (self.model.SINI.value > 1.0 or self.model.SINI.value < 0.0):
             return -np.inf
-        if 'E' in self.fitkeys and self.model.E.value < 0.0:
+        # Do we really need to check both E and ECC or can the model param alias handle that?
+        if 'E' in self.fitkeys and (self.model.E.value < 0.0 or self.model.E.value>=1.0):
+            return -np.inf
+        if 'ECC' in self.fitkeys and (self.model.ECC.value < 0.0 or self.model.ECC.value>=1.0):
             return -np.inf
         phases = self.get_event_phases()
         lnlikelihood = marginalize_over_phase(phases, self.template,
@@ -296,181 +292,184 @@ class emcee_fitter(fitter.fitter):
             plt.savefig(ftr.model.PSR.value+"_htest_v_wgtcut_unweighted.png")
         plt.close()
 
-# Read in initial model
-modelin = pint.models.get_model(parfile)
-# Remove the dispersion delay as it is unnecessary
-modelin.delay_funcs.remove(modelin.dispersion_delay)
-# Set the target coords for automatic weighting if necessary
-target = SkyCoord(modelin.RAJ.value, modelin.DECJ.value, \
-    frame='icrs') if weightcol=='CALC' else None
+if __name__ == '__main__':
 
-# TODO: make this properly handle long double
-if not (os.path.isfile(eventfile+".pickle") or
-    os.path.isfile(eventfile+".pickle.gz")):
-    # Read event file and return list of TOA objects
-    tl = fermi.load_Fermi_TOAs(eventfile, weightcolumn=weightcol,
-                               targetcoord=target, minweight=minWeight)
-    # Limit the TOAs to ones where we have IERS corrections for
-    tl = [tl[ii] for ii in range(len(tl)) if (tl[ii].mjd.value < maxMJD
-        and (weightcol is None or tl[ii].flags['weight'] > minWeight))]
-    print "There are %d events we will use" % len(tl)
-    # Now convert to TOAs object and compute TDBs and posvels
-    ts = toa.TOAs(toalist=tl)
-    ts.filename = eventfile
-    ts.compute_TDBs()
-    ts.compute_posvels(ephem="DE421", planets=False)
-    ts.pickle()
-else:  # read the events in as a picke file
-    ts = toa.TOAs(eventfile, usepickle=True)
-
-if weightcol is not None:
-    weights = np.asarray([x['weight'] for x in ts.table['flags']])
-    print "There are %d events, with minimum weight %.3f" % (len(weights), weights.min())
-else:
-    weights = None
-    print "There are %d events, no weights are being used." % (len(weights))
-
-# Now load in the gaussian template and normalize it
-gtemplate = pu.read_gaussfitfile(gaussianfile, nbins)
-gtemplate /= gtemplate.sum()
-
-# Now define the requirements for emcee
-ftr = emcee_fitter(ts, modelin, gtemplate, weights)
-
-# Use this if you want to see the effect of setting minWeight
-if minWeight == 0.0:
-    ftr.prof_vs_weights(use_weights=True)
-    ftr.prof_vs_weights(use_weights=False)
-    sys.exit()
-
-# Now compute the photon phases and see if we see a pulse
-phss = ftr.get_event_phases()
-maxbin, like_start = marginalize_over_phase(phss, gtemplate,
-    weights=ftr.weights, minimize=True, showplot=False)
-print "Starting pulse likelihood:", like_start
-ftr.phaseogram(file=ftr.model.PSR.value+"_pre.png")
-plt.close()
-#ftr.phaseogram()
-
-# Write out the starting pulse profile
-vs, xs = np.histogram(ftr.get_event_phases(), outprof_nbins, \
-    range=[0,1], weights=ftr.weights)
-f = open(ftr.model.PSR.value+"_prof_pre.txt", 'w')
-for x, v in zip(xs, vs):
-    f.write("%.5f  %12.5f\n" % (x, v))
-f.close()
-
-# Try normal optimization first to see how it goes
-if do_opt_first:
-    result = op.minimize(ftr.minimize_func, np.zeros_like(ftr.fitvals))
-    newfitvals = np.asarray(result['x']) * ftr.fiterrs + ftr.fitvals
-    like_optmin = -result['fun']
-    print "Optimization likelihood:", like_optmin
-    ftr.set_params(dict(zip(ftr.fitkeys, newfitvals)))
-    #ftr.phaseogram()
-else:
-    like_optmin = -np.inf
-
-# Set up the initial conditions for the emcee walkers.  Use the
-# scipy.optimize newfitvals instead if they are better
-ndim = ftr.n_fit_params
-if like_start > like_optmin:
-    pos = [ftr.fitvals + ftr.fiterrs * np.random.randn(ndim)
-        for ii in range(nwalkers)]
-    # Set starting params with uniform priors to uniform in the prior
-    for param in ["GLPH_1", "GLEP_1", "SINI", "M2", "E", "PX"]:
-        if param in ftr.fitkeys:
-            idx = ftr.fitkeys.index(param)
-            if param=="GLPH_1":
-                svals = np.random.uniform(-0.5, 0.5, nwalkers)
-            elif param=="GLEP_1":
-                svals = np.random.uniform(54680.0+100, maxMJD-100, nwalkers)
-                #svals = 55422.0 + np.random.randn(nwalkers)
-            elif param=="SINI":
-                svals = np.random.uniform(0.0, 1.0, nwalkers)
-            elif param=="M2":
-                svals = np.random.uniform(0.1, 0.6, nwalkers)
-            elif param in ["E", "PX"]:
-                # Ensure all positive
-                svals = ftr.fitvals[idx] + ftr.fiterrs[idx] * \
-                    np.fabs(np.random.randn(nwalkers))
-            for ii in range(nwalkers):
-                pos[ii][idx] = svals[ii]
-else:
-    pos = [newfitvals + ftr.fiterrs*np.random.randn(ndim)
-        for i in range(nwalkers)]
-
-# If we are fitting for PX, make sure that the initial conditions
-# are positive for all walkers, since we heavily penalize PX < 0
-if 'PX' in ftr.fitkeys:
-    idx = ftr.fitkeys.index('PX')
-    for xs in pos:
-        if xs[idx] < 0.0:
-            xs[idx] = np.fabs(xs[idx])
-
-import emcee
-#sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior, threads=10)
-sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
-# The number is the number of points in the chain
-sampler.run_mcmc(pos, nsteps)
-
-def chains_to_dict(names, sampler):
-    chains = [sampler.chain[:,:,ii].T for ii in range(len(names))]
-    return dict(zip(names,chains))
-
-def plot_chains(chain_dict, file=False):
-    np = len(chain_dict)
-    fig, axes = plt.subplots(np, 1, sharex=True, figsize=(8, 9))
-    for ii, name in enumerate(chain_dict.keys()):
-        axes[ii].plot(chain_dict[name], color="k", alpha=0.3)
-        axes[ii].set_ylabel(name)
-    axes[np-1].set_xlabel("Step Number")
-    fig.tight_layout()
-    if file:
-        fig.savefig(file)
-        plt.close()
+    if len(sys.argv[1:])==4:
+        eventfile, parfile, gaussianfile, weightcol = sys.argv[1:]
+    elif len(sys.argv[1:])==3:
+        eventfile, parfile, gaussianfile = sys.argv[1:]
+        weightcol=None
     else:
-        plt.show()
-        plt.close()
+        print "usage:  python event_optimize.py eventfile parfile gaussianfile [weightcol]"
+        sys.exit()
 
-chains = chains_to_dict(ftr.fitkeys, sampler)
-plot_chains(chains, file=ftr.model.PSR.value+"_chains.png")
+    # Read in initial model
+    modelin = pint.models.get_model(parfile)
+    # Remove the dispersion delay as it is unnecessary
+    modelin.delay_funcs.remove(modelin.dispersion_delay)
+    # Set the target coords for automatic weighting if necessary
+    target = SkyCoord(modelin.RAJ.value, modelin.DECJ.value, \
+        frame='icrs') if weightcol=='CALC' else None
 
-# Make the triangle plot.
-import corner
-samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
-fig = corner.corner(samples, labels=ftr.fitkeys, bins=50)
-fig.savefig(ftr.model.PSR.value+"_triangle.png")
-plt.close()
+    # TODO: make this properly handle long double
+    if not (os.path.isfile(eventfile+".pickle") or
+        os.path.isfile(eventfile+".pickle.gz")):
+        # Read event file and return list of TOA objects
+        tl = fermi.load_Fermi_TOAs(eventfile, weightcolumn=weightcol,
+                                   targetcoord=target, minweight=minWeight)
+        # Limit the TOAs to ones where we have IERS corrections for
+        tl = [tl[ii] for ii in range(len(tl)) if (tl[ii].mjd.value < maxMJD
+            and (weightcol is None or tl[ii].flags['weight'] > minWeight))]
+        print "There are %d events we will use" % len(tl)
+        # Now convert to TOAs object and compute TDBs and posvels
+        ts = toa.TOAs(toalist=tl)
+        ts.filename = eventfile
+        ts.compute_TDBs()
+        ts.compute_posvels(ephem="DE421", planets=False)
+        ts.pickle()
+    else:  # read the events in as a picke file
+        ts = toa.TOAs(eventfile, usepickle=True)
 
-# Make a phaseogram with the 50th percentile values
-#ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
-# Make a phaseogram with the best MCMC result
-ftr.set_params(dict(zip(ftr.fitkeys, ftr.maxpost_fitvals)))
-ftr.phaseogram(file=ftr.model.PSR.value+"_post.png")
-plt.close()
+    if weightcol is not None:
+        weights = np.asarray([x['weight'] for x in ts.table['flags']])
+        print "There are %d events, with minimum weight %.3f" % (len(weights), weights.min())
+    else:
+        weights = None
+        print "There are %d events, no weights are being used." % (len(weights))
 
-# Write out the output pulse profile
-vs, xs = np.histogram(ftr.get_event_phases(), outprof_nbins, \
-    range=[0,1], weights=ftr.weights)
-f = open(ftr.model.PSR.value+"_prof_post.txt", 'w')
-for x, v in zip(xs, vs):
-    f.write("%.5f  %12.5f\n" % (x, v))
-f.close()
+    # Now load in the gaussian template and normalize it
+    gtemplate = pu.read_gaussfitfile(gaussianfile, nbins)
+    gtemplate /= gtemplate.sum()
 
-# Print the best MCMC values and ranges
-ranges = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
-    zip(*np.percentile(samples, [16, 50, 84], axis=0)))
-print "Post-MCMC values (50th percentile +/- (16th/84th percentile):"
-for name, vals in zip(ftr.fitkeys, ranges):
-    print "%8s:"%name, "%25.15g (+ %12.5g  / - %12.5g)"%vals
+    # Now define the requirements for emcee
+    ftr = emcee_fitter(ts, modelin, gtemplate, weights)
 
-# Put the same stuff in a file
-f = open(ftr.model.PSR.value+"_results.txt", 'w')
-f.write("Post-MCMC values (50th percentile +/- (16th/84th percentile):\n")
-for name, vals in zip(ftr.fitkeys, ranges):
-    f.write("%8s:"%name + " %25.15g (+ %12.5g  / - %12.5g)\n"%vals)
-f.close()
+    # Use this if you want to see the effect of setting minWeight
+    if minWeight == 0.0:
+        ftr.prof_vs_weights(use_weights=True)
+        ftr.prof_vs_weights(use_weights=False)
+        sys.exit()
 
-import cPickle
-cPickle.dump(samples, open(ftr.model.PSR.value+"_samples.pickle", "wb"))
+    # Now compute the photon phases and see if we see a pulse
+    phss = ftr.get_event_phases()
+    maxbin, like_start = marginalize_over_phase(phss, gtemplate,
+        weights=ftr.weights, minimize=True, showplot=False)
+    print "Starting pulse likelihood:", like_start
+    ftr.phaseogram(file=ftr.model.PSR.value+"_pre.png")
+    plt.close()
+    #ftr.phaseogram()
+
+    # Write out the starting pulse profile
+    vs, xs = np.histogram(ftr.get_event_phases(), outprof_nbins, \
+        range=[0,1], weights=ftr.weights)
+    f = open(ftr.model.PSR.value+"_prof_pre.txt", 'w')
+    for x, v in zip(xs, vs):
+        f.write("%.5f  %12.5f\n" % (x, v))
+    f.close()
+
+    # Try normal optimization first to see how it goes
+    if do_opt_first:
+        result = op.minimize(ftr.minimize_func, np.zeros_like(ftr.fitvals))
+        newfitvals = np.asarray(result['x']) * ftr.fiterrs + ftr.fitvals
+        like_optmin = -result['fun']
+        print "Optimization likelihood:", like_optmin
+        ftr.set_params(dict(zip(ftr.fitkeys, newfitvals)))
+        #ftr.phaseogram()
+    else:
+        like_optmin = -np.inf
+
+    # Set up the initial conditions for the emcee walkers.  Use the
+    # scipy.optimize newfitvals instead if they are better
+    ndim = ftr.n_fit_params
+    if like_start > like_optmin:
+        pos = [ftr.fitvals + ftr.fiterrs * np.random.randn(ndim)
+            for ii in range(nwalkers)]
+        # Set starting params with uniform priors to uniform in the prior
+        for param in ["GLPH_1", "GLEP_1", "SINI", "M2", "E", "ECC", "PX"]:
+            if param in ftr.fitkeys:
+                idx = ftr.fitkeys.index(param)
+                if param=="GLPH_1":
+                    svals = np.random.uniform(-0.5, 0.5, nwalkers)
+                elif param=="GLEP_1":
+                    svals = np.random.uniform(minMJD+100, maxMJD-100, nwalkers)
+                    #svals = 55422.0 + np.random.randn(nwalkers)
+                elif param=="SINI":
+                    svals = np.random.uniform(0.0, 1.0, nwalkers)
+                elif param=="M2":
+                    svals = np.random.uniform(0.1, 0.6, nwalkers)
+                elif param in ["E", "ECC", "PX"]:
+                    # Ensure all positive
+                    svals = ftr.fitvals[idx] + ftr.fiterrs[idx] * \
+                        np.fabs(np.random.randn(nwalkers))
+                for ii in range(nwalkers):
+                    pos[ii][idx] = svals[ii]
+    else:
+        pos = [newfitvals + ftr.fiterrs*np.random.randn(ndim)
+            for i in range(nwalkers)]
+
+    import emcee
+    #sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior, threads=10)
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
+    # The number is the number of points in the chain
+    sampler.run_mcmc(pos, nsteps)
+
+    def chains_to_dict(names, sampler):
+        chains = [sampler.chain[:,:,ii].T for ii in range(len(names))]
+        return dict(zip(names,chains))
+
+    def plot_chains(chain_dict, file=False):
+        np = len(chain_dict)
+        fig, axes = plt.subplots(np, 1, sharex=True, figsize=(8, 9))
+        for ii, name in enumerate(chain_dict.keys()):
+            axes[ii].plot(chain_dict[name], color="k", alpha=0.3)
+            axes[ii].set_ylabel(name)
+        axes[np-1].set_xlabel("Step Number")
+        fig.tight_layout()
+        if file:
+            fig.savefig(file)
+            plt.close()
+        else:
+            plt.show()
+            plt.close()
+
+    chains = chains_to_dict(ftr.fitkeys, sampler)
+    plot_chains(chains, file=ftr.model.PSR.value+"_chains.png")
+
+    # Make the triangle plot.
+    import corner
+    samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
+    fig = corner.corner(samples, labels=ftr.fitkeys, bins=50)
+    fig.savefig(ftr.model.PSR.value+"_triangle.png")
+    plt.close()
+
+    # Make a phaseogram with the 50th percentile values
+    #ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
+    # Make a phaseogram with the best MCMC result
+    ftr.set_params(dict(zip(ftr.fitkeys, ftr.maxpost_fitvals)))
+    ftr.phaseogram(file=ftr.model.PSR.value+"_post.png")
+    plt.close()
+
+    # Write out the output pulse profile
+    vs, xs = np.histogram(ftr.get_event_phases(), outprof_nbins, \
+        range=[0,1], weights=ftr.weights)
+    f = open(ftr.model.PSR.value+"_prof_post.txt", 'w')
+    for x, v in zip(xs, vs):
+        f.write("%.5f  %12.5f\n" % (x, v))
+    f.close()
+
+    # Print the best MCMC values and ranges
+    ranges = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
+        zip(*np.percentile(samples, [16, 50, 84], axis=0)))
+    print "Post-MCMC values (50th percentile +/- (16th/84th percentile):"
+    for name, vals in zip(ftr.fitkeys, ranges):
+        print "%8s:"%name, "%25.15g (+ %12.5g  / - %12.5g)"%vals
+
+    # Put the same stuff in a file
+    f = open(ftr.model.PSR.value+"_results.txt", 'w')
+    f.write("Post-MCMC values (50th percentile +/- (16th/84th percentile):\n")
+    for name, vals in zip(ftr.fitkeys, ranges):
+        f.write("%8s:"%name + " %25.15g (+ %12.5g  / - %12.5g)\n"%vals)
+    f.close()
+
+    import cPickle
+    cPickle.dump(samples, open(ftr.model.PSR.value+"_samples.pickle", "wb"))
