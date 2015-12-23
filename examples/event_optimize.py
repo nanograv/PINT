@@ -25,6 +25,8 @@ maxMJD = 57250.0 # latest MJD to use (limited by IERS file usually)
 minWeight = 0.03 # if using weights, this is the minimum to include
 errfact = 10.0 # multiplier for gaussian priors based TEMPO errors
 do_opt_first = False
+# Raise the calculated weights to this power
+wgtexp = 0.5
 
 # initialization values
 maxpost = -9e99
@@ -331,8 +333,19 @@ if __name__ == '__main__':
         ts = toa.TOAs(eventfile, usepickle=True)
 
     if weightcol is not None:
+        if weightcol=='CALC':
+            weights = np.asarray([x['weight'] for x in ts.table['flags']])
+            print "Original weights have min / max weights %.3f / %.3f" % \
+                (weights.min(), weights.max())
+            weights **= wgtexp
+            wmx, wmn = weights.max(), weights.min()
+                # make the highest weight = 1, but keep min weight the same
+            weights = wmn + ((weights - wmn) * (1.0 - wmn) / (wmx - wmn))
+            for ii, x in enumerate(ts.table['flags']):
+                x['weight'] = weights[ii]
         weights = np.asarray([x['weight'] for x in ts.table['flags']])
-        print "There are %d events, with minimum weight %.3f" % (len(weights), weights.min())
+        print "There are %d events, with min / max weights %.3f / %.3f" % \
+            (len(weights), weights.min(), weights.max())
     else:
         weights = None
         print "There are %d events, no weights are being used." % (len(weights))
