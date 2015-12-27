@@ -19,8 +19,7 @@ class SolarSystemShapiro(TimingModel):
             description="Include planetary Shapiro delays (Y/N)",
             parse_value=lambda x: x.upper() == 'Y',
             print_value=lambda x: 'Y' if x else 'N'))
-
-        self.delay_funcs += [self.solar_system_shapiro_delay,]
+        self.delay_funcs['L1'] += [self.solar_system_shapiro_delay,]
 
     def setup(self):
         super(SolarSystemShapiro, self).setup()
