@@ -100,7 +100,10 @@ class TimingModel(object):
     def __init__(self):
         self.params = []  # List of model parameter names
         self.params = []  # List of model parameter names
-        self.delay_funcs = [] # List of delay component functions
+        self.delay_funcs = {'L1':[],'L2':[]} # List of delay component functions
+        # L1 is the first level of delays. L1 delay does not need barycentric toas
+        # After L1 delay, the toas have been corrected to solar system barycenter. 
+        # L2 is the second level of delays. L2 delay need barycentric toas
         self.phase_funcs = [] # List of phase component functions
         self.cache = None
         self.add_param(Parameter(name="PSR",
@@ -108,6 +111,7 @@ class TimingModel(object):
             description="Source name",
             aliases=["PSRJ", "PSRB"],
             parse_value=str))
+        self.model_type = None
 
     def setup(self):
         pass
@@ -144,23 +148,18 @@ class TimingModel(object):
         Return the total delay which will be subtracted from the given
         TOA to get time of emission at the pulsar.
         """
-        toasObs = toas['tdbld']
         delay = np.zeros(len(toas))
+        for dlevel in self.delay_funcs.keys():
+            for df in self.delay_funcs[dlevel]:
+                delay += df(toas)
 
-        for df in self.delay_funcs:
-            delay += df(toas)
-
-        if hasattr(self,'binary_delay'):
-            bdelay = getattr(self,'binary_delay')(toas)
-            return delay + (bdelay.to('second')).value
-        else:
-            return delay
+        return delay
 
     @Cache.use_cache
     def get_barycentric_toas(self,toas):
         toasObs = toas['tdbld']
         delay = np.zeros(len(toas))
-        for df in self.delay_funcs:
+        for df in self.delay_funcs['L1']:
             delay += df(toas)
         toasBary = toasObs*u.day - delay*u.second
         return toasBary
