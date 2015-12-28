@@ -14,8 +14,8 @@ import astropy.units as u
 ignore_params = ['START', 'FINISH', 'SOLARN0', 'EPHEM', 'CLK', 'UNITS',
                  'TIMEEPH', 'T2CMETHOD', 'CORRECT_TROPOSPHERE', 'DILATEFREQ',
                  'NTOA', 'CLOCK', 'TRES', 'TZRMJD', 'TZRFRQ', 'TZRSITE',
-                 'NITS', 'IBOOT','BINARY','DMX']
-ignore_prefix = ['DMXF1_','DMXF2_','DMXEP_'] # DMXEP_ for now. 
+                 'NITS', 'IBOOT','BINARY']
+ignore_prefix = ['DMXF1_','DMXF2_','DMXEP_'] # DMXEP_ for now.
 
 class Cache(object):
     """Temporarily cache timing model internal computation results.

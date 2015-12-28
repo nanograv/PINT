@@ -12,7 +12,7 @@ import pint.utils as ut
 # as we don't really use the "pc cm^3" units on DM.
 # But the time and freq portions are correct
 DMconst = 1.0/2.41e-4 * u.MHz * u.MHz * u.s
-# TODO split simple dispersion and DMX dispearion. 
+# TODO split simple dispersion and DMX dispearion.
 class Dispersion(TimingModel):
     """This class provides a timing model for a simple constant
     dispersion measure.
@@ -24,6 +24,9 @@ class Dispersion(TimingModel):
         self.add_param(Parameter(name="DM",
             units="pc cm^-3", value=0.0,
             description="Dispersion measure"))
+        self.add_param(Parameter(name="DMX",
+            units="pc cm^-3", value=0.0,
+            description="Dispersion measure")) # DMX is for info output right now
         self.add_param(prefixParameter(prefix = 'DMX_',indexformat = '0000',
             units = "pc cm^-3", value=0.0,
             description='Dispersion measure variation'))
