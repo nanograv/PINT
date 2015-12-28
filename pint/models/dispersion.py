@@ -22,7 +22,7 @@ class Dispersion(TimingModel):
         self.add_param(Parameter(name="DM",
             units="pc cm^-3", value=0.0,
             description="Dispersion measure"))
-        self.delay_funcs['L1'] += [self.dispersion_delay,]
+        self.delay_funcs += [self.dispersion_delay,]
 
     def setup(self):
         super(Dispersion, self).setup()

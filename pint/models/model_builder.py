@@ -7,18 +7,15 @@ from .timing_model import generate_timing_model
 from .astrometry import Astrometry
 from .dispersion import Dispersion
 from .spindown import Spindown
-
-from .DDbinaryModel import DD
-
 from .glitch import Glitch
+from .dd import DD
 from .bt import BT
 from .solar_system_shapiro import SolarSystemShapiro
-from .dd_wapper import DDwrapper
+
 # List with all timing model components we will consider when pre-processing a
 # parfile
-
 ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro,
-                  BT, DDwrapper, Glitch]
+                  BT, DD, Glitch]
 
 class model_builder(object):
     """A class for model construction interface.
@@ -26,15 +23,15 @@ class model_builder(object):
         ---------
         name : str
             Name for the model.
-        parfile : str optional
-            The .par file input for select components. If the parfile is
+        parfile : str optional 
+            The .par file input for select components. If the parfile is 
             provided the self.model_instance will be put model instance
             with .par file read in. If it is not provided, self.model_instance
             will return as None.
 
         Return
         ---------
-        A class contains the result model instance if parfile is provided and
+        A class contains the result model instance if parfile is provided and 
         method to build the model.
 
         Examples:
@@ -44,8 +41,7 @@ class model_builder(object):
         [2] psrJ1955 = mb.model_instance
 
         Build model from sketch and read parfile:
-
-        [1] from .bt import BT
+        [1] from .bt import BT 
         [2] mb = model_builder("BT_model")
         [3] mb.add_components(BT)
         [4] psrJ1955 = mb.get_model_instance('J1955.par')
@@ -75,7 +71,7 @@ class model_builder(object):
         if self.model_instance is not None:
             result += 'Read parameters from : '+ self.parfile +'\n'
             result += 'The model instance is :\n'+str(self.model_instance)
-
+            
         return result
 
     def preprocess_parfile(self,parfile):
@@ -89,7 +85,7 @@ class model_builder(object):
         for l in [pl.strip() for pl in pfile.readlines()]:
             # Skip blank lines
             if not l:
-                continue
+                continue            
                 # Skip commented lines
             if l.startswith('#') or l[:2]=="C ":
                 continue
@@ -113,7 +109,7 @@ class model_builder(object):
                     self.select_comp.append(c)
 
     def build_model(self):
-        """ Return a model with all components listed in the self.components
+        """ Return a model with all components listed in the self.components 
         list.
         """
         if self.select_comp ==[]:
@@ -122,7 +118,7 @@ class model_builder(object):
         return generate_timing_model(self.name,tuple(self.select_comp))
 
     def add_components(self,components):
-        """ Add new components to constructing model.
+        """ Add new components to constructing model. 
         """
         if not isinstance(components,list):
     	   components = [components,]
@@ -158,7 +154,7 @@ def get_model(parfile):
 
         Return
         ---------
-        Model instance get from parfile.
+        Model instance get from parfile.  
     """
     name = os.path.basename(os.path.splitext(parfile)[0])
 

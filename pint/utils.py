@@ -284,21 +284,6 @@ def str2longdouble(str):
     """Return a numpy long double scalar from the input string, using strtold()"""
     return str2ldarr1(str)[0]
 
-
-def data2longdouble(data):
-    """Return a numpy long double scalar form different type of data
-       Parameters
-       ---------
-       data : str, ndarray, or a number
-       Return
-       ---------
-       numpy long double type of data.
-    """
-    if type(data) is str:
-        return str2longdouble(data)
-    else:
-        return np.longdouble(data)
-
 def taylor_horner(x, coeffs):
     """Evaluate a Taylor series of coefficients at x via the Horner scheme.
 
