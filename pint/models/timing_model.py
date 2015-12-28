@@ -5,7 +5,7 @@ from .parameter import Parameter
 from ..phase import Phase
 from astropy import log
 import numpy as np
-import pint.toa as toa 
+import pint.toa as toa
 import pint.utils as utils
 import astropy.units as u
 
@@ -100,7 +100,10 @@ class TimingModel(object):
     def __init__(self):
         self.params = []  # List of model parameter names
         self.params = []  # List of model parameter names
-        self.delay_funcs = [] # List of delay component functions
+        self.delay_funcs = {'L1':[],'L2':[]} # List of delay component functions
+        # L1 is the first level of delays. L1 delay does not need barycentric toas
+        # After L1 delay, the toas have been corrected to solar system barycenter. 
+        # L2 is the second level of delays. L2 delay need barycentric toas
         self.phase_funcs = [] # List of phase component functions
         self.cache = None
         self.add_param(Parameter(name="PSR",
@@ -108,13 +111,16 @@ class TimingModel(object):
             description="Source name",
             aliases=["PSRJ", "PSRB"],
             parse_value=str))
+        self.model_type = None
 
     def setup(self):
         pass
 
-    def add_param(self, param):
+    def add_param(self, param,binary_param = False):
         setattr(self, param.name, param)
         self.params += [param.name,]
+        if binary_param is True:
+            self.binary_params +=[param.name,]
 
     def param_help(self):
         """Print help lines for all available parameters in model.
@@ -143,9 +149,20 @@ class TimingModel(object):
         TOA to get time of emission at the pulsar.
         """
         delay = np.zeros(len(toas))
-        for df in self.delay_funcs:
-            delay += df(toas)
+        for dlevel in self.delay_funcs.keys():
+            for df in self.delay_funcs[dlevel]:
+                delay += df(toas)
+
         return delay
+
+    @Cache.use_cache
+    def get_barycentric_toas(self,toas):
+        toasObs = toas['tdbld']
+        delay = np.zeros(len(toas))
+        for df in self.delay_funcs['L1']:
+            delay += df(toas)
+        toasBary = toasObs*u.day - delay*u.second
+        return toasBary
 
     def d_phase_d_tpulsar(self, toas):
         """Return the derivative of phase wrt time at the pulsar.
@@ -154,7 +171,7 @@ class TimingModel(object):
         """
         pass
 
-    def d_phase_d_toa(self, toas, time_intval = 60 ,method = None, 
+    def d_phase_d_toa(self, toas, time_intval = 60 ,method = None,
                       num_sample = 20, order = 11):
         """Return the derivative of phase wrt TOA
             time_intval: is in seconds
@@ -164,8 +181,8 @@ class TimingModel(object):
         """
         d_phase_d_toa = np.zeros(len(toas))
 
-        if method is None or "FDM":  
-        # Using finite difference to calculate the derivitve  
+        if method is None or "FDM":
+        # Using finite difference to calculate the derivitve
             dt = np.longdouble(time_intval)/np.longdouble(num_sample)
             num_sample = int(num_sample)/2*2+1
 
@@ -174,10 +191,10 @@ class TimingModel(object):
                 # Resample the toa points
                 domain = (toa_utc_ld-time_intval/2.0,toa_utc_ld+time_intval/2.0)
                 sample = np.linspace(domain[0],domain[1],num_sample)
-            
+
                 toa_list = []
                 for sample_time in sample:
-                    toa_list.append(toa.TOA((np.modf(sample_time)[1], 
+                    toa_list.append(toa.TOA((np.modf(sample_time)[1],
                                 np.modf(sample_time)[0]),obs = singal_toa['obs'],
                                 freq = singal_toa['freq']))
 
@@ -189,17 +206,17 @@ class TimingModel(object):
                 reduce_samepl = np.array((sample-sample.min())*86400.0,dtype = 'float64')
                 dx = np.gradient(reduce_samepl)
                 dp = np.gradient(p-p.mean(),dx)
-                d_phase_d_toa[i] = dp[num_sample/2]            
+                d_phase_d_toa[i] = dp[num_sample/2]
 
         if method is "chebyshev":
-        # Using chebyshev interpolation to calculate the 
+        # Using chebyshev interpolation to calculate the
 
             for i,singal_toa in enumerate(toas):
                 # Have more sample point around toa
                 toa_utc_ld = utils.time_to_longdouble(singal_toa['mjd'])
                 domain = (toa_utc_ld-time_intval/2.0,toa_utc_ld+time_intval/2.0)
                 sample = np.linspace(domain[0],domain[1],num_sample)
-                
+
                 toa_list = []
                 for sample_time in sample:
                     toa_list.append(toa.TOA((np.modf(sample_time)[1],
@@ -338,10 +355,10 @@ class TimingModel(object):
 
     def is_in_parfile(self,para_dict):
         """ Check if this subclass inclulded in parfile.
-            Parameters 
+            Parameters
             ------------
-            para_dict : dictionary 
-                A dictionary contain all the parameters with values in string 
+            para_dict : dictionary
+                A dictionary contain all the parameters with values in string
                 from one parfile
             Return
             ------------
@@ -354,20 +371,20 @@ class TimingModel(object):
 
         pNames_inModel = self.params
 
-        # Remove the common parameter PSR 
+        # Remove the common parameter PSR
         try:
             del pNames_inModel[pNames_inModel.index('PSR')]
         except:
             pass
 
         # For solar system shapiro delay component
-        if hasattr(self,'PLANET_SHAPIRO'): 
+        if hasattr(self,'PLANET_SHAPIRO'):
             if "NO_SS_SHAPIRO" in pNames_inpar:
                 return False
             else:
                 return True
 
-        
+
         # For Binary model component
         try:
             if getattr(self,'BinaryModelName') == para_dict['BINARY'][0]:
@@ -376,23 +393,23 @@ class TimingModel(object):
                 return False
         except:
             pass
-        
+
         # Compare the componets parameter names with par file parameters
         compr = list(set(pNames_inpar).intersection(pNames_inModel))
 
         if compr==[]:
-            # Check aliases 
+            # Check aliases
             for p in pNames_inModel:
                 al = getattr(self,p).aliases
                 # No aliase in parameters
                 if al == []:
                     continue
-                # Find alise check if match any of parameter name in parfile    
+                # Find alise check if match any of parameter name in parfile
                 if list(set(pNames_inpar).intersection(al)):
                     return True
                 else:
                     continue
-            
+
             return False
 
         return True
