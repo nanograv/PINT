@@ -1,4 +1,4 @@
-PSR              1744-1134   
+PSR              1744-1134
 RAJ      17:44:29.40543836  0          0.00000086
 DECJ     -11:34:54.6780671  0           0.0000500
 PMRA               18.6713  0              0.0084
@@ -18,7 +18,7 @@ UNITS               TDB
 TIMEEPH             FB90
 C T2CMETHOD           TEMPO
 CORRECT_TROPOSPHERE N
-PLANET_SHAPIRO      N
+#PLANET_SHAPIRO      N
 C DILATEFREQ          N
 NTOA                  1462
 TRES                  1.16
