@@ -312,7 +312,7 @@ class TimingModel(object):
         for par in self.params:
             result += getattr(self, par).as_parfile_line()
         # Always include UNITS in par file. For now, PINT only supports TDB
-        result += "UNITS TDB\"
+        result += "UNITS TDB"
         return result
 
     def read_parfile(self, filename):
