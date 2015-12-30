@@ -449,6 +449,7 @@ if __name__ == '__main__':
     ftr.set_params(dict(zip(ftr.fitkeys, ftr.maxpost_fitvals)))
     ftr.phaseogram(file=ftr.model.PSR.value+"_post.png")
     plt.close()
+    
 
     # Write out the output pulse profile
     vs, xs = np.histogram(ftr.get_event_phases(), outprof_nbins, \
@@ -457,7 +458,12 @@ if __name__ == '__main__':
     for x, v in zip(xs, vs):
         f.write("%.5f  %12.5f\n" % (x, v))
     f.close()
-
+    
+    # Write out the par file for the best MCMC parameter est
+    f = open(ftr.model.PSR.value+"_post.par", 'w')
+    f.write(ftr.model.as_parfile())
+    f.close()
+    
     # Print the best MCMC values and ranges
     ranges = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
         zip(*np.percentile(samples, [16, 50, 84], axis=0)))
@@ -467,9 +473,13 @@ if __name__ == '__main__':
 
     # Put the same stuff in a file
     f = open(ftr.model.PSR.value+"_results.txt", 'w')
+
     f.write("Post-MCMC values (50th percentile +/- (16th/84th percentile):\n")
     for name, vals in zip(ftr.fitkeys, ranges):
         f.write("%8s:"%name + " %25.15g (+ %12.5g  / - %12.5g)\n"%vals)
+    
+    f.write("\nMaximum likelihood par file:\n")
+    f.write(ftr.model.as_parfile())
     f.close()
 
     import cPickle
