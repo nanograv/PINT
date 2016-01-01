@@ -8,8 +8,45 @@ import pint.models
 import pint.residuals
 import astropy.units as u
 import matplotlib.pyplot as plt
+from astropy.coordinates import SkyCoord
 
 from astropy import log
+
+def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
+    """
+    This function computes photon weights based on the energy-dependent
+    PSF, as defined in Philippe Bruel's SearchPulsation code.
+    It was built by David Smith, based on some code from Lucas Guillemot.
+    This computation uses only the PSF as a function of energy, not a full
+    spectral model of the region, so is less exact than gtsrcprob.
+    
+    The input values are:
+    energies : Array of photon energies in MeV
+    angseps : Angular separations between photon direction and target
+              This should be astropy Angle array, such as returned from
+              SkyCoord_photons.separation(SkyCoord_target)
+    logeref : Parameter from SearchPulsation optimization
+    logesig : Parameter from SearchPulsation optimization
+    
+    Returns a numpy array of weights (probabilities that the photons came
+    from the target, based on the PSF).
+
+    """
+    # A few parameters that define the PSF shape
+    psfpar0 =  5.445
+    psfpar1 =  0.848
+    psfpar2 =  0.084
+    norm = 1.
+    gam = 2.
+    scalepsf = 3.
+
+    logE = np.log10(energies)
+    
+    sigma = np.sqrt(psfpar0*psfpar0*np.power(100./energies, 2.*psfpar1) + psfpar2*psfpar2)/scalepsf
+    
+    fgeom = norm*np.power(1+angseps.degree*angseps.degree/2./gam/sigma/sigma, -gam)
+
+    return fgeom * np.exp(-np.power((logE-logeref)/np.sqrt(2.)/logesig,2.))	
 
 def phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.0, size=5,
     alpha=0.25, file=False):
@@ -59,13 +96,21 @@ def phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.0, siz
     else:
         plt.show()
 
-def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None):
+def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,logeref=4.1, logesig=0.5,minweight=0.0):
     '''
     TOAlist = load_Fermi_TOAs(ft1name,ft2name=None)
       Read photon event times out of a Fermi FT1 file and return
       a list of PINT TOA objects.
       Correctly handles raw FT1 files, or ones processed with gtbary
       to have barycentered or geocentered TOAs.
+      
+      weightcolumn specifies the FITS column name to read the photon weights
+      from.  The special value 'CALC' causes the weights to be computed empirically
+      as in Philippe Bruel's SearchPulsation code. 
+      logeref and logesig are parameters for the weight computation and are only
+      used when weightcolumn='CALC'.
+      
+      When weights are loaded, or computed, events are filtered by weight >= minweight
     '''
     import pyfits
     # Load photon times from FT1 file
@@ -105,9 +150,18 @@ def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None):
     #print >>outfile, "# MJDREF = ",MJDREF
     log.info("MJDREF = {0}".format(MJDREF))
     mjds = np.array(ft1dat.field('TIME'),dtype=np.float128)/86400.0 + MJDREF + TIMEZERO
-    if weightcolumn is not None:
-        weights = ft1dat.field(weightcolumn)
     energies = ft1dat.field('ENERGY')*u.MeV
+    if weightcolumn is not None:
+        if weightcolumn == 'CALC':
+            photoncoords = SkyCoord(ft1dat.field('RA')*u.degree,ft1dat.field('DEC')*u.degree,frame='icrs')
+            weights = calc_lat_weights(ft1dat.field('ENERGY'), photoncoords.separation(targetcoord), logeref=4.1, logesig=0.5)
+        else:
+            weights = ft1dat.field(weightcolumn)
+        if minweight > 0.0:
+            idx = np.where(weights>minweight)[0]
+            mjds = mjds[idx]
+            energies = energies[idx]
+            weights = weights[idx]
 
     if timesys == 'TDB':
         log.info("Building barycentered TOAs")
@@ -138,15 +192,16 @@ if __name__ == '__main__':
     planets = True
     parfile = 'PSRJ0030+0451_psrcat.par'
     #eventfile = 'J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_GEO_short.fits'
-    eventfile = 'J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_BARY_short.fits'
-    weightcol = 'PSRJ0030+0451'
+    eventfile = 'J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_BARY.fits'
+    #weightcol = 'PSRJ0030+0451'
+    weightcol = None # 'CALC'
 
     #eventfile = 'J0740+6620_P8_15.0deg_239557517_458611204_ft1weights_GEO_short.fits'
     #parfile = 'J0740+6620.par'
     #weightcol = 'PSRJ0740+6620'
 
     # Read event file and return list of TOA objects
-    tl  = load_Fermi_TOAs(eventfile,weightcolumn=weightcol)
+    tl  = load_Fermi_TOAs(eventfile,weightcolumn=weightcol,targetcoord=SkyCoord('00:30:27.4303','+04:51:39.74',unit=(u.hourangle,u.degree),frame='icrs'))
 
     # Now convert to TOAs object and compute TDBs and posvels
     ts = toa.TOAs(toalist=tl)
@@ -173,5 +228,8 @@ if __name__ == '__main__':
     # ensure all postive
     phases = np.where(phss < 0.0, phss + 1.0, phss)
     mjds = ts.get_mjds()
-    weights = np.array([w['weight'] for w in ts.table['flags']])
-    phaseogram(mjds,phases,weights)
+    if weightcol is not None:
+        weights = np.array([w['weight'] for w in ts.table['flags']])
+        phaseogram(mjds,phases,weights)
+    else:
+        phaseogram(mjds,phases)
