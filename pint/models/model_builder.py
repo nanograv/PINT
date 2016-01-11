@@ -7,9 +7,6 @@ from .timing_model import generate_timing_model
 from .astrometry import Astrometry
 from .dispersion import Dispersion
 from .spindown import Spindown
-
-from .DDbinaryModel import DD
-
 from .glitch import Glitch
 from .bt import BT
 from .solar_system_shapiro import SolarSystemShapiro
