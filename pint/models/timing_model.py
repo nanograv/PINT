@@ -101,8 +101,6 @@ class TimingModel(object):
     def __init__(self):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
-        self.prefix_params_units = {}  # Unit for prefixed parameters
-        self.prefix_params_description = {}
         self.num_prefix_params = {}
         self.delay_funcs = [] # List of delay component functions
         self.phase_funcs = [] # List of phase component functions
@@ -123,14 +121,49 @@ class TimingModel(object):
         setattr(self, param.name, param)
         self.params += [param.name,]
         if param.is_prefix is True:
-            self.prefix_params.append(param.prefix)
-            self.prefix_params_units[param.prefix]=param.units
+            if param.prefix not in self.prefix_params:
+                self.prefix_params.append(param.prefix)
             if self.num_prefix_params.has_key(param.prefix):
                 self.num_prefix_params[param.prefix]+=1
             else:
                 self.num_prefix_params[param.prefix]=1
 
-            self.prefix_params_description[param.prefix]=param.description
+
+    def add_more_prefix_params(self,prefixParamExp,maxPrefixIndex):
+        """Add more same type of prefixed parameters into the timing model.
+           Parameter
+           ----------
+           prefixParamExp : PINT prefixParam class
+               The eample prefixed parameter need to be added
+           maxPrefixIndex : int
+               The maximum number of prefixed parameter can be add.
+        """
+        try:
+            isp = prefixParamExp.is_prefix
+            if isp is not True:
+                raise ValueError('prefixParamExp needs to be a prefixParameter class.')
+        except:
+            raise ValueError('prefixParamExp needs to be a Parameter class.')
+
+        pfx = prefixParamExp.prefix
+        idxfmt = prefixParamExp.indexformat
+        unitTplt = prefixParamExp.unit_template
+        descriptionTplt = prefixParamExp.description_template
+        frozen=prefixParamExp.frozen
+        continuous=prefixParamExp.continuous
+        parse_value=prefixParamExp.parse_value
+        print_value=prefixParamExp.print_value
+        for ii in range(1,maxPrefixIndex+1):
+
+            pp = prefixParameter(prefix = prefix ,indexformat = idxfmt,
+                    index = ii, unitTplt = unitTplt,
+                    descriptionTplt = descriptionTplt, frozen=frozen,
+                    continuous=continuous, parse_value=parse_value,
+                    print_value=print_value)
+            pp.apply_template()
+            if pp.name not in self.params:
+                self.add_param(pp)
+
 
     def param_help(self):
         """Print help lines for all available parameters in model.
@@ -139,6 +172,7 @@ class TimingModel(object):
         for par in self.params:
             s += "%s\n" % getattr(self, par).help_line()
         return s
+
 
     @Cache.use_cache
     def get_prefix_mapping(self,prefix):
