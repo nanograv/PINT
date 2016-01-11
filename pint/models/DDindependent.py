@@ -382,7 +382,8 @@ class PSRdd(PSRbin):
         return H1+H2
     @Cache.use_cache
     def d_delayI_d_par2(self,par):
-        """
+        """Second way of doing derivative on delay inverse. Did not test the
+           accuracy against the first way yet. 
         """
         e = self.ecc()
         sE = self.sinE
@@ -531,8 +532,9 @@ class PSRdd(PSRbin):
 
     @Cache.use_cache
     def delayR(self):  # Is this needed?
-        """Binary Romoer delay
+        """Binary Romoer delay in proper time.
             T. Damour and N. Deruelle(1986)equation [24]
+            Equation [46-52] gives the result in coordinate time.
         """
 
         rDelay = self.a1()/c.c*(self.sOmg*(self.cosEcc_A-self.er)   \
