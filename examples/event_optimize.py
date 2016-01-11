@@ -3,6 +3,7 @@ import pint.toa as toa
 import pint.models
 import pint.fitter as fitter
 import pint.fermi_toas as fermi
+from pint.eventstats import hmw, hm
 import matplotlib.pyplot as plt
 import astropy.table
 import astropy.units as u
@@ -10,6 +11,7 @@ import psr_utils as pu
 import scipy.optimize as op
 import sys, os, copy, fftfit
 from astropy.coordinates import SkyCoord
+
         
 # Params you might want to edit
 nwalkers = 200
@@ -109,33 +111,6 @@ def marginalize_over_phase(phases, template, weights=None, resolution=1.0/1024,
         plt.ylabel("Log likelihood")
         plt.show()
     return ltemp - dphss[lnlikes.argmax()]*ltemp, lnlikes.max()
-
-def Htest_exact(phases, maxnumharms=20, weights=None):
-    """
-    Htest_exact(phases, maxnumharms=20, weights=None):
-       Return an exactly computed (i.e. unbinned) H-test statistic
-       for periodicity for the events with folded phases 'phases' [0,1).
-       Also return the best number of harmonics.  The H-statistic and
-       harmonic number are returned as a tuple: (hstat, harmnum).
-       This routine returns the Leahy normalized H-statistic, and the
-       best number of harmonics summed.  If weights are set to be
-       fractional photon weights, then the weighted Htest is returned
-       (see Kerr 2011: http://arxiv.org/pdf/1103.2128.pdf)
-    """
-    N = len(phases)
-    Zm2s = np.zeros(maxnumharms, dtype=np.float)
-    rad_phases = 2.0*np.pi*phases
-    weightfact = 1.0/(np.sum(weights**2.0) / N) if \
-                 weights is not None else 1.0
-    for harmnum in range(1, maxnumharms+1):
-        phss = harmnum*rad_phases
-        Zm2s[harmnum-1] = 2.0/N*(np.add.reduce(np.sin(phss))**2.0+
-                                 np.add.reduce(np.cos(phss))**2.0)
-        Zm2s[harmnum-1] *= weightfact
-    hs = np.add.accumulate(Zm2s) - \
-         4.0*np.arange(1.0, maxnumharms+1)+4.0
-    bestharm = hs.argmax()
-    return (hs[bestharm], bestharm+1)
 
 class emcee_fitter(fitter.fitter):
 
@@ -265,7 +240,13 @@ class emcee_fitter(fitter.fitter):
             good = ftr.weights > minwgt
             nphotons = np.sum(good)
             wgts = ftr.weights[good] if use_weights else None
-            hval, nharm = Htest_exact(phss[good], weights=wgts)
+            if nphotons <= 0:
+                hval = 0
+            else:
+                if use_weights:
+                    hval = hmw(phss[good], weights=wgts)
+                else:
+                    hval = hm(phss[good])
             htests.append(hval)
             if ii > 0 and ii%2==0 and ii<20:
                 r, c = ((ii-2)/2)/3, ((ii-2)/2)%3
@@ -359,6 +340,7 @@ if __name__ == '__main__':
 
     # Use this if you want to see the effect of setting minWeight
     if minWeight == 0.0:
+        print("Checking h-test vs weights")
         ftr.prof_vs_weights(use_weights=True)
         ftr.prof_vs_weights(use_weights=False)
         sys.exit()
@@ -467,6 +449,7 @@ if __name__ == '__main__':
     ftr.set_params(dict(zip(ftr.fitkeys, ftr.maxpost_fitvals)))
     ftr.phaseogram(file=ftr.model.PSR.value+"_post.png")
     plt.close()
+    
 
     # Write out the output pulse profile
     vs, xs = np.histogram(ftr.get_event_phases(), outprof_nbins, \
@@ -475,7 +458,12 @@ if __name__ == '__main__':
     for x, v in zip(xs, vs):
         f.write("%.5f  %12.5f\n" % (x, v))
     f.close()
-
+    
+    # Write out the par file for the best MCMC parameter est
+    f = open(ftr.model.PSR.value+"_post.par", 'w')
+    f.write(ftr.model.as_parfile())
+    f.close()
+    
     # Print the best MCMC values and ranges
     ranges = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
         zip(*np.percentile(samples, [16, 50, 84], axis=0)))
@@ -485,9 +473,13 @@ if __name__ == '__main__':
 
     # Put the same stuff in a file
     f = open(ftr.model.PSR.value+"_results.txt", 'w')
+
     f.write("Post-MCMC values (50th percentile +/- (16th/84th percentile):\n")
     for name, vals in zip(ftr.fitkeys, ranges):
         f.write("%8s:"%name + " %25.15g (+ %12.5g  / - %12.5g)\n"%vals)
+    
+    f.write("\nMaximum likelihood par file:\n")
+    f.write(ftr.model.as_parfile())
     f.close()
 
     import cPickle
