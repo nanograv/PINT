@@ -172,8 +172,16 @@ class model_builder(object):
 
             if self.param_prefix != {}:
                 for p in self.param_prefix.keys():
-                    add_prefixed_param(self.model_instance,self.param_prefix[p])
-
+                    ppnames = [x for x in self.model_instance.params if x.startswith(p)]
+                    for ppn in ppnames:
+                        pfxp = getattr(self.model_instance,ppn)
+                        if pfxp.is_prefix is True:
+                            for pp in self.param_prefix[p]:
+                                pre,idstr,idx = split_prefixed_name(pp)
+                                if idx == pfxp.index:
+                                    continue
+                                newPfxp = pfxp.new_index_prefix_param(idx)
+                                self.model_instance.add_param(newPfxp)
         if parfile is not None:
             self.model_instance.read_parfile(parfile)
 
