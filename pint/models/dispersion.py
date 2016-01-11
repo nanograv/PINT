@@ -29,13 +29,19 @@ class Dispersion(TimingModel):
             description="Dispersion measure")) # DMX is for info output right now
         self.add_param(prefixParameter(prefix = 'DMX_',indexformat = '0000',
             units = "pc cm^-3", value=0.0,
-            description='Dispersion measure variation'))
+            unitTplt = lambda x: "pc cm^-3",
+            description='Dispersion measure variation',
+            descriptionTplt= lambda x: "Dispersion measure"))
         self.add_param(prefixParameter(prefix = 'DMXR1_',indexformat = '0000',
             units = "MJD", value=0.0,
-            description='Beginning of DMX interval'))
+            unitTplt = lambda x: "MJD",
+            description='Beginning of DMX interval',
+            descriptionTplt= lambda x:'Beginning of DMX interval'))
         self.add_param(prefixParameter(prefix = 'DMXR2_',indexformat = '0000',
             units = "MJD", value=0.0,
-            description='End of DMX interval'))
+            unitTplt = lambda x: "MJD",
+            description='End of DMX interval',
+            descriptionTplt= lambda x:'End of DMX interval'))
 
         self.delay_funcs += [self.dispersion_delay,]
 

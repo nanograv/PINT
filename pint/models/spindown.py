@@ -8,7 +8,7 @@ try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
-from .parameter import Parameter, MJDParameter
+from .parameter import Parameter, MJDParameter,prefixParameter
 from .timing_model import TimingModel, MissingParameter
 from ..phase import *
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, taylor_horner
@@ -36,9 +36,11 @@ class Spindown(TimingModel):
             description="Spin-down rate"))
 
         for ii in range(2, self.num_spin_terms + 1):
-            self.add_param(Parameter(name="F%d"%ii,
+            self.add_param(prefixParameter(name="F%d"%ii,
                 units="Hz/s^%s"%ii, value=0.0,
-                description="Spin-frequency %d derivative"%ii))
+                unitTplt = lambda x: "Hz/s^%s"%x,
+                description="Spin-frequency %d derivative"%ii,
+                descriptionTplt = lambda x: "Spin-frequency %d derivative"%x))
 
         self.add_param(MJDParameter(name="TZRMJD",
             description="Reference epoch for phase = 0.0",

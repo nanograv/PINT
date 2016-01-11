@@ -8,7 +8,7 @@ try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
-from .parameter import Parameter, MJDParameter
+from .parameter import Parameter, MJDParameter,prefixParameter
 from .timing_model import TimingModel, MissingParameter
 from ..phase import *
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, taylor_horner
@@ -25,22 +25,22 @@ class Glitch(TimingModel):
         self.num_glitches = maxglitches
 
         for ii in range(1, self.num_glitches + 1):
-            self.add_param(Parameter(name="GLPH_%d"%ii,
+            self.add_param(prefixParameter(name = "GLPH_%d"%ii,
                 units="pulse phase", value=0.0,
                 description="Phase change for glitch %d"%ii))
-            self.add_param(MJDParameter(name="GLEP_%d"%ii,
+            self.add_param(prefixParameter(name="GLEP_%d"%ii,
                 description="Epoch of glitch %d"%ii,
                 parse_value=lambda x: time_from_mjd_string(x, scale='tdb')))
-            self.add_param(Parameter(name="GLF0_%d"%ii,
+            self.add_param(prefixParameter(name="GLF0_%d"%ii,
                 units="Hz", value=0.0,
                 description="Permanent frequency change for glitch %d"%ii))
-            self.add_param(Parameter(name="GLF1_%d"%ii,
+            self.add_param(prefixParameter(name="GLF1_%d"%ii,
                 units="Hz/s", value=0.0,
                 description="Permanent frequency-derivative change for glitch %d"%ii))
-            self.add_param(Parameter(name="GLF0D_%d"%ii,
+            self.add_param(prefixParameter(name="GLF0D_%d"%ii,
                 units="Hz", value=0.0,
                 description="Decaying frequency change for glitch %d"%ii))
-            self.add_param(Parameter(name="GLTD_%d"%ii,
+            self.add_param(prefixParameter(name="GLTD_%d"%ii,
                 units="days", value=0.0,
                 description="Decay time constant for glitch %d"%ii))
 
