@@ -147,6 +147,33 @@ class MJDParameter(Parameter):
 
 class prefixParameter(Parameter):
     """ This is a Parameter type for prefix parameters, for example DMX_
+
+        Create a prefix parameter
+        To create a prefix parameter, there are two ways:
+        1. Create by name
+            If optional agrument name with a prefixed format, such as DMX_001
+            or F10, is given. prefixParameter class will figure out the prefix
+            name, index and indexformat.
+        2. Create by prefix and index
+            This method allows you create a prefixParameter class using prefix
+            name and index. The class name will be returned as prefix name plus
+            index with the right index format. So the optional arguments prefix,
+            indexformat and index are need. index default value is 1.
+        If both of two methods are fillfulled, It will using the first method.
+
+        Add descrition and units.
+        1. Direct add
+            A descrition and unit can be added directly by using the optional
+            arguments, descrition and units. Both of them will return as a string
+            attribution.
+        2. descrition and units template.
+            If the descrition and unit are changing with the prefix parameter index,
+            optional argurment descritionTplt and unitTplt are need. These two attributions
+            are lambda functions, for example
+            >>> descritionTplt = lambda x: 'This is the descrition of parameter %d'%x
+            The class will fill the descrition and unit automaticly.
+        If both two methods are fillfulled, it prefer the first one.
+
         Parameter
         ---------
         name : str optional
@@ -158,13 +185,24 @@ class prefixParameter(Parameter):
             The format for parameter index
         index : int optional [default 1]
             The index number for the prefixed parameter.
+        units :  str optional
+            The unit of parameter
+        unitTplt : lambda method
+            The unit template for prefixed parameter
+        description : str optional
+            Description for the parameter
+        descriptionTplt : lambda method optional
+            Description template for prefixed parameters
+        prefix_aliases : list of str optional
+            Alias for the prefix
     """
 
     def __init__(self,name=None, prefix = None ,indexformat = None,index = 1,
-            value=None,units = None,description=None,uncertainty=None, frozen=True,
-            continuous=True, aliases=None,prefix_aliases = [],parse_value=fortran_float,
+            value=None,units = None, unitTplt = None,description=None,
+            descriptionTplt = None,uncertainty=None, frozen=True,
+            continuous=True,prefix_aliases = [],parse_value=fortran_float,
             print_value=None):
-
+        # Create prefix parameter by name
         if name is None:
             if prefix is None or indexformat is None:
                 errorMsg = 'When prefix parameter name is not give, the prefix'
@@ -200,12 +238,13 @@ class prefixParameter(Parameter):
                 self.indexformat = self.indexformat_field.format(0)
                 self.prefix = ''.join(prefixPart)
                 self.index = int(indexPart)
+        self.unit_template = unitTplt
+        self.description_template = descriptionTplt
 
         super(prefixParameter, self).__init__(name=name, value=value,
                 units=units, description=description,
                 uncertainty=uncertainty, frozen=frozen,
                 continuous=continuous,
-                aliases=aliases,
                 parse_value=parse_value,
                 print_value=print_value)
 
@@ -220,3 +259,21 @@ class prefixParameter(Parameter):
 
     def prefix_matches(self,prefix):
         return (prefix == self.perfix) or (prefix in self.prefix_aliases)
+
+    def apply_template(self):
+        dsc = self.description_template(self.index)
+        unt = self.unit_template(self.index)
+        if self.description is None:
+            self.description = dsc
+        if self.units is None:
+            self.units = unt
+
+    def new_index_prefix_param(self,index):
+        newpfx = prefixParameter(prefix = self.prefix ,
+                indexformat = self.indexformat,index = index,
+                unitTplt = self.unit_template,
+                descriptionTplt = self.description_template, frozen=self.frozen,
+                continuous=self.continuous, parse_value=self.parse_value,
+                print_value=self.print_value)
+        newpfx.apply_template()
+        return newpfx
