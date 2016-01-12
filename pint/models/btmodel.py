@@ -67,7 +67,7 @@ class BTmodel(object):
         self.params = ['PEPOCH', 'P0', 'P1', 'PB', 'PBDOT', 'ECC', 'EDOT', \
                        'OM', 'OMDOT', 'A1', 'A1DOT', 'T0', 'GAMMA']
         self.set_default_values()
-        
+
         for key, value in kwargs.iteritems():
             if key.upper() in self.params:
                 setattr(self, key.upper(), value)
@@ -111,7 +111,7 @@ class BTmodel(object):
             for par,val in zip(params, values):
                 setattr(self, par, val)
 
-    
+
     @Cache.use_cache
     def eccentric_anomaly(self, eccentricity, mean_anomaly):
         """
@@ -128,19 +128,19 @@ class BTmodel(object):
             ecc_anom_old = ecc_anom[:]
             ecc_anom = ma + eccentricity * np.sin(ecc_anom_old)
         return ecc_anom
-    
+
     @Cache.use_cache
     def P(self):
         return self.P0 + self.P1*(self.t - self.PEPOCH)*self.SECS_PER_DAY
-    
+
     @Cache.use_cache
     def om(self):
         return (self.OM + self.OMDOT*self.tt0()/self.SECS_PER_YEAR) * self.DEG2RAD
-    
+
     @Cache.use_cache
     def ecc(self):
         return self.ECC + self.tt0()*self.EDOT
-    
+
     @Cache.use_cache
     def a1(self):
         return self.A1 + self.tt0()*self.A1DOT
@@ -183,14 +183,14 @@ class BTmodel(object):
     def delay(self):
         """Full BT model delay"""
         return (self.delayL1() + self.delayL2()) * self.delayR()
-    
+
     @Cache.use_cache
     def d_Pobs_d_par(self, parname, pct=0.001):
         par = getattr(self, parname)
         x1 = par
         x2 = (1+pct)*par
         dx = x2-x1
-        
+
         y1 = self.Pobs()
         setattr(self, parname, x2)
         y2 = self.Pobs()
@@ -202,19 +202,19 @@ class BTmodel(object):
     @Cache.use_cache
     def tt0(self):
         return (self.t-self.T0) * self.SECS_PER_DAY
-    
+
     @Cache.use_cache
     def t0(self):
         return (self.t-self.PEPOCH) * self.SECS_PER_DAY
-    
+
     @Cache.use_cache
     def pb(self):
         return self.PB * self.SECS_PER_DAY
-    
+
     @Cache.use_cache
     def pbprime(self):
         return self.pb() - self.PBDOT * self.tt0()
-        
+
     @Cache.use_cache
     def M(self):
         return np.fmod(self.tt0()/self.pb() - 0.5*self.PBDOT*(self.tt0()/self.pb())**2, 1.0) * 2*np.pi
@@ -222,25 +222,25 @@ class BTmodel(object):
     @Cache.use_cache
     def d_M_d_T0(self):
         return self.SECS_PER_DAY*(self.PBDOT*(self.tt0()/self.pb())-1.0)*2*np.pi/self.pb()
-    
+
     @Cache.use_cache
     def d_M_d_PB(self):
         return self.SECS_PER_DAY*2*np.pi*(self.PBDOT*self.tt0()**2/self.pb()**3 - self.tt0()/self.pb()**2)
-    
+
     @Cache.use_cache
     def d_M_d_PBDOT(self):
         return -np.pi * self.tt0()**2/self.pb()**2
-    
+
     @Cache.use_cache
     def E(self):
         return self.eccentric_anomaly(self.ecc(), self.M())
-    
+
     @Cache.use_cache
     def d_E_d_T0(self):
         brack1 = self.PBDOT*self.tt0()/self.pb() - 1.0
         brack2 = 2*np.pi/(self.pb()*(1-self.ecc()*np.cos(self.E())))
         return self.SECS_PER_DAY * brack1 * brack2
-    
+
     @Cache.use_cache
     def d_E_d_PB(self):
         brack1 = self.PBDOT*self.tt0()**2/self.pb()**3 - self.tt0()/self.pb()**2
@@ -250,32 +250,32 @@ class BTmodel(object):
     @Cache.use_cache
     def d_E_d_PBDOT(self):
         return -np.pi*self.tt0()**2/(self.pb()**2 * (1-self.ecc()*np.cos(self.E())))
-    
+
     @Cache.use_cache
     def d_E_d_ECC(self):
         return np.sin(self.E()) / (1 - self.ecc()*np.cos(self.E()))
-    
+
     @Cache.use_cache
     def d_E_d_EDOT(self):
         return self.tt0() * self.d_E_d_ECC()
-    
+
     @Cache.use_cache
     def nu(self):
         """True anomaly"""
         return 2*np.arctan(np.sqrt((1.0+self.ecc())/(1.0-self.ecc()))*np.tan(self.E()/2.0))
-    
+
     @Cache.use_cache
     def d_nu_d_T0(self):
         brack1 = (1 + self.ecc()*np.cos(self.nu())) / (1 - self.ecc()*np.cos(self.E()))
         brack2 = self.d_E_d_T0() * np.sin(self.E()) / np.sin(self.nu())
         return brack1*brack2
-    
+
     @Cache.use_cache
     def d_nu_d_PB(self):
         brack1 = (1 + self.ecc()*np.cos(self.nu())) / (1 - self.ecc()*np.cos(self.E()))
         brack2 = self.d_E_d_PB() * np.sin(self.E()) / np.sin(self.nu())
         return brack1*brack2
-    
+
     @Cache.use_cache
     def d_nu_d_PBDOT(self):
         brack1 = (1 + self.ecc()*np.cos(self.nu())) / (1 - self.ecc()*np.cos(self.E()))
@@ -287,7 +287,7 @@ class BTmodel(object):
         brack1 = self.d_E_d_ECC() * np.sin(self.E()) * (1 + self.ecc()*np.cos(self.nu())) - np.cos(self.E())*np.cos(self.nu()) + 1.0
         brack2 = np.sin(self.nu()) * (1 - self.ecc() * np.cos(self.E()))
         return brack1 / brack2
-    
+
     @Cache.use_cache
     def d_nu_d_EDOT(self):
         return self.tt0() * self.d_nu_d_ECC()
@@ -295,7 +295,7 @@ class BTmodel(object):
     @Cache.use_cache
     def Doppler(self):
         return 2*np.pi*self.a1() / (self.pbprime()*np.sqrt(1-self.ecc()**2))
-    
+
     @Cache.use_cache
     def d_Pobs_d_P0(self):
         geom = (-np.sin(self.nu())*np.sin(self.om())+(np.cos(self.nu())+self.ecc())*np.cos(self.om()))
@@ -307,12 +307,12 @@ class BTmodel(object):
         geom = (-np.sin(self.nu())*np.sin(self.om())+(np.cos(self.nu())+self.ecc())*np.cos(self.om()))
         ds = self.Doppler() * geom
         return self.t0() * (1 + ds)
-    
+
     @Cache.use_cache
     def d_Pobs_d_A1(self):
         geom = (-np.sin(self.nu())*np.sin(self.om())+(np.cos(self.nu())+self.ecc())*np.cos(self.om()))
         return 2*np.pi * self.P() * geom / (self.pbprime() * np.sqrt(1-self.ecc()**2))
-    
+
     @Cache.use_cache
     def d_Pobs_d_PB(self):
         geom1 = (-np.sin(self.nu())*np.sin(self.om())+(np.cos(self.nu())+self.ecc())*np.cos(self.om()))
@@ -320,7 +320,7 @@ class BTmodel(object):
         pref1 = -self.P() * 2 * np.pi * self.a1() / (self.pbprime()**2 * np.sqrt(1-self.ecc()**2)) * self.SECS_PER_DAY
         pref2 = self.P() * self.Doppler() * self.d_nu_d_PB()
         return pref1 * geom1 + pref2 * geom2
-    
+
     @Cache.use_cache
     def d_Pobs_d_PBDOT(self):
         geom1 = (-np.sin(self.nu())*np.sin(self.om())+(np.cos(self.nu())+self.ecc())*np.cos(self.om()))
@@ -328,7 +328,7 @@ class BTmodel(object):
         pref1 = self.P() * self.tt0() * 2 * np.pi * self.a1() / (self.pbprime()**2 * np.sqrt(1-self.ecc()**2))
         pref2 = self.P() * self.Doppler() * self.d_nu_d_PBDOT()
         return pref1 * geom1 + pref2 * geom2
-    
+
     @Cache.use_cache
     def d_Pobs_d_OM(self):
         geom = (-np.sin(self.nu())*np.cos(self.om())-(np.cos(self.nu())+self.ecc())*np.sin(self.om()))
@@ -353,7 +353,7 @@ class BTmodel(object):
     @Cache.use_cache
     def d_Pobs_d_EDOT(self):
         return self.tt0() * self.d_Pobs_d_ECC()
-    
+
     @Cache.use_cache
     def d_Pobs_d_OMDOT(self):
         return self.tt0() * self.d_Pobs_d_OM() / self.SECS_PER_YEAR
@@ -415,7 +415,7 @@ class BTmodel(object):
 
     @Cache.use_cache
     def d_delayL2_d_ECC(self):
-        num = -self.a1()*np.cos(self.om())*self.ecc()*np.sin(self.E()) 
+        num = -self.a1()*np.cos(self.om())*self.ecc()*np.sin(self.E())
         den = np.sqrt(1-self.ecc()**2)
         return num/den + self.d_delayL2_d_E() * self.d_E_d_ECC()
 
