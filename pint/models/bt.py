@@ -87,7 +87,7 @@ class BT(TimingModel):
             description="Time dilation & gravitational redshift",
             parse_value=np.double))
 
-        self.delay_funcs['L2'] += [self.BT_delay,]
+        self.delay_funcs += [self.BT_delay,]
 
     def setup(self):
         super(BT, self).setup()
