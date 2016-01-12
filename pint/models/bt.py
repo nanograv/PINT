@@ -87,7 +87,7 @@ class BT(TimingModel):
             description="Time dilation & gravitational redshift",
             parse_value=np.double))
 
-        self.delay_funcs += [self.BT_delay,]
+        self.delay_funcs['L2'] += [self.BT_delay,]
 
     def setup(self):
         super(BT, self).setup()
@@ -145,7 +145,7 @@ class BT(TimingModel):
 
         # Apply all the delay terms, except for the binary model itself
         tt0 = toas['tdbld'] * SECS_PER_DAY
-        for df in self.delay_funcs:
+        for df in self.delay_funcs['L1']:
             if df != self.BT_delay:
                 tt0 -= df(toas)
 
