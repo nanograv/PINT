@@ -10,7 +10,7 @@ import numpy as np
 
 
 # Using Nanograv data B1855
-parfile = 'B1855+09_NANOGrav_dfg+12.par'
+parfile = 'B1855+09_NANOGrav_dfg+12_modified.par'
 timfile = 'B1855+09_NANOGrav_dfg+12.tim'
 # libstempo calculation
 print "libstempo calculation"
@@ -27,11 +27,12 @@ tempo2_vals = tempo2_utils.general2(parfile, timfile,
                                      'shapiro', 'shapiroJ','bat','clock0',
                                      'clock1','clock2','clock3','clock4','sat',
                                      'tropo'])
-# compute residules 
+# compute residules
 t2_resids = tempo2_vals['post_phase'] / float(mdd.F0.value) * 1e6 * u.us
 presids_us = resids(toas, mdd).time_resids.to(u.us)
-
-plt.plot(psr.toas(),presids_us-t2_resids)
+toas = psr.toas()
+toas.sort()
+plt.plot(toas,presids_us-t2_resids)
 plt.xlabel('Mjd (DAY)')
 plt.ylabel('residule (us)')
 plt.title('Residule difference between PINT and tempo2')
