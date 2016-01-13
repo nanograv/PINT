@@ -4,7 +4,8 @@ from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
 time_to_longdouble
 import numpy
 import astropy.units as u
-from pint import ls,GMsun,Tsun
+from astropy import log
+from pint import pint_units
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
@@ -44,15 +45,29 @@ class Parameter(object):
 
         print_value is a function that converts the internal value to
           a string for output.
-
+        bare_value is the purely numerical number from value property
+        get_bare_value is the function that gets bare value from value 
     """
 
     def __init__(self, name=None, value=None, units=None, description=None,
             uncertainty=None, frozen=True, aliases=None, continuous=True,
-            parse_value=fortran_float, print_value=str):
-        self.value = value
+            parse_value=fortran_float, print_value=str,
+            get_bare_value=lambda x: x):
         self.name = name
-        self.units = units
+        self.unit = units
+        self.base_unit = None
+        if isinstance(self.unit,str):
+            if self.unit in pint_units.keys():
+                self.base_unit = pint_units[self.unit]
+            else:
+                try:
+                    self.base_unit = u.Unit(self.unit)
+                except:
+                    log.warn("Unrecognized unit '%s'" % self.unit)
+        self.get_bare_value = get_bare_value
+        self.bare_value = 0.0
+        self.value = value
+
         self.description = description
         self.uncertainty = uncertainty
         self.frozen = frozen
@@ -60,7 +75,32 @@ class Parameter(object):
         self.aliases = [] if aliases is None else aliases
         self.parse_value = parse_value
         self.print_value = print_value
+
         self.paramType = 'Parameter'
+
+    @property
+    def value(self):
+        return self._value
+    @value.setter
+    def value(self,val):
+        self._value = val
+        if self._value is None:
+            self.bare_value = 0.0
+            return
+
+        if self.base_unit is None:
+            if hasattr(self._value,'unit'):
+                self.base_unit = self._value.unit
+            else:
+                self.base_unit = self.unit
+
+
+        if hasattr(self._value,'unit'):
+            value_base_unit = self._value.to(u.Unit(self.base_unit))
+            self.bare_value = value_base_unit.value
+        else:
+            self.bare_value = self.get_bare_value(self._value)
+
     def __str__(self):
         out = self.name
         if self.units is not None:
@@ -139,12 +179,14 @@ class MJDParameter(Parameter):
     def __init__(self, name=None, value=None, description=None,
             uncertainty=None, frozen=True, continuous=True, aliases=None,
             parse_value=time_from_mjd_string,
-            print_value=time_to_mjd_string):
+            print_value=time_to_mjd_string,
+            get_bare_value = time_to_longdouble):
         super(MJDParameter, self).__init__(name=name, value=value,
                 units="MJD", description=description,
                 uncertainty=uncertainty, frozen=frozen,
                 continuous=continuous,
                 aliases=aliases,
                 parse_value=parse_value,
-                print_value=print_value)
+                print_value=print_value,
+                get_bare_value = get_bare_value)
         self.paramType = 'MJDParameter'
