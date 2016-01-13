@@ -33,7 +33,9 @@ Tneptune = Tsun / 19412.24
 # The Epoch J2000
 J2000 = time.Time('2000-01-01 12:00:00', scale='utc')
 J2000ld = utils.time_to_longdouble(J2000)
-
+# PINT special units list
+pint_units = {'H:M:S':u.hourangle,'D:M:S':u.deg,'lt-s':ls,'Tsun':Tsun,
+              'GMsun':GMsun,'MJD':u.day,'pulse phase':u.Unit(1)}
 # setup environment
 # Load the PINT environment variable to get the top level directory
 pintdir = os.getenv("PINT")
