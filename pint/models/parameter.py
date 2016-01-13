@@ -46,7 +46,7 @@ class Parameter(object):
         print_value is a function that converts the internal value to
           a string for output.
         bare_value is the purely numerical number from value property
-        get_bare_value is the function that gets bare value from value 
+        get_bare_value is the function that gets bare value from value
     """
 
     def __init__(self, name=None, value=None, units=None, description=None,
@@ -54,16 +54,16 @@ class Parameter(object):
             parse_value=fortran_float, print_value=str,
             get_bare_value=lambda x: x):
         self.name = name
-        self.unit = units
+        self.units = units
         self.base_unit = None
-        if isinstance(self.unit,str):
-            if self.unit in pint_units.keys():
-                self.base_unit = pint_units[self.unit]
+        if isinstance(self.units,str):
+            if self.units in pint_units.keys():
+                self.base_unit = pint_units[self.units]
             else:
                 try:
-                    self.base_unit = u.Unit(self.unit)
+                    self.base_unit = u.Unit(self.units)
                 except:
-                    log.warn("Unrecognized unit '%s'" % self.unit)
+                    log.warn("Unrecognized unit '%s'" % self.units)
         self.get_bare_value = get_bare_value
         self.bare_value = 0.0
         self.value = value
@@ -91,9 +91,6 @@ class Parameter(object):
         if self.base_unit is None:
             if hasattr(self._value,'unit'):
                 self.base_unit = self._value.unit
-            else:
-                self.base_unit = self.unit
-
 
         if hasattr(self._value,'unit'):
             value_base_unit = self._value.to(u.Unit(self.base_unit))
