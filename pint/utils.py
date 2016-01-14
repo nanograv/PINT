@@ -316,6 +316,23 @@ def taylor_horner(x, coeffs):
         fact -= 1.0
     return result
 
+def is_number(s):
+    """Check if it is a number string.
+    """
+    try:
+        float(s)
+        return True
+    except ValueError:
+        pass
+
+    try:
+        import unicodedata
+        unicodedata.numeric(s)
+        return True
+    except (TypeError, ValueError):
+        pass
+    return False
+
 if __name__=="__main__":
     assert taylor_horner(2.0, [10]) == 10
     assert taylor_horner(2.0, [10, 3]) == 10 + 3*2.0
