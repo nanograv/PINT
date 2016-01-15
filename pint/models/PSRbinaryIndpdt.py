@@ -178,6 +178,10 @@ class PSRbin(object):
             e = np.longdouble(eccentricity).value
         else:
             e = eccentricity
+
+        if e<=0 or e>1:
+            raise ValueError('eccentric should be in the range of (0,1].')
+
         if hasattr(mean_anomaly,'unit'):
             ma = np.longdouble(mean_anomaly).value
         else:
