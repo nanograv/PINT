@@ -49,21 +49,21 @@ def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
     return fgeom * np.exp(-np.power((logE-logeref)/np.sqrt(2.)/logesig,2.))	
 
 def phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.0, size=5,
-    alpha=0.25, file=False):
+    alpha=0.25, width=6, maxphs=2.0, file=False):
     """
     Make a nice 2-panel phaseogram
     """
     years = (mjds - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
     phss[phss > 1.0] -= 1.0
-    fig = plt.figure(figsize=(6,8))
+    fig = plt.figure(figsize=(width, 8))
     ax1 = plt.subplot2grid((3, 1), (0, 0))
     ax2 = plt.subplot2grid((3, 1), (1, 0), rowspan=2)
     wgts = None if weights is None else np.concatenate((weights, weights))
     h, x, p = ax1.hist(np.concatenate((phss, phss+1.0)),
-        2*bins, range=[0,2], weights=wgts,
+        int(maxphs*bins), range=[0,maxphs], weights=wgts,
         color='k', histtype='step', fill=False, lw=2)
-    ax1.set_xlim([0.0, 2.0]) # show 2 pulses
+    ax1.set_xlim([0.0, maxphs]) # show 1 or more pulses
     ax1.set_ylim([0.0, 1.1*h.max()])
     if weights is not None:
         ax1.set_ylabel("Weighted Counts")
@@ -78,7 +78,7 @@ def phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.0, siz
         colarray = np.array([[0.0,0.0,0.0,w] for w in weights])
         ax2.scatter(phss, mjds, s=size, color=colarray)
         ax2.scatter(phss+1.0, mjds, s=size, color=colarray)
-    ax2.set_xlim([0.0, 2.0]) # show 2 pulses
+    ax2.set_xlim([0.0, maxphs]) # show 1 or more pulses
     ax2.set_ylim([mjds.min(), mjds.max()])
     ax2.set_ylabel("MJD")
     ax2.get_yaxis().get_major_formatter().set_useOffset(False)
