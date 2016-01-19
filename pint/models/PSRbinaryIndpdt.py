@@ -27,7 +27,6 @@ class PSRbin(object):
        projected semi-major axis of orbit   a1
     """
     def __init__(self,):
-        self.t = None
         self.params = ['PB', 'PBDOT', 'ECC', 'EDOT','OM', 'OMDOT', 'A1', \
                        'A1DOT', 'T0',]
                        # Necessary parameters for all binary model
@@ -41,8 +40,30 @@ class PSRbin(object):
                            'OMDOT':0.0*u.deg/u.year,
                            'XPBDOT':0.0*u.day/u.day,
                            'M2':0.0*u.M_sun }
+
+        self.tt0 = None
+        self.t = None
+        self.set_default_values(self.parDefault)
         self.inter_vars = ['E','M','nu','ecc','omega','a1','TM2']
         self.binary_delay_funcs = []
+
+
+
+    @property
+    def t(self):
+        return self._t
+    @t.setter
+    def t(self,val):
+        self._t = val
+        self.tt0 = self.get_tt0(self._t)
+
+    @property
+    def T0(self):
+        return self._T0
+    @T0.setter
+    def T0(self,val):
+        self._T0 = val
+        self.tt0 = self.get_tt0(self.t)
 
     def pars(self):
         """Parameter names in model"""
@@ -59,6 +80,7 @@ class PSRbin(object):
         for p in parameters:
             if p not in self.params:
                 self.params.append(p)
+
     def add_inter_vars(self,interVars):
         if not isinstance(interVars,list):
             interVars = [interVars,]
@@ -197,11 +219,14 @@ class PSRbin(object):
         ####################################
     @Cache.use_cache
     def get_tt0(self,barycentricTOA):
+        if barycentricTOA is None or self.T0 is None:
+            tt0 = None
+            return tt0
         T0 =  self.T0
     	if not hasattr(barycentricTOA,'unit') or barycentricTOA.unit == None:
             barycentricTOA = barycentricTOA*u.day
-        self.tt0 = (barycentricTOA - T0).to('second')
-        return self.tt0
+        tt0 = (barycentricTOA - T0).to('second')
+        return tt0
     ####################################
     @Cache.use_cache
     def ecc(self):
@@ -272,8 +297,6 @@ class PSRbin(object):
         PB = self.PB.to('second')
         PBDOT = self.PBDOT
         XPBDOT = self.XPBDOT
-        print PBDOT
-        print XPBDOT
         return 2*np.pi*u.rad*((PBDOT+XPBDOT)*self.tt0**2/PB**3 - self.tt0/PB**2)
 
     @Cache.use_cache
@@ -432,7 +455,7 @@ class PSRbin(object):
         k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
 
         if par in ['OM','OMDOT','PB']:
-            dername = 'd_omeg_d_' + par
+            dername = 'd_omega_d_' + par
             return getattr(self,dername)()
         else:
             dername = 'd_nu_d_'+par # For parameters only in nu
@@ -469,7 +492,6 @@ class PSRbin(object):
         nu = self.nu()
         k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
         return (self.d_nu_d_PB()*k)+nu*OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad)
-
 
     ############################################################
 
