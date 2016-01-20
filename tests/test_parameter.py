@@ -2,7 +2,7 @@ from pint.models import parameter as p
 from pint.models import model_builder as mb
 from astropy.coordinates.angles import Angle
 from pint.utils import time_from_mjd_string, time_to_longdouble, str2longdouble,\
-                       longdouble2string
+                       longdouble2string,data2longdouble
 
 # Test parameter Class
 
@@ -25,7 +25,13 @@ print "param1 bare value is ", param1.bare_value
 print "param1 value is      ", param1.value,"With type ", type(param1.value)
 print "param1 unit is       ", param1.units
 print "param1 base unit is  ", param1.base_unit
-
+# Change bare_value
+print "Change bare_values"
+param1.bare_value = 10.0
+print "param1 bare value is ", param1.bare_value
+print "param1 value is      ", param1.value,"With type ", type(param1.value)
+print "param1 unit is       ", param1.units
+print "param1 base unit is  ", param1.base_unit
 # Test MJDparameter Class
 paramMJD = p.MJDParameter(name="TZRMJD",
                         description="Reference epoch for phase = 0.0",
@@ -41,7 +47,15 @@ print "paramMJD bare value is ", longdouble2string(paramMJD.bare_value)
 print "paramMJD value is      ", paramMJD.value, "With type ", type(paramMJD.value)
 print "paramMJD unit is       ", paramMJD.units
 print "paramMJD base unit is  ", paramMJD.base_unit
+#change bare_value
+paramMJD.bare_value = data2longdouble('54001.012345678901234')
+print "After assigning paramMJD bare_value."
+print "paramMJD bare value is ", longdouble2string(paramMJD.bare_value)
+print "paramMJD value is      ", paramMJD.value, "With type ", type(paramMJD.value)
+print "paramMJD unit is       ", paramMJD.units
+print "paramMJD base unit is  ", paramMJD.base_unit
 
+print '\n\n\n\n'
 model = mb.get_model('J1744-1134.basic.par')
 
 for pn in model.params:
