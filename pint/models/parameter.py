@@ -9,7 +9,7 @@ from pint import pint_units
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
-
+import numbers
 
 class Parameter(object):
     """
@@ -51,11 +51,12 @@ class Parameter(object):
 
     def __init__(self, name=None, value=None, units=None, description=None,
             uncertainty=None, frozen=True, aliases=None, continuous=True,
-            parse_value=fortran_float, print_value=str,
+            parse_value=fortran_float, print_value=str,get_value = None,
             get_bare_value=lambda x: x):
         self.name = name
         self.units = units
         self.base_unit = None
+        # Setup base unit.
         if isinstance(self.units,str):
             if self.units in pint_units.keys():
                 self.base_unit = pint_units[self.units]
@@ -65,8 +66,9 @@ class Parameter(object):
                 except:
                     log.warn("Unrecognized unit '%s'" % self.units)
         self.get_bare_value = get_bare_value
-        self.bare_value = 0.0
+        self.get_value = get_value
         self.value = value
+
 
         self.description = description
         self.uncertainty = uncertainty
@@ -75,7 +77,6 @@ class Parameter(object):
         self.aliases = [] if aliases is None else aliases
         self.parse_value = parse_value
         self.print_value = print_value
-
         self.paramType = 'Parameter'
 
     @property
@@ -85,7 +86,7 @@ class Parameter(object):
     def value(self,val):
         self._value = val
         if self._value is None:
-            self.bare_value = 0.0
+            self._bare_value = None
             return
 
         if self.base_unit is None:
@@ -94,9 +95,24 @@ class Parameter(object):
 
         if hasattr(self._value,'unit'):
             value_base_unit = self._value.to(u.Unit(self.base_unit))
-            self.bare_value = value_base_unit.value
+            self._bare_value = value_base_unit.value
         else:
-            self.bare_value = self.get_bare_value(self._value)
+            self._bare_value = self.get_bare_value(self._value)
+
+
+
+    @property
+    def bare_value(self):
+        return self._bare_value
+    @bare_value.setter
+    def bare_value(self,val):
+        self._bare_value = val
+        if not isinstance(val, numbers.Number):
+            return
+        if self.get_value is None:
+            self.value = self._bare_value*self.base_unit
+        else:
+            self.value = self.get_value(self._bare_value)
 
     def __str__(self):
         out = self.name
