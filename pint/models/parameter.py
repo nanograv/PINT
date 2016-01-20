@@ -12,50 +12,55 @@ from astropy.coordinates.angles import Angle
 import numbers
 
 class Parameter(object):
-    """
-    Parameter(name=None, value=None, units=None, description=None,
-                uncertainty=None, frozen=True, continuous=True, aliases=[],
-                parse_value=float, print_value=str)
+    """A PINT class describing a single timing model parameter. The parameter
+    value will be stored at `value` property in a users speicified format. At
+    the same time property `bare_value` will store a bare value from the value and
+    `base_unit` will store the basic unit in the format of `Astropy.units`
 
-        Class describing a single timing model parameter.  Takes the following
-        inputs:
-
-        name is the name of the parameter.
-
-        value is the current value of the parameter.
-
-        units is a string giving the units.
-
-        description is a short description of what this parameter means.
-
-        uncertainty is the current uncertainty of the value.
-
-        frozen is a flag specifying whether "fitters" should adjust the
-          value of this parameter or leave it fixed.
-
-        continuous is flag specifying whether phase derivatives with
-          respect to this parameter exist.
-
-        aliases is an optional list of strings specifying alternate names
-          that can also be accepted for this parameter.
-
-        parse_value is a function that converts string input into the
-          appropriate internal representation of the parameter (typically
-          floating-point but could be any datatype).
-
-        print_value is a function that converts the internal value to
-          a string for output.
-        bare_value is the purely numerical number from value property
-        get_bare_value is the function that gets bare value from value
+    Parameters
+    ----------
+    name : str, optional
+        The name of the parameter.
+    value : number, str, `Astropy.units.Quantity` object, or other datatype or object
+        The current value of parameter. It is the internal storage of
+        parameter value
+    units : str, optional
+        String format for parameter unit
+    description : str, optional
+        A short description of what this parameter means.
+    uncertainty : number
+        Current uncertainty of the value.
+    frozen : bool, optional
+        A flag specifying whether "fitters" should adjust the value of this
+        parameter or leave it fixed.
+    aliases : list, optional
+        An optional list of strings specifying alternate names that can also
+        be accepted for this parameter.
+    continuous : bool, optional
+        A flag specifying whether phase derivatives with respect to this
+        parameter exist.
+    parse_value : method, optional
+        A function that converts string input into the appropriate internal
+        representation of the parameter (typically floating-point but could be any datatype).
+    print_value : method, optional
+        A function that converts the internal value to a string for output.
+    get_value : method, optional
+        A function that converts bare_value attribute and base_unit to value
+        attribute
+    get_bare_value:
+        A function that get purely value from value attribute
     """
 
     def __init__(self, name=None, value=None, units=None, description=None,
             uncertainty=None, frozen=True, aliases=None, continuous=True,
             parse_value=fortran_float, print_value=str,get_value = None,
             get_bare_value=lambda x: x):
-        self.name = name
-        self.units = units
+        self.name = name  # name of the parameter
+        self.units = units # parameter unit in string format
+        # parameter base unit, in astropy.units object format.
+        # Once it is speicified, base_unit will not be changed.
         self.base_unit = None
+
         # Setup base unit.
         if isinstance(self.units,str):
             if self.units in pint_units.keys():
@@ -65,9 +70,10 @@ class Parameter(object):
                     self.base_unit = u.Unit(self.units)
                 except:
                     log.warn("Unrecognized unit '%s'" % self.units)
-        self.get_bare_value = get_bare_value
-        self.get_value = get_value
-        self.value = value
+
+        self.get_bare_value = get_bare_value # Method to get bare_value from value
+        self.get_value = get_value # Method to update value from bare_value
+        self.value = value # The value of parameter, internal storage
 
 
         self.description = description
@@ -75,10 +81,12 @@ class Parameter(object):
         self.frozen = frozen
         self.continuous = continuous
         self.aliases = [] if aliases is None else aliases
-        self.parse_value = parse_value
-        self.print_value = print_value
-        self.paramType = 'Parameter'
+        self.parse_value = parse_value # method to read a value from string,
+                                       # user can put the speicified format here
+        self.print_value = print_value # method to convert value to a string.
+        self.paramType = 'Parameter' # Type of parameter. Here is general type
 
+    # Setup value property
     @property
     def value(self):
         return self._value
@@ -100,7 +108,7 @@ class Parameter(object):
             self._bare_value = self.get_bare_value(self._value)
 
 
-
+    # Setup bare_value property
     @property
     def bare_value(self):
         return self._bare_value
