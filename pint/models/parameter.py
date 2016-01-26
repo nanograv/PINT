@@ -56,7 +56,7 @@ class Parameter(object):
             parse_value=fortran_float, print_value=str,get_value = None,
             get_base_value=lambda x: x):
         self.name = name  # name of the parameter
-        self.units = units # parameter unit in string format
+        self.units = units # parameter unit in string format,or None
         # parameter base unit, in astropy.units object format.
         # Once it is speicified, base_unit will not be changed.
 
@@ -81,7 +81,7 @@ class Parameter(object):
     @units.setter
     def units(self,unt):
         # Setup unit and base unit
-        if isinstance(unt,u.Unit):
+        if isinstance(unt,(u.Unit,u.CompositeUnit)):
             self._units = unt.to_string()
             self._base_unit = unt
         elif isinstance(unt,(str)):
@@ -89,8 +89,8 @@ class Parameter(object):
                 self._units = unt
                 self._base_unit = pint_units[unt]
             else:
-                self._unit = unt
-                self._base_unit = u.Unit(self._unit)
+                self._units = unt
+                self._base_unit = u.Unit(self._units)
         elif unt is None:
             self._units = unt
             self._base_unit = unt
@@ -98,6 +98,16 @@ class Parameter(object):
         else:
             raise ValueError('Units can only take string, astropy units or None')
 
+        # Check if this is the first time set units
+        if hasattr(self,'value'):
+            wmsg = 'Parameter '+self.name+'units has been reset to '+unt
+            log.warning(wmsg)
+            try:
+                if hasattr(self.value,'unit'):
+                    temp = self.value.to(self.base_unit)
+            except:
+                log.warning('The value unit is not compatable with'\
+                                 ' parameter units,right now.')
     # Setup value property
     @property
     def value(self):
@@ -110,22 +120,17 @@ class Parameter(object):
             return
 
         # Check units
-        if self._base_unit is None:
-            if hasattr(self._value,'unit'):
-                if self.units is None:
-                    self.units = self._value.unit.to_string()
-                    self._base_unit = self._value.unit
-                else:# Check if value unit compatable with self.units
-                    try:
-                        if self.units in pint_units.keys():
-                            temp = self._value.to(pint_units[self.units])
-                        else:
-                            temp = self._value.to(u.Unit(self.units]))
-                    except:
-                        raise ValueError('Value unit is not compatable with units')
-       # Set up base_value
         if hasattr(self._value,'unit'):
-            value_base_unit = self._value.to(u.Unit(self.base_unit))
+            if self.units is None:
+                self.units = self._value.unit.to_string()
+                value_base_unit = self._value
+            else:
+                try:
+                    value_base_unit = self._value.to(self._base_unit)
+                except:
+                    raise ValueError('The value unit is not compatable with'\
+                                     ' parameter units.')
+
             self._base_value = value_base_unit.value
         else:
             self._base_value = self.get_base_value(self._value)
@@ -151,27 +156,13 @@ class Parameter(object):
         return self._base_unit
     @base_unit.setter
     def base_unit(self,unt):# Once the base unit is initialized, it wil not change
-        if self._base_unit is None:
-            if self.units is not None:
-                self._base_unit = unt
-                return
+        wmsg = "Base_unit can not be set. It has to be asscoiate with units."
+        wmsg+= "If you really want to change Base_unit, change units instead."
+        log.warning(wmsg)
+        if self.units in pint_units.keys():
+            self._base_unit = pint_units[self.units]
         else:
-            log.warnning("Base_unit can not be set.")
-            if self.unit is None:
-                self._base_unit = None
-                return
-            if isinstance(self.units,str):
-                if self.units in pint_units.keys():
-                    self._base_unit = pint_units[self.units]
-                else:
-                    try:
-                        self._base_unit = u.Unit(self.units)
-                    except:
-                        log.warn("Unrecognized unit '%s'" % self.units)
-                return
-            if isinstance(self.units,u.Unit):
-                self._base_unit = self.units
-                return
+            self._base_unit = u.Unit(self._unit)
 
     def __str__(self):
         out = self.name
@@ -234,6 +225,7 @@ class Parameter(object):
             try:
                 if int(k[2]) > 0:
                     self.frozen = False
+                    ucty = '0.0'
             except:
                 if is_number(k[2]):
                     ucty = k[2]
@@ -241,14 +233,15 @@ class Parameter(object):
                     errmsg = 'The third column of parfile can only be fitting flag '
                     errmsg+= '(1/0) or uncertainty.'
                     raise ValueError(errmsg)
+
             if len(k) == 4:
                 ucty = k[3]
-                if name=="RAJ":
-                    self.uncertainty = Angle("0:0:%.15fh" % fortran_float(ucty))
-                elif name=="DECJ":
-                    self.uncertainty = Angle("0:0:%.15fd" % fortran_float(ucty))
-                else:
-                    self.uncertainty = fortran_float(ucty)
+            if name=="RAJ":
+                self.uncertainty = Angle("0:0:%.15fh" % fortran_float(ucty))
+            elif name=="DECJ":
+                self.uncertainty = Angle("0:0:%.15fd" % fortran_float(ucty))
+            else:
+                self.uncertainty = fortran_float(ucty)
         return True
     def name_matches(self, name):
         """Whether or not the parameter name matches the provided name
