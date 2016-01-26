@@ -41,7 +41,7 @@ class Glitch(TimingModel):
                 units="Hz", value=0.0,
                 description="Decaying frequency change for glitch %d"%ii))
             self.add_param(Parameter(name="GLTD_%d"%ii,
-                units="days", value=0.0,
+                units="day", value=0.0,
                 description="Decay time constant for glitch %d"%ii))
 
         self.phase_funcs += [self.glitch_phase,]
