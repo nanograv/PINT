@@ -154,15 +154,6 @@ class Parameter(object):
     @property
     def base_unit(self):
         return self._base_unit
-    @base_unit.setter
-    def base_unit(self,unt):# Once the base unit is initialized, it wil not change
-        wmsg = "Base_unit can not be set. It has to be asscoiate with units."
-        wmsg+= "If you really want to change Base_unit, change units instead."
-        log.warning(wmsg)
-        if self.units in pint_units.keys():
-            self._base_unit = pint_units[self.units]
-        else:
-            self._base_unit = u.Unit(self._unit)
 
     def __str__(self):
         out = self.name
