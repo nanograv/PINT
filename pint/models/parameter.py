@@ -230,7 +230,7 @@ class Parameter(object):
             return False
         if len(k) >= 2:
             self.set(k[1])
-        if len(k) >= 3:  # A bug Fixed here.
+        if len(k) >= 3:  # Fixed a bug here. It can read parfile third column as uncertainty
             try:
                 if int(k[2]) > 0:
                     self.frozen = False
@@ -243,12 +243,12 @@ class Parameter(object):
                     raise ValueError(errmsg)
             if len(k) == 4:
                 ucty = k[3]
-            if name=="RAJ":
-                self.uncertainty = Angle("0:0:%.15fh" % fortran_float(ucty))
-            elif name=="DECJ":
-                self.uncertainty = Angle("0:0:%.15fd" % fortran_float(ucty))
-            else:
-                self.uncertainty = fortran_float(ucty)
+                if name=="RAJ":
+                    self.uncertainty = Angle("0:0:%.15fh" % fortran_float(ucty))
+                elif name=="DECJ":
+                    self.uncertainty = Angle("0:0:%.15fd" % fortran_float(ucty))
+                else:
+                    self.uncertainty = fortran_float(ucty)
         return True
     def name_matches(self, name):
         """Whether or not the parameter name matches the provided name
