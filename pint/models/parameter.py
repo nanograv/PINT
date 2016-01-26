@@ -14,7 +14,7 @@ import numbers
 class Parameter(object):
     """A PINT class describing a single timing model parameter. The parameter
     value will be stored at `value` property in a users speicified format. At
-    the same time property `bare_value` will store a bare value from the value and
+    the same time property `base_value` will store a base value from the value and
     `base_unit` will store the basic unit in the format of `Astropy.units`
 
     Parameters
@@ -45,34 +45,23 @@ class Parameter(object):
     print_value : method, optional
         A function that converts the internal value to a string for output.
     get_value : method, optional
-        A function that converts bare_value attribute and base_unit to value
+        A function that converts base_value attribute and base_unit to value
         attribute
-    get_bare_value:
+    get_base_value:
         A function that get purely value from value attribute
     """
 
     def __init__(self, name=None, value=None, units=None, description=None,
             uncertainty=None, frozen=True, aliases=None, continuous=True,
             parse_value=fortran_float, print_value=str,get_value = None,
-            get_bare_value=lambda x: x):
+            get_base_value=lambda x: x):
         self.name = name  # name of the parameter
         self.units = units # parameter unit in string format
         # parameter base unit, in astropy.units object format.
         # Once it is speicified, base_unit will not be changed.
-        self.base_unit = None
-
-        # Setup base unit.
-        if isinstance(self.units,str):
-            if self.units in pint_units.keys():
-                self.base_unit = pint_units[self.units]
-            else:
-                try:
-                    self.base_unit = u.Unit(self.units)
-                except:
-                    log.warn("Unrecognized unit '%s'" % self.units)
-
-        self.get_bare_value = get_bare_value # Method to get bare_value from value
-        self.get_value = get_value # Method to update value from bare_value
+        
+        self.get_base_value = get_base_value # Method to get base_value from value
+        self.get_value = get_value # Method to update value from base_value
         self.value = value # The value of parameter, internal storage
 
 
@@ -85,6 +74,29 @@ class Parameter(object):
                                        # user can put the speicified format here
         self.print_value = print_value # method to convert value to a string.
         self.paramType = 'Parameter' # Type of parameter. Here is general type
+    # Setup units property
+    @property
+    def units(self):
+        return self._units
+    @units.setter
+    def units(self,unt):
+        # Setup unit and base unit
+        if isinstance(unt,u.Unit):
+            self._units = unt.to_string()
+            self._base_unit = unt
+        elif isinstance(unt,(str)):
+            if unt in pint_units.keys():
+                self._units = unt
+                self._base_unit = pint_units[unt]
+            else:
+                self._unit = unt
+                self._base_unit = u.Unit(self._unit)
+        elif unt is None:
+            self._units = unt
+            self._base_unit = unt
+
+        else:
+            raise ValueError('Units can only take string, astropy units or None')
 
     # Setup value property
     @property
@@ -94,33 +106,72 @@ class Parameter(object):
     def value(self,val):
         self._value = val
         if self._value is None:
-            self._bare_value = None
+            self._base_value = None
             return
 
-        if self.base_unit is None:
+        # Check units
+        if self._base_unit is None:
             if hasattr(self._value,'unit'):
-                self.base_unit = self._value.unit
-
+                if self.units is None:
+                    self.units = self._value.unit.to_string()
+                    self._base_unit = self._value.unit
+                else:# Check if value unit compatable with self.units
+                    try:
+                        if self.units in pint_units.keys():
+                            temp = self._value.to(pint_units[self.units])
+                        else:
+                            temp = self._value.to(u.Unit(self.units]))
+                    except:
+                        raise ValueError('Value unit is not compatable with units')
+       # Set up base_value
         if hasattr(self._value,'unit'):
             value_base_unit = self._value.to(u.Unit(self.base_unit))
-            self._bare_value = value_base_unit.value
+            self._base_value = value_base_unit.value
         else:
-            self._bare_value = self.get_bare_value(self._value)
+            self._base_value = self.get_base_value(self._value)
 
 
-    # Setup bare_value property
+    # Setup base_value property
     @property
-    def bare_value(self):
-        return self._bare_value
-    @bare_value.setter
-    def bare_value(self,val):
-        self._bare_value = val
+    def base_value(self):
+        return self._base_value
+    @base_value.setter
+    def base_value(self,val):
+        self._base_value = val
         if not isinstance(val, numbers.Number):
             return
         if self.get_value is None:
-            self.value = self._bare_value*self.base_unit
+            self.value = self._base_value*self.base_unit
         else:
-            self.value = self.get_value(self._bare_value)
+            self.value = self.get_value(self._base_value)
+
+    # Setup base_unit property
+    @property
+    def base_unit(self):
+        return self._base_unit
+    @base_unit.setter
+    def base_unit(self,unt):# Once the base unit is initialized, it wil not change
+        if self._base_unit is None:
+            if self.units is not None:
+                self._base_unit = unt
+                return
+        else:
+            log.warnning("Base_unit can not be set.")
+            if self.unit is None:
+                self._base_unit = None
+                return
+            if isinstance(self.units,str):
+                if self.units in pint_units.keys():
+                    self._base_unit = pint_units[self.units]
+                else:
+                    try:
+                        self._base_unit = u.Unit(self.units)
+                    except:
+                        log.warn("Unrecognized unit '%s'" % self.units)
+                return
+            if isinstance(self.units,u.Unit):
+                self._base_unit = self.units
+                return
 
     def __str__(self):
         out = self.name
@@ -211,7 +262,7 @@ class MJDParameter(Parameter):
             parse_value=time_from_mjd_string,
             print_value=time_to_mjd_string,
             get_value =lambda x: longdouble_from_mjd_string(x,'utc'),
-            get_bare_value = time_to_longdouble):
+            get_base_value = time_to_longdouble):
         super(MJDParameter, self).__init__(name=name, value=value,
                 units="MJD", description=description,
                 uncertainty=uncertainty, frozen=frozen,
@@ -219,5 +270,5 @@ class MJDParameter(Parameter):
                 aliases=aliases,
                 parse_value=parse_value,
                 print_value=print_value,
-                get_bare_value = get_bare_value)
+                get_base_value = get_base_value)
         self.paramType = 'MJDParameter'
