@@ -1,7 +1,7 @@
 # parameter.py
 # Defines Parameter class for timing model parameters
 from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
-time_to_longdouble
+time_to_longdouble, is_number
 import numpy
 import astropy.units as u
 from pint import ls,GMsun,Tsun
@@ -118,17 +118,28 @@ class Parameter(object):
             return False
         if len(k) >= 2:
             self.set(k[1])
-        if len(k) >= 3:
-            if int(k[2]) > 0:
-                self.frozen = False
-        if len(k) == 4:
-            if name=="RAJ":
-                self.uncertainty = Angle("0:0:%.15fh" % fortran_float(k[3]))
-            elif name=="DECJ":
-                self.uncertainty = Angle("0:0:%.15fd" % fortran_float(k[3]))
-            else:
-                self.uncertainty = fortran_float(k[3])
+        if len(k) >= 3:  # Fixed a bug here. It can read parfile third column as uncertainty
+            try:
+                if int(k[2]) > 0:
+                    self.frozen = False
+            except:
+                if is_number(k[2]):
+                    ucty = k[2]
+                else:
+                    errmsg = 'The third column of parfile can only be fitting flag '
+                    errmsg+= '(1/0) or uncertainty.'
+                    raise ValueError(errmsg)
+
+            if len(k) == 4:
+                ucty = k[3]
+                if name=="RAJ":
+                    self.uncertainty = Angle("0:0:%.15fh" % fortran_float(ucty))
+                elif name=="DECJ":
+                    self.uncertainty = Angle("0:0:%.15fd" % fortran_float(ucty))
+                else:
+                    self.uncertainty = fortran_float(ucty)
         return True
+
     def name_matches(self, name):
         """Whether or not the parameter name matches the provided name
         """
