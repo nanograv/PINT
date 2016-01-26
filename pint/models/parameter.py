@@ -1,7 +1,7 @@
 # parameter.py
 # Defines Parameter class for timing model parameters
 from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
-time_to_longdouble,is_number
+time_to_longdouble, is_number
 import numpy
 import astropy.units as u
 from astropy import log
@@ -59,7 +59,7 @@ class Parameter(object):
         self.units = units # parameter unit in string format
         # parameter base unit, in astropy.units object format.
         # Once it is speicified, base_unit will not be changed.
-        
+
         self.get_base_value = get_base_value # Method to get base_value from value
         self.get_value = get_value # Method to update value from base_value
         self.value = value # The value of parameter, internal storage
