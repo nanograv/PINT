@@ -122,7 +122,10 @@ def time_from_mjd_string(s, scale='utc'):
         imjd = int(imjd_s)
         fmjd = float("0." + fmjd_s)
     return astropy.time.Time(imjd, fmjd, scale=scale, format='mjd',
-                             precision=9)
+                         precision=9)
+def time_from_longdouble(t,scale='utc'):
+    st = longdouble2string(t)
+    return time_from_mjd_string(st,scale)
 
 def time_to_mjd_string(t, prec=15):
     """Print an MJD time with lots of digits (number is 'prec').
