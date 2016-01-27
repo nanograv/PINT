@@ -144,7 +144,7 @@ class Parameter(object):
     def base_value(self,val):
         self._base_value = val
         if not isinstance(val, numbers.Number):
-            return
+            raise ValueError('Base_value has to be a pure number.')
         if self.get_value is None:
             self.value = self._base_value*self.base_unit
         else:
