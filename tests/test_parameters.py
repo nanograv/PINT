@@ -1,6 +1,7 @@
 from pint.models import parameter as p
 from pint.models import model_builder as mb
 from astropy.coordinates.angles import Angle
+import astropy.time as time
 import astropy.units as u
 import os, unittest
 
@@ -30,7 +31,12 @@ class TestParameters(unittest.TestCase):
         self.m.T0.num_value = 'this is a string'
     def test_num_value(self):
         self.assertRaises(ValueError, self.set_num_value)
-
+    def set_value(self):
+        self.m.OM.value = 10*u.m
+        self.m.OM.value = None
+        self.m.OM.value = time.Time(54000,format = 'mjd')
+    def test_value(self):
+        self.assertRaises(ValueError, self.set_value)
 
 if __name__ == '__main__':
     pass
