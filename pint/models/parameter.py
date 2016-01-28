@@ -14,8 +14,8 @@ import numbers
 class Parameter(object):
     """A PINT class describing a single timing model parameter. The parameter
     value will be stored at `value` property in a users speicified format. At
-    the same time property `base_value` will store a base value from the value and
-    `base_unit` will store the basic unit in the format of `Astropy.units`
+    the same time property `num_value` will store a num value from the value and
+    `num_unit` will store the basic unit in the format of `Astropy.units`
 
     Parameters
     ----------
@@ -45,25 +45,24 @@ class Parameter(object):
     print_value : method, optional
         A function that converts the internal value to a string for output.
     get_value : method, optional
-        A function that converts base_value attribute and base_unit to value
+        A function that converts num_value attribute and num_unit to value
         attribute
-    get_base_value:
+    get_num_value:
         A function that get purely value from value attribute
     """
 
     def __init__(self, name=None, value=None, units=None, description=None,
             uncertainty=None, frozen=True, aliases=None, continuous=True,
             parse_value=fortran_float, print_value=str,get_value = None,
-            get_base_value=lambda x: x):
+            get_num_value=lambda x: x):
         self.name = name  # name of the parameter
         self.units = units # parameter unit in string format,or None
-        # parameter base unit, in astropy.units object format.
-        # Once it is speicified, base_unit will not be changed.
+        # parameter num unit, in astropy.units object format.
+        # Once it is speicified, num_unit will not be changed.
 
-        self.get_base_value = get_base_value # Method to get base_value from value
-        self.get_value = get_value # Method to update value from base_value
+        self.get_num_value = get_num_value # Method to get num_value from value
+        self.get_value = get_value # Method to update value from num_value
         self.value = value # The value of parameter, internal storage
-
 
         self.description = description
         self.uncertainty = uncertainty
@@ -80,20 +79,20 @@ class Parameter(object):
         return self._units
     @units.setter
     def units(self,unt):
-        # Setup unit and base unit
+        # Setup unit and num unit
         if isinstance(unt,(u.Unit,u.CompositeUnit)):
             self._units = unt.to_string()
-            self._base_unit = unt
+            self._num_unit = unt
         elif isinstance(unt,(str)):
             if unt in pint_units.keys():
                 self._units = unt
-                self._base_unit = pint_units[unt]
+                self._num_unit = pint_units[unt]
             else:
                 self._units = unt
-                self._base_unit = u.Unit(self._units)
+                self._num_unit = u.Unit(self._units)
         elif unt is None:
             self._units = unt
-            self._base_unit = unt
+            self._num_unit = unt
 
         else:
             raise ValueError('Units can only take string, astropy units or None')
@@ -104,7 +103,7 @@ class Parameter(object):
             log.warning(wmsg)
             try:
                 if hasattr(self.value,'unit'):
-                    temp = self.value.to(self.base_unit)
+                    temp = self.value.to(self.num_unit)
             except:
                 log.warning('The value unit is not compatable with'\
                                  ' parameter units,right now.')
@@ -115,45 +114,55 @@ class Parameter(object):
     @value.setter
     def value(self,val):
         self._value = val
-        if self._value is None:
-            self._base_value = None
-            return
-
-        # Check units
-        if hasattr(self._value,'unit'):
-            if self.units is None:
-                self.units = self._value.unit.to_string()
-                value_base_unit = self._value
-            else:
+        if isinstance(self._value,u.Unit):  # If the new value is astropy angle or Quantity
+            if self._num_unit is not None: # Check unit
                 try:
-                    value_base_unit = self._value.to(self._base_unit)
+                    value_num_unit = self._value.to(self._num_unit)
                 except:
                     raise ValueError('The value unit is not compatable with'\
                                      ' parameter units.')
-
-            self._base_value = value_base_unit.value
+                self._num_value = value_num_unit.value
+            else:
+                self.unit = self._value.unit.to_string()
+                self._num_value = self._value.value
+        elif isinstance(self._value,(str,bool)) or self._value is None:
+            self._num_value = None
         else:
-            self._base_value = self.get_base_value(self._value)
+            self._num_value = self.get_num_value(self._value)
+            if not isinstance(self._num_value, numbers.Number):
+                if not self._num_value is not None:
+                    raise ValueError("The ._num_value has to be a pure number or None. "\
+                                     "Please check your .get_num_value method. ")
 
-
-    # Setup base_value property
+    # Setup num_value property
     @property
-    def base_value(self):
-        return self._base_value
-    @base_value.setter
-    def base_value(self,val):
-        self._base_value = val
-        if not isinstance(val, numbers.Number):
-            raise ValueError('Base_value has to be a pure number.')
-        if self.get_value is None:
-            self.value = self._base_value*self.base_unit
+    def num_value(self):
+        return self._num_value
+    @num_value.setter
+    def num_value(self,val):
+        if val is None:
+            self._num_value = val
+            if not isinstance(self.value,(str,bool)):
+                raise ValueError('This parameter value is number convertable. '\
+                                 'Setting ._num_value to None will lost the ' \
+                                 'parameter value.' )
+            else:
+                self.value = None
+
+        elif not isinstance(val,numbers.Number):
+            raise ValueError('num_value has to be a pure number or None.')
         else:
-            self.value = self.get_value(self._base_value)
+            self._num_value = val
+            # Update value
+            if self.get_value is None:
+                self.value = self._num_value*self.num_unit
+            else:
+                self.value = self.get_value(self._num_value)
 
-    # Setup base_unit property
+    # Setup num_unit property
     @property
-    def base_unit(self):
-        return self._base_unit
+    def num_unit(self):
+        return self._num_unit
 
     def __str__(self):
         out = self.name
@@ -248,7 +257,7 @@ class MJDParameter(Parameter):
             parse_value=time_from_mjd_string,
             print_value=time_to_mjd_string,
             get_value =lambda x: longdouble_from_mjd_string(x,'utc'),
-            get_base_value = time_to_longdouble):
+            get_num_value = time_to_longdouble):
         super(MJDParameter, self).__init__(name=name, value=value,
                 units="MJD", description=description,
                 uncertainty=uncertainty, frozen=frozen,
@@ -256,5 +265,5 @@ class MJDParameter(Parameter):
                 aliases=aliases,
                 parse_value=parse_value,
                 print_value=print_value,
-                get_base_value = get_base_value)
+                get_num_value = get_num_value)
         self.paramType = 'MJDParameter'
