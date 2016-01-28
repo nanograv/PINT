@@ -121,7 +121,7 @@ class TimingModel(object):
         pass
 
 
-    def add_param(self, param):
+    def add_param(self, param,binary_param = False):
         """Add a parameter to the timing model. If it is a prefixe parameter,
            it will add prefix information to the prefix information attributes.
         """
