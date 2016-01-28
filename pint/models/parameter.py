@@ -114,7 +114,7 @@ class Parameter(object):
     @value.setter
     def value(self,val):
         self._value = val
-        if isinstance(self._value,u.Unit):  # If the new value is astropy angle or Quantity
+        if hasattr(self._value,'unit'):  # If the new value is astropy angle or Quantity
             if self._num_unit is not None: # Check unit
                 try:
                     value_num_unit = self._value.to(self._num_unit)
