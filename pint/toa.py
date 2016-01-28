@@ -344,7 +344,7 @@ class TOA(object):
 class TOAs(object):
     """A class of multiple TOAs, loaded from zero or more files."""
 
-    def __init__(self, toafile=None, toalist=None, toaTable = None, usepickle=True):
+    def __init__(self, toafile=None, toalist=None, toaTable=None, usepickle=True):
         # First, just make an empty container
         self.toas = []
         self.commands = []
@@ -448,6 +448,7 @@ class TOAs(object):
 
     def get_errors(self):
         """Return a numpy array of the TOA errors in us"""
+        #FIXME temporarily disable reading errors from toas
         if hasattr(self, "toas"):
             return numpy.array([t.error.to(u.us).value for t in self.toas])*u.us
         else:

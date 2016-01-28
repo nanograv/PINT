@@ -102,7 +102,12 @@ class TimingModel(object):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
         self.num_prefix_params = {}
-        self.delay_funcs = [] # List of delay component functions
+        self.params = []  # List of model parameter names
+        self.delay_funcs = {'L1':[],'L2':[]} # List of delay component functions
+        # L1 is the first level of delays. L1 delay does not need barycentric toas
+        # After L1 delay, the toas have been corrected to solar system barycenter.
+        # L2 is the second level of delays. L2 delay need barycentric toas
+
         self.phase_funcs = [] # List of phase component functions
         self.cache = None
         self.add_param(Parameter(name="PSR",
@@ -110,9 +115,11 @@ class TimingModel(object):
             description="Source name",
             aliases=["PSRJ", "PSRB"],
             parse_value=str))
+        self.model_type = None
 
     def setup(self):
         pass
+
 
     def add_param(self, param):
         """Add a parameter to the timing model. If it is a prefixe parameter,
@@ -127,6 +134,8 @@ class TimingModel(object):
                 self.num_prefix_params[param.prefix]+=1
             else:
                 self.num_prefix_params[param.prefix]=1
+        if binary_param is True:
+            self.binary_params +=[param.name,]
 
 
     def add_more_prefix_params(self,prefixParamExp,maxPrefixIndex):
@@ -163,6 +172,7 @@ class TimingModel(object):
             pp.apply_template()
             if pp.name not in self.params:
                 self.add_param(pp)
+
 
 
     def param_help(self):
@@ -215,9 +225,20 @@ class TimingModel(object):
         TOA to get time of emission at the pulsar.
         """
         delay = np.zeros(len(toas))
-        for df in self.delay_funcs:
-            delay += df(toas)
+        for dlevel in self.delay_funcs.keys():
+            for df in self.delay_funcs[dlevel]:
+                delay += df(toas)
+
         return delay
+
+    @Cache.use_cache
+    def get_barycentric_toas(self,toas):
+        toasObs = toas['tdbld']
+        delay = np.zeros(len(toas))
+        for df in self.delay_funcs['L1']:
+            delay += df(toas)
+        toasBary = toasObs*u.day - delay*u.second
+        return toasBary
 
     def d_phase_d_tpulsar(self, toas):
         """Return the derivative of phase wrt time at the pulsar.
@@ -383,6 +404,8 @@ class TimingModel(object):
         result = ""
         for par in self.params:
             result += getattr(self, par).as_parfile_line()
+        # Always include UNITS in par file. For now, PINT only supports TDB
+        result += "UNITS TDB"
         return result
 
     def read_parfile(self, filename):
@@ -431,7 +454,9 @@ class TimingModel(object):
         pNames_inpar = para_dict.keys()
 
         pNames_inModel = self.params
+
         prefix_inModel = self.prefix_params
+
         # Remove the common parameter PSR
         try:
             del pNames_inModel[pNames_inModel.index('PSR')]
@@ -470,6 +495,7 @@ class TimingModel(object):
                     return True
                 else:
                     continue
+
             # TODO Check prefix parameter
 
             return False

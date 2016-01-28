@@ -40,6 +40,7 @@ class Glitch(TimingModel):
             self.add_param(prefixParameter(name="GLF0D_%d"%ii,
                 units="Hz", value=0.0,
                 description="Decaying frequency change for glitch %d"%ii))
+
             self.add_param(prefixParameter(name="GLTD_%d"%ii,
                 units="days", value=0.0,
                 description="Decay time constant for glitch %d"%ii))

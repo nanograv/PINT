@@ -43,7 +43,8 @@ class Dispersion(TimingModel):
             description='End of DMX interval',
             descriptionTplt= lambda x:'End of DMX interval'))
 
-        self.delay_funcs += [self.dispersion_delay,]
+        self.delay_funcs['L1'] += [self.dispersion_delay,]
+
 
     def setup(self):
         super(Dispersion, self).setup()

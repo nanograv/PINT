@@ -8,15 +8,19 @@ from .astrometry import Astrometry
 from .dispersion import Dispersion
 from .spindown import Spindown
 from .glitch import Glitch
-from .dd import DD
 from .bt import BT
 from .solar_system_shapiro import SolarSystemShapiro
 from pint.utils import split_prefixed_name
 from .parameter import prefixParameter
+from .dd_wrapper import DDwrapper
+
 # List with all timing model components we will consider when pre-processing a
 # parfile
+
 ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro,
-                  BT, DD, Glitch]
+                  BT, DDwrapper, Glitch]
+
+
 class model_builder(object):
     """A class for model construction interface.
         Parameters
@@ -56,8 +60,8 @@ class model_builder(object):
         self.name = name
         self.model_instance = None
         self.param_inparF = None
+        self.param_unrecognized = {}
         self.param_inModel = []
-        self.param_unknown = {}
         self.comps = ComponentsList
         self.prefix_names = None
         self.param_prefix = {}
@@ -157,6 +161,8 @@ class model_builder(object):
         self.model_instance = model()
         self.param_inModel = self.model_instance.params
         self.prefix_names = self.model_instance.prefix_params
+        # Find unrecognised parameters in par file.
+
         if self.param_inparF is not None:
             parName = []
             for p in self.param_inModel:
@@ -166,7 +172,7 @@ class model_builder(object):
 
             for pp in self.param_inparF.keys():
                 if pp not in parName:
-                    self.param_unknown[pp] = self.param_inparF[pp]
+                    self.param_unrecognized[pp] = self.param_inparF[pp]
 
             self.search_prefix_param(self.param_unknown.keys(),self.prefix_names)
 
@@ -182,6 +188,7 @@ class model_builder(object):
                                     continue
                                 newPfxp = pfxp.new_index_prefix_param(idx)
                                 self.model_instance.add_param(newPfxp)
+
         if parfile is not None:
             self.model_instance.read_parfile(parfile)
 

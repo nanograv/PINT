@@ -55,7 +55,7 @@ class Astrometry(TimingModel):
             units="mas", value=0.0,
             description="Parallax"))
 
-        self.delay_funcs += [self.solar_system_geometric_delay,]
+        self.delay_funcs['L1'] += [self.solar_system_geometric_delay,]
 
     def setup(self):
         super(Astrometry, self).setup()
