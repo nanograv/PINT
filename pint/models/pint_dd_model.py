@@ -2,8 +2,8 @@ import numpy as np
 import time
 from pint import ls,GMsun,Tsun
 from pint import utils
-from pulsar_binaries.DDindependent import PSRdd as DDmodel
-from .psr_binary_wapper import PSRbinaryWapper
+from .pulsar_binaries.DD_model import DDmodel
+from .pint_pulsar_binary import PSRbinaryWapper
 from .parameter import Parameter, MJDParameter
 from .timing_model import Cache, TimingModel, MissingParameter
 import astropy
@@ -11,7 +11,10 @@ from ..utils import time_from_mjd_string, time_to_longdouble
 import astropy.units as u
 
 class DDwrapper(PSRbinaryWapper):
-    """A DD modle wapper
+    """This is a PINT pulsar binary dd model class a subclass of PSRbinaryWapper.
+       It is a wrapper for independent DDmodel class defined in ./pulsar_binary/DD_model.py
+       All the detailed calculations are in the independent DDmodel.
+       The aim for this class is to connect the independent binary model with PINT platform
     """
 
     def __init__(self,):
@@ -95,9 +98,12 @@ class DDwrapper(PSRbinaryWapper):
         ddobj = DDmodel(self.barycentricTime)
 
         pardict = {}
-        for par in ddobj.parDefault.keys():     # Note, not called dd_params, but just params
+        for par in ddobj.binary_params:
             if hasattr(self, par):
-                pardict[par] = getattr(self, par).num_value
+                parObj = getattr(self, par)
+                if parObj.num_value is None:
+                    continue
+                pardict[par] = parObj.num_value*parObj.num_unit
 
         ddobj.set_par_values(pardict)    # This now does a lot of stuff that is in the PSRdd.__init__
 

@@ -20,7 +20,7 @@ class DDmodel(PSR_BINARY):
            Barycentric time of arrival in the format of MJD.
        Return
        ----------
-       A dd binary model class with paramters, delay calculations and derivatives. 
+       A dd binary model class with paramters, delay calculations and derivatives.
 
        Example
        ----------
@@ -32,32 +32,21 @@ class DDmodel(PSR_BINARY):
        calculated.
     """
     def __init__(self,t):
-        super(PSRdd, self).__init__()
+        super(DDmodel, self).__init__()
         if not isinstance(t, np.ndarray) and not isinstance(t,list):
             self.t = np.array([t,])
         else:
             self.t = t
+        self.param_default_value.update({'A0':0*u.second,'B0':0*u.second,
+                               'DR':0*u.Unit(''),'DTH':0*u.Unit(''),
+                               'GAMMA':0*u.second,'SINI':0*u.Unit('')})
 
+        self.binary_params = self.param_default_value.keys()
 
-        self.dd_params = [ 'PB', 'PBDOT', 'ECC', 'EDOT', \
-                       'OM', 'OMDOT', 'A1', 'A1DOT','A0','B0', 'T0', 'GAMMA',\
-                       'SINI','DR','DTH']
         self.dd_interVars = ['er','eTheta','beta','alpha','Dre','Drep','Drepp',
                              'nhat']
-        self.add_binary_params(self.dd_params)
         self.add_inter_vars(self.dd_interVars)
-        self.parDefault.update({'A0':0*u.second,'B0':0*u.second,
-                                'DR':0*u.Unit(''),'DTH':0*u.Unit(''),
-                                'GAMMA':0*u.second,'SINI':0*u.Unit('')})
-
-        self.set_default_values(self.parDefault)
-
-
-        # for key, value in kwargs.iteritems():
-        #     if key.upper() in self.params:
-        #         if value is not None:
-        #             setattr(self, key.upper(), value)
-
+        self.set_par_values()
         self.set_inter_vars()
         self.binary_delay_funcs+= [self.DDdelay]
 
