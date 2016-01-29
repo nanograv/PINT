@@ -14,7 +14,7 @@ SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
 from pint import ls,GMsun,Tsun
 
 
-class PSRbin(object):
+class PSR_BINARY(object):
     """A generic model for independent psr binary model
        Parameters are signed by specific model.
 

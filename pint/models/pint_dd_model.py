@@ -2,7 +2,7 @@ import numpy as np
 import time
 from pint import ls,GMsun,Tsun
 from pint import utils
-from .DDindependent import PSRdd as DDmodel
+from pulsar_binaries.DDindependent import PSRdd as DDmodel
 from .psr_binary_wapper import PSRbinaryWapper
 from .parameter import Parameter, MJDParameter
 from .timing_model import Cache, TimingModel, MissingParameter

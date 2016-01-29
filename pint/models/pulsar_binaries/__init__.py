@@ -1,6 +1,7 @@
 # __init__.py for PINT models/binarys directory
-"""This module contains implementations of pulsar timing independent binary models.
+"""This module contains implementations of independent pulsar timing binary models.
 """
+import os
 # setup environment
 # Load the PINT environment variable to get the top level directory
 pintdir = os.getenv("PINT")
