@@ -82,6 +82,18 @@ class Parameter(object):
         return self._units
     @units.setter
     def units(self,unt):
+        # Check if this is the first time set units
+        if hasattr(self,'value'):
+            if self.units is None:
+                return 
+            wmsg = 'Parameter '+self.name+' units has been reset to '+unt
+            log.warning(wmsg)
+            try:
+                if hasattr(self.value,'unit'):
+                    temp = self.value.to(self.num_unit)
+            except:
+                log.warning('The value unit is not compatable with'\
+                                 ' parameter units,right now.')
         # Setup unit and num unit
         if isinstance(unt,(u.Unit,u.CompositeUnit)):
             self._units = unt.to_string()
@@ -100,16 +112,7 @@ class Parameter(object):
         else:
             raise ValueError('Units can only take string, astropy units or None')
 
-        # Check if this is the first time set units
-        if hasattr(self,'value'):
-            wmsg = 'Parameter '+self.name+'units has been reset to '+unt
-            log.warning(wmsg)
-            try:
-                if hasattr(self.value,'unit'):
-                    temp = self.value.to(self.num_unit)
-            except:
-                log.warning('The value unit is not compatable with'\
-                                 ' parameter units,right now.')
+
     # Setup value property
     @property
     def value(self):
@@ -325,10 +328,10 @@ class prefixParameter(Parameter):
     """
 
     def __init__(self,name=None, prefix = None ,indexformat = None,index = 1,
-            value=None,units = None, unitTplt = None,description=None,
-            descriptionTplt = None,uncertainty=None, frozen=True,
-            continuous=True,prefix_aliases = [],parse_value=fortran_float,
-            print_value=None):
+            value=None,units = None, unitTplt = None,
+            description=None, descriptionTplt = None,
+            uncertainty=None, frozen=True,continuous=True,prefix_aliases = [],
+            parse_value=fortran_float, print_value=None):
         # Create prefix parameter by name
         if name is None:
             if prefix is None or indexformat is None:
@@ -367,6 +370,12 @@ class prefixParameter(Parameter):
                 self.index = int(indexPart)
         self.unit_template = unitTplt
         self.description_template = descriptionTplt
+        # set templates
+        if self.unit_template is None:
+            self.unit_template = lambda x: self.units
+        if self.description_template is None:
+            self.description_template = lambda x: self.descrition
+
 
         super(prefixParameter, self).__init__(name=name, value=value,
                 units=units, description=description,
