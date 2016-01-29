@@ -89,24 +89,19 @@ class DDwrapper(PSRbinaryWapper):
         """
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py
-        dd_params = [  'PB', 'PBDOT', 'ECC', 'EDOT', \
-                       'OM', 'OMDOT', 'A1', 'A1DOT','A0','B0', 'T0', 'GAMMA',\
-                       'SINI','DR','DTH']
-        aliases = {'A1DOT':'XDOT', 'ECC':'E'}
-
-        pardict = {}
-        for par in dd_params:
-            key = par
-            # T0 needs to be converted to long double
-            if key in ['T0'] and \
-                type(getattr(self, key).value) is astropy.time.core.Time:
-                pardict[par] = time_to_longdouble(getattr(self, key).value)*u.day
-            else:
-                pardict[par] = getattr(self, key).value
         # Get barycnetric toa first
         self.barycentricTime = self.get_barycentric_toas(toas)
-        # Return the DDmodel object
-        return DDmodel(self.barycentricTime, **pardict)
+
+        ddobj = DDmodel(self.barycentricTime)
+
+        pardict = {}
+        for par in ddobj.parDefault.keys():     # Note, not called dd_params, but just params
+            if hasattr(self, par):
+                pardict[par] = getattr(self, par).num_value
+
+        ddobj.set_par_values(pardict)    # This now does a lot of stuff that is in the PSRdd.__init__
+
+        return ddobj
 
     @Cache.use_cache
     def DD_delay(self, toas):

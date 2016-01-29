@@ -5,7 +5,7 @@ import astropy.units as u
 import astropy.constants as c
 from pint import ls,GMsun,Tsun
 class PSRdd(PSRbin):
-    def __init__(self,t,**kwargs):
+    def __init__(self,t):
         super(PSRdd, self).__init__()
         if not isinstance(t, np.ndarray) and not isinstance(t,list):
             self.t = np.array([t,])
@@ -13,7 +13,7 @@ class PSRdd(PSRbin):
             self.t = t
 
 
-        self.dd_params = ['PB', 'PBDOT', 'ECC', 'EDOT', \
+        self.dd_params = [ 'PB', 'PBDOT', 'ECC', 'EDOT', \
                        'OM', 'OMDOT', 'A1', 'A1DOT','A0','B0', 'T0', 'GAMMA',\
                        'SINI','DR','DTH']
         self.dd_interVars = ['er','eTheta','beta','alpha','Dre','Drep','Drepp',
@@ -27,10 +27,10 @@ class PSRdd(PSRbin):
         self.set_default_values(self.parDefault)
 
 
-        for key, value in kwargs.iteritems():
-            if key.upper() in self.params:
-                if value is not None:
-                    setattr(self, key.upper(), value)
+        # for key, value in kwargs.iteritems():
+        #     if key.upper() in self.params:
+        #         if value is not None:
+        #             setattr(self, key.upper(), value)
 
         self.set_inter_vars()
         self.binary_delay_funcs+= [self.DDdelay]

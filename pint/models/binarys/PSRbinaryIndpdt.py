@@ -27,7 +27,7 @@ class PSRbin(object):
        projected semi-major axis of orbit   a1
     """
     def __init__(self,):
-        self.params = ['PB', 'PBDOT', 'ECC', 'EDOT','OM', 'OMDOT', 'A1', \
+        self.binary_params = ['PB', 'PBDOT', 'ECC', 'EDOT','OM', 'OMDOT', 'A1', \
                        'A1DOT', 'T0',]
                        # Necessary parameters for all binary model
         self.parDefault = {'PB':np.longdouble(10.0)*u.day,
@@ -41,8 +41,6 @@ class PSRbin(object):
                            'XPBDOT':0.0*u.day/u.day,
                            'M2':0.0*u.M_sun }
 
-        self.tt0 = None
-        self.t = None
         self.set_default_values(self.parDefault)
         self.inter_vars = ['E','M','nu','ecc','omega','a1','TM2']
         self.binary_delay_funcs = []
@@ -55,7 +53,7 @@ class PSRbin(object):
     @t.setter
     def t(self,val):
         self._t = val
-        self.tt0 = self.get_tt0(self._t)
+        self._tt0 = self.get_tt0(self._t)
 
     @property
     def T0(self):
@@ -63,7 +61,12 @@ class PSRbin(object):
     @T0.setter
     def T0(self,val):
         self._T0 = val
-        self.tt0 = self.get_tt0(self.t)
+        if hasattr(self, '_t'):
+            self._tt0 = self.get_tt0(self._t)
+
+    def set_par_values(self,valDict):
+        for par in valDict.keys():
+            setattr(self,par,valDict[par])
 
     def pars(self):
         """Parameter names in model"""
@@ -78,8 +81,8 @@ class PSRbin(object):
         if not isinstance(parameters,list):
             parameters = [parameters,]
         for p in parameters:
-            if p not in self.params:
-                self.params.append(p)
+            if p not in self.binary_params:
+                self.binary_params.append(p)
 
     def add_inter_vars(self,interVars):
         if not isinstance(interVars,list):

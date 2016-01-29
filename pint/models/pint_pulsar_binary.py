@@ -101,12 +101,9 @@ class PSRbinaryWapper(TimingModel):
     def apply_units(self):
         for bpar in self.binary_params:
             bparObj = getattr(self,bpar)
-            if bparObj.value == None:
+            if bparObj.num_value is None or bparObj.num_unit is None:
                 continue
-            if type(bparObj).__name__ == 'MJDParameter':
-                continue
-
-            bparObj.value = bparObj.value*u.Unit(bparObj.num_unit)
+            bparObj.value = bparObj.num_value*u.Unit(bparObj.num_unit)
 
 
     def binary_delay(self,toas):
