@@ -135,7 +135,7 @@ class model_builder(object):
     	       self.select_comp.append(c)
 
     def search_prefix_param(self,paramList,prefixList):
-        """ Check if the unknown parameter has prefix parameter
+        """ Check if the Unrecognized parameter has prefix parameter
         """
         for pn in prefixList:
             self.param_prefix[pn] = []
@@ -174,7 +174,7 @@ class model_builder(object):
                 if pp not in parName:
                     self.param_unrecognized[pp] = self.param_inparF[pp]
 
-            self.search_prefix_param(self.param_unknown.keys(),self.prefix_names)
+            self.search_prefix_param(self.param_unrecognized.keys(),self.prefix_names)
 
             if self.param_prefix != {}:
                 for p in self.param_prefix.keys():
