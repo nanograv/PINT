@@ -122,7 +122,10 @@ def time_from_mjd_string(s, scale='utc'):
         imjd = int(imjd_s)
         fmjd = float("0." + fmjd_s)
     return astropy.time.Time(imjd, fmjd, scale=scale, format='mjd',
-                             precision=9)
+                         precision=9)
+def time_from_longdouble(t,scale='utc'):
+    st = longdouble2string(t)
+    return time_from_mjd_string(st,scale)
 
 def time_to_mjd_string(t, prec=15):
     """Print an MJD time with lots of digits (number is 'prec').
@@ -284,6 +287,21 @@ def str2longdouble(str):
     """Return a numpy long double scalar from the input string, using strtold()"""
     return str2ldarr1(str)[0]
 
+
+def data2longdouble(data):
+    """Return a numpy long double scalar form different type of data
+       Parameters
+       ---------
+       data : str, ndarray, or a number
+       Return
+       ---------
+       numpy long double type of data.
+    """
+    if type(data) is str:
+        return str2longdouble(data)
+    else:
+        return np.longdouble(data)
+
 def taylor_horner(x, coeffs):
     """Evaluate a Taylor series of coefficients at x via the Horner scheme.
 
@@ -300,6 +318,23 @@ def taylor_horner(x, coeffs):
         result = result * x / fact + coeff
         fact -= 1.0
     return result
+
+def is_number(s):
+    """Check if it is a number string.
+    """
+    try:
+        float(s)
+        return True
+    except ValueError:
+        pass
+
+    try:
+        import unicodedata
+        unicodedata.numeric(s)
+        return True
+    except (TypeError, ValueError):
+        pass
+    return False
 
 if __name__=="__main__":
     assert taylor_horner(2.0, [10]) == 10

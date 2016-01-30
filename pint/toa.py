@@ -448,6 +448,7 @@ class TOAs(object):
 
     def get_errors(self):
         """Return a numpy array of the TOA errors in us"""
+        #FIXME temporarily disable reading errors from toas
         if hasattr(self, "toas"):
             return numpy.array([t.error.to(u.us).value for t in self.toas])*u.us
         else:
