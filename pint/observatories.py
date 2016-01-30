@@ -39,8 +39,15 @@ def get_clock_corr_vals(obsname, **kwargs):
         return (numpy.array([0.0, 100000.0]), numpy.array([0.0, 0.0]))
     # The following works for simple linear interpolation
     # of normal TEMPO-style clock correction files
-    mjds, ccorr = numpy.loadtxt(filenm, skiprows=2,
-                                usecols=(0, 2), unpack=True)
+    if obsname == "Parkes":
+        # Parkes clock correction file changes which column is used part way through
+        # This skips all pre-GPS data (50844.73 = 1998 Jan 31),
+        # and goes to the point where the 'GPS-PKS' column is populated
+        mjds, ccorr = numpy.loadtxt(filenm, skiprows=1003,
+                                    usecols=(0, 2), unpack=True)
+    else:
+        mjds, ccorr = numpy.loadtxt(filenm, skiprows=2,
+                                    usecols=(0, 2), unpack=True)
     return mjds, ccorr
 
 def read_observatories():
