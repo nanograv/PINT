@@ -62,7 +62,9 @@ class PSR_BINARY(object):
         self._T0 = val
         if hasattr(self, '_t'):
             self._tt0 = self.get_tt0(self._t)
-
+    @property
+    def tt0(self):
+        return self._tt0
     def set_par_values(self,valDict = None):
         """A function that sets the parameters and assign values
            If the valDict is not provided, it will set parameter as default value

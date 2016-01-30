@@ -96,7 +96,6 @@ class DDwrapper(PSRbinaryWapper):
         self.barycentricTime = self.get_barycentric_toas(toas)
 
         ddobj = DDmodel(self.barycentricTime)
-
         pardict = {}
         for par in ddobj.binary_params:
             if hasattr(self, par):
@@ -106,7 +105,6 @@ class DDwrapper(PSRbinaryWapper):
                 pardict[par] = parObj.num_value*parObj.num_unit
 
         ddobj.set_par_values(pardict)    # This now does a lot of stuff that is in the PSRdd.__init__
-
         return ddobj
 
     @Cache.use_cache

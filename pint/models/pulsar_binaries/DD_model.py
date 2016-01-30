@@ -47,7 +47,6 @@ class DDmodel(PSR_BINARY):
                              'nhat']
         self.add_inter_vars(self.dd_interVars)
         self.set_par_values()
-        self.set_inter_vars()
         self.binary_delay_funcs+= [self.DDdelay]
 
     # calculations for delays in DD model
