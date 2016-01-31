@@ -1,4 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
+"""Command-line interface for PINT
+
+This is a command-line interface for PINT. It does *not* try to duplicate the
+command line syntax for either TEMPO or Tempo2. (I never understood why I had to 
+specify '-f parfile' to those codes -- I mean, who runs TEMPO without a timing model?)
+
+This is currently just a stub and should be added to and expanded, as desired.
+
+"""
 from __future__ import division, print_function
 
 import os,sys
@@ -24,9 +33,12 @@ if __name__ == '__main__':
     
     log.info("Reading model from {0}".format(args.parfile))
     m = pint.models.get_model(args.parfile)
+    
+    log.info("Reading TOAs")
     t = pint.toa.get_TOAs(args.timfile)
     prefit_resids = pint.residuals.resids(t, m).time_resids
 
+    log.info("Fitting...")
     f = pint.fitter.fitter(t, m)
     f.call_minimize()
     
@@ -52,6 +64,7 @@ if __name__ == '__main__':
         fout = file(args.outfile,"w")
     else:
         fout = sys.stdout
+        print("\nBest fit model is:")
     
     fout.write(f.model.as_parfile()+"\n")
     

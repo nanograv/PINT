@@ -475,7 +475,7 @@ class TOAs(object):
         elif self.filename is not None:
             cPickle.dump(self, gzip.open(self.filename+".pickle.gz", "wb"))
         else:
-            log.warn("TOA pickle method needs a filename.\n")
+            log.warn("TOA pickle method needs a filename.")
 
     def get_summary(self):
         """Return a short ASCII summary of the TOAs."""
@@ -715,7 +715,7 @@ class TOAs(object):
                   os.path.isfile(filename+".pickle.gz") else ".pickle"
                 if (os.path.getmtime(filename+ext) >
                     os.path.getmtime(filename)):
-                    log.info("Reading toas from '%s'...\n" % \
+                    log.info("Reading toas from '%s'..." % \
                              (filename+ext))
                     # Pickle file is newer, assume it is good and load it
                     if ext==".pickle.gz":
