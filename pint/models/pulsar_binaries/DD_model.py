@@ -1,38 +1,52 @@
-from .PSRbinaryIndpdt import PSRbin
-from .timing_model import Cache
+from .pulsar_binary import PSR_BINARY
+from pint.models.timing_model import Cache
 import numpy as np
 import astropy.units as u
 import astropy.constants as c
 from pint import ls,GMsun,Tsun
-class PSRdd(PSRbin):
-    def __init__(self,t,**kwargs):
-        super(PSRdd, self).__init__()
+class DDmodel(PSR_BINARY):
+    """This is a class independent from PINT platform for pulsar DD binary model.
+       Refence: T. Damour and N. Deruelle(1986)
+       It is a subclass of PSR_BINARY class defined in file pulsar_binary.py in
+       the same folder. This class is desined for PINT platform but can be used
+       as an independent module for binary delay calculation.
+
+       To interact with PINT platform, a pint_pulsar_binary wrapper is needed.
+       See the source file pint/models/pint_dd_model.py
+
+       Parameters
+       ----------
+       t : numpy.array_like
+           Barycentric time of arrival in the format of MJD.
+       Return
+       ----------
+       A dd binary model class with paramters, delay calculations and derivatives.
+
+       Example
+       ----------
+       >>>t = numpy.linspace(54200.0,55000.0,800)
+       >>>binar_model = DDmodel(t)
+       >>>paramters_dict = {'A0':0.5,'ECC':0.01}
+       >>>binar_model.set_par_values(paramters_dict)
+       Here the binary has time input and parameters input, the delay can be
+       calculated.
+    """
+    def __init__(self,t):
+        super(DDmodel, self).__init__()
         if not isinstance(t, np.ndarray) and not isinstance(t,list):
             self.t = np.array([t,])
         else:
             self.t = t
+        self.param_default_value.update({'A0':0*u.second,'B0':0*u.second,
+                               'DR':0*u.Unit(''),'DTH':0*u.Unit(''),
+                               'GAMMA':0*u.second,'SINI':0*u.Unit('')})
 
+        self.binary_params = self.param_default_value.keys()
 
-        self.dd_params = ['PB', 'PBDOT', 'ECC', 'EDOT', \
-                       'OM', 'OMDOT', 'A1', 'A1DOT','A0','B0', 'T0', 'GAMMA',\
-                       'SINI','DR','DTH']
         self.dd_interVars = ['er','eTheta','beta','alpha','Dre','Drep','Drepp',
                              'nhat']
-        self.add_binary_params(self.dd_params)
         self.add_inter_vars(self.dd_interVars)
-        self.parDefault.update({'A0':0*u.second,'B0':0*u.second,
-                                'DR':0*u.Unit(''),'DTH':0*u.Unit(''),
-                                'GAMMA':0*u.second,'SINI':0*u.Unit('')})
-
-        self.set_default_values(self.parDefault)
-
-
-        for key, value in kwargs.iteritems():
-            if key.upper() in self.params:
-                if value is not None:
-                    setattr(self, key.upper(), value)
-
-        self.set_inter_vars()
+        self.set_par_values()
         self.binary_delay_funcs+= [self.DDdelay]
 
     # calculations for delays in DD model

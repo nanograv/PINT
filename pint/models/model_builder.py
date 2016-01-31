@@ -10,9 +10,10 @@ from .spindown import Spindown
 from .glitch import Glitch
 from .bt import BT
 from .solar_system_shapiro import SolarSystemShapiro
+
 from pint.utils import split_prefixed_name
 from .parameter import prefixParameter
-from .dd_wrapper import DDwrapper
+from .pint_dd_model import DDwrapper
 
 # List with all timing model components we will consider when pre-processing a
 # parfile
