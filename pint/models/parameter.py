@@ -85,7 +85,7 @@ class Parameter(object):
         # Check if this is the first time set units
         if hasattr(self,'value'):
             if self.units is None:
-                return 
+                return
             wmsg = 'Parameter '+self.name+' units has been reset to '+unt
             log.warning(wmsg)
             try:
@@ -331,7 +331,7 @@ class prefixParameter(Parameter):
             value=None,units = None, unitTplt = None,
             description=None, descriptionTplt = None,
             uncertainty=None, frozen=True,continuous=True,prefix_aliases = [],
-            parse_value=fortran_float, print_value=None):
+            parse_value=fortran_float, print_value=str):
         # Create prefix parameter by name
         if name is None:
             if prefix is None or indexformat is None:
@@ -387,8 +387,6 @@ class prefixParameter(Parameter):
         if units == 'MJD':
             self.parse_value = time_from_mjd_string
             self.print_value=time_to_mjd_string
-        else:
-            self.print_value = str
 
         self.prefix_aliases = prefix_aliases
         self.is_prefix = True
