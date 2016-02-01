@@ -12,7 +12,7 @@ timfile = 'tests/prefixtest.tim'
 
 m = pint.models.get_model(parfile)
 
-t = pint.toa.get_TOAs(timfile)
+t = pint.toa.get_TOAs(timfile,ephem="DE405")
 
 # These are pre-fit residuals
 rs = pint.residuals.resids(t, m).phase_resids
