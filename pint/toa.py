@@ -552,7 +552,7 @@ class TOAs(object):
                     flags[jj]['clkcorr'] = corr[jj]
 
     def compute_TDBs(self):
-        """Compute and add TDB and TDB long double columns to the TOA table
+        """Compute and add TDB and TDB long double columns to the TOA table.
 
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
         for TDB times, using the Observatory locations and IERS A Earth
@@ -604,6 +604,9 @@ class TOAs(object):
                 # Also save delta_ut1_utc for these TOAs for later use
                 for toa, dut1 in zip(grp['mjd'], utcs.delta_ut1_utc):
                     toa.delta_ut1_utc = dut1
+                # The actual conversion from UTC to TDB is done by astropy.Time
+                # as described here <http://docs.astropy.org/en/stable/time/>,
+                # with the real work done by the IAU SOFA library
                 tdbs = utcs.tdb
             else:
                 log.error("Unknown observatory ({0})".format(key['obs']))
