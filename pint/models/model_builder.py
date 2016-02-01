@@ -10,12 +10,16 @@ from .spindown import Spindown
 from .glitch import Glitch
 from .bt import BT
 from .solar_system_shapiro import SolarSystemShapiro
+from pint.utils import split_prefixed_name
+from .parameter import prefixParameter
 from .dd_wrapper import DDwrapper
+
 # List with all timing model components we will consider when pre-processing a
 # parfile
 
 ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro,
                   BT, DDwrapper, Glitch]
+
 
 class model_builder(object):
     """A class for model construction interface.
@@ -41,7 +45,6 @@ class model_builder(object):
         [2] psrJ1955 = mb.model_instance
 
         Build model from sketch and read parfile:
-
         [1] from .bt import BT
         [2] mb = model_builder("BT_model")
         [3] mb.add_components(BT)
@@ -60,6 +63,8 @@ class model_builder(object):
         self.param_unrecognized = {}
         self.param_inModel = []
         self.comps = ComponentsList
+        self.prefix_names = None
+        self.param_prefix = {}
         self.select_comp = []
         if parfile is not None:
             self.parfile = parfile
@@ -129,6 +134,20 @@ class model_builder(object):
     	    if c not in self.select_comp:
     	       self.select_comp.append(c)
 
+    def search_prefix_param(self,paramList,prefixList):
+        """ Check if the Unrecognized parameter has prefix parameter
+        """
+        for pn in prefixList:
+            self.param_prefix[pn] = []
+            pnlen = len(pn)
+            for p in paramList:
+                try:
+                    pre,idxstr,idxV = split_prefixed_name(p)
+                except:
+                    continue
+                if pre == pn:
+                    self.param_prefix[pn].append(p)
+
     def get_model_instance(self,parfile=None):
         """Read parfile using the model_instance attribute.
             Parameters
@@ -141,7 +160,7 @@ class model_builder(object):
 
         self.model_instance = model()
         self.param_inModel = self.model_instance.params
-
+        self.prefix_names = self.model_instance.prefix_params
         # Find unrecognised parameters in par file.
 
         if self.param_inparF is not None:
@@ -150,9 +169,25 @@ class model_builder(object):
                 parName+= getattr(self.model_instance,p).aliases
 
             parName += self.param_inModel
+
             for pp in self.param_inparF.keys():
                 if pp not in parName:
                     self.param_unrecognized[pp] = self.param_inparF[pp]
+
+            self.search_prefix_param(self.param_unrecognized.keys(),self.prefix_names)
+
+            if self.param_prefix != {}:
+                for p in self.param_prefix.keys():
+                    ppnames = [x for x in self.model_instance.params if x.startswith(p)]
+                    for ppn in ppnames:
+                        pfxp = getattr(self.model_instance,ppn)
+                        if pfxp.is_prefix is True:
+                            for pp in self.param_prefix[p]:
+                                pre,idstr,idx = split_prefixed_name(pp)
+                                if idx == pfxp.index:
+                                    continue
+                                newPfxp = pfxp.new_index_prefix_param(idx)
+                                self.model_instance.add_param(newPfxp)
 
         if parfile is not None:
             self.model_instance.read_parfile(parfile)
@@ -177,3 +212,23 @@ def get_model(parfile):
 
     mb = model_builder(name,parfile)
     return mb.model_instance
+
+def add_prefixed_param(modelIns,names):
+    """Add a prefixed parameter into the timing model.
+       Parameter
+       ----------
+       modelIns : PINT Timing_model class
+           The timing model of parameters adding to
+       names : string or list of strings
+           The name list of prefixed parameters.s
+    """
+    if type(names) is str:
+        names = [names,]
+    for n in names:
+        prefix,indexformat,indexV = split_prefixed_name(n)
+        if prefix in modelIns.prefix_params:
+            units = modelIns.prefix_params_units[prefix]
+            des = modelIns.prefix_params_description[prefix]
+
+        modelIns.add_param(prefixParameter(name = n,units = units,value = 0.0,
+                           description = des))

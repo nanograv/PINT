@@ -9,7 +9,9 @@ from pint import pint_units
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
+import re
 import numbers
+
 
 class Parameter(object):
     """A PINT class describing a single timing model parameter. The parameter
@@ -69,6 +71,7 @@ class Parameter(object):
         self.frozen = frozen
         self.continuous = continuous
         self.aliases = [] if aliases is None else aliases
+        self.is_prefix = False
         self.parse_value = parse_value # method to read a value from string,
                                        # user can put the speicified format here
         self.print_value = print_value # method to convert value to a string.
@@ -79,6 +82,18 @@ class Parameter(object):
         return self._units
     @units.setter
     def units(self,unt):
+        # Check if this is the first time set units
+        if hasattr(self,'value'):
+            if self.units is None:
+                return 
+            wmsg = 'Parameter '+self.name+' units has been reset to '+unt
+            log.warning(wmsg)
+            try:
+                if hasattr(self.value,'unit'):
+                    temp = self.value.to(self.num_unit)
+            except:
+                log.warning('The value unit is not compatable with'\
+                                 ' parameter units,right now.')
         # Setup unit and num unit
         if isinstance(unt,(u.Unit,u.CompositeUnit)):
             self._units = unt.to_string()
@@ -97,16 +112,7 @@ class Parameter(object):
         else:
             raise ValueError('Units can only take string, astropy units or None')
 
-        # Check if this is the first time set units
-        if hasattr(self,'value'):
-            wmsg = 'Parameter '+self.name+'units has been reset to '+unt
-            log.warning(wmsg)
-            try:
-                if hasattr(self.value,'unit'):
-                    temp = self.value.to(self.num_unit)
-            except:
-                log.warning('The value unit is not compatable with'\
-                                 ' parameter units,right now.')
+
     # Setup value property
     @property
     def value(self):
@@ -267,3 +273,143 @@ class MJDParameter(Parameter):
                 print_value=print_value,
                 get_num_value = get_num_value)
         self.paramType = 'MJDParameter'
+
+
+class prefixParameter(Parameter):
+    """ This is a Parameter type for prefix parameters, for example DMX_
+
+        Create a prefix parameter
+        To create a prefix parameter, there are two ways:
+        1. Create by name
+            If optional agrument name with a prefixed format, such as DMX_001
+            or F10, is given. prefixParameter class will figure out the prefix
+            name, index and indexformat.
+        2. Create by prefix and index
+            This method allows you create a prefixParameter class using prefix
+            name and index. The class name will be returned as prefix name plus
+            index with the right index format. So the optional arguments prefix,
+            indexformat and index are need. index default value is 1.
+        If both of two methods are fillfulled, It will using the first method.
+
+        Add descrition and units.
+        1. Direct add
+            A descrition and unit can be added directly by using the optional
+            arguments, descrition and units. Both of them will return as a string
+            attribution.
+        2. descrition and units template.
+            If the descrition and unit are changing with the prefix parameter index,
+            optional argurment descritionTplt and unitTplt are need. These two attributions
+            are lambda functions, for example
+            >>> descritionTplt = lambda x: 'This is the descrition of parameter %d'%x
+            The class will fill the descrition and unit automaticly.
+        If both two methods are fillfulled, it prefer the first one.
+
+        Parameter
+        ---------
+        name : str optional
+            The name of the parameter. If it is not provided, the prefix and index
+            format are needed.
+        prefix : str optional
+            Paremeter prefix, now it is only supporting 'prefix_' type and 'prefix0' type.
+        indexformat : str optional
+            The format for parameter index
+        index : int optional [default 1]
+            The index number for the prefixed parameter.
+        units :  str optional
+            The unit of parameter
+        unitTplt : lambda method
+            The unit template for prefixed parameter
+        description : str optional
+            Description for the parameter
+        descriptionTplt : lambda method optional
+            Description template for prefixed parameters
+        prefix_aliases : list of str optional
+            Alias for the prefix
+    """
+
+    def __init__(self,name=None, prefix = None ,indexformat = None,index = 1,
+            value=None,units = None, unitTplt = None,
+            description=None, descriptionTplt = None,
+            uncertainty=None, frozen=True,continuous=True,prefix_aliases = [],
+            parse_value=fortran_float, print_value=None):
+        # Create prefix parameter by name
+        if name is None:
+            if prefix is None or indexformat is None:
+                errorMsg = 'When prefix parameter name is not give, the prefix'
+                errorMsg += 'and indexformat are both needed.'
+                raise ValueError(errorMsg)
+            else:
+                # Get format fields
+                digitLen = 0
+                for i in range(len(indexformat)-1,-1,-1):
+                    if indexformat[i].isdigit():
+                        digitLen+=1
+                self.indexformat_field = indexformat[0:len(indexformat)-digitLen]
+                self.indexformat_field += '{0:0' +str(digitLen)+'d}'
+
+                name = prefix+self.indexformat_field.format(index)
+                self.prefix = prefix
+                self.indexformat = self.indexformat_field.format(0)
+                self.index = index
+        else: # Detect prefix and indexformat from name.
+            namefield = re.split('(\d+)',name)
+            if len(namefield)<2 or namefield[-2].isdigit() is False\
+               or namefield[-1]!='':
+            #When Name has no index in the end or no prefix part.
+                errorMsg = 'Prefix parameter name needs a perfix part'\
+                           +' and an index part in the end. '
+                errorMsg += 'If you meant to set up with prefix, please use prefix '\
+                           +'and indexformat optional agruments. Leave name argument alone.'
+                raise ValueError(errorMsg)
+            else: # When name has index in the end and prefix in front.
+                indexPart = namefield[-2]
+                prefixPart = namefield[0:-2]
+                self.indexformat_field = '{0:0' +str(len(indexPart))+'d}'
+                self.indexformat = self.indexformat_field.format(0)
+                self.prefix = ''.join(prefixPart)
+                self.index = int(indexPart)
+        self.unit_template = unitTplt
+        self.description_template = descriptionTplt
+        # set templates
+        if self.unit_template is None:
+            self.unit_template = lambda x: self.units
+        if self.description_template is None:
+            self.description_template = lambda x: self.descrition
+
+
+        super(prefixParameter, self).__init__(name=name, value=value,
+                units=units, description=description,
+                uncertainty=uncertainty, frozen=frozen,
+                continuous=continuous,
+                parse_value=parse_value,
+                print_value=print_value)
+
+        if units == 'MJD':
+            self.parse_value = time_from_mjd_string
+            self.print_value=time_to_mjd_string
+        else:
+            self.print_value = str
+
+        self.prefix_aliases = prefix_aliases
+        self.is_prefix = True
+
+    def prefix_matches(self,prefix):
+        return (prefix == self.perfix) or (prefix in self.prefix_aliases)
+
+    def apply_template(self):
+        dsc = self.description_template(self.index)
+        unt = self.unit_template(self.index)
+        if self.description is None:
+            self.description = dsc
+        if self.units is None:
+            self.units = unt
+
+    def new_index_prefix_param(self,index):
+        newpfx = prefixParameter(prefix = self.prefix ,
+                indexformat = self.indexformat,index = index,
+                unitTplt = self.unit_template,
+                descriptionTplt = self.description_template, frozen=self.frozen,
+                continuous=self.continuous, parse_value=self.parse_value,
+                print_value=self.print_value)
+        newpfx.apply_template()
+        return newpfx

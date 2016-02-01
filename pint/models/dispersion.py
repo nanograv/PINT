@@ -1,16 +1,18 @@
-"""This module implements a simple model of a constant dispersion measure."""
+"""This module implements a simple model of a constant dispersion measure.
+   And DMX dispersion"""
 # dispersion.py
 # Simple (constant) ISM dispersion measure
 from warnings import warn
-from .parameter import Parameter
+from .parameter import Parameter,prefixParameter
 from .timing_model import TimingModel, Cache
 import astropy.units as u
-
+import numpy as np
+import pint.utils as ut
 # The units on this are not completely correct
 # as we don't really use the "pc cm^3" units on DM.
 # But the time and freq portions are correct
 DMconst = 1.0/2.41e-4 * u.MHz * u.MHz * u.s
-
+# TODO split simple dispersion and DMX dispearion.
 class Dispersion(TimingModel):
     """This class provides a timing model for a simple constant
     dispersion measure.
@@ -22,10 +24,44 @@ class Dispersion(TimingModel):
         self.add_param(Parameter(name="DM",
             units="pc cm^-3", value=0.0,
             description="Dispersion measure"))
+        self.add_param(Parameter(name="DMX",
+            units="pc cm^-3", value=0.0,
+            description="Dispersion measure")) # DMX is for info output right now
+        self.add_param(prefixParameter(prefix = 'DMX_',indexformat = '0000',
+            units = "pc cm^-3", value=0.0,
+            unitTplt = lambda x: "pc cm^-3",
+            description='Dispersion measure variation',
+            descriptionTplt= lambda x: "Dispersion measure"))
+        self.add_param(prefixParameter(prefix = 'DMXR1_',indexformat = '0000',
+            units = "MJD", value=0.0,
+            unitTplt = lambda x: "MJD",
+            description='Beginning of DMX interval',
+            descriptionTplt= lambda x:'Beginning of DMX interval'))
+        self.add_param(prefixParameter(prefix = 'DMXR2_',indexformat = '0000',
+            units = "MJD", value=0.0,
+            unitTplt = lambda x: "MJD",
+            description='End of DMX interval',
+            descriptionTplt= lambda x:'End of DMX interval'))
+
         self.delay_funcs['L1'] += [self.dispersion_delay,]
+
 
     def setup(self):
         super(Dispersion, self).setup()
+        self.get_prefix_mapping('DMX_')
+        self.get_prefix_mapping('DMXR1_')
+        self.get_prefix_mapping('DMXR2_')
+        if len(self.DMX_mapping)!= len(self.DMXR1_mapping):
+            errorMsg = 'Number of DMX_ parameters is not'
+            errorMsg += 'equals to Number of DMXR1_ parameters. '
+            errorMsg += 'Please check your prefixed parameters.'
+            raise AttributeError(errorMsg)
+
+        if len(self.DMX_mapping)!= len(self.DMXR2_mapping):
+            errorMsg = 'Number of DMX_ parameters is not'
+            errorMsg += 'equals to Number of DMXR2_ parameters. '
+            errorMsg += 'Please check your prefixed parameters.'
+            raise AttributeError(errorMsg)
 
     def dispersion_delay(self, toas):
         """Return the dispersion delay at each toa."""
@@ -34,7 +70,27 @@ class Dispersion(TimingModel):
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
             bfreq = toas['freq']
-        return self.DM.value * DMconst / bfreq**2
+
+        # Constant dm delay
+        dmdelay = self.DM.value * DMconst / bfreq**2
+
+        # Get DMX delays
+        epoch_ind = 1
+        while epoch_ind in self.DMX_mapping:
+            # Get the parameters
+            r1 = getattr(self, self.DMXR1_mapping[epoch_ind]).value
+            r2 = getattr(self, self.DMXR2_mapping[epoch_ind]).value
+            dmx = getattr(self, self.DMX_mapping[epoch_ind]).value
+
+            # Apply the DMX delays
+            msk = np.logical_and(toas['tdbld'] >= ut.time_to_longdouble(r1),
+                                 toas['tdbld'] <= ut.time_to_longdouble(r2))
+            dmdelay[msk] += dmx * DMconst / bfreq[msk]**2
+
+            epoch_ind = epoch_ind + 1
+
+        return dmdelay
+
 
     @Cache.use_cache
     def d_delay_d_DM(self, toas):

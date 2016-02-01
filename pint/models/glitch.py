@@ -8,7 +8,7 @@ try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
-from .parameter import Parameter, MJDParameter
+from .parameter import Parameter, MJDParameter,prefixParameter
 from .timing_model import TimingModel, MissingParameter
 from ..phase import *
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, taylor_horner
@@ -23,26 +23,47 @@ class Glitch(TimingModel):
 
         # The number of terms in the taylor exapansion of spin freq (F0...FN)
         self.num_glitches = maxglitches
+        self.add_param(prefixParameter(name = "GLPH_1",
+            units="pulse phase", value=0.0,
+            descriptionTplt = lambda x:"Phase change for glitch %d"%x,))
+        self.add_param(prefixParameter(name="GLEP_1",
+            descriptionTplt=lambda x:"Epoch of glitch %d"%x,
+            units= 'day',
+            parse_value=lambda x: time_from_mjd_string(x, scale='tdb')))
+        self.add_param(prefixParameter(name="GLF0_1",
+            units="Hz", value=0.0,
+            descriptionTplt=lambda x:"Permanent frequency change for glitch %d"%x))
+        self.add_param(prefixParameter(name="GLF1_1",
+            units="Hz/s", value=0.0,
+            descriptionTplt=lambda x:"Permanent frequency-derivative change for glitch %d"%x))
+        self.add_param(prefixParameter(name="GLF0D_1",
+            units="Hz", value=0.0,
+            descriptionTplt=lambda x:"Decaying frequency change for glitch %d"%x))
 
-        for ii in range(1, self.num_glitches + 1):
-            self.add_param(Parameter(name="GLPH_%d"%ii,
-                units="pulse phase", value=0.0,
-                description="Phase change for glitch %d"%ii))
-            self.add_param(MJDParameter(name="GLEP_%d"%ii,
-                description="Epoch of glitch %d"%ii,
-                parse_value=lambda x: time_from_mjd_string(x, scale='tdb')))
-            self.add_param(Parameter(name="GLF0_%d"%ii,
-                units="Hz", value=0.0,
-                description="Permanent frequency change for glitch %d"%ii))
-            self.add_param(Parameter(name="GLF1_%d"%ii,
-                units="Hz/s", value=0.0,
-                description="Permanent frequency-derivative change for glitch %d"%ii))
-            self.add_param(Parameter(name="GLF0D_%d"%ii,
-                units="Hz", value=0.0,
-                description="Decaying frequency change for glitch %d"%ii))
-            self.add_param(Parameter(name="GLTD_%d"%ii,
-                units="day", value=0.0,
-                description="Decay time constant for glitch %d"%ii))
+        self.add_param(prefixParameter(name="GLTD_1",
+            units="day", value=0.0,
+            descriptionTplt=lambda x:"Decay time constant for glitch %d"%x))
+
+        self.add_param(prefixParameter(name = "GLPH_1",
+            units="pulse phase", value=0.0,
+            descriptionTplt=lambda x:"Phase change for glitch %d"%x))
+        self.add_param(prefixParameter(name="GLEP_1",
+            descriptionTplt=lambda x:"Epoch of glitch %d"%x,
+            units = 'day',
+            parse_value=lambda x: time_from_mjd_string(x, scale='tdb')))
+        self.add_param(prefixParameter(name="GLF0_1",
+            units="Hz", value=0.0,
+            descriptionTplt=lambda x: "Permanent frequency change for glitch %d"%x))
+        self.add_param(prefixParameter(name="GLF1_1",
+            units="Hz/s", value=0.0,
+            descriptionTplt=lambda x:"Permanent frequency-derivative change for glitch %d"%x))
+        self.add_param(prefixParameter(name="GLF0D_1",
+            units="Hz", value=0.0,
+            descriptionTplt=lambda x:"Decaying frequency change for glitch %d"%x))
+
+        self.add_param(prefixParameter(name="GLTD_1",
+            units="day", value=0.0,
+            description=lambda x:"Decay time constant for glitch %d"%x))
 
         self.phase_funcs += [self.glitch_phase,]
 
@@ -56,16 +77,16 @@ class Glitch(TimingModel):
                 if getattr(self, term).value is None:
                     raise MissingParameter("Glitch", term)
         # Remove all unused glitch params
-        for ii in range(self.num_glitches, 0, -1):
-            for p in ps:
-                term = p%ii
-                if hasattr(self, term) and \
-                        getattr(self, term).value==0.0 and \
-                        getattr(self, term).uncertainty is None:
-                    delattr(self, term)
-                    self.params.remove(term)
-                else:
-                    break
+        # for ii in range(self.num_glitches, 0, -1):
+        #     for p in ps:
+        #         term = p%ii
+        #         if hasattr(self, term) and \
+        #                 getattr(self, term).value==0.0 and \
+        #                 getattr(self, term).uncertainty is None:
+        #             delattr(self, term)
+        #             self.params.remove(term)
+        #         else:
+        #             break
         # Add a shortcut for the number of spin terms there are
         self.num_glitches = ii
 
