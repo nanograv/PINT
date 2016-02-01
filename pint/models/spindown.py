@@ -85,6 +85,8 @@ class Spindown(TimingModel):
         delay is the time delay from the TOA to time of pulse emission
           at the pulsar, in seconds.
 
+        This routine should implement Eq 120 of the Tempo2 Paper II (2006, MNRAS 372, 1549)
+
         returns an array of phases in long double
         """
         # If TZRMJD is not defined, use the first time as phase reference
