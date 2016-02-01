@@ -72,11 +72,15 @@ class Spindown(TimingModel):
                     getattr(self, term).uncertainty is None:
                 delattr(self, term)
                 self.params.remove(term)
+                if ii>1:
+                    self.num_prefix_params['F']-=1
             else:
                 break
         # Add a shortcut for the number of spin terms there are
-        self.num_spin_terms = ii + 1
-
+        if hasattr(self,'F1'):
+            self.num_spin_terms = self.num_prefix_params['F'] + 2
+        else:
+            self.num_spin_terms = 1
     def get_spin_terms(self):
         """Return a list of the spin term values in the model: [F0, F1, ..., FN]
         """
