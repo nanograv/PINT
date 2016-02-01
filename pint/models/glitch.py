@@ -14,7 +14,7 @@ from ..phase import *
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, taylor_horner
 
 # The maximum number of glitches we allow
-maxglitches = 10
+maxglitches = 10 # Have not use this one in the new version.
 
 class Glitch(TimingModel):
     """This class provides glitches."""
@@ -22,7 +22,7 @@ class Glitch(TimingModel):
         super(Glitch, self).__init__()
 
         # The number of terms in the taylor exapansion of spin freq (F0...FN)
-        self.num_glitches = maxglitches
+
         self.add_param(prefixParameter(name = "GLPH_1",
             units="pulse phase", value=0.0,
             descriptionTplt = lambda x:"Phase change for glitch %d"%x,))
@@ -44,51 +44,36 @@ class Glitch(TimingModel):
             units="day", value=0.0,
             descriptionTplt=lambda x:"Decay time constant for glitch %d"%x))
 
-        self.add_param(prefixParameter(name = "GLPH_1",
-            units="pulse phase", value=0.0,
-            descriptionTplt=lambda x:"Phase change for glitch %d"%x))
-        self.add_param(prefixParameter(name="GLEP_1",
-            descriptionTplt=lambda x:"Epoch of glitch %d"%x,
-            units = 'day',
-            parse_value=lambda x: time_from_mjd_string(x, scale='tdb')))
-        self.add_param(prefixParameter(name="GLF0_1",
-            units="Hz", value=0.0,
-            descriptionTplt=lambda x: "Permanent frequency change for glitch %d"%x))
-        self.add_param(prefixParameter(name="GLF1_1",
-            units="Hz/s", value=0.0,
-            descriptionTplt=lambda x:"Permanent frequency-derivative change for glitch %d"%x))
-        self.add_param(prefixParameter(name="GLF0D_1",
-            units="Hz", value=0.0,
-            descriptionTplt=lambda x:"Decaying frequency change for glitch %d"%x))
-
-        self.add_param(prefixParameter(name="GLTD_1",
-            units="day", value=0.0,
-            description=lambda x:"Decay time constant for glitch %d"%x))
-
         self.phase_funcs += [self.glitch_phase,]
 
     def setup(self):
         super(Glitch, self).setup()
-        # Check for required params, at least for first glitch
-        ps = ["GLPH_%d", "GLEP_%d", "GLF0_%d", "GLF1_%d", "GLF0D_%d", "GLTD_%d"]
-        for ii in range(1, 2):
+        # Check for required params, Check for Glitch numbers
+        self.num_glitches = self.num_prefix_params['GLPH_']
+        # check if glitch phase is continuous
+        ps = ["GLPH_", "GLEP_", "GLF0_", "GLF1_"]
+        for ii in range(1,self.num_glitches+1):
+            glcname = 'GLPH_%d'%ii
+            if glcname not in self.params:
+                msg = 'Index of glitch prefix parameter should be continuous.'
+                raise MissingParameter("Glitch", glcname,msg)
+            # Check if the other glicth parameter exist
             for p in ps:
-                term = p%ii
-                if getattr(self, term).value is None:
-                    raise MissingParameter("Glitch", term)
-        # Remove all unused glitch params
-        # for ii in range(self.num_glitches, 0, -1):
-        #     for p in ps:
-        #         term = p%ii
-        #         if hasattr(self, term) and \
-        #                 getattr(self, term).value==0.0 and \
-        #                 getattr(self, term).uncertainty is None:
-        #             delattr(self, term)
-        #             self.params.remove(term)
-        #         else:
-        #             break
-        # Add a shortcut for the number of spin terms there are
-        self.num_glitches = ii
+                glcparam = p+'%d'%ii
+                if glcparam not in self.params:
+                    raise MissingParameter("Glitch", glcparam)
+
+
+        # Check the Decay Term. If not match number of glitch. If not in parfile. add zeros. 
+        ps2 = [ "GLF0D_", "GLTD_"]
+        for p in ps2:
+            pname = [x for x in self.params if x.startswith(p) ]
+            for ii in range(1,self.num_glitches+1):
+                if p+"%d"%ii not in self.params:
+                    pfxpar = getattr(self,pname[0])
+                    self.add_param(pfxpar.new_index_prefix_param(ii))
+                    getattr(self,p+"%d"%ii).value = 0.0
+
 
     def glitch_phase(self, toas, delay):
         """Glitch phase function.
