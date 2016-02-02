@@ -9,7 +9,7 @@ SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
 from .parameter import Parameter, MJDParameter
 from .timing_model import Cache, TimingModel, MissingParameter
 from ..phase import Phase
-from ..utils import time_from_mjd_string, time_to_longdouble
+from ..utils import time_from_mjd_string, time_to_longdouble,time_from_longdouble
 from ..orbital.kepler import eccentric_from_mean
 from .btmodel import BTmodel
 import numpy as np
@@ -75,7 +75,9 @@ class PSRbinaryWapper(TimingModel):
 
         self.add_param(MJDParameter(name="T0",
             parse_value=lambda x: time_from_mjd_string(x, scale='tdb'),
-            description="Epoch of periastron passage"),binary_param = True)
+            description="Epoch of periastron passage",
+            get_value = lambda x: time_from_longdouble(x, scale='tdb')),
+            binary_param = True)
 
         self.add_param(Parameter(name="OM",
             units=u.deg,
@@ -104,6 +106,31 @@ class PSRbinaryWapper(TimingModel):
             if bparObj.num_value is None or bparObj.num_unit is None:
                 continue
             bparObj.value = bparObj.num_value*u.Unit(bparObj.num_unit)
+
+    @Cache.use_cache
+    def get_binary_object(self, toas, binaryObj):
+        """
+        Obtain the independent binary object for this set of parameters/toas
+        """
+        # Don't need to fill P0 and P1. Translate all the others to the format
+        # that is used in bmodel.py
+        # Get barycnetric toa first
+        self.barycentricTime = self.get_barycentric_toas(toas)
+
+        binobj = binaryObj(self.barycentricTime)
+        pardict = {}
+        for par in binobj.binary_params:
+            if par in binobj.param_aliases.keys():
+                aliase = binobj.param_aliases[par]
+            if hasattr(self, par) or \
+                list(set(aliase).intersection(self.params)!=[]) :
+                binObjpar = getattr(self, par)
+                if binObjpar.num_value is None:
+                    continue
+                pardict[par] = binObjpar.num_value*binObjpar.num_unit
+
+        binobj.set_param_values(pardict)
+        return binobj
 
 
     def binary_delay(self,toas):
