@@ -1,7 +1,7 @@
 # parameter.py
 # Defines Parameter class for timing model parameters
 from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
-time_to_longdouble, is_number
+    time_to_longdouble, is_number
 import numpy
 import astropy.units as u
 from astropy import log
@@ -15,9 +15,9 @@ import numbers
 
 class Parameter(object):
     """A PINT class describing a single timing model parameter. The parameter
-    value will be stored at `value` property in a users speicified format. At
-    the same time property `num_value` will store a num value from the value and
-    `num_unit` will store the basic unit in the format of `Astropy.units`
+       value will be stored at `value` property in a users speicified format. At
+       the same time property `num_value` will store a num value from the value
+       and `num_unit` will store the basic unit in the format of `Astropy.units`
 
     Parameters
     ----------
@@ -237,7 +237,7 @@ class Parameter(object):
                     ucty = k[2]
                 else:
                     errmsg = 'The third column of parfile can only be fitting flag '
-                    errmsg+= '(1/0) or uncertainty.'
+                    errmsg += '(1/0) or uncertainty.'
                     raise ValueError(errmsg)
 
             if len(k) == 4:
@@ -327,7 +327,7 @@ class prefixParameter(Parameter):
             Alias for the prefix
     """
 
-    def __init__(self,name=None, prefix = None ,indexformat = None,index = 1,
+    def __init__(self,name=None, prefix = None, indexformat = None, index = 1,
             value=None,units = None, unitTplt = None,
             description=None, descriptionTplt = None,
             uncertainty=None, frozen=True,continuous=True,prefix_aliases = [],
@@ -406,7 +406,7 @@ class prefixParameter(Parameter):
             self.units = unt
 
     def new_index_prefix_param(self,index):
-        newpfx = prefixParameter(prefix = self.prefix ,
+        newpfx = prefixParameter(prefix = self.prefix,
                 indexformat = self.indexformat,index = index,
                 unitTplt = self.unit_template,
                 descriptionTplt = self.description_template, frozen=self.frozen,
