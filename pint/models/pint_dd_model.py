@@ -53,7 +53,7 @@ class DDwrapper(PSRbinaryWapper):
              binary_param = True)
 
         self.binary_delay_funcs += [self.DD_delay,]
-        self.delay_funcs['L2'] += [self.DD_delay,]
+        self.delay_funcs['L2'] += self.binary_delay_funcs
     def setup(self):
         super(DDwrapper,self).setup()
         for p in ("PB", "T0", "A1"):
@@ -85,31 +85,9 @@ class DDwrapper(PSRbinaryWapper):
 
 
     @Cache.use_cache
-    def get_dd_object(self, toas):
-        """
-        Obtain the DDmodel object for this set of parameters/toas
-        """
-        # Don't need to fill P0 and P1. Translate all the others to the format
-        # that is used in bmodel.py
-        # Get barycnetric toa first
-        self.barycentricTime = self.get_barycentric_toas(toas)
-
-        ddobj = DDmodel(self.barycentricTime)
-        pardict = {}
-        for par in ddobj.binary_params:
-            if hasattr(self, par):
-                parObj = getattr(self, par)
-                if parObj.value is None:
-                    continue
-                pardict[par] = parObj.value*parObj.units
-
-        ddobj.set_par_values(pardict)    # This now does a lot of stuff that is in the PSRdd.__init__
-        return ddobj
-
-    @Cache.use_cache
     def DD_delay(self, toas):
         """Return the DD timing model delay"""
-        ddob = self.get_dd_object(toas)
+        ddob = self.get_binary_object(toas,DDmodel)
 
         return ddob.DDdelay()
 
