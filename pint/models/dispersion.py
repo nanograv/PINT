@@ -49,6 +49,7 @@ class Dispersion(TimingModel):
 
     def setup(self):
         super(Dispersion, self).setup()
+        # Get DMX mapping. 
         self.get_prefix_mapping('DMX_')
         self.get_prefix_mapping('DMXR1_')
         self.get_prefix_mapping('DMXR2_')
@@ -74,21 +75,28 @@ class Dispersion(TimingModel):
 
         # Constant dm delay
         dmdelay = self.DM.value * DMconst / bfreq**2
+        # Set toas to the right DMX peiod.
+        if 'DMX_section' not in toas.keys():
+            toas['DMX_section'] = np.zeros_like(toas['index'])
+            epoch_ind = 1
+            while epoch_ind in self.DMX_mapping:
+                # Get the parameters
+                r1 = getattr(self, self.DMXR1_mapping[epoch_ind]).value
+                r2 = getattr(self, self.DMXR2_mapping[epoch_ind]).value
+                msk = np.logical_and(toas['tdbld'] >= ut.time_to_longdouble(r1),
+                                     toas['tdbld'] <= ut.time_to_longdouble(r2))
+                toas['DMX_section'][msk] = epoch_ind
+                epoch_ind = epoch_ind + 1
 
         # Get DMX delays
-        epoch_ind = 1
-        while epoch_ind in self.DMX_mapping:
-            # Get the parameters
-            r1 = getattr(self, self.DMXR1_mapping[epoch_ind]).value
-            r2 = getattr(self, self.DMXR2_mapping[epoch_ind]).value
-            dmx = getattr(self, self.DMX_mapping[epoch_ind]).value
-
-            # Apply the DMX delays
-            msk = np.logical_and(toas['tdbld'] >= ut.time_to_longdouble(r1),
-                                 toas['tdbld'] <= ut.time_to_longdouble(r2))
-            dmdelay[msk] += dmx * DMconst / bfreq[msk]**2
-
-            epoch_ind = epoch_ind + 1
+        DMX_group = toas.group_by('DMX_section')
+        for ii,key in enumerate(DMX_group.groups.keys):
+            keyval = key.as_void()[0]
+            if keyval != 0:
+                dmx = getattr(self, self.DMX_mapping[keyval]).value
+                ind = DMX_group.groups[ii]['index']
+                # Apply the DMX delays
+                dmdelay[ind] += dmx * DMconst / bfreq[ind]**2
 
         return dmdelay
 
