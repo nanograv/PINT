@@ -105,6 +105,31 @@ class PSRbinaryWapper(TimingModel):
                 continue
             bparObj.value = bparObj.num_value*u.Unit(bparObj.num_unit)
 
+    @Cache.use_cache
+    def get_binary_object(self, toas, binaryObj):
+        """
+        Obtain the independent binary object for this set of parameters/toas
+        """
+        # Don't need to fill P0 and P1. Translate all the others to the format
+        # that is used in bmodel.py
+        # Get barycnetric toa first
+        self.barycentricTime = self.get_barycentric_toas(toas)
+
+        binobj = binaryObj(self.barycentricTime)
+        pardict = {}
+        for par in binobj.binary_params:
+            if par in binobj.param_aliases.keys():
+                aliase = binobj.param_aliases[par]
+            if hasattr(self, par) or \
+                list(set(aliase).intersection(self.params)!=[]) :
+                binObjpar = getattr(self, par)
+                if binObjpar.num_value is None:
+                    continue
+                pardict[par] = binObjpar.num_value*binObjpar.num_unit
+
+        binobj.set_param_values(pardict)
+        return binobj
+
 
     def binary_delay(self,toas):
         """Returns total pulsar binary delay.
