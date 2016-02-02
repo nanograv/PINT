@@ -28,6 +28,7 @@ class PSR_BINARY(object):
     """
     def __init__(self,):
         # Necessary parameters for all binary model
+        self.binary_name = None
         self.param_default_value = {'PB':np.longdouble(10.0)*u.day,
                            'PBDOT':0.0*u.day/u.day,
                            'ECC': 0.9*u.Unit('') ,
@@ -37,8 +38,10 @@ class PSR_BINARY(object):
                            'OM':10.0*u.deg,
                            'OMDOT':0.0*u.deg/u.year,
                            'XPBDOT':0.0*u.day/u.day,
-                           'M2':0.0*u.M_sun }
-
+                           'M2':0.0*u.M_sun,
+                           'SINI':0*u.Unit('') }
+        self.param_aliases = {'ECC':['E'],'EDOT':['ECCDOT'],
+                              'A1DOT':['XDOT']}
         self.binary_params = self.param_default_value.keys()
         self.inter_vars = ['E','M','nu','ecc','omega','a1','TM2']
         self.binary_delay_funcs = []
@@ -65,7 +68,7 @@ class PSR_BINARY(object):
     @property
     def tt0(self):
         return self._tt0
-    def set_par_values(self,valDict = None):
+    def set_param_values(self,valDict = None):
         """A function that sets the parameters and assign values
            If the valDict is not provided, it will set parameter as default value
         """
@@ -74,6 +77,13 @@ class PSR_BINARY(object):
                 setattr(self,par.upper(),self.param_default_value[par])
         else:
             for par in valDict.keys():
+                if par not in self.binary_params: # search for aliases
+                    for pn in self.param_aliases.keys():
+                        if par in self.param_aliases[pn]:
+                            par = pn
+                        else:
+                            raise AttributeError('Can not find parameter '+par+' in '\
+                                                 + self.binary_name+'model')
                 setattr(self,par,valDict[par])
 
     def add_binary_params(self,parameter,defaultValue):
@@ -96,16 +106,6 @@ class PSR_BINARY(object):
         for v in interVars:
             if v not in self.inter_vars:
                 self.inter_vars.append(v)
-
-    def set_inter_vars(self):
-        setattr(self,'tt0', self.get_tt0(self.t))
-        setattr(self,'sinE',np.sin(self.E()))
-        setattr(self,'cosE',np.cos(self.E()))
-        setattr(self,'sinNu',np.sin(self.nu()))
-        setattr(self,'cosNu',np.cos(self.nu()))
-        setattr(self,'sinOmg',np.sin(self.omega()))
-        setattr(self,'cosOmg',np.cos(self.omega()))
-        setattr(self,'TM2',self.M2.value*Tsun)
 
     def binary_delay(self):
         """Returns total pulsar binary delay.
