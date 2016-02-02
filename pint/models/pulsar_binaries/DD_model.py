@@ -49,6 +49,7 @@ class DDmodel(PSR_BINARY):
             self.t = t
         if input_params is not None:
             self.update_input(param_dict=input_params)
+
     # calculations for delays in DD model
     # Calculate er
     @Cache.cache_result
@@ -406,7 +407,7 @@ class DDmodel(PSR_BINARY):
 
     @Cache.use_cache
     def d_delayI_d_par(self,par):
-        """Derivative on delay inverse. 
+        """Derivative on delay inverse.
         """
         e = self.ecc()
         sE = np.sin(self.E())
