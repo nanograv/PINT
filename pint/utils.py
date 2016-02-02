@@ -11,6 +11,13 @@ from astropy import log
 from spice_util import str2ldarr1
 import re
 
+# Define prefix parameter pattern
+pp1 = re.compile(r'([a-zA-Z]+_)(\d+)')
+pp2 = re.compile(r'([a-zA-Z]+\d+_*)(\d+)')
+pp3 = re.compile(r'([a-zA-Z]+)(\d+)')
+
+prefixPatten = [pp1,pp2,pp3]
+
 class PosVel(object):
     """Position/Velocity class.
 
@@ -304,15 +311,18 @@ def split_prefixed_name(name):
        indexValue : int
            The absolute index valeu
     """
-    namefield = re.split('(\d+)',name)
-    if len(namefield)<2 or namefield[-2].isdigit() is False or namefield[-1]!='':
-        errorMsg = "A prefixed name should have prefix part and index value part. "
-        errorMsg += "For example: DMX_0001 or F20. "
-        raise ValueError(errorMsg)
-    else: # When name has index in the end and prefix in front.
-        indexPart = namefield[-2]
-        prefixPart = ''.join(namefield[0:-2])
-        indexValue = int(indexPart)
+    for pt in prefixPatten:
+        namefield = pt.match(name)
+        if namefield is None:
+            continue
+        prefixPart,indexPart = namefield.groups()
+        if '_' in name:
+            if '_' in prefixPart:
+                break
+            else:
+                continue
+                
+    indexValue = int(indexPart)
     return prefixPart, indexPart ,indexValue
 
 
