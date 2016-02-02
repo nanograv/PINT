@@ -262,7 +262,7 @@ class MJDParameter(Parameter):
             uncertainty=None, frozen=True, continuous=True, aliases=None,
             parse_value=time_from_mjd_string,
             print_value=time_to_mjd_string,
-            get_value =lambda x: longdouble_from_mjd_string(x,'utc'),
+            get_value = None,
             get_num_value = time_to_longdouble):
         super(MJDParameter, self).__init__(name=name, value=value,
                 units="MJD", description=description,
@@ -331,7 +331,8 @@ class prefixParameter(Parameter):
             value=None,units = None, unitTplt = None,
             description=None, descriptionTplt = None,
             uncertainty=None, frozen=True,continuous=True,prefix_aliases = [],
-            parse_value=fortran_float, print_value=str):
+            parse_value=fortran_float, print_value=str,get_value = None,
+            get_num_value=lambda x: x):
         # Create prefix parameter by name
         if name is None:
             if prefix is None or indexformat is None:
@@ -382,12 +383,14 @@ class prefixParameter(Parameter):
                 uncertainty=uncertainty, frozen=frozen,
                 continuous=continuous,
                 parse_value=parse_value,
-                print_value=print_value)
+                print_value=print_value,
+                get_value = get_value,
+                get_num_value = get_num_value)
 
         if units == 'MJD':
             self.parse_value = time_from_mjd_string
             self.print_value=time_to_mjd_string
-
+            self.get_num_value = time_to_longdouble
         self.prefix_aliases = prefix_aliases
         self.is_prefix = True
 

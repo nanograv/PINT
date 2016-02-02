@@ -29,7 +29,8 @@ class Glitch(TimingModel):
         self.add_param(prefixParameter(name="GLEP_1",
             descriptionTplt=lambda x:"Epoch of glitch %d"%x,
             units= 'day',
-            parse_value=lambda x: time_from_mjd_string(x, scale='tdb')))
+            parse_value=lambda x: time_from_mjd_string(x, scale='tdb'),
+            get_value = lambda x: time_from_longdouble(x,'tdb')))
         self.add_param(prefixParameter(name="GLF0_1",
             units="Hz", value=0.0,
             descriptionTplt=lambda x:"Permanent frequency change for glitch %d"%x))

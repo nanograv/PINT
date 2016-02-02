@@ -11,7 +11,8 @@ except ImportError:
 from .parameter import Parameter, MJDParameter,prefixParameter
 from .timing_model import TimingModel, MissingParameter
 from ..phase import *
-from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, taylor_horner
+from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, taylor_horner,\
+                    time_from_longdouble
 
 # The maximum number of spin frequency derivs we allow
 maxderivs = 20
@@ -44,11 +45,13 @@ class Spindown(TimingModel):
 
         self.add_param(MJDParameter(name="TZRMJD",
             description="Reference epoch for phase = 0.0",
-            parse_value=lambda x: time_from_mjd_string(x, scale='tdb')))
+            parse_value=lambda x: time_from_mjd_string(x, scale='tdb'),
+            get_value = lambda x: time_from_longdouble(x,'tdb')))
 
         self.add_param(MJDParameter(name="PEPOCH",
             description="Reference epoch for spin-down",
-            parse_value=lambda x: time_from_mjd_string(x, scale='tdb')))
+            parse_value=lambda x: time_from_mjd_string(x, scale='tdb'),
+            get_value = lambda x: time_from_longdouble(x,'tdb')))
 
         self.prefix_params+= ['F',]
         self.phase_funcs += [self.spindown_phase,]
