@@ -188,7 +188,6 @@ class PSR_BINARY(object):
             else:
                 return None
 
-    @Cache.use_cache
     def binary_delay(self):
         """Returns total pulsar binary delay.
         Return
