@@ -33,20 +33,22 @@ class DDmodel(PSR_BINARY):
     """
     def __init__(self,t):
         super(DDmodel, self).__init__()
+        self.binary_name = 'DD'
         if not isinstance(t, np.ndarray) and not isinstance(t,list):
             self.t = np.array([t,])
         else:
             self.t = t
         self.param_default_value.update({'A0':0*u.second,'B0':0*u.second,
                                'DR':0*u.Unit(''),'DTH':0*u.Unit(''),
-                               'GAMMA':0*u.second,'SINI':0*u.Unit('')})
-
+                               'GAMMA':0*u.second,})
+        # If any parameter has aliases, it should be updated                       
+        #self.param_aliases.update({})
         self.binary_params = self.param_default_value.keys()
 
         self.dd_interVars = ['er','eTheta','beta','alpha','Dre','Drep','Drepp',
                              'nhat']
         self.add_inter_vars(self.dd_interVars)
-        self.set_par_values()
+        self.set_param_values()
         self.binary_delay_funcs+= [self.DDdelay]
 
     # calculations for delays in DD model
