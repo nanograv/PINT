@@ -1,7 +1,7 @@
 # parameter.py
 # Defines Parameter class for timing model parameters
 from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
-time_to_longdouble, is_number
+time_to_longdouble, is_number,time_from_longdouble
 import numpy
 import astropy.units as u
 from astropy import log
@@ -256,7 +256,7 @@ class MJDParameter(Parameter):
             uncertainty=None, frozen=True, continuous=True, aliases=None,
             parse_value=time_from_mjd_string,
             print_value=time_to_mjd_string,
-            get_value =lambda x: longdouble_from_mjd_string(x,'utc'),
+            get_value =lambda x: time_from_longdouble(x,'utc'),
             get_num_value = time_to_longdouble):
         super(MJDParameter, self).__init__(name=name, value=value,
                 units="MJD", description=description,
