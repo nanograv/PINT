@@ -73,7 +73,8 @@ class PosVel(object):
             else:
                 raise RuntimeError("Attempting to add incompatible vectors: " +
                                    "%s->%s + %s->%s" % (self.origin, self.obj,
-                                   other.origin, other.obj))
+                                                        other.origin,
+                                                        other.obj))
 
         return PosVel(self.pos + other.pos, self.vel + other.vel,
                       obj=obj, origin=origin)
@@ -158,7 +159,7 @@ def time_to_mjd_string(t, prec=15):
         imjd -= 1
         fmjd += 1.0
     fmt = "%." + "%sf" % prec
-    return str(imjd) + (fmt%fmjd)[1:]
+    return str(imjd) + (fmt % fmjd)[1:]
 
 
 def time_to_mjd_string_array(t, prec=15):
@@ -181,7 +182,7 @@ def time_to_mjd_string_array(t, prec=15):
         if f < 0.0:
             i -= 1
             f += 1.0
-        fmt = "%."+"%sf"%prec
+        fmt = "%." + "%sf" % prec
         s.append(str(i) + (fmt % f)[1:])
     return s
 
