@@ -12,10 +12,9 @@ from spice_util import str2ldarr1
 import re
 
 # Define prefix parameter pattern
-pp1 = re.compile(r'([a-zA-Z]+_)(\d+)')  # For the prefix like DMX_3
-pp2 = re.compile(r'([a-zA-Z]+\d+_*)(\d+)')  # For the prefix like DMXR1_3
-pp3 = re.compile(r'([a-zA-Z]+)(\d+)')  # For the prefix like F12
-prefixPattern = [pp1, pp2, pp3]
+pp1 = re.compile(r'([a-zA-Z0-9]+_*)(\d+)')  # For the prefix like DMXR1_3
+pp2 = re.compile(r'([a-zA-Z]+)(\d+)')  # For the prefix like F12
+prefixPattern = [pp1, pp2]
 
 
 class PosVel(object):
