@@ -12,10 +12,10 @@ from spice_util import str2ldarr1
 import re
 
 # Define prefix parameter pattern
-pp1 = re.compile(r'([a-zA-Z]+_)(\d+)')
-pp2 = re.compile(r'([a-zA-Z]+\d+_*)(\d+)')
-pp3 = re.compile(r'([a-zA-Z]+)(\d+)')
-prefixPatten = [pp1, pp2, pp3]
+pp1 = re.compile(r'([a-zA-Z]+_)(\d+)')  # For the prefix like DMX_3
+pp2 = re.compile(r'([a-zA-Z]+\d+_*)(\d+)')  # For the prefix like DMXR1_3
+pp3 = re.compile(r'([a-zA-Z]+)(\d+)')  # For the prefix like F12
+prefixPattern = [pp1, pp2, pp3]
 
 
 class PosVel(object):
@@ -329,7 +329,7 @@ def split_prefixed_name(name):
        indexValue : int
            The absolute index valeu
     """
-    for pt in prefixPatten:
+    for pt in prefixPattern:
         namefield = pt.match(name)
         if namefield is None:
             continue
@@ -339,7 +339,8 @@ def split_prefixed_name(name):
                 break
             else:
                 continue
-
+    if namefield is None:
+        raise ValueError('Unrecognized prefix name pattern.')
     indexValue = int(indexPart)
     return prefixPart, indexPart, indexValue
 
