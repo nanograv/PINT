@@ -123,7 +123,7 @@ class Glitch(TimingModel):
 
     def d_phase_d_GLF0_1(self, toas):
         """Calculate the derivative wrt GLF0_1"""
-        eph = time_to_longdouble(getattr(self, "GLEP_%d" % ii).value)
+        eph = time_to_longdouble(getattr(self, "GLEP_1").value)
         delay = self.delay(toas)
         dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
         dpdGLF0_1 = numpy.where(dt > 0.0, dt, 0.0)
@@ -131,9 +131,9 @@ class Glitch(TimingModel):
 
     def d_phase_d_GLPH_1(self, toas):
         """Calculate the derivative wrt GLPH_1"""
-        return numpy.zeros_like(toas)
+        return numpy.zeros_like(toas['tdbld'])
 
     def d_phase_d_GLEP_1(self, toas):
         """Calculate the derivative wrt GLEP_1"""
         # ToDo
-        return numpy.zeros_like(toas)
+        return numpy.zeros_like(toas['tdbld'])
