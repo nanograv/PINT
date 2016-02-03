@@ -215,7 +215,7 @@ if __name__ == '__main__':
     # Read in initial model
     modelin = pint.models.get_model(parfile)
     # Remove the dispersion delay as it is unnecessary
-    modelin.delay_funcs.remove(modelin.dispersion_delay)
+    modelin.delay_funcs['L1'].remove(modelin.dispersion_delay)
     # Set the target coords for automatic weighting if necessary
     target = SkyCoord(modelin.RAJ.value, modelin.DECJ.value, \
         frame='icrs') if weightcol=='CALC' else None

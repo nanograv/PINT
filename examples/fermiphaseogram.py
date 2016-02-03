@@ -61,7 +61,7 @@ if __name__ == '__main__':
     modelin = pint.models.get_model(args.parfile)
 
     # Remove the dispersion delay as it is unnecessary
-    modelin.delay_funcs.remove(modelin.dispersion_delay)
+    modelin.delay_funcs['L1'].remove(modelin.dispersion_delay)
 
     # Compute model phase for each TOA
     phss = modelin.phase(ts.table)[1]
