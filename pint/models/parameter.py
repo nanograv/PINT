@@ -15,15 +15,16 @@ import numbers
 
 class Parameter(object):
     """A PINT class describing a single timing model parameter. The parameter
-       value will be stored at `value` property in a users speicified format. At
-       the same time property `num_value` will store a num value from the value
-       and `num_unit` will store the basic unit in the format of `Astropy.units`
+    value will be stored at `value` property in a users speicified format. At
+    the same time property `num_value` will store a num value from the value
+    and `num_unit` will store the basic unit in the format of `Astropy.units`
 
     Parameters
     ----------
     name : str, optional
         The name of the parameter.
-    value : number, str, `Astropy.units.Quantity` object, or other datatype or object
+    value : number, str, `Astropy.units.Quantity` object, or other datatype or
+            object
         The current value of parameter. It is the internal storage of
         parameter value
     units : str, optional
@@ -43,7 +44,8 @@ class Parameter(object):
         parameter exist.
     parse_value : method, optional
         A function that converts string input into the appropriate internal
-        representation of the parameter (typically floating-point but could be any datatype).
+        representation of the parameter (typically floating-point but could be
+        any datatype).
     print_value : method, optional
         A function that converts the internal value to a string for output.
     get_value : method, optional
@@ -54,51 +56,54 @@ class Parameter(object):
     """
 
     def __init__(self, name=None, value=None, units=None, description=None,
-            uncertainty=None, frozen=True, aliases=None, continuous=True,
-            parse_value=fortran_float, print_value=str,get_value = None,
-            get_num_value=lambda x: x):
+                 uncertainty=None, frozen=True, aliases=None, continuous=True,
+                 parse_value=fortran_float, print_value=str,
+                 get_value=None, get_num_value=lambda x: x):
         self.name = name  # name of the parameter
-        self.units = units # parameter unit in string format,or None
+        self.units = units  # parameter unit in string format,or None
         # parameter num unit, in astropy.units object format.
         # Once it is speicified, num_unit will not be changed.
 
-        self.get_num_value = get_num_value # Method to get num_value from value
-        self.get_value = get_value # Method to update value from num_value
-        self.value = value # The value of parameter, internal storage
-
+        # Method to get num_value from value
+        self.get_num_value = get_num_value
+        self.get_value = get_value  # Method to update value from num_value
+        self.value = value  # The value of parameter, internal storage
         self.description = description
         self.uncertainty = uncertainty
         self.frozen = frozen
         self.continuous = continuous
         self.aliases = [] if aliases is None else aliases
         self.is_prefix = False
-        self.parse_value = parse_value # method to read a value from string,
-                                       # user can put the speicified format here
-        self.print_value = print_value # method to convert value to a string.
-        self.paramType = 'Parameter' # Type of parameter. Here is general type
+        self.parse_value = parse_value  # method to read a value from string,
+                                        # user can put the speicified format
+                                        # here
+        self.print_value = print_value  # method to convert value to a string.
+        self.paramType = 'Parameter'  # Type of parameter. Here is general type
+
     # Setup units property
     @property
     def units(self):
         return self._units
+
     @units.setter
-    def units(self,unt):
+    def units(self, unt):
         # Check if this is the first time set units
-        if hasattr(self,'value'):
+        if hasattr(self, 'value'):
             if self.units is None:
                 return
             wmsg = 'Parameter '+self.name+' units has been reset to '+unt
             log.warning(wmsg)
             try:
-                if hasattr(self.value,'unit'):
+                if hasattr(self.value, 'unit'):
                     temp = self.value.to(self.num_unit)
             except:
-                log.warning('The value unit is not compatable with'\
-                                 ' parameter units,right now.')
+                log.warning('The value unit is not compatable with'
+                            ' parameter units,right now.')
         # Setup unit and num unit
-        if isinstance(unt,(u.Unit,u.CompositeUnit)):
+        if isinstance(unt, (u.Unit, u.CompositeUnit)):
             self._units = unt.to_string()
             self._num_unit = unt
-        elif isinstance(unt,(str)):
+        elif isinstance(unt, (str)):
             if unt in pint_units.keys():
                 self._units = unt
                 self._num_unit = pint_units[unt]
@@ -108,54 +113,57 @@ class Parameter(object):
         elif unt is None:
             self._units = unt
             self._num_unit = unt
-
         else:
-            raise ValueError('Units can only take string, astropy units or None')
-
+            raise ValueError('Units can only take string, astropy units or'
+                             ' None')
 
     # Setup value property
     @property
     def value(self):
         return self._value
+
     @value.setter
-    def value(self,val):
+    def value(self, val):
         self._value = val
-        if hasattr(self._value,'unit'):  # If the new value is astropy angle or Quantity
-            if self._num_unit is not None: # Check unit
+        # If the new value is astropy angle or Quantity
+        if hasattr(self._value, 'unit'):
+            if self._num_unit is not None:  # Check unit
                 try:
                     value_num_unit = self._value.to(self._num_unit)
                 except:
-                    raise ValueError('The value unit is not compatable with'\
+                    raise ValueError('The value unit is not compatable with'
                                      ' parameter units.')
                 self._num_value = value_num_unit.value
             else:
                 self.unit = self._value.unit.to_string()
                 self._num_value = self._value.value
-        elif isinstance(self._value,(str,bool)) or self._value is None:
+        elif isinstance(self._value, (str, bool)) or self._value is None:
             self._num_value = None
         else:
             self._num_value = self.get_num_value(self._value)
             if not isinstance(self._num_value, numbers.Number):
                 if not self._num_value is not None:
-                    raise ValueError("The ._num_value has to be a pure number or None. "\
-                                     "Please check your .get_num_value method. ")
+                    raise ValueError("The ._num_value has to be a pure number "
+                                     "or None. Please check your .get_num_value"
+                                     " method. ")
 
     # Setup num_value property
     @property
     def num_value(self):
         return self._num_value
+
     @num_value.setter
-    def num_value(self,val):
+    def num_value(self, val):
         if val is None:
             self._num_value = val
-            if not isinstance(self.value,(str,bool)):
-                raise ValueError('This parameter value is number convertable. '\
-                                 'Setting ._num_value to None will lost the ' \
-                                 'parameter value.' )
+            if not isinstance(self.value, (str, bool)):
+                raise ValueError('This parameter value is number convertable. '
+                                 'Setting ._num_value to None will lost the '
+                                 'parameter value.')
             else:
                 self.value = None
 
-        elif not isinstance(val,numbers.Number):
+        elif not isinstance(val, numbers.Number):
             raise ValueError('num_value has to be a pure number or None.')
         else:
             self._num_value = val
@@ -179,7 +187,7 @@ class Parameter(object):
             out += " +/- " + str(self.uncertainty)
         return out
 
-    def set(self, value, with_unit = False):
+    def set(self, value, with_unit=False):
         """Parses a string 'value' into the appropriate internal representation
         of the parameter.
         """
@@ -227,7 +235,7 @@ class Parameter(object):
             return False
         if len(k) >= 2:
             self.set(k[1])
-        if len(k) >= 3:  # Fixed a bug here. It can read parfile third column as uncertainty
+        if len(k) >= 3:
             try:
                 if int(k[2]) > 0:
                     self.frozen = False
@@ -236,16 +244,16 @@ class Parameter(object):
                 if is_number(k[2]):
                     ucty = k[2]
                 else:
-                    errmsg = 'The third column of parfile can only be fitting flag '
-                    errmsg += '(1/0) or uncertainty.'
+                    errmsg = 'The third column of parfile can only be fitting '
+                    errmsg += 'flag (1/0) or uncertainty.'
                     raise ValueError(errmsg)
 
             if len(k) == 4:
                 ucty = k[3]
 
-            if name=="RAJ":
+            if name == "RAJ":
                 self.uncertainty = Angle("0:0:%.15fh" % fortran_float(ucty))
-            elif name=="DECJ":
+            elif name == "DECJ":
                 self.uncertainty = Angle("0:0:%.15fd" % fortran_float(ucty))
             else:
                 self.uncertainty = fortran_float(ucty)
@@ -256,22 +264,25 @@ class Parameter(object):
         """
         return (name == self.name) or (name in self.aliases)
 
+
 class MJDParameter(Parameter):
     """This is a Parameter type that is specific to MJD values."""
     def __init__(self, name=None, value=None, description=None,
-            uncertainty=None, frozen=True, continuous=True, aliases=None,
-            parse_value=time_from_mjd_string,
-            print_value=time_to_mjd_string,
-            get_value = None,
-            get_num_value = time_to_longdouble):
+                 uncertainty=None, frozen=True, continuous=True, aliases=None,
+                 parse_value=time_from_mjd_string,
+                 print_value=time_to_mjd_string,
+                 get_value=None,
+                 get_num_value=time_to_longdouble):
         super(MJDParameter, self).__init__(name=name, value=value,
-                units="MJD", description=description,
-                uncertainty=uncertainty, frozen=frozen,
-                continuous=continuous,
-                aliases=aliases,
-                parse_value=parse_value,
-                print_value=print_value,
-                get_num_value = get_num_value)
+                                           units="MJD",
+                                           description=description,
+                                           uncertainty=uncertainty,
+                                           frozen=frozen,
+                                           continuous=continuous,
+                                           aliases=aliases,
+                                           parse_value=parse_value,
+                                           print_value=print_value,
+                                           get_num_value=get_num_value)
         self.paramType = 'MJDParameter'
 
 
@@ -287,30 +298,31 @@ class prefixParameter(Parameter):
         2. Create by prefix and index
             This method allows you create a prefixParameter class using prefix
             name and index. The class name will be returned as prefix name plus
-            index with the right index format. So the optional arguments prefix,
-            indexformat and index are need. index default value is 1.
+            index with the right index format. So the optional arguments
+            prefix, indexformat and index are need. index default value is 1.
         If both of two methods are fillfulled, It will using the first method.
-
         Add descrition and units.
         1. Direct add
             A descrition and unit can be added directly by using the optional
-            arguments, descrition and units. Both of them will return as a string
-            attribution.
+            arguments, descrition and units. Both of them will return as a
+            string attribution.
         2. descrition and units template.
-            If the descrition and unit are changing with the prefix parameter index,
-            optional argurment descritionTplt and unitTplt are need. These two attributions
-            are lambda functions, for example
-            >>> descritionTplt = lambda x: 'This is the descrition of parameter %d'%x
+            If the descrition and unit are changing with the prefix parameter
+            index, optional argurment descritionTplt and unitTplt are need.
+            These two attributions are lambda functions, for example
+            >>> descritionTplt = lambda x: 'This is the descrition of parameter
+                                            %d'%x
             The class will fill the descrition and unit automaticly.
         If both two methods are fillfulled, it prefer the first one.
 
         Parameter
         ---------
         name : str optional
-            The name of the parameter. If it is not provided, the prefix and index
-            format are needed.
+            The name of the parameter. If it is not provided, the prefix and
+            index format are needed.
         prefix : str optional
-            Paremeter prefix, now it is only supporting 'prefix_' type and 'prefix0' type.
+            Paremeter prefix, now it is only supporting 'prefix_' type and
+            'prefix0' type.
         indexformat : str optional
             The format for parameter index
         index : int optional [default 1]
@@ -327,12 +339,12 @@ class prefixParameter(Parameter):
             Alias for the prefix
     """
 
-    def __init__(self,name=None, prefix = None, indexformat = None, index = 1,
-            value=None,units = None, unitTplt = None,
-            description=None, descriptionTplt = None,
-            uncertainty=None, frozen=True,continuous=True,prefix_aliases = [],
-            parse_value=fortran_float, print_value=str,get_value = None,
-            get_num_value=lambda x: x):
+    def __init__(self, name=None, prefix=None, indexformat=None, index=1,
+                 value=None, units=None, unitTplt=None,
+                 description=None, descriptionTplt=None,
+                 uncertainty=None, frozen=True, continuous=True,
+                 prefix_aliases=[], parse_value=fortran_float,
+                 print_value=str, get_value=None, get_num_value=lambda x: x):
         # Create prefix parameter by name
         if name is None:
             if prefix is None or indexformat is None:
@@ -342,30 +354,32 @@ class prefixParameter(Parameter):
             else:
                 # Get format fields
                 digitLen = 0
-                for i in range(len(indexformat)-1,-1,-1):
+                for i in range(len(indexformat)-1, -1, -1):
                     if indexformat[i].isdigit():
-                        digitLen+=1
-                self.indexformat_field = indexformat[0:len(indexformat)-digitLen]
-                self.indexformat_field += '{0:0' +str(digitLen)+'d}'
+                        digitLen += 1
+                self.indexformat_field = indexformat[0:len(indexformat)
+                                                     - digitLen]
+                self.indexformat_field += '{0:0' + str(digitLen) + 'd}'
 
                 name = prefix+self.indexformat_field.format(index)
                 self.prefix = prefix
                 self.indexformat = self.indexformat_field.format(0)
                 self.index = index
-        else: # Detect prefix and indexformat from name.
-            namefield = re.split('(\d+)',name)
-            if len(namefield)<2 or namefield[-2].isdigit() is False\
-               or namefield[-1]!='':
+        else:  # Detect prefix and indexformat from name.
+            namefield = re.split('(\d+)', name)
+            if len(namefield) < 2 or namefield[-2].isdigit() is False\
+               or namefield[-1] != '':
             #When Name has no index in the end or no prefix part.
                 errorMsg = 'Prefix parameter name needs a perfix part'\
-                           +' and an index part in the end. '
-                errorMsg += 'If you meant to set up with prefix, please use prefix '\
-                           +'and indexformat optional agruments. Leave name argument alone.'
+                           + ' and an index part in the end. '
+                errorMsg += 'If you meant to set up with prefix, please use' \
+                            + 'prefix and indexformat optional agruments.' \
+                            + 'Leave name argument alone.'
                 raise ValueError(errorMsg)
-            else: # When name has index in the end and prefix in front.
+            else:  # When name has index in the end and prefix in front.
                 indexPart = namefield[-2]
                 prefixPart = namefield[0:-2]
-                self.indexformat_field = '{0:0' +str(len(indexPart))+'d}'
+                self.indexformat_field = '{0:0' + str(len(indexPart)) + 'd}'
                 self.indexformat = self.indexformat_field.format(0)
                 self.prefix = ''.join(prefixPart)
                 self.index = int(indexPart)
@@ -377,24 +391,25 @@ class prefixParameter(Parameter):
         if self.description_template is None:
             self.description_template = lambda x: self.descrition
 
-
         super(prefixParameter, self).__init__(name=name, value=value,
-                units=units, description=description,
-                uncertainty=uncertainty, frozen=frozen,
-                continuous=continuous,
-                parse_value=parse_value,
-                print_value=print_value,
-                get_value = get_value,
-                get_num_value = get_num_value)
+                                              units=units,
+                                              description=description,
+                                              uncertainty=uncertainty,
+                                              frozen=frozen,
+                                              continuous=continuous,
+                                              parse_value=parse_value,
+                                              print_value=print_value,
+                                              get_value=get_value,
+                                              get_num_value=get_num_value)
 
         if units == 'MJD':
             self.parse_value = time_from_mjd_string
-            self.print_value=time_to_mjd_string
+            self.print_value = time_to_mjd_string
             self.get_num_value = time_to_longdouble
         self.prefix_aliases = prefix_aliases
         self.is_prefix = True
 
-    def prefix_matches(self,prefix):
+    def prefix_matches(self, prefix):
         return (prefix == self.perfix) or (prefix in self.prefix_aliases)
 
     def apply_template(self):
@@ -405,12 +420,14 @@ class prefixParameter(Parameter):
         if self.units is None:
             self.units = unt
 
-    def new_index_prefix_param(self,index):
-        newpfx = prefixParameter(prefix = self.prefix,
-                indexformat = self.indexformat,index = index,
-                unitTplt = self.unit_template,
-                descriptionTplt = self.description_template, frozen=self.frozen,
-                continuous=self.continuous, parse_value=self.parse_value,
-                print_value=self.print_value)
+    def new_index_prefix_param(self, index):
+        newpfx = prefixParameter(prefix=self.prefix,
+                                 indexformat=self.indexformat, index=index,
+                                 unitTplt=self.unit_template,
+                                 descriptionTplt=self.description_template,
+                                 frozen=self.frozen,
+                                 continuous=self.continuous,
+                                 parse_value=self.parse_value,
+                                 print_value=self.print_value)
         newpfx.apply_template()
         return newpfx
