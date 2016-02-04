@@ -6,7 +6,8 @@ import astropy.units as u
 import os, unittest
 
 testdir=os.path.join(os.getenv('PINT'),'tests');
-os.chdir(testdir)
+datadir = os.path.join(testdir,'datafile')
+os.chdir(datadir)
 
 class TestParameters(unittest.TestCase):
     @classmethod
