@@ -50,16 +50,13 @@ class fitter(object):
         for p, val in zip(fitp.keys(), fitp.values()):
             # If value is unitless but model parameter is not, interpret the
             # value as being in the same units as the model
-            modval = getattr(self.model, p).value
+            modval = getattr(self.model, p).num_value
             # Right now while the code below preserves the unit, Angle types
             # become generic astropy quantities. Still, the timing model appears
             # to work.
-            if (not has_astropy_unit(val)) and has_astropy_unit(modval):
-                if type(modval) is ang.Angle:
-                    val = ang.Angle(val, unit=modval.unit)
-                else:
-                    val = val * modval.unit
-            getattr(self.model, p).value = val
+            if modval is None:
+                raise RuntimeError('Paramter ' + p + ' is non-fitable.')
+            getattr(self.model, p).num_value = val
 
     def minimize_func(self, x, *args):
         """Wrapper function for the residual class, meant to be passed to
