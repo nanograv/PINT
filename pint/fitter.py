@@ -51,9 +51,6 @@ class fitter(object):
             # If value is unitless but model parameter is not, interpret the
             # value as being in the same units as the model
             modval = getattr(self.model, p).num_value
-            # Right now while the code below preserves the unit, Angle types
-            # become generic astropy quantities. Still, the timing model appears
-            # to work.
             if modval is None:
                 raise RuntimeError('Paramter ' + p + ' is non-fitable.')
             getattr(self.model, p).num_value = val
