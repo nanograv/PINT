@@ -34,65 +34,58 @@ class PSRbinaryWapper(TimingModel):
         self.barycentricTime = None
         self.binary_delay_funcs= []
         self.binary_params = []
-        self.add_param(Parameter(name="PB",
-            units=u.day,
-            description="Orbital period",
-            parse_value=utils.data2longdouble),binary_param = True)
+        self.add_param(Parameter(name="PB", units=u.day,
+                       description="Orbital period",
+                       parse_value=utils.data2longdouble),binary_param = True)
 
 
-        self.add_param(Parameter(name="PBDOT",
-            units=u.day/u.day,
-            description="Orbital period derivitve respect to time",
-            parse_value=utils.data2longdouble),binary_param = True)
+        self.add_param(Parameter(name="PBDOT", units=u.day/u.day,
+                       description="Orbital period derivitve respect to time",
+                       parse_value=utils.data2longdouble),binary_param = True)
 
 
-        self.add_param(Parameter(name="XPBDOT",
-            units=u.s/u.s,
-            description="Rate of change of orbital period minus GR prediction",
-            parse_value=utils.data2longdouble),binary_param = True)
+        self.add_param(Parameter(name="XPBDOT", units=u.s/u.s,
+                       description="Rate of change of orbital period minus GR"\
+                                   " prediction",
+                       parse_value=utils.data2longdouble),binary_param = True)
 
 
-        self.add_param(Parameter(name="A1",
-            units=ls,
-            description="Projected semi-major axis, a*sin(i)",
-            parse_value=np.double),binary_param = True)
+        self.add_param(Parameter(name="A1", units=ls,
+                       description="Projected semi-major axis, a*sin(i)",
+                       parse_value=np.double),binary_param = True)
 
-        self.add_param(Parameter(name = "A1DOT",
-            units=ls/u.s,
-            description="Derivitve of projected semi-major axis, da*sin(i)/dt",
-            parse_value=np.double),binary_param = True)
+        self.add_param(Parameter(name = "A1DOT", units=ls/u.s,
+                       description="Derivitve of projected semi-major axis," \
+                                   " da*sin(i)/dt",
+                       parse_value=np.double),binary_param = True)
 
-        self.add_param(Parameter(name="ECC",
-            units="",
-            aliases = ["E"],
-            description="Eccentricity",
-            parse_value=np.double),binary_param = True)
+        self.add_param(Parameter(name="ECC", units="", aliases = ["E"],
+                       description="Eccentricity",
+                       parse_value=np.double),binary_param = True)
 
-        self.add_param(Parameter(name="EDOT",
-             units="1/s",
-             description="Eccentricity derivitve respect to time",
-             parse_value=np.double),binary_param = True)
+        self.add_param(Parameter(name="EDOT", units="1/s",
+                       description="Eccentricity derivitve respect to time",
+                       parse_value=np.double),binary_param = True)
 
         self.add_param(MJDParameter(name="T0",
-            parse_value=lambda x: time_from_mjd_string(x, scale='tdb'),
-            description="Epoch of periastron passage",
-            get_value = lambda x: time_from_longdouble(x, scale='tdb')),
-            binary_param = True)
+                       parse_value=lambda x: time_from_mjd_string(x,
+                                                                  scale='tdb'),
+                       description="Epoch of periastron passage",
+                       get_value = lambda x: time_from_longdouble(x,
+                                                                  scale='tdb')),
+                       binary_param = True)
 
-        self.add_param(Parameter(name="OM",
-            units=u.deg,
-            description="Longitude of periastron",
-            parse_value=lambda x: np.double(x)),binary_param = True)
+        self.add_param(Parameter(name="OM", units=u.deg,
+                       description="Longitude of periastron",
+                       parse_value=lambda x: np.double(x)),binary_param = True)
 
-        self.add_param(Parameter(name="OMDOT",
-            units="deg/year",
-            description="Longitude of periastron",
-            parse_value=lambda x: np.double(x)),binary_param = True)
+        self.add_param(Parameter(name="OMDOT", units="deg/year",
+                       description="Longitude of periastron",
+                       parse_value=lambda x: np.double(x)), binary_param=True)
 
-        self.add_param(Parameter(name="M2",
-             units=u.M_sun,
-             description="Mass of companian in the unit Sun mass",
-             parse_value=np.double),binary_param = True)
+        self.add_param(Parameter(name="M2", units=u.M_sun,
+                       description="Mass of companian in the unit Sun mass",
+                       parse_value=np.double),binary_param=True)
 
 
     def setup(self):
