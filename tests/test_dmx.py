@@ -3,25 +3,30 @@ import pint.toa as toa
 import matplotlib.pyplot as plt
 from pint import residuals
 import astropy.units as u
+import libstempo as lt
+import os
+import unittest
+import numpy as np
 
-parf = 'J1923+2515_NANOGrav_9yv1.gls.par'
-timf = 'J1923+2515_NANOGrav_9yv1.tim'
-DMXmodel = mb.get_model(parf)
-t = toa.get_TOAs(timf)
+datapath = os.path.join(os.environ['PINT'], 'tests', 'datafile')
 
-dispDelay = DMXmodel.dispersion_delay(t.table)
-xt = t.get_mjds()
-plt.figure(1)
-plt.plot(xt, dispDelay,'x')
-plt.title("%s DMX dispersion delay" % DMXmodel.PSR.value)
-plt.xlabel('MJD')
-plt.ylabel("Dispersion (s)")
-plt.show()
-plt.figure(2)
-rs = residuals.resids(t, DMXmodel).time_resids.to(u.us).value
-plt.plot(xt, rs, 'x')
-plt.title("%s Pre-Fit Timing Residuals" % DMXmodel.PSR.value)
-plt.xlabel('MJD')
-plt.ylabel('Residual (us)')
-plt.grid()
-plt.show()
+
+class TestDMX(unittest.TestCase):
+    @classmethod
+    def setUpClass(self):
+        self.parf = os.path.join(datapath,
+                                 'B1855+09_NANOGrav_dfg+12_modified.par')
+        self.timf = os.path.join(datapath, 'J1923+2515_NANOGrav_9yv1.tim')
+        self.DMXm = mb.get_model(self.parf)
+        self.toas = toa.get_TOAs(self.timf)
+
+    def test_DMX(self):
+        print "Testing DMX module."
+        rs = residuals.resids(self.toas, self.DMXm).time_resids.to(u.us).value
+        psr = lt.tempopulsar(self.parf, self.timf)
+        resDiff = rs-psr.residuals()
+        assert np.all(resDiff) < 1e-7, \
+            "PINT and tempo Residual difference is too big. "
+
+if __name__ == '__main__':
+    pass

@@ -3,6 +3,10 @@ from __future__ import (print_function, division)
 import pint.toa as toa
 import numpy as np
 import pint.models.bt as bt
+import os
+
+datapath = os.path.join(os.environ['PINT'],'tests','datafile')
+
 
 class TestBT():
     """Various tests to assess the performance of the BT model."""
@@ -10,8 +14,8 @@ class TestBT():
     def test_1955(self):
         """Compare delays from the BT model with libstempo and PINT"""
 
-        parfile = 'tests/J1955.par'
-        timfile = 'tests/J1955.tim'
+        parfile = os.path.join(datapath, 'J1955.par')
+        timfile = os.path.join(datapath, 'J1955.tim')
 
         # Calculate delays with PINT
         toas = toa.get_TOAs(timfile, planets=False)
