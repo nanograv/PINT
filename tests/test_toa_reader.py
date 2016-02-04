@@ -1,12 +1,13 @@
 from pint import toa
 import os
 
-testdir=os.path.join(os.getenv('PINT'),'tests');
-os.chdir(testdir)
+testdir = os.path.join(os.getenv('PINT'),'tests');
+datadir = os.path.join(testdir,'datafile')
+os.chdir(datadir)
 
 class TestTOAReader:
     def setUp(self):
-        self.x = toa.TOAs("test1.tim",usepickle=False)
+        self.x = toa.TOAs("test1.tim", usepickle=False)
         self.x.apply_clock_corrections()
         self.x.compute_TDBs()
         self.x.table.sort('index')
@@ -29,13 +30,13 @@ class TestTOAReader:
     def test_jump_3(self):
         assert self.x.table[-1]['flags']["jump"] == 1
     def test_obs(self):
-        assert self.x.table[1]["obs"]=="GBT" 
+        assert self.x.table[1]["obs"]=="GBT"
 
 if __name__ == '__main__':
     t = TestTOAReader()
     t.setUp()
     print 'Tests are set up.'
-    
+
     t.test_commands()
     t.test_count()
     t.test_info()
@@ -46,4 +47,3 @@ if __name__ == '__main__':
     t.test_time_2()
     t.test_jump_3()
     t.test_obs()
-
