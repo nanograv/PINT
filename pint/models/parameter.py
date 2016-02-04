@@ -173,13 +173,11 @@ class Parameter(object):
             out += " +/- " + str(self.uncertainty)
         return out
 
-    def set(self, value, with_unit = False):
+    def set(self, value):
         """Parses a string 'value' into the appropriate internal representation
         of the parameter.
         """
         self.value = self.parse_value(value)
-        if with_unit is True:
-            self.value = self.value*u.Unit(self.units)
 
     def add_alias(self, alias):
         """Add a name to the list of aliases for this parameter."""
@@ -257,7 +255,10 @@ class MJDParameter(Parameter):
             parse_value=time_from_mjd_string,
             print_value=time_to_mjd_string,
             get_value =lambda x: longdouble_from_mjd_string(x,'utc'),
-            get_num_value = time_to_longdouble):
+            get_num_value = time_to_longdouble,
+            time_scale=None):
+        if time_scale is not None:
+            get_value =lambda x: longdouble_from_mjd_string(x,time_scale)
         super(MJDParameter, self).__init__(name=name, value=value,
                 units="MJD", description=description,
                 uncertainty=uncertainty, frozen=frozen,
@@ -265,5 +266,6 @@ class MJDParameter(Parameter):
                 aliases=aliases,
                 parse_value=parse_value,
                 print_value=print_value,
+                get_value = get_value,
                 get_num_value = get_num_value)
         self.paramType = 'MJDParameter'
