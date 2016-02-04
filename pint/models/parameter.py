@@ -248,6 +248,25 @@ class Parameter(object):
         """
         return (name == self.name) or (name in self.aliases)
 
+
+def get_MJD_parameter(name, value=None, description=None, uncertainty=None,
+                      frozen=True, continuous=True, aliases=None,
+                      time_scale='utc'):
+    """This is a function to set up a parameter with MJD style.
+    """
+    parse_value = lambda x: time_from_mjd_string(x, scale=time_scale)
+    print_value = time_to_mjd_string
+    get_value = lambda x: longdouble_from_mjd_string(x, scale=time_scale)
+    get_num_value = time_to_longdouble
+    MJDpar = Parameter(name=name, value=value, units="MJD",
+                       description=description, uncertainty=uncertainty,
+                       frozen=frozen, continuous=continuous, aliases=aliases,
+                       parse_value=parse_value, print_value=print_value,
+                       get_value = get_value, get_num_value = get_num_value)
+    setattr(MJDpar, 'paramType', 'MJD parameter')
+    return MJDpar
+
+
 class MJDParameter(Parameter):
     """This is a Parameter type that is specific to MJD values."""
     def __init__(self, name=None, value=None, description=None,
