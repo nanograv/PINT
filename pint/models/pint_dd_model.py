@@ -10,6 +10,7 @@ import astropy
 from ..utils import time_from_mjd_string, time_to_longdouble
 import astropy.units as u
 
+
 class DDwrapper(PSRbinaryWapper):
     """This is a PINT pulsar binary dd model class a subclass of PSRbinaryWapper.
        It is a wrapper for independent DDmodel class defined in ./pulsar_binary/DD_model.py
@@ -19,7 +20,8 @@ class DDwrapper(PSRbinaryWapper):
 
     def __init__(self,):
         super(DDwrapper, self).__init__()
-        self.BinaryModelName = 'DD'
+        self.binary_model_name = 'DD'
+        self.binary_model_class = DDmodel
 
         self.add_param(p.floatParameter(name="A0",
              units="s",
@@ -54,13 +56,13 @@ class DDwrapper(PSRbinaryWapper):
 
         self.binary_delay_funcs += [self.DD_delay,]
         self.delay_funcs['L2'] += self.binary_delay_funcs
+        
     def setup(self):
         super(DDwrapper,self).setup()
         for p in ("PB", "T0", "A1"):
             if getattr(self, p).value is None:
                 raise MissingParameter("DD", p,
                                        "%s is required for DD" % p)
-
         # If any *DOT is set, we need T0
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
             if getattr(self, p).value is None:
@@ -82,18 +84,3 @@ class DDwrapper(PSRbinaryWapper):
             for p in ("ECC", "OM", "OMDOT", "EDOT"):
                 getattr(self, p).set("0")
                 getattr(self, p).frozen = True
-
-
-    @Cache.use_cache
-    def DD_delay(self, toas):
-        """Return the DD timing model delay"""
-        ddob = self.get_binary_object(toas,DDmodel)
-
-        return ddob.DDdelay()
-
-    @Cache.use_cache
-    def d_delay_d_par(self,par,toas):
-        """Return the DD timing model delay derivtives"""
-        ddob = self.get_dd_object(toas)
-
-        return ddob.d_delay_d_par(par)
