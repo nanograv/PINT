@@ -12,6 +12,17 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 
 class Prior(object):
+    r"""Class for evaluation of prior probability densities
+    
+     Any Prior object returns the probability density using
+    the prior_probability() method.  For generality, these 
+    are written so that they work on a scalar value or a numpy array
+    of values.
+    
+    The default Prior is just the constant value 1.0.
+    Subclasses implement other forms.
+   
+    """
     
     def __init__(self):
         pass
@@ -21,6 +32,16 @@ class Prior(object):
         
 
 class UniformBoundedPrior(Prior):
+    r"""A uniform prior between two bounds
+    
+    Parameters
+    ----------
+    lower_bound : number
+        Lower bound of allowed parameter range
+        
+    upper_bound : number
+        Upper bound of allowed parameter range
+    """
     def __init__(self,lower_bound,upper_bound):
         super(UniformBoundedPrior,self).__init__()
         self.lower = lower_bound
@@ -37,7 +58,7 @@ class GaussianPrior(Prior):
         self.var = sigma**2
 
     def prior_probability(self,value):
-        return np.exp(-(value-self.mean)/(2*self.var))/np.sqrt(2.0*np.pi*self.var)
+        return np.exp(-(value-self.mean)**2/(2*self.var))/np.sqrt(2.0*np.pi*self.var)
        
 if __name__ == '__main__':
     val1 = 2.0

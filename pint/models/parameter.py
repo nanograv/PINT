@@ -10,7 +10,7 @@ import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
 import numbers
-import .priors
+import priors
 
 class Parameter(object):
     """A PINT class describing a single timing model parameter. The parameter
@@ -138,10 +138,11 @@ class Parameter(object):
                     raise ValueError("The ._num_value has to be a pure number or None. "\
                                      "Please check your .get_num_value method. ")
 
-    @property
     def prior_probability(self,value=None):
         """Return the prior probability, evaluated at the current value of
         the parameter, or at a proposed value.
+        
+        Probabilities are evaluated using the num_value attribute
         """
         if value is None:
             return self.prior.prior_probability(self.num_value)
