@@ -24,7 +24,8 @@ class TestBT():
         pint_delays = newmodel.delay(toas.table)
 
         # Load delays calculated with libstempo
-        _, lt_delays = np.genfromtxt('tests/J1955_ltdelays.dat', unpack=True)
+        _, lt_delays = np.genfromtxt(os.path.join(datapath,
+                                     'J1955_ltdelays.dat'), unpack=True)
 
         assert np.all(np.abs(pint_delays - lt_delays) < 1e-11), 'BT TEST FAILED'
 

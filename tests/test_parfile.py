@@ -3,7 +3,8 @@ import sys,os
 import pint.models as tm
 
 testdir=os.path.join(os.getenv('PINT'),'tests');
-parfile = os.path.join(testdir,'J1744-1134.basic.par')
+datadir = os.path.join(testdir,'datafile')
+parfile = os.path.join(datadir,'J1744-1134.basic.par')
 
 TestModel = tm.generate_timing_model("TestModel",(tm.Astrometry,tm.Dispersion,tm.SolarSystemShapiro,tm.Spindown))
 m = TestModel()

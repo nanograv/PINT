@@ -37,7 +37,7 @@ class test_diff(object):
         return ((v1-v2)/(h*self.parU)).decompose()
 
 def testdiff(model,dy,step):
-    Pars = model.params
+    Pars = model.binary_params
     dervs = {}
     for p in Pars:
         if p is 'EDOT':
