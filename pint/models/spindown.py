@@ -44,16 +44,14 @@ class Spindown(TimingModel):
                 descriptionTplt = lambda x: "Spin-frequency %d derivative"%x))
 
         self.add_param(MJDParameter(name="TZRMJD",
-            description="Reference epoch for phase = 0.0",
-            parse_value=lambda x: time_from_mjd_string(x, scale='tdb'),
-            get_value = lambda x: time_from_longdouble(x,'tdb')))
+                       description="Reference epoch for phase = 0.0",
+                       time_scale='tdb'))
 
         self.add_param(MJDParameter(name="PEPOCH",
-            description="Reference epoch for spin-down",
-            parse_value=lambda x: time_from_mjd_string(x, scale='tdb'),
-            get_value = lambda x: time_from_longdouble(x,'tdb')))
+                       description="Reference epoch for spin-down",
+                       time_scale='tdb'))
 
-        self.prefix_params+= ['F',]
+
         self.phase_funcs += [self.spindown_phase,]
 
     def setup(self):

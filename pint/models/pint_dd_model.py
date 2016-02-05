@@ -83,7 +83,6 @@ class DDwrapper(PSRbinaryWapper):
                 getattr(self, p).set("0")
                 getattr(self, p).frozen = True
 
-        self.apply_units()
 
     @Cache.use_cache
     def get_dd_object(self, toas):

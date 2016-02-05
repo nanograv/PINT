@@ -58,7 +58,7 @@ class Parameter(object):
     def __init__(self, name=None, value=None, units=None, description=None,
                  uncertainty=None, frozen=True, aliases=None, continuous=True,
                  parse_value=fortran_float, print_value=str,
-                 get_value=None, get_num_value=lambda x: x):
+                 get_value=lambda x: x, get_num_value=lambda x: x):
         self.name = name  # name of the parameter
         self.units = units  # parameter unit in string format,or None
         # parameter num unit, in astropy.units object format.
@@ -73,11 +73,13 @@ class Parameter(object):
         self.frozen = frozen
         self.continuous = continuous
         self.aliases = [] if aliases is None else aliases
+
         self.is_prefix = False
         self.parse_value = parse_value  # method to read a value from string,
                                         # user can put the speicified format
                                         # here
         self.print_value = print_value  # method to convert value to a string.
+        self.parse_uncertainty = fortran_float
         self.paramType = 'Parameter'  # Type of parameter. Here is general type
 
     # Setup units property
@@ -187,13 +189,12 @@ class Parameter(object):
             out += " +/- " + str(self.uncertainty)
         return out
 
-    def set(self, value, with_unit=False):
+    def set(self, value):
+
         """Parses a string 'value' into the appropriate internal representation
         of the parameter.
         """
         self.value = self.parse_value(value)
-        if with_unit is True:
-            self.value = self.value*u.Unit(self.units)
 
     def add_alias(self, alias):
         """Add a name to the list of aliases for this parameter."""
@@ -247,16 +248,9 @@ class Parameter(object):
                     errmsg = 'The third column of parfile can only be fitting '
                     errmsg += 'flag (1/0) or uncertainty.'
                     raise ValueError(errmsg)
-
             if len(k) == 4:
                 ucty = k[3]
-
-            if name == "RAJ":
-                self.uncertainty = Angle("0:0:%.15fh" % fortran_float(ucty))
-            elif name == "DECJ":
-                self.uncertainty = Angle("0:0:%.15fd" % fortran_float(ucty))
-            else:
-                self.uncertainty = fortran_float(ucty)
+            self.uncertainty = self.parse_uncertainty(ucty)
         return True
 
     def name_matches(self, name):
@@ -269,21 +263,49 @@ class MJDParameter(Parameter):
     """This is a Parameter type that is specific to MJD values."""
     def __init__(self, name=None, value=None, description=None,
                  uncertainty=None, frozen=True, continuous=True, aliases=None,
-                 parse_value=time_from_mjd_string,
-                 print_value=time_to_mjd_string,
-                 get_value=None,
-                 get_num_value=time_to_longdouble):
+                 time_scale='utc'):
         super(MJDParameter, self).__init__(name=name, value=value,
-                                           units="MJD",
-                                           description=description,
-                                           uncertainty=uncertainty,
-                                           frozen=frozen,
-                                           continuous=continuous,
-                                           aliases=aliases,
-                                           parse_value=parse_value,
-                                           print_value=print_value,
-                                           get_num_value=get_num_value)
+                                       units="MJD", description=description,
+                                       uncertainty=uncertainty, frozen=frozen,
+                                       continuous=continuous,
+                                       aliases=aliases)
+
+        self.parse_value = lambda x: time_from_mjd_string(x, time_scale)
+        self.print_value = time_to_mjd_string
+        self.get_value = lambda x: longdouble_from_mjd_string(x, time_scale)
+        self.get_num_value = time_to_longdouble
         self.paramType = 'MJDParameter'
+
+
+class AngleParameter(Parameter):
+    """This is a Parameter type that is specific to Angle values."""
+    def __init__(self, name=None, value=None, description=None, units='rad',
+             uncertainty=None, frozen=True, continuous=True, aliases=None):
+        super(AngleParameter, self).__init__(name=name, value=value,
+              units=units, description=description, uncertainty=uncertainty,
+              frozen=frozen, continuous=continuous, aliases=aliases)
+
+        self.separator = {
+            'h:m:s': (u.hourangle, 'h', '0:0:%.15fh'),
+            'd:m:s': (u.deg, 'd', '0:0:%.15fd'),
+            'rad': (u.rad, 'rad', '%.15frad'),
+            'deg': (u.deg, 'deg', '%.15fdeg'),
+        }
+        # Check unit format
+        if self.units.lower() not in self.separator.keys():
+            raise ValueError('Unidentified unit ' + self.units)
+
+        unitsuffix = self.separator[self.units.lower()][1]
+        self.parse_value = lambda x: Angle(x+unitsuffix)
+        self.print_value = lambda x: x.to_string(sep=':', precision=8) \
+                           if x.unit != u.rad else x.to_string(decimal = True,
+                           precision=8)
+        self.get_value = lambda x: Angle(x * self.separator[units.lower])
+        self.get_num_value = lambda x: x.value
+        self.parse_uncertainty = lambda x: \
+                                Angle(self.separator[self.units.lower()][2] \
+                                      % fortran_float(x))
+        self.paramType = 'AngleParameter'
 
 
 class prefixParameter(Parameter):

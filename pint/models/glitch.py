@@ -23,8 +23,6 @@ class Glitch(TimingModel):
     def __init__(self):
         super(Glitch, self).__init__()
 
-        # The number of terms in the taylor exapansion of spin freq (F0...FN)
-
         self.add_param(prefixParameter(name="GLPH_1", units="pulse phase",
                        value=0.0,
                        descriptionTplt=lambda x: "Phase change for glitch %d"
@@ -49,7 +47,6 @@ class Glitch(TimingModel):
                        units="day", value=0.0,
                        descriptionTplt=lambda x: "Decay time constant for"
                                                  " glitch %d" % x))
-
         self.phase_funcs += [self.glitch_phase]
 
     def setup(self):
