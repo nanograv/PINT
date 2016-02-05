@@ -9,7 +9,8 @@ SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
 from .parameter import Parameter, MJDParameter
 from .timing_model import Cache, TimingModel, MissingParameter
 from ..phase import Phase
-from ..utils import time_from_mjd_string, time_to_longdouble
+from ..utils import time_from_mjd_string, time_to_longdouble, \
+    time_from_longdouble
 from ..orbital.kepler import eccentric_from_mean
 from .btmodel import BTmodel
 import numpy as np
@@ -74,8 +75,8 @@ class PSRbinaryWapper(TimingModel):
              parse_value=np.double),binary_param = True)
 
         self.add_param(MJDParameter(name="T0",
-            parse_value=lambda x: time_from_mjd_string(x, scale='tdb'),
-            description="Epoch of periastron passage"),binary_param = True)
+            description="Epoch of periastron passage", time_scale='tdb'),
+            binary_param = True)
 
         self.add_param(Parameter(name="OM",
             units=u.deg,
@@ -101,12 +102,9 @@ class PSRbinaryWapper(TimingModel):
     def apply_units(self):
         for bpar in self.binary_params:
             bparObj = getattr(self,bpar)
-            if bparObj.value == None:
+            if bparObj.num_value is None or bparObj.num_unit is None:
                 continue
-            if type(bparObj).__name__ == 'MJDParameter':
-                continue
-
-            bparObj.value = bparObj.value*u.Unit(bparObj.num_unit)
+            bparObj.value = bparObj.num_value*u.Unit(bparObj.num_unit)
 
 
     def binary_delay(self,toas):

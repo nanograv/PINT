@@ -2,8 +2,8 @@ import numpy as np
 import time
 from pint import ls,GMsun,Tsun
 from pint import utils
-from .DDindependent import PSRdd as DDmodel
-from .psr_binary_wapper import PSRbinaryWapper
+from .pulsar_binaries.DD_model import DDmodel
+from .pint_pulsar_binary import PSRbinaryWapper
 from .parameter import Parameter, MJDParameter
 from .timing_model import Cache, TimingModel, MissingParameter
 import astropy
@@ -11,7 +11,10 @@ from ..utils import time_from_mjd_string, time_to_longdouble
 import astropy.units as u
 
 class DDwrapper(PSRbinaryWapper):
-    """A DD modle wapper
+    """This is a PINT pulsar binary dd model class a subclass of PSRbinaryWapper.
+       It is a wrapper for independent DDmodel class defined in ./pulsar_binary/DD_model.py
+       All the detailed calculations are in the independent DDmodel.
+       The aim for this class is to connect the independent binary model with PINT platform
     """
 
     def __init__(self,):
@@ -80,7 +83,6 @@ class DDwrapper(PSRbinaryWapper):
                 getattr(self, p).set("0")
                 getattr(self, p).frozen = True
 
-        self.apply_units()
 
     @Cache.use_cache
     def get_dd_object(self, toas):
@@ -89,24 +91,20 @@ class DDwrapper(PSRbinaryWapper):
         """
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py
-        dd_params = [  'PB', 'PBDOT', 'ECC', 'EDOT', \
-                       'OM', 'OMDOT', 'A1', 'A1DOT','A0','B0', 'T0', 'GAMMA',\
-                       'SINI','DR','DTH']
-        aliases = {'A1DOT':'XDOT', 'ECC':'E'}
-
-        pardict = {}
-        for par in dd_params:
-            key = par
-            # T0 needs to be converted to long double
-            if key in ['T0'] and \
-                type(getattr(self, key).value) is astropy.time.core.Time:
-                pardict[par] = time_to_longdouble(getattr(self, key).value)*u.day
-            else:
-                pardict[par] = getattr(self, key).value
         # Get barycnetric toa first
         self.barycentricTime = self.get_barycentric_toas(toas)
-        # Return the DDmodel object
-        return DDmodel(self.barycentricTime, **pardict)
+
+        ddobj = DDmodel(self.barycentricTime)
+        pardict = {}
+        for par in ddobj.binary_params:
+            if hasattr(self, par):
+                parObj = getattr(self, par)
+                if parObj.num_value is None:
+                    continue
+                pardict[par] = parObj.num_value*parObj.num_unit
+
+        ddobj.set_par_values(pardict)    # This now does a lot of stuff that is in the PSRdd.__init__
+        return ddobj
 
     @Cache.use_cache
     def DD_delay(self, toas):
