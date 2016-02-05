@@ -30,8 +30,9 @@ class PSRbinaryWapper(TimingModel):
     """
     def __init__(self,):
         super(PSRbinaryWapper, self).__init__()
-        self.BinaryModelName = None
-        self.barycentricTime = None
+        self.binary_model_name = None
+        self.barycentric_time = None
+        self.binary_model_class = None
         self.binary_delay_funcs= []
         self.binary_params = []
         self.add_param(Parameter(name="PB", units=u.day,
@@ -87,11 +88,12 @@ class PSRbinaryWapper(TimingModel):
                        description="Mass of companian in the unit Sun mass",
                        parse_value=np.double),binary_param=True)
 
+        # Set up delay function
+        self.binary_delay_funcs += [self.binarymodel_delay,]
+        self.delay_funcs['L2'] += self.binary_delay_funcs
 
     def setup(self):
         super(PSRbinaryWapper, self).setup()
-
-
 
     def apply_units(self):
         for bpar in self.binary_params:
@@ -101,16 +103,15 @@ class PSRbinaryWapper(TimingModel):
             bparObj.value = bparObj.num_value*u.Unit(bparObj.num_unit)
 
     @Cache.use_cache
-    def get_binary_object(self, toas, binaryObj):
+    def get_binary_object(self, toas):
         """
         Obtain the independent binary object for this set of parameters/toas
         """
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py
         # Get barycnetric toa first
-        self.barycentricTime = self.get_barycentric_toas(toas)
-
-        binobj = binaryObj(self.barycentricTime)
+        self.barycentric_time = self.get_barycentric_toas(toas)
+        binobj = self.binary_model_class(self.barycentric_time)
         pardict = {}
         for par in binobj.binary_params:
             if par in binobj.param_aliases.keys():
@@ -124,6 +125,13 @@ class PSRbinaryWapper(TimingModel):
 
         binobj.set_param_values(pardict)
         return binobj
+
+    @Cache.use_cache
+    def binarymodel_delay(self, toas):
+        """Return the binary model independent delay call"""
+        bmob = self.get_binary_object(toas)
+
+        return bmob.binary_delay()
 
 
     def binary_delay(self,toas):
@@ -139,3 +147,10 @@ class PSRbinaryWapper(TimingModel):
         for bdf in self.binary_delay_funcs:
             bdelay+= bdf(toas)
         return bdelay
+
+    @Cache.use_cache
+    def d_delay_d_xxxx(self,param,toas):
+        """Return the DD timing model delay derivtives"""
+        bmob = self.get_binary_object(toas)
+
+        return bmob.d_binarydelay_d_par(par)
