@@ -42,6 +42,7 @@ class DDmodel(PSR_BINARY):
         self.dd_interVars = ['er','eTheta','beta','alpha','Dre','Drep','Drepp',
                              'nhat', 'TM2']
         self.add_inter_vars(self.dd_interVars)
+<<<<<<< HEAD
         self.set_param_values() # Set parameters to default values.
         self.binary_delay_funcs += [self.DDdelay]
         self.d_binarydelay_d_par_funcs += [self.d_DDdelay_d_par]
@@ -50,6 +51,11 @@ class DDmodel(PSR_BINARY):
         if input_params is not None:
             self.update_input(param_dict=input_params)
 
+=======
+        self.set_param_values()
+        self.binary_delay_funcs += [self.DDdelay]
+        self.d_binarydelay_d_par_funcs += [self.d_DDdelay_d_par]
+>>>>>>> Add dd derivative to derivative functions list, fix varable name change , add coding style
     # calculations for delays in DD model
     # Calculate er
     @Cache.cache_result
