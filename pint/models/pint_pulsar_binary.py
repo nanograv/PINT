@@ -75,9 +75,7 @@ class PSRbinaryWapper(TimingModel):
              parse_value=np.double),binary_param = True)
 
         self.add_param(MJDParameter(name="T0",
-            parse_value=lambda x: time_from_mjd_string(x, scale='tdb'),
-            description="Epoch of periastron passage",
-            get_value=lambda x: time_from_longdouble(x, scale='tdb')),
+            description="Epoch of periastron passage", time_scale='tdb'),
             binary_param = True)
 
         self.add_param(Parameter(name="OM",

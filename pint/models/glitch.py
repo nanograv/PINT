@@ -30,7 +30,7 @@ class Glitch(TimingModel):
                 description="Phase change for glitch %d"%ii))
             self.add_param(MJDParameter(name="GLEP_%d"%ii,
                 description="Epoch of glitch %d"%ii,
-                parse_value=lambda x: time_from_mjd_string(x, scale='tdb')))
+                time_scale='tdb'))
             self.add_param(Parameter(name="GLF0_%d"%ii,
                 units="Hz", value=0.0,
                 description="Permanent frequency change for glitch %d"%ii))

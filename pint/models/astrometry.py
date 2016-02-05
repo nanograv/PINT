@@ -5,7 +5,7 @@ import astropy.coordinates as coords
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
-from .parameter import Parameter, MJDParameter
+from .parameter import Parameter, MJDParameter, AngleParameter
 from .timing_model import TimingModel, MissingParameter, Cache
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble
 from pint import ls
@@ -24,21 +24,15 @@ class Astrometry(TimingModel):
     def __init__(self):
         super(Astrometry, self).__init__()
 
-        self.add_param(Parameter(name="RAJ",
+        self.add_param(AngleParameter(name="RAJ",
             units="H:M:S",
             description="Right ascension (J2000)",
-            aliases=["RAJ"],
-            parse_value=lambda x: Angle(x+'h'),
-            print_value=lambda x: x.to_string(sep=':',
-                precision=8)))
+            aliases=["RAJ"]))
 
-        self.add_param(Parameter(name="DECJ",
+        self.add_param(AngleParameter(name="DECJ",
             units="D:M:S",
             description="Declination (J2000)",
-            aliases=["DECJ"],
-            parse_value=lambda x: Angle(x+'deg'),
-            print_value=lambda x: x.to_string(sep=':',
-                alwayssign=True, precision=8)))
+            aliases=["DECJ"]))
 
         self.add_param(MJDParameter(name="POSEPOCH",
             description="Reference epoch for position"))

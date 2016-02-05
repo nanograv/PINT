@@ -272,8 +272,8 @@ class AngleParameter(Parameter):
         self.separator = {
             'h:m:s': (u.hourangle, 'h', '0:0:%.15fh'),
             'd:m:s': (u.deg, 'd', '0:0:%.15fd'),
-            'rad': (u.rad, 'rad', '%.15f'),
-            'deg': (u.deg, 'deg', '%.15f'),
+            'rad': (u.rad, 'rad', '%.15frad'),
+            'deg': (u.deg, 'deg', '%.15fdeg'),
         }
         # Check unit format
         if self.units.lower() not in self.separator.keys():
@@ -288,5 +288,5 @@ class AngleParameter(Parameter):
         self.get_num_value = lambda x: x.value
         self.parse_uncertainty = lambda x: \
                                 Angle(self.separator[self.units.lower()][2] \
-                                      +unitsuffix % fortran_float(x))
+                                      % fortran_float(x))
         self.paramType = 'AngleParameter'
