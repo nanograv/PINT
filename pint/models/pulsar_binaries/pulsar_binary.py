@@ -45,7 +45,7 @@ class PSR_BINARY(object):
         self.binary_params = self.param_default_value.keys()
         self.inter_vars = ['E','M','nu','ecc','omega','a1','TM2']
         self.binary_delay_funcs = []
-
+        self.d_binarydelay_d_par_funcs = []
 
 
     @property
@@ -78,12 +78,10 @@ class PSR_BINARY(object):
         else:
             for par in valDict.keys():
                 if par not in self.binary_params: # search for aliases
-                    for pn in self.param_aliases.keys():
-                        if par in self.param_aliases[pn]:
-                            par = pn
-                        else:
-                            raise AttributeError('Can not find parameter '+par+' in '\
-                                                 + self.binary_name+'model')
+                    par = self.search_alias(par)
+                    if par is None:
+                        raise AttributeError('Can not find parameter '+par+' in '\
+                                              + self.binary_name+'model')
                 setattr(self,par,valDict[par])
 
     def add_binary_params(self,parameter,defaultValue):
@@ -107,6 +105,14 @@ class PSR_BINARY(object):
             if v not in self.inter_vars:
                 self.inter_vars.append(v)
 
+    def search_alias(self,parname):
+        for pn in self.param_aliases.keys():
+            if parname in self.param_aliases[pn]:
+                return pn
+            else:
+                return None
+
+    @Cache.use_cache
     def binary_delay(self):
         """Returns total pulsar binary delay.
            Return
@@ -118,6 +124,21 @@ class PSR_BINARY(object):
             bdelay+= bdf()
         return bdelay
 
+    @Cache.use_cache
+    def d_binarydelay_d_par(self, par):
+        # search for aliases
+        if par not in self.binary_params and self.search_alias(par) is None:
+            raise AttributeError('Can not find parameter '+par+' in '\
+                                 + self.binary_name+'model')
+        # Get first derivative in the delay derivative function
+        bdelayder = self.d_binarydelay_d_par_funcs[0]
+        # Remove the first one, get others.
+        self.d_binarydelay_d_par_funcs.remove(self.d_binarydelay_d_par_funcs[0])
+        for bdder in self.d_binarydelay_d_par_funcs:
+            bdelayder += bdder()
+        return bdelayder
+
+    @Cache.use_cache
     def prtl_der(self,y,x):
         """Find the partial derivatives in binary model
            pdy/pdx
@@ -131,11 +152,11 @@ class PSR_BINARY(object):
            ---------
            pdy/pdx : The derivatives
         """
-        if y not in self.params+self.inter_vars:
+        if y not in self.binary_params+self.inter_vars:
             errorMesg = y + " is not in binary parameter and variables list."
             raise ValueError(errorMesg)
 
-        if x not in self.inter_vars+self.params:
+        if x not in self.inter_vars+self.binary_params:
             errorMesg = x + " is not in binary parameters and variables list."
             raise ValueError(errorMesg)
         # derivative to itself
@@ -190,7 +211,7 @@ class PSR_BINARY(object):
             return (result*derU).decompose()
 
 
-    @Cache.use_cache
+    @Cache.cache_result
     def compute_eccentric_anomaly(self, eccentricity, mean_anomaly):
         """compute eccentric anomaly, solve for Kepler Equation
             Parameter
@@ -226,7 +247,7 @@ class PSR_BINARY(object):
 
 
         ####################################
-    @Cache.use_cache
+    @Cache.cache_result
     def get_tt0(self,barycentricTOA):
         if barycentricTOA is None or self.T0 is None:
             tt0 = None
@@ -237,46 +258,46 @@ class PSR_BINARY(object):
         tt0 = (barycentricTOA - T0).to('second')
         return tt0
     ####################################
-    @Cache.use_cache
+    @Cache.cache_result
     def ecc(self):
         ECC = self.ECC
         EDOT = self.EDOT
         return ECC + (self.tt0*EDOT).decompose()
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_ecc_d_T0(self):
         result = np.empty(len(self.tt0))
         result.fill(-self.EDOT.value)
         return result*u.Unit(self.EDOT.unit)
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_ecc_d_ECC(self):
         return np.longdouble(np.ones(len(self.tt0)))*u.Unit("")
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_ecc_d_EDOT(self):
         return self.tt0
 
     #####################################
-    @Cache.use_cache
+    @Cache.cache_result
     def a1(self):
         return self.A1 + self.tt0*self.A1DOT
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_a1_d_A1(self):
         return np.longdouble(np.ones(len(self.tt0)))*u.Unit('')
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_a1_d_T0(self):
         result = np.empty(len(self.tt0))
         result.fill(-self.A1DOT.value)
         return result*u.Unit(self.A1DOT.unit)
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_a1_d_A1DOT(self):
         return self.tt0
     ######################################
-    @Cache.use_cache
+    @Cache.cache_result
     def M(self):
         """Orbit phase, this could be a generic function
         """
@@ -289,7 +310,8 @@ class PSR_BINARY(object):
         phase = (orbits - norbits)*2*np.pi*u.rad
 
         return phase
-    @Cache.use_cache
+
+    @Cache.cache_result
     def d_M_d_T0(self):
         """dM/dT0  this could be a generic function
         """
@@ -299,7 +321,7 @@ class PSR_BINARY(object):
 
         return ((PBDOT - XPBDOT)*self.tt0/PB-1.0)*2*np.pi*u.rad/PB
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_M_d_PB(self):
         """dM/dPB this could be a generic function
         """
@@ -308,14 +330,14 @@ class PSR_BINARY(object):
         XPBDOT = self.XPBDOT
         return 2*np.pi*u.rad*((PBDOT+XPBDOT)*self.tt0**2/PB**3 - self.tt0/PB**2)
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_M_d_PBDOT(self):
         """dM/dPBDOT this could be a generic function
         """
         PB = self.PB.to('second')
         return -np.pi*u.rad * self.tt0**2/PB**2
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_M_d_XPBDOT(self):
         """dM/dPBDOT this could be a generic function
         """
@@ -323,14 +345,14 @@ class PSR_BINARY(object):
         return -np.pi*u.rad * self.tt0**2/PB**2
 
     ###############################################
-    @Cache.use_cache
+    @Cache.cache_result
     def E(self):
         """Eccentric Anomaly
         """
         return self.compute_eccentric_anomaly(self.ecc(),self.M())
 
     # Analytically calculate derivtives.
-    @Cache.use_cache
+    @Cache.cache_result
     def d_E_d_T0(self):
         """d(E-e*sinE)/dT0 = dM/dT0
            dE/dT0(1-cosE*e)-de/dT0*sinE = dM/dT0
@@ -342,7 +364,7 @@ class PSR_BINARY(object):
         ecc = self.ecc()
         return (RHS-EDOT*np.sin(E))/(1.0-np.cos(E)*ecc)
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_E_d_PB(self):
         """d(E-e*sinE)/dPB = dM/dPB
            dE/dPB(1-cosE*e)-de/dPB*sinE = dM/dPB
@@ -351,47 +373,50 @@ class PSR_BINARY(object):
         RHS = self.d_M_d_PB()
         return RHS/(1.0-np.cos(self.E())*self.ecc())
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_E_d_PBDOT(self):
         RHS = self.d_M_d_PBDOT()
         return RHS/(1.0-np.cos(self.E())*self.ecc())
-    @Cache.use_cache
+
+    @Cache.cache_result
     def d_E_d_XPBDOT(self):
         RHS = self.d_M_d_XPBDOT()
         return RHS/(1.0-np.cos(self.E())*self.ecc())
-    @Cache.use_cache
+
+    @Cache.cache_result
     def d_E_d_ECC(self):
         E = self.E()
         return np.sin(E) / (1.0 - self.ecc()*np.cos(E))
-    @Cache.use_cache
+
+    @Cache.cache_result
     def d_E_d_EDOT(self):
         return self.tt0 * self.d_E_d_ECC()
 
     #####################################################
-    @Cache.use_cache
+    @Cache.cache_result
     def nu(self):
         """True anomaly  (Ae)
         """
         return 2*np.arctan(np.sqrt((1.0+self.ecc())/(1.0-self.ecc()))*np.tan(self.E()/2.0))
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_nu_d_E(self):
         brack1 = (1 + self.ecc()*np.cos(self.nu())) / (1 - self.ecc()*np.cos(self.E()))
         brack2 = np.sin(self.E()) / np.sin(self.nu())
         return brack1*brack2
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_nu_d_ecc(self):
         return np.sin(self.E())**2/(self.ecc()*np.cos(self.E())-1)**2/np.sin(self.nu())
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_nu_d_T0(self):
         """dnu/dT0 = dnu/de*de/dT0+dnu/dE*dE/dT0
            de/dT0 = -EDOT
         """
         return self.d_nu_d_ecc()*(-self.EDOT)+self.d_nu_d_E()*self.d_E_d_T0()
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_nu_d_PB(self):
         """dnu(e,E)/dPB = dnu/de*de/dPB+dnu/dE*dE/dPB
            de/dPB = 0
@@ -399,20 +424,21 @@ class PSR_BINARY(object):
         """
         return self.d_nu_d_E()*self.d_E_d_PB()
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_nu_d_PBDOT(self):
         """dnu(e,E)/dPBDOT = dnu/de*de/dPBDOT+dnu/dE*dE/dPBDOT
            de/dPBDOT = 0
            dnu/dPBDOT = dnu/dE*dE/dPBDOT
         """
         return self.d_nu_d_E()*self.d_E_d_PBDOT()
-    @Cache.use_cache
+
+    @Cache.cache_result
     def d_nu_d_XPBDOT(self):
         """dnu/dPBDOT = dnu/dE*dE/dPBDOT
         """
         return self.d_nu_d_E()*self.d_E_d_XPBDOT()
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_nu_d_ECC(self):
         """dnu(e,E)/dECC = dnu/de*de/dECC+dnu/dE*dE/dECC
            de/dECC = 1
@@ -420,11 +446,12 @@ class PSR_BINARY(object):
         """
         return self.d_nu_d_ecc()+self.d_nu_d_E()*self.d_E_d_ECC()
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_nu_d_EDOT(self):
         return self.tt0 * self.d_nu_d_ECC()
+
     #############################################
-    @Cache.use_cache
+    @Cache.cache_result
     def omega(self):
         """T. Damour and N. Deruelle(1986)equation [25]
            omega = OM+nu*k
@@ -439,7 +466,7 @@ class PSR_BINARY(object):
         k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
         return (OM + nu*k).to(u.rad)
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_omega_d_par(self,par):
         """derivative for omega respect to user input Parameter.
            if par is not 'OM','OMDOT','PB'
@@ -453,7 +480,7 @@ class PSR_BINARY(object):
            ----------
            Derivitve of omega respect to par
         """
-        if par not in self.params:
+        if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
 
@@ -473,13 +500,13 @@ class PSR_BINARY(object):
             else:
                 return np.longdouble(np.zeros(len(self.tt0)))
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_omega_d_OM(self):
         """dOmega/dOM = 1
         """
         return np.longdouble(np.ones((len(self.tt0))))*u.Unit('')
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_omega_d_OMDOT(self):
         """dOmega/dOMDOT = 1/n*nu
            n = 2*pi/PB
@@ -490,8 +517,7 @@ class PSR_BINARY(object):
 
         return PB/(2*np.pi*u.rad)*nu
 
-
-    @Cache.use_cache
+    @Cache.cache_result
     def d_omega_d_PB(self):
         """dOmega/dPB = dnu/dPB*k+dk/dPB*nu
         """
@@ -504,11 +530,11 @@ class PSR_BINARY(object):
 
     ############################################################
 
-    @Cache.use_cache
+    @Cache.cache_result
     def pbprime(self):
 
         return self.PB - self.PBDOT * self.tt0
 
-    @Cache.use_cache
+    @Cache.cache_result
     def P(self):
         return self.P0 + self.P1*(self.t - self.PEPOCH).to('second')
