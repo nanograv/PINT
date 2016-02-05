@@ -51,8 +51,8 @@ class DDmodel(PSR_BINARY):
                              'nhat']
         self.add_inter_vars(self.dd_interVars)
         self.set_param_values()
-        self.binary_delay_funcs+= [self.DDdelay]
-
+        self.binary_delay_funcs += [self.DDdelay]
+        self.d_binarydelay_d_par_funcs += [self.d_DDdelay_d_par]
     # calculations for delays in DD model
     # Calculate er
     @Cache.cache_result
@@ -65,7 +65,7 @@ class DDmodel(PSR_BINARY):
 
     @Cache.cache_result
     def d_er_d_par(self,par):
-        if par not in self.params:
+        if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
 
@@ -88,7 +88,7 @@ class DDmodel(PSR_BINARY):
         return np.longdouble(np.ones(len(self.tt0)))*u.Unit("")
     @Cache.cache_result
     def d_eTheta_d_par(self,par):
-        if par not in self.params:
+        if par not in self.binary_params:
             errorMesg = par + "is not in parameter list."
             raise ValueError(errorMesg)
 
@@ -121,7 +121,7 @@ class DDmodel(PSR_BINARY):
            dAlpha/dPar = a1/c*cos(omega)*dOmega/dPar
         """
 
-        if par not in self.params:
+        if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
 
@@ -171,7 +171,7 @@ class DDmodel(PSR_BINARY):
            Other parameters
            dBeta/dPar = -A1/c*(1-eTheta**2)**0.5*sin(omega)*dOmega/dPar
         """
-        if par not in self.params:
+        if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
 
@@ -612,7 +612,7 @@ class DDmodel(PSR_BINARY):
                  +(1-self.eTheta()**2)**0.5*self.cOmg*self.sinEcc_A)
         return rDelay.decompose()
     @Cache.use_cache
-    def d_delay_d_par(self,par):
+    def d_DDdelay_d_par(self,par):
         """Full DD model delay derivtive
         """
         return self.d_delayI_d_par(par)+self.d_delayS_d_par(par)+ \
