@@ -3,7 +3,7 @@ import numpy as np
 import functools
 import collections
 from astropy import log
-from .timing_model import Cache
+from pint.models.timing_model import Cache
 from pint import utils as ut
 import astropy.units as u
 try:
@@ -14,7 +14,7 @@ SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
 from pint import ls,GMsun,Tsun
 
 
-class PSRbin(object):
+class PSR_BINARY(object):
     """A generic model for independent psr binary model
        Parameters are signed by specific model.
 
@@ -27,10 +27,8 @@ class PSRbin(object):
        projected semi-major axis of orbit   a1
     """
     def __init__(self,):
-        self.params = ['PB', 'PBDOT', 'ECC', 'EDOT','OM', 'OMDOT', 'A1', \
-                       'A1DOT', 'T0',]
-                       # Necessary parameters for all binary model
-        self.parDefault = {'PB':np.longdouble(10.0)*u.day,
+        # Necessary parameters for all binary model
+        self.param_default_value = {'PB':np.longdouble(10.0)*u.day,
                            'PBDOT':0.0*u.day/u.day,
                            'ECC': 0.9*u.Unit('') ,
                            'EDOT':0.0/u.second ,
@@ -41,9 +39,7 @@ class PSRbin(object):
                            'XPBDOT':0.0*u.day/u.day,
                            'M2':0.0*u.M_sun }
 
-        self.tt0 = None
-        self.t = None
-        self.set_default_values(self.parDefault)
+        self.binary_params = self.param_default_value.keys()
         self.inter_vars = ['E','M','nu','ecc','omega','a1','TM2']
         self.binary_delay_funcs = []
 
@@ -55,7 +51,8 @@ class PSRbin(object):
     @t.setter
     def t(self,val):
         self._t = val
-        self.tt0 = self.get_tt0(self._t)
+        if hasattr(self,'T0'):
+            self._tt0 = self.get_tt0(self._t)
 
     @property
     def T0(self):
@@ -63,23 +60,35 @@ class PSRbin(object):
     @T0.setter
     def T0(self,val):
         self._T0 = val
-        self.tt0 = self.get_tt0(self.t)
+        if hasattr(self, '_t'):
+            self._tt0 = self.get_tt0(self._t)
+    @property
+    def tt0(self):
+        return self._tt0
+    def set_par_values(self,valDict = None):
+        """A function that sets the parameters and assign values
+           If the valDict is not provided, it will set parameter as default value
+        """
+        if valDict is None:
+            for par in self.param_default_value.keys():
+                setattr(self,par.upper(),self.param_default_value[par])
+        else:
+            for par in valDict.keys():
+                setattr(self,par,valDict[par])
 
-    def pars(self):
-        """Parameter names in model"""
-        return self.params
+    def add_binary_params(self,parameter,defaultValue):
+        """Add one parameter to the binary class
+        """
+        if parameter not in self.binary_params:
+            self.binary_params.append(p)
+            if not hasattr(defaultValue,unit):
+                log.warning("Binary paramters' value generally has unit."\
+                            " Treat paramter "+paramter+" as a diemension less unit.")
+                self.param_default_value[p] = defaultValue*u.Unit("")
+            else:
+                self.param_default_value[p] = defaultValue
+            setattr(self,parameter,self.param_default_value[p])
 
-    def set_default_values(self,defaultDict):
-        for key in defaultDict.keys():
-            value = defaultDict[key]
-            setattr(self,key,value)
-
-    def add_binary_params(self,parameters):
-        if not isinstance(parameters,list):
-            parameters = [parameters,]
-        for p in parameters:
-            if p not in self.params:
-                self.params.append(p)
 
     def add_inter_vars(self,interVars):
         if not isinstance(interVars,list):
