@@ -284,7 +284,7 @@ class AngleParameter(Parameter):
         self.print_value = lambda x: x.to_string(sep=':', precision=8) \
                            if x.unit != u.rad else x.to_string(decimal = True,
                            precision=8)
-        self.get_value = lambda x: Angle(x * self.separator[units.lower])
+        self.get_value = lambda x: Angle(x * self.separator[units.lower()][0])
         self.get_num_value = lambda x: x.value
         self.parse_uncertainty = lambda x: \
                                 Angle(self.separator[self.units.lower()][2] \
