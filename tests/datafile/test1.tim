@@ -1,0 +1,18 @@
+MODE 1
+
+C This is test datafile for reading TOAs
+EMAX 10.0
+FMIN 200.0
+
+JUMP
+INFO test1
+toa1 1404.000 55336.989701997555466   3.469  gbt  -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 1740.3 
+FORMAT 1
+toa2 1412.000 55336.989701995786016   3.291  1    -fe Rcvr1_2 -be GASP 
+toa3 1408.000 55336.989701996723497   3.842  gb   -fe Rcvr1_2 -be GASP 
+C The following is below FMIN
+toa4  104.000 55336.989701996723497   3.842  gb   -fe Rcvr1_2 -be GASP 
+JUMP
+
+INFO test2
+INCLUDE test2.tim
