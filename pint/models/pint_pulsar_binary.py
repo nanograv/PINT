@@ -9,7 +9,8 @@ SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
 from .parameter import Parameter, MJDParameter
 from .timing_model import Cache, TimingModel, MissingParameter
 from ..phase import Phase
-from ..utils import time_from_mjd_string, time_to_longdouble,time_from_longdouble
+from ..utils import time_from_mjd_string, time_to_longdouble, \
+    time_from_longdouble
 from ..orbital.kepler import eccentric_from_mean
 from .btmodel import BTmodel
 import numpy as np
@@ -37,44 +38,40 @@ class PSRbinaryWapper(TimingModel):
         self.binary_params = []
         self.add_param(Parameter(name="PB", units=u.day,
                        description="Orbital period",
-                       parse_value=utils.data2longdouble),binary_param = True)
+                       parse_value=utils.data2longdouble),binary_param=True)
 
 
         self.add_param(Parameter(name="PBDOT", units=u.day/u.day,
                        description="Orbital period derivitve respect to time",
-                       parse_value=utils.data2longdouble),binary_param = True)
+                       parse_value=utils.data2longdouble),binary_param=True)
 
 
         self.add_param(Parameter(name="XPBDOT", units=u.s/u.s,
                        description="Rate of change of orbital period minus GR"\
                                    " prediction",
-                       parse_value=utils.data2longdouble),binary_param = True)
+                       parse_value=utils.data2longdouble),binary_param=True)
 
 
         self.add_param(Parameter(name="A1", units=ls,
                        description="Projected semi-major axis, a*sin(i)",
-                       parse_value=np.double),binary_param = True)
+                       parse_value=np.double),binary_param=True)
 
         self.add_param(Parameter(name = "A1DOT", units=ls/u.s,
                        description="Derivitve of projected semi-major axis," \
                                    " da*sin(i)/dt",
-                       parse_value=np.double),binary_param = True)
+                       parse_value=np.double),binary_param=True)
 
-        self.add_param(Parameter(name="ECC", units="", aliases = ["E"],
+        self.add_param(Parameter(name="ECC", units="", aliases=["E"],
                        description="Eccentricity",
                        parse_value=np.double),binary_param = True)
 
         self.add_param(Parameter(name="EDOT", units="1/s",
                        description="Eccentricity derivitve respect to time",
-                       parse_value=np.double),binary_param = True)
+                       parse_value=np.double),binary_param=True)
 
         self.add_param(MJDParameter(name="T0",
-                       parse_value=lambda x: time_from_mjd_string(x,
-                                                                  scale='tdb'),
                        description="Epoch of periastron passage",
-                       get_value = lambda x: time_from_longdouble(x,
-                                                                  scale='tdb')),
-                       binary_param = True)
+                       time_scale='tdb'), binary_param=True)
 
         self.add_param(Parameter(name="OM", units=u.deg,
                        description="Longitude of periastron",

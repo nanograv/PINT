@@ -59,8 +59,7 @@ class BT(TimingModel):
             parse_value=lambda x: np.double(x)))
 
         self.add_param(MJDParameter(name="T0",
-            parse_value=lambda x: time_from_mjd_string(x, scale='tdb'),
-            description="Epoch of periastron passage"))
+            time_scale='tdb', description="Epoch of periastron passage"))
 
         self.add_param(Parameter(name="PBDOT",
             units="s/s",

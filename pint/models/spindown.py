@@ -42,11 +42,11 @@ class Spindown(TimingModel):
 
         self.add_param(MJDParameter(name="TZRMJD",
             description="Reference epoch for phase = 0.0",
-            parse_value=lambda x: time_from_mjd_string(x, scale='tdb')))
+            time_scale='tdb'))
 
         self.add_param(MJDParameter(name="PEPOCH",
             description="Reference epoch for spin-down",
-            parse_value=lambda x: time_from_mjd_string(x, scale='tdb')))
+            time_scale='tdb'))
 
         self.phase_funcs += [self.spindown_phase,]
 

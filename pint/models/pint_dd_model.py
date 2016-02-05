@@ -68,6 +68,3 @@ class DDwrapper(PSRbinaryWapper):
             for p in ("ECC", "OM", "OMDOT", "EDOT"):
                 getattr(self, p).set("0")
                 getattr(self, p).frozen = True
-
-
-    
