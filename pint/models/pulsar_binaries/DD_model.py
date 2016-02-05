@@ -50,8 +50,8 @@ class DDmodel(PSR_BINARY):
                              'nhat']
         self.add_inter_vars(self.dd_interVars)
         self.set_param_values()
-        self.binary_delay_funcs+= [self.DDdelay]
-
+        self.binary_delay_funcs += [self.DDdelay]
+        self.d_binarydelay_d_par_funcs += [self.d_DDdelay_d_par]
     # calculations for delays in DD model
     # Calculate er
     @Cache.cache_result
@@ -611,7 +611,7 @@ class DDmodel(PSR_BINARY):
                  +(1-self.eTheta()**2)**0.5*self.cOmg*self.sinEcc_A)
         return rDelay.decompose()
     @Cache.use_cache
-    def d_delay_d_par(self,par):
+    def d_DDdelay_d_par(self,par):
         """Full DD model delay derivtive
         """
         return self.d_delayI_d_par(par)+self.d_delayS_d_par(par)+ \
