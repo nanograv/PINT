@@ -34,7 +34,7 @@ class test_diff(object):
         return ((v1-v2)/(h*self.parU)).decompose()
 
 def testdiff(model,dy,step):
-    Pars = model.params
+    Pars = model.binary_params
     dervs = {}
     for p in Pars:
         if p is 'EDOT':
@@ -60,5 +60,5 @@ def testdiff(model,dy,step):
     return dervs
 ddm = mb.get_model('B1855+09_NANOGrav_dfg+12_modified.par')
 t = toa.get_TOAs("B1855+09_NANOGrav_dfg+12.tim",planets = True)
-ddob = ddm.get_dd_object(t.table)
+ddob = ddm.get_binary_object(t.table)
 diff = testdiff(ddob,'delayInverse',1e-7)
