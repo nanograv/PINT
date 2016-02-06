@@ -39,7 +39,7 @@ class fitter(object):
         fitp = [p for p in self.model.params if not getattr(self.model,p).frozen]
         fitval = []
         for p in fitp:
-            fitval.append(getattr(self.model, p).value)
+            fitval.append(getattr(self.model, p).num_value)
         return {k: v for k, v in zip(fitp, fitval)}
 
     def set_params(self, fitp):
@@ -63,6 +63,8 @@ class fitter(object):
         """
         # Minimze takes array of dimensionless input variables. Put back into
         # dict form and set the model.
+        # I don't think the following is needed.  x should be all numerical at this point
+        # and the check is not robust if x is astropy Times. -- paulr
         if type(x) is u.Quantity:
             x = x.value
         fitp = {k: v for k, v in zip(args, x)}
@@ -78,10 +80,6 @@ class fitter(object):
         """
         # Initial guesses are model params
         fitp = self.get_fitparams()
-        # Input variables must be unitless
-        for k, v in zip(fitp.keys(), fitp.values()):
-            if has_astropy_unit(v):
-                fitp[k] = v.value
         self.fitresult=opt.minimize(self.minimize_func, fitp.values(),
                                     args=tuple(fitp.keys()),
                                     options={'maxiter':maxiter},

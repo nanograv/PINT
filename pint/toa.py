@@ -41,6 +41,8 @@ def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=True):
     if 'ssb_obs_pos' not in t.table.colnames:
         log.info("Computing observatory positions and velocities.")
         t.compute_posvels(ephem, planets)
+    # This should also check if the timfile is newer than the pickle file
+    # and update the pickle in that case
     if not (os.path.isfile(timfile+".pickle") or
             os.path.isfile(timfile+".pickle.gz")):
         log.info("Pickling TOAs.")

@@ -166,7 +166,7 @@ class Parameter(object):
                 self.value = None
 
         elif not isinstance(val,numbers.Number):
-            raise ValueError('num_value has to be a pure number or None.')
+            raise ValueError('num_value has to be a pure number or None. ({0} <- {1} ({2})'.format(self.name,val,type(val)))
         else:
             self._num_value = val
             # Update value
