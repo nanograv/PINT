@@ -1,7 +1,7 @@
 # parameter.py
 # Defines Parameter class for timing model parameters
 from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
-    time_to_longdouble, is_number
+    time_to_longdouble, is_number, time_from_longdouble
 import numpy
 import astropy.units as u
 from astropy import log
@@ -271,7 +271,7 @@ class MJDParameter(Parameter):
 
         self.parse_value = lambda x: time_from_mjd_string(x, time_scale)
         self.print_value = time_to_mjd_string
-        self.get_value = lambda x: longdouble_from_mjd_string(x, time_scale)
+        self.get_value = lambda x: time_from_longdouble(x, time_scale)
         self.get_num_value = time_to_longdouble
         self.paramType = 'MJDParameter'
 
@@ -299,7 +299,7 @@ class AngleParameter(Parameter):
         self.print_value = lambda x: x.to_string(sep=':', precision=8) \
                            if x.unit != u.rad else x.to_string(decimal = True,
                            precision=8)
-        self.get_value = lambda x: Angle(x * self.separator[units.lower])
+        self.get_value = lambda x: Angle(x * self.separator[units.lower()][0])
         self.get_num_value = lambda x: x.value
         self.parse_uncertainty = lambda x: \
                                 Angle(self.separator[self.units.lower()][2] \
