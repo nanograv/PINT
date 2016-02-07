@@ -36,7 +36,7 @@ class resids(object):
         nF0 = 0
         for n in F0names:
             if n in self.model.params:
-                F0 = getattr(self.model, n).value
+                F0 = getattr(self.model, n).num_value
                 nF0 += 1
         if nF0 == 0:
             raise ValueError('no PSR frequency parameter found; ' +
