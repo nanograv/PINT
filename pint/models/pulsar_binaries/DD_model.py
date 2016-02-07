@@ -58,7 +58,7 @@ class DDmodel(PSR_BINARY):
         return np.longdouble(np.ones(len(self.tt0)))*u.Unit("")
     @Cache.use_cache
     def d_er_d_par(self,par):
-        if par not in self.params:
+        if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
 
@@ -81,7 +81,7 @@ class DDmodel(PSR_BINARY):
         return np.longdouble(np.ones(len(self.tt0)))*u.Unit("")
     @Cache.use_cache
     def d_eTheta_d_par(self,par):
-        if par not in self.params:
+        if par not in self.binary_params:
             errorMesg = par + "is not in parameter list."
             raise ValueError(errorMesg)
 
@@ -113,7 +113,7 @@ class DDmodel(PSR_BINARY):
            dAlpha/dPar = a1/c*cos(omega)*dOmega/dPar
         """
 
-        if par not in self.params:
+        if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
 
@@ -161,7 +161,7 @@ class DDmodel(PSR_BINARY):
            Other parameters
            dBeta/dPar = -A1/c*(1-eTheta**2)**0.5*sin(omega)*dOmega/dPar
         """
-        if par not in self.params:
+        if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
 

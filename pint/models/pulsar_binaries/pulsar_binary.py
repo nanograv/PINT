@@ -131,11 +131,11 @@ class PSR_BINARY(object):
            ---------
            pdy/pdx : The derivatives
         """
-        if y not in self.params+self.inter_vars:
+        if y not in self.binary_params+self.inter_vars:
             errorMesg = y + " is not in binary parameter and variables list."
             raise ValueError(errorMesg)
 
-        if x not in self.inter_vars+self.params:
+        if x not in self.inter_vars+self.binary_params:
             errorMesg = x + " is not in binary parameters and variables list."
             raise ValueError(errorMesg)
         # derivative to itself
@@ -453,7 +453,7 @@ class PSR_BINARY(object):
            ----------
            Derivitve of omega respect to par
         """
-        if par not in self.params:
+        if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
 
