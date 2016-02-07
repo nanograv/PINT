@@ -260,6 +260,25 @@ class TOA(object):
                  error=0.0, obs='Barycenter', freq=float("inf"),
                  scale='utc', # with defaults
                  **kwargs):  # keyword args that are completely optional
+        r"""
+        Construct a TOA object
+        
+        Parameters
+        ----------
+        MJD : astropy Time, float, or tuple of floats
+            The time of the TOA, which can be expressed as an astropy Time,
+            a floating point MJD (64 or 128 bit precision), or a tuple
+            of (MJD1,MJD2) whose sum is the full precision MJD (usually the 
+            integer and fractional part of the MJD)
+        obs : string
+            The observatory code for the TOA
+        freq : float or astropy Quantity
+            Frequency corresponding to the TOA.  Either a Quantity with frequency
+            units, or a number for which MHz is assumed.
+        scale : string
+            Time scale for the TOA time.  Usually 'utc'
+                    
+        """
         if obs == "Barycenter":
             # Barycenter overrides the scale argument with 'tdb' always.
             if type(MJD) in [float, numpy.float64, numpy.float128]:
@@ -307,7 +326,9 @@ class TOA(object):
             # Not sure what I was trying to test for with this. -- paulr
             #if  location is not None:
             #    raise ValueError("Specifying location for observatory TOAs is not currently supported.")
-            if type(MJD) in [float, numpy.float64, numpy.float128]:
+            if type(MJD) == time.Time:
+                self.mjd = MJD
+            elif type(MJD) in [float, numpy.float64, numpy.float128]:
                 self.mjd = time.Time(MJD, scale=scale, format='mjd',
                                     location=observatories[obs].loc,
                                     precision=9)
