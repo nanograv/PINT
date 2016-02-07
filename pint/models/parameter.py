@@ -272,7 +272,7 @@ class MJDParameter(Parameter):
 
         self.parse_value = lambda x: time_from_mjd_string(x, time_scale)
         self.print_value = time_to_mjd_string
-        self.get_value = lambda x: time_from_longdouble(x,time_scale)
+        self.get_value = lambda x: time_from_longdouble(x, time_scale)
         self.get_num_value = time_to_longdouble
         self.paramType = 'MJDParameter'
 
@@ -300,7 +300,7 @@ class AngleParameter(Parameter):
         self.print_value = lambda x: x.to_string(sep=':', precision=8) \
                            if x.unit != u.rad else x.to_string(decimal = True,
                            precision=8)
-        self.get_value = lambda x: Angle(x * self.separator[units.lower])
+        self.get_value = lambda x: Angle(x * self.separator[units.lower()][0])
         self.get_num_value = lambda x: x.value
         self.parse_uncertainty = lambda x: \
                                 Angle(self.separator[self.units.lower()][2] \

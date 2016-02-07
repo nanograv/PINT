@@ -1,6 +1,6 @@
 # fitter.py
 # Defines the basic TOA fitter class
-import copy, numpy
+import copy, numpy, numbers
 import astropy.units as u
 import astropy.coordinates.angles as ang
 import scipy.optimize as opt, scipy.linalg as sl
@@ -34,39 +34,37 @@ class fitter(object):
         for p in self.model.params:
             getattr(self.model,p).frozen = p not in params
 
+    def get_allparams(self):
+        """Return a dict of all param names and values."""
+        return dict((k, getattr(self.model, k).value) for k in
+                    self.model.params)
+
     def get_fitparams(self):
-        """Return a dict of param names and values for free parameters."""
-        fitp = [p for p in self.model.params if not getattr(self.model,p).frozen]
-        fitval = []
-        for p in fitp:
-            fitval.append(getattr(self.model, p).value)
-        return {k: v for k, v in zip(fitp, fitval)}
+        """Return a dict of fittable param names and values."""
+        return dict((k, getattr(self.model, k).value) for k in
+                    self.model.params if not getattr(self.model, k).frozen)
+
+    def get_fitparams_num(self):
+        """Return a dict of fittable param names and numeric values."""
+        return dict((k, getattr(self.model, k).num_value) for k in
+                    self.model.params if not getattr(self.model, k).frozen)
 
     def set_params(self, fitp):
         """Set the model parameters to the value contained in the input dict.
 
         Ex. fitter.set_params({'F0':60.1,'F1':-1.3e-15})
         """
-        for p, val in zip(fitp.keys(), fitp.values()):
-            # If value is unitless but model parameter is not, interpret the
-            # value as being in the same units as the model
-            modval = getattr(self.model, p).num_value
-            if modval is None:
-                raise RuntimeError('Paramter ' + p + ' is non-fitable.')
-            getattr(self.model, p).num_value = val
+        for k, v in fitp.items(): 
+            # The check for astropy units should be able to go away once params are fixed
+            getattr(self.model, k).num_value = v.value if has_astropy_unit(v) else v
 
     def minimize_func(self, x, *args):
         """Wrapper function for the residual class, meant to be passed to
         scipy.optimize.minimize. The function must take a single list of input
-        values and a second optional tuple of input arguments, and return a
-        quantitiy to be minimized (in this case chi^2).
+        values, x, and a second optional tuple of input arguments.  It returns
+        a quantity to be minimized (in this case chi^2).
         """
-        # Minimze takes array of dimensionless input variables. Put back into
-        # dict form and set the model.
-        if type(x) is u.Quantity:
-            x = x.value
-        fitp = {k: v for k, v in zip(args, x)}
-        self.set_params(fitp)
+        self.set_params({k: v for k, v in zip(args, x)})
         # Get new residuals
         self.update_resids()
         # Return chi^2
@@ -77,11 +75,7 @@ class fitter(object):
         Ex. fitter.call_minimize(method='Powell',maxiter=20)
         """
         # Initial guesses are model params
-        fitp = self.get_fitparams()
-        # Input variables must be unitless
-        for k, v in zip(fitp.keys(), fitp.values()):
-            if has_astropy_unit(v):
-                fitp[k] = v.value
+        fitp = self.get_fitparams_num()
         self.fitresult=opt.minimize(self.minimize_func, fitp.values(),
                                     args=tuple(fitp.keys()),
                                     options={'maxiter':maxiter},
