@@ -33,12 +33,34 @@ if __name__ == '__main__':
     error = 1.0e-6*u.s
     freq = 1400.0*u.MHz
     scale = 'utc'
+    obs = 'GBT'
+    ephem = 'DE421'
+    planets = False
 
     times = np.linspace(0,duration.to(u.day).value,ntoa)*u.day + start
     
     tl = [toa.TOA(t,error=error, obs=obs, freq=freq,
                  scale=scale) for t in times]
-                 
+    del t
     ts = toa.TOAs(toalist=tl)
+    
+    # WARNING! I'm not sure how clock corrections should be handled here!
+    # Do we apply them, or not?
+    if not any([f.has_key('clkcorr') for f in ts.table['flags']]):
+        log.info("Applying clock corrections.")
+        ts.apply_clock_corrections()
+    if 'tdb' not in ts.table.colnames:
+        log.info("Getting IERS params and computing TDBs.")
+        ts.compute_TDBs()
+    if 'ssb_obs_pos' not in ts.table.colnames:
+        log.info("Computing observatory positions and velocities.")
+        ts.compute_posvels(ephem, planets)
+
+                 
+    
+    rs = pint.residuals.resids(ts, m).time_resids
+    
+    
+    ts = ts - rs
     
     
