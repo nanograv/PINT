@@ -8,10 +8,11 @@ try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
-from .parameter import Parameter, MJDParameter
+from .parameter import Parameter, MJDParameter,prefixParameter
 from .timing_model import TimingModel, MissingParameter
 from ..phase import *
-from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, taylor_horner
+from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, taylor_horner,\
+                    time_from_longdouble
 
 # The maximum number of spin frequency derivs we allow
 maxderivs = 20
@@ -36,17 +37,20 @@ class Spindown(TimingModel):
             description="Spin-down rate"))
 
         for ii in range(2, self.num_spin_terms + 1):
-            self.add_param(Parameter(name="F%d"%ii,
+            self.add_param(prefixParameter(name="F%d"%ii,
                 units="Hz/s^%s"%ii, value=0.0,
-                description="Spin-frequency %d derivative"%ii))
+                unitTplt = lambda x: "Hz/s^%s"%x,
+                description="Spin-frequency %d derivative"%ii,
+                descriptionTplt = lambda x: "Spin-frequency %d derivative"%x))
 
         self.add_param(MJDParameter(name="TZRMJD",
-            description="Reference epoch for phase = 0.0",
-            time_scale='tdb'))
+                       description="Reference epoch for phase = 0.0",
+                       time_scale='tdb'))
 
         self.add_param(MJDParameter(name="PEPOCH",
-            description="Reference epoch for spin-down",
-            time_scale='tdb'))
+                       description="Reference epoch for spin-down",
+                       time_scale='tdb'))
+
 
         self.phase_funcs += [self.spindown_phase,]
 
@@ -69,11 +73,15 @@ class Spindown(TimingModel):
                     getattr(self, term).uncertainty is None:
                 delattr(self, term)
                 self.params.remove(term)
+                if ii>1:
+                    self.num_prefix_params['F']-=1
             else:
                 break
         # Add a shortcut for the number of spin terms there are
-        self.num_spin_terms = ii + 1
-
+        if hasattr(self,'F1'):
+            self.num_spin_terms = self.num_prefix_params['F'] + 2
+        else:
+            self.num_spin_terms = 1
     def get_spin_terms(self):
         """Return a list of the spin term values in the model: [F0, F1, ..., FN]
         """

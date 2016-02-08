@@ -7,6 +7,9 @@ import pint.toa as toa
 import numdifftools as nd
 import copy
 import astropy.constants as c
+import os, unittest
+datapath = os.path.join(os.environ['PINT'],'tests','datafile')
+
 
 class test_diff(object):
     """Setup a new class for testing derivatives.
@@ -34,7 +37,7 @@ class test_diff(object):
         return ((v1-v2)/(h*self.parU)).decompose()
 
 def testdiff(model,dy,step):
-    Pars = model.params
+    Pars = model.binary_params
     dervs = {}
     for p in Pars:
         if p is 'EDOT':
@@ -58,7 +61,10 @@ def testdiff(model,dy,step):
         dervs[p+'_num'] = numr
         dervs[p+'_anlg'] = anlog
     return dervs
-ddm = mb.get_model('B1855+09_NANOGrav_dfg+12_modified.par')
-t = toa.get_TOAs("B1855+09_NANOGrav_dfg+12.tim",planets = True)
+
+parfile = os.path.join(datapath, 'B1855+09_NANOGrav_dfg+12_modified.par')
+timfile = os.path.join(datapath, 'B1855+09_NANOGrav_dfg+12.tim')
+ddm = mb.get_model(parfile)
+t = toa.get_TOAs(timfile,planets = True)
 ddob = ddm.get_dd_object(t.table)
 diff = testdiff(ddob,'delayInverse',1e-7)
