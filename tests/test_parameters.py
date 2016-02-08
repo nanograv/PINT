@@ -55,8 +55,8 @@ class TestParameters(unittest.TestCase):
 
     def test_value1(self):
         self.m.OM.value = 10
-        assert m.OM.value == 10 * u.deg
-        
+        assert self.m.OM.value == 10 * u.deg
+
     def set_value2(self):
         self.m.OM.value = None
     def test_value2(self):
