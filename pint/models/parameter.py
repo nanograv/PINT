@@ -1,9 +1,11 @@
 # parameter.py
 # Defines Parameter class for timing model parameters
 from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
-    time_to_longdouble, is_number, time_from_longdouble
+    time_to_longdouble, is_number, time_from_longdouble, str2longdouble, \
+    longdouble2string
 import numpy
 import astropy.units as u
+import astropy.time as time
 from astropy import log
 from pint import pint_units
 import astropy.units as u
@@ -57,31 +59,34 @@ class Parameter(object):
 
     def __init__(self, name=None, value=None, units=None, description=None,
                  uncertainty=None, frozen=True, aliases=None, continuous=True,
-                 parse_value=fortran_float, print_value=str,
-                 get_value=lambda x: x, get_num_value=lambda x: x):
+                 parse_value=fortran_float, print_value=str, set_value=lambda x: x,
+                 get_value=lambda x: x, get_num_value=lambda x: x,
+                 parse_uncertainty=None):
         self.name = name  # name of the parameter
         self.units = units  # parameter unit in string format,or None
         # parameter num unit, in astropy.units object format.
         # Once it is speicified, num_unit will not be changed.
-
+        self.set_value = set_value
         # Method to get num_value from value
         self.get_num_value = get_num_value
         self.get_value = get_value  # Method to update value from num_value
+        self.parse_value = parse_value  # method to read a value from string,
+                                        # user can put the speicified format
+                                        # here
+        self.print_value = print_value  # method to convert value to a string.
+        if parse_uncertainty is None:
+            self.parse_uncertainty = fortran_float
+        else:
+            self.parse_uncertainty = parse_uncertainty
         self.value = value  # The value of parameter, internal storage
         self.description = description
         self.uncertainty = uncertainty
         self.frozen = frozen
         self.continuous = continuous
         self.aliases = [] if aliases is None else aliases
-
         self.is_prefix = False
-        self.parse_value = parse_value  # method to read a value from string,
-                                        # user can put the speicified format
-                                        # here
-        self.print_value = print_value  # method to convert value to a string.
-        self.parse_uncertainty = fortran_float
         self.paramType = 'Parameter'  # Type of parameter. Here is general type
-
+        self.valueType = None
     # Setup units property
     @property
     def units(self):
@@ -126,28 +131,16 @@ class Parameter(object):
 
     @value.setter
     def value(self, val):
-        self._value = val
-        # If the new value is astropy angle or Quantity
-        if hasattr(self._value, 'unit'):
-            if self._num_unit is not None:  # Check unit
-                try:
-                    value_num_unit = self._value.to(self._num_unit)
-                except:
-                    raise ValueError('The value unit is not compatable with'
-                                     ' parameter units.')
-                self._num_value = value_num_unit.value
+        if val is None:
+            if hasattr(self, 'value') and self.value is not None:
+                raise ValueError('Setting an exist value to None is not'
+                                 ' allowed.')
             else:
-                self.unit = self._value.unit.to_string()
-                self._num_value = self._value.value
-        elif isinstance(self._value, (str, bool)) or self._value is None:
-            self._num_value = None
-        else:
-            self._num_value = self.get_num_value(self._value)
-            if not isinstance(self._num_value, numbers.Number):
-                if not self._num_value is not None:
-                    raise ValueError("The ._num_value has to be a pure number "
-                                     "or None. Please check your .get_num_value"
-                                     " method. ")
+                self._value = val
+                self._num_value = self._value
+                return
+        self._value = self.set_value(val)
+        self._num_value = self.get_num_value(self._value)
 
     # Setup num_value property
     @property
@@ -157,24 +150,15 @@ class Parameter(object):
     @num_value.setter
     def num_value(self, val):
         if val is None:
-            self._num_value = val
             if not isinstance(self.value, (str, bool)):
                 raise ValueError('This parameter value is number convertable. '
                                  'Setting ._num_value to None will lost the '
                                  'parameter value.')
-            else:
-                self.value = None
-
-        elif not isinstance(val, numbers.Number):
-            raise ValueError('num_value has to be a pure number or None.')
-        else:
+        elif isinstance(val, numbers.Number):
             self._num_value = val
-            # Update value
-            if self.get_value is None:
-                self.value = self._num_value*self.num_unit
-            else:
-                self.value = self.get_value(self._num_value)
-
+            self._value = self.get_value(val)
+        else:
+            raise ValueError('.num_value can only take a pure number.')
     # Setup num_unit property
     @property
     def num_unit(self):
@@ -194,7 +178,7 @@ class Parameter(object):
         """Parses a string 'value' into the appropriate internal representation
         of the parameter.
         """
-        self.value = self.parse_value(value)
+        self.value = value
 
     def add_alias(self, alias):
         """Add a name to the list of aliases for this parameter."""
@@ -258,33 +242,195 @@ class Parameter(object):
         """
         return (name == self.name) or (name in self.aliases)
 
+class floatParameter(Parameter):
+    """This is a Paraemeter type that is specific to astropy quantity values
+    """
+    def __init__(self, name=None, value=None, units=None, description=None,
+                 uncertainty=None, frozen=True, aliases=None, continuous=True,
+                 long_double=False):
+        self.long_double = long_double
+        if self.long_double:
+            parse_value = self.set_float_value
+            print_value = lambda x: longdouble2string(x.value)
+            get_value = lambda x: data2longdouble(x)*self.num_unit
+
+        else:
+            parse_value = self.set_float_value
+            print_value = lambda x: str(x.value)
+            get_value = lambda x: x * self.num_unit
+
+        get_num_value = lambda x: x.value
+        set_value = self.set_float_value
+        super(floatParameter, self).__init__(name=name, value=value,
+                                             units=units, frozen=True,
+                                             aliases=aliases,
+                                             continuous=continuous,
+                                             description=description,
+                                             uncertainty=uncertainty,
+                                             parse_value=parse_value,
+                                             print_value=print_value,
+                                             set_value=set_value,
+                                             get_value=get_value,
+                                             get_num_value=get_num_value)
+        self.value_type = u.quantity.Quantity
+        self.paramType = 'floatParameter'
+
+
+    def set_float_value(self, val):
+        """Set value method specific for float parameter
+        accept format
+        1. Astropy quantity
+        2. float
+        3. string
+        """
+        if isinstance(val, u.Quantity):
+            valu = val.unit
+            if self.units is not None:
+                try:
+                    temp = val.to(self.num_unit)
+                except:
+                    emsg = 'Setting a uncompatible unit ' + valu.to_string
+                    emsg += ' to value is not allowed'
+                    raise ValueError(emsg)
+                result = val
+            else:
+                result = val
+        elif isinstance(val, numbers.Number):
+            if self.num_unit is not None:
+                result = val * self.num_unit
+            else:
+                result = val * u.Unit('')
+
+        elif isinstance(val, str):
+            try:
+                if self.long_double:
+                    v = str2longdouble(val)
+                else:
+                    v = fortran_float(val)
+            except:
+                raise ValueError('String ' + val + 'can not be converted to'
+                                 ' float')
+            result = self.set_float_value(v)
+        else:
+            raise ValueError('float parameter can not accept '
+                             + type(val).__name__ + 'format.')
+        return result
+
+
+class strParameter(Parameter):
+    """This is a Paraemeter type that is specific to string values
+    """
+    def __init__(self, name=None, value=None, description=None, frozen=True,
+                 aliases=[]):
+        parse_value = str
+        print_value = str
+        get_num_value = lambda x: None
+        set_value = str
+        get_value = self.get_value_str
+
+        super(strParameter, self).__init__(name=name, value=value,
+                                           description=None, frozen=True,
+                                           aliases=aliases,
+                                           parse_value=parse_value,
+                                           print_value=print_value,
+                                           set_value=set_value,
+                                           get_value=get_value,
+                                           get_num_value=get_num_value)
+
+        self.paramType = 'strParameter'
+        self.value_type = str
+
+    def get_value_str(self, val):
+        raise ValueError('Can not set a num value to a string type parameter.')
+
+class boolParameter(Parameter):
+    """This is a Paraemeter type that is specific to boolen values
+    """
+    def __init__(self, name=None, value=None, description=None, frozen=True,
+                 aliases=[]):
+
+        parse_value = lambda x: x.upper() == 'Y'
+        print_value = lambda x: 'Y' if x else 'N'
+        set_value = self.set_bool_value
+        get_num_value = lambda x: None
+        get_value = lambda x: log.warning('Can not set a pure value to a '
+                                               'string boolen parameter.')
+        super(boolParameter, self).__init__(name=name, value=value,
+                                            description=None, frozen=True,
+                                            aliases=aliases,
+                                            parse_value=parse_value,
+                                            print_value=print_value,
+                                            set_value=set_value,
+                                            get_value=get_value,
+                                            get_num_value=get_num_value)
+        self.value_type = bool
+        self.paramType = 'boolParameter'
+
+    def set_bool_value(self, val):
+        """ This function is to get boolen value for boolParameter class
+        """
+        if isinstance(val, str):
+            return val.upper() in ['Y', 'YES', 'SI']
+        elif isinstance(val, bool):
+            return val
+        elif isinstance(val, numbers.Number):
+            return val != 0
+
 
 class MJDParameter(Parameter):
     """This is a Parameter type that is specific to MJD values."""
     def __init__(self, name=None, value=None, description=None,
                  uncertainty=None, frozen=True, continuous=True, aliases=None,
                  time_scale='utc'):
-        super(MJDParameter, self).__init__(name=name, value=value,
-                                       units="MJD", description=description,
-                                       uncertainty=uncertainty, frozen=frozen,
-                                       continuous=continuous,
-                                       aliases=aliases)
-
-        self.parse_value = lambda x: time_from_mjd_string(x, time_scale)
-        self.print_value = time_to_mjd_string
-        self.get_value = lambda x: time_from_longdouble(x, time_scale)
-        self.get_num_value = time_to_longdouble
+        self.time_scale = time_scale
+        parse_value = self.set_mjd_value
+        set_value = self.set_mjd_value
+        print_value = time_to_mjd_string
+        get_value = lambda x: time_from_longdouble(x, time_scale)
+        get_num_value = time_to_longdouble
+        super(MJDParameter, self).__init__(name=name, value=value, units="MJD",
+                                           description=description,
+                                           uncertainty=uncertainty,
+                                           frozen=frozen,
+                                           continuous=continuous,
+                                           aliases=aliases,
+                                           parse_value=parse_value,
+                                           print_value=print_value,
+                                           set_value=set_value,
+                                           get_value=get_value,
+                                           get_num_value=get_num_value)
+        self.value_type = time.Time
         self.paramType = 'MJDParameter'
+
+    def set_mjd_value(self, val):
+        """Value setter for MJD parameter,
+           Accepted format:
+           Astropy time object
+           mjd float
+           mjd string
+        """
+        if isinstance(val, numbers.Number):
+            val = numpy.longdouble(val)
+            result = time_from_longdouble(val, self.time_scale)
+        elif isinstance(val, str):
+            try:
+                 result = time_from_mjd_string(val, self.time_scale)
+            except:
+                raise ValueError('String ' + val + 'can not be converted to'
+                                 'a time object.' )
+
+        elif isinstance(val,time.Time):
+            result = val
+        else:
+            raise ValueError('MJD parameter can not accept '
+                             + type(val).__name__ + 'format.')
+        return result
 
 
 class AngleParameter(Parameter):
     """This is a Parameter type that is specific to Angle values."""
     def __init__(self, name=None, value=None, description=None, units='rad',
              uncertainty=None, frozen=True, continuous=True, aliases=None):
-        super(AngleParameter, self).__init__(name=name, value=value,
-              units=units, description=description, uncertainty=uncertainty,
-              frozen=frozen, continuous=continuous, aliases=aliases)
-
         self.separator = {
             'h:m:s': (u.hourangle, 'h', '0:0:%.15fh'),
             'd:m:s': (u.deg, 'd', '0:0:%.15fd'),
@@ -292,20 +438,58 @@ class AngleParameter(Parameter):
             'deg': (u.deg, 'deg', '%.15fdeg'),
         }
         # Check unit format
-        if self.units.lower() not in self.separator.keys():
-            raise ValueError('Unidentified unit ' + self.units)
+        if units.lower() not in self.separator.keys():
+            raise ValueError('Unidentified unit ' + units)
 
-        unitsuffix = self.separator[self.units.lower()][1]
-        self.parse_value = lambda x: Angle(x+unitsuffix)
-        self.print_value = lambda x: x.to_string(sep=':', precision=8) \
-                           if x.unit != u.rad else x.to_string(decimal = True,
-                           precision=8)
-        self.get_value = lambda x: Angle(x * self.separator[units.lower()][0])
-        self.get_num_value = lambda x: x.value
-        self.parse_uncertainty = lambda x: \
-                                Angle(self.separator[self.units.lower()][2] \
-                                      % fortran_float(x))
+        self.unitsuffix = self.separator[units.lower()][1]
+        set_value = self.set_angle_value
+        parse_value = lambda x: Angle(x + self.unitsuffix)
+        print_value = lambda x: x.to_string(sep=':', precision=8) \
+                        if x.unit != u.rad else x.to_string(decimal = True,
+                        precision=8)
+        get_value = lambda x: Angle(x * self.separator[units.lower()][0])
+        get_num_value = lambda x: x.value
+        parse_uncertainty = lambda x: \
+                             Angle(self.separator[units.lower()][2] \
+                                   % fortran_float(x))
+        self.value_type = Angle
         self.paramType = 'AngleParameter'
+
+        super(AngleParameter, self).__init__(name=name, value=value,
+                                             units=units,
+                                             description=description,
+                                             uncertainty=uncertainty,
+                                             frozen=frozen,
+                                             continuous=continuous,
+                                             aliases=aliases,
+                                             parse_value=parse_value,
+                                             print_value=print_value,
+                                             set_value=set_value,
+                                             get_value=get_value,
+                                             get_num_value=get_num_value,
+                                             parse_uncertainty=parse_uncertainty)
+
+    def set_angle_value(self,val):
+        """ This function is to set value to angle parameters.
+        Accepted format:
+        1. Astropy angle object
+        2. float
+        3. number string
+        """
+        if isinstance(val, numbers.Number):
+            result = Angle(val * self.num_unit)
+        elif isinstance(val, str):
+            try:
+                result = Angle(val + self.unitsuffix)
+            except:
+                raise ValueError('Srting ' + val + ' can not be converted to'
+                                 ' astropy angle.')
+        elif isinstance(val, Angle):
+            result = val.to(self.num_unit)
+        else:
+            raise ValueError('Angle parameter can not accept '
+                             + type(val).__name__ + 'format.')
+        return result
 
 
 class prefixParameter(Parameter):
@@ -365,8 +549,8 @@ class prefixParameter(Parameter):
                  value=None, units=None, unitTplt=None,
                  description=None, descriptionTplt=None,
                  uncertainty=None, frozen=True, continuous=True,
-                 prefix_aliases=[], parse_value=fortran_float,
-                 print_value=str, get_value=None, get_num_value=lambda x: x):
+                 prefix_aliases=[], type_match='float', long_double=False,
+                 time_scale='utc'):
         # Create prefix parameter by name
         if name is None:
             if prefix is None or indexformat is None:
@@ -405,6 +589,8 @@ class prefixParameter(Parameter):
                 self.indexformat = self.indexformat_field.format(0)
                 self.prefix = ''.join(prefixPart)
                 self.index = int(indexPart)
+
+        # Set up other attributes
         self.unit_template = unitTplt
         self.description_template = descriptionTplt
         # set templates
@@ -413,21 +599,39 @@ class prefixParameter(Parameter):
         if self.description_template is None:
             self.description_template = lambda x: self.descrition
 
+        self.type_separator = {
+                               'float': floatParameter('exmple',
+                                                       long_double=long_double),
+                               'string': strParameter('exmaple'),
+                               'bool': boolParameter('exmaple'),
+                               'mjd': MJDParameter('example',
+                                                   time_scale=time_scale),
+                               'angle': AngleParameter('example')}
+        if isinstance(type_match, str):
+            self.type_match = type_match.lower()
+        elif isinstance(value_type, type):
+            self.type_match = type_match.__name__
+        else:
+            self.type_match = type(type_match).__name__
+
+        if self.type_match not in self.type_separator.keys():
+            raise ValueError('Unrecognized value type ' + self.type_match)
+
+        exp_par = self.type_separator[self.type_match]
+
         super(prefixParameter, self).__init__(name=name, value=value,
                                               units=units,
                                               description=description,
                                               uncertainty=uncertainty,
                                               frozen=frozen,
                                               continuous=continuous,
-                                              parse_value=parse_value,
-                                              print_value=print_value,
-                                              get_value=get_value,
-                                              get_num_value=get_num_value)
+                                              parse_value=exp_par.parse_value,
+                                              print_value=exp_par.print_value,
+                                              set_value=exp_par.set_value,
+                                              get_value=exp_par.get_value,
+                                              get_num_value=exp_par.get_num_value,
+                                              parse_uncertainty=exp_par.parse_uncertainty)
 
-        if units == 'MJD':
-            self.parse_value = time_from_mjd_string
-            self.print_value = time_to_mjd_string
-            self.get_num_value = time_to_longdouble
         self.prefix_aliases = prefix_aliases
         self.is_prefix = True
 
@@ -447,7 +651,6 @@ class prefixParameter(Parameter):
                                  descriptionTplt=self.description_template,
                                  frozen=self.frozen,
                                  continuous=self.continuous,
-                                 parse_value=self.parse_value,
-                                 print_value=self.print_value)
+                                 type_match=self.type_match)
         newpfx.apply_template()
         return newpfx
