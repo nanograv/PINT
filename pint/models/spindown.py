@@ -8,7 +8,7 @@ try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
-from .parameter import Parameter, MJDParameter,prefixParameter
+import parameter as p
 from .timing_model import TimingModel, MissingParameter
 from ..phase import *
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, taylor_horner,\
@@ -25,29 +25,29 @@ class Spindown(TimingModel):
         # The number of terms in the taylor exapansion of spin freq (F0...FN)
         self.num_spin_terms = maxderivs
 
-        self.add_param(Parameter(name="F0",
+        self.add_param(p.floatParameter(name="F0",
             units="Hz",
             description="Spin frequency",
             aliases=["F"],
-            parse_value=str2longdouble,
-            print_value=repr))
+            long_double=True))
 
-        self.add_param(Parameter(name="F1",
+        self.add_param(p.floatParameter(name="F1",
             units="Hz/s", value=0.0,
             description="Spin-down rate"))
 
         for ii in range(2, self.num_spin_terms + 1):
-            self.add_param(prefixParameter(name="F%d"%ii,
+            self.add_param(p.prefixParameter(name="F%d"%ii,
                 units="Hz/s^%s"%ii, value=0.0,
                 unitTplt = lambda x: "Hz/s^%s"%x,
                 description="Spin-frequency %d derivative"%ii,
-                descriptionTplt = lambda x: "Spin-frequency %d derivative"%x))
+                descriptionTplt = lambda x: "Spin-frequency %d derivative"%x,
+                type_match='float',long_double=True))
 
-        self.add_param(MJDParameter(name="TZRMJD",
+        self.add_param(p.MJDParameter(name="TZRMJD",
                        description="Reference epoch for phase = 0.0",
                        time_scale='tdb'))
 
-        self.add_param(MJDParameter(name="PEPOCH",
+        self.add_param(p.MJDParameter(name="PEPOCH",
                        description="Reference epoch for spin-down",
                        time_scale='tdb'))
 

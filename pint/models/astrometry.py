@@ -5,7 +5,7 @@ import astropy.coordinates as coords
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
-from .parameter import Parameter, MJDParameter, AngleParameter
+import parameter as p
 from .timing_model import TimingModel, MissingParameter, Cache
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble
 from pint import ls
@@ -24,28 +24,28 @@ class Astrometry(TimingModel):
     def __init__(self):
         super(Astrometry, self).__init__()
 
-        self.add_param(AngleParameter(name="RAJ",
+        self.add_param(p.AngleParameter(name="RAJ",
             units="H:M:S",
             description="Right ascension (J2000)",
             aliases=["RAJ"]))
 
-        self.add_param(AngleParameter(name="DECJ",
+        self.add_param(p.AngleParameter(name="DECJ",
             units="D:M:S",
             description="Declination (J2000)",
             aliases=["DECJ"]))
 
-        self.add_param(MJDParameter(name="POSEPOCH",
+        self.add_param(p.MJDParameter(name="POSEPOCH",
             description="Reference epoch for position"))
 
-        self.add_param(Parameter(name="PMRA",
+        self.add_param(p.floatParameter(name="PMRA",
             units="mas/year", value=0.0,
             description="Proper motion in RA"))
 
-        self.add_param(Parameter(name="PMDEC",
+        self.add_param(p.floatParameter(name="PMDEC",
             units="mas/year", value=0.0,
             description="Proper motion in DEC"))
 
-        self.add_param(Parameter(name="PX",
+        self.add_param(p.floatParameter(name="PX",
             units="mas", value=0.0,
             description="Parallax"))
 
@@ -76,7 +76,7 @@ class Astrometry(TimingModel):
         if epoch is None:
             return coords.ICRS(ra=self.RAJ.value, dec=self.DECJ.value)
         else:
-            dt = (epoch - self.POSEPOCH.value.mjd) * u.d * mas_yr
+            dt = (epoch - self.POSEPOCH.value.mjd) * u.d
             dRA = dt * self.PMRA.value / numpy.cos(self.DECJ.value.radian)
             dDEC = dt * self.PMDEC.value
             return coords.ICRS(ra=self.RAJ.value+dRA, dec=self.DECJ.value+dDEC)

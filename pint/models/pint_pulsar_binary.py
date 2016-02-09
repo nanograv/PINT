@@ -5,8 +5,7 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
-
-from .parameter import Parameter, MJDParameter
+import parameter as p
 from .timing_model import Cache, TimingModel, MissingParameter
 from ..phase import Phase
 from ..utils import time_from_mjd_string, time_to_longdouble, \
@@ -35,63 +34,63 @@ class PSRbinaryWapper(TimingModel):
         self.barycentricTime = None
         self.binary_delay_funcs= []
         self.binary_params = []
-        self.add_param(Parameter(name="PB",
+        self.add_param(p.floatParameter(name="PB",
             units=u.day,
-            description="Orbital period",
-            parse_value=utils.data2longdouble),binary_param = True)
+            description="Orbital period"),
+            binary_param = True)
 
 
-        self.add_param(Parameter(name="PBDOT",
+        self.add_param(p.floatParameter(name="PBDOT",
             units=u.day/u.day,
-            description="Orbital period derivitve respect to time",
-            parse_value=utils.data2longdouble),binary_param = True)
+            description="Orbital period derivitve respect to time"),
+            binary_param = True)
 
 
-        self.add_param(Parameter(name="XPBDOT",
+        self.add_param(p.floatParameter(name="XPBDOT",
             units=u.s/u.s,
-            description="Rate of change of orbital period minus GR prediction",
-            parse_value=utils.data2longdouble),binary_param = True)
+            description="Rate of change of orbital period minus GR prediction"),
+            binary_param = True)
 
 
-        self.add_param(Parameter(name="A1",
+        self.add_param(p.floatParameter(name="A1",
             units=ls,
-            description="Projected semi-major axis, a*sin(i)",
-            parse_value=np.double),binary_param = True)
+            description="Projected semi-major axis, a*sin(i)"),
+            binary_param = True)
 
-        self.add_param(Parameter(name = "A1DOT",
+        self.add_param(p.floatParameter(name = "A1DOT",
             units=ls/u.s,
-            description="Derivitve of projected semi-major axis, da*sin(i)/dt",
-            parse_value=np.double),binary_param = True)
+            description="Derivitve of projected semi-major axis, da*sin(i)/dt"),
+            binary_param = True)
 
-        self.add_param(Parameter(name="ECC",
+        self.add_param(p.floatParameter(name="ECC",
             units="",
             aliases = ["E"],
-            description="Eccentricity",
-            parse_value=np.double),binary_param = True)
+            description="Eccentricity"),
+            binary_param = True)
 
-        self.add_param(Parameter(name="EDOT",
+        self.add_param(p.floatParameter(name="EDOT",
              units="1/s",
-             description="Eccentricity derivitve respect to time",
-             parse_value=np.double),binary_param = True)
+             description="Eccentricity derivitve respect to time"),
+             binary_param = True)
 
-        self.add_param(MJDParameter(name="T0",
+        self.add_param(p.MJDParameter(name="T0",
             description="Epoch of periastron passage", time_scale='tdb'),
             binary_param = True)
 
-        self.add_param(Parameter(name="OM",
+        self.add_param(p.floatParameter(name="OM",
             units=u.deg,
-            description="Longitude of periastron",
-            parse_value=lambda x: np.double(x)),binary_param = True)
+            description="Longitude of periastron"),
+            binary_param = True)
 
-        self.add_param(Parameter(name="OMDOT",
+        self.add_param(p.floatParameter(name="OMDOT",
             units="deg/year",
-            description="Longitude of periastron",
-            parse_value=lambda x: np.double(x)),binary_param = True)
+            description="Longitude of periastron"),
+            binary_param = True)
 
-        self.add_param(Parameter(name="M2",
+        self.add_param(p.floatParameter(name="M2",
              units=u.M_sun,
-             description="Mass of companian in the unit Sun mass",
-             parse_value=np.double),binary_param = True)
+             description="Mass of companian in the unit Sun mass"),
+             binary_param = True)
 
 
     def setup(self):
