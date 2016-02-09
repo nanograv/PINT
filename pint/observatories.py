@@ -16,8 +16,7 @@ def load_tempo1_clock_file(filename,site=None):
     the exception of the 'F' flag (to disable interpolation), which
     is currently not implemented.
 
-    INCLUDE statments are not currently processed (they will be 
-    ignored).
+    INCLUDE statments are processed.
 
     If the 'site' argument is set to an appropriate one-character tempo
     site code, only values for that site will be returned, otherwise all
@@ -28,6 +27,17 @@ def load_tempo1_clock_file(filename,site=None):
     for l in open(filename).readlines():
         # Ignore comment lines
         if l.startswith('#'): continue
+
+        # Process INCLUDE
+        # Assumes included file is in same dir as this one
+        if l.startswith('INCLUDE'):
+            clkdir = os.path.dirname(os.path.abspath(filename))
+            filename1 = os.path.join(clkdir, l.split()[1])
+            mjds1, clkcorrs1 = load_tempo1_clock_file(filename1,site=site)
+            mjds.extend(mjds1)
+            clkcorrs.extend(clkcorrs1)
+            continue
+
         # Parse MJD
         try:
             mjd = float(l[0:9])
@@ -63,7 +73,7 @@ def load_tempo1_clock_file(filename,site=None):
         mjds.append(mjd)
         clkcorrs.append(clkcorr2 - clkcorr1)
 
-    return numpy.array(mjds), numpy.array(clkcorrs)
+    return mjds, clkcorrs
     
 def get_clock_corr_vals(obsname, **kwargs):
     """
@@ -80,29 +90,19 @@ def get_clock_corr_vals(obsname, **kwargs):
     # Also, a routine should probably be provided to actually use the corrections, with
     # proper interpolation, instead of the current manual calculation that toa.py does
     """
-    fileparts = {"GBT": "gbt",
-                 "Arecibo": "ao",
-                 "JVLA": "vla",
-                 "Parkes": "pks",
-                 "Nancay": "nancay",
-                 "Effelsberg": "bonn",
-                 "WSRT": "wsrt"}
-    if obsname in fileparts.keys():
-        filenm = os.path.join(os.environ["TEMPO"],
-                              "clock/time_%s.dat" % \
-                              fileparts[obsname])
-    else:
-        log.error("No clock correction valus for %s" % obsname)
-        return (numpy.array([0.0, 100000.0]), numpy.array([0.0, 0.0]))
-
     # The following works for simple linear interpolation
     # of normal TEMPO-style clock correction files
     # Find the 1-character tempo code, this is necessary for properly
     # reading the file.
     obs = read_observatories()
     site = next((x for x in obs[obsname].aliases if len(x)==1), None)
+    if site is None:
+        log.error("No tempo site code for '%s', skipping clock corrections" 
+                % obsname)
+        return (numpy.array([0.0, 100000.0]), numpy.array([0.0, 0.0]))
+    filenm = os.path.join(os.environ["TEMPO"], "clock/time.dat")
     mjds, ccorr = load_tempo1_clock_file(filenm,site=site)
-    return mjds, ccorr
+    return numpy.array(mjds), numpy.array(ccorr)
 
 def read_observatories():
     """Load observatory data files and return them.
