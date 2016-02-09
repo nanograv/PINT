@@ -12,7 +12,7 @@ import pint.fitter
 import pint.residuals
 import astropy.units as u
 import matplotlib.pyplot as plt
-from astropy.time import Time
+from astropy.time import Time, TimeDelta
 import argparse
 
 from astropy import log
@@ -59,8 +59,17 @@ if __name__ == '__main__':
                  
     
     rs = pint.residuals.resids(ts, m).time_resids
+    plt.plot(ts.get_mjds(),rs.to(u.us),'o')
     
-    
-    ts = ts - rs
+    # Adjust the TOA times to put them where their residuals will be 0.0
+    ts.adjust_TOAs(TimeDelta(-1.0*rs))
+
+    rspost = pint.residuals.resids(ts, m).time_resids
+    plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
+
+     # Write TOAs to a file
+    ts.write_TOA_file(args.timfile,name='fake',format='Tempo2')
+   
+    plt.show()
     
     
