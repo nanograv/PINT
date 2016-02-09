@@ -451,6 +451,9 @@ class TOAs(object):
             for jj in range(loind, hiind):
                 if flags[jj].has_key('time'):
                     # TIME commands are in sec
+                    # SUGGESTION(paulr): These time correction units should
+                    # be applied in the parser, not here. In the table the time
+                    # correction should have units.
                     corr[jj] = flags[jj]['time'] * u.s
                     times[jj] += time.TimeDelta(corr[jj])
             # These are observatory clock corrections.  Do in groups.
