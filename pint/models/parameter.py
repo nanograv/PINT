@@ -2,7 +2,7 @@
 # Defines Parameter class for timing model parameters
 from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
     time_to_longdouble, is_number, time_from_longdouble, str2longdouble, \
-    longdouble2string
+    longdouble2string, data2longdouble
 import numpy
 import astropy.units as u
 import astropy.time as time
@@ -98,7 +98,7 @@ class Parameter(object):
         if hasattr(self, 'value'):
             if self.units is not None:
                 wmsg = 'Parameter '+self.name+' units has been reset to '+unt
-                wmsg += ' from'+self.units
+                wmsg += ' from '+self._units
                 log.warning(wmsg)
                 try:
                     if hasattr(self.value, 'unit'):
@@ -250,17 +250,17 @@ class floatParameter(Parameter):
                  long_double=False):
         self.long_double = long_double
         if self.long_double:
-            parse_value = self.set_float_value
+            parse_value = self.set_value_float
             print_value = lambda x: longdouble2string(x.value)
             get_value = lambda x: data2longdouble(x)*self.num_unit
 
         else:
-            parse_value = self.set_float_value
+            parse_value = self.set_value_float
             print_value = lambda x: str(x.value)
             get_value = lambda x: x * self.num_unit
 
-        get_num_value = lambda x: x.value
-        set_value = self.set_float_value
+        get_num_value = self.get_num_value_float
+        set_value = self.set_value_float
         super(floatParameter, self).__init__(name=name, value=value,
                                              units=units, frozen=True,
                                              aliases=aliases,
@@ -276,7 +276,7 @@ class floatParameter(Parameter):
         self.paramType = 'floatParameter'
 
 
-    def set_float_value(self, val):
+    def set_value_float(self, val):
         """Set value method specific for float parameter
         accept format
         1. Astropy quantity
@@ -310,12 +310,17 @@ class floatParameter(Parameter):
             except:
                 raise ValueError('String ' + val + 'can not be converted to'
                                  ' float')
-            result = self.set_float_value(v)
+            result = self.set_value_float(v)
         else:
             raise ValueError('float parameter can not accept '
                              + type(val).__name__ + 'format.')
         return result
 
+    def get_num_value_float(self, val):
+        if val is None:
+            return None
+        else:
+            return val.value
 
 class strParameter(Parameter):
     """This is a Paraemeter type that is specific to string values
@@ -351,7 +356,7 @@ class boolParameter(Parameter):
 
         parse_value = lambda x: x.upper() == 'Y'
         print_value = lambda x: 'Y' if x else 'N'
-        set_value = self.set_bool_value
+        set_value = self.set_value_bool
         get_num_value = lambda x: None
         get_value = lambda x: log.warning('Can not set a pure value to a '
                                                'string boolen parameter.')
@@ -366,7 +371,7 @@ class boolParameter(Parameter):
         self.value_type = bool
         self.paramType = 'boolParameter'
 
-    def set_bool_value(self, val):
+    def set_value_bool(self, val):
         """ This function is to get boolen value for boolParameter class
         """
         if isinstance(val, str):
@@ -383,8 +388,8 @@ class MJDParameter(Parameter):
                  uncertainty=None, frozen=True, continuous=True, aliases=None,
                  time_scale='utc'):
         self.time_scale = time_scale
-        parse_value = self.set_mjd_value
-        set_value = self.set_mjd_value
+        parse_value = self.set_value_mjd
+        set_value = self.set_value_mjd
         print_value = time_to_mjd_string
         get_value = lambda x: time_from_longdouble(x, time_scale)
         get_num_value = time_to_longdouble
@@ -402,7 +407,7 @@ class MJDParameter(Parameter):
         self.value_type = time.Time
         self.paramType = 'MJDParameter'
 
-    def set_mjd_value(self, val):
+    def set_value_mjd(self, val):
         """Value setter for MJD parameter,
            Accepted format:
            Astropy time object
@@ -442,7 +447,7 @@ class AngleParameter(Parameter):
             raise ValueError('Unidentified unit ' + units)
 
         self.unitsuffix = self.separator[units.lower()][1]
-        set_value = self.set_angle_value
+        set_value = self.set_value_angle
         parse_value = lambda x: Angle(x + self.unitsuffix)
         print_value = lambda x: x.to_string(sep=':', precision=8) \
                         if x.unit != u.rad else x.to_string(decimal = True,
@@ -469,7 +474,7 @@ class AngleParameter(Parameter):
                                              get_num_value=get_num_value,
                                              parse_uncertainty=parse_uncertainty)
 
-    def set_angle_value(self,val):
+    def set_value_angle(self,val):
         """ This function is to set value to angle parameters.
         Accepted format:
         1. Astropy angle object
@@ -598,15 +603,19 @@ class prefixParameter(Parameter):
             self.unit_template = lambda x: self.units
         if self.description_template is None:
             self.description_template = lambda x: self.descrition
-
+        # Here is a bug example parameters should be initialize totally
         self.type_separator = {
-                               'float': floatParameter('exmple',
-                                                       long_double=long_double),
-                               'string': strParameter('exmaple'),
-                               'bool': boolParameter('exmaple'),
-                               'mjd': MJDParameter('example',
-                                                   time_scale=time_scale),
-                               'angle': AngleParameter('example')}
+                               'float': (floatParameter,
+                                         ['units',' value', 'long_double',
+                                          'num_value', 'uncertainty']),
+                               'string': (strParameter, ['value']),
+                               'bool': (boolParameter, ['value']),
+                               'mjd': (MJDParameter, ['time_scale', 'value'
+                                                     'num_value',
+                                                     'uncertainty']),
+                               'angle': (AngleParameter, ['units', 'value',
+                                                         'uncertainty',
+                                                         'num_value'])}
         if isinstance(type_match, str):
             self.type_match = type_match.lower()
         elif isinstance(value_type, type):
@@ -617,7 +626,11 @@ class prefixParameter(Parameter):
         if self.type_match not in self.type_separator.keys():
             raise ValueError('Unrecognized value type ' + self.type_match)
 
-        exp_par = self.type_separator[self.type_match]
+        print_value = self.print_value_prefix
+        set_value = self.set_value_prefix
+        get_value = self.get_value_prefix
+        get_num_value = self.get_num_value_prefix
+        parse_uncertainty = self.parse_uncertainty_prefix
 
         super(prefixParameter, self).__init__(name=name, value=value,
                                               units=units,
@@ -625,12 +638,12 @@ class prefixParameter(Parameter):
                                               uncertainty=uncertainty,
                                               frozen=frozen,
                                               continuous=continuous,
-                                              parse_value=exp_par.parse_value,
-                                              print_value=exp_par.print_value,
-                                              set_value=exp_par.set_value,
-                                              get_value=exp_par.get_value,
-                                              get_num_value=exp_par.get_num_value,
-                                              parse_uncertainty=exp_par.parse_uncertainty)
+                                              parse_value=set_value,
+                                              print_value=print_value,
+                                              set_value=set_value,
+                                              get_value=get_value,
+                                              get_num_value=get_num_value,
+                                              parse_uncertainty=parse_uncertainty)
 
         self.prefix_aliases = prefix_aliases
         self.is_prefix = True
@@ -643,6 +656,47 @@ class prefixParameter(Parameter):
         self.description = dsc
         unt = self.unit_template(self.index)
         self.units = unt
+
+    #@Cache.cache_result
+    def get_par_type_object(self):
+        par_type_class = self.type_separator[self.type_match][0]
+        obj = par_type_class('example')
+        attr_dependency = self.type_separator[self.type_match][1]
+        for dp in attr_dependency:
+            if hasattr(self, dp):
+                prefix_arg = getattr(self, dp)
+                setattr(obj, dp, prefix_arg)
+        return obj
+
+    #@Cache.use_cache
+    def set_value_prefix(self, val):
+        obj = self.get_par_type_object()
+        result = obj.set_value(val)
+        return result
+
+    #@Cache.use_cache
+    def get_value_prefix(self, val):
+        obj = self.get_par_type_object()
+        result = obj.get_value(val)
+        return result
+
+    #@Cache.use_cache
+    def get_num_value_prefix(self, val):
+        obj = self.get_par_type_object()
+        result = obj.get_num_value(val)
+        return result
+
+    #@Cache.use_cache
+    def print_value_prefix(self, val):
+        obj = self.get_par_type_object()
+        result = obj.print_value(val)
+        return result
+
+    #@Cache.use_cache
+    def parse_uncertainty_prefix(self, val):
+        obj = self.get_par_type_object()
+        result = obj.parse_uncertainty(val)
+        return result
 
     def new_index_prefix_param(self, index):
         newpfx = prefixParameter(prefix=self.prefix, value=self.value,
