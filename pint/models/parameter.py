@@ -289,7 +289,7 @@ class floatParameter(Parameter):
                 try:
                     temp = val.to(self.num_unit)
                 except:
-                    emsg = 'Setting a uncompatible unit ' + valu.to_string
+                    emsg = 'Setting a uncompatible unit ' + valu.to_string()
                     emsg += ' to value is not allowed'
                     raise ValueError(emsg)
                 result = val
