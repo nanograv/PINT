@@ -38,7 +38,6 @@ class Spindown(TimingModel):
         for ii in range(2, self.num_spin_terms + 1):
             self.add_param(p.prefixParameter(name="F%d"%ii,
                 units="Hz/s^%s"%ii, value=0.0,
-                unitTplt = lambda x: "Hz/s^%s"%x,
                 description="Spin-frequency %d derivative"%ii,
                 descriptionTplt = lambda x: "Spin-frequency %d derivative"%x,
                 type_match='float',long_double=True))
@@ -69,7 +68,7 @@ class Spindown(TimingModel):
         for ii in range(self.num_spin_terms, -1, -1):
             term = "F%d"%ii
             if hasattr(self, term) and \
-                    getattr(self, term).value==0.0 and \
+                    getattr(self, term).num_value==0.0 and \
                     getattr(self, term).uncertainty is None:
                 delattr(self, term)
                 self.params.remove(term)
@@ -85,7 +84,7 @@ class Spindown(TimingModel):
     def get_spin_terms(self):
         """Return a list of the spin term values in the model: [F0, F1, ..., FN]
         """
-        return [getattr(self, "F%d"%ii).value for ii in range(self.num_spin_terms)]
+        return [getattr(self, "F%d"%ii).num_value for ii in range(self.num_spin_terms)]
 
     def spindown_phase(self, toas, delay):
         """Spindown phase function.

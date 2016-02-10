@@ -111,6 +111,7 @@ class Glitch(TimingModel):
             dF1 = getattr(self, "GLF1_%d" % idx).value
             eph = time_to_longdouble(getattr(self, "GLEP_%d" % idx).value)
             dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
+            dt = dt * u.s
             affected = dt > 0.0  # TOAs affected by glitch
             if hasattr(self, "GLF0D_%d" % idx):
                 dF0D = getattr(self, "GLF0D_%d" % idx).value
