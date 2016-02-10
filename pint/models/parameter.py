@@ -13,7 +13,7 @@ import astropy.constants as const
 from astropy.coordinates.angles import Angle
 import re
 import numbers
-
+#from .timing_model import Cache
 
 class Parameter(object):
     """A PINT class describing a single timing model parameter. The parameter
