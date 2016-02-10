@@ -631,7 +631,7 @@ class prefixParameter(Parameter):
         get_value = self.get_value_prefix
         get_num_value = self.get_num_value_prefix
         parse_uncertainty = self.parse_uncertainty_prefix
-
+        self.time_scale = time_scale
         super(prefixParameter, self).__init__(name=name, value=value,
                                               units=units,
                                               description=description,
@@ -705,6 +705,7 @@ class prefixParameter(Parameter):
                                  descriptionTplt=self.description_template,
                                  frozen=self.frozen,
                                  continuous=self.continuous,
-                                 type_match=self.type_match)
+                                 type_match=self.type_match,
+                                 time_scale=self.time_scale)
         newpfx.apply_template()
         return newpfx
