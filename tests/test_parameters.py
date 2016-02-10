@@ -13,7 +13,7 @@ class TestParameters(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.m = mb.get_model('B1855+09_NANOGrav_dfg+12_modified.par')
-
+        self.mp = mb.get_model('prefixtest.par')
     def test_RAJ(self):
         print "RAJ"
         assert self.m.RAJ.num_unit == u.hourangle
@@ -66,6 +66,23 @@ class TestParameters(unittest.TestCase):
         self.m.OM.value = time.Time(54000,format = 'mjd')
     def test_value3(self):
         self.assertRaises(ValueError, self.set_value3)
+
+    def test_prefix_value1(self):
+        self.mp.GLF0_2.value = 50
+        assert self.mp.GLF0_2.value == 50 * u.Hz
+
+    def test_prefix_value_str(self):
+        self.mp.GLF0_2.value = '50'
+        assert self.mp.GLF0_2.value == 50 * u.Hz
+
+    def test_prefix_value_quantity(self):
+        self.mp.GLF0_2.value = 50 * u.Hz
+        assert self.mp.GLF0_2.value == 50 * u.Hz
+
+    def set_prefix_value1(self):
+        self.mp.GLF0_2.value = 100 * u.s
+    def test_prefix_value1(self):
+        self.assertRaises(ValueError, self.set_prefix_value1)
 
 if __name__ == '__main__':
     pass
