@@ -587,6 +587,9 @@ class TOAs(object):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
+            # Make sure the string precisions are all set to 9 for all TOAs
+            for t in grp['mjd']:
+                t.precision = 9
             if key['obs'] in ["Barycenter", "Geocenter", "Spacecraft"]:
                 # For these special cases, convert the times to TDB.
                 # For Barycenter this will be
