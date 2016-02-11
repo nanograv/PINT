@@ -327,7 +327,13 @@ class TOA(object):
             units, or a number for which MHz is assumed.
         scale : string
             Time scale for the TOA time.  Usually 'utc'
-                    
+
+        Notes
+        -----
+        It is VERY important that all astropy.Time() objects are created
+        with precision=9. This is ensured in the code and is checked for any
+        Time object passed to the TOA constructor.
+                            
         """
         if obs == "Barycenter":
             # Barycenter overrides the scale argument with 'tdb' always.
@@ -378,6 +384,10 @@ class TOA(object):
             #    raise ValueError("Specifying location for observatory TOAs is not currently supported.")
             if type(MJD) == time.Time:
                 self.mjd = MJD
+                # Make sure precision is high enough!
+                if self.mjd.precision < 9:
+                    log.warning('TOA passed with poor precision ({0})'.format(self.mjd.precision))
+                self.mjd.precision = 9
             elif type(MJD) in [float, numpy.float64, numpy.float128]:
                 self.mjd = time.Time(MJD, scale=scale, format='mjd',
                                     location=observatories[obs].loc,
@@ -421,6 +431,7 @@ class TOAs(object):
         self.commands = []
         self.observatories = set()
         self.filename = None
+        self.planets = False
         if toaTable is not None:
             self.table = toaTable
             self.ntoas = len(self.table)

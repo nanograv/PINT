@@ -53,7 +53,7 @@ class Cache(object):
                         # Evaluate the function and cache the results
                         log.debug(" ... computing new result")
                         result = function(*args, **kwargs)
-                        setattr(cache, the_func, result)
+                        #setattr(cache, the_func, result)
                         return result
             # Couldn't access the cache, just return the result
             # without caching it.
@@ -84,7 +84,7 @@ class Cache(object):
                     return function(*args, **kwargs)
                 else:
                     # Init the cache, excute the function, then delete cache
-                    setattr(args[0], cls.the_cache, cls())
+                    #setattr(args[0], cls.the_cache, cls())
                     result = function(*args, **kwargs)
                     setattr(args[0], cls.the_cache, None)
                     return result

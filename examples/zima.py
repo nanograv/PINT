@@ -9,13 +9,13 @@ import numpy as np
 import pint.toa as toa
 import pint.models
 import pint.fitter
-import pint.residuals
 import astropy.units as u
 import matplotlib.pyplot as plt
 from astropy.time import Time, TimeDelta
 import argparse
 
 from astropy import log
+log.setLevel('DEBUG')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="PINT tool for simulating TOAs")
@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     ntoa = 100
     duration = 400*u.day
-    start = Time(56000.0,scale='utc',format='mjd')
+    start = Time(56000.0,scale='utc',format='mjd',precision=9)
     error = 1.0e-6*u.s
     freq = 1400.0*u.MHz
     scale = 'utc'
@@ -57,15 +57,23 @@ if __name__ == '__main__':
         ts.compute_posvels(ephem, planets)
 
                  
-    
-    rs = pint.residuals.resids(ts, m).time_resids
-    plt.plot(ts.get_mjds(),rs.to(u.us),'o')
+    F = m.F0.num_value*m.F0.num_unit    
+    rs = m.phase(ts.table).frac/F
+    #plt.plot(ts.get_mjds(),rs.to(u.us),'o')
     
     # Adjust the TOA times to put them where their residuals will be 0.0
     ts.adjust_TOAs(TimeDelta(-1.0*rs))
 
-    rspost = pint.residuals.resids(ts, m).time_resids
+    rspost = m.phase(ts.table).frac/F
     plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
+
+    # Adjust the TOA times to put them where their residuals will be 0.0
+    ts.adjust_TOAs(TimeDelta(-1.0*rspost))
+
+    # Do a second iteration to fix the poor assumption of F = F0 when
+    # converting phase residuals to time residuals
+    rspost2 = m.phase(ts.table).frac/F
+    plt.plot(ts.get_mjds(),rspost2.to(u.us),'+')
 
      # Write TOAs to a file
     ts.write_TOA_file(args.timfile,name='fake',format='Tempo2')
