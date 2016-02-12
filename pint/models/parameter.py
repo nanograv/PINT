@@ -58,7 +58,7 @@ class Parameter(object):
 
     def __init__(self, name=None, value=None, units=None, description=None,
                  uncertainty=None, frozen=True, aliases=None, continuous=True,
-                 prior=priors.Prior(),
+                 prior=priors.Prior(priors.UniformPrior()),
                  parse_value=fortran_float, print_value=str,
                  get_value=lambda x: x, get_num_value=lambda x: x):
         self.name = name  # name of the parameter
@@ -153,16 +153,20 @@ class Parameter(object):
                                      "or None. Please check your .get_num_value"
                                      " method. ")
 
-    def prior_probability(self,value=None):
+    def prior_pdf(self,value=None, logpdf=False):
         """Return the prior probability, evaluated at the current value of
         the parameter, or at a proposed value.
+        
+        Parameters
+        ----------
+        value : array_like or float_like
         
         Probabilities are evaluated using the num_value attribute
         """
         if value is None:
-            return self.prior.prior_probability(self.num_value)
+            return self.prior.pdf(self.num_value) if not logpdf else self.prior.logpdf(self.num_value)
         else:
-            return self.prior.prior_probability(value)
+            return self.prior.pdf(value) if not logpdf else self.prior.logpdf(value)
             
     # Setup num_value property
     @property
