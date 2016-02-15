@@ -24,6 +24,7 @@ observatories = obsmod.read_observatories()
 iers_a_file = None
 iers_a = None
 
+
 def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=True):
     """Convenience function to load and prepare TOAs for PINT use.
 
@@ -150,6 +151,55 @@ def parse_TOA_line(line, fmt="Unknown"):
             "TOA format '%s' not implemented yet" % fmt)
     return MJD, d
 
+def format_toa_line(toatime, toaerr, freq, dm=0.0, obs='@', name='unk', flags={},
+    format='Princeton'):
+    """
+    Format TOA line for writing
+    
+    Bugs
+    ----
+    This implementation is currently incomplete in that it will not
+    undo things like TIME statements and probably other things.
+    
+    Princeton format
+    ----------------
+    columns  item
+    1-1     Observatory (one-character code) '@' is barycenter
+    2-2     must be blank
+    16-24   Observing frequency (MHz)
+    25-44   TOA (decimal point must be in column 30 or column 31)
+    45-53   TOA uncertainty (microseconds)
+    69-78   DM correction (pc cm^-3)
+
+    Tempo2 format
+    -------------
+    First line of file should be "FORMAT 1"
+    TOA format is "file freq sat satErr siteID <flags>"
+
+    Returns
+    -------
+    out : string
+        Formatted TOA line
+    """
+    toa = "{0:19.13f}".format(toatime.mjd)
+    if format.upper() in ('TEMPO2','1'):
+        flagstring = ''
+        if dm != 0.0:
+            flagstring += "-dm %.5f" % (dm,)
+        # Here I need to append any actual flags
+        out = "%s %f %s %.2f %s %s\n" % (name,freq,toa,toaerr,obs,flagstring)
+    else: # TEMPO format
+        if not format.upper in ('PRINCETON','TEMPO'):
+            log.error('Unknown TOA format ({0})'.format(format))
+        if dm!=0.0:
+            out = obs+" %13s %8.3f %s %8.2f              %9.4f\n" % \
+              (name, freq, toa, toaerr, dm)
+        else:
+            out = obs+" %13s %8.3f %s %8.2f\n" % (name, freq, toa, toaerr)
+
+    return out
+
+
 class TOA(object):
     """A time of arrival (TOA) class.
 
@@ -187,6 +237,31 @@ class TOA(object):
                  error=0.0, obs='Barycenter', freq=float("inf"),
                  scale='utc', # with defaults
                  **kwargs):  # keyword args that are completely optional
+        r"""
+        Construct a TOA object
+        
+        Parameters
+        ----------
+        MJD : astropy Time, float, or tuple of floats
+            The time of the TOA, which can be expressed as an astropy Time,
+            a floating point MJD (64 or 128 bit precision), or a tuple
+            of (MJD1,MJD2) whose sum is the full precision MJD (usually the 
+            integer and fractional part of the MJD)
+        obs : string
+            The observatory code for the TOA
+        freq : float or astropy Quantity
+            Frequency corresponding to the TOA.  Either a Quantity with frequency
+            units, or a number for which MHz is assumed.
+        scale : string
+            Time scale for the TOA time.  Usually 'utc'
+
+        Notes
+        -----
+        It is VERY important that all astropy.Time() objects are created
+        with precision=9. This is ensured in the code and is checked for any
+        Time object passed to the TOA constructor.
+                            
+        """
         if obs == "Barycenter":
             # Barycenter overrides the scale argument with 'tdb' always.
             if type(MJD) in [float, numpy.float64, numpy.float128]:
@@ -234,7 +309,13 @@ class TOA(object):
             # Not sure what I was trying to test for with this. -- paulr
             #if  location is not None:
             #    raise ValueError("Specifying location for observatory TOAs is not currently supported.")
-            if type(MJD) in [float, numpy.float64, numpy.float128]:
+            if type(MJD) == time.Time:
+                self.mjd = MJD
+                # Make sure precision is high enough!
+                if self.mjd.precision < 9:
+                    log.warning('TOA passed with poor precision ({0})'.format(self.mjd.precision))
+                self.mjd.precision = 9
+            elif type(MJD) in [float, numpy.float64, numpy.float128]:
                 self.mjd = time.Time(MJD, scale=scale, format='mjd',
                                     location=observatories[obs].loc,
                                     precision=9)
@@ -277,6 +358,7 @@ class TOAs(object):
         self.commands = []
         self.observatories = set()
         self.filename = None
+        self.planets = False
 
         if (toalist is not None) and (toafile is not None):
             log.error('Can not initialize TOAs from both file and list')
@@ -418,6 +500,52 @@ class TOAs(object):
         """Write a summary of the TOAs to stdout."""
         print self.get_summary()
 
+    def adjust_TOAs(self, delta):
+        """Apply a time delta to TOAs
+        
+        Adjusts the time (MJD) of the TOAs by applying delta, which should
+        be a numpy.time.TimeDelta instance with the same shape as self.table['mjd']
+        
+        Parameters
+        ----------
+        delta : astropy.time.TimeDelta
+            The time difference to add to the MJD of each TOA
+        
+        """
+        col = self.table['mjd']
+        if type(delta) != time.TimeDelta:
+            raise ValueError('Type of argument must be TimeDelta')
+        if delta.shape != col.shape:
+            raise ValueError('Shape of mjd column and delta must be compatible')
+        for ii in range(len(col)):
+            col[ii] += delta[ii]
+            
+        # This adjustment invalidates the derived columns in the table, so delete
+        # and recompute them
+        self.compute_TDBs()
+        self.compute_posvels()
+        
+    def write_TOA_file(self,filename,name='pint', format='Princeton'):
+        """Dump current TOA table out as a TOA file
+        
+        Parameters
+        ----------
+        filename : str
+            File name to write to
+        format : str
+            Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1')
+        
+        """
+        outf = file(filename,'w')
+        if format.upper() in ('TEMPO2','1'):
+            outf.write('FORMAT 1\n')
+        for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'],
+            self.table['freq'],self.table['obs'],self.table['flags']):
+            str = format_toa_line(toatime, toaerr, freq, dm=0.0, obs=obs, name=name, 
+            flags=flags, format=format)
+            outf.write(str)
+        outf.close()
+        
     def apply_clock_corrections(self):
         """Apply observatory clock corrections and TIME statments.
 
@@ -485,6 +613,14 @@ class TOAs(object):
         from astropy.utils.iers import IERS_A, IERS_A_URL
         from astropy.utils.data import download_file, clear_download_cache
         global iers_a_file, iers_a
+        # If previous columns exist, delete them
+        if 'tdb' in self.table.colnames:
+            log.info('tdb column already exists. Deleting...')
+            self.table.remove_column('tdb')
+        if 'tdbld' in self.table.colnames:
+            log.info('tdbld column already exists. Deleting...')
+            self.table.remove_column('tdbld')
+
         # First make sure that we have already applied clock corrections
         ccs = False
         for tfs in self.table['flags']:
@@ -511,6 +647,9 @@ class TOAs(object):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
+            # Make sure the string precisions are all set to 9 for all TOAs
+            for t in grp['mjd']:
+                t.precision = 9
             if key['obs'] in ["Barycenter", "Geocenter", "Spacecraft"]:
                 # For these special cases, convert the times to TDB.
                 # For Barycenter this will be
@@ -551,6 +690,21 @@ class TOAs(object):
         using the 'ephem' parameter.  The positions and velocities are
         set with PosVel class instances which have astropy units.
         """
+        # Record the planets choice for this instance
+        self.planets = planets
+        
+        # Remove any existing columns
+        cols_to_remove = ['ssb_obs_pos', 'ssb_obs_vel', 'obs_sun_pos']
+        for c in cols_to_remove:
+            if c in self.table.colnames:
+                log.info('Column {0} already exists. Removing...'.format(c))
+                self.table.remove_column(c)
+        for p in ('jupiter', 'saturn', 'venus', 'uranus'):
+            name = 'obs_'+p+'_pos'
+            if name in self.table.colnames:
+                log.info('Column {0} already exists. Removing...'.format(name))
+                self.table.remove_column(name)
+                
         load_kernels(ephem)
         pth = os.path.join(pintdir, "datafiles")
         ephem_file = os.path.join(pth, "%s.bsp"%ephem.lower())
