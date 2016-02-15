@@ -10,7 +10,6 @@ import pint.toa as toa
 import pint.models
 import pint.fitter
 import astropy.units as u
-import matplotlib.pyplot as plt
 from astropy.time import Time, TimeDelta
 import argparse
 
@@ -21,25 +20,33 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="PINT tool for simulating TOAs")
     parser.add_argument("parfile",help="par file to read model from")
     parser.add_argument("timfile",help="Output TOA file name")
+    parser.add_argument("--startMJD",help="MJD of first fake TOA (default=56000.0)",
+                    type=float, default=56000.0)
+    parser.add_argument("--ntoa",help="Number of fake TOAs to generate",type=int,default=100)
+    parser.add_argument("--duration",help="Span of TOAs to generate (days)",type=int,default=400)
+    parser.add_argument("--obs",help="Observatory code (default: GBT)",default="GBT")
+    parser.add_argument("--freq",help="Frequency for TOAs (MHz) (default: 1400)",
+                    type=float, default=1400.0)
+    parser.add_argument("--error",help="Random error to apply to each TOA (us, default=1.0)",
+                    type=float, default=1.0)
     parser.add_argument("--plot",help="Plot residuals",action="store_true",default=False)
+    parser.add_argument("--ephem",help="Ephemeris to use",default="DE421")
+    parser.add_argument("--planets",help="Use planetary Shapiro delay",action="store_true",
+                        default=False)
     args = parser.parse_args()
 
     log.info("Reading model from {0}".format(args.parfile))
     m = pint.models.get_model(args.parfile)
 
-    ntoa = 100
-    duration = 400*u.day
-    start = Time(56000.0,scale='utc',format='mjd',precision=9)
-    error = 1.0e-6*u.s
-    freq = 1400.0*u.MHz
+    duration = args.duration*u.day
+    start = Time(args.startMJD,scale='utc',format='mjd',precision=9)
+    error = args.error*u.s
+    freq = args.freq*u.MHz
     scale = 'utc'
-    obs = 'GBT'
-    ephem = 'DE421'
-    planets = False
 
-    times = np.linspace(0,duration.to(u.day).value,ntoa)*u.day + start
+    times = np.linspace(0,duration.to(u.day).value,args.ntoa)*u.day + start
     
-    tl = [toa.TOA(t,error=error, obs=obs, freq=freq,
+    tl = [toa.TOA(t,error=error, obs=args.obs, freq=freq,
                  scale=scale) for t in times]
     del t
     ts = toa.TOAs(toalist=tl)
@@ -54,30 +61,29 @@ if __name__ == '__main__':
         ts.compute_TDBs()
     if 'ssb_obs_pos' not in ts.table.colnames:
         log.info("Computing observatory positions and velocities.")
-        ts.compute_posvels(ephem, planets)
+        ts.compute_posvels(args.ephem, args.planets)
 
-                 
+    # This computation should be replaced with a call to d_phase_d_TOA() when that
+    # function works to compute the instantaneous topocentric frequency                 
     F = m.F0.num_value*m.F0.num_unit    
     rs = m.phase(ts.table).frac/F
-    #plt.plot(ts.get_mjds(),rs.to(u.us),'o')
     
     # Adjust the TOA times to put them where their residuals will be 0.0
     ts.adjust_TOAs(TimeDelta(-1.0*rs))
-
     rspost = m.phase(ts.table).frac/F
-    plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
-
-    # Adjust the TOA times to put them where their residuals will be 0.0
-    ts.adjust_TOAs(TimeDelta(-1.0*rspost))
 
     # Do a second iteration to fix the poor assumption of F = F0 when
     # converting phase residuals to time residuals
-    rspost2 = m.phase(ts.table).frac/F
-    plt.plot(ts.get_mjds(),rspost2.to(u.us),'+')
+    ts.adjust_TOAs(TimeDelta(-1.0*rspost))
 
      # Write TOAs to a file
     ts.write_TOA_file(args.timfile,name='fake',format='Tempo2')
-   
-    plt.show()
+
+    if args.plot:
+        import matplotlib.pyplot as plt
+        rspost2 = m.phase(ts.table).frac/F
+        plt.plot(ts.get_mjds(),rspost2.to(u.us),'+')
+        plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
+        plt.show()
     
     
