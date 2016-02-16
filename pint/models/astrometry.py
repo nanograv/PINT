@@ -3,6 +3,7 @@
 import numpy
 import astropy.coordinates as coords
 import astropy.units as u
+from astropy import log
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
 from .parameter import Parameter, MJDParameter, AngleParameter
@@ -107,13 +108,31 @@ class Astrometry(TimingModel):
         L_hat = self.ssb_to_psb_xyz(epoch=toas['tdbld'].astype(numpy.float64))
         re_dot_L = numpy.sum(toas['ssb_obs_pos']*L_hat, axis=1)
         delay = -re_dot_L.to(ls).value
+
         if self.PX.value != 0.0:
             L = ((1.0 / self.PX.value) * u.kpc)
             # TODO: numpy.sum currently loses units in some cases...
             re_sqr = numpy.sum(toas['ssb_obs_pos']**2, axis=1) * toas['ssb_obs_pos'].unit**2
-            delay += (0.5 * (re_sqr / L) * (1.0 - re_dot_L**2 / re_sqr)).to(ls).value
+            for ii, key in enumerate(toas.groups.keys):
+                grp = toas.groups[ii]
+                obs = toas.groups.keys[ii]['obs']
+                loind, hiind = toas.groups.indices[ii:ii+2]
+                if key['obs'] == 'Barycenter':
+                    log.info("Skipping parallax delay for Barycentric TOAs")
+                    continue
+
+                delay[loind:hiind] += ((0.5 * (re_sqr[loind:hiind] /
+                                      L) * (1.0 - re_dot_L[loind:hiind]**2 /
+                                      re_sqr[loind:hiind])).to(ls).value)
+
         return delay
 
+    def topo_center_delay(self, toas):
+        L_hat = self.ssb_to_psb_xyz(epoch=toas['tdbld'].astype(numpy.float64))
+        re_dot_L = numpy.sum(toas['topo_obs_pos']*L_hat, axis=1)
+        delay = -re_dot_L.to(ls).value
+        return delay
+        
     @Cache.use_cache
     def get_d_delay_quantities(self, toas):
         """Calculate values needed for many d_delay_d_param functions """
