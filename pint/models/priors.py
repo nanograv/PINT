@@ -76,7 +76,6 @@ class UniformPrior(rv_continuous):
     
     # The astype() calls prevent unsafe cast messages
     def _pdf(self,x):
-        log.info('x ({0}) {1}'.format(type(x),x))
         return np.ones_like(x).astype(np.float64,casting='same_kind')
     def _logpdf(self,x):
         return np.zeros_like(x).astype(np.float64,casting='same_kind')

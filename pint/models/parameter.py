@@ -70,7 +70,7 @@ class Parameter(object):
         self.get_value = get_value # Method to update value from num_value
         self.value = value # The value of parameter, internal storage
         
-        self.prior = prior
+        self._prior = prior
 
         self.description = description
         self.uncertainty = uncertainty
@@ -164,9 +164,9 @@ class Parameter(object):
         Probabilities are evaluated using the num_value attribute
         """
         if value is None:
-            return self.prior.pdf(self.num_value) if not logpdf else self.prior.logpdf(self.num_value)
+            return self._prior.pdf(self.num_value) if not logpdf else self._prior.logpdf(self.num_value)
         else:
-            return self.prior.pdf(value) if not logpdf else self.prior.logpdf(value)
+            return self._prior.pdf(value) if not logpdf else self._prior.logpdf(value)
             
     # Setup num_value property
     @property
