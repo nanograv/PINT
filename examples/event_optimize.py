@@ -1,3 +1,4 @@
+#!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 import numpy as np
 import pint.toa as toa
 import pint.models
@@ -16,7 +17,8 @@ from astropy.coordinates import SkyCoord
 from astropy import log
 import argparse
 
-log.setLevel('DEBUG')
+#log.setLevel('DEBUG')
+#np.seterr(all='raise')
         
 def measure_phase(profile, template, rotate_prof=True):
     """
@@ -332,8 +334,8 @@ if __name__ == '__main__':
 
 
     # TODO: make this properly handle long double
-    if not args.usepickle and not (os.path.isfile(eventfile+".pickle") or
-        os.path.isfile(eventfile+".pickle.gz")):
+    if not args.usepickle or (not (os.path.isfile(eventfile+".pickle") or
+        os.path.isfile(eventfile+".pickle.gz"))):
         # Read event file and return list of TOA objects
         tl = fermi.load_Fermi_TOAs(eventfile, weightcolumn=weightcol,
                                    targetcoord=target, minweight=minWeight)
