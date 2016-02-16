@@ -42,6 +42,8 @@ def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=True):
     if 'ssb_obs_pos' not in t.table.colnames:
         log.info("Computing observatory positions and velocities.")
         t.compute_posvels(ephem, planets)
+    # This should also check if the timfile is newer than the pickle file
+    # and update the pickle in that case
     if not (os.path.isfile(timfile+".pickle") or
             os.path.isfile(timfile+".pickle.gz")):
         log.info("Pickling TOAs.")
@@ -65,81 +67,6 @@ def get_TOAs_list(toa_list,ephem="DE421", planets=False):
         log.info("Computing observatory positions and velocities.")
         t.compute_posvels(ephem, planets)
     return t
-
-def read_fake_TOAs(time_mjd1,time_mjd2 = None, error = 0.0, obs='Barycenter',
-                  freq=float("inf"), scale='utc', ephem="DE421",planets=False,
-                  **kwargs):
-    '''
-    A fast way to create TOAs table from set of fake
-    mjd time samples
-    Parameters
-    ---------
-    time_mjd1 : array_like
-        Time samples in mjd. If time_mjd2 is not given, time_mjd1 will be take
-        as full mjd time samples. If the time_mjd2 is give, time_mjd1 should be
-        the integer part of mjd.
-    time_mjd1 : array_like , optional
-        Fractional part of mjd.
-    obs : str , optional
-        Observatory code.
-    freq : float, optional
-        Observation frequency
-    scale : {'tai', 'tcb', 'tcg', 'tdb', 'tt', 'ut1', 'utc'} , optional
-        Time scale for input mjds
-    ephem : str, optional
-        Ephemeris name for calculate earth and planets positions and velocities
-    planets : bool, optional
-        If the planets positions and velocities are calculated
-    '''
-    if time_mjd2 == None:
-        MJD1,MJD0 = numpy.modf(numpy.longdouble(time_mjd1))
-    else:
-        MJD0,MJD1 = (time_mjd1,time_mjd2)
-    try:
-        ntoas = len(MJD0)
-    except:
-        ntoas = 1
-
-    fakeToa = TOA((MJD0,MJD1),error=error, obs=obs, freq=freq,
-                 scale=scale)
-    flags = kwargs
-    try:
-        len_error = len(error)
-        len_freq = len(freq)
-        len_flags = len(flags)
-    except:
-        error_list = [error]*ntoas
-        freq_list = [freq]*ntoas
-        flag_list = [flags]*ntoas
-    else:
-        error_list = error
-        freq_list = freq
-        flag_list = flag
-
-    obs = [obs]*ntoas
-    if ntoas>1:
-        timeList = [fakeToa.mjd[i] for i in range(ntoas)]
-    else:
-        timeList = [fakeToa.mjd,]
-    print len(timeList),len(error_list),len(freq_list)
-    tb = table.Table([numpy.arange(ntoas), timeList,error_list, freq_list,obs,
-                    flag_list],names=("index", "mjd", "error", "freq","obs",
-                    "flags"), meta = {'TOA Type':'Fake toa time sample' }).group_by("obs")
-
-    t = TOAs(toaTable = tb) # Create TOAs class using a table
-
-    if not any([f.has_key('clkcorr') for f in t.table['flags']]):
-        log.info("Applying clock corrections.")
-        t.apply_clock_corrections()
-    if 'tdb' not in t.table.colnames:
-        log.info("Getting IERS params and computing TDBs.")
-        t.compute_TDBs()
-    if 'ssb_obs_pos' not in t.table.colnames:
-        log.info("Computing observatory positions and velocities.")
-        t.compute_posvels(ephem, planets)
-
-    return t
-
 
 def toa_format(line, fmt="Unknown"):
     """Determine the type of a TOA line.
@@ -425,19 +352,13 @@ class TOA(object):
 class TOAs(object):
     """A class of multiple TOAs, loaded from zero or more files."""
 
-    def __init__(self, toafile=None, toalist=None, toaTable=None, usepickle=True):
+    def __init__(self, toafile=None, toalist=None, usepickle=True):
         # First, just make an empty container
         self.toas = []
         self.commands = []
         self.observatories = set()
         self.filename = None
         self.planets = False
-        if toaTable is not None:
-            self.table = toaTable
-            self.ntoas = len(self.table)
-            self.first_MJD = self.table['mjd'].min()
-            self.last_MJD = self.table['mjd'].max()
-            self.source = 'table'
 
         if (toalist is not None) and (toafile is not None):
             log.error('Can not initialize TOAs from both file and list')
@@ -658,6 +579,9 @@ class TOAs(object):
             for jj in range(loind, hiind):
                 if flags[jj].has_key('time'):
                     # TIME commands are in sec
+                    # SUGGESTION(paulr): These time correction units should
+                    # be applied in the parser, not here. In the table the time
+                    # correction should have units.
                     corr[jj] = flags[jj]['time'] * u.s
                     times[jj] += time.TimeDelta(corr[jj])
             # These are observatory clock corrections.  Do in groups.

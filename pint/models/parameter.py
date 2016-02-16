@@ -11,6 +11,7 @@ import astropy.constants as const
 from astropy.coordinates.angles import Angle
 import re
 import numbers
+import priors
 
 
 class Parameter(object):
@@ -57,6 +58,7 @@ class Parameter(object):
 
     def __init__(self, name=None, value=None, units=None, description=None,
                  uncertainty=None, frozen=True, aliases=None, continuous=True,
+                 prior=priors.Prior(priors.UniformPrior()),
                  parse_value=fortran_float, print_value=str,
                  get_value=lambda x: x, get_num_value=lambda x: x):
         self.name = name  # name of the parameter
@@ -64,10 +66,12 @@ class Parameter(object):
         # parameter num unit, in astropy.units object format.
         # Once it is speicified, num_unit will not be changed.
 
-        # Method to get num_value from value
-        self.get_num_value = get_num_value
-        self.get_value = get_value  # Method to update value from num_value
-        self.value = value  # The value of parameter, internal storage
+        self.get_num_value = get_num_value # Method to get num_value from value
+        self.get_value = get_value # Method to update value from num_value
+        self.value = value # The value of parameter, internal storage
+        
+        self.prior = prior
+
         self.description = description
         self.uncertainty = uncertainty
         self.frozen = frozen
@@ -149,6 +153,21 @@ class Parameter(object):
                                      "or None. Please check your .get_num_value"
                                      " method. ")
 
+    def prior_pdf(self,value=None, logpdf=False):
+        """Return the prior probability, evaluated at the current value of
+        the parameter, or at a proposed value.
+        
+        Parameters
+        ----------
+        value : array_like or float_like
+        
+        Probabilities are evaluated using the num_value attribute
+        """
+        if value is None:
+            return self.prior.pdf(self.num_value) if not logpdf else self.prior.logpdf(self.num_value)
+        else:
+            return self.prior.pdf(value) if not logpdf else self.prior.logpdf(value)
+            
     # Setup num_value property
     @property
     def num_value(self):
@@ -166,7 +185,7 @@ class Parameter(object):
                 self.value = None
 
         elif not isinstance(val, numbers.Number):
-            raise ValueError('num_value has to be a pure number or None.')
+            raise ValueError('num_value has to be a pure number or None. ({0} <- {1} ({2})'.format(self.name,val,type(val)))
         else:
             self._num_value = val
             # Update value
