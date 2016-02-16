@@ -26,5 +26,10 @@ class TestD_phase_D_toa(unittest.TestCase):
         plt.plot(self.toas.get_mjds(),dpdtoa)
         plt.show()
 
+        print 'test d_phase_d_toa as geocenter'
+        dpdtoa = self.model.d_phase_d_toa(self.toas, obs='GEO')
+        plt.plot(self.toas.get_mjds(),dpdtoa)
+        plt.show()
+
 if __name__ == '__main__':
     pass
