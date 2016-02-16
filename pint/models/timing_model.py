@@ -4,11 +4,12 @@ import functools
 from .parameter import Parameter
 from ..phase import Phase
 from astropy import log
+import astropy.time as time
 import numpy as np
 import pint.toa as toa
 import pint.utils as utils
 import astropy.units as u
-
+import copy
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
 ignore_params = ['START', 'FINISH', 'SOLARN0', 'EPHEM', 'CLK', 'UNITS',
@@ -247,72 +248,72 @@ class TimingModel(object):
         """
         pass
 
-    def d_phase_d_toa(self, toas, time_intval = 60 ,method = None,
-                      num_sample = 20, order = 11):
+    def d_phase_d_toa(self, toas, obs=None, sample_step=None):
         """Return the derivative of phase wrt TOA
-            time_intval: is in seconds
-            method: with finite difference and chebyshev interpolation
-
-
+        Parameter
+        ---------
+        toas : PINT TOAs class
+            The toas where the derivative of phase will be evaluated at.
+        obs : str optional
+            The location where the derivative of phase will be evaluated at.
+        sample_step : float optional
+            Finite difference steps. If not specified, it will take 1/10 of the
+            spin period. 
         """
-        d_phase_d_toa = np.zeros(len(toas))
+        copy_toas = copy.deepcopy(toas)
+        ttable = copy_toas.table
+        if sample_step is None:
+            pulse_period = 1.0/self.F0.num_value
+            sample_step = pulse_period/10.0
+        sample_step_sec = sample_step*u.second
+        sample_step_day = sample_step_sec.to(u.day).value
+        sample_dt = [-sample_step_day,2 * sample_step_day]
+        table = toas.table
+        time_scale = table['mjd'][0].scale
+        if time_scale == 'utc':
+            time_scale = 'ut1'
 
-        if method is None or "FDM":
-        # Using finite difference to calculate the derivitve
-            dt = np.longdouble(time_intval)/np.longdouble(num_sample)
-            num_sample = int(num_sample)/2*2+1
 
-            for i,singal_toa in enumerate(toas):
-                toa_utc_ld = utils.time_to_longdouble(singal_toa['mjd'])
-                # Resample the toa points
-                domain = (toa_utc_ld-time_intval/2.0,toa_utc_ld+time_intval/2.0)
-                sample = np.linspace(domain[0],domain[1],num_sample)
+        if obs is None:
+            TOAobj = copy_toas
+            delay_fs = [self.delay,]
+            phase_fs = self.phase_funcs
 
-                toa_list = []
-                for sample_time in sample:
-                    toa_list.append(toa.TOA((np.modf(sample_time)[1],
-                                np.modf(sample_time)[0]),obs = singal_toa['obs'],
-                                freq = singal_toa['freq']))
+        # Get read for barycentric d_phase_d_toa
+        elif obs.lower() in ['ssb','bary','barycenter']:
+            time_scale = 'tdb'
+            bTOA = self.get_barycentric_toas(ttable)
+            TOAobj = toa.read_fake_TOAs(bTOA.value, obs='Barycenter',
+                                        scale=time_scale)
+            delay_fs = self.delay_funcs['L2'] # Only the second level delay
+                                              # Solar system delay will not count
+            phase_fs = self.phase_funcs
 
-                sample_toalist = toa.get_TOAs_list(toa_list)
-                ph = self.phase(sample_toalist.table)
-                p = ph.int-ph.int.min()+ph.frac
-                p = np.array(p,dtype='float64')
-                # Reduce the value of samples in order to use double precision
-                reduce_samepl = np.array((sample-sample.min())*86400.0,dtype = 'float64')
-                dx = np.gradient(reduce_samepl)
-                dp = np.gradient(p-p.mean(),dx)
-                d_phase_d_toa[i] = dp[num_sample/2]
+        else:
+            raise ValueError('Unknown position to calculate d_phase_d_toa')
 
-        if method is "chebyshev":
-        # Using chebyshev interpolation to calculate the
+        sample_phase = []
+        for dt in sample_dt:
 
-            for i,singal_toa in enumerate(toas):
-                # Have more sample point around toa
-                toa_utc_ld = utils.time_to_longdouble(singal_toa['mjd'])
-                domain = (toa_utc_ld-time_intval/2.0,toa_utc_ld+time_intval/2.0)
-                sample = np.linspace(domain[0],domain[1],num_sample)
-
-                toa_list = []
-                for sample_time in sample:
-                    toa_list.append(toa.TOA((np.modf(sample_time)[1],
-                                np.modf(sample_time)[0]),obs = singal_toa['obs'],
-                                freq = singal_toa['freq']))
-
-                sample_toalist = toa.get_TOAs_list(toa_list)
-                # Calculate phase
-                ph = self.phase(sample_toalist.table)
-                p = ph.int-ph.int.min()+ph.frac
-                p = np.array(p,dtype='float64')
-                # reduce the phase value to use double precision
-                reduce_samepl = np.array((sample-sample.min())*86400.0,dtype = 'float64')
-                coeff = np.polynomial.chebyshev.chebfit(reduce_samepl, p,order)
-                dcoeff = np.polynomial.chebyshev.chebder(coeff)
-                dy =  np.polynomial.chebyshev.chebval(reduce_samepl,dcoeff)
-                d_phase_d_toa[i] = dy[num_sample/2]
+            deltaT = time.TimeDelta([dt]*len(table),
+                                    format='jd',scale=time_scale)
+            TOAobj.adjust_TOAs(deltaT)
+            delay = np.zeros(len(ttable))
+            for df in delay_fs:
+                delay += df(TOAobj.table)
+            # Compute phase
+            phase = Phase(np.zeros(len(ttable)), np.zeros(len(ttable)))
+            for pf in phase_fs:
+                phase += Phase(pf(TOAobj.table, delay))
+            sample_phase.append(phase)
+        # Use finite difference method.
+        # phase'(t) = (phase(t+h)-phase(t-h))/2+ 1/6*F2*h^2 + ..
+        # The error should be near 1/6*F2*h^2
+        dp = (sample_phase[1]-sample_phase[0])
+        d_phase_d_toa = dp.int/(2*sample_step)+dp.frac/(2*sample_step)
+        del copy_toas
 
         return d_phase_d_toa
-
 
     @Cache.use_cache
     def d_phase_d_param(self, toas, param):
