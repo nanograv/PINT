@@ -258,7 +258,7 @@ class TimingModel(object):
             The location where the derivative of phase will be evaluated at.
         sample_step : float optional
             Finite difference steps. If not specified, it will take 1/10 of the
-            spin period. 
+            spin period.
         """
         copy_toas = copy.deepcopy(toas)
         ttable = copy_toas.table
@@ -269,15 +269,10 @@ class TimingModel(object):
         sample_step_day = sample_step_sec.to(u.day).value
         sample_dt = [-sample_step_day,2 * sample_step_day]
         table = toas.table
-        time_scale = table['mjd'][0].scale
-        if time_scale == 'utc':
-            time_scale = 'ut1'
-
 
         if obs is None:
+            time_scale = 'utc'
             TOAobj = copy_toas
-            delay_fs = [self.delay,]
-            phase_fs = self.phase_funcs
 
         # Get read for barycentric d_phase_d_toa
         elif obs.lower() in ['ssb','bary','barycenter']:
@@ -285,26 +280,26 @@ class TimingModel(object):
             bTOA = self.get_barycentric_toas(ttable)
             TOAobj = toa.read_fake_TOAs(bTOA.value, obs='Barycenter',
                                         scale=time_scale)
-            delay_fs = self.delay_funcs['L2'] # Only the second level delay
-                                              # Solar system delay will not count
-            phase_fs = self.phase_funcs
 
+        elif obs.lower() in ['geo','geocenter','geocentric']:
+            time_scale = 'utc'
+            geoTOA = ttable['tdbld']+ self.topo_center_delay(ttable)
+            TOAobj = toa.read_fake_TOAs(geoTOA, obs='Geocenter',
+                                        scale=time_scale)
         else:
             raise ValueError('Unknown position to calculate d_phase_d_toa')
 
+        if time_scale == 'utc':
+            dt_scale = 'ut1'
+        else:
+            dt_scale = time_scale
         sample_phase = []
         for dt in sample_dt:
 
             deltaT = time.TimeDelta([dt]*len(table),
-                                    format='jd',scale=time_scale)
+                                    format='jd',scale=dt_scale)
             TOAobj.adjust_TOAs(deltaT)
-            delay = np.zeros(len(ttable))
-            for df in delay_fs:
-                delay += df(TOAobj.table)
-            # Compute phase
-            phase = Phase(np.zeros(len(ttable)), np.zeros(len(ttable)))
-            for pf in phase_fs:
-                phase += Phase(pf(TOAobj.table, delay))
+            phase = self.phase(TOAobj.table)
             sample_phase.append(phase)
         # Use finite difference method.
         # phase'(t) = (phase(t+h)-phase(t-h))/2+ 1/6*F2*h^2 + ..
