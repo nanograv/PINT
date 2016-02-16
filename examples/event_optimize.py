@@ -98,17 +98,28 @@ def marginalize_over_phase(phases, template, weights=None, resolution=1.0/1024,
         plt.show()
     return ltemp - dphss[lnlikes.argmax()]*ltemp, lnlikes.max()
 
+def get_fit_keyvals(model):
+    """Read the model to determine fitted keys and their values and errors from the par file
+    """
+    fitkeys = [p for p in model.params if not
+        getattr(model,p).frozen]
+    fitvals = []
+    fiterrs = []
+    for p in fitkeys:
+        fitvals.append(getattr(model, p).num_value)
+        fiterrs.append(getattr(model, p).uncertainty)
+    return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
+
 class emcee_fitter(fitter.fitter):
 
-    def __init__(self, toas=None, model=None, template=None, weights=None, priorerrfact=10.0):
+    def __init__(self, toas=None, model=None, template=None, weights=None):
         self.toas = toas
         self.model_init = model
         self.reset_model()
         self.template = template
         self.weights = weights
-        self.fitkeys, self.fitvals, self.fiterrs = self.get_fit_keys()
+        self.fitkeys, self.fitvals, self.fiterrs = get_fit_keyvals(self.model)
         self.n_fit_params = len(self.fitvals)
-        self.setpriors(priorerrfact)
 
     def get_event_phases(self):
         """
@@ -118,31 +129,10 @@ class emcee_fitter(fitter.fitter):
         # ensure all postive
         return np.where(phss < 0.0, phss + 1.0, phss)
 
-    def get_fit_keys(self):
-        """Read the model to determine fitted keys and their values and errors from the par file
-        """
-        fitkeys = [p for p in self.model.params if not
-            getattr(self.model,p).frozen]
-        fitvals = []
-        fiterrs = []
-        for p in fitkeys:
-            fitvals.append(getattr(self.model, p).value)
-            fiterrs.append(getattr(self.model, p).uncertainty)
-            # I think the following is just to strip off units from those params
-            if p in ["RAJ", "DECJ", "T0", "GLEP_1"]:
-                fitvals[-1] = fitvals[-1].value
-                if p not in ["T0", "GLEP_1"]:
-                    fiterrs[-1] = fiterrs[-1].value
-        return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
-
-    def setpriors(self, priorerrfact):
-        """Set the priors on the parameters"""
-        for key, v, e in zip(self.fitkeys,self.fitvals,self.fiterrs):
-            getattr(self.model,key).prior = Prior(norm(loc=float(v),scale=float(e*priorerrfact)))
-        
+      
     def lnprior(self, theta):
         """
-        The log prior
+        The log prior evaulated at the parameter values specified
         """
         lnsum = 0.0
         for val, key in zip(theta, self.fitkeys):
@@ -187,7 +177,7 @@ class emcee_fitter(fitter.fitter):
         # first scale the params based on the errors
         ntheta = (theta * self.fiterrs) + self.fitvals
         self.set_params(dict(zip(self.fitkeys, ntheta)))
-        if 'PX' in self.fitkeys and self.model.PX.value < 0.0:
+        if not np.isfinite(self.lnprior(ntheta)):
             return np.inf
         phases = self.get_event_phases()
         lnlikelihood = marginalize_over_phase(phases, self.template,
@@ -295,6 +285,9 @@ if __name__ == '__main__':
     nwalkers = args.nwalkers
     burnin = args.burnin
     nsteps = args.nsteps
+    if burnin >= nsteps:
+        log.error('burnin must be < nsteps')
+        sys.exit(1)
     nbins = 256 # For likelihood calculation based on gaussians file
     outprof_nbins = 256 # in the text file, for pygaussfit.py, for instance
     minMJD = args.minMJD
@@ -316,22 +309,6 @@ if __name__ == '__main__':
     # Set the target coords for automatic weighting if necessary
     target = SkyCoord(modelin.RAJ.value, modelin.DECJ.value, \
         frame='icrs') if weightcol=='CALC' else None
-
-    # Set up the priors on each parameter
-#             Do uniform priors first
-#             if key=="GLEP_1":
-#                 Don't allow a glitch within the first/last 100 days
-#                 lnsum += 0.0 if 54680.0+100 < val < maxMJD-100 else -np.inf
-#             elif key=="GLPH_1":
-#                 lnsum += 0.0 if -0.5 < val < 0.5 else -np.inf
-#             elif key=="SINI":
-#                 lnsum += 0.0 if 0.0 < val < 1.0 else -np.inf
-#             elif key=="M2":
-#                 lnsum += 0.0 if 0.1 < val < 0.6 else -np.inf
-#             else:  # gaussian prior based on initial param errors
-#                 lnsum += (-np.log(sig * np.sqrt(2.0 * np.pi)) -
-#                           (val-mn)**2.0/(2.0*sig**2.0))
-
 
     # TODO: make this properly handle long double
     if not args.usepickle or (not (os.path.isfile(eventfile+".pickle") or
@@ -376,8 +353,30 @@ if __name__ == '__main__':
     gtemplate = pu.read_gaussfitfile(gaussianfile, nbins)
     gtemplate /= gtemplate.sum()
 
+
+    # Set the priors on the parameters in the model, before
+    # instantiating the emcee_fitter
+    # Currently, this adds a gaussian prior on each parameter
+    # with width equal to the par file uncertainty * priorerrfact,
+    # and then puts in some special cases.
+    # *** This should be replaced/supplemented with a way to specify
+    # more general priors on parameters that need certain bounds
+    # Also, it would be good to have a gaussian prior with limits
+    # (for things like E and PX)
+    fitkeys, fitvals, fiterrs = get_fit_keyvals(modelin)
+
+    for key, v, e in zip(fitkeys,fitvals,fiterrs):
+        if key == 'SINI' or key == 'E' or key == 'ECC':
+            getattr(modelin,key).prior = Prior(UniformBoundedPrior(0.0,1.0))
+        elif key == 'PX':
+            getattr(modelin,key).prior = Prior(UniformBoundedPrior(0.0,10.0))
+        elif key.startswith('GLPH'):
+            getattr(modelin,key).prior = Prior(UniformBoundedPrior(-0.5,0.5))
+        else:
+            getattr(modelin,key).prior = Prior(norm(loc=float(v),scale=float(e*args.priorerrfact)))
+
     # Now define the requirements for emcee
-    ftr = emcee_fitter(ts, modelin, gtemplate, weights, args.priorerrfact)
+    ftr = emcee_fitter(ts, modelin, gtemplate, weights)
 
     # Use this if you want to see the effect of setting minWeight
     if args.testWeights:
@@ -481,7 +480,10 @@ if __name__ == '__main__':
     try:
         import corner
         samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
-        fig = corner.corner(samples, labels=ftr.fitkeys, bins=20)
+        # Note, I had to turn off plot_contours because I kept getting
+        # errors about how contour levels must be increasing.
+        fig = corner.corner(samples, labels=ftr.fitkeys, bins=20,
+            truths=ftr.maxpost_fitvals, plot_contours=False)
         fig.savefig(ftr.model.PSR.value+"_triangle.png")
         plt.close()
     except:
