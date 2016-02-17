@@ -5,7 +5,7 @@ import pint.models
 import pint.fitter as fitter
 import pint.fermi_toas as fermi
 from pint.eventstats import hmw, hm
-from pint.models.priors import Prior, UniformPrior, UniformBoundedPrior
+from pint.models.priors import Prior, UniformRV, UniformBoundedRV, GaussianBoundedRV
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 import astropy.table
@@ -172,7 +172,6 @@ class emcee_fitter(fitter.fitter):
         """
         Returns -log(likelihood) so that we can use scipy.optimize.minimize
         
-        *** Should update this to use priors
         """
         # first scale the params based on the errors
         ntheta = (theta * self.fiterrs) + self.fitvals
@@ -316,8 +315,8 @@ if __name__ == '__main__':
         # Read event file and return list of TOA objects
         tl = fermi.load_Fermi_TOAs(eventfile, weightcolumn=weightcol,
                                    targetcoord=target, minweight=minWeight)
-        # Limit the TOAs to ones where we have IERS corrections for
-        tl = [tl[ii] for ii in range(len(tl)) if (tl[ii].mjd.value < maxMJD
+        # Limit the TOAs to ones in selected MJD range and above minWeight
+        tl = [tl[ii] for ii in range(len(tl)) if (tl[ii].mjd.value > minMJD and tl[ii].mjd.value < maxMJD
             and (weightcol is None or tl[ii].flags['weight'] > minWeight))]
         print "There are %d events we will use" % len(tl)
         # Now convert to TOAs object and compute TDBs and posvels
@@ -361,17 +360,15 @@ if __name__ == '__main__':
     # and then puts in some special cases.
     # *** This should be replaced/supplemented with a way to specify
     # more general priors on parameters that need certain bounds
-    # Also, it would be good to have a gaussian prior with limits
-    # (for things like E and PX)
     fitkeys, fitvals, fiterrs = get_fit_keyvals(modelin)
 
     for key, v, e in zip(fitkeys,fitvals,fiterrs):
         if key == 'SINI' or key == 'E' or key == 'ECC':
-            getattr(modelin,key).prior = Prior(UniformBoundedPrior(0.0,1.0))
+            getattr(modelin,key).prior = Prior(UniformBoundedRV(0.0,1.0))
         elif key == 'PX':
-            getattr(modelin,key).prior = Prior(UniformBoundedPrior(0.0,10.0))
+            getattr(modelin,key).prior = Prior(UniformBoundedRV(0.0,10.0))
         elif key.startswith('GLPH'):
-            getattr(modelin,key).prior = Prior(UniformBoundedPrior(-0.5,0.5))
+            getattr(modelin,key).prior = Prior(UniformBoundedRV(-0.5,0.5))
         else:
             getattr(modelin,key).prior = Prior(norm(loc=float(v),scale=float(e*args.priorerrfact)))
 
@@ -420,7 +417,7 @@ if __name__ == '__main__':
         # Keep the starting deviations small...
         pos = [ftr.fitvals + ftr.fiterrs/args.initerrfact * np.random.randn(ndim)
             for ii in range(nwalkers)]
-        # Set starting params with uniform priors to uniform in the prior
+        # Set starting params
         for param in ["GLPH_1", "GLEP_1", "SINI", "M2", "E", "ECC", "PX", "A1"]:
             if param in ftr.fitkeys:
                 idx = ftr.fitkeys.index(param)

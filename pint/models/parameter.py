@@ -58,7 +58,7 @@ class Parameter(object):
 
     def __init__(self, name=None, value=None, units=None, description=None,
                  uncertainty=None, frozen=True, aliases=None, continuous=True,
-                 prior=priors.Prior(priors.UniformPrior()),
+                 prior=priors.Prior(priors.UniformRV()),
                  parse_value=fortran_float, print_value=str,
                  get_value=lambda x: x, get_num_value=lambda x: x):
         self.name = name  # name of the parameter
@@ -70,7 +70,7 @@ class Parameter(object):
         self.get_value = get_value # Method to update value from num_value
         self.value = value # The value of parameter, internal storage
         
-        self._prior = prior
+        self.prior = prior 
 
         self.description = description
         self.uncertainty = uncertainty
@@ -86,6 +86,16 @@ class Parameter(object):
         self.parse_uncertainty = fortran_float
         self.paramType = 'Parameter'  # Type of parameter. Here is general type
 
+    @property
+    def prior(self):
+        return self._prior
+        
+    @prior.setter
+    def prior(self,p):
+        if not isinstance(p,priors.Prior):
+            log.error("prior must be an instance of Prior()")
+        self._prior = p
+        
     # Setup units property
     @property
     def units(self):
@@ -164,9 +174,9 @@ class Parameter(object):
         Probabilities are evaluated using the num_value attribute
         """
         if value is None:
-            return self._prior.pdf(self.num_value) if not logpdf else self._prior.logpdf(self.num_value)
+            return self.prior.pdf(self.num_value) if not logpdf else self.prior.logpdf(self.num_value)
         else:
-            return self._prior.pdf(value) if not logpdf else self._prior.logpdf(value)
+            return self.prior.pdf(value) if not logpdf else self.prior.logpdf(value)
             
     # Setup num_value property
     @property
