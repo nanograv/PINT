@@ -5,7 +5,7 @@ import pint.models
 import pint.fitter as fitter
 import pint.fermi_toas as fermi
 from pint.eventstats import hmw, hm
-from pint.models.priors import Prior, UniformPrior, UniformBoundedPrior
+from pint.models.priors import Prior, UniformRV, UniformBoundedRV, GaussianBoundedRV
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 import astropy.table
@@ -172,7 +172,6 @@ class emcee_fitter(fitter.fitter):
         """
         Returns -log(likelihood) so that we can use scipy.optimize.minimize
         
-        *** Should update this to use priors
         """
         # first scale the params based on the errors
         ntheta = (theta * self.fiterrs) + self.fitvals
@@ -367,11 +366,11 @@ if __name__ == '__main__':
 
     for key, v, e in zip(fitkeys,fitvals,fiterrs):
         if key == 'SINI' or key == 'E' or key == 'ECC':
-            getattr(modelin,key).prior = Prior(UniformBoundedPrior(0.0,1.0))
+            getattr(modelin,key).prior = Prior(UniformBoundedRV(0.0,1.0))
         elif key == 'PX':
-            getattr(modelin,key).prior = Prior(UniformBoundedPrior(0.0,10.0))
+            getattr(modelin,key).prior = Prior(UniformBoundedRV(0.0,10.0))
         elif key.startswith('GLPH'):
-            getattr(modelin,key).prior = Prior(UniformBoundedPrior(-0.5,0.5))
+            getattr(modelin,key).prior = Prior(UniformBoundedRV(-0.5,0.5))
         else:
             getattr(modelin,key).prior = Prior(norm(loc=float(v),scale=float(e*args.priorerrfact)))
 
