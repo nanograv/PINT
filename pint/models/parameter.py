@@ -194,8 +194,7 @@ class Parameter(object):
         else:
             self._num_value = val
             self._value = self.get_value(val)
-        else:
-            raise ValueError('.num_value can only take a pure number.')
+            
     # Setup num_unit property
     @property
     def num_unit(self):
