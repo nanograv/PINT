@@ -108,7 +108,7 @@ class Astrometry(TimingModel):
         re_dot_L = numpy.sum(toas['ssb_obs_pos']*L_hat, axis=1)
         delay = -re_dot_L.to(ls).value
         if self.PX.value != 0.0:
-            L = ((1.0 / self.PX.value) * u.kpc)
+            L = ((1.0 / self.PX.num_value) * u.kpc)
             # TODO: numpy.sum currently loses units in some cases...
             re_sqr = numpy.sum(toas['ssb_obs_pos']**2, axis=1) * toas['ssb_obs_pos'].unit**2
             delay += (0.5 * (re_sqr / L) * (1.0 - re_dot_L**2 / re_sqr)).to(ls).value
