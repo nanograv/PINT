@@ -121,14 +121,15 @@ class GaussianBoundedRV(rv_continuous):
         self.gaussian = scipy.stats.norm(loc=loc,scale=scale)
         # Norm should be the integral of the gaussian from lower to upper
         # so that integral over allowed range will be == 1.0
-        self.norm = 1.0/(gaussian.cdf(upper_bound)-gaussian.cdf(lower_bound))
+        self.norm = 1.0/(self.gaussian.cdf(upper_bound)-self.gaussian.cdf(lower_bound))
                 
     def _pdf(self,x):
-        ret = np.where(np.logical_and(x>self.lower,x<self.upper),self.norm,0.0)
-        return ret*gaussian(x)
+        ret = np.where(np.logical_and(x>self.lower,x<self.upper), 
+            self.norm*self.gaussian.pdf(x), 0.0)
+        return ret
         
     def _logpdf(self,x):
         ret = np.where(np.logical_and(x>self.lower,x<self.upper),
-                       np.log(self.norm), -np.inf)
-        return ret*gaussian(x)
+                       np.log(self.norm)*self.gaussian.logpdf(x), -np.inf)
+        return ret
        
