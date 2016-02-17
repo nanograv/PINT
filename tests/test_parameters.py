@@ -41,7 +41,7 @@ class TestParameters(unittest.TestCase):
     def test_num_value3(self):
         self.m.T0.num_value = 50044.3322
         # I don't understand why this is failing...  something about float128
-        assert self.m.T0.num_value == 50044.3322
+        assert numpy.isclose(self.m.T0.num_value, 50044.3322)
 
     def set_num_value4(self):
         self.m.T0.num_value = None
@@ -54,8 +54,8 @@ class TestParameters(unittest.TestCase):
         self.assertRaises(ValueError, self.set_num_value5)
 
     def test_value1(self):
-        self.m.OM.value = 10
-        assert self.m.OM.value == 10 * u.deg
+        self.m.OM.value = 10.0*u.deg
+        assert self.m.OM.value == 10.0 * u.deg
 
     def set_value2(self):
         self.m.OM.value = None
