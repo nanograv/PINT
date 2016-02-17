@@ -1,4 +1,5 @@
 import astropy.units as u
+import numpy as np
 
 class resids(object):
     """resids(toa=None, model=None)"""
@@ -49,7 +50,10 @@ class resids(object):
     def calc_chi2(self):
         """Return the weighted chi-squared for the model and toas."""
         # Residual units are in seconds. Error units are in microseconds.
-        return ((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()
+        if (self.toas.get_errors()==0.0).any():
+            return np.inf
+        else:
+            return ((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()
 
     def get_dof(self):
         """Return number of degrees of freedom for the model."""

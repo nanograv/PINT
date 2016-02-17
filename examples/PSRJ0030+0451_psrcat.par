@@ -1,0 +1,17 @@
+PSRJ            J0030+0451
+RAJ             00:30:27.4303
+DECJ            +04:51:39.74 
+DM              4.333        
+PEPOCH          50984.4
+F0              205.530699274922 1 0.0000001
+F1              -4.2976E-16   1 1.0e-18
+PMRA            -5.3            
+PMDEC           -2              
+POSEPOCH        52079
+C PX              4.1             
+EPHVER          2
+UNITS           TDB
+PLANET_SHAPIRO N
+TZRMJD 56000
+TZRSITE 1
+TZRFRQ 1400.0

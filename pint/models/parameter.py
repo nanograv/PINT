@@ -13,7 +13,9 @@ import astropy.constants as const
 from astropy.coordinates.angles import Angle
 import re
 import numbers
-#from .timing_model import Cache
+import priors
+
+
 
 class Parameter(object):
     """A PINT class describing a single timing model parameter. The parameter
@@ -61,7 +63,9 @@ class Parameter(object):
                  uncertainty=None, frozen=True, aliases=None, continuous=True,
                  parse_value=fortran_float, print_value=str, set_value=lambda x: x,
                  get_value=lambda x: x, get_num_value=lambda x: x,
+                 prior=priors.Prior(priors.UniformRV()),
                  parse_uncertainty=None):
+
         self.name = name  # name of the parameter
         self.units = units  # parameter unit in string format,or None
         # parameter num unit, in astropy.units object format.
@@ -79,6 +83,8 @@ class Parameter(object):
         else:
             self.parse_uncertainty = parse_uncertainty
         self.value = value  # The value of parameter, internal storage
+        self.prior = prior
+
         self.description = description
         self.uncertainty = uncertainty
         self.frozen = frozen
@@ -87,6 +93,17 @@ class Parameter(object):
         self.is_prefix = False
         self.paramType = 'Parameter'  # Type of parameter. Here is general type
         self.valueType = None
+
+    @property
+    def prior(self):
+        return self._prior
+
+    @prior.setter
+    def prior(self,p):
+        if not isinstance(p,priors.Prior):
+            log.error("prior must be an instance of Prior()")
+        self._prior = p
+
     # Setup units property
     @property
     def units(self):
@@ -142,6 +159,21 @@ class Parameter(object):
         self._value = self.set_value(val)
         self._num_value = self.get_num_value(self._value)
 
+    def prior_pdf(self,value=None, logpdf=False):
+        """Return the prior probability, evaluated at the current value of
+        the parameter, or at a proposed value.
+
+        Parameters
+        ----------
+        value : array_like or float_like
+
+        Probabilities are evaluated using the num_value attribute
+        """
+        if value is None:
+            return self.prior.pdf(self.num_value) if not logpdf else self.prior.logpdf(self.num_value)
+        else:
+            return self.prior.pdf(value) if not logpdf else self.prior.logpdf(value)
+
     # Setup num_value property
     @property
     def num_value(self):
@@ -154,7 +186,12 @@ class Parameter(object):
                 raise ValueError('This parameter value is number convertable. '
                                  'Setting ._num_value to None will lost the '
                                  'parameter value.')
-        elif isinstance(val, numbers.Number):
+            else:
+                self.value = None
+
+        elif not isinstance(val, numbers.Number):
+            raise ValueError('num_value has to be a pure number or None. ({0} <- {1} ({2})'.format(self.name,val,type(val)))
+        else:
             self._num_value = val
             self._value = self.get_value(val)
         else:

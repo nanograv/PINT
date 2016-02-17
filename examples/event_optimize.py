@@ -1,9 +1,12 @@
+#!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 import numpy as np
 import pint.toa as toa
 import pint.models
 import pint.fitter as fitter
 import pint.fermi_toas as fermi
 from pint.eventstats import hmw, hm
+from pint.models.priors import Prior, UniformRV, UniformBoundedRV, GaussianBoundedRV
+from scipy.stats import norm
 import matplotlib.pyplot as plt
 import astropy.table
 import astropy.units as u
@@ -11,29 +14,12 @@ import psr_utils as pu
 import scipy.optimize as op
 import sys, os, copy, fftfit
 from astropy.coordinates import SkyCoord
+from astropy import log
+import argparse
 
+#log.setLevel('DEBUG')
+#np.seterr(all='raise')
         
-# Params you might want to edit
-nwalkers = 200
-burnin = 100
-nsteps = 1000
-nbins = 256 # For likelihood calculation based on gaussians file
-outprof_nbins = 256 # in the text file, for pygaussfit.py, for instance
-minMJD = 54680.0 # Earliest MJD (limited by LAT data)
-maxMJD = 57250.0 # latest MJD to use (limited by IERS file usually)
-# Set minWeight to 0.0 to get plots about how significant the
-# pulsations are before doing an expensive MCMC.  This allows
-# you to set minWeight intelligently.
-minWeight = 0.03 # if using weights, this is the minimum to include
-errfact = 10.0 # multiplier for gaussian priors based TEMPO errors
-do_opt_first = False
-# Raise the calculated weights to this power
-wgtexp = 0.5
-
-# initialization values
-maxpost = -9e99
-numcalls = 0
-
 def measure_phase(profile, template, rotate_prof=True):
     """
     measure_phase(profile, template):
@@ -112,6 +98,18 @@ def marginalize_over_phase(phases, template, weights=None, resolution=1.0/1024,
         plt.show()
     return ltemp - dphss[lnlikes.argmax()]*ltemp, lnlikes.max()
 
+def get_fit_keyvals(model):
+    """Read the model to determine fitted keys and their values and errors from the par file
+    """
+    fitkeys = [p for p in model.params if not
+        getattr(model,p).frozen]
+    fitvals = []
+    fiterrs = []
+    for p in fitkeys:
+        fitvals.append(getattr(model, p).num_value)
+        fiterrs.append(getattr(model, p).uncertainty)
+    return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
+
 class emcee_fitter(fitter.fitter):
 
     def __init__(self, toas=None, model=None, template=None, weights=None):
@@ -120,7 +118,7 @@ class emcee_fitter(fitter.fitter):
         self.reset_model()
         self.template = template
         self.weights = weights
-        self.fitkeys, self.fitvals, self.fiterrs = self.get_lnprior_vals()
+        self.fitkeys, self.fitvals, self.fiterrs = get_fit_keyvals(self.model)
         self.n_fit_params = len(self.fitvals)
 
     def get_event_phases(self):
@@ -131,44 +129,14 @@ class emcee_fitter(fitter.fitter):
         # ensure all postive
         return np.where(phss < 0.0, phss + 1.0, phss)
 
-    def get_lnprior_vals(self, errfact=errfact):
-        """
-        By default use Gaussian priors on fit params of errfact * TEMPO errors
-        """
-        fitkeys = [p for p in self.model.params if not
-            getattr(self.model,p).frozen]
-        fitvals = []
-        fiterrs = []
-        for p in fitkeys:
-            fitvals.append(getattr(self.model, p).value)
-            fiterrs.append(getattr(self.model, p).uncertainty * errfact)
-            # I think the following is just to strip off units from those params
-            if p in ["RAJ", "DECJ", "T0", "GLEP_1"]:
-                fitvals[-1] = fitvals[-1].value
-                if p not in ["T0", "GLEP_1"]:
-                    fiterrs[-1] = fiterrs[-1].value
-        return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
-
+      
     def lnprior(self, theta):
         """
-        The log prior
+        The log prior evaulated at the parameter values specified
         """
         lnsum = 0.0
-        for val, mn, sig, key in \
-            zip(theta, self.fitvals, self.fiterrs, self.fitkeys):
-            # Do uniform priors first
-            if key=="GLEP_1":
-                # Don't allow a glitch within the first/last 100 days
-                lnsum += 0.0 if 54680.0+100 < val < maxMJD-100 else -np.inf
-            elif key=="GLPH_1":
-                lnsum += 0.0 if -0.5 < val < 0.5 else -np.inf
-            elif key=="SINI":
-                lnsum += 0.0 if 0.0 < val < 1.0 else -np.inf
-            elif key=="M2":
-                lnsum += 0.0 if 0.1 < val < 0.6 else -np.inf
-            else:  # gaussian prior based on initial param errors
-                lnsum += (-np.log(sig * np.sqrt(2.0 * np.pi)) -
-                          (val-mn)**2.0/(2.0*sig**2.0))
+        for val, key in zip(theta, self.fitkeys):
+            lnsum += getattr(self.model,key).prior_pdf(val,logpdf=True)
         return lnsum
 
     def lnposterior(self, theta):
@@ -177,23 +145,21 @@ class emcee_fitter(fitter.fitter):
         """
         global maxpost, numcalls
         self.set_params(dict(zip(self.fitkeys, theta)))
-        # Make sure parallax is positive if we are fitting for it
-        if 'PX' in self.fitkeys and self.model.PX.value < 0.0:
-            return -np.inf
-        if 'SINI' in self.fitkeys and (self.model.SINI.value > 1.0 or self.model.SINI.value < 0.0):
-            return -np.inf
-        # Do we really need to check both E and ECC or can the model param alias handle that?
-        if 'E' in self.fitkeys and (self.model.E.value < 0.0 or self.model.E.value>=1.0):
-            return -np.inf
-        if 'ECC' in self.fitkeys and (self.model.ECC.value < 0.0 or self.model.ECC.value>=1.0):
-            return -np.inf
-        phases = self.get_event_phases()
-        lnlikelihood = marginalize_over_phase(phases, self.template,
-            weights=self.weights)[1]
+
         numcalls += 1
         if numcalls % (nwalkers * nsteps / 100) == 0:
             print "~%d%% complete" % (numcalls / (nwalkers * nsteps / 100))
-        lnpost = self.lnprior(theta) + lnlikelihood
+
+        # Evaluate the prior FIRST, then don't even both computing
+        # the posterior if the prior is not finite
+        lnprior = self.lnprior(theta)
+        if not np.isfinite(lnprior):
+            return -np.inf
+
+        phases = self.get_event_phases()
+        lnlikelihood = marginalize_over_phase(phases, self.template,
+            weights=self.weights)[1]
+        lnpost = lnprior + lnlikelihood
         if lnpost > maxpost:
             print "New max: ", lnpost
             for name, val in zip(ftr.fitkeys, theta):
@@ -205,11 +171,12 @@ class emcee_fitter(fitter.fitter):
     def minimize_func(self, theta):
         """
         Returns -log(likelihood) so that we can use scipy.optimize.minimize
+        
         """
         # first scale the params based on the errors
         ntheta = (theta * self.fiterrs) + self.fitvals
         self.set_params(dict(zip(self.fitkeys, ntheta)))
-        if 'PX' in self.fitkeys and self.model.PX.value < 0.0:
+        if not np.isfinite(self.lnprior(ntheta)):
             return np.inf
         phases = self.get_event_phases()
         lnlikelihood = marginalize_over_phase(phases, self.template,
@@ -277,31 +244,79 @@ class emcee_fitter(fitter.fitter):
 
 if __name__ == '__main__':
 
-    if len(sys.argv[1:])==4:
-        eventfile, parfile, gaussianfile, weightcol = sys.argv[1:]
-    elif len(sys.argv[1:])==3:
-        eventfile, parfile, gaussianfile = sys.argv[1:]
-        weightcol=None
-    else:
-        print "usage:  python event_optimize.py eventfile parfile gaussianfile [weightcol]"
-        sys.exit()
+    parser = argparse.ArgumentParser(description="PINT tool for MCMC optimization of timing models using event data.")
+    
+    parser.add_argument("eventfile",help="event file to use")
+    parser.add_argument("parfile",help="par file to read model from")
+    parser.add_argument("gaussianfile",help="gaussian file that defines template")
+    parser.add_argument("--weightcol",help="name of weight column (or 'CALC' to have them computed",default=None)
+    parser.add_argument("--nwalkers",help="Number of MCMC walkers (def 200)",type=int,
+        default=200)
+    parser.add_argument("--burnin",help="Number of MCMC steps for burn in (def 100)",
+        type=int, default=100)
+    parser.add_argument("--nsteps",help="Number of MCMC steps to compute (def 1000)",
+        type=int, default=1000)
+    parser.add_argument("--minMJD",help="Earliest MJD to use (def 54680)",type=float,
+        default=54680.0)
+    parser.add_argument("--maxMJD",help="Latest MJD to use (def 57250)",type=float,
+        default=57250.0)
+    parser.add_argument("--minWeight",help="Minimum weight to include (def 0.05)",
+        type=float,default=0.05)
+    parser.add_argument("--wgtexp", 
+        help="Raise computed weights to this power (or 0.0 to disable any rescaling of weights)", 
+        type=float, default=0.0)
+    parser.add_argument("--testWeights",help="Make plots to evalute weight cuts?",
+        default=False,action="store_true")
+    parser.add_argument("--doOpt",help="Run initial scipy opt before MCMC?",
+        default=False,action="store_true")
+    parser.add_argument("--initerrfact",help="Multiply par file errors by this factor when initializing walker starting values",type=float,default=0.1)
+    parser.add_argument("--priorerrfact",help="Multiple par file errors by this factor when setting gaussian prior widths",type=float,default=10.0)
+    parser.add_argument("--usepickle",help="Read events from pickle file, if available?",
+        default=False,action="store_true")
+   
+    args = parser.parse_args()
 
+    eventfile = args.eventfile
+    parfile = args.parfile
+    gaussianfile = args.gaussianfile
+    weightcol = args.weightcol
+
+    nwalkers = args.nwalkers
+    burnin = args.burnin
+    nsteps = args.nsteps
+    if burnin >= nsteps:
+        log.error('burnin must be < nsteps')
+        sys.exit(1)
+    nbins = 256 # For likelihood calculation based on gaussians file
+    outprof_nbins = 256 # in the text file, for pygaussfit.py, for instance
+    minMJD = args.minMJD
+    maxMJD = args.maxMJD # Usually set by coverage of IERS file
+
+    minWeight = args.minWeight
+    do_opt_first = args.doOpt
+    wgtexp = args.wgtexp
+
+    # initialization values
+    # Should probably figure a way to make these not global variables
+    maxpost = -9e99
+    numcalls = 0
+    
     # Read in initial model
     modelin = pint.models.get_model(parfile)
     # Remove the dispersion delay as it is unnecessary
-    modelin.delay_funcs.remove(modelin.dispersion_delay)
+    modelin.delay_funcs['L1'].remove(modelin.dispersion_delay)
     # Set the target coords for automatic weighting if necessary
     target = SkyCoord(modelin.RAJ.value, modelin.DECJ.value, \
         frame='icrs') if weightcol=='CALC' else None
 
     # TODO: make this properly handle long double
-    if not (os.path.isfile(eventfile+".pickle") or
-        os.path.isfile(eventfile+".pickle.gz")):
+    if not args.usepickle or (not (os.path.isfile(eventfile+".pickle") or
+        os.path.isfile(eventfile+".pickle.gz"))):
         # Read event file and return list of TOA objects
         tl = fermi.load_Fermi_TOAs(eventfile, weightcolumn=weightcol,
                                    targetcoord=target, minweight=minWeight)
-        # Limit the TOAs to ones where we have IERS corrections for
-        tl = [tl[ii] for ii in range(len(tl)) if (tl[ii].mjd.value < maxMJD
+        # Limit the TOAs to ones in selected MJD range and above minWeight
+        tl = [tl[ii] for ii in range(len(tl)) if (tl[ii].mjd.value > minMJD and tl[ii].mjd.value < maxMJD
             and (weightcol is None or tl[ii].flags['weight'] > minWeight))]
         print "There are %d events we will use" % len(tl)
         # Now convert to TOAs object and compute TDBs and posvels
@@ -318,10 +333,12 @@ if __name__ == '__main__':
             weights = np.asarray([x['weight'] for x in ts.table['flags']])
             print "Original weights have min / max weights %.3f / %.3f" % \
                 (weights.min(), weights.max())
-            weights **= wgtexp
-            wmx, wmn = weights.max(), weights.min()
+            # Rescale the weights, if requested (by having wgtexp != 0.0)
+            if wgtexp != 0.0:
+                weights **= wgtexp
+                wmx, wmn = weights.max(), weights.min()
                 # make the highest weight = 1, but keep min weight the same
-            weights = wmn + ((weights - wmn) * (1.0 - wmn) / (wmx - wmn))
+                weights = wmn + ((weights - wmn) * (1.0 - wmn) / (wmx - wmn))
             for ii, x in enumerate(ts.table['flags']):
                 x['weight'] = weights[ii]
         weights = np.asarray([x['weight'] for x in ts.table['flags']])
@@ -335,12 +352,32 @@ if __name__ == '__main__':
     gtemplate = pu.read_gaussfitfile(gaussianfile, nbins)
     gtemplate /= gtemplate.sum()
 
+
+    # Set the priors on the parameters in the model, before
+    # instantiating the emcee_fitter
+    # Currently, this adds a gaussian prior on each parameter
+    # with width equal to the par file uncertainty * priorerrfact,
+    # and then puts in some special cases.
+    # *** This should be replaced/supplemented with a way to specify
+    # more general priors on parameters that need certain bounds
+    fitkeys, fitvals, fiterrs = get_fit_keyvals(modelin)
+
+    for key, v, e in zip(fitkeys,fitvals,fiterrs):
+        if key == 'SINI' or key == 'E' or key == 'ECC':
+            getattr(modelin,key).prior = Prior(UniformBoundedRV(0.0,1.0))
+        elif key == 'PX':
+            getattr(modelin,key).prior = Prior(UniformBoundedRV(0.0,10.0))
+        elif key.startswith('GLPH'):
+            getattr(modelin,key).prior = Prior(UniformBoundedRV(-0.5,0.5))
+        else:
+            getattr(modelin,key).prior = Prior(norm(loc=float(v),scale=float(e*args.priorerrfact)))
+
     # Now define the requirements for emcee
     ftr = emcee_fitter(ts, modelin, gtemplate, weights)
 
     # Use this if you want to see the effect of setting minWeight
-    if minWeight == 0.0:
-        print("Checking h-test vs weights")
+    if args.testWeights:
+        log.info("Checking H-test vs weights")
         ftr.prof_vs_weights(use_weights=True)
         ftr.prof_vs_weights(use_weights=False)
         sys.exit()
@@ -369,7 +406,7 @@ if __name__ == '__main__':
         like_optmin = -result['fun']
         print "Optimization likelihood:", like_optmin
         ftr.set_params(dict(zip(ftr.fitkeys, newfitvals)))
-        #ftr.phaseogram()
+        ftr.phaseogram()
     else:
         like_optmin = -np.inf
 
@@ -378,9 +415,9 @@ if __name__ == '__main__':
     ndim = ftr.n_fit_params
     if like_start > like_optmin:
         # Keep the starting deviations small...
-        pos = [ftr.fitvals + ftr.fiterrs/errfact * np.random.randn(ndim)
+        pos = [ftr.fitvals + ftr.fiterrs/args.initerrfact * np.random.randn(ndim)
             for ii in range(nwalkers)]
-        # Set starting params with uniform priors to uniform in the prior
+        # Set starting params
         for param in ["GLPH_1", "GLEP_1", "SINI", "M2", "E", "ECC", "PX", "A1"]:
             if param in ftr.fitkeys:
                 idx = ftr.fitkeys.index(param)
@@ -402,7 +439,7 @@ if __name__ == '__main__':
                 for ii in range(nwalkers):
                     pos[ii][idx] = svals[ii]
     else:
-        pos = [newfitvals + ftr.fiterrs/errfact*np.random.randn(ndim)
+        pos = [newfitvals + ftr.fiterrs/args.initerrfact*np.random.randn(ndim)
             for i in range(nwalkers)]
     # Set the 0th walker to have the initial pre-fit solution
     # This way, one walker should always be in a good position
@@ -419,12 +456,12 @@ if __name__ == '__main__':
         return dict(zip(names,chains))
 
     def plot_chains(chain_dict, file=False):
-        np = len(chain_dict)
-        fig, axes = plt.subplots(np, 1, sharex=True, figsize=(8, 9))
+        npts = len(chain_dict)
+        fig, axes = plt.subplots(npts, 1, sharex=True, figsize=(8, 9))
         for ii, name in enumerate(chain_dict.keys()):
             axes[ii].plot(chain_dict[name], color="k", alpha=0.3)
             axes[ii].set_ylabel(name)
-        axes[np-1].set_xlabel("Step Number")
+        axes[npts-1].set_xlabel("Step Number")
         fig.tight_layout()
         if file:
             fig.savefig(file)
@@ -437,11 +474,17 @@ if __name__ == '__main__':
     plot_chains(chains, file=ftr.model.PSR.value+"_chains.png")
 
     # Make the triangle plot.
-    import corner
-    samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
-    fig = corner.corner(samples, labels=ftr.fitkeys, bins=50)
-    fig.savefig(ftr.model.PSR.value+"_triangle.png")
-    plt.close()
+    try:
+        import corner
+        samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
+        # Note, I had to turn off plot_contours because I kept getting
+        # errors about how contour levels must be increasing.
+        fig = corner.corner(samples, labels=ftr.fitkeys, bins=20,
+            truths=ftr.maxpost_fitvals, plot_contours=False)
+        fig.savefig(ftr.model.PSR.value+"_triangle.png")
+        plt.close()
+    except:
+        log.warning("Corner plot failed")
 
     # Make a phaseogram with the 50th percentile values
     #ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
