@@ -51,7 +51,6 @@ class PSRbinaryWapper(TimingModel):
                                    " prediction",
                        parse_value=utils.data2longdouble),binary_param=True)
 
-
         self.add_param(Parameter(name="A1", units=ls,
                        description="Projected semi-major axis, a*sin(i)",
                        parse_value=np.double),binary_param=True)
@@ -92,7 +91,10 @@ class PSRbinaryWapper(TimingModel):
     def setup(self):
         super(PSRbinaryWapper, self).setup()
 
+    # With new parameter class set up, do we need this?
     def apply_units(self):
+        """Apply units to parameter value.
+        """
         for bpar in self.binary_params:
             bparObj = getattr(self,bpar)
             if bparObj.num_value is None or bparObj.num_unit is None:
@@ -114,7 +116,7 @@ class PSRbinaryWapper(TimingModel):
             if par in binobj.param_aliases.keys():
                 aliase = binobj.param_aliases[par]
             if hasattr(self, par) or \
-                list(set(aliase).intersection(self.params)!=[]) :
+                list(set(aliase).intersection(self.params))!=[] :
                 binObjpar = getattr(self, par)
                 if binObjpar.num_value is None:
                     continue
@@ -130,20 +132,20 @@ class PSRbinaryWapper(TimingModel):
 
         return bmob.binary_delay()
 
-
-    def binary_delay(self,toas):
-        """Returns total pulsar binary delay.
-           Parameters
-           ----------
-           toas : PINT toas table
-           Return
-           ----------
-           Pulsar binary delay in the units of second
-        """
-        bdelay = np.longdouble(np.zeros(len(toas)))*u.s
-        for bdf in self.binary_delay_funcs:
-            bdelay+= bdf(toas)
-        return bdelay
+    #
+    # def binary_delay(self,toas):
+    #     """Returns total pulsar binary delay.
+    #        Parameters
+    #        ----------
+    #        toas : PINT toas table
+    #        Return
+    #        ----------
+    #        Pulsar binary delay in the units of second
+    #     """
+    #     bdelay = np.longdouble(np.zeros(len(toas)))*u.s
+    #     for bdf in self.binary_delay_funcs:
+    #         bdelay+= bdf(toas)
+    #     return bdelay
 
     @Cache.use_cache
     def d_delay_d_xxxx(self,param,toas):
