@@ -58,6 +58,8 @@ class DDwrapper(PSRbinaryWapper):
         self.delay_funcs['L2'] += self.binary_delay_funcs
         
     def setup(self):
+        """Check out parameters setup. 
+        """
         super(DDwrapper,self).setup()
         for p in ("PB", "T0", "A1"):
             if getattr(self, p).value is None:

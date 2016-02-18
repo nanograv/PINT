@@ -126,6 +126,12 @@ class PSR_BINARY(object):
 
     @Cache.use_cache
     def d_binarydelay_d_par(self, par):
+        """Get the binary delay derivatives respect to parameters.
+        Parameter
+        ---------
+        par : str
+            Parameter name.
+        """
         # search for aliases
         if par not in self.binary_params and self.search_alias(par) is None:
             raise AttributeError('Can not find parameter '+par+' in '\
@@ -193,7 +199,6 @@ class PSR_BINARY(object):
         # Call derivtive functions
         derU =  ((yU/xU).decompose()).unit
 
-
         if hasattr(self,'d_'+y+'_d_'+x):
             dername = 'd_'+y+'_d_'+x
             result = getattr(self,dername)()
@@ -249,6 +254,9 @@ class PSR_BINARY(object):
         ####################################
     @Cache.cache_result
     def get_tt0(self,barycentricTOA):
+        """
+        tt0 = barycentricTOA - T0
+        """
         if barycentricTOA is None or self.T0 is None:
             tt0 = None
             return tt0
@@ -257,9 +265,12 @@ class PSR_BINARY(object):
             barycentricTOA = barycentricTOA*u.day
         tt0 = (barycentricTOA - T0).to('second')
         return tt0
+
     ####################################
     @Cache.cache_result
     def ecc(self):
+        """Calculate ecctricity with EDOT
+        """
         ECC = self.ECC
         EDOT = self.EDOT
         return ECC + (self.tt0*EDOT).decompose()
