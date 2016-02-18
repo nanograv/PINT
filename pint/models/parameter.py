@@ -194,7 +194,7 @@ class Parameter(object):
         else:
             self._num_value = val
             self._value = self.get_value(val)
-            
+
     # Setup num_unit property
     @property
     def num_unit(self):
@@ -584,6 +584,16 @@ class prefixParameter(Parameter):
             Description template for prefixed parameters
         prefix_aliases : list of str optional
             Alias for the prefix
+        frozen : bool, optional
+            A flag specifying whether "fitters" should adjust the value of this
+            parameter or leave it fixed.
+        continuous : bool
+        type_match : str, optinal, default 'float'
+            Example paramter class template for value and num_value setter
+        long_double : bool, optional default 'double'
+            Set float type value and num_value in numpy float128
+        time_scale : str, optional default 'utc'
+            Time scale for MJDParameter class. 
     """
 
     def __init__(self, name=None, prefix=None, indexformat=None, index=1,
@@ -639,7 +649,8 @@ class prefixParameter(Parameter):
             self.unit_template = lambda x: self.units
         if self.description_template is None:
             self.description_template = lambda x: self.descrition
-        # Here is a bug example parameters should be initialize totally
+        # Using other parameter class as a template for value and num_value
+        # setter
         self.type_separator = {
                                'float': (floatParameter,
                                          ['units',' value', 'long_double',
@@ -693,7 +704,6 @@ class prefixParameter(Parameter):
         unt = self.unit_template(self.index)
         self.units = unt
 
-    #@Cache.cache_result
     def get_par_type_object(self):
         par_type_class = self.type_separator[self.type_match][0]
         obj = par_type_class('example')
@@ -704,31 +714,26 @@ class prefixParameter(Parameter):
                 setattr(obj, dp, prefix_arg)
         return obj
 
-    #@Cache.use_cache
     def set_value_prefix(self, val):
         obj = self.get_par_type_object()
         result = obj.set_value(val)
         return result
 
-    #@Cache.use_cache
     def get_value_prefix(self, val):
         obj = self.get_par_type_object()
         result = obj.get_value(val)
         return result
 
-    #@Cache.use_cache
     def get_num_value_prefix(self, val):
         obj = self.get_par_type_object()
         result = obj.get_num_value(val)
         return result
 
-    #@Cache.use_cache
     def print_value_prefix(self, val):
         obj = self.get_par_type_object()
         result = obj.print_value(val)
         return result
 
-    #@Cache.use_cache
     def parse_uncertainty_prefix(self, val):
         obj = self.get_par_type_object()
         result = obj.parse_uncertainty(val)
