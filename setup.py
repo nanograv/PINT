@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 import numpy, os, sys
 from distutils.extension import Extension
 try:
