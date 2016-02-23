@@ -105,16 +105,16 @@ class Parameter(object):
     def units(self, unt):
         # Check if this is the first time set units
         if hasattr(self, 'value'):
-            if self.units is None:
-                return
-            wmsg = 'Parameter '+self.name+' units has been reset to '+unt
-            log.warning(wmsg)
-            try:
-                if hasattr(self.value, 'unit'):
-                    temp = self.value.to(self.num_unit)
-            except:
-                log.warning('The value unit is not compatable with'
-                            ' parameter units,right now.')
+            if self.units is not None:
+                wmsg = 'Parameter '+self.name+' units has been reset to '+unt
+                wmsg += ' from'+self.units
+                log.warning(wmsg)
+                try:
+                    if hasattr(self.value, 'unit'):
+                        temp = self.value.to(self.num_unit)
+                except:
+                    log.warning('The value unit is not compatable with'
+                                ' parameter units,right now.')
         # Setup unit and num unit
         if isinstance(unt, (u.Unit, u.CompositeUnit)):
             self._units = unt.to_string()
@@ -465,14 +465,12 @@ class prefixParameter(Parameter):
 
     def apply_template(self):
         dsc = self.description_template(self.index)
+        self.description = dsc
         unt = self.unit_template(self.index)
-        if self.description is None:
-            self.description = dsc
-        if self.units is None:
-            self.units = unt
+        self.units = unt
 
     def new_index_prefix_param(self, index):
-        newpfx = prefixParameter(prefix=self.prefix,
+        newpfx = prefixParameter(prefix=self.prefix, value=self.value,
                                  indexformat=self.indexformat, index=index,
                                  unitTplt=self.unit_template,
                                  descriptionTplt=self.description_template,

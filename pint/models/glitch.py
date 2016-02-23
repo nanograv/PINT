@@ -26,27 +26,33 @@ class Glitch(TimingModel):
         self.add_param(prefixParameter(name="GLPH_1", units="pulse phase",
                        value=0.0,
                        descriptionTplt=lambda x: "Phase change for glitch %d"
-                                                 % x,))
+                                                 % x,
+                       unitTplt=lambda x: 'pulse phase'))
         self.add_param(prefixParameter(name="GLEP_1", units='day',
                        descriptionTplt=lambda x: "Epoch of glitch %d" % x,
                        parse_value=lambda x: time_from_mjd_string(x,
                                                                   scale='tdb'),
-                       get_value=lambda x: time_from_longdouble(x, 'tdb')))
+                       get_value=lambda x: time_from_longdouble(x, 'tdb'),
+                       unitTplt=lambda x: 'day'))
         self.add_param(prefixParameter(name="GLF0_1", units="Hz", value=0.0,
                        descriptionTplt=lambda x: "Permanent frequency change"
-                                                 " for glitch %d" % x))
+                                                 " for glitch %d" % x,
+                       unitTplt=lambda x: 'Hz'))
         self.add_param(prefixParameter(name="GLF1_1", units="Hz/s", value=0.0,
                        descriptionTplt=lambda x: "Permanent frequency-"
                                                  "derivative change for glitch"
-                                                 " %d " % x))
+                                                 " %d " % x,
+                       unitTplt=lambda x: 'Hz/s'))
         self.add_param(prefixParameter(name="GLF0D_1", units="Hz", value=0.0,
                        descriptionTplt=lambda x: "Decaying frequency change for"
-                                                 " glitch %d " % x))
+                                                 " glitch %d " % x,
+                       unitTplt=lambda x: 'Hz'))
 
         self.add_param(prefixParameter(name="GLTD_1",
                        units="day", value=0.0,
                        descriptionTplt=lambda x: "Decay time constant for"
-                                                 " glitch %d" % x))
+                                                 " glitch %d" % x,
+                       unitTplt=lambda x: 'day'))
         self.phase_funcs += [self.glitch_phase]
 
     def setup(self):
