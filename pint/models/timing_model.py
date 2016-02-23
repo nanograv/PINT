@@ -248,7 +248,7 @@ class TimingModel(object):
         """
         pass
 
-    def d_phase_d_toa(self, toas, obs=None, sample_step=None):
+    def d_phase_d_toa(self, toas, sample_step=None):
         """Return the derivative of phase wrt TOA
         Parameter
         ---------
@@ -270,29 +270,37 @@ class TimingModel(object):
         sample_dt = [-sample_step_day,2 * sample_step_day]
         table = toas.table
 
-        if obs is None:
-            time_scale = 'utc'
-            TOAobj = copy_toas
+        for ii, key in enumerate(self.table.groups.keys):
+            grp = self.table.groups[ii]
+            obs = self.table.groups.keys[ii]['obs']
+            loind, hiind = self.table.groups.indices[ii:ii+2]
+            if obs in []
 
-        # Get read for barycentric d_phase_d_toa
-        elif obs.lower() in ['ssb','bary','barycenter']:
-            time_scale = 'tdb'
-            bTOA = self.get_barycentric_toas(ttable)
-            TOAobj = toa.read_fake_TOAs(bTOA.value, obs='Barycenter',
-                                        scale=time_scale)
 
-        elif obs.lower() in ['geo','geocenter','geocentric']:
-            time_scale = 'utc'
-            geoTOA = ttable['tdbld']+ self.topo_center_delay(ttable)
-            TOAobj = toa.read_fake_TOAs(geoTOA, obs='Geocenter',
-                                        scale=time_scale)
-        else:
-            raise ValueError('Unknown position to calculate d_phase_d_toa')
-
-        if time_scale == 'utc':
-            dt_scale = 'ut1'
-        else:
-            dt_scale = time_scale
+        return copy_toas
+        # if obs is None:
+        #     time_scale = 'utc'
+        #     TOAobj = copy_toas
+        #
+        # # Get read for barycentric d_phase_d_toa
+        # elif obs.lower() in ['ssb','bary','barycenter']:
+        #     time_scale = 'tdb'
+        #     bTOA = self.get_barycentric_toas(ttable)
+        #     TOAobj = toa.read_fake_TOAs(bTOA.value, obs='Barycenter',
+        #                                 scale=time_scale)
+        #
+        # elif obs.lower() in ['geo','geocenter','geocentric']:
+        #     time_scale = 'utc'
+        #     geoTOA = ttable['tdbld']+ self.topo_center_delay(ttable)
+        #     TOAobj = toa.read_fake_TOAs(geoTOA, obs='Geocenter',
+        #                                 scale=time_scale)
+        # else:
+        #     raise ValueError('Unknown position to calculate d_phase_d_toa')
+        #
+        # if time_scale == 'utc':
+        #     dt_scale = 'ut1'
+        # else:
+        #     dt_scale = time_scale
         sample_phase = []
         for dt in sample_dt:
 
