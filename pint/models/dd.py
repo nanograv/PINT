@@ -56,7 +56,7 @@ def DD_delay_func(t, PB, T0, A1, OM=0.0, ECC=0.0, EDOT=0.0, PBDOT=0.0, XDOT=0.0,
     @param sini:    Sine of inclination angle
     """
     # TODO (RvH): How do I get the solMass in seconds using astropy?
-    SUNMASS         = np.float128('4.925490947e-6')
+    SUNMASS         = np.longdouble('4.925490947e-6')
 
     # TODO (RvH):
     # - XPBDOT is completely covariant with PBDOT. Why is it included in Tempo2?
