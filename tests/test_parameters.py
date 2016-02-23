@@ -36,30 +36,52 @@ class TestParameters(unittest.TestCase):
         """Check whether the value and units of F0 parameter are ok"""
         num_unit = u.Hz
         num_value = str2longdouble('186.49408156698235146')
+        num_value = 186.49408156698235
 
         self.assertEqual(self.m.F0.num_unit, num_unit)
+        self.assertTrue(
+                numpy.isclose(self.m.F0.num_value, num_value, atol=1e-13))
         self.assertEqual(self.m.F0.num_value, num_value)
-        self.assertEqual(self.m.F0.value, num_value*num_unit)
+
+    def test_set_new_units(self):
+        """Check whether we can set the units to non-standard ones """
+        # Standard units
+        num_unit = u.Hz
+        str_unit = 'Hz'
+        num_value = 186.49
+        # New units
+        num_unit_new = u.kHz
+        str_unit_new = 'kHz'
+        num_value_new = 0.18649
+        
+        # Set it to 186.49 Hz: the 'standard' value
+        self.m.F0.value = num_value * num_unit
+        self.assertTrue(
+                numpy.isclose(self.m.F0.num_value, num_value, atol=1e-13))
+
+        # Now change the units
+        self.m.F0.units = str_unit_new
+        self.assertTrue(
+                numpy.isclose(self.m.F0.num_value, num_value_new, atol=1e-13))
+
+        # Change the units back, and then set them implicitly
+        self.m.F0.units = str_unit
+        self.m.F0.value = num_value_new * num_unit_new
+        self.assertTrue(
+                numpy.isclose(self.m.F0.num_value, num_value_new, atol=1e-13))
+
+        # Check the ratio, using the old units as a reference
+        ratio = self.m.F0.value / (num_value * num_unit)
+        self.assertTrue(
+                numpy.isclose(ratio.decompose(u.si.bases), 1.0, atol=1e-13))
 
     def set_num_unit_fail(self):
         """Setting the unit to a non-compatible unit should fail """
         self.m.RAJ.num_unit = u.m
 
-    def set_num_unit_pass_identical(self):
-        """Setting the unit to the same unit as the base unit should pass """
-        #self.m.RAJ.num_unit = u.hourangle
-        pass
-
-    def set_num_unit_pass_compatible(self):
-        """Setting the unit to a compatible unit should pass """
-        #self.m.RAJ.num_unit = u.deg
-        pass
-
     def test_num_unit(self):
         """Test setting the units """
         self.assertRaises(AttributeError, self.set_num_unit_fail)
-        self.set_num_unit_pass_identical()
-        self.set_num_unit_pass_compatible()
 
     def set_num_to_unit(self):
         """Try to set the numerical value to a unit """
@@ -108,26 +130,42 @@ class TestParameters(unittest.TestCase):
         value = 10.0 * u.deg
         self.m.OM.value = value
 
-        self.assertEqual(self.OM.value, value)
+        self.assertEqual(self.m.OM.value, value)
         self.assertRaises(ValueError, self.set_OM_to_none)
         self.assertRaises(ValueError, self.set_OM_to_time)
 
-    def test_prefix_value1(self):
-        self.mp.GLF0_2.value = 50
-        assert self.mp.GLF0_2.value == 50 * u.Hz
+    def test_prefix_value_to_num(self):
+        """Test setting the prefix parameter """
+        num_value = 51
+        num_unit = u.Hz
+        self.mp.GLF0_2.value = num_value
+
+        self.assertEqual(self.mp.GLF0_2.value, num_value * num_unit)
+
+        num_value = 50
+        self.mp.GLF0_2.num_value = num_value
+        self.assertEqual(self.mp.GLF0_2.value, num_value * num_unit)
 
     def test_prefix_value_str(self):
-        self.mp.GLF0_2.value = '50'
-        assert self.mp.GLF0_2.value == 50 * u.Hz
+        """Test setting the prefix parameter from a string"""
+        str_value = '50'
+        num_value = 50
+        num_unit = u.Hz
 
-    def test_prefix_value_quantity(self):
-        self.mp.GLF0_2.value = 50 * u.Hz
-        assert self.mp.GLF0_2.value == 50 * u.Hz
+        self.mp.GLF0_2.value = str_value
 
-    def set_prefix_value1(self):
-        self.mp.GLF0_2.value = 100 * u.s
-    def test_prefix_value1(self):
-        self.assertRaises(ValueError, self.set_prefix_value1)
+        self.assertEqual(self.mp.GLF0_2.value, num_value * num_unit)
+
+    def set_prefix_value_to_unit_fail(self):
+        """Set the prefix parameter to an incompatible value"""
+        num_value = 50
+        num_unit = u.s
+
+        self.mp.GLF0_2.value = num_value * num_unit
+
+    def test_prefix_value_fail(self):
+        """Test setting the prefix parameter to an incompatible value"""
+        self.assertRaises(ValueError, self.set_prefix_value_to_unit_fail)
 
 if __name__ == '__main__':
     pass
