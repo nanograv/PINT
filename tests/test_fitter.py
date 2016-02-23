@@ -7,7 +7,7 @@ from pint import fitter
 import matplotlib.pyplot as plt
 import numpy
 
-testdir=os.path.join(os.getenv('PINT'),'tests');
+testdir=os.path.join(os.getenv('PINT'), 'tests', 'datafile');
 
 # Get model
 m = tm.StandardTimingModel()
@@ -41,7 +41,7 @@ print('chi^2 is %0.2f after 4-param fit' % f.resids.chi2)
 p2=plt.errorbar(xt,f.resids.time_resids.value,yerr,fmt='go');
 
 # Now perturb F1 and fit only that. This doesn't work, though tempo2 easily fits
-# it. 
+# it.
 f.model.F1.value=1.1*f.model.F1.value
 f.update_resids()
 print('chi^2 is %0.2f after perturbing F1' % f.resids.chi2)
