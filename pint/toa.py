@@ -264,7 +264,7 @@ class TOA(object):
         """
         if obs == "Barycenter":
             # Barycenter overrides the scale argument with 'tdb' always.
-            if type(MJD) in [float, numpy.float64, numpy.float128]:
+            if np.isscalar(MJD):
                 self.mjd = time.Time(MJD, scale='tdb', format='mjd',
                                     precision=9)
             else:
@@ -278,7 +278,7 @@ class TOA(object):
             # corrected to the Geocenter with gtbary tcorrect=GEO
             # Certainly (0,0,0) is the right answer for the solar system
             # delays and such.
-            if type(MJD) in [float, numpy.float64, numpy.float128]:
+            if np.isscalar(MJD):
                 self.mjd = time.Time(MJD, scale=scale, format='mjd',
                                     location=EarthLocation(0.0,0.0,0.0),
                                     precision=9)
@@ -298,7 +298,7 @@ class TOA(object):
                 raise ValueError("Spacecraft TOAs require gcrslocation to be specified.")
             if not isinstance(kwargs['gcrslocation'],coord.GCRS):
                 raise ValueError("gcrslocation must be an astropy.coordinates.GCRS instance")
-            if type(MJD) in [float, numpy.float64, numpy.float128]:
+            if np.isscalar(MJD):
                 self.mjd = time.Time(MJD, scale=scale, format='mjd',
                                     precision=9)
             else:
@@ -315,7 +315,7 @@ class TOA(object):
                 if self.mjd.precision < 9:
                     log.warning('TOA passed with poor precision ({0})'.format(self.mjd.precision))
                 self.mjd.precision = 9
-            elif type(MJD) in [float, numpy.float64, numpy.float128]:
+            elif np.isscalar(MJD):
                 self.mjd = time.Time(MJD, scale=scale, format='mjd',
                                     location=observatories[obs].loc,
                                     precision=9)
