@@ -1,6 +1,10 @@
-from distutils.core import setup
+try:
+    from setuptools import setup, Extension
+except ImportError:
+    from distutils.core import setup
+    from distutils.extension import Extension
+
 import numpy, os, sys
-from distutils.extension import Extension
 try:
     from Cython.Distutils import build_ext
 except ImportError:
@@ -72,20 +76,11 @@ setup(
     author_email = 'sransom@nrao.edu',
     url = 'https://github.com/nanograv/PINT',
 
-    packages=['pint'],
-    package_dir = {'pint': 'pint'},
+    packages=['pint', 
+        'pint.models', 
+        'pint.models.pulsar_binaries', 
+        'pint.orbital'],
 
-    py_modules = ['pint.models.timing_model', 'pint.models.model_builder',
-        'pint.models.astrometry', 'pint.models.glitch',
-        'pint.models.dispersion', 'pint.models.spindown',
-        'pint.models.parameter', 'pint.fitter',
-        'pint.ltinterface',
-        'pint.models.solar_system_shapiro',
-        'pint.models.btmodel', 'pint.models.polycos',
-        'pint.models.bt', 'pint.models.dd',
-        'pint.orbital.kepler'],
-
-    include_package_data=True,
     cmdclass = cmdclass,
     ext_modules=ext_modules,
 )

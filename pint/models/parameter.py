@@ -64,7 +64,7 @@ class Parameter(object):
                  parse_value=fortran_float, print_value=str, set_value=lambda x: x,
                  get_value=lambda x: x, get_num_value=lambda x: x,
                  prior=priors.Prior(priors.UniformRV()),
-                 parse_uncertainty=None):
+                 parse_uncertainty=fortran_float):
 
         self.name = name  # name of the parameter
         self.units = units  # parameter unit in string format,or None
@@ -78,10 +78,7 @@ class Parameter(object):
                                         # user can put the speicified format
                                         # here
         self.print_value = print_value  # method to convert value to a string.
-        if parse_uncertainty is None:
-            self.parse_uncertainty = fortran_float
-        else:
-            self.parse_uncertainty = parse_uncertainty
+        self.parse_uncertainty = parse_uncertainty
         self.value = value  # The value of parameter, internal storage
         self.prior = prior
 
@@ -119,7 +116,7 @@ class Parameter(object):
                 log.warning(wmsg)
                 try:
                     if hasattr(self.value, 'unit'):
-                        temp = self.value.to(self.num_unit)
+                        _ = self.value.to(self.num_unit)
                 except:
                     log.warning('The value unit is not compatable with'
                                 ' parameter units,right now.')
@@ -323,7 +320,7 @@ class floatParameter(Parameter):
             valu = val.unit
             if self.units is not None:
                 try:
-                    temp = val.to(self.num_unit)
+                    _ = val.to(self.num_unit)
                 except:
                     emsg = 'Setting a uncompatible unit ' + valu.to_string()
                     emsg += ' to value is not allowed'
@@ -593,7 +590,7 @@ class prefixParameter(Parameter):
         long_double : bool, optional default 'double'
             Set float type value and num_value in numpy float128
         time_scale : str, optional default 'utc'
-            Time scale for MJDParameter class. 
+            Time scale for MJDParameter class.
     """
 
     def __init__(self, name=None, prefix=None, indexformat=None, index=1,
