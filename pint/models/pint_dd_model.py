@@ -4,7 +4,7 @@ from pint import ls,GMsun,Tsun
 from pint import utils
 from .pulsar_binaries.DD_model import DDmodel
 from .pint_pulsar_binary import PSRbinaryWapper
-from .parameter import Parameter, MJDParameter
+import parameter as p
 from .timing_model import Cache, TimingModel, MissingParameter
 import astropy
 from ..utils import time_from_mjd_string, time_to_longdouble
@@ -21,36 +21,36 @@ class DDwrapper(PSRbinaryWapper):
         super(DDwrapper, self).__init__()
         self.BinaryModelName = 'DD'
 
-        self.add_param(Parameter(name="A0",
+        self.add_param(p.floatParameter(name="A0",
              units="s",
-             description="DD model aberration parameter A0",
-             parse_value=np.double),binary_param = True)
+             description="DD model aberration parameter A0"),
+             binary_param = True)
 
-        self.add_param(Parameter(name="B0",
+        self.add_param(p.floatParameter(name="B0",
              units="s",
-             description="DD model aberration parameter B0",
-             parse_value=np.double),binary_param = True)
+             description="DD model aberration parameter B0",),
+             binary_param = True)
 
-        self.add_param(Parameter(name="GAMMA",
+        self.add_param(p.floatParameter(name="GAMMA",
              units="second",
-             description="Binary Einsten delay GAMMA term",
-             parse_value=np.double),binary_param = True)
+             description="Binary Einsten delay GAMMA term"),
+             binary_param = True)
 
-        self.add_param(Parameter(name="DR",
+        self.add_param(p.floatParameter(name="DR",
              units="",
-             description="Relativistic deformation of the orbit",
-             parse_value=np.double),binary_param = True)
+             description="Relativistic deformation of the orbit"),
+             binary_param = True)
 
-        self.add_param(Parameter(name="DTH",
+        self.add_param(p.floatParameter(name="DTH",
              units="",
-             description="Relativistic deformation of the orbit",
-             parse_value=np.double),binary_param = True)
+             description="Relativistic deformation of the orbit",),
+             binary_param = True)
 
 
-        self.add_param(Parameter(name="SINI",
+        self.add_param(p.floatParameter(name="SINI",
              units="",
-             description="Sine of inclination angle",
-             parse_value=np.double),binary_param = True)
+             description="Sine of inclination angle"),
+             binary_param = True)
 
         self.binary_delay_funcs += [self.DD_delay,]
         self.delay_funcs['L2'] += [self.DD_delay,]

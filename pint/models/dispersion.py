@@ -3,7 +3,7 @@
 # dispersion.py
 # Simple (constant) ISM dispersion measure
 from warnings import warn
-from .parameter import Parameter, prefixParameter
+import parameter as p
 from .timing_model import TimingModel, Cache
 import astropy.units as u
 import numpy as np
@@ -23,31 +23,34 @@ class Dispersion(TimingModel):
 
     def __init__(self):
         super(Dispersion, self).__init__()
-        self.add_param(Parameter(name="DM",
+        self.add_param(p.floatParameter(name="DM",
                        units="pc cm^-3", value=0.0,
                        description="Dispersion measure"))
 
         # DMX is for info output right now
-        self.add_param(Parameter(name="DMX",
+        self.add_param(p.floatParameter(name="DMX",
                        units="pc cm^-3", value=0.0,
                        description="Dispersion measure"))
-        self.add_param(prefixParameter(prefix='DMX_', indexformat='0000',
+        self.add_param(p.prefixParameter(prefix='DMX_', indexformat='0000',
                        units="pc cm^-3", value=0.0,
                        unitTplt=lambda x: "pc cm^-3",
                        description='Dispersion measure variation',
-                       descriptionTplt=lambda x: "Dispersion measure"))
-        self.add_param(prefixParameter(prefix='DMXR1_', indexformat='0000',
+                       descriptionTplt=lambda x: "Dispersion measure",
+                       type_match='float'))
+        self.add_param(p.prefixParameter(prefix='DMXR1_', indexformat='0000',
                        units="MJD",
                        value=time.Time(0.0, scale='tdb', format='mjd'),
                        unitTplt=lambda x: "MJD",
                        description='Beginning of DMX interval',
-                       descriptionTplt=lambda x: 'Beginning of DMX interval'))
-        self.add_param(prefixParameter(prefix='DMXR2_', indexformat='0000',
+                       descriptionTplt=lambda x: 'Beginning of DMX interval',
+                       type_match='MJD', time_scale='tdb'))
+        self.add_param(p.prefixParameter(prefix='DMXR2_', indexformat='0000',
                        units="MJD",
                        value=time.Time(0.0, scale='tdb', format='mjd'),
                        unitTplt=lambda x: "MJD",
                        description='End of DMX interval',
-                       descriptionTplt=lambda x: 'End of DMX interval'))
+                       descriptionTplt=lambda x: 'End of DMX interval',
+                       type_match='MJD', time_scale='tdb'))
 
         self.delay_funcs['L1'] += [self.dispersion_delay]
 
