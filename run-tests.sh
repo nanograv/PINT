@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # First, build the documentation
-# Currently this fails with an error about not being able to import numpydoc
 MODULE=pint
+# The make latexpdf is not working at the moment...
 #(cd doc && make html && make latexpdf)
-#(cd doc && make html)
+(cd doc && make html)
 
 PYTHONPATH="`pwd`:$PYTHONPATH"
 NOSETESTS=`which nosetests 2> /dev/null`
