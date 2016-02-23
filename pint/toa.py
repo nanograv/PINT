@@ -500,7 +500,7 @@ class TOAs(object):
         """Write a summary of the TOAs to stdout."""
         print self.get_summary()
 
-    def adjust_TOAs(self, delta):
+    def adjust_TOAs(self, delta, get_posvel=False):
         """Apply a time delta to TOAs
 
         Adjusts the time (MJD) of the TOAs by applying delta, which should
@@ -510,7 +510,8 @@ class TOAs(object):
         ----------
         delta : astropy.time.TimeDelta
             The time difference to add to the MJD of each TOA
-
+        get_posvel : bool
+            Flag to enable earth posvel calculation
         """
         col = self.table['mjd']
         if type(delta) != time.TimeDelta:
@@ -523,7 +524,8 @@ class TOAs(object):
         # This adjustment invalidates the derived columns in the table, so delete
         # and recompute them
         self.compute_TDBs()
-        self.compute_posvels()
+        if get_posvel:
+            self.compute_posvels()
 
     def write_TOA_file(self,filename,name='pint', format='Princeton'):
         """Dump current TOA table out as a TOA file
