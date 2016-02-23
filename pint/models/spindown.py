@@ -47,20 +47,21 @@ class Spindown(TimingModel):
             if getattr(self, p).value is None:
                 raise MissingParameter("Spindown", p)
 
-        # Remove all unused freq derivs
+        # Check continuity
+        F_terms = []
         for par in self.params:
             # Make sure we select the freq derivs
             if par.startswith('F'):
                 parobj = getattr(self, par)
                 if hasattr(parobj, 'prefix') and parobj.prefix == 'F':
-                    if parobj.num_value==0.0 and \
-                            parobj.uncertainty is None:
-                        delattr(self, par)
-                        self.params.remove(par)
-                        self.num_prefix_params['F'] -= 1
+                    F_terms.append(parobj.index)
                 else:
                     continue
-
+        F_terms.sort()
+        F_in_order = range(max(F_terms)+1)
+        if not F_terms == F_in_order:
+            diff = list(set(F_in_order) - set(F_terms))
+            raise MissingParameter("Spindown", "F%d"%diff[0])
         # If F1 is set, we need PEPOCH
         if self.F1.value != 0.0:
             if self.PEPOCH.value is None:
@@ -68,8 +69,6 @@ class Spindown(TimingModel):
                         "PEPOCH is required if F1 or higher are set")
 
         self.num_spin_terms = self.num_prefix_params['F']
-
-
 
     def F_description(self, x):
         """Template function for description"""
