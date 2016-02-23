@@ -469,26 +469,26 @@ class AngleParameter(Parameter):
     """This is a Parameter type that is specific to Angle values."""
     def __init__(self, name=None, value=None, description=None, units='rad',
              uncertainty=None, frozen=True, continuous=True, aliases=None):
-        self.separator = {
+        self.unit_identifier = {
             'h:m:s': (u.hourangle, 'h', '0:0:%.15fh'),
             'd:m:s': (u.deg, 'd', '0:0:%.15fd'),
             'rad': (u.rad, 'rad', '%.15frad'),
             'deg': (u.deg, 'deg', '%.15fdeg'),
         }
         # Check unit format
-        if units.lower() not in self.separator.keys():
+        if units.lower() not in self.unit_identifier.keys():
             raise ValueError('Unidentified unit ' + units)
 
-        self.unitsuffix = self.separator[units.lower()][1]
+        self.unitsuffix = self.unit_identifier[units.lower()][1]
         set_value = self.set_value_angle
         parse_value = lambda x: Angle(x + self.unitsuffix)
         print_value = lambda x: x.to_string(sep=':', precision=8) \
                         if x.unit != u.rad else x.to_string(decimal = True,
                         precision=8)
-        get_value = lambda x: Angle(x * self.separator[units.lower()][0])
+        get_value = lambda x: Angle(x * self.unit_identifier[units.lower()][0])
         get_num_value = lambda x: x.value
         parse_uncertainty = lambda x: \
-                             Angle(self.separator[units.lower()][2] \
+                             Angle(self.unit_identifier[units.lower()][2] \
                                    % fortran_float(x))
         self.value_type = Angle
         self.paramType = 'AngleParameter'
@@ -648,7 +648,7 @@ class prefixParameter(Parameter):
             self.description_template = lambda x: self.descrition
         # Using other parameter class as a template for value and num_value
         # setter
-        self.type_separator = {
+        self.type_identifier = {
                                'float': (floatParameter,
                                          ['units',' value', 'long_double',
                                           'num_value', 'uncertainty']),
@@ -667,7 +667,7 @@ class prefixParameter(Parameter):
         else:
             self.type_match = type(type_match).__name__
 
-        if self.type_match not in self.type_separator.keys():
+        if self.type_match not in self.type_identifier.keys():
             raise ValueError('Unrecognized value type ' + self.type_match)
 
         print_value = self.print_value_prefix
@@ -702,9 +702,9 @@ class prefixParameter(Parameter):
         self.units = unt
 
     def get_par_type_object(self):
-        par_type_class = self.type_separator[self.type_match][0]
+        par_type_class = self.type_identifier[self.type_match][0]
         obj = par_type_class('example')
-        attr_dependency = self.type_separator[self.type_match][1]
+        attr_dependency = self.type_identifier[self.type_match][1]
         for dp in attr_dependency:
             if hasattr(self, dp):
                 prefix_arg = getattr(self, dp)
