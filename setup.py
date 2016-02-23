@@ -81,6 +81,11 @@ setup(
         'pint.models.pulsar_binaries', 
         'pint.orbital'],
 
+    package_data={'pint':['datafiles/observatories.txt', 
+        'datafiles/*.tpc', 'datafiles/*.bsp',
+        'datafiles/*.bpc', 'datafiles/*.tls', 
+        'datafiles/*.tpc']},
+
     cmdclass = cmdclass,
     ext_modules=ext_modules,
 )

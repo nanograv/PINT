@@ -41,5 +41,5 @@ pint_units = {'H:M:S':u.hourangle,'D:M:S':u.deg,'lt-s':ls,'ls':ls,'Tsun':Tsun,
 pintdir = os.getenv("PINT")
 if pintdir is None:
     filedir = os.path.split(os.path.realpath(__file__))[0]
-    pintdir = os.path.abspath(os.path.join(filedir, ".."))
+    pintdir = os.path.abspath(filedir)
     del filedir
