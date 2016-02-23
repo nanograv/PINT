@@ -108,18 +108,6 @@ class Parameter(object):
 
     @units.setter
     def units(self, unt):
-        # Check if this is the first time set units
-        if hasattr(self, 'value'):
-            if self.units is not None:
-                wmsg = 'Parameter '+self.name+' units has been reset to '+unt
-                wmsg += ' from '+self._units
-                log.warning(wmsg)
-                try:
-                    if hasattr(self.value, 'unit'):
-                        _ = self.value.to(self.num_unit)
-                except:
-                    log.warning('The value unit is not compatable with'
-                                ' parameter units,right now.')
         # Setup unit and num unit
         if isinstance(unt, (u.Unit, u.CompositeUnit)):
             self._units = unt.to_string()
@@ -137,6 +125,18 @@ class Parameter(object):
         else:
             raise ValueError('Units can only take string, astropy units or'
                              ' None')
+        # Check if this is the first time set units
+        if hasattr(self, 'value'):
+            if self.units is not None:
+                wmsg = 'Parameter '+self.name+' units has been reset to '+unt
+                wmsg += ' from '+self._units
+                log.warning(wmsg)
+                try:
+                    if hasattr(self.value, 'unit'):
+                        self.value = self.value.to(self.num_unit)
+                except:
+                    log.warning('The value unit is not compatable with'
+                                ' parameter units right now.')
 
     # Setup value property
     @property
