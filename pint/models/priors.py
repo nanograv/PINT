@@ -95,11 +95,11 @@ class UniformBoundedRV(rv_continuous):
         self.norm = np.float64(1.0/(upper_bound-lower_bound))
                 
     def _pdf(self,x):
-        ret = np.where(np.logical_and(x>self.lower,x<self.upper),self.norm,0.0)
+        ret = np.where(np.logical_and(x>=self.lower,x<=self.upper),self.norm,0.0)
         return ret
         
     def _logpdf(self,x):
-        ret = np.where(np.logical_and(x>self.lower,x<self.upper),
+        ret = np.where(np.logical_and(x>=self.lower,x<=self.upper),
                        np.log(self.norm), -np.inf)
         return ret
 
@@ -124,12 +124,12 @@ class GaussianBoundedRV(rv_continuous):
         self.norm = 1.0/(self.gaussian.cdf(upper_bound)-self.gaussian.cdf(lower_bound))
                 
     def _pdf(self,x):
-        ret = np.where(np.logical_and(x>self.lower,x<self.upper), 
+        ret = np.where(np.logical_and(x>=self.lower,x<=self.upper), 
             self.norm*self.gaussian.pdf(x), 0.0)
         return ret
         
     def _logpdf(self,x):
-        ret = np.where(np.logical_and(x>self.lower,x<self.upper),
+        ret = np.where(np.logical_and(x>=self.lower,x<=self.upper),
                        np.log(self.norm)*self.gaussian.logpdf(x), -np.inf)
         return ret
        
