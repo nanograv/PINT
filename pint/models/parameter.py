@@ -656,16 +656,13 @@ class prefixParameter(Parameter):
         # setter
         self.type_identifier = {
                                'float': (floatParameter, {'units' : '',
-                                         'value' : 0.0 ,
                                          'long_double' : False,
                                          'uncertainty' : 0.0 }),
-                               'string': (strParameter, {'value' : ''}),
-                               'bool': (boolParameter, {'value' : False}),
+                               'string': (strParameter, {}),
+                               'bool': (boolParameter, {}),
                                'mjd': (MJDParameter, {'time_scale' : 'utc',
-                                       'value' : 54000.0,
                                        'uncertainty' : 0.0}),
                                'angle': (AngleParameter, {'units' : 'rad',
-                                         'value' : 0.0,
                                          'uncertainty' : 0.0})}
 
         if isinstance(type_match, str):
@@ -715,11 +712,9 @@ class prefixParameter(Parameter):
         obj = par_type_class('example')
         attr_dependency = self.type_identifier[self.type_match][1]
         for dp in attr_dependency.keys():
-            if hasattr(self, dp) and getattr(self,dp) is not None:
+            if hasattr(self, dp):
                 prefix_arg = getattr(self, dp)
                 setattr(obj, dp, prefix_arg)
-            else:
-                setattr(obj, dp, attr_dependency[dp])
         return obj
 
     def set_value_prefix(self, val):
@@ -766,6 +761,5 @@ class prefixParameter(Parameter):
                                  type_match=self.type_match,
                                  long_double=self.long_double,
                                  time_scale=self.time_scale)
-        print newpfx.units
         newpfx.apply_template()
         return newpfx
