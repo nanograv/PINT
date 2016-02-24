@@ -185,7 +185,7 @@ class Parameter(object):
     def num_value(self, val):
         if val is None:
             if not isinstance(self.value, (str, bool)) and \
-                 self._num_value is not None:
+                self._num_value is not None:
                 raise ValueError('This parameter value is number convertable. '
                                  'Setting ._num_value to None will lost the '
                                  'parameter value.')
@@ -202,6 +202,45 @@ class Parameter(object):
     @property
     def num_unit(self):
         return self._num_unit
+
+    @property
+    def uncertainty(self):
+        return self._uncertainty
+
+    @uncertainty.setter
+    def uncertainty(self, val):
+        if val is None:
+            if hasattr(self, 'uncertainty') and self.uncertainty is not None:
+                raise ValueError('Setting an exist uncertainty to None is not'
+                                 ' allowed.')
+            else:
+                self._uncertainty = val
+                self._num_uncertainty = self._uncertainty
+                return
+        self._uncertainty = self.set_uncertainty(val)
+        self._num_uncertainty = self.get_num_uncertainty(self._uncertainty)
+
+    @property
+    def num_uncertainty(self):
+        return self._num_uncertainty
+
+    @num_uncertainty.setter
+    def num_uncertainty(self, val):
+        if val is None:
+            if not isinstance(self.uncertainty, (str, bool)) and \
+                self._num_uncertainty is not None:
+                log.warning('This parameter has uncertainty value. '
+                            'Change it to None will lost information.')
+
+            self._num_uncertainty = val
+            self._uncertainty = val
+
+        elif not isinstance(val, numbers.Number):
+            raise ValueError('num_value has to be a pure number or None. ({0} <- {1} ({2})'.format(self.name,val,type(val)))
+        else:
+            self._num_uncertainty = val
+            self._uncertainty = self.get_uncertainty(val)
+
 
     def __str__(self):
         out = self.name
