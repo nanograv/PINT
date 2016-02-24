@@ -253,61 +253,24 @@ class TimingModel(object):
         Parameter
         ---------
         toas : PINT TOAs class
-            The toas where the derivative of phase will be evaluated at.
-        obs : str optional
-            The location where the derivative of phase will be evaluated at.
+            The toas when the derivative of phase will be evaluated at.
         sample_step : float optional
             Finite difference steps. If not specified, it will take 1/10 of the
             spin period.
         """
         copy_toas = copy.deepcopy(toas)
-        ttable = copy_toas.table
         if sample_step is None:
-            pulse_period = 1.0/self.F0.num_value
+            pulse_period = 1.0/self.F0.value
             sample_step = pulse_period/10.0
-        sample_step_sec = sample_step*u.second
-        sample_step_day = sample_step_sec.to(u.day).value
-        sample_dt = [-sample_step_day,2 * sample_step_day]
-        table = toas.table
+        sample_dt = [-sample_step,2 * sample_step]
 
-        for ii, key in enumerate(self.table.groups.keys):
-            grp = self.table.groups[ii]
-            obs = self.table.groups.keys[ii]['obs']
-            loind, hiind = self.table.groups.indices[ii:ii+2]
-            if obs in []
-
-
-        return copy_toas
-        # if obs is None:
-        #     time_scale = 'utc'
-        #     TOAobj = copy_toas
-        #
-        # # Get read for barycentric d_phase_d_toa
-        # elif obs.lower() in ['ssb','bary','barycenter']:
-        #     time_scale = 'tdb'
-        #     bTOA = self.get_barycentric_toas(ttable)
-        #     TOAobj = toa.read_fake_TOAs(bTOA.value, obs='Barycenter',
-        #                                 scale=time_scale)
-        #
-        # elif obs.lower() in ['geo','geocenter','geocentric']:
-        #     time_scale = 'utc'
-        #     geoTOA = ttable['tdbld']+ self.topo_center_delay(ttable)
-        #     TOAobj = toa.read_fake_TOAs(geoTOA, obs='Geocenter',
-        #                                 scale=time_scale)
-        # else:
-        #     raise ValueError('Unknown position to calculate d_phase_d_toa')
-        #
-        # if time_scale == 'utc':
-        #     dt_scale = 'ut1'
-        # else:
-        #     dt_scale = time_scale
         sample_phase = []
         for dt in sample_dt:
-
-            deltaT = time.TimeDelta([dt]*len(table),
-                                    format='jd',scale=dt_scale)
-            TOAobj.adjust_TOAs(deltaT)
-            phase = self.phase(TOAobj.table)
+            dt_array = ([dt] * copy_toas.ntoas) * u.s
+            deltaT = time.TimeDelta(dt_array)
+            copy_toas.adjust_TOAs(deltaT)
+            copy_toas.table['ssb_obs_pos'] += copy_toas.table['ssb_obs_vel'] * dt
+            phase = self.phase(copy_toas.table)
             sample_phase.append(phase)
         # Use finite difference method.
         # phase'(t) = (phase(t+h)-phase(t-h))/2+ 1/6*F2*h^2 + ..
@@ -315,8 +278,8 @@ class TimingModel(object):
         dp = (sample_phase[1]-sample_phase[0])
         d_phase_d_toa = dp.int/(2*sample_step)+dp.frac/(2*sample_step)
         del copy_toas
-
         return d_phase_d_toa
+
 
     @Cache.use_cache
     def d_phase_d_param(self, toas, param):
