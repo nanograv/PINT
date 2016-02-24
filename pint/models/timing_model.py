@@ -98,7 +98,6 @@ class Cache(object):
 
 
 class TimingModel(object):
-
     def __init__(self):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
