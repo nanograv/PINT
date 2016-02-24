@@ -131,25 +131,25 @@ def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,loge
 
     # Collect TIMEZERO and MJDREF
     try:
-        TIMEZERO = np.float128(ft1hdr['TIMEZERO'])
+        TIMEZERO = np.longdouble(ft1hdr['TIMEZERO'])
     except KeyError:
-        TIMEZERO = np.float128(ft1hdr['TIMEZERI']) + np.float128(ft1hdr['TIMEZERF'])
+        TIMEZERO = np.longdouble(ft1hdr['TIMEZERI']) + np.longdouble(ft1hdr['TIMEZERF'])
     #print >>outfile, "# TIMEZERO = ",TIMEZERO
     log.info("TIMEZERO = {0}".format(TIMEZERO))
     try:
-        MJDREF = np.float128(ft1hdr['MJDREF'])
+        MJDREF = np.longdouble(ft1hdr['MJDREF'])
     except KeyError:
         # Here I have to work around an issue where the MJDREFF key is stored
         # as a string in the header and uses the "1.234D-5" syntax for floats, which
         # is not supported by Python
         if isinstance(ft1hdr['MJDREFF'],basestring):
-            MJDREF = np.float128(ft1hdr['MJDREFI']) + \
-            np.float128(ft1hdr['MJDREFF'].replace('D','E'))
+            MJDREF = np.longdouble(ft1hdr['MJDREFI']) + \
+            np.longdouble(ft1hdr['MJDREFF'].replace('D','E'))
         else:
-            MJDREF = np.float128(ft1hdr['MJDREFI']) + np.float128(ft1hdr['MJDREFF'])
+            MJDREF = np.longdouble(ft1hdr['MJDREFI']) + np.longdouble(ft1hdr['MJDREFF'])
     #print >>outfile, "# MJDREF = ",MJDREF
     log.info("MJDREF = {0}".format(MJDREF))
-    mjds = np.array(ft1dat.field('TIME'),dtype=np.float128)/86400.0 + MJDREF + TIMEZERO
+    mjds = np.array(ft1dat.field('TIME'),dtype=np.longdouble)/86400.0 + MJDREF + TIMEZERO
     energies = ft1dat.field('ENERGY')*u.MeV
     if weightcolumn is not None:
         if weightcolumn == 'CALC':
