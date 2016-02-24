@@ -474,9 +474,9 @@ if __name__ == '__main__':
     plot_chains(chains, file=ftr.model.PSR.value+"_chains.png")
 
     # Make the triangle plot.
+    samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
     try:
         import corner
-        samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
         # Note, I had to turn off plot_contours because I kept getting
         # errors about how contour levels must be increasing.
         fig = corner.corner(samples, labels=ftr.fitkeys, bins=20,
