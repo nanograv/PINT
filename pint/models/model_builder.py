@@ -190,8 +190,8 @@ class model_builder(object):
                                 newPfxp = pfxp.new_index_prefix_param(idx)
                                 self.model_instance.add_param(newPfxp)
 
-        if parfile is not None:
-            self.model_instance.read_parfile(parfile)
+        #if parfile is not None:
+        #    self.model_instance.read_parfile(parfile)
 
         return self.model_instance
 

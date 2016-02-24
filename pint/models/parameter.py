@@ -108,10 +108,24 @@ class Parameter(object):
 
     @units.setter
     def units(self, unt):
+        # Check if this is the first time set units and check compatable
+        if hasattr(self, 'value'):
+            if self.units is not None:
+                if unt != self.units:
+                    wmsg = 'Parameter '+self.name+' units has been reset to '+unt
+                    wmsg += ' from '+self._units
+                    log.warning(wmsg)
+                try:
+                    if hasattr(self.value, 'unit'):
+                        _ = self.value.to(unt)
+                except:
+                    log.warning('The value unit is not compatable with'
+                                ' parameter units right now.')
         # Setup unit and num unit
         if isinstance(unt, (u.Unit, u.CompositeUnit)):
             self._units = unt.to_string()
             self._num_unit = unt
+
         elif isinstance(unt, (str)):
             if unt in pint_units.keys():
                 self._units = unt
@@ -125,18 +139,9 @@ class Parameter(object):
         else:
             raise ValueError('Units can only take string, astropy units or'
                              ' None')
-        # Check if this is the first time set units
-        if hasattr(self, 'value'):
-            if self.units is not None:
-                wmsg = 'Parameter '+self.name+' units has been reset to '+unt
-                wmsg += ' from '+self._units
-                log.warning(wmsg)
-                try:
-                    if hasattr(self.value, 'unit'):
-                        self.value = self.value.to(self.num_unit)
-                except:
-                    log.warning('The value unit is not compatable with'
-                                ' parameter units right now.')
+
+        if hasattr(self, 'value') and hasattr(self.value, 'unit'):
+            self.value = self.value.to(self.num_unit)
 
     # Setup value property
     @property
@@ -179,7 +184,8 @@ class Parameter(object):
     @num_value.setter
     def num_value(self, val):
         if val is None:
-            if not isinstance(self.value, (str, bool)):
+            if not isinstance(self.value, (str, bool)) and \
+                 self._num_value is not None:
                 raise ValueError('This parameter value is number convertable. '
                                  'Setting ._num_value to None will lost the '
                                  'parameter value.')
@@ -649,17 +655,19 @@ class prefixParameter(Parameter):
         # Using other parameter class as a template for value and num_value
         # setter
         self.type_identifier = {
-                               'float': (floatParameter,
-                                         ['units',' value', 'long_double',
-                                          'num_value', 'uncertainty']),
-                               'string': (strParameter, ['value']),
-                               'bool': (boolParameter, ['value']),
-                               'mjd': (MJDParameter, ['time_scale', 'value'
-                                                     'num_value',
-                                                     'uncertainty']),
-                               'angle': (AngleParameter, ['units', 'value',
-                                                         'uncertainty',
-                                                         'num_value'])}
+                               'float': (floatParameter, {'units' : '',
+                                         'value' : 0.0 ,
+                                         'long_double' : False,
+                                         'uncertainty' : 0.0 }),
+                               'string': (strParameter, {'value' : ''}),
+                               'bool': (boolParameter, {'value' : False}),
+                               'mjd': (MJDParameter, {'time_scale' : 'utc',
+                                       'value' : 54000.0,
+                                       'uncertainty' : 0.0}),
+                               'angle': (AngleParameter, {'units' : 'rad',
+                                         'value' : 0.0,
+                                         'uncertainty' : 0.0})}
+
         if isinstance(type_match, str):
             self.type_match = type_match.lower()
         elif isinstance(value_type, type):
@@ -676,6 +684,7 @@ class prefixParameter(Parameter):
         get_num_value = self.get_num_value_prefix
         parse_uncertainty = self.parse_uncertainty_prefix
         self.time_scale = time_scale
+        self.long_double = long_double
         super(prefixParameter, self).__init__(name=name, value=value,
                                               units=units,
                                               description=description,
@@ -705,10 +714,12 @@ class prefixParameter(Parameter):
         par_type_class = self.type_identifier[self.type_match][0]
         obj = par_type_class('example')
         attr_dependency = self.type_identifier[self.type_match][1]
-        for dp in attr_dependency:
-            if hasattr(self, dp):
+        for dp in attr_dependency.keys():
+            if hasattr(self, dp) and getattr(self,dp) is not None:
                 prefix_arg = getattr(self, dp)
                 setattr(obj, dp, prefix_arg)
+            else:
+                setattr(obj, dp, attr_dependency[dp])
         return obj
 
     def set_value_prefix(self, val):
@@ -737,13 +748,24 @@ class prefixParameter(Parameter):
         return result
 
     def new_index_prefix_param(self, index):
-        newpfx = prefixParameter(prefix=self.prefix, value=self.value,
+        """Get one prefix parameter with the same type.
+        Parameter
+        ----------
+        index : int
+            index of prefixed parameter.
+        Return
+        ----------
+        A prefixed parameter with the same type of instance.
+        """
+        newpfx = prefixParameter(prefix=self.prefix,
                                  indexformat=self.indexformat, index=index,
                                  unitTplt=self.unit_template,
                                  descriptionTplt=self.description_template,
                                  frozen=self.frozen,
                                  continuous=self.continuous,
                                  type_match=self.type_match,
+                                 long_double=self.long_double,
                                  time_scale=self.time_scale)
+        print newpfx.units
         newpfx.apply_template()
         return newpfx
