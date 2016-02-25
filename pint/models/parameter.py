@@ -378,7 +378,8 @@ class floatParameter(Parameter):
         elif isinstance(val, str):
             try:
                 if self.long_double:
-                    v = str2longdouble(val)
+                    val = fortran_float(val)
+                    v = data2longdouble(val)
                 else:
                     v = fortran_float(val)
             except:
