@@ -23,8 +23,11 @@ class Spindown(TimingModel):
         # The number of terms in the taylor exapansion of spin freq (F0...FN)
         #self.num_spin_terms = maxderivs
 
-        self.add_param(p.prefixParameter(name="F0", value=0.0, units="Hz",
-                       description="Spin-frequency",
+        self.add_param(p.floatParameter(name="F0", value=0.0, units="Hz",
+                       description="Spin-frequency", long_double=True))
+
+        self.add_param(p.prefixParameter(name="F1", value=0.0, units="Hz",
+                       description="Spindown-rate",
                        unitTplt=self.F_unit,
                        descriptionTplt=self.F_description,
                        type_match='float',long_double=True))
@@ -48,17 +51,9 @@ class Spindown(TimingModel):
                 raise MissingParameter("Spindown", p)
 
         # Check continuity
-        F_terms = []
-        for par in self.params:
-            # Make sure we select the freq derivs
-            if par.startswith('F'):
-                parobj = getattr(self, par)
-                if hasattr(parobj, 'prefix') and parobj.prefix == 'F':
-                    F_terms.append(parobj.index)
-                else:
-                    continue
+        F_terms = self.get_prefix_mapping('F').keys()
         F_terms.sort()
-        F_in_order = range(max(F_terms)+1)
+        F_in_order = range(1,max(F_terms)+1)
         if not F_terms == F_in_order:
             diff = list(set(F_in_order) - set(F_terms))
             raise MissingParameter("Spindown", "F%d"%diff[0])
@@ -68,7 +63,7 @@ class Spindown(TimingModel):
                 raise MissingParameter("Spindown", "PEPOCH",
                         "PEPOCH is required if F1 or higher are set")
 
-        self.num_spin_terms = self.num_prefix_params['F']
+        self.num_spin_terms = self.num_prefix_params['F'] + 1
 
     def F_description(self, x):
         """Template function for description"""
