@@ -26,7 +26,7 @@ class Spindown(TimingModel):
         self.add_param(p.floatParameter(name="F0", value=0.0, units="Hz",
                        description="Spin-frequency", long_double=True))
 
-        self.add_param(p.prefixParameter(name="F1", value=0.0, units="Hz",
+        self.add_param(p.prefixParameter(name="F1", value=0.0, units='Hz/s^1',
                        description="Spindown-rate",
                        unitTplt=self.F_unit,
                        descriptionTplt=self.F_description,
