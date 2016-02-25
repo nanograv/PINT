@@ -213,23 +213,3 @@ def get_model(parfile):
 
     mb = model_builder(name,parfile)
     return mb.model_instance
-
-def add_prefixed_param(modelIns,names):
-    """Add a prefixed parameter into the timing model.
-       Parameter
-       ----------
-       modelIns : PINT Timing_model class
-           The timing model of parameters adding to
-       names : string or list of strings
-           The name list of prefixed parameters.s
-    """
-    if type(names) is str:
-        names = [names,]
-    for n in names:
-        prefix,indexformat,indexV = split_prefixed_name(n)
-        if prefix in modelIns.prefix_params:
-            units = modelIns.prefix_params_units[prefix]
-            des = modelIns.prefix_params_description[prefix]
-
-        modelIns.add_param(prefixParameter(name = n,units = units,value = 0.0,
-                           description = des))
