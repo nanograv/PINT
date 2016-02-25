@@ -133,7 +133,9 @@ class Parameter(object):
 
         if hasattr(self, 'value') and hasattr(self.value, 'unit'):
             self.value = self.value.to(self.num_unit)
-
+        if hasattr(self, 'uncertainty') and hasattr(self.uncertainty, 'unit'):
+            self.uncertainty = self.uncertainty.to(self.num_unit)
+            
     # Setup value property
     @property
     def value(self):
