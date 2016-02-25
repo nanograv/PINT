@@ -198,11 +198,11 @@ class TimingModel(object):
         mapping = dict()
         for parname in parnames:
             par = getattr(self,parname)
-            if par.is_prefix == True:
+            if par.is_prefix == True and par.prefix == prefix:
                 mapping[par.index] = parname
 
         setattr(self,prefix+'mapping',mapping)
-
+        return getattr(self,prefix+'mapping',mapping)
 
     @Cache.use_cache
     def phase(self, toas):
