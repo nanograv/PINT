@@ -46,25 +46,20 @@ class Parameter(object):
     continuous : bool, optional
         A flag specifying whether phase derivatives with respect to this
         parameter exist.
-    parse_value : method, optional
-        A function that converts string input into the appropriate internal
-        representation of the parameter (typically floating-point but could be
-        any datatype).
     print_value : method, optional
         A function that converts the internal value to a string for output.
-    get_value : method, optional
-        A function that converts num_value attribute and num_unit to value
-        attribute
+    set_value : method, optional
+        A function that sets the value property
     get_num_value:
         A function that get purely value from value attribute
     """
 
     def __init__(self, name=None, value=None, units=None, description=None,
                  uncertainty=None, frozen=True, aliases=None, continuous=True,
-                 parse_value=fortran_float, print_value=str, set_value=lambda x: x,
-                 get_value=lambda x: x, get_num_value=lambda x: x,
+                 print_value=str, set_value=lambda x: x,
+                 get_num_value=lambda x: x,
                  prior=priors.Prior(priors.UniformRV()),
-                 parse_uncertainty=fortran_float):
+                 set_uncertainty=fortran_float):
 
         self.name = name  # name of the parameter
         self.units = units  # parameter unit in string format,or None
@@ -73,12 +68,8 @@ class Parameter(object):
         self.set_value = set_value
         # Method to get num_value from value
         self.get_num_value = get_num_value
-        self.get_value = get_value  # Method to update value from num_value
-        self.parse_value = parse_value  # method to read a value from string,
-                                        # user can put the speicified format
-                                        # here
         self.print_value = print_value  # method to convert value to a string.
-        self.parse_uncertainty = parse_uncertainty
+        self.set_uncertainty = set_uncertainty
         self.value = value  # The value of parameter, internal storage
         self.prior = prior
 
@@ -190,13 +181,14 @@ class Parameter(object):
                                  'Setting ._num_value to None will lost the '
                                  'parameter value.')
             else:
+                self._num_value = val
                 self.value = None
 
         elif not isinstance(val, numbers.Number):
             raise ValueError('num_value has to be a pure number or None. ({0} <- {1} ({2})'.format(self.name,val,type(val)))
         else:
             self._num_value = val
-            self._value = self.get_value(val)
+            self._value = self.set_value(val)
 
     # Setup num_unit property
     @property
@@ -218,7 +210,7 @@ class Parameter(object):
                 self._num_uncertainty = self._uncertainty
                 return
         self._uncertainty = self.set_uncertainty(val)
-        self._num_uncertainty = self.get_num_uncertainty(self._uncertainty)
+        self._num_uncertainty = self.get_num_value(self._uncertainty)
 
     @property
     def num_uncertainty(self):
@@ -239,7 +231,7 @@ class Parameter(object):
             raise ValueError('num_value has to be a pure number or None. ({0} <- {1} ({2})'.format(self.name,val,type(val)))
         else:
             self._num_uncertainty = val
-            self._uncertainty = self.get_uncertainty(val)
+            self._uncertainty = self.set_value(val)
 
 
     def __str__(self):
@@ -312,7 +304,7 @@ class Parameter(object):
                     raise ValueError(errmsg)
             if len(k) == 4:
                 ucty = k[3]
-            self.uncertainty = self.parse_uncertainty(ucty)
+            self.uncertainty = self.set_uncertainty(ucty)
         return True
 
     def name_matches(self, name):
@@ -328,27 +320,23 @@ class floatParameter(Parameter):
                  long_double=False):
         self.long_double = long_double
         if self.long_double:
-            parse_value = self.set_value_float
             print_value = lambda x: longdouble2string(x.value)
-            get_value = lambda x: data2longdouble(x)*self.num_unit
-
+            #get_value = lambda x: data2longdouble(x)*self.num_unit
         else:
-            parse_value = self.set_value_float
             print_value = lambda x: str(x.value)
-            get_value = lambda x: x * self.num_unit
 
         get_num_value = self.get_num_value_float
         set_value = self.set_value_float
+        set_uncertainty = self.set_value_float
         super(floatParameter, self).__init__(name=name, value=value,
                                              units=units, frozen=True,
                                              aliases=aliases,
                                              continuous=continuous,
                                              description=description,
                                              uncertainty=uncertainty,
-                                             parse_value=parse_value,
                                              print_value=print_value,
                                              set_value=set_value,
-                                             get_value=get_value,
+                                             set_uncertainty=set_uncertainty,
                                              get_num_value=get_num_value)
         self.value_type = u.quantity.Quantity
         self.paramType = 'floatParameter'
@@ -373,7 +361,15 @@ class floatParameter(Parameter):
                 result = val
             else:
                 result = val
+
+            if self.long_double:
+                result = data2longdouble(result.value)*result.unit
         elif isinstance(val, numbers.Number):
+            if self.long_double:
+                v = data2longdouble(val)
+            else:
+                v = float(val)
+
             if self.num_unit is not None:
                 result = val * self.num_unit
             else:
@@ -405,53 +401,59 @@ class strParameter(Parameter):
     """
     def __init__(self, name=None, value=None, description=None, frozen=True,
                  aliases=[]):
-        parse_value = str
         print_value = str
         get_num_value = lambda x: None
-        set_value = str
-        get_value = self.get_value_str
+        set_value = self.set_value_str
+        set_uncertainty = lambda x: None
+        #get_value = self.get_value_str
 
         super(strParameter, self).__init__(name=name, value=value,
                                            description=None, frozen=True,
                                            aliases=aliases,
-                                           parse_value=parse_value,
                                            print_value=print_value,
                                            set_value=set_value,
-                                           get_value=get_value,
-                                           get_num_value=get_num_value)
+                                           get_num_value=get_num_value,
+                                           set_uncertainty=set_uncertainty)
 
         self.paramType = 'strParameter'
         self.value_type = str
 
-    def get_value_str(self, val):
-        raise ValueError('Can not set a num value to a string type parameter.')
+    def set_value_str(self, val):
+        if hasattr(self,'_num_value') and val == self._num_value:
+            raise ValueError('Can not set a num value to a string type'
+                             ' parameter.')
+        else:
+            return str(val)
+
 
 class boolParameter(Parameter):
     """This is a Paraemeter type that is specific to boolen values
     """
     def __init__(self, name=None, value=None, description=None, frozen=True,
                  aliases=[]):
-
-        parse_value = lambda x: x.upper() == 'Y'
         print_value = lambda x: 'Y' if x else 'N'
         set_value = self.set_value_bool
         get_num_value = lambda x: None
-        get_value = lambda x: log.warning('Can not set a pure value to a '
-                                               'string boolen parameter.')
+        set_uncertainty = lambda x: None
+        #get_value = lambda x: log.warning('Can not set a pure value to a '
+                                               #'string boolen parameter.')
         super(boolParameter, self).__init__(name=name, value=value,
                                             description=None, frozen=True,
                                             aliases=aliases,
-                                            parse_value=parse_value,
                                             print_value=print_value,
                                             set_value=set_value,
-                                            get_value=get_value,
-                                            get_num_value=get_num_value)
+                                            #get_value=get_value,
+                                            get_num_value=get_num_value,
+                                            set_uncertainty=set_uncertainty)
         self.value_type = bool
         self.paramType = 'boolParameter'
 
     def set_value_bool(self, val):
         """ This function is to get boolen value for boolParameter class
         """
+        if hasattr(self,'_num_value') and val == self._num_value:
+            raise ValueError('Can not set a num value to a boolen type'
+                             ' parameter.')
         if isinstance(val, str):
             return val.upper() in ['Y', 'YES', 'SI']
         elif isinstance(val, bool):
@@ -460,28 +462,28 @@ class boolParameter(Parameter):
             return val != 0
 
 
+
 class MJDParameter(Parameter):
     """This is a Parameter type that is specific to MJD values."""
     def __init__(self, name=None, value=None, description=None,
                  uncertainty=None, frozen=True, continuous=True, aliases=None,
                  time_scale='utc'):
         self.time_scale = time_scale
-        parse_value = self.set_value_mjd
         set_value = self.set_value_mjd
         print_value = time_to_mjd_string
-        get_value = lambda x: time_from_longdouble(x, time_scale)
         get_num_value = time_to_longdouble
+        set_uncertainty = self.set_value_mjd
         super(MJDParameter, self).__init__(name=name, value=value, units="MJD",
                                            description=description,
                                            uncertainty=uncertainty,
                                            frozen=frozen,
                                            continuous=continuous,
                                            aliases=aliases,
-                                           parse_value=parse_value,
                                            print_value=print_value,
                                            set_value=set_value,
-                                           get_value=get_value,
-                                           get_num_value=get_num_value)
+                                           #get_value=get_value,
+                                           get_num_value=get_num_value,
+                                           set_uncertainty=set_uncertainty)
         self.value_type = time.Time
         self.paramType = 'MJDParameter'
 
@@ -526,15 +528,12 @@ class AngleParameter(Parameter):
 
         self.unitsuffix = self.unit_identifier[units.lower()][1]
         set_value = self.set_value_angle
-        parse_value = lambda x: Angle(x + self.unitsuffix)
         print_value = lambda x: x.to_string(sep=':', precision=8) \
                         if x.unit != u.rad else x.to_string(decimal = True,
                         precision=8)
-        get_value = lambda x: Angle(x * self.unit_identifier[units.lower()][0])
+        #get_value = lambda x: Angle(x * self.unit_identifier[units.lower()][0])
         get_num_value = lambda x: x.value
-        parse_uncertainty = lambda x: \
-                             Angle(self.unit_identifier[units.lower()][2] \
-                                   % fortran_float(x))
+        set_uncertainty = self.set_uncertainty_angle
         self.value_type = Angle
         self.paramType = 'AngleParameter'
 
@@ -545,14 +544,13 @@ class AngleParameter(Parameter):
                                              frozen=frozen,
                                              continuous=continuous,
                                              aliases=aliases,
-                                             parse_value=parse_value,
                                              print_value=print_value,
                                              set_value=set_value,
-                                             get_value=get_value,
+                                             #get_value=get_value,
                                              get_num_value=get_num_value,
-                                             parse_uncertainty=parse_uncertainty)
+                                             set_uncertainty=set_uncertainty)
 
-    def set_value_angle(self,val):
+    def set_value_angle(self, val):
         """ This function is to set value to angle parameters.
         Accepted format:
         1. Astropy angle object
@@ -574,6 +572,24 @@ class AngleParameter(Parameter):
                              + type(val).__name__ + 'format.')
         return result
 
+    def set_uncertainty_angle(self, val):
+        """This function is to set the uncertainty for an angle parameter.
+        """
+        if isinstance(val, numbers.Number):
+            result =Angle(self.unit_identifier[self.units.lower()][2] % val)
+        elif isinstance(val, str):
+
+            result =Angle(self.unit_identifier[self.units.lower()][2] \
+                          % fortran_float(val))
+            #except:
+            #    raise ValueError('Srting ' + val + ' can not be converted to'
+            #                     ' astropy angle.')
+        elif isinstance(val, Angle):
+            result = val.to(self.num_unit)
+        else:
+            raise ValueError('Angle parameter can not accept '
+                             + type(val).__name__ + 'format.')
+        return result
 
 class prefixParameter(Parameter):
     """ This is a Parameter type for prefix parameters, for example DMX_
@@ -716,9 +732,9 @@ class prefixParameter(Parameter):
 
         print_value = self.print_value_prefix
         set_value = self.set_value_prefix
-        get_value = self.get_value_prefix
+        #get_value = self.get_value_prefix
         get_num_value = self.get_num_value_prefix
-        parse_uncertainty = self.parse_uncertainty_prefix
+        set_uncertainty = self.set_uncertainty_prefix
         self.time_scale = time_scale
         self.long_double = long_double
         super(prefixParameter, self).__init__(name=name, value=value,
@@ -727,12 +743,11 @@ class prefixParameter(Parameter):
                                               uncertainty=uncertainty,
                                               frozen=frozen,
                                               continuous=continuous,
-                                              parse_value=set_value,
                                               print_value=print_value,
                                               set_value=set_value,
-                                              get_value=get_value,
+                                              #get_value=get_value,
                                               get_num_value=get_num_value,
-                                              parse_uncertainty=parse_uncertainty)
+                                              set_uncertainty=set_uncertainty)
 
         self.prefix_aliases = prefix_aliases
         self.is_prefix = True
@@ -776,9 +791,9 @@ class prefixParameter(Parameter):
         result = obj.print_value(val)
         return result
 
-    def parse_uncertainty_prefix(self, val):
+    def set_uncertainty_prefix(self, val):
         obj = self.get_par_type_object()
-        result = obj.parse_uncertainty(val)
+        result = obj.set_uncertainty(val)
         return result
 
     def new_index_prefix_param(self, index):
