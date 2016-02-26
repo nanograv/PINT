@@ -257,7 +257,7 @@ class TimingModel(object):
         """
         copy_toas = copy.deepcopy(toas)
         if sample_step is None:
-            pulse_period = 1.0/self.F0.value
+            pulse_period = 1.0/self.F0.num_value
             sample_step = pulse_period/10.0
         sample_dt = [-sample_step,2 * sample_step]
 
