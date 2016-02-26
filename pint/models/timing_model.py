@@ -1,7 +1,7 @@
 # timing_model.py
 # Defines the basic timing model interface classes
 import functools
-from .parameter import Parameter
+from .parameter import strParameter
 from ..phase import Phase
 from astropy import log
 import astropy.time as time
@@ -110,11 +110,9 @@ class TimingModel(object):
 
         self.phase_funcs = [] # List of phase component functions
         self.cache = None
-        self.add_param(Parameter(name="PSR",
-            units=None,
+        self.add_param(strParameter(name="PSR",
             description="Source name",
-            aliases=["PSRJ", "PSRB"],
-            parse_value=str))
+            aliases=["PSRJ", "PSRB"]))
         self.model_type = None
 
     def setup(self):
@@ -200,11 +198,11 @@ class TimingModel(object):
         mapping = dict()
         for parname in parnames:
             par = getattr(self,parname)
-            if par.is_prefix == True:
+            if par.is_prefix == True and par.prefix == prefix:
                 mapping[par.index] = parname
 
         setattr(self,prefix+'mapping',mapping)
-
+        return getattr(self,prefix+'mapping',mapping)
 
     @Cache.use_cache
     def phase(self, toas):

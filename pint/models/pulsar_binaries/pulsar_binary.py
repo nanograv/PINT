@@ -210,8 +210,8 @@ class PSR_BINARY(object):
         else:
             e = eccentricity
 
-        if any(e)<=0 or any(e)>1:
-            raise ValueError('eccentric should be in the range of (0,1].')
+        if any(e)<0 or any(e)>=1:
+            raise ValueError('Eccentricity should be in the range of [0,1).')
 
         if hasattr(mean_anomaly,'unit'):
             ma = np.longdouble(mean_anomaly).value
