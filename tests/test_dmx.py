@@ -16,7 +16,7 @@ class TestDMX(unittest.TestCase):
     def setUpClass(self):
         self.parf = os.path.join(datapath,
                                  'B1855+09_NANOGrav_dfg+12_modified.par')
-        self.timf = os.path.join(datapath, 'J1923+2515_NANOGrav_9yv1.tim')
+        self.timf = os.path.join(datapath, 'B1855+09_NANOGrav_dfg+12.tim')
         self.DMXm = mb.get_model(self.parf)
         self.toas = toa.get_TOAs(self.timf)
 
