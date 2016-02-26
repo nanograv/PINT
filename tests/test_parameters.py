@@ -43,17 +43,23 @@ class TestParameters(unittest.TestCase):
                 numpy.isclose(self.m.F0.num_value, num_value, atol=1e-13))
         self.assertEqual(self.m.F0.num_value, num_value)
 
+    def test_F0_uncertainty(self):
+        uncertainty = 0.00000000000698911818
+        num_unit = self.m.F0.num_unit
+        self.assertEqual(self.m.F0.uncertainty, uncertainty * num_unit)
+
     def test_set_new_units(self):
         """Check whether we can set the units to non-standard ones """
         # Standard units
         num_unit = u.Hz
         str_unit = 'Hz'
         num_value = 186.49
+        num_uncertainty = 0.00000000000698911818
         # New units
         num_unit_new = u.kHz
         str_unit_new = 'kHz'
         num_value_new = 0.18649
-
+        num_uncertainty_new = 0.00000000000698911818/1000.0
         # Set it to 186.49 Hz: the 'standard' value
         self.m.F0.value = num_value * num_unit
         self.assertTrue(
@@ -64,16 +70,27 @@ class TestParameters(unittest.TestCase):
         self.assertTrue(
                 numpy.isclose(self.m.F0.num_value, num_value_new, atol=1e-13))
 
+        self.assertTrue(
+                numpy.isclose(self.m.F0.num_uncertainty, num_uncertainty_new,
+                              atol=1e-13))
         # Change the units back, and then set them implicitly
         self.m.F0.units = str_unit
         self.m.F0.value = num_value_new * num_unit_new
+        self.m.F0.uncertainty = num_uncertainty_new * num_unit_new
         self.assertTrue(
                 numpy.isclose(self.m.F0.num_value, num_value_new, atol=1e-13))
-
+        self.assertTrue(
+                numpy.isclose(self.m.F0.num_uncertainty, num_uncertainty_new,
+                              atol=1e-13))
         # Check the ratio, using the old units as a reference
         ratio = self.m.F0.value / (num_value * num_unit)
+        ratio_uncertainty = self.m.F0.uncertainty / (num_uncertainty * num_unit)
         self.assertTrue(
                 numpy.isclose(ratio.decompose(u.si.bases), 1.0, atol=1e-13))
+
+        self.assertTrue(
+                numpy.isclose(ratio_uncertainty.decompose(u.si.bases), 1.0,
+                              atol=1e-13))
 
     def set_num_unit_fail(self):
         """Setting the unit to a non-compatible unit should fail """
@@ -166,6 +183,23 @@ class TestParameters(unittest.TestCase):
     def test_prefix_value_fail(self):
         """Test setting the prefix parameter to an incompatible value"""
         self.assertRaises(ValueError, self.set_prefix_value_to_unit_fail)
+
+    def test_prefix_value1(self):
+        self.mp.GLF0_2.value = 50
+        assert self.mp.GLF0_2.value == 50 * u.Hz
+
+    def test_prefix_value_str(self):
+        self.mp.GLF0_2.value = '50'
+        assert self.mp.GLF0_2.value == 50 * u.Hz
+
+    def test_prefix_value_quantity(self):
+        self.mp.GLF0_2.value = 50 * u.Hz
+        assert self.mp.GLF0_2.value == 50 * u.Hz
+
+    def set_prefix_value1(self):
+        self.mp.GLF0_2.value = 100 * u.s
+    def test_prefix_value1(self):
+        self.assertRaises(ValueError, self.set_prefix_value1)
 
 if __name__ == '__main__':
     pass
