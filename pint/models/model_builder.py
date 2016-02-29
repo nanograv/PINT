@@ -5,7 +5,7 @@ import os
 # The timing models that we will be using
 from .timing_model import generate_timing_model
 from .astrometry import Astrometry
-from .dispersion import Dispersion
+from .dispersion_models import DispersionDMX
 from .spindown import Spindown
 from .glitch import Glitch
 from .bt import BT
@@ -18,7 +18,7 @@ from .pint_dd_model import DDwrapper
 # List with all timing model components we will consider when pre-processing a
 # parfile
 
-ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro,
+ComponentsList = [Astrometry, Spindown, DispersionDMX, SolarSystemShapiro,
                   BT, DDwrapper, Glitch]
 
 
