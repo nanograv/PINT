@@ -11,7 +11,7 @@ import os, unittest
 
 datapath = os.path.join(os.environ['PINT'],'tests','datafile')
 # Using Nanograv data B1855
-parfile = os.path.join(datapath, 'B1855+09_NANOGrav_dfg+12_modified.par')
+parfile = os.path.join(datapath, 'B1855+09_NANOGrav_dfg+12_modified_DD.par')
 timfile = os.path.join(datapath, 'B1855+09_NANOGrav_dfg+12.tim')
 # libstempo calculation
 print "libstempo calculation"

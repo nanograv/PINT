@@ -34,7 +34,10 @@ class FD(TimingModel):
 
     def FD_delay(self, toas):
         """This is a function for calculation of frequency dependent delay.
-        See nanograv 9 years data set (2015) Eq.(2)
+        Z. Arzoumanian, The NANOGrav Nine-year Data Set: Observations, Arrival
+        Time Measurements, and Analysis of 37 Millisecond Pulsars, The
+        Astrophysical Journal, Volume 813, Issue 1, article id. 65, 31 pp.(2015).
+        Eq.(2):
         FDdelay = sum(c_i * (log(obs_freq/1GHz))^i)
         """
         FD_delay = np.zeros_like(toas, dtype=np.longdouble) * u.second
