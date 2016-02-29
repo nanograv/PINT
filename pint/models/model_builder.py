@@ -14,12 +14,13 @@ from .solar_system_shapiro import SolarSystemShapiro
 from pint.utils import split_prefixed_name
 from .parameter import prefixParameter
 from .pint_dd_model import DDwrapper
+from .frequency_dependent import FD
 
 # List with all timing model components we will consider when pre-processing a
 # parfile
 
 ComponentsList = [Astrometry, Spindown, DispersionDMX, SolarSystemShapiro,
-                  BT, DDwrapper, Glitch]
+                  BT, DDwrapper, Glitch, FD]
 
 
 class model_builder(object):
