@@ -76,9 +76,9 @@ setup(
     author_email = 'sransom@nrao.edu',
     url = 'https://github.com/nanograv/PINT',
 
-    packages=['pint', 
-        'pint.models', 
-        'pint.models.pulsar_binaries', 
+    packages=['pint',
+        'pint.models',
+        'pint.models.pulsar_binaries',
         'pint.orbital'],
 
     cmdclass = cmdclass,
