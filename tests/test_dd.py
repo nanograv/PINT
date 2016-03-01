@@ -24,16 +24,15 @@ toas = toa.get_TOAs(timfile, planets=True)
 tt = toas.table
 # Run tempo2 general2 pluging
 tempo2_vals = tempo2_utils.general2(parfile, timfile,
-                                    ['tt2tb', 'roemer', 'post_phase',
+                                    ['tt2tb', 'roemer', 'pre',
                                      'shapiro', 'shapiroJ','bat','clock0',
                                      'clock1','clock2','clock3','clock4','sat',
                                      'tropo'])
 # compute residules
-t2_resids = tempo2_vals['post_phase'] / float(mdd.F0.num_value) * 1e6 * u.us
+#t2_resids = tempo2_vals['post_phase'] / float(mdd.F0.num_value) * 1e6 * u.us
+t2_resids = tempo2_vals['pre']
 presids_us = resids(toas, mdd).time_resids.to(u.us)
-toas = psr.toas()
-toas.sort()
-plt.plot(toas,presids_us-t2_resids)
+plt.plot(toas.get_mjds(high_precision=False),presids_us.value-t2_resids,'+')
 plt.xlabel('Mjd (DAY)')
 plt.ylabel('residule (us)')
 plt.title('Residule difference between PINT and tempo2')
