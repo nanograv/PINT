@@ -1,5 +1,6 @@
 """Miscellaneous potentially-helpful functions."""
 import numpy as np
+from scipy.misc import factorial
 import string
 import astropy.time
 try:
@@ -370,11 +371,9 @@ def taylor_horner(x, coeffs):
     Out[1]: 40.0
 
     """
-    result = 0.0
-    fact = float(len(coeffs))
-    for coeff in coeffs[::-1]:
-        result = result * x / fact + coeff
-        fact -= 1.0
+    fact = factorial(range(len(coeffs)-1, -1, -1))
+    coeffs = np.flipud(coeffs) / fact
+    result = np.polyval(coeffs, x)
     return result
 
 

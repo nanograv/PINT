@@ -40,13 +40,14 @@ class FD(TimingModel):
         Eq.(2):
         FDdelay = sum(c_i * (log(obs_freq/1GHz))^i)
         """
-        FD_delay = np.zeros_like(toas, dtype=np.longdouble) * u.second
-        for ii in range(1,self.num_FD_terms+1):
-            FD_coef = getattr(self, self.FDmapping[ii])
-            log_freq = np.log(toas['freq'] / (1 * u.GHz))
-            FD_delay += FD_coef.value * (log_freq) ** ii
+        log_freq = np.log(toas['freq'] / (1 * u.GHz))
+        FD_coeff = [getattr(self, self.FDmapping[ii]).num_value \
+                   for ii in range(self.num_FD_terms,0,-1)]
+        FD_coeff += [0.0]
 
-        return FD_delay
+        FD_delay = np.polyval(FD_coeff, log_freq)
+
+        return FD_delay * self.FD1.num_unit
 
     def d_delay_d_FD(self, toas, FD_term=1):
         """This is a derivative function for FD parameter
