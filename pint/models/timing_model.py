@@ -257,9 +257,9 @@ class TimingModel(object):
         """
         copy_toas = copy.deepcopy(toas)
         if sample_step is None:
-            pulse_period = 1.0/self.F0.num_value
-            sample_step = pulse_period/10.0
-        sample_dt = [-sample_step,2 * sample_step]
+            pulse_period = 1.0 / self.F0.num_value
+            sample_step = pulse_period / 10.0
+        sample_dt = [-sample_step, 2 * sample_step]
 
         sample_phase = []
         for dt in sample_dt:
@@ -272,8 +272,8 @@ class TimingModel(object):
         # Use finite difference method.
         # phase'(t) = (phase(t+h)-phase(t-h))/2+ 1/6*F2*h^2 + ..
         # The error should be near 1/6*F2*h^2
-        dp = (sample_phase[1]-sample_phase[0])
-        d_phase_d_toa = dp.int/(2*sample_step)+dp.frac/(2*sample_step)
+        dp = (sample_phase[1] - sample_phase[0])
+        d_phase_d_toa = dp.int / (2*sample_step) + dp.frac / (2*sample_step)
         del copy_toas
         return d_phase_d_toa
 
