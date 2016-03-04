@@ -267,6 +267,14 @@ class TOA(object):
             if numpy.isscalar(MJD):
                 self.mjd = time.Time(MJD, scale='tdb', format='mjd',
                                     precision=9)
+                                    
+            elif type(MJD) == time.Time:
+                self.mjd = MJD
+                # Make sure precision is high enough!
+                if self.mjd.precision < 9:
+                    log.warning('TOA passed with poor precision ({0})'.format(self.mjd.precision))
+                self.mjd.precision = 9
+
             else:
                 self.mjd = time.Time(MJD[0], MJD[1],
                                     scale='tdb', format='mjd',
