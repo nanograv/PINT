@@ -3,6 +3,7 @@ import pint.toa as toa
 import matplotlib.pyplot as plt
 import astropy.units as u
 import astropy.time as time
+import numpy as np
 import unittest
 import copy
 import os
@@ -13,26 +14,35 @@ datapath = os.path.join(os.environ['PINT'], 'tests', 'datafile')
 class TestD_phase_D_toa(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.parf = os.path.join(datapath, 'J1744-1134.basic.par')
-        self.timf = os.path.join(datapath, 'J1744-1134.Rcvr1_2.GASP.8y.x.tim')
+        self.parf = os.path.join(datapath, 'test_d_phase_d_toa_F1.par')
+        self.timf = os.path.join(datapath, 'test_d_phase_d_toa_F1.tim')
         self.model = mb.get_model(self.parf)
         self.toas = toa.get_TOAs(self.timf)
 
     def test_d_phase_d_toa(self):
         # TODO: How do you Calculate real derivative. To analysis the error?
-        dpdtoa_model = self.model.d_phase_d_toa(self.toas)
-        dpdtoa_full = self.d_phase_d_toa_full()
-        dpdtoa_basic = self.d_phase_d_toa_basic()
-        diff_m_f = dpdtoa_model - dpdtoa_full
-        diff_m_b = dpdtoa_model - dpdtoa_basic
-        max_diff_m_f = max(diff_m_f)
-        max_diff_m_b = max(diff_m_b)
+        analog = self.ana_diff()
+        emsg = ""
+        for f in [0.1, 1, 10, 100, 1000, 5000]:
+            step = 1.0/self.model.F0.num_value*f
+            dpdtoa_model = self.model.d_phase_d_toa(self.toas, step)
+            diff = dpdtoa_model - analog
+            emsg += str(max(np.abs(diff))) + " "
+        #dpdtoa_full = self.d_phase_d_toa_full()
+        #dpdtoa_basic = self.d_phase_d_toa_basic()
+        #diff_m_f = dpdtoa_model - dpdtoa_full
+        #diff_m_b = dpdtoa_model - dpdtoa_basic
+        #max_diff_m_f = max(diff_m_f)
+        #max_diff_m_b = max(diff_m_b)
         # Calculate the error for derivative.
-        drd, step = self.d_third_derivative()
-        max_drd = max(drd)
-        error = step**2 / 6 * max_drd
-        emsg = str(max_diff_m_f) + "is bigger then" + str(error)
-        assert max_diff_m_f < error, emsg
+        #drd, step = self.d_third_derivative()
+        assert False, emsg
+
+    def ana_diff(self):
+        der = self.model.F0.num_value + \
+              self.model.F1.num_value * ((self.toas.table['tdbld'] - \
+                                self.model.PEPOCH.num_value)* 86400.0)
+        return der
 
     def d_phase_d_toa_full(self):
         print "Test with full ssb_obs_pos calculation."
