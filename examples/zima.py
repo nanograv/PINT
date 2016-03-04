@@ -78,6 +78,10 @@ if __name__ == '__main__':
     # converting phase residuals to time residuals
     ts.adjust_TOAs(TimeDelta(-1.0*rspost))
 
+    # Do the third iteration.
+    rspost = m.phase(ts.table).frac/F
+    ts.adjust_TOAs(TimeDelta(-1.0*rspost))
+    
      # Write TOAs to a file
     ts.write_TOA_file(args.timfile,name='fake',format='Tempo2')
 
