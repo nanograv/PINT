@@ -13,7 +13,6 @@ class PhaseJump(TimingModel):
         super(PhaseJump, self).__init__()
         self.add_param(p.maskParameter(name = 'JUMP'))
         self.phase_funcs += [self.jump_phase,]
-
     def setup(self):
         super(PhaseJump, self).setup()
         self.jumps = []
@@ -26,5 +25,5 @@ class PhaseJump(TimingModel):
         for jump in self.jumps:
             jump_par = getattr(self, jump)
             mask = jump_par.select_toa_mask(toas)
-            phase[mask] += jump_par.num_value
+            phase[mask] += jump_par.num_value * self.F0.num_value 
         return phase
