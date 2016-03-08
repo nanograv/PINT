@@ -55,7 +55,6 @@ class TestAstroPyTime:
 
 
 def test_iers_a_now():
-    iers_a_file = download_file(IERS_A_URL, cache=True)
     iers_a = IERS_A.open(IERS_A_URL)
     t2 = astropy.time.Time.now()
     t2.delta_ut1_utc = t2.get_delta_ut1_utc(iers_a)

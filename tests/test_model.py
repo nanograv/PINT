@@ -12,10 +12,13 @@ from astropy import log
 log.setLevel('ERROR')
 # for nice output info, set the following instead
 #log.setLevel('INFO')
+testdir=os.path.join(os.getenv('PINT'),'tests');
+datadir = os.path.join(testdir,'datafile')
+os.chdir(datadir)
 
-parfile = 'tests/datafile/J1744-1134.basic.par'
-t1_parfile = 'tests/datafile/J1744-1134.t1.par'
-timfile = 'tests/datafile/J1744-1134.Rcvr1_2.GASP.8y.x.tim'
+parfile = 'J1744-1134.basic.par'
+t1_parfile = 'J1744-1134.t1.par'
+timfile = 'J1744-1134.Rcvr1_2.GASP.8y.x.tim'
 
 m = tm.StandardTimingModel()
 m.read_parfile(parfile)
