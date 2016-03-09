@@ -824,6 +824,42 @@ class prefixParameter(Parameter):
 
 
 class maskParameter(Parameter):
+        """ This is a Parameter type for mask parameters which is to select a
+        certain subset of TOAs, for example JUMP. This type of parameter does
+        not require index input. But the final may would has an index part, for
+        the purpose of parsing the right value from the parfile. For example,
+        >>>p = maskParameter(name='JUMP', index=2)
+        >>>p.name
+        'JUMP2'
+        Parameter
+        ---------
+        name : str optional
+            The name of the parameter.
+        index : int optional [default 1]
+            The index number for the prefixed parameter.
+        key : str optional
+            The key words/flag for the selecting TOAs
+        key_value :  list/single value optional
+            The value for key words/flags. Value can take one value as a flag value.
+            or two value as a range.
+            e.g. JUMP freq 430.0 1440.0. or JUMP -fe G430
+        value : float or long_double optinal
+            Toas/phase adjust value
+        long_double : bool, optional default 'double'
+            Set float type value and num_value in numpy float128
+        units : str optional
+            Unit for the offset value
+        description : str optional
+            Description for the parameter
+        uncertainty: float/longdouble
+            uncertainty of the parameter.
+        frozen : bool, optional
+            A flag specifying whether "fitters" should adjust the value of this
+            parameter or leave it fixed.
+        continuous : bool optional
+        aliases : list optional
+            List of aliases for parameter name.
+        """
     def __init__(self, name=None, index=1, key=None, key_value=None,
             value=None, long_double=False, units= None, description=None,
             uncertainty=None, frozen=True, continuous=False, aliases=[]):
@@ -956,11 +992,21 @@ class maskParameter(Parameter):
         return True
 
     def new_param(self, index):
+        """Create a new but same style mask parameter
+        """
         new_mask_param = maskParameter(name=self.origin_name, index=index,
                                        long_double=self.long_double,
                                        units= self.units, aliases=[])
         return new_mask_param
 
     def select_toa_mask(self, toas):
+        """Select the toas.
+        Parameter
+        ----------
+        toas : toas table
+        Return
+        ----------
+        A mask array. the select toas are masked as True. 
+        """
         self.toa_select = TOASelect(self.key, self.key_value)
         return self.toa_select.get_toa_key_mask(toas)

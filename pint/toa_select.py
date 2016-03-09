@@ -1,6 +1,9 @@
 import numpy as np
 
 class TOASelect(object):
+    """This class is designed for select toas based on a key word and key value.
+    It will check toa table and do table operation.
+    """
     def __init__(self, key, key_value):
         self.key = key
         self.key_value = key_value
@@ -33,6 +36,8 @@ class TOASelect(object):
             raise ValueError("Key %s is not a flag or toas table key." % self.key)
 
     def get_toa_key_mask(self, toas):
+        """This is a function to return toas mask depend on key word and key value. 
+        """
         if self.key_section not in toas.keys():
             self.get_key_section(toas)
         if not self.range_select:
