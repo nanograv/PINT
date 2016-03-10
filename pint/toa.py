@@ -155,12 +155,12 @@ def format_toa_line(toatime, toaerr, freq, dm=0.0, obs='@', name='unk', flags={}
     format='Princeton'):
     """
     Format TOA line for writing
-    
+
     Bugs
     ----
     This implementation is currently incomplete in that it will not
     undo things like TIME statements and probably other things.
-    
+
     Princeton format
     ----------------
     columns  item
@@ -239,13 +239,13 @@ class TOA(object):
                  **kwargs):  # keyword args that are completely optional
         r"""
         Construct a TOA object
-        
+
         Parameters
         ----------
         MJD : astropy Time, float, or tuple of floats
             The time of the TOA, which can be expressed as an astropy Time,
             a floating point MJD (64 or 128 bit precision), or a tuple
-            of (MJD1,MJD2) whose sum is the full precision MJD (usually the 
+            of (MJD1,MJD2) whose sum is the full precision MJD (usually the
             integer and fractional part of the MJD)
         obs : string
             The observatory code for the TOA
@@ -260,7 +260,7 @@ class TOA(object):
         It is VERY important that all astropy.Time() objects are created
         with precision=9. This is ensured in the code and is checked for any
         Time object passed to the TOA constructor.
-                            
+
         """
         if obs == "Barycenter":
             # Barycenter overrides the scale argument with 'tdb' always.
@@ -502,15 +502,15 @@ class TOAs(object):
 
     def adjust_TOAs(self, delta):
         """Apply a time delta to TOAs
-        
+
         Adjusts the time (MJD) of the TOAs by applying delta, which should
         be a numpy.time.TimeDelta instance with the same shape as self.table['mjd']
-        
+
         Parameters
         ----------
         delta : astropy.time.TimeDelta
             The time difference to add to the MJD of each TOA
-        
+
         """
         col = self.table['mjd']
         if type(delta) != time.TimeDelta:
@@ -519,33 +519,33 @@ class TOAs(object):
             raise ValueError('Shape of mjd column and delta must be compatible')
         for ii in range(len(col)):
             col[ii] += delta[ii]
-            
+
         # This adjustment invalidates the derived columns in the table, so delete
         # and recompute them
         self.compute_TDBs()
         self.compute_posvels()
-        
+
     def write_TOA_file(self,filename,name='pint', format='Princeton'):
         """Dump current TOA table out as a TOA file
-        
+
         Parameters
         ----------
         filename : str
             File name to write to
         format : str
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1')
-        
+
         """
         outf = file(filename,'w')
         if format.upper() in ('TEMPO2','1'):
             outf.write('FORMAT 1\n')
         for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'],
             self.table['freq'],self.table['obs'],self.table['flags']):
-            str = format_toa_line(toatime, toaerr, freq, dm=0.0, obs=obs, name=name, 
+            str = format_toa_line(toatime, toaerr, freq, dm=0.0, obs=obs, name=name,
             flags=flags, format=format)
             outf.write(str)
         outf.close()
-        
+
     def apply_clock_corrections(self):
         """Apply observatory clock corrections and TIME statments.
 
@@ -692,7 +692,7 @@ class TOAs(object):
         """
         # Record the planets choice for this instance
         self.planets = planets
-        
+
         # Remove any existing columns
         cols_to_remove = ['ssb_obs_pos', 'ssb_obs_vel', 'obs_sun_pos']
         for c in cols_to_remove:
@@ -704,7 +704,7 @@ class TOAs(object):
             if name in self.table.colnames:
                 log.info('Column {0} already exists. Removing...'.format(name))
                 self.table.remove_column(name)
-                
+
         load_kernels(ephem)
         pth = os.path.join(pintdir, "datafiles")
         ephem_file = os.path.join(pth, "%s.bsp"%ephem.lower())
@@ -812,6 +812,8 @@ class TOAs(object):
                         self.ntoas = tmp.ntoas
                     self.commands = tmp.commands
                     self.observatories = tmp.observatories
+                    self.last_MJD = tmp.last_MJD
+                    self.first_MJD = tmp.first_MJD
                     return
             self.ntoas = 0
             self.toas = []
