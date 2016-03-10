@@ -267,7 +267,7 @@ class TOA(object):
             if numpy.isscalar(MJD):
                 self.mjd = time.Time(MJD, scale='tdb', format='mjd',
                                     precision=9)
-                                    
+
             elif type(MJD) == time.Time:
                 self.mjd = MJD
                 # Make sure precision is high enough!
@@ -518,6 +518,7 @@ class TOAs(object):
         ----------
         delta : astropy.time.TimeDelta
             The time difference to add to the MJD of each TOA
+
         get_posvel : bool
             Flag to enable earth posvel calculation
         """
@@ -832,6 +833,8 @@ class TOAs(object):
                         self.ntoas = tmp.ntoas
                     self.commands = tmp.commands
                     self.observatories = tmp.observatories
+                    self.last_MJD = tmp.last_MJD
+                    self.first_MJD = tmp.first_MJD
                     return
             self.ntoas = 0
             self.toas = []
