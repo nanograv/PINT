@@ -67,6 +67,22 @@ ext_modules += [Extension("spice_util", src,
 if use_cython:
     cmdclass.update({'build_ext': build_ext})
 
+# Download data files
+data_urls = [
+        "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de405.bsp",
+        "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de421.bsp",
+        "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de430t.bsp",
+        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/earth_latest_high_prec.bpc",
+        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00010.tpc",
+        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0011.tls",
+        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/de-403-masses.tpc"
+        ]
+data_files = []
+data_dir = 'datafiles'
+for u in data_urls:
+    os.system("wget -N -c -P pint/%s %s" % (data_dir, u))
+    data_files.append(os.path.join(data_dir,u.split('/')[-1]))
+
 setup(
     name="pint",
     version = '0.0.1',
@@ -82,10 +98,7 @@ setup(
         'pint.models.pulsar_binaries', 
         'pint.orbital'],
 
-    package_data={'pint':['datafiles/observatories.txt', 
-        'datafiles/*.tpc', 'datafiles/*.bsp',
-        'datafiles/*.bpc', 'datafiles/*.tls', 
-        'datafiles/*.tpc']},
+    package_data={'pint':['datafiles/observatories.txt',]+data_files},
 
     cmdclass = cmdclass,
     ext_modules=ext_modules,
