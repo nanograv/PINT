@@ -12,7 +12,8 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 from spiceutils import objPosVel, load_kernels
-from pint import ls, pintdir, J2000, J2000ld
+from pint import ls, J2000, J2000ld
+from .config import datapath
 from astropy import log
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
@@ -706,8 +707,7 @@ class TOAs(object):
                 self.table.remove_column(name)
                 
         load_kernels(ephem)
-        pth = os.path.join(pintdir, "datafiles")
-        ephem_file = os.path.join(pth, "%s.bsp"%ephem.lower())
+        ephem_file = datapath("%s.bsp"%ephem.lower())
         log.info("Loading %s ephemeris." % ephem_file)
         spice.furnsh(ephem_file)
         self.table.meta['ephem'] = ephem

@@ -36,10 +36,3 @@ J2000ld = utils.time_to_longdouble(J2000)
 # PINT special units list
 pint_units = {'H:M:S':u.hourangle,'D:M:S':u.deg,'lt-s':ls,'ls':ls,'Tsun':Tsun,
               'GMsun':GMsun,'MJD':u.day,'pulse phase':u.Unit(1)}
-# setup environment
-# Load the PINT environment variable to get the top level directory
-pintdir = os.getenv("PINT")
-if pintdir is None:
-    filedir = os.path.split(os.path.realpath(__file__))[0]
-    pintdir = os.path.abspath(filedir)
-    del filedir

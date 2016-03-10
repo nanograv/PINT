@@ -3,7 +3,7 @@ import numpy
 import astropy.units as u
 from astropy.coordinates import EarthLocation
 from astropy import log
-from pint import pintdir
+from .config import datapath
 
 class observatory(object):
     pass
@@ -108,10 +108,10 @@ def read_observatories():
     """Load observatory data files and return them.
 
     Return a dictionary of instances of the observatory class that are
-    stored in the $PINT/datafiles/observatories.txt file.
+    stored in the PINT observatories.txt data file.
     """
     observatories = {}
-    filenm = os.path.join(pintdir, "datafiles/observatories.txt")
+    filenm = datapath("observatories.txt")
     with open(filenm) as f:
         for line in f.readlines():
             if line[0] != "#":
