@@ -77,6 +77,7 @@ setup(
     url = 'https://github.com/nanograv/PINT',
 
     packages=['pint', 
+        'pint.extern',
         'pint.models', 
         'pint.models.pulsar_binaries', 
         'pint.orbital'],
