@@ -14,8 +14,8 @@ datapath = os.path.join(os.environ['PINT'], 'tests', 'datafile')
 class TestD_phase_D_toa(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.parf = os.path.join(datapath, 'test_d_phase_d_toa_F1.par')
-        self.timf = os.path.join(datapath, 'test_d_phase_d_toa_F1.tim')
+        self.parf = os.path.join(datapath, 'test_d_phase_d_toa.par')
+        self.timf = os.path.join(datapath, 'test_d_phase_d_toa.tim')
         self.model = mb.get_model(self.parf)
         self.toas = toa.get_TOAs(self.timf)
 
@@ -28,20 +28,13 @@ class TestD_phase_D_toa(unittest.TestCase):
             dpdtoa_model = self.model.d_phase_d_toa(self.toas, step)
             diff = dpdtoa_model - analog
             emsg += str(max(np.abs(diff))) + " "
-        #dpdtoa_full = self.d_phase_d_toa_full()
-        #dpdtoa_basic = self.d_phase_d_toa_basic()
-        #diff_m_f = dpdtoa_model - dpdtoa_full
-        #diff_m_b = dpdtoa_model - dpdtoa_basic
-        #max_diff_m_f = max(diff_m_f)
-        #max_diff_m_b = max(diff_m_b)
-        # Calculate the error for derivative.
-        #drd, step = self.d_third_derivative()
         assert False, emsg
 
     def ana_diff(self):
-        der = self.model.F0.num_value + \
-              self.model.F1.num_value * ((self.toas.table['tdbld'] - \
-                                self.model.PEPOCH.num_value)* 86400.0)
+        t_reduced = (self.toas.table['tdbld'] - \
+                     self.model.PEPOCH.num_value)* 86400.0
+        der = self.model.F0.num_value + self.model.F1.num_value * t_reduced + \
+              self.model.F2.num_value/2.0*(t_reduced**2)
         return der
 
     def d_phase_d_toa_full(self):
