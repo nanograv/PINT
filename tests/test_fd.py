@@ -3,7 +3,6 @@ import pint.models.model_builder as mb
 import pint.toa as toa
 import libstempo as lt
 import matplotlib.pyplot as plt
-import tempo2_utils
 import astropy.units as u
 import pint.residuals
 import numpy as np
@@ -23,7 +22,7 @@ class TestFD(unittest.TestCase):
         rs = pint.residuals.resids(self.toas, self.FDm).time_resids.to(u.s).value
         psr = lt.tempopulsar(self.parf, self.timf)
         resDiff = rs-psr.residuals()
-        #TODO : this percision should be increased. 
+        #TODO : this percision should be increased.
         assert np.all(resDiff< 5e-6) , \
             "PINT and tempo Residual difference is too big. "
 
