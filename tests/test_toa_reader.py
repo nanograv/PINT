@@ -1,8 +1,7 @@
 from pint import toa
 import os
 
-testdir = os.path.join(os.getenv('PINT'),'tests');
-datadir = os.path.join(testdir,'datafile')
+from pinttestdata import testdir, datadir
 os.chdir(datadir)
 
 class TestTOAReader:

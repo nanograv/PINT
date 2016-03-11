@@ -7,8 +7,7 @@ from pint.utils import PosVel
 from astropy import log
 import os
 
-testdir=os.path.join(os.getenv('PINT'),'tests');
-datadir = os.path.join(testdir,'datafile')
+from pinttestdata import testdir, datadir
 
 log.setLevel('ERROR')
 # for nice output info, set the following instead

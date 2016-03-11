@@ -7,14 +7,14 @@ from pint import fitter
 import matplotlib.pyplot as plt
 import numpy
 
-testdir=os.path.join(os.getenv('PINT'), 'tests', 'datafile');
+from pinttestdata import testdir, datadir
 
 # Get model
 m = tm.StandardTimingModel()
-m.read_parfile(os.path.join(testdir,'NGC6440E.par'))
+m.read_parfile(os.path.join(datadir,'NGC6440E.par'))
 
 # Get TOAs
-t = toa.TOAs(os.path.join(testdir,'NGC6440E.tim'),usepickle=False)
+t = toa.TOAs(os.path.join(datadir,'NGC6440E.tim'),usepickle=False)
 t.apply_clock_corrections()
 t.compute_TDBs()
 try:
@@ -81,4 +81,4 @@ plt.legend([p1,p2,p3,p4,p5,p6],['Initial','4-param','Perturb F1',
                                 'Fit F0,F1,RA,DEC with method="Powell"'],
            loc=3)
 #plt.show()
-plt.savefig(os.path.join(testdir,"test_fitter_plot.pdf"))
+plt.savefig(os.path.join(datadir,"test_fitter_plot.pdf"))
