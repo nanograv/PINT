@@ -5,10 +5,11 @@ import pint.fitter
 import pint.residuals
 import matplotlib.pyplot as plt
 import astropy.units as u
-import sys
+import os, sys
 
-parfile = 'examples/NGC6440E.par'
-timfile = 'examples/NGC6440E.tim'
+datadir = os.path.dirname(os.path.abspath(__file__))
+parfile = os.path.join(datadir, 'NGC6440E.par')
+timfile = os.path.join(datadir, 'NGC6440E.tim')
 
 # Define the timing model
 m = pint.models.StandardTimingModel()
