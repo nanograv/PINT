@@ -1,4 +1,6 @@
 from pint.models import model_builder as mb
+import pint.models.polycos as py
+import pint.utils as ut
 import pint.toa as toa
 import matplotlib.pyplot as plt
 import astropy.units as u
@@ -18,18 +20,55 @@ class TestD_phase_D_toa(unittest.TestCase):
         self.timf = os.path.join(datapath, 'test_d_phase_d_toa.tim')
         self.model = mb.get_model(self.parf)
         self.toas = toa.get_TOAs(self.timf)
+        self.polycos= py.Polycos()
 
     def test_d_phase_d_toa(self):
         # TODO: How do you Calculate real derivative. To analysis the error?
         analog = self.ana_diff()
-        emsg = ""
-        for f in [0.1, 1, 10, 100, 1000, 5000]:
-            step = 1.0/self.model.F0.num_value*f
-            dpdtoa_model = self.model.d_phase_d_toa(self.toas, step)
-            diff = dpdtoa_model - analog
-            emsg += str(max(np.abs(diff))) + " "
-        assert False, emsg
+        dpdtoa_model = self.model.d_phase_d_toa(self.toas)
+        diff = dpdtoa_model - analog
+        emsg = "Max difference is %s between d_phase_d_toa and realy value. "%str(max(np.abs(diff)))
+        assert np.all(diff < 1e-7), emsg
 
+    def test_d_phase_d_toa_polyco(self):
+        # Use Tempo generated polyco to test the frequency
+        parfile = os.path.join(datapath, 'J1744-1134.basic2.par')
+        timfile = os.path.join(datapath, 'J1744-1134.Rcvr1_2.GASP.8y.x.tim')
+        m = mb.get_model(parfile)
+        t = toa.get_TOAs(timfile)
+        mask = t.table['mjd']< time.Time(53219.0, format='mjd',scale='utc')
+        polycofile = os.path.join(datapath, 'J1744-1134_polyco.dat')
+        self.polycos.read_polyco_file(polycofile, 'tempo')
+        mjdld = []
+        for mjd in t.table['mjd'][mask]:
+            mjdld.append(ut.time_to_longdouble(mjd))
+
+        freqPolyco = self.polycos.eval_spin_freq(mjdld)
+        freqModel =  m.d_phase_d_toa(t, 1000)
+        diff = freqPolyco - freqModel[mask]
+
+        assert np.all(diff<1e-7), " The result from d_phase_d_toa is not match" + \
+                "polyco result."
+
+    def test_d_phase_d_toa_coe(self):
+        """Test toa at center of earth.
+        """
+        parfile = os.path.join(datapath, 'J1744-1134.basic2.par')
+        timfile = os.path.join(datapath, 'J1744_coe.tim')
+        m_coe = mb.get_model(parfile)
+        t_coe = toa.get_TOAs(timfile)
+        polycofile = os.path.join(datapath, 'J1744_coe.dat')
+        plyc = py.Polycos()
+        mjdld = []
+        for mjd in t_coe.table['mjd']:
+            mjdld.append(ut.time_to_longdouble(mjd))
+
+        plyc.read_polyco_file(polycofile, 'tempo')
+        freqPlyc = plyc.eval_spin_freq(mjdld)
+        freqModel = m_coe.d_phase_d_toa(t_coe, 10000)
+        diff = freqPlyc - freqModel
+        assert np.all(diff < 1e-7), "d_phase_d_toa at center of earth is not match tempo polyco result."
+        
     def ana_diff(self):
         t_reduced = (self.toas.table['tdbld'] - \
                      self.model.PEPOCH.num_value)* 86400.0
