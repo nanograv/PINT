@@ -20,7 +20,7 @@ from .frequency_dependent import FD
 # parfile
 
 
-ComponentsList = [Astrometry, Spindown, DispersionDMX, SolarSystemShapiro,
+ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro,
                   BT, DDwrapper, Glitch, FD]
 
 class model_builder(object):
