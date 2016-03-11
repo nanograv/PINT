@@ -14,7 +14,7 @@ from .parameter import Parameter
 from .timing_model import TimingModel, MissingParameter, Cache
 import astropy.table as table
 from astropy.io import registry
-
+MIN_PER_DAY = 60.0*24.0
 
 
 class polycoEntry:
@@ -146,8 +146,8 @@ def tempo_polyco_table_reader(filename):
         http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
     """
     f = open(filename, "r")
-    entries=[]
     # Read entries to the end of file
+    entries = []
     while True:
         # Read first line
         line1 = f.readline()
@@ -173,14 +173,14 @@ def tempo_polyco_table_reader(filename):
 
         refF0 = np.longdouble(fields[1])
         obs = fields[2]
-        mjdSpan = np.longdouble(fields[3])/(60.0*24.0)   # Here change to constant
+        mjdSpan = np.longdouble(fields[3])/MIN_PER_DAY   # Here change to constant
         nCoeff = int(fields[4])
         obsfreq = float(fields[5].strip())
 
         try:
             binaryPhase = np.longdouble(fields[6])
         except:
-            binaryPhase = 0.0
+            binaryPhase = np.longdouble(0.0)
 
         # Read coefficients
         nCoeffLines = nCoeff/3
@@ -194,19 +194,34 @@ def tempo_polyco_table_reader(filename):
             for c in line.split():
                 coeffs.append(np.longdouble(c))
         coeffs = np.array(coeffs)
-        entry = polycoEntry(tmid,mjdSpan,refPhaseInt,refPhaseFrac,refF0,
-                            nCoeff,coeffs,obs)
 
-        entries.append((psrname, date, utc, tmid, dm, doppler, logrms,
-                        binaryPhase, obsfreq,entry))
 
-    # Construct the polyco data table
-    pTable = table.Table(rows = entries, names = ('psr','date','utc','tmid','dm',
-                                            'dopper','logrms','binary_phase',
-                                            'obsfreq','entry'),
-                                            meta={'name': 'Ployco Data Table'})
+        tmid = tmid*u.day
+        mjdspan = mjdSpan*u.day
+        tstart = np.longdouble(tmid) - np.longdouble(mjdspan)/2.0
+        tstop = np.longdouble(tmid) + np.longdouble(mjdspan)/2.0
+        rphase = Phase(refPhaseInt, refPhaseFrac)
+        refF0 = np.longdouble(refF0)
+        coeffs = np.longdouble(coeffs)
+
+        entries.append((psrname, date, utc, tmid.value, dm, doppler, logrms,
+                        binaryPhase, obs, obsfreq, mjdSpan, tstart, tstop,
+                        rphase, refF0, nCoeff, coeffs))
+    entry_list  = []
+    for ii in range(len(entries[0])):
+         entry_list.append([t[ii] for t in entries])
+
+    #Construct the polyco data table
+    pTable = table.Table(entry_list,
+                         names = ( 'psr','date','utc','tmid','dm',
+                         'dopper','logrms','binary_phase', 'obs', 'obsfreq',
+                         'mjd_span', 't_start', 't_stop','ref_phase','ref_freq',
+                         'num_coeffs', 'coeffs'),
+                         meta={'name': 'Ployco Data Table'})
+
+    pTable['index'] = np.arange(len(entries))
     return pTable
-    #return entries
+
 def tempo_polyco_table_writer(polycoTable, filename = 'polyco.dat'):
     """
     Write tempo style polyco file from an astropy table
@@ -548,7 +563,7 @@ class Polycos(object):
     def find_entry(self,t):
         """Find the right entry for the input time.
         """
-        if not isinstance(t, np.ndarray) and not isinstance(t,list):
+        if not isinstance(t, (np.ndarray, list)):
             t = np.array([t,])
         # Check if polyco table exist
         try:
@@ -562,25 +577,14 @@ class Polycos(object):
             errorMssg = "No sufficent polyco data. Plese read or generate polyco data correctlly."
             raise AttributeError(errorMssg)
 
-        if self.tStart is None or self.tStop is None:
-            self.tStart = np.array([self.polycoTable['entry'][i].tstart for i in range(lenEntry)])
-            self.tStop = np.array([self.polycoTable['entry'][i].tstop for i in range(lenEntry)])
-
-        # Check if t in the polyco domain
-
-        if np.min(t) < self.tStart[0] or np.max(t) > self.tStop[-1]:
-            errorMssg = ("Input time should be in the range of "+
-                        str(self.tStart[0])+" and "+str(self.tStop[-1]))
-            raise ValueError(errorMssg)
-
-        startIndex = np.searchsorted(self.tStart,t)
+        startIndex = np.searchsorted(self.polycoTable['t_start'], t)
         entryIndex = startIndex-1
-        overFlow = np.where(t > self.tStop[entryIndex])[0]
+        overFlow = np.where(t > self.polycoTable['t_stop'][entryIndex])[0]
         if overFlow.size!=0:
-            errorMssg = ("Input time"+str(t[overFlow])+
-                        "may be not coverd by entry start with "
-                        +str(self.tStart[entryIndex[overFlow]])+
-                        " and end with "+str(self.tStop[entryIndex[overFlow]]))
+            errorMssg = "Input time "
+            for i in overFlow:
+                errorMssg += str(t[i]) + " "
+            errorMssg += " may be not coverd by entries."
             raise ValueError(errorMssg)
 
         return entryIndex
@@ -602,7 +606,7 @@ class Polycos(object):
         out: PINT Phase class
              Polyco evaluated absolute phase for t.
         '''
-        if not isinstance(t, np.ndarray) and not isinstance(t,list):
+        if not isinstance(t, (np.ndarray, list)):
             t = np.array([t,])
 
         entryIndex = self.find_entry(t)
@@ -624,26 +628,21 @@ class Polycos(object):
         return absPhase
 
     def eval_spin_freq(self,t):
+        """FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ....)
+        """
         if not isinstance(t, np.ndarray) and not isinstance(t,list):
             t = np.array([t,])
 
         entryIndex = self.find_entry(t)
-        print entryIndex
-        spinFreq = np.array([])
-        for tt in t:
-            t_in_entry = self.polycoTable[entryIndex]
-            print t_in_entry['tmid']
-            if len(t_in_entry) == 0:
-                continue
-            #sfreq = t_in_entry['entry'].evalfreq(t_in_entry)
-            #spinFreq = np.hstack((spinFreq,sfreq))
-        # for i in range(len(self.polycoTable)):
-        #     mask = np.where(entryIndex==i) # Build mask for time in each entry
-        #     print mask
-        #     t_in_entry = t[mask]
-        #     if len(t_in_entry) == 0:
-        #         continue
-        #     sfreq = self.polycoTable['entry'][i].evalfreq(t_in_entry)
-        #     spinFreq = np.hstack((spinFreq,sfreq))
+        poly_result = np.longdouble(np.zeros(len(t)))
+
+        dt = (np.longdouble(t) - self.polycoTable[entryIndex]['tmid']) * np.longdouble(1440.0)
+        s = np.longdouble(0.0)
+        for ii, (tt, eidx) in enumerate(zip(dt, entryIndex)):
+            coeffs = self.polycoTable[eidx]['coeffs']
+            coeffs = np.longdouble(range(len(coeffs))) * coeffs
+            coeffs = coeffs[::-1][:-1]
+            poly_result[ii] = np.polyval(coeffs, tt)
+        spinFreq = self.polycoTable[entryIndex]['ref_freq'] + poly_result / np.longdouble(60.0)
 
         return spinFreq
