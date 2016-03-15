@@ -112,24 +112,23 @@ class Parameter(object):
                 except:
                     log.warning('The value unit is not compatable with'
                                 ' parameter units right now.')
-        # Setup unit and num unit
-        if isinstance(unt, (u.Unit, u.CompositeUnit)):
-            self._units = unt.to_string()
-            self._num_unit = unt
+    
+        # note, _units is a string, _num_unit is the astropy unit
 
-        elif isinstance(unt, (str)):
-            if unt in pint_units.keys():
-                self._units = unt
-                self._num_unit = pint_units[unt]
-            else:
-                self._units = unt
-                self._num_unit = u.Unit(self._units)
-        elif unt is None:
+        if unt is None:
+            self._units = None
+            self._num_unit = None
+
+        elif unt in pint_units.keys():
+            # These are special-case unit strings in in PINT
             self._units = unt
-            self._num_unit = unt
+            self._num_unit = pint_units[unt]
+
         else:
-            raise ValueError('Units can only take string, astropy units or'
-                             ' None')
+            # Try to use it as an astopy unit.  If this fails,
+            # ValueError will be raised.
+            self._num_unit = u.Unit(unt)
+            self._units = self._num_unit.to_string()
 
         if hasattr(self, 'value') and hasattr(self.value, 'unit'):
             self.value = self.value.to(self.num_unit)
@@ -186,11 +185,8 @@ class Parameter(object):
                 self._num_value = val
                 self.value = None
 
-        elif not isinstance(val, numbers.Number):
-            raise ValueError('num_value has to be a pure number or None. ({0} <- {1} ({2})'.format(self.name,val,type(val)))
-        else:
-            self._num_value = val
-            self._value = self.set_value(val)
+        self._num_value = val
+        self._value = self.set_value(val)
 
     # Setup num_unit property
     @property
@@ -315,20 +311,21 @@ class Parameter(object):
         return (name == self.name) or (name in self.aliases)
 
 class floatParameter(Parameter):
-    """This is a Paraemeter type that is specific to astropy quantity values
+    """This is a Parameter type that is specific to astropy quantity values
     """
     def __init__(self, name=None, value=None, units=None, description=None,
                  uncertainty=None, frozen=True, aliases=None, continuous=True,
                  long_double=False):
         self.long_double = long_double
         if self.long_double:
+            set_value = self.set_value_longdouble
             print_value = lambda x: longdouble2string(x.value)
             #get_value = lambda x: data2longdouble(x)*self.num_unit
         else:
+            set_value = self.set_value_float
             print_value = lambda x: str(x.value)
 
         get_num_value = self.get_num_value_float
-        set_value = self.set_value_float
         set_uncertainty = self.set_value_float
         super(floatParameter, self).__init__(name=name, value=value,
                                              units=units, frozen=True,
@@ -351,47 +348,28 @@ class floatParameter(Parameter):
         2. float
         3. string
         """
-        if isinstance(val, u.Quantity):
-            valu = val.unit
-            if self.units is not None:
-                try:
-                    _ = val.to(self.num_unit)
-                except:
-                    emsg = 'Setting a uncompatible unit ' + valu.to_string()
-                    emsg += ' to value is not allowed'
-                    raise ValueError(emsg)
-                result = val
-            else:
-                result = val
+        # First try to use astropy unit conversion
+        try:
+            # If this fails, it will raise UnitConversionError
+            _ = val.to(self.num_unit)
+            result = val
+        except AttributeError:
+            # This will happen if the input value did not have units
+            result = fortran_float(val) * self.num_unit
+            # TODO how to treat num_unit==None ? does it mean 
+            # dimensionless or unset?  Ignore for now.. 
 
-            if self.long_double:
-                result = data2longdouble(result.value)*result.unit
-        elif isinstance(val, numbers.Number):
-            if self.long_double:
-                v = data2longdouble(val)
-            else:
-                v = float(val)
-
-            if self.num_unit is not None:
-                result = val * self.num_unit
-            else:
-                result = val * u.Unit('')
-
-        elif isinstance(val, str):
-            try:
-                if self.long_double:
-                    val = fortran_float(val)
-                    v = data2longdouble(val)
-                else:
-                    v = fortran_float(val)
-            except:
-                raise ValueError('String ' + val + 'can not be converted to'
-                                 ' float')
-            result = self.set_value_float(v)
-        else:
-            raise ValueError('float parameter can not accept '
-                             + type(val).__name__ + 'format.')
         return result
+
+    def set_value_longdouble(self, val):
+        try:
+            _ = val.to(self.num_unit)
+            result = data2longdouble(val.value)*val.unit
+        except AttributeError:
+            result = data2longdouble(val) * self.num_unit
+
+        return result
+
 
     def get_num_value_float(self, val):
         if val is None:
@@ -400,7 +378,7 @@ class floatParameter(Parameter):
             return val.value
 
 class strParameter(Parameter):
-    """This is a Paraemeter type that is specific to string values
+    """This is a Parameter type that is specific to string values
     """
     def __init__(self, name=None, value=None, description=None, frozen=True,
                  aliases=[]):
@@ -430,7 +408,7 @@ class strParameter(Parameter):
 
 
 class boolParameter(Parameter):
-    """This is a Paraemeter type that is specific to boolen values
+    """This is a Parameter type that is specific to boolean values
     """
     def __init__(self, name=None, value=None, description=None, frozen=True,
                  aliases=[]):
@@ -457,14 +435,12 @@ class boolParameter(Parameter):
         if hasattr(self,'_num_value') and val == self._num_value:
             raise ValueError('Can not set a num value to a boolen type'
                              ' parameter.')
-        if isinstance(val, str):
-            return val.upper() in ['Y', 'YES', 'SI']
-        elif isinstance(val, bool):
-            return val
-        elif isinstance(val, numbers.Number):
-            return val != 0
-
-
+        # First try strings
+        try:
+            return val.upper() in ['Y','YES','T','TRUE','1']
+        except AttributeError:
+            # Will get here on non-string types
+            return bool(val)
 
 class MJDParameter(Parameter):
     """This is a Parameter type that is specific to MJD values."""
