@@ -23,7 +23,7 @@ class TestDMX(unittest.TestCase):
         rs = residuals.resids(self.toas, self.DMXm).time_resids.to(u.s).value
         psr = lt.tempopulsar(self.parf, self.timf)
         resDiff = rs-psr.residuals()
-        assert np.all(np.abs(resDiff) < 5e-5),\
+        assert np.all(np.abs(resDiff) < 2e-8),\
             "PINT and tempo Residual difference is too big."
 if __name__ == '__main__':
     pass
