@@ -6,8 +6,7 @@ import astropy.time as time
 import astropy.units as u
 import numpy, os, unittest
 
-testdir=os.path.join(os.getenv('PINT'),'tests');
-datadir = os.path.join(testdir,'datafile')
+from pinttestdata import testdir, datadir
 os.chdir(datadir)
 
 class TestParameters(unittest.TestCase):

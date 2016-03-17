@@ -7,8 +7,7 @@ from pint.models.priors import *
 from scipy.stats import norm
 import os
 
-testdir=os.path.join(os.getenv('PINT'),'tests');
-datadir = os.path.join(testdir,'datafile')
+from pinttestdata import testdir, datadir
 os.chdir(datadir)
 
 class TestPriors(unittest.TestCase):
