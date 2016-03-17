@@ -16,24 +16,21 @@ The behavior we want for numerical Parameter variables (p):
 
     str(p.unit) is the string version
 
-    p.value returns the Quantity.
+    p.quantity returns the Quantity.
 
-    p.num_value returns the numerical value (without units).
+    p.value returns the numerical value (without units).
 
-    p.value = new_value stores the new value, assumining it is given in
+    p.value = new_value stores the new value, assuming it is given in
     the current p.unit.
-
-    p.num_value = new_value acts the same as setting via p.value.
 
     p.value = new_value*u.NewCompatibleUnit converts new_value to the
     existing p.unit and stores this as the value.  Does not change
     p.unit.
 
-    p.num_value = new_value*u.NewCompatibleUnit acts the same as setting
-    via p.value.
+    p.quantity = (anything) acts the same as setting p.value
 
-    p.uncertainty and p.num_uncertainty act analagous to p.value and
-    p.num_value.
+    p.uncertainty acts analagous to p.quantity.  p.uncertainty_value acts
+    like p.value.
 
     p.unit = u.NewCompatibleUnit changes all internal representations of
     value, uncertaintly and units to the new units. 
