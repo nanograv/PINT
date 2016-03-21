@@ -5,7 +5,7 @@ import os
 # The timing models that we will be using
 from .timing_model import generate_timing_model
 from .astrometry import Astrometry
-from .dispersion_models import DispersionDMX
+from .dispersion import Dispersion
 from .spindown import Spindown
 from .glitch import Glitch
 from .bt import BT
@@ -14,13 +14,14 @@ from .solar_system_shapiro import SolarSystemShapiro
 from pint.utils import split_prefixed_name
 from .parameter import prefixParameter
 from .pint_dd_model import DDwrapper
+from .frequency_dependent import FD
 
 # List with all timing model components we will consider when pre-processing a
 # parfile
 
-ComponentsList = [Astrometry, Spindown, DispersionDMX, SolarSystemShapiro,
-                  BT, DDwrapper, Glitch]
 
+ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro,
+                  BT, DDwrapper, Glitch, FD]
 
 class model_builder(object):
     """A class for model construction interface.
