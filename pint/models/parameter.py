@@ -824,7 +824,7 @@ class prefixParameter(Parameter):
 
 
 class maskParameter(Parameter):
-        """ This is a Parameter type for mask parameters which is to select a
+    """ This is a Parameter type for mask parameters which is to select a
         certain subset of TOAs, for example JUMP. This type of parameter does
         not require index input. But the final may would has an index part, for
         the purpose of parsing the right value from the parfile. For example,
@@ -859,10 +859,10 @@ class maskParameter(Parameter):
         continuous : bool optional
         aliases : list optional
             List of aliases for parameter name.
-        """
+    """
     def __init__(self, name=None, index=1, key=None, key_value=None,
-            value=None, long_double=False, units= None, description=None,
-            uncertainty=None, frozen=True, continuous=False, aliases=[]):
+                 value=None, long_double=False, units= None, description=None,
+                 uncertainty=None, frozen=True, continuous=False, aliases=[]):
         self.is_mask = True
         self.key_identifier = {'mjd': (lambda x: time.Time(x, format='mjd'), 2),
                                 'freq': (float, 2),
@@ -1006,7 +1006,7 @@ class maskParameter(Parameter):
         toas : toas table
         Return
         ----------
-        A mask array. the select toas are masked as True. 
+        A mask array. the select toas are masked as True.
         """
         self.toa_select = TOASelect(self.key, self.key_value)
         return self.toa_select.get_toa_key_mask(toas)
