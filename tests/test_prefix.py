@@ -9,9 +9,10 @@ import sys
 import os
 import unittest
 
-datapath = os.path.join(os.environ['PINT'], 'tests', 'datafile')
-parfile = os.path.join(datapath, 'prefixtest.par')
-timfile = os.path.join(datapath, 'prefixtest.tim')
+from pinttestdata import testdir, datadir
+
+parfile = os.path.join(datadir, 'prefixtest.par')
+timfile = os.path.join(datadir, 'prefixtest.tim')
 
 
 class TestPrefix(unittest.TestCase):

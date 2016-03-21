@@ -5,8 +5,7 @@ import numpy as np
 import pint.models.bt as bt
 import os
 
-datapath = os.path.join(os.environ['PINT'],'tests','datafile')
-
+from pinttestdata import testdir, datadir
 
 class TestBT():
     """Various tests to assess the performance of the BT model."""
@@ -14,8 +13,8 @@ class TestBT():
     def test_1955(self):
         """Compare delays from the BT model with libstempo and PINT"""
 
-        parfile = os.path.join(datapath, 'J1955.par')
-        timfile = os.path.join(datapath, 'J1955.tim')
+        parfile = os.path.join(datadir, 'J1955.par')
+        timfile = os.path.join(datadir, 'J1955.tim')
 
         # Calculate delays with PINT
         toas = toa.get_TOAs(timfile, planets=False)
@@ -24,7 +23,7 @@ class TestBT():
         pint_delays = newmodel.delay(toas.table)
 
         # Load delays calculated with libstempo
-        _, lt_delays = np.genfromtxt(os.path.join(datapath,
+        _, lt_delays = np.genfromtxt(os.path.join(datadir,
                                      'J1955_ltdelays.dat'), unpack=True)
 
         assert np.all(np.abs(pint_delays - lt_delays) < 1e-11), 'BT TEST FAILED'

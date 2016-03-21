@@ -2,7 +2,7 @@
 import sys,os
 import pint.models as tm
 
-testdir=os.path.join(os.getenv('PINT'),'tests');
+from pinttestdata import testdir, datadir
 datadir = os.path.join(testdir,'datafile')
 parfile = os.path.join(datadir,'J1744-1134.basic.par')
 

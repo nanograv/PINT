@@ -39,18 +39,18 @@ class Dispersion(TimingModel):
                        type_match='float'))
         self.add_param(p.prefixParameter(prefix='DMXR1_', indexformat='0000',
                        units="MJD",
-                       value=time.Time(0.0, scale='tdb', format='mjd'),
+                       value=time.Time(0.0, scale='utc', format='mjd'),
                        unitTplt=lambda x: "MJD",
                        description='Beginning of DMX interval',
                        descriptionTplt=lambda x: 'Beginning of DMX interval',
-                       type_match='MJD', time_scale='tdb'))
+                       type_match='MJD', time_scale='utc'))
         self.add_param(p.prefixParameter(prefix='DMXR2_', indexformat='0000',
                        units="MJD",
-                       value=time.Time(0.0, scale='tdb', format='mjd'),
+                       value=time.Time(0.0, scale='utc', format='mjd'),
                        unitTplt=lambda x: "MJD",
                        description='End of DMX interval',
                        descriptionTplt=lambda x: 'End of DMX interval',
-                       type_match='MJD', time_scale='tdb'))
+                       type_match='MJD', time_scale='utc'))
 
         self.delay_funcs['L1'] += [self.dispersion_delay]
 
@@ -90,8 +90,7 @@ class Dispersion(TimingModel):
                 # Get the parameters
                 r1 = getattr(self, self.DMXR1_mapping[epoch_ind]).value
                 r2 = getattr(self, self.DMXR2_mapping[epoch_ind]).value
-                msk = np.logical_and(toas['tdbld'] >= ut.time_to_longdouble(r1),
-                                     toas['tdbld'] <= ut.time_to_longdouble(r2))
+                msk = np.logical_and(toas['mjd'] >= r1, toas['mjd'] <= r2)
                 toas['DMX_section'][msk] = epoch_ind
                 epoch_ind = epoch_ind + 1
 

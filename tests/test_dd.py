@@ -10,8 +10,8 @@ from pint.models.pint_dd_model import DDwrapper
 import numpy as np
 import os, unittest
 
-testdir=os.path.join(os.getenv('PINT'),'tests');
-datadir = os.path.join(testdir,'datafile')
+from pinttestdata import testdir, datadir
+
 os.chdir(datadir)
 
 class TestDD(unittest.TestCase):

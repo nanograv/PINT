@@ -2,10 +2,3 @@
 """This module contains implementations of independent pulsar timing binary models.
 """
 import os
-# setup environment
-# Load the PINT environment variable to get the top level directory
-pintdir = os.getenv("PINT")
-if pintdir is None:
-    filedir = os.path.split(os.path.realpath(__file__))[0]
-    pintdir = os.path.abspath(os.path.join(filedir, ".."))
-    del filedir
