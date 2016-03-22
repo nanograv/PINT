@@ -9,11 +9,12 @@ import parameter as p
 
 
 class PhaseJump(TimingModel):
-    """This is a class to implement phase jumps 
+    """This is a class to implement phase jumps
     """
     def __init__(self):
         super(PhaseJump, self).__init__()
-        self.add_param(p.maskParameter(name = 'JUMP'))
+        self.add_param(p.maskParameter(name = 'JUMP', units='second'))
+        # NOTE: it is not safe to say all the jumps are in unit of second here. 
         self.phase_funcs += [self.jump_phase,]
     def setup(self):
         super(PhaseJump, self).setup()

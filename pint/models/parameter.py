@@ -113,7 +113,7 @@ class Parameter(object):
                 except:
                     log.warning('The value unit is not compatable with'
                                 ' parameter units right now.')
-    
+
         # note, _units is a string, _num_unit is the astropy unit
 
         if unt is None:
@@ -357,8 +357,8 @@ class floatParameter(Parameter):
         except AttributeError:
             # This will happen if the input value did not have units
             result = fortran_float(val) * self.num_unit
-            # TODO how to treat num_unit==None ? does it mean 
-            # dimensionless or unset?  Ignore for now.. 
+            # TODO how to treat num_unit==None ? does it mean
+            # dimensionless or unset?  Ignore for now..
 
         return result
 
