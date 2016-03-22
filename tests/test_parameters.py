@@ -9,6 +9,34 @@ import numpy, os, unittest
 from pinttestdata import testdir, datadir
 os.chdir(datadir)
 
+"""
+The behavior we want for numerical Parameter variables (p):
+
+    p.unit returns the astropy Unit
+
+    str(p.unit) is the string version
+
+    p.quantity returns the Quantity.
+
+    p.value returns the numerical value (without units).
+
+    p.value = new_value stores the new value, assuming it is given in
+    the current p.unit.
+
+    p.value = new_value*u.NewCompatibleUnit converts new_value to the
+    existing p.unit and stores this as the value.  Does not change
+    p.unit.
+
+    p.quantity = (anything) acts the same as setting p.value
+
+    p.uncertainty acts analagous to p.quantity.  p.uncertainty_value acts
+    like p.value.
+
+    p.unit = u.NewCompatibleUnit changes all internal representations of
+    value, uncertaintly and units to the new units. 
+
+"""
+
 class TestParameters(unittest.TestCase):
     @classmethod
     def setUpClass(self):
@@ -35,11 +63,10 @@ class TestParameters(unittest.TestCase):
         """Check whether the value and units of F0 parameter are ok"""
         num_unit = u.Hz
         num_value = str2longdouble('186.49408156698235146')
-        num_value = 186.49408156698235
 
         self.assertEqual(self.m.F0.num_unit, num_unit)
         self.assertTrue(
-                numpy.isclose(self.m.F0.num_value, num_value, atol=1e-13))
+                numpy.isclose(self.m.F0.num_value, num_value, atol=1e-17))
         self.assertEqual(self.m.F0.num_value, num_value)
 
     def test_F0_uncertainty(self):
@@ -148,7 +175,7 @@ class TestParameters(unittest.TestCase):
 
         self.assertEqual(self.m.OM.value, value)
         self.assertRaises(ValueError, self.set_OM_to_none)
-        self.assertRaises(ValueError, self.set_OM_to_time)
+        self.assertRaises(TypeError, self.set_OM_to_time)
 
     def test_prefix_value_to_num(self):
         """Test setting the prefix parameter """
