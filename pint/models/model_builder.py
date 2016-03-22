@@ -14,13 +14,13 @@ from .solar_system_shapiro import SolarSystemShapiro
 from pint.utils import split_prefixed_name
 from .parameter import prefixParameter
 from .pint_dd_model import DDwrapper
-
+from .frequency_dependent import FD
+from .phase_jump import PhaseJump
 # List with all timing model components we will consider when pre-processing a
 # parfile
 
 ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro,
-                  BT, DDwrapper, Glitch]
-
+                  BT, DDwrapper, Glitch, PhaseJump, FD]
 
 class model_builder(object):
     """A class for model construction interface.
@@ -90,6 +90,7 @@ class model_builder(object):
         A dictionary with all the parfile parameters with values in string
         """
         param = {}
+        repeat_par = {}
         pfile = open(parfile, 'r')
         for l in [pl.strip() for pl in pfile.readlines()]:
             # Skip blank lines
@@ -99,8 +100,17 @@ class model_builder(object):
             if l.startswith('#') or l[:2]=="C ":
                 continue
             k = l.split()
-            param[k[0]] = k[1:]
+            if k[0] in param.keys(): # repeat parameter TODO: add JUMP1 even there is only one
+                if k[0] in repeat_par.keys():
+                    repeat_par[k[0]] += 1
+                else:
+                    repeat_par[k[0]] = 2
+                param[k[0] + str(repeat_par[k[0]])] = k[1:]
+            else:
+                param[k[0]] = k[1:]
         self.param_inparF = param
+        for key in repeat_par.keys():
+            self.param_inparF[key + str(1)] = self.param_inparF.pop(key)
         pfile.close()
         return self.param_inparF
 
@@ -135,19 +145,26 @@ class model_builder(object):
     	    if c not in self.select_comp:
     	       self.select_comp.append(c)
 
-    def search_prefix_param(self,paramList,prefixList):
+    def search_prefix_param(self, paramList, prefix_inModel):
         """ Check if the Unrecognized parameter has prefix parameter
         """
-        for pn in prefixList:
-            self.param_prefix[pn] = []
-            pnlen = len(pn)
-            for p in paramList:
-                try:
-                    pre,idxstr,idxV = split_prefixed_name(p)
-                except:
-                    continue
-                if pre == pn:
-                    self.param_prefix[pn].append(p)
+        prefixs = {}
+        for pn in prefix_inModel:
+            try:
+                pre,idxstr,idxV = split_prefixed_name(pn)
+                prefixs[pre] = []
+            except:
+                continue
+
+        for p in paramList:
+            try:
+                pre,idxstr,idxV = split_prefixed_name(p)
+                if pre in prefixs.keys():
+                    prefixs[pre].append(p)
+            except:
+                continue
+
+        return prefixs
 
     def get_model_instance(self,parfile=None):
         """Read parfile using the model_instance attribute.
@@ -161,6 +178,7 @@ class model_builder(object):
 
         self.model_instance = model()
         self.param_inModel = self.model_instance.params
+        self.param_register = self.model_instance.param_register
         self.prefix_names = self.model_instance.prefix_params
         # Find unrecognised parameters in par file.
 
@@ -175,26 +193,23 @@ class model_builder(object):
                 if pp not in parName:
                     self.param_unrecognized[pp] = self.param_inparF[pp]
 
-            self.search_prefix_param(self.param_unrecognized.keys(),self.prefix_names)
-
-            if self.param_prefix != {}:
-                for p in self.param_prefix.keys():
-                    ppnames = [x for x in self.model_instance.params if x.startswith(p)]
-                    for ppn in ppnames:
-                        pfxp = getattr(self.model_instance,ppn)
-                        if pfxp.is_prefix is True:
-                            for pp in self.param_prefix[p]:
-                                pre,idstr,idx = split_prefixed_name(pp)
-                                if idx == pfxp.index:
-                                    continue
-                                newPfxp = pfxp.new_index_prefix_param(idx)
-                                self.model_instance.add_param(newPfxp)
+            for ptype in ['prefixParameter', 'maskParameter']:
+                prefix_in_model = self.param_register.get(ptype, [])
+                prefix_param = self.search_prefix_param(self.param_unrecognized.keys(),
+                                                        prefix_in_model)
+                for key in prefix_param.keys():
+                    ppnames = [x for x in prefix_in_model if x.startswith(key)]
+                    exm_par = getattr(self.model_instance,ppnames[0])
+                    for parname in prefix_param[key]:
+                        pre,idstr,idx = split_prefixed_name(parname)
+                        if idx == exm_par.index:
+                             continue
+                        if hasattr(exm_par, 'new_param'):
+                            new_par = exm_par.new_param(idx)
+                            self.model_instance.add_param(new_par)
 
         if parfile is not None:
             self.model_instance.read_parfile(parfile)
-
-        return self.model_instance
-
 
 def get_model(parfile):
     """A one step function to build model from a parfile
