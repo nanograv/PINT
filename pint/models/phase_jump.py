@@ -13,7 +13,8 @@ class PhaseJump(TimingModel):
     """
     def __init__(self):
         super(PhaseJump, self).__init__()
-        # NOTE: it is dangours to put jump unit as second
+        # NOTE: it is dangours to put jump unit as second.
+        # Since JUMP is not always in the unit of time. 
         # For now we put it Temporarily
         self.add_param(p.maskParameter(name = 'JUMP', units='second'))
         self.phase_funcs += [self.jump_phase,]
