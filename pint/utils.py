@@ -105,7 +105,12 @@ def fortran_float(x):
     into 'e' characters.  Intended for dealing with exponential
     notation in tempo1-generated parfiles.
     """
-    return float(x.translate(string.maketrans('Dd', 'ee')))
+    try:
+        # First treat it as a string, wih d->e
+        return float(x.translate(string.maketrans('Dd', 'ee')))
+    except AttributeError:
+        # If that didn't work it may already be a numeric type
+        return float(x)
 
 
 def time_from_mjd_string(s, scale='utc'):
