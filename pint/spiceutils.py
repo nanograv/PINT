@@ -5,7 +5,7 @@ from astropy.coordinates import Longitude, Latitude
 from .utils import PosVel
 from astropy import log
 import os, sys
-from pint import pintdir
+from .config import datapath
 
 kernels_loaded = False
 def load_kernels(ephem="DE421"):
@@ -17,33 +17,31 @@ def load_kernels(ephem="DE421"):
     """
     global kernels_loaded
     if not kernels_loaded:
-        spice.furnsh(os.path.join(pintdir, "datafiles/pck00010.tpc"))
+        spice.furnsh(datapath("pck00010.tpc"))
         log.info("SPICE loaded planetary constants.")
         try:
-            spice.furnsh(os.path.join(pintdir, "datafiles/naif0011.tls"))
+            spice.furnsh(datapath("naif0011.tls"))
         except:
             log.error("Download updated leap second file (naif0011.tls)"+
                       " using download script in $PINT/datafiles directory.")
             sys.exit()
         log.info("SPICE loaded leap seconds.")
-        spice.furnsh(os.path.join(pintdir,
-                                  "datafiles/earth_latest_high_prec.bpc"))
+        spice.furnsh(datapath("earth_latest_high_prec.bpc"))
         log.info("SPICE loaded Earth rotation parameters.")
-        spice.furnsh(os.path.join(pintdir, "datafiles/%s.bsp" % ephem.lower()))
+        spice.furnsh(datapath("%s.bsp" % ephem.lower()))
         log.info("SPICE loaded DE%s Planetary Ephemeris." % ephem[2:])
         kernels_loaded = True
 
 def load_kernels_cython(ephem="DE421"):
     global kernels_loaded
     if not kernels_loaded:
-        spice_util.furnsh_py(os.path.join(pintdir, "datafiles/pck00010.tpc"))
+        spice_util.furnsh_py(datapath("pck00010.tpc"))
         log.info("SPICE loaded planetary constants.")
-        spice_util.furnsh_py(os.path.join(pintdir, "datafiles/naif0010.tls"))
+        spice_util.furnsh_py(datapath("naif0010.tls"))
         log.info("SPICE loaded leap seconds.")
-        spice_util.furnsh_py(os.path.join(pintdir,
-                                  "datafiles/earth_latest_high_prec.bpc"))
+        spice_util.furnsh_py(datapath("earth_latest_high_prec.bpc"))
         log.info("SPICE loaded Earth rotation parameters.")
-        spice_util.furnsh_py(os.path.join(pintdir, "datafiles/%s.bsp" % ephem.lower()))
+        spice_util.furnsh_py(datapath("%s.bsp" % ephem.lower()))
         log.info("SPICE loaded DE%s Planetary Ephemeris." % ephem[2:])
         kernels_loaded = True
 

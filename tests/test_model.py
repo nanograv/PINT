@@ -9,11 +9,11 @@ import matplotlib.pyplot as plt
 import tempo2_utils
 from astropy import log
 
+from pinttestdata import testdir, datadir
+
 log.setLevel('ERROR')
 # for nice output info, set the following instead
 #log.setLevel('INFO')
-testdir=os.path.join(os.getenv('PINT'),'tests');
-datadir = os.path.join(testdir,'datafile')
 os.chdir(datadir)
 
 parfile = 'J1744-1134.basic.par'

@@ -40,14 +40,14 @@ doc/api
 *.mo
 
 # Ephemerides and clock stuff
-datafiles/de405.bsp
-datafiles/de421.bsp
-datafiles/de430t.bsp
-datafiles/earth_latest_high_prec.bpc
-datafiles/naif0010.tls
-datafiles/naif0011.tls
-datafiles/pck00010.tpc
-datafiles/de-403-masses.tpc
+de405.bsp
+de421.bsp
+de430t.bsp
+earth_latest_high_prec.bpc
+naif0010.tls
+naif0011.tls
+pck00010.tpc
+de-403-masses.tpc
 
 # Pickles of .tim files
 *.tim.pickle.gz
