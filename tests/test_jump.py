@@ -1,7 +1,6 @@
 """Tests for jump model component """
 import pint.models.model_builder as mb
 import pint.toa as toa
-import matplotlib.pyplot as plt
 import astropy.units as u
 from pint.residuals import resids
 import numpy as np
