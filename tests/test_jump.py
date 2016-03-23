@@ -22,3 +22,7 @@ class TestJUMP(unittest.TestCase):
     def test_jump(self):
         presids_s = resids(self.toas, self.JUMPm).time_resids.to(u.s)
         assert np.all(np.abs(presids_s.value - self.ltres) < 1e-7), "JUMP test failed."
+
+
+if __name__ == '__main__':
+    pass
