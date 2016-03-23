@@ -6,6 +6,18 @@ from pint.utils import longdouble2string
 import argparse
 
 def get_tempo_result(parfile, timfile):
+    """This function is to get the results from tempo and write them to a file.
+    Parameter
+    ---------
+    parfile : str
+        The file to read parameters.
+    timfile : str
+        The file to read toas.
+    Return
+    ----------
+    A file named as parfile name ends with '.tempo_test' stored residuals in the
+    first column, binary delay in the second column 
+    """
     psr = lt.tempopulsar(parfile, timfile)
     residuals = psr.residuals()
     binary_delay = psr.binarydelay()
@@ -23,8 +35,8 @@ def get_tempo_result(parfile, timfile):
     f.close()
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="PINT tool for simulating TOAs")
-    parser.add_argument("parfile",help="par file to read model from")
-    parser.add_argument("timfile",help="Output TOA file name")
+    parser = argparse.ArgumentParser(description="A script to get tempo results.")
+    parser.add_argument("parfile",help="par file to read model from.")
+    parser.add_argument("timfile",help="tim file to read toas from.")
     args = parser.parse_args()
     get_tempo_result(args.parfile, args.timfile)
