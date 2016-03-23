@@ -17,7 +17,7 @@ class TestFD(unittest.TestCase):
         self.toas = toa.get_TOAs(self.timf)
         # libstempo result
         self.ltres, self.ltbindelay = np.genfromtxt(self.parf + '.tempo_test', unpack=True)
-    def test_DMX(self):
+    def test_FD(self):
         print "Testing FD module."
         rs = pint.residuals.resids(self.toas, self.FDm).time_resids.to(u.s).value
         resDiff = rs - self.ltres
@@ -25,7 +25,7 @@ class TestFD(unittest.TestCase):
         # early parks clock corrections are treated differently.
         # TEMPO2: Clock correction = clock0 + clock1 (in the format of general2)
         # PINT : Clock correction = toas.table['flags']['clkcorr']
-        # Those two clock correction difference are causing the trouble. 
+        # Those two clock correction difference are causing the trouble.
         assert np.all(resDiff< 5e-6) , \
             "PINT and tempo Residual difference is too big. "
 
