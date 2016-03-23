@@ -13,11 +13,8 @@ class JumpDelay(TimingModel):
     """
     def __init__(self):
         super(JumpDelay, self).__init__()
-        # NOTE: it is dangours to put jump unit as second.
-        # Since JUMP is not always in the unit of time.
-        # For now we put it Temporarily
+        # TODO: In the future we should have phase jump as well. 
         self.add_param(p.maskParameter(name = 'JUMP', units='second'))
-        # NOTE: Which part of delay function needs to be in 'L2' or 'L1'?
         self.delay_funcs['L1'] += [self.jump_delay,]
     def setup(self):
         super(JumpDelay, self).setup()
