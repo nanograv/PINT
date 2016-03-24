@@ -63,8 +63,8 @@ class emcee_fitter(fitter.fitter):
         fitvals = []
         fiterrs = []
         for p in fitkeys:
-            fitvals.append(getattr(self.model, p).value)
-            fiterrs.append(getattr(self.model, p).uncertainty * errfact)
+            fitvals.append(getattr(self.model, p).num_value)
+            fiterrs.append(getattr(self.model, p).num_uncertainty * errfact)
             # I think the following is just to strip off units from those params
             if p in ["RAJ", "DECJ", "T0", "GLEP_1"]:
                 fitvals[-1] = fitvals[-1].value
