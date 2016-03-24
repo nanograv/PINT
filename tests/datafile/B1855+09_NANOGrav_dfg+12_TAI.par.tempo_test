@@ -1,8 +1,4 @@
-# This is a tempo result.
-# Parfile : B1855+09_NANOGrav_dfg+12_TAI.par
-# Timfile : B1855+09_NANOGrav_dfg+12.tim
-# Column keys:
-# residuals  BinaryDelay
+residuals  BinaryDelay 
 5.7523448251118550998e-07 6.1180256679885615043
 -2.3437438826485106179e-06 6.6157969426453025271
 2.0684168265601436426e-06 5.7645975466941093627

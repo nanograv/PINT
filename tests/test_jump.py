@@ -18,10 +18,10 @@ class TestJUMP(unittest.TestCase):
         self.JUMPm = mb.get_model(self.parf)
         self.toas = toa.get_TOAs(self.timf, ephem="DE405", planets=False)
         # libstempo calculation
-        self.ltres, self.ltbindelay = np.genfromtxt(self.parf + '.tempo_test', unpack=True)
+        self.ltres = np.genfromtxt(self.parf + '.tempo_test', unpack=True, names=True, dtype='float128')
     def test_jump(self):
         presids_s = resids(self.toas, self.JUMPm).time_resids.to(u.s)
-        assert np.all(np.abs(presids_s.value - self.ltres) < 1e-7), "JUMP test failed."
+        assert np.all(np.abs(presids_s.value - self.ltres['residuals']) < 1e-7), "JUMP test failed."
 
 
 if __name__ == '__main__':
