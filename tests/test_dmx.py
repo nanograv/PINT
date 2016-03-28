@@ -1,9 +1,7 @@
 from pint.models import model_builder as mb
 import pint.toa as toa
-import matplotlib.pyplot as plt
 from pint import residuals
 import astropy.units as u
-import libstempo as lt
 import os
 import unittest
 import numpy as np
@@ -21,8 +19,8 @@ class TestDMX(unittest.TestCase):
     def test_DMX(self):
         print "Testing DMX module."
         rs = residuals.resids(self.toas, self.DMXm).time_resids.to(u.s).value
-        psr = lt.tempopulsar(self.parf, self.timf)
-        resDiff = rs-psr.residuals()
+        ltres, _ = np.genfromtxt(self.parf+ '.tempo_test', unpack=True)
+        resDiff = rs-ltres
         assert np.all(np.abs(resDiff) < 2e-8),\
             "PINT and tempo Residual difference is too big."
 if __name__ == '__main__':

@@ -113,7 +113,7 @@ class Parameter(object):
                 except:
                     log.warning('The value unit is not compatable with'
                                 ' parameter units right now.')
-    
+
         # note, _units is a string, _num_unit is the astropy unit
 
         if unt is None:
@@ -357,8 +357,8 @@ class floatParameter(Parameter):
         except AttributeError:
             # This will happen if the input value did not have units
             result = fortran_float(val) * self.num_unit
-            # TODO how to treat num_unit==None ? does it mean 
-            # dimensionless or unset?  Ignore for now.. 
+            # TODO how to treat num_unit==None ? does it mean
+            # dimensionless or unset?  Ignore for now..
 
         return result
 
@@ -599,6 +599,7 @@ class prefixParameter(Parameter):
             >>> descritionTplt = lambda x: 'This is the descrition of parameter
                                             %d'%x
             The class will fill the descrition and unit automaticly.
+            
         If both two methods are fillfulled, it prefer the first one.
 
         Parameter
@@ -804,8 +805,8 @@ class maskParameter(Parameter):
         certain subset of TOAs, for example JUMP. This type of parameter does
         not require index input. But the final may would has an index part, for
         the purpose of parsing the right value from the parfile. For example,
-        >>>p = maskParameter(name='JUMP', index=2)
-        >>>p.name
+        >>> p = maskParameter(name='JUMP', index=2)
+        >>> p.name
         'JUMP2'
         Parameter
         ---------
