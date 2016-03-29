@@ -8,7 +8,7 @@ except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
 
-from .parameter import Parameter, MJDParameter
+import parameter as p
 from .timing_model import Cache, TimingModel, MissingParameter
 from ..phase import Phase
 from ..utils import time_from_mjd_string, time_to_longdouble
@@ -32,59 +32,49 @@ class BT(TimingModel):
         # Parameters are mostly defined as numpy doubles.
         # Some might become long doubles in the future.
         self.BinaryModelName = 'BT'
-        self.add_param(Parameter(name="PB",
+        self.add_param(p.floatParameter(name="PB",
             units="s",
-            description="Orbital period",
-            parse_value=np.double,
-            print_value=lambda x: '%.15f'%x))
+            description="Orbital period"))
 
-        self.add_param(Parameter(name="A1",
+        self.add_param(p.floatParameter(name="A1",
             units="lt-s",
-            description="Projected semi-major axis",
-            parse_value=np.double))
+            description="Projected semi-major axis"))
 
-        self.add_param(Parameter(name="E",
+        self.add_param(p.floatParameter(name="E",
             units="",
             aliases = ["ECC"],
-            description="Eccentricity",
-            parse_value=np.double))
+            description="Eccentricity"))
 
         # Warning(paulr): This says the units on OM are deg (which is correct)
         # But then it converts the value to radians!
         # This may work OK in here, but when printing the value to a new
         # par file, it comes out wrong!
-        self.add_param(Parameter(name="OM",
+        self.add_param(p.AngleParameter(name="OM",
             units="deg",
-            description="Longitude of periastron",
-            parse_value=lambda x: np.double(x)))
+            description="Longitude of periastron"))
 
-        self.add_param(MJDParameter(name="T0",
+        self.add_param(p.MJDParameter(name="T0",
             time_scale='tdb', description="Epoch of periastron passage"))
 
-        self.add_param(Parameter(name="PBDOT",
+        self.add_param(p.floatParameter(name="PBDOT",
             units="s/s",
-            description="First derivative of orbital period",
-            parse_value=np.double))
+            description="First derivative of orbital period"))
 
-        self.add_param(Parameter(name="OMDOT",
+        self.add_param(p.floatParameter(name="OMDOT",
             units="deg/yr",
-            description="Periastron advance",
-            parse_value=np.double))
+            description="Periastron advance"))
 
-        self.add_param(Parameter(name="XDOT",
+        self.add_param(p.floatParameter(name="XDOT",
             units="s/s",
-            description="Orbital spin-down rate",
-            parse_value=np.double))
+            description="Orbital spin-down rate"))
 
-        self.add_param(Parameter(name="EDOT",
+        self.add_param(p.floatParameter(name="EDOT",
             units="s^-1",
-            description="Orbital spin-down rate",
-            parse_value=np.double))
+            description="Orbital spin-down rate"))
 
-        self.add_param(Parameter(name="GAMMA",
+        self.add_param(p.floatParameter(name="GAMMA",
             units="s",
-            description="Time dilation & gravitational redshift",
-            parse_value=np.double))
+            description="Time dilation & gravitational redshift"))
 
         self.delay_funcs['L2'] += [self.BT_delay,]
 
@@ -136,11 +126,8 @@ class BT(TimingModel):
             key = par if not par in aliases else aliases[par]
 
             # T0 needs to be converted to long double
-            if key in ['T0'] and \
-                type(getattr(self, key).value) is astropy.time.core.Time:
-                pardict[par] = time_to_longdouble(getattr(self, key).value)
-            else:
-                pardict[par] = getattr(self, key).value
+            parobj = getattr(self, key)
+            pardict[par] = parobj.num_value 
 
         # Apply all the delay terms, except for the binary model itself
         tt0 = toas['tdbld'] * SECS_PER_DAY

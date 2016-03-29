@@ -8,13 +8,12 @@ try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
-from .parameter import Parameter, MJDParameter
+import parameter as p
 from .timing_model import TimingModel, MissingParameter
 from ..phase import *
-from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, taylor_horner
+from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, taylor_horner,\
+                    time_from_longdouble
 
-# The maximum number of spin frequency derivs we allow
-maxderivs = 20
 
 class Spindown(TimingModel):
     """This class provides a simple timing model for an isolated pulsar."""
@@ -22,31 +21,25 @@ class Spindown(TimingModel):
         super(Spindown, self).__init__()
 
         # The number of terms in the taylor exapansion of spin freq (F0...FN)
-        self.num_spin_terms = maxderivs
+        #self.num_spin_terms = maxderivs
 
-        self.add_param(Parameter(name="F0",
-            units="Hz",
-            description="Spin frequency",
-            aliases=["F"],
-            parse_value=str2longdouble,
-            print_value=repr))
+        self.add_param(p.floatParameter(name="F0", value=0.0, units="Hz",
+                       description="Spin-frequency", long_double=True))
 
-        self.add_param(Parameter(name="F1",
-            units="Hz/s", value=0.0,
-            description="Spin-down rate"))
+        self.add_param(p.prefixParameter(name="F1", value=0.0, units='Hz/s^1',
+                       description="Spindown-rate",
+                       unitTplt=self.F_unit,
+                       descriptionTplt=self.F_description,
+                       type_match='float',long_double=True))
 
-        for ii in range(2, self.num_spin_terms + 1):
-            self.add_param(Parameter(name="F%d"%ii,
-                units="Hz/s^%s"%ii, value=0.0,
-                description="Spin-frequency %d derivative"%ii))
+        self.add_param(p.MJDParameter(name="TZRMJD",
+                       description="Reference epoch for phase = 0.0",
+                       time_scale='tdb'))
 
-        self.add_param(MJDParameter(name="TZRMJD",
-            description="Reference epoch for phase = 0.0",
-            time_scale='tdb'))
+        self.add_param(p.MJDParameter(name="PEPOCH",
+                       description="Reference epoch for spin-down",
+                       time_scale='tdb'))
 
-        self.add_param(MJDParameter(name="PEPOCH",
-            description="Reference epoch for spin-down",
-            time_scale='tdb'))
 
         self.phase_funcs += [self.spindown_phase,]
 
@@ -56,28 +49,40 @@ class Spindown(TimingModel):
         for p in ("F0",):
             if getattr(self, p).value is None:
                 raise MissingParameter("Spindown", p)
+
+        # Check continuity
+        F_terms = self.get_prefix_mapping('F').keys()
+        F_terms.sort()
+        F_in_order = range(1,max(F_terms)+1)
+        if not F_terms == F_in_order:
+            diff = list(set(F_in_order) - set(F_terms))
+            raise MissingParameter("Spindown", "F%d"%diff[0])
         # If F1 is set, we need PEPOCH
         if self.F1.value != 0.0:
             if self.PEPOCH.value is None:
                 raise MissingParameter("Spindown", "PEPOCH",
                         "PEPOCH is required if F1 or higher are set")
-        # Remove all unused freq derivs
-        for ii in range(self.num_spin_terms, -1, -1):
-            term = "F%d"%ii
-            if hasattr(self, term) and \
-                    getattr(self, term).value==0.0 and \
-                    getattr(self, term).uncertainty is None:
-                delattr(self, term)
-                self.params.remove(term)
-            else:
-                break
-        # Add a shortcut for the number of spin terms there are
-        self.num_spin_terms = ii + 1
+
+        self.num_spin_terms = self.num_prefix_params['F'] + 1
+
+    def F_description(self, x):
+        """Template function for description"""
+        if x <1:
+            return "Spin-frequency"
+        else:
+            return "Spin-frequency %d derivative"%x
+
+    def F_unit(self,x):
+        """Template function for unit"""
+        if x <1:
+            return "Hz"
+        else:
+            return "Hz/s^%d"%x
 
     def get_spin_terms(self):
         """Return a list of the spin term values in the model: [F0, F1, ..., FN]
         """
-        return [getattr(self, "F%d"%ii).value for ii in range(self.num_spin_terms)]
+        return [getattr(self, "F%d"%ii).num_value for ii in range(self.num_spin_terms)]
 
     def spindown_phase(self, toas, delay):
         """Spindown phase function.

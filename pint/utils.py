@@ -1,5 +1,6 @@
 """Miscellaneous potentially-helpful functions."""
 import numpy as np
+from scipy.misc import factorial
 import string
 import astropy.time
 try:
@@ -9,6 +10,13 @@ except ImportError:
 import astropy.units as u
 from astropy import log
 from spice_util import str2ldarr1
+import re
+
+# Define prefix parameter pattern
+pp1 = re.compile(r'([a-zA-Z0-9]+_*)(\d+)')  # For the prefix like DMXR1_3
+pp2 = re.compile(r'([a-zA-Z]+)(\d+)')  # For the prefix like F12
+prefixPattern = [pp1, pp2]
+
 
 class PosVel(object):
     """Position/Velocity class.
@@ -64,11 +72,12 @@ class PosVel(object):
                 obj = self.obj
             else:
                 raise RuntimeError("Attempting to add incompatible vectors: " +
-                        "%s->%s + %s->%s" % (self.origin, self.obj,
-                            other.origin, other.obj))
+                                   "%s->%s + %s->%s" % (self.origin, self.obj,
+                                                        other.origin,
+                                                        other.obj))
 
         return PosVel(self.pos + other.pos, self.vel + other.vel,
-                obj=obj, origin=origin)
+                      obj=obj, origin=origin)
 
     def __sub__(self, other):
         return self.__add__(other.__neg__())
@@ -80,12 +89,14 @@ class PosVel(object):
         else:
             return str(self.pos)+", "+str(self.vel)
 
-def compute_bats(tt,m):
+
+def compute_bats(tt, m):
     '''Compute barycentric arrival times. This is the MJD of the TOA converted
     to TDB, with the delay terms from the model applied (Solar System and
     dispersion delays). The result is MJD(TDB) at infinite frequency.
     Inputs are tt: TOAs table and m (model object)'''
     return tt['tdbld'] - m.delay(tt)/86400.0
+
 
 def fortran_float(x):
     """Convert Fortran-format floating-point strings.
@@ -94,7 +105,13 @@ def fortran_float(x):
     into 'e' characters.  Intended for dealing with exponential
     notation in tempo1-generated parfiles.
     """
-    return float(x.translate(string.maketrans('Dd', 'ee')))
+    try:
+        # First treat it as a string, wih d->e
+        return float(x.translate(string.maketrans('Dd', 'ee')))
+    except AttributeError:
+        # If that didn't work it may already be a numeric type
+        return float(x)
+
 
 def time_from_mjd_string(s, scale='utc'):
     """Returns an astropy Time object generated from a MJD string input."""
@@ -104,8 +121,8 @@ def time_from_mjd_string(s, scale='utc'):
         num, expon = ss.split("e")
         expon = int(expon)
         if expon < 0:
-            log.warn("Likely bogus sci notation input in "+
-                    "time_from_mjd_string ('%s')!" % s)
+            log.warn("Likely bogus sci notation input in " +
+                     "time_from_mjd_string ('%s')!" % s)
             # This could cause a loss of precision...
             # maybe throw an exception instead?
             imjd, fmjd = 0, float(ss)
@@ -122,10 +139,13 @@ def time_from_mjd_string(s, scale='utc'):
         imjd = int(imjd_s)
         fmjd = float("0." + fmjd_s)
     return astropy.time.Time(imjd, fmjd, scale=scale, format='mjd',
-                         precision=9)
-def time_from_longdouble(t,scale='utc'):
+                             precision=9)
+
+
+def time_from_longdouble(t, scale='utc'):
     st = longdouble2string(t)
-    return time_from_mjd_string(st,scale)
+    return time_from_mjd_string(st, scale)
+
 
 def time_to_mjd_string(t, prec=15):
     """Print an MJD time with lots of digits (number is 'prec').
@@ -143,10 +163,11 @@ def time_to_mjd_string(t, prec=15):
     if fmjd < 0.0:
         imjd -= 1
         fmjd += 1.0
-    fmt = "%."+"%sf"%prec
-    return str(imjd) + (fmt%fmjd)[1:]
+    fmt = "%." + "%sf" % prec
+    return str(imjd) + (fmt % fmjd)[1:]
 
-def time_to_mjd_string_array(t,prec = 15):
+
+def time_to_mjd_string_array(t, prec=15):
     """Print and MJD time array from an astropy time object as array in
        time.
     """
@@ -159,16 +180,17 @@ def time_to_mjd_string_array(t,prec = 15):
 
     assert np.fabs(fmjd).max() < 2.0
     s = []
-    for i,f in zip(imjd,fmjd):
+    for i, f in zip(imjd, fmjd):
         if f >= 1.0:
             i += 1
             f -= 1.0
         if f < 0.0:
             i -= 1
             f += 1.0
-        fmt = "%."+"%sf"%prec
-        s.append(str(i) + (fmt%f)[1:])
+        fmt = "%." + "%sf" % prec
+        s.append(str(i) + (fmt % f)[1:])
     return s
+
 
 def time_to_longdouble(t):
     """ Return an astropy Time value as MJD in longdouble
@@ -184,6 +206,7 @@ def time_to_longdouble(t):
     except:
         return np.longdouble(t)
 
+
 def GEO_WGS84_to_ITRF(lon, lat, hgt):
     """Convert lat/long/height to rectangular.
 
@@ -195,6 +218,7 @@ def GEO_WGS84_to_ITRF(lon, lat, hgt):
                                                lat.to(u.rad).value,
                                                hgt.to(u.m).value)
     return x * u.m, y * u.m, z * u.m
+
 
 def numeric_partial(f, args, ix=0, delta=1e-6):
     """Compute the partial derivative of f numerically.
@@ -212,6 +236,7 @@ def numeric_partial(f, args, ix=0, delta=1e-6):
     r3 = np.array(f(*args3))
     return (r2-r3)/delta
 
+
 def numeric_partials(f, args, delta=1e-6):
     """Compute all the partial derivatives of f numerically.
 
@@ -221,6 +246,7 @@ def numeric_partials(f, args, delta=1e-6):
     """
     r = [numeric_partial(f, args, i, delta) for i in range(len(args))]
     return np.array(r).T
+
 
 def check_all_partials(f, args, delta=1e-6, atol=1e-4, rtol=1e-4):
     """Check the partial derivatives of a function that returns derivatives.
@@ -246,6 +272,7 @@ def check_all_partials(f, args, delta=1e-6, atol=1e-4, rtol=1e-4):
         print "jac there:", jac[worst_ix], "njac there:", njac[worst_ix]
         raise
 
+
 def has_astropy_unit(x):
     """
     has_astropy_unit(x):
@@ -254,19 +281,22 @@ def has_astropy_unit(x):
     useful, because different data types can still have units associated with
     them.
     """
-    return hasattr(x,'unit') and isinstance(x.unit, u.core.UnitBase)
+    return hasattr(x, 'unit') and isinstance(x.unit, u.core.UnitBase)
+
 
 def longdouble2string(x):
     """Convert numpy longdouble to string"""
     return repr(x)
+
 
 def MJD_string2longdouble(s):
     """
     MJD_string2longdouble(s):
         Convert a MJD string to a numpy longdouble
     """
-    ii,ff = s.split(".")
+    ii, ff = s.split(".")
     return np.longfloat(ii) + np.longfloat("0."+ff)
+
 
 def ddouble2ldouble(t1, t2, format='jd'):
     """
@@ -274,18 +304,51 @@ def ddouble2ldouble(t1, t2, format='jd'):
         inputs two double-precision numbers representing JD times,
         converts them to a single long double MJD value
     """
-    if format=='jd':
+    if format == 'jd':
     # determine if the two double are JD time
         t1 = np.longdouble(t1) - np.longdouble(2400000.5)
         t = np.longdouble(t1) + np.longdouble(t2)
         return t
     else:
-        t = np.longdouble([t1,t2])
+        t = np.longdouble([t1, t2])
     return t[0]+t[1]
 
+
 def str2longdouble(str):
-    """Return a numpy long double scalar from the input string, using strtold()"""
+    """Return a numpy long double scalar from the input string, using strtold()
+    """
     return str2ldarr1(str)[0]
+
+
+def split_prefixed_name(name):
+    """A utility function that splits a prefixed name.
+       Parameter
+       ----------
+       name : str
+           Prefixed name
+       Return
+       ----------
+       prefixPart : str
+           The prefix part of the name
+       indexPart : str
+           The index part from the name
+       indexValue : int
+           The absolute index valeu
+    """
+    for pt in prefixPattern:
+        namefield = pt.match(name)
+        if namefield is None:
+            continue
+        prefixPart, indexPart = namefield.groups()
+        if '_' in name:
+            if '_' in prefixPart:
+                break
+            else:
+                continue
+    if namefield is None:
+        raise ValueError('Unrecognized prefix name pattern.')
+    indexValue = int(indexPart)
+    return prefixPart, indexPart, indexValue
 
 
 def data2longdouble(data):
@@ -304,13 +367,10 @@ def data2longdouble(data):
 
 def taylor_horner(x, coeffs):
     """Evaluate a Taylor series of coefficients at x via the Horner scheme.
-
     For example, if we want: 10 + 3*x/1! + 4*x^2/2! + 12*x^3/3! with
     x evaluated at 2.0, we would do:
-
     In [1]: taylor_horner(2.0, [10, 3, 4, 12])
     Out[1]: 40.0
-
     """
     result = 0.0
     fact = float(len(coeffs))
@@ -318,6 +378,7 @@ def taylor_horner(x, coeffs):
         result = result * x / fact + coeff
         fact -= 1.0
     return result
+
 
 def is_number(s):
     """Check if it is a number string.
@@ -336,7 +397,7 @@ def is_number(s):
         pass
     return False
 
-if __name__=="__main__":
+if __name__ == "__main__":
     assert taylor_horner(2.0, [10]) == 10
     assert taylor_horner(2.0, [10, 3]) == 10 + 3*2.0
     assert taylor_horner(2.0, [10, 3, 4]) == 10 + 3*2.0 + 4*2.0**2 / 2.0

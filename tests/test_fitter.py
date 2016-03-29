@@ -7,14 +7,14 @@ from pint import fitter
 import matplotlib.pyplot as plt
 import numpy
 
-testdir=os.path.join(os.getenv('PINT'),'tests');
+from pinttestdata import testdir, datadir
 
 # Get model
 m = tm.StandardTimingModel()
-m.read_parfile(os.path.join(testdir,'NGC6440E.par'))
+m.read_parfile(os.path.join(datadir,'NGC6440E.par'))
 
 # Get TOAs
-t = toa.TOAs(os.path.join(testdir,'NGC6440E.tim'),usepickle=False)
+t = toa.TOAs(os.path.join(datadir,'NGC6440E.tim'),usepickle=False)
 t.apply_clock_corrections()
 t.compute_TDBs()
 try:
@@ -41,7 +41,7 @@ print('chi^2 is %0.2f after 4-param fit' % f.resids.chi2)
 p2=plt.errorbar(xt,f.resids.time_resids.value,yerr,fmt='go');
 
 # Now perturb F1 and fit only that. This doesn't work, though tempo2 easily fits
-# it. 
+# it.
 f.model.F1.value=1.1*f.model.F1.value
 f.update_resids()
 print('chi^2 is %0.2f after perturbing F1' % f.resids.chi2)
@@ -81,4 +81,4 @@ plt.legend([p1,p2,p3,p4,p5,p6],['Initial','4-param','Perturb F1',
                                 'Fit F0,F1,RA,DEC with method="Powell"'],
            loc=3)
 #plt.show()
-plt.savefig(os.path.join(testdir,"test_fitter_plot.pdf"))
+plt.savefig(os.path.join(datadir,"test_fitter_plot.pdf"))

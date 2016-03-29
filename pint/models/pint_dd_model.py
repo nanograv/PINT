@@ -4,7 +4,7 @@ from pint import ls,GMsun,Tsun
 from pint import utils
 from .pulsar_binaries.DD_model import DDmodel
 from .pint_pulsar_binary import PSRbinaryWapper
-from .parameter import Parameter, MJDParameter
+import parameter as p
 from .timing_model import Cache, TimingModel, MissingParameter
 import astropy
 from ..utils import time_from_mjd_string, time_to_longdouble
@@ -22,27 +22,40 @@ class DDwrapper(PSRbinaryWapper):
         super(DDwrapper, self).__init__()
         self.binary_model_name = 'DD'
         self.binary_model_class = DDmodel
-        self.add_param(Parameter(name="A0", units="s",
-                       description="DD model aberration parameter A0"),
-                       binary_param = True)
-        self.add_param(Parameter(name="B0", units="s",
-                       description="DD model aberration parameter B0"),
-                       binary_param = True)
-        self.add_param(Parameter(name="GAMMA", units="second",
-                       description="Binary Einsten delay GAMMA term"),
-                       binary_param = True)
-        self.add_param(Parameter(name="DR", units="",
-                       description="Relativistic deformation of the orbit"),
-                       binary_param = True)
-        self.add_param(Parameter(name="DTH", units="",
-                       description="Relativistic deformation of the orbit"),
-                       binary_param = True)
-        self.add_param(Parameter(name="SINI", units="",
-                       description="Sine of inclination angle"),
-                       binary_param = True)
+
+        self.add_param(p.floatParameter(name="A0",
+             units="s",
+             description="DD model aberration parameter A0"),
+             binary_param = True)
+
+        self.add_param(p.floatParameter(name="B0",
+             units="s",
+             description="DD model aberration parameter B0",),
+             binary_param = True)
+
+        self.add_param(p.floatParameter(name="GAMMA",
+             units="second",
+             description="Binary Einsten delay GAMMA term"),
+             binary_param = True)
+
+        self.add_param(p.floatParameter(name="DR",
+             units="",
+             description="Relativistic deformation of the orbit"),
+             binary_param = True)
+
+        self.add_param(p.floatParameter(name="DTH",
+             units="",
+             description="Relativistic deformation of the orbit",),
+             binary_param = True)
+
+
+        self.add_param(p.floatParameter(name="SINI",
+             units="",
+             description="Sine of inclination angle"),
+             binary_param = True)
 
     def setup(self):
-        """Check out parameters setup. 
+        """Check out parameters setup.
         """
         super(DDwrapper,self).setup()
         for p in ("PB", "T0", "A1"):

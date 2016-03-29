@@ -8,30 +8,29 @@ from pint import ls,GMsun,Tsun
 
 class DDmodel(PSR_BINARY):
     """This is a class independent from PINT platform for pulsar DD binary model.
-       Refence: T. Damour and N. Deruelle(1986)
-       It is a subclass of PSR_BINARY class defined in file pulsar_binary.py in
-       the same folder. This class is desined for PINT platform but can be used
-       as an independent module for binary delay calculation.
+    Refence: T. Damour and N. Deruelle(1986)
+    It is a subclass of PSR_BINARY class defined in file pulsar_binary.py in
+    the same folder. This class is desined for PINT platform but can be used
+    as an independent module for binary delay calculation.
+    To interact with PINT platform, a pint_pulsar_binary wrapper is needed.
+    See the source file pint/models/pint_dd_model.py
 
-       To interact with PINT platform, a pint_pulsar_binary wrapper is needed.
-       See the source file pint/models/pint_dd_model.py
-
-       Parameters
-       ----------
-       t : numpy.array_like
-           Barycentric time of arrival in the format of MJD.
-       Return
-       ----------
-       A dd binary model class with paramters, delay calculations and derivatives.
-
-       Example
-       ----------
-       >>>t = numpy.linspace(54200.0,55000.0,800)
-       >>>binar_model = DDmodel(t)
-       >>>paramters_dict = {'A0':0.5,'ECC':0.01}
-       >>>binar_model.set_par_values(paramters_dict)
-       Here the binary has time input and parameters input, the delay can be
-       calculated.
+    Parameters
+    ----------
+    t : numpy.array_like
+        Barycentric time of arrival in the format of MJD.
+    Return
+    ----------
+    A dd binary model class with paramters, delay calculations and derivatives.
+    Example
+    ----------
+    >>> import numpy
+    >>> t = numpy.linspace(54200.0,55000.0,800)
+    >>> binary_model = DDmodel(t)
+    >>> paramters_dict = {'A0':0.5,'ECC':0.01}
+    >>> binary_model.set_par_values(paramters_dict)
+    Here the binary has time input and parameters input, the delay can be
+    calculated.
     """
     def __init__(self,t):
         super(DDmodel, self).__init__()

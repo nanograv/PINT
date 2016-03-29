@@ -1,39 +1,35 @@
 """Various tests to assess the performance of the DD model."""
 import pint.models.model_builder as mb
 import pint.toa as toa
-import libstempo as lt
 import matplotlib.pyplot as plt
-import tempo2_utils
 import astropy.units as u
 from pint.residuals import resids
+from pint.models.pint_dd_model import DDwrapper
 import numpy as np
+import os, unittest
+from pinttestdata import testdir, datadir
+
+os.chdir(datadir)
+
+class TestDD(unittest.TestCase):
+    """Compare delays from the dd model with libstempo and PINT"""
+    @classmethod
+    def setUpClass(self):
+        self.parfileB1855 = 'B1855+09_NANOGrav_dfg+12_modified_DD.par'
+        self.timB1855 = 'B1855+09_NANOGrav_dfg+12.tim'
+        self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405", planets=False)
+        self.modelB1855 = mb.get_model(self.parfileB1855)
+        # libstempo result
+        self.ltres, self.ltbindelay = np.genfromtxt(self.parfileB1855 + '.tempo_test', unpack=True)
+    def test_J1855_binary_delay(self):
+        # Calculate delays with PINT
+        pint_binary_delay = self.modelB1855.binarymodel_delay(self.toasB1855.table)
+        assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-11), 'DD B1855 TEST FAILED'
+    # TODO: PINT can still incresase the precision by adding more components
+    def test_B1855(self):
+        pint_resids_us = resids(self.toasB1855, self.modelB1855).time_resids.to(u.s)
+        assert np.all(np.abs(pint_resids_us.value - self.ltres) < 1e-7), 'DD B1855 TEST FAILED'
 
 
-# Using Nanograv data B1855
-parfile = 'B1855+09_NANOGrav_dfg+12_modified.par'
-timfile = 'B1855+09_NANOGrav_dfg+12.tim'
-# libstempo calculation
-print "libstempo calculation"
-psr = lt.tempopulsar(parfile, timfile)
-# Build PINT model
-print "PINT calculation"
-mdd = mb.get_model(parfile)
-# Get toas to pint
-toas = toa.get_TOAs(timfile, planets=True)
-tt = toas.table
-# Run tempo2 general2 pluging
-tempo2_vals = tempo2_utils.general2(parfile, timfile,
-                                    ['tt2tb', 'roemer', 'post_phase',
-                                     'shapiro', 'shapiroJ','bat','clock0',
-                                     'clock1','clock2','clock3','clock4','sat',
-                                     'tropo'])
-# compute residules
-t2_resids = tempo2_vals['post_phase'] / float(mdd.F0.value) * 1e6 * u.us
-presids_us = resids(toas, mdd).time_resids.to(u.us)
-toas = psr.toas()
-toas.sort()
-plt.plot(toas,presids_us-t2_resids)
-plt.xlabel('Mjd (DAY)')
-plt.ylabel('residule (us)')
-plt.title('Residule difference between PINT and tempo2')
-plt.show()
+if __name__ == '__main__':
+    pass

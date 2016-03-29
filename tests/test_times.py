@@ -5,6 +5,9 @@ import astropy.constants as const
 import astropy.units as u
 from pint.utils import PosVel
 from astropy import log
+import os
+
+from pinttestdata import testdir, datadir
 
 log.setLevel('ERROR')
 # for nice output info, set the following instead
@@ -15,29 +18,35 @@ observatories = obsmod.read_observatories()
 ls = u.def_unit('ls', const.c * 1.0 * u.s)
 
 log.info("Reading TOAs into PINT")
-ts = toa.get_TOAs("tests/testtimes.tim",usepickle=False)
+ts = toa.get_TOAs(datadir + "/testtimes.tim",usepickle=False)
 if log.level < 25:
     ts.print_summary()
 ts.table.sort('index')
 
 log.info("Calling TEMPO2")
 #cmd = 'tempo2 -output general2 -f tests/testtimes.par tests/testtimes.tim -s "XXX {clock0} {clock1} {clock2} {clock3} {tt} {t2tb} {telSSB} {telVel} {Ttt}\n"'
-cmd = 'tempo2 -output general2 -f tests/testtimes.par tests/testtimes.tim -s "XXX {clock0} {clock1} {clock2} {clock3} {tt} {t2tb} {earth_ssb1} {earth_ssb2} {earth_ssb3} {earth_ssb4} {earth_ssb5} {earth_ssb6} {telEpos} {telEVel} {Ttt}\n"'
-args = shlex.split(cmd)
+# cmd = 'tempo2 -output general2 -f ' + datadir+'/testtimes.par ' + datadir + \
+#       '/testtimes.tim -s "XXX {clock0} {clock1} {clock2} {clock3} {tt} {t2tb} {earth_ssb1} {earth_ssb2} {earth_ssb3} {earth_ssb4} {earth_ssb5} {earth_ssb6} {telEpos} {telEVel} {Ttt}\n"'
+# args = shlex.split(cmd)
+#
+# tout = subprocess.check_output(args)
+# goodlines = [x for x in tout.split("\n") if x.startswith("XXX")]
+#
+# assert(len(goodlines)==len(ts.table))
+#t2result = numpy.genfromtxt('datafile/testtimes.par' + '.tempo2_test', names=True, comments = '#')
 
-tout = subprocess.check_output(args)
-goodlines = [x for x in tout.split("\n") if x.startswith("XXX")]
-
-assert(len(goodlines)==len(ts.table))
-
+f = open(datadir + '/testtimes.par' + '.tempo2_test')
+lines = f.readlines()
+goodlines = lines[1:]
 # Get the output lines from the TOAs
 for line, TOA in zip(goodlines, ts.table):
-    assert len(line.split()) == 20, \
+    assert len(line.split()) == 19, \
       "tempo2 general2 does not support all needed outputs"
     oclk, ut1_utc, tai_utc, tt_tai, ttcorr, tt2tb, \
           ep0, ep1, ep2, ev0, ev1, ev2, \
           tp0, tp1, tp2, tv0, tv1, tv2, Ttt = \
-          (float(x) for x in line.split()[1:])
+          (float(x) for x in line.split())
+
     t2_epv = utils.PosVel(numpy.asarray([ep0, ep1, ep2]) * ls,
                           numpy.asarray([ev0, ev1, ev2]) * ls/u.s)
     t2_opv = utils.PosVel(numpy.asarray([tp0, tp1, tp2]) * ls,
@@ -60,7 +69,7 @@ for line, TOA in zip(goodlines, ts.table):
     dvel = numpy.sqrt(numpy.dot(dopv.vel.to(u.mm/u.s), dopv.vel.to(u.mm/u.s)))
     log.info(" obs diff: %.2f m, %.3f mm/s" % (dpos, dvel))
     assert(dpos < 2.0 and dvel < 0.02)
-    
+
     pint_ssb2obs = PosVel(numpy.asarray(TOA['ssb_obs_pos'])*u.km,
                           numpy.asarray(TOA['ssb_obs_vel'])*u.km/u.s,
                           origin='SSB', obj='OBS')

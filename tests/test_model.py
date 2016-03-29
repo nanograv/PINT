@@ -6,16 +6,18 @@ from pint import toa
 from pint.residuals import resids
 import astropy.units as u
 import matplotlib.pyplot as plt
-import tempo2_utils
 from astropy import log
+
+from pinttestdata import testdir, datadir
 
 log.setLevel('ERROR')
 # for nice output info, set the following instead
 #log.setLevel('INFO')
+os.chdir(datadir)
 
-parfile = 'tests/J1744-1134.basic.par'
-t1_parfile = 'tests/J1744-1134.t1.par'
-timfile = 'tests/J1744-1134.Rcvr1_2.GASP.8y.x.tim'
+parfile = 'J1744-1134.basic.par'
+t1_parfile = 'J1744-1134.t1.par'
+timfile = 'J1744-1134.Rcvr1_2.GASP.8y.x.tim'
 
 m = tm.StandardTimingModel()
 m.read_parfile(parfile)
@@ -47,10 +49,13 @@ log.info("RMS PINT residuals are %.3f us" % resids_us.std().value)
 
 # Get some general2 stuff
 log.info("Running TEMPO2...")
-tempo2_vals = tempo2_utils.general2(parfile, timfile,
-                                    ['tt2tb', 'roemer', 'post_phase',
-                                     'shapiro', 'shapiroJ'])
-t2_resids = tempo2_vals['post_phase'] / float(m.F0.value) * 1e6 * u.us
+# Old tempo2 values output
+# tempo2_vals = tempo2_utils.general2(parfile, timfile,
+#                                     ['tt2tb', 'roemer', 'post_phase',
+#                                      'shapiro', 'shapiroJ'])
+tempo2_vals = numpy.genfromtxt(parfile + '.tempo2_test', names=True, comments = '#',
+                            dtype = 'float128')
+t2_resids = tempo2_vals['post_phase'] / float(m.F0.num_value) * 1e6 * u.us
 diff_t2 = (resids_us - t2_resids).to(u.ns)
 diff_t2 -= diff_t2.mean()
 log.info("Max resid diff between PINT and T2: %.2f ns" % numpy.fabs(diff_t2).max().value)
@@ -63,9 +68,9 @@ did_tempo1 = False
 try:
     import tempo_utils
     log.info("Running TEMPO1...")
-    t1_toas = tempo_utils.read_toa_file(timfile)
-    tempo_utils.run_tempo(t1_toas, t1_parfile)
-    t1_resids = t1_toas.get_resids(units='phase') / float(m.F0.value) * 1e6 * u.us
+    t1_result = numpy.genfromtxt(t1_parfile + '.tempo_test', names=True, comments = '#',
+                                dtype = 'float128')
+    t1_resids = t1_result['residuals_phase']/ float(m.F0.value) * 1e6 * u.us
     did_tempo1 = True
     diff_t1 = (resids_us - t1_resids).to(u.ns)
     diff_t1 -= diff_t1.mean()

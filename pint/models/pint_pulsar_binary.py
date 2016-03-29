@@ -5,8 +5,7 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
-
-from .parameter import Parameter, MJDParameter
+import parameter as p
 from .timing_model import Cache, TimingModel, MissingParameter
 from ..phase import Phase
 from ..utils import time_from_mjd_string, time_to_longdouble, \
@@ -36,53 +35,62 @@ class PSRbinaryWapper(TimingModel):
         self.binary_model_class = None
         self.binary_delay_funcs= []
         self.binary_params = []
-        self.add_param(Parameter(name="PB", units=u.day,
-                       description="Orbital period",
-                       parse_value=utils.data2longdouble),binary_param=True)
+
+        self.add_param(p.floatParameter(name="PB",
+            units=u.day,
+            description="Orbital period"),
+            binary_param = True)
+
+        self.add_param(p.floatParameter(name="PBDOT",
+            units=u.day/u.day,
+            description="Orbital period derivitve respect to time"),
+            binary_param = True)
 
 
-        self.add_param(Parameter(name="PBDOT", units=u.day/u.day,
-                       description="Orbital period derivitve respect to time",
-                       parse_value=utils.data2longdouble),binary_param=True)
+        self.add_param(p.floatParameter(name="XPBDOT",
+            units=u.s/u.s,
+            description="Rate of change of orbital period minus GR prediction"),
+            binary_param = True)
 
+        self.add_param(p.floatParameter(name="A1",
+            units=ls,
+            description="Projected semi-major axis, a*sin(i)"),
+            binary_param = True)
 
-        self.add_param(Parameter(name="XPBDOT", units=u.s/u.s,
-                       description="Rate of change of orbital period minus GR"\
-                                   " prediction",
-                       parse_value=utils.data2longdouble),binary_param=True)
+        self.add_param(p.floatParameter(name = "A1DOT",
+            units=ls/u.s,
+            description="Derivitve of projected semi-major axis, da*sin(i)/dt"),
+            binary_param = True)
 
-        self.add_param(Parameter(name="A1", units=ls,
-                       description="Projected semi-major axis, a*sin(i)",
-                       parse_value=np.double),binary_param=True)
+        self.add_param(p.floatParameter(name="ECC",
+            units="",
+            aliases = ["E"],
+            description="Eccentricity"),
+            binary_param = True)
 
-        self.add_param(Parameter(name = "A1DOT", units=ls/u.s,
-                       description="Derivitve of projected semi-major axis," \
-                                   " da*sin(i)/dt",
-                       parse_value=np.double),binary_param=True)
+        self.add_param(p.floatParameter(name="EDOT",
+             units="1/s",
+             description="Eccentricity derivitve respect to time"),
+             binary_param = True)
 
-        self.add_param(Parameter(name="ECC", units="", aliases=["E"],
-                       description="Eccentricity",
-                       parse_value=np.double),binary_param = True)
+        self.add_param(p.MJDParameter(name="T0",
+            description="Epoch of periastron passage", time_scale='tdb'),
+            binary_param = True)
 
-        self.add_param(Parameter(name="EDOT", units="1/s",
-                       description="Eccentricity derivitve respect to time",
-                       parse_value=np.double),binary_param=True)
+        self.add_param(p.floatParameter(name="OM",
+            units=u.deg,
+            description="Longitude of periastron"),
+            binary_param = True)
 
-        self.add_param(MJDParameter(name="T0",
-                       description="Epoch of periastron passage",
-                       time_scale='tdb'), binary_param=True)
+        self.add_param(p.floatParameter(name="OMDOT",
+            units="deg/year",
+            description="Longitude of periastron"),
+            binary_param = True)
 
-        self.add_param(Parameter(name="OM", units=u.deg,
-                       description="Longitude of periastron",
-                       parse_value=lambda x: np.double(x)),binary_param = True)
-
-        self.add_param(Parameter(name="OMDOT", units="deg/year",
-                       description="Longitude of periastron",
-                       parse_value=lambda x: np.double(x)), binary_param=True)
-
-        self.add_param(Parameter(name="M2", units=u.M_sun,
-                       description="Mass of companian in the unit Sun mass",
-                       parse_value=np.double),binary_param=True)
+        self.add_param(p.floatParameter(name="M2",
+             units=u.M_sun,
+             description="Mass of companian in the unit Sun mass"),
+             binary_param = True)
 
         # Set up delay function
         self.binary_delay_funcs += [self.binarymodel_delay,]
@@ -128,28 +136,13 @@ class PSRbinaryWapper(TimingModel):
     @Cache.use_cache
     def binarymodel_delay(self, toas):
         """Return the binary model independent delay call"""
-        bmob = self.get_binary_object(toas)
+        bmobj = self.get_binary_object(toas)
 
-        return bmob.binary_delay()
-
-    #
-    # def binary_delay(self,toas):
-    #     """Returns total pulsar binary delay.
-    #        Parameters
-    #        ----------
-    #        toas : PINT toas table
-    #        Return
-    #        ----------
-    #        Pulsar binary delay in the units of second
-    #     """
-    #     bdelay = np.longdouble(np.zeros(len(toas)))*u.s
-    #     for bdf in self.binary_delay_funcs:
-    #         bdelay+= bdf(toas)
-    #     return bdelay
+        return bmobj.binary_delay()
 
     @Cache.use_cache
     def d_delay_d_xxxx(self,param,toas):
         """Return the DD timing model delay derivtives"""
-        bmob = self.get_binary_object(toas)
+        bmobj = self.get_binary_object(toas)
 
-        return bmob.d_binarydelay_d_par(par)
+        return bmobj.d_binarydelay_d_par(par)

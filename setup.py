@@ -1,6 +1,10 @@
-from distutils.core import setup
+try:
+    from setuptools import setup, Extension
+except ImportError:
+    from distutils.core import setup
+    from distutils.extension import Extension
+
 import numpy, os, sys
-from distutils.extension import Extension
 try:
     from Cython.Distutils import build_ext
 except ImportError:
@@ -63,6 +67,22 @@ ext_modules += [Extension("spice_util", src,
 if use_cython:
     cmdclass.update({'build_ext': build_ext})
 
+# Download data files
+data_urls = [
+        "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de405.bsp",
+        "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de421.bsp",
+        "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de430t.bsp",
+        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/earth_latest_high_prec.bpc",
+        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00010.tpc",
+        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0011.tls",
+        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/de-403-masses.tpc"
+        ]
+data_files = []
+data_dir = 'datafiles'
+for u in data_urls:
+    os.system("wget -N -c -P pint/%s %s" % (data_dir, u))
+    data_files.append(os.path.join(data_dir,u.split('/')[-1]))
+
 setup(
     name="pint",
     version = '0.0.1',
@@ -72,20 +92,15 @@ setup(
     author_email = 'sransom@nrao.edu',
     url = 'https://github.com/nanograv/PINT',
 
-    packages=['pint'],
-    package_dir = {'pint': 'pint'},
 
-    py_modules = ['pint.models.timing_model', 'pint.models.model_builder',
-        'pint.models.astrometry', 'pint.models.glitch',
-        'pint.models.dispersion', 'pint.models.spindown',
-        'pint.models.parameter', 'pint.fitter',
-        'pint.ltinterface',
-        'pint.models.solar_system_shapiro',
-        'pint.models.btmodel', 'pint.models.polycos',
-        'pint.models.bt', 'pint.models.dd',
-        'pint.orbital.kepler'],
+    packages=['pint',
+        'pint.extern',
+        'pint.models',
+        'pint.models.pulsar_binaries', 
+        'pint.orbital'],
 
-    include_package_data=True,
+    package_data={'pint':['datafiles/observatories.txt',]+data_files},
+
     cmdclass = cmdclass,
     ext_modules=ext_modules,
 )

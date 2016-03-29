@@ -4,7 +4,7 @@ import numpy
 import astropy.units as u
 import astropy.constants as const
 from astropy import log
-from .parameter import Parameter
+import parameter as p
 from .timing_model import TimingModel
 from .. import Tsun, Tmercury, Tvenus, Tearth, Tmars, \
         Tjupiter, Tsaturn, Turanus, Tneptune
@@ -14,11 +14,8 @@ class SolarSystemShapiro(TimingModel):
     def __init__(self):
         super(SolarSystemShapiro, self).__init__()
 
-        self.add_param(Parameter(name="PLANET_SHAPIRO",
-            units=None, value=True, continuous=False,
-            description="Include planetary Shapiro delays (Y/N)",
-            parse_value=lambda x: x.upper() == 'Y',
-            print_value=lambda x: 'Y' if x else 'N'))
+        self.add_param(p.boolParameter(name="PLANET_SHAPIRO",
+             value=False, description="Include planetary Shapiro delays (Y/N)"))
         self.delay_funcs['L1'] += [self.solar_system_shapiro_delay,]
 
     def setup(self):

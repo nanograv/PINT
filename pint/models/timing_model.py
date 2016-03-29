@@ -1,7 +1,7 @@
 # timing_model.py
 # Defines the basic timing model interface classes
 import functools
-from .parameter import Parameter
+from .parameter import strParameter
 from ..phase import Phase
 from astropy import log
 import numpy as np
@@ -15,6 +15,7 @@ ignore_params = ['START', 'FINISH', 'SOLARN0', 'EPHEM', 'CLK', 'UNITS',
                  'TIMEEPH', 'T2CMETHOD', 'CORRECT_TROPOSPHERE', 'DILATEFREQ',
                  'NTOA', 'CLOCK', 'TRES', 'TZRMJD', 'TZRFRQ', 'TZRSITE',
                  'NITS', 'IBOOT','BINARY']
+ignore_prefix = ['DMXF1_','DMXF2_','DMXEP_'] # DMXEP_ for now.
 
 class Cache(object):
     """Temporarily cache timing model internal computation results.
@@ -99,28 +100,85 @@ class TimingModel(object):
 
     def __init__(self):
         self.params = []  # List of model parameter names
+        self.prefix_params = []  # List of model parameter names
+        self.num_prefix_params = {}
         self.params = []  # List of model parameter names
         self.delay_funcs = {'L1':[],'L2':[]} # List of delay component functions
         # L1 is the first level of delays. L1 delay does not need barycentric toas
-        # After L1 delay, the toas have been corrected to solar system barycenter. 
+        # After L1 delay, the toas have been corrected to solar system barycenter.
         # L2 is the second level of delays. L2 delay need barycentric toas
+
         self.phase_funcs = [] # List of phase component functions
         self.cache = None
-        self.add_param(Parameter(name="PSR",
-            units=None,
+        self.param_register = {}
+        self.add_param(strParameter(name="PSR",
             description="Source name",
-            aliases=["PSRJ", "PSRB"],
-            parse_value=str))
+            aliases=["PSRJ", "PSRB"]))
         self.model_type = None
+
 
     def setup(self):
         pass
 
+
     def add_param(self, param,binary_param = False):
+        """Add a parameter to the timing model. If it is a prefixe parameter,
+           it will add prefix information to the prefix information attributes.
+        """
         setattr(self, param.name, param)
         self.params += [param.name,]
+        par_type = type(param).__name__
+        if par_type in self.param_register.keys():
+            self.param_register[par_type].append(param.name)
+        else:
+            self.param_register[par_type] = [param.name]
+
+        if param.is_prefix is True:
+            if param.prefix not in self.prefix_params:
+                self.prefix_params.append(param.prefix)
+            if self.num_prefix_params.has_key(param.prefix):
+                self.num_prefix_params[param.prefix]+=1
+            else:
+                self.num_prefix_params[param.prefix]=1
         if binary_param is True:
             self.binary_params +=[param.name,]
+
+    def add_more_prefix_params(self,prefixParamExp,maxPrefixIndex):
+        """Add more same type of prefixed parameters into the timing model.
+           Parameter
+           ----------
+           prefixParamExp : PINT prefixParam class
+               The eample prefixed parameter need to be added
+           maxPrefixIndex : int
+               The maximum number of prefixed parameter can be add.
+        """
+        try:
+            isp = prefixParamExp.is_prefix
+            if isp is not True:
+                raise ValueError('prefixParamExp needs to be a prefixParameter class.')
+        except:
+            raise ValueError('prefixParamExp needs to be a Parameter class.')
+
+        pfx = prefixParamExp.prefix
+        idxfmt = prefixParamExp.indexformat
+        unitTplt = prefixParamExp.unit_template
+        descriptionTplt = prefixParamExp.description_template
+        frozen=prefixParamExp.frozen
+        continuous=prefixParamExp.continuous
+        parse_value=prefixParamExp.parse_value
+        print_value=prefixParamExp.print_value
+        for ii in range(1,maxPrefixIndex+1):
+
+            pp = prefixParameter(prefix = prefix ,indexformat = idxfmt,
+                    index = ii, unitTplt = unitTplt,
+                    descriptionTplt = descriptionTplt, frozen=frozen,
+                    continuous=continuous, parse_value=parse_value,
+                    print_value=print_value)
+            pp.apply_template()
+            if pp.name not in self.params:
+                self.add_param(pp)
+
+
 
     def param_help(self):
         """Print help lines for all available parameters in model.
@@ -129,6 +187,29 @@ class TimingModel(object):
         for par in self.params:
             s += "%s\n" % getattr(self, par).help_line()
         return s
+
+
+    @Cache.use_cache
+    def get_prefix_mapping(self,prefix):
+        """Get the index mapping for the prefix parameters.
+           Parameter
+           ----------
+           prefix : str
+               Name of prefix.
+           Return
+           ----------
+           A dictionary with prefix pararameter real index as key and parameter
+           name as value.
+        """
+        parnames = [x for x in self.params if x.startswith(prefix)]
+        mapping = dict()
+        for parname in parnames:
+            par = getattr(self,parname)
+            if par.is_prefix == True and par.prefix == prefix:
+                mapping[par.index] = parname
+
+        setattr(self,prefix+'mapping',mapping)
+        return getattr(self,prefix+'mapping',mapping)
 
     @Cache.use_cache
     def phase(self, toas):
@@ -329,11 +410,15 @@ class TimingModel(object):
         for par in self.params:
             result += getattr(self, par).as_parfile_line()
         # Always include UNITS in par file. For now, PINT only supports TDB
-        result += "UNITS TDB"
+        result += "UNITS TDB\n"
+        if hasattr(self,'BinaryModelName'):
+            result += "BINARY {0}\n".format(self.BinaryModelName)
         return result
 
     def read_parfile(self, filename):
         """Read values from the specified parfile into the model parameters."""
+        checked_param = []
+        repeat_param = {}
         pfile = open(filename, 'r')
         for l in [pl.strip() for pl in pfile.readlines()]:
             # Skip blank lines
@@ -342,13 +427,32 @@ class TimingModel(object):
             # Skip commented lines
             if l.startswith('#') or l[:2]=="C ":
                 continue
+
+            k = l.split()
+            name = k[0].upper()
+
+            if name in checked_param:
+                if name in repeat_param.keys():
+                    repeat_param[name] += 1
+                else:
+                    repeat_param[name] = 2
+                k[0] = k[0] + str(repeat_param[name])
+                l = ' '.join(k)
+
             parsed = False
             for par in self.params:
                 if getattr(self, par).from_parfile_line(l):
                     parsed = True
-            if not parsed and l.split()[0] not in ignore_params:
-                log.warn("Unrecognized parfile line '%s'" % l)
+            if not parsed:
+                try:
+                    prefix,f,v = utils.split_prefixed_name(l.split()[0])
+                    if prefix not in ignore_prefix:
+                        log.warn("Unrecognized parfile line '%s'" % l)
+                except:
+                    if l.split()[0] not in ignore_params:
+                        log.warn("Unrecognized parfile line '%s'" % l)
 
+            checked_param.append(name)
         # The "setup" functions contain tests for required parameters or
         # combinations of parameters, etc, that can only be done
         # after the entire parfile is read
@@ -372,6 +476,8 @@ class TimingModel(object):
         pNames_inpar = para_dict.keys()
 
         pNames_inModel = self.params
+
+        prefix_inModel = self.prefix_params
 
         # Remove the common parameter PSR
         try:
@@ -411,6 +517,8 @@ class TimingModel(object):
                     return True
                 else:
                     continue
+
+            # TODO Check prefix parameter
 
             return False
 

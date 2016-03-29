@@ -2,8 +2,8 @@
 from pint import toa
 import os
 
-testdir=os.path.join(os.getenv('PINT'),'tests');
-os.chdir(testdir)
+from pinttestdata import testdir, datadir
+os.chdir(datadir)
 
 class TestTOAReader:
     def setUp(self):
@@ -29,6 +29,5 @@ if __name__ == '__main__':
     t = TestTOAReader()
     t.setUp()
     print 'Tests are set up.'
-    
-    t.test_pickle()
 
+    t.test_pickle()
