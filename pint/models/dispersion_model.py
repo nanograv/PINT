@@ -12,6 +12,8 @@ import astropy.time as time
 # The units on this are not completely correct
 # as we don't really use the "pc cm^3" units on DM.
 # But the time and freq portions are correct
+# This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
+# Astronomy, Second edition, Page 86, Note 1
 DMconst = 1.0/2.41e-4 * u.MHz * u.MHz * u.s
 
 class Dispersion(TimingModel):
@@ -35,7 +37,11 @@ class Dispersion(TimingModel):
         return cdm * self.DM.num_unit
 
     def dispersion_time_delay(self, DM, freq):
-        """Return the dispersion time delay for a set of frequency."""
+        """Return the dispersion time delay for a set of frequency.
+        This equation if cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
+        # Astronomy, Second edition, Page 86, Equation [4.7]
+        Here we assume the reference frequency is at infinity. 
+        """
         # dm delay
         dmdelay = DM * DMconst / freq**2.0
         return dmdelay
