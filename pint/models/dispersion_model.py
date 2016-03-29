@@ -12,6 +12,8 @@ import astropy.time as time
 # The units on this are not completely correct
 # as we don't really use the "pc cm^3" units on DM.
 # But the time and freq portions are correct
+# This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
+# Astronomy, Second edition, Page 86, Note 1
 DMconst = 1.0/2.41e-4 * u.MHz * u.MHz * u.s
 
 class Dispersion(TimingModel):
@@ -35,7 +37,11 @@ class Dispersion(TimingModel):
         return cdm * self.DM.num_unit
 
     def dispersion_time_delay(self, DM, freq):
-        """Return the dispersion time delay for a set of frequency."""
+        """Return the dispersion time delay for a set of frequency.
+        This equation if cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
+        # Astronomy, Second edition, Page 86, Equation [4.7]
+        Here we assume the reference frequency is at infinity. 
+        """
         # dm delay
         dmdelay = DM * DMconst / freq**2.0
         return dmdelay
@@ -54,11 +60,11 @@ class Dispersion(TimingModel):
         return self.dispersion_time_delay(dm, bfreq)
 
 
-class Dispersion_DMX(Dispersion):
+class DispersionDMX(Dispersion):
     """This class provides a DMX model based on the class of Dispersion.
     """
     def __init__(self):
-        super(Dispersion_DMX, self).__init__()
+        super(DispersionDMX, self).__init__()
         # DMX is for info output right now
         self.add_param(p.floatParameter(name="DMX",
                        units="pc cm^-3", value=0.0,
@@ -84,7 +90,7 @@ class Dispersion_DMX(Dispersion):
                        descriptionTplt=lambda x: 'End of DMX interval',
                        type_match='MJD', time_scale='utc'))
         self.dm_value_funcs += [self.dmx_dm,]
-
+        self.model_special_params = ['DMX_0001', 'DMXR1_0001','DMXR2_0001']
     def setup(self):
         super(Dispersion, self).setup()
         # Get DMX mapping.
