@@ -39,8 +39,9 @@ class Dispersion(TimingModel):
     def dispersion_time_delay(self, DM, freq):
         """Return the dispersion time delay for a set of frequency.
         This equation if cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
-        # Astronomy, Second edition, Page 86, Equation [4.7]
-        Here we assume the reference frequency is at infinity. 
+        Astronomy, Second edition, Page 86, Equation [4.7]
+        Here we assume the reference frequency is at infinity and the EM wave
+        frequency is much larger than plasma frequency.
         """
         # dm delay
         dmdelay = DM * DMconst / freq**2.0
