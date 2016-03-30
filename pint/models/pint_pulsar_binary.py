@@ -145,4 +145,4 @@ class PSRbinaryWapper(TimingModel):
         """Return the DD timing model delay derivtives"""
         bmobj = self.get_binary_object(toas)
 
-        return bmobj.d_binarydelay_d_par(par)
+        return bmobj.d_binarydelay_d_par(param)

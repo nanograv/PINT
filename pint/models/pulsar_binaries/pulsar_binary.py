@@ -78,11 +78,16 @@ class PSR_BINARY(object):
         else:
             for par in valDict.keys():
                 if par not in self.binary_params: # search for aliases
-                    par = self.search_alias(par)
-                    if par is None:
-                        raise AttributeError('Can not find parameter '+par+' in '\
+                    par_aliases = self.search_alias(par)
+                    if par_aliases is None:
+                        raise AttributeError('Can not find parameter '+ par +' in '\
                                               + self.binary_name+'model')
+                    else:
+                        par = par_aliases
+                if not hasattr(valDict[par], 'unit'):
+                    valDict[par] = valDict[par] * self.param_default_value[par].unit
                 setattr(self,par,valDict[par])
+
 
     def add_binary_params(self,parameter,defaultValue):
         """Add one parameter to the binary class
