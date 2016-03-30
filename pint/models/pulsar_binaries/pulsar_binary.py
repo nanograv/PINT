@@ -11,7 +11,7 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
-from pint import ls,GMsun,Tsun
+from pint import ls, GMsun, Tsun, time_distance
 
 
 class PSR_BINARY(object):
@@ -271,6 +271,12 @@ class PSR_BINARY(object):
         tt0 = (barycentricTOA - T0).to('second')
         return tt0
 
+    ####################################
+    @Cache.cache_result
+    def pb(self):
+        """Calculate the orbit period with PBDOT and XPBDOT
+        """
+        return self.PB + 0.5 * (self.PBDOT + self.XPBDOT)
     ####################################
     @Cache.cache_result
     def ecc(self):
