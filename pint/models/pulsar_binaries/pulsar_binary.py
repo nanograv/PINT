@@ -39,7 +39,8 @@ class PSR_BINARY(object):
                            'OMDOT':0.0*u.deg/u.year,
                            'XPBDOT':0.0*u.day/u.day,
                            'M2':0.0*u.M_sun,
-                           'SINI':0*u.Unit('') }
+                           'SINI':0*u.Unit(''),
+                           'GAMMA':0*u.second }
         self.param_aliases = {'ECC':['E'],'EDOT':['ECCDOT'],
                               'A1DOT':['XDOT']}
         self.binary_params = self.param_default_value.keys()

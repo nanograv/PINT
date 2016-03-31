@@ -3,7 +3,7 @@ from pint.models.timing_model import Cache
 import numpy as np
 import astropy.units as u
 import astropy.constants as c
-from pint import ls,GMsun,Tsun
+from pint import ls,GMsun,Tsun, time_distance
 
 
 class BTmodel(PSR_BINARY):
@@ -16,7 +16,6 @@ class BTmodel(PSR_BINARY):
             self.t = np.array([t,])
         else:
             self.t = t
-        self.param_default_value.update({'GAMMA':0*u.second})
         # If any parameter has aliases, it should be updated
         #self.param_aliases.update({})
         self.binary_params = self.param_default_value.keys()
@@ -50,7 +49,7 @@ class BTmodel(PSR_BINARY):
     @Cache.use_cache
     def BTdelay(self):
         """Full BT model delay"""
-        return (self.delayL1() + self.delayL2()) * self.delayR()
+        return ((self.delayL1() + self.delayL2()) * self.delayR()).decompose()
 ############### Derivatives.
     @Cache.use_cache
     def d_delayL1_d_E(self):
@@ -66,7 +65,7 @@ class BTmodel(PSR_BINARY):
 
     @Cache.use_cache
     def d_delayL1_d_A1DOT(self):
-        return self.tt0() * self.d_delayL1_d_A1()
+        return (self.tt0 * self.d_delayL1_d_A1())
 
     @Cache.use_cache
     def d_delayL2_d_A1(self):
@@ -74,23 +73,32 @@ class BTmodel(PSR_BINARY):
 
     @Cache.use_cache
     def d_delayL2_d_A1DOT(self):
-        return self.tt0() * self.d_delayL2_d_A1()
+        return (self.tt0 * self.d_delayL2_d_A1())
 
     @Cache.use_cache
     def d_delayL1_d_OM(self):
-        return self.a1()/c.c*np.cos(self.omega())*(np.cos(self.E())-self.ecc())*self.DEG2RAD
+        par = getattr(self, 'OM')
+        dunit = u.s/par.unit
+        return (self.a1()/c.c*np.cos(self.omega())*(np.cos(self.E())
+                -self.ecc())).to(dunit, equivalencies=u.dimensionless_angles())
 
     @Cache.use_cache
     def d_delayL1_d_OMDOT(self):
-        return self.tt0() * self.d_delayL1_d_OM() / self.SECS_PER_YEAR
+        par = getattr(self, 'OMDOT')
+        dunit = u.s/par.unit
+        return (self.tt0 * self.d_delayL1_d_OM()).to(dunit, equivalencies=u.dimensionless_angles())
 
     @Cache.use_cache
     def d_delayL2_d_OM(self):
-        return -self.a1()/c.c*np.sin(self.omega())*np.sqrt(1-self.ecc()**2)*np.sin(self.E())*self.DEG2RAD
+        par = getattr(self, 'OM')
+        dunit = u.s/par.unit
+        return -(self.a1()/c.c*np.sin(self.omega())*np.sqrt(1-self.ecc()**2)*np.sin(self.E())).to(dunit, equivalencies=u.dimensionless_angles())
 
     @Cache.use_cache
     def d_delayL2_d_OMDOT(self):
-        return self.tt0() * self.d_delayL2_d_OM() / self.SECS_PER_YEAR
+        par = getattr(self, 'OMDOT')
+        dunit = u.s/par.unit
+        return (self.tt0 * self.d_delayL2_d_OM()).to(dunit, equivalencies=u.dimensionless_angles())
 
     @Cache.use_cache
     def d_delayL1_d_ECC(self):
@@ -99,7 +107,7 @@ class BTmodel(PSR_BINARY):
 
     @Cache.use_cache
     def d_delayL1_d_EDOT(self):
-        return self.tt0() * self.d_delayL1_d_ECC()
+        return self.tt0 * self.d_delayL1_d_ECC()
 
     @Cache.use_cache
     def d_delayL2_d_ECC(self):
@@ -109,7 +117,7 @@ class BTmodel(PSR_BINARY):
 
     @Cache.use_cache
     def d_delayL2_d_EDOT(self):
-        return self.tt0() * self.d_delayL2_d_ECC()
+        return self.tt0 * self.d_delayL2_d_ECC()
 
     @Cache.use_cache
     def d_delayL1_d_GAMMA(self):
@@ -121,23 +129,23 @@ class BTmodel(PSR_BINARY):
 
     @Cache.use_cache
     def d_delayL1_d_T0(self):
-        return self.d_delayL1_d_E() * self.d_E_d_T0()
+        return (self.d_delayL1_d_E() * self.d_E_d_T0()).to(u.s/u.day)
 
     @Cache.use_cache
     def d_delayL2_d_T0(self):
-        return self.d_delayL2_d_E() * self.d_E_d_T0()
+        return (self.d_delayL2_d_E() * self.d_E_d_T0()).to(u.s/u.day)
 
     @Cache.use_cache
     def d_delayL1_d_PB(self):
-        return self.d_delayL1_d_E() * self.d_E_d_PB()
+        return (self.d_delayL1_d_E() * self.d_E_d_PB()).to(u.s/u.day, equivalencies=u.dimensionless_angles())
 
     @Cache.use_cache
     def d_delayL2_d_PB(self):
-        return self.d_delayL2_d_E() * self.d_E_d_PB()
+        return (self.d_delayL2_d_E() * self.d_E_d_PB()).to(u.s/u.day, equivalencies=u.dimensionless_angles())
 
     @Cache.use_cache
     def d_delayL1_d_PBDOT(self):
-        return self.d_delayL1_d_E() * self.d_E_d_PBDOT()
+        return (self.d_delayL1_d_E() * self.d_E_d_PBDOT())
 
     @Cache.use_cache
     def d_delayL2_d_PBDOT(self):
@@ -181,7 +189,7 @@ class BTmodel(PSR_BINARY):
 
     @Cache.use_cache
     def d_delay_d_T0(self):
-        return self.delayR() * (self.d_delayL1_d_T0() + self.d_delayL2_d_T0())
+        return (self.delayR() * (self.d_delayL1_d_T0() + self.d_delayL2_d_T0())).to(u.s/u.day)
 
     @Cache.use_cache
     def d_delay_d_GAMMA(self):
