@@ -110,10 +110,12 @@ class TimingModel(object):
 
         self.phase_funcs = [] # List of phase component functions
         self.cache = None
+        self.param_register = {}
         self.add_param(strParameter(name="PSR",
             description="Source name",
             aliases=["PSRJ", "PSRB"]))
         self.model_type = None
+
 
     def setup(self):
         pass
@@ -125,6 +127,12 @@ class TimingModel(object):
         """
         setattr(self, param.name, param)
         self.params += [param.name,]
+        par_type = type(param).__name__
+        if par_type in self.param_register.keys():
+            self.param_register[par_type].append(param.name)
+        else:
+            self.param_register[par_type] = [param.name]
+
         if param.is_prefix is True:
             if param.prefix not in self.prefix_params:
                 self.prefix_params.append(param.prefix)
@@ -134,7 +142,6 @@ class TimingModel(object):
                 self.num_prefix_params[param.prefix]=1
         if binary_param is True:
             self.binary_params +=[param.name,]
-
 
     def add_more_prefix_params(self,prefixParamExp,maxPrefixIndex):
         """Add more same type of prefixed parameters into the timing model.
@@ -410,6 +417,8 @@ class TimingModel(object):
 
     def read_parfile(self, filename):
         """Read values from the specified parfile into the model parameters."""
+        checked_param = []
+        repeat_param = {}
         pfile = open(filename, 'r')
         for l in [pl.strip() for pl in pfile.readlines()]:
             # Skip blank lines
@@ -418,6 +427,18 @@ class TimingModel(object):
             # Skip commented lines
             if l.startswith('#') or l[:2]=="C ":
                 continue
+
+            k = l.split()
+            name = k[0].upper()
+
+            if name in checked_param:
+                if name in repeat_param.keys():
+                    repeat_param[name] += 1
+                else:
+                    repeat_param[name] = 2
+                k[0] = k[0] + str(repeat_param[name])
+                l = ' '.join(k)
+
             parsed = False
             for par in self.params:
                 if getattr(self, par).from_parfile_line(l):
@@ -431,6 +452,7 @@ class TimingModel(object):
                     if l.split()[0] not in ignore_params:
                         log.warn("Unrecognized parfile line '%s'" % l)
 
+            checked_param.append(name)
         # The "setup" functions contain tests for required parameters or
         # combinations of parameters, etc, that can only be done
         # after the entire parfile is read

@@ -14,7 +14,7 @@ from astropy.coordinates.angles import Angle
 import re
 import numbers
 import priors
-
+from ..toa_select import TOASelect
 
 
 class Parameter(object):
@@ -70,6 +70,7 @@ class Parameter(object):
         self.get_num_value = get_num_value
         self.print_value = print_value  # method to convert value to a string.
         self.set_uncertainty = set_uncertainty
+        self.from_parfile_line = self.from_parfile_line_regular
         self.value = value  # The value of parameter, internal storage
         self.prior = prior
 
@@ -112,7 +113,7 @@ class Parameter(object):
                 except:
                     log.warning('The value unit is not compatable with'
                                 ' parameter units right now.')
-    
+
         # note, _units is a string, _num_unit is the astropy unit
 
         if unt is None:
@@ -134,7 +135,7 @@ class Parameter(object):
             self.value = self.value.to(self.num_unit)
         if hasattr(self, 'uncertainty') and hasattr(self.uncertainty, 'unit'):
             self.uncertainty = self.uncertainty.to(self.num_unit)
-            
+
     # Setup value property
     @property
     def value(self):
@@ -271,7 +272,7 @@ class Parameter(object):
             line += " 1"
         return line + "\n"
 
-    def from_parfile_line(self, line):
+    def from_parfile_line_regular(self, line):
         """
         Parse a parfile line into the current state of the parameter.
         Returns True if line was successfully parsed, False otherwise.
@@ -314,7 +315,7 @@ class floatParameter(Parameter):
     """This is a Parameter type that is specific to astropy quantity values
     """
     def __init__(self, name=None, value=None, units=None, description=None,
-                 uncertainty=None, frozen=True, aliases=None, continuous=True,
+                 uncertainty=None, frozen=True, aliases=[], continuous=True,
                  long_double=False):
         self.long_double = long_double
         if self.long_double:
@@ -356,8 +357,8 @@ class floatParameter(Parameter):
         except AttributeError:
             # This will happen if the input value did not have units
             result = fortran_float(val) * self.num_unit
-            # TODO how to treat num_unit==None ? does it mean 
-            # dimensionless or unset?  Ignore for now.. 
+            # TODO how to treat num_unit==None ? does it mean
+            # dimensionless or unset?  Ignore for now..
 
         return result
 
@@ -445,8 +446,9 @@ class boolParameter(Parameter):
 class MJDParameter(Parameter):
     """This is a Parameter type that is specific to MJD values."""
     def __init__(self, name=None, value=None, description=None,
-                 uncertainty=None, frozen=True, continuous=True, aliases=None,
+                 uncertainty=None, frozen=True, continuous=True, aliases=[],
                  time_scale='utc'):
+
         self.time_scale = time_scale
         set_value = self.set_value_mjd
         print_value = time_to_mjd_string
@@ -494,7 +496,7 @@ class MJDParameter(Parameter):
 class AngleParameter(Parameter):
     """This is a Parameter type that is specific to Angle values."""
     def __init__(self, name=None, value=None, description=None, units='rad',
-             uncertainty=None, frozen=True, continuous=True, aliases=None):
+             uncertainty=None, frozen=True, continuous=True, aliases=[]):
         self.unit_identifier = {
             'h:m:s': (u.hourangle, 'h', '0:0:%.15fh'),
             'd:m:s': (u.deg, 'd', '0:0:%.15fd'),
@@ -570,6 +572,7 @@ class AngleParameter(Parameter):
                              + type(val).__name__ + 'format.')
         return result
 
+
 class prefixParameter(Parameter):
     """ This is a Parameter type for prefix parameters, for example DMX_
 
@@ -597,6 +600,7 @@ class prefixParameter(Parameter):
             >>> descritionTplt = lambda x: 'This is the descrition of parameter
                                             %d'%x
             The class will fill the descrition and unit automaticly.
+
         If both two methods are fillfulled, it prefer the first one.
 
         Parameter
@@ -724,7 +728,6 @@ class prefixParameter(Parameter):
                                               continuous=continuous,
                                               print_value=print_value,
                                               set_value=set_value,
-                                              #get_value=get_value,
                                               get_num_value=get_num_value,
                                               set_uncertainty=set_uncertainty)
 
@@ -775,7 +778,7 @@ class prefixParameter(Parameter):
         result = obj.set_uncertainty(val)
         return result
 
-    def new_index_prefix_param(self, index):
+    def new_param(self, index):
         """Get one prefix parameter with the same type.
         Parameter
         ----------
@@ -796,3 +799,192 @@ class prefixParameter(Parameter):
                                  time_scale=self.time_scale)
         newpfx.apply_template()
         return newpfx
+
+
+class maskParameter(Parameter):
+    """ This is a Parameter type for mask parameters which is to select a
+        certain subset of TOAs, for example JUMP. This type of parameter does
+        not require index input. But the final may would has an index part, for
+        the purpose of parsing the right value from the parfile. For example,
+        >>> p = maskParameter(name='JUMP', index=2)
+        >>> p.name
+        'JUMP2'
+        Parameter
+        ---------
+        name : str optional
+            The name of the parameter.
+        index : int optional [default 1]
+            The index number for the prefixed parameter.
+        key : str optional
+            The key words/flag for the selecting TOAs
+        key_value :  list/single value optional
+            The value for key words/flags. Value can take one value as a flag value.
+            or two value as a range.
+            e.g. JUMP freq 430.0 1440.0. or JUMP -fe G430
+        value : float or long_double optinal
+            Toas/phase adjust value
+        long_double : bool, optional default 'double'
+            Set float type value and num_value in numpy float128
+        units : str optional
+            Unit for the offset value
+        description : str optional
+            Description for the parameter
+        uncertainty: float/longdouble
+            uncertainty of the parameter.
+        frozen : bool, optional
+            A flag specifying whether "fitters" should adjust the value of this
+            parameter or leave it fixed.
+        continuous : bool optional
+        aliases : list optional
+            List of aliases for parameter name.
+    """
+    def __init__(self, name=None, index=1, key=None, key_value=None,
+                 value=None, long_double=False, units= None, description=None,
+                 uncertainty=None, frozen=True, continuous=False, aliases=[]):
+        self.is_mask = True
+        self.key_identifier = {'mjd': (lambda x: time.Time(x, format='mjd'), 2),
+                                'freq': (float, 2),
+                                'name': (str, 1),
+                                'tel': (str, 1)}
+        if key_value is None:
+            key_value = []
+        elif not isinstance(key_value, list):
+            key_value = [key_value]
+
+        # Check key and key value
+        if key is not None \
+            and key.lower() in self.key_identifier.keys():
+            key_info = self.key_identifier[key.lower()]
+            if len(key_value) != key_info[1]:
+                errmsg = "key " + key + " takes " + key_info[1] + \
+                         " element."
+                raise ValueError(errmsg)
+
+        self.key = key
+        self.key_value = key_value
+        self.long_double = long_double
+        set_value = self.set_value_mask
+        get_num_value = self.get_num_value_mask
+        print_value = self.print_value_mask
+        set_uncertainty = self.set_uncertainty_mask
+        self.index = index
+        name_param = name + str(index)
+        self.origin_name = name
+        super(maskParameter, self).__init__(name=name_param, value=value,
+                                              units=units,
+                                              description=description,
+                                              uncertainty=uncertainty,
+                                              frozen=frozen,
+                                              continuous=continuous,
+                                              aliases=aliases,
+                                              print_value=print_value,
+                                              set_value=set_value,
+                                              get_num_value=get_num_value,
+                                              set_uncertainty=set_uncertainty)
+        # For the first mask parameter, add name to aliases for the reading
+        # first mask parameter from parfile.
+        if index == 1:
+            self.aliases.append(name)
+        self.from_parfile_line = self.from_parfile_line_mask
+
+    def get_par_type_object(self):
+        obj = floatParameter('example', units=self.units,
+                             long_double=self.long_double)
+        return obj
+
+    def set_value_mask(self, val):
+        obj = self.get_par_type_object()
+        result = obj.set_value(val)
+        return result
+
+    def get_value_mask(self, val):
+        obj = self.get_par_type_object()
+        result = obj.get_value(val)
+        return result
+
+    def get_num_value_mask(self, val):
+        obj = self.get_par_type_object()
+        result = obj.get_num_value(val)
+        return result
+
+    def print_value_mask(self, val):
+        obj = self.get_par_type_object()
+        result = obj.print_value(val)
+        return result
+
+    def set_uncertainty_mask(self, val):
+        obj = self.get_par_type_object()
+        result = obj.set_uncertainty(val)
+        return result
+
+    def from_parfile_line_mask(self, line):
+        try:
+            k = line.split()
+            name = k[0].upper()
+        except IndexError:
+            return False
+        # Test that name matches
+        if not self.name_matches(name):
+            return False
+
+        try:
+            self.key = k[1].replace('-', '')
+        except IndexError:
+            return False
+
+
+        key_value_info = self.key_identifier.get(self.key.lower(), (str, 1))
+        len_key_v = key_value_info[1]
+        if len(k) < 3 + len_key_v:
+            return False
+
+        for ii in range(len_key_v):
+            if key_value_info[0] != str:
+                try:
+                    kval = float(k[2 + ii])
+                except:
+                    kval = k[2 + ii]
+            else:
+                kval = k[2 + ii]
+            if ii > len(self.key_value)-1:
+                self.key_value.append(key_value_info[0](kval))
+            else:
+                self.key_value[ii] = key_value_info[0](kval)
+        if len(k) >= 3 + len_key_v:
+            self.set(k[2 + len_key_v])
+        if len(k) >= 4 + len_key_v:
+            try:
+                if int(k[3 + len_key_v]) > 0:
+                    self.frozen = False
+                    ucty = '0.0'
+            except:
+                if is_number(k[4 + len_key_v]):
+                    ucty = k[3 + len_key_v]
+                else:
+                    errmsg = 'Unidentified string ' + k[3 + len_key_v] + ' in'
+                    errmsg += ' parfile line ' + k
+                    raise ValueError(errmsg)
+            if len(k) >= 5 + len_key_v:
+                ucty = k[4 + len_key_v]
+            self.uncertainty = self.set_uncertainty(ucty)
+        return True
+
+    def new_param(self, index):
+        """Create a new but same style mask parameter
+        """
+        new_mask_param = maskParameter(name=self.origin_name, index=index,
+                                       long_double=self.long_double,
+                                       units= self.units, aliases=[])
+        return new_mask_param
+
+    def select_toa_mask(self, toas):
+        """Select the toas.
+        Parameter
+        ----------
+        toas : toas table
+        Return
+        ----------
+        A mask array. the select toas are masked as True.
+        """
+        self.toa_select = TOASelect(self.key, self.key_value)
+        return self.toa_select.get_toa_key_mask(toas)
