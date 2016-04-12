@@ -5,7 +5,7 @@ import os
 # The timing models that we will be using
 from .timing_model import generate_timing_model
 from .astrometry import Astrometry
-from .dispersion_model import Dispersion_DMX
+from .dispersion_model import Dispersion
 from .spindown import Spindown
 from .glitch import Glitch
 from .bt import BT
@@ -19,9 +19,10 @@ from .jump import JumpDelay
 # List with all timing model components we will consider when pre-processing a
 # parfile
 
-ComponentsList = [Astrometry, Spindown, Dispersion_DMX, SolarSystemShapiro,
+ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro,
                   BT, DDwrapper, Glitch, JumpDelay, FD]
 
+default_models = ["StandardTimingModel",]
 class model_builder(object):
     """A class for model construction interface.
         Parameters
@@ -126,6 +127,15 @@ class model_builder(object):
             if cclass.is_in_parfile(params_inpar):
                 if c not in self.select_comp:
                     self.select_comp.append(c)
+        # Check if model components has subclass that matches parfile better. 
+        for sc in self.select_comp:
+            for subc in sc.__subclasses__():
+                if subc.__name__ not in default_models:
+                    sub_inst = subc()
+                    if hasattr(sub_inst,'model_special_params'):
+                        if any(par in params_inpar.keys() for par in sub_inst.model_special_params):
+                            self.select_comp.append(subc)
+                            self.select_comp.remove(sc)
 
     def build_model(self):
         """ Return a model with all components listed in the self.components
