@@ -121,7 +121,7 @@ class BTmodel(PSR_BINARY):
 
     @Cache.use_cache
     def d_delayL1_d_GAMMA(self):
-        return np.zeros_like(self.t)
+        return np.zeros_like(self.t) * u.Unit('')
 
     @Cache.use_cache
     def d_delayL2_d_GAMMA(self):
@@ -175,8 +175,8 @@ class BTmodel(PSR_BINARY):
 
     @Cache.use_cache
     def d_delay_d_EDOT(self):
-        return self.delayR() * (self.d_delayL1_d_EDOT() + \
-                self.d_delayL2_d_EDOT())
+        return (self.delayR() * (self.d_delayL1_d_EDOT() + \
+                self.d_delayL2_d_EDOT())).to(u.s * u.s)
 
     @Cache.use_cache
     def d_delay_d_PB(self):
