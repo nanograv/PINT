@@ -102,7 +102,6 @@ class TimingModel(object):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
         self.num_prefix_params = {}
-        self.params = []  # List of model parameter names
         self.delay_funcs = {'L1':[],'L2':[]} # List of delay component functions
         # L1 is the first level of delays. L1 delay does not need barycentric toas
         # After L1 delay, the toas have been corrected to solar system barycenter.
