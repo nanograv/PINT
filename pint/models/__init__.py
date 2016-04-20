@@ -17,8 +17,7 @@ from .model_builder import get_model
 # Define a standard basic model
 StandardTimingModel = generate_timing_model("StandardTimingModel",
         (Astrometry, Spindown, Dispersion, SolarSystemShapiro))
-BTTimingModel = generate_timing_model("BTTimingModel",
-        (Astrometry, Spindown, Dispersion, SolarSystemShapiro, BT))
-DDTimingModel = generate_timing_model("DDTimingModel",
-        (Astrometry, Spindown, Dispersion, SolarSystemShapiro, DD))
-
+# BTTimingModel = generate_timing_model("BTTimingModel",
+#         (Astrometry, Spindown, Dispersion, SolarSystemShapiro, BT))
+# DDTimingModel = generate_timing_model("DDTimingModel",
+#         (Astrometry, Spindown, Dispersion, SolarSystemShapiro, DD))

@@ -73,7 +73,7 @@ class Astrometry(TimingModel):
         If epoch (MJD) is specified, proper motion is included to return
         the position at the given epoch.
         """
-        if epoch is None:
+        if epoch is None or (self.PMRA.value == 0.0 and self.PMDEC.value == 0.0):
             return coords.ICRS(ra=self.RAJ.value, dec=self.DECJ.value)
         else:
             dt = (epoch - self.POSEPOCH.value.mjd) * u.d
