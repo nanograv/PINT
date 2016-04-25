@@ -97,7 +97,35 @@ class Cache(object):
 
 
 class TimingModel(object):
+    """Base-level object provids an interface for implementing pulsar timing
+    models. A timing model generally have the following parts:
+        Parameters
+        Delay/Phase functions
+        Derivatives of dealy and phase respect to parameter
+    In PINT, one timing model would be a subclass of `TimingModel` class. The
+    required parts has to be provided in order to compute the residuals and update
+    the model, in other words, fit the model.
+    Example code for developers:
 
+    import parameter as p
+    from .timing_model import TimingModel, MissingParameter
+
+    class MyModel(object):
+        def __init__(self):
+            super(MyModel, self).__init__()
+            self.add_param(p.floatParameter(name="F0", value=0.0, units="Hz",
+                           description="Spin-frequency", long_double=True))
+            self.delay_funcs += [self.MyModel_delay, ]
+        def setup(self):
+            super(MyModel, self).setup()
+
+        def MyModel_delay(self):
+            pass
+            return delay
+    To make it work with PINT model builder, The new component should be added
+    to the ComponentsList in the top of model_builder.py file. Note: In the future
+    this will be automaticly detected. 
+    """
     def __init__(self):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
