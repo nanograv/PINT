@@ -6,9 +6,8 @@ from .timing_model import TimingModel, generate_timing_model
 
 # Import all standard model components here
 from .astrometry import Astrometry
-from .dispersion import Dispersion
+from .dispersion_model import Dispersion
 from .spindown import Spindown
-from .dd import DD
 from .bt import BT
 from .solar_system_shapiro import SolarSystemShapiro
 from .polycos import Polycos
