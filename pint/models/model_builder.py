@@ -3,7 +3,7 @@
 import os
 
 # The timing models that we will be using
-from .timing_model import generate_timing_model
+from .timing_model import generate_timing_model, TimingModel
 from .astrometry import Astrometry
 from .dispersion_model import Dispersion
 from .spindown import Spindown
@@ -16,11 +16,38 @@ from .parameter import prefixParameter
 from .pint_dd_model import DDwrapper
 from .frequency_dependent import FD
 from .jump import JumpDelay
+import os
+import glob
+import inspect
+import sys
+#import ..models as pint_models
 # List with all timing model components we will consider when pre-processing a
 # parfile
 
-ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro,
-                  BT, DDwrapper, Glitch, JumpDelay, FD]
+#print TimingModel.__subclasses__()
+
+
+def get_componets():
+    sub_timing_classes = TimingModel.__subclasses__()
+    timing_comps = {}
+    timing_model_modules = TimingModel.__module__
+    for sub_c in sub_timing_classes:
+        module = sub_c.__module__
+        if module not in timing_comps.keys():
+            timing_comps[module] = []
+        for name, obj in inspect.getmembers(sys.modules[module]):
+            if inspect.isclass(obj):
+                if obj.__module__ == module:
+                    if obj not in timing_comps[module]:
+                        timing_comps[module].append(obj)
+                    #check subclasses
+                    for s in obj.__subclasses__():
+                        if s.__module__ not in timing_comps[module] and \
+                           s.__module__ != TimingModel.__module__:
+                            timing_comps[module].append(s)
+    return timing_comps
+
+ComponentsList = get_componets()
 
 default_models = ["StandardTimingModel",]
 class model_builder(object):
@@ -121,21 +148,22 @@ class model_builder(object):
            Put the needed on in the selected components list
         """
         params_inpar = self.preprocess_parfile(parfile)
-        comp_classes = [c() for c in self.comps]
-        for c in self.comps:
-            cclass = c()
-            if cclass.is_in_parfile(params_inpar):
-                if c not in self.select_comp:
-                    self.select_comp.append(c)
-        # Check if model components has subclass that matches parfile better. 
-        for sc in self.select_comp:
-            for subc in sc.__subclasses__():
-                if subc.__name__ not in default_models:
-                    sub_inst = subc()
-                    if hasattr(sub_inst,'model_special_params'):
-                        if any(par in params_inpar.keys() for par in sub_inst.model_special_params):
-                            self.select_comp.append(subc)
-                            self.select_comp.remove(sc)
+        for module in self.comps.keys():
+            selected_c = None
+            for c in self.comps[module]:
+                cclass = c()
+                #Check is this components a subclass of other components
+                if TimingModel not in c.__bases__:
+                    if hasattr(cclass,'model_special_params'):
+                        if any(par in params_inpar.keys() for par in cclass.model_special_params):
+                            selected_c = c
+                            continue
+                if cclass.is_in_parfile(params_inpar):
+                    selected_c = c
+            # One module will have one selected component
+            if selected_c is not None and selected_c not in self.select_comp:
+                self.select_comp.append(selected_c)
+
 
     def build_model(self):
         """ Return a model with all components listed in the self.components
