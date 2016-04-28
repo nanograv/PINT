@@ -1,5 +1,6 @@
 """This module implements a simple model of a constant dispersion measure.
-   And DMX dispersion"""
+   And DMX dispersion. NOTE: this file will be replaced by disperion_model.py
+"""
 # dispersion.py
 # Simple (constant) ISM dispersion measure
 from warnings import warn
@@ -57,16 +58,16 @@ class Dispersion(TimingModel):
     def setup(self):
         super(Dispersion, self).setup()
         # Get DMX mapping.
-        self.get_prefix_mapping('DMX_')
-        self.get_prefix_mapping('DMXR1_')
-        self.get_prefix_mapping('DMXR2_')
-        if len(self.DMX_mapping) != len(self.DMXR1_mapping):
+        DMX_mapping = self.get_prefix_mapping('DMX_')
+        DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
+        DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
+        if len(DMX_mapping) != len(DMXR1_mapping):
             errorMsg = 'Number of DMX_ parameters is not'
             errorMsg += 'equals to Number of DMXR1_ parameters. '
             errorMsg += 'Please check your prefixed parameters.'
             raise AttributeError(errorMsg)
 
-        if len(self.DMX_mapping) != len(self.DMXR2_mapping):
+        if len(DMX_mapping) != len(DMXR2_mapping):
             errorMsg = 'Number of DMX_ parameters is not'
             errorMsg += 'equals to Number of DMXR2_ parameters. '
             errorMsg += 'Please check your prefixed parameters.'
@@ -83,13 +84,16 @@ class Dispersion(TimingModel):
         # Constant dm delay
         dmdelay = self.DM.value * DMconst / bfreq**2
         # Set toas to the right DMX peiod.
+        DMX_mapping = self.get_prefix_mapping('DMX_')
+        DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
+        DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
         if 'DMX_section' not in toas.keys():
             toas['DMX_section'] = np.zeros_like(toas['index'])
             epoch_ind = 1
-            while epoch_ind in self.DMX_mapping:
+            while epoch_ind in DMX_mapping:
                 # Get the parameters
-                r1 = getattr(self, self.DMXR1_mapping[epoch_ind]).value
-                r2 = getattr(self, self.DMXR2_mapping[epoch_ind]).value
+                r1 = getattr(self, DMXR1_mapping[epoch_ind]).value
+                r2 = getattr(self, DMXR2_mapping[epoch_ind]).value
                 msk = np.logical_and(toas['mjd'] >= r1, toas['mjd'] <= r2)
                 toas['DMX_section'][msk] = epoch_ind
                 epoch_ind = epoch_ind + 1
@@ -99,7 +103,7 @@ class Dispersion(TimingModel):
         for ii, key in enumerate(DMX_group.groups.keys):
             keyval = key.as_void()[0]
             if keyval != 0:
-                dmx = getattr(self, self.DMX_mapping[keyval]).value
+                dmx = getattr(self, DMX_mapping[keyval]).value
                 ind = DMX_group.groups[ii]['index']
                 # Apply the DMX delays
                 dmdelay[ind] += dmx * DMconst / bfreq[ind]**2

@@ -24,7 +24,8 @@ class FD(TimingModel):
     def setup(self):
         super(FD, self).setup()
         # Check if FD terms are in order.
-        FD_terms = self.get_prefix_mapping('FD').keys()
+        FD_mapping = self.get_prefix_mapping('FD')
+        FD_terms = FD_mapping.keys()
         FD_terms.sort()
         FD_in_order = range(1,max(FD_terms)+1)
         if not FD_terms == FD_in_order:
@@ -40,8 +41,9 @@ class FD(TimingModel):
         Eq.(2):
         FDdelay = sum(c_i * (log(obs_freq/1GHz))^i)
         """
+        FD_mapping = self.get_prefix_mapping('FD')
         log_freq = np.log(toas['freq'] / (1 * u.GHz))
-        FD_coeff = [getattr(self, self.FDmapping[ii]).num_value \
+        FD_coeff = [getattr(self, FD_mapping[ii]).num_value \
                    for ii in range(self.num_FD_terms,0,-1)]
         FD_coeff += [0.0]
 
@@ -52,12 +54,13 @@ class FD(TimingModel):
     def d_delay_d_FD(self, toas, FD_term=1):
         """This is a derivative function for FD parameter
         """
+        FD_mapping = self.get_prefix_mapping('FD')
         if FD_term > self.num_FD_terms:
             raise ValueError('FD model has no FD%d term' % FD_term)
 
         d_delay_d_FD = np.zeros_like(toas, dtype=np.longdouble)
         for ii in range(1,self.num_FD_terms+1):
-            FD_coef = getattr(self, self.FDmapping[ii])
+            FD_coef = getattr(self, FD_mapping[ii])
             if ii == FD_term:
                 FD_coef.value = 1.0
             log_freq = np.log(toas['freq'] / (1 * u.GHz))
