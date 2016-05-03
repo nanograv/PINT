@@ -10,9 +10,6 @@ import astropy.constants as c
 import astropy.time as time
 from . import utils
 
-# light-second unit
-ls = u.def_unit('ls', c.c * 1.0 * u.s)
-
 # Following are from here:
 # http://ssd.jpl.nasa.gov/?constants (grabbed on 30 Dec 2013)
 GMsun = 1.32712440018e20 * u.m**3/u.s**2
@@ -29,6 +26,16 @@ Tjupiter = Tsun / 1047.3486
 Tsaturn = Tsun / 3497.898
 Turanus = Tsun / 22902.98
 Tneptune = Tsun / 19412.24
+
+# value of c in m/s
+_c_ms = c.c.to(u.m/u.s).value
+
+# define m and s equivalence
+time_distance = [(u.s, u.m, lambda x: x*_c_ms, lambda x: x/_c_ms),]
+
+#u.set_enabled_equivalencies(time_distance)
+# light-second unit
+ls = u.def_unit('ls', c.c * 1.0 * u.s)
 
 # The Epoch J2000
 J2000 = time.Time('2000-01-01 12:00:00', scale='utc')

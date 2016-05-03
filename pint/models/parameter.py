@@ -448,6 +448,7 @@ class MJDParameter(Parameter):
     def __init__(self, name=None, value=None, description=None,
                  uncertainty=None, frozen=True, continuous=True, aliases=[],
                  time_scale='utc'):
+
         self.time_scale = time_scale
         set_value = self.set_value_mjd
         print_value = time_to_mjd_string
@@ -599,7 +600,7 @@ class prefixParameter(Parameter):
             >>> descritionTplt = lambda x: 'This is the descrition of parameter
                                             %d'%x
             The class will fill the descrition and unit automaticly.
-            
+
         If both two methods are fillfulled, it prefer the first one.
 
         Parameter

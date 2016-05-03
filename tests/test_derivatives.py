@@ -62,9 +62,10 @@ def testdiff(model,dy,step):
         dervs[p+'_anlg'] = anlog
     return dervs
 
+
 parfile = os.path.join(datapath, 'B1855+09_NANOGrav_dfg+12_modified.par')
 timfile = os.path.join(datapath, 'B1855+09_NANOGrav_dfg+12.tim')
 ddm = mb.get_model(parfile)
 t = toa.get_TOAs(timfile,planets = True)
-ddob = ddm.get_dd_object(t.table)
+ddob = ddm.get_binary_object(t.table)
 diff = testdiff(ddob,'delayInverse',1e-7)
