@@ -24,7 +24,6 @@ import sys
 # List with all timing model components we will consider when pre-processing a
 # parfile
 
-#print TimingModel.__subclasses__()
 
 
 def get_componets():
@@ -158,12 +157,14 @@ class model_builder(object):
                         if any(par in params_inpar.keys() for par in cclass.model_special_params):
                             selected_c = c
                             continue
+                        else:  # If no special parameters, ignore.
+                            continue
+
                 if cclass.is_in_parfile(params_inpar):
                     selected_c = c
             # One module will have one selected component
             if selected_c is not None and selected_c not in self.select_comp:
                 self.select_comp.append(selected_c)
-
 
     def build_model(self):
         """ Return a model with all components listed in the self.components
