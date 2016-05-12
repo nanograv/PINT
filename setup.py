@@ -1,3 +1,4 @@
+from __future__ import print_function
 try:
     from setuptools import setup, Extension
 except ImportError:
@@ -53,10 +54,10 @@ cmdclass = {}
 ext_modules = []
 
 if use_cython:
-    print "Using cython..."
+    print("Using cython...")
     src = ["spice_util_cython/spice_util_py.pyx"]
 else:
-    print "Using existing 'C' source file..."
+    print("Using existing 'C' source file...")
     src = ["spice_util_cython/spice_util_py.c"]
 
 ext_modules += [Extension("spice_util", src,
