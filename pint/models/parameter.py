@@ -27,9 +27,9 @@ class Parameter(object):
     ----------
     name : str, optional
         The name of the parameter.
-    value : number, str, `Astropy.units.Quantity` object, or other datatype or
+    quantity : number, str, `Astropy.units.Quantity` object, or other datatype or
             object
-        The current value of parameter. It is the internal storage of
+        The current quantity of parameter. It is the internal storage of
         parameter value
     units : str, optional
         String format for parameter unit
@@ -56,8 +56,8 @@ class Parameter(object):
 
     def __init__(self, name=None, value=None, units=None, description=None,
                  uncertainty=None, frozen=True, aliases=None, continuous=True,
-                 print_value=str, set_value=lambda x: x,
-                 get_num_value=lambda x: x,
+                 print_value=str, set_quantity=lambda x: x,
+                 get_value=lambda x: x,
                  prior=priors.Prior(priors.UniformRV()),
                  set_uncertainty=fortran_float):
 
@@ -65,13 +65,13 @@ class Parameter(object):
         self.units = units  # parameter unit in string format,or None
         # parameter num unit, in astropy.units object format.
         # Once it is speicified, num_unit will not be changed.
-        self.set_value = set_value
+        self.set_quantity = set_quantity
         # Method to get num_value from value
-        self.get_num_value = get_num_value
+        self.get_value = get_value
         self.print_value = print_value  # method to convert value to a string.
         self.set_uncertainty = set_uncertainty
         self.from_parfile_line = self.from_parfile_line_regular
-        self.value = value  # The value of parameter, internal storage
+        self.quantity = value  # The value of parameter, internal storage
         self.prior = prior
 
         self.description = description
@@ -101,15 +101,15 @@ class Parameter(object):
     @units.setter
     def units(self, unt):
         # Check if this is the first time set units and check compatable
-        if hasattr(self, 'value'):
+        if hasattr(self, 'quantity'):
             if self.units is not None:
                 if unt != self.units:
                     wmsg = 'Parameter '+self.name+' units has been reset to '+unt
                     wmsg += ' from '+self._units
                     log.warning(wmsg)
                 try:
-                    if hasattr(self.value, 'unit'):
-                        _ = self.value.to(unt)
+                    if hasattr(self.quantity, 'unit'):
+                        _ = self.quantity.to(unt)
                 except:
                     log.warning('The value unit is not compatable with'
                                 ' parameter units right now.')
@@ -136,23 +136,22 @@ class Parameter(object):
         if hasattr(self, 'uncertainty') and hasattr(self.uncertainty, 'unit'):
             self.uncertainty = self.uncertainty.to(self.num_unit)
 
-    # Setup value property
+    # Setup quantity property
     @property
-    def value(self):
-        return self._value
+    def quantity(self):
+        return self._quantity
 
-    @value.setter
-    def value(self, val):
+    @quantity.setter
+    def quantity(self, val):
         if val is None:
-            if hasattr(self, 'value') and self.value is not None:
+            if hasattr(self, 'quantity') and self.quantity is not None:
                 raise ValueError('Setting an exist value to None is not'
                                  ' allowed.')
             else:
-                self._value = val
-                self._num_value = self._value
+                self._quantity = val
                 return
-        self._value = self.set_value(val)
-        self._num_value = self.get_num_value(self._value)
+        self._quantity = self.set_quantity(val)
+        #self._num_value = self.get_num_value(self._value)
 
     def prior_pdf(self,value=None, logpdf=False):
         """Return the prior probability, evaluated at the current value of
@@ -171,13 +170,16 @@ class Parameter(object):
 
     # Setup num_value property
     @property
-    def num_value(self):
-        return self._num_value
+    def value(self):
+        if self._quantity is None:
+            return None
+        else:
+            return self.get_value(self._quantity)
 
-    @num_value.setter
-    def num_value(self, val):
+    @value.setter
+    def value(self, val):
         if val is None:
-            if not isinstance(self.value, (str, bool)) and \
+            if not isinstance(self.quantity, (str, bool)) and \
                 self._num_value is not None:
                 raise ValueError('This parameter value is number convertable. '
                                  'Setting ._num_value to None will lost the '
@@ -187,7 +189,7 @@ class Parameter(object):
                 self.value = None
 
         self._num_value = val
-        self._value = self.set_value(val)
+        self._quantity = self.set_quantity(val)
 
     # Setup num_unit property
     @property
@@ -599,7 +601,7 @@ class prefixParameter(Parameter):
             >>> descritionTplt = lambda x: 'This is the descrition of parameter
                                             %d'%x
             The class will fill the descrition and unit automaticly.
-            
+
         If both two methods are fillfulled, it prefer the first one.
 
         Parameter
