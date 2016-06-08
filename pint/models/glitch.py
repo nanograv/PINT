@@ -43,9 +43,14 @@ class Glitch(TimingModel):
                                                  "derivative change for glitch"
                                                  " %d " % x,
                        unitTplt=lambda x: 'Hz/s'))
+        self.add_param(prefixParameter(name="GLF2_1", units="Hz/s^2", value=0.,
+                       descriptionTplt=lambda x: "Permanent second frequency-"
+                                                 "derivative change for glitch"
+                                                 " %d " % x,
+                       unitTplt=lambda x: 'Hz/s^2'))
         self.add_param(prefixParameter(name="GLF0D_1", units="Hz", value=0.0,
-                       descriptionTplt=lambda x: "Decaying frequency change for"
-                                                 " glitch %d " % x,
+                       descriptionTplt=lambda x: "Decaying frequency change "
+                                                 "for glitch %d " % x,
                        unitTplt=lambda x: 'Hz',
                        type_match='float'))
 
@@ -109,6 +114,7 @@ class Glitch(TimingModel):
             idx = glph.index
             dF0 = getattr(self, "GLF0_%d" % idx).value
             dF1 = getattr(self, "GLF1_%d" % idx).value
+            dF2 = getattr(self, "GLF2_%d" % idx).value
             eph = time_to_longdouble(getattr(self, "GLEP_%d" % idx).value)
             dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
             dt = dt * u.s
@@ -124,7 +130,8 @@ class Glitch(TimingModel):
             else:
                 decayterm = 0.0
             phs[affected] += dphs + dt[affected] * \
-                (dF0 + 0.5 * dt[affected] * dF1) + decayterm
+                (dF0 + 0.5 * dt[affected] * dF1 +
+                 1./6. * dt[affected]*dt[affected] * dF2) + decayterm
         return phs
 
     def d_phase_d_GLF0_1(self, toas):
