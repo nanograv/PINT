@@ -39,18 +39,20 @@ if __name__ == '__main__':
     m = pint.models.get_model(args.parfile)
 
     duration = args.duration*u.day
-    start = Time(args.startMJD,scale='utc',format='mjd',precision=9)
+    if args.obs == 'Barycenter':
+        start = Time(args.startMJD,scale='tdb',format='mjd',precision=9)
+        scale = 'tdb'
+    else:
+        start = Time(args.startMJD,scale='utc',format='mjd',precision=9)
+        scale = 'utc'
     error = args.error*u.s
     freq = args.freq*u.MHz
-    scale = 'utc'
 
     times = np.linspace(0,duration.to(u.day).value,args.ntoa)*u.day + start
-    
     tl = [toa.TOA(t,error=error, obs=args.obs, freq=freq,
                  scale=scale) for t in times]
     del t
     ts = toa.TOAs(toalist=tl)
-    
     # WARNING! I'm not sure how clock corrections should be handled here!
     # Do we apply them, or not?
     if not any([f.has_key('clkcorr') for f in ts.table['flags']]):
@@ -64,10 +66,10 @@ if __name__ == '__main__':
         ts.compute_posvels(args.ephem, args.planets)
 
     # This computation should be replaced with a call to d_phase_d_TOA() when that
-    # function works to compute the instantaneous topocentric frequency                 
-    F = m.F0.num_value*m.F0.num_unit    
+    # function works to compute the instantaneous topocentric frequency
+    F = m.F0.num_value*m.F0.num_unit
     rs = m.phase(ts.table).frac/F
-    
+
     # Adjust the TOA times to put them where their residuals will be 0.0
     ts.adjust_TOAs(TimeDelta(-1.0*rs))
     rspost = m.phase(ts.table).frac/F
@@ -76,6 +78,10 @@ if __name__ == '__main__':
     # converting phase residuals to time residuals
     ts.adjust_TOAs(TimeDelta(-1.0*rspost))
 
+    # Do the third iteration.
+    rspost = m.phase(ts.table).frac/F
+    ts.adjust_TOAs(TimeDelta(-1.0*rspost))
+    
      # Write TOAs to a file
     ts.write_TOA_file(args.timfile,name='fake',format='Tempo2')
 
@@ -85,5 +91,3 @@ if __name__ == '__main__':
         plt.plot(ts.get_mjds(),rspost2.to(u.us),'+')
         plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
         plt.show()
-    
-    

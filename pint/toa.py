@@ -268,6 +268,14 @@ class TOA(object):
             if numpy.isscalar(MJD):
                 self.mjd = time.Time(MJD, scale='tdb', format='mjd',
                                     precision=9)
+
+            elif type(MJD) == time.Time:
+                self.mjd = MJD
+                # Make sure precision is high enough!
+                if self.mjd.precision < 9:
+                    log.warning('TOA passed with poor precision ({0})'.format(self.mjd.precision))
+                self.mjd.precision = 9
+
             else:
                 self.mjd = time.Time(MJD[0], MJD[1],
                                     scale='tdb', format='mjd',
@@ -501,7 +509,7 @@ class TOAs(object):
         """Write a summary of the TOAs to stdout."""
         print self.get_summary()
 
-    def adjust_TOAs(self, delta):
+    def adjust_TOAs(self, delta, get_posvel=False):
         """Apply a time delta to TOAs
 
         Adjusts the time (MJD) of the TOAs by applying delta, which should
@@ -512,6 +520,8 @@ class TOAs(object):
         delta : astropy.time.TimeDelta
             The time difference to add to the MJD of each TOA
 
+        get_posvel : bool
+            Flag to enable earth posvel calculation
         """
         col = self.table['mjd']
         if type(delta) != time.TimeDelta:
@@ -524,7 +534,8 @@ class TOAs(object):
         # This adjustment invalidates the derived columns in the table, so delete
         # and recompute them
         self.compute_TDBs()
-        self.compute_posvels()
+        if get_posvel:
+            self.compute_posvels()
 
     def write_TOA_file(self,filename,name='pint', format='Princeton'):
         """Dump current TOA table out as a TOA file
@@ -695,7 +706,8 @@ class TOAs(object):
         self.planets = planets
 
         # Remove any existing columns
-        cols_to_remove = ['ssb_obs_pos', 'ssb_obs_vel', 'obs_sun_pos']
+        cols_to_remove = ['ssb_obs_pos', 'ssb_obs_vel', 'obs_sun_pos',
+                          'topo_obs_pos','topo_obs_vel']
         for c in cols_to_remove:
             if c in self.table.colnames:
                 log.info('Column {0} already exists. Removing...'.format(c))
@@ -720,6 +732,12 @@ class TOAs(object):
         obs_sun_pos = table.Column(name='obs_sun_pos',
                                     data=numpy.zeros((self.ntoas, 3), dtype=numpy.float64),
                                     unit=u.km, meta={'origin':'OBS', 'obj':'SUN'})
+        topo_obs_pos = table.Column(name='topo_obs_pos',
+                                    data=numpy.zeros((self.ntoas, 3), dtype=numpy.float64),
+                                    unit=u.km, meta={'origin':'TOPO', 'obj':'OBS'})
+        topo_obs_vel = table.Column(name='topo_obs_vel',
+                                    data=numpy.zeros((self.ntoas, 3), dtype=numpy.float64),
+                                    unit=u.km/u.s, meta={'origin':'TOPO', 'obj':'OBS'})
         if planets:
             plan_poss = {}
             for p in ('jupiter', 'saturn', 'venus', 'uranus'):
@@ -770,6 +788,8 @@ class TOAs(object):
                     ssb_obs = ssb_earth + earth_obss[jj]
                     ssb_obs_pos[ind,:] = ssb_obs.pos
                     ssb_obs_vel[ind,:] = ssb_obs.vel
+                    topo_obs_pos[ind,:] = earth_obss[jj].pos
+                    topo_obs_vel[ind,:] = earth_obss[jj].vel
                     if planets:
                         for p in ('jupiter', 'saturn', 'venus', 'uranus'):
                             name = 'obs_'+p+'_pos'
@@ -778,7 +798,8 @@ class TOAs(object):
                             plan_poss[name][ind,:] = pv.pos
             else:
                 log.error("Unknown observatory {0}".format(key['obs']))
-        cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
+        cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos, topo_obs_pos,
+                       topo_obs_vel]
         if planets:
             cols_to_add += plan_poss.values()
         self.table.add_columns(cols_to_add)
