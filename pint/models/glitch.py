@@ -109,16 +109,15 @@ class Glitch(TimingModel):
             dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
             dt = dt * u.s
             affected = dt > 0.0  # TOAs affected by glitch
-            if hasattr(self, "GLF0D_%d" % idx):
-                dF0D = getattr(self, "GLF0D_%d" % idx).value
-                if dF0D != 0.0:
-                    tau = getattr(self, "GLTD_%d" % idx).value
-                    decayterm = dF0D * tau * (1.0 - numpy.exp(- dt[affected]
-                                              / tau))
-                else:
-                    decayterm = 0.0
+            # decay term
+            dF0D = getattr(self, "GLF0D_%d" % idx).value
+            if dF0D != 0.0:
+                tau = getattr(self, "GLTD_%d" % idx).value
+                decayterm = dF0D * tau * (1.0 - numpy.exp(- dt[affected]
+                                          / tau))
             else:
                 decayterm = 0.0
+
             phs[affected] += dphs + dt[affected] * \
                 (dF0 + 0.5 * dt[affected] * dF1 +
                  1./6. * dt[affected]*dt[affected] * dF2) + decayterm
