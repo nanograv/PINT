@@ -96,7 +96,9 @@ def phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.0, siz
     else:
         plt.show()
 
-def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,logeref=4.1, logesig=0.5,minweight=0.0):
+def load_Fermi_TOAs(ft1name, ft2name=None, weightcolumn=None, targetcoord=None,
+                    logeref=4.1, logesig=0.5, minweight=0.0,
+                    minmjd=0.0, maxmjd=np.inf):
     '''
     TOAlist = load_Fermi_TOAs(ft1name,ft2name=None)
       Read photon event times out of a Fermi FT1 file and return
@@ -162,6 +164,12 @@ def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,loge
             mjds = mjds[idx]
             energies = energies[idx]
             weights = weights[idx]
+    # limit the TOAs to ones in selected MJD range
+    idx = (mjds > minmjd) & (mjds < maxmjd)
+    mjds = mjds[idx]
+    energies = energies[idx]
+    if weightcolumn is not None:
+        weights = weights[idx]
 
     if timesys == 'TDB':
         log.info("Building barycentered TOAs")
