@@ -81,20 +81,14 @@ class Glitch(TimingModel):
 
         # Check the Decay Term.
         glf0dparams = [x for x in self.params if x.startswith('GLF0D_')]
-        for glf0d in glf0dparams:
-            df0d = getattr(self, glf0d)
-            idx = df0d.index
-            # Check if the decay belongs to a glitch
-            if not hasattr(self, 'GLPH_%d' % idx):
-                msg = 'Glitch frequency decay index has to match one glicth' \
-                      ' phase index.'
-                raise MissingParameter("Glitch", 'GLPH_%d' % idx, msg)
-
-            if not hasattr(self, 'GLTD_%d' % idx):
-                if df0d.value != 0.0:
-                    msg = 'None zero GLTD_%d parameter needs a GLTD_%d' \
-                          ' parameter' % (idx, idx)
-                    raise MissingParameter("Glitch", 'GLTD_%d' % idx, msg)
+        for glf0dnm in glf0dparams:
+            glf0d = getattr(self, glf0dnm)
+            idx = glf0d.index
+            if glf0d.value != 0.0 and \
+                    getattr(self, "GLTD_%d" % idx).value == 0.0:
+                msg = "None zero GLF0D_%d parameter needs a none" \
+                      " zero GLTD_%d parameter" % (idx, idx)
+                raise MissingParameter("Glitch", 'GLTD_%d' % idx, msg)
 
     def glitch_phase(self, toas, delay):
         """Glitch phase function.
