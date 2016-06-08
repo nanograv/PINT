@@ -116,7 +116,7 @@ class Glitch(TimingModel):
             if hasattr(self, "GLF0D_%d" % idx):
                 dF0D = getattr(self, "GLF0D_%d" % idx).value
                 if dF0D != 0.0:
-                    tau = getattr(self, "GLTD_%d" % idx).value * SECS_PER_DAY
+                    tau = getattr(self, "GLTD_%d" % idx).value
                     decayterm = dF0D * tau * (1.0 - numpy.exp(- dt[affected]
                                               / tau))
                 else:
