@@ -56,7 +56,7 @@ class Parameter(object):
 
     def __init__(self, name=None, value=None, units=None, description=None,
                  uncertainty=None, frozen=True, aliases=None, continuous=True,
-                 print_value=str, set_quantity=lambda x: x,
+                 print_quantity=str, set_quantity=lambda x: x,
                  get_value=lambda x: x,
                  prior=priors.Prior(priors.UniformRV()),
                  set_uncertainty=fortran_float):
@@ -65,10 +65,13 @@ class Parameter(object):
         self.units = units  # parameter unit in string format,or None
         # parameter num unit, in astropy.units object format.
         # Once it is speicified, num_unit will not be changed.
+        # Method to get quantity from input
         self.set_quantity = set_quantity
-        # Method to get num_value from value
+        # Method to get value
         self.get_value = get_value
-        self.print_value = print_value  # method to convert value to a string.
+        # method to convert quantity to a string.
+        self.print_quantity = print_quantity
+        # Method to get uncertainty from input
         self.set_uncertainty = set_uncertainty
         self.from_parfile_line = self.from_parfile_line_regular
         self.quantity = value  # The value of parameter, internal storage
@@ -80,7 +83,7 @@ class Parameter(object):
         self.continuous = continuous
         self.aliases = [] if aliases is None else aliases
         self.is_prefix = False
-        self.paramType = 'Parameter'  # Type of parameter. Here is general type
+        self.paramType = 'Not specified'  # Type of parameter. Here is general type
         self.valueType = None
 
     @property
@@ -122,19 +125,19 @@ class Parameter(object):
 
         elif unt in pint_units.keys():
             # These are special-case unit strings in in PINT
-            self._units = unt
-            self._num_unit = pint_units[unt]
+            self._units = pint_units[unt]
 
         else:
             # Try to use it as an astopy unit.  If this fails,
             # ValueError will be raised.
-            self._num_unit = u.Unit(unt)
-            self._units = self._num_unit.to_string()
+            self._units = u.Unit(unt)
 
-        if hasattr(self, 'value') and hasattr(self.value, 'unit'):
-            self.value = self.value.to(self.num_unit)
+        if hasattr(self, 'quantity') and hasattr(self.quantity, 'unit'):
+            # Change quantity unit to new unit
+            self.quantity = self.quantity.to(self._units)
         if hasattr(self, 'uncertainty') and hasattr(self.uncertainty, 'unit'):
-            self.uncertainty = self.uncertainty.to(self.num_unit)
+            # Change uncertainty unit to new unit
+            self.uncertainty = self.uncertainty.to(self._units)
 
     # Setup quantity property
     @property
@@ -168,7 +171,9 @@ class Parameter(object):
         else:
             return self.prior.pdf(value) if not logpdf else self.prior.logpdf(value)
 
-    # Setup num_value property
+    # Setup .value property
+    # .value will get pure number from ._quantity.
+    # Setting .value property will change ._quantity.
     @property
     def value(self):
         if self._quantity is None:
@@ -180,15 +185,12 @@ class Parameter(object):
     def value(self, val):
         if val is None:
             if not isinstance(self.quantity, (str, bool)) and \
-                self._num_value is not None:
+                self._quantity is not None:
                 raise ValueError('This parameter value is number convertable. '
-                                 'Setting ._num_value to None will lost the '
+                                 'Setting .value to None will lost the '
                                  'parameter value.')
             else:
-                self._num_value = val
-                self.value = None
-
-        self._num_value = val
+                self.value = val
         self._quantity = self.set_quantity(val)
 
     # Setup num_unit property
@@ -239,7 +241,7 @@ class Parameter(object):
         out = self.name
         if self.units is not None:
             out += " (" + str(self.units) + ")"
-        out += " " + self.print_value(self.value)
+        out += " " + self.print_quantity(self.quantity)
         if self.uncertainty is not None:
             out += " +/- " + str(self.uncertainty)
         return out
@@ -315,36 +317,36 @@ class Parameter(object):
 
 class floatParameter(Parameter):
     """This is a Parameter type that is specific to astropy quantity values
+       .quantity will be a astropy quantity class.
     """
-    def __init__(self, name=None, value=None, units=None, description=None,
+    def __init__(self, name=None, value=None, units=u.Unit(''), description=None,
                  uncertainty=None, frozen=True, aliases=[], continuous=True,
                  long_double=False):
-        self.long_double = long_double
-        if self.long_double:
-            set_value = self.set_value_longdouble
-            print_value = lambda x: longdouble2string(x.value)
+        self.is_long_double = long_double
+        if self.is_long_double:
+            set_quantity = self.set_quantity_longdouble
+            print_quantity = lambda x: longdouble2string(x.quantity)
             #get_value = lambda x: data2longdouble(x)*self.num_unit
         else:
-            set_value = self.set_value_float
-            print_value = lambda x: str(x.value)
+            set_quantity = self.set_quantity_float
+            print_quantity = lambda x: str(x.quantity)
 
-        get_num_value = self.get_num_value_float
-        set_uncertainty = self.set_value_float
+        get_value = self.get_value_float
+        set_uncertainty = self.set_quantity_float
         super(floatParameter, self).__init__(name=name, value=value,
                                              units=units, frozen=True,
                                              aliases=aliases,
                                              continuous=continuous,
                                              description=description,
                                              uncertainty=uncertainty,
-                                             print_value=print_value,
-                                             set_value=set_value,
-                                             set_uncertainty=set_uncertainty,
-                                             get_num_value=get_num_value)
-        self.value_type = u.quantity.Quantity
+                                             print_quantity=print_quantity,
+                                             set_quantity=set_quantity,
+                                             get_value=get_value,
+                                             set_uncertainty=set_uncertainty)
         self.paramType = 'floatParameter'
 
 
-    def set_value_float(self, val):
+    def set_quantity_float(self, val):
         """Set value method specific for float parameter
         accept format
         1. Astropy quantity
@@ -358,27 +360,28 @@ class floatParameter(Parameter):
             result = val
         except AttributeError:
             # This will happen if the input value did not have units
-            result = fortran_float(val) * self.num_unit
+            result = fortran_float(val) * self.units
             # TODO how to treat num_unit==None ? does it mean
             # dimensionless or unset?  Ignore for now..
 
         return result
 
-    def set_value_longdouble(self, val):
+    def set_quantity_longdouble(self, val):
         try:
-            _ = val.to(self.num_unit)
-            result = data2longdouble(val.value)*val.unit
+            _ = val.to(self.units)
+            result = data2longdouble(val.value)*val.units
         except AttributeError:
-            result = data2longdouble(val) * self.num_unit
+            result = data2longdouble(val) * self.units
 
         return result
 
 
-    def get_num_value_float(self, val):
-        if val is None:
+    def get_value_float(self, quan):
+        if quan is None:
             return None
         else:
-            return val.value
+            return quan.value
+
 
 class strParameter(Parameter):
     """This is a Parameter type that is specific to string values
@@ -386,28 +389,21 @@ class strParameter(Parameter):
     def __init__(self, name=None, value=None, description=None, frozen=True,
                  aliases=[]):
         print_value = str
-        get_num_value = lambda x: None
-        set_value = self.set_value_str
+        get_value = lambda x: x
+        set_quantity = lambda x: str(x)
         set_uncertainty = lambda x: None
         #get_value = self.get_value_str
 
         super(strParameter, self).__init__(name=name, value=value,
                                            description=None, frozen=True,
                                            aliases=aliases,
-                                           print_value=print_value,
-                                           set_value=set_value,
-                                           get_num_value=get_num_value,
+                                           print_quantity=print_value,
+                                           set_quantity=set_quantity,
+                                           get_value=get_value,
                                            set_uncertainty=set_uncertainty)
 
         self.paramType = 'strParameter'
         self.value_type = str
-
-    def set_value_str(self, val):
-        if hasattr(self,'_num_value') and val == self._num_value:
-            raise ValueError('Can not set a num value to a string type'
-                             ' parameter.')
-        else:
-            return str(val)
 
 
 class boolParameter(Parameter):
@@ -415,24 +411,23 @@ class boolParameter(Parameter):
     """
     def __init__(self, name=None, value=None, description=None, frozen=True,
                  aliases=[]):
-        print_value = lambda x: 'Y' if x else 'N'
-        set_value = self.set_value_bool
-        get_num_value = lambda x: None
+        print_quantity = lambda x: 'Y' if x else 'N'
+        set_quantity = self.set_quantity_bool
+        get_value = lambda x: x
         set_uncertainty = lambda x: None
         #get_value = lambda x: log.warning('Can not set a pure value to a '
                                                #'string boolen parameter.')
         super(boolParameter, self).__init__(name=name, value=value,
                                             description=None, frozen=True,
                                             aliases=aliases,
-                                            print_value=print_value,
-                                            set_value=set_value,
-                                            #get_value=get_value,
-                                            get_num_value=get_num_value,
+                                            print_quantity=print_quantity,
+                                            set_quantity=set_quantity,
+                                            get_value=get_value,
                                             set_uncertainty=set_uncertainty)
         self.value_type = bool
         self.paramType = 'boolParameter'
 
-    def set_value_bool(self, val):
+    def set_quantity_bool(self, val):
         """ This function is to get boolen value for boolParameter class
         """
         if hasattr(self,'_num_value') and val == self._num_value:
@@ -451,25 +446,24 @@ class MJDParameter(Parameter):
                  uncertainty=None, frozen=True, continuous=True, aliases=[],
                  time_scale='utc'):
         self.time_scale = time_scale
-        set_value = self.set_value_mjd
-        print_value = time_to_mjd_string
-        get_num_value = time_to_longdouble
-        set_uncertainty = self.set_value_mjd
+        set_quantity = self.set_quantity_mjd
+        print_quantity = time_to_mjd_string
+        get_value = time_to_longdouble
+        set_uncertainty = self.set_quantity_mjd
         super(MJDParameter, self).__init__(name=name, value=value, units="MJD",
                                            description=description,
                                            uncertainty=uncertainty,
                                            frozen=frozen,
                                            continuous=continuous,
                                            aliases=aliases,
-                                           print_value=print_value,
-                                           set_value=set_value,
-                                           #get_value=get_value,
-                                           get_num_value=get_num_value,
+                                           print_quantity=print_quantity,
+                                           set_quantity=set_quantity,
+                                           get_value=get_value,
                                            set_uncertainty=set_uncertainty)
         self.value_type = time.Time
         self.paramType = 'MJDParameter'
 
-    def set_value_mjd(self, val):
+    def set_quantity_mjd(self, val):
         """Value setter for MJD parameter,
            Accepted format:
            Astropy time object
@@ -509,12 +503,12 @@ class AngleParameter(Parameter):
             raise ValueError('Unidentified unit ' + units)
 
         self.unitsuffix = self.unit_identifier[units.lower()][1]
-        set_value = self.set_value_angle
-        print_value = lambda x: x.to_string(sep=':', precision=8) \
+        set_quantity = self.set_quantity_angle
+        print_quantity = lambda x: x.to_string(sep=':', precision=8) \
                         if x.unit != u.rad else x.to_string(decimal = True,
                         precision=8)
         #get_value = lambda x: Angle(x * self.unit_identifier[units.lower()][0])
-        get_num_value = lambda x: x.value
+        get_value = lambda x: x.value
         set_uncertainty = self.set_uncertainty_angle
         self.value_type = Angle
         self.paramType = 'AngleParameter'
@@ -526,13 +520,12 @@ class AngleParameter(Parameter):
                                              frozen=frozen,
                                              continuous=continuous,
                                              aliases=aliases,
-                                             print_value=print_value,
-                                             set_value=set_value,
-                                             #get_value=get_value,
-                                             get_num_value=get_num_value,
+                                             print_quantity=print_quantity,
+                                             set_quantity=set_quantity,
+                                             get_value=get_value,
                                              set_uncertainty=set_uncertainty)
 
-    def set_value_angle(self, val):
+    def set_quantity_angle(self, val):
         """ This function is to set value to angle parameters.
         Accepted format:
         1. Astropy angle object
@@ -540,7 +533,7 @@ class AngleParameter(Parameter):
         3. number string
         """
         if isinstance(val, numbers.Number):
-            result = Angle(val * self.num_unit)
+            result = Angle(val * self.units)
         elif isinstance(val, str):
             try:
                 result = Angle(val + self.unitsuffix)
@@ -567,7 +560,7 @@ class AngleParameter(Parameter):
             #    raise ValueError('Srting ' + val + ' can not be converted to'
             #                     ' astropy angle.')
         elif isinstance(val, Angle):
-            result = val.to(self.num_unit)
+            result = val.to(self.units)
         else:
             raise ValueError('Angle parameter can not accept '
                              + type(val).__name__ + 'format.')
