@@ -107,8 +107,8 @@ class Parameter(object):
         if hasattr(self, 'quantity'):
             if self.units is not None:
                 if unt != self.units:
-                    wmsg = 'Parameter '+self.name+' units has been reset to '+unt
-                    wmsg += ' from '+self._units
+                    wmsg = 'Parameter '+self.name+' units has been reset to '
+                    wmsg += str(unt) + ' from '+ str(self._units)
                     log.warning(wmsg)
                 try:
                     if hasattr(self.quantity, 'unit'):
@@ -121,7 +121,6 @@ class Parameter(object):
 
         if unt is None:
             self._units = None
-            self._num_unit = None
 
         elif unt in pint_units.keys():
             # These are special-case unit strings in in PINT
@@ -192,11 +191,6 @@ class Parameter(object):
             else:
                 self.value = val
         self._quantity = self.set_quantity(val)
-
-    # Setup num_unit property
-    @property
-    def num_unit(self):
-        return self._num_unit
 
     @property
     def uncertainty(self):
@@ -326,7 +320,6 @@ class floatParameter(Parameter):
         if self.is_long_double:
             set_quantity = self.set_quantity_longdouble
             print_quantity = lambda x: longdouble2string(x.quantity)
-            #get_value = lambda x: data2longdouble(x)*self.num_unit
         else:
             set_quantity = self.set_quantity_float
             print_quantity = lambda x: str(x.quantity)
@@ -356,7 +349,7 @@ class floatParameter(Parameter):
         # First try to use astropy unit conversion
         try:
             # If this fails, it will raise UnitConversionError
-            _ = val.to(self.num_unit)
+            _ = val.to(self.units)
             result = val
         except AttributeError:
             # This will happen if the input value did not have units
@@ -541,7 +534,7 @@ class AngleParameter(Parameter):
                 raise ValueError('Srting ' + val + ' can not be converted to'
                                  ' astropy angle.')
         elif isinstance(val, Angle):
-            result = val.to(self.num_unit)
+            result = val.to(self.units)
         else:
             raise ValueError('Angle parameter can not accept '
                              + type(val).__name__ + 'format.')
@@ -707,10 +700,10 @@ class prefixParameter(Parameter):
         if self.type_match not in self.type_identifier.keys():
             raise ValueError('Unrecognized value type ' + self.type_match)
 
-        print_value = self.print_value_prefix
-        set_value = self.set_value_prefix
+        print_quantity = self.print_quantity_prefix
+        set_quantity = self.set_quantity_prefix
         #get_value = self.get_value_prefix
-        get_num_value = self.get_num_value_prefix
+        get_value = self.get_value_prefix
         set_uncertainty = self.set_uncertainty_prefix
         self.time_scale = time_scale
         self.long_double = long_double
@@ -720,9 +713,9 @@ class prefixParameter(Parameter):
                                               uncertainty=uncertainty,
                                               frozen=frozen,
                                               continuous=continuous,
-                                              print_value=print_value,
-                                              set_value=set_value,
-                                              get_num_value=get_num_value,
+                                              print_quantity=print_quantity,
+                                              set_quantity=set_quantity,
+                                              get_value=get_value,
                                               set_uncertainty=set_uncertainty)
 
         self.prefix_aliases = prefix_aliases
@@ -747,9 +740,9 @@ class prefixParameter(Parameter):
                 setattr(obj, dp, prefix_arg)
         return obj
 
-    def set_value_prefix(self, val):
+    def set_quantity_prefix(self, val):
         obj = self.get_par_type_object()
-        result = obj.set_value(val)
+        result = obj.set_quantity(val)
         return result
 
     def get_value_prefix(self, val):
@@ -757,12 +750,7 @@ class prefixParameter(Parameter):
         result = obj.get_value(val)
         return result
 
-    def get_num_value_prefix(self, val):
-        obj = self.get_par_type_object()
-        result = obj.get_num_value(val)
-        return result
-
-    def print_value_prefix(self, val):
+    def print_quantity_prefix(self, val):
         obj = self.get_par_type_object()
         result = obj.print_value(val)
         return result
