@@ -117,7 +117,6 @@ class Parameter(object):
                     log.warning('The value unit is not compatable with'
                                 ' parameter units right now.')
 
-        # note, _units is a string, _num_unit is the astropy unit
 
         if unt is None:
             self._units = None
@@ -207,7 +206,7 @@ class Parameter(object):
                 self._num_uncertainty = self._uncertainty
                 return
         self._uncertainty = self.set_uncertainty(val)
-        self._num_uncertainty = self.get_num_value(self._uncertainty)
+        self._num_uncertainty = self.get_value(self._uncertainty)
 
     @property
     def num_uncertainty(self):
@@ -313,7 +312,7 @@ class floatParameter(Parameter):
     """This is a Parameter type that is specific to astropy quantity values
        .quantity will be a astropy quantity class.
     """
-    def __init__(self, name=None, value=None, units=u.Unit(''), description=None,
+    def __init__(self, name=None, value=None, units=None, description=None,
                  uncertainty=None, frozen=True, aliases=[], continuous=True,
                  long_double=False):
         self.is_long_double = long_double
@@ -362,7 +361,7 @@ class floatParameter(Parameter):
     def set_quantity_longdouble(self, val):
         try:
             _ = val.to(self.units)
-            result = data2longdouble(val.value)*val.units
+            result = data2longdouble(val.value)*val.unit
         except AttributeError:
             result = data2longdouble(val) * self.units
 
@@ -485,6 +484,7 @@ class AngleParameter(Parameter):
     """This is a Parameter type that is specific to Angle values."""
     def __init__(self, name=None, value=None, description=None, units='rad',
              uncertainty=None, frozen=True, continuous=True, aliases=[]):
+        self._str_unit = units
         self.unit_identifier = {
             'h:m:s': (u.hourangle, 'h', '0:0:%.15fh'),
             'd:m:s': (u.deg, 'd', '0:0:%.15fd'),
@@ -544,10 +544,10 @@ class AngleParameter(Parameter):
         """This function is to set the uncertainty for an angle parameter.
         """
         if isinstance(val, numbers.Number):
-            result =Angle(self.unit_identifier[self.units.lower()][2] % val)
+            result =Angle(self.unit_identifier[self._str_unit.lower()][2] % val)
         elif isinstance(val, str):
 
-            result =Angle(self.unit_identifier[self.units.lower()][2] \
+            result =Angle(self.unit_identifier[self._str_unit.lower()][2] \
                           % fortran_float(val))
             #except:
             #    raise ValueError('Srting ' + val + ' can not be converted to'
@@ -845,9 +845,9 @@ class maskParameter(Parameter):
         self.key = key
         self.key_value = key_value
         self.long_double = long_double
-        set_value = self.set_value_mask
-        get_num_value = self.get_num_value_mask
-        print_value = self.print_value_mask
+        set_quantity = self.set_quantity_mask
+        get_value = self.get_value_mask
+        print_quantity = self.print_quantity_mask
         set_uncertainty = self.set_uncertainty_mask
         self.index = index
         name_param = name + str(index)
@@ -859,9 +859,9 @@ class maskParameter(Parameter):
                                               frozen=frozen,
                                               continuous=continuous,
                                               aliases=aliases,
-                                              print_value=print_value,
-                                              set_value=set_value,
-                                              get_num_value=get_num_value,
+                                              print_quantity=print_quantity,
+                                              set_quantity=set_quantity,
+                                              get_value=get_value,
                                               set_uncertainty=set_uncertainty)
         # For the first mask parameter, add name to aliases for the reading
         # first mask parameter from parfile.
@@ -874,9 +874,9 @@ class maskParameter(Parameter):
                              long_double=self.long_double)
         return obj
 
-    def set_value_mask(self, val):
+    def set_quantity_mask(self, val):
         obj = self.get_par_type_object()
-        result = obj.set_value(val)
+        result = obj.set_quantity(val)
         return result
 
     def get_value_mask(self, val):
@@ -884,14 +884,9 @@ class maskParameter(Parameter):
         result = obj.get_value(val)
         return result
 
-    def get_num_value_mask(self, val):
+    def print_quantity_mask(self, val):
         obj = self.get_par_type_object()
-        result = obj.get_num_value(val)
-        return result
-
-    def print_value_mask(self, val):
-        obj = self.get_par_type_object()
-        result = obj.print_value(val)
+        result = obj.print_quantity(val)
         return result
 
     def set_uncertainty_mask(self, val):

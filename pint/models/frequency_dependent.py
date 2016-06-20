@@ -43,7 +43,7 @@ class FD(TimingModel):
         """
         FD_mapping = self.get_prefix_mapping('FD')
         log_freq = np.log(toas['freq'] / (1 * u.GHz))
-        FD_coeff = [getattr(self, FD_mapping[ii]).num_value \
+        FD_coeff = [getattr(self, FD_mapping[ii]).value \
                    for ii in range(self.num_FD_terms,0,-1)]
         FD_coeff += [0.0]
 
