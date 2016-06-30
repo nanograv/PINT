@@ -6,7 +6,7 @@ import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
 import parameter as p
-from .timing_model import TimingModel, MissingParameter, Cache
+from .timing_model import TimingModel, MissingParameter, Cache, module_info
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble
 from pint import ls
 from pint import utils
@@ -23,7 +23,8 @@ class Astrometry(TimingModel):
 
     def __init__(self):
         super(Astrometry, self).__init__()
-
+        self.requires = {'TOA_location': 'obs', 'freq_location': 'obs'}
+        self.provides = {'TOA_location': 'ssb', 'freq_location': 'ssb'}
         self.add_param(p.AngleParameter(name="RAJ",
             units="H:M:S",
             description="Right ascension (J2000)",

@@ -174,7 +174,11 @@ class model_builder(object):
             raise(RuntimeError("No timing model components selected."))
 
         return generate_timing_model(self.name,tuple(self.select_comp))
-
+    # def arrage_components(self, components_list):
+    #     for comp in components_list:
+    #         requires = comp.requires
+    #         if requires['TOA_loc'] == 'obs'
+    #         for
     def add_components(self,components):
         """ Add new components to constructing model.
         """

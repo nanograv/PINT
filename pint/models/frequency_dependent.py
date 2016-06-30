@@ -13,6 +13,8 @@ class FD(TimingModel):
     """
     def __init__(self):
         super(FD, self).__init__()
+        self.requires = {'TOA_location': 'pulsar', 'freq_location': 'pulsar'}
+        self.provides = {'TOA_location': '', 'freq_location': ''}
         self.add_param(p.prefixParameter(name='FD1', units="second", value=0.0,
                        descriptionTplt=lambda x: ("%d term of frequency"
                                                   " dependent  coefficients" % x),

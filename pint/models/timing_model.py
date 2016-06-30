@@ -95,6 +95,56 @@ class Cache(object):
         return use_cached_results
 
 
+# class requires(object):
+#     """An object provids and interface for model requirement
+#     """
+#     def __init__(self, TOA_location='', freq_location=''):
+#         self.TOA_location = TOA_location
+#         self.freq_location = freq_location
+#
+#     def __str__(self):
+#         if self.TOA_location != '':
+#             out = 'Required TOA is at ' + self.TOA_location
+#         else:
+#             out = 'Required TOA location is not specified.'
+#         if self.freq_location != '':
+#             out += 'Required frequency is at ' + self.freq_location
+#         else:
+#             out += 'Required frequency location is not specified.'
+#         return out
+#
+#     def add_require(self, name, require):
+#         setattr(self, name, require)
+#
+# class provides(object):
+#     """An object provids and interface for model results
+#     """
+#     def __init__(self, TOA_location='', freq_location=''):
+#         self.TOA_location = TOA_location
+#         self.freq_location = freq_location
+#
+#     def add_provides(self, name, provide):
+#         setattr(self, name, provide)
+class module_info(object):
+    """A class that provides the information for each module
+    """
+    def __init__(self, module):
+        self.module_name = type(module).__name__
+        self.requires = module.requires
+        self.provides = module.provides
+        self.params = module.params
+        self.module_order = None
+        self.delay_funcs = module.delay_funcs
+        self.phase_funcs = module.phase_funcs
+
+    def __str__(self):
+        out = self.module_name + ':\n'
+        out += 'Requires : ' + str(self.requires) + '\n'
+        out += 'Provides : ' + str(self.provides) + '\n'
+        out += 'Delay functions : ' + str(self.delay_funcs) + '\n'
+        out += 'Phase functions : ' + str(self.phase_funcs) + '\n'
+        return out
+
 
 class TimingModel(object):
     """Base-level object provids an interface for implementing pulsar timing
@@ -124,7 +174,7 @@ class TimingModel(object):
             return delay
     To make it work with PINT model builder, The new component should be added
     to the ComponentsList in the top of model_builder.py file. Note: In the future
-    this will be automaticly detected. 
+    this will be automaticly detected.
     """
     def __init__(self):
         self.params = []  # List of model parameter names
@@ -142,8 +192,6 @@ class TimingModel(object):
             description="Source name",
             aliases=["PSRJ", "PSRB"]))
         self.model_type = None
-
-
     def setup(self):
         pass
 
@@ -531,16 +579,14 @@ def generate_timing_model(name, components, attributes={}):
         numComp = len(components)
     except:
         components = (components,)
-
+    components_info = []
     for c in components:
-        try:
-            if not issubclass(c,TimingModel):
-                raise(TypeError("Class "+c.__name__+
-                                 " is not a subclass of TimingModel"))
-        except:
-            raise(TypeError("generate_timing_model() Arg 2"+
-                            "has to be a tuple of classes"))
+        if not issubclass(c,TimingModel):
+            raise(TypeError("Class "+c.__name__+
+                            " is not a subclass of TimingModel"))
+        components_info += [module_info(c())]
 
+    attributes['modules'] = components_info
     return type(name, components, attributes)
 
 class TimingModelError(Exception):

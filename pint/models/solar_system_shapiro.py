@@ -13,7 +13,8 @@ class SolarSystemShapiro(TimingModel):
 
     def __init__(self):
         super(SolarSystemShapiro, self).__init__()
-
+        self.requires = {'TOA_location': 'obs', 'freq_location': 'obs'}
+        self.provides = {'TOA_location': 'ssb', 'freq_location': 'ssb'}
         self.add_param(p.boolParameter(name="PLANET_SHAPIRO",
              value=False, description="Include planetary Shapiro delays (Y/N)"))
         self.delay_funcs['L1'] += [self.solar_system_shapiro_delay,]

@@ -22,7 +22,8 @@ class Spindown(TimingModel):
 
         # The number of terms in the taylor exapansion of spin freq (F0...FN)
         #self.num_spin_terms = maxderivs
-
+        self.requires = {'TOA_location': 'obs', 'freq_location': 'obs'}
+        self.provides = {'TOA_location': '', 'freq_location': ''}
         self.add_param(p.floatParameter(name="F0", value=0.0, units="Hz",
                        description="Spin-frequency", long_double=True))
 
