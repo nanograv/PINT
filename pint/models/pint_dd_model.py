@@ -5,7 +5,7 @@ from pint import utils
 from .pulsar_binaries.DD_model import DDmodel
 from .pint_pulsar_binary import PSRbinaryWapper
 import parameter as p
-from .timing_model import Cache, TimingModel, MissingParameter
+from .timing_model import Cache, TimingModel, MissingParameter, module_info
 import astropy
 from ..utils import time_from_mjd_string, time_to_longdouble
 import astropy.units as u
@@ -53,7 +53,7 @@ class DDwrapper(PSRbinaryWapper):
              binary_param = True)
 
         self.binary_delay_funcs += [self.DD_delay,]
-        self.delay_funcs['L2'] += [self.DD_delay,]
+        self.delay_funcs += [self.DD_delay,]
     def setup(self):
         super(DDwrapper,self).setup()
         for p in ("PB", "T0", "A1"):
@@ -90,9 +90,13 @@ class DDwrapper(PSRbinaryWapper):
         Obtain the DDmodel object for this set of parameters/toas
         """
         # Don't need to fill P0 and P1. Translate all the others to the format
-        # that is used in bmodel.py
+        # that is used in btmodel.py
         # Get barycnetric toa first
-        self.barycentricTime = self.get_barycentric_toas(toas)
+        if hasattr(self, 'modules'):
+            require = self.modules['DDwrapper'].requires['TOA']
+        else:
+            require = self.requires['TOA']
+        self.barycentricTime = self.get_required_TOAs(require, toas)
 
         ddobj = DDmodel(self.barycentricTime)
         pardict = {}

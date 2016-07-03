@@ -95,36 +95,6 @@ class Cache(object):
         return use_cached_results
 
 
-# class requires(object):
-#     """An object provids and interface for model requirement
-#     """
-#     def __init__(self, TOA_location='', freq_location=''):
-#         self.TOA_location = TOA_location
-#         self.freq_location = freq_location
-#
-#     def __str__(self):
-#         if self.TOA_location != '':
-#             out = 'Required TOA is at ' + self.TOA_location
-#         else:
-#             out = 'Required TOA location is not specified.'
-#         if self.freq_location != '':
-#             out += 'Required frequency is at ' + self.freq_location
-#         else:
-#             out += 'Required frequency location is not specified.'
-#         return out
-#
-#     def add_require(self, name, require):
-#         setattr(self, name, require)
-#
-# class provides(object):
-#     """An object provids and interface for model results
-#     """
-#     def __init__(self, TOA_location='', freq_location=''):
-#         self.TOA_location = TOA_location
-#         self.freq_location = freq_location
-#
-#     def add_provides(self, name, provide):
-#         setattr(self, name, provide)
 class module_info(object):
     """A class that provides the information for each module
     """
@@ -134,8 +104,12 @@ class module_info(object):
         self.provides = module.provides
         self.params = module.params
         self.module_order = None
-        self.delay_funcs = module.delay_funcs
-        self.phase_funcs = module.phase_funcs
+        self.delay_func_names = []
+        self.phase_func_names = []
+        if hasattr(module, 'delay_funcs'):
+            self.delay_func_names += [f.__name__ for f in module.delay_funcs]
+        if hasattr(module, 'phase_funcs'):
+            self.phase_func_names += [f.__name__ for f in module.phase_funcs]
 
     def __str__(self):
         out = self.module_name + ':\n'
@@ -180,11 +154,7 @@ class TimingModel(object):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
         self.num_prefix_params = {}
-        self.delay_funcs = {'L1':[],'L2':[]} # List of delay component functions
-        # L1 is the first level of delays. L1 delay does not need barycentric toas
-        # After L1 delay, the toas have been corrected to solar system barycenter.
-        # L2 is the second level of delays. L2 delay need barycentric toas
-
+        self.delay_funcs = []
         self.phase_funcs = [] # List of phase component functions
         self.cache = None
         self.param_register = {}
@@ -192,6 +162,7 @@ class TimingModel(object):
             description="Source name",
             aliases=["PSRJ", "PSRB"]))
         self.model_type = None
+        self.start_point = 'obs'
     def setup(self):
         pass
 
@@ -227,6 +198,51 @@ class TimingModel(object):
             s += "%s\n" % getattr(self, par).help_line()
         return s
 
+    def get_delay_func_names(self, module_name = ''):
+        if not hasattr(self, 'modules'):
+            return [f.__name__ for f in self.delay_funcs]
+        delay_func_names = []
+        if module_name == '':
+            for m in self.modules.keys():
+                delay_func_names += self.modules[m].delay_func_names
+        else:
+            delay_func_names += self.modules[module_name].delay_func_names
+        return delay_func_names
+
+    def search_provider(self, key, requirements, init_require):
+        """This is a function that checks module requirement and search the
+        provider in the current loaded modules
+        """
+        if not isinstance(requirements, list): requirements = [requirements]
+        if not isinstance(init_require, list): init_require = [init_require]
+        provider = {}
+        for req in requirements:
+            provider[req] = None
+            if req in init_require:
+                provider[req] = ''
+                continue
+
+            for m in self.modules:
+                if key not in self.modules[m].provides.keys():
+                    continue
+                if self.modules[m].provides[key][0] == req:
+                    provider[req] = self.modules[m].provides[key][1]
+        return provider
+
+    def get_required_TOAs(self, requirements, toas):
+        """This is a function that returns the requrired toas
+        """
+        provider = self.search_provider('TOA', requirements, 'obs')
+        delay = np.zeros(len(toas))
+        for p in provider:
+            if provider[p] is None:
+                errmsg = 'Module ' + mod + ' section ' + p
+                errmsg += ' does not have a provider.'
+                raise ValueError(errmsg)
+            for dfn in provider[p]:
+                delay += getattr(self, dfn)(toas)
+        result_toas = toas['tdbld']*u.day - delay*u.second
+        return result_toas
 
     @Cache.use_cache
     def get_prefix_mapping(self,prefix):
@@ -267,20 +283,11 @@ class TimingModel(object):
         TOA to get time of emission at the pulsar.
         """
         delay = np.zeros(len(toas))
-        for dlevel in self.delay_funcs.keys():
-            for df in self.delay_funcs[dlevel]:
+        for k, m in self.modules.iteritems():
+            for dfnm in m.delay_func_names:
+                df = getattr(self, dfnm)
                 delay += df(toas)
-
         return delay
-
-    @Cache.use_cache
-    def get_barycentric_toas(self,toas):
-        toasObs = toas['tdbld']
-        delay = np.zeros(len(toas))
-        for df in self.delay_funcs['L1']:
-            delay += df(toas)
-        toasBary = toasObs*u.day - delay*u.second
-        return toasBary
 
     def d_phase_d_tpulsar(self, toas):
         """Return the derivative of phase wrt time at the pulsar.
@@ -579,13 +586,14 @@ def generate_timing_model(name, components, attributes={}):
         numComp = len(components)
     except:
         components = (components,)
-    components_info = []
+    components_info = {}
     for c in components:
         if not issubclass(c,TimingModel):
             raise(TypeError("Class "+c.__name__+
                             " is not a subclass of TimingModel"))
-        components_info += [module_info(c())]
 
+        module_name = type(c()).__name__
+        components_info[module_name]= module_info(c())
     attributes['modules'] = components_info
     return type(name, components, attributes)
 

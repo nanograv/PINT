@@ -1,7 +1,7 @@
 """This module implements a frequency evolution of pulsar profiles model"""
 from warnings import warn
 import parameter as p
-from .timing_model import TimingModel, Cache
+from .timing_model import TimingModel, Cache, module_info
 import astropy.units as u
 import numpy as np
 import pint.utils as ut
@@ -13,16 +13,15 @@ class FD(TimingModel):
     """
     def __init__(self):
         super(FD, self).__init__()
-        self.requires = {'TOA_location': 'pulsar', 'freq_location': 'pulsar'}
-        self.provides = {'TOA_location': '', 'freq_location': ''}
+        self.requires = {'TOA': [], 'freq': ['obs',]}
+        self.provides = {'TOA': ('', None), 'freq': ('', None)}
         self.add_param(p.prefixParameter(name='FD1', units="second", value=0.0,
                        descriptionTplt=lambda x: ("%d term of frequency"
                                                   " dependent  coefficients" % x),
                        unitTplt=lambda x: 'second',
                        type_match='float'))
 
-        self.delay_funcs['L1'] += [self.FD_delay]
-
+        self.delay_funcs += [self.FD_delay,]
     def setup(self):
         super(FD, self).setup()
         # Check if FD terms are in order.
