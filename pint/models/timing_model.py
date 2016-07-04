@@ -115,8 +115,8 @@ class module_info(object):
         out = self.module_name + ':\n'
         out += 'Requires : ' + str(self.requires) + '\n'
         out += 'Provides : ' + str(self.provides) + '\n'
-        out += 'Delay functions : ' + str(self.delay_funcs) + '\n'
-        out += 'Phase functions : ' + str(self.phase_funcs) + '\n'
+        out += 'Delay functions : ' + str(self.delay_func_names) + '\n'
+        out += 'Phase functions : ' + str(self.phase_func_names) + '\n'
         return out
 
 
