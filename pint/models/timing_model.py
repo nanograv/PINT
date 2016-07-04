@@ -283,10 +283,8 @@ class TimingModel(object):
         TOA to get time of emission at the pulsar.
         """
         delay = np.zeros(len(toas))
-        for k, m in self.modules.iteritems():
-            for dfnm in m.delay_func_names:
-                df = getattr(self, dfnm)
-                delay += df(toas)
+        for df in self.delay_funcs:
+            delay += df(toas)
         return delay
 
     def d_phase_d_tpulsar(self, toas):

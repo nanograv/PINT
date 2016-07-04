@@ -22,7 +22,8 @@ class Glitch(TimingModel):
     """This class provides glitches."""
     def __init__(self):
         super(Glitch, self).__init__()
-
+        self.requires = {'TOA': ['obs'], 'freq': []}
+        self.provides = {'TOA': ('', None), 'freq': ('', None)}
         self.add_param(prefixParameter(name="GLPH_1", units="pulse phase",
                        value=0.0,
                        descriptionTplt=lambda x: "Phase change for glitch %d"
