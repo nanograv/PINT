@@ -49,7 +49,7 @@ class FD(TimingModel):
 
         FD_delay = np.polyval(FD_coeff, log_freq)
 
-        return FD_delay * self.FD1.num_unit
+        return FD_delay * self.FD1.units
 
     def d_delay_d_FD(self, toas, FD_term=1):
         """This is a derivative function for FD parameter

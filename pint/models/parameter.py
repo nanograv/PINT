@@ -46,11 +46,11 @@ class Parameter(object):
     continuous : bool, optional
         A flag specifying whether phase derivatives with respect to this
         parameter exist.
-    print_value : method, optional
+    print_quantity : method, optional
         A function that converts the internal value to a string for output.
     set_value : method, optional
         A function that sets the value property
-    get_num_value:
+    get_value:
         A function that get purely value from value attribute
     """
 
@@ -162,10 +162,10 @@ class Parameter(object):
         ----------
         value : array_like or float_like
 
-        Probabilities are evaluated using the num_value attribute
+        Probabilities are evaluated using the value attribute
         """
         if value is None:
-            return self.prior.pdf(self.num_value) if not logpdf else self.prior.logpdf(self.num_value)
+            return self.prior.pdf(self.value) if not logpdf else self.prior.logpdf(self.value)
         else:
             return self.prior.pdf(value) if not logpdf else self.prior.logpdf(value)
 
@@ -224,7 +224,7 @@ class Parameter(object):
             self._uncertainty = val
 
         elif not isinstance(val, numbers.Number):
-            raise ValueError('num_value has to be a pure number or None. ({0} <- {1} ({2})'.format(self.name,val,type(val)))
+            raise ValueError('value has to be a pure number or None. ({0} <- {1} ({2})'.format(self.name,val,type(val)))
         else:
             self._num_uncertainty = val
             self._uncertainty = self.set_value(val)
@@ -262,7 +262,7 @@ class Parameter(object):
         # Don't print unset parameters
         if self.value is None:
             return ""
-        line = "%-15s %25s" % (self.name, self.print_value(self.value))
+        line = "%-15s %25s" % (self.name, self.print_quantity(self.quantity))
         if self.uncertainty is not None:
             line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty))
         elif not self.frozen:
@@ -318,10 +318,10 @@ class floatParameter(Parameter):
         self.is_long_double = long_double
         if self.is_long_double:
             set_quantity = self.set_quantity_longdouble
-            print_quantity = lambda x: longdouble2string(x.quantity)
+            print_quantity = lambda x: longdouble2string(x.value)
         else:
             set_quantity = self.set_quantity_float
-            print_quantity = lambda x: str(x.quantity)
+            print_quantity = lambda x: str(x.value)
 
         get_value = self.get_value_float
         set_uncertainty = self.set_quantity_float
@@ -380,7 +380,7 @@ class strParameter(Parameter):
     """
     def __init__(self, name=None, value=None, description=None, frozen=True,
                  aliases=[]):
-        print_value = str
+        print_quantity = str
         get_value = lambda x: x
         set_quantity = lambda x: str(x)
         set_uncertainty = lambda x: None
@@ -389,7 +389,7 @@ class strParameter(Parameter):
         super(strParameter, self).__init__(name=name, value=value,
                                            description=None, frozen=True,
                                            aliases=aliases,
-                                           print_quantity=print_value,
+                                           print_quantity=print_quantity,
                                            set_quantity=set_quantity,
                                            get_value=get_value,
                                            set_uncertainty=set_uncertainty)
@@ -422,12 +422,12 @@ class boolParameter(Parameter):
     def set_quantity_bool(self, val):
         """ This function is to get boolen value for boolParameter class
         """
-        if hasattr(self,'_num_value') and val == self._num_value:
-            raise ValueError('Can not set a num value to a boolen type'
-                             ' parameter.')
         # First try strings
         try:
-            return val.upper() in ['Y','YES','T','TRUE','1']
+            if val.upper() in ['Y','YES','T','TRUE','1']:
+                return True
+            else:
+                return False
         except AttributeError:
             # Will get here on non-string types
             return bool(val)
@@ -752,7 +752,7 @@ class prefixParameter(Parameter):
 
     def print_quantity_prefix(self, val):
         obj = self.get_par_type_object()
-        result = obj.print_value(val)
+        result = obj.print_quantity(val)
         return result
 
     def set_uncertainty_prefix(self, val):
