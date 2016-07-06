@@ -63,7 +63,7 @@ class Spindown(TimingModel):
                 raise MissingParameter("Spindown", "PEPOCH",
                         "PEPOCH is required if F1 or higher are set")
 
-        self.num_spin_terms = self.num_prefix_params['F'] + 1
+        self.num_spin_terms = len(self.get_prefix_mapping('F')) + 1
 
     def F_description(self, x):
         """Template function for description"""

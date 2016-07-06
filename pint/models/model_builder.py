@@ -217,7 +217,6 @@ class model_builder(object):
 
         self.model_instance = model()
         self.param_inModel = self.model_instance.params
-        self.param_register = self.model_instance.param_register
         self.prefix_names = self.model_instance.prefix_params
         # Find unrecognised parameters in par file.
 
@@ -233,7 +232,7 @@ class model_builder(object):
                     self.param_unrecognized[pp] = self.param_inparF[pp]
 
             for ptype in ['prefixParameter', 'maskParameter']:
-                prefix_in_model = self.param_register.get(ptype, [])
+                prefix_in_model = self.model_instance.get_type_params(ptype)
                 prefix_param = self.search_prefix_param(self.param_unrecognized.keys(),
                                                         prefix_in_model)
                 for key in prefix_param.keys():
