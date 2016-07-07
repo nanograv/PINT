@@ -11,7 +11,7 @@ import os, unittest
 
 datapath = os.path.join(os.environ['PINT'],'tests','datafile')
 # Using Nanograv data B1855
-parfile = os.path.join(datapath, 'B1855+09_NANOGrav_dfg+12.par')
+parfile = os.path.join(datapath, 'B1855+09_NANOGrav_dfg+12_TAI.par')
 timfile = os.path.join(datapath, 'B1855+09_NANOGrav_dfg+12.tim')
 
 # libstempo calculation
@@ -21,7 +21,7 @@ psr = lt.tempopulsar(parfile, timfile)
 print "PINT calculation"
 mdd = mb.get_model(parfile)
 # Get toas to pint
-toas = toa.get_TOAs(timfile, planets=True)
+toas = toa.get_TOAs(timfile, planets=False, ephem='DE405')
 tt = toas.table
 
 t2_resids = psr.residuals()

@@ -97,12 +97,39 @@ class Cache(object):
 
 
 class TimingModel(object):
+    """Base-level object provids an interface for implementing pulsar timing
+    models. A timing model generally have the following parts:
+        Parameters
+        Delay/Phase functions
+        Derivatives of dealy and phase respect to parameter
+    In PINT, one timing model would be a subclass of `TimingModel` class. The
+    required parts has to be provided in order to compute the residuals and update
+    the model, in other words, fit the model.
+    Example code for developers:
 
+    import parameter as p
+    from .timing_model import TimingModel, MissingParameter
+
+    class MyModel(object):
+        def __init__(self):
+            super(MyModel, self).__init__()
+            self.add_param(p.floatParameter(name="F0", value=0.0, units="Hz",
+                           description="Spin-frequency", long_double=True))
+            self.delay_funcs += [self.MyModel_delay, ]
+        def setup(self):
+            super(MyModel, self).setup()
+
+        def MyModel_delay(self):
+            pass
+            return delay
+    To make it work with PINT model builder, The new component should be added
+    to the ComponentsList in the top of model_builder.py file. Note: In the future
+    this will be automaticly detected. 
+    """
     def __init__(self):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
         self.num_prefix_params = {}
-        self.params = []  # List of model parameter names
         self.delay_funcs = {'L1':[],'L2':[]} # List of delay component functions
         # L1 is the first level of delays. L1 delay does not need barycentric toas
         # After L1 delay, the toas have been corrected to solar system barycenter.
@@ -143,42 +170,6 @@ class TimingModel(object):
         if binary_param is True:
             self.binary_params +=[param.name,]
 
-    def add_more_prefix_params(self,prefixParamExp,maxPrefixIndex):
-        """Add more same type of prefixed parameters into the timing model.
-           Parameter
-           ----------
-           prefixParamExp : PINT prefixParam class
-               The eample prefixed parameter need to be added
-           maxPrefixIndex : int
-               The maximum number of prefixed parameter can be add.
-        """
-        try:
-            isp = prefixParamExp.is_prefix
-            if isp is not True:
-                raise ValueError('prefixParamExp needs to be a prefixParameter class.')
-        except:
-            raise ValueError('prefixParamExp needs to be a Parameter class.')
-
-        pfx = prefixParamExp.prefix
-        idxfmt = prefixParamExp.indexformat
-        unitTplt = prefixParamExp.unit_template
-        descriptionTplt = prefixParamExp.description_template
-        frozen=prefixParamExp.frozen
-        continuous=prefixParamExp.continuous
-        parse_value=prefixParamExp.parse_value
-        print_value=prefixParamExp.print_value
-        for ii in range(1,maxPrefixIndex+1):
-
-            pp = prefixParameter(prefix = prefix ,indexformat = idxfmt,
-                    index = ii, unitTplt = unitTplt,
-                    descriptionTplt = descriptionTplt, frozen=frozen,
-                    continuous=continuous, parse_value=parse_value,
-                    print_value=print_value)
-            pp.apply_template()
-            if pp.name not in self.params:
-                self.add_param(pp)
-
-
 
     def param_help(self):
         """Print help lines for all available parameters in model.
@@ -204,12 +195,10 @@ class TimingModel(object):
         parnames = [x for x in self.params if x.startswith(prefix)]
         mapping = dict()
         for parname in parnames:
-            par = getattr(self,parname)
+            par = getattr(self, parname)
             if par.is_prefix == True and par.prefix == prefix:
                 mapping[par.index] = parname
-
-        setattr(self,prefix+'mapping',mapping)
-        return getattr(self,prefix+'mapping',mapping)
+        return mapping
 
     @Cache.use_cache
     def phase(self, toas):
