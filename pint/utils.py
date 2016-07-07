@@ -1,5 +1,6 @@
 """Miscellaneous potentially-helpful functions."""
 import numpy as np
+from scipy.misc import factorial
 import string
 import astropy.time
 try:
@@ -364,16 +365,12 @@ def data2longdouble(data):
     else:
         return np.longdouble(data)
 
-
 def taylor_horner(x, coeffs):
     """Evaluate a Taylor series of coefficients at x via the Horner scheme.
-
     For example, if we want: 10 + 3*x/1! + 4*x^2/2! + 12*x^3/3! with
     x evaluated at 2.0, we would do:
-
     In [1]: taylor_horner(2.0, [10, 3, 4, 12])
     Out[1]: 40.0
-
     """
     result = 0.0
     fact = float(len(coeffs))

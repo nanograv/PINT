@@ -93,9 +93,10 @@ setup(
     author_email = 'sransom@nrao.edu',
     url = 'https://github.com/nanograv/PINT',
 
-    packages=['pint', 
+
+    packages=['pint',
         'pint.extern',
-        'pint.models', 
+        'pint.models',
         'pint.models.pulsar_binaries', 
         'pint.orbital'],
 

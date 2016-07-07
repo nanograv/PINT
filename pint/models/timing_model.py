@@ -97,12 +97,38 @@ class Cache(object):
 
 
 class TimingModel(object):
+    """Base-level object provids an interface for implementing pulsar timing
+    models. A timing model generally have the following parts:
+        Parameters
+        Delay/Phase functions
+        Derivatives of dealy and phase respect to parameter
+    In PINT, one timing model would be a subclass of `TimingModel` class. The
+    required parts has to be provided in order to compute the residuals and update
+    the model, in other words, fit the model.
+    Example code for developers:
 
+    import parameter as p
+    from .timing_model import TimingModel, MissingParameter
+
+    class MyModel(object):
+        def __init__(self):
+            super(MyModel, self).__init__()
+            self.add_param(p.floatParameter(name="F0", value=0.0, units="Hz",
+                           description="Spin-frequency", long_double=True))
+            self.delay_funcs += [self.MyModel_delay, ]
+        def setup(self):
+            super(MyModel, self).setup()
+
+        def MyModel_delay(self):
+            pass
+            return delay
+    To make it work with PINT model builder, The new component should be added
+    to the ComponentsList in the top of model_builder.py file. Note: In the future
+    this will be automaticly detected.
+    """
     def __init__(self):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
-        self.num_prefix_params = {}
-        self.params = []  # List of model parameter names
         self.delay_funcs = {'L1':[],'L2':[]} # List of delay component functions
         # L1 is the first level of delays. L1 delay does not need barycentric toas
         # After L1 delay, the toas have been corrected to solar system barycenter.
@@ -115,6 +141,7 @@ class TimingModel(object):
             aliases=["PSRJ", "PSRB"]))
         self.model_type = None
 
+
     def setup(self):
         pass
 
@@ -125,52 +152,9 @@ class TimingModel(object):
         """
         setattr(self, param.name, param)
         self.params += [param.name,]
-        if param.is_prefix is True:
-            if param.prefix not in self.prefix_params:
-                self.prefix_params.append(param.prefix)
-            if self.num_prefix_params.has_key(param.prefix):
-                self.num_prefix_params[param.prefix]+=1
-            else:
-                self.num_prefix_params[param.prefix]=1
+
         if binary_param is True:
             self.binary_params +=[param.name,]
-
-
-    def add_more_prefix_params(self,prefixParamExp,maxPrefixIndex):
-        """Add more same type of prefixed parameters into the timing model.
-           Parameter
-           ----------
-           prefixParamExp : PINT prefixParam class
-               The eample prefixed parameter need to be added
-           maxPrefixIndex : int
-               The maximum number of prefixed parameter can be add.
-        """
-        try:
-            isp = prefixParamExp.is_prefix
-            if isp is not True:
-                raise ValueError('prefixParamExp needs to be a prefixParameter class.')
-        except:
-            raise ValueError('prefixParamExp needs to be a Parameter class.')
-
-        pfx = prefixParamExp.prefix
-        idxfmt = prefixParamExp.indexformat
-        unitTplt = prefixParamExp.unit_template
-        descriptionTplt = prefixParamExp.description_template
-        frozen=prefixParamExp.frozen
-        continuous=prefixParamExp.continuous
-        parse_value=prefixParamExp.parse_value
-        print_value=prefixParamExp.print_value
-        for ii in range(1,maxPrefixIndex+1):
-
-            pp = prefixParameter(prefix = prefix ,indexformat = idxfmt,
-                    index = ii, unitTplt = unitTplt,
-                    descriptionTplt = descriptionTplt, frozen=frozen,
-                    continuous=continuous, parse_value=parse_value,
-                    print_value=print_value)
-            pp.apply_template()
-            if pp.name not in self.params:
-                self.add_param(pp)
-
 
 
     def param_help(self):
@@ -181,6 +165,18 @@ class TimingModel(object):
             s += "%s\n" % getattr(self, par).help_line()
         return s
 
+    def get_type_params(self, param_type):
+        """ Get all the parameters for one specific type
+        """
+        result = []
+        for p in self.params:
+            par = getattr(self, p)
+            par_type = type(par).__name__
+            par_prefix = par_type[:-9]
+            if param_type.upper() == par_type.upper() or \
+                param_type.upper() == par_prefix.upper():
+                result.append(par.name)
+        return result
 
     @Cache.use_cache
     def get_prefix_mapping(self,prefix):
@@ -197,12 +193,10 @@ class TimingModel(object):
         parnames = [x for x in self.params if x.startswith(prefix)]
         mapping = dict()
         for parname in parnames:
-            par = getattr(self,parname)
+            par = getattr(self, parname)
             if par.is_prefix == True and par.prefix == prefix:
                 mapping[par.index] = parname
-
-        setattr(self,prefix+'mapping',mapping)
-        return getattr(self,prefix+'mapping',mapping)
+        return mapping
 
     @Cache.use_cache
     def phase(self, toas):
@@ -410,6 +404,8 @@ class TimingModel(object):
 
     def read_parfile(self, filename):
         """Read values from the specified parfile into the model parameters."""
+        checked_param = []
+        repeat_param = {}
         pfile = open(filename, 'r')
         for l in [pl.strip() for pl in pfile.readlines()]:
             # Skip blank lines
@@ -418,6 +414,18 @@ class TimingModel(object):
             # Skip commented lines
             if l.startswith('#') or l[:2]=="C ":
                 continue
+
+            k = l.split()
+            name = k[0].upper()
+
+            if name in checked_param:
+                if name in repeat_param.keys():
+                    repeat_param[name] += 1
+                else:
+                    repeat_param[name] = 2
+                k[0] = k[0] + str(repeat_param[name])
+                l = ' '.join(k)
+
             parsed = False
             for par in self.params:
                 if getattr(self, par).from_parfile_line(l):
@@ -431,6 +439,7 @@ class TimingModel(object):
                     if l.split()[0] not in ignore_params:
                         log.warn("Unrecognized parfile line '%s'" % l)
 
+            checked_param.append(name)
         # The "setup" functions contain tests for required parameters or
         # combinations of parameters, etc, that can only be done
         # after the entire parfile is read
@@ -520,7 +529,6 @@ def generate_timing_model(name, components, attributes={}):
         numComp = len(components)
     except:
         components = (components,)
-
     for c in components:
         try:
             if not issubclass(c,TimingModel):
