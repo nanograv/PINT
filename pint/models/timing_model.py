@@ -529,7 +529,6 @@ def generate_timing_model(name, components, attributes={}):
         numComp = len(components)
     except:
         components = (components,)
-
     for c in components:
         try:
             if not issubclass(c,TimingModel):
