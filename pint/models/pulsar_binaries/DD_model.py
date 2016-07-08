@@ -380,7 +380,7 @@ class DDmodel(PSR_BINARY):
         """DD model Inverse timing delay.
            T. Damour and N. Deruelle(1986)equation [46-52]
 
-           From proper time to coordinate time.
+           From proper time to coordinate time. 
            The Romoer delay and Einstein are included.
         """
         Dre = self.Dre()
@@ -600,16 +600,6 @@ class DDmodel(PSR_BINARY):
         """Full DD model delay"""
         return self.delayInverse()+self.delayS()+self.delayA()
 
-    @Cache.use_cache
-    def delayR(self):  # Is this needed?
-        """Binary Romoer delay in proper time.
-            T. Damour and N. Deruelle(1986)equation [24]
-            Equation [46-52] gives the result in coordinate time.
-        """
-
-        rDelay = self.a1()/c.c*(self.sOmg*(self.cosEcc_A-self.er)   \
-                 +(1-self.eTheta()**2)**0.5*self.cOmg*self.sinEcc_A)
-        return rDelay.decompose()
     @Cache.use_cache
     def d_DDdelay_d_par(self,par):
         """Full DD model delay derivtive
