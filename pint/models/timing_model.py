@@ -103,6 +103,7 @@ class module_info(object):
         self.requires = module.requires
         self.provides = module.provides
         self.params = module.params
+        self.params.remove('PSR')
         self.module_order = None
         self.delay_func_names = []
         self.phase_func_names = []
