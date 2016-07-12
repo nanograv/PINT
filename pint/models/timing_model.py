@@ -118,6 +118,7 @@ class module_info(object):
         out += 'Provides : ' + str(self.provides) + '\n'
         out += 'Delay functions : ' + str(self.delay_func_names) + '\n'
         out += 'Phase functions : ' + str(self.phase_func_names) + '\n'
+        out += 'Parameters :' + str(self.params) + '\n'
         return out
 
 
