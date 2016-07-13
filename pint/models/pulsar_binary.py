@@ -6,6 +6,7 @@ from pint import ls,GMsun,Tsun
 
 
 class PulsarBinary(TimingModel):
+<<<<<<< HEAD
     """ A wapper class for independent pulsar binary model interact with PINT
     platform. The calculations are done by the classes located at
     pint/models/stand_alone_psr_binary
@@ -18,6 +19,16 @@ class PulsarBinary(TimingModel):
     Longitude of periastron         omega
     projected semi-major axis of orbit   a1
 
+=======
+    """ A class for independent pulsar binary model wapper.
+        Binary variables naming:
+        Eccentric Anomaly               E (not parameter ECC)
+        Mean Anomaly                    M
+        True Anomaly                    nu
+        Eccentric                       ecc
+        Longitude of periastron         omega
+        projected semi-major axis of orbit   a1
+>>>>>>> Change DDwrapper class name
     """
     def __init__(self,):
         super(PulsarBinary, self).__init__()
@@ -85,11 +96,14 @@ class PulsarBinary(TimingModel):
 
     def setup(self):
         super(PulsarBinary, self).setup()
+<<<<<<< HEAD
         for bpar in self.binary_params:
             self.make_delay_binary_deriv_funcs(bpar)
             self.delay_derivs += [getattr(self, 'd_delay_binary_d_' + bpar)]
         # Setup the model isinstance
         self.binary_instance = self.binary_model_class()
+=======
+>>>>>>> Change DDwrapper class name
 
     # With new parameter class set up, do we need this?
     def apply_units(self):

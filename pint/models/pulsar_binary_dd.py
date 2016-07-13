@@ -6,7 +6,6 @@ from .timing_model import Cache, TimingModel, MissingParameter
 import astropy.units as u
 
 
-
 class BinaryDD(PulsarBinary):
     """This is a PINT pulsar binary dd model class a subclass of PSRbinaryWapper.
     It is a wrapper for independent DDmodel class defined in
