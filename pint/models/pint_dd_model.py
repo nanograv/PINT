@@ -13,9 +13,9 @@ import astropy.units as u
 
 class BinaryDD(PulsarBinary):
     """This is a PINT pulsar binary dd model class a subclass of PSRbinaryWapper.
-       It is a wrapper for independent DDmodel class defined in ./pulsar_binary/DD_model.py
-       All the detailed calculations are in the independent DDmodel.
-       The aim for this class is to connect the independent binary model with PINT platform
+    It is a wrapper for independent DDmodel class defined in ./pulsar_binary/DD_model.py
+    All the detailed calculations are in the independent DDmodel.
+    The aim for this class is to connect the independent binary model with PINT platform
     """
 
     def __init__(self,):
