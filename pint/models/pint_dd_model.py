@@ -11,7 +11,6 @@ from ..utils import time_from_mjd_string, time_to_longdouble
 import astropy.units as u
 
 
-
 class BinaryDD(PulsarBinary):
     """This is a PINT pulsar binary dd model class a subclass of PSRbinaryWapper.
     It is a wrapper for independent DDmodel class defined in ./pulsar_binary/DD_model.py
