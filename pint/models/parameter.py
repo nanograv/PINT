@@ -27,12 +27,12 @@ class Parameter(object):
     ----------
     name : str, optional
         The name of the parameter.
-    quantity : number, str, `Astropy.units.Quantity` object, or other datatype or
+    value : number, str, `Astropy.units.Quantity` object, or other datatype or
             object
         The current quantity of parameter. It is the internal storage of
         parameter value
-    units : str, optional
-        String format for parameter unit
+    units : str or Astropy.units optional
+        parameter unit
     description : str, optional
         A short description of what this parameter means.
     uncertainty : number
