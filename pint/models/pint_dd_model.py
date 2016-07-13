@@ -3,7 +3,7 @@ import time
 from pint import ls,GMsun,Tsun
 from pint import utils
 from .pulsar_binaries.DD_model import DDmodel
-from .pint_pulsar_binary import PSRbinaryWapper
+from .pint_pulsar_binary import PulsarBinary
 import parameter as p
 from .timing_model import Cache, TimingModel, MissingParameter
 import astropy
@@ -11,7 +11,7 @@ from ..utils import time_from_mjd_string, time_to_longdouble
 import astropy.units as u
 
 
-class DDwrapper(PSRbinaryWapper):
+class BinaryDD(PulsarBinary):
     """This is a PINT pulsar binary dd model class a subclass of PSRbinaryWapper.
        It is a wrapper for independent DDmodel class defined in ./pulsar_binary/DD_model.py
        All the detailed calculations are in the independent DDmodel.
@@ -19,7 +19,7 @@ class DDwrapper(PSRbinaryWapper):
     """
 
     def __init__(self,):
-        super(DDwrapper, self).__init__()
+        super(BinaryDD, self).__init__()
         self.binary_model_name = 'DD'
         self.binary_model_class = DDmodel
 
@@ -57,7 +57,7 @@ class DDwrapper(PSRbinaryWapper):
     def setup(self):
         """Check out parameters setup.
         """
-        super(DDwrapper,self).setup()
+        super(BinaryDD,self).setup()
         for p in ("PB", "T0", "A1"):
             if getattr(self, p).value is None:
                 raise MissingParameter("DD", p,

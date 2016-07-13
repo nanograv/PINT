@@ -4,7 +4,7 @@ import pint.toa as toa
 import matplotlib.pyplot as plt
 import astropy.units as u
 from pint.residuals import resids
-from pint.models.pint_dd_model import DDwrapper
+from pint.models.pint_dd_model import BinaryDD
 import numpy as np
 import os, unittest
 from pinttestdata import testdir, datadir

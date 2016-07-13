@@ -13,7 +13,7 @@ from .solar_system_shapiro import SolarSystemShapiro
 
 from pint.utils import split_prefixed_name
 from .parameter import prefixParameter
-from .pint_dd_model import DDwrapper
+from .pint_dd_model import BinaryDD
 from .frequency_dependent import FD
 from .jump import JumpDelay
 import os

@@ -18,7 +18,7 @@ from pint import ls,GMsun,Tsun
 from pint import utils
 
 
-class PSRbinaryWapper(TimingModel):
+class PulsarBinary(TimingModel):
     """ A class for independent pulsar binary model wapper.
         Binary variables naming:
         Eccentric Anomaly               E (not parameter ECC)
@@ -97,7 +97,7 @@ class PSRbinaryWapper(TimingModel):
         self.delay_funcs['L2'] += self.binary_delay_funcs
 
     def setup(self):
-        super(PSRbinaryWapper, self).setup()
+        super(PulsarBinary, self).setup()
 
     # With new parameter class set up, do we need this?
     def apply_units(self):
