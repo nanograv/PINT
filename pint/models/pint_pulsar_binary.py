@@ -19,17 +19,20 @@ from pint import utils
 
 
 class PulsarBinary(TimingModel):
-    """ A class for independent pulsar binary model wapper.
-        Binary variables naming:
-        Eccentric Anomaly               E (not parameter ECC)
-        Mean Anomaly                    M
-        True Anomaly                    nu
-        Eccentric                       ecc
-        Longitude of periastron         omega
-        projected semi-major axis of orbit   a1
+    """ A wapper class for independent pulsar binary model interact with PINT
+    platform. The calculations are done by the class located at
+    pint/models/pulsar_binary
+
+    Binary variables naming:
+    Eccentric Anomaly               E (not parameter ECC)
+    Mean Anomaly                    M
+    True Anomaly                    nu
+    Eccentric                       ecc
+    Longitude of periastron         omega
+    projected semi-major axis of orbit   a1
     """
     def __init__(self,):
-        super(PSRbinaryWapper, self).__init__()
+        super(PulsarBinary, self).__init__()
         self.binary_model_name = None
         self.barycentric_time = None
         self.binary_model_class = None
@@ -158,7 +161,7 @@ class PulsarBinary(TimingModel):
 
     @Cache.use_cache
     def d_delay_d_xxxx(self,param,toas):
-        """Return the DD timing model delay derivtives"""
-        bmob = self.get_binary_object(toas)
+        """Return the bianry model delay derivtives"""
+        bmobj = self.get_binary_object(toas)
 
-        return bmob.d_binarydelay_d_par(par)
+        return bmobj.d_binarydelay_d_par(par)
