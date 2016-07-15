@@ -135,14 +135,14 @@ class PSR_BINARY(object):
         # search for aliases
         if par not in self.binary_params and self.search_alias(par) is None:
             raise AttributeError('Can not find parameter '+par+' in '\
-                                 + self.binary_name+'model')
+                                 + self.binary_name+' model')
         # Get first derivative in the delay derivative function
-        bdelayder = self.d_binarydelay_d_par_funcs[0]
-        # Remove the first one, get others.
-        self.d_binarydelay_d_par_funcs.remove(self.d_binarydelay_d_par_funcs[0])
-        for bdder in self.d_binarydelay_d_par_funcs:
-            bdelayder += bdder()
-        return bdelayder
+        result = self.d_binarydelay_d_par_funcs[0](par)
+        if len(self.d_binarydelay_d_par_funcs) > 1:
+            for df in self.d_binarydelay_d_par_funcs[1,:]:
+                result += df(par)
+
+        return result
 
     @Cache.use_cache
     def prtl_der(self,y,x):

@@ -140,7 +140,7 @@ class TimingModel(object):
             description="Source name",
             aliases=["PSRJ", "PSRB"]))
         self.model_type = None
-
+        self.delay_derivs = {}
 
     def setup(self):
         pass

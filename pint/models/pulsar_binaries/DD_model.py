@@ -47,7 +47,7 @@ class DDmodel(PSR_BINARY):
         self.binary_params = self.param_default_value.keys()
 
         self.dd_interVars = ['er','eTheta','beta','alpha','Dre','Drep','Drepp',
-                             'nhat']
+                             'nhat', 'TM2']
         self.add_inter_vars(self.dd_interVars)
         self.set_param_values()
         self.binary_delay_funcs += [self.DDdelay]
@@ -380,7 +380,7 @@ class DDmodel(PSR_BINARY):
         """DD model Inverse timing delay.
            T. Damour and N. Deruelle(1986)equation [46-52]
 
-           From proper time to coordinate time. 
+           From proper time to coordinate time.
            The Romoer delay and Einstein are included.
         """
         Dre = self.Dre()
@@ -479,6 +479,13 @@ class DDmodel(PSR_BINARY):
                dnhat_dpar*diDelay_dnhat
 
     #################################################
+    @Cache.cache_result
+    def TM2(self):
+        return self.M2.value*Tsun
+
+    def d_TM2_d_M2(self):
+        return Tsun
+
     @Cache.use_cache
     def delayS(self):
         """Binary shapiro delay
