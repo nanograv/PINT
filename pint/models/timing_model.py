@@ -124,7 +124,7 @@ class TimingModel(object):
             return delay
     To make it work with PINT model builder, The new component should be added
     to the ComponentsList in the top of model_builder.py file. Note: In the future
-    this will be automaticly detected. 
+    this will be automaticly detected.
     """
     def __init__(self):
         self.params = []  # List of model parameter names
@@ -142,7 +142,7 @@ class TimingModel(object):
             description="Source name",
             aliases=["PSRJ", "PSRB"]))
         self.model_type = None
-
+        self.delay_derivs = {}
 
     def setup(self):
         pass
