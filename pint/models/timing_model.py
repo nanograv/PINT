@@ -142,7 +142,7 @@ class TimingModel(object):
             description="Source name",
             aliases=["PSRJ", "PSRB"]))
         self.model_type = None
-        self.delay_derivs = {}
+        self.delay_derivs = []
 
     def setup(self):
         pass
@@ -342,9 +342,14 @@ class TimingModel(object):
         """
         Return the derivative of delay with respect to the parameter.
         """
-        result = numpy.zeros(len(toas))
-        for f in self.delay_derivs[param]:
-            result += f(toas)
+        result = np.zeros(len(toas))
+        param_delay_derivs = []
+        for f in self.delay_derivs:
+            if f.__name__.endswith(param):
+                param_delay_derivs.append(f)
+
+        for df in param_delay_derivs:
+            result += df(toas)
         return result
 
     @Cache.use_cache
@@ -372,6 +377,7 @@ class TimingModel(object):
         for ii, param in enumerate(params):
             dpdp = "d_phase_d_" + param
             dddp = "d_delay_d_" + param
+            print dddp, dpdp
             if param == 'Offset':
                 M[:,ii] = 1.0
                 units.append(u.s/u.s)
@@ -380,10 +386,14 @@ class TimingModel(object):
                 #q = self.d_phase_d_param(toas, param) / F0
                 M[:,ii] = q
                 units.append(q.unit)
-            elif hasattr(self, dddp):
-                q = getattr(self, dddp)(toas)
+            else:
+                q = self.d_delay_d_param(toas, param)
                 M[:,ii] = q
-                units.append(q.unit)
+                # TODO: Make all the derivs has unit
+                if hasattr(q, 'unit'):
+                    units.append(q.unit)
+                else:
+                    units.append(u.s/ getattr(self, param).num_unit)
 
         return M, params, units
 

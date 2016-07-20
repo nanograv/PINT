@@ -65,6 +65,11 @@ class Astrometry(TimingModel):
                             "POSEPOCH or PEPOCH are required if PM is set.")
                 else:
                     self.POSEPOCH.value = self.PEPOCH.value
+        self.delay_derivs += [self.d_delay_astrometry_d_RAJ,
+                              self.d_delay_astrometry_d_DECJ,
+                              self.d_delay_astrometry_d_PMRA,
+                              self.d_delay_astrometry_d_PMDEC,
+                              self.d_delay_astrometry_d_PX]
 
     @Cache.cache_result
     def coords_as_ICRS(self, epoch=None):
@@ -147,7 +152,7 @@ class Astrometry(TimingModel):
 
 
     @Cache.use_cache
-    def d_delay_d_RAJ(self, toas):
+    def d_delay_astrometry_d_RAJ(self, toas):
         """Calculate the derivative wrt RAJ
 
         For the RAJ and DEC derivatives, use the following approximate model for
@@ -174,7 +179,7 @@ class Astrometry(TimingModel):
         return dd_draj.decompose(u.si.bases)
 
     @Cache.use_cache
-    def d_delay_d_DECJ(self, toas):
+    def d_delay_astrometry_d_DECJ(self, toas):
         """Calculate the derivative wrt DECJ
 
         Definitions as in d_delay_d_RAJ
@@ -192,7 +197,7 @@ class Astrometry(TimingModel):
         return dd_ddecj.decompose(u.si.bases)
 
     @Cache.use_cache
-    def d_delay_d_PMRA(self, toas):
+    def d_delay_astrometry_d_PMRA(self, toas):
         """Calculate the derivative wrt PMRA
 
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
@@ -212,7 +217,7 @@ class Astrometry(TimingModel):
         return dd_dpmra.decompose(u.si.bases) / (u.mas / u.year)
 
     @Cache.use_cache
-    def d_delay_d_PMDEC(self, toas):
+    def d_delay_astrometry_d_PMDEC(self, toas):
         """Calculate the derivative wrt PMDEC
 
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
@@ -235,7 +240,7 @@ class Astrometry(TimingModel):
         return dd_dpmdec.decompose(u.si.bases) / (u.mas / u.year)
 
     @Cache.use_cache
-    def d_delay_d_PX(self, toas):
+    def d_delay_astrometry_d_PX(self, toas):
         """Calculate the derivative wrt PX
 
         Roughly following Smart, 1977, chapter 9.

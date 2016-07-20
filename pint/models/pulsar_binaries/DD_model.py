@@ -484,7 +484,7 @@ class DDmodel(PSR_BINARY):
         return self.M2.value*Tsun
 
     def d_TM2_d_M2(self):
-        return Tsun
+        return Tsun.value
 
     @Cache.use_cache
     def delayS(self):
