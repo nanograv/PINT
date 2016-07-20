@@ -91,6 +91,7 @@ class DispersionDMX(Dispersion):
                        parameter_type='MJD', time_scale='utc'))
         self.dm_value_funcs += [self.dmx_dm,]
         self.model_special_params = ['DMX_0001', 'DMXR1_0001','DMXR2_0001']
+
     def setup(self):
         super(Dispersion, self).setup()
         # Get DMX mapping.
@@ -135,3 +136,6 @@ class DispersionDMX(Dispersion):
                 ind = DMX_group.groups[ii]['index']
                 dm[ind] = dmx
         return dm
+
+    def d_delay_dmx_d_DMX(self, toas):
+        pass

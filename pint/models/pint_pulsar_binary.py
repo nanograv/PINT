@@ -103,7 +103,8 @@ class PulsarBinary(TimingModel):
     def setup(self):
         super(PulsarBinary, self).setup()
         for bpar in self.binary_params:
-            self.make_delay_deriv_funcs(bpar)
+            self.make_delay_binary_deriv_funcs(bpar)
+            self.delay_derivs += [getattr(self, 'd_delay_binary_d_' + bpar)]
     # With new parameter class set up, do we need this?
     def apply_units(self):
         """Apply units to parameter value.
@@ -145,14 +146,14 @@ class PulsarBinary(TimingModel):
         return bmobj.binary_delay()
 
     @Cache.use_cache
-    def d_delay_d_xxxx(self,param,toas):
+    def d_binary_delay_d_xxxx(self,param,toas):
         """Return the bianry model delay derivtives"""
         bmobj = self.get_binary_object(toas)
 
         return bmobj.d_binarydelay_d_par(param)
 
-    def make_delay_deriv_funcs(self, param):
+    def make_delay_binary_deriv_funcs(self, param):
         def deriv_func(toas):
-            return self.d_delay_d_xxxx(param, toas)
-        deriv_func.__name__ = 'd_delay_d_' + param
-        setattr(self, 'd_delay_d_' + param, deriv_func)
+            return self.d_binary_delay_d_xxxx(param, toas)
+        deriv_func.__name__ = 'd_delay_binary_d_' + param
+        setattr(self, 'd_delay_binary_d_' + param, deriv_func)
