@@ -19,14 +19,8 @@ from pint import utils
 
 
 class PulsarBinary(TimingModel):
-<<<<<<< HEAD
-<<<<<<< HEAD
     """ A wapper class for independent pulsar binary model interact with PINT
     platform. The calculations are done by the classes located at
-=======
-    """ A wapper class for independent pulsar binary model interact with PINT
-    platform. The calculations are done by the class located at
->>>>>>> fix a bug and add docstrings
     pint/models/pulsar_binary
 
     Binary variables naming:
@@ -36,20 +30,6 @@ class PulsarBinary(TimingModel):
     Eccentric                       ecc
     Longitude of periastron         omega
     projected semi-major axis of orbit   a1
-<<<<<<< HEAD
-
-=======
-    """ A class for independent pulsar binary model wapper.
-        Binary variables naming:
-        Eccentric Anomaly               E (not parameter ECC)
-        Mean Anomaly                    M
-        True Anomaly                    nu
-        Eccentric                       ecc
-        Longitude of periastron         omega
-        projected semi-major axis of orbit   a1
->>>>>>> Change DDwrapper class name
-=======
->>>>>>> fix a bug and add docstrings
     """
     def __init__(self,):
         super(PulsarBinary, self).__init__()
@@ -118,15 +98,10 @@ class PulsarBinary(TimingModel):
     def setup(self):
         super(PulsarBinary, self).setup()
         for bpar in self.binary_params:
-<<<<<<< HEAD
             self.make_delay_binary_deriv_funcs(bpar)
             self.delay_derivs += [getattr(self, 'd_delay_binary_d_' + bpar)]
         # Setup the model isinstance
         self.binary_instance = self.binary_model_class()
-
-=======
-            self.make_delay_deriv_funcs(bpar)
->>>>>>> Fix binary derivatives
     # With new parameter class set up, do we need this?
     def apply_units(self):
         """Apply units to parameter value.
@@ -176,7 +151,6 @@ class PulsarBinary(TimingModel):
         """This is a funcion to make binary derivative functions to the formate
         of d_binary_delay_d_paramName(toas)
         """
-        # TODO make this function more generalized?
         def deriv_func(toas):
             return self.d_binary_delay_d_xxxx(param, toas)
         deriv_func.__name__ = 'd_delay_binary_d_' + param

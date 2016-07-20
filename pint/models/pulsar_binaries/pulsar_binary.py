@@ -108,10 +108,6 @@ class PSR_BINARY(object):
         self.inter_vars = ['E','M','nu','ecc','omega','a1','TM2']
         self.binary_delay_funcs = []
         self.d_binarydelay_d_par_funcs = []
-<<<<<<< HEAD
-=======
-
->>>>>>> add d_bianrydelay_d_par function and search alias function, fix cache
 
     @property
     def t(self):
