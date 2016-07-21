@@ -340,7 +340,8 @@ class TimingModel(object):
         """
         Return the derivative of delay with respect to the parameter.
         """
-        result = np.zeros(len(toas))
+        par = getattr(self, param)
+        result = np.zeros(len(toas)) * u.s/par.num_unit
         param_delay_derivs = []
         for f in self.delay_derivs:
             if f.__name__.endswith(param):
