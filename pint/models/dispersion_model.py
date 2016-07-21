@@ -26,7 +26,8 @@ class Dispersion(TimingModel):
                        units="pc cm^-3", value=0.0,
                        description="Dispersion measure"))
         self.dm_value_funcs = [self.constant_dm,]
-        self.delay_funcs['L1'] += [self.dispersion_delay,]
+        self.delay_funcs['L1'] += [self.dedispersion_delay,]
+        self.delay_derivs += [self.d_delay_dispersion_d_DM,]
 
     def setup(self):
         super(Dispersion, self).setup()
@@ -60,6 +61,16 @@ class Dispersion(TimingModel):
 
         return self.dispersion_time_delay(dm, bfreq)
 
+    def d_delay_dispersion_d_DM(self, toas):
+        """Derivatives for constant DM
+        """
+        try:
+            bfreq = self.barycentric_radio_freq(toas)
+        except AttributeError:
+            warn("Using topocentric frequency for dedispersion!")
+            bfreq = toas['freq']
+
+        return DMconst / bfreq**2.0
 
 class DispersionDMX(Dispersion):
     """This class provides a DMX model based on the class of Dispersion.
