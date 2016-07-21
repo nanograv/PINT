@@ -153,6 +153,7 @@ class PulsarBinary(TimingModel):
         return bmobj.d_binarydelay_d_par(param)
 
     def make_delay_binary_deriv_funcs(self, param):
+        # TODO make this function more generalized?
         def deriv_func(toas):
             return self.d_binary_delay_d_xxxx(param, toas)
         deriv_func.__name__ = 'd_delay_binary_d_' + param
