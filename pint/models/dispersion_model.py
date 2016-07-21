@@ -14,7 +14,7 @@ import astropy.time as time
 # But the time and freq portions are correct
 # This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
 # Astronomy, Second edition, Page 86, Note 1
-DMconst = 1.0/2.41e-4 * u.MHz * u.MHz * u.s
+DMconst = 1.0/2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
 
 class Dispersion(TimingModel):
     """This class provides a base dispersion timing model. The dm varience will
