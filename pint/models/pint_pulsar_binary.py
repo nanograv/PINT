@@ -50,7 +50,7 @@ class PulsarBinary(TimingModel):
             binary_param = True)
 
 
-        self.add_param(p.floatParameter(name="XPBDOT",
+        self.add_param(p.floatParameter(name="XPBDOT", value = 0.0,
             units=u.s/u.s,
             description="Rate of change of orbital period minus GR prediction"),
             binary_param = True)
