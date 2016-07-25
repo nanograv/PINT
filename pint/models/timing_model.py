@@ -346,11 +346,12 @@ class TimingModel(object):
         result = np.zeros(len(toas)) * u.s/par.num_unit
         param_delay_derivs = []
         for f in self.delay_derivs:
-            if f.__name__.endswith(param):
+            if f.__name__.endswith('_'+param):
                 param_delay_derivs.append(f)
 
         for df in param_delay_derivs:
-            result += df(toas)
+            print df.__name__
+            result += df(toas).to(u.s/par.num_unit, equivalencies=u.dimensionless_angles())
         return result
 
     @Cache.use_cache

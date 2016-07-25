@@ -23,33 +23,33 @@ class BinaryDD(PulsarBinary):
         self.binary_model_name = 'DD'
         self.binary_model_class = DDmodel
 
-        self.add_param(p.floatParameter(name="A0",
+        self.add_param(p.floatParameter(name="A0", value=0.0,
              units="s",
              description="DD model aberration parameter A0"),
              binary_param = True)
 
-        self.add_param(p.floatParameter(name="B0",
+        self.add_param(p.floatParameter(name="B0", value=0.0,
              units="s",
              description="DD model aberration parameter B0",),
              binary_param = True)
 
-        self.add_param(p.floatParameter(name="GAMMA",
+        self.add_param(p.floatParameter(name="GAMMA", value=0.0,
              units="second",
              description="Binary Einsten delay GAMMA term"),
              binary_param = True)
 
-        self.add_param(p.floatParameter(name="DR",
+        self.add_param(p.floatParameter(name="DR", value=0.0,
              units="",
              description="Relativistic deformation of the orbit"),
              binary_param = True)
 
-        self.add_param(p.floatParameter(name="DTH",
+        self.add_param(p.floatParameter(name="DTH", value=0.0,
              units="",
              description="Relativistic deformation of the orbit",),
              binary_param = True)
 
 
-        self.add_param(p.floatParameter(name="SINI",
+        self.add_param(p.floatParameter(name="SINI", value=0.0,
              units="",
              description="Sine of inclination angle"),
              binary_param = True)
