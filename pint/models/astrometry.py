@@ -270,3 +270,9 @@ class Astrometry(TimingModel):
 
         # We want to return sec / mas
         return dd_dpx.decompose(u.si.bases) / u.mas
+
+    @Cache.cache_result
+    def d_delay_astrometry_d_POSEPOCH(self, toas):
+        """Calculate the derivative wrt POSEPOCH
+        """
+        pass
