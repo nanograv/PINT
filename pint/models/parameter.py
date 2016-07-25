@@ -318,10 +318,10 @@ class floatParameter(Parameter):
         self.is_long_double = long_double
         if self.is_long_double:
             set_quantity = self.set_quantity_longdouble
-            print_quantity = lambda x: longdouble2string(x.value)
+            print_quantity = lambda x: longdouble2string(x.to(self.units).value)
         else:
             set_quantity = self.set_quantity_float
-            print_quantity = lambda x: str(x.value)
+            print_quantity = lambda x: str(x.to(self.units).value)
 
         get_value = self.get_value_float
         set_uncertainty = self.set_quantity_float
@@ -372,7 +372,7 @@ class floatParameter(Parameter):
         if quan is None:
             return None
         else:
-            return quan.value
+            return quan.to(self.units).value
 
 
 class strParameter(Parameter):
