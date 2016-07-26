@@ -100,13 +100,14 @@ class TestParameters(unittest.TestCase):
                 numpy.isclose(self.m.F0.num_uncertainty, num_uncertainty_new,
                               atol=1e-13))
         # Change the units back, and then set them implicitly
+        # The value will be associate with the new units
         self.m.F0.units = str_unit
         self.m.F0.quantity = value_new * units_new
         self.m.F0.uncertainty = num_uncertainty_new * units_new
         self.assertTrue(
-                numpy.isclose(self.m.F0.value, value_new, atol=1e-13))
+                numpy.isclose(self.m.F0.value, value, atol=1e-13))
         self.assertTrue(
-                numpy.isclose(self.m.F0.num_uncertainty, num_uncertainty_new,
+                numpy.isclose(self.m.F0.num_uncertainty, num_uncertainty,
                               atol=1e-13))
         # Check the ratio, using the old units as a reference
         ratio = self.m.F0.quantity / (value * units)

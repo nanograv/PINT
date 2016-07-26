@@ -29,10 +29,10 @@ class Parameter(object):
         The name of the parameter.
     value : number, str, `Astropy.units.Quantity` object, or other datatype or
             object
-        The current quantity of parameter. It is the internal storage of
-        parameter value
-    units : str or Astropy.units optional
-        parameter unit
+        The input parameter value.
+    units : str or Astropy.units, optional
+        Parameter default unit. Parameter .value and .num_uncertainty attribute
+        will associate with the default units.
     description : str, optional
         A short description of what this parameter means.
     uncertainty : number
@@ -48,10 +48,15 @@ class Parameter(object):
         parameter exist.
     print_quantity : method, optional
         A function that converts the internal value to a string for output.
-    set_value : method, optional
-        A function that sets the value property
+    set_quantity : method, optional
+        A function that sets the quantity property
     get_value:
-        A function that get purely value from value attribute
+        A function that get purely value from quantity attribute
+
+    Attributes
+    ----------
+    quantity: Type depends on the parameter subclass, it can be anything
+        An internal storage for parameter value and units
     """
 
     def __init__(self, name=None, value=None, units=None, description=None,
@@ -62,10 +67,7 @@ class Parameter(object):
                  set_uncertainty=fortran_float):
 
         self.name = name  # name of the parameter
-        self.units = units  # parameter unit in string format,or None
-        # parameter num unit, in astropy.units object format.
-        # Once it is speicified, num_unit will not be changed.
-        # Method to get quantity from input
+        self.units = units  # Default unit
         self.set_quantity = set_quantity
         # Method to get value
         self.get_value = get_value
@@ -107,8 +109,8 @@ class Parameter(object):
         if hasattr(self, 'quantity'):
             if self.units is not None:
                 if unt != self.units:
-                    wmsg = 'Parameter '+self.name+' units has been reset to '
-                    wmsg += str(unt) + ' from '+ str(self._units)
+                    wmsg = 'Parameter '+self.name+' default units has been '
+                    wmsg += ' reset to ' + str(unt) + ' from '+ str(self._units)
                     log.warning(wmsg)
                 try:
                     if hasattr(self.quantity, 'unit'):
@@ -140,10 +142,15 @@ class Parameter(object):
     # Setup quantity property
     @property
     def quantity(self):
+        """Return the internal stored parameter value and units.
+        """
         return self._quantity
 
     @quantity.setter
     def quantity(self, val):
+        """General wapper method to set .quantity. For different type of
+        parameters, the setter method is stored at .set_quantity attribute.
+        """
         if val is None:
             if hasattr(self, 'quantity') and self.quantity is not None:
                 raise ValueError('Setting an exist value to None is not'
@@ -174,6 +181,9 @@ class Parameter(object):
     # Setting .value property will change ._quantity.
     @property
     def value(self):
+        """Return the pure value of a parameter. This value will associate with
+        parameter default value, which is .units attribute.
+        """
         if self._quantity is None:
             return None
         else:
@@ -181,6 +191,9 @@ class Parameter(object):
 
     @value.setter
     def value(self, val):
+        """Method to set .value. Setting .value attribute will change the
+        .quantity attribute other than .value attribute.
+        """
         if val is None:
             if not isinstance(self.quantity, (str, bool)) and \
                 self._quantity is not None:
@@ -193,10 +206,15 @@ class Parameter(object):
 
     @property
     def uncertainty(self):
+        """Return the internal stored parameter uncertainty value and units.
+        """
         return self._uncertainty
 
     @uncertainty.setter
     def uncertainty(self, val):
+        """General wapper setter for uncertainty. The setting method is stored
+        at .set_uncertainty attribute
+        """
         if val is None:
             if hasattr(self, 'uncertainty') and self.uncertainty is not None:
                 raise ValueError('Setting an exist uncertainty to None is not'
@@ -206,29 +224,30 @@ class Parameter(object):
                 self._num_uncertainty = self._uncertainty
                 return
         self._uncertainty = self.set_uncertainty(val)
-        self._num_uncertainty = self.get_value(self._uncertainty)
 
     @property
     def num_uncertainty(self):
-        return self._num_uncertainty
+        """Return a pure value from .uncertainty. The unit will associate
+        with .units
+        """
+        if self._uncertainty is None:
+            return None
+        else:
+            return self.get_value(self._uncertainty)
 
     @num_uncertainty.setter
     def num_uncertainty(self, val):
+        """Setter for num_uncertainty. Setting .num_uncertainty will only change
+        the .uncertainty attribute.
+        """
         if val is None:
             if not isinstance(self.uncertainty, (str, bool)) and \
                 self._num_uncertainty is not None:
                 log.warning('This parameter has uncertainty value. '
                             'Change it to None will lost information.')
-
-            self._num_uncertainty = val
-            self._uncertainty = val
-
-        elif not isinstance(val, numbers.Number):
-            raise ValueError('value has to be a pure number or None. ({0} <- {1} ({2})'.format(self.name,val,type(val)))
-        else:
-            self._num_uncertainty = val
-            self._uncertainty = self.set_value(val)
-
+            else:
+                self.num_uncertainty = val
+        self._uncertainty = self.set_uncertainty(val)
 
     def __str__(self):
         out = self.name
@@ -236,11 +255,10 @@ class Parameter(object):
             out += " (" + str(self.units) + ")"
         out += " " + self.print_quantity(self.quantity)
         if self.uncertainty is not None:
-            out += " +/- " + str(self.uncertainty)
+            out += " +/- " + str(self.uncertainty.to(self.units))
         return out
 
     def set(self, value):
-
         """Parses a string 'value' into the appropriate internal representation
         of the parameter.
         """
@@ -533,8 +551,8 @@ class AngleParameter(Parameter):
             except:
                 raise ValueError('Srting ' + val + ' can not be converted to'
                                  ' astropy angle.')
-        elif isinstance(val, Angle):
-            result = val.to(self.units)
+        elif hasattr(val, 'unit'):
+            result = Angle(val.to(self.units))
         else:
             raise ValueError('Angle parameter can not accept '
                              + type(val).__name__ + 'format.')
@@ -552,8 +570,8 @@ class AngleParameter(Parameter):
             #except:
             #    raise ValueError('Srting ' + val + ' can not be converted to'
             #                     ' astropy angle.')
-        elif isinstance(val, Angle):
-            result = val.to(self.units)
+        elif hasattr(val, 'unit'):
+            result = Angle(val.to(self.units))
         else:
             raise ValueError('Angle parameter can not accept '
                              + type(val).__name__ + 'format.')
