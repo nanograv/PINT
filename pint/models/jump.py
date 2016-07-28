@@ -19,7 +19,7 @@ class JumpDelay(TimingModel):
     def setup(self):
         super(JumpDelay, self).setup()
         self.jumps = []
-        for mask_par in self.get_type_params('maskParameter'):
+        for mask_par in self.get_params_of_type('maskParameter'):
             if mask_par.startswith('JUMP'):
                 self.jumps.append(mask_par)
 

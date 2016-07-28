@@ -165,8 +165,8 @@ class TimingModel(object):
             s += "%s\n" % getattr(self, par).help_line()
         return s
 
-    def get_type_params(self, param_type):
-        """ Get all the parameters for one specific type
+    def get_params_of_type(self, param_type):
+        """ Get all the parameters in timing model for one specific type
         """
         result = []
         for p in self.params:
