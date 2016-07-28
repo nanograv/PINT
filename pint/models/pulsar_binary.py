@@ -16,6 +16,7 @@ class PulsarBinary(TimingModel):
     Eccentric                       ecc
     Longitude of periastron         omega
     projected semi-major axis of orbit   a1
+
     """
     def __init__(self,):
         super(PulsarBinary, self).__init__()
