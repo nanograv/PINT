@@ -20,7 +20,7 @@ from pint import utils
 
 class PulsarBinary(TimingModel):
     """ A wapper class for independent pulsar binary model interact with PINT
-    platform. The calculations are done by the class located at
+    platform. The calculations are done by the classes located at
     pint/models/pulsar_binary
 
     Binary variables naming:
@@ -30,6 +30,7 @@ class PulsarBinary(TimingModel):
     Eccentric                       ecc
     Longitude of periastron         omega
     projected semi-major axis of orbit   a1
+
     """
     def __init__(self,):
         super(PulsarBinary, self).__init__()
@@ -91,11 +92,6 @@ class PulsarBinary(TimingModel):
             description="Longitude of periastron"),
             binary_param = True)
 
-        self.add_param(p.floatParameter(name="M2",
-             units=u.M_sun,
-             description="Mass of companian in the unit Sun mass"),
-             binary_param = True)
-
         # Set up delay function
         self.binary_delay_funcs += [self.binarymodel_delay,]
         self.delay_funcs['L2'] += [self.binarymodel_delay,]
@@ -153,6 +149,9 @@ class PulsarBinary(TimingModel):
         return bmobj.d_binarydelay_d_par(param)
 
     def make_delay_binary_deriv_funcs(self, param):
+        """This is a funcion to make binary derivative functions to the formate
+        of d_binary_delay_d_paramName(toas)
+        """
         # TODO make this function more generalized?
         def deriv_func(toas):
             return self.d_binary_delay_d_xxxx(param, toas)
