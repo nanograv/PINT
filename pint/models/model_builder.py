@@ -4,46 +4,34 @@ import os
 
 # The timing models that we will be using
 from .timing_model import generate_timing_model, TimingModel
-from .astrometry import Astrometry
-from .dispersion_model import Dispersion
-from .spindown import Spindown
-from .glitch import Glitch
-from .bt import BT
-from .solar_system_shapiro import SolarSystemShapiro
-
 from pint.utils import split_prefixed_name
 from .parameter import prefixParameter
-from .pint_dd_model import DDwrapper
-from .frequency_dependent import FD
-from .jump import JumpDelay
-import os
+import os, inspect, fnmatch
 import glob
-import inspect
 import sys
-#import ..models as pint_models
-# List with all timing model components we will consider when pre-processing a
-# parfile
-
-
 
 def get_componets():
-    sub_timing_classes = TimingModel.__subclasses__()
     timing_comps = {}
-    timing_model_modules = TimingModel.__module__
-    for sub_c in sub_timing_classes:
-        module = sub_c.__module__
-        if module not in timing_comps.keys():
-            timing_comps[module] = []
-        for name, obj in inspect.getmembers(sys.modules[module]):
-            if inspect.isclass(obj):
-                if obj.__module__ == module:
-                    if obj not in timing_comps[module]:
-                        timing_comps[module].append(obj)
-                    #check subclasses
-                    for s in obj.__subclasses__():
-                        if s.__module__ not in timing_comps[module] and \
-                           s.__module__ != TimingModel.__module__:
-                            timing_comps[module].append(s)
+    path = os.path.dirname(os.path.abspath(__file__))
+    for root, dirnames, filenames in os.walk(path):
+        for filename in fnmatch.filter(filenames, '*.py'):
+            if filename == '__init__.py':
+                continue
+            mod_root_start = root.find('PINT/pint/models')
+            if mod_root_start + len('PINT/pint/models') > len(root):
+                mod_root = ''
+            else:
+                mod_root = root[mod_root_start + len('PINT/pint/models/'):]
+            mod = os.path.join(mod_root, filename).replace("/", ".")[:-3]
+            exec('import %s as tmp' % mod)
+            s = set()
+            for k, v in tmp.__dict__.items():
+                if inspect.isclass(v) and issubclass(v, TimingModel):
+                    if k == 'TimingModel':
+                        continue
+                    s.add(v)
+                if s != set():
+                    timing_comps[tmp.__name__] = s
     return timing_comps
 
 ComponentsList = get_componets()
@@ -217,7 +205,6 @@ class model_builder(object):
 
         self.model_instance = model()
         self.param_inModel = self.model_instance.params
-        self.param_register = self.model_instance.param_register
         self.prefix_names = self.model_instance.prefix_params
         # Find unrecognised parameters in par file.
 
@@ -233,7 +220,7 @@ class model_builder(object):
                     self.param_unrecognized[pp] = self.param_inparF[pp]
 
             for ptype in ['prefixParameter', 'maskParameter']:
-                prefix_in_model = self.param_register.get(ptype, [])
+                prefix_in_model = self.model_instance.get_params_of_type(ptype)
                 prefix_param = self.search_prefix_param(self.param_unrecognized.keys(),
                                                         prefix_in_model)
                 for key in prefix_param.keys():

@@ -60,7 +60,7 @@ class Glitch(TimingModel):
     def setup(self):
         super(Glitch, self).setup()
         # Check for required params, Check for Glitch numbers
-        self.num_glitches = self.num_prefix_params['GLPH_']
+        self.num_glitches = len(self.get_prefix_mapping('GLPH_'))
         glphparams = [x for x in self.params if x.startswith('GLPH_')]
         # check if glitch phase matches GLEP, GLF0, GLF1
         for glphnm in glphparams:
