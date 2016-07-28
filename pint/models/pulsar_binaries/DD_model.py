@@ -393,56 +393,56 @@ class DDmodel(PSR_BINARY):
         return (Dre*(1-nHat*Drep+(nHat*Drep)**2+1.0/2*nHat**2*Dre*Drepp-\
                 1.0/2*e*sinE/(1-e*cosE)*nHat**2*Dre*Drep)).decompose()
 
+    # @Cache.use_cache
+    # def d_delayI_d_par(self,par):
+    #     """ddelayI/dPar = dDre/dPar*delayI/Dre       [1] half
+    #                       +Dre*d(delayI/Dre)/dPar    [2] half
+    #        d(delayI/Dre)/dPar = -nhat*dDrep/dPar-Drep*dnhat/dPar   part (1)
+    #                             +2*Drep*nhat*(nhat*dDrep/dPar+Drep*dnhat/dPar  part (2)
+    #                             +1/2*nhat*(Drepp*nhat*dDre/dPar+Dre*nhat*dDrepp/dPar+2*Dre*Drepp*dnhat/dPar) part (3)
+    #                             +Part4    part (4)
+    #        Define x:= -1.0/2*ecct*sin(E)/(1-ecct*cos(E))
+    #        part4 = nhat*(Dre*Drep*nhat*dx/dPar+x*(Drep*nHat*dDre/dPar+Dre*nHat*dDrep/dPar+
+    #                2*Dre*Drep*dnhat/dPar))
+    #        dx/dPar = (-ecc*cos(E)*dE/dPar-sin(E)*decc/dPar
+    #                  +ecc*sin(E)*(-cos(E)*decc/dPar+ecc*sin(E)*dE/dPar)/(1-ecc*cos(E)))/(2*(1-ecc*cos(E)))
+    #     """
+    #     e = self.ecc()
+    #     sE = np.sin(self.E())
+    #     cE = np.cos(self.E())
+    #     dE_dpar = self.prtl_der('E',par)
+    #     decc_dpar = self.prtl_der('ecc',par)
+    #
+    #     Dre = self.Dre()
+    #     Drep = self.Drep()
+    #     Drepp = self.Drepp()
+    #     nHat = self.nhat()
+    #     delayI = self.delayInverse()
+    #
+    #     dDre_dpar = self.d_Dre_d_par(par)
+    #     dDrep_dpar = self.d_Drep_d_par(par)
+    #     dDrepp_dpar = self.d_Drepp_d_par(par)
+    #     dnhat_dpar = self.d_nhat_d_par(par)
+    #     oneMeccTcosE = (1-e*cE) # 1-e*cos(E)
+    #
+    #     x =  -1.0/2.0*e*sE/oneMeccTcosE # -1/2*e*sin(E)/(1-e*cos(E))
+    #
+    #     dx_dpar = -sE/(2*oneMeccTcosE**2)*decc_dpar+e*(e-cE)/(2*oneMeccTcosE**2)*dE_dpar
+    #     #First half
+    #     H1 = dDre_dpar*delayI/Dre
+    #     # For second half
+    #     part1 = -nHat*dDrep_dpar-Drep*dnhat_dpar
+    #     part2 = 2*Drep*nHat*(nHat*dDrep_dpar+Drep*dnhat_dpar)
+    #     part3 = 1.0/2.0*nHat*(Drepp*nHat*dDre_dpar+Dre*nHat*dDrepp_dpar+2*Dre*Drepp*dnhat_dpar)
+    #     part4 = nHat*(Dre*Drep*nHat*dx_dpar+  \
+    #             x*(Drep*nHat*dDre_dpar+Dre*nHat*dDrep_dpar+2*Dre*Drep*dnhat_dpar))
+    #
+    #     H2 = Dre*(part1+part2+part3+part4)
+    #
+    #     return H1+H2
+
     @Cache.use_cache
     def d_delayI_d_par(self,par):
-        """ddelayI/dPar = dDre/dPar*delayI/Dre       [1] half
-                          +Dre*d(delayI/Dre)/dPar    [2] half
-           d(delayI/Dre)/dPar = -nhat*dDrep/dPar-Drep*dnhat/dPar   part (1)
-                                +2*Drep*nhat*(nhat*dDrep/dPar+Drep*dnhat/dPar  part (2)
-                                +1/2*nhat*(Drepp*nhat*dDre/dPar+Dre*nhat*dDrepp/dPar+2*Dre*Drepp*dnhat/dPar) part (3)
-                                +Part4    part (4)
-           Define x:= -1.0/2*ecct*sin(E)/(1-ecct*cos(E))
-           part4 = nhat*(Dre*Drep*nhat*dx/dPar+x*(Drep*nHat*dDre/dPar+Dre*nHat*dDrep/dPar+
-                   2*Dre*Drep*dnhat/dPar))
-           dx/dPar = (-ecc*cos(E)*dE/dPar-sin(E)*decc/dPar
-                     +ecc*sin(E)*(-cos(E)*decc/dPar+ecc*sin(E)*dE/dPar)/(1-ecc*cos(E)))/(2*(1-ecc*cos(E)))
-        """
-        e = self.ecc()
-        sE = np.sin(self.E())
-        cE = np.cos(self.E())
-        dE_dpar = self.prtl_der('E',par)
-        decc_dpar = self.prtl_der('ecc',par)
-
-        Dre = self.Dre()
-        Drep = self.Drep()
-        Drepp = self.Drepp()
-        nHat = self.nhat()
-        delayI = self.delayInverse()
-
-        dDre_dpar = self.d_Dre_d_par(par)
-        dDrep_dpar = self.d_Drep_d_par(par)
-        dDrepp_dpar = self.d_Drepp_d_par(par)
-        dnhat_dpar = self.d_nhat_d_par(par)
-        oneMeccTcosE = (1-e*cE) # 1-e*cos(E)
-
-        x =  -1.0/2.0*e*sE/oneMeccTcosE # -1/2*e*sin(E)/(1-e*cos(E))
-
-        dx_dpar = -sE/(2*oneMeccTcosE**2)*decc_dpar+e*(e-cE)/(2*oneMeccTcosE**2)*dE_dpar
-        #First half
-        H1 = dDre_dpar*delayI/Dre
-        # For second half
-        part1 = -nHat*dDrep_dpar-Drep*dnhat_dpar
-        part2 = 2*Drep*nHat*(nHat*dDrep_dpar+Drep*dnhat_dpar)
-        part3 = 1.0/2.0*nHat*(Drepp*nHat*dDre_dpar+Dre*nHat*dDrepp_dpar+2*Dre*Drepp*dnhat_dpar)
-        part4 = nHat*(Dre*Drep*nHat*dx_dpar+  \
-                x*(Drep*nHat*dDre_dpar+Dre*nHat*dDrep_dpar+2*Dre*Drep*dnhat_dpar))
-
-        H2 = Dre*(part1+part2+part3+part4)
-
-        return H1+H2
-
-    @Cache.use_cache
-    def d_delayI_d_par2(self,par):
         """Second way of doing derivative on delay inverse. Did not test the
            accuracy against the first way yet.
         """
