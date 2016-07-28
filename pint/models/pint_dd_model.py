@@ -16,6 +16,12 @@ class BinaryDD(PulsarBinary):
     It is a wrapper for independent DDmodel class defined in ./pulsar_binary/DD_model.py
     All the detailed calculations are in the independent DDmodel.
     The aim for this class is to connect the independent binary model with PINT platform
+    DDmodel special parameters:
+    A0 Aberration
+    B0 Aberration
+    GAMMA Binary Einsten delay coeeficient
+    DR Relativistic deformation of the orbit
+    DTH Relativistic deformation of the orbit
     """
 
     def __init__(self,):
@@ -48,6 +54,10 @@ class BinaryDD(PulsarBinary):
              description="Relativistic deformation of the orbit",),
              binary_param = True)
 
+        self.add_param(p.floatParameter(name="M2",
+             units=u.M_sun,
+             description="Mass of companian in the unit Sun mass"),
+             binary_param = True)
 
         self.add_param(p.floatParameter(name="SINI", value=0.0,
              units="",
