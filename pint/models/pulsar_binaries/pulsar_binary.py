@@ -47,7 +47,6 @@ class PSR_BINARY(object):
         self.binary_delay_funcs = []
         self.d_binarydelay_d_par_funcs = []
 
-
     @property
     def t(self):
         return self._t
@@ -68,6 +67,7 @@ class PSR_BINARY(object):
     @property
     def tt0(self):
         return self._tt0
+        
     def set_param_values(self,valDict = None):
         """A function that sets the parameters and assign values
            If the valDict is not provided, it will set parameter as default value
