@@ -18,10 +18,23 @@ from ..toa_select import TOASelect
 
 
 class Parameter(object):
-    """A PINT class describing a single timing model parameter. The parameter
-    value will be stored at `value` property in a users speicified format. At
-    the same time property `num_value` will store a num value from the value
-    and `num_unit` will store the basic unit in the format of `Astropy.units`
+    """A base PINT class describing a single timing model parameter.
+    PINT Parameter class will have
+
+    A `Parameter` object can be created with one of the subclasses provided by
+    `PINT` depending on the parameter usage.
+    Currnet Parameter type:
+    [`floatParameter`, `strParameter`, `boolParameter`, `MDJParameter`,
+     `AngleParameter`, `prefixParameter`, `maskParameter`]
+
+    Parameter Mechanism
+    Parameter value will be stored at `.quantity` property in a parameter type
+    speicified format. If applicable, Parameter default unit is stored at
+    `.units` property which is an `astropy.unit` object. Property `.value` always
+    returns a pure value associate with `.units` from `.quantity`. `.uncertainty`
+    provides the storage for parameter uncertainty and `.uncertainty_value` for
+    pure uncertainty value. Like `.value`, `.uncertainty_value` always associate
+    with default unit.
 
     Parameters
     ----------
@@ -31,7 +44,7 @@ class Parameter(object):
             object
         The input parameter value.
     units : str or Astropy.units, optional
-        Parameter default unit. Parameter .value and .num_uncertainty attribute
+        Parameter default unit. Parameter .value and .uncertainty_value attribute
         will associate with the default units.
     description : str, optional
         A short description of what this parameter means.
@@ -159,7 +172,6 @@ class Parameter(object):
                 self._quantity = val
                 return
         self._quantity = self.set_quantity(val)
-        #self._num_value = self.get_num_value(self._value)
 
     def prior_pdf(self,value=None, logpdf=False):
         """Return the prior probability, evaluated at the current value of
@@ -221,12 +233,12 @@ class Parameter(object):
                                  ' allowed.')
             else:
                 self._uncertainty = val
-                self._num_uncertainty = self._uncertainty
+                self._uncertainty_value = self._uncertainty
                 return
         self._uncertainty = self.set_uncertainty(val)
 
     @property
-    def num_uncertainty(self):
+    def uncertainty_value(self):
         """Return a pure value from .uncertainty. The unit will associate
         with .units
         """
@@ -235,18 +247,18 @@ class Parameter(object):
         else:
             return self.get_value(self._uncertainty)
 
-    @num_uncertainty.setter
-    def num_uncertainty(self, val):
-        """Setter for num_uncertainty. Setting .num_uncertainty will only change
+    @uncertainty_value.setter
+    def uncertainty_value(self, val):
+        """Setter for uncertainty_value. Setting .uncertainty_value will only change
         the .uncertainty attribute.
         """
         if val is None:
             if not isinstance(self.uncertainty, (str, bool)) and \
-                self._num_uncertainty is not None:
+                self._uncertainty_value is not None:
                 log.warning('This parameter has uncertainty value. '
                             'Change it to None will lost information.')
             else:
-                self.num_uncertainty = val
+                self.uncertainty_value = val
         self._uncertainty = self.set_uncertainty(val)
 
     def __str__(self):
@@ -327,8 +339,38 @@ class Parameter(object):
         return (name == self.name) or (name in self.aliases)
 
 class floatParameter(Parameter):
-    """This is a Parameter type that is specific to astropy quantity values
-       .quantity will be a astropy quantity class.
+    """This is a Parameter type that is specific to the parameters has a float/
+    float128 quantity as its value.
+
+    `.quantity` stores parameter value and its unit in an
+    `astropy.units.quantity` class. The unit of `.quantity` can be any unit
+    that convertable to default unit.
+
+    Parameters
+    ----------
+    name : str
+        The name of the parameter.
+    value : number, str, `Astropy.units.Quantity` object,
+        The input parameter float value.
+    units : str or Astropy.units
+        Parameter default unit. Parameter .value and .uncertainty_value attribute
+        will associate with the default units. If unit is dimensionless, use
+        "''" as its unit.
+    description : str, optional
+        A short description of what this parameter means.
+    uncertainty : number
+        Current uncertainty of the value.
+    frozen : bool, optional
+        A flag specifying whether "fitters" should adjust the value of this
+        parameter or leave it fixed.
+    aliases : list, optional
+        An optional list of strings specifying alternate names that can also
+        be accepted for this parameter.
+    continuous : bool, optional, default True
+        A flag specifying whether phase derivatives with respect to this
+        parameter exist.
+    long_double : bool, optional, default False
+        A flag specifying whether value is float or float128/longdouble.
     """
     def __init__(self, name=None, value=None, units=None, description=None,
                  uncertainty=None, frozen=True, aliases=[], continuous=True,
@@ -635,9 +677,9 @@ class prefixParameter(Parameter):
             parameter or leave it fixed.
         continuous : bool
         type_match : str, optinal, default 'float'
-            Example paramter class template for value and num_value setter
+            Example paramter class template for quantity and value setter
         long_double : bool, optional default 'double'
-            Set float type value and num_value in numpy float128
+            Set float type quantity and value in numpy float128
         time_scale : str, optional default 'utc'
             Time scale for MJDParameter class.
     """
@@ -695,7 +737,7 @@ class prefixParameter(Parameter):
             self.unit_template = lambda x: self.units
         if self.description_template is None:
             self.description_template = lambda x: self.descrition
-        # Using other parameter class as a template for value and num_value
+        # Using other parameter class as a template for Quantity and value
         # setter
         self.type_identifier = {
                                'float': (floatParameter, {'units' : '',
@@ -824,7 +866,7 @@ class maskParameter(Parameter):
         value : float or long_double optinal
             Toas/phase adjust value
         long_double : bool, optional default 'double'
-            Set float type value and num_value in numpy float128
+            Set float type quantity and value in numpy float128
         units : str optional
             Unit for the offset value
         description : str optional
