@@ -494,7 +494,7 @@ class TimingModel(object):
 
         # For Binary model component
         try:
-            if getattr(self,'BinaryModelName') == para_dict['BINARY'][0]:
+            if getattr(self,'binary_model_name') == para_dict['BINARY'][0]:
                 return True
             else:
                 return False
