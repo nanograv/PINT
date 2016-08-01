@@ -75,7 +75,7 @@ data_urls = [
         "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de430t.bsp",
         "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/earth_latest_high_prec.bpc",
         "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00010.tpc",
-        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0011.tls",
+        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls",
         "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/de-403-masses.tpc"
         ]
 data_files = []

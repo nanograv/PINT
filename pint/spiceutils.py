@@ -20,28 +20,15 @@ def load_kernels(ephem="DE421"):
         spice.furnsh(datapath("pck00010.tpc"))
         log.info("SPICE loaded planetary constants.")
         try:
-            spice.furnsh(datapath("naif0011.tls"))
+            spice.furnsh(datapath("naif0012.tls"))
         except:
-            log.error("Download updated leap second file (naif0011.tls)"+
+            log.error("Download updated leap second file (naif0012.tls)"+
                       " using download script in $PINT/datafiles directory.")
             sys.exit()
         log.info("SPICE loaded leap seconds.")
         spice.furnsh(datapath("earth_latest_high_prec.bpc"))
         log.info("SPICE loaded Earth rotation parameters.")
         spice.furnsh(datapath("%s.bsp" % ephem.lower()))
-        log.info("SPICE loaded DE%s Planetary Ephemeris." % ephem[2:])
-        kernels_loaded = True
-
-def load_kernels_cython(ephem="DE421"):
-    global kernels_loaded
-    if not kernels_loaded:
-        spice_util.furnsh_py(datapath("pck00010.tpc"))
-        log.info("SPICE loaded planetary constants.")
-        spice_util.furnsh_py(datapath("naif0010.tls"))
-        log.info("SPICE loaded leap seconds.")
-        spice_util.furnsh_py(datapath("earth_latest_high_prec.bpc"))
-        log.info("SPICE loaded Earth rotation parameters.")
-        spice_util.furnsh_py(datapath("%s.bsp" % ephem.lower()))
         log.info("SPICE loaded DE%s Planetary Ephemeris." % ephem[2:])
         kernels_loaded = True
 
