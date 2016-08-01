@@ -28,7 +28,7 @@ class DDmodel(PSR_BINARY):
     >>> t = numpy.linspace(54200.0,55000.0,800)
     >>> binary_model = DDmodel(t)
     >>> paramters_dict = {'A0':0.5,'ECC':0.01}
-    >>> binary_model.set_par_values(paramters_dict)
+    >>> binary_model.set_param_values(paramters_dict)
     Here the binary has time input and parameters input, the delay can be
     calculated.
     """
