@@ -31,7 +31,7 @@ class BT(TimingModel):
 
         # Parameters are mostly defined as numpy doubles.
         # Some might become long doubles in the future.
-        self.BinaryModelName = 'BT'
+        self.binary_model_name = 'BT'
         self.add_param(p.floatParameter(name="PB",
             units="s",
             description="Orbital period"))
