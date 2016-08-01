@@ -31,7 +31,7 @@ class BT(TimingModel):
 
         # Parameters are mostly defined as numpy doubles.
         # Some might become long doubles in the future.
-        self.BinaryModelName = 'BT'
+        self.binary_model_name = 'BT'
         self.add_param(p.floatParameter(name="PB",
             units="s",
             description="Orbital period"))
@@ -127,7 +127,7 @@ class BT(TimingModel):
 
             # T0 needs to be converted to long double
             parobj = getattr(self, key)
-            pardict[par] = parobj.num_value 
+            pardict[par] = parobj.num_value
 
         # Apply all the delay terms, except for the binary model itself
         tt0 = toas['tdbld'] * SECS_PER_DAY
