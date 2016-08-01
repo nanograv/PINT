@@ -20,7 +20,7 @@ class FD(TimingModel):
                        type_match='float'))
 
         self.delay_funcs['L1'] += [self.FD_delay]
-        
+
     def setup(self):
         super(FD, self).setup()
         # Check if FD terms are in order.
@@ -35,7 +35,7 @@ class FD(TimingModel):
         # set up derivative functions
         for ii, val in FD_mapping.iteritems():
             self.make_delay_FD_deriv_funcs(val)
-            self.deriv_func += [getattr(self, 'd_delay_FD_d_' + val)]
+            self.delay_derivs += [getattr(self, 'd_delay_FD_d_' + val)]
 
 
     def FD_delay(self, toas):
