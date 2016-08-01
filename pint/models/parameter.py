@@ -371,6 +371,12 @@ class floatParameter(Parameter):
         parameter exist.
     long_double : bool, optional, default False
         A flag specifying whether value is float or float128/longdouble.
+
+    Example::
+        >>> from parameter import floatParameter
+        >>> test = floatParameter(name='test1', value=100.0, units='second')
+        >>> print test
+        test1 (s) 100.0
     """
     def __init__(self, name=None, value=None, units=None, description=None,
                  uncertainty=None, frozen=True, aliases=[], continuous=True,
