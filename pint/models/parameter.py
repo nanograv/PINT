@@ -28,13 +28,15 @@ class Parameter(object):
      `AngleParameter`, `prefixParameter`, `maskParameter`]
 
     Parameter Mechanism
-    Parameter value will be stored at `.quantity` property in a parameter type
-    speicified format. If applicable, Parameter default unit is stored at
-    `.units` property which is an `astropy.unit` object. Property `.value` always
-    returns a pure value associate with `.units` from `.quantity`. `.uncertainty`
-    provides the storage for parameter uncertainty and `.uncertainty_value` for
-    pure uncertainty value. Like `.value`, `.uncertainty_value` always associate
-    with default unit.
+    Parameter current value informat will be stored at `.quantity` property
+    which can be a fixibale format, for example astropy.quantity in
+    floatParameter and string in strParameter, (For more detail see Parameter
+    subclasses docstrings). If applicable, Parameter default unit is
+    stored at`.units` property which is an `astropy.unit` object. Property
+    `.value` always returns a pure value associate with `.units` from
+    `.quantity`. `.uncertainty` provides the storage for parameter uncertainty
+    and `.uncertainty_value` for pure uncertainty value. Like `.value`,
+    `.uncertainty_value` always associate with default unit.
 
     Parameters
     ----------
@@ -342,7 +344,7 @@ class floatParameter(Parameter):
     """This is a Parameter type that is specific to the parameters has a float/
     float128 quantity as its value.
 
-    `.quantity` stores parameter value and its unit in an
+    `.quantity` stores current parameter value and its unit in an
     `astropy.units.quantity` class. The unit of `.quantity` can be any unit
     that convertable to default unit.
 
@@ -442,15 +444,35 @@ class floatParameter(Parameter):
 
 
 class strParameter(Parameter):
-    """This is a Parameter type that is specific to string values
+    """This is a Parameter type that is specific to string values.
+    `.quantity` stores current parameter information in a string. `.value`
+    returns the same with `.quantity`. `.units` is not applicable.
+    `strParameter` is not fitable.
+
+    Parameter
+    ---------
+    name : str
+        The name of the parameter.
+    value : str
+        The input parameter string value.
+    description : str, optional
+        A short description of what this parameter means.
+    aliases : list, optional
+        An optional list of strings specifying alternate names that can also
+        be accepted for this parameter.
+
+    Example::
+        >>> from parameter import strParameter
+        >>> test = strParameter(name='test1', value='This is a test',)
+        >>> print test
+        test1 This is a test
     """
-    def __init__(self, name=None, value=None, description=None, frozen=True,
+    def __init__(self, name=None, value=None, description=None,
                  aliases=[]):
         print_quantity = str
         get_value = lambda x: x
         set_quantity = lambda x: str(x)
         set_uncertainty = lambda x: None
-        #get_value = self.get_value_str
 
         super(strParameter, self).__init__(name=name, value=value,
                                            description=None, frozen=True,
@@ -465,7 +487,28 @@ class strParameter(Parameter):
 
 
 class boolParameter(Parameter):
-    """This is a Parameter type that is specific to boolean values
+    """This is a Parameter type that is specific to boolean values.
+    `.quantity` stores current parameter information in boolean type. `.value`
+    returns the same with `.quantity`. `.units` is not applicable.
+    `boolParameter` is not fitable.
+
+    Parameter
+    ---------
+    name : str
+        The name of the parameter.
+    value : str, bool, [0,1]
+        The input parameter boolean value.
+    description : str, optional
+        A short description of what this parameter means.
+    aliases : list, optional
+        An optional list of strings specifying alternate names that can also
+        be accepted for this parameter.
+
+    Example::
+        >>> from parameter import boolParameter
+        >>> test = boolParameter(name='test1', value='N')
+        >>> print test
+        test1 N
     """
     def __init__(self, name=None, value=None, description=None, frozen=True,
                  aliases=[]):
@@ -473,8 +516,6 @@ class boolParameter(Parameter):
         set_quantity = self.set_quantity_bool
         get_value = lambda x: x
         set_uncertainty = lambda x: None
-        #get_value = lambda x: log.warning('Can not set a pure value to a '
-                                               #'string boolen parameter.')
         super(boolParameter, self).__init__(name=name, value=value,
                                             description=None, frozen=True,
                                             aliases=aliases,
@@ -499,7 +540,39 @@ class boolParameter(Parameter):
             return bool(val)
 
 class MJDParameter(Parameter):
-    """This is a Parameter type that is specific to MJD values."""
+    """This is a Parameter type that is specific to MJD values.
+    `.quantity` stores current parameter information in an `astropy.Time` type
+    in the format of MJD. `.value` returns the pure MJD value. `.units` is in
+    day as default unit.
+
+    Parameter
+    ---------
+    name : str
+        The name of the parameter.
+    value : astropy Time, str, float in mjd, str in mjd.
+        The input parameter MJD value.
+    description : str, optional
+        A short description of what this parameter means.
+    uncertainty : number
+        Current uncertainty of the value.
+    frozen : bool, optional
+        A flag specifying whether "fitters" should adjust the value of this
+        parameter or leave it fixed.
+    continuous : bool, optional, default True
+        A flag specifying whether phase derivatives with respect to this
+        parameter exist.
+    aliases : list, optional
+        An optional list of strings specifying alternate names that can also
+        be accepted for this parameter.
+    time_scale : str, optional, default 'utc'
+        MJD parameter time scale.
+
+    Example::
+        >>> from parameter import MJDParameter
+        >>> test = MJDParameter(name='test1', value='54000', time_scale='utc')
+        >>> print test
+        test1 (d) 54000.000000000000000
+    """
     def __init__(self, name=None, value=None, description=None,
                  uncertainty=None, frozen=True, continuous=True, aliases=[],
                  time_scale='utc'):
@@ -547,7 +620,38 @@ class MJDParameter(Parameter):
 
 
 class AngleParameter(Parameter):
-    """This is a Parameter type that is specific to Angle values."""
+    """This is a Parameter type that is specific to Angle values.
+    `.quantity` stores current parameter information in an `astropy Angle` type.
+    `.value` returns the pure angle value associate with default unit.
+    `.units` currently can accept angle format  {'h:m:s': u.hourangle,
+    'd:m:s': u.deg, 'rad': u.rad, 'deg': u.deg}
+
+    Parameter
+    ---------
+    name : str
+        The name of the parameter.
+    value : angle string, float, astropy angle object
+        The input parameter angle value.
+    description : str, optional
+        A short description of what this parameter means.
+    uncertainty : number
+        Current uncertainty of the value.
+    frozen : bool, optional
+        A flag specifying whether "fitters" should adjust the value of this
+        parameter or leave it fixed.
+    continuous : bool, optional, default True
+        A flag specifying whether phase derivatives with respect to this
+        parameter exist.
+    aliases : list, optional
+        An optional list of strings specifying alternate names that can also
+        be accepted for this parameter.
+
+    Example::
+        >>> from parameter import AngleParameter
+        >>> test = AngleParameter(name='test1', value='12:20:10', units='H:M:S')
+        >>> print test
+        test1 (hourangle) 12:20:10.00000000
+    """
     def __init__(self, name=None, value=None, description=None, units='rad',
              uncertainty=None, frozen=True, continuous=True, aliases=[]):
         self._str_unit = units
@@ -594,11 +698,7 @@ class AngleParameter(Parameter):
         if isinstance(val, numbers.Number):
             result = Angle(val * self.units)
         elif isinstance(val, str):
-            try:
-                result = Angle(val + self.unitsuffix)
-            except:
-                raise ValueError('Srting ' + val + ' can not be converted to'
-                                 ' astropy angle.')
+            result = Angle(val + self.unitsuffix)
         elif hasattr(val, 'unit'):
             result = Angle(val.to(self.units))
         else:
