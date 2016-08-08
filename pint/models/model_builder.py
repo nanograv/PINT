@@ -144,7 +144,7 @@ class model_builder(object):
                     if hasattr(cclass,'model_special_params'):
                         if any(par in params_inpar.keys() for par in cclass.model_special_params):
                             selected_c = c
-                            continue
+                            break
                         else:  # If no special parameters, ignore.
                             continue
 
