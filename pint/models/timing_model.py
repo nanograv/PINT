@@ -97,11 +97,38 @@ class Cache(object):
 
 
 class TimingModel(object):
+    """Base-level object provids an interface for implementing pulsar timing
+    models. A timing model generally have the following parts:
+        Parameters
+        Delay/Phase functions
+        Derivatives of dealy and phase respect to parameter
+    In PINT, one timing model would be a subclass of `TimingModel` class. The
+    required parts has to be provided in order to compute the residuals and update
+    the model, in other words, fit the model.
+    Example code for developers:
 
+    import parameter as p
+    from .timing_model import TimingModel, MissingParameter
+
+    class MyModel(object):
+        def __init__(self):
+            super(MyModel, self).__init__()
+            self.add_param(p.floatParameter(name="F0", value=0.0, units="Hz",
+                           description="Spin-frequency", long_double=True))
+            self.delay_funcs += [self.MyModel_delay, ]
+        def setup(self):
+            super(MyModel, self).setup()
+
+        def MyModel_delay(self):
+            pass
+            return delay
+    To make it work with PINT model builder, The new component should be added
+    to the ComponentsList in the top of model_builder.py file. Note: In the future
+    this will be automaticly detected.
+    """
     def __init__(self):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
-        self.num_prefix_params = {}
         self.delay_funcs = {'L1':[],'L2':[]} # List of delay component functions
         # L1 is the first level of delays. L1 delay does not need barycentric toas
         # After L1 delay, the toas have been corrected to solar system barycenter.
@@ -109,7 +136,6 @@ class TimingModel(object):
 
         self.phase_funcs = [] # List of phase component functions
         self.cache = None
-        self.param_register = {}
         self.add_param(strParameter(name="PSR",
             description="Source name",
             aliases=["PSRJ", "PSRB"]))
@@ -126,19 +152,7 @@ class TimingModel(object):
         """
         setattr(self, param.name, param)
         self.params += [param.name,]
-        par_type = type(param).__name__
-        if par_type in self.param_register.keys():
-            self.param_register[par_type].append(param.name)
-        else:
-            self.param_register[par_type] = [param.name]
 
-        if param.is_prefix is True:
-            if param.prefix not in self.prefix_params:
-                self.prefix_params.append(param.prefix)
-            if self.num_prefix_params.has_key(param.prefix):
-                self.num_prefix_params[param.prefix]+=1
-            else:
-                self.num_prefix_params[param.prefix]=1
         if binary_param is True:
             self.binary_params +=[param.name,]
 
@@ -151,6 +165,18 @@ class TimingModel(object):
             s += "%s\n" % getattr(self, par).help_line()
         return s
 
+    def get_params_of_type(self, param_type):
+        """ Get all the parameters in timing model for one specific type
+        """
+        result = []
+        for p in self.params:
+            par = getattr(self, p)
+            par_type = type(par).__name__
+            par_prefix = par_type[:-9]
+            if param_type.upper() == par_type.upper() or \
+                param_type.upper() == par_prefix.upper():
+                result.append(par.name)
+        return result
 
     @Cache.use_cache
     def get_prefix_mapping(self,prefix):
@@ -503,7 +529,6 @@ def generate_timing_model(name, components, attributes={}):
         numComp = len(components)
     except:
         components = (components,)
-
     for c in components:
         try:
             if not issubclass(c,TimingModel):

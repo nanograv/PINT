@@ -46,7 +46,7 @@ class fitter(object):
 
     def get_fitparams_num(self):
         """Return a dict of fittable param names and numeric values."""
-        return dict((k, getattr(self.model, k).num_value) for k in
+        return dict((k, getattr(self.model, k).value) for k in
                     self.model.params if not getattr(self.model, k).frozen)
 
     def set_params(self, fitp):
@@ -54,7 +54,7 @@ class fitter(object):
 
         Ex. fitter.set_params({'F0':60.1,'F1':-1.3e-15})
         """
-        for k, v in fitp.items(): 
+        for k, v in fitp.items():
             # The check for astropy units should be able to go away once params are fixed
             getattr(self.model, k).num_value = v.value if has_astropy_unit(v) else v
 

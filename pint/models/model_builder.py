@@ -3,24 +3,38 @@
 import os
 
 # The timing models that we will be using
-from .timing_model import generate_timing_model
-from .astrometry import Astrometry
-from .dispersion_model import Dispersion
-from .spindown import Spindown
-from .glitch import Glitch
-from .bt import BT
-from .solar_system_shapiro import SolarSystemShapiro
-
+from .timing_model import generate_timing_model, TimingModel
 from pint.utils import split_prefixed_name
 from .parameter import prefixParameter
-from .pint_dd_model import DDwrapper
-from .frequency_dependent import FD
-from .jump import JumpDelay
-# List with all timing model components we will consider when pre-processing a
-# parfile
+import os, inspect, fnmatch
+import glob
+import sys
 
-ComponentsList = [Astrometry, Spindown, Dispersion, SolarSystemShapiro,
-                  BT, DDwrapper, Glitch, JumpDelay, FD]
+def get_componets():
+    timing_comps = {}
+    path = os.path.dirname(os.path.abspath(__file__))
+    for root, dirnames, filenames in os.walk(path):
+        for filename in fnmatch.filter(filenames, '*.py'):
+            if filename == '__init__.py':
+                continue
+            mod_root_start = root.find('pint/models')
+            if mod_root_start + len('pint/models') > len(root):
+                mod_root = ''
+            else:
+                mod_root = root[mod_root_start + len('pint/models/'):]
+            mod = os.path.join(mod_root, filename).replace("/", ".")[:-3]
+            exec('import %s as tmp' % mod)
+            s = set()
+            for k, v in tmp.__dict__.items():
+                if inspect.isclass(v) and issubclass(v, TimingModel):
+                    if k == 'TimingModel':
+                        continue
+                    s.add(v)
+                if s != set():
+                    timing_comps[tmp.__name__] = s
+    return timing_comps
+
+ComponentsList = get_componets()
 
 default_models = ["StandardTimingModel",]
 class model_builder(object):
@@ -121,21 +135,24 @@ class model_builder(object):
            Put the needed on in the selected components list
         """
         params_inpar = self.preprocess_parfile(parfile)
-        comp_classes = [c() for c in self.comps]
-        for c in self.comps:
-            cclass = c()
-            if cclass.is_in_parfile(params_inpar):
-                if c not in self.select_comp:
-                    self.select_comp.append(c)
-        # Check if model components has subclass that matches parfile better. 
-        for sc in self.select_comp:
-            for subc in sc.__subclasses__():
-                if subc.__name__ not in default_models:
-                    sub_inst = subc()
-                    if hasattr(sub_inst,'model_special_params'):
-                        if any(par in params_inpar.keys() for par in sub_inst.model_special_params):
-                            self.select_comp.append(subc)
-                            self.select_comp.remove(sc)
+        for module in self.comps.keys():
+            selected_c = None
+            for c in self.comps[module]:
+                cclass = c()
+                #Check is this components a subclass of other components
+                if TimingModel not in c.__bases__:
+                    if hasattr(cclass,'model_special_params'):
+                        if any(par in params_inpar.keys() for par in cclass.model_special_params):
+                            selected_c = c
+                            break
+                        else:  # If no special parameters, ignore.
+                            continue
+
+                if cclass.is_in_parfile(params_inpar):
+                    selected_c = c
+            # One module will have one selected component
+            if selected_c is not None and selected_c not in self.select_comp:
+                self.select_comp.append(selected_c)
 
     def build_model(self):
         """ Return a model with all components listed in the self.components
@@ -188,7 +205,6 @@ class model_builder(object):
 
         self.model_instance = model()
         self.param_inModel = self.model_instance.params
-        self.param_register = self.model_instance.param_register
         self.prefix_names = self.model_instance.prefix_params
         # Find unrecognised parameters in par file.
 
@@ -204,7 +220,7 @@ class model_builder(object):
                     self.param_unrecognized[pp] = self.param_inparF[pp]
 
             for ptype in ['prefixParameter', 'maskParameter']:
-                prefix_in_model = self.param_register.get(ptype, [])
+                prefix_in_model = self.model_instance.get_params_of_type(ptype)
                 prefix_param = self.search_prefix_param(self.param_unrecognized.keys(),
                                                         prefix_in_model)
                 for key in prefix_param.keys():

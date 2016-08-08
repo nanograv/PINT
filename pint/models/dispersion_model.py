@@ -14,7 +14,7 @@ import astropy.time as time
 # But the time and freq portions are correct
 # This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
 # Astronomy, Second edition, Page 86, Note 1
-DMconst = 1.0/2.41e-4 * u.MHz * u.MHz * u.s
+DMconst = 1.0/2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
 
 class Dispersion(TimingModel):
     """This class provides a base dispersion timing model. The dm varience will
@@ -33,8 +33,8 @@ class Dispersion(TimingModel):
 
     def constant_dm(self, toas):
         cdm = np.zeros(len(toas))
-        cdm.fill(self.DM.num_value)
-        return cdm * self.DM.num_unit
+        cdm.fill(self.DM.quantity)
+        return cdm * self.DM.units
 
     def dispersion_time_delay(self, DM, freq):
         """Return the dispersion time delay for a set of frequency.
@@ -54,7 +54,7 @@ class Dispersion(TimingModel):
             warn("Using topocentric frequency for dedispersion!")
             bfreq = toas['freq']
 
-        dm = np.zeros(len(toas)) * self.DM.num_unit
+        dm = np.zeros(len(toas)) * self.DM.units
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
 
@@ -120,19 +120,19 @@ class DispersionDMX(Dispersion):
             epoch_ind = 1
             while epoch_ind in DMX_mapping:
                 # Get the parameters
-                r1 = getattr(self, DMXR1_mapping[epoch_ind]).value
-                r2 = getattr(self, DMXR2_mapping[epoch_ind]).value
+                r1 = getattr(self, DMXR1_mapping[epoch_ind]).quantity
+                r2 = getattr(self, DMXR2_mapping[epoch_ind]).quantity
                 msk = np.logical_and(toas['mjd'] >= r1, toas['mjd'] <= r2)
                 toas['DMX_section'][msk] = epoch_ind
                 epoch_ind = epoch_ind + 1
 
         # Get DMX delays
-        dm = np.zeros(len(toas)) * self.DM.num_unit
+        dm = np.zeros(len(toas)) * self.DM.units
         DMX_group = toas.group_by('DMX_section')
         for ii, key in enumerate(DMX_group.groups.keys):
             keyval = key.as_void()[0]
             if keyval != 0:
-                dmx = getattr(self, DMX_mapping[keyval]).value
+                dmx = getattr(self, DMX_mapping[keyval]).quantity
                 ind = DMX_group.groups[ii]['index']
                 dm[ind] = dmx
         return dm
