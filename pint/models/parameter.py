@@ -42,7 +42,7 @@ class Parameter(object):
     ----------
     name : str, optional
         The name of the parameter.
-    value : number, str, `Astropy.units.Quantity` object, or other datatype or
+    value : number, str, `Astropy.units.Quantity` object, or other data type or
             object
         The input parameter value.
     units : str or Astropy.units, optional
@@ -120,7 +120,7 @@ class Parameter(object):
 
     @units.setter
     def units(self, unt):
-        # Check if this is the first time set units and check compatable
+        # Check if this is the first time set units and check compatibility 
         if hasattr(self, 'quantity'):
             if self.units is not None:
                 if unt != self.units:
@@ -131,7 +131,7 @@ class Parameter(object):
                     if hasattr(self.quantity, 'unit'):
                         _ = self.quantity.to(unt)
                 except:
-                    log.warning('The value unit is not compatable with'
+                    log.warning('The value unit is not compatible with'
                                 ' parameter units right now.')
 
 
@@ -163,7 +163,7 @@ class Parameter(object):
 
     @quantity.setter
     def quantity(self, val):
-        """General wapper method to set .quantity. For different type of
+        """General wrapper method to set .quantity. For different type of
         parameters, the setter method is stored at .set_quantity attribute.
         """
         if val is None:
@@ -762,7 +762,7 @@ class prefixParameter(Parameter):
             The name of the parameter. If it is not provided, the prefix and
             index format are needed.
         prefix : str optional
-            Paremeter prefix, now it is only supporting 'prefix_' type and
+            Parameter prefix, now it is only supporting 'prefix_' type and
             'prefix0' type.
         indexformat : str optional
             The format for parameter index
