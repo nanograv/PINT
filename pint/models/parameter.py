@@ -28,8 +28,8 @@ class Parameter(object):
      `AngleParameter`, `prefixParameter`, `maskParameter`]
 
     Parameter Mechanism
-    Parameter current value informat will be stored at `.quantity` property
-    which can be a fixibale format, for example astropy.quantity in
+    Parameter current value information will be stored at `.quantity` property
+    which can be a flexible format, for example astropy.quantity in
     floatParameter and string in strParameter, (For more detail see Parameter
     subclasses docstrings). If applicable, Parameter default unit is
     stored at`.units` property which is an `astropy.unit` object. Property
@@ -211,7 +211,7 @@ class Parameter(object):
         if val is None:
             if not isinstance(self.quantity, (str, bool)) and \
                 self._quantity is not None:
-                raise ValueError('This parameter value is number convertable. '
+                raise ValueError('This parameter value is number convertible. '
                                  'Setting .value to None will lost the '
                                  'parameter value.')
             else:
@@ -226,7 +226,7 @@ class Parameter(object):
 
     @uncertainty.setter
     def uncertainty(self, val):
-        """General wapper setter for uncertainty. The setting method is stored
+        """General wrapper setter for uncertainty. The setting method is stored
         at .set_uncertainty attribute
         """
         if val is None:
@@ -283,7 +283,7 @@ class Parameter(object):
         self.aliases.append(alias)
 
     def help_line(self):
-        """Return a help line containing param name, description and units."""
+        """Return a help line containing parameter name, description and units."""
         out = "%-12s %s" % (self.name, self.description)
         if self.units is not None:
             out += ' (' + str(self.units) + ')'
@@ -346,7 +346,7 @@ class floatParameter(Parameter):
 
     `.quantity` stores current parameter value and its unit in an
     `astropy.units.quantity` class. The unit of `.quantity` can be any unit
-    that convertable to default unit.
+    that convertible to default unit.
 
     Parameters
     ----------
@@ -527,7 +527,7 @@ class boolParameter(Parameter):
         self.paramType = 'boolParameter'
 
     def set_quantity_bool(self, val):
-        """ This function is to get boolen value for boolParameter class
+        """ This function is to get boolean value for boolParameter class
         """
         # First try strings
         try:
@@ -732,7 +732,7 @@ class prefixParameter(Parameter):
         Create a prefix parameter
         To create a prefix parameter, there are two ways:
         1. Create by name
-            If optional agrument name with a prefixed format, such as DMX_001
+            If optional argument name with a prefixed format, such as DMX_001
             or F10, is given. prefixParameter class will figure out the prefix
             name, index and indexformat.
         2. Create by prefix and index
@@ -740,21 +740,21 @@ class prefixParameter(Parameter):
             name and index. The class name will be returned as prefix name plus
             index with the right index format. So the optional arguments
             prefix, indexformat and index are need. index default value is 1.
-        If both of two methods are fillfulled, It will using the first method.
-        Add descrition and units.
+        If both of two methods are filled, It will using the first method.
+        Add description and units.
         1. Direct add
-            A descrition and unit can be added directly by using the optional
-            arguments, descrition and units. Both of them will return as a
+            A description and unit can be added directly by using the optional
+            arguments, description and units. Both of them will return as a
             string attribution.
-        2. descrition and units template.
-            If the descrition and unit are changing with the prefix parameter
-            index, optional argurment descritionTplt and unitTplt are need.
+        2. description and units template.
+            If the description and unit are changing with the prefix parameter
+            index, optional argument descritionTplt and unitTplt are need.
             These two attributions are lambda functions, for example
-            >>> descritionTplt = lambda x: 'This is the descrition of parameter
+            >>> descritionTplt = lambda x: 'This is the description of parameter
                                             %d'%x
-            The class will fill the descrition and unit automaticly.
+            The class will fill the description and unit automatically.
 
-        If both two methods are fillfulled, it prefer the first one.
+        If both two methods are filled, it prefer the first one.
 
         Parameter
         ---------
@@ -782,8 +782,8 @@ class prefixParameter(Parameter):
             A flag specifying whether "fitters" should adjust the value of this
             parameter or leave it fixed.
         continuous : bool
-        type_match : str, optinal, default 'float'
-            Example paramter class template for quantity and value setter
+        type_match : str, optional, default 'float'
+            Example parameter class template for quantity and value setter
         long_double : bool, optional default 'double'
             Set float type quantity and value in numpy float128
         time_scale : str, optional default 'utc'
@@ -800,7 +800,7 @@ class prefixParameter(Parameter):
         if name is None:
             if prefix is None or indexformat is None:
                 errorMsg = 'When prefix parameter name is not give, the prefix'
-                errorMsg += 'and indexformat are both needed.'
+                errorMsg += 'and index format are both needed.'
                 raise ValueError(errorMsg)
             else:
                 # Get format fields
@@ -821,10 +821,10 @@ class prefixParameter(Parameter):
             if len(namefield) < 2 or namefield[-2].isdigit() is False\
                or namefield[-1] != '':
             #When Name has no index in the end or no prefix part.
-                errorMsg = 'Prefix parameter name needs a perfix part'\
+                errorMsg = 'Prefix parameter name needs a prefix part'\
                            + ' and an index part in the end. '
                 errorMsg += 'If you meant to set up with prefix, please use' \
-                            + 'prefix and indexformat optional agruments.' \
+                            + 'prefix and index format optional arguments.' \
                             + 'Leave name argument alone.'
                 raise ValueError(errorMsg)
             else:  # When name has index in the end and prefix in front.
