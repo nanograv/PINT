@@ -59,12 +59,12 @@ class Astrometry(TimingModel):
                 raise MissingParameter("Astrometry", p)
         # If PM is included, check for POSEPOCH
         if self.PMRA.value != 0.0 or self.PMDEC.value != 0.0:
-            if self.POSEPOCH.value is None:
-                if self.PEPOCH.value is None:
+            if self.POSEPOCH.quantity is None:
+                if self.PEPOCH.quantity is None:
                     raise MissingParameter("Astrometry", "POSEPOCH",
                             "POSEPOCH or PEPOCH are required if PM is set.")
                 else:
-                    self.POSEPOCH.value = self.PEPOCH.value
+                    self.POSEPOCH.quantity = self.PEPOCH.quantity
 
     @Cache.cache_result
     def coords_as_ICRS(self, epoch=None):
@@ -73,13 +73,13 @@ class Astrometry(TimingModel):
         If epoch (MJD) is specified, proper motion is included to return
         the position at the given epoch.
         """
-        if epoch is None:
-            return coords.ICRS(ra=self.RAJ.value, dec=self.DECJ.value)
+        if epoch is None or (self.PMRA.value == 0.0 and self.PMDEC.value == 0.0):
+            return coords.ICRS(ra=self.RAJ.quantity, dec=self.DECJ.quantity)
         else:
-            dt = (epoch - self.POSEPOCH.value.mjd) * u.d
-            dRA = dt * self.PMRA.value / numpy.cos(self.DECJ.value.radian)
-            dDEC = dt * self.PMDEC.value
-            return coords.ICRS(ra=self.RAJ.value+dRA, dec=self.DECJ.value+dDEC)
+            dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
+            dRA = dt * self.PMRA.quantity / numpy.cos(self.DECJ.quantity.radian)
+            dDEC = dt * self.PMDEC.quantity
+            return coords.ICRS(ra=self.RAJ.quantity+dRA, dec=self.DECJ.quantity+dDEC)
 
     @Cache.cache_result
     def ssb_to_psb_xyz(self, epoch=None):
@@ -108,7 +108,7 @@ class Astrometry(TimingModel):
         re_dot_L = numpy.sum(toas['ssb_obs_pos']*L_hat, axis=1)
         delay = -re_dot_L.to(ls).value
         if self.PX.value != 0.0:
-            L = ((1.0 / self.PX.num_value) * u.kpc)
+            L = ((1.0 / self.PX.value) * u.kpc)
             # TODO: numpy.sum currently loses units in some cases...
             re_sqr = numpy.sum(toas['ssb_obs_pos']**2, axis=1) * toas['ssb_obs_pos'].unit**2
             delay += (0.5 * (re_sqr / L) * (1.0 - re_dot_L**2 / re_sqr)).to(ls).value
@@ -164,8 +164,8 @@ class Astrometry(TimingModel):
         """
         rd = self.get_d_delay_quantities(toas)
 
-        psr_ra = self.RAJ.value
-        psr_dec = self.DECJ.value
+        psr_ra = self.RAJ.quantity
+        psr_dec = self.DECJ.quantity
 
         geom = numpy.cos(rd['earth_dec'])*numpy.cos(psr_dec)*\
                 numpy.sin(psr_ra-rd['earth_ra'])
@@ -181,8 +181,8 @@ class Astrometry(TimingModel):
         """
         rd = self.get_d_delay_quantities(toas)
 
-        psr_ra = self.RAJ.value
-        psr_dec = self.DECJ.value
+        psr_ra = self.RAJ.quantity
+        psr_dec = self.DECJ.quantity
 
         geom = numpy.cos(rd['earth_dec'])*numpy.sin(psr_dec)*\
                 numpy.cos(psr_ra-rd['earth_ra']) - numpy.sin(rd['earth_dec'])*\
@@ -200,9 +200,9 @@ class Astrometry(TimingModel):
         """
         rd = self.get_d_delay_quantities(toas)
 
-        psr_ra = self.RAJ.value
+        psr_ra = self.RAJ.quantity
 
-        te = rd['epoch'] - time_to_longdouble(self.POSEPOCH.value) * u.day
+        te = rd['epoch'] - time_to_longdouble(self.POSEPOCH.quantity) * u.day
         geom = numpy.cos(rd['earth_dec'])*numpy.sin(psr_ra-rd['earth_ra'])
 
         deriv = rd['ssb_obs_r'] * geom * te / (const.c * u.radian)
@@ -220,10 +220,10 @@ class Astrometry(TimingModel):
         """
         rd = self.get_d_delay_quantities(toas)
 
-        psr_ra = self.RAJ.value
-        psr_dec = self.DECJ.value
+        psr_ra = self.RAJ.quantity
+        psr_dec = self.DECJ.quantity
 
-        te = rd['epoch'] - time_to_longdouble(self.POSEPOCH.value) * u.day
+        te = rd['epoch'] - time_to_longdouble(self.POSEPOCH.quantity) * u.day
         geom = numpy.cos(rd['earth_dec'])*numpy.sin(psr_dec)*\
                 numpy.cos(psr_ra-rd['earth_ra']) - numpy.cos(psr_dec)*\
                 numpy.sin(rd['earth_dec'])
