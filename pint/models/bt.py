@@ -127,7 +127,7 @@ class BT(TimingModel):
 
             # T0 needs to be converted to long double
             parobj = getattr(self, key)
-            pardict[par] = parobj.num_value 
+            pardict[par] = parobj.value 
 
         # Apply all the delay terms, except for the binary model itself
         tt0 = toas['tdbld'] * SECS_PER_DAY

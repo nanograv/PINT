@@ -43,13 +43,13 @@ class FD(TimingModel):
         """
         FD_mapping = self.get_prefix_mapping('FD')
         log_freq = np.log(toas['freq'] / (1 * u.GHz))
-        FD_coeff = [getattr(self, FD_mapping[ii]).num_value \
+        FD_coeff = [getattr(self, FD_mapping[ii]).value \
                    for ii in range(self.num_FD_terms,0,-1)]
         FD_coeff += [0.0]
 
         FD_delay = np.polyval(FD_coeff, log_freq)
 
-        return FD_delay * self.FD1.num_unit
+        return FD_delay * self.FD1.units
 
     def d_delay_d_FD(self, toas, FD_term=1):
         """This is a derivative function for FD parameter

@@ -82,7 +82,7 @@ class Spindown(TimingModel):
     def get_spin_terms(self):
         """Return a list of the spin term values in the model: [F0, F1, ..., FN]
         """
-        return [getattr(self, "F%d"%ii).num_value for ii in range(self.num_spin_terms)]
+        return [getattr(self, "F%d"%ii).value for ii in range(self.num_spin_terms)]
 
     def spindown_phase(self, toas, delay):
         """Spindown phase function.
