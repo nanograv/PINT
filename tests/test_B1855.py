@@ -9,10 +9,11 @@ from pint.residuals import resids
 import numpy as np
 import os, unittest
 
-datapath = os.path.join(os.environ['PINT'],'tests','datafile')
+from pinttestdata import testdir, datadir
+
 # Using Nanograv data B1855
-parfile = os.path.join(datapath, 'B1855+09_NANOGrav_dfg+12_TAI.par')
-timfile = os.path.join(datapath, 'B1855+09_NANOGrav_dfg+12.tim')
+parfile = os.path.join(datadir, 'B1855+09_NANOGrav_dfg+12_TAI.par')
+timfile = os.path.join(datadir, 'B1855+09_NANOGrav_dfg+12.tim')
 
 # libstempo calculation
 print "libstempo calculation"
