@@ -80,12 +80,12 @@ class TestParameters(unittest.TestCase):
         units = u.Hz
         str_unit = 'Hz'
         value = 186.49
-        num_uncertainty = 0.00000000000698911818
+        uncertainty_value = 0.00000000000698911818
         # New units
         units_new = u.kHz
         str_unit_new = 'kHz'
         value_new = 0.18649
-        num_uncertainty_new = 0.00000000000698911818/1000.0
+        uncertainty_value_new = 0.00000000000698911818/1000.0
         # Set it to 186.49 Hz: the 'standard' value
         self.m.F0.quantity = value * units
         self.assertTrue(
@@ -97,21 +97,21 @@ class TestParameters(unittest.TestCase):
                 numpy.isclose(self.m.F0.value, value_new, atol=1e-13))
 
         self.assertTrue(
-                numpy.isclose(self.m.F0.num_uncertainty, num_uncertainty_new,
+                numpy.isclose(self.m.F0.uncertainty_value, uncertainty_value_new,
                               atol=1e-13))
         # Change the units back, and then set them implicitly
         # The value will be associate with the new units
         self.m.F0.units = str_unit
         self.m.F0.quantity = value_new * units_new
-        self.m.F0.uncertainty = num_uncertainty_new * units_new
+        self.m.F0.uncertainty = uncertainty_value_new * units_new
         self.assertTrue(
                 numpy.isclose(self.m.F0.value, value, atol=1e-13))
         self.assertTrue(
-                numpy.isclose(self.m.F0.num_uncertainty, num_uncertainty,
+                numpy.isclose(self.m.F0.uncertainty_value, uncertainty_value,
                               atol=1e-13))
         # Check the ratio, using the old units as a reference
         ratio = self.m.F0.quantity / (value * units)
-        ratio_uncertainty = self.m.F0.uncertainty / (num_uncertainty * units)
+        ratio_uncertainty = self.m.F0.uncertainty / (uncertainty_value * units)
         self.assertTrue(
                 numpy.isclose(ratio.decompose(u.si.bases), 1.0, atol=1e-13))
 
