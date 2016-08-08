@@ -1,3 +1,4 @@
+from __future__ import print_function
 try:
     from setuptools import setup, Extension
 except ImportError:
@@ -53,10 +54,10 @@ cmdclass = {}
 ext_modules = []
 
 if use_cython:
-    print "Using cython..."
+    print("Using cython...")
     src = ["spice_util_cython/spice_util_py.pyx"]
 else:
-    print "Using existing 'C' source file..."
+    print("Using existing 'C' source file...")
     src = ["spice_util_cython/spice_util_py.c"]
 
 ext_modules += [Extension("spice_util", src,
@@ -74,7 +75,7 @@ data_urls = [
         "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de430t.bsp",
         "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/earth_latest_high_prec.bpc",
         "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00010.tpc",
-        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0011.tls",
+        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls",
         "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/de-403-masses.tpc"
         ]
 data_files = []
