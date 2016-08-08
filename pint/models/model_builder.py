@@ -17,11 +17,11 @@ def get_componets():
         for filename in fnmatch.filter(filenames, '*.py'):
             if filename == '__init__.py':
                 continue
-            mod_root_start = root.find('PINT/pint/models')
-            if mod_root_start + len('PINT/pint/models') > len(root):
+            mod_root_start = root.find('pint/models')
+            if mod_root_start + len('pint/models') > len(root):
                 mod_root = ''
             else:
-                mod_root = root[mod_root_start + len('PINT/pint/models/'):]
+                mod_root = root[mod_root_start + len('pint/models/'):]
             mod = os.path.join(mod_root, filename).replace("/", ".")[:-3]
             exec('import %s as tmp' % mod)
             s = set()
