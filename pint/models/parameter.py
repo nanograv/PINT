@@ -23,7 +23,7 @@ class Parameter(object):
 
     A `Parameter` object can be created with one of the subclasses provided by
     `PINT` depending on the parameter usage.
-    Currnet Parameter type:
+    Current Parameter type:
     [`floatParameter`, `strParameter`, `boolParameter`, `MDJParameter`,
      `AngleParameter`, `prefixParameter`, `maskParameter`]
 
