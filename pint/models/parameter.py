@@ -292,11 +292,11 @@ class Parameter(object):
     def as_parfile_line(self):
         """Return a parfile line giving the current state of the parameter."""
         # Don't print unset parameters
-        if self.value is None:
+        if self.quantity is None:
             return ""
         line = "%-15s %25s" % (self.name, self.print_quantity(self.quantity))
         if self.uncertainty is not None:
-            line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty))
+            line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty_value))
         elif not self.frozen:
             line += " 1"
         return line + "\n"
