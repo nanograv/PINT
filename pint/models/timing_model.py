@@ -155,7 +155,7 @@ class TimingModel(object):
     def __init__(self):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
-        self.num_prefix_params = {}
+        #self.num_prefix_params = {}
         self.delay_funcs = []
         self.phase_funcs = [] # List of phase component functions
         self.cache = None
@@ -175,22 +175,8 @@ class TimingModel(object):
         """
         setattr(self, param.name, param)
         self.params += [param.name,]
-        par_type = type(param).__name__
-        if par_type in self.param_register.keys():
-            self.param_register[par_type].append(param.name)
-        else:
-            self.param_register[par_type] = [param.name]
-
-        if param.is_prefix is True:
-            if param.prefix not in self.prefix_params:
-                self.prefix_params.append(param.prefix)
-            if self.num_prefix_params.has_key(param.prefix):
-                self.num_prefix_params[param.prefix]+=1
-            else:
-                self.num_prefix_params[param.prefix]=1
         if binary_param is True:
             self.binary_params +=[param.name,]
-
 
     def param_help(self):
         """Print help lines for all available parameters in model.
@@ -199,6 +185,7 @@ class TimingModel(object):
         for par in self.params:
             s += "%s\n" % getattr(self, par).help_line()
         return s
+
 
     def get_delay_func_names(self, module_name = ''):
         if not hasattr(self, 'modules'):
@@ -245,6 +232,20 @@ class TimingModel(object):
                 delay += getattr(self, dfn)(toas)
         result_toas = toas['tdbld']*u.day - delay*u.second
         return result_toas
+
+    def get_params_of_type(self, param_type):
+        """ Get all the parameters in timing model for one specific type
+        """
+        result = []
+        for p in self.params:
+            par = getattr(self, p)
+            par_type = type(par).__name__
+            par_prefix = par_type[:-9]
+            if param_type.upper() == par_type.upper() or \
+                param_type.upper() == par_prefix.upper():
+                result.append(par.name)
+        return result
+
 
     @Cache.use_cache
     def get_prefix_mapping(self,prefix):

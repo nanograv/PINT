@@ -103,9 +103,9 @@ class DDwrapper(PSRbinaryWapper):
         for par in ddobj.binary_params:
             if hasattr(self, par):
                 parObj = getattr(self, par)
-                if parObj.num_value is None:
+                if parObj.value is None:
                     continue
-                pardict[par] = parObj.num_value*parObj.num_unit
+                pardict[par] = parObj.value*parObj.units
 
         ddobj.set_par_values(pardict)    # This now does a lot of stuff that is in the PSRdd.__init__
         return ddobj

@@ -129,7 +129,7 @@ class BT(TimingModel):
 
             # T0 needs to be converted to long double
             parobj = getattr(self, key)
-            pardict[par] = parobj.num_value
+            pardict[par] = parobj.value
 
         # Apply all the delay terms, except for the binary model itself
         if hasattr(self, 'modules'):
