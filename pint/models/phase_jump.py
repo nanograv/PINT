@@ -9,6 +9,8 @@ import parameter as p
 
 
 class PhaseJump(TimingModel):
+    """This is a class to implement phase jumps 
+    """
     def __init__(self):
         super(PhaseJump, self).__init__()
         self.add_param(p.maskParameter(name = 'JUMP'))
@@ -25,5 +27,5 @@ class PhaseJump(TimingModel):
         for jump in self.jumps:
             jump_par = getattr(self, jump)
             mask = jump_par.select_toa_mask(toas)
-            phase[mask] += jump_par.num_value * self.F0.num_value 
+            phase[mask] += jump_par.num_value * self.F0.num_value
         return phase
