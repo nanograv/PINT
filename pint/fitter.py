@@ -56,7 +56,7 @@ class fitter(object):
         """
         # The check for astropy units should be able to go away once params are fixed
         for k, v in fitp.items():
-            getattr(self.model, k).value = v.value if has_astropy_unit(v) else v
+            getattr(self.model, k).value = v
 
     def minimize_func(self, x, *args):
         """Wrapper function for the residual class, meant to be passed to
@@ -68,7 +68,7 @@ class fitter(object):
         # Get new residuals
         self.update_resids()
         # Return chi^2
-        return self.resids.chi2
+        return self.resids.chi2.value
 
     def call_minimize(self, method='Powell', maxiter=20):
         """Wrapper to scipy.optimize.minimize function.
