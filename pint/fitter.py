@@ -54,7 +54,6 @@ class fitter(object):
 
         Ex. fitter.set_params({'F0':60.1,'F1':-1.3e-15})
         """
-        # The check for astropy units should be able to go away once params are fixed
         for k, v in fitp.items():
             getattr(self.model, k).value = v
 
@@ -68,7 +67,7 @@ class fitter(object):
         # Get new residuals
         self.update_resids()
         # Return chi^2
-        return self.resids.chi2.value
+        return self.resids.chi2
 
     def call_minimize(self, method='Powell', maxiter=20):
         """Wrapper to scipy.optimize.minimize function.
