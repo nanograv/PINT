@@ -120,7 +120,7 @@ class Parameter(object):
 
     @units.setter
     def units(self, unt):
-        # Check if this is the first time set units and check compatibility 
+        # Check if this is the first time set units and check compatibility
         if hasattr(self, 'quantity'):
             if self.units is not None:
                 if unt != self.units:
@@ -986,6 +986,7 @@ class maskParameter(Parameter):
         aliases : list optional
             List of aliases for parameter name.
     """
+
     def __init__(self, name=None, index=1, key=None, key_value=None,
                  value=None, long_double=False, units= None, description=None,
                  uncertainty=None, frozen=True, continuous=False, aliases=[]):
