@@ -6,7 +6,7 @@ import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
 import parameter as p
-from .timing_model import TimingModel, MissingParameter, Cache
+from .timing_model import TimingModel, MissingParameter, Cache, module_info
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble
 from pint import ls
 from pint import utils
@@ -23,7 +23,11 @@ class Astrometry(TimingModel):
 
     def __init__(self):
         super(Astrometry, self).__init__()
-
+        self.requires = {'TOA': ['obs',], 'freq': ['obs',]}
+        self.provides = {'TOA': ('ssb', ['solar_system_geometric_delay',
+                                         'solar_system_shapiro_delay']),
+                         'freq': ('ssb', ['barycentric_radio_freq',])}
+                         
         self.add_param(p.AngleParameter(name="RAJ",
             units="H:M:S",
             description="Right ascension (J2000)",
@@ -48,8 +52,7 @@ class Astrometry(TimingModel):
         self.add_param(p.floatParameter(name="PX",
             units="mas", value=0.0,
             description="Parallax"))
-
-        self.delay_funcs['L1'] += [self.solar_system_geometric_delay,]
+        self.delay_funcs += [self.solar_system_geometric_delay,]
 
     def setup(self):
         super(Astrometry, self).setup()
@@ -113,6 +116,15 @@ class Astrometry(TimingModel):
             re_sqr = numpy.sum(toas['ssb_obs_pos']**2, axis=1) * toas['ssb_obs_pos'].unit**2
             delay += (0.5 * (re_sqr / L) * (1.0 - re_dot_L**2 / re_sqr)).to(ls).value
         return delay
+
+    @Cache.cache_result
+    def barycentric_toas(self, toas):
+        toasObs = toas['tdbld']
+        delay = numpy.zeros(len(toas))
+        for adf in self.get_delay_func_names('Astrometry'):
+            delay += getattr(self, adf)(toas)
+        toasBary = toasObs*u.day - delay*u.second
+        return toasBary
 
     @Cache.use_cache
     def get_d_delay_quantities(self, toas):

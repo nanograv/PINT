@@ -4,7 +4,7 @@
 # Simple (constant) ISM dispersion measure
 from warnings import warn
 import parameter as p
-from .timing_model import TimingModel, Cache
+from .timing_model import TimingModel, Cache, module_info
 import astropy.units as u
 import numpy as np
 import pint.utils as ut
@@ -25,8 +25,11 @@ class Dispersion(TimingModel):
         self.add_param(p.floatParameter(name="DM",
                        units="pc cm^-3", value=0.0,
                        description="Dispersion measure"))
+        self.requires = {'TOA': ['obs',], 'freq': ['ssb',]}
+        self.provides = {'TOA': ('inf_freq', ['dedispersion_delay',]),
+                         'freq': ('', None)}
         self.dm_value_funcs = [self.constant_dm,]
-        self.delay_funcs['L1'] += [self.dedispersion_delay,]
+        self.delay_funcs += [self.dedispersion_delay,]
 
     def setup(self):
         super(Dispersion, self).setup()

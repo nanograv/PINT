@@ -4,7 +4,7 @@
 # Defines PhaseJump timing model class
 import numpy
 import astropy.units as u
-from .timing_model import TimingModel, MissingParameter
+from .timing_model import TimingModel, MissingParameter, module_info
 import parameter as p
 
 
@@ -14,8 +14,10 @@ class JumpDelay(TimingModel):
     def __init__(self):
         super(JumpDelay, self).__init__()
         # TODO: In the future we should have phase jump as well.
+        self.requires = {'TOA': [], 'freq': []}
+        self.provides = {'TOA': ('', None), 'freq': ('', None)}
         self.add_param(p.maskParameter(name = 'JUMP', units='second'))
-        self.delay_funcs['L1'] += [self.jump_delay,]
+        self.delay_funcs += [self.jump_delay,]
     def setup(self):
         super(JumpDelay, self).setup()
         self.jumps = []

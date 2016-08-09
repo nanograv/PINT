@@ -1,6 +1,7 @@
 """Various tests to assess the performance of the BT model."""
 from __future__ import (print_function, division)
 import pint.toa as toa
+from pint.models import model_builder as mb
 import numpy as np
 import pint.models.bt as bt
 import os
@@ -18,8 +19,7 @@ class TestBT():
 
         # Calculate delays with PINT
         toas = toa.get_TOAs(timfile, planets=False)
-        newmodel = bt.BT()
-        newmodel.read_parfile(parfile)
+        newmodel = mb.get_model(parfile)
         pint_delays = newmodel.delay(toas.table)
 
         # Load delays calculated with libstempo
