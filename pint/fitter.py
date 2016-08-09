@@ -54,7 +54,6 @@ class fitter(object):
 
         Ex. fitter.set_params({'F0':60.1,'F1':-1.3e-15})
         """
-        # The check for astropy units should be able to go away once params are fixed
         for k, v in fitp.items():
             getattr(self.model, k).value = v
 
