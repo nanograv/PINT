@@ -136,6 +136,7 @@ class TimingModel(object):
 
         self.phase_funcs = [] # List of phase component functions
         self.cache = None
+        self.param_register = {}
         self.add_param(strParameter(name="PSR",
             description="Source name",
             aliases=["PSRJ", "PSRB"]))
@@ -152,10 +153,8 @@ class TimingModel(object):
         """
         setattr(self, param.name, param)
         self.params += [param.name,]
-
         if binary_param is True:
             self.binary_params +=[param.name,]
-
 
     def param_help(self):
         """Print help lines for all available parameters in model.
