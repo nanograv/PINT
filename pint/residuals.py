@@ -53,8 +53,16 @@ class resids(object):
         if (self.toas.get_errors()==0.0).any():
             return np.inf
         else:
-            return ((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()
+            # The self.time_resids is in the unit of "s", the error "us".
+            # This is more correct way, but it is the slowest.
+            #return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
 
+            # This method is faster then the method above but not the most correct way
+            #return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
+
+            # This the fastest way, but highly depend on the assumption of time_resids and
+            # error units.
+            return ((self.time_resids.value * 1e6 / self.toas.get_errors())**2.0).sum()
     def get_dof(self):
         """Return number of degrees of freedom for the model."""
         dof = self.toas.ntoas
