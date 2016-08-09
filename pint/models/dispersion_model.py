@@ -26,7 +26,7 @@ class Dispersion(TimingModel):
                        units="pc cm^-3", value=0.0,
                        description="Dispersion measure"))
         self.dm_value_funcs = [self.constant_dm,]
-        self.delay_funcs['L1'] += [self.dedispersion_delay,]
+        self.delay_funcs['L1'] += [self.dispersion_delay,]
 
     def setup(self):
         super(Dispersion, self).setup()
@@ -47,7 +47,7 @@ class Dispersion(TimingModel):
         dmdelay = DM * DMconst / freq**2.0
         return dmdelay
 
-    def dedispersion_delay(self, toas):
+    def dispersion_delay(self, toas):
         try:
             bfreq = self.barycentric_radio_freq(toas)
         except AttributeError:
