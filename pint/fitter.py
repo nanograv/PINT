@@ -68,7 +68,7 @@ class fitter(object):
         # Get new residuals
         self.update_resids()
         # Return chi^2
-        return self.resids.chi2.value
+        return self.resids.chi2
 
     def call_minimize(self, method='Powell', maxiter=20):
         """Wrapper to scipy.optimize.minimize function.
