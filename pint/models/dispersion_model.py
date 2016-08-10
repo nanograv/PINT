@@ -26,15 +26,16 @@ class Dispersion(TimingModel):
                        units="pc cm^-3", value=0.0,
                        description="Dispersion measure"))
         self.dm_value_funcs = [self.constant_dm,]
-        self.delay_funcs['L1'] += [self.dedispersion_delay,]
         self.delay_derivs += [self.d_delay_dispersion_d_DM,]
+        self.delay_funcs['L1'] += [self.dispersion_delay,]
+
     def setup(self):
         super(Dispersion, self).setup()
 
     def constant_dm(self, toas):
         cdm = np.zeros(len(toas))
-        cdm.fill(self.DM.num_value)
-        return cdm * self.DM.num_unit
+        cdm.fill(self.DM.quantity)
+        return cdm * self.DM.units
 
     def dispersion_time_delay(self, DM, freq):
         """Return the dispersion time delay for a set of frequency.
@@ -47,14 +48,14 @@ class Dispersion(TimingModel):
         dmdelay = DM * DMconst / freq**2.0
         return dmdelay
 
-    def dedispersion_delay(self, toas):
+    def dispersion_delay(self, toas):
         try:
             bfreq = self.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
             bfreq = toas['freq']
 
-        dm = np.zeros(len(toas)) * self.DM.num_unit
+        dm = np.zeros(len(toas)) * self.DM.units
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
 
@@ -131,19 +132,19 @@ class DispersionDMX(Dispersion):
             epoch_ind = 1
             while epoch_ind in DMX_mapping:
                 # Get the parameters
-                r1 = getattr(self, DMXR1_mapping[epoch_ind]).value
-                r2 = getattr(self, DMXR2_mapping[epoch_ind]).value
+                r1 = getattr(self, DMXR1_mapping[epoch_ind]).quantity
+                r2 = getattr(self, DMXR2_mapping[epoch_ind]).quantity
                 msk = np.logical_and(toas['mjd'] >= r1, toas['mjd'] <= r2)
                 toas['DMX_section'][msk] = epoch_ind
                 epoch_ind = epoch_ind + 1
 
         # Get DMX delays
-        dm = np.zeros(len(toas)) * self.DM.num_unit
+        dm = np.zeros(len(toas)) * self.DM.units
         DMX_group = toas.group_by('DMX_section')
         for ii, key in enumerate(DMX_group.groups.keys):
             keyval = key.as_void()[0]
             if keyval != 0:
-                dmx = getattr(self, DMX_mapping[keyval]).value
+                dmx = getattr(self, DMX_mapping[keyval]).quantity
                 ind = DMX_group.groups[ii]['index']
                 dm[ind] = dmx
         return dm

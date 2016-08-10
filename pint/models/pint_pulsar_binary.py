@@ -106,9 +106,9 @@ class PulsarBinary(TimingModel):
         """
         for bpar in self.binary_params:
             bparObj = getattr(self,bpar)
-            if bparObj.num_value is None or bparObj.num_unit is None:
+            if bparObj.value is None or bparObj.units is None:
                 continue
-            bparObj.value = bparObj.num_value*u.Unit(bparObj.num_unit)
+            bparObj.value = bparObj.value*u.Unit(bparObj.units)
 
     @Cache.use_cache
     def get_binary_object(self, toas):
@@ -127,9 +127,9 @@ class PulsarBinary(TimingModel):
             if hasattr(self, par) or \
                 list(set(aliase).intersection(self.params))!=[] :
                 binObjpar = getattr(self, par)
-                if binObjpar.num_value is None:
+                if binObjpar.value is None:
                     continue
-                pardict[par] = binObjpar.num_value*binObjpar.num_unit
+                pardict[par] = binObjpar.value*binObjpar.units
 
         binobj.set_param_values(pardict)
         return binobj

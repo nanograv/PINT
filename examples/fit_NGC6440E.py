@@ -3,6 +3,7 @@ import pint.toa
 import pint.models
 import pint.fitter
 import pint.residuals
+import pint.models.model_builder as mb
 import matplotlib.pyplot as plt
 import astropy.units as u
 import os, sys
@@ -12,8 +13,7 @@ parfile = os.path.join(datadir, 'NGC6440E.par')
 timfile = os.path.join(datadir, 'NGC6440E.tim')
 
 # Define the timing model
-m = pint.models.StandardTimingModel()
-m.read_parfile(parfile)
+m = mb.get_model(parfile)
 
 # Read in the TOAs
 t = pint.toa.get_TOAs(timfile)

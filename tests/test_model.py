@@ -55,7 +55,7 @@ log.info("Running TEMPO2...")
 #                                      'shapiro', 'shapiroJ'])
 tempo2_vals = numpy.genfromtxt(parfile + '.tempo2_test', names=True, comments = '#',
                             dtype = 'float128')
-t2_resids = tempo2_vals['post_phase'] / float(m.F0.num_value) * 1e6 * u.us
+t2_resids = tempo2_vals['post_phase'] / float(m.F0.value) * 1e6 * u.us
 diff_t2 = (resids_us - t2_resids).to(u.ns)
 diff_t2 -= diff_t2.mean()
 log.info("Max resid diff between PINT and T2: %.2f ns" % numpy.fabs(diff_t2).max().value)

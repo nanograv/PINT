@@ -107,8 +107,8 @@ class Glitch(TimingModel):
             glph = getattr(self, glphnm)
             dphs = glph.value
             idx = glph.index
-            dF0 = getattr(self, "GLF0_%d" % idx).value
-            dF1 = getattr(self, "GLF1_%d" % idx).value
+            dF0 = getattr(self, "GLF0_%d" % idx).quantity
+            dF1 = getattr(self, "GLF1_%d" % idx).quantity
             eph = time_to_longdouble(getattr(self, "GLEP_%d" % idx).value)
             dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
             dt = dt * u.s
