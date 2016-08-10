@@ -76,7 +76,7 @@ class BT(TimingModel):
             units="s",
             description="Time dilation & gravitational redshift"))
 
-        self.delay_funcs['L2'] += [self.BT_delay,]
+        self.delay_funcs += [self.BT_delay,]
 
     def setup(self):
         super(BT, self).setup()
@@ -127,7 +127,7 @@ class BT(TimingModel):
 
             # T0 needs to be converted to long double
             parobj = getattr(self, key)
-            pardict[par] = parobj.value 
+            pardict[par] = parobj.value
 
         # Apply all the delay terms, except for the binary model itself
         tt0 = toas['tdbld'] * SECS_PER_DAY

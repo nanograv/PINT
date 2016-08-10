@@ -19,7 +19,7 @@ class FD(TimingModel):
                        unitTplt=lambda x: 'second',
                        type_match='float'))
 
-        self.delay_funcs['L1'] += [self.FD_delay]
+        self.delay_funcs += [self.FD_delay]
 
     def setup(self):
         super(FD, self).setup()

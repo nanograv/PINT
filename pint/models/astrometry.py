@@ -49,8 +49,14 @@ class Astrometry(TimingModel):
             units="mas", value=0.0,
             description="Parallax"))
 
-        self.delay_funcs['L1'] += [self.solar_system_geometric_delay,]
-
+        #self.delay_funcs['L1'] += [self.solar_system_geometric_delay,]
+        self.requires = {'TOA': ['obs',], 'freq': ['obs',]}
+        self.provides = {'TOA': ('ssb', [self.solar_system_geometric_delay,
+                                         #self.solar_system_shapiro_delay]
+                                         # Should solar system shapiro delay be here?
+                                        #  How do we deal with it?
+                                         ]),
+                         'freq': ('ssb', [self.barycentric_radio_freq,])}
     def setup(self):
         super(Astrometry, self).setup()
         # RA/DEC are required

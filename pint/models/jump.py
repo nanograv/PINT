@@ -15,7 +15,7 @@ class JumpDelay(TimingModel):
         super(JumpDelay, self).__init__()
         # TODO: In the future we should have phase jump as well.
         self.add_param(p.maskParameter(name = 'JUMP', units='second'))
-        self.delay_funcs['L1'] += [self.jump_delay,]
+        self.delay_funcs += [self.jump_delay,]
     def setup(self):
         super(JumpDelay, self).setup()
         self.jumps = []

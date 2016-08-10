@@ -99,24 +99,26 @@ class module_info(object):
     """
     def __init__(self, module):
         self.module_name = type(module).__name__
-        self.requires = module.requires
-        self.provides = module.provides
+        if hasattr(module, 'requires'):
+            self.requires = module.requires
+        if hasattr(module, 'provides'):
+            self.provides = module.provides
         self.params = module.params
         self.params.remove('PSR')
         self.module_order = None
         self.delay_func_names = []
         self.phase_func_names = []
-        if hasattr(module, 'delay_funcs'):
-            self.delay_func_names += [f.__name__ for f in module.delay_funcs]
-        if hasattr(module, 'phase_funcs'):
-            self.phase_func_names += [f.__name__ for f in module.phase_funcs]
+        # if hasattr(module, 'delay_funcs'):
+        #     self.delay_func_names += [f.__name__ for f in module.delay_funcs]
+        # if hasattr(module, 'phase_funcs'):
+        #     self.phase_func_names += [f.__name__ for f in module.phase_funcs]
 
     def __str__(self):
         out = self.module_name + ':\n'
         out += 'Requires : ' + str(self.requires) + '\n'
         out += 'Provides : ' + str(self.provides) + '\n'
-        out += 'Delay functions : ' + str(self.delay_func_names) + '\n'
-        out += 'Phase functions : ' + str(self.phase_func_names) + '\n'
+        # out += 'Delay functions : ' + str(self.delay_func_names) + '\n'
+        # out += 'Phase functions : ' + str(self.phase_func_names) + '\n'
         out += 'Parameters :' + str(self.params) + '\n'
         return out
 
@@ -154,7 +156,7 @@ class TimingModel(object):
     def __init__(self):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
-        self.delay_funcs = {'L1':[],'L2':[]} # List of delay component functions
+        self.delay_funcs = [] # List of delay component functions
         # L1 is the first level of delays. L1 delay does not need barycentric toas
         # After L1 delay, the toas have been corrected to solar system barycenter.
         # L2 is the second level of delays. L2 delay need barycentric toas
@@ -589,6 +591,7 @@ def generate_timing_model(name, components, attributes={}):
         numComp = len(components)
     except:
         components = (components,)
+    components_info = {}
     for c in components:
         try:
             if not issubclass(c,TimingModel):
@@ -597,7 +600,9 @@ def generate_timing_model(name, components, attributes={}):
         except:
             raise(TypeError("generate_timing_model() Arg 2"+
                             "has to be a tuple of classes"))
-
+        module_name = type(c()).__name__
+        components_info[module_name]= module_info(c())
+    attributes['modules'] = components_info
     return type(name, components, attributes)
 
 class TimingModelError(Exception):
