@@ -32,7 +32,7 @@ class PSRbinaryWapper(TimingModel):
         super(PSRbinaryWapper, self).__init__()
         self.BinaryModelName = None
         self.requires = {'TOA': ['ssb','inf_freq'], 'freq': []}
-        self.provides = {'TOA': ('pulsar', None), 'freq': ('', None)}
+        self.provides = {'TOA': ('pulsar', 'binary_delay'), 'freq': ('', None)}
         self.barycentricTime = None
         self.binary_delay_funcs= []
         self.binary_params = []
