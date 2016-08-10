@@ -13,6 +13,8 @@ class JumpDelay(TimingModel):
     """
     def __init__(self):
         super(JumpDelay, self).__init__()
+        self.requires = {'TOA': [], 'freq': []}
+        self.provides = {'TOA': ('', None), 'freq': ('', None)}
         # TODO: In the future we should have phase jump as well.
         self.add_param(p.maskParameter(name = 'JUMP', units='second'))
         self.delay_funcs += [self.jump_delay,]
