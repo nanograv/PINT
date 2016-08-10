@@ -235,7 +235,7 @@ class TimingModel(object):
         for req in requirements:
             provider[req] = None
             if req in init_require:
-                provider[req] = ''
+                provider[req] = []
                 continue
 
             for m in self.modules:
@@ -279,10 +279,8 @@ class TimingModel(object):
         TOA to get time of emission at the pulsar.
         """
         delay = np.zeros(len(toas))
-        for dlevel in self.delay_funcs.keys():
-            for df in self.delay_funcs[dlevel]:
-                delay += df(toas)
-
+        for df in self.delay_funcs:
+            delay += df(toas)
         return delay
 
     @Cache.use_cache

@@ -51,12 +51,15 @@ class Astrometry(TimingModel):
 
         #self.delay_funcs['L1'] += [self.solar_system_geometric_delay,]
         self.requires = {'TOA': ['obs',], 'freq': ['obs',]}
-        self.provides = {'TOA': ('ssb', [self.solar_system_geometric_delay,
-                                         #self.solar_system_shapiro_delay]
+        # We need to put function name here not the function. Since provides
+        # and requires are built before the timing_model instance was built
+        self.provides = {'TOA': ('ssb', ['solar_system_geometric_delay',
+                                         'solar_system_shapiro_delay'
                                          # Should solar system shapiro delay be here?
                                         #  How do we deal with it?
                                          ]),
-                         'freq': ('ssb', [self.barycentric_radio_freq,])}
+                         'freq': ('ssb', ['barycentric_radio_freq',])}
+        self.delay_funcs += [self.solar_system_geometric_delay,]
     def setup(self):
         super(Astrometry, self).setup()
         # RA/DEC are required

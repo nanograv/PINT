@@ -92,7 +92,11 @@ class DDwrapper(PSRbinaryWapper):
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py
         # Get barycnetric toa first
-        self.barycentricTime = self.get_barycentric_toas(toas)
+        if hasattr(self, 'modules'):
+            require = self.modules['DDwrapper'].requires['TOA']
+        else:
+            require = self.requires['TOA']
+        self.barycentricTime = self.get_required_TOAs(require, toas)
 
         ddobj = DDmodel(self.barycentricTime)
         pardict = {}
