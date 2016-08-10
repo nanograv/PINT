@@ -32,6 +32,8 @@ class BT(TimingModel):
         # Parameters are mostly defined as numpy doubles.
         # Some might become long doubles in the future.
         self.BinaryModelName = 'BT'
+        self.requires = {'TOA': ['ssb','inf_freq'], 'freq': []}
+        self.provides = {'TOA': ('pulsar', None), 'freq': ('', None)}
         self.add_param(p.floatParameter(name="PB",
             units="s",
             description="Orbital period"))

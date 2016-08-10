@@ -25,6 +25,9 @@ class Dispersion(TimingModel):
         self.add_param(p.floatParameter(name="DM",
                        units="pc cm^-3", value=0.0,
                        description="Dispersion measure"))
+        self.requires = {'TOA': ['obs',], 'freq': ['ssb',]}
+        self.provides = {'TOA': ('inf_freq', [self.dispersion_delay,]),
+                         'freq': ('', None)}
         self.dm_value_funcs = [self.constant_dm,]
         self.delay_funcs += [self.dispersion_delay,]
 
