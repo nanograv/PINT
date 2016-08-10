@@ -94,6 +94,31 @@ class Cache(object):
                 return function(*args, **kwargs)
         return use_cached_results
 
+class module_info(object):
+    """A class that provides the information for each module
+    """
+    def __init__(self, module):
+        self.module_name = type(module).__name__
+        self.requires = module.requires
+        self.provides = module.provides
+        self.params = module.params
+        self.params.remove('PSR')
+        self.module_order = None
+        self.delay_func_names = []
+        self.phase_func_names = []
+        if hasattr(module, 'delay_funcs'):
+            self.delay_func_names += [f.__name__ for f in module.delay_funcs]
+        if hasattr(module, 'phase_funcs'):
+            self.phase_func_names += [f.__name__ for f in module.phase_funcs]
+
+    def __str__(self):
+        out = self.module_name + ':\n'
+        out += 'Requires : ' + str(self.requires) + '\n'
+        out += 'Provides : ' + str(self.provides) + '\n'
+        out += 'Delay functions : ' + str(self.delay_func_names) + '\n'
+        out += 'Phase functions : ' + str(self.phase_func_names) + '\n'
+        out += 'Parameters :' + str(self.params) + '\n'
+        return out
 
 
 class TimingModel(object):
@@ -197,6 +222,41 @@ class TimingModel(object):
             if par.is_prefix == True and par.prefix == prefix:
                 mapping[par.index] = parname
         return mapping
+
+    def search_provider(self, key, requirements, init_require):
+        """This is a function that checks module requirement and search the
+        provider in the current loaded modules
+        """
+        if not isinstance(requirements, list): requirements = [requirements]
+        if not isinstance(init_require, list): init_require = [init_require]
+        provider = {}
+        for req in requirements:
+            provider[req] = None
+            if req in init_require:
+                provider[req] = ''
+                continue
+
+            for m in self.modules:
+                if key not in self.modules[m].provides.keys():
+                    continue
+                if self.modules[m].provides[key][0] == req:
+                    provider[req] = self.modules[m].provides[key][1]
+        return provider
+
+    def get_required_TOAs(self, requirements, toas):
+        """This is a function that returns the requrired toas
+        """
+        provider = self.search_provider('TOA', requirements, 'obs')
+        delay = np.zeros(len(toas))
+        for p in provider:
+            if provider[p] is None:
+                errmsg = 'Module ' + mod + ' requirement ' + p
+                errmsg += ' does not have a provider.'
+                raise ValueError(errmsg)
+            for dfn in provider[p]:
+                delay += getattr(self, dfn)(toas)
+        result_toas = toas['tdbld']*u.day - delay*u.second
+        return result_toas
 
     @Cache.use_cache
     def phase(self, toas):
