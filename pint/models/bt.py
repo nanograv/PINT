@@ -132,11 +132,14 @@ class BT(TimingModel):
             pardict[par] = parobj.value
 
         # Apply all the delay terms, except for the binary model itself
+        # If there is no .modules attribution, It is a singal BT model
+        # Treat input toa as barycentric toa
         if hasattr(self, 'modules'):
             require = self.modules['BT'].requires['TOA']
+            self.barycentricTime = toa['tdbld']*u.day
         else:
             require = self.requires['TOA']
-        self.barycentricTime = self.get_required_TOAs(require, toas)
+            self.barycentricTime = self.get_required_TOAs(require, toas)
 
         # Return the BTmodel object
         return BTmodel(self.barycentricTime.value, **pardict)

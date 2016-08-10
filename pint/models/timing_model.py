@@ -108,10 +108,10 @@ class module_info(object):
         self.module_order = None
         self.delay_func_names = []
         self.phase_func_names = []
-        # if hasattr(module, 'delay_funcs'):
-        #     self.delay_func_names += [f.__name__ for f in module.delay_funcs]
-        # if hasattr(module, 'phase_funcs'):
-        #     self.phase_func_names += [f.__name__ for f in module.phase_funcs]
+        if hasattr(module, 'delay_funcs'):
+            self.delay_func_names += [f.__name__ for f in module.delay_funcs]
+        if hasattr(module, 'phase_funcs'):
+            self.phase_func_names += [f.__name__ for f in module.phase_funcs]
 
     def __str__(self):
         out = self.module_name + ':\n'
@@ -245,10 +245,10 @@ class TimingModel(object):
                     provider[req] = self.modules[m].provides[key][1]
         return provider
 
-    def get_required_TOAs(self, requirements, toas):
+    def get_required_TOAs(self, requirements, toa_start, toas):
         """This is a function that returns the requrired toas
         """
-        provider = self.search_provider('TOA', requirements, 'obs')
+        provider = self.search_provider('TOA', requirements, toa_start)
         delay = np.zeros(len(toas))
         for p in provider:
             if provider[p] is None:
