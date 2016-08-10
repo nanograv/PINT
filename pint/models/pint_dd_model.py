@@ -53,7 +53,7 @@ class DDwrapper(PSRbinaryWapper):
              binary_param = True)
 
         self.binary_delay_funcs += [self.DD_delay,]
-        self.delay_funcs['L2'] += [self.DD_delay,]
+        self.delay_funcs += [self.DD_delay,]
     def setup(self):
         super(DDwrapper,self).setup()
         for p in ("PB", "T0", "A1"):
