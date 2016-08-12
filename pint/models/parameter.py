@@ -120,7 +120,7 @@ class Parameter(object):
 
     @units.setter
     def units(self, unt):
-        # Check if this is the first time set units and check compatibility 
+        # Check if this is the first time set units and check compatibility
         if hasattr(self, 'quantity'):
             if self.units is not None:
                 if unt != self.units:
@@ -138,7 +138,7 @@ class Parameter(object):
         if unt is None:
             self._units = None
 
-        elif unt in pint_units.keys():
+        elif isinstance(unt, str) and unt in pint_units.keys():
             # These are special-case unit strings in in PINT
             self._units = pint_units[unt]
 
