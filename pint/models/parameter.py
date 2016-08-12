@@ -138,6 +138,10 @@ class Parameter(object):
         if unt is None:
             self._units = None
 
+        # Always compare a string to pint_units.keys()
+        # If search an astropy unit object with a sting list
+        # If the string does not match astropy unit, astropy will guess what
+        # does the string mean. It will take a lot of time. 
         elif isinstance(unt, str) and unt in pint_units.keys():
             # These are special-case unit strings in in PINT
             self._units = pint_units[unt]
