@@ -141,7 +141,7 @@ class Parameter(object):
         # Always compare a string to pint_units.keys()
         # If search an astropy unit object with a sting list
         # If the string does not match astropy unit, astropy will guess what
-        # does the string mean. It will take a lot of time. 
+        # does the string mean. It will take a lot of time.
         elif isinstance(unt, str) and unt in pint_units.keys():
             # These are special-case unit strings in in PINT
             self._units = pint_units[unt]
@@ -729,6 +729,21 @@ class AngleParameter(Parameter):
                              + type(val).__name__ + 'format.')
         return result
 
+
+class parameterWrapper(object):
+    """This is a wrapper class for parameter classes. It is for the type of
+    parameters requires some speical functionalities, for example prefixParameter
+    and maskParameter.
+    A normal parameter class will be stored in an attribution. This class will
+    provide a set of property to interact with the stored parameter class.
+    """
+    def __init__(self, parameter_type, name=None, description=None,
+                 uncertainty=None, frozen=True, continuous=True, aliases=[]):
+        self.type_mapping = {'float': floatParameter, 'str': strParameter,
+                             'bool': boolParameter, 'mjd': MJDParameter,
+                             'angle': AngleParameter}
+        self.name = name
+        param_class = self.type_mapping[parameter_type.lower()]
 
 class prefixParameter(Parameter):
     """ This is a Parameter type for prefix parameters, for example DMX_
