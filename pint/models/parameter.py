@@ -2,7 +2,7 @@
 # Defines Parameter class for timing model parameters
 from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
     time_to_longdouble, is_number, time_from_longdouble, str2longdouble, \
-    longdouble2string, data2longdouble
+    longdouble2string, data2longdouble, split_prefixed_name
 import numpy
 import astropy.units as u
 import astropy.time as time
@@ -102,7 +102,7 @@ class Parameter(object):
         self.is_prefix = False
         self.paramType = 'Not specified'  # Type of parameter. Here is general type
         self.valueType = None
-
+        self.special_arg = []
     @property
     def prior(self):
         return self._prior
@@ -386,15 +386,10 @@ class floatParameter(Parameter):
     """
     def __init__(self, name=None, value=None, units=None, description=None,
                  uncertainty=None, frozen=True, aliases=[], continuous=True,
-                 long_double=False):
-        self.is_long_double = long_double
-        if self.is_long_double:
-            set_quantity = self.set_quantity_longdouble
-            print_quantity = lambda x: longdouble2string(x.to(self.units).value)
-        else:
-            set_quantity = self.set_quantity_float
-            print_quantity = lambda x: str(x.to(self.units).value)
-
+                 long_double=False, **kwargs):
+        self.long_double = long_double
+        set_quantity = self.set_quantity_float
+        print_quantity = self.print_quantity_float
         get_value = self.get_value_float
         set_uncertainty = self.set_quantity_float
         super(floatParameter, self).__init__(name=name, value=value,
@@ -408,7 +403,30 @@ class floatParameter(Parameter):
                                              get_value=get_value,
                                              set_uncertainty=set_uncertainty)
         self.paramType = 'floatParameter'
+        self.special_arg += ['long_double',]
+    @property
+    def long_double(self):
+        return self._long_double
 
+    @long_double.setter
+    def long_double(self, val):
+        """long double setter, if a floatParameter's longdouble flag has been
+        changed, `.quantity` will get reset in order to get to the right data
+        type.
+        """
+        if not isinstance(val, bool):
+            raise ValueError("long_double property can only be set as boolean"
+                             " type")
+        if hasattr(self, 'long_double'):
+            if self._long_double != val and hasattr(self, 'quantity'):
+                if not val:
+                    log.warning("Setting floatParameter from long double to float,"
+                                " precision will be lost.")
+                # Reset quantity to its asked type
+                self._long_double = val
+                self.quantity = self.quantity
+        else:
+            self._long_double = val
 
     def set_quantity_float(self, val):
         """Set value method specific for float parameter
@@ -417,27 +435,40 @@ class floatParameter(Parameter):
         2. float
         3. string
         """
+        # Check long_double
+        if not self._long_double:
+            setfunc_with_unit = lambda x: x
+            setfunc_no_unit = lambda x: fortran_float(x) * self.units
+        else:
+            setfunc_with_unit = lambda x: data2longdouble(x.value)*x.unit
+            setfunc_no_unit = lambda x:  data2longdouble(x) * self.units
         # First try to use astropy unit conversion
         try:
             # If this fails, it will raise UnitConversionError
             _ = val.to(self.units)
-            result = val
+            result = setfunc_with_unit(val)
         except AttributeError:
             # This will happen if the input value did not have units
-            result = fortran_float(val) * self.units
-            # TODO how to treat num_unit==None ? does it mean
-            # dimensionless or unset?  Ignore for now..
+            result = setfunc_no_unit(val)
 
         return result
 
-    def set_quantity_longdouble(self, val):
-        try:
-            _ = val.to(self.units)
-            result = data2longdouble(val.value)*val.unit
-        except AttributeError:
-            result = data2longdouble(val) * self.units
-
+    def print_quantity_float(self, quan):
+        """A function gives print quantity string.
+        """
+        if not self._long_double:
+            result = str(quan.to(self.units).value)
+        else:
+            result = longdouble2string(quan.to(self.units).value)
         return result
+    # def set_quantity_longdouble(self, val):
+    #     try:
+    #         _ = val.to(self.units)
+    #         result = data2longdouble(val.value)*val.unit
+    #     except AttributeError:
+    #         result = data2longdouble(val) * self.units
+    #
+    #     return result
 
 
     def get_value_float(self, quan):
@@ -472,7 +503,7 @@ class strParameter(Parameter):
         test1 This is a test
     """
     def __init__(self, name=None, value=None, description=None,
-                 aliases=[]):
+                 aliases=[], **kwargs):
         print_quantity = str
         get_value = lambda x: x
         set_quantity = lambda x: str(x)
@@ -515,7 +546,7 @@ class boolParameter(Parameter):
         test1 N
     """
     def __init__(self, name=None, value=None, description=None, frozen=True,
-                 aliases=[]):
+                 aliases=[], **kwargs):
         print_quantity = lambda x: 'Y' if x else 'N'
         set_quantity = self.set_quantity_bool
         get_value = lambda x: x
@@ -579,7 +610,7 @@ class MJDParameter(Parameter):
     """
     def __init__(self, name=None, value=None, description=None,
                  uncertainty=None, frozen=True, continuous=True, aliases=[],
-                 time_scale='utc'):
+                 time_scale='utc', **kwargs):
         self.time_scale = time_scale
         set_quantity = self.set_quantity_mjd
         print_quantity = time_to_mjd_string
@@ -597,7 +628,7 @@ class MJDParameter(Parameter):
                                            set_uncertainty=set_uncertainty)
         self.value_type = time.Time
         self.paramType = 'MJDParameter'
-
+        self.special_arg += ['time_scale',]
     def set_quantity_mjd(self, val):
         """Value setter for MJD parameter,
            Accepted format:
@@ -657,7 +688,7 @@ class AngleParameter(Parameter):
         test1 (hourangle) 12:20:10.00000000
     """
     def __init__(self, name=None, value=None, description=None, units='rad',
-             uncertainty=None, frozen=True, continuous=True, aliases=[]):
+             uncertainty=None, frozen=True, continuous=True, aliases=[],**kwargs):
         self._str_unit = units
         self.unit_identifier = {
             'h:m:s': (u.hourangle, 'h', '0:0:%.15fh'),
@@ -737,15 +768,48 @@ class parameterWrapper(object):
     A normal parameter class will be stored in an attribution. This class will
     provide a set of property to interact with the stored parameter class.
     """
-    def __init__(self, parameter_type, name=None, description=None,
-                 uncertainty=None, frozen=True, continuous=True, aliases=[]):
+    def __init__(self, parameter_type, name=None, **kwargs):
+        # Use kwargs.
         self.type_mapping = {'float': floatParameter, 'str': strParameter,
                              'bool': boolParameter, 'mjd': MJDParameter,
                              'angle': AngleParameter}
+        print kwargs
         self.name = name
-        param_class = self.type_mapping[parameter_type.lower()]
+        try:
+            self.param_class = self.type_mapping[parameter_type.lower()]
+        except KeyError:
+            raise ValueError("Unknow parameter type '"+ parameter_type + "' ")
+        # initiate parameter class
+        self.param_inst = self.param_class(name=self.name, **kwargs)
 
-class prefixParameter(Parameter):
+    def __getattr__(self, name):
+        """Customizing attribute access. If normal getattr can not fine 'name',
+        it will go to self.param_inst to find 'name'
+        See page :
+        http://docs.python.org/reference/datamodel.html#customizing-attribute-access
+        """
+        try:
+            return getattr(self.param_inst, name)
+        except AttributeError:
+            msg = "'{0}' object has no attribute '{1}'"
+            raise AttributeError(msg.format(type(self).__name__, name))
+
+    def __setattr__(self, name, value):
+        """Customizing attribute access. See page :
+        http://docs.python.org/reference/datamodel.html#customizing-attribute-access
+        """
+        # Set for attributes for initilization
+        if not hasattr(self, 'param_inst'):
+            super(parameterWrapper, self).__setattr__(name, value)
+        # When has self.param_list
+        else:
+            if name in dir(self.param_inst):
+                setattr(self.param_inst, name, value)
+            else:
+                super(parameterWrapper, self).__setattr__(name, value)
+
+
+class prefixParameter(parameterWrapper):
     """ This is a Parameter type for prefix parameters, for example DMX_
 
         Create a prefix parameter
@@ -808,142 +872,48 @@ class prefixParameter(Parameter):
         time_scale : str, optional default 'utc'
             Time scale for MJDParameter class.
     """
-
-    def __init__(self, name=None, prefix=None, indexformat=None, index=1,
-                 value=None, units=None, unitTplt=None,
-                 description=None, descriptionTplt=None,
+    def __init__(self, type_match='float',name=None, value=None, units=None,
+                 unitTplt=None, description=None, descriptionTplt=None,
                  uncertainty=None, frozen=True, continuous=True,
-                 prefix_aliases=[], type_match='float', long_double=False,
-                 time_scale='utc'):
-        # Create prefix parameter by name
-        if name is None:
-            if prefix is None or indexformat is None:
-                errorMsg = 'When prefix parameter name is not give, the prefix'
-                errorMsg += 'and index format are both needed.'
-                raise ValueError(errorMsg)
-            else:
-                # Get format fields
-                digitLen = 0
-                for i in range(len(indexformat)-1, -1, -1):
-                    if indexformat[i].isdigit():
-                        digitLen += 1
-                self.indexformat_field = indexformat[0:len(indexformat)
-                                                     - digitLen]
-                self.indexformat_field += '{0:0' + str(digitLen) + 'd}'
+                 prefix_aliases=[],long_double=False, time_scale='utc'):
+        # Split prefixed name, if the name is not in the prefixed format, error
+        # will be raised
+        self.prefix, self.idxfmt, self.index = split_prefixed_name(name)
 
-                name = prefix+self.indexformat_field.format(index)
-                self.prefix = prefix
-                self.indexformat = self.indexformat_field.format(0)
-                self.index = index
-        else:  # Detect prefix and indexformat from name.
-            namefield = re.split('(\d+)', name)
-            if len(namefield) < 2 or namefield[-2].isdigit() is False\
-               or namefield[-1] != '':
-            #When Name has no index in the end or no prefix part.
-                errorMsg = 'Prefix parameter name needs a prefix part'\
-                           + ' and an index part in the end. '
-                errorMsg += 'If you meant to set up with prefix, please use' \
-                            + 'prefix and index format optional arguments.' \
-                            + 'Leave name argument alone.'
-                raise ValueError(errorMsg)
-            else:  # When name has index in the end and prefix in front.
-                indexPart = namefield[-2]
-                prefixPart = namefield[0:-2]
-                self.indexformat_field = '{0:0' + str(len(indexPart)) + 'd}'
-                self.indexformat = self.indexformat_field.format(0)
-                self.prefix = ''.join(prefixPart)
-                self.index = int(indexPart)
-
-        # Set up other attributes
+        # Set up other attributes in the wrapper class
         self.unit_template = unitTplt
         self.description_template = descriptionTplt
-        # set templates
+        input_units = units
+        input_description = description
+        self.prefix_aliases = prefix_aliases
+        self.type_match = type_match
+        # set templates, the templates should be a lambda function and input is
+        # the index of prefix parameter.
         if self.unit_template is None:
-            self.unit_template = lambda x: self.units
+            self.unit_template = lambda x: input_units
         if self.description_template is None:
-            self.description_template = lambda x: self.descrition
-        # Using other parameter class as a template for Quantity and value
-        # setter
-        self.type_identifier = {
-                               'float': (floatParameter, {'units' : '',
-                                         'long_double' : False,
-                                         'uncertainty' : 0.0 }),
-                               'string': (strParameter, {}),
-                               'bool': (boolParameter, {}),
-                               'mjd': (MJDParameter, {'time_scale' : 'utc',
-                                       'uncertainty' : 0.0}),
-                               'angle': (AngleParameter, {'units' : 'rad',
-                                         'uncertainty' : 0.0})}
+            self.description_template = lambda x: input_description
 
-        if isinstance(type_match, str):
-            self.type_match = type_match.lower()
-        elif isinstance(value_type, type):
-            self.type_match = type_match.__name__
-        else:
-            self.type_match = type(type_match).__name__
-
-        if self.type_match not in self.type_identifier.keys():
-            raise ValueError('Unrecognized value type ' + self.type_match)
-
-        print_quantity = self.print_quantity_prefix
-        set_quantity = self.set_quantity_prefix
-        #get_value = self.get_value_prefix
-        get_value = self.get_value_prefix
-        set_uncertainty = self.set_uncertainty_prefix
-        self.time_scale = time_scale
-        self.long_double = long_double
-        super(prefixParameter, self).__init__(name=name, value=value,
-                                              units=units,
-                                              description=description,
+        # Set the description and units for the parameter compostion.
+        real_units = self.unit_template(self.index)
+        real_description = self.description_template(self.index)
+        aliases = []
+        for pa in prefix_aliases:
+            aliases.append(pa + self.idxfmt)
+        super(prefixParameter, self).__init__(self.type_match,
+                                              name=name, value=value,
+                                              units=real_units,
+                                              description=real_description,
                                               uncertainty=uncertainty,
                                               frozen=frozen,
                                               continuous=continuous,
-                                              print_quantity=print_quantity,
-                                              set_quantity=set_quantity,
-                                              get_value=get_value,
-                                              set_uncertainty=set_uncertainty)
-
-        self.prefix_aliases = prefix_aliases
+                                              aliases=aliases,
+                                              long_double=long_double,
+                                              time_scale='utc')
         self.is_prefix = True
 
     def prefix_matches(self, prefix):
         return (prefix == self.perfix) or (prefix in self.prefix_aliases)
-
-    def apply_template(self):
-        dsc = self.description_template(self.index)
-        self.description = dsc
-        unt = self.unit_template(self.index)
-        self.units = unt
-
-    def get_par_type_object(self):
-        par_type_class = self.type_identifier[self.type_match][0]
-        obj = par_type_class('example')
-        attr_dependency = self.type_identifier[self.type_match][1]
-        for dp in attr_dependency.keys():
-            if hasattr(self, dp):
-                prefix_arg = getattr(self, dp)
-                setattr(obj, dp, prefix_arg)
-        return obj
-
-    def set_quantity_prefix(self, val):
-        obj = self.get_par_type_object()
-        result = obj.set_quantity(val)
-        return result
-
-    def get_value_prefix(self, val):
-        obj = self.get_par_type_object()
-        result = obj.get_value(val)
-        return result
-
-    def print_quantity_prefix(self, val):
-        obj = self.get_par_type_object()
-        result = obj.print_quantity(val)
-        return result
-
-    def set_uncertainty_prefix(self, val):
-        obj = self.get_par_type_object()
-        result = obj.set_uncertainty(val)
-        return result
 
     def new_param(self, index):
         """Get one prefix parameter with the same type.
@@ -955,7 +925,8 @@ class prefixParameter(Parameter):
         ----------
         A prefixed parameter with the same type of instance.
         """
-        newpfx = prefixParameter(prefix=self.prefix,
+
+        newpfx = prefixParameter(prefx=self.prefix,
                                  indexformat=self.indexformat, index=index,
                                  unitTplt=self.unit_template,
                                  descriptionTplt=self.description_template,
@@ -964,7 +935,6 @@ class prefixParameter(Parameter):
                                  type_match=self.type_match,
                                  long_double=self.long_double,
                                  time_scale=self.time_scale)
-        newpfx.apply_template()
         return newpfx
 
 
