@@ -773,7 +773,6 @@ class parameterWrapper(object):
         self.type_mapping = {'float': floatParameter, 'str': strParameter,
                              'bool': boolParameter, 'mjd': MJDParameter,
                              'angle': AngleParameter}
-        print kwargs
         self.name = name
         try:
             self.param_class = self.type_mapping[parameter_type.lower()]
@@ -875,7 +874,8 @@ class prefixParameter(parameterWrapper):
     def __init__(self, type_match='float',name=None, value=None, units=None,
                  unitTplt=None, description=None, descriptionTplt=None,
                  uncertainty=None, frozen=True, continuous=True,
-                 prefix_aliases=[],long_double=False, time_scale='utc'):
+                 prefix_aliases=[],long_double=False, time_scale='utc',
+                 **kwargs):
         # Split prefixed name, if the name is not in the prefixed format, error
         # will be raised
         self.prefix, self.idxfmt, self.index = split_prefixed_name(name)
@@ -926,15 +926,15 @@ class prefixParameter(parameterWrapper):
         A prefixed parameter with the same type of instance.
         """
 
-        newpfx = prefixParameter(prefx=self.prefix,
-                                 indexformat=self.indexformat, index=index,
-                                 unitTplt=self.unit_template,
-                                 descriptionTplt=self.description_template,
-                                 frozen=self.frozen,
-                                 continuous=self.continuous,
-                                 type_match=self.type_match,
-                                 long_double=self.long_double,
-                                 time_scale=self.time_scale)
+        new_name = self.prefix + format(index, '0'+ str(len(self.idxfmt)))
+        kws = dict()
+        for key in ['units', 'unitTplt', 'description','descriptionTplt',
+                    'frozen', 'continuous', 'prefix_aliases', 'type_match',
+                    'long_double', 'time_scale']:
+            if hasattr(self, key):
+                kws[key] = getattr(self, key)
+
+        newpfx = prefixParameter(name=new_name, **kws)
         return newpfx
 
 
