@@ -66,13 +66,21 @@ class TestParameters(unittest.TestCase):
 
         self.assertEqual(self.m.F0.units, units)
         self.assertTrue(
-                numpy.isclose(self.m.F0.value, value, atol=1e-17))
+                numpy.isclose(self.m.F0.value, value, atol=1e-19))
         self.assertEqual(self.m.F0.value, value)
 
     def test_F0_uncertainty(self):
         uncertainty = 0.00000000000698911818
         units = self.m.F0.units
-        self.assertEqual(self.m.F0.uncertainty, uncertainty * units)
+        # Test stored uncertainty value
+        self.assertTrue(
+                numpy.isclose(self.m.F0.uncertainty.to(units).value,
+                uncertainty, atol=1e-20))
+        # Test parameter.uncertainty_value returned value
+        self.assertTrue(
+                numpy.isclose(self.m.F0.uncertainty_value, uncertainty,
+                atol=1e-20))
+
 
     def test_set_new_units(self):
         """Check whether we can set the units to non-standard ones """
@@ -108,7 +116,7 @@ class TestParameters(unittest.TestCase):
                 numpy.isclose(self.m.F0.value, value, atol=1e-13))
         self.assertTrue(
                 numpy.isclose(self.m.F0.uncertainty_value, uncertainty_value,
-                              atol=1e-13))
+                              atol=1e-20))
         # Check the ratio, using the old units as a reference
         ratio = self.m.F0.quantity / (value * units)
         ratio_uncertainty = self.m.F0.uncertainty / (uncertainty_value * units)
@@ -117,7 +125,7 @@ class TestParameters(unittest.TestCase):
 
         self.assertTrue(
                 numpy.isclose(ratio_uncertainty.decompose(u.si.bases), 1.0,
-                              atol=1e-13))
+                              atol=1e-20))
 
     def set_units_fail(self):
         """Setting the unit to a non-compatible unit should fail """
