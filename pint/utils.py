@@ -314,10 +314,11 @@ def ddouble2ldouble(t1, t2, format='jd'):
     return t[0]+t[1]
 
 
-def str2longdouble(str):
+def str2longdouble(str_data):
     """Return a numpy long double scalar from the input string, using strtold()
     """
-    return str2ldarr1(str)[0]
+    input_str = str_data.translate(string.maketrans('Dd', 'ee'))
+    return str2ldarr1(input_str)[0]
 
 
 def split_prefixed_name(name):
