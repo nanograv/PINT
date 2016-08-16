@@ -5,7 +5,7 @@ class TOASelect(object):
     It will check toa table and do table operation.
     """
     def __init__(self, key, key_value):
-        self.key = key
+        self.key = key.replace('-','')
         self.key_value = key_value
         self.key_section = key + '_section'
         self.range_select = False
@@ -36,7 +36,7 @@ class TOASelect(object):
             raise ValueError("Key %s is not a flag or toas table key." % self.key)
 
     def get_toa_key_mask(self, toas):
-        """This is a function to return toas mask depend on key word and key value. 
+        """This is a function to return toas mask depend on key word and key value.
         """
         if self.key_section not in toas.keys():
             self.get_key_section(toas)
