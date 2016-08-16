@@ -117,12 +117,13 @@ class DispersionDMX(Dispersion):
         DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
         if 'DMX_section' not in toas.keys():
             toas['DMX_section'] = np.zeros_like(toas['index'])
+            mjds = np.array([t.mjd for t in toas['mjd']])
             epoch_ind = 1
             while epoch_ind in DMX_mapping:
                 # Get the parameters
                 r1 = getattr(self, DMXR1_mapping[epoch_ind]).quantity
                 r2 = getattr(self, DMXR2_mapping[epoch_ind]).quantity
-                msk = np.logical_and(toas['mjd'] >= r1, toas['mjd'] <= r2)
+                msk = np.logical_and(mjds >= r1.mjd, mjds <= r2.mjd)
                 toas['DMX_section'][msk] = epoch_ind
                 epoch_ind = epoch_ind + 1
 
