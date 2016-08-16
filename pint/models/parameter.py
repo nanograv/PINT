@@ -781,61 +781,6 @@ class parameterWrapper(object):
         # initiate parameter class
         self.param_inst = self.param_class(name=self.name, **kwargs)
 
-    # @property
-    # def prior(self):
-    #     return self.param_inst.prior
-    #
-    # # @prior.setter
-    # # def prior(self,p):
-    #
-    # # Setup units property
-    # @property
-    # def units(self):
-    #     return self.param_inst.units
-    #
-    # # @units.setter
-    # # def units(self, unt):
-    #
-    # # Setup quantity property
-    # @property
-    # def quantity(self):
-    #     """Return the internal stored parameter value and units.
-    #     """
-    #     return self.param_inst.quantity
-    #
-    # # @quantity.setter
-    # # def quantity(self, val):
-    #
-    # # Setup .value property
-    # # .value will get pure number from ._quantity.
-    # # Setting .value property will change ._quantity.
-    # @property
-    # def value(self):
-    #     return self.param_inst.value
-    #
-    # # @value.setter
-    # # def value(self, val):
-    #
-    # @property
-    # def uncertainty(self):
-    #     """Return the internal stored parameter uncertainty value and units.
-    #     """
-    #     return self.param_inst.uncertainty
-    #
-    # # @uncertainty.setter
-    # # def uncertainty(self, val):
-    #
-    # @property
-    # def uncertainty_value(self):
-    #     """Return a pure value from .uncertainty. The unit will associate
-    #     with .units
-    #     """
-    #     return self.param_inst.uncertainty_value
-
-    # @uncertainty_value.setter
-    # def uncertainty_value(self, val):
-    #
-
     def __getattr__(self, name):
         """Customizing attribute access. If normal getattr can not fine 'name',
         it will go to self.param_inst to find 'name'
@@ -853,14 +798,14 @@ class parameterWrapper(object):
         http://docs.python.org/reference/datamodel.html#customizing-attribute-access
         """
         # Set for attributes for initilization
-        if not hasattr(self, 'param_inst'):
-            super(parameterWrapper, self).__setattr__(name, value)
-        # When has self.param_list
-        else:
+        if hasattr(self, 'param_inst'):
             if name in dir(self.param_inst):
                 setattr(self.param_inst, name, value)
             else:
                 super(parameterWrapper, self).__setattr__(name, value)
+        # When has no self.param_list
+        else:
+            super(parameterWrapper, self).__setattr__(name, value)
 
 
 class prefixParameter(parameterWrapper):
@@ -993,7 +938,7 @@ class prefixParameter(parameterWrapper):
         return newpfx
 
 
-class maskParameter(Parameter):
+class maskParameter(floatParameter):
     """ This is a Parameter type for mask parameters which is to select a
         certain subset of TOAs, for example JUMP. This type of parameter does
         not require index input. But the final may would has an index part, for
@@ -1054,55 +999,24 @@ class maskParameter(Parameter):
 
         self.key = key
         self.key_value = key_value
-        self.long_double = long_double
-        set_quantity = self.set_quantity_mask
-        get_value = self.get_value_mask
-        print_quantity = self.print_quantity_mask
-        set_uncertainty = self.set_uncertainty_mask
         self.index = index
         name_param = name + str(index)
         self.origin_name = name
         super(maskParameter, self).__init__(name=name_param, value=value,
-                                              units=units,
-                                              description=description,
-                                              uncertainty=uncertainty,
-                                              frozen=frozen,
-                                              continuous=continuous,
-                                              aliases=aliases,
-                                              print_quantity=print_quantity,
-                                              set_quantity=set_quantity,
-                                              get_value=get_value,
-                                              set_uncertainty=set_uncertainty)
+                                            units=units,
+                                            description=description,
+                                            uncertainty=uncertainty,
+                                            frozen=frozen,
+                                            continuous=continuous,
+                                            aliases=aliases,
+                                            long_double=long_double)
+
         # For the first mask parameter, add name to aliases for the reading
         # first mask parameter from parfile.
         if index == 1:
             self.aliases.append(name)
         self.from_parfile_line = self.from_parfile_line_mask
-
-    def get_par_type_object(self):
-        obj = floatParameter('example', units=self.units,
-                             long_double=self.long_double)
-        return obj
-
-    def set_quantity_mask(self, val):
-        obj = self.get_par_type_object()
-        result = obj.set_quantity(val)
-        return result
-
-    def get_value_mask(self, val):
-        obj = self.get_par_type_object()
-        result = obj.get_value(val)
-        return result
-
-    def print_quantity_mask(self, val):
-        obj = self.get_par_type_object()
-        result = obj.print_quantity(val)
-        return result
-
-    def set_uncertainty_mask(self, val):
-        obj = self.get_par_type_object()
-        result = obj.set_uncertainty(val)
-        return result
+        self.as_parfile_line = self.as_parfile_line_mask
 
     def from_parfile_line_mask(self, line):
         try:
@@ -1115,7 +1029,7 @@ class maskParameter(Parameter):
             return False
 
         try:
-            self.key = k[1].replace('-', '')
+            self.key = k[1]
         except IndexError:
             return False
 
@@ -1155,6 +1069,22 @@ class maskParameter(Parameter):
                 ucty = k[4 + len_key_v]
             self.uncertainty = self.set_uncertainty(ucty)
         return True
+
+    def as_parfile_line_mask(self):
+        if self.quantity is None:
+            return ""
+        line = "%-15s %s " % (self.origin_name, self.key)
+        for kv in self.key_value:
+            if not isinstance(kv, time.Time):
+                line += "%s " % kv
+            else:
+                line += "%s " % time_to_mjd_string(kvgit s)
+        line += "%25s" % self.print_quantity(self.quantity)
+        if self.uncertainty is not None:
+            line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty_value))
+        elif not self.frozen:
+            line += " 1"
+        return line + "\n"
 
     def new_param(self, index):
         """Create a new but same style mask parameter
