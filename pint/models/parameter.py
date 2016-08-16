@@ -781,6 +781,61 @@ class parameterWrapper(object):
         # initiate parameter class
         self.param_inst = self.param_class(name=self.name, **kwargs)
 
+    # @property
+    # def prior(self):
+    #     return self.param_inst.prior
+    #
+    # # @prior.setter
+    # # def prior(self,p):
+    #
+    # # Setup units property
+    # @property
+    # def units(self):
+    #     return self.param_inst.units
+    #
+    # # @units.setter
+    # # def units(self, unt):
+    #
+    # # Setup quantity property
+    # @property
+    # def quantity(self):
+    #     """Return the internal stored parameter value and units.
+    #     """
+    #     return self.param_inst.quantity
+    #
+    # # @quantity.setter
+    # # def quantity(self, val):
+    #
+    # # Setup .value property
+    # # .value will get pure number from ._quantity.
+    # # Setting .value property will change ._quantity.
+    # @property
+    # def value(self):
+    #     return self.param_inst.value
+    #
+    # # @value.setter
+    # # def value(self, val):
+    #
+    # @property
+    # def uncertainty(self):
+    #     """Return the internal stored parameter uncertainty value and units.
+    #     """
+    #     return self.param_inst.uncertainty
+    #
+    # # @uncertainty.setter
+    # # def uncertainty(self, val):
+    #
+    # @property
+    # def uncertainty_value(self):
+    #     """Return a pure value from .uncertainty. The unit will associate
+    #     with .units
+    #     """
+    #     return self.param_inst.uncertainty_value
+
+    # @uncertainty_value.setter
+    # def uncertainty_value(self, val):
+    #
+
     def __getattr__(self, name):
         """Customizing attribute access. If normal getattr can not fine 'name',
         it will go to self.param_inst to find 'name'
