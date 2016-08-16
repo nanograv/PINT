@@ -940,40 +940,44 @@ class prefixParameter(parameterWrapper):
 
 class maskParameter(floatParameter):
     """ This is a Parameter type for mask parameters which is to select a
-        certain subset of TOAs, for example JUMP. This type of parameter does
-        not require index input. But the final may would has an index part, for
-        the purpose of parsing the right value from the parfile. For example,
-        >>> p = maskParameter(name='JUMP', index=2)
-        >>> p.name
-        'JUMP2'
-        Parameter
-        ---------
-        name : str optional
-            The name of the parameter.
-        index : int optional [default 1]
-            The index number for the prefixed parameter.
-        key : str optional
-            The key words/flag for the selecting TOAs
-        key_value :  list/single value optional
-            The value for key words/flags. Value can take one value as a flag value.
-            or two value as a range.
-            e.g. JUMP freq 430.0 1440.0. or JUMP -fe G430
-        value : float or long_double optinal
-            Toas/phase adjust value
-        long_double : bool, optional default 'double'
-            Set float type quantity and value in numpy float128
-        units : str optional
-            Unit for the offset value
-        description : str optional
-            Description for the parameter
-        uncertainty: float/longdouble
-            uncertainty of the parameter.
-        frozen : bool, optional
-            A flag specifying whether "fitters" should adjust the value of this
-            parameter or leave it fixed.
-        continuous : bool optional
-        aliases : list optional
-            List of aliases for parameter name.
+    certain subset of TOAs and apply changes on the subset of TOAs, for example
+    JUMP. This type of parameter does not require index input. But eventrully
+    an index part will be added, for the purpose of parsing the right value
+    from the parfile. For example,
+    >>> p = maskParameter(name='JUMP', index=2)
+    >>> p.name
+    'JUMP2'
+    Parameter
+    ---------
+    name : str optional
+        The name of the parameter.
+    index : int optional [default 1]
+        The index number for the prefixed parameter.
+    key : str optional
+        The key words/flag for the selecting TOAs
+    key_value :  list/single value optional
+        The value for key words/flags. Value can take one value as a flag value.
+        or two value as a range.
+        e.g. JUMP freq 430.0 1440.0. or JUMP -fe G430
+    value : float or long_double optinal
+        Toas/phase adjust value
+    long_double : bool, optional default 'double'
+        Set float type quantity and value in numpy float128
+    units : str optional
+        Unit for the offset value
+    description : str optional
+        Description for the parameter
+    uncertainty: float/longdouble
+        uncertainty of the parameter.
+    frozen : bool, optional
+        A flag specifying whether "fitters" should adjust the value of this
+        parameter or leave it fixed.
+    continuous : bool optional
+    aliases : list optional
+        List of aliases for parameter name.
+
+    TODO: Is mask parameter provide some other type of parameters other then
+    floatParameter?
     """
     def __init__(self, name=None, index=1, key=None, key_value=None,
                  value=None, long_double=False, units= None, description=None,
@@ -1078,7 +1082,7 @@ class maskParameter(floatParameter):
             if not isinstance(kv, time.Time):
                 line += "%s " % kv
             else:
-                line += "%s " % time_to_mjd_string(kvgit s)
+                line += "%s " % time_to_mjd_string(kv)
         line += "%25s" % self.print_quantity(self.quantity)
         if self.uncertainty is not None:
             line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty_value))
