@@ -51,8 +51,9 @@ class Dispersion(TimingModel):
         return dmdelay
 
     def dispersion_delay(self, toas):
+        require, provides = self.find_requires_provides('Dispersion')
         try:
-            bfreq = self.barycentric_radio_freq(toas)
+            bfreq = self.get_required_data(require, toas, 'obs')['freq']
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
             bfreq = toas['freq']
@@ -94,6 +95,7 @@ class DispersionDMX(Dispersion):
                        parameter_type='MJD', time_scale='utc'))
         self.dm_value_funcs += [self.dmx_dm,]
         self.model_special_params = ['DMX_0001', 'DMXR1_0001','DMXR2_0001']
+
     def setup(self):
         super(Dispersion, self).setup()
         # Get DMX mapping.
