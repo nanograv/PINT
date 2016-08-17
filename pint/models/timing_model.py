@@ -99,6 +99,7 @@ class module_info(object):
     """
     def __init__(self, module):
         self.module_name = type(module).__name__
+        self.base_class = module.__class__.__base__.__name__
         if hasattr(module, 'requires'):
             self.requires = module.requires
         if hasattr(module, 'provides'):
@@ -156,11 +157,7 @@ class TimingModel(object):
     def __init__(self):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
-        self.delay_funcs = [] # List of delay component functions
-        # L1 is the first level of delays. L1 delay does not need barycentric toas
-        # After L1 delay, the toas have been corrected to solar system barycenter.
-        # L2 is the second level of delays. L2 delay need barycentric toas
-
+        self.delay_funcs = [] 
         self.phase_funcs = [] # List of phase component functions
         self.cache = None
         self.add_param(strParameter(name="PSR",
@@ -224,6 +221,30 @@ class TimingModel(object):
             if par.is_prefix == True and par.prefix == prefix:
                 mapping[par.index] = parname
         return mapping
+
+    def find_requires_provides(self, module_name):
+        """This function returns the provides and requires from a module.
+        """
+        req = None
+        prv = None
+        if hasattr(self, 'modules'):
+            if module_name in self.modules.keys():
+                req = self.modules[module_name].requires
+                prv = self.modules[module_name].provides
+            # search in the subclass
+            else:
+                for md in self.modules.values():
+                    if md.base_class == module_name:
+                        req = md.requires
+                        prv = md.provides
+                        break
+        else:
+            req = self.requires
+            prv = self.provides
+        if req is None or prv is None:
+            raise ValueError("Module '" + module_name + "' is not a valid module "
+                             "or parent class.")
+        return req, prv
 
     def search_provider(self, key, requirements, init_require):
         """This is a function that checks module requirement and search the
