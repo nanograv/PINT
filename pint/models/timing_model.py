@@ -117,8 +117,8 @@ class module_info(object):
         out = self.module_name + ':\n'
         out += 'Requires : ' + str(self.requires) + '\n'
         out += 'Provides : ' + str(self.provides) + '\n'
-        # out += 'Delay functions : ' + str(self.delay_func_names) + '\n'
-        # out += 'Phase functions : ' + str(self.phase_func_names) + '\n'
+        out += 'Delay functions : ' + str(self.delay_func_names) + '\n'
+        out += 'Phase functions : ' + str(self.phase_func_names) + '\n'
         out += 'Parameters :' + str(self.params) + '\n'
         return out
 
@@ -245,20 +245,50 @@ class TimingModel(object):
                     provider[req] = self.modules[m].provides[key][1]
         return provider
 
-    def get_required_TOAs(self, requirements, toa_start, toas):
-        """This is a function that returns the requrired toas
+    def get_required_TOA(self, requirements, toa_start, toas):
+        """This is a function that returns the requrired TOAs
+        depend on the requirement of each module.
+        required_toa = toas['tdbld'] - delay
         """
         provider = self.search_provider('TOA', requirements, toa_start)
+
         delay = np.zeros(len(toas))
         for p in provider:
             if provider[p] is None:
-                errmsg = 'Module ' + mod + ' requirement ' + p
+                errmsg = 'Module ' + mod + ' requirement ' + p + ' TOA'
                 errmsg += ' does not have a provider.'
                 raise ValueError(errmsg)
             for dfn in provider[p]:
                 delay += getattr(self, dfn)(toas)
         result_toas = toas['tdbld']*u.day - delay*u.second
         return result_toas
+
+    def get_required_freq(self, requirements, freq_start, toas):
+        """This is a function to get the required frequency
+        result_freq += required_function(toas)
+        """
+        provider = self.search_provider('freq', requirements, freq_start)
+        result_freq = np.zeros(len(toas))
+        for p in provider:
+            if provider[p] is None:
+                errmsg = 'Module ' + mod + ' requirement ' + p + ' frequency'
+                errmsg += ' does not have a provider.'
+                raise ValueError(errmsg)
+            for dfn in provider[p]:
+                result_freq += getattr(self, dfn)(toas)
+        return result_freq
+
+    def get_required_data(self, requirements_dict, toas, start_point='obs'):
+        """This is a wrapper function for getting all the required data,(toa
+        and freq for now)
+        To use this function, each requirement section sould have a get
+        requirement function in the format of
+        'get_required_xxx(self, requirements, start_point, toas)'
+        """
+        result = {}
+        for key, rqm in zip(requirements_dict.keys(), requirements_dict.values()):
+            result[key] = getattr(self, 'get_required_'+key)(rqm, start_point, toas)
+        return result
 
     @Cache.use_cache
     def phase(self, toas):

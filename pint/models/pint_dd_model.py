@@ -96,8 +96,8 @@ class DDwrapper(PSRbinaryWapper):
             require = self.modules['DDwrapper'].requires['TOA']
         else:
             require = self.requires['TOA']
-        # Here we are assuming toa starts at observatory. 
-        self.barycentricTime = self.get_required_TOAs(require, 'obs', toas)
+        # Here we are assuming toa starts at observatory.
+        self.barycentricTime = self.get_required_TOA(require, 'obs', toas)
 
         ddobj = DDmodel(self.barycentricTime)
         pardict = {}
