@@ -580,6 +580,7 @@ class MJDParameter(Parameter):
     def __init__(self, name=None, value=None, description=None,
                  uncertainty=None, frozen=True, continuous=True, aliases=[],
                  time_scale='utc'):
+
         self.time_scale = time_scale
         set_quantity = self.set_quantity_mjd
         print_quantity = time_to_mjd_string
@@ -732,66 +733,62 @@ class AngleParameter(Parameter):
 
 class prefixParameter(Parameter):
     """ This is a Parameter type for prefix parameters, for example DMX_
-
-        Create a prefix parameter
-        To create a prefix parameter, there are two ways:
-        1. Create by name
-            If optional argument name with a prefixed format, such as DMX_001
-            or F10, is given. prefixParameter class will figure out the prefix
-            name, index and indexformat.
-        2. Create by prefix and index
-            This method allows you create a prefixParameter class using prefix
-            name and index. The class name will be returned as prefix name plus
-            index with the right index format. So the optional arguments
-            prefix, indexformat and index are need. index default value is 1.
-        If both of two methods are filled, It will using the first method.
-        Add description and units.
-        1. Direct add
-            A description and unit can be added directly by using the optional
-            arguments, description and units. Both of them will return as a
-            string attribution.
-        2. description and units template.
-            If the description and unit are changing with the prefix parameter
-            index, optional argument descritionTplt and unitTplt are need.
-            These two attributions are lambda functions, for example
-            >>> descritionTplt = lambda x: 'This is the description of parameter
-                                            %d'%x
-            The class will fill the description and unit automatically.
-
-        If both two methods are filled, it prefer the first one.
-
-        Parameter
-        ---------
-        name : str optional
-            The name of the parameter. If it is not provided, the prefix and
-            index format are needed.
-        prefix : str optional
-            Parameter prefix, now it is only supporting 'prefix_' type and
-            'prefix0' type.
-        indexformat : str optional
-            The format for parameter index
-        index : int optional [default 1]
-            The index number for the prefixed parameter.
-        units :  str optional
-            The unit of parameter
-        unitTplt : lambda method
-            The unit template for prefixed parameter
-        description : str optional
-            Description for the parameter
-        descriptionTplt : lambda method optional
-            Description template for prefixed parameters
-        prefix_aliases : list of str optional
-            Alias for the prefix
-        frozen : bool, optional
-            A flag specifying whether "fitters" should adjust the value of this
-            parameter or leave it fixed.
-        continuous : bool
-        type_match : str, optional, default 'float'
-            Example parameter class template for quantity and value setter
-        long_double : bool, optional default 'double'
-            Set float type quantity and value in numpy float128
-        time_scale : str, optional default 'utc'
-            Time scale for MJDParameter class.
+    Create a prefix parameter
+    To create a prefix parameter, there are two ways:
+    1. Create by name
+        If optional argument name with a prefixed format, such as DMX_001
+        or F10, is given. prefixParameter class will figure out the prefix
+        name, index and indexformat.
+    2. Create by prefix and index
+        This method allows you create a prefixParameter class using prefix
+        name and index. The class name will be returned as prefix name plus
+        index with the right index format. So the optional arguments
+        prefix, indexformat and index are need. index default value is 1.
+    If both of two methods are filled, It will using the first method.
+    Add description and units.
+    1. Direct add
+        A description and unit can be added directly by using the optional
+        arguments, description and units. Both of them will return as a
+        string attribution.
+    2. description and units template.
+        If the description and unit are changing with the prefix parameter
+        index, optional argument descritionTplt and unitTplt are need.
+        These two attributions are lambda functions, for example
+        >>> descritionTplt = lambda x:'This is the description of parameter %d'%x
+        The class will fill the description and unit automatically.
+    If both two methods are filled, it prefer the first one.
+    Parameter
+    ---------
+    name : str optional
+        The name of the parameter. If it is not provided, the prefix and
+        index format are needed.
+    prefix : str optional
+        Parameter prefix, now it is only supporting 'prefix_' type and
+        'prefix0' type.
+    indexformat : str optional
+        The format for parameter index
+    index : int optional [default 1]
+        The index number for the prefixed parameter.
+    units :  str optional
+        The unit of parameter
+    unitTplt : lambda method
+        The unit template for prefixed parameter
+    description : str optional
+        Description for the parameter
+    descriptionTplt : lambda method optional
+        Description template for prefixed parameters
+    prefix_aliases : list of str optional
+        Alias for the prefix
+    frozen : bool, optional
+        A flag specifying whether "fitters" should adjust the value of this
+        parameter or leave it fixed.
+    continuous : bool
+    type_match : str, optional, default 'float'
+        Example parameter class template for quantity and value setter
+    long_double : bool, optional default 'double'
+        Set float type quantity and value in numpy float128
+    time_scale : str, optional default 'utc'
+        Time scale for MJDParameter class.
     """
 
     def __init__(self, name=None, prefix=None, indexformat=None, index=1,
