@@ -101,52 +101,52 @@ class PulsarBinary(TimingModel):
         for bpar in self.binary_params:
             self.make_delay_binary_deriv_funcs(bpar)
             self.delay_derivs += [getattr(self, 'd_delay_binary_d_' + bpar)]
+        # Setup the model isinstance
+        self.binary_instance = self.binary_model_class()
+
     # With new parameter class set up, do we need this?
     def apply_units(self):
         """Apply units to parameter value.
         """
         for bpar in self.binary_params:
             bparObj = getattr(self,bpar)
-            if bparObj.num_value is None or bparObj.num_unit is None:
+            if bparObj.value is None or bparObj.units is None:
                 continue
-            bparObj.value = bparObj.num_value*u.Unit(bparObj.num_unit)
+            bparObj.value = bparObj.value * u.Unit(bparObj.units)
 
     @Cache.use_cache
-    def get_binary_object(self, toas):
+    def update_binary_object(self, toas):
         """
-        Obtain the independent binary object for this set of parameters/toas
+        Update binary object instance for this set of parameters/toas
         """
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py
         # Get barycnetric toa first
         self.barycentric_time = self.get_barycentric_toas(toas)
-        binobj = self.binary_model_class(self.barycentric_time)
         pardict = {}
-        for par in binobj.binary_params:
-            if par in binobj.param_aliases.keys():
-                aliase = binobj.param_aliases[par]
+        for par in self.binary_instance.binary_params:
+            if par in self.binary_instance.param_aliases.keys():
+                aliase = self.binary_instance.param_aliases[par]
             if hasattr(self, par) or \
                 list(set(aliase).intersection(self.params))!=[] :
                 binObjpar = getattr(self, par)
-                if binObjpar.num_value is None:
+                if binObjpar.value is None:
                     continue
-                pardict[par] = binObjpar.num_value*binObjpar.num_unit
+                pardict[par] = binObjpar.value * binObjpar.units
 
-        binobj.set_param_values(pardict)
-        return binobj
+        self.binary_instance.update_input(self.barycentric_time, pardict)
 
     @Cache.use_cache
     def binarymodel_delay(self, toas):
         """Return the binary model independent delay call"""
-        bmobj = self.get_binary_object(toas)
-        return bmobj.binary_delay()
+        self.update_binary_object(toas)
+        return self.binary_instance.binary_delay()
 
     @Cache.use_cache
     def d_binary_delay_d_xxxx(self,param,toas):
         """Return the bianry model delay derivtives"""
-        bmobj = self.get_binary_object(toas)
-
-        return bmobj.d_binarydelay_d_par(param)
+        self.update_binary_object(toas)
+        return self.binary_instance.d_binarydelay_d_par(param)
 
     def make_delay_binary_deriv_funcs(self, param):
         """This is a funcion to make binary derivative functions to the formate

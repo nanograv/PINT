@@ -28,7 +28,6 @@ class BinaryDD(PulsarBinary):
         super(BinaryDD, self).__init__()
         self.binary_model_name = 'DD'
         self.binary_model_class = DDmodel
-
         self.add_param(p.floatParameter(name="A0", value=0.0,
              units="s",
              description="DD model aberration parameter A0"),
@@ -64,11 +63,8 @@ class BinaryDD(PulsarBinary):
              description="Sine of inclination angle"),
              binary_param = True)
 
-        self.binary_delay_funcs += [self.DD_delay,]
-        self.delay_funcs['L2'] += self.binary_delay_funcs
-        
     def setup(self):
-        """Check out parameters setup. 
+        """Check out parameters setup.
         """
         super(BinaryDD,self).setup()
         for p in ("PB", "T0", "A1"):
