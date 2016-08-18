@@ -97,7 +97,6 @@ class PulsarBinary(TimingModel):
             bparObj = getattr(self,bpar)
             if bparObj.value is None or bparObj.units is None:
                 continue
-
             bparObj.value = bparObj.value * u.Unit(bparObj.units)
 
     @Cache.use_cache

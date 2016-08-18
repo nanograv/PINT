@@ -24,7 +24,6 @@ class BinaryDD(PulsarBinary):
         super(BinaryDD, self).__init__()
         self.binary_model_name = 'DD'
         self.binary_model_class = DDmodel
-        
         self.add_param(p.floatParameter(name="A0", value=0.0,
              units="s",
              description="DD model aberration parameter A0"),
