@@ -32,6 +32,8 @@ class BT(TimingModel):
         # Parameters are mostly defined as numpy doubles.
         # Some might become long doubles in the future.
         self.BinaryModelName = 'BT'
+        self.requires = {'TOA': ['ssb','inf_freq'], 'freq': []}
+        self.provides = {'TOA': ('pulsar', ['BT_delay',]), 'freq': ('', None)}
         self.add_param(p.floatParameter(name="PB",
             units="s",
             description="Orbital period"))
@@ -76,7 +78,7 @@ class BT(TimingModel):
             units="s",
             description="Time dilation & gravitational redshift"))
 
-        self.delay_funcs['L2'] += [self.BT_delay,]
+        self.delay_funcs += [self.BT_delay,]
 
     def setup(self):
         super(BT, self).setup()
@@ -127,16 +129,20 @@ class BT(TimingModel):
 
             # T0 needs to be converted to long double
             parobj = getattr(self, key)
-            pardict[par] = parobj.value 
+            pardict[par] = parobj.value
 
         # Apply all the delay terms, except for the binary model itself
-        tt0 = toas['tdbld'] * SECS_PER_DAY
-        for df in self.delay_funcs['L1']:
-            if df != self.BT_delay:
-                tt0 -= df(toas)
+        # If there is no .modules attribution, It is a singal BT model
+        # Treat input toa as barycentric toa
+        if hasattr(self, 'modules'):
+            require = self.modules['BT'].requires['TOA']
+            self.barycentricTime = toa['tdbld']*u.day
+        else:
+            require = self.requires['TOA']
+            self.barycentricTime = self.get_required_TOAs(require, toas)
 
         # Return the BTmodel object
-        return BTmodel(tt0/SECS_PER_DAY, **pardict)
+        return BTmodel(self.barycentricTime.value, **pardict)
 
     @Cache.use_cache
     def BT_delay(self, toas):

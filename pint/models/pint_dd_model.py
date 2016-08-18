@@ -53,7 +53,7 @@ class DDwrapper(PSRbinaryWapper):
              binary_param = True)
 
         self.binary_delay_funcs += [self.DD_delay,]
-        self.delay_funcs['L2'] += [self.DD_delay,]
+        self.delay_funcs += [self.DD_delay,]
     def setup(self):
         super(DDwrapper,self).setup()
         for p in ("PB", "T0", "A1"):
@@ -92,7 +92,12 @@ class DDwrapper(PSRbinaryWapper):
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py
         # Get barycnetric toa first
-        self.barycentricTime = self.get_barycentric_toas(toas)
+        if hasattr(self, 'modules'):
+            require = self.modules['DDwrapper'].requires['TOA']
+        else:
+            require = self.requires['TOA']
+        # Here we are assuming toa starts at observatory. 
+        self.barycentricTime = self.get_required_TOAs(require, 'obs', toas)
 
         ddobj = DDmodel(self.barycentricTime)
         pardict = {}
