@@ -32,13 +32,9 @@ class DDmodel(PSR_BINARY):
     Here the binary has time input and parameters input, the delay can be
     calculated.
     """
-    def __init__(self,t):
+    def __init__(self):
         super(DDmodel, self).__init__()
         self.binary_name = 'DD'
-        if not isinstance(t, np.ndarray) and not isinstance(t,list):
-            self.t = np.array([t,])
-        else:
-            self.t = t
         self.param_default_value.update({'A0':0*u.second,'B0':0*u.second,
                                'DR':0*u.Unit(''),'DTH':0*u.Unit(''),
                                'GAMMA':0*u.second,})
@@ -49,7 +45,7 @@ class DDmodel(PSR_BINARY):
         self.dd_interVars = ['er','eTheta','beta','alpha','Dre','Drep','Drepp',
                              'nhat', 'TM2']
         self.add_inter_vars(self.dd_interVars)
-        self.set_param_values()
+        self.set_param_values() # Set parameters to default values. 
         self.binary_delay_funcs += [self.DDdelay]
         self.d_binarydelay_d_par_funcs += [self.d_DDdelay_d_par]
     # calculations for delays in DD model
