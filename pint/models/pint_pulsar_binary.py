@@ -50,19 +50,12 @@ class PulsarBinary(TimingModel):
             description="Orbital period derivitve respect to time"),
             binary_param = True)
 
-
-        self.add_param(p.floatParameter(name="XPBDOT", value = 0.0,
-            units=u.s/u.s,
-            description="Rate of change of orbital period minus GR prediction"),
-            binary_param = True)
-
-
         self.add_param(p.floatParameter(name="A1",
             units=ls,
             description="Projected semi-major axis, a*sin(i)"),
             binary_param = True)
 
-        self.add_param(p.floatParameter(name = "A1DOT",
+        self.add_param(p.floatParameter(name = "A1DOT", aliases = ['XDOT']
             units=ls/u.s,
             description="Derivitve of projected semi-major axis, da*sin(i)/dt"),
             binary_param = True)
