@@ -67,8 +67,22 @@ class PSR_BINARY(object):
     @property
     def tt0(self):
         return self._tt0
-        
-    def set_param_values(self,valDict = None):
+
+    def update_input(self, barycentric_toa=None, param_dict=None):
+        """ A function updates the toas and parameters
+        """
+        # Update toas
+        if barycentric_toa is not None:
+            if not isinstance(barycentric_toa, np.ndarray) and \
+               not isinstance(barycentric_toa, list):
+                self.t = np.array([barycentric_toa,])
+            else:
+                self.t = barycentric_toa
+        # Update parameters
+        if param_dict is not None:
+            self.set_param_values(param_dict)
+
+    def set_param_values(self, valDict = None):
         """A function that sets the parameters and assign values
            If the valDict is not provided, it will set parameter as default value
         """
@@ -95,7 +109,7 @@ class PSR_BINARY(object):
                 self.param_default_value[p] = defaultValue*u.Unit("")
             else:
                 self.param_default_value[p] = defaultValue
-            setattr(self,parameter,self.param_default_value[p])
+            setattr(self, parameter, self.param_default_value[p])
 
 
     def add_inter_vars(self,interVars):

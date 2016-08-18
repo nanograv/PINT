@@ -26,7 +26,7 @@ class Dispersion(TimingModel):
                        units="pc cm^-3", value=0.0,
                        description="Dispersion measure"))
         self.dm_value_funcs = [self.constant_dm,]
-        self.delay_funcs['L1'] += [self.dedispersion_delay,]
+        self.delay_funcs['L1'] += [self.dispersion_delay,]
         self.delay_derivs += [self.d_delay_dispersion_d_DM,]
 
     def setup(self):
