@@ -53,7 +53,7 @@ class Dispersion(TimingModel):
     def dispersion_delay(self, toas):
         require, provides = self.find_requires_provides('Dispersion')
         try:
-            bfreq = self.get_required_data(require, toas, 'obs')['freq']
+            bfreq = self.get_required_freq(require['freq'], 'obs', toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
             bfreq = toas['freq']

@@ -136,11 +136,10 @@ class BT(TimingModel):
         # Treat input toa as barycentric toa
         if hasattr(self, 'modules'):
             require = self.modules['BT'].requires['TOA']
-            self.barycentricTime = toa['tdbld']*u.day
+            self.barycentricTime = self.get_required_TOA(require,'obs',toas)
         else:
             require = self.requires['TOA']
-            self.barycentricTime = self.get_required_TOAs(require, toas)
-
+            self.barycentricTime = toas['tdbld']*u.day
         # Return the BTmodel object
         return BTmodel(self.barycentricTime.value, **pardict)
 

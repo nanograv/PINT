@@ -157,7 +157,7 @@ class TimingModel(object):
     def __init__(self):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
-        self.delay_funcs = [] 
+        self.delay_funcs = []
         self.phase_funcs = [] # List of phase component functions
         self.cache = None
         self.add_param(strParameter(name="PSR",
@@ -266,37 +266,41 @@ class TimingModel(object):
                     provider[req] = self.modules[m].provides[key][1]
         return provider
 
-    def get_required_TOA(self, requirements, toa_start, toas):
+    def get_required_TOA(self, requirements, start_point, toas):
         """This is a function that returns the requrired TOAs
         depend on the requirement of each module.
-        required_toa = toas['tdbld'] - delay
+        required_toa = toas['tdbld'] - delay. Generally
         """
-        provider = self.search_provider('TOA', requirements, toa_start)
-
+        provider = self.search_provider('TOA', requirements, start_point)
         delay = np.zeros(len(toas))
         for p in provider:
             if provider[p] is None:
-                errmsg = 'Module ' + mod + ' requirement ' + p + ' TOA'
+                errmsg = 'Requirement ' + p + ' TOA'
                 errmsg += ' does not have a provider.'
                 raise ValueError(errmsg)
             for dfn in provider[p]:
                 delay += getattr(self, dfn)(toas)
-        result_toas = toas['tdbld']*u.day - delay*u.second
+        result_toas = toas['tdbld'] * u.day - delay * u.second
         return result_toas
 
-    def get_required_freq(self, requirements, freq_start, toas):
+    def get_required_freq(self, requirements, start_point, toas):
         """This is a function to get the required frequency
         result_freq += required_function(toas)
+        TODO: not sure how to implement this one.
         """
-        provider = self.search_provider('freq', requirements, freq_start)
+        provider = self.search_provider('freq', requirements, start_point)
         result_freq = np.zeros(len(toas))
+        num_funs = 0
         for p in provider:
             if provider[p] is None:
-                errmsg = 'Module ' + mod + ' requirement ' + p + ' frequency'
+                errmsg = 'Requirement ' + p + ' frequency'
                 errmsg += ' does not have a provider.'
                 raise ValueError(errmsg)
             for dfn in provider[p]:
                 result_freq += getattr(self, dfn)(toas)
+                num_funs += 1
+            if num_funs == 0:
+                result_freq = toas['freq']
         return result_freq
 
     def get_required_data(self, requirements_dict, toas, start_point='obs'):

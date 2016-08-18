@@ -113,7 +113,9 @@ class Astrometry(TimingModel):
         NOTE: currently assumes XYZ location of TOA relative to SSB is
         available as 3-vector toa.xyz, in units of light-seconds.
         """
-        L_hat = self.ssb_to_psb_xyz(epoch=toas['tdbld'].astype(numpy.float64))
+        requires, provides = self.find_requires_provides('Astrometry')
+        req_TOA = self.get_required_TOA(requires['TOA'], 'obs', toas)
+        L_hat = self.ssb_to_psb_xyz(epoch=req_TOA.value.astype(numpy.float64))
         re_dot_L = numpy.sum(toas['ssb_obs_pos']*L_hat, axis=1)
         delay = -re_dot_L.to(ls).value
         if self.PX.value != 0.0:

@@ -43,8 +43,10 @@ class FD(TimingModel):
         Eq.(2):
         FDdelay = sum(c_i * (log(obs_freq/1GHz))^i)
         """
+        require, provides = self.find_requires_provides('FD')
+        req_freq = self.get_required_freq(require['freq'], 'obs', toas)
         FD_mapping = self.get_prefix_mapping('FD')
-        log_freq = np.log(toas['freq'] / (1 * u.GHz))
+        log_freq = np.log(req_freq / (1 * u.GHz))
         FD_coeff = [getattr(self, FD_mapping[ii]).value \
                    for ii in range(self.num_FD_terms,0,-1)]
         FD_coeff += [0.0]
