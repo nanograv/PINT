@@ -60,7 +60,7 @@ class BinaryELL1(PulsarBinary):
         if self.TASC.value is None:
             if self.ECC.value == 0.0:
                 warn("Since ECC is 0.0, using T0 as TASC.")
-                if self.T0.value not None:
+                if self.T0.value is not None:
                     self.TASC.value = self.T0.value
                 else:
                     raise MissingParameter("ELL1", 'T0', "T0 or TASC is required for ELL1 model.")

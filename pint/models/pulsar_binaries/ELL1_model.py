@@ -23,8 +23,6 @@ class ELL1model(PSR_BINARY):
         self.binary_delay_funcs += [self.ELL1delay]
         self.d_binarydelay_d_par_funcs += [self.d_ELL1delay_d_par]
 
-    # TODO: EPS1 EPS2 revser. Tasc
-
     def ttasc(self):
         """
         ttasc = t - TASC
@@ -76,4 +74,7 @@ class ELL1model(PSR_BINARY):
         return om.to(u.deg, equivalencies=u.dimensionless_angles())
 
     def ELL1_ecc(self):
-        return self.eps1() / np.sin(ELL1_om())
+        return np.sqrt(self.eps1()**2 + self.eps2()**2)
+
+    def ELL1_T0(self):
+        return self.TASC + self.PB/(2*np.pi) * np.arctan(self.eps1()/self.eps2())
