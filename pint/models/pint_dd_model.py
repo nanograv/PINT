@@ -53,11 +53,6 @@ class BinaryDD(PulsarBinary):
              description="Relativistic deformation of the orbit",),
              binary_param = True)
 
-        self.add_param(p.floatParameter(name="M2",
-             units=u.M_sun,
-             description="Mass of companian in the unit Sun mass"),
-             binary_param = True)
-
         self.add_param(p.floatParameter(name="SINI", value=0.0,
              units="",
              description="Sine of inclination angle"),
