@@ -41,7 +41,7 @@ class PulsarBinary(TimingModel):
             description="Projected semi-major axis, a*sin(i)"),
             binary_param = True)
 
-        self.add_param(p.floatParameter(name = "A1DOT", aliases = ['XDOT']
+        self.add_param(p.floatParameter(name = "A1DOT", aliases = ['XDOT'],
             units=ls/u.s,
             description="Derivitve of projected semi-major axis, da*sin(i)/dt"),
             binary_param = True)
@@ -71,6 +71,10 @@ class PulsarBinary(TimingModel):
             description="Longitude of periastron"),
             binary_param = True)
 
+        self.add_param(p.floatParameter(name="M2",
+             units=u.M_sun,
+             description="Mass of companian in the unit Sun mass"),
+             binary_param = True)
         # Set up delay function
         self.binary_delay_funcs += [self.binarymodel_delay,]
         self.delay_funcs['L2'] += [self.binarymodel_delay,]
@@ -103,10 +107,10 @@ class PulsarBinary(TimingModel):
         self.barycentric_time = self.get_barycentric_toas(toas)
         pardict = {}
         for par in self.binary_instance.binary_params:
+            binary_par_names = [par,]
             if par in self.binary_instance.param_aliases.keys():
-                aliase = self.binary_instance.param_aliases[par]
-            if hasattr(self, par) or \
-                list(set(aliase).intersection(self.params))!=[] :
+                binary_par_names += self.binary_instance.param_aliases[par]
+            if list(set(binary_par_names).intersection(self.params))!=[] :
                 binObjpar = getattr(self, par)
                 if binObjpar.value is None:
                     continue
