@@ -393,7 +393,7 @@ class TOAs(object):
 
         if not hasattr(self, 'table'):
             mjds = self.get_mjds(high_precision=True)
-            mjds_low = self.get_mjds()*u.day
+            mjds_low = self.get_mjds()
             self.first_MJD = mjds.min()
             self.last_MJD = mjds.max()
             # The table is grouped by observatory
@@ -446,9 +446,9 @@ class TOAs(object):
                 return numpy.array([t for t in self.table['mjd']])
         else:
             if hasattr(self, "toas"):
-                return numpy.array([t.mjd.value for t in self.toas])
+                return numpy.array([t.mjd.value for t in self.toas]) * u.day
             else:
-                return numpy.array([t.mjd for t in self.table['mjd']])
+                return self.table['mjd_float']
 
 
     def get_errors(self):
