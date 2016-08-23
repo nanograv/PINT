@@ -75,20 +75,20 @@ class DispersionDMX(Dispersion):
                        unitTplt=lambda x: "pc cm^-3",
                        description='Dispersion measure variation',
                        descriptionTplt=lambda x: "Dispersion measure",
-                       type_match='float'))
+                       paramter_type='float'))
         self.add_param(p.prefixParameter(name='DMXR1_0001',
                        units="MJD",
                        value=time.Time(0.0, scale='utc', format='mjd'),
                        unitTplt=lambda x: "MJD",
                        description='Beginning of DMX interval',
                        descriptionTplt=lambda x: 'Beginning of DMX interval',
-                       type_match='MJD', time_scale='utc'))
+                       parameter_type='MJD', time_scale='utc'))
         self.add_param(p.prefixParameter(name='DMXR2_0001', units="MJD",
                        value=time.Time(0.0, scale='utc', format='mjd'),
                        unitTplt=lambda x: "MJD",
                        description='End of DMX interval',
                        descriptionTplt=lambda x: 'End of DMX interval',
-                       type_match='MJD', time_scale='utc'))
+                       parameter_type='MJD', time_scale='utc'))
         self.dm_value_funcs += [self.dmx_dm,]
         self.model_special_params = ['DMX_0001', 'DMXR1_0001','DMXR2_0001']
     def setup(self):
@@ -114,6 +114,7 @@ class DispersionDMX(Dispersion):
         DMX_mapping = self.get_prefix_mapping('DMX_')
         DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
         DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
+        print DMXR1_mapping
         if 'DMX_section' not in toas.keys():
             toas['DMX_section'] = np.zeros_like(toas['index'])
             epoch_ind = 1
