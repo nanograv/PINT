@@ -461,15 +461,6 @@ class floatParameter(Parameter):
         else:
             result = longdouble2string(quan.to(self.units).value)
         return result
-    # def set_quantity_longdouble(self, val):
-    #     try:
-    #         _ = val.to(self.units)
-    #         result = data2longdouble(val.value)*val.unit
-    #     except AttributeError:
-    #         result = data2longdouble(val) * self.units
-    #
-    #     return result
-
 
     def get_value_float(self, quan):
         if quan is None:
@@ -761,124 +752,71 @@ class AngleParameter(Parameter):
         return result
 
 
-class parameterWrapper(object):
-    """This is a wrapper class for parameter classes. It is for the type of
-    parameters requires some speical functionalities, for example prefixParameter
-    and maskParameter.
-    A normal parameter class will be stored in an attribution. This class will
-    provide a set of property to interact with the stored parameter class.
-    """
-    def __init__(self, parameter_type, name=None, **kwargs):
-        # Use kwargs.
-        self.type_mapping = {'float': floatParameter, 'str': strParameter,
-                             'bool': boolParameter, 'mjd': MJDParameter,
-                             'angle': AngleParameter}
-        self.name = name
-        try:
-            self.param_class = self.type_mapping[parameter_type.lower()]
-        except KeyError:
-            raise ValueError("Unknow parameter type '"+ parameter_type + "' ")
-        # initiate parameter class
-        self.param_inst = self.param_class(name=self.name, **kwargs)
-
-    def __getattr__(self, name):
-        """Customizing attribute access. If normal getattr can not fine 'name',
-        it will go to self.param_inst to find 'name'
-        See page :
-        http://docs.python.org/reference/datamodel.html#customizing-attribute-access
-        """
-        try:
-            return getattr(self.param_inst, name)
-        except AttributeError:
-            msg = "'{0}' object has no attribute '{1}'"
-            raise AttributeError(msg.format(type(self).__name__, name))
-
-    def __setattr__(self, name, value):
-        """Customizing attribute access. See page :
-        http://docs.python.org/reference/datamodel.html#customizing-attribute-access
-        """
-        # Set for attributes for initilization
-        if hasattr(self, 'param_inst'):
-            if name in dir(self.param_inst):
-                setattr(self.param_inst, name, value)
-            else:
-                super(parameterWrapper, self).__setattr__(name, value)
-        # When has no self.param_list
-        else:
-            super(parameterWrapper, self).__setattr__(name, value)
-
-
-class prefixParameter(parameterWrapper):
+class prefixParameter(object):
     """ This is a Parameter type for prefix parameters, for example DMX_
-
-        Create a prefix parameter
-        To create a prefix parameter, there are two ways:
-        1. Create by name
-            If optional argument name with a prefixed format, such as DMX_001
-            or F10, is given. prefixParameter class will figure out the prefix
-            name, index and indexformat.
-        2. Create by prefix and index
-            This method allows you create a prefixParameter class using prefix
-            name and index. The class name will be returned as prefix name plus
-            index with the right index format. So the optional arguments
-            prefix, indexformat and index are need. index default value is 1.
-        If both of two methods are filled, It will using the first method.
-        Add description and units.
-        1. Direct add
-            A description and unit can be added directly by using the optional
-            arguments, description and units. Both of them will return as a
-            string attribution.
-        2. description and units template.
-            If the description and unit are changing with the prefix parameter
-            index, optional argument descritionTplt and unitTplt are need.
-            These two attributions are lambda functions, for example
-            >>> descritionTplt = lambda x: 'This is the description of parameter
-                                            %d'%x
-            The class will fill the description and unit automatically.
-
-        If both two methods are filled, it prefer the first one.
-
-        Parameter
-        ---------
-        name : str optional
-            The name of the parameter. If it is not provided, the prefix and
-            index format are needed.
-        prefix : str optional
-            Parameter prefix, now it is only supporting 'prefix_' type and
-            'prefix0' type.
-        indexformat : str optional
-            The format for parameter index
-        index : int optional [default 1]
-            The index number for the prefixed parameter.
-        units :  str optional
-            The unit of parameter
-        unitTplt : lambda method
-            The unit template for prefixed parameter
-        description : str optional
-            Description for the parameter
-        descriptionTplt : lambda method optional
-            Description template for prefixed parameters
-        prefix_aliases : list of str optional
-            Alias for the prefix
-        frozen : bool, optional
-            A flag specifying whether "fitters" should adjust the value of this
-            parameter or leave it fixed.
-        continuous : bool
-        type_match : str, optional, default 'float'
-            Example parameter class template for quantity and value setter
-        long_double : bool, optional default 'double'
-            Set float type quantity and value in numpy float128
-        time_scale : str, optional default 'utc'
-            Time scale for MJDParameter class.
+    Create a prefix parameter, is like create a normal parameter. But the
+    name should be in the format of prefix and index. For example DMX_0001 or
+    F22.
+    To create a prefix parameter with the same prefix but different index, just
+    use the `.new_param` method. It will return a new prefix parameter with the
+    same setup but the index. Some parameters' unit and description will
+    be changed once the index has been changed. In order to get the right units
+    and description, `.unitTplt` and `.descriptionTplt` should be provided. If
+    not the new prefix parameter will use the same units and description with
+    the old one. A typical description and units template is like:
+    >>> descritionTplt = lambda x: 'This is the description of parameter %d'%x
+    >>> unitTplt = lambda x: 'second^%d'%x
+    Parameter
+    ---------
+    name : str optional
+        The name of the parameter. If it is not provided, the prefix and
+        index format are needed.
+    prefix : str optional
+        Parameter prefix, now it is only supporting 'prefix_' type and
+        'prefix0' type.
+    indexformat : str optional
+        The format for parameter index
+    index : int optional [default 1]
+        The index number for the prefixed parameter.
+    units :  str optional
+        The unit of parameter
+    unitTplt : lambda method
+        The unit template for prefixed parameter
+    description : str optional
+        Description for the parameter
+    descriptionTplt : lambda method optional
+        Description template for prefixed parameters
+    prefix_aliases : list of str optional
+        Alias for the prefix
+    frozen : bool, optional
+        A flag specifying whether "fitters" should adjust the value of this
+        parameter or leave it fixed.
+    continuous : bool
+    parameter_type : str, optional, default 'float'
+        Example parameter class template for quantity and value setter
+    long_double : bool, optional default 'double'
+        Set float type quantity and value in numpy float128
+    time_scale : str, optional default 'utc'
+        Time scale for MJDParameter class.
     """
-    def __init__(self, type_match='float',name=None, value=None, units=None,
+    def __init__(self, parameter_type='float',name=None, value=None, units=None,
                  unitTplt=None, description=None, descriptionTplt=None,
                  uncertainty=None, frozen=True, continuous=True,
                  prefix_aliases=[],long_double=False, time_scale='utc',
                  **kwargs):
         # Split prefixed name, if the name is not in the prefixed format, error
         # will be raised
+        self.name = name
         self.prefix, self.idxfmt, self.index = split_prefixed_name(name)
+        # Type identifier
+        self.type_mapping = {'float': floatParameter, 'str': strParameter,
+                             'bool': boolParameter, 'mjd': MJDParameter,
+                             'angle': AngleParameter}
+        self.parameter_type = parameter_type
+        try:
+            self.param_class = self.type_mapping[self.parameter_type.lower()]
+        except KeyError:
+            raise ValueError("Unknow parameter type '"+ parameter_type + "' ")
 
         # Set up other attributes in the wrapper class
         self.unit_template = unitTplt
@@ -886,7 +824,6 @@ class prefixParameter(parameterWrapper):
         input_units = units
         input_description = description
         self.prefix_aliases = prefix_aliases
-        self.type_match = type_match
         # set templates, the templates should be a lambda function and input is
         # the index of prefix parameter.
         if self.unit_template is None:
@@ -900,17 +837,120 @@ class prefixParameter(parameterWrapper):
         aliases = []
         for pa in prefix_aliases:
             aliases.append(pa + self.idxfmt)
-        super(prefixParameter, self).__init__(self.type_match,
-                                              name=name, value=value,
-                                              units=real_units,
-                                              description=real_description,
-                                              uncertainty=uncertainty,
-                                              frozen=frozen,
-                                              continuous=continuous,
-                                              aliases=aliases,
-                                              long_double=long_double,
-                                              time_scale='utc')
+        # initiate parameter class
+        self.param_comp = self.param_class(name=self.name, value=value,
+                                           units=real_units,
+                                           description=real_description,
+                                           uncertainty=uncertainty,
+                                           frozen=frozen,
+                                           continuous=continuous,
+                                           aliases=aliases,
+                                           long_double=long_double,
+                                           time_scale=time_scale)
         self.is_prefix = True
+    # Define prpoerties for access the parameter composition
+    @property
+    def units(self):
+        return self.param_comp.units
+
+    @units.setter
+    def units(self, unt):
+        self.param_comp.units = unt
+
+    @property
+    def quantity(self):
+        return self.param_comp.quantity
+
+    @quantity.setter
+    def quantity(self, qnt):
+        self.param_comp.quantity = qnt
+
+    @property
+    def value(self):
+        return self.param_comp.value
+
+    @value.setter
+    def value(self, val):
+        self.param_comp.value = val
+
+    @property
+    def uncertainty(self):
+        return self.param_comp.uncertainty
+
+    @uncertainty.setter
+    def uncertainty(self, ucty):
+        self.param_comp.uncertainty = ucty
+
+    @property
+    def uncertainty_value(self):
+        return self.param_comp.uncertainty_value
+
+    @uncertainty_value.setter
+    def uncertainty_value(self, val):
+        self.param_comp.uncertainty_value = val
+
+    @property
+    def prior(self):
+        return self.param_comp.prior
+
+    @prior.setter
+    def prior(self,p):
+        self.param_comp.prior = p
+
+    @property
+    def aliases(self):
+        return self.param_comp.aliases
+
+    @aliases.setter
+    def aliases(self,a):
+        self.param_comp.aliases = a
+
+    @property
+    def continuous(self):
+        return self.param_comp.continuous
+
+    @continuous.setter
+    def continuous(self, val):
+        self.param_comp.continuous = val
+
+    @property
+    def frozen(self):
+        return self.param_comp.frozen
+
+    @frozen.setter
+    def frozen(self, val):
+        self.param_comp.frozen = val
+
+    @property
+    def description(self):
+        return self.param_comp.description
+
+    @description.setter
+    def description(self, val):
+        self.param_comp.description = val
+
+    @property
+    def special_arg(self):
+        return self.param_comp.special_arg
+
+    # Define the function to call functions inside of parameter composition.
+    def from_parfile_line(self, line):
+        return self.param_comp.from_parfile_line(line)
+
+    def prior_pdf(self,value=None, logpdf=False):
+        return self.param_comp.prior_pdf(value, logpdf)
+
+    def print_quantity(self):
+        self.param_comp.print_quantity()
+
+    def name_matches(self, name):
+        return self.param_comp.name_matches(name)
+
+    def as_parfile_line(self):
+        return self.param_comp.as_parfile_line()
+
+    def help_line(self):
+        return self.param_comp.help_line()
 
     def prefix_matches(self, prefix):
         return (prefix == self.perfix) or (prefix in self.prefix_aliases)
@@ -929,8 +969,8 @@ class prefixParameter(parameterWrapper):
         new_name = self.prefix + format(index, '0'+ str(len(self.idxfmt)))
         kws = dict()
         for key in ['units', 'unitTplt', 'description','descriptionTplt',
-                    'frozen', 'continuous', 'prefix_aliases', 'type_match',
-                    'long_double', 'time_scale']:
+                    'frozen', 'continuous', 'prefix_aliases', 'long_double',
+                    'time_scale', 'parameter_type']:
             if hasattr(self, key):
                 kws[key] = getattr(self, key)
 
