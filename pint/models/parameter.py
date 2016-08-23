@@ -769,15 +769,7 @@ class prefixParameter(object):
     Parameter
     ---------
     name : str optional
-        The name of the parameter. If it is not provided, the prefix and
-        index format are needed.
-    prefix : str optional
-        Parameter prefix, now it is only supporting 'prefix_' type and
-        'prefix0' type.
-    indexformat : str optional
-        The format for parameter index
-    index : int optional [default 1]
-        The index number for the prefixed parameter.
+        The name of the parameter. It has to be in the format of prefix + index.
     units :  str optional
         The unit of parameter
     unitTplt : lambda method
