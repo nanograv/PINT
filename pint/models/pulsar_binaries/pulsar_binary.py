@@ -15,16 +15,78 @@ from pint import ls,GMsun,Tsun
 
 
 class PSR_BINARY(object):
-    """A generic model for independent psr binary model
-       Parameters are signed by specific model.
+    """A base (generic) object for psr binary models. In this class, a set of
+    generally used binary paramters and several commonly used calculations are
+    defined. For each binary model, the specific parameters and calculations
+    are defined in the subclass.
 
-       Intermedia variables calculation method are given here:
-       Eccentric Anomaly               E (not parameter ECC)
-       Mean Anomaly                    M
-       True Anomaly                    nu
-       Eccentric                       ecc
-       Longitude of periastron         omega
-       projected semi-major axis of orbit   a1
+    A binary model takes the solar system barycentric time (ssb time) as input.
+    When a binary model is instantiated, the parameters are set to the default
+    values and input time is not initialized. The update those values, method
+    `.updata_input()` should be used.
+
+    Example of build a sepcific binary model class
+    -------
+    >>> from pint.models.pulsar_binaries.pulsar_binary import PSR_BINARY
+    >>> class foo(PSR_BINARY):
+            def __init__(self):
+                # This is to initialize the mother class attributes.
+                super(foo, self).__init__()
+                self.binary_name = 'foo'
+                # Add parameter that specific for my_binary, with default value and units
+                self.param_default_value.update({'A0':0*u.second,'B0':0*u.second,
+                                       'DR':0*u.Unit(''),'DTH':0*u.Unit(''),
+                                       'GAMMA':0*u.second,})
+                self.set_param_values() # This is to set all the parameters to attributes
+                self.binary_delay_funcs += [self.foo_delay]
+                self.d_binarydelay_d_par_funcs += [self.d_foo_delay_d_par]
+                # If you have intermedia value in the calculation
+                self.dd_interVars = ['er','eTheta','beta','alpha','Dre','Drep','Drepp',
+                                     'nhat', 'TM2']
+                self.add_inter_vars(self.dd_interVars)
+
+            def foo_delay(self):
+                pass
+
+            def d_foo_delay_d_par(self):
+                pass
+    >>> # To build a model instance
+    >>> binary_foo = foo()
+    >>> # binary_foo class has the defualt parameter value without toa input.
+    >>> # Update the toa input and parameters
+    >>> t = numpy.linspace(54200.0,55000.0,800)
+    >>> paramters_dict = {'A0':0.5,'ECC':0.01}
+    >>> binary_foo.update_input(t, paramters_dict)
+    >>> # Now the binary delay and derivatives can be computed.
+
+    To acess the binary model class from pint platform, a pint pulsar binary
+    wrapper is needed. See docstrings in the source code of pint/models/pint_pul
+    sar_binary class `PulsarBinary`.
+
+    Included general parameters:
+    @param PB:          Binary period [days]
+    @param ECC:         Eccentricity
+    @param A1:          Projected semi-major axis (lt-sec)
+    @param A1DOT:       Time-derivative of A1 (lt-sec/sec)
+    @param T0:          Time of ascending node (TASC)
+    @param OM:          Omega (longitude of periastron) [deg]
+    @param EDOT:        Time-derivative of ECC [0.0]
+    @param PBDOT:       Time-derivative of PB [0.0]
+    @param XPBDOT:      Rate of change of orbital period minus GR prediction
+    @param OMDOT:       Time-derivative of OMEGA [0.0]
+
+    Intermedia variables calculation method are given here:
+    Eccentric Anomaly               E (not parameter ECC)
+    Mean Anomaly                    M
+    True Anomaly                    nu
+    Eccentric                       ecc
+    Longitude of periastron         omega
+    projected semi-major axis of orbit   a1
+
+    Generic methon provided:
+    binary_delay()  Binary total delay
+    d_binarydelay_d_par()   Derivatives respect to one parameter
+    prtl_der()    partial derivatives respect to some variable
     """
     def __init__(self,):
         # Necessary parameters for all binary model
@@ -84,7 +146,7 @@ class PSR_BINARY(object):
 
     def set_param_values(self, valDict = None):
         """A function that sets the parameters and assign values
-           If the valDict is not provided, it will set parameter as default value
+        If the valDict is not provided, it will set parameter as default value
         """
         if valDict is None:
             for par in self.param_default_value.keys():
@@ -129,9 +191,9 @@ class PSR_BINARY(object):
     @Cache.use_cache
     def binary_delay(self):
         """Returns total pulsar binary delay.
-           Return
-           ----------
-           Pulsar binary delay in the units of second
+        Return
+        ----------
+        Pulsar binary delay in the units of second
         """
         bdelay = np.longdouble(np.zeros(len(self.t)))*u.s
         for bdf in self.binary_delay_funcs:
@@ -232,18 +294,19 @@ class PSR_BINARY(object):
 
     @Cache.cache_result
     def compute_eccentric_anomaly(self, eccentricity, mean_anomaly):
-        """compute eccentric anomaly, solve for Kepler Equation
-            Parameter
-            ----------
-            eccentricity : array_like
-                Eccentricity of binary system
-            mean_anomaly : array_like
-                Mean anomaly of the binary system
-            Returns
-            -------
-            array_like
-                The eccentric anomaly in radians, given a set of mean_anomalies
-                in radians.
+        """compute eccentric anomaly, solve for Kepler Equation,
+        E - e * sin(E) = M
+        Parameter
+        ----------
+        eccentricity : array_like
+            Eccentricity of binary system
+        mean_anomaly : array_like
+            Mean anomaly of the binary system
+        Returns
+        -------
+        array_like
+            The eccentric anomaly in radians, given a set of mean_anomalies
+            in radians.
         """
         if hasattr(eccentricity,'unit'):
             e = np.longdouble(eccentricity).value
