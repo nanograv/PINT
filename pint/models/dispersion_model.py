@@ -114,7 +114,6 @@ class DispersionDMX(Dispersion):
         DMX_mapping = self.get_prefix_mapping('DMX_')
         DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
         DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
-        print DMXR1_mapping
         if 'DMX_section' not in toas.keys():
             toas['DMX_section'] = np.zeros_like(toas['index'])
             epoch_ind = 1
