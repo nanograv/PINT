@@ -10,15 +10,11 @@ class DDmodel(PSR_BINARY):
     """This is a class independent from PINT platform for pulsar DD binary model.
     Refence: T. Damour and N. Deruelle(1986)
     It is a subclass of PSR_BINARY class defined in file pulsar_binary.py in
-    the same folder. This class is desined for PINT platform but can be used
+    the same dierectory. This class is desined for PINT platform but can be used
     as an independent module for binary delay calculation.
     To interact with PINT platform, a pint_pulsar_binary wrapper is needed.
     See the source file pint/models/pint_dd_model.py
 
-    Parameters
-    ----------
-    t : numpy.array_like
-        Barycentric time of arrival in the format of MJD.
     Return
     ----------
     A dd binary model class with paramters, delay calculations and derivatives.
@@ -26,15 +22,16 @@ class DDmodel(PSR_BINARY):
     ----------
     >>> import numpy
     >>> t = numpy.linspace(54200.0,55000.0,800)
-    >>> binary_model = DDmodel(t)
+    >>> binary_model = DDmodel()
     >>> paramters_dict = {'A0':0.5,'ECC':0.01}
-    >>> binary_model.set_param_values(paramters_dict)
+    >>> binary_model.update_input(t, paramters_dict)
     Here the binary has time input and parameters input, the delay can be
     calculated.
     """
-    def __init__(self):
+    def __init__(self, t=None, input_params=None):
         super(DDmodel, self).__init__()
         self.binary_name = 'DD'
+        # Add parameter that specific for DD model, with default value and units
         self.param_default_value.update({'A0':0*u.second,'B0':0*u.second,
                                'DR':0*u.Unit(''),'DTH':0*u.Unit(''),
                                'GAMMA':0*u.second,})
@@ -45,9 +42,13 @@ class DDmodel(PSR_BINARY):
         self.dd_interVars = ['er','eTheta','beta','alpha','Dre','Drep','Drepp',
                              'nhat', 'TM2']
         self.add_inter_vars(self.dd_interVars)
-        self.set_param_values() # Set parameters to default values. 
+        self.set_param_values() # Set parameters to default values.
         self.binary_delay_funcs += [self.DDdelay]
         self.d_binarydelay_d_par_funcs += [self.d_DDdelay_d_par]
+        if t is not None:
+            self.t = t
+        if input_params is not None:
+            self.update_input(param_dict=input_params)
     # calculations for delays in DD model
     # Calculate er
     @Cache.cache_result
