@@ -122,7 +122,7 @@ class DispersionDMX(Dispersion):
                 # Get the parameters
                 r1 = getattr(self, DMXR1_mapping[epoch_ind]).quantity
                 r2 = getattr(self, DMXR2_mapping[epoch_ind]).quantity
-                msk = np.logical_and(toas['mjd'] >= r1, toas['mjd'] <= r2)
+                msk = np.logical_and(toas['mjd_float'] >= r1.mjd, toas['mjd_float'] <= r2.mjd)
                 toas['DMX_section'][msk] = epoch_ind
                 epoch_ind = epoch_ind + 1
 
