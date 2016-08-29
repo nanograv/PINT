@@ -53,17 +53,55 @@ class ELL1model(PSR_BINARY):
 
     def delayR(self):
         Phi = self.Phi()
-        return self.a1()/c.c*(np.sin(Phi) + 0.5 * (self.eps1() * np.sin(2*Phi)
-                          - self.eps2() * np.sin(2*Phi)))
+        return (self.a1()/c.c*(np.sin(Phi) + 0.5 * (self.eps2() * np.sin(2*Phi)
+                          - self.eps1() * np.cos(2*Phi)))).decompose()
+
+    def Drep(self):
+        """ dDr/dPhi
+        """
+        a1 = self.a1()
+        eps1 = self.eps1()
+        eps2 = self.eps1()
+        Phi = self.Phi()
+        return a1/c.c*(np.cos(Phi) + eps1 * np.cos(Phi) + eps2 * np.sin(Phi))
+
+    def Drepp(self):
+        a1 = self.a1()
+        eps1 = self.eps1()
+        eps2 = self.eps1()
+        Phi = self.Phi()
+        return a1/c.c*(-np.sin(Phi) - eps1 * np.sin(Phi) + eps2 * np.cos(Phi))
+
     def delayS(self):
         TM2 = self.M2.value*Tsun
         Phi = self.Phi()
         sDelay = -2 * TM2 * np.log(1 - self.SINI * np.sin(Phi))
         return sDelay
 
+    def delayI(self):
+        """Inverse time delay formular. The treatment is similar to the one
+        in DD model(T. Damour and N. Deruelle(1986)equation [46-52])
+        Dre = a1*(sin(Phi)+eps1/2*sin(Phi)+eps1/2*cos(Phi))
+        Drep = dDre/dt
+        Drep = d^2 Dre/dt^2
+        nhat = dPhi/dt = 2pi/pb
+        nhatp = d^2Phi/dt^2 = 0
+        Dre(t-Dre(t-Dre(t)))  = Dre(Phi) - Drep(Phi)*nhat*Dre(t-Dre(t))
+                              = Dre(Phi) - Drep(Phi)*nhat*(Dre(Phi)-Drep(Phi)*nhat*Dre(t))
+                                + 1/2 (Drepp(u)*nhat^2 + Drep(u) * nhat * nhatp) * (Dre(t)-...)^2
+                              = Dre(Phi)(1 - nhat*Drep(Phi) + (nhat*Drep(Phi))^2
+                                + 1/2*nhat^2* Dre*Drepp)
+        """
+        Dre = self.delayR()
+        Drep = self.Drep()
+        Drepp = self.Drepp()
+        PB = self.PB.to('second')
+        nhat = 2*np.pi/self.PB
+        return (Dre*(1 - nhat*Drep + (nhat*Drep)**2 + 1.0/2*nhat**2*Dre*Drepp)).decompose()
+
     def ELL1delay(self):
         # TODO need add aberration delay
-        return self.delayR() + self.delayS()
+        return self.delayI() + self.delayS()
 
     def d_ELL1delay_d_par(self):
         pass
@@ -77,4 +115,5 @@ class ELL1model(PSR_BINARY):
         return np.sqrt(self.eps1()**2 + self.eps2()**2)
 
     def ELL1_T0(self):
-        return self.TASC + self.PB/(2*np.pi) * np.arctan(self.eps1()/self.eps2())
+        return self.TASC + self.PB/(2*np.pi) * \
+        (np.arctan(self.eps1()/self.eps2())).to(u.Unit(''), equivalencies=u.dimensionless_angles())

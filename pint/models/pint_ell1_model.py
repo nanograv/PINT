@@ -34,20 +34,20 @@ class BinaryELL1(PulsarBinary):
                        binary_param = True)
 
         self.add_param(p.floatParameter(name="EPS1", units="",
-             description="First Laplace-Lagrange parameter, ECC x sin(OM) for ELL1 model",),
-             binary_param = True)
+             description="First Laplace-Lagrange parameter, ECC x sin(OM) for ELL1 model",
+             long_double = True), binary_param = True)
 
         self.add_param(p.floatParameter(name="EPS2", units="",
-             description="Second Laplace-Lagrange parameter, ECC x cos(OM) for ELL1 model"),
-             binary_param = True)
+             description="Second Laplace-Lagrange parameter, ECC x cos(OM) for ELL1 model",
+             long_double = True), binary_param = True)
 
         self.add_param(p.floatParameter(name="EPS1DOT", units="",
-             description="First derivative of first Laplace-Lagrange parameter",),
-             binary_param = True)
+             description="First derivative of first Laplace-Lagrange parameter",
+             long_double = True), binary_param = True)
 
         self.add_param(p.floatParameter(name="EPS2DOT", units="",
-             description="Second derivative of first Laplace-Lagrange parameter",),
-             binary_param = True)
+             description="Second derivative of first Laplace-Lagrange parameter",
+             long_double = True), binary_param = True)
 
     def setup(self):
         """Check out parameters setup.
