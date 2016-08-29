@@ -387,9 +387,9 @@ class DDmodel(PSR_BINARY):
         nhatp  = d^2u/dt^2
         Drep = dDre/du
         Drepp = d^2Dre/du^2
-        Dre(t-Dre(t-Dre(t)))  =  Dre(u) + Drep(u)*nhat*Dre(t-Dre(t))
-                              =  Dre(u) + Drep(u)*nhat*(Dre(u)+Drep(u)*nhat*Dre(t)
-                                 + 1/2 (Drepp(u)*nhat^2 + Drep(u) * nhat * nhatp) * Dre(t)^2
+        Dre(t-Dre(t-Dre(t)))  =  Dre(u) - Drep(u)*nhat*Dre(t-Dre(t))
+                              =  Dre(u) - Drep(u)*nhat*(Dre(u)-Drep(u)*nhat*Dre(t))
+                                 + 1/2 (Drepp(u)*nhat^2 + Drep(u) * nhat * nhatp) * (Dre(t)-...)^2
                               = Dre(t)*(1 - nhat * Drep(u) + (nhat*Drep)^2 +
                                 1/2*nhat^2* Dre*Drepp - 1/2*e*sin(u)/(1-e*cos(u)*nhat^2*Drep*Drep))
         Here u is equivalent to E in the function.
