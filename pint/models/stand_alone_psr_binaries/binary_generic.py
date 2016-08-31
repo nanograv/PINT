@@ -83,6 +83,7 @@ class PSR_BINARY(object):
     Eccentric                       ecc
     Longitude of periastron         omega
     projected semi-major axis of orbit   a1
+    TM2
 
     Generic methon provided:
     binary_delay()  Binary total delay
@@ -617,7 +618,13 @@ class PSR_BINARY(object):
         return (self.d_nu_d_PB()*k)+nu*OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad)
 
     ############################################################
+    @Cache.cache_result
+    def TM2(self):
+        return self.M2.value*Tsun
 
+    def d_TM2_d_M2(self):
+        return Tsun/(1.0*u.Msun)
+    ###########################################################
     @Cache.cache_result
     def pbprime(self):
 

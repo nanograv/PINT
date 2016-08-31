@@ -441,13 +441,6 @@ class DDmodel(PSR_BINARY):
                dnhat_dpar*diDelay_dnhat
 
     #################################################
-    @Cache.cache_result
-    def TM2(self):
-        return self.M2.value*Tsun
-
-    def d_TM2_d_M2(self):
-        return Tsun/(1.0*u.Msun)
-
     @Cache.use_cache
     def delayS(self):
         """Binary shapiro delay
