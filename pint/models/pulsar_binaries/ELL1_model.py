@@ -20,7 +20,7 @@ class ELL1model(PSR_BINARY):
                                          'TASC': np.longdouble(54000.0)*u.day})
         self.binary_params = self.param_default_value.keys()
         self.set_param_values() # Set parameters to default values.
-        self.dd_interVars = ['eps1', 'eps2', 'Phi', 'Dre', 'Drep', 'Drepp', 'nhat']
+        self.ELL1_interVars = ['eps1', 'eps2', 'Phi', 'Dre', 'Drep', 'Drepp', 'nhat']
         self.binary_delay_funcs += [self.ELL1delay]
         self.d_binarydelay_d_par_funcs += [self.d_ELL1delay_d_par]
 
@@ -250,7 +250,7 @@ class ELL1model(PSR_BINARY):
                          Dre * 1.0/2*nhat**2*Drepp
         d_delayI_d_Drep = -Dre*nhat + 2*(nhat*Drep)*nhat*Dre
         d_delayI_d_Drepp = 1.0/2*(nhat*Dre)**2
-        d_delay_d_nhat = Dre*(-Drep + 2*(nhat*Drep)*Drep + nhat*Dre**Drepp)
+        d_delay_d_nhat = Dre*(-Drep + 2*(nhat*Drep)*Drep + nhat*Dre*Drepp)
         d_nhat_d_par = self.prtl_der('nhat', par)
         d_Dre_d_par = self.d_Dre_d_par(par)
         d_Drep_d_par = self.d_Drep_d_par(par)
