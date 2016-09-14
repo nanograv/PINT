@@ -1,13 +1,8 @@
-import numpy as np
-import time
 from pint import ls,GMsun,Tsun
-from pint import utils
 from .stand_alone_psr_binaries.DD_model import DDmodel
 from .pulsar_binary import PulsarBinary
 import parameter as p
 from .timing_model import Cache, TimingModel, MissingParameter
-import astropy
-from ..utils import time_from_mjd_string, time_to_longdouble
 import astropy.units as u
 
 

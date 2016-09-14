@@ -1,4 +1,4 @@
-from .pulsar_binary import PSR_BINARY
+from .binary_generic import PSR_BINARY
 from pint.models.timing_model import Cache
 import numpy as np
 import astropy.units as u
@@ -9,11 +9,11 @@ from pint import ls,GMsun,Tsun
 class DDmodel(PSR_BINARY):
     """This is a class independent from PINT platform for pulsar DD binary model.
     Refence: T. Damour and N. Deruelle(1986)
-    It is a subclass of PSR_BINARY class defined in file pulsar_binary.py in
+    It is a subclass of PSR_BINARY class defined in file binary_generic.py in
     the same dierectory. This class is desined for PINT platform but can be used
     as an independent module for binary delay calculation.
-    To interact with PINT platform, a pint_pulsar_binary wrapper is needed.
-    See the source file pint/models/pint_dd_model.py
+    To interact with PINT platform, a pulsar_binary wrapper is needed.
+    See the source file pint/models/pulsar_binary_dd.py
 
     Return
     ----------
@@ -406,7 +406,7 @@ class DDmodel(PSR_BINARY):
 
     @Cache.use_cache
     def d_delayI_d_par(self,par):
-        """Derivative on delay inverse. 
+        """Derivative on delay inverse.
         """
         e = self.ecc()
         sE = np.sin(self.E())

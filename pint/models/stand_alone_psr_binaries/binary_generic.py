@@ -27,7 +27,8 @@ class PSR_BINARY(object):
 
     Example of build a sepcific binary model class
     -------
-    >>> from pint.models.pulsar_binaries.pulsar_binary import PSR_BINARY
+    >>> from pint.models.stand_alone_psr_binaries.pulsar_binary import PSR_BINARY
+    >>> import numpy
     >>> class foo(PSR_BINARY):
             def __init__(self):
                 # This is to initialize the mother class attributes.
@@ -60,7 +61,7 @@ class PSR_BINARY(object):
     >>> # Now the binary delay and derivatives can be computed.
 
     To acess the binary model class from pint platform, a pint pulsar binary
-    wrapper is needed. See docstrings in the source code of pint/models/pint_pul
+    wrapper is needed. See docstrings in the source code of pint/models/pul
     sar_binary class `PulsarBinary`.
 
     Included general parameters:

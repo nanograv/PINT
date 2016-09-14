@@ -1,21 +1,8 @@
 # This is a wapper for independent binary model. It is a PINT timing model class
 import astropy.units as u
-try:
-    from astropy.erfa import DAYSEC as SECS_PER_DAY
-except ImportError:
-    from astropy._erfa import DAYSEC as SECS_PER_DAY
-SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
 import parameter as p
 from .timing_model import Cache, TimingModel, MissingParameter
-from ..phase import Phase
-from ..utils import time_from_mjd_string, time_to_longdouble, \
-    time_from_longdouble
-from ..orbital.kepler import eccentric_from_mean
-from .btmodel import BTmodel
-import numpy as np
-import time
 from pint import ls,GMsun,Tsun
-from pint import utils
 
 
 class PulsarBinary(TimingModel):
