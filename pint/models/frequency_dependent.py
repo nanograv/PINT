@@ -30,8 +30,13 @@ class FD(TimingModel):
         FD_in_order = range(1,max(FD_terms)+1)
         if not FD_terms == FD_in_order:
             diff = list(set(FD_in_order) - set(FD_terms))
-            raise MissingParameter("Spindown", "FD%d"%diff[0])
+            raise MissingParameter("FD", "FD%d"%diff[0])
         self.num_FD_terms = len(FD_terms)
+        # set up derivative functions
+        for ii, val in FD_mapping.iteritems():
+            self.make_delay_FD_deriv_funcs(val)
+            self.delay_derivs += [getattr(self, 'd_delay_FD_d_' + val)]
+
 
     def FD_delay(self, toas):
         """This is a function for calculation of frequency dependent delay.
@@ -51,7 +56,7 @@ class FD(TimingModel):
 
         return FD_delay * self.FD1.units
 
-    def d_delay_d_FD(self, toas, FD_term=1):
+    def d_delay_FD_d_FDX(self, toas, FD_term=1):
         """This is a derivative function for FD parameter
         """
         FD_mapping = self.get_prefix_mapping('FD')
@@ -66,3 +71,10 @@ class FD(TimingModel):
             log_freq = np.log(toas['freq'] / (1 * u.GHz))
             d_delay_d_FD += FD_coef.value * (log_freq) ** ii
         return d_delay_d_FD
+
+    def make_delay_FD_deriv_funcs(self, param):
+        FD_term = getattr(self, param).index
+        def deriv_func(toas):
+            return self.d_binary_FD_d_FDX(toas, FD_term)
+        deriv_func.__name__ = 'd_delay_FD_d_' + param
+        setattr(self, 'd_delay_FD_d_' + param, deriv_func)

@@ -4,7 +4,6 @@ from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
     time_to_longdouble, is_number, time_from_longdouble, str2longdouble, \
     longdouble2string, data2longdouble, split_prefixed_name
 import numpy
-import astropy.units as u
 import astropy.time as time
 from astropy import log
 from pint import pint_units

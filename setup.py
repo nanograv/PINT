@@ -97,7 +97,7 @@ setup(
     packages=['pint',
         'pint.extern',
         'pint.models',
-        'pint.models.pulsar_binaries', 
+        'pint.models.stand_alone_psr_binaries', 
         'pint.orbital'],
 
     package_data={'pint':['datafiles/observatories.txt',]+data_files},
