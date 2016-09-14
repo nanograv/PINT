@@ -21,7 +21,7 @@ from pint import utils
 class PulsarBinary(TimingModel):
     """ A wapper class for independent pulsar binary model interact with PINT
     platform. The calculations are done by the classes located at
-    pint/models/pulsar_binary
+    pint/models/stand_alone_psr_binary
 
     Binary variables naming:
     Eccentric Anomaly               E (not parameter ECC)

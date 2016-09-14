@@ -2,8 +2,8 @@ import numpy as np
 import time
 from pint import ls,GMsun,Tsun
 from pint import utils
-from .pulsar_binaries.DD_model import DDmodel
-from .pint_pulsar_binary import PulsarBinary
+from .stand_alone_psr_binaries.DD_model import DDmodel
+from .pulsar_binary import PulsarBinary
 import parameter as p
 from .timing_model import Cache, TimingModel, MissingParameter
 import astropy
@@ -13,7 +13,8 @@ import astropy.units as u
 
 class BinaryDD(PulsarBinary):
     """This is a PINT pulsar binary dd model class a subclass of PSRbinaryWapper.
-    It is a wrapper for independent DDmodel class defined in ./pulsar_binary/DD_model.py
+    It is a wrapper for independent DDmodel class defined in
+    ./stand_alone_psr_binary/DD_model.py
     All the detailed calculations are in the independent DDmodel.
     The aim for this class is to connect the independent binary model with PINT platform
     DDmodel special parameters:
