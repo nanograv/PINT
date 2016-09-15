@@ -1,4 +1,4 @@
-from .pulsar_binary import PSR_BINARY
+from .binary_generic import PSR_BINARY
 from pint.models.timing_model import Cache
 import numpy as np
 import astropy.units as u
