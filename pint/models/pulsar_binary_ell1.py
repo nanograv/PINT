@@ -2,8 +2,8 @@ import numpy as np
 import time
 from pint import ls,GMsun,Tsun
 from pint import utils
-from .pulsar_binaries.ELL1_model import ELL1model
-from .pint_pulsar_binary import PulsarBinary
+from .stand_alone_psr_binaries.ELL1_model import ELL1model
+from .pulsar_binary import PulsarBinary
 import parameter as p
 from .timing_model import Cache, TimingModel, MissingParameter
 import astropy
