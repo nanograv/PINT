@@ -110,8 +110,11 @@ class PulsarBinary(TimingModel):
         for par in self.binary_instance.binary_params:
             binary_par_names = [par,]
             if par in self.binary_instance.param_aliases.keys():
-                binary_par_names += self.binary_instance.param_aliases[par]
-            if list(set(binary_par_names).intersection(self.params))!=[] :
+                aliase = self.binary_instance.param_aliases[par]
+            else:
+                aliase = []
+            if hasattr(self, par) or \
+                list(set(aliase).intersection(self.params))!=[]:
                 binObjpar = getattr(self, par)
                 if binObjpar.value is None:
                     continue

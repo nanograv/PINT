@@ -36,7 +36,7 @@ class BinaryDD(PulsarBinary):
 
         self.add_param(p.floatParameter(name="GAMMA", value=0.0,
              units="second",
-             description="Binary Einsten delay GAMMA term"),
+             description="Time dilation & gravitational redshift"),
              binary_param = True)
 
         self.add_param(p.floatParameter(name="DR", value=0.0,

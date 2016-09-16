@@ -16,23 +16,16 @@ class BinaryBT(PulsarBinary):
         super(BinaryBT, self).__init__()
         self.binary_model_name = 'BT'
         self.binary_model_class = BTmodel
-        # TO DO: add commonly used parameters such as T90, TASC with clear,
-        # documented usage.
 
-        self.binary_model_name = 'BT'
-
-        self.add_param(p.floatParameter(name="XDOT",
-            units="s/s",
-            description="Orbital spin-down rate"))
-
-        self.add_param(p.floatParameter(name="GAMMA",
-            units="s",
-            description="Time dilation & gravitational redshift"))
+        self.add_param(p.floatParameter(name="GAMMA", value=0.0,
+             units="second",
+             description="Time dilation & gravitational redshift"),
+             binary_param = True)
 
         self.delay_funcs['L2'] += [self.BT_delay,]
 
     def setup(self):
-        super(BT, self).setup()
+        super(BinaryBT, self).setup()
 
         # If any necessary parameter is missing, raise MissingParameter.
         # This will probably be updated after ELL1 model is added.
@@ -42,7 +35,7 @@ class BinaryBT(PulsarBinary):
                                        "%s is required for BT" % p)
 
         # If any *DOT is set, we need T0
-        for p in ("PBDOT", "OMDOT", "EDOT", "XDOT"):
+        for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
             if getattr(self, p).value is None:
                 getattr(self, p).set("0")
                 getattr(self, p).frozen = True
@@ -58,7 +51,7 @@ class BinaryBT(PulsarBinary):
 
         # If eccentricity is zero, freeze some parameters to 0
         # OM = 0 -> T0 = TASC
-        if self.E.value == 0 or self.E.value is None:
+        if self.ECC.value == 0 or self.ECC.value is None:
             for p in ("E", "OM", "OMDOT", "EDOT"):
                 getattr(self, p).set("0")
                 getattr(self, p).frozen = True
