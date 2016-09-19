@@ -13,6 +13,10 @@ from . import utils
 # light-second unit
 ls = u.def_unit('ls', c.c * 1.0 * u.s)
 
+# define equivalencies for astropy units
+def light_second():
+    return [(ls, si.second)]
+
 # Following are from here:
 # http://ssd.jpl.nasa.gov/?constants (grabbed on 30 Dec 2013)
 GMsun = 1.32712440018e20 * u.m**3/u.s**2
