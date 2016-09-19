@@ -50,6 +50,86 @@ class DDmodel(PSR_BINARY):
         if input_params is not None:
             self.update_input(param_dict=input_params)
     # calculations for delays in DD model
+
+    # DDmodel special omega. 
+    @Cache.cache_result
+    def omega(self):
+        """T. Damour and N. Deruelle(1986)equation [25]
+           omega = OM+nu*k
+           k = OMDOT/n  (T. Damour and N. Deruelle(1986)equation between Eq 16
+                         Eq 17)
+        """
+        PB = self.PB
+        PB = PB.to('second')
+        OMDOT = self.OMDOT
+        OM = self.OM
+        nu = self.nu()
+        k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
+        return (OM + nu*k).to(u.rad)
+
+    @Cache.cache_result
+    def d_omega_d_par(self,par):
+        """derivative for omega respect to user input Parameter.
+           if par is not 'OM','OMDOT','PB'
+           dOmega/dPar =  k*dAe/dPar
+           k = OMDOT/n
+           Parameters
+           ----------
+           par : string
+                 parameter name
+           Return
+           ----------
+           Derivitve of omega respect to par
+        """
+        if par not in self.binary_params:
+            errorMesg = par + "is not in binary parameter list."
+            raise ValueError(errorMesg)
+
+        PB = self.PB
+        OMDOT = self.OMDOT
+        OM = self.OM
+        nu = self.nu()
+        k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
+
+        if par in ['OM','OMDOT','PB']:
+            dername = 'd_omega_d_' + par
+            return getattr(self,dername)()
+        else:
+            dername = 'd_nu_d_'+par # For parameters only in nu
+            if hasattr(self,dername):
+                return k*getattr(self,dername)()
+            else:
+                return np.longdouble(np.zeros(len(self.tt0)))
+
+    @Cache.cache_result
+    def d_omega_d_OM(self):
+        """dOmega/dOM = 1
+        """
+        return np.longdouble(np.ones((len(self.tt0))))*u.Unit('')
+
+    @Cache.cache_result
+    def d_omega_d_OMDOT(self):
+        """dOmega/dOMDOT = 1/n*nu
+           n = 2*pi/PB
+           dOmega/dOMDOT = PB/2*pi*nu
+        """
+        PB = (self.PB).to('second')
+        nu = self.nu()
+
+        return PB/(2*np.pi*u.rad)*nu
+
+    @Cache.cache_result
+    def d_omega_d_PB(self):
+        """dOmega/dPB = dnu/dPB*k+dk/dPB*nu
+        """
+        PB = self.PB
+        OMDOT = self.OMDOT
+        OM = self.OM
+        nu = self.nu()
+        k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
+        return (self.d_nu_d_PB()*k)+nu*OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad)
+
+    ############################################################
     # Calculate er
     @Cache.cache_result
     def er(self):

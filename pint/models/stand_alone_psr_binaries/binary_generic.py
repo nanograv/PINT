@@ -542,18 +542,13 @@ class PSR_BINARY(object):
     #############################################
     @Cache.cache_result
     def omega(self):
-        """T. Damour and N. Deruelle(1986)equation [25]
-           omega = OM+nu*k
-           k = OMDOT/n  (T. Damour and N. Deruelle(1986)equation between Eq 16
-                         Eq 17)
+        """
         """
         PB = self.PB
         PB = PB.to('second')
         OMDOT = self.OMDOT
         OM = self.OM
-        nu = self.nu()
-        k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
-        return (OM + nu*k).to(u.rad)
+        return OM + OMDOT * self.tt0
 
     @Cache.cache_result
     def d_omega_d_par(self,par):
