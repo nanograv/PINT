@@ -1,9 +1,6 @@
 """Various tests to assess the performance of the B1855+09."""
 import pint.models.model_builder as mb
 import pint.toa as toa
-import libstempo as lt
-import matplotlib.pyplot as plt
-import tempo2_utils
 import astropy.units as u
 from pint.residuals import resids
 import numpy as np
@@ -11,25 +8,30 @@ import os, unittest
 
 from pinttestdata import testdir, datadir
 
-# Using Nanograv data B1855
-parfile = os.path.join(datadir, 'B1855+09_NANOGrav_dfg+12_TAI.par')
-timfile = os.path.join(datadir, 'B1855+09_NANOGrav_dfg+12.tim')
+os.chdir(datadir)
 
-# libstempo calculation
-print "libstempo calculation"
-psr = lt.tempopulsar(parfile, timfile)
-# Build PINT model
-print "PINT calculation"
-mdd = mb.get_model(parfile)
-# Get toas to pint
-toas = toa.get_TOAs(timfile, planets=False, ephem='DE405')
-tt = toas.table
+class TestB1855(unittest.TestCase):
+    """Compare delays from the dd model with tempo and PINT"""
+    @classmethod
+    def setUpClass(self):
+        self.parfileB1855 = 'B1855+09_NANOGrav_dfg+12_TAI_FB90.par'
+        self.timB1855 = 'B1855+09_NANOGrav_dfg+12.tim'
+        self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405", planets=False)
+        self.modelB1855 = mb.get_model(self.parfileB1855)
+        # tempo result
+        self.ltres, self.ltbindelay = np.genfromtxt(self.parfileB1855 + \
+                                     '.tempo2_test',skip_header=1, unpack=True)
+        print self.ltres
+    def test_B1855_binary_delay(self):
+        # Calculate delays with PINT
+        pint_binary_delay = self.modelB1855.binarymodel_delay(self.toasB1855.table)
+        assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-8), 'B1855 binary delay test failed.'
 
-t2_resids = psr.residuals()
-presids_us = resids(toas, mdd).time_resids
-diff = (presids_us - t2_resids * u.second).to(u.us)
-plt.plot(toas.get_mjds(high_precision=False), diff, '+')
-plt.xlabel('Mjd (DAY)')
-plt.ylabel('residule difference (us)')
-plt.title('Residule difference between PINT and tempo2')
-plt.show()
+    def test_B1855(self):
+        pint_resids_us = resids(self.toasB1855, self.modelB1855).time_resids.to(u.s)
+        # Due to the gps2utc clock correction. We are at 3e-8 seconds level. 
+        assert np.all(np.abs(pint_resids_us.value - self.ltres) < 3e-8), 'B1855 residuals test failed.'
+
+
+if __name__ == '__main__':
+    pass

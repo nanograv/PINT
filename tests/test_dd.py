@@ -1,10 +1,8 @@
 """Various tests to assess the performance of the DD model."""
 import pint.models.model_builder as mb
 import pint.toa as toa
-import matplotlib.pyplot as plt
 import astropy.units as u
 from pint.residuals import resids
-from pint.models.pulsar_binary_dd import BinaryDD
 import numpy as np
 import os, unittest
 from pinttestdata import testdir, datadir

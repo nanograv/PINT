@@ -37,7 +37,6 @@ class FD(TimingModel):
             self.make_delay_FD_deriv_funcs(val)
             self.delay_derivs += [getattr(self, 'd_delay_FD_d_' + val)]
 
-
     def FD_delay(self, toas):
         """This is a function for calculation of frequency dependent delay.
         Z. Arzoumanian, The NANOGrav Nine-year Data Set: Observations, Arrival

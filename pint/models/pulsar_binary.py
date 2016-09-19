@@ -9,7 +9,6 @@ class PulsarBinary(TimingModel):
     """ A wapper class for independent pulsar binary model interact with PINT
     platform. The calculations are done by the classes located at
     pint/models/stand_alone_psr_binary
-
     Binary variables naming:
     Eccentric Anomaly               E (not parameter ECC)
     Mean Anomaly                    M
@@ -37,19 +36,12 @@ class PulsarBinary(TimingModel):
             description="Orbital period derivitve respect to time"),
             binary_param = True)
 
-
-        self.add_param(p.floatParameter(name="XPBDOT", value = 0.0,
-            units=u.s/u.s,
-            description="Rate of change of orbital period minus GR prediction"),
-            binary_param = True)
-
-
         self.add_param(p.floatParameter(name="A1",
             units=ls,
             description="Projected semi-major axis, a*sin(i)"),
             binary_param = True)
 
-        self.add_param(p.floatParameter(name = "A1DOT",
+        self.add_param(p.floatParameter(name = "A1DOT", aliases = ['XDOT'],
             units=ls/u.s,
             description="Derivitve of projected semi-major axis, da*sin(i)/dt"),
             binary_param = True)
@@ -79,6 +71,10 @@ class PulsarBinary(TimingModel):
             description="Longitude of periastron"),
             binary_param = True)
 
+        self.add_param(p.floatParameter(name="M2",
+             units=u.M_sun,
+             description="Mass of companian in the unit Sun mass"),
+             binary_param = True)
         # Set up delay function
         self.binary_delay_funcs += [self.binarymodel_delay,]
         self.delay_funcs['L2'] += [self.binarymodel_delay,]
@@ -90,7 +86,6 @@ class PulsarBinary(TimingModel):
             self.delay_derivs += [getattr(self, 'd_delay_binary_d_' + bpar)]
         # Setup the model isinstance
         self.binary_instance = self.binary_model_class()
-
     # With new parameter class set up, do we need this?
     def apply_units(self):
         """Apply units to parameter value.
@@ -112,10 +107,10 @@ class PulsarBinary(TimingModel):
         self.barycentric_time = self.get_barycentric_toas(toas)
         pardict = {}
         for par in self.binary_instance.binary_params:
+            binary_par_names = [par,]
             if par in self.binary_instance.param_aliases.keys():
-                aliase = self.binary_instance.param_aliases[par]
-            if hasattr(self, par) or \
-                list(set(aliase).intersection(self.params))!=[] :
+                binary_par_names += self.binary_instance.param_aliases[par]
+            if list(set(binary_par_names).intersection(self.params))!=[] :
                 binObjpar = getattr(self, par)
                 if binObjpar.value is None:
                     continue
@@ -139,7 +134,6 @@ class PulsarBinary(TimingModel):
         """This is a funcion to make binary derivative functions to the formate
         of d_binary_delay_d_paramName(toas)
         """
-        # TODO make this function more generalized?
         def deriv_func(toas):
             return self.d_binary_delay_d_xxxx(param, toas)
         deriv_func.__name__ = 'd_delay_binary_d_' + param
