@@ -22,8 +22,6 @@ class BinaryBT(PulsarBinary):
              description="Time dilation & gravitational redshift"),
              binary_param = True)
 
-        self.delay_funcs['L2'] += [self.BT_delay,]
-
     def setup(self):
         super(BinaryBT, self).setup()
 
@@ -55,98 +53,3 @@ class BinaryBT(PulsarBinary):
             for p in ("E", "OM", "OMDOT", "EDOT"):
                 getattr(self, p).set("0")
                 getattr(self, p).frozen = True
-
-    @Cache.use_cache
-    def get_bt_object(self, toas):
-        """
-        Obtain the BTmodel object for this set of parameters/toas
-        """
-        # Don't need to fill P0 and P1. Translate all the others to the format
-        # that is used in bmodel.py
-        bt_params = ['PB', 'PBDOT', 'ECC', 'EDOT', 'OM', 'OMDOT', 'A1', \
-                'A1DOT', 'T0', 'GAMMA']
-        aliases = {'A1DOT':'XDOT', 'ECC':'E'}
-
-        pardict = {}
-        for par in bt_params:
-            key = par if not par in aliases else aliases[par]
-
-            # T0 needs to be converted to long double
-            parobj = getattr(self, key)
-            pardict[par] = parobj.value
-
-        # Apply all the delay terms, except for the binary model itself
-        tt0 = toas['tdbld'] * SECS_PER_DAY
-        for df in self.delay_funcs['L1']:
-            if df != self.BT_delay:
-                tt0 -= df(toas)
-
-        # Return the BTmodel object
-        return BTmodel(tt0/SECS_PER_DAY, **pardict)
-
-    @Cache.use_cache
-    def BT_delay(self, toas):
-        """Return the BT timing model delay"""
-        btob = self.get_bt_object(toas)
-
-        return btob.delay()
-
-    @Cache.use_cache
-    def d_delay_d_A1(self, toas):
-        btob = self.get_bt_object(toas)
-
-        return btob.d_delay_d_A1()
-
-    @Cache.use_cache
-    def d_delay_d_XDOT(self, toas):
-        btob = self.get_bt_object(toas)
-
-        return btob.d_delay_d_A1DOT()
-
-    @Cache.use_cache
-    def d_delay_d_OM(self, toas):
-        btob = self.get_bt_object(toas)
-
-        return btob.d_delay_d_OM()
-
-    @Cache.use_cache
-    def d_delay_d_OMDOT(self, toas):
-        btob = self.get_bt_object(toas)
-
-        return btob.d_delay_d_OMDOT()
-
-    @Cache.use_cache
-    def d_delay_d_E(self, toas):
-        btob = self.get_bt_object(toas)
-
-        return btob.d_delay_d_ECC()
-
-    @Cache.use_cache
-    def d_delay_d_EDOT(self, toas):
-        btob = self.get_bt_object(toas)
-
-        return btob.d_delay_d_EDOT()
-
-    @Cache.use_cache
-    def d_delay_d_PB(self, toas):
-        btob = self.get_bt_object(toas)
-
-        return btob.d_delay_d_PB()
-
-    @Cache.use_cache
-    def d_delay_d_PBDOT(self, toas):
-        btob = self.get_bt_object(toas)
-
-        return btob.d_delay_d_PBDOT()
-
-    @Cache.use_cache
-    def d_delay_d_T0(self, toas):
-        btob = self.get_bt_object(toas)
-
-        return btob.d_delay_d_T0()
-
-    @Cache.use_cache
-    def d_delay_d_GAMMA(self, toas):
-        btob = self.get_bt_object(toas)
-
-        return btob.d_delay_d_GAMMA()

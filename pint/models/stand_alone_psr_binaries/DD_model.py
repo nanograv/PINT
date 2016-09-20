@@ -33,8 +33,7 @@ class DDmodel(PSR_BINARY):
         self.binary_name = 'DD'
         # Add parameter that specific for DD model, with default value and units
         self.param_default_value.update({'A0':0*u.second,'B0':0*u.second,
-                               'DR':0*u.Unit(''),'DTH':0*u.Unit(''),
-                               'GAMMA':0*u.second,})
+                               'DR':0*u.Unit(''),'DTH':0*u.Unit(''),})
         # If any parameter has aliases, it should be updated
         #self.param_aliases.update({})
         self.binary_params = self.param_default_value.keys()
@@ -51,7 +50,7 @@ class DDmodel(PSR_BINARY):
             self.update_input(param_dict=input_params)
     # calculations for delays in DD model
 
-    # DDmodel special omega. 
+    # DDmodel special omega.
     @Cache.cache_result
     def omega(self):
         """T. Damour and N. Deruelle(1986)equation [25]

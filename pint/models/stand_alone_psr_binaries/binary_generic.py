@@ -11,7 +11,7 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
-from pint import ls,GMsun,Tsun
+from pint import ls,GMsun,Tsun,light_second_equivalency
 
 
 class PSR_BINARY(object):
@@ -103,7 +103,8 @@ class PSR_BINARY(object):
                            'OMDOT':0.0*u.deg/u.year,
                            'XPBDOT':0.0*u.day/u.day,
                            'M2':0.0*u.M_sun,
-                           'SINI':0*u.Unit('') }
+                           'SINI':0*u.Unit(''),
+                           'GAMMA':0*u.second, }
         self.param_aliases = {'ECC':['E'],'EDOT':['ECCDOT'],
                               'A1DOT':['XDOT']}
         self.binary_params = self.param_default_value.keys()
@@ -156,11 +157,20 @@ class PSR_BINARY(object):
         else:
             for par in valDict.keys():
                 if par not in self.binary_params: # search for aliases
-                    par = self.search_alias(par)
+                    parname = self.search_alias(par)
                     if par is None:
                         raise AttributeError('Can not find parameter '+par+' in '\
                                               + self.binary_name+'model')
-                setattr(self,par,valDict[par])
+                else:
+                    parname = par
+                if valDict[par] is None:
+                    setattr(self, parname, self.param_default_value[parname])
+                    continue
+                if not hasattr(valDict[par], 'unit'):
+                    val = valDict[par] * getattr(self, parname).unit
+                else:
+                    val = valDict[par]
+                setattr(self,parname,val)
 
     def add_binary_params(self,parameter,defaultValue):
         """Add one parameter to the binary class
@@ -553,9 +563,6 @@ class PSR_BINARY(object):
     @Cache.cache_result
     def d_omega_d_par(self,par):
         """derivative for omega respect to user input Parameter.
-           if par is not 'OM','OMDOT','PB'
-           dOmega/dPar =  k*dAe/dPar
-           k = OMDOT/n
            Parameters
            ----------
            par : string
@@ -568,21 +575,13 @@ class PSR_BINARY(object):
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
 
-        PB = self.PB
         OMDOT = self.OMDOT
         OM = self.OM
-        nu = self.nu()
-        k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
-
-        if par in ['OM','OMDOT','PB']:
+        if par in ['OM','OMDOT','T0']:
             dername = 'd_omega_d_' + par
             return getattr(self,dername)()
         else:
-            dername = 'd_nu_d_'+par # For parameters only in nu
-            if hasattr(self,dername):
-                return k*getattr(self,dername)()
-            else:
-                return np.longdouble(np.zeros(len(self.tt0)))
+            return np.longdouble(np.zeros(len(self.tt0)))
 
     @Cache.cache_result
     def d_omega_d_OM(self):
@@ -592,25 +591,17 @@ class PSR_BINARY(object):
 
     @Cache.cache_result
     def d_omega_d_OMDOT(self):
-        """dOmega/dOMDOT = 1/n*nu
-           n = 2*pi/PB
-           dOmega/dOMDOT = PB/2*pi*nu
+        """dOmega/dOMDOT = tt0
         """
-        PB = (self.PB).to('second')
-        nu = self.nu()
-
-        return PB/(2*np.pi*u.rad)*nu
+        return self.tt0
 
     @Cache.cache_result
-    def d_omega_d_PB(self):
+    def d_omega_d_T0(self):
         """dOmega/dPB = dnu/dPB*k+dk/dPB*nu
         """
-        PB = self.PB
-        OMDOT = self.OMDOT
-        OM = self.OM
-        nu = self.nu()
-        k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
-        return (self.d_nu_d_PB()*k)+nu*OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad)
+        result = np.empty(len(self.tt0))
+        result.fill(-self.EDOT.value)
+        return result*u.Unit(self.EDOT.unit)
 
     ############################################################
     @Cache.cache_result
@@ -622,9 +613,106 @@ class PSR_BINARY(object):
     ###########################################################
     @Cache.cache_result
     def pbprime(self):
-
         return self.PB - self.PBDOT * self.tt0
 
+    ################# Calculation for binary phase ################
     @Cache.cache_result
     def P(self):
         return self.P0 + self.P1*(self.t - self.PEPOCH).to('second')
+
+    @Cache.use_cache
+    def t0(self):
+        return (self.t-self.PEPOCH) * self.SECS_PER_DAY
+
+    @Cache.use_cache
+    def Doppler(self):
+        a1 = self.a1()/c.c
+        return 2*np.pi*a1 / (self.pbprime()*np.sqrt(1-self.ecc()**2))
+
+    @Cache.use_cache
+    def d_Pobs_d_P0(self):
+        geom = (-np.sin(self.nu())*np.sin(self.omega())+(np.cos(self.nu())+self.ecc())*np.cos(self.omega()))
+        ds = self.Doppler() * geom
+        return 1.0 + ds
+
+    @Cache.use_cache
+    def d_Pobs_d_P1(self):
+        geom = (-np.sin(self.nu())*np.sin(self.omega())+(np.cos(self.nu())+self.ecc())*np.cos(self.omega()))
+        ds = self.Doppler() * geom
+        return self.t0() * (1 + ds)
+
+    @Cache.use_cache
+    def d_Pobs_d_A1(self):
+        geom = (-np.sin(self.nu())*np.sin(self.omega())+(np.cos(self.nu())+self.ecc())*np.cos(self.omega()))
+        return 2*np.pi * self.P() * geom / (self.pbprime() * np.sqrt(1-self.ecc()**2))
+
+    @Cache.use_cache
+    def d_Pobs_d_PB(self):
+        geom1 = (-np.sin(self.nu())*np.sin(self.omega())+(np.cos(self.nu())+self.ecc())*np.cos(self.omega()))
+        geom2 = (-np.cos(self.nu())*np.sin(self.omega())-np.sin(self.nu())*np.cos(self.omega()))
+        pref1 = -self.P() * 2 * np.pi * self.a1() / (self.pbprime()**2 * np.sqrt(1-self.ecc()**2)) * self.SECS_PER_DAY
+        pref2 = self.P() * self.Doppler() * self.d_nu_d_PB()
+        return pref1 * geom1 + pref2 * geom2
+
+    @Cache.use_cache
+    def d_Pobs_d_PBDOT(self):
+        geom1 = (-np.sin(self.nu())*np.sin(self.omega())+(np.cos(self.nu())+self.ecc())*np.cos(self.omega()))
+        geom2 = (-np.cos(self.nu())*np.sin(self.omega())-np.sin(self.nu())*np.cos(self.omega()))
+        pref1 = self.P() * self.tt0() * 2 * np.pi * self.a1() / (self.pbprime()**2 * np.sqrt(1-self.ecc()**2))
+        pref2 = self.P() * self.Doppler() * self.d_nu_d_PBDOT()
+        return pref1 * geom1 + pref2 * geom2
+
+    @Cache.use_cache
+    def d_Pobs_d_OM(self):
+        geom = (-np.sin(self.nu())*np.cos(self.omega())-(np.cos(self.nu())+self.ecc())*np.sin(self.omega()))
+        return self.P() * self.Doppler() * geom * self.DEG2RAD
+
+    @Cache.use_cache
+    def d_Pobs_d_ECC(self):
+        geom1 = (-np.sin(self.nu())*np.sin(self.omega())+(np.cos(self.nu())+self.ecc())*np.cos(self.omega()))
+        geom2 = (-np.cos(self.nu())*np.sin(self.omega())-np.sin(self.nu())*np.cos(self.omega()))
+        pref1 = self.P() * self.ecc() * 2 * np.pi * self.a1() / (self.pbprime() * (1-self.ecc()**2)**(1.5))
+        pref2 = self.P() * self.Doppler() * self.d_nu_d_ECC()
+        return pref1 * geom1 + pref2 * geom2 + self.P0 * self.Doppler() * np.cos(self.omega())
+
+    @Cache.use_cache
+    def d_Pobs_d_T0(self):
+        geom1 = (-np.sin(self.nu())*np.sin(self.omega())+(np.cos(self.nu())+self.ecc())*np.cos(self.omega()))
+        geom2 = (-np.cos(self.nu())*np.sin(self.omega())-np.sin(self.nu())*np.cos(self.omega()))
+        pref1 = -self.P() * self.PBDOT * 2 * np.pi * self.a1() / (self.pbprime()**2 * np.sqrt(1-self.ecc()**2)) * self.SECS_PER_DAY
+        pref2 = self.P() * self.Doppler() * self.d_nu_d_T0()
+        return pref1 * geom1 + pref2 * geom2
+
+    @Cache.use_cache
+    def d_Pobs_d_EDOT(self):
+        return self.tt0() * self.d_Pobs_d_ECC()
+
+    @Cache.use_cache
+    def d_Pobs_d_OMDOT(self):
+        return self.tt0() * self.d_Pobs_d_OM() / self.SECS_PER_YEAR
+
+    @Cache.use_cache
+    def d_Pobs_d_A1DOT(self):
+        return self.tt0() * self.d_Pobs_d_A1()
+
+    ############## Calculation for design matrix  ################
+    @Cache.use_cache
+    def Pobs_designmatrix(self, params):
+        npars = len(params)
+        M = np.zeros((len(self.t), npars))
+
+        for ii, par in enumerate(params):
+            dername = 'd_Pobs_d_' + par
+            M[:,ii] = getattr(self, dername)()
+        return M
+
+    @Cache.use_cache
+    def delay_designmatrix(self, params):
+        npars = len(params)
+        M = np.zeros((len(self.t), npars))
+
+        for ii, par in enumerate(params):
+            dername = 'd_delay_d_' + par
+            M[:,ii] = getattr(self, dername)()
+
+        return M
