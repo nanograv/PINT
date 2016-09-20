@@ -106,8 +106,8 @@ class PSR_BINARY(object):
                            'SINI':0*u.Unit(''),
                            'GAMMA':0*u.second, }
         # For Binary phase calculation
-        self.param_default_value.update({'P0': 1.0*u.second
-                                         'P1': 0.0*u.second/u.second
+        self.param_default_value.update({'P0': 1.0*u.second,
+                                         'P1': 0.0*u.second/u.second,
                                          'PEPOCH': np.longdouble(54000.0)*u.day
                                         })
         self.param_aliases = {'ECC':['E'],'EDOT':['ECCDOT'],

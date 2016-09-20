@@ -8,7 +8,6 @@ from .timing_model import TimingModel, generate_timing_model
 from .astrometry import Astrometry
 from .dispersion_model import Dispersion
 from .spindown import Spindown
-from .bt import BT
 from .solar_system_shapiro import SolarSystemShapiro
 from .polycos import Polycos
 from .model_builder import get_model
