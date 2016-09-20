@@ -9,8 +9,13 @@ from .timing_model import Cache, TimingModel, MissingParameter
 import astropy.units as u
 
 class BinaryBT(PulsarBinary):
-    """This class provides an implementation of the BT model
-        by Blandford & Teukolsky 1976, ApJ, 205, 580.
+    """This is a PINT pulsar binary BT model class a subclass of PulsarBinary.
+    It is a wrapper for stand alone BTmodel class defined in
+    ./stand_alone_psr_binary/BT_model.py
+    All the detailed calculations are in the stand alone BTmodel.
+    The aim for this class is to connect the stand alone binary model with PINT platform
+    BTmodel special parameters:
+    GAMMA Binary Einsten delay coeeficient
     """
     def __init__(self):
         super(BinaryBT, self).__init__()
@@ -24,7 +29,6 @@ class BinaryBT(PulsarBinary):
 
     def setup(self):
         super(BinaryBT, self).setup()
-
         # If any necessary parameter is missing, raise MissingParameter.
         # This will probably be updated after ELL1 model is added.
         for p in ("PB", "T0", "A1"):
