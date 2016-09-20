@@ -105,6 +105,11 @@ class PSR_BINARY(object):
                            'M2':0.0*u.M_sun,
                            'SINI':0*u.Unit(''),
                            'GAMMA':0*u.second, }
+        # For Binary phase calculation
+        self.param_default_value.update({'P0': 1.0*u.second
+                                         'P1': 0.0*u.second/u.second
+                                         'PEPOCH': np.longdouble(54000.0)*u.day
+                                        })
         self.param_aliases = {'ECC':['E'],'EDOT':['ECCDOT'],
                               'A1DOT':['XDOT']}
         self.binary_params = self.param_default_value.keys()
@@ -622,7 +627,7 @@ class PSR_BINARY(object):
 
     @Cache.use_cache
     def t0(self):
-        return (self.t-self.PEPOCH) * self.SECS_PER_DAY
+        return (self.t-self.PEPOCH)
 
     @Cache.use_cache
     def Doppler(self):
