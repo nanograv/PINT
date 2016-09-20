@@ -6,6 +6,7 @@ import os
 
 # Define a few important constants
 import astropy.units as u
+from astropy.units import si
 import astropy.constants as c
 import astropy.time as time
 from . import utils
@@ -13,8 +14,8 @@ from . import utils
 # light-second unit
 ls = u.def_unit('ls', c.c * 1.0 * u.s)
 
-# define equivalencies for astropy units
-def light_second():
+# define equivalency for astropy units
+def light_second_equivalency():
     return [(ls, si.second)]
 
 # Following are from here:
