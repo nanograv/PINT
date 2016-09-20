@@ -7,7 +7,7 @@ import astropy.units as u
 
 
 class BinaryDD(PulsarBinary):
-    """This is a PINT pulsar binary dd model class a subclass of PSRbinaryWapper.
+    """This is a PINT pulsar binary dd model class a subclass of PulsarBinary.
     It is a wrapper for independent DDmodel class defined in
     ./stand_alone_psr_binary/DD_model.py
     All the detailed calculations are in the independent DDmodel.
@@ -36,7 +36,7 @@ class BinaryDD(PulsarBinary):
 
         self.add_param(p.floatParameter(name="GAMMA", value=0.0,
              units="second",
-             description="Binary Einsten delay GAMMA term"),
+             description="Time dilation & gravitational redshift"),
              binary_param = True)
 
         self.add_param(p.floatParameter(name="DR", value=0.0,
