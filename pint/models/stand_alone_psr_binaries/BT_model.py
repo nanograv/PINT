@@ -15,7 +15,7 @@ Calculations
 [v] Pulse delay (delay)
 [v] Derivatives of Pobs (d_Pobs_d_xxx)
 [v] Derivatives of delay (d_delay_d_xxx)
-
+[ ] Wrapper function for Derivatives
 Interface
 =========
 [v] Caching (with decorator)
@@ -40,15 +40,31 @@ Open issues
 """
 
 class BTmodel(PSR_BINARY):
-    """
+    """This is a class independent from PINT platform for pulsar BT binary model.
+    It is a subclass of PSR_BINARY class defined in file binary_generic.py in
+    the same dierectory. This class is desined for PINT platform but can be used
+    as an independent module for binary delay calculation.
+    To interact with PINT platform, a pulsar_binary wrapper is needed.
+    See the source file pint/models/binary_bt.py
+    Refence
+    ---------
     The 'BT' binary model for the pulse period. Model as in:
-    W.M. Smart, (1962), "Spherical Astronomy", p359
+    W.M. Smart, (1962), "Spherical Astronomy", p35
+    Blandford & Teukolsky (1976), ApJ, 205, 580-591
 
-    See also: Blandford & Teukolsky (1976), ApJ, 205, 580-591
+    Return
+    ----------
+    A bt binary model class with paramters, delay calculations and derivatives.
+    Example
+    ----------
+    >>> import numpy
+    >>> t = numpy.linspace(54200.0,55000.0,800)
+    >>> binary_model = BTmodel()
+    >>> paramters_dict = {'A0':0.5,'ECC':0.01}
+    >>> binary_model.update_input(t, paramters_dict)
+    Here the binary has time input and parameters input, the delay can be
+    calculated.
 
-    @param P0:          The pulse period [sec]
-    @param P1:          The pulse period derivative [sec/sec]
-    @param PEPOCH:      Position EPOCH
     @param PB:          Binary period [days]
     @param ECC:         Eccentricity
     @param A1:          Projected semi-major axis (lt-sec)
@@ -74,19 +90,41 @@ class BTmodel(PSR_BINARY):
 
     @Cache.use_cache
     def delayL1(self):
-        """First left-hand term of delay equation"""
+        """First term of Blandford & Teukolsky (1976), ApJ, 205,
+        580-591, eq 2.33/ First left-hand term of W.M. Smart, (1962),
+        "Spherical Astronomy", p35 delay equation.
+
+        alpha * (cosE-e)
+        alpha = a1*sin(omega)
+        Here a1 is in the unit of light second as distance
+        """
         return self.a1()/c.c*np.sin(self.omega())*(np.cos(self.E())-self.ecc())
 
     @Cache.use_cache
     def delayL2(self):
-        """Second left-hand term of delay equation"""
+        """Second term of Blandford & Teukolsky (1976), ApJ, 205,
+        580-591, eq 2.33/ / Second left-hand term of W.M. Smart, (1962),
+        "Spherical Astronomy", p35 delay equation.
+        
+        (beta + gamma) * sinE
+        beta = (1-e^2)*a1*cos(omega)
+        Here a1 is in the unit of light second as distance
+        """
         a1 = self.a1()/c.c
         return (a1*np.cos(self.omega())*\
                 np.sqrt(1-self.ecc()**2)+self.GAMMA)*np.sin(self.E())
 
     @Cache.use_cache
     def delayR(self):
-        """Right-hand term of delay equation"""
+        """Third term of Blandford & Teukolsky (1976), ApJ, 205,
+        580-591, eq 2.33 / Right-hand term of W.M. Smart, (1962),
+        "Spherical Astronomy", p35 delay equation.
+
+        (alpha*(cosE-e)+(beta+gamma)*sinE)*(1-alpha*sinE - beta*sinE)/
+        (pb*(1-e*coeE))
+        (alpha*(cosE-e)+(beta+gamma)*sinE) is define in delayL1
+        and delayL2
+        """
         a1 = self.a1()/c.c
         num = a1*np.cos(self.omega())*np.sqrt(1-self.ecc()**2)*np.cos(self.E()) -\
               a1*np.sin(self.omega())*np.sin(self.E())
