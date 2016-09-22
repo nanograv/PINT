@@ -137,11 +137,14 @@ class model_builder(object):
         params_inpar = self.preprocess_parfile(parfile)
         for module in self.comps.keys():
             selected_c = None
-            for c in self.comps[module]:
+            num_comp = len(self.comps[module])
+            slt_tmp = None
+            for ii, c in enumerate(self.comps[module]):
                 cclass = c()
                 #Check is this components a subclass of other components
                 if TimingModel not in c.__bases__:
                     if hasattr(cclass,'model_special_params'):
+                        # TODO : Need fix aliases part
                         if any(par in params_inpar.keys() for par in cclass.model_special_params):
                             selected_c = c
                             break
@@ -149,7 +152,7 @@ class model_builder(object):
                             continue
 
                 if cclass.is_in_parfile(params_inpar):
-                    selected_c = c
+                        selected_c = c
             # One module will have one selected component
             if selected_c is not None and selected_c not in self.select_comp:
                 self.select_comp.append(selected_c)
