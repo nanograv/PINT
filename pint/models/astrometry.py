@@ -5,9 +5,11 @@ import astropy.coordinates as coords
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
+from astropy import log
 import parameter as p
 from .timing_model import TimingModel, MissingParameter, Cache
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble
+from pint.pulsar_ecliptic import PulsarEcliptic
 from pint import ls
 from pint import utils
 import time
@@ -23,27 +25,8 @@ class Astrometry(TimingModel):
 
     def __init__(self):
         super(Astrometry, self).__init__()
-
-        self.add_param(p.AngleParameter(name="RAJ",
-            units="H:M:S",
-            description="Right ascension (J2000)",
-            aliases=["RAJ"]))
-
-        self.add_param(p.AngleParameter(name="DECJ",
-            units="D:M:S",
-            description="Declination (J2000)",
-            aliases=["DECJ"]))
-
         self.add_param(p.MJDParameter(name="POSEPOCH",
             description="Reference epoch for position"))
-
-        self.add_param(p.floatParameter(name="PMRA",
-            units="mas/year", value=0.0,
-            description="Proper motion in RA"))
-
-        self.add_param(p.floatParameter(name="PMDEC",
-            units="mas/year", value=0.0,
-            description="Proper motion in DEC"))
 
         self.add_param(p.floatParameter(name="PX",
             units="mas", value=0.0,
@@ -53,39 +36,7 @@ class Astrometry(TimingModel):
 
     def setup(self):
         super(Astrometry, self).setup()
-        # RA/DEC are required
-        for p in ("RAJ", "DECJ"):
-            if getattr(self, p).value is None:
-                raise MissingParameter("Astrometry", p)
-        # If PM is included, check for POSEPOCH
-        if self.PMRA.value != 0.0 or self.PMDEC.value != 0.0:
-            if self.POSEPOCH.quantity is None:
-                if self.PEPOCH.quantity is None:
-                    raise MissingParameter("Astrometry", "POSEPOCH",
-                            "POSEPOCH or PEPOCH are required if PM is set.")
-                else:
-                    self.POSEPOCH.value = self.PEPOCH.value
-        self.delay_derivs += [self.d_delay_astrometry_d_RAJ,
-                              self.d_delay_astrometry_d_DECJ,
-                              self.d_delay_astrometry_d_PMRA,
-                              self.d_delay_astrometry_d_PMDEC,
-                              self.d_delay_astrometry_d_PX]
-
-
-    @Cache.cache_result
-    def coords_as_ICRS(self, epoch=None):
-        """Returns pulsar sky coordinates as an astropy ICRS object instance.
-
-        If epoch (MJD) is specified, proper motion is included to return
-        the position at the given epoch.
-        """
-        if epoch is None or (self.PMRA.value == 0.0 and self.PMDEC.value == 0.0):
-            return coords.ICRS(ra=self.RAJ.quantity, dec=self.DECJ.quantity)
-        else:
-            dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
-            dRA = dt * self.PMRA.quantity / numpy.cos(self.DECJ.quantity.radian)
-            dDEC = dt * self.PMDEC.quantity
-            return coords.ICRS(ra=self.RAJ.quantity+dRA, dec=self.DECJ.quantity+dDEC)
+        self.delay_derivs += [self.d_delay_astrometry_d_PX]
 
     @Cache.cache_result
     def ssb_to_psb_xyz(self, epoch=None):
@@ -152,6 +103,99 @@ class Astrometry(TimingModel):
 
         return rd
 
+    @Cache.use_cache
+    def d_delay_astrometry_d_PX(self, toas):
+        """Calculate the derivative wrt PX
+
+        Roughly following Smart, 1977, chapter 9.
+
+        px_r:   Extra distance to Earth, wrt SSB, from pulsar
+        r_e:    Position of earth (vector) wrt SSB
+        u_p:    Unit vector from SSB pointing to pulsar
+        t_d:    Parallax delay
+        c:      Speed of light
+        delta:  Parallax
+
+        The parallax delay is due to a distance orthogonal to the line of sight
+        to the pulsar from the SSB:
+
+        px_r = sqrt( r_e**2 - (r_e.u_p)**2 ),
+
+        with delay
+
+        t_d = 0.5 * px_r * delta'/ c,  and delta = delta' * px_r / (1 AU)
+
+        """
+        rd = self.get_d_delay_quantities(toas)
+
+        px_r = numpy.sqrt(rd['ssb_obs_r']**2-rd['in_psr_obs']**2)
+        dd_dpx = 0.5*(px_r**2 / (u.AU*const.c)) * (u.mas / u.radian)
+
+        # We want to return sec / mas
+        return dd_dpx.decompose(u.si.bases) / u.mas
+
+    @Cache.cache_result
+    def d_delay_astrometry_d_POSEPOCH(self, toas):
+        """Calculate the derivative wrt POSEPOCH
+        """
+        pass
+
+class AstrometryEquitoral(Astrometry):
+    def __init__(self):
+        super(AstrometryEquitoral, self).__init__()
+        self.add_param(p.AngleParameter(name="RAJ",
+            units="H:M:S",
+            description="Right ascension (J2000)",
+            aliases=["RAJ"]))
+
+        self.add_param(p.AngleParameter(name="DECJ",
+            units="D:M:S",
+            description="Declination (J2000)",
+            aliases=["DECJ"]))
+
+        self.add_param(p.floatParameter(name="PMRA",
+            units="mas/year", value=0.0,
+            description="Proper motion in RA"))
+
+        self.add_param(p.floatParameter(name="PMDEC",
+            units="mas/year", value=0.0,
+            description="Proper motion in DEC"))
+        self.set_special_params(['RAJ', 'DECJ', 'PMRA', 'PMDEC'])
+    def setup(self):
+        super(AstrometryEquitoral, self).setup()
+        # RA/DEC are required
+        for p in ("RAJ", "DECJ"):
+            if getattr(self, p).value is None:
+                raise MissingParameter("Astrometry", p)
+        # If PM is included, check for POSEPOCH
+        if self.PMRA.value != 0.0 or self.PMDEC.value != 0.0:
+            if self.POSEPOCH.quantity is None:
+                if self.PEPOCH.quantity is None:
+                    raise MissingParameter("AstrometryEquitoral", "POSEPOCH",
+                            "POSEPOCH or PEPOCH are required if PM is set.")
+                else:
+                    self.POSEPOCH.quantity = self.PEPOCH.quantity
+
+        self.delay_derivs += [self.d_delay_astrometry_d_RAJ,
+                              self.d_delay_astrometry_d_DECJ,
+                              self.d_delay_astrometry_d_PMRA,
+                              self.d_delay_astrometry_d_PMDEC]
+    @Cache.cache_result
+    def coords_as_ICRS(self, epoch=None):
+        """Returns pulsar sky coordinates as an astropy ICRS object instance.
+
+        If epoch (MJD) is specified, proper motion is included to return
+        the position at the given epoch.
+
+        If the ecliptic coordinates are provided,
+        """
+        if epoch is None or (self.PMRA.value == 0.0 and self.PMDEC.value == 0.0):
+            return coords.ICRS(ra=self.RAJ.quantity, dec=self.DECJ.quantity)
+        else:
+            dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
+            dRA = dt * self.PMRA.quantity / numpy.cos(self.DECJ.quantity.radian)
+            dDEC = dt * self.PMDEC.quantity
+            return coords.ICRS(ra=self.RAJ.quantity+dRA, dec=self.DECJ.quantity+dDEC)
 
     @Cache.use_cache
     def d_delay_astrometry_d_RAJ(self, toas):
@@ -241,39 +285,67 @@ class Astrometry(TimingModel):
         # We want to return sec / (mas / yr)
         return dd_dpmdec.decompose(u.si.bases) / (u.mas / u.year)
 
-    @Cache.use_cache
-    def d_delay_astrometry_d_PX(self, toas):
-        """Calculate the derivative wrt PX
 
-        Roughly following Smart, 1977, chapter 9.
+class AstrometryEcliptic(Astrometry):
+    def __init__(self):
+        super(AstrometryEcliptic, self).__init__()
+        self.add_param(p.AngleParameter(name="ELONG",
+            units="deg",
+            description="Ecliptic longitude",
+            aliases=["LAMBDA"]))
 
-        px_r:   Extra distance to Earth, wrt SSB, from pulsar
-        r_e:    Position of earth (vector) wrt SSB
-        u_p:    Unit vector from SSB pointing to pulsar
-        t_d:    Parallax delay
-        c:      Speed of light
-        delta:  Parallax
+        self.add_param(p.AngleParameter(name="ELAT",
+            units="deg",
+            description="Ecliptic latitude",
+            aliases=["BETA"]))
 
-        The parallax delay is due to a distance orthogonal to the line of sight
-        to the pulsar from the SSB:
+        self.add_param(p.floatParameter(name="PMELONG",
+            units="mas/year", value=0.0,
+            description="Proper motion in ecliptic longitude",
+            aliases=["PMLAMBDA"]))
 
-        px_r = sqrt( r_e**2 - (r_e.u_p)**2 ),
+        self.add_param(p.floatParameter(name="PMELAT",
+            units="mas/year", value=0.0,
+            description="Proper motion in ecliptic latitude",
+            aliases=["PMBETA"]))
 
-        with delay
+        self.add_param(p.strParameter(name="ECL",
+            description="Obliqity angle value secetion"))
 
-        t_d = 0.5 * px_r * delta'/ c,  and delta = delta' * px_r / (1 AU)
+        self.set_special_params(['ELONG', 'ELAT', 'PMELONG','PMELAT', 'ECL'])
 
-        """
-        rd = self.get_d_delay_quantities(toas)
+    def setup(self):
+        super(AstrometryEcliptic, self).setup()
+        # RA/DEC are required
+        for p in ("ELONG", "ELAT"):
+            if getattr(self, p).value is None:
+                raise MissingParameter("AstrometryEcliptic", p)
+        # If PM is included, check for POSEPOCH
+        if self.PMELONG.value != 0.0 or self.PMELAT.value != 0.0:
+            if self.POSEPOCH.quantity is None:
+                if self.PEPOCH.quantity is None:
+                    raise MissingParameter("Astrometry", "POSEPOCH",
+                            "POSEPOCH or PEPOCH are required if PM is set.")
+                else:
+                    self.POSEPOCH.quantity = self.PEPOCH.quantity
 
-        px_r = numpy.sqrt(rd['ssb_obs_r']**2-rd['in_psr_obs']**2)
-        dd_dpx = 0.5*(px_r**2 / (u.AU*const.c)) * (u.mas / u.radian)
-
-        # We want to return sec / mas
-        return dd_dpx.decompose(u.si.bases) / u.mas
+        self.delay_derivs += []
 
     @Cache.cache_result
-    def d_delay_astrometry_d_POSEPOCH(self, toas):
-        """Calculate the derivative wrt POSEPOCH
+    def coords_as_ICRS(self, epoch=None):
+        """Returns pulsar sky coordinates as an astropy ICRS object instance.
+        Pulsar coordinates will be transform from ecliptic coordinates to ICRS
+        If epoch (MJD) is specified, proper motion is included to return
+        the position at the given epoch.
+
+        If the ecliptic coordinates are provided,
         """
-        pass
+        if epoch is None or (self.PMELONG.value == 0.0 and self.PMELAT.value == 0.0):
+            pos_ecl = PulsarEcliptic(lon=self.ELONG.quantity, lat=self.ELAT.quantity)
+        else:
+            dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
+            dELONG = dt * self.PMELONG.quantity / numpy.cos(self.ELAT.quantity.radian)
+            dELAT = dt * self.PMELAT.quantity
+            pos_ecl = PulsarEcliptic(lon=self.ELONG.quantity+dELONG, lat=self.ELAT.quantity+dELAT)
+
+        return pos_ecl.transform_to(coords.ICRS)
