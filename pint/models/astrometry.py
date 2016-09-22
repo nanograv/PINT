@@ -9,7 +9,7 @@ from astropy import log
 import parameter as p
 from .timing_model import TimingModel, MissingParameter, Cache
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble
-from pint.pulsar_ecliptic import PulsarEcliptic
+from pint.pulsar_ecliptic import PulsarEcliptic, OBL
 from pint import ls
 from pint import utils
 import time
@@ -346,6 +346,7 @@ class AstrometryEcliptic(Astrometry):
             dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
             dELONG = dt * self.PMELONG.quantity / numpy.cos(self.ELAT.quantity.radian)
             dELAT = dt * self.PMELAT.quantity
+            PulsarEcliptic.obliquity = OBL[self.ECL.value]
             pos_ecl = PulsarEcliptic(lon=self.ELONG.quantity+dELONG, lat=self.ELAT.quantity+dELAT)
 
         return pos_ecl.transform_to(coords.ICRS)
