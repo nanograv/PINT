@@ -40,7 +40,8 @@ class PulsarBinary(TimingModel):
             units=ls,
             description="Projected semi-major axis, a*sin(i)"),
             binary_param = True)
-
+        # NOTE: the DOT here takes the value and times 1e-12, tempo/tempo2 can
+        # take both.  
         self.add_param(p.floatParameter(name = "A1DOT", aliases = ['XDOT'],
             units=1e-12*ls/u.s,
             description="Derivitve of projected semi-major axis, da*sin(i)/dt"),
