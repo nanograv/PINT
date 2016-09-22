@@ -346,7 +346,12 @@ class AstrometryEcliptic(Astrometry):
             dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
             dELONG = dt * self.PMELONG.quantity / numpy.cos(self.ELAT.quantity.radian)
             dELAT = dt * self.PMELAT.quantity
-            PulsarEcliptic.obliquity = OBL[self.ECL.value]
+            try:
+                PulsarEcliptic.obliquity = OBL[self.ECL.value]
+            except KeyError:
+                raise ValueError("No obliquity " + self.ECL.value + " provided. "
+                                 "Check your pint/datafile/ecliptic.dat file.")
+
             pos_ecl = PulsarEcliptic(lon=self.ELONG.quantity+dELONG, lat=self.ELAT.quantity+dELAT)
 
         return pos_ecl.transform_to(coords.ICRS)
