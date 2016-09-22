@@ -156,6 +156,13 @@ class TimingModel(object):
         if binary_param is True:
             self.binary_params +=[param.name,]
 
+    def set_special_params(self, spcl_params):
+        als = []
+        for p in spcl_params:
+            als += getattr(self, p).aliases
+        spcl_params += als
+        self.model_special_params = spcl_params
+
 
     def param_help(self):
         """Print help lines for all available parameters in model.
