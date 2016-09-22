@@ -41,11 +41,11 @@ class BinaryELL1(PulsarBinary):
              description="Second Laplace-Lagrange parameter, ECC x cos(OM) for ELL1 model",
              long_double = True), binary_param = True)
 
-        self.add_param(p.floatParameter(name="EPS1DOT", units="",
+        self.add_param(p.floatParameter(name="EPS1DOT", units="1e-12/s",
              description="First derivative of first Laplace-Lagrange parameter",
              long_double = True), binary_param = True)
 
-        self.add_param(p.floatParameter(name="EPS2DOT", units="",
+        self.add_param(p.floatParameter(name="EPS2DOT", units="1e-12/s",
              description="Second derivative of first Laplace-Lagrange parameter",
              long_double = True), binary_param = True)
 

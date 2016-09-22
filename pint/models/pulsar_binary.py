@@ -32,7 +32,7 @@ class PulsarBinary(TimingModel):
 
 
         self.add_param(p.floatParameter(name="PBDOT",
-            units=u.day/u.day,
+            units=1e-12*u.day/u.day,
             description="Orbital period derivitve respect to time"),
             binary_param = True)
 
@@ -42,7 +42,7 @@ class PulsarBinary(TimingModel):
             binary_param = True)
 
         self.add_param(p.floatParameter(name = "A1DOT", aliases = ['XDOT'],
-            units=ls/u.s,
+            units=1e-12*ls/u.s,
             description="Derivitve of projected semi-major axis, da*sin(i)/dt"),
             binary_param = True)
 
@@ -53,7 +53,7 @@ class PulsarBinary(TimingModel):
             binary_param = True)
 
         self.add_param(p.floatParameter(name="EDOT",
-             units="1/s",
+             units="1e-12/s",
              description="Eccentricity derivitve respect to time"),
              binary_param = True)
 
