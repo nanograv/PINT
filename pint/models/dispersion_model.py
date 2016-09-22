@@ -101,7 +101,7 @@ class DispersionDMX(Dispersion):
                        descriptionTplt=lambda x: 'End of DMX interval',
                        parameter_type='MJD', time_scale='utc'))
         self.dm_value_funcs += [self.dmx_dm,]
-        self.model_special_params = ['DMX_0001', 'DMXR1_0001','DMXR2_0001']
+        self.set_special_params(['DMX_0001', 'DMXR1_0001','DMXR2_0001'])
 
     def setup(self):
         super(Dispersion, self).setup()
