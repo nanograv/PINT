@@ -1,0 +1,48 @@
+ Obliquity of the ecliptic       
+#
+# One value in this file must be labelled as "DEFAULT"
+#
+# Values in this table are in arcseconds.
+# Note that 84381. == 23deg26'21"
+
+# IAU1976 value
+# References
+#   Wikipedia article(!) on IAU 1976 adopted constants
+#   Sedelman et al (1977) IAU commission  report
+#   Lieske (1977)
+IAU1976 84381.448
+
+# IERS1992/DE403 value:
+# References:
+#   Standish et al 1995 DE403 JPL Interoffice Memo IOM 314.10-127
+#   IERS technical note 21 (IERS conventions, dated 1992), page 19
+# According to the DE403 memo, this value was determined from Viking lander
+#   radar ranging.  It was adopted bt the IERS.  This was the value originally
+#   progrmamed into tempo (in  January 1998, according to the repositlry log).
+#   and superceded by the IAU2005 value in June 2014.
+# This was the "historic" value used in tempo prior to ~June 2014.  This 
+#   value is used by tempo2 when running in "tempo1 emulation mode" (-tempo1
+#   cmd line, or EPHVER 2 in parfile).
+IERS1992 84381.412
+DE403    84381.412
+
+# IERS2003 value
+# References:
+#   IERS technical note 32 (IERS conventions, dated 2003), page 19
+# Note, this is the default value used by tempo2 (all versions through 
+#   at least tempo2.h v1.102, 2014/10/28).
+IERS2003 84381.4059     
+
+#       the following are equivalent: 
+# References:
+#   IERS technical note 36 (IERS conventions, dated 2010), page 19
+#   IAU 2005 Resolution 1, 
+#     (downloaded from http://www.iau.org/static/resolutions/IAU2006_Resol1.pdf
+#     pointed to by http://www.iau.org/administration/resolutions/general_assemblies/ )
+#     Endorses the results of Hilton et al 2006, celestial Mechanics 34, 351
+
+IERS2010 84381.406000
+IAU2005  84381.406000
+DEFAULT  84381.406000
+
+
