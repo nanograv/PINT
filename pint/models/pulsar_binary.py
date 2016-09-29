@@ -41,7 +41,7 @@ class PulsarBinary(TimingModel):
             description="Projected semi-major axis, a*sin(i)"),
             binary_param = True)
         # NOTE: the DOT here takes the value and times 1e-12, tempo/tempo2 can
-        # take both.  
+        # take both.
         self.add_param(p.floatParameter(name = "A1DOT", aliases = ['XDOT'],
             units=1e-12*ls/u.s,
             description="Derivitve of projected semi-major axis, da*sin(i)/dt"),
@@ -97,7 +97,7 @@ class PulsarBinary(TimingModel):
                 continue
             bparObj.value = bparObj.value * u.Unit(bparObj.units)
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def update_binary_object(self, toas):
         """
         Update binary object instance for this set of parameters/toas
@@ -122,13 +122,11 @@ class PulsarBinary(TimingModel):
 
         self.binary_instance.update_input(self.barycentric_time, pardict)
 
-    @Cache.use_cache
     def binarymodel_delay(self, toas):
         """Return the binary model independent delay call"""
         self.update_binary_object(toas)
         return self.binary_instance.binary_delay()
 
-    @Cache.use_cache
     def d_binary_delay_d_xxxx(self,param,toas):
         """Return the bianry model delay derivtives"""
         self.update_binary_object(toas)

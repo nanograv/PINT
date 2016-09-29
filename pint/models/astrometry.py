@@ -72,7 +72,7 @@ class Astrometry(TimingModel):
             delay += (0.5 * (re_sqr / L) * (1.0 - re_dot_L**2 / re_sqr)).to(ls).value
         return delay
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def get_d_delay_quantities(self, toas):
         """Calculate values needed for many d_delay_d_param functions """
         # TODO: Move all these calculations in a separate class for elegance
@@ -134,7 +134,7 @@ class Astrometry(TimingModel):
         # We want to return sec / mas
         return dd_dpx.decompose(u.si.bases) / u.mas
 
-    @Cache.cache_result
+    #@Cache.cache_result
     def d_delay_astrometry_d_POSEPOCH(self, toas):
         """Calculate the derivative wrt POSEPOCH
         """
@@ -180,7 +180,7 @@ class AstrometryEquitoral(Astrometry):
                               self.d_delay_astrometry_d_DECJ,
                               self.d_delay_astrometry_d_PMRA,
                               self.d_delay_astrometry_d_PMDEC]
-    @Cache.cache_result
+    #@Cache.cache_result
     def coords_as_ICRS(self, epoch=None):
         """Returns pulsar sky coordinates as an astropy ICRS object instance.
 
@@ -197,7 +197,7 @@ class AstrometryEquitoral(Astrometry):
             dDEC = dt * self.PMDEC.quantity
             return coords.ICRS(ra=self.RAJ.quantity+dRA, dec=self.DECJ.quantity+dDEC)
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def d_delay_astrometry_d_RAJ(self, toas):
         """Calculate the derivative wrt RAJ
 
@@ -224,7 +224,7 @@ class AstrometryEquitoral(Astrometry):
 
         return dd_draj.decompose(u.si.bases)
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def d_delay_astrometry_d_DECJ(self, toas):
         """Calculate the derivative wrt DECJ
 
@@ -242,7 +242,7 @@ class AstrometryEquitoral(Astrometry):
 
         return dd_ddecj.decompose(u.si.bases)
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def d_delay_astrometry_d_PMRA(self, toas):
         """Calculate the derivative wrt PMRA
 
@@ -262,7 +262,7 @@ class AstrometryEquitoral(Astrometry):
         # We want to return sec / (mas / yr)
         return dd_dpmra.decompose(u.si.bases) / (u.mas / u.year)
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def d_delay_astrometry_d_PMDEC(self, toas):
         """Calculate the derivative wrt PMDEC
 

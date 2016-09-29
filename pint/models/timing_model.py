@@ -185,7 +185,7 @@ class TimingModel(object):
                 result.append(par.name)
         return result
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def get_prefix_mapping(self,prefix):
         """Get the index mapping for the prefix parameters.
            Parameter
@@ -205,7 +205,7 @@ class TimingModel(object):
                 mapping[par.index] = parname
         return mapping
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def phase(self, toas):
         """Return the model-predicted pulse phase for the given TOAs."""
         # First compute the delays to "pulsar time"
@@ -216,7 +216,7 @@ class TimingModel(object):
             phase += Phase(pf(toas, delay))
         return phase
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def delay(self, toas):
         """Total delay for the TOAs.
 
@@ -230,7 +230,7 @@ class TimingModel(object):
 
         return delay
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def get_barycentric_toas(self,toas):
         toasObs = toas['tdbld']
         delay = np.zeros(len(toas))
@@ -313,7 +313,7 @@ class TimingModel(object):
         return d_phase_d_toa
 
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def d_phase_d_param(self, toas, param):
         """ Return the derivative of phase with respect to the parameter.
 
@@ -330,7 +330,7 @@ class TimingModel(object):
 
         return result
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def d_phase_d_param_num(self, toas, param):
         """ Return the derivative of phase with respect to the parameter.
 
@@ -359,7 +359,7 @@ class TimingModel(object):
             result += df(toas).to(u.s/par.num_unit, equivalencies=u.dimensionless_angles())
         return result
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def designmatrix(self, toas, incfrozen=False, incoffset=True):
         """
         Return the design matrix: the matrix with columns of d_phase_d_param/F0
