@@ -49,10 +49,6 @@ class BinaryDD(PulsarBinary):
              description="Relativistic deformation of the orbit",),
              binary_param = True)
 
-        self.add_param(p.floatParameter(name="SINI", value=0.0,
-             units="",
-             description="Sine of inclination angle"),
-             binary_param = True)
 
     def setup(self):
         """Check out parameters setup.

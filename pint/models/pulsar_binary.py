@@ -64,18 +64,24 @@ class PulsarBinary(TimingModel):
 
         self.add_param(p.floatParameter(name="OM",
             units=u.deg,
-            description="Longitude of periastron"),
+            description="Longitude of periastron",longdouble=True),
             binary_param = True)
 
         self.add_param(p.floatParameter(name="OMDOT",
             units="deg/year",
-            description="Longitude of periastron"),
+            description="Longitude of periastron", longdouble=True),
             binary_param = True)
 
         self.add_param(p.floatParameter(name="M2",
              units=u.M_sun,
              description="Mass of companian in the unit Sun mass"),
              binary_param = True)
+
+        self.add_param(p.floatParameter(name="SINI", value=0.0,
+             units="",
+             description="Sine of inclination angle"),
+             binary_param = True)
+             
         # Set up delay function
         self.binary_delay_funcs += [self.binarymodel_delay,]
         self.delay_funcs['L2'] += [self.binarymodel_delay,]
