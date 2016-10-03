@@ -140,9 +140,9 @@ class Astrometry(TimingModel):
         """
         pass
 
-class AstrometryEquitoral(Astrometry):
+class AstrometryEquatoral(Astrometry):
     def __init__(self):
-        super(AstrometryEquitoral, self).__init__()
+        super(AstrometryEquatoral, self).__init__()
         self.add_param(p.AngleParameter(name="RAJ",
             units="H:M:S",
             description="Right ascension (J2000)",
@@ -162,7 +162,7 @@ class AstrometryEquitoral(Astrometry):
             description="Proper motion in DEC"))
         self.set_special_params(['RAJ', 'DECJ', 'PMRA', 'PMDEC'])
     def setup(self):
-        super(AstrometryEquitoral, self).setup()
+        super(AstrometryEquatoral, self).setup()
         # RA/DEC are required
         for p in ("RAJ", "DECJ"):
             if getattr(self, p).value is None:
@@ -171,7 +171,7 @@ class AstrometryEquitoral(Astrometry):
         if self.PMRA.value != 0.0 or self.PMDEC.value != 0.0:
             if self.POSEPOCH.quantity is None:
                 if self.PEPOCH.quantity is None:
-                    raise MissingParameter("AstrometryEquitoral", "POSEPOCH",
+                    raise MissingParameter("AstrometryEquatoral", "POSEPOCH",
                             "POSEPOCH or PEPOCH are required if PM is set.")
                 else:
                     self.POSEPOCH.quantity = self.PEPOCH.quantity
