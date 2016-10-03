@@ -9,7 +9,7 @@ import os
 
 # Load obliquity data
 # Assume the data file is in the ./datafile directory
-def load_obliqity_file(filename):
+def load_obliquity_file(filename):
     obliquity_data = {}
     for l in open(filename).readlines():
         l = l.strip()
@@ -23,7 +23,7 @@ def load_obliqity_file(filename):
         obliquity_data[line[0]] = float(line[1])* u.arcsecond
     return obliquity_data
 
-OBL = load_obliqity_file(datapath('ecliptic.dat'))
+OBL = load_obliquity_file(datapath('ecliptic.dat'))
 
 
 class PulsarEcliptic(coord.BaseCoordinateFrame):
