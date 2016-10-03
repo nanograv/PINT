@@ -97,10 +97,11 @@ setup(
     packages=['pint',
         'pint.extern',
         'pint.models',
-        'pint.models.stand_alone_psr_binaries', 
+        'pint.models.stand_alone_psr_binaries',
         'pint.orbital'],
 
-    package_data={'pint':['datafiles/observatories.txt',]+data_files},
+    package_data={'pint':['datafiles/observatories.txt',
+                          'datafiles/ecliptic.dat', ]+data_files},
 
     cmdclass = cmdclass,
     ext_modules=ext_modules,
