@@ -32,7 +32,7 @@ class PulsarBinary(TimingModel):
 
 
         self.add_param(p.floatParameter(name="PBDOT",
-            units=u.day/u.day,
+            units=1e-12*u.day/u.day,
             description="Orbital period derivitve respect to time"),
             binary_param = True)
 
@@ -40,9 +40,10 @@ class PulsarBinary(TimingModel):
             units=ls,
             description="Projected semi-major axis, a*sin(i)"),
             binary_param = True)
-
+        # NOTE: the DOT here takes the value and times 1e-12, tempo/tempo2 can
+        # take both.
         self.add_param(p.floatParameter(name = "A1DOT", aliases = ['XDOT'],
-            units=ls/u.s,
+            units=1e-12*ls/u.s,
             description="Derivitve of projected semi-major axis, da*sin(i)/dt"),
             binary_param = True)
 
@@ -53,7 +54,7 @@ class PulsarBinary(TimingModel):
             binary_param = True)
 
         self.add_param(p.floatParameter(name="EDOT",
-             units="1/s",
+             units="1e-12/s",
              description="Eccentricity derivitve respect to time"),
              binary_param = True)
 
@@ -63,18 +64,24 @@ class PulsarBinary(TimingModel):
 
         self.add_param(p.floatParameter(name="OM",
             units=u.deg,
-            description="Longitude of periastron"),
+            description="Longitude of periastron",longdouble=True),
             binary_param = True)
 
         self.add_param(p.floatParameter(name="OMDOT",
             units="deg/year",
-            description="Longitude of periastron"),
+            description="Longitude of periastron", longdouble=True),
             binary_param = True)
 
         self.add_param(p.floatParameter(name="M2",
              units=u.M_sun,
              description="Mass of companian in the unit Sun mass"),
              binary_param = True)
+
+        self.add_param(p.floatParameter(name="SINI", value=0.0,
+             units="",
+             description="Sine of inclination angle"),
+             binary_param = True)
+             
         # Set up delay function
         self.binary_delay_funcs += [self.binarymodel_delay,]
         self.delay_funcs['L2'] += [self.binarymodel_delay,]
@@ -96,7 +103,7 @@ class PulsarBinary(TimingModel):
                 continue
             bparObj.value = bparObj.value * u.Unit(bparObj.units)
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def update_binary_object(self, toas):
         """
         Update binary object instance for this set of parameters/toas
@@ -121,13 +128,11 @@ class PulsarBinary(TimingModel):
 
         self.binary_instance.update_input(self.barycentric_time, pardict)
 
-    @Cache.use_cache
     def binarymodel_delay(self, toas):
         """Return the binary model independent delay call"""
         self.update_binary_object(toas)
         return self.binary_instance.binary_delay()
 
-    @Cache.use_cache
     def d_binary_delay_d_xxxx(self,param,toas):
         """Return the bianry model delay derivtives"""
         self.update_binary_object(toas)

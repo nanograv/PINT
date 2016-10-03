@@ -100,4 +100,3 @@ def ITRF_to_GEO_WGS84(x, y, z):
                                   z.to(u.m).value), Re_wgs84, f_wgs84)
     return Longitude(lon, 'radian', wrap_angle=180.0*u.degree), \
            Latitude(lat, 'radian'), hgt * u.m
-

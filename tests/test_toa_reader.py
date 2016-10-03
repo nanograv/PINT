@@ -21,7 +21,7 @@ class TestTOAReader:
     def test_info_2(self):
         assert self.x.table[3]['flags']["info"] == "test2"
     def test_time(self):
-        assert self.x.table[3]['flags']["time"] == 1.0
+        assert self.x.table[3]['flags']["to"] == 1.0
     def test_jump_2(self):
         assert "jump" not in self.x.table[4]['flags']
     def test_time_2(self):

@@ -579,12 +579,12 @@ class TOAs(object):
             loind, hiind = self.table.groups.indices[ii:ii+2]
             # First apply any TIME statements
             for jj in range(loind, hiind):
-                if flags[jj].has_key('time'):
+                if flags[jj].has_key('to'):
                     # TIME commands are in sec
                     # SUGGESTION(paulr): These time correction units should
                     # be applied in the parser, not here. In the table the time
                     # correction should have units.
-                    corr[jj] = flags[jj]['time'] * u.s
+                    corr[jj] = flags[jj]['to'] * u.s
                     times[jj] += time.TimeDelta(corr[jj])
             # These are observatory clock corrections.  Do in groups.
             if (key['obs'] in observatories and key['obs'] != "Geocenter"):
@@ -901,7 +901,7 @@ class TOAs(object):
                         if self.cdict["PHASE"] != 0:
                             newtoa.flags["phase"] = self.cdict["PHASE"]
                         if self.cdict["TIME"] != 0.0:
-                            newtoa.flags["time"] = self.cdict["TIME"]
+                            newtoa.flags["to"] = self.cdict["TIME"]
                         self.observatories.add(newtoa.obs)
                         self.toas.append(newtoa)
                         self.ntoas += 1

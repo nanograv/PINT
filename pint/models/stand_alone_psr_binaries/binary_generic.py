@@ -401,15 +401,20 @@ class PSR_BINARY(object):
     def d_a1_d_A1DOT(self):
         return self.tt0
     ######################################
-    @Cache.cache_result
-    def M(self):
-        """Orbit phase, this could be a generic function
+    def orbits(self):
+        """Pulsar Orbit
         """
         PB = (self.PB).to('second')
         PBDOT = self.PBDOT
         XPBDOT = self.XPBDOT
-
         orbits = (self.tt0/PB - 0.5*(PBDOT+XPBDOT)*(self.tt0/PB)**2).decompose()
+        return orbits
+
+    @Cache.cache_result
+    def M(self):
+        """Orbit phase
+        """
+        orbits = self.orbits()
         norbits = np.array(np.floor(orbits), dtype=np.long)
         phase = (orbits - norbits)*2*np.pi*u.rad
 
@@ -501,7 +506,11 @@ class PSR_BINARY(object):
     def nu(self):
         """True anomaly  (Ae)
         """
-        return 2*np.arctan(np.sqrt((1.0+self.ecc())/(1.0-self.ecc()))*np.tan(self.E()/2.0))
+        nu = 2*np.arctan(np.sqrt((1.0+self.ecc())/(1.0-self.ecc()))*np.tan(self.E()/2.0))
+        # Normalize True anomaly to on orbit. 
+        nu[nu<0] += 2*np.pi*u.rad
+        nu2 = 2*np.pi*self.orbits()*u.rad + nu - self.M()
+        return nu2
 
     @Cache.cache_result
     def d_nu_d_E(self):
