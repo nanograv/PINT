@@ -30,8 +30,21 @@ class TimePulsarMJD(TimeFormat):
 
     @property
     def value(self):
-        # Note this is not quite right in the UTC case.  I'm not sure 
-        # if this matters, but might want to clean it up.
-        return (self.jd1 - erfa.DJM0) + self.jd2
+        if self._scale == 'utc':
+            # Do the reverse of the above calculation
+            # Note this will return an incorrect value during 
+            # leap seconds, so raise an exception in that 
+            # case.
+            y, mo, d, hmsf = erfa.d2dtf('UTC',9,self.jd1,self.jd2)
+            if 60 in hmsf[...,2]:
+                raise ValueError('UTC times during a leap second cannot be represented in pulsar_mjd format')
+            j1, j2 = erfa.cal2jd(y,mo,d)
+            return (j1 - erfa.DJM0 + j2) + (hmsf[...,0]/24.0 
+                    + hmsf[...,1]/1440.0 
+                    + hmsf[...,2]/86400.0 
+                    + hmsf[...,3]/86400.0e9)
+        else:
+            # As in TimeMJD
+            return (self.jd1 - erfa.DJM0) + self.jd2
 
 
