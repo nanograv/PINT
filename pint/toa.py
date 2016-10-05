@@ -4,6 +4,7 @@ from . import observatories as obsmod
 from . import erfautils
 import spice
 import astropy.time as time
+from . import pulsar_mjd
 import astropy.table as table
 import astropy.units as u
 from astropy.coordinates import EarthLocation
@@ -263,14 +264,15 @@ class TOA(object):
         Time object passed to the TOA constructor.
 
         """
+        fmt='pulsar_mjd'
         if obs == "Barycenter":
             # Barycenter overrides the scale argument with 'tdb' always.
             if numpy.isscalar(MJD):
-                self.mjd = time.Time(MJD, scale='tdb', format='mjd',
+                self.mjd = time.Time(MJD, scale='tdb', format=fmt,
                                     precision=9)
             else:
                 self.mjd = time.Time(MJD[0], MJD[1],
-                                    scale='tdb', format='mjd',
+                                    scale='tdb', format=fmt,
                                     precision=9)
         elif obs == "Geocenter":
             # Warning(paulr): The location is used in the TT->TDB
@@ -280,13 +282,13 @@ class TOA(object):
             # Certainly (0,0,0) is the right answer for the solar system
             # delays and such.
             if numpy.isscalar(MJD):
-                self.mjd = time.Time(MJD, scale=scale, format='mjd',
+                self.mjd = time.Time(MJD, scale=scale, format=fmt,
                                     location=EarthLocation(0.0,0.0,0.0),
                                     precision=9)
             else:
                 self.mjd = time.Time(MJD[0], MJD[1],
                                     location=EarthLocation(0.0,0.0,0.0),
-                                    scale=scale, format='mjd',
+                                    scale=scale, format=fmt,
                                     precision=9)
         elif obs == "Spacecraft":
             # For TOAs from a spacecraft, a gcrslocation argument is
@@ -300,11 +302,11 @@ class TOA(object):
             if not isinstance(kwargs['gcrslocation'],coord.GCRS):
                 raise ValueError("gcrslocation must be an astropy.coordinates.GCRS instance")
             if numpy.isscalar(MJD):
-                self.mjd = time.Time(MJD, scale=scale, format='mjd',
+                self.mjd = time.Time(MJD, scale=scale, format=fmt,
                                     precision=9)
             else:
                 self.mjd = time.Time(MJD[0], MJD[1],
-                                    scale=scale, format='mjd',
+                                    scale=scale, format=fmt,
                                     precision=9)
         elif obs in observatories:
             # Not sure what I was trying to test for with this. -- paulr
@@ -317,12 +319,12 @@ class TOA(object):
                     log.warning('TOA passed with poor precision ({0})'.format(self.mjd.precision))
                 self.mjd.precision = 9
             elif numpy.isscalar(MJD):
-                self.mjd = time.Time(MJD, scale=scale, format='mjd',
+                self.mjd = time.Time(MJD, scale=scale, format=fmt,
                                     location=observatories[obs].loc,
                                     precision=9)
             else:
                 self.mjd = time.Time(MJD[0], MJD[1],
-                                    scale=scale, format='mjd',
+                                    scale=scale, format=fmt,
                                     location=observatories[obs].loc,
                                     precision=9)
         else:
