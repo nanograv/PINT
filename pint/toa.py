@@ -74,6 +74,7 @@ def _check_pickle(toafilename, picklefilename=None):
             testfilename = toafilename + ext
             if os.path.isfile(testfilename):
                 picklefilename = testfilename
+                break
         # It it's still None, no pickles were found
         if picklefilename is None:
             return ''
