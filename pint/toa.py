@@ -27,7 +27,7 @@ iers_a_file = None
 iers_a = None
 
 
-def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=True):
+def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=False):
     """Convenience function to load and prepare TOAs for PINT use.
 
     Loads TOAs from a '.tim' file, applies clock corrections, computes
@@ -422,7 +422,7 @@ class TOAs(object):
             if toafile.endswith('.pickle') or toafile.endswith('pickle.gz'):
                 self.read_pickle_file(toafile)
 
-            # Not a picke file, process as a standard set of TOA lines
+            # Not a pickle file, process as a standard set of TOA lines
             else:
                 self.read_toa_file(toafile)
                 self.filename = toafile
