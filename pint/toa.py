@@ -392,7 +392,7 @@ class TOA(object):
 class TOAs(object):
     """A class of multiple TOAs, loaded from zero or more files."""
 
-    def __init__(self, toafile=None, toalist=None, usepickle=True):
+    def __init__(self, toafile=None, toalist=None):
         # First, just make an empty container
         self.toas = []
         self.commands = []
@@ -408,7 +408,7 @@ class TOAs(object):
             # FIXME: work with file-like objects as well
 
             # Note, this code was included in an earlier version of
-            # TOAs.__init__() however would not have worked correctly.
+            # TOAs.__init__() however it would not have worked correctly.
             # I'm leaving it here as a reminder until we either decide we
             # need this functionality and make it work, or decide to remove
             # it. PBD 2016/10/10.

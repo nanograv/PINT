@@ -14,7 +14,7 @@ m = tm.StandardTimingModel()
 m.read_parfile(os.path.join(datadir,'NGC6440E.par'))
 
 # Get TOAs
-t = toa.TOAs(os.path.join(datadir,'NGC6440E.tim'),usepickle=False)
+t = toa.TOAs(os.path.join(datadir,'NGC6440E.tim'))
 t.apply_clock_corrections()
 t.compute_TDBs()
 try:

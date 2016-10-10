@@ -6,7 +6,7 @@ os.chdir(datadir)
 
 class TestTOAReader:
     def setUp(self):
-        self.x = toa.TOAs("test1.tim", usepickle=False)
+        self.x = toa.TOAs("test1.tim")
         self.x.apply_clock_corrections()
         self.x.compute_TDBs()
         self.x.table.sort('index')
