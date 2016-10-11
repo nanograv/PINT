@@ -89,6 +89,6 @@ def objPosVel(obj1, obj2, t, ephem):
     elif obj2.lower() != 'ssb' and obj1.lower() != 'ssb':
         obj1pv = objPosVel2SSB(obj1,t,ephem)
         obj2pv = objPosVel2SSB(obj2,t,ephem)
-        return obj1pv - obj2pv
+        return obj2pv - obj1pv
     else:
         return PosVel(np.zeros((3,len(t)))*u.km, np.zeros((3,len(t)))*u.km/u.second)

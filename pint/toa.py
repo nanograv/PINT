@@ -761,7 +761,7 @@ class TOAs(object):
             elif (key['obs'] in observatories):
                 earth_obss = erfautils.topo_posvels2(obs, grp)
                 ssb_earth = astropyObj("SSB", "EARTH", tdb[loind:hiind],ephem)
-                obs_sun = astropyObj("EARTH", "SUN", tdb[loind:hiind],ephem)
+                obs_sun = astropyObj("EARTH", "SUN", tdb[loind:hiind],ephem) - earth_obss
                 obs_sun_pos[loind:hiind,:] = obs_sun.pos.T
                 ssb_obs = ssb_earth + earth_obss
                 ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T
@@ -770,7 +770,7 @@ class TOAs(object):
                     for p in ('jupiter', 'saturn', 'venus', 'uranus'):
                         name = 'obs_'+p+'_pos'
                         dest = p
-                        pv = astropyObj("EARTH", dest, tdb[loind:hiind],ephem) - earth_obss[jj]
+                        pv = astropyObj("EARTH", dest, tdb[loind:hiind],ephem) - earth_obss
                         plan_poss[name][loind:hiind,:] = pv.pos.T
             else:
                 log.error("Unknown observatory {0}".format(key['obs']))
