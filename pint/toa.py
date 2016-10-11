@@ -408,16 +408,6 @@ class TOAs(object):
             
             # FIXME: work with file-like objects as well
 
-            # Note, this code was included in an earlier version of
-            # TOAs.__init__() however it would not have worked correctly.
-            # I'm leaving it here as a reminder until we either decide we
-            # need this functionality and make it work, or decide to remove
-            # it. PBD 2016/10/10.
-            #if type(toafile) in [tuple, list]:
-            #    self.filename = None
-            #    for infile in toafile:
-            #        self.read_toa_file(infile, usepickle=usepickle)
-
             # Check for a pickle-like filename.  Alternative approach would
             # be to just try opening it as a pickle and see what happens.
             if toafile.endswith('.pickle') or toafile.endswith('pickle.gz'):
