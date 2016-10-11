@@ -13,6 +13,7 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 from spiceutils import objPosVel, load_kernels
+from astropy_solar_system_ephem import objPosVel as astropyObj
 from pint import ls, J2000, J2000ld
 from .config import datapath
 from astropy import log
@@ -709,10 +710,9 @@ class TOAs(object):
                 log.info('Column {0} already exists. Removing...'.format(name))
                 self.table.remove_column(name)
 
-        load_kernels(ephem)
         ephem_file = datapath("%s.bsp"%ephem.lower())
         log.info("Loading %s ephemeris." % ephem_file)
-        spice.furnsh(ephem_file)
+
         self.table.meta['ephem'] = ephem
         ssb_obs_pos = table.Column(name='ssb_obs_pos',
                                     data=numpy.zeros((self.ntoas, 3), dtype=numpy.float64),
@@ -730,55 +730,48 @@ class TOAs(object):
                 plan_poss[name] = table.Column(name=name,
                                     data=numpy.zeros((self.ntoas, 3), dtype=numpy.float64),
                                     unit=u.km, meta={'origin':'OBS', 'obj':p})
+
+        tdb = time.Time(self.table['tdbld'], scale='tdb', format='mjd')
         # Now step through in observatory groups
         for ii, key in enumerate(self.table.groups.keys):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
             if (key['obs'] == 'Barycenter'):
-                for jj, grprow in enumerate(grp):
-                    ind = jj+loind
-                    et = float((grprow['tdbld'] - J2000ld) * SECS_PER_DAY)
-                    obs_sun = objPosVel("SSB", "SUN", et)
-                    obs_sun_pos[ind,:] = obs_sun.pos
+                obs_sun = astropyObj('ssb', 'earth', tdb[loind:hiind],ephem)
+                obs_sun_pos[loind:hiind,:] = obs_sun.pos.T
             elif (key['obs'] == 'Spacecraft'):
                 # For a time recorded at a spacecraft, use the position of
                 # the spacecraft recorded in the TOA to compute the needed
                 # vectors.
                 pass
             elif (key['obs'] == 'Geocenter'):
-                for jj, grprow in enumerate(grp):
-                    ind = jj+loind
-                    et = float((grprow['tdbld'] - J2000ld) * SECS_PER_DAY)
-                    ssb_earth = objPosVel("SSB", "EARTH", et)
-                    obs_sun = objPosVel("EARTH", "SUN", et)
-                    obs_sun_pos[ind,:] = obs_sun.pos
-                    ssb_obs = ssb_earth
-                    ssb_obs_pos[ind,:] = ssb_obs.pos
-                    ssb_obs_vel[ind,:] = ssb_obs.vel
-                    if planets:
-                        for p in ('jupiter', 'saturn', 'venus', 'uranus'):
-                            name = 'obs_'+p+'_pos'
-                            dest = p.upper()+" BARYCENTER"
-                            pv = objPosVel("EARTH", dest, et)
-                            plan_poss[name][ind,:] = pv.pos
+                ssb_earth = astropyObj("SSB", "EARTH", ttdb[loind:hiind],ephem)
+                obs_sun = astropyObj("EARTH", "SUN", ttdb[loind:hiind],ephem)
+                obs_sun_pos[loind:hiind,:] = obs_sun.pos.T
+                ssb_obs = ssb_earth
+                ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T
+                ssb_obs_vel[loind:hiind,:] = ssb_obs.vel.T
+                if planets:
+                    for p in ('jupiter', 'saturn', 'venus', 'uranus'):
+                        name = 'obs_'+p+'_pos'
+                        dest = p
+                        pv = astropyObj("EARTH", dest, tdb[loind:hiind],ephem)
+                        plan_poss[name][loind,hiind] = pv.pos
             elif (key['obs'] in observatories):
-                earth_obss = erfautils.topo_posvels(obs, grp)
-                for jj, grprow in enumerate(grp):
-                    ind = jj+loind
-                    et = float((grprow['tdbld'] - J2000ld) * SECS_PER_DAY)
-                    ssb_earth = objPosVel("SSB", "EARTH", et)
-                    obs_sun = objPosVel("EARTH", "SUN", et) - earth_obss[jj]
-                    obs_sun_pos[ind,:] = obs_sun.pos
-                    ssb_obs = ssb_earth + earth_obss[jj]
-                    ssb_obs_pos[ind,:] = ssb_obs.pos
-                    ssb_obs_vel[ind,:] = ssb_obs.vel
-                    if planets:
-                        for p in ('jupiter', 'saturn', 'venus', 'uranus'):
-                            name = 'obs_'+p+'_pos'
-                            dest = p.upper()+" BARYCENTER"
-                            pv = objPosVel("EARTH", dest, et) - earth_obss[jj]
-                            plan_poss[name][ind,:] = pv.pos
+                earth_obss = erfautils.topo_posvels2(obs, grp)
+                ssb_earth = astropyObj("SSB", "EARTH", tdb[loind:hiind],ephem)
+                obs_sun = astropyObj("EARTH", "SUN", tdb[loind:hiind],ephem)
+                obs_sun_pos[loind:hiind,:] = obs_sun.pos.T
+                ssb_obs = ssb_earth + earth_obss
+                ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T
+                ssb_obs_vel[loind:hiind,:] = ssb_obs.vel.T
+                if planets:
+                    for p in ('jupiter', 'saturn', 'venus', 'uranus'):
+                        name = 'obs_'+p+'_pos'
+                        dest = p
+                        pv = astropyObj("EARTH", dest, tdb[loind:hiind],ephem) - earth_obss[jj]
+                        plan_poss[name][loind:hiind,:] = pv.pos.T
             else:
                 log.error("Unknown observatory {0}".format(key['obs']))
         cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
