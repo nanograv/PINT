@@ -236,8 +236,11 @@ if __name__ == '__main__':
         ts.compute_TDBs()
         ts.compute_posvels(ephem="DE421", planets=False)
         ts.pickle()
-    else:  # read the events in as a picke file
-        ts = toa.TOAs(eventfile, usepickle=True)
+    else:  # read the events in as a pickle file
+        picklefile = toa._check_pickle(eventfile)
+        if not picklefile:
+            picklefile = eventfile
+        ts = toa.TOAs(picklefile)
 
     if weightcol is not None:
         if weightcol=='CALC':
