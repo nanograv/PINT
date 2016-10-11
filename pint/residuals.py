@@ -1,5 +1,6 @@
 import astropy.units as u
 import numpy as np
+from .phase import Phase
 
 class resids(object):
     """resids(toa=None, model=None)"""
@@ -19,8 +20,10 @@ class resids(object):
 
     def calc_phase_resids(self):
         """Return timing model residuals in pulse phase."""
-        rs = self.model.phase(self.toas.table).frac
-        return rs - rs.mean()
+        rs = self.model.phase(self.toas.table)
+        rs -= Phase(rs.int[0],rs.frac[0])
+        rs -= Phase(0.0,rs.frac.mean())
+        return rs.frac
 
     def calc_time_resids(self):
         """Return timing model residuals in time (seconds)."""

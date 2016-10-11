@@ -30,8 +30,12 @@ class FD(TimingModel):
         FD_in_order = range(1,max(FD_terms)+1)
         if not FD_terms == FD_in_order:
             diff = list(set(FD_in_order) - set(FD_terms))
-            raise MissingParameter("Spindown", "FD%d"%diff[0])
+            raise MissingParameter("FD", "FD%d"%diff[0])
         self.num_FD_terms = len(FD_terms)
+        # set up derivative functions
+        for ii, val in FD_mapping.iteritems():
+            self.make_delay_FD_deriv_funcs(val)
+            self.delay_derivs += [getattr(self, 'd_delay_FD_d_' + val)]
 
     def FD_delay(self, toas):
         """This is a function for calculation of frequency dependent delay.
@@ -41,8 +45,13 @@ class FD(TimingModel):
         Eq.(2):
         FDdelay = sum(c_i * (log(obs_freq/1GHz))^i)
         """
+        try:
+            bfreq = self.barycentric_radio_freq(toas)
+        except AttributeError:
+            warn("Using topocentric frequency for frequency dependent delay!")
+            bfreq = toas['freq']
         FD_mapping = self.get_prefix_mapping('FD')
-        log_freq = np.log(toas['freq'] / (1 * u.GHz))
+        log_freq = np.log(bfreq / (1 * u.GHz))
         FD_coeff = [getattr(self, FD_mapping[ii]).value \
                    for ii in range(self.num_FD_terms,0,-1)]
         FD_coeff += [0.0]
@@ -51,9 +60,14 @@ class FD(TimingModel):
 
         return FD_delay * self.FD1.units
 
-    def d_delay_d_FD(self, toas, FD_term=1):
+    def d_delay_FD_d_FDX(self, toas, FD_term=1):
         """This is a derivative function for FD parameter
         """
+        try:
+            bfreq = self.barycentric_radio_freq(toas)
+        except AttributeError:
+            warn("Using topocentric frequency for frequency dependent delay derivative!")
+            bfreq = toas['freq']
         FD_mapping = self.get_prefix_mapping('FD')
         if FD_term > self.num_FD_terms:
             raise ValueError('FD model has no FD%d term' % FD_term)
@@ -63,6 +77,13 @@ class FD(TimingModel):
             FD_coef = getattr(self, FD_mapping[ii])
             if ii == FD_term:
                 FD_coef.value = 1.0
-            log_freq = np.log(toas['freq'] / (1 * u.GHz))
+            log_freq = np.log(bfreq / (1 * u.GHz))
             d_delay_d_FD += FD_coef.value * (log_freq) ** ii
         return d_delay_d_FD
+
+    def make_delay_FD_deriv_funcs(self, param):
+        FD_term = getattr(self, param).index
+        def deriv_func(toas):
+            return self.d_binary_FD_d_FDX(toas, FD_term)
+        deriv_func.__name__ = 'd_delay_FD_d_' + param
+        setattr(self, 'd_delay_FD_d_' + param, deriv_func)

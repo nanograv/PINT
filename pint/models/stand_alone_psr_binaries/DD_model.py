@@ -1,22 +1,20 @@
-from .pulsar_binary import PSR_BINARY
+from .binary_generic import PSR_BINARY
 from pint.models.timing_model import Cache
 import numpy as np
 import astropy.units as u
 import astropy.constants as c
 from pint import ls,GMsun,Tsun
+
+
 class DDmodel(PSR_BINARY):
     """This is a class independent from PINT platform for pulsar DD binary model.
     Refence: T. Damour and N. Deruelle(1986)
-    It is a subclass of PSR_BINARY class defined in file pulsar_binary.py in
-    the same folder. This class is desined for PINT platform but can be used
+    It is a subclass of PSR_BINARY class defined in file binary_generic.py in
+    the same dierectory. This class is desined for PINT platform but can be used
     as an independent module for binary delay calculation.
-    To interact with PINT platform, a pint_pulsar_binary wrapper is needed.
-    See the source file pint/models/pint_dd_model.py
+    To interact with PINT platform, a pulsar_binary wrapper is needed.
+    See the source file pint/models/pulsar_binary_dd.py
 
-    Parameters
-    ----------
-    t : numpy.array_like
-        Barycentric time of arrival in the format of MJD.
     Return
     ----------
     A dd binary model class with paramters, delay calculations and derivatives.
@@ -24,38 +22,123 @@ class DDmodel(PSR_BINARY):
     ----------
     >>> import numpy
     >>> t = numpy.linspace(54200.0,55000.0,800)
-    >>> binary_model = DDmodel(t)
+    >>> binary_model = DDmodel()
     >>> paramters_dict = {'A0':0.5,'ECC':0.01}
-    >>> binary_model.set_par_values(paramters_dict)
+    >>> binary_model.update_input(t, paramters_dict)
     Here the binary has time input and parameters input, the delay can be
     calculated.
     """
-    def __init__(self,t):
+    def __init__(self, t=None, input_params=None):
         super(DDmodel, self).__init__()
-        if not isinstance(t, np.ndarray) and not isinstance(t,list):
-            self.t = np.array([t,])
-        else:
-            self.t = t
+        self.binary_name = 'DD'
+        # Add parameter that specific for DD model, with default value and units
         self.param_default_value.update({'A0':0*u.second,'B0':0*u.second,
-                               'DR':0*u.Unit(''),'DTH':0*u.Unit(''),
-                               'GAMMA':0*u.second,'SINI':0*u.Unit('')})
-
+                               'DR':0*u.Unit(''),'DTH':0*u.Unit(''),})
+        # If any parameter has aliases, it should be updated
+        #self.param_aliases.update({})
         self.binary_params = self.param_default_value.keys()
 
         self.dd_interVars = ['er','eTheta','beta','alpha','Dre','Drep','Drepp',
-                             'nhat']
+                             'nhat', 'TM2']
         self.add_inter_vars(self.dd_interVars)
-        self.set_par_values()
-        self.binary_delay_funcs+= [self.DDdelay]
-
+        self.set_param_values() # Set parameters to default values.
+        self.binary_delay_funcs += [self.DDdelay]
+        self.d_binarydelay_d_par_funcs += [self.d_DDdelay_d_par]
+        if t is not None:
+            self.t = t
+        if input_params is not None:
+            self.update_input(param_dict=input_params)
     # calculations for delays in DD model
-    @Cache.use_cache
+
+    # DDmodel special omega.
+    @Cache.cache_result
+    def omega(self):
+        """T. Damour and N. Deruelle(1986)equation [25]
+           omega = OM+nu*k
+           k = OMDOT/n  (T. Damour and N. Deruelle(1986)equation between Eq 16
+                         Eq 17)
+        """
+        PB = self.PB
+        PB = PB.to('second')
+        OMDOT = self.OMDOT
+        OM = self.OM
+        nu = self.nu()
+        k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
+        return (OM + nu*k).to(u.rad)
+
+    @Cache.cache_result
+    def d_omega_d_par(self,par):
+        """derivative for omega respect to user input Parameter.
+           if par is not 'OM','OMDOT','PB'
+           dOmega/dPar =  k*dAe/dPar
+           k = OMDOT/n
+           Parameters
+           ----------
+           par : string
+                 parameter name
+           Return
+           ----------
+           Derivitve of omega respect to par
+        """
+        if par not in self.binary_params:
+            errorMesg = par + "is not in binary parameter list."
+            raise ValueError(errorMesg)
+
+        PB = self.PB
+        OMDOT = self.OMDOT
+        OM = self.OM
+        nu = self.nu()
+        k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
+
+        if par in ['OM','OMDOT','PB']:
+            dername = 'd_omega_d_' + par
+            return getattr(self,dername)()
+        else:
+            dername = 'd_nu_d_'+par # For parameters only in nu
+            if hasattr(self,dername):
+                return k*getattr(self,dername)()
+            else:
+                return np.longdouble(np.zeros(len(self.tt0)))
+
+    @Cache.cache_result
+    def d_omega_d_OM(self):
+        """dOmega/dOM = 1
+        """
+        return np.longdouble(np.ones((len(self.tt0))))*u.Unit('')
+
+    @Cache.cache_result
+    def d_omega_d_OMDOT(self):
+        """dOmega/dOMDOT = 1/n*nu
+           n = 2*pi/PB
+           dOmega/dOMDOT = PB/2*pi*nu
+        """
+        PB = (self.PB).to('second')
+        nu = self.nu()
+
+        return PB/(2*np.pi*u.rad)*nu
+
+    @Cache.cache_result
+    def d_omega_d_PB(self):
+        """dOmega/dPB = dnu/dPB*k+dk/dPB*nu
+        """
+        PB = self.PB
+        OMDOT = self.OMDOT
+        OM = self.OM
+        nu = self.nu()
+        k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
+        return (self.d_nu_d_PB()*k)+nu*OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad)
+
+    ############################################################
+    # Calculate er
+    @Cache.cache_result
     def er(self):
         return self.ecc()+self.DR
-    @Cache.use_cache
+
+    @Cache.cache_result
     def d_er_d_DR(self):
         return np.longdouble(np.ones(len(self.tt0)))*u.Unit("")
-    @Cache.use_cache
+
+    @Cache.cache_result
     def d_er_d_par(self,par):
         if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
@@ -72,13 +155,13 @@ class DDmodel(PSR_BINARY):
                 return np.longdouble(np.zeros(len(self.tt0)))
 
     ##########
-    @Cache.use_cache
+    @Cache.cache_result
     def eTheta(self):
         return self.ecc()+self.DTH
-    @Cache.use_cache
+    @Cache.cache_result
     def d_eTheta_d_DTH(self):
         return np.longdouble(np.ones(len(self.tt0)))*u.Unit("")
-    @Cache.use_cache
+    @Cache.cache_result
     def d_eTheta_d_par(self,par):
         if par not in self.binary_params:
             errorMesg = par + "is not in parameter list."
@@ -94,7 +177,7 @@ class DDmodel(PSR_BINARY):
             else:
                 return np.longdouble(np.zeros(len(self.tt0)))
     ##########
-    @Cache.use_cache
+    @Cache.cache_result
     def alpha(self):
         """Alpha defined in
            T. Damour and N. Deruelle(1986)equation [46]
@@ -102,7 +185,8 @@ class DDmodel(PSR_BINARY):
         """
         sinOmg = np.sin(self.omega())
         return self.a1()/c.c*sinOmg
-    @Cache.use_cache
+
+    @Cache.cache_result
     def d_alpha_d_par(self,par):
         """T. Damour and N. Deruelle(1986)equation [46]
            alpha = a1/c*sin(omega)
@@ -128,17 +212,18 @@ class DDmodel(PSR_BINARY):
             else:
                 return np.longdouble(np.zeros(len(self.tt0)))
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_alpha_d_A1(self):
         sinOmg = np.sin(self.omega())
         return 1.0/c.c*sinOmg
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_alpha_d_A1DOT(self):
         sinOmg = np.sin(self.omega())
         return self.tt0/c.c*sinOmg
     ##############################################
-    @Cache.use_cache
+
+    @Cache.cache_result
     def beta(self):
         """Beta defined in
            T. Damour and N. Deruelle(1986)equation [47]
@@ -147,7 +232,8 @@ class DDmodel(PSR_BINARY):
         eTheta = self.eTheta()
         cosOmg = np.cos(self.omega())
         return self.a1()/c.c*(1-eTheta**2)**0.5*cosOmg
-    @Cache.use_cache
+
+    @Cache.cache_result
     def d_beta_d_par(self,par):
         """beta = A1/c*(1-eTheta**2)**0.5*cos(omega)
            eTheta = ecc+Dth  ??
@@ -177,7 +263,8 @@ class DDmodel(PSR_BINARY):
                 return -a1/c.c*(1-eTheta**2)**0.5*sinOmg*getattr(self,dername)()
             else:
                 return np.longdouble(np.zeros(len(self.tt0)))
-    @Cache.use_cache
+
+    @Cache.cache_result
     def d_beta_d_A1(self):
         """dBeta/dA1 = 1.0/c*(1-eTheta**2)**0.5*cos(omega)
         """
@@ -185,7 +272,7 @@ class DDmodel(PSR_BINARY):
         cosOmg = np.cos(self.omega())
         return 1.0/c.c*(1-eTheta**2)**0.5*cosOmg
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_beta_d_A1DOT(self):
         """dBeta/dA1DOT = (t-T0)/c*(1-eTheta**2)**0.5*cos(omega)
         """
@@ -193,7 +280,7 @@ class DDmodel(PSR_BINARY):
         cosOmg = np.cos(self.omega())
         return self.tt0/c.c*(1-eTheta**2)**0.5*cosOmg
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_beta_d_ECC(self):
         """dBeta/dECC = A1/c*((-(e+dtheta)/sqrt(1-(e+dtheta)**2)*cos(omega)*de/dECC-
                         (1-eTheta**2)**0.5*sin(omega)*domega/dECC
@@ -206,7 +293,7 @@ class DDmodel(PSR_BINARY):
         return a1/c.c*((-eTheta)/np.sqrt(1-eTheta**2)*cosOmg- \
                (1-eTheta**2)**0.5*sinOmg*self.d_omega_d_par('ECC'))
 
-    @Cache.use_cache
+    @Cache.cache_result
     def d_beta_d_EDOT(self):
         """dBeta/dEDOT = A1/c*((-(e+dtheta)/sqrt(1-(e+dtheta)**2)*cos(omega)*de/dEDOT- \
            (1-eTheta**2)**0.5*sin(omega)*domega/dEDOT
@@ -218,7 +305,8 @@ class DDmodel(PSR_BINARY):
         cosOmg = np.cos(self.omega())
         return a1/c.c*((-eTheta)/np.sqrt(1-eTheta**2)*cosOmg*self.tt0- \
                (1-eTheta**2)**0.5*sinOmg*self.d_omega_d_par('EDOT'))
-    @Cache.use_cache
+
+    @Cache.cache_result
     def d_beta_d_DTH(self):
         """dBeta/dDth = a1/c*((-(e+dr)/sqrt(1-(e+dr)**2)*cos(omega)
         """
@@ -227,10 +315,8 @@ class DDmodel(PSR_BINARY):
 
         return self.a1()/c.c*(-eTheta)/np.sqrt(1-eTheta**2)*cosOmg
 
-
-
     ##################################################
-    @Cache.use_cache
+    @Cache.cache_result
     def Dre(self):
         """Dre defined in
            T. Damour and N. Deruelle(1986)equation [48]
@@ -241,7 +327,8 @@ class DDmodel(PSR_BINARY):
         cosE = np.cos(self.E())
         return self.alpha()*(cosE- er)+   \
                (self.beta()+self.GAMMA)*sinE
-    @Cache.use_cache
+
+    @Cache.cache_result
     def d_Dre_d_par(self,par):
         """Dre = alpha*(cos(E)-er)+(beta+gamma)*sin(E)
            dDre = alpha*(-der-dE*sin(E)) + (cos[E]-er)*dalpha +
@@ -266,8 +353,9 @@ class DDmodel(PSR_BINARY):
         term4 = (self.beta()+self.GAMMA)*cosE*self.prtl_der('E',par)
 
         return term1 + term2 + term3 +term4
+
     #################################################
-    @Cache.use_cache
+    @Cache.cache_result
     def Drep(self):
         """Dervitive of Dre respect to E
            T. Damour and N. Deruelle(1986)equation [49]
@@ -276,7 +364,8 @@ class DDmodel(PSR_BINARY):
         sinE = np.sin(self.E())
         cosE = np.cos(self.E())
         return -self.alpha()*sinE+(self.beta()+self.GAMMA)*cosE
-    @Cache.use_cache
+
+    @Cache.cache_result
     def d_Drep_d_par(self,par):
         """Drep = -alpha*sin(E)+(beta+gamma)*cos(E)
            dDrep = -alpha*cos(E)*dE + cos(E)*(dbeta+dgamma)
@@ -299,7 +388,7 @@ class DDmodel(PSR_BINARY):
         return term1+term2+term3
 
     #################################################
-    @Cache.use_cache
+    @Cache.cache_result
     def Drepp(self):
         """Dervitive of Drep respect to E
            T. Damour and N. Deruelle(1986)equation [50]
@@ -308,7 +397,8 @@ class DDmodel(PSR_BINARY):
         sinE = np.sin(self.E())
         cosE = np.cos(self.E())
         return -self.alpha()*cosE-(self.beta()+self.GAMMA)*sinE
-    @Cache.use_cache
+
+    @Cache.cache_result
     def d_Drepp_d_par(self,par):
         """Drepp = -alpha*cos(E)-(beta+GAMMA)*sin(E)
            dDrepp = -(beta+gamma)*cos(E)*dE - cos(E)*dalpha
@@ -330,7 +420,8 @@ class DDmodel(PSR_BINARY):
 
         return term1+term2+term3
     #################################################
-    @Cache.use_cache
+
+    @Cache.cache_result
     def nhat(self):
         """nhat defined as
            T. Damour and N. Deruelle(1986)equation [51]
@@ -339,7 +430,8 @@ class DDmodel(PSR_BINARY):
         """
         cosE = np.cos(self.E())
         return 2.0*np.pi/self.PB.to('second')/(1-self.ecc()*cosE)
-    @Cache.use_cache
+
+    @Cache.cache_result
     def d_nhat_d_par(self,par):
         """nhat = n/(1-ecc*cos(E))
            n = 2*pi/PB # should here be M()?
@@ -357,14 +449,29 @@ class DDmodel(PSR_BINARY):
         return fctr*(self.prtl_der('PB',par)/self.PB - \
                (cosE*self.prtl_der('ecc',par)- \
                 self.ecc()*sinE*self.prtl_der('E',par))/oneMeccTcosE)
+
     #################################################
     @Cache.use_cache
     def delayInverse(self):
         """DD model Inverse timing delay.
-           T. Damour and N. Deruelle(1986)equation [46-52]
-
-           From proper time to coordinate time.
-           The Romoer delay and Einstein are included.
+        T. Damour and N. Deruelle(1986)equation [46-52]
+        This part is convert the delay argument from proper time to coordinate
+        time. The Romoer delay and Einstein are included in the calculation.
+        It uses there iterations to approximate the Roemer delay and Einstein
+        delay.
+        T. Damour and N. Deruelle(1986)equation [43]. The equation [52] gives a
+        taylor expension of equation [43].
+        u - e*sin(u) = n(t-T0)
+        nhat = du/dt
+        nhatp  = d^2u/dt^2
+        Drep = dDre/du
+        Drepp = d^2Dre/du^2
+        Dre(t-Dre(t-Dre(t)))  =  Dre(u) - Drep(u)*nhat*Dre(t-Dre(t))
+                              =  Dre(u) - Drep(u)*nhat*(Dre(u)-Drep(u)*nhat*Dre(t))
+                                 + 1/2 (Drepp(u)*nhat^2 + Drep(u) * nhat * nhatp) * (Dre(t)-...)^2
+                              = Dre(t)*(1 - nhat * Drep(u) + (nhat*Drep)^2 +
+                                1/2*nhat^2* Dre*Drepp - 1/2*e*sin(u)/(1-e*cos(u)*nhat^2*Drep*Drep))
+        Here u is equivalent to E in the function.
         """
         Dre = self.Dre()
         Drep = self.Drep()
@@ -375,57 +482,10 @@ class DDmodel(PSR_BINARY):
         cosE = np.cos(self.E())
         return (Dre*(1-nHat*Drep+(nHat*Drep)**2+1.0/2*nHat**2*Dre*Drepp-\
                 1.0/2*e*sinE/(1-e*cosE)*nHat**2*Dre*Drep)).decompose()
+
     @Cache.use_cache
     def d_delayI_d_par(self,par):
-        """ddelayI/dPar = dDre/dPar*delayI/Dre       [1] half
-                          +Dre*d(delayI/Dre)/dPar    [2] half
-           d(delayI/Dre)/dPar = -nhat*dDrep/dPar-Drep*dnhat/dPar   part (1)
-                                +2*Drep*nhat*(nhat*dDrep/dPar+Drep*dnhat/dPar  part (2)
-                                +1/2*nhat*(Drepp*nhat*dDre/dPar+Dre*nhat*dDrepp/dPar+2*Dre*Drepp*dnhat/dPar) part (3)
-                                +Part4    part (4)
-           Define x:= -1.0/2*ecct*sin(E)/(1-ecct*cos(E))
-           part4 = nhat*(Dre*Drep*nhat*dx/dPar+x*(Drep*nHat*dDre/dPar+Dre*nHat*dDrep/dPar+
-                   2*Dre*Drep*dnhat/dPar))
-           dx/dPar = (-ecc*cos(E)*dE/dPar-sin(E)*decc/dPar
-                     +ecc*sin(E)*(-cos(E)*decc/dPar+ecc*sin(E)*dE/dPar)/(1-ecc*cos(E)))/(2*(1-ecc*cos(E)))
-        """
-        e = self.ecc()
-        sE = np.sin(self.E())
-        cE = np.cos(self.E())
-        dE_dpar = self.prtl_der('E',par)
-        decc_dpar = self.prtl_der('ecc',par)
-
-        Dre = self.Dre()
-        Drep = self.Drep()
-        Drepp = self.Drepp()
-        nHat = self.nhat()
-        delayI = self.delayInverse()
-
-        dDre_dpar = self.d_Dre_d_par(par)
-        dDrep_dpar = self.d_Drep_d_par(par)
-        dDrepp_dpar = self.d_Drepp_d_par(par)
-        dnhat_dpar = self.d_nhat_d_par(par)
-        oneMeccTcosE = (1-e*cE) # 1-e*cos(E)
-
-        x =  -1.0/2.0*e*sE/oneMeccTcosE # -1/2*e*sin(E)/(1-e*cos(E))
-
-        dx_dpar = -sE/(2*oneMeccTcosE**2)*decc_dpar+e*(e-cE)/(2*oneMeccTcosE**2)*dE_dpar
-        #First half
-        H1 = dDre_dpar*delayI/Dre
-        # For second half
-        part1 = -nHat*dDrep_dpar-Drep*dnhat_dpar
-        part2 = 2*Drep*nHat*(nHat*dDrep_dpar+Drep*dnhat_dpar)
-        part3 = 1.0/2.0*nHat*(Drepp*nHat*dDre_dpar+Dre*nHat*dDrepp_dpar+2*Dre*Drepp*dnhat_dpar)
-        part4 = nHat*(Dre*Drep*nHat*dx_dpar+  \
-                x*(Drep*nHat*dDre_dpar+Dre*nHat*dDrep_dpar+2*Dre*Drep*dnhat_dpar))
-
-        H2 = Dre*(part1+part2+part3+part4)
-
-        return H1+H2
-    @Cache.use_cache
-    def d_delayI_d_par2(self,par):
-        """Second way of doing derivative on delay inverse. Did not test the
-           accuracy against the first way yet.
+        """Derivative on delay inverse.
         """
         e = self.ecc()
         sE = np.sin(self.E())
@@ -475,6 +535,7 @@ class DDmodel(PSR_BINARY):
         sDelay = -2*TM2* np.log(1-e*cE-self.SINI*(sOmega*(cE-e)+
                  (1-e**2)**0.5*cOmega*sE))
         return sDelay
+
     @Cache.use_cache
     def d_delayS_d_par(self,par):
         """dsDelay/dPar = dsDelay/dTM2*dTM2/dPar+
@@ -505,6 +566,7 @@ class DDmodel(PSR_BINARY):
         return dTM2_dpar*dsDelay_dTM2 + decc_dpar*dsDelay_decc + \
                dE_dpar*dsDelay_dE +domega_dpar*dsDelay_domega +  \
                dSINI_dpar*dsDelay_dSINI
+
     #################################################
     @Cache.use_cache
     def delayE(self):
@@ -513,6 +575,7 @@ class DDmodel(PSR_BINARY):
         """
         sinE = np.sin(self.E())
         return self.GAMMA
+
     @Cache.use_cache
     def d_delayE_d_par(self,par):
         """eDelay = gamma*sin[E]
@@ -524,6 +587,7 @@ class DDmodel(PSR_BINARY):
 
         return sE*self.prtl_der('GAMMA',par)+self.GAMMA*cE*self.prtl_der('E',par)
     #################################################
+
     @Cache.use_cache
     def delayA(self):
         """Binary Abberation delay
@@ -571,23 +635,14 @@ class DDmodel(PSR_BINARY):
 
             return domega_dpar*daDelay_domega + dnu_dpar*daDelay_dnu + decc_dpar*daDelay_decc
     #################################################
+
     @Cache.use_cache
     def DDdelay(self):
         """Full DD model delay"""
         return self.delayInverse()+self.delayS()+self.delayA()
 
     @Cache.use_cache
-    def delayR(self):  # Is this needed?
-        """Binary Romoer delay in proper time.
-            T. Damour and N. Deruelle(1986)equation [24]
-            Equation [46-52] gives the result in coordinate time.
-        """
-
-        rDelay = self.a1()/c.c*(self.sOmg*(self.cosEcc_A-self.er)   \
-                 +(1-self.eTheta()**2)**0.5*self.cOmg*self.sinEcc_A)
-        return rDelay.decompose()
-    @Cache.use_cache
-    def d_delay_d_par(self,par):
+    def d_DDdelay_d_par(self,par):
         """Full DD model delay derivtive
         """
         return self.d_delayI_d_par(par)+self.d_delayS_d_par(par)+ \

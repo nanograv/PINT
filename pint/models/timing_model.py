@@ -140,7 +140,7 @@ class TimingModel(object):
             description="Source name",
             aliases=["PSRJ", "PSRB"]))
         self.model_type = None
-
+        self.delay_derivs = []
 
     def setup(self):
         pass
@@ -155,6 +155,13 @@ class TimingModel(object):
 
         if binary_param is True:
             self.binary_params +=[param.name,]
+
+    def set_special_params(self, spcl_params):
+        als = []
+        for p in spcl_params:
+            als += getattr(self, p).aliases
+        spcl_params += als
+        self.model_special_params = spcl_params
 
 
     def param_help(self):
@@ -178,7 +185,7 @@ class TimingModel(object):
                 result.append(par.name)
         return result
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def get_prefix_mapping(self,prefix):
         """Get the index mapping for the prefix parameters.
            Parameter
@@ -198,7 +205,7 @@ class TimingModel(object):
                 mapping[par.index] = parname
         return mapping
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def phase(self, toas):
         """Return the model-predicted pulse phase for the given TOAs."""
         # First compute the delays to "pulsar time"
@@ -209,7 +216,7 @@ class TimingModel(object):
             phase += Phase(pf(toas, delay))
         return phase
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def delay(self, toas):
         """Total delay for the TOAs.
 
@@ -223,7 +230,7 @@ class TimingModel(object):
 
         return delay
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def get_barycentric_toas(self,toas):
         toasObs = toas['tdbld']
         delay = np.zeros(len(toas))
@@ -306,7 +313,7 @@ class TimingModel(object):
         return d_phase_d_toa
 
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def d_phase_d_param(self, toas, param):
         """ Return the derivative of phase with respect to the parameter.
 
@@ -323,7 +330,7 @@ class TimingModel(object):
 
         return result
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def d_phase_d_param_num(self, toas, param):
         """ Return the derivative of phase with respect to the parameter.
 
@@ -340,12 +347,19 @@ class TimingModel(object):
         """
         Return the derivative of delay with respect to the parameter.
         """
-        result = numpy.zeros(len(toas))
-        for f in self.delay_derivs[param]:
-            result += f(toas)
+        par = getattr(self, param)
+        result = np.zeros(len(toas)) * u.s/par.num_unit
+        param_delay_derivs = []
+        for f in self.delay_derivs:
+            if f.__name__.endswith('_'+param):
+                param_delay_derivs.append(f)
+
+        for df in param_delay_derivs:
+            print df.__name__
+            result += df(toas).to(u.s/par.num_unit, equivalencies=u.dimensionless_angles())
         return result
 
-    @Cache.use_cache
+    #@Cache.use_cache
     def designmatrix(self, toas, incfrozen=False, incoffset=True):
         """
         Return the design matrix: the matrix with columns of d_phase_d_param/F0
@@ -370,6 +384,7 @@ class TimingModel(object):
         for ii, param in enumerate(params):
             dpdp = "d_phase_d_" + param
             dddp = "d_delay_d_" + param
+            print dddp, dpdp
             if param == 'Offset':
                 M[:,ii] = 1.0
                 units.append(u.s/u.s)
@@ -378,10 +393,14 @@ class TimingModel(object):
                 #q = self.d_phase_d_param(toas, param) / F0
                 M[:,ii] = q
                 units.append(q.unit)
-            elif hasattr(self, dddp):
-                q = getattr(self, dddp)(toas)
+            else:
+                q = self.d_delay_d_param(toas, param)
                 M[:,ii] = q
-                units.append(q.unit)
+                # TODO: Make all the derivs has unit
+                if hasattr(q, 'unit'):
+                    units.append(q.unit)
+                else:
+                    units.append(u.s/ getattr(self, param).num_unit)
 
         return M, params, units
 
@@ -482,7 +501,7 @@ class TimingModel(object):
 
         # For Binary model component
         try:
-            if getattr(self,'BinaryModelName') == para_dict['BINARY'][0]:
+            if getattr(self,'binary_model_name') == para_dict['BINARY'][0]:
                 return True
             else:
                 return False

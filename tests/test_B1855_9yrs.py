@@ -14,9 +14,9 @@ class TestB1855(unittest.TestCase):
     """Compare delays from the dd model with tempo and PINT"""
     @classmethod
     def setUpClass(self):
-        self.parfileB1855 = 'B1855+09_NANOGrav_dfg+12_TAI_FB90.par'
-        self.timB1855 = 'B1855+09_NANOGrav_dfg+12.tim'
-        self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405", planets=False)
+        self.parfileB1855 = 'B1855+09_NANOGrav_9yv1.gls.par'
+        self.timB1855 = 'B1855+09_NANOGrav_9yv1.tim'
+        self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE421", planets=False)
         self.modelB1855 = mb.get_model(self.parfileB1855)
         # tempo result
         self.ltres= np.genfromtxt(self.parfileB1855 + \

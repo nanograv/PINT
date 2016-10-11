@@ -4,6 +4,7 @@ from . import observatories as obsmod
 from . import erfautils
 import spice
 import astropy.time as time
+from . import pulsar_mjd
 import astropy.table as table
 import astropy.units as u
 from astropy.coordinates import EarthLocation
@@ -12,6 +13,7 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 from spiceutils import objPosVel, load_kernels
+from astropy_solar_system_ephem import objPosVel as astropyObj
 from pint import ls, J2000, J2000ld
 from .config import datapath
 from astropy import log
@@ -263,14 +265,15 @@ class TOA(object):
         Time object passed to the TOA constructor.
 
         """
+        fmt='pulsar_mjd'
         if obs == "Barycenter":
             # Barycenter overrides the scale argument with 'tdb' always.
             if numpy.isscalar(MJD):
-                self.mjd = time.Time(MJD, scale='tdb', format='mjd',
+                self.mjd = time.Time(MJD, scale='tdb', format=fmt,
                                     precision=9)
             else:
                 self.mjd = time.Time(MJD[0], MJD[1],
-                                    scale='tdb', format='mjd',
+                                    scale='tdb', format=fmt,
                                     precision=9)
         elif obs == "Geocenter":
             # Warning(paulr): The location is used in the TT->TDB
@@ -280,13 +283,13 @@ class TOA(object):
             # Certainly (0,0,0) is the right answer for the solar system
             # delays and such.
             if numpy.isscalar(MJD):
-                self.mjd = time.Time(MJD, scale=scale, format='mjd',
+                self.mjd = time.Time(MJD, scale=scale, format=fmt,
                                     location=EarthLocation(0.0,0.0,0.0),
                                     precision=9)
             else:
                 self.mjd = time.Time(MJD[0], MJD[1],
                                     location=EarthLocation(0.0,0.0,0.0),
-                                    scale=scale, format='mjd',
+                                    scale=scale, format=fmt,
                                     precision=9)
         elif obs == "Spacecraft":
             # For TOAs from a spacecraft, a gcrslocation argument is
@@ -300,11 +303,11 @@ class TOA(object):
             if not isinstance(kwargs['gcrslocation'],coord.GCRS):
                 raise ValueError("gcrslocation must be an astropy.coordinates.GCRS instance")
             if numpy.isscalar(MJD):
-                self.mjd = time.Time(MJD, scale=scale, format='mjd',
+                self.mjd = time.Time(MJD, scale=scale, format=fmt,
                                     precision=9)
             else:
                 self.mjd = time.Time(MJD[0], MJD[1],
-                                    scale=scale, format='mjd',
+                                    scale=scale, format=fmt,
                                     precision=9)
         elif obs in observatories:
             # Not sure what I was trying to test for with this. -- paulr
@@ -317,12 +320,12 @@ class TOA(object):
                     log.warning('TOA passed with poor precision ({0})'.format(self.mjd.precision))
                 self.mjd.precision = 9
             elif numpy.isscalar(MJD):
-                self.mjd = time.Time(MJD, scale=scale, format='mjd',
+                self.mjd = time.Time(MJD, scale=scale, format=fmt,
                                     location=observatories[obs].loc,
                                     precision=9)
             else:
                 self.mjd = time.Time(MJD[0], MJD[1],
-                                    scale=scale, format='mjd',
+                                    scale=scale, format=fmt,
                                     location=observatories[obs].loc,
                                     precision=9)
         else:
@@ -579,12 +582,12 @@ class TOAs(object):
             loind, hiind = self.table.groups.indices[ii:ii+2]
             # First apply any TIME statements
             for jj in range(loind, hiind):
-                if flags[jj].has_key('time'):
+                if flags[jj].has_key('to'):
                     # TIME commands are in sec
                     # SUGGESTION(paulr): These time correction units should
                     # be applied in the parser, not here. In the table the time
                     # correction should have units.
-                    corr[jj] = flags[jj]['time'] * u.s
+                    corr[jj] = flags[jj]['to'] * u.s
                     times[jj] += time.TimeDelta(corr[jj])
             # These are observatory clock corrections.  Do in groups.
             if (key['obs'] in observatories and key['obs'] != "Geocenter"):
@@ -707,10 +710,9 @@ class TOAs(object):
                 log.info('Column {0} already exists. Removing...'.format(name))
                 self.table.remove_column(name)
 
-        load_kernels(ephem)
         ephem_file = datapath("%s.bsp"%ephem.lower())
         log.info("Loading %s ephemeris." % ephem_file)
-        spice.furnsh(ephem_file)
+
         self.table.meta['ephem'] = ephem
         ssb_obs_pos = table.Column(name='ssb_obs_pos',
                                     data=numpy.zeros((self.ntoas, 3), dtype=numpy.float64),
@@ -728,55 +730,48 @@ class TOAs(object):
                 plan_poss[name] = table.Column(name=name,
                                     data=numpy.zeros((self.ntoas, 3), dtype=numpy.float64),
                                     unit=u.km, meta={'origin':'OBS', 'obj':p})
+
+        tdb = time.Time(self.table['tdbld'], scale='tdb', format='mjd')
         # Now step through in observatory groups
         for ii, key in enumerate(self.table.groups.keys):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
             if (key['obs'] == 'Barycenter'):
-                for jj, grprow in enumerate(grp):
-                    ind = jj+loind
-                    et = float((grprow['tdbld'] - J2000ld) * SECS_PER_DAY)
-                    obs_sun = objPosVel("SSB", "SUN", et)
-                    obs_sun_pos[ind,:] = obs_sun.pos
+                obs_sun = astropyObj('ssb', 'earth', tdb[loind:hiind],ephem)
+                obs_sun_pos[loind:hiind,:] = obs_sun.pos.T
             elif (key['obs'] == 'Spacecraft'):
                 # For a time recorded at a spacecraft, use the position of
                 # the spacecraft recorded in the TOA to compute the needed
                 # vectors.
                 pass
             elif (key['obs'] == 'Geocenter'):
-                for jj, grprow in enumerate(grp):
-                    ind = jj+loind
-                    et = float((grprow['tdbld'] - J2000ld) * SECS_PER_DAY)
-                    ssb_earth = objPosVel("SSB", "EARTH", et)
-                    obs_sun = objPosVel("EARTH", "SUN", et)
-                    obs_sun_pos[ind,:] = obs_sun.pos
-                    ssb_obs = ssb_earth
-                    ssb_obs_pos[ind,:] = ssb_obs.pos
-                    ssb_obs_vel[ind,:] = ssb_obs.vel
-                    if planets:
-                        for p in ('jupiter', 'saturn', 'venus', 'uranus'):
-                            name = 'obs_'+p+'_pos'
-                            dest = p.upper()+" BARYCENTER"
-                            pv = objPosVel("EARTH", dest, et)
-                            plan_poss[name][ind,:] = pv.pos
+                ssb_earth = astropyObj("SSB", "EARTH", ttdb[loind:hiind],ephem)
+                obs_sun = astropyObj("EARTH", "SUN", ttdb[loind:hiind],ephem)
+                obs_sun_pos[loind:hiind,:] = obs_sun.pos.T
+                ssb_obs = ssb_earth
+                ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T
+                ssb_obs_vel[loind:hiind,:] = ssb_obs.vel.T
+                if planets:
+                    for p in ('jupiter', 'saturn', 'venus', 'uranus'):
+                        name = 'obs_'+p+'_pos'
+                        dest = p
+                        pv = astropyObj("EARTH", dest, tdb[loind:hiind],ephem)
+                        plan_poss[name][loind,hiind] = pv.pos
             elif (key['obs'] in observatories):
-                earth_obss = erfautils.topo_posvels(obs, grp)
-                for jj, grprow in enumerate(grp):
-                    ind = jj+loind
-                    et = float((grprow['tdbld'] - J2000ld) * SECS_PER_DAY)
-                    ssb_earth = objPosVel("SSB", "EARTH", et)
-                    obs_sun = objPosVel("EARTH", "SUN", et) - earth_obss[jj]
-                    obs_sun_pos[ind,:] = obs_sun.pos
-                    ssb_obs = ssb_earth + earth_obss[jj]
-                    ssb_obs_pos[ind,:] = ssb_obs.pos
-                    ssb_obs_vel[ind,:] = ssb_obs.vel
-                    if planets:
-                        for p in ('jupiter', 'saturn', 'venus', 'uranus'):
-                            name = 'obs_'+p+'_pos'
-                            dest = p.upper()+" BARYCENTER"
-                            pv = objPosVel("EARTH", dest, et) - earth_obss[jj]
-                            plan_poss[name][ind,:] = pv.pos
+                earth_obss = erfautils.topo_posvels2(obs, grp)
+                ssb_earth = astropyObj("SSB", "EARTH", tdb[loind:hiind],ephem)
+                obs_sun = astropyObj("EARTH", "SUN", tdb[loind:hiind],ephem) - earth_obss
+                obs_sun_pos[loind:hiind,:] = obs_sun.pos.T
+                ssb_obs = ssb_earth + earth_obss
+                ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T
+                ssb_obs_vel[loind:hiind,:] = ssb_obs.vel.T
+                if planets:
+                    for p in ('jupiter', 'saturn', 'venus', 'uranus'):
+                        name = 'obs_'+p+'_pos'
+                        dest = p
+                        pv = astropyObj("EARTH", dest, tdb[loind:hiind],ephem) - earth_obss
+                        plan_poss[name][loind:hiind,:] = pv.pos.T
             else:
                 log.error("Unknown observatory {0}".format(key['obs']))
         cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
@@ -901,7 +896,7 @@ class TOAs(object):
                         if self.cdict["PHASE"] != 0:
                             newtoa.flags["phase"] = self.cdict["PHASE"]
                         if self.cdict["TIME"] != 0.0:
-                            newtoa.flags["time"] = self.cdict["TIME"]
+                            newtoa.flags["to"] = self.cdict["TIME"]
                         self.observatories.add(newtoa.obs)
                         self.toas.append(newtoa)
                         self.ntoas += 1

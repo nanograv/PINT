@@ -1,10 +1,8 @@
 """Various tests to assess the performance of the DD model."""
 import pint.models.model_builder as mb
 import pint.toa as toa
-import matplotlib.pyplot as plt
 import astropy.units as u
 from pint.residuals import resids
-from pint.models.pint_dd_model import DDwrapper
 import numpy as np
 import os, unittest
 from pinttestdata import testdir, datadir
@@ -23,7 +21,7 @@ class TestDD(unittest.TestCase):
         self.ltres, self.ltbindelay = np.genfromtxt(self.parfileB1855 + '.tempo_test', unpack=True)
     def test_J1855_binary_delay(self):
         # Calculate delays with PINT
-        pint_binary_delay = self.modelB1855.binary_delay(self.toasB1855.table)
+        pint_binary_delay = self.modelB1855.binarymodel_delay(self.toasB1855.table)
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-11), 'DD B1855 TEST FAILED'
     # TODO: PINT can still incresase the precision by adding more components
     def test_B1855(self):
