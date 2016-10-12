@@ -29,15 +29,14 @@ ext_modules = []
 
 if use_cython:
     print("Using cython...")
-    src = ["spice_util_cython/spice_util_py.pyx"]
+    src = ["str2ld_cython/str2ld_py.pyx"]
 else:
     print("Using existing 'C' source file...")
-    src = ["spice_util_cython/spice_util_py.c"]
+    src = ["str2ld_cython/str2ld_py.c"]
 
-ext_modules += [Extension("spice_util", src,
-                          include_dirs = [numpy.get_include(),
-                                          os.path.join(pyspice, "cspice/include")],
-                          extra_objects = [os.path.join(pyspice, "cspice", "lib", "cspice.a")]),]
+ext_modules += [Extension("str2ld", src,
+                          include_dirs = [numpy.get_include(),],
+                          )]
 
 if use_cython:
     cmdclass.update({'build_ext': build_ext})
