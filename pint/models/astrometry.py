@@ -312,7 +312,7 @@ class AstrometryEcliptic(Astrometry):
         self.add_param(p.strParameter(name="ECL",
             description="Obliquity angle value secetion"))
 
-        self.set_special_params(['ELONG', 'ELAT', 'PMELONG','PMELAT', 'ECL'])
+        self.set_special_params(['ELONG', 'ELAT', 'PMELONG','PMELAT'])
 
     def setup(self):
         super(AstrometryEcliptic, self).setup()
