@@ -29,12 +29,12 @@ ext_modules = []
 
 if use_cython:
     print("Using cython...")
-    src = ["str2ld_cython/str2ld_py.pyx"]
+    src = ["pint/str2ld/str2ld_py.pyx"]
 else:
     print("Using existing 'C' source file...")
-    src = ["str2ld_cython/str2ld_py.c"]
+    src = ["pint/str2ld/str2ld_py.c"]
 
-ext_modules += [Extension("str2ld", src,
+ext_modules += [Extension("pint.str2ld", src,
                           include_dirs = [numpy.get_include(),],
                           )]
 
