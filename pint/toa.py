@@ -759,7 +759,7 @@ class TOAs(object):
                         pv = astropyObj("EARTH", dest, tdb[loind:hiind],ephem)
                         plan_poss[name][loind,hiind] = pv.pos
             elif (key['obs'] in observatories):
-                earth_obss = erfautils.topo_posvels2(obs, grp)
+                earth_obss = erfautils.topo_posvels(obs, grp)
                 ssb_earth = astropyObj("SSB", "EARTH", tdb[loind:hiind],ephem)
                 obs_sun = astropyObj("EARTH", "SUN", tdb[loind:hiind],ephem) - earth_obss
                 obs_sun_pos[loind:hiind,:] = obs_sun.pos.T
