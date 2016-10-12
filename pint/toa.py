@@ -2,7 +2,6 @@ import re, sys, os, cPickle, numpy, gzip
 from . import utils
 from . import observatories as obsmod
 from . import erfautils
-import spice
 import astropy.time as time
 from . import pulsar_mjd
 import astropy.table as table
@@ -12,8 +11,7 @@ try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
-from spiceutils import objPosVel, load_kernels
-from astropy_solar_system_ephem import objPosVel as astropyObj
+from solar_system_ephemerides import objPosVel
 from pint import ls, J2000, J2000ld
 from .config import datapath
 from astropy import log
@@ -738,7 +736,7 @@ class TOAs(object):
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
             if (key['obs'] == 'Barycenter'):
-                obs_sun = astropyObj('ssb', 'earth', tdb[loind:hiind],ephem)
+                obs_sun = objPosVel('ssb', 'earth', tdb[loind:hiind],ephem)
                 obs_sun_pos[loind:hiind,:] = obs_sun.pos.T
             elif (key['obs'] == 'Spacecraft'):
                 # For a time recorded at a spacecraft, use the position of
@@ -746,8 +744,8 @@ class TOAs(object):
                 # vectors.
                 pass
             elif (key['obs'] == 'Geocenter'):
-                ssb_earth = astropyObj("SSB", "EARTH", ttdb[loind:hiind],ephem)
-                obs_sun = astropyObj("EARTH", "SUN", ttdb[loind:hiind],ephem)
+                ssb_earth = objPosVel("SSB", "EARTH", ttdb[loind:hiind],ephem)
+                obs_sun = objPosVel("EARTH", "SUN", ttdb[loind:hiind],ephem)
                 obs_sun_pos[loind:hiind,:] = obs_sun.pos.T
                 ssb_obs = ssb_earth
                 ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T
@@ -756,12 +754,12 @@ class TOAs(object):
                     for p in ('jupiter', 'saturn', 'venus', 'uranus'):
                         name = 'obs_'+p+'_pos'
                         dest = p
-                        pv = astropyObj("EARTH", dest, tdb[loind:hiind],ephem)
+                        pv = objPosVel("EARTH", dest, tdb[loind:hiind],ephem)
                         plan_poss[name][loind,hiind] = pv.pos
             elif (key['obs'] in observatories):
                 earth_obss = erfautils.topo_posvels(obs, grp)
-                ssb_earth = astropyObj("SSB", "EARTH", tdb[loind:hiind],ephem)
-                obs_sun = astropyObj("EARTH", "SUN", tdb[loind:hiind],ephem) - earth_obss
+                ssb_earth = objPosVel("SSB", "EARTH", tdb[loind:hiind],ephem)
+                obs_sun = objPosVel("EARTH", "SUN", tdb[loind:hiind],ephem) - earth_obss
                 obs_sun_pos[loind:hiind,:] = obs_sun.pos.T
                 ssb_obs = ssb_earth + earth_obss
                 ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T
@@ -770,7 +768,7 @@ class TOAs(object):
                     for p in ('jupiter', 'saturn', 'venus', 'uranus'):
                         name = 'obs_'+p+'_pos'
                         dest = p
-                        pv = astropyObj("EARTH", dest, tdb[loind:hiind],ephem) - earth_obss
+                        pv = objPosVel("EARTH", dest, tdb[loind:hiind],ephem) - earth_obss
                         plan_poss[name][loind:hiind,:] = pv.pos.T
             else:
                 log.error("Unknown observatory {0}".format(key['obs']))
