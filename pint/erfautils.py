@@ -7,7 +7,7 @@ except ImportError:
     import astropy._erfa as erfa
 import astropy.table as table
 from . import observatories as obsmod
-
+from astropy.time import Time
 SECS_PER_DAY = erfa.DAYSEC
 
 from astropy.utils.iers import IERS_A, IERS_A_URL, IERS_B, IERS_B_URL, IERS
@@ -98,17 +98,15 @@ def topo_posvels(obsname, toas):
     ivels = np.asarray([OM * (-sx - cy), OM * (cx - sy), \
                         np.zeros_like(x)]).T
     # There is probably a way to do this with np.einsum or something...
+    # and here it is .
     poss = np.empty((N, 3), dtype=np.float64)
     vels = np.empty((N, 3), dtype=np.float64)
-    for ii in range(N):
-        poss[ii] = np.dot(iposs[ii], rc2i[ii])
-        vels[ii] = np.dot(ivels[ii], rc2i[ii])
-
-    # Make a PosVel list for return
-    pvs = [utils.PosVel(p, v, obj=obsname, origin="EARTH") \
-           for p, v in zip(poss * u.m, vels * u.m / u.s)]
-    return pvs
+    poss = np.einsum('ij,ijk->ik', iposs, rc2i)
+    vels = np.einsum('ij,ijk->ik', ivels, rc2i)
+    return utils.PosVel(poss.T * u.m, vels.T * u.m / u.s, obj=obsname, origin="earth")
 
 
-
-
+def astropy_topo_posvels(obsname, toas):
+    t = Time(toas['tdbld'], scale='tdb', format='mjd')
+    pos, vel = observatories[obsname].loc.get_gcrs_posvel(t)
+    return utils.PosVel(pos, vel, obj=obsname, origin="EARTH")

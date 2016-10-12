@@ -9,7 +9,7 @@ except ImportError:
     import astropy._erfa as erfa
 import astropy.units as u
 from astropy import log
-from spice_util import str2ldarr1
+from str2ld import str2ldarr1
 import re
 
 # Define prefix parameter pattern
