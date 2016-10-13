@@ -348,7 +348,7 @@ class TimingModel(object):
         Return the derivative of delay with respect to the parameter.
         """
         par = getattr(self, param)
-        result = np.zeros(len(toas)) * u.s/par.num_unit
+        result = np.zeros(len(toas)) * u.s/par.units
         param_delay_derivs = []
         for f in self.delay_derivs:
             if f.__name__.endswith('_'+param):
@@ -356,7 +356,7 @@ class TimingModel(object):
 
         for df in param_delay_derivs:
             print df.__name__
-            result += df(toas).to(u.s/par.num_unit, equivalencies=u.dimensionless_angles())
+            result += df(toas).to(u.s/par.units, equivalencies=u.dimensionless_angles())
         return result
 
     #@Cache.use_cache
@@ -400,7 +400,7 @@ class TimingModel(object):
                 if hasattr(q, 'unit'):
                     units.append(q.unit)
                 else:
-                    units.append(u.s/ getattr(self, param).num_unit)
+                    units.append(u.s/ getattr(self, param).units)
 
         return M, params, units
 
