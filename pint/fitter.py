@@ -40,8 +40,8 @@ class fitter(object):
                     self.model.params)
 
     def get_fitparams(self):
-        """Return a dict of fittable param names and values."""
-        return dict((k, getattr(self.model, k).quantity) for k in
+        """Return a dict of fittable param names and quantity."""
+        return dict((k, getattr(self.model, k)) for k in
                     self.model.params if not getattr(self.model, k).frozen)
 
     def get_fitparams_num(self):
@@ -55,7 +55,7 @@ class fitter(object):
         Ex. fitter.set_params({'F0':60.1,'F1':-1.3e-15})
         """
         for k, v in fitp.items():
-            getattr(self.model, k).value = v
+            getattr(self.model, k).value = v.value if has_astropy_unit(v) else v
 
     def minimize_func(self, x, *args):
         """Wrapper function for the residual class, meant to be passed to
@@ -92,11 +92,7 @@ class wls_fitter(fitter):
     def call_minimize(self, method='weighted', maxiter=20):
         """Run a linear weighted least-squared fitting method"""
         fitp = self.get_fitparams()
-
-        # Input variables must be unitless
-        for k, v in zip(fitp.keys(), fitp.values()):
-            if has_astropy_unit(v):
-                fitp[k] = v.value
+        fitpv = self.get_fitparams_num()
 
         # Define the linear system
         M, params, units = self.model.designmatrix(toas=self.toas.table,
@@ -113,22 +109,21 @@ class wls_fitter(fitter):
 
         # Uncertainties
         errs = numpy.sqrt(numpy.diag(Sigma))
-
         # Set the new parameter values
         # TODO: Now have to do the units manually, because not all parameters
         #       have units everywhere in the code yet. Eventually, this can be
         #       removed
-        conv = {'F0': u.Hz, 'F1': u.Hz/u.s, 'RAJ':u.hourangle,
-                'DECJ':u.degree, 'PMRA':u.mas/u.yr, 'PMDEC':u.mas/u.yr,
-                'PX':u.mas, 'DM':u.s/u.s}
-
-        # TODO: units and fitp have a different ordering. That is confusing
+        # conv = {'F0': u.Hz, 'F1': u.Hz/u.s, 'RAJ':u.hourangle,
+        #         'DECJ':u.degree, 'PMRA':u.mas/u.yr, 'PMDEC':u.mas/u.yr,
+        #         'PX':u.mas, 'DM':u.s/u.s}
+        #
+        # # TODO: units and fitp have a different ordering. That is confusing
         for ii, pn in enumerate(fitp.keys()):
             uind = params.index(pn)             # Index of designmatrix
             un = 1.0 /  (units[uind]/u.s)       # Unit in designmatrix
-            pv, dpv = fitp[pn] * conv[pn], dpars[uind] * un
-            fitp[pn] = float( (pv+dpv) / conv[pn] )
+            pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
+            fitpv[pn] = float( (pv+dpv) / fitp[pn].units )
 
-        # TODO: Also record the uncertainties in minimize_func
-
-        chi2 = self.minimize_func(list(fitp.values()), *fitp.keys())
+        # # TODO: Also record the uncertainties in minimize_func
+        #
+        chi2 = self.minimize_func(list(fitpv.values()), *fitp.keys())
