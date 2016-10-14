@@ -34,7 +34,7 @@ OM = 1.00273781191135448 * 2.0 * np.pi / SECS_PER_DAY
 # arcsec to radians
 asec2rad = 4.84813681109536e-06
 
-def topo_posvels(obsname, toas):
+def topo_posvels(obsname, toas, loc=None):
     """Return a list of PosVel instances for the observatory at the TOA times
 
     This routine returns a list of PosVel instances, containing the
@@ -47,9 +47,15 @@ def topo_posvels(obsname, toas):
     if type(toas) == table.row.Row:
         ttoas = [toas['mjd']]
         N = 1
-    else:
+    elif type(toas) == table.table.Table:
         N = len(toas)
         ttoas = toas['mjd']
+    else:
+        if toas.isscalar:
+            ttoas = Time([toas])
+        else:
+            ttoas = toas
+        N = len(ttoas)
 
     # Get various times from the TOAs as arrays
     tts = np.asarray([(toa.tt.jd1, toa.tt.jd2) for toa in ttoas]).T
@@ -83,8 +89,8 @@ def topo_posvels(obsname, toas):
     rpm = erfa.pom00(xp, yp, sp)
 
     # Observatory geocentric coords in m
-    xyzm = np.array([a.to(u.m).value for a in \
-                     observatories[obsname].loc.geocentric])
+    if loc is None: loc = observatories[obsname].loc
+    xyzm = np.array([a.to(u.m).value for a in loc.geocentric])
     x, y, z = np.dot(xyzm, rpm).T
 
     # Functions of Earth Rotation Angle
