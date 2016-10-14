@@ -40,7 +40,8 @@ ext_modules += [Extension("pint.str2ld", src,
 
 if use_cython:
     cmdclass.update({'build_ext': build_ext})
-
+# TODO: need to check if datafile have all the datafile inplace. We do not want
+# to download those files everytime we reinstall PINT
 # Download data files
 data_urls = [
         "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de405.bsp",

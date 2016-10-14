@@ -4,9 +4,9 @@ from scipy.misc import factorial
 import string
 import astropy.time
 try:
-    import astropy.erfa as erfa
+    from astropy.erfa import DJM0
 except ImportError:
-    import astropy._erfa as erfa
+    from astropy._erfa import DJM0
 import astropy.units as u
 from astropy import log
 from .str2ld import str2ldarr1
@@ -152,7 +152,7 @@ def time_to_mjd_string(t, prec=15):
 
     astropy does not seem to provide this capability (yet?).
     """
-    jd1 = t.jd1 - erfa.DJM0
+    jd1 = t.jd1 - DJM0
     imjd = int(jd1)
     fjd1 = jd1 - imjd
     fmjd = t.jd2 + fjd1
@@ -173,7 +173,7 @@ def time_to_mjd_string_array(t, prec=15):
     """
     jd1 = np.array(t.jd1)
     jd2 = np.array(t.jd2)
-    jd1 = jd1 - astropy.erfa.DJM0
+    jd1 = jd1 - DJM0
     imjd = jd1.astype(int)
     fjd1 = jd1 - imjd
     fmjd = jd2 + fjd1
@@ -202,7 +202,7 @@ def time_to_longdouble(t):
 
     """
     try:
-        return np.longdouble(t.jd1 - erfa.DJM0) + np.longdouble(t.jd2)
+        return np.longdouble(t.jd1 - DJM0) + np.longdouble(t.jd2)
     except:
         return np.longdouble(t)
 
