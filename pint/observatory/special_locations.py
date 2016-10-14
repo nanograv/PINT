@@ -10,10 +10,16 @@ from ..utils import PosVel
 from ..solar_system_ephemerides import objPosVel2SSB
 
 class SpecialLocation(Observatory):
+    """Observatory-derived class for special sites that are not really
+    observatories but sometimes are used as TOA locations (eg, solar 
+    system barycenter).  Currently the only feature of this class is
+    that clock corrections are zero."""
     def clock_corrections(self, t):
         return numpy.zeros(t.shape)*u.s
 
 class BarycenterObs(SpecialLocation):
+    """Observatory-derived class for the solar system barycenter.  Time
+    scale is assumed to be tdb."""
     def timescale(self): 
         return 'tdb'
 
@@ -23,6 +29,7 @@ class BarycenterObs(SpecialLocation):
                 obj=self.name, origin='ssb')
 
 class GeocenterObs(SpecialLocation):
+    """Observatory-derived class for the Earth geocenter."""
     def timescale(self): 
         return 'utc' # OK?
 
