@@ -1,13 +1,12 @@
 # clock_file.py
 
 # Routines for reading various formats of clock file.
-# These just return the values from the file, no interpolation
-# or other processing is done here.
 
 import os
 import numpy
 import astropy.units as u
 from astropy.time import Time
+from astropy import log
 
 class ClockFileMeta(type):
     """Metaclass that provides a registry for different clock file formats.
@@ -61,6 +60,24 @@ class ClockFile(object):
         
     @property
     def clock(self): return self._clock
+
+    def evaluate(self,t,limits='warn'):
+        """Evaluate the clock corrections at the times t (given as an
+        array-valued Time object).  By default, values are linearly
+        interpolated but this could be overridden by derived classes
+        if needed.  The first/last values will be applied to times outside
+        the data range.  If limits=='warn' this will also issue a warning.
+        If limits=='error' an exception will be raised."""
+
+        if numpy.any(t<self.time[0]) or numpy.any(t>self.time[-1]):
+            msg = "Data points out of range in clock file '%s'" % self.filename
+            if limits=='warn':
+                log.warn(msg)
+            elif limits=='error':
+                raise RuntimeError(msg)
+
+        # Can't pass Times directly to numpy.interp.  This should be OK:
+        return numpy.interp(t.mjd, self.time.mjd, self.clock.to(u.us))*u.us
         
 
 class Tempo2ClockFile(ClockFile):
