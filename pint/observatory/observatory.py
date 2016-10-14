@@ -28,6 +28,7 @@ class Observatory(object):
         return obs
 
     def __init__(self,name,aliases=[]):
+        # TODO convert all to lower case?
         self._name = name
         self._aliases = aliases
 
@@ -47,6 +48,7 @@ class Observatory(object):
         If the name has not been defined, an error will be raised.  Apart
         from the initial observatory definitions, this is in general the 
         only way Observatory objects should be accessed."""
+        # TODO case-insensitive name matching?
         # First see if name matches
         if name in cls._registry.keys(): 
             return cls._registry[name]
@@ -60,12 +62,14 @@ class Observatory(object):
     ### Any which raise NotImplementedError below must be implemented in 
     ### derived classes.
 
+    # property?
     def earth_location(self):
         """Returns observatory geocentric position as an astropy 
         EarthLocation object.  For observatories where this is not
         relevant, None can be returned."""
         return None
 
+    # property?
     def timescale(self):
         """Returns the timescale that TOAs from this observatory will be in,
         once any clock corrections have been applied.  This should be a 
@@ -74,7 +78,7 @@ class Observatory(object):
         raise NotImplementedError
 
     def clock_corrections(self,t):
-        """Given a Time (can be array-valued), return the clock corrections 
+        """Given an array-valued Time, return the clock corrections 
         as a numpy array, with units.  These values are to be added to the 
         raw TOAs in order to refer them to the timescale specified by
         self.timescale()."""
@@ -87,9 +91,9 @@ class Observatory(object):
         # could help address the metadata question above
         raise NotImplementedError
 
-    def posvel(self,t):
+    def posvel(self,t,ephem):
         """Returns observatory position and velocity relative to solar system
-        barycenter for the given times (astropy Time objects)."""
+        barycenter for the given times (astropy array-valued Time objects)."""
         # TODO: accept simple float mjds?
         raise NotImplementedError
 

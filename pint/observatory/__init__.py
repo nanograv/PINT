@@ -1,0 +1,1 @@
+from .observatory import Observatory
