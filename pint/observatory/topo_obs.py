@@ -6,9 +6,12 @@ from .clock_file import ClockFile
 import os
 import numpy
 import astropy.units as u
+from astropy.coordinates import EarthLocation
+from astropy.time import Time
 from ..utils import PosVel, has_astropy_unit
 from ..solar_system_ephemerides import objPosVel2SSB
 from ..config import datapath
+from ..erfautils import topo_posvels
 
 class TopoObs(Observatory):
     """Class for representing observatories that are at a fixed location
@@ -56,21 +59,25 @@ class TopoObs(Observatory):
         # Convert coords to standard format.  If no units are given, assume
         # meters.
         if not has_astropy_unit(itrf_xyz):
-            self.xyz = numpy.array(itrf_xyz) * u.m
+            xyz = numpy.array(itrf_xyz) * u.m
         else:
-            self.xyz = itrf_xyz.to(u.m)
+            xyz = itrf_xyz.to(u.m)
 
         # Check for correct array dims
-        if self.xyz.shape != (3,):
+        if xyz.shape != (3,):
             raise ValueError( 
                     "Incorrect coordinate dimensions for observatory '%s'" % (
                         name))
+
+        # Convert to astropy EarthLocation
+        self._loc = EarthLocation(*xyz)
 
         # Save clock file info, the data will be read only if clock
         # corrections for this site are requested.
         self.clock_file = clock_file
         self.clock_dir = clock_dir
         self.clock_fmt = clock_fmt
+        self._clock = None # The ClockFile object, will be read on demand
 
         # If using TEMPO time.dat we need to know the 1-char tempo-style
         # observatory code.
@@ -78,6 +85,11 @@ class TopoObs(Observatory):
                 and tempo_code is None):
             raise ValueError("No tempo_code set for observatory '%s'" % name)
 
+        # GPS corrections not implemented yet
+        if include_gps:
+            raise NotImplementedError
+
+        self.tempo_code = tempo_code
         for code in (tempo_code, itoa_code):
             if code is not None: aliases.append(code)
 
@@ -101,11 +113,19 @@ class TopoObs(Observatory):
     def timescale(self):
         return 'utc'
 
+    def earth_location(self):
+        return self._loc
+
     def clock_corrections(self, t):
-        # TODO fill it in
-        raise NotImplemetedError
+        # Read clock file if necessary
+        # TODO provide some method for re-reading the clock file?
+        if self._clock is None:
+            self._clock = ClockFile.read(self.clock_fullpath, 
+                    format=self.clock_fmt, obscode=self.tempo_code)
+        return self._clock.evaluate(t)
 
     def posvel(self, t, ephem):
-        # TODO fill it in
-        raise NotImplemetedError
-
+        if t.isscalar: t = Time([t])
+        earth_pv = objPosVel2SSB('earth', t, ephem)
+        obs_topo_pv = topo_posvels(self.name, t, loc=self.earth_location())
+        return obs_topo_pv + earth_pv
