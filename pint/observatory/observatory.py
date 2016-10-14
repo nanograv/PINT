@@ -22,15 +22,18 @@ class Observatory(object):
         # Perhaps this should be checked as well.  Might also want to check
         # that no aliases are already defined as observatory names.
         obs = super(Observatory,cls).__new__(cls,name,*args,**kwargs)
-        cls._registry[name] = obs
+        # TODO possibly should call __init__() explicitly here to catch errors
+        # before it is added to the registry.
+        cls._registry[name.lower()] = obs
         if 'aliases' in kwargs.keys():
-            for a in kwargs['aliases']: cls._alias_map[a] = name
+            for a in kwargs['aliases']: cls._alias_map[a.lower()] = name
         return obs
 
     def __init__(self,name,aliases=[]):
-        # TODO convert all to lower case?
-        self._name = name
-        self._aliases = aliases
+        self._name = name.lower()
+        self._aliases = [a.lower() for a in aliases]
+        # Make sure all get added to alias list
+        for a in self._aliases: Observatory._alias_map[a] = self._name
 
     ### Note, name and aliases are not currently intended to be changed
     ### after initialization.  If we want to allow this, we could add 
@@ -44,11 +47,13 @@ class Observatory(object):
 
     @classmethod
     def get(cls,name):
-        """This will return the Observatory instance for the specified name.
-        If the name has not been defined, an error will be raised.  Apart
+        """Returns the Observatory instance for the specified name/alias.
+        If the name has not been defined, an error will be raised.  Aside
         from the initial observatory definitions, this is in general the 
-        only way Observatory objects should be accessed."""
-        # TODO case-insensitive name matching?
+        only way Observatory objects should be accessed.  Name-matching
+        is case-insensitive."""
+        # Be case-insensitive
+        name = name.lower()
         # First see if name matches
         if name in cls._registry.keys(): 
             return cls._registry[name]
