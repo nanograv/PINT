@@ -9,7 +9,6 @@ from .astrometry import AstrometryEquatorial
 from .dispersion_model import Dispersion
 from .spindown import Spindown
 from .solar_system_shapiro import SolarSystemShapiro
-from .polycos import Polycos
 from .model_builder import get_model
 
 # Define a standard basic model
