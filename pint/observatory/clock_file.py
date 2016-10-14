@@ -84,7 +84,7 @@ class Tempo2ClockFile(ClockFile):
 
     format = 'tempo2'
 
-    def __init__(self, filename):
+    def __init__(self, filename, **kwargs):
         self.filename = filename
         mjd, clk, self.header = self.load_tempo2_clock_file(filename)
         self._time = Time(mjd, format='mjd', scale='utc')
@@ -106,7 +106,7 @@ class TempoClockFile(ClockFile):
 
     format = 'tempo'
 
-    def __init__(self, filename, obscode=None):
+    def __init__(self, filename, obscode=None, **kwargs):
         self.filename = filename
         self.obscode = obscode
         mjd, clk = self.load_tempo1_clock_file(filename,site=obscode)
