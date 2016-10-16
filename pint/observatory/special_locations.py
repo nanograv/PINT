@@ -6,6 +6,7 @@
 from . import Observatory
 import numpy
 import astropy.units as u
+from astropy.coordinates import EarthLocation
 from ..utils import PosVel
 from ..solar_system_ephemerides import objPosVel2SSB
 
@@ -31,8 +32,9 @@ class BarycenterObs(SpecialLocation):
 class GeocenterObs(SpecialLocation):
     """Observatory-derived class for the Earth geocenter."""
     def timescale(self): 
-        return 'utc' # OK?
-
+        return 'tt'
+    def earth_location(self):
+        return EarthLocation(0.0,0.0,0.0)
     def posvel(self, t, ephem):
         return obsPosVel2SSB('earth', t, ephem)
 
