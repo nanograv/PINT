@@ -1,5 +1,6 @@
 from pint import toa, utils, erfautils
 import pint.observatories as obsmod
+from pint.observatory import Observatory
 import math, shlex, subprocess, numpy
 import astropy.constants as const
 import astropy.units as u
@@ -61,7 +62,8 @@ for line, TOA in zip(goodlines, ts.table):
     log.info("TOA in tt difference is: %.2f ns" % \
              ((TOA['mjd'].tt - tempo_tt.tt).sec * u.s).to(u.ns).value)
 
-    pint_opv = erfautils.topo_posvels(TOA['obs'], TOA) # usually for arrays...
+    pint_opv = erfautils.topo_posvels(TOA['obs'], TOA,
+            loc=Observatory.get(TOA['obs']).earth_location())
     pint_opv = utils.PosVel(pint_opv.pos.T[0], pint_opv.vel.T[0])
     #print " obs  T2:", t2_opv.pos.to(u.m).value, t2_opv.vel.to(u.m/u.s)
     #print " obs PINT:", pint_opv.pos.to(u.m), pint_opv.vel.to(u.m/u.s)
