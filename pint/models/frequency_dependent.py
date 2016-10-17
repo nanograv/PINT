@@ -34,8 +34,8 @@ class FD(TimingModel):
         self.num_FD_terms = len(FD_terms)
         # set up derivative functions
         for ii, val in FD_mapping.iteritems():
-            self.make_delay_FD_deriv_funcs(val)
-            self.delay_derivs += [getattr(self, 'd_delay_FD_d_' + val)]
+            self._make_delay_derivative_funcs(val, self.d_delay_FD_d_FDX, 'd_delay_d_')
+            self.delay_derivs += [getattr(self, 'd_delay_d_' + val)]
 
     def FD_delay(self, toas):
         """This is a function for calculation of frequency dependent delay.
@@ -54,13 +54,13 @@ class FD(TimingModel):
         log_freq = np.log(bfreq / (1 * u.GHz))
         FD_coeff = [getattr(self, FD_mapping[ii]).value \
                    for ii in range(self.num_FD_terms,0,-1)]
-        FD_coeff += [0.0]
+        FD_coeff += [0.0] # Zeroth term of polynomial
 
         FD_delay = np.polyval(FD_coeff, log_freq)
 
         return FD_delay * self.FD1.units
 
-    def d_delay_FD_d_FDX(self, toas, FD_term=1):
+    def d_delay_FD_d_FDX(self, toas, param):
         """This is a derivative function for FD parameter
         """
         try:
@@ -68,18 +68,17 @@ class FD(TimingModel):
         except AttributeError:
             warn("Using topocentric frequency for frequency dependent delay derivative!")
             bfreq = toas['freq']
+        log_freq = np.log(bfreq / (1 * u.GHz))
+        FD_par = getattr(self, param)
+        FD_term = FD_par.index
         FD_mapping = self.get_prefix_mapping('FD')
         if FD_term > self.num_FD_terms:
             raise ValueError('FD model has no FD%d term' % FD_term)
-
-        d_delay_d_FD = np.zeros_like(toas, dtype=np.longdouble)
-        for ii in range(1,self.num_FD_terms+1):
-            FD_coef = getattr(self, FD_mapping[ii])
-            if ii == FD_term:
-                FD_coef.value = 1.0
-            log_freq = np.log(bfreq / (1 * u.GHz))
-            d_delay_d_FD += FD_coef.value * (log_freq) ** ii
-        return d_delay_d_FD
+        # make the selected FD coefficient 1, others 0
+        FD_coeff = np.zeros(len(FD_mapping)+1)
+        FD_coeff[-1-FD_term] = np.longdouble(1.0)
+        d_delay_d_FD = np.polyval(FD_coeff, log_freq)
+        return d_delay_d_FD * u.second / FD_par.units
 
     def make_delay_FD_deriv_funcs(self, param):
         FD_term = getattr(self, param).index

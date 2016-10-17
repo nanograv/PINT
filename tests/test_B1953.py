@@ -5,7 +5,8 @@ import astropy.units as u
 from pint.residuals import resids
 import numpy as np
 import os, unittest
-
+import test_derivative_utils as tdu
+import logging
 from pinttestdata import testdir, datadir
 
 os.chdir(datadir)
@@ -32,6 +33,37 @@ class TestB1953(unittest.TestCase):
         # Due to the gps2utc clock correction. We are at 3e-8 seconds level.
         assert np.all(np.abs(pint_resids_us.value - self.ltres) < 3e-8), 'B1953 residuals test failed.'
 
+    def test_derivative(self):
+        dd, pd, nd = tdu.get_derivative_funcs(self.modelB1953)
+        log= logging.getLogger( "TestB1953.derivative_test")
+        for p in dd.keys():
+            log.debug( "Runing derivative for %s", 'd_delay_d_'+p)
+            ndf = tdu.num_diff_delay(self.toasB1953.table, p, self.modelB1953)
+            adf = self.modelB1953.d_delay_d_param(self.toasB1953.table, p)
+            diff = adf - ndf
+            if not np.all(diff.value) == 0.0:
+                mean_der = (adf+ndf)/2.0
+                relative_diff = np.abs(diff)/np.abs(mean_der)
+                #print "Diff Max is :", np.abs(diff).max()
+                msg = 'Derivative test failed at d_delay_d_%s with max relative difference %lf' % (p, np.nanmax(relative_diff).value)
+                assert np.nanmax(relative_diff) < 0.001, msg
+            else:
+                continue
+
+        for p in pd.keys():
+            log.debug( "Runing derivative for %s", 'd_phase_d_'+p)
+            delay = self.modelB1953.delay(self.toasB1953.table)
+            ndf = tdu.num_diff_phase(self.toasB1953.table, p, self.modelB1953)
+            adf = pd[p](self.toasB1953.table, delay)
+            diff = adf - ndf
+            if not np.all(diff.value) == 0.0:
+                mean_der = (adf+ndf)/2.0
+                relative_diff = np.abs(diff)/np.abs(mean_der)
+                #print "Diff Max is :", np.abs(diff).max()
+                msg = 'Derivative test failed at d_phase_d_%s with max relative difference %lf' % (p, relative_diff.max().value)
+                assert np.nanmax(relative_diff) < 0.001, msg
+            else:
+                continue
 
 if __name__ == '__main__':
     pass

@@ -55,7 +55,7 @@ class fitter(object):
         Ex. fitter.set_params({'F0':60.1,'F1':-1.3e-15})
         """
         for k, v in fitp.items():
-            getattr(self.model, k).value = v.value if has_astropy_unit(v) else v
+            getattr(self.model, k).value = v
 
     def minimize_func(self, x, *args):
         """Wrapper function for the residual class, meant to be passed to
@@ -109,18 +109,10 @@ class wls_fitter(fitter):
 
         # Uncertainties
         errs = numpy.sqrt(numpy.diag(Sigma))
-        # Set the new parameter values
-        # TODO: Now have to do the units manually, because not all parameters
-        #       have units everywhere in the code yet. Eventually, this can be
-        #       removed
-        # conv = {'F0': u.Hz, 'F1': u.Hz/u.s, 'RAJ':u.hourangle,
-        #         'DECJ':u.degree, 'PMRA':u.mas/u.yr, 'PMDEC':u.mas/u.yr,
-        #         'PX':u.mas, 'DM':u.s/u.s}
-        #
-        # # TODO: units and fitp have a different ordering. That is confusing
+
         for ii, pn in enumerate(fitp.keys()):
             uind = params.index(pn)             # Index of designmatrix
-            un = 1.0 /  (units[uind]/u.s)       # Unit in designmatrix
+            un = 1.0 /  (units[uind]/u.Unit(""))       # Unit in designmatrix
             pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
             fitpv[pn] = float( (pv+dpv) / fitp[pn].units )
 

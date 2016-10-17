@@ -5,6 +5,7 @@ import astropy.coordinates as coords
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
+from astropy.coordinates.angles import rotation_matrix
 from astropy import log
 from . import parameter as p
 from .timing_model import TimingModel, MissingParameter, Cache
@@ -329,7 +330,10 @@ class AstrometryEcliptic(Astrometry):
                 else:
                     self.POSEPOCH.quantity = self.PEPOCH.quantity
 
-        self.delay_derivs += []
+        self.delay_derivs += [self.d_delay_astrometry_d_ELAT,
+                              self.d_delay_astrometry_d_ELONG,
+                              self.d_delay_astrometry_d_PMELAT,
+                              self.d_delay_astrometry_d_PMELONG]
 
     @Cache.cache_result
     def coords_as_ICRS(self, epoch=None):
@@ -346,12 +350,129 @@ class AstrometryEcliptic(Astrometry):
             dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
             dELONG = dt * self.PMELONG.quantity / numpy.cos(self.ELAT.quantity.radian)
             dELAT = dt * self.PMELAT.quantity
-            try:
-                PulsarEcliptic.obliquity = OBL[self.ECL.value]
-            except KeyError:
-                raise ValueError("No obliquity " + self.ECL.value + " provided. "
-                                 "Check your pint/datafile/ecliptic.dat file.")
+        try:
+            PulsarEcliptic.obliquity = OBL[self.ECL.value]
+        except KeyError:
+            raise ValueError("No obliquity " + self.ECL.value + " provided. "
+                             "Check your pint/datafile/ecliptic.dat file.")
 
-            pos_ecl = PulsarEcliptic(lon=self.ELONG.quantity+dELONG, lat=self.ELAT.quantity+dELAT)
+        pos_ecl = PulsarEcliptic(lon=self.ELONG.quantity+dELONG, lat=self.ELAT.quantity+dELAT)
 
         return pos_ecl.transform_to(coords.ICRS)
+
+    def get_d_delay_quantities_ecliptical(self, toas):
+        """Calculate values needed for many d_delay_d_param functions """
+        # TODO: Move all these calculations in a separate class for elegance
+        rd = dict()
+        # From the earth_ra dec to earth_elong and elat
+        try:
+            PulsarEcliptic.obliquity = OBL[self.ECL.value]
+        except KeyError:
+            raise ValueError("No obliquity " + self.ECL.value + " provided. "
+                             "Check your pint/datafile/ecliptic.dat file.")
+
+        rd = self.get_d_delay_quantities(toas)
+        coords_icrs = coords.ICRS(ra=rd['earth_ra'], dec=rd['earth_dec'])
+        coords_elpt = coords_icrs.transform_to(PulsarEcliptic)
+        rd['earth_elong'] = coords_elpt.lon
+        rd['earth_elat'] = coords_elpt.lat
+
+        return rd
+
+    #@Cache.use_cache
+    def d_delay_astrometry_d_ELONG(self, toas):
+        """Calculate the derivative wrt RAJ
+
+        For the RAJ and DEC derivatives, use the following approximate model for
+        the pulse delay. (Inner-product between two Cartesian vectors)
+
+        de = Earth declination (wrt SSB)
+        ae = Earth right ascension
+        dp = pulsar declination
+        aa = pulsar right ascension
+        r = distance from SSB to Earh
+        c = speed of light
+
+        delay = r*[cos(de)*cos(dp)*cos(ae-aa)+sin(de)*sin(dp)]/c
+
+        elate = Earth elat (wrt SSB)
+        elonge = Earth elong
+        elatp = pulsar elat
+        elongp = pulsar elong
+        r = distance from SSB to Earh
+        c = speed of light
+
+        delay = r*[cos(elate)*cos(elatp)*cos(elonge-elongp)+sin(elate)*sin(elatp)]/c
+        """
+        rd = self.get_d_delay_quantities_ecliptical(toas)
+
+        psr_elong = self.ELONG.quantity
+        psr_elat = self.ELAT.quantity
+
+        geom = numpy.cos(rd['earth_elat'])*numpy.cos(psr_elat)*\
+                numpy.sin(psr_elong-rd['earth_elong'])
+        dd_delong = rd['ssb_obs_r'] * geom / (const.c * u.radian)
+
+        return dd_delong.decompose(u.si.bases)
+
+    #@Cache.use_cache
+    def d_delay_astrometry_d_ELAT(self, toas):
+        """Calculate the derivative wrt DECJ
+
+        Definitions as in d_delay_d_RAJ
+        """
+        rd = self.get_d_delay_quantities_ecliptical(toas)
+
+        psr_elong = self.ELONG.quantity
+        psr_elat = self.ELAT.quantity
+
+        geom = numpy.cos(rd['earth_elat'])*numpy.sin(psr_elat)*\
+                numpy.cos(psr_elong-rd['earth_elong']) - numpy.sin(rd['earth_elat'])*\
+                numpy.cos(psr_elat)
+        dd_delat = rd['ssb_obs_r'] * geom / (const.c * u.radian)
+
+        return dd_delat.decompose(u.si.bases)
+
+    #@Cache.use_cache
+    def d_delay_astrometry_d_PMELONG(self, toas):
+        """Calculate the derivative wrt PMRA
+
+        Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
+        the pulsar RA
+        """
+        rd = self.get_d_delay_quantities_ecliptical(toas)
+
+        psr_elong = self.ELONG.quantity
+        psr_elat = self.ELAT.quantity
+
+        te = rd['epoch'] - time_to_longdouble(self.POSEPOCH.quantity) * u.day
+        geom = numpy.cos(rd['earth_elat'])*numpy.sin(psr_elong-rd['earth_elong'])
+
+        deriv = rd['ssb_obs_r'] * geom * te / (const.c * u.radian)
+        dd_dpmelong = deriv * u.mas / u.year
+
+        # We want to return sec / (mas / yr)
+        return dd_dpmelong.decompose(u.si.bases) / (u.mas / u.year)
+
+    #@Cache.use_cache
+    def d_delay_astrometry_d_PMELAT(self, toas):
+        """Calculate the derivative wrt PMDEC
+
+        Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
+        the pulsar DEC
+        """
+        rd = self.get_d_delay_quantities_ecliptical(toas)
+
+        psr_elong = self.ELONG.quantity
+        psr_elat = self.ELAT.quantity
+
+        te = rd['epoch'] - time_to_longdouble(self.POSEPOCH.quantity) * u.day
+        geom = numpy.cos(rd['earth_elat'])*numpy.sin(psr_elat)*\
+                numpy.cos(psr_elong-rd['earth_elong']) - numpy.cos(psr_elat)*\
+                numpy.sin(rd['earth_elat'])
+
+        deriv = rd['ssb_obs_r'] * geom * te / (const.c * u.radian)
+        dd_dpmelat = deriv * u.mas / u.year
+
+        # We want to return sec / (mas / yr)
+        return dd_dpmelat.decompose(u.si.bases) / (u.mas / u.year)

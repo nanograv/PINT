@@ -5,6 +5,8 @@ import astropy.units as u
 from pint.residuals import resids
 import numpy as np
 import os, unittest
+import test_derivative_utils as tdu
+import logging
 
 from pinttestdata import testdir, datadir
 
@@ -32,6 +34,44 @@ class TestJ0613(unittest.TestCase):
         # Due to the gps2utc clock correction. We are at 3e-8 seconds level.
         assert np.all(np.abs(pint_resids_us.value - self.ltres) < 3e-8), 'J0613 residuals test failed.'
 
+    def test_derivative(self):
+        dd, pd, nd = tdu.get_derivative_funcs(self.modelJ0613)
+        log= logging.getLogger( "TestJ0613.derivative_test")
+        self.modelJ0613.PBDOT.value = 0.0 # For test PBDOT
+        self.modelJ0613.EPS1DOT.value = 0.0
+        self.modelJ0613.EPS2DOT.value = 0.0
+        self.modelJ0613.A1DOT.value = 0.0
+        for p in dd.keys():
+            log.debug( "Runing derivative for %s", 'd_delay_d_'+p)
+            ndf = tdu.num_diff_delay(self.toasJ0613.table, p, self.modelJ0613)
+            adf = self.modelJ0613.d_delay_d_param(self.toasJ0613.table, p)
+            diff = adf - ndf
+            tol = 0.001
+            if not np.all(diff.value) == 0.0:
+                mean_der = (adf+ndf)/2.0
+                relative_diff = np.abs(diff)/np.abs(mean_der)
+                #print "Diff Max is :", np.abs(diff).max()
+                msg = 'Derivative test failed at d_delay_d_%s with max relative difference %lf' % (p, np.nanmax(relative_diff).value)
+                if p in ['EPS1DOT', 'EPS1']:
+                    tol = 0.05
+                assert np.nanmax(relative_diff) < tol, msg
+            else:
+                continue
+
+        for p in pd.keys():
+            log.debug( "Runing derivative for %s", 'd_phase_d_'+p)
+            delay = self.modelJ0613.delay(self.toasJ0613.table)
+            ndf = tdu.num_diff_phase(self.toasJ0613.table, p, self.modelJ0613)
+            adf = pd[p](self.toasJ0613.table, delay)
+            diff = adf - ndf
+            if not np.all(diff.value) == 0.0:
+                mean_der = (adf+ndf)/2.0
+                relative_diff = np.abs(diff)/np.abs(mean_der)
+                #print "Diff Max is :", np.abs(diff).max()
+                msg = 'Derivative test failed at d_phase_d_%s with max relative difference %lf' % (p, relative_diff.max().value)
+                assert np.nanmax(relative_diff) < 0.001, msg
+            else:
+                continue
 
 if __name__ == '__main__':
     pass

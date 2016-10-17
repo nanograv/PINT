@@ -89,7 +89,8 @@ class PulsarBinary(TimingModel):
     def setup(self):
         super(PulsarBinary, self).setup()
         for bpar in self.binary_params:
-            self.make_delay_binary_deriv_funcs(bpar)
+            self._make_delay_derivative_funcs(bpar, self.d_binary_delay_d_xxxx,
+                                              'd_delay_binary_d_')
             self.delay_derivs += [getattr(self, 'd_delay_binary_d_' + bpar)]
         # Setup the model isinstance
         self.binary_instance = self.binary_model_class()
@@ -133,7 +134,7 @@ class PulsarBinary(TimingModel):
         self.update_binary_object(toas)
         return self.binary_instance.binary_delay()
 
-    def d_binary_delay_d_xxxx(self,param,toas):
+    def d_binary_delay_d_xxxx(self, toas, param):
         """Return the bianry model delay derivtives"""
         self.update_binary_object(toas)
         return self.binary_instance.d_binarydelay_d_par(param)
@@ -143,6 +144,6 @@ class PulsarBinary(TimingModel):
         of d_binary_delay_d_paramName(toas)
         """
         def deriv_func(toas):
-            return self.d_binary_delay_d_xxxx(param, toas)
+            return self.d_binary_delay_d_xxxx(toas, param)
         deriv_func.__name__ = 'd_delay_binary_d_' + param
         setattr(self, 'd_delay_binary_d_' + param, deriv_func)

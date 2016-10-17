@@ -10,6 +10,7 @@ import pint.utils as utils
 import astropy.units as u
 import copy
 
+
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
 ignore_params = ['START', 'FINISH', 'SOLARN0', 'EPHEM', 'CLK', 'UNITS',
@@ -142,7 +143,8 @@ class TimingModel(object):
             aliases=["PSRJ", "PSRB"]))
         self.model_type = None
         self.delay_derivs = []
-
+        self.phase_derivs = []
+        self.phase_derivs_wrt_delay = []
     def setup(self):
         pass
 
@@ -156,6 +158,12 @@ class TimingModel(object):
 
         if binary_param is True:
             self.binary_params +=[param.name,]
+
+    def remove_param(self, param):
+        delattr(self, param)
+        self.params.remove(param)
+        if param in self.binary_params:
+            self.binary_params.remove(param)
 
     def set_special_params(self, spcl_params):
         als = []
@@ -240,6 +248,65 @@ class TimingModel(object):
         toasBary = toasObs*u.day - delay*u.second
         return toasBary
 
+    def _make_delay_derivative_funcs(self, param, function, name_tplt):
+        """This function is a method to help make the delay derivatives wrt timing
+        model parameters use the parameter specific name and only have the toas
+        table as input.
+        Parameter
+        ----------
+        param: str
+            Name of parameter
+        function: method
+            The method to compute the delay derivatives. It is generally in the
+            formate of function(toas, parameter)
+        name_tplt: str
+            The name template of the new function. The parameter name will be
+            added in the end. For example: 'd_delay_d_' is a name template.
+        Return
+        ---------
+        A delay derivative function wrt to input parameter name with the input
+        name template and parameter name.
+        """
+        def deriv_func(toas):
+            return function(toas, param)
+        deriv_func.__name__ = name_tplt + param
+        deriv_func.__doc__ = "Delay derivative wrt " + param + " \n"
+        deriv_func.__doc__ += "Parameter\n----------\ntoas: TOA table\n    "
+        deriv_func.__doc__ += "TOA point where the derivative is evaluated at.\n"
+        deriv_func.__doc__ += "Return\n---------\n Delay derivatives wrt " + param
+        deriv_func.__doc__ += " at toa."
+        setattr(self, deriv_func.__name__, deriv_func)
+
+    def _make_phase_derivative_funcs(self, param, function, name_tplt):
+        """This function is a method to help make the phase derivatives wrt timing
+        model parameters use the parameter specific name and only have the toas
+        table as input.
+        Parameter
+        ----------
+        param: str
+            Name of parameter
+        function: method
+            The method to compute the phase derivatives. It is generally in the
+            formate of 'function(toas, parameter, delay)'
+        name_tplt: str
+            The name template of the new function. The parameter name will be
+            added in the end. For example: 'd_phase_d_' is a name template.
+        Return
+        ---------
+        A phase derivative function wrt to input parameter name with the input
+        name template and parameter name.
+        """
+        def deriv_func(toas, delay):
+            return function(toas, param, delay)
+        deriv_func.__name__ = name_tplt + param
+        deriv_func.__doc__ = "Phase derivative wrt " + param + " \n"
+        deriv_func.__doc__ += "Parameter\n----------\ntoas: TOA table\n    "
+        deriv_func.__doc__ += "TOA point where the derivative is evaluated at.\n"
+        deriv_func.__doc__ += "delay: numpy array\n    Time delay for phase calculation.\n"
+        deriv_func.__doc__ += "Return\n---------\n Phase derivatives wrt " + param
+        deriv_func.__doc__ += " at toa."
+        setattr(self, deriv_func.__name__, deriv_func)
+
     def d_phase_d_tpulsar(self, toas):
         """Return the derivative of phase wrt time at the pulsar.
 
@@ -280,22 +347,29 @@ class TimingModel(object):
 
 
     #@Cache.use_cache
-    def d_phase_d_param(self, toas, param):
+    def d_phase_d_param(self, toas, delay, param):
         """ Return the derivative of phase with respect to the parameter.
-
-        Either analytically, or numerically
         """
         result = 0.0
+        par = getattr(self, param)
         # TODO need to do correct chain rule stuff wrt delay derivs, etc
         # Is it safe to assume that any param affecting delay only affects
         # phase indirectly (and vice-versa)??
-        an_funcname = "d_phase_d_" + param
-        if hasattr(self, an_funcname):
-            # Have an analytic function for this parameter
-            result = getattr(self, an_funcname)(toas)
-        else:
-            result = self.d_phase_d_param_num(toas, param)
-
+        result = np.zeros(len(toas)) * u.Unit('')/par.units
+        param_phase_derivs = []
+        for f in self.phase_derivs:
+            if f.__name__.endswith('_'+param):
+                param_phase_derivs.append(f)
+        if param_phase_derivs != []:
+            for df in param_phase_derivs:
+                print df.__name__
+                result += df(toas, delay).to(u.Unit('')/par.units,
+                                         equivalencies=u.dimensionless_angles())
+        else: # Apply chain rule for the parameters in the delay.
+            d_delay_d_p = self.d_delay_d_param(toas, param)
+            for dpddf in self.phase_derivs_wrt_delay:
+                result += (dpddf(toas, delay) * d_delay_d_p).to(u.Unit('')/par.units,
+                                         equivalencies=u.dimensionless_angles())
         return result
 
     #@Cache.use_cache
@@ -316,14 +390,43 @@ class TimingModel(object):
         phaseF = np.zeros((len(toas),2))
         for ii, val in enumerate(parv):
             par.value = val
-            phaseI[:,ii] = self.phase(toas).int
-            phaseF[:,ii] = self.phase(toas).frac
+            ph = self.phase(toas)
+            phaseI[:,ii] = ph.int
+            phaseF[:,ii] = ph.frac
         resI = (- phaseI[:,0] + phaseI[:,1])
         resF = (- phaseF[:,0] + phaseF[:,1])
         result = (resI + resF)/(2.0 * h)
         # shift value back to the original value
         par.value = ori_value
         return result * u.Unit("")/unit
+
+    def d_delay_d_param_num(self, toas, param, step=1e-2):
+        """ Return the derivative of phase with respect to the parameter.
+        """
+        # TODO : We need to know the range of parameter.
+        par = getattr(self, param)
+        ori_value = par.value
+        if ori_value is None:
+             # A parameter did not get to use in the model
+            log.warn("Parameter '%s' is not used by timing model." % param)
+            return np.zeros(len(toas)) * (u.second/par.units)
+        unit = par.units
+        if ori_value == 0:
+            h = 1.0 * step
+        else:
+            h = ori_value * step
+        parv = [par.value-h, par.value+h]
+        delay = np.zeros((len(toas),2))
+        for ii, val in enumerate(parv):
+            par.value = val
+            try:
+                delay[:,ii] = self.delay(toas)
+            except:
+                par.value = ori_value
+                raise
+        d_delay = (-delay[:,0] + delay[:,1])/2.0/h
+        par.value = ori_value
+        return d_delay * (u.second/unit)
 
     def d_delay_d_param(self, toas, param):
         """
@@ -351,7 +454,7 @@ class TimingModel(object):
         params += [par for par in self.params if incfrozen or
                 not getattr(self, par).frozen]
 
-        F0 = self.F0.value / u.s        # 1/sec
+        F0 = self.F0.quantity        # 1/sec
         ntoas = len(toas)
         nparams = len(params)
         delay = self.delay(toas)
@@ -364,25 +467,13 @@ class TimingModel(object):
 
         M = np.zeros((ntoas, nparams))
         for ii, param in enumerate(params):
-            dpdp = "d_phase_d_" + param
-            dddp = "d_delay_d_" + param
-            print(dddp, dpdp)
             if param == 'Offset':
                 M[:,ii] = 1.0
                 units.append(u.s/u.s)
-            elif hasattr(self, dpdp):
-                q = getattr(self, dpdp)(toas) / F0
-                #q = self.d_phase_d_param(toas, param) / F0
-                M[:,ii] = q
-                units.append(q.unit)
             else:
-                q = self.d_delay_d_param(toas, param)
+                q = self.d_phase_d_param(toas, delay,param)
                 M[:,ii] = q
-                # TODO: Make all the derivs has unit
-                if hasattr(q, 'unit'):
-                    units.append(q.unit)
-                else:
-                    units.append(u.s/ getattr(self, param).units)
+                units.append(u.Unit("")/ getattr(self, param).units)
 
         return M, params, units
 
