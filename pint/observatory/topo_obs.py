@@ -19,7 +19,7 @@ class TopoObs(Observatory):
     site definitions in tempo/tempo2.  Clock correction files are read and
     computed, observatory coordinates are specified in ITRF XYZ, etc."""
 
-    def __init__(self, name, tempo_code=None, itoa_code=None, aliases=[], 
+    def __init__(self, name, tempo_code=None, itoa_code=None, aliases=None, 
             itrf_xyz=None, 
             clock_file='time.dat', clock_dir='TEMPO', clock_fmt='tempo',
             include_gps=False):
@@ -90,6 +90,7 @@ class TopoObs(Observatory):
             raise NotImplementedError
 
         self.tempo_code = tempo_code
+        if aliases is None: aliases = []
         for code in (tempo_code, itoa_code):
             if code is not None: aliases.append(code)
 
@@ -127,5 +128,5 @@ class TopoObs(Observatory):
     def posvel(self, t, ephem):
         if t.isscalar: t = Time([t])
         earth_pv = objPosVel2SSB('earth', t, ephem)
-        obs_topo_pv = topo_posvels(self.name, t, loc=self.earth_location())
+        obs_topo_pv = topo_posvels(self.earth_location(), t, obsname=self.name)
         return obs_topo_pv + earth_pv
