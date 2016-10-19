@@ -75,7 +75,10 @@ setup(
         'pint.observatory',
         'pint.orbital'],
 
-    package_data={'pint':['datafiles/ecliptic.dat', ]+data_files},
+    package_data={'pint': [
+        'datafiles/ecliptic.dat', 
+        'datafiles/gps2utc.clk'
+        ] + data_files},
 
     cmdclass = cmdclass,
     ext_modules=ext_modules,

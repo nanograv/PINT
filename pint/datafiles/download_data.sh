@@ -6,3 +6,4 @@ wget -N -c http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00010.tpc
 wget -N -c http://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0011.tls
 wget -N  -c http://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls
 wget -N -c http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/de-403-masses.tpc
+wget -N http://bitbucket.org/psrsoft/tempo2/raw/HEAD/T2runtime/clock/gps2utc.clk
