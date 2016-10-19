@@ -268,7 +268,6 @@ class TimingModel(object):
             dt_array = ([dt] * copy_toas.ntoas) * u.s
             deltaT = time.TimeDelta(dt_array)
             copy_toas.adjust_TOAs(deltaT)
-            copy_toas.table['ssb_obs_pos'] += copy_toas.table['ssb_obs_vel'] * dt
             phase = self.phase(copy_toas.table)
             sample_phase.append(phase)
         # Use finite difference method.
