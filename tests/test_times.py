@@ -1,5 +1,4 @@
 from pint import toa, utils, erfautils
-import pint.observatories as obsmod
 from pint.observatory import Observatory
 import math, shlex, subprocess, numpy
 import astropy.constants as const
@@ -13,8 +12,6 @@ from pinttestdata import testdir, datadir
 log.setLevel('ERROR')
 # for nice output info, set the following instead
 #log.setLevel('INFO')
-
-observatories = obsmod.read_observatories()
 
 ls = u.def_unit('ls', const.c * 1.0 * u.s)
 
