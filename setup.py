@@ -75,8 +75,7 @@ setup(
         'pint.observatory',
         'pint.orbital'],
 
-    package_data={'pint':['datafiles/observatories.txt',
-                          'datafiles/ecliptic.dat', ]+data_files},
+    package_data={'pint':['datafiles/ecliptic.dat', ]+data_files},
 
     cmdclass = cmdclass,
     ext_modules=ext_modules,
