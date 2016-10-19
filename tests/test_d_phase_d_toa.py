@@ -23,6 +23,7 @@ class TestD_phase_d_toa(unittest.TestCase):
         mjd = np.array([np.longdouble(t.jd1 - ut.DJM0)+np.longdouble(t.jd2) for t in self.toasB1855.table['mjd']])
         tempo_d_phase_d_toa = self.plc.eval_spin_freq(mjd)
         diff = pint_d_phase_d_toa - tempo_d_phase_d_toa
-        assert False ,diff
+        relative_diff = diff/tempo_d_phase_d_toa
+        assert np.all(relative_diff < 1e-8), 'd_phae_d_toa test filed.'
 if __name__ == '__main__':
     pass
