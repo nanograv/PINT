@@ -1,6 +1,5 @@
 import re, sys, os, cPickle, numpy, gzip
 from . import utils
-from . import observatories as obsmod
 from .observatory import Observatory
 from . import erfautils
 import astropy.time as time
@@ -22,7 +21,6 @@ toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "PHA2", "PHASE", "SEARCH", "SIGMA", "SIM", "SKIP", "TIME",
                 "TRACK", "ZAWGT", "FORMAT", "END")
 
-observatories = obsmod.read_observatories()
 iers_a_file = None
 iers_a = None
 
@@ -133,15 +131,8 @@ def toa_format(line, fmt="Unknown"):
         return "Unknown"
 
 def get_obs(obscode):
-    """Search for an observatory by obscode in the PINT observatories.txt file."""
-    if obscode in ['@', 'SSB', 'BARY', 'BARYCENTER']:
-        return "Barycenter"
-    elif obscode in ['COE', 'GEO', 'GEOCENTER']:
-        return "Geocenter"
-    for name in observatories:
-        if obscode in observatories[name].aliases:
-            return name
-    raise ValueError("cannot identify observatory '%s'!" % obscode)
+    """Return the standard name for the given code."""
+    return Observatory.get(obscode).name
 
 def parse_TOA_line(line, fmt="Unknown"):
     """Parse a one-line ASCII time-of-arrival.
@@ -590,8 +581,17 @@ class TOAs(object):
             log.info('tdbld column already exists. Deleting...')
             self.table.remove_column('tdbld')
 
+        # Compute in observatory groups
+        tdbs = numpy.zeros_like(self.table['mjd'])
+        for ii, key in enumerate(self.table.groups.keys):
+            grp = self.table.groups[ii]
+            obs = self.table.groups.keys[ii]['obs']
+            loind, hiind = self.table.groups.indices[ii:ii+2]
+            grpmjds = time.Time(grp['mjd'], location=grp['mjd'][0].location)
+            grptdbs = grpmjds.tdb
+            tdbs[loind:hiind] = numpy.asarray([t for t in grptdbs])
+
         # Now add the new columns to the table
-        tdbs = [t.tdb for t in self.table['mjd']]
         col_tdb = table.Column(name='tdb', data=tdbs)
         col_tdbld = table.Column(name='tdbld', 
                 data=[utils.time_to_longdouble(t) for t in tdbs])
