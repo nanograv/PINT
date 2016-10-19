@@ -2,6 +2,17 @@
 # Base class for PINT observatories
 
 class Observatory(object):
+    """
+    The Observatory class defines observatory locations and related 
+    site-dependent properties (eg, TOA time scales, clock corrections).
+    Any new Observtory that is declared will be automatically added to
+    a registry that is keyed on observatory name.  Aside from their initial
+    declaration (for examples, see pint/observatory/observatories.py),
+    Observatory instances should generally be accessed only via the 
+    Observatory.get() function.  This will query the registry based on 
+    observatory name (and any defined aliases).  A list of all registered
+    names can be returned via Observatory.names().
+    """
 
     # This is a dict containing all defined Observatory instances,
     # keyed on standard observatory name.
@@ -15,25 +26,46 @@ class Observatory(object):
         # Generates a new Observtory object instance, and adds it
         # it the registry, using name as the key.  Name must be unique,
         # a new instance with a given name will over-write the existing
-        # one.  This could be changed to give a warning or error.
-        # Will also add any aliases passed via the aliases kwarg to the
-        # alias registry.  An alias can only map to a single observatory,
-        # re-use of an alias will override previously defined ones.
-        # Perhaps this should be checked as well.  Might also want to check
-        # that no aliases are already defined as observatory names.
+        # one.
         obs = super(Observatory,cls).__new__(cls,name,*args,**kwargs)
-        # TODO possibly should call __init__() explicitly here to catch errors
-        # before it is added to the registry.
-        cls._registry[name.lower()] = obs
-        if 'aliases' in kwargs.keys():
-            for a in kwargs['aliases']: cls._alias_map[a.lower()] = name
+        cls._register(obs, name)
         return obs
 
-    def __init__(self,name,aliases=[]):
-        self._name = name.lower()
-        self._aliases = [a.lower() for a in aliases]
-        # Make sure all get added to alias list
-        for a in self._aliases: Observatory._alias_map[a] = self._name
+    def __init__(self,name,aliases=None):
+        if aliases is not None:
+            Observatory._add_aliases(self,aliases)
+
+    @classmethod
+    def _register(cls,obs,name):
+        """Add an observatory to the registry using the specified name
+        (which will be converted to lower case).  If an existing observatory
+        of the same name exists, it will be replaced with the new one.  
+        The Observatory instance's name attribute will be updated for
+        consistency."""
+        cls._registry[name.lower()] = obs
+        obs._name = name.lower()
+
+    @classmethod
+    def _add_aliases(cls,obs,aliases):
+        """Add aliases for the specified Observatory.  Aliases
+        should be given as a list.  If any of the new aliases are already in
+        use, they will be replaced.  Aliases are not checked against the
+        list of observatory names, but names always take precedence over
+        aliases when matching.  After the new aliases are in place, the 
+        aliases attribute is updated for all registered observatories 
+        to ensure consistency."""
+        for a in aliases:
+            cls._alias_map[a.lower()] = obs.name
+        for o in cls._registry.values():
+            obs_aliases = []
+            for alias, name in cls._alias_map.items():
+                if name == o.name:
+                    obs_aliases.append(alias)
+            o._aliases = obs_aliases
+
+    @classmethod
+    def names(cls):
+        return cls._registry.keys()
 
     ### Note, name and aliases are not currently intended to be changed
     ### after initialization.  If we want to allow this, we could add 
@@ -67,14 +99,14 @@ class Observatory(object):
     ### Any which raise NotImplementedError below must be implemented in 
     ### derived classes.
 
-    # property?
+    @property
     def earth_location(self):
         """Returns observatory geocentric position as an astropy 
         EarthLocation object.  For observatories where this is not
         relevant, None can be returned."""
         return None
 
-    # property?
+    @property
     def timescale(self):
         """Returns the timescale that TOAs from this observatory will be in,
         once any clock corrections have been applied.  This should be a 
@@ -86,19 +118,17 @@ class Observatory(object):
         """Given an array-valued Time, return the clock corrections 
         as a numpy array, with units.  These values are to be added to the 
         raw TOAs in order to refer them to the timescale specified by
-        self.timescale()."""
-        # TODO: accept simple mjd float arrays also?
-        # TODO: provide a way to accept additional metadata that may be
-        # needed to calculate these (for example, different corrections
-        # for different instruments at an observatory).
-        # TODO: return a TimeDelta rather than a quantity?  Does it matter?
-        # TODO: provide a method that will adjust the TOAs directly?  This
-        # could help address the metadata question above
+        self.timescale."""
+        # TODO this and derived methods should be changed to accept a TOA
+        # table in addition to Time objects.  This will allow access to extra
+        # TOA metadata which may be necessary in some cases.
         raise NotImplementedError
 
     def posvel(self,t,ephem):
         """Returns observatory position and velocity relative to solar system
         barycenter for the given times (astropy array-valued Time objects)."""
-        # TODO: accept simple float mjds?
+        # TODO this and derived methods should be changed to accept a TOA
+        # table in addition to Time objects.  This will allow access to extra
+        # TOA metadata which may be necessary in some cases.
         raise NotImplementedError
 

@@ -298,8 +298,8 @@ class TOA(object):
             arg1, arg2 = MJD, None
         else:
             arg1, arg2 = MJD[0], MJD[1]
-        self.mjd = time.Time(arg1, arg2, scale=site.timescale(),
-                location=site.earth_location(),
+        self.mjd = time.Time(arg1, arg2, scale=site.timescale,
+                location=site.earth_location,
                 format='pulsar_mjd', precision=9)
 
         if hasattr(error,'unit'):

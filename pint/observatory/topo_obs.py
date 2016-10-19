@@ -111,9 +111,11 @@ class TopoObs(Observatory):
             dir = self.clock_dir
         return os.path.join(dir,self.clock_file)
 
+    @property
     def timescale(self):
         return 'utc'
 
+    @property
     def earth_location(self):
         return self._loc
 
@@ -128,5 +130,5 @@ class TopoObs(Observatory):
     def posvel(self, t, ephem):
         if t.isscalar: t = Time([t])
         earth_pv = objPosVel2SSB('earth', t, ephem)
-        obs_topo_pv = topo_posvels(self.earth_location(), t, obsname=self.name)
+        obs_topo_pv = topo_posvels(self.earth_location, t, obsname=self.name)
         return obs_topo_pv + earth_pv

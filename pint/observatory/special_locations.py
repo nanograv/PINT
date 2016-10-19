@@ -21,6 +21,7 @@ class SpecialLocation(Observatory):
 class BarycenterObs(SpecialLocation):
     """Observatory-derived class for the solar system barycenter.  Time
     scale is assumed to be tdb."""
+    @property
     def timescale(self): 
         return 'tdb'
 
@@ -31,8 +32,10 @@ class BarycenterObs(SpecialLocation):
 
 class GeocenterObs(SpecialLocation):
     """Observatory-derived class for the Earth geocenter."""
+    @property
     def timescale(self): 
         return 'tt'
+    @property
     def earth_location(self):
         return EarthLocation(0.0,0.0,0.0)
     def posvel(self, t, ephem):
