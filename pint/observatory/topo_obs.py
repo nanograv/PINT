@@ -22,7 +22,7 @@ class TopoObs(Observatory):
     def __init__(self, name, tempo_code=None, itoa_code=None, aliases=None, 
             itrf_xyz=None, 
             clock_file='time.dat', clock_dir='TEMPO', clock_fmt='tempo',
-            include_gps=False):
+            include_gps=True):
         """ 
         Required arguments:
 
@@ -47,7 +47,7 @@ class TopoObs(Observatory):
                           containing the clock_file.  Default='TEMPO'
             clock_fmt   = Format of clock file (see ClockFile class for allowed
                           values).  Default='tempo'
-            include_gps = Set True to add UTC(GPS)->UTC into the clock
+            include_gps = Set False to disable UTC(GPS)->UTC clock
                           correction.
         """
 
@@ -86,8 +86,8 @@ class TopoObs(Observatory):
             raise ValueError("No tempo_code set for observatory '%s'" % name)
 
         # GPS corrections not implemented yet
-        if include_gps:
-            raise NotImplementedError
+        self.include_gps = include_gps
+        self._gps_clock = None
 
         self.tempo_code = tempo_code
         if aliases is None: aliases = []
@@ -112,6 +112,16 @@ class TopoObs(Observatory):
         return os.path.join(dir,self.clock_file)
 
     @property
+    def gps_fullpath(self):
+        """Returns full path to the GPS-UTC clock file.  Will first try PINT
+        data dirs, then fall back on $TEMPO2/clock."""
+        fname = 'gps2utc.clk'
+        fullpath = datapath(fname)
+        if fullpath is not None:
+            return fullpath
+        return os.path.join(os.getenv('TEMPO2'),'clock',fname)
+
+    @property
     def timescale(self):
         return 'utc'
 
@@ -125,7 +135,13 @@ class TopoObs(Observatory):
         if self._clock is None:
             self._clock = ClockFile.read(self.clock_fullpath, 
                     format=self.clock_fmt, obscode=self.tempo_code)
-        return self._clock.evaluate(t)
+        corr = self._clock.evaluate(t)
+        if self.include_gps:
+            if self._gps_clock is None:
+                self._gps_clock = ClockFile.read(self.gps_fullpath,
+                        format='tempo2')
+            corr += self._gps_clock.evaluate(t)
+        return corr
 
     def posvel(self, t, ephem):
         if t.isscalar: t = Time([t])
