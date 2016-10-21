@@ -106,8 +106,8 @@ def get_fit_keyvals(model):
     fitvals = []
     fiterrs = []
     for p in fitkeys:
-        fitvals.append(getattr(model, p).num_value)
-        fiterrs.append(getattr(model, p).num_uncertainty)
+        fitvals.append(getattr(model, p).value)
+        fiterrs.append(getattr(model, p).uncertainty_value)
     return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
 class emcee_fitter(fitter.fitter):
