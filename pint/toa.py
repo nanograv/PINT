@@ -779,8 +779,8 @@ class TOAs(object):
                 # vectors.
                 pass
             elif (key['obs'] == 'Geocenter'):
-                ssb_earth = objPosVel("SSB", "EARTH", ttdb[loind:hiind],ephem)
-                obs_sun = objPosVel("EARTH", "SUN", ttdb[loind:hiind],ephem)
+                ssb_earth = objPosVel("SSB", "EARTH", tdb[loind:hiind],ephem)
+                obs_sun = objPosVel("EARTH", "SUN", tdb[loind:hiind],ephem)
                 obs_sun_pos[loind:hiind,:] = obs_sun.pos.T
                 ssb_obs = ssb_earth
                 ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T
