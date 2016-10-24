@@ -14,6 +14,7 @@ from ..phase import *
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble,\
     taylor_horner, time_from_longdouble
 
+
 class Spindown(TimingModel):
     """This class provides a simple timing model for an isolated pulsar."""
     def __init__(self):
@@ -62,7 +63,9 @@ class Spindown(TimingModel):
                 raise MissingParameter("Spindown", "PEPOCH",
                         "PEPOCH is required if F1 or higher are set")
 
-        self.num_spin_terms = len(self.get_prefix_mapping('F')) + 1
+        self.num_spin_terms = len(F_terms) + 1
+        for fp in self.get_prefix_mapping('F').values() + ['F0',]:
+            self.make_spindown_phase_deriv_funcs(fp)
 
     def F_description(self, n):
         """Template function for description"""
@@ -112,23 +115,34 @@ class Spindown(TimingModel):
         phs_pepoch = taylor_horner(-dt_pepoch, fterms)
         return phs_tzrmjd - phs_pepoch
 
-    def d_phase_d_F0(self, toas):
-        """Calculate the derivative wrt F0"""
+    def d_phase_d_F(self, toas, param, delay):
+        """Calculate the derivative wrt to an spin term."""
         # NOTE: Should we be using barycentric arrival times, instead of TDB?
-        # TODO: toas should have units from the table
-        tdb = toas['tdbld'].quantity * u.day
-        dt_pepoch = time_to_longdouble(self.PEPOCH.value) * u.day
-        delay = self.delay(toas) * u.s
-        dpdF0 = -(tdb - dt_pepoch) - delay
-        return dpdF0.decompose()
-
-    def d_phase_d_F1(self, toas):
-        """Calculate the derivative wrt F1"""
-        # NOTE: Should we be using barycentric arrival times, instead of TDB?
+        if self.TZRMJD.value is None:
+            self.TZRMJD.value = toas['tdb'][0] - delay[0]*u.s
+        # Warning(paulr): This looks wrong.  You need to use the
+        # TZRFREQ and TZRSITE to compute a proper TDB reference time.
+        if not hasattr(self, "TZRMJDld"):
+            self.TZRMJDld = time_to_longdouble(self.TZRMJD.value)
+        par = getattr(self, param)
+        unit = par.units
+        pn, idxf, idxv = split_prefixed_name(param)
+        order = idxv + 1
+        fterms = [0.0] + self.get_spin_terms()
+        fterms = numpy.longdouble(numpy.zeros(len(fterms)))
+        fterms[order] = numpy.longdouble(1.0)
+        dt_tzrmjd = (toas['tdbld'] - self.TZRMJDld) * SECS_PER_DAY - delay
         # TODO: what timescale should we use for pepoch calculation? Does this even matter?
-        tdb = toas['tdbld'] * u.day
-        delay = self.delay(toas) * u.s
-        dt_pepoch = time_to_longdouble(self.PEPOCH.value) * u.day
-        dt = tdb - dt_pepoch - delay
-        dpdF1 = -0.5 * dt ** 2
-        return dpdF1.decompose()
+        dt_pepoch = (time_to_longdouble(self.PEPOCH.value) - self.TZRMJDld) * SECS_PER_DAY
+        d_ptzrmjd_d_f = taylor_horner(dt_tzrmjd-dt_pepoch, fterms)
+        d_ppepoch_d_f = taylor_horner(-dt_pepoch, fterms)
+        return (d_ptzrmjd_d_f - d_ppepoch_d_f) * u.Unit("")/unit
+
+    def make_spindown_phase_deriv_funcs(self, param):
+        """This is a funcion to make binary derivative functions to the formate
+        of d_binary_delay_d_paramName(toas)
+        """
+        def deriv_func(toas, delay):
+            return self.d_phase_d_F(toas, param, delay)
+        deriv_func.__name__ = 'd_phase_d_' + param
+        setattr(self, 'd_phase_d_' + param, deriv_func)

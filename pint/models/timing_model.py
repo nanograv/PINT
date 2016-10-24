@@ -286,7 +286,9 @@ class TimingModel(object):
         Either analytically, or numerically
         """
         result = 0.0
-
+        # TODO need to do correct chain rule stuff wrt delay derivs, etc
+        # Is it safe to assume that any param affecting delay only affects
+        # phase indirectly (and vice-versa)??
         an_funcname = "d_phase_d_" + param
         if hasattr(self, an_funcname):
             # Have an analytic function for this parameter
@@ -297,17 +299,31 @@ class TimingModel(object):
         return result
 
     #@Cache.use_cache
-    def d_phase_d_param_num(self, toas, param):
+    def d_phase_d_param_num(self, toas, param, step=1e-2):
         """ Return the derivative of phase with respect to the parameter.
-
-        NOT implemented yet.
         """
-        result = 0.0
+        # TODO : We need to know the range of parameter.
+        par = getattr(self, param)
+        ori_value = par.value
+        unit = par.units
+        if ori_value == 0:
+            h = 1.0 * step
+        else:
+            h = ori_value * step
+        parv = [par.value-h, par.value+h]
 
-        # TODO need to do correct chain rule stuff wrt delay derivs, etc
-        # Is it safe to assume that any param affecting delay only affects
-        # phase indirectly (and vice-versa)??
-        return result
+        phaseI = np.zeros((len(toas),2))
+        phaseF = np.zeros((len(toas),2))
+        for ii, val in enumerate(parv):
+            par.value = val
+            phaseI[:,ii] = self.phase(toas).int
+            phaseF[:,ii] = self.phase(toas).frac
+        resI = (- phaseI[:,0] + phaseI[:,1])
+        resF = (- phaseF[:,0] + phaseF[:,1])
+        result = (resI + resF)/(2.0 * h)
+        # shift value back to the original value
+        par.value = ori_value
+        return result * u.Unit("")/unit
 
     def d_delay_d_param(self, toas, param):
         """
