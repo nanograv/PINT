@@ -40,7 +40,7 @@ goodlines = lines[1:]
 for line, TOA in zip(goodlines, ts.table):
     assert len(line.split()) == 19, \
       "tempo2 general2 does not support all needed outputs"
-    oclk, ut1_utc, tai_utc, tt_tai, ttcorr, tt2tb, \
+    oclk, gps_utc, tai_utc, tt_tai, ttcorr, tt2tb, \
           ep0, ep1, ep2, ev0, ev1, ev2, \
           tp0, tp1, tp2, tv0, tv1, tv2, Ttt = \
           (float(x) for x in line.split())
@@ -54,7 +54,7 @@ for line, TOA in zip(goodlines, ts.table):
     # print utils.time_toq_mjd_string(TOA.mjd.tt), line.split()[-1]
     tempo_tt = utils.time_from_mjd_string(line.split()[-1], scale='tt')
     # Ensure that the clock corrections are accurate to better than 0.1 ns
-    assert(math.fabs((oclk*u.s - TOA['flags']["clkcorr"]).to(u.ns).value) < 0.1)
+    assert(math.fabs((oclk*u.s + gps_utc*u.s - TOA['flags']["clkcorr"]).to(u.ns).value) < 0.1)
 
     log.info("TOA in tt difference is: %.2f ns" % \
              ((TOA['mjd'].tt - tempo_tt.tt).sec * u.s).to(u.ns).value)
