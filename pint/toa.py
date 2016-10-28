@@ -1,6 +1,6 @@
 import re, sys, os, cPickle, numpy, gzip
 from . import utils
-from . import observatories as obsmod
+from .observatory import Observatory
 from . import erfautils
 import astropy.time as time
 from . import pulsar_mjd
@@ -11,7 +11,7 @@ try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
-from solar_system_ephemerides import objPosVel
+from solar_system_ephemerides import objPosVel2SSB
 from pint import ls, J2000, J2000ld
 from .config import datapath
 from astropy import log
@@ -21,7 +21,6 @@ toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "PHA2", "PHASE", "SEARCH", "SIGMA", "SIM", "SKIP", "TIME",
                 "TRACK", "ZAWGT", "FORMAT", "END")
 
-observatories = obsmod.read_observatories()
 iers_a_file = None
 iers_a = None
 
@@ -132,15 +131,8 @@ def toa_format(line, fmt="Unknown"):
         return "Unknown"
 
 def get_obs(obscode):
-    """Search for an observatory by obscode in the PINT observatories.txt file."""
-    if obscode in ['@', 'SSB', 'BARY', 'BARYCENTER']:
-        return "Barycenter"
-    elif obscode in ['COE', 'GEO', 'GEOCENTER']:
-        return "Geocenter"
-    for name in observatories:
-        if obscode in observatories[name].aliases:
-            return name
-    raise ValueError("cannot identify observatory '%s'!" % obscode)
+    """Return the standard name for the given code."""
+    return Observatory.get(obscode).name
 
 def parse_TOA_line(line, fmt="Unknown"):
     """Parse a one-line ASCII time-of-arrival.
@@ -301,77 +293,20 @@ class TOA(object):
         Time object passed to the TOA constructor.
 
         """
-        fmt='pulsar_mjd'
-        if obs == "Barycenter":
-            # Barycenter overrides the scale argument with 'tdb' always.
-            if numpy.isscalar(MJD):
-                self.mjd = time.Time(MJD, scale='tdb', format=fmt,
-                                    precision=9)
-            else:
-                self.mjd = time.Time(MJD[0], MJD[1],
-                                    scale='tdb', format=fmt,
-                                    precision=9)
-        elif obs == "Geocenter":
-            # Warning(paulr): The location is used in the TT->TDB
-            # conversion, and I'm not actually sure what the right
-            # answer is for Fermi photon times that have been
-            # corrected to the Geocenter with gtbary tcorrect=GEO
-            # Certainly (0,0,0) is the right answer for the solar system
-            # delays and such.
-            if numpy.isscalar(MJD):
-                self.mjd = time.Time(MJD, scale=scale, format=fmt,
-                                    location=EarthLocation(0.0,0.0,0.0),
-                                    precision=9)
-            else:
-                self.mjd = time.Time(MJD[0], MJD[1],
-                                    location=EarthLocation(0.0,0.0,0.0),
-                                    scale=scale, format=fmt,
-                                    precision=9)
-        elif obs == "Spacecraft":
-            # For TOAs from a spacecraft, a gcrslocation argument is
-            # required, and gcrsvelocity should be provided, if available
-            # Warning: Need to think about what the 'location' should be
-            # set to for the Time() value, as it will be used in the TT->TDB
-            # conversion. The default is lat=0,lon=0, which is certainly wrong.
-            # I believe error is up to a couple of microseconds (paulr)
-            if kwargs['gcrslocation'] is None:
-                raise ValueError("Spacecraft TOAs require gcrslocation to be specified.")
-            if not isinstance(kwargs['gcrslocation'],coord.GCRS):
-                raise ValueError("gcrslocation must be an astropy.coordinates.GCRS instance")
-            if numpy.isscalar(MJD):
-                self.mjd = time.Time(MJD, scale=scale, format=fmt,
-                                    precision=9)
-            else:
-                self.mjd = time.Time(MJD[0], MJD[1],
-                                    scale=scale, format=fmt,
-                                    precision=9)
-        elif obs in observatories:
-            # Not sure what I was trying to test for with this. -- paulr
-            #if  location is not None:
-            #    raise ValueError("Specifying location for observatory TOAs is not currently supported.")
-            if type(MJD) == time.Time:
-                self.mjd = MJD
-                # Make sure precision is high enough!
-                if self.mjd.precision < 9:
-                    log.warning('TOA passed with poor precision ({0})'.format(self.mjd.precision))
-                self.mjd.precision = 9
-            elif numpy.isscalar(MJD):
-                self.mjd = time.Time(MJD, scale=scale, format=fmt,
-                                    location=observatories[obs].loc,
-                                    precision=9)
-            else:
-                self.mjd = time.Time(MJD[0], MJD[1],
-                                    scale=scale, format=fmt,
-                                    location=observatories[obs].loc,
-                                    precision=9)
+        site = Observatory.get(obs)
+        if numpy.isscalar(MJD):
+            arg1, arg2 = MJD, None
         else:
-            raise ValueError("Unknown observatory %s" % obs)
+            arg1, arg2 = MJD[0], MJD[1]
+        self.mjd = time.Time(arg1, arg2, scale=site.timescale,
+                location=site.earth_location,
+                format='pulsar_mjd', precision=9)
 
         if hasattr(error,'unit'):
             self.error = error
         else:
             self.error = error * u.microsecond
-        self.obs = obs
+        self.obs = site.name
         if hasattr(freq,'unit'):
             self.freq = freq
         else:
@@ -386,7 +321,6 @@ class TOA(object):
         if len(self.flags):
             s += str(self.flags)
         return s
-
 
 
 class TOAs(object):
@@ -612,6 +546,7 @@ class TOAs(object):
         for ii, key in enumerate(self.table.groups.keys):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
+            site = Observatory.get(obs)
             loind, hiind = self.table.groups.indices[ii:ii+2]
             # First apply any TIME statements
             for jj in range(loind, hiind):
@@ -622,20 +557,11 @@ class TOAs(object):
                     # correction should have units.
                     corr[jj] = flags[jj]['to'] * u.s
                     times[jj] += time.TimeDelta(corr[jj])
-            # These are observatory clock corrections.  Do in groups.
-            if (key['obs'] in observatories and key['obs'] != "Geocenter"):
-                mjds, ccorr = obsmod.get_clock_corr_vals(key['obs'])
-                tvals = numpy.array([t.mjd for t in grp['mjd']])
-                if numpy.any((tvals < mjds[0]) | (tvals > mjds[-1])):
-                    # FIXME: check the user sees this! should it be an exception?
-                    log.error(
-                        "Some TOAs are not covered by the %s clock correction"%key['obs']
-                        +" file, treating clock corrections as constant"
-                        +" past the ends.")
-                gcorr = numpy.interp(tvals, mjds, ccorr) * u.us
-                for jj, cc in enumerate(gcorr):
-                    grp['mjd'][jj] += time.TimeDelta(cc)
-                corr[loind:hiind] += gcorr
+
+            gcorr = site.clock_corrections(time.Time(grp['mjd']))
+            for jj, cc in enumerate(gcorr):
+                grp['mjd'][jj] += time.TimeDelta(cc)
+            corr[loind:hiind] += gcorr
             # Now update the flags with the clock correction used
             for jj in range(loind, hiind):
                 if corr[jj]:
@@ -648,10 +574,6 @@ class TOAs(object):
         for TDB times, using the Observatory locations and IERS A Earth
         rotation corrections for UT1.
         """
-        from astropy.utils.iers import IERS_A, IERS_A_URL
-        from astropy.utils.data import download_file, clear_download_cache
-        global iers_a_file, iers_a
-        # If previous columns exist, delete them
         if 'tdb' in self.table.colnames:
             log.info('tdb column already exists. Deleting...')
             self.table.remove_column('tdb')
@@ -659,64 +581,20 @@ class TOAs(object):
             log.info('tdbld column already exists. Deleting...')
             self.table.remove_column('tdbld')
 
-        # First make sure that we have already applied clock corrections
-        ccs = False
-        for tfs in self.table['flags']:
-            if 'clkcorr' in tfs: ccs = True
-        if ccs is False:
-            log.warn("No TOAs have clock corrections.  Use .apply_clock_corrections() first.")
-        # These will be the new table columns
-        col_tdb = numpy.zeros_like(self.table['mjd'])
-        col_tdbld = numpy.zeros(self.ntoas, dtype=numpy.longdouble)
-        # Read the IERS for ut1_utc corrections, if needed
-        iers_a_file = download_file(IERS_A_URL, cache=True)
-        # Check to see if the cached file is older than any of the TOAs
-        iers_file_time = time.Time(os.path.getctime(iers_a_file), format="unix")
-        if (iers_file_time.mjd < self.last_MJD.mjd):
-            clear_download_cache(iers_a_file)
-            try:
-                log.warn("Cached IERS A file is out-of-date.  Re-downloading.")
-                iers_a_file = download_file(IERS_A_URL, cache=True)
-            except:
-                pass
-        iers_a = IERS_A.open(iers_a_file)
-        # Now step through in observatory groups to compute TDBs
+        # Compute in observatory groups
+        tdbs = numpy.zeros_like(self.table['mjd'])
         for ii, key in enumerate(self.table.groups.keys):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
-            # Make sure the string precisions are all set to 9 for all TOAs
-            for t in grp['mjd']:
-                t.precision = 9
-            if key['obs'] in ["Barycenter", "Geocenter", "Spacecraft"]:
-                # For these special cases, convert the times to TDB.
-                # For Barycenter this will be
-                # a null conversion, but for Geocenter the scale will Likely
-                # be TT (if they came from a spacecraft like Fermi, RXTE or NICER)
-                tdbs = [t.tdb for t in grp['mjd']]
-            elif key['obs'] in observatories:
-                # For a normal observatory, convert to Time in UTC
-                # with location specified as observatory,
-                # and then convert to TDB
-                utcs = time.Time([t.isot for t in grp['mjd']],
-                                format='isot', scale='utc', precision=9,
-                                location=observatories[obs].loc)
-                utcs.delta_ut1_utc = utcs.get_delta_ut1_utc(iers_a)
-                # Also save delta_ut1_utc for these TOAs for later use
-                for toa, dut1 in zip(grp['mjd'], utcs.delta_ut1_utc):
-                    toa.delta_ut1_utc = dut1
-                # The actual conversion from UTC to TDB is done by astropy.Time
-                # as described here <http://docs.astropy.org/en/stable/time/>,
-                # with the real work done by the IAU SOFA library
-                tdbs = utcs.tdb
-            else:
-                log.error("Unknown observatory ({0})".format(key['obs']))
+            grpmjds = time.Time(grp['mjd'], location=grp['mjd'][0].location)
+            grptdbs = grpmjds.tdb
+            tdbs[loind:hiind] = numpy.asarray([t for t in grptdbs])
 
-            col_tdb[loind:hiind] = numpy.asarray([t for t in tdbs])
-            col_tdbld[loind:hiind] = numpy.asarray([utils.time_to_longdouble(t) for t in tdbs])
         # Now add the new columns to the table
-        col_tdb = table.Column(name='tdb', data=col_tdb)
-        col_tdbld = table.Column(name='tdbld', data=col_tdbld)
+        col_tdb = table.Column(name='tdb', data=tdbs)
+        col_tdbld = table.Column(name='tdbld', 
+                data=[utils.time_to_longdouble(t) for t in tdbs])
         self.table.add_columns([col_tdb, col_tdbld])
 
     def compute_posvels(self, ephem="DE421", planets=False):
@@ -743,9 +621,6 @@ class TOAs(object):
                 log.info('Column {0} already exists. Removing...'.format(name))
                 self.table.remove_column(name)
 
-        ephem_file = datapath("%s.bsp"%ephem.lower())
-        log.info("Loading %s ephemeris." % ephem_file)
-
         self.table.meta['ephem'] = ephem
         ssb_obs_pos = table.Column(name='ssb_obs_pos',
                                     data=numpy.zeros((self.ntoas, 3), dtype=numpy.float64),
@@ -764,49 +639,24 @@ class TOAs(object):
                                     data=numpy.zeros((self.ntoas, 3), dtype=numpy.float64),
                                     unit=u.km, meta={'origin':'OBS', 'obj':p})
 
-        tdb = time.Time(self.table['tdbld'], scale='tdb', format='mjd')
         # Now step through in observatory groups
         for ii, key in enumerate(self.table.groups.keys):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
-            if (key['obs'] == 'Barycenter'):
-                obs_sun = objPosVel('ssb', 'earth', tdb[loind:hiind],ephem)
-                obs_sun_pos[loind:hiind,:] = obs_sun.pos.T
-            elif (key['obs'] == 'Spacecraft'):
-                # For a time recorded at a spacecraft, use the position of
-                # the spacecraft recorded in the TOA to compute the needed
-                # vectors.
-                pass
-            elif (key['obs'] == 'Geocenter'):
-                ssb_earth = objPosVel("SSB", "EARTH", tdb[loind:hiind],ephem)
-                obs_sun = objPosVel("EARTH", "SUN", tdb[loind:hiind],ephem)
-                obs_sun_pos[loind:hiind,:] = obs_sun.pos.T
-                ssb_obs = ssb_earth
-                ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T
-                ssb_obs_vel[loind:hiind,:] = ssb_obs.vel.T
-                if planets:
-                    for p in ('jupiter', 'saturn', 'venus', 'uranus'):
-                        name = 'obs_'+p+'_pos'
-                        dest = p
-                        pv = objPosVel("EARTH", dest, tdb[loind:hiind],ephem)
-                        plan_poss[name][loind,hiind] = pv.pos
-            elif (key['obs'] in observatories):
-                earth_obss = erfautils.topo_posvels(obs, grp)
-                ssb_earth = objPosVel("SSB", "EARTH", tdb[loind:hiind],ephem)
-                obs_sun = objPosVel("EARTH", "SUN", tdb[loind:hiind],ephem) - earth_obss
-                obs_sun_pos[loind:hiind,:] = obs_sun.pos.T
-                ssb_obs = ssb_earth + earth_obss
-                ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T
-                ssb_obs_vel[loind:hiind,:] = ssb_obs.vel.T
-                if planets:
-                    for p in ('jupiter', 'saturn', 'venus', 'uranus'):
-                        name = 'obs_'+p+'_pos'
-                        dest = p
-                        pv = objPosVel("EARTH", dest, tdb[loind:hiind],ephem) - earth_obss
-                        plan_poss[name][loind:hiind,:] = pv.pos.T
-            else:
-                log.error("Unknown observatory {0}".format(key['obs']))
+            site = Observatory.get(obs)
+            tdb = time.Time(grp['tdb'])
+            ssb_obs = site.posvel(tdb,ephem)
+            ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T.to(u.km)
+            ssb_obs_vel[loind:hiind,:] = ssb_obs.vel.T.to(u.km/u.s)
+            sun_obs = objPosVel2SSB('sun',tdb,ephem) - ssb_obs
+            obs_sun_pos[loind:hiind,:] = sun_obs.pos.T.to(u.km)
+            if planets:
+                for p in ('jupiter', 'saturn', 'venus', 'uranus'):
+                    name = 'obs_'+p+'_pos'
+                    dest = p
+                    pv = objPosVel2SSB(dest,tdb,ephem) - ssb_obs
+                    plan_poss[name][loind:hiind,:] = pv.pos.T.to(u.km)
         cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
         if planets:
             cols_to_add += plan_poss.values()

@@ -72,10 +72,13 @@ setup(
         'pint.extern',
         'pint.models',
         'pint.models.stand_alone_psr_binaries',
+        'pint.observatory',
         'pint.orbital'],
 
-    package_data={'pint':['datafiles/observatories.txt',
-                          'datafiles/ecliptic.dat', ]+data_files},
+    package_data={'pint': [
+        'datafiles/ecliptic.dat', 
+        'datafiles/gps2utc.clk'
+        ] + data_files},
 
     cmdclass = cmdclass,
     ext_modules=ext_modules,

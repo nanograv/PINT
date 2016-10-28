@@ -1,5 +1,5 @@
 from pint import toa, utils, erfautils
-import pint.observatories as obsmod
+from pint.observatory import Observatory
 import math, shlex, subprocess, numpy
 import astropy.constants as const
 import astropy.units as u
@@ -12,8 +12,6 @@ from pinttestdata import testdir, datadir
 log.setLevel('ERROR')
 # for nice output info, set the following instead
 #log.setLevel('INFO')
-
-observatories = obsmod.read_observatories()
 
 ls = u.def_unit('ls', const.c * 1.0 * u.s)
 
@@ -42,7 +40,7 @@ goodlines = lines[1:]
 for line, TOA in zip(goodlines, ts.table):
     assert len(line.split()) == 19, \
       "tempo2 general2 does not support all needed outputs"
-    oclk, ut1_utc, tai_utc, tt_tai, ttcorr, tt2tb, \
+    oclk, gps_utc, tai_utc, tt_tai, ttcorr, tt2tb, \
           ep0, ep1, ep2, ev0, ev1, ev2, \
           tp0, tp1, tp2, tv0, tv1, tv2, Ttt = \
           (float(x) for x in line.split())
@@ -56,12 +54,14 @@ for line, TOA in zip(goodlines, ts.table):
     # print utils.time_toq_mjd_string(TOA.mjd.tt), line.split()[-1]
     tempo_tt = utils.time_from_mjd_string(line.split()[-1], scale='tt')
     # Ensure that the clock corrections are accurate to better than 0.1 ns
-    assert(math.fabs((oclk*u.s - TOA['flags']["clkcorr"]).to(u.ns).value) < 0.1)
+    assert(math.fabs((oclk*u.s + gps_utc*u.s - TOA['flags']["clkcorr"]).to(u.ns).value) < 0.1)
 
     log.info("TOA in tt difference is: %.2f ns" % \
              ((TOA['mjd'].tt - tempo_tt.tt).sec * u.s).to(u.ns).value)
 
-    pint_opv = erfautils.topo_posvels(TOA['obs'], TOA) # usually for arrays...
+    pint_opv = erfautils.topo_posvels(
+            Observatory.get(TOA['obs']).earth_location, 
+            TOA, obsname=TOA['obs'])
     pint_opv = utils.PosVel(pint_opv.pos.T[0], pint_opv.vel.T[0])
     #print " obs  T2:", t2_opv.pos.to(u.m).value, t2_opv.vel.to(u.m/u.s)
     #print " obs PINT:", pint_opv.pos.to(u.m), pint_opv.vel.to(u.m/u.s)

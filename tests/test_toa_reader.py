@@ -29,7 +29,7 @@ class TestTOAReader:
     def test_jump_3(self):
         assert self.x.table[-1]['flags']["jump"] == 1
     def test_obs(self):
-        assert self.x.table[1]["obs"]=="GBT"
+        assert self.x.table[1]["obs"]=="gbt"
 
 if __name__ == '__main__':
     t = TestTOAReader()

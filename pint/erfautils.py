@@ -6,7 +6,6 @@ try:
 except ImportError:
     import astropy._erfa as erfa
 import astropy.table as table
-from . import observatories as obsmod
 from astropy.time import Time
 SECS_PER_DAY = erfa.DAYSEC
 
@@ -18,9 +17,6 @@ iers_b_file = download_file(IERS_B_URL, cache=True)
 iers_b = IERS_B.open(iers_b_file)
 IERS.iers_table = iers_b
 iers_tab = IERS.iers_table
-
-# Read in the observatory information
-observatories = obsmod.read_observatories()
 
 # Earth rotation rate in radians per UT1 second
 #
@@ -34,8 +30,14 @@ OM = 1.00273781191135448 * 2.0 * np.pi / SECS_PER_DAY
 # arcsec to radians
 asec2rad = 4.84813681109536e-06
 
-def topo_posvels(obsname, toas):
-    """Return a list of PosVel instances for the observatory at the TOA times
+def topo_posvels(loc, toas, obsname='obs'):
+    """Return a list of PosVel instances for the observatory at the TOA times.
+
+    Observatory location should be given in the loc argument as an astropy
+    EarthLocation object.
+
+    The optional obsname argument will be used as label in the returned
+    PosVel instance.
 
     This routine returns a list of PosVel instances, containing the
     positions (m) and velocities (m / s) at the times of the toas and
@@ -45,16 +47,22 @@ def topo_posvels(obsname, toas):
     # If the input is a single TOA (i.e. a row from the table),
     # then put it into a list
     if type(toas) == table.row.Row:
-        ttoas = [toas['mjd']]
+        ttoas = Time([toas['mjd']])
         N = 1
-    else:
+    elif type(toas) == table.table.Table:
         N = len(toas)
         ttoas = toas['mjd']
+    else:
+        if toas.isscalar:
+            ttoas = Time([toas])
+        else:
+            ttoas = toas
+        N = len(ttoas)
 
     # Get various times from the TOAs as arrays
-    tts = np.asarray([(toa.tt.jd1, toa.tt.jd2) for toa in ttoas]).T
-    ut1s = np.asarray([(toa.ut1.jd1, toa.ut1.jd2) for toa in ttoas]).T
-    mjds = np.asarray([toa.mjd for toa in ttoas])
+    tts = np.asarray([(t.jd1, t.jd2) for t in ttoas.tt]).T
+    ut1s = np.asarray([(t.jd1, t.jd2) for t in ttoas.ut1]).T
+    mjds = np.asarray(ttoas.mjd)
 
     # Get x, y coords of Celestial Intermediate Pole and CIO locator s
     X, Y, S = erfa.xys00a(*tts)
@@ -83,8 +91,7 @@ def topo_posvels(obsname, toas):
     rpm = erfa.pom00(xp, yp, sp)
 
     # Observatory geocentric coords in m
-    xyzm = np.array([a.to(u.m).value for a in \
-                     observatories[obsname].loc.geocentric])
+    xyzm = np.array([a.to(u.m).value for a in loc.geocentric])
     x, y, z = np.dot(xyzm, rpm).T
 
     # Functions of Earth Rotation Angle
@@ -106,7 +113,7 @@ def topo_posvels(obsname, toas):
     return utils.PosVel(poss.T * u.m, vels.T * u.m / u.s, obj=obsname, origin="earth")
 
 
-def astropy_topo_posvels(obsname, toas):
+def astropy_topo_posvels(loc, toas, obsname='obs'):
     t = Time(toas['tdbld'], scale='tdb', format='mjd')
-    pos, vel = observatories[obsname].loc.get_gcrs_posvel(t)
+    pos, vel = loc.get_gcrs_posvel(t)
     return utils.PosVel(pos, vel, obj=obsname, origin="EARTH")

@@ -61,7 +61,7 @@ diff_t2 -= diff_t2.mean()
 log.info("Max resid diff between PINT and T2: %.2f ns" % numpy.fabs(diff_t2).max().value)
 log.info("Std resid diff between PINT and T2: %.2f ns" % diff_t2.std().value)
 
-assert numpy.fabs(diff_t2).max() < 18.0 * u.ns # Check that all resids are < 18 ns
+assert numpy.fabs(diff_t2).max() < 5.0 * u.ns 
 
 # run tempo1 also, if the tempo_utils module is available
 did_tempo1 = False
@@ -84,7 +84,7 @@ except:
     pass
 
 if did_tempo1 and not planets:
-    assert numpy.fabs(diff_t1).max() < 22.0 * u.ns # Check that all resids are < 22 ns
+    assert numpy.fabs(diff_t1).max() < 32.0 * u.ns 
 
 def do_plot():
     plt.clf()
