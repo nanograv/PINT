@@ -39,7 +39,7 @@ class GeocenterObs(SpecialLocation):
     def earth_location(self):
         return EarthLocation(0.0,0.0,0.0)
     def posvel(self, t, ephem):
-        return obsPosVel2SSB('earth', t, ephem)
+        return objPosVel2SSB('earth', t, ephem)
 
 # Need to initialize one of each so that it gets added to the list
 BarycenterObs('barycenter', aliases=['@','ssb','bary'])
