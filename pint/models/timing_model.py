@@ -445,7 +445,7 @@ class TimingModel(object):
         return result
 
     #@Cache.use_cache
-    def designmatrix(self, toas, incfrozen=False, incoffset=True):
+    def designmatrix(self, toas, scale_by_F0=True, incfrozen=False, incoffset=True):
         """
         Return the design matrix: the matrix with columns of d_phase_d_param/F0
         or d_toa_d_param
@@ -475,6 +475,14 @@ class TimingModel(object):
                 M[:,ii] = q
                 units.append(u.Unit("")/ getattr(self, param).units)
 
+        if scale_by_F0:
+            mask = []
+            for ii, un in enumerate(units):
+                if params[ii] == 'Offset':
+                    continue
+                units[ii] = un * u.second
+                mask.append(ii)
+            M[:, mask] /= F0.value
         return M, params, units
 
     def __str__(self):
