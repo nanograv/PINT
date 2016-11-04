@@ -7,7 +7,7 @@ def num_diff_delay(toas, pint_param, model, h=None):
     if isinstance(par, p.MJDParameter) or par.units == u.day:
         h = 1e-8
     elif pint_param == 'SINI':
-        h = 1e-4
+        h = 1e-3
     else:
         h = 1e-2
     return model.d_delay_d_param_num(toas, pint_param, h)
