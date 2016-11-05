@@ -470,6 +470,9 @@ class TimingModel(object):
             if param == 'Offset':
                 M[:,ii] = 1.0
                 units.append(u.s/u.s)
+            # elif param == 'F0':
+            #     M[:,ii] = self.d_phase_d_F02(toas)
+            #     units.append(u.Unit("")/ getattr(self, param).units)
             else:
                 q = self.d_phase_d_param(toas, delay,param)
                 M[:,ii] = q
@@ -483,7 +486,7 @@ class TimingModel(object):
                 units[ii] = un * u.second
                 mask.append(ii)
             M[:, mask] /= F0.value
-        return M, params, units
+        return M, params, units, scale_by_F0
 
     def __str__(self):
         result = ""

@@ -95,7 +95,7 @@ class wls_fitter(fitter):
         fitpv = self.get_fitparams_num()
 
         # Define the linear system
-        M, params, units = self.model.designmatrix(toas=self.toas.table,
+        M, params, units, scale_by_F0 = self.model.designmatrix(toas=self.toas.table,
                 incfrozen=False, incoffset=True)
         Nvec = numpy.array(self.toas.get_errors().to(u.s))**2
         self.update_resids()
@@ -112,10 +112,13 @@ class wls_fitter(fitter):
 
         for ii, pn in enumerate(fitp.keys()):
             uind = params.index(pn)             # Index of designmatrix
-            un = 1.0 /  (units[uind]/u.Unit(""))       # Unit in designmatrix
+            un = 1.0 / (units[uind])     # Unit in designmatrix
+            if scale_by_F0:
+                un *= u.s
             pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
             fitpv[pn] = float( (pv+dpv) / fitp[pn].units )
 
         # # TODO: Also record the uncertainties in minimize_func
         #
         chi2 = self.minimize_func(list(fitpv.values()), *fitp.keys())
+        return chi2, dpars
