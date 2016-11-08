@@ -73,7 +73,7 @@ class SolarSystemShapiro(TimingModel):
             grp = toas.groups[ii]
             obs = toas.groups.keys[ii]['obs']
             loind, hiind = toas.groups.indices[ii:ii+2]
-            if key['obs'] == 'Barycenter':
+            if key['obs'].lower() == 'barycenter':
                 log.info("Skipping Shapiro delay for Barycentric TOAs")
                 continue
             psr_dir = self.ssb_to_psb_xyz(epoch=grp['tdbld'].astype(numpy.float64))
