@@ -214,6 +214,23 @@ class TimingModel(object):
                 mapping[par.index] = parname
         return mapping
 
+    def match_param_aliases(self, alias):
+        p_aliases = {}
+        # if alias is a parameter name, return itself
+        if alias in self.params:
+            return alias
+        # get all the aliases
+        for p in self.params:
+            par = getattr(self, p)
+            if par.aliases !=[]:
+                p_aliases[p] = par.aliases
+        # match alias
+        for pa, pav in zip(p_aliases.keys(), p_aliases.values()):
+            if alias in pav:
+                return pa
+        # if not found any thing.
+        return ''
+
     #@Cache.use_cache
     def phase(self, toas):
         """Return the model-predicted pulse phase for the given TOAs."""
