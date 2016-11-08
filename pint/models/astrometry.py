@@ -147,12 +147,12 @@ class AstrometryEquatorial(Astrometry):
         self.add_param(p.AngleParameter(name="RAJ",
             units="H:M:S",
             description="Right ascension (J2000)",
-            aliases=["RAJ"]))
+            aliases=["RA"]))
 
         self.add_param(p.AngleParameter(name="DECJ",
             units="D:M:S",
             description="Declination (J2000)",
-            aliases=["DECJ"]))
+            aliases=["DEC"]))
 
         self.add_param(p.floatParameter(name="PMRA",
             units="mas/year", value=0.0,
