@@ -74,6 +74,7 @@ class Spindown(TimingModel):
             self.phase_derivs += [getattr(self, 'd_phase_d_' + fp)]
 
         self.phase_derivs_wrt_delay += [self.d_spindown_phase_d_delay,]
+
     def F_description(self, x):
         """Template function for description"""
         return "Spin-frequency %d derivative" % n if n else "Spin-frequency"
@@ -135,10 +136,8 @@ class Spindown(TimingModel):
         fterms[order] = numpy.longdouble(1.0)
         dt_tzrmjd, dt_pepoch = self.get_dt(toas, delay)
         d_ptzrmjd_d_f = taylor_horner(dt_tzrmjd-dt_pepoch, fterms)
-        #NOTE should we have d_ppepoch_d_f here? This is a term from phase 
-        #d_ppepoch_d_f = taylor_horner(-dt_pepoch, fterms)
-        #return (d_ptzrmjd_d_f - d_ppepoch_d_f) * u.Unit("")/unit
-        return -(d_ptzrmjd_d_f) * u.Unit("")/unit
+        d_ppepoch_d_f = taylor_horner(-dt_pepoch, fterms)
+        return (d_ptzrmjd_d_f - d_ppepoch_d_f) * u.Unit("")/unit
 
     def d_spindown_phase_d_delay(self, toas, delay):
         dt_tzrmjd, dt_pepoch = self.get_dt(toas, delay)
