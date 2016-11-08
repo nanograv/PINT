@@ -31,8 +31,17 @@ class fitter(object):
 
         Ex. fitter.set_fitparams('F0','F1')
         """
+        fit_params_name = []
+        for pn in params:
+            if pn in self.model.params:
+                fit_params_name.append(pn)
+            else:
+                rn = self.model.match_param_aliases(pn)
+                if rn != '':
+                    fit_params_name.append(rn)
+
         for p in self.model.params:
-            getattr(self.model,p).frozen = p not in params
+            getattr(self.model,p).frozen = p not in fit_params_name
 
     def get_allparams(self):
         """Return a dict of all param names and values."""
@@ -105,7 +114,7 @@ class wls_fitter(fitter):
         Sigma_inv = numpy.dot(M.T / Nvec, M)
         U, s, Vt = sl.svd(Sigma_inv)
         Sigma = numpy.dot(Vt.T / s, U.T)
-        dpars = numpy.dot(Sigma, numpy.dot(M.T, residuals.value / Nvec))
+        dpars = -numpy.dot(Sigma, numpy.dot(M.T, residuals.value / Nvec))
 
         # Uncertainties
         errs = numpy.sqrt(numpy.diag(Sigma))
