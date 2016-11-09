@@ -114,6 +114,9 @@ class wls_fitter(fitter):
         Sigma_inv = numpy.dot(M.T / Nvec, M)
         U, s, Vt = sl.svd(Sigma_inv)
         Sigma = numpy.dot(Vt.T / s, U.T)
+        # NOTE Here we have negative sign here. Since in pulsar timing
+        # the residuals are calculated as (Phase - int(Phase)), which is different
+        # from the conventional defination of least square definetion (Data - model)
         dpars = -numpy.dot(Sigma, numpy.dot(M.T, residuals.value / Nvec))
 
         # Uncertainties
