@@ -487,11 +487,13 @@ class TimingModel(object):
             if param == 'Offset':
                 M[:,ii] = 1.0
                 units.append(u.s/u.s)
-            # elif param == 'F0':
-            #     M[:,ii] = self.d_phase_d_F02(toas)
-            #     units.append(u.Unit("")/ getattr(self, param).units)
             else:
-                q = self.d_phase_d_param(toas, delay,param)
+                # NOTE Here we have negative sign here. Since in pulsar timing
+                # the residuals are calculated as (Phase - int(Phase)), which is different
+                # from the conventional defination of least square definetion (Data - model)
+                # We decide to add minus sign here in the design matrix, so the fitter
+                # keeps the conventional way. 
+                q = - self.d_phase_d_param(toas, delay,param)
                 M[:,ii] = q
                 units.append(u.Unit("")/ getattr(self, param).units)
 
