@@ -58,6 +58,10 @@ class fitter(object):
         return dict((k, getattr(self.model, k).value) for k in
                     self.model.params if not getattr(self.model, k).frozen)
 
+    def get_fitparams_uncertainty(self):
+        return dict((k, getattr(self.model, k).uncertainty_value) for k in
+                    self.model.params if not getattr(self.model, k).frozen)
+
     def set_params(self, fitp):
         """Set the model parameters to the value contained in the input dict.
 
@@ -66,6 +70,10 @@ class fitter(object):
         for k, v in fitp.items():
             getattr(self.model, k).value = v
 
+    def set_param_uncertainties(self, fitp):
+        for k, v in fitp.items():
+            getattr(self.model, k).uncertainty_value = v
+
     def minimize_func(self, x, *args):
         """Wrapper function for the residual class, meant to be passed to
         scipy.optimize.minimize. The function must take a single list of input
@@ -73,7 +81,6 @@ class fitter(object):
         a quantity to be minimized (in this case chi^2).
         """
         self.set_params({k: v for k, v in zip(args, x)})
-        # Get new residuals
         self.update_resids()
         # Return chi^2
         return self.resids.chi2
@@ -102,7 +109,7 @@ class wls_fitter(fitter):
         """Run a linear weighted least-squared fitting method"""
         fitp = self.get_fitparams()
         fitpv = self.get_fitparams_num()
-
+        fitperrs = self.get_fitparams_uncertainty()
         # Define the linear system
         M, params, units, scale_by_F0 = self.model.designmatrix(toas=self.toas.table,
                 incfrozen=False, incoffset=True)
@@ -114,10 +121,7 @@ class wls_fitter(fitter):
         Sigma_inv = numpy.dot(M.T / Nvec, M)
         U, s, Vt = sl.svd(Sigma_inv)
         Sigma = numpy.dot(Vt.T / s, U.T)
-        # NOTE Here we have negative sign here. Since in pulsar timing
-        # the residuals are calculated as (Phase - int(Phase)), which is different
-        # from the conventional defination of least square definetion (Data - model)
-        dpars = -numpy.dot(Sigma, numpy.dot(M.T, residuals.value / Nvec))
+        dpars = numpy.dot(Sigma, numpy.dot(M.T, residuals.value / Nvec))
 
         # Uncertainties
         errs = numpy.sqrt(numpy.diag(Sigma))
@@ -129,8 +133,9 @@ class wls_fitter(fitter):
                 un *= u.s
             pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
             fitpv[pn] = float( (pv+dpv) / fitp[pn].units )
+            fitperrs[pn] = errs[uind]
 
-        # # TODO: Also record the uncertainties in minimize_func
-        #
         chi2 = self.minimize_func(list(fitpv.values()), *fitp.keys())
-        return chi2, dpars
+        # Updata Uncertainties
+        self.set_param_uncertainties(fitperrs)
+        return chi2
