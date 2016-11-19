@@ -270,6 +270,9 @@ class Parameter(object):
                 self.uncertainty_value = val
         self._uncertainty = self.set_uncertainty(val)
 
+    def print_uncertainty(self, uncertainty):
+        return str(uncertainty.to(self.units).value)
+
     def __str__(self):
         out = self.name
         if self.units is not None:
@@ -665,6 +668,9 @@ class MJDParameter(Parameter):
                              + type(val).__name__ + 'format.')
         return result
 
+    def print_uncertainty(self, uncertainty):
+        return time_to_mjd_string(uncertainty)
+
 
 class AngleParameter(Parameter):
     """This is a Parameter type that is specific to Angle values.
@@ -946,6 +952,15 @@ class prefixParameter(object):
     def special_arg(self):
         return self.param_comp.special_arg
 
+    def __str__(self):
+        out = self.name
+        if self.units is not None:
+            out += " (" + str(self.units) + ")"
+        out += " " + self.print_quantity(self.quantity)
+        if self.uncertainty is not None:
+            out += " +/- " + str(self.uncertainty.to(self.units))
+        return out
+
     # Define the function to call functions inside of parameter composition.
     def __str__(self):
         return self.param_comp.__str__()
@@ -956,8 +971,8 @@ class prefixParameter(object):
     def prior_pdf(self,value=None, logpdf=False):
         return self.param_comp.prior_pdf(value, logpdf)
 
-    def print_quantity(self):
-        self.param_comp.print_quantity()
+    def print_quantity(self, quantity):
+        return self.param_comp.print_quantity(quantity)
 
     def name_matches(self, name):
         return self.param_comp.name_matches(name)
