@@ -630,7 +630,7 @@ class MJDParameter(Parameter):
         set_quantity = self.set_quantity_mjd
         print_quantity = time_to_mjd_string
         get_value = time_to_longdouble
-        set_uncertainty = self.set_quantity_mjd
+        set_uncertainty = self.set_uncertainty_mjd
         super(MJDParameter, self).__init__(name=name, value=value, units="MJD",
                                            description=description,
                                            uncertainty=uncertainty,
@@ -644,6 +644,17 @@ class MJDParameter(Parameter):
         self.value_type = time.Time
         self.paramType = 'MJDParameter'
         self.special_arg += ['time_scale',]
+
+    @property
+    def uncertainty_value(self):
+        """Return a pure value from .uncertainty. The unit will associate
+        with .units
+        """
+        if self._uncertainty is None:
+            return None
+        else:
+            return self._uncertainty.value
+
     def set_quantity_mjd(self, val):
         """Value setter for MJD parameter,
            Accepted format:
@@ -668,8 +679,27 @@ class MJDParameter(Parameter):
                              + type(val).__name__ + 'format.')
         return result
 
+    def set_uncertainty_mjd(self, val):
+        if isinstance(val, numbers.Number):
+            val = numpy.longdouble(val)
+            result = time.TimeDelta(val, format='jd')
+        elif isinstance(val, str):
+            try:
+                val = str2longdouble(val)
+                result = time.TimeDelta(val, format='jd')
+            except:
+                raise ValueError('String ' + val + 'can not be converted to'
+                                 'a TimeDelta object.' )
+
+        elif isinstance(val,time.TimeDelta):
+            result = val
+        else:
+            raise ValueError('MJD parameter can not accept '
+                             + type(val).__name__ + 'format.')
+        return result
+
     def print_uncertainty(self, uncertainty):
-        return time_to_mjd_string(uncertainty)
+        return longdouble2string(self.uncertainty_value)
 
 
 class AngleParameter(Parameter):
