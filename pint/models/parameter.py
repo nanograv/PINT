@@ -654,6 +654,20 @@ class MJDParameter(Parameter):
             return None
         else:
             return self._uncertainty.value
+            
+    @uncertainty_value.setter
+    def uncertainty_value(self, val):
+        """Setter for uncertainty_value. Setting .uncertainty_value will only change
+        the .uncertainty attribute.
+        """
+        if val is None:
+            if not isinstance(self.uncertainty, (str, bool)) and \
+                self._uncertainty_value is not None:
+                log.warning('This parameter has uncertainty value. '
+                            'Change it to None will lost information.')
+            else:
+                self.uncertainty_value = val
+        self._uncertainty = self.set_uncertainty(val)
 
     def set_quantity_mjd(self, val):
         """Value setter for MJD parameter,
@@ -680,22 +694,14 @@ class MJDParameter(Parameter):
         return result
 
     def set_uncertainty_mjd(self, val):
-        if isinstance(val, numbers.Number):
-            val = numpy.longdouble(val)
-            result = time.TimeDelta(val, format='jd')
-        elif isinstance(val, str):
-            try:
-                val = str2longdouble(val)
-                result = time.TimeDelta(val, format='jd')
-            except:
-                raise ValueError('String ' + val + 'can not be converted to'
-                                 'a TimeDelta object.' )
-
-        elif isinstance(val,time.TimeDelta):
-            result = val
-        else:
-            raise ValueError('MJD parameter can not accept '
-                             + type(val).__name__ + 'format.')
+        # First try to use astropy unit conversion
+        try:
+            # If this fails, it will raise UnitConversionError
+            _ = val.to(self.units)
+            result = data2longdouble(val.value) * self.units
+        except AttributeError:
+            # This will happen if the input value did not have units
+            result = data2longdouble(val) * self.units
         return result
 
     def print_uncertainty(self, uncertainty):
