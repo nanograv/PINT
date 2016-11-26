@@ -8,6 +8,7 @@
 *.so
 #pickle
 *.pickle.gz
+pint/cutils/str2ld_py.c
 
 # Packages
 *.egg
@@ -60,3 +61,5 @@ de-403-masses.tpc
 
 # ipython notebook temps
 .ipynb_checkpoints
+
+.idea
