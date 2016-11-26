@@ -1,7 +1,7 @@
 from pint import ls,GMsun,Tsun
 from .stand_alone_psr_binaries.DD_model import DDmodel
 from .pulsar_binary import PulsarBinary
-import parameter as p
+from . import parameter as p
 from .timing_model import Cache, TimingModel, MissingParameter
 import astropy.units as u
 

@@ -1,4 +1,4 @@
-import utils
+from . import utils
 import numpy as np
 import astropy.units as u
 try:

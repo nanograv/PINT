@@ -9,6 +9,7 @@ import pint.residuals
 import astropy.units as u
 import matplotlib.pyplot as plt
 from astropy.coordinates import SkyCoord
+from astropy.extern import six
 
 from astropy import log
 
@@ -142,7 +143,7 @@ def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,loge
         # Here I have to work around an issue where the MJDREFF key is stored
         # as a string in the header and uses the "1.234D-5" syntax for floats, which
         # is not supported by Python
-        if isinstance(ft1hdr['MJDREFF'],basestring):
+        if isinstance(ft1hdr['MJDREFF'],six.string_types):
             MJDREF = np.longdouble(ft1hdr['MJDREFI']) + \
             np.longdouble(ft1hdr['MJDREFF'].replace('D','E'))
         else:

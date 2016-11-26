@@ -5,7 +5,7 @@
 import numpy
 import astropy.units as u
 from .timing_model import TimingModel, MissingParameter
-import parameter as p
+from . import parameter as p
 
 
 class JumpDelay(TimingModel):

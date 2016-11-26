@@ -4,7 +4,7 @@ from pint import ls,GMsun,Tsun
 from pint import utils
 from .stand_alone_psr_binaries.ELL1_model import ELL1model
 from .pulsar_binary import PulsarBinary
-import parameter as p
+from . import parameter as p
 from .timing_model import Cache, TimingModel, MissingParameter
 import astropy
 from ..utils import time_from_mjd_string, time_to_longdouble

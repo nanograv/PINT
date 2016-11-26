@@ -321,7 +321,7 @@ class TimingModel(object):
                 param_delay_derivs.append(f)
 
         for df in param_delay_derivs:
-            print df.__name__
+            print(df.__name__)
             result += df(toas).to(u.s/par.units, equivalencies=u.dimensionless_angles())
         return result
 
@@ -350,7 +350,7 @@ class TimingModel(object):
         for ii, param in enumerate(params):
             dpdp = "d_phase_d_" + param
             dddp = "d_delay_d_" + param
-            print dddp, dpdp
+            print(dddp, dpdp)
             if param == 'Offset':
                 M[:,ii] = 1.0
                 units.append(u.s/u.s)

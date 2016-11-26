@@ -12,7 +12,7 @@ import astropy.constants as const
 from astropy.coordinates.angles import Angle
 import re
 import numbers
-import priors
+from . import priors
 from ..toa_select import TOASelect
 
 

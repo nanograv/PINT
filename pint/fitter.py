@@ -4,7 +4,7 @@ import copy, numpy, numbers
 import astropy.units as u
 import astropy.coordinates.angles as ang
 import scipy.optimize as opt, scipy.linalg as sl
-from utils import has_astropy_unit
+from .utils import has_astropy_unit
 from .residuals import resids
 
 class fitter(object):
