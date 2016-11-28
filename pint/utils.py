@@ -266,10 +266,10 @@ def check_all_partials(f, args, delta=1e-6, atol=1e-4, rtol=1e-4):
         #print jac
         #print njac
         d = np.abs(jac-njac)/(atol+rtol*np.abs(njac))
-        print "fail fraction:", np.sum(d > 1)/float(np.sum(d >= 0))
+        print("fail fraction:", np.sum(d > 1)/float(np.sum(d >= 0)))
         worst_ix = np.unravel_index(np.argmax(d.reshape((-1,))), d.shape)
-        print "max fail:", np.amax(d), "at", worst_ix
-        print "jac there:", jac[worst_ix], "njac there:", njac[worst_ix]
+        print("max fail:", np.amax(d), "at", worst_ix)
+        print("jac there:", jac[worst_ix], "njac there:", njac[worst_ix])
         raise
 
 

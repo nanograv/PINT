@@ -3,7 +3,7 @@
 # dispersion.py
 # Simple (constant) ISM dispersion measure
 from warnings import warn
-import parameter as p
+from . import parameter as p
 from .timing_model import TimingModel, Cache
 import astropy.units as u
 import numpy as np

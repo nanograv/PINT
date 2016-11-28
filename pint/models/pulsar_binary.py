@@ -1,6 +1,6 @@
 # This is a wapper for independent binary model. It is a PINT timing model class
 import astropy.units as u
-import parameter as p
+from . import parameter as p
 from .timing_model import Cache, TimingModel, MissingParameter
 from pint import ls,GMsun,Tsun
 

@@ -11,7 +11,7 @@ try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
-from solar_system_ephemerides import objPosVel2SSB
+from .solar_system_ephemerides import objPosVel2SSB
 from pint import ls, J2000, J2000ld
 from .config import datapath
 from astropy import log
@@ -470,7 +470,7 @@ class TOAs(object):
 
     def print_summary(self):
         """Write a summary of the TOAs to stdout."""
-        print self.get_summary()
+        print(self.get_summary())
 
     def adjust_TOAs(self, delta):
         """Apply a time delta to TOAs
@@ -508,7 +508,7 @@ class TOAs(object):
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1')
 
         """
-        outf = file(filename,'w')
+        outf = open(filename,'w')
         if format.upper() in ('TEMPO2','1'):
             outf.write('FORMAT 1\n')
         for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'],

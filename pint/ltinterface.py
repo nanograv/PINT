@@ -9,7 +9,7 @@ import pint.toa as pt
 from pint.phase import Phase
 from pint.residuals import resids
 from pint import fitter
-from utils import has_astropy_unit
+from .utils import has_astropy_unit
 import astropy.units as u
 import astropy.constants as ac
 import astropy.coordinates.angles as ang

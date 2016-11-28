@@ -4,7 +4,7 @@ import numpy
 import astropy.units as u
 import astropy.constants as const
 from astropy import log
-import parameter as p
+from . import parameter as p
 from .timing_model import TimingModel
 from .. import Tsun, Tmercury, Tvenus, Tearth, Tmars, \
         Tjupiter, Tsaturn, Turanus, Tneptune

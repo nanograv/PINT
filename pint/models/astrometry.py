@@ -6,7 +6,7 @@ import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
 from astropy import log
-import parameter as p
+from . import parameter as p
 from .timing_model import TimingModel, MissingParameter, Cache
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble
 from pint.pulsar_ecliptic import PulsarEcliptic, OBL
