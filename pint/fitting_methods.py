@@ -14,7 +14,6 @@ class fitter_cls(object):
         self.resids_init = resids(toas=toas, model=model)
         self.reset_model()
 
-
     def reset_model(self):
         """Reset the current model to the initial model."""
         self.model = copy.deepcopy(self.model_init)
@@ -120,18 +119,49 @@ class wls_fitter(fitter_cls):
         fitperrs = self.get_fitparams_uncertainty()
         # Define the linear system
         M, params, units, scale_by_F0 = self.get_designmatrix()
-        Nvec = numpy.array(self.toas.get_errors().to(u.s))**2
+                # Get residuals and TOA uncertainties in seconds
         self.update_resids()
-        residuals = self.resids.time_resids.to(u.s)
+        residuals = self.resids.time_resids.to(u.s).value
+        Nvec = self.toas.get_errors().to(u.s).value
 
-        # Weighted linear fit
-        Sigma_inv = numpy.dot(M.T / Nvec, M)
-        U, s, Vt = sl.svd(Sigma_inv)
-        Sigma = numpy.dot(Vt.T / s, U.T)
-        dpars = numpy.dot(Sigma, numpy.dot(M.T, residuals.value / Nvec))
+        # "Whiten" design matrix and residuals by dividing by uncertainties
+        M = M/Nvec.reshape((-1,1))
+        residuals = residuals / Nvec
 
-        # Uncertainties
-        errs = numpy.sqrt(numpy.diag(Sigma))
+        # For each column in design matrix except for col 0 (const. pulse
+        # phase), subtract the mean value, and scale by the column RMS.
+        # This helps avoid numerical problems later.  The scaling factors need
+        # to be saved to recover correct parameter units.
+        # NOTE, We remove subtract mean value here, since it did not give us a
+        # fast converge fitting.
+        # M[:,1:] -= M[:,1:].mean(axis=0)
+        fac = M.std(axis=0)
+        fac[0] = 1.0
+        M /= fac
+
+        # Singular value decomp of design matrix:
+        #   M = U s V^T
+        # Dimensions:
+        #   M, U are Ntoa x Nparam
+        #   s is Nparam x Nparam diagonal matrix encoded as 1-D vector
+        #   V^T is Nparam x Nparam
+        U, s, Vt = sl.svd(M, full_matrices=False)
+
+        # Note, here we could do various checks like report
+        # matrix condition number or zero out low singular values.
+        #print 'log_10 cond=', numpy.log10(s.max()/s.min())
+
+        #Sigma = numpy.dot(Vt.T / s, U.T)
+        # The post-fit parameter covariance matrix
+        #   Sigma = V s^-2 V^T
+        Sigma = numpy.dot(Vt.T / (s**2), Vt)
+        # Parameter uncertainties.  Scale by fac recovers original units.
+        errs = numpy.sqrt(numpy.diag(Sigma)) / fac
+
+        # The delta-parameter values
+        #   dpars = V s^-1 U^T r
+        # Scaling by fac recovers original units
+        dpars = numpy.dot(Vt.T, numpy.dot(U.T,residuals)/s) / fac
 
         for ii, pn in enumerate(fitp.keys()):
             uind = params.index(pn)             # Index of designmatrix
