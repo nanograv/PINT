@@ -5,9 +5,31 @@ import scipy.optimize as opt, scipy.linalg as sl
 from .residuals import resids
 
 
-class fitter_cls(object):
-    """fitter(toas=None, model=None)"""
-    __metaclass__  = abc.ABCMeta
+class FittingMethodMeta(abc.ABCMeta):
+    """ This is a Meta class for fitting methods registeration at FittingMethod
+    class. In order to get registered, a member called 'method_name' has to be
+    in the FittingMethod subclass.
+    """
+    def __init__(cls, name, bases, dct):
+        regname = '_method_list'
+        if not hasattr(cls,regname):
+            setattr(cls,regname,{})
+        if 'method_name' in dct:
+            getattr(cls,regname)[cls.method_name] = cls
+        super(FittingMethodMeta, cls).__init__(name, bases, dct)
+
+
+class FittingMethod(object):
+    """ Base fitting method object for different fitting methods. The fitting
+    function should be defined at fit_toas method.
+    Parameters
+    ----------
+    toas : a pint TOAs instance
+        The input toas.
+    model : a pint timing model instance
+        The initial timing model for fitting. 
+    """
+    __metaclass__  = FittingMethodMeta
     def __init__(self, toas, model):
         self.toas = toas
         self.model_init = model
@@ -92,7 +114,8 @@ class fitter_cls(object):
         raise NotImplementedError
 
 
-class scipy_powell_fitter(fitter_cls):
+class scipy_powell_fitter(FittingMethod):
+    method_name = 'Powell'
     def __init__(self, toas, model, maxiter=20):
         super(scipy_minimize_fitter, self).__init__(toas, model, maxiter)
         self.method = 'Powell'
@@ -108,7 +131,8 @@ class scipy_powell_fitter(fitter_cls):
         # necessarily the one that yields the best fit
         self.minimize_func(numpy.atleast_1d(self.fitresult.x), *fitp.keys())
 
-class wls_fitter(fitter_cls):
+class wls_fitter(FittingMethod):
+    method_name = 'wls'
     def __init__(self, toas=None, model=None):
         super(wls_fitter, self).__init__(toas=toas, model=model)
 
@@ -176,6 +200,3 @@ class wls_fitter(fitter_cls):
         # Updata Uncertainties
         self.set_param_uncertainties(fitperrs)
         return chi2
-
-# TODO : Make FITTING_METHOD update automatically
-FITTING_METHOD = {'powell': scipy_powell_fitter, 'wls': wls_fitter}

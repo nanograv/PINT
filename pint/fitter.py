@@ -1,25 +1,33 @@
 # fitter.py
 # Defines the basic TOA fitter class
 
-from fitting_methods import FITTING_METHOD, fitter_cls
+from fitting_methods import FittingMethod
  #Make fitter class a wrapper class, allows different fitting method
 
 
 class fitter(object):
-    """This is wrapper fitter class. By giving method argument, fitter will call
-    different fitter_cls.
+    """This is upper level fitter class. By giving method argument, fitter will call
+    different fitting method.
+    Parameters
+    ----------
+    toas : a pint TOAs instance
+        The input toas.
+    model : a pint timing model instance
+        The initial timing model for fitting.
+    method : str or FittingMethod class.
+        The method user select or defined for fitting. 
     """
     def __init__(self, toas, model, method='wls'):
         if isinstance(method, str):
-            if method in FITTING_METHOD.keys():
-                self._fitter = FITTING_METHOD[method](toas, model)
+            if method in FittingMethod._method_list.keys():
+                self._fitter = FittingMethod._method_list[method](toas, model)
             else:
-                raise NameError("'" + method + "' is not in the built-in fitting methods.")
+                raise NameError("Fitting '" + method + "' is not implemented yet.")
         else:
-            if issubclass(method, fitter_cls):
-                self._fitter = fitter_cls(toas, model)
+            if issubclass(method, FittingMethod):
+                self._fitter = method(toas, model)
             else:
-                raise TypeError("'" + method + "' has to be a fitter_cls type.")
+                raise TypeError("'" + method + "' has to be a FittingMethod type.")
 
     @property
     def model(self):
@@ -29,7 +37,7 @@ class fitter(object):
     def model(self, m):
         self._fitter.model = m
         self._fitter.update_resids()
-        
+
     @property
     def toas(self):
         return self._fitter.toas
