@@ -39,7 +39,7 @@ class fitter(object):
         self._fitter.update_resids()
 
     def __getattr__(self, name):
-        if name in self._fitter.__dict__.keys():
+        if name in dir(self._fitter):
             return getattr(self._fitter, name)
         else:
-            return getattr(self, name)
+            return super(fitter, self).__getattribute__(name)
