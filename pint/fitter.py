@@ -29,6 +29,7 @@ class fitter(object):
     def model(self, m):
         self._fitter.model = m
         self._fitter.update_resids()
+        
     @property
     def toas(self):
         return self._fitter.toas
