@@ -105,7 +105,7 @@ class BTmodel(PSR_BINARY):
         """Second term of Blandford & Teukolsky (1976), ApJ, 205,
         580-591, eq 2.33/ / Second left-hand term of W.M. Smart, (1962),
         "Spherical Astronomy", p35 delay equation.
-        
+
         (beta + gamma) * sinE
         beta = (1-e^2)*a1*cos(omega)
         Here a1 is in the unit of light second as distance

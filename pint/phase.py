@@ -8,7 +8,7 @@
 # range is [-0.5,0.5) or (-0.5,0.5].
 from collections import namedtuple
 import numpy
- 
+
 class Phase(namedtuple('Phase', 'int frac')):
     """
     Phase class array version

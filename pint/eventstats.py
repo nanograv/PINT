@@ -18,7 +18,7 @@ def to_array(x):
     x = np.asarray(x)
     if len(x.shape)==0: return np.asarray([x])
     return x
-    
+
 def from_array(x):
     if (len(x.shape)==1) and (x.shape[0]==1): return x[0]
     return x
@@ -30,7 +30,7 @@ def sig2sigma(sig,two_tailed=True,logprob=False):
        probability is sig.  Note that the default is to interpret this number
        as the two-tailed value, as this is the quantity that goes to 0
        when sig goes to 1.
-       
+
        args
        ----
        sig     the chance probability
@@ -91,14 +91,14 @@ def sigma2sig(sigma,two_tailed=True):
     return 1 - 0.5*erfc(-sigma/2**0.5)
 
 def sigma_trials(sigma,trials):
-   # correct a sigmal value for a trials factor
-   if sigma < 20:
-       p = sigma2sig(sigma)*trials
-       if p >= 1: return 0
-       return sig2sigma(p)
-   else:
-      # use an asymptotic expansion -- this needs to be checked!
-      return (sigma**2 - 2*np.log(trials))**0.5
+    # correct a sigmal value for a trials factor
+    if sigma < 20:
+        p = sigma2sig(sigma)*trials
+        if p >= 1: return 0
+        return sig2sigma(p)
+    else:
+        # use an asymptotic expansion -- this needs to be checked!
+        return (sigma**2 - 2*np.log(trials))**0.5
 
 
 def z2m(phases,m=2):
@@ -122,24 +122,24 @@ def z2m(phases,m=2):
     return (2./n)*np.cumsum(s)
 
 def z2mw(phases,weights,m=2):
-   """ Return the Z^2_m test for each harmonic up to the specified m.
+    """ Return the Z^2_m test for each harmonic up to the specified m.
 
-       The user provides a list of weights.  In the case that they are
-       well-distributed or assumed to be fixed, the CLT applies and the
-       statistic remains calibrated.  Nice!
-    """
+        The user provides a list of weights.  In the case that they are
+        well-distributed or assumed to be fixed, the CLT applies and the
+        statistic remains calibrated.  Nice!
+     """
 
-   phases = np.asarray(phases)*(2*np.pi) #phase in radians
+    phases = np.asarray(phases)*(2*np.pi) #phase in radians
 
-   s = (np.asarray([(np.cos(k*phases)*weights).sum() for k in range(1,m+1)]))**2 +\
-       (np.asarray([(np.sin(k*phases)*weights).sum() for k in range(1,m+1)]))**2
+    s = (np.asarray([(np.cos(k*phases)*weights).sum() for k in range(1,m+1)]))**2 +\
+        (np.asarray([(np.sin(k*phases)*weights).sum() for k in range(1,m+1)]))**2
 
-   return np.cumsum(s) * (2./(weights**2).sum())
+    return np.cumsum(s) * (2./(weights**2).sum())
 
 def sf_z2m(ts,m=2):
     """ Return the survival function (chance probability) according to the
         asymptotic calibration for the Z^2_m test.
-        
+
         args
         ----
         ts      result of the Z^2_m test
@@ -154,7 +154,7 @@ def best_m(phases,weights=None,m=100):
 def em_four(phases,m=2,weights=None):
     """ Return the empirical Fourier coefficients up to the mth harmonic.
         These are derived from the empirical trignometric moments."""
-   
+
     phases = np.asarray(phases)*TWOPI #phase in radians
 
     n = len(phases) if weights is None else weights.sum()
@@ -220,7 +220,7 @@ def sf_hm(h,m=20,c=4,logprob=False):
     from numpy import exp,arange,log,empty
     from scipy.special import gamma
     fact = lambda x: gamma(x+1)
-               
+
     # first, calculate the integrals of unity for all needed orders
     ints = empty(m)
     for i in range(m):

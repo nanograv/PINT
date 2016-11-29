@@ -13,7 +13,7 @@ import scipy.optimize as op
 import sys, os, copy, fftfit
 from astropy.coordinates import SkyCoord
 
-        
+
 # Params you might want to edit
 nwalkers = 200
 burnin = 100
@@ -121,7 +121,7 @@ class emcee_fitter(fitter.fitter):
         if lnpost > maxpost:
             print "New max: ", lnpost
             for name, val in zip(ftr.fitkeys, theta):
-                    print "  %8s: %25.15g" % (name, val)
+                print "  %8s: %25.15g" % (name, val)
             maxpost = lnpost
             self.maxpost_fitvals = theta
         return lnpost
@@ -376,7 +376,7 @@ if __name__ == '__main__':
     ftr.set_params(dict(zip(ftr.fitkeys, ftr.maxpost_fitvals)))
     ftr.phaseogram(file=ftr.model.PSR.value+"_post.png")
     plt.close()
-    
+
 
     # Write out the output pulse profile
     vs, xs = np.histogram(ftr.get_event_phases(), outprof_nbins, \
@@ -385,12 +385,12 @@ if __name__ == '__main__':
     for x, v in zip(xs, vs):
         f.write("%.5f  %12.5f\n" % (x, v))
     f.close()
-    
+
     # Write out the par file for the best MCMC parameter est
     f = open(ftr.model.PSR.value+"_post.par", 'w')
     f.write(ftr.model.as_parfile())
     f.close()
-    
+
     # Print the best MCMC values and ranges
     ranges = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
         zip(*np.percentile(samples, [16, 50, 84], axis=0)))
@@ -404,7 +404,7 @@ if __name__ == '__main__':
     f.write("Post-MCMC values (50th percentile +/- (16th/84th percentile):\n")
     for name, vals in zip(ftr.fitkeys, ranges):
         f.write("%8s:"%name + " %25.15g (+ %12.5g  / - %12.5g)\n"%vals)
-    
+
     f.write("\nMaximum likelihood par file:\n")
     f.write(ftr.model.as_parfile())
     f.close()

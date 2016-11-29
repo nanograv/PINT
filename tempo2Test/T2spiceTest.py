@@ -42,19 +42,19 @@ earth2 =[]
 earth3 =[]
 # Read tt2tdb earthposition output
 for l in fp.readlines():
-	l = l.strip()
-	l = l.strip("\n")
-	l = l.split()
+    l = l.strip()
+    l = l.strip("\n")
+    l = l.split()
 # Avoid the column that is not data
-	try:                
-		m = float(l[0]) 
-	except:
-		pass
-	else:
-		tt2tdb.append(l[-1]) 
-		earth1.append(l[0])
-		earth2.append(l[1])
-		earth3.append(l[2])
+    try:                
+        m = float(l[0]) 
+    except:
+        pass
+    else:
+        tt2tdb.append(l[-1]) 
+        earth1.append(l[0])
+        earth2.append(l[1])
+        earth3.append(l[2])
 #### Testing toa mjd to tt
 tt = []
 for i in range(len(toa)):

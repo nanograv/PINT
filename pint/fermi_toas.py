@@ -20,7 +20,7 @@ def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
     It was built by David Smith, based on some code from Lucas Guillemot.
     This computation uses only the PSF as a function of energy, not a full
     spectral model of the region, so is less exact than gtsrcprob.
-    
+
     The input values are:
     energies : Array of photon energies in MeV
     angseps : Angular separations between photon direction and target
@@ -28,7 +28,7 @@ def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
               SkyCoord_photons.separation(SkyCoord_target)
     logeref : Parameter from SearchPulsation optimization
     logesig : Parameter from SearchPulsation optimization
-    
+
     Returns a numpy array of weights (probabilities that the photons came
     from the target, based on the PSF).
 
@@ -42,9 +42,9 @@ def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
     scalepsf = 3.
 
     logE = np.log10(energies)
-    
+
     sigma = np.sqrt(psfpar0*psfpar0*np.power(100./energies, 2.*psfpar1) + psfpar2*psfpar2)/scalepsf
-    
+
     fgeom = norm*np.power(1+angseps.degree*angseps.degree/2./gam/sigma/sigma, -gam)
 
     return fgeom * np.exp(-np.power((logE-logeref)/np.sqrt(2.)/logesig,2.))	
@@ -104,13 +104,13 @@ def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,loge
       a list of PINT TOA objects.
       Correctly handles raw FT1 files, or ones processed with gtbary
       to have barycentered or geocentered TOAs.
-      
+
       weightcolumn specifies the FITS column name to read the photon weights
       from.  The special value 'CALC' causes the weights to be computed empirically
       as in Philippe Bruel's SearchPulsation code. 
       logeref and logesig are parameters for the weight computation and are only
       used when weightcolumn='CALC'.
-      
+
       When weights are loaded, or computed, events are filtered by weight >= minweight
     '''
     import pyfits

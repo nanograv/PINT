@@ -57,7 +57,7 @@ class ClockFile(object):
 
     @property
     def time(self): return self._time
-        
+
     @property
     def clock(self): return self._clock
 
@@ -78,7 +78,7 @@ class ClockFile(object):
 
         # Can't pass Times directly to numpy.interp.  This should be OK:
         return numpy.interp(t.mjd, self.time.mjd, self.clock.to(u.us))*u.us
-        
+
 
 class Tempo2ClockFile(ClockFile):
 

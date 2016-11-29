@@ -39,7 +39,7 @@ goodlines = lines[1:]
 # Get the output lines from the TOAs
 for line, TOA in zip(goodlines, ts.table):
     assert len(line.split()) == 19, \
-      "tempo2 general2 does not support all needed outputs"
+        "tempo2 general2 does not support all needed outputs"
     oclk, gps_utc, tai_utc, tt_tai, ttcorr, tt2tb, \
           ep0, ep1, ep2, ev0, ev1, ev2, \
           tp0, tp1, tp2, tv0, tv1, tv2, Ttt = \
