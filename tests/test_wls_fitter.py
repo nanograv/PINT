@@ -18,7 +18,7 @@ class Testwls(unittest.TestCase):
         self.tim = 'B1855+09_NANOGrav_dfg+12.tim'
         self.m = mb.get_model(self.par)
         self.t = toa.get_TOAs(self.tim, ephem='DE405')
-        self.f = fitter.wls_fitter(self.t, self.m)
+        self.f = fitter.fitter(self.t, self.m)
         # set perturb parameter step
         self.per_param = {'A1': 1e-05, 'DECJ': 1e-06, 'DMX_0003': 120, 'ECC': 0.2,
                           'F0': 1e-12, 'F1': 0.001, 'JUMP3': 10.0, 'M2': 10.0,
@@ -36,8 +36,8 @@ class Testwls(unittest.TestCase):
     def test_wlf_fitter(self):
         for ii, p in enumerate(self.per_param.keys()):
             self.perturb_param(p, self.per_param[p])
-            self.f.call_minimize()
+            self.f.fit_toas()
             chi2_red = self.f.resids.chi2_reduced
-            tol = 5.0
-            msg = "Fitting parameter " + p + " failed."
+            tol = 2.6
+            msg = "Fitting parameter " + p + " failed. with chi2_red " + str(chi2_red)
             assert chi2_red < tol, msg
