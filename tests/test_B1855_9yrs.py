@@ -23,11 +23,6 @@ class TestB1855(unittest.TestCase):
         # tempo result
         self.ltres= np.genfromtxt(self.parfileB1855 + \
                                   '.tempo2_test',skip_header=1, unpack=True)
-        print(self.ltres)
-    # def test_B1855_binary_delay(self):
-    #     # Calculate delays with PINT
-    #     pint_binary_delay = self.modelB1855.binarymodel_delay(self.toasB1855.table)
-    #     assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-8), 'B1855 binary delay test failed.'
 
     def test_B1855(self):
         pint_resids_us = resids(self.toasB1855, self.modelB1855).time_resids.to(u.s)
@@ -35,16 +30,13 @@ class TestB1855(unittest.TestCase):
         assert np.all(np.abs(pint_resids_us.value - self.ltres) < 3e-8), 'B1855 residuals test failed.'
 
     def test_derivative(self):
-        dd, pd, nd = tdu.get_derivative_funcs(self.modelB1855)
         log= logging.getLogger( "TestB1855.derivative_test")
-        for p in dd.keys():
+        testp = tdu.get_derivative_params(self.modelB1855)
+        delay = self.modelB1855.delay(self.toasB1855.table)
+        for p in testp.keys():
             log.debug( "Runing derivative for %s", 'd_delay_d_'+p)
-            if p in ['PBDOT']:
-                h = 200
-            else:
-                h = None
-            ndf = tdu.num_diff_delay(self.toasB1855.table, p, self.modelB1855, h)
-            adf = self.modelB1855.d_delay_d_param(self.toasB1855.table, p)
+            ndf = self.modelB1855.d_phase_d_param_num(self.toasB1855.table, p, testp[p])
+            adf = self.modelB1855.d_phase_d_param(self.toasB1855.table, delay, p)
             diff = adf - ndf
             if not np.all(diff.value) == 0.0:
                 mean_der = (adf+ndf)/2.0
@@ -52,35 +44,10 @@ class TestB1855(unittest.TestCase):
                 #print "Diff Max is :", np.abs(diff).max()
                 msg = 'Derivative test failed at d_delay_d_%s with max relative difference %lf' % (p, np.nanmax(relative_diff).value)
                 if p in ['SINI']:
-                    tol = 7e-1
-                else:
-                    tol = 1e-3
-                assert np.nanmax(relative_diff) < tol, msg
-            else:
-                continue
-
-        for pp in self.modelB1855.params:
-            par = getattr(self.modelB1855, pp)
-            if par.frozen is True:
-                continue
-            log.debug( "Runing derivative for %s", 'd_phase_d_'+pp)
-            delay = self.modelB1855.delay(self.toasB1855.table)
-            if pp in ['FD3']:
-                h = 3e-2
-            else:
-                h = None
-            ndf = tdu.num_diff_phase(self.toasB1855.table, pp, self.modelB1855, h)
-            adf = self.modelB1855.d_phase_d_param(self.toasB1855.table, delay, pp)
-            diff = adf - ndf
-            if not np.all(diff.value) == 0.0:
-                mean_der = (adf+ndf)/2.0
-                relative_diff = np.abs(diff)/np.abs(mean_der)
-                if pp in ['SINI', 'PX']: # SINI's relative diff is kind of hight. 
                     tol = 0.7
                 else:
-                    tol = 0.001
-                #print "Diff Max is :", np.abs(diff).max()
-                msg = 'Derivative test failed at d_phase_d_%s with max relative difference %lf' % (pp, relative_diff.max().value)
+                    tol = 1e-3
+                log.debug( "derivative relative diff for %s, %lf"%('d_delay_d_'+p, np.nanmax(relative_diff).value))
                 assert np.nanmax(relative_diff) < tol, msg
             else:
                 continue
