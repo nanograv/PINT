@@ -27,19 +27,23 @@ class TestDMX(unittest.TestCase):
             "PINT and tempo Residual difference is too big."
 
     def test_derivative(self):
-        dd, pd, nd = tdu.get_derivative_funcs(self.DMXm)
         log= logging.getLogger( "DMX.derivative_test")
-        for p in dd.keys():
-            if p.startswith('DMX'):
-                log.debug( "Runing derivative for %s", 'd_delay_d_'+p)
-                ndf = tdu.num_diff_delay(self.toas.table, p, self.DMXm)
-                adf = self.DMXm.d_delay_d_param(self.toas.table, p)
-                diff = adf - ndf
-                if not np.all(diff.value) == 0.0:
-                    mean_der = (adf+ndf)/2.0
-                    relative_diff = np.abs(diff)/np.abs(mean_der)
-                    #print "Diff Max is :", np.abs(diff).max()
-                    msg = 'Derivative test failed at d_delay_d_%s with max relative difference %lf' % (p, np.nanmax(relative_diff).value)
-                    assert np.nanmax(relative_diff) < 0.001, msg
+        p = 'DMX_0002'
+        log.debug( "Runing derivative for %s", 'd_delay_d_'+p)
+        ndf = self.DMXm.d_delay_d_param_num(self.toas.table, p)
+        adf = self.DMXm.d_delay_d_param(self.toas.table, p)
+        diff = adf - ndf
+        if not np.all(diff.value) == 0.0:
+            mean_der = (adf+ndf)/2.0
+            relative_diff = np.abs(diff)/np.abs(mean_der)
+            #print "Diff Max is :", np.abs(diff).max()
+            msg = 'Derivative test failed at d_delay_d_%s with max relative difference %lf' % (p, np.nanmax(relative_diff).value)
+            if p in ['SINI']:
+                tol = 0.7
+            else:
+                tol = 1e-3
+            log.debug( "derivative relative diff for %s, %lf"%('d_delay_d_'+p, np.nanmax(relative_diff).value))
+            assert np.nanmax(relative_diff) < tol, msg
+
 if __name__ == '__main__':
     pass

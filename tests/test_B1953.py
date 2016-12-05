@@ -34,38 +34,27 @@ class TestB1953(unittest.TestCase):
         assert np.all(np.abs(pint_resids_us.value - self.ltres) < 3e-8), 'B1953 residuals test failed.'
 
     def test_derivative(self):
-        dd, pd, nd = tdu.get_derivative_funcs(self.modelB1953)
         log= logging.getLogger( "TestB1953.derivative_test")
-        for p in dd.keys():
+        testp = tdu.get_derivative_params(self.modelB1953)
+        delay = self.modelB1953.delay(self.toasB1953.table)
+        for p in testp.keys():
             log.debug( "Runing derivative for %s", 'd_delay_d_'+p)
-            ndf = tdu.num_diff_delay(self.toasB1953.table, p, self.modelB1953)
-            adf = self.modelB1953.d_delay_d_param(self.toasB1953.table, p)
+            ndf = self.modelB1953.d_phase_d_param_num(self.toasB1953.table, p, testp[p])
+            adf = self.modelB1953.d_phase_d_param(self.toasB1953.table, delay, p)
             diff = adf - ndf
             if not np.all(diff.value) == 0.0:
                 mean_der = (adf+ndf)/2.0
                 relative_diff = np.abs(diff)/np.abs(mean_der)
                 #print "Diff Max is :", np.abs(diff).max()
                 msg = 'Derivative test failed at d_delay_d_%s with max relative difference %lf' % (p, np.nanmax(relative_diff).value)
-                if p in ['EDOT', 'ECC']: # Due to the no d_delayR_d_ECC, this is not as accurate as numerical derivative
-                    tol = 20.0
+                if p in ['ECC', 'EDOT']:
+                    tol = 20
+                elif p in ['PMDEC']:
+                    tol = 5e-3
                 else:
-                    tol = 0.001
+                    tol = 1e-3
+                log.debug( "derivative relative diff for %s, %lf"%('d_delay_d_'+p, np.nanmax(relative_diff).value))
                 assert np.nanmax(relative_diff) < tol, msg
-            else:
-                continue
-
-        for p in pd.keys():
-            log.debug( "Runing derivative for %s", 'd_phase_d_'+p)
-            delay = self.modelB1953.delay(self.toasB1953.table)
-            ndf = tdu.num_diff_phase(self.toasB1953.table, p, self.modelB1953)
-            adf = pd[p](self.toasB1953.table, delay)
-            diff = adf - ndf
-            if not np.all(diff.value) == 0.0:
-                mean_der = (adf+ndf)/2.0
-                relative_diff = np.abs(diff)/np.abs(mean_der)
-                #print "Diff Max is :", np.abs(diff).max()
-                msg = 'Derivative test failed at d_phase_d_%s with max relative difference %lf' % (p, relative_diff.max().value)
-                assert np.nanmax(relative_diff) < 0.001, msg
             else:
                 continue
 
