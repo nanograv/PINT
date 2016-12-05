@@ -116,8 +116,8 @@ class FittingMethod(object):
 
 class scipy_powell_fitter(FittingMethod):
     method_name = 'Powell'
-    def __init__(self, toas, model, maxiter=20):
-        super(scipy_minimize_fitter, self).__init__(toas, model, maxiter)
+    def __init__(self, toas, model):
+        super(scipy_powell_fitter, self).__init__(toas, model)
         self.method = 'Powell'
 
     def fit_toas(self, maxiter=20):
@@ -126,7 +126,7 @@ class scipy_powell_fitter(FittingMethod):
         self.fitresult=opt.minimize(self.minimize_func, fitp.values(),
                                     args=tuple(fitp.keys()),
                                     options={'maxiter':self.method},
-                                    method=method)
+                                    method=self.method)
         # Update model and resids, as the last iteration of minimize is not
         # necessarily the one that yields the best fit
         self.minimize_func(numpy.atleast_1d(self.fitresult.x), *fitp.keys())
@@ -138,6 +138,7 @@ class wls_fitter(FittingMethod):
 
     def fit_toas(self, maxiter=1):
         """Run a linear weighted least-squared fitting method"""
+        chi2 = 0
         for i in range(maxiter):
             fitp = self.get_fitparams()
             fitpv = self.get_fitparams_num()
