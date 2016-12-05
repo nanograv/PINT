@@ -654,7 +654,7 @@ class MJDParameter(Parameter):
             return None
         else:
             return self._uncertainty.value
-            
+
     @uncertainty_value.setter
     def uncertainty_value(self, val):
         """Setter for uncertainty_value. Setting .uncertainty_value will only change
