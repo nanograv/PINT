@@ -21,7 +21,7 @@ class TestJ0613(unittest.TestCase):
         # tempo result
         self.ltres, self.ltbindelay = np.genfromtxt(self.parfileJ0613 + \
                                      '.tempo2_test',skip_header=1, unpack=True)
-        print self.ltres
+        print(self.ltres)
     def test_J0613_binary_delay(self):
         # Calculate delays with PINT
         pint_binary_delay = self.modelJ0613.binarymodel_delay(self.toasJ0613.table)

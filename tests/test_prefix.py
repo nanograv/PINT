@@ -21,10 +21,10 @@ class TestPrefix(unittest.TestCase):
         self.m = pint.models.get_model(parfile)
         self.t = pint.toa.get_TOAs(timfile,ephem="DE405")
     def test_prefix(self):
-        print "Test prefix parameter via a glitch model"
+        print("Test prefix parameter via a glitch model")
         rs = pint.residuals.resids(self.t, self.m).phase_resids
         # Now do the fit
-        print "Fitting..."
+        print("Fitting...")
         f = pint.fitter.fitter(self.t, self.m)
         f.call_minimize()
         emsg = "RMS of " + self.m.PSR.value + " is too big."

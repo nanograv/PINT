@@ -9,18 +9,18 @@ parfile = os.path.join(datadir,'J1744-1134.basic.par')
 TestModel = tm.generate_timing_model("TestModel",(tm.AstrometryEquatorial,tm.Dispersion,tm.SolarSystemShapiro,tm.Spindown))
 m = TestModel()
 
-print "model.param_help():"
+print("model.param_help():")
 m.param_help()
-print
+print()
 
-print "calling model.read_parfile():"
+print("calling model.read_parfile():")
 m.read_parfile(parfile)
-print
+print()
 
-print "print model:"
-print m
-print
+print("print model:")
+print(m)
+print()
 
-print "model.as_parfile():"
-print m.as_parfile()
-print
+print("model.as_parfile():")
+print(m.as_parfile())
+print()

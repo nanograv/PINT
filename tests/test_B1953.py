@@ -21,7 +21,7 @@ class TestB1953(unittest.TestCase):
         # tempo result
         self.ltres, self.ltbindelay = np.genfromtxt(self.parfileB1953 + \
                                      '.tempo2_test',skip_header=1, unpack=True)
-        print self.ltres
+        print(self.ltres)
     def test_B1953_binary_delay(self):
         # Calculate delays with PINT
         pint_binary_delay = self.modelB1953.binarymodel_delay(self.toasB1953.table)

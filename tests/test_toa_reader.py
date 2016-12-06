@@ -34,7 +34,7 @@ class TestTOAReader:
 if __name__ == '__main__':
     t = TestTOAReader()
     t.setUp()
-    print 'Tests are set up.'
+    print('Tests are set up.')
 
     t.test_commands()
     t.test_count()
