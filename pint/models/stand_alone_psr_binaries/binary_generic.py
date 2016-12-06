@@ -300,7 +300,7 @@ class PSR_BINARY(object):
             result = getattr(self,dername)(x)
 
         else:
-           result = np.longdouble(np.zeros(len(self.tt0)))
+            result = np.longdouble(np.zeros(len(self.tt0)))
 
         if hasattr(result,'unit'):
             return result.to(derU,equivalencies=u.dimensionless_angles())
@@ -354,7 +354,7 @@ class PSR_BINARY(object):
             tt0 = None
             return tt0
         T0 =  self.T0
-    	if not hasattr(barycentricTOA,'unit') or barycentricTOA.unit == None:
+        if not hasattr(barycentricTOA,'unit') or barycentricTOA.unit == None:
             barycentricTOA = barycentricTOA*u.day
         tt0 = (barycentricTOA - T0).to('second')
         return tt0

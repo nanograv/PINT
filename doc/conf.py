@@ -187,7 +187,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'PINT.tex', u'PINT Documentation',
+    ('index', 'PINT.tex', u'PINT Documentation',
    u'Anne Archibald, Paul Demorest, Luo Jing, Rick Jenet, Scott Ransom, Chris Sheehy, Michele Vallisneri, Rutger van Haasteren', 'manual'),
 ]
 
@@ -231,7 +231,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'PINT', u'PINT Documentation',
+    ('index', 'PINT', u'PINT Documentation',
    u'Anne Archibald, Paul Demorest, Luo Jing, Rick Jenet, Scott Ransom, Chris Sheehy, Michele Vallisneri, Rutger van Haasteren', 'PINT', 'One line description of project.',
    'Miscellaneous'),
 ]

@@ -19,7 +19,7 @@ import argparse
 
 #log.setLevel('DEBUG')
 #np.seterr(all='raise')
-        
+
 def measure_phase(profile, template, rotate_prof=True):
     """
     measure_phase(profile, template):
@@ -129,7 +129,7 @@ class emcee_fitter(fitter.fitter):
         # ensure all postive
         return np.where(phss < 0.0, phss + 1.0, phss)
 
-      
+
     def lnprior(self, theta):
         """
         The log prior evaulated at the parameter values specified
@@ -163,7 +163,7 @@ class emcee_fitter(fitter.fitter):
         if lnpost > maxpost:
             print "New max: ", lnpost
             for name, val in zip(ftr.fitkeys, theta):
-                    print "  %8s: %25.15g" % (name, val)
+                print "  %8s: %25.15g" % (name, val)
             maxpost = lnpost
             self.maxpost_fitvals = theta
         return lnpost
@@ -171,7 +171,7 @@ class emcee_fitter(fitter.fitter):
     def minimize_func(self, theta):
         """
         Returns -log(likelihood) so that we can use scipy.optimize.minimize
-        
+
         """
         # first scale the params based on the errors
         ntheta = (theta * self.fiterrs) + self.fitvals
@@ -245,7 +245,7 @@ class emcee_fitter(fitter.fitter):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="PINT tool for MCMC optimization of timing models using event data.")
-    
+
     parser.add_argument("eventfile",help="event file to use")
     parser.add_argument("parfile",help="par file to read model from")
     parser.add_argument("gaussianfile",help="gaussian file that defines template")
@@ -273,7 +273,7 @@ if __name__ == '__main__':
     parser.add_argument("--priorerrfact",help="Multiple par file errors by this factor when setting gaussian prior widths",type=float,default=10.0)
     parser.add_argument("--usepickle",help="Read events from pickle file, if available?",
         default=False,action="store_true")
-   
+
     args = parser.parse_args()
 
     eventfile = args.eventfile
@@ -300,7 +300,7 @@ if __name__ == '__main__':
     # Should probably figure a way to make these not global variables
     maxpost = -9e99
     numcalls = 0
-    
+
     # Read in initial model
     modelin = pint.models.get_model(parfile)
     # Remove the dispersion delay as it is unnecessary
@@ -495,7 +495,7 @@ if __name__ == '__main__':
     ftr.set_params(dict(zip(ftr.fitkeys, ftr.maxpost_fitvals)))
     ftr.phaseogram(file=ftr.model.PSR.value+"_post.png")
     plt.close()
-    
+
 
     # Write out the output pulse profile
     vs, xs = np.histogram(ftr.get_event_phases(), outprof_nbins, \
@@ -504,12 +504,12 @@ if __name__ == '__main__':
     for x, v in zip(xs, vs):
         f.write("%.5f  %12.5f\n" % (x, v))
     f.close()
-    
+
     # Write out the par file for the best MCMC parameter est
     f = open(ftr.model.PSR.value+"_post.par", 'w')
     f.write(ftr.model.as_parfile())
     f.close()
-    
+
     # Print the best MCMC values and ranges
     ranges = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
         zip(*np.percentile(samples, [16, 50, 84], axis=0)))
@@ -523,7 +523,7 @@ if __name__ == '__main__':
     f.write("Post-MCMC values (50th percentile +/- (16th/84th percentile):\n")
     for name, vals in zip(ftr.fitkeys, ranges):
         f.write("%8s:"%name + " %25.15g (+ %12.5g  / - %12.5g)\n"%vals)
-    
+
     f.write("\nMaximum likelihood par file:\n")
     f.write(ftr.model.as_parfile())
     f.close()

@@ -63,7 +63,7 @@ def objPosVel2SSB(objname, t, ephem):
         vel = vel_pbary_ssb + vel_p_pbary
     # Planets without barycenter computing
     else:
-         _, vel = kernel[0,jpl_obj_code[objname]].compute_and_differentiate(tjd1, tjd2)
+        _, vel = kernel[0,jpl_obj_code[objname]].compute_and_differentiate(tjd1, tjd2)
     return PosVel(pos.xyz, vel / SECS_PER_DAY * u.km/u.second, origin='ssb', obj=objname)
 
 def objPosVel(obj1, obj2, t, ephem):

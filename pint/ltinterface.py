@@ -344,7 +344,7 @@ class pintpulsar(object):
 
     def flags(self):
         """Returns the list of flags defined in this dataset (for at least some observations).""" 
-        
+
         return self.flagnames_
 
     # TO DO: setting flags
@@ -501,7 +501,7 @@ class pintpulsar(object):
         M, params, units = self.model.designmatrix(self.t.table, incfrozen=False,
                 incoffset=incoffset)
         return M
-    
+
     def telescope(self):
         """tempopulsar.telescope()
 
@@ -560,7 +560,7 @@ class pintpulsar(object):
     @property
     def pulse_number(self):
         """Return the pulse number relative to PEPOCH, as detected by tempo2
-        
+
         WARNING: Will be deprecated in the future. Use `pulsenumbers`.
         """
         return self.model.phase(self.t.table).int.quantity.value
@@ -584,7 +584,7 @@ class pintpulsar(object):
 
         for ii in range(iters+1):
             f.call_minimize()
-        
+
         fitp = f.get_fitparams()
         # TODO: handle these units correctly
         for p, val in zip(fitp.keys(), fitp.values()):

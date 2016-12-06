@@ -14,7 +14,7 @@ class TestClockcorrection(unittest.TestCase):
                 obscode=obs.tempo_code)
         mjd = cf.time.mjd
         corr = cf.clock.to(u.us).value
-        
+
         assert numpy.isclose(mjd.min(), 44000.0)
 
         idx = numpy.where(numpy.isclose(mjd,49990.0))[0][0]

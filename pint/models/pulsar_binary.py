@@ -81,7 +81,7 @@ class PulsarBinary(TimingModel):
              units="",
              description="Sine of inclination angle"),
              binary_param = True)
-             
+
         # Set up delay function
         self.binary_delay_funcs += [self.binarymodel_delay,]
         self.delay_funcs['L2'] += [self.binarymodel_delay,]

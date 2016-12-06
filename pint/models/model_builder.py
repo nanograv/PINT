@@ -152,7 +152,7 @@ class model_builder(object):
                             continue
 
                 if cclass.is_in_parfile(params_inpar):
-                        selected_c = c
+                    selected_c = c
             # One module will have one selected component
             if selected_c is not None and selected_c not in self.select_comp:
                 self.select_comp.append(selected_c)
@@ -170,10 +170,10 @@ class model_builder(object):
         """ Add new components to constructing model.
         """
         if not isinstance(components,list):
-    	   components = [components,]
+            components = [components,]
         for c in components:
-    	    if c not in self.select_comp:
-    	       self.select_comp.append(c)
+            if c not in self.select_comp:
+                self.select_comp.append(c)
 
     def search_prefix_param(self, paramList, prefix_inModel):
         """ Check if the Unrecognized parameter has prefix parameter
@@ -232,7 +232,7 @@ class model_builder(object):
                     for parname in prefix_param[key]:
                         pre,idstr,idx = split_prefixed_name(parname)
                         if idx == exm_par.index:
-                             continue
+                            continue
                         if hasattr(exm_par, 'new_param'):
                             new_par = exm_par.new_param(idx)
                             self.model_instance.add_param(new_par)

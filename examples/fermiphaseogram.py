@@ -46,7 +46,7 @@ if __name__ == '__main__':
                 tlnew.append(tt)
         tl=tlnew
         print("post len : ",len(tlnew))
-        
+
     # Now convert to TOAs object and compute TDBs and posvels
     ts = toa.TOAs(toalist=tl)
     ts.filename = args.eventfile

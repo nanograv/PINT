@@ -87,7 +87,7 @@ def _check_pickle(toafilename, picklefilename=None):
 
     # All checks passed, return name of pickle.
     return picklefilename
-        
+
 def get_TOAs_list(toa_list,ephem="DE421", planets=False):
     """Load TOAs from a list of TOA objects.
 
@@ -224,7 +224,7 @@ def format_toa_line(toatime, toaerr, freq, dm=0.0, obs='@', name='unk', flags={}
             log.error('Unknown TOA format ({0})'.format(format))
         if dm!=0.0:
             out = obs+" %13s %8.3f %s %8.2f              %9.4f\n" % \
-              (name, freq, toa, toaerr, dm)
+                (name, freq, toa, toaerr, dm)
         else:
             out = obs+" %13s %8.3f %s %8.2f\n" % (name, freq, toa, toaerr)
 
@@ -338,7 +338,7 @@ class TOAs(object):
             log.error('Can not initialize TOAs from both file and list')
 
         if toafile is not None:
-            
+
             # FIXME: work with file-like objects as well
 
             # Check for a pickle-like filename.  Alternative approach would

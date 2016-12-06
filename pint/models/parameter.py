@@ -631,7 +631,7 @@ class MJDParameter(Parameter):
             result = time_from_longdouble(val, self.time_scale)
         elif isinstance(val, str):
             try:
-                 result = time_from_mjd_string(val, self.time_scale)
+                result = time_from_mjd_string(val, self.time_scale)
             except:
                 raise ValueError('String ' + val + 'can not be converted to'
                                  'a time object.' )

@@ -209,7 +209,7 @@ def tempo_polyco_table_reader(filename):
                         rphase, refF0, nCoeff, coeffs))
     entry_list  = []
     for ii in range(len(entries[0])):
-         entry_list.append([t[ii] for t in entries])
+        entry_list.append([t[ii] for t in entries])
 
     #Construct the polyco data table
     pTable = table.Table(entry_list,
@@ -341,8 +341,8 @@ class Polycos(object):
         for fmt in self.polycoFormat:
             if fmt['format'] not in registry.get_formats()['Format']:
                 if fmt['read_method'] != None:
-                   registry.register_reader(fmt['format'], table.Table,
-                                            fmt['read_method'])
+                    registry.register_reader(fmt['format'], table.Table,
+                                             fmt['read_method'])
 
                 if fmt['write_method'] != None:
                     registry.register_writer(fmt['format'], table.Table,
@@ -470,9 +470,9 @@ class Polycos(object):
         # Make sure the number of nodes is bigger then number of coeffs.
         if numNodes < ncoeff:
             numNodes = ncoeff+1
-    	# generate the ploynomial coefficents
-    	if method == "TEMPO":
-    	    # Using tempo1 method to create polycos
+        # generate the ploynomial coefficents
+        if method == "TEMPO":
+            # Using tempo1 method to create polycos
             for i in range(len(entryIntvl)-1):
                 tStart = entryIntvl[i]
                 tStop = entryIntvl[i+1]
@@ -516,9 +516,9 @@ class Polycos(object):
                                    meta={'name': 'Ployco Data Table'})
             self.polycoTable = pTable
 
-    	else:
-    		#  Reading from an old polycofile
-    		pass
+        else:
+                #  Reading from an old polycofile
+            pass
 
 
     def read_polyco_file(self,filename,format):
@@ -552,9 +552,9 @@ class Polycos(object):
         """
 
         if format not in [f['format'] for f in self.polycoFormat]:
-             raise Exception('Unknown polyco file format \''+ format +'\'\n'
-                            'Plese use function \'self.add_polyco_file_format()\''
-                            ' to register the format\n')
+            raise Exception('Unknown polyco file format \''+ format +'\'\n'
+                           'Plese use function \'self.add_polyco_file_format()\''
+                           ' to register the format\n')
         if filename is not None:
             self.polycoTable.write(filename,format = format)
         else:
