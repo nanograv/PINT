@@ -26,7 +26,7 @@ if [[ ! -f "$NOSETESTS" ]] ; then
 else
    echo "Using $NOSETESTS"
    $NOSETESTS \
-              --with-doctest --with-coverage \
+              --with-coverage \
               --cover-package="$MODULE" \
               --cover-tests \
               --cover-html \
