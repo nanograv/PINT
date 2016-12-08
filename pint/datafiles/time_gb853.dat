@@ -1,0 +1,8 @@
+   MJD       EECO-REF    NIST-REF NS      DATE    COMMENTS
+=========    ========    ======== ==    ========  ========
+ 00000.0        0.0         0.0   b                 85ft: mostly no correction
+ 50633.99       0.0         0.0   b
+ 50634.00       0.0     -1000.0   b                 85ft: Jul/Aug'98: 1ms error
+ 50688.40       0.0     -1000.0   b                    start/stop times may be
+ 50688.41       0.0         0.0   b                    off by up to +-1 day
+ 99999.0        0.0         0.0   b                 85ft: mostly no correction

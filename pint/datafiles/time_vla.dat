@@ -1,0 +1,23 @@
+   MJD       EECO-REF    NIST-REF NS      DATE    COMMENTS
+=========    ========    ======== ==    ========  ========
+ 48191.17       0.000       9.1   6 f  27-OCT-90     *VLA (maser-Loran)
+ 48226.00       0.000      14.55  6 f   1-DEC-90     *VLA (maser-gps)
+ 48269.0        0.000   50803.7   6 f  13-JAN-91     *VLA (maser-gps)
+ 48326.0        0.000       1.0   6 f  10-MAR-91     *VLA (maser-loran)
+ 48368.         0.000       3.55  6 f  22-APR-91     *VLA (maser-loran)
+ 48369.         0.000       3.55  6 f  23-APR-91                "
+ 48370.         0.000       3.55  6 f  24-APR-91                "
+ 48453.         0.000       4.0   6 f  16-JUL-91     *VLA (maser-gps)
+ 48502.         0.0        -1.1   6 f   3-SEP-91          *VLA (maser-gps)
+ 48568.8        0.0        16.8   6 f  08-NOV-91       *VLA (maser-gps)
+ 48626.8        0.0        14.8   6 f  05-JAN-92       *VLA (maser-loran) (bad)
+ 48698.6        0.0        -3.0   6 f  17-MAR-92          *VLA (maser-loran)
+ 48766.5        0.0        18.4   6 f  24-MAY-92     *VLA (maser-gps)
+ 48818.5        0.0         0.0   6 f  15-Jul-92
+ 48878.5        0.0        -0.8   6 f  13-Sep-92          *VLA (maser-gps)
+ 48946.5        0.0         0.2   6 f  20-Nov-92          *VLA (maser-gps?)
+ 49002.5        0.0         4.2   6 f  15-JAN-93          *VLA (maser-gps)
+ 49061.5        0.0        10.7   6 f  15-MAR-93          *VLA (maser-gps)
+ 49188.5        0.0         1.5   6 f  20-JUL-93          *VLA (maser-gps)
+ 49237.5        0.0         3.7   6 f  07-SEP-93          *VLA (maser-gps)
+ 49304.0        0.0         2.2   6 f  12-NOV-93          *VLA (maser-gps)
