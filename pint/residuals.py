@@ -18,16 +18,18 @@ class resids(object):
             self.phase_resids = None
             self.time_resids = None
 
-    def calc_phase_resids(self):
+    def calc_phase_resids(self, weighted_mean=True):
         """Return timing model residuals in pulse phase."""
         rs = self.model.phase(self.toas.table)
         rs -= Phase(rs.int[0],rs.frac[0])
-        rs -= Phase(0.0,rs.frac.mean())
+        if not weighted_mean:
+            rs -= Phase(0.0,rs.frac.mean())
+        else:
         # Errs for weighted sum.  Units don't matter since they will
         # cancel out in the weighted sum.
-        # w = 1.0/(np.array(self.toas.get_errors())**2)
-        # wm = (rs.frac*w).sum() / w.sum()
-        # rs -= Phase(0.0,wm)
+            w = 1.0/(np.array(self.toas.get_errors())**2)
+            wm = (rs.frac*w).sum() / w.sum()
+            rs -= Phase(0.0,wm)
         return rs.frac
 
     def calc_time_resids(self):
