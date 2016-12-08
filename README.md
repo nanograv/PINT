@@ -17,3 +17,5 @@ For detailed information on installing and developing PINT, see the
 [Wiki](https://github.com/nanograv/PINT/wiki) and the documentation in the
 doc subdirectory in the distribution.  Also, follow along with the examples
 in the examples subdirectory.
+
+[![Build Status](https://travis-ci.org/nanograv/PINT.svg?branch=master)](https://travis-ci.org/nanograv/PINT)
