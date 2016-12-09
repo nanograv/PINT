@@ -1,9 +1,10 @@
-import re, sys, os, cPickle, numpy, gzip
+import re, sys, os, numpy, gzip
 from . import utils
 from .observatory import Observatory
 from . import erfautils
 import astropy.time as time
 from . import pulsar_mjd
+from astropy.extern.six.moves import cPickle as pickle
 import astropy.table as table
 import astropy.units as u
 from astropy.coordinates import EarthLocation
@@ -446,9 +447,9 @@ class TOAs(object):
     def pickle(self, filename=None):
         """Write the TOAs to a .pickle file with optional filename."""
         if filename is not None:
-            cPickle.dump(self, open(filename, "wb"))
+            pickle.dump(self, open(filename, "wb"))
         elif self.filename is not None:
-            cPickle.dump(self, gzip.open(self.filename+".pickle.gz", "wb"))
+            pickle.dump(self, gzip.open(self.filename+".pickle.gz", "wb"))
         else:
             log.warn("TOA pickle method needs a filename.")
 
@@ -672,7 +673,7 @@ class TOAs(object):
             infile = gzip.open(filename,'rb')
         else:
             infile = open(filename,'rb')
-        tmp = cPickle.load(infile)
+        tmp = pickle.load(infile)
         self.filename = tmp.filename
         if hasattr(tmp, 'toas'):
             self.toas = tmp.toas

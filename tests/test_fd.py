@@ -18,7 +18,7 @@ class TestFD(unittest.TestCase):
         # libstempo result
         self.ltres, self.ltbindelay = np.genfromtxt(self.parf + '.tempo_test', unpack=True)
     def test_FD(self):
-        print "Testing FD module."
+        print("Testing FD module.")
         rs = pint.residuals.resids(self.toas, self.FDm).time_resids.to(u.s).value
         resDiff = rs - self.ltres
         #NOTE : This prescision is a lower then 1e-7 seconds level, due to some
