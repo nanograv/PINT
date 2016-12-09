@@ -41,7 +41,6 @@ install:
   - conda install pip nose pytest coverage numpy scipy astropy sphinx cython matplotlib
   - pip install astropy-helpers
   - pip install jplephem
-  - pip install coverage
 
   # Do an in-place build (needed?)
   - pip install -e .
