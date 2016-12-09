@@ -25,7 +25,7 @@ class TestDD(unittest.TestCase):
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-11), 'DD B1855 TEST FAILED'
     # TODO: PINT can still incresase the precision by adding more components
     def test_B1855(self):
-        pint_resids_us = resids(self.toasB1855, self.modelB1855).time_resids.to(u.s)
+        pint_resids_us = resids(self.toasB1855, self.modelB1855, False).time_resids.to(u.s)
         assert np.all(np.abs(pint_resids_us.value - self.ltres) < 1e-7), 'DD B1855 TEST FAILED'
 
 

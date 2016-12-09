@@ -22,7 +22,7 @@ class TestJUMP(unittest.TestCase):
         # libstempo calculation
         self.ltres = np.genfromtxt(self.parf + '.tempo_test', unpack=True, names=True, dtype='float128')
     def test_jump(self):
-        presids_s = resids(self.toas, self.JUMPm).time_resids.to(u.s)
+        presids_s = resids(self.toas, self.JUMPm, False).time_resids.to(u.s)
         assert np.all(np.abs(presids_s.value - self.ltres['residuals']) < 1e-7), "JUMP test failed."
 
     def test_derivative(self):
