@@ -21,7 +21,7 @@ class TopoObs(Observatory):
 
     def __init__(self, name, tempo_code=None, itoa_code=None, aliases=None, 
             itrf_xyz=None, 
-            clock_file='time.dat', clock_dir='TEMPO', clock_fmt='tempo',
+            clock_file='time.dat', clock_dir='PINT', clock_fmt='tempo',
             include_gps=True):
         """ 
         Required arguments:
