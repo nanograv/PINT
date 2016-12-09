@@ -21,7 +21,7 @@ class TestB1855(unittest.TestCase):
         # tempo result
         self.ltres= np.genfromtxt(self.parfileB1855 + \
                                   '.tempo2_test',skip_header=1, unpack=True)
-        print self.ltres
+        print(self.ltres)
     # def test_B1855_binary_delay(self):
     #     # Calculate delays with PINT
     #     pint_binary_delay = self.modelB1855.binarymodel_delay(self.toasB1855.table)

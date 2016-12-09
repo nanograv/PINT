@@ -17,7 +17,7 @@ class TestDMX(unittest.TestCase):
         self.toas = toa.get_TOAs(self.timf, ephem='DE405')
 
     def test_DMX(self):
-        print "Testing DMX module."
+        print("Testing DMX module.")
         rs = residuals.resids(self.toas, self.DMXm).time_resids.to(u.s).value
         ltres, _ = np.genfromtxt(self.parf+ '.tempo_test', unpack=True)
         resDiff = rs-ltres
