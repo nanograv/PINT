@@ -101,46 +101,46 @@ class Cache(object):
 class TimingModel(object):
     """
     Base-level object provides an interface for implementing pulsar timing
-    models. It contains several over all wrapper methods. 
+    models. It contains several over all wrapper methods.
 
     Notes
     -----
-    PINT models pulsar pulse time of arrival at observer from its emission process and 
+    PINT models pulsar pulse time of arrival at observer from its emission process and
     propagation to observer. Emission generally modeled as pulse 'Phase' and propagation.
-    'time delay'. In pulsar timing different astrophysics phenomenons are separated to 
-    time model components for handling a specific emission or propagation effect. 
+    'time delay'. In pulsar timing different astrophysics phenomenons are separated to
+    time model components for handling a specific emission or propagation effect.
 
-    All timing model component classes should subclass this timing model base class. 
+    All timing model component classes should subclass this timing model base class.
     Each timing model component generally requires the following parts:
-        Timing Parameters 
-        Delay/Phase functions which implements the time delay and phase. 
-        Derivatives of delay and phase respect to parameter for fitting toas. 
+        Timing Parameters
+        Delay/Phase functions which implements the time delay and phase.
+        Derivatives of delay and phase respect to parameter for fitting toas.
     Each timing parameters are stored as TimingModel attribute in the type of `pint.model.parameter`
-    delay or phase and its derivatives are implemented as TimingModel Methods. 
-    
+    delay or phase and its derivatives are implemented as TimingModel Methods.
+
     Attributes
     ----------
     params : list
-        A list of all the parameter names. 
+        A list of all the parameter names.
     prefix_params : list
-        A list of prefixed parameter names. 
+        A list of prefixed parameter names.
     delay_funcs : dict
-        All the delay functions implemented in timing model. The delays do not 
-        need barycentric toas are placed under the 'L1' keys as a list of methods, 
-        the ones needs barycentric toas are under the 'L2' delay. This will be improved 
-        in the future. One a delay method is defined in model component, it should 
+        All the delay functions implemented in timing model. The delays do not
+        need barycentric toas are placed under the 'L1' keys as a list of methods,
+        the ones needs barycentric toas are under the 'L2' delay. This will be improved
+        in the future. One a delay method is defined in model component, it should
         get registered in this dictionary.
     phase_funcs : list
-        All the phase functions implemented in timing model. Once a phase method is defined 
+        All the phase functions implemented in timing model. Once a phase method is defined
         in model component, it should get registered in this list.
     delay_derivs : list
-        All the delay derivatives respect to timing parameters. 
-        Once a delay derivative method is defined in model component, it should get registered in this list. 
+        All the delay derivatives respect to timing parameters.
+        Once a delay derivative method is defined in model component, it should get registered in this list.
     phase_derivs : list
-        All the phase derivatives respect to timing parameters. 
+        All the phase derivatives respect to timing parameters.
         Once a phase derivative method is defined in model component, it should get registered in this list.
     phase_derivs_wrt_delay : list
-        All the phase derivatives respect to delay. 
+        All the phase derivatives respect to delay.
     """
     def __init__(self):
         self.params = []  # List of model parameter names
@@ -161,8 +161,8 @@ class TimingModel(object):
         self.phase_derivs_wrt_delay = []
 
     def setup(self):
-        """This is a abstract class for setting up timing model class. It is designed for 
-        reading .par file and check parameters. 
+        """This is a abstract class for setting up timing model class. It is designed for
+        reading .par file and check parameters.
         """
         pass
 
@@ -468,7 +468,7 @@ class TimingModel(object):
         Return the derivative of delay with respect to the parameter.
         """
         par = getattr(self, param)
-        result = np.zeros(len(toas)) * u.s/par.units
+        result = np.longdouble(np.zeros(len(toas)) * u.s/par.units)
         param_delay_derivs = []
         for f in self.delay_derivs:
             if f.__name__.endswith('_'+param):
@@ -510,8 +510,9 @@ class TimingModel(object):
                 # the residuals are calculated as (Phase - int(Phase)), which is different
                 # from the conventional defination of least square definetion (Data - model)
                 # We decide to add minus sign here in the design matrix, so the fitter
-                # keeps the conventional way. 
+                # keeps the conventional way.
                 q = - self.d_phase_d_param(toas, delay,param)
+                print q.dtype
                 M[:,ii] = q
                 units.append(u.Unit("")/ getattr(self, param).units)
 
