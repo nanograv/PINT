@@ -390,7 +390,7 @@ class TimingModel(object):
         # TODO need to do correct chain rule stuff wrt delay derivs, etc
         # Is it safe to assume that any param affecting delay only affects
         # phase indirectly (and vice-versa)??
-        result = np.zeros(len(toas)) * u.Unit('')/par.units
+        result = np.longdouble(np.zeros(len(toas))) * u.Unit('')/par.units
         param_phase_derivs = []
         for f in self.phase_derivs:
             if f.__name__.endswith('_'+param):
