@@ -45,6 +45,8 @@ class Dispersion(TimingModel):
         frequency is much larger than plasma frequency.
         """
         # dm delay
+        if (freq==0.0).any():
+            freq[freq==0.0] = float("inf")
         dmdelay = DM * DMconst / freq**2.0
         return dmdelay
 
