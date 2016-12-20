@@ -223,17 +223,18 @@ def format_toa_line(toatime, toaerr, freq, dm=0.0, obs='@', name='unk', flags={}
             flagstring += "-dm %.5f" % (dm,)
         # Here I need to append any actual flags
         out = "%s %f %s %.2f %s %s\n" % (name,freq,toa,toaerr,obs,flagstring)
-    else: # TEMPO format
+    elif fomat.upper() in  ('PRINCETON','TEMPO'): # TEMPO/Princeton format
         # In TEMPO/Princeton format, freq=0.0 means infinite frequency
         if freq == numpy.inf:
             freq = 0.0
-        if not format.upper() in ('PRINCETON','TEMPO'):
-            log.error('Unknown TOA format ({0})'.format(format))
         if dm!=0.0:
             out = obs+" %13s %8.3f %s %8.2f              %9.4f\n" % \
                 (name, freq, toa, toaerr, dm)
         else:
             out = obs+" %13s %8.3f %s %8.2f\n" % (name, freq, toa, toaerr)
+    else:
+        log.error('Unknown TOA format ({0})'.format(format))
+        # Should this raise an exception here? -- paulr
 
     return out
 
