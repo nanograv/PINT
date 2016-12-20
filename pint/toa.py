@@ -215,19 +215,26 @@ def format_toa_line(toatime, toaerr, freq, dm=0.0, obs='@', name='unk', flags={}
     """
     toa = "{0:19.13f}".format(toatime.mjd)
     if format.upper() in ('TEMPO2','1'):
+        # In Tempo2 format, freq=0.0 means infinite frequency
+        if freq == numpy.inf:
+            freq = 0.0
         flagstring = ''
         if dm != 0.0:
             flagstring += "-dm %.5f" % (dm,)
         # Here I need to append any actual flags
         out = "%s %f %s %.2f %s %s\n" % (name,freq,toa,toaerr,obs,flagstring)
-    else: # TEMPO format
-        if not format.upper in ('PRINCETON','TEMPO'):
-            log.error('Unknown TOA format ({0})'.format(format))
+    elif fomat.upper() in  ('PRINCETON','TEMPO'): # TEMPO/Princeton format
+        # In TEMPO/Princeton format, freq=0.0 means infinite frequency
+        if freq == numpy.inf:
+            freq = 0.0
         if dm!=0.0:
             out = obs+" %13s %8.3f %s %8.2f              %9.4f\n" % \
                 (name, freq, toa, toaerr, dm)
         else:
             out = obs+" %13s %8.3f %s %8.2f\n" % (name, freq, toa, toaerr)
+    else:
+        log.error('Unknown TOA format ({0})'.format(format))
+        # Should this raise an exception here? -- paulr
 
     return out
 
@@ -309,9 +316,15 @@ class TOA(object):
             self.error = error * u.microsecond
         self.obs = site.name
         if hasattr(freq,'unit'):
+            try:
+                junk = freq.to(u.MHz)
+            except UnitConversionError:
+                log.error("Frequency for TOA with incompatible unit {0}".format(freq))
             self.freq = freq
         else:
             self.freq = freq * u.MHz
+        if self.freq == 0.0*u.MHz:
+            self.freq = numpy.inf*u.MHz
         self.flags = kwargs
 
 
@@ -594,7 +607,7 @@ class TOAs(object):
 
         # Now add the new columns to the table
         col_tdb = table.Column(name='tdb', data=tdbs)
-        col_tdbld = table.Column(name='tdbld', 
+        col_tdbld = table.Column(name='tdbld',
                 data=[utils.time_to_longdouble(t) for t in tdbs])
         self.table.add_columns([col_tdb, col_tdbld])
 
@@ -665,7 +678,7 @@ class TOAs(object):
 
     def read_pickle_file(self, filename):
         """Read the TOAs from the pickle file specified in filename.  Note
-        the filename should include any pickle-specific extensions (ie 
+        the filename should include any pickle-specific extensions (ie
         ".pickle.gz" or similar), these will not be added automatically."""
 
         log.info("Reading pickled TOAs from '%s'..." % filename)
@@ -696,8 +709,8 @@ class TOAs(object):
             self.toas = []
             self.commands = []
             self.cdict = {"EFAC": 1.0, "EQUAD": 0.0*u.us,
-                          "EMIN": 0.0*u.us, "EMAX": 1e100*u.us,
-                          "FMIN": 0.0*u.MHz, "FMAX": 1e100*u.MHz,
+                          "EMIN": 0.0*u.us, "EMAX": numpy.inf*u.us,
+                          "FMIN": 0.0*u.MHz, "FMAX": numpy.inf*u.MHz,
                           "INFO": None, "SKIP": False,
                           "TIME": 0.0, "PHASE": 0,
                           "PHA1": None, "PHA2": None,
