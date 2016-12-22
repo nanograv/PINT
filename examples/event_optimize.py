@@ -47,9 +47,12 @@ def profile_likelihood(phs, *otherargs):
     phss[phss < 0.0] += 1.0
     probs = np.interp(phss, xvals, template, right=template[0])
     if weights is None:
-        return -np.log(probs).sum()
+        return np.log(probs).sum()
     else:
-        return -np.log(weights*probs + 1.0-weights).sum()
+        return np.log(weights*probs + 1.0-weights).sum()
+
+def neg_prof_like(phs, *otherargs):
+    return -profile_likelihood(phs, *otherargs)
 
 def marginalize_over_phase(phases, template, weights=None, resolution=1.0/1024,
     minimize=True, fftfit=False, showplot=False, lophs=0.0, hiphs=1.0):
@@ -69,7 +72,7 @@ def marginalize_over_phase(phases, template, weights=None, resolution=1.0/1024,
         phs = 1.0 - phs / ltemp
         hwidth = 0.03
         lophs, hiphs = phs - hwidth, phs + hwidth
-        result = op.minimize(profile_likelihood, [phs],
+        result = op.minimize(neg_prof_like, [phs],
             args=(xtemp, phases, template, weights), bounds=[[lophs, hiphs]])
         return ltemp - result['x'] * ltemp, -result['fun']
     if fftfit:
@@ -98,7 +101,7 @@ def marginalize_over_phase(phases, template, weights=None, resolution=1.0/1024,
         plt.show()
     return ltemp - dphss[lnlikes.argmax()]*ltemp, lnlikes.max()
 
-def get_fit_keyvals(model):
+def get_fit_keyvals(model, phs=0.0, phserr=0.1):
     """Read the model to determine fitted keys and their values and errors from the par file
     """
     fitkeys = [p for p in model.params if not
@@ -108,17 +111,25 @@ def get_fit_keyvals(model):
     for p in fitkeys:
         fitvals.append(getattr(model, p).value)
         fiterrs.append(getattr(model, p).uncertainty_value)
+    # The last entry in each of the fit lists is our absolute PHASE term
+    # Hopefully this will become a full PINT model param soon.
+    fitkeys.append("PHASE")
+    fitvals.append(phs)
+    fiterrs.append(phserr)
     return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
 class emcee_fitter(fitter.fitter):
 
-    def __init__(self, toas=None, model=None, template=None, weights=None):
+    def __init__(self, toas=None, model=None, template=None, 
+                 weights=None, phs=0.5, phserr=0.03):
         self.toas = toas
         self.model_init = model
         self.reset_model()
         self.template = template
+        self.ltemp = len(template)
+        self.xtemp = np.arange(self.ltemp) * 1.0/self.ltemp
         self.weights = weights
-        self.fitkeys, self.fitvals, self.fiterrs = get_fit_keyvals(self.model)
+        self.fitkeys, self.fitvals, self.fiterrs = get_fit_keyvals(self.model, phs, phserr)
         self.n_fit_params = len(self.fitvals)
 
     def get_event_phases(self):
@@ -129,14 +140,16 @@ class emcee_fitter(fitter.fitter):
         # ensure all postive
         return np.where(phss < 0.0, phss + 1.0, phss)
 
-
     def lnprior(self, theta):
         """
         The log prior evaulated at the parameter values specified
         """
         lnsum = 0.0
-        for val, key in zip(theta, self.fitkeys):
+        for val, key in zip(theta[:-1], self.fitkeys[:-1]):
             lnsum += getattr(self.model,key).prior_pdf(val,logpdf=True)
+        # Add the phase term
+        if theta[-1] > 1.0 or theta[-1] < 0.0:
+            return -np.inf
         return lnsum
 
     def lnposterior(self, theta):
@@ -144,7 +157,7 @@ class emcee_fitter(fitter.fitter):
         The log posterior (priors * likelihood)
         """
         global maxpost, numcalls
-        self.set_params(dict(zip(self.fitkeys, theta)))
+        self.set_params(dict(zip(self.fitkeys[:-1], theta[:-1])))
 
         numcalls += 1
         if numcalls % (nwalkers * nsteps / 100) == 0:
@@ -156,9 +169,10 @@ class emcee_fitter(fitter.fitter):
         if not np.isfinite(lnprior):
             return -np.inf
 
+        # Call PINT to compute the phases
         phases = self.get_event_phases()
-        lnlikelihood = marginalize_over_phase(phases, self.template,
-            weights=self.weights)[1]
+        lnlikelihood = profile_likelihood(theta[-1], self.xtemp, 
+                                          phases, self.template, self.weights)
         lnpost = lnprior + lnlikelihood
         if lnpost > maxpost:
             print "New max: ", lnpost
@@ -171,17 +185,15 @@ class emcee_fitter(fitter.fitter):
     def minimize_func(self, theta):
         """
         Returns -log(likelihood) so that we can use scipy.optimize.minimize
-
         """
         # first scale the params based on the errors
-        ntheta = (theta * self.fiterrs) + self.fitvals
-        self.set_params(dict(zip(self.fitkeys, ntheta)))
+        ntheta = (theta[:-1] * self.fiterrs[:-1]) + self.fitvals[:-1]
+        self.set_params(dict(zip(self.fitkeys[:-1], ntheta)))
         if not np.isfinite(self.lnprior(ntheta)):
             return np.inf
         phases = self.get_event_phases()
-        lnlikelihood = marginalize_over_phase(phases, self.template,
-            weights=self.weights)[1]
-        print lnlikelihood, ntheta
+        lnlikelihood = profile_likelihood(theta[-1], self.xtemp, 
+                                          phases, self.template, self.weights)
         return -lnlikelihood
 
     def phaseogram(self, weights=None, bins=100, rotate=0.0, size=5,
@@ -260,6 +272,9 @@ if __name__ == '__main__':
         default=54680.0)
     parser.add_argument("--maxMJD",help="Latest MJD to use (def 57250)",type=float,
         default=57250.0)
+    parser.add_argument("--phs",help="Starting phase offset [0-1] (def is to measure)",type=float)
+    parser.add_argument("--phserr",help="Error on starting phase",type=float,
+        default=0.03)
     parser.add_argument("--minWeight",help="Minimum weight to include (def 0.05)",
         type=float,default=0.05)
     parser.add_argument("--wgtexp", 
@@ -355,7 +370,6 @@ if __name__ == '__main__':
     gtemplate = pu.read_gaussfitfile(gaussianfile, nbins)
     gtemplate /= gtemplate.sum()
 
-
     # Set the priors on the parameters in the model, before
     # instantiating the emcee_fitter
     # Currently, this adds a gaussian prior on each parameter
@@ -363,9 +377,10 @@ if __name__ == '__main__':
     # and then puts in some special cases.
     # *** This should be replaced/supplemented with a way to specify
     # more general priors on parameters that need certain bounds
-    fitkeys, fitvals, fiterrs = get_fit_keyvals(modelin)
+    phs = 0.0 if args.phs is None else args.phs
+    fitkeys, fitvals, fiterrs = get_fit_keyvals(modelin, phs=phs, phserr=args.phserr)
 
-    for key, v, e in zip(fitkeys,fitvals,fiterrs):
+    for key, v, e in zip(fitkeys[:-1],fitvals[:-1],fiterrs[:-1]):
         if key == 'SINI' or key == 'E' or key == 'ECC':
             getattr(modelin,key).prior = Prior(UniformBoundedRV(0.0,1.0))
         elif key == 'PX':
@@ -376,7 +391,7 @@ if __name__ == '__main__':
             getattr(modelin,key).prior = Prior(norm(loc=float(v),scale=float(e*args.priorerrfact)))
 
     # Now define the requirements for emcee
-    ftr = emcee_fitter(ts, modelin, gtemplate, weights)
+    ftr = emcee_fitter(ts, modelin, gtemplate, weights, phs, args.phserr)
 
     # Use this if you want to see the effect of setting minWeight
     if args.testWeights:
@@ -390,6 +405,16 @@ if __name__ == '__main__':
     maxbin, like_start = marginalize_over_phase(phss, gtemplate,
         weights=ftr.weights, minimize=True, showplot=False)
     print "Starting pulse likelihood:", like_start
+    if args.phs is None:
+        fitvals[-1] = 1.0 - maxbin[0] / float(len(gtemplate))
+        if fitvals[-1] > 1.0: fitvals[-1] -= 1.0
+        if fitvals[-1] < 0.0: fitvals[-1] += 1.0
+        print "Starting pulse phase:", fitvals[-1]
+    else:
+        print "Measured starting pulse phase is %f, but using %f" % \
+            (1.0 - maxbin / float(len(gtemplate)), args.phs)
+        fitvals[-1] = args.phs
+    ftr.fitvals[-1] = fitvals[-1]
     ftr.phaseogram(file=ftr.model.PSR.value+"_pre.png")
     plt.close()
     #ftr.phaseogram()
@@ -418,7 +443,7 @@ if __name__ == '__main__':
     ndim = ftr.n_fit_params
     if like_start > like_optmin:
         # Keep the starting deviations small...
-        pos = [ftr.fitvals + ftr.fiterrs/args.initerrfact * np.random.randn(ndim)
+        pos = [ftr.fitvals + ftr.fiterrs * args.initerrfact * np.random.randn(ndim)
             for ii in range(nwalkers)]
         # Set starting params
         for param in ["GLPH_1", "GLEP_1", "SINI", "M2", "E", "ECC", "PX", "A1"]:
@@ -442,14 +467,20 @@ if __name__ == '__main__':
                 for ii in range(nwalkers):
                     pos[ii][idx] = svals[ii]
     else:
-        pos = [newfitvals + ftr.fiterrs/args.initerrfact*np.random.randn(ndim)
+        pos = [newfitvals + ftr.fiterrs*args.initerrfact*np.random.randn(ndim)
             for i in range(nwalkers)]
     # Set the 0th walker to have the initial pre-fit solution
     # This way, one walker should always be in a good position
     pos[0] = ftr.fitvals
 
     import emcee
-    #sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior, threads=10)
+    # Following are for parallel processing tests...
+    #def unwrapped_lnpost(theta, ftr):
+    #    return ftr.lnposterior(theta)
+
+    #import pathos.multiprocessing as mp
+    #pool = mp.ProcessPool(nodes=8)
+    #sampler = emcee.EnsembleSampler(nwalkers, ndim, unwrapped_lnpost, pool=pool, args=[ftr])
     sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
     # The number is the number of points in the chain
     sampler.run_mcmc(pos, nsteps)
@@ -482,8 +513,8 @@ if __name__ == '__main__':
         import corner
         # Note, I had to turn off plot_contours because I kept getting
         # errors about how contour levels must be increasing.
-        fig = corner.corner(samples, labels=ftr.fitkeys, bins=20,
-            truths=ftr.maxpost_fitvals, plot_contours=False)
+        fig = corner.corner(samples, labels=ftr.fitkeys, bins=50,
+            truths=ftr.maxpost_fitvals, plot_contours=True)
         fig.savefig(ftr.model.PSR.value+"_triangle.png")
         plt.close()
     except:
@@ -492,10 +523,9 @@ if __name__ == '__main__':
     # Make a phaseogram with the 50th percentile values
     #ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
     # Make a phaseogram with the best MCMC result
-    ftr.set_params(dict(zip(ftr.fitkeys, ftr.maxpost_fitvals)))
+    ftr.set_params(dict(zip(ftr.fitkeys[:-1], ftr.maxpost_fitvals[:-1])))
     ftr.phaseogram(file=ftr.model.PSR.value+"_post.png")
     plt.close()
-
 
     # Write out the output pulse profile
     vs, xs = np.histogram(ftr.get_event_phases(), outprof_nbins, \
