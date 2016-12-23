@@ -2,11 +2,11 @@
 import numpy as np
 import pint.toa as toa
 import pint.models
-import pint.fitter as fitter
+import pint.fitter
 import pint.fermi_toas as fermi
 from pint.eventstats import hmw, hm
 from pint.models.priors import Prior, UniformRV, UniformBoundedRV, GaussianBoundedRV
-from scipy.stats import norm
+from scipy.stats import norm, uniform
 import matplotlib.pyplot as plt
 import astropy.table
 import astropy.units as u
@@ -19,6 +19,12 @@ import argparse
 
 #log.setLevel('DEBUG')
 #np.seterr(all='raise')
+
+class custom_timing(pint.models.spindown.Spindown,
+                    pint.models.astrometry.AstrometryEcliptic):
+    def __init__(self, parfile):
+        super(custom_timing, self).__init__()
+        self.read_parfile(parfile)
 
 def measure_phase(profile, template, rotate_prof=True):
     """
@@ -118,18 +124,20 @@ def get_fit_keyvals(model, phs=0.0, phserr=0.1):
     fiterrs.append(phserr)
     return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
-class emcee_fitter(fitter.fitter):
+class emcee_fitter(pint.fitter.fitter):
 
     def __init__(self, toas=None, model=None, template=None, 
                  weights=None, phs=0.5, phserr=0.03):
+        #super(emcee_fitter, self).__init__(model=model, toas=toas)
         self.toas = toas
-        self.model_init = model
-        self.reset_model()
+        self.model = model
         self.template = template
-        self.ltemp = len(template)
-        self.xtemp = np.arange(self.ltemp) * 1.0/self.ltemp
+        if template is not None:
+            self.ltemp = len(template)
+            self.xtemp = np.arange(self.ltemp) * 1.0/self.ltemp
         self.weights = weights
-        self.fitkeys, self.fitvals, self.fiterrs = get_fit_keyvals(self.model, phs, phserr)
+        self.fitkeys, self.fitvals, self.fiterrs = \
+            get_fit_keyvals(self.model, phs, phserr)
         self.n_fit_params = len(self.fitvals)
 
     def get_event_phases(self):
@@ -317,9 +325,11 @@ if __name__ == '__main__':
     numcalls = 0
 
     # Read in initial model
-    modelin = pint.models.get_model(parfile)
+    #modelin = pint.models.get_model(parfile)
+    modelin = custom_timing(parfile)
+
     # Remove the dispersion delay as it is unnecessary
-    modelin.delay_funcs['L1'].remove(modelin.dispersion_delay)
+    #modelin.delay_funcs['L1'].remove(modelin.dispersion_delay)
     # Set the target coords for automatic weighting if necessary
     target = SkyCoord(modelin.RAJ.value, modelin.DECJ.value, \
         frame='icrs') if weightcol=='CALC' else None
@@ -382,13 +392,14 @@ if __name__ == '__main__':
 
     for key, v, e in zip(fitkeys[:-1],fitvals[:-1],fiterrs[:-1]):
         if key == 'SINI' or key == 'E' or key == 'ECC':
-            getattr(modelin,key).prior = Prior(UniformBoundedRV(0.0,1.0))
+            getattr(modelin,key).prior = Prior(uniform(0.0, 1.0))
         elif key == 'PX':
-            getattr(modelin,key).prior = Prior(UniformBoundedRV(0.0,10.0))
+            getattr(modelin,key).prior = Prior(uniform(0.0, 10.0))
         elif key.startswith('GLPH'):
-            getattr(modelin,key).prior = Prior(UniformBoundedRV(-0.5,0.5))
+            getattr(modelin,key).prior = Prior(uniform(-0.5, 1.0))
         else:
-            getattr(modelin,key).prior = Prior(norm(loc=float(v),scale=float(e*args.priorerrfact)))
+            getattr(modelin,key).prior = Prior(norm(loc=float(v),
+                                                    scale=float(e*args.priorerrfact)))
 
     # Now define the requirements for emcee
     ftr = emcee_fitter(ts, modelin, gtemplate, weights, phs, args.phserr)
@@ -475,13 +486,16 @@ if __name__ == '__main__':
 
     import emcee
     # Following are for parallel processing tests...
-    #def unwrapped_lnpost(theta, ftr):
-    #    return ftr.lnposterior(theta)
+    if 0:
+        def unwrapped_lnpost(theta, ftr=ftr):
+            return ftr.lnposterior(theta)
 
-    #import pathos.multiprocessing as mp
-    #pool = mp.ProcessPool(nodes=8)
-    #sampler = emcee.EnsembleSampler(nwalkers, ndim, unwrapped_lnpost, pool=pool, args=[ftr])
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
+        import pathos.multiprocessing as mp
+        pool = mp.ProcessPool(nodes=8)
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, unwrapped_lnpost,
+                                        pool=pool, args=[ftr])
+    else:
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
     # The number is the number of points in the chain
     sampler.run_mcmc(pos, nsteps)
 
