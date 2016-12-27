@@ -5,7 +5,7 @@ import pint.models
 import pint.fitter
 import pint.fermi_toas as fermi
 from pint.eventstats import hmw, hm
-from pint.models.priors import Prior, UniformRV, UniformBoundedRV, GaussianBoundedRV
+from pint.models.priors import Prior, UniformUnboundedRV, UniformBoundedRV, GaussianBoundedRV
 from scipy.stats import norm, uniform
 import matplotlib.pyplot as plt
 import astropy.table

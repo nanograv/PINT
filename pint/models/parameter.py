@@ -77,7 +77,7 @@ class Parameter(object):
                  uncertainty=None, frozen=True, aliases=None, continuous=True,
                  print_quantity=str, set_quantity=lambda x: x,
                  get_value=lambda x: x,
-                 prior=priors.Prior(priors.UniformRV()),
+                 prior=priors.Prior(priors.UniformUnboundedRV()),
                  set_uncertainty=fortran_float):
 
         self.name = name  # name of the parameter
