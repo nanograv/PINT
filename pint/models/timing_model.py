@@ -397,7 +397,6 @@ class TimingModel(object):
                 param_phase_derivs.append(f)
         if param_phase_derivs != []:
             for df in param_phase_derivs:
-                print df.__name__
                 result += df(toas, delay).to(u.Unit('')/par.units,
                                          equivalencies=u.dimensionless_angles())
         else: # Apply chain rule for the parameters in the delay.
@@ -475,7 +474,6 @@ class TimingModel(object):
                 param_delay_derivs.append(f)
 
         for df in param_delay_derivs:
-            print(df.__name__)
             result += df(toas).to(u.s/par.units, equivalencies=u.dimensionless_angles())
         return result
 
@@ -512,7 +510,6 @@ class TimingModel(object):
                 # We decide to add minus sign here in the design matrix, so the fitter
                 # keeps the conventional way.
                 q = - self.d_phase_d_param(toas, delay,param)
-                print q.dtype
                 M[:,ii] = q
                 units.append(u.Unit("")/ getattr(self, param).units)
 
