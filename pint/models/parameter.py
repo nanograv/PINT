@@ -1216,6 +1216,9 @@ class maskParameter(floatParameter):
 
             if len(k) >= 5 + len_key_v:
                 ucty = k[4 + len_key_v]
+            else:
+                ucty = '0.0'
+            # TODO: to have the reading more clean. 
             self.uncertainty = self.set_uncertainty(ucty)
         return True
 
