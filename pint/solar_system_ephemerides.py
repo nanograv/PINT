@@ -54,26 +54,11 @@ def objPosVel_wrt_SSB(objname, t, ephem):
     objname = objname.lower()
     # Use astropy to compute postion.
     try:
-        pos = coor.get_body_barycentric(objname, t, ephemeris=ephem)
+        pos, vel = coor.get_body_barycentric_posvel(objname, t, ephemeris=ephem)
     except ValueError:
-        pos = coor.get_body_barycentric(objname, t, ephemeris= kernel_link_base + "%s.bsp" % ephem)
-    # Use jplephem to compute velocity.
-    # TODO: Astropy 1.3 will have velocity calculation availble.
-    kernel = SPK.open(datapath("%s.bsp" % ephem))
-    # Compute vel from planet barycenter to solar system barycenter
-    lcod = len(str(jpl_obj_code[objname]))
-    tjd1 = t.tdb.jd1
-    tjd2 = t.tdb.jd2
-    # Planets with barycenter computing
-    if lcod == 3:
-        _, vel_pbary_ssb = kernel[0,jpl_obj_code[objname]/100].compute_and_differentiate(tjd1, tjd2)
-        _, vel_p_pbary = kernel[jpl_obj_code[objname]/100,
-                        jpl_obj_code[objname]].compute_and_differentiate(tjd1, tjd2)
-        vel = vel_pbary_ssb + vel_p_pbary
-    # Planets without barycenter computing
-    else:
-        _, vel = kernel[0,jpl_obj_code[objname]].compute_and_differentiate(tjd1, tjd2)
-    return PosVel(pos.xyz, vel / SECS_PER_DAY * u.km/u.second, origin='ssb', obj=objname)
+        pos, vel = coor.get_body_barycentric_posvel(objname, t, ephemeris= \
+                            kernel_link_base + "%s.bsp" % ephem)
+    return PosVel(pos.xyz, vel.xyz.to(u.km/u.second), origin='ssb', obj=objname)
 
 def objPosVel(obj1, obj2, t, ephem):
     """Compute the position and velocity for solar system obj2 referenced at obj1.
