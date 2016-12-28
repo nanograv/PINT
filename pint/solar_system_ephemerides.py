@@ -4,6 +4,7 @@ import astropy.coordinates as coor
 from astropy.time import Time
 from .utils import PosVel
 from astropy import log
+import astropy.utils as aut
 from jplephem.spk import SPK
 from .config import datapath
 try:
@@ -11,8 +12,9 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 
-kernel_link_base = 'http://naif.jpl.nasa.gov/pub/naif/' + \
-                   'generic_kernels/spk/planets/a_old_versions/'
+kerner_link_base_http = 'http://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/'
+kernel_link_base_ftp = 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/'
+
 jpl_obj_code = {'ssb': 0,
                 'sun': 10,
                 'mercury': 199,
@@ -56,8 +58,18 @@ def objPosVel_wrt_SSB(objname, t, ephem):
     try:
         pos, vel = coor.get_body_barycentric_posvel(objname, t, ephemeris=ephem)
     except ValueError:
-        pos, vel = coor.get_body_barycentric_posvel(objname, t, ephemeris= \
-                            kernel_link_base + "%s.bsp" % ephem)
+        # Try use http link first.
+        try:
+            pos, vel = coor.get_body_barycentric_posvel(objname, t, ephemeris= \
+                           kernel_link_base_http + "%s.bsp" % ephem)
+        except:
+            # try ftp link, This link is slow but gives the newest ephemeris.
+            # NOTE I am not suer 50 second for timeout is enough here.
+            aut.data.download_file(kernel_link_base_ftp + "%s.bsp" % ephem, \
+                                   timeout=50, cache=True)
+            pos, vel = coor.get_body_barycentric_posvel(objname, t, ephemeris= \
+                           kernel_link_base_ftp + "%s.bsp" % ephem)
+
     return PosVel(pos.xyz, vel.xyz.to(u.km/u.second), origin='ssb', obj=objname)
 
 def objPosVel(obj1, obj2, t, ephem):
