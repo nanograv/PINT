@@ -39,6 +39,7 @@ nosetests.xml
 coverage
 doc/_build
 doc/api
+tests/datafile/test_fitter_plot.pdf
 
 # Translations
 *.mo
