@@ -4,6 +4,9 @@
 
 *.py[cod]
 
+# Dynamically generated git commit information
+pint/_commit.py
+
 # C extensions
 *.so
 #pickle

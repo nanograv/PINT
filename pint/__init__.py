@@ -4,6 +4,9 @@ PINT Is Not TEMPO3!
 """
 import os
 
+from ._version import __version__
+from ._commit import __commit__
+
 # Define a few important constants
 import astropy.units as u
 from astropy.units import si
