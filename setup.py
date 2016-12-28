@@ -92,7 +92,7 @@ import subprocess
 # Write git hash to __commit__
 commit = subprocess.check_output(["git", "describe", "--always"])
 with open('pint/_commit.py','w') as commitfile:
-    commitfile.write("__commit__ = {0}\n".format(commit))
+    commitfile.write("__commit__ = '{0}'\n".format(commit.strip()))
 
 setup(
     name="pint",
