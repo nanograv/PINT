@@ -43,9 +43,6 @@ if use_cython:
 
 # Download data files
 data_urls = [
-        "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de405.bsp",
-        "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de421.bsp",
-        "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de430t.bsp",
         "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/earth_latest_high_prec.bpc",
         "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00010.tpc",
         "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls",
@@ -121,7 +118,7 @@ setup(
         'pint.orbital'],
 
     package_data={'pint': [
-        'datafiles/ecliptic.dat', 
+        'datafiles/ecliptic.dat',
         'datafiles/gps2utc.clk'
         ] + data_files},
 
