@@ -104,6 +104,11 @@ setup(
     url = 'https://github.com/nanograv/PINT',
     license = 'TBD',
 
+    install_requires = ['astropy>=1.2'],
+
+    # These scripts will be installed in your PATH
+    scripts = ['bin/pintempo.py'],
+
     packages=['pint',
         'pint.extern',
         'pint.models',
