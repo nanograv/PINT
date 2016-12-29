@@ -9,9 +9,11 @@ pint/_commit.py
 
 # C extensions
 *.so
-#pickle
+# Try letting str2lc_py.c be in repo to remove dependency on Cython for users to install PINT
+# pint/cutils/str2ld_py.c
+
+# pickle files
 *.pickle.gz
-pint/cutils/str2ld_py.c
 
 # Packages
 *.egg
