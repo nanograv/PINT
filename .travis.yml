@@ -41,8 +41,9 @@ install:
   - pip install astropy-helpers
   - pip install jplephem
 
-  # Do an in-place build (needed?)
-  - pip install -e .
+  # Build the package
+  - pip install  .
 
 script:
+  - cd tests
   - ./run-tests.sh
