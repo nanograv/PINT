@@ -1,6 +1,7 @@
 #!/bin/bash
 
-MODULE=pint
+# This script runs the PINT test suite on the local version of the code. Since this is assumed to mostly
+# be used by developers, it includes coverage analysis, which the user version of the tests do not (to minimize required packages)
 
 # Before running this, make sure the module has been build in place with this command:
 # python setup.py build_ext --inplace
@@ -8,6 +9,8 @@ MODULE=pint
 # This ensures that the local directory is in PYTHONPATH so that the module being tested is the local one, not the installed version
 # This is useful for testing before installing, or for testing code changes without needing to install after each edit.
 PYTHONPATH="`pwd`:$PYTHONPATH"
+
+MODULE=pint
 
 NOSETESTS=`which nosetests 2> /dev/null`
 

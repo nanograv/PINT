@@ -23,14 +23,7 @@ if [[ ! -f "$NOSETESTS" ]] ; then
 else
    echo "Using $NOSETESTS"
 
-   $NOSETESTS \
-              --with-coverage \
-              --cover-package="$MODULE" \
-              --cover-tests \
-              --cover-html \
-              --cover-html-dir=coverage \
-              --cover-erase 
-
+   $NOSETESTS 
 # Eventually, we should re-enable --with-doctest, once the doctests have been written correctly (issue #198)
 
 fi
