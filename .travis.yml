@@ -34,9 +34,10 @@ install:
 
 
   # Install dependencies
+  # Note that I (paulray) removed sphinx, pytest, and cython since they should not be needed to build PINT and run the tests
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION
   - source activate test-environment
-  - conda install pip nose pytest coverage numpy scipy astropy sphinx cython matplotlib
+  - conda install pip nose coverage numpy scipy astropy matplotlib
   - pip install astropy-helpers
   - pip install jplephem
 
