@@ -1,17 +1,15 @@
 #!/bin/bash
 
-# First, build the documentation
 MODULE=pint
-# The make latexpdf is not working at the moment...
-#(cd doc && make html && make latexpdf)
-#(cd doc && make html)
 
+# Before running this, make sure the module has been build in place with this command:
+# python setup.py build_ext --inplace
+
+# This ensures that the local directory is in PYTHONPATH so that the module being tested is the local one, not the installed version
+# This is useful for testing before installing, or for testing code changes without needing to install after each edit.
 PYTHONPATH="`pwd`:$PYTHONPATH"
+
 NOSETESTS=`which nosetests 2> /dev/null`
-PYLINT=`which pylint 2> /dev/null`
-if [[ ! -f "$PYLINT" ]] ; then
-    PYLINT=`which pylint2`
-fi
 
 if [[ ! -f "$NOSETESTS" ]] ; then
     NOSETESTS=`which nosetests2`
@@ -25,6 +23,7 @@ if [[ ! -f "$NOSETESTS" ]] ; then
     echo 'Cannot find nosetests or nosetests2';
 else
    echo "Using $NOSETESTS"
+
    $NOSETESTS \
               --with-coverage \
               --cover-package="$MODULE" \
@@ -32,21 +31,9 @@ else
               --cover-html \
               --cover-html-dir=coverage \
               --cover-erase 
-fi
 
-# Disable pylint for now, since it is failing
-exit
+# Eventually, we should re-enable --with-doctest, once the doctests have been written correctly (issue #198)
 
-echo ''
-echo '  *** Pylint output ***'
-echo ''
-
-if [[ ! -f "$PYLINT" ]] ; then
-    echo 'Cannot find pylint';
-else
-    $PYLINT --output-format=colorized \
-	           --rcfile=pylint.rc \
-                   --reports=n $MODULE;
 fi
 
 echo ''
