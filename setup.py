@@ -107,7 +107,7 @@ setup(
     install_requires = ['astropy>=1.2'],
 
     # These scripts will be installed in your PATH
-    scripts = ['bin/pintempo.py'],
+    scripts = ['scripts/pintempo.py'],
 
     packages=['pint',
         'pint.extern',
