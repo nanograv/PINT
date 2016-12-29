@@ -102,6 +102,7 @@ setup(
     author = 'Luo Jing, Scott Ransom, Paul Demorest, Paul Ray, et al.',
     author_email = 'sransom@nrao.edu',
     url = 'https://github.com/nanograv/PINT',
+    license = 'TBD',
 
     packages=['pint',
         'pint.extern',
