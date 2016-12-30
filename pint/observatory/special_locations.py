@@ -37,7 +37,7 @@ class GeocenterObs(SpecialLocation):
         return 'tt'
     @property
     def earth_location(self):
-        return EarthLocation(0.0,0.0,0.0)
+        return EarthLocation.from_geocentric(0.0,0.0,0.0,unit=u.m)
     def posvel(self, t, ephem):
         return objPosVel2SSB('earth', t, ephem)
 
