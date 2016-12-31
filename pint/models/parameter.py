@@ -308,6 +308,12 @@ class Parameter(object):
         """
         Parse a parfile line into the current state of the parameter.
         Returns True if line was successfully parsed, False otherwise.
+        Notes
+        -----
+        The accepted format:
+            NAME value
+            NAME value fit_flag
+            NAME value fit_flag uncertainty
         """
         try:
             k = line.split()
@@ -325,15 +331,12 @@ class Parameter(object):
             try:
                 if int(k[2]) > 0:
                     self.frozen = False
-                    ucty = '0.0'
+                ucty = '0.0'
             except:
-                if is_number(k[2]):
-                    ucty = k[2]
-                else:
-                    errmsg = 'The third column of parfile can only be fitting '
-                    errmsg += 'flag (1/0) or uncertainty.'
-                    raise ValueError(errmsg)
-            if len(k) == 4:
+                errmsg = 'The third column of parfile can only be fitting '
+                errmsg += 'flag (1/0)'
+                raise ValueError(errmsg)
+            if len(k) >= 4:
                 ucty = k[3]
             self.uncertainty = self.set_uncertainty(ucty)
         return True
@@ -1054,6 +1057,18 @@ class maskParameter(floatParameter):
         self.as_parfile_line = self.as_parfile_line_mask
 
     def from_parfile_line_mask(self, line):
+        """
+        This is a method to read mask parameter line (e.g. JUMP)
+        Notes
+        -----
+        The accepted format:
+            NAME key key_value parameter_value
+            NAME key key_value parameter_value fit_flag
+            NAME key key_value parameter_value fit_flag uncertainty
+            NAME key key_value1 key_value2 parameter_value
+            NAME key key_value1 key_value2 parameter_value fit_flag
+            NAME key key_value1 key_value2 parameter_value fit_flag uncertainty
+        """
         try:
             k = line.split()
             name = k[0].upper()
@@ -1092,14 +1107,11 @@ class maskParameter(floatParameter):
             try:
                 if int(k[3 + len_key_v]) > 0:
                     self.frozen = False
-                    ucty = '0.0'
+                ucty = '0.0'
             except:
-                if is_number(k[4 + len_key_v]):
-                    ucty = k[3 + len_key_v]
-                else:
-                    errmsg = 'Unidentified string ' + k[3 + len_key_v] + ' in'
-                    errmsg += ' parfile line ' + k
-                    raise ValueError(errmsg)
+                errmsg = 'Unidentified string ' + k[3 + len_key_v] + ' in'
+                errmsg += ' parfile line ' + k
+                raise ValueError(errmsg)
             if len(k) >= 5 + len_key_v:
                 ucty = k[4 + len_key_v]
             self.uncertainty = self.set_uncertainty(ucty)
