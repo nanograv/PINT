@@ -42,6 +42,69 @@ class TestParameters(unittest.TestCase):
     def setUpClass(self):
         self.m = mb.get_model('B1855+09_NANOGrav_dfg+12_modified.par')
         self.mp = mb.get_model('prefixtest.par')
+    def test_read_par_line(self):
+        test_m = mb.get_model('test_par_read.par')
+        self.assertEqual(test_m.F2.frozen, True)
+        self.assertEqual(test_m.F3.frozen, True)
+        self.assertTrue(
+                numpy.isclose(test_m.F3.value, 0.0))
+        self.assertTrue(
+                numpy.isclose(test_m.F3.uncertainty_value, 0.0))
+        self.assertEqual(test_m.F4.frozen, True)
+        self.assertTrue(
+                numpy.isclose(test_m.F4.value, 0.0))
+        self.assertTrue(
+                numpy.isclose(test_m.F4.uncertainty_value, 0.001))
+        self.assertEqual(test_m.F5.frozen, True)
+        self.assertTrue(
+                numpy.isclose(test_m.F5.value, 0.0))
+        self.assertTrue(
+                numpy.isclose(test_m.F5.uncertainty_value, 0.001))
+        self.assertEqual(test_m.F6.frozen, False)
+        self.assertTrue(
+                numpy.isclose(test_m.F6.value, 0.0))
+        self.assertTrue(
+                numpy.isclose(test_m.F6.uncertainty_value, 0.001))
+        self.assertEqual(test_m.F7.frozen, True)
+        self.assertTrue(
+                numpy.isclose(test_m.F7.value, 0.0))
+        self.assertTrue(
+                numpy.isclose(test_m.F7.uncertainty_value, 3.0))
+        self.assertEqual(test_m.F8.frozen, True)
+        self.assertTrue(
+                numpy.isclose(test_m.F8.value, 0.0))
+        self.assertTrue(
+                numpy.isclose(test_m.F8.uncertainty_value, 10))
+        self.assertEqual(test_m.JUMP1.frozen, True)
+        self.assertEqual(test_m.JUMP1.key, 'MJD')
+        self.assertTrue(
+                numpy.isclose(test_m.JUMP1.key_value[0].value, 52742.0, atol=1e-10))
+        self.assertTrue(
+                numpy.isclose(test_m.JUMP1.key_value[1].value, 52745.0, atol=1e-10))
+        self.assertTrue(
+                numpy.isclose(test_m.JUMP1.value, 0.2))
+
+        self.assertEqual(test_m.JUMP2.frozen, True)
+        self.assertTrue(
+                numpy.isclose(test_m.JUMP2.value, 0.1))
+        self.assertTrue(
+                numpy.isclose(test_m.JUMP2.uncertainty_value, 0.0))
+        self.assertTrue(
+                numpy.isclose(test_m.JUMP7.value, 0.1))
+        self.assertTrue(
+                numpy.isclose(test_m.JUMP7.uncertainty_value, 10.5))
+        self.assertTrue(
+                numpy.isclose(test_m.JUMP6.value, 0.1))
+        self.assertTrue(
+                numpy.isclose(test_m.JUMP6.uncertainty_value, 10.0))
+        self.assertEqual(test_m.JUMP12.key, '-testflag')
+        self.assertEqual(test_m.JUMP12.frozen, False)
+        self.assertEqual(test_m.JUMP12.key_value[0], 'flagvalue')
+        self.assertTrue(
+                numpy.isclose(test_m.JUMP12.value, 0.1))
+        self.assertTrue(
+                numpy.isclose(test_m.JUMP12.uncertainty_value, 2.0))
+
     def test_RAJ(self):
         """Check whether the value and units of RAJ parameter are ok"""
         units = u.hourangle
