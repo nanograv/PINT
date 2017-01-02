@@ -274,7 +274,7 @@ class TOA(object):
     """
     def __init__(self, MJD, # required
                  error=0.0, obs='Barycenter', freq=float("inf"),
-                 scale='utc', # with defaults
+                 scale=None, 
                  **kwargs):  # keyword args that are completely optional
         r"""
         Construct a TOA object
@@ -292,7 +292,8 @@ class TOA(object):
             Frequency corresponding to the TOA.  Either a Quantity with frequency
             units, or a number for which MHz is assumed.
         scale : string
-            Time scale for the TOA time.  Usually 'utc'
+            Time scale for the TOA time.  Defaults to the timescale appropriate
+            to the site, but can be overridden
 
         Notes
         -----
@@ -306,7 +307,9 @@ class TOA(object):
             arg1, arg2 = MJD, None
         else:
             arg1, arg2 = MJD[0], MJD[1]
-        self.mjd = time.Time(arg1, arg2, scale=site.timescale,
+        if scale is None:
+            scale = site.timescale
+        self.mjd = time.Time(arg1, arg2, scale=scale,
                 location=site.earth_location,
                 format='pulsar_mjd', precision=9)
 

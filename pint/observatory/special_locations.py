@@ -34,7 +34,7 @@ class GeocenterObs(SpecialLocation):
     """Observatory-derived class for the Earth geocenter."""
     @property
     def timescale(self): 
-        return 'tt'
+        return 'utc'
     @property
     def earth_location(self):
         return EarthLocation.from_geocentric(0.0,0.0,0.0,unit=u.m)
