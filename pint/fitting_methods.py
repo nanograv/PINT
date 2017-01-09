@@ -176,7 +176,10 @@ class wls_fitter(FittingMethod):
             # Note, here we could do various checks like report
             # matrix condition number or zero out low singular values.
             #print 'log_10 cond=', numpy.log10(s.max()/s.min())
-
+            # Note, Check the threshold from data precision level.Borrowed from
+            # Numpy Curve fit.
+            threshold = numpy.finfo(numpy.longdouble).eps * max(M.shape) * s[0]
+            s[s<threshold] = 0.0
             # Sigma = numpy.dot(Vt.T / s, U.T)
             # The post-fit parameter covariance matrix
             #   Sigma = V s^-2 V^T
