@@ -85,18 +85,12 @@ clock_files = ['gps2utc.clk', 'time.dat',
 for fname in clock_files:
     data_files.append(os.path.join(data_dir, fname))
 
-# Get version string
-exec(open('pint/_version.py').read())
-import subprocess
-
-# Write git hash to __commit__
-commit = subprocess.check_output(["git", "describe", "--always"])
-with open('pint/_commit.py','w') as commitfile:
-    commitfile.write("__commit__ = '{0}'\n".format(commit.strip()))
+import versioneer
+cmdclass.update(versioneer.get_cmdclass())
 
 setup(
     name="pint",
-    version = __version__,
+    version = versioneer.get_version(),
     description = 'A Pulsar Timing Package, written in Python from scratch',
 
     author = 'Luo Jing, Scott Ransom, Paul Demorest, Paul Ray, et al.',
