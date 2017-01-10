@@ -1,2 +1,2 @@
 include versioneer.py
-include pint/_version.py
+include pint/extern/_version.py

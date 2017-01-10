@@ -1,1 +1,1 @@
-pint/_version.py export-subst
+pint/extern/_version.py export-subst

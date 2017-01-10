@@ -43,7 +43,7 @@ def get_config():
     cfg.style = "pep440"
     cfg.tag_prefix = ""
     cfg.parentdir_prefix = "'pint-'"
-    cfg.versionfile_source = "pint/_version.py"
+    cfg.versionfile_source = "pint/extern/_version.py"
     cfg.verbose = False
     return cfg
 
