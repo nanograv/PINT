@@ -242,6 +242,10 @@ class Parameter(object):
                 return
         self._uncertainty = self.set_uncertainty(val)
 
+        # This is avoiding negtive unvertainty input.
+        if self._uncertainty is not None and self.uncertainty_value < 0:
+            self.uncertainty_value = numpy.abs(self.uncertainty_value)
+
     @property
     def uncertainty_value(self):
         """Return a pure value from .uncertainty. The unit will associate
@@ -270,8 +274,12 @@ class Parameter(object):
         out = self.name
         if self.units is not None:
             out += " (" + str(self.units) + ")"
-        out += " " + self.print_quantity(self.quantity)
-        if self.uncertainty is not None:
+        if self.quantity is not None:
+            out += " " + self.print_quantity(self.quantity)
+        else:
+            out += " " + "UNSET"
+            return out
+        if self.uncertainty is not None and isinstance(self.value, numbers.Number):
             out += " +/- " + str(self.uncertainty.to(self.units))
         return out
 
@@ -308,6 +316,13 @@ class Parameter(object):
         """
         Parse a parfile line into the current state of the parameter.
         Returns True if line was successfully parsed, False otherwise.
+        Notes
+        -----
+        The accepted format:
+            NAME value
+            NAME value fit_flag
+            NAME value fit_flag uncertainty
+            NAME value uncertainty
         """
         try:
             k = line.split()
@@ -323,17 +338,24 @@ class Parameter(object):
             self.set(k[1])
         if len(k) >= 3:
             try:
-                if int(k[2]) > 0:
+                fit_flag = int(k[2])
+                if fit_flag == 0:
+                    self.frozen = True
+                    ucty = 0.0
+                elif fit_flag == 1:
                     self.frozen = False
-                    ucty = '0.0'
+                    ucty = 0.0
+                else:
+                    ucty = fit_flag
             except:
                 if is_number(k[2]):
                     ucty = k[2]
                 else:
-                    errmsg = 'The third column of parfile can only be fitting '
-                    errmsg += 'flag (1/0) or uncertainty.'
+                    errmsg = 'Unidentified string ' + k[2] + ' in'
+                    errmsg += ' parfile line ' + k
                     raise ValueError(errmsg)
-            if len(k) == 4:
+
+            if len(k) >= 4:
                 ucty = k[3]
             self.uncertainty = self.set_uncertainty(ucty)
         return True
@@ -925,6 +947,9 @@ class prefixParameter(object):
         return self.param_comp.special_arg
 
     # Define the function to call functions inside of parameter composition.
+    def __str__(self):
+        return self.param_comp.__str__()
+
     def from_parfile_line(self, line):
         return self.param_comp.from_parfile_line(line)
 
@@ -1053,7 +1078,38 @@ class maskParameter(floatParameter):
         self.from_parfile_line = self.from_parfile_line_mask
         self.as_parfile_line = self.as_parfile_line_mask
 
+    def __str__(self):
+        out = self.name
+        if self.units is not None:
+            out += " (" + str(self.units) + ")"
+
+        out += " " + self.key
+        for kv in self.key_value:
+            out += " " + str(kv)
+        if self.quantity is not None:
+            out += " " + self.print_quantity(self.quantity)
+        else:
+            out += " " + "UNSET"
+            return out
+        if self.uncertainty is not None and isinstance(self.value, numbers.Number):
+            out += " +/- " + str(self.uncertainty.to(self.units))
+        return out
+
     def from_parfile_line_mask(self, line):
+        """
+        This is a method to read mask parameter line (e.g. JUMP)
+        Notes
+        -----
+        The accepted format:
+            NAME key key_value parameter_value
+            NAME key key_value parameter_value fit_flag
+            NAME key key_value parameter_value fit_flag uncertainty
+            NAME key key_value parameter_value uncertainty
+            NAME key key_value1 key_value2 parameter_value
+            NAME key key_value1 key_value2 parameter_value fit_flag
+            NAME key key_value1 key_value2 parameter_value fit_flag uncertainty
+            NAME key key_value1 key_value2 parameter_value uncertainty
+        """
         try:
             k = line.split()
             name = k[0].upper()
@@ -1090,16 +1146,23 @@ class maskParameter(floatParameter):
             self.set(k[2 + len_key_v])
         if len(k) >= 4 + len_key_v:
             try:
-                if int(k[3 + len_key_v]) > 0:
+                fit_flag =  int(k[3 + len_key_v])
+                if fit_flag == 0:
+                    self.frozen = True
+                    ucty = 0.0
+                elif fit_flag == 1:
                     self.frozen = False
-                    ucty = '0.0'
+                    ucty = 0.0
+                else:
+                    ucty = fit_flag
             except:
-                if is_number(k[4 + len_key_v]):
+                if is_number(k[3 + len_key_v]):
                     ucty = k[3 + len_key_v]
                 else:
                     errmsg = 'Unidentified string ' + k[3 + len_key_v] + ' in'
                     errmsg += ' parfile line ' + k
                     raise ValueError(errmsg)
+
             if len(k) >= 5 + len_key_v:
                 ucty = k[4 + len_key_v]
             self.uncertainty = self.set_uncertainty(ucty)

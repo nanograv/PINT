@@ -1,0 +1,30 @@
+PSRJ                J0007+7303
+RAJ     00:07:01.56
+DECJ     +73:03:08.1
+# epoch of CXO obs (2003 Apr 13)
+POSEPOCH     52742
+PEPOCH              55555
+PLANET_SHAPIRO N 0
+F0           3.1656417173390769548
+F1           -3.5765444266796247216e-12
+F2           1.2083172450962419925e-23
+F3           0   0
+F4           0   0.001
+F5           0   0 0.001
+F6           0   1 -0.001
+F7           0   -3
+F8           0   10
+JUMP  MJD  52742  52745 0.2
+JUMP  FREQ  1400.0 2000.0 0.1 0
+JUMP  FREQ  2001.0 2025.0 0.1 0 10
+JUMP  FREQ  2001.0 2025.0 0.1 1 -10
+JUMP  FREQ  2001.0 2025.0 0.1 10
+JUMP  FREQ  2001.0 2025.0 0.1 -10
+JUMP  FREQ  2001.0 2025.0 0.1 10.5
+JUMP  -testflag flagvalue 0.1
+JUMP  -testflag flagvalue 0.1 1
+JUMP  -testflag flagvalue 0.1 0
+JUMP  -testflag flagvalue 0.1 1 10
+JUMP  -testflag flagvalue 0.1 1 -2
+JUMP  -testflag flagvalue 0.1 10
+JUMP  -testflag flagvalue 0.1 10.5
