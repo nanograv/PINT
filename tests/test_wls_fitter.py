@@ -3,7 +3,7 @@ import time, sys, os, unittest
 import pint.models.model_builder as mb
 from pint.phase import Phase
 from pint import toa
-from pint import fitter
+from pint.fitter import WlsFitter
 import matplotlib.pyplot as plt
 import numpy
 
@@ -18,7 +18,7 @@ class Testwls(unittest.TestCase):
         self.tim = 'B1855+09_NANOGrav_dfg+12.tim'
         self.m = mb.get_model(self.par)
         self.t = toa.get_TOAs(self.tim, ephem='DE405')
-        self.f = fitter.fitter(self.t, self.m)
+        self.f = WlsFitter(self.t, self.m)
         # set perturb parameter step
         self.per_param = {'A1': 1e-05, 'DECJ': 1e-06, 'DMX_0003': 120, 'ECC': 0.2,
                           'F0': 1e-12, 'F1': 0.001, 'JUMP3': 10.0, 'M2': 10.0,

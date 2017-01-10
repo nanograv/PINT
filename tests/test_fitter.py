@@ -23,7 +23,7 @@ except AttributeError:
     planet_ephems = False
 t.compute_posvels(planets=planet_ephems)
 
-f=fitter.fitter(toas=t,model=m)
+f=fitter.WlsFitter(toas=t,model=m)
 
 # Print initial chi2
 print('chi^2 is initially %0.2f' % f.resids.chi2)
@@ -53,7 +53,7 @@ print('chi^2 is %0.2f after fitting just F1 with default method="Powell"' % f.re
 p4=plt.errorbar(xt,f.resids.time_resids.value,yerr,fmt='k^');
 
 # Try a different method. This works, apparently.
-# NOTE: Disable this part since the interface has changed. 
+# NOTE: Disable this part since the interface has changed.
 # f.fit_toas(method='Nelder-Mead')
 # print('chi^2 is %0.2f after fitting just F1 with method="Nelder-Mead"' % f.resids.chi2)
 # p5=plt.errorbar(xt,f.resids.time_resids.value,yerr,fmt='rs');

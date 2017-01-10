@@ -24,7 +24,7 @@ class TestPrefix(unittest.TestCase):
         rs = pint.residuals.resids(self.t, self.m).phase_resids
         # Now do the fit
         print "Fitting..."
-        f = pint.fitter.fitter(self.t, self.m, method='Powell')
+        f = pint.fitter.PowellFitter(self.t, self.m)
         f.fit_toas()
         emsg = "RMS of " + self.m.PSR.value + " is too big."
         assert f.resids.time_resids.std().to(u.us).value < 950.0, emsg
