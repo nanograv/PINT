@@ -2,10 +2,10 @@
 """
 PINT Is Not TEMPO3!
 """
-import os
 
-from ._version import __version__
-from ._commit import __commit__
+from .extern._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
 
 # Define a few important constants
 import astropy.units as u
