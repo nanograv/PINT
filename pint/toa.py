@@ -303,15 +303,20 @@ class TOA(object):
 
         """
         site = Observatory.get(obs)
-        if numpy.isscalar(MJD):
-            arg1, arg2 = MJD, None
-        else:
-            arg1, arg2 = MJD[0], MJD[1]
-        if scale is None:
-            scale = site.timescale
-        self.mjd = time.Time(arg1, arg2, scale=scale,
-                location=site.earth_location,
-                format='pulsar_mjd', precision=9)
+        
+        # If MJD is already a Time, just use it. Note that this will ignore 'scale'!
+        if isinstance(MJD,time.Time):
+            self.mjd = MJD
+        else:        
+            if numpy.isscalar(MJD):
+                arg1, arg2 = MJD, None
+            else:
+                arg1, arg2 = MJD[0], MJD[1]
+            if scale is None:
+                scale = site.timescale
+            self.mjd = time.Time(arg1, arg2, scale=scale,
+                    location=site.earth_location,
+                    format='pulsar_mjd', precision=9)
 
         if hasattr(error,'unit'):
             self.error = error
