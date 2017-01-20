@@ -3,26 +3,37 @@ from __future__ import division, print_function
 import numpy as np
 import pint.toa as toa
 import pint.models
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, Angle
 from astropy import log
 from astropy.time import Time
+from astropy import log
+import astropy.units as u
 import argparse
 from pint import pulsar_mjd
 
+log.setLevel('INFO')
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="PINT tool for command-line barycentering calculations.")
 
     parser.add_argument("time",help="MJD (UTC, by default)")
-    parser.add_argument("--timescale",default="utc",help="Time scale for MJD argument ('utc', 'tt', 'tdb'), default=utc")
-    parser.add_argument("--format",help="Format for time argument",default="mjd")
-    parser.add_argument("--freq",type=float,default=np.inf)
-    parser.add_argument("--obs",default="Geocenter")
+    parser.add_argument("--timescale",default="utc",
+        help="Time scale for MJD argument ('utc', 'tt', 'tdb'), default=utc")
+    parser.add_argument("--format",
+        help="Format for time argument ('mjd' or any astropy.Time format (e.g. 'isot'), see <http://docs.astropy.org/en/stable/time/#time-format>)",
+        default="mjd")
+    parser.add_argument("--freq",type=float,default=np.inf,
+        help="Frequency to use, MHz")
+    parser.add_argument("--obs",default="Geocenter", 
+        help="Observatory code (default = Geocenter)")
     parser.add_argument("--parfile",help="par file to read model from",default=None)
-    parser.add_argument("--ra",help="RA to use (if not read from par file)")
-    parser.add_argument("--dec",help="Decl. to use (if not read from par file)")
-    parser.add_argument("--dm",help="DM to use (if not read from par file)")
+    parser.add_argument("--ra",
+        help="RA to use (e.g. '12h22m33.2s' if not read from par file)")
+    parser.add_argument("--dec",
+        help="Decl. to use (e.g. '19d21m44.2s' if not read from par file)")
+    parser.add_argument("--dm",
+        help="DM to use (if not read from par file)",type=float,default=0.0)
     parser.add_argument("--ephem",default="DE421",help="Ephemeris to use")
 
     args = parser.parse_args()
@@ -33,7 +44,7 @@ if __name__ == '__main__':
             precision=9)
     else:
         t = Time(args.time,scale=args.timescale,format=args.format, precision=9)
-    print(t.iso, isinstance(t,Time))
+    log.debug(t.iso)
 
     t = toa.TOA(t,freq=args.freq,obs=args.obs)
 
@@ -42,11 +53,15 @@ if __name__ == '__main__':
     else:
         # Construct model by hand
         m=pint.models.StandardTimingModel()
-
+        m.RAJ.quantity = Angle(args.ra)
+        m.DECJ.quantity = Angle(args.dec)
+        m.DM.quantity = args.dm*u.parsec/u.cm**3
+        
+    # Build TOAs and compute TDBs and positions from ephemeris    
     ts = toa.TOAs(toalist=[t])
     ts.compute_TDBs()
-    ts.compute_posvels()
+    ts.compute_posvels(ephem=args.ephem)
     tdbtimes = m.get_barycentric_toas(ts.table)
 
-    print(tdbtimes[0])
+    print("{0:21.14f}".format(tdbtimes[0].value))
     
