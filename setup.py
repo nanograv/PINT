@@ -101,7 +101,8 @@ setup(
     install_requires = ['astropy>=1.2'],
 
     # These scripts will be installed in your PATH
-    scripts = ['scripts/pintempo.py'],
+    scripts = ['scripts/pintempo.py', 'scripts/zima.py', 'scripts/pintbary.py', 'scripts/fermiphaseogram.py', 
+               'scripts/event_optimize.py', 'scripts/htest_optimize.py' ],
 
     packages=['pint',
         'pint.extern',
