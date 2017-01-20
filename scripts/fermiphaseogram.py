@@ -13,7 +13,7 @@ import argparse
 from astropy.time import Time
 from pint.eventstats import hmw, hm, h2sig
 from astropy.coordinates import SkyCoord
-from parfile import psr_par
+#from parfile import psr_par
 
 from astropy import log
 
@@ -29,11 +29,18 @@ if __name__ == '__main__':
     parser.add_argument("--ephem",help="Planetary ephemeris to use (default=DE421)", default="DE421")
     args = parser.parse_args()
 
-    pf = psr_par(args.parfile)
+
+    # Read in model
+    modelin = pint.models.get_model(args.parfile)
+    if 'ELONG' in modelin.params:
+        tc = SkyCoord(modelin.ELONG.quantity,modelin.ELAT.quantity,
+            frame='barycentrictrueecliptic')
+    else:
+        tc = SkyCoord(modelin.RAJ.quantity,modelin.DECJ.quantity,frame='icrs')
 
     # Read event file and return list of TOA objects
     tl  = load_Fermi_TOAs(args.eventfile, weightcolumn=args.weightcol,
-                          targetcoord=SkyCoord(pf.RAJ,pf.DECJ,unit=(u.hourangle,u.degree),frame='icrs'))
+                          targetcoord=tc)
 
     # Discard events outside of MJD range    
     if args.maxMJD is not None:
@@ -56,12 +63,6 @@ if __name__ == '__main__':
     print(ts.get_summary())
     mjds = ts.get_mjds()
     print(mjds.min(),mjds.max())
-
-    # Read in model
-    modelin = pint.models.get_model(args.parfile)
-
-    # Remove the dispersion delay as it is unnecessary
-    modelin.delay_funcs['L1'].remove(modelin.dispersion_delay)
 
     # Compute model phase for each TOA
     phss = modelin.phase(ts.table)[1]
