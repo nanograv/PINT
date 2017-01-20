@@ -438,7 +438,7 @@ class TOAs(object):
                 return numpy.array([t for t in self.table['mjd']])
         else:
             if hasattr(self, "toas"):
-                return numpy.array([t.mjd.value for t in self.toas]) * u.day
+                return numpy.array([t.mjd.mjd for t in self.toas]) * u.day
             else:
                 return self.table['mjd_float']
 
