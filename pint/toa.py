@@ -146,15 +146,24 @@ def parse_TOA_line(line, fmt="Unknown"):
     fmt = toa_format(line, fmt)
     d = dict(format=fmt)
     if fmt == "Princeton":
-        fields = line.split()
+#            Princeton format
+#            ----------------
+#            columns  item
+#            1-1     Observatory (one-character code) '@' is barycenter
+#            2-2     must be blank
+#            16-24   Observing frequency (MHz)
+#            25-44   TOA (decimal point must be in column 30 or column 31)
+#            45-53   TOA uncertainty (microseconds)
+#            69-78   DM correction (pc cm^-3)
+        #fields = line.split()
         d["obs"] = get_obs(line[0].upper())
-        d["freq"] = float(fields[1])
-        d["error"] = float(fields[3])
-        ii, ff = fields[2].split('.')
+        d["freq"] = float(line[15:24])
+        d["error"] = float(line[44:53])
+        ii, ff = line[24:44].split('.')
         MJD = (int(ii), float("0."+ff))
         try:
-            d["ddm"] = float(fields[4])
-        except IndexError:
+            d["ddm"] = float(line[68:78])
+        except ValueError:
             d["ddm"] = 0.0
     elif fmt == "Tempo2":
         # This could use more error catching...
@@ -187,14 +196,14 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
     format='Princeton'):
     """
     Format TOA line for writing
-    
+
     Inputs
     ------
     toatime   Time object containing TOA arrival time
     toaerr    TOA error as a Quantity with units
     freq      Frequency as a Quantity with units (NB: value of np.inf is allowed)
     obs       Observatory object
-    
+
     dm        DM for the TOA as a Quantity with units (not printed if 0.0 pc/cm^3)
     name      Name to embed in TOA line (conventionally the data file name)
     format    (Princeton | Tempo2)
@@ -225,9 +234,7 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
     out : string
         Formatted TOA line
     """
-    if obs is None:
-        obs = Observatory.get('@')
-        
+
     toa_str = "{0:19.13f}".format(toatime.mjd)
     if format.upper() in ('TEMPO2','1'):
         # In Tempo2 format, freq=0.0 means infinite frequency
@@ -237,18 +244,18 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
         if dm != 0.0*u.pc/u.cm**3:
             flagstring += "-dm {0:%.5f}".format(dm.to(u.pc/u.cm**3).value)
         # Here I need to append any actual flags
-        out = "%s %f %s %.2f %s %s\n" % (name,freq.to(u.MHz).value, 
-            toa_str,toaerr.to(u.us).value,obs.tempo_code,flagstring)
+        out = "%s %f %s %.2f %s %s\n" % (name,freq.to(u.MHz).value,
+            toa_str,toaerr.to(u.us).value,obs.name,flagstring)
     elif format.upper() in  ('PRINCETON','TEMPO'): # TEMPO/Princeton format
         # In TEMPO/Princeton format, freq=0.0 means infinite frequency
         if freq == numpy.inf*u.MHz:
             freq = 0.0
         if dm!=0.0*u.pc/u.cm**3:
-            out = obs+" %13s %8.3f %s %8.2f              %9.4f\n" % \
-                (name, freq.to(u.MHz).value, toa_str, toaerr.to(u.us).value, 
+            out = obs.tempo_code+" %13s %8.3f %s %8.2f              %9.4f\n" % \
+                (name, freq.to(u.MHz).value, toa_str, toaerr.to(u.us).value,
                 dm.to(u.pc/u.cm**3).value)
         else:
-            out = obs+" %13s %8.3f %s %8.2f\n" % (name, freq.to(u.MHz).value, 
+            out = obs.tempo_code+" %13s %8.3f %s %8.2f\n" % (name, freq.to(u.MHz).value,
                 toa_str, toaerr.to(u.us).value)
     else:
         log.error('Unknown TOA format ({0})'.format(format))
@@ -292,7 +299,7 @@ class TOA(object):
     """
     def __init__(self, MJD, # required
                  error=0.0, obs='Barycenter', freq=float("inf"),
-                 scale=None, 
+                 scale=None,
                  **kwargs):  # keyword args that are completely optional
         r"""
         Construct a TOA object
@@ -321,11 +328,11 @@ class TOA(object):
 
         """
         site = Observatory.get(obs)
-        
+
         # If MJD is already a Time, just use it. Note that this will ignore 'scale'!
         if isinstance(MJD,time.Time):
             self.mjd = MJD
-        else:        
+        else:
             if numpy.isscalar(MJD):
                 arg1, arg2 = MJD, None
             else:
@@ -384,6 +391,7 @@ class TOAs(object):
             # Check for a pickle-like filename.  Alternative approach would
             # be to just try opening it as a pickle and see what happens.
             if toafile.endswith('.pickle') or toafile.endswith('pickle.gz'):
+                log.info('Reading TOA from pickle file')
                 self.read_pickle_file(toafile)
 
             # Not a pickle file, process as a standard set of TOA lines
