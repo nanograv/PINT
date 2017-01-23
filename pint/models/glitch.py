@@ -20,6 +20,7 @@ maxglitches = 10  # Have not use this one in the new version.
 
 class Glitch(TimingModel):
     """This class provides glitches."""
+    name = 'Glitch'
     def __init__(self):
         super(Glitch, self).__init__()
 

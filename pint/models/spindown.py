@@ -18,6 +18,7 @@ from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble,\
 
 class Spindown(TimingModel):
     """This class provides a simple timing model for an isolated pulsar."""
+    name = 'Spindown'
     def __init__(self):
         super(Spindown, self).__init__()
 

@@ -18,6 +18,7 @@ class PulsarBinary(TimingModel):
     projected semi-major axis of orbit   a1
 
     """
+    name = 'PulsarBinary'
     def __init__(self,):
         super(PulsarBinary, self).__init__()
         self.binary_model_name = None

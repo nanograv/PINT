@@ -10,7 +10,7 @@ from .. import Tsun, Tmercury, Tvenus, Tearth, Tmars, \
         Tjupiter, Tsaturn, Turanus, Tneptune
 
 class SolarSystemShapiro(TimingModel):
-
+    name = 'SolarSystemShapiro'
     def __init__(self):
         super(SolarSystemShapiro, self).__init__()
 

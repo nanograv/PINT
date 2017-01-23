@@ -9,7 +9,7 @@ import numpy as np
 import pint.utils as utils
 import astropy.units as u
 import copy
-import inspect
+import abc
 
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
@@ -97,6 +97,20 @@ class Cache(object):
         return use_cached_results
 
 
+class ModelMeta(abc.ABCMeta):
+    """
+    This is a Meta class for timing model registeration. In order ot get a
+    timing model registered, a member called 'name' has to be provided in a
+    TimingModel subclass.
+    """
+    def __init__(cls, name, bases, dct):
+        regname = '_model_list'
+        if not hasattr(cls,regname):
+            setattr(cls,regname,{})
+        if 'name' in dct:
+            getattr(cls,regname)[cls.name] = cls
+        super(ModelMeta, cls).__init__(name, bases, dct)
+
 
 class TimingModel(object):
     """
@@ -142,6 +156,7 @@ class TimingModel(object):
     phase_derivs_wrt_delay : list
         All the phase derivatives respect to delay.
     """
+    __metaclass__ = ModelMeta
     def __init__(self):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names

@@ -22,7 +22,7 @@ except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 
 class Astrometry(TimingModel):
-
+    name = 'Astrometry'
     def __init__(self):
         super(Astrometry, self).__init__()
         self.add_param(p.MJDParameter(name="POSEPOCH",
@@ -141,6 +141,7 @@ class Astrometry(TimingModel):
         pass
 
 class AstrometryEquatorial(Astrometry):
+    name = 'AstrometryEquatorial'
     def __init__(self):
         super(AstrometryEquatorial, self).__init__()
         self.add_param(p.AngleParameter(name="RAJ",
@@ -288,6 +289,7 @@ class AstrometryEquatorial(Astrometry):
 
 
 class AstrometryEcliptic(Astrometry):
+    name = 'AstrometryEcliptic'
     def __init__(self):
         super(AstrometryEcliptic, self).__init__()
         self.add_param(p.AngleParameter(name="ELONG",

@@ -11,6 +11,7 @@ class FD(TimingModel):
     """This class provides a timing model for frequency evolution of pulsar
     profiles model.
     """
+    name = 'FD'
     def __init__(self):
         super(FD, self).__init__()
         self.add_param(p.prefixParameter(name='FD1', units="second", value=0.0,
