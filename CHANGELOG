@@ -5,3 +5,4 @@
 2015-03-02 (paulr) Allow TOAs() class to be initialized from a list or tuple of TOA() objects
 2016-12-28 (paulr) Tag: 0.5.0
 2016-12-28 (paulr) Tag: 0.5.1 Bug fix in setup.py, cleanup of ipython notebooks, bug fix in Priors
+2016-01-23 (paulr) Added pintbary.py and moved other scripts to scripts dir, some script improvements
