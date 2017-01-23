@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     duration = args.duration*u.day
     start = Time(args.startMJD,scale='utc',format='mjd',precision=9)
-    error = args.error*u.s
+    error = args.error*u.microsecond
     freq = args.freq*u.MHz
     scale = 'utc'
 
@@ -63,25 +63,25 @@ if __name__ == '__main__':
         log.info("Computing observatory positions and velocities.")
         ts.compute_posvels(args.ephem, args.planets)
 
-    # This computation should be replaced with a call to d_phase_d_TOA() when that
-    # function works to compute the instantaneous topocentric frequency
-    F = m.F0.value*m.F0.units    
-    rs = m.phase(ts.table).frac/F
+    F_local = m.d_phase_d_toa(ts)*u.Hz
+    rs = m.phase(ts.table).frac/F_local
 
     # Adjust the TOA times to put them where their residuals will be 0.0
     ts.adjust_TOAs(TimeDelta(-1.0*rs))
-    rspost = m.phase(ts.table).frac/F
+    rspost = m.phase(ts.table).frac/F_local
 
-    # Do a second iteration to fix the poor assumption of F = F0 when
-    # converting phase residuals to time residuals
+    # Do a second iteration 
     ts.adjust_TOAs(TimeDelta(-1.0*rspost))
 
      # Write TOAs to a file
     ts.write_TOA_file(args.timfile,name='fake',format='Tempo2')
+    #ts.write_TOA_file(args.timfile,name='fake',format='Princeton')
 
     if args.plot:
         import matplotlib.pyplot as plt
-        rspost2 = m.phase(ts.table).frac/F
+        rspost2 = m.phase(ts.table).frac/F_local
         plt.plot(ts.get_mjds(),rspost2.to(u.us),'+')
         plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
+        plt.xlabel('MJD')
+        plt.ylabel('Residual (us)')
         plt.show()
