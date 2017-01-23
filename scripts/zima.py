@@ -14,7 +14,7 @@ from astropy.time import Time, TimeDelta
 import argparse
 
 from astropy import log
-log.setLevel('DEBUG')
+log.setLevel('INFO')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="PINT tool for simulating TOAs")

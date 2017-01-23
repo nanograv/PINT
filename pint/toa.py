@@ -183,10 +183,22 @@ def parse_TOA_line(line, fmt="Unknown"):
             "TOA format '%s' not implemented yet" % fmt)
     return MJD, d
 
-def format_toa_line(toatime, toaerr, freq, dm=0.0, obs='@', name='unk', flags={},
+def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk', flags={},
     format='Princeton'):
     """
     Format TOA line for writing
+    
+    Inputs
+    ------
+    toatime   Time object containing TOA arrival time
+    toaerr    TOA error as a Quantity with units
+    freq      Frequency as a Quantity with units (NB: value of np.inf is allowed)
+    obs       Observatory object
+    
+    dm        DM for the TOA as a Quantity with units (not printed if 0.0 pc/cm^3)
+    name      Name to embed in TOA line (conventionally the data file name)
+    format    (Princeton | Tempo2)
+    flags     Any Tempo2 flags to append to the TOA line
 
     Bugs
     ----
@@ -213,25 +225,31 @@ def format_toa_line(toatime, toaerr, freq, dm=0.0, obs='@', name='unk', flags={}
     out : string
         Formatted TOA line
     """
-    toa = "{0:19.13f}".format(toatime.mjd)
+    if obs is None:
+        obs = Observatory.get('@')
+        
+    toa_str = "{0:19.13f}".format(toatime.mjd)
     if format.upper() in ('TEMPO2','1'):
         # In Tempo2 format, freq=0.0 means infinite frequency
-        if freq == numpy.inf:
-            freq = 0.0
+        if freq == numpy.inf*u.MHz:
+            freq = 0.0*u.MHz
         flagstring = ''
-        if dm != 0.0:
-            flagstring += "-dm %.5f" % (dm,)
+        if dm != 0.0*u.pc/u.cm**3:
+            flagstring += "-dm {0:%.5f}".format(dm.to(u.pc/u.cm**3).value)
         # Here I need to append any actual flags
-        out = "%s %f %s %.2f %s %s\n" % (name,freq,toa,toaerr,obs,flagstring)
-    elif fomat.upper() in  ('PRINCETON','TEMPO'): # TEMPO/Princeton format
+        out = "%s %f %s %.2f %s %s\n" % (name,freq.to(u.MHz).value, 
+            toa_str,toaerr.to(u.us).value,obs.tempo_code,flagstring)
+    elif format.upper() in  ('PRINCETON','TEMPO'): # TEMPO/Princeton format
         # In TEMPO/Princeton format, freq=0.0 means infinite frequency
-        if freq == numpy.inf:
+        if freq == numpy.inf*u.MHz:
             freq = 0.0
-        if dm!=0.0:
+        if dm!=0.0*u.pc/u.cm**3:
             out = obs+" %13s %8.3f %s %8.2f              %9.4f\n" % \
-                (name, freq, toa, toaerr, dm)
+                (name, freq.to(u.MHz).value, toa_str, toaerr.to(u.us).value, 
+                dm.to(u.pc/u.cm**3).value)
         else:
-            out = obs+" %13s %8.3f %s %8.2f\n" % (name, freq, toa, toaerr)
+            out = obs+" %13s %8.3f %s %8.2f\n" % (name, freq.to(u.MHz).value, 
+                toa_str, toaerr.to(u.us).value)
     else:
         log.error('Unknown TOA format ({0})'.format(format))
         # Should this raise an exception here? -- paulr
@@ -533,10 +551,11 @@ class TOAs(object):
         outf = open(filename,'w')
         if format.upper() in ('TEMPO2','1'):
             outf.write('FORMAT 1\n')
-        for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'],
-            self.table['freq'],self.table['obs'],self.table['flags']):
-            str = format_toa_line(toatime, toaerr, freq, dm=0.0, obs=obs, name=name,
-            flags=flags, format=format)
+        for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'].quantity,
+            self.table['freq'].quantity,self.table['obs'],self.table['flags']):
+            obs_obj = Observatory.get(obs)
+            str = format_toa_line(toatime, toaerr, freq, obs_obj, name=name,
+                flags=flags, format=format)
             outf.write(str)
         outf.close()
 
