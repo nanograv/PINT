@@ -24,7 +24,9 @@ class BarycenterObs(SpecialLocation):
     @property
     def timescale(self): 
         return 'tdb'
-
+    @property
+    def tempo_code(self):
+        return '@'
     def posvel(self, t, ephem):
         vdim = (3,) + t.shape
         return PosVel(numpy.zeros(vdim)*u.m, numpy.zeros(vdim)*u.m/u.s,
@@ -38,6 +40,9 @@ class GeocenterObs(SpecialLocation):
     @property
     def earth_location(self):
         return EarthLocation.from_geocentric(0.0,0.0,0.0,unit=u.m)
+    @property
+    def tempo_code(self):
+        return '0'
     def posvel(self, t, ephem):
         return objPosVel2SSB('earth', t, ephem)
 
