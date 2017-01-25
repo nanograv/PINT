@@ -70,18 +70,22 @@ if __name__ == '__main__':
     ts.adjust_TOAs(TimeDelta(-1.0*rs))
     rspost = m.phase(ts.table).frac/F_local
 
-    # Do a second iteration 
+    # Do a second iteration
     ts.adjust_TOAs(TimeDelta(-1.0*rspost))
 
      # Write TOAs to a file
+    #ts.write_TOA_file(args.timfile,name='fake',format='Tempo2')
     ts.write_TOA_file(args.timfile,name='fake',format='Tempo2')
-    #ts.write_TOA_file(args.timfile,name='fake',format='Princeton')
 
     if args.plot:
+        # This should be a very boring plot with all residuals flat at 0.0!
         import matplotlib.pyplot as plt
         rspost2 = m.phase(ts.table).frac/F_local
-        plt.plot(ts.get_mjds(),rspost2.to(u.us),'+')
-        plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
+        plt.errorbar(ts.get_mjds(),rspost2.to(u.us).value,yerr=ts.get_errors().to(u.us).value)
+        newts = pint.toa.get_TOAs(args.timfile)
+        rsnew = m.phase(newts.table).frac/F_local
+        plt.errorbar(newts.get_mjds(),rsnew.to(u.us).value,yerr=newts.get_errors().to(u.us).value)
+        #plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
         plt.xlabel('MJD')
         plt.ylabel('Residual (us)')
         plt.show()
