@@ -17,6 +17,9 @@ from . import utils
 # light-second unit
 ls = u.def_unit('ls', c.c * 1.0 * u.s)
 
+# DM unit (pc cm^-3)
+dmu = u.def_unit('dmu', u.pc*u.cm**-3)
+
 # define equivalency for astropy units
 def light_second_equivalency():
     return [(ls, si.second)]
