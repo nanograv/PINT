@@ -19,11 +19,11 @@ class TopoObs(Observatory):
     site definitions in tempo/tempo2.  Clock correction files are read and
     computed, observatory coordinates are specified in ITRF XYZ, etc."""
 
-    def __init__(self, name, tempo_code=None, itoa_code=None, aliases=None, 
-            itrf_xyz=None, 
+    def __init__(self, name, tempo_code=None, itoa_code=None, aliases=None,
+            itrf_xyz=None,
             clock_file='time.dat', clock_dir='PINT', clock_fmt='tempo',
             include_gps=True):
-        """ 
+        """
         Required arguments:
 
             name     = The name of the observatory
@@ -65,12 +65,12 @@ class TopoObs(Observatory):
 
         # Check for correct array dims
         if xyz.shape != (3,):
-            raise ValueError( 
+            raise ValueError(
                     "Incorrect coordinate dimensions for observatory '%s'" % (
                         name))
 
-        # Convert to astropy EarthLocation
-        self._loc = EarthLocation(*xyz)
+        # Convert to astropy EarthLocation, ensuring use of geocentric coordinates
+        self._loc = EarthLocation.from_geocentric(*xyz)
 
         # Save clock file info, the data will be read only if clock
         # corrections for this site are requested.
@@ -81,7 +81,7 @@ class TopoObs(Observatory):
 
         # If using TEMPO time.dat we need to know the 1-char tempo-style
         # observatory code.
-        if (clock_dir=='TEMPO' and clock_file=='time.dat' 
+        if (clock_dir=='TEMPO' and clock_file=='time.dat'
                 and tempo_code is None):
             raise ValueError("No tempo_code set for observatory '%s'" % name)
 
@@ -133,7 +133,7 @@ class TopoObs(Observatory):
         # Read clock file if necessary
         # TODO provide some method for re-reading the clock file?
         if self._clock is None:
-            self._clock = ClockFile.read(self.clock_fullpath, 
+            self._clock = ClockFile.read(self.clock_fullpath,
                     format=self.clock_fmt, obscode=self.tempo_code)
         corr = self._clock.evaluate(t)
         if self.include_gps:
