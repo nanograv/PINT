@@ -330,8 +330,9 @@ class TOA(object):
         site = Observatory.get(obs)
 
         # If MJD is already a Time, just use it. Note that this will ignore 'scale'!
+        # This assigns the site location to the Time, for use in the TDB conversion
         if isinstance(MJD,time.Time):
-            self.mjd = MJD
+            self.mjd = time.Time(MJD,location=site.earth_location)
         else:
             if numpy.isscalar(MJD):
                 arg1, arg2 = MJD, None
@@ -542,6 +543,7 @@ class TOAs(object):
 
         # This adjustment invalidates the derived columns in the table, so delete
         # and recompute them
+        self.table['mjd_float'] = self.get_mjds(high_precision=False)
         self.compute_TDBs()
         self.compute_posvels()
 
