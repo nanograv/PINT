@@ -17,7 +17,7 @@ class BinaryBT(PulsarBinary):
     BTmodel special parameters:
     GAMMA Binary Einsten delay coeeficient
     """
-    name = 'BinaryBT'
+    is_register = True
     def __init__(self):
         super(BinaryBT, self).__init__()
         self.binary_model_name = 'BT'

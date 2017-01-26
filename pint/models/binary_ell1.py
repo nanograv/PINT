@@ -23,7 +23,7 @@ class BinaryELL1(PulsarBinary):
     EPS1DOT First derivative of first Laplace-Lagrange parameter
     EPS2DOT Second derivative of second Laplace-Lagrange parameter
     """
-    name = 'BinaryELL1'
+    is_register = True
     def __init__(self):
         super(BinaryELL1, self).__init__()
         self.binary_model_name = 'ELL1'

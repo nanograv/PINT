@@ -11,7 +11,7 @@ from . import parameter as p
 class JumpDelay(TimingModel):
     """This is a class to implement phase jumps
     """
-    name = 'JumpDelay'
+    is_register = True
     def __init__(self):
         super(JumpDelay, self).__init__()
         # TODO: In the future we should have phase jump as well.

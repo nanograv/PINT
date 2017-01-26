@@ -107,8 +107,9 @@ class ModelMeta(abc.ABCMeta):
         regname = '_model_list'
         if not hasattr(cls,regname):
             setattr(cls,regname,{})
-        if 'name' in dct:
-            getattr(cls,regname)[cls.name] = cls
+        if 'is_register' in dct:
+            if cls.is_register:
+                getattr(cls,regname)[name] = cls
         super(ModelMeta, cls).__init__(name, bases, dct)
 
 
