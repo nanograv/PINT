@@ -100,15 +100,15 @@ class Cache(object):
 class ModelMeta(abc.ABCMeta):
     """
     This is a Meta class for timing model registeration. In order ot get a
-    timing model registered, a member called 'name' has to be provided in a
+    timing model registered, a member called 'register' has to be set true in the
     TimingModel subclass.
     """
     def __init__(cls, name, bases, dct):
         regname = '_model_list'
         if not hasattr(cls,regname):
             setattr(cls,regname,{})
-        if 'is_register' in dct:
-            if cls.is_register:
+        if 'register' in dct:
+            if cls.register:
                 getattr(cls,regname)[name] = cls
         super(ModelMeta, cls).__init__(name, bases, dct)
 

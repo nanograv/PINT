@@ -20,7 +20,7 @@ class Dispersion(TimingModel):
     """This class provides a base dispersion timing model. The dm varience will
     be treated linearly.
     """
-    is_register = True
+    register = True
     def __init__(self):
         super(Dispersion, self).__init__()
         self.add_param(p.floatParameter(name="DM",
@@ -76,7 +76,7 @@ class Dispersion(TimingModel):
 class DispersionDMX(Dispersion):
     """This class provides a DMX model based on the class of Dispersion.
     """
-    is_register = True
+    register = True
     def __init__(self):
         super(DispersionDMX, self).__init__()
         # DMX is for info output right now
