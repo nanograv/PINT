@@ -1,4 +1,4 @@
-"""This module implements a simple spindown model for an isolated pulsar.
+"""This module implements polynomial pulsar spindown.
 """
 # spindown.py
 # Defines Spindown timing model class
@@ -11,9 +11,8 @@ except ImportError:
 from . import parameter as p
 from .timing_model import TimingModel, MissingParameter
 from ..phase import *
-from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, taylor_horner,\
-                    time_from_longdouble
-
+from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble,\
+    taylor_horner, time_from_longdouble
 
 class Spindown(TimingModel):
     """This class provides a simple timing model for an isolated pulsar."""
@@ -30,7 +29,7 @@ class Spindown(TimingModel):
                        description="Spindown-rate",
                        unitTplt=self.F_unit,
                        descriptionTplt=self.F_description,
-                       type_match='float',long_double=True))
+                       type_match='float'))
 
         self.add_param(p.MJDParameter(name="TZRMJD",
                        description="Reference epoch for phase = 0.0",
@@ -39,7 +38,6 @@ class Spindown(TimingModel):
         self.add_param(p.MJDParameter(name="PEPOCH",
                        description="Reference epoch for spin-down",
                        time_scale='tdb'))
-
 
         self.phase_funcs += [self.spindown_phase,]
 
@@ -53,10 +51,11 @@ class Spindown(TimingModel):
         # Check continuity
         F_terms = self.get_prefix_mapping('F').keys()
         F_terms.sort()
-        F_in_order = range(1,max(F_terms)+1)
+        F_in_order = range(1, max(F_terms)+1)
         if not F_terms == F_in_order:
             diff = list(set(F_in_order) - set(F_terms))
             raise MissingParameter("Spindown", "F%d"%diff[0])
+
         # If F1 is set, we need PEPOCH
         if self.F1.value != 0.0:
             if self.PEPOCH.value is None:
@@ -65,24 +64,19 @@ class Spindown(TimingModel):
 
         self.num_spin_terms = len(self.get_prefix_mapping('F')) + 1
 
-    def F_description(self, x):
+    def F_description(self, n):
         """Template function for description"""
-        if x <1:
-            return "Spin-frequency"
-        else:
-            return "Spin-frequency %d derivative"%x
+        return "Spin-frequency %d derivative" % n if n else "Spin-frequency"
 
-    def F_unit(self,x):
+    def F_unit(self, n):
         """Template function for unit"""
-        if x <1:
-            return "Hz"
-        else:
-            return "Hz/s^%d"%x
+        return "Hz/s^%d" % n if n else "Hz"
 
     def get_spin_terms(self):
         """Return a list of the spin term values in the model: [F0, F1, ..., FN]
         """
-        return [getattr(self, "F%d"%ii).value for ii in range(self.num_spin_terms)]
+        return [getattr(self, "F%d" % ii).value for ii in
+                range(self.num_spin_terms)]
 
     def spindown_phase(self, toas, delay):
         """Spindown phase function.
@@ -90,7 +84,8 @@ class Spindown(TimingModel):
         delay is the time delay from the TOA to time of pulse emission
           at the pulsar, in seconds.
 
-        This routine should implement Eq 120 of the Tempo2 Paper II (2006, MNRAS 372, 1549)
+        This routine should implement Eq 120 of the Tempo2 Paper
+        II (2006, MNRAS 372, 1549)
 
         returns an array of phases in long double
         """
