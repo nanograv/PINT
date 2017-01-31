@@ -11,13 +11,9 @@ except ImportError:
 from . import parameter as p
 from .timing_model import TimingModel, MissingParameter
 from ..phase import *
-<<<<<<< HEAD
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble,\
-    taylor_horner, time_from_longdouble
-=======
-from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, taylor_horner,\
-                    time_from_longdouble, split_prefixed_name, taylor_horner_deriv
->>>>>>> Fix deriv funcs
+    taylor_horner, time_from_longdouble, split_prefixed_name, taylor_horner_deriv
+
 
 
 class Spindown(TimingModel):
@@ -75,7 +71,7 @@ class Spindown(TimingModel):
 
         self.phase_derivs_wrt_delay += [self.d_spindown_phase_d_delay,]
 
-    def F_description(self, x):
+    def F_description(self, n):
         """Template function for description"""
         return "Spin-frequency %d derivative" % n if n else "Spin-frequency"
 
