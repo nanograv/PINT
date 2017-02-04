@@ -235,8 +235,26 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
         Formatted TOA line
     """
 
-    toa_str = "{0:19.13f}".format(toatime.mjd)
     if format.upper() in ('TEMPO2','1'):
+        mjd1 = toatime.jd1 - 2400000.5 # Convert value to MJD
+        mjd2 = toatime.jd2
+        log.info("------------------")
+        log.info("mjd1 {0} mjd2 {1} ".format(mjd1,mjd2))
+        # Now ensure that mjd1 is an integer
+        fpart,ipart = numpy.modf(mjd1)
+        mjd1 = ipart
+        mjd2 += fpart
+        log.info("mjd1 {0} mjd2 {1} ".format(mjd1,mjd2))
+        if (mjd2 < 0.0):
+            mjd2 += 1.0
+            mjd1 -= 1.0
+        if (mjd2 >= 1.0):
+            mjd2 -= 1.0
+            mjd1 += 1.0
+        fracstr = "{0:.17f}".format(mjd2)
+        log.info("mjd {0} mjd1 {1} mjd2 {2}".format(toatime.mjd,mjd1,mjd2))
+        toa_str = "{0:.0f}".format(numpy.round(mjd1)) + fracstr[fracstr.index("."):]
+        log.info(toa_str)
         # In Tempo2 format, freq=0.0 means infinite frequency
         if freq == numpy.inf*u.MHz:
             freq = 0.0*u.MHz
@@ -244,9 +262,10 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
         if dm != 0.0*u.pc/u.cm**3:
             flagstring += "-dm {0:%.5f}".format(dm.to(u.pc/u.cm**3).value)
         # Here I need to append any actual flags
-        out = "%s %f %s %.2f %s %s\n" % (name,freq.to(u.MHz).value,
+        out = "%s %f %s %.3f %s %s\n" % (name,freq.to(u.MHz).value,
             toa_str,toaerr.to(u.us).value,obs.name,flagstring)
     elif format.upper() in  ('PRINCETON','TEMPO'): # TEMPO/Princeton format
+        toa_str = "{0:19.13f}".format(toatime.mjd)
         # In TEMPO/Princeton format, freq=0.0 means infinite frequency
         if freq == numpy.inf*u.MHz:
             freq = 0.0
@@ -331,8 +350,9 @@ class TOA(object):
 
         # If MJD is already a Time, just use it. Note that this will ignore 'scale'!
         # This assigns the site location to the Time, for use in the TDB conversion
+        # Time objects are immutable so you must make a new one to add the location!
         if isinstance(MJD,time.Time):
-            self.mjd = time.Time(MJD,location=site.earth_location)
+            self.mjd = time.Time(MJD,location=site.earth_location,precision=9)
         else:
             if numpy.isscalar(MJD):
                 arg1, arg2 = MJD, None
@@ -539,7 +559,7 @@ class TOAs(object):
         if delta.shape != col.shape:
             raise ValueError('Shape of mjd column and delta must be compatible')
         for ii in range(len(col)):
-            col[ii] += delta[ii]
+            col[ii] = col[ii] + delta[ii]
 
         # This adjustment invalidates the derived columns in the table, so delete
         # and recompute them
