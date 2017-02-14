@@ -12,7 +12,7 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 
-kerner_link_base_http = 'http://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/'
+kernel_link_base_http = 'http://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/'
 kernel_link_base_ftp = 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/'
 
 jpl_obj_code = {'ssb': 0,
