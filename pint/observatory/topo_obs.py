@@ -147,7 +147,6 @@ class TopoObs(Observatory):
     def clock_corrections(self, t):
         # Read clock file if necessary
         # TODO provide some method for re-reading the clock file?
-        print self.clock_fullpath
         if self._clock is None:
             self._clock = ClockFile.read(self.clock_fullpath, 
                     format=self.clock_fmt, obscode=self.tempo_code)
