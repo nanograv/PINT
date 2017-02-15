@@ -130,7 +130,7 @@ class TopoObs(Observatory):
     def bipm_fullpath(self):
         """Returns full path to the TAI TT(BIPM) clock file.  Will first try PINT
         data dirs, then fall back on $TEMPO2/clock."""
-        fname = 'tai2tt_bipm.clk'
+        fname = 'tai2tt_bipm2015.clk'
         fullpath = datapath(fname)
         if fullpath is not None:
             return fullpath
@@ -157,10 +157,11 @@ class TopoObs(Observatory):
                         format='tempo2')
             corr += self._gps_clock.evaluate(t)
         if self.include_bipm:
+            tt2tai = 32.184 * 1e6 * u.us
             if self._bipm_clock is None:
                 self._bipm_clock = ClockFile.read(self.bipm_fullpath,
                         format='tempo2')
-            corr += self._bipm_clock.evaluate(t)
+            corr += self._bipm_clock.evaluate(t) - tt2tai
         return corr
 
     def posvel(self, t, ephem):
