@@ -1,6 +1,6 @@
-PSR              B1855+09    
-LAMBDA   286.8634893301156  1     0.0000000165859
-BETA      32.32181097038126  1     0.0000000273526
+PSR              B1855+09
+LAMBDA   286.8634896169791  1     0.0000000165859
+BETA      32.3214877555037  1     0.0000000273526
 PMLAMBDA           -3.2701  1              0.0141
 PMBETA             -5.0982  1              0.0291
 PX                  0.2929  1              0.2186
@@ -448,11 +448,11 @@ FD2 -1.88210030D-04  1      4.13173074D-05
 FD3  1.07526915D-04  1      2.50177766D-05
 SOLARN0               0.00
 EPHEM               DE421
-ECL                 IERS2010
-CLK                 TT(BIPM)    
+ECL                 IERS2003
+#CLK                 TT(BIPM)
 UNITS               TDB
 TIMEEPH             FB90
-T2CMETHOD           TEMPO
+#T2CMETHOD           TEMPO
 CORRECT_TROPOSPHERE N
 PLANET_SHAPIRO      N
 DILATEFREQ          N
@@ -462,8 +462,8 @@ TZRMJD  54981.28084616488447
 TZRFRQ             424.000
 TZRSITE                  3
 NITS                     1
-INFO -f                              
-BINARY            DD      
+INFO -f
+BINARY            DD
 A1             9.230780480  1         0.000000203
 E             0.0000216340  1        0.0000000236
 T0        54975.5128660817  1        0.0019286695
@@ -471,18 +471,18 @@ PB       12.32717119132762  1    0.00000000019722
 OM        276.536118059963  1      0.056323656112
 SINI              0.999461  1            0.000178
 M2                0.233837  1            0.011278
-RNAMP         0.17173D-01
-RNIDX            -4.91353
-T2EFAC -f L-wide_PUPPI   1.507
-T2EFAC -f 430_ASP   1.147
-T2EFAC -f L-wide_ASP   1.150
-T2EFAC -f 430_PUPPI   1.117
-T2EQUAD -f L-wide_PUPPI   0.25518
-T2EQUAD -f 430_ASP   0.01410
-T2EQUAD -f L-wide_ASP   0.42504
-T2EQUAD -f 430_PUPPI   0.02640
-ECORR -f 430_PUPPI   0.00601
-ECORR -f L-wide_PUPPI   0.31843
-ECORR -f L-wide_ASP   0.79618
-ECORR -f 430_ASP   0.01117
+#RNAMP         0.17173D-01
+#RNIDX            -4.91353
+#T2EFAC -f L-wide_PUPPI   1.507
+#T2EFAC -f 430_ASP   1.147
+#T2EFAC -f L-wide_ASP   1.150
+#T2EFAC -f 430_PUPPI   1.117
+#T2EQUAD -f L-wide_PUPPI   0.25518
+#T2EQUAD -f 430_ASP   0.01410
+#T2EQUAD -f L-wide_ASP   0.42504
+#T2EQUAD -f 430_PUPPI   0.02640
+#ECORR -f 430_PUPPI   0.00601
+#ECORR -f L-wide_PUPPI   0.31843
+#ECORR -f L-wide_ASP   0.79618
+#ECORR -f 430_ASP   0.01117
 JUMP -fe L-wide      -0.000009449  1       0.000009439
