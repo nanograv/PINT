@@ -45,5 +45,4 @@ install:
   - pip install  .
 
 script:
-  - cd tests
-  - ./run-tests.sh
+  - python setup.py test
