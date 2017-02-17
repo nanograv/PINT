@@ -184,16 +184,14 @@ class WlsFitter(Fitter):
             #   dpars = V s^-1 U^T r
             # Scaling by fac recovers original units
             dpars = numpy.dot(Vt.T, numpy.dot(U.T,residuals)/s) / fac
-
             for ii, pn in enumerate(fitp.keys()):
                 uind = params.index(pn)             # Index of designmatrix
                 un = 1.0 / (units[uind])     # Unit in designmatrix
                 if scale_by_F0:
                     un *= u.s
                 pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
-                fitpv[pn] = float( (pv+dpv) / fitp[pn].units )
+                fitpv[pn] = numpy.longdouble((pv+dpv) / fitp[pn].units)
                 fitperrs[pn] = errs[uind]
-
                 chi2 = self.minimize_func(list(fitpv.values()), *fitp.keys())
             # Updata Uncertainties
             self.set_param_uncertainties(fitperrs)
