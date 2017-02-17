@@ -4,6 +4,8 @@ language: python
 
 python:
     - 2.7
+ 
+sudo: required
 
 # https://docs.travis-ci.com/user/gui-and-headless-browsers/#Using-xvfb-to-Run-Tests-That-Require-a-GUI
 before_script:
