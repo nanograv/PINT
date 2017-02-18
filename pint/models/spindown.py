@@ -63,13 +63,10 @@ class Spindown(TimingModel):
             if self.PEPOCH.value is None:
                 raise MissingParameter("Spindown", "PEPOCH",
                         "PEPOCH is required if F1 or higher are set")
-
         self.num_spin_terms = len(F_terms) + 1
         for fp in self.get_prefix_mapping('F').values() + ['F0',]:
-            self._make_phase_derivative_funcs(fp, self.d_phase_d_F, 'd_phase_d_')
-            self.phase_derivs += [getattr(self, 'd_phase_d_' + fp)]
-
-        self.phase_derivs_wrt_delay += [self.d_spindown_phase_d_delay,]
+            self.register_deriv_funcs(self.d_phase_d_F, 'phase', fp)
+        self.register_deriv_funcs(self.d_spindown_phase_d_delay, 'd_phase_d_delay')
 
     def F_description(self, n):
         """Template function for description"""

@@ -37,7 +37,7 @@ class Astrometry(TimingModel):
 
     def setup(self):
         super(Astrometry, self).setup()
-        self.delay_derivs += [self.d_delay_astrometry_d_PX]
+        self.register_deriv_funcs(self.d_delay_astrometry_d_PX, 'delay', 'PX')
 
     @Cache.cache_result
     def ssb_to_psb_xyz(self, epoch=None):
@@ -177,10 +177,11 @@ class AstrometryEquatorial(Astrometry):
                 else:
                     self.POSEPOCH.quantity = self.PEPOCH.quantity
 
-        self.delay_derivs += [self.d_delay_astrometry_d_RAJ,
-                              self.d_delay_astrometry_d_DECJ,
-                              self.d_delay_astrometry_d_PMRA,
-                              self.d_delay_astrometry_d_PMDEC]
+        self.register_deriv_funcs(self.d_delay_astrometry_d_RAJ, 'delay', 'RAJ')
+        self.register_deriv_funcs(self.d_delay_astrometry_d_DECJ, 'delay', 'DEC')
+        self.register_deriv_funcs(self.d_delay_astrometry_d_PMRA, 'delay', 'PMRA')
+        self.register_deriv_funcs(self.d_delay_astrometry_d_PMDEC, 'delay', 'PMDEC')
+
     #@Cache.cache_result
     def coords_as_ICRS(self, epoch=None):
         """Returns pulsar sky coordinates as an astropy ICRS object instance.
@@ -329,11 +330,10 @@ class AstrometryEcliptic(Astrometry):
                             "POSEPOCH or PEPOCH are required if PM is set.")
                 else:
                     self.POSEPOCH.quantity = self.PEPOCH.quantity
-
-        self.delay_derivs += [self.d_delay_astrometry_d_ELAT,
-                              self.d_delay_astrometry_d_ELONG,
-                              self.d_delay_astrometry_d_PMELAT,
-                              self.d_delay_astrometry_d_PMELONG]
+        self.register_deriv_funcs(self.d_delay_astrometry_d_ELAT, 'delay', 'ELAT')
+        self.register_deriv_funcs(self.d_delay_astrometry_d_ELONG, 'delay', 'ELONG')
+        self.register_deriv_funcs(self.d_delay_astrometry_d_PMELAT, 'delay', 'PMELAT')
+        self.register_deriv_funcs(self.d_delay_astrometry_d_PMELONG, 'delay', 'PMELONG')
 
     @Cache.cache_result
     def coords_as_ICRS(self, epoch=None):

@@ -9,7 +9,7 @@ import numpy as np
 import pint.utils as utils
 import astropy.units as u
 import copy
-
+import inspect
 
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
@@ -156,8 +156,8 @@ class TimingModel(object):
             description="Source name",
             aliases=["PSRJ", "PSRB"]))
         self.model_type = None
-        self.delay_derivs = []
-        self.phase_derivs = []
+        self.delay_derivs = {}
+        self.phase_derivs = {}
         self.phase_derivs_wrt_delay = []
 
     def setup(self):
@@ -342,6 +342,39 @@ class TimingModel(object):
         deriv_func.__doc__ += " at toa."
         setattr(self, deriv_func.__name__, deriv_func)
 
+    def register_deriv_funcs(self, func, deriv_type, param=''):
+        """
+        This is a function to register the derivative function in to the
+        deriv_func dictionaries.
+        Parameter
+        ---------
+        func: method
+            The method calculates the derivative
+        deriv_type: str ['delay', 'phase', 'd_phase_d_delay']
+            Flag for different type of derivatives. It only accepts the three
+            above.
+        param: str, if for d_phase_d_delay it is optional
+            Name of parameter the derivative respect to
+        """
+        if deriv_type == 'd_phase_d_delay':
+            self.phase_derivs_wrt_delay += [func,]
+        elif deriv_type == 'delay':
+            pn = self.match_param_aliases(param)
+            if pn == '':
+                raise ValueError("Parameter '%s' in not in the model." % param)
+            if pn not in self.delay_derivs.keys():
+                self.delay_derivs[pn] = [func,]
+            else:
+                self.delay_derivs[pn] += [func,]
+        elif deriv_type == 'phase':
+            pn = self.match_param_aliases(param)
+            if pn == '':
+                raise ValueError("Parameter '%s' in not in the model." % param)
+            if pn not in self.phase_derivs.keys():
+                self.phase_derivs[pn] = [func,]
+            else:
+                self.phase_derivs[pn] += [func,]
+
     def d_phase_d_tpulsar(self, toas):
         """Return the derivative of phase wrt time at the pulsar.
 
@@ -392,17 +425,18 @@ class TimingModel(object):
         # phase indirectly (and vice-versa)??
         result = np.longdouble(np.zeros(len(toas))) * u.Unit('')/par.units
         param_phase_derivs = []
-        for f in self.phase_derivs:
-            if f.__name__.endswith('_'+param):
-                param_phase_derivs.append(f)
-        if param_phase_derivs != []:
-            for df in param_phase_derivs:
-                result += df(toas, delay).to(u.Unit('')/par.units,
+        if param in self.phase_derivs.keys():
+            for df in self.phase_derivs[param]:
+                if df.func_name.endswith(param):
+                    result += df(toas, delay).to(result.unit,
+                                         equivalencies=u.dimensionless_angles())
+                else: # Then this is a general derivative function.
+                    result += df(toas, param, delay).to(result.unit,
                                          equivalencies=u.dimensionless_angles())
         else: # Apply chain rule for the parameters in the delay.
             d_delay_d_p = self.d_delay_d_param(toas, param)
             for dpddf in self.phase_derivs_wrt_delay:
-                result += (dpddf(toas, delay) * d_delay_d_p).to(u.Unit('')/par.units,
+                result += (dpddf(toas, delay) * d_delay_d_p).to(result.unit,
                                          equivalencies=u.dimensionless_angles())
         return result
 
@@ -468,13 +502,15 @@ class TimingModel(object):
         """
         par = getattr(self, param)
         result = np.longdouble(np.zeros(len(toas)) * u.s/par.units)
-        param_delay_derivs = []
-        for f in self.delay_derivs:
-            if f.__name__.endswith('_'+param):
-                param_delay_derivs.append(f)
-
-        for df in param_delay_derivs:
-            result += df(toas).to(u.s/par.units, equivalencies=u.dimensionless_angles())
+        if param not in self.delay_derivs.keys():
+            raise AttributeError("Derivative function for '%s' is not provided"
+                                 " or not registred. "%param)
+        for df in self.delay_derivs[param]:
+            # The derivative function is for a specific parameter.
+            if df.func_name.endswith(param):
+                result += df(toas).to(result.unit, equivalencies=u.dimensionless_angles())
+            else: # Then this is a general derivative function.
+                result += df(toas, param).to(result.unit, equivalencies=u.dimensionless_angles())
         return result
 
     #@Cache.use_cache

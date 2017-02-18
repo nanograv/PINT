@@ -34,8 +34,7 @@ class FD(TimingModel):
         self.num_FD_terms = len(FD_terms)
         # set up derivative functions
         for ii, val in FD_mapping.iteritems():
-            self._make_delay_derivative_funcs(val, self.d_delay_FD_d_FDX, 'd_delay_d_')
-            self.delay_derivs += [getattr(self, 'd_delay_d_' + val)]
+            self.register_deriv_funcs(self.d_delay_FD_d_FDX, 'delay', val)
 
     def FD_delay(self, toas):
         """This is a function for calculation of frequency dependent delay.

@@ -89,11 +89,10 @@ class PulsarBinary(TimingModel):
     def setup(self):
         super(PulsarBinary, self).setup()
         for bpar in self.binary_params:
-            self._make_delay_derivative_funcs(bpar, self.d_binary_delay_d_xxxx,
-                                              'd_delay_binary_d_')
-            self.delay_derivs += [getattr(self, 'd_delay_binary_d_' + bpar)]
+            self.register_deriv_funcs(self.d_binary_delay_d_xxxx, 'delay', bpar)
         # Setup the model isinstance
         self.binary_instance = self.binary_model_class()
+
     # With new parameter class set up, do we need this?
     def apply_units(self):
         """Apply units to parameter value.
@@ -126,7 +125,7 @@ class PulsarBinary(TimingModel):
                 if binObjpar.value is None:
                     continue
                 pardict[par] = binObjpar.value * binObjpar.units
-
+        #NOTE something is wrong here.
         self.binary_instance.update_input(self.barycentric_time, pardict)
 
     def binarymodel_delay(self, toas):

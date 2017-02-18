@@ -27,10 +27,10 @@ class Dispersion(TimingModel):
                        description="Dispersion measure"))
         self.dm_value_funcs = [self.constant_dm,]
         self.delay_funcs['L1'] += [self.dispersion_delay,]
-        self.delay_derivs += [self.d_delay_d_DM,]
 
     def setup(self):
         super(Dispersion, self).setup()
+        self.register_deriv_funcs(self.d_delay_d_DM, 'delay', 'DM')
 
     def constant_dm(self, toas):
         cdm = np.zeros(len(toas))
@@ -104,7 +104,7 @@ class DispersionDMX(Dispersion):
         self.set_special_params(['DMX_0001', 'DMXR1_0001','DMXR2_0001'])
 
     def setup(self):
-        super(Dispersion, self).setup()
+        super(DispersionDMX, self).setup()
         # Get DMX mapping.
         DMX_mapping = self.get_prefix_mapping('DMX_')
         DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
@@ -123,8 +123,7 @@ class DispersionDMX(Dispersion):
         # create d_delay_d_dmx functions
         for prefix_par in self.get_params_of_type('prefixParameter'):
             if prefix_par.startswith('DMX_'):
-                self._make_delay_derivative_funcs(prefix_par, self.d_delay_d_DMX, 'd_delay_d_')
-                self.delay_derivs += [getattr(self, 'd_delay_d_'+prefix_par)]
+                self.register_deriv_funcs(self.d_delay_d_DMX, 'delay', prefix_par)
 
     def dmx_dm(self, toas):
         # Set toas to the right DMX peiod.
@@ -179,6 +178,6 @@ class DispersionDMX(Dispersion):
         DMX_group = toas.group_by('DMX_section')
         grp_msk = DMX_group.groups.keys['DMX_section'] == dmx_index
         selected_grp = DMX_group.groups[grp_msk]
-        dmx[selected_grp['index']] = 1.0 
+        dmx[selected_grp['index']] = 1.0
 
         return DMconst * dmx / bfreq**2.0
