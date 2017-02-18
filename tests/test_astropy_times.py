@@ -4,7 +4,9 @@ from astropy.utils.data import download_file
 import astropy.time
 import astropy.coordinates
 
-class TestAstroPyTime:
+import unittest
+
+class TestAstroPyTime(unittest.TestCase):
     """This class contains a sequence of time conversion tests.
 
     From the SOFA manual, these times are all equivalent:
