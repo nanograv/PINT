@@ -33,7 +33,8 @@ class TestAstroPyTime(unittest.TestCase):
     def test_utc_ut1(self):
         x = self.t.ut1.iso
         y = '2006-01-15 21:24:37.834078'
-        assert x == y
+        msg = '({0}, {1})'.format(x, y)
+        assert x == y, msg
     def test_ut1_tai(self):
         x = self.t.tai.iso
         y = '2006-01-15 21:25:10.500000'
