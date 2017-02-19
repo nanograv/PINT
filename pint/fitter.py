@@ -191,8 +191,9 @@ class WlsFitter(Fitter):
                     un *= u.s
                 pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
                 fitpv[pn] = numpy.longdouble((pv+dpv) / fitp[pn].units)
-                #NOTE Temp TEST, it will be deleted
-                if fitpv['SINI'] > 1:
+                #NOTE Here is to avoide SINI go beyone the limit. It would be
+                # changed in the future when piror is emplimented. 
+                if 'SINI' in fitpv.keys() and fitpv['SINI'] > 1:
                     fitpv['SINI'] = numpy.longdouble(1.0)
                 fitperrs[pn] = errs[uind]
                 chi2 = self.minimize_func(list(fitpv.values()), *fitp.keys())
