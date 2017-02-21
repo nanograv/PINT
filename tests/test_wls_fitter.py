@@ -23,7 +23,7 @@ class Testwls(unittest.TestCase):
         self.per_param = {'A1': 1e-05, 'DECJ': 1e-06, 'DMX_0003': 120, 'ECC': 0.2,
                           'F0': 1e-12, 'F1': 0.001, 'JUMP3': 10.0, 'M2': 10.0,
                           'OM': 1e-06, 'PB': 1e-08, 'PMDEC': 0.1, 'PMRA': 0.1,
-                          'PX': 100, 'RAJ': 1e-08, 'SINI': 0.004075, 'T0': 1e-10}
+                          'PX': 100, 'RAJ': 1e-08, 'SINI': -0.004075, 'T0': 1e-10}
 
     def perturb_param(self, param, h):
         self.f.reset_model()
