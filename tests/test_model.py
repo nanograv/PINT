@@ -40,7 +40,7 @@ errs = t.get_errors()
 
 log.info("Computing residuals...")
 t0 = time.time()
-resids_us = resids(t, m).time_resids.to(u.us)
+resids_us = resids(t, m, False).time_resids.to(u.us)
 time_phase = time.time() - t0
 log.info("Computed phases and residuals in %.3f sec" % time_phase)
 
@@ -61,7 +61,7 @@ diff_t2 -= diff_t2.mean()
 log.info("Max resid diff between PINT and T2: %.2f ns" % numpy.fabs(diff_t2).max().value)
 log.info("Std resid diff between PINT and T2: %.2f ns" % diff_t2.std().value)
 
-assert numpy.fabs(diff_t2).max() < 5.0 * u.ns 
+assert numpy.fabs(diff_t2).max() < 5.0 * u.ns
 
 # run tempo1 also, if the tempo_utils module is available
 did_tempo1 = False
@@ -84,7 +84,7 @@ except:
     pass
 
 if did_tempo1 and not planets:
-    assert numpy.fabs(diff_t1).max() < 32.0 * u.ns 
+    assert numpy.fabs(diff_t1).max() < 32.0 * u.ns
 
 def do_plot():
     plt.clf()

@@ -270,6 +270,9 @@ class Parameter(object):
                 self.uncertainty_value = val
         self._uncertainty = self.set_uncertainty(val)
 
+    def print_uncertainty(self, uncertainty):
+        return str(uncertainty.to(self.units).value)
+
     def __str__(self):
         out = self.name
         if self.units is not None:
@@ -627,7 +630,7 @@ class MJDParameter(Parameter):
         set_quantity = self.set_quantity_mjd
         print_quantity = time_to_mjd_string
         get_value = time_to_longdouble
-        set_uncertainty = self.set_quantity_mjd
+        set_uncertainty = self.set_uncertainty_mjd
         super(MJDParameter, self).__init__(name=name, value=value, units="MJD",
                                            description=description,
                                            uncertainty=uncertainty,
@@ -641,6 +644,31 @@ class MJDParameter(Parameter):
         self.value_type = time.Time
         self.paramType = 'MJDParameter'
         self.special_arg += ['time_scale',]
+
+    @property
+    def uncertainty_value(self):
+        """Return a pure value from .uncertainty. The unit will associate
+        with .units
+        """
+        if self._uncertainty is None:
+            return None
+        else:
+            return self._uncertainty.value
+
+    @uncertainty_value.setter
+    def uncertainty_value(self, val):
+        """Setter for uncertainty_value. Setting .uncertainty_value will only change
+        the .uncertainty attribute.
+        """
+        if val is None:
+            if not isinstance(self.uncertainty, (str, bool)) and \
+                self._uncertainty_value is not None:
+                log.warning('This parameter has uncertainty value. '
+                            'Change it to None will lost information.')
+            else:
+                self.uncertainty_value = val
+        self._uncertainty = self.set_uncertainty(val)
+
     def set_quantity_mjd(self, val):
         """Value setter for MJD parameter,
            Accepted format:
@@ -664,6 +692,20 @@ class MJDParameter(Parameter):
             raise ValueError('MJD parameter can not accept '
                              + type(val).__name__ + 'format.')
         return result
+
+    def set_uncertainty_mjd(self, val):
+        # First try to use astropy unit conversion
+        try:
+            # If this fails, it will raise UnitConversionError
+            _ = val.to(self.units)
+            result = data2longdouble(val.value) * self.units
+        except AttributeError:
+            # This will happen if the input value did not have units
+            result = data2longdouble(val) * self.units
+        return result
+
+    def print_uncertainty(self, uncertainty):
+        return longdouble2string(self.uncertainty_value)
 
 
 class AngleParameter(Parameter):
@@ -946,6 +988,15 @@ class prefixParameter(object):
     def special_arg(self):
         return self.param_comp.special_arg
 
+    def __str__(self):
+        out = self.name
+        if self.units is not None:
+            out += " (" + str(self.units) + ")"
+        out += " " + self.print_quantity(self.quantity)
+        if self.uncertainty is not None:
+            out += " +/- " + str(self.uncertainty.to(self.units))
+        return out
+
     # Define the function to call functions inside of parameter composition.
     def __str__(self):
         return self.param_comp.__str__()
@@ -956,8 +1007,8 @@ class prefixParameter(object):
     def prior_pdf(self,value=None, logpdf=False):
         return self.param_comp.prior_pdf(value, logpdf)
 
-    def print_quantity(self):
-        self.param_comp.print_quantity()
+    def print_quantity(self, quantity):
+        return self.param_comp.print_quantity(quantity)
 
     def name_matches(self, name):
         return self.param_comp.name_matches(name)

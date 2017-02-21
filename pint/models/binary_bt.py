@@ -26,7 +26,9 @@ class BinaryBT(PulsarBinary):
              units="second",
              description="Time dilation & gravitational redshift"),
              binary_param = True)
-
+        # remove unused parameter. 
+        self.remove_param('M2')
+        self.remove_param('SINI')
     def setup(self):
         super(BinaryBT, self).setup()
         # If any necessary parameter is missing, raise MissingParameter.
