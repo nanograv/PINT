@@ -8,7 +8,6 @@ import astropy.units as u
 import sys
 import os
 import unittest
-
 from pinttestdata import testdir, datadir
 
 parfile = os.path.join(datadir, 'prefixtest.par')
@@ -24,9 +23,9 @@ class TestPrefix(unittest.TestCase):
         print("Test prefix parameter via a glitch model")
         rs = pint.residuals.resids(self.t, self.m).phase_resids
         # Now do the fit
-        print("Fitting...")
-        f = pint.fitter.fitter(self.t, self.m)
-        f.call_minimize()
+        print "Fitting..."
+        f = pint.fitter.PowellFitter(self.t, self.m)
+        f.fit_toas()
         emsg = "RMS of " + self.m.PSR.value + " is too big."
         assert f.resids.time_resids.std().to(u.us).value < 950.0, emsg
 
