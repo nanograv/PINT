@@ -133,7 +133,7 @@ class BTmodel(PSR_BINARY):
         # In BTmodel.C, they do not use pbprime here, just pb...
         # Is it not more appropriate to include the effects of PBDOT?
         #return 1.0 - 2*np.pi*num / (den * self.pbprime())
-        return 1.0 - 2*np.pi*num / (den * self.PB.to('second'))
+        return 1.0 - 2*np.pi*num / (den * self.PB.to(u.second))
 
     @Cache.use_cache
     def BTdelay(self):
@@ -151,42 +151,42 @@ class BTmodel(PSR_BINARY):
 
     @Cache.use_cache
     def d_delayL2_d_E(self):
-        a1 = self.a1().to('second')/c.c
+        a1 = self.a1()/c.c
         return (a1*np.cos(self.omega())*np.sqrt(1-self.ecc()**2)+self.GAMMA) * np.cos(self.E())
 
     @Cache.use_cache
     def d_delayL1_d_A1(self):
-        return np.sin(self.omega())*(np.cos(self.E()) - self.ecc())
+        return np.sin(self.omega())*(np.cos(self.E()) - self.ecc())/c.c
 
     @Cache.use_cache
     def d_delayL1_d_A1DOT(self):
-        return self.tt0() * self.d_delayL1_d_A1()
+        return self.tt0 * self.d_delayL1_d_A1()
 
     @Cache.use_cache
     def d_delayL2_d_A1(self):
-        return np.cos(self.omega())*np.sqrt(1-self.ecc()**2)*np.sin(self.E())
+        return np.cos(self.omega())*np.sqrt(1-self.ecc()**2)*np.sin(self.E())/c.c
 
     @Cache.use_cache
     def d_delayL2_d_A1DOT(self):
-        return self.tt0() * self.d_delayL2_d_A1()
+        return self.tt0 * self.d_delayL2_d_A1()
 
     @Cache.use_cache
     def d_delayL1_d_OM(self):
         a1 = self.a1()/c.c
-        return a1*np.cos(self.omega())*(np.cos(self.E())-self.ecc())*self.DEG2RAD
+        return a1*np.cos(self.omega())*(np.cos(self.E())-self.ecc())
 
     @Cache.use_cache
     def d_delayL1_d_OMDOT(self):
-        return self.tt0() * self.d_delayL1_d_OM() / self.SECS_PER_YEAR
+        return self.tt0 * self.d_delayL1_d_OM()
 
     @Cache.use_cache
     def d_delayL2_d_OM(self):
         a1 = self.a1()/c.c
-        return -a1*np.sin(self.omega())*np.sqrt(1-self.ecc()**2)*np.sin(self.E())*self.DEG2RAD
+        return -a1*np.sin(self.omega())*np.sqrt(1-self.ecc()**2)*np.sin(self.E())
 
     @Cache.use_cache
     def d_delayL2_d_OMDOT(self):
-        return self.tt0() * self.d_delayL2_d_OM() / self.SECS_PER_YEAR
+        return self.tt0 * self.d_delayL2_d_OM()
 
     @Cache.use_cache
     def d_delayL1_d_ECC(self):
@@ -196,7 +196,7 @@ class BTmodel(PSR_BINARY):
 
     @Cache.use_cache
     def d_delayL1_d_EDOT(self):
-        return self.tt0() * self.d_delayL1_d_ECC()
+        return self.tt0 * self.d_delayL1_d_ECC()
 
     @Cache.use_cache
     def d_delayL2_d_ECC(self):
@@ -207,11 +207,11 @@ class BTmodel(PSR_BINARY):
 
     @Cache.use_cache
     def d_delayL2_d_EDOT(self):
-        return self.tt0() * self.d_delayL2_d_ECC()
+        return self.tt0 * self.d_delayL2_d_ECC()
 
     @Cache.use_cache
     def d_delayL1_d_GAMMA(self):
-        return np.zeros_like(self.t)
+        return np.zeros(len(self.t)) * u.second/u.second
 
     @Cache.use_cache
     def d_delayL2_d_GAMMA(self):
@@ -286,4 +286,7 @@ class BTmodel(PSR_BINARY):
         return self.delayR() * (self.d_delayL1_d_GAMMA() + self.d_delayL2_d_GAMMA())
 
     def d_BTdelay_d_par(self, par):
-        pass
+        if hasattr(self, 'd_delay_d_'+par):
+            return getattr(self, 'd_delay_d_'+par)()
+        else:
+            return np.zeros(len(self.tt0))*u.second/getattr(self, par).unit

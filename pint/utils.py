@@ -381,6 +381,23 @@ def taylor_horner(x, coeffs):
     return result
 
 
+def taylor_horner_deriv(x, coeffs):
+    """Evaluate a Taylor series of coefficients at x via the Horner scheme.
+    For example, if we want: 3/1! + 4*x/2! + 12*x^2/3! with
+    x evaluated at 2.0, we would do:
+    In [1]: taylor_horner_deriv(2.0, [10, 3, 4, 12])
+    Out[1]: 15.0
+    """
+    result = 0.0
+    fact = float(len(coeffs))
+    der_coeff = float(len(coeffs)) - 1
+    for coeff in coeffs[::-1]:
+        result = result * x / fact + coeff * der_coeff
+        fact -= 1.0
+        der_coeff -= 1.0
+    result = (result)/x
+    return result
+
 def is_number(s):
     """Check if it is a number string.
     """

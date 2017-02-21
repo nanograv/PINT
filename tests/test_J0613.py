@@ -5,6 +5,8 @@ import astropy.units as u
 from pint.residuals import resids
 import numpy as np
 import os, unittest
+import test_derivative_utils as tdu
+import logging
 
 from pinttestdata import testdir, datadir
 
@@ -28,10 +30,41 @@ class TestJ0613(unittest.TestCase):
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-8), 'J0613 binary delay test failed.'
 
     def test_J0613(self):
-        pint_resids_us = resids(self.toasJ0613, self.modelJ0613).time_resids.to(u.s)
+        pint_resids_us = resids(self.toasJ0613, self.modelJ0613, False).time_resids.to(u.s)
         # Due to the gps2utc clock correction. We are at 3e-8 seconds level.
         assert np.all(np.abs(pint_resids_us.value - self.ltres) < 3e-8), 'J0613 residuals test failed.'
 
+    def test_derivative(self):
+        log= logging.getLogger( "TestJ0613.derivative_test")
+        self.modelJ0613.PBDOT.value = 0.0 # For test PBDOT
+        self.modelJ0613.EPS1DOT.value = 0.0
+        self.modelJ0613.EPS2DOT.value = 0.0
+        self.modelJ0613.A1DOT.value = 0.0
+        testp = tdu.get_derivative_params(self.modelJ0613)
+        delay = self.modelJ0613.delay(self.toasJ0613.table)
+        # Change parameter test step
+        testp['EPS1'] = 1
+        testp['EPS2'] = 1
+        testp['PMDEC'] = 1
+        testp['PMRA'] = 1
+        for p in testp.keys():
+            log.debug( "Runing derivative for %s", 'd_delay_d_'+p)
+            ndf = self.modelJ0613.d_phase_d_param_num(self.toasJ0613.table, p, testp[p])
+            adf = self.modelJ0613.d_phase_d_param(self.toasJ0613.table, delay, p)
+            diff = adf - ndf
+            if not np.all(diff.value) == 0.0:
+                mean_der = (adf+ndf)/2.0
+                relative_diff = np.abs(diff)/np.abs(mean_der)
+                #print "Diff Max is :", np.abs(diff).max()
+                msg = 'Derivative test failed at d_delay_d_%s with max relative difference %lf' % (p, np.nanmax(relative_diff).value)
+                if p in ['EPS1DOT', 'EPS1']:
+                    tol = 0.05
+                else:
+                    tol = 1e-3
+                log.debug( "derivative relative diff for %s, %lf"%('d_delay_d_'+p, np.nanmax(relative_diff).value))
+                assert np.nanmax(relative_diff) < tol, msg
+            else:
+                continue
 
 if __name__ == '__main__':
     pass
