@@ -1133,6 +1133,7 @@ class maskParameter(floatParameter):
         self.index = index
         name_param = name + str(index)
         self.origin_name = name
+        self.prefix = self.origin_name
         super(maskParameter, self).__init__(name=name_param, value=value,
                                             units=units,
                                             description=description,
@@ -1148,7 +1149,8 @@ class maskParameter(floatParameter):
             self.aliases.append(name)
         self.from_parfile_line = self.from_parfile_line_mask
         self.as_parfile_line = self.as_parfile_line_mask
-
+        self.is_prefix = True
+        
     def __str__(self):
         out = self.name
         if self.units is not None:
@@ -1263,14 +1265,14 @@ class maskParameter(floatParameter):
                                        units= self.units, aliases=[])
         return new_mask_param
 
-    def select_toa_mask(self, toas):
-        """Select the toas.
-        Parameter
-        ----------
-        toas : toas table
-        Return
-        ----------
-        A mask array. the select toas are masked as True.
-        """
-        self.toa_select = TOASelect(self.key, self.key_value)
-        return self.toa_select.get_toa_key_mask(toas)
+    # def select_toa_mask(self, toas):
+    #     """Select the toas.
+    #     Parameter
+    #     ----------
+    #     toas : toas table
+    #     Return
+    #     ----------
+    #     A mask array. the select toas are masked as True.
+    #     """
+    #     self.toa_select = TOASelect(self.key, self.key_value)
+    #     return self.toa_select.get_toa_key_mask(toas)
