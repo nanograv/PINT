@@ -19,7 +19,7 @@ class JumpDelay(TimingModel):
         self.delay_funcs['L1'] += [self.jump_delay,]
         self.order_number = -1
         self.print_par_func = 'print_par_JumpDelay'
-        
+
     def setup(self):
         super(JumpDelay, self).setup()
         self.jumps = []
@@ -27,8 +27,6 @@ class JumpDelay(TimingModel):
             if mask_par.startswith('JUMP'):
                 self.jumps.append(mask_par)
         for j in self.jumps:
-            #self._make_delay_derivative_funcs(j, self.d_delay_d_jump, 'd_delay_d_')
-            #self.delay_derivs += [getattr(self, 'd_delay_d_'+j)]
             self.register_deriv_funcs(self.d_delay_d_jump, 'delay', j)
 
     def jump_delay(self, toas):
