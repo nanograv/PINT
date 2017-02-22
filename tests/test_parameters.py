@@ -78,9 +78,9 @@ class TestParameters(unittest.TestCase):
         self.assertEqual(test_m.JUMP1.frozen, True)
         self.assertEqual(test_m.JUMP1.key, 'MJD')
         self.assertTrue(
-                numpy.isclose(test_m.JUMP1.key_value[0].value, 52742.0, atol=1e-10))
+                numpy.isclose(test_m.JUMP1.key_value[0], 52742.0, atol=1e-10))
         self.assertTrue(
-                numpy.isclose(test_m.JUMP1.key_value[1].value, 52745.0, atol=1e-10))
+                numpy.isclose(test_m.JUMP1.key_value[1], 52745.0, atol=1e-10))
         self.assertTrue(
                 numpy.isclose(test_m.JUMP1.value, 0.2))
 
