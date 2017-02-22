@@ -22,7 +22,7 @@ class TOASelect(object):
     Putting an object as condition will slow the process dramtically.
     """
     def __init__(self, is_range, use_hash=False):
-        self.is_range = True
+        self.is_range = is_range
         self.use_hash = use_hash
         self.hash_dict = {}
         self.columns_info = {}
