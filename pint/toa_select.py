@@ -114,7 +114,8 @@ class TOASelect(object):
         # Check if condition get changed
         cd_unchg, cd_chg = self.check_condition(condition)
         # check if column get changed.
-        if self.check_table_column(column):
+        col_change = self.check_table_column(column)
+        if col_change:
             if self.is_range:
                 new_select = self.get_select_range(cd_chg, column)
             else:
