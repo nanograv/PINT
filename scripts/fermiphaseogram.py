@@ -13,7 +13,6 @@ import argparse
 from astropy.time import Time
 from pint.eventstats import hmw, hm, h2sig
 from astropy.coordinates import SkyCoord
-#from parfile import psr_par
 
 from astropy import log
 

@@ -113,7 +113,7 @@ def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,loge
 
       When weights are loaded, or computed, events are filtered by weight >= minweight
     '''
-    import pyfits
+    import astropy.io.fits as pyfits
     # Load photon times from FT1 file
     hdulist = pyfits.open(ft1name)
     ft1hdr=hdulist[1].header
