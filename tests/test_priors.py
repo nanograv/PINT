@@ -56,5 +56,5 @@ class TestPriors(unittest.TestCase):
         # Test that integral is 1.0, not safe since using _rv private var
         assert np.isclose(self.m.M2.prior._rv.cdf(0.6), 1.0)
 
-if __name__ == '__main__':
-    unittest.main()
+#if __name__ == '__main__':
+#    unittest.main()
