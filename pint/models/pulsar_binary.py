@@ -89,10 +89,10 @@ class PulsarBinary(TimingModel):
     def setup(self):
         super(PulsarBinary, self).setup()
         for bpar in self.binary_params:
-            self.make_delay_binary_deriv_funcs(bpar)
-            self.delay_derivs += [getattr(self, 'd_delay_binary_d_' + bpar)]
+            self.register_deriv_funcs(self.d_binary_delay_d_xxxx, 'delay', bpar)
         # Setup the model isinstance
         self.binary_instance = self.binary_model_class()
+
     # With new parameter class set up, do we need this?
     def apply_units(self):
         """Apply units to parameter value.
@@ -125,7 +125,7 @@ class PulsarBinary(TimingModel):
                 if binObjpar.value is None:
                     continue
                 pardict[par] = binObjpar.value * binObjpar.units
-
+        #NOTE something is wrong here.
         self.binary_instance.update_input(self.barycentric_time, pardict)
 
     def binarymodel_delay(self, toas):
@@ -133,7 +133,7 @@ class PulsarBinary(TimingModel):
         self.update_binary_object(toas)
         return self.binary_instance.binary_delay()
 
-    def d_binary_delay_d_xxxx(self,param,toas):
+    def d_binary_delay_d_xxxx(self, toas, param):
         """Return the bianry model delay derivtives"""
         self.update_binary_object(toas)
         return self.binary_instance.d_binarydelay_d_par(param)
@@ -143,6 +143,6 @@ class PulsarBinary(TimingModel):
         of d_binary_delay_d_paramName(toas)
         """
         def deriv_func(toas):
-            return self.d_binary_delay_d_xxxx(param, toas)
+            return self.d_binary_delay_d_xxxx(toas, param)
         deriv_func.__name__ = 'd_delay_binary_d_' + param
         setattr(self, 'd_delay_binary_d_' + param, deriv_func)

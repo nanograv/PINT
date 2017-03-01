@@ -562,7 +562,7 @@ class DDmodel(PSR_BINARY):
         domega_dpar = self.prtl_der('omega',par)
         dsDelay_domega = -2*TM2/logNum*self.SINI*((cE-e)*cOmega-np.sqrt(1-e**2)*sE*sOmega)
         dSINI_dpar = self.prtl_der('SINI',par)
-        dsDelay_dSINI = -2*TM2/logNum*(-np.sqrt(1-e**2)*cOmega*sE-(cE-e)*sOmega)
+        dsDelay_dSINI = -2*TM2/logNum*(-(1-e**2)**0.5*cOmega*sE-(cE-e)*sOmega)
         return dTM2_dpar*dsDelay_dTM2 + decc_dpar*dsDelay_decc + \
                dE_dpar*dsDelay_dE +domega_dpar*dsDelay_domega +  \
                dSINI_dpar*dsDelay_dSINI

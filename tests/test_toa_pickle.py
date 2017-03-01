@@ -2,10 +2,11 @@
 from pint import toa
 import os
 
+import unittest
 from pinttestdata import testdir, datadir
 os.chdir(datadir)
 
-class TestTOAReader:
+class TestTOAReader(unittest.TestCase):
     def setUp(self):
         # First, read the TOAs from the tim file.
         # This should also create the pickle file.
