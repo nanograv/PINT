@@ -1,6 +1,7 @@
 import numpy as np
 import astropy.units as u
 import astropy.coordinates as coor
+from astropy.extern.six.moves import urllib
 from astropy.time import Time
 from .utils import PosVel
 from astropy import log
@@ -12,8 +13,8 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 
-kernel_link_base_http = 'http://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/'
-kernel_link_base_ftp = 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/'
+jpl_kernel_http = 'http://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/'
+jpl_kernel_ftp = 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/'
 
 jpl_obj_code = {'ssb': 0,
                 'sun': 10,
@@ -29,14 +30,14 @@ jpl_obj_code = {'ssb': 0,
                 'neptune': 8,
                 'pluto': 9}
 
-def objPosVel_wrt_SSB(objname, t, ephem):
-    """This function computes a solar system object position and velocity with respect
-    to the solar system barycenter (SSB) using astropy coordinates get_body_barycentric()
+def objPosVel_wrt_SSB(objname, t, ephem, path=None, link=None):
+    """This function computes a solar system object position and velocity respect
+    to solar system barycenter using astropy coordinates get_body_barycentric()
     method.
-    
-    The coordinate frame is that of the underlying solar system ephemeris, which 
+
+    The coordinate frame is that of the underlying solar system ephemeris, which
     has been the ICRF (J2000) since the DE4XX series.
-    
+
     Parameters
     ----------
     objname: str
@@ -46,30 +47,49 @@ def objPosVel_wrt_SSB(objname, t, ephem):
         Observation time in Astropy.time.Time object format.
     ephem: str
         The ephem to for computing solar system object position and velocity
-        
+    path: str optional
+        The data directory point to a local ephemeris.
+    link: str optional
+        The link where to download the ephemeris.
+
     Returns
     -------
     PosVel object with 3-vectors for the position and velocity of the object
-    
+    Note
+    ----
+    If both path and link are provided. Path will be first to try.
     """
     ephem = ephem.lower()
     objname = objname.lower()
     # Use astropy to compute postion.
-    try:
-        pos, vel = coor.get_body_barycentric_posvel(objname, t, ephemeris=ephem)
-    except ValueError:
-        # Try use http link first.
-        try:
-            pos, vel = coor.get_body_barycentric_posvel(objname, t, ephemeris= \
-                           kernel_link_base_http + "%s.bsp" % ephem)
-        except:
-            # try ftp link, This link is slow but gives the newest ephemeris.
-            # NOTE I am not suer 50 second for timeout is enough here.
-            aut.data.download_file(kernel_link_base_ftp + "%s.bsp" % ephem, \
+    if link is None and path is None: # set solar_system_ephemeris kernel from default links.
+        load_kernel = True # a flag for checking if the kernel has been loaded
+        for l in ['', jpl_kernel_http, jpl_kernel_ftp]:
+            if load_kernel:
+                break
+            try:
+                coor.solar_system_ephemeris.set(l + "%s.bsp" % ephem)
+                load_kernel = True
+            except urllib.error.URLError:
+                aut.data.download_file(l + "%s.bsp" % ephem, \
+                                       timeout=50, cache=True)
+                coor.solar_system_ephemeris.set(l + "%s.bsp" % ephem)
+                load_kernel = True
+            except:
+                load_kernel = False
+            print l
+        if not load_kernel: # if all above not working try to load from default datadir
+            coor.solar_system_ephemeris.kernel = SPK.open(datapath("%s.bsp" % ephem))
+            load_kernel = 1
+    else:
+        if path is not None:
+            coor.solar_system_ephemeris.kernel = SPK.open(path + "%s.bsp" % ephem)
+        else:
+            aut.data.download_file(link + "%s.bsp" % ephem, \
                                    timeout=50, cache=True)
-            pos, vel = coor.get_body_barycentric_posvel(objname, t, ephemeris= \
-                           kernel_link_base_ftp + "%s.bsp" % ephem)
+            coor.solar_system_ephemeris.set(link + "%s.bsp" % ephem)
 
+    pos, vel = coor.get_body_barycentric_posvel(objname, t)
     return PosVel(pos.xyz, vel.xyz.to(u.km/u.second), origin='ssb', obj=objname)
 
 def objPosVel(obj1, obj2, t, ephem):
