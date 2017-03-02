@@ -15,7 +15,7 @@ m.read_parfile(os.path.join(datadir,'NGC6440E.par'))
 
 # Get TOAs
 t = toa.TOAs(os.path.join(datadir,'NGC6440E.tim'))
-t.apply_clock_corrections()
+t.apply_clock_corrections(include_bipm=False)
 t.compute_TDBs()
 try:
     planet_ephems = m.PLANET_SHAPIRO.value

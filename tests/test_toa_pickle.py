@@ -15,11 +15,11 @@ class TestTOAReader(unittest.TestCase):
             os.remove('test1.tim.pickle')
         except OSError:
             pass
-        tt = toa.get_TOAs("test1.tim",usepickle=False)
+        tt = toa.get_TOAs("test1.tim",usepickle=False, include_bipm=False)
         self.numtoas = tt.ntoas
         del tt
         # Now read them from the pickle
-        self.t = toa.get_TOAs("test1.tim",usepickle=True)
+        self.t = toa.get_TOAs("test1.tim",usepickle=True, include_bipm=False)
 
     def test_pickle(self):
         # Initially this just checks that the same number
