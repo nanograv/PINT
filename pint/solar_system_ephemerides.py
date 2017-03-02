@@ -93,11 +93,10 @@ def objPosVel_wrt_SSB(objname, t, ephem, path=None, link=None):
             coor.solar_system_ephemeris._value = datapath("%s.bsp" % ephem)
             coor.solar_system_ephemeris._kernel.origin = coor.solar_system_ephemeris._value
             load_kernel = True
-
     else:
         if path is not None:
             coor.solar_system_ephemeris._kernel = SPK.open(path + "%s.bsp" % ephem)
-            coor.solar_system_ephemeris._value = datapath("%s.bsp" % ephem)
+            coor.solar_system_ephemeris._value = path + "%s.bsp" % ephem
             coor.solar_system_ephemeris._kernel.origin = coor.solar_system_ephemeris._value
         else:
             aut.data.download_file(link + "%s.bsp" % ephem, \
