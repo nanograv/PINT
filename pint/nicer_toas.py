@@ -106,29 +106,18 @@ def load_NICER_TOAs(eventname):
             MJDREF = np.longdouble(event_hdr['MJDREFI']) + np.longdouble(event_hdr['MJDREFF'])
     log.info("MJDREF = {0}".format(MJDREF))
     mjds = np.array(event_dat.field('TIME'),dtype=np.longdouble)/86400.0 + MJDREF + TIMEZERO
-    energies = event_dat.field('PHI')*u.eV
+    phas = event_dat.field('PHA')
 
     if timesys == 'TDB':
         log.info("Building barycentered TOAs")
-        if weightcolumn is None:
-            toalist=[toa.TOA(m,obs='Barycenter',scale='tdb',energy=e) for m,e in zip(mjds,energies)]
-        else:
-            toalist=[toa.TOA(m,obs='Barycenter',scale='tdb',energy=e,weight=w) for m,e,w in zip(mjds,energies,weights)]
+        toalist=[toa.TOA(m,obs='Barycenter',scale='tdb',pha=e) for m,e in zip(mjds,phas)]
     else:
         if timeref == 'LOCAL':
-            log.info('LOCAL TOAs not implemented yet')
-            if ft2name is None:
-                log.error('FT2 file required to process raw Fermi times.')
-            if weightcolumn is None:
-                toalist=[toa.TOA(m, obs='Spacecraft', scale='tt',energy=e) for m,e in zip(mjds,energies)]
-            else:
-                toalist=[toa.TOA(m, obs='Spacecraft', scale='tt',energy=e,weight=w) for m,e,w in zip(mjds,energies,weights)]
+            log.info('Building LOCAL TOAs')
+            toalist=[toa.TOA(m, obs='Spacecraft', scale='tt',energy=e) for m,e in zip(mjds,phas)]
         else:
             log.info("Building geocentered TOAs")
-            if weightcolumn is None:
-                toalist=[toa.TOA(m, obs='Geocenter', scale='tt',energy=e) for m,e in zip(mjds,energies)]
-            else:
-                toalist=[toa.TOA(m, obs='Geocenter', scale='tt',energy=e,weight=w) for m,e,w in zip(mjds,energies,weights)]
+            toalist=[toa.TOA(m, obs='Geocenter', scale='tt',energy=e) for m,e in zip(mjds,phas)]
 
     return toalist
 
