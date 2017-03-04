@@ -8,7 +8,7 @@ import pint.models
 import pint.residuals
 import astropy.units as u
 import matplotlib.pyplot as plt
-from pint.fermi_toas import phaseogram, load_Fermi_TOAs
+from pint.nicer_toas import nicer_phaseogram, load_NICER_TOAs
 import argparse
 from astropy.time import Time
 from pint.eventstats import hmw, hm, h2sig
@@ -33,8 +33,7 @@ if __name__ == '__main__':
     modelin = pint.models.get_model(args.parfile)
 
     # Read event file and return list of TOA objects
-    tl  = load_Fermi_TOAs(args.eventfile, weightcolumn=args.weightcol,
-                          targetcoord=tc)
+    tl  = load_NICER_TOAs(args.eventfile)
 
     # Discard events outside of MJD range    
     if args.maxMJD is not None:
@@ -63,7 +62,6 @@ if __name__ == '__main__':
     # ensure all postive
     phases = np.where(phss < 0.0, phss + 1.0, phss)
     mjds = ts.get_mjds()
-    weights = np.array([w['weight'] for w in ts.table['flags']])
-    h = float(hmw(phases,weights))
+    h = float(hm(phases))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h,h2sig(h)))
-    phaseogram(mjds,phases,weights,bins=100,file = args.outfile)
+    nicer_phaseogram(mjds,phases,bins=100,file = args.outfile)
