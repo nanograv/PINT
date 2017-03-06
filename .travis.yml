@@ -47,3 +47,10 @@ install:
 script:
   - cd tests
   - ./run-tests.sh
+  # For now, just make sure that each script starts up and does its imports
+  # without error.
+  - pintbary.py --help
+  - pintempo.py --hep
+  - zima.py --help
+  - fermiphaseogram.py --help
+  - nicerphase.py --help

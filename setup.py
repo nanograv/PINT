@@ -102,7 +102,7 @@ setup(
 
     # These scripts will be installed in your PATH
     # These should be end user scripts for general use.
-    scripts = ['scripts/pintempo.py', 'scripts/zima.py', 'scripts/pintbary.py', 'scripts/fermiphaseogram.py'],
+    scripts = ['scripts/pintempo.py', 'scripts/zima.py', 'scripts/pintbary.py', 'scripts/fermiphaseogram.py', 'scripts/nicerphase.py'],
 
     packages=['pint',
         'pint.extern',
