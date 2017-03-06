@@ -234,26 +234,9 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
     out : string
         Formatted TOA line
     """
-
+    from .utils import time_to_mjd_string
     if format.upper() in ('TEMPO2','1'):
-        mjd1 = toatime.jd1 - 2400000.5 # Convert value to MJD
-        mjd2 = toatime.jd2
-        log.info("------------------")
-        log.info("mjd1 {0} mjd2 {1} ".format(mjd1,mjd2))
-        # Now ensure that mjd1 is an integer
-        fpart,ipart = numpy.modf(mjd1)
-        mjd1 = ipart
-        mjd2 += fpart
-        log.info("mjd1 {0} mjd2 {1} ".format(mjd1,mjd2))
-        if (mjd2 < 0.0):
-            mjd2 += 1.0
-            mjd1 -= 1.0
-        if (mjd2 >= 1.0):
-            mjd2 -= 1.0
-            mjd1 += 1.0
-        fracstr = "{0:.17f}".format(mjd2)
-        log.info("mjd {0} mjd1 {1} mjd2 {2}".format(toatime.mjd,mjd1,mjd2))
-        toa_str = "{0:.0f}".format(numpy.round(mjd1)) + fracstr[fracstr.index("."):]
+        toa_str = time_to_mjd_string(toatime,prec=13)
         log.info(toa_str)
         # In Tempo2 format, freq=0.0 means infinite frequency
         if freq == numpy.inf*u.MHz:
@@ -269,12 +252,13 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
         # In TEMPO/Princeton format, freq=0.0 means infinite frequency
         if freq == numpy.inf*u.MHz:
             freq = 0.0
+        # TODO: Improve these strings to ensure everything lands in the right columns
         if dm!=0.0*u.pc/u.cm**3:
-            out = obs.tempo_code+" %13s %8.3f %s %8.2f              %9.4f\n" % \
+            out = obs.tempo_code+" %13s%9.3f%20s%9.2f                %9.4f\n" % \
                 (name, freq.to(u.MHz).value, toa_str, toaerr.to(u.us).value,
                 dm.to(u.pc/u.cm**3).value)
         else:
-            out = obs.tempo_code+" %13s %8.3f %s %8.2f\n" % (name, freq.to(u.MHz).value,
+            out = obs.tempo_code+" %13s%9.3f%20s%9.2f\n" % (name, freq.to(u.MHz).value,
                 toa_str, toaerr.to(u.us).value)
     else:
         log.error('Unknown TOA format ({0})'.format(format))
