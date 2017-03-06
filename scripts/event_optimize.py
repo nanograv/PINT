@@ -2,7 +2,7 @@
 import numpy as np
 import pint.toa as toa
 import pint.models
-import pint.fitter
+from pint.fitter import Fitter
 import pint.fermi_toas as fermi
 from pint.eventstats import hmw, hm
 from pint.models.priors import Prior, UniformUnboundedRV, UniformBoundedRV, GaussianBoundedRV
@@ -124,7 +124,7 @@ def get_fit_keyvals(model, phs=0.0, phserr=0.1):
     fiterrs.append(phserr)
     return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
-class emcee_fitter(pint.fitter.fitter):
+class emcee_fitter(Fitter):
 
     def __init__(self, toas=None, model=None, template=None, 
                  weights=None, phs=0.5, phserr=0.03):

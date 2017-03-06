@@ -39,8 +39,8 @@ if __name__ == '__main__':
     prefit_resids = pint.residuals.resids(t, m).time_resids
 
     log.info("Fitting...")
-    f = pint.fitter.fitter(t, m)
-    f.call_minimize()
+    f = pint.fitter.WlsFitter(t, m)
+    f.fit_toas()
 
     # Print some basic params
     print( "Best fit has reduced chi^2 of", f.resids.chi2_reduced)

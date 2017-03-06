@@ -2,7 +2,7 @@
 import numpy as np
 import pint.toa as toa
 import pint.models
-import pint.fitter as fitter
+from pint.fitter import Fitter
 import pint.fermi_toas as fermi
 from pint.eventstats import hmw, hm, sf_hm
 import matplotlib.pyplot as plt
@@ -36,7 +36,7 @@ maxpost = -9e99
 numcalls = 0
 
 
-class emcee_fitter(fitter.fitter):
+class emcee_fitter(Fitter):
 
     def __init__(self, toas=None, model=None, weights=None):
         self.toas = toas
