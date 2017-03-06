@@ -12,7 +12,7 @@ from ..solar_system_ephemerides import objPosVel_wrt_SSB
 
 class SpecialLocation(Observatory):
     """Observatory-derived class for special sites that are not really
-    observatories but sometimes are used as TOA locations (eg, solar 
+    observatories but sometimes are used as TOA locations (eg, solar
     system barycenter).  Currently the only feature of this class is
     that clock corrections are zero."""
     def clock_corrections(self, t):
@@ -22,7 +22,7 @@ class BarycenterObs(SpecialLocation):
     """Observatory-derived class for the solar system barycenter.  Time
     scale is assumed to be tdb."""
     @property
-    def timescale(self): 
+    def timescale(self):
         return 'tdb'
     @property
     def tempo_code(self):
@@ -38,7 +38,7 @@ class BarycenterObs(SpecialLocation):
 class GeocenterObs(SpecialLocation):
     """Observatory-derived class for the Earth geocenter."""
     @property
-    def timescale(self): 
+    def timescale(self):
         return 'utc'
     @property
     def earth_location(self):

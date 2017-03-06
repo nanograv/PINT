@@ -2,7 +2,7 @@
 from __future__ import division, absolute_import, print_function
 
 import unittest
-from pint.solar_system_ephemerides import objPosVel2SSB, objPosVel
+from pint.solar_system_ephemerides import objPosVel_wrt_SSB, objPosVel
 import numpy as np
 import astropy.time as time
 import os
@@ -26,14 +26,14 @@ class TestSolarSystemDynamic(unittest.TestCase):
     # Here we only test if any errors happens.
     def test_earth(self):
         for ep in self.ephem:
-            a = objPosVel2SSB('earth', self.tdb_time ,ephem = ep)
+            a = objPosVel_wrt_SSB('earth', self.tdb_time ,ephem = ep)
             assert a.obj == 'earth'
             assert a.pos.shape == (3, 100000)
             assert a.vel.shape == (3, 100000)
 
     def test_sun(self):
         for ep in self.ephem:
-            a = objPosVel2SSB('sun', self.tdb_time ,ephem = ep)
+            a = objPosVel_wrt_SSB('sun', self.tdb_time ,ephem = ep)
             assert a.obj == 'sun'
             assert a.pos.shape == (3, 100000)
             assert a.vel.shape == (3, 100000)
@@ -41,7 +41,7 @@ class TestSolarSystemDynamic(unittest.TestCase):
     def test_planets(self):
         for p in self.planets:
             for ep in self.ephem:
-                a = objPosVel2SSB(p, self.tdb_time ,ephem = ep)
+                a = objPosVel_wrt_SSB(p, self.tdb_time ,ephem = ep)
                 assert a.obj == p
                 assert a.pos.shape == (3, 100000)
                 assert a.vel.shape == (3, 100000)

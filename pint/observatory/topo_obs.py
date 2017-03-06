@@ -20,9 +20,9 @@ class TopoObs(Observatory):
     computed, observatory coordinates are specified in ITRF XYZ, etc."""
 
     def __init__(self, name, tempo_code=None, itoa_code=None, aliases=None, 
-                 itrf_xyz=None, clock_file='time.dat', clock_dir='PINT', 
+                 itrf_xyz=None, clock_file='time.dat', clock_dir='PINT',
                  clock_fmt='tempo', include_gps=True, include_bipm=True):
-        """ 
+        """
         Required arguments:
 
             name     = The name of the observatory
