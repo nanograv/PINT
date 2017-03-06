@@ -28,18 +28,27 @@ jpl_obj_code = {'ssb': 0,
                 'pluto': 9}
 
 def objPosVel2SSB(objname, t, ephem):
-    """This function computes a solar system object position and velocity respect
-    to solar system barycenter using astropy coordinates get_body_barycentric()
+    """This function computes a solar system object position and velocity with respect
+    to the solar system barycenter (SSB) using astropy coordinates get_body_barycentric()
     method.
+    
+    The coordinate frame is that of the underlying solar system ephemeris, which 
+    has been the ICRF (J2000) since the DE4XX series.
+    
     Parameters
     ----------
     objname: str
         Solar system object name. Current support solar system bodies are listed in
-        astropy.coordinates.olar_system_ephemeris.bodies attribution.
+        astropy.coordinates.solar_system_ephemeris.bodies attribution.
     t: Astropy.time.Time object
         Observation time in Astropy.time.Time object format.
     ephem: str
         The ephem to for computing solar system object position and velocity
+        
+    Returns
+    -------
+    PosVel object with 3-vectors for the position and velocity of the object
+    
     """
     ephem = ephem.lower()
     objname = objname.lower()

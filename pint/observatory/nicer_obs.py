@@ -4,6 +4,7 @@ from __future__ import division, print_function
 # Special "site" location for NICER experiment
 
 from . import Observatory
+from .special_locations import SpecialLocation
 import astropy.units as u
 from astropy.coordinates import EarthLocation
 from ..utils import PosVel
@@ -84,9 +85,15 @@ class NICERObs(SpecialLocation):
     Note that this must be instantiated once to be put into the Observatory registry."""
     
     def __init__(self, FPorbname):
-        super(NICERObs, self).__init__()
+        super(NICERObs, self).__init__(name='nicer')
         self.FPorb = load_FPorbit(FPorbname)
         # Now build the interpolator here:
+        self.X = interp1d(self.FPorb['MJD_TT'],self.FPorb['X'])
+        self.Y = interp1d(self.FPorb['MJD_TT'],self.FPorb['Y'])
+        self.Z = interp1d(self.FPorb['MJD_TT'],self.FPorb['Z'])
+        self.Vx = interp1d(self.FPorb['MJD_TT'],self.FPorb['Vx'])
+        self.Vy = interp1d(self.FPorb['MJD_TT'],self.FPorb['Vy'])
+        self.Vz = interp1d(self.FPorb['MJD_TT'],self.FPorb['Vz'])
         
     @property
     def timescale(self): 
@@ -101,7 +108,13 @@ class NICERObs(SpecialLocation):
         return None
         
     def posvel(self, t, ephem):
+        # Compute vector from SSB to Earth
         geo_posvel = objPosVel2SSB('earth', t, ephem)
-        # Now look up geocentric position of NICER in FPorbit file
-        # and vector add to geo_posvel to get full posvel vector.
-        
+        log.info('geo_posvel {0}'.format(geo_posvel))
+        # Now add vector from Earth to NICER
+        nicer_pos_geo = np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])*self.FPorb['X'].unit
+        log.info('nicer_pos_geo {0}'.format(nicer_pos_geo))
+        nicer_vel_geo = np.array([self.Vx(t.tt.mjd), self.Vy(t.tt.mjd), self.Vz(t.tt.mjd)])*self.FPorb['Vx'].unit
+        nicer_posvel = PosVel( nicer_pos_geo, nicer_vel_geo, origin='earth')
+        # Vector add to geo_posvel to get full posvel vector.
+        return geo_posvel + nicer_posvel

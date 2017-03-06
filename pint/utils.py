@@ -89,15 +89,6 @@ class PosVel(object):
         else:
             return str(self.pos)+", "+str(self.vel)
 
-
-def compute_bats(tt, m):
-    '''Compute barycentric arrival times. This is the MJD of the TOA converted
-    to TDB, with the delay terms from the model applied (Solar System and
-    dispersion delays). The result is MJD(TDB) at infinite frequency.
-    Inputs are tt: TOAs table and m (model object)'''
-    return tt['tdbld'] - m.delay(tt)/86400.0
-
-
 def fortran_float(x):
     """Convert Fortran-format floating-point strings.
 
