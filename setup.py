@@ -118,4 +118,6 @@ setup(
 
     cmdclass = cmdclass,
     ext_modules=ext_modules,
+    #test_suite='tests',
+    #tests_require=[]
 )

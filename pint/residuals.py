@@ -5,12 +5,12 @@ from .phase import Phase
 class resids(object):
     """resids(toa=None, model=None)"""
 
-    def __init__(self, toas=None, model=None):
+    def __init__(self, toas=None, model=None, weighted_mean=True):
         self.toas = toas
         self.model = model
         if toas is not None and model is not None:
-            self.phase_resids = self.calc_phase_resids()
-            self.time_resids = self.calc_time_resids()
+            self.phase_resids = self.calc_phase_resids(weighted_mean=weighted_mean)
+            self.time_resids = self.calc_time_resids(weighted_mean=weighted_mean)
             self.chi2 = self.calc_chi2()
             self.dof = self.get_dof()
             self.chi2_reduced = self.chi2 / self.dof
@@ -18,17 +18,24 @@ class resids(object):
             self.phase_resids = None
             self.time_resids = None
 
-    def calc_phase_resids(self):
+    def calc_phase_resids(self, weighted_mean=True):
         """Return timing model residuals in pulse phase."""
         rs = self.model.phase(self.toas.table)
         rs -= Phase(rs.int[0],rs.frac[0])
-        rs -= Phase(0.0,rs.frac.mean())
+        if not weighted_mean:
+            rs -= Phase(0.0,rs.frac.mean())
+        else:
+        # Errs for weighted sum.  Units don't matter since they will
+        # cancel out in the weighted sum.
+            w = 1.0/(np.array(self.toas.get_errors())**2)
+            wm = (rs.frac*w).sum() / w.sum()
+            rs -= Phase(0.0,wm)
         return rs.frac
 
-    def calc_time_resids(self):
+    def calc_time_resids(self, weighted_mean=True):
         """Return timing model residuals in time (seconds)."""
         if self.phase_resids==None:
-            self.phase_resids = self.calc_phase_resids()
+            self.phase_resids = self.calc_phase_resids(weighted_mean=weighted_mean)
         return (self.phase_resids / self.get_PSR_freq()).to(u.s)
 
     def get_PSR_freq(self):

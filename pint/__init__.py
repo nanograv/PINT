@@ -21,8 +21,7 @@ ls = u.def_unit('ls', c.c * 1.0 * u.s)
 dmu = u.def_unit('dmu', u.pc*u.cm**-3)
 
 # define equivalency for astropy units
-def light_second_equivalency():
-    return [(ls, si.second)]
+light_second_equivalency = [(ls, si.second, lambda x: x, lambda x: x)]
 
 # Following are from here:
 # http://ssd.jpl.nasa.gov/?constants (grabbed on 30 Dec 2013)

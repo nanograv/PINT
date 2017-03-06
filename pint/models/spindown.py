@@ -1,4 +1,4 @@
-"""This module implements a simple spindown model for an isolated pulsar.
+"""This module implements polynomial pulsar spindown.
 """
 # spindown.py
 # Defines Spindown timing model class
@@ -11,8 +11,9 @@ except ImportError:
 from . import parameter as p
 from .timing_model import TimingModel, MissingParameter
 from ..phase import *
-from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, taylor_horner,\
-                    time_from_longdouble
+from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble,\
+    taylor_horner, time_from_longdouble, split_prefixed_name, taylor_horner_deriv
+
 
 
 class Spindown(TimingModel):
@@ -30,7 +31,7 @@ class Spindown(TimingModel):
                        description="Spindown-rate",
                        unitTplt=self.F_unit,
                        descriptionTplt=self.F_description,
-                       type_match='float',long_double=True))
+                       type_match='float'))
 
         self.add_param(p.MJDParameter(name="TZRMJD",
                        description="Reference epoch for phase = 0.0",
@@ -39,7 +40,6 @@ class Spindown(TimingModel):
         self.add_param(p.MJDParameter(name="PEPOCH",
                        description="Reference epoch for spin-down",
                        time_scale='tdb'))
-
 
         self.phase_funcs += [self.spindown_phase,]
 
@@ -53,47 +53,36 @@ class Spindown(TimingModel):
         # Check continuity
         F_terms = self.get_prefix_mapping('F').keys()
         F_terms.sort()
-        F_in_order = range(1,max(F_terms)+1)
+        F_in_order = range(1, max(F_terms)+1)
         if not F_terms == F_in_order:
             diff = list(set(F_in_order) - set(F_terms))
             raise MissingParameter("Spindown", "F%d"%diff[0])
+
         # If F1 is set, we need PEPOCH
         if self.F1.value != 0.0:
             if self.PEPOCH.value is None:
                 raise MissingParameter("Spindown", "PEPOCH",
                         "PEPOCH is required if F1 or higher are set")
+        self.num_spin_terms = len(F_terms) + 1
+        for fp in self.get_prefix_mapping('F').values() + ['F0',]:
+            self.register_deriv_funcs(self.d_phase_d_F, 'phase', fp)
+        self.register_deriv_funcs(self.d_spindown_phase_d_delay, 'd_phase_d_delay')
 
-        self.num_spin_terms = len(self.get_prefix_mapping('F')) + 1
-
-    def F_description(self, x):
+    def F_description(self, n):
         """Template function for description"""
-        if x <1:
-            return "Spin-frequency"
-        else:
-            return "Spin-frequency %d derivative"%x
+        return "Spin-frequency %d derivative" % n if n else "Spin-frequency"
 
-    def F_unit(self,x):
+    def F_unit(self, n):
         """Template function for unit"""
-        if x <1:
-            return "Hz"
-        else:
-            return "Hz/s^%d"%x
+        return "Hz/s^%d" % n if n else "Hz"
 
     def get_spin_terms(self):
         """Return a list of the spin term values in the model: [F0, F1, ..., FN]
         """
-        return [getattr(self, "F%d"%ii).value for ii in range(self.num_spin_terms)]
+        return [getattr(self, "F%d" % ii).value for ii in
+                range(self.num_spin_terms)]
 
-    def spindown_phase(self, toas, delay):
-        """Spindown phase function.
-
-        delay is the time delay from the TOA to time of pulse emission
-          at the pulsar, in seconds.
-
-        This routine should implement Eq 120 of the Tempo2 Paper II (2006, MNRAS 372, 1549)
-
-        returns an array of phases in long double
-        """
+    def get_dt(self, toas, delay):
         # If TZRMJD is not defined, use the first time as phase reference
         # NOTE, all of this ignores TZRSITE and TZRFRQ for the time being.
         # TODO: TZRMJD should be set by default somewhere in a standard place,
@@ -106,34 +95,45 @@ class Spindown(TimingModel):
         if not hasattr(self, "TZRMJDld"):
             self.TZRMJDld = time_to_longdouble(self.TZRMJD.value)
 
-        # Add the [0.0] because that is the constant phase term
-        fterms = [0.0] + self.get_spin_terms()
-
         dt_tzrmjd = (toas['tdbld'] - self.TZRMJDld) * SECS_PER_DAY - delay
         # TODO: what timescale should we use for pepoch calculation? Does this even matter?
         dt_pepoch = (time_to_longdouble(self.PEPOCH.value) - self.TZRMJDld) * SECS_PER_DAY
+        return dt_tzrmjd, dt_pepoch
 
+    def spindown_phase(self, toas, delay):
+        """Spindown phase function.
+
+        delay is the time delay from the TOA to time of pulse emission
+          at the pulsar, in seconds.
+
+        This routine should implement Eq 120 of the Tempo2 Paper II (2006, MNRAS 372, 1549)
+
+        returns an array of phases in long double
+        """
+        dt_tzrmjd, dt_pepoch = self.get_dt(toas, delay)
+        # Add the [0.0] because that is the constant phase term
+        fterms = [0.0] + self.get_spin_terms()
         phs_tzrmjd = taylor_horner(dt_tzrmjd-dt_pepoch, fterms)
         phs_pepoch = taylor_horner(-dt_pepoch, fterms)
         return phs_tzrmjd - phs_pepoch
 
-    def d_phase_d_F0(self, toas):
-        """Calculate the derivative wrt F0"""
-        # NOTE: Should we be using barycentric arrival times, instead of TDB?
-        # TODO: toas should have units from the table
-        tdb = toas['tdbld'].quantity * u.day
-        dt_pepoch = time_to_longdouble(self.PEPOCH.value) * u.day
-        delay = self.delay(toas) * u.s
-        dpdF0 = -(tdb - dt_pepoch) - delay
-        return dpdF0.decompose()
+    def d_phase_d_F(self, toas, param, delay):
+        """Calculate the derivative wrt to an spin term."""
+        par = getattr(self, param)
+        unit = par.units
+        pn, idxf, idxv = split_prefixed_name(param)
+        order = idxv + 1
+        fterms = [0.0] + self.get_spin_terms()
+        # make the choosen fterms 1 others 0
+        fterms = numpy.longdouble(numpy.zeros(len(fterms)))
+        fterms[order] = numpy.longdouble(1.0)
+        dt_tzrmjd, dt_pepoch = self.get_dt(toas, delay)
+        d_ptzrmjd_d_f = taylor_horner(dt_tzrmjd-dt_pepoch, fterms)
+        d_ppepoch_d_f = taylor_horner(-dt_pepoch, fterms)
+        return (d_ptzrmjd_d_f - d_ppepoch_d_f) * u.Unit("")/unit
 
-    def d_phase_d_F1(self, toas):
-        """Calculate the derivative wrt F1"""
-        # NOTE: Should we be using barycentric arrival times, instead of TDB?
-        # TODO: what timescale should we use for pepoch calculation? Does this even matter?
-        tdb = toas['tdbld'] * u.day
-        delay = self.delay(toas) * u.s
-        dt_pepoch = time_to_longdouble(self.PEPOCH.value) * u.day
-        dt = tdb - dt_pepoch - delay
-        dpdF1 = -0.5 * dt ** 2
-        return dpdF1.decompose()
+    def d_spindown_phase_d_delay(self, toas, delay):
+        dt_tzrmjd, dt_pepoch = self.get_dt(toas, delay)
+        fterms = [0.0] + self.get_spin_terms()
+        d_ptzrmjd_d_delay = taylor_horner_deriv(dt_tzrmjd-dt_pepoch, fterms)
+        return -d_ptzrmjd_d_delay * u.Unit("")/u.second
