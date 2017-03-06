@@ -325,8 +325,8 @@ if __name__ == '__main__':
     numcalls = 0
 
     # Read in initial model
-    #modelin = pint.models.get_model(parfile)
-    modelin = custom_timing(parfile)
+    modelin = pint.models.get_model(parfile)
+    #modelin = custom_timing(parfile)
 
     # Remove the dispersion delay as it is unnecessary
     #modelin.delay_funcs['L1'].remove(modelin.dispersion_delay)
