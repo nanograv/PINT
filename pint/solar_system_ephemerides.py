@@ -29,12 +29,48 @@ jpl_obj_code = {'ssb': 0,
                 'uranus': 7,
                 'neptune': 8,
                 'pluto': 9}
-#
-# def _load_kernel_link(ephem, link=None):
-#     if link is None:
-#
-#
-# def _load_kernel_local():
+
+
+def _load_kernel_link(ephem, link=''):
+    load_kernel = False # a flag for checking if the kernel has been loaded
+    search_list = [link, jpl_kernel_http, jpl_kernel_ftp]
+    if link != '':
+        search_list.append('')
+    for l in search_list:
+        if l == '':
+            ephem_link = ephem # Astropy default ephem does not like .bsp in the end.
+        else:
+            ephem_link = l+"%s.bsp" % ephem
+        if load_kernel:
+            break
+        try:
+            coor.solar_system_ephemeris.set(ephem_link)
+            load_kernel = True
+        except:
+            try:
+                aut.data.download_file(ephem_link, timeout=50, cache=True)
+                coor.solar_system_ephemeris.set(ephem_link)
+                load_kernel = True
+            except:
+                load_kernel = False
+    return load_kernel
+
+
+def _load_kernel_local(ephem, path=''):
+    load_kernel = False # a flag for checking if the kernel has been loaded
+    search_list = [os.path.join(path, "%s.bsp" % ephem), datapath("%s.bsp" % ephem)]
+    for p in search_list:
+        if load_kernel:
+            break
+        try:# Bipass the astropy kernel loading system.
+            coor.solar_system_ephemeris._kernel = SPK.open(p)
+            coor.solar_system_ephemeris._value = p
+            coor.solar_system_ephemeris._kernel.origin = coor.solar_system_ephemeris._value
+            load_kernel = True
+        except:
+            load_kernel = False
+    return load_kernel
+
 
 def objPosVel_wrt_SSB(objname, t, ephem, path=None, link=None):
     """This function computes a solar system object position and velocity respect
@@ -61,6 +97,7 @@ def objPosVel_wrt_SSB(objname, t, ephem, path=None, link=None):
     Returns
     -------
     PosVel object with 3-vectors for the position and velocity of the object
+
     Note
     ----
     If both path and link are provided. Path will be first to try.
@@ -68,40 +105,25 @@ def objPosVel_wrt_SSB(objname, t, ephem, path=None, link=None):
     ephem = ephem.lower()
     objname = objname.lower()
     # Use astropy to compute postion.
-    if link is None and path is None: # set solar_system_ephemeris kernel from default links.
-        load_kernel = False # a flag for checking if the kernel has been loaded
-        for l in ['', jpl_kernel_http, jpl_kernel_ftp]:
-            print l+"%s.bsp" % ephem
-            if load_kernel:
-                break
-            try:
-                coor.solar_system_ephemeris.set(l + "%s.bsp" % ephem)
-                load_kernel = True
-            except urllib.error.URLError:
-                try:
-                    aut.data.download_file(l + "%s.bsp" % ephem, \
-                                           timeout=50, cache=True)
-                    coor.solar_system_ephemeris.set(l + "%s.bsp" % ephem)
-                    load_kernel = True
-                except:
-                    load_kernel = False
-            except:
-                load_kernel = False
-            print load_kernel
-        if not load_kernel: # if all above not working try to load from default datadir
-            coor.solar_system_ephemeris._kernel = SPK.open(datapath("%s.bsp" % ephem))
-            coor.solar_system_ephemeris._value = datapath("%s.bsp" % ephem)
-            coor.solar_system_ephemeris._kernel.origin = coor.solar_system_ephemeris._value
-            load_kernel = True
-    else:
-        if path is not None:
-            coor.solar_system_ephemeris._kernel = SPK.open(path + "%s.bsp" % ephem)
-            coor.solar_system_ephemeris._value = path + "%s.bsp" % ephem
-            coor.solar_system_ephemeris._kernel.origin = coor.solar_system_ephemeris._value
+    # If a local path is provided, the local search will be considered first.
+    # If the path is not provided, try link first, then local data file.
+    if path is None:
+        if link is None:
+            link_str = ''
         else:
-            aut.data.download_file(link + "%s.bsp" % ephem, \
-                                   timeout=50, cache=True)
-            coor.solar_system_ephemeris.set(link + "%s.bsp" % ephem)
+            link_str = link
+        is_load = _load_kernel_link(ephem, link=link_str)
+        if not is_load: # Link does not Try to load from data path.
+            path_str = ''
+            is_load = _load_kernel_local(ephem, path=path_str)
+        if not is_load:
+            raise ValueError("Can not load the ephemeris file '%s.bsp'. " % ephem)
+    else:
+        path_str = path
+        is_load = _load_kernel_local(ephem, path=path_str)
+        if not is_load:
+            raise ValueError("Can not load the ephemeris file '%s.bsp' from the"
+                             " local directory %s." % (ephem, path_str))
     pos, vel = coor.get_body_barycentric_posvel(objname, t)
     return PosVel(pos.xyz, vel.xyz.to(u.km/u.second), origin='ssb', obj=objname)
 
@@ -118,6 +140,11 @@ def objPosVel(obj1, obj2, t, ephem):
         TDB time in Astropy.time.Time object format
     ephem: str
         The ephem to for computing solar system object position and velocity
+    Return
+    ------
+    PosVel object.
+        solar system obj1's position and velocity with respect to obj2 in the
+        J2000 cartesian coordinate.
     """
     if obj1.lower() == 'ssb' and obj2.lower() != 'ssb':
         obj2pv = objPosVel_wrt_SSB(obj2,t,ephem)
