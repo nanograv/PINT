@@ -217,8 +217,13 @@ if __name__ == '__main__':
     # Remove the dispersion delay as it is unnecessary
     modelin.delay_funcs['L1'].remove(modelin.dispersion_delay)
     # Set the target coords for automatic weighting if necessary
-    target = SkyCoord(modelin.RAJ.value, modelin.DECJ.value, \
-        frame='icrs') if weightcol=='CALC' else None
+    if 'ELONG' in modelin.params:
+        tc = SkyCoord(modelin.ELONG.quantity,modelin.ELAT.quantity,
+            frame='barycentrictrueecliptic')
+    else:
+        tc = SkyCoord(modelin.RAJ.quantity,modelin.DECJ.quantity,frame='icrs')
+
+    target = tc if weightcol=='CALC' else None
 
     # TODO: make this properly handle long double
     if not (os.path.isfile(eventfile+".pickle") or
