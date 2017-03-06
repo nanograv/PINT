@@ -26,6 +26,8 @@ class PosVel(object):
     that are numpy arrays of floats (and can have attached astropy
     units).  The 'pos' and 'vel' params are 3-vectors of the positions
     and velocities respectively.
+    
+    The coordinates are generally assumed to be aligned with ITRF (J2000)
 
     The 'obj' and 'origin' components are strings that can optionally
     be used to specify names for endpoints of the vectors.  If present,

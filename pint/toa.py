@@ -12,7 +12,7 @@ try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
-from .solar_system_ephemerides import objPosVel2SSB
+from .solar_system_ephemerides import objPosVel_wrt_SSB
 from pint import ls, J2000, J2000ld
 from .config import datapath
 from astropy import log
@@ -629,6 +629,7 @@ class TOAs(object):
         for TDB times, using the Observatory locations and IERS A Earth
         rotation corrections for UT1.
         """
+        log.info('Computing TDB columns.')
         if 'tdb' in self.table.colnames:
             log.info('tdb column already exists. Deleting...')
             self.table.remove_column('tdb')
@@ -663,7 +664,7 @@ class TOAs(object):
         """
         # Record the planets choice for this instance
         self.planets = planets
-
+        log.info('Compute positions and velocities of observatories and Earth (planets = {0}), using {1} ephemeris'.format(planets,ephem))
         # Remove any existing columns
         cols_to_remove = ['ssb_obs_pos', 'ssb_obs_vel', 'obs_sun_pos']
         for c in cols_to_remove:
@@ -704,17 +705,18 @@ class TOAs(object):
             ssb_obs = site.posvel(tdb,ephem)
             ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T.to(u.km)
             ssb_obs_vel[loind:hiind,:] = ssb_obs.vel.T.to(u.km/u.s)
-            sun_obs = objPosVel2SSB('sun',tdb,ephem) - ssb_obs
+            sun_obs = objPosVel_wrt_SSB('sun',tdb,ephem) - ssb_obs
             obs_sun_pos[loind:hiind,:] = sun_obs.pos.T.to(u.km)
             if planets:
                 for p in ('jupiter', 'saturn', 'venus', 'uranus'):
                     name = 'obs_'+p+'_pos'
                     dest = p
-                    pv = objPosVel2SSB(dest,tdb,ephem) - ssb_obs
+                    pv = objPosVel_wrt_SSB(dest,tdb,ephem) - ssb_obs
                     plan_poss[name][loind:hiind,:] = pv.pos.T.to(u.km)
         cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
         if planets:
             cols_to_add += plan_poss.values()
+        log.info('Adding columns ' + ' '.join([cc.name for cc in cols_to_add]))
         self.table.add_columns(cols_to_add)
 
     def read_pickle_file(self, filename):
