@@ -8,7 +8,7 @@ from .special_locations import SpecialLocation
 import astropy.units as u
 from astropy.coordinates import EarthLocation
 from ..utils import PosVel
-from ..solar_system_ephemerides import objPosVel2SSB
+from ..solar_system_ephemerides import objPosVel_wrt_SSB
 import numpy as np
 from astropy.time import Time
 from astropy.table import Table
@@ -73,7 +73,7 @@ def load_FPorbit(orbit_filename):
     Vx = FPorbit_dat.field('Vx')*u.m/u.s
     Vy = FPorbit_dat.field('Vy')*u.m/u.s
     Vz = FPorbit_dat.field('Vz')*u.m/u.s
-
+    log.info('Building FPorbit table covering MJDs {0} to {1}'.format(mjds_TT.min(), mjds_TT.max()))
     FPorbit_table = Table([mjds_TT, X, Y, Z, Vx, Vy, Vz], 
             names = ('MJD_TT', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'),
             meta = {'name':'FPorbit'} )
@@ -84,8 +84,7 @@ class NICERObs(SpecialLocation):
     
     Note that this must be instantiated once to be put into the Observatory registry."""
     
-    def __init__(self, FPorbname):
-        super(NICERObs, self).__init__(name='nicer')
+    def __init__(self, name, FPorbname):
         self.FPorb = load_FPorbit(FPorbname)
         # Now build the interpolator here:
         self.X = interp1d(self.FPorb['MJD_TT'],self.FPorb['X'])
@@ -94,7 +93,8 @@ class NICERObs(SpecialLocation):
         self.Vx = interp1d(self.FPorb['MJD_TT'],self.FPorb['Vx'])
         self.Vy = interp1d(self.FPorb['MJD_TT'],self.FPorb['Vy'])
         self.Vz = interp1d(self.FPorb['MJD_TT'],self.FPorb['Vz'])
-        
+        super(NICERObs, self).__init__(name=name)
+
     @property
     def timescale(self): 
         return 'tt'
@@ -108,12 +108,16 @@ class NICERObs(SpecialLocation):
         return None
         
     def posvel(self, t, ephem):
+        '''Return position and velocity vectors of NICER.
+        
+        t is an astropy.Time or array of astropy.Times
+        '''
         # Compute vector from SSB to Earth
-        geo_posvel = objPosVel2SSB('earth', t, ephem)
-        log.info('geo_posvel {0}'.format(geo_posvel))
+        geo_posvel = objPosVel_wrt_SSB('earth', t, ephem)
+        log.debug('geo_posvel {0}'.format(geo_posvel))
         # Now add vector from Earth to NICER
         nicer_pos_geo = np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])*self.FPorb['X'].unit
-        log.info('nicer_pos_geo {0}'.format(nicer_pos_geo))
+        log.debug('nicer_pos_geo {0}'.format(nicer_pos_geo))
         nicer_vel_geo = np.array([self.Vx(t.tt.mjd), self.Vy(t.tt.mjd), self.Vz(t.tt.mjd)])*self.FPorb['Vx'].unit
         nicer_posvel = PosVel( nicer_pos_geo, nicer_vel_geo, origin='earth')
         # Vector add to geo_posvel to get full posvel vector.

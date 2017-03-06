@@ -9,7 +9,7 @@ import astropy.units as u
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from ..utils import PosVel, has_astropy_unit
-from ..solar_system_ephemerides import objPosVel2SSB
+from ..solar_system_ephemerides import objPosVel_wrt_SSB
 from ..config import datapath
 from ..erfautils import topo_posvels
 
@@ -145,6 +145,6 @@ class TopoObs(Observatory):
 
     def posvel(self, t, ephem):
         if t.isscalar: t = Time([t])
-        earth_pv = objPosVel2SSB('earth', t, ephem)
+        earth_pv = objPosVel_wrt_SSB('earth', t, ephem)
         obs_topo_pv = topo_posvels(self.earth_location, t, obsname=self.name)
         return obs_topo_pv + earth_pv

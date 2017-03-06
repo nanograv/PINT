@@ -13,7 +13,7 @@ from astropy.extern import six
 
 from astropy import log
 
-def nicer_phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.0, size=5,
+def nicer_phaseogram(mjds, phases, weights=None, title=None, bins=64, rotate=0.0, size=5,
     alpha=0.25, width=6, maxphs=2.0, file=False):
     """
     Make a nice 2-panel phaseogram
@@ -36,13 +36,48 @@ def nicer_phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.
         ax1.set_ylabel("Counts")
     if title is not None:
         ax1.set_title(title)
-    if weights is None:
-        ax2.scatter(phss, mjds, s=size, color='k', alpha=alpha)
-        ax2.scatter(phss+1.0, mjds, s=size, color='k', alpha=alpha)
+    SCATTER=False
+    if SCATTER:
+        if weights is None:
+            ax2.scatter(phss, mjds, s=size, color='k', alpha=alpha)
+            ax2.scatter(phss+1.0, mjds, s=size, color='k', alpha=alpha)
+        else:
+            colarray = np.array([[0.0,0.0,0.0,w] for w in weights])
+            ax2.scatter(phss, mjds, s=size, color=colarray)
+            ax2.scatter(phss+1.0, mjds, s=size, color=colarray)
     else:
-        colarray = np.array([[0.0,0.0,0.0,w] for w in weights])
-        ax2.scatter(phss, mjds, s=size, color=colarray)
-        ax2.scatter(phss+1.0, mjds, s=size, color=colarray)
+        profile = np.zeros(bins,dtype=np.float_)
+        ntoa = 64
+        toadur = (mjds.max()-mjds.min())/ntoa
+        mjdstarts = mjds.min() + toadur*np.arange(ntoa,dtype=np.float_)
+        mjdstops = mjdstarts + toadur
+        # Loop over blocks to process
+        a = []
+        for tstart,tstop in zip(mjdstarts,mjdstops):
+
+            # Clear profile array
+            profile = profile*0.0
+
+            idx = (mjds>tstart)&(mjds<tstop)
+
+            if weights is not None:
+                for ph,ww in zip(phases[idx],weights[idx]):
+                    bin = int(ph*bins)
+                    profile[bin] += ww
+            else:
+                for ph in phases[idx]:
+                    bin = int(ph*bins)
+                    profile[bin] += 1
+
+            for i in xrange(bins):
+                a.append(profile[i])
+
+        a = np.array(a)
+        b = a.reshape(ntoa,bins)
+        c = np.hstack([b,b])
+        ax2.imshow(c, interpolation='nearest', origin='lower', cmap=plt.cm.binary,
+             extent=(0,2.0,mjds.min(),mjds.max()),aspect='auto')
+
     ax2.set_xlim([0.0, maxphs]) # show 1 or more pulses
     ax2.set_ylim([mjds.min(), mjds.max()])
     ax2.set_ylabel("MJD")
@@ -88,6 +123,7 @@ def load_NICER_TOAs(eventname):
     log.info("TIMEREF {0}".format(timeref))
 
     # Collect TIMEZERO and MJDREF
+    # IMPORTANT: TIMEZERO is in SECONDS (not days)!
     try:
         TIMEZERO = np.longdouble(event_hdr['TIMEZERO'])
     except KeyError:
@@ -105,16 +141,20 @@ def load_NICER_TOAs(eventname):
         else:
             MJDREF = np.longdouble(event_hdr['MJDREFI']) + np.longdouble(event_hdr['MJDREFF'])
     log.info("MJDREF = {0}".format(MJDREF))
-    mjds = np.array(event_dat.field('TIME'),dtype=np.longdouble)/86400.0 + MJDREF + TIMEZERO
-    phas = event_dat.field('PHA')
+    mjds = (np.array(event_dat.field('TIME'),dtype=np.longdouble)+ TIMEZERO)/86400.0 + MJDREF 
+    
+    try:
+        phas = event_dat.field('PHA')
+    except:
+        phas = np.zeros(len(mjds))
 
     if timesys == 'TDB':
         log.info("Building barycentered TOAs")
-        toalist=[toa.TOA(m,obs='Barycenter',scale='tdb',pha=e) for m,e in zip(mjds,phas)]
+        toalist=[toa.TOA(m,obs='Barycenter',scale='tdb',energy=e) for m,e in zip(mjds,phas)]
     else:
         if timeref == 'LOCAL':
-            log.info('Building LOCAL TOAs')
-            toalist=[toa.TOA(m, obs='Spacecraft', scale='tt',energy=e) for m,e in zip(mjds,phas)]
+            log.info('Building LOCAL TOAs, with MJDs in range {0} to {1}'.format(mjds.min(),mjds.max()))
+            toalist=[toa.TOA(m, obs='NICER', scale='tt',energy=e) for m,e in zip(mjds,phas)]
         else:
             log.info("Building geocentered TOAs")
             toalist=[toa.TOA(m, obs='Geocenter', scale='tt',energy=e) for m,e in zip(mjds,phas)]

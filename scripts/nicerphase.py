@@ -9,6 +9,7 @@ import pint.residuals
 import astropy.units as u
 import matplotlib.pyplot as plt
 from pint.nicer_toas import nicer_phaseogram, load_NICER_TOAs
+from pint.observatory.nicer_obs import NICERObs
 import argparse
 from astropy.time import Time
 from pint.eventstats import hmw, hm, h2sig
@@ -21,6 +22,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="Use PINT to compute event phases and make plots of NICER event files.")
     parser.add_argument("eventfile",help="NICER event FITS file name.")
+    parser.add_argument("orbfile",help="Name of FPorbit file.")
     parser.add_argument("parfile",help="par file to construct model from")
     parser.add_argument("--maxMJD",help="Maximum MJD to include in analysis", default=None)
     parser.add_argument("--outfile",help="Output figure file name (default=None)", default=None)
@@ -28,6 +30,8 @@ if __name__ == '__main__':
     parser.add_argument("--ephem",help="Planetary ephemeris to use (default=DE421)", default="DE421")
     args = parser.parse_args()
 
+    # Instantiate NICERObs once so it gets added to the observatory registry
+    NICERObs(name='NICER',FPorbname=args.orbfile)
 
     # Read in model
     modelin = pint.models.get_model(args.parfile)
