@@ -161,6 +161,7 @@ def parse_TOA_line(line, fmt="Unknown"):
         d["error"] = float(line[44:53])
         ii, ff = line[24:44].split('.')
         MJD = (int(ii), float("0."+ff))
+        log.info('MJD {0} {1:.12f}'.format(MJD[0],MJD[1]))
         try:
             d["ddm"] = float(line[68:78])
         except ValueError:
@@ -236,7 +237,7 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
     """
     from .utils import time_to_mjd_string
     if format.upper() in ('TEMPO2','1'):
-        toa_str = time_to_mjd_string(toatime,prec=13)
+        toa_str = time_to_mjd_string(toatime,prec=16)
         log.info(toa_str)
         # In Tempo2 format, freq=0.0 means infinite frequency
         if freq == numpy.inf*u.MHz:
@@ -245,14 +246,20 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
         if dm != 0.0*u.pc/u.cm**3:
             flagstring += "-dm {0:%.5f}".format(dm.to(u.pc/u.cm**3).value)
         # Here I need to append any actual flags
+        # Now set observatory code. Use obs.name unless overridden by tempo2_code
+        try:
+            obscode = obs.tempo2_code
+        except:
+            obscode = obs.name
         out = "%s %f %s %.3f %s %s\n" % (name,freq.to(u.MHz).value,
             toa_str,toaerr.to(u.us).value,obs.name,flagstring)
     elif format.upper() in  ('PRINCETON','TEMPO'): # TEMPO/Princeton format
-        toa_str = "{0:19.13f}".format(toatime.mjd)
+        toa_str = time_to_mjd_string(toatime,prec=13)
         # In TEMPO/Princeton format, freq=0.0 means infinite frequency
         if freq == numpy.inf*u.MHz:
-            freq = 0.0
-        # TODO: Improve these strings to ensure everything lands in the right columns
+            freq = 0.0*u.MHz
+        if len(obs.tempo_code) != 1:
+            log.warn('Observatory {0} does not have 1-character tempo_code, skipping TOA!'.format(obs.name))
         if dm!=0.0*u.pc/u.cm**3:
             out = obs.tempo_code+" %13s%9.3f%20s%9.2f                %9.4f\n" % \
                 (name, freq.to(u.MHz).value, toa_str, toaerr.to(u.us).value,
@@ -560,11 +567,18 @@ class TOAs(object):
             File name to write to
         format : str
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1')
+            
+        Bugs
+        ----
+        Currently does not undo any clock corrections that were applied,
+        so TOA file won't match the input TOA file if any were applied.
 
         """
         outf = open(filename,'w')
         if format.upper() in ('TEMPO2','1'):
             outf.write('FORMAT 1\n')
+        # NOTE(paulr): This really should REMOVE any(?) clock corrections
+        # that have been applied!
         for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'].quantity,
             self.table['freq'].quantity,self.table['obs'],self.table['flags']):
             obs_obj = Observatory.get(obs)

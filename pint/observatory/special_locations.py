@@ -27,6 +27,9 @@ class BarycenterObs(SpecialLocation):
     @property
     def tempo_code(self):
         return '@'
+    @property
+    def tempo2_code(self):
+        return 'bat'
     def posvel(self, t, ephem):
         vdim = (3,) + t.shape
         return PosVel(numpy.zeros(vdim)*u.m, numpy.zeros(vdim)*u.m/u.s,
@@ -43,6 +46,9 @@ class GeocenterObs(SpecialLocation):
     @property
     def tempo_code(self):
         return '0'
+    @property
+    def tempo2_code(self):
+        return 'coe'
     def posvel(self, t, ephem):
         return objPosVel_wrt_SSB('earth', t, ephem)
 
