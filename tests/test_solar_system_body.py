@@ -2,10 +2,12 @@
 from __future__ import division, absolute_import, print_function
 
 import unittest
+from astropy.coordinates import solar_system_ephemeris
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB, objPosVel
 import numpy as np
 import astropy.time as time
 import os
+from pint.config import datapath
 
 from pinttestdata import testdir, datadir
 os.chdir(datadir)
@@ -55,3 +57,11 @@ class TestSolarSystemDynamic(unittest.TestCase):
                 assert a.origin == 'earth'
                 assert a.pos.shape == (3, 100000)
                 assert a.vel.shape == (3, 100000)
+
+    def test_from_dir(self):
+        path = datapath('de432s.bsp')
+        a = objPosVel_wrt_SSB('earth', self.tdb_time , 'de432s', path=path)
+        assert a.obj == 'earth'
+        assert a.pos.shape == (3, 100000)
+        assert a.vel.shape == (3, 100000)
+        assert solar_system_ephemeris._value == path

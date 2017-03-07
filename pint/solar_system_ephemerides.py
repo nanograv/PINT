@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import astropy.units as u
 import astropy.coordinates as coor
 from astropy.extern.six.moves import urllib
