@@ -238,7 +238,7 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
     from .utils import time_to_mjd_string
     if format.upper() in ('TEMPO2','1'):
         toa_str = time_to_mjd_string(toatime,prec=16)
-        log.info(toa_str)
+        #log.info(toa_str)
         # In Tempo2 format, freq=0.0 means infinite frequency
         if freq == numpy.inf*u.MHz:
             freq = 0.0*u.MHz

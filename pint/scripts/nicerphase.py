@@ -7,7 +7,6 @@ import pint.toa as toa
 import pint.models
 import pint.residuals
 import astropy.units as u
-import matplotlib.pyplot as plt
 from pint.nicer_toas import nicer_phaseogram, load_NICER_TOAs
 from pint.observatory.nicer_obs import NICERObs
 from astropy.time import Time

@@ -7,7 +7,6 @@ import pint.toa as toa
 import pint.models
 import pint.residuals
 import astropy.units as u
-import matplotlib.pyplot as plt
 from astropy.coordinates import SkyCoord
 from astropy.extern import six
 
@@ -18,6 +17,7 @@ def nicer_phaseogram(mjds, phases, weights=None, title=None, bins=64, rotate=0.0
     """
     Make a nice 2-panel phaseogram
     """
+    import matplotlib.pyplot as plt
     years = (mjds - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
     phss[phss > 1.0] -= 1.0

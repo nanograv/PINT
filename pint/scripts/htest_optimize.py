@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+
+# At the moment, this code is kind of an unsupported hack.
+# It will not be installed by setup.py and not tested by nosetests.
+
 import numpy as np
 import pint.toa as toa
 import pint.models
