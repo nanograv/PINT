@@ -10,7 +10,6 @@ from scipy.stats import norm, uniform
 import matplotlib.pyplot as plt
 import astropy.table
 import astropy.units as u
-import psr_utils as pu
 import scipy.optimize as op
 import sys, os, copy, fftfit
 from astropy.coordinates import SkyCoord
@@ -31,6 +30,75 @@ class custom_timing(pint.models.spindown.Spindown,
         super(custom_timing, self).__init__()
         self.read_parfile(parfile)
 
+
+def read_gaussfitfile(gaussfitfile, proflen):
+    """
+    read_gaussfitfile(gaussfitfile, proflen):
+        Read a Gaussian-fit file as created by the output of pygaussfit.py.
+            The input parameters are the name of the file and the number of
+            bins to include in the resulting template file.  A numpy array
+            of that length is returned.
+    """
+    phass = []
+    ampls = []
+    fwhms = []
+    for line in open(gaussfitfile):
+        if line.lstrip().startswith("phas"):
+            phass.append(float(line.split()[2]))
+        if line.lstrip().startswith("ampl"):
+            ampls.append(float(line.split()[2]))
+        if line.lstrip().startswith("fwhm"):
+            fwhms.append(float(line.split()[2]))
+    if not (len(phass) == len(ampls) == len(fwhms)):
+        print "Number of phases, amplitudes, and FWHMs are not the same in '%s'!"%gaussfitfile
+        return 0.0
+    phass = Num.asarray(phass)
+    ampls = Num.asarray(ampls)
+    fwhms = Num.asarray(fwhms)
+    # Now sort them all according to decreasing amplitude
+    new_order = Num.argsort(ampls)
+    new_order = new_order[::-1]
+    ampls = Num.take(ampls, new_order)
+    phass = Num.take(phass, new_order)
+    fwhms = Num.take(fwhms, new_order)
+    # Now put the biggest gaussian at phase = 0.0
+    phass = phass - phass[0]
+    phass = Num.where(phass<0.0, phass+1.0, phass)
+    template = Num.zeros(proflen, dtype='d')
+    for ii in range(len(ampls)):
+        template += ampls[ii]*gaussian_profile(proflen, phass[ii], fwhms[ii])
+    return template
+
+def gaussian_profile(N, phase, fwhm):
+    """
+    gaussian_profile(N, phase, fwhm):
+        Return a gaussian pulse profile with 'N' bins and
+        an integrated 'flux' of 1 unit.
+            'N' = the number of points in the profile
+            'phase' = the pulse phase (0-1)
+            'fwhm' = the gaussian pulses full width at half-max
+        Note:  The FWHM of a gaussian is approx 2.35482 sigma
+    """
+    sigma = fwhm / 2.35482
+    mean = phase % 1.0
+    phsval = Num.arange(N, dtype='d') / float(N)
+    if (mean < 0.5):
+        phsval = Num.where(Num.greater(phsval, mean+0.5),
+                           phsval-1.0, phsval)
+    else:
+        phsval = Num.where(Num.less(phsval, mean-0.5),
+                           phsval+1.0, phsval)
+    try:
+        zs = (phsval-mean)/sigma
+        okzinds = Num.compress(Num.fabs(zs)<20.0, Num.arange(N))
+        okzs = Num.take(zs, okzinds)
+        retval = Num.zeros(N, 'd')
+        Num.put(retval, okzinds, Num.exp(-0.5*(okzs)**2.0)/(sigma*Num.sqrt(2*PI)))
+        return retval
+    except OverflowError:
+        print "Problem in gaussian prof:  mean = %f  sigma = %f" % \
+              (mean, sigma)
+        return Num.zeros(N, 'd')
 def measure_phase(profile, template, rotate_prof=True):
     """
     measure_phase(profile, template):
@@ -392,7 +460,7 @@ def main(argv=None):
         print "There are %d events, no weights are being used." % (len(weights))
 
     # Now load in the gaussian template and normalize it
-    gtemplate = pu.read_gaussfitfile(gaussianfile, nbins)
+    gtemplate = read_gaussfitfile(gaussianfile, nbins)
     gtemplate /= gtemplate.sum()
 
     # Set the priors on the parameters in the model, before
