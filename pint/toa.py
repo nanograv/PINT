@@ -161,7 +161,7 @@ def parse_TOA_line(line, fmt="Unknown"):
         d["error"] = float(line[44:53])
         ii, ff = line[24:44].split('.')
         MJD = (int(ii), float("0."+ff))
-        log.info('MJD {0} {1:.12f}'.format(MJD[0],MJD[1]))
+        #log.info('MJD {0} {1:.12f}'.format(MJD[0],MJD[1]))
         try:
             d["ddm"] = float(line[68:78])
         except ValueError:

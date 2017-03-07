@@ -22,8 +22,7 @@ import argparse
 
 from astropy import log
 
-if __name__ == '__main__':
-
+def main(args):
     parser = argparse.ArgumentParser(description="Command line interfact to PINT")
     parser.add_argument("parfile",help="par file to read model from")
     parser.add_argument("timfile",help="TOA file name")
@@ -67,5 +66,11 @@ if __name__ == '__main__':
         print("\nBest fit model is:")
 
     fout.write(f.model.as_parfile()+"\n")
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
+
+
 
 
