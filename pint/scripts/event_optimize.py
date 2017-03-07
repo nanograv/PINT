@@ -20,6 +20,11 @@ import argparse
 #log.setLevel('DEBUG')
 #np.seterr(all='raise')
 
+# initialization values
+# Should probably figure a way to make these not global variables
+maxpost = -9e99
+numcalls = 0
+
 class custom_timing(pint.models.spindown.Spindown,
                     pint.models.astrometry.AstrometryEcliptic):
     def __init__(self, parfile):
@@ -164,7 +169,7 @@ class emcee_fitter(Fitter):
         """
         The log posterior (priors * likelihood)
         """
-        global maxpost, numcalls
+        global maxpost, numcalls, ftr
         self.set_params(dict(zip(self.fitkeys[:-1], theta[:-1])))
 
         numcalls += 1
@@ -219,6 +224,7 @@ class emcee_fitter(Fitter):
         Show binned profiles (and H-test values) as a function
         of the minimum weight used. nbins is only for the plots.
         """
+        global ftr
         f, ax = plt.subplots(3, 3, sharex=True)
         phss = ftr.get_event_phases()
         htests = []
@@ -297,6 +303,8 @@ def main(argv=None):
     parser.add_argument("--usepickle",help="Read events from pickle file, if available?",
         default=False,action="store_true")
 
+    global nwalkers, nsteps, ftr
+    
     args = parser.parse_args(argv)
 
     eventfile = args.eventfile
@@ -319,13 +327,15 @@ def main(argv=None):
     do_opt_first = args.doOpt
     wgtexp = args.wgtexp
 
-    # initialization values
-    # Should probably figure a way to make these not global variables
-    maxpost = -9e99
-    numcalls = 0
 
     # Read in initial model
     modelin = pint.models.get_model(parfile)
+    
+    # The custom_timing version below is to manually construct the TimingModel
+    # class, which allows it to be pickled. This is needed for parallelizing
+    # the emcee call over a number of threads.  So far, it isn't quite working
+    # so it is disabled.  The code above constructs the TimingModel class
+    # dynamically, as usual.
     #modelin = custom_timing(parfile)
 
     # Remove the dispersion delay as it is unnecessary
@@ -528,16 +538,11 @@ def main(argv=None):
 
     # Make the triangle plot.
     samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
-    try:
-        import corner
-        # Note, I had to turn off plot_contours because I kept getting
-        # errors about how contour levels must be increasing.
-        fig = corner.corner(samples, labels=ftr.fitkeys, bins=50,
-            truths=ftr.maxpost_fitvals, plot_contours=True)
-        fig.savefig(ftr.model.PSR.value+"_triangle.png")
-        plt.close()
-    except:
-        log.warning("Corner plot failed")
+    import corner
+    fig = corner.corner(samples, labels=ftr.fitkeys, bins=50,
+        truths=ftr.maxpost_fitvals, plot_contours=True)
+    fig.savefig(ftr.model.PSR.value+"_triangle.png")
+    plt.close()
 
     # Make a phaseogram with the 50th percentile values
     #ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
