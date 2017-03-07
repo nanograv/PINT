@@ -16,7 +16,7 @@ from astropy.coordinates import SkyCoord
 
 from astropy import log
 
-if __name__ == '__main__':
+def main(argv=None):
 
     parser = argparse.ArgumentParser(description="Use PINT to compute H-test and plot Phaseogram from a Fermi FT1 event file.")
     parser.add_argument("eventfile",help="Fermi event FITS file name.  Should be GEOCENTERED.")
@@ -26,7 +26,7 @@ if __name__ == '__main__':
     parser.add_argument("--outfile",help="Output figure file name (default=None)", default=None)
     parser.add_argument("--planets",help="Use planetary Shapiro delay in calculations (default=False)", default=False, action="store_true")
     parser.add_argument("--ephem",help="Planetary ephemeris to use (default=DE421)", default="DE421")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
 
     # Read in model

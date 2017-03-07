@@ -13,8 +13,7 @@ from pint import pulsar_mjd
 
 log.setLevel('INFO')
 
-if __name__ == '__main__':
-
+def main(argv=None):
     parser = argparse.ArgumentParser(description="PINT tool for command-line barycentering calculations.")
 
     parser.add_argument("time",help="MJD (UTC, by default)")
@@ -36,7 +35,7 @@ if __name__ == '__main__':
         help="DM to use (if not read from par file)",type=float,default=0.0)
     parser.add_argument("--ephem",default="DE421",help="Ephemeris to use")
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.format in ("mjd","jd"):
         # These formats require conversion from string to longdouble first
@@ -47,20 +46,21 @@ if __name__ == '__main__':
     log.debug(t.iso)
 
     t = toa.TOA(t,freq=args.freq,obs=args.obs)
+    # Build TOAs and compute TDBs and positions from ephemeris    
+    ts = toa.TOAs(toalist=[t])
+    ts.compute_TDBs()
+    ts.compute_posvels(ephem=args.ephem)
 
     if args.parfile is not None:
         m=pint.models.get_model(args.parfile)
     else:
         # Construct model by hand
         m=pint.models.StandardTimingModel()
+        # Should check if 12:13:14.2 syntax is used and support that as well!
         m.RAJ.quantity = Angle(args.ra)
         m.DECJ.quantity = Angle(args.dec)
         m.DM.quantity = args.dm*u.parsec/u.cm**3
         
-    # Build TOAs and compute TDBs and positions from ephemeris    
-    ts = toa.TOAs(toalist=[t])
-    ts.compute_TDBs()
-    ts.compute_posvels(ephem=args.ephem)
     tdbtimes = m.get_barycentric_toas(ts.table)
 
     print("{0:21.14f}".format(tdbtimes[0].value))

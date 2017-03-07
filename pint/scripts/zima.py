@@ -11,12 +11,12 @@ import pint.models
 import pint.fitter
 import astropy.units as u
 from astropy.time import Time, TimeDelta
-import argparse
 
 from astropy import log
 log.setLevel('INFO')
 
-if __name__ == '__main__':
+def main(argv=None):
+    import argparse
     parser = argparse.ArgumentParser(description="PINT tool for simulating TOAs")
     parser.add_argument("parfile",help="par file to read model from")
     parser.add_argument("timfile",help="Output TOA file name")
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     parser.add_argument("--ephem",help="Ephemeris to use",default="DE421")
     parser.add_argument("--planets",help="Use planetary Shapiro delay",action="store_true",
                         default=False)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     log.info("Reading model from {0}".format(args.parfile))
     m = pint.models.get_model(args.parfile)

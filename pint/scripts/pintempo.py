@@ -22,13 +22,13 @@ import argparse
 
 from astropy import log
 
-def main(args):
+def main(argv=None):
     parser = argparse.ArgumentParser(description="Command line interfact to PINT")
     parser.add_argument("parfile",help="par file to read model from")
     parser.add_argument("timfile",help="TOA file name")
     parser.add_argument("--outfile",help="Output figure file name (default=None)", default=None)
     parser.add_argument("--plot",help="Plot residuals",action="store_true",default=False)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     log.info("Reading model from {0}".format(args.parfile))
     m = pint.models.get_model(args.parfile)
@@ -67,10 +67,6 @@ def main(args):
 
     fout.write(f.model.as_parfile()+"\n")
     return 0
-
-if __name__ == '__main__':
-    sys.exit(main(sys.argv))
-
 
 
 

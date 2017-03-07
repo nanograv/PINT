@@ -201,15 +201,15 @@ class emcee_fitter(Fitter):
             plt.savefig(ftr.model.PSR.value+"_htest_v_wgtcut_unweighted.png")
         plt.close()
 
-if __name__ == '__main__':
+def main(argv=None):
 
-    if len(sys.argv[1:])==3:
+    if len(argv)==3:
         eventfile, parfile, weightcol = sys.argv[1:]
-    elif len(sys.argv[1:])==2:
+    elif len(argv)==2:
         eventfile, parfile = sys.argv[1:]
         weightcol=None
     else:
-        print "usage:  python event_optimize.py eventfile parfile [weightcol]"
+        print "usage: htest_optimize eventfile parfile [weightcol]"
         sys.exit()
 
     # Read in initial model

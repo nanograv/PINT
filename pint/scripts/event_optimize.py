@@ -262,7 +262,7 @@ class emcee_fitter(Fitter):
             plt.savefig(ftr.model.PSR.value+"_htest_v_wgtcut_unweighted.png")
         plt.close()
 
-if __name__ == '__main__':
+def main(argv=None):
 
     parser = argparse.ArgumentParser(description="PINT tool for MCMC optimization of timing models using event data.")
 
@@ -297,7 +297,7 @@ if __name__ == '__main__':
     parser.add_argument("--usepickle",help="Read events from pickle file, if available?",
         default=False,action="store_true")
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     eventfile = args.eventfile
     parfile = args.parfile

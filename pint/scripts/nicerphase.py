@@ -10,16 +10,13 @@ import astropy.units as u
 import matplotlib.pyplot as plt
 from pint.nicer_toas import nicer_phaseogram, load_NICER_TOAs
 from pint.observatory.nicer_obs import NICERObs
-import argparse
 from astropy.time import Time
 from pint.eventstats import hmw, hm, h2sig
 from astropy.coordinates import SkyCoord
-#from parfile import psr_par
-
 from astropy import log
 
-if __name__ == '__main__':
-
+def main(argv=None):
+    import argparse
     parser = argparse.ArgumentParser(description="Use PINT to compute event phases and make plots of NICER event files.")
     parser.add_argument("eventfile",help="NICER event FITS file name.")
     parser.add_argument("orbfile",help="Name of FPorbit file.")
@@ -28,8 +25,8 @@ if __name__ == '__main__':
     parser.add_argument("--outfile",help="Output figure file name (default=None)", default=None)
     parser.add_argument("--planets",help="Use planetary Shapiro delay in calculations (default=False)", default=False, action="store_true")
     parser.add_argument("--ephem",help="Planetary ephemeris to use (default=DE421)", default="DE421")
-    args = parser.parse_args()
-
+    parser.add_argument("--plot",help="Show phaseogram plot.", action='store_true', default=False)
+    args = parser.parse_args(argv)
     # Instantiate NICERObs once so it gets added to the observatory registry
     NICERObs(name='NICER',FPorbname=args.orbfile)
 
@@ -68,4 +65,5 @@ if __name__ == '__main__':
     mjds = ts.get_mjds()
     h = float(hm(phases))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h,h2sig(h)))
-    nicer_phaseogram(mjds,phases,bins=100,file = args.outfile)
+    if args.plot:
+        nicer_phaseogram(mjds,phases,bins=100,file = args.outfile)

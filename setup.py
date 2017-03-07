@@ -88,6 +88,15 @@ for fname in clock_files:
 import versioneer
 cmdclass.update(versioneer.get_cmdclass())
 
+# These command-line scripts will be built by the setup process and installed in your PATH
+# See http://python-packaging.readthedocs.io/en/latest/command-line-scripts.html#the-console-scripts-entry-point
+console_scripts = [ 'nicerphase=pint.scripts.nicerphase:main',
+                    'event_optimize=pint.scripts.event_optimize:main',
+                    'pintempo=pint.scripts.pintempo:main', 
+                    'zima=pint.scripts.zima:main', 
+                    'pintbary=pint.scripts.pintbary:main', 
+                    'fermiphaseogram=pint.scripts.fermiphaseogram:main' ]
+
 setup(
     name="pint",
     version = versioneer.get_version(),
@@ -100,9 +109,9 @@ setup(
 
     install_requires = ['astropy>=1.2'],
 
-    # These scripts will be installed in your PATH
-    # These should be end user scripts for general use.
-    scripts = ['scripts/pintempo.py', 'scripts/zima.py', 'scripts/pintbary.py', 'scripts/fermiphaseogram.py', 'scripts/nicerphase.py'],
+    entry_points={  
+        'console_scripts': console_scripts, 
+    },
 
     packages=['pint',
         'pint.extern',
