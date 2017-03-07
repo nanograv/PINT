@@ -29,11 +29,4 @@ install:
     - pip install -r requirements.txt
 
 script:
-  # For now, just make sure that each script starts up and does its imports
-  # without error.
-  - python scripts/pintbary.py --help
-  - python scripts/pintempo.py --hep
-  - python scripts/zima.py --help
-  - python scripts/fermiphaseogram.py --help
-  - python scripts/nicerphase.py --help
   - python setup.py nosetests
