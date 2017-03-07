@@ -59,7 +59,11 @@ def _load_kernel_link(ephem, link=''):
 
 def _load_kernel_local(ephem, path=''):
     load_kernel = False # a flag for checking if the kernel has been loaded
-    search_list = [os.path.join(path, "%s.bsp" % ephem), datapath("%s.bsp" % ephem)]
+    if path.endswith("%s.bsp" % ephem):
+        custom_path = path
+    else:
+        custom_path = os.path.join(path, "%s.bsp" % ephem)
+    search_list = [custom_path, datapath("%s.bsp" % ephem)]
     for p in search_list:
         if load_kernel:
             break
