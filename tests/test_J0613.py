@@ -18,7 +18,8 @@ class TestJ0613(unittest.TestCase):
     def setUpClass(self):
         self.parfileJ0613 = 'J0613-0200_NANOGrav_dfg+12_TAI_FB90.par'
         self.timJ0613 = 'J0613-0200_NANOGrav_dfg+12.tim'
-        self.toasJ0613 = toa.get_TOAs(self.timJ0613, ephem="DE405", planets=False)
+        self.toasJ0613 = toa.get_TOAs(self.timJ0613, ephem="DE405", 
+                                      planets=False, include_bipm=False)
         self.modelJ0613 = mb.get_model(self.parfileJ0613)
         # tempo result
         self.ltres, self.ltbindelay = np.genfromtxt(self.parfileJ0613 + \

@@ -19,11 +19,10 @@ class TopoObs(Observatory):
     site definitions in tempo/tempo2.  Clock correction files are read and
     computed, observatory coordinates are specified in ITRF XYZ, etc."""
 
-    def __init__(self, name, tempo_code=None, itoa_code=None, aliases=None,
-            itrf_xyz=None,
-            clock_file='time.dat', clock_dir='PINT', clock_fmt='tempo',
-            include_gps=True):
-        """
+    def __init__(self, name, tempo_code=None, itoa_code=None, aliases=None, 
+                 itrf_xyz=None, clock_file='time.dat', clock_dir='PINT', 
+                 clock_fmt='tempo', include_gps=True, include_bipm=True):
+        """ 
         Required arguments:
 
             name     = The name of the observatory
@@ -48,6 +47,8 @@ class TopoObs(Observatory):
             clock_fmt   = Format of clock file (see ClockFile class for allowed
                           values).  Default='tempo'
             include_gps = Set False to disable UTC(GPS)->UTC clock
+                          correction.
+            include_bipm = Set False to disable TAI TT(BIPM) clock
                           correction.
         """
 
@@ -89,6 +90,10 @@ class TopoObs(Observatory):
         self.include_gps = include_gps
         self._gps_clock = None
 
+        # BIPM corrections not implemented yet
+        self.include_bipm = include_bipm
+        self._bipm_clock = None
+
         self.tempo_code = tempo_code
         if aliases is None: aliases = []
         for code in (tempo_code, itoa_code):
@@ -122,6 +127,16 @@ class TopoObs(Observatory):
         return os.path.join(os.getenv('TEMPO2'),'clock',fname)
 
     @property
+    def bipm_fullpath(self):
+        """Returns full path to the TAI TT(BIPM) clock file.  Will first try PINT
+        data dirs, then fall back on $TEMPO2/clock."""
+        fname = 'tai2tt_bipm2015.clk'
+        fullpath = datapath(fname)
+        if fullpath is not None:
+            return fullpath
+        return os.path.join(os.getenv('TEMPO2'),'clock',fname)
+
+    @property
     def timescale(self):
         return 'utc'
 
@@ -141,6 +156,12 @@ class TopoObs(Observatory):
                 self._gps_clock = ClockFile.read(self.gps_fullpath,
                         format='tempo2')
             corr += self._gps_clock.evaluate(t)
+        if self.include_bipm:
+            tt2tai = 32.184 * 1e6 * u.us
+            if self._bipm_clock is None:
+                self._bipm_clock = ClockFile.read(self.bipm_fullpath,
+                        format='tempo2')
+            corr += self._bipm_clock.evaluate(t) - tt2tai
         return corr
 
     def posvel(self, t, ephem):

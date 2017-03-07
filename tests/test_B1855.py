@@ -17,7 +17,8 @@ class TestB1855(unittest.TestCase):
     def setUpClass(self):
         self.parfileB1855 = 'B1855+09_NANOGrav_dfg+12_TAI_FB90.par'
         self.timB1855 = 'B1855+09_NANOGrav_dfg+12.tim'
-        self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405", planets=False)
+        self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405", 
+                                      planets=False, include_bipm=False)
         self.modelB1855 = mb.get_model(self.parfileB1855)
         # tempo result
         self.ltres= np.genfromtxt(self.parfileB1855 + \

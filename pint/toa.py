@@ -1,6 +1,6 @@
 import re, sys, os, numpy, gzip
 from . import utils
-from .observatory import Observatory
+from .observatory import Observatory, get_observatory
 from . import erfautils
 import astropy.time as time
 from . import pulsar_mjd
@@ -26,12 +26,17 @@ iers_a_file = None
 iers_a = None
 
 
-def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=False):
+def get_TOAs(timfile, ephem="DE421", include_bipm=True,
+             include_gps=True, planets=False, usepickle=False):
     """Convenience function to load and prepare TOAs for PINT use.
 
     Loads TOAs from a '.tim' file, applies clock corrections, computes
     key values (like TDB), computes the observatory position and velocity
     vectors, and pickles the file for later use (if requested).
+
+    Includes options to specify solar system ephemeris [default DE421],
+    gps clock corrections [default=True], and BIPM clock corrections 
+    [default=True].
     """
     updatepickle = False
     if usepickle:
@@ -44,7 +49,8 @@ def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=False):
     t = TOAs(timfile)
     if not any([f.has_key('clkcorr') for f in t.table['flags']]):
         log.info("Applying clock corrections.")
-        t.apply_clock_corrections()
+        t.apply_clock_corrections(include_gps=include_gps,
+                                  include_bipm=include_bipm)
     if 'tdb' not in t.table.colnames:
         log.info("Getting IERS params and computing TDBs.")
         t.compute_TDBs()
@@ -89,16 +95,22 @@ def _check_pickle(toafilename, picklefilename=None):
     # All checks passed, return name of pickle.
     return picklefilename
 
-def get_TOAs_list(toa_list,ephem="DE421", planets=False):
+def get_TOAs_list(toa_list,ephem="DE421", include_bipm=True,
+                  include_gps=True, planets=False):
     """Load TOAs from a list of TOA objects.
 
-       Compute the TDB time and observatory positions and velocity
-       vectors.
+    Compute the TDB time and observatory positions and velocity
+    vectors.
+
+    Includes options to specify solar system ephemeris [default DE421],
+    gps clock corrections [default=True], and BIPM clock corrections 
+    [default=True].
     """
     t = TOAs(toalist = toa_list)
     if not any([f.has_key('clkcorr') for f in t.table['flags']]):
         log.info("Applying clock corrections.")
-        t.apply_clock_corrections()
+        t.apply_clock_corrections(include_gps=include_gps,
+                                  include_bipm=include_bipm)
     if 'tdb' not in t.table.colnames:
         log.info("Getting IERS params and computing TDBs.")
         t.compute_TDBs()
@@ -133,7 +145,7 @@ def toa_format(line, fmt="Unknown"):
 
 def get_obs(obscode):
     """Return the standard name for the given code."""
-    return Observatory.get(obscode).name
+    return get_observatory(obscode).name
 
 def parse_TOA_line(line, fmt="Unknown"):
     """Parse a one-line ASCII time-of-arrival.
@@ -337,7 +349,7 @@ class TOA(object):
         Time object passed to the TOA constructor.
 
         """
-        site = Observatory.get(obs)
+        site = get_observatory(obs)
 
         # If MJD is already a Time, just use it. Note that this will ignore 'scale'!
         # This assigns the site location to the Time, for use in the TDB conversion
@@ -587,7 +599,8 @@ class TOAs(object):
             outf.write(str)
         outf.close()
 
-    def apply_clock_corrections(self):
+    def apply_clock_corrections(self, include_bipm=True, 
+                                include_gps=True):
         """Apply observatory clock corrections and TIME statments.
 
         Apply clock corrections to all the TOAs where corrections are
@@ -596,6 +609,9 @@ class TOAs(object):
         called 'clkcorr' so that it can be reversed if necessary.  This
         routine also applies all 'TIME' commands and treats them exactly
         as if they were a part of the observatory clock corrections.
+
+        Options to include GPS or BIPM clock corrections are set to True
+        by default in order to give the most accurate clock corrections.
 
         # SUGGESTION(paulr): Somewhere in this docstring, or in a higher level
         # documentation, the assumptions about the timescales should be specified.
@@ -615,7 +631,8 @@ class TOAs(object):
         for ii, key in enumerate(self.table.groups.keys):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
-            site = Observatory.get(obs)
+            site = get_observatory(obs, include_gps=include_gps,
+                                   include_bipm=include_bipm)
             loind, hiind = self.table.groups.indices[ii:ii+2]
             # First apply any TIME statements
             for jj in range(loind, hiind):
@@ -714,7 +731,7 @@ class TOAs(object):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
-            site = Observatory.get(obs)
+            site = get_observatory(obs)
             tdb = time.Time(grp['tdb'])
             ssb_obs = site.posvel(tdb,ephem)
             ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T.to(u.km)
