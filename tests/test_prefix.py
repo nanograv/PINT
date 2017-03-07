@@ -18,7 +18,7 @@ class TestPrefix(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         self.m = pint.models.get_model(parfile)
-        self.t = pint.toa.get_TOAs(timfile,ephem="DE405")
+        self.t = pint.toa.get_TOAs(timfile,ephem="DE405", include_bipm=False)
     def test_prefix(self):
         print("Test prefix parameter via a glitch model")
         rs = pint.residuals.resids(self.t, self.m).phase_resids

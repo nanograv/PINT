@@ -18,7 +18,8 @@ class TestJUMP(unittest.TestCase):
         self.parf = 'B1855+09_NANOGrav_dfg+12_TAI.par'
         self.timf = 'B1855+09_NANOGrav_dfg+12.tim'
         self.JUMPm = mb.get_model(self.parf)
-        self.toas = toa.get_TOAs(self.timf, ephem="DE405", planets=False)
+        self.toas = toa.get_TOAs(self.timf, ephem="DE405", 
+                                 planets=False, include_bipm=False)
         # libstempo calculation
         self.ltres = np.genfromtxt(self.parf + '.tempo_test', unpack=True, names=True, dtype='float128')
     def test_jump(self):

@@ -15,7 +15,8 @@ class TestDD(unittest.TestCase):
     def setUpClass(self):
         self.parfileB1855 = 'B1855+09_NANOGrav_dfg+12_modified_DD.par'
         self.timB1855 = 'B1855+09_NANOGrav_dfg+12.tim'
-        self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405", planets=False)
+        self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405", 
+                                      planets=False, include_bipm=False)
         self.modelB1855 = mb.get_model(self.parfileB1855)
         # libstempo result
         self.ltres, self.ltbindelay = np.genfromtxt(self.parfileB1855 + '.tempo_test', unpack=True)

@@ -1,6 +1,7 @@
 # observatory.py
 # Base class for PINT observatories
 
+
 class Observatory(object):
     """
     The Observatory class defines observatory locations and related 
@@ -132,3 +133,29 @@ class Observatory(object):
         # TOA metadata which may be necessary in some cases.
         raise NotImplementedError
 
+
+def get_observatory(name, include_gps=True, include_bipm=True):
+    """Conviencience function to get observatory object with options.
+    
+    This function will simply call the ``Observatory.get`` method but
+    will manually set options after the method is called.
+
+    Required arguments:
+
+        name = The name of the observatory
+
+    Optional Arguments
+
+        include_gps = Set False to disable UTC(GPS)->UTC clock
+                      correction.
+        include_bipm = Set False to disable TAI TT(BIPM) clock
+                      correction.
+
+    .. note:: This function can and should be expanded if more clock
+        file switches/options are added at a public API level.
+
+    """
+    site = Observatory.get(name)
+    site.include_gps = include_gps
+    site.include_bipm = include_bipm
+    return site

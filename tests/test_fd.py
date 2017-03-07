@@ -14,7 +14,7 @@ class TestFD(unittest.TestCase):
         self.parf = 'test_FD.par'
         self.timf = 'test_FD.simulate.pint_corrected'
         self.FDm = mb.get_model(self.parf)
-        self.toas = toa.get_TOAs(self.timf)
+        self.toas = toa.get_TOAs(self.timf, include_bipm=False)
         # libstempo result
         self.ltres, self.ltbindelay = np.genfromtxt(self.parf + '.tempo_test', unpack=True)
     def test_FD(self):
