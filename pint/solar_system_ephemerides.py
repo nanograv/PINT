@@ -27,19 +27,28 @@ jpl_obj_code = {'ssb': 0,
                 'neptune': 8,
                 'pluto': 9}
 
-def objPosVel2SSB(objname, t, ephem):
-    """This function computes a solar system object position and velocity respect
-    to solar system barycenter using astropy coordinates get_body_barycentric()
+def objPosVel_wrt_SSB(objname, t, ephem):
+    """This function computes a solar system object position and velocity with respect
+    to the solar system barycenter (SSB) using astropy coordinates get_body_barycentric()
     method.
+    
+    The coordinate frame is that of the underlying solar system ephemeris, which 
+    has been the ICRF (J2000) since the DE4XX series.
+    
     Parameters
     ----------
     objname: str
         Solar system object name. Current support solar system bodies are listed in
-        astropy.coordinates.olar_system_ephemeris.bodies attribution.
+        astropy.coordinates.solar_system_ephemeris.bodies attribution.
     t: Astropy.time.Time object
         Observation time in Astropy.time.Time object format.
     ephem: str
         The ephem to for computing solar system object position and velocity
+        
+    Returns
+    -------
+    PosVel object with 3-vectors for the position and velocity of the object
+    
     """
     ephem = ephem.lower()
     objname = objname.lower()
@@ -81,14 +90,14 @@ def objPosVel(obj1, obj2, t, ephem):
         The ephem to for computing solar system object position and velocity
     """
     if obj1.lower() == 'ssb' and obj2.lower() != 'ssb':
-        obj2pv = objPosVel2SSB(obj2,t,ephem)
+        obj2pv = objPosVel_wrt_SSB(obj2,t,ephem)
         return obj2pv
     elif obj2.lower() == 'ssb' and obj1.lower() != 'ssb':
-        obj1pv = objPosVel2SSB(obj1,t,ephem)
+        obj1pv = objPosVel_wrt_SSB(obj1,t,ephem)
         return -obj1pv
     elif obj2.lower() != 'ssb' and obj1.lower() != 'ssb':
-        obj1pv = objPosVel2SSB(obj1,t,ephem)
-        obj2pv = objPosVel2SSB(obj2,t,ephem)
+        obj1pv = objPosVel_wrt_SSB(obj1,t,ephem)
+        obj2pv = objPosVel_wrt_SSB(obj2,t,ephem)
         return obj2pv - obj1pv
     else:
         return PosVel(np.zeros((3,len(t)))*u.km, np.zeros((3,len(t)))*u.km/u.second)

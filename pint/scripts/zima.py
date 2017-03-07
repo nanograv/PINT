@@ -11,12 +11,12 @@ import pint.models
 import pint.fitter
 import astropy.units as u
 from astropy.time import Time, TimeDelta
-import argparse
 
 from astropy import log
-log.setLevel('DEBUG')
+log.setLevel('INFO')
 
-if __name__ == '__main__':
+def main(argv=None):
+    import argparse
     parser = argparse.ArgumentParser(description="PINT tool for simulating TOAs")
     parser.add_argument("parfile",help="par file to read model from")
     parser.add_argument("timfile",help="Output TOA file name")
@@ -33,14 +33,14 @@ if __name__ == '__main__':
     parser.add_argument("--ephem",help="Ephemeris to use",default="DE421")
     parser.add_argument("--planets",help="Use planetary Shapiro delay",action="store_true",
                         default=False)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     log.info("Reading model from {0}".format(args.parfile))
     m = pint.models.get_model(args.parfile)
 
     duration = args.duration*u.day
     start = Time(args.startMJD,scale='utc',format='mjd',precision=9)
-    error = args.error*u.s
+    error = args.error*u.microsecond
     freq = args.freq*u.MHz
     scale = 'utc'
 
@@ -63,25 +63,29 @@ if __name__ == '__main__':
         log.info("Computing observatory positions and velocities.")
         ts.compute_posvels(args.ephem, args.planets)
 
-    # This computation should be replaced with a call to d_phase_d_TOA() when that
-    # function works to compute the instantaneous topocentric frequency
-    F = m.F0.value*m.F0.units    
-    rs = m.phase(ts.table).frac/F
+    F_local = m.d_phase_d_toa(ts)*u.Hz
+    rs = m.phase(ts.table).frac/F_local
 
     # Adjust the TOA times to put them where their residuals will be 0.0
     ts.adjust_TOAs(TimeDelta(-1.0*rs))
-    rspost = m.phase(ts.table).frac/F
+    rspost = m.phase(ts.table).frac/F_local
 
-    # Do a second iteration to fix the poor assumption of F = F0 when
-    # converting phase residuals to time residuals
+    # Do a second iteration
     ts.adjust_TOAs(TimeDelta(-1.0*rspost))
 
      # Write TOAs to a file
+    #ts.write_TOA_file(args.timfile,name='fake',format='Tempo2')
     ts.write_TOA_file(args.timfile,name='fake',format='Tempo2')
 
     if args.plot:
+        # This should be a very boring plot with all residuals flat at 0.0!
         import matplotlib.pyplot as plt
-        rspost2 = m.phase(ts.table).frac/F
-        plt.plot(ts.get_mjds(),rspost2.to(u.us),'+')
-        plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
+        rspost2 = m.phase(ts.table).frac/F_local
+        plt.errorbar(ts.get_mjds(),rspost2.to(u.us).value,yerr=ts.get_errors().to(u.us).value)
+        newts = pint.toa.get_TOAs(args.timfile)
+        rsnew = m.phase(newts.table).frac/F_local
+        plt.errorbar(newts.get_mjds(),rsnew.to(u.us).value,yerr=newts.get_errors().to(u.us).value)
+        #plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
+        plt.xlabel('MJD')
+        plt.ylabel('Residual (us)')
         plt.show()

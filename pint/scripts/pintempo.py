@@ -17,19 +17,17 @@ import pint.models
 import pint.fitter
 import pint.residuals
 import astropy.units as u
-import matplotlib.pyplot as plt
 import argparse
 
 from astropy import log
 
-if __name__ == '__main__':
-
+def main(argv=None):
     parser = argparse.ArgumentParser(description="Command line interfact to PINT")
     parser.add_argument("parfile",help="par file to read model from")
     parser.add_argument("timfile",help="TOA file name")
-    parser.add_argument("--outfile",help="Output figure file name (default=None)", default=None)
+    parser.add_argument("--outfile",help="Output par file name (default=None)", default=None)
     parser.add_argument("--plot",help="Plot residuals",action="store_true",default=False)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     log.info("Reading model from {0}".format(args.parfile))
     m = pint.models.get_model(args.parfile)
@@ -39,8 +37,8 @@ if __name__ == '__main__':
     prefit_resids = pint.residuals.resids(t, m).time_resids
 
     log.info("Fitting...")
-    f = pint.fitter.fitter(t, m)
-    f.call_minimize()
+    f = pint.fitter.WlsFitter(t, m)
+    f.fit_toas()
 
     # Print some basic params
     print( "Best fit has reduced chi^2 of", f.resids.chi2_reduced)
@@ -48,6 +46,7 @@ if __name__ == '__main__':
     print( "RMS in time is", f.resids.time_resids.std().to(u.us))
 
     if args.plot:
+        import matplotlib.pyplot as plt
         xt = t.get_mjds()
         plt.errorbar(xt,prefit_resids.to(u.us).value,
                     t.get_errors().to(u.us).value, fmt='o')
@@ -67,5 +66,7 @@ if __name__ == '__main__':
         print("\nBest fit model is:")
 
     fout.write(f.model.as_parfile()+"\n")
+    return 0
+
 
 

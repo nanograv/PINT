@@ -29,4 +29,4 @@ install:
     - pip install -r requirements.txt
 
 script:
-    - python setup.py nosetests
+  - python setup.py nosetests

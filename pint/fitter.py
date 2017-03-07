@@ -6,8 +6,10 @@ from .residuals import resids
 
 
 class Fitter(object):
-    """ Base class for fitter. The fitting function should be defined at
-    fit_toas method.
+    """ Base class for fitter. 
+    
+    The fitting function should be defined as the fit_toas() method.
+    
     Parameters
     ----------
     toas : a pint TOAs instance

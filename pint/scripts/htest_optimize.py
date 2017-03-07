@@ -1,8 +1,12 @@
 #!/usr/bin/env python
+
+# At the moment, this code is kind of an unsupported hack.
+# It will not be installed by setup.py and not tested by nosetests.
+
 import numpy as np
 import pint.toa as toa
 import pint.models
-import pint.fitter as fitter
+from pint.fitter import Fitter
 import pint.fermi_toas as fermi
 from pint.eventstats import hmw, hm, sf_hm
 import matplotlib.pyplot as plt
@@ -36,7 +40,7 @@ maxpost = -9e99
 numcalls = 0
 
 
-class emcee_fitter(fitter.fitter):
+class emcee_fitter(Fitter):
 
     def __init__(self, toas=None, model=None, weights=None):
         self.toas = toas
@@ -201,15 +205,15 @@ class emcee_fitter(fitter.fitter):
             plt.savefig(ftr.model.PSR.value+"_htest_v_wgtcut_unweighted.png")
         plt.close()
 
-if __name__ == '__main__':
+def main(argv=None):
 
-    if len(sys.argv[1:])==3:
+    if len(argv)==3:
         eventfile, parfile, weightcol = sys.argv[1:]
-    elif len(sys.argv[1:])==2:
+    elif len(argv)==2:
         eventfile, parfile = sys.argv[1:]
         weightcol=None
     else:
-        print "usage:  python event_optimize.py eventfile parfile [weightcol]"
+        print "usage: htest_optimize eventfile parfile [weightcol]"
         sys.exit()
 
     # Read in initial model
@@ -217,8 +221,13 @@ if __name__ == '__main__':
     # Remove the dispersion delay as it is unnecessary
     modelin.delay_funcs['L1'].remove(modelin.dispersion_delay)
     # Set the target coords for automatic weighting if necessary
-    target = SkyCoord(modelin.RAJ.value, modelin.DECJ.value, \
-        frame='icrs') if weightcol=='CALC' else None
+    if 'ELONG' in modelin.params:
+        tc = SkyCoord(modelin.ELONG.quantity,modelin.ELAT.quantity,
+            frame='barycentrictrueecliptic')
+    else:
+        tc = SkyCoord(modelin.RAJ.quantity,modelin.DECJ.quantity,frame='icrs')
+
+    target = tc if weightcol=='CALC' else None
 
     # TODO: make this properly handle long double
     if not (os.path.isfile(eventfile+".pickle") or

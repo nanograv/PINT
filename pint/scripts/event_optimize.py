@@ -2,7 +2,7 @@
 import numpy as np
 import pint.toa as toa
 import pint.models
-import pint.fitter
+from pint.fitter import Fitter
 import pint.fermi_toas as fermi
 from pint.eventstats import hmw, hm
 from pint.models.priors import Prior, UniformUnboundedRV, UniformBoundedRV, GaussianBoundedRV
@@ -10,7 +10,6 @@ from scipy.stats import norm, uniform
 import matplotlib.pyplot as plt
 import astropy.table
 import astropy.units as u
-import psr_utils as pu
 import scipy.optimize as op
 import sys, os, copy, fftfit
 from astropy.coordinates import SkyCoord
@@ -20,12 +19,86 @@ import argparse
 #log.setLevel('DEBUG')
 #np.seterr(all='raise')
 
+# initialization values
+# Should probably figure a way to make these not global variables
+maxpost = -9e99
+numcalls = 0
+
 class custom_timing(pint.models.spindown.Spindown,
                     pint.models.astrometry.AstrometryEcliptic):
     def __init__(self, parfile):
         super(custom_timing, self).__init__()
         self.read_parfile(parfile)
 
+
+def read_gaussfitfile(gaussfitfile, proflen):
+    """
+    read_gaussfitfile(gaussfitfile, proflen):
+        Read a Gaussian-fit file as created by the output of pygaussfit.py.
+            The input parameters are the name of the file and the number of
+            bins to include in the resulting template file.  A numpy array
+            of that length is returned.
+    """
+    phass = []
+    ampls = []
+    fwhms = []
+    for line in open(gaussfitfile):
+        if line.lstrip().startswith("phas"):
+            phass.append(float(line.split()[2]))
+        if line.lstrip().startswith("ampl"):
+            ampls.append(float(line.split()[2]))
+        if line.lstrip().startswith("fwhm"):
+            fwhms.append(float(line.split()[2]))
+    if not (len(phass) == len(ampls) == len(fwhms)):
+        print "Number of phases, amplitudes, and FWHMs are not the same in '%s'!"%gaussfitfile
+        return 0.0
+    phass = np.asarray(phass)
+    ampls = np.asarray(ampls)
+    fwhms = np.asarray(fwhms)
+    # Now sort them all according to decreasing amplitude
+    new_order = np.argsort(ampls)
+    new_order = new_order[::-1]
+    ampls = np.take(ampls, new_order)
+    phass = np.take(phass, new_order)
+    fwhms = np.take(fwhms, new_order)
+    # Now put the biggest gaussian at phase = 0.0
+    phass = phass - phass[0]
+    phass = np.where(phass<0.0, phass+1.0, phass)
+    template = np.zeros(proflen, dtype='d')
+    for ii in range(len(ampls)):
+        template += ampls[ii]*gaussian_profile(proflen, phass[ii], fwhms[ii])
+    return template
+
+def gaussian_profile(N, phase, fwhm):
+    """
+    gaussian_profile(N, phase, fwhm):
+        Return a gaussian pulse profile with 'N' bins and
+        an integrated 'flux' of 1 unit.
+            'N' = the number of points in the profile
+            'phase' = the pulse phase (0-1)
+            'fwhm' = the gaussian pulses full width at half-max
+        Note:  The FWHM of a gaussian is approx 2.35482 sigma
+    """
+    sigma = fwhm / 2.35482
+    mean = phase % 1.0
+    phsval = np.arange(N, dtype='d') / float(N)
+    if (mean < 0.5):
+        phsval = np.where(np.greater(phsval, mean+0.5),
+                           phsval-1.0, phsval)
+    else:
+        phsval = np.where(np.less(phsval, mean-0.5),
+                           phsval+1.0, phsval)
+    try:
+        zs = (phsval-mean)/sigma
+        okzinds = np.compress(np.fabs(zs)<20.0, np.arange(N))
+        okzs = np.take(zs, okzinds)
+        retval = np.zeros(N, 'd')
+        np.put(retval, okzinds, np.exp(-0.5*(okzs)**2.0)/(sigma*np.sqrt(2*np.pi)))
+        return retval
+    except OverflowError:
+        print "Problem in gaussian prof:  mean = %f  sigma = %f" % \
+              (mean, sigma)
+        return np.zeros(N, 'd')
 def measure_phase(profile, template, rotate_prof=True):
     """
     measure_phase(profile, template):
@@ -124,7 +197,7 @@ def get_fit_keyvals(model, phs=0.0, phserr=0.1):
     fiterrs.append(phserr)
     return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
-class emcee_fitter(pint.fitter.fitter):
+class emcee_fitter(Fitter):
 
     def __init__(self, toas=None, model=None, template=None, 
                  weights=None, phs=0.5, phserr=0.03):
@@ -164,7 +237,7 @@ class emcee_fitter(pint.fitter.fitter):
         """
         The log posterior (priors * likelihood)
         """
-        global maxpost, numcalls
+        global maxpost, numcalls, ftr
         self.set_params(dict(zip(self.fitkeys[:-1], theta[:-1])))
 
         numcalls += 1
@@ -219,6 +292,7 @@ class emcee_fitter(pint.fitter.fitter):
         Show binned profiles (and H-test values) as a function
         of the minimum weight used. nbins is only for the plots.
         """
+        global ftr
         f, ax = plt.subplots(3, 3, sharex=True)
         phss = ftr.get_event_phases()
         htests = []
@@ -262,7 +336,7 @@ class emcee_fitter(pint.fitter.fitter):
             plt.savefig(ftr.model.PSR.value+"_htest_v_wgtcut_unweighted.png")
         plt.close()
 
-if __name__ == '__main__':
+def main(argv=None):
 
     parser = argparse.ArgumentParser(description="PINT tool for MCMC optimization of timing models using event data.")
 
@@ -297,7 +371,9 @@ if __name__ == '__main__':
     parser.add_argument("--usepickle",help="Read events from pickle file, if available?",
         default=False,action="store_true")
 
-    args = parser.parse_args()
+    global nwalkers, nsteps, ftr
+    
+    args = parser.parse_args(argv)
 
     eventfile = args.eventfile
     parfile = args.parfile
@@ -319,20 +395,27 @@ if __name__ == '__main__':
     do_opt_first = args.doOpt
     wgtexp = args.wgtexp
 
-    # initialization values
-    # Should probably figure a way to make these not global variables
-    maxpost = -9e99
-    numcalls = 0
 
     # Read in initial model
-    #modelin = pint.models.get_model(parfile)
-    modelin = custom_timing(parfile)
+    modelin = pint.models.get_model(parfile)
+    
+    # The custom_timing version below is to manually construct the TimingModel
+    # class, which allows it to be pickled. This is needed for parallelizing
+    # the emcee call over a number of threads.  So far, it isn't quite working
+    # so it is disabled.  The code above constructs the TimingModel class
+    # dynamically, as usual.
+    #modelin = custom_timing(parfile)
 
     # Remove the dispersion delay as it is unnecessary
     #modelin.delay_funcs['L1'].remove(modelin.dispersion_delay)
     # Set the target coords for automatic weighting if necessary
-    target = SkyCoord(modelin.RAJ.value, modelin.DECJ.value, \
-        frame='icrs') if weightcol=='CALC' else None
+    if 'ELONG' in modelin.params:
+        tc = SkyCoord(modelin.ELONG.quantity,modelin.ELAT.quantity,
+            frame='barycentrictrueecliptic')
+    else:
+        tc = SkyCoord(modelin.RAJ.quantity,modelin.DECJ.quantity,frame='icrs')
+
+    target = tc if weightcol=='CALC' else None
 
     # TODO: make this properly handle long double
     if not args.usepickle or (not (os.path.isfile(eventfile+".pickle") or
@@ -377,7 +460,7 @@ if __name__ == '__main__':
         print "There are %d events, no weights are being used." % (len(weights))
 
     # Now load in the gaussian template and normalize it
-    gtemplate = pu.read_gaussfitfile(gaussianfile, nbins)
+    gtemplate = read_gaussfitfile(gaussianfile, nbins)
     gtemplate /= gtemplate.sum()
 
     # Set the priors on the parameters in the model, before
@@ -523,16 +606,11 @@ if __name__ == '__main__':
 
     # Make the triangle plot.
     samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
-    try:
-        import corner
-        # Note, I had to turn off plot_contours because I kept getting
-        # errors about how contour levels must be increasing.
-        fig = corner.corner(samples, labels=ftr.fitkeys, bins=50,
-            truths=ftr.maxpost_fitvals, plot_contours=True)
-        fig.savefig(ftr.model.PSR.value+"_triangle.png")
-        plt.close()
-    except:
-        log.warning("Corner plot failed")
+    import corner
+    fig = corner.corner(samples, labels=ftr.fitkeys, bins=50,
+        truths=ftr.maxpost_fitvals, plot_contours=True)
+    fig.savefig(ftr.model.PSR.value+"_triangle.png")
+    plt.close()
 
     # Make a phaseogram with the 50th percentile values
     #ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))

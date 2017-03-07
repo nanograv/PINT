@@ -5,3 +5,10 @@
 2015-03-02 (paulr) Allow TOAs() class to be initialized from a list or tuple of TOA() objects
 2016-12-28 (paulr) Tag: 0.5.0
 2016-12-28 (paulr) Tag: 0.5.1 Bug fix in setup.py, cleanup of ipython notebooks, bug fix in Priors
+2017-01-23 (paulr) Added pintbary.py and moved other scripts to scripts dir, some script improvements
+2017-03-07 (paulr) Added handling of NICER TOAs and created NICER observatory
+2017-03-07 (paulr) Several improvements to TOA file writing
+2017-03-07 (paulr) Several changes to event_optimize to make it work in the new script framework and removed psr_utils dependency
+2017-03-07 (paulr) Removed old (and broken) compute_bats function from utils.py
+2017-03-07 (paulr) Added emcee and corner to requirements.txt
+2017-03-07 (paulr) Script fermiphaseogram.py renamed to fermiphase

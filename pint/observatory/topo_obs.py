@@ -9,7 +9,7 @@ import astropy.units as u
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from ..utils import PosVel, has_astropy_unit
-from ..solar_system_ephemerides import objPosVel2SSB
+from ..solar_system_ephemerides import objPosVel_wrt_SSB
 from ..config import datapath
 from ..erfautils import topo_posvels
 
@@ -66,12 +66,12 @@ class TopoObs(Observatory):
 
         # Check for correct array dims
         if xyz.shape != (3,):
-            raise ValueError( 
+            raise ValueError(
                     "Incorrect coordinate dimensions for observatory '%s'" % (
                         name))
 
-        # Convert to astropy EarthLocation
-        self._loc = EarthLocation(*xyz)
+        # Convert to astropy EarthLocation, ensuring use of geocentric coordinates
+        self._loc = EarthLocation.from_geocentric(*xyz)
 
         # Save clock file info, the data will be read only if clock
         # corrections for this site are requested.
@@ -82,7 +82,7 @@ class TopoObs(Observatory):
 
         # If using TEMPO time.dat we need to know the 1-char tempo-style
         # observatory code.
-        if (clock_dir=='TEMPO' and clock_file=='time.dat' 
+        if (clock_dir=='TEMPO' and clock_file=='time.dat'
                 and tempo_code is None):
             raise ValueError("No tempo_code set for observatory '%s'" % name)
 
@@ -148,7 +148,7 @@ class TopoObs(Observatory):
         # Read clock file if necessary
         # TODO provide some method for re-reading the clock file?
         if self._clock is None:
-            self._clock = ClockFile.read(self.clock_fullpath, 
+            self._clock = ClockFile.read(self.clock_fullpath,
                     format=self.clock_fmt, obscode=self.tempo_code)
         corr = self._clock.evaluate(t)
         if self.include_gps:
@@ -166,6 +166,6 @@ class TopoObs(Observatory):
 
     def posvel(self, t, ephem):
         if t.isscalar: t = Time([t])
-        earth_pv = objPosVel2SSB('earth', t, ephem)
+        earth_pv = objPosVel_wrt_SSB('earth', t, ephem)
         obs_topo_pv = topo_posvels(self.earth_location, t, obsname=self.name)
         return obs_topo_pv + earth_pv
