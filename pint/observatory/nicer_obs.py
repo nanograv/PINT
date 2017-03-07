@@ -119,6 +119,6 @@ class NICERObs(SpecialLocation):
         nicer_pos_geo = np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])*self.FPorb['X'].unit
         log.debug('nicer_pos_geo {0}'.format(nicer_pos_geo))
         nicer_vel_geo = np.array([self.Vx(t.tt.mjd), self.Vy(t.tt.mjd), self.Vz(t.tt.mjd)])*self.FPorb['Vx'].unit
-        nicer_posvel = PosVel( nicer_pos_geo, nicer_vel_geo, origin='earth')
+        nicer_posvel = PosVel( nicer_pos_geo, nicer_vel_geo, origin='earth', obj='nicer')
         # Vector add to geo_posvel to get full posvel vector.
         return geo_posvel + nicer_posvel
