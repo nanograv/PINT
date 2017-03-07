@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# This test is DISABLED because event_optimize requires PRESTO to be installed
+# to get the fftfit module.  It can be run manually by people who have PRESTO
 from __future__ import division, print_function
 import sys, os
 from StringIO import StringIO
