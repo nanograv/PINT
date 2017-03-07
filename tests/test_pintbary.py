@@ -8,18 +8,16 @@ import numpy as np
 
 class TestPintBary(unittest.TestCase):
 
-    def test_main_runs(self):
-        pintbary.main(['56000.0', '--ra', '12h22m33.2s', '--dec', '19d21m44.2s'])
-
-
     def test_result(self):
         saved_stdout, pintbary.sys.stdout = pintbary.sys.stdout, StringIO('_')
-        pintbary.main(['56000.0', '--ra', '12h22m33.2s', '--dec', '19d21m44.2s'])
+        cmd = '56000.0 --ra 12h22m33.2s --dec 19d21m44.2s --obs gbt --ephem DE405'
+        pintbary.main(cmd.split())
         v = pintbary.sys.stdout.getvalue()
         # Check that last value printed is the barycentered time
-        self.assertTrue(np.isclose(float(v.split()[-1]),56000.00616908018856))
+        self.assertTrue(np.isclose(float(v.split()[-1]),56000.0061691189))
         pintbary.sys.stdout = saved_stdout
-        
+
+# Below are some examples of types of tests         
 #     def test_main_returns_nonzero_on_error(self):
 #         self.assertNotEqual(plus_one.main(['test']), 0)
 
