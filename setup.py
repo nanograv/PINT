@@ -95,7 +95,7 @@ console_scripts = [ 'nicerphase=pint.scripts.nicerphase:main',
                     'pintempo=pint.scripts.pintempo:main', 
                     'zima=pint.scripts.zima:main', 
                     'pintbary=pint.scripts.pintbary:main', 
-                    'fermiphaseogram=pint.scripts.fermiphaseogram:main' ]
+                    'fermiphase=pint.scripts.fermiphase:main' ]
 
 setup(
     name="pint",
