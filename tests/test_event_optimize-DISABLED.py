@@ -7,7 +7,7 @@ import numpy as np
 import pint.scripts.event_optimize as event_optimize
 from pinttestdata import testdir, datadir
 
-parfile = os.path.join(datadir, 'PSRJ0030+0451_psrcat.par')
+parfile = os.path.join(datadir, 'PSRJ0030+0451_psrcat.p')
 eventfile = os.path.join(datadir, 'J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_GEO_wt.gt.0.4.fits')
 temfile = os.path.join(datadir, 'templateJ0030.3gauss')
 
