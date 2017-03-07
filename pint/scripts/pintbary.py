@@ -1,5 +1,6 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 from __future__ import division, print_function
+import sys
 import numpy as np
 import pint.toa as toa
 import pint.models
@@ -63,5 +64,5 @@ def main(argv=None):
         
     tdbtimes = m.get_barycentric_toas(ts.table)
 
-    print("{0:21.14f}".format(tdbtimes[0].value))
-    
+    print("{0:.14f}".format(tdbtimes[0].value))
+    return
