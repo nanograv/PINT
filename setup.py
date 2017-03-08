@@ -116,6 +116,7 @@ setup(
     packages=['pint',
         'pint.extern',
         'pint.models',
+        'pint.scripts',
         'pint.models.stand_alone_psr_binaries',
         'pint.observatory',
         'pint.orbital'],
