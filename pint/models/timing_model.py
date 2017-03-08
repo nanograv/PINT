@@ -572,8 +572,8 @@ class TimingModel(object):
             result += getattr(self, par).as_parfile_line()
         # Always include UNITS in par file. For now, PINT only supports TDB
         result += "UNITS TDB\n"
-        if hasattr(self,'BinaryModelName'):
-            result += "BINARY {0}\n".format(self.BinaryModelName)
+        if hasattr(self,'binary_model_name'):
+            result += "BINARY {0}\n".format(self.binary_model_name)
         return result
 
     def read_parfile(self, filename):
