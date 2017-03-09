@@ -108,6 +108,9 @@ def load_NICER_TOAs(eventname):
     import astropy.io.fits as pyfits
     # Load photon times from FT1 file
     hdulist = pyfits.open(eventname)
+    # This code currently support NICER and RXTE science event data
+    if hdulist[1].name not in ['EVENTS', 'XTE_SE']:
+        raise RuntimeError('First table in FITS file must be EVENTS or XTE_SE. Found '+hdulis[1].name)
     event_hdr=hdulist[1].header
     event_dat=hdulist[1].data
 
@@ -155,7 +158,7 @@ def load_NICER_TOAs(eventname):
         toalist=[toa.TOA(m,obs='Barycenter',scale='tdb',energy=e) for m,e in zip(mjds,phas)]
     else:
         if timeref == 'LOCAL':
-            log.info('Building LOCAL TOAs, with MJDs in range {0} to {1}'.format(mjds.min(),mjds.max()))
+            log.info('Building spacecraft local TOAs, with MJDs in range {0} to {1}'.format(mjds.min(),mjds.max()))
             toalist=[toa.TOA(m, obs='NICER', scale='tt',energy=e) for m,e in zip(mjds,phas)]
         else:
             log.info("Building geocentered TOAs")

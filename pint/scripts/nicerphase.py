@@ -14,6 +14,7 @@ from pint.eventstats import hmw, hm, h2sig
 from astropy.coordinates import SkyCoord
 from astropy import log
 import astropy.io.fits as pyfits
+import uuid
 
 def main(argv=None):
     import argparse
@@ -72,16 +73,36 @@ def main(argv=None):
         nicer_phaseogram(mjds,phases,bins=100,file = args.plotfile)
         
     if args.addphase:
-        # Read input FITS file (again). lazy_load_hdus ensures that it is all
-        # read into memory so it can be closed.
-        hdulist = pyfits.open(args.eventfile,lazy_load_hdus=False)
-        event_hdr=hdulist[1].header
-        event_dat=hdulist[1].data
-        hdulist.close()
+        # Read input FITS file (again).
+        # If overwriting, open in 'update' mode
         if args.outfile is None:
-            # overwrite the existing file
-            hdulist.writeto(args.eventfile,overwrite=True)
+            hdulist = pyfits.open(args.eventfile,mode='update')
         else:
-            hdulist.writeto(args.outfile,overwrite=False)
-            
+            hdulist = pyfits.open(args.eventfile)
+        event_hdu = hdulist[1]
+        event_hdr=event_hdu.header
+        event_dat=event_hdu.data
+        if len(event_dat) != len(phases):
+            raise RuntimeError('Mismatch between length of FITS table ({0}) and length of phase array ({1})!'.format(len(event_dat),len(phases)))
+        if 'PULSE_PHASE' in event_hdu.columns.names:
+            log.info('Found existing PULSE_PHASE column, overwriting...')
+            # Overwrite values in existing Column
+            event_dat['PULSE_PHASE'] = phases
+        else:
+            # Construct and append new column, preserving HDU header and name
+            log.info('Adding new PULSE_PHASE column.')
+            phasecol = pyfits.ColDefs([pyfits.Column(name='PULSE_PHASE', format='D',
+                array=phases)])
+            bt = pyfits.BinTableHDU.from_columns( event_hdu.columns + phasecol, 
+                header=event_hdr,name=event_hdu.name)
+            hdulist[1] = bt
+        if args.outfile is None:
+            # Overwrite the existing file
+            log.info('Overwriting existing FITS file '+args.eventfile)
+            hdulist.flush(verbose=True, output_verify='warn')
+        else:
+            # Write to new output file
+            log.info('Writing output FITS file '+args.outfile)
+            hdulist.writeto(args.outfile,overwrite=False, checksum=True, output_verify='warn')
+
 
