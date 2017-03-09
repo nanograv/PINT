@@ -50,7 +50,7 @@ def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
     return fgeom * np.exp(-np.power((logE-logeref)/np.sqrt(2.)/logesig,2.))	
 
 def phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.0, size=5,
-    alpha=0.25, width=6, maxphs=2.0, file=False):
+    alpha=0.25, width=6, maxphs=2.0, plotfile=None):
     """
     Make a nice 2-panel phaseogram
     """
@@ -91,15 +91,15 @@ def phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.0, siz
     ax2r.get_yaxis().get_major_formatter().set_scientific(False)
     ax2.set_xlabel("Pulse Phase")
     plt.tight_layout()
-    if file:
-        plt.savefig(file)
+    if plotfile is not None:
+        plt.savefig(plotfile)
         plt.close()
     else:
         plt.show()
 
-def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,logeref=4.1, logesig=0.5,minweight=0.0):
+def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1, logesig=0.5,minweight=0.0):
     '''
-    TOAlist = load_Fermi_TOAs(ft1name,ft2name=None)
+    TOAlist = load_Fermi_TOAs(ft1name)
       Read photon event times out of a Fermi FT1 file and return
       a list of PINT TOA objects.
       Correctly handles raw FT1 files, or ones processed with gtbary
@@ -130,12 +130,11 @@ def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,loge
     timeref = ft1hdr['TIMEREF']
     log.info("TIMEREF {0}".format(timeref))
 
-    # Collect TIMEZERO and MJDREF
+    # Collect TIMEZERO (which is in SECONDS, not days) and MJDREF
     try:
         TIMEZERO = np.longdouble(ft1hdr['TIMEZERO'])
     except KeyError:
         TIMEZERO = np.longdouble(ft1hdr['TIMEZERI']) + np.longdouble(ft1hdr['TIMEZERF'])
-    #print >>outfile, "# TIMEZERO = ",TIMEZERO
     log.info("TIMEZERO = {0}".format(TIMEZERO))
     try:
         MJDREF = np.longdouble(ft1hdr['MJDREF'])
@@ -148,7 +147,6 @@ def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,loge
             np.longdouble(ft1hdr['MJDREFF'].replace('D','E'))
         else:
             MJDREF = np.longdouble(ft1hdr['MJDREFI']) + np.longdouble(ft1hdr['MJDREFF'])
-    #print >>outfile, "# MJDREF = ",MJDREF
     log.info("MJDREF = {0}".format(MJDREF))
     mjds = (np.array(ft1dat.field('TIME'),dtype=np.longdouble)+ TIMEZERO)/86400.0 + MJDREF 
     energies = ft1dat.field('ENERGY')*u.MeV
@@ -172,13 +170,15 @@ def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,loge
             toalist=[toa.TOA(m,obs='Barycenter',scale='tdb',energy=e,weight=w) for m,e,w in zip(mjds,energies,weights)]
     else:
         if timeref == 'LOCAL':
-            log.info('LOCAL TOAs not implemented yet')
-            if ft2name is None:
-                log.error('FT2 file required to process raw Fermi times.')
-            if weightcolumn is None:
-                toalist=[toa.TOA(m, obs='Spacecraft', scale='tt',energy=e) for m,e in zip(mjds,energies)]
-            else:
-                toalist=[toa.TOA(m, obs='Spacecraft', scale='tt',energy=e,weight=w) for m,e,w in zip(mjds,energies,weights)]
+            log.info('Building spacecraft local TOAs, with MJDs in range {0} to {1}'.format(mjds.min(),mjds.max()))
+            try:
+                if weightcolumn is None:
+                    toalist=[toa.TOA(m, obs='Fermi', scale='tt',energy=e) for m,e in zip(mjds,energies)]
+                else:
+                    toalist=[toa.TOA(m, obs='Fermi', scale='tt',energy=e,weight=w) for m,e,w in zip(mjds,energies,weights)]
+            except KeyError:
+                log.error('Error processing Fermi TOAs. You may have forgotten to specify an FT2 file with --ft2')
+                raise
         else:
             log.info("Building geocentered TOAs")
             if weightcolumn is None:
@@ -188,49 +188,3 @@ def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,loge
 
     return toalist
 
-if __name__ == '__main__':
-    ephem = 'DE421'
-    planets = True
-    parfile = 'PSRJ0030+0451_psrcat.par'
-    #eventfile = 'J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_GEO_short.fits'
-    eventfile = 'J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_BARY.fits'
-    #weightcol = 'PSRJ0030+0451'
-    weightcol = None # 'CALC'
-
-    #eventfile = 'J0740+6620_P8_15.0deg_239557517_458611204_ft1weights_GEO_short.fits'
-    #parfile = 'J0740+6620.par'
-    #weightcol = 'PSRJ0740+6620'
-
-    # Read event file and return list of TOA objects
-    tl  = load_Fermi_TOAs(eventfile,weightcolumn=weightcol,targetcoord=SkyCoord('00:30:27.4303','+04:51:39.74',unit=(u.hourangle,u.degree),frame='icrs'))
-
-    # Now convert to TOAs object and compute TDBs and posvels
-    ts = toa.TOAs(toalist=tl)
-    ts.filename = eventfile
-    ts.compute_TDBs()
-    ts.compute_posvels(ephem=ephem,planets=planets)
-
-    print(ts.get_summary())
-
-    print(ts.table)
-
-    # Read in initial model
-    modelin = pint.models.get_model(parfile)
-
-    # Remove the dispersion delay as it is unnecessary
-    modelin.delay_funcs.remove(modelin.dispersion_delay)
-
-    # Hack to remove solar system delay terms if file was barycentered
-    if 'Barycenter' in ts.observatories:
-        modelin.delay_funcs.remove(modelin.solar_system_shapiro_delay)
-        modelin.delay_funcs.remove(modelin.solar_system_geometric_delay)
-    # Compute model phase for each TOA
-    phss = modelin.phase(ts.table)[1]
-    # ensure all postive
-    phases = np.where(phss < 0.0, phss + 1.0, phss)
-    mjds = ts.get_mjds()
-    if weightcol is not None:
-        weights = np.array([w['weight'] for w in ts.table['flags']])
-        phaseogram(mjds,phases,weights)
-    else:
-        phaseogram(mjds,phases)

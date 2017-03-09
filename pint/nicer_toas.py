@@ -13,7 +13,7 @@ from astropy.extern import six
 from astropy import log
 
 def nicer_phaseogram(mjds, phases, weights=None, title=None, bins=64, rotate=0.0, size=5,
-    alpha=0.25, width=6, maxphs=2.0, file=False):
+    alpha=0.25, width=6, maxphs=2.0, plotfile=False):
     """
     Make a nice 2-panel phaseogram
     """
@@ -90,8 +90,8 @@ def nicer_phaseogram(mjds, phases, weights=None, title=None, bins=64, rotate=0.0
     ax2r.get_yaxis().get_major_formatter().set_scientific(False)
     ax2.set_xlabel("Pulse Phase")
     plt.tight_layout()
-    if file:
-        plt.savefig(file)
+    if plotfile:
+        plt.savefig(plotfile)
         plt.close()
     else:
         plt.show()

@@ -31,6 +31,11 @@ def main(argv=None):
     parser.add_argument("--ephem",help="Planetary ephemeris to use (default=DE421)", default="DE421")
     parser.add_argument("--plot",help="Show phaseogram plot.", action='store_true', default=False)
     args = parser.parse_args(argv)
+    
+    # If outfile is specified, that implies addphase
+    if args.outfile is not None:
+        args.addphase = True
+
     # Instantiate NICERObs once so it gets added to the observatory registry
     NICERObs(name='NICER',FPorbname=args.orbfile)
 
@@ -70,7 +75,7 @@ def main(argv=None):
     h = float(hm(phases))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h,h2sig(h)))
     if args.plot:
-        nicer_phaseogram(mjds,phases,bins=100,file = args.plotfile)
+        nicer_phaseogram(mjds,phases,bins=100,plotfile = args.plotfile)
         
     if args.addphase:
         # Read input FITS file (again).

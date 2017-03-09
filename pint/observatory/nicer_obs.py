@@ -47,7 +47,7 @@ def load_FPorbit(orbit_filename):
     timeref = FPorbit_hdr['TIMEREF']
     log.info("FPorbit TIMEREF {0}".format(timeref))
 
-    # Collect TIMEZERO and MJDREF
+    # Collect TIMEZERO (which is in SECONDS) and MJDREF
     try:
         TIMEZERO = np.longdouble(FPorbit_hdr['TIMEZERO'])
     except KeyError:
@@ -65,7 +65,7 @@ def load_FPorbit(orbit_filename):
         else:
             MJDREF = np.longdouble(FPorbit_hdr['MJDREFI']) + np.longdouble(FPorbit_hdr['MJDREFF'])
     log.info("FPorbit MJDREF = {0}".format(MJDREF))
-    mjds_TT = np.array(FPorbit_dat.field('TIME'),dtype=np.longdouble)/86400.0 + MJDREF + TIMEZERO
+    mjds_TT = np.array(FPorbit_dat.field('TIME'),dtype=np.longdouble)/86400.0 + MJDREF + TIMEZERO/86400.0
     mjds_TT = mjds_TT*u.d
     X = FPorbit_dat.field('X')*u.m
     Y = FPorbit_dat.field('Y')*u.m
