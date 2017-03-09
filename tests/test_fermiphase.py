@@ -14,7 +14,7 @@ class TestFermiPhase(unittest.TestCase):
 
     def test_result(self):
         saved_stdout, fermiphase.sys.stdout = fermiphase.sys.stdout, StringIO('_')
-        cmd = '{0} {1} CALC --outfile out_fermiphase.png'.format(eventfile,parfile)
+        cmd = '{0} {1} CALC'.format(eventfile,parfile)
         fermiphase.main(cmd.split())
         lines = fermiphase.sys.stdout.getvalue()
         v = 999.0
