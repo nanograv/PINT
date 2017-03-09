@@ -148,6 +148,8 @@ def load_NICER_TOAs(eventname):
     except:
         phas = np.zeros(len(mjds))
 
+    hdulist.close()
+    
     if timesys == 'TDB':
         log.info("Building barycentered TOAs")
         toalist=[toa.TOA(m,obs='Barycenter',scale='tdb',energy=e) for m,e in zip(mjds,phas)]

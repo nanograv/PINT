@@ -13,6 +13,7 @@ from astropy.time import Time
 from pint.eventstats import hmw, hm, h2sig
 from astropy.coordinates import SkyCoord
 from astropy import log
+import astropy.io.fits as pyfits
 
 def main(argv=None):
     import argparse
@@ -21,7 +22,10 @@ def main(argv=None):
     parser.add_argument("orbfile",help="Name of FPorbit file.")
     parser.add_argument("parfile",help="par file to construct model from")
     parser.add_argument("--maxMJD",help="Maximum MJD to include in analysis", default=None)
-    parser.add_argument("--outfile",help="Output figure file name (default=None)", default=None)
+    parser.add_argument("--plotfile",help="Output figure file name (default=None)", default=None)
+    parser.add_argument("--addphase",help="Write FITS file with added phase column",
+        default=False,action='store_true')
+    parser.add_argument("--outfile",help="Output FITS file name (default=same as eventfile)", default=None)
     parser.add_argument("--planets",help="Use planetary Shapiro delay in calculations (default=False)", default=False, action="store_true")
     parser.add_argument("--ephem",help="Planetary ephemeris to use (default=DE421)", default="DE421")
     parser.add_argument("--plot",help="Show phaseogram plot.", action='store_true', default=False)
@@ -65,4 +69,19 @@ def main(argv=None):
     h = float(hm(phases))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h,h2sig(h)))
     if args.plot:
-        nicer_phaseogram(mjds,phases,bins=100,file = args.outfile)
+        nicer_phaseogram(mjds,phases,bins=100,file = args.plotfile)
+        
+    if args.addphase:
+        # Read input FITS file (again). lazy_load_hdus ensures that it is all
+        # read into memory so it can be closed.
+        hdulist = pyfits.open(args.eventfile,lazy_load_hdus=False)
+        event_hdr=hdulist[1].header
+        event_dat=hdulist[1].data
+        hdulist.close()
+        if args.outfile is None:
+            # overwrite the existing file
+            hdulist.writeto(args.eventfile,overwrite=True)
+        else:
+            hdulist.writeto(args.outfile,overwrite=False)
+            
+
