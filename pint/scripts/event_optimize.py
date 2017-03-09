@@ -461,7 +461,7 @@ def main(argv=None):
 
     # Now load in the gaussian template and normalize it
     gtemplate = read_gaussfitfile(gaussianfile, nbins)
-    gtemplate /= gtemplate.sum()
+    gtemplate /= gtemplate.mean()
 
     # Set the priors on the parameters in the model, before
     # instantiating the emcee_fitter
