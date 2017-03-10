@@ -56,6 +56,6 @@ class BinaryBT(PulsarBinary):
         # If eccentricity is zero, freeze some parameters to 0
         # OM = 0 -> T0 = TASC
         if self.ECC.value == 0 or self.ECC.value is None:
-            for p in ("E", "OM", "OMDOT", "EDOT"):
+            for p in ("ECC", "OM", "OMDOT", "EDOT"):
                 getattr(self, p).set("0")
                 getattr(self, p).frozen = True
