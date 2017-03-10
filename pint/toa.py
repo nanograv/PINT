@@ -613,11 +613,8 @@ class TOAs(object):
         Options to include GPS or BIPM clock corrections are set to True
         by default in order to give the most accurate clock corrections.
 
-        # SUGGESTION(paulr): Somewhere in this docstring, or in a higher level
-        # documentation, the assumptions about the timescales should be specified.
-        # The docstring says apply "correction" but does not say what it is correcting.
-        # Be more specific.
-
+        A description of how PINT handles clock corrections and timescales is here:
+        https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
 
         """
         # First make sure that we haven't already applied clock corrections
