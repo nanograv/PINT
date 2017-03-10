@@ -278,14 +278,14 @@ class emcee_fitter(Fitter):
         return -lnlikelihood
 
     def phaseogram(self, weights=None, bins=100, rotate=0.0, size=5,
-        alpha=0.25, file=False):
+        alpha=0.25, plotfile=None):
         """
         Make a nice 2-panel phaseogram for the current model
         """
         mjds = self.toas.table['tdbld'].astype(np.float64)
         phss = self.get_event_phases()
         fermi.phaseogram(mjds, phss, weights=self.weights, bins=bins,
-            rotate=rotate, size=size, alpha=alpha, file=file)
+            rotate=rotate, size=size, alpha=alpha, plotfile=plotfile)
 
     def prof_vs_weights(self, nbins=50, use_weights=False):
         """
@@ -509,7 +509,7 @@ def main(argv=None):
             (1.0 - maxbin / float(len(gtemplate)), args.phs)
         fitvals[-1] = args.phs
     ftr.fitvals[-1] = fitvals[-1]
-    ftr.phaseogram(file=ftr.model.PSR.value+"_pre.png")
+    ftr.phaseogram(plotfile=ftr.model.PSR.value+"_pre.png")
     plt.close()
     #ftr.phaseogram()
 
@@ -616,7 +616,7 @@ def main(argv=None):
     #ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
     # Make a phaseogram with the best MCMC result
     ftr.set_params(dict(zip(ftr.fitkeys[:-1], ftr.maxpost_fitvals[:-1])))
-    ftr.phaseogram(file=ftr.model.PSR.value+"_post.png")
+    ftr.phaseogram(plotfile=ftr.model.PSR.value+"_post.png")
     plt.close()
 
     # Write out the output pulse profile
