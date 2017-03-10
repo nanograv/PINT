@@ -20,7 +20,7 @@ def main(argv=None):
     import argparse
     parser = argparse.ArgumentParser(description="Use PINT to compute event phases and make plots of NICER event files.")
     parser.add_argument("eventfile",help="NICER event FITS file name.")
-    parser.add_argument("orbfile",help="Name of FPorbit file.")
+    parser.add_argument("orbfile",help="Name of FPorbit file or 'none'.")
     parser.add_argument("parfile",help="par file to construct model from")
     parser.add_argument("--maxMJD",help="Maximum MJD to include in analysis", default=None)
     parser.add_argument("--plotfile",help="Output figure file name (default=None)", default=None)
@@ -37,7 +37,8 @@ def main(argv=None):
         args.addphase = True
 
     # Instantiate NICERObs once so it gets added to the observatory registry
-    NICERObs(name='NICER',FPorbname=args.orbfile)
+    if not args.orbfile.lower() == 'none':
+        NICERObs(name='NICER',FPorbname=args.orbfile)
 
     # Read in model
     modelin = pint.models.get_model(args.parfile)
