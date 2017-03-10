@@ -1,7 +1,7 @@
 from __future__ import print_function
 import numpy as np
 from astropy.coordinates import frame_transform_graph, DynamicMatrixTransform
-from astropy.coordinates.angles import rotation_matrix
+from astropy.coordinates.matrix_utilities import rotation_matrix
 import astropy.coordinates as coord
 import astropy.units as u
 from .config import datapath
