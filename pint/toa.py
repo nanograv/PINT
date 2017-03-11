@@ -1,6 +1,6 @@
 import re, sys, os, numpy, gzip
 from . import utils
-from .observatory import Observatory
+from .observatory import Observatory, get_observatory
 from . import erfautils
 import astropy.time as time
 from . import pulsar_mjd
@@ -12,7 +12,7 @@ try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
-from .solar_system_ephemerides import objPosVel2SSB
+from .solar_system_ephemerides import objPosVel_wrt_SSB
 from pint import ls, J2000, J2000ld
 from .config import datapath
 from astropy import log
@@ -26,12 +26,17 @@ iers_a_file = None
 iers_a = None
 
 
-def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=False):
+def get_TOAs(timfile, ephem="DE421", include_bipm=True,
+             include_gps=True, planets=False, usepickle=False):
     """Convenience function to load and prepare TOAs for PINT use.
 
     Loads TOAs from a '.tim' file, applies clock corrections, computes
     key values (like TDB), computes the observatory position and velocity
     vectors, and pickles the file for later use (if requested).
+
+    Includes options to specify solar system ephemeris [default DE421],
+    gps clock corrections [default=True], and BIPM clock corrections 
+    [default=True].
     """
     updatepickle = False
     if usepickle:
@@ -44,7 +49,8 @@ def get_TOAs(timfile, ephem="DE421", planets=False, usepickle=False):
     t = TOAs(timfile)
     if not any([f.has_key('clkcorr') for f in t.table['flags']]):
         log.info("Applying clock corrections.")
-        t.apply_clock_corrections()
+        t.apply_clock_corrections(include_gps=include_gps,
+                                  include_bipm=include_bipm)
     if 'tdb' not in t.table.colnames:
         log.info("Getting IERS params and computing TDBs.")
         t.compute_TDBs()
@@ -89,16 +95,22 @@ def _check_pickle(toafilename, picklefilename=None):
     # All checks passed, return name of pickle.
     return picklefilename
 
-def get_TOAs_list(toa_list,ephem="DE421", planets=False):
+def get_TOAs_list(toa_list,ephem="DE421", include_bipm=True,
+                  include_gps=True, planets=False):
     """Load TOAs from a list of TOA objects.
 
-       Compute the TDB time and observatory positions and velocity
-       vectors.
+    Compute the TDB time and observatory positions and velocity
+    vectors.
+
+    Includes options to specify solar system ephemeris [default DE421],
+    gps clock corrections [default=True], and BIPM clock corrections 
+    [default=True].
     """
     t = TOAs(toalist = toa_list)
     if not any([f.has_key('clkcorr') for f in t.table['flags']]):
         log.info("Applying clock corrections.")
-        t.apply_clock_corrections()
+        t.apply_clock_corrections(include_gps=include_gps,
+                                  include_bipm=include_bipm)
     if 'tdb' not in t.table.colnames:
         log.info("Getting IERS params and computing TDBs.")
         t.compute_TDBs()
@@ -133,7 +145,7 @@ def toa_format(line, fmt="Unknown"):
 
 def get_obs(obscode):
     """Return the standard name for the given code."""
-    return Observatory.get(obscode).name
+    return get_observatory(obscode).name
 
 def parse_TOA_line(line, fmt="Unknown"):
     """Parse a one-line ASCII time-of-arrival.
@@ -146,15 +158,25 @@ def parse_TOA_line(line, fmt="Unknown"):
     fmt = toa_format(line, fmt)
     d = dict(format=fmt)
     if fmt == "Princeton":
-        fields = line.split()
+#            Princeton format
+#            ----------------
+#            columns  item
+#            1-1     Observatory (one-character code) '@' is barycenter
+#            2-2     must be blank
+#            16-24   Observing frequency (MHz)
+#            25-44   TOA (decimal point must be in column 30 or column 31)
+#            45-53   TOA uncertainty (microseconds)
+#            69-78   DM correction (pc cm^-3)
+        #fields = line.split()
         d["obs"] = get_obs(line[0].upper())
-        d["freq"] = float(fields[1])
-        d["error"] = float(fields[3])
-        ii, ff = fields[2].split('.')
+        d["freq"] = float(line[15:24])
+        d["error"] = float(line[44:53])
+        ii, ff = line[24:44].split('.')
         MJD = (int(ii), float("0."+ff))
+        #log.info('MJD {0} {1:.12f}'.format(MJD[0],MJD[1]))
         try:
-            d["ddm"] = float(fields[4])
-        except IndexError:
+            d["ddm"] = float(line[68:78])
+        except ValueError:
             d["ddm"] = 0.0
     elif fmt == "Tempo2":
         # This could use more error catching...
@@ -183,10 +205,22 @@ def parse_TOA_line(line, fmt="Unknown"):
             "TOA format '%s' not implemented yet" % fmt)
     return MJD, d
 
-def format_toa_line(toatime, toaerr, freq, dm=0.0, obs='@', name='unk', flags={},
+def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk', flags={},
     format='Princeton'):
     """
     Format TOA line for writing
+
+    Inputs
+    ------
+    toatime   Time object containing TOA arrival time
+    toaerr    TOA error as a Quantity with units
+    freq      Frequency as a Quantity with units (NB: value of np.inf is allowed)
+    obs       Observatory object
+
+    dm        DM for the TOA as a Quantity with units (not printed if 0.0 pc/cm^3)
+    name      Name to embed in TOA line (conventionally the data file name)
+    format    (Princeton | Tempo2)
+    flags     Any Tempo2 flags to append to the TOA line
 
     Bugs
     ----
@@ -213,25 +247,38 @@ def format_toa_line(toatime, toaerr, freq, dm=0.0, obs='@', name='unk', flags={}
     out : string
         Formatted TOA line
     """
-    toa = "{0:19.13f}".format(toatime.mjd)
+    from .utils import time_to_mjd_string
     if format.upper() in ('TEMPO2','1'):
+        toa_str = time_to_mjd_string(toatime,prec=16)
+        #log.info(toa_str)
         # In Tempo2 format, freq=0.0 means infinite frequency
-        if freq == numpy.inf:
-            freq = 0.0
+        if freq == numpy.inf*u.MHz:
+            freq = 0.0*u.MHz
         flagstring = ''
-        if dm != 0.0:
-            flagstring += "-dm %.5f" % (dm,)
+        if dm != 0.0*u.pc/u.cm**3:
+            flagstring += "-dm {0:%.5f}".format(dm.to(u.pc/u.cm**3).value)
         # Here I need to append any actual flags
-        out = "%s %f %s %.2f %s %s\n" % (name,freq,toa,toaerr,obs,flagstring)
-    elif fomat.upper() in  ('PRINCETON','TEMPO'): # TEMPO/Princeton format
+        # Now set observatory code. Use obs.name unless overridden by tempo2_code
+        try:
+            obscode = obs.tempo2_code
+        except:
+            obscode = obs.name
+        out = "%s %f %s %.3f %s %s\n" % (name,freq.to(u.MHz).value,
+            toa_str,toaerr.to(u.us).value,obs.name,flagstring)
+    elif format.upper() in  ('PRINCETON','TEMPO'): # TEMPO/Princeton format
+        toa_str = time_to_mjd_string(toatime,prec=13)
         # In TEMPO/Princeton format, freq=0.0 means infinite frequency
-        if freq == numpy.inf:
-            freq = 0.0
-        if dm!=0.0:
-            out = obs+" %13s %8.3f %s %8.2f              %9.4f\n" % \
-                (name, freq, toa, toaerr, dm)
+        if freq == numpy.inf*u.MHz:
+            freq = 0.0*u.MHz
+        if len(obs.tempo_code) != 1:
+            log.warn('Observatory {0} does not have 1-character tempo_code, skipping TOA!'.format(obs.name))
+        if dm!=0.0*u.pc/u.cm**3:
+            out = obs.tempo_code+" %13s%9.3f%20s%9.2f                %9.4f\n" % \
+                (name, freq.to(u.MHz).value, toa_str, toaerr.to(u.us).value,
+                dm.to(u.pc/u.cm**3).value)
         else:
-            out = obs+" %13s %8.3f %s %8.2f\n" % (name, freq, toa, toaerr)
+            out = obs.tempo_code+" %13s%9.3f%20s%9.2f\n" % (name, freq.to(u.MHz).value,
+                toa_str, toaerr.to(u.us).value)
     else:
         log.error('Unknown TOA format ({0})'.format(format))
         # Should this raise an exception here? -- paulr
@@ -274,7 +321,7 @@ class TOA(object):
     """
     def __init__(self, MJD, # required
                  error=0.0, obs='Barycenter', freq=float("inf"),
-                 scale=None, 
+                 scale=None,
                  **kwargs):  # keyword args that are completely optional
         r"""
         Construct a TOA object
@@ -302,16 +349,23 @@ class TOA(object):
         Time object passed to the TOA constructor.
 
         """
-        site = Observatory.get(obs)
-        if numpy.isscalar(MJD):
-            arg1, arg2 = MJD, None
+        site = get_observatory(obs)
+
+        # If MJD is already a Time, just use it. Note that this will ignore 'scale'!
+        # This assigns the site location to the Time, for use in the TDB conversion
+        # Time objects are immutable so you must make a new one to add the location!
+        if isinstance(MJD,time.Time):
+            self.mjd = time.Time(MJD,location=site.earth_location,precision=9)
         else:
-            arg1, arg2 = MJD[0], MJD[1]
-        if scale is None:
-            scale = site.timescale
-        self.mjd = time.Time(arg1, arg2, scale=scale,
-                location=site.earth_location,
-                format='pulsar_mjd', precision=9)
+            if numpy.isscalar(MJD):
+                arg1, arg2 = MJD, None
+            else:
+                arg1, arg2 = MJD[0], MJD[1]
+            if scale is None:
+                scale = site.timescale
+            self.mjd = time.Time(arg1, arg2, scale=scale,
+                    location=site.earth_location,
+                    format='pulsar_mjd', precision=9)
 
         if hasattr(error,'unit'):
             self.error = error
@@ -361,6 +415,7 @@ class TOAs(object):
             # Check for a pickle-like filename.  Alternative approach would
             # be to just try opening it as a pickle and see what happens.
             if toafile.endswith('.pickle') or toafile.endswith('pickle.gz'):
+                log.info('Reading TOA from pickle file')
                 self.read_pickle_file(toafile)
 
             # Not a pickle file, process as a standard set of TOA lines
@@ -433,7 +488,7 @@ class TOAs(object):
                 return numpy.array([t for t in self.table['mjd']])
         else:
             if hasattr(self, "toas"):
-                return numpy.array([t.mjd.value for t in self.toas]) * u.day
+                return numpy.array([t.mjd.mjd for t in self.toas]) * u.day
             else:
                 return self.table['mjd_float']
 
@@ -507,10 +562,11 @@ class TOAs(object):
         if delta.shape != col.shape:
             raise ValueError('Shape of mjd column and delta must be compatible')
         for ii in range(len(col)):
-            col[ii] += delta[ii]
+            col[ii] = col[ii] + delta[ii]
 
         # This adjustment invalidates the derived columns in the table, so delete
         # and recompute them
+        self.table['mjd_float'] = self.get_mjds(high_precision=False)
         self.compute_TDBs()
         self.compute_posvels()
 
@@ -523,19 +579,28 @@ class TOAs(object):
             File name to write to
         format : str
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1')
+            
+        Bugs
+        ----
+        Currently does not undo any clock corrections that were applied,
+        so TOA file won't match the input TOA file if any were applied.
 
         """
         outf = open(filename,'w')
         if format.upper() in ('TEMPO2','1'):
             outf.write('FORMAT 1\n')
-        for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'],
-            self.table['freq'],self.table['obs'],self.table['flags']):
-            str = format_toa_line(toatime, toaerr, freq, dm=0.0, obs=obs, name=name,
-            flags=flags, format=format)
+        # NOTE(paulr): This really should REMOVE any(?) clock corrections
+        # that have been applied!
+        for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'].quantity,
+            self.table['freq'].quantity,self.table['obs'],self.table['flags']):
+            obs_obj = Observatory.get(obs)
+            str = format_toa_line(toatime, toaerr, freq, obs_obj, name=name,
+                flags=flags, format=format)
             outf.write(str)
         outf.close()
 
-    def apply_clock_corrections(self):
+    def apply_clock_corrections(self, include_bipm=True, 
+                                include_gps=True):
         """Apply observatory clock corrections and TIME statments.
 
         Apply clock corrections to all the TOAs where corrections are
@@ -544,6 +609,9 @@ class TOAs(object):
         called 'clkcorr' so that it can be reversed if necessary.  This
         routine also applies all 'TIME' commands and treats them exactly
         as if they were a part of the observatory clock corrections.
+
+        Options to include GPS or BIPM clock corrections are set to True
+        by default in order to give the most accurate clock corrections.
 
         # SUGGESTION(paulr): Somewhere in this docstring, or in a higher level
         # documentation, the assumptions about the timescales should be specified.
@@ -554,16 +622,17 @@ class TOAs(object):
         """
         # First make sure that we haven't already applied clock corrections
         flags = self.table['flags']
-        if any([f.has_key('clkcorr') for f in flags]):
-            log.warn("Some TOAs have 'clkcorr' flag.  Not applying new clock corrections.")
-            return
+        # if any([f.has_key('clkcorr') for f in flags]):
+        #     log.warn("Some TOAs have 'clkcorr' flag.  Not applying new clock corrections.")
+        #     return
         # An array of all the time corrections, one for each TOA
         corr = numpy.zeros(self.ntoas) * u.s
         times = self.table['mjd']
         for ii, key in enumerate(self.table.groups.keys):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
-            site = Observatory.get(obs)
+            site = get_observatory(obs, include_gps=include_gps,
+                                   include_bipm=include_bipm)
             loind, hiind = self.table.groups.indices[ii:ii+2]
             # First apply any TIME statements
             for jj in range(loind, hiind):
@@ -591,6 +660,7 @@ class TOAs(object):
         for TDB times, using the Observatory locations and IERS A Earth
         rotation corrections for UT1.
         """
+        log.info('Computing TDB columns.')
         if 'tdb' in self.table.colnames:
             log.info('tdb column already exists. Deleting...')
             self.table.remove_column('tdb')
@@ -625,7 +695,7 @@ class TOAs(object):
         """
         # Record the planets choice for this instance
         self.planets = planets
-
+        log.info('Compute positions and velocities of observatories and Earth (planets = {0}), using {1} ephemeris'.format(planets,ephem))
         # Remove any existing columns
         cols_to_remove = ['ssb_obs_pos', 'ssb_obs_vel', 'obs_sun_pos']
         for c in cols_to_remove:
@@ -661,22 +731,23 @@ class TOAs(object):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
-            site = Observatory.get(obs)
+            site = get_observatory(obs)
             tdb = time.Time(grp['tdb'])
             ssb_obs = site.posvel(tdb,ephem)
             ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T.to(u.km)
             ssb_obs_vel[loind:hiind,:] = ssb_obs.vel.T.to(u.km/u.s)
-            sun_obs = objPosVel2SSB('sun',tdb,ephem) - ssb_obs
+            sun_obs = objPosVel_wrt_SSB('sun',tdb,ephem) - ssb_obs
             obs_sun_pos[loind:hiind,:] = sun_obs.pos.T.to(u.km)
             if planets:
                 for p in ('jupiter', 'saturn', 'venus', 'uranus'):
                     name = 'obs_'+p+'_pos'
                     dest = p
-                    pv = objPosVel2SSB(dest,tdb,ephem) - ssb_obs
+                    pv = objPosVel_wrt_SSB(dest,tdb,ephem) - ssb_obs
                     plan_poss[name][loind:hiind,:] = pv.pos.T.to(u.km)
         cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
         if planets:
             cols_to_add += plan_poss.values()
+        log.info('Adding columns ' + ' '.join([cc.name for cc in cols_to_add]))
         self.table.add_columns(cols_to_add)
 
     def read_pickle_file(self, filename):

@@ -13,7 +13,8 @@ class TestD_phase_d_toa(unittest.TestCase):
     def setUpClass(self):
         self.parfileB1855 = 'B1855+09_polycos.par'
         self.timB1855 = 'B1855_polyco.tim'
-        self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405", planets=False)
+        self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405", 
+                                      planets=False, include_bipm=False)
         self.modelB1855 = mb.get_model(self.parfileB1855)
         # Read tempo style polycos.
         self.plc = Polycos()

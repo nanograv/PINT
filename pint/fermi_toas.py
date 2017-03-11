@@ -150,7 +150,7 @@ def load_Fermi_TOAs(ft1name,ft2name=None,weightcolumn=None,targetcoord=None,loge
             MJDREF = np.longdouble(ft1hdr['MJDREFI']) + np.longdouble(ft1hdr['MJDREFF'])
     #print >>outfile, "# MJDREF = ",MJDREF
     log.info("MJDREF = {0}".format(MJDREF))
-    mjds = np.array(ft1dat.field('TIME'),dtype=np.longdouble)/86400.0 + MJDREF + TIMEZERO
+    mjds = (np.array(ft1dat.field('TIME'),dtype=np.longdouble)+ TIMEZERO)/86400.0 + MJDREF 
     energies = ft1dat.field('ENERGY')*u.MeV
     if weightcolumn is not None:
         if weightcolumn == 'CALC':

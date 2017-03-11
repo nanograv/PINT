@@ -27,6 +27,6 @@ python setup.py build_ext --inplace
 For more information on installing and developing PINT, see the
 [Wiki](https://github.com/nanograv/PINT/wiki) and the documentation in the
 doc subdirectory in the distribution.  Also, follow along with the examples
-in the examples subdirectory, particularly the IPython notebook `examples/PINT_walktrhough.ipynb`.
+in the examples subdirectory, particularly the IPython notebook `examples/PINT_walkthrough.ipynb`.
 
 [![Build Status](https://travis-ci.org/nanograv/PINT.svg?branch=master)](https://travis-ci.org/nanograv/PINT)

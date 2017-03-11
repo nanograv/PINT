@@ -1,4 +1,4 @@
-from .observatory import Observatory
+from .observatory import Observatory, get_observatory
 
 # Include any files that define observatories here.  This will start
 # with the standard distribution files, then will read any system- or

@@ -43,9 +43,6 @@ if use_cython:
 
 # Download data files
 data_urls = [
-        "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de405.bsp",
-        "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de421.bsp",
-        "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de430t.bsp",
         "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/earth_latest_high_prec.bpc",
         "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00010.tpc",
         "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls",
@@ -56,9 +53,6 @@ fnames = [os.path.split(x)[1] for x in data_urls]
 # Following md5sums created using:
 # >  dict([(fname, hashlib.md5(open(fname, 'rb').read()).digest()) for fname in fnames])
 md5sums = {'de-403-masses.tpc': '\x00\x13{\xda\x957\xbbG\xcb\xd0v\xb6qoBg',
-           'de405.bsp': '\xc5\xe5\x9d\x92\xfcO\x84`\xaa\xa1\xeeV\x94i0x',
-           'de421.bsp': "a\x10\xd8\xd2\xb65`h\x0f\xf8\x0b'\xe3\x00e\xb2",
-           'de430t.bsp': '\xe2p\xe5\xb9\xcc\x8c(\xa2\xd8#\x06\xbeLQU\xb6',
            'earth_latest_high_prec.bpc': '\xd3\xefHO%\x1dc\xb4\x91\x06\xc1\x93\xf6\x01\xbb\x08',
            'naif0012.tls': '%\xa2\xff\xf3\x0b\r\xed\xb4\xd7l\x06r{\x18\x95\xb1',
            'pck00010.tpc': '\xda\x156A\xf74k\xd5\xb6\xa1"gx\xe0\xd5\x1b'}
@@ -88,6 +82,15 @@ for fname in clock_files:
 import versioneer
 cmdclass.update(versioneer.get_cmdclass())
 
+# These command-line scripts will be built by the setup process and installed in your PATH
+# See http://python-packaging.readthedocs.io/en/latest/command-line-scripts.html#the-console-scripts-entry-point
+console_scripts = [ 'nicerphase=pint.scripts.nicerphase:main',
+                    'event_optimize=pint.scripts.event_optimize:main',
+                    'pintempo=pint.scripts.pintempo:main', 
+                    'zima=pint.scripts.zima:main', 
+                    'pintbary=pint.scripts.pintbary:main', 
+                    'fermiphase=pint.scripts.fermiphase:main' ]
+
 setup(
     name="pint",
     version = versioneer.get_version(),
@@ -98,23 +101,27 @@ setup(
     url = 'https://github.com/nanograv/PINT',
     license = 'TBD',
 
-    install_requires = ['astropy>=1.2'],
+    install_requires = ['astropy>=1.3'],
 
-    # These scripts will be installed in your PATH
-    scripts = ['scripts/pintempo.py'],
+    entry_points={  
+        'console_scripts': console_scripts, 
+    },
 
     packages=['pint',
         'pint.extern',
         'pint.models',
+        'pint.scripts',
         'pint.models.stand_alone_psr_binaries',
         'pint.observatory',
         'pint.orbital'],
 
     package_data={'pint': [
-        'datafiles/ecliptic.dat', 
+        'datafiles/ecliptic.dat',
         'datafiles/gps2utc.clk'
         ] + data_files},
 
     cmdclass = cmdclass,
     ext_modules=ext_modules,
+    #test_suite='tests',
+    #tests_require=[]
 )

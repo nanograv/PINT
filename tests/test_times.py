@@ -16,7 +16,8 @@ log.setLevel('ERROR')
 ls = u.def_unit('ls', const.c * 1.0 * u.s)
 
 log.info("Reading TOAs into PINT")
-ts = toa.get_TOAs(datadir + "/testtimes.tim",usepickle=False)
+ts = toa.get_TOAs(datadir + "/testtimes.tim", 
+                  include_bipm=False, usepickle=False)
 if log.level < 25:
     ts.print_summary()
 ts.table.sort('index')

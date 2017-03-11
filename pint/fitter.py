@@ -6,8 +6,10 @@ from .residuals import resids
 
 
 class Fitter(object):
-    """ Base class for fitter. The fitting function should be defined at
-    fit_toas method.
+    """ Base class for fitter. 
+    
+    The fitting function should be defined as the fit_toas() method.
+    
     Parameters
     ----------
     toas : a pint TOAs instance
@@ -191,9 +193,9 @@ class WlsFitter(Fitter):
                     un *= u.s
                 pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
                 fitpv[pn] = numpy.longdouble((pv+dpv) / fitp[pn].units)
-                #NOTE We need some way to use the parameter limits. 
+                #NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
-                chi2 = self.minimize_func(list(fitpv.values()), *fitp.keys())
+            chi2 = self.minimize_func(list(fitpv.values()), *fitp.keys())
             # Updata Uncertainties
             self.set_param_uncertainties(fitperrs)
 

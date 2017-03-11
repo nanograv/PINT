@@ -9,7 +9,7 @@ import astropy.units as u
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from ..utils import PosVel, has_astropy_unit
-from ..solar_system_ephemerides import objPosVel2SSB
+from ..solar_system_ephemerides import objPosVel_wrt_SSB
 from ..config import datapath
 from ..erfautils import topo_posvels
 
@@ -20,10 +20,9 @@ class TopoObs(Observatory):
     computed, observatory coordinates are specified in ITRF XYZ, etc."""
 
     def __init__(self, name, tempo_code=None, itoa_code=None, aliases=None, 
-            itrf_xyz=None, 
-            clock_file='time.dat', clock_dir='PINT', clock_fmt='tempo',
-            include_gps=True):
-        """ 
+                 itrf_xyz=None, clock_file='time.dat', clock_dir='PINT',
+                 clock_fmt='tempo', include_gps=True, include_bipm=True):
+        """
         Required arguments:
 
             name     = The name of the observatory
@@ -49,6 +48,8 @@ class TopoObs(Observatory):
                           values).  Default='tempo'
             include_gps = Set False to disable UTC(GPS)->UTC clock
                           correction.
+            include_bipm = Set False to disable TAI TT(BIPM) clock
+                          correction.
         """
 
         # ITRF coordinates are required
@@ -65,12 +66,12 @@ class TopoObs(Observatory):
 
         # Check for correct array dims
         if xyz.shape != (3,):
-            raise ValueError( 
+            raise ValueError(
                     "Incorrect coordinate dimensions for observatory '%s'" % (
                         name))
 
-        # Convert to astropy EarthLocation
-        self._loc = EarthLocation(*xyz)
+        # Convert to astropy EarthLocation, ensuring use of geocentric coordinates
+        self._loc = EarthLocation.from_geocentric(*xyz)
 
         # Save clock file info, the data will be read only if clock
         # corrections for this site are requested.
@@ -81,13 +82,17 @@ class TopoObs(Observatory):
 
         # If using TEMPO time.dat we need to know the 1-char tempo-style
         # observatory code.
-        if (clock_dir=='TEMPO' and clock_file=='time.dat' 
+        if (clock_dir=='TEMPO' and clock_file=='time.dat'
                 and tempo_code is None):
             raise ValueError("No tempo_code set for observatory '%s'" % name)
 
         # GPS corrections not implemented yet
         self.include_gps = include_gps
         self._gps_clock = None
+
+        # BIPM corrections not implemented yet
+        self.include_bipm = include_bipm
+        self._bipm_clock = None
 
         self.tempo_code = tempo_code
         if aliases is None: aliases = []
@@ -122,6 +127,16 @@ class TopoObs(Observatory):
         return os.path.join(os.getenv('TEMPO2'),'clock',fname)
 
     @property
+    def bipm_fullpath(self):
+        """Returns full path to the TAI TT(BIPM) clock file.  Will first try PINT
+        data dirs, then fall back on $TEMPO2/clock."""
+        fname = 'tai2tt_bipm2015.clk'
+        fullpath = datapath(fname)
+        if fullpath is not None:
+            return fullpath
+        return os.path.join(os.getenv('TEMPO2'),'clock',fname)
+
+    @property
     def timescale(self):
         return 'utc'
 
@@ -133,7 +148,7 @@ class TopoObs(Observatory):
         # Read clock file if necessary
         # TODO provide some method for re-reading the clock file?
         if self._clock is None:
-            self._clock = ClockFile.read(self.clock_fullpath, 
+            self._clock = ClockFile.read(self.clock_fullpath,
                     format=self.clock_fmt, obscode=self.tempo_code)
         corr = self._clock.evaluate(t)
         if self.include_gps:
@@ -141,10 +156,16 @@ class TopoObs(Observatory):
                 self._gps_clock = ClockFile.read(self.gps_fullpath,
                         format='tempo2')
             corr += self._gps_clock.evaluate(t)
+        if self.include_bipm:
+            tt2tai = 32.184 * 1e6 * u.us
+            if self._bipm_clock is None:
+                self._bipm_clock = ClockFile.read(self.bipm_fullpath,
+                        format='tempo2')
+            corr += self._bipm_clock.evaluate(t) - tt2tai
         return corr
 
     def posvel(self, t, ephem):
         if t.isscalar: t = Time([t])
-        earth_pv = objPosVel2SSB('earth', t, ephem)
+        earth_pv = objPosVel_wrt_SSB('earth', t, ephem)
         obs_topo_pv = topo_posvels(self.earth_location, t, obsname=self.name)
         return obs_topo_pv + earth_pv
