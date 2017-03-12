@@ -7,9 +7,9 @@ import pint.toa as toa
 import pint.models
 import pint.residuals
 import astropy.units as u
-import matplotlib.pyplot as plt
 from astropy.coordinates import SkyCoord
 from astropy.extern import six
+from pint.fits_utils import read_fits_event_mjds
 
 from astropy import log
 
@@ -47,55 +47,7 @@ def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
 
     fgeom = norm*np.power(1+angseps.degree*angseps.degree/2./gam/sigma/sigma, -gam)
 
-    return fgeom * np.exp(-np.power((logE-logeref)/np.sqrt(2.)/logesig,2.))	
-
-def phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.0, size=5,
-    alpha=0.25, width=6, maxphs=2.0, plotfile=None):
-    """
-    Make a nice 2-panel phaseogram
-    """
-    years = (mjds - 51544.0) / 365.25 + 2000.0
-    phss = phases + rotate
-    phss[phss > 1.0] -= 1.0
-    fig = plt.figure(figsize=(width, 8))
-    ax1 = plt.subplot2grid((3, 1), (0, 0))
-    ax2 = plt.subplot2grid((3, 1), (1, 0), rowspan=2)
-    wgts = None if weights is None else np.concatenate((weights, weights))
-    h, x, p = ax1.hist(np.concatenate((phss, phss+1.0)),
-        int(maxphs*bins), range=[0,maxphs], weights=wgts,
-        color='k', histtype='step', fill=False, lw=2)
-    ax1.set_xlim([0.0, maxphs]) # show 1 or more pulses
-    ax1.set_ylim([0.0, 1.1*h.max()])
-    if weights is not None:
-        ax1.set_ylabel("Weighted Counts")
-    else:
-        ax1.set_ylabel("Counts")
-    if title is not None:
-        ax1.set_title(title)
-    if weights is None:
-        ax2.scatter(phss, mjds, s=size, color='k', alpha=alpha)
-        ax2.scatter(phss+1.0, mjds, s=size, color='k', alpha=alpha)
-    else:
-        colarray = np.array([[0.0,0.0,0.0,w] for w in weights])
-        ax2.scatter(phss, mjds, s=size, color=colarray)
-        ax2.scatter(phss+1.0, mjds, s=size, color=colarray)
-    ax2.set_xlim([0.0, maxphs]) # show 1 or more pulses
-    ax2.set_ylim([mjds.min(), mjds.max()])
-    ax2.set_ylabel("MJD")
-    ax2.get_yaxis().get_major_formatter().set_useOffset(False)
-    ax2.get_yaxis().get_major_formatter().set_scientific(False)
-    ax2r = ax2.twinx()
-    ax2r.set_ylim([years.min(), years.max()])
-    ax2r.set_ylabel("Year")
-    ax2r.get_yaxis().get_major_formatter().set_useOffset(False)
-    ax2r.get_yaxis().get_major_formatter().set_scientific(False)
-    ax2.set_xlabel("Pulse Phase")
-    plt.tight_layout()
-    if plotfile is not None:
-        plt.savefig(plotfile)
-        plt.close()
-    else:
-        plt.show()
+    return fgeom * np.exp(-np.power((logE-logeref)/np.sqrt(2.)/logesig,2.))
 
 def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1, logesig=0.5,minweight=0.0):
     '''
@@ -107,7 +59,7 @@ def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1, loge
 
       weightcolumn specifies the FITS column name to read the photon weights
       from.  The special value 'CALC' causes the weights to be computed empirically
-      as in Philippe Bruel's SearchPulsation code. 
+      as in Philippe Bruel's SearchPulsation code.
       logeref and logesig are parameters for the weight computation and are only
       used when weightcolumn='CALC'.
 
@@ -130,25 +82,9 @@ def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1, loge
     timeref = ft1hdr['TIMEREF']
     log.info("TIMEREF {0}".format(timeref))
 
-    # Collect TIMEZERO (which is in SECONDS, not days) and MJDREF
-    try:
-        TIMEZERO = np.longdouble(ft1hdr['TIMEZERO'])
-    except KeyError:
-        TIMEZERO = np.longdouble(ft1hdr['TIMEZERI']) + np.longdouble(ft1hdr['TIMEZERF'])
-    log.info("TIMEZERO = {0}".format(TIMEZERO))
-    try:
-        MJDREF = np.longdouble(ft1hdr['MJDREF'])
-    except KeyError:
-        # Here I have to work around an issue where the MJDREFF key is stored
-        # as a string in the header and uses the "1.234D-5" syntax for floats, which
-        # is not supported by Python
-        if isinstance(ft1hdr['MJDREFF'],six.string_types):
-            MJDREF = np.longdouble(ft1hdr['MJDREFI']) + \
-            np.longdouble(ft1hdr['MJDREFF'].replace('D','E'))
-        else:
-            MJDREF = np.longdouble(ft1hdr['MJDREFI']) + np.longdouble(ft1hdr['MJDREFF'])
-    log.info("MJDREF = {0}".format(MJDREF))
-    mjds = (np.array(ft1dat.field('TIME'),dtype=np.longdouble)+ TIMEZERO)/86400.0 + MJDREF 
+    # Read time column from FITS file
+    mjds = read_fits_event_mjds(hdulist[1])
+
     energies = ft1dat.field('ENERGY')*u.MeV
     if weightcolumn is not None:
         if weightcolumn == 'CALC':
@@ -187,4 +123,3 @@ def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1, loge
                 toalist=[toa.TOA(m, obs='Geocenter', scale='tt',energy=e,weight=w) for m,e,w in zip(mjds,energies,weights)]
 
     return toalist
-

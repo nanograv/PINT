@@ -7,7 +7,8 @@ import pint.toa as toa
 import pint.models
 import pint.residuals
 import astropy.units as u
-from pint.nicer_toas import nicer_phaseogram, load_NICER_TOAs
+from pint.nicer_toas import load_NICER_TOAs
+from pint.plot_utils import phaseogram_binned
 from pint.observatory.nicer_obs import NICERObs
 from astropy.time import Time
 from pint.eventstats import hmw, hm, h2sig
@@ -31,7 +32,7 @@ def main(argv=None):
     parser.add_argument("--ephem",help="Planetary ephemeris to use (default=DE421)", default="DE421")
     parser.add_argument("--plot",help="Show phaseogram plot.", action='store_true', default=False)
     args = parser.parse_args(argv)
-    
+
     # If outfile is specified, that implies addphase
     if args.outfile is not None:
         args.addphase = True
@@ -46,7 +47,7 @@ def main(argv=None):
     # Read event file and return list of TOA objects
     tl  = load_NICER_TOAs(args.eventfile)
 
-    # Discard events outside of MJD range    
+    # Discard events outside of MJD range
     if args.maxMJD is not None:
         tlnew = []
         print("pre len : ",len(tl))
@@ -76,8 +77,8 @@ def main(argv=None):
     h = float(hm(phases))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h,h2sig(h)))
     if args.plot:
-        nicer_phaseogram(mjds,phases,bins=100,plotfile = args.plotfile)
-        
+        phaseogram_binned(mjds,phases,bins=100,plotfile = args.plotfile)
+
     if args.addphase:
         # Read input FITS file (again).
         # If overwriting, open in 'update' mode
@@ -99,7 +100,7 @@ def main(argv=None):
             log.info('Adding new PULSE_PHASE column.')
             phasecol = pyfits.ColDefs([pyfits.Column(name='PULSE_PHASE', format='D',
                 array=phases)])
-            bt = pyfits.BinTableHDU.from_columns( event_hdu.columns + phasecol, 
+            bt = pyfits.BinTableHDU.from_columns( event_hdu.columns + phasecol,
                 header=event_hdr,name=event_hdu.name)
             hdulist[1] = bt
         if args.outfile is None:
@@ -110,5 +111,3 @@ def main(argv=None):
             # Write to new output file
             log.info('Writing output FITS file '+args.outfile)
             hdulist.writeto(args.outfile,overwrite=False, checksum=True, output_verify='warn')
-
-

@@ -8,7 +8,8 @@ import pint.models
 import pint.residuals
 import astropy.units as u
 import matplotlib.pyplot as plt
-from pint.fermi_toas import phaseogram, load_Fermi_TOAs
+from pint.fermi_toas import load_Fermi_TOAs
+from pint.plot_utils import phaseogram
 from pint.observatory.fermi_obs import FermiObs
 import argparse
 import astropy.io.fits as pyfits
@@ -34,7 +35,7 @@ def main(argv=None):
     parser.add_argument("--planets",help="Use planetary Shapiro delay in calculations (default=False)", default=False, action="store_true")
     parser.add_argument("--ephem",help="Planetary ephemeris to use (default=DE421)", default="DE421")
     args = parser.parse_args(argv)
-    
+
     # If outfile is specified, that implies addphase
     if args.outfile is not None:
         args.addphase = True
@@ -55,7 +56,7 @@ def main(argv=None):
     tl  = load_Fermi_TOAs(args.eventfile, weightcolumn=args.weightcol,
                           targetcoord=tc)
 
-    # Discard events outside of MJD range    
+    # Discard events outside of MJD range
     if args.maxMJD is not None:
         tlnew = []
         print("pre len : ",len(tl))
@@ -85,7 +86,9 @@ def main(argv=None):
     weights = np.array([w['weight'] for w in ts.table['flags']])
     h = float(hmw(phases,weights))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h,h2sig(h)))
+    log.info('plot {0}'.format(args.plot))
     if args.plot:
+        log.info("Making phaseogram plot" + str(len(mjds)))
         phaseogram(mjds,phases,weights,bins=100,plotfile = args.plotfile)
 
     if args.addphase:
@@ -109,7 +112,7 @@ def main(argv=None):
             log.info('Adding new PULSE_PHASE column.')
             phasecol = pyfits.ColDefs([pyfits.Column(name='PULSE_PHASE', format='D',
                 array=phases)])
-            bt = pyfits.BinTableHDU.from_columns( event_hdu.columns + phasecol, 
+            bt = pyfits.BinTableHDU.from_columns( event_hdu.columns + phasecol,
                 header=event_hdr,name=event_hdu.name)
             hdulist[1] = bt
         if args.outfile is None:
@@ -120,3 +123,5 @@ def main(argv=None):
             # Write to new output file
             log.info('Writing output FITS file '+args.outfile)
             hdulist.writeto(args.outfile,overwrite=False, checksum=True, output_verify='warn')
+
+    return 0
