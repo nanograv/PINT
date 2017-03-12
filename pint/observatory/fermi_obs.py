@@ -8,6 +8,7 @@ from .special_locations import SpecialLocation
 import astropy.units as u
 from astropy.coordinates import EarthLocation
 from ..utils import PosVel
+from ..fits_utils import read_fits_event_mjds
 from ..solar_system_ephemerides import objPosVel_wrt_SSB
 import numpy as np
 from astropy.time import Time
@@ -19,19 +20,19 @@ from scipy.interpolate import interp1d
 
 def load_FT2(ft2_filename):
     '''Load data from a Fermi FT2 file
-        
+
         The contents of the FT2 file are described here:
         https://fermi.gsfc.nasa.gov/ssc/data/analysis/documentation/Cicerone/Cicerone_Data/LAT_Data_Columns.html#SpacecraftFile
-        
+
         Parameters
         ----------
         ft2_filename : str
             Name of file to load
-            
+
         Returns
         -------
         astropy Table containing Time, x, y, z, v_x, v_y, v_z data
-        
+
     '''
     # Load photon times from FT1 file
     hdulist = pyfits.open(ft2_filename)
@@ -46,26 +47,8 @@ def load_FT2(ft2_filename):
     timeref = FT2_hdr['TIMEREF']
     log.info("FT2 TIMEREF {0}".format(timeref))
 
-    # Collect TIMEZERO and MJDREF
-    try:
-        TIMEZERO = np.float(FT2_hdr['TIMEZERO'])
-    except KeyError:
-        TIMEZERO = np.float(FT2_hdr['TIMEZERI']) + np.float(FT2_hdr['TIMEZERF'])
-    log.info("FT2 TIMEZERO = {0}".format(TIMEZERO))
-    try:
-        MJDREF = np.float(FT2_hdr['MJDREF'])
-    except KeyError:
-        # Here I have to work around an issue where the MJDREFF key is stored
-        # as a string in the header and uses the "1.234D-5" syntax for floats, which
-        # is not supported by Python
-        if isinstance(FT2_hdr['MJDREFF'],six.string_types):
-            MJDREF = np.float(FT2_hdr['MJDREFI']) + \
-            np.float(FT2_hdr['MJDREFF'].replace('D','E'))
-        else:
-            MJDREF = np.float(FT2_hdr['MJDREFI']) + np.float(FT2_hdr['MJDREFF'])
-    log.info("FT2 MJDREF = {0}".format(MJDREF))
     # The X, Y, Z position are for the START time
-    mjds_TT = np.array(FT2_dat.field('START'),dtype=np.float)/86400.0 + MJDREF + TIMEZERO/86400.0
+    mjds_TT = read_fits_event_mjds(hdulist[1],timecolumn='START')
     mjds_TT = mjds_TT*u.d
     # SC_POS is in meters in X,Y,Z Earth-centered Inertial (ECI) coordinates
     SC_POS = FT2_dat.field('SC_POSITION')
@@ -84,16 +67,16 @@ def load_FT2(ft2_filename):
     Z = Z[:-1]
     mjds_TT = mjds_TT[:-1]
     log.info('Building FT2 table covering MJDs {0} to {1}'.format(mjds_TT.min(), mjds_TT.max()))
-    FT2_table = Table([mjds_TT, X, Y, Z, Vx, Vy, Vz], 
+    FT2_table = Table([mjds_TT, X, Y, Z, Vx, Vy, Vz],
             names = ('MJD_TT', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'),
             meta = {'name':'FT2'} )
     return FT2_table
-    
+
 class FermiObs(SpecialLocation):
     """Observatory-derived class for the Fermi FT1 data.
-    
+
     Note that this must be instantiated once to be put into the Observatory registry."""
-    
+
     def __init__(self, name, ft2name):
         self.FT2 = load_FT2(ft2name)
         # Now build the interpolator here:
@@ -106,28 +89,26 @@ class FermiObs(SpecialLocation):
         super(FermiObs, self).__init__(name=name)
 
     @property
-    def timescale(self): 
+    def timescale(self):
         return 'tt'
-        
+
     @property
     def earth_location(self):
         return None
-        
+
     @property
     def tempo_code(self):
         return None
-        
+
     def posvel(self, t, ephem):
         '''Return position and velocity vectors of Fermi.
-        
+
         t is an astropy.Time or array of astropy.Times
         '''
         # Compute vector from SSB to Earth
         geo_posvel = objPosVel_wrt_SSB('earth', t, ephem)
-        log.debug('geo_posvel {0}'.format(geo_posvel))
         # Now add vector from Earth to Fermi
         fermi_pos_geo = np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])*self.FT2['X'].unit
-        log.debug('fermi_pos_geo {0}'.format(fermi_pos_geo))
         fermi_vel_geo = np.array([self.Vx(t.tt.mjd), self.Vy(t.tt.mjd), self.Vz(t.tt.mjd)])*self.FT2['Vx'].unit
         fermi_posvel = PosVel( fermi_pos_geo, fermi_vel_geo, origin='earth', obj='Fermi')
         # Vector add to geo_posvel to get full posvel vector.
