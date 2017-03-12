@@ -1,0 +1,11 @@
+[run]
+source = pint
+omit =
+    pint/__init__*
+    pint/extern/*
+    pint/datafiles/*
+    pint/scripts/*
+    pint/cutils/*
+    pint/models/__init__*
+    pint/observatory/__init__*
+    pint/orbital/__init__*
