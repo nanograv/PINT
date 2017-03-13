@@ -16,7 +16,7 @@ from astropy.table import Table
 import astropy.io.fits as pyfits
 from astropy.extern import six
 from astropy import log
-from scipy.interpolate import interp1d
+from scipy.interpolate import InterpolatedUnivariateSpline
 
 def load_FPorbit(orbit_filename):
     '''Load data from an (RXTE or NICER) FPorbit file
@@ -70,12 +70,12 @@ class NICERObs(SpecialLocation):
     def __init__(self, name, FPorbname):
         self.FPorb = load_FPorbit(FPorbname)
         # Now build the interpolator here:
-        self.X = interp1d(self.FPorb['MJD_TT'],self.FPorb['X'])
-        self.Y = interp1d(self.FPorb['MJD_TT'],self.FPorb['Y'])
-        self.Z = interp1d(self.FPorb['MJD_TT'],self.FPorb['Z'])
-        self.Vx = interp1d(self.FPorb['MJD_TT'],self.FPorb['Vx'])
-        self.Vy = interp1d(self.FPorb['MJD_TT'],self.FPorb['Vy'])
-        self.Vz = interp1d(self.FPorb['MJD_TT'],self.FPorb['Vz'])
+        self.X = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['X'])
+        self.Y = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Y'])
+        self.Z = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Z'])
+        self.Vx = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Vx'])
+        self.Vy = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Vy'])
+        self.Vz = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Vz'])
         super(NICERObs, self).__init__(name=name)
 
     @property

@@ -16,7 +16,8 @@ from astropy.table import Table
 import astropy.io.fits as pyfits
 from astropy.extern import six
 from astropy import log
-from scipy.interpolate import interp1d
+from scipy.interpolate import InterpolatedUnivariateSpline
+
 
 def load_FT2(ft2_filename):
     '''Load data from a Fermi FT2 file
@@ -80,12 +81,12 @@ class FermiObs(SpecialLocation):
     def __init__(self, name, ft2name):
         self.FT2 = load_FT2(ft2name)
         # Now build the interpolator here:
-        self.X = interp1d(self.FT2['MJD_TT'],self.FT2['X'])
-        self.Y = interp1d(self.FT2['MJD_TT'],self.FT2['Y'])
-        self.Z = interp1d(self.FT2['MJD_TT'],self.FT2['Z'])
-        self.Vx = interp1d(self.FT2['MJD_TT'],self.FT2['Vx'])
-        self.Vy = interp1d(self.FT2['MJD_TT'],self.FT2['Vy'])
-        self.Vz = interp1d(self.FT2['MJD_TT'],self.FT2['Vz'])
+        self.X = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['X'])
+        self.Y = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Y'])
+        self.Z = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Z'])
+        self.Vx = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Vx'])
+        self.Vy = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Vy'])
+        self.Vz = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Vz'])
         super(FermiObs, self).__init__(name=name)
 
     @property

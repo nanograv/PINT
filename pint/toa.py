@@ -291,16 +291,14 @@ class TOA(object):
 
         MJD will be stored in astropy.time.Time format, and can be
             passed as a double (not recommended), a string, a
-            tuple of component parts (day and fraction of day).
+            tuple of component parts (usually day and fraction of day).
         error is the TOA uncertainty in microseconds
         obs is the observatory name as defined in XXX
         freq is the observatory-centric frequency in MHz
         other keyword/value pairs can be specified as needed
 
-        # SUGGESTION(paulr): Here, or in a higher level document, the time system
-        # philosophy should be specified.  It looks like TOAs are assumed to be
-        # input as UTC(observatory) and then are converted to UTC(???) using the
-        # observatory clock correction file.
+        A discussion of times and clock corrections in PINT is available here:
+        https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
 
     Example:
         >>> a = TOA((54567, 0.876876876876876), 4.5, freq=1400.0,
@@ -321,7 +319,7 @@ class TOA(object):
     """
     def __init__(self, MJD, # required
                  error=0.0, obs='Barycenter', freq=float("inf"),
-                 scale=None,
+                 scale=None, obsloc=None,
                  **kwargs):  # keyword args that are completely optional
         r"""
         Construct a TOA object
@@ -341,7 +339,11 @@ class TOA(object):
         scale : string
             Time scale for the TOA time.  Defaults to the timescale appropriate
             to the site, but can be overridden
-
+        obsloc : EarthLocation
+            For moving observatories (like spacecraft), this location
+            can be specified to override the base (immobile) EarthLocation
+            property of the observatory
+            
         Notes
         -----
         It is VERY important that all astropy.Time() objects are created
@@ -351,11 +353,17 @@ class TOA(object):
         """
         site = get_observatory(obs)
 
+        # Override location for TOA, if specified
+        if obsloc is not None:
+            loc = obsloc
+        else:
+            loc = site.earth_location
+            
         # If MJD is already a Time, just use it. Note that this will ignore 'scale'!
         # This assigns the site location to the Time, for use in the TDB conversion
         # Time objects are immutable so you must make a new one to add the location!
         if isinstance(MJD,time.Time):
-            self.mjd = time.Time(MJD,location=site.earth_location,precision=9)
+            self.mjd = time.Time(MJD,location=loc,precision=9)
         else:
             if numpy.isscalar(MJD):
                 arg1, arg2 = MJD, None
@@ -364,7 +372,7 @@ class TOA(object):
             if scale is None:
                 scale = site.timescale
             self.mjd = time.Time(arg1, arg2, scale=scale,
-                    location=site.earth_location,
+                    location=loc,
                     format='pulsar_mjd', precision=9)
 
         if hasattr(error,'unit'):
