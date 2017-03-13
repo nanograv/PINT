@@ -41,7 +41,9 @@ def main(argv=None):
     if args.format in ("mjd","jd"):
         # These formats require conversion from string to longdouble first
         fmt = args.format
-        if fmt = "mjd":
+        # Never allow format == 'mjd' because it fails when scale is 'utc'
+        # Change 'mjd' to 'pulsar_mjd' to deal with this.
+        if fmt == "mjd":
             fmt = "pulsar_mjd"
         t = Time(np.longdouble(args.time),scale=args.timescale,format=fmt,
             precision=9)
