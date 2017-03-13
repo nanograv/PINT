@@ -40,7 +40,10 @@ def main(argv=None):
 
     if args.format in ("mjd","jd"):
         # These formats require conversion from string to longdouble first
-        t = Time(np.longdouble(args.time),scale=args.timescale,format=args.format,
+        fmt = args.format
+        if fmt = "mjd":
+            fmt = "pulsar_mjd"
+        t = Time(np.longdouble(args.time),scale=args.timescale,format=fmt,
             precision=9)
     else:
         t = Time(args.time,scale=args.timescale,format=args.format, precision=9)
