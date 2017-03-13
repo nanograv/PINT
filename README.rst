@@ -8,6 +8,13 @@ PINT
     :target: http://nanograv-pint.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
+.. image:: https://coveralls.io/repos/github/nanograv/PINT/badge.svg?branch=master
+    :target: https://coveralls.io/github/nanograv/PINT?branch=master
+
+.. image:: https://landscape.io/github/nanograv/PINT/master/landscape.svg?style=flat
+    :target: https://landscape.io/github/nanograv/PINT/master
+    :alt: Code Health
+
 PINT is not TEMPO3
 ------------------
 
