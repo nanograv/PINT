@@ -51,8 +51,8 @@ def read_fits_event_mjds_tuples(event_hdu,timecolumn='TIME'):
     # Should check timecolumn units to be sure they are seconds!
 
     # MJD = (TIMECOLUMN + TIMEZERO)/SECS_PER_DAY + MJDREF
-    mjds = [(MJDREF, tt) for tt in (event_dat.field(timecolumn)
-        + TIMEZERO)/SECS_PER_DAY]
+    mjds = np.array([(MJDREF, tt) for tt in (event_dat.field(timecolumn)
+        + TIMEZERO)/SECS_PER_DAY])
 
     return mjds
 
