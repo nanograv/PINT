@@ -8,6 +8,7 @@ import astropy.time as time
 import numpy as np
 import pint.utils as utils
 import astropy.units as u
+from astropy.table import Table
 import copy
 import abc
 
@@ -192,6 +193,8 @@ class TimingModel(object):
 
         if binary_param is True:
             self.binary_params +=[param.name,]
+        if hasattr(self, '_param_table'):
+            param_row = [param.name, ]
 
     def remove_param(self, param):
         delattr(self, param)
@@ -247,6 +250,14 @@ class TimingModel(object):
             if par.is_prefix == True and par.prefix == prefix:
                 mapping[par.index] = parname
         return mapping
+
+    def match_perfix(self, param):
+        par = getattr(self, param)
+        if not hasattr(par, 'prefix'):
+            return ''
+        prefix = par.prefix
+        
+
 
     def match_param_aliases(self, alias):
         p_aliases = {}
@@ -719,6 +730,11 @@ def generate_timing_model(name, components, attributes={}):
         numComp = len(components)
     except:
         components = (components,)
+
+    param = []
+    comps = []
+    param_type = []
+
     for c in components:
         try:
             if not issubclass(c,TimingModel):
@@ -727,6 +743,17 @@ def generate_timing_model(name, components, attributes={}):
         except:
             raise(TypeError("generate_timing_model() Arg 2"+
                             "has to be a tuple of classes"))
+        cpi = c()
+        for p in cpi.params:
+            if p in ['PSR', 'PSRJ', 'PSRB']:
+                continue
+            param.append(p)
+            comps.append(cpi.__class__.__name__)
+            param_type.append(type(getattr(cpi, p)).__name__)
+
+        param_table = Table([param, comps, param_type],names=('Parameter', \
+                            'Affiliateion', 'Type'), meta={'name': 'Parameter table'})
+        attributes['_param_table'] = param_table
 
     return type(name, components, attributes)
 
