@@ -27,9 +27,8 @@ def load_NICER_TOAs(eventname):
     hdulist = pyfits.open(eventname)
 
     # This code currently supports NICER science event data
-    # Should remove 'XTE_SE' once we have real NICER data for this test! (@paulray)
-    if hdulist[1].name not in ['EVENTS', 'XTE_SE']:
-        raise RuntimeError('First table in FITS file must be EVENTS or XTE_SE. Found '+hdulist[1].name)
+    if hdulist[1].name not in ['EVENTS']:
+        raise RuntimeError('For NICER data, first table in FITS file must be EVENTS. Found '+hdulist[1].name)
     event_hdr=hdulist[1].header
     event_dat=hdulist[1].data
 
