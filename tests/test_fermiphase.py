@@ -10,11 +10,14 @@ from pinttestdata import testdir, datadir
 parfile = os.path.join(datadir, 'PSRJ0030+0451_psrcat.par')
 eventfile = os.path.join(datadir, 'J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_GEO_wt.gt.0.4.fits')
 
+# Can't easily test raw files since FT2 file is huge and can't be put in repo.
+eventfileraw = os.path.joine(datadir, 'J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_weight.gt.0.4.fits')
+
 class TestFermiPhase(unittest.TestCase):
 
     def test_result(self):
         saved_stdout, fermiphase.sys.stdout = fermiphase.sys.stdout, StringIO('_')
-        cmd = '{0} {1} CALC'.format(eventfile,parfile)
+        cmd = '--plot --plotfile fermitest.png --outfile fermitest.fits {0} {1} CALC'.format(eventfile,parfile)
         fermiphase.main(cmd.split())
         lines = fermiphase.sys.stdout.getvalue()
         v = 999.0
