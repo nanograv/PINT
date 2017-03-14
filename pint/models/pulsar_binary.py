@@ -85,7 +85,9 @@ class PulsarBinary(TimingModel):
         # Set up delay function
         self.binary_delay_funcs += [self.binarymodel_delay,]
         self.delay_funcs['L2'] += [self.binarymodel_delay,]
-
+        self.order_number = 5
+        self.print_par_func = 'print_par_BINARY'
+        
     def setup(self):
         super(PulsarBinary, self).setup()
         for bpar in self.binary_params:
@@ -137,6 +139,14 @@ class PulsarBinary(TimingModel):
         """Return the bianry model delay derivtives"""
         self.update_binary_object(toas)
         return self.binary_instance.d_binarydelay_d_par(param)
+
+    def print_par_BINARY(self,):
+        result = "BINARY {0}\n".format(self.binary_model_name)
+        for p in self.binary_params:
+            par = getattr(self, p)
+            if par.quantity is not None:
+                result += par.as_parfile_line()
+        return result
 
     def make_delay_binary_deriv_funcs(self, param):
         """This is a funcion to make binary derivative functions to the formate

@@ -28,6 +28,7 @@ class Dispersion(TimingModel):
                        description="Dispersion measure"))
         self.dm_value_funcs = [self.constant_dm,]
         self.delay_funcs['L1'] += [self.dispersion_delay,]
+        self.order_number = 3
 
     def setup(self):
         super(Dispersion, self).setup()
@@ -104,6 +105,7 @@ class DispersionDMX(Dispersion):
                        parameter_type='MJD', time_scale='utc'))
         self.dm_value_funcs += [self.dmx_dm,]
         self.set_special_params(['DMX_0001', 'DMXR1_0001','DMXR2_0001'])
+        self.print_par_func = 'print_par_DMX'
 
     def setup(self):
         super(DispersionDMX, self).setup()
@@ -183,3 +185,18 @@ class DispersionDMX(Dispersion):
         dmx[selected_grp['index']] = 1.0
 
         return DMconst * dmx / bfreq**2.0
+
+    def print_par_DMX(self,):
+        result = ''
+        DMX_mapping = self.get_prefix_mapping('DMX_')
+        DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
+        DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
+        result += getattr(self, 'DM').as_parfile_line()
+        result += getattr(self, 'DMX').as_parfile_line()
+        sorted_list = DMX_mapping.keys()
+        sorted_list.sort()
+        for ii in sorted_list:
+            result += getattr(self, DMX_mapping[ii]).as_parfile_line()
+            result += getattr(self, DMXR1_mapping[ii]).as_parfile_line()
+            result += getattr(self, DMXR2_mapping[ii]).as_parfile_line()
+        return result

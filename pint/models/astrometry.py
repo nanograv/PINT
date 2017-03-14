@@ -33,7 +33,8 @@ class Astrometry(TimingModel):
             description="Parallax"))
 
         self.delay_funcs['L1'] += [self.solar_system_geometric_delay,]
-
+        self.order_number = 1
+        
     def setup(self):
         super(Astrometry, self).setup()
         self.register_deriv_funcs(self.d_delay_astrometry_d_PX, 'delay', 'PX')

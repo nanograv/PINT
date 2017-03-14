@@ -21,7 +21,8 @@ class FD(TimingModel):
                        type_match='float'))
 
         self.delay_funcs['L1'] += [self.FD_delay]
-
+        self.order_number = 4
+        
     def setup(self):
         super(FD, self).setup()
         # Check if FD terms are in order.
