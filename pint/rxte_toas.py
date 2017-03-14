@@ -13,12 +13,12 @@ from pint.fits_utils import read_fits_event_mjds
 from astropy import log
 
 
-def load_NICER_TOAs(eventname):
+def load_RXTE_TOAs(eventname):
     '''
-    TOAlist = load_NICER_TOAs(eventname)
-      Read photon event times out of a NICER event FITS file and return
+    TOAlist = load_RXTE_TOAs(eventname)
+      Read photon event times out of a RXTE event FITS file and return
       a list of PINT TOA objects.
-      Correctly handles raw NICER files, or ones processed with axBary
+      Correctly handles raw RXTE files, or ones processed with axBary
       to have barycentered  TOAs.
 
     '''
@@ -26,16 +26,17 @@ def load_NICER_TOAs(eventname):
     # Load photon times from FT1 file
     hdulist = pyfits.open(eventname)
 
-    # This code currently supports NICER science event data
-    if hdulist[1].name not in ['EVENTS']:
-        raise RuntimeError('For NICER data, first table in FITS file must be EVENTS. Found '+hdulist[1].name)
+    # This code currently supports RXTE science event data
+    if hdulist[1].name not in ['XTE_SE']:
+        raise RuntimeError('First table in FITS file must be XTE_SE. Found '+hdulist[1].name)
     event_hdr=hdulist[1].header
     event_dat=hdulist[1].data
 
-    if not event_hdr['TELESCOP'].startswith('NICER'):
-        log.error('NICER data should have TELESCOP == NICER, found '+event_hdr['TELESCOP'])
+    if not event_hdr['TELESCOP'].startswith('XTE'):
+        log.error('RXTE data should have TELESCOP == RXTE, found '+event_hdr['TELESCOP'])
+        raise(RuntimeError)
 
-    # TIMESYS will be 'TT' for unmodified NICER events (or geocentered), and
+    # TIMESYS will be 'TT' for unmodified RXTE events (or geocentered), and
     #                 'TDB' for events barycentered with axBary
     # TIMEREF will be 'GEOCENTER' for geocentered events,
     #                 'SOLARSYSTEM' for barycentered,
@@ -62,7 +63,7 @@ def load_NICER_TOAs(eventname):
     else:
         if timeref == 'LOCAL':
             log.info('Building spacecraft local TOAs, with MJDs in range {0} to {1}'.format(mjds.min(),mjds.max()))
-            toalist=[toa.TOA(m, obs='NICER', scale='tt',energy=e) for m,e in zip(mjds,phas)]
+            toalist=[toa.TOA(m, obs='RXTE', scale='tt',energy=e) for m,e in zip(mjds,phas)]
         else:
             log.info("Building geocentered TOAs")
             toalist=[toa.TOA(m, obs='Geocenter', scale='tt',energy=e) for m,e in zip(mjds,phas)]
@@ -76,7 +77,7 @@ if __name__ == '__main__':
     eventfile = 'J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_BARY.fits'
 
     # Read event file and return list of TOA objects
-    tl  = load_NICER_TOAs(eventfile)
+    tl  = load_RXTE_TOAs(eventfile)
 
     # Now convert to TOAs object and compute TDBs and posvels
     ts = toa.TOAs(toalist=tl)

@@ -35,7 +35,7 @@ def get_TOAs(timfile, ephem="DE421", include_bipm=True,
     vectors, and pickles the file for later use (if requested).
 
     Includes options to specify solar system ephemeris [default DE421],
-    gps clock corrections [default=True], and BIPM clock corrections 
+    gps clock corrections [default=True], and BIPM clock corrections
     [default=True].
     """
     updatepickle = False
@@ -103,7 +103,7 @@ def get_TOAs_list(toa_list,ephem="DE421", include_bipm=True,
     vectors.
 
     Includes options to specify solar system ephemeris [default DE421],
-    gps clock corrections [default=True], and BIPM clock corrections 
+    gps clock corrections [default=True], and BIPM clock corrections
     [default=True].
     """
     t = TOAs(toalist = toa_list)
@@ -291,16 +291,14 @@ class TOA(object):
 
         MJD will be stored in astropy.time.Time format, and can be
             passed as a double (not recommended), a string, a
-            tuple of component parts (day and fraction of day).
+            tuple of component parts (usually day and fraction of day).
         error is the TOA uncertainty in microseconds
-        obs is the observatory name as defined in XXX
+        obs is the observatory name as defined by the Observatory class
         freq is the observatory-centric frequency in MHz
         other keyword/value pairs can be specified as needed
 
-        # SUGGESTION(paulr): Here, or in a higher level document, the time system
-        # philosophy should be specified.  It looks like TOAs are assumed to be
-        # input as UTC(observatory) and then are converted to UTC(???) using the
-        # observatory clock correction file.
+        A discussion of times and clock corrections in PINT is available here:
+        https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
 
     Example:
         >>> a = TOA((54567, 0.876876876876876), 4.5, freq=1400.0,
@@ -351,11 +349,10 @@ class TOA(object):
         """
         site = get_observatory(obs)
 
-        # If MJD is already a Time, just use it. Note that this will ignore 'scale'!
-        # This assigns the site location to the Time, for use in the TDB conversion
-        # Time objects are immutable so you must make a new one to add the location!
+        # If MJD is already a Time, just use it. Note that this will ignore
+        # the 'scale' argument to the TOA() constructor!
         if isinstance(MJD,time.Time):
-            self.mjd = time.Time(MJD,location=site.earth_location,precision=9)
+            t = MJD
         else:
             if numpy.isscalar(MJD):
                 arg1, arg2 = MJD, None
@@ -363,9 +360,20 @@ class TOA(object):
                 arg1, arg2 = MJD[0], MJD[1]
             if scale is None:
                 scale = site.timescale
-            self.mjd = time.Time(arg1, arg2, scale=scale,
-                    location=site.earth_location,
+            # First build a time without a location
+            t = time.Time(arg1, arg2, scale=scale,
                     format='pulsar_mjd', precision=9)
+        # Now assign the site location to the Time, for use in the TDB conversion
+        # Time objects are immutable so you must make a new one to add the location!
+        # Use the intial time to look up the observatory location
+        # (needed for moving observatories)
+        try:
+            loc = site.earth_location(time=t)
+        except:
+            print("Error computing earth_location at time {0}, {1}".format(t,type(t)))
+            raise
+        # Then construct the full time, with observatory location set
+        self.mjd = time.Time(t, location=loc, precision=9)
 
         if hasattr(error,'unit'):
             self.error = error
@@ -579,7 +587,7 @@ class TOAs(object):
             File name to write to
         format : str
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1')
-            
+
         Bugs
         ----
         Currently does not undo any clock corrections that were applied,
@@ -599,7 +607,7 @@ class TOAs(object):
             outf.write(str)
         outf.close()
 
-    def apply_clock_corrections(self, include_bipm=True, 
+    def apply_clock_corrections(self, include_bipm=True,
                                 include_gps=True):
         """Apply observatory clock corrections and TIME statments.
 
@@ -613,11 +621,8 @@ class TOAs(object):
         Options to include GPS or BIPM clock corrections are set to True
         by default in order to give the most accurate clock corrections.
 
-        # SUGGESTION(paulr): Somewhere in this docstring, or in a higher level
-        # documentation, the assumptions about the timescales should be specified.
-        # The docstring says apply "correction" but does not say what it is correcting.
-        # Be more specific.
-
+        A description of how PINT handles clock corrections and timescales is here:
+        https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
 
         """
         # First make sure that we haven't already applied clock corrections

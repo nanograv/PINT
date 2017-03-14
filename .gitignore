@@ -4,9 +4,6 @@
 
 *.py[cod]
 
-# Dynamically generated git commit information
-pint/_commit.py
-
 # C extensions
 *.so
 # Try letting str2lc_py.c be in repo to remove dependency on Cython for users to install PINT

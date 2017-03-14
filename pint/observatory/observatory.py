@@ -4,13 +4,13 @@
 
 class Observatory(object):
     """
-    The Observatory class defines observatory locations and related 
+    The Observatory class defines observatory locations and related
     site-dependent properties (eg, TOA time scales, clock corrections).
     Any new Observtory that is declared will be automatically added to
     a registry that is keyed on observatory name.  Aside from their initial
     declaration (for examples, see pint/observatory/observatories.py),
-    Observatory instances should generally be accessed only via the 
-    Observatory.get() function.  This will query the registry based on 
+    Observatory instances should generally be accessed only via the
+    Observatory.get() function.  This will query the registry based on
     observatory name (and any defined aliases).  A list of all registered
     names can be returned via Observatory.names().
     """
@@ -40,7 +40,7 @@ class Observatory(object):
     def _register(cls,obs,name):
         """Add an observatory to the registry using the specified name
         (which will be converted to lower case).  If an existing observatory
-        of the same name exists, it will be replaced with the new one.  
+        of the same name exists, it will be replaced with the new one.
         The Observatory instance's name attribute will be updated for
         consistency."""
         cls._registry[name.lower()] = obs
@@ -52,8 +52,8 @@ class Observatory(object):
         should be given as a list.  If any of the new aliases are already in
         use, they will be replaced.  Aliases are not checked against the
         list of observatory names, but names always take precedence over
-        aliases when matching.  After the new aliases are in place, the 
-        aliases attribute is updated for all registered observatories 
+        aliases when matching.  After the new aliases are in place, the
+        aliases attribute is updated for all registered observatories
         to ensure consistency."""
         for a in aliases:
             cls._alias_map[a.lower()] = obs.name
@@ -69,7 +69,7 @@ class Observatory(object):
         return cls._registry.keys()
 
     ### Note, name and aliases are not currently intended to be changed
-    ### after initialization.  If we want to allow this, we could add 
+    ### after initialization.  If we want to allow this, we could add
     ### setter methods that update the registries appropriately.
 
     @property
@@ -82,42 +82,47 @@ class Observatory(object):
     def get(cls,name):
         """Returns the Observatory instance for the specified name/alias.
         If the name has not been defined, an error will be raised.  Aside
-        from the initial observatory definitions, this is in general the 
+        from the initial observatory definitions, this is in general the
         only way Observatory objects should be accessed.  Name-matching
         is case-insensitive."""
         # Be case-insensitive
         name = name.lower()
         # First see if name matches
-        if name in cls._registry.keys(): 
+        if name in cls._registry.keys():
             return cls._registry[name]
         # Then look for aliases
-        if name in cls._alias_map.keys(): 
+        if name in cls._alias_map.keys():
             return cls._registry[cls._alias_map[name]]
         # Nothing matched, raise an error
         raise KeyError("Observatory name '%s' is not defined" % name)
 
     ### The following methods define the basic API for the Observatory class.
-    ### Any which raise NotImplementedError below must be implemented in 
+    ### Any which raise NotImplementedError below must be implemented in
     ### derived classes.
 
-    @property
-    def earth_location(self):
-        """Returns observatory geocentric position as an astropy 
+    def earth_location(self, time=None):
+        """Returns observatory geocentric position as an astropy
         EarthLocation object.  For observatories where this is not
-        relevant, None can be returned."""
+        relevant, None can be returned.
+
+        The time argument is ignored for observatories with static
+        positions. For moving observaties (e.g. spacecraft), it
+        should be specified (as an astropy Time) and the position
+        at that time will be returned.
+        """
         return None
 
     @property
     def timescale(self):
         """Returns the timescale that TOAs from this observatory will be in,
-        once any clock corrections have been applied.  This should be a 
+        once any clock corrections have been applied.  This should be a
         string suitable to be passed directly to the scale argument of
         astropy.time.Time()."""
         raise NotImplementedError
 
     def clock_corrections(self,t):
-        """Given an array-valued Time, return the clock corrections 
-        as a numpy array, with units.  These values are to be added to the 
+        """Given an array-valued Time, return the clock corrections
+        as a numpy array, with units.  These values are to be added to the
         raw TOAs in order to refer them to the timescale specified by
         self.timescale."""
         # TODO this and derived methods should be changed to accept a TOA
@@ -136,7 +141,7 @@ class Observatory(object):
 
 def get_observatory(name, include_gps=True, include_bipm=True):
     """Conviencience function to get observatory object with options.
-    
+
     This function will simply call the ``Observatory.get`` method but
     will manually set options after the method is called.
 

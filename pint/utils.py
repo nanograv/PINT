@@ -131,7 +131,7 @@ def time_from_mjd_string(s, scale='utc'):
         imjd_s, fmjd_s = mjd_s
         imjd = int(imjd_s)
         fmjd = float("0." + fmjd_s)
-    return astropy.time.Time(imjd, fmjd, scale=scale, format='mjd',
+    return astropy.time.Time(imjd, fmjd, scale=scale, format='pulsar_mjd',
                              precision=9)
 
 
