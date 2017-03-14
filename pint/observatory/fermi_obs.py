@@ -57,6 +57,7 @@ def load_FT2(ft2_filename):
     Y = SC_POS[:,1]*u.m
     Z = SC_POS[:,2]*u.m
     # Compute velocities by differentiation because FT2 does not have velocities
+    # This is not the best way. Should fit an orbit and determine velocity from that.
     dt = mjds_TT[1]-mjds_TT[0]
     log.info('FT2 spacing is '+str(dt.to(u.s)))
     # Trim off last point because array.diff() is one shorter
@@ -93,16 +94,19 @@ class FermiObs(SpecialLocation):
     def timescale(self):
         return 'tt'
 
-    @property
-    def earth_location(self):
-        return None
+    def earth_location(self, time=None):
+        # Interpolate geocentric location from orbit file
+        pos = EarthLocation.from_geocentric(self.X(time.tt.mjd),
+                                self.Y(time.tt.mjd),
+                                self.Z(time.tt.mjd), unit=u.m)
+        return pos
 
     @property
     def tempo_code(self):
         return None
 
     def posvel(self, t, ephem):
-        '''Return position and velocity vectors of Fermi.
+        '''Return position and velocity vectors of Fermi, wrt SSB.
 
         t is an astropy.Time or array of astropy.Times
         '''

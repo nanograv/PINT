@@ -35,7 +35,7 @@ def get_TOAs(timfile, ephem="DE421", include_bipm=True,
     vectors, and pickles the file for later use (if requested).
 
     Includes options to specify solar system ephemeris [default DE421],
-    gps clock corrections [default=True], and BIPM clock corrections 
+    gps clock corrections [default=True], and BIPM clock corrections
     [default=True].
     """
     updatepickle = False
@@ -103,7 +103,7 @@ def get_TOAs_list(toa_list,ephem="DE421", include_bipm=True,
     vectors.
 
     Includes options to specify solar system ephemeris [default DE421],
-    gps clock corrections [default=True], and BIPM clock corrections 
+    gps clock corrections [default=True], and BIPM clock corrections
     [default=True].
     """
     t = TOAs(toalist = toa_list)
@@ -293,7 +293,7 @@ class TOA(object):
             passed as a double (not recommended), a string, a
             tuple of component parts (usually day and fraction of day).
         error is the TOA uncertainty in microseconds
-        obs is the observatory name as defined in XXX
+        obs is the observatory name as defined by the Observatory class
         freq is the observatory-centric frequency in MHz
         other keyword/value pairs can be specified as needed
 
@@ -319,7 +319,7 @@ class TOA(object):
     """
     def __init__(self, MJD, # required
                  error=0.0, obs='Barycenter', freq=float("inf"),
-                 scale=None, obsloc=None,
+                 scale=None,
                  **kwargs):  # keyword args that are completely optional
         r"""
         Construct a TOA object
@@ -339,11 +339,7 @@ class TOA(object):
         scale : string
             Time scale for the TOA time.  Defaults to the timescale appropriate
             to the site, but can be overridden
-        obsloc : EarthLocation
-            For moving observatories (like spacecraft), this location
-            can be specified to override the base (immobile) EarthLocation
-            property of the observatory
-            
+
         Notes
         -----
         It is VERY important that all astropy.Time() objects are created
@@ -353,17 +349,10 @@ class TOA(object):
         """
         site = get_observatory(obs)
 
-        # Override location for TOA, if specified
-        if obsloc is not None:
-            loc = obsloc
-        else:
-            loc = site.earth_location
-            
-        # If MJD is already a Time, just use it. Note that this will ignore 'scale'!
-        # This assigns the site location to the Time, for use in the TDB conversion
-        # Time objects are immutable so you must make a new one to add the location!
+        # If MJD is already a Time, just use it. Note that this will ignore
+        # the 'scale' argument to the TOA() constructor!
         if isinstance(MJD,time.Time):
-            self.mjd = time.Time(MJD,location=loc,precision=9)
+            t = MJD
         else:
             if numpy.isscalar(MJD):
                 arg1, arg2 = MJD, None
@@ -371,9 +360,20 @@ class TOA(object):
                 arg1, arg2 = MJD[0], MJD[1]
             if scale is None:
                 scale = site.timescale
-            self.mjd = time.Time(arg1, arg2, scale=scale,
-                    location=loc,
+            # First build a time without a location
+            t = time.Time(arg1, arg2, scale=scale,
                     format='pulsar_mjd', precision=9)
+        # Now assign the site location to the Time, for use in the TDB conversion
+        # Time objects are immutable so you must make a new one to add the location!
+        # Use the intial time to look up the observatory location
+        # (needed for moving observatories)
+        try:
+            loc = site.earth_location(time=t)
+        except:
+            print("Error computing earth_location at time {0}, {1}".format(t,type(t)))
+            raise
+        # Then construct the full time, with observatory location set
+        self.mjd = time.Time(t, location=loc, precision=9)
 
         if hasattr(error,'unit'):
             self.error = error
@@ -587,7 +587,7 @@ class TOAs(object):
             File name to write to
         format : str
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1')
-            
+
         Bugs
         ----
         Currently does not undo any clock corrections that were applied,
@@ -607,7 +607,7 @@ class TOAs(object):
             outf.write(str)
         outf.close()
 
-    def apply_clock_corrections(self, include_bipm=True, 
+    def apply_clock_corrections(self, include_bipm=True,
                                 include_gps=True):
         """Apply observatory clock corrections and TIME statments.
 

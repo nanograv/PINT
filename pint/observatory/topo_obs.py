@@ -19,7 +19,7 @@ class TopoObs(Observatory):
     site definitions in tempo/tempo2.  Clock correction files are read and
     computed, observatory coordinates are specified in ITRF XYZ, etc."""
 
-    def __init__(self, name, tempo_code=None, itoa_code=None, aliases=None, 
+    def __init__(self, name, tempo_code=None, itoa_code=None, aliases=None,
                  itrf_xyz=None, clock_file='time.dat', clock_dir='PINT',
                  clock_fmt='tempo', include_gps=True, include_bipm=True):
         """
@@ -140,8 +140,7 @@ class TopoObs(Observatory):
     def timescale(self):
         return 'utc'
 
-    @property
-    def earth_location(self):
+    def earth_location(self, time=None):
         return self._loc
 
     def clock_corrections(self, t):
@@ -167,5 +166,5 @@ class TopoObs(Observatory):
     def posvel(self, t, ephem):
         if t.isscalar: t = Time([t])
         earth_pv = objPosVel_wrt_SSB('earth', t, ephem)
-        obs_topo_pv = topo_posvels(self.earth_location, t, obsname=self.name)
+        obs_topo_pv = topo_posvels(self.earth_location(), t, obsname=self.name)
         return obs_topo_pv + earth_pv

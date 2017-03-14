@@ -9,7 +9,7 @@ import pint.residuals
 import astropy.units as u
 from astropy.coordinates import SkyCoord, EarthLocation
 from astropy.extern import six
-from pint.fits_utils import read_fits_event_mjds, read_fits_event_mjds_longdouble
+from pint.fits_utils import read_fits_event_mjds, read_fits_event_mjds_tuples
 from pint.observatory import get_observatory
 
 from astropy import log
@@ -84,7 +84,7 @@ def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1, loge
     log.info("TIMEREF {0}".format(timeref))
 
     # Read time column from FITS file
-    mjds = read_fits_event_mjds(hdulist[1])
+    mjds = read_fits_event_mjds_tuples(hdulist[1])
 
     energies = ft1dat.field('ENERGY')*u.MeV
     if weightcolumn is not None:
@@ -107,18 +107,17 @@ def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1, loge
             toalist=[toa.TOA(m,obs='Barycenter',scale='tdb',energy=e,weight=w) for m,e,w in zip(mjds,energies,weights)]
     else:
         if timeref == 'LOCAL':
-            log.info('Building spacecraft local TOAs, with MJDs in range {0} to {1}'.format(mjds.min(),mjds.max()))
+            log.info('Building spacecraft local TOAs, with MJDs in range {0} to {1}'.format(mjds[0],mjds[-1]))
             assert timesys == 'TT'
             fermiobs = get_observatory('Fermi')
-            
+
             try:
-                # NOTE: This TOA constructor needs to pass an argument to override
-                # the site.earth_location, which is not set.
                 if weightcolumn is None:
-                    toalist=[toa.TOA(m, obs='Fermi', scale='tt',energy=e, 
-                    obsloc=EarthLocation.from_geocentric(fermiobs.X(m),fermiobs.Y(m), fermiobs.Z(m),unit=u.m)) for m,e in zip(mjds,energies)]
+                    toalist=[toa.TOA(m, obs='Fermi', scale='tt',energy=e)
+                            for m,e in zip(mjds,energies)]
                 else:
-                    toalist=[toa.TOA(m, obs='Fermi', scale='tt',energy=e,weight=w, obsloc=EarthLocation.from_geocentric(fermiobs.X(m),fermiobs.Y(m), fermiobs.Z(m),unit=u.m)) for m,e,w in zip(mjds,energies,weights)]
+                    toalist=[toa.TOA(m, obs='Fermi', scale='tt',energy=e,weight=w)
+                            for m,e,w in zip(mjds,energies,weights)]
             except KeyError:
                 log.error('Error processing Fermi TOAs. You may have forgotten to specify an FT2 file with --ft2')
                 raise

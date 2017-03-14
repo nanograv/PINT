@@ -10,7 +10,7 @@ except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 from .utils import fortran_float
 
-def read_fits_event_mjds_longdouble(event_hdu,timecolumn='TIME'):
+def read_fits_event_mjds_tuples(event_hdu,timecolumn='TIME'):
     """Read a set of MJDs from a FITS HDU, with proper converstion of times to MJD
 
     The FITS time format is defined here:
@@ -18,7 +18,8 @@ def read_fits_event_mjds_longdouble(event_hdu,timecolumn='TIME'):
 
     Returns
     -------
-    mjds: MJDs returned are longdouble precision
+    mjds: MJDs returned are tuples of two doubles (jd1, jd2), as use by
+        astropy Time() objects.
 
     """
 
@@ -50,7 +51,8 @@ def read_fits_event_mjds_longdouble(event_hdu,timecolumn='TIME'):
     # Should check timecolumn units to be sure they are seconds!
 
     # MJD = (TIMECOLUMN + TIMEZERO)/SECS_PER_DAY + MJDREF
-    mjds = (np.array(event_dat.field(timecolumn),dtype=np.longdouble)+ TIMEZERO)/SECS_PER_DAY + MJDREF
+    mjds = [(MJDREF, tt) for tt in (event_dat.field(timecolumn)
+        + TIMEZERO)/SECS_PER_DAY]
 
     return mjds
 
