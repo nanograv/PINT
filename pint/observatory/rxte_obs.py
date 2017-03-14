@@ -39,9 +39,12 @@ class RXTEObs(SpecialLocation):
     def timescale(self):
         return 'tt'
 
-    @property
-    def earth_location(self):
-        return None
+    def earth_location(self, time=None):
+        # Interpolate geocentric location from orbit file
+        pos = EarthLocation.from_geocentric(self.X(time.tt.mjd),
+                                self.Y(time.tt.mjd),
+                                self.Z(time.tt.mjd), unit=u.m)
+        return pos
 
     @property
     def tempo_code(self):

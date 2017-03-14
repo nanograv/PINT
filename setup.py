@@ -84,7 +84,7 @@ cmdclass.update(versioneer.get_cmdclass())
 
 # These command-line scripts will be built by the setup process and installed in your PATH
 # See http://python-packaging.readthedocs.io/en/latest/command-line-scripts.html#the-console-scripts-entry-point
-console_scripts = [ 'nicerphase=pint.scripts.nicerphase:main',
+console_scripts = [ 'photonphase=pint.scripts.photonphase:main',
                     'event_optimize=pint.scripts.event_optimize:main',
                     'pintempo=pint.scripts.pintempo:main', 
                     'zima=pint.scripts.zima:main', 

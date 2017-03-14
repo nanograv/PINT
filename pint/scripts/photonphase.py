@@ -8,8 +8,10 @@ import pint.models
 import pint.residuals
 import astropy.units as u
 from pint.nicer_toas import load_NICER_TOAs
+from pint.rxte_toas import load_RXTE_TOAs
 from pint.plot_utils import phaseogram_binned
 from pint.observatory.nicer_obs import NICERObs
+from pint.observatory.rxte_obs import RXTEObs
 from astropy.time import Time
 from pint.eventstats import hmw, hm, h2sig
 from astropy.coordinates import SkyCoord
@@ -19,10 +21,10 @@ import uuid
 
 def main(argv=None):
     import argparse
-    parser = argparse.ArgumentParser(description="Use PINT to compute event phases and make plots of NICER event files.")
-    parser.add_argument("eventfile",help="NICER event FITS file name.")
-    parser.add_argument("orbfile",help="Name of FPorbit file or 'none'.")
+    parser = argparse.ArgumentParser(description="Use PINT to compute event phases and make plots of photon event files.")
+    parser.add_argument("eventfile",help="Photon event FITS file name (e.g. from NICER, RXTE, XMM, Chandra).")
     parser.add_argument("parfile",help="par file to construct model from")
+    parser.add_argument("--orbfile",help="Name of orbit file", default=None)
     parser.add_argument("--maxMJD",help="Maximum MJD to include in analysis", default=None)
     parser.add_argument("--plotfile",help="Output figure file name (default=None)", default=None)
     parser.add_argument("--addphase",help="Write FITS file with added phase column",
@@ -37,15 +39,33 @@ def main(argv=None):
     if args.outfile is not None:
         args.addphase = True
 
-    # Instantiate NICERObs once so it gets added to the observatory registry
-    if not args.orbfile.lower() == 'none':
-        NICERObs(name='NICER',FPorbname=args.orbfile)
+    # Read event file header to figure out what instrument is is from
+    hdr = pyfits.getheader(args.eventfile,ext=1)
+
+    log.info('Event file TELESCOPE = {0}, INSTRUMENT = {1}'.format(hdr['TELESCOP'],
+        hdr['INSTRUME']))
+    if hdr['TELESCOP'] == 'NICER':
+        # Instantiate NICERObs once so it gets added to the observatory registry
+        if args.orbfile is not None:
+            log.info('Setting up NICER observatory')
+            NICERObs(name='NICER',FPorbname=args.orbfile)
+        # Read event file and return list of TOA objects
+        tl  = load_NICER_TOAs(args.eventfile)
+    elif hdr['TELESCOP'] == 'XTE':
+        # Instantiate RXTEObs once so it gets added to the observatory registry
+        if args.orbfile is not None:
+            # Determine what observatory type is.
+            log.info('Setting up RXTE observatory')
+            RXTEObs(name='RXTE',FPorbname=args.orbfile)
+        # Read event file and return list of TOA objects
+        tl  = load_RXTE_TOAs(args.eventfile)
+    else:
+        log.error("FITS file not recognized, TELESCOPE = {0}, INSTRUMENT = {1}".format(
+            hdr['TELESCOP'], hdr['INSTRUME']))
+        sys.exit(1)
 
     # Read in model
     modelin = pint.models.get_model(args.parfile)
-
-    # Read event file and return list of TOA objects
-    tl  = load_NICER_TOAs(args.eventfile)
 
     # Discard events outside of MJD range
     if args.maxMJD is not None:
