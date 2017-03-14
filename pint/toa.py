@@ -361,8 +361,13 @@ class TOA(object):
             if scale is None:
                 scale = site.timescale
             # First build a time without a location
+            # Note that when scale is UTC, must use pulsar_mjd format!
+            if scale.lower() == 'utc':
+                fmt = 'pulsar_mjd'
+            else:
+                fmt = 'mjd'
             t = time.Time(arg1, arg2, scale=scale,
-                    format='pulsar_mjd', precision=9)
+                    format=fmt, precision=9)
         # Now assign the site location to the Time, for use in the TDB conversion
         # Time objects are immutable so you must make a new one to add the location!
         # Use the intial time to look up the observatory location

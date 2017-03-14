@@ -50,6 +50,7 @@ def load_FPorbit(orbit_filename):
 
     mjds_TT = read_fits_event_mjds(hdulist[1])
     mjds_TT = mjds_TT*u.d
+    log.info("FPorbit spacing is {0}".format((mjds_TT[1]-mjds_TT[0]).to(u.s)))
     X = FPorbit_dat.field('X')*u.m
     Y = FPorbit_dat.field('Y')*u.m
     Z = FPorbit_dat.field('Z')*u.m
