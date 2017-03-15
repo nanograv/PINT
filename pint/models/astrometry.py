@@ -5,7 +5,6 @@ import astropy.coordinates as coords
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
-from astropy.coordinates.angles import rotation_matrix
 from astropy import log
 from . import parameter as p
 from .timing_model import TimingModel, MissingParameter, Cache

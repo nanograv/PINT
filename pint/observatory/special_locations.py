@@ -40,8 +40,7 @@ class GeocenterObs(SpecialLocation):
     @property
     def timescale(self):
         return 'utc'
-    @property
-    def earth_location(self):
+    def earth_location(self, time=None):
         return EarthLocation.from_geocentric(0.0,0.0,0.0,unit=u.m)
     @property
     def tempo_code(self):

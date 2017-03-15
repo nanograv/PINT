@@ -4,6 +4,7 @@ import pint.toa as toa
 import pint.models
 from pint.fitter import Fitter
 import pint.fermi_toas as fermi
+import pint.plot_utils as plot_utils
 from pint.eventstats import hmw, hm
 from pint.models.priors import Prior, UniformUnboundedRV, UniformBoundedRV, GaussianBoundedRV
 from scipy.stats import norm, uniform
@@ -199,7 +200,7 @@ def get_fit_keyvals(model, phs=0.0, phserr=0.1):
 
 class emcee_fitter(Fitter):
 
-    def __init__(self, toas=None, model=None, template=None, 
+    def __init__(self, toas=None, model=None, template=None,
                  weights=None, phs=0.5, phserr=0.03):
         #super(emcee_fitter, self).__init__(model=model, toas=toas)
         self.toas = toas
@@ -252,7 +253,7 @@ class emcee_fitter(Fitter):
 
         # Call PINT to compute the phases
         phases = self.get_event_phases()
-        lnlikelihood = profile_likelihood(theta[-1], self.xtemp, 
+        lnlikelihood = profile_likelihood(theta[-1], self.xtemp,
                                           phases, self.template, self.weights)
         lnpost = lnprior + lnlikelihood
         if lnpost > maxpost:
@@ -273,19 +274,19 @@ class emcee_fitter(Fitter):
         if not np.isfinite(self.lnprior(ntheta)):
             return np.inf
         phases = self.get_event_phases()
-        lnlikelihood = profile_likelihood(theta[-1], self.xtemp, 
+        lnlikelihood = profile_likelihood(theta[-1], self.xtemp,
                                           phases, self.template, self.weights)
         return -lnlikelihood
 
     def phaseogram(self, weights=None, bins=100, rotate=0.0, size=5,
-        alpha=0.25, file=False):
+        alpha=0.25, plotfile=None):
         """
         Make a nice 2-panel phaseogram for the current model
         """
         mjds = self.toas.table['tdbld'].astype(np.float64)
         phss = self.get_event_phases()
-        fermi.phaseogram(mjds, phss, weights=self.weights, bins=bins,
-            rotate=rotate, size=size, alpha=alpha, file=file)
+        plot_utils.phaseogram(mjds, phss, weights=self.weights, bins=bins,
+            rotate=rotate, size=size, alpha=alpha, plotfile=plotfile)
 
     def prof_vs_weights(self, nbins=50, use_weights=False):
         """
@@ -359,8 +360,8 @@ def main(argv=None):
         default=0.03)
     parser.add_argument("--minWeight",help="Minimum weight to include (def 0.05)",
         type=float,default=0.05)
-    parser.add_argument("--wgtexp", 
-        help="Raise computed weights to this power (or 0.0 to disable any rescaling of weights)", 
+    parser.add_argument("--wgtexp",
+        help="Raise computed weights to this power (or 0.0 to disable any rescaling of weights)",
         type=float, default=0.0)
     parser.add_argument("--testWeights",help="Make plots to evalute weight cuts?",
         default=False,action="store_true")
@@ -372,7 +373,7 @@ def main(argv=None):
         default=False,action="store_true")
 
     global nwalkers, nsteps, ftr
-    
+
     args = parser.parse_args(argv)
 
     eventfile = args.eventfile
@@ -398,7 +399,7 @@ def main(argv=None):
 
     # Read in initial model
     modelin = pint.models.get_model(parfile)
-    
+
     # The custom_timing version below is to manually construct the TimingModel
     # class, which allows it to be pickled. This is needed for parallelizing
     # the emcee call over a number of threads.  So far, it isn't quite working
@@ -509,7 +510,7 @@ def main(argv=None):
             (1.0 - maxbin / float(len(gtemplate)), args.phs)
         fitvals[-1] = args.phs
     ftr.fitvals[-1] = fitvals[-1]
-    ftr.phaseogram(file=ftr.model.PSR.value+"_pre.png")
+    ftr.phaseogram(plotfile=ftr.model.PSR.value+"_pre.png")
     plt.close()
     #ftr.phaseogram()
 
@@ -616,7 +617,7 @@ def main(argv=None):
     #ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
     # Make a phaseogram with the best MCMC result
     ftr.set_params(dict(zip(ftr.fitkeys[:-1], ftr.maxpost_fitvals[:-1])))
-    ftr.phaseogram(file=ftr.model.PSR.value+"_post.png")
+    ftr.phaseogram(plotfile=ftr.model.PSR.value+"_post.png")
     plt.close()
 
     # Write out the output pulse profile

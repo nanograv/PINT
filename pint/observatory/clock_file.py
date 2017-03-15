@@ -87,7 +87,7 @@ class Tempo2ClockFile(ClockFile):
     def __init__(self, filename, **kwargs):
         self.filename = filename
         mjd, clk, self.header = self.load_tempo2_clock_file(filename)
-        self._time = Time(mjd, format='mjd', scale='utc')
+        self._time = Time(mjd, format='pulsar_mjd', scale='utc')
         self._clock = clk * u.s
 
     @staticmethod
@@ -110,13 +110,13 @@ class TempoClockFile(ClockFile):
         self.filename = filename
         self.obscode = obscode
         mjd, clk = self.load_tempo1_clock_file(filename,site=obscode)
-        self._time = Time(mjd, format='mjd', scale='utc')
+        self._time = Time(mjd, format='pulsar_mjd', scale='utc')
         self._clock = clk * u.us
 
     @staticmethod
     def load_tempo1_clock_file(filename,site=None):
         """
-        Given the specified full path to the tempo1-format clock file, 
+        Given the specified full path to the tempo1-format clock file,
         will return two numpy arrays containing the MJDs and the clock
         corrections (us).  All computations here are done as in tempo, with
         the exception of the 'F' flag (to disable interpolation), which
@@ -183,4 +183,3 @@ class TempoClockFile(ClockFile):
             clkcorrs.append(clkcorr2 - clkcorr1)
 
         return mjds, clkcorrs
-

@@ -30,8 +30,8 @@ plt.show()
 
 # Now do the fit
 print "Fitting..."
-f = pint.fitter.fitter(t, m)
-f.call_minimize()
+f = pint.fitter.WlsFitter(t, m)
+f.fit_toas()
 
 # Print some basic params
 print "Best fit has reduced chi^2 of", f.resids.chi2_reduced
