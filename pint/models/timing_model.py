@@ -276,7 +276,7 @@ class TimingModel(object):
         not_in_placed = []
         for cp, cpv in self.components.items():
             if cpv.order_number is not None:
-                sorted_list[cpv.order_number - 1] = cp
+                sorted_list[cpv.order_number] = cp
                 in_placed.append(cp)
             else:
                 not_in_placed.append(cp)

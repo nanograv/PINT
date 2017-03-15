@@ -85,9 +85,9 @@ class PulsarBinary(TimingModel):
         # Set up delay function
         self.binary_delay_funcs += [self.binarymodel_delay,]
         self.delay_funcs['L2'] += [self.binarymodel_delay,]
-        self.order_number = 5
+        self.order_number = 3
         self.print_par_func = 'print_par_BINARY'
-        
+
     def setup(self):
         super(PulsarBinary, self).setup()
         for bpar in self.binary_params:

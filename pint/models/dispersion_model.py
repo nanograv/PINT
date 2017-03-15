@@ -28,7 +28,7 @@ class Dispersion(TimingModel):
                        description="Dispersion measure"))
         self.dm_value_funcs = [self.constant_dm,]
         self.delay_funcs['L1'] += [self.dispersion_delay,]
-        self.order_number = 3
+        self.order_number = 2
 
     def setup(self):
         super(Dispersion, self).setup()

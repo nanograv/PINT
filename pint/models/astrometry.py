@@ -33,7 +33,7 @@ class Astrometry(TimingModel):
             description="Parallax"))
 
         self.delay_funcs['L1'] += [self.solar_system_geometric_delay,]
-        self.order_number = 1
+        self.order_number = 0
 
     def setup(self):
         super(Astrometry, self).setup()
@@ -164,7 +164,7 @@ class AstrometryEquatorial(Astrometry):
             description="Proper motion in DEC"))
         self.set_special_params(['RAJ', 'DECJ', 'PMRA', 'PMDEC'])
         self.print_par_func = 'print_par_AstrometryEquatorial'
-        
+
     def setup(self):
         super(AstrometryEquatorial, self).setup()
         # RA/DEC are required

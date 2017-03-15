@@ -43,7 +43,7 @@ class Spindown(TimingModel):
                        time_scale='tdb'))
 
         self.phase_funcs += [self.spindown_phase,]
-        self.order_number = 2
+        self.order_number = 1
 
     def setup(self):
         super(Spindown, self).setup()
