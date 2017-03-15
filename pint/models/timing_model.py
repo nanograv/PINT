@@ -271,8 +271,19 @@ class TimingModel(object):
 
     def sort_model_components(self):
         # initiate the sorted_components
-        components = self.components.keys()
-        return components
+        sorted_list = ['']*len(self.components.keys())
+        in_placed = []
+        not_in_placed = []
+        for cp, cpv in self.components.items():
+            if cpv.order_number is not None:
+                sorted_list[cpv.order_number - 1] = cp
+                in_placed.append(cp)
+            else:
+                not_in_placed.append(cp)
+        for nicp in not_in_placed:
+            idx = sorted_list.index('')
+            sorted_list[idx] = nicp
+        return sorted_list
 
     #@Cache.use_cache
     def phase(self, toas):
