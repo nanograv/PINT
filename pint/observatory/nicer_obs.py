@@ -84,11 +84,21 @@ class NICERObs(SpecialLocation):
         return 'tt'
 
     def earth_location(self, time=None):
-        # Interpolate geocentric location from orbit file
-        pos = EarthLocation.from_geocentric(self.X(time.tt.mjd),
-                                self.Y(time.tt.mjd),
-                                self.Z(time.tt.mjd), unit=u.m)
-        return pos
+        '''Return NICER spacecraft location in ITRS coordinates'''
+
+        # First, interpolate ECI geocentric location from orbit file.
+        # These are inertial coorinates aligned with ICRF
+        pos_gcrs =  GCRS(CartesianRepresentation(self.X(time.tt.mjd)*u.m,
+                        self.Y(time.tt.mjd)*u.m,
+                        self.Z(time.tt.mjd)*u.m),
+                    obstime=time)
+
+        # Now transform ECI (GCRS) to ECEF (ITRS)
+        # By default, this uses the WGS84 ellipsoid
+        pos_ITRS = pos_gcrs.transform_to(ITRS(obstime=time))
+
+        # Return geocentric ITRS coordinates as an EarthLocation object
+        return pos_ITRS.earth_location
 
     @property
     def tempo_code(self):

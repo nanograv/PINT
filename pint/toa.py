@@ -372,6 +372,7 @@ class TOA(object):
         # Time objects are immutable so you must make a new one to add the location!
         # Use the intial time to look up the observatory location
         # (needed for moving observatories)
+        # The location is an EarthLocation in the ITRF (ECEF, WGS84) frame
         try:
             loc = site.earth_location(time=t)
         except:

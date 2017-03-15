@@ -70,7 +70,7 @@ class TopoObs(Observatory):
                     "Incorrect coordinate dimensions for observatory '%s'" % (
                         name))
 
-        # Convert to astropy EarthLocation, ensuring use of geocentric coordinates
+        # Convert to astropy EarthLocation, ensuring use of ITRF geocentric coordinates
         self._loc = EarthLocation.from_geocentric(*xyz)
 
         # Save clock file info, the data will be read only if clock

@@ -105,6 +105,10 @@ class Observatory(object):
         EarthLocation object.  For observatories where this is not
         relevant, None can be returned.
 
+        The location is in the International Terrestrial Reference Frame (ITRF).
+        The realization of the ITRF is determined by astropy,
+        which uses ERFA (IAU SOFA).
+
         The time argument is ignored for observatories with static
         positions. For moving observaties (e.g. spacecraft), it
         should be specified (as an astropy Time) and the position
