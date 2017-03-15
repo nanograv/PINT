@@ -34,12 +34,12 @@ class Astrometry(TimingModel):
 
         self.delay_funcs['L1'] += [self.solar_system_geometric_delay,]
         self.order_number = 1
-        
+
     def setup(self):
         super(Astrometry, self).setup()
         self.register_deriv_funcs(self.d_delay_astrometry_d_PX, 'delay', 'PX')
 
-    @Cache.cache_result
+    # @Cache.cache_result
     def ssb_to_psb_xyz(self, epoch=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter.
 
@@ -48,7 +48,7 @@ class Astrometry(TimingModel):
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
         return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
-    @Cache.cache_result
+    # @Cache.cache_result
     def barycentric_radio_freq(self, toas):
         """Return radio frequencies (MHz) of the toas corrected for Earth motion"""
         L_hat = self.ssb_to_psb_xyz(epoch=toas['tdbld'].astype(numpy.float64))
@@ -163,6 +163,8 @@ class AstrometryEquatorial(Astrometry):
             units="mas/year", value=0.0,
             description="Proper motion in DEC"))
         self.set_special_params(['RAJ', 'DECJ', 'PMRA', 'PMDEC'])
+        self.print_par_func = 'print_par_AstrometryEquatorial'
+        
     def setup(self):
         super(AstrometryEquatorial, self).setup()
         # RA/DEC are required
@@ -182,6 +184,15 @@ class AstrometryEquatorial(Astrometry):
         self.register_deriv_funcs(self.d_delay_astrometry_d_DECJ, 'delay', 'DEC')
         self.register_deriv_funcs(self.d_delay_astrometry_d_PMRA, 'delay', 'PMRA')
         self.register_deriv_funcs(self.d_delay_astrometry_d_PMDEC, 'delay', 'PMDEC')
+
+    def print_par_AstrometryEquatorial(self):
+        result = ''
+        print_order = ['RAJ', 'DECJ', 'PMRA', 'PMDEC', 'PX', 'POSEPOCH']
+        for p in print_order:
+            par = getattr(self, p)
+            if par.quantity is not None:
+                result += getattr(self, p).as_parfile_line()
+        return result
 
     #@Cache.cache_result
     def coords_as_ICRS(self, epoch=None):
@@ -317,7 +328,7 @@ class AstrometryEcliptic(Astrometry):
             description="Obliquity angle value secetion"))
 
         self.set_special_params(['ELONG', 'ELAT', 'PMELONG','PMELAT'])
-
+        self.print_par_func = 'print_par_AstrometryEcliptic'
     def setup(self):
         super(AstrometryEcliptic, self).setup()
         # RA/DEC are required
@@ -478,3 +489,12 @@ class AstrometryEcliptic(Astrometry):
 
         # We want to return sec / (mas / yr)
         return dd_dpmelat.decompose(u.si.bases) / (u.mas / u.year)
+
+    def print_par_AstrometryEcliptic(self):
+        result = ''
+        print_order = ['ELONG', 'ELAT', 'PMELONG', 'PMELAT', 'PX', 'POSEPOCH']
+        for p in print_order:
+            par = getattr(self, p)
+            if par.quantity is not None:
+                result += getattr(self, p).as_parfile_line()
+        return result
