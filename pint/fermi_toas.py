@@ -85,6 +85,9 @@ def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1, loge
 
     # Read time column from FITS file
     mjds = read_fits_event_mjds_tuples(hdulist[1])
+    if len(mjds) == 0:
+        log.error('No MJDs read from file!')
+        raise
 
     energies = ft1dat.field('ENERGY')*u.MeV
     if weightcolumn is not None:

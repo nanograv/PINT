@@ -6,7 +6,7 @@ from __future__ import division, print_function
 from . import Observatory
 from .special_locations import SpecialLocation
 import astropy.units as u
-from astropy.coordinates import EarthLocation
+from astropy.coordinates import GCRS, ITRS, EarthLocation, CartesianRepresentation
 from ..utils import PosVel
 from ..fits_utils import read_fits_event_mjds
 from ..solar_system_ephemerides import objPosVel_wrt_SSB
