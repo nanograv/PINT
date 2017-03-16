@@ -124,7 +124,7 @@ class Parameter(object):
             if self.units is not None:
                 if unt != self.units:
                     wmsg = 'Parameter '+self.name+' default units has been '
-                    wmsg += ' reset to ' + str(unt) + ' from '+ str(self._units)
+                    wmsg += ' reset to ' + str(unt) + ' from '+ str(self.units)
                     log.warning(wmsg)
                 try:
                     if hasattr(self.quantity, 'unit'):
@@ -409,7 +409,7 @@ class floatParameter(Parameter):
         test1 (s) 100.0
     """
     def __init__(self, name=None, value=None, units=None, description=None,
-                 uncertainty=None, frozen=True, aliases=[], continuous=True,
+                 uncertainty=None, frozen=True, aliases=None, continuous=True,
                  long_double=False, **kwargs):
         self.long_double = long_double
         set_quantity = self.set_quantity_float
@@ -442,7 +442,7 @@ class floatParameter(Parameter):
             raise ValueError("long_double property can only be set as boolean"
                              " type")
         if hasattr(self, 'long_double'):
-            if self._long_double != val and hasattr(self, 'quantity'):
+            if self.long_double != val and hasattr(self, 'quantity'):
                 if not val:
                     log.warning("Setting floatParameter from long double to float,"
                                 " precision will be lost.")
@@ -518,7 +518,7 @@ class strParameter(Parameter):
         test1 This is a test
     """
     def __init__(self, name=None, value=None, description=None,
-                 aliases=[], **kwargs):
+                 aliases=None, **kwargs):
         print_quantity = str
         get_value = lambda x: x
         set_quantity = lambda x: str(x)
@@ -561,7 +561,7 @@ class boolParameter(Parameter):
         test1 N
     """
     def __init__(self, name=None, value=None, description=None, frozen=True,
-                 aliases=[], **kwargs):
+                 aliases=None, **kwargs):
         print_quantity = lambda x: 'Y' if x else 'N'
         set_quantity = self.set_quantity_bool
         get_value = lambda x: x
@@ -624,7 +624,7 @@ class MJDParameter(Parameter):
         test1 (d) 54000.000000000000000
     """
     def __init__(self, name=None, value=None, description=None,
-                 uncertainty=None, frozen=True, continuous=True, aliases=[],
+                 uncertainty=None, frozen=True, continuous=True, aliases=None,
                  time_scale='utc', **kwargs):
         self.time_scale = time_scale
         set_quantity = self.set_quantity_mjd
@@ -742,7 +742,7 @@ class AngleParameter(Parameter):
         test1 (hourangle) 12:20:10.00000000
     """
     def __init__(self, name=None, value=None, description=None, units='rad',
-             uncertainty=None, frozen=True, continuous=True, aliases=[],**kwargs):
+             uncertainty=None, frozen=True, continuous=True, aliases=None, **kwargs):
         self._str_unit = units
         self.unit_identifier = {
             'h:m:s': (u.hourangle, 'h', '0:0:%.15fh'),
@@ -857,7 +857,7 @@ class prefixParameter(object):
     def __init__(self, parameter_type='float',name=None, value=None, units=None,
                  unitTplt=None, description=None, descriptionTplt=None,
                  uncertainty=None, frozen=True, continuous=True,
-                 prefix_aliases=[],long_double=False, time_scale='utc',
+                 prefix_aliases=None, long_double=False, time_scale='utc',
                  **kwargs):
         # Split prefixed name, if the name is not in the prefixed format, error
         # will be raised
@@ -878,7 +878,7 @@ class prefixParameter(object):
         self.description_template = descriptionTplt
         input_units = units
         input_description = description
-        self.prefix_aliases = prefix_aliases
+        self.prefix_aliases = [] if prefix_aliases is None else prefix_aliases
         # set templates, the templates should be a lambda function and input is
         # the index of prefix parameter.
         if self.unit_template is None:
@@ -890,7 +890,7 @@ class prefixParameter(object):
         real_units = self.unit_template(self.index)
         real_description = self.description_template(self.index)
         aliases = []
-        for pa in prefix_aliases:
+        for pa in self.prefix_aliases:
             aliases.append(pa + self.idxfmt)
         # initiate parameter class
         self.param_comp = self.param_class(name=self.name, value=value,
@@ -1088,7 +1088,7 @@ class maskParameter(floatParameter):
     """
     def __init__(self, name=None, index=1, key=None, key_value=None,
                  value=None, long_double=False, units= None, description=None,
-                 uncertainty=None, frozen=True, continuous=False, aliases=[]):
+                 uncertainty=None, frozen=True, continuous=False, aliases=None):
         self.is_mask = True
         self.key_identifier = {'mjd': (lambda x: time.Time(x, format='mjd'), 2),
                                 'freq': (float, 2),

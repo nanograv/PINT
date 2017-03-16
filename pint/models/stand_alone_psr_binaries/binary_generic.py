@@ -6,6 +6,7 @@ from astropy import log
 from pint.models.timing_model import Cache
 from pint import utils as ut
 import astropy.units as u
+import astropy.constants as c
 try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
@@ -181,15 +182,14 @@ class PSR_BINARY(object):
         """Add one parameter to the binary class
         """
         if parameter not in self.binary_params:
-            self.binary_params.append(p)
-            if not hasattr(defaultValue,unit):
-                log.warning("Binary paramters' value generally has unit."\
-                            " Treat paramter "+paramter+" as a diemension less unit.")
-                self.param_default_value[p] = defaultValue*u.Unit("")
+            self.binary_params.append(parameter)
+            if not hasattr(defaultValue, 'unit'):
+                log.warning("Binary parameters' value generally has unit."\
+                            " Treat parameter "+parameter+" as a diemension less unit.")
+                self.param_default_value[parameter] = defaultValue*u.Unit("")
             else:
-                self.param_default_value[p] = defaultValue
-            setattr(self, parameter, self.param_default_value[p])
-
+                self.param_default_value[parameter] = defaultValue
+            setattr(self, parameter, self.param_default_value[parameter])
 
     def add_inter_vars(self,interVars):
         if not isinstance(interVars,list):
@@ -216,7 +216,6 @@ class PSR_BINARY(object):
             bdelay+= bdf()
         return bdelay
 
-    @Cache.use_cache
     def d_binarydelay_d_par(self, par):
         """Get the binary delay derivatives respect to parameters.
         Parameter
@@ -231,7 +230,7 @@ class PSR_BINARY(object):
         # Get first derivative in the delay derivative function
         result = self.d_binarydelay_d_par_funcs[0](par)
         if len(self.d_binarydelay_d_par_funcs) > 1:
-            for df in self.d_binarydelay_d_par_funcs[1,:]:
+            for df in self.d_binarydelay_d_par_funcs[1:]:
                 result += df(par)
 
         return result
@@ -507,7 +506,7 @@ class PSR_BINARY(object):
         """True anomaly  (Ae)
         """
         nu = 2*np.arctan(np.sqrt((1.0+self.ecc())/(1.0-self.ecc()))*np.tan(self.E()/2.0))
-        # Normalize True anomaly to on orbit. 
+        # Normalize True anomaly to on orbit.
         nu[nu<0] += 2*np.pi*u.rad
         nu2 = 2*np.pi*self.orbits()*u.rad + nu - self.M()
         return nu2
@@ -672,7 +671,7 @@ class PSR_BINARY(object):
     def d_Pobs_d_PBDOT(self):
         geom1 = (-np.sin(self.nu())*np.sin(self.omega())+(np.cos(self.nu())+self.ecc())*np.cos(self.omega()))
         geom2 = (-np.cos(self.nu())*np.sin(self.omega())-np.sin(self.nu())*np.cos(self.omega()))
-        pref1 = self.P() * self.tt0() * 2 * np.pi * self.a1() / (self.pbprime()**2 * np.sqrt(1-self.ecc()**2))
+        pref1 = self.P() * self.tt0 * 2 * np.pi * self.a1() / (self.pbprime()**2 * np.sqrt(1-self.ecc()**2))
         pref2 = self.P() * self.Doppler() * self.d_nu_d_PBDOT()
         return pref1 * geom1 + pref2 * geom2
 
@@ -699,15 +698,15 @@ class PSR_BINARY(object):
 
     @Cache.use_cache
     def d_Pobs_d_EDOT(self):
-        return self.tt0() * self.d_Pobs_d_ECC()
+        return self.tt0 * self.d_Pobs_d_ECC()
 
     @Cache.use_cache
     def d_Pobs_d_OMDOT(self):
-        return self.tt0() * self.d_Pobs_d_OM() / self.SECS_PER_YEAR
+        return self.tt0 * self.d_Pobs_d_OM() / self.SECS_PER_YEAR
 
     @Cache.use_cache
     def d_Pobs_d_A1DOT(self):
-        return self.tt0() * self.d_Pobs_d_A1()
+        return self.tt0 * self.d_Pobs_d_A1()
 
     ############## Calculation for design matrix  ################
     @Cache.use_cache
