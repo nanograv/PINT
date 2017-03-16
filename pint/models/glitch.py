@@ -75,8 +75,8 @@ class Glitch(TimingModel):
                 if not hasattr(self, glf + '%d' % idx):
                     # The first glf0 and glf1 should be there
                     glf0exp = getattr(self, glf + '1')
-                    add_param(glf0exp.new_index_prefix_param(idx))
-                    getattr(self, plf + "%d" % idx).value = 0.0
+                    self.add_param(glf0exp.new_index_prefix_param(idx))
+                    getattr(self, glf + "%d" % idx).value = 0.0
 
         # Check the Decay Term.
         glf0dparams = [x for x in self.params if x.startswith('GLF0D_')]
