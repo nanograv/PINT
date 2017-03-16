@@ -69,39 +69,3 @@ def load_RXTE_TOAs(eventname):
             toalist=[toa.TOA(m, obs='Geocenter', scale='tt',energy=e) for m,e in zip(mjds,phas)]
 
     return toalist
-
-if __name__ == '__main__':
-    ephem = 'DE421'
-    planets = True
-    parfile = 'PSRJ0030+0451_psrcat.par'
-    eventfile = 'J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_BARY.fits'
-
-    # Read event file and return list of TOA objects
-    tl  = load_RXTE_TOAs(eventfile)
-
-    # Now convert to TOAs object and compute TDBs and posvels
-    ts = toa.TOAs(toalist=tl)
-    ts.filename = eventfile
-    ts.compute_TDBs()
-    ts.compute_posvels(ephem=ephem,planets=planets)
-
-    print(ts.get_summary())
-
-    print(ts.table)
-
-    # Read in initial model
-    modelin = pint.models.get_model(parfile)
-
-    # Remove the dispersion delay as it is unnecessary
-    modelin.delay_funcs.remove(modelin.dispersion_delay)
-
-    # Hack to remove solar system delay terms if file was barycentered
-    if 'Barycenter' in ts.observatories:
-        modelin.delay_funcs.remove(modelin.solar_system_shapiro_delay)
-        modelin.delay_funcs.remove(modelin.solar_system_geometric_delay)
-    # Compute model phase for each TOA
-    phss = modelin.phase(ts.table)[1]
-    # ensure all postive
-    phases = np.where(phss < 0.0, phss + 1.0, phss)
-    mjds = ts.get_mjds()
-    phaseogram_binned(mjds,phases)
