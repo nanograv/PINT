@@ -103,9 +103,9 @@ class FermiObs(SpecialLocation):
         # First, interpolate ECI geocentric location from orbit file.
         # These are inertial coorinates aligned with ICRF
         pos_gcrs =  GCRS(CartesianRepresentation(self.X(time.tt.mjd)*u.m,
-                        self.Y(time.tt.mjd)*u.m,
-                        self.Z(time.tt.mjd)*u.m),
-                    obstime=time)
+                                                 self.Y(time.tt.mjd)*u.m,
+                                                 self.Z(time.tt.mjd)*u.m),
+                         obstime=time)
 
         # Now transform ECI (GCRS) to ECEF (ITRS)
         # By default, this uses the WGS84 ellipsoid
