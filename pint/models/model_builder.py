@@ -81,6 +81,7 @@ class model_builder(object):
         self.prefix_names = None
         self.param_prefix = {}
         self.select_comp = []
+        self.control_params = ['EPHEM', 'CLK']
         if parfile is not None:
             self.parfile = parfile
             self.get_comp_from_parfile(self.parfile)
@@ -241,6 +242,19 @@ class model_builder(object):
 
         if parfile is not None:
             self.model_instance.read_parfile(parfile)
+
+    def get_control_info(self):
+        info = {}
+        if not self.param_unrecognized == {}:
+            for ctrlp in self.control_params:
+                if ctrlp in self.param_unrecognized:
+                    info[ctrlp] = self.param_unrecognized[ctrlp]
+                else:
+                    # Check if the prefix match
+                    for p in self.control_params.keys():
+                        if p.startswith(ctrlp):
+                            info[ctrlp] = self.param_unrecognized[ctrlp]
+        return info
 
 def get_model(parfile):
     """A one step function to build model from a parfile
