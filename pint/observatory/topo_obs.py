@@ -111,7 +111,7 @@ class TopoObs(Observatory):
             # location from CLKDIR line...
             dir = os.path.join(os.getenv('TEMPO'),'clock')
         elif self.clock_dir=='TEMPO2':
-            dir = os.path.joins(os.getenv('TEMPO2'),'clock')
+            dir = os.path.join(os.getenv('TEMPO2'),'clock')
         else:
             dir = self.clock_dir
         return os.path.join(dir,self.clock_file)
