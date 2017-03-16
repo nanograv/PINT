@@ -100,7 +100,7 @@ class Observatory(object):
     ### Any which raise NotImplementedError below must be implemented in
     ### derived classes.
 
-    def earth_location(self, time=None):
+    def earth_location_itrf(self, time=None):
         """Returns observatory geocentric position as an astropy
         EarthLocation object.  For observatories where this is not
         relevant, None can be returned.

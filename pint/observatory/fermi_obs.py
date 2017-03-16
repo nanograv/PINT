@@ -97,8 +97,8 @@ class FermiObs(SpecialLocation):
     def timescale(self):
         return 'tt'
 
-    def earth_location(self, time=None):
-        '''Return Fermi spacecraft location in ITRS coordinates'''
+    def earth_location_itrf(self, time=None):
+        '''Return Fermi spacecraft location in ITRF coordinates'''
 
         # First, interpolate ECI geocentric location from orbit file.
         # These are inertial coorinates aligned with ICRF

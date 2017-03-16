@@ -103,4 +103,5 @@ if __name__ == '__main__':
     # ensure all postive
     phases = np.where(phss < 0.0, phss + 1.0, phss)
     mjds = ts.get_mjds()
+    from pint.plot_utils import phaseogram_binned
     phaseogram_binned(mjds,phases)

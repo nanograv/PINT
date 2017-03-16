@@ -374,9 +374,9 @@ class TOA(object):
         # (needed for moving observatories)
         # The location is an EarthLocation in the ITRF (ECEF, WGS84) frame
         try:
-            loc = site.earth_location(time=t)
+            loc = site.earth_location_itrf(time=t)
         except:
-            print("Error computing earth_location at time {0}, {1}".format(t,type(t)))
+            print("Error computing earth_location_itrf at time {0}, {1}".format(t,type(t)))
             raise
         # Then construct the full time, with observatory location set
         self.mjd = time.Time(t, location=loc, precision=9)
