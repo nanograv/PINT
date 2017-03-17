@@ -12,6 +12,9 @@ ignore-paths:
     - validation
     - pint/scripts
     - pint/extern
+pylint:
+  disable:
+    - logging-format-interpolation
 python-targets:
     - 2
     - 3
