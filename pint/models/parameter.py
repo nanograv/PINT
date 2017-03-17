@@ -743,13 +743,14 @@ class AngleParameter(Parameter):
         test1 (hourangle) 12:20:10.00000000
     """
     def __init__(self, name=None, value=None, description=None, units='rad',
-             uncertainty=None, frozen=True, continuous=True, aliases=None, **kwargs):
+             uncertainty=None, frozen=True, continuous=True, aliases=None,
+             **kwargs):
         self._str_unit = units
         self.unit_identifier = {
-            'h:m:s': (u.hourangle, 'h', '0:0:%.15fh'),
-            'd:m:s': (u.deg, 'd', '0:0:%.15fd'),
-            'rad': (u.rad, 'rad', '%.15frad'),
-            'deg': (u.deg, 'deg', '%.15fdeg'),
+            'h:m:s': (u.hourangle, 'h', '0:0:%.20fh'),
+            'd:m:s': (u.deg, 'd', '0:0:%.20fd'),
+            'rad': (u.rad, 'rad', '%.20frad'),
+            'deg': (u.deg, 'deg', '%.20fdeg'),
         }
         # Check unit format
         if units.lower() not in self.unit_identifier.keys():
@@ -819,15 +820,15 @@ class AngleParameter(Parameter):
         if ':' in self._str_unit:
             return quan.to_string(sep=':', precision=8)
         else:
-            return quan.to_string(decimal = True, precision=8)
+            return quan.to_string(decimal = True, precision=15)
 
     def print_uncertainty(self, unc):
         """This is a function for printing out the uncertainty
         """
         if ':' in self._str_unit:
-            return unc.arcsec.to_string(decimal = True, precision=8)
+            return unc.arcsec.to_string(decimal = True, precision=20)
         else:
-            return unc.to_string(decimal = True, precision=8)
+            return unc.to_string(decimal = True, precision=20)
 
 
 class prefixParameter(object):
