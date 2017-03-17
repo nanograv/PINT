@@ -826,7 +826,11 @@ class AngleParameter(Parameter):
         """This is a function for printing out the uncertainty
         """
         if ':' in self._str_unit:
-            return unc.to(u.arcsec).to_string(decimal = True, precision=20)
+            angle_arcsec = unc.to(u.arcsec)
+            if self.units == u.hourangle:
+                # Triditionaly hourangle uncertainty is in hourangle seconds
+                angle_arcsec  /= 15.0
+            return angle_arcsec.to_string(decimal = True, precision=20)
         else:
             return unc.to_string(decimal = True, precision=20)
 
