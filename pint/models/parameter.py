@@ -826,7 +826,7 @@ class AngleParameter(Parameter):
         """This is a function for printing out the uncertainty
         """
         if ':' in self._str_unit:
-            return unc.arcsec.to_string(decimal = True, precision=20)
+            return unc.to(u.arcsec).to_string(decimal = True, precision=20)
         else:
             return unc.to_string(decimal = True, precision=20)
 
