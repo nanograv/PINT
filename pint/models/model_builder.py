@@ -6,7 +6,7 @@ import os
 from .timing_model import generate_timing_model, TimingModel
 from pint.utils import split_prefixed_name
 from .parameter import prefixParameter
-import os, inspect, fnmatch
+import inspect, fnmatch
 import glob
 import sys
 

@@ -1,7 +1,7 @@
 """This module implements a frequency evolution of pulsar profiles model"""
 from warnings import warn
 from . import parameter as p
-from .timing_model import TimingModel, Cache, MissingParameter
+from .timing_model import TimingModel, MissingParameter
 import astropy.units as u
 import numpy as np
 import pint.utils as ut
