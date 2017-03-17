@@ -18,6 +18,7 @@ class JumpDelay(TimingModel):
         self.add_param(p.maskParameter(name = 'JUMP', units='second'))
         self.delay_funcs['L1'] += [self.jump_delay,]
         self.order_number = -1
+        self.print_par_func = 'print_par_JumpDelay'
         
     def setup(self):
         super(JumpDelay, self).setup()
@@ -50,3 +51,10 @@ class JumpDelay(TimingModel):
         mask = jpar.select_toa_mask(toas)
         d_delay_d_j[mask] = -1.0
         return d_delay_d_j * u.second/jpar.units
+
+    def print_par_JumpDelay(self):
+        result = ''
+        for jump in self.jumps:
+            jump_par = getattr(self, jump)
+            result += jump_par.as_parfile_line()
+        return result

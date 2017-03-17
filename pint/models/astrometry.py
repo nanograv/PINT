@@ -492,7 +492,7 @@ class AstrometryEcliptic(Astrometry):
 
     def print_par_AstrometryEcliptic(self):
         result = ''
-        print_order = ['ELONG', 'ELAT', 'PMELONG', 'PMELAT', 'PX', 'POSEPOCH']
+        print_order = ['ELONG', 'ELAT', 'PMELONG', 'PMELAT', 'PX', 'ECL','POSEPOCH']
         for p in print_order:
             par = getattr(self, p)
             if par.quantity is not None:

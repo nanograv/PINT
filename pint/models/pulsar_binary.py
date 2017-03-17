@@ -27,7 +27,7 @@ class PulsarBinary(TimingModel):
         self.binary_params = []
         self.add_param(p.floatParameter(name="PB",
             units=u.day,
-            description="Orbital period"),
+            description="Orbital period", long_double=True),
             binary_param = True)
 
 
@@ -64,12 +64,12 @@ class PulsarBinary(TimingModel):
 
         self.add_param(p.floatParameter(name="OM",
             units=u.deg,
-            description="Longitude of periastron",longdouble=True),
+            description="Longitude of periastron",long_double=True),
             binary_param = True)
 
         self.add_param(p.floatParameter(name="OMDOT",
             units="deg/year",
-            description="Longitude of periastron", longdouble=True),
+            description="Longitude of periastron", long_double=True),
             binary_param = True)
 
         self.add_param(p.floatParameter(name="M2",

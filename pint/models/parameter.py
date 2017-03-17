@@ -310,7 +310,8 @@ class Parameter(object):
             return ""
         line = "%-15s %25s" % (self.name, self.print_quantity(self.quantity))
         if self.uncertainty is not None:
-            line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty_value))
+            line += " %d %s" % (0 if self.frozen else 1, \
+                                self.print_uncertainty(self.uncertainty))
         elif not self.frozen:
             line += " 1"
         return line + "\n"
@@ -756,9 +757,7 @@ class AngleParameter(Parameter):
 
         self.unitsuffix = self.unit_identifier[units.lower()][1]
         set_quantity = self.set_quantity_angle
-        print_quantity = lambda x: x.to_string(sep=':', precision=8) \
-                        if x.unit != u.rad else x.to_string(decimal = True,
-                        precision=8)
+        print_quantity = self.print_quantity_angle
         #get_value = lambda x: Angle(x * self.unit_identifier[units.lower()][0])
         get_value = lambda x: x.value
         set_uncertainty = self.set_uncertainty_angle
@@ -785,7 +784,7 @@ class AngleParameter(Parameter):
         3. number string
         """
         if isinstance(val, numbers.Number):
-            result = Angle(val * self.units)
+            result = Angle(data2longdouble(val) * self.units)
         elif isinstance(val, str):
             result = Angle(val + self.unitsuffix)
         elif hasattr(val, 'unit'):
@@ -813,6 +812,22 @@ class AngleParameter(Parameter):
             raise ValueError('Angle parameter can not accept '
                              + type(val).__name__ + 'format.')
         return result
+
+    def print_quantity_angle(self, quan):
+        """This is a function to print out the angle parameter.
+        """
+        if ':' in self._str_unit:
+            return quan.to_string(sep=':', precision=8)
+        else:
+            return quan.to_string(decimal = True, precision=8)
+
+    def print_uncertainty(self, unc):
+        """This is a function for printing out the uncertainty
+        """
+        if ':' in self._str_unit:
+            return unc.arcsec.to_string(decimal = True, precision=8)
+        else:
+            return unc.to_string(decimal = True, precision=8)
 
 
 class prefixParameter(object):

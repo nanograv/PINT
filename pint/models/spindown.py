@@ -32,7 +32,7 @@ class Spindown(TimingModel):
                        description="Spindown-rate",
                        unitTplt=self.F_unit,
                        descriptionTplt=self.F_description,
-                       type_match='float'))
+                       type_match='float', long_double=True))
 
         self.add_param(p.MJDParameter(name="TZRMJD",
                        description="Reference epoch for phase = 0.0",
