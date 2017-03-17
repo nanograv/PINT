@@ -389,7 +389,7 @@ class TOA(object):
         if hasattr(freq,'unit'):
             try:
                 junk = freq.to(u.MHz)
-            except UnitConversionError:
+            except u.UnitConversionError:
                 log.error("Frequency for TOA with incompatible unit {0}".format(freq))
             self.freq = freq
         else:
