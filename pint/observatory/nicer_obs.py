@@ -68,7 +68,7 @@ class NICERObs(SpecialLocation):
 
     Note that this must be instantiated once to be put into the Observatory registry."""
 
-    def __init__(self, name, FPorbname):
+    def __init__(self, name, FPorbname, tt2tdb_mode = 'none'):
         self.FPorb = load_FPorbit(FPorbname)
         # Now build the interpolator here:
         self.X = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['X'])
@@ -77,6 +77,7 @@ class NICERObs(SpecialLocation):
         self.Vx = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Vx'])
         self.Vy = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Vy'])
         self.Vz = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Vz'])
+        self.tt2tdb_mode = tt2tdb_mode
         super(NICERObs, self).__init__(name=name)
 
     @property
@@ -86,19 +87,27 @@ class NICERObs(SpecialLocation):
     def earth_location_itrf(self, time=None):
         '''Return NICER spacecraft location in ITRF coordinates'''
 
-        # First, interpolate ECI geocentric location from orbit file.
-        # These are inertial coorinates aligned with ICRF
-        pos_gcrs =  GCRS(CartesianRepresentation(self.X(time.tt.mjd)*u.m,
-                        self.Y(time.tt.mjd)*u.m,
-                        self.Z(time.tt.mjd)*u.m),
-                    obstime=time)
+        if self.tt2tdb_mode.lower().startswith('none'):
+            return None
+        elif self.tt2tdb_mode.lower().startswith('geo'):
+            return EarthLocation.from_geocentric(0.0*u.m,0.0*u.m,0.0*u.m)
+        elif self.tt2tdb_mode.lower().startswith('spacecraft'):
+            # First, interpolate ECI geocentric location from orbit file.
+            # These are inertial coorinates aligned with ICRF
+            pos_gcrs =  GCRS(CartesianRepresentation(self.X(time.tt.mjd)*u.m,
+                                                     self.Y(time.tt.mjd)*u.m,
+                                                     self.Z(time.tt.mjd)*u.m),
+                             obstime=time)
 
-        # Now transform ECI (GCRS) to ECEF (ITRS)
-        # By default, this uses the WGS84 ellipsoid
-        pos_ITRS = pos_gcrs.transform_to(ITRS(obstime=time))
+            # Now transform ECI (GCRS) to ECEF (ITRS)
+            # By default, this uses the WGS84 ellipsoid
+            pos_ITRS = pos_gcrs.transform_to(ITRS(obstime=time))
 
-        # Return geocentric ITRS coordinates as an EarthLocation object
-        return pos_ITRS.earth_location
+            # Return geocentric ITRS coordinates as an EarthLocation object
+            return pos_ITRS.earth_location
+        else:
+            log.error('Unknown tt2tdb_mode %s, using None', self.tt2tdb_mode)
+            return None
 
     @property
     def tempo_code(self):

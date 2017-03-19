@@ -49,7 +49,7 @@ def main(argv=None):
         # Instantiate NICERObs once so it gets added to the observatory registry
         if args.orbfile is not None:
             log.info('Setting up NICER observatory')
-            NICERObs(name='NICER',FPorbname=args.orbfile)
+            NICERObs(name='NICER',FPorbname=args.orbfile,tt2tdb_mode='none')
         # Read event file and return list of TOA objects
         tl  = load_NICER_TOAs(args.eventfile)
     elif hdr['TELESCOP'] == 'XTE':
@@ -57,7 +57,7 @@ def main(argv=None):
         if args.orbfile is not None:
             # Determine what observatory type is.
             log.info('Setting up RXTE observatory')
-            RXTEObs(name='RXTE',FPorbname=args.orbfile)
+            RXTEObs(name='RXTE',FPorbname=args.orbfile,tt2tdb_mode='none')
         # Read event file and return list of TOA objects
         tl  = load_RXTE_TOAs(args.eventfile)
     elif hdr['TELESCOP'].startswith('XMM'):
@@ -134,4 +134,4 @@ def main(argv=None):
         else:
             # Write to new output file
             log.info('Writing output FITS file '+args.outfile)
-            hdulist.writeto(args.outfile,overwrite=False, checksum=True, output_verify='warn')
+            hdulist.writeto(args.outfile,overwrite=True, checksum=True, output_verify='warn')
