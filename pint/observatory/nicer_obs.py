@@ -66,7 +66,21 @@ def load_FPorbit(orbit_filename):
 class NICERObs(SpecialLocation):
     """Observatory-derived class for the NICER photon data.
 
-    Note that this must be instantiated once to be put into the Observatory registry."""
+    Note that this must be instantiated once to be put into the Observatory registry.
+
+    Parameters
+    ----------
+
+    name: str
+        Observatory name
+    ft2name: str
+        File name to read spacecraft position information from
+    tt2tdb_mode: str
+        Selection for mode to use for TT to TDB conversion.
+        'none' = Give no position to astropy.Time()
+        'geo' = Give geocenter position to astropy.Time()
+        'spacecraft' = Give spacecraft ITRF position to astropy.Time()
+"""
 
     def __init__(self, name, FPorbname, tt2tdb_mode = 'none'):
         self.FPorb = load_FPorbit(FPorbname)
@@ -88,8 +102,10 @@ class NICERObs(SpecialLocation):
         '''Return NICER spacecraft location in ITRF coordinates'''
 
         if self.tt2tdb_mode.lower().startswith('none'):
+            log.warning('Using location=None for TT to TDB conversion')
             return None
         elif self.tt2tdb_mode.lower().startswith('geo'):
+            log.warning('Using location geocenter for TT to TDB conversion')
             return EarthLocation.from_geocentric(0.0*u.m,0.0*u.m,0.0*u.m)
         elif self.tt2tdb_mode.lower().startswith('spacecraft'):
             # First, interpolate ECI geocentric location from orbit file.

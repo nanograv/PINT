@@ -116,8 +116,10 @@ class FermiObs(SpecialLocation):
         '''Return Fermi spacecraft location in ITRF coordinates'''
 
         if self.tt2tdb_mode.lower().startswith('none'):
+            log.warning('Using location=None for TT to TDB conversion')
             return None
         elif self.tt2tdb_mode.lower().startswith('geo'):
+            log.warning('Using location geocenter for TT to TDB conversion')
             return EarthLocation.from_geocentric(0.0*u.m,0.0*u.m,0.0*u.m)
         elif self.tt2tdb_mode.lower().startswith('spacecraft'):
             # First, interpolate ECI geocentric location from orbit file.
