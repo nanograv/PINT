@@ -32,3 +32,7 @@ The primary reasons we are developing PINT are:
 
 * To make a system that is easy to extend and modify due to a good design
   and the use of a modern programming language, techniques, and libraries.
+
+Read the complete PINT documentation here_.
+
+.. _here:   http://nanograv-pint.readthedocs.io/en/latest/
