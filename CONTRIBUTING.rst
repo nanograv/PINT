@@ -20,8 +20,10 @@ Report bugs at https://github.com/nanograv/pint/issues.
 If you are reporting a bug, please include:
 
 * Your operating system name and version.
-* Any details about your local setup that might be helpful in troubleshooting.
-* Detailed steps to reproduce the bug.
+* The output of ``pint.__version__`` and ``pint.__file__``
+* Any details about your local setup that might be helpful in troubleshooting,
+such as the command used to install PINT and whether you are using a virtualenv.
+* Detailed steps to reproduce the bug, as simply as possible.
 
 Fix Bugs
 ~~~~~~~~
@@ -91,6 +93,9 @@ Ready to contribute? Here's how to set up `pint` for local development.
 
 7. Submit a pull request through the GitHub website.
 
+8. The maintainers will review and comment on the PR. If accepted, it will be
+merged into the master branch.
+
 Pull Request Guidelines
 -----------------------
 
@@ -100,7 +105,7 @@ Before you submit a pull request, check that it meets these guidelines:
 2. If the pull request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
    feature to the list in README.rst.
-3. The pull request should work for Python 2.6, 2.7, 3.3, 3.4 and 3.5, and for PyPy. Check
+3. The pull request should work for Python 2.7 and 3.5+. Check
    https://travis-ci.org/nanograv/pint/pull_requests
    and make sure that the tests pass for all supported Python versions.
 
