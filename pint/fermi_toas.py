@@ -85,12 +85,17 @@ def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1, loge
 
     # Read time column from FITS file
     mjds = read_fits_event_mjds_tuples(hdulist[1])
+    if len(mjds) == 0:
+        log.error('No MJDs read from file!')
+        raise
 
     energies = ft1dat.field('ENERGY')*u.MeV
     if weightcolumn is not None:
         if weightcolumn == 'CALC':
             photoncoords = SkyCoord(ft1dat.field('RA')*u.degree,ft1dat.field('DEC')*u.degree,frame='icrs')
-            weights = calc_lat_weights(ft1dat.field('ENERGY'), photoncoords.separation(targetcoord), logeref=4.1, logesig=0.5)
+            weights = calc_lat_weights(ft1dat.field('ENERGY'),
+                photoncoords.separation(targetcoord), logeref=logeref,
+                logesig=logesig)
         else:
             weights = ft1dat.field(weightcolumn)
         if minweight > 0.0:

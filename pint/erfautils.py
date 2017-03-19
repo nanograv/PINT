@@ -113,6 +113,7 @@ def topo_posvels(loc, toas, obsname='obs'):
     return utils.PosVel(poss.T * u.m, vels.T * u.m / u.s, obj=obsname, origin="earth")
 
 
+# This seems to be never used!  It also has no docstring!
 def astropy_topo_posvels(loc, toas, obsname='obs'):
     t = Time(toas['tdbld'], scale='tdb', format='mjd')
     pos, vel = loc.get_gcrs_posvel(t)

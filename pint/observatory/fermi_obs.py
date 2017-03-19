@@ -6,7 +6,7 @@ from __future__ import division, print_function
 from . import Observatory
 from .special_locations import SpecialLocation
 import astropy.units as u
-from astropy.coordinates import EarthLocation
+from astropy.coordinates import GCRS, ITRS, EarthLocation, CartesianRepresentation
 from ..utils import PosVel
 from ..fits_utils import read_fits_event_mjds
 from ..solar_system_ephemerides import objPosVel_wrt_SSB
@@ -18,12 +18,15 @@ from astropy.extern import six
 from astropy import log
 from scipy.interpolate import InterpolatedUnivariateSpline
 
-
 def load_FT2(ft2_filename):
     '''Load data from a Fermi FT2 file
 
         The contents of the FT2 file are described here:
         https://fermi.gsfc.nasa.gov/ssc/data/analysis/documentation/Cicerone/Cicerone_Data/LAT_Data_Columns.html#SpacecraftFile
+        The coordinates are X, Y, Z in the ECI (Earth-Centered Inertial)
+        frame. I (@paulray) **believe** this is the same as astropy's GCRS
+        <http://docs.astropy.org/en/stable/api/astropy.coordinates.GCRS.html>,
+        but this should be confirmed.
 
         Parameters
         ----------
@@ -77,9 +80,23 @@ def load_FT2(ft2_filename):
 class FermiObs(SpecialLocation):
     """Observatory-derived class for the Fermi FT1 data.
 
-    Note that this must be instantiated once to be put into the Observatory registry."""
+    Note that this must be instantiated once to be put into the Observatory registry.
 
-    def __init__(self, name, ft2name):
+    Parameters
+    ----------
+
+    name: str
+        Observatory name
+    ft2name: str
+        File name to read spacecraft position information from
+    tt2tdb_mode: str
+        Selection for mode to use for TT to TDB conversion.
+        'none' = Give no position to astropy.Time()
+        'geo' = Give geocenter position to astropy.Time()
+        'spacecraft' = Give spacecraft ITRF position to astropy.Time()
+    """
+
+    def __init__(self, name, ft2name, tt2tdb_mode = 'NONE'):
         self.FT2 = load_FT2(ft2name)
         # Now build the interpolator here:
         self.X = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['X'])
@@ -88,18 +105,39 @@ class FermiObs(SpecialLocation):
         self.Vx = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Vx'])
         self.Vy = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Vy'])
         self.Vz = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Vz'])
+        self.tt2tdb_mode = tt2tdb_mode
         super(FermiObs, self).__init__(name=name)
 
     @property
     def timescale(self):
         return 'tt'
 
-    def earth_location(self, time=None):
-        # Interpolate geocentric location from orbit file
-        pos = EarthLocation.from_geocentric(self.X(time.tt.mjd),
-                                self.Y(time.tt.mjd),
-                                self.Z(time.tt.mjd), unit=u.m)
-        return pos
+    def earth_location_itrf(self, time=None):
+        '''Return Fermi spacecraft location in ITRF coordinates'''
+
+        if self.tt2tdb_mode.lower().startswith('none'):
+            log.warning('Using location=None for TT to TDB conversion')
+            return None
+        elif self.tt2tdb_mode.lower().startswith('geo'):
+            log.warning('Using location geocenter for TT to TDB conversion')
+            return EarthLocation.from_geocentric(0.0*u.m,0.0*u.m,0.0*u.m)
+        elif self.tt2tdb_mode.lower().startswith('spacecraft'):
+            # First, interpolate ECI geocentric location from orbit file.
+            # These are inertial coorinates aligned with ICRF
+            pos_gcrs =  GCRS(CartesianRepresentation(self.X(time.tt.mjd)*u.m,
+                                                     self.Y(time.tt.mjd)*u.m,
+                                                     self.Z(time.tt.mjd)*u.m),
+                             obstime=time)
+
+            # Now transform ECI (GCRS) to ECEF (ITRS)
+            # By default, this uses the WGS84 ellipsoid
+            pos_ITRS = pos_gcrs.transform_to(ITRS(obstime=time))
+
+            # Return geocentric ITRS coordinates as an EarthLocation object
+            return pos_ITRS.earth_location
+        else:
+            log.error('Unknown tt2tdb_mode %s, using None', self.tt2tdb_mode)
+            return None
 
     @property
     def tempo_code(self):
@@ -107,6 +145,9 @@ class FermiObs(SpecialLocation):
 
     def posvel(self, t, ephem):
         '''Return position and velocity vectors of Fermi, wrt SSB.
+
+        These positions and velocites are in inertial coordinates
+        (i.e. aligned with ITRF)
 
         t is an astropy.Time or array of astropy.Times
         '''

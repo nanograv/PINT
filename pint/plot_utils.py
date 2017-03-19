@@ -107,7 +107,7 @@ def phaseogram_binned(mjds, phases, weights=None, title=None, bins=64, rotate=0.
                     bin = int(ph*bins)
                     profile[bin] += 1
 
-            for i in xrange(bins):
+            for i in range(bins):
                 a.append(profile[i])
 
         a = np.array(a)

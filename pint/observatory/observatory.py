@@ -100,10 +100,14 @@ class Observatory(object):
     ### Any which raise NotImplementedError below must be implemented in
     ### derived classes.
 
-    def earth_location(self, time=None):
+    def earth_location_itrf(self, time=None):
         """Returns observatory geocentric position as an astropy
         EarthLocation object.  For observatories where this is not
         relevant, None can be returned.
+
+        The location is in the International Terrestrial Reference Frame (ITRF).
+        The realization of the ITRF is determined by astropy,
+        which uses ERFA (IAU SOFA).
 
         The time argument is ignored for observatories with static
         positions. For moving observaties (e.g. spacecraft), it
