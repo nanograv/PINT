@@ -86,9 +86,8 @@ def main(argv=None):
     weights = np.array([w['weight'] for w in ts.table['flags']])
     h = float(hmw(phases,weights))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h,h2sig(h)))
-    log.info('plot {0}'.format(args.plot))
     if args.plot:
-        log.info("Making phaseogram plot" + str(len(mjds)))
+        log.info("Making phaseogram plot with {0} photons".format(len(mjds)))
         phaseogram(mjds,phases,weights,bins=100,plotfile = args.plotfile)
 
     if args.addphase:
@@ -122,6 +121,6 @@ def main(argv=None):
         else:
             # Write to new output file
             log.info('Writing output FITS file '+args.outfile)
-            hdulist.writeto(args.outfile,overwrite=False, checksum=True, output_verify='warn')
+            hdulist.writeto(args.outfile,overwrite=True, checksum=True, output_verify='warn')
 
     return 0

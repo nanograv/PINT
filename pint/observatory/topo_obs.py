@@ -70,8 +70,8 @@ class TopoObs(Observatory):
                     "Incorrect coordinate dimensions for observatory '%s'" % (
                         name))
 
-        # Convert to astropy EarthLocation, ensuring use of geocentric coordinates
-        self._loc = EarthLocation.from_geocentric(*xyz)
+        # Convert to astropy EarthLocation, ensuring use of ITRF geocentric coordinates
+        self._loc_itrf = EarthLocation.from_geocentric(*xyz)
 
         # Save clock file info, the data will be read only if clock
         # corrections for this site are requested.
@@ -111,7 +111,7 @@ class TopoObs(Observatory):
             # location from CLKDIR line...
             dir = os.path.join(os.getenv('TEMPO'),'clock')
         elif self.clock_dir=='TEMPO2':
-            dir = os.path.joins(os.getenv('TEMPO2'),'clock')
+            dir = os.path.join(os.getenv('TEMPO2'),'clock')
         else:
             dir = self.clock_dir
         return os.path.join(dir,self.clock_file)
@@ -140,8 +140,8 @@ class TopoObs(Observatory):
     def timescale(self):
         return 'utc'
 
-    def earth_location(self, time=None):
-        return self._loc
+    def earth_location_itrf(self, time=None):
+        return self._loc_itrf
 
     def clock_corrections(self, t):
         # Read clock file if necessary
@@ -166,5 +166,5 @@ class TopoObs(Observatory):
     def posvel(self, t, ephem):
         if t.isscalar: t = Time([t])
         earth_pv = objPosVel_wrt_SSB('earth', t, ephem)
-        obs_topo_pv = topo_posvels(self.earth_location(), t, obsname=self.name)
+        obs_topo_pv = topo_posvels(self.earth_location_itrf(), t, obsname=self.name)
         return obs_topo_pv + earth_pv

@@ -5,9 +5,12 @@ Credits
 Development Leads
 -----------------
 
+In alphabetical order:
+
 * Anne Archibald
 * Matteo Bachetti
 * Paul Demorest
+* Justin A. Ellis
 * Luo Jing
 * Rick Jenet
 * Scott Ransom
@@ -15,7 +18,6 @@ Development Leads
 * Chris Sheehy
 * Michele Vallisneri
 * Rutger van Haasteren
-* Justin A. Ellis
 
 Contributors
 ------------

@@ -6,7 +6,6 @@ author: M. Kerr <matthew.kerr@gmail.com>
 """
 
 import numpy as np
-from astropy.extern.six.moves import range
 
 TWOPI = np.pi*2
 
@@ -25,7 +24,7 @@ def from_array(x):
 
 
 def sig2sigma(sig,two_tailed=True,logprob=False):
-    """Convert tail probability to "sigma" units, i.e., find the value of the 
+    """Convert tail probability to "sigma" units, i.e., find the value of the
        argument for the normal distribution beyond which the integrated tail
        probability is sig.  Note that the default is to interpret this number
        as the two-tailed value, as this is the quantity that goes to 0
@@ -103,7 +102,7 @@ def sigma_trials(sigma,trials):
 
 def z2m(phases,m=2):
     """ Return the Z^2_m test for each harmonic up to the specified m.
-        See de Jager et al. 1989 for definition.    
+        See de Jager et al. 1989 for definition.
     """
 
     phases = np.asarray(phases)*TWOPI #phase in radians
@@ -148,7 +147,7 @@ def sf_z2m(ts,m=2):
     return chi2.sf(ts,2*m)
 
 def best_m(phases,weights=None,m=100):
-    z = z2mw(phases,np.ones_like(phases) if weights is None else weights,m=m) 
+    z = z2mw(phases,np.ones_like(phases) if weights is None else weights,m=m)
     return np.arange(1,m+1)[np.argmax(z-4*np.arange(0,m))]
 
 def em_four(phases,m=2,weights=None):

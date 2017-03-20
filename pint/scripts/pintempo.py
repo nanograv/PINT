@@ -2,7 +2,7 @@
 """Command-line interface for PINT
 
 This is a command-line interface for PINT. It does *not* try to duplicate the
-command line syntax for either TEMPO or Tempo2. (I never understood why I had to 
+command line syntax for either TEMPO or Tempo2. (I never understood why I had to
 specify '-f parfile' to those codes -- I mean, who runs TEMPO without a timing model?)
 
 This is currently just a stub and should be added to and expanded, as desired.
@@ -27,6 +27,7 @@ def main(argv=None):
     parser.add_argument("timfile",help="TOA file name")
     parser.add_argument("--outfile",help="Output par file name (default=None)", default=None)
     parser.add_argument("--plot",help="Plot residuals",action="store_true",default=False)
+    parser.add_argument("--plotfile",help="Plot file name", default=None)
     args = parser.parse_args(argv)
 
     log.info("Reading model from {0}".format(args.parfile))
@@ -47,17 +48,21 @@ def main(argv=None):
 
     if args.plot:
         import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(figsize=(8,4.5))
         xt = t.get_mjds()
-        plt.errorbar(xt,prefit_resids.to(u.us).value,
+        ax.errorbar(xt,prefit_resids.to(u.us).value,
                     t.get_errors().to(u.us).value, fmt='o')
-        plt.errorbar(xt,
-                 f.resids.time_resids.to(u.us).value,
-                 t.get_errors().to(u.us).value, fmt='x')
-        plt.title("%s Timing Residuals" % m.PSR.value)
-        plt.xlabel('MJD')
-        plt.ylabel('Residual (us)')
-        plt.grid()
-        plt.show()
+        ax.errorbar(xt,
+              f.resids.time_resids.to(u.us).value,
+              t.get_errors().to(u.us).value, fmt='x')
+        ax.set_title("%s Timing Residuals" % m.PSR.value)
+        ax.set_xlabel('MJD')
+        ax.set_ylabel('Residual (us)')
+        ax.grid()
+        if args.plotfile is not None:
+            fig.savefig(args.plotfile)
+        else:
+            fig.show()
 
     if args.outfile is not None:
         fout = file(args.outfile,"w")
@@ -67,6 +72,3 @@ def main(argv=None):
 
     fout.write(f.model.as_parfile()+"\n")
     return 0
-
-
-
