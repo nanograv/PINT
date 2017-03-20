@@ -89,13 +89,11 @@ class DispersionDMX(Dispersion):
                        paramter_type='float'))
         self.add_param(p.prefixParameter(name='DMXR1_0001',
                        units="MJD",
-                       value=time.Time(0.0, scale='utc', format='pulsar_mjd'),
                        unitTplt=lambda x: "MJD",
                        description='Beginning of DMX interval',
                        descriptionTplt=lambda x: 'Beginning of DMX interval',
                        parameter_type='MJD', time_scale='utc'))
         self.add_param(p.prefixParameter(name='DMXR2_0001', units="MJD",
-                       value=time.Time(0.0, scale='utc', format='pulsar_mjd'),
                        unitTplt=lambda x: "MJD",
                        description='End of DMX interval',
                        descriptionTplt=lambda x: 'End of DMX interval',
