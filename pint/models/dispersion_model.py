@@ -8,7 +8,7 @@ from .timing_model import TimingModel, Cache
 import astropy.units as u
 import numpy as np
 import pint.utils as ut
-import astropy.time as time
+
 # The units on this are not completely correct
 # as we don't really use the "pc cm^3" units on DM.
 # But the time and freq portions are correct
