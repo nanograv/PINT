@@ -18,6 +18,7 @@ from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble,\
 
 class Spindown(TimingModel):
     """This class provides a simple timing model for an isolated pulsar."""
+    register = True
     def __init__(self):
         super(Spindown, self).__init__()
 
@@ -31,7 +32,7 @@ class Spindown(TimingModel):
                        description="Spindown-rate",
                        unitTplt=self.F_unit,
                        descriptionTplt=self.F_description,
-                       type_match='float'))
+                       type_match='float', long_double=True))
 
         self.add_param(p.MJDParameter(name="TZRMJD",
                        description="Reference epoch for phase = 0.0",
@@ -42,6 +43,7 @@ class Spindown(TimingModel):
                        time_scale='tdb'))
 
         self.phase_funcs += [self.spindown_phase,]
+        self.order_number = 1
 
     def setup(self):
         super(Spindown, self).setup()

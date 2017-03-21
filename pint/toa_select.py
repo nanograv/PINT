@@ -1,52 +1,132 @@
 import numpy as np
-
+import copy
 class TOASelect(object):
-    """This class is designed for select toas based on a key word and key value.
-    It will check toa table and do table operation.
     """
-    def __init__(self, key, key_value):
-        self.key = key.replace('-','')
-        self.key_value = key_value
-        self.key_section = key + '_section'
-        self.range_select = False
-        if len(key_value) > 1:
-            self.range_select = True
+    This class is designed for select toas from toa table based on a given
+    condition. The selection result will be saved in the `select_result`
+    attribute as a mini caching for the future calculation.
+    Parameter
+    ---------
+    is_range: bool
+        If this toa seclection a range selection.
+    use_hash: bool, optional [defualt: False]
+        If use hash for caching.
+    Note
+    ----
+    The supported condition types are:
+        Ranged condition in the format of
+        {'DMX_0001':(54000, 54001), ...}
+        Key condition in the format of
+        {'JUMP1': 'L-wide', ...}
 
-    def check_table_keys(self, toas):
-        table_keys = toas.keys()
-        if 'flags' in table_keys:
-            flag_names = toas['flags'][0].keys()
-        return table_keys, flag_names
+    Putting an object as condition will slow the process dramtically.
+    """
+    def __init__(self, is_range, use_hash=False):
+        self.is_range = is_range
+        self.use_hash = use_hash
+        self.hash_dict = {}
+        self.columns_info = {}
+        self.select_result = {}
 
-    def get_key_section(self, toas):
-        table_keys, flags = self.check_table_keys(toas)
-        if self.key in flags:
-            flag_value = []
-            for ii, flags_dict in enumerate(toas['flags']):
-                try:
-                    flag_value.append(flags_dict[self.key])
-                except: # TODO allow flags has empty element.
-                    raise RuntimeError('TOA %d does not have flag %s.' % (ii, self.key))
-            self.key_section = self.key + '_section'
-            toas[self.key_section] = flag_value
-        elif self.key.lower() in table_keys:
-            self.key_section = self.key.lower()
-            return
-        else:
-            raise ValueError("Key %s is not a flag or toas table key." % self.key)
-
-    def get_toa_key_mask(self, toas):
-        """This is a function to return toas mask depend on key word and key value.
+    def check_condition(self, new_cond):
         """
-        if self.key_section not in toas.keys():
-            self.get_key_section(toas)
-        if not self.range_select:
-            group = toas.group_by(self.key_section)
-            mask = group.groups.keys[self.key_section] == self.key_value[0]
-            return group.groups[mask]['index']
+        Check if the condition that same with old input. The new condition's
+        information will be updated to the 'condition' attribute.
+        Parameter
+        ---------
+        new_cond : dict
+            New condition for selection.
+        """
+        condition_chg = {}
+        condition_unchg = {}
+        if not hasattr(self, 'condition'):
+            self.condition = new_cond
+            condition_chg = new_cond
         else:
-            r1 = self.key_value[0]
-            r2 = self.key_value[1]
-            mask = np.logical_and(toas[self.key_section] >= r1,
-                                 toas[self.key_section] <= r2)
-            return toas[mask]['index']
+            old = set(self.condition.items())
+            new = set(new_cond.items())
+            # Get the condition entries have not been changed
+            unchg = set.intersection(old, new)
+            # Get the conditon entries have been changed
+            chg = new - old
+            condition_chg = dict(chg)
+            condition_unchg = dict(unchg)
+            self.condition.update(dict(chg))
+        return condition_unchg, condition_chg
+
+    def check_table_column(self, new_column):
+        """
+        This is a function checks if a table column has been changed from the old
+        one. The column information will be updated to the new column if they
+        are not the same.
+        Parameter
+        ---------
+        column: toas.table column
+            The toa table column that the condition is applied on
+        Return
+        ------
+        True for column is the same as old one
+        False for column has been changed.
+        """
+        if self.use_hash:
+            if new_column.name not in self.hash_dict.keys():
+                self.hash_dict[new_column.name] = hash(new_column.tostring())
+                return False
+            else:
+                if self.hash_dict[new_column.name] == hash(new_column.tostring()):
+                    return True
+                else:
+                    # update hash value to new column
+                    self.hash_dict[new_column.name] = hash(new_column.tostring())
+                    return False
+        else:
+            if new_column.name not in self.columns_info.keys():
+                self.columns_info[new_column.name] = new_column
+                return False
+            else:
+                if np.array_equal(self.columns_info[new_column.name], new_column):
+                    return True
+                else:
+                    self.columns_info[new_column.name] =  new_column
+                    return False
+
+    def get_select_range(self, condition, column):
+        """
+        A function get the selected toa index via a range comparision.
+        """
+        result = {}
+        for k, v in condition.items():
+            msk = np.logical_and(column >= v[0], column <= v[1])
+            result[k] = np.where(msk)[0]
+        return result
+
+    def get_select_non_range(self, condition, column):
+        """
+        A function get the selected toa index via compare the key value.
+        """
+        result = {}
+        for k, v in condition.items():
+            index = np.where(column == v)[0]
+            result[k] = index
+        return result
+
+    def get_select_index(self, condition, column):
+        # Check if condition get changed
+        cd_unchg, cd_chg = self.check_condition(condition)
+        # check if column get changed.
+        col_change = self.check_table_column(column)
+        if col_change:
+            if self.is_range:
+                new_select = self.get_select_range(cd_chg, column)
+            else:
+                new_select = self.get_select_non_range(cd_chg, column)
+            self.select_result.update(new_select)
+            return {k: self.select_result[k] for k in condition.keys()}
+
+        else:
+            if self.is_range:
+                new_select = self.get_select_range(condition, column)
+            else:
+                new_select = self.get_select_non_range(condition, column)
+            self.select_result = new_select
+            return new_select

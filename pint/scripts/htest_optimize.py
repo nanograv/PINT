@@ -3,6 +3,7 @@
 # At the moment, this code is kind of an unsupported hack.
 # It will not be installed by setup.py and not tested by nosetests.
 
+from __future__ import print_function
 import numpy as np
 import pint.toa as toa
 import pint.models
@@ -121,12 +122,12 @@ class emcee_fitter(Fitter):
         lnlikelihood = -1.0*sf_hm(hmw(phases,weights=self.weights),logprob=True)
         numcalls += 1
         if numcalls % (nwalkers * nsteps / 100) == 0:
-            print "~%d%% complete" % (numcalls / (nwalkers * nsteps / 100))
+            print("~%d%% complete" % (numcalls / (nwalkers * nsteps / 100)))
         lnpost = self.lnprior(theta) + lnlikelihood
         if lnpost > maxpost:
-            print "New max: ", lnpost
+            print("New max: ", lnpost)
             for name, val in zip(ftr.fitkeys, theta):
-                print "  %8s: %25.15g" % (name, val)
+                print("  %8s: %25.15g" % (name, val))
             maxpost = lnpost
             self.maxpost_fitvals = theta
         return lnpost
@@ -145,7 +146,7 @@ class emcee_fitter(Fitter):
         # of getting that value or higher. So this is already a negative
         # log likelihood, and should be minimized.
         lnlikelihood = sf_hm(hmw(phases, self.weights),logprob=True)
-        print lnlikelihood, ntheta
+        print(lnlikelihood, ntheta)
         return lnlikelihood
 
     def phaseogram(self, bins=100, rotate=0.0, size=5,
@@ -214,7 +215,7 @@ def main(argv=None):
         eventfile, parfile = sys.argv[1:]
         weightcol=None
     else:
-        print "usage: htest_optimize eventfile parfile [weightcol]"
+        print("usage: htest_optimize eventfile parfile [weightcol]")
         sys.exit()
 
     # Read in initial model
@@ -239,7 +240,7 @@ def main(argv=None):
         # Limit the TOAs to ones where we have IERS corrections for
         tl = [tl[ii] for ii in range(len(tl)) if (tl[ii].mjd.value < maxMJD
             and (weightcol is None or tl[ii].flags['weight'] > minWeight))]
-        print "There are %d events we will use" % len(tl)
+        print("There are %d events we will use" % len(tl))
         # Now convert to TOAs object and compute TDBs and posvels
         ts = toa.TOAs(toalist=tl)
         ts.filename = eventfile
@@ -255,8 +256,8 @@ def main(argv=None):
     if weightcol is not None:
         if weightcol=='CALC':
             weights = np.asarray([x['weight'] for x in ts.table['flags']])
-            print "Original weights have min / max weights %.3f / %.3f" % \
-                (weights.min(), weights.max())
+            print("Original weights have min / max weights %.3f / %.3f" % \
+                (weights.min(), weights.max()))
             weights **= wgtexp
             wmx, wmn = weights.max(), weights.min()
                 # make the highest weight = 1, but keep min weight the same
@@ -264,11 +265,11 @@ def main(argv=None):
             for ii, x in enumerate(ts.table['flags']):
                 x['weight'] = weights[ii]
         weights = np.asarray([x['weight'] for x in ts.table['flags']])
-        print "There are %d events, with min / max weights %.3f / %.3f" % \
-            (len(weights), weights.min(), weights.max())
+        print("There are %d events, with min / max weights %.3f / %.3f" % \
+            (len(weights), weights.min(), weights.max()))
     else:
         weights = None
-        print "There are %d events, no weights are being used." % (len(weights))
+        print("There are %d events, no weights are being used." % (len(weights)))
 
     # Now define the requirements for emcee
     ftr = emcee_fitter(ts, modelin, weights)
@@ -283,7 +284,7 @@ def main(argv=None):
     # Now compute the photon phases and see if we see a pulse
     phss = ftr.get_event_phases()
     like_start = -1.0*sf_hm(hmw(phss,weights=ftr.weights),logprob=True)
-    print "Starting pulse likelihood:", like_start
+    print("Starting pulse likelihood:", like_start)
     ftr.phaseogram(file=ftr.model.PSR.value+"_pre.png")
     plt.close()
     ftr.phaseogram()
@@ -301,7 +302,7 @@ def main(argv=None):
         result = op.minimize(ftr.minimize_func, np.zeros_like(ftr.fitvals))
         newfitvals = np.asarray(result['x']) * ftr.fiterrs + ftr.fitvals
         like_optmin = -result['fun']
-        print "Optimization likelihood:", like_optmin
+        print("Optimization likelihood:", like_optmin)
         ftr.set_params(dict(zip(ftr.fitkeys, newfitvals)))
         ftr.phaseogram()
     else:
@@ -404,9 +405,9 @@ def main(argv=None):
     # Print the best MCMC values and ranges
     ranges = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
         zip(*np.percentile(samples, [16, 50, 84], axis=0)))
-    print "Post-MCMC values (50th percentile +/- (16th/84th percentile):"
+    print("Post-MCMC values (50th percentile +/- (16th/84th percentile):")
     for name, vals in zip(ftr.fitkeys, ranges):
-        print "%8s:"%name, "%25.15g (+ %12.5g  / - %12.5g)"%vals
+        print("%8s:"%name, "%25.15g (+ %12.5g  / - %12.5g)"%vals)
 
     # Put the same stuff in a file
     f = open(ftr.model.PSR.value+"_results.txt", 'w')

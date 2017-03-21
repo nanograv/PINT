@@ -8,8 +8,9 @@ import astropy.time as time
 import numpy as np
 import pint.utils as utils
 import astropy.units as u
+from astropy.table import Table
 import copy
-import inspect
+import abc
 
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
@@ -97,6 +98,21 @@ class Cache(object):
         return use_cached_results
 
 
+class ModelMeta(abc.ABCMeta):
+    """
+    This is a Meta class for timing model registeration. In order ot get a
+    timing model registered, a member called 'register' has to be set true in the
+    TimingModel subclass.
+    """
+    def __init__(cls, name, bases, dct):
+        regname = '_model_list'
+        if not hasattr(cls,regname):
+            setattr(cls,regname,{})
+        if 'register' in dct:
+            if cls.register:
+                getattr(cls,regname)[name] = cls
+        super(ModelMeta, cls).__init__(name, bases, dct)
+
 
 class TimingModel(object):
     """
@@ -142,6 +158,7 @@ class TimingModel(object):
     phase_derivs_wrt_delay : list
         All the phase derivatives respect to delay.
     """
+    __metaclass__ = ModelMeta
     def __init__(self):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
@@ -159,7 +176,8 @@ class TimingModel(object):
         self.delay_derivs = {}
         self.phase_derivs = {}
         self.phase_derivs_wrt_delay = []
-
+        self.order_number = None
+        self.print_par_func = ''
     def setup(self):
         """This is a abstract class for setting up timing model class. It is designed for
         reading .par file and check parameters.
@@ -176,6 +194,8 @@ class TimingModel(object):
 
         if binary_param is True:
             self.binary_params +=[param.name,]
+        if hasattr(self, '_param_table'):
+            param_row = [param.name, ]
 
     def remove_param(self, param):
         delattr(self, param)
@@ -248,6 +268,22 @@ class TimingModel(object):
                 return pa
         # if not found any thing.
         return ''
+
+    def sort_model_components(self):
+        # initiate the sorted_components
+        sorted_list = ['']*len(self.components.keys())
+        in_placed = []
+        not_in_placed = []
+        for cp, cpv in self.components.items():
+            if cpv.order_number is not None:
+                sorted_list[cpv.order_number] = cp
+                in_placed.append(cp)
+            else:
+                not_in_placed.append(cp)
+        for nicp in not_in_placed:
+            idx = sorted_list.index('')
+            sorted_list[idx] = nicp
+        return sorted_list
 
     #@Cache.use_cache
     def phase(self, toas):
@@ -565,15 +601,37 @@ class TimingModel(object):
             result += str(getattr(self, par)) + "\n"
         return result
 
+    def print_param_control(self, control_info={'UNITS': 'TDB', 'TIMEEPH':'FB90'},
+                          order=['UNITS', 'TIMEEPH']):
+        result = ""
+        for pc in order:
+            if pc not in control_info.keys():
+                continue
+            result += pc + ' ' + control_info[pc] + '\n'
+        return result
+
+    def print_param_component(self, component_name):
+        result = ''
+        if component_name not in self.components:
+            return result
+        else:
+            if hasattr(self, self.components[component_name].param_print_func):
+                result += getattr(self, self.components[component_name].param_print_func)()
+            else:
+                for p in self.components[component_name].params:
+                    par = getattr(self, p)
+                    if par.quantity is not None:
+                        result += par.as_parfile_line()
+        return result
+
     def as_parfile(self):
         """Returns a parfile representation of the entire model as a string."""
         result = ""
-        for par in self.params:
-            result += getattr(self, par).as_parfile_line()
-        # Always include UNITS in par file. For now, PINT only supports TDB
-        result += "UNITS TDB\n"
-        if hasattr(self,'binary_model_name'):
-            result += "BINARY {0}\n".format(self.binary_model_name)
+        result += self.PSR.as_parfile_line()
+        sort_comps = self.sort_model_components()
+        for scp in sort_comps:
+            result += self.print_param_component(scp)
+        result += self.print_param_control()
         return result
 
     def read_parfile(self, filename):
@@ -678,12 +736,46 @@ class TimingModel(object):
                     return True
                 else:
                     continue
-
             # TODO Check prefix parameter
-
             return False
 
         return True
+
+class ComponentInfo(object):
+    """
+    This is a class to save the components information before it get combined
+    to a specific timing model
+    Parameter
+    ---------
+    comp : TimingModel component object
+        The timing model component object
+    """
+    def __init__(self, comp):
+        self.name = comp.__class__.__name__
+        comp.params.remove('PSR')
+        self.params = comp.params
+        #NOTE This should be changed in the future
+        self.param_print_func = comp.print_par_func
+        self.order_number = comp.order_number
+    def is_param_in_component(self, param):
+        if param in self.params:
+            return True
+        else:
+            match = False
+            try:
+                p, i, iv = utils.split_prefixed_name(param)
+                for cp in self.params:
+                    if cp.startswith(p):
+                        try:
+                            cpp, cpi, cpiv = utils.split_prefixed_name(param)
+                            if cpp == p:
+                                match = True
+                                break
+                        except:
+                            continue
+                return match
+            except:
+                return match
 
 def generate_timing_model(name, components, attributes={}):
 
@@ -703,6 +795,7 @@ def generate_timing_model(name, components, attributes={}):
         numComp = len(components)
     except:
         components = (components,)
+    cps = {}
     for c in components:
         try:
             if not issubclass(c,TimingModel):
@@ -711,6 +804,10 @@ def generate_timing_model(name, components, attributes={}):
         except:
             raise(TypeError("generate_timing_model() Arg 2"+
                             "has to be a tuple of classes"))
+        cp = c()
+        cpi = ComponentInfo(cp)
+        cps[cpi.name] = cpi
+    attributes['components'] = cps
 
     return type(name, components, attributes)
 
