@@ -12,8 +12,7 @@ from ..utils import PosVel, has_astropy_unit
 from ..solar_system_ephemerides import objPosVel_wrt_SSB
 from ..config import datapath
 from ..erfautils import topo_posvels
-from astropy.utils.exceptions import AstropyWarning
-import warnings
+
 
 class TopoObs(Observatory):
     """Class for representing observatories that are at a fixed location
@@ -154,13 +153,8 @@ class TopoObs(Observatory):
         corr = self._clock.evaluate(t)
         if self.include_gps:
             if self._gps_clock is None:
-                #NOTE GPS_clk correction file has a time far in the future in the
-                # end
-                # We are swithing off astropy warning only for gps correction.
-                with warnings.catch_warnings():
-                    warnings.simplefilter('ignore', AstropyWarning)
-                    self._gps_clock = ClockFile.read(self.gps_fullpath,
-                            format='tempo2')
+                self._gps_clock = ClockFile.read(self.gps_fullpath,
+                        format='tempo2')
             corr += self._gps_clock.evaluate(t)
         if self.include_bipm:
             tt2tai = 32.184 * 1e6 * u.us
