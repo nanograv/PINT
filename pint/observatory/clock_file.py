@@ -7,6 +7,8 @@ import numpy
 import astropy.units as u
 from astropy.time import Time
 from astropy import log
+from astropy.utils.exceptions import AstropyWarning
+import warnings
 
 class ClockFileMeta(type):
     """Metaclass that provides a registry for different clock file formats.
@@ -110,7 +112,11 @@ class TempoClockFile(ClockFile):
         self.filename = filename
         self.obscode = obscode
         mjd, clk = self.load_tempo1_clock_file(filename,site=obscode)
-        self._time = Time(mjd, format='pulsar_mjd', scale='utc')
+        #NOTE Clock correction file has a time far in the future as ending point
+        # We are swithing off astropy warning only for gps correction.
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', AstropyWarning)
+            self._time = Time(mjd, format='pulsar_mjd', scale='utc')
         self._clock = clk * u.us
 
     @staticmethod
