@@ -1110,7 +1110,7 @@ class maskParameter(floatParameter):
                  value=None, long_double=False, units= None, description=None,
                  uncertainty=None, frozen=True, continuous=False, aliases=None):
         self.is_mask = True
-        self.key_identifier = {'mjd': (lambda x: time.Time(x, format='mjd'), 2),
+        self.key_identifier = {'mjd': (lambda x: time.Time(x, format='mjd').mjd, 2),
                                 'freq': (float, 2),
                                 'name': (str, 1),
                                 'tel': (str, 1)}
@@ -1133,6 +1133,7 @@ class maskParameter(floatParameter):
         self.index = index
         name_param = name + str(index)
         self.origin_name = name
+        self.prefix = self.origin_name
         super(maskParameter, self).__init__(name=name_param, value=value,
                                             units=units,
                                             description=description,
@@ -1148,6 +1149,7 @@ class maskParameter(floatParameter):
             self.aliases.append(name)
         self.from_parfile_line = self.from_parfile_line_mask
         self.as_parfile_line = self.as_parfile_line_mask
+        self.is_prefix = True
 
     def __str__(self):
         out = self.name
@@ -1266,11 +1268,38 @@ class maskParameter(floatParameter):
     def select_toa_mask(self, toas):
         """Select the toas.
         Parameter
-        ----------
+        ---------
         toas : toas table
         Return
-        ----------
-        A mask array. the select toas are masked as True.
+        ------
+        A array of returned index.
         """
-        self.toa_select = TOASelect(self.key, self.key_value)
-        return self.toa_select.get_toa_key_mask(toas)
+        column_match = {'mjd': 'mjd_float',
+                        'freq': 'freq',
+                        'tel': 'obs'}
+        if len(self.key_value) == 1:
+            if not hasattr(self, 'toa_selector'):
+                self.toa_selector = TOASelect(is_range=False, use_hash=True)
+            condition = {self.name: self.key_value[0]}
+        elif len(self.key_value) == 2:
+            if not hasattr(self, 'toa_selector'):
+                self.toa_selector = TOASelect(is_range=True, use_hash=True)
+            condition = {self.name: tuple(self.key_value)}
+        else:
+            raise ValueError('Parameter %s has more key values than '
+                             'expected.(Expect 1 or 2 key values)' % self.name)
+        # get the table columns
+        # TODO Right now it is only supports mjd, freq, tel, and flagkeys,
+        # We need to consider some more complicated situation
+        key = self.key.replace('-', '')
+        if key not in column_match.keys(): # This only works for the one with flags.
+            section_name = key+'_section'
+            if section_name not in toas.keys():
+                flag_col = [x.get(key, None) for x in toas['flags']]
+                toas[section_name] = flag_col
+            col = toas[section_name]
+        else:
+            col = toas[column_match[key]]
+        select_idx = self.toa_selector.get_select_index(condition, col)
+
+        return select_idx[self.name]
