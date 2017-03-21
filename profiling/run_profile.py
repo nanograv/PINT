@@ -1,4 +1,8 @@
 """ This is a script for profiling a python script.
+NOTE:
+this script uses a program gprof2dot which can be downloaded at
+https://github.com/jrfonseca/gprof2dot
+
 The 100 most time consumed runs will be listed in the screen. Depending the
 selected output sort key.
 A .png image file with the name <script_name> + <git_branch_name>.png will be
