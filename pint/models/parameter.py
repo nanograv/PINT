@@ -310,7 +310,8 @@ class Parameter(object):
             return ""
         line = "%-15s %25s" % (self.name, self.print_quantity(self.quantity))
         if self.uncertainty is not None:
-            line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty_value))
+            line += " %d %s" % (0 if self.frozen else 1, \
+                                self.print_uncertainty(self.uncertainty))
         elif not self.frozen:
             line += " 1"
         return line + "\n"
@@ -742,13 +743,14 @@ class AngleParameter(Parameter):
         test1 (hourangle) 12:20:10.00000000
     """
     def __init__(self, name=None, value=None, description=None, units='rad',
-             uncertainty=None, frozen=True, continuous=True, aliases=None, **kwargs):
+             uncertainty=None, frozen=True, continuous=True, aliases=None,
+             **kwargs):
         self._str_unit = units
         self.unit_identifier = {
-            'h:m:s': (u.hourangle, 'h', '0:0:%.15fh'),
-            'd:m:s': (u.deg, 'd', '0:0:%.15fd'),
-            'rad': (u.rad, 'rad', '%.15frad'),
-            'deg': (u.deg, 'deg', '%.15fdeg'),
+            'h:m:s': (u.hourangle, 'h', '0:0:%.20fh'),
+            'd:m:s': (u.deg, 'd', '0:0:%.20fd'),
+            'rad': (u.rad, 'rad', '%.20frad'),
+            'deg': (u.deg, 'deg', '%.20fdeg'),
         }
         # Check unit format
         if units.lower() not in self.unit_identifier.keys():
@@ -756,9 +758,7 @@ class AngleParameter(Parameter):
 
         self.unitsuffix = self.unit_identifier[units.lower()][1]
         set_quantity = self.set_quantity_angle
-        print_quantity = lambda x: x.to_string(sep=':', precision=8) \
-                        if x.unit != u.rad else x.to_string(decimal = True,
-                        precision=8)
+        print_quantity = self.print_quantity_angle
         #get_value = lambda x: Angle(x * self.unit_identifier[units.lower()][0])
         get_value = lambda x: x.value
         set_uncertainty = self.set_uncertainty_angle
@@ -785,7 +785,7 @@ class AngleParameter(Parameter):
         3. number string
         """
         if isinstance(val, numbers.Number):
-            result = Angle(val * self.units)
+            result = Angle(data2longdouble(val) * self.units)
         elif isinstance(val, str):
             result = Angle(val + self.unitsuffix)
         elif hasattr(val, 'unit'):
@@ -813,6 +813,26 @@ class AngleParameter(Parameter):
             raise ValueError('Angle parameter can not accept '
                              + type(val).__name__ + 'format.')
         return result
+
+    def print_quantity_angle(self, quan):
+        """This is a function to print out the angle parameter.
+        """
+        if ':' in self._str_unit:
+            return quan.to_string(sep=':', precision=8)
+        else:
+            return quan.to_string(decimal = True, precision=15)
+
+    def print_uncertainty(self, unc):
+        """This is a function for printing out the uncertainty
+        """
+        if ':' in self._str_unit:
+            angle_arcsec = unc.to(u.arcsec)
+            if self.units == u.hourangle:
+                # Triditionaly hourangle uncertainty is in hourangle seconds
+                angle_arcsec  /= 15.0
+            return angle_arcsec.to_string(decimal = True, precision=20)
+        else:
+            return unc.to_string(decimal = True, precision=20)
 
 
 class prefixParameter(object):
