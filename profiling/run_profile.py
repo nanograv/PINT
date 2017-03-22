@@ -31,7 +31,7 @@ if __name__ == '__main__':
         cline = 'python -m cProfile -o '+ outfile + ' ' + args.f
     else:
         cline = 'python -m cProfile -o '+ outfile + ' -s ' + args.s + ' ' + args.f
-    print cline
+    print(cline)
     subprocess.call(cline, shell=True)
     call_tree_line = 'gprof2dot -f pstats ' + outfile + ' | dot -Tpng -o ' + outfile +'.png'
     subprocess.call(call_tree_line, shell=True)
