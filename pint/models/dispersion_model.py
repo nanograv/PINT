@@ -1,7 +1,6 @@
-"""This module implements a simple model of a constant dispersion measure.
+"""This module implements a simple model of a base dispersion delay.
    And DMX dispersion"""
-# dispersion.py
-# Simple (constant) ISM dispersion measure
+
 from warnings import warn
 from . import parameter as p
 from .timing_model import TimingModel, Cache
@@ -10,6 +9,7 @@ import numpy as np
 import pint.utils as ut
 import astropy.time as time
 from ..toa_select import TOASelect
+from ..utils import taylor_horner
 
 # The units on this are not completely correct
 # as we don't really use the "pc cm^3" units on DM.
@@ -28,18 +28,54 @@ class Dispersion(TimingModel):
         self.add_param(p.floatParameter(name="DM",
                        units="pc cm^-3", value=0.0,
                        description="Dispersion measure"))
-        self.dm_value_funcs = [self.constant_dm,]
+        self.add_param(p.prefixParameter(name="DM1", value=0.0, units='pc cm^-3/yr^1',
+                       description="Spindown-rate",
+                       unitTplt=self.DM_dervative_unit,
+                       descriptionTplt=self.DM_dervative_description,
+                       type_match='float'))
+        self.add_param(p.MJDParameter(name="DMEPOCH",
+                       description="Epoch of DM measurement"))
+
+        self.dm_value_funcs = [self.base_dm,]
         self.delay_funcs['L1'] += [self.dispersion_delay,]
         self.order_number = 2
 
     def setup(self):
         super(Dispersion, self).setup()
+        # If DM1 is set, we need DMEPOCH
+        if self.DM1.value != 0.0:
+            if self.DMEPOCH.value is None:
+                raise MissingParameter("Dispersion", "DMEPOCH",
+                        "DMEPOCH is required if DM1 or higher are set")
+
         self.register_deriv_funcs(self.d_delay_d_DM, 'delay', 'DM')
 
-    def constant_dm(self, toas):
-        cdm = np.zeros(len(toas))
-        cdm.fill(self.DM.quantity)
-        return cdm * self.DM.units
+    def DM_dervative_unit(self, n):
+        return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
+
+    def DM_dervative_description(self, n):
+        return "%d'th time derivative of the dispersion measure" % n
+
+    def get_DM_terms(self):
+        """Return a list of the DM term values in the model: [DM, DM1, ..., DMn]
+        """
+        perfix_dm = self.get_prefix_mapping('DM').values()
+        dm_terms = [self.DM.quantity,]
+        dm_terms += [getattr(self, x).quantity for x in perfix_dm]
+        return dm_terms
+
+    def base_dm(self, toas):
+        dm = np.zeros(len(toas))
+        dm_terms = self.get_DM_terms()
+        if self.DMEPOCH.value is None:
+            DMEPOCH = toas['tdbld'][0]
+        else:
+            DMEPOCH = self.DMEPOCH.value
+        dt = (toas['tdbld'] - DMEPOCH) * u.day
+        dt_value = (dt.to(u.yr)).value
+        dm_terms_value = [d.value for d in dm_terms]
+        dm = taylor_horner(dt_value, dm_terms_value)
+        return dm * self.DM.units
 
     def dispersion_time_delay(self, DM, freq):
         """Return the dispersion time delay for a set of frequency.
