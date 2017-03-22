@@ -12,6 +12,7 @@ ignore-paths:
     - validation
     - pint/scripts
     - pint/extern
+    - pint/profiling
 pylint:
   disable:
     - logging-format-interpolation

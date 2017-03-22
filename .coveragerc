@@ -9,5 +9,6 @@ omit =
     pint/models/__init__*
     pint/observatory/__init__*
     pint/orbital/__init__*
+    pint/profiling/*
 	pint/str2ld.py
 	pint/tmtestfuncs.py
