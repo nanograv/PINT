@@ -8,6 +8,7 @@ selected output sort key.
 A .png image file with the name <script_name> + <git_branch_name>.png will be
 generated for listing all the calls.
 """
+from __future__ import print_function
 import cProfile
 import argparse
 import subprocess
