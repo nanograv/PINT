@@ -7,9 +7,6 @@ matrix:
         - python: "2.7"
         - python: "3.5"
         - python: "3.6"
-    allow_failures:
-        - python: "3.5"
-        - python: "3.6"
  
 sudo: required
 
