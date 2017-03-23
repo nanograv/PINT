@@ -11,6 +11,11 @@ import astropy.units as u
 from astropy import log
 from .str2ld import str2ldarr1
 import re
+try:
+    maketrans = ''.maketrans
+except AttributeError:
+    # fallback for Python 2
+    from string import maketrans
 
 # Define prefix parameter pattern
 pp1 = re.compile(r'([a-zA-Z0-9]+_*)(\d+)')  # For the prefix like DMXR1_3
@@ -101,7 +106,7 @@ def fortran_float(x):
     """
     try:
         # First treat it as a string, wih d->e
-        return float(x.translate(string.maketrans('Dd', 'ee')))
+        return float(x.translate(maketrans('Dd', 'ee')))
     except AttributeError:
         # If that didn't work it may already be a numeric type
         return float(x)
@@ -111,7 +116,7 @@ def time_from_mjd_string(s, scale='utc'):
     """Returns an astropy Time object generated from a MJD string input."""
     ss = s.lower()
     if "e" in ss or "d" in ss:
-        ss = ss.translate(string.maketrans("d", "e"))
+        ss = ss.translate(maketrans("d", "e"))
         num, expon = ss.split("e")
         expon = int(expon)
         if expon < 0:
@@ -132,6 +137,7 @@ def time_from_mjd_string(s, scale='utc'):
         imjd_s, fmjd_s = mjd_s
         imjd = int(imjd_s)
         fmjd = float("0." + fmjd_s)
+
     return astropy.time.Time(imjd, fmjd, scale=scale, format='pulsar_mjd',
                              precision=9)
 
@@ -311,8 +317,8 @@ def ddouble2ldouble(t1, t2, format='jd'):
 def str2longdouble(str_data):
     """Return a numpy long double scalar from the input string, using strtold()
     """
-    input_str = str_data.translate(string.maketrans('Dd', 'ee'))
-    return str2ldarr1(input_str)[0]
+    input_str = str_data.translate(maketrans('Dd', 'ee'))
+    return str2ldarr1(input_str.encode())[0]
 
 
 def split_prefixed_name(name):

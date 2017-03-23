@@ -18,7 +18,7 @@ class ELL1model(PSR_BINARY):
                                          'EPS1DOT': 0/u.second,
                                          'EPS2DOT': 0/u.second,
                                          'TASC': np.longdouble(54000.0)*u.day})
-        self.binary_params = self.param_default_value.keys()
+        self.binary_params = list(self.param_default_value.keys())
         self.set_param_values() # Set parameters to default values.
         self.ELL1_interVars = ['eps1', 'eps2', 'Phi', 'Dre', 'Drep', 'Drepp', 'nhat']
         self.add_inter_vars(self.ELL1_interVars)

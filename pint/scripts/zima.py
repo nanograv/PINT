@@ -48,12 +48,12 @@ def main(argv=None):
 
     tl = [toa.TOA(t,error=error, obs=args.obs, freq=freq,
                  scale=scale) for t in times]
-    del t
+
     ts = toa.TOAs(toalist=tl)
 
     # WARNING! I'm not sure how clock corrections should be handled here!
     # Do we apply them, or not?
-    if not any([f.has_key('clkcorr') for f in ts.table['flags']]):
+    if not any(['clkcorr' in f for f in ts.table['flags']]):
         log.info("Applying clock corrections.")
         ts.apply_clock_corrections()
     if 'tdb' not in ts.table.colnames:

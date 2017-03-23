@@ -3,7 +3,10 @@
 # to get the fftfit module.  It can be run manually by people who have PRESTO
 from __future__ import division, print_function
 import sys, os
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 import unittest
 import numpy as np
 import pint.scripts.event_optimize as event_optimize

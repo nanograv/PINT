@@ -177,7 +177,7 @@ class DispersionDMX(Dispersion):
         DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
         result += getattr(self, 'DM').as_parfile_line()
         result += getattr(self, 'DMX').as_parfile_line()
-        sorted_list = DMX_mapping.keys()
+        sorted_list = list(DMX_mapping.keys())
         sorted_list.sort()
         for ii in sorted_list:
             result += getattr(self, DMX_mapping[ii]).as_parfile_line()

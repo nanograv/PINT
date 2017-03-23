@@ -47,7 +47,7 @@ def get_TOAs(timfile, ephem="DE421", include_bipm=True,
             # Pickle either did not exist or is out of date
             updatepickle = True
     t = TOAs(timfile)
-    if not any([f.has_key('clkcorr') for f in t.table['flags']]):
+    if not any(['clkcorr' in f for f in t.table['flags']]):
         log.info("Applying clock corrections.")
         t.apply_clock_corrections(include_gps=include_gps,
                                   include_bipm=include_bipm)
@@ -647,7 +647,7 @@ class TOAs(object):
             loind, hiind = self.table.groups.indices[ii:ii+2]
             # First apply any TIME statements
             for jj in range(loind, hiind):
-                if flags[jj].has_key('to'):
+                if 'to' in flags[jj]:
                     # TIME commands are in sec
                     # SUGGESTION(paulr): These time correction units should
                     # be applied in the parser, not here. In the table the time
