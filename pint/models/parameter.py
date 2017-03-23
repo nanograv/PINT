@@ -684,7 +684,7 @@ class MJDParameter(Parameter):
             try:
                 result = time_from_mjd_string(val, self.time_scale)
             except:
-                raise ValueError('String ' + val + 'can not be converted to'
+                raise ValueError('String ' + val + ' can not be converted to'
                                  'a time object.' )
 
         elif isinstance(val,time.Time):

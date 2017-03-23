@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 from __future__ import division, print_function
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 import pint.scripts.pintbary as pintbary
 import unittest
 import numpy as np
