@@ -48,7 +48,7 @@ def main(argv=None):
 
     tl = [toa.TOA(t,error=error, obs=args.obs, freq=freq,
                  scale=scale) for t in times]
-    del t
+
     ts = toa.TOAs(toalist=tl)
 
     # WARNING! I'm not sure how clock corrections should be handled here!
