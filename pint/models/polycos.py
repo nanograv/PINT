@@ -2,6 +2,7 @@
 # given interval using polynomial expansion. The return will be some necessary
 # information and the polynomial coefficients
 
+from __future__ import division, print_function
 import functools
 from ..phase import Phase
 import numpy as np
@@ -183,7 +184,7 @@ def tempo_polyco_table_reader(filename):
             binaryPhase = np.longdouble(0.0)
 
         # Read coefficients
-        nCoeffLines = nCoeff/3
+        nCoeffLines = nCoeff//3
 
         if nCoeff%3>0:
             nCoeffLines += 1

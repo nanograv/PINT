@@ -227,8 +227,10 @@ class model_builder(object):
 
             for ptype in ['prefixParameter', 'maskParameter']:
                 prefix_in_model = self.model_instance.get_params_of_type(ptype)
-                prefix_param = self.search_prefix_param(self.param_unrecognized.keys(),
-                                                        prefix_in_model)
+                prefix_param = \
+                    self.search_prefix_param(
+                        list(self.param_unrecognized.keys()),
+                        prefix_in_model)
                 for key in prefix_param.keys():
                     ppnames = [x for x in prefix_in_model if x.startswith(key)]
                     exm_par = getattr(self.model_instance,ppnames[0])

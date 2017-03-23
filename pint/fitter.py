@@ -112,13 +112,14 @@ class PowellFitter(Fitter):
     def fit_toas(self, maxiter=20):
         # Initial guesses are model params
         fitp = self.get_fitparams_num()
-        self.fitresult=opt.minimize(self.minimize_func, fitp.values(),
+        self.fitresult=opt.minimize(self.minimize_func, list(fitp.values()),
                                     args=tuple(fitp.keys()),
-                                    options={'maxiter':self.method},
+                                    options={'maxiter':maxiter},
                                     method=self.method)
         # Update model and resids, as the last iteration of minimize is not
         # necessarily the one that yields the best fit
-        self.minimize_func(numpy.atleast_1d(self.fitresult.x), *fitp.keys())
+        self.minimize_func(numpy.atleast_1d(self.fitresult.x),
+                           *list(fitp.keys()))
 
 
 class WlsFitter(Fitter):
@@ -195,7 +196,7 @@ class WlsFitter(Fitter):
                 fitpv[pn] = numpy.longdouble((pv+dpv) / fitp[pn].units)
                 #NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
-            chi2 = self.minimize_func(list(fitpv.values()), *fitp.keys())
+            chi2 = self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
             # Updata Uncertainties
             self.set_param_uncertainties(fitperrs)
 

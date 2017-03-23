@@ -23,7 +23,7 @@ class TestPrefix(unittest.TestCase):
         print("Test prefix parameter via a glitch model")
         rs = pint.residuals.resids(self.t, self.m).phase_resids
         # Now do the fit
-        print "Fitting..."
+        print("Fitting...")
         f = pint.fitter.PowellFitter(self.t, self.m)
         f.fit_toas()
         emsg = "RMS of " + self.m.PSR.value + " is too big."

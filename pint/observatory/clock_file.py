@@ -9,6 +9,8 @@ from astropy.time import Time
 from astropy import log
 from astropy.utils.exceptions import AstropyWarning
 import warnings
+from six import add_metaclass
+
 
 class ClockFileMeta(type):
     """Metaclass that provides a registry for different clock file formats.
@@ -23,6 +25,7 @@ class ClockFileMeta(type):
         super(ClockFileMeta, cls).__init__(name, bases, members)
 
 
+@add_metaclass(ClockFileMeta)
 class ClockFile(object):
     """The ClockFile class provides a way to read various formats of clock
     files.  It will provide the clock information from the file as arrays
@@ -47,8 +50,6 @@ class ClockFile(object):
            2.10000000e-08   2.30000000e-08] s
 
     """
-
-    __metaclass__ = ClockFileMeta
 
     @classmethod
     def read(cls, filename, format='tempo', **kwargs):
