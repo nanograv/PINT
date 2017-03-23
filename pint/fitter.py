@@ -195,7 +195,7 @@ class WlsFitter(Fitter):
                 fitpv[pn] = numpy.longdouble((pv+dpv) / fitp[pn].units)
                 #NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
-            chi2 = self.minimize_func(list(fitpv.values()), *fitp.keys())
+            chi2 = self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
             # Updata Uncertainties
             self.set_param_uncertainties(fitperrs)
 
