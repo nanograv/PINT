@@ -21,9 +21,12 @@ install:
     - pip install -r requirements.txt
     - pip install .
 
+#script:
+#    - pwd
+#    - make test
+
 script:
-  - cd tests
-  - nosetests
+    - (cd tests ; nosetests --ignore-files=.\*DISABLED.py)
 
 after_success:
     coveralls
