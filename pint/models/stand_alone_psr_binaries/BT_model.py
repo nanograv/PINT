@@ -79,7 +79,7 @@ class BTmodel(PSR_BINARY):
     def __init__(self, t=None, input_params=None):
         super(BTmodel, self).__init__()
         self.binary_name = 'BT'
-        self.binary_params = self.param_default_value.keys()
+        self.binary_params = list(self.param_default_value.keys())
         self.set_param_values() # Set parameters to default values.
         self.binary_delay_funcs += [self.BTdelay]
         self.d_binarydelay_d_par_funcs += [self.d_BTdelay_d_par]

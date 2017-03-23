@@ -465,7 +465,7 @@ class TimingModel(object):
         param_phase_derivs = []
         if param in self.phase_derivs.keys():
             for df in self.phase_derivs[param]:
-                if df.func_name.endswith(param):
+                if df.__name__.endswith(param):
                     result += df(toas, delay).to(result.unit,
                                          equivalencies=u.dimensionless_angles())
                 else: # Then this is a general derivative function.
@@ -545,7 +545,7 @@ class TimingModel(object):
                                  " or not registred. "%param)
         for df in self.delay_derivs[param]:
             # The derivative function is for a specific parameter.
-            if df.func_name.endswith(param):
+            if df.__name__.endswith(param):
                 result += df(toas).to(result.unit, equivalencies=u.dimensionless_angles())
             else: # Then this is a general derivative function.
                 result += df(toas, param).to(result.unit, equivalencies=u.dimensionless_angles())
@@ -694,7 +694,7 @@ class TimingModel(object):
             False : bool
                 The subclass is not inculded in the parfile.
         """
-        pNames_inpar = para_dict.keys()
+        pNames_inpar = list(para_dict.keys())
 
         pNames_inModel = self.params
 
