@@ -19,9 +19,11 @@ before_script:
 install:
     - pip install -r requirements_dev.txt
     - pip install -r requirements.txt
+    - pip install .
 
 script:
-  - make test
+  - cd tests
+  - nosetests
 
 after_success:
     coveralls
