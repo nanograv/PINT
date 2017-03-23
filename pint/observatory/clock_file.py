@@ -8,6 +8,7 @@ import astropy.units as u
 from astropy.time import Time
 from astropy import log
 from astropy.utils.exceptions import AstropyWarning
+from astropy._erfa import ErfaWarning
 import warnings
 from six import add_metaclass
 
@@ -90,7 +91,10 @@ class Tempo2ClockFile(ClockFile):
     def __init__(self, filename, **kwargs):
         self.filename = filename
         mjd, clk, self.header = self.load_tempo2_clock_file(filename)
-        self._time = Time(mjd, format='pulsar_mjd', scale='utc')
+        #NOTE Clock correction file has a time far in the future as ending point
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', ErfaWarning)
+            self._time = Time(mjd, format='pulsar_mjd', scale='utc')
         self._clock = clk * u.s
 
     @staticmethod
@@ -116,7 +120,7 @@ class TempoClockFile(ClockFile):
         #NOTE Clock correction file has a time far in the future as ending point
         # We are swithing off astropy warning only for gps correction.
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore', AstropyWarning)
+            warnings.simplefilter('ignore', ErfaWarning)
             self._time = Time(mjd, format='pulsar_mjd', scale='utc')
         self._clock = clk * u.us
 
