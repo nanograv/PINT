@@ -26,7 +26,7 @@ install:
 #    - make test
 
 script:
-    - (cd tests ; nosetests --ignore-files=.\*DISABLED.py)
+    - (cd tests ; nosetests -v --with-coverage --cover-package=pint --ignore-files=.\*DISABLED.py)
 
 after_success:
     coveralls
