@@ -122,8 +122,10 @@ class FermiObs(SpecialLocation):
             log.warning('Using location geocenter for TT to TDB conversion')
             return EarthLocation.from_geocentric(0.0*u.m,0.0*u.m,0.0*u.m)
         elif self.tt2tdb_mode.lower().startswith('spacecraft'):
-            # First, interpolate ECI geocentric location from orbit file.
-            # These are inertial coorinates aligned with ICRF
+            # First, interpolate Earth-Centered Inertial (ECI) geocentric
+            # location from orbit file.
+            # These are inertial coordinates aligned with ICRS, called GCRS
+            # <http://docs.astropy.org/en/stable/api/astropy.coordinates.GCRS.html>
             pos_gcrs =  GCRS(CartesianRepresentation(self.X(time.tt.mjd)*u.m,
                                                      self.Y(time.tt.mjd)*u.m,
                                                      self.Z(time.tt.mjd)*u.m),
@@ -147,7 +149,7 @@ class FermiObs(SpecialLocation):
         '''Return position and velocity vectors of Fermi, wrt SSB.
 
         These positions and velocites are in inertial coordinates
-        (i.e. aligned with ITRF)
+        (i.e. aligned with ICRS)
 
         t is an astropy.Time or array of astropy.Times
         '''

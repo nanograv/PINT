@@ -117,7 +117,8 @@ setup(
 
     package_data={'pint': [
         'datafiles/ecliptic.dat',
-        'datafiles/gps2utc.clk'
+        'datafiles/gps2utc.clk',
+        'datafiles/tai2tt_bipm2015.clk',
         ] + data_files},
 
     cmdclass = cmdclass,
