@@ -11,6 +11,7 @@ import astropy.units as u
 from astropy.table import Table
 import copy
 import abc
+from six import add_metaclass
 
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
@@ -114,6 +115,7 @@ class ModelMeta(abc.ABCMeta):
         super(ModelMeta, cls).__init__(name, bases, dct)
 
 
+@add_metaclass(ModelMeta)
 class TimingModel(object):
     """
     Base-level object provides an interface for implementing pulsar timing
@@ -158,7 +160,7 @@ class TimingModel(object):
     phase_derivs_wrt_delay : list
         All the phase derivatives respect to delay.
     """
-    __metaclass__ = ModelMeta
+
     def __init__(self):
         self.params = []  # List of model parameter names
         self.prefix_params = []  # List of model parameter names
@@ -271,7 +273,7 @@ class TimingModel(object):
 
     def sort_model_components(self):
         # initiate the sorted_components
-        sorted_list = ['']*len(self.components.keys())
+        sorted_list = ['']*len(list(self.components.keys()))
         in_placed = []
         not_in_placed = []
         for cp, cpv in self.components.items():
