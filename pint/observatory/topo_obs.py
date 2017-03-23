@@ -13,6 +13,7 @@ from ..solar_system_ephemerides import objPosVel_wrt_SSB
 from ..config import datapath
 from ..erfautils import topo_posvels
 
+
 class TopoObs(Observatory):
     """Class for representing observatories that are at a fixed location
     on the surface of the Earth.  This behaves very similarly to "standard"
