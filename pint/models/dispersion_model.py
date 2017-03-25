@@ -9,7 +9,7 @@ import numpy as np
 import pint.utils as ut
 import astropy.time as time
 from ..toa_select import TOASelect
-from ..utils import taylor_horner
+from ..utils import taylor_horner, split_prefixed_name
 
 # The units on this are not completely correct
 # as we don't really use the "pc cm^3" units on DM.
@@ -47,8 +47,11 @@ class Dispersion(TimingModel):
             if self.DMEPOCH.value is None:
                 raise MissingParameter("Dispersion", "DMEPOCH",
                         "DMEPOCH is required if DM1 or higher are set")
+        base_dms = self.get_prefix_mapping('DM').values()
+        base_dms.append('DM')
 
-        self.register_deriv_funcs(self.d_delay_d_DM, 'delay', 'DM')
+        for dm_name in base_dms:
+            self.register_deriv_funcs(self.d_delay_d_DM, 'delay', dm_name)
 
     def DM_dervative_unit(self, n):
         return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
@@ -101,7 +104,7 @@ class Dispersion(TimingModel):
 
         return self.dispersion_time_delay(dm, bfreq)
 
-    def d_delay_d_DM(self, toas):
+    def d_delay_d_DM(self, toas, param_name):
         """Derivatives for constant DM
         """
         try:
@@ -109,8 +112,24 @@ class Dispersion(TimingModel):
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
             bfreq = toas['freq']
-
-        return DMconst / bfreq**2.0
+        par = getattr(self, param_name)
+        unit = par.units
+        if param_name == 'DM':
+            order = 0
+        else:
+            pn, idxf, idxv = split_prefixed_name(param_name)
+            order = idxv
+        dms = self.get_DM_terms()
+        dm_terms = np.longdouble(np.zeros(len(dms)))
+        dm_terms[order] = np.longdouble(1.0)
+        if self.DMEPOCH.value is None:
+            DMEPOCH = toas['tdbld'][0]
+        else:
+            DMEPOCH = self.DMEPOCH.value
+        dt = (toas['tdbld'] - DMEPOCH) * u.day
+        dt_value = (dt.to(u.yr)).value
+        d_dm_d_dm_param = taylor_horner(dt_value, dm_terms)
+        return DMconst * d_dm_d_dm_param/ bfreq**2.0
 
 class DispersionDMX(Dispersion):
     """This class provides a DMX model based on the class of Dispersion.
