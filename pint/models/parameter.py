@@ -7,6 +7,7 @@ import numpy
 import astropy.time as time
 from astropy import log
 from pint import pint_units
+from pint import pulsar_mjd
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
@@ -684,8 +685,9 @@ class MJDParameter(Parameter):
             try:
                 result = time_from_mjd_string(val, self.time_scale)
             except:
-                raise ValueError('String ' + val + ' can not be converted to'
+                log.error('String ' + val + ' can not be converted to'
                                  'a time object.' )
+                raise
 
         elif isinstance(val,time.Time):
             result = val
