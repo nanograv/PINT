@@ -233,7 +233,12 @@ class model_builder(object):
                         prefix_in_model)
                 for key in prefix_param.keys():
                     ppnames = [x for x in prefix_in_model if x.startswith(key)]
-                    exm_par = getattr(self.model_instance,ppnames[0])
+                    for ppn in ppnames:
+                        pfx, idxs, idxv = split_prefixed_name(ppn)
+                        if pfx == key:
+                            exm_par = getattr(self.model_instance, ppn)
+                        else:
+                            continue
                     for parname in prefix_param[key]:
                         pre,idstr,idx = split_prefixed_name(parname)
                         if idx == exm_par.index:
