@@ -1,5 +1,6 @@
 # observatory.py
 # Base class for PINT observatories
+import six
 
 
 class Observatory(object):
@@ -28,7 +29,10 @@ class Observatory(object):
         # it the registry, using name as the key.  Name must be unique,
         # a new instance with a given name will over-write the existing
         # one.
-        obs = super(Observatory,cls).__new__(cls,name,*args,**kwargs)
+        if six.PY2:
+            obs = super(Observatory,cls).__new__(cls,name,*args,**kwargs)
+        else:
+            obs = super().__new__(cls)
         cls._register(obs, name)
         return obs
 

@@ -62,7 +62,7 @@ def main(argv=None):
         if args.plotfile is not None:
             fig.savefig(args.plotfile)
         else:
-            fig.show()
+            plt.show()
 
     if args.outfile is not None:
         fout = file(args.outfile,"w")

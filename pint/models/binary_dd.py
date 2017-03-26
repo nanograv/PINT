@@ -19,7 +19,7 @@ class BinaryDD(PulsarBinary):
     DR Relativistic deformation of the orbit
     DTH Relativistic deformation of the orbit
     """
-
+    register = True
     def __init__(self,):
         super(BinaryDD, self).__init__()
         self.binary_model_name = 'DD'

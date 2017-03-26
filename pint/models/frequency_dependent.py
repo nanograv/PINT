@@ -11,6 +11,7 @@ class FD(TimingModel):
     """This class provides a timing model for frequency evolution of pulsar
     profiles model.
     """
+    register = True
     def __init__(self):
         super(FD, self).__init__()
         self.add_param(p.prefixParameter(name='FD1', units="second", value=0.0,
@@ -20,20 +21,21 @@ class FD(TimingModel):
                        type_match='float'))
 
         self.delay_funcs['L1'] += [self.FD_delay]
-
+        self.order_number = 4
+        self.print_par_func = 'print_par_FD'
     def setup(self):
         super(FD, self).setup()
         # Check if FD terms are in order.
         FD_mapping = self.get_prefix_mapping('FD')
-        FD_terms = FD_mapping.keys()
+        FD_terms = list(FD_mapping.keys())
         FD_terms.sort()
-        FD_in_order = range(1,max(FD_terms)+1)
+        FD_in_order = list(range(1,max(FD_terms)+1))
         if not FD_terms == FD_in_order:
             diff = list(set(FD_in_order) - set(FD_terms))
             raise MissingParameter("FD", "FD%d"%diff[0])
         self.num_FD_terms = len(FD_terms)
         # set up derivative functions
-        for ii, val in FD_mapping.iteritems():
+        for ii, val in FD_mapping.items():
             self.register_deriv_funcs(self.d_delay_FD_d_FDX, 'delay', val)
 
     def FD_delay(self, toas):
@@ -85,3 +87,11 @@ class FD(TimingModel):
             return self.d_binary_FD_d_FDX(toas, FD_term)
         deriv_func.__name__ = 'd_delay_FD_d_' + param
         setattr(self, 'd_delay_FD_d_' + param, deriv_func)
+
+    def print_par_FD(self):
+        result = ''
+        FD_mapping = self.get_prefix_mapping('FD')
+        for FD in FD_mapping.values():
+            FD_par = getattr(self, FD)
+            result += FD_par.as_parfile_line()
+        return result

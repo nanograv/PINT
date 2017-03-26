@@ -9,6 +9,8 @@ import astropy.units as u
 import numpy as np
 import pint.utils as ut
 import astropy.time as time
+from ..toa_select import TOASelect
+
 # The units on this are not completely correct
 # as we don't really use the "pc cm^3" units on DM.
 # But the time and freq portions are correct
@@ -20,6 +22,7 @@ class Dispersion(TimingModel):
     """This class provides a base dispersion timing model. The dm varience will
     be treated linearly.
     """
+    register = True
     def __init__(self):
         super(Dispersion, self).__init__()
         self.add_param(p.floatParameter(name="DM",
@@ -27,6 +30,7 @@ class Dispersion(TimingModel):
                        description="Dispersion measure"))
         self.dm_value_funcs = [self.constant_dm,]
         self.delay_funcs['L1'] += [self.dispersion_delay,]
+        self.order_number = 2
 
     def setup(self):
         super(Dispersion, self).setup()
@@ -75,6 +79,7 @@ class Dispersion(TimingModel):
 class DispersionDMX(Dispersion):
     """This class provides a DMX model based on the class of Dispersion.
     """
+    register = True
     def __init__(self):
         super(DispersionDMX, self).__init__()
         # DMX is for info output right now
@@ -89,19 +94,18 @@ class DispersionDMX(Dispersion):
                        paramter_type='float'))
         self.add_param(p.prefixParameter(name='DMXR1_0001',
                        units="MJD",
-                       value=time.Time(0.0, scale='utc', format='pulsar_mjd'),
                        unitTplt=lambda x: "MJD",
                        description='Beginning of DMX interval',
                        descriptionTplt=lambda x: 'Beginning of DMX interval',
                        parameter_type='MJD', time_scale='utc'))
         self.add_param(p.prefixParameter(name='DMXR2_0001', units="MJD",
-                       value=time.Time(0.0, scale='utc', format='pulsar_mjd'),
                        unitTplt=lambda x: "MJD",
                        description='End of DMX interval',
                        descriptionTplt=lambda x: 'End of DMX interval',
                        parameter_type='MJD', time_scale='utc'))
         self.dm_value_funcs += [self.dmx_dm,]
         self.set_special_params(['DMX_0001', 'DMXR1_0001','DMXR2_0001'])
+        self.print_par_func = 'print_par_DMX'
 
     def setup(self):
         super(DispersionDMX, self).setup()
@@ -126,58 +130,56 @@ class DispersionDMX(Dispersion):
                 self.register_deriv_funcs(self.d_delay_d_DMX, 'delay', prefix_par)
 
     def dmx_dm(self, toas):
-        # Set toas to the right DMX peiod.
+        condition = {}
+        if not hasattr(self, 'dmx_toas_selector'):
+            self.dmx_toas_selector = TOASelect(is_range=True)
         DMX_mapping = self.get_prefix_mapping('DMX_')
         DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
         DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
-        if 'DMX_section' not in toas.keys():
-            toas['DMX_section'] = np.zeros_like(toas['index'])
-            epoch_ind = 1
-            while epoch_ind in DMX_mapping:
-                # Get the parameters
-                r1 = getattr(self, DMXR1_mapping[epoch_ind]).quantity
-                r2 = getattr(self, DMXR2_mapping[epoch_ind]).quantity
-                msk = np.logical_and(toas['mjd_float'] >= r1.mjd, toas['mjd_float'] <= r2.mjd)
-                toas['DMX_section'][msk] = epoch_ind
-                epoch_ind = epoch_ind + 1
-
-        # Get DMX delays
+        for epoch_ind in DMX_mapping.keys():
+            r1 = getattr(self, DMXR1_mapping[epoch_ind]).quantity
+            r2 = getattr(self, DMXR2_mapping[epoch_ind]).quantity
+            condition[DMX_mapping[epoch_ind]] = (r1.mjd, r2.mjd)
+        select_idx = self.dmx_toas_selector.get_select_index(condition, toas['mjd_float'])
+        #Get DMX delays
         dm = np.zeros(len(toas)) * self.DM.units
-        DMX_group = toas.group_by('DMX_section')
-        for ii, key in enumerate(DMX_group.groups.keys):
-            keyval = key.as_void()[0]
-            if keyval != 0:
-                dmx = getattr(self, DMX_mapping[keyval]).quantity
-                ind = DMX_group.groups[ii]['index']
-                dm[ind] = dmx
+        for k, v in select_idx.items():
+           dm[v] = getattr(self, k).quantity
         return dm
 
     def d_delay_d_DMX(self, toas, param_name):
+        condition = {}
+        if not hasattr(self, 'dmx_toas_selector'):
+            self.dmx_toas_selector = TOASelect(is_range=True)
         param = getattr(self, param_name)
         dmx_index = param.index
+        DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
+        DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
+        r1 = getattr(self, DMXR1_mapping[dmx_index]).quantity
+        r2 = getattr(self, DMXR2_mapping[dmx_index]).quantity
+        condition = {param_name:(r1.mjd, r2.mjd)}
+        select_idx = self.dmx_toas_selector.get_select_index(condition, toas['mjd_float'])
+
         try:
             bfreq = self.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
             bfreq = toas['freq']
         dmx = np.zeros(len(toas))
-        if 'DMX_section' not in toas.keys():
-            DMX_mapping = self.get_prefix_mapping('DMX_')
-            DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
-            DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
-            toas['DMX_section'] = np.zeros_like(toas['index'])
-            epoch_ind = 1
-            while epoch_ind in DMX_mapping:
-                # Get the parameters
-                r1 = getattr(self, DMXR1_mapping[epoch_ind]).quantity
-                r2 = getattr(self, DMXR2_mapping[epoch_ind]).quantity
-                msk = np.logical_and(toas['mjd_float'] >= r1.mjd, toas['mjd_float'] <= r2.mjd)
-                toas['DMX_section'][msk] = epoch_ind
-                epoch_ind = epoch_ind + 1
-
-        DMX_group = toas.group_by('DMX_section')
-        grp_msk = DMX_group.groups.keys['DMX_section'] == dmx_index
-        selected_grp = DMX_group.groups[grp_msk]
-        dmx[selected_grp['index']] = 1.0
-
+        for k, v in select_idx.items():
+           dmx[v] = 1.0
         return DMconst * dmx / bfreq**2.0
+
+    def print_par_DMX(self,):
+        result = ''
+        DMX_mapping = self.get_prefix_mapping('DMX_')
+        DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
+        DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
+        result += getattr(self, 'DM').as_parfile_line()
+        result += getattr(self, 'DMX').as_parfile_line()
+        sorted_list = sorted(DMX_mapping.keys())
+        for ii in sorted_list:
+            result += getattr(self, DMX_mapping[ii]).as_parfile_line()
+            result += getattr(self, DMXR1_mapping[ii]).as_parfile_line()
+            result += getattr(self, DMXR2_mapping[ii]).as_parfile_line()
+        return result

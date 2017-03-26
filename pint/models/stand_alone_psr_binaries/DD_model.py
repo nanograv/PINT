@@ -36,7 +36,7 @@ class DDmodel(PSR_BINARY):
                                'DR':0*u.Unit(''),'DTH':0*u.Unit(''),})
         # If any parameter has aliases, it should be updated
         #self.param_aliases.update({})
-        self.binary_params = self.param_default_value.keys()
+        self.binary_params = list(self.param_default_value.keys())
 
         self.dd_interVars = ['er','eTheta','beta','alpha','Dre','Drep','Drepp',
                              'nhat', 'TM2']

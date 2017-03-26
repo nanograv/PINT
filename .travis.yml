@@ -7,10 +7,7 @@ matrix:
         - python: "2.7"
         - python: "3.5"
         - python: "3.6"
-    allow_failures:
-        - python: "3.5"
-        - python: "3.6"
- 
+
 sudo: required
 
 # https://docs.travis-ci.com/user/gui-and-headless-browsers/#Using-xvfb-to-Run-Tests-That-Require-a-GUI
@@ -22,9 +19,14 @@ before_script:
 install:
     - pip install -r requirements_dev.txt
     - pip install -r requirements.txt
+    - pip install .
+
+#script:
+#    - pwd
+#    - make test
 
 script:
-  - make test
+    - (cd tests ; nosetests -v --with-coverage --cover-package=pint --ignore-files=.\*DISABLED.py)
 
 after_success:
-    coveralls
+    ( cd tests ; coveralls )

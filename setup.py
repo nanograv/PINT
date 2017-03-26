@@ -71,7 +71,7 @@ for u in data_urls:
 
 # And now add the clock files (at least until we figure out a better
 # way of doint this.  This aids in automatic testing, though.
-clock_files = ['gps2utc.clk', 'time.dat',
+clock_files = ['gps2utc.clk', 'time.dat', 'tai2tt_bipm2015.clk',
                'time_jb.dat', 'time_nancay.dat', 'time_wsrt.dat',
                'time_gb853.dat', 'time_bonn.dat', 'time_vla.dat',
                'time_gb140.dat', 'time_gbt.dat', 'time_pks.dat',
@@ -117,7 +117,7 @@ setup(
 
     package_data={'pint': [
         'datafiles/ecliptic.dat',
-        'datafiles/gps2utc.clk'
+        'datafiles/de432s.bsp',
         ] + data_files},
 
     cmdclass = cmdclass,

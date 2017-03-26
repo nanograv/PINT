@@ -7,6 +7,11 @@ import numpy
 import astropy.units as u
 from astropy.time import Time
 from astropy import log
+from astropy.utils.exceptions import AstropyWarning
+from astropy._erfa import ErfaWarning
+import warnings
+from six import add_metaclass
+
 
 class ClockFileMeta(type):
     """Metaclass that provides a registry for different clock file formats.
@@ -21,6 +26,7 @@ class ClockFileMeta(type):
         super(ClockFileMeta, cls).__init__(name, bases, members)
 
 
+@add_metaclass(ClockFileMeta)
 class ClockFile(object):
     """The ClockFile class provides a way to read various formats of clock
     files.  It will provide the clock information from the file as arrays
@@ -45,8 +51,6 @@ class ClockFile(object):
            2.10000000e-08   2.30000000e-08] s
 
     """
-
-    __metaclass__ = ClockFileMeta
 
     @classmethod
     def read(cls, filename, format='tempo', **kwargs):
@@ -87,7 +91,10 @@ class Tempo2ClockFile(ClockFile):
     def __init__(self, filename, **kwargs):
         self.filename = filename
         mjd, clk, self.header = self.load_tempo2_clock_file(filename)
-        self._time = Time(mjd, format='pulsar_mjd', scale='utc')
+        #NOTE Clock correction file has a time far in the future as ending point
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', ErfaWarning)
+            self._time = Time(mjd, format='pulsar_mjd', scale='utc')
         self._clock = clk * u.s
 
     @staticmethod
@@ -110,7 +117,11 @@ class TempoClockFile(ClockFile):
         self.filename = filename
         self.obscode = obscode
         mjd, clk = self.load_tempo1_clock_file(filename,site=obscode)
-        self._time = Time(mjd, format='pulsar_mjd', scale='utc')
+        #NOTE Clock correction file has a time far in the future as ending point
+        # We are swithing off astropy warning only for gps correction.
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', ErfaWarning)
+            self._time = Time(mjd, format='pulsar_mjd', scale='utc')
         self._clock = clk * u.us
 
     @staticmethod

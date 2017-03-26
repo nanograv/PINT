@@ -7,6 +7,7 @@ import numpy
 import astropy.time as time
 from astropy import log
 from pint import pint_units
+from pint import pulsar_mjd
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
@@ -310,7 +311,8 @@ class Parameter(object):
             return ""
         line = "%-15s %25s" % (self.name, self.print_quantity(self.quantity))
         if self.uncertainty is not None:
-            line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty_value))
+            line += " %d %s" % (0 if self.frozen else 1, \
+                                self.print_uncertainty(self.uncertainty))
         elif not self.frozen:
             line += " 1"
         return line + "\n"
@@ -683,8 +685,9 @@ class MJDParameter(Parameter):
             try:
                 result = time_from_mjd_string(val, self.time_scale)
             except:
-                raise ValueError('String ' + val + 'can not be converted to'
+                log.error('String ' + val + ' can not be converted to'
                                  'a time object.' )
+                raise
 
         elif isinstance(val,time.Time):
             result = val
@@ -742,13 +745,14 @@ class AngleParameter(Parameter):
         test1 (hourangle) 12:20:10.00000000
     """
     def __init__(self, name=None, value=None, description=None, units='rad',
-             uncertainty=None, frozen=True, continuous=True, aliases=None, **kwargs):
+             uncertainty=None, frozen=True, continuous=True, aliases=None,
+             **kwargs):
         self._str_unit = units
         self.unit_identifier = {
-            'h:m:s': (u.hourangle, 'h', '0:0:%.15fh'),
-            'd:m:s': (u.deg, 'd', '0:0:%.15fd'),
-            'rad': (u.rad, 'rad', '%.15frad'),
-            'deg': (u.deg, 'deg', '%.15fdeg'),
+            'h:m:s': (u.hourangle, 'h', '0:0:%.20fh'),
+            'd:m:s': (u.deg, 'd', '0:0:%.20fd'),
+            'rad': (u.rad, 'rad', '%.20frad'),
+            'deg': (u.deg, 'deg', '%.20fdeg'),
         }
         # Check unit format
         if units.lower() not in self.unit_identifier.keys():
@@ -756,9 +760,7 @@ class AngleParameter(Parameter):
 
         self.unitsuffix = self.unit_identifier[units.lower()][1]
         set_quantity = self.set_quantity_angle
-        print_quantity = lambda x: x.to_string(sep=':', precision=8) \
-                        if x.unit != u.rad else x.to_string(decimal = True,
-                        precision=8)
+        print_quantity = self.print_quantity_angle
         #get_value = lambda x: Angle(x * self.unit_identifier[units.lower()][0])
         get_value = lambda x: x.value
         set_uncertainty = self.set_uncertainty_angle
@@ -785,7 +787,7 @@ class AngleParameter(Parameter):
         3. number string
         """
         if isinstance(val, numbers.Number):
-            result = Angle(val * self.units)
+            result = Angle(data2longdouble(val) * self.units)
         elif isinstance(val, str):
             result = Angle(val + self.unitsuffix)
         elif hasattr(val, 'unit'):
@@ -813,6 +815,26 @@ class AngleParameter(Parameter):
             raise ValueError('Angle parameter can not accept '
                              + type(val).__name__ + 'format.')
         return result
+
+    def print_quantity_angle(self, quan):
+        """This is a function to print out the angle parameter.
+        """
+        if ':' in self._str_unit:
+            return quan.to_string(sep=':', precision=8)
+        else:
+            return quan.to_string(decimal = True, precision=15)
+
+    def print_uncertainty(self, unc):
+        """This is a function for printing out the uncertainty
+        """
+        if ':' in self._str_unit:
+            angle_arcsec = unc.to(u.arcsec)
+            if self.units == u.hourangle:
+                # Triditionaly hourangle uncertainty is in hourangle seconds
+                angle_arcsec  /= 15.0
+            return angle_arcsec.to_string(decimal = True, precision=20)
+        else:
+            return unc.to_string(decimal = True, precision=20)
 
 
 class prefixParameter(object):
@@ -1090,7 +1112,7 @@ class maskParameter(floatParameter):
                  value=None, long_double=False, units= None, description=None,
                  uncertainty=None, frozen=True, continuous=False, aliases=None):
         self.is_mask = True
-        self.key_identifier = {'mjd': (lambda x: time.Time(x, format='mjd'), 2),
+        self.key_identifier = {'mjd': (lambda x: time.Time(x, format='mjd').mjd, 2),
                                 'freq': (float, 2),
                                 'name': (str, 1),
                                 'tel': (str, 1)}
@@ -1113,6 +1135,7 @@ class maskParameter(floatParameter):
         self.index = index
         name_param = name + str(index)
         self.origin_name = name
+        self.prefix = self.origin_name
         super(maskParameter, self).__init__(name=name_param, value=value,
                                             units=units,
                                             description=description,
@@ -1128,6 +1151,7 @@ class maskParameter(floatParameter):
             self.aliases.append(name)
         self.from_parfile_line = self.from_parfile_line_mask
         self.as_parfile_line = self.as_parfile_line_mask
+        self.is_prefix = True
 
     def __str__(self):
         out = self.name
@@ -1246,11 +1270,38 @@ class maskParameter(floatParameter):
     def select_toa_mask(self, toas):
         """Select the toas.
         Parameter
-        ----------
+        ---------
         toas : toas table
         Return
-        ----------
-        A mask array. the select toas are masked as True.
+        ------
+        A array of returned index.
         """
-        self.toa_select = TOASelect(self.key, self.key_value)
-        return self.toa_select.get_toa_key_mask(toas)
+        column_match = {'mjd': 'mjd_float',
+                        'freq': 'freq',
+                        'tel': 'obs'}
+        if len(self.key_value) == 1:
+            if not hasattr(self, 'toa_selector'):
+                self.toa_selector = TOASelect(is_range=False, use_hash=True)
+            condition = {self.name: self.key_value[0]}
+        elif len(self.key_value) == 2:
+            if not hasattr(self, 'toa_selector'):
+                self.toa_selector = TOASelect(is_range=True, use_hash=True)
+            condition = {self.name: tuple(self.key_value)}
+        else:
+            raise ValueError('Parameter %s has more key values than '
+                             'expected.(Expect 1 or 2 key values)' % self.name)
+        # get the table columns
+        # TODO Right now it is only supports mjd, freq, tel, and flagkeys,
+        # We need to consider some more complicated situation
+        key = self.key.replace('-', '')
+        if key not in column_match.keys(): # This only works for the one with flags.
+            section_name = key+'_section'
+            if section_name not in toas.keys():
+                flag_col = [x.get(key, None) for x in toas['flags']]
+                toas[section_name] = flag_col
+            col = toas[section_name]
+        else:
+            col = toas[column_match[key]]
+        select_idx = self.toa_selector.get_select_index(condition, col)
+
+        return select_idx[self.name]

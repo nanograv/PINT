@@ -19,7 +19,7 @@ class TestSolarSystemDynamic(unittest.TestCase):
         J2000_JD = 2451545.0
         J2000_MJD = J2000_JD - MJDREF
         SECPERJULDAY = 86400.0
-        ets = np.random.uniform(0.0, 9000.0, 100000) * SECPERJULDAY
+        ets = np.random.uniform(0.0, 9000.0, 10000) * SECPERJULDAY
         mjd = J2000_MJD + ets / SECPERJULDAY
         self.tdb_time = time.Time(mjd, scale='tdb', format='mjd')
         self.ephem = ['de405', 'de421', 'de434', 'de430','de436']
@@ -30,23 +30,23 @@ class TestSolarSystemDynamic(unittest.TestCase):
         for ep in self.ephem:
             a = objPosVel_wrt_SSB('earth', self.tdb_time ,ephem = ep)
             assert a.obj == 'earth'
-            assert a.pos.shape == (3, 100000)
-            assert a.vel.shape == (3, 100000)
+            assert a.pos.shape == (3, 10000)
+            assert a.vel.shape == (3, 10000)
 
     def test_sun(self):
         for ep in self.ephem:
             a = objPosVel_wrt_SSB('sun', self.tdb_time ,ephem = ep)
             assert a.obj == 'sun'
-            assert a.pos.shape == (3, 100000)
-            assert a.vel.shape == (3, 100000)
+            assert a.pos.shape == (3, 10000)
+            assert a.vel.shape == (3, 10000)
 
     def test_planets(self):
         for p in self.planets:
             for ep in self.ephem:
                 a = objPosVel_wrt_SSB(p, self.tdb_time ,ephem = ep)
                 assert a.obj == p
-                assert a.pos.shape == (3, 100000)
-                assert a.vel.shape == (3, 100000)
+                assert a.pos.shape == (3, 10000)
+                assert a.vel.shape == (3, 10000)
 
     def test_earth2obj(self):
         objs = self.planets + ['sun']
@@ -55,13 +55,14 @@ class TestSolarSystemDynamic(unittest.TestCase):
                 a = objPosVel('earth', obj, self.tdb_time, ep)
                 assert a.obj == obj
                 assert a.origin == 'earth'
-                assert a.pos.shape == (3, 100000)
-                assert a.vel.shape == (3, 100000)
+                assert a.pos.shape == (3, 10000)
+                assert a.vel.shape == (3, 10000)
 
     def test_from_dir(self):
         path = datapath('de432s.bsp')
         a = objPosVel_wrt_SSB('earth', self.tdb_time , 'de432s', path=path)
         assert a.obj == 'earth'
-        assert a.pos.shape == (3, 100000)
-        assert a.vel.shape == (3, 100000)
+        assert a.pos.shape == (3, 10000)
+        assert a.vel.shape == (3, 10000)
+        print("value {0}, path {1}".format(solar_system_ephemeris._value,path))
         assert solar_system_ephemeris._value == path

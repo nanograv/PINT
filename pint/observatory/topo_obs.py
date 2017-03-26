@@ -6,12 +6,14 @@ from .clock_file import ClockFile
 import os
 import numpy
 import astropy.units as u
+from astropy import log
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from ..utils import PosVel, has_astropy_unit
 from ..solar_system_ephemerides import objPosVel_wrt_SSB
 from ..config import datapath
 from ..erfautils import topo_posvels
+
 
 class TopoObs(Observatory):
     """Class for representing observatories that are at a fixed location
@@ -147,17 +149,20 @@ class TopoObs(Observatory):
         # Read clock file if necessary
         # TODO provide some method for re-reading the clock file?
         if self._clock is None:
+            log.info('Observatory {0}, loading clock file {1}'.format(self.name, self.clock_fullpath))
             self._clock = ClockFile.read(self.clock_fullpath,
                     format=self.clock_fmt, obscode=self.tempo_code)
         corr = self._clock.evaluate(t)
         if self.include_gps:
             if self._gps_clock is None:
+                log.info('Observatory {0}, loading GPS clock file {1}'.format(self.name, self.gps_fullpath))
                 self._gps_clock = ClockFile.read(self.gps_fullpath,
                         format='tempo2')
             corr += self._gps_clock.evaluate(t)
         if self.include_bipm:
             tt2tai = 32.184 * 1e6 * u.us
             if self._bipm_clock is None:
+                log.info('Observatory {0}, loading BIPM clock file {1}'.format(self.name, self.bipm_fullpath))
                 self._bipm_clock = ClockFile.read(self.bipm_fullpath,
                         format='tempo2')
             corr += self._bipm_clock.evaluate(t) - tt2tai

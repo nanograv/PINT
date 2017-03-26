@@ -113,7 +113,7 @@ class PSR_BINARY(object):
                                         })
         self.param_aliases = {'ECC':['E'],'EDOT':['ECCDOT'],
                               'A1DOT':['XDOT']}
-        self.binary_params = self.param_default_value.keys()
+        self.binary_params = list(self.param_default_value.keys())
         self.inter_vars = ['E','M','nu','ecc','omega','a1','TM2']
         self.binary_delay_funcs = []
         self.d_binarydelay_d_par_funcs = []

@@ -18,6 +18,7 @@ from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble,\
 
 class Spindown(TimingModel):
     """This class provides a simple timing model for an isolated pulsar."""
+    register = True
     def __init__(self):
         super(Spindown, self).__init__()
 
@@ -31,7 +32,7 @@ class Spindown(TimingModel):
                        description="Spindown-rate",
                        unitTplt=self.F_unit,
                        descriptionTplt=self.F_description,
-                       type_match='float'))
+                       type_match='float', long_double=True))
 
         self.add_param(p.MJDParameter(name="TZRMJD",
                        description="Reference epoch for phase = 0.0",
@@ -42,6 +43,7 @@ class Spindown(TimingModel):
                        time_scale='tdb'))
 
         self.phase_funcs += [self.spindown_phase,]
+        self.order_number = 1
 
     def setup(self):
         super(Spindown, self).setup()
@@ -51,9 +53,9 @@ class Spindown(TimingModel):
                 raise MissingParameter("Spindown", p)
 
         # Check continuity
-        F_terms = self.get_prefix_mapping('F').keys()
+        F_terms = list(self.get_prefix_mapping('F').keys())
         F_terms.sort()
-        F_in_order = range(1, max(F_terms)+1)
+        F_in_order = list(range(1, max(F_terms)+1))
         if not F_terms == F_in_order:
             diff = list(set(F_in_order) - set(F_terms))
             raise MissingParameter("Spindown", "F%d"%diff[0])
@@ -64,7 +66,7 @@ class Spindown(TimingModel):
                 raise MissingParameter("Spindown", "PEPOCH",
                         "PEPOCH is required if F1 or higher are set")
         self.num_spin_terms = len(F_terms) + 1
-        for fp in self.get_prefix_mapping('F').values() + ['F0',]:
+        for fp in list(self.get_prefix_mapping('F').values()) + ['F0',]:
             self.register_deriv_funcs(self.d_phase_d_F, 'phase', fp)
         self.register_deriv_funcs(self.d_spindown_phase_d_delay, 'd_phase_d_delay')
 

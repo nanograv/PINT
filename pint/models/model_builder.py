@@ -34,7 +34,7 @@ def get_componets():
                     timing_comps[tmp.__name__] = s
     return timing_comps
 
-ComponentsList = get_componets()
+#ComponentsList = get_componets()
 
 default_models = ["StandardTimingModel",]
 class model_builder(object):
@@ -78,10 +78,10 @@ class model_builder(object):
         self.param_inparF = None
         self.param_unrecognized = {}
         self.param_inModel = []
-        self.comps = ComponentsList
         self.prefix_names = None
         self.param_prefix = {}
         self.select_comp = []
+        self.control_params = ['EPHEM', 'CLK']
         if parfile is not None:
             self.parfile = parfile
             self.get_comp_from_parfile(self.parfile)
@@ -129,31 +129,34 @@ class model_builder(object):
         pfile.close()
         return self.param_inparF
 
-
-    def get_comp_from_parfile(self,parfile):
-        """Check all the components if it is needed from parfile
-           Put the needed on in the selected components list
-        """
+    def get_comp_from_parfile(self, parfile):
         params_inpar = self.preprocess_parfile(parfile)
-        for module in self.comps.keys():
+        comps = TimingModel._model_list
+        used_base = []
+        common_bases = (TimingModel, object)
+        for k, cp in zip(comps.keys(), comps.values()):
+            if cp in used_base:
+                continue
             selected_c = None
-            num_comp = len(self.comps[module])
-            slt_tmp = None
-            for ii, c in enumerate(self.comps[module]):
-                cclass = c()
-                #Check is this components a subclass of other components
-                if TimingModel not in c.__bases__:
-                    if hasattr(cclass,'model_special_params'):
-                        # TODO : Need fix aliases part
-                        if any(par in params_inpar.keys() for par in cclass.model_special_params):
-                            selected_c = c
-                            break
-                        else:  # If no special parameters, ignore.
-                            continue
+            ci = cp()
+            #Check is this components a subclass of other components
+            if hasattr(ci,'model_special_params'):
+                if any(par in params_inpar.keys() for par in ci.model_special_params):
+                    # This is the components we want
+                    selected_c = cp
+                    bases = inspect.getmro(cp)
+                    mother_classes = list(set(bases) - set(common_bases + (cp,)))
+                    # remove mother class from selected list, if selected
+                    for mc in mother_classes:
+                        if mc in self.select_comp:
+                            self.select_comp.remove(mc)
+                    used_base += mother_classes
+                else:
+                    continue
+            else:
+                if ci.is_in_parfile(params_inpar):
+                    selected_c = cp
 
-                if cclass.is_in_parfile(params_inpar):
-                    selected_c = c
-            # One module will have one selected component
             if selected_c is not None and selected_c not in self.select_comp:
                 self.select_comp.append(selected_c)
 
@@ -224,8 +227,10 @@ class model_builder(object):
 
             for ptype in ['prefixParameter', 'maskParameter']:
                 prefix_in_model = self.model_instance.get_params_of_type(ptype)
-                prefix_param = self.search_prefix_param(self.param_unrecognized.keys(),
-                                                        prefix_in_model)
+                prefix_param = \
+                    self.search_prefix_param(
+                        list(self.param_unrecognized.keys()),
+                        prefix_in_model)
                 for key in prefix_param.keys():
                     ppnames = [x for x in prefix_in_model if x.startswith(key)]
                     exm_par = getattr(self.model_instance,ppnames[0])
@@ -239,6 +244,19 @@ class model_builder(object):
 
         if parfile is not None:
             self.model_instance.read_parfile(parfile)
+
+    def get_control_info(self):
+        info = {}
+        if not self.param_unrecognized == {}:
+            for ctrlp in self.control_params:
+                if ctrlp in self.param_unrecognized:
+                    info[ctrlp] = self.param_unrecognized[ctrlp]
+                else:
+                    # Check if the prefix match
+                    for p in self.control_params.keys():
+                        if p.startswith(ctrlp):
+                            info[ctrlp] = self.param_unrecognized[ctrlp]
+        return info
 
 def get_model(parfile):
     """A one step function to build model from a parfile
