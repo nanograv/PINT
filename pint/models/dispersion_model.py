@@ -51,7 +51,7 @@ class Dispersion(TimingModel):
         base_dms.append('DM')
 
         for dm_name in base_dms:
-            self.register_deriv_funcs(self.d_delay_d_DM, 'delay', dm_name)
+            self.register_deriv_funcs(self.d_delay_d_DMs, 'delay', dm_name)
 
     def DM_dervative_unit(self, n):
         return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
@@ -104,7 +104,7 @@ class Dispersion(TimingModel):
 
         return self.dispersion_time_delay(dm, bfreq)
 
-    def d_delay_d_DM(self, toas, param_name):
+    def d_delay_d_DMs(self, toas, param_name): # NOTE we should have a better name for this.
         """Derivatives for constant DM
         """
         try:
