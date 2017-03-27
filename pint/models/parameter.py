@@ -914,6 +914,7 @@ class prefixParameter(object):
         aliases = []
         for pa in self.prefix_aliases:
             aliases.append(pa + self.idxfmt)
+        self.long_double = long_double
         # initiate parameter class
         self.param_comp = self.param_class(name=self.name, value=value,
                                            units=real_units,
