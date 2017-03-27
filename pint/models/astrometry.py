@@ -324,7 +324,7 @@ class AstrometryEcliptic(Astrometry):
             description="Proper motion in ecliptic latitude",
             aliases=["PMBETA"]))
 
-        self.add_param(p.strParameter(name="ECL",
+        self.add_param(p.strParameter(name="ECL", value='IERS2003', 
             description="Obliquity angle value secetion"))
 
         self.set_special_params(['ELONG', 'ELAT', 'PMELONG','PMELAT'])
@@ -366,7 +366,7 @@ class AstrometryEcliptic(Astrometry):
         try:
             PulsarEcliptic.obliquity = OBL[self.ECL.value]
         except KeyError:
-            raise ValueError("No obliquity " + self.ECL.value + " provided. "
+            raise ValueError("No obliquity " + str(self.ECL.value) + " provided. "
                              "Check your pint/datafile/ecliptic.dat file.")
 
         pos_ecl = PulsarEcliptic(lon=self.ELONG.quantity+dELONG, lat=self.ELAT.quantity+dELAT)
