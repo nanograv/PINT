@@ -8,11 +8,16 @@ import astropy.io.fits as pyfits
 from .fits_utils import read_fits_event_mjds_tuples
 
 # fits_extension can be a single name or a comma-separated list of allowed
-# extension names
+# extension names.
+# For weight we use the same conventions used for Fermi: None, a valid FITS
+# extension name or CALC.
 mission_config = \
-    {"rxte": {"fits_extension": "XTE_SE", 'allow_local': True},
-     "nicer": {"fits_extension": "EVENTS", 'allow_local': True},
-     "xmm": {"fits_extension": "EVENTS", 'allow_local': False}}
+    {"rxte": {"fits_extension": "XTE_SE", 'allow_local': True,
+              "fits_columns": {"pha": "PHA"}},
+     "nicer": {"fits_extension": "EVENTS", 'allow_local': True,
+               "fits_columns": {"pha": "PHA"}},
+     "xmm": {"fits_extension": "EVENTS", 'allow_local': False,
+             "fits_columns": {"pi": "PI"}}}
 
 
 def _default_obs_and_scale(mission, timesys, timeref):
@@ -48,6 +53,20 @@ def load_event_TOAs(eventname, mission, weights=None):
 
     Correctly handles raw event files, or ones processed with axBary to have
     barycentered  TOAs. Different conditions may apply to different missions.
+    
+    Parameters
+    ----------
+    eventname : str
+        File name of the FITS event list
+    mission : str
+        Name of the mission (e.g. RXTE, XMM)
+    weights : array or None
+        The array has to be of the same size as the event list. Overwrites 
+        possible weight lists from mission-specific FITS files
+    
+    Returns
+    -------
+    toalist : list of TOA objects
     '''
     # Load photon times from event file
     hdulist = pyfits.open(eventname)
@@ -77,27 +96,30 @@ def load_event_TOAs(eventname, mission, weights=None):
     # Read time column from FITS file
     mjds = read_fits_event_mjds_tuples(hdulist[1])
 
-    try:
-        phas = event_dat.field('PHA')
-    except:
-        phas = np.zeros(len(mjds))
-    try:
-        pis = event_dat.field('PI')
-    except:
-        pis = np.zeros(len(mjds), dtype=np.long)
+    new_kwargs = {}
+    # Parse and retrieve default values from the FITS columns listed in config
+    cols = mission_config[mission]["fits_columns"]
+    for col in cols.keys():
+        try:
+            val = event_dat.field(cols[col])
+        except ValueError:
+            val = np.zeros(len(mjds), dtype=np.long)
+        new_kwargs[col] = val
+
+    if weights is not None:
+        new_kwargs["weights"] = weights
 
     hdulist.close()
 
     obs, scale = _default_obs_and_scale(mission, timesys, timeref)
 
-    # Create TOA list
-    if weights is None:
-        toalist = [toa.TOA(m, obs=obs, scale=scale, energy=e, pi=pis) for
-                   m, e in zip(mjds, phas)]
-    else:
-        toalist = [toa.TOA(m, obs=obs, scale=scale, energy=e, pi=pis,
-                           weight=w) for
-                   m, e, w in zip(mjds, phas, weights)]
+    toalist = [None] * len(mjds)
+    for i in range(len(mjds)):
+        # Create TOA list
+        kw = {}
+        for key in new_kwargs.keys():
+            kw[key] = new_kwargs[key][i]
+        toalist[i] = toa.TOA(mjds[i], obs=obs, scale=scale, **kw)
 
     return toalist
 
