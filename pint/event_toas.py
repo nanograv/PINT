@@ -103,7 +103,7 @@ def load_event_TOAs(eventname, mission, weights=None):
         try:
             val = event_dat.field(cols[col])
         except ValueError:
-            val = np.zeros(len(mjds), dtype=np.long)
+            val = np.zeros(len(mjds))
         new_kwargs[col] = val
 
     if weights is not None:
