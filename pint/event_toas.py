@@ -47,6 +47,35 @@ def _default_obs_and_scale(mission, timesys, timeref):
     return obs, scale
 
 
+def _get_columns_from_fits(hdu, cols):
+    new_dict = {}
+    event_dat = hdu.data
+    default_val = np.zeros(len(event_dat))
+    # Parse and retrieve default values from the FITS columns listed in config
+    for col in cols.keys():
+        try:
+            val = event_dat.field(cols[col])
+        except ValueError:
+            val = default_val
+        new_dict[col] = val
+    return new_dict
+
+
+def _get_timesys_and_timeref(hdu):
+    event_hdr = hdu.header
+    timesys = event_hdr['TIMESYS']
+    log.info("TIMESYS {0}".format(timesys))
+    if timesys not in ['TDB', 'TT']:
+        raise ValueError('Timesys has to be TDB or TT')
+
+    timeref = event_hdr['TIMEREF']
+    log.info("TIMEREF {0}".format(timeref))
+    if timeref not in ['GEOCENTER', 'SOLARSYSTEM', 'LOCAL']:
+        raise ValueError('Timeref is invalid')
+
+    return timesys, timeref
+
+
 def load_event_TOAs(eventname, mission, weights=None):
     '''
     Read photon event times out of a FITS file as PINT TOA objects.
@@ -78,45 +107,29 @@ def load_event_TOAs(eventname, mission, weights=None):
         raise RuntimeError('First table in FITS file' +
                            'must be {}. Found {}'.format(extension,
                                                          hdulist[1].name))
-    event_hdr=hdulist[1].header
-    event_dat=hdulist[1].data
 
-    timesys = event_hdr['TIMESYS']
-    log.info("TIMESYS {0}".format(timesys))
-    if timesys not in ['TDB', 'TT']:
-        raise ValueError('Timesys has to be TDB or TT')
+    timesys, timeref = _get_timesys_and_timeref(hdulist[1])
 
-    timeref = event_hdr['TIMEREF']
-    log.info("TIMEREF {0}".format(timeref))
-    if timeref not in ['GEOCENTER', 'SOLARSYSTEM', 'LOCAL']:
-        raise ValueError('Timeref is invalid')
-
-    if allow_local is False and timesys != 'TDB':
+    if allow_local == False and timesys != 'TDB':
         log.error('Raw spacecraft TOAs not yet supported for ' + mission)
+
+    obs, scale = _default_obs_and_scale(mission, timesys, timeref)
+
     # Read time column from FITS file
     mjds = read_fits_event_mjds_tuples(hdulist[1])
 
-    new_kwargs = {}
-    # Parse and retrieve default values from the FITS columns listed in config
-    cols = mission_config[mission]["fits_columns"]
-    for col in cols.keys():
-        try:
-            val = event_dat.field(cols[col])
-        except ValueError:
-            val = np.zeros(len(mjds))
-        new_kwargs[col] = val
+    new_kwargs = _get_columns_from_fits(hdulist[1],
+                                        mission_config[mission]["fits_columns"])
+
+    hdulist.close()
 
     if weights is not None:
         new_kwargs["weights"] = weights
 
-    hdulist.close()
-
-    obs, scale = _default_obs_and_scale(mission, timesys, timeref)
-
     toalist = [None] * len(mjds)
+    kw = {}
     for i in range(len(mjds)):
         # Create TOA list
-        kw = {}
         for key in new_kwargs.keys():
             kw[key] = new_kwargs[key][i]
         toalist[i] = toa.TOA(mjds[i], obs=obs, scale=scale, **kw)
