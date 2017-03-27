@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import astropy.units as u
 import os, sys
 
-datadir = os.path.dirname(os.path.abspath(__file__))
+datadir = os.path.dirname(os.path.abspath(str(__file__)))
 parfile = os.path.join(datadir, 'NGC6440E.par')
 timfile = os.path.join(datadir, 'NGC6440E.tim')
 
