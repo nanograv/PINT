@@ -103,7 +103,15 @@ class Dispersion(TimingModel):
             dm += dm_f(toas)
 
         return self.dispersion_time_delay(dm, bfreq)
-
+    def print_par_DMs(self,):
+        result  = ''
+        perfix_dm = self.get_prefix_mapping('DM').values()
+        dms = ['DM'] + perfix_dm
+        for dm in dms:
+            result += getattr(self, dm).as_parfile_line()
+        if hasattr(self, 'components'):
+            all_params = self.components[self.__class__.__name__].params
+        
     def d_delay_d_DMs(self, toas, param_name): # NOTE we should have a better name for this.
         """Derivatives for constant DM
         """
