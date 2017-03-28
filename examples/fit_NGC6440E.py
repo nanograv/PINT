@@ -8,6 +8,7 @@ import pint.models.model_builder as mb
 import matplotlib.pyplot as plt
 import astropy.units as u
 import os, sys
+import numpy as np
 
 datadir = os.path.dirname(os.path.abspath(str(__file__)))
 parfile = os.path.join(datadir, 'NGC6440E.par')
@@ -18,6 +19,21 @@ m = mb.get_model(parfile)
 
 # Read in the TOAs
 t = pint.toa.get_TOAs(timfile)
+
+# Examples of how to select some subset of the TOAs
+# The resulting new table must be grouped by 'obs', though!
+#
+# Use every other TOA
+#t.table = t.table[::2].group_by('obs')
+#t.ntoas = len(t.table)
+
+# Use only TOAs with errors < 30 us
+#t.table = t.table[t.table['error'] < 30 * u.us].group_by('obs')
+#t.ntoas = len(t.table)
+
+# Use only TOAs from the GBT (although this is all of them for this example)
+#t.table = t.table[t.table['obs'] == 'gbt'].group_by('obs')
+#t.ntoas = len(t.table)
 
 # These are pre-fit residuals
 rs = pint.residuals.resids(t, m).phase_resids
