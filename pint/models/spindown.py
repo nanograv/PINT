@@ -44,6 +44,7 @@ class Spindown(TimingModel):
 
         self.phase_funcs += [self.spindown_phase,]
         self.order_number = 1
+        self.print_par_func = 'print_par_F'
 
     def setup(self):
         super(Spindown, self).setup()
@@ -118,6 +119,22 @@ class Spindown(TimingModel):
         phs_tzrmjd = taylor_horner(dt_tzrmjd-dt_pepoch, fterms)
         phs_pepoch = taylor_horner(-dt_pepoch, fterms)
         return phs_tzrmjd - phs_pepoch
+
+    def print_par_F(self,):
+        result = ''
+        f_terms = ["F%d" % ii for ii in
+                range(self.num_spin_terms)]
+        for ft in f_terms:
+            par = getattr(self, ft)
+            result += par.as_parfile_line()
+        if hasattr(self, 'components'):
+            p_default = self.components['Spindown'].params
+        else:
+            p_default = self.params
+        for param in p_default:
+            if param not in f_terms:
+                result += getattr(self, param).as_parfile_line()
+        return result
 
     def d_phase_d_F(self, toas, param, delay):
         """Calculate the derivative wrt to an spin term."""
