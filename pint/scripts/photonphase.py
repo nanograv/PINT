@@ -7,9 +7,9 @@ import pint.toa as toa
 import pint.models
 import pint.residuals
 import astropy.units as u
-from pint.nicer_toas import load_NICER_TOAs
-from pint.rxte_toas import load_RXTE_TOAs
-from pint.xmm_toas import load_XMM_TOAs
+from pint.event_toas import load_NICER_TOAs
+from pint.event_toas import load_RXTE_TOAs
+from pint.event_toas import load_XMM_TOAs
 from pint.plot_utils import phaseogram_binned
 from pint.observatory.nicer_obs import NICERObs
 from pint.observatory.rxte_obs import RXTEObs
