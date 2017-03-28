@@ -48,7 +48,7 @@ class Dispersion(TimingModel):
                 raise MissingParameter("Dispersion", "DMEPOCH",
                         "DMEPOCH is required if DM1 or higher are set")
         base_dms = self.get_prefix_mapping('DM').values()
-        base_dms.append('DM')
+        base_dms += ['DM',]
 
         for dm_name in base_dms:
             self.register_deriv_funcs(self.d_delay_d_DMs, 'delay', dm_name)
@@ -136,7 +136,7 @@ class Dispersion(TimingModel):
             DMEPOCH = self.DMEPOCH.value
         dt = (toas['tdbld'] - DMEPOCH) * u.day
         dt_value = (dt.to(u.yr)).value
-        d_dm_d_dm_param = taylor_horner(dt_value, dm_terms)
+        d_dm_d_dm_param = taylor_horner(dt_value, dm_terms)* (self.DM.units/par.units)
         return DMconst * d_dm_d_dm_param/ bfreq**2.0
 
 class DispersionDMX(Dispersion):
