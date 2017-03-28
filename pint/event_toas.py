@@ -101,7 +101,6 @@ def load_event_TOAs(eventname, mission, weights=None):
     hdulist = pyfits.open(eventname)
 
     extension = mission_config[mission]["fits_extension"]
-    allow_local = mission_config[mission]['allow_local']
 
     if hdulist[1].name not in extension.split(','):
         raise RuntimeError('First table in FITS file' +
@@ -110,7 +109,8 @@ def load_event_TOAs(eventname, mission, weights=None):
 
     timesys, timeref = _get_timesys_and_timeref(hdulist[1])
 
-    if not allow_local and timesys != 'TDB':
+    if not mission_config[mission]['allow_local'] \
+            and timesys != 'TDB':
         log.error('Raw spacecraft TOAs not yet supported for ' + mission)
 
     obs, scale = _default_obs_and_scale(mission, timesys, timeref)
