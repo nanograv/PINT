@@ -445,11 +445,8 @@ class TOAs(object):
 
         if not hasattr(self, 'table'):
             mjds = self.get_mjds(high_precision=True)
-            mjds_low = self.get_mjds()
-            self.first_MJD = mjds.min()
-            self.last_MJD = mjds.max()
             # The table is grouped by observatory
-            self.table = table.Table([numpy.arange(len(mjds)), mjds, mjds_low,
+            self.table = table.Table([numpy.arange(len(mjds)), mjds, self.get_mjds(),
                                       self.get_errors(), self.get_freqs(),
                                       self.get_obss(), self.get_flags()],
                                       names=("index", "mjd", "mjd_float", "error", "freq",
@@ -466,6 +463,14 @@ class TOAs(object):
     @property
     def observatories(self):
         return set(self.get_obss())
+
+    @property
+    def first_MJD(self):
+        return self.get_mjds(high_precision=True).min()
+
+    @property
+    def last_MJD(self):
+        return self.get_mjds(high_precision=True).max()
  
     def __add__(self, x):
         if type(x) in [int, float]:
@@ -801,8 +806,6 @@ class TOAs(object):
         if hasattr(tmp, 'table'):
             self.table = tmp.table.group_by("obs")
         self.commands = tmp.commands
-        self.last_MJD = tmp.last_MJD
-        self.first_MJD = tmp.first_MJD
 
     def read_toa_file(self, filename, process_includes=True, top=True):
         """Read the given filename and return a list of TOA objects.
