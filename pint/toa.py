@@ -1,4 +1,4 @@
-import re, sys, os, numpy, gzip
+import re, sys, os, numpy, gzip, copy
 from . import utils
 from .observatory import Observatory, get_observatory
 from . import erfautils
@@ -415,7 +415,6 @@ class TOAs(object):
         # First, just make an empty container
         self.toas = []
         self.commands = []
-        self.observatories = set()
         self.filename = None
         self.planets = False
 
@@ -441,11 +440,8 @@ class TOAs(object):
             if not isinstance(toalist,(list,tuple)):
                 log.error('Trying to initialize from a non-list class')
             self.toas = toalist
-            self.ntoas = len(toalist)
             self.commands = []
             self.filename = None
-            self.observatories.update([t.obs for t in toalist])
-
 
         if not hasattr(self, 'table'):
             mjds = self.get_mjds(high_precision=True)
@@ -453,7 +449,7 @@ class TOAs(object):
             self.first_MJD = mjds.min()
             self.last_MJD = mjds.max()
             # The table is grouped by observatory
-            self.table = table.Table([numpy.arange(self.ntoas), mjds, mjds_low,
+            self.table = table.Table([numpy.arange(len(mjds)), mjds, mjds_low,
                                       self.get_errors(), self.get_freqs(),
                                       self.get_obss(), self.get_flags()],
                                       names=("index", "mjd", "mjd_float", "error", "freq",
@@ -463,6 +459,14 @@ class TOAs(object):
         # We don't need this now that we have a table
         del(self.toas)
 
+    @property
+    def ntoas(self):
+        return len(self.table) if hasattr(self, "table") else len(self.toas)
+
+    @property
+    def observatories(self):
+        return set(self.get_obss())
+ 
     def __add__(self, x):
         if type(x) in [int, float]:
             if not x:
@@ -528,6 +532,25 @@ class TOAs(object):
             return numpy.array([t.flags for t in self.toas])
         else:
             return self.table['flags']
+
+    def select(self, selectarray):
+        """Apply a boolean selection or mask array to the TOA table."""
+        if hasattr(self, "table"):
+            # Allow for selection undos
+            if not hasattr(self, "table_selects"):
+                self.table_selects = []
+            self.table_selects.append(copy.copy(self.table))
+            # Our TOA table must be grouped by observatory for phase calcs
+            self.table = self.table[selectarray].group_by('obs')
+        else:
+            log.warn("TOA selection not implemented for TOA lists.")
+
+    def unselect(self):
+        """Return to previous selected version of the TOA table (stored in stack)."""
+        if hasattr(self, "table_selects") and len(self.table_selects):
+            self.table = self.table_selects.pop()
+        else:
+            log.warn("No previous TOA table found.  No changes made.")
 
     def pickle(self, filename=None):
         """Write the TOAs to a .pickle file with optional filename."""
@@ -777,10 +800,7 @@ class TOAs(object):
             self.toas = tmp.toas
         if hasattr(tmp, 'table'):
             self.table = tmp.table.group_by("obs")
-        if hasattr(tmp, 'ntoas'):
-            self.ntoas = tmp.ntoas
         self.commands = tmp.commands
-        self.observatories = tmp.observatories
         self.last_MJD = tmp.last_MJD
         self.first_MJD = tmp.first_MJD
 
@@ -789,8 +809,8 @@ class TOAs(object):
 
         Will process INCLUDEd files unless process_includes is False.
         """
+        ntoas = 0
         if top:
-            self.ntoas = 0
             self.toas = []
             self.commands = []
             self.cdict = {"EFAC": 1.0, "EQUAD": 0.0*u.us,
@@ -801,13 +821,12 @@ class TOAs(object):
                           "PHA1": None, "PHA2": None,
                           "MODE": 1, "JUMP": [False, 0],
                           "FORMAT": "Unknown", "END": False}
-            self.observatories = set()
         with open(filename, "r") as f:
             for l in f.readlines():
                 MJD, d = parse_TOA_line(l, fmt=self.cdict["FORMAT"])
                 if d["format"] == "Command":
                     cmd = d["Command"][0]
-                    self.commands.append((d["Command"], self.ntoas))
+                    self.commands.append((d["Command"], ntoas))
                     if cmd == "SKIP":
                         self.cdict[cmd] = True
                         continue
@@ -876,9 +895,8 @@ class TOAs(object):
                             newtoa.flags["phase"] = self.cdict["PHASE"]
                         if self.cdict["TIME"] != 0.0:
                             newtoa.flags["to"] = self.cdict["TIME"]
-                        self.observatories.add(newtoa.obs)
                         self.toas.append(newtoa)
-                        self.ntoas += 1
+                        ntoas += 1
             if top:
                 # Clean up our temporaries used when reading TOAs
                 del self.cdict

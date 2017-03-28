@@ -20,20 +20,20 @@ m = mb.get_model(parfile)
 # Read in the TOAs
 t = pint.toa.get_TOAs(timfile)
 
-# Examples of how to select some subset of the TOAs
-# The resulting new table must be grouped by 'obs', though!
+# Examples of how to select some subsets of TOAs
+# These can be un-done using t.unselect()
 #
 # Use every other TOA
-#t.table = t.table[::2].group_by('obs')
-#t.ntoas = len(t.table)
+# t.select(np.where(np.arange(t.ntoas) % 2))
 
 # Use only TOAs with errors < 30 us
-#t.table = t.table[t.table['error'] < 30 * u.us].group_by('obs')
-#t.ntoas = len(t.table)
+# t.select(t.table['error'] < 30 * u.us)
 
 # Use only TOAs from the GBT (although this is all of them for this example)
-#t.table = t.table[t.table['obs'] == 'gbt'].group_by('obs')
-#t.ntoas = len(t.table)
+# t.select(t.table['obs'] == 'gbt')
+
+# Print a summary of the TOAs that we have
+t.print_summary()
 
 # These are pre-fit residuals
 rs = pint.residuals.resids(t, m).phase_resids
