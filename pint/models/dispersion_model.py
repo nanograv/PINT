@@ -27,12 +27,12 @@ class Dispersion(TimingModel):
         super(Dispersion, self).__init__()
         self.add_param(p.floatParameter(name="DM",
                        units="pc cm^-3", value=0.0,
-                       description="Dispersion measure"))
+                       description="Dispersion measure", long_double=True))
         self.add_param(p.prefixParameter(name="DM1", value=0.0, units='pc cm^-3/yr^1',
-                       description="Spindown-rate",
-                       unitTplt=self.DM_dervative_unit,
-                       descriptionTplt=self.DM_dervative_description,
-                       type_match='float'))
+                       description="1'th time derivative of the dispersion measure",
+                       unit_template=self.DM_dervative_unit,
+                       description_template=self.DM_dervative_description,
+                       type_match='float', long_double=True))
         self.add_param(p.MJDParameter(name="DMEPOCH",
                        description="Epoch of DM measurement"))
 
@@ -111,7 +111,7 @@ class Dispersion(TimingModel):
             result += getattr(self, dm).as_parfile_line()
         if hasattr(self, 'components'):
             all_params = self.components[self.__class__.__name__].params
-        
+
     def d_delay_d_DMs(self, toas, param_name): # NOTE we should have a better name for this.
         """Derivatives for constant DM
         """
@@ -151,20 +151,20 @@ class DispersionDMX(Dispersion):
                        description="Dispersion measure"))
         self.add_param(p.prefixParameter(name='DMX_0001',
                        units="pc cm^-3", value=0.0,
-                       unitTplt=lambda x: "pc cm^-3",
+                       unit_template=lambda x: "pc cm^-3",
                        description='Dispersion measure variation',
-                       descriptionTplt=lambda x: "Dispersion measure",
+                       description_template=lambda x: "Dispersion measure",
                        paramter_type='float'))
         self.add_param(p.prefixParameter(name='DMXR1_0001',
                        units="MJD",
-                       unitTplt=lambda x: "MJD",
+                       unit_template=lambda x: "MJD",
                        description='Beginning of DMX interval',
-                       descriptionTplt=lambda x: 'Beginning of DMX interval',
+                       description_template=lambda x: 'Beginning of DMX interval',
                        parameter_type='MJD', time_scale='utc'))
         self.add_param(p.prefixParameter(name='DMXR2_0001', units="MJD",
-                       unitTplt=lambda x: "MJD",
+                       unit_template=lambda x: "MJD",
                        description='End of DMX interval',
-                       descriptionTplt=lambda x: 'End of DMX interval',
+                       description_template=lambda x: 'End of DMX interval',
                        parameter_type='MJD', time_scale='utc'))
         self.dm_value_funcs += [self.dmx_dm,]
         self.set_special_params(['DMX_0001', 'DMXR1_0001','DMXR2_0001'])
