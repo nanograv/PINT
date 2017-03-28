@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+from __future__ import print_function, division
 import pint.toa
 import pint.models
 import pint.fitter
@@ -29,16 +30,16 @@ plt.grid()
 plt.show()
 
 # Now do the fit
-print "Fitting..."
+print("Fitting...")
 f = pint.fitter.WlsFitter(t, m)
 f.fit_toas()
 
 # Print some basic params
-print "Best fit has reduced chi^2 of", f.resids.chi2_reduced
-print "RMS in phase is", f.resids.phase_resids.std()
-print "RMS in time is", f.resids.time_resids.std().to(u.us)
-print "\n Best model is:"
-print f.model.as_parfile()
+print("Best fit has reduced chi^2 of", f.resids.chi2_reduced)
+print("RMS in phase is", f.resids.phase_resids.std())
+print("RMS in time is", f.resids.time_resids.std().to(u.us))
+print("\n Best model is:")
+print(f.model.as_parfile())
 
 plt.errorbar(xt,
              f.resids.time_resids.to(u.us).value,
