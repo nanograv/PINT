@@ -39,6 +39,7 @@ class Dispersion(TimingModel):
         self.dm_value_funcs = [self.base_dm,]
         self.delay_funcs['L1'] += [self.dispersion_delay,]
         self.order_number = 2
+        self.print_par_func = 'print_par_DMs'
 
     def setup(self):
         super(Dispersion, self).setup()
@@ -103,14 +104,23 @@ class Dispersion(TimingModel):
             dm += dm_f(toas)
 
         return self.dispersion_time_delay(dm, bfreq)
+
     def print_par_DMs(self,):
+        # TODO we need to have a better design for print out the parameters in
+        # an inhertance class.  
         result  = ''
         perfix_dm = self.get_prefix_mapping('DM').values()
         dms = ['DM'] + perfix_dm
         for dm in dms:
             result += getattr(self, dm).as_parfile_line()
         if hasattr(self, 'components'):
-            all_params = self.components[self.__class__.__name__].params
+            all_params = self.components['Dispersion'].params
+        else:
+            all_params = self.params
+        for pm in all_params:
+            if pm not in dms:
+                result += getattr(self, pm).as_parfile_line()
+        return result
 
     def d_delay_d_DMs(self, toas, param_name): # NOTE we should have a better name for this.
         """Derivatives for constant DM
