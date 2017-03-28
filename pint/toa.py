@@ -419,29 +419,23 @@ class TOAs(object):
         self.planets = False
 
         if (toalist is not None) and (toafile is not None):
-            log.error('Can not initialize TOAs from both file and list')
+            log.error('Cannot initialize TOAs from both file and list.')
 
         if toafile is not None:
-
             # FIXME: work with file-like objects as well
-
             # Check for a pickle-like filename.  Alternative approach would
             # be to just try opening it as a pickle and see what happens.
             if toafile.endswith('.pickle') or toafile.endswith('pickle.gz'):
-                log.info('Reading TOA from pickle file')
+                log.info('Reading TOAs from pickle file')
                 self.read_pickle_file(toafile)
-
-            # Not a pickle file, process as a standard set of TOA lines
-            else:
+            else: # Not a pickle file, process as a standard set of TOA lines
                 self.read_toa_file(toafile)
                 self.filename = toafile
 
         if toalist is not None:
-            if not isinstance(toalist,(list,tuple)):
-                log.error('Trying to initialize from a non-list class')
+            if not isinstance(toalist, (list, tuple)):
+                log.error('Trying to initialize TOAs from a non-list class')
             self.toas = toalist
-            self.commands = []
-            self.filename = None
 
         if not hasattr(self, 'table'):
             mjds = self.get_mjds(high_precision=True)
@@ -449,9 +443,9 @@ class TOAs(object):
             self.table = table.Table([numpy.arange(len(mjds)), mjds, self.get_mjds(),
                                       self.get_errors(), self.get_freqs(),
                                       self.get_obss(), self.get_flags()],
-                                      names=("index", "mjd", "mjd_float", "error", "freq",
-                                              "obs", "flags"),
-                                      meta = {'filename':self.filename}).group_by("obs")
+                                      names=("index", "mjd", "mjd_float", "error",
+                                             "freq", "obs", "flags"),
+                                      meta={'filename':self.filename}).group_by("obs")
 
         # We don't need this now that we have a table
         del(self.toas)
@@ -487,7 +481,7 @@ class TOAs(object):
     def get_freqs(self):
         """Return a numpy array of the observing frequencies in MHz for the TOAs"""
         if hasattr(self, "toas"):
-            return numpy.array([t.freq.to(u.MHz).value for t in self.toas])*u.MHz
+            return numpy.array([t.freq.to(u.MHz).value for t in self.toas]) * u.MHz
         else:
             x = self.table['freq']
             return numpy.asarray(x) * x.unit
@@ -520,7 +514,7 @@ class TOAs(object):
         """Return a numpy array of the TOA errors in us"""
         #FIXME temporarily disable reading errors from toas
         if hasattr(self, "toas"):
-            return numpy.array([t.error.to(u.us).value for t in self.toas])*u.us
+            return numpy.array([t.error.to(u.us).value for t in self.toas]) * u.us
         else:
             return self.table['error']
 
@@ -734,7 +728,7 @@ class TOAs(object):
         """
         # Record the planets choice for this instance
         self.planets = planets
-        log.info('Compute positions and velocities of observatories and Earth (planets = {0}), using {1} ephemeris'.format(planets,ephem))
+        log.info('Compute positions and velocities of observatories and Earth (planets = {0}), using {1} ephemeris'.format(planets, ephem))
         # Remove any existing columns
         cols_to_remove = ['ssb_obs_pos', 'ssb_obs_vel', 'obs_sun_pos']
         for c in cols_to_remove:
