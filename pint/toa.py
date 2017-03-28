@@ -566,6 +566,8 @@ class TOAs(object):
         s += "Number of commands:  %d\n" % len(self.commands)
         s += "Number of observatories:  %d %s\n" % (len(self.observatories),
                                                     list(self.observatories))
+        s += "MJD span:  %.3f to %.3f\n" % (self.first_MJD.value,
+                                            self.last_MJD.value)
         for ii, key in enumerate(self.table.groups.keys):
             grp = self.table.groups[ii]
             s += "%s TOAs (%d):\n" % (key['obs'], len(grp))
