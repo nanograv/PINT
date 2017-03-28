@@ -539,7 +539,7 @@ class TOAs(object):
             # Allow for selection undos
             if not hasattr(self, "table_selects"):
                 self.table_selects = []
-            self.table_selects.append(copy.copy(self.table))
+            self.table_selects.append(copy.deepcopy(self.table))
             # Our TOA table must be grouped by observatory for phase calcs
             self.table = self.table[selectarray].group_by('obs')
         else:

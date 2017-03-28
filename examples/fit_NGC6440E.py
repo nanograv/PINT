@@ -27,10 +27,10 @@ t = pint.toa.get_TOAs(timfile)
 # t.select(np.where(np.arange(t.ntoas) % 2))
 
 # Use only TOAs with errors < 30 us
-# t.select(t.table['error'] < 30 * u.us)
+# t.select(t.get_errors() < 30 * u.us)
 
 # Use only TOAs from the GBT (although this is all of them for this example)
-# t.select(t.table['obs'] == 'gbt')
+# t.select(t.get_obss() == 'gbt')
 
 # Print a summary of the TOAs that we have
 t.print_summary()

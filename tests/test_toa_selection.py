@@ -56,6 +56,18 @@ class TestTOAselection(unittest.TestCase):
                 dmx_old[ind] = dmx
         return dmx_old
 
+    def test_boolean_selection(self):
+        # This tests boolean TOA selection and unselection
+        assert self.toas.ntoas == 4005
+        self.toas.select(self.toas.get_errors() < 1.19 * u.us)
+        assert self.toas.ntoas == 2001
+        self.toas.select(self.toas.get_freqs() > 1.0 * u.GHz)
+        assert self.toas.ntoas == 1918
+        self.toas.unselect()
+        assert self.toas.ntoas == 2001
+        self.toas.unselect()
+        assert self.toas.ntoas == 4005
+
     def test_DMX_selection(self):
         dmx_old = self.get_dmx_old(self.toas.table).value
         # New way in the code.
