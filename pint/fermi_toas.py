@@ -106,7 +106,8 @@ def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1,
             weights = weights[idx]
 
     # limit the TOAs to ones in selected MJD range
-    idx = np.logical_and((mjds > minmjd),(mjds < maxmjd))
+    mjds_float = np.array([r[0] + r[1] for r in mjds])
+    idx = np.logical_and((mjds_float > minmjd),(mjds_float < maxmjd))
     mjds = mjds[idx]
     energies = energies[idx]
     if weightcolumn is not None:
