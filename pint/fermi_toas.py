@@ -50,7 +50,8 @@ def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
 
     return fgeom * np.exp(-np.power((logE-logeref)/np.sqrt(2.)/logesig,2.))
 
-def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1, logesig=0.5,minweight=0.0):
+def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1,
+                    logesig=0.5,minweight=0.0, minmjd=0.0, maxmjd=np.inf):
     '''
     TOAlist = load_Fermi_TOAs(ft1name)
       Read photon event times out of a Fermi FT1 file and return
@@ -103,6 +104,14 @@ def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1, loge
             mjds = mjds[idx]
             energies = energies[idx]
             weights = weights[idx]
+
+    # limit the TOAs to ones in selected MJD range
+    mjds_float = np.array([r[0] + r[1] for r in mjds])
+    idx = np.logical_and((mjds_float > minmjd),(mjds_float < maxmjd))
+    mjds = mjds[idx]
+    energies = energies[idx]
+    if weightcolumn is not None:
+        weights = weights[idx]
 
     if timesys == 'TDB':
         log.info("Building barycentered TOAs")
