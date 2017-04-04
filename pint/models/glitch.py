@@ -114,16 +114,17 @@ class Glitch(TimingModel):
             glep = getattr(self, glepnm)
             eph = glep.value
             idx = glep.index
-            dphs = getattr(self, "GLPH_%d" % idx).value
-            dF0 = getattr(self, "GLF0_%d" % idx).value
-            dF1 = getattr(self, "GLF1_%d" % idx).value
-            dF2 = getattr(self, "GLF2_%d" % idx).value
+            dphs = getattr(self, "GLPH_%d" % idx).quantity
+            dF0 = getattr(self, "GLF0_%d" % idx).quantity
+            dF1 = getattr(self, "GLF1_%d" % idx).quantity
+            dF2 = getattr(self, "GLF2_%d" % idx).quantity
             dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
+            dt = dt * u.second
             affected = dt > 0.0  # TOAs affected by glitch
             # decay term
-            dF0D = getattr(self, "GLF0D_%d" % idx).value
+            dF0D = getattr(self, "GLF0D_%d" % idx).quantity
             if dF0D != 0.0:
-                tau = getattr(self, "GLTD_%d" % idx).value
+                tau = getattr(self, "GLTD_%d" % idx).quantity
                 decayterm = dF0D * tau * (1.0 - numpy.exp(- dt[affected]
                                           / tau))
             else:
@@ -217,6 +218,8 @@ class Glitch(TimingModel):
             raise ValueError("Can not calculate d_phase_d_GLF0D with respect to %s." % param)
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLTD = getattr(self, param)
+        if par_GLTD.value == 0.0:
+            return numpy.zeros(len(toas), dtype=numpy.longdouble) * u.Unit("")/par_GLTD.units
         glf0d = getattr(self, 'GLF0D_'+ids).quantity
         tau = par_GLTD.quantity
         dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
