@@ -34,7 +34,8 @@ def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
     """Return a list of PosVel instances for the observatory at the TOA times.
 
     Observatory location should be given in the loc argument as an astropy
-    EarthLocation object.
+    EarthLocation object. This location will be in the ITRF frame (i.e.
+    co-rotating with the Earth).
 
     The optional obsname argument will be used as label in the returned
     PosVel instance.
