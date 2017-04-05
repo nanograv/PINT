@@ -67,7 +67,8 @@ class Parameter(object):
         A function that sets the quantity property
     get_value:
         A function that get purely value from quantity attribute
-
+    print_as_parfile: bool
+        A flag tells if the parameter should be printed out as parfile.
     Attributes
     ----------
     quantity: Type depends on the parameter subclass, it can be anything
@@ -79,7 +80,7 @@ class Parameter(object):
                  print_quantity=str, set_quantity=lambda x: x,
                  get_value=lambda x: x,
                  prior=priors.Prior(priors.UniformUnboundedRV()),
-                 set_uncertainty=fortran_float):
+                 set_uncertainty=fortran_float, print_as_parfile=False):
 
         self.name = name  # name of the parameter
         self.units = units  # Default unit
@@ -103,6 +104,7 @@ class Parameter(object):
         self.paramType = 'Not specified'  # Type of parameter. Here is general type
         self.valueType = None
         self.special_arg = []
+        self.print_as_parfile = print_as_parfile
     @property
     def prior(self):
         return self._prior
@@ -307,7 +309,7 @@ class Parameter(object):
     def as_parfile_line(self):
         """Return a parfile line giving the current state of the parameter."""
         # Don't print unset parameters
-        if self.quantity is None:
+        if not self.print_as_parfile or self.quantity is None:
             return ""
         line = "%-15s %25s" % (self.name, self.print_quantity(self.quantity))
         if self.uncertainty is not None:
@@ -363,6 +365,7 @@ class Parameter(object):
             if len(k) >= 4:
                 ucty = k[3]
             self.uncertainty = self.set_uncertainty(ucty)
+        self.print_as_parfile = True
         return True
 
     def name_matches(self, name):
@@ -1242,10 +1245,11 @@ class maskParameter(floatParameter):
             if len(k) >= 5 + len_key_v:
                 ucty = k[4 + len_key_v]
             self.uncertainty = self.set_uncertainty(ucty)
+        self.print_as_parfile = True
         return True
 
     def as_parfile_line_mask(self):
-        if self.quantity is None:
+        if not self.print_as_parfile or self.quantity is None:
             return ""
         line = "%-15s %s " % (self.origin_name, self.key)
         for kv in self.key_value:
