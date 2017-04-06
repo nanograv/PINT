@@ -877,7 +877,7 @@ class prefixParameter(object):
         Time scale for MJDParameter class.
     """
     def __init__(self, parameter_type='float',name=None, value=None, units=None,
-                 unitTplt=None, description=None, descriptionTplt=None,
+                 unit_template=None, description=None, description_template=None,
                  uncertainty=None, frozen=True, continuous=True,
                  prefix_aliases=None, long_double=False, time_scale='utc',
                  **kwargs):
@@ -896,8 +896,8 @@ class prefixParameter(object):
             raise ValueError("Unknow parameter type '"+ parameter_type + "' ")
 
         # Set up other attributes in the wrapper class
-        self.unit_template = unitTplt
-        self.description_template = descriptionTplt
+        self.unit_template = unit_template
+        self.description_template = description_template
         input_units = units
         input_description = description
         self.prefix_aliases = [] if prefix_aliases is None else prefix_aliases
@@ -1058,7 +1058,7 @@ class prefixParameter(object):
 
         new_name = self.prefix + format(index, '0'+ str(len(self.idxfmt)))
         kws = dict()
-        for key in ['units', 'unitTplt', 'description','descriptionTplt',
+        for key in ['units', 'unit_template', 'description','description_template',
                     'frozen', 'continuous', 'prefix_aliases', 'long_double',
                     'time_scale', 'parameter_type']:
             if hasattr(self, key):
