@@ -48,7 +48,7 @@ class Dispersion(TimingModel):
             if self.DMEPOCH.value is None:
                 raise MissingParameter("Dispersion", "DMEPOCH",
                         "DMEPOCH is required if DM1 or higher are set")
-        base_dms = self.get_prefix_mapping('DM').values()
+        base_dms = list(self.get_prefix_mapping('DM').values())
         base_dms += ['DM',]
 
         for dm_name in base_dms:
@@ -63,7 +63,7 @@ class Dispersion(TimingModel):
     def get_DM_terms(self):
         """Return a list of the DM term values in the model: [DM, DM1, ..., DMn]
         """
-        perfix_dm = self.get_prefix_mapping('DM').values()
+        prefix_dm = list(self.get_prefix_mapping('DM').values())
         dm_terms = [self.DM.quantity,]
         dm_terms += [getattr(self, x).quantity for x in perfix_dm]
         return dm_terms
@@ -107,9 +107,9 @@ class Dispersion(TimingModel):
 
     def print_par_DMs(self,):
         # TODO we need to have a better design for print out the parameters in
-        # an inhertance class.  
+        # an inhertance class.
         result  = ''
-        perfix_dm = self.get_prefix_mapping('DM').values()
+        prefix_dm = list(self.get_prefix_mapping('DM').values())
         dms = ['DM'] + perfix_dm
         for dm in dms:
             result += getattr(self, dm).as_parfile_line()
