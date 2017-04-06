@@ -125,13 +125,13 @@ class Glitch(TimingModel):
             dF0D = getattr(self, "GLF0D_%d" % idx).quantity
             if dF0D != 0.0:
                 tau = getattr(self, "GLTD_%d" % idx).quantity
-                decayterm = dF0D * tau * (1.0 - numpy.exp(- dt[affected]
-                                          / tau))
+                decayterm = dF0D * tau * (1.0 - numpy.exp(- (dt[affected]
+                                          / tau).to(u.Unit(""))))
             else:
                 decayterm = 0.0
 
             phs[affected] += dphs + dt[affected] * \
-                (dF0 + 0.5 * dt[affected] * dF1 +
+                (dF0 + 0.5 * dt[affected] * dF1 + \
                  1./6. * dt[affected]*dt[affected] * dF2) + decayterm
         return phs
 
