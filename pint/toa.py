@@ -862,6 +862,7 @@ class TOAs(object):
                         # Save FORMAT in a tmp
                         fmt = self.cdict["FORMAT"]
                         self.cdict["FORMAT"] = "Unknown"
+                        log.info("Processing included TOA file {0}".format(d["Command"][1]))
                         self.read_toa_file(d["Command"][1], top=False)
                         # re-set FORMAT
                         self.cdict["FORMAT"] = fmt
