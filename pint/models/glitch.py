@@ -97,7 +97,7 @@ class Glitch(TimingModel):
     def print_par_glitch(self):
         result = ''
         for idx in set(self.glitch_indices):
-            for param in self.glitch_prop:
+            for param in ['GLEP_',] + self.glitch_prop:
                 par = getattr(self, param + '%d'%idx)
                 result += par.as_parfile_line()
         return result
