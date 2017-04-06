@@ -65,7 +65,7 @@ class Dispersion(TimingModel):
         """
         prefix_dm = list(self.get_prefix_mapping('DM').values())
         dm_terms = [self.DM.quantity,]
-        dm_terms += [getattr(self, x).quantity for x in perfix_dm]
+        dm_terms += [getattr(self, x).quantity for x in prefix_dm]
         return dm_terms
 
     def base_dm(self, toas):
@@ -110,7 +110,7 @@ class Dispersion(TimingModel):
         # an inhertance class.
         result  = ''
         prefix_dm = list(self.get_prefix_mapping('DM').values())
-        dms = ['DM'] + perfix_dm
+        dms = ['DM'] + prefix_dm
         for dm in dms:
             result += getattr(self, dm).as_parfile_line()
         if hasattr(self, 'components'):
