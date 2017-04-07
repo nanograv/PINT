@@ -93,7 +93,7 @@ class Spindown(TimingModel):
         # NOTE: Should we be using barycentric arrival times, instead of TDB?
         if self.TZRMJD.value is None:
             self.TZRMJD.value = toas['tdb'][0] - delay[0]*u.s
-        # Warning(paulr): This looks wrong.  You need to use the
+        # Warning(@paulray): This looks wrong.  You need to use the
         # TZRFREQ and TZRSITE to compute a proper TDB reference time.
         if not hasattr(self, "TZRMJDld"):
             self.TZRMJDld = time_to_longdouble(self.TZRMJD.value)

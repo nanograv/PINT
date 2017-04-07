@@ -1,7 +1,7 @@
 # phase.py
 # Simple class representing pulse phase as integer and fractional
 # parts.
-# SUGGESTION(paulr): How about adding some documentation here
+# SUGGESTION(@paulray): How about adding some documentation here
 # describing why the fractional part is reduced to [-0.5,0.5] instead of [0,1].
 # I think I understand it, but it would be good to have it stated.
 # Also, probably one of the comparisons below should be <= or >=, so the
@@ -27,14 +27,14 @@ class Phase(namedtuple('Phase', 'int frac')):
                 arg2 = numpy.array([arg2,])
             arg1S = numpy.modf(arg1)
             arg2S = numpy.modf(arg2)
-            ii = arg1S[1]+arg2S[1]    
+            ii = arg1S[1]+arg2S[1]
             ff = arg2S[0]
         index = numpy.where(ff < -0.5)
         ff[index] += 1.0
         ii[index] -= 1
         index = numpy.where(ff > 0.5)
         ff[index] -= 1.0
-        ii[index] += 1    
+        ii[index] += 1
         return super(Phase, cls).__new__(cls, ii, ff)
 
     def __neg__(self):
@@ -46,4 +46,4 @@ class Phase(namedtuple('Phase', 'int frac')):
         return Phase(self.int + other.int + ii, ff - ii)
 
     def __sub__(self, other):
-        return self.__add__(other.__neg__())    
+        return self.__add__(other.__neg__())

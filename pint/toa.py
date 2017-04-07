@@ -281,7 +281,7 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
                 toa_str, toaerr.to(u.us).value)
     else:
         log.error('Unknown TOA format ({0})'.format(format))
-        # Should this raise an exception here? -- paulr
+        # Should this raise an exception here? -- @paulray
 
     return out
 
@@ -465,7 +465,7 @@ class TOAs(object):
     @property
     def last_MJD(self):
         return self.get_mjds(high_precision=True).max()
- 
+
     def __add__(self, x):
         if type(x) in [int, float]:
             if not x:
@@ -627,7 +627,7 @@ class TOAs(object):
         outf = open(filename,'w')
         if format.upper() in ('TEMPO2','1'):
             outf.write('FORMAT 1\n')
-        # NOTE(paulr): This really should REMOVE any(?) clock corrections
+        # NOTE(@paulray): This really should REMOVE any(?) clock corrections
         # that have been applied!
         for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'].quantity,
             self.table['freq'].quantity,self.table['obs'],self.table['flags']):
@@ -673,7 +673,7 @@ class TOAs(object):
             for jj in range(loind, hiind):
                 if 'to' in flags[jj]:
                     # TIME commands are in sec
-                    # SUGGESTION(paulr): These time correction units should
+                    # SUGGESTION(@paulray): These time correction units should
                     # be applied in the parser, not here. In the table the time
                     # correction should have units.
                     corr[jj] = flags[jj]['to'] * u.s
@@ -711,6 +711,9 @@ class TOAs(object):
             loind, hiind = self.table.groups.indices[ii:ii+2]
             grpmjds = time.Time(grp['mjd'], location=grp['mjd'][0].location)
             grptdbs = grpmjds.tdb
+            # For spacecraft observatories, here is the place
+            # to add the time dilation part. Just let astropy
+            # do the geocentric TT->TDB correction (@paulray)
             tdbs[loind:hiind] = numpy.asarray([t for t in grptdbs])
 
         # Now add the new columns to the table
