@@ -750,7 +750,7 @@ class AngleParameter(Parameter):
         self._str_unit = units
         self.unit_identifier = {
             'h:m:s': (u.hourangle, 'h', '0:0:%.20fh'),
-            'd:m:s': (u.deg, 'd', '0:0:%.20fd'),
+            'd:m:s': (u.deg, 'd', '%.20fsecond'),
             'rad': (u.rad, 'rad', '%.20frad'),
             'deg': (u.deg, 'deg', '%.20fdeg'),
         }
