@@ -1,5 +1,6 @@
 from pint.models import parameter as p
 from pint.models import model_builder as mb
+from pint import pint_units
 from pint.utils import str2longdouble
 from astropy.coordinates.angles import Angle
 import astropy.time as time
@@ -104,7 +105,13 @@ class TestParameters(unittest.TestCase):
                 numpy.isclose(test_m.JUMP12.value, 0.1))
         self.assertTrue(
                 numpy.isclose(test_m.JUMP12.uncertainty_value, 2.0))
+        self.assertTrue(
+                numpy.isclose(test_m.RAJ.uncertainty_value, 476.94611148516092061223))
 
+        self.assertTrue(
+                numpy.isclose(test_m.DECJ.uncertainty_value, 190996312986311097848351.00000000000000000000))
+        self.assertTrue(test_m.RAJ.uncertainty.unit, pint_units['hourangle_second'])
+        self.assertTrue(test_m.RAJ.uncertainty.unit, u.arcsecond)
     def test_RAJ(self):
         """Check whether the value and units of RAJ parameter are ok"""
         units = u.hourangle
