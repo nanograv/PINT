@@ -749,10 +749,10 @@ class AngleParameter(Parameter):
              **kwargs):
         self._str_unit = units
         self.unit_identifier = {
-            'h:m:s': (u.hourangle, 'h', '0:0:%.20fh'),
-            'd:m:s': (u.deg, 'd', '%.20fsecond'),
-            'rad': (u.rad, 'rad', '%.20frad'),
-            'deg': (u.deg, 'deg', '%.20fdeg'),
+            'h:m:s': (u.hourangle, 'h', pint_units['hourangle_second']),
+            'd:m:s': (u.deg, 'd', u.arcsec),
+            'rad': (u.rad, 'rad', u.rad),
+            'deg': (u.deg, 'deg', u.deg),
         }
         # Check unit format
         if units.lower() not in self.unit_identifier.keys():
@@ -801,16 +801,16 @@ class AngleParameter(Parameter):
         """This function is to set the uncertainty for an angle parameter.
         """
         if isinstance(val, numbers.Number):
-            result =Angle(self.unit_identifier[self._str_unit.lower()][2] % val)
+            result =Angle(val * self.unit_identifier[self._str_unit.lower()][2])
         elif isinstance(val, str):
 
-            result =Angle(self.unit_identifier[self._str_unit.lower()][2] \
-                          % fortran_float(val))
+            result =Angle(str2longdouble(val) * \
+                          self.unit_identifier[self._str_unit.lower()][2])
             #except:
             #    raise ValueError('Srting ' + val + ' can not be converted to'
             #                     ' astropy angle.')
         elif hasattr(val, 'unit'):
-            result = Angle(val.to(self.units))
+            result = Angle(val.to(self.unit_identifier[self._str_unit.lower()][2]))
         else:
             raise ValueError('Angle parameter can not accept '
                              + type(val).__name__ + 'format.')
