@@ -915,7 +915,8 @@ class prefixParameter(object):
     def __init__(self, parameter_type='float',name=None, value=None, units=None,
                  unit_template=None, description=None, description_template=None,
                  uncertainty=None, frozen=True, continuous=True,
-                 prefix_aliases=None, long_double=False, time_scale='utc',
+                 prefix_aliases=None, long_double=False, unit_scale=False, \
+                 scale_factor=None, scale_threshold=None,  time_scale='utc',
                  **kwargs):
         # Split prefixed name, if the name is not in the prefixed format, error
         # will be raised
@@ -960,7 +961,10 @@ class prefixParameter(object):
                                            continuous=continuous,
                                            aliases=aliases,
                                            long_double=long_double,
-                                           time_scale=time_scale)
+                                           time_scale=time_scale,
+                                           unit_scale=unit_scale, \
+                                           scale_factor=scale_factor,\
+                                           scale_threshold=scale_threshold)
         self.is_prefix = True
     # Define prpoerties for access the parameter composition
     @property
