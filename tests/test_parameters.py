@@ -256,6 +256,14 @@ class TestParameters(unittest.TestCase):
         self.assertRaises(ValueError, self.set_OM_to_none)
         self.assertRaises(TypeError, self.set_OM_to_time)
 
+    def test_PBDOT(self):
+        self.m.PBDOT.value = 20
+        self.assertEqual(self.m.PBDOT.units, 1e-12*u.day/u.day)
+        self.assertEqual(self.m.PBDOT.quantity, 20 * 1e-12*u.day/u.day)
+        self.m.PBDOT.value = 1e-11
+        self.assertEqual(self.m.PBDOT.units, u.day/u.day)
+        self.assertEqual(self.m.PBDOT.quantity, 1e-11 * u.day/u.day)
+
     def test_prefix_value_to_num(self):
         """Test setting the prefix parameter """
         value = 51
