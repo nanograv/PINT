@@ -49,7 +49,7 @@ class Astrometry(TimingModel):
 
     def barycentric_radio_freq(self, toas):
         """Return radio frequencies (MHz) of the toas corrected for Earth motion"""
-        L_hat = self.ssb_to_psb_xyz(epoch=toas['tdbld'].astype(numpy.float64))
+        L_hat = self.ssb_to_psb_xyz(epoch=toas['tdbld'])
         v_dot_L_array = numpy.sum(toas['ssb_obs_vel']*L_hat, axis=1)
         return toas['freq'] * (1.0 - v_dot_L_array / const.c)
 
@@ -60,7 +60,7 @@ class Astrometry(TimingModel):
         NOTE: currently assumes XYZ location of TOA relative to SSB is
         available as 3-vector toa.xyz, in units of light-seconds.
         """
-        L_hat = self.ssb_to_psb_xyz(epoch=toas['tdbld'].astype(numpy.float64))
+        L_hat = self.ssb_to_psb_xyz(epoch=toas['tdbld'])
         re_dot_L = numpy.sum(toas['ssb_obs_pos']*L_hat, axis=1)
         delay = -re_dot_L.to(ls).value
         if self.PX.value != 0.0 \
