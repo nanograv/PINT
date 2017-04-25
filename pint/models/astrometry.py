@@ -7,7 +7,7 @@ import astropy.constants as const
 from astropy.coordinates.angles import Angle
 from astropy import log
 from . import parameter as p
-from .timing_model import TimingModel, MissingParameter, Cache
+from .timing_model import DelayComponent, MissingParameter, Cache
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble
 from pint.pulsar_ecliptic import PulsarEcliptic, OBL
 from pint import ls
@@ -21,7 +21,7 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 
-class Astrometry(TimingModel):
+class Astrometry(DelayComponent):
     register = True
     def __init__(self):
         super(Astrometry, self).__init__()
@@ -32,12 +32,12 @@ class Astrometry(TimingModel):
             units="mas", value=0.0,
             description="Parallax"))
 
-        self.delay_funcs['L1'] += [self.solar_system_geometric_delay,]
-        self.order_number = 0
+        self.delay_funcs += [self.solar_system_geometric_delay,]
+        self.category = 'Astrometry'
 
     def setup(self):
         super(Astrometry, self).setup()
-        self.register_deriv_funcs(self.d_delay_astrometry_d_PX, 'delay', 'PX')
+        # self.register_deriv_funcs(self.d_delay_astrometry_d_PX, 'delay', 'PX')
 
     def ssb_to_psb_xyz(self, epoch=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter.
@@ -53,7 +53,7 @@ class Astrometry(TimingModel):
         v_dot_L_array = numpy.sum(toas['ssb_obs_vel']*L_hat, axis=1)
         return toas['freq'] * (1.0 - v_dot_L_array / const.c)
 
-    def solar_system_geometric_delay(self, toas):
+    def solar_system_geometric_delay(self, toas, acc_delay=None):
         """Returns geometric delay (in sec) due to position of site in
         solar system.  This includes Roemer delay and parallax.
 
@@ -158,7 +158,7 @@ class AstrometryEquatorial(Astrometry):
             units="mas/year", value=0.0,
             description="Proper motion in DEC"))
         self.set_special_params(['RAJ', 'DECJ', 'PMRA', 'PMDEC'])
-        self.print_par_func = 'print_par_AstrometryEquatorial'
+        # self.print_par_func = 'print_par_AstrometryEquatorial'
 
     def setup(self):
         super(AstrometryEquatorial, self).setup()
@@ -175,10 +175,10 @@ class AstrometryEquatorial(Astrometry):
                 else:
                     self.POSEPOCH.quantity = self.PEPOCH.quantity
 
-        self.register_deriv_funcs(self.d_delay_astrometry_d_RAJ, 'delay', 'RAJ')
-        self.register_deriv_funcs(self.d_delay_astrometry_d_DECJ, 'delay', 'DEC')
-        self.register_deriv_funcs(self.d_delay_astrometry_d_PMRA, 'delay', 'PMRA')
-        self.register_deriv_funcs(self.d_delay_astrometry_d_PMDEC, 'delay', 'PMDEC')
+        # self.register_deriv_funcs(self.d_delay_astrometry_d_RAJ, 'delay', 'RAJ')
+        # self.register_deriv_funcs(self.d_delay_astrometry_d_DECJ, 'delay', 'DEC')
+        # self.register_deriv_funcs(self.d_delay_astrometry_d_PMRA, 'delay', 'PMRA')
+        # self.register_deriv_funcs(self.d_delay_astrometry_d_PMDEC, 'delay', 'PMDEC')
 
     def print_par_AstrometryEquatorial(self):
         result = ''
@@ -333,10 +333,10 @@ class AstrometryEcliptic(Astrometry):
                             "POSEPOCH or PEPOCH are required if PM is set.")
                 else:
                     self.POSEPOCH.quantity = self.PEPOCH.quantity
-        self.register_deriv_funcs(self.d_delay_astrometry_d_ELAT, 'delay', 'ELAT')
-        self.register_deriv_funcs(self.d_delay_astrometry_d_ELONG, 'delay', 'ELONG')
-        self.register_deriv_funcs(self.d_delay_astrometry_d_PMELAT, 'delay', 'PMELAT')
-        self.register_deriv_funcs(self.d_delay_astrometry_d_PMELONG, 'delay', 'PMELONG')
+        # self.register_deriv_funcs(self.d_delay_astrometry_d_ELAT, 'delay', 'ELAT')
+        # self.register_deriv_funcs(self.d_delay_astrometry_d_ELONG, 'delay', 'ELONG')
+        # self.register_deriv_funcs(self.d_delay_astrometry_d_PMELAT, 'delay', 'PMELAT')
+        # self.register_deriv_funcs(self.d_delay_astrometry_d_PMELONG, 'delay', 'PMELONG')
 
     def coords_as_ICRS(self, epoch=None):
         """Returns pulsar sky coordinates as an astropy ICRS object instance.

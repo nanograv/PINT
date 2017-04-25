@@ -9,14 +9,14 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 from . import parameter as p
-from .timing_model import TimingModel, MissingParameter
+from .timing_model import PhaseComponent, MissingParameter
 from ..phase import *
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble,\
     taylor_horner, time_from_longdouble, split_prefixed_name, taylor_horner_deriv
 
 
 
-class Spindown(TimingModel):
+class Spindown(PhaseComponent):
     """This class provides a simple timing model for an isolated pulsar."""
     register = True
     def __init__(self):
@@ -43,8 +43,7 @@ class Spindown(TimingModel):
                        time_scale='tdb'))
 
         self.phase_funcs += [self.spindown_phase,]
-        self.order_number = 1
-        self.print_par_func = 'print_par_F'
+        self.category = 'spindown'
 
     def setup(self):
         super(Spindown, self).setup()
@@ -67,9 +66,9 @@ class Spindown(TimingModel):
                 raise MissingParameter("Spindown", "PEPOCH",
                         "PEPOCH is required if F1 or higher are set")
         self.num_spin_terms = len(F_terms) + 1
-        for fp in list(self.get_prefix_mapping('F').values()) + ['F0',]:
-            self.register_deriv_funcs(self.d_phase_d_F, 'phase', fp)
-        self.register_deriv_funcs(self.d_spindown_phase_d_delay, 'd_phase_d_delay')
+        # for fp in list(self.get_prefix_mapping('F').values()) + ['F0',]:
+        #     self.register_deriv_funcs(self.d_phase_d_F, 'phase', fp)
+        # self.register_deriv_funcs(self.d_spindown_phase_d_delay, 'd_phase_d_delay')
 
     def F_description(self, n):
         """Template function for description"""
