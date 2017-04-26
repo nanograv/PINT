@@ -2,7 +2,7 @@
 """This module contains implementations of pulsar timing models.
 """
 # Import the main timing model classes
-from .timing_model import TimingModel, generate_timing_model
+#from .timing_model import TimingModel, generate_timing_model
 
 # Import all standard model components here
 # from .astrometry import AstrometryEquatorial, AstrometryEcliptic

@@ -21,29 +21,25 @@ class Spindown(PhaseComponent):
     register = True
     def __init__(self):
         super(Spindown, self).__init__()
-
-        # The number of terms in the taylor exapansion of spin freq (F0...FN)
-        #self.num_spin_terms = maxderivs
-
         self.add_param(p.floatParameter(name="F0", value=0.0, units="Hz",
                        description="Spin-frequency", long_double=True))
-
         self.add_param(p.prefixParameter(name="F1", value=0.0, units='Hz/s^1',
                        description="Spindown-rate",
                        unit_template=self.F_unit,
                        description_template=self.F_description,
                        type_match='float', long_double=True))
-
         self.add_param(p.MJDParameter(name="TZRMJD",
                        description="Reference epoch for phase = 0.0",
                        time_scale='tdb'))
-
         self.add_param(p.MJDParameter(name="PEPOCH",
                        description="Reference epoch for spin-down",
                        time_scale='tdb'))
 
         self.phase_funcs += [self.spindown_phase,]
         self.category = 'spindown'
+        for fp in list(self.get_prefix_mapping('F').values()) + ['F0',]:
+            self.register_deriv_funcs(self.d_phase_d_F, fp)
+        self.phase_derivs_wrt_delay += [self.d_spindown_phase_d_delay,]
 
     def setup(self):
         super(Spindown, self).setup()
@@ -66,9 +62,7 @@ class Spindown(PhaseComponent):
                 raise MissingParameter("Spindown", "PEPOCH",
                         "PEPOCH is required if F1 or higher are set")
         self.num_spin_terms = len(F_terms) + 1
-        # for fp in list(self.get_prefix_mapping('F').values()) + ['F0',]:
-        #     self.register_deriv_funcs(self.d_phase_d_F, 'phase', fp)
-        # self.register_deriv_funcs(self.d_spindown_phase_d_delay, 'd_phase_d_delay')
+
 
     def F_description(self, n):
         """Template function for description"""

@@ -1,7 +1,7 @@
 # timing_model.py
 # Defines the basic timing model interface classes
 import functools
-from .parameter import strParameter
+from .parameter import Parameter, strParameter
 from ..phase import Phase
 from astropy import log
 import astropy.time as time
@@ -303,8 +303,50 @@ class TimingModel(object):
             setattr(self, param.name, param)
             self.top_level_params += [param.name]
         else:
+            if target_component not in list(self.components.keys()):
+                raise AttributeError("Can not find component '%s' in "
+                                     "timging model." % target_component)
             self.components[target_component].add_param(param)
 
+    def remove_param(self, param):
+        """
+        Remove a parameter from timing model
+        Parameter
+        ---------
+        param: str
+            The name of parameter need to be removed.
+        """
+        param_map = self.get_params_mapping()
+        if param not in list(param_map.keys()):
+            raise AttributeError("Can not find '%s' in timing model." % param.name)
+        if param_map[param] == 'timing_model':
+            delattr(self, param)
+            self.top_level_params.remove(param)
+        else:
+            target_component = param_map[param]
+            self.components[target_component].remove_param(param)
+
+    def get_params_mapping(self):
+        """
+        This is a method to map all the parameters to the component they belong
+        to.
+        """
+        param_mapping = {}
+        for p in self.top_level_params:
+            param_mapping[p] = 'timing_model'
+        for cp in list(self.components.values()):
+            for pp in cp.params:
+                param_mapping[pp] = cp.__class__.__name__
+        return param_mapping
+
+    def param_help(self):
+        """Print help lines for all available parameters in model.
+        """
+        s = "Available parameters for %s\n" % self.__class__
+        for par, cp in list(self.get_params_mapping().items()) :
+            s += "%s\nLocated in component '%s'\n" % \
+                 (getattr(self, par).help_line(), cp)
+        return s
 
     def delay(self, toas):
         """Total delay for the TOAs.
@@ -371,28 +413,39 @@ class TimingModel(object):
         for cp in self.components.values():
             cp.setup()
 
+    def d_phase_d_toa(self, toas, sample_step=None):
+        """Return the derivative of phase wrt TOA
+        Parameter
+        ---------
+        toas : PINT TOAs class
+            The toas when the derivative of phase will be evaluated at.
+        sample_step : float optional
+            Finite difference steps. If not specified, it will take 1/10 of the
+            spin period.
+        """
+        copy_toas = copy.deepcopy(toas)
+        if sample_step is None:
+            pulse_period = 1.0 / self.F0.value
+            sample_step = pulse_period * 1000
+        sample_dt = [-sample_step, 2 * sample_step]
+
+        sample_phase = []
+        for dt in sample_dt:
+            dt_array = ([dt] * copy_toas.ntoas) * u.s
+            deltaT = time.TimeDelta(dt_array)
+            copy_toas.adjust_TOAs(deltaT)
+            phase = self.phase(copy_toas.table)
+            sample_phase.append(phase)
+        # Use finite difference method.
+        # phase'(t) = (phase(t+h)-phase(t-h))/2+ 1/6*F2*h^2 + ..
+        # The error should be near 1/6*F2*h^2
+        dp = (sample_phase[1] - sample_phase[0])
+        d_phase_d_toa = dp.int / (2*sample_step) + dp.frac / (2*sample_step)
+        del copy_toas
+        return d_phase_d_toa
+
     #
-    # def remove_param(self, param):
-    #     delattr(self, param)
-    #     self.params.remove(param)
-    #     if param in self.binary_params:
-    #         self.binary_params.remove(param)
-    #
-    # def set_special_params(self, spcl_params):
-    #     als = []
-    #     for p in spcl_params:
-    #         als += getattr(self, p).aliases
-    #     spcl_params += als
-    #     self.model_special_params = spcl_params
-    #
-    #
-    # def param_help(self):
-    #     """Print help lines for all available parameters in model.
-    #     """
-    #     s = "Available parameters for %s\n" % self.__class__
-    #     for par in self.params:
-    #         s += "%s\n" % getattr(self, par).help_line()
-    #     return s
+
     #
     # def get_params_of_type(self, param_type):
     #     """ Get all the parameters in timing model for one specific type
@@ -460,30 +513,8 @@ class TimingModel(object):
     #         sorted_list[idx] = nicp
     #     return sorted_list
     #
-    # #@Cache.use_cache
-    # def phase(self, toas):
-    #     """Return the model-predicted pulse phase for the given TOAs."""
-    #     # First compute the delays to "pulsar time"
-    #     delay = self.delay(toas)
-    #     phase = Phase(np.zeros(len(toas)), np.zeros(len(toas)))
-    #     # Then compute the relevant pulse phases
-    #     for pf in self.phase_funcs:
-    #         phase += Phase(pf(toas, delay))
-    #     return phase
-    #
-    # #@Cache.use_cache
-    # def delay(self, toas):
-    #     """Total delay for the TOAs.
-    #
-    #     Return the total delay which will be subtracted from the given
-    #     TOA to get time of emission at the pulsar.
-    #     """
-    #     delay = np.zeros(len(toas))
-    #     for dlevel in self.delay_funcs.keys():
-    #         for df in self.delay_funcs[dlevel]:
-    #             delay += df(toas)
-    #
-    #     return delay
+
+
 
     #@Cache.use_cache
     # def get_barycentric_toas(self,toas):
@@ -494,97 +525,9 @@ class TimingModel(object):
     #     toasBary = toasObs*u.day - delay*u.second
     #     return toasBary
     #
-    # def _make_delay_derivative_funcs(self, param, function, name_tplt):
-    #     """This function is a method to help make the delay derivatives wrt timing
-    #     model parameters use the parameter specific name and only have the toas
-    #     table as input.
-    #     Parameter
-    #     ----------
-    #     param: str
-    #         Name of parameter
-    #     function: method
-    #         The method to compute the delay derivatives. It is generally in the
-    #         formate of function(toas, parameter)
-    #     name_tplt: str
-    #         The name template of the new function. The parameter name will be
-    #         added in the end. For example: 'd_delay_d_' is a name template.
-    #     Return
-    #     ---------
-    #     A delay derivative function wrt to input parameter name with the input
-    #     name template and parameter name.
-    #     """
-    #     def deriv_func(toas):
-    #         return function(toas, param)
-    #     deriv_func.__name__ = name_tplt + param
-    #     deriv_func.__doc__ = "Delay derivative wrt " + param + " \n"
-    #     deriv_func.__doc__ += "Parameter\n----------\ntoas: TOA table\n    "
-    #     deriv_func.__doc__ += "TOA point where the derivative is evaluated at.\n"
-    #     deriv_func.__doc__ += "Return\n---------\n Delay derivatives wrt " + param
-    #     deriv_func.__doc__ += " at toa."
-    #     setattr(self, deriv_func.__name__, deriv_func)
+
     #
-    # def _make_phase_derivative_funcs(self, param, function, name_tplt):
-    #     """This function is a method to help make the phase derivatives wrt timing
-    #     model parameters use the parameter specific name and only have the toas
-    #     table as input.
-    #     Parameter
-    #     ----------
-    #     param: str
-    #         Name of parameter
-    #     function: method
-    #         The method to compute the phase derivatives. It is generally in the
-    #         formate of 'function(toas, parameter, delay)'
-    #     name_tplt: str
-    #         The name template of the new function. The parameter name will be
-    #         added in the end. For example: 'd_phase_d_' is a name template.
-    #     Return
-    #     ---------
-    #     A phase derivative function wrt to input parameter name with the input
-    #     name template and parameter name.
-    #     """
-    #     def deriv_func(toas, delay):
-    #         return function(toas, param, delay)
-    #     deriv_func.__name__ = name_tplt + param
-    #     deriv_func.__doc__ = "Phase derivative wrt " + param + " \n"
-    #     deriv_func.__doc__ += "Parameter\n----------\ntoas: TOA table\n    "
-    #     deriv_func.__doc__ += "TOA point where the derivative is evaluated at.\n"
-    #     deriv_func.__doc__ += "delay: numpy array\n    Time delay for phase calculation.\n"
-    #     deriv_func.__doc__ += "Return\n---------\n Phase derivatives wrt " + param
-    #     deriv_func.__doc__ += " at toa."
-    #     setattr(self, deriv_func.__name__, deriv_func)
-    #
-    # def register_deriv_funcs(self, func, deriv_type, param=''):
-    #     """
-    #     This is a function to register the derivative function in to the
-    #     deriv_func dictionaries.
-    #     Parameter
-    #     ---------
-    #     func: method
-    #         The method calculates the derivative
-    #     deriv_type: str ['delay', 'phase', 'd_phase_d_delay']
-    #         Flag for different type of derivatives. It only accepts the three
-    #         above.
-    #     param: str, if for d_phase_d_delay it is optional
-    #         Name of parameter the derivative respect to
-    #     """
-    #     if deriv_type == 'd_phase_d_delay':
-    #         self.phase_derivs_wrt_delay += [func,]
-    #     elif deriv_type == 'delay':
-    #         pn = self.match_param_aliases(param)
-    #         if pn == '':
-    #             raise ValueError("Parameter '%s' in not in the model." % param)
-    #         if pn not in self.delay_derivs.keys():
-    #             self.delay_derivs[pn] = [func,]
-    #         else:
-    #             self.delay_derivs[pn] += [func,]
-    #     elif deriv_type == 'phase':
-    #         pn = self.match_param_aliases(param)
-    #         if pn == '':
-    #             raise ValueError("Parameter '%s' in not in the model." % param)
-    #         if pn not in self.phase_derivs.keys():
-    #             self.phase_derivs[pn] = [func,]
-    #         else:
-    #             self.phase_derivs[pn] += [func,]
+
     #
     # def d_phase_d_tpulsar(self, toas):
     #     """Return the derivative of phase wrt time at the pulsar.
@@ -593,36 +536,7 @@ class TimingModel(object):
     #     """
     #     pass
     #
-    # def d_phase_d_toa(self, toas, sample_step=None):
-    #     """Return the derivative of phase wrt TOA
-    #     Parameter
-    #     ---------
-    #     toas : PINT TOAs class
-    #         The toas when the derivative of phase will be evaluated at.
-    #     sample_step : float optional
-    #         Finite difference steps. If not specified, it will take 1/10 of the
-    #         spin period.
-    #     """
-    #     copy_toas = copy.deepcopy(toas)
-    #     if sample_step is None:
-    #         pulse_period = 1.0 / self.F0.value
-    #         sample_step = pulse_period * 1000
-    #     sample_dt = [-sample_step, 2 * sample_step]
-    #
-    #     sample_phase = []
-    #     for dt in sample_dt:
-    #         dt_array = ([dt] * copy_toas.ntoas) * u.s
-    #         deltaT = time.TimeDelta(dt_array)
-    #         copy_toas.adjust_TOAs(deltaT)
-    #         phase = self.phase(copy_toas.table)
-    #         sample_phase.append(phase)
-    #     # Use finite difference method.
-    #     # phase'(t) = (phase(t+h)-phase(t-h))/2+ 1/6*F2*h^2 + ..
-    #     # The error should be near 1/6*F2*h^2
-    #     dp = (sample_phase[1] - sample_phase[0])
-    #     d_phase_d_toa = dp.int / (2*sample_step) + dp.frac / (2*sample_step)
-    #     del copy_toas
-    #     return d_phase_d_toa
+
     #
     #
     # #@Cache.use_cache
@@ -920,10 +834,10 @@ class Component(object):
     """ This is a base class for timing model components.
     """
     def __init__(self,):
-        self._parent = None
         self.params = []
+        self._parent = None
         self.category = ''
-
+        self.deriv_funcs = {}
     def setup(self,):
         pass
 
@@ -938,8 +852,19 @@ class Component(object):
                 return self._parent.__getattr__(name)
 
     def add_param(self, param):
+        """
+        Remove a parameter from the Component
+        Parameter
+        ---------
+        param: str
+            The name of parameter need to be removed.
+        """
         setattr(self, param.name, param)
         self.params += [param.name,]
+
+    def remove_param(self, param):
+        delattr(self, param)
+        self.params.remove(param)
 
     def set_special_params(self, spcl_params):
         als = []
@@ -1006,6 +931,26 @@ class Component(object):
         # if not found any thing.
         return ''
 
+    def register_deriv_funcs(self, func, param):
+        """
+        This is a function to register the derivative function in to the
+        deriv_func dictionaries.
+        Parameter
+        ---------
+        func: method
+            The method calculates the derivative
+        param: str
+            Name of parameter the derivative respect to
+        """
+        pn = self.match_param_aliases(param)
+        if pn == '':
+            raise ValueError("Parameter '%s' in not in the model." % param)
+
+        if pn not in list(self.deriv_funcs.keys()):
+            self.deriv_funcs[pn] = [func,]
+        else:
+            self.deriv_funcs[pn] += [func,]
+
 
 class DelayComponent(Component):
     def __init__(self,):
@@ -1017,41 +962,8 @@ class PhaseComponent(Component):
     def __init__(self,):
         super(PhaseComponent, self).__init__()
         self.phase_funcs = []
-
-
-def generate_timing_model(name, components, attributes={}):
-
-    """Build a timing model from components.
-
-    Returns a timing model class generated from the specifiied
-    sub-components.  The return value is a class type, not an instance,
-    so needs to be called to generate a usable instance.  For example:
-
-    MyModel = generate_timing_model("MyModel",(Astrometry,Spindown),{})
-    my_model = MyModel()
-    my_model.read_parfile("J1234+1234.par")
-    """
-    # Test that all the components are derived from
-    # TimingModel
-    try:
-        numComp = len(components)
-    except:
-        components = (components,)
-    cps = {}
-    for c in components:
-        try:
-            if not issubclass(c,TimingModel):
-                raise(TypeError("Class "+c.__name__+
-                                 " is not a subclass of TimingModel"))
-        except:
-            raise(TypeError("generate_timing_model() Arg 2"+
-                            "has to be a tuple of classes"))
-        cp = c()
-        cpi = ComponentInfo(cp)
-        cps[cpi.name] = cpi
-    attributes['components'] = cps
-
-    return type(name, components, attributes)
+        self.phase_derivs_wrt_delay = []
+        
 
 class TimingModelError(Exception):
     """Generic base class for timing model errors."""

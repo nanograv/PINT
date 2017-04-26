@@ -5,18 +5,18 @@ import astropy.units as u
 import astropy.constants as const
 from astropy import log
 from . import parameter as p
-from .timing_model import TimingModel
+from .timing_model import DelayComponent
 from .. import Tsun, Tmercury, Tvenus, Tearth, Tmars, \
         Tjupiter, Tsaturn, Turanus, Tneptune
 
-class SolarSystemShapiro(TimingModel):
+class SolarSystemShapiro(DelayComponent):
     register = True
     def __init__(self):
         super(SolarSystemShapiro, self).__init__()
-
+        self.category = 'solar_system_shapiro'
         self.add_param(p.boolParameter(name="PLANET_SHAPIRO",
              value=False, description="Include planetary Shapiro delays (Y/N)"))
-        self.delay_funcs['L1'] += [self.solar_system_shapiro_delay,]
+        self.delay_funcs += [self.solar_system_shapiro_delay,]
 
     def setup(self):
         super(SolarSystemShapiro, self).setup()

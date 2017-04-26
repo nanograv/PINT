@@ -34,10 +34,11 @@ class Astrometry(DelayComponent):
 
         self.delay_funcs += [self.solar_system_geometric_delay,]
         self.category = 'Astrometry'
+        self.register_deriv_funcs(self.d_delay_astrometry_d_PX, 'PX')
 
     def setup(self):
         super(Astrometry, self).setup()
-        # self.register_deriv_funcs(self.d_delay_astrometry_d_PX, 'delay', 'PX')
+
 
     def ssb_to_psb_xyz(self, epoch=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter.
@@ -158,7 +159,10 @@ class AstrometryEquatorial(Astrometry):
             units="mas/year", value=0.0,
             description="Proper motion in DEC"))
         self.set_special_params(['RAJ', 'DECJ', 'PMRA', 'PMDEC'])
-        # self.print_par_func = 'print_par_AstrometryEquatorial'
+        for param in ['RAJ', 'DECJ', 'PMRA', 'PMDEC']:
+            deriv_func_name = 'd_delay_astrometry_d_' + param
+            func = getattr(self, deriv_func_name)
+            self.register_deriv_funcs(func, param)
 
     def setup(self):
         super(AstrometryEquatorial, self).setup()
@@ -174,11 +178,6 @@ class AstrometryEquatorial(Astrometry):
                             "POSEPOCH or PEPOCH are required if PM is set.")
                 else:
                     self.POSEPOCH.quantity = self.PEPOCH.quantity
-
-        # self.register_deriv_funcs(self.d_delay_astrometry_d_RAJ, 'delay', 'RAJ')
-        # self.register_deriv_funcs(self.d_delay_astrometry_d_DECJ, 'delay', 'DEC')
-        # self.register_deriv_funcs(self.d_delay_astrometry_d_PMRA, 'delay', 'PMRA')
-        # self.register_deriv_funcs(self.d_delay_astrometry_d_PMDEC, 'delay', 'PMDEC')
 
     def print_par_AstrometryEquatorial(self):
         result = ''
@@ -318,7 +317,11 @@ class AstrometryEcliptic(Astrometry):
             description="Obliquity angle value secetion"))
 
         self.set_special_params(['ELONG', 'ELAT', 'PMELONG','PMELAT'])
-        self.print_par_func = 'print_par_AstrometryEcliptic'
+        for param in ['ELAT', 'ELONG', 'PMLAT', 'PMELONG']:
+            deriv_func_name = 'd_delay_astrometry_d_' + param
+            func = getattr(self, deriv_func_name)
+            self.register_deriv_funcs(func, param)
+            
     def setup(self):
         super(AstrometryEcliptic, self).setup()
         # RA/DEC are required
@@ -333,10 +336,6 @@ class AstrometryEcliptic(Astrometry):
                             "POSEPOCH or PEPOCH are required if PM is set.")
                 else:
                     self.POSEPOCH.quantity = self.PEPOCH.quantity
-        # self.register_deriv_funcs(self.d_delay_astrometry_d_ELAT, 'delay', 'ELAT')
-        # self.register_deriv_funcs(self.d_delay_astrometry_d_ELONG, 'delay', 'ELONG')
-        # self.register_deriv_funcs(self.d_delay_astrometry_d_PMELAT, 'delay', 'PMELAT')
-        # self.register_deriv_funcs(self.d_delay_astrometry_d_PMELONG, 'delay', 'PMELONG')
 
     def coords_as_ICRS(self, epoch=None):
         """Returns pulsar sky coordinates as an astropy ICRS object instance.

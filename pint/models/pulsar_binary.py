@@ -1,11 +1,11 @@
 # This is a wapper for independent binary model. It is a PINT timing model class
 import astropy.units as u
 from . import parameter as p
-from .timing_model import Cache, TimingModel, MissingParameter
+from .timing_model import Cache, DelayComponent, MissingParameter
 from pint import ls,GMsun,Tsun
 
 
-class PulsarBinary(TimingModel):
+class PulsarBinary(DelayComponent):
     """ A wapper class for independent pulsar binary model interact with PINT
     platform. The calculations are done by the classes located at
     pint/models/stand_alone_psr_binary
@@ -20,6 +20,7 @@ class PulsarBinary(TimingModel):
     """
     def __init__(self,):
         super(PulsarBinary, self).__init__()
+        self.category = 'binary'
         self.binary_model_name = None
         self.barycentric_time = None
         self.binary_model_class = None
