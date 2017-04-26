@@ -116,14 +116,6 @@ class pintpar(object):
         self._par = par
         self._set = True
 
-        # Convert the error
-        # TODO: Units should of course be handled in the PINT interface
-        if parname in err_conv:
-            if has_astropy_unit(self._par.uncertainty):
-                raise NotImplementedError("Deprecated conversion stuff!")
-            ev = self._par.uncertainty * err_units_set[parname]
-            self._par.uncertainty = ev.to(err_units[parname]).value
-
     @property
     def val(self):
         if has_astropy_unit(self._par.value):
@@ -133,35 +125,15 @@ class pintpar(object):
 
     @val.setter
     def val(self, value):
-        if not has_astropy_unit(value) and self.name in par_units_set:
-            self._par.value = \
-                    (value * par_units[self.name]).to(par_units_set[self.name])
-        elif has_astropy_unit(value) and self.name in par_units_set:
-            self._par.value = value.to(par_units_set[self.name])
-        elif not has_astropy_unit(value):
-            self._par.value = value
-        else:
-            self._par.value = value
+        self._par.value = value
 
     @property
     def err(self):
-        if has_astropy_unit(self._par.uncertainty):
-            return self._par.uncertainty.to(err_units[self.name]).value
-        else:
-            return self._par.uncertainty
+        return self._par.uncertainty
 
     @err.setter
     def err(self, value):
-        #self._par.uncertainty = value
-        if not has_astropy_unit(value) and self.name in err_units_set:
-            self._par.uncertainty = \
-                    (value * err_units[self.name]).to(err_units_set[self.name])
-        elif has_astropy_unit(value) and self.name in err_units_set:
-            self._par.uncertainty = value.to(err_units_set[self.name])
-        elif not has_astropy_unit(value):
-            self._par.uncertainty = value
-        else:
-            self._par.uncertainty = value
+        self._par.uncertainty = value
 
     @property
     def fit(self):
@@ -466,7 +438,9 @@ class pintpulsar(object):
                 self[par].val = values[par]
         elif isinstance(values,collections.Iterable):
             for par,val in zip(self.pars(which), values):
+                print(par,val)
                 self[par].val = val
+                print self[par].val
         else:
             raise TypeError
 
