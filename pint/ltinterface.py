@@ -82,20 +82,6 @@ map_units = {
              'TASC': u.day
              }
 
-
-
-# Setting units, in case of bulk access to parameters
-par_units = {'RAJ': u.radian,
-             'DECJ': u.radian}
-par_units_set = {'RAJ': u.hourangle,
-             'DECJ': u.degree}
-err_units = {'RAJ': u.radian,
-             'DECJ': u.radian}
-err_units_set = {'RAJ': u.secondangle,
-             'DECJ': u.arcsecond}
-
-err_conv = ['RAJ', 'DECJ']          # Error units that need to be converted
-
 class pintpar(object):
     """
     Similar to the parameter class defined in libstempo, this class gives a nice
@@ -118,10 +104,7 @@ class pintpar(object):
 
     @property
     def val(self):
-        if has_astropy_unit(self._par.value):
-            return self._par.value.to(par_units[self.name]).value
-        else:
-            return self._par.value
+        return self._par.value
 
     @val.setter
     def val(self, value):
@@ -438,9 +421,7 @@ class pintpulsar(object):
                 self[par].val = values[par]
         elif isinstance(values,collections.Iterable):
             for par,val in zip(self.pars(which), values):
-                print(par,val)
                 self[par].val = val
-                print self[par].val
         else:
             raise TypeError
 
