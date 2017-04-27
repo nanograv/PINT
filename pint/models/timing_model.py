@@ -13,6 +13,7 @@ import copy
 import abc
 from six import add_metaclass
 from collections import OrderedDict
+import inspect
 
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
@@ -161,25 +162,36 @@ class TimingModel(object):
         All the phase derivatives respect to delay.
     """
 
-    def __init__(self, delays=[], phases=[]):
-        self.delays = OrderedDict()
-        self.phases= OrderedDict()
+    def __init__(self, components=[]):
+        self.component_types = ['DelayComponent', 'PhaseComponent']
+        self.setup_component_dict()
         self.top_level_params = []
         self.add_param(strParameter(name="PSR",
             description="Source name",
             aliases=["PSRJ", "PSRB"]), '')
 
-        # self.delay_derivs = {}
-        # self.phase_derivs = {}
-        # self.phase_derivs_wrt_delay = []
-        # self.order_number = None
-        # self.print_par_func = ''
+        for cp in components:
+            self.add_component(cp)
+        # for phase in phases:
+        #     self.add_phase(phase)
+
     def setup(self):
         """This is a abstract class for setting up timing model class. It is designed for
         reading .par file and check parameters.
         """
         for cp in list(self.components.values()):
             cp.setup()
+
+    def setup_component_dict(self):
+        """
+        An OrderedDict will be create for all the component types listed in the
+        attribute component_types. The name template will be 'type name'+'_dict'.
+        """
+        for ct in self.component_types:
+            if hasattr(self, ct):
+                continue
+            else:
+                setattr(self, ct+'_dict', OrderedDict())
 
     def __getattr__(self, name):
         try:
@@ -204,25 +216,23 @@ class TimingModel(object):
         """This will return a dictionary of all the components
         """
         comps = {}
-        ds = list(self.delays.values())
-        ps = list(self.phases.values())
-        for d in ds:
-            comps[d.__class__.__name__] = d
-        for p in ps:
-            comps[p.__class__.__name__] = p
+        for ct in self.component_types:
+            cps = list(getattr(self, ct+'_dict').values())
+            for cp in cps:
+                comps[cp.__class__.__name__] = cp
         return comps
 
     @property
     def delay_funcs(self,):
         dfs = []
-        for d in list(self.delays.values()):
+        for d in list(self.DelayComponent_dict.values()):
             dfs += d.delay_funcs
         return dfs
 
     @property
     def phase_funcs(self,):
         pfs = []
-        for p in list(self.phases.values()):
+        for p in list(self.DelayComponent_dict.values()):
             pfs += p.phase_funcs
         return pfs
 
@@ -242,59 +252,61 @@ class TimingModel(object):
                 continue
         return cmp
 
-    def add_delay(self, delay, order=None):
+    def add_component(self, component, order=None, force=False):
         """
-        This is a method to add a delay instance into the timing model with
-        the assigned order. If the order is not assigned, it will add to the
-        end of the order dictionary.
+        This is a method to add a component to the timing model
+        Parameter
+        ---------
+        component: component instance
+            The component need to be added to the timing model
+        order: int, optional
+            The order of component
+        force: bool, optional
+            If add a duplicated type of component  
         """
-        orders = list(self.delays.keys())
-        ds = list(self.delays.values())
-        delay._parent = self
-        if delay in ds:
-            log.warn("Delay '%s' is already added." % delay.__class__.__name__)
-            return
-        if order is None:
-            if len(orders) > 0:
-                order = orders[-1] + 1
-            else:
-                order = 1
-            self.delays.update({order: delay})
+        # check component type
+        comp_base = inspect.getmro(component.__class__)
+        # NOTE Since a component can be inhertance from other component
+        # We inspect all the component bases.
+        # inspect getmro method returns the base classes (including cls)
+        # in method resolution order. The third level of inhertance class name
+        # is what we want. Object --> component --> TypeComponent.
+        # (ie DelayComponent)
+        # This class type is in the third to the last of the getmro returned
+        # result.
+        comp_type = comp_base[-3].__name__
+        if comp_type in self.component_types:
+            comp_type_dict = getattr(self, comp_type+'_dict')
         else:
-            delay_items = self.delays.items()
-            if order in orders:
-                idx = delay_items.index((order, self.delays[order]))
-                for ii in range(idx, len(delay_items)):
-                    delay_items[ii][0] += 1
-                delay_items.append((order, delay))
-            self.delays = OrderedDict(sorted(delay_items, key=lambda t: t[0]))
+            self.component_types.append(comp_type)
+            self.setup_component_dict()
+            comp_type_dict = getattr(self, comp_type+'_dict')
 
-    def add_phase(self, phase, order=None):
-        """
-        This is a method to add a phase instance into the timing model with
-        the assigned order. If the order is not assigned, it will add to the
-        end of the order dictionary.
-        """
-        orders = list(self.phases.keys())
-        ps = list(self.phases.values())
-        phase._parent = self
-        if phase in ps:
-            log.warn("Phase '%s' is already added." % phase.__class__.__name__)
-            return
+        orders = list(comp_type_dict.keys())
+        comps = list(comp_type_dict.values())
+        comp_classes = [x.__class__ for x in comps]
+        if component.__class__ in comp_classes:
+            log.warn("Component '%s' is already added." %
+                     component.__class__.__name__)
+            if not force:
+                log.warn("Component '%s' will not be added. To force add it, use"
+                         " force option." % component.__class__.__name__)
+                return
+        component._parent = self
         if order is None:
             if len(orders) > 0:
                 order = orders[-1] + 1
             else:
                 order = 1
-            self.phases.update({order: phase})
+            comp_type_dict.update({order: component})
         else:
-            phase_items = self.phases.items()
+            component_items = comp_type_dict.items()
             if order in orders:
-                idx = phase_items.index((order, self.phases[order]))
-                for ii in range(idx, len(phase_items)):
-                    phase_items[ii][0] += 1
-                phase_items.append((order, phase))
-            self.phases = OrderedDict(sorted(phase_items, key=lambda t: t[0]))
+                idx = component_items.index((order, comp_type_dict[order]))
+                for ii in range(idx, len(component_items)):
+                    component_items[ii][0] += 1
+                component_items.append((order, delay))
+            comp_type_dict = OrderedDict(sorted(component_items, key=lambda t: t[0]))
 
     def add_param(self, param, target_component):
         """Add a parameter to a timing model component.
@@ -829,7 +841,23 @@ class TimingModel(object):
     #         return False
     #
     #     return True
+class ModelMeta(abc.ABCMeta):
+    """
+    This is a Meta class for timing model registeration. In order ot get a
+    timing model registered, a member called 'register' has to be set true in the
+    TimingModel subclass.
+    """
+    def __init__(cls, name, bases, dct):
+        regname = '_component_list'
+        if not hasattr(cls,regname):
+            setattr(cls,regname,{})
+        if 'register' in dct:
+            if cls.register:
+                getattr(cls,regname)[name] = cls
+        super(ModelMeta, cls).__init__(name, bases, dct)
 
+
+@add_metaclass(ModelMeta)
 class Component(object):
     """ This is a base class for timing model components.
     """
@@ -838,6 +866,7 @@ class Component(object):
         self._parent = None
         self.category = ''
         self.deriv_funcs = {}
+        self.component_special_params = []
     def setup(self,):
         pass
 
@@ -871,7 +900,9 @@ class Component(object):
         for p in spcl_params:
             als += getattr(self, p).aliases
         spcl_params += als
-        self.model_special_params = spcl_params
+        for sp in spcl_params:
+            if sp not in self.component_special_params:
+                self.component_special_params.append(sp)
 
     def param_help(self):
         """Print help lines for all available parameters in model.
@@ -915,6 +946,7 @@ class Component(object):
         return mapping
 
     def match_param_aliases(self, alias):
+        # TODO need to search the parent class as well
         p_aliases = {}
         # if alias is a parameter name, return itself
         if alias in self.params:
@@ -951,6 +983,59 @@ class Component(object):
         else:
             self.deriv_funcs[pn] += [func,]
 
+    def is_in_parfile(self,para_dict):
+        """ Check if this subclass inclulded in parfile.
+            Parameters
+            ------------
+            para_dict : dictionary
+                A dictionary contain all the parameters with values in string
+                from one parfile
+            Return
+            ------------
+            True : bool
+                The subclass is inculded in the parfile.
+            False : bool
+                The subclass is not inculded in the parfile.
+        """
+        pNames_inpar = list(para_dict.keys())
+        pNames_inModel = self.params
+
+        # For solar system shapiro delay component
+        if hasattr(self,'PLANET_SHAPIRO'):
+            if "NO_SS_SHAPIRO" in pNames_inpar:
+                return False
+            else:
+                return True
+
+        # For Binary model component
+        try:
+            if getattr(self,'binary_model_name') == para_dict['BINARY'][0]:
+                return True
+            else:
+                return False
+        except:
+            pass
+
+        # Compare the componets parameter names with par file parameters
+        compr = list(set(pNames_inpar).intersection(pNames_inModel))
+
+        if compr==[]:
+            # Check aliases
+            for p in pNames_inModel:
+                al = getattr(self,p).aliases
+                # No aliase in parameters
+                if al == []:
+                    continue
+                # Find alise check if match any of parameter name in parfile
+                if list(set(pNames_inpar).intersection(al)):
+                    return True
+                else:
+                    continue
+            # TODO Check prefix parameter
+            return False
+
+        return True
+
 
 class DelayComponent(Component):
     def __init__(self,):
@@ -963,7 +1048,7 @@ class PhaseComponent(Component):
         super(PhaseComponent, self).__init__()
         self.phase_funcs = []
         self.phase_derivs_wrt_delay = []
-        
+
 
 class TimingModelError(Exception):
     """Generic base class for timing model errors."""
