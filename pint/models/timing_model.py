@@ -101,22 +101,6 @@ class Cache(object):
         return use_cached_results
 
 
-class ModelMeta(abc.ABCMeta):
-    """
-    This is a Meta class for timing model registeration. In order ot get a
-    timing model registered, a member called 'register' has to be set true in the
-    TimingModel subclass.
-    """
-    def __init__(cls, name, bases, dct):
-        regname = '_model_list'
-        if not hasattr(cls,regname):
-            setattr(cls,regname,{})
-        if 'register' in dct:
-            if cls.register:
-                getattr(cls,regname)[name] = cls
-        super(ModelMeta, cls).__init__(name, bases, dct)
-
-
 class TimingModel(object):
     """
     Base-level object provides an interface for implementing pulsar timing
@@ -233,9 +217,15 @@ class TimingModel(object):
     @property
     def phase_funcs(self,):
         pfs = []
-        for p in list(self.DelayComponent_dict.values()):
+        for p in list(self.PhaseComponent_dict.values()):
             pfs += p.phase_funcs_component
         return pfs
+
+    @property
+    def phase_deriv_funcs(self):
+        pass
+    def delay_deriv_funcs(self):
+        pass
 
     def search_cmp_attr(self, name):
         """
@@ -470,8 +460,7 @@ class TimingModel(object):
         # The "setup" functions contain tests for required parameters or
         # combinations of parameters, etc, that can only be done
         # after the entire parfile is read
-        for cp in self.components.values():
-            cp.setup()
+        self.setup()
 
     def d_phase_d_toa(self, toas, sample_step=None):
         """Return the derivative of phase wrt TOA
