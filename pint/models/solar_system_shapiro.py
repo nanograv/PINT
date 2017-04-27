@@ -54,7 +54,7 @@ class SolarSystemShapiro(DelayComponent):
         # Tempo2 uses the postion vector sign differently between the sun and planets
         return -2.0 * T_obj * numpy.log((r-rcostheta)/const.au).value
 
-    def solar_system_shapiro_delay(self, toas):
+    def solar_system_shapiro_delay(self, toas, acc_delay=None):
         """
         Returns total shapiro delay to due solar system objects.
         If the PLANET_SHAPIRO model param is set to True then

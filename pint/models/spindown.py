@@ -37,8 +37,6 @@ class Spindown(PhaseComponent):
 
         self.phase_funcs += [self.spindown_phase,]
         self.category = 'spindown'
-        for fp in list(self.get_prefix_mapping('F').values()) + ['F0',]:
-            self.register_deriv_funcs(self.d_phase_d_F, fp)
         self.phase_derivs_wrt_delay += [self.d_spindown_phase_d_delay,]
 
     def setup(self):
@@ -62,7 +60,9 @@ class Spindown(PhaseComponent):
                 raise MissingParameter("Spindown", "PEPOCH",
                         "PEPOCH is required if F1 or higher are set")
         self.num_spin_terms = len(F_terms) + 1
-
+        # Add derivative functions
+        for fp in list(self.get_prefix_mapping('F').values()) + ['F0',]:
+            self.register_deriv_funcs(self.d_phase_d_F, fp)
 
     def F_description(self, n):
         """Template function for description"""

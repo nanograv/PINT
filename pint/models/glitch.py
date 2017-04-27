@@ -9,7 +9,7 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 from .parameter import Parameter, MJDParameter, prefixParameter
-from .timing_model import TimingModel, MissingParameter
+from .timing_model import PhaseComponent, MissingParameter
 from ..phase import *
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, \
     taylor_horner, split_prefixed_name
@@ -18,7 +18,7 @@ from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble, \
 maxglitches = 10  # Have not use this one in the new version.
 
 
-class Glitch(TimingModel):
+class Glitch(PhaseComponent):
     """This class provides glitches."""
     register = True
     def __init__(self):
@@ -62,7 +62,7 @@ class Glitch(TimingModel):
                        unitTplt=lambda x: 'day',
                        type_match='float'))
         self.phase_funcs += [self.glitch_phase]
-        self.print_par_func = 'print_par_glitch'
+        self.category = 'glitch'
 
     def setup(self):
         super(Glitch, self).setup()
@@ -81,7 +81,7 @@ class Glitch(TimingModel):
                     self.add_param(param0.new_param(idx))
                     getattr(self, param + '%d' % idx).value = 0.0
                 self.register_deriv_funcs(getattr(self, \
-                     'd_phase_d_'+param[0:-1]), 'phase', param + '%d' % idx)
+                     'd_phase_d_'+param[0:-1]), param + '%d' % idx)
 
         # Check the Decay Term.
         glf0dparams = [x for x in self.params if x.startswith('GLF0D_')]

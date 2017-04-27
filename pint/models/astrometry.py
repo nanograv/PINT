@@ -33,7 +33,7 @@ class Astrometry(DelayComponent):
             description="Parallax"))
 
         self.delay_funcs += [self.solar_system_geometric_delay,]
-        self.category = 'Astrometry'
+        self.category = 'astrometry'
         self.register_deriv_funcs(self.d_delay_astrometry_d_PX, 'PX')
 
     def setup(self):
@@ -317,11 +317,11 @@ class AstrometryEcliptic(Astrometry):
             description="Obliquity angle value secetion"))
 
         self.set_special_params(['ELONG', 'ELAT', 'PMELONG','PMELAT'])
-        for param in ['ELAT', 'ELONG', 'PMLAT', 'PMELONG']:
+        for param in ['ELAT', 'ELONG', 'PMELAT', 'PMELONG']:
             deriv_func_name = 'd_delay_astrometry_d_' + param
             func = getattr(self, deriv_func_name)
             self.register_deriv_funcs(func, param)
-            
+
     def setup(self):
         super(AstrometryEcliptic, self).setup()
         # RA/DEC are required

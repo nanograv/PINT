@@ -3,7 +3,7 @@
 
 from warnings import warn
 from . import parameter as p
-from .timing_model import TimingModel, Cache
+from .timing_model import DelayComponent, Cache
 import astropy.units as u
 import numpy as np
 import pint.utils as ut
@@ -18,7 +18,7 @@ from ..utils import taylor_horner, split_prefixed_name
 # Astronomy, Second edition, Page 86, Note 1
 DMconst = 1.0/2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
 
-class Dispersion(TimingModel):
+class Dispersion(DelayComponent):
     """This class provides a base dispersion timing model. The dm varience will
     be treated linearly.
     """
@@ -37,9 +37,8 @@ class Dispersion(TimingModel):
                        description="Epoch of DM measurement"))
 
         self.dm_value_funcs = [self.base_dm,]
-        self.delay_funcs['L1'] += [self.dispersion_delay,]
-        self.order_number = 2
-        self.print_par_func = 'print_par_DMs'
+        self.delay_funcs += [self.dispersion_delay,]
+        self.category = 'dispersion'
 
     def setup(self):
         super(Dispersion, self).setup()
@@ -52,7 +51,7 @@ class Dispersion(TimingModel):
         base_dms += ['DM',]
 
         for dm_name in base_dms:
-            self.register_deriv_funcs(self.d_delay_d_DMs, 'delay', dm_name)
+            self.register_deriv_funcs(self.d_delay_d_DMs, dm_name)
 
     def DM_dervative_unit(self, n):
         return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
@@ -80,7 +79,7 @@ class Dispersion(TimingModel):
         dm_terms_value = [d.value for d in dm_terms]
         dm = taylor_horner(dt_value, dm_terms_value)
         return dm * self.DM.units
-
+    
     def dispersion_time_delay(self, DM, freq):
         """Return the dispersion time delay for a set of frequency.
         This equation if cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
@@ -92,7 +91,7 @@ class Dispersion(TimingModel):
         dmdelay = DM * DMconst / freq**2.0
         return dmdelay
 
-    def dispersion_delay(self, toas):
+    def dispersion_delay(self, toas, acc_delay=None):
         try:
             bfreq = self.barycentric_radio_freq(toas)
         except AttributeError:
@@ -178,7 +177,6 @@ class DispersionDMX(Dispersion):
                        parameter_type='MJD', time_scale='utc'))
         self.dm_value_funcs += [self.dmx_dm,]
         self.set_special_params(['DMX_0001', 'DMXR1_0001','DMXR2_0001'])
-        self.print_par_func = 'print_par_DMX'
 
     def setup(self):
         super(DispersionDMX, self).setup()
@@ -200,7 +198,7 @@ class DispersionDMX(Dispersion):
         # create d_delay_d_dmx functions
         for prefix_par in self.get_params_of_type('prefixParameter'):
             if prefix_par.startswith('DMX_'):
-                self.register_deriv_funcs(self.d_delay_d_DMX, 'delay', prefix_par)
+                self.register_deriv_funcs(self.d_delay_d_DMX, prefix_par)
 
     def dmx_dm(self, toas):
         condition = {}

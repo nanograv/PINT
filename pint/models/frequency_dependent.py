@@ -1,13 +1,13 @@
 """This module implements a frequency evolution of pulsar profiles model"""
 from warnings import warn
 from . import parameter as p
-from .timing_model import TimingModel, MissingParameter
+from .timing_model import DelayComponent, MissingParameter
 import astropy.units as u
 import numpy as np
 import pint.utils as ut
 import astropy.time as time
 
-class FD(TimingModel):
+class FD(DelayComponent):
     """This class provides a timing model for frequency evolution of pulsar
     profiles model.
     """
@@ -20,9 +20,9 @@ class FD(TimingModel):
                        unitTplt=lambda x: 'second',
                        type_match='float'))
 
-        self.delay_funcs['L1'] += [self.FD_delay]
-        self.order_number = 4
-        self.print_par_func = 'print_par_FD'
+        self.delay_funcs += [self.FD_delay]
+        self.category = 'frequency_dependent'
+
     def setup(self):
         super(FD, self).setup()
         # Check if FD terms are in order.
@@ -36,9 +36,9 @@ class FD(TimingModel):
         self.num_FD_terms = len(FD_terms)
         # set up derivative functions
         for ii, val in FD_mapping.items():
-            self.register_deriv_funcs(self.d_delay_FD_d_FDX, 'delay', val)
+            self.register_deriv_funcs(self.d_delay_FD_d_FDX, val)
 
-    def FD_delay(self, toas):
+    def FD_delay(self, toas, acc_delay=None):
         """This is a function for calculation of frequency dependent delay.
         Z. Arzoumanian, The NANOGrav Nine-year Data Set: Observations, Arrival
         Time Measurements, and Analysis of 37 Millisecond Pulsars, The
@@ -80,13 +80,6 @@ class FD(TimingModel):
         FD_coeff[-1-FD_term] = np.longdouble(1.0)
         d_delay_d_FD = np.polyval(FD_coeff, log_freq)
         return d_delay_d_FD * u.second / FD_par.units
-
-    def make_delay_FD_deriv_funcs(self, param):
-        FD_term = getattr(self, param).index
-        def deriv_func(toas):
-            return self.d_binary_FD_d_FDX(toas, FD_term)
-        deriv_func.__name__ = 'd_delay_FD_d_' + param
-        setattr(self, 'd_delay_FD_d_' + param, deriv_func)
 
     def print_par_FD(self):
         result = ''
