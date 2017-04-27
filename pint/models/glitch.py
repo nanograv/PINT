@@ -61,7 +61,7 @@ class Glitch(PhaseComponent):
                                                  " glitch %d" % x,
                        unitTplt=lambda x: 'day',
                        type_match='float'))
-        self.phase_funcs += [self.glitch_phase]
+        self.phase_funcs_component += [self.glitch_phase]
         self.category = 'glitch'
 
     def setup(self):

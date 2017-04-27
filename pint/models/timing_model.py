@@ -162,7 +162,8 @@ class TimingModel(object):
         All the phase derivatives respect to delay.
     """
 
-    def __init__(self, components=[]):
+    def __init__(self, name='', components=[]):
+        self.name = name
         self.component_types = ['DelayComponent', 'PhaseComponent']
         self.setup_component_dict()
         self.top_level_params = []
@@ -226,14 +227,14 @@ class TimingModel(object):
     def delay_funcs(self,):
         dfs = []
         for d in list(self.DelayComponent_dict.values()):
-            dfs += d.delay_funcs
+            dfs += d.delay_funcs_component
         return dfs
 
     @property
     def phase_funcs(self,):
         pfs = []
         for p in list(self.DelayComponent_dict.values()):
-            pfs += p.phase_funcs
+            pfs += p.phase_funcs_component
         return pfs
 
     def search_cmp_attr(self, name):
@@ -262,7 +263,7 @@ class TimingModel(object):
         order: int, optional
             The order of component
         force: bool, optional
-            If add a duplicated type of component  
+            If add a duplicated type of component
         """
         # check component type
         comp_base = inspect.getmro(component.__class__)
@@ -351,6 +352,19 @@ class TimingModel(object):
                 param_mapping[pp] = cp.__class__.__name__
         return param_mapping
 
+    def get_params_of_type(self, param_type):
+        """ Get all the parameters in timing model for one specific type
+        """
+        result = []
+        for p in self.params:
+            par = getattr(self, p)
+            par_type = type(par).__name__
+            par_prefix = par_type[:-9]
+            if param_type.upper() == par_type.upper() or \
+                param_type.upper() == par_prefix.upper():
+                result.append(par.name)
+        return result
+
     def param_help(self):
         """Print help lines for all available parameters in model.
         """
@@ -385,6 +399,8 @@ class TimingModel(object):
         """Read values from the specified parfile into the model parameters."""
         checked_param = []
         repeat_param = {}
+        param_map = self.get_params_mapping()
+        comps = self.components
         pfile = open(filename, 'r')
         for l in [pl.strip() for pl in pfile.readlines()]:
             # Skip blank lines
@@ -406,8 +422,13 @@ class TimingModel(object):
                 l = ' '.join(k)
 
             parsed = False
-            for par in self.params:
-                if getattr(self, par).from_parfile_line(l):
+            for par in param_map.keys():
+                host_comp = param_map[par]
+                if host_comp != 'timing_model':
+                    cmp = comps[host_comp]
+                else:
+                    cmp = self
+                if cmp.__getattr__(par).from_parfile_line(l):
                     parsed = True
             if not parsed:
                 try:
@@ -456,21 +477,17 @@ class TimingModel(object):
         del copy_toas
         return d_phase_d_toa
 
+    def d_phase_d_tpulsar(self, toas):
+        """Return the derivative of phase wrt time at the pulsar.
+
+        NOT implemented yet.
+        """
+        pass
+
     #
 
     #
-    # def get_params_of_type(self, param_type):
-    #     """ Get all the parameters in timing model for one specific type
-    #     """
-    #     result = []
-    #     for p in self.params:
-    #         par = getattr(self, p)
-    #         par_type = type(par).__name__
-    #         par_prefix = par_type[:-9]
-    #         if param_type.upper() == par_type.upper() or \
-    #             param_type.upper() == par_prefix.upper():
-    #             result.append(par.name)
-    #     return result
+
     #
     # #@Cache.use_cache
     # def get_prefix_mapping(self,prefix):
@@ -509,22 +526,7 @@ class TimingModel(object):
     #     # if not found any thing.
     #     return ''
     #
-    # def sort_model_components(self):
-    #     # initiate the sorted_components
-    #     sorted_list = ['']*len(list(self.components.keys()))
-    #     in_placed = []
-    #     not_in_placed = []
-    #     for cp, cpv in self.components.items():
-    #         if cpv.order_number is not None:
-    #             sorted_list[cpv.order_number] = cp
-    #             in_placed.append(cp)
-    #         else:
-    #             not_in_placed.append(cp)
-    #     for nicp in not_in_placed:
-    #         idx = sorted_list.index('')
-    #         sorted_list[idx] = nicp
-    #     return sorted_list
-    #
+
 
 
 
@@ -541,12 +543,7 @@ class TimingModel(object):
     #
 
     #
-    # def d_phase_d_tpulsar(self, toas):
-    #     """Return the derivative of phase wrt time at the pulsar.
-    #
-    #     NOT implemented yet.
-    #     """
-    #     pass
+
     #
 
     #
@@ -1040,13 +1037,13 @@ class Component(object):
 class DelayComponent(Component):
     def __init__(self,):
         super(DelayComponent, self).__init__()
-        self.delay_funcs = []
+        self.delay_funcs_component = []
 
 
 class PhaseComponent(Component):
     def __init__(self,):
         super(PhaseComponent, self).__init__()
-        self.phase_funcs = []
+        self.phase_funcs_component = []
         self.phase_derivs_wrt_delay = []
 
 

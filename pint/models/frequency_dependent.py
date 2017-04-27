@@ -20,7 +20,7 @@ class FD(DelayComponent):
                        unitTplt=lambda x: 'second',
                        type_match='float'))
 
-        self.delay_funcs += [self.FD_delay]
+        self.delay_funcs_component += [self.FD_delay]
         self.category = 'frequency_dependent'
 
     def setup(self):

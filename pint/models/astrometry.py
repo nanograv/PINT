@@ -32,7 +32,7 @@ class Astrometry(DelayComponent):
             units="mas", value=0.0,
             description="Parallax"))
 
-        self.delay_funcs += [self.solar_system_geometric_delay,]
+        self.delay_funcs_component += [self.solar_system_geometric_delay,]
         self.category = 'astrometry'
         self.register_deriv_funcs(self.d_delay_astrometry_d_PX, 'PX')
 

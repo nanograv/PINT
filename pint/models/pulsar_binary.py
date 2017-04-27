@@ -74,7 +74,7 @@ class PulsarBinary(DelayComponent):
              description="Sine of inclination angle"))
 
         # Set up delay function
-        self.delay_funcs += [self.binarymodel_delay,]
+        self.delay_funcs_component += [self.binarymodel_delay,]
 
     def setup(self):
         super(PulsarBinary, self).setup()

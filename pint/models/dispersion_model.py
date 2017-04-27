@@ -37,7 +37,7 @@ class Dispersion(DelayComponent):
                        description="Epoch of DM measurement"))
 
         self.dm_value_funcs = [self.base_dm,]
-        self.delay_funcs += [self.dispersion_delay,]
+        self.delay_funcs_component += [self.dispersion_delay,]
         self.category = 'dispersion'
 
     def setup(self):
@@ -79,7 +79,7 @@ class Dispersion(DelayComponent):
         dm_terms_value = [d.value for d in dm_terms]
         dm = taylor_horner(dt_value, dm_terms_value)
         return dm * self.DM.units
-    
+
     def dispersion_time_delay(self, DM, freq):
         """Return the dispersion time delay for a set of frequency.
         This equation if cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar

@@ -35,7 +35,7 @@ class Spindown(PhaseComponent):
                        description="Reference epoch for spin-down",
                        time_scale='tdb'))
 
-        self.phase_funcs += [self.spindown_phase,]
+        self.phase_funcs_component += [self.spindown_phase,]
         self.category = 'spindown'
         self.phase_derivs_wrt_delay += [self.d_spindown_phase_d_delay,]
 
