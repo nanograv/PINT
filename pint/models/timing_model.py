@@ -302,12 +302,39 @@ class TimingModel(object):
             comp_type_dict.update({order: component})
         else:
             component_items = comp_type_dict.items()
-            if order in orders:
+            if order in orders: # PUSH the order back
                 idx = component_items.index((order, comp_type_dict[order]))
                 for ii in range(idx, len(component_items)):
                     component_items[ii][0] += 1
-                component_items.append((order, delay))
-            comp_type_dict = OrderedDict(sorted(component_items, key=lambda t: t[0]))
+            component_items.append((order, component))
+            setattr(self, comp_type+'_dict', OrderedDict(sorted(component_items,\
+                    key=lambda t: t[0])))
+
+    def remove_component(self, component):
+        # case for input component is a str name
+        comps = self.components
+        if isinstance(component, str):
+            if component not in list(comps.keys()):
+                raise AttributeError("No '%s' in the timing model." % component)
+            comp = comps[component]
+        else: # When component is an component instance.
+            if component not in list(comps.values()):
+                raise AttributeError("No '%s' in the timing model." \
+                                     % component.__class__.__name__)
+            else:
+                comp = component
+        comp_base = inspect.getmro(comp.__class__)
+        comp_type = comp_base[-3].__name__
+        comp_type_dict = getattr(self, comp_type+'_dict')
+        comp_items = list(comp_type_dict.items())
+        remove = []
+        for order, cp in comp_items:
+            if cp == comp:
+                remove.append((order, cp))
+        for re in remove:
+            comp_items.remove(re)
+        setattr(self, comp_type+'_dict', OrderedDict(sorted(comp_items, \
+                key=lambda t: t[0])))
 
     def add_param(self, param, target_component):
         """Add a parameter to a timing model component.
@@ -484,6 +511,31 @@ class TimingModel(object):
         """
         pass
 
+    def d_phase_d_param(self, toas, delay, param):
+        """ Return the derivative of phase with respect to the parameter.
+        """
+        result = 0.0
+        par = getattr(self, param)
+        # TODO need to do correct chain rule stuff wrt delay derivs, etc
+        # Is it safe to assume that any param affecting delay only affects
+        # phase indirectly (and vice-versa)??
+        result = np.longdouble(np.zeros(len(toas))) * u.Unit('')/par.units
+        param_phase_derivs = []
+        if param in self.phase_derivs.keys():
+            for df in self.phase_derivs[param]:
+                if df.__name__.endswith(param):
+                    result += df(toas, delay).to(result.unit,
+                                         equivalencies=u.dimensionless_angles())
+                else: # Then this is a general derivative function.
+                    result += df(toas, param, delay).to(result.unit,
+                                         equivalencies=u.dimensionless_angles())
+        else: # Apply chain rule for the parameters in the delay.
+            d_delay_d_p = self.d_delay_d_param(toas, param)
+            for dpddf in self.phase_derivs_wrt_delay:
+                result += (dpddf(toas, delay) * d_delay_d_p).to(result.unit,
+                                         equivalencies=u.dimensionless_angles())
+        return result
+
     #
 
     #
@@ -549,30 +601,7 @@ class TimingModel(object):
     #
     #
     # #@Cache.use_cache
-    # def d_phase_d_param(self, toas, delay, param):
-    #     """ Return the derivative of phase with respect to the parameter.
-    #     """
-    #     result = 0.0
-    #     par = getattr(self, param)
-    #     # TODO need to do correct chain rule stuff wrt delay derivs, etc
-    #     # Is it safe to assume that any param affecting delay only affects
-    #     # phase indirectly (and vice-versa)??
-    #     result = np.longdouble(np.zeros(len(toas))) * u.Unit('')/par.units
-    #     param_phase_derivs = []
-    #     if param in self.phase_derivs.keys():
-    #         for df in self.phase_derivs[param]:
-    #             if df.__name__.endswith(param):
-    #                 result += df(toas, delay).to(result.unit,
-    #                                      equivalencies=u.dimensionless_angles())
-    #             else: # Then this is a general derivative function.
-    #                 result += df(toas, param, delay).to(result.unit,
-    #                                      equivalencies=u.dimensionless_angles())
-    #     else: # Apply chain rule for the parameters in the delay.
-    #         d_delay_d_p = self.d_delay_d_param(toas, param)
-    #         for dpddf in self.phase_derivs_wrt_delay:
-    #             result += (dpddf(toas, delay) * d_delay_d_p).to(result.unit,
-    #                                      equivalencies=u.dimensionless_angles())
-    #     return result
+
     #
     # #@Cache.use_cache
     # def d_phase_d_param_num(self, toas, param, step=1e-2):
@@ -731,113 +760,7 @@ class TimingModel(object):
     #         result += self.print_param_component(scp)
     #     result += self.print_param_control()
     #     return result
-    #
-    # def read_parfile(self, filename):
-    #     """Read values from the specified parfile into the model parameters."""
-    #     checked_param = []
-    #     repeat_param = {}
-    #     pfile = open(filename, 'r')
-    #     for l in [pl.strip() for pl in pfile.readlines()]:
-    #         # Skip blank lines
-    #         if not l:
-    #             continue
-    #         # Skip commented lines
-    #         if l.startswith('#') or l[:2]=="C ":
-    #             continue
-    #
-    #         k = l.split()
-    #         name = k[0].upper()
-    #
-    #         if name in checked_param:
-    #             if name in repeat_param.keys():
-    #                 repeat_param[name] += 1
-    #             else:
-    #                 repeat_param[name] = 2
-    #             k[0] = k[0] + str(repeat_param[name])
-    #             l = ' '.join(k)
-    #
-    #         parsed = False
-    #         for par in self.params:
-    #             if getattr(self, par).from_parfile_line(l):
-    #                 parsed = True
-    #         if not parsed:
-    #             try:
-    #                 prefix,f,v = utils.split_prefixed_name(l.split()[0])
-    #                 if prefix not in ignore_prefix:
-    #                     log.warn("Unrecognized parfile line '%s'" % l)
-    #             except:
-    #                 if l.split()[0] not in ignore_params:
-    #                     log.warn("Unrecognized parfile line '%s'" % l)
-    #
-    #         checked_param.append(name)
-    #     # The "setup" functions contain tests for required parameters or
-    #     # combinations of parameters, etc, that can only be done
-    #     # after the entire parfile is read
-    #     self.setup()
-    #
-    #
-    # def is_in_parfile(self,para_dict):
-    #     """ Check if this subclass inclulded in parfile.
-    #         Parameters
-    #         ------------
-    #         para_dict : dictionary
-    #             A dictionary contain all the parameters with values in string
-    #             from one parfile
-    #         Return
-    #         ------------
-    #         True : bool
-    #             The subclass is inculded in the parfile.
-    #         False : bool
-    #             The subclass is not inculded in the parfile.
-    #     """
-    #     pNames_inpar = list(para_dict.keys())
-    #
-    #     pNames_inModel = self.params
-    #
-    #     prefix_inModel = self.prefix_params
-    #
-    #     # Remove the common parameter PSR
-    #     try:
-    #         del pNames_inModel[pNames_inModel.index('PSR')]
-    #     except:
-    #         pass
-    #
-    #     # For solar system shapiro delay component
-    #     if hasattr(self,'PLANET_SHAPIRO'):
-    #         if "NO_SS_SHAPIRO" in pNames_inpar:
-    #             return False
-    #         else:
-    #             return True
-    #
-    #
-    #     # For Binary model component
-    #     try:
-    #         if getattr(self,'binary_model_name') == para_dict['BINARY'][0]:
-    #             return True
-    #         else:
-    #             return False
-    #     except:
-    #         pass
-    #
-    #     # Compare the componets parameter names with par file parameters
-    #     compr = list(set(pNames_inpar).intersection(pNames_inModel))
-    #
-    #     if compr==[]:
-    #         # Check aliases
-    #         for p in pNames_inModel:
-    #             al = getattr(self,p).aliases
-    #             # No aliase in parameters
-    #             if al == []:
-    #                 continue
-    #             # Find alise check if match any of parameter name in parfile
-    #             if list(set(pNames_inpar).intersection(al)):
-    #                 return True
-    #             else:
-    #                 continue
-    #         # TODO Check prefix parameter
-    #         return False
-    #
-    #     return True
+
 class ModelMeta(abc.ABCMeta):
     """
     This is a Meta class for timing model registeration. In order ot get a
