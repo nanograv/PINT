@@ -157,8 +157,6 @@ class TimingModel(object):
 
         for cp in components:
             self.add_component(cp)
-        # for phase in phases:
-        #     self.add_phase(phase)
 
     def setup(self):
         """This is a abstract class for setting up timing model class. It is designed for
@@ -223,9 +221,31 @@ class TimingModel(object):
 
     @property
     def phase_deriv_funcs(self):
-        pass
+        return self.get_deriv_funcs('PhaseComponent')
+
+    @property
     def delay_deriv_funcs(self):
-        pass
+        return self.get_deriv_funcs('DelayComponent')
+
+    @property
+    def d_phase_d_delay_funcs(self):
+        phase_comps = list(self.PhaseComponent_dict.values())
+        Dphase_Ddelay = []
+        for cp in phase_comps:
+            Dphase_Ddelay += cp.phase_derivs_wrt_delay
+        return Dphase_Ddelay
+
+    def get_deriv_funcs(self, component_type):
+        componet_dict = component_type + '_dict'
+        type_components = list(getattr(self, componet_dict).values())
+        deriv_funcs = {}
+        for cp in type_components:
+            for k, v in list(cp.deriv_funcs.items()):
+                if k in deriv_funcs:
+                    deriv_funcs[k] += v
+                else:
+                    deriv_funcs[k] = v
+        return deriv_funcs
 
     def search_cmp_attr(self, name):
         """
@@ -503,27 +523,146 @@ class TimingModel(object):
     def d_phase_d_param(self, toas, delay, param):
         """ Return the derivative of phase with respect to the parameter.
         """
-        result = 0.0
-        par = getattr(self, param)
         # TODO need to do correct chain rule stuff wrt delay derivs, etc
         # Is it safe to assume that any param affecting delay only affects
         # phase indirectly (and vice-versa)??
+        par = getattr(self, param)
         result = np.longdouble(np.zeros(len(toas))) * u.Unit('')/par.units
         param_phase_derivs = []
-        if param in self.phase_derivs.keys():
-            for df in self.phase_derivs[param]:
-                if df.__name__.endswith(param):
-                    result += df(toas, delay).to(result.unit,
-                                         equivalencies=u.dimensionless_angles())
-                else: # Then this is a general derivative function.
-                    result += df(toas, param, delay).to(result.unit,
-                                         equivalencies=u.dimensionless_angles())
-        else: # Apply chain rule for the parameters in the delay.
+        phase_derivs = self.phase_deriv_funcs
+        delay_derivs = self.delay_deriv_funcs
+        if param in list(phase_derivs.keys()):
+            for df in phase_derivs[param]:
+                result += df(toas, param, delay).to(result.unit,
+                            equivalencies=u.dimensionless_angles())
+        else:
+            # Apply chain rule for the parameters in the delay.
+            # total_phase = Phase1(delay(param)) + Phase2(delay(param))
+            # d_total_phase_d_param = d_Phase1/d_delay*d_delay/d_param +
+            #                         d_Phase2/d_delay*d_delay/d_param
+            #                       = (d_Phase1/d_delay + d_Phase2/d_delay) *
+            #                         d_delay_d_param
+
             d_delay_d_p = self.d_delay_d_param(toas, param)
-            for dpddf in self.phase_derivs_wrt_delay:
-                result += (dpddf(toas, delay) * d_delay_d_p).to(result.unit,
-                                         equivalencies=u.dimensionless_angles())
-        return result
+            dpdd_result = np.longdouble(np.zeros(len(toas))) * u.Unit('')/u.second
+            for dpddf in self.d_phase_d_delay_funcs:
+                dpdd_result += dpddf(toas, delay)
+            result = dpdd_result * d_delay_d_p
+        return result.to(result.unit, equivalencies=u.dimensionless_angles())
+
+    def d_delay_d_param(self, toas, param):
+        """
+        Return the derivative of delay with respect to the parameter.
+        """
+        par = getattr(self, param)
+        result = np.longdouble(np.zeros(len(toas)) * u.s/par.units)
+        delay_derivs = self.delay_deriv_funcs
+        if param not in list(delay_derivs.keys()):
+            raise AttributeError("Derivative function for '%s' is not provided"
+                                 " or not registred. "%param)
+        for df in delay_derivs[param]:
+            result += df(toas, param)
+        return result.to(result.unit, equivalencies=u.dimensionless_angles())
+
+    def d_phase_d_param_num(self, toas, param, step=1e-2):
+        """ Return the derivative of phase with respect to the parameter.
+        """
+        # TODO : We need to know the range of parameter.
+        par = getattr(self, param)
+        ori_value = par.value
+        unit = par.units
+        if ori_value == 0:
+            h = 1.0 * step
+        else:
+            h = ori_value * step
+        parv = [par.value-h, par.value+h]
+
+        phaseI = np.zeros((len(toas),2))
+        phaseF = np.zeros((len(toas),2))
+        for ii, val in enumerate(parv):
+            par.value = val
+            ph = self.phase(toas)
+            phaseI[:,ii] = ph.int
+            phaseF[:,ii] = ph.frac
+        resI = (- phaseI[:,0] + phaseI[:,1])
+        resF = (- phaseF[:,0] + phaseF[:,1])
+        result = (resI + resF)/(2.0 * h)
+        # shift value back to the original value
+        par.value = ori_value
+        return result * u.Unit("")/unit
+
+    def d_delay_d_param_num(self, toas, param, step=1e-2):
+        """ Return the derivative of phase with respect to the parameter.
+        """
+        # TODO : We need to know the range of parameter.
+        par = getattr(self, param)
+        ori_value = par.value
+        if ori_value is None:
+             # A parameter did not get to use in the model
+            log.warn("Parameter '%s' is not used by timing model." % param)
+            return np.zeros(len(toas)) * (u.second/par.units)
+        unit = par.units
+        if ori_value == 0:
+            h = 1.0 * step
+        else:
+            h = ori_value * step
+        parv = [par.value-h, par.value+h]
+        delay = np.zeros((len(toas),2))
+        for ii, val in enumerate(parv):
+            par.value = val
+            try:
+                delay[:,ii] = self.delay(toas)
+            except:
+                par.value = ori_value
+                raise
+        d_delay = (-delay[:,0] + delay[:,1])/2.0/h
+        par.value = ori_value
+        return d_delay * (u.second/unit)
+
+    def designmatrix(self, toas, scale_by_F0=True, incfrozen=False, incoffset=True):
+        """
+        Return the design matrix: the matrix with columns of d_phase_d_param/F0
+        or d_toa_d_param
+        """
+        params = ['Offset',] if incoffset else []
+        params += [par for par in self.params if incfrozen or
+                not getattr(self, par).frozen]
+
+        F0 = self.F0.quantity        # 1/sec
+        ntoas = len(toas)
+        nparams = len(params)
+        delay = self.delay(toas)
+        units = []
+
+        # Apply all delays ?
+        #tt = toas['tdbld']
+        #for df in self.delay_funcs:
+        #    tt -= df(toas)
+
+        M = np.zeros((ntoas, nparams))
+        for ii, param in enumerate(params):
+            if param == 'Offset':
+                M[:,ii] = 1.0
+                units.append(u.s/u.s)
+            else:
+                # NOTE Here we have negative sign here. Since in pulsar timing
+                # the residuals are calculated as (Phase - int(Phase)), which is different
+                # from the conventional defination of least square definetion (Data - model)
+                # We decide to add minus sign here in the design matrix, so the fitter
+                # keeps the conventional way.
+                q = - self.d_phase_d_param(toas, delay,param)
+                M[:,ii] = q
+                units.append(u.Unit("")/ getattr(self, param).units)
+
+        if scale_by_F0:
+            mask = []
+            for ii, un in enumerate(units):
+                if params[ii] == 'Offset':
+                    continue
+                units[ii] = un * u.second
+                mask.append(ii)
+            M[:, mask] /= F0.value
+        return M, params, units, scale_by_F0
 
     #
 
@@ -550,22 +689,7 @@ class TimingModel(object):
     #             mapping[par.index] = parname
     #     return mapping
     #
-    # def match_param_aliases(self, alias):
-    #     p_aliases = {}
-    #     # if alias is a parameter name, return itself
-    #     if alias in self.params:
-    #         return alias
-    #     # get all the aliases
-    #     for p in self.params:
-    #         par = getattr(self, p)
-    #         if par.aliases !=[]:
-    #             p_aliases[p] = par.aliases
-    #     # match alias
-    #     for pa, pav in zip(p_aliases.keys(), p_aliases.values()):
-    #         if alias in pav:
-    #             return pa
-    #     # if not found any thing.
-    #     return ''
+
     #
 
 
@@ -579,137 +703,14 @@ class TimingModel(object):
     #         delay += df(toas)
     #     toasBary = toasObs*u.day - delay*u.second
     #     return toasBary
-    #
 
-    #
-
-    #
-
-    #
-
-    #
-    #
-    # #@Cache.use_cache
 
     #
     # #@Cache.use_cache
-    # def d_phase_d_param_num(self, toas, param, step=1e-2):
-    #     """ Return the derivative of phase with respect to the parameter.
-    #     """
-    #     # TODO : We need to know the range of parameter.
-    #     par = getattr(self, param)
-    #     ori_value = par.value
-    #     unit = par.units
-    #     if ori_value == 0:
-    #         h = 1.0 * step
-    #     else:
-    #         h = ori_value * step
-    #     parv = [par.value-h, par.value+h]
-    #
-    #     phaseI = np.zeros((len(toas),2))
-    #     phaseF = np.zeros((len(toas),2))
-    #     for ii, val in enumerate(parv):
-    #         par.value = val
-    #         ph = self.phase(toas)
-    #         phaseI[:,ii] = ph.int
-    #         phaseF[:,ii] = ph.frac
-    #     resI = (- phaseI[:,0] + phaseI[:,1])
-    #     resF = (- phaseF[:,0] + phaseF[:,1])
-    #     result = (resI + resF)/(2.0 * h)
-    #     # shift value back to the original value
-    #     par.value = ori_value
-    #     return result * u.Unit("")/unit
-    #
-    # def d_delay_d_param_num(self, toas, param, step=1e-2):
-    #     """ Return the derivative of phase with respect to the parameter.
-    #     """
-    #     # TODO : We need to know the range of parameter.
-    #     par = getattr(self, param)
-    #     ori_value = par.value
-    #     if ori_value is None:
-    #          # A parameter did not get to use in the model
-    #         log.warn("Parameter '%s' is not used by timing model." % param)
-    #         return np.zeros(len(toas)) * (u.second/par.units)
-    #     unit = par.units
-    #     if ori_value == 0:
-    #         h = 1.0 * step
-    #     else:
-    #         h = ori_value * step
-    #     parv = [par.value-h, par.value+h]
-    #     delay = np.zeros((len(toas),2))
-    #     for ii, val in enumerate(parv):
-    #         par.value = val
-    #         try:
-    #             delay[:,ii] = self.delay(toas)
-    #         except:
-    #             par.value = ori_value
-    #             raise
-    #     d_delay = (-delay[:,0] + delay[:,1])/2.0/h
-    #     par.value = ori_value
-    #     return d_delay * (u.second/unit)
-    #
-    # def d_delay_d_param(self, toas, param):
-    #     """
-    #     Return the derivative of delay with respect to the parameter.
-    #     """
-    #     par = getattr(self, param)
-    #     result = np.longdouble(np.zeros(len(toas)) * u.s/par.units)
-    #     if param not in self.delay_derivs.keys():
-    #         raise AttributeError("Derivative function for '%s' is not provided"
-    #                              " or not registred. "%param)
-    #     for df in self.delay_derivs[param]:
-    #         # The derivative function is for a specific parameter.
-    #         if df.__name__.endswith(param):
-    #             result += df(toas).to(result.unit, equivalencies=u.dimensionless_angles())
-    #         else: # Then this is a general derivative function.
-    #             result += df(toas, param).to(result.unit, equivalencies=u.dimensionless_angles())
-    #     return result
-    #
+
+
     # #@Cache.use_cache
-    # def designmatrix(self, toas, scale_by_F0=True, incfrozen=False, incoffset=True):
-    #     """
-    #     Return the design matrix: the matrix with columns of d_phase_d_param/F0
-    #     or d_toa_d_param
-    #     """
-    #     params = ['Offset',] if incoffset else []
-    #     params += [par for par in self.params if incfrozen or
-    #             not getattr(self, par).frozen]
-    #
-    #     F0 = self.F0.quantity        # 1/sec
-    #     ntoas = len(toas)
-    #     nparams = len(params)
-    #     delay = self.delay(toas)
-    #     units = []
-    #
-    #     # Apply all delays ?
-    #     #tt = toas['tdbld']
-    #     #for df in self.delay_funcs:
-    #     #    tt -= df(toas)
-    #
-    #     M = np.zeros((ntoas, nparams))
-    #     for ii, param in enumerate(params):
-    #         if param == 'Offset':
-    #             M[:,ii] = 1.0
-    #             units.append(u.s/u.s)
-    #         else:
-    #             # NOTE Here we have negative sign here. Since in pulsar timing
-    #             # the residuals are calculated as (Phase - int(Phase)), which is different
-    #             # from the conventional defination of least square definetion (Data - model)
-    #             # We decide to add minus sign here in the design matrix, so the fitter
-    #             # keeps the conventional way.
-    #             q = - self.d_phase_d_param(toas, delay,param)
-    #             M[:,ii] = q
-    #             units.append(u.Unit("")/ getattr(self, param).units)
-    #
-    #     if scale_by_F0:
-    #         mask = []
-    #         for ii, un in enumerate(units):
-    #             if params[ii] == 'Offset':
-    #                 continue
-    #             units[ii] = un * u.second
-    #             mask.append(ii)
-    #         M[:, mask] /= F0.value
-    #     return M, params, units, scale_by_F0
+
     #
     # def __str__(self):
     #     result = ""
