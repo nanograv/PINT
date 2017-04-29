@@ -42,7 +42,7 @@ class JumpDelay(DelayComponent):
             jdelay[mask] += -jump_par.value
         return jdelay
 
-    def d_delay_d_jump(self, toas, jump_param):
+    def d_delay_d_jump(self, toas, jump_param, acc_delay=None):
         d_delay_d_j = numpy.zeros(len(toas))
         jpar = getattr(self, jump_param)
         mask = jpar.select_toa_mask(toas)

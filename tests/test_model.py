@@ -19,8 +19,8 @@ parfile = 'J1744-1134.basic.par'
 t1_parfile = 'J1744-1134.t1.par'
 timfile = 'J1744-1134.Rcvr1_2.GASP.8y.x.tim'
 
-m = tm.StandardTimingModel()
-m.read_parfile(parfile)
+
+m = tm.get_model(parfile)
 log.info("model.as_parfile():\n%s"%m.as_parfile())
 
 try:
@@ -29,7 +29,7 @@ except AttributeError:
     planets = False
 
 t0 = time.time()
-t = toa.get_TOAs(timfile, planets=planets, 
+t = toa.get_TOAs(timfile, planets=planets,
                  include_bipm=False, usepickle=False)
 time_toa = time.time() - t0
 if log.level < 25:

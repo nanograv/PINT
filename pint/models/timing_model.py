@@ -432,55 +432,37 @@ class TimingModel(object):
             phase += Phase(pf(toas, delay))
         return phase
 
-    def read_parfile(self, filename):
-        """Read values from the specified parfile into the model parameters."""
-        checked_param = []
-        repeat_param = {}
-        param_map = self.get_params_mapping()
-        comps = self.components
-        pfile = open(filename, 'r')
-        for l in [pl.strip() for pl in pfile.readlines()]:
-            # Skip blank lines
-            if not l:
-                continue
-            # Skip commented lines
-            if l.startswith('#') or l[:2]=="C ":
-                continue
-
-            k = l.split()
-            name = k[0].upper()
-
-            if name in checked_param:
-                if name in repeat_param.keys():
-                    repeat_param[name] += 1
-                else:
-                    repeat_param[name] = 2
-                k[0] = k[0] + str(repeat_param[name])
-                l = ' '.join(k)
-
-            parsed = False
-            for par in param_map.keys():
-                host_comp = param_map[par]
-                if host_comp != 'timing_model':
-                    cmp = comps[host_comp]
-                else:
-                    cmp = self
-                if cmp.__getattr__(par).from_parfile_line(l):
-                    parsed = True
-            if not parsed:
-                try:
-                    prefix,f,v = utils.split_prefixed_name(l.split()[0])
-                    if prefix not in ignore_prefix:
-                        log.warn("Unrecognized parfile line '%s'" % l)
-                except:
-                    if l.split()[0] not in ignore_params:
-                        log.warn("Unrecognized parfile line '%s'" % l)
-
-            checked_param.append(name)
-        # The "setup" functions contain tests for required parameters or
-        # combinations of parameters, etc, that can only be done
-        # after the entire parfile is read
-        self.setup()
+    def get_barycentric_correction(self, toas, last_component_order=None):
+        """
+        This is a function to calculate the timing delays for correcting TOAs
+        to solar system barycenter.
+        Parameter
+        ---------
+        toas: TOAs table
+        last_component_order: int, optional
+            The order number of the last component to be included in the
+            calculation. If it is not provided, it will assign the one before
+            the binary model component.
+        """
+        delay = np.zeros(len(toas))
+        end_order = 0
+        delay_list = list(self.DelayComponent_dict.items())
+        if last_component_order is None:
+            # search for binary model.
+            for ii, c in enumerate(delay_list):
+                if c[1].category == 'binary':
+                   end_order = delay_list[ii - 1][0]
+                   break
+            if end_order == 0:
+                end_order = delay_list[-1][0]
+        else:
+            end_order = last_component_order
+        for cp in delay_list:
+            if cp[0] > end_order:
+                break
+            for df in cp[1].delay_funcs_component:
+                delay += df(toas, delay)
+        return delay
 
     def d_phase_d_toa(self, toas, sample_step=None):
         """Return the derivative of phase wrt TOA
@@ -550,7 +532,7 @@ class TimingModel(object):
             result = dpdd_result * d_delay_d_p
         return result.to(result.unit, equivalencies=u.dimensionless_angles())
 
-    def d_delay_d_param(self, toas, param):
+    def d_delay_d_param(self, toas, param, acc_delay=None):
         """
         Return the derivative of delay with respect to the parameter.
         """
@@ -561,8 +543,9 @@ class TimingModel(object):
             raise AttributeError("Derivative function for '%s' is not provided"
                                  " or not registred. "%param)
         for df in delay_derivs[param]:
-            result += df(toas, param)
-        return result.to(result.unit, equivalencies=u.dimensionless_angles())
+            result += df(toas, param, acc_delay).to(result.unit, \
+                        equivalencies=u.dimensionless_angles())
+        return result
 
     def d_phase_d_param_num(self, toas, param, step=1e-2):
         """ Return the derivative of phase with respect to the parameter.
@@ -619,7 +602,8 @@ class TimingModel(object):
         par.value = ori_value
         return d_delay * (u.second/unit)
 
-    def designmatrix(self, toas, scale_by_F0=True, incfrozen=False, incoffset=True):
+    def designmatrix(self, toas,acc_delay=None, scale_by_F0=True, \
+                     incfrozen=False, incoffset=True):
         """
         Return the design matrix: the matrix with columns of d_phase_d_param/F0
         or d_toa_d_param
@@ -664,6 +648,65 @@ class TimingModel(object):
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
 
+    def read_parfile(self, filename):
+        """Read values from the specified parfile into the model parameters."""
+        checked_param = []
+        repeat_param = {}
+        param_map = self.get_params_mapping()
+        comps = self.components
+        pfile = open(filename, 'r')
+        for l in [pl.strip() for pl in pfile.readlines()]:
+            # Skip blank lines
+            if not l:
+                continue
+            # Skip commented lines
+            if l.startswith('#') or l[:2]=="C ":
+                continue
+
+            k = l.split()
+            name = k[0].upper()
+
+            if name in checked_param:
+                if name in repeat_param.keys():
+                    repeat_param[name] += 1
+                else:
+                    repeat_param[name] = 2
+                k[0] = k[0] + str(repeat_param[name])
+                l = ' '.join(k)
+
+            parsed = False
+            for par in param_map.keys():
+                host_comp = param_map[par]
+                if host_comp != 'timing_model':
+                    cmp = comps[host_comp]
+                else:
+                    cmp = self
+                if cmp.__getattr__(par).from_parfile_line(l):
+                    parsed = True
+            if not parsed:
+                try:
+                    prefix,f,v = utils.split_prefixed_name(l.split()[0])
+                    if prefix not in ignore_prefix:
+                        log.warn("Unrecognized parfile line '%s'" % l)
+                except:
+                    if l.split()[0] not in ignore_params:
+                        log.warn("Unrecognized parfile line '%s'" % l)
+
+            checked_param.append(name)
+        # The "setup" functions contain tests for required parameters or
+        # combinations of parameters, etc, that can only be done
+        # after the entire parfile is read
+        self.setup()
+
+    def as_parfile(self, ):
+        """Returns a parfile representation of the entire model as a string."""
+        result = ""
+        for p in self.top_level_params:
+            result += getattr(self, p).as_parfile_line()
+
+
+        return result
+
     #
 
     #
@@ -695,21 +738,6 @@ class TimingModel(object):
 
 
 
-    #@Cache.use_cache
-    # def get_barycentric_toas(self,toas):
-    #     toasObs = toas['tdbld']
-    #     delay = np.zeros(len(toas))
-    #     for df in self.delay_funcs['L1']:
-    #         delay += df(toas)
-    #     toasBary = toasObs*u.day - delay*u.second
-    #     return toasBary
-
-
-    #
-    # #@Cache.use_cache
-
-
-    # #@Cache.use_cache
 
     #
     # def __str__(self):

@@ -102,7 +102,7 @@ class Astrometry(DelayComponent):
 
         return rd
 
-    def d_delay_astrometry_d_PX(self, toas, param=''):
+    def d_delay_astrometry_d_PX(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt PX
 
         Roughly following Smart, 1977, chapter 9.
@@ -132,7 +132,7 @@ class Astrometry(DelayComponent):
         # We want to return sec / mas
         return dd_dpx.decompose(u.si.bases) / u.mas
 
-    def d_delay_astrometry_d_POSEPOCH(self, toas, param=''):
+    def d_delay_astrometry_d_POSEPOCH(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt POSEPOCH
         """
         pass
@@ -204,7 +204,7 @@ class AstrometryEquatorial(Astrometry):
             dDEC = dt * self.PMDEC.quantity
             return coords.ICRS(ra=self.RAJ.quantity+dRA, dec=self.DECJ.quantity+dDEC)
 
-    def d_delay_astrometry_d_RAJ(self, toas, param=''):
+    def d_delay_astrometry_d_RAJ(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt RAJ
 
         For the RAJ and DEC derivatives, use the following approximate model for
@@ -230,7 +230,7 @@ class AstrometryEquatorial(Astrometry):
 
         return dd_draj.decompose(u.si.bases)
 
-    def d_delay_astrometry_d_DECJ(self, toas, param=''):
+    def d_delay_astrometry_d_DECJ(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt DECJ
 
         Definitions as in d_delay_d_RAJ
@@ -247,7 +247,7 @@ class AstrometryEquatorial(Astrometry):
 
         return dd_ddecj.decompose(u.si.bases)
 
-    def d_delay_astrometry_d_PMRA(self, toas, param=''):
+    def d_delay_astrometry_d_PMRA(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt PMRA
 
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
@@ -266,7 +266,7 @@ class AstrometryEquatorial(Astrometry):
         # We want to return sec / (mas / yr)
         return dd_dpmra.decompose(u.si.bases) / (u.mas / u.year)
 
-    def d_delay_astrometry_d_PMDEC(self, toas, param=''):
+    def d_delay_astrometry_d_PMDEC(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt PMDEC
 
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
@@ -381,7 +381,7 @@ class AstrometryEcliptic(Astrometry):
 
         return rd
 
-    def d_delay_astrometry_d_ELONG(self, toas, param=''):
+    def d_delay_astrometry_d_ELONG(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt RAJ
 
         For the RAJ and DEC derivatives, use the following approximate model for
@@ -416,7 +416,7 @@ class AstrometryEcliptic(Astrometry):
 
         return dd_delong.decompose(u.si.bases)
 
-    def d_delay_astrometry_d_ELAT(self, toas, param=''):
+    def d_delay_astrometry_d_ELAT(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt DECJ
 
         Definitions as in d_delay_d_RAJ
@@ -433,7 +433,7 @@ class AstrometryEcliptic(Astrometry):
 
         return dd_delat.decompose(u.si.bases)
 
-    def d_delay_astrometry_d_PMELONG(self, toas, param=''):
+    def d_delay_astrometry_d_PMELONG(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt PMRA
 
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
@@ -453,7 +453,7 @@ class AstrometryEcliptic(Astrometry):
         # We want to return sec / (mas / yr)
         return dd_dpmelong.decompose(u.si.bases) / (u.mas / u.year)
 
-    def d_delay_astrometry_d_PMELAT(self, toas, param=''):
+    def d_delay_astrometry_d_PMELAT(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt PMDEC
 
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for

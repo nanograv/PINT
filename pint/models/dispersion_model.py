@@ -121,7 +121,7 @@ class Dispersion(DelayComponent):
                 result += getattr(self, pm).as_parfile_line()
         return result
 
-    def d_delay_d_DMs(self, toas, param_name): # NOTE we should have a better name for this.
+    def d_delay_d_DMs(self, toas, param_name, acc_delay=None): # NOTE we should have a better name for this.
         """Derivatives for constant DM
         """
         try:
@@ -218,7 +218,7 @@ class DispersionDMX(Dispersion):
            dm[v] = getattr(self, k).quantity
         return dm
 
-    def d_delay_d_DMX(self, toas, param_name):
+    def d_delay_d_DMX(self, toas, param_name, acc_delay=None):
         condition = {}
         if not hasattr(self, 'dmx_toas_selector'):
             self.dmx_toas_selector = TOASelect(is_range=True)

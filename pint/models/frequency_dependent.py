@@ -61,7 +61,7 @@ class FD(DelayComponent):
 
         return FD_delay * self.FD1.units
 
-    def d_delay_FD_d_FDX(self, toas, param):
+    def d_delay_FD_d_FDX(self, toas, param, acc_delay=None):
         """This is a derivative function for FD parameter
         """
         try:
