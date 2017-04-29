@@ -26,7 +26,7 @@ class FD(DelayComponent):
     def setup(self):
         super(FD, self).setup()
         # Check if FD terms are in order.
-        FD_mapping = self.get_prefix_mapping('FD')
+        FD_mapping = self.get_prefix_mapping_component('FD')
         FD_terms = list(FD_mapping.keys())
         FD_terms.sort()
         FD_in_order = list(range(1,max(FD_terms)+1))
@@ -51,7 +51,7 @@ class FD(DelayComponent):
         except AttributeError:
             warn("Using topocentric frequency for frequency dependent delay!")
             bfreq = toas['freq']
-        FD_mapping = self.get_prefix_mapping('FD')
+        FD_mapping = self.get_prefix_mapping_component('FD')
         log_freq = np.log(bfreq / (1 * u.GHz))
         FD_coeff = [getattr(self, FD_mapping[ii]).value \
                    for ii in range(self.num_FD_terms,0,-1)]
@@ -72,7 +72,7 @@ class FD(DelayComponent):
         log_freq = np.log(bfreq / (1 * u.GHz))
         FD_par = getattr(self, param)
         FD_term = FD_par.index
-        FD_mapping = self.get_prefix_mapping('FD')
+        FD_mapping = self.get_prefix_mapping_component('FD')
         if FD_term > self.num_FD_terms:
             raise ValueError('FD model has no FD%d term' % FD_term)
         # make the selected FD coefficient 1, others 0
@@ -83,7 +83,7 @@ class FD(DelayComponent):
 
     def print_par(self):
         result = ''
-        FD_mapping = self.get_prefix_mapping('FD')
+        FD_mapping = self.get_prefix_mapping_component('FD')
         for FD in FD_mapping.values():
             FD_par = getattr(self, FD)
             result += FD_par.as_parfile_line()

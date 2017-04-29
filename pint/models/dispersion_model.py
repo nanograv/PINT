@@ -47,7 +47,7 @@ class Dispersion(DelayComponent):
             if self.DMEPOCH.value is None:
                 raise MissingParameter("Dispersion", "DMEPOCH",
                         "DMEPOCH is required if DM1 or higher are set")
-        base_dms = list(self.get_prefix_mapping('DM').values())
+        base_dms = list(self.get_prefix_mapping_component('DM').values())
         base_dms += ['DM',]
 
         for dm_name in base_dms:
@@ -62,7 +62,7 @@ class Dispersion(DelayComponent):
     def get_DM_terms(self):
         """Return a list of the DM term values in the model: [DM, DM1, ..., DMn]
         """
-        prefix_dm = list(self.get_prefix_mapping('DM').values())
+        prefix_dm = list(self.get_prefix_mapping_component('DM').values())
         dm_terms = [self.DM.quantity,]
         dm_terms += [getattr(self, x).quantity for x in prefix_dm]
         return dm_terms
@@ -108,7 +108,7 @@ class Dispersion(DelayComponent):
         # TODO we need to have a better design for print out the parameters in
         # an inhertance class.
         result  = ''
-        prefix_dm = list(self.get_prefix_mapping('DM').values())
+        prefix_dm = list(self.get_prefix_mapping_component('DM').values())
         dms = ['DM'] + prefix_dm
         for dm in dms:
             result += getattr(self, dm).as_parfile_line()
@@ -181,9 +181,9 @@ class DispersionDMX(Dispersion):
     def setup(self):
         super(DispersionDMX, self).setup()
         # Get DMX mapping.
-        DMX_mapping = self.get_prefix_mapping('DMX_')
-        DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
-        DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
+        DMX_mapping = self.get_prefix_mapping_component('DMX_')
+        DMXR1_mapping = self.get_prefix_mapping_component('DMXR1_')
+        DMXR2_mapping = self.get_prefix_mapping_component('DMXR2_')
         if len(DMX_mapping) != len(DMXR1_mapping):
             errorMsg = 'Number of DMX_ parameters is not'
             errorMsg += 'equals to Number of DMXR1_ parameters. '
@@ -204,9 +204,9 @@ class DispersionDMX(Dispersion):
         condition = {}
         if not hasattr(self, 'dmx_toas_selector'):
             self.dmx_toas_selector = TOASelect(is_range=True)
-        DMX_mapping = self.get_prefix_mapping('DMX_')
-        DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
-        DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
+        DMX_mapping = self.get_prefix_mapping_component('DMX_')
+        DMXR1_mapping = self.get_prefix_mapping_component('DMXR1_')
+        DMXR2_mapping = self.get_prefix_mapping_component('DMXR2_')
         for epoch_ind in DMX_mapping.keys():
             r1 = getattr(self, DMXR1_mapping[epoch_ind]).quantity
             r2 = getattr(self, DMXR2_mapping[epoch_ind]).quantity
@@ -224,8 +224,8 @@ class DispersionDMX(Dispersion):
             self.dmx_toas_selector = TOASelect(is_range=True)
         param = getattr(self, param_name)
         dmx_index = param.index
-        DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
-        DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
+        DMXR1_mapping = self.get_prefix_mapping_component('DMXR1_')
+        DMXR2_mapping = self.get_prefix_mapping_component('DMXR2_')
         r1 = getattr(self, DMXR1_mapping[dmx_index]).quantity
         r2 = getattr(self, DMXR2_mapping[dmx_index]).quantity
         condition = {param_name:(r1.mjd, r2.mjd)}
@@ -243,9 +243,9 @@ class DispersionDMX(Dispersion):
 
     def print_par(self,):
         result = ''
-        DMX_mapping = self.get_prefix_mapping('DMX_')
-        DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
-        DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
+        DMX_mapping = self.get_prefix_mapping_component('DMX_')
+        DMXR1_mapping = self.get_prefix_mapping_component('DMXR1_')
+        DMXR2_mapping = self.get_prefix_mapping_component('DMXR2_')
         result += getattr(self, 'DM').as_parfile_line()
         result += getattr(self, 'DMX').as_parfile_line()
         sorted_list = sorted(DMX_mapping.keys())

@@ -47,7 +47,7 @@ class Spindown(PhaseComponent):
                 raise MissingParameter("Spindown", p)
 
         # Check continuity
-        F_terms = list(self.get_prefix_mapping('F').keys())
+        F_terms = list(self.get_prefix_mapping_component('F').keys())
         F_terms.sort()
         F_in_order = list(range(1, max(F_terms)+1))
         if not F_terms == F_in_order:
@@ -61,7 +61,7 @@ class Spindown(PhaseComponent):
                         "PEPOCH is required if F1 or higher are set")
         self.num_spin_terms = len(F_terms) + 1
         # Add derivative functions
-        for fp in list(self.get_prefix_mapping('F').values()) + ['F0',]:
+        for fp in list(self.get_prefix_mapping_component('F').values()) + ['F0',]:
             self.register_deriv_funcs(self.d_phase_d_F, fp)
 
     def F_description(self, n):

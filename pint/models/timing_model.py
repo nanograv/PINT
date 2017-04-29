@@ -411,6 +411,24 @@ class TimingModel(object):
                 param_type.upper() == par_prefix.upper():
                 result.append(par.name)
         return result
+    def get_prefix_mapping(self,prefix):
+        """Get the index mapping for the prefix parameters.
+           Parameter
+           ----------
+           prefix : str
+               Name of prefix.
+           Return
+           ----------
+           A dictionary with prefix pararameter real index as key and parameter
+           name as value.
+        """
+        parnames = [x for x in self.params if x.startswith(prefix)]
+        mapping = dict()
+        for parname in parnames:
+            par = getattr(self, parname)
+            if par.is_prefix == True and par.prefix == prefix:
+                mapping[par.index] = parname
+        return mapping
 
     def param_help(self):
         """Print help lines for all available parameters in model.
@@ -757,24 +775,7 @@ class TimingModel(object):
 
     #
     # #@Cache.use_cache
-    # def get_prefix_mapping(self,prefix):
-    #     """Get the index mapping for the prefix parameters.
-    #        Parameter
-    #        ----------
-    #        prefix : str
-    #            Name of prefix.
-    #        Return
-    #        ----------
-    #        A dictionary with prefix pararameter real index as key and parameter
-    #        name as value.
-    #     """
-    #     parnames = [x for x in self.params if x.startswith(prefix)]
-    #     mapping = dict()
-    #     for parname in parnames:
-    #         par = getattr(self, parname)
-    #         if par.is_prefix == True and par.prefix == prefix:
-    #             mapping[par.index] = parname
-    #     return mapping
+    #
     #
 
     #
@@ -914,7 +915,7 @@ class Component(object):
         return result
 
     #@Cache.use_cache
-    def get_prefix_mapping(self,prefix):
+    def get_prefix_mapping_component(self,prefix):
         """Get the index mapping for the prefix parameters.
            Parameter
            ----------
