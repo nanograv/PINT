@@ -104,7 +104,7 @@ class Dispersion(DelayComponent):
 
         return self.dispersion_time_delay(dm, bfreq)
 
-    def print_par_DMs(self,):
+    def print_par(self,):
         # TODO we need to have a better design for print out the parameters in
         # an inhertance class.
         result  = ''
@@ -241,7 +241,7 @@ class DispersionDMX(Dispersion):
            dmx[v] = 1.0
         return DMconst * dmx / bfreq**2.0
 
-    def print_par_DMX(self,):
+    def print_par(self,):
         result = ''
         DMX_mapping = self.get_prefix_mapping('DMX_')
         DMXR1_mapping = self.get_prefix_mapping('DMXR1_')

@@ -113,7 +113,7 @@ class Spindown(PhaseComponent):
         phs_pepoch = taylor_horner(-dt_pepoch, fterms)
         return phs_tzrmjd - phs_pepoch
 
-    def print_par_F(self,):
+    def print_par(self,):
         result = ''
         f_terms = ["F%d" % ii for ii in
                 range(self.num_spin_terms)]

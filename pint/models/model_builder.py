@@ -148,15 +148,6 @@ class ModelBuilder(object):
             sorted_components.append(cp)
         return sorted_components
 
-    # def build_model(self):
-    #     """ Return a model with all selected components
-    #     """
-    #     sorted_comps = self.sorted_components()
-    #     if self.sorted_comps ==[]:
-    #         raise(RuntimeError("No timing model components selected."))
-    #
-    #     return generate_timing_model(self.name,tuple(self.select_comp))
-
     def search_prefix_param(self, paramList, prefix_inModel):
         """ Check if the Unrecognized parameter has prefix parameter
         """
@@ -227,7 +218,8 @@ class ModelBuilder(object):
                             continue
                         if hasattr(exm_par, 'new_param'):
                             new_par = exm_par.new_param(idx)
-                            self.timing_model.add_param(new_par, exm_par_comp)
+                            self.timing_model.add_param_from_top(new_par,
+                                                                 exm_par_comp)
 
         if parfile is not None:
             self.timing_model.read_parfile(parfile)

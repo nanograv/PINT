@@ -49,7 +49,7 @@ class JumpDelay(DelayComponent):
         d_delay_d_j[mask] = -1.0
         return d_delay_d_j * u.second/jpar.units
 
-    def print_par_JumpDelay(self):
+    def print_par(self):
         result = ''
         for jump in self.jumps:
             jump_par = getattr(self, jump)

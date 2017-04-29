@@ -151,7 +151,7 @@ class TimingModel(object):
         self.component_types = ['DelayComponent', 'PhaseComponent']
         self.setup_component_dict()
         self.top_level_params = []
-        self.add_param(strParameter(name="PSR",
+        self.add_param_from_top(strParameter(name="PSR",
             description="Source name",
             aliases=["PSRJ", "PSRB"]), '')
 
@@ -191,7 +191,7 @@ class TimingModel(object):
     def params(self,):
         p = self.top_level_params
         for cp in list(self.components.values()):
-            p += cp.params
+            p = p+cp.params
         return p
 
     @property
@@ -346,7 +346,17 @@ class TimingModel(object):
         setattr(self, comp_type+'_dict', OrderedDict(sorted(comp_items, \
                 key=lambda t: t[0])))
 
-    def add_param(self, param, target_component):
+    def get_component_of_category(self):
+        category = {}
+        for cp in list(self.components.values()):
+            cat = cp.category
+            if cat in list(category.keys()):
+                category[cat].append(cp)
+            else:
+                category[cat] = [cp,]
+        return category
+
+    def add_param_from_top(self, param, target_component):
         """Add a parameter to a timing model component.
         """
         if target_component == '':
@@ -702,14 +712,44 @@ class TimingModel(object):
         # after the entire parfile is read
         self.setup()
 
-    def as_parfile(self, ):
+    def as_parfile(self, start_order=['astrometry', 'spindown', 'dispersion'],
+                         last_order=['jump_delay']):
         """Returns a parfile representation of the entire model as a string."""
-        result = ""
+        result_begin = ""
+        result_end = ""
+        result_middle = ""
+        cates_comp = self.get_component_of_category()
+        printed_cate = []
         for p in self.top_level_params:
-            result += getattr(self, p).as_parfile_line()
+            result_begin += getattr(self, p).as_parfile_line()
+        for cat in start_order:
+            if cat in list(cates_comp.keys()):
+                cp = cates_comp[cat]
+                for cpp in cp:
+                    result_begin += cpp.print_par()
+                printed_cate.append(cat)
+            else:
+                continue
 
+        for cat in last_order:
+            if cat in list(cates_comp.keys()):
+                cp = cates_comp[cat]
+                for cpp in cp:
+                    result_end += cpp.print_par()
+                printed_cate.append(cat)
+            else:
+                continue
 
-        return result
+        for c in list(cates_comp.keys()):
+            if c in printed_cate:
+                continue
+            else:
+                cp = cates_comp[c]
+                for cpp in cp:
+                    result_middle += cpp.print_par()
+                printed_cate.append(cat)
+
+        return result_begin + result_middle + result_end
 
     #
 
@@ -824,18 +864,24 @@ class Component(object):
 
     def add_param(self, param):
         """
-        Remove a parameter from the Component
+        Add a parameter into the Component
         Parameter
         ---------
         param: str
-            The name of parameter need to be removed.
+            The name of parameter need to be add.
         """
         setattr(self, param.name, param)
         self.params += [param.name,]
 
     def remove_param(self, param):
-        delattr(self, param)
         self.params.remove(param)
+        par = getattr(self, param)
+        all_names = [param, ] + par.aliases
+        if param in self.component_special_params:
+            for pn in all_names:
+                self.component_special_params.remove(pn)
+        delattr(self, param)
+
 
     def set_special_params(self, spcl_params):
         als = []
@@ -978,6 +1024,11 @@ class Component(object):
 
         return True
 
+    def print_par(self,):
+        result = ""
+        for p in self.params:
+            result += getattr(self, p).as_parfile_line()
+        return result
 
 class DelayComponent(Component):
     def __init__(self,):

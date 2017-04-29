@@ -179,7 +179,7 @@ class AstrometryEquatorial(Astrometry):
                 else:
                     self.POSEPOCH.quantity = self.PEPOCH.quantity
 
-    def print_par_AstrometryEquatorial(self):
+    def print_par(self):
         result = ''
         print_order = ['RAJ', 'DECJ', 'PMRA', 'PMDEC', 'PX', 'POSEPOCH']
         for p in print_order:
@@ -475,7 +475,7 @@ class AstrometryEcliptic(Astrometry):
         # We want to return sec / (mas / yr)
         return dd_dpmelat.decompose(u.si.bases) / (u.mas / u.year)
 
-    def print_par_AstrometryEcliptic(self):
+    def print_par(self):
         result = ''
         print_order = ['ELONG', 'ELAT', 'PMELONG', 'PMELAT', 'PX', 'ECL','POSEPOCH']
         for p in print_order:

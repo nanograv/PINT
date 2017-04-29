@@ -81,7 +81,7 @@ class FD(DelayComponent):
         d_delay_d_FD = np.polyval(FD_coeff, log_freq)
         return d_delay_d_FD * u.second / FD_par.units
 
-    def print_par_FD(self):
+    def print_par(self):
         result = ''
         FD_mapping = self.get_prefix_mapping('FD')
         for FD in FD_mapping.values():

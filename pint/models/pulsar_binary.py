@@ -103,7 +103,7 @@ class PulsarBinary(DelayComponent):
         # Get barycnetric toa first
         if acc_delay is None:
             # If the accumulate delay is not provided, it will try to get
-            # the barycentric correction. 
+            # the barycentric correction.
             acc_delay = self.get_barycentric_correction(toas)
         self.barycentric_time = toas['tdbld'] * u.day - acc_delay * u.second
         pardict = {}
@@ -132,9 +132,9 @@ class PulsarBinary(DelayComponent):
         self.update_binary_object(toas, acc_delay)
         return self.binary_instance.d_binarydelay_d_par(param)
 
-    def print_par_BINARY(self,):
+    def print_par(self,):
         result = "BINARY {0}\n".format(self.binary_model_name)
-        for p in self.binary_params:
+        for p in self.params:
             par = getattr(self, p)
             if par.quantity is not None:
                 result += par.as_parfile_line()

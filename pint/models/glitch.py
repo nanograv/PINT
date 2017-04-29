@@ -94,7 +94,7 @@ class Glitch(PhaseComponent):
                       " zero GLTD_%d parameter" % (idx, idx)
                 raise MissingParameter("Glitch", 'GLTD_%d' % idx, msg)
 
-    def print_par_glitch(self):
+    def print_par(self):
         result = ''
         for idx in set(self.glitch_indices):
             for param in ['GLEP_',] + self.glitch_prop:
