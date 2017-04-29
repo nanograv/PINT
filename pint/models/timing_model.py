@@ -464,6 +464,10 @@ class TimingModel(object):
                 delay += df(toas, delay)
         return delay
 
+    def get_barycentric_toas(self, toas, last_component_order=None):
+        corr = self.get_barycentric_correction(toas, last_component_order)
+        return toas['tdbld'] * u.day - corr * u.second
+
     def d_phase_d_toa(self, toas, sample_step=None):
         """Return the derivative of phase wrt TOA
         Parameter
