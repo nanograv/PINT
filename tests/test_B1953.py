@@ -26,7 +26,7 @@ class TestB1953(unittest.TestCase):
         print(self.ltres)
     def test_B1953_binary_delay(self):
         # Calculate delays with PINT
-        bcorr = self.get_barycentric_correction(self.toasB1953.table)
+        bcorr = self.modelB1953.get_barycentric_correction(self.toasB1953.table)
         pint_binary_delay = self.modelB1953.binarymodel_delay(self.toasB1953.table, bcorr)
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-8), 'B1953 binary delay test failed.'
 

@@ -27,7 +27,7 @@ class TestJ0613(unittest.TestCase):
         print(self.ltres)
     def test_J0613_binary_delay(self):
         # Calculate delays with PINT
-        bcorr = self.get_barycentric_correction(self.toasJ0613.table)
+        bcorr = self.modelJ0613.get_barycentric_correction(self.toasJ0613.table)
         pint_binary_delay = self.modelJ0613.binarymodel_delay(self.toasJ0613.table, bcorr)
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-8), 'J0613 binary delay test failed.'
 

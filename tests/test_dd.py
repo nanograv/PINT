@@ -22,7 +22,7 @@ class TestDD(unittest.TestCase):
         self.ltres, self.ltbindelay = np.genfromtxt(self.parfileB1855 + '.tempo_test', unpack=True)
     def test_J1855_binary_delay(self):
         # Calculate delays with PINT
-        bcorr = self.get_barycentric_correction(self.toasB1855.table)
+        bcorr = self.modelB1855.get_barycentric_correction(self.toasB1855.table)
         pint_binary_delay = self.modelB1855.binarymodel_delay(self.toasB1855.table, bcorr)
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-11), 'DD B1855 TEST FAILED'
     # TODO: PINT can still incresase the precision by adding more components

@@ -6,8 +6,7 @@ from pinttestdata import testdir, datadir
 datadir = os.path.join(testdir,'datafile')
 parfile = os.path.join(datadir,'J1744-1134.basic.par')
 
-TestModel = tm.generate_timing_model("TestModel",(tm.AstrometryEquatorial,tm.Dispersion,tm.SolarSystemShapiro,tm.Spindown))
-m = TestModel()
+m = tm.get_model(parfile)
 
 print("model.param_help():")
 m.param_help()
