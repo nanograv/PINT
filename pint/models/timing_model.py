@@ -171,10 +171,19 @@ class TimingModel(object):
         attribute component_types. The name template will be 'type name'+'_dict'.
         """
         for ct in self.component_types:
-            if hasattr(self, ct):
+            if hasattr(self, ct+'_dict'):
                 continue
             else:
                 setattr(self, ct+'_dict', OrderedDict())
+
+    def __str__(self):
+        result = ""
+        comps = self.components
+        for k, cp in list(comps.items()):
+            result += "In component '%s'" % k + "\n\n"
+            for pp in cp.params:
+                result += str(getattr(cp, pp)) + "\n"
+        return result
 
     def __getattr__(self, name):
         try:
@@ -785,12 +794,7 @@ class TimingModel(object):
 
 
     #
-    # def __str__(self):
-    #     result = ""
-    #     for par in self.params:
-    #         result += str(getattr(self, par)) + "\n"
-    #     return result
-    #
+
     # def print_param_control(self, control_info={'UNITS': 'TDB', 'TIMEEPH':'FB90'},
     #                       order=['UNITS', 'TIMEEPH']):
     #     result = ""
