@@ -922,7 +922,10 @@ class Component(object):
 
     def __getattr__(self, name):
         try:
-            return super(Component, self).__getattribute__(name)
+            if six.PY2:
+                return super(Component, self).__getattribute__(name)
+            else:
+                return super().__getattribute__(name)
         except AttributeError:
             if self._parent is None:
                 raise AttributeError("'%s' object has no attribute '%s'." %
