@@ -11,7 +11,7 @@ import astropy.units as u
 from astropy.table import Table
 import copy
 import abc
-from six import add_metaclass
+import six
 from collections import OrderedDict
 import inspect
 
@@ -187,14 +187,25 @@ class TimingModel(object):
 
     def __getattr__(self, name):
         try:
-            return super(TimingModel, self).__getattribute__(name)
-        except AttributeError:
-            cp = super(TimingModel, self).__getattribute__('search_cmp_attr')(name)
-            if cp is not None:
-                return cp.__getattribute__(name)
+            if six.PY2:
+                return super(TimingModel, self).__getattribute__(name)
             else:
-                raise AttributeError("'%s' object has no attribute '%s'." %
-                                     (self.__class__.__name__, name))
+                return super().__getattribute__(name)
+        except AttributeError:
+            if six.PY2:
+                cp = super(TimingModel, self).__getattribute__('search_cmp_attr')(name)
+                if cp is not None:
+                    return super(cp.__class__, cp).__getattribute__(name)
+                else:
+                    raise AttributeError("'%s' object has no attribute '%s'." %
+                                         (self.__class__.__name__, name))
+            else:
+                cp = super().__getattribute__('search_cmp_attr')(name)
+                if cp is not None:
+                    return cp.__getattribute__(name)
+                else:
+                    raise AttributeError("'%s' object has no attribute '%s'." %
+                                         (self.__class__.__name__, name))
 
     @property
     def params(self,):
@@ -896,7 +907,7 @@ class ModelMeta(abc.ABCMeta):
         super(ModelMeta, cls).__init__(name, bases, dct)
 
 
-@add_metaclass(ModelMeta)
+@six.add_metaclass(ModelMeta)
 class Component(object):
     """ This is a base class for timing model components.
     """
