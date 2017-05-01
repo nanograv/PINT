@@ -330,7 +330,62 @@ class TimingModel(object):
                     key=lambda t: t[0])))
 
     def remove_component(self, component):
-        # case for input component is a str name
+        comp, old_order, comp_type_dict, comp_type = \
+               self.get_component_instance(component)
+        comp_items = list(comp_type_dict.items())
+        remove_comp = (old_order, comp)
+        comp_items.remove(remove_comp)
+        setattr(self, comp_type+'_dict', OrderedDict(sorted(comp_items, \
+                key=lambda t: t[0])))
+
+    def change_component_order(self, component, new_order, switch_order=False):
+        cmp, old_order, comp_host, comp_type = \
+               self.get_component_instance(component)
+        comp_items = list(comp_host.items())
+        orders = np.array(list(comp_host.keys()))
+        idx = comp_items.index((old_order, cmp))
+        if new_order not in orders:
+            comp_items.append((new_order, cmp))
+            comp_items.remove((old_order, cmp))
+            setattr(self, comp_type+'_dict', OrderedDict(sorted(comp_items, \
+                   key=lambda t: t[0])))
+
+        else:
+            affected_comp = (new_order, comp_host[new_order])
+            if switch_order:
+                idx_affected = comp_items.index(affected_comp)
+                switched1 = (new_order, cmp)
+                switched2 = (old_order, comp_host[new_order])
+                comp_items.remove(affected_comp)
+                comp_items.append(switched1)
+                comp_items.remove((old_order, cmp))
+                comp_items.append(switched2)
+                setattr(self, comp_type+'_dict', OrderedDict(sorted(comp_items,\
+                       key=lambda t: t[0])))
+            else:
+                if new_order > old_order:
+                    order_effected_index = np.logical_and(orders > old_order, \
+                                                          orders <= new_order)
+                    factor = -1
+
+                else:
+                    order_effected_index = np.logical_and(orders < old_order, \
+                                                          orders >= new_order)
+                    factor = 1
+                order_effected = orders[order_effected_index]
+                new_comp_item = []
+                for o, c in comp_items:
+                    if o == old_order:
+                        new_comp_item.append((new_order, cmp))
+                        continue
+                    if o in order_effected:
+                        new_comp_item.append((o+factor, c))
+                        continue
+                    new_comp_item.append((o, c))
+                setattr(self, comp_type+'_dict', OrderedDict(sorted(new_comp_item,\
+                       key=lambda t: t[0])))
+
+    def get_component_instance(self, component):
         comps = self.components
         if isinstance(component, str):
             if component not in list(comps.keys()):
@@ -345,15 +400,12 @@ class TimingModel(object):
         comp_base = inspect.getmro(comp.__class__)
         comp_type = comp_base[-3].__name__
         comp_type_dict = getattr(self, comp_type+'_dict')
-        comp_items = list(comp_type_dict.items())
-        remove = []
-        for order, cp in comp_items:
-            if cp == comp:
-                remove.append((order, cp))
-        for re in remove:
-            comp_items.remove(re)
-        setattr(self, comp_type+'_dict', OrderedDict(sorted(comp_items, \
-                key=lambda t: t[0])))
+        for k,v in list(comp_type_dict.items()):
+            if v == comp:
+                order = k
+            else:
+                continue
+        return comp, order, comp_type_dict, comp_type
 
     def get_component_of_category(self):
         category = {}
