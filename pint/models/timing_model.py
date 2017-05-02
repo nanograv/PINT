@@ -202,7 +202,7 @@ class TimingModel(object):
             else:
                 cp = super().__getattribute__('search_cmp_attr')(name)
                 if cp is not None:
-                    return cp.__getattribute__(name)
+                    return super(cp.__class__, cp).__getattribute__(name)
                 else:
                     raise AttributeError("'%s' object has no attribute '%s'." %
                                          (self.__class__.__name__, name))
