@@ -1,7 +1,6 @@
-"""This module implements a simple model of a constant dispersion measure.
+"""This module implements a simple model of a base dispersion delay.
    And DMX dispersion"""
-# dispersion.py
-# Simple (constant) ISM dispersion measure
+
 from warnings import warn
 from . import parameter as p
 from .timing_model import TimingModel, Cache
@@ -10,6 +9,7 @@ import numpy as np
 import pint.utils as ut
 import astropy.time as time
 from ..toa_select import TOASelect
+from ..utils import taylor_horner, split_prefixed_name
 
 # The units on this are not completely correct
 # as we don't really use the "pc cm^3" units on DM.
@@ -27,19 +27,59 @@ class Dispersion(TimingModel):
         super(Dispersion, self).__init__()
         self.add_param(p.floatParameter(name="DM",
                        units="pc cm^-3", value=0.0,
-                       description="Dispersion measure"))
-        self.dm_value_funcs = [self.constant_dm,]
+                       description="Dispersion measure", long_double=True))
+        self.add_param(p.prefixParameter(name="DM1", value=0.0, units='pc cm^-3/yr^1',
+                       description="1'th time derivative of the dispersion measure",
+                       unit_template=self.DM_dervative_unit,
+                       description_template=self.DM_dervative_description,
+                       type_match='float', long_double=True))
+        self.add_param(p.MJDParameter(name="DMEPOCH",
+                       description="Epoch of DM measurement"))
+
+        self.dm_value_funcs = [self.base_dm,]
         self.delay_funcs['L1'] += [self.dispersion_delay,]
         self.order_number = 2
+        self.print_par_func = 'print_par_DMs'
 
     def setup(self):
         super(Dispersion, self).setup()
-        self.register_deriv_funcs(self.d_delay_d_DM, 'delay', 'DM')
+        # If DM1 is set, we need DMEPOCH
+        if self.DM1.value != 0.0:
+            if self.DMEPOCH.value is None:
+                raise MissingParameter("Dispersion", "DMEPOCH",
+                        "DMEPOCH is required if DM1 or higher are set")
+        base_dms = list(self.get_prefix_mapping('DM').values())
+        base_dms += ['DM',]
 
-    def constant_dm(self, toas):
-        cdm = np.zeros(len(toas))
-        cdm.fill(self.DM.quantity)
-        return cdm * self.DM.units
+        for dm_name in base_dms:
+            self.register_deriv_funcs(self.d_delay_d_DMs, 'delay', dm_name)
+
+    def DM_dervative_unit(self, n):
+        return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
+
+    def DM_dervative_description(self, n):
+        return "%d'th time derivative of the dispersion measure" % n
+
+    def get_DM_terms(self):
+        """Return a list of the DM term values in the model: [DM, DM1, ..., DMn]
+        """
+        prefix_dm = list(self.get_prefix_mapping('DM').values())
+        dm_terms = [self.DM.quantity,]
+        dm_terms += [getattr(self, x).quantity for x in prefix_dm]
+        return dm_terms
+
+    def base_dm(self, toas):
+        dm = np.zeros(len(toas))
+        dm_terms = self.get_DM_terms()
+        if self.DMEPOCH.value is None:
+            DMEPOCH = toas['tdbld'][0]
+        else:
+            DMEPOCH = self.DMEPOCH.value
+        dt = (toas['tdbld'] - DMEPOCH) * u.day
+        dt_value = (dt.to(u.yr)).value
+        dm_terms_value = [d.value for d in dm_terms]
+        dm = taylor_horner(dt_value, dm_terms_value)
+        return dm * self.DM.units
 
     def dispersion_time_delay(self, DM, freq):
         """Return the dispersion time delay for a set of frequency.
@@ -65,7 +105,24 @@ class Dispersion(TimingModel):
 
         return self.dispersion_time_delay(dm, bfreq)
 
-    def d_delay_d_DM(self, toas):
+    def print_par_DMs(self,):
+        # TODO we need to have a better design for print out the parameters in
+        # an inhertance class.
+        result  = ''
+        prefix_dm = list(self.get_prefix_mapping('DM').values())
+        dms = ['DM'] + prefix_dm
+        for dm in dms:
+            result += getattr(self, dm).as_parfile_line()
+        if hasattr(self, 'components'):
+            all_params = self.components['Dispersion'].params
+        else:
+            all_params = self.params
+        for pm in all_params:
+            if pm not in dms:
+                result += getattr(self, pm).as_parfile_line()
+        return result
+
+    def d_delay_d_DMs(self, toas, param_name): # NOTE we should have a better name for this.
         """Derivatives for constant DM
         """
         try:
@@ -73,8 +130,24 @@ class Dispersion(TimingModel):
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
             bfreq = toas['freq']
-
-        return DMconst / bfreq**2.0
+        par = getattr(self, param_name)
+        unit = par.units
+        if param_name == 'DM':
+            order = 0
+        else:
+            pn, idxf, idxv = split_prefixed_name(param_name)
+            order = idxv
+        dms = self.get_DM_terms()
+        dm_terms = np.longdouble(np.zeros(len(dms)))
+        dm_terms[order] = np.longdouble(1.0)
+        if self.DMEPOCH.value is None:
+            DMEPOCH = toas['tdbld'][0]
+        else:
+            DMEPOCH = self.DMEPOCH.value
+        dt = (toas['tdbld'] - DMEPOCH) * u.day
+        dt_value = (dt.to(u.yr)).value
+        d_dm_d_dm_param = taylor_horner(dt_value, dm_terms)* (self.DM.units/par.units)
+        return DMconst * d_dm_d_dm_param/ bfreq**2.0
 
 class DispersionDMX(Dispersion):
     """This class provides a DMX model based on the class of Dispersion.
@@ -88,20 +161,20 @@ class DispersionDMX(Dispersion):
                        description="Dispersion measure"))
         self.add_param(p.prefixParameter(name='DMX_0001',
                        units="pc cm^-3", value=0.0,
-                       unitTplt=lambda x: "pc cm^-3",
+                       unit_template=lambda x: "pc cm^-3",
                        description='Dispersion measure variation',
-                       descriptionTplt=lambda x: "Dispersion measure",
+                       description_template=lambda x: "Dispersion measure",
                        paramter_type='float'))
         self.add_param(p.prefixParameter(name='DMXR1_0001',
                        units="MJD",
-                       unitTplt=lambda x: "MJD",
+                       unit_template=lambda x: "MJD",
                        description='Beginning of DMX interval',
-                       descriptionTplt=lambda x: 'Beginning of DMX interval',
+                       description_template=lambda x: 'Beginning of DMX interval',
                        parameter_type='MJD', time_scale='utc'))
         self.add_param(p.prefixParameter(name='DMXR2_0001', units="MJD",
-                       unitTplt=lambda x: "MJD",
+                       unit_template=lambda x: "MJD",
                        description='End of DMX interval',
-                       descriptionTplt=lambda x: 'End of DMX interval',
+                       description_template=lambda x: 'End of DMX interval',
                        parameter_type='MJD', time_scale='utc'))
         self.dm_value_funcs += [self.dmx_dm,]
         self.set_special_params(['DMX_0001', 'DMXR1_0001','DMXR2_0001'])

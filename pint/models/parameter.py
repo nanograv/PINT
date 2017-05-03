@@ -412,12 +412,16 @@ class floatParameter(Parameter):
     """
     def __init__(self, name=None, value=None, units=None, description=None,
                  uncertainty=None, frozen=True, aliases=None, continuous=True,
-                 long_double=False, **kwargs):
+                 long_double=False, unit_scale=False, scale_factor=None,
+                 scale_threshold=None, **kwargs):
         self.long_double = long_double
+        self.scale_factor = scale_factor
+        self.scale_threshold = scale_threshold
         set_quantity = self.set_quantity_float
         print_quantity = self.print_quantity_float
         get_value = self.get_value_float
         set_uncertainty = self.set_quantity_float
+        self._unit_scale = False
         super(floatParameter, self).__init__(name=name, value=value,
                                              units=units, frozen=True,
                                              aliases=aliases,
@@ -429,7 +433,11 @@ class floatParameter(Parameter):
                                              get_value=get_value,
                                              set_uncertainty=set_uncertainty)
         self.paramType = 'floatParameter'
-        self.special_arg += ['long_double',]
+        self.special_arg += ['long_double', 'unit_scale', 'scale_threshold',
+                             'scale_factor']
+        self.unit_scale = unit_scale
+        self._original_units = self.units
+
     @property
     def long_double(self):
         return self._long_double
@@ -454,6 +462,25 @@ class floatParameter(Parameter):
         else:
             self._long_double = val
 
+    @property
+    def unit_scale(self):
+        return self._unit_scale
+
+    @unit_scale.setter
+    def unit_scale(self, val):
+        old_unit_scale = self._unit_scale
+        self._unit_scale = val
+        if self._unit_scale:
+            if self.scale_factor is None:
+                raise ValueError("The scale factor should be given if unit_scale"
+                                 " is set to be True.")
+            if self.scale_threshold is None:
+                raise ValueError("The scale threshold should be given if unit_scale"
+                                 " is set to be True.")
+        else:
+            if old_unit_scale: # This makes sure the unit_scale if from True to false
+                self.units = self._original_units
+
     def set_quantity_float(self, val):
         """Set value method specific for float parameter
         accept format
@@ -464,10 +491,11 @@ class floatParameter(Parameter):
         # Check long_double
         if not self._long_double:
             setfunc_with_unit = lambda x: x
-            setfunc_no_unit = lambda x: fortran_float(x) * self.units
+            setfunc_no_unit = lambda x: fortran_float(x)
         else:
             setfunc_with_unit = lambda x: data2longdouble(x.value)*x.unit
-            setfunc_no_unit = lambda x:  data2longdouble(x) * self.units
+            setfunc_no_unit = lambda x:  data2longdouble(x)
+
         # First try to use astropy unit conversion
         try:
             # If this fails, it will raise UnitConversionError
@@ -475,7 +503,15 @@ class floatParameter(Parameter):
             result = setfunc_with_unit(val)
         except AttributeError:
             # This will happen if the input value did not have units
-            result = setfunc_no_unit(val)
+            num_value = setfunc_no_unit(val)
+            if self.unit_scale:
+                if num_value > self.scale_threshold:
+                    log.warning("Parameter %s's unit will be scaled to %s %s" \
+                             % (self.name, str(self.scale_factor), str(self.units)))
+                    self.units = self.scale_factor * self._original_units
+                else:
+                    self.units = self._original_units
+            result = (num_value) * self.units
 
         return result
 
@@ -749,10 +785,10 @@ class AngleParameter(Parameter):
              **kwargs):
         self._str_unit = units
         self.unit_identifier = {
-            'h:m:s': (u.hourangle, 'h', '0:0:%.20fh'),
-            'd:m:s': (u.deg, 'd', '0:0:%.20fd'),
-            'rad': (u.rad, 'rad', '%.20frad'),
-            'deg': (u.deg, 'deg', '%.20fdeg'),
+            'h:m:s': (u.hourangle, 'h', pint_units['hourangle_second']),
+            'd:m:s': (u.deg, 'd', u.arcsec),
+            'rad': (u.rad, 'rad', u.rad),
+            'deg': (u.deg, 'deg', u.deg),
         }
         # Check unit format
         if units.lower() not in self.unit_identifier.keys():
@@ -801,16 +837,16 @@ class AngleParameter(Parameter):
         """This function is to set the uncertainty for an angle parameter.
         """
         if isinstance(val, numbers.Number):
-            result =Angle(self.unit_identifier[self._str_unit.lower()][2] % val)
+            result =Angle(val * self.unit_identifier[self._str_unit.lower()][2])
         elif isinstance(val, str):
 
-            result =Angle(self.unit_identifier[self._str_unit.lower()][2] \
-                          % fortran_float(val))
+            result =Angle(str2longdouble(val) * \
+                          self.unit_identifier[self._str_unit.lower()][2])
             #except:
             #    raise ValueError('Srting ' + val + ' can not be converted to'
             #                     ' astropy angle.')
         elif hasattr(val, 'unit'):
-            result = Angle(val.to(self.units))
+            result = Angle(val.to(self.unit_identifier[self._str_unit.lower()][2]))
         else:
             raise ValueError('Angle parameter can not accept '
                              + type(val).__name__ + 'format.')
@@ -877,9 +913,10 @@ class prefixParameter(object):
         Time scale for MJDParameter class.
     """
     def __init__(self, parameter_type='float',name=None, value=None, units=None,
-                 unitTplt=None, description=None, descriptionTplt=None,
+                 unit_template=None, description=None, description_template=None,
                  uncertainty=None, frozen=True, continuous=True,
-                 prefix_aliases=None, long_double=False, time_scale='utc',
+                 prefix_aliases=None, long_double=False, unit_scale=False, \
+                 scale_factor=None, scale_threshold=None,  time_scale='utc',
                  **kwargs):
         # Split prefixed name, if the name is not in the prefixed format, error
         # will be raised
@@ -896,8 +933,8 @@ class prefixParameter(object):
             raise ValueError("Unknow parameter type '"+ parameter_type + "' ")
 
         # Set up other attributes in the wrapper class
-        self.unit_template = unitTplt
-        self.description_template = descriptionTplt
+        self.unit_template = unit_template
+        self.description_template = description_template
         input_units = units
         input_description = description
         self.prefix_aliases = [] if prefix_aliases is None else prefix_aliases
@@ -924,7 +961,10 @@ class prefixParameter(object):
                                            continuous=continuous,
                                            aliases=aliases,
                                            long_double=long_double,
-                                           time_scale=time_scale)
+                                           time_scale=time_scale,
+                                           unit_scale=unit_scale, \
+                                           scale_factor=scale_factor,\
+                                           scale_threshold=scale_threshold)
         self.is_prefix = True
     # Define prpoerties for access the parameter composition
     @property
@@ -1058,7 +1098,7 @@ class prefixParameter(object):
 
         new_name = self.prefix + format(index, '0'+ str(len(self.idxfmt)))
         kws = dict()
-        for key in ['units', 'unitTplt', 'description','descriptionTplt',
+        for key in ['units', 'unit_template', 'description','description_template',
                     'frozen', 'continuous', 'prefix_aliases', 'long_double',
                     'time_scale', 'parameter_type']:
             if hasattr(self, key):
