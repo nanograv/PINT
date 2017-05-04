@@ -19,6 +19,8 @@ from astropy.coordinates import SkyCoord
 
 from astropy import log
 
+log.setLevel('DEBUG')
+
 def main(argv=None):
 
     parser = argparse.ArgumentParser(description="Use PINT to compute H-test and plot Phaseogram from a Fermi FT1 event file.")
@@ -82,6 +84,7 @@ def main(argv=None):
     phss = modelin.phase(ts.table)[1]
     # ensure all postive
     phases = np.where(phss < 0.0, phss + 1.0, phss)
+    log.debug("Phases {0}".format(phases))
     mjds = ts.get_mjds()
     weights = np.array([w['weight'] for w in ts.table['flags']])
     h = float(hmw(phases,weights))

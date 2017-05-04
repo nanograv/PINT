@@ -709,8 +709,12 @@ class TOAs(object):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
-            grpmjds = time.Time(grp['mjd'], location=grp['mjd'][0].location)
+            log.debug("compute_TDBs: location = {0}".format(grp['mjd'][0].location))
+            grpmjds = time.Time(grp['mjd'], location=grp['mjd'][0].location,
+                precision=9)
+            log.debug("grpmjds ({0}) {1:.12f}".format(grpmjds.scale,grpmjds.mjd[0]))
             grptdbs = grpmjds.tdb
+            log.debug("grptdbs ({0}) {1:.12f}".format(grptdbs.scale,grptdbs.mjd[0]))
             # For spacecraft observatories, here is the place
             # to add the time dilation part. Just let astropy
             # do the geocentric TT->TDB correction (@paulray)
@@ -770,8 +774,9 @@ class TOAs(object):
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
             site = get_observatory(obs)
-            tdb = time.Time(grp['tdb'])
+            tdb = time.Time(grp['tdb'],precision=9)
             ssb_obs = site.posvel(tdb,ephem)
+            log.debug("SSB obs pos {0}".format(ssb_obs.pos[:,0]))
             ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T.to(u.km)
             ssb_obs_vel[loind:hiind,:] = ssb_obs.vel.T.to(u.km/u.s)
             sun_obs = objPosVel_wrt_SSB('sun',tdb,ephem) - ssb_obs

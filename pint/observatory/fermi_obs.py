@@ -157,6 +157,7 @@ class FermiObs(SpecialLocation):
         geo_posvel = objPosVel_wrt_SSB('earth', t, ephem)
         # Now add vector from Earth to Fermi
         fermi_pos_geo = np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])*self.FT2['X'].unit
+        log.debug("fermi_pos_geo {0}".format(fermi_pos_geo[:,0]))
         fermi_vel_geo = np.array([self.Vx(t.tt.mjd), self.Vy(t.tt.mjd), self.Vz(t.tt.mjd)])*self.FT2['Vx'].unit
         fermi_posvel = PosVel( fermi_pos_geo, fermi_vel_geo, origin='earth', obj='Fermi')
         # Vector add to geo_posvel to get full posvel vector.
