@@ -90,7 +90,7 @@ class ModelBuilder(object):
         pfile.close()
         return self.param_inparF
 
-    def get_all_categroies(self,):
+    def get_all_categories(self,):
         comp_category = {}
         for k, cp in list(Component._component_list.items()):
             ci = cp()
@@ -105,7 +105,7 @@ class ModelBuilder(object):
         """Right now we only have one component on each category.
         """
         params_inpar = self.preprocess_parfile(parfile)
-        comp_categories = self.get_all_categroies()
+        comp_categories = self.get_all_categories()
         for cat, cmps in list(comp_categories.items()):
             selected_c = None
             for cpi in cmps:
@@ -136,7 +136,7 @@ class ModelBuilder(object):
         as order non-sensitive category and put in the end of sorted order list.
         """
         cur_category = list(self.select_comp.keys())
-        all_categories = list(self.get_all_categroies().keys())
+        all_categories = list(self.get_all_categories().keys())
         sorted_components = []
         for cat in all_categories:
             if cat not in category_order:
