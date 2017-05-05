@@ -148,8 +148,7 @@ class TimingModel(object):
 
     def __init__(self, name='', components=[]):
         self.name = name
-        self.component_types = ['DelayComponent', 'PhaseComponent']
-        self.setup_component_dict()
+        self.component_types = []
         self.top_level_params = []
         self.add_param_from_top(strParameter(name="PSR",
             description="Source name",
@@ -164,17 +163,6 @@ class TimingModel(object):
         """
         for cp in list(self.components.values()):
             cp.setup()
-
-    def setup_component_dict(self):
-        """
-        An OrderedDict will be create for all the component types listed in the
-        attribute component_types. The name template will be 'type name'+'_dict'.
-        """
-        for ct in self.component_types:
-            if hasattr(self, ct+'_dict'):
-                continue
-            else:
-                setattr(self, ct+'_dict', OrderedDict())
 
     def __str__(self):
         result = ""
@@ -310,7 +298,7 @@ class TimingModel(object):
             comp_type_dict = getattr(self, comp_type+'_dict')
         else:
             self.component_types.append(comp_type)
-            self.setup_component_dict()
+            setattr(self, comp_type+'_dict', OrderedDict())
             comp_type_dict = getattr(self, comp_type+'_dict')
 
         orders = list(comp_type_dict.keys())
