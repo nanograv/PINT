@@ -829,56 +829,6 @@ class TimingModel(object):
 
         return result_begin + result_middle + result_end
 
-    #
-
-    #
-
-    #
-    # #@Cache.use_cache
-    #
-    #
-
-    #
-
-
-
-
-
-    #
-
-    # def print_param_control(self, control_info={'UNITS': 'TDB', 'TIMEEPH':'FB90'},
-    #                       order=['UNITS', 'TIMEEPH']):
-    #     result = ""
-    #     for pc in order:
-    #         if pc not in control_info.keys():
-    #             continue
-    #         result += pc + ' ' + control_info[pc] + '\n'
-    #     return result
-    #
-    # def print_param_component(self, component_name):
-    #     result = ''
-    #     if component_name not in self.components:
-    #         return result
-    #     else:
-    #         if hasattr(self, self.components[component_name].param_print_func):
-    #             result += getattr(self, self.components[component_name].param_print_func)()
-    #         else:
-    #             for p in self.components[component_name].params:
-    #                 par = getattr(self, p)
-    #                 if par.quantity is not None:
-    #                     result += par.as_parfile_line()
-    #     return result
-    #
-    # def as_parfile(self):
-    #     """Returns a parfile representation of the entire model as a string."""
-    #     result = ""
-    #     result += self.PSR.as_parfile_line()
-    #     sort_comps = self.sort_model_components()
-    #     for scp in sort_comps:
-    #         result += self.print_param_component(scp)
-    #     result += self.print_param_control()
-    #     return result
-
 class ModelMeta(abc.ABCMeta):
     """
     This is a Meta class for timing model registeration. In order ot get a
@@ -913,7 +863,7 @@ class Component(object):
             if six.PY2:
                 return super(Component, self).__getattribute__(name)
             else:
-                return super().__getattribute__(name)
+                return super(Component, self).__getattribute__(name)
         except AttributeError:
             if self._parent is None:
                 raise AttributeError("'%s' object has no attribute '%s'." %
