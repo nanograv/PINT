@@ -180,20 +180,19 @@ class TimingModel(object):
             else:
                 return super().__getattribute__(name)
         except AttributeError:
-            if six.PY2:
-                cp = super(TimingModel, self).__getattribute__('search_cmp_attr')(name)
+            errmsg = "'TimingModel' object and its component has no attribute"
+            errmsg += " '%s'." % name
+            try:
+                if six.PY2:
+                    cp = super(TimingModel, self).__getattribute__('search_cmp_attr')(name)
+                else:
+                    cp = super().__getattribute__('search_cmp_attr')(name)
                 if cp is not None:
                     return super(cp.__class__, cp).__getattribute__(name)
                 else:
-                    raise AttributeError("'%s' object has no attribute '%s'." %
-                                         (self.__class__.__name__, name))
-            else:
-                cp = super().__getattribute__('search_cmp_attr')(name)
-                if cp is not None:
-                    return super(cp.__class__, cp).__getattribute__(name)
-                else:
-                    raise AttributeError("'%s' object has no attribute '%s'." %
-                                         (self.__class__.__name__, name))
+                    raise AttributeError(errmsg)
+            except:
+                raise AttributeError(errmsg)
 
     @property
     def params(self,):
@@ -207,8 +206,16 @@ class TimingModel(object):
         """This will return a dictionary of all the components
         """
         comps = {}
-        for ct in self.component_types:
-            cps = list(getattr(self, ct+'_dict').values())
+        if six.PY2:
+            type_list = super(TimingModel, self).__getattribute__('component_types')
+        else:
+            type_list = super().__getattribute__('component_types')
+        for ct in type_list:
+            if six.PY2:
+                cps_dict = super(TimingModel, self).__getattribute__(ct + '_dict')
+            else:
+                cps_dict = super().__getattribute__(ct + '_dict')
+            cps = list(cps_dict.values())
             for cp in cps:
                 comps[cp.__class__.__name__] = cp
         return comps
@@ -860,16 +867,18 @@ class Component(object):
 
     def __getattr__(self, name):
         try:
-            if six.PY2:
-                return super(Component, self).__getattribute__(name)
-            else:
-                return super(Component, self).__getattribute__(name)
+            return super(Component, self).__getattribute__(name)
         except AttributeError:
-            if self._parent is None:
+            try:
+                p = super(Component, self).__getattribute__('_parent')
+                if p is None:
+                    raise AttributeError("'%s' object has no attribute '%s'." %
+                                        (self.__class__.__name__, name))
+                else:
+                    return self._parent.__getattr__(name)
+            except:
                 raise AttributeError("'%s' object has no attribute '%s'." %
-                                     (self.__class__.__name__, name))
-            else:
-                return self._parent.__getattr__(name)
+                                    (self.__class__.__name__, name))
 
     def add_param(self, param):
         """
