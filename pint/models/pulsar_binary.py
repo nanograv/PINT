@@ -104,7 +104,7 @@ class PulsarBinary(DelayComponent):
         if acc_delay is None:
             # If the accumulate delay is not provided, it will try to get
             # the barycentric correction.
-            acc_delay = self.get_barycentric_correction(toas)
+            acc_delay = self.delay(toas, self.__class__.__name__, False)
         self.barycentric_time = toas['tdbld'] * u.day - acc_delay * u.second
         pardict = {}
         for par in self.binary_instance.binary_params:

@@ -478,7 +478,7 @@ class TimingModel(object):
                 param_type.upper() == par_prefix.upper():
                 result.append(par.name)
         return result
-    def get_prefix_mapping(self,prefix):
+    def get_prefix_mapping(self, prefix):
         """Get the index mapping for the prefix parameters.
            Parameter
            ----------
@@ -506,15 +506,39 @@ class TimingModel(object):
                  (getattr(self, par).help_line(), cp)
         return s
 
-    def delay(self, toas):
+    def delay(self, toas, cutoff_delay='', include_last=True):
         """Total delay for the TOAs.
+        Parameter
+        ---------
+        toas: toa.table
+            The toas for analysis delays.
+        cutoff_delay: str
+            The delay component name that a user wants the calculation to stop
+            at.
+        include_last: bool
+            If the cutoff delay component is included.
 
         Return the total delay which will be subtracted from the given
         TOA to get time of emission at the pulsar.
         """
         delay = np.zeros(len(toas))
-        for df in self.delay_funcs:
-                delay += df(toas, delay)
+        if cutoff_delay == '':
+            idx = len(self.DelayComponent_dict)
+        else:
+            delay_list = list(self.DelayComponent_dict.items())
+            delay_names = [x[1].__class__.__name__ for x in delay_list]
+            if cutoff_delay in delay_names:
+                idx = delay_names.index(cutoff_delay)
+                if include_last:
+                    idx += 1
+                else:
+                    log.warn("Cut off delay component '%s' is not included in"
+                             " delay calculation." % cutoff_delay)
+            else:
+                raise KeyError("No delay component named '%s'." % cutoff_delay)
+
+        for df in self.delay_funcs[0:idx]:
+            delay += df(toas, delay)
         return delay
 
     def phase(self, toas):
@@ -527,40 +551,26 @@ class TimingModel(object):
             phase += Phase(pf(toas, delay))
         return phase
 
-    def get_barycentric_correction(self, toas, last_component_order=None):
+    def get_barycentric_toas(self, toas, cutoff_delay=''):
+        """This is a convenient function for calculate the barycentric TOAs.
+           Parameter
+           ---------
+           toas: TOAs table
+               The TOAs the barycentric corrections are applied on
+           cutoff_delay: str, optional
+               The cutoff delay component name. If it is not provided, it will
+               search for binary delay and apply all the delay before binary.
+           Return
+           ------
+           astropy.quantity.
+               Barycentered TOAs.
         """
-        This is a function to calculate the timing delays for correcting TOAs
-        to solar system barycenter.
-        Parameter
-        ---------
-        toas: TOAs table
-        last_component_order: int, optional
-            The order number of the last component to be included in the
-            calculation. If it is not provided, it will assign the one before
-            the binary model component.
-        """
-        delay = np.zeros(len(toas))
-        end_order = 0
-        delay_list = list(self.DelayComponent_dict.items())
-        if last_component_order is None:
-            # search for binary model.
-            for ii, c in enumerate(delay_list):
-                if c[1].category == 'binary':
-                   end_order = delay_list[ii - 1][0]
-                   break
-            if end_order == 0:
-                end_order = delay_list[-1][0]
-        else:
-            end_order = last_component_order
-        for cp in delay_list:
-            if cp[0] > end_order:
-                break
-            for df in cp[1].delay_funcs_component:
-                delay += df(toas, delay)
-        return delay
-
-    def get_barycentric_toas(self, toas, last_component_order=None):
-        corr = self.get_barycentric_correction(toas, last_component_order)
+        if cutoff_delay == '':
+            delay_list = list(self.DelayComponent_dict.items())
+            for o, cp in delay_list:
+                if cp.category == 'binary':
+                    cutoff_delay = cp.__class__.__name__
+        corr = self.delay(toas, cutoff_delay, False)
         return toas['tdbld'] * u.day - corr * u.second
 
     def d_phase_d_toa(self, toas, sample_step=None):
