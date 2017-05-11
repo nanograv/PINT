@@ -34,7 +34,7 @@ class resids(object):
 
     def calc_time_resids(self, weighted_mean=True):
         """Return timing model residuals in time (seconds)."""
-        if self.phase_resids==None:
+        if self.phase_resids is None:
             self.phase_resids = self.calc_phase_resids(weighted_mean=weighted_mean)
         return (self.phase_resids / self.get_PSR_freq()).to(u.s)
 
