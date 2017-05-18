@@ -154,8 +154,7 @@ class TimingModel(object):
             description="Source name",
             aliases=["PSRJ", "PSRB"]), '')
 
-        for cp in components:
-            self.add_component(cp)
+        self.form_ordered_dicts(components)
 
     def setup(self):
         """This is a abstract class for setting up timing model class. It is designed for
@@ -278,6 +277,52 @@ class TimingModel(object):
                 continue
         return cmp
 
+    def get_component_type(self, component):
+        """A function to identify the component object's type.
+           Parameter
+           ---------
+           component: component instance
+               The component object need to be instected.
+           NOTE
+           ----
+           Since a component can be inhertance from other component We inspect
+           all the component object bases. "inspect getmro" method returns the
+           base classes (including 'object') in method resolution order. The
+           third level of inhertance class name is what we want.
+           Object --> component --> TypeComponent. (ie DelayComponent)
+           This class type is in the third to the last of the getmro returned
+           result.
+        """
+        # check component type
+        comp_base = inspect.getmro(component.__class__)
+        if comp_base[-2].__name__ != 'Component':
+            raise TypeError("Class '%s' is not a Component type class."% \
+                             component.__class__.__name__)
+        elif len(comp_base) < 3:
+            raise TypeError("'%s' class is not a subclass of 'Component' class." % \
+                             component.__class__.__name__)
+        else:
+            comp_type = comp_base[-3].__name__
+        return comp_type
+
+    def form_ordered_dicts(self, components):
+        """A function to form the orderd dictionarys from a list of components.
+           It will rewrite the current components ordered dictionarys and
+        """
+        comp_types = {}
+        for cp in components:
+            comp_type = self.get_component_type(cp)
+            if comp_type in list(comp_types.keys()):
+                comp_types[comp_type].append(cp)
+            else:
+                comp_types[comp_type] = [cp,]
+            cp._parent = self
+
+        self.component_types = list(comp_types.keys())
+        for ct in self.component_types:
+            setattr(self, ct+'_dict',\
+                    OrderedDict((ii, c) for ii, c in enumerate(comp_types[ct])))
+
     def add_component(self, component, order=None, force=False):
         """
         This is a method to add a component to the timing model
@@ -290,106 +335,47 @@ class TimingModel(object):
         force: bool, optional
             If add a duplicated type of component
         """
-        # check component type
-        comp_base = inspect.getmro(component.__class__)
-        # NOTE Since a component can be inhertance from other component
-        # We inspect all the component bases.
-        # inspect getmro method returns the base classes (including cls)
-        # in method resolution order. The third level of inhertance class name
-        # is what we want. Object --> component --> TypeComponent.
-        # (ie DelayComponent)
-        # This class type is in the third to the last of the getmro returned
-        # result.
-        comp_type = comp_base[-3].__name__
+        comp_type = self.get_component_type(component)
         if comp_type in self.component_types:
-            comp_type_dict = getattr(self, comp_type+'_dict')
-        else:
-            self.component_types.append(comp_type)
-            setattr(self, comp_type+'_dict', OrderedDict())
-            comp_type_dict = getattr(self, comp_type+'_dict')
-
-        orders = list(comp_type_dict.keys())
-        comps = list(comp_type_dict.values())
-        comp_classes = [x.__class__ for x in comps]
-        if component.__class__ in comp_classes:
-            log.warn("Component '%s' is already added." %
-                     component.__class__.__name__)
-            if not force:
-                log.warn("Component '%s' will not be added. To force add it, use"
-                         " force option." % component.__class__.__name__)
-                return
-        component._parent = self
-        if order is None:
-            if len(orders) > 0:
-                order = orders[-1] + 1
+            comp_list = list(getattr(self, comp_type+'_dict').values())
+            # Check if the component has been added already.
+            comp_classes = [x.__class__ for x in comp_list]
+            if component.__class__ in comp_classes:
+                log.warn("Component '%s' is already added." %
+                         component.__class__.__name__)
+                if not force:
+                    log.warn("Component '%s' will not be added. To force add it, use"
+                             " force option." % component.__class__.__name__)
+                    return
+            if order is None:
+                comp_list.append(component)
             else:
-                order = 1
-            comp_type_dict.update({order: component})
+                if order > len(comp_list):
+                    order = len(comp_list)
+                comp_list.insert(order, component)
         else:
-            component_items = comp_type_dict.items()
-            if order in orders: # PUSH the order back
-                idx = component_items.index((order, comp_type_dict[order]))
-                for ii in range(idx, len(component_items)):
-                    component_items[ii][0] += 1
-            component_items.append((order, component))
-            setattr(self, comp_type+'_dict', OrderedDict(sorted(component_items,\
-                    key=lambda t: t[0])))
+            comp_list = [component,]
+        self.form_ordered_dicts(comp_list)
 
     def remove_component(self, component):
+        """This is a function to remove a component from timing model.
+           Parameter
+           ---------
+           component: Component instance, str.
+               Component object or Component class name.
+        """
         comp, old_order, comp_type_dict, comp_type = \
                self.get_component_instance(component)
-        comp_items = list(comp_type_dict.items())
-        remove_comp = (old_order, comp)
-        comp_items.remove(remove_comp)
-        setattr(self, comp_type+'_dict', OrderedDict(sorted(comp_items, \
-                key=lambda t: t[0])))
+        comp_list = list(comp_type_dict.values())
+        comp_list.remove(comp)
+        self.form_ordered_dicts(comp_list)
 
-    def change_component_order(self, component, new_order, switch_order=False):
-        cmp, old_order, comp_host, comp_type = \
-               self.get_component_instance(component)
-        comp_items = list(comp_host.items())
-        orders = np.array(list(comp_host.keys()))
-        idx = comp_items.index((old_order, cmp))
-        if new_order not in orders:
-            comp_items.append((new_order, cmp))
-            comp_items.remove((old_order, cmp))
-            setattr(self, comp_type+'_dict', OrderedDict(sorted(comp_items, \
-                   key=lambda t: t[0])))
+    def change_component_order(self, new_component_list):
+        self.form_ordered_dicts(new_component_list)
 
-        else:
-            affected_comp = (new_order, comp_host[new_order])
-            if switch_order:
-                idx_affected = comp_items.index(affected_comp)
-                switched1 = (new_order, cmp)
-                switched2 = (old_order, comp_host[new_order])
-                comp_items.remove(affected_comp)
-                comp_items.append(switched1)
-                comp_items.remove((old_order, cmp))
-                comp_items.append(switched2)
-                setattr(self, comp_type+'_dict', OrderedDict(sorted(comp_items,\
-                       key=lambda t: t[0])))
-            else:
-                if new_order > old_order:
-                    order_effected_index = np.logical_and(orders > old_order, \
-                                                          orders <= new_order)
-                    factor = -1
+    def replicate(self, components=[], deep_copy=False):
+        pass
 
-                else:
-                    order_effected_index = np.logical_and(orders < old_order, \
-                                                          orders >= new_order)
-                    factor = 1
-                order_effected = orders[order_effected_index]
-                new_comp_item = []
-                for o, c in comp_items:
-                    if o == old_order:
-                        new_comp_item.append((new_order, cmp))
-                        continue
-                    if o in order_effected:
-                        new_comp_item.append((o+factor, c))
-                        continue
-                    new_comp_item.append((o, c))
-                setattr(self, comp_type+'_dict', OrderedDict(sorted(new_comp_item,\
-                       key=lambda t: t[0])))
 
     def get_component_instance(self, component):
         comps = self.components
@@ -403,8 +389,7 @@ class TimingModel(object):
                                      % component.__class__.__name__)
             else:
                 comp = component
-        comp_base = inspect.getmro(comp.__class__)
-        comp_type = comp_base[-3].__name__
+        comp_type = self.get_component_type(comp)
         comp_type_dict = getattr(self, comp_type+'_dict')
         for k,v in list(comp_type_dict.items()):
             if v == comp:
@@ -568,7 +553,7 @@ class TimingModel(object):
         if cutoff_delay == '':
             delay_list = list(self.DelayComponent_dict.items())
             for o, cp in delay_list:
-                if cp.category == 'binary':
+                if cp.category == 'pulsar_system':
                     cutoff_delay = cp.__class__.__name__
         corr = self.delay(toas, cutoff_delay, False)
         return toas['tdbld'] * u.day - corr * u.second
