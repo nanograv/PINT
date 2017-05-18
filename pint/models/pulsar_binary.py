@@ -1,7 +1,7 @@
 # This is a wapper for independent binary model. It is a PINT timing model class
 import astropy.units as u
 from . import parameter as p
-from .timing_model import Cache, DelayComponent, MissingParameter
+from .timing_model import DelayComponent, MissingParameter
 from pint import ls,GMsun,Tsun
 
 
@@ -93,7 +93,6 @@ class PulsarBinary(DelayComponent):
                 continue
             bparObj.value = bparObj.value * u.Unit(bparObj.units)
 
-    #@Cache.use_cache
     def update_binary_object(self, toas, acc_delay):
         """
         Update binary object instance for this set of parameters/toas
