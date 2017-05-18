@@ -20,7 +20,7 @@ class PulsarBinary(DelayComponent):
     """
     def __init__(self,):
         super(PulsarBinary, self).__init__()
-        self.category = 'binary'
+        self.category = 'pulsar_system'
         self.binary_model_name = None
         self.barycentric_time = None
         self.binary_model_class = None
