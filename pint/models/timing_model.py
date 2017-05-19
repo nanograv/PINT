@@ -296,9 +296,19 @@ class TimingModel(object):
     def change_component_order(self, new_component_list):
         self.form_ordered_dicts(new_component_list)
 
-    def replicate(self, components=[], deep_copy=False):
-        pass
-
+    def replicate(self, components = [], copy_component=False):
+        new_tm = TimingModel()
+        for ct in self.component_types:
+            comp_list = (getattr(self, ct+'_dict').values())
+            if not copy_component:
+                # if not copied, the components' _parent will point to the new
+                # TimingModel class. 
+                new_tm.form_ordered_dicts(comp_list)
+            else:
+                new_comp_list = [copy.deepcopy(c) for c in comp_list]
+                new_tm.form_ordered_dicts(new_comp_list)
+        new_tm.top_level_params = self.top_level_params
+        return new_tm
 
     def get_component_instance(self, component):
         comps = self.components
