@@ -460,8 +460,8 @@ class TimingModel(object):
                Barycentered TOAs.
         """
         if cutoff_component == '':
-            delay_list = list(self.DelayComponent_list.items())
-            for o, cp in delay_list:
+            delay_list = self.DelayComponent_list
+            for cp in delay_list:
                 if cp.category == 'pulsar_system':
                     cutoff_component = cp.__class__.__name__
         corr = self.delay(toas, cutoff_component, False)
