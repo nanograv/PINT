@@ -77,7 +77,7 @@ class TimingModel(object):
             description="Source name",
             aliases=["PSRJ", "PSRB"]), '')
 
-        self.form_ordered_dicts(components)
+        self.setup_components(components)
 
     def setup(self):
         """This is a abstract class for setting up timing model class. It is designed for
@@ -134,25 +134,24 @@ class TimingModel(object):
             type_list = super().__getattribute__('component_types')
         for ct in type_list:
             if six.PY2:
-                cps_dict = super(TimingModel, self).__getattribute__(ct + '_dict')
+                cps_list = super(TimingModel, self).__getattribute__(ct + '_list')
             else:
-                cps_dict = super().__getattribute__(ct + '_dict')
-            cps = list(cps_dict.values())
-            for cp in cps:
+                cps_list = super().__getattribute__(ct + '_list')
+            for cp in cps_list:
                 comps[cp.__class__.__name__] = cp
         return comps
 
     @property
     def delay_funcs(self,):
         dfs = []
-        for d in list(self.DelayComponent_dict.values()):
+        for d in self.DelayComponent_list:
             dfs += d.delay_funcs_component
         return dfs
 
     @property
     def phase_funcs(self,):
         pfs = []
-        for p in list(self.PhaseComponent_dict.values()):
+        for p in self.PhaseComponent_list:
             pfs += p.phase_funcs_component
         return pfs
 
@@ -166,15 +165,14 @@ class TimingModel(object):
 
     @property
     def d_phase_d_delay_funcs(self):
-        phase_comps = list(self.PhaseComponent_dict.values())
         Dphase_Ddelay = []
-        for cp in phase_comps:
+        for cp in self.PhaseComponent_list:
             Dphase_Ddelay += cp.phase_derivs_wrt_delay
         return Dphase_Ddelay
 
     def get_deriv_funcs(self, component_type):
-        componet_dict = component_type + '_dict'
-        type_components = list(getattr(self, componet_dict).values())
+        componet_list_name = component_type + '_list'
+        type_components = getattr(self, componet_list_name)
         deriv_funcs = {}
         for cp in type_components:
             for k, v in list(cp.deriv_funcs.items()):
@@ -228,9 +226,9 @@ class TimingModel(object):
             comp_type = comp_base[-3].__name__
         return comp_type
 
-    def form_ordered_dicts(self, components):
-        """A function to form the orderd dictionarys from a list of components.
-           It will rewrite the current components ordered dictionarys and
+    def setup_components(self, components):
+        """A function to set components list according to the component types,
+        ie, delays or phases
         """
         comp_types = {}
         for cp in components:
@@ -243,8 +241,7 @@ class TimingModel(object):
 
         self.component_types = list(comp_types.keys())
         for ct in self.component_types:
-            setattr(self, ct+'_dict',\
-                    OrderedDict((ii, c) for ii, c in enumerate(comp_types[ct])))
+            setattr(self, ct+'_list', comp_types[ct])
 
     def add_component(self, component, order=None, force=False):
         """
@@ -254,13 +251,13 @@ class TimingModel(object):
         component: component instance
             The component need to be added to the timing model
         order: int, optional
-            The order of component
+            The order of component. The order starts from zero.
         force: bool, optional
             If add a duplicated type of component
         """
         comp_type = self.get_component_type(component)
         if comp_type in self.component_types:
-            comp_list = list(getattr(self, comp_type+'_dict').values())
+            comp_list = getattr(self, comp_type+'_list')
             # Check if the component has been added already.
             comp_classes = [x.__class__ for x in comp_list]
             if component.__class__ in comp_classes:
@@ -278,39 +275,23 @@ class TimingModel(object):
                 comp_list.insert(order, component)
         else:
             comp_list = [component,]
-        self.form_ordered_dicts(comp_list)
-
-    def remove_component(self, component):
-        """This is a function to remove a component from timing model.
-           Parameter
-           ---------
-           component: Component instance, str.
-               Component object or Component class name.
-        """
-        comp, old_order, comp_type_dict, comp_type = \
-               self.get_component_instance(component)
-        comp_list = list(comp_type_dict.values())
-        comp_list.remove(comp)
-        self.form_ordered_dicts(comp_list)
-
-    def change_component_order(self, new_component_list):
-        self.form_ordered_dicts(new_component_list)
+        self.setup_components(comp_list)
 
     def replicate(self, components = [], copy_component=False):
         new_tm = TimingModel()
         for ct in self.component_types:
-            comp_list = (getattr(self, ct+'_dict').values())
+            comp_list = (getattr(self, ct+'_list').values())
             if not copy_component:
                 # if not copied, the components' _parent will point to the new
-                # TimingModel class. 
-                new_tm.form_ordered_dicts(comp_list)
+                # TimingModel class.
+                new_tm.setup_components(comp_list)
             else:
                 new_comp_list = [copy.deepcopy(c) for c in comp_list]
-                new_tm.form_ordered_dicts(new_comp_list)
+                new_tm.setup_components(new_comp_list)
         new_tm.top_level_params = self.top_level_params
         return new_tm
 
-    def get_component_instance(self, component):
+    def map_component(self, component):
         comps = self.components
         if isinstance(component, str):
             if component not in list(comps.keys()):
@@ -323,13 +304,9 @@ class TimingModel(object):
             else:
                 comp = component
         comp_type = self.get_component_type(comp)
-        comp_type_dict = getattr(self, comp_type+'_dict')
-        for k,v in list(comp_type_dict.items()):
-            if v == comp:
-                order = k
-            else:
-                continue
-        return comp, order, comp_type_dict, comp_type
+        comp_type_list = getattr(self, comp_type+'_list')
+        order = comp_type_list.index(comp)
+        return comp, order, comp_type_list, comp_type
 
     def get_component_of_category(self):
         category = {}
@@ -424,13 +401,13 @@ class TimingModel(object):
                  (getattr(self, par).help_line(), cp)
         return s
 
-    def delay(self, toas, cutoff_delay='', include_last=True):
+    def delay(self, toas, cutoff_component='', include_last=True):
         """Total delay for the TOAs.
         Parameter
         ---------
         toas: toa.table
             The toas for analysis delays.
-        cutoff_delay: str
+        cutoff_component: str
             The delay component name that a user wants the calculation to stop
             at.
         include_last: bool
@@ -440,20 +417,19 @@ class TimingModel(object):
         TOA to get time of emission at the pulsar.
         """
         delay = np.zeros(len(toas))
-        if cutoff_delay == '':
-            idx = len(self.DelayComponent_dict)
+        if cutoff_component == '':
+            idx = len(self.DelayComponent_list)
         else:
-            delay_list = list(self.DelayComponent_dict.items())
-            delay_names = [x[1].__class__.__name__ for x in delay_list]
-            if cutoff_delay in delay_names:
-                idx = delay_names.index(cutoff_delay)
+            delay_names = [x.__class__.__name__ for x in self.DelayComponent_list]
+            if cutoff_component in delay_names:
+                idx = delay_names.index(cutoff_component)
                 if include_last:
                     idx += 1
                 else:
                     log.warn("Cut off delay component '%s' is not included in"
-                             " delay calculation." % cutoff_delay)
+                             " delay calculation." % cutoff_component)
             else:
-                raise KeyError("No delay component named '%s'." % cutoff_delay)
+                raise KeyError("No delay component named '%s'." % cutoff_component)
 
         for df in self.delay_funcs[0:idx]:
             delay += df(toas, delay)
@@ -469,7 +445,7 @@ class TimingModel(object):
             phase += Phase(pf(toas, delay))
         return phase
 
-    def get_barycentric_toas(self, toas, cutoff_delay=''):
+    def get_barycentric_toas(self, toas, cutoff_component=''):
         """This is a convenient function for calculate the barycentric TOAs.
            Parameter
            ---------
@@ -483,12 +459,12 @@ class TimingModel(object):
            astropy.quantity.
                Barycentered TOAs.
         """
-        if cutoff_delay == '':
-            delay_list = list(self.DelayComponent_dict.items())
+        if cutoff_component == '':
+            delay_list = list(self.DelayComponent_list.items())
             for o, cp in delay_list:
                 if cp.category == 'pulsar_system':
-                    cutoff_delay = cp.__class__.__name__
-        corr = self.delay(toas, cutoff_delay, False)
+                    cutoff_component = cp.__class__.__name__
+        corr = self.delay(toas, cutoff_component, False)
         return toas['tdbld'] * u.day - corr * u.second
 
     def d_phase_d_toa(self, toas, sample_step=None):
