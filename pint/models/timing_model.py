@@ -12,7 +12,6 @@ from astropy.table import Table
 import copy
 import abc
 import six
-from collections import OrderedDict
 import inspect
 
 # parameters or lines in parfiles to ignore (for now?), or at
