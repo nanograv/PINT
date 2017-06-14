@@ -12,7 +12,6 @@ import astropy.units as u
 import astropy.constants as const
 import astropy.time as at
 from .parameter import Parameter
-from .timing_model import TimingModel, MissingParameter, Cache
 import astropy.table as table
 from astropy.io import registry
 MIN_PER_DAY = 60.0*24.0

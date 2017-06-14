@@ -3,41 +3,18 @@
 import os
 
 # The timing models that we will be using
-from .timing_model import generate_timing_model, TimingModel
+from .timing_model import TimingModel, Component
 from pint.utils import split_prefixed_name
 from .parameter import prefixParameter
 import inspect, fnmatch
 import glob
 import sys
 
-def get_componets():
-    timing_comps = {}
-    path = os.path.dirname(os.path.abspath(__file__))
-    for root, dirnames, filenames in os.walk(path):
-        for filename in fnmatch.filter(filenames, '*.py'):
-            if filename == '__init__.py':
-                continue
-            mod_root_start = root.find('pint/models')
-            if mod_root_start + len('pint/models') > len(root):
-                mod_root = ''
-            else:
-                mod_root = root[mod_root_start + len('pint/models/'):]
-            mod = os.path.join(mod_root, filename).replace("/", ".")[:-3]
-            exec('import %s as tmp' % mod)
-            s = set()
-            for k, v in tmp.__dict__.items():
-                if inspect.isclass(v) and issubclass(v, TimingModel):
-                    if k == 'TimingModel':
-                        continue
-                    s.add(v)
-                if s != set():
-                    timing_comps[tmp.__name__] = s
-    return timing_comps
-
-#ComponentsList = get_componets()
 
 default_models = ["StandardTimingModel",]
-class model_builder(object):
+DEFAULT_ORDER = ['astrometry', 'jump_delay', 'solar_system_shapiro',
+                 'dispersion', 'pulsar_system','frequency_dependent', 'spindown']
+class ModelBuilder(object):
     """A class for model construction interface.
         Parameters
         ---------
@@ -54,38 +31,22 @@ class model_builder(object):
         A class contains the result model instance if parfile is provided and
         method to build the model.
 
-        Examples:
-        ---------
-        Read model from parfile :
-        [1] mb = model_builder("PulsarJ1955", parfile ="J1955.par" )
-        [2] psrJ1955 = mb.model_instance
-
-        Build model from sketch and read parfile:
-        [1] from .bt import BT
-        [2] mb = model_builder("BT_model")
-        [3] mb.add_components(BT)
-        [4] psrJ1955 = mb.get_model_instance('J1955.par')
-
-        Build model instance without reading parfile:
-        [1] mb = model_builder("BT_model")
-        [2] mb.add_components(BT)
-        [3] myModel = mb.get_model_instance()
-
+        Examples
+        --------
     """
-    def __init__(self, name, parfile = None):
+    def __init__(self, parfile = None, name=''):
+        self.timing_model = None
         self.name = name
-        self.model_instance = None
         self.param_inparF = None
         self.param_unrecognized = {}
         self.param_inModel = []
-        self.prefix_names = None
         self.param_prefix = {}
-        self.select_comp = []
+
+        self.select_comp = {}
         self.control_params = ['EPHEM', 'CLK']
         if parfile is not None:
             self.parfile = parfile
-            self.get_comp_from_parfile(self.parfile)
-            self.get_model_instance(self.parfile)
+            self.build_model(self.parfile, self.name)
 
     def __str__(self):
         result = 'Model name : ' + self.name + '\n'
@@ -98,7 +59,7 @@ class model_builder(object):
 
         return result
 
-    def preprocess_parfile(self,parfile):
+    def preprocess_parfile(self, parfile):
         """Preprocess the par file.
         Return
         ---------
@@ -129,54 +90,63 @@ class model_builder(object):
         pfile.close()
         return self.param_inparF
 
-    def get_comp_from_parfile(self, parfile):
-        params_inpar = self.preprocess_parfile(parfile)
-        comps = TimingModel._model_list
-        used_base = []
-        common_bases = (TimingModel, object)
-        for k, cp in zip(comps.keys(), comps.values()):
-            if cp in used_base:
-                continue
-            selected_c = None
+    def get_all_categories(self,):
+        comp_category = {}
+        for k, cp in list(Component._component_list.items()):
             ci = cp()
-            #Check is this components a subclass of other components
-            if hasattr(ci,'model_special_params'):
-                if any(par in params_inpar.keys() for par in ci.model_special_params):
-                    # This is the components we want
-                    selected_c = cp
-                    bases = inspect.getmro(cp)
-                    mother_classes = list(set(bases) - set(common_bases + (cp,)))
-                    # remove mother class from selected list, if selected
-                    for mc in mother_classes:
-                        if mc in self.select_comp:
-                            self.select_comp.remove(mc)
-                    used_base += mother_classes
-                else:
-                    continue
+            category = ci.category
+            if category not in list(comp_category.keys()):
+                comp_category[category] = [ci,]
             else:
-                if ci.is_in_parfile(params_inpar):
-                    selected_c = cp
+                comp_category[category].append(ci)
+        return comp_category
 
-            if selected_c is not None and selected_c not in self.select_comp:
-                self.select_comp.append(selected_c)
-
-    def build_model(self):
-        """ Return a model with all components listed in the self.components
-        list.
+    def get_comp_from_parfile(self, parfile):
+        """Right now we only have one component on each category.
         """
-        if self.select_comp ==[]:
-            raise(RuntimeError("No timing model components selected."))
+        params_inpar = self.preprocess_parfile(parfile)
+        comp_categories = self.get_all_categories()
+        for cat, cmps in list(comp_categories.items()):
+            selected_c = None
+            for cpi in cmps:
+                if cpi.component_special_params != []:
+                    if any(par in params_inpar.keys() for par in \
+                           cpi.component_special_params):
+                        selected_c = cpi
+                        # Once have match, stop searching
+                        break
+                    else:
+                        continue
+                else:
+                    if cpi.is_in_parfile(params_inpar):
+                        selected_c = cpi
+            if selected_c is not None:
+                self.select_comp[cat] = selected_c
 
-        return generate_timing_model(self.name,tuple(self.select_comp))
-
-    def add_components(self,components):
-        """ Add new components to constructing model.
+    def sort_components(self, category_order=DEFAULT_ORDER):
         """
-        if not isinstance(components,list):
-            components = [components,]
-        for c in components:
-            if c not in self.select_comp:
-                self.select_comp.append(c)
+        This is a function to sort the component order.
+        Parameter
+        ---------
+        category_order: list, optional
+           The order for the order sensitive component categories.
+        Note
+        ----
+        If a category is not listed in the category_order, it will be treated
+        as order non-sensitive category and put in the end of sorted order list.
+        """
+        cur_category = list(self.select_comp.keys())
+        all_categories = list(self.get_all_categories().keys())
+        sorted_components = []
+        for cat in all_categories:
+            if cat not in category_order:
+                category_order.append(cat)
+        for co in category_order:
+            if co not in cur_category:
+                continue
+            cp = self.select_comp[co]
+            sorted_components.append(cp)
+        return sorted_components
 
     def search_prefix_param(self, paramList, prefix_inModel):
         """ Check if the Unrecognized parameter has prefix parameter
@@ -199,34 +169,36 @@ class model_builder(object):
 
         return prefixs
 
-    def get_model_instance(self,parfile=None):
+    def build_model(self, parfile=None, name=''):
         """Read parfile using the model_instance attribute.
-            Parameters
-            ---------
-            parfile : str optional
-                The parfile name
+        Parameters
+        ---------
+        name: str, optional
+            The name for the timing model
+        parfile : str optional
+            The parfile name
         """
-        if self.model_instance is None:
-            model = self.build_model()
-
-        self.model_instance = model()
-        self.param_inModel = self.model_instance.params
-        self.prefix_names = self.model_instance.prefix_params
+        if parfile is not None:
+            self.get_comp_from_parfile(parfile)
+        sorted_comps = self.sort_components()
+        self.timing_model = TimingModel(name, sorted_comps)
+        param_inModel = self.timing_model.get_params_mapping()
         # Find unrecognised parameters in par file.
 
         if self.param_inparF is not None:
             parName = []
-            for p in self.param_inModel:
-                parName+= getattr(self.model_instance,p).aliases
+            # add aliases
+            for p in list(param_inModel.keys()):
+                parName+= getattr(self.timing_model, p).aliases
 
-            parName += self.param_inModel
+            parName += param_inModel.keys()
 
             for pp in self.param_inparF.keys():
                 if pp not in parName:
                     self.param_unrecognized[pp] = self.param_inparF[pp]
 
             for ptype in ['prefixParameter', 'maskParameter']:
-                prefix_in_model = self.model_instance.get_params_of_type(ptype)
+                prefix_in_model = self.timing_model.get_params_of_type(ptype)
                 prefix_param = \
                     self.search_prefix_param(
                         list(self.param_unrecognized.keys()),
@@ -236,19 +208,21 @@ class model_builder(object):
                     for ppn in ppnames:
                         pfx, idxs, idxv = split_prefixed_name(ppn)
                         if pfx == key:
-                            exm_par = getattr(self.model_instance, ppn)
+                            exm_par = getattr(self.timing_model, ppn)
                         else:
                             continue
+                    exm_par_comp = param_inModel[exm_par.name]
                     for parname in prefix_param[key]:
                         pre,idstr,idx = split_prefixed_name(parname)
                         if idx == exm_par.index:
                             continue
                         if hasattr(exm_par, 'new_param'):
                             new_par = exm_par.new_param(idx)
-                            self.model_instance.add_param(new_par)
+                            self.timing_model.add_param_from_top(new_par,
+                                                                 exm_par_comp)
 
         if parfile is not None:
-            self.model_instance.read_parfile(parfile)
+            self.timing_model.read_parfile(parfile)
 
     def get_control_info(self):
         info = {}
@@ -278,5 +252,5 @@ def get_model(parfile):
     """
     name = os.path.basename(os.path.splitext(parfile)[0])
 
-    mb = model_builder(name,parfile)
-    return mb.model_instance
+    mb = ModelBuilder(parfile)
+    return mb.timing_model

@@ -25,7 +25,7 @@ def main(argv=None):
         default="mjd")
     parser.add_argument("--freq",type=float,default=np.inf,
         help="Frequency to use, MHz")
-    parser.add_argument("--obs",default="Geocenter", 
+    parser.add_argument("--obs",default="Geocenter",
         help="Observatory code (default = Geocenter)")
     parser.add_argument("--parfile",help="par file to read model from",default=None)
     parser.add_argument("--ra",
@@ -52,7 +52,7 @@ def main(argv=None):
     log.debug(t.iso)
 
     t = toa.TOA(t,freq=args.freq,obs=args.obs)
-    # Build TOAs and compute TDBs and positions from ephemeris    
+    # Build TOAs and compute TDBs and positions from ephemeris
     ts = toa.TOAs(toalist=[t])
     ts.compute_TDBs()
     ts.compute_posvels(ephem=args.ephem)
@@ -61,12 +61,12 @@ def main(argv=None):
         m=pint.models.get_model(args.parfile)
     else:
         # Construct model by hand
-        m=pint.models.StandardTimingModel()
+        m=pint.models.StandardTimingModel
         # Should check if 12:13:14.2 syntax is used and support that as well!
         m.RAJ.quantity = Angle(args.ra)
         m.DECJ.quantity = Angle(args.dec)
         m.DM.quantity = args.dm*u.parsec/u.cm**3
-        
+
     tdbtimes = m.get_barycentric_toas(ts.table)
 
     print("{0:.14f}".format(tdbtimes[0].value))

@@ -17,8 +17,8 @@ before_script:
     - sleep 3 # give xvfb some time to start
 
 install:
-    - pip install -r requirements_dev.txt
     - pip install -r requirements.txt
+    - pip install -r requirements_dev.txt
     - pip install .
 
 #script:

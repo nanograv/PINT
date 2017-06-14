@@ -18,7 +18,7 @@ class TestJ0613(unittest.TestCase):
     def setUpClass(self):
         self.parfileJ0613 = 'J0613-0200_NANOGrav_dfg+12_TAI_FB90.par'
         self.timJ0613 = 'J0613-0200_NANOGrav_dfg+12.tim'
-        self.toasJ0613 = toa.get_TOAs(self.timJ0613, ephem="DE405", 
+        self.toasJ0613 = toa.get_TOAs(self.timJ0613, ephem="DE405",
                                       planets=False, include_bipm=False)
         self.modelJ0613 = mb.get_model(self.parfileJ0613)
         # tempo result
@@ -27,7 +27,7 @@ class TestJ0613(unittest.TestCase):
         print(self.ltres)
     def test_J0613_binary_delay(self):
         # Calculate delays with PINT
-        pint_binary_delay = self.modelJ0613.binarymodel_delay(self.toasJ0613.table)
+        pint_binary_delay = self.modelJ0613.binarymodel_delay(self.toasJ0613.table, None)
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-8), 'J0613 binary delay test failed.'
 
     def test_J0613(self):
