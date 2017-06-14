@@ -26,7 +26,17 @@ ignore_prefix = ['DMXF1_','DMXF2_','DMXEP_'] # DMXEP_ for now.
 class TimingModel(object):
     """
     Base-level object provides an interface for implementing pulsar timing
-    models. It contains several over all wrapper methods.
+    models. A timing model contains different model components, for example
+    astrometry delays and spindown phase. All the components will be stored in
+    a ordered list.
+
+    Parameters
+    ----------
+    name: str, optional
+        The name of the timing model.
+    components: list of component object
+        The model components for timing model. The order of the components in
+        timing model will follow the order of input.
 
     Notes
     -----
@@ -45,27 +55,31 @@ class TimingModel(object):
 
     Attributes
     ----------
-    params : list
-        A list of all the parameter names.
-    prefix_params : list
-        A list of prefixed parameter names.
-    delay_funcs : dict
-        All the delay functions implemented in timing model. The delays do not
-        need barycentric toas are placed under the 'L1' keys as a list of methods,
-        the ones needs barycentric toas are under the 'L2' delay. This will be improved
-        in the future. One a delay method is defined in model component, it should
-        get registered in this dictionary.
-    phase_funcs : list
-        All the phase functions implemented in timing model. Once a phase method is defined
-        in model component, it should get registered in this list.
-    delay_derivs : list
-        All the delay derivatives respect to timing parameters.
-        Once a delay derivative method is defined in model component, it should get registered in this list.
-    phase_derivs : list
-        All the phase derivatives respect to timing parameters.
-        Once a phase derivative method is defined in model component, it should get registered in this list.
-    phase_derivs_wrt_delay : list
-        All the phase derivatives respect to delay.
+    name : str
+        The name of the timing model
+    component_types : list
+        A list for register the timing model component type name. For example,
+        delay components will be register as 'DelayComponent'.
+    top_level_params : list
+        A parameter name list for thoes parameters belong to the top timing
+        model class rather than a specific component.
+
+    Properties
+    ----------
+    components:
+        Returns a dictionary of all the components with the component's name as
+        the key.
+    delay_funcs:
+        Gives all the delay functions.
+    phase_funcs:
+        Gives all the phase functions.
+    phase_deriv_funcs:
+        Dictionary, Gives all the functions for phase derivatives.
+    delay_deriv_funcs:
+        Dictionary, Gives all the functions for delay derivatives.
+    d_phase_d_delay_funcs:
+        Dictionary, Gives all the functions for phase derivatives with respect
+        to total delay. 
     """
 
     def __init__(self, name='', components=[]):
@@ -202,14 +216,14 @@ class TimingModel(object):
            Parameter
            ---------
            component: component instance
-               The component object need to be instected.
+               The component object need to be inspected.
            NOTE
            ----
-           Since a component can be inhertance from other component We inspect
+           Since a component can be an inheritance from other component We inspect
            all the component object bases. "inspect getmro" method returns the
            base classes (including 'object') in method resolution order. The
-           third level of inhertance class name is what we want.
-           Object --> component --> TypeComponent. (ie DelayComponent)
+           third level of inheritance class name is what we want.
+           Object --> component --> TypeComponent. (i.e. DelayComponent)
            This class type is in the third to the last of the getmro returned
            result.
         """
@@ -226,8 +240,12 @@ class TimingModel(object):
         return comp_type
 
     def setup_components(self, components):
-        """A function to set components list according to the component types,
-        ie, delays or phases
+        """
+        A function to set components list according to the component types,
+        i.e., delays or phases.
+        Note
+        ----
+        The method will reset the component list.
         """
         comp_types = {}
         for cp in components:
@@ -543,7 +561,7 @@ class TimingModel(object):
         delay_derivs = self.delay_deriv_funcs
         if param not in list(delay_derivs.keys()):
             raise AttributeError("Derivative function for '%s' is not provided"
-                                 " or not registred. "%param)
+                                 " or not registered. "%param)
         for df in delay_derivs[param]:
             result += df(toas, param, acc_delay).to(result.unit, \
                         equivalencies=u.dimensionless_angles())
@@ -633,7 +651,7 @@ class TimingModel(object):
             else:
                 # NOTE Here we have negative sign here. Since in pulsar timing
                 # the residuals are calculated as (Phase - int(Phase)), which is different
-                # from the conventional defination of least square definetion (Data - model)
+                # from the conventional definition of least square definition (Data - model)
                 # We decide to add minus sign here in the design matrix, so the fitter
                 # keeps the conventional way.
                 q = - self.d_phase_d_param(toas, delay,param)
@@ -741,7 +759,7 @@ class TimingModel(object):
 
 class ModelMeta(abc.ABCMeta):
     """
-    This is a Meta class for timing model registeration. In order ot get a
+    This is a Meta class for timing model registration. In order to get a
     timing model registered, a member called 'register' has to be set true in the
     TimingModel subclass.
     """
@@ -843,7 +861,7 @@ class Component(object):
                Name of prefix.
            Return
            ----------
-           A dictionary with prefix pararameter real index as key and parameter
+           A dictionary with prefix parameter real index as key and parameter
            name as value.
         """
         parnames = [x for x in self.params if x.startswith(prefix)]
@@ -893,7 +911,7 @@ class Component(object):
             self.deriv_funcs[pn] += [func,]
 
     def is_in_parfile(self,para_dict):
-        """ Check if this subclass inclulded in parfile.
+        """ Check if this subclass included in parfile.
             Parameters
             ------------
             para_dict : dictionary
@@ -902,14 +920,14 @@ class Component(object):
             Return
             ------------
             True : bool
-                The subclass is inculded in the parfile.
+                The subclass is included in the parfile.
             False : bool
-                The subclass is not inculded in the parfile.
+                The subclass is not included in the parfile.
         """
         pNames_inpar = list(para_dict.keys())
         pNames_inModel = self.params
 
-        # For solar system shapiro delay component
+        # For solar system Shapiro delay component
         if hasattr(self,'PLANET_SHAPIRO'):
             if "NO_SS_SHAPIRO" in pNames_inpar:
                 return False
@@ -932,10 +950,10 @@ class Component(object):
             # Check aliases
             for p in pNames_inModel:
                 al = getattr(self,p).aliases
-                # No aliase in parameters
+                # No aliases in parameters
                 if al == []:
                     continue
-                # Find alise check if match any of parameter name in parfile
+                # Find alias check if match any of parameter name in parfile
                 if list(set(pNames_inpar).intersection(al)):
                     return True
                 else:
