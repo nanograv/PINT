@@ -10,7 +10,7 @@ import inspect, fnmatch
 import glob
 import sys
 
-def get_componets():
+def get_components():
     timing_comps = {}
     path = os.path.dirname(os.path.abspath(__file__))
     for root, dirnames, filenames in os.walk(path):
