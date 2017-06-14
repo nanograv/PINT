@@ -1,7 +1,7 @@
 # timing_model.py
 # Defines the basic timing model interface classes
 import functools
-from .parameter import strParameter
+from .parameter import Parameter, strParameter
 from ..phase import Phase
 from astropy import log
 import astropy.time as time
@@ -11,7 +11,8 @@ import astropy.units as u
 from astropy.table import Table
 import copy
 import abc
-from six import add_metaclass
+import six
+import inspect
 
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
@@ -21,105 +22,21 @@ ignore_params = ['START', 'FINISH', 'SOLARN0', 'EPHEM', 'CLK', 'UNITS',
                  'NITS', 'IBOOT','BINARY']
 ignore_prefix = ['DMXF1_','DMXF2_','DMXEP_'] # DMXEP_ for now.
 
-class Cache(object):
-    """Temporarily cache timing model internal computation results.
 
-    The Cache class defines two decorators, use_cache and cache_result.
-    """
-
-    # The name of the cache attribute
-    the_cache = "cache"
-
-    @classmethod
-    def cache_result(cls, function):
-        """Caching decorator for functions.
-
-        This can be applied as a decorator to any timing model method
-        for which it might be useful to store the value, once computed
-        for a given TOA.  Note that the cache must be manually enabled
-        and cleared when appropriate, so this functionality should be
-        used with care.
-        """
-        the_func = function.__name__
-        @functools.wraps(function)
-        def get_cached_result(*args, **kwargs):
-            log.debug("Checking for cached value of %s" % the_func)
-            # What to do about checking for a change of arguments?
-            # args[0] should be a "self"
-            if hasattr(args[0], cls.the_cache):
-                cache = getattr(args[0], cls.the_cache)
-                if isinstance(cache, cls):
-                    if hasattr(cache, the_func):
-                        # Return the cached value
-                        log.debug(" ... using cached result")
-                        return getattr(cache, the_func)
-                    else:
-                        # Evaluate the function and cache the results
-                        log.debug(" ... computing new result")
-                        result = function(*args, **kwargs)
-                        setattr(cache, the_func, result)
-                        return result
-            # Couldn't access the cache, just return the result
-            # without caching it.
-            log.debug(" ... no cache found")
-            return function(*args, **kwargs)
-        return get_cached_result
-
-    @classmethod
-    def use_cache(cls, function):
-        """Caching decorator for functions.
-
-        This can be applied as a decorator to a function that should
-        internally use caching of function return values.  The cache
-        will be deleted when the function exits.  If the top-level function
-        calls other functions that have caching enabled they will share
-        the cache, and it will only be deleted when the top-level function
-        exits.
-        """
-        @functools.wraps(function)
-        def use_cached_results(*args, **kwargs):
-            # args[0] should be a "self"
-            # Test whether a cache attribute is present
-            if hasattr(args[0], cls.the_cache):
-                cache = getattr(args[0], cls.the_cache)
-                # Test whether caching is already enabled
-                if isinstance(cache, cls):
-                    # Yes, just execute the function
-                    return function(*args, **kwargs)
-                else:
-                    # Init the cache, excute the function, then delete cache
-                    setattr(args[0], cls.the_cache, cls())
-                    result = function(*args, **kwargs)
-                    setattr(args[0], cls.the_cache, None)
-                    return result
-            else:
-                # no "self.cache" attrib is found.  Could raise an error, or
-                # just execute the function normally.
-                return function(*args, **kwargs)
-        return use_cached_results
-
-
-class ModelMeta(abc.ABCMeta):
-    """
-    This is a Meta class for timing model registeration. In order ot get a
-    timing model registered, a member called 'register' has to be set true in the
-    TimingModel subclass.
-    """
-    def __init__(cls, name, bases, dct):
-        regname = '_model_list'
-        if not hasattr(cls,regname):
-            setattr(cls,regname,{})
-        if 'register' in dct:
-            if cls.register:
-                getattr(cls,regname)[name] = cls
-        super(ModelMeta, cls).__init__(name, bases, dct)
-
-
-@add_metaclass(ModelMeta)
 class TimingModel(object):
     """
     Base-level object provides an interface for implementing pulsar timing
-    models. It contains several over all wrapper methods.
+    models. A timing model contains different model components, for example
+    astrometry delays and spindown phase. All the components will be stored in
+    a ordered list.
+
+    Parameters
+    ----------
+    name: str, optional
+        The name of the timing model.
+    components: list of component object
+        The model components for timing model. The order of the components in
+        timing model will follow the order of input.
 
     Notes
     -----
@@ -138,88 +55,328 @@ class TimingModel(object):
 
     Attributes
     ----------
-    params : list
-        A list of all the parameter names.
-    prefix_params : list
-        A list of prefixed parameter names.
-    delay_funcs : dict
-        All the delay functions implemented in timing model. The delays do not
-        need barycentric toas are placed under the 'L1' keys as a list of methods,
-        the ones needs barycentric toas are under the 'L2' delay. This will be improved
-        in the future. One a delay method is defined in model component, it should
-        get registered in this dictionary.
-    phase_funcs : list
-        All the phase functions implemented in timing model. Once a phase method is defined
-        in model component, it should get registered in this list.
-    delay_derivs : list
-        All the delay derivatives respect to timing parameters.
-        Once a delay derivative method is defined in model component, it should get registered in this list.
-    phase_derivs : list
-        All the phase derivatives respect to timing parameters.
-        Once a phase derivative method is defined in model component, it should get registered in this list.
-    phase_derivs_wrt_delay : list
-        All the phase derivatives respect to delay.
+    name : str
+        The name of the timing model
+    component_types : list
+        A list for register the timing model component type name. For example,
+        delay components will be register as 'DelayComponent'.
+    top_level_params : list
+        A parameter name list for thoes parameters belong to the top timing
+        model class rather than a specific component.
+
+    Properties
+    ----------
+    components:
+        Returns a dictionary of all the components with the component's name as
+        the key.
+    delay_funcs:
+        Gives all the delay functions.
+    phase_funcs:
+        Gives all the phase functions.
+    phase_deriv_funcs:
+        Dictionary, Gives all the functions for phase derivatives.
+    delay_deriv_funcs:
+        Dictionary, Gives all the functions for delay derivatives.
+    d_phase_d_delay_funcs:
+        Dictionary, Gives all the functions for phase derivatives with respect
+        to total delay. 
     """
 
-    def __init__(self):
-        self.params = []  # List of model parameter names
-        self.prefix_params = []  # List of model parameter names
-        self.delay_funcs = {'L1':[],'L2':[]} # List of delay component functions
-        # L1 is the first level of delays. L1 delay does not need barycentric toas
-        # After L1 delay, the toas have been corrected to solar system barycenter.
-        # L2 is the second level of delays. L2 delay need barycentric toas
-
-        self.phase_funcs = [] # List of phase component functions
-        self.cache = None
-        self.add_param(strParameter(name="PSR",
+    def __init__(self, name='', components=[]):
+        self.name = name
+        self.component_types = []
+        self.top_level_params = []
+        self.add_param_from_top(strParameter(name="PSR",
             description="Source name",
-            aliases=["PSRJ", "PSRB"]))
-        self.model_type = None
-        self.delay_derivs = {}
-        self.phase_derivs = {}
-        self.phase_derivs_wrt_delay = []
-        self.order_number = None
-        self.print_par_func = ''
+            aliases=["PSRJ", "PSRB"]), '')
+
+        self.setup_components(components)
+
     def setup(self):
         """This is a abstract class for setting up timing model class. It is designed for
         reading .par file and check parameters.
         """
-        pass
+        for cp in list(self.components.values()):
+            cp.setup()
 
+    def __str__(self):
+        result = ""
+        comps = self.components
+        for k, cp in list(comps.items()):
+            result += "In component '%s'" % k + "\n\n"
+            for pp in cp.params:
+                result += str(getattr(cp, pp)) + "\n"
+        return result
 
-    def add_param(self, param,binary_param = False):
-        """Add a parameter to the timing model. If it is a prefixe parameter,
-           it will add prefix information to the prefix information attributes.
+    def __getattr__(self, name):
+        try:
+            if six.PY2:
+                return super(TimingModel, self).__getattribute__(name)
+            else:
+                return super().__getattribute__(name)
+        except AttributeError:
+            errmsg = "'TimingModel' object and its component has no attribute"
+            errmsg += " '%s'." % name
+            try:
+                if six.PY2:
+                    cp = super(TimingModel, self).__getattribute__('search_cmp_attr')(name)
+                else:
+                    cp = super().__getattribute__('search_cmp_attr')(name)
+                if cp is not None:
+                    return super(cp.__class__, cp).__getattribute__(name)
+                else:
+                    raise AttributeError(errmsg)
+            except:
+                raise AttributeError(errmsg)
+
+    @property
+    def params(self,):
+        p = self.top_level_params
+        for cp in list(self.components.values()):
+            p = p+cp.params
+        return p
+
+    @property
+    def components(self,):
+        """This will return a dictionary of all the components
         """
-        setattr(self, param.name, param)
-        self.params += [param.name,]
+        comps = {}
+        if six.PY2:
+            type_list = super(TimingModel, self).__getattribute__('component_types')
+        else:
+            type_list = super().__getattribute__('component_types')
+        for ct in type_list:
+            if six.PY2:
+                cps_list = super(TimingModel, self).__getattribute__(ct + '_list')
+            else:
+                cps_list = super().__getattribute__(ct + '_list')
+            for cp in cps_list:
+                comps[cp.__class__.__name__] = cp
+        return comps
 
-        if binary_param is True:
-            self.binary_params +=[param.name,]
-        if hasattr(self, '_param_table'):
-            param_row = [param.name, ]
+    @property
+    def delay_funcs(self,):
+        dfs = []
+        for d in self.DelayComponent_list:
+            dfs += d.delay_funcs_component
+        return dfs
+
+    @property
+    def phase_funcs(self,):
+        pfs = []
+        for p in self.PhaseComponent_list:
+            pfs += p.phase_funcs_component
+        return pfs
+
+    @property
+    def phase_deriv_funcs(self):
+        return self.get_deriv_funcs('PhaseComponent')
+
+    @property
+    def delay_deriv_funcs(self):
+        return self.get_deriv_funcs('DelayComponent')
+
+    @property
+    def d_phase_d_delay_funcs(self):
+        Dphase_Ddelay = []
+        for cp in self.PhaseComponent_list:
+            Dphase_Ddelay += cp.phase_derivs_wrt_delay
+        return Dphase_Ddelay
+
+    def get_deriv_funcs(self, component_type):
+        componet_list_name = component_type + '_list'
+        type_components = getattr(self, componet_list_name)
+        deriv_funcs = {}
+        for cp in type_components:
+            for k, v in list(cp.deriv_funcs.items()):
+                if k in deriv_funcs:
+                    deriv_funcs[k] += v
+                else:
+                    deriv_funcs[k] = v
+        return deriv_funcs
+
+    def search_cmp_attr(self, name):
+        """
+        This is a function for searching an attribute from all the components.
+        If the multiple components has same attribute, it will return the first
+        component.
+        """
+        cmp = None
+        for cp in list(self.components.values()):
+            try:
+                _ = super(cp.__class__, cp).__getattribute__(name)
+                cmp = cp
+                break
+            except AttributeError:
+                continue
+        return cmp
+
+    def get_component_type(self, component):
+        """A function to identify the component object's type.
+           Parameter
+           ---------
+           component: component instance
+               The component object need to be inspected.
+           NOTE
+           ----
+           Since a component can be an inheritance from other component We inspect
+           all the component object bases. "inspect getmro" method returns the
+           base classes (including 'object') in method resolution order. The
+           third level of inheritance class name is what we want.
+           Object --> component --> TypeComponent. (i.e. DelayComponent)
+           This class type is in the third to the last of the getmro returned
+           result.
+        """
+        # check component type
+        comp_base = inspect.getmro(component.__class__)
+        if comp_base[-2].__name__ != 'Component':
+            raise TypeError("Class '%s' is not a Component type class."% \
+                             component.__class__.__name__)
+        elif len(comp_base) < 3:
+            raise TypeError("'%s' class is not a subclass of 'Component' class." % \
+                             component.__class__.__name__)
+        else:
+            comp_type = comp_base[-3].__name__
+        return comp_type
+
+    def setup_components(self, components):
+        """
+        A function to set components list according to the component types,
+        i.e., delays or phases.
+        Note
+        ----
+        The method will reset the component list.
+        """
+        comp_types = {}
+        for cp in components:
+            comp_type = self.get_component_type(cp)
+            if comp_type in list(comp_types.keys()):
+                comp_types[comp_type].append(cp)
+            else:
+                comp_types[comp_type] = [cp,]
+            cp._parent = self
+
+        self.component_types = list(comp_types.keys())
+        for ct in self.component_types:
+            setattr(self, ct+'_list', comp_types[ct])
+
+    def add_component(self, component, order=None, force=False):
+        """
+        This is a method to add a component to the timing model
+        Parameter
+        ---------
+        component: component instance
+            The component need to be added to the timing model
+        order: int, optional
+            The order of component. The order starts from zero.
+        force: bool, optional
+            If add a duplicated type of component
+        """
+        comp_type = self.get_component_type(component)
+        if comp_type in self.component_types:
+            comp_list = getattr(self, comp_type+'_list')
+            # Check if the component has been added already.
+            comp_classes = [x.__class__ for x in comp_list]
+            if component.__class__ in comp_classes:
+                log.warn("Component '%s' is already added." %
+                         component.__class__.__name__)
+                if not force:
+                    log.warn("Component '%s' will not be added. To force add it, use"
+                             " force option." % component.__class__.__name__)
+                    return
+            if order is None:
+                comp_list.append(component)
+            else:
+                if order > len(comp_list):
+                    order = len(comp_list)
+                comp_list.insert(order, component)
+        else:
+            comp_list = [component,]
+        self.setup_components(comp_list)
+
+    def replicate(self, components = [], copy_component=False):
+        new_tm = TimingModel()
+        for ct in self.component_types:
+            comp_list = (getattr(self, ct+'_list').values())
+            if not copy_component:
+                # if not copied, the components' _parent will point to the new
+                # TimingModel class.
+                new_tm.setup_components(comp_list)
+            else:
+                new_comp_list = [copy.deepcopy(c) for c in comp_list]
+                new_tm.setup_components(new_comp_list)
+        new_tm.top_level_params = self.top_level_params
+        return new_tm
+
+    def map_component(self, component):
+        comps = self.components
+        if isinstance(component, str):
+            if component not in list(comps.keys()):
+                raise AttributeError("No '%s' in the timing model." % component)
+            comp = comps[component]
+        else: # When component is an component instance.
+            if component not in list(comps.values()):
+                raise AttributeError("No '%s' in the timing model." \
+                                     % component.__class__.__name__)
+            else:
+                comp = component
+        comp_type = self.get_component_type(comp)
+        comp_type_list = getattr(self, comp_type+'_list')
+        order = comp_type_list.index(comp)
+        return comp, order, comp_type_list, comp_type
+
+    def get_component_of_category(self):
+        category = {}
+        for cp in list(self.components.values()):
+            cat = cp.category
+            if cat in list(category.keys()):
+                category[cat].append(cp)
+            else:
+                category[cat] = [cp,]
+        return category
+
+    def add_param_from_top(self, param, target_component):
+        """Add a parameter to a timing model component.
+        """
+        if target_component == '':
+            setattr(self, param.name, param)
+            self.top_level_params += [param.name]
+        else:
+            if target_component not in list(self.components.keys()):
+                raise AttributeError("Can not find component '%s' in "
+                                     "timging model." % target_component)
+            self.components[target_component].add_param(param)
 
     def remove_param(self, param):
-        delattr(self, param)
-        self.params.remove(param)
-        if param in self.binary_params:
-            self.binary_params.remove(param)
-
-    def set_special_params(self, spcl_params):
-        als = []
-        for p in spcl_params:
-            als += getattr(self, p).aliases
-        spcl_params += als
-        self.model_special_params = spcl_params
-
-
-    def param_help(self):
-        """Print help lines for all available parameters in model.
         """
-        s = "Available parameters for %s\n" % self.__class__
-        for par in self.params:
-            s += "%s\n" % getattr(self, par).help_line()
-        return s
+        Remove a parameter from timing model
+        Parameter
+        ---------
+        param: str
+            The name of parameter need to be removed.
+        """
+        param_map = self.get_params_mapping()
+        if param not in list(param_map.keys()):
+            raise AttributeError("Can not find '%s' in timing model." % param.name)
+        if param_map[param] == 'timing_model':
+            delattr(self, param)
+            self.top_level_params.remove(param)
+        else:
+            target_component = param_map[param]
+            self.components[target_component].remove_param(param)
+
+    def get_params_mapping(self):
+        """
+        This is a method to map all the parameters to the component they belong
+        to.
+        """
+        param_mapping = {}
+        for p in self.top_level_params:
+            param_mapping[p] = 'timing_model'
+        for cp in list(self.components.values()):
+            for pp in cp.params:
+                param_mapping[pp] = cp.__class__.__name__
+        return param_mapping
 
     def get_params_of_type(self, param_type):
         """ Get all the parameters in timing model for one specific type
@@ -233,9 +390,7 @@ class TimingModel(object):
                 param_type.upper() == par_prefix.upper():
                 result.append(par.name)
         return result
-
-    #@Cache.use_cache
-    def get_prefix_mapping(self,prefix):
+    def get_prefix_mapping(self, prefix):
         """Get the index mapping for the prefix parameters.
            Parameter
            ----------
@@ -254,40 +409,49 @@ class TimingModel(object):
                 mapping[par.index] = parname
         return mapping
 
-    def match_param_aliases(self, alias):
-        p_aliases = {}
-        # if alias is a parameter name, return itself
-        if alias in self.params:
-            return alias
-        # get all the aliases
-        for p in self.params:
-            par = getattr(self, p)
-            if par.aliases !=[]:
-                p_aliases[p] = par.aliases
-        # match alias
-        for pa, pav in zip(p_aliases.keys(), p_aliases.values()):
-            if alias in pav:
-                return pa
-        # if not found any thing.
-        return ''
+    def param_help(self):
+        """Print help lines for all available parameters in model.
+        """
+        s = "Available parameters for %s\n" % self.__class__
+        for par, cp in list(self.get_params_mapping().items()) :
+            s += "%s\nLocated in component '%s'\n" % \
+                 (getattr(self, par).help_line(), cp)
+        return s
 
-    def sort_model_components(self):
-        # initiate the sorted_components
-        sorted_list = ['']*len(list(self.components.keys()))
-        in_placed = []
-        not_in_placed = []
-        for cp, cpv in self.components.items():
-            if cpv.order_number is not None:
-                sorted_list[cpv.order_number] = cp
-                in_placed.append(cp)
+    def delay(self, toas, cutoff_component='', include_last=True):
+        """Total delay for the TOAs.
+        Parameter
+        ---------
+        toas: toa.table
+            The toas for analysis delays.
+        cutoff_component: str
+            The delay component name that a user wants the calculation to stop
+            at.
+        include_last: bool
+            If the cutoff delay component is included.
+
+        Return the total delay which will be subtracted from the given
+        TOA to get time of emission at the pulsar.
+        """
+        delay = np.zeros(len(toas))
+        if cutoff_component == '':
+            idx = len(self.DelayComponent_list)
+        else:
+            delay_names = [x.__class__.__name__ for x in self.DelayComponent_list]
+            if cutoff_component in delay_names:
+                idx = delay_names.index(cutoff_component)
+                if include_last:
+                    idx += 1
+                else:
+                    log.warn("Cut off delay component '%s' is not included in"
+                             " delay calculation." % cutoff_component)
             else:
-                not_in_placed.append(cp)
-        for nicp in not_in_placed:
-            idx = sorted_list.index('')
-            sorted_list[idx] = nicp
-        return sorted_list
+                raise KeyError("No delay component named '%s'." % cutoff_component)
 
-    #@Cache.use_cache
+        for df in self.delay_funcs[0:idx]:
+            delay += df(toas, delay)
+        return delay
+
     def phase(self, toas):
         """Return the model-predicted pulse phase for the given TOAs."""
         # First compute the delays to "pulsar time"
@@ -298,127 +462,27 @@ class TimingModel(object):
             phase += Phase(pf(toas, delay))
         return phase
 
-    #@Cache.use_cache
-    def delay(self, toas):
-        """Total delay for the TOAs.
-
-        Return the total delay which will be subtracted from the given
-        TOA to get time of emission at the pulsar.
+    def get_barycentric_toas(self, toas, cutoff_component=''):
+        """This is a convenient function for calculate the barycentric TOAs.
+           Parameter
+           ---------
+           toas: TOAs table
+               The TOAs the barycentric corrections are applied on
+           cutoff_delay: str, optional
+               The cutoff delay component name. If it is not provided, it will
+               search for binary delay and apply all the delay before binary.
+           Return
+           ------
+           astropy.quantity.
+               Barycentered TOAs.
         """
-        delay = np.zeros(len(toas))
-        for dlevel in self.delay_funcs.keys():
-            for df in self.delay_funcs[dlevel]:
-                delay += df(toas)
-
-        return delay
-
-    #@Cache.use_cache
-    def get_barycentric_toas(self,toas):
-        toasObs = toas['tdbld']
-        delay = np.zeros(len(toas))
-        for df in self.delay_funcs['L1']:
-            delay += df(toas)
-        toasBary = toasObs*u.day - delay*u.second
-        return toasBary
-
-    def _make_delay_derivative_funcs(self, param, function, name_tplt):
-        """This function is a method to help make the delay derivatives wrt timing
-        model parameters use the parameter specific name and only have the toas
-        table as input.
-        Parameter
-        ----------
-        param: str
-            Name of parameter
-        function: method
-            The method to compute the delay derivatives. It is generally in the
-            formate of function(toas, parameter)
-        name_tplt: str
-            The name template of the new function. The parameter name will be
-            added in the end. For example: 'd_delay_d_' is a name template.
-        Return
-        ---------
-        A delay derivative function wrt to input parameter name with the input
-        name template and parameter name.
-        """
-        def deriv_func(toas):
-            return function(toas, param)
-        deriv_func.__name__ = name_tplt + param
-        deriv_func.__doc__ = "Delay derivative wrt " + param + " \n"
-        deriv_func.__doc__ += "Parameter\n----------\ntoas: TOA table\n    "
-        deriv_func.__doc__ += "TOA point where the derivative is evaluated at.\n"
-        deriv_func.__doc__ += "Return\n---------\n Delay derivatives wrt " + param
-        deriv_func.__doc__ += " at toa."
-        setattr(self, deriv_func.__name__, deriv_func)
-
-    def _make_phase_derivative_funcs(self, param, function, name_tplt):
-        """This function is a method to help make the phase derivatives wrt timing
-        model parameters use the parameter specific name and only have the toas
-        table as input.
-        Parameter
-        ----------
-        param: str
-            Name of parameter
-        function: method
-            The method to compute the phase derivatives. It is generally in the
-            formate of 'function(toas, parameter, delay)'
-        name_tplt: str
-            The name template of the new function. The parameter name will be
-            added in the end. For example: 'd_phase_d_' is a name template.
-        Return
-        ---------
-        A phase derivative function wrt to input parameter name with the input
-        name template and parameter name.
-        """
-        def deriv_func(toas, delay):
-            return function(toas, param, delay)
-        deriv_func.__name__ = name_tplt + param
-        deriv_func.__doc__ = "Phase derivative wrt " + param + " \n"
-        deriv_func.__doc__ += "Parameter\n----------\ntoas: TOA table\n    "
-        deriv_func.__doc__ += "TOA point where the derivative is evaluated at.\n"
-        deriv_func.__doc__ += "delay: numpy array\n    Time delay for phase calculation.\n"
-        deriv_func.__doc__ += "Return\n---------\n Phase derivatives wrt " + param
-        deriv_func.__doc__ += " at toa."
-        setattr(self, deriv_func.__name__, deriv_func)
-
-    def register_deriv_funcs(self, func, deriv_type, param=''):
-        """
-        This is a function to register the derivative function in to the
-        deriv_func dictionaries.
-        Parameter
-        ---------
-        func: method
-            The method calculates the derivative
-        deriv_type: str ['delay', 'phase', 'd_phase_d_delay']
-            Flag for different type of derivatives. It only accepts the three
-            above.
-        param: str, if for d_phase_d_delay it is optional
-            Name of parameter the derivative respect to
-        """
-        if deriv_type == 'd_phase_d_delay':
-            self.phase_derivs_wrt_delay += [func,]
-        elif deriv_type == 'delay':
-            pn = self.match_param_aliases(param)
-            if pn == '':
-                raise ValueError("Parameter '%s' in not in the model." % param)
-            if pn not in self.delay_derivs.keys():
-                self.delay_derivs[pn] = [func,]
-            else:
-                self.delay_derivs[pn] += [func,]
-        elif deriv_type == 'phase':
-            pn = self.match_param_aliases(param)
-            if pn == '':
-                raise ValueError("Parameter '%s' in not in the model." % param)
-            if pn not in self.phase_derivs.keys():
-                self.phase_derivs[pn] = [func,]
-            else:
-                self.phase_derivs[pn] += [func,]
-
-    def d_phase_d_tpulsar(self, toas):
-        """Return the derivative of phase wrt time at the pulsar.
-
-        NOT implemented yet.
-        """
-        pass
+        if cutoff_component == '':
+            delay_list = self.DelayComponent_list
+            for cp in delay_list:
+                if cp.category == 'pulsar_system':
+                    cutoff_component = cp.__class__.__name__
+        corr = self.delay(toas, cutoff_component, False)
+        return toas['tdbld'] * u.day - corr * u.second
 
     def d_phase_d_toa(self, toas, sample_step=None):
         """Return the derivative of phase wrt TOA
@@ -451,34 +515,58 @@ class TimingModel(object):
         del copy_toas
         return d_phase_d_toa
 
+    def d_phase_d_tpulsar(self, toas):
+        """Return the derivative of phase wrt time at the pulsar.
 
-    #@Cache.use_cache
+        NOT implemented yet.
+        """
+        pass
+
     def d_phase_d_param(self, toas, delay, param):
         """ Return the derivative of phase with respect to the parameter.
         """
-        result = 0.0
-        par = getattr(self, param)
         # TODO need to do correct chain rule stuff wrt delay derivs, etc
         # Is it safe to assume that any param affecting delay only affects
         # phase indirectly (and vice-versa)??
+        par = getattr(self, param)
         result = np.longdouble(np.zeros(len(toas))) * u.Unit('')/par.units
         param_phase_derivs = []
-        if param in self.phase_derivs.keys():
-            for df in self.phase_derivs[param]:
-                if df.__name__.endswith(param):
-                    result += df(toas, delay).to(result.unit,
-                                         equivalencies=u.dimensionless_angles())
-                else: # Then this is a general derivative function.
-                    result += df(toas, param, delay).to(result.unit,
-                                         equivalencies=u.dimensionless_angles())
-        else: # Apply chain rule for the parameters in the delay.
+        phase_derivs = self.phase_deriv_funcs
+        delay_derivs = self.delay_deriv_funcs
+        if param in list(phase_derivs.keys()):
+            for df in phase_derivs[param]:
+                result += df(toas, param, delay).to(result.unit,
+                            equivalencies=u.dimensionless_angles())
+        else:
+            # Apply chain rule for the parameters in the delay.
+            # total_phase = Phase1(delay(param)) + Phase2(delay(param))
+            # d_total_phase_d_param = d_Phase1/d_delay*d_delay/d_param +
+            #                         d_Phase2/d_delay*d_delay/d_param
+            #                       = (d_Phase1/d_delay + d_Phase2/d_delay) *
+            #                         d_delay_d_param
+
             d_delay_d_p = self.d_delay_d_param(toas, param)
-            for dpddf in self.phase_derivs_wrt_delay:
-                result += (dpddf(toas, delay) * d_delay_d_p).to(result.unit,
-                                         equivalencies=u.dimensionless_angles())
+            dpdd_result = np.longdouble(np.zeros(len(toas))) * u.Unit('')/u.second
+            for dpddf in self.d_phase_d_delay_funcs:
+                dpdd_result += dpddf(toas, delay)
+            result = dpdd_result * d_delay_d_p
+        return result.to(result.unit, equivalencies=u.dimensionless_angles())
+
+    def d_delay_d_param(self, toas, param, acc_delay=None):
+        """
+        Return the derivative of delay with respect to the parameter.
+        """
+        par = getattr(self, param)
+        result = np.longdouble(np.zeros(len(toas)) * u.s/par.units)
+        delay_derivs = self.delay_deriv_funcs
+        if param not in list(delay_derivs.keys()):
+            raise AttributeError("Derivative function for '%s' is not provided"
+                                 " or not registered. "%param)
+        for df in delay_derivs[param]:
+            result += df(toas, param, acc_delay).to(result.unit, \
+                        equivalencies=u.dimensionless_angles())
         return result
 
-    #@Cache.use_cache
     def d_phase_d_param_num(self, toas, param, step=1e-2):
         """ Return the derivative of phase with respect to the parameter.
         """
@@ -534,25 +622,8 @@ class TimingModel(object):
         par.value = ori_value
         return d_delay * (u.second/unit)
 
-    def d_delay_d_param(self, toas, param):
-        """
-        Return the derivative of delay with respect to the parameter.
-        """
-        par = getattr(self, param)
-        result = np.longdouble(np.zeros(len(toas)) * u.s/par.units)
-        if param not in self.delay_derivs.keys():
-            raise AttributeError("Derivative function for '%s' is not provided"
-                                 " or not registred. "%param)
-        for df in self.delay_derivs[param]:
-            # The derivative function is for a specific parameter.
-            if df.__name__.endswith(param):
-                result += df(toas).to(result.unit, equivalencies=u.dimensionless_angles())
-            else: # Then this is a general derivative function.
-                result += df(toas, param).to(result.unit, equivalencies=u.dimensionless_angles())
-        return result
-
-    #@Cache.use_cache
-    def designmatrix(self, toas, scale_by_F0=True, incfrozen=False, incoffset=True):
+    def designmatrix(self, toas,acc_delay=None, scale_by_F0=True, \
+                     incfrozen=False, incoffset=True):
         """
         Return the design matrix: the matrix with columns of d_phase_d_param/F0
         or d_toa_d_param
@@ -580,7 +651,7 @@ class TimingModel(object):
             else:
                 # NOTE Here we have negative sign here. Since in pulsar timing
                 # the residuals are calculated as (Phase - int(Phase)), which is different
-                # from the conventional defination of least square definetion (Data - model)
+                # from the conventional definition of least square definition (Data - model)
                 # We decide to add minus sign here in the design matrix, so the fitter
                 # keeps the conventional way.
                 q = - self.d_phase_d_param(toas, delay,param)
@@ -597,49 +668,12 @@ class TimingModel(object):
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
 
-    def __str__(self):
-        result = ""
-        for par in self.params:
-            result += str(getattr(self, par)) + "\n"
-        return result
-
-    def print_param_control(self, control_info={'UNITS': 'TDB', 'TIMEEPH':'FB90'},
-                          order=['UNITS', 'TIMEEPH']):
-        result = ""
-        for pc in order:
-            if pc not in control_info.keys():
-                continue
-            result += pc + ' ' + control_info[pc] + '\n'
-        return result
-
-    def print_param_component(self, component_name):
-        result = ''
-        if component_name not in self.components:
-            return result
-        else:
-            if hasattr(self, self.components[component_name].param_print_func):
-                result += getattr(self, self.components[component_name].param_print_func)()
-            else:
-                for p in self.components[component_name].params:
-                    par = getattr(self, p)
-                    if par.quantity is not None:
-                        result += par.as_parfile_line()
-        return result
-
-    def as_parfile(self):
-        """Returns a parfile representation of the entire model as a string."""
-        result = ""
-        result += self.PSR.as_parfile_line()
-        sort_comps = self.sort_model_components()
-        for scp in sort_comps:
-            result += self.print_param_component(scp)
-        result += self.print_param_control()
-        return result
-
     def read_parfile(self, filename):
         """Read values from the specified parfile into the model parameters."""
         checked_param = []
         repeat_param = {}
+        param_map = self.get_params_mapping()
+        comps = self.components
         pfile = open(filename, 'r')
         for l in [pl.strip() for pl in pfile.readlines()]:
             # Skip blank lines
@@ -661,8 +695,13 @@ class TimingModel(object):
                 l = ' '.join(k)
 
             parsed = False
-            for par in self.params:
-                if getattr(self, par).from_parfile_line(l):
+            for par in param_map.keys():
+                host_comp = param_map[par]
+                if host_comp != 'timing_model':
+                    cmp = comps[host_comp]
+                else:
+                    cmp = self
+                if cmp.__getattr__(par).from_parfile_line(l):
                     parsed = True
             if not parsed:
                 try:
@@ -679,9 +718,200 @@ class TimingModel(object):
         # after the entire parfile is read
         self.setup()
 
+    def as_parfile(self, start_order=['astrometry', 'spindown', 'dispersion'],
+                         last_order=['jump_delay']):
+        """Returns a parfile representation of the entire model as a string."""
+        result_begin = ""
+        result_end = ""
+        result_middle = ""
+        cates_comp = self.get_component_of_category()
+        printed_cate = []
+        for p in self.top_level_params:
+            result_begin += getattr(self, p).as_parfile_line()
+        for cat in start_order:
+            if cat in list(cates_comp.keys()):
+                cp = cates_comp[cat]
+                for cpp in cp:
+                    result_begin += cpp.print_par()
+                printed_cate.append(cat)
+            else:
+                continue
+
+        for cat in last_order:
+            if cat in list(cates_comp.keys()):
+                cp = cates_comp[cat]
+                for cpp in cp:
+                    result_end += cpp.print_par()
+                printed_cate.append(cat)
+            else:
+                continue
+
+        for c in list(cates_comp.keys()):
+            if c in printed_cate:
+                continue
+            else:
+                cp = cates_comp[c]
+                for cpp in cp:
+                    result_middle += cpp.print_par()
+                printed_cate.append(cat)
+
+        return result_begin + result_middle + result_end
+
+class ModelMeta(abc.ABCMeta):
+    """
+    This is a Meta class for timing model registration. In order to get a
+    timing model registered, a member called 'register' has to be set true in the
+    TimingModel subclass.
+    """
+    def __init__(cls, name, bases, dct):
+        regname = '_component_list'
+        if not hasattr(cls,regname):
+            setattr(cls,regname,{})
+        if 'register' in dct:
+            if cls.register:
+                getattr(cls,regname)[name] = cls
+        super(ModelMeta, cls).__init__(name, bases, dct)
+
+
+@six.add_metaclass(ModelMeta)
+class Component(object):
+    """ This is a base class for timing model components.
+    """
+    def __init__(self,):
+        self.params = []
+        self._parent = None
+        self.category = ''
+        self.deriv_funcs = {}
+        self.component_special_params = []
+    def setup(self,):
+        pass
+
+    def __getattr__(self, name):
+        try:
+            return super(Component, self).__getattribute__(name)
+        except AttributeError:
+            try:
+                p = super(Component, self).__getattribute__('_parent')
+                if p is None:
+                    raise AttributeError("'%s' object has no attribute '%s'." %
+                                        (self.__class__.__name__, name))
+                else:
+                    return self._parent.__getattr__(name)
+            except:
+                raise AttributeError("'%s' object has no attribute '%s'." %
+                                    (self.__class__.__name__, name))
+
+    def add_param(self, param):
+        """
+        Add a parameter into the Component
+        Parameter
+        ---------
+        param: str
+            The name of parameter need to be add.
+        """
+        setattr(self, param.name, param)
+        self.params += [param.name,]
+
+    def remove_param(self, param):
+        self.params.remove(param)
+        par = getattr(self, param)
+        all_names = [param, ] + par.aliases
+        if param in self.component_special_params:
+            for pn in all_names:
+                self.component_special_params.remove(pn)
+        delattr(self, param)
+
+
+    def set_special_params(self, spcl_params):
+        als = []
+        for p in spcl_params:
+            als += getattr(self, p).aliases
+        spcl_params += als
+        for sp in spcl_params:
+            if sp not in self.component_special_params:
+                self.component_special_params.append(sp)
+
+    def param_help(self):
+        """Print help lines for all available parameters in model.
+        """
+        s = "Available parameters for %s\n" % self.__class__
+        for par in self.params:
+            s += "%s\n" % getattr(self, par).help_line()
+        return s
+
+    def get_params_of_type(self, param_type):
+        """ Get all the parameters in timing model for one specific type
+        """
+        result = []
+        for p in self.params:
+            par = getattr(self, p)
+            par_type = type(par).__name__
+            par_prefix = par_type[:-9]
+            if param_type.upper() == par_type.upper() or \
+                param_type.upper() == par_prefix.upper():
+                result.append(par.name)
+        return result
+
+    #@Cache.use_cache
+    def get_prefix_mapping_component(self,prefix):
+        """Get the index mapping for the prefix parameters.
+           Parameter
+           ----------
+           prefix : str
+               Name of prefix.
+           Return
+           ----------
+           A dictionary with prefix parameter real index as key and parameter
+           name as value.
+        """
+        parnames = [x for x in self.params if x.startswith(prefix)]
+        mapping = dict()
+        for parname in parnames:
+            par = getattr(self, parname)
+            if par.is_prefix == True and par.prefix == prefix:
+                mapping[par.index] = parname
+        return mapping
+
+    def match_param_aliases(self, alias):
+        # TODO need to search the parent class as well
+        p_aliases = {}
+        # if alias is a parameter name, return itself
+        if alias in self.params:
+            return alias
+        # get all the aliases
+        for p in self.params:
+            par = getattr(self, p)
+            if par.aliases !=[]:
+                p_aliases[p] = par.aliases
+        # match alias
+        for pa, pav in zip(p_aliases.keys(), p_aliases.values()):
+            if alias in pav:
+                return pa
+        # if not found any thing.
+        return ''
+
+    def register_deriv_funcs(self, func, param):
+        """
+        This is a function to register the derivative function in to the
+        deriv_func dictionaries.
+        Parameter
+        ---------
+        func: method
+            The method calculates the derivative
+        param: str
+            Name of parameter the derivative respect to
+        """
+        pn = self.match_param_aliases(param)
+        if pn == '':
+            raise ValueError("Parameter '%s' in not in the model." % param)
+
+        if pn not in list(self.deriv_funcs.keys()):
+            self.deriv_funcs[pn] = [func,]
+        else:
+            self.deriv_funcs[pn] += [func,]
 
     def is_in_parfile(self,para_dict):
-        """ Check if this subclass inclulded in parfile.
+        """ Check if this subclass included in parfile.
             Parameters
             ------------
             para_dict : dictionary
@@ -690,29 +920,19 @@ class TimingModel(object):
             Return
             ------------
             True : bool
-                The subclass is inculded in the parfile.
+                The subclass is included in the parfile.
             False : bool
-                The subclass is not inculded in the parfile.
+                The subclass is not included in the parfile.
         """
         pNames_inpar = list(para_dict.keys())
-
         pNames_inModel = self.params
 
-        prefix_inModel = self.prefix_params
-
-        # Remove the common parameter PSR
-        try:
-            del pNames_inModel[pNames_inModel.index('PSR')]
-        except:
-            pass
-
-        # For solar system shapiro delay component
+        # For solar system Shapiro delay component
         if hasattr(self,'PLANET_SHAPIRO'):
             if "NO_SS_SHAPIRO" in pNames_inpar:
                 return False
             else:
                 return True
-
 
         # For Binary model component
         try:
@@ -730,10 +950,10 @@ class TimingModel(object):
             # Check aliases
             for p in pNames_inModel:
                 al = getattr(self,p).aliases
-                # No aliase in parameters
+                # No aliases in parameters
                 if al == []:
                     continue
-                # Find alise check if match any of parameter name in parfile
+                # Find alias check if match any of parameter name in parfile
                 if list(set(pNames_inpar).intersection(al)):
                     return True
                 else:
@@ -743,75 +963,24 @@ class TimingModel(object):
 
         return True
 
-class ComponentInfo(object):
-    """
-    This is a class to save the components information before it get combined
-    to a specific timing model
-    Parameter
-    ---------
-    comp : TimingModel component object
-        The timing model component object
-    """
-    def __init__(self, comp):
-        self.name = comp.__class__.__name__
-        comp.params.remove('PSR')
-        self.params = comp.params
-        #NOTE This should be changed in the future
-        self.param_print_func = comp.print_par_func
-        self.order_number = comp.order_number
-    def is_param_in_component(self, param):
-        if param in self.params:
-            return True
-        else:
-            match = False
-            try:
-                p, i, iv = utils.split_prefixed_name(param)
-                for cp in self.params:
-                    if cp.startswith(p):
-                        try:
-                            cpp, cpi, cpiv = utils.split_prefixed_name(param)
-                            if cpp == p:
-                                match = True
-                                break
-                        except:
-                            continue
-                return match
-            except:
-                return match
+    def print_par(self,):
+        result = ""
+        for p in self.params:
+            result += getattr(self, p).as_parfile_line()
+        return result
 
-def generate_timing_model(name, components, attributes={}):
+class DelayComponent(Component):
+    def __init__(self,):
+        super(DelayComponent, self).__init__()
+        self.delay_funcs_component = []
 
-    """Build a timing model from components.
 
-    Returns a timing model class generated from the specifiied
-    sub-components.  The return value is a class type, not an instance,
-    so needs to be called to generate a usable instance.  For example:
+class PhaseComponent(Component):
+    def __init__(self,):
+        super(PhaseComponent, self).__init__()
+        self.phase_funcs_component = []
+        self.phase_derivs_wrt_delay = []
 
-    MyModel = generate_timing_model("MyModel",(Astrometry,Spindown),{})
-    my_model = MyModel()
-    my_model.read_parfile("J1234+1234.par")
-    """
-    # Test that all the components are derived from
-    # TimingModel
-    try:
-        numComp = len(components)
-    except:
-        components = (components,)
-    cps = {}
-    for c in components:
-        try:
-            if not issubclass(c,TimingModel):
-                raise(TypeError("Class "+c.__name__+
-                                 " is not a subclass of TimingModel"))
-        except:
-            raise(TypeError("generate_timing_model() Arg 2"+
-                            "has to be a tuple of classes"))
-        cp = c()
-        cpi = ComponentInfo(cp)
-        cps[cpi.name] = cpi
-    attributes['components'] = cps
-
-    return type(name, components, attributes)
 
 class TimingModelError(Exception):
     """Generic base class for timing model errors."""

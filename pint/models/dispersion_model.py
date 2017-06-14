@@ -3,7 +3,7 @@
 
 from warnings import warn
 from . import parameter as p
-from .timing_model import TimingModel, Cache
+from .timing_model import DelayComponent
 import astropy.units as u
 import numpy as np
 import pint.utils as ut
@@ -18,7 +18,7 @@ from ..utils import taylor_horner, split_prefixed_name
 # Astronomy, Second edition, Page 86, Note 1
 DMconst = 1.0/2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
 
-class Dispersion(TimingModel):
+class Dispersion(DelayComponent):
     """This class provides a base dispersion timing model. The dm varience will
     be treated linearly.
     """
@@ -37,9 +37,8 @@ class Dispersion(TimingModel):
                        description="Epoch of DM measurement"))
 
         self.dm_value_funcs = [self.base_dm,]
-        self.delay_funcs['L1'] += [self.dispersion_delay,]
-        self.order_number = 2
-        self.print_par_func = 'print_par_DMs'
+        self.delay_funcs_component += [self.dispersion_delay,]
+        self.category = 'dispersion'
 
     def setup(self):
         super(Dispersion, self).setup()
@@ -48,11 +47,11 @@ class Dispersion(TimingModel):
             if self.DMEPOCH.value is None:
                 raise MissingParameter("Dispersion", "DMEPOCH",
                         "DMEPOCH is required if DM1 or higher are set")
-        base_dms = list(self.get_prefix_mapping('DM').values())
+        base_dms = list(self.get_prefix_mapping_component('DM').values())
         base_dms += ['DM',]
 
         for dm_name in base_dms:
-            self.register_deriv_funcs(self.d_delay_d_DMs, 'delay', dm_name)
+            self.register_deriv_funcs(self.d_delay_d_DMs, dm_name)
 
     def DM_dervative_unit(self, n):
         return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
@@ -63,7 +62,7 @@ class Dispersion(TimingModel):
     def get_DM_terms(self):
         """Return a list of the DM term values in the model: [DM, DM1, ..., DMn]
         """
-        prefix_dm = list(self.get_prefix_mapping('DM').values())
+        prefix_dm = list(self.get_prefix_mapping_component('DM').values())
         dm_terms = [self.DM.quantity,]
         dm_terms += [getattr(self, x).quantity for x in prefix_dm]
         return dm_terms
@@ -92,7 +91,7 @@ class Dispersion(TimingModel):
         dmdelay = DM * DMconst / freq**2.0
         return dmdelay
 
-    def dispersion_delay(self, toas):
+    def dispersion_delay(self, toas, acc_delay=None):
         try:
             bfreq = self.barycentric_radio_freq(toas)
         except AttributeError:
@@ -105,11 +104,11 @@ class Dispersion(TimingModel):
 
         return self.dispersion_time_delay(dm, bfreq)
 
-    def print_par_DMs(self,):
+    def print_par(self,):
         # TODO we need to have a better design for print out the parameters in
         # an inhertance class.
         result  = ''
-        prefix_dm = list(self.get_prefix_mapping('DM').values())
+        prefix_dm = list(self.get_prefix_mapping_component('DM').values())
         dms = ['DM'] + prefix_dm
         for dm in dms:
             result += getattr(self, dm).as_parfile_line()
@@ -122,7 +121,7 @@ class Dispersion(TimingModel):
                 result += getattr(self, pm).as_parfile_line()
         return result
 
-    def d_delay_d_DMs(self, toas, param_name): # NOTE we should have a better name for this.
+    def d_delay_d_DMs(self, toas, param_name, acc_delay=None): # NOTE we should have a better name for this.
         """Derivatives for constant DM
         """
         try:
@@ -178,14 +177,13 @@ class DispersionDMX(Dispersion):
                        parameter_type='MJD', time_scale='utc'))
         self.dm_value_funcs += [self.dmx_dm,]
         self.set_special_params(['DMX_0001', 'DMXR1_0001','DMXR2_0001'])
-        self.print_par_func = 'print_par_DMX'
 
     def setup(self):
         super(DispersionDMX, self).setup()
         # Get DMX mapping.
-        DMX_mapping = self.get_prefix_mapping('DMX_')
-        DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
-        DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
+        DMX_mapping = self.get_prefix_mapping_component('DMX_')
+        DMXR1_mapping = self.get_prefix_mapping_component('DMXR1_')
+        DMXR2_mapping = self.get_prefix_mapping_component('DMXR2_')
         if len(DMX_mapping) != len(DMXR1_mapping):
             errorMsg = 'Number of DMX_ parameters is not'
             errorMsg += 'equals to Number of DMXR1_ parameters. '
@@ -200,15 +198,15 @@ class DispersionDMX(Dispersion):
         # create d_delay_d_dmx functions
         for prefix_par in self.get_params_of_type('prefixParameter'):
             if prefix_par.startswith('DMX_'):
-                self.register_deriv_funcs(self.d_delay_d_DMX, 'delay', prefix_par)
+                self.register_deriv_funcs(self.d_delay_d_DMX, prefix_par)
 
     def dmx_dm(self, toas):
         condition = {}
         if not hasattr(self, 'dmx_toas_selector'):
             self.dmx_toas_selector = TOASelect(is_range=True)
-        DMX_mapping = self.get_prefix_mapping('DMX_')
-        DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
-        DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
+        DMX_mapping = self.get_prefix_mapping_component('DMX_')
+        DMXR1_mapping = self.get_prefix_mapping_component('DMXR1_')
+        DMXR2_mapping = self.get_prefix_mapping_component('DMXR2_')
         for epoch_ind in DMX_mapping.keys():
             r1 = getattr(self, DMXR1_mapping[epoch_ind]).quantity
             r2 = getattr(self, DMXR2_mapping[epoch_ind]).quantity
@@ -220,14 +218,14 @@ class DispersionDMX(Dispersion):
            dm[v] = getattr(self, k).quantity
         return dm
 
-    def d_delay_d_DMX(self, toas, param_name):
+    def d_delay_d_DMX(self, toas, param_name, acc_delay=None):
         condition = {}
         if not hasattr(self, 'dmx_toas_selector'):
             self.dmx_toas_selector = TOASelect(is_range=True)
         param = getattr(self, param_name)
         dmx_index = param.index
-        DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
-        DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
+        DMXR1_mapping = self.get_prefix_mapping_component('DMXR1_')
+        DMXR2_mapping = self.get_prefix_mapping_component('DMXR2_')
         r1 = getattr(self, DMXR1_mapping[dmx_index]).quantity
         r2 = getattr(self, DMXR2_mapping[dmx_index]).quantity
         condition = {param_name:(r1.mjd, r2.mjd)}
@@ -243,11 +241,11 @@ class DispersionDMX(Dispersion):
            dmx[v] = 1.0
         return DMconst * dmx / bfreq**2.0
 
-    def print_par_DMX(self,):
+    def print_par(self,):
         result = ''
-        DMX_mapping = self.get_prefix_mapping('DMX_')
-        DMXR1_mapping = self.get_prefix_mapping('DMXR1_')
-        DMXR2_mapping = self.get_prefix_mapping('DMXR2_')
+        DMX_mapping = self.get_prefix_mapping_component('DMX_')
+        DMXR1_mapping = self.get_prefix_mapping_component('DMXR1_')
+        DMXR2_mapping = self.get_prefix_mapping_component('DMXR2_')
         result += getattr(self, 'DM').as_parfile_line()
         result += getattr(self, 'DMX').as_parfile_line()
         sorted_list = sorted(DMX_mapping.keys())

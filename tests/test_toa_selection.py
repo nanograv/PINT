@@ -1,7 +1,7 @@
 import pint.models.model_builder as mb
 import pint.toa as toa
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from astropy.table import Table
 import astropy.units as u
 import os, unittest
@@ -121,3 +121,6 @@ class TestTOAselection(unittest.TestCase):
         assert len(indx0005_2) == 0
         assert len(run1) == len(run2)
         assert np.allclose(run1, run2)
+
+if __name__ =="__main__":
+    unittest.main()
