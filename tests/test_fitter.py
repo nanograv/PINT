@@ -10,8 +10,8 @@ import numpy
 from pinttestdata import testdir, datadir
 
 # Get model
-m = tm.StandardTimingModel()
-m.read_parfile(os.path.join(datadir,'NGC6440E.par'))
+
+m = tm.get_model(os.path.join(datadir,'NGC6440E.par'))
 
 # Get TOAs
 t = toa.TOAs(os.path.join(datadir,'NGC6440E.tim'))

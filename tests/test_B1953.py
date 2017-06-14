@@ -17,7 +17,7 @@ class TestB1953(unittest.TestCase):
     def setUpClass(self):
         self.parfileB1953 = 'B1953+29_NANOGrav_dfg+12_TAI_FB90.par'
         self.timB1953 = 'B1953+29_NANOGrav_dfg+12.tim'
-        self.toasB1953 = toa.get_TOAs(self.timB1953, ephem="DE405", 
+        self.toasB1953 = toa.get_TOAs(self.timB1953, ephem="DE405",
                                       planets=False, include_bipm=False)
         self.modelB1953 = mb.get_model(self.parfileB1953)
         # tempo result
@@ -26,7 +26,7 @@ class TestB1953(unittest.TestCase):
         print(self.ltres)
     def test_B1953_binary_delay(self):
         # Calculate delays with PINT
-        pint_binary_delay = self.modelB1953.binarymodel_delay(self.toasB1953.table)
+        pint_binary_delay = self.modelB1953.binarymodel_delay(self.toasB1953.table, None)
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-8), 'B1953 binary delay test failed.'
 
     def test_B1953(self):

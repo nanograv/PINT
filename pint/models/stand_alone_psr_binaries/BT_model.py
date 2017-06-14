@@ -1,5 +1,4 @@
 from .binary_generic import PSR_BINARY
-from pint.models.timing_model import Cache
 import numpy as np
 import astropy.units as u
 import astropy.constants as c
@@ -88,7 +87,6 @@ class BTmodel(PSR_BINARY):
         if input_params is not None:
             self.update_input(param_dict=input_params)
 
-    @Cache.use_cache
     def delayL1(self):
         """First term of Blandford & Teukolsky (1976), ApJ, 205,
         580-591, eq 2.33/ First left-hand term of W.M. Smart, (1962),
@@ -100,7 +98,6 @@ class BTmodel(PSR_BINARY):
         """
         return self.a1()/c.c*np.sin(self.omega())*(np.cos(self.E())-self.ecc())
 
-    @Cache.use_cache
     def delayL2(self):
         """Second term of Blandford & Teukolsky (1976), ApJ, 205,
         580-591, eq 2.33/ / Second left-hand term of W.M. Smart, (1962),
@@ -114,7 +111,6 @@ class BTmodel(PSR_BINARY):
         return (a1*np.cos(self.omega())*\
                 np.sqrt(1-self.ecc()**2)+self.GAMMA)*np.sin(self.E())
 
-    @Cache.use_cache
     def delayR(self):
         """Third term of Blandford & Teukolsky (1976), ApJ, 205,
         580-591, eq 2.33 / Right-hand term of W.M. Smart, (1962),
@@ -135,7 +131,6 @@ class BTmodel(PSR_BINARY):
         #return 1.0 - 2*np.pi*num / (den * self.pbprime())
         return 1.0 - 2*np.pi*num / (den * self.PB.to(u.second))
 
-    @Cache.use_cache
     def BTdelay(self):
         """Full BT model delay"""
         return (self.delayL1() + self.delayL2()) * self.delayR()
@@ -144,144 +139,112 @@ class BTmodel(PSR_BINARY):
 
     # NOTE: Below, OMEGA is supposed to be in RADIANS!
     # TODO: Fix UNITS!!!
-    @Cache.use_cache
     def d_delayL1_d_E(self):
         a1 = self.a1()/c.c
         return -a1*np.sin(self.omega())*np.sin(self.E())
 
-    @Cache.use_cache
     def d_delayL2_d_E(self):
         a1 = self.a1()/c.c
         return (a1*np.cos(self.omega())*np.sqrt(1-self.ecc()**2)+self.GAMMA) * np.cos(self.E())
 
-    @Cache.use_cache
     def d_delayL1_d_A1(self):
         return np.sin(self.omega())*(np.cos(self.E()) - self.ecc())/c.c
 
-    @Cache.use_cache
     def d_delayL1_d_A1DOT(self):
         return self.tt0 * self.d_delayL1_d_A1()
 
-    @Cache.use_cache
     def d_delayL2_d_A1(self):
         return np.cos(self.omega())*np.sqrt(1-self.ecc()**2)*np.sin(self.E())/c.c
 
-    @Cache.use_cache
     def d_delayL2_d_A1DOT(self):
         return self.tt0 * self.d_delayL2_d_A1()
 
-    @Cache.use_cache
     def d_delayL1_d_OM(self):
         a1 = self.a1()/c.c
         return a1*np.cos(self.omega())*(np.cos(self.E())-self.ecc())
 
-    @Cache.use_cache
     def d_delayL1_d_OMDOT(self):
         return self.tt0 * self.d_delayL1_d_OM()
 
-    @Cache.use_cache
     def d_delayL2_d_OM(self):
         a1 = self.a1()/c.c
         return -a1*np.sin(self.omega())*np.sqrt(1-self.ecc()**2)*np.sin(self.E())
 
-    @Cache.use_cache
     def d_delayL2_d_OMDOT(self):
         return self.tt0 * self.d_delayL2_d_OM()
 
-    @Cache.use_cache
     def d_delayL1_d_ECC(self):
         a1 = self.a1()/c.c
         return a1*np.sin(self.omega()) + \
                self.d_delayL1_d_E() * self.d_E_d_ECC()
 
-    @Cache.use_cache
     def d_delayL1_d_EDOT(self):
         return self.tt0 * self.d_delayL1_d_ECC()
 
-    @Cache.use_cache
     def d_delayL2_d_ECC(self):
         a1 = self.a1()/c.c
         num = -a1*np.cos(self.omega())*self.ecc()*np.sin(self.E())
         den = np.sqrt(1-self.ecc()**2)
         return num/den + self.d_delayL2_d_E() * self.d_E_d_ECC()
 
-    @Cache.use_cache
     def d_delayL2_d_EDOT(self):
         return self.tt0 * self.d_delayL2_d_ECC()
 
-    @Cache.use_cache
     def d_delayL1_d_GAMMA(self):
         return np.zeros(len(self.t)) * u.second/u.second
 
-    @Cache.use_cache
     def d_delayL2_d_GAMMA(self):
         return np.sin(self.E())
 
-    @Cache.use_cache
     def d_delayL1_d_T0(self):
         return self.d_delayL1_d_E() * self.d_E_d_T0()
 
-    @Cache.use_cache
     def d_delayL2_d_T0(self):
         return self.d_delayL2_d_E() * self.d_E_d_T0()
 
-    @Cache.use_cache
     def d_delayL1_d_PB(self):
         return self.d_delayL1_d_E() * self.d_E_d_PB()
 
-    @Cache.use_cache
     def d_delayL2_d_PB(self):
         return self.d_delayL2_d_E() * self.d_E_d_PB()
 
-    @Cache.use_cache
     def d_delayL1_d_PBDOT(self):
         return self.d_delayL1_d_E() * self.d_E_d_PBDOT()
 
-    @Cache.use_cache
     def d_delayL2_d_PBDOT(self):
         return self.d_delayL2_d_E() * self.d_E_d_PBDOT()
 
-    @Cache.use_cache
     def d_delay_d_A1(self):
         return self.delayR() * (self.d_delayL1_d_A1() + self.d_delayL2_d_A1())
 
-    @Cache.use_cache
     def d_delay_d_A1DOT(self):
         return self.delayR() * (self.d_delayL1_d_A1DOT() + \
                 self.d_delayL2_d_A1DOT())
 
-    @Cache.use_cache
     def d_delay_d_OM(self):
         return self.delayR() * (self.d_delayL1_d_OM() + self.d_delayL2_d_OM())
 
-    @Cache.use_cache
     def d_delay_d_OMDOT(self):
         return self.delayR() * (self.d_delayL1_d_OMDOT() + \
                 self.d_delayL2_d_OMDOT())
 
-    @Cache.use_cache
     def d_delay_d_ECC(self):
         return self.delayR() * (self.d_delayL1_d_ECC() + self.d_delayL2_d_ECC())
 
-    @Cache.use_cache
     def d_delay_d_EDOT(self):
         return self.delayR() * (self.d_delayL1_d_EDOT() + \
                 self.d_delayL2_d_EDOT())
 
-    @Cache.use_cache
     def d_delay_d_PB(self):
         return self.delayR() * (self.d_delayL1_d_PB() + self.d_delayL2_d_PB())
 
-    @Cache.use_cache
     def d_delay_d_PBDOT(self):
         return self.delayR() * (self.d_delayL1_d_PBDOT() + \
                 self.d_delayL2_d_PBDOT())
 
-    @Cache.use_cache
     def d_delay_d_T0(self):
         return self.delayR() * (self.d_delayL1_d_T0() + self.d_delayL2_d_T0())
 
-    @Cache.use_cache
     def d_delay_d_GAMMA(self):
         return self.delayR() * (self.d_delayL1_d_GAMMA() + self.d_delayL2_d_GAMMA())
 

@@ -4,11 +4,11 @@
 # Defines PhaseJump timing model class
 import numpy
 import astropy.units as u
-from .timing_model import TimingModel, MissingParameter
+from .timing_model import DelayComponent, MissingParameter
 from . import parameter as p
 
 
-class JumpDelay(TimingModel):
+class JumpDelay(DelayComponent):
     """This is a class to implement phase jumps
     """
     register = True
@@ -16,9 +16,8 @@ class JumpDelay(TimingModel):
         super(JumpDelay, self).__init__()
         # TODO: In the future we should have phase jump as well.
         self.add_param(p.maskParameter(name = 'JUMP', units='second'))
-        self.delay_funcs['L1'] += [self.jump_delay,]
-        self.order_number = -1
-        self.print_par_func = 'print_par_JumpDelay'
+        self.delay_funcs_component += [self.jump_delay,]
+        self.category = 'jump_delay'
 
     def setup(self):
         super(JumpDelay, self).setup()
@@ -27,9 +26,9 @@ class JumpDelay(TimingModel):
             if mask_par.startswith('JUMP'):
                 self.jumps.append(mask_par)
         for j in self.jumps:
-            self.register_deriv_funcs(self.d_delay_d_jump, 'delay', j)
+            self.register_deriv_funcs(self.d_delay_d_jump, j)
 
-    def jump_delay(self, toas):
+    def jump_delay(self, toas, acc_delay=None):
         """This method returns the jump delays for each toas section collected by
         jump parameters. The delay value is determined by jump parameter value
         in the unit of seconds.
@@ -43,14 +42,14 @@ class JumpDelay(TimingModel):
             jdelay[mask] += -jump_par.value
         return jdelay
 
-    def d_delay_d_jump(self, toas, jump_param):
+    def d_delay_d_jump(self, toas, jump_param, acc_delay=None):
         d_delay_d_j = numpy.zeros(len(toas))
         jpar = getattr(self, jump_param)
         mask = jpar.select_toa_mask(toas)
         d_delay_d_j[mask] = -1.0
         return d_delay_d_j * u.second/jpar.units
 
-    def print_par_JumpDelay(self):
+    def print_par(self):
         result = ''
         for jump in self.jumps:
             jump_par = getattr(self, jump)

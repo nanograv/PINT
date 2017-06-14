@@ -2,7 +2,7 @@ from pint import ls,GMsun,Tsun
 from .stand_alone_psr_binaries.DD_model import DDmodel
 from .pulsar_binary import PulsarBinary
 from . import parameter as p
-from .timing_model import Cache, TimingModel, MissingParameter
+from .timing_model import MissingParameter
 import astropy.units as u
 
 
@@ -26,28 +26,23 @@ class BinaryDD(PulsarBinary):
         self.binary_model_class = DDmodel
         self.add_param(p.floatParameter(name="A0", value=0.0,
              units="s",
-             description="DD model aberration parameter A0"),
-             binary_param = True)
+             description="DD model aberration parameter A0"))
 
         self.add_param(p.floatParameter(name="B0", value=0.0,
              units="s",
-             description="DD model aberration parameter B0",),
-             binary_param = True)
+             description="DD model aberration parameter B0",))
 
         self.add_param(p.floatParameter(name="GAMMA", value=0.0,
              units="second",
-             description="Time dilation & gravitational redshift"),
-             binary_param = True)
+             description="Time dilation & gravitational redshift"))
 
         self.add_param(p.floatParameter(name="DR", value=0.0,
              units="",
-             description="Relativistic deformation of the orbit"),
-             binary_param = True)
+             description="Relativistic deformation of the orbit"))
 
         self.add_param(p.floatParameter(name="DTH", value=0.0,
              units="",
-             description="Relativistic deformation of the orbit",),
-             binary_param = True)
+             description="Relativistic deformation of the orbit",))
 
 
     def setup(self):

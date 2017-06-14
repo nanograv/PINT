@@ -5,7 +5,7 @@ from pint import utils
 from .stand_alone_psr_binaries.ELL1_model import ELL1model
 from .pulsar_binary import PulsarBinary
 from . import parameter as p
-from .timing_model import Cache, TimingModel, MissingParameter
+from .timing_model import MissingParameter
 import astropy
 from ..utils import time_from_mjd_string, time_to_longdouble
 import astropy.units as u
@@ -30,24 +30,23 @@ class BinaryELL1(PulsarBinary):
         self.binary_model_class = ELL1model
 
         self.add_param(p.MJDParameter(name="TASC",
-                       description="Epoch of ascending node", time_scale='tdb'),
-                       binary_param = True)
+                       description="Epoch of ascending node", time_scale='tdb'))
 
         self.add_param(p.floatParameter(name="EPS1", units="",
              description="First Laplace-Lagrange parameter, ECC x sin(OM) for ELL1 model",
-             long_double = True), binary_param = True)
+             long_double = True))
 
         self.add_param(p.floatParameter(name="EPS2", units="",
              description="Second Laplace-Lagrange parameter, ECC x cos(OM) for ELL1 model",
-             long_double = True), binary_param = True)
+             long_double = True))
 
         self.add_param(p.floatParameter(name="EPS1DOT", units="1e-12/s",
              description="First derivative of first Laplace-Lagrange parameter",
-             long_double = True), binary_param = True)
+             long_double = True))
 
         self.add_param(p.floatParameter(name="EPS2DOT", units="1e-12/s",
              description="Second derivative of first Laplace-Lagrange parameter",
-             long_double = True), binary_param = True)
+             long_double = True))
 
     def setup(self):
         """Check out parameters setup.

@@ -2,7 +2,7 @@
 """This module contains implementations of pulsar timing models.
 """
 # Import the main timing model classes
-from .timing_model import TimingModel, generate_timing_model
+from .timing_model import TimingModel
 
 # Import all standard model components here
 from .astrometry import AstrometryEquatorial, AstrometryEcliptic
@@ -18,8 +18,8 @@ from .solar_system_shapiro import SolarSystemShapiro
 from .model_builder import get_model
 
 # Define a standard basic model
-StandardTimingModel = generate_timing_model("StandardTimingModel",
-        (AstrometryEquatorial, Spindown, Dispersion, SolarSystemShapiro))
+StandardTimingModel = TimingModel("StandardTimingModel",
+          (AstrometryEquatorial(), Spindown(), Dispersion(), SolarSystemShapiro()))
 # BTTimingModel = generate_timing_model("BTTimingModel",
 #         (Astrometry, Spindown, Dispersion, SolarSystemShapiro, BT))
 # DDTimingModel = generate_timing_model("DDTimingModel",

@@ -1,5 +1,4 @@
 from .binary_generic import PSR_BINARY
-from pint.models.timing_model import Cache
 import numpy as np
 import astropy.units as u
 import astropy.constants as c
@@ -35,24 +34,20 @@ class ELL1model(PSR_BINARY):
         ttasc = (t - self.TASC).to('second')
         return ttasc
 
-    @Cache.cache_result
     def a1(self):
         """ELL1 model a1 calculation. This method overrides the a1() method in
         pulsar_binary.py. Instead of tt0, it uses ttasc.
         """
         return self.A1 + self.ttasc()*self.A1DOT
 
-    @Cache.cache_result
     def d_a1_d_A1(self):
         return np.longdouble(np.ones(len(self.ttasc())))*u.Unit('')
 
-    @Cache.cache_result
     def d_a1_d_T0(self):
         result = np.empty(len(self.ttasc()))
         result.fill(-self.A1DOT.value)
         return result*u.Unit(self.A1DOT.unit)
 
-    @Cache.cache_result
     def d_a1_d_A1DOT(self):
         return self.ttasc()
 
@@ -96,7 +91,6 @@ class ELL1model(PSR_BINARY):
         phase = (orbits - norbits)*2*np.pi*u.rad
         return phase
 
-    @Cache.cache_result
     def d_Phi_d_TASC(self):
         """dPhi/dTASC
         """
@@ -105,7 +99,6 @@ class ELL1model(PSR_BINARY):
         ttasc = self.ttasc()
         return (PBDOT*ttasc/PB-1.0)*2*np.pi*u.rad/PB
 
-    @Cache.cache_result
     def d_Phi_d_PB(self):
         """dPhi/dPB
         """
@@ -114,7 +107,6 @@ class ELL1model(PSR_BINARY):
         ttasc = self.ttasc()
         return 2*np.pi*u.rad*(PBDOT*ttasc**2/PB**3 - ttasc/PB**2)
 
-    @Cache.cache_result
     def d_Phi_d_PBDOT(self):
         """dPhi/dPBDOT
         """

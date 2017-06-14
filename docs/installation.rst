@@ -31,7 +31,7 @@ Prerequisites
   Some of those packages may have been already installed, for example by MacPorts.
   For MacPorts users, this command will get many of the requirements::
 
-    port install py27-numpy py27-scipy py27-astropy py27-nose py27-cython py27-emcee
+    port install py27-numpy py27-scipy py27-astropy py27-nose py27-cython py27-emcee py27-sphinx py27-sphinx_rtd_theme
 
   You probably want to avoid having multiple versions of packages installed,
   to reduce confusion.  Working in a virtualenv can be helpful.

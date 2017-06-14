@@ -9,42 +9,35 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 from . import parameter as p
-from .timing_model import TimingModel, MissingParameter
+from .timing_model import PhaseComponent, MissingParameter
 from ..phase import *
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble,\
     taylor_horner, time_from_longdouble, split_prefixed_name, taylor_horner_deriv
 
 
 
-class Spindown(TimingModel):
+class Spindown(PhaseComponent):
     """This class provides a simple timing model for an isolated pulsar."""
     register = True
     def __init__(self):
         super(Spindown, self).__init__()
-
-        # The number of terms in the taylor exapansion of spin freq (F0...FN)
-        #self.num_spin_terms = maxderivs
-
         self.add_param(p.floatParameter(name="F0", value=0.0, units="Hz",
                        description="Spin-frequency", long_double=True))
-
         self.add_param(p.prefixParameter(name="F1", value=0.0, units='Hz/s^1',
                        description="Spindown-rate",
                        unit_template=self.F_unit,
                        description_template=self.F_description,
                        type_match='float', long_double=True))
-
         self.add_param(p.MJDParameter(name="TZRMJD",
                        description="Reference epoch for phase = 0.0",
                        time_scale='tdb'))
-
         self.add_param(p.MJDParameter(name="PEPOCH",
                        description="Reference epoch for spin-down",
                        time_scale='tdb'))
 
-        self.phase_funcs += [self.spindown_phase,]
-        self.order_number = 1
-        self.print_par_func = 'print_par_F'
+        self.phase_funcs_component += [self.spindown_phase,]
+        self.category = 'spindown'
+        self.phase_derivs_wrt_delay += [self.d_spindown_phase_d_delay,]
 
     def setup(self):
         super(Spindown, self).setup()
@@ -54,7 +47,7 @@ class Spindown(TimingModel):
                 raise MissingParameter("Spindown", p)
 
         # Check continuity
-        F_terms = list(self.get_prefix_mapping('F').keys())
+        F_terms = list(self.get_prefix_mapping_component('F').keys())
         F_terms.sort()
         F_in_order = list(range(1, max(F_terms)+1))
         if not F_terms == F_in_order:
@@ -67,9 +60,9 @@ class Spindown(TimingModel):
                 raise MissingParameter("Spindown", "PEPOCH",
                         "PEPOCH is required if F1 or higher are set")
         self.num_spin_terms = len(F_terms) + 1
-        for fp in list(self.get_prefix_mapping('F').values()) + ['F0',]:
-            self.register_deriv_funcs(self.d_phase_d_F, 'phase', fp)
-        self.register_deriv_funcs(self.d_spindown_phase_d_delay, 'd_phase_d_delay')
+        # Add derivative functions
+        for fp in list(self.get_prefix_mapping_component('F').values()) + ['F0',]:
+            self.register_deriv_funcs(self.d_phase_d_F, fp)
 
     def F_description(self, n):
         """Template function for description"""
@@ -120,7 +113,7 @@ class Spindown(TimingModel):
         phs_pepoch = taylor_horner(-dt_pepoch, fterms)
         return phs_tzrmjd - phs_pepoch
 
-    def print_par_F(self,):
+    def print_par(self,):
         result = ''
         f_terms = ["F%d" % ii for ii in
                 range(self.num_spin_terms)]
