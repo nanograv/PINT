@@ -444,9 +444,6 @@ class TimingModel(object):
                 idx = delay_names.index(cutoff_component)
                 if include_last:
                     idx += 1
-                else:
-                    log.warn("Cut off delay component '%s' is not included in"
-                             " delay calculation." % cutoff_component)
             else:
                 raise KeyError("No delay component named '%s'." % cutoff_component)
 
