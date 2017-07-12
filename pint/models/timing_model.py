@@ -79,7 +79,7 @@ class TimingModel(object):
         Dictionary, Gives all the functions for delay derivatives.
     d_phase_d_delay_funcs:
         Dictionary, Gives all the functions for phase derivatives with respect
-        to total delay. 
+        to total delay.
     """
 
     def __init__(self, name='', components=[]):
@@ -256,8 +256,10 @@ class TimingModel(object):
                 comp_types[comp_type] = [cp,]
             cp._parent = self
 
-        self.component_types = list(comp_types.keys())
-        for ct in self.component_types:
+        for types in comp_types.keys():
+            if types not in self.component_types:
+                self.component_types.append(types)
+        for ct in comp_types.keys():
             setattr(self, ct+'_list', comp_types[ct])
 
     def add_component(self, component, order=None, force=False):
@@ -442,9 +444,6 @@ class TimingModel(object):
                 idx = delay_names.index(cutoff_component)
                 if include_last:
                     idx += 1
-                else:
-                    log.warn("Cut off delay component '%s' is not included in"
-                             " delay calculation." % cutoff_component)
             else:
                 raise KeyError("No delay component named '%s'." % cutoff_component)
 
