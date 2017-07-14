@@ -118,8 +118,8 @@ class Glitch(PhaseComponent):
             dF0 = getattr(self, "GLF0_%d" % idx).quantity
             dF1 = getattr(self, "GLF1_%d" % idx).quantity
             dF2 = getattr(self, "GLF2_%d" % idx).quantity
-            dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
-            dt = dt * u.second
+            dt = (toas['tdbld'] - eph) * u.day - delay
+            dt = dt.to(u.second)
             affected = dt > 0.0  # TOAs affected by glitch
             # decay term
             dF0D = getattr(self, "GLF0D_%d" % idx).quantity
@@ -142,8 +142,8 @@ class Glitch(PhaseComponent):
             raise ValueError("Can not calculate d_phase_d_GLPH with respect to %s." % param)
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLPH = getattr(self, param)
-        dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
-        dt = dt * u.second
+        dt = (toas['tdbld'] - eph) * u.day - delay
+        dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
         dpdGLPH = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.Unit("")/par_GLPH.units
         dpdGLPH[affected] += 1.0 * u.Unit("")/par_GLPH.units
@@ -158,8 +158,8 @@ class Glitch(PhaseComponent):
             raise ValueError("Can not calculate d_phase_d_GLF0 with respect to %s." % param)
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLF0 = getattr(self, param)
-        dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
-        dt = dt * u.second
+        dt = (toas['tdbld'] - eph) * u.day - delay
+        dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
         dpdGLF0 = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.Unit("")/par_GLF0.units
         dpdGLF0[affected] = dt[affected]
@@ -172,8 +172,8 @@ class Glitch(PhaseComponent):
             raise ValueError("Can not calculate d_phase_d_GLF1 with respect to %s." % param)
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLF1 = getattr(self, param)
-        dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
-        dt = dt * u.second
+        dt = (toas['tdbld'] - eph) * u.day - delay
+        dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
         dpdGLF1 = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.Unit("")/par_GLF1.units
         dpdGLF1[affected] += numpy.longdouble(0.5) * dt[affected] * dt[affected]
@@ -186,8 +186,8 @@ class Glitch(PhaseComponent):
             raise ValueError("Can not calculate d_phase_d_GLF2 with respect to %s." % param)
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLF2 = getattr(self, param)
-        dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
-        dt = dt * u.second
+        dt = (toas['tdbld'] - eph) * u.day - delay
+        dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
         dpdGLF2 = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.Unit("")/par_GLF2.units
         dpdGLF2[affected] += numpy.longdouble(1.0)/6.0 * dt[affected] * dt[affected] * dt[affected]
@@ -202,8 +202,8 @@ class Glitch(PhaseComponent):
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLF0D = getattr(self, param)
         tau = getattr(self, "GLTD_%d" % idv).quantity
-        dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
-        dt = dt * u.second
+        dt = (toas['tdbld'] - eph) * u.day - delay
+        dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
         dpdGLF0D = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.Unit("")/par_GLF0D.units
         dpdGLF0D[affected] += tau * (numpy.longdouble(1.0) - numpy.exp(- dt[affected]
@@ -222,8 +222,8 @@ class Glitch(PhaseComponent):
             return numpy.zeros(len(toas), dtype=numpy.longdouble) * u.Unit("")/par_GLTD.units
         glf0d = getattr(self, 'GLF0D_'+ids).quantity
         tau = par_GLTD.quantity
-        dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
-        dt = dt * u.second
+        dt = (toas['tdbld'] - eph) * u.day - delay
+        dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
         dpdGLTD = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.Unit("")/par_GLTD.units
         dpdGLTD[affected] += glf0d * (numpy.longdouble(1.0) - \

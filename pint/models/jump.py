@@ -40,7 +40,7 @@ class JumpDelay(DelayComponent):
             # NOTE: Currently parfile jump value has opposite sign with our
             # delay calculation.
             jdelay[mask] += -jump_par.value
-        return jdelay
+        return jdelay * u.second
 
     def d_delay_d_jump(self, toas, jump_param, acc_delay=None):
         d_delay_d_j = numpy.zeros(len(toas))

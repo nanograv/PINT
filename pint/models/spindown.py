@@ -85,15 +85,15 @@ class Spindown(PhaseComponent):
         #       after the TOAs are loaded (RvH -- June 2, 2015)
         # NOTE: Should we be using barycentric arrival times, instead of TDB?
         if self.TZRMJD.value is None:
-            self.TZRMJD.value = toas['tdb'][0] - delay[0]*u.s
+            self.TZRMJD.value = toas['tdb'][0] - delay[0]
         # Warning(paulr): This looks wrong.  You need to use the
         # TZRFREQ and TZRSITE to compute a proper TDB reference time.
         if not hasattr(self, "TZRMJDld"):
             self.TZRMJDld = time_to_longdouble(self.TZRMJD.value)
 
-        dt_tzrmjd = (toas['tdbld'] - self.TZRMJDld) * SECS_PER_DAY - delay
+        dt_tzrmjd = (toas['tdbld'] - self.TZRMJDld) * u.day - delay
         # TODO: what timescale should we use for pepoch calculation? Does this even matter?
-        dt_pepoch = (time_to_longdouble(self.PEPOCH.value) - self.TZRMJDld) * SECS_PER_DAY
+        dt_pepoch = (time_to_longdouble(self.PEPOCH.value) - self.TZRMJDld) * u.day
         return dt_tzrmjd, dt_pepoch
 
     def spindown_phase(self, toas, delay):
@@ -109,9 +109,9 @@ class Spindown(PhaseComponent):
         dt_tzrmjd, dt_pepoch = self.get_dt(toas, delay)
         # Add the [0.0] because that is the constant phase term
         fterms = [0.0] + self.get_spin_terms()
-        phs_tzrmjd = taylor_horner(dt_tzrmjd-dt_pepoch, fterms)
-        phs_pepoch = taylor_horner(-dt_pepoch, fterms)
-        return phs_tzrmjd - phs_pepoch
+        phs_tzrmjd = taylor_horner((dt_tzrmjd-dt_pepoch).to(u.second).value, fterms)
+        phs_pepoch = taylor_horner(-dt_pepoch.to(u.second).value, fterms)
+        return (phs_tzrmjd - phs_pepoch) 
 
     def print_par(self,):
         result = ''
@@ -140,12 +140,12 @@ class Spindown(PhaseComponent):
         fterms = numpy.longdouble(numpy.zeros(len(fterms)))
         fterms[order] = numpy.longdouble(1.0)
         dt_tzrmjd, dt_pepoch = self.get_dt(toas, delay)
-        d_ptzrmjd_d_f = taylor_horner(dt_tzrmjd-dt_pepoch, fterms)
-        d_ppepoch_d_f = taylor_horner(-dt_pepoch, fterms)
+        d_ptzrmjd_d_f = taylor_horner((dt_tzrmjd-dt_pepoch).to(u.second).value, fterms)
+        d_ppepoch_d_f = taylor_horner(-dt_pepoch.to(u.second).value, fterms)
         return (d_ptzrmjd_d_f - d_ppepoch_d_f) * u.Unit("")/unit
 
     def d_spindown_phase_d_delay(self, toas, delay):
         dt_tzrmjd, dt_pepoch = self.get_dt(toas, delay)
         fterms = [0.0] + self.get_spin_terms()
-        d_ptzrmjd_d_delay = taylor_horner_deriv(dt_tzrmjd-dt_pepoch, fterms)
+        d_ptzrmjd_d_delay = taylor_horner_deriv((dt_tzrmjd-dt_pepoch).to(u.second).value, fterms)
         return -d_ptzrmjd_d_delay * u.Unit("")/u.second

@@ -70,7 +70,7 @@ class Astrometry(DelayComponent):
             # TODO: numpy.sum currently loses units in some cases...
             re_sqr = numpy.sum(toas['ssb_obs_pos']**2, axis=1) * toas['ssb_obs_pos'].unit**2
             delay += (0.5 * (re_sqr / L) * (1.0 - re_dot_L**2 / re_sqr)).to(ls).value
-        return delay
+        return delay * u.second
 
     def get_d_delay_quantities(self, toas):
         """Calculate values needed for many d_delay_d_param functions """
