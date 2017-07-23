@@ -13,7 +13,7 @@ from .timing_model import PhaseComponent, MissingParameter
 from ..phase import *
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble,\
     taylor_horner, time_from_longdouble, split_prefixed_name, taylor_horner_deriv
-
+from pint import dimensionless_cycles
 
 
 class Spindown(PhaseComponent):
@@ -75,7 +75,7 @@ class Spindown(PhaseComponent):
     def get_spin_terms(self):
         """Return a list of the spin term values in the model: [F0, F1, ..., FN]
         """
-        return [getattr(self, "F%d" % ii).value for ii in
+        return [getattr(self, "F%d" % ii).quantity for ii in
                 range(self.num_spin_terms)]
 
     def get_dt(self, toas, delay):
@@ -108,10 +108,12 @@ class Spindown(PhaseComponent):
         """
         dt_tzrmjd, dt_pepoch = self.get_dt(toas, delay)
         # Add the [0.0] because that is the constant phase term
-        fterms = [0.0] + self.get_spin_terms()
-        phs_tzrmjd = taylor_horner((dt_tzrmjd-dt_pepoch).to(u.second).value, fterms)
-        phs_pepoch = taylor_horner(-dt_pepoch.to(u.second).value, fterms)
-        return (phs_tzrmjd - phs_pepoch) 
+        fterms = [0.0 * u.cycle] + self.get_spin_terms()
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            phs_tzrmjd = taylor_horner((dt_tzrmjd-dt_pepoch).to(u.second), \
+                                       fterms)
+            phs_pepoch = taylor_horner(-dt_pepoch.to(u.second), fterms)
+            return (phs_tzrmjd - phs_pepoch).to(u.cycle)
 
     def print_par(self,):
         result = ''
@@ -135,17 +137,21 @@ class Spindown(PhaseComponent):
         unit = par.units
         pn, idxf, idxv = split_prefixed_name(param)
         order = idxv + 1
-        fterms = [0.0] + self.get_spin_terms()
+        fterms = [0.0 * u.Unit("")] + self.get_spin_terms()
         # make the choosen fterms 1 others 0
-        fterms = numpy.longdouble(numpy.zeros(len(fterms)))
-        fterms[order] = numpy.longdouble(1.0)
+        fterms = [ft * numpy.longdouble(0.0)/unit for ft in fterms]
+        fterms[order] += numpy.longdouble(1.0)
         dt_tzrmjd, dt_pepoch = self.get_dt(toas, delay)
-        d_ptzrmjd_d_f = taylor_horner((dt_tzrmjd-dt_pepoch).to(u.second).value, fterms)
-        d_ppepoch_d_f = taylor_horner(-dt_pepoch.to(u.second).value, fterms)
-        return (d_ptzrmjd_d_f - d_ppepoch_d_f) * u.Unit("")/unit
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            d_ptzrmjd_d_f = taylor_horner((dt_tzrmjd-dt_pepoch).to(u.second), \
+                                          fterms)
+            d_ppepoch_d_f = taylor_horner(-dt_pepoch.to(u.second), fterms)
+            return (d_ptzrmjd_d_f - d_ppepoch_d_f).to(u.cycle/unit)
 
     def d_spindown_phase_d_delay(self, toas, delay):
         dt_tzrmjd, dt_pepoch = self.get_dt(toas, delay)
         fterms = [0.0] + self.get_spin_terms()
-        d_ptzrmjd_d_delay = taylor_horner_deriv((dt_tzrmjd-dt_pepoch).to(u.second).value, fterms)
-        return -d_ptzrmjd_d_delay * u.Unit("")/u.second
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            d_ptzrmjd_d_delay = taylor_horner_deriv((dt_tzrmjd-dt_pepoch).to( \
+                                                     u.second), fterms)
+            return -d_ptzrmjd_d_delay.to(u.cycle/u.second)
