@@ -83,4 +83,4 @@ class SolarSystemShapiro(DelayComponent):
                 for pl in ('jupiter', 'saturn', 'venus', 'uranus'):
                     delay[loind:hiind] += self.ss_obj_shapiro_delay(grp['obs_'+pl+'_pos'],
                                                    psr_dir, self._ss_mass_sec[pl])
-        return delay
+        return delay * u.second

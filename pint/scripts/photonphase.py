@@ -96,7 +96,7 @@ def main(argv=None):
     # Compute model phase for each TOA
     phss = modelin.phase(ts.table)[1]
     # ensure all postive
-    phases = np.where(phss < 0.0, phss + 1.0, phss)
+    phases = np.where(phss < 0.0 * u.cycle, phss + 1.0 * u.cycle, phss)
     mjds = ts.get_mjds()
     h = float(hm(phases))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h,h2sig(h)))

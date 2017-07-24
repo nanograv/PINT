@@ -1,6 +1,7 @@
 import astropy.units as u
 import numpy as np
 from .phase import Phase
+from pint import dimensionless_cycles
 
 class resids(object):
     """resids(toa=None, model=None)"""
@@ -36,7 +37,8 @@ class resids(object):
         """Return timing model residuals in time (seconds)."""
         if self.phase_resids is None:
             self.phase_resids = self.calc_phase_resids(weighted_mean=weighted_mean)
-        return (self.phase_resids / self.get_PSR_freq()).to(u.s)
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            return (self.phase_resids.to(u.Unit("")) / self.get_PSR_freq()).to(u.s)
 
     def get_PSR_freq(self):
         """Return pulsar rotational frequency in Hz. model.F0 must be defined."""
@@ -72,7 +74,7 @@ class resids(object):
 
             # This the fastest way, but highly depend on the assumption of time_resids and
             # error units.
-            return ((self.time_resids.value * 1e6 / self.toas.get_errors())**2.0).sum()
+            return ((self.time_resids / self.toas.get_errors().to(u.s))**2.0).sum()
     def get_dof(self):
         """Return number of degrees of freedom for the model."""
         dof = self.toas.ntoas

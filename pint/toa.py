@@ -465,7 +465,7 @@ class TOAs(object):
     @property
     def last_MJD(self):
         return self.get_mjds(high_precision=True).max()
- 
+
     def __add__(self, x):
         if type(x) in [int, float]:
             if not x:
@@ -483,8 +483,7 @@ class TOAs(object):
         if hasattr(self, "toas"):
             return numpy.array([t.freq.to(u.MHz).value for t in self.toas]) * u.MHz
         else:
-            x = self.table['freq']
-            return numpy.asarray(x) * x.unit
+            return self.table['freq'].quantity
 
     def get_mjds(self, high_precision=False):
         """ With high_precision is True
@@ -507,7 +506,7 @@ class TOAs(object):
             if hasattr(self, "toas"):
                 return numpy.array([t.mjd.mjd for t in self.toas]) * u.day
             else:
-                return self.table['mjd_float']
+                return self.table['mjd_float'].quantity
 
 
     def get_errors(self):
@@ -516,7 +515,7 @@ class TOAs(object):
         if hasattr(self, "toas"):
             return numpy.array([t.error.to(u.us).value for t in self.toas]) * u.us
         else:
-            return self.table['error']
+            return self.table['error'].quantity
 
     def get_obss(self):
         """Return a numpy array of the observatories for each TOA"""

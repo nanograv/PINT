@@ -29,28 +29,28 @@ f=fitter.WlsFitter(toas=t,model=m)
 print('chi^2 is initially %0.2f' % f.resids.chi2)
 
 # Plot initial residuals
-xt=[x for x in f.resids.toas.get_mjds()]
+xt = f.resids.toas.get_mjds().value
 yerr=t.get_errors()*1e-6
 plt.close()
-p1=plt.errorbar(xt,f.resids.time_resids.value,yerr,fmt='bo');
+p1=plt.errorbar(xt, f.resids.toas.get_mjds().value,f.resids.time_resids.value,yerr.value,fmt='bo');
 
 # Do a 4-parameter fit
 f.set_fitparams('F0','F1','RA','DEC')
 f.fit_toas()
 print('chi^2 is %0.2f after 4-param fit' % f.resids.chi2)
-p2=plt.errorbar(xt,f.resids.time_resids.value,yerr,fmt='go');
+p2=plt.errorbar(xt,f.resids.time_resids.value,yerr.value,fmt='go');
 
 # Now perturb F1 and fit only that. This doesn't work, though tempo2 easily fits
 # it.
 f.model.F1.value=1.1*f.model.F1.value
 f.fit_toas()
 print('chi^2 is %0.2f after perturbing F1' % f.resids.chi2)
-p3=plt.errorbar(xt,f.resids.time_resids.value,yerr,fmt='ms');
+p3=plt.errorbar(xt,f.resids.time_resids.value,yerr.value,fmt='ms');
 
 f.set_fitparams('F1')
 f.fit_toas()
 print('chi^2 is %0.2f after fitting just F1 with default method="Powell"' % f.resids.chi2)
-p4=plt.errorbar(xt,f.resids.time_resids.value,yerr,fmt='k^');
+p4=plt.errorbar(xt,f.resids.time_resids.value,yerr.value,fmt='k^');
 
 # Try a different method. This works, apparently.
 # NOTE: Disable this part since the interface has changed.

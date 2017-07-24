@@ -108,32 +108,33 @@ class Glitch(PhaseComponent):
         at the pulsar, in seconds.
         returns an array of phases in long double
         """
-        phs = numpy.zeros_like(toas, dtype=numpy.longdouble)
+        phs = numpy.zeros_like(toas, dtype=numpy.longdouble) * u.cycle
         glepnames = [x for x in self.params if x.startswith('GLEP_')]
-        for glepnm in glepnames:
-            glep = getattr(self, glepnm)
-            eph = glep.value
-            idx = glep.index
-            dphs = getattr(self, "GLPH_%d" % idx).quantity
-            dF0 = getattr(self, "GLF0_%d" % idx).quantity
-            dF1 = getattr(self, "GLF1_%d" % idx).quantity
-            dF2 = getattr(self, "GLF2_%d" % idx).quantity
-            dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
-            dt = dt * u.second
-            affected = dt > 0.0  # TOAs affected by glitch
-            # decay term
-            dF0D = getattr(self, "GLF0D_%d" % idx).quantity
-            if dF0D != 0.0:
-                tau = getattr(self, "GLTD_%d" % idx).quantity
-                decayterm = dF0D * tau * (1.0 - numpy.exp(- (dt[affected]
-                                          / tau).to(u.Unit(""))))
-            else:
-                decayterm = 0.0
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            for glepnm in glepnames:
+                glep = getattr(self, glepnm)
+                eph = glep.value
+                idx = glep.index
+                dphs = getattr(self, "GLPH_%d" % idx).quantity
+                dF0 = getattr(self, "GLF0_%d" % idx).quantity
+                dF1 = getattr(self, "GLF1_%d" % idx).quantity
+                dF2 = getattr(self, "GLF2_%d" % idx).quantity
+                dt = (toas['tdbld'] - eph) * u.day - delay
+                dt = dt.to(u.second)
+                affected = dt > 0.0  # TOAs affected by glitch
+                # decay term
+                dF0D = getattr(self, "GLF0D_%d" % idx).quantity
+                if dF0D != 0.0:
+                    tau = getattr(self, "GLTD_%d" % idx).quantity
+                    decayterm = dF0D * tau * (1.0 - numpy.exp(- (dt[affected]
+                                              / tau).to(u.Unit(""))))
+                else:
+                    decayterm = 0.0
 
-            phs[affected] += dphs + dt[affected] * \
-                (dF0 + 0.5 * dt[affected] * dF1 + \
-                 1./6. * dt[affected]*dt[affected] * dF2) + decayterm
-        return phs
+                phs[affected] += dphs + dt[affected] * \
+                    (dF0 + 0.5 * dt[affected] * dF1 + \
+                     1./6. * dt[affected]*dt[affected] * dF2) + decayterm
+            return phs.to(u.cycle)
 
     def d_phase_d_GLPH(self, toas, param, delay):
         """Calculate the derivative wrt GLPH_"""
@@ -142,11 +143,11 @@ class Glitch(PhaseComponent):
             raise ValueError("Can not calculate d_phase_d_GLPH with respect to %s." % param)
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLPH = getattr(self, param)
-        dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
-        dt = dt * u.second
+        dt = (toas['tdbld'] - eph) * u.day - delay
+        dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
-        dpdGLPH = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.Unit("")/par_GLPH.units
-        dpdGLPH[affected] += 1.0 * u.Unit("")/par_GLPH.units
+        dpdGLPH = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.cycle/par_GLPH.units
+        dpdGLPH[affected] += 1.0 * u.cycle/par_GLPH.units
         return dpdGLPH
 
     def d_phase_d_GLF0(self, toas, param, delay):
@@ -158,11 +159,12 @@ class Glitch(PhaseComponent):
             raise ValueError("Can not calculate d_phase_d_GLF0 with respect to %s." % param)
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLF0 = getattr(self, param)
-        dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
-        dt = dt * u.second
+        dt = (toas['tdbld'] - eph) * u.day - delay
+        dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
-        dpdGLF0 = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.Unit("")/par_GLF0.units
-        dpdGLF0[affected] = dt[affected]
+        dpdGLF0 = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.cycle/par_GLF0.units
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            dpdGLF0[affected] = dt[affected]
         return dpdGLF0
 
     def d_phase_d_GLF1(self, toas,  param, delay):
@@ -172,11 +174,12 @@ class Glitch(PhaseComponent):
             raise ValueError("Can not calculate d_phase_d_GLF1 with respect to %s." % param)
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLF1 = getattr(self, param)
-        dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
-        dt = dt * u.second
+        dt = (toas['tdbld'] - eph) * u.day - delay
+        dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
-        dpdGLF1 = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.Unit("")/par_GLF1.units
-        dpdGLF1[affected] += numpy.longdouble(0.5) * dt[affected] * dt[affected]
+        dpdGLF1 = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.cycle/par_GLF1.units
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            dpdGLF1[affected] += numpy.longdouble(0.5) * dt[affected] * dt[affected]
         return dpdGLF1
 
     def d_phase_d_GLF2(self, toas,  param, delay):
@@ -186,11 +189,12 @@ class Glitch(PhaseComponent):
             raise ValueError("Can not calculate d_phase_d_GLF2 with respect to %s." % param)
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLF2 = getattr(self, param)
-        dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
-        dt = dt * u.second
+        dt = (toas['tdbld'] - eph) * u.day - delay
+        dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
-        dpdGLF2 = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.Unit("")/par_GLF2.units
-        dpdGLF2[affected] += numpy.longdouble(1.0)/6.0 * dt[affected] * dt[affected] * dt[affected]
+        dpdGLF2 = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.cycle/par_GLF2.units
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            dpdGLF2[affected] += numpy.longdouble(1.0)/6.0 * dt[affected] * dt[affected] * dt[affected]
         return dpdGLF2
 
     def d_phase_d_GLF0D(self, toas, param, delay):
@@ -202,12 +206,13 @@ class Glitch(PhaseComponent):
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLF0D = getattr(self, param)
         tau = getattr(self, "GLTD_%d" % idv).quantity
-        dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
-        dt = dt * u.second
+        dt = (toas['tdbld'] - eph) * u.day - delay
+        dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
-        dpdGLF0D = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.Unit("")/par_GLF0D.units
-        dpdGLF0D[affected] += tau * (numpy.longdouble(1.0) - numpy.exp(- dt[affected]
-                                  / tau))
+        dpdGLF0D = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.cycle/par_GLF0D.units
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            dpdGLF0D[affected] += tau * (numpy.longdouble(1.0) - numpy.exp(- dt[affected]
+                                         / tau))
         return dpdGLF0D
 
     def d_phase_d_GLTD(self, toas, param, delay):
@@ -219,15 +224,16 @@ class Glitch(PhaseComponent):
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLTD = getattr(self, param)
         if par_GLTD.value == 0.0:
-            return numpy.zeros(len(toas), dtype=numpy.longdouble) * u.Unit("")/par_GLTD.units
+            return numpy.zeros(len(toas), dtype=numpy.longdouble) * u.cycle/par_GLTD.units
         glf0d = getattr(self, 'GLF0D_'+ids).quantity
         tau = par_GLTD.quantity
-        dt = (toas['tdbld'] - eph) * SECS_PER_DAY - delay
-        dt = dt * u.second
+        dt = (toas['tdbld'] - eph) * u.day - delay
+        dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
-        dpdGLTD = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.Unit("")/par_GLTD.units
-        dpdGLTD[affected] += glf0d * (numpy.longdouble(1.0) - \
-                             numpy.exp(- dt[affected] / tau)) + \
-                             glf0d * tau * (-numpy.exp(- dt[affected] / tau)) * \
-                             dt[affected] / (tau * tau)
+        dpdGLTD = numpy.zeros(len(toas), dtype=numpy.longdouble) * u.cycle/par_GLTD.units
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            dpdGLTD[affected] += glf0d * (numpy.longdouble(1.0) - \
+                                 numpy.exp(- dt[affected] / tau)) + \
+                                 glf0d * tau * (-numpy.exp(- dt[affected] / tau)) * \
+                                 dt[affected] / (tau * tau)
         return dpdGLTD

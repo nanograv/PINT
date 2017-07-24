@@ -93,7 +93,7 @@ class PulsarBinary(DelayComponent):
                 continue
             bparObj.value = bparObj.value * u.Unit(bparObj.units)
 
-    def update_binary_object(self, toas, acc_delay):
+    def update_binary_object(self, toas, acc_delay=None):
         """
         Update binary object instance for this set of parameters/toas
         """
@@ -104,7 +104,7 @@ class PulsarBinary(DelayComponent):
             # If the accumulate delay is not provided, it will try to get
             # the barycentric correction.
             acc_delay = self.delay(toas, self.__class__.__name__, False)
-        self.barycentric_time = toas['tdbld'] * u.day - acc_delay * u.second
+        self.barycentric_time = toas['tdbld'] * u.day - acc_delay 
         pardict = {}
         for par in self.binary_instance.binary_params:
             binary_par_names = [par,]
@@ -121,7 +121,7 @@ class PulsarBinary(DelayComponent):
         #NOTE something is wrong here.
         self.binary_instance.update_input(self.barycentric_time, pardict)
 
-    def binarymodel_delay(self, toas, acc_delay):
+    def binarymodel_delay(self, toas, acc_delay=None):
         """Return the binary model independent delay call"""
         self.update_binary_object(toas, acc_delay)
         return self.binary_instance.binary_delay()
