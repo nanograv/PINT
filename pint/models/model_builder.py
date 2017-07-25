@@ -148,24 +148,21 @@ class ModelBuilder(object):
             sorted_components.append(cp)
         return sorted_components
 
-    def search_prefix_param(self, paramList, prefix_inModel):
+    def search_prefix_param(self, paramList, model, prefix_type):
         """ Check if the Unrecognized parameter has prefix parameter
         """
         prefixs = {}
+        prefix_inModel = model.get_params_of_type(prefix_type)
         for pn in prefix_inModel:
-            try:
-                pre,idxstr,idxV = split_prefixed_name(pn)
-                prefixs[pre] = []
-            except:
-                continue
-
-        for p in paramList:
-            try:
-                pre,idxstr,idxV = split_prefixed_name(p)
-                if pre in prefixs.keys():
-                    prefixs[pre].append(p)
-            except:
-                continue
+            par = getattr(model,  pn)
+            prefixs[par.prefix] = []
+            for p in paramList:
+                try:
+                    pre,idxstr,idxV = split_prefixed_name(p)
+                    if pre in [par.prefix,] + par.prefix_aliases:
+                        prefixs[par.prefix].append(p)
+                except:
+                    continue
 
         return prefixs
 
@@ -198,11 +195,11 @@ class ModelBuilder(object):
                     self.param_unrecognized[pp] = self.param_inparF[pp]
 
             for ptype in ['prefixParameter', 'maskParameter']:
-                prefix_in_model = self.timing_model.get_params_of_type(ptype)
                 prefix_param = \
-                    self.search_prefix_param(
-                        list(self.param_unrecognized.keys()),
-                        prefix_in_model)
+                    self.search_prefix_param( \
+                         list(self.param_unrecognized.keys()),self.timing_model,
+                         ptype)
+                prefix_in_model = self.timing_model.get_params_of_type(ptype)
                 for key in prefix_param.keys():
                     ppnames = [x for x in prefix_in_model if x.startswith(key)]
                     for ppn in ppnames:
