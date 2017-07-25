@@ -684,7 +684,6 @@ class TimingModel(object):
 
             k = l.split()
             name = k[0].upper()
-
             if name in checked_param:
                 if name in repeat_param.keys():
                     repeat_param[name] += 1
@@ -692,7 +691,6 @@ class TimingModel(object):
                     repeat_param[name] = 2
                 k[0] = k[0] + str(repeat_param[name])
                 l = ' '.join(k)
-
             parsed = False
             for par in param_map.keys():
                 host_comp = param_map[par]
