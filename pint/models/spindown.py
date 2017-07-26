@@ -79,6 +79,11 @@ class Spindown(PhaseComponent):
                 range(self.num_spin_terms)]
 
     def get_dt(self, toas, delay):
+        """Return dt, the time from the phase 0 epoch to each TOA
+
+        Currently this uses a buggy version of TZRMJD to define the
+        phase 0 epoch. This needs to change to a real phase 0 epoch
+        """
         # If TZRMJD is not defined, use the first time as phase reference
         # NOTE, all of this ignores TZRSITE and TZRFRQ for the time being.
         # TODO: TZRMJD should be set by default somewhere in a standard place,
