@@ -97,7 +97,8 @@ class NICERObs(SpecialLocation):
         if self.tt2tdb_mode.lower().startswith('none'):
             log.warning('Using location=None for TT to TDB conversion')
         elif self.tt2tdb_mode.lower().startswith('geo'):
-            log.warning('Using location geocenter for TT to TDB conversion')        super(NICERObs, self).__init__(name=name)
+            log.warning('Using location geocenter for TT to TDB conversion')        
+        super(NICERObs, self).__init__(name=name)
 
     @property
     def timescale(self):
