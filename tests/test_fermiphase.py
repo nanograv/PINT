@@ -7,6 +7,7 @@ except ImportError:
     from io import StringIO
 import unittest
 import numpy as np
+import astropy.units as u
 import pint.scripts.fermiphase as fermiphase
 from pint.observatory.fermi_obs import FermiObs
 from pint.fermi_toas import load_Fermi_TOAs
@@ -46,7 +47,7 @@ class TestFermiPhase(unittest.TestCase):
         ts.compute_TDBs()
         ts.compute_posvels(ephem='DE405',planets=False)
         phss = modelin.phase(ts.table)[1]
-        phases = np.where(phss < 0.0, phss + 1.0, phss)
+        phases = np.where(phss < 0.0 * u.cycle, phss + 1.0 * u.cycle, phss)
 
 
 
