@@ -83,6 +83,7 @@ class NICERObs(SpecialLocation):
 """
 
     def __init__(self, name, FPorbname, tt2tdb_mode = 'none'):
+
         self.FPorb = load_FPorbit(FPorbname)
         # Now build the interpolator here:
         self.X = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['X'])
@@ -92,6 +93,11 @@ class NICERObs(SpecialLocation):
         self.Vy = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Vy'])
         self.Vz = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Vz'])
         self.tt2tdb_mode = tt2tdb_mode
+        # Print this warning once, mainly for @paulray
+        if self.tt2tdb_mode.lower().startswith('none'):
+            log.warning('Using location=None for TT to TDB conversion')
+        elif self.tt2tdb_mode.lower().startswith('geo'):
+            log.warning('Using location geocenter for TT to TDB conversion')        
         super(NICERObs, self).__init__(name=name)
 
     @property
@@ -102,10 +108,8 @@ class NICERObs(SpecialLocation):
         '''Return NICER spacecraft location in ITRF coordinates'''
 
         if self.tt2tdb_mode.lower().startswith('none'):
-            log.warning('Using location=None for TT to TDB conversion')
             return None
         elif self.tt2tdb_mode.lower().startswith('geo'):
-            log.warning('Using location geocenter for TT to TDB conversion')
             return EarthLocation.from_geocentric(0.0*u.m,0.0*u.m,0.0*u.m)
         elif self.tt2tdb_mode.lower().startswith('spacecraft'):
             # First, interpolate ECI geocentric location from orbit file.
