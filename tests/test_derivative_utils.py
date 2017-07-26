@@ -52,13 +52,15 @@ def get_derivative_params(model):
         if isinstance(par, pa.MJDParameter) or par.units == u.day:
             h = 1e-8
         elif p in ['SINI']:
-            h = 1e-4
+            h = 3e-4
         elif p in ['PX']:
-            h = 1e-1
+            h = 2e-1
         elif p in ['FD2']:
             h = 3e-2
         elif p in ['F1', 'M2', 'PMELONG', 'PMELAT']:
             h = 2
+        elif p in ['PMDEC']:
+            h = 3e-2
         elif p in ['PBDOT']:
             h = 200
         else:

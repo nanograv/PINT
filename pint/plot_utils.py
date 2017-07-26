@@ -8,7 +8,7 @@ def phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.0, siz
     """
     Make a nice 2-panel phaseogram
     """
-    years = (mjds - 51544.0) / 365.25 + 2000.0
+    years = (mjds.value - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
     phss[phss > 1.0] -= 1.0
     fig = plt.figure(figsize=(width, 8))
@@ -34,7 +34,7 @@ def phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.0, siz
         ax2.scatter(phss, mjds, s=size, color=colarray)
         ax2.scatter(phss+1.0, mjds, s=size, color=colarray)
     ax2.set_xlim([0.0, maxphs]) # show 1 or more pulses
-    ax2.set_ylim([mjds.min(), mjds.max()])
+    ax2.set_ylim([mjds.min().value, mjds.max().value])
     ax2.set_ylabel("MJD")
     ax2.get_yaxis().get_major_formatter().set_useOffset(False)
     ax2.get_yaxis().get_major_formatter().set_scientific(False)
@@ -56,7 +56,7 @@ def phaseogram_binned(mjds, phases, weights=None, title=None, bins=64, rotate=0.
     """
     Make a nice 2-panel phaseogram
     """
-    years = (mjds - 51544.0) / 365.25 + 2000.0
+    years = (mjds.value - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
     phss[phss > 1.0] -= 1.0
     fig = plt.figure(figsize=(width, 8))
@@ -114,10 +114,10 @@ def phaseogram_binned(mjds, phases, weights=None, title=None, bins=64, rotate=0.
         b = a.reshape(ntoa,bins)
         c = np.hstack([b,b])
         ax2.imshow(c, interpolation='nearest', origin='lower', cmap=plt.cm.binary,
-             extent=(0,2.0,mjds.min(),mjds.max()),aspect='auto')
+             extent=[0,2.0,mjds.min().value,mjds.max().value],aspect='auto')
 
     ax2.set_xlim([0.0, maxphs]) # show 1 or more pulses
-    ax2.set_ylim([mjds.min(), mjds.max()])
+    ax2.set_ylim([mjds.min().value, mjds.max().value])
     ax2.set_ylabel("MJD")
     ax2.get_yaxis().get_major_formatter().set_useOffset(False)
     ax2.get_yaxis().get_major_formatter().set_scientific(False)
