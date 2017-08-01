@@ -613,7 +613,7 @@ class TOAs(object):
         Parameters
         ----------
         filename : str
-            File name to write to
+            File name to write to; can be an open file handle.
         format : str
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1')
 
@@ -623,7 +623,12 @@ class TOAs(object):
         so TOA file won't match the input TOA file if any were applied.
 
         """
-        outf = open(filename,'w')
+        try:
+            outf = open(filename,'w')
+            handle = False
+        except TypeError:
+            outf = filename
+            handle = True
         if format.upper() in ('TEMPO2','1'):
             outf.write('FORMAT 1\n')
         # NOTE(paulr): This really should REMOVE any(?) clock corrections
@@ -634,7 +639,8 @@ class TOAs(object):
             str = format_toa_line(toatime, toaerr, freq, obs_obj, name=name,
                 flags=flags, format=format)
             outf.write(str)
-        outf.close()
+        if not handle:
+            outf.close()
 
     def apply_clock_corrections(self, include_bipm=True,
                                 include_gps=True):
