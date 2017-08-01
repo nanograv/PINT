@@ -512,6 +512,7 @@ class TimingModel(object):
         dp = (sample_phase[1] - sample_phase[0])
         d_phase_d_toa = dp.int / (2*sample_step) + dp.frac / (2*sample_step)
         del copy_toas
+        d_phase_d_toa._unit = u.Hz
         return d_phase_d_toa
 
     def d_phase_d_tpulsar(self, toas):
