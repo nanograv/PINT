@@ -63,12 +63,14 @@ def main(argv=None):
         log.info("Computing observatory positions and velocities.")
         ts.compute_posvels(args.ephem, args.planets)
 
-    F_local = m.d_phase_d_toa(ts)*u.Hz
-    rs = m.phase(ts.table).frac/F_local
+    # F_local has units of Hz; discard cycles unit in phase to get a unit
+    # that TimeDelta understands
+    F_local = m.d_phase_d_toa(ts)
+    rs = m.phase(ts.table).frac.value/F_local
 
     # Adjust the TOA times to put them where their residuals will be 0.0
     ts.adjust_TOAs(TimeDelta(-1.0*rs))
-    rspost = m.phase(ts.table).frac/F_local
+    rspost = m.phase(ts.table).frac.value/F_local
 
     # Do a second iteration
     ts.adjust_TOAs(TimeDelta(-1.0*rspost))
