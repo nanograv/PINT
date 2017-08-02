@@ -505,7 +505,8 @@ class TimingModel(object):
             deltaT = time.TimeDelta(dt_array)
             copy_toas.adjust_TOAs(deltaT)
             phase = self.phase(copy_toas.table)
-            sample_phase.append(phase Use finite difference method.
+            sample_phase.append(phase)
+        #Use finite difference method.
         # phase'(t) = (phase(t+h)-phase(t-h))/2+ 1/6*F2*h^2 + ..
         # The error should be near 1/6*F2*h^2
         dp = (sample_phase[1] - sample_phase[0])
