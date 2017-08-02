@@ -76,7 +76,6 @@ def main(argv=None):
     ts.adjust_TOAs(TimeDelta(-1.0*rspost))
 
      # Write TOAs to a file
-    #ts.write_TOA_file(args.timfile,name='fake',format='Tempo2')
     ts.write_TOA_file(args.timfile,name='fake',format='Tempo2')
 
     if args.plot:
