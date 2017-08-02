@@ -258,6 +258,13 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
         if dm != 0.0*u.pc/u.cm**3:
             flagstring += "-dm {0:%.5f}".format(dm.to(u.pc/u.cm**3).value)
         # Here I need to append any actual flags
+        for flag in flags.keys():
+            v = flags[flag]
+            flag = str(flag)
+            if flag.startswith('-'):
+                flagstring += ' %s %s'%(flag,v)
+            else:
+                flagstring += ' -%s %s'%(flag,v)
         # Now set observatory code. Use obs.name unless overridden by tempo2_code
         try:
             obscode = obs.tempo2_code
