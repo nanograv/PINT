@@ -495,13 +495,13 @@ class TimingModel(object):
         """
         copy_toas = copy.deepcopy(toas)
         if sample_step is None:
-            pulse_period = 1.0 / self.F0.value
+            pulse_period = 1.0 / self.F0
             sample_step = pulse_period * 1000
         sample_dt = [-sample_step, 2 * sample_step]
 
         sample_phase = []
         for dt in sample_dt:
-            dt_array = ([dt] * copy_toas.ntoas) * u.s
+            dt_array = ([dt] * copy_toas.ntoas)
             deltaT = time.TimeDelta(dt_array)
             copy_toas.adjust_TOAs(deltaT)
             phase = self.phase(copy_toas.table)
@@ -512,8 +512,7 @@ class TimingModel(object):
         dp = (sample_phase[1] - sample_phase[0])
         d_phase_d_toa = dp.int / (2*sample_step) + dp.frac / (2*sample_step)
         del copy_toas
-        d_phase_d_toa._unit = u.Hz
-        return d_phase_d_toa
+        return d_phase_d_toa.to(u.Hz,equivalencies=[dimensionless_cycles])
 
     def d_phase_d_tpulsar(self, toas):
         """Return the derivative of phase wrt time at the pulsar.
