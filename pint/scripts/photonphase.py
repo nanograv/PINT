@@ -41,6 +41,10 @@ def main(argv=None):
     if args.outfile is not None:
         args.addphase = True
 
+    # If plotfile is specified, that implies plot
+    if args.plotfile is not None:
+        args.plot = True
+
     # Read event file header to figure out what instrument is is from
     hdr = pyfits.getheader(args.eventfile,ext=1)
 
@@ -75,6 +79,15 @@ def main(argv=None):
 
     # Read in model
     modelin = pint.models.get_model(args.parfile)
+
+    # Discard SS Shapiro part if specified in ephemeris and not enabled
+    if (not args.planets) and (
+            'SolarSystemShapiro' in modelin.components.keys()):
+        log.info(
+            "Removing SS Shapiro component from model (planets=False).")
+        components = modelin.components
+        components.pop('SolarSystemShapiro')
+        modelin.setup_components(components.values())
 
     # Discard events outside of MJD range
     if args.maxMJD is not None:

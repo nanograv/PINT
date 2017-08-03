@@ -13,6 +13,7 @@ import copy
 import abc
 import six
 import inspect
+from pint import dimensionless_cycles
 
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
@@ -495,24 +496,25 @@ class TimingModel(object):
         """
         copy_toas = copy.deepcopy(toas)
         if sample_step is None:
-            pulse_period = 1.0 / self.F0.value
+            pulse_period = 1.0 / (self.F0.quantity)
             sample_step = pulse_period * 1000
         sample_dt = [-sample_step, 2 * sample_step]
 
         sample_phase = []
         for dt in sample_dt:
-            dt_array = ([dt] * copy_toas.ntoas) * u.s
+            dt_array = ([dt.value] * copy_toas.ntoas*dt._unit)
             deltaT = time.TimeDelta(dt_array)
             copy_toas.adjust_TOAs(deltaT)
             phase = self.phase(copy_toas.table)
             sample_phase.append(phase)
-        # Use finite difference method.
+        #Use finite difference method.
         # phase'(t) = (phase(t+h)-phase(t-h))/2+ 1/6*F2*h^2 + ..
         # The error should be near 1/6*F2*h^2
         dp = (sample_phase[1] - sample_phase[0])
         d_phase_d_toa = dp.int / (2*sample_step) + dp.frac / (2*sample_step)
         del copy_toas
-        return d_phase_d_toa
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            return d_phase_d_toa.to(u.Hz)
 
     def d_phase_d_tpulsar(self, toas):
         """Return the derivative of phase wrt time at the pulsar.

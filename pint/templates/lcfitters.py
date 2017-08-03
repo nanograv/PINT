@@ -19,7 +19,7 @@ import numpy as np
 from copy import deepcopy
 import scipy
 from scipy.optimize import fmin,fmin_tnc,leastsq
-from uw.pulsar.stats import z2mw,hm,hmw
+from pint.eventstats import z2mw,hm,hmw
 
 SECSPERDAY = 86400.
 
