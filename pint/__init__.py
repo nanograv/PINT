@@ -23,7 +23,7 @@ dmu = u.def_unit('dmu', u.pc*u.cm**-3)
 
 # define equivalency for astropy units
 light_second_equivalency = [(ls, si.second, lambda x: x, lambda x: x)]
-
+dimensionless_cycles = [(u.cycle, None)]
 # hourangle_second unit
 hourangle_second = u.def_unit('hourangle_second', u.hourangle/np.longdouble(3600.0))
 
@@ -49,5 +49,5 @@ J2000 = time.Time('2000-01-01 12:00:00', scale='utc')
 J2000ld = utils.time_to_longdouble(J2000)
 # PINT special units list
 pint_units = {'H:M:S':u.hourangle,'D:M:S':u.deg,'lt-s':ls,'ls':ls,'Tsun':Tsun,
-              'GMsun':GMsun,'MJD':u.day,'pulse phase':u.Unit(1),
+              'GMsun':GMsun,'MJD':u.day,'pulse phase':u.cycle,
               'hourangle_second': hourangle_second}

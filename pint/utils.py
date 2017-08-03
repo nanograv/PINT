@@ -374,6 +374,10 @@ def taylor_horner(x, coeffs):
     Out[1]: 40.0
     """
     result = 0.0
+    if hasattr(coeffs[-1], 'unit'):
+        if not hasattr(x, 'unit'):
+            x = x * u.Unit("")
+        result *= coeffs[-1].unit / x.unit
     fact = float(len(coeffs))
     for coeff in coeffs[::-1]:
         result = result * x / fact + coeff
@@ -389,6 +393,10 @@ def taylor_horner_deriv(x, coeffs):
     Out[1]: 15.0
     """
     result = 0.0
+    if hasattr(coeffs[-1], 'unit'):
+        if not hasattr(x, 'unit'):
+            x = x * u.Unit("")
+        result *= coeffs[-1].unit / x.unit
     fact = float(len(coeffs))
     der_coeff = float(len(coeffs)) - 1
     for coeff in coeffs[::-1]:

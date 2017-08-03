@@ -258,6 +258,13 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
         if dm != 0.0*u.pc/u.cm**3:
             flagstring += "-dm {0:%.5f}".format(dm.to(u.pc/u.cm**3).value)
         # Here I need to append any actual flags
+        for flag in flags.keys():
+            v = flags[flag]
+            flag = str(flag)
+            if flag.startswith('-'):
+                flagstring += ' %s %s'%(flag,v)
+            else:
+                flagstring += ' -%s %s'%(flag,v)
         # Now set observatory code. Use obs.name unless overridden by tempo2_code
         try:
             obscode = obs.tempo2_code
@@ -483,8 +490,7 @@ class TOAs(object):
         if hasattr(self, "toas"):
             return numpy.array([t.freq.to(u.MHz).value for t in self.toas]) * u.MHz
         else:
-            x = self.table['freq']
-            return numpy.asarray(x) * x.unit
+            return self.table['freq'].quantity
 
     def get_mjds(self, high_precision=False):
         """ With high_precision is True
@@ -507,7 +513,7 @@ class TOAs(object):
             if hasattr(self, "toas"):
                 return numpy.array([t.mjd.mjd for t in self.toas]) * u.day
             else:
-                return self.table['mjd_float']
+                return self.table['mjd_float'].quantity
 
 
     def get_errors(self):
@@ -516,7 +522,7 @@ class TOAs(object):
         if hasattr(self, "toas"):
             return numpy.array([t.error.to(u.us).value for t in self.toas]) * u.us
         else:
-            return self.table['error']
+            return self.table['error'].quantity
 
     def get_obss(self):
         """Return a numpy array of the observatories for each TOA"""
@@ -614,7 +620,7 @@ class TOAs(object):
         Parameters
         ----------
         filename : str
-            File name to write to
+            File name to write to; can be an open file handle.
         format : str
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1')
 
@@ -624,7 +630,12 @@ class TOAs(object):
         so TOA file won't match the input TOA file if any were applied.
 
         """
-        outf = open(filename,'w')
+        try:
+            outf = open(filename,'w')
+            handle = False
+        except TypeError:
+            outf = filename
+            handle = True
         if format.upper() in ('TEMPO2','1'):
             outf.write('FORMAT 1\n')
         # NOTE(@paulray): This really should REMOVE any(?) clock corrections
@@ -635,7 +646,8 @@ class TOAs(object):
             str = format_toa_line(toatime, toaerr, freq, obs_obj, name=name,
                 flags=flags, format=format)
             outf.write(str)
-        outf.close()
+        if not handle:
+            outf.close()
 
     def apply_clock_corrections(self, include_bipm=True,
                                 include_gps=True):

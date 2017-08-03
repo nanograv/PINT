@@ -83,8 +83,7 @@ def main(argv=None):
     # Compute model phase for each TOA
     phss = modelin.phase(ts.table)[1]
     # ensure all postive
-    phases = np.where(phss < 0.0, phss + 1.0, phss)
-    log.debug("Phases {0}".format(phases))
+    phases = np.where(phss < 0.0 * u.cycle, phss + 1.0 * u.cycle, phss)
     mjds = ts.get_mjds()
     weights = np.array([w['weight'] for w in ts.table['flags']])
     h = float(hmw(phases,weights))

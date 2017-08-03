@@ -29,6 +29,8 @@ class TestGlitch(unittest.TestCase):
         self.f.fit_toas()
         emsg = "RMS of " + self.m.PSR.value + " is too big."
         assert self.f.resids.time_resids.std().to(u.us).value < 950.0, emsg
+        
+    def test_glith_der(self):
         delay = self.m.delay(self.t.table)
         for pf in self.m.glitch_prop:
             for idx in set(self.m.glitch_indices):

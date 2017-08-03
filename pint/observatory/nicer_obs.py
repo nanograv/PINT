@@ -83,6 +83,7 @@ class NICERObs(SpecialLocation):
 """
 
     def __init__(self, name, FPorbname, tt2tdb_mode = 'none'):
+
         self.FPorb = load_FPorbit(FPorbname)
         # Now build the interpolator here:
         self.X = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['X'])
@@ -92,6 +93,11 @@ class NICERObs(SpecialLocation):
         self.Vy = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Vy'])
         self.Vz = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Vz'])
         self.tt2tdb_mode = tt2tdb_mode
+        # Print this warning once, mainly for @paulray
+        if self.tt2tdb_mode.lower().startswith('none'):
+            log.warning('Using location=None for TT to TDB conversion')
+        elif self.tt2tdb_mode.lower().startswith('geo'):
+            log.warning('Using location geocenter for TT to TDB conversion')        
         super(NICERObs, self).__init__(name=name)
 
     @property
@@ -102,10 +108,8 @@ class NICERObs(SpecialLocation):
         '''Return NICER spacecraft location in ITRF coordinates'''
 
         if self.tt2tdb_mode.lower().startswith('none'):
-            log.warning('Using location=None for TT to TDB conversion')
             return None
         elif self.tt2tdb_mode.lower().startswith('geo'):
-            log.warning('Using location geocenter for TT to TDB conversion')
             return EarthLocation.from_geocentric(0.0*u.m,0.0*u.m,0.0*u.m)
         elif self.tt2tdb_mode.lower().startswith('spacecraft'):
             # First, interpolate ECI geocentric location from orbit file.
@@ -129,11 +133,23 @@ class NICERObs(SpecialLocation):
     def tempo_code(self):
         return None
 
-    def posvel(self, t, ephem):
+    def posvel(self, t, ephem, maxextrap=2):
         '''Return position and velocity vectors of NICER.
 
         t is an astropy.Time or array of astropy.Times
+        maxextrap is the longest (in minutes) it is acceptable to
+            extrapolate the S/C position
         '''
+        # this is a simple edge check mainly to prevent use of the wrong
+        # orbit file or a single orbit file with a merged event file; if
+        # needed, can check to make sure there is a spline anchor point
+        # sufficiently close to all event times
+        tmin = np.min(self.FPorb['MJD_TT'])
+        tmax = np.max(self.FPorb['MJD_TT'])
+        if (tmin-np.min(t.tt.mjd) > float(maxextrap)/(60*24) or
+            np.max(t.tt.mjd)-tmax > float(maxextrap)/(60*24)):
+            log.error('Extrapolating NICER position by more than %d minutes!'%maxextrap)
+            raise ValueError("Bad extrapolation of S/C file.")
         # Compute vector from SSB to Earth
         geo_posvel = objPosVel_wrt_SSB('earth', t, ephem)
         # Now add vector from Earth to NICER
