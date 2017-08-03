@@ -113,7 +113,8 @@ setup(
         'pint.scripts',
         'pint.models.stand_alone_psr_binaries',
         'pint.observatory',
-        'pint.orbital'],
+        'pint.orbital',
+        'pint.templates'],
 
     package_data={'pint': [
         'datafiles/ecliptic.dat',
