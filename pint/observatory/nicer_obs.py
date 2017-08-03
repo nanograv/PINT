@@ -133,11 +133,23 @@ class NICERObs(SpecialLocation):
     def tempo_code(self):
         return None
 
-    def posvel(self, t, ephem):
+    def posvel(self, t, ephem, maxextrap=2):
         '''Return position and velocity vectors of NICER.
 
         t is an astropy.Time or array of astropy.Times
+        maxextrap is the longest (in minutes) it is acceptable to
+            extrapolate the S/C position
         '''
+        # this is a simple edge check mainly to prevent use of the wrong
+        # orbit file or a single orbit file with a merged event file; if
+        # needed, can check to make sure there is a spline anchor point
+        # sufficiently close to all event times
+        tmin = np.min(self.FPorb['MJD_TT'])
+        tmax = np.max(self.FPorb['MJD_TT'])
+        if (tmin-np.min(t.tt.mjd) > float(maxextrap)/(60*24) or
+            np.max(t.tt.mjd)-tmax > float(maxextrap)/(60*24)):
+            log.error('Extrapolating NICER position by more than %d minutes!'%maxextrap)
+            raise ValueError("Bad extrapolation of S/C file.")
         # Compute vector from SSB to Earth
         geo_posvel = objPosVel_wrt_SSB('earth', t, ephem)
         # Now add vector from Earth to NICER
