@@ -262,6 +262,32 @@ class UnweightedLCFitter(object):
         self.template.set_overall_phase(ph1)
         return ph1-ph0,d2**-0.5
 
+    def fit_background(self, unbinned=True):
+        """ Fit the background level, holding the ratios of the pulsed
+        components fixed but varying their total normalization."""
+
+        self._set_unbinned(unbinned)
+
+        def logl(p):
+            if np.isscalar(p):
+                self.template.norms.set_total(p)
+            else:
+                self.template.norms.set_total(p[0])
+            return self.loglikelihood(self.template.get_parameters())
+
+        old_total = self.template.norms.get_total()
+
+        grid = np.linspace(0,1,51)[1:]
+        logls = np.asarray(map(logl,grid))
+        bestidx = np.argmin(logls)
+        gmax = min(grid[-1],grid[bestidx]+0.02)
+        gmin = max(grid[0],grid[bestidx]-0.02)
+        grid = np.linspace(gmin,gmax,51)
+        logls = np.asarray(map(logl,grid))
+        bestval = grid[np.argmin(logls)]
+        self.template.norms.set_total(bestval)
+        return bestval
+
     def fit_fmin(self,fit_func,ftol=1e-5):
         x0 = self.template.get_parameters()
         fit = fmin(fit_func,x0,disp=0,ftol=ftol,full_output=True)
