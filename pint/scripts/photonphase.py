@@ -28,8 +28,9 @@ def main(argv=None):
     parser.add_argument("--orbfile",help="Name of orbit file", default=None)
     parser.add_argument("--maxMJD",help="Maximum MJD to include in analysis", default=None)
     parser.add_argument("--plotfile",help="Output figure file name (default=None)", default=None)
-    parser.add_argument("--addphase",help="Write FITS file with added phase column",
-        default=False,action='store_true')
+    parser.add_argument("--addphase",help="Write FITS file with added phase column",default=False,action='store_true')
+    parser.add_argument("--absphase",help="Write FITS file with integral portion of pulse phase (ABS_PHASE)",default=False,action='store_true')
+    parser.add_argument("--barytime",help="Write FITS file with a column containing the barycentric time as double precision MJD.",default=False,action='store_true')
     parser.add_argument("--outfile",help="Output FITS file name (default=same as eventfile)", default=None)
     parser.add_argument("--planets",help="Use planetary Shapiro delay in calculations (default=False)", default=False, action="store_true")
     parser.add_argument("--ephem",help="Planetary ephemeris to use (default=DE421)", default="DE421")
@@ -39,6 +40,10 @@ def main(argv=None):
     # If outfile is specified, that implies addphase
     if args.outfile is not None:
         args.addphase = True
+
+    # If plotfile is specified, that implies plot
+    if args.plotfile is not None:
+        args.plot = True
 
     # Read event file header to figure out what instrument is is from
     hdr = pyfits.getheader(args.eventfile,ext=1)
@@ -51,7 +56,11 @@ def main(argv=None):
             log.info('Setting up NICER observatory')
             NICERObs(name='NICER',FPorbname=args.orbfile,tt2tdb_mode='none')
         # Read event file and return list of TOA objects
-        tl  = load_NICER_TOAs(args.eventfile)
+        try:
+            tl  = load_NICER_TOAs(args.eventfile)
+        except KeyError:
+            log.error("Observatory not recognized.  This probably means you need to provide an orbit file or barycenter the event file.")
+            sys.exit(1)
     elif hdr['TELESCOP'] == 'XTE':
         # Instantiate RXTEObs once so it gets added to the observatory registry
         if args.orbfile is not None:
@@ -70,6 +79,15 @@ def main(argv=None):
 
     # Read in model
     modelin = pint.models.get_model(args.parfile)
+
+    # Discard SS Shapiro part if specified in ephemeris and not enabled
+    if (not args.planets) and (
+            'SolarSystemShapiro' in modelin.components.keys()):
+        log.info(
+            "Removing SS Shapiro component from model (planets=False).")
+        components = modelin.components
+        components.pop('SolarSystemShapiro')
+        modelin.setup_components(components.values())
 
     # Discard events outside of MJD range
     if args.maxMJD is not None:
@@ -96,8 +114,7 @@ def main(argv=None):
     # Compute model phase for each TOA
     phss = modelin.phase(ts.table)[1]
     # ensure all postive
-    phases = np.where(phss < 0.0, phss + 1.0, phss)
-    mjds = ts.get_mjds()
+    phases = np.where(phss < 0.0 * u.cycle, phss + 1.0 * u.cycle, phss)
     h = float(hm(phases))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h,h2sig(h)))
     if args.plot:
@@ -110,23 +127,28 @@ def main(argv=None):
             hdulist = pyfits.open(args.eventfile,mode='update')
         else:
             hdulist = pyfits.open(args.eventfile)
-        event_hdu = hdulist[1]
-        event_hdr=event_hdu.header
-        event_dat=event_hdu.data
-        if len(event_dat) != len(phases):
-            raise RuntimeError('Mismatch between length of FITS table ({0}) and length of phase array ({1})!'.format(len(event_dat),len(phases)))
-        if 'PULSE_PHASE' in event_hdu.columns.names:
-            log.info('Found existing PULSE_PHASE column, overwriting...')
-            # Overwrite values in existing Column
-            event_dat['PULSE_PHASE'] = phases
-        else:
-            # Construct and append new column, preserving HDU header and name
-            log.info('Adding new PULSE_PHASE column.')
-            phasecol = pyfits.ColDefs([pyfits.Column(name='PULSE_PHASE', format='D',
-                array=phases)])
-            bt = pyfits.BinTableHDU.from_columns( event_hdu.columns + phasecol,
-                header=event_hdr,name=event_hdu.name)
-            hdulist[1] = bt
+        if len(hdulist[1].data) != len(phases):
+            raise RuntimeError('Mismatch between length of FITS table ({0}) and length of phase array ({1})!'.format(len(hdulist[1].data),len(phases)))
+        data_to_add = {'PULSE_PHASE':[phases,'D']}
+        if args.absphase:
+            data_to_add['ABS_PHASE'] = [modelin.phase(ts.table)[0],'K']
+        if args.barytime:
+            tdbs = np.asarray([t.mjd for t in ts.table['tdb']])
+            data_to_add['BARY_TIME'] = [tdbs,'D']
+        for key in data_to_add.keys():
+            if key in hdulist[1].columns.names:
+                log.info('Found existing %s column, overwriting...'%key)
+                # Overwrite values in existing Column
+                hdulist[1].data[key] = data_to_add[key][0]
+            else:
+                # Construct and append new column, preserving HDU header and name
+                log.info('Adding new %s column.'%key)
+                datacol = pyfits.ColDefs([pyfits.Column(name=key, 
+                    format=data_to_add[key][1], array=data_to_add[key][0])])
+                bt = pyfits.BinTableHDU.from_columns(
+                    hdulist[1].columns + datacol, header=hdulist[1].header,
+                    name=hdulist[1].name)
+                hdulist[1] = bt
         if args.outfile is None:
             # Overwrite the existing file
             log.info('Overwriting existing FITS file '+args.eventfile)

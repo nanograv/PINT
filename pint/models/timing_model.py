@@ -13,6 +13,7 @@ import copy
 import abc
 import six
 import inspect
+from pint import dimensionless_cycles
 
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
@@ -79,7 +80,7 @@ class TimingModel(object):
         Dictionary, Gives all the functions for delay derivatives.
     d_phase_d_delay_funcs:
         Dictionary, Gives all the functions for phase derivatives with respect
-        to total delay. 
+        to total delay.
     """
 
     def __init__(self, name='', components=[]):
@@ -256,8 +257,10 @@ class TimingModel(object):
                 comp_types[comp_type] = [cp,]
             cp._parent = self
 
-        self.component_types = list(comp_types.keys())
-        for ct in self.component_types:
+        for types in comp_types.keys():
+            if types not in self.component_types:
+                self.component_types.append(types)
+        for ct in comp_types.keys():
             setattr(self, ct+'_list', comp_types[ct])
 
     def add_component(self, component, order=None, force=False):
@@ -433,7 +436,7 @@ class TimingModel(object):
         Return the total delay which will be subtracted from the given
         TOA to get time of emission at the pulsar.
         """
-        delay = np.zeros(len(toas))
+        delay = np.zeros(len(toas)) * u.second
         if cutoff_component == '':
             idx = len(self.DelayComponent_list)
         else:
@@ -442,9 +445,6 @@ class TimingModel(object):
                 idx = delay_names.index(cutoff_component)
                 if include_last:
                     idx += 1
-                else:
-                    log.warn("Cut off delay component '%s' is not included in"
-                             " delay calculation." % cutoff_component)
             else:
                 raise KeyError("No delay component named '%s'." % cutoff_component)
 
@@ -456,7 +456,7 @@ class TimingModel(object):
         """Return the model-predicted pulse phase for the given TOAs."""
         # First compute the delays to "pulsar time"
         delay = self.delay(toas)
-        phase = Phase(np.zeros(len(toas)), np.zeros(len(toas)))
+        phase = Phase(np.zeros(len(toas)) , np.zeros(len(toas)))
         # Then compute the relevant pulse phases
         for pf in self.phase_funcs:
             phase += Phase(pf(toas, delay))
@@ -482,7 +482,7 @@ class TimingModel(object):
                 if cp.category == 'pulsar_system':
                     cutoff_component = cp.__class__.__name__
         corr = self.delay(toas, cutoff_component, False)
-        return toas['tdbld'] * u.day - corr * u.second
+        return toas['tdbld'] * u.day - corr
 
     def d_phase_d_toa(self, toas, sample_step=None):
         """Return the derivative of phase wrt TOA
@@ -496,24 +496,25 @@ class TimingModel(object):
         """
         copy_toas = copy.deepcopy(toas)
         if sample_step is None:
-            pulse_period = 1.0 / self.F0.value
+            pulse_period = 1.0 / (self.F0.quantity)
             sample_step = pulse_period * 1000
         sample_dt = [-sample_step, 2 * sample_step]
 
         sample_phase = []
         for dt in sample_dt:
-            dt_array = ([dt] * copy_toas.ntoas) * u.s
+            dt_array = ([dt.value] * copy_toas.ntoas*dt._unit)
             deltaT = time.TimeDelta(dt_array)
             copy_toas.adjust_TOAs(deltaT)
             phase = self.phase(copy_toas.table)
             sample_phase.append(phase)
-        # Use finite difference method.
+        #Use finite difference method.
         # phase'(t) = (phase(t+h)-phase(t-h))/2+ 1/6*F2*h^2 + ..
         # The error should be near 1/6*F2*h^2
         dp = (sample_phase[1] - sample_phase[0])
         d_phase_d_toa = dp.int / (2*sample_step) + dp.frac / (2*sample_step)
         del copy_toas
-        return d_phase_d_toa
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            return d_phase_d_toa.to(u.Hz)
 
     def d_phase_d_tpulsar(self, toas):
         """Return the derivative of phase wrt time at the pulsar.
@@ -529,7 +530,7 @@ class TimingModel(object):
         # Is it safe to assume that any param affecting delay only affects
         # phase indirectly (and vice-versa)??
         par = getattr(self, param)
-        result = np.longdouble(np.zeros(len(toas))) * u.Unit('')/par.units
+        result = np.longdouble(np.zeros(len(toas))) * u.cycle/par.units
         param_phase_derivs = []
         phase_derivs = self.phase_deriv_funcs
         delay_derivs = self.delay_deriv_funcs
@@ -546,7 +547,7 @@ class TimingModel(object):
             #                         d_delay_d_param
 
             d_delay_d_p = self.d_delay_d_param(toas, param)
-            dpdd_result = np.longdouble(np.zeros(len(toas))) * u.Unit('')/u.second
+            dpdd_result = np.longdouble(np.zeros(len(toas))) * u.cycle/u.second
             for dpddf in self.d_phase_d_delay_funcs:
                 dpdd_result += dpddf(toas, delay)
             result = dpdd_result * d_delay_d_p
@@ -578,10 +579,10 @@ class TimingModel(object):
             h = 1.0 * step
         else:
             h = ori_value * step
-        parv = [par.value-h, par.value+h]
+        parv = [par.value - h, par.value + h]
 
-        phaseI = np.zeros((len(toas),2))
-        phaseF = np.zeros((len(toas),2))
+        phaseI = np.zeros((len(toas),2), dtype=np.longdouble) * u.cycle
+        phaseF = np.zeros((len(toas),2), dtype=np.longdouble) * u.cycle
         for ii, val in enumerate(parv):
             par.value = val
             ph = self.phase(toas)
@@ -589,10 +590,10 @@ class TimingModel(object):
             phaseF[:,ii] = ph.frac
         resI = (- phaseI[:,0] + phaseI[:,1])
         resF = (- phaseF[:,0] + phaseF[:,1])
-        result = (resI + resF)/(2.0 * h)
+        result = (resI + resF)/(2.0 * h * unit)
         # shift value back to the original value
-        par.value = ori_value
-        return result * u.Unit("")/unit
+        par.quantity = ori_value
+        return result
 
     def d_delay_d_param_num(self, toas, param, step=1e-2):
         """ Return the derivative of phase with respect to the parameter.

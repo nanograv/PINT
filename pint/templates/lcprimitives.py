@@ -819,7 +819,7 @@ class LCHarmonic(LCPrimitive):
 
     def __call__(self,phases,log10_ens=3):
         e,x0 = self._make_p(log10_ens)
-        return 1+np.cos( (TWOPI*self.order) * (phases - x0 ) )
+        return 1+2*np.cos( (TWOPI*self.order) * (phases - x0 ) )
 
     def integrate(self,x1,x2,log10_ens=3):
         e,x0 = self._make_p(log10_ens)
@@ -843,6 +843,7 @@ class LCEmpiricalFourier(LCPrimitive):
         self.name  = 'Empirical Fourier Profile'
         self.shortname = 'EF'
         self.shift_mode = True
+        self.bounds = np.asarray([[0,1]])
 
     def __init__(self,phases=None,input_file=None,**kwargs):
         """Must provide either phases or a template input file!"""
@@ -885,14 +886,15 @@ class LCEmpiricalFourier(LCPrimitive):
         for i in xrange(self.nharm):
             f.write('%s\t%s\n'%(self.alphas[i],self.betas[i]))
 
-    def __call__(self,phases):
+    def __call__(self,phases,log10_ens=None):
+        """ NB energy-evolution currently not supported."""
         shift = self.p[0] ; harm = self.harmonics
         if shift != 0:
             """ shift theorem, for real coefficients
                 It's probably a wash whether it is faster to simply 
                 subtract from the phases, but it's more fun this way! """
-            c = np.cos(harms * shift)
-            s = np.sin(harms * shift)
+            c = np.cos(harm * shift)
+            s = np.sin(harm * shift)
             a = c*self.alphas - s*self.betas
             b = s*self.alphas + c*self.betas
         else: a,b = self.alphas,self.betas

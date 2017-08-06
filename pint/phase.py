@@ -8,6 +8,8 @@
 # range is [-0.5,0.5) or (-0.5,0.5].
 from collections import namedtuple
 import numpy
+import astropy.units as u
+from pint import dimensionless_cycles
 
 class Phase(namedtuple('Phase', 'int frac')):
     """
@@ -18,32 +20,42 @@ class Phase(namedtuple('Phase', 'int frac')):
         # Assume inputs are numerical, could add an extra
         # case to parse strings as input.
         # if it is not a list, convert to a list
-        if not isinstance(arg1, numpy.ndarray) and not isinstance(arg1,list):
-            arg1 = numpy.array([arg1,])
-        if arg2 is None:
-            ff,ii = numpy.modf(arg1)
-        else:
-            if not isinstance(arg2, numpy.ndarray) and not isinstance(arg2,list):
-                arg2 = numpy.array([arg2,])
-            arg1S = numpy.modf(arg1)
-            arg2S = numpy.modf(arg2)
-            ii = arg1S[1]+arg2S[1]    
-            ff = arg2S[0]
-        index = numpy.where(ff < -0.5)
-        ff[index] += 1.0
-        ii[index] -= 1
-        index = numpy.where(ff > 0.5)
-        ff[index] -= 1.0
-        ii[index] += 1    
-        return super(Phase, cls).__new__(cls, ii, ff)
+        if not hasattr(arg1, 'unit'):
+            arg1 = arg1 * u.cycle
+        if arg1.shape == ():
+            arg1 = arg1.reshape((1,))
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            arg1 = arg1.to(u.Unit(""))
+            # Since modf does not like dimensioned quantity
+            if arg2 is None:
+                ff,ii = numpy.modf(arg1)
+            else:
+                if not hasattr(arg2, 'unit'):
+                    arg2 = arg2 * u.cycle
+                if arg2.shape == ():
+                    arg2 = arg2.reshape((1,))
+                arg2 = arg2.to(u.Unit(""))
+                arg1S = numpy.modf(arg1)
+                arg2S = numpy.modf(arg2)
+                ii = arg1S[1]+arg2S[1]
+                ff = arg2S[0]
+            index = numpy.where(ff < -0.5)
+            ff[index] += 1.0
+            ii[index] -= 1
+            index = numpy.where(ff > 0.5 )
+            ff[index] -= 1.0
+            ii[index] += 1
+            return super(Phase, cls).__new__(cls, ii.to(u.cycle), ff.to(u.cycle))
 
     def __neg__(self):
         return Phase(-self.int, -self.frac)
 
     def __add__(self, other):
         ff = self.frac + other.frac
-        ii = numpy.modf(ff)[1]
-        return Phase(self.int + other.int + ii, ff - ii)
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            ii = numpy.modf(ff.to(u.Unit("")))[1]
+            ii = ii.to(u.cycle)
+            return Phase(self.int + other.int + ii, ff - ii)
 
     def __sub__(self, other):
-        return self.__add__(other.__neg__())    
+        return self.__add__(other.__neg__())
