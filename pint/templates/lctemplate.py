@@ -249,8 +249,9 @@ class LCTemplate(object):
         prims = self.primitives
         s0 = str(self.norms)
         s1 = '\n\n'+'\n\n'.join( ['P%d -- '%(i+1)+str(prim) for i,prim in enumerate(prims)] ) + '\n'
-        s1 +=  '\ndelta   : %.4f +\- %.4f'%self.delta()
-        s1 +=  '\nDelta   : %.4f +\- %.4f'%self.Delta()
+        if len(prims) > 1:
+            s1 +=  '\ndelta   : %.4f +\- %.4f'%self.delta()
+            s1 +=  '\nDelta   : %.4f +\- %.4f'%self.Delta()
         return s0+s1
 
     def prof_string(self,outputfile=None):
