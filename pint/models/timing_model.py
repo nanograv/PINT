@@ -170,6 +170,14 @@ class TimingModel(object):
         return pfs
 
     @property
+    def convariance_matrix_funcs(self,):
+        cvfs = []
+        if 'NoiseComponent' in self.component_type:
+            for nc in self.NoiseComponent_list:
+                cvfs += nc.convariance_matrix_funcs
+        return cvfs
+
+    @property
     def phase_deriv_funcs(self):
         return self.get_deriv_funcs('PhaseComponent')
 
@@ -461,6 +469,23 @@ class TimingModel(object):
         for pf in self.phase_funcs:
             phase += Phase(pf(toas, delay))
         return phase
+
+    def convariance_matrix(self, toas):
+        """This a function to get the TOA convariance matrix for noise models.
+           If there is no noise model component provided, a diagonal matrix with
+           TOAs error as diagonal element will be returned.
+        """
+        ntoa = len(toas)
+        result = np.zeros((ntoa, ntoa)) * u.us
+        # When there is no noise model.
+        if len(self.convariance_matrix_funcs) == 0:
+            result += np.diag(toas['error'].quantity) * \
+                      toas['error'].quantity.unit
+            return result
+
+        for nf in self.convariance_matrix_funcs:
+            result += nf(toas)
+        return result
 
     def get_barycentric_toas(self, toas, cutoff_component=''):
         """This is a convenient function for calculate the barycentric TOAs.

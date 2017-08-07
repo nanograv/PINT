@@ -8,10 +8,11 @@ import astropy.units as u
 class NoiseComponent(Component):
     def __init__(self,):
         super(NoiseComponent, self).__init__()
-        self.noise_function_component = []
         self.category = 'timing_noise'
+        self.convariance_matrix_funcs = []
 
-class TemplateFittingError(NoiseComponent):
+
+class ScaleToaError(NoiseComponent):
     """This is a class to correct template fitting timing noise.
     Notes
     -----
@@ -19,7 +20,7 @@ class TemplateFittingError(NoiseComponent):
     """
     register = True
     def __init__(self,):
-        super(TemplateFittingError, self).__init__()
+        super(ScaleToaError, self).__init__()
         self.add_param(p.maskParameter(name ='EFAC', units="",
                                        aliases=['T2EFAC', 'TNEFAC'],
                                        description="A multiplication factor on" \
@@ -37,8 +38,9 @@ class TemplateFittingError(NoiseComponent):
                                                   "quadrature to the scaled (by"
                                                   " EFAC) TOA uncertainty in "
                                                   " the unit of log10(second)."))
+        self.convariance_matrix_funcs += [self.sigma_scaled_cov_matrix, ]
     def setup(self):
-        super(TemplateFittingError, self).setup()
+        super(ScaleToaError, self).setup()
         # Get all the EFAC parameters and EQUAD
         self.EFACs = {}
         self.EQUADs = {}
@@ -116,3 +118,7 @@ class TemplateFittingError(NoiseComponent):
             sigma_scaled[mask] = efac.quantity * np.sqrt(sigma_old[mask] ** 2 + \
                                  (equad.quantity)**2)
         return sigma_scaled
+
+    def sigma_scaled_cov_matrix(self, toas):
+        scaled_sigma = self.scale_sigma(toas)
+        return np.diag(scaled_sigma) * scaled_sigma.unit
