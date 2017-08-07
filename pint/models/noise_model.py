@@ -9,7 +9,7 @@ class NoiseComponent(Component):
     def __init__(self,):
         super(NoiseComponent, self).__init__()
         self.category = 'timing_noise'
-        self.convariance_matrix_funcs = []
+        self.covariance_matrix_funcs = []
 
 
 class ScaleToaError(NoiseComponent):
@@ -38,7 +38,7 @@ class ScaleToaError(NoiseComponent):
                                                   "quadrature to the scaled (by"
                                                   " EFAC) TOA uncertainty in "
                                                   " the unit of log10(second)."))
-        self.convariance_matrix_funcs += [self.sigma_scaled_cov_matrix, ]
+        self.covariance_matrix_funcs += [self.sigma_scaled_cov_matrix, ]
     def setup(self):
         super(ScaleToaError, self).setup()
         # Get all the EFAC parameters and EQUAD

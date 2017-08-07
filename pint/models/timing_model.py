@@ -170,11 +170,11 @@ class TimingModel(object):
         return pfs
 
     @property
-    def convariance_matrix_funcs(self,):
+    def covariance_matrix_funcs(self,):
         cvfs = []
         if 'NoiseComponent' in self.component_type:
             for nc in self.NoiseComponent_list:
-                cvfs += nc.convariance_matrix_funcs
+                cvfs += nc.covariance_matrix_funcs
         return cvfs
 
     @property
@@ -470,20 +470,20 @@ class TimingModel(object):
             phase += Phase(pf(toas, delay))
         return phase
 
-    def convariance_matrix(self, toas):
-        """This a function to get the TOA convariance matrix for noise models.
+    def covariance_matrix(self, toas):
+        """This a function to get the TOA covariance matrix for noise models.
            If there is no noise model component provided, a diagonal matrix with
            TOAs error as diagonal element will be returned.
         """
         ntoa = len(toas)
         result = np.zeros((ntoa, ntoa)) * u.us
         # When there is no noise model.
-        if len(self.convariance_matrix_funcs) == 0:
+        if len(self.covariance_matrix_funcs) == 0:
             result += np.diag(toas['error'].quantity) * \
                       toas['error'].quantity.unit
             return result
 
-        for nf in self.convariance_matrix_funcs:
+        for nf in self.covariance_matrix_funcs:
             result += nf(toas)
         return result
 
