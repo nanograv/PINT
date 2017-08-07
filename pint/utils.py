@@ -347,6 +347,9 @@ def split_prefixed_name(name):
                 break
             else:
                 continue
+        # when we have a match        
+        break
+
     if namefield is None:
         raise ValueError("Unrecognized prefix name pattern'%s'." % name)
     indexValue = int(indexPart)
