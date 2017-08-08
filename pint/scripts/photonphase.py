@@ -112,9 +112,10 @@ def main(argv=None):
     print(mjds.min(),mjds.max())
 
     # Compute model phase for each TOA
-    phss = modelin.phase(ts.table)[1]
+    iphss,phss = modelin.phase(ts.table)
     # ensure all postive
-    phases = np.where(phss < 0.0 * u.cycle, phss + 1.0 * u.cycle, phss)
+    negmask = phss < 0.0 * u.cycle
+    phases = np.where(negmask, phss + 1.0 * u.cycle, phss)
     h = float(hm(phases))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h,h2sig(h)))
     if args.plot:
@@ -131,7 +132,7 @@ def main(argv=None):
             raise RuntimeError('Mismatch between length of FITS table ({0}) and length of phase array ({1})!'.format(len(hdulist[1].data),len(phases)))
         data_to_add = {'PULSE_PHASE':[phases,'D']}
         if args.absphase:
-            data_to_add['ABS_PHASE'] = [modelin.phase(ts.table)[0],'K']
+            data_to_add['ABS_PHASE'] = [iphss-negmask*u.cycle,'K']
         if args.barytime:
             tdbs = np.asarray([t.mjd for t in ts.table['tdb']])
             data_to_add['BARY_TIME'] = [tdbs,'D']
