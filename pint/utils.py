@@ -19,14 +19,9 @@ except AttributeError:
 
 # Define prefix parameter pattern
 pp1 = re.compile(r'([a-zA-Z]\d[a-zA-Z]+)(\d+)') # For the prefix like T2EFAC2
-<<<<<<< HEAD
-pp2 = re.compile(r'([a-zA-Z0-9]+_*)(\d+)')  # For the prefix like DMXR1_3
-pp3 = re.compile(r'([a-zA-Z]+)(\d+)')  # For the prefix like F12
-=======
 pp2 = re.compile(r'([a-zA-Z]+)(\d+)')  # For the prefix like F12
 pp3 = re.compile(r'([a-zA-Z0-9]+_*)(\d+)')  # For the prefix like DMXR1_3
 
->>>>>>> 94be4bab6f4f612e3fd9fb81cd244983759cc82f
 prefixPattern = [pp1, pp2, pp3]
 
 

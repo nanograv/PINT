@@ -178,6 +178,14 @@ class TimingModel(object):
         return cvfs
 
     @property
+    def scaled_sigma_funcs(self,):
+        ssfs = []
+        if 'NoiseComponent' in self.component_type:
+            for nc in self.NoiseComponent_list:
+                ssfs += nc.scaled_sigma_funcs
+        return ssfs
+
+    @property
     def phase_deriv_funcs(self):
         return self.get_deriv_funcs('PhaseComponent')
 
@@ -484,6 +492,22 @@ class TimingModel(object):
             return result
 
         for nf in self.covariance_matrix_funcs:
+            result += nf(toas)
+        return result
+
+    def scaled_sigma(self, toas):
+        """This a function to get the scaled TOA uncertainties noise models.
+           If there is no noise model component provided, a vector with
+           TOAs error as values will be returned.
+        """
+        ntoa = len(toas)
+        result = np.zeros(ntoa) * u.us
+        # When there is no noise model.
+        if len(self.covariance_matrix_funcs) == 0:
+            result += toas['error'].quantity * toas['error'].quantity.unit
+            return result
+
+        for nf in self.scaled_sigma_funcs:
             result += nf(toas)
         return result
 
