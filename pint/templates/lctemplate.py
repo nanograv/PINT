@@ -191,7 +191,6 @@ class LCTemplate(object):
             return rvals + n.sum(axis=0)
         return rvals
 
-
     def gradient(self,phases,log10_ens=3,free=True):
         r = np.empty([len(self.get_parameters(free=free)),len(phases)])
         c = 0
@@ -460,6 +459,46 @@ class LCTemplate(object):
             rvals += weight*prim(phases,en)*self.norms(en)[index]
         rvals /= w[0].sum()
         return rvals
+
+    def align_peak(self,phi=0,dphi=0.001):
+        """ Adjust such that template peak arrives within dphi of phi."""
+        self._cache_out_of_date = True
+        nbin = int(1./dphi)+1
+        dom = np.linspace(0,1,nbin)
+        current_peak = dom[np.argmax(self(dom))]
+        shift = phi - current_peak
+        for prim in self.primitives:
+            new_location = (prim.get_location() + shift)%1
+            prim.set_location(new_location)
+
+    def write_profile(self,fname,nbin,integral=False):
+        """ Write out a two-column tabular profile to file fname.
+
+        The first column indicates the left edge of the phase bin, while
+        the right column indicates the profile value.
+
+        integral -- if True, integrate the profile over the bins.
+                    Otherwise, differential value at indicated bin phase.
+
+        """
+
+        if not integral:
+            bin_phases = np.linspace(0,1,nbin+1)[:-1]
+            bin_values = self(bin_phases)
+            bin_values *= 1./bin_values.mean()
+
+        else:
+            phases = np.linspace(0,1,2*nbin+1)
+            values = self(phases)
+            hi = values[2::2]
+            lo = values[0:-1:2]
+            mid = values[1::2]
+            bin_phases = phases[0:-1:2]
+            bin_values = 1./(6*nbin)*(hi+4*mid+lo)
+
+        bin_values *= 1./bin_values.mean()
+        file(fname,'w').write(''.join(('%.6f %.6f\n'%(x,y) for x,y in zip(bin_phases,bin_values))))
+
 
 class LCBridgeTemplate(LCTemplate):
     """ A light curve template specialized to the "typical" shape of a
