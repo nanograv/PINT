@@ -15,7 +15,11 @@ from .frequency_dependent import FD
 from .glitch import Glitch
 from .jump import JumpDelay
 from .solar_system_shapiro import SolarSystemShapiro
+<<<<<<< HEAD
 from .noise_model import TemplateFittingError
+=======
+from .noise_model import ScaleToaError
+>>>>>>> 94be4bab6f4f612e3fd9fb81cd244983759cc82f
 from .model_builder import get_model
 
 # Define a standard basic model

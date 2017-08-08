@@ -13,6 +13,7 @@ import copy
 import abc
 import six
 import inspect
+from pint import dimensionless_cycles
 
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
@@ -167,6 +168,14 @@ class TimingModel(object):
         for p in self.PhaseComponent_list:
             pfs += p.phase_funcs_component
         return pfs
+
+    @property
+    def covariance_matrix_funcs(self,):
+        cvfs = []
+        if 'NoiseComponent' in self.component_type:
+            for nc in self.NoiseComponent_list:
+                cvfs += nc.covariance_matrix_funcs
+        return cvfs
 
     @property
     def phase_deriv_funcs(self):
@@ -461,6 +470,23 @@ class TimingModel(object):
             phase += Phase(pf(toas, delay))
         return phase
 
+    def covariance_matrix(self, toas):
+        """This a function to get the TOA covariance matrix for noise models.
+           If there is no noise model component provided, a diagonal matrix with
+           TOAs error as diagonal element will be returned.
+        """
+        ntoa = len(toas)
+        result = np.zeros((ntoa, ntoa)) * u.us
+        # When there is no noise model.
+        if len(self.covariance_matrix_funcs) == 0:
+            result += np.diag(toas['error'].quantity) * \
+                      toas['error'].quantity.unit
+            return result
+
+        for nf in self.covariance_matrix_funcs:
+            result += nf(toas)
+        return result
+
     def get_barycentric_toas(self, toas, cutoff_component=''):
         """This is a convenient function for calculate the barycentric TOAs.
            Parameter
@@ -495,24 +521,25 @@ class TimingModel(object):
         """
         copy_toas = copy.deepcopy(toas)
         if sample_step is None:
-            pulse_period = 1.0 / self.F0.value
+            pulse_period = 1.0 / (self.F0.quantity)
             sample_step = pulse_period * 1000
         sample_dt = [-sample_step, 2 * sample_step]
 
         sample_phase = []
         for dt in sample_dt:
-            dt_array = ([dt] * copy_toas.ntoas) * u.s
+            dt_array = ([dt.value] * copy_toas.ntoas*dt._unit)
             deltaT = time.TimeDelta(dt_array)
             copy_toas.adjust_TOAs(deltaT)
             phase = self.phase(copy_toas.table)
             sample_phase.append(phase)
-        # Use finite difference method.
+        #Use finite difference method.
         # phase'(t) = (phase(t+h)-phase(t-h))/2+ 1/6*F2*h^2 + ..
         # The error should be near 1/6*F2*h^2
         dp = (sample_phase[1] - sample_phase[0])
         d_phase_d_toa = dp.int / (2*sample_step) + dp.frac / (2*sample_step)
         del copy_toas
-        return d_phase_d_toa
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            return d_phase_d_toa.to(u.Hz)
 
     def d_phase_d_tpulsar(self, toas):
         """Return the derivative of phase wrt time at the pulsar.

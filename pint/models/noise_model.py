@@ -8,10 +8,18 @@ import astropy.units as u
 class NoiseComponent(Component):
     def __init__(self,):
         super(NoiseComponent, self).__init__()
+<<<<<<< HEAD
         self.noise_function_component = []
         self.category = 'timing_noise'
 
 class TemplateFittingError(NoiseComponent):
+=======
+        self.category = 'timing_noise'
+        self.covariance_matrix_funcs = []
+
+
+class ScaleToaError(NoiseComponent):
+>>>>>>> 94be4bab6f4f612e3fd9fb81cd244983759cc82f
     """This is a class to correct template fitting timing noise.
     Notes
     -----
@@ -19,7 +27,11 @@ class TemplateFittingError(NoiseComponent):
     """
     register = True
     def __init__(self,):
+<<<<<<< HEAD
         super(TemplateFittingError, self).__init__()
+=======
+        super(ScaleToaError, self).__init__()
+>>>>>>> 94be4bab6f4f612e3fd9fb81cd244983759cc82f
         self.add_param(p.maskParameter(name ='EFAC', units="",
                                        aliases=['T2EFAC', 'TNEFAC'],
                                        description="A multiplication factor on" \
@@ -37,8 +49,14 @@ class TemplateFittingError(NoiseComponent):
                                                   "quadrature to the scaled (by"
                                                   " EFAC) TOA uncertainty in "
                                                   " the unit of log10(second)."))
+<<<<<<< HEAD
     def setup(self):
         super(TemplateFittingError, self).setup()
+=======
+        self.covariance_matrix_funcs += [self.sigma_scaled_cov_matrix, ]
+    def setup(self):
+        super(ScaleToaError, self).setup()
+>>>>>>> 94be4bab6f4f612e3fd9fb81cd244983759cc82f
         # Get all the EFAC parameters and EQUAD
         self.EFACs = {}
         self.EQUADs = {}
@@ -116,3 +134,10 @@ class TemplateFittingError(NoiseComponent):
             sigma_scaled[mask] = efac.quantity * np.sqrt(sigma_old[mask] ** 2 + \
                                  (equad.quantity)**2)
         return sigma_scaled
+<<<<<<< HEAD
+=======
+
+    def sigma_scaled_cov_matrix(self, toas):
+        scaled_sigma = self.scale_sigma(toas)
+        return np.diag(scaled_sigma) * scaled_sigma.unit
+>>>>>>> 94be4bab6f4f612e3fd9fb81cd244983759cc82f
