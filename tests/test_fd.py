@@ -5,6 +5,7 @@ import astropy.units as u
 import pint.residuals
 import numpy as np
 import os, unittest
+import copy
 from pinttestdata import testdir, datadir
 os.chdir(datadir)
 
@@ -28,6 +29,19 @@ class TestFD(unittest.TestCase):
         # Those two clock correction difference are causing the trouble.
         assert np.all(resDiff< 5e-6) , \
             "PINT and tempo Residual difference is too big. "
+    def test_inf_freq(self):
+        test_toas = copy.deepcopy(self.toas)
+        test_toas.table['freq'][0:5] = np.inf * u.MHz
+        fd_delay = self.FDm.components['FD'].FD_delay(test_toas.table)
+        assert np.all(np.isfinite), \
+            "FD component is not handling infinite frequency right."
+        assert np.all(fd_delay[0:5].value == 0.0), \
+            "FD component did not compute infinite frequency delay right"
+        d_d_d_fd = self.FDm.d_delay_FD_d_FDX(test_toas.table, 'FD1')
+        assert np.all(np.isfinite), \
+            "FD component is not handling infinite frequency right when doning"\
+             + " derivatives."
+
 
 if __name__ == '__main__':
     pass
