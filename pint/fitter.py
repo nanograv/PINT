@@ -143,7 +143,7 @@ class WlsFitter(Fitter):
             # Get residuals and TOA uncertainties in seconds
             self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value
-            Nvec = self.toas.get_errors().to(u.s).value
+            Nvec = self.model.scaled_sigma(self.toas.table).to(u.s).value
 
             # "Whiten" design matrix and residuals by dividing by uncertainties
             M = M/Nvec.reshape((-1,1))
