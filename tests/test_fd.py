@@ -31,7 +31,7 @@ class TestFD(unittest.TestCase):
             "PINT and tempo Residual difference is too big. "
     def test_inf_freq(self):
         test_toas = copy.deepcopy(self.toas)
-        test_toas.table['freq'][0:5] = np.nan
+        test_toas.table['freq'][0:5] = np.inf * u.MHz
         fd_delay = self.FDm.components['FD'].FD_delay(test_toas.table)
         assert np.all(np.isfinite), \
             "FD component is not handling infinite frequency right."
