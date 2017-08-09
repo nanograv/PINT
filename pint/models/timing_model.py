@@ -186,6 +186,14 @@ class TimingModel(object):
         return ssfs
 
     @property
+    def basis_funcs(self,):
+        bfs = []
+        if 'NoiseComponent' in self.component_type:
+            for nc in self.NoiseComponent_list:
+                bfs += nc.basis_funcs
+        return bfs
+
+    @property
     def phase_deriv_funcs(self):
         return self.get_deriv_funcs('PhaseComponent')
 
@@ -503,13 +511,34 @@ class TimingModel(object):
         ntoa = len(toas)
         result = np.zeros(ntoa) * u.us
         # When there is no noise model.
-        if len(self.covariance_matrix_funcs) == 0:
+        if len(self.scaled_sigma_funcs) == 0:
             result += toas['error'].quantity * toas['error'].quantity.unit
             return result
 
         for nf in self.scaled_sigma_funcs:
             result += nf(toas)
         return result
+
+    def noise_model_designmatrix(self, toas):
+        result = []
+        if len(self.basis_funcs) == 0:
+            return None
+
+        for nf in self.basis_funcs:
+            result.append(nf(toas)[0])
+        return np.concatenate((r for r in results), axis=1)
+
+
+    def noise_model_basis_prior(self, toas):
+        result = []
+        if len(self.basis_funcs) == 0:
+            return None
+
+        for nf in self.basis_funcs:
+            result.append(nf(toas)[1])
+        return np.concatenate((r for r in results))
+
+
 
     def get_barycentric_toas(self, toas, cutoff_component=''):
         """This is a convenient function for calculate the barycentric TOAs.

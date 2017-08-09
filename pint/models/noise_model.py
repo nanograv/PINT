@@ -2,6 +2,7 @@
 # Defines the pulsar timing noise model.
 from .timing_model import Component,  MissingParameter
 from . import parameter as p
+from .. import utils
 import numpy as np
 import astropy.units as u
 
@@ -12,7 +13,6 @@ class NoiseComponent(Component):
         self.covariance_matrix_funcs = []
         self.scaled_sigma_funcs = []
         self.basis_funcs = []
-        self.prior_funcs = []
 
 class ScaleToaError(NoiseComponent):
     """This is a class to correct template fitting timing noise.
@@ -126,3 +126,69 @@ class ScaleToaError(NoiseComponent):
     def sigma_scaled_cov_matrix(self, toas):
         scaled_sigma = self.scale_sigma(toas)
         return np.diag(scaled_sigma) * scaled_sigma.unit
+
+
+class EcorrNoise(NoiseComponent):
+    """This is a class to model ECORR type noise.
+    Notes
+    -----
+    Ref: NanoGrav 11 yrs data
+    """
+    register = True
+    def __init__(self,):
+        super(EcorrNoise, self).__init__()
+        self.add_param(p.maskParameter(name='ECORR', units="us",\
+                                       aliases=['TNECORR'],
+                                       description="An error term added that"\
+                                                  " correlated all TOAs in an"\
+                                                  " observing epoch."))
+
+
+        self.covariance_matrix_funcs += [self.ecorr_cov_matrix, ]
+        self.basis_funcs += [self.ecorr_basis_prior_pair, ]
+
+    def setup(self):
+        super(EcorrNoise, self).setup()
+        # Get all the EFAC parameters and EQUAD
+        self.ECORRs = {}
+        for mask_par in self.get_params_of_type('maskParameter'):
+            if mask_par.startswith('ECORR'):
+                par = getattr(self, mask_par)
+                self.ECORRs[mask_par] = (par.key, par.key_value)
+            else:
+                continue
+
+        # check duplicate
+        for el in ['ECORRs']:
+            l  = list(getattr(self, el).values())
+            if [x for x in l if l.count(x) > 1] != []:
+                raise ValueError("'%s' have duplicated keys and key values." % el)
+
+    def get_ecorrs(self):
+        ecorrs = []
+        for ecorr, ecorr_key in list(self.ECORRs.items()):
+            ecorrs.append(getattr(self, ecorr))
+        return ecorrs
+
+    def ecorr_basis_prior_pair(self, toas):
+        t = (toas['tdbld'].quantity * u.day).to(u.s).value
+        ecorrs = self.get_ecorrs()
+        Umats = []
+        for ec in ecorrs:
+            mask = ec.select_toa_mask(toas)
+            Umats.append(utils.create_quantization_matrix(t[mask]))
+        nc = np.sum(U.shape[1] for U in Umats)
+        Umat = np.zeros((len(t), nc))
+        prior = np.zeros(nc)
+        nctot = 0
+        for ct, ec in enumerate(ecorrs):
+            mask = ec.select_toa_mask(toas)
+            nn = Umats[ct].shape[1]
+            Umat[mask, nctot:nn+nctot] = Umats[ct]
+            prior[nctot:nn+nctot] = ec.quantity.to(u.s).value ** 2
+            nctot += nn
+        return (Umat, prior)
+
+    def ecorr_cov_matrix(self, toas):
+        U, Jvec = self.ecorr_basis_prior_pair(toas)
+        return np.dot(U * Jvec[None,:], U.T)

@@ -428,6 +428,29 @@ def is_number(s):
         pass
     return False
 
+def create_quantization_matrix(toas, dt=1, nmin=2):
+    """Create quantization matrix mapping TOAs to observing epochs."""
+    isort = np.argsort(toas)
+
+    bucket_ref = [toas[isort[0]]]
+    bucket_ind = [[isort[0]]]
+
+    for i in isort[1:]:
+        if toas[i] - bucket_ref[-1] < dt:
+            bucket_ind[-1].append(i)
+        else:
+            bucket_ref.append(toas[i])
+            bucket_ind.append([i])
+
+    # find only epochs with more than 1 TOA
+    bucket_ind2 = [ind for ind in bucket_ind if len(ind) >= nmin]
+
+    U = np.zeros((len(toas),len(bucket_ind2)),'d')
+    for i,l in enumerate(bucket_ind2):
+        U[l,i] = 1
+
+    return U
+
 if __name__ == "__main__":
     assert taylor_horner(2.0, [10]) == 10
     assert taylor_horner(2.0, [10, 3]) == 10 + 3*2.0
