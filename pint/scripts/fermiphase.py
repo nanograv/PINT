@@ -19,7 +19,7 @@ from astropy.coordinates import SkyCoord
 
 from astropy import log
 
-log.setLevel('DEBUG')
+#log.setLevel('DEBUG')
 
 def main(argv=None):
 
