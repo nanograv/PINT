@@ -164,7 +164,7 @@ def get_observatory(name, include_gps=True, include_bipm=True,
                       correction.
         include_bipm = Set False to disable TAI TT(BIPM) clock
                       correction.
-        bimp_version = Set the version of tt bimp clock correction files.
+        bipm_version = Set the version of TT BIPM clock correction files.
 
     .. note:: This function can and should be expanded if more clock
         file switches/options are added at a public API level.
