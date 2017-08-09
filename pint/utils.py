@@ -451,6 +451,47 @@ def create_quantization_matrix(toas, dt=1, nmin=2):
 
     return U
 
+def create_fourier_design_matrix(t, nmodes, Tspan=None):
+    """
+    Construct fourier design matrix from eq 11 of Lentati et al, 2013
+
+    :param t: vector of time series in seconds
+    :param nmodes: number of fourier coefficients to use
+    :param Tspan: option to some other Tspan
+    :return: F: fourier design matrix
+    :return: f: Sampling frequencies
+    """
+
+    N = len(t)
+    F = np.zeros((N, 2 * nmodes))
+
+    if Tspan is not None:
+        T = Tspan
+    else:
+        T = t.max() - t.min()
+
+    f = np.linspace(1 / T, nmodes / T, nmodes)
+
+    Ffreqs = np.zeros(2 * nmodes)
+    Ffreqs[0::2] = f
+    Ffreqs[1::2] = f
+
+    F[:,::2] = np.sin(2*np.pi*t[:,None]*f[None,:])
+    F[:,1::2] = np.cos(2*np.pi*t[:,None]*f[None,:])
+
+    return F, Ffreqs
+
+def powerlaw(f, A=1e-16, gamma=5):
+    """Power-law PSD.
+
+    :param f: Sampling frequencies
+    :param A: Amplitude of red noise [GW units]
+    :param gamma: Spectral index of red noise process
+    """
+
+    fyr = 1 / 3.16e7
+    return A**2 / 12.0 / np.pi**2 * fyr**(gamma-3) * f**(-gamma)
+
 if __name__ == "__main__":
     assert taylor_horner(2.0, [10]) == 10
     assert taylor_horner(2.0, [10, 3]) == 10 + 3*2.0

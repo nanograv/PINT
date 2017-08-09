@@ -172,7 +172,7 @@ class TimingModel(object):
     @property
     def covariance_matrix_funcs(self,):
         cvfs = []
-        if 'NoiseComponent' in self.component_type:
+        if 'NoiseComponent' in self.component_types:
             for nc in self.NoiseComponent_list:
                 cvfs += nc.covariance_matrix_funcs
         return cvfs
@@ -180,7 +180,7 @@ class TimingModel(object):
     @property
     def scaled_sigma_funcs(self,):
         ssfs = []
-        if 'NoiseComponent' in self.component_type:
+        if 'NoiseComponent' in self.component_types:
             for nc in self.NoiseComponent_list:
                 ssfs += nc.scaled_sigma_funcs
         return ssfs
@@ -188,7 +188,7 @@ class TimingModel(object):
     @property
     def basis_funcs(self,):
         bfs = []
-        if 'NoiseComponent' in self.component_type:
+        if 'NoiseComponent' in self.component_types:
             for nc in self.NoiseComponent_list:
                 bfs += nc.basis_funcs
         return bfs
@@ -512,7 +512,7 @@ class TimingModel(object):
         result = np.zeros(ntoa) * u.us
         # When there is no noise model.
         if len(self.scaled_sigma_funcs) == 0:
-            result += toas['error'].quantity * toas['error'].quantity.unit
+            result += toas['error'].quantity 
             return result
 
         for nf in self.scaled_sigma_funcs:
@@ -526,7 +526,7 @@ class TimingModel(object):
 
         for nf in self.basis_funcs:
             result.append(nf(toas)[0])
-        return np.concatenate((r for r in results), axis=1)
+        return np.hstack((r for r in result))
 
 
     def noise_model_basis_prior(self, toas):
@@ -536,7 +536,7 @@ class TimingModel(object):
 
         for nf in self.basis_funcs:
             result.append(nf(toas)[1])
-        return np.concatenate((r for r in results))
+        return np.hstack((r for r in result))
 
 
 

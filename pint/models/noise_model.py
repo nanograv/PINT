@@ -9,7 +9,6 @@ import astropy.units as u
 class NoiseComponent(Component):
     def __init__(self,):
         super(NoiseComponent, self).__init__()
-        self.category = 'timing_noise'
         self.covariance_matrix_funcs = []
         self.scaled_sigma_funcs = []
         self.basis_funcs = []
@@ -23,6 +22,7 @@ class ScaleToaError(NoiseComponent):
     register = True
     def __init__(self,):
         super(ScaleToaError, self).__init__()
+        self.category = 'scale_toa_error'
         self.add_param(p.maskParameter(name ='EFAC', units="",
                                        aliases=['T2EFAC', 'TNEFAC'],
                                        description="A multiplication factor on" \
@@ -137,6 +137,7 @@ class EcorrNoise(NoiseComponent):
     register = True
     def __init__(self,):
         super(EcorrNoise, self).__init__()
+        self.category = 'ecorr_noise'
         self.add_param(p.maskParameter(name='ECORR', units="us",\
                                        aliases=['TNECORR'],
                                        description="An error term added that"\
@@ -192,3 +193,62 @@ class EcorrNoise(NoiseComponent):
     def ecorr_cov_matrix(self, toas):
         U, Jvec = self.ecorr_basis_prior_pair(toas)
         return np.dot(U * Jvec[None,:], U.T)
+
+
+class PLRedNoise(NoiseComponent):
+    """This is a class to model Powerlaw red noise type noise.
+    Notes
+    -----
+    Ref: NanoGrav 11 yrs data
+    """
+    register = True
+    def __init__(self,):
+        super(PLRedNoise, self).__init__()
+        self.category = 'pl_red_noise'
+        self.add_param(p.floatParameter(name='RNAMP', units="",\
+                                       aliases=[],
+                                       description="Amplitude of powerlaw "\
+                                                "red noise."))
+        self.add_param(p.floatParameter(name='RNIDX', units="",\
+                                       aliases=[],
+                                       description="Spectral index of "\
+                                                "powerlaw red noise."))
+
+        self.add_param(p.floatParameter(name='TNRedAmp', units="",\
+                                       aliases=[],
+                                       description="Amplitude of powerlaw "\
+                                       "red noise in tempo2 format"))
+        self.add_param(p.floatParameter(name='TNRedGam', units="",\
+                                       aliases=[],
+                                       description="Spectral index of powerlaw "\
+                                       "red noise in tempo2 format"))
+        self.add_param(p.floatParameter(name='TNRedC', units="",\
+                                       aliases=[],
+                                       description="Number of red noise frequencies."))
+
+
+        self.covariance_matrix_funcs += [self.pl_rn_cov_matrix, ]
+        self.basis_funcs += [self.pl_rn_basis_prior_pair, ]
+
+    def setup(self):
+        super(PLRedNoise, self).setup()
+
+    def get_pl_vals(self):
+        nf = int(self.TNredC.value) if self.TNRedC.value is not None else 30
+        if self.TNRedAmp.value is not None and self.TNRedGam.value is not None:
+            amp, gam= 10**self.TNRedAmp.value, self.TNRedGam
+        elif self.RNAMP.value is not None and self.RNIDX is not None:
+            fac = (86400.*365.24*1e6)/(2.0*np.pi*np.sqrt(3.0))
+            amp, gam = self.RNAMP.value/fac, -1*self.RNIDX.value
+        return (amp, gam, nf)
+
+    def pl_rn_basis_prior_pair(self, toas):
+        t = (toas['tdbld'].quantity * u.day).to(u.s).value
+        amp, gam, nf = self.get_pl_vals()
+        Fmat, f = utils.create_fourier_design_matrix(t, nf)
+        prior = utils.powerlaw(f, amp, gam) * f[0]
+        return (Fmat, prior)
+
+    def pl_rn_cov_matrix(self, toas):
+        Fmat, phi = self.pl_rn_basis_pair(toas)
+        return np.dot(Fmat * phi[None,:], Fmat.T)
