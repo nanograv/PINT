@@ -60,7 +60,7 @@ for line, TOA in zip(goodlines, ts.table):
     log.info("TOA in tt difference is: %.2f ns" % \
              ((TOA['mjd'].tt - tempo_tt.tt).sec * u.s).to(u.ns).value)
 
-    pint_opv = erfautils.topo_posvels(
+    pint_opv = erfautils.gcrs_posvel_from_itrf(
             Observatory.get(TOA['obs']).earth_location_itrf(),
             TOA, obsname=TOA['obs'])
     pint_opv = utils.PosVel(pint_opv.pos.T[0], pint_opv.vel.T[0])

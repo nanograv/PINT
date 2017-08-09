@@ -30,19 +30,23 @@ OM = 1.00273781191135448 * 2.0 * np.pi / SECS_PER_DAY
 # arcsec to radians
 asec2rad = 4.84813681109536e-06
 
-def topo_posvels(loc, toas, obsname='obs'):
+def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
     """Return a list of PosVel instances for the observatory at the TOA times.
 
     Observatory location should be given in the loc argument as an astropy
-    EarthLocation object.
+    EarthLocation object. This location will be in the ITRF frame (i.e.
+    co-rotating with the Earth).
 
     The optional obsname argument will be used as label in the returned
     PosVel instance.
 
     This routine returns a list of PosVel instances, containing the
     positions (m) and velocities (m / s) at the times of the toas and
-    referenced to the ITRF geocentric coordinates.  This routine is
-    basically SOFA's pvtob() with an extra rotation from c2ixys.
+    referenced to the Earth-centered Inertial (ECI, aka GCRS) coordinates.
+    This routine is basically SOFA's pvtob() [Position and velocity of
+    a terrestrial observing station] with an extra rotation from c2ixys()
+    [Form the celestial to intermediate-frame-of-date matrix given the CIP
+    X,Y and the CIO locator s].
     """
     # If the input is a single TOA (i.e. a row from the table),
     # then put it into a list
@@ -114,7 +118,7 @@ def topo_posvels(loc, toas, obsname='obs'):
 
 
 # This seems to be never used!  It also has no docstring!
-def astropy_topo_posvels(loc, toas, obsname='obs'):
-    t = Time(toas['tdbld'], scale='tdb', format='mjd')
-    pos, vel = loc.get_gcrs_posvel(t)
-    return utils.PosVel(pos, vel, obj=obsname, origin="EARTH")
+# def astropy_gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
+#     t = Time(toas['tdbld'], scale='tdb', format='mjd')
+#     pos, vel = loc.get_gcrs_posvel(t)
+#     return utils.PosVel(pos, vel, obj=obsname, origin="earth")

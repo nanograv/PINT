@@ -19,6 +19,8 @@ from astropy.coordinates import SkyCoord
 
 from astropy import log
 
+#log.setLevel('DEBUG')
+
 def main(argv=None):
 
     parser = argparse.ArgumentParser(description="Use PINT to compute H-test and plot Phaseogram from a Fermi FT1 event file.")

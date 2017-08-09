@@ -1,7 +1,7 @@
 # phase.py
 # Simple class representing pulse phase as integer and fractional
 # parts.
-# SUGGESTION(paulr): How about adding some documentation here
+# SUGGESTION(@paulray): How about adding some documentation here
 # describing why the fractional part is reduced to [-0.5,0.5] instead of [0,1].
 # I think I understand it, but it would be good to have it stated.
 # Also, probably one of the comparisons below should be <= or >=, so the

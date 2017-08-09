@@ -288,7 +288,7 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
                 toa_str, toaerr.to(u.us).value)
     else:
         log.error('Unknown TOA format ({0})'.format(format))
-        # Should this raise an exception here? -- paulr
+        # Should this raise an exception here? -- @paulray
 
     return out
 
@@ -638,7 +638,7 @@ class TOAs(object):
             handle = True
         if format.upper() in ('TEMPO2','1'):
             outf.write('FORMAT 1\n')
-        # NOTE(paulr): This really should REMOVE any(?) clock corrections
+        # NOTE(@paulray): This really should REMOVE any(?) clock corrections
         # that have been applied!
         for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'].quantity,
             self.table['freq'].quantity,self.table['obs'],self.table['flags']):
@@ -685,7 +685,7 @@ class TOAs(object):
             for jj in range(loind, hiind):
                 if 'to' in flags[jj]:
                     # TIME commands are in sec
-                    # SUGGESTION(paulr): These time correction units should
+                    # SUGGESTION(@paulray): These time correction units should
                     # be applied in the parser, not here. In the table the time
                     # correction should have units.
                     corr[jj] = flags[jj]['to'] * u.s
@@ -721,8 +721,15 @@ class TOAs(object):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
-            grpmjds = time.Time(grp['mjd'], location=grp['mjd'][0].location)
+            log.debug("compute_TDBs: location = {0}".format(grp['mjd'][0].location))
+            grpmjds = time.Time(grp['mjd'], location=grp['mjd'][0].location,
+                precision=9)
+            log.debug("grpmjds ({0}) {1:.12f}".format(grpmjds.scale,grpmjds.mjd[0]))
             grptdbs = grpmjds.tdb
+            log.debug("grptdbs ({0}) {1:.12f}".format(grptdbs.scale,grptdbs.mjd[0]))
+            # For spacecraft observatories, here is the place
+            # to add the time dilation part. Just let astropy
+            # do the geocentric TT->TDB correction (@paulray)
             tdbs[loind:hiind] = numpy.asarray([t for t in grptdbs])
 
         # Now add the new columns to the table
@@ -779,8 +786,9 @@ class TOAs(object):
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
             site = get_observatory(obs)
-            tdb = time.Time(grp['tdb'])
+            tdb = time.Time(grp['tdb'],precision=9)
             ssb_obs = site.posvel(tdb,ephem)
+            log.debug("SSB obs pos {0}".format(ssb_obs.pos[:,0]))
             ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T.to(u.km)
             ssb_obs_vel[loind:hiind,:] = ssb_obs.vel.T.to(u.km/u.s)
             sun_obs = objPosVel_wrt_SSB('sun',tdb,ephem) - ssb_obs
@@ -874,6 +882,7 @@ class TOAs(object):
                         # Save FORMAT in a tmp
                         fmt = self.cdict["FORMAT"]
                         self.cdict["FORMAT"] = "Unknown"
+                        log.info("Processing included TOA file {0}".format(d["Command"][1]))
                         self.read_toa_file(d["Command"][1], top=False)
                         # re-set FORMAT
                         self.cdict["FORMAT"] = fmt

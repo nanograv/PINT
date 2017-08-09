@@ -195,7 +195,7 @@ def time_to_mjd_string_array(t, prec=15):
 def time_to_longdouble(t):
     """ Return an astropy Time value as MJD in longdouble
 
-    ## SUGGESTION(paulr): This function is at least partly redundant with
+    ## SUGGESTION(@paulray): This function is at least partly redundant with
     ## ddouble2ldouble() below...
 
     ## Also, is it certain that this calculation retains the full precision?
