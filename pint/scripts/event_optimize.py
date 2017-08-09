@@ -221,7 +221,7 @@ class emcee_fitter(Fitter):
         """
         phss = self.model.phase(self.toas.table)[1]
         # ensure all postive
-        return np.where(phss < 0.0, phss + 1.0, phss)
+        return np.where(phss < 0.0*u.cycle, phss + 1.0*u.cycle, phss)
 
     def lnprior(self, theta):
         """
@@ -284,7 +284,7 @@ class emcee_fitter(Fitter):
         """
         Make a nice 2-panel phaseogram for the current model
         """
-        mjds = self.toas.table['tdbld'].astype(np.float64)
+        mjds = self.toas.table['tdbld'].quantity
         phss = self.get_event_phases()
         plot_utils.phaseogram(mjds, phss, weights=self.weights, bins=bins,
             rotate=rotate, size=size, alpha=alpha, plotfile=plotfile)
