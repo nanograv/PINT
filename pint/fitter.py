@@ -212,8 +212,8 @@ class GLSFitter(Fitter):
         super(GLSFitter, self).__init__(toas=toas, model=model)
         self.method = 'weighted_least_square'
 
-    def fit_toas(self, maxiter=1, threshold=False):
-        """Run a linear weighted least-squared fitting method"""
+    def fit_toas(self, maxiter=1, threshold=False, full_cov=False):
+        """Run a Generalized least-squared fitting method"""
         chi2 = 0
         for i in range(maxiter):
             fitp = self.get_fitparams()
@@ -226,15 +226,15 @@ class GLSFitter(Fitter):
             # Get residuals and TOA uncertainties in seconds
             self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value
-            Nvec = self.model.scaled_sigma(self.toas.table).to(u.s).value **2
 
             # get any noise design matrices and prior vectors
-            Mn = self.model.noise_model_designmatrix(self.toas.table)
-            phi = self.model.noise_model_basis_prior(self.toas.table)
-            phiinv = np.zeros(M.shape[1])
-            if Mn is not None and phi is not None:
-                phiinv = np.concatenate((phiinv, 1/phi))
-                M = np.hstack((M, Mn))
+            if not full_cov:
+                Mn = self.model.noise_model_designmatrix(self.toas.table)
+                phi = self.model.noise_model_basis_prior(self.toas.table)
+                phiinv = np.zeros(M.shape[1])
+                if Mn is not None and phi is not None:
+                    phiinv = np.concatenate((phiinv, 1/phi))
+                    M = np.hstack((M, Mn))
 
             # normalize the design matrix
             norm = np.sqrt(np.sum(M**2, axis=0))
@@ -246,10 +246,20 @@ class GLSFitter(Fitter):
             M /= norm
 
             # compute covariance matrices
-            cinv = 1 / Nvec
-            mtcm = np.dot(M.T, cinv[:,None]*M)
-            mtcm += np.diag(phiinv)
-            mtcy = np.dot(M.T, cinv*residuals)
+            if full_cov:
+                cov = self.model.covariance_matrix(self.toas.table)
+                cf = sl.cho_factor(cov)
+                cm = sl.cho_solve(cf, M)
+                mtcm = np.dot(M.T, cm)
+                mtcy = np.dot(cm.T, residuals)
+
+            else:
+                Nvec = self.model.scaled_sigma(self.toas.table).to(u.s).value**2
+                cinv = 1 / Nvec
+                mtcm = np.dot(M.T, cinv[:,None]*M)
+                mtcm += np.diag(phiinv)
+                mtcy = np.dot(M.T, cinv*residuals)
+
 
             try:
                 c = sl.cho_factor(mtcm)
@@ -268,7 +278,10 @@ class GLSFitter(Fitter):
 
             # compute linearized chisq
             newres = residuals - np.dot(M, xhat)
-            chi2 = np.dot(newres, cinv*newres)
+            if full_cov:
+                chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+            else:
+                chi2 = np.dot(newres, cinv*newres)
 
             # compute absolute estimates, normalized errors, covariance matrix
             dpars = xhat/norm

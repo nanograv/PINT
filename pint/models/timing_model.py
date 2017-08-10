@@ -492,11 +492,10 @@ class TimingModel(object):
            TOAs error as diagonal element will be returned.
         """
         ntoa = len(toas)
-        result = np.zeros((ntoa, ntoa)) * u.us
+        result = np.zeros((ntoa, ntoa))
         # When there is no noise model.
         if len(self.covariance_matrix_funcs) == 0:
-            result += np.diag(toas['error'].quantity) * \
-                      toas['error'].quantity.unit
+            result += np.diag(toas['error'].quantity.value**2)
             return result
 
         for nf in self.covariance_matrix_funcs:
@@ -512,7 +511,7 @@ class TimingModel(object):
         result = np.zeros(ntoa) * u.us
         # When there is no noise model.
         if len(self.scaled_sigma_funcs) == 0:
-            result += toas['error'].quantity 
+            result += toas['error'].quantity
             return result
 
         for nf in self.scaled_sigma_funcs:

@@ -124,8 +124,8 @@ class ScaleToaError(NoiseComponent):
         return sigma_scaled
 
     def sigma_scaled_cov_matrix(self, toas):
-        scaled_sigma = self.scale_sigma(toas)
-        return np.diag(scaled_sigma) * scaled_sigma.unit
+        scaled_sigma = self.scale_sigma(toas).to(u.s).value**2
+        return np.diag(scaled_sigma)
 
 
 class EcorrNoise(NoiseComponent):
@@ -250,5 +250,5 @@ class PLRedNoise(NoiseComponent):
         return (Fmat, prior)
 
     def pl_rn_cov_matrix(self, toas):
-        Fmat, phi = self.pl_rn_basis_pair(toas)
+        Fmat, phi = self.pl_rn_basis_prior_pair(toas)
         return np.dot(Fmat * phi[None,:], Fmat.T)
