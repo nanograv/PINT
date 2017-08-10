@@ -26,7 +26,7 @@ iers_a_file = None
 iers_a = None
 
 
-def get_TOAs(timfile, ephem="DE421", include_bipm=True,
+def get_TOAs(timfile, ephem="DE421", include_bipm=True, bipm_version='BIPM2015',
              include_gps=True, planets=False, usepickle=False):
     """Convenience function to load and prepare TOAs for PINT use.
 
@@ -50,7 +50,8 @@ def get_TOAs(timfile, ephem="DE421", include_bipm=True,
     if not any(['clkcorr' in f for f in t.table['flags']]):
         log.info("Applying clock corrections.")
         t.apply_clock_corrections(include_gps=include_gps,
-                                  include_bipm=include_bipm)
+                                  include_bipm=include_bipm,
+                                  bipm_version=bipm_version)
     if 'tdb' not in t.table.colnames:
         log.info("Getting IERS params and computing TDBs.")
         t.compute_TDBs()
@@ -96,6 +97,7 @@ def _check_pickle(toafilename, picklefilename=None):
     return picklefilename
 
 def get_TOAs_list(toa_list,ephem="DE421", include_bipm=True,
+                  bipm_version="BIPM2015",
                   include_gps=True, planets=False):
     """Load TOAs from a list of TOA objects.
 
@@ -110,7 +112,8 @@ def get_TOAs_list(toa_list,ephem="DE421", include_bipm=True,
     if not any([f.has_key('clkcorr') for f in t.table['flags']]):
         log.info("Applying clock corrections.")
         t.apply_clock_corrections(include_gps=include_gps,
-                                  include_bipm=include_bipm)
+                                  include_bipm=include_bipm,
+                                  bipm_version=bipm_version)
     if 'tdb' not in t.table.colnames:
         log.info("Getting IERS params and computing TDBs.")
         t.compute_TDBs()
@@ -650,6 +653,7 @@ class TOAs(object):
             outf.close()
 
     def apply_clock_corrections(self, include_bipm=True,
+                                bipm_version="BIPM2015",
                                 include_gps=True):
         """Apply observatory clock corrections and TIME statments.
 
@@ -679,7 +683,8 @@ class TOAs(object):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             site = get_observatory(obs, include_gps=include_gps,
-                                   include_bipm=include_bipm)
+                                   include_bipm=include_bipm,
+                                   bipm_version=bipm_version)
             loind, hiind = self.table.groups.indices[ii:ii+2]
             # First apply any TIME statements
             for jj in range(loind, hiind):

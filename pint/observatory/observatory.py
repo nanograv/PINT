@@ -147,7 +147,8 @@ class Observatory(object):
         raise NotImplementedError
 
 
-def get_observatory(name, include_gps=True, include_bipm=True):
+def get_observatory(name, include_gps=True, include_bipm=True,
+                    bipm_version="BIPM2015"):
     """Conviencience function to get observatory object with options.
 
     This function will simply call the ``Observatory.get`` method but
@@ -163,6 +164,7 @@ def get_observatory(name, include_gps=True, include_bipm=True):
                       correction.
         include_bipm = Set False to disable TAI TT(BIPM) clock
                       correction.
+        bipm_version = Set the version of TT BIPM clock correction files.
 
     .. note:: This function can and should be expanded if more clock
         file switches/options are added at a public API level.
@@ -171,4 +173,5 @@ def get_observatory(name, include_gps=True, include_bipm=True):
     site = Observatory.get(name)
     site.include_gps = include_gps
     site.include_bipm = include_bipm
+    site.bipm_version= bipm_version
     return site
