@@ -26,7 +26,7 @@ iers_a_file = None
 iers_a = None
 JD_MJD = 2400000.5
 
-def get_TOAs(timfile, ephem="DE421", include_bipm=True,
+def get_TOAs(timfile, ephem="DE421", include_bipm=True, bipm_version='BIPM2015',
              include_gps=True, planets=False, usepickle=False,
              tdb_from_ephem=False):
     """Convenience function to load and prepare TOAs for PINT use.
@@ -98,7 +98,8 @@ def _check_pickle(toafilename, picklefilename=None):
     return picklefilename
 
 def get_TOAs_list(toa_list,ephem="DE421", include_bipm=True,
-                  include_gps=True, planets=False, tdb_from_ephem=False):
+                  bipm_version='BIPM2015', include_gps=True, planets=False,
+                  tdb_from_ephem=False):
     """Load TOAs from a list of TOA objects.
 
     Compute the TDB time and observatory positions and velocity
