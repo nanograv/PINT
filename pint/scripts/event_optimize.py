@@ -459,7 +459,7 @@ def main(argv=None):
             (len(weights), weights.min(), weights.max()))
     else:
         weights = None
-        print("There are %d events, no weights are being used." % (len(weights)))
+        print("There are %d events, no weights are being used." % ts.ntoas)
 
     # Now load in the gaussian template and normalize it
     gtemplate = read_gaussfitfile(gaussianfile, nbins)
