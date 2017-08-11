@@ -24,7 +24,7 @@ class ScaleToaError(NoiseComponent):
         super(ScaleToaError, self).__init__()
         self.category = 'scale_toa_error'
         self.add_param(p.maskParameter(name ='EFAC', units="",
-                                       aliases=['T2EFAC', 'TNEFAC'],
+                                       aliases=['T2EFAC', 'TNEF'],
                                        description="A multiplication factor on" \
                                                    " the measured TOA uncertainties,"))
 
@@ -214,15 +214,15 @@ class PLRedNoise(NoiseComponent):
                                        description="Spectral index of "\
                                                 "powerlaw red noise."))
 
-        self.add_param(p.floatParameter(name='TNRedAmp', units="",\
+        self.add_param(p.floatParameter(name='TNREDAMP', units="",\
                                        aliases=[],
                                        description="Amplitude of powerlaw "\
                                        "red noise in tempo2 format"))
-        self.add_param(p.floatParameter(name='TNRedGam', units="",\
+        self.add_param(p.floatParameter(name='TNREDGAM', units="",\
                                        aliases=[],
                                        description="Spectral index of powerlaw "\
                                        "red noise in tempo2 format"))
-        self.add_param(p.floatParameter(name='TNRedC', units="",\
+        self.add_param(p.floatParameter(name='TNREDC', units="",\
                                        aliases=[],
                                        description="Number of red noise frequencies."))
 
@@ -234,9 +234,9 @@ class PLRedNoise(NoiseComponent):
         super(PLRedNoise, self).setup()
 
     def get_pl_vals(self):
-        nf = int(self.TNredC.value) if self.TNRedC.value is not None else 30
-        if self.TNRedAmp.value is not None and self.TNRedGam.value is not None:
-            amp, gam= 10**self.TNRedAmp.value, self.TNRedGam
+        nf = int(self.TNREDC.value) if self.TNREDC.value is not None else 30
+        if self.TNREDAMP.value is not None and self.TNREDGAM.value is not None:
+            amp, gam= 10**self.TNREDAMP.value, self.TNREDGAM.value
         elif self.RNAMP.value is not None and self.RNIDX is not None:
             fac = (86400.*365.24*1e6)/(2.0*np.pi*np.sqrt(3.0))
             amp, gam = self.RNAMP.value/fac, -1*self.RNIDX.value
