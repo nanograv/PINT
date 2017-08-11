@@ -11,6 +11,7 @@ import numpy as np
 from copy import deepcopy
 from lcnorm import NormAngles
 from lcprimitives import *
+from astropy import log
 
 class LCTemplate(object):
     """Manage a lightcurve template (collection of LCPrimitive objects).
@@ -464,9 +465,10 @@ class LCTemplate(object):
         """ Adjust such that template peak arrives within dphi of phi."""
         self._cache_out_of_date = True
         nbin = int(1./dphi)+1
-        dom = np.linspace(0,1,nbin)
-        current_peak = dom[np.argmax(self(dom))]
-        shift = phi - current_peak
+        # This shifts the first primitive to peak at phase 0.0
+        # Could instead use tallest primitive or some other feature
+        shift = -1.0*self.primitives[0].get_location()
+        log.info('Shifting profile peak by {0}'.format(shift))
         for prim in self.primitives:
             new_location = (prim.get_location() + shift)%1
             prim.set_location(new_location)
