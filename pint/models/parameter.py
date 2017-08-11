@@ -368,7 +368,8 @@ class Parameter(object):
     def name_matches(self, name):
         """Whether or not the parameter name matches the provided name
         """
-        return (name == self.name) or (name in self.aliases)
+        return (name == self.name.upper()) or (name in map(lambda x: x.upper(),
+                                                           self.aliases))
 
 class floatParameter(Parameter):
     """This is a Parameter type that is specific to the parameters has a float/
