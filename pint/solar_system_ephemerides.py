@@ -164,7 +164,7 @@ def objPosVel(obj1, obj2, t, ephem):
     else:
         return PosVel(np.zeros((3,len(t)))*u.km, np.zeros((3,len(t)))*u.km/u.second)
 
-def get_tdb_tt_ephem(t, ephem, path=None, link=None):
+def get_tdb_tt_ephem_geocenter(tt, ephem, path=None, link=None):
     """The is a function to read the TDB_TT correction from the JPL DExxxt.bsp
        ephemeris file.
        Parameter
@@ -176,8 +176,11 @@ def get_tdb_tt_ephem(t, ephem, path=None, link=None):
        Note
        ----
        Only the DEXXXt.bsp type ephemeris has the TDB-TT information, others do
-       not provide it.
+       not provide it. The definition for TDB-TT column is described in the
+       paper:
+       https://ipnpr.jpl.nasa.gov/progress_report/42-196/196C.pdf page 6.
     """
+    # Load kernel
     ephem = ephem.lower()
 
     if path is None:
@@ -199,10 +202,9 @@ def get_tdb_tt_ephem(t, ephem, path=None, link=None):
                              " local directory %s." % (ephem, path_str))
     kernel = coor.solar_system_ephemeris._kernel
     try:
+        # JPL ID defines this column.
         seg = kernel[1000000000, 1000000001]
     except KeyError:
         raise ValueError("Ephemeris '%s.bsp' do not provide the TDB-TT correction.")
-
-    tt = np.longdouble(t.jd1) + np.longdouble(t.jd2)
-    tdb_tt = seg.compute(tt)[0]
-    return tdb_tt
+    tdb_tt = seg.compute(tt.jd1, tt.jd2)[0]
+    return tdb_tt * u.second

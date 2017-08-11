@@ -12,8 +12,8 @@ try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
-from .solar_system_ephemerides import objPosVel_wrt_SSB, get_tdb_tt_ephem
-from pint import ls, J2000, J2000ld
+from .solar_system_ephemerides import objPosVel_wrt_SSB
+from pint import ls, J2000, J2000ld, JD_MJD
 from .config import datapath
 from astropy import log
 
@@ -739,11 +739,12 @@ class TOAs(object):
                 grp = self.table.groups[ii]
                 obs = self.table.groups.keys[ii]['obs']
                 loind, hiind = self.table.groups.indices[ii:ii+2]
+                site = get_observatory(obs)
                 grpmjds = time.Time(grp['mjd'], location=grp['mjd'][0].location)
                 grptt = grpmjds.tt
-                tdb_tt = get_tdb_tt_ephem(grptt, ephem)
+                tdb_tt = site.get_TDB_TT_from_ephem(grpmjds, ephem)
                 grptdbs_mjd = time.Time(grptt.jd1 - JD_MJD, \
-                                        grptt.jd2 - tdb_tt/SECS_PER_DAY, \
+                                        grptt.jd2 - tdb_tt.to(u.day).value, \
                                         format='pulsar_mjd', scale='tdb', \
                                         location=grp['mjd'][0].location)
                 tdbs[loind:hiind] = numpy.asarray([t for t in grptdbs_mjd])

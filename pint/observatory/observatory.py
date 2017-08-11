@@ -138,6 +138,12 @@ class Observatory(object):
         # TOA metadata which may be necessary in some cases.
         raise NotImplementedError
 
+    def compute_TDBs_from_ephem(self, t, ephem):
+        """Returns observatory TDB calculated from ephemeris other than from
+           astropy.
+        """
+        raise NotImplementedError
+
     def posvel(self,t,ephem):
         """Returns observatory position and velocity relative to solar system
         barycenter for the given times (astropy array-valued Time objects)."""
