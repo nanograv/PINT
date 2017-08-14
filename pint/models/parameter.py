@@ -1151,7 +1151,7 @@ class maskParameter(floatParameter):
     """
     def __init__(self, name=None, index=1, key=None, key_value=None,
                  value=None, long_double=False, units= None, description=None,
-                 uncertainty=None, frozen=True, continuous=False, aliases=None):
+                 uncertainty=None, frozen=True, continuous=False, aliases=[]):
         self.is_mask = True
         self.key_identifier = {'mjd': (lambda x: time.Time(x, format='mjd').mjd, 2),
                                 'freq': (float, 2),
@@ -1177,13 +1177,18 @@ class maskParameter(floatParameter):
         name_param = name + str(index)
         self.origin_name = name
         self.prefix = self.origin_name
+        # Make aliases with index.
+        idx_aliases = []
+        for al in aliases:
+            idx_aliases.append(al + str(self.index))
+        self.prefix_aliases = aliases
         super(maskParameter, self).__init__(name=name_param, value=value,
                                             units=units,
                                             description=description,
                                             uncertainty=uncertainty,
                                             frozen=frozen,
                                             continuous=continuous,
-                                            aliases=aliases,
+                                            aliases=idx_aliases,
                                             long_double=long_double)
 
         # For the first mask parameter, add name to aliases for the reading
@@ -1210,6 +1215,13 @@ class maskParameter(floatParameter):
         if self.uncertainty is not None and isinstance(self.value, numbers.Number):
             out += " +/- " + str(self.uncertainty.to(self.units))
         return out
+
+    def name_matches(self, name):
+        if super(maskParameter, self).name_matches(name):
+            return True
+        else:
+            name_idx = name + str(self.index)
+            return super(maskParameter, self).name_matches(name_idx)
 
     def from_parfile_line_mask(self, line):
         """
@@ -1305,7 +1317,8 @@ class maskParameter(floatParameter):
         """
         new_mask_param = maskParameter(name=self.origin_name, index=index,
                                        long_double=self.long_double,
-                                       units= self.units, aliases=[])
+                                       units= self.units,
+                                       aliases=self.prefix_aliases)
         return new_mask_param
 
     def select_toa_mask(self, toas):
