@@ -2,9 +2,9 @@
 # Defines the pulsar timing noise model.
 from .timing_model import Component,  MissingParameter
 from . import parameter as p
-from .. import utils
 import numpy as np
 import astropy.units as u
+
 
 class NoiseComponent(Component):
     def __init__(self,):
@@ -177,7 +177,7 @@ class EcorrNoise(NoiseComponent):
         Umats = []
         for ec in ecorrs:
             mask = ec.select_toa_mask(toas)
-            Umats.append(utils.create_quantization_matrix(t[mask]))
+            Umats.append(create_quantization_matrix(t[mask]))
         nc = np.sum(U.shape[1] for U in Umats)
         Umat = np.zeros((len(t), nc))
         prior = np.zeros(nc)
@@ -245,10 +245,75 @@ class PLRedNoise(NoiseComponent):
     def pl_rn_basis_prior_pair(self, toas):
         t = (toas['tdbld'].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
-        Fmat, f = utils.create_fourier_design_matrix(t, nf)
-        prior = utils.powerlaw(f, amp, gam) * f[0]
+        Fmat, f = create_fourier_design_matrix(t, nf)
+        prior = powerlaw(f, amp, gam) * f[0]
         return (Fmat, prior)
 
     def pl_rn_cov_matrix(self, toas):
         Fmat, phi = self.pl_rn_basis_prior_pair(toas)
         return np.dot(Fmat * phi[None,:], Fmat.T)
+
+
+def create_quantization_matrix(toas, dt=1, nmin=2):
+    """Create quantization matrix mapping TOAs to observing epochs."""
+    isort = np.argsort(toas)
+
+    bucket_ref = [toas[isort[0]]]
+    bucket_ind = [[isort[0]]]
+
+    for i in isort[1:]:
+        if toas[i] - bucket_ref[-1] < dt:
+            bucket_ind[-1].append(i)
+        else:
+            bucket_ref.append(toas[i])
+            bucket_ind.append([i])
+
+    # find only epochs with more than 1 TOA
+    bucket_ind2 = [ind for ind in bucket_ind if len(ind) >= nmin]
+
+    U = np.zeros((len(toas),len(bucket_ind2)),'d')
+    for i,l in enumerate(bucket_ind2):
+        U[l,i] = 1
+
+    return U
+
+def create_fourier_design_matrix(t, nmodes, Tspan=None):
+    """
+    Construct fourier design matrix from eq 11 of Lentati et al, 2013
+
+    :param t: vector of time series in seconds
+    :param nmodes: number of fourier coefficients to use
+    :param Tspan: option to some other Tspan
+    :return: F: fourier design matrix
+    :return: f: Sampling frequencies
+    """
+
+    N = len(t)
+    F = np.zeros((N, 2 * nmodes))
+
+    if Tspan is not None:
+        T = Tspan
+    else:
+        T = t.max() - t.min()
+
+    f = np.linspace(1 / T, nmodes / T, nmodes)
+
+    Ffreqs = np.zeros(2 * nmodes)
+    Ffreqs[0::2] = f
+    Ffreqs[1::2] = f
+
+    F[:,::2] = np.sin(2*np.pi*t[:,None]*f[None,:])
+    F[:,1::2] = np.cos(2*np.pi*t[:,None]*f[None,:])
+
+    return F, Ffreqs
+
+def powerlaw(f, A=1e-16, gamma=5):
+    """Power-law PSD.
+
+    :param f: Sampling frequencies
+    :param A: Amplitude of red noise [GW units]
+    :param gamma: Spectral index of red noise process
+    """
+
+    fyr = 1 / 3.16e7
+    return A**2 / 12.0 / np.pi**2 * fyr**(gamma-3) * f**(-gamma)

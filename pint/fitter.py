@@ -210,7 +210,7 @@ class GLSFitter(Fitter):
     """
     def __init__(self, toas=None, model=None):
         super(GLSFitter, self).__init__(toas=toas, model=model)
-        self.method = 'weighted_least_square'
+        self.method = 'generalized_least_square'
 
     def fit_toas(self, maxiter=1, threshold=False, full_cov=False):
         """Run a Generalized least-squared fitting method"""
