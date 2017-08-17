@@ -13,7 +13,7 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 from .solar_system_ephemerides import objPosVel_wrt_SSB
-from pint import ls, J2000, J2000ld, JD_MJD
+from pint import ls, J2000, J2000ld
 from .config import datapath
 from astropy import log
 
@@ -28,7 +28,7 @@ JD_MJD = 2400000.5
 
 def get_TOAs(timfile, ephem="DE421", include_bipm=True, bipm_version='BIPM2015',
              include_gps=True, planets=False, usepickle=False,
-             tdb_from_ephem=False):
+             tdb_method="astropy"):
     """Convenience function to load and prepare TOAs for PINT use.
 
     Loads TOAs from a '.tim' file, applies clock corrections, computes
@@ -55,7 +55,7 @@ def get_TOAs(timfile, ephem="DE421", include_bipm=True, bipm_version='BIPM2015',
                                   bipm_version=bipm_version)
     if 'tdb' not in t.table.colnames:
         log.info("Getting IERS params and computing TDBs.")
-        t.compute_TDBs(from_ephem=tdb_from_ephem, ephem=ephem)
+        t.compute_TDBs(method=tdb_method, ephem=ephem)
     if 'ssb_obs_pos' not in t.table.colnames:
         log.info("Computing observatory positions and velocities.")
         t.compute_posvels(ephem, planets)
@@ -99,7 +99,7 @@ def _check_pickle(toafilename, picklefilename=None):
 
 def get_TOAs_list(toa_list,ephem="DE421", include_bipm=True,
                   bipm_version='BIPM2015', include_gps=True, planets=False,
-                  tdb_from_ephem=False):
+                  tdb_method="astropy"):
     """Load TOAs from a list of TOA objects.
 
     Compute the TDB time and observatory positions and velocity
@@ -117,7 +117,7 @@ def get_TOAs_list(toa_list,ephem="DE421", include_bipm=True,
                                   bipm_version=bipm_version)
     if 'tdb' not in t.table.colnames:
         log.info("Getting IERS params and computing TDBs.")
-        t.compute_TDBs(from_ephem=tdb_from_ephem, ephem=ephem)
+        t.compute_TDBs(method=tdb_method, ephem=ephem)
     if 'ssb_obs_pos' not in t.table.colnames:
         log.info("Computing observatory positions and velocities.")
         t.compute_posvels(ephem, planets)
@@ -706,9 +706,8 @@ class TOAs(object):
                 if corr[jj]:
                     flags[jj]['clkcorr'] = corr[jj]
 
-    def compute_TDBs(self, from_ephem=False, ephem=None):
+    def compute_TDBs(self, method="astropy", ephem=None):
         """Compute and add TDB and TDB long double columns to the TOA table.
-
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
         for TDB times, using the Observatory locations and IERS A Earth
         rotation corrections for UT1.
@@ -723,31 +722,14 @@ class TOAs(object):
 
         # Compute in observatory groups
         tdbs = numpy.zeros_like(self.table['mjd'])
-        if not from_ephem:
-            for ii, key in enumerate(self.table.groups.keys):
-                grp = self.table.groups[ii]
-                obs = self.table.groups.keys[ii]['obs']
-                loind, hiind = self.table.groups.indices[ii:ii+2]
-                grpmjds = time.Time(grp['mjd'], location=grp['mjd'][0].location)
-                grptdbs = grpmjds.tdb
-                tdbs[loind:hiind] = numpy.asarray([t for t in grptdbs])
-        else:
-            if ephem is None:
-                raise ValueError("A ephemeris file should be provided to get"
-                                 " the TDB-TT corrections.")
-            for ii, key in enumerate(self.table.groups.keys):
-                grp = self.table.groups[ii]
-                obs = self.table.groups.keys[ii]['obs']
-                loind, hiind = self.table.groups.indices[ii:ii+2]
-                site = get_observatory(obs)
-                grpmjds = time.Time(grp['mjd'], location=grp['mjd'][0].location)
-                grptt = grpmjds.tt
-                tdb_tt = site.get_TDB_TT_from_ephem(grpmjds, ephem)
-                grptdbs_mjd = time.Time(grptt.jd1 - JD_MJD, \
-                                        grptt.jd2 - tdb_tt.to(u.day).value, \
-                                        format='pulsar_mjd', scale='tdb', \
-                                        location=grp['mjd'][0].location)
-                tdbs[loind:hiind] = numpy.asarray([t for t in grptdbs_mjd])
+        for ii, key in enumerate(self.table.groups.keys):
+            grp = self.table.groups[ii]
+            obs = self.table.groups.keys[ii]['obs']
+            loind, hiind = self.table.groups.indices[ii:ii+2]
+            site = get_observatory(obs)
+            grpmjds = time.Time(grp['mjd'], location=grp['mjd'][0].location)
+            grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
+            tdbs[loind:hiind] = numpy.asarray([t for t in grptdbs])
 
         # Now add the new columns to the table
         col_tdb = table.Column(name='tdb', data=tdbs)

@@ -138,9 +138,50 @@ class Observatory(object):
         # TOA metadata which may be necessary in some cases.
         raise NotImplementedError
 
-    def compute_TDBs_from_ephem(self, t, ephem):
-        """Returns observatory TDB calculated from ephemeris other than from
-           astropy.
+    def get_TDBs(self, t,  method='astropy', ephem=None, options=None):
+        """This is a high level function for converting TOAs to TDB time scale.
+            Different method can be applied to obtain the result. Current supported
+            methods are ['astropy', 'ephemeris']
+            Parameters
+            ----------
+            t: astropy.time.Time object
+                The time need for converting toas
+            method: str or callable, optional
+                Method of computing TDB
+
+                - 'astropy': Astropy time.Time object built-in converter, use FB90.
+                - 'ephemeris': JPL ephemeris included TDB-TT correction.
+            ephme: str, optional
+                The ephemeris to get he TDB-TT correction. Required for the
+                'ephemeris' method.
+        """
+        if t.isscalar: t = Time([t])
+        # Check the method. This pattern is from numpy minize
+        if callable(method):
+            meth = "_custom"
+        else:
+            meth = method.lower()
+        if options is None:
+            options = {}
+        if meth == "_custom":
+            options = dict(options)
+            return method(t, **options)
+        elif meth == "astropy":
+            return self._get_TDB_astropy(t)
+        elif meth == "ephemeris":
+            if ephem is None:
+                raise ValueError("A ephemeris file should be provided to get"
+                                     " the TDB-TT corrections.")
+            return self._get_TDB_ephem(t, ephem)
+        else:
+            raise ValueError("Unknown method '%s'." % method)
+
+    def _get_TDB_astropy(self, t):
+        return t.tdb
+
+    def _get_TDB_ephem(self, t, ephem):
+        """This is a function that reads the ephem TDB-TT column. This column is
+            provided by DE4XXt version of ephemeris.
         """
         raise NotImplementedError
 

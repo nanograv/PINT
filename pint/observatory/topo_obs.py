@@ -14,6 +14,7 @@ from ..utils import PosVel, has_astropy_unit
 from ..solar_system_ephemerides import objPosVel_wrt_SSB, get_tdb_tt_ephem_geocenter
 from ..config import datapath
 from ..erfautils import gcrs_posvel_from_itrf, SECS_PER_DAY
+from pint import JD_MJD
 
 
 class TopoObs(Observatory):
@@ -185,10 +186,11 @@ class TopoObs(Observatory):
             corr += self._bipm_clock.evaluate(t) - tt2tai
         return corr
 
-    def get_TDB_TT_from_ephem(self, t, ephem):
+    def _get_TDB_ephem(self, t, ephem):
+        """This is a function that reads the ephem TDB-TT column. This column is
+            provided by DE4XXt version of ephemeris. This function is only for
+            the ground-based observatories
         """
-        """
-        if t.isscalar: t = Time([t])
         geo_tdb_tt = get_tdb_tt_ephem_geocenter(t.tt, ephem)
         # NOTE The earth velocity is need to compute the time correcion from
         # Topocenter to Geocenter
@@ -196,13 +198,18 @@ class TopoObs(Observatory):
         # differences between TT and TDB can be ignored.
         earth_pv = objPosVel_wrt_SSB('earth', t.tdb, ephem)
         obs_geocenter_pv = gcrs_posvel_from_itrf(self.earth_location_itrf(), t,\
-                                           obsname=self.name)
+                                               obsname=self.name)
         # NOTE
         # Moyer (1981) and Murray (1983), with fundamental arguments adapted
         # from Simon et al. 1994.
-        topo_time_corr = numpy.sum(earth_pv.vel/c.c * obs_geocenter_pv.pos /c.c, axis=0)
+        topo_time_corr = numpy.sum(earth_pv.vel/c.c * obs_geocenter_pv.pos /c.c,
+                                       axis=0)
         topo_tdb_tt = geo_tdb_tt - topo_time_corr
-        return topo_tdb_tt
+        result = Time(t.tt.jd1 - JD_MJD, \
+                      t.tt.jd2 - topo_tdb_tt.to(u.day).value, \
+                      format='pulsar_mjd', scale='tdb', \
+                      location=self.earth_location_itrf())
+        return result
 
     def posvel(self, t, ephem):
         if t.isscalar: t = Time([t])
