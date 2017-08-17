@@ -227,10 +227,10 @@ class GLSFitter(Fitter):
             self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value
 
-            # get any noise design matrices and prior vectors
+            # get any noise design matrices and weight vectors
             if not full_cov:
                 Mn = self.model.noise_model_designmatrix(self.toas.table)
-                phi = self.model.noise_model_basis_prior(self.toas.table)
+                phi = self.model.noise_model_basis_weight(self.toas.table)
                 phiinv = np.zeros(M.shape[1])
                 if Mn is not None and phi is not None:
                     phiinv = np.concatenate((phiinv, 1/phi))

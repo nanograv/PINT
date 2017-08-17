@@ -146,7 +146,7 @@ class EcorrNoise(NoiseComponent):
 
 
         self.covariance_matrix_funcs += [self.ecorr_cov_matrix, ]
-        self.basis_funcs += [self.ecorr_basis_prior_pair, ]
+        self.basis_funcs += [self.ecorr_basis_weight_pair, ]
 
     def setup(self):
         super(EcorrNoise, self).setup()
@@ -171,7 +171,13 @@ class EcorrNoise(NoiseComponent):
             ecorrs.append(getattr(self, ecorr))
         return ecorrs
 
-    def ecorr_basis_prior_pair(self, toas):
+    def ecorr_basis_weight_pair(self, toas):
+        """Return a quantization matrix and ECORR weights.
+
+        A quantization matrix maps TOAs to observing epochs.
+        The weights used are the square of the ECORR values.
+
+        """
         t = (toas['tdbld'].quantity * u.day).to(u.s).value
         ecorrs = self.get_ecorrs()
         Umats = []
@@ -180,18 +186,19 @@ class EcorrNoise(NoiseComponent):
             Umats.append(create_quantization_matrix(t[mask]))
         nc = np.sum(U.shape[1] for U in Umats)
         Umat = np.zeros((len(t), nc))
-        prior = np.zeros(nc)
+        weight = np.zeros(nc)
         nctot = 0
         for ct, ec in enumerate(ecorrs):
             mask = ec.select_toa_mask(toas)
             nn = Umats[ct].shape[1]
             Umat[mask, nctot:nn+nctot] = Umats[ct]
-            prior[nctot:nn+nctot] = ec.quantity.to(u.s).value ** 2
+            weight[nctot:nn+nctot] = ec.quantity.to(u.s).value ** 2
             nctot += nn
-        return (Umat, prior)
+        return (Umat, weight)
 
     def ecorr_cov_matrix(self, toas):
-        U, Jvec = self.ecorr_basis_prior_pair(toas)
+        """Full ECORR covariance matrix."""
+        U, Jvec = self.ecorr_basis_weight_pair(toas)
         return np.dot(U * Jvec[None,:], U.T)
 
 
@@ -228,7 +235,7 @@ class PLRedNoise(NoiseComponent):
 
 
         self.covariance_matrix_funcs += [self.pl_rn_cov_matrix, ]
-        self.basis_funcs += [self.pl_rn_basis_prior_pair, ]
+        self.basis_funcs += [self.pl_rn_basis_weight_pair, ]
 
     def setup(self):
         super(PLRedNoise, self).setup()
@@ -242,15 +249,25 @@ class PLRedNoise(NoiseComponent):
             amp, gam = self.RNAMP.value/fac, -1*self.RNIDX.value
         return (amp, gam, nf)
 
-    def pl_rn_basis_prior_pair(self, toas):
+    def pl_rn_basis_weight_pair(self, toas):
+        """Return a Fourier design matrix and red noise weights.
+
+        A Fourier design matrix contains the sine and cosine basis_functions
+        in a Fourier series expansion.
+        The weights used are the power-law PSD values at frequencies n/T,
+        where n is in [1, TNRedC] and T is the total observing duration of
+        the dataset.
+
+        """
+
         t = (toas['tdbld'].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
         Fmat, f = create_fourier_design_matrix(t, nf)
-        prior = powerlaw(f, amp, gam) * f[0]
-        return (Fmat, prior)
+        weight = powerlaw(f, amp, gam) * f[0]
+        return (Fmat, weight)
 
     def pl_rn_cov_matrix(self, toas):
-        Fmat, phi = self.pl_rn_basis_prior_pair(toas)
+        Fmat, phi = self.pl_rn_basis_weight_pair(toas)
         return np.dot(Fmat * phi[None,:], Fmat.T)
 
 

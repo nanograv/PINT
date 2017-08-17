@@ -528,7 +528,7 @@ class TimingModel(object):
         return np.hstack((r for r in result))
 
 
-    def noise_model_basis_prior(self, toas):
+    def noise_model_basis_weight(self, toas):
         result = []
         if len(self.basis_funcs) == 0:
             return None
