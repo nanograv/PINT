@@ -18,9 +18,11 @@ except AttributeError:
     from string import maketrans
 
 # Define prefix parameter pattern
-pp1 = re.compile(r'([a-zA-Z0-9]+_*)(\d+)')  # For the prefix like DMXR1_3
+pp1 = re.compile(r'([a-zA-Z]\d[a-zA-Z]+)(\d+)') # For the prefix like T2EFAC2
 pp2 = re.compile(r'([a-zA-Z]+)(\d+)')  # For the prefix like F12
-prefixPattern = [pp1, pp2]
+pp3 = re.compile(r'([a-zA-Z0-9]+_*)(\d+)')  # For the prefix like DMXR1_3
+
+prefixPattern = [pp1, pp2, pp3]
 
 
 class PosVel(object):
@@ -346,8 +348,11 @@ def split_prefixed_name(name):
                 break
             else:
                 continue
+        # when we have a match
+        break
+
     if namefield is None:
-        raise ValueError('Unrecognized prefix name pattern.')
+        raise ValueError("Unrecognized prefix name pattern'%s'." % name)
     indexValue = int(indexPart)
     return prefixPart, indexPart, indexValue
 

@@ -170,6 +170,30 @@ class TimingModel(object):
         return pfs
 
     @property
+    def covariance_matrix_funcs(self,):
+        cvfs = []
+        if 'NoiseComponent' in self.component_types:
+            for nc in self.NoiseComponent_list:
+                cvfs += nc.covariance_matrix_funcs
+        return cvfs
+
+    @property
+    def scaled_sigma_funcs(self,):
+        ssfs = []
+        if 'NoiseComponent' in self.component_types:
+            for nc in self.NoiseComponent_list:
+                ssfs += nc.scaled_sigma_funcs
+        return ssfs
+
+    @property
+    def basis_funcs(self,):
+        bfs = []
+        if 'NoiseComponent' in self.component_types:
+            for nc in self.NoiseComponent_list:
+                bfs += nc.basis_funcs
+        return bfs
+
+    @property
     def phase_deriv_funcs(self):
         return self.get_deriv_funcs('PhaseComponent')
 
@@ -462,6 +486,59 @@ class TimingModel(object):
             phase += Phase(pf(toas, delay))
         return phase
 
+    def covariance_matrix(self, toas):
+        """This a function to get the TOA covariance matrix for noise models.
+           If there is no noise model component provided, a diagonal matrix with
+           TOAs error as diagonal element will be returned.
+        """
+        ntoa = len(toas)
+        result = np.zeros((ntoa, ntoa))
+        # When there is no noise model.
+        if len(self.covariance_matrix_funcs) == 0:
+            result += np.diag(toas['error'].quantity.value**2)
+            return result
+
+        for nf in self.covariance_matrix_funcs:
+            result += nf(toas)
+        return result
+
+    def scaled_sigma(self, toas):
+        """This a function to get the scaled TOA uncertainties noise models.
+           If there is no noise model component provided, a vector with
+           TOAs error as values will be returned.
+        """
+        ntoa = len(toas)
+        result = np.zeros(ntoa) * u.us
+        # When there is no noise model.
+        if len(self.scaled_sigma_funcs) == 0:
+            result += toas['error'].quantity
+            return result
+
+        for nf in self.scaled_sigma_funcs:
+            result += nf(toas)
+        return result
+
+    def noise_model_designmatrix(self, toas):
+        result = []
+        if len(self.basis_funcs) == 0:
+            return None
+
+        for nf in self.basis_funcs:
+            result.append(nf(toas)[0])
+        return np.hstack((r for r in result))
+
+
+    def noise_model_basis_weight(self, toas):
+        result = []
+        if len(self.basis_funcs) == 0:
+            return None
+
+        for nf in self.basis_funcs:
+            result.append(nf(toas)[1])
+        return np.hstack((r for r in result))
+
+
+
     def get_barycentric_toas(self, toas, cutoff_component=''):
         """This is a convenient function for calculate the barycentric TOAs.
            Parameter
@@ -686,7 +763,6 @@ class TimingModel(object):
 
             k = l.split()
             name = k[0].upper()
-
             if name in checked_param:
                 if name in repeat_param.keys():
                     repeat_param[name] += 1
@@ -694,7 +770,6 @@ class TimingModel(object):
                     repeat_param[name] = 2
                 k[0] = k[0] + str(repeat_param[name])
                 l = ' '.join(k)
-
             parsed = False
             for par in param_map.keys():
                 host_comp = param_map[par]

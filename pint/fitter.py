@@ -1,4 +1,5 @@
-import copy, numpy, numbers
+import copy, numbers
+import numpy as np
 import astropy.units as u
 import abc
 import scipy.optimize as opt, scipy.linalg as sl
@@ -118,7 +119,7 @@ class PowellFitter(Fitter):
                                     method=self.method)
         # Update model and resids, as the last iteration of minimize is not
         # necessarily the one that yields the best fit
-        self.minimize_func(numpy.atleast_1d(self.fitresult.x),
+        self.minimize_func(np.atleast_1d(self.fitresult.x),
                            *list(fitp.keys()))
 
 
@@ -131,7 +132,7 @@ class WlsFitter(Fitter):
         super(WlsFitter, self).__init__(toas=toas, model=model)
         self.method = 'weighted_least_square'
 
-    def fit_toas(self, maxiter=1, thershold=False):
+    def fit_toas(self, maxiter=1, threshold=False):
         """Run a linear weighted least-squared fitting method"""
         chi2 = 0
         for i in range(maxiter):
@@ -170,34 +171,133 @@ class WlsFitter(Fitter):
 
             # Note, here we could do various checks like report
             # matrix condition number or zero out low singular values.
-            #print 'log_10 cond=', numpy.log10(s.max()/s.min())
+            #print 'log_10 cond=', np.log10(s.max()/s.min())
             # Note, Check the threshold from data precision level.Borrowed from
-            # Numpy Curve fit.
-            if thershold:
-                threshold_val = numpy.finfo(numpy.longdouble).eps * max(M.shape) * s[0]
+            # np Curve fit.
+            if threshold:
+                threshold_val = np.finfo(np.longdouble).eps * max(M.shape) * s[0]
                 s[s<threshold_val] = 0.0
-            # Sigma = numpy.dot(Vt.T / s, U.T)
+            # Sigma = np.dot(Vt.T / s, U.T)
             # The post-fit parameter covariance matrix
             #   Sigma = V s^-2 V^T
-            Sigma = numpy.dot(Vt.T / (s**2), Vt)
+            Sigma = np.dot(Vt.T / (s**2), Vt)
             # Parameter uncertainties.  Scale by fac recovers original units.
-            errs = numpy.sqrt(numpy.diag(Sigma)) / fac
+            errs = np.sqrt(np.diag(Sigma)) / fac
 
             # The delta-parameter values
             #   dpars = V s^-1 U^T r
             # Scaling by fac recovers original units
-            dpars = numpy.dot(Vt.T, numpy.dot(U.T,residuals)/s) / fac
+            dpars = np.dot(Vt.T, np.dot(U.T,residuals)/s) / fac
             for ii, pn in enumerate(fitp.keys()):
                 uind = params.index(pn)             # Index of designmatrix
                 un = 1.0 / (units[uind])     # Unit in designmatrix
                 if scale_by_F0:
                     un *= u.s
                 pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
-                fitpv[pn] = numpy.longdouble((pv+dpv) / fitp[pn].units)
+                fitpv[pn] = np.longdouble((pv+dpv) / fitp[pn].units)
                 #NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
             chi2 = self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
             # Updata Uncertainties
+            self.set_param_uncertainties(fitperrs)
+
+        return chi2
+
+class GLSFitter(Fitter):
+    """
+       A class for weighted least square fitting method. The design matrix is
+       required.
+    """
+    def __init__(self, toas=None, model=None):
+        super(GLSFitter, self).__init__(toas=toas, model=model)
+        self.method = 'generalized_least_square'
+
+    def fit_toas(self, maxiter=1, threshold=False, full_cov=False):
+        """Run a Generalized least-squared fitting method"""
+        chi2 = 0
+        for i in range(maxiter):
+            fitp = self.get_fitparams()
+            fitpv = self.get_fitparams_num()
+            fitperrs = self.get_fitparams_uncertainty()
+
+            # Define the linear system
+            M, params, units, scale_by_F0 = self.get_designmatrix()
+
+            # Get residuals and TOA uncertainties in seconds
+            self.update_resids()
+            residuals = self.resids.time_resids.to(u.s).value
+
+            # get any noise design matrices and weight vectors
+            if not full_cov:
+                Mn = self.model.noise_model_designmatrix(self.toas.table)
+                phi = self.model.noise_model_basis_weight(self.toas.table)
+                phiinv = np.zeros(M.shape[1])
+                if Mn is not None and phi is not None:
+                    phiinv = np.concatenate((phiinv, 1/phi))
+                    M = np.hstack((M, Mn))
+
+            # normalize the design matrix
+            norm = np.sqrt(np.sum(M**2, axis=0))
+            ntmpar = len(fitp)
+            if M.shape[1] > ntmpar:
+                norm[ntmpar:] = 1
+            if np.any(norm == 0):
+                print("Warning: one or more of the design-matrix columns is null.")
+            M /= norm
+
+            # compute covariance matrices
+            if full_cov:
+                cov = self.model.covariance_matrix(self.toas.table)
+                cf = sl.cho_factor(cov)
+                cm = sl.cho_solve(cf, M)
+                mtcm = np.dot(M.T, cm)
+                mtcy = np.dot(cm.T, residuals)
+
+            else:
+                Nvec = self.model.scaled_sigma(self.toas.table).to(u.s).value**2
+                cinv = 1 / Nvec
+                mtcm = np.dot(M.T, cinv[:,None]*M)
+                mtcm += np.diag(phiinv)
+                mtcy = np.dot(M.T, cinv*residuals)
+
+
+            try:
+                c = sl.cho_factor(mtcm)
+                xhat = sl.cho_solve(c, mtcy)
+                xvar = sl.cho_solve(c, np.eye(len(mtcy)))
+            except:
+                U, s, Vt = sl.svd(mtcm, full_matrices=False)
+
+                if threshold:
+                    threshold_val = np.finfo(np.longdouble).eps * max(M.shape) * s[0]
+                    s[s<threshold_val] = 0.0
+
+                xvar = np.dot(Vt.T / s, Vt)
+                xhat = np.dot(Vt.T, np.dot(U.T, mtcy)/s)
+
+
+            # compute linearized chisq
+            newres = residuals - np.dot(M, xhat)
+            if full_cov:
+                chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+            else:
+                chi2 = np.dot(newres, cinv*newres)
+
+            # compute absolute estimates, normalized errors, covariance matrix
+            dpars = xhat/norm
+            errs = np.sqrt(np.diag(xvar)) / norm
+
+            for ii, pn in enumerate(fitp.keys()):
+                uind = params.index(pn)             # Index of designmatrix
+                un = 1.0 / (units[uind])     # Unit in designmatrix
+                if scale_by_F0:
+                    un *= u.s
+                pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
+                fitpv[pn] = np.longdouble((pv+dpv) / fitp[pn].units)
+                #NOTE We need some way to use the parameter limits.
+                fitperrs[pn] = errs[uind]
+            _ = self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
+            # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
 
         return chi2
