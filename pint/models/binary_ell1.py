@@ -3,6 +3,7 @@ import time
 from pint import ls,GMsun,Tsun
 from pint import utils
 from .stand_alone_psr_binaries.ELL1_model import ELL1model
+from .stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
 from .pulsar_binary import PulsarBinary
 from . import parameter as p
 from .timing_model import MissingParameter
@@ -67,3 +68,28 @@ class BinaryELL1(PulsarBinary):
                     raise MissingParameter("ELL1", 'T0', "T0 or TASC is required for ELL1 model.")
             else:
                 raise MissingParameter("ELL1", 'TASC', "TASC is required for ELL1 model.")
+
+
+
+class BinaryELL1H(BinaryELL1):
+    """This is modified version of ELL1 model. a new parameter H3 is introduced
+       to model the shapiro delay.
+       Note
+       ----
+       Ref:  Freire and Wex 2010
+       Only the Medium-inclination case model is implemented.
+    """
+    register = True
+    def __init__(self):
+        super(BinaryELL1H, self).__init__()
+        self.binary_model_name = 'ELL1H'
+        self.binary_model_class = ELL1Hmodel
+
+        self.add_param(p.floatParameter(name="H3", units="second",
+                  description="Shapiro delay parameter H3 as in Freire and Wex 2010",
+                  long_double = True))
+
+    def setup(self):
+        """Check out parameters setup.
+        """
+        super(BinaryELL1H, self).setup()

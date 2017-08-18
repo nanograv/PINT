@@ -5,7 +5,7 @@ import astropy.constants as c
 from pint import ls,GMsun,Tsun
 
 
-class ELL1Hmodel(ELL1Hmodel):
+class ELL1Hmodel(ELL1model):
     """This is a class for ELL1H pulsar binary model.
        ELL1H model is modified model from ELL1. It changes the parameterization
        of the binary shapiro delay.
@@ -94,3 +94,9 @@ class ELL1Hmodel(ELL1Hmodel):
                              - sigma * np.cos(5*Phi) \
                              - sigma**2 * np.sin(6 * Phi)))
         return d_delayS_H3_d_Phi
+
+    def d_delayS_H3_d_par(self, par):
+        pass
+
+    def d_ELL1Hdelay_d_par(self, par):
+        pass
