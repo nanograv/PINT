@@ -21,8 +21,8 @@ class ELL1model(PSR_BINARY):
         self.set_param_values() # Set parameters to default values.
         self.ELL1_interVars = ['eps1', 'eps2', 'Phi', 'Dre', 'Drep', 'Drepp', 'nhat']
         self.add_inter_vars(self.ELL1_interVars)
-        self.binary_delay_funcs += [self.ELL1delay]
-        self.d_binarydelay_d_par_funcs += [self.d_ELL1delay_d_par]
+        self.binary_delay_funcs = [self.ELL1delay,]
+        self.d_binarydelay_d_par_funcs = [self.d_ELL1delay_d_par,]
 
     def ttasc(self):
         """
