@@ -13,6 +13,8 @@ author: M. Kerr <matthew.kerr@gmail.com>
 # Monte Carlo variables because they don't account for the uniform approx.
 # perhaps this isn't a big deal
 
+from __future__ import print_function
+
 import numpy as np
 from scipy.special import erf,i0,i1
 from scipy.integrate import simps,quad
@@ -97,7 +99,7 @@ def check_gradient(func,atol=1e-8,rtol=1e-5,quiet=False):
         fail = np.any(d1 > (atol + rtol*np.abs(g2)))
         if not quiet:
             pass_string = 'FAILED' if fail else 'passed'
-            print '%02d (%s) %.3g (abs)'%(i,pass_string,d1.max())
+            print('%02d (%s) %.3g (abs)'%(i,pass_string,d1.max()))
         anyfail = anyfail or fail
     return not anyfail
 
@@ -331,11 +333,11 @@ class LCPrimitive(object):
         except: t4 = False
         # boundary conditions
         t5 = abs(self(0)-self(1-eps))<eps
-        if not t1: print 'Failed Normalization test'
-        if not t2: print 'Failed integrate method test'
-        if not t3: print 'Failed FWHM test'
-        if not t4: print 'Failed gradient test'
-        if not t5: print 'Did not pass boundary conditions'
+        if not t1: print('Failed Normalization test')
+        if not t2: print('Failed integrate method test')
+        if not t3: print('Failed FWHM test')
+        if not t4: print('Failed gradient test')
+        if not t5: print('Did not pass boundary conditions')
         return np.all([t1,t2,t3,t4,t5])
 
     def eval_string(self):
@@ -947,17 +949,17 @@ class LCKernelDensity(LCPrimitive):
         b = o[15]
         if self.bw is None:
             self.bw = (0.5 * (p**2 * n)**-0.2)/(2*np.pi)
-            print p,self.bw
+            print(p,self.bw)
             local_p = np.maximum(h[0] - b,0).astype(float) / h[0]
-            print local_p, b
+            print(local_p,b)
             bgbw = ((1-p)**2*n)**-0.2/(2*np.pi)
-            print bgbw
+            print(bgbw)
             self.bw = np.minimum((local_p**2 * h[0])**-0.2/100.,bgbw)
 
         keys = np.searchsorted(h[1],phases)
         keys[keys==len(h[0])] = len(h[0]) - 1
         bw = self.bw[keys]
-        print len(phases),len(bw),type(bw)
+        print(len(phases),len(bw),type(bw))
 
 
         phases = phases.copy()
@@ -965,14 +967,14 @@ class LCKernelDensity(LCPrimitive):
         self.phases.sort()
         phases = np.asarray(phases)
         self.phases = np.asarray(phases)
-        print type(self.phases),type(phases)
+        print(type(self.phases),type(phases))
         hi_mask = np.asarray(phases > 0.9)
         lo_mask = np.asarray(phases < 0.1)
         self.num = len(phases)
         self.phases = np.concatenate([phases[hi_mask]-1,phases])
         self.phases = np.concatenate([self.phases,1+phases[lo_mask]])
 
-        print len(hi_mask),type(hi_mask),type(bw),len(bw)
+        print(len(hi_mask),type(hi_mask),type(bw),len(bw))
         self.bw = np.concatenate([bw[hi_mask],bw])
         self.bw = np.concatenate([self.bw,bw[lo_mask]])
 

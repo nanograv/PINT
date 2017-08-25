@@ -15,6 +15,8 @@ author: M. Kerr <matthew.kerr@gmail.com>
 
 """
 
+from __future__ import print_function
+
 import numpy as np
 from copy import deepcopy
 import scipy
@@ -88,7 +90,7 @@ class UnweightedLCFitter(object):
         if h > 1000: nbins = 100
         ph0,ph1 = 0+self.phase_shift,1+self.phase_shift
         hist = np.histogram(self.phases,bins=np.linspace(ph0,ph1,nbins))
-        if len(hist[0])==nbins: raise ValueError,'Histogram too old!'
+        if len(hist[0])==nbins: raise ValueError('Histogram too old!')
         x = ((hist[1][1:] + hist[1][:-1])/2.)[hist[0]>0]
         counts = (hist[0][hist[0]>0]).astype(float)
         y    = counts / counts.sum() * nbins
@@ -147,10 +149,10 @@ class UnweightedLCFitter(object):
         chi0 = (self.chi(t.get_parameters(),t)**2).sum()
         f = leastsq(self.chi,t.get_parameters(),args=(t))
         chi1 = (self.chi(t.get_parameters(),t)**2).sum()
-        print chi0,chi1,' chi numbers'
+        print(chi0,chi1,' chi numbers')
         if (chi1 > chi0):
-            print self
-            print 'Failed least squares fit -- reset and proceed to likelihood.'
+            print(self)
+            print('Failed least squares fit -- reset and proceed to likelihood.')
             t.set_parameters(p0)
 
     def _fix_state(self,restore_state=None):
@@ -205,7 +207,7 @@ class UnweightedLCFitter(object):
             self.template.set_overall_phase(ph0)
 
         if positions_first:
-            print 'Running positions first'
+            print('Running positions first')
             restore_state = self._fix_state()
             self.fit(quick_fit_first=quick_fit_first,estimate_errors=False, unbinned=unbinned, use_gradient=use_gradient, positions_first=False)
             self._fix_state(restore_state)
@@ -222,7 +224,7 @@ class UnweightedLCFitter(object):
         if (ll0 > self.ll) or (self.ll==-2e20) or (np.isnan(self.ll)):
             if unbinned_refit and np.isnan(self.ll) and (not unbinned):
                 if (self.binned_bins*2) < 400:
-                    print 'Did not converge using %d bins... retrying with %d bins...'%(self.binned_bins,self.binned_bins*2)
+                    print('Did not converge using %d bins... retrying with %d bins...'%(self.binned_bins,self.binned_bins*2))
                     self.template.set_parameters(p0)
                     self.ll = ll0; self.fitvals = p0
                     self.binned_bins *= 2
@@ -230,7 +232,7 @@ class UnweightedLCFitter(object):
                     return self.fit(quick_fit_first=quick_fit_first, unbinned=unbinned, use_gradient=use_gradient, positions_first=positions_first, estimate_errors=estimate_errors,prior=prior)
             self.bad_p = self.template.get_parameters().copy()
             self.bad_ll = self.ll
-            print 'Failed likelihood fit -- resetting parameters.'
+            print('Failed likelihood fit -- resetting parameters.')
             self.template.set_parameters(p0)
             self.ll = ll0; self.fitvals = p0
             return False
@@ -240,9 +242,9 @@ class UnweightedLCFitter(object):
                 if try_bootstrap:
                     self.bootstrap_errors(set_errors=True)
                 #except ValueError:
-                #    print 'Warning, could not estimate errors.'
+                #    print('Warning, could not estimate errors.')
                 #    self.template.set_errors(np.zeros_like(p0))
-        print 'Improved log likelihood by %.2f'%(self.ll-ll0)
+        print('Improved log likelihood by %.2f'%(self.ll-ll0))
         return True
 
     def fit_position(self, unbinned=True):
@@ -339,14 +341,14 @@ class UnweightedLCFitter(object):
             if np.all(np.diag(c1)>0):
                 self.cov_matrix = c1
             else: 
-                print 'Could not estimate errors from hessian.'
+                print('Could not estimate errors from hessian.')
                 return False
         else:
             h1 = hessian(self.template,self.loglikelihood,delta=ss)
             try:
                 c1 = scipy.linalg.inv(h1)
             except scipy.linalg.LinAlgError:
-                print 'Hessian matrix was singular!  Aborting.'
+                print('Hessian matrix was singular!  Aborting.')
                 return False
             d = np.diag(c1)
             if np.all(d>0):
@@ -356,12 +358,12 @@ class UnweightedLCFitter(object):
                 try:
                     c2 = scipy.linalg.inv(h2)
                 except scipy.linalg.LinAlgError:
-                    print 'Second try at hessian matrix was singular!  Aborting.'
+                    print('Second try at hessian matrix was singular!  Aborting.')
                     return False
                 if np.all(np.diag(c2)>0):
                     self.cov_matrix = c2
             else:
-                print 'Could not estimate errors from hessian.'
+                print('Could not estimate errors from hessian.')
                 return False
         self.template.set_errors(np.diag(self.cov_matrix)**0.5)
         return True
@@ -733,7 +735,7 @@ def get_errors(template,total,n=100):
         errors[i] = (logl(phi0+delta,ph)-fopt*2+logl(phi0-delta,ph))/delta**2
         my_delta = errors[i]**-0.5
         errors_r[i] = (logl(phi0+my_delta,ph)-fopt*2+logl(phi0-my_delta,ph))/my_delta**2
-    print 'Mean: %.2f'%(mean/n)
+    print('Mean: %.2f'%(mean/n))
     return fitvals-ph0,errors**-0.5,errors_r**-0.5
 
 def make_err_plot(template,totals=[10,20,50,100,500],n=1000):
@@ -863,7 +865,7 @@ def calc_step_size(logl,par,minstep=1e-5,maxstep=1e-1):
             try:
                 rvals[i] = bisect(f,minstep,maxstep,args=(i))
             except ValueError as e:
-                print 'Unable to compute a step size for parameter %d.'%i
+                print('Unable to compute a step size for parameter %d.'%i)
                 rvals[i] = maxstep
     logl(par) # reset parameters
     return rvals

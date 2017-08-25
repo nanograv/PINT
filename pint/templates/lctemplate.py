@@ -7,6 +7,8 @@ author: M. Kerr <matthew.kerr@gmail.com>
 
 """
 
+from __future__ import print_function
+
 import numpy as np
 from copy import deepcopy
 from lcnorm import NormAngles
@@ -165,7 +167,7 @@ class LCTemplate(object):
             try:
                 return self._cache[indices]
             except Exception:
-                print '%d phases were NaN!'%(np.sum(np.isnan(phases)))
+                print('%d phases were NaN!'%(np.sum(np.isnan(phases))))
                 indices[np.isnan(phases)] = 0
                 return self._cache[indices]
         rvals,norms,norm = self._get_scales(phases,log10_ens)
@@ -394,7 +396,7 @@ class LCTemplate(object):
         if not hasattr(indices,'__len__'):
             raise TypeError('indices must specify a list or array of indices')
         if len(indices)<2:
-            print 'Found fewer than 2 indices, returning.'
+            print('Found fewer than 2 indices, returning.')
             return
         norms,prims = self.norms(),self.primitives
         norms_free = self.norms.free.copy()
@@ -597,7 +599,7 @@ class LCBridgeTemplate(LCTemplate):
 
     def mean_single_component(self,index,phases,log10_ens=None,weights=None,bins=20,add_pedestal=False):
         #if add_pedestal:
-            #print 'No add pedestal.'
+            #print('No add pedestal.')
         # this needs to be done in some sane way, not sure if ideal exists
         #raise NotImplementedError()
         if (log10_ens is None) or (not self.is_energy_dependent()):
@@ -708,5 +710,5 @@ def prim_io(template):
     if 'gauss' in toks[0]:     return read_gaussian(toks[1:])
     elif 'kernel' in toks[0]:  return [LCKernelDensity(input_file=toks[1:])],None
     elif 'fourier' in toks[0]: return [LCEmpiricalFourier(input_file=toks[1:])],None
-    raise ValueError,'Template format not recognized!'
+    raise ValueError('Template format not recognized!')
 
