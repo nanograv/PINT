@@ -268,16 +268,14 @@ class PSR_BINARY(object):
         xAttr = getattr(self,x)
         U = [None,None]
         for i,attr in enumerate([yAttr, xAttr]):
-            if type(attr).__name__ == 'Parameter':  # If attr is a PINT Parameter class type
-                U[i] = u.Unit(attr.units)
-            elif type(attr).__name__ == 'MJDParameter': # If attr is a PINT MJDParameter class type
-                U[i] = u.Unit('day')
+            if  hasattr(attr,'units'):  # If attr is a PINT Parameter class type
+                U[i] = attr.units
             elif hasattr(attr,'unit'):  # If attr is a Quantity type
                 U[i] = attr.unit
             elif hasattr(attr,'__call__'):  # If attr is a method
                 U[i] = attr().unit
             else:
-                raise TypeError(type(attr)+'can not get unit')
+                raise TypeError(type(attr).__name__ + ' object has no unit information')
             U[i] = 1*U[i]
 
             commonU = list(set(U[i].unit.bases).intersection([u.rad,u.deg]))
