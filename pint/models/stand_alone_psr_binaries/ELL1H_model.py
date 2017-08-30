@@ -54,9 +54,18 @@ class ELL1Hmodel(ELL1model):
         # TODO need aberration
         return self.delayI() + self.delayS()
 
-    def get_TM2_from_H3(self):
-        stigma = self.stigma()
-        return self.H3 / stigma **3
+    def get_SINI_from_STIGMA(self):
+        return 2 * self.STIGMA / (1 + self.STIGMA ** 2)
+
+    def get_TM2_from_H3_STIGMA(self):
+        return self.H3 / self.STIGMA **3
+
+    def get_SINI_from_H3_H4(self):
+        return 2 * self.H3 * self.H4 / (self.H3 ** 2 + self.H4 ** 2)
+
+    def get_TM2_from_H3_H4(self):
+        return (self.H3) ** 4 / (self.H4) ** 3
+
 
     def _ELL1H_fourier_basis(self, k, derivative=False):
         """ This is a function to select the fourier basis and part of the
