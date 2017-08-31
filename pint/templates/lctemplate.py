@@ -494,7 +494,7 @@ class LCTemplate(object):
 
         else:
             phases = np.linspace(0,1,2*nbin+1)
-            values = self(phases,suppress_bg=supress_bg)
+            values = self(phases,suppress_bg=suppress_bg)
             hi = values[2::2]
             lo = values[0:-1:2]
             mid = values[1::2]
