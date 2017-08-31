@@ -1,16 +1,15 @@
 # This Python file uses the following encoding: utf-8
-from .ELL1_model import ELL1model
+from .ELL1_model import ELL1BaseModel
 import numpy as np
 import astropy.units as u
 import astropy.constants as c
 from pint import ls,GMsun,Tsun
 
 
-class ELL1Hmodel(ELL1model):
+class ELL1Hmodel(ELL1BaseModel):
     """
-       This is a class for ELL1H pulsar binary model.
-       ELL1H model is modified model from ELL1. It changes the parameterization
-       of the binary shapiro delay.
+       This is a class for ELL1H pulsar binary model using H3, H4 or STIGMA as
+       shapiro delay parameter.
 
        Note
        ----
@@ -65,7 +64,6 @@ class ELL1Hmodel(ELL1model):
 
     def get_TM2_from_H3_H4(self):
         return (self.H3) ** 4 / (self.H4) ** 3
-
 
     def _ELL1H_fourier_basis(self, k, derivative=False):
         """ This is a function to select the fourier basis and part of the

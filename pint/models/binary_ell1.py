@@ -12,7 +12,7 @@ from ..utils import time_from_mjd_string, time_to_longdouble
 import astropy.units as u
 from warnings import warn
 
-class BinaryELL1(PulsarBinary):
+class BinaryELL1Base(PulsarBinary):
     """This is a PINT pulsar binary ELL1 model class a subclass of PulsarBinary.
     It is a wrapper for stand alone ELL1model class defined in ./pulsar_binary/ELL1_model.py
     All the detailed calculations are in the stand alone ELL1model.
@@ -24,12 +24,8 @@ class BinaryELL1(PulsarBinary):
     EPS1DOT First derivative of first Laplace-Lagrange parameter
     EPS2DOT Second derivative of second Laplace-Lagrange parameter
     """
-    register = True
     def __init__(self):
-        super(BinaryELL1, self).__init__()
-        self.binary_model_name = 'ELL1'
-        self.binary_model_class = ELL1model
-
+        super(BinaryELL1Base, self).__init__()
         self.add_param(p.MJDParameter(name="TASC",
                        description="Epoch of ascending node", time_scale='tdb'))
 
@@ -54,7 +50,7 @@ class BinaryELL1(PulsarBinary):
     def setup(self):
         """Check out parameters setup.
         """
-        super(BinaryELL1, self).setup()
+        super(BinaryELL1Base, self).setup()
         for p in ['EPS1', 'EPS2']:
             if getattr(self, p).value is None:
                 raise MissingParameter("ELL1", p, p + " is required for ELL1 model.")
@@ -71,7 +67,17 @@ class BinaryELL1(PulsarBinary):
 
 
 
-class BinaryELL1H(BinaryELL1):
+class BinaryELL1(BinaryELL1Base):
+    register = True
+    def __init__(self):
+        super(BinaryELL1, self).__init__()
+        self.binary_model_name = 'ELL1'
+        self.binary_model_class = ELL1model
+
+    def setup(self):
+        super(BinaryELL1, self).setup()
+
+class BinaryELL1H(BinaryELL1Base):
     """This is modified version of ELL1 model. a new parameter H3 is introduced
        to model the shapiro delay.
        Note
@@ -86,10 +92,24 @@ class BinaryELL1H(BinaryELL1):
         self.binary_model_class = ELL1Hmodel
 
         self.add_param(p.floatParameter(name="H3", units="second",
-                  description="Shapiro delay parameter H3 as in Freire and Wex 2010",
+                  description="Shapiro delay parameter H3 as in Freire and Wex 2010 Eq(20)",
+                  long_double = True))
+
+        self.add_param(p.floatParameter(name="H4", units="second",
+                  description="Shapiro delay parameter H4 as in Freire and Wex 2010 Eq(21)",
+                  long_double = True))
+
+        self.add_param(p.floatParameter(name="STIGMA", units="",
+                  description="Shapiro delay parameter STIGMA as in Freire and Wex 2010 Eq(12)",
                   long_double = True))
 
     def setup(self):
         """Check out parameters setup.
         """
         super(BinaryELL1H, self).setup()
+        if self.H3.quantity is None:
+            raise MissingParameter("'H3' is required for ELL1H model")
+        if self.SINI.quantity is not None:
+            warn("'SINI' will not be used in ELL1H model. ")
+        if self.M2.quantity is not None:
+            warn("'M2' will not be used in ELL1H model. ")
