@@ -475,7 +475,7 @@ class LCTemplate(object):
             new_location = (prim.get_location() + shift)%1
             prim.set_location(new_location)
 
-    def write_profile(self,fname,nbin,integral=False):
+    def write_profile(self,fname,nbin,integral=False,suppress_bg=False):
         """ Write out a two-column tabular profile to file fname.
 
         The first column indicates the left edge of the phase bin, while
@@ -483,17 +483,18 @@ class LCTemplate(object):
 
         integral -- if True, integrate the profile over the bins.
                     Otherwise, differential value at indicated bin phase.
+        suppress_bg -- if True, do not include the unpulsed (DC) component
 
         """
 
         if not integral:
             bin_phases = np.linspace(0,1,nbin+1)[:-1]
-            bin_values = self(bin_phases)
+            bin_values = self(bin_phases,suppress_bg=suppress_bg)
             bin_values *= 1./bin_values.mean()
 
         else:
             phases = np.linspace(0,1,2*nbin+1)
-            values = self(phases)
+            values = self(phases,suppress_bg=suppress_bg)
             hi = values[2::2]
             lo = values[0:-1:2]
             mid = values[1::2]
