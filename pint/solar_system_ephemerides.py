@@ -163,3 +163,48 @@ def objPosVel(obj1, obj2, t, ephem):
         return obj2pv - obj1pv
     else:
         return PosVel(np.zeros((3,len(t)))*u.km, np.zeros((3,len(t)))*u.km/u.second)
+
+def get_tdb_tt_ephem_geocenter(tt, ephem, path=None, link=None):
+    """The is a function to read the TDB_TT correction from the JPL DExxxt.bsp
+       ephemeris file.
+       Parameter
+       ---------
+       t: Astropy.time.Time object
+           Observation time in Astropy.time.Time object format.
+       ephem: str
+           Ephemeris name.
+       Note
+       ----
+       Only the DEXXXt.bsp type ephemeris has the TDB-TT information, others do
+       not provide it. The definition for TDB-TT column is described in the
+       paper:
+       https://ipnpr.jpl.nasa.gov/progress_report/42-196/196C.pdf page 6.
+    """
+    # Load kernel
+    ephem = ephem.lower()
+
+    if path is None:
+        if link is None:
+            link_str = ''
+        else:
+            link_str = link
+        is_load = _load_kernel_link(ephem, link=link_str)
+        if not is_load: # Link does not Try to load from data path.
+            path_str = ''
+            is_load = _load_kernel_local(ephem, path=path_str)
+        if not is_load:
+            raise ValueError("Can not load the ephemeris file '%s.bsp'. " % ephem)
+    else:
+        path_str = path
+        is_load = _load_kernel_local(ephem, path=path_str)
+        if not is_load:
+            raise ValueError("Can not load the ephemeris file '%s.bsp' from the"
+                             " local directory %s." % (ephem, path_str))
+    kernel = coor.solar_system_ephemeris._kernel
+    try:
+        # JPL ID defines this column.
+        seg = kernel[1000000000, 1000000001]
+    except KeyError:
+        raise ValueError("Ephemeris '%s.bsp' do not provide the TDB-TT correction.")
+    tdb_tt = seg.compute(tt.jd1, tt.jd2)[0]
+    return tdb_tt * u.second

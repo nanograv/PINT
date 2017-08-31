@@ -23,10 +23,10 @@ TZRFRQ         1414
 TZRSITE        ao
 TRES           3.980
 EPHVER         5
-CLK            TT(TAI)
+CLK            TT(BIPM2015)
 MODE 1
 UNITS          TDB
-#T2CMETHOD      TEMPO
+T2CMETHOD      TEMPO
 NE_SW          0.000
 CORRECT_TROPOSPHERE  N
 EPHEM          DE405
