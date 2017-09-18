@@ -133,13 +133,16 @@ class ELL1BaseModel(PSR_BINARY):
                d_Dre_d_eps2 * self.prtl_der('eps2', par)
 
     def Drep(self):
-        """ dDr/dPhi
+        """ dDre/dPhi
         """
         a1 = self.a1()
         eps1 = self.eps1()
-        eps2 = self.eps1()
+        eps2 = self.eps2()
         Phi = self.Phi()
-        return a1/c.c*(np.cos(Phi) + eps1 * np.sin(Phi) + eps2 * np.cos(Phi))
+        # Here we are using full d Dre/dPhi. But Tempo and Tempo2 ELL1 model
+        # does not have the last two terms. This will result a difference in
+        # the order of magnitude of 1e-8s level.
+        return a1/c.c*(np.cos(Phi) + eps1 * np.sin(2.0 * Phi) + eps2 * np.cos(2.0 * Phi))
 
     def d_Drep_d_par(self, par):
         """Drep = d_Dre_d_Phi = a1/c.c*(cos(Phi) + eps1 * sin(Phi) + eps2 * cos(Phi))
@@ -154,23 +157,23 @@ class ELL1BaseModel(PSR_BINARY):
         d_a1_d_par = self.prtl_der('a1', par)
         d_Drep_d_Phi = self.Drepp()
         d_Phi_d_par = self.prtl_der('Phi', par)
-        d_Drep_d_eps1 = a1/c.c*np.sin(Phi)
-        d_Drep_d_eps2 = a1/c.c*np.cos(Phi)
+        d_Drep_d_eps1 = a1/c.c*np.sin(2.0 * Phi)
+        d_Drep_d_eps2 = a1/c.c*np.cos(2.0 * Phi)
 
-        return d_a1_d_par /c.c*(np.cos(Phi) + eps1 * np.sin(Phi) + eps2 * np.cos(Phi)) + \
+        return d_a1_d_par /c.c*(np.cos(Phi) + eps1 * np.sin(2.0 * Phi) + eps2 * np.cos(2.0 * Phi)) + \
                d_Drep_d_Phi * d_Phi_d_par + d_Drep_d_eps1 * self.prtl_der('eps1', par) + \
                d_Drep_d_eps2 * self.prtl_der('eps2', par)
 
     def Drepp(self):
         a1 = self.a1()
         eps1 = self.eps1()
-        eps2 = self.eps1()
+        eps2 = self.eps2()
         Phi = self.Phi()
-        return a1/c.c*(-np.sin(Phi) + eps1 * np.cos(Phi) - eps2 * np.sin(Phi))
+        return a1/c.c*(-np.sin(Phi) + 2.0 * (eps1 * np.cos(2.0 * Phi) - eps2 * np.sin(2.0 * Phi)))
 
     def d_Drepp_d_par(self, par):
-        """Drepp = d_Drep_d_Phi = a1/c.c*(-sin(Phi) + eps1 * cos(Phi) - eps2 * sin(Phi))
-        d_Drep_d_par = d_a1_d_par /c.c*(-sin(Phi) + eps1 * cos(Phi) - eps2 * sin(Phi)) +
+        """Drepp = d_Drep_d_Phi = a1/c.c*(-sin(Phi) + 2.0* (eps1 * cos(2.0*Phi) - eps2 * sin(2.0*Phi)))
+        d_Drepp_d_par = d_a1_d_par /c.c*(-sin(Phi) + 2.0* (eps1 * cos(2.0*Phi) - eps2 * sin(2.0*Phi))) +
                       d_Drepp_d_Phi * d_Phi_d_par + d_Drepp_d_eps1*d_eps1_d_par +
                       d_Drepp_d_eps2*d_eps2_d_par
         """
@@ -179,13 +182,15 @@ class ELL1BaseModel(PSR_BINARY):
         eps1 = self.eps1()
         eps2 = self.eps2()
         d_a1_d_par = self.prtl_der('a1', par)
-        d_Drepp_d_Phi = a1/c.c*(-np.cos(Phi) - eps1*np.sin(Phi) - eps2 * np.cos(Phi))
+        d_Drepp_d_Phi = a1/c.c*(-np.cos(Phi) - 4.0 * (eps1*np.sin(2.0 * Phi) + \
+                         eps2 * np.cos(2.0 * Phi)))
         d_Phi_d_par = self.prtl_der('Phi', par)
-        d_Drepp_d_eps1 = a1/c.c*np.cos(Phi)
-        d_Drepp_d_eps2 = -a1/c.c*np.sin(Phi)
+        d_Drepp_d_eps1 = a1/c.c* 2.0 * np.cos(2.0 * Phi)
+        d_Drepp_d_eps2 = -a1/c.c* 2.0 * np.sin(2.0 * Phi)
 
-        return d_a1_d_par /c.c*(-np.sin(Phi) + eps1 * np.cos(Phi) - eps2 * np.sin(Phi)) + \
-               d_Drepp_d_Phi * d_Phi_d_par + d_Drepp_d_eps1 * self.prtl_der('eps1', par) + \
+        return d_a1_d_par /c.c*(-np.sin(Phi) + 2.0 * (eps1 * np.cos(2.0 * Phi) - \
+               eps2 * np.sin(2.0 * Phi))) + d_Drepp_d_Phi * d_Phi_d_par + \
+               d_Drepp_d_eps1 * self.prtl_der('eps1', par) + \
                d_Drepp_d_eps2 * self.prtl_der('eps2', par)
 
     def delayR(self):
@@ -198,9 +203,9 @@ class ELL1BaseModel(PSR_BINARY):
     def delayI(self):
         """Inverse time delay formular. The treatment is similar to the one
         in DD model(T. Damour and N. Deruelle(1986)equation [46-52])
-        Dre = a1*(sin(Phi)+eps1/2*sin(Phi)+eps1/2*cos(Phi))
+        Dre = a1*(sin(Phi)+eps1/2*sin(2*Phi)+eps1/2*cos(2*Phi))
         Drep = dDre/dt
-        Drep = d^2 Dre/dt^2
+        Drepp = d^2 Dre/dt^2
         nhat = dPhi/dt = 2pi/pb
         nhatp = d^2Phi/dt^2 = 0
         Dre(t-Dre(t-Dre(t)))  = Dre(Phi) - Drep(Phi)*nhat*Dre(t-Dre(t))
