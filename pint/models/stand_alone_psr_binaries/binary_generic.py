@@ -135,23 +135,31 @@ class PSR_BINARY(object):
         self._T0 = val
         if hasattr(self, '_t'):
             self._tt0 = self.get_tt0(self._t)
+
     @property
     def tt0(self):
         return self._tt0
 
-    def update_input(self, barycentric_toa=None, param_dict=None):
+    def update_input(self, **updates):
         """ A function updates the toas and parameters
         """
         # Update toas
-        if barycentric_toa is not None:
-            if not isinstance(barycentric_toa, np.ndarray) and \
-               not isinstance(barycentric_toa, list):
-                self.t = np.array([barycentric_toa,])
-            else:
-                self.t = barycentric_toa
-        # Update parameters
-        if param_dict is not None:
-            self.set_param_values(param_dict)
+        if 'barycentric_toa' in updates:
+            self.t = np.atleast_1d(updates['barycentric_toa'])
+        # Update observatory position.
+        if 'obs_pos' in updates:
+            self.obs_pos = np.atleast_1d(updates['obs_pos'])
+
+        if 'psr_pos' in updates:
+            self.psr_pos = np.atleast_1d(updates['psr_pos'])
+        # update parameters
+        d_list = ['barycentric_toa', 'obs_pos', 'psr_pos']
+        parameters = {}
+        for key, value in updates.items():
+            if key not in d_list:
+                parameters[key] = value
+        self.set_param_values(parameters)
+
         # Switch the cache off
         # NOTE Having cache is needs to be very careful.
         for cv in self.cache_vars:
@@ -168,7 +176,7 @@ class PSR_BINARY(object):
             for par in valDict.keys():
                 if par not in self.binary_params: # search for aliases
                     parname = self.search_alias(par)
-                    if par is None:
+                    if parname is None:
                         raise AttributeError('Can not find parameter '+par+' in '\
                                               + self.binary_name+'model')
                 else:

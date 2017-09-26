@@ -1,5 +1,6 @@
 # This is a wapper for independent binary model. It is a PINT timing model class
 import astropy.units as u
+import numpy as np
 from . import parameter as p
 from .timing_model import DelayComponent, MissingParameter
 from astropy import log
@@ -70,8 +71,12 @@ class PulsarBinary(DelayComponent):
              units=u.M_sun,
              description="Mass of companian in the unit Sun mass"))
 
+<<<<<<< HEAD
         self.add_param(p.floatParameter(name="SINI",
              units="",
+=======
+        self.add_param(p.floatParameter(name="SINI", units="",
+>>>>>>> add ddk model
              description="Sine of inclination angle"))
 
         self.warn_default_params = ['ECC', 'OM']
@@ -102,13 +107,15 @@ class PulsarBinary(DelayComponent):
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py
         # Get barycnetric toa first
+        updates = {}
         if acc_delay is None:
             # If the accumulate delay is not provided, it will try to get
             # the barycentric correction.
             acc_delay = self.delay(toas, self.__class__.__name__, False)
         self.barycentric_time = toas['tdbld'] * u.day - acc_delay
-        pardict = {}
-        # Find all the possible parameter name in the stand alone pulsar binary
+        updates['barycentric_toa'] = self.barycentric_time
+        updates['obs_pos'] = toas['ssb_obs_pos']
+        updates['psr_pos'] = self.ssb_to_psb_xyz(epoch=toas['tdbld'].astype(np.float64))
         for par in self.binary_instance.binary_params:
             binary_par_names = [par,]
             if par in self.binary_instance.param_aliases.keys():
@@ -126,8 +133,8 @@ class PulsarBinary(DelayComponent):
                         log.warn("'%s' is not set, using the default value %f "
                                  "instead." % (binObjpar.name, instance_par_val))
                     continue
-                pardict[par] = binObjpar.value * binObjpar.units
-        self.binary_instance.update_input(self.barycentric_time, pardict)
+                updates[par] = binObjpar.value * binObjpar.units
+        self.binary_instance.update_input(**updates)
 
     def binarymodel_delay(self, toas, acc_delay=None):
         """Return the binary model independent delay call"""
