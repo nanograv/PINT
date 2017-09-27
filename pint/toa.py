@@ -457,6 +457,10 @@ class TOAs(object):
                                       names=("index", "mjd", "mjd_float", "error",
                                              "freq", "obs", "flags"),
                                       meta={'filename':self.filename}).group_by("obs")
+            self.TOA_index_of_obs = {}
+            for g,k in zip(self.table.groups, self.table.groups.keys['obs'].data):
+                self.TOA_index_of_obs[k] = g['index']
+            self.table.sort('index')
 
         # We don't need this now that we have a table
         del(self.toas)
