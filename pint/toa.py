@@ -63,6 +63,8 @@ def get_TOAs(timfile, ephem="DE421", include_bipm=True, bipm_version='BIPM2015',
     if usepickle and updatepickle:
         log.info("Pickling TOAs.")
         t.pickle()
+
+    t.table.sort('index')
     return t
 
 def _check_pickle(toafilename, picklefilename=None):
@@ -460,7 +462,6 @@ class TOAs(object):
             self.TOA_index_of_obs = {}
             for g,k in zip(self.table.groups, self.table.groups.keys['obs'].data):
                 self.TOA_index_of_obs[k] = g['index']
-            self.table.sort('index')
 
         # We don't need this now that we have a table
         del(self.toas)

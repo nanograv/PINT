@@ -20,31 +20,30 @@ ts = toa.get_TOAs(datadir + "/testtimes.tim",
                   include_bipm=False, usepickle=False)
 if log.level < 25:
     ts.print_summary()
-ts.table.sort('index')
+# ts.table.sort('index')
 
-log.info("Calling TEMPO2")
-#cmd = 'tempo2 -output general2 -f tests/testtimes.par tests/testtimes.tim -s "XXX {clock0} {clock1} {clock2} {clock3} {tt} {t2tb} {telSSB} {telVel} {Ttt}\n"'
+# log.info("Calling TEMPO2")
+# cmd = 'tempo2 -output general2 -f tests/testtimes.par tests/testtimes.tim -s "XXX {clock0} {clock1} {clock2} {clock3} {tt} {t2tb} {telSSB} {telVel} {Ttt}\n"'
 # cmd = 'tempo2 -output general2 -f ' + datadir+'/testtimes.par ' + datadir + \
 #       '/testtimes.tim -s "XXX {clock0} {clock1} {clock2} {clock3} {tt} {t2tb} {earth_ssb1} {earth_ssb2} {earth_ssb3} {earth_ssb4} {earth_ssb5} {earth_ssb6} {telEpos} {telEVel} {Ttt}\n"'
 # args = shlex.split(cmd)
-#
 # tout = subprocess.check_output(args)
 # goodlines = [x for x in tout.split("\n") if x.startswith("XXX")]
-#
 # assert(len(goodlines)==len(ts.table))
-#t2result = numpy.genfromtxt('datafile/testtimes.par' + '.tempo2_test', names=True, comments = '#')
+# t2result = numpy.genfromtxt('datafile/testtimes.par' + '.tempo2_test', names=True, comments = '#')
 
 f = open(datadir + '/testtimes.par' + '.tempo2_test')
 lines = f.readlines()
 goodlines = lines[1:]
 # Get the output lines from the TOAs
 for line, TOA in zip(goodlines, ts.table):
-    assert len(line.split()) == 19, \
+    l_field = line.split()
+    assert len(l_field) == 19, \
         "tempo2 general2 does not support all needed outputs"
     oclk, gps_utc, tai_utc, tt_tai, ttcorr, tt2tb, \
           ep0, ep1, ep2, ev0, ev1, ev2, \
           tp0, tp1, tp2, tv0, tv1, tv2, Ttt = \
-          (float(x) for x in line.split())
+          (float(x) for x in l_field)
 
     t2_epv = utils.PosVel(numpy.asarray([ep0, ep1, ep2]) * ls,
                           numpy.asarray([ev0, ev1, ev2]) * ls/u.s)
@@ -56,6 +55,7 @@ for line, TOA in zip(goodlines, ts.table):
     tempo_tt = utils.time_from_mjd_string(line.split()[-1], scale='tt')
     # Ensure that the clock corrections are accurate to better than 0.1 ns
     assert(math.fabs((oclk*u.s + gps_utc*u.s - TOA['flags']["clkcorr"]).to(u.ns).value) < 0.1)
+
 
     log.info("TOA in tt difference is: %.2f ns" % \
              ((TOA['mjd'].tt - tempo_tt.tt).sec * u.s).to(u.ns).value)
