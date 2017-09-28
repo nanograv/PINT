@@ -121,7 +121,7 @@ class DDKmodel(DDmodel):
         kin = self.kin_proper_motion()
         tan_kin = np.tan(kin)
         d_kin = self.delta_kin_proper_motion()
-        d_a1 = a1 * 1.0 * d_kin / tan_kin
+        d_a1 = a1 * d_kin / tan_kin
         return d_a1.to(a1.unit, equivalencies=u.dimensionless_angles())
 
     def delta_omega_proper_motion(self):

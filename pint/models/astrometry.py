@@ -381,6 +381,14 @@ class AstrometryEcliptic(Astrometry):
 
         return rd
 
+    def params_to_equatorial(self):
+        result = dict()
+        pos_ICRS = self.coords_as_ICRS()
+        result['RA'] = pos_ICRS.ra.to(u.hourangle)
+        result['DEC'] = pos_ICRS.dec.to(u.deg)
+
+
+
     def d_delay_astrometry_d_ELONG(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt RAJ
 

@@ -30,7 +30,21 @@ class BinaryDDK(BinaryDD):
         self.add_param(p.floatParameter(name='KOM', value=0.0, units="deg",
                        description="The longitude of the ascending node"))
 
-        def setup(self):
-            """Check out parameters setup.
-            """
-            super(BinaryDDK,self).setup()
+    def setup(self):
+        """Check out parameters setup.
+        """
+        super(BinaryDDK,self).setup()
+
+        if 'PMRA' not in self._parent.params or 'PMDEC' not in self._parent.params:
+            # Check ecliptic coordinates proper motion.
+            if 'PMELONG' not in self._parent.params or 'PMELAT' not in self._parent.params:
+                raise MissingParameter("DDK", "DDK model needs proper motion parameters.")
+            else:
+                self.add_param(p.floatParameter(name="PMRA",
+                    units="mas/year", value=0.0,
+                    description="Proper motion in RA"))
+                self.add_param(p.floatParameter(name="PMDEC",
+                    units="mas/year", value=0.0,
+                    description="Proper motion in DEC"))
+
+                self.PMRA.value = 
