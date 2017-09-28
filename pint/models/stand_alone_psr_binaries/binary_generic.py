@@ -151,6 +151,8 @@ class PSR_BINARY(object):
         # Update parameters
         if param_dict is not None:
             self.set_param_values(param_dict)
+        # Switch the eccentric_anomaly cache off
+        self._E = None
 
     def set_param_values(self, valDict = None):
         """A function that sets the parameters and assign values
@@ -437,7 +439,9 @@ class PSR_BINARY(object):
     def E(self):
         """Eccentric Anomaly
         """
-        return self.compute_eccentric_anomaly(self.ecc(),self.M())
+        if not hasattr(self, '_E') or self._E is None:
+            self._E = self.compute_eccentric_anomaly(self.ecc(),self.M())
+        return self._E
 
     # Analytically calculate derivtives.
 
