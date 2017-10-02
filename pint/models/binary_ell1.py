@@ -113,3 +113,7 @@ class BinaryELL1H(BinaryELL1Base):
             warn("'SINI' will not be used in ELL1H model. ")
         if self.M2.quantity is not None:
             warn("'M2' will not be used in ELL1H model. ")
+        if self.H4.quantity is not None:
+            self.binary_instance.fit_params = ['H3', 'H4']
+        if self.STIGMA.quantity is not None:
+            self.binary_instance.fit_params = ['H3', 'STIGMA']

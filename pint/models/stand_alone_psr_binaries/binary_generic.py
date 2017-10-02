@@ -166,6 +166,7 @@ class PSR_BINARY(object):
                 setattr(self,par.upper(),self.param_default_value[par])
         else:
             for par in valDict.keys():
+                print par, valDict[par]
                 if par not in self.binary_params: # search for aliases
                     parname = self.search_alias(par)
                     if par is None:
