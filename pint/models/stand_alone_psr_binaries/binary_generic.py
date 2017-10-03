@@ -114,6 +114,7 @@ class PSR_BINARY(object):
                               'A1DOT':['XDOT']}
         self.binary_params = list(self.param_default_value.keys())
         self.inter_vars = ['E','M','nu','ecc','omega','a1','TM2']
+        self.cache_vars = ['E', 'nu']
         self.binary_delay_funcs = []
         self.d_binarydelay_d_par_funcs = []
 
@@ -151,6 +152,10 @@ class PSR_BINARY(object):
         # Update parameters
         if param_dict is not None:
             self.set_param_values(param_dict)
+        # Switch the cache off
+        # NOTE Having cache is needs to be very careful. 
+        for cv in self.cache_vars:
+            setattr(self, '_' + cv, None)
 
     def set_param_values(self, valDict = None):
         """A function that sets the parameters and assign values
@@ -437,7 +442,9 @@ class PSR_BINARY(object):
     def E(self):
         """Eccentric Anomaly
         """
-        return self.compute_eccentric_anomaly(self.ecc(),self.M())
+        if not hasattr(self, '_E') or self._E is None:
+            self._E = self.compute_eccentric_anomaly(self.ecc(),self.M())
+        return self._E
 
     # Analytically calculate derivtives.
 
@@ -479,19 +486,27 @@ class PSR_BINARY(object):
     def nu(self):
         """True anomaly  (Ae)
         """
-        nu = 2*np.arctan(np.sqrt((1.0+self.ecc())/(1.0-self.ecc()))*np.tan(self.E()/2.0))
-        # Normalize True anomaly to on orbit.
-        nu[nu<0] += 2*np.pi*u.rad
-        nu2 = 2*np.pi*self.orbits()*u.rad + nu - self.M()
-        return nu2
+        if not hasattr(self, '_nu') or self._nu is None:
+            ecc = self.ecc()
+            nu = 2*np.arctan(np.sqrt((1.0+ ecc)/(1.0- ecc)) * np.tan(self.E()/2.0))
+            # Normalize True anomaly to on orbit.
+            nu[nu<0] += 2*np.pi*u.rad
+            nu2 = 2*np.pi*self.orbits()*u.rad + nu - self.M()
+            self._nu = nu2
+        return self._nu
 
     def d_nu_d_E(self):
-        brack1 = (1 + self.ecc()*np.cos(self.nu())) / (1 - self.ecc()*np.cos(self.E()))
-        brack2 = np.sin(self.E()) / np.sin(self.nu())
+        nu = self.nu()
+        E = self.E()
+        ecc = self.ecc()
+        brack1 = (1 + ecc * np.cos(nu)) / (1 - ecc * np.cos(E))
+        brack2 = np.sin(E) / np.sin(nu)
         return brack1*brack2
 
     def d_nu_d_ecc(self):
-        return np.sin(self.E())**2/(self.ecc()*np.cos(self.E())-1)**2/np.sin(self.nu())
+        ecc = self.ecc()
+        E = self.E()
+        return np.sin(E)**2/(ecc*np.cos(E)-1)**2/np.sin(self.nu())
 
     def d_nu_d_T0(self):
         """dnu/dT0 = dnu/de*de/dT0+dnu/dE*dE/dT0

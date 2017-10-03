@@ -122,9 +122,12 @@ class BTmodel(PSR_BINARY):
         and delayL2
         """
         a1 = self.a1()/c.c
-        num = a1*np.cos(self.omega())*np.sqrt(1-self.ecc()**2)*np.cos(self.E()) -\
-              a1*np.sin(self.omega())*np.sin(self.E())
-        den = 1.0 - self.ecc()*np.cos(self.E())
+        omega = self.omega()
+        ecc = self.ecc()
+        E = self.E()
+        num = a1 * np.cos(omega)* np.sqrt(1 - ecc**2)*np.cos(E) -\
+              a1 * np.sin(omega) * np.sin(E)
+        den = 1.0 - ecc * np.cos(E)
 
         # In BTmodel.C, they do not use pbprime here, just pb...
         # Is it not more appropriate to include the effects of PBDOT?
