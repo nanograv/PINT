@@ -95,11 +95,11 @@ class PSR_BINARY(object):
         self.binary_name = None
         self.param_default_value = {'PB':np.longdouble(10.0)*u.day,
                            'PBDOT':0.0*u.day/u.day,
-                           'ECC': 0.9*u.Unit('') ,
+                           'ECC': 0.0*u.Unit('') ,
                            'EDOT':0.0/u.second ,
                            'A1':10.0*ls,'A1DOT':0.0*ls/u.second,
                            'T0':np.longdouble(54000.0)*u.day,
-                           'OM':10.0*u.deg,
+                           'OM':0.0*u.deg,
                            'OMDOT':0.0*u.deg/u.year,
                            'XPBDOT':0.0*u.day/u.day,
                            'M2':0.0*u.M_sun,
