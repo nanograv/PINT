@@ -46,5 +46,6 @@ class BinaryDDK(BinaryDD):
                 self.add_param(p.floatParameter(name="PMDEC",
                     units="mas/year", value=0.0,
                     description="Proper motion in DEC"))
-
-                self.PMRA.value = 
+                ICRS_param = self.get_params_as_ICRS()
+                self.PMRA.quantity = ICRS_param['PMRA']
+                self.PMDEC.quantity = ICRS_param['PMDEC']

@@ -145,7 +145,7 @@ class DDKmodel(DDmodel):
         """
         Refernce: (Kopeikin 1995 Eq 15)
         """
-        return -self.obs_pos[:,0] * self.sin_alpha + self.obs_pos[:,1] * self.sin_alpha
+        return -self.obs_pos[:,0] * self.sin_alpha + self.obs_pos[:,1] * self.cos_alpha
 
     def delta_J0(self):
         """

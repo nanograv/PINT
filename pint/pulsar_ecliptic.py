@@ -44,6 +44,7 @@ class PulsarEcliptic(coord.BaseCoordinateFrame):
         The Distance for this object along the line-of-sight.
     """
     default_representation = coord.SphericalRepresentation
+    default_differential = coord.SphericalCosLatDifferential
     obliquity = OBL['DEFAULT']
     # def __init__(self, obliquity=OBL['DEFAULT'], *argu, **kwargs)
     #     super(PulsarEcliptic, self).__init__(*argu, **kwargs):

@@ -102,6 +102,9 @@ class Astrometry(DelayComponent):
 
         return rd
 
+    def get_params_as_ICRS(self):
+        raise NotImplementedError
+
     def d_delay_astrometry_d_PX(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt PX
 
@@ -203,6 +206,12 @@ class AstrometryEquatorial(Astrometry):
             dRA = dt * self.PMRA.quantity / numpy.cos(self.DECJ.quantity.radian)
             dDEC = dt * self.PMDEC.quantity
             return coords.ICRS(ra=self.RAJ.quantity+dRA, dec=self.DECJ.quantity+dDEC)
+
+    def get_params_as_ICRS(self):
+        result  = {'RAJ': self.RAJ.quantity,
+                   'DECJ': self.DECJ.quantity,
+                   'PMRAJ': self.PMRAJ.quantity,
+                   'PMDECJ': self.PMDECJ.quantity}
 
     def d_delay_astrometry_d_RAJ(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt RAJ
@@ -381,13 +390,17 @@ class AstrometryEcliptic(Astrometry):
 
         return rd
 
-    def params_to_equatorial(self):
+    def get_params_as_ICRS(self):
         result = dict()
-        pos_ICRS = self.coords_as_ICRS()
-        result['RA'] = pos_ICRS.ra.to(u.hourangle)
-        result['DEC'] = pos_ICRS.dec.to(u.deg)
-
-
+        dlon_coslat = self.PMELONG.quantity #* numpy.cos(self.ELAT.quantity.radian)
+        pv_ECL = PulsarEcliptic(lon=self.ELONG.quantity, lat=self.ELAT.quantity,
+                                d_lon_coslat=dlon_coslat, d_lat=self.PMELAT.quantity)
+        pv_ICRS = pv_ECL.transform_to(coords.ICRS)
+        result['RAJ'] = pv_ICRS.ra.to(u.hourangle)
+        result['DECJ'] = pv_ICRS.dec
+        result['PMRA'] = pv_ICRS.pm_ra_cosdec
+        result['PMDEC'] = pv_ICRS.pm_dec
+        return result
 
     def d_delay_astrometry_d_ELONG(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt RAJ
