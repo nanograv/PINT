@@ -187,7 +187,7 @@ class DDKmodel(DDmodel):
         kin = self.kin_proper_motion()
         sin_kin = np.sin(kin)
         PX_kpc= self.PX.to(u.kpc, equivalencies=u.parallax())
-        delta_omega = -1.0 / sin_kin / PX_kpc * (self.delta_I0() * self.cos_KOM - \
+        delta_omega = -1.0 / sin_kin / PX_kpc * (self.delta_I0() * self.cos_KOM + \
                                                   self.delta_J0() * self.sin_KOM)
         return delta_omega.to(self.OM.unit, equivalencies=u.dimensionless_angles())
 
