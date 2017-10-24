@@ -48,6 +48,8 @@ class BinaryELL1(PulsarBinary):
              description="Second derivative of first Laplace-Lagrange parameter",
              long_double = True))
 
+        self.warn_default_params = []
+
     def setup(self):
         """Check out parameters setup.
         """

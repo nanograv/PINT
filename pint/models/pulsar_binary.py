@@ -2,6 +2,7 @@
 import astropy.units as u
 from . import parameter as p
 from .timing_model import DelayComponent, MissingParameter
+from astropy import log
 from pint import ls,GMsun,Tsun
 
 
@@ -69,10 +70,11 @@ class PulsarBinary(DelayComponent):
              units=u.M_sun,
              description="Mass of companian in the unit Sun mass"))
 
-        self.add_param(p.floatParameter(name="SINI", value=0.0,
+        self.add_param(p.floatParameter(name="SINI",
              units="",
              description="Sine of inclination angle"))
 
+        self.warn_default_params = ['ECC', 'OM']
         # Set up delay function
         self.delay_funcs_component += [self.binarymodel_delay,]
 
@@ -104,21 +106,27 @@ class PulsarBinary(DelayComponent):
             # If the accumulate delay is not provided, it will try to get
             # the barycentric correction.
             acc_delay = self.delay(toas, self.__class__.__name__, False)
-        self.barycentric_time = toas['tdbld'] * u.day - acc_delay 
+        self.barycentric_time = toas['tdbld'] * u.day - acc_delay
         pardict = {}
+        # Find all the possible parameter name in the stand alone pulsar binary
         for par in self.binary_instance.binary_params:
             binary_par_names = [par,]
             if par in self.binary_instance.param_aliases.keys():
                 aliase = self.binary_instance.param_aliases[par]
             else:
                 aliase = []
+
             if hasattr(self, par) or \
                 list(set(aliase).intersection(self.params))!=[]:
-                binObjpar = getattr(self, par)
+                pint_bin_name = self.match_param_aliases(par)
+                binObjpar = getattr(self, pint_bin_name)
+                instance_par_val = getattr(self.binary_instance, par).value
                 if binObjpar.value is None:
+                    if binObjpar.name in self.warn_default_params:
+                        log.warn("'%s' is not set, using the default value %f "
+                                 "instead." % (binObjpar.name, instance_par_val))
                     continue
                 pardict[par] = binObjpar.value * binObjpar.units
-        #NOTE something is wrong here.
         self.binary_instance.update_input(self.barycentric_time, pardict)
 
     def binarymodel_delay(self, toas, acc_delay=None):

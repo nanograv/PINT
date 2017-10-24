@@ -952,10 +952,14 @@ class Component(object):
         # TODO need to search the parent class as well
         p_aliases = {}
         # if alias is a parameter name, return itself
-        if alias in self.params:
+        if self._parent is not None:
+            search_target = self._parent
+        else:
+            search_target = self
+        if alias in search_target.params:
             return alias
         # get all the aliases
-        for p in self.params:
+        for p in self._parent.params:
             par = getattr(self, p)
             if par.aliases !=[]:
                 p_aliases[p] = par.aliases
