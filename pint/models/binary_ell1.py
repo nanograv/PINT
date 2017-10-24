@@ -103,6 +103,10 @@ class BinaryELL1H(BinaryELL1Base):
                   description="Shapiro delay parameter STIGMA as in Freire and Wex 2010 Eq(12)",
                   long_double = True))
 
+    @property
+    def Shapiro_delay_funcs(self):
+        return self.binary_instance.ds_func_list
+
     def setup(self):
         """Check out parameters setup.
         """
@@ -115,5 +119,8 @@ class BinaryELL1H(BinaryELL1Base):
             warn("'M2' will not be used in ELL1H model. ")
         if self.H4.quantity is not None:
             self.binary_instance.fit_params = ['H3', 'H4']
+            # If have H4 or STIGMA, choose 7th order harmonics
+            self.binary_params.num_harms = 7
         if self.STIGMA.quantity is not None:
             self.binary_instance.fit_params = ['H3', 'STIGMA']
+            self.binary_params.num_harms = 7

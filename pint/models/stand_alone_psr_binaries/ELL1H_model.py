@@ -38,6 +38,9 @@ class ELL1Hmodel(ELL1BaseModel):
         # Put those default value here.  It can be changed for a new model.
         self.fit_params = ['H3']
         self.num_harms = 3
+        self.ds_func_list = [self.delayS3p_H3_STIGMA_approximate,
+                             self.delayS_H3_STIGMA_exact,
+                             self.delayS3p_H3_STIGMA_exact]
         self.ds_func = self.delayS3p_H3_STIGMA_approximate
 
     def delayS(self):
@@ -74,7 +77,7 @@ class ELL1Hmodel(ELL1BaseModel):
             if not derivative :
                 basis_func = np.cos
             else:
-                basis_func = -np.sin
+                basis_func = lambda x: -1 * np.sin(x)
         else:
             pwr = (k + 1)/2
             if not derivative :
