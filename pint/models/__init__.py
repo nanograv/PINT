@@ -13,7 +13,7 @@ from .dispersion_model import Dispersion, DispersionDMX
 from .spindown import Spindown
 from .frequency_dependent import FD
 from .glitch import Glitch
-from .jump import JumpDelay
+from .jump import DelayJump, PhaseJump 
 from .solar_system_shapiro import SolarSystemShapiro
 from .noise_model import ScaleToaError, EcorrNoise, PLRedNoise
 from .model_builder import get_model
