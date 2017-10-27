@@ -424,18 +424,19 @@ class AstrometryEcliptic(Astrometry):
                                   z=obs_xyz_ICRS[:,2], representation='cartesian')
         coords_elpt = coords_icrs.transform_to(PulsarEcliptic)
         return coords_elpt.cartesian.xyz
-
-    def get_params_as_ICRS(self):
-        result = dict()
-        dlon_coslat = self.PMELONG.quantity #* numpy.cos(self.ELAT.quantity.radian)
-        pv_ECL = PulsarEcliptic(lon=self.ELONG.quantity, lat=self.ELAT.quantity,
-                                d_lon_coslat=dlon_coslat, d_lat=self.PMELAT.quantity)
-        pv_ICRS = pv_ECL.transform_to(coords.ICRS)
-        result['RAJ'] = pv_ICRS.ra.to(u.hourangle)
-        result['DECJ'] = pv_ICRS.dec
-        result['PMRA'] = pv_ICRS.pm_ra_cosdec
-        result['PMDEC'] = pv_ICRS.pm_dec
-        return result
+    # NOTE
+    # This feature below needs astropy version 2.0, disalbed right now. 
+    # def get_params_as_ICRS(self):
+    #     result = dict()
+    #     dlon_coslat = self.PMELONG.quantity #* numpy.cos(self.ELAT.quantity.radian)
+    #     pv_ECL = PulsarEcliptic(lon=self.ELONG.quantity, lat=self.ELAT.quantity,
+    #                             d_lon_coslat=dlon_coslat, d_lat=self.PMELAT.quantity)
+    #     pv_ICRS = pv_ECL.transform_to(coords.ICRS)
+    #     result['RAJ'] = pv_ICRS.ra.to(u.hourangle)
+    #     result['DECJ'] = pv_ICRS.dec
+    #     result['PMRA'] = pv_ICRS.pm_ra_cosdec
+    #     result['PMDEC'] = pv_ICRS.pm_dec
+    #     return result
 
     def d_delay_astrometry_d_ELONG(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt RAJ
