@@ -4,6 +4,7 @@ from .binary_dd import BinaryDD
 from . import parameter as p
 from .timing_model import MissingParameter
 import astropy.units as u
+from astropy import log
 
 
 class BinaryDDK(BinaryDD):
@@ -29,6 +30,26 @@ class BinaryDDK(BinaryDD):
                        description="Inclination angle"))
         self.add_param(p.floatParameter(name='KOM', value=0.0, units="deg",
                        description="The longitude of the ascending node"))
+        self.interal_params += ['PMRA_DDK', 'PMDEC_DDK']
+
+    @property
+    def PMRA_DDK(self):
+        if 'PMRA' in self._parent.params:
+            return self.PMRA
+        elif 'PMELONG' in self._parent.params:
+            return self.PMELONG
+        else:
+            raise MissingParameter("DDK", "DDK model needs proper motion parameters.")
+
+    @property
+    def PMDEC_DDK(self):
+        if 'PMDEC' in self._parent.params:
+            return self.PMDEC
+        elif 'PMELAT' in self._parent.params:
+            return self.PMELAT
+        else:
+            raise MissingParameter("DDK", "DDK model needs proper motion parameters.")
+
 
     def setup(self):
         """Check out parameters setup.
@@ -40,12 +61,9 @@ class BinaryDDK(BinaryDD):
             if 'PMELONG' not in self._parent.params or 'PMELAT' not in self._parent.params:
                 raise MissingParameter("DDK", "DDK model needs proper motion parameters.")
             else:
-                self.add_param(p.floatParameter(name="PMRA",
-                    units="mas/year", value=0.0,
-                    description="Proper motion in RA"))
-                self.add_param(p.floatParameter(name="PMDEC",
-                    units="mas/year", value=0.0,
-                    description="Proper motion in DEC"))
-                ICRS_param = self.get_params_as_ICRS()
-                self.PMRA.quantity = ICRS_param['PMRA']
-                self.PMDEC.quantity = ICRS_param['PMDEC']
+                log.info("Using ecliptic coordinate. The parameter KOM is"
+                         " measured respect to ecliptic North.")
+
+        else:
+            log.info("Using equatorial coordinate. The parameter KOM is"
+                     " measured respect to equatorial North.")

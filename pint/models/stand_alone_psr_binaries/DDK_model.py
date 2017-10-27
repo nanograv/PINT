@@ -20,8 +20,8 @@ class DDKmodel(DDmodel):
         super(DDKmodel, self).__init__()
         self.binary_name = 'DDK'
         # Add parameter that specific for DD model, with default value and units
-        self.param_default_value.update({'KIN':0*u.deg,'PMRA':0*u.mas/u.year,
-                               'PMDEC':0.5*u.mas/u.year, 'PX': 0*u.mas,
+        self.param_default_value.update({'KIN':0*u.deg,'PMRA_DDK':0*u.mas/u.year,
+                               'PMDEC_DDK':0.5*u.mas/u.year, 'PX': 0*u.mas,
                                'KOM': 0*u.deg
                                })
         # Remove unused parameter SINI
@@ -100,10 +100,10 @@ class DDKmodel(DDmodel):
         """The time dependent inclination angle.
         (KOPEIKIN. 1996 Eq 10.)
         ki = KIN + d_KIN
-        d_KIN = (-PMRA * sin(KOM) + PMDEC * cos(KOM)) * (t-T0)
+        d_KIN = (-PMRA_DDK * sin(KOM) + PMDEC_DDK * cos(KOM)) * (t-T0)
         """
-        d_KIN = (-self.PMRA * self.sin_KOM +
-                  self.PMDEC * self.cos_KOM) * self.tt0
+        d_KIN = (-self.PMRA_DDK * self.sin_KOM +
+                  self.PMDEC_DDK * self.cos_KOM) * self.tt0
         return d_KIN.to(self.KIN.unit)
 
     def kin_proper_motion(self):
@@ -113,8 +113,8 @@ class DDKmodel(DDmodel):
         """The correction on a1 (projected semi-major axis)
         due to the pulsar proper motion
         (KOPEIKIN. 1996 Eq 8.)
-        d_x = a1 * cot(kin) * (-PMRA * sin(KOM) + PMDEC * cos(KOM)) * (t-T0)
-        d_kin = (-PMRA * sin(KOM) + PMDEC * cos(KOM)) * (t-T0)
+        d_x = a1 * cot(kin) * (-PMRA_DDK * sin(KOM) + PMDEC_DDK * cos(KOM)) * (t-T0)
+        d_kin = (-PMRA_DDK * sin(KOM) + PMDEC_DDK * cos(KOM)) * (t-T0)
         d_x = a1 * d_kin * cot(kin)
         """
         a1 = self.a1(False, False)
@@ -128,12 +128,12 @@ class DDKmodel(DDmodel):
         """The correction on omega (Longitude of periastron)
         due to the pulsar proper motion
         (KOPEIKIN. 1996 Eq 9.)
-        d_omega = csc(i) * (PMRA * cos(KOM) + PMDEC * sin(KOM)) * (t-T0)
+        d_omega = csc(i) * (PMRA_DDK * cos(KOM) + PMDEC_DDK * sin(KOM)) * (t-T0)
         """
         kin = self.kin_proper_motion()
         sin_kin = np.sin(kin)
-        omega_dot = 1.0/sin_kin * (self.PMRA * self.cos_KOM +
-                                        self.PMDEC * self.sin_KOM)
+        omega_dot = 1.0/sin_kin * (self.PMRA_DDK * self.cos_KOM +
+                                        self.PMDEC_DDK * self.sin_KOM)
         return (omega_dot * self.tt0).to(self.OM.unit)
 
 
