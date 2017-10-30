@@ -30,6 +30,9 @@ class TestELL1H(unittest.TestCase):
         self.modelJ0613 = model.get_model(self.parfileJ0613)
         self.toasJ0613 = toa.get_TOAs(self.timfileJ0613, ephem="DE421",
                                       planets=False)
+        self.parfileJ0613_STIG = "J0613-0200_NANOGrav_9yv1_ELL1H_STIG.gls.par"
+        self.modelJ0613_STIG = model.get_model(self.parfileJ0613_STIG)
+
     def test_J1853(self):
         pint_resids_us = resids(self.toasJ1853, self.modelJ1853, False).time_resids.to(u.s)
         # Due to PINT has higher order of ELL1 model, Tempo2 gives a difference around 3e-8
@@ -73,7 +76,7 @@ class TestELL1H(unittest.TestCase):
 
     def test_J0613_H4(self):
         log= logging.getLogger( "TestJ0613.fit_tests")
-        f = ff.WlsFitter(self.toasJ0613, self.modelJ0613)
+        f = ff.GLSFitter(self.toasJ0613, self.modelJ0613)
         f.fit_toas()
         f.set_fitparams('H3', 'H4')
         for pn, p in (f.get_fitparams()).items():
@@ -82,5 +85,17 @@ class TestELL1H(unittest.TestCase):
             sigma = diff/op.uncertainty_value
             # Fit th
             assert sigma < 0.7, "refit %s is %lf sigma different from original value" % (pn, sigma)
+    def test_J0613_STIG(self):
+        log= logging.getLogger( "TestJ0613.fit_tests_stig")
+        f = ff.GLSFitter(self.toasJ0613, self.modelJ0613_STIG)
+        f.fit_toas()
+        f.set_fitparams('H3', 'STIGMA')
+        for pn, p in (f.get_fitparams()).items():
+            op = getattr(f.model_init, pn)
+            diff = np.abs(p.value - op.value)
+            sigma = diff/op.uncertainty_value
+            # Fit th
+            assert sigma < 0.7, "refit %s is %lf sigma different from original value" % (pn, sigma)
+
 if __name__ == '__main__':
     pass

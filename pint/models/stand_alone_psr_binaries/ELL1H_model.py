@@ -316,7 +316,7 @@ class ELL1Hmodel(ELL1BaseModel):
         Phi = self.Phi()
         lognum = 1 + stigma ** 2 - 2 * stigma * np.sin(Phi)
         d_ds_d_Phi = 4 * H3 / stigma ** 2 *(np.cos(Phi)/lognum)
-        return d_ds_d_stigma
+        return d_ds_d_Phi
 
     def d_delayS_d_par(self, par):
         if set(self.fit_params) == set(['H3', 'H4']):
