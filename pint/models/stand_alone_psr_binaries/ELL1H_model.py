@@ -26,7 +26,8 @@ class ELL1Hmodel(ELL1BaseModel):
         self.binary_name = 'ELL1H'
         self.param_default_value.update({'H3': 0.0 * u.second,
                                          'H4': 0.0 * u.second,
-                                         'STIGMA': 0.0 * u.Unit("")})
+                                         'STIGMA': 0.0 * u.Unit(""),
+                                         'NHARMS': 3 * u.Unit("")})
         self.binary_params = list(self.param_default_value.keys())
         self.set_param_values() # Set parameters to default values.
         self.ELL1H_interVars = ['stigma']
@@ -37,7 +38,6 @@ class ELL1Hmodel(ELL1BaseModel):
         self.d_binarydelay_d_par_funcs = [self.d_ELL1Hdelay_d_par]
         # Put those default value here.  It can be changed for a new model.
         self.fit_params = ['H3']
-        self.num_harms = 3
         self.ds_func_list = [self.delayS3p_H3_STIGMA_approximate,
                              self.delayS_H3_STIGMA_exact,
                              self.delayS3p_H3_STIGMA_exact]
@@ -50,7 +50,10 @@ class ELL1Hmodel(ELL1BaseModel):
             stigma = self.STIGMA
         elif set(self.fit_params) == set(['H3']):
             stigma = 0.0
-        return self.ds_func(self.H3, stigma, self.num_harms)
+        else:
+            raise NotImplementedError("ELL1H did not implemented %s parameter"
+                                      " set yet." % str(self.fit_params))
+        return self.ds_func(self.H3, stigma, self.NHARMS)
 
     def ELL1Hdelay(self):
         # TODO need aberration
@@ -90,7 +93,7 @@ class ELL1Hmodel(ELL1BaseModel):
         """(P. Freire and N. Wex 2010) paper Eq (13)
            parameter
            ---------
-           sitgma: float
+           stigma: float
                Orthometric ratio
            k: positive integer
                Order of harmonics.
@@ -122,7 +125,7 @@ class ELL1Hmodel(ELL1BaseModel):
             if stigma == 0.0 and k == factor_out_power:
                 return 0.0, basis_func
             else:
-                return (-1) ** (pwr) * 2.0 * stigma ** (k - factor_out_power - 1), \
+                return (-1) ** (pwr) * 2.0* (k - factor_out_power) /k * stigma ** (k - factor_out_power - 1), \
                        basis_func
         else:
             basis_func = np.cos
@@ -138,6 +141,21 @@ class ELL1Hmodel(ELL1BaseModel):
         else:
             basis_func = -np.sin
             return 0, basis_func
+
+    def d_STIGMA_d_H4(self):
+        return 1.0 / self.H3
+
+    def d_STIGMA_d_H3(self):
+        if set(self.fit_params) == set(['H3', 'H4']):
+            d_stigma_d_H3 = - self.H4 / self.H3 / self.H3
+        elif set(self.fit_params) == set(['H3', 'STIGMA']):
+            d_stigma_d_H3 = 0.0
+        elif set(self.fit_params) == set(['H3']):
+            d_stigma_d_H3 = 0.0
+        else:
+            raise NotImplementedError("ELL1H did not implemented %s parameter"
+                                      " set yet." % str(self.fit_params))
+        return d_stigma_d_H3
 
 
     def ELL1H_shapiro_delay_fourier_harms(self, selected_harms, phi, stigma, \
@@ -300,9 +318,6 @@ class ELL1Hmodel(ELL1BaseModel):
         d_ds_d_Phi = 4 * H3 / stigma ** 2 *(np.cos(Phi)/lognum)
         return d_ds_d_stigma
 
-    def d_STIGMA_d_H4(self):
-        return 1.0 / self.H3
-
     def d_delayS_d_par(self, par):
         if set(self.fit_params) == set(['H3', 'H4']):
             stigma = self.H4 / self.H3
@@ -310,15 +325,18 @@ class ELL1Hmodel(ELL1BaseModel):
             stigma = self.STIGMA
         elif set(self.fit_params) == set(['H3']):
             stigma = 0.0
+        else:
+            raise NotImplementedError("ELL1H did not implemented %s parameter"
+                                      " set yet." % str(self.fit_params))
 
         d_ds_func_name_base = 'd_' + self.ds_func.__name__ + '_d_'
         d_delayS_d_H3_func = getattr(self, d_ds_func_name_base + 'H3')
         d_delayS_d_Phi_func = getattr(self, d_ds_func_name_base + 'Phi')
         d_delayS_d_STIGMA_func = getattr(self, d_ds_func_name_base + 'STIGMA')
 
-        d_delayS_d_H3 = d_delayS_d_H3_func(self.H3, stigma, self.num_harms)
-        d_delayS_d_Phi = d_delayS_d_Phi_func(self.H3, stigma, self.num_harms)
-        d_delayS_d_STIGMA = d_delayS_d_STIGMA_func(self.H3, stigma, self.num_harms)
+        d_delayS_d_H3 = d_delayS_d_H3_func(self.H3, stigma, self.NHARMS)
+        d_delayS_d_Phi = d_delayS_d_Phi_func(self.H3, stigma, self.NHARMS)
+        d_delayS_d_STIGMA = d_delayS_d_STIGMA_func(self.H3, stigma, self.NHARMS)
 
         d_H3_d_par = self.prtl_der('H3', par)
         d_Phi_d_par = self.prtl_der('Phi', par)

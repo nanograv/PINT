@@ -102,6 +102,8 @@ class BinaryELL1H(BinaryELL1Base):
         self.add_param(p.floatParameter(name="STIGMA", units="",
                   description="Shapiro delay parameter STIGMA as in Freire and Wex 2010 Eq(12)",
                   long_double = True))
+        self.add_param(p.floatParameter(name="NHARMS", units="", value=3,
+                  description="Number of harmonics for ELL1H shapiro delay."))
 
     @property
     def Shapiro_delay_funcs(self):
@@ -120,7 +122,9 @@ class BinaryELL1H(BinaryELL1Base):
         if self.H4.quantity is not None:
             self.binary_instance.fit_params = ['H3', 'H4']
             # If have H4 or STIGMA, choose 7th order harmonics
-            self.binary_params.num_harms = 7
+            if self.NHARMS.value < 7:
+                self.NHARMS.value = 7
+
         if self.STIGMA.quantity is not None:
             self.binary_instance.fit_params = ['H3', 'STIGMA']
-            self.binary_params.num_harms = 7
+            self.binary_instance.ds_func = self.binary_instance.delayS_H3_STIGMA_exact

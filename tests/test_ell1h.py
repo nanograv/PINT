@@ -2,6 +2,7 @@
 import pint.models as model
 import pint.toa as toa
 import astropy.units as u
+import pint.fitter as ff
 from pint.residuals import resids
 import numpy as np
 import os, unittest
@@ -23,6 +24,12 @@ class TestELL1H(unittest.TestCase):
         self.modelJ1853 = model.get_model(self.parfileJ1853)
         self.ltres, self.ltbindelay = np.genfromtxt(self.parfileJ1853 + \
                                      '.tempo2_test',skip_header=1, unpack=True)
+
+        self.parfileJ0613 = "J0613-0200_NANOGrav_9yv1_ELL1H.gls.par"
+        self.timfileJ0613 = "J0613-0200_NANOGrav_9yv1.tim"
+        self.modelJ0613 = model.get_model(self.parfileJ0613)
+        self.toasJ0613 = toa.get_TOAs(self.timfileJ0613, ephem="DE421",
+                                      planets=False)
     def test_J1853(self):
         pint_resids_us = resids(self.toasJ1853, self.modelJ1853, False).time_resids.to(u.s)
         # Due to PINT has higher order of ELL1 model, Tempo2 gives a difference around 3e-8
@@ -64,5 +71,16 @@ class TestELL1H(unittest.TestCase):
             else:
                 continue
 
+    def test_J0613_H4(self):
+        log= logging.getLogger( "TestJ0613.fit_tests")
+        f = ff.WlsFitter(self.toasJ0613, self.modelJ0613)
+        f.fit_toas()
+        f.set_fitparams('H3', 'H4')
+        for pn, p in (f.get_fitparams()).items():
+            op = getattr(f.model_init, pn)
+            diff = np.abs(p.value - op.value)
+            sigma = diff/op.uncertainty_value
+            # Fit th
+            assert sigma < 0.7, "refit %s is %lf sigma different from original value" % (pn, sigma)
 if __name__ == '__main__':
     pass

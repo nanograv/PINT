@@ -153,7 +153,7 @@ class PSR_BINARY(object):
         if param_dict is not None:
             self.set_param_values(param_dict)
         # Switch the cache off
-        # NOTE Having cache is needs to be very careful. 
+        # NOTE Having cache is needs to be very careful.
         for cv in self.cache_vars:
             setattr(self, '_' + cv, None)
 
@@ -166,7 +166,6 @@ class PSR_BINARY(object):
                 setattr(self,par.upper(),self.param_default_value[par])
         else:
             for par in valDict.keys():
-                print par, valDict[par]
                 if par not in self.binary_params: # search for aliases
                     parname = self.search_alias(par)
                     if par is None:
