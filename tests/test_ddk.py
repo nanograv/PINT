@@ -24,9 +24,13 @@ class TestDDK(unittest.TestCase):
         # Calculate delays with PINT
         pint_binary_delay = self.modelJ1713.binarymodel_delay(self.toasJ1713.table, None)
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 8e-11), 'DDK J1713 TEST FAILED'
+
     def test_J1713(self):
         pint_resids_us = resids(self.toasJ1713, self.modelJ1713, False).time_resids.to(u.s)
         assert np.all(np.abs(pint_resids_us.value - self.ltres) < 1e-8), 'DDK J1713 TEST FAILED'
+
+    def test_J1713_deriv(self):
+        pass
 
 
 if __name__ == '__main__':

@@ -396,6 +396,20 @@ class PSR_BINARY(object):
 
     def d_a1_d_A1DOT(self):
         return self.tt0
+
+    def d_a1_d_par(self, par):
+        if par not in self.binary_params:
+            errorMesg = par + "is not in binary parameter list."
+            raise ValueError(errorMesg)
+        
+        par_obj = getattr(self, par)
+        try:
+            func = getattr(self, 'd_a1_d_'+ par)
+        except:
+            func = lambda : np.zeros(len(self.tt0)) * self.A1.unit/par_obj.unit
+        result = func()
+        return result
+
     ######################################
     def orbits(self):
         """Pulsar Orbit
