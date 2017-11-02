@@ -12,7 +12,7 @@ from ..fits_utils import read_fits_event_mjds
 from ..solar_system_ephemerides import objPosVel_wrt_SSB
 import numpy as np
 from astropy.time import Time
-from astropy.table import Table
+from astropy.table import Table, vstack
 import astropy.io.fits as pyfits
 from astropy.extern import six
 from astropy import log
@@ -84,7 +84,18 @@ class NICERObs(SpecialLocation):
 
     def __init__(self, name, FPorbname, tt2tdb_mode = 'none'):
 
-        self.FPorb = load_FPorbit(FPorbname)
+
+        if FPorbname.startswith('@'):
+            # Read multiple orbit files names
+            FPlist = []
+            fnames = [ll.strip() for ll in open(FPorbname[1:]).readlines()]
+            for fn in fnames:
+                FPlist.append(load_FPorbit(fn))
+            self.FPorb = vstack(FPlist)
+            # Make sure full table is sorted
+            self.FPorb.sort('MJD_TT')
+        else:
+            self.FPorb = load_FPorbit(FPorbname)
         # Now build the interpolator here:
         self.X = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['X'])
         self.Y = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Y'])
@@ -97,7 +108,7 @@ class NICERObs(SpecialLocation):
         if self.tt2tdb_mode.lower().startswith('none'):
             log.warning('Using location=None for TT to TDB conversion')
         elif self.tt2tdb_mode.lower().startswith('geo'):
-            log.warning('Using location geocenter for TT to TDB conversion')        
+            log.warning('Using location geocenter for TT to TDB conversion')
         super(NICERObs, self).__init__(name=name)
 
     @property
