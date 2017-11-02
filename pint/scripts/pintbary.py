@@ -38,7 +38,7 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
 
-    if args.format in ("mjd","jd"):
+    if args.format in ("mjd","jd", "unix"):
         # These formats require conversion from string to longdouble first
         fmt = args.format
         # Never allow format == 'mjd' because it fails when scale is 'utc'
