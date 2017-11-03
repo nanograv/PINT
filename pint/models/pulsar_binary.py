@@ -125,13 +125,20 @@ class PulsarBinary(DelayComponent):
                 if pint_bin_name == "" and par in self.interal_params:
                     pint_bin_name = par
                 binObjpar = getattr(self, pint_bin_name)
-                instance_par_val = getattr(self.binary_instance, par).value
+                instance_par = getattr(self.binary_instance, par)
+                if hasattr(instance_par, 'value'):
+                    instance_par_val = instance_par.value
+                else:
+                    instance_par_val = instance_par
                 if binObjpar.value is None:
                     if binObjpar.name in self.warn_default_params:
                         log.warn("'%s' is not set, using the default value %f "
                                  "instead." % (binObjpar.name, instance_par_val))
                     continue
-                updates[par] = binObjpar.value * binObjpar.units
+                if binObjpar.units is not None:
+                    updates[par] = binObjpar.value * binObjpar.units
+                else:
+                    updates[par] = binObjpar.value
         self.binary_instance.update_input(**updates)
 
     def binarymodel_delay(self, toas, acc_delay=None):
