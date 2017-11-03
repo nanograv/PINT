@@ -359,18 +359,21 @@ class DDmodel(PSR_BINARY):
 
             er = e + Dr
         """
+        Dre = self.Dre()
+        par_obj = getattr(self, par)
         sinE = np.sin(self.E())
         cosE = np.cos(self.E())
-        # First term
-        term1 = self.alpha()*(-self.prtl_der('er',par)-self.prtl_der('E',par)*sinE)
-        # Second term
-        term2 = (cosE-self.er())*self.prtl_der('alpha',par)
-        # Third term
-        term3 = (self.prtl_der('beta',par)+self.prtl_der('GAMMA',par))*sinE
-        # Fourth term
-        term4 = (self.beta()+self.GAMMA)*cosE*self.prtl_der('E',par)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            # First term
+            term1 = self.alpha()*(-self.prtl_der('er',par)-self.prtl_der('E',par)*sinE)
+            # Second term
+            term2 = (cosE-self.er())*self.prtl_der('alpha',par)
+            # Third term
+            term3 = (self.prtl_der('beta',par)+self.prtl_der('GAMMA',par))*sinE
+            # Fourth term
+            term4 = (self.beta()+self.GAMMA)*cosE*self.prtl_der('E',par)
 
-        return term1 + term2 + term3 +term4
+            return (term1 + term2 + term3 +term4).to(Dre.unit/par_obj.unit)
 
     #################################################
     def Drep(self):
@@ -393,15 +396,18 @@ class DDmodel(PSR_BINARY):
         """
         sinE = np.sin(self.E())
         cosE = np.cos(self.E())
-        # first term
-        term1 = -sinE*self.prtl_der('alpha',par)
-        # second term
-        term2 = -(self.alpha()*cosE+  \
+        Drep = self.Drep()
+        par_obj = getattr(self, par)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            # first term
+            term1 = -sinE*self.prtl_der('alpha',par)
+            # second term
+            term2 = -(self.alpha()*cosE+  \
                 (self.beta()+self.GAMMA)*sinE)*self.prtl_der('E',par)
-        # Third term
-        term3 = cosE*(self.prtl_der('beta',par)+self.prtl_der('GAMMA',par))
+            # Third term
+            term3 = cosE*(self.prtl_der('beta',par)+self.prtl_der('GAMMA',par))
 
-        return term1+term2+term3
+            return (term1+term2+term3).to(Drep.unit/par_obj.unit)
 
     #################################################
     def Drepp(self):
@@ -424,15 +430,18 @@ class DDmodel(PSR_BINARY):
         """
         sinE = np.sin(self.E())
         cosE = np.cos(self.E())
-        # first term
-        term1 = -cosE*self.prtl_der('alpha',par)
-        # second term
-        term2 = (self.alpha()*sinE -  \
+        Drepp = self.Drepp()
+        par_obj = getattr(self, par)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            # first term
+            term1 = -cosE*self.prtl_der('alpha',par)
+            # second term
+            term2 = (self.alpha()*sinE -  \
                 (self.beta()+self.GAMMA)*cosE)*self.prtl_der('E',par)
-        # Third term
-        term3 = -sinE*(self.prtl_der('beta',par)+self.prtl_der('GAMMA',par))
+            # Third term
+            term3 = -sinE*(self.prtl_der('beta',par)+self.prtl_der('GAMMA',par))
 
-        return term1+term2+term3
+            return (term1+term2+term3).to(Drepp.unit/par_obj.unit)
     #################################################
 
     def nhat(self):
@@ -455,12 +464,13 @@ class DDmodel(PSR_BINARY):
         """
         sinE = np.sin(self.E())
         cosE = np.cos(self.E())
-        oneMeccTcosE = (1-self.ecc()*cosE)
-        fctr = -2*np.pi/self.PB/oneMeccTcosE
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            oneMeccTcosE = (1-self.ecc()*cosE)
+            fctr = -2*np.pi/self.PB/oneMeccTcosE
 
-        return fctr*(self.prtl_der('PB',par)/self.PB - \
-               (cosE*self.prtl_der('ecc',par)- \
-                self.ecc()*sinE*self.prtl_der('E',par))/oneMeccTcosE)
+            return fctr*(self.prtl_der('PB',par)/self.PB - \
+                   (cosE*self.prtl_der('ecc',par)- \
+                    self.ecc()*sinE*self.prtl_der('E',par))/oneMeccTcosE)
 
     #################################################
     def delayInverse(self):
@@ -514,20 +524,20 @@ class DDmodel(PSR_BINARY):
         dDrepp_dpar = self.d_Drepp_d_par(par)
         dnhat_dpar = self.d_nhat_d_par(par)
         oneMeccTcosE = (1-e*cE) # 1-e*cos(E)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            x =  -1.0/2.0*e*sE/oneMeccTcosE # -1/2*e*sin(E)/(1-e*cos(E))
 
-        x =  -1.0/2.0*e*sE/oneMeccTcosE # -1/2*e*sin(E)/(1-e*cos(E))
+            dx_dpar = -sE/(2*oneMeccTcosE**2)*decc_dpar+e*(e-cE)/(2*oneMeccTcosE**2)*dE_dpar
 
-        dx_dpar = -sE/(2*oneMeccTcosE**2)*decc_dpar+e*(e-cE)/(2*oneMeccTcosE**2)*dE_dpar
+            diDelay_dDre = 1+(Drep*nHat)**2+Dre*Drepp*nHat**2+Drep*nHat*(2*Dre*nHat*x-1)
+            diDelay_dDrep = Dre*nHat*(2*Drep*nHat+Dre*nHat*x-1)
+            diDelay_dDrepp = (Dre*nHat)**2/2
+            diDelay_dnhat = Dre*(-Drep+2*Drep**2*nHat+nHat*Dre*Drepp+2*x*nHat*Dre*Drep)
+            diDelay_dx = (Dre*nHat)**2*Drep
 
-        diDelay_dDre = 1+(Drep*nHat)**2+Dre*Drepp*nHat**2+Drep*nHat*(2*Dre*nHat*x-1)
-        diDelay_dDrep = Dre*nHat*(2*Drep*nHat+Dre*nHat*x-1)
-        diDelay_dDrepp = (Dre*nHat)**2/2
-        diDelay_dnhat = Dre*(-Drep+2*Drep**2*nHat+nHat*Dre*Drepp+2*x*nHat*Dre*Drep)
-        diDelay_dx = (Dre*nHat)**2*Drep
-
-        return dDre_dpar*diDelay_dDre + dDrep_dpar*diDelay_dDrep + \
-               dDrepp_dpar*diDelay_dDrepp + dx_dpar*diDelay_dx+ \
-               dnhat_dpar*diDelay_dnhat
+            return dDre_dpar*diDelay_dDre + dDrep_dpar*diDelay_dDrep + \
+                   dDrepp_dpar*diDelay_dDrepp + dx_dpar*diDelay_dx+ \
+                   dnhat_dpar*diDelay_dnhat
 
     #################################################
     def delayS(self):
@@ -561,19 +571,20 @@ class DDmodel(PSR_BINARY):
 
         logNum = 1-e*cE-self.SINI*(sOmega*(cE-e)+
                  (1-e**2)**0.5*cOmega*sE)
-        dTM2_dpar = self.prtl_der('TM2',par)
-        dsDelay_dTM2 = -2*np.log(logNum)
-        decc_dpar = self.prtl_der('ecc',par)
-        dsDelay_decc = -2*TM2/logNum*(-cE-self.SINI*(-e*cOmega*sE/np.sqrt(1-e**2)-sOmega))
-        dE_dpar = self.prtl_der('E',par)
-        dsDelay_dE =  -2*TM2/logNum*(e*sE-self.SINI*(np.sqrt(1-e**2)*cE*cOmega-sE*sOmega))
-        domega_dpar = self.prtl_der('omega',par)
-        dsDelay_domega = -2*TM2/logNum*self.SINI*((cE-e)*cOmega-np.sqrt(1-e**2)*sE*sOmega)
-        dSINI_dpar = self.prtl_der('SINI',par)
-        dsDelay_dSINI = -2*TM2/logNum*(-(1-e**2)**0.5*cOmega*sE-(cE-e)*sOmega)
-        return dTM2_dpar*dsDelay_dTM2 + decc_dpar*dsDelay_decc + \
-               dE_dpar*dsDelay_dE +domega_dpar*dsDelay_domega +  \
-               dSINI_dpar*dsDelay_dSINI
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            dTM2_dpar = self.prtl_der('TM2',par)
+            dsDelay_dTM2 = -2*np.log(logNum)
+            decc_dpar = self.prtl_der('ecc',par)
+            dsDelay_decc = -2*TM2/logNum*(-cE-self.SINI*(-e*cOmega*sE/np.sqrt(1-e**2)-sOmega))
+            dE_dpar = self.prtl_der('E',par)
+            dsDelay_dE =  -2*TM2/logNum*(e*sE-self.SINI*(np.sqrt(1-e**2)*cE*cOmega-sE*sOmega))
+            domega_dpar = self.prtl_der('omega',par)
+            dsDelay_domega = 2*TM2/logNum*self.SINI*((cE-e)*cOmega-np.sqrt(1-e**2)*sE*sOmega)
+            dSINI_dpar = self.prtl_der('SINI',par)
+            dsDelay_dSINI = -2*TM2/logNum*(-(1-e**2)**0.5*cOmega*sE-(cE-e)*sOmega)
+            return dTM2_dpar*dsDelay_dTM2 + decc_dpar*dsDelay_decc + \
+                   dE_dpar*dsDelay_dE +domega_dpar*dsDelay_domega +  \
+                   dSINI_dpar*dsDelay_dSINI
 
     #################################################
     def delayE(self):
@@ -647,5 +658,6 @@ class DDmodel(PSR_BINARY):
     def d_DDdelay_d_par(self,par):
         """Full DD model delay derivtive
         """
-        return self.d_delayI_d_par(par)+self.d_delayS_d_par(par)+ \
-               self.d_delayA_d_par(par)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            return self.d_delayI_d_par(par)+self.d_delayS_d_par(par)+ \
+                   self.d_delayA_d_par(par)

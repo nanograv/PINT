@@ -4,6 +4,8 @@ import astropy.units as u
 import astropy.constants as c
 from astropy import log
 from pint import ls,GMsun,Tsun
+u.set_enabled_equivalencies(u.dimensionless_angles())
+
 
 class DDKmodel(DDmodel):
     """
@@ -116,6 +118,35 @@ class DDKmodel(DDmodel):
         else:
             return self.KIN
 
+    def d_SINI_d_KIN(self):
+        #with u.set_enabled_equivalencies(u.dimensionless_angles()):
+        return np.cos(self.kin()).to(u.Unit("") / self.KIN.unit)
+
+    def d_SINI_d_KOM(self):
+        if self.K96:
+            d_si_d_kom = (-self.PMRA_DDK * self.cos_KOM -
+                          self.PMDEC_DDK * self.sin_KOM) * self.tt0 * np.cos(self.kin())
+            #with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            return d_si_d_kom.to(u.Unit("") / self.KOM.unit)
+        else:
+            return np.cos(self.kin()) * u.Unit("") / self.KOM.unit
+
+    def d_SINI_d_T0(self):
+        if self.K96:
+            d_si_d_kom = - (-self.PMRA_DDK * self.sin_KOM +
+                          self.PMDEC_DDK * self.cos_KOM)
+            return d_si_d_kom.to(u.Unit("") / self.T0.unit)
+        else:
+            return np.ones(len(self.tt0)) * u.Unit("") / self.T0.unit
+
+    def d_SINI_d_par(self, par):
+        par_obj = getattr(self, par)
+        try:
+            ko_func = getattr(self,  'd_SINI_d_'+ par)
+        except:
+            ko_func = lambda : np.zeros(len(self.tt0)) * u.Unit("")/par_obj.unit
+        return ko_func()
+
     def d_kin_proper_motion_d_KOM(self):
         d_DKIN_d_KOM = (-self.PMRA_DDK * self.cos_KOM -
                   self.PMDEC_DDK * self.sin_KOM) * self.tt0
@@ -131,15 +162,15 @@ class DDKmodel(DDmodel):
     def d_kin_d_par(self, par):
         if par == 'KIN':
             return np.ones_like(self.tt0)
-
+        par_obj = getattr(self, par)
         if self.K96:
             try:
                 func = getattr(self, 'd_kin_proper_motion_d_' + par)
             except:
-                func = lambda : np.zeros_like(self.tt0)
+                func = lambda : np.zeros(len(self.tt0)) * self.KIN / par_obj.unit
             return func()
         else:
-            return np.zeros_like(self.tt0)
+            return np.zeros(len(self.tt0)) * self.KIN / par_obj.unit
 
     def delta_a1_proper_motion(self):
         """The correction on a1 (projected semi-major axis)
@@ -174,10 +205,10 @@ class DDKmodel(DDmodel):
         # dkin/dKOM = dKIN/dKOM + d (d_kin)/dKOM
         # dKIN/dKOM == 0
         # dkin/dKOM = d (d_kin)/dKOM
-        with u.set_enabled_equivalencies(u.dimensionless_angles()):
-            d_delta_a1_proper_motion_d_KOM = a1 * d_kin_d_KOM * (
-                             -1.0/ np.sin(kin)**2 * d_kin +  1.0/ tan_kin)
-            return d_delta_a1_proper_motion_d_KOM.to(a1.unit/self.KOM.unit)
+        #with u.set_enabled_equivalencies(u.dimensionless_angles()):
+        d_delta_a1_proper_motion_d_KOM = a1 * d_kin_d_KOM * (
+                            -1.0/ np.sin(kin)**2 * d_kin +  1.0/ tan_kin)
+        return d_delta_a1_proper_motion_d_KOM.to(a1.unit/self.KOM.unit)
 
     def d_delta_a1_proper_motion_d_T0(self):
         a1 = self.a1_k(False, False)
@@ -185,10 +216,10 @@ class DDKmodel(DDmodel):
         d_kin_d_T0 = self.d_kin_proper_motion_d_T0()
         tan_kin = np.tan(kin)
         d_kin = self.delta_kin_proper_motion()
-        with u.set_enabled_equivalencies(u.dimensionless_angles()):
-            d_delta_a1_proper_motion_d_T0 = a1 * d_kin_d_T0 * (
+        #with u.set_enabled_equivalencies(u.dimensionless_angles()):
+        d_delta_a1_proper_motion_d_T0 = a1 * d_kin_d_T0 * (
                                    -1.0/ np.sin(kin)**2 * d_kin +  1.0/ tan_kin)
-            return d_delta_a1_proper_motion_d_T0.to(a1.unit/self.T0.unit)
+        return d_delta_a1_proper_motion_d_T0.to(a1.unit/self.T0.unit)
 
     def delta_omega_proper_motion(self):
         """The correction on omega (Longitude of periastron)
@@ -228,10 +259,10 @@ class DDKmodel(DDmodel):
         sin_kin = np.sin(kin)
         cos_kin = np.cos(kin)
         d_kin_d_T0 = self.d_kin_proper_motion_d_T0()
-        with u.set_enabled_equivalencies(u.dimensionless_angles()):
-            d_omega_d_T0 = (-cos_kin/sin_kin **2 * d_kin_d_T0 * self.tt0 - 1.0/sin_kin) * \
+        #with u.set_enabled_equivalencies(u.dimensionless_angles()):
+        d_omega_d_T0 = (-cos_kin/sin_kin **2 * d_kin_d_T0 * self.tt0 - 1.0/sin_kin) * \
                     (self.PMRA_DDK * self.cos_KOM + self.PMDEC_DDK * self.sin_KOM)
-            return d_omega_d_T0.to(self.OM.unit/self.T0.unit)
+        return d_omega_d_T0.to(self.OM.unit/self.T0.unit)
 
     # The code below is to implement the binary model parameter correction due
     # to the parallax.
@@ -292,10 +323,10 @@ class DDKmodel(DDmodel):
         sin_kin = np.sin(kin)
         cos_kin = np.cos(kin)
         PX_kpc= self.PX.to(u.kpc, equivalencies=u.parallax())
-        with u.set_enabled_equivalencies(u.dimensionless_angles()):
-            d_delta_a1_d_KIN = (d_a1_d_kin /tan_kin / PX_kpc - a1 / PX_kpc / np.sin(kin)**2) * \
+        #with u.set_enabled_equivalencies(u.dimensionless_angles()):
+        d_delta_a1_d_KIN = (d_a1_d_kin /tan_kin / PX_kpc - a1 / PX_kpc / np.sin(kin)**2) * \
                                (self.delta_I0() * self.sin_KOM - self.delta_J0() * self.cos_KOM)
-            return d_delta_a1_d_KIN.to(a1.unit/kin.unit)
+        return d_delta_a1_d_KIN.to(a1.unit/kin.unit)
 
     def d_delta_a1_parallax_d_KOM(self):
         if self.K96:
@@ -312,12 +343,12 @@ class DDKmodel(DDmodel):
         PX_kpc= self.PX.to(u.kpc, equivalencies=u.parallax())
         kom_projection = (self.delta_I0() * self.sin_KOM - \
                           self.delta_J0() * self.cos_KOM)
-        with u.set_enabled_equivalencies(u.dimensionless_angles()):
-            d_delta_a1_d_KOM = d_a1_d_kom /tan_kin / PX_kpc * kom_projection - \
+        #with u.set_enabled_equivalencies(u.dimensionless_angles()):
+        d_delta_a1_d_KOM = d_a1_d_kom /tan_kin / PX_kpc * kom_projection - \
                            a1 * d_kin_d_kom / PX_kpc / sin_kin **2 * kom_projection + \
                            a1 /tan_kin / PX_kpc * (self.delta_I0() * self.cos_KOM + \
                                                    self.delta_J0() * self.sin_KOM)
-            return d_delta_a1_d_KOM.to(a1.unit/self.KOM.unit)
+        return d_delta_a1_d_KOM.to(a1.unit/self.KOM.unit)
 
     def d_delta_a1_parallax_d_T0(self):
         if self.K96:
@@ -334,10 +365,10 @@ class DDKmodel(DDmodel):
         PX_kpc= self.PX.to(u.kpc, equivalencies=u.parallax())
         kom_projection = (self.delta_I0() * self.sin_KOM - \
                           self.delta_J0() * self.cos_KOM)
-        with u.set_enabled_equivalencies(u.dimensionless_angles()):
-            d_delta_a1_d_T0 = (d_a1_d_T0 / tan_kin / PX_kpc - \
+        #with u.set_enabled_equivalencies(u.dimensionless_angles()):
+        d_delta_a1_d_T0 = (d_a1_d_T0 / tan_kin / PX_kpc - \
                            a1 * d_kin_d_T0 / PX_kpc / sin_kin **2) * kom_projection
-            return d_delta_a1_d_T0.to(a1.unit/self.T0.unit)
+        return d_delta_a1_d_T0.to(a1.unit/self.T0.unit)
 
     def delta_omega_parallax(self):
         """

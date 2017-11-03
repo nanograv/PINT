@@ -185,7 +185,11 @@ class PSR_BINARY(object):
                     setattr(self, parname, self.param_default_value[parname])
                     continue
                 if not hasattr(valDict[par], 'unit'):
-                    val = valDict[par] * getattr(self, parname).unit
+                    bm_par = getattr(self, parname)
+                    if not hasattr(bm_par, 'unit'):
+                        val = valDict[par]
+                    else:
+                        val = valDict[par] * getattr(self, parname).unit
                 else:
                     val = valDict[par]
                 setattr(self,parname,val)
@@ -283,21 +287,21 @@ class PSR_BINARY(object):
             elif hasattr(attr,'__call__'):  # If attr is a method
                 U[i] = attr().unit
             else:
-                raise TypeError(type(attr).__name__ + ' object has no unit information')
-            U[i] = 1*U[i]
+                raise TypeError(type(attr)+'can not get unit')
+            #U[i] = 1*U[i]
 
-            commonU = list(set(U[i].unit.bases).intersection([u.rad,u.deg]))
-            if commonU != []:
-                strU = U[i].unit.to_string()
-                for cu in commonU:
-                    scu = cu.to_string()
-                    strU = strU.replace(scu,'1')
-                U[i] = U[i].to(strU, equivalencies=u.dimensionless_angles())
+            # commonU = list(set(U[i].unit.bases).intersection([u.rad,u.deg]))
+            # if commonU != []:
+            #     strU = U[i].unit.to_string()
+            #     for cu in commonU:
+            #         scu = cu.to_string()
+            #         strU = strU.replace(scu,'1')
+            #     U[i] = U[i].to(strU, equivalencies=u.dimensionless_angles()).unit
 
         yU = U[0]
         xU = U[1]
         # Call derivtive functions
-        derU =  ((yU/xU).decompose()).unit
+        derU =  yU/xU
 
         if hasattr(self,'d_'+y+'_d_'+x):
             dername = 'd_'+y+'_d_'+x
@@ -313,7 +317,7 @@ class PSR_BINARY(object):
         if hasattr(result,'unit'):
             return result.to(derU,equivalencies=u.dimensionless_angles())
         else:
-            return (result*derU).decompose()
+            return (result*derU)
 
     def compute_eccentric_anomaly(self, eccentricity, mean_anomaly):
         """compute eccentric anomaly, solve for Kepler Equation,
@@ -401,7 +405,7 @@ class PSR_BINARY(object):
         if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
-        
+
         par_obj = getattr(self, par)
         try:
             func = getattr(self, 'd_a1_d_'+ par)
@@ -477,7 +481,8 @@ class PSR_BINARY(object):
         E = self.E()
         EDOT = self.EDOT
         ecc = self.ecc()
-        return (RHS-EDOT*np.sin(E))/(1.0-np.cos(E)*ecc)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            return (RHS-EDOT*np.sin(E))/(1.0-np.cos(E)*ecc)
 
     def d_E_d_PB(self):
         """d(E-e*sinE)/dPB = dM/dPB
@@ -532,7 +537,8 @@ class PSR_BINARY(object):
         """dnu/dT0 = dnu/de*de/dT0+dnu/dE*dE/dT0
            de/dT0 = -EDOT
         """
-        return self.d_nu_d_ecc()*(-self.EDOT)+self.d_nu_d_E()*self.d_E_d_T0()
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            return self.d_nu_d_ecc()*(-self.EDOT)+self.d_nu_d_E()*self.d_E_d_T0()
 
 
     def d_nu_d_PB(self):
@@ -594,13 +600,15 @@ class PSR_BINARY(object):
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
 
+        par_obj = getattr(self, par)
+
         OMDOT = self.OMDOT
         OM = self.OM
         if par in ['OM','OMDOT','T0']:
             dername = 'd_omega_d_' + par
             return getattr(self,dername)()
         else:
-            return np.longdouble(np.zeros(len(self.tt0)))
+            return np.longdouble(np.zeros(len(self.tt0))) * self.OM.unit/par_obj.unit
 
 
     def d_omega_d_OM(self):
