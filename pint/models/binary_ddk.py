@@ -30,6 +30,9 @@ class BinaryDDK(BinaryDD):
                        description="Inclination angle"))
         self.add_param(p.floatParameter(name='KOM', value=0.0, units="deg",
                        description="The longitude of the ascending node"))
+        self.add_param(p.boolParameter(name='K96',
+                       description="Flag for Kopeikin binary model proper motion" + \
+                       " correction"))
         self.interal_params += ['PMRA_DDK', 'PMDEC_DDK']
 
     @property
