@@ -23,6 +23,12 @@ class ELL1BaseModel(PSR_BINARY):
         self.ELL1_interVars = ['eps1', 'eps2', 'Phi', 'Dre', 'Drep', 'Drepp', 'nhat']
         self.add_inter_vars(self.ELL1_interVars)
 
+    @property
+    def tt0(self):
+        return self.ttasc()
+
+    ###############################
+
     def ttasc(self):
         """
         ttasc = t - TASC

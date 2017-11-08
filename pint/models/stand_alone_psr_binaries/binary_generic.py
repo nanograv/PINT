@@ -104,7 +104,8 @@ class PSR_BINARY(object):
                            'XPBDOT':0.0*u.day/u.day,
                            'M2':0.0*u.M_sun,
                            'SINI':0*u.Unit(''),
-                           'GAMMA':0*u.second, }
+                           'GAMMA':0*u.second,
+                           'FB0': 0*u.Unit("")/u.second}
         # For Binary phase calculation
         self.param_default_value.update({'P0': 1.0*u.second,
                                          'P1': 0.0*u.second/u.second,
@@ -117,6 +118,7 @@ class PSR_BINARY(object):
         self.cache_vars = ['E', 'nu']
         self.binary_delay_funcs = []
         self.d_binarydelay_d_par_funcs = []
+        self.orbits_func = self.orbits_PB
 
     @property
     def t(self):
@@ -178,7 +180,7 @@ class PSR_BINARY(object):
                     parname = self.search_alias(par)
                     if parname is None:
                         raise AttributeError('Can not find parameter '+par+' in '\
-                                              + self.binary_name+'model')
+                                              + self.binary_name+' model')
                 else:
                     parname = par
                 if valDict[par] is None:
@@ -194,15 +196,18 @@ class PSR_BINARY(object):
                     val = valDict[par]
                 setattr(self,parname,val)
 
-    def add_binary_params(self,parameter,defaultValue):
+    def add_binary_params(self,parameter, defaultValue, unit=False):
         """Add one parameter to the binary class
         """
         if parameter not in self.binary_params:
             self.binary_params.append(parameter)
             if not hasattr(defaultValue, 'unit'):
-                log.warning("Binary parameters' value generally has unit."\
+                if unit:
+                    log.warning("Binary parameters' value generally has unit."\
                             " Treat parameter "+parameter+" as a diemension less unit.")
-                self.param_default_value[parameter] = defaultValue*u.Unit("")
+                    self.param_default_value[parameter] = defaultValue*u.Unit("")
+                else:
+                    self.param_default_value[parameter] = defaultValue
             else:
                 self.param_default_value[parameter] = defaultValue
             setattr(self, parameter, self.param_default_value[parameter])
@@ -415,7 +420,7 @@ class PSR_BINARY(object):
         return result
 
     ######################################
-    def orbits(self):
+    def orbits_PB(self):
         """Pulsar Orbit
         """
         PB = (self.PB).to('second')
@@ -424,10 +429,21 @@ class PSR_BINARY(object):
         orbits = (self.tt0/PB - 0.5*(PBDOT+XPBDOT)*(self.tt0/PB)**2).decompose()
         return orbits
 
+    def orbits_FBX(self):
+        """Pulsar Orbit parameterized by FBX parameter
+        """
+        FBXs = [0*u.Unit(""),]
+        ii = 0
+        while hasattr(self, 'FB' + str(ii)):
+            FBXs.append(getattr(self, 'FB' + str(ii)))
+            ii += 1
+        orbits = ut.taylor_horner(self.tt0, FBXs)
+        return orbits.decompose()
+
     def M(self):
         """Orbit phase
         """
-        orbits = self.orbits()
+        orbits = self.orbits_func()
         norbits = np.array(np.floor(orbits), dtype=np.long)
         phase = (orbits - norbits)*2*np.pi*u.rad
 
@@ -516,7 +532,7 @@ class PSR_BINARY(object):
             nu = 2*np.arctan(np.sqrt((1.0+ ecc)/(1.0- ecc)) * np.tan(self.E()/2.0))
             # Normalize True anomaly to on orbit.
             nu[nu<0] += 2*np.pi*u.rad
-            nu2 = 2*np.pi*self.orbits()*u.rad + nu - self.M()
+            nu2 = 2*np.pi*self.orbits_func()*u.rad + nu - self.M()
             self._nu = nu2
         return self._nu
 

@@ -74,6 +74,12 @@ class PulsarBinary(DelayComponent):
         self.add_param(p.floatParameter(name="SINI", units="",
              description="Sine of inclination angle"))
 
+        self.add_param(p.prefixParameter(name="FB0", value=None, units='1/s^1',
+                       description="0th time derivative of frequency of orbit",
+                       unit_template=self.FBX_unit, aliases = ['FB'],
+                       description_template=self.FBX_description,
+                       type_match='float', long_double=True))
+
         self.interal_params = []
         self.warn_default_params = ['ECC', 'OM']
         # Set up delay function
@@ -85,6 +91,18 @@ class PulsarBinary(DelayComponent):
             self.register_deriv_funcs(self.d_binary_delay_d_xxxx, bpar)
         # Setup the model isinstance
         self.binary_instance = self.binary_model_class()
+        # Setup the FBX orbits if FB is set.
+        FBX_mapping = self.get_prefix_mapping_component('FB')
+        FBXs = {}
+        for fbn in FBX_mapping.values():
+            FBXs[fbn] = getattr(self, fbn).quantity
+        if None not in list(FBXs.values()):
+            self.binary_instance.orbits_func = self.binary_instance.orbits_FBX
+            for fb_name, fb_value in FBXs.items():
+                if fb_value is None:
+                    raise MissingParameter(self.binary_model_name, fb_name + \
+                                           " is required for FB orbits.")
+                self.binary_instance.add_binary_params(fb_name, fb_value)
 
     # With new parameter class set up, do we need this?
     def apply_units(self):
@@ -158,3 +176,9 @@ class PulsarBinary(DelayComponent):
             if par.quantity is not None:
                 result += par.as_parfile_line()
         return result
+
+    def FBX_unit(self, n):
+        return "1/s^%d" % (n+1) if n else "1/s"
+
+    def FBX_description(self, n):
+        return "%dth time derivative of frequency of orbit" % n
