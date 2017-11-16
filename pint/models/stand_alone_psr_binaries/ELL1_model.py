@@ -22,6 +22,9 @@ class ELL1BaseModel(PSR_BINARY):
         self.set_param_values() # Set parameters to default values.
         self.ELL1_interVars = ['eps1', 'eps2', 'Phi', 'Dre', 'Drep', 'Drepp', 'nhat']
         self.add_inter_vars(self.ELL1_interVars)
+        self.binary_delay_funcs += [self.ELL1delay]
+        self.d_binarydelay_d_par_funcs += [self.d_ELL1delay_d_par]
+        self.orbits_func = self.orbits_ELL1
 
     @property
     def tt0(self):
@@ -84,17 +87,22 @@ class ELL1BaseModel(PSR_BINARY):
     def d_eps2_d_EPS2DOT(self):
         return self.ttasc()
 
-    # TODO Duplicate code. Do we need change here.
+    # NOTE in ELL1 the orbit phase is modeled as Phi.
+    # But pulsar_binary function M() is a generic function ot computes the
+    # orbit phase in the range [0,1], So Phi can be computed by M(). But
+    # the attribute .orbits_func needs to be set as orbits_ELL1
     def Phi(self):
         """Orbit phase in ELL1 model. Using TASC
         """
+        phase = self.M()
+        return phase
+
+    def orbits_ELL1(self):
         PB = (self.PB).to('second')
         PBDOT = self.PBDOT
         ttasc = self.ttasc()
         orbits = (ttasc/PB - 0.5*PBDOT*(ttasc/PB)**2).decompose()
-        norbits = np.array(np.floor(orbits), dtype=np.long)
-        phase = (orbits - norbits)*2*np.pi*u.rad
-        return phase
+        return orbits
 
     def d_Phi_d_TASC(self):
         """dPhi/dTASC

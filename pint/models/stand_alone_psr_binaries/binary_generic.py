@@ -477,6 +477,19 @@ class PSR_BINARY(object):
         PB = self.PB.to('second')
         return -np.pi*u.rad * self.tt0**2/PB**2
 
+    def d_M_d_FBX(self, FBX):
+        """dM/dFBX
+        """
+        par = getattr(self, FBX)
+        while hasattr(self, 'FB' + str(ii)):
+            if 'FB' + str(ii) != FBX:
+                FBXs.append(0.0 * getattr(self, 'FB' + str(ii)).unit)
+            else:
+                FBXs.append(1.0 * getattr(self, 'FB' + str(ii)).unit)
+            ii += 1
+        orbits = ut.taylor_horner(self.tt0, FBXs)
+        return orbits.decompose()
+
     ###############################################
 
     def E(self):
