@@ -89,6 +89,8 @@ class PhaseJump(PhaseComponent):
             mask = jump_par.select_toa_mask(toas)
             # NOTE: Currently parfile jump value has opposite sign with our
             # phase calculation.
+            print jump_par.quantity, self.F0.quantity
+            jump_par.quantity * self.F0.quantity
             jphase[mask] += jump_par.quantity * self.F0.quantity
         return jphase
 
