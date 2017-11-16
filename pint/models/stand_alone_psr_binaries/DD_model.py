@@ -41,8 +41,8 @@ class DDmodel(PSR_BINARY):
                              'nhat', 'TM2']
         self.add_inter_vars(self.dd_interVars)
         self.set_param_values() # Set parameters to default values.
-        self.binary_delay_funcs += [self.DDdelay]
-        self.d_binarydelay_d_par_funcs += [self.d_DDdelay_d_par]
+        self.binary_delay_funcs = [self.DDdelay]
+        self.d_binarydelay_d_par_funcs = [self.d_DDdelay_d_par]
         if t is not None:
             self.t = t
         if input_params is not None:

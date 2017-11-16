@@ -83,7 +83,7 @@ class PhaseJump(PhaseComponent):
         jump parameters. The phase value is determined by jump parameter times
         F0.
         """
-        jphase = numpy.zeros(len(toas))
+        jphase = numpy.zeros(len(toas)) * (self.JUMP1.units * self.F0.units)
         for jump in self.jumps:
             jump_par = getattr(self, jump)
             mask = jump_par.select_toa_mask(toas)
