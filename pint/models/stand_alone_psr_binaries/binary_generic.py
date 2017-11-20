@@ -3,6 +3,7 @@ import numpy as np
 import functools
 import collections
 from astropy import log
+import re
 from pint import utils as ut
 import astropy.units as u
 import astropy.constants as c
@@ -105,7 +106,7 @@ class PSR_BINARY(object):
                            'M2':0.0*u.M_sun,
                            'SINI':0*u.Unit(''),
                            'GAMMA':0*u.second,
-                           'FB0': 0*u.Unit("")/u.second}
+                           'FB0': 1.1574e-6*u.Unit("")/u.second}
         # For Binary phase calculation
         self.param_default_value.update({'P0': 1.0*u.second,
                                          'P1': 0.0*u.second/u.second,
@@ -495,6 +496,8 @@ class PSR_BINARY(object):
         """dM/dFBX
         """
         par = getattr(self, FBX)
+        ii = 0
+        FBXs = [0*u.Unit(""),]
         while hasattr(self, 'FB' + str(ii)):
             if 'FB' + str(ii) != FBX:
                 FBXs.append(0.0 * getattr(self, 'FB' + str(ii)).unit)
@@ -503,6 +506,31 @@ class PSR_BINARY(object):
             ii += 1
         orbits = ut.taylor_horner(self.tt0, FBXs)
         return orbits.decompose()
+
+    def d_M_d_par(self, par):
+        """derivative for M respect to bianry parameter.
+           Parameters
+           ----------
+           par : string
+                 parameter name
+           Return
+           ----------
+           Derivitve of M respect to par
+        """
+        if par not in self.binary_params:
+            errorMesg = par + " is not in binary parameter list."
+            raise ValueError(errorMesg)
+
+        par_obj = getattr(self, par)
+        FBX_match = re.match(r"FB[0-9]", par)
+        if FBX_match is not None:
+            return self.d_M_d_FBX(par)
+        try:
+            func = getattr(self, 'd_M_d_'+ par)
+        except:
+            func = lambda : np.zeros(len(self.tt0)) * u.Unit("")/par_obj.unit
+        result = func()
+        return result
 
     ###############################################
 
@@ -549,6 +577,33 @@ class PSR_BINARY(object):
 
     def d_E_d_EDOT(self):
         return self.tt0 * self.d_E_d_ECC()
+
+    def d_E_d_par(self, par):
+        """derivative for E respect to bianry parameter.
+           Parameters
+           ----------
+           par : string
+                 parameter name
+           Return
+           ----------
+           Derivitve of E respect to par
+        """
+        if par not in self.binary_params:
+            errorMesg = par + " is not in binary parameter list."
+            raise ValueError(errorMesg)
+
+        par_obj = getattr(self, par)
+        FBX_match = re.match(r"FB[0-9]", par)
+        if FBX_match is not None:
+            d_M_d_par = self.d_M_d_par(par)
+            return d_M_d_par/(1.0-np.cos(self.E())*self.ecc())
+        try:
+            func = getattr(self, 'd_E_d_'+ par)
+        except:
+            E = self.E()
+            func = lambda : np.zeros(len(self.tt0)) * E.unit/par_obj.unit
+        result = func()
+        return result
 
     #####################################################
     def nu(self):
