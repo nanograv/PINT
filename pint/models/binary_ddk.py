@@ -38,12 +38,18 @@ class BinaryDDK(BinaryDD):
     @property
     def PMRA_DDK(self):
         params = self.get_params_as_ICRS()
-        return params['PMRA']
+        par_obj = p.floatParameter(name="PMRA",
+            units="mas/year", value=params["PMRA"],
+            description="Proper motion in RA")
+        return par_obj
 
     @property
     def PMDEC_DDK(self):
         params = self.get_params_as_ICRS()
-        return params['PMDEC']
+        par_obj = p.floatParameter(name="PMDEC",
+            units="mas/year", value=params["PMDEC"],
+            description="Proper motion in DEC")
+        return par_obj
 
 
     def setup(self):

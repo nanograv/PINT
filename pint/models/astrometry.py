@@ -216,8 +216,8 @@ class AstrometryEquatorial(Astrometry):
     def get_params_as_ICRS(self):
         result  = {'RAJ': self.RAJ.quantity,
                    'DECJ': self.DECJ.quantity,
-                   'PMRAJ': self.PMRAJ.quantity,
-                   'PMDECJ': self.PMDECJ.quantity}
+                   'PMRA': self.PMRA.quantity,
+                   'PMDEC': self.PMDEC.quantity}
         return result
 
     def d_delay_astrometry_d_RAJ(self, toas, param='', acc_delay=None):
