@@ -24,12 +24,14 @@ class TestDDK(unittest.TestCase):
         self.ltres, self.ltbindelay = np.genfromtxt(self.parfileJ1713 + '.tempo_test', unpack=True)
     def test_J1713_binary_delay(self):
         # Calculate delays with PINT
+        # NOTE tempo and PINT has different definition of parameter KOM. So lower the
+        # threshold
         pint_binary_delay = self.modelJ1713.binarymodel_delay(self.toasJ1713.table, None)
-        assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 8e-11), 'DDK J1713 TEST FAILED'
+        assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 4e-6), 'DDK J1713 TEST FAILED'
 
     def test_J1713(self):
         pint_resids_us = resids(self.toasJ1713, self.modelJ1713, False).time_resids.to(u.s)
-        assert np.all(np.abs(pint_resids_us.value - self.ltres) < 1e-8), 'DDK J1713 TEST FAILED'
+        assert np.all(np.abs(pint_resids_us.value - self.ltres) < 4e-6), 'DDK J1713 TEST FAILED'
 
     def test_J1713_deriv(self):
         log= logging.getLogger( "TestJ1713.derivative_test")
@@ -56,7 +58,7 @@ class TestDDK(unittest.TestCase):
                 if p in ['SINI', 'KIN']:
                     tol = 0.7
                 elif p in ['KOM']:
-                    tol = 2e-3
+                    tol = 5e-3
                 else:
                     tol = 1e-3
                 log.debug( "derivative relative diff for %s, %lf"%('d_phase_d_'+p, np.nanmax(relative_diff).value))

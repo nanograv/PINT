@@ -58,7 +58,7 @@ def get_derivative_params(model):
         elif p in ['KIN']:
             h = 2.55e-2
         elif p in ['KOM']:
-            h = 5.5e-2
+            h = 7e-2
         elif p in ['PX']:
             h = 2e-1
         elif p in ['FD2']:

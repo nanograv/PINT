@@ -110,8 +110,8 @@ class PulsarBinary(DelayComponent):
             acc_delay = self.delay(toas, self.__class__.__name__, False)
         self.barycentric_time = toas['tdbld'] * u.day - acc_delay
         updates['barycentric_toa'] = self.barycentric_time
-        updates['obs_pos'] = self.get_obs_coords_xyz(toas).T
-        updates['psr_pos'] = self.ssb_to_psb_xyz(epoch=toas['tdbld'].astype(np.float64))
+        updates['obs_pos'] = toas['ssb_obs_pos'].quantity
+        updates['psr_pos'] = self.ssb_to_psb_xyz_ICRS(epoch=toas['tdbld'].astype(np.float64))
         for par in self.binary_instance.binary_params:
             binary_par_names = [par,]
             if par in self.binary_instance.param_aliases.keys():

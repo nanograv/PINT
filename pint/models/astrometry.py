@@ -48,13 +48,6 @@ class Astrometry(DelayComponent):
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
         return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
-    def ssb_to_psb_xyz(self, epoch=None):
-        """Returns unit vector(s) from SSB to pulsar system barycenter under
-        current coordinate system.
-        If epochs (MJD) are given, proper motion is included in the calculation.
-        """
-        return self.get_psr_coords(epoch=epoch).cartesian.xyz.transpose()
-
     def barycentric_radio_freq(self, toas):
         """Return radio frequencies (MHz) of the toas corrected for Earth motion"""
         L_hat = self.ssb_to_psb_xyz_ICRS(epoch=toas['tdbld'].astype(numpy.float64))
@@ -113,12 +106,6 @@ class Astrometry(DelayComponent):
         raise NotImplementedError
 
     def get_psr_coords(self, epoch=None):
-        raise NotImplementedError
-
-    def get_obs_coords_xyz(self, toas):
-        """This function is for get earth cartesian coordinates 3 vector under
-           current coordinates.
-        """
         raise NotImplementedError
 
     def d_delay_astrometry_d_PX(self, toas, param='', acc_delay=None):
@@ -226,17 +213,12 @@ class AstrometryEquatorial(Astrometry):
     def coords_as_ICRS(self, epoch=None):
         return self.get_psr_coords(epoch)
 
-    def get_obs_coords_xyz(self, toas):
-        """This function is for get earth cartesian coordinates 3 vector under
-           ICRS coordinates.
-        """
-        return toas['ssb_obs_pos'].quantity
-
     def get_params_as_ICRS(self):
         result  = {'RAJ': self.RAJ.quantity,
                    'DECJ': self.DECJ.quantity,
                    'PMRAJ': self.PMRAJ.quantity,
                    'PMDECJ': self.PMDECJ.quantity}
+        return result
 
     def d_delay_astrometry_d_RAJ(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt RAJ
@@ -418,25 +400,19 @@ class AstrometryEcliptic(Astrometry):
 
         return rd
 
-    def get_obs_coords_xyz(self, toas):
-        obs_xyz_ICRS = toas['ssb_obs_pos'].quantity
-        coords_icrs = coords.ICRS(x=obs_xyz_ICRS[:,0], y=obs_xyz_ICRS[:,1],
-                                  z=obs_xyz_ICRS[:,2], representation='cartesian')
-        coords_elpt = coords_icrs.transform_to(PulsarEcliptic)
-        return coords_elpt.cartesian.xyz
-    # NOTE
-    # This feature below needs astropy version 2.0, disalbed right now. 
-    # def get_params_as_ICRS(self):
-    #     result = dict()
-    #     dlon_coslat = self.PMELONG.quantity #* numpy.cos(self.ELAT.quantity.radian)
-    #     pv_ECL = PulsarEcliptic(lon=self.ELONG.quantity, lat=self.ELAT.quantity,
-    #                             d_lon_coslat=dlon_coslat, d_lat=self.PMELAT.quantity)
-    #     pv_ICRS = pv_ECL.transform_to(coords.ICRS)
-    #     result['RAJ'] = pv_ICRS.ra.to(u.hourangle)
-    #     result['DECJ'] = pv_ICRS.dec
-    #     result['PMRA'] = pv_ICRS.pm_ra_cosdec
-    #     result['PMDEC'] = pv_ICRS.pm_dec
-    #     return result
+    def get_params_as_ICRS(self):
+        result = dict()
+        # NOTE This feature below needs astropy version 2.0.
+        dlon_coslat = self.PMELONG.quantity #* numpy.cos(self.ELAT.quantity.radian)
+
+        pv_ECL = PulsarEcliptic(lon=self.ELONG.quantity, lat=self.ELAT.quantity,
+                                d_lon_coslat=dlon_coslat, d_lat=self.PMELAT.quantity)
+        pv_ICRS = pv_ECL.transform_to(coords.ICRS)
+        result['RAJ'] = pv_ICRS.ra.to(u.hourangle)
+        result['DECJ'] = pv_ICRS.dec
+        result['PMRA'] = pv_ICRS.pm_ra_cosdec
+        result['PMDEC'] = pv_ICRS.pm_dec
+        return result
 
     def d_delay_astrometry_d_ELONG(self, toas, param='', acc_delay=None):
         """Calculate the derivative wrt RAJ

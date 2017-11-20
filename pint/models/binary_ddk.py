@@ -37,36 +37,22 @@ class BinaryDDK(BinaryDD):
 
     @property
     def PMRA_DDK(self):
-        if 'PMRA' in self._parent.params:
-            return self.PMRA
-        elif 'PMELONG' in self._parent.params:
-            return self.PMELONG
-        else:
-            raise MissingParameter("DDK", "DDK model needs proper motion parameters.")
+        params = self.get_params_as_ICRS()
+        return params['PMRA']
 
     @property
     def PMDEC_DDK(self):
-        if 'PMDEC' in self._parent.params:
-            return self.PMDEC
-        elif 'PMELAT' in self._parent.params:
-            return self.PMELAT
-        else:
-            raise MissingParameter("DDK", "DDK model needs proper motion parameters.")
+        params = self.get_params_as_ICRS()
+        return params['PMDEC']
 
 
     def setup(self):
         """Check out parameters setup.
         """
         super(BinaryDDK,self).setup()
-
+        log.info("Using ICRS equatorial coordinate. The parameter KOM is"
+                 " measured respect to equatorial North.")
         if 'PMRA' not in self._parent.params or 'PMDEC' not in self._parent.params:
             # Check ecliptic coordinates proper motion.
             if 'PMELONG' not in self._parent.params or 'PMELAT' not in self._parent.params:
                 raise MissingParameter("DDK", "DDK model needs proper motion parameters.")
-            else:
-                log.info("Using ecliptic coordinate. The parameter KOM is"
-                         " measured respect to ecliptic North.")
-
-        else:
-            log.info("Using equatorial coordinate. The parameter KOM is"
-                     " measured respect to equatorial North.")
