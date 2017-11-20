@@ -27,14 +27,14 @@ class TestDDK(unittest.TestCase):
         # NOTE tempo and PINT has different definition of parameter KOM. So lower the
         # threshold
         pint_binary_delay = self.modelJ1713.binarymodel_delay(self.toasJ1713.table, None)
-        assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 4e-6), 'DDK J1713 TEST FAILED'
+        assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 5e-7), 'DDK J1713 TEST FAILED'
 
     def test_J1713(self):
         log= logging.getLogger( "TestJ1713.test_J1713")
         pint_resids_us = resids(self.toasJ1713, self.modelJ1713, False).time_resids.to(u.s)
         diff = pint_resids_us.value - self.ltres
         log.debug("Max diff %lf" % np.abs(diff - diff.mean()).max())
-        assert np.all(np.abs(diff - diff.mean()) < 4e-6), 'DDK J1713 TEST FAILED'
+        assert np.all(np.abs(diff - diff.mean()) < 5e-7), 'DDK J1713 TEST FAILED'
 
     def test_J1713_deriv(self):
         log= logging.getLogger( "TestJ1713.derivative_test")
@@ -61,7 +61,7 @@ class TestDDK(unittest.TestCase):
                 if p in ['SINI', 'KIN']:
                     tol = 0.7
                 elif p in ['KOM']:
-                    tol = 5e-3
+                    tol = 0.04
                 else:
                     tol = 1e-3
                 log.debug( "derivative relative diff for %s, %lf"%('d_phase_d_'+p, np.nanmax(relative_diff).value))
