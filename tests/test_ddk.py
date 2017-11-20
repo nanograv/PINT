@@ -30,8 +30,11 @@ class TestDDK(unittest.TestCase):
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 4e-6), 'DDK J1713 TEST FAILED'
 
     def test_J1713(self):
+        log= logging.getLogger( "TestJ1713.test_J1713")
         pint_resids_us = resids(self.toasJ1713, self.modelJ1713, False).time_resids.to(u.s)
-        assert np.all(np.abs(pint_resids_us.value - self.ltres) < 4e-6), 'DDK J1713 TEST FAILED'
+        diff = pint_resids_us.value - self.ltres
+        log.debug("Max diff %lf" % np.abs(diff - diff.mean()).max())
+        assert np.all(np.abs(diff - diff.mean()) < 4e-6), 'DDK J1713 TEST FAILED'
 
     def test_J1713_deriv(self):
         log= logging.getLogger( "TestJ1713.derivative_test")
