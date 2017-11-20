@@ -142,6 +142,20 @@ class PSR_BINARY(object):
     def tt0(self):
         return self._tt0
 
+    # TODO we need to have a clean way to do the parameterization
+    @property
+    def PB(self):
+        if self.orbits_func == self.orbits_FBX:
+            return 1.0 / self.FB0
+        else:
+            return self._PB
+    @PB.setter
+    def PB(self, val):
+        if self.orbits_func == self.orbits_FBX:
+            return
+        else:
+            self._PB = val
+
     def update_input(self, **updates):
         """ A function updates the toas and parameters
         """
