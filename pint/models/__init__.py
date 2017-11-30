@@ -9,6 +9,7 @@ from .astrometry import AstrometryEquatorial, AstrometryEcliptic
 from .binary_bt import BinaryBT
 from .binary_dd import BinaryDD
 from .binary_ell1 import BinaryELL1, BinaryELL1H
+from .binary_ddk import BinaryDDK
 from .dispersion_model import Dispersion, DispersionDMX
 from .spindown import Spindown
 from .frequency_dependent import FD

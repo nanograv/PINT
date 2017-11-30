@@ -33,8 +33,8 @@ class TestPulsarPosition(unittest.TestCase):
         self.m2.PMRA.value = 0.0
         self.m2.PMDEC.value = 0.0
 
-        p1 = self.m1.ssb_to_psb_xyz(epoch = self.t)
-        p2 = self.m2.ssb_to_psb_xyz(epoch = self.t)
+        p1 = self.m1.ssb_to_psb_xyz_ICRS(epoch = self.t)
+        p2 = self.m2.ssb_to_psb_xyz_ICRS(epoch = self.t)
 
         self.assertTrue(np.max(np.abs(p1-p2))<1e-6)
 
@@ -44,8 +44,8 @@ class TestPulsarPosition(unittest.TestCase):
         self.m2.PMRA.value = PMRA
         self.m2.PMDEC.value = PMDEC
 
-        p1 = self.m1.ssb_to_psb_xyz(epoch = self.t)
-        p2 = self.m2.ssb_to_psb_xyz(epoch = self.t)
+        p1 = self.m1.ssb_to_psb_xyz_ICRS(epoch = self.t)
+        p2 = self.m2.ssb_to_psb_xyz_ICRS(epoch = self.t)
 
         self.assertTrue(np.max(np.abs(p1-p2))<1e-7)
 

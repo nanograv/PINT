@@ -135,23 +135,31 @@ class PSR_BINARY(object):
         self._T0 = val
         if hasattr(self, '_t'):
             self._tt0 = self.get_tt0(self._t)
+
     @property
     def tt0(self):
         return self._tt0
 
-    def update_input(self, barycentric_toa=None, param_dict=None):
+    def update_input(self, **updates):
         """ A function updates the toas and parameters
         """
         # Update toas
-        if barycentric_toa is not None:
-            if not isinstance(barycentric_toa, np.ndarray) and \
-               not isinstance(barycentric_toa, list):
-                self.t = np.array([barycentric_toa,])
-            else:
-                self.t = barycentric_toa
-        # Update parameters
-        if param_dict is not None:
-            self.set_param_values(param_dict)
+        if 'barycentric_toa' in updates:
+            self.t = np.atleast_1d(updates['barycentric_toa'])
+        # Update observatory position.
+        if 'obs_pos' in updates:
+            self.obs_pos = np.atleast_1d(updates['obs_pos'])
+
+        if 'psr_pos' in updates:
+            self.psr_pos = np.atleast_1d(updates['psr_pos'])
+        # update parameters
+        d_list = ['barycentric_toa', 'obs_pos', 'psr_pos']
+        parameters = {}
+        for key, value in updates.items():
+            if key not in d_list:
+                parameters[key] = value
+        self.set_param_values(parameters)
+
         # Switch the cache off
         # NOTE Having cache is needs to be very careful.
         for cv in self.cache_vars:
@@ -168,7 +176,7 @@ class PSR_BINARY(object):
             for par in valDict.keys():
                 if par not in self.binary_params: # search for aliases
                     parname = self.search_alias(par)
-                    if par is None:
+                    if parname is None:
                         raise AttributeError('Can not find parameter '+par+' in '\
                                               + self.binary_name+'model')
                 else:
@@ -177,7 +185,11 @@ class PSR_BINARY(object):
                     setattr(self, parname, self.param_default_value[parname])
                     continue
                 if not hasattr(valDict[par], 'unit'):
-                    val = valDict[par] * getattr(self, parname).unit
+                    bm_par = getattr(self, parname)
+                    if not hasattr(bm_par, 'unit'):
+                        val = valDict[par]
+                    else:
+                        val = valDict[par] * getattr(self, parname).unit
                 else:
                     val = valDict[par]
                 setattr(self,parname,val)
@@ -275,21 +287,21 @@ class PSR_BINARY(object):
             elif hasattr(attr,'__call__'):  # If attr is a method
                 U[i] = attr().unit
             else:
-                raise TypeError(type(attr).__name__ + ' object has no unit information')
-            U[i] = 1*U[i]
+                raise TypeError(type(attr)+'can not get unit')
+            #U[i] = 1*U[i]
 
-            commonU = list(set(U[i].unit.bases).intersection([u.rad,u.deg]))
-            if commonU != []:
-                strU = U[i].unit.to_string()
-                for cu in commonU:
-                    scu = cu.to_string()
-                    strU = strU.replace(scu,'1')
-                U[i] = U[i].to(strU, equivalencies=u.dimensionless_angles())
+            # commonU = list(set(U[i].unit.bases).intersection([u.rad,u.deg]))
+            # if commonU != []:
+            #     strU = U[i].unit.to_string()
+            #     for cu in commonU:
+            #         scu = cu.to_string()
+            #         strU = strU.replace(scu,'1')
+            #     U[i] = U[i].to(strU, equivalencies=u.dimensionless_angles()).unit
 
         yU = U[0]
         xU = U[1]
         # Call derivtive functions
-        derU =  ((yU/xU).decompose()).unit
+        derU =  yU/xU
 
         if hasattr(self,'d_'+y+'_d_'+x):
             dername = 'd_'+y+'_d_'+x
@@ -305,7 +317,7 @@ class PSR_BINARY(object):
         if hasattr(result,'unit'):
             return result.to(derU,equivalencies=u.dimensionless_angles())
         else:
-            return (result*derU).decompose()
+            return (result*derU)
 
     def compute_eccentric_anomaly(self, eccentricity, mean_anomaly):
         """compute eccentric anomaly, solve for Kepler Equation,
@@ -388,6 +400,20 @@ class PSR_BINARY(object):
 
     def d_a1_d_A1DOT(self):
         return self.tt0
+
+    def d_a1_d_par(self, par):
+        if par not in self.binary_params:
+            errorMesg = par + "is not in binary parameter list."
+            raise ValueError(errorMesg)
+
+        par_obj = getattr(self, par)
+        try:
+            func = getattr(self, 'd_a1_d_'+ par)
+        except:
+            func = lambda : np.zeros(len(self.tt0)) * self.A1.unit/par_obj.unit
+        result = func()
+        return result
+
     ######################################
     def orbits(self):
         """Pulsar Orbit
@@ -455,7 +481,8 @@ class PSR_BINARY(object):
         E = self.E()
         EDOT = self.EDOT
         ecc = self.ecc()
-        return (RHS-EDOT*np.sin(E))/(1.0-np.cos(E)*ecc)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            return (RHS-EDOT*np.sin(E))/(1.0-np.cos(E)*ecc)
 
     def d_E_d_PB(self):
         """d(E-e*sinE)/dPB = dM/dPB
@@ -510,7 +537,8 @@ class PSR_BINARY(object):
         """dnu/dT0 = dnu/de*de/dT0+dnu/dE*dE/dT0
            de/dT0 = -EDOT
         """
-        return self.d_nu_d_ecc()*(-self.EDOT)+self.d_nu_d_E()*self.d_E_d_T0()
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            return self.d_nu_d_ecc()*(-self.EDOT)+self.d_nu_d_E()*self.d_E_d_T0()
 
 
     def d_nu_d_PB(self):
@@ -572,13 +600,15 @@ class PSR_BINARY(object):
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
 
+        par_obj = getattr(self, par)
+
         OMDOT = self.OMDOT
         OM = self.OM
         if par in ['OM','OMDOT','T0']:
             dername = 'd_omega_d_' + par
             return getattr(self,dername)()
         else:
-            return np.longdouble(np.zeros(len(self.tt0)))
+            return np.longdouble(np.zeros(len(self.tt0))) * self.OM.unit/par_obj.unit
 
 
     def d_omega_d_OM(self):
