@@ -859,6 +859,7 @@ class Component(object):
         self.category = ''
         self.deriv_funcs = {}
         self.component_special_params = []
+        
     def setup(self,):
         pass
 

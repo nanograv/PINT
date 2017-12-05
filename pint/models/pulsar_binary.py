@@ -1,5 +1,6 @@
 # This is a wapper for independent binary model. It is a PINT timing model class
 import astropy.units as u
+import numpy as np
 from . import parameter as p
 from .timing_model import DelayComponent, MissingParameter
 from astropy import log
@@ -70,10 +71,10 @@ class PulsarBinary(DelayComponent):
              units=u.M_sun,
              description="Mass of companian in the unit Sun mass"))
 
-        self.add_param(p.floatParameter(name="SINI",
-             units="",
+        self.add_param(p.floatParameter(name="SINI", units="",
              description="Sine of inclination angle"))
 
+        self.interal_params = []
         self.warn_default_params = ['ECC', 'OM']
         # Set up delay function
         self.delay_funcs_component += [self.binarymodel_delay,]
@@ -102,13 +103,15 @@ class PulsarBinary(DelayComponent):
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py
         # Get barycnetric toa first
+        updates = {}
         if acc_delay is None:
             # If the accumulate delay is not provided, it will try to get
             # the barycentric correction.
             acc_delay = self.delay(toas, self.__class__.__name__, False)
         self.barycentric_time = toas['tdbld'] * u.day - acc_delay
-        pardict = {}
-        # Find all the possible parameter name in the stand alone pulsar binary
+        updates['barycentric_toa'] = self.barycentric_time
+        updates['obs_pos'] = toas['ssb_obs_pos'].quantity
+        updates['psr_pos'] = self.ssb_to_psb_xyz_ICRS(epoch=toas['tdbld'].astype(np.float64))
         for par in self.binary_instance.binary_params:
             binary_par_names = [par,]
             if par in self.binary_instance.param_aliases.keys():
@@ -119,15 +122,24 @@ class PulsarBinary(DelayComponent):
             if hasattr(self, par) or \
                 list(set(aliase).intersection(self.params))!=[]:
                 pint_bin_name = self.match_param_aliases(par)
+                if pint_bin_name == "" and par in self.interal_params:
+                    pint_bin_name = par
                 binObjpar = getattr(self, pint_bin_name)
-                instance_par_val = getattr(self.binary_instance, par).value
+                instance_par = getattr(self.binary_instance, par)
+                if hasattr(instance_par, 'value'):
+                    instance_par_val = instance_par.value
+                else:
+                    instance_par_val = instance_par
                 if binObjpar.value is None:
                     if binObjpar.name in self.warn_default_params:
                         log.warn("'%s' is not set, using the default value %f "
                                  "instead." % (binObjpar.name, instance_par_val))
                     continue
-                pardict[par] = binObjpar.value * binObjpar.units
-        self.binary_instance.update_input(self.barycentric_time, pardict)
+                if binObjpar.units is not None:
+                    updates[par] = binObjpar.value * binObjpar.units
+                else:
+                    updates[par] = binObjpar.value
+        self.binary_instance.update_input(**updates)
 
     def binarymodel_delay(self, toas, acc_delay=None):
         """Return the binary model independent delay call"""

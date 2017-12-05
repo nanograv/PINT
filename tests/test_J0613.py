@@ -13,7 +13,7 @@ from pinttestdata import testdir, datadir
 os.chdir(datadir)
 
 class TestJ0613(unittest.TestCase):
-    """Compare delays from the dd model with tempo and PINT"""
+    """Compare delays from the ELL1 model with tempo and PINT"""
     @classmethod
     def setUpClass(self):
         self.parfileJ0613 = 'J0613-0200_NANOGrav_dfg+12_TAI_FB90.par'

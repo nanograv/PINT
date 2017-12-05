@@ -8,12 +8,13 @@ from .timing_model import TimingModel
 from .astrometry import AstrometryEquatorial, AstrometryEcliptic
 from .binary_bt import BinaryBT
 from .binary_dd import BinaryDD
-from .binary_ell1 import BinaryELL1
+from .binary_ell1 import BinaryELL1, BinaryELL1H
+from .binary_ddk import BinaryDDK
 from .dispersion_model import Dispersion, DispersionDMX
 from .spindown import Spindown
 from .frequency_dependent import FD
 from .glitch import Glitch
-from .jump import JumpDelay
+from .jump import DelayJump, PhaseJump 
 from .solar_system_shapiro import SolarSystemShapiro
 from .noise_model import ScaleToaError, EcorrNoise, PLRedNoise
 from .model_builder import get_model

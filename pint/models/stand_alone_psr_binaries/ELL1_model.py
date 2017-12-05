@@ -4,14 +4,15 @@ import astropy.units as u
 import astropy.constants as c
 from pint import ls,GMsun,Tsun
 
-
-class ELL1model(PSR_BINARY):
-    """This is a class for ELL1 pulsar binary model.
+class ELL1BaseModel(PSR_BINARY):
+    """This is a class for base ELL1 pulsar binary model.
        ELL1 model is BT model in the small eccentricity case.
+       The shapiro delay is computed differently by different subclass of
+       ELL1Base.
     """
     def __init__(self):
-        super(ELL1model, self).__init__()
-        self.binary_name = 'ELL1'
+        super(ELL1BaseModel, self).__init__()
+        self.binary_name = 'ELL1Base'
         self.param_default_value.update({'EPS1': 0*u.Unit(''),
                                          'EPS2': 0*u.Unit(''),
                                          'EPS1DOT': 0/u.second,
@@ -21,8 +22,6 @@ class ELL1model(PSR_BINARY):
         self.set_param_values() # Set parameters to default values.
         self.ELL1_interVars = ['eps1', 'eps2', 'Phi', 'Dre', 'Drep', 'Drepp', 'nhat']
         self.add_inter_vars(self.ELL1_interVars)
-        self.binary_delay_funcs += [self.ELL1delay]
-        self.d_binarydelay_d_par_funcs += [self.d_ELL1delay_d_par]
 
     def ttasc(self):
         """
@@ -134,13 +133,16 @@ class ELL1model(PSR_BINARY):
                d_Dre_d_eps2 * self.prtl_der('eps2', par)
 
     def Drep(self):
-        """ dDr/dPhi
+        """ dDre/dPhi
         """
         a1 = self.a1()
         eps1 = self.eps1()
-        eps2 = self.eps1()
+        eps2 = self.eps2()
         Phi = self.Phi()
-        return a1/c.c*(np.cos(Phi) + eps1 * np.sin(Phi) + eps2 * np.cos(Phi))
+        # Here we are using full d Dre/dPhi. But Tempo and Tempo2 ELL1 model
+        # does not have the last two terms. This will result a difference in
+        # the order of magnitude of 1e-8s level.
+        return a1/c.c*(np.cos(Phi) + eps1 * np.sin(2.0 * Phi) + eps2 * np.cos(2.0 * Phi))
 
     def d_Drep_d_par(self, par):
         """Drep = d_Dre_d_Phi = a1/c.c*(cos(Phi) + eps1 * sin(Phi) + eps2 * cos(Phi))
@@ -155,23 +157,23 @@ class ELL1model(PSR_BINARY):
         d_a1_d_par = self.prtl_der('a1', par)
         d_Drep_d_Phi = self.Drepp()
         d_Phi_d_par = self.prtl_der('Phi', par)
-        d_Drep_d_eps1 = a1/c.c*np.sin(Phi)
-        d_Drep_d_eps2 = a1/c.c*np.cos(Phi)
+        d_Drep_d_eps1 = a1/c.c*np.sin(2.0 * Phi)
+        d_Drep_d_eps2 = a1/c.c*np.cos(2.0 * Phi)
 
-        return d_a1_d_par /c.c*(np.cos(Phi) + eps1 * np.sin(Phi) + eps2 * np.cos(Phi)) + \
+        return d_a1_d_par /c.c*(np.cos(Phi) + eps1 * np.sin(2.0 * Phi) + eps2 * np.cos(2.0 * Phi)) + \
                d_Drep_d_Phi * d_Phi_d_par + d_Drep_d_eps1 * self.prtl_der('eps1', par) + \
                d_Drep_d_eps2 * self.prtl_der('eps2', par)
 
     def Drepp(self):
         a1 = self.a1()
         eps1 = self.eps1()
-        eps2 = self.eps1()
+        eps2 = self.eps2()
         Phi = self.Phi()
-        return a1/c.c*(-np.sin(Phi) + eps1 * np.cos(Phi) - eps2 * np.sin(Phi))
+        return a1/c.c*(-np.sin(Phi) + 2.0 * (eps1 * np.cos(2.0 * Phi) - eps2 * np.sin(2.0 * Phi)))
 
     def d_Drepp_d_par(self, par):
-        """Drepp = d_Drep_d_Phi = a1/c.c*(-sin(Phi) + eps1 * cos(Phi) - eps2 * sin(Phi))
-        d_Drep_d_par = d_a1_d_par /c.c*(-sin(Phi) + eps1 * cos(Phi) - eps2 * sin(Phi)) +
+        """Drepp = d_Drep_d_Phi = a1/c.c*(-sin(Phi) + 2.0* (eps1 * cos(2.0*Phi) - eps2 * sin(2.0*Phi)))
+        d_Drepp_d_par = d_a1_d_par /c.c*(-sin(Phi) + 2.0* (eps1 * cos(2.0*Phi) - eps2 * sin(2.0*Phi))) +
                       d_Drepp_d_Phi * d_Phi_d_par + d_Drepp_d_eps1*d_eps1_d_par +
                       d_Drepp_d_eps2*d_eps2_d_par
         """
@@ -180,13 +182,15 @@ class ELL1model(PSR_BINARY):
         eps1 = self.eps1()
         eps2 = self.eps2()
         d_a1_d_par = self.prtl_der('a1', par)
-        d_Drepp_d_Phi = a1/c.c*(-np.cos(Phi) - eps1*np.sin(Phi) - eps2 * np.cos(Phi))
+        d_Drepp_d_Phi = a1/c.c*(-np.cos(Phi) - 4.0 * (eps1*np.sin(2.0 * Phi) + \
+                         eps2 * np.cos(2.0 * Phi)))
         d_Phi_d_par = self.prtl_der('Phi', par)
-        d_Drepp_d_eps1 = a1/c.c*np.cos(Phi)
-        d_Drepp_d_eps2 = -a1/c.c*np.sin(Phi)
+        d_Drepp_d_eps1 = a1/c.c* 2.0 * np.cos(2.0 * Phi)
+        d_Drepp_d_eps2 = -a1/c.c* 2.0 * np.sin(2.0 * Phi)
 
-        return d_a1_d_par /c.c*(-np.sin(Phi) + eps1 * np.cos(Phi) - eps2 * np.sin(Phi)) + \
-               d_Drepp_d_Phi * d_Phi_d_par + d_Drepp_d_eps1 * self.prtl_der('eps1', par) + \
+        return d_a1_d_par /c.c*(-np.sin(Phi) + 2.0 * (eps1 * np.cos(2.0 * Phi) - \
+               eps2 * np.sin(2.0 * Phi))) + d_Drepp_d_Phi * d_Phi_d_par + \
+               d_Drepp_d_eps1 * self.prtl_der('eps1', par) + \
                d_Drepp_d_eps2 * self.prtl_der('eps2', par)
 
     def delayR(self):
@@ -196,39 +200,12 @@ class ELL1model(PSR_BINARY):
         return (self.a1()/c.c*(np.sin(Phi) + 0.5 * (self.eps2() * np.sin(2*Phi)
                           - self.eps1() * np.cos(2*Phi)))).decompose()
 
-    def delayS(self):
-        """ELL1 Shaprio delay. Ch. Lange,1 F. Camilo, 2001 eq. A16
-        """
-        TM2 = self.TM2()
-        Phi = self.Phi()
-        sDelay = -2 * TM2 * np.log(1 - self.SINI * np.sin(Phi))
-        return sDelay
-
-    def d_delayS_d_par(self, par):
-        """Derivative for bianry Shaprio delay.
-        delayS = -2 * TM2 * np.log(1 - self.SINI * np.sin(Phi))
-        d_delayS_d_par = d_delayS_d_TM2 * d_TM2_d_par + d_delayS_d_SINI*d_SINI_d_par +
-                         d_delayS_d_Phi * d_Phi_d_par
-        """
-        TM2 = self.TM2()
-        Phi = self.Phi()
-        d_delayS_d_TM2 = -2*np.log(1 - self.SINI * np.sin(Phi))
-        d_delayS_d_SINI = -2 * TM2 * 1.0/(1 - self.SINI * np.sin(Phi))*(-np.sin(Phi))
-        d_delayS_d_Phi = -2 * TM2 * 1.0/(1 - self.SINI * np.sin(Phi))*(-self.SINI)
-        d_TM2_d_par = self.prtl_der('TM2', par)
-        d_SINI_d_par = self.prtl_der('SINI', par)
-        d_Phi_d_par = self.prtl_der('Phi', par)
-
-        return d_delayS_d_TM2 * d_TM2_d_par + d_delayS_d_SINI*d_SINI_d_par + \
-               d_delayS_d_Phi * d_Phi_d_par
-
-
     def delayI(self):
         """Inverse time delay formular. The treatment is similar to the one
         in DD model(T. Damour and N. Deruelle(1986)equation [46-52])
-        Dre = a1*(sin(Phi)+eps1/2*sin(Phi)+eps1/2*cos(Phi))
+        Dre = a1*(sin(Phi)+eps1/2*sin(2*Phi)+eps1/2*cos(2*Phi))
         Drep = dDre/dt
-        Drep = d^2 Dre/dt^2
+        Drepp = d^2 Dre/dt^2
         nhat = dPhi/dt = 2pi/pb
         nhatp = d^2Phi/dt^2 = 0
         Dre(t-Dre(t-Dre(t)))  = Dre(Phi) - Drep(Phi)*nhat*Dre(t-Dre(t))
@@ -274,13 +251,6 @@ class ELL1model(PSR_BINARY):
         return d_delayI_d_Dre * d_Dre_d_par + d_delayI_d_Drep * d_Drep_d_par + \
                d_delayI_d_Drepp * d_Drepp_d_par + d_delayI_d_nhat * d_nhat_d_par
 
-    def ELL1delay(self):
-        # TODO need add aberration delay
-        return self.delayI() + self.delayS()
-
-    def d_ELL1delay_d_par(self, par):
-        return self.d_delayI_d_par(par) + self.d_delayS_d_par(par)
-
     def ELL1_om(self):
         # arctan(om)
         om = np.arctan2(self.eps1(), self.eps2())
@@ -292,3 +262,46 @@ class ELL1model(PSR_BINARY):
     def ELL1_T0(self):
         return self.TASC + self.PB/(2*np.pi) * \
         (np.arctan(self.eps1()/self.eps2())).to(u.Unit(''), equivalencies=u.dimensionless_angles())
+
+
+class ELL1model(ELL1BaseModel):
+    """ This is a ELL1 model using M2 and SINI as the Shapiro delay parameters.
+    """
+    def __init__(self):
+        super(ELL1model, self).__init__()
+        self.binary_name = 'ELL1'
+        self.binary_delay_funcs = [self.ELL1delay,]
+        self.d_binarydelay_d_par_funcs = [self.d_ELL1delay_d_par,]
+
+    def delayS(self):
+        """ELL1 Shaprio delay. Ch. Lange,1 F. Camilo, 2001 eq. A16
+        """
+        TM2 = self.TM2()
+        Phi = self.Phi()
+        sDelay = -2 * TM2 * np.log(1 - self.SINI * np.sin(Phi))
+        return sDelay
+
+    def d_delayS_d_par(self, par):
+        """Derivative for bianry Shaprio delay.
+        delayS = -2 * TM2 * np.log(1 - self.SINI * np.sin(Phi))
+        d_delayS_d_par = d_delayS_d_TM2 * d_TM2_d_par + d_delayS_d_SINI*d_SINI_d_par +
+                         d_delayS_d_Phi * d_Phi_d_par
+        """
+        TM2 = self.TM2()
+        Phi = self.Phi()
+        d_delayS_d_TM2 = -2*np.log(1 - self.SINI * np.sin(Phi))
+        d_delayS_d_SINI = -2 * TM2 * 1.0/(1 - self.SINI * np.sin(Phi))*(-np.sin(Phi))
+        d_delayS_d_Phi = -2 * TM2 * 1.0/(1 - self.SINI * np.sin(Phi))*(-self.SINI)
+        d_TM2_d_par = self.prtl_der('TM2', par)
+        d_SINI_d_par = self.prtl_der('SINI', par)
+        d_Phi_d_par = self.prtl_der('Phi', par)
+
+        return d_delayS_d_TM2 * d_TM2_d_par + d_delayS_d_SINI*d_SINI_d_par + \
+               d_delayS_d_Phi * d_Phi_d_par
+
+    def ELL1delay(self):
+        # TODO need add aberration delay
+        return self.delayI() + self.delayS()
+
+    def d_ELL1delay_d_par(self, par):
+        return self.d_delayI_d_par(par) + self.d_delayS_d_par(par)

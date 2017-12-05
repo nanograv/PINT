@@ -41,8 +41,8 @@ class DDmodel(PSR_BINARY):
                              'nhat', 'TM2']
         self.add_inter_vars(self.dd_interVars)
         self.set_param_values() # Set parameters to default values.
-        self.binary_delay_funcs += [self.DDdelay]
-        self.d_binarydelay_d_par_funcs += [self.d_DDdelay_d_par]
+        self.binary_delay_funcs = [self.DDdelay]
+        self.d_binarydelay_d_par_funcs = [self.d_DDdelay_d_par]
         if t is not None:
             self.t = t
         if input_params is not None:
@@ -80,22 +80,23 @@ class DDmodel(PSR_BINARY):
         if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
+        par_obj = getattr(self, par)
 
         PB = self.PB
         OMDOT = self.OMDOT
         OM = self.OM
         nu = self.nu()
         k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
-
         if par in ['OM','OMDOT','PB']:
             dername = 'd_omega_d_' + par
             return getattr(self,dername)()
         else:
             dername = 'd_nu_d_'+par # For parameters only in nu
             if hasattr(self,dername):
-                return k*getattr(self,dername)()
+                return (k*getattr(self,dername)()).to(OM.unit/par_obj.unit,
+                                       equivalencies = u.dimensionless_angles())
             else:
-                return np.longdouble(np.zeros(len(self.tt0)))
+                return np.longdouble(np.zeros(len(self.tt0))) * OM.unit/par_obj.unit
 
     def d_omega_d_OM(self):
         """dOmega/dOM = 1
@@ -143,7 +144,8 @@ class DDmodel(PSR_BINARY):
             if hasattr(self,dername):
                 return getattr(self,dername)()
             else:
-                return np.longdouble(np.zeros(len(self.tt0)))
+                par_obj = getattr(self, par)
+                return np.longdouble(np.zeros(len(self.tt0)))* u.Unit("") / par_obj.unit
 
     ##########
     def eTheta(self):
@@ -156,6 +158,7 @@ class DDmodel(PSR_BINARY):
         if par not in self.binary_params:
             errorMesg = par + "is not in parameter list."
             raise ValueError(errorMesg)
+        par_obj = getattr(self, par)
 
         if par in ['DTH']:
             dername = 'd_eTheta_d_'+par
@@ -165,7 +168,7 @@ class DDmodel(PSR_BINARY):
             if hasattr(self,dername):
                 return getattr(self,dername)()
             else:
-                return np.longdouble(np.zeros(len(self.tt0)))
+                return np.longdouble(np.zeros(len(self.tt0))) * u.Unit("") / par_obj.unit
     ##########
     def alpha(self):
         """Alpha defined in
@@ -178,35 +181,42 @@ class DDmodel(PSR_BINARY):
     def d_alpha_d_par(self,par):
         """T. Damour and N. Deruelle(1986)equation [46]
            alpha = a1/c*sin(omega)
-
-           dAlpha/dA1 = 1.0/c*sin(omega)
-
-           dAlpha/dPar = a1/c*cos(omega)*dOmega/dPar
+           dAlpha/dpar = d_a1_d_par /c * sin(omega) + a1/c*cos(omega)*dOmega/dPar
         """
 
         if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
-
-        if par in ['A1','A1DOT']:
-            dername = 'd_alpha_d_'+par
-            return getattr(self,dername)()
-
-        else:
-            dername = 'd_omega_d_'+par # For parameters only in Ae
-            if hasattr(self,dername):
-                cosOmg=np.cos(self.omega())
-                return self.a1()/c.c*cosOmg*getattr(self,dername)()
-            else:
-                return np.longdouble(np.zeros(len(self.tt0)))
-
-    def d_alpha_d_A1(self):
+        par_obj = getattr(self, par)
+        alpha = self.alpha()
         sinOmg = np.sin(self.omega())
-        return 1.0/c.c*sinOmg
+        cosOmg = np.cos(self.omega())
+        a1 = self.a1()
+        d_a1_d_par = self.d_a1_d_par(par)
+        d_omega_d_par = self.d_omega_d_par(par)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            dAlpha_dpar = d_a1_d_par / c.c * sinOmg + a1 / c.c * cosOmg * d_omega_d_par
+        #
+        # if par in ['A1','A1DOT']:
+        #     dername = 'd_alpha_d_'+par
+        #     return getattr(self,dername)()
+        #
+        # else:
+        #     dername = 'd_omega_d_'+par # For parameters only in Ae
+        #     if hasattr(self,dername):
+        #         cosOmg=np.cos(self.omega())
+        #         return self.a1()/c.c*cosOmg*getattr(self,dername)()
+        #     else:
+        #         return np.longdouble(np.zeros(len(self.tt0)))
+        return dAlpha_dpar.to(alpha.unit/par_obj.unit)
 
-    def d_alpha_d_A1DOT(self):
-        sinOmg = np.sin(self.omega())
-        return self.tt0/c.c*sinOmg
+    # def d_alpha_d_A1(self):
+    #     sinOmg = np.sin(self.omega())
+    #     return 1.0/c.c*sinOmg
+    #
+    # def d_alpha_d_A1DOT(self):
+    #     sinOmg = np.sin(self.omega())
+    #     return self.tt0/c.c*sinOmg
     ##############################################
 
     def beta(self):
@@ -233,34 +243,63 @@ class DDmodel(PSR_BINARY):
         if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
             raise ValueError(errorMesg)
+        par_obj = getattr(self, par)
+        beta = self.beta()
+        eTheta = self.eTheta()
+        a1 = self.a1()
+        omega = self.omega()
+        sinOmg = np.sin(omega)
+        cosOmg = np.cos(omega)
+        d_a1_d_par = self.d_a1_d_par(par)
+        d_omega_d_par = self.d_omega_d_par(par)
+        d_eTheta_d_par = self.d_eTheta_d_par(par)
 
-        if par in ['A1','ECC','EDOT','DTH','A1DOT']:
-            dername = 'd_beta_d_'+par
-            return getattr(self,dername)()
+        d_beta_d_a1 = 1.0/c.c*(1-eTheta**2)**0.5*cosOmg
+        d_beta_d_omega = -a1/c.c*(1-eTheta**2)**0.5*sinOmg
+        d_beta_d_eTheta = a1/c.c*(-eTheta)/np.sqrt(1-eTheta**2)*cosOmg
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            return (d_beta_d_a1 * d_a1_d_par + d_beta_d_omega * d_omega_d_par + \
+                    d_beta_d_eTheta * d_eTheta_d_par).to(beta.unit/par_obj.unit)
 
-        else:
-            dername = 'd_omega_d_'+par # For parameters only in omega
-            if hasattr(self,dername):
-                eTheta = self.eTheta()
-                a1 = self.a1()
-                sinOmg = np.sin(self.omega())
-                return -a1/c.c*(1-eTheta**2)**0.5*sinOmg*getattr(self,dername)()
-            else:
-                return np.longdouble(np.zeros(len(self.tt0)))
+
+        # if par in ['A1','ECC','EDOT','DTH','A1DOT']:
+        #     dername = 'd_beta_d_'+par
+        #     return getattr(self,dername)()
+        #
+        # else:
+        #     dername = 'd_omega_d_'+par # For parameters only in omega
+        #     if hasattr(self,dername):
+        #         eTheta = self.eTheta()
+        #         a1 = self.a1()
+        #         sinOmg = np.sin(self.omega())
+        #         return -a1/c.c*(1-eTheta**2)**0.5*sinOmg*getattr(self,dername)()
+        #     else:
+        #         return np.longdouble(np.zeros(len(self.tt0)))
 
     def d_beta_d_A1(self):
-        """dBeta/dA1 = 1.0/c*(1-eTheta**2)**0.5*cos(omega)
+        """dBeta/dA1 = 1.0/c*(1-eTheta**2)**0.5*cos(omega) * d_a1_d_A1
         """
         eTheta = self.eTheta()
         cosOmg = np.cos(self.omega())
-        return 1.0/c.c*(1-eTheta**2)**0.5*cosOmg
+        d_a1_d_A1 = self.d_a1_d_A1()
+        return d_a1_d_A1/c.c*(1-eTheta**2)**0.5*cosOmg
 
     def d_beta_d_A1DOT(self):
-        """dBeta/dA1DOT = (t-T0)/c*(1-eTheta**2)**0.5*cos(omega)
+        """dBeta/dA1DOT = * d_a1_d_A1DOT/c*(1-eTheta**2)**0.5*cos(omega)
         """
         eTheta = self.eTheta()
         cosOmg = np.cos(self.omega())
-        return self.tt0/c.c*(1-eTheta**2)**0.5*cosOmg
+        d_a1_d_A1DOT = self.d_a1_d_A1DOT()
+        return d_a1_d_A1DOT/c.c*(1-eTheta**2)**0.5*cosOmg
+
+    def d_beta_d_T0(self):
+        """dBeta/dT0 = * d_a1_d_T0/c*(1-eTheta**2)**0.5*cos(omega)
+        """
+        eTheta = self.eTheta()
+        cosOmg = np.cos(self.omega())
+        d_a1_d_T0 = self.d_a1_d_T0()
+        return d_a1_d_T0/c.c*(1-eTheta**2)**0.5*cosOmg
+
 
     def d_beta_d_ECC(self):
         """dBeta/dECC = A1/c*((-(e+dtheta)/sqrt(1-(e+dtheta)**2)*cos(omega)*de/dECC-
@@ -271,8 +310,9 @@ class DDmodel(PSR_BINARY):
         a1 = (self.a1()).decompose()
         sinOmg = np.sin(self.omega())
         cosOmg = np.cos(self.omega())
-        return a1/c.c*((-eTheta)/np.sqrt(1-eTheta**2)*cosOmg- \
-               (1-eTheta**2)**0.5*sinOmg*self.d_omega_d_par('ECC'))
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            return a1/c.c*((-eTheta)/np.sqrt(1-eTheta**2)*cosOmg- \
+                   (1-eTheta**2)**0.5*sinOmg*self.d_omega_d_par('ECC'))
 
     def d_beta_d_EDOT(self):
         """dBeta/dEDOT = A1/c*((-(e+dtheta)/sqrt(1-(e+dtheta)**2)*cos(omega)*de/dEDOT- \
@@ -283,8 +323,9 @@ class DDmodel(PSR_BINARY):
         a1 = (self.a1()).decompose()
         sinOmg = np.sin(self.omega())
         cosOmg = np.cos(self.omega())
-        return a1/c.c*((-eTheta)/np.sqrt(1-eTheta**2)*cosOmg*self.tt0- \
-               (1-eTheta**2)**0.5*sinOmg*self.d_omega_d_par('EDOT'))
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            return a1/c.c*((-eTheta)/np.sqrt(1-eTheta**2)*cosOmg*self.tt0- \
+                   (1-eTheta**2)**0.5*sinOmg*self.d_omega_d_par('EDOT'))
 
     def d_beta_d_DTH(self):
         """dBeta/dDth = a1/c*((-(e+dr)/sqrt(1-(e+dr)**2)*cos(omega)
@@ -318,18 +359,21 @@ class DDmodel(PSR_BINARY):
 
             er = e + Dr
         """
+        Dre = self.Dre()
+        par_obj = getattr(self, par)
         sinE = np.sin(self.E())
         cosE = np.cos(self.E())
-        # First term
-        term1 = self.alpha()*(-self.prtl_der('er',par)-self.prtl_der('E',par)*sinE)
-        # Second term
-        term2 = (cosE-self.er())*self.prtl_der('alpha',par)
-        # Third term
-        term3 = (self.prtl_der('beta',par)+self.prtl_der('GAMMA',par))*sinE
-        # Fourth term
-        term4 = (self.beta()+self.GAMMA)*cosE*self.prtl_der('E',par)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            # First term
+            term1 = self.alpha()*(-self.prtl_der('er',par)-self.prtl_der('E',par)*sinE)
+            # Second term
+            term2 = (cosE-self.er())*self.prtl_der('alpha',par)
+            # Third term
+            term3 = (self.prtl_der('beta',par)+self.prtl_der('GAMMA',par))*sinE
+            # Fourth term
+            term4 = (self.beta()+self.GAMMA)*cosE*self.prtl_der('E',par)
 
-        return term1 + term2 + term3 +term4
+            return (term1 + term2 + term3 +term4).to(Dre.unit/par_obj.unit)
 
     #################################################
     def Drep(self):
@@ -352,15 +396,18 @@ class DDmodel(PSR_BINARY):
         """
         sinE = np.sin(self.E())
         cosE = np.cos(self.E())
-        # first term
-        term1 = -sinE*self.prtl_der('alpha',par)
-        # second term
-        term2 = -(self.alpha()*cosE+  \
+        Drep = self.Drep()
+        par_obj = getattr(self, par)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            # first term
+            term1 = -sinE*self.prtl_der('alpha',par)
+            # second term
+            term2 = -(self.alpha()*cosE+  \
                 (self.beta()+self.GAMMA)*sinE)*self.prtl_der('E',par)
-        # Third term
-        term3 = cosE*(self.prtl_der('beta',par)+self.prtl_der('GAMMA',par))
+            # Third term
+            term3 = cosE*(self.prtl_der('beta',par)+self.prtl_der('GAMMA',par))
 
-        return term1+term2+term3
+            return (term1+term2+term3).to(Drep.unit/par_obj.unit)
 
     #################################################
     def Drepp(self):
@@ -383,15 +430,18 @@ class DDmodel(PSR_BINARY):
         """
         sinE = np.sin(self.E())
         cosE = np.cos(self.E())
-        # first term
-        term1 = -cosE*self.prtl_der('alpha',par)
-        # second term
-        term2 = (self.alpha()*sinE -  \
+        Drepp = self.Drepp()
+        par_obj = getattr(self, par)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            # first term
+            term1 = -cosE*self.prtl_der('alpha',par)
+            # second term
+            term2 = (self.alpha()*sinE -  \
                 (self.beta()+self.GAMMA)*cosE)*self.prtl_der('E',par)
-        # Third term
-        term3 = -sinE*(self.prtl_der('beta',par)+self.prtl_der('GAMMA',par))
+            # Third term
+            term3 = -sinE*(self.prtl_der('beta',par)+self.prtl_der('GAMMA',par))
 
-        return term1+term2+term3
+            return (term1+term2+term3).to(Drepp.unit/par_obj.unit)
     #################################################
 
     def nhat(self):
@@ -414,12 +464,13 @@ class DDmodel(PSR_BINARY):
         """
         sinE = np.sin(self.E())
         cosE = np.cos(self.E())
-        oneMeccTcosE = (1-self.ecc()*cosE)
-        fctr = -2*np.pi/self.PB/oneMeccTcosE
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            oneMeccTcosE = (1-self.ecc()*cosE)
+            fctr = -2*np.pi/self.PB/oneMeccTcosE
 
-        return fctr*(self.prtl_der('PB',par)/self.PB - \
-               (cosE*self.prtl_der('ecc',par)- \
-                self.ecc()*sinE*self.prtl_der('E',par))/oneMeccTcosE)
+            return fctr*(self.prtl_der('PB',par)/self.PB - \
+                   (cosE*self.prtl_der('ecc',par)- \
+                    self.ecc()*sinE*self.prtl_der('E',par))/oneMeccTcosE)
 
     #################################################
     def delayInverse(self):
@@ -473,20 +524,20 @@ class DDmodel(PSR_BINARY):
         dDrepp_dpar = self.d_Drepp_d_par(par)
         dnhat_dpar = self.d_nhat_d_par(par)
         oneMeccTcosE = (1-e*cE) # 1-e*cos(E)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            x =  -1.0/2.0*e*sE/oneMeccTcosE # -1/2*e*sin(E)/(1-e*cos(E))
 
-        x =  -1.0/2.0*e*sE/oneMeccTcosE # -1/2*e*sin(E)/(1-e*cos(E))
+            dx_dpar = -sE/(2*oneMeccTcosE**2)*decc_dpar+e*(e-cE)/(2*oneMeccTcosE**2)*dE_dpar
 
-        dx_dpar = -sE/(2*oneMeccTcosE**2)*decc_dpar+e*(e-cE)/(2*oneMeccTcosE**2)*dE_dpar
+            diDelay_dDre = 1+(Drep*nHat)**2+Dre*Drepp*nHat**2+Drep*nHat*(2*Dre*nHat*x-1)
+            diDelay_dDrep = Dre*nHat*(2*Drep*nHat+Dre*nHat*x-1)
+            diDelay_dDrepp = (Dre*nHat)**2/2
+            diDelay_dnhat = Dre*(-Drep+2*Drep**2*nHat+nHat*Dre*Drepp+2*x*nHat*Dre*Drep)
+            diDelay_dx = (Dre*nHat)**2*Drep
 
-        diDelay_dDre = 1+(Drep*nHat)**2+Dre*Drepp*nHat**2+Drep*nHat*(2*Dre*nHat*x-1)
-        diDelay_dDrep = Dre*nHat*(2*Drep*nHat+Dre*nHat*x-1)
-        diDelay_dDrepp = (Dre*nHat)**2/2
-        diDelay_dnhat = Dre*(-Drep+2*Drep**2*nHat+nHat*Dre*Drepp+2*x*nHat*Dre*Drep)
-        diDelay_dx = (Dre*nHat)**2*Drep
-
-        return dDre_dpar*diDelay_dDre + dDrep_dpar*diDelay_dDrep + \
-               dDrepp_dpar*diDelay_dDrepp + dx_dpar*diDelay_dx+ \
-               dnhat_dpar*diDelay_dnhat
+            return dDre_dpar*diDelay_dDre + dDrep_dpar*diDelay_dDrep + \
+                   dDrepp_dpar*diDelay_dDrepp + dx_dpar*diDelay_dx+ \
+                   dnhat_dpar*diDelay_dnhat
 
     #################################################
     def delayS(self):
@@ -520,19 +571,20 @@ class DDmodel(PSR_BINARY):
 
         logNum = 1-e*cE-self.SINI*(sOmega*(cE-e)+
                  (1-e**2)**0.5*cOmega*sE)
-        dTM2_dpar = self.prtl_der('TM2',par)
-        dsDelay_dTM2 = -2*np.log(logNum)
-        decc_dpar = self.prtl_der('ecc',par)
-        dsDelay_decc = -2*TM2/logNum*(-cE-self.SINI*(-e*cOmega*sE/np.sqrt(1-e**2)-sOmega))
-        dE_dpar = self.prtl_der('E',par)
-        dsDelay_dE =  -2*TM2/logNum*(e*sE-self.SINI*(np.sqrt(1-e**2)*cE*cOmega-sE*sOmega))
-        domega_dpar = self.prtl_der('omega',par)
-        dsDelay_domega = -2*TM2/logNum*self.SINI*((cE-e)*cOmega-np.sqrt(1-e**2)*sE*sOmega)
-        dSINI_dpar = self.prtl_der('SINI',par)
-        dsDelay_dSINI = -2*TM2/logNum*(-(1-e**2)**0.5*cOmega*sE-(cE-e)*sOmega)
-        return dTM2_dpar*dsDelay_dTM2 + decc_dpar*dsDelay_decc + \
-               dE_dpar*dsDelay_dE +domega_dpar*dsDelay_domega +  \
-               dSINI_dpar*dsDelay_dSINI
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            dTM2_dpar = self.prtl_der('TM2',par)
+            dsDelay_dTM2 = -2*np.log(logNum)
+            decc_dpar = self.prtl_der('ecc',par)
+            dsDelay_decc = -2*TM2/logNum*(-cE-self.SINI*(-e*cOmega*sE/np.sqrt(1-e**2)-sOmega))
+            dE_dpar = self.prtl_der('E',par)
+            dsDelay_dE =  -2*TM2/logNum*(e*sE-self.SINI*(np.sqrt(1-e**2)*cE*cOmega-sE*sOmega))
+            domega_dpar = self.prtl_der('omega',par)
+            dsDelay_domega = 2*TM2/logNum*self.SINI*((cE-e)*cOmega-np.sqrt(1-e**2)*sE*sOmega)
+            dSINI_dpar = self.prtl_der('SINI',par)
+            dsDelay_dSINI = -2*TM2/logNum*(-(1-e**2)**0.5*cOmega*sE-(cE-e)*sOmega)
+            return dTM2_dpar*dsDelay_dTM2 + decc_dpar*dsDelay_decc + \
+                   dE_dpar*dsDelay_dE +domega_dpar*dsDelay_domega +  \
+                   dSINI_dpar*dsDelay_dSINI
 
     #################################################
     def delayE(self):
@@ -606,5 +658,6 @@ class DDmodel(PSR_BINARY):
     def d_DDdelay_d_par(self,par):
         """Full DD model delay derivtive
         """
-        return self.d_delayI_d_par(par)+self.d_delayS_d_par(par)+ \
-               self.d_delayA_d_par(par)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            return self.d_delayI_d_par(par)+self.d_delayS_d_par(par)+ \
+                   self.d_delayA_d_par(par)
