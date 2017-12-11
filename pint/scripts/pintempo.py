@@ -65,7 +65,7 @@ def main(argv=None):
             plt.show()
 
     if args.outfile is not None:
-        fout = file(args.outfile,"w")
+        fout = open(args.outfile,"w")
     else:
         fout = sys.stdout
         print("\nBest fit model is:")

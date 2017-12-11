@@ -864,7 +864,7 @@ class LCEmpiricalFourier(LCPrimitive):
 
     def from_file(self,input_file):
         if type(input_file) == type(''):
-            toks = [line.strip().split() for line in file(input_file) if len(line.strip()) > 0 and '#' not in line]
+            toks = [line.strip().split() for line in open(input_file) if len(line.strip()) > 0 and '#' not in line]
         else: toks = input_file
         alphas = []
         betas  = []
@@ -883,7 +883,7 @@ class LCEmpiricalFourier(LCPrimitive):
         self.harmonics = np.arange(1,n+1)*(2*np.pi)
 
     def to_file(self,output_file):
-        f = file(output_file,'w')
+        f = open(output_file,'w')
         f.write('# fourier\n')
         for i in xrange(self.nharm):
             f.write('%s\t%s\n'%(self.alphas[i],self.betas[i]))
@@ -1012,7 +1012,7 @@ class LCKernelDensity(LCPrimitive):
 
     def from_file(self,input_file):
         if type(input_file) == type(''):
-            toks = [line.strip().split() for line in file(input_file) if len(line.strip()) > 0 and '#' not in line]
+            toks = [line.strip().split() for line in open(input_file) if len(line.strip()) > 0 and '#' not in line]
         else: toks = input_file
 
         xvals,yvals = np.asarray(toks).astype(float).transpose()
@@ -1031,7 +1031,7 @@ class LCKernelDensity(LCPrimitive):
         return self.interpolator(phc) 
 
     def to_file(self,output_file):
-        f = file(output_file,'w')
+        f = open(output_file,'w')
         f.write('# kernel\n')
         for i in xrange(len(self.xvals)):
             f.write('%s\t%s\n'%(self.xvals[i],self.yvals[i]))
