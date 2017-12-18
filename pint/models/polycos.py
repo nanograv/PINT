@@ -1,8 +1,7 @@
 # This program is designed to predict the pulsar's phase and pulse-period over a
 # given interval using polynomial expansion. The return will be some necessary
 # information and the polynomial coefficients
-
-from __future__ import division, print_function
+from __future__ import absolute_import, print_function, division
 import functools
 from ..phase import Phase
 import numpy as np

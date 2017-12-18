@@ -13,7 +13,7 @@ author: M. Kerr <matthew.kerr@gmail.com>
 # Monte Carlo variables because they don't account for the uniform approx.
 # perhaps this isn't a big deal
 
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
 import numpy as np
 from scipy.special import erf,i0,i1

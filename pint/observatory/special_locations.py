@@ -2,7 +2,7 @@
 
 # Special "site" locations (eg, barycenter) which do not need clock
 # corrections or much else done.
-
+from __future__ import absolute_import, print_function
 from . import Observatory
 import numpy
 import astropy.units as u

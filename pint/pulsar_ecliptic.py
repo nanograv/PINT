@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import numpy as np
 from astropy.coordinates import frame_transform_graph, DynamicMatrixTransform
 from astropy.coordinates.matrix_utilities import rotation_matrix

@@ -1,5 +1,5 @@
 # special_locations.py
-from __future__ import division, print_function
+from __future__ import absolute_import, print_function, division
 
 # Special "site" location for RXTE satellite
 

@@ -1,3 +1,4 @@
+from __future__ import absolute_import, print_function
 import re, sys, os, numpy, gzip, copy
 from . import utils
 from .observatory import Observatory, get_observatory

@@ -6,13 +6,12 @@ $Header: /nfs/slac/g/glast/ground/cvs/pointlike/python/uw/pulsar/lctemplate.py,v
 author: M. Kerr <matthew.kerr@gmail.com>
 
 """
-
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
 import numpy as np
 from copy import deepcopy
-from lcnorm import NormAngles
-from lcprimitives import *
+from .lcnorm import NormAngles
+from .lcprimitives import *
 from astropy import log
 
 class LCTemplate(object):

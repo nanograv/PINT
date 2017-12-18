@@ -1,5 +1,6 @@
 # observatory.py
 # Base class for PINT observatories
+from __future__ import absolute_import, print_function
 import six
 
 

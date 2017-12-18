@@ -1,7 +1,7 @@
 # config.py
 
 # Functions related to PINT configuration
-
+from __future__ import absolute_import, print_function
 import os
 from .extern import appdirs
 

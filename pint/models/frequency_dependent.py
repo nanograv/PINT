@@ -1,4 +1,5 @@
 """This module implements a frequency evolution of pulsar profiles model"""
+from __future__ import absolute_import, print_function
 from warnings import warn
 from . import parameter as p
 from .timing_model import DelayComponent, MissingParameter

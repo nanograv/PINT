@@ -1,5 +1,6 @@
 # noise_model.py
 # Defines the pulsar timing noise model.
+from __future__ import absolute_import, print_function
 from .timing_model import Component,  MissingParameter
 from . import parameter as p
 import numpy as np

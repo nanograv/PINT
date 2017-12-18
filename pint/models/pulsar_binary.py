@@ -1,4 +1,5 @@
 # This is a wapper for independent binary model. It is a PINT timing model class
+from __future__ import absolute_import, print_function
 import astropy.units as u
 import numpy as np
 from . import parameter as p

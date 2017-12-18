@@ -1,6 +1,7 @@
 
 """This model provides the BT (Blandford & Teukolsky 1976, ApJ, 205, 580) model.
     """
+from __future__ import absolute_import, print_function
 from pint import ls,GMsun,Tsun
 from .stand_alone_psr_binaries.BT_model import BTmodel
 from .pulsar_binary import PulsarBinary
