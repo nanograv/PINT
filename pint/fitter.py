@@ -1,4 +1,4 @@
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, division
 import copy, numbers
 import numpy as np
 import astropy.units as u

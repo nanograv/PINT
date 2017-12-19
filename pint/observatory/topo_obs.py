@@ -1,6 +1,6 @@
 # topo_obs.py
 # Code for dealing with "standard" ground-based observatories.
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, division
 from . import Observatory
 from .clock_file import ClockFile
 import os

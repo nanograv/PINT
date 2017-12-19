@@ -1,4 +1,4 @@
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, division
 from .DD_model import DDmodel
 import numpy as np
 import astropy.units as u

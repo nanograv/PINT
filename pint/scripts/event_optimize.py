@@ -1,5 +1,5 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, division
 import numpy as np
 import pint.toa as toa
 import pint.models

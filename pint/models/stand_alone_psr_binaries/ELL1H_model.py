@@ -1,5 +1,5 @@
 # This Python file uses the following encoding: utf-8
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, division
 from .ELL1_model import ELL1BaseModel
 import numpy as np
 import astropy.units as u

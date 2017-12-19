@@ -7,7 +7,7 @@ in the model class, that implements priors on combinations of parameters,
 such as total proper motion, 2-d sky location, etc.
 
 """
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, print_function, division
 import scipy.stats
 from scipy.stats import rv_continuous, rv_discrete, norm, uniform
 

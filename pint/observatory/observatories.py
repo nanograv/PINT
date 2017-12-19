@@ -2,7 +2,7 @@
 
 # This file contains the basic definitions of observatory sites for
 # PINT.
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, division
 from pint.observatory.topo_obs import TopoObs
 
 TopoObs('gbt',          tempo_code='1', itoa_code='GB',

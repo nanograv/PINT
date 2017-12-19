@@ -1,6 +1,6 @@
 """This module implements a simple model of a base dispersion delay.
    And DMX dispersion"""
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, division
 from warnings import warn
 from . import parameter as p
 from .timing_model import DelayComponent
