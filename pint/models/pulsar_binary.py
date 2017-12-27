@@ -98,11 +98,28 @@ class PulsarBinary(DelayComponent):
             FBXs[fbn] = getattr(self, fbn).quantity
         if None not in list(FBXs.values()):
             self.binary_instance.orbits_func = self.binary_instance.orbits_FBX
+            self.binary_instance.pb_func = self.binary_instance.pb_FBX
+            self.binary_instance.pbdot_func = self.binary_instance.pbdot_FBX
             for fb_name, fb_value in FBXs.items():
                 if fb_value is None:
                     raise MissingParameter(self.binary_model_name, fb_name + \
                                            " is required for FB orbits.")
                 self.binary_instance.add_binary_params(fb_name, fb_value)
+
+    def check_required_params(self, required_params):
+        # seach for all the possible to get the parameters.
+        for p in required_params:
+            par = getattr(self, p)
+            if par.value is None:
+                # try to search if there is any class method that computes it
+                method_name = p.lower() + "_func"
+                try:
+                    par_method = getattr(self.binary_instance, method_name)
+                    _ = par_method()
+                except:
+                    raise MissingParameter(self.binary_model_name, p + \
+                                           " is required for '%s'." %
+                                           self.binary_model_name)
 
     # With new parameter class set up, do we need this?
     def apply_units(self):

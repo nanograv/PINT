@@ -132,7 +132,7 @@ class BTmodel(PSR_BINARY):
         # In BTmodel.C, they do not use pbprime here, just pb...
         # Is it not more appropriate to include the effects of PBDOT?
         #return 1.0 - 2*np.pi*num / (den * self.pbprime())
-        return 1.0 - 2*np.pi*num / (den * self.PB.to(u.second))
+        return 1.0 - 2*np.pi*num / (den * self.pb().to(u.second))
 
     def BTdelay(self):
         """Full BT model delay"""

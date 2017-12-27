@@ -56,7 +56,7 @@ class DDmodel(PSR_BINARY):
            k = OMDOT/n  (T. Damour and N. Deruelle(1986)equation between Eq 16
                          Eq 17)
         """
-        PB = self.PB
+        PB = self.pb()
         PB = PB.to('second')
         OMDOT = self.OMDOT
         OM = self.OM
@@ -82,7 +82,7 @@ class DDmodel(PSR_BINARY):
             raise ValueError(errorMesg)
         par_obj = getattr(self, par)
 
-        PB = self.PB
+        PB = self.pb()
         OMDOT = self.OMDOT
         OM = self.OM
         nu = self.nu()
@@ -108,7 +108,7 @@ class DDmodel(PSR_BINARY):
            n = 2*pi/PB
            dOmega/dOMDOT = PB/2*pi*nu
         """
-        PB = (self.PB).to('second')
+        PB = (self.pb()).to('second')
         nu = self.nu()
 
         return PB/(2*np.pi*u.rad)*nu
@@ -116,7 +116,7 @@ class DDmodel(PSR_BINARY):
     def d_omega_d_PB(self):
         """dOmega/dPB = dnu/dPB*k+dk/dPB*nu
         """
-        PB = self.PB
+        PB = self.pb()
         OMDOT = self.OMDOT
         OM = self.OM
         nu = self.nu()
@@ -451,7 +451,7 @@ class DDmodel(PSR_BINARY):
            n = 2*pi/PB # should here be M()
         """
         cosE = np.cos(self.E())
-        return 2.0*np.pi/self.PB.to('second')/(1-self.ecc()*cosE)
+        return 2.0*np.pi/self.pb().to('second')/(1-self.ecc()*cosE)
 
     def d_nhat_d_par(self,par):
         """nhat = n/(1-ecc*cos(E))
@@ -466,9 +466,9 @@ class DDmodel(PSR_BINARY):
         cosE = np.cos(self.E())
         with u.set_enabled_equivalencies(u.dimensionless_angles()):
             oneMeccTcosE = (1-self.ecc()*cosE)
-            fctr = -2*np.pi/self.PB/oneMeccTcosE
+            fctr = -2*np.pi/self.pb()/oneMeccTcosE
 
-            return fctr*(self.prtl_der('PB',par)/self.PB - \
+            return fctr*(self.prtl_der('PB',par)/self.pb() - \
                    (cosE*self.prtl_der('ecc',par)- \
                     self.ecc()*sinE*self.prtl_der('E',par))/oneMeccTcosE)
 

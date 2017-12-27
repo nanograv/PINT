@@ -120,6 +120,8 @@ class PSR_BINARY(object):
         self.binary_delay_funcs = []
         self.d_binarydelay_d_par_funcs = []
         self.orbits_func = self.orbits_PB
+        self.pb_func = self.pb_PB
+        self.pbdot_func = self.pbdot_PBDOT
 
     @property
     def t(self):
@@ -142,20 +144,6 @@ class PSR_BINARY(object):
     @property
     def tt0(self):
         return self._tt0
-
-    # TODO we need to have a clean way to do the parameterization
-    @property
-    def PB(self):
-        if self.orbits_func == self.orbits_FBX:
-            return 1.0 / self.FB0
-        else:
-            return self._PB
-    @PB.setter
-    def PB(self, val):
-        if self.orbits_func == self.orbits_FBX:
-            return
-        else:
-            self._PB = val
 
     def update_input(self, **updates):
         """ A function updates the toas and parameters
@@ -435,11 +423,30 @@ class PSR_BINARY(object):
         return result
 
     ######################################
+    def pb_PB(self):
+        return self.PB
+
+    def pb_FBX(self):
+        return 1.0 / self.FB0
+
+    def pb(self):
+        return self.pb_func()
+    ######################################
+    def pbdot_PBDOT(self):
+        return self.PBDOT
+
+    def pbdot_FBX(self):
+        return -(self.FB0 ** -2) * self.FB1
+
+    def pbdot(self):
+        return self.pbdot_func()
+
+    ######################################
     def orbits_PB(self):
         """Pulsar Orbit
         """
-        PB = (self.PB).to('second')
-        PBDOT = self.PBDOT
+        PB = (self.pb()).to('second')
+        PBDOT = self.pbdot()
         XPBDOT = self.XPBDOT
         orbits = (self.tt0/PB - 0.5*(PBDOT+XPBDOT)*(self.tt0/PB)**2).decompose()
         return orbits
@@ -467,29 +474,29 @@ class PSR_BINARY(object):
     def d_M_d_T0(self):
         """dM/dT0  this could be a generic function
         """
-        PB = self.PB.to('second')
-        PBDOT = self.PBDOT
+        PB = self.pb().to('second')
+        PBDOT = self.pbdot()
         XPBDOT = self.XPBDOT
         return ((PBDOT - XPBDOT)*self.tt0/PB-1.0)*2*np.pi*u.rad/PB
 
     def d_M_d_PB(self):
         """dM/dPB this could be a generic function
         """
-        PB = self.PB.to('second')
-        PBDOT = self.PBDOT
+        PB = self.pb().to('second')
+        PBDOT = self.pbdot()
         XPBDOT = self.XPBDOT
         return 2*np.pi*u.rad*((PBDOT+XPBDOT)*self.tt0**2/PB**3 - self.tt0/PB**2)
 
     def d_M_d_PBDOT(self):
         """dM/dPBDOT this could be a generic function
         """
-        PB = self.PB.to('second')
+        PB = self.pb().to('second')
         return -np.pi*u.rad * self.tt0**2/PB**2
 
     def d_M_d_XPBDOT(self):
         """dM/dPBDOT this could be a generic function
         """
-        PB = self.PB.to('second')
+        PB = self.pb().to('second')
         return -np.pi*u.rad * self.tt0**2/PB**2
 
     def d_M_d_FBX(self, FBX):
@@ -677,8 +684,7 @@ class PSR_BINARY(object):
     def omega(self):
         """
         """
-        PB = self.PB
-        PB = PB.to('second')
+        PB = self.pb().to('second')
         OMDOT = self.OMDOT
         OM = self.OM
         return OM + OMDOT * self.tt0
@@ -737,7 +743,7 @@ class PSR_BINARY(object):
     ###########################################################
 
     def pbprime(self):
-        return self.PB - self.PBDOT * self.tt0
+        return self.pb() - self.pbdot() * self.tt0
 
     ################# Calculation for binary phase ################
 
@@ -793,7 +799,7 @@ class PSR_BINARY(object):
     def d_Pobs_d_T0(self):
         geom1 = (-np.sin(self.nu())*np.sin(self.omega())+(np.cos(self.nu())+self.ecc())*np.cos(self.omega()))
         geom2 = (-np.cos(self.nu())*np.sin(self.omega())-np.sin(self.nu())*np.cos(self.omega()))
-        pref1 = -self.P() * self.PBDOT * 2 * np.pi * self.a1() / (self.pbprime()**2 * np.sqrt(1-self.ecc()**2)) * self.SECS_PER_DAY
+        pref1 = -self.P() * self.pbdot() * 2 * np.pi * self.a1() / (self.pbprime()**2 * np.sqrt(1-self.ecc()**2)) * self.SECS_PER_DAY
         pref2 = self.P() * self.Doppler() * self.d_nu_d_T0()
         return pref1 * geom1 + pref2 * geom2
 
