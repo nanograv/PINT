@@ -123,7 +123,11 @@ def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1,
         if timeref == 'LOCAL':
             log.info('Building spacecraft local TOAs, with MJDs in range {0} to {1}'.format(mjds[0],mjds[-1]))
             assert timesys == 'TT'
-            fermiobs = get_observatory('Fermi')
+            try:
+                fermiobs = get_observatory('Fermi')
+            except KeyError:
+                log.error('Fermi observatory not defined. Make sure you have specified an FT2 file!')
+                raise
 
             try:
                 if weightcolumn is None:

@@ -49,15 +49,12 @@ def get_TOAs(timfile, ephem="DE421", include_bipm=True, bipm_version='BIPM2015',
             updatepickle = True
     t = TOAs(timfile)
     if not any(['clkcorr' in f for f in t.table['flags']]):
-        log.info("Applying clock corrections.")
         t.apply_clock_corrections(include_gps=include_gps,
                                   include_bipm=include_bipm,
                                   bipm_version=bipm_version)
     if 'tdb' not in t.table.colnames:
-        log.info("Getting IERS params and computing TDBs.")
         t.compute_TDBs(method=tdb_method, ephem=ephem)
     if 'ssb_obs_pos' not in t.table.colnames:
-        log.info("Computing observatory positions and velocities.")
         t.compute_posvels(ephem, planets)
     # Update pickle if needed:
     if usepickle and updatepickle:
@@ -110,16 +107,13 @@ def get_TOAs_list(toa_list,ephem="DE421", include_bipm=True,
     [default=True].
     """
     t = TOAs(toalist = toa_list)
-    if not any([f.has_key('clkcorr') for f in t.table['flags']]):
-        log.info("Applying clock corrections.")
+    if not any(['clkcorr' in f for f in t.table['flags']]):
         t.apply_clock_corrections(include_gps=include_gps,
                                   include_bipm=include_bipm,
                                   bipm_version=bipm_version)
     if 'tdb' not in t.table.colnames:
-        log.info("Getting IERS params and computing TDBs.")
         t.compute_TDBs(method=tdb_method, ephem=ephem)
     if 'ssb_obs_pos' not in t.table.colnames:
-        log.info("Computing observatory positions and velocities.")
         t.compute_posvels(ephem, planets)
     return t
 
@@ -678,6 +672,7 @@ class TOAs(object):
         #     log.warn("Some TOAs have 'clkcorr' flag.  Not applying new clock corrections.")
         #     return
         # An array of all the time corrections, one for each TOA
+        log.info("Applying clock corrections.")
         corr = numpy.zeros(self.ntoas) * u.s
         times = self.table['mjd']
         for ii, key in enumerate(self.table.groups.keys):
@@ -748,7 +743,7 @@ class TOAs(object):
         """
         # Record the planets choice for this instance
         self.planets = planets
-        log.info('Compute positions and velocities of observatories and Earth (planets = {0}), using {1} ephemeris'.format(planets, ephem))
+        log.info('Computing positions and velocities of observatories and Earth (planets = {0}), using {1} ephemeris'.format(planets, ephem))
         # Remove any existing columns
         cols_to_remove = ['ssb_obs_pos', 'ssb_obs_vel', 'obs_sun_pos']
         for c in cols_to_remove:

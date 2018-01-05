@@ -53,9 +53,7 @@ def main(argv=None):
 
     t = toa.TOA(t,freq=args.freq,obs=args.obs)
     # Build TOAs and compute TDBs and positions from ephemeris
-    ts = toa.TOAs(toalist=[t])
-    ts.compute_TDBs()
-    ts.compute_posvels(ephem=args.ephem)
+    ts = toa.get_TOAs_list([t],ephem=args.ephem)
 
     if args.parfile is not None:
         m=pint.models.get_model(args.parfile)
