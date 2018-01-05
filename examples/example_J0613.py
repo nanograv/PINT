@@ -6,8 +6,7 @@ import matplotlib.pyplot as plt
 import tempo2_utils
 import astropy.units as u
 from pint.residuals import resids
-import numpy as np
-import os, unittest
+import os
 
 # Using Nanograv data J0623-0200
 datadir = '../tests/datafile'
@@ -15,10 +14,10 @@ parfile = os.path.join(datadir, 'J0613-0200_NANOGrav_dfg+12_TAI_FB90.par')
 timfile = os.path.join(datadir, 'J0613-0200_NANOGrav_dfg+12.tim')
 
 # libstempo calculation
-print "libstempo calculation"
+print("libstempo calculation")
 psr = lt.tempopulsar(parfile, timfile)
 # Build PINT model
-print "PINT calculation"
+print("PINT calculation")
 m = mb.get_model(parfile)
 # Get toas to pint
 toas = toa.get_TOAs(timfile, planets=False, ephem='DE405')

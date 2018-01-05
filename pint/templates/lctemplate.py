@@ -502,7 +502,7 @@ class LCTemplate(object):
             bin_values = 1./(6*nbin)*(hi+4*mid+lo)
 
         bin_values *= 1./bin_values.mean()
-        file(fname,'w').write(''.join(('%.6f %.6f\n'%(x,y) for x,y in zip(bin_phases,bin_values))))
+        open(fname,'w').write(''.join(('%.6f %.6f\n'%(x,y) for x,y in zip(bin_phases,bin_values))))
 
 
 class LCBridgeTemplate(LCTemplate):
@@ -707,7 +707,7 @@ def prim_io(template):
                 norms.append(float(tok[2]))
         return primitives,norms
 
-    toks = [line.strip().split() for line in file(template) if len(line.strip()) > 0]
+    toks = [line.strip().split() for line in open(template) if len(line.strip()) > 0]
     if 'gauss' in toks[0]:     return read_gaussian(toks[1:])
     elif 'kernel' in toks[0]:  return [LCKernelDensity(input_file=toks[1:])],None
     elif 'fourier' in toks[0]: return [LCEmpiricalFourier(input_file=toks[1:])],None

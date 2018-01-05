@@ -2,11 +2,9 @@
 import pint.models.model_builder as mb
 import pint.toa as toa
 import matplotlib.pyplot as plt
-import tempo2_utils
 import astropy.units as u
 from pint.residuals import resids
-import numpy as np
-import os, unittest
+import os
 import tempo2_utils
 
 # Using Nanograv data B1855
@@ -15,10 +13,10 @@ parfile = os.path.join(datadir, 'B1855+09_NANOGrav_dfg+12_TAI_FB90.par')
 timfile = os.path.join(datadir, 'B1855+09_NANOGrav_dfg+12.tim')
 
 # libstempo calculation
-print "tempo2 calculation"
+print("tempo2 calculation")
 tempo2_vals = tempo2_utils.general2(parfile, timfile,['pre'])
 # Build PINT model
-print "PINT calculation"
+print("PINT calculation")
 mdd = mb.get_model(parfile)
 # Get toas to pint
 toas = toa.get_TOAs(timfile, planets=False, ephem='DE405')
