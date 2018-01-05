@@ -107,7 +107,7 @@ def get_TOAs_list(toa_list,ephem="DE421", include_bipm=True,
     [default=True].
     """
     t = TOAs(toalist = toa_list)
-    if not any([f.has_key('clkcorr') for f in t.table['flags']]):
+    if not any(['clkcorr' in f for f in t.table['flags']]):
         t.apply_clock_corrections(include_gps=include_gps,
                                   include_bipm=include_bipm,
                                   bipm_version=bipm_version)
