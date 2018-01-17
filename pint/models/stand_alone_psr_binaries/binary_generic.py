@@ -429,6 +429,8 @@ class PSR_BINARY(object):
         return self.orbits_class.pbdot_orbit()
 
     ######################################
+    def orbits(self):
+        return self.orbits_class.orbits()
 
     def M(self):
         """Orbit phase
@@ -578,7 +580,7 @@ class PSR_BINARY(object):
             nu = 2*np.arctan(np.sqrt((1.0+ ecc)/(1.0- ecc)) * np.tan(self.E()/2.0))
             # Normalize True anomaly to on orbit.
             nu[nu<0] += 2*np.pi*u.rad
-            nu2 = 2*np.pi*self.orbits_func()*u.rad + nu - self.M()
+            nu2 = 2*np.pi*self.orbits()*u.rad + nu - self.M()
             self._nu = nu2
         return self._nu
 
