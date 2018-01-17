@@ -13,7 +13,7 @@ except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
 from pint import ls,GMsun,Tsun,light_second_equivalency
-
+from .binary_orbits import OrbitPB
 
 class PSR_BINARY(object):
     """A base (generic) object for psr binary models. In this class, a set of
@@ -119,9 +119,7 @@ class PSR_BINARY(object):
         self.cache_vars = ['E', 'nu']
         self.binary_delay_funcs = []
         self.d_binarydelay_d_par_funcs = []
-        self.orbits_func = self.orbits_PB
-        self.pb_func = self.pb_PB
-        self.pbdot_func = self.pbdot_PBDOT
+        self.orbits_class = OrbitPB(self, ['PB', 'PBDOT', 'XPBDOT', 'T0'])
 
     @property
     def t(self):
@@ -423,96 +421,62 @@ class PSR_BINARY(object):
         return result
 
     ######################################
-    def pb_PB(self):
-        return self.PB
-
-    def pb_FBX(self):
-        return 1.0 / self.FB0
-
     def pb(self):
-        return self.pb_func()
+        return self.orbits_class.pbprime()
+
     ######################################
-    def pbdot_PBDOT(self):
-        return self.PBDOT
-
-    def pbdot_FBX(self):
-        return -(self.FB0 ** -2) * self.FB1
-
     def pbdot(self):
-        return self.pbdot_func()
+        return self.orbits_class.pbdot_orbit()
 
     ######################################
-    def orbits_PB(self):
-        """Pulsar Orbit
-        """
-        PB = (self.pb()).to('second')
-        PBDOT = self.pbdot()
-        XPBDOT = self.XPBDOT
-        orbits = (self.tt0/PB - 0.5*(PBDOT+XPBDOT)*(self.tt0/PB)**2).decompose()
-        return orbits
-
-    def orbits_FBX(self):
-        """Pulsar Orbit parameterized by FBX parameter
-        """
-        FBXs = [0*u.Unit(""),]
-        ii = 0
-        while hasattr(self, 'FB' + str(ii)):
-            FBXs.append(getattr(self, 'FB' + str(ii)))
-            ii += 1
-        orbits = ut.taylor_horner(self.tt0, FBXs)
-        return orbits.decompose()
 
     def M(self):
         """Orbit phase
         """
-        orbits = self.orbits_func()
-        norbits = np.array(np.floor(orbits), dtype=np.long)
-        phase = (orbits - norbits)*2*np.pi*u.rad
+        return self.orbits_class.orbit_phase()
 
-        return phase
-
-    def d_M_d_T0(self):
-        """dM/dT0  this could be a generic function
-        """
-        PB = self.pb().to('second')
-        PBDOT = self.pbdot()
-        XPBDOT = self.XPBDOT
-        return ((PBDOT - XPBDOT)*self.tt0/PB-1.0)*2*np.pi*u.rad/PB
-
-    def d_M_d_PB(self):
-        """dM/dPB this could be a generic function
-        """
-        PB = self.pb().to('second')
-        PBDOT = self.pbdot()
-        XPBDOT = self.XPBDOT
-        return 2*np.pi*u.rad*((PBDOT+XPBDOT)*self.tt0**2/PB**3 - self.tt0/PB**2)
-
-    def d_M_d_PBDOT(self):
-        """dM/dPBDOT this could be a generic function
-        """
-        PB = self.pb().to('second')
-        return -np.pi*u.rad * self.tt0**2/PB**2
-
-    def d_M_d_XPBDOT(self):
-        """dM/dPBDOT this could be a generic function
-        """
-        PB = self.pb().to('second')
-        return -np.pi*u.rad * self.tt0**2/PB**2
-
-    def d_M_d_FBX(self, FBX):
-        """dM/dFBX
-        """
-        par = getattr(self, FBX)
-        ii = 0
-        FBXs = [0*u.Unit(""),]
-        while hasattr(self, 'FB' + str(ii)):
-            if 'FB' + str(ii) != FBX:
-                FBXs.append(0.0 * getattr(self, 'FB' + str(ii)).unit)
-            else:
-                FBXs.append(1.0 * getattr(self, 'FB' + str(ii)).unit)
-            ii += 1
-        orbits = ut.taylor_horner(self.tt0, FBXs)
-        return orbits.decompose()
+    # def d_M_d_T0(self):
+    #     """dM/dT0  this could be a generic function
+    #     """
+    #     PB = self.pb().to('second')
+    #     PBDOT = self.pbdot()
+    #     XPBDOT = self.XPBDOT
+    #     return ((PBDOT - XPBDOT)*self.tt0/PB-1.0)*2*np.pi*u.rad/PB
+    #
+    # def d_M_d_PB(self):
+    #     """dM/dPB this could be a generic function
+    #     """
+    #     PB = self.pb().to('second')
+    #     PBDOT = self.pbdot()
+    #     XPBDOT = self.XPBDOT
+    #     return 2*np.pi*u.rad*((PBDOT+XPBDOT)*self.tt0**2/PB**3 - self.tt0/PB**2)
+    #
+    # def d_M_d_PBDOT(self):
+    #     """dM/dPBDOT this could be a generic function
+    #     """
+    #     PB = self.pb().to('second')
+    #     return -np.pi*u.rad * self.tt0**2/PB**2
+    #
+    # def d_M_d_XPBDOT(self):
+    #     """dM/dPBDOT this could be a generic function
+    #     """
+    #     PB = self.pb().to('second')
+    #     return -np.pi*u.rad * self.tt0**2/PB**2
+    #
+    # def d_M_d_FBX(self, FBX):
+    #     """dM/dFBX
+    #     """
+    #     par = getattr(self, FBX)
+    #     ii = 0
+    #     FBXs = [0*u.Unit(""),]
+    #     while hasattr(self, 'FB' + str(ii)):
+    #         if 'FB' + str(ii) != FBX:
+    #             FBXs.append(0.0 * getattr(self, 'FB' + str(ii)).unit)
+    #         else:
+    #             FBXs.append(1.0 * getattr(self, 'FB' + str(ii)).unit)
+    #         ii += 1
+    #     orbits = ut.taylor_horner(self.tt0, FBXs)
+    #     return orbits.decompose()*2*np.pi*u.rad
 
     def d_M_d_par(self, par):
         """derivative for M respect to bianry parameter.
@@ -529,15 +493,8 @@ class PSR_BINARY(object):
             raise ValueError(errorMesg)
 
         par_obj = getattr(self, par)
-        FBX_match = re.match(r"FB[0-9]", par)
-        if FBX_match is not None:
-            return self.d_M_d_FBX(par)
-        try:
-            func = getattr(self, 'd_M_d_'+ par)
-        except:
-            func = lambda : np.zeros(len(self.tt0)) * u.Unit("")/par_obj.unit
-        result = func()
-        return result
+        result = self.orbits_class.d_orbits_d_par(par)
+        return result.to(u.Unit("")/par_obj.unit)
 
     ###############################################
 

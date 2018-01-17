@@ -5,6 +5,7 @@ from . import parameter as p
 from .timing_model import DelayComponent, MissingParameter
 from astropy import log
 from pint import ls,GMsun,Tsun
+from .stand_alone_psr_binaries import binary_orbits as bo
 
 
 class PulsarBinary(DelayComponent):
@@ -97,14 +98,12 @@ class PulsarBinary(DelayComponent):
         for fbn in FBX_mapping.values():
             FBXs[fbn] = getattr(self, fbn).quantity
         if None not in list(FBXs.values()):
-            self.binary_instance.orbits_func = self.binary_instance.orbits_FBX
-            self.binary_instance.pb_func = self.binary_instance.pb_FBX
-            self.binary_instance.pbdot_func = self.binary_instance.pbdot_FBX
             for fb_name, fb_value in FBXs.items():
                 if fb_value is None:
                     raise MissingParameter(self.binary_model_name, fb_name + \
                                            " is required for FB orbits.")
                 self.binary_instance.add_binary_params(fb_name, fb_value)
+            self.binary_instance.orbits_class = bo.OrbitFBX(self.binary_instance)
 
     def check_required_params(self, required_params):
         # seach for all the possible to get the parameters.
