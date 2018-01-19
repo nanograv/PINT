@@ -28,10 +28,20 @@ class orbits(object):
         raise NotImplementedError
 
     def d_orbits_d_par(self, par):
+        par_obj = getattr(self, par)
         try:
             func = getattr(self, 'd_orbits_d_'+ par)
         except:
             func = lambda : np.zeros(len(self.tt0)) * u.Unit("")/par_obj.unit
+        result = func()
+        return result
+
+    def d_pbprime_d_par(self, par):
+        par_obj = getattr(self, par)
+        try:
+            func = getattr(self, 'd_pbprime_d_'+ par)
+        except:
+            func = lambda : np.zeros(len(self.tt0)) * u.day/par_obj.unit
         result = func()
         return result
 
@@ -65,7 +75,7 @@ class OrbitPB(orbits):
         return orbits
 
     def pbprime(self):
-        return self.PB - self.PBDOT * self.tt0
+        return self.PB + self.PBDOT * self.tt0
 
     def pbdot_orbit(self):
         return self.PBDOT
@@ -102,7 +112,7 @@ class OrbitPB(orbits):
         return np.ones(len(self.tt0)) * u.Unit("")
 
     def d_pbprime_d_PBDOT(self):
-        return - self.tt0
+        return self.tt0
 
     def d_pbprime_d_T0(self):
         result = np.empty(len(self.tt0))
@@ -129,10 +139,22 @@ class OrbitFBX(orbits):
         return orbits.decompose()
 
     def pbprime(self):
-        return 1.0 / self.FB0 - self.pbdot_orbit() * self.tt0
+        FBXs = [0*u.Unit(""),]
+        ii = 0
+        while 'FB' + str(ii) in self.orbit_params:
+            FBXs.append(getattr(self, 'FB' + str(ii)))
+            ii += 1
+        orbit_freq = ut.taylor_horner_deriv(self.tt0, FBXs, 1)
+        return 1.0 / orbit_freq
 
     def pbdot_orbit(self):
-        return -(self.FB0 ** -2) * self.FB1
+        FBXs = [0*u.Unit(""),]
+        ii = 0
+        while 'FB' + str(ii) in self.orbit_params:
+            FBXs.append(getattr(self, 'FB' + str(ii)))
+            ii += 1
+        orbit_freq_dot = ut.taylor_horner_deriv(self.tt0, FBXs, 2)
+        return -(self.pbprime() ** 2) * orbit_freq_dot
 
     def d_orbits_d_par(self, par):
         if re.match(r'FB\d', par) is not None:
@@ -151,11 +173,26 @@ class OrbitFBX(orbits):
             else:
                 FBXs.append(1.0 * getattr(self, 'FB' + str(ii)).unit)
             ii += 1
-        orbits = ut.taylor_horner(self.tt0, FBXs)
-        return orbits.decompose()*2*np.pi*u.rad
+        d_orbits = ut.taylor_horner(self.tt0, FBXs) / par.unit
+        return d_orbits.decompose()*2*np.pi*u.rad
 
-    def d_pbprime_d_FB0(self):
-        return -np.ones(len(self.tt0))/self.FB0 ** 2
+    def d_pbprime_d_FBX(self, FBX):
+        par = getattr(self, FBX)
+        ii = 0
+        FBXs = [0*u.Unit(""),]
+        while 'FB' + str(ii) in self.orbit_params:
+            if 'FB' + str(ii) != FBX:
+                FBXs.append(0.0 * getattr(self, 'FB' + str(ii)).unit)
+            else:
+                FBXs.append(1.0 * getattr(self, 'FB' + str(ii)).unit)
+            ii += 1
+        d_FB = ut.taylor_horner_deriv(self.tt0, FBXs, 1) / par.unit
+        return -(self.pbprime() ** 2) * d_FB
 
-    def d_pbprime_d_FB1(self):
-        pass
+    def d_pbprime_d_par(self, par):
+        par_obj = getattr(self, par)
+        if re.match(r'FB\d', par) is not None:
+            result = self.d_pbprime_d_FBX(par)
+        else:
+            result = np.zeros(len(self.tt0)) * u.second/par_obj.unit
+        return result
