@@ -69,6 +69,12 @@ def get_derivative_params(model):
             h = 3e-2
         elif p in ['PBDOT']:
             h = 200
+        elif p in ['FB1']:
+            h = 2
+        elif p in ['FB0']:
+            h = 1e-7
+        elif p in ['FB2', 'FB3']:
+            h = 1000
         else:
             h = 1e-2
         test_params[p] = h
