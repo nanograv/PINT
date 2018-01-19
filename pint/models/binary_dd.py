@@ -49,7 +49,7 @@ class BinaryDD(PulsarBinary):
         """Check out parameters setup.
         """
         super(BinaryDD,self).setup()
-        self.check_required_params(["PB", "T0", "A1"])
+        self.check_required_params(["T0", "A1"])
         # If any *DOT is set, we need T0
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
             if getattr(self, p).value is None:
