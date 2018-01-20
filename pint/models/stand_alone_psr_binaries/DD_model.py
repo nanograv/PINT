@@ -87,16 +87,18 @@ class DDmodel(PSR_BINARY):
         OM = self.OM
         nu = self.nu()
         k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
-        if par in ['OM','OMDOT','PB']:
+        if par in ['OM','OMDOT']:
             dername = 'd_omega_d_' + par
             return getattr(self,dername)()
+        elif par in self.orbits_cls.orbit_params:
+            d_nu_d_par = self.d_nu_d_par(par)
+            d_pb_d_par = self.d_pb_d_par(par)
+            return d_nu_d_par * k + d_pb_d_par * nu * \
+                   OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad)
         else:
-            dername = 'd_nu_d_'+par # For parameters only in nu
-            if hasattr(self,dername):
-                return (k*getattr(self,dername)()).to(OM.unit/par_obj.unit,
-                                       equivalencies = u.dimensionless_angles())
-            else:
-                return np.longdouble(np.zeros(len(self.tt0))) * OM.unit/par_obj.unit
+            # For parameters only in nu
+            return (k * self.d_nu_d_par(par)).to(OM.unit/par_obj.unit,
+                                     equivalencies = u.dimensionless_angles())
 
     def d_omega_d_OM(self):
         """dOmega/dOM = 1
@@ -112,16 +114,6 @@ class DDmodel(PSR_BINARY):
         nu = self.nu()
 
         return PB/(2*np.pi*u.rad)*nu
-
-    def d_omega_d_PB(self):
-        """dOmega/dPB = dnu/dPB*k+dk/dPB*nu
-        """
-        PB = self.pb()
-        OMDOT = self.OMDOT
-        OM = self.OM
-        nu = self.nu()
-        k = OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad/PB)
-        return (self.d_nu_d_PB()*k)+nu*OMDOT.to(u.rad/u.second)/(2*np.pi*u.rad)
 
     ############################################################
     # Calculate er

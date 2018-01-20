@@ -110,20 +110,26 @@ class ELL1BaseModel(PSR_BINARY):
         ttasc = self.ttasc()
         return (PBDOT*ttasc/PB-1.0)*2*np.pi*u.rad/PB
 
-    def d_Phi_d_PB(self):
-        """dPhi/dPB
+    def d_Phi_d_par(self, par):
+        """The derivative of Phi with respect to parameter
+         Parameters
+         ----------
+         par : string
+               parameter name
+         Return
+         ----------
+         Derivitve of Phi respect to par
         """
-        PB = self.pb().to('second')
-        PBDOT = self.pbdot()
-        ttasc = self.ttasc()
-        return 2*np.pi*u.rad*(PBDOT*ttasc**2/PB**3 - ttasc/PB**2)
+        if par not in self.binary_params:
+            errorMesg = par + " is not in binary parameter list."
+            raise ValueError(errorMesg)
 
-    def d_Phi_d_PBDOT(self):
-        """dPhi/dPBDOT
-        """
-        PB = self.pb().to('second')
-        ttasc = self.ttasc()
-        return -np.pi*u.rad * ttasc**2/PB**2
+        par_obj = getattr(self, par)
+        try:
+            func = getattr(self, 'd_Phi_d_'+ par)
+            return func()
+        except:
+            return self.d_M_d_par(par)
 
     def d_Dre_d_par(self, par):
         """Dre = delayR = a1/c.c*(sin(phi) - 0.5* eps1*cos(2*phi) +  0.5* eps2*sin(2*phi))
@@ -236,8 +242,8 @@ class ELL1BaseModel(PSR_BINARY):
     def nhat(self):
         return 2*np.pi/self.pb()
 
-    def d_nhat_d_PB(self):
-        return -2*np.pi/self.pb()**2
+    def d_nhat_d_par(self, par):
+        return -2*np.pi/self.pb()**2 * self.d_pb_d_par(par)
 
     def d_delayI_d_par(self, par):
         """delayI = Dre*(1 - nhat*Drep + (nhat*Drep)**2 + 1.0/2*nhat**2*Dre*Drepp)
