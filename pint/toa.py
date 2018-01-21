@@ -258,6 +258,10 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
         # Here I need to append any actual flags
         for flag in flags.keys():
             v = flags[flag]
+            # Since toas file do not have values with unit in the flags,
+            # here we are taking the units out
+            if hasattr(v, "unit"):
+                v = v.value
             flag = str(flag)
             if flag.startswith('-'):
                 flagstring += ' %s %s'%(flag,v)
