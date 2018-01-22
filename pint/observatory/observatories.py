@@ -7,7 +7,7 @@ from pint.observatory.topo_obs import TopoObs
 
 TopoObs('gbt',          tempo_code='1', itoa_code='GB',
         itrf_xyz=[882589.65, -4924872.32, 3943729.348])
-TopoObs('arecibo',      tempo_code='3', itoa_code='AO',
+TopoObs('arecibo',      tempo_code='3', itoa_code='AO', aliases=['aoutc'],
         itrf_xyz=[2390490.0, -5564764.0, 1994727.0])
 TopoObs('vla',          tempo_code='6', itoa_code='VL', aliases=['jvla'],
         itrf_xyz=[-1601192.0, -5041981.4, 3554871.4])
