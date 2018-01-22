@@ -13,6 +13,8 @@ TopoObs('vla',          tempo_code='6', itoa_code='VL', aliases=['jvla'],
         itrf_xyz=[-1601192.0, -5041981.4, 3554871.4])
 TopoObs('parkes',       tempo_code='7', itoa_code='PK', aliases=['pks'],
         itrf_xyz=[-4554231.5, 2816759.1, -3454036.3])
+TopoObs('jodrell',      tempo_code='8', itoa_code='JB', aliases=['jbdfb', 'jbroach', 'jbafb'],
+        itrf_xyz=[3822626.04, -154105.65, 5086486.04])
 TopoObs('nancay',       tempo_code='f', itoa_code='NC', aliases=['ncy'],
         itrf_xyz=[4324165.81, 165927.11, 4670132.83])
 TopoObs('ncyobs',       tempo_code='f', itoa_code='NC', aliases=['ncyobs'],
