@@ -260,6 +260,8 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
             v = flags[flag]
             # Since toas file do not have values with unit in the flags,
             # here we are taking the units out
+            if flag in ['clkcorr']:
+                continue
             if hasattr(v, "unit"):
                 v = v.value
             flag = str(flag)
@@ -647,7 +649,9 @@ class TOAs(object):
         for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'].quantity,
             self.table['freq'].quantity,self.table['obs'],self.table['flags']):
             obs_obj = Observatory.get(obs)
-            str = format_toa_line(toatime, toaerr, freq, obs_obj, name=name,
+            # Remove clock corrections from the out_put toas
+            toatime_out = toatime - flags['clkcorr']
+            str = format_toa_line(toatime_out, toaerr, freq, obs_obj, name=name,
                 flags=flags, format=format)
             outf.write(str)
         if not handle:
