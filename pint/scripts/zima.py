@@ -65,13 +65,14 @@ def main(argv=None):
 
     # F_local has units of Hz; discard cycles unit in phase to get a unit
     # that TimeDelta understands
+    log.info("Creating TOAs")
     F_local = m.d_phase_d_toa(ts)
     rs = m.phase(ts.table).frac.value/F_local
 
     # Adjust the TOA times to put them where their residuals will be 0.0
     ts.adjust_TOAs(TimeDelta(-1.0*rs))
     rspost = m.phase(ts.table).frac.value/F_local
-
+    log.info("Second iteration")
     # Do a second iteration
     ts.adjust_TOAs(TimeDelta(-1.0*rspost))
 
@@ -82,10 +83,10 @@ def main(argv=None):
         # This should be a very boring plot with all residuals flat at 0.0!
         import matplotlib.pyplot as plt
         rspost2 = m.phase(ts.table).frac/F_local
-        plt.errorbar(ts.get_mjds(),rspost2.to(u.us).value,yerr=ts.get_errors().to(u.us).value)
-        newts = pint.toa.get_TOAs(args.timfile)
+        plt.errorbar(ts.get_mjds().value,rspost2.to(u.us).value,yerr=ts.get_errors().to(u.us).value)
+        newts = pint.toa.get_TOAs(args.timfile, ephem = args.ephem, planets=args.planets)
         rsnew = m.phase(newts.table).frac/F_local
-        plt.errorbar(newts.get_mjds(),rsnew.to(u.us).value,yerr=newts.get_errors().to(u.us).value)
+        plt.errorbar(newts.get_mjds().value,rsnew.to(u.us).value,yerr=newts.get_errors().to(u.us).value)
         #plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
         plt.xlabel('MJD')
         plt.ylabel('Residual (us)')

@@ -258,6 +258,12 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
         # Here I need to append any actual flags
         for flag in flags.keys():
             v = flags[flag]
+            # Since toas file do not have values with unit in the flags,
+            # here we are taking the units out
+            if flag in ['clkcorr']:
+                continue
+            if hasattr(v, "unit"):
+                v = v.value
             flag = str(flag)
             if flag.startswith('-'):
                 flagstring += ' %s %s'%(flag,v)
@@ -422,6 +428,8 @@ class TOAs(object):
         self.commands = []
         self.filename = None
         self.planets = False
+        self.ephem = None
+        self.clock_corr_info = {}
 
         if (toalist is not None) and (toafile is not None):
             log.error('Cannot initialize TOAs from both file and list.')
@@ -610,7 +618,7 @@ class TOAs(object):
         # and recompute them
         self.table['mjd_float'] = self.get_mjds(high_precision=False)
         self.compute_TDBs()
-        self.compute_posvels()
+        self.compute_posvels(self.ephem, self.planets)
 
     def write_TOA_file(self,filename,name='pint', format='Princeton'):
         """Dump current TOA table out as a TOA file
@@ -641,7 +649,9 @@ class TOAs(object):
         for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'].quantity,
             self.table['freq'].quantity,self.table['obs'],self.table['flags']):
             obs_obj = Observatory.get(obs)
-            str = format_toa_line(toatime, toaerr, freq, obs_obj, name=name,
+            # Remove clock corrections from the out_put toas
+            toatime_out = toatime - flags['clkcorr']
+            str = format_toa_line(toatime_out, toaerr, freq, obs_obj, name=name,
                 flags=flags, format=format)
             outf.write(str)
         if not handle:
@@ -700,6 +710,10 @@ class TOAs(object):
             for jj in range(loind, hiind):
                 if corr[jj]:
                     flags[jj]['clkcorr'] = corr[jj]
+        # Updat clock correction info
+        self.clock_corr_info.update({'include_bipm':include_bipm,
+                                     'bipm_version':bipm_version,
+                                     'include_gps':include_gps})
 
     def compute_TDBs(self, method="astropy", ephem=None):
         """Compute and add TDB and TDB long double columns to the TOA table.
@@ -798,6 +812,9 @@ class TOAs(object):
             cols_to_add += plan_poss.values()
         log.info('Adding columns ' + ' '.join([cc.name for cc in cols_to_add]))
         self.table.add_columns(cols_to_add)
+        #update ephemeris info
+        self.ephem = ephem
+        self.planets = planets
 
     def read_pickle_file(self, filename):
         """Read the TOAs from the pickle file specified in filename.  Note
