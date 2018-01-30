@@ -2,7 +2,7 @@
 
 All times are in days, distances in light-seconds, and masses in solar masses.
 """
-from __future__ import division
+from __future__ import absolute_import, print_function, division
 import collections
 import numpy as np
 from scipy.optimize import newton, fsolve

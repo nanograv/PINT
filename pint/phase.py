@@ -6,6 +6,7 @@
 # I think I understand it, but it would be good to have it stated.
 # Also, probably one of the comparisons below should be <= or >=, so the
 # range is [-0.5,0.5) or (-0.5,0.5].
+from __future__ import absolute_import, print_function, division
 from collections import namedtuple
 import numpy
 import astropy.units as u

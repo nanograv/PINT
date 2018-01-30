@@ -4,7 +4,7 @@ test statistics on event data and helper functions.
 
 author: M. Kerr <matthew.kerr@gmail.com>
 """
-
+from __future__ import absolute_import, print_function, division
 import numpy as np
 
 TWOPI = np.pi*2

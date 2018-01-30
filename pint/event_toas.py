@@ -1,6 +1,5 @@
 """Generic function to load TOAs from events files."""
-from __future__ import division, print_function
-
+from __future__ import absolute_import, print_function, division
 import numpy as np
 import pint.toa as toa
 from astropy import log

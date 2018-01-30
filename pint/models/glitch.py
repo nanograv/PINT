@@ -2,6 +2,7 @@
 """
 # glitch.py
 # Defines glitch timing model class
+from __future__ import absolute_import, print_function, division
 import numpy
 import astropy.units as u
 try:

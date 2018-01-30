@@ -1,5 +1,6 @@
 # timing_model.py
 # Defines the basic timing model interface classes
+from __future__ import absolute_import, print_function, division
 import functools
 from .parameter import Parameter, strParameter
 from ..phase import Phase

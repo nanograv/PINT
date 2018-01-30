@@ -1,5 +1,5 @@
 """FITS handling functions"""
-
+from __future__ import absolute_import, print_function, division
 import astropy.io.fits as pyfits
 import numpy as np
 from astropy import log

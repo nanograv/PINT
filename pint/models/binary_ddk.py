@@ -1,3 +1,4 @@
+from __future__ import absolute_import, print_function, division
 from pint import ls,GMsun,Tsun
 from .stand_alone_psr_binaries.DDK_model import DDKmodel
 from .binary_dd import BinaryDD

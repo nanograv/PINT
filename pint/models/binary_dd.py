@@ -1,3 +1,4 @@
+from __future__ import absolute_import, print_function, division
 from pint import ls,GMsun,Tsun
 from .stand_alone_psr_binaries.DD_model import DDmodel
 from .pulsar_binary import PulsarBinary

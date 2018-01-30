@@ -1,5 +1,6 @@
 # astrometry.py
 # Defines Astrometry timing model class
+from __future__ import absolute_import, print_function, division
 import numpy
 import astropy.coordinates as coords
 import astropy.units as u

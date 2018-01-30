@@ -1,3 +1,4 @@
+from __future__ import absolute_import, print_function, division
 from astropy.time.formats import TimeFormat
 from astropy.time.utils import day_frac
 import astropy._erfa as erfa

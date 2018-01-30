@@ -1,4 +1,5 @@
 # This file is a prototype of independent psr binary model class
+from __future__ import absolute_import, print_function, division
 import numpy as np
 import functools
 import collections

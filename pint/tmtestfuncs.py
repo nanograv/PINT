@@ -1,4 +1,5 @@
 # Test timing model functions to test out the residuals class
+from __future__ import absolute_import, print_function, division
 from astropy.time import Time
 import numpy
 

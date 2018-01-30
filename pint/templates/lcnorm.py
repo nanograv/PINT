@@ -10,7 +10,7 @@ $Header: /nfs/slac/g/glast/ground/cvs/pointlike/python/uw/pulsar/lcnorm.py,v 1.9
 
 author: M. Kerr <matthew.kerr@gmail.com>
 """
-
+from __future__ import absolute_import, print_function, division
 import numpy as np
 from math import sin,cos,asin,acos,pi
 
