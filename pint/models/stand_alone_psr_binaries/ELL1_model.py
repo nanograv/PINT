@@ -23,6 +23,13 @@ class ELL1BaseModel(PSR_BINARY):
         self.set_param_values() # Set parameters to default values.
         self.ELL1_interVars = ['eps1', 'eps2', 'Phi', 'Dre', 'Drep', 'Drepp', 'nhat']
         self.add_inter_vars(self.ELL1_interVars)
+        self.orbits_func = self.orbits_ELL1
+
+    @property
+    def tt0(self):
+        return self.ttasc()
+
+    ###############################
 
     def ttasc(self):
         """
@@ -79,40 +86,51 @@ class ELL1BaseModel(PSR_BINARY):
     def d_eps2_d_EPS2DOT(self):
         return self.ttasc()
 
-    # TODO Duplicate code. Do we need change here.
+    # NOTE in ELL1 the orbit phase is modeled as Phi.
+    # But pulsar_binary function M() is a generic function ot computes the
+    # orbit phase in the range [0,1], So Phi can be computed by M(). But
+    # the attribute .orbits_func needs to be set as orbits_ELL1
     def Phi(self):
         """Orbit phase in ELL1 model. Using TASC
         """
-        PB = (self.PB).to('second')
-        PBDOT = self.PBDOT
+        phase = self.M()
+        return phase
+
+    def orbits_ELL1(self):
+        PB = (self.pb()).to('second')
+        PBDOT = self.pbdot()
         ttasc = self.ttasc()
         orbits = (ttasc/PB - 0.5*PBDOT*(ttasc/PB)**2).decompose()
-        norbits = np.array(np.floor(orbits), dtype=np.long)
-        phase = (orbits - norbits)*2*np.pi*u.rad
-        return phase
+        return orbits
 
     def d_Phi_d_TASC(self):
         """dPhi/dTASC
         """
-        PB = self.PB.to('second')
-        PBDOT = self.PBDOT
+        PB = self.pb().to('second')
+        PBDOT = self.pbdot()
         ttasc = self.ttasc()
         return (PBDOT*ttasc/PB-1.0)*2*np.pi*u.rad/PB
 
-    def d_Phi_d_PB(self):
-        """dPhi/dPB
+    def d_Phi_d_par(self, par):
+        """The derivative of Phi with respect to parameter
+         Parameters
+         ----------
+         par : string
+               parameter name
+         Return
+         ----------
+         Derivitve of Phi respect to par
         """
-        PB = self.PB.to('second')
-        PBDOT = self.PBDOT
-        ttasc = self.ttasc()
-        return 2*np.pi*u.rad*(PBDOT*ttasc**2/PB**3 - ttasc/PB**2)
+        if par not in self.binary_params:
+            errorMesg = par + " is not in binary parameter list."
+            raise ValueError(errorMesg)
 
-    def d_Phi_d_PBDOT(self):
-        """dPhi/dPBDOT
-        """
-        PB = self.PB.to('second')
-        ttasc = self.ttasc()
-        return -np.pi*u.rad * ttasc**2/PB**2
+        par_obj = getattr(self, par)
+        try:
+            func = getattr(self, 'd_Phi_d_'+ par)
+            return func()
+        except:
+            return self.d_M_d_par(par)
 
     def d_Dre_d_par(self, par):
         """Dre = delayR = a1/c.c*(sin(phi) - 0.5* eps1*cos(2*phi) +  0.5* eps2*sin(2*phi))
@@ -218,15 +236,15 @@ class ELL1BaseModel(PSR_BINARY):
         Dre = self.delayR()
         Drep = self.Drep()
         Drepp = self.Drepp()
-        PB = self.PB.to('second')
-        nhat = 2*np.pi/self.PB
+        PB = self.pb().to('second')
+        nhat = 2*np.pi/self.pb()
         return (Dre*(1 - nhat*Drep + (nhat*Drep)**2 + 1.0/2*nhat**2*Dre*Drepp)).decompose()
 
     def nhat(self):
-        return 2*np.pi/self.PB
+        return 2*np.pi/self.pb()
 
-    def d_nhat_d_PB(self):
-        return -2*np.pi/self.PB**2
+    def d_nhat_d_par(self, par):
+        return -2*np.pi/self.pb()**2 * self.d_pb_d_par(par)
 
     def d_delayI_d_par(self, par):
         """delayI = Dre*(1 - nhat*Drep + (nhat*Drep)**2 + 1.0/2*nhat**2*Dre*Drepp)
@@ -236,8 +254,8 @@ class ELL1BaseModel(PSR_BINARY):
         Dre = self.delayR()
         Drep = self.Drep()
         Drepp = self.Drepp()
-        PB = self.PB.to('second')
-        nhat = 2*np.pi/self.PB
+        PB = self.pb().to('second')
+        nhat = 2*np.pi/self.pb()
 
         d_delayI_d_Dre = (1 - nhat*Drep + (nhat*Drep)**2 + 1.0/2*nhat**2*Dre*Drepp) + \
                          Dre * 1.0/2*nhat**2*Drepp
@@ -261,7 +279,7 @@ class ELL1BaseModel(PSR_BINARY):
         return np.sqrt(self.eps1()**2 + self.eps2()**2)
 
     def ELL1_T0(self):
-        return self.TASC + self.PB/(2*np.pi) * \
+        return self.TASC + self.pb()/(2*np.pi) * \
         (np.arctan(self.eps1()/self.eps2())).to(u.Unit(''), equivalencies=u.dimensionless_angles())
 
 

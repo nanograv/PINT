@@ -456,7 +456,7 @@ ECL                 IERS2003
 CLK                 TT(BIPM)
 UNITS               TDB
 TIMEEPH             FB90
-T2CMETHOD           TEMPO
+#T2CMETHOD           TEMPO
 CORRECT_TROPOSPHERE N
 PLANET_SHAPIRO      N
 #DILATEFREQ          N
@@ -477,9 +477,9 @@ SINI              0.999461  1            0.000178
 M2                0.233837  1            0.011278
 RNAMP         0.17173D-01
 RNIDX            -4.91353
-#TNRedAmp -14.227505410948254
-#TNRedGam 4.91353
-#TNRedC 45
+TNRedAmp -14.227505410948254
+TNRedGam 4.91353
+TNRedC 45
 T2EFAC -f L-wide_PUPPI   1.507
 T2EFAC -f 430_ASP   1.147
 T2EFAC -f L-wide_ASP   1.150
