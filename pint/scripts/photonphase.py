@@ -95,14 +95,12 @@ def main(argv=None):
     if len(tl) == 0:
         log.error("No TOAs, exiting!")
         sys.exit(0)
-    ts = toa.TOAs(toalist=tl)
+    # Could add a check here to only compute planet positions if PLANET_SHAPIRO is true.
+    # For now, just being lazy and always computing planet positions.
+    ts = toa.get_TOAs_list(tl,ephem=args.ephem,planets=True)
     ts.filename = args.eventfile
     if args.fix:
         ts.adjust_TOAs(TimeDelta(np.ones(len(ts.table))*-1.0*u.s,scale='tt'))
-    ts.compute_TDBs()
-    # Could add a check here to only compute planet positions if PLANET_SHAPIRO is true.
-    # For now, just being lazy and always computing planet positions.
-    ts.compute_posvels(ephem=args.ephem,planets=True)
 
     print(ts.get_summary())
     mjds = ts.get_mjds()
