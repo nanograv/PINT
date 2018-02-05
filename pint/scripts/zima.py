@@ -8,11 +8,23 @@ import numpy as np
 import pint.toa as toa
 import pint.models
 import pint.fitter
+import pint.residuals as res
+from pint import pulsar_mjd
 import astropy.units as u
 from astropy.time import Time, TimeDelta
 
 from astropy import log
 log.setLevel('INFO')
+
+def get_freq_array(base_freq_values, ntoas):
+    """Right now it is a very simple frequency array simulation.
+       It just simulates an alternating frequency arrays
+    """
+    freq = np.zeros(ntoas)
+    num_freqs = len(base_freq_values)
+    for ii, fv in enumerate(base_freq_values):
+        freq[ii::num_freqs] = fv
+    return freq
 
 def main(argv=None):
     import argparse
@@ -24,7 +36,7 @@ def main(argv=None):
     parser.add_argument("--ntoa",help="Number of fake TOAs to generate",type=int,default=100)
     parser.add_argument("--duration",help="Span of TOAs to generate (days)",type=int,default=400)
     parser.add_argument("--obs",help="Observatory code (default: GBT)",default="GBT")
-    parser.add_argument("--freq",help="Frequency for TOAs (MHz) (default: 1400)",
+    parser.add_argument("--freq",help="Frequency for TOAs (MHz) (default: 1400)",nargs='+',
                     type=float, default=1400.0)
     parser.add_argument("--error",help="Random error to apply to each TOA (us, default=1.0)",
                     type=float, default=1.0)
@@ -38,16 +50,18 @@ def main(argv=None):
     m = pint.models.get_model(args.parfile)
 
     duration = args.duration*u.day
-    start = Time(args.startMJD,scale='utc',format='mjd',precision=9)
+    #start = Time(args.startMJD,scale='utc',format='pulsar_mjd',precision=9)
+    start = np.longdouble(args.startMJD) * u.day
     error = args.error*u.microsecond
-    freq = args.freq*u.MHz
+    freq = np.array(args.freq) * u.MHz
     scale = 'utc'
 
     times = np.linspace(0,duration.to(u.day).value,args.ntoa)*u.day + start
+    # Add mulitple frequency
+    freq_array = get_freq_array(freq, len(times))
 
-    tl = [toa.TOA(t,error=error, obs=args.obs, freq=freq,
-                 scale=scale) for t in times]
-
+    tl = [toa.TOA(t.value,error=error, obs=args.obs, freq=f,
+                 scale=scale) for t, f in zip(times, freq_array)]
     ts = toa.TOAs(toalist=tl)
 
     # WARNING! I'm not sure how clock corrections should be handled here!
