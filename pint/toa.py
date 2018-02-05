@@ -650,14 +650,13 @@ class TOAs(object):
         for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'].quantity,
             self.table['freq'].quantity,self.table['obs'],self.table['flags']):
             obs_obj = Observatory.get(obs)
-            # Remove clock corrections from the out_put toas
-            if 'clkcorr' in flags:
-                toatime_out = toatime - flags['clkcorr']
+            if 'clkcorr' in flags.keys():
+                toatime_out = toatime - time.TimeDelta(flags['clkcorr'])
             else:
                 toatime_out = toatime
-            str = format_toa_line(toatime_out, toaerr, freq, obs_obj, name=name,
-                flags=flags, format=format)
-            outf.write(str)
+            out_str = format_toa_line(toatime_out, toaerr, freq, obs_obj, name=name,
+                      flags=flags, format=format)
+            outf.write(out_str)
         if not handle:
             outf.close()
 
