@@ -651,7 +651,10 @@ class TOAs(object):
             self.table['freq'].quantity,self.table['obs'],self.table['flags']):
             obs_obj = Observatory.get(obs)
             # Remove clock corrections from the out_put toas
-            toatime_out = toatime - flags['clkcorr']
+            if 'clkcorr' in flags:
+                toatime_out = toatime - flags['clkcorr']
+            else:
+                toatime_out = toatime
             str = format_toa_line(toatime_out, toaerr, freq, obs_obj, name=name,
                 flags=flags, format=format)
             outf.write(str)
