@@ -5,9 +5,10 @@ from scipy.misc import factorial
 import string
 import astropy.time
 try:
-    from astropy.erfa import DJM0
+    from astropy.erfa import DJM0, d2dtf
 except ImportError:
-    from astropy._erfa import DJM0
+    from astropy._erfa import DJM0, d2dtf
+from astropy.time.utils import day_frac
 import astropy.units as u
 from astropy import log
 from .str2ld import str2ldarr1
@@ -155,17 +156,25 @@ def time_to_mjd_string(t, prec=15):
 
     astropy does not seem to provide this capability (yet?).
     """
-    jd1 = t.jd1 - DJM0
-    imjd = int(jd1)
-    fjd1 = jd1 - imjd
-    fmjd = t.jd2 + fjd1
-    assert np.fabs(fmjd) < 2.0
-    if fmjd >= 1.0:
-        imjd += 1
-        fmjd -= 1.0
-    if fmjd < 0.0:
-        imjd -= 1
-        fmjd += 1.0
+    if t.format == 'pulsar_mjd':
+        (imjd, fmjd) = day_frac(t.jd1 - DJM0, t.jd2)
+        imjd = int(imjd)
+        if fmjd<0.0: 
+            imjd -= 1
+        y, mo, d, hmsf = d2dtf('UTC',9,t.jd1,t.jd2)
+        fmjd = (hmsf[...,0]/24.0 + hmsf[...,1]/1440.0 
+                + hmsf[...,2]/86400.0 + hmsf[...,3]/86400.0e9)
+    else:
+        (imjd, fmjd) = day_frac(t.jd1 - DJM0, t.jd2)
+        imjd = int(imjd)
+        assert np.fabs(fmjd) < 2.0
+        if fmjd >= 1.0:
+            imjd += 1
+            fmjd -= 1.0
+        if fmjd < 0.0:
+            imjd -= 1
+            fmjd += 1.0
+
     fmt = "%." + "%sf" % prec
     return str(imjd) + (fmt % fmjd)[1:]
 
