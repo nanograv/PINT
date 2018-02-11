@@ -276,7 +276,7 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
         except:
             obscode = obs.name
         out = "%s %f %s %.3f %s %s\n" % (name,freq.to(u.MHz).value,
-            toa_str,toaerr.to(u.us).value,obs.name,flagstring)
+            toa_str,toaerr.to(u.us).value,obscode,flagstring)
     elif format.upper() in  ('PRINCETON','TEMPO'): # TEMPO/Princeton format
         toa_str = time_to_mjd_string(toatime,prec=13)
         # In TEMPO/Princeton format, freq=0.0 means infinite frequency
@@ -647,6 +647,7 @@ class TOAs(object):
             outf.write('FORMAT 1\n')
         # NOTE(@paulray): This really should REMOVE any(?) clock corrections
         # that have been applied!
+        # NOTE clock corrections has been removed.
         for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'].quantity,
             self.table['freq'].quantity,self.table['obs'],self.table['flags']):
             obs_obj = Observatory.get(obs)

@@ -44,6 +44,7 @@ def main(argv=None):
     parser.add_argument("--ephem",help="Ephemeris to use",default="DE421")
     parser.add_argument("--planets",help="Use planetary Shapiro delay",action="store_true",
                         default=False)
+    parser.add_argument("--format",help="The format of out put .tim file.", default='TEMPO')
     args = parser.parse_args(argv)
 
     log.info("Reading model from {0}".format(args.parfile))
@@ -55,6 +56,7 @@ def main(argv=None):
     error = args.error*u.microsecond
     freq = np.array(args.freq) * u.MHz
     scale = 'utc'
+    out_format = args.format
 
     times = np.linspace(0,duration.to(u.day).value,args.ntoa)*u.day + start
     # Add mulitple frequency
@@ -90,7 +92,7 @@ def main(argv=None):
     ts.adjust_TOAs(TimeDelta(-1.0*rspost))
 
      # Write TOAs to a file
-    ts.write_TOA_file(args.timfile,name='fake',format='Tempo2')
+    ts.write_TOA_file(args.timfile,name='fake',format=out_format)
 
     if args.plot:
         # This should be a very boring plot with all residuals flat at 0.0!
