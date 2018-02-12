@@ -54,7 +54,7 @@ def main(argv=None):
     #start = Time(args.startMJD,scale='utc',format='pulsar_mjd',precision=9)
     start = np.longdouble(args.startMJD) * u.day
     error = args.error*u.microsecond
-    freq = np.array(args.freq) * u.MHz
+    freq = np.atleast_1d(args.freq) * u.MHz
     scale = 'utc'
     out_format = args.format
 
