@@ -17,7 +17,7 @@ TopoObs('jodrell',      tempo_code='8', itoa_code='JB', aliases=['jbdfb', 'jbroa
         itrf_xyz=[3822626.04, -154105.65, 5086486.04])
 TopoObs('nancay',       tempo_code='f', itoa_code='NC', aliases=['ncy'],
         itrf_xyz=[4324165.81, 165927.11, 4670132.83])
-TopoObs('ncyobs',       tempo_code='f', itoa_code='NC', aliases=['ncyobs'],
+TopoObs('ncyobs', aliases=['ncyobs'],
         itrf_xyz=[4324165.81, 165927.11, 4670132.83], clock_fmt='tempo2',
         clock_file='ncyobs2obspm.clk', clock_dir='TEMPO2')
 TopoObs('effelsberg',   tempo_code='g', itoa_code='EF', aliases=['eff'],
