@@ -79,6 +79,25 @@ def main(argv=None):
     # Read in model
     modelin = pint.models.get_model(args.parfile)
 
+    # Read TZR parameters from parfile separately
+    tzrmjd = None
+    tzrsite = '@'
+    tzrfrq = np.inf*u.MHz
+    for line in open(args.parfile):
+        if line.startswith('TZRMJD'):
+            tzrmjd = np.longdouble(line.split()[1])
+        if line.startswith('TZRSITE'):
+            tzrsite = line.split()[1]
+        if line.startswith('TZRFRQ'):
+            tzrfrq = np.float(line.split()[1])*u.MHz
+
+    if tzrmjd is None:
+        tzrmjd = tl[0].mjd
+
+    tztoa = toa.TOA(tzrmjd,obs=tzrsite,freq=tzrfrq)
+    tz = toa.get_TOAs_list([tztoa],include_bipm=False,include_gps=True,
+        ephem=args.ephem, planets=True)
+
     # Discard events outside of MJD range
     if args.maxMJD is not None:
         tlnew = []
@@ -97,7 +116,8 @@ def main(argv=None):
         sys.exit(0)
     # Could add a check here to only compute planet positions if PLANET_SHAPIRO is true.
     # For now, just being lazy and always computing planet positions.
-    ts = toa.get_TOAs_list(tl,ephem=args.ephem,planets=True)
+    ts = toa.get_TOAs_list(tl, ephem=args.ephem, include_bipm=False,
+        include_gps=True, planets=True)
     ts.filename = args.eventfile
     if args.fix:
         ts.adjust_TOAs(TimeDelta(np.ones(len(ts.table))*-1.0*u.s,scale='tt'))
@@ -106,8 +126,10 @@ def main(argv=None):
     mjds = ts.get_mjds()
     print(mjds.min(),mjds.max())
 
+
     # Compute model phase for each TOA
-    iphss,phss = modelin.phase(ts.table)
+    # Subtracts off model phase at TZRMJD so that point defines phase 0.0
+    iphss,phss = modelin.phase(ts.table) - modelin.phase(tz.table)
     # ensure all postive
     negmask = phss < 0.0 * u.cycle
     phases = np.where(negmask, phss + 1.0 * u.cycle, phss)

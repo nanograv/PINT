@@ -7,6 +7,7 @@ from . import Observatory
 import numpy
 import astropy.units as u
 from astropy.coordinates import EarthLocation
+from astropy import log
 from ..utils import PosVel
 from ..solar_system_ephemerides import objPosVel_wrt_SSB
 
