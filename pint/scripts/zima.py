@@ -12,6 +12,7 @@ import pint.residuals as res
 from pint import pulsar_mjd
 import astropy.units as u
 from astropy.time import Time, TimeDelta
+from pint.observatory import Observatory, get_observatory
 
 from astropy import log
 log.setLevel('INFO')
@@ -55,7 +56,8 @@ def main(argv=None):
     start = np.longdouble(args.startMJD) * u.day
     error = args.error*u.microsecond
     freq = np.atleast_1d(args.freq) * u.MHz
-    scale = 'utc'
+    site = get_observatory(args.obs)
+    scale = site.timescale
     out_format = args.format
 
     times = np.linspace(0,duration.to(u.day).value,args.ntoa)*u.day + start
