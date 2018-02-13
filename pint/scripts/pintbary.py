@@ -35,6 +35,9 @@ def main(argv=None):
     parser.add_argument("--dm",
         help="DM to use (if not read from par file)",type=float,default=0.0)
     parser.add_argument("--ephem",default="DE421",help="Ephemeris to use")
+    parser.add_argument("--use_gps",default=False,action='store_true',help="Apply GPS to UTC clock corrections")
+    parser.add_argument("--use_bipm",default=False,action='store_true',help="Use TT(BIPM) instead of TT(TAI)")
+    
 
     args = parser.parse_args(argv)
 
@@ -47,13 +50,15 @@ def main(argv=None):
             fmt = "pulsar_mjd"
         t = Time(np.longdouble(args.time),scale=args.timescale,format=fmt,
             precision=9)
+        print(t)
     else:
         t = Time(args.time,scale=args.timescale,format=args.format, precision=9)
     log.debug(t.iso)
 
     t = toa.TOA(t,freq=args.freq,obs=args.obs)
     # Build TOAs and compute TDBs and positions from ephemeris
-    ts = toa.get_TOAs_list([t],ephem=args.ephem)
+    ts = toa.get_TOAs_list([t],ephem=args.ephem, include_bipm=args.use_bipm, 
+        include_gps=args.use_gps, planets=False)
 
     if args.parfile is not None:
         m=pint.models.get_model(args.parfile)
@@ -67,5 +72,5 @@ def main(argv=None):
 
     tdbtimes = m.get_barycentric_toas(ts.table)
 
-    print("{0:.14f}".format(tdbtimes[0].value))
+    print("{0:.16f}".format(tdbtimes[0].value))
     return
