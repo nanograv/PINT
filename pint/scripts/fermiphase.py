@@ -69,10 +69,9 @@ def main(argv=None):
         print("post len : ",len(tlnew))
 
     # Now convert to TOAs object and compute TDBs and posvels
-    ts = toa.TOAs(toalist=tl)
+    # For Fermi, we are not including GPS or TT(BIPM) corrections
+    ts = toa.get_TOAs_list(tl,include_gps=False,include_bipm=False,planets=args.planets,ephem=args.ephem)
     ts.filename = args.eventfile
-    ts.compute_TDBs()
-    ts.compute_posvels(ephem=args.ephem,planets=args.planets)
 
     print(ts.get_summary())
     mjds = ts.get_mjds()
