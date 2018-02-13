@@ -292,8 +292,9 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
             out = obs.tempo_code+" %13s%9.3f%20s%9.2f\n" % (name, freq.to(u.MHz).value,
                 toa_str, toaerr.to(u.us).value)
     else:
-        log.error('Unknown TOA format ({0})'.format(format))
+        raise ValueError('Unknown TOA format ({0})'.format(format))
         # Should this raise an exception here? -- @paulray
+        # Fixed
 
     return out
 
