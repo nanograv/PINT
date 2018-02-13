@@ -56,7 +56,7 @@ print("RMS in time is", f.resids.time_resids.std().to(u.us))
 print("\n Best model is:")
 print(f.model.as_parfile())
 
-plt.errorbar(xt,
+plt.errorbar(xt.value,
              f.resids.time_resids.to(u.us).value,
              t.get_errors().to(u.us).value, fmt='x')
 plt.title("%s Post-Fit Timing Residuals" % m.PSR.value)
