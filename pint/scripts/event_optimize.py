@@ -614,11 +614,14 @@ def main(argv=None):
 
     # Make the triangle plot.
     samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
-    import corner
-    fig = corner.corner(samples, labels=ftr.fitkeys, bins=50,
-        truths=ftr.maxpost_fitvals, plot_contours=True)
-    fig.savefig(ftr.model.PSR.value+"_triangle.png")
-    plt.close()
+    try:
+        import corner
+        fig = corner.corner(samples, labels=ftr.fitkeys, bins=50,
+            truths=ftr.maxpost_fitvals, plot_contours=True)
+        fig.savefig(ftr.model.PSR.value+"_triangle.png")
+        plt.close()
+    except ImportError:
+        pass
 
     # Make a phaseogram with the 50th percentile values
     #ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))

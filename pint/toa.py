@@ -682,7 +682,7 @@ class TOAs(object):
         """
         # First make sure that we haven't already applied clock corrections
         flags = self.table['flags']
-        if any([f.has_key('clkcorr') for f in flags]):
+        if any(['clkcorr' in f for f in flags]):
             log.warn("Some TOAs have 'clkcorr' flag.  Not applying new clock corrections.")
             return
         # An array of all the time corrections, one for each TOA
