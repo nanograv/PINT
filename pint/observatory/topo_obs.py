@@ -167,14 +167,17 @@ class TopoObs(Observatory):
             log.info('Observatory {0}, loading clock file {1}'.format(self.name, self.clock_fullpath))
             self._clock = ClockFile.read(self.clock_fullpath,
                     format=self.clock_fmt, obscode=self.tempo_code)
+        log.info('Evaluating observatory clock corrections.')
         corr = self._clock.evaluate(t)
         if self.include_gps:
+            log.info('Applying GPS to UTC clock correction (~few nanoseconds)')
             if self._gps_clock is None:
                 log.info('Observatory {0}, loading GPS clock file {1}'.format(self.name, self.gps_fullpath))
                 self._gps_clock = ClockFile.read(self.gps_fullpath,
                         format='tempo2')
             corr += self._gps_clock.evaluate(t)
         if self.include_bipm:
+            log.info('Applying TT(TAI) to TT(BIPM) clock correction (~27 us)')
             tt2tai = 32.184 * 1e6 * u.us
             if self._bipm_clock is None:
                 try:

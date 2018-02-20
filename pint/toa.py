@@ -682,11 +682,11 @@ class TOAs(object):
         """
         # First make sure that we haven't already applied clock corrections
         flags = self.table['flags']
-        # if any([f.has_key('clkcorr') for f in flags]):
-        #     log.warn("Some TOAs have 'clkcorr' flag.  Not applying new clock corrections.")
-        #     return
+        if any(['clkcorr' in f for f in flags]):
+            log.warn("Some TOAs have 'clkcorr' flag.  Not applying new clock corrections.")
+            return
         # An array of all the time corrections, one for each TOA
-        log.info("Applying clock corrections.")
+        log.info("Applying clock corrections (include_GPS = {0}, include_BIPM = {1}.".format(include_gps,include_bipm))
         corr = numpy.zeros(self.ntoas) * u.s
         times = self.table['mjd']
         for ii, key in enumerate(self.table.groups.keys):

@@ -48,6 +48,25 @@ def main(argv=None):
     else:
         tc = SkyCoord(modelin.RAJ.quantity,modelin.DECJ.quantity,frame='icrs')
 
+    # Read TZR parameters from parfile separately
+    tzrmjd = None
+    tzrsite = '@'
+    tzrfrq = np.inf*u.MHz
+    for line in open(args.parfile):
+        if line.startswith('TZRMJD'):
+            tzrmjd = np.longdouble(line.split()[1])
+        if line.startswith('TZRSITE'):
+            tzrsite = line.split()[1]
+        if line.startswith('TZRFRQ'):
+            tzrfrq = np.float(line.split()[1])*u.MHz
+
+    if tzrmjd is None:
+        tzrmjd = tl[0].mjd
+
+    tztoa = toa.TOA(tzrmjd,obs=tzrsite,freq=tzrfrq)
+    tz = toa.get_TOAs_list([tztoa],include_bipm=False,include_gps=True,
+        ephem=args.ephem, planets=True)
+
     if args.ft2 is not None:
         # Instantiate FermiObs once so it gets added to the observatory registry
         FermiObs(name='Fermi',ft2name=args.ft2)
@@ -69,17 +88,17 @@ def main(argv=None):
         print("post len : ",len(tlnew))
 
     # Now convert to TOAs object and compute TDBs and posvels
-    ts = toa.TOAs(toalist=tl)
+    # For Fermi, we are not including GPS or TT(BIPM) corrections
+    ts = toa.get_TOAs_list(tl,include_gps=False,include_bipm=False,planets=args.planets,ephem=args.ephem)
     ts.filename = args.eventfile
-    ts.compute_TDBs()
-    ts.compute_posvels(ephem=args.ephem,planets=args.planets)
 
     print(ts.get_summary())
     mjds = ts.get_mjds()
     print(mjds.min(),mjds.max())
 
     # Compute model phase for each TOA
-    phss = modelin.phase(ts.table)[1]
+    # Subtracts off model phase at TZRMJD so that point defines phase 0.0
+    iphss,phss = modelin.phase(ts.table) - modelin.phase(tz.table)
     # ensure all postive
     phases = np.where(phss < 0.0 * u.cycle, phss + 1.0 * u.cycle, phss)
     mjds = ts.get_mjds()

@@ -106,6 +106,11 @@ class FermiObs(SpecialLocation):
         self.Vy = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Vy'])
         self.Vz = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Vz'])
         self.tt2tdb_mode = tt2tdb_mode
+        # Print this warning once, mainly for @paulray
+        if self.tt2tdb_mode.lower().startswith('none'):
+            log.warning('Using location=None for TT to TDB conversion')
+        elif self.tt2tdb_mode.lower().startswith('geo'):
+            log.warning('Using location geocenter for TT to TDB conversion')
         super(FermiObs, self).__init__(name=name)
 
     @property
@@ -116,10 +121,10 @@ class FermiObs(SpecialLocation):
         '''Return Fermi spacecraft location in ITRF coordinates'''
 
         if self.tt2tdb_mode.lower().startswith('none'):
-            log.warning('Using location=None for TT to TDB conversion')
+            #log.warning('Using location=None for TT to TDB conversion')
             return None
         elif self.tt2tdb_mode.lower().startswith('geo'):
-            log.warning('Using location geocenter for TT to TDB conversion')
+            #log.warning('Using location geocenter for TT to TDB conversion')
             return EarthLocation.from_geocentric(0.0*u.m,0.0*u.m,0.0*u.m)
         elif self.tt2tdb_mode.lower().startswith('spacecraft'):
             # First, interpolate Earth-Centered Inertial (ECI) geocentric

@@ -7,6 +7,7 @@ from . import Observatory
 import numpy
 import astropy.units as u
 from astropy.coordinates import EarthLocation
+from astropy import log
 from ..utils import PosVel
 from ..solar_system_ephemerides import objPosVel_wrt_SSB
 
@@ -16,6 +17,7 @@ class SpecialLocation(Observatory):
     system barycenter).  Currently the only feature of this class is
     that clock corrections are zero."""
     def clock_corrections(self, t):
+        log.info('Special observatory location. No clock corrections applied.')
         return numpy.zeros(t.shape)*u.s
 
 class BarycenterObs(SpecialLocation):
