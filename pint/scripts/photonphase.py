@@ -33,7 +33,7 @@ def main(argv=None):
     parser.add_argument("--outfile",help="Output FITS file name (default=same as eventfile)", default=None)
     parser.add_argument("--ephem",help="Planetary ephemeris to use (default=DE421)", default="DE421")
     parser.add_argument("--plot",help="Show phaseogram plot.", action='store_true', default=False)
-    parser.add_argument("--fix",help="Apply 1.0 second offset for NICER", action='store_true', default=False)
+#    parser.add_argument("--fix",help="Apply 1.0 second offset for NICER", action='store_true', default=False)
     args = parser.parse_args(argv)
 
     # If outfile is specified, that implies addphase
@@ -121,8 +121,8 @@ def main(argv=None):
     ts = toa.get_TOAs_list(tl, ephem=args.ephem, include_bipm=False,
         include_gps=False, planets=use_planets)
     ts.filename = args.eventfile
-    if args.fix:
-        ts.adjust_TOAs(TimeDelta(np.ones(len(ts.table))*-1.0*u.s,scale='tt'))
+#    if args.fix:
+#        ts.adjust_TOAs(TimeDelta(np.ones(len(ts.table))*-1.0*u.s,scale='tt'))
 
     print(ts.get_summary())
     mjds = ts.get_mjds()
