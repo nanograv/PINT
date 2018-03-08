@@ -30,3 +30,5 @@ TopoObs('lwa1',         tempo_code='x', itoa_code='LW',
         itrf_xyz=[-1602196.60, -5042313.47, 3553971.51])
 TopoObs('ps1',          tempo_code='p', itoa_code='PS',
         itrf_xyz=[-5461997.8, -2412559.0, 2243024.0])
+TopoObs('hobart',          tempo_code='4', itoa_code='HO',
+        itrf_xyz=[-3950077.96,  2522377.31,  -4311667.52])

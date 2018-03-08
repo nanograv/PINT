@@ -12,3 +12,4 @@ INCLUDE time_jb.dat
 INCLUDE time_vla.dat
 INCLUDE time_pks.dat
 INCLUDE time_wsrt.dat
+INCLUDE time_hobart.dat
