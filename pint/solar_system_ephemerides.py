@@ -50,6 +50,7 @@ def _load_kernel_link(ephem, link=''):
             load_kernel = True
         except:
             try:
+                log.info('Trying to set astropy ephemeris to {0}'.format(ephem_link))
                 aut.data.download_file(ephem_link, timeout=50, cache=True)
                 coor.solar_system_ephemeris.set(ephem_link)
                 load_kernel = True
