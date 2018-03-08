@@ -56,8 +56,8 @@ def _load_kernel_link(ephem, link=''):
                 aut.data.download_file(ephem_link, timeout=500, cache=True)
                 coor.solar_system_ephemeris.set(ephem_link)
                 load_kernel = True
-            except:
-                log.info('Exception2! {0} {1} {2}'.format(type(ex), ex.args, ex))
+            except Exception as ex2:
+                log.info('Exception2! {0} {1} {2}'.format(type(ex2), ex2.args, ex2))
                 load_kernel = False
     return load_kernel
 
