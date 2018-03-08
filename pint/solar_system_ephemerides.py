@@ -41,6 +41,7 @@ def _load_kernel_link(ephem, link=''):
     for l in search_list:
         if l == '':
             ephem_link = ephem # Astropy default ephem does not like .bsp in the end.
+            continue  # This is just for debuggin
         else:
             ephem_link = l+"%s.bsp" % ephem
         if load_kernel:
