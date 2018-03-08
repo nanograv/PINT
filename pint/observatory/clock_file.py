@@ -121,7 +121,11 @@ class TempoClockFile(ClockFile):
         # We are swithing off astropy warning only for gps correction.
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', ErfaWarning)
-            self._time = Time(mjd, format='pulsar_mjd', scale='utc')
+            try:
+                self._time = Time(mjd, format='pulsar_mjd', scale='utc')
+            except ValueError:
+                log.error('Filename {0}, site {1}: Bad MJD {2}'.format(filename,obscode,mjd))
+                raise
         self._clock = clk * u.us
 
     @staticmethod
