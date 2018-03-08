@@ -15,7 +15,7 @@ try:
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 
-jpl_kernel_http = 'http://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/'
+jpl_kernel_http = 'https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/'
 jpl_kernel_ftp = 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/'
 
 jpl_obj_code = {'ssb': 0,
@@ -51,7 +51,7 @@ def _load_kernel_link(ephem, link=''):
             coor.solar_system_ephemeris.set(ephem_link)
             load_kernel = True
         except:
-            raise
+            raise  # For debugging exceptions
             try:
                 log.info('Trying to download and set astropy ephemeris to {0}'.format(ephem_link))
                 aut.data.download_file(ephem_link, timeout=50, cache=True)
