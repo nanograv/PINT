@@ -73,7 +73,7 @@ class NICERObs(SpecialLocation):
 
     name: str
         Observatory name
-    ft2name: str
+    FPorbname: str
         File name to read spacecraft position information from
     tt2tdb_mode: str
         Selection for mode to use for TT to TDB conversion.
