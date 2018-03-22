@@ -3,7 +3,11 @@ import pint.toa
 import pint.models
 import pint.fitter
 import pint.residuals
+
+#import matplotlib
+#matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
+
 import astropy.units as u
 import sys
 import os

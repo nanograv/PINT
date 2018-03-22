@@ -52,7 +52,10 @@ class polycoEntry:
     def __str__(self):
         return("Middle Point mjd : "+repr(self.tmid)+"\n"+
                "Time Span in mjd : "+repr(self.mjdspan)+"\n"+
+               "Time Start in mjd : "+repr(self.tstart)+"\n"+
+               "Time Stop in mjd : "+repr(self.tstop)+"\n"+
                "Reference Phase : "+repr(self.rphase)+"\n"+
+               "Reference Freq in Hz : "+repr(self.f0)+"\n"+
                "Number of Coefficients : "+repr(self.ncoeff)+"\n"+
                "Coefficients : "+repr(self.coeffs))
 
@@ -202,10 +205,11 @@ def tempo_polyco_table_reader(filename):
         rphase = Phase(refPhaseInt, refPhaseFrac)
         refF0 = np.longdouble(refF0)
         coeffs = np.longdouble(coeffs)
+        entry = polycoEntry(tmid,mjdspan,refPhaseInt,refPhaseFrac,refF0,
+                            nCoeff,coeffs,obs)
 
         entries.append((psrname, date, utc, tmid.value, dm, doppler, logrms,
-                        binaryPhase, obs, obsfreq, mjdSpan, tstart, tstop,
-                        rphase, refF0, nCoeff, coeffs))
+                        binaryPhase, tstart, tstop, obs, obsfreq, entry))
     entry_list  = []
     for ii in range(len(entries[0])):
         entry_list.append([t[ii] for t in entries])
@@ -213,9 +217,9 @@ def tempo_polyco_table_reader(filename):
     #Construct the polyco data table
     pTable = table.Table(entry_list,
                          names = ( 'psr','date','utc','tmid','dm',
-                         'doppler','logrms','binary_phase', 'obs', 'obsfreq',
-                         'mjd_span', 't_start', 't_stop','ref_phase','ref_freq',
-                         'num_coeffs', 'coeffs'),
+                         'doppler','logrms','binary_phase', 
+                         'mjd_span', 't_start', 't_stop',
+                         'obs', 'obsfreq','entry'),
                          meta={'name': 'Polyco Data Table'})
 
     pTable['index'] = np.arange(len(entries))
@@ -512,11 +516,13 @@ class Polycos(object):
                                 refPhase.int,refPhase.frac, model.F0.value, ncoeff,
                                 coeffs,obs)
                 entryList.append((model.PSR.value, date, hms, tmid.value,
-                                  model.DM.value,0.0,0.0,0.0,obsFreq,entry))
+                                  model.DM.value,0.0,0.0,0.0,mjdSpan.to('day').value,
+                                  tStart,tStop,obs,obsFreq,entry))
 
             pTable = table.Table(rows = entryList, names = ('psr','date','utc',
                                   'tmid','dm','doppler','logrms','binary_phase',
-                                  'obsfreq','entry'),
+                                  'mjd_span','t_start','t_stop',
+                                  'obs','obsfreq','entry'),
                                    meta={'name': 'Polyco Data Table'})
             self.polycoTable = pTable
 
@@ -612,6 +618,8 @@ class Polycos(object):
         ---------
         out: PINT Phase class
              Polyco evaluated absolute phase for t.
+
+        phase = refPh + DT*60*F0 + COEFF(1) + COEFF(2)*DT + COEFF(3)*DT**2 + ...
         '''
         if not isinstance(t, (np.ndarray, list)):
             t = np.array([t,])
@@ -635,7 +643,20 @@ class Polycos(object):
         return absPhase
 
     def eval_spin_freq(self,t):
-        """FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ....)
+        """
+        Polyco evaluate spin frequency for a time array.
+
+        Parameters
+        ---------
+        t: numpy.ndarray or a single number.
+           An time array in MJD. Time sample should be in order
+
+        Returns
+        ---------
+        out: numpy array of float128 frequencies in Hz
+             Polyco evaluated spin frequency at time t.
+
+        FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ...)
         """
         if not isinstance(t, np.ndarray) and not isinstance(t,list):
             t = np.array([t,])
@@ -646,10 +667,10 @@ class Polycos(object):
         dt = (np.longdouble(t) - self.polycoTable[entryIndex]['tmid']) * np.longdouble(1440.0)
         s = np.longdouble(0.0)
         for ii, (tt, eidx) in enumerate(zip(dt, entryIndex)):
-            coeffs = self.polycoTable[eidx]['coeffs']
+            coeffs = self.polycoTable['entry'][eidx].coeffs
             coeffs = np.longdouble(range(len(coeffs))) * coeffs
             coeffs = coeffs[::-1][:-1]
             poly_result[ii] = np.polyval(coeffs, tt)
-        spinFreq = self.polycoTable[entryIndex]['ref_freq'] + poly_result / np.longdouble(60.0)
+        spinFreq = np.array([self.polycoTable['entry'][eidx].f0 + poly_result[ii] / np.longdouble(60.0) for ii,eidx in zip(range(len(t)),entryIndex)])
 
         return spinFreq

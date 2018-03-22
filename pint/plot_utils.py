@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import absolute_import, print_function, division
 import matplotlib.pyplot as plt
+
 import numpy as np
 
 def phaseogram(mjds, phases, weights=None, title=None, bins=100, rotate=0.0, size=5,

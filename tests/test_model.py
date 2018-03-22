@@ -5,7 +5,11 @@ from pint.phase import Phase
 from pint import toa
 from pint.residuals import resids
 import astropy.units as u
+
+#import matplotlib
+#matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
+
 from astropy import log
 
 from pinttestdata import testdir, datadir
