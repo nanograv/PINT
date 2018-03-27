@@ -61,6 +61,14 @@ def load_FPorbit(orbit_filename):
     FPorbit_table = Table([mjds_TT, X, Y, Z, Vx, Vy, Vz],
             names = ('MJD_TT', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'),
             meta = {'name':'FPorbit'} )
+    # Make sure table is sorted by time
+    log.info('Sorting FPorbit table')
+    FPorbit_table.sort('MJD_TT')
+    # Now delete any bad entries where the positions are 0.0
+    idx = np.where(np.logical_and(FPorbit_table['X'] != 0.0, FPorbit_table['Y'] != 0.0))[0]
+    if (len(idx) != len(FPorbit_table)):
+        log.warning('Dropping {0} zero entries from FPorbit table'.format(len(FPorbit_table)-len(idx)))
+        FPorbit_table = FPorbit_table[idx]
     return FPorbit_table
 
 class NICERObs(SpecialLocation):
