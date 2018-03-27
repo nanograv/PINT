@@ -54,5 +54,5 @@ class GeocenterObs(SpecialLocation):
         return objPosVel_wrt_SSB('earth', t, ephem)
 
 # Need to initialize one of each so that it gets added to the list
-BarycenterObs('barycenter', aliases=['@','ssb','bary'])
+BarycenterObs('barycenter', aliases=['@','ssb','bary','bat'])
 GeocenterObs('geocenter', aliases=['0','o','coe','geo'])
