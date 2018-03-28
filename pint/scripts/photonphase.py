@@ -76,6 +76,11 @@ def main(argv=None):
             hdr['TELESCOP'], hdr['INSTRUME']))
         sys.exit(1)
 
+    # Now convert to TOAs object and compute TDBs and posvels
+    if len(tl) == 0:
+        log.error("No TOAs, exiting!")
+        sys.exit(0)
+
     # Read in model
     modelin = pint.models.get_model(args.parfile)
     use_planets=False
@@ -114,10 +119,6 @@ def main(argv=None):
         tl=tlnew
         print("post len : ",len(tlnew))
 
-    # Now convert to TOAs object and compute TDBs and posvels
-    if len(tl) == 0:
-        log.error("No TOAs, exiting!")
-        sys.exit(0)
     ts = toa.get_TOAs_list(tl, ephem=args.ephem, include_bipm=False,
         include_gps=False, planets=use_planets)
     ts.filename = args.eventfile
