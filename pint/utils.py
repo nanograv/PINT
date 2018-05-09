@@ -442,3 +442,11 @@ if __name__ == "__main__":
     assert taylor_horner(2.0, [10, 3]) == 10 + 3*2.0
     assert taylor_horner(2.0, [10, 3, 4]) == 10 + 3*2.0 + 4*2.0**2 / 2.0
     assert taylor_horner(2.0, [10, 3, 4, 12]) == 10 + 3*2.0 + 4*2.0**2 / 2.0 + 12*2.0**3/(3.0*2.0)
+    
+def get_pint_models(psr_name, psr_file_path):
+        """Function that returns pint model given a specific pulsar"""
+        # will need to add section for J1713 T2 file. gls is not file wanted for this specfic pulsar.
+        model_name = "{0}{1}_NANOGrav_11yv1.gls.par".format(psr_file_path,psr_name)
+        par_model = models.get_model(model_name) 
+
+        return par_model
