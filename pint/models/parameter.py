@@ -927,7 +927,7 @@ class prefixParameter(object):
         # Type identifier
         self.type_mapping = {'float': floatParameter, 'str': strParameter,
                              'bool': boolParameter, 'mjd': MJDParameter,
-                             'angle': AngleParameter}
+                             'angle': AngleParameter, 'pair': pairParameter}
         self.parameter_type = parameter_type
         try:
             self.param_class = self.type_mapping[self.parameter_type.lower()]
@@ -1361,3 +1361,158 @@ class maskParameter(floatParameter):
         select_idx = self.toa_selector.get_select_index(condition, col)
 
         return select_idx[self.name]
+
+
+class pairParameter(floatParameter):
+    """Parameter type for parameters that need two input floats.
+
+    One example are WAVE parameters.
+
+    Parameter
+    ---------
+    name : str
+        The name of the parameter.
+    value : astropy Time, str, float in mjd, str in mjd.
+        The input parameter MJD value.
+    description : str, optional
+        A short description of what this parameter means.
+    uncertainty : number
+        Current uncertainty of the value.
+    frozen : bool, optional
+        A flag specifying whether "fitters" should adjust the value of this
+        parameter or leave it fixed.
+    continuous : bool, optional, default True
+        A flag specifying whether phase derivatives with respect to this
+        parameter exist.
+    aliases : str, optional
+        List of aliases for the current parameter
+
+    """
+    def __init__(self, name=None, index=None,
+                 value=None, long_double=False, units=None, description=None,
+                 uncertainty=None, frozen=True, continuous=False, aliases=[],
+                 **kwargs):
+
+        self.index = index
+        name_param = name
+        self.origin_name = name
+        self.prefix = self.origin_name
+
+        self.prefix_aliases = aliases
+
+        super(pairParameter, self).__init__(name=name_param, value=value,
+                                            units=units,
+                                            description=description,
+                                            uncertainty=uncertainty,
+                                            frozen=frozen,
+                                            continuous=continuous,
+                                            aliases=aliases,
+                                            long_double=long_double,
+                                            set_quantity=self.set_quantity_pair,
+                                            set_uncertainty=self.set_quantity_pair,
+                                            **kwargs)
+
+        self.set_quantity = self.set_quantity_pair
+        self.set_uncertainty = self.set_quantity_pair
+        self.print_quantity = self.print_quantity_pair
+
+        self.from_parfile_line = self.from_parfile_line_pair
+        self.as_parfile_line = self.as_parfile_line_pair
+        self.is_prefix = True
+
+    def name_matches(self, name):
+        if super(pairParameter, self).name_matches(name):
+            return True
+        else:
+            name_idx = name + str(self.index)
+            return super(pairParameter, self).name_matches(name_idx)
+
+    def from_parfile_line_pair(self, line):
+        """
+        This is a method to read mask parameter line (e.g. JUMP)
+
+        Notes
+        -----
+        The accepted format:
+            NAME value_a value_b
+        """
+        try:
+            k = line.split()
+            name = k[0].upper()
+        except IndexError:
+            return False
+        # Test that name matches
+        if not self.name_matches(name):
+            return False
+
+        try:
+            self.set((k[1], k[2]))
+        except IndexError:
+            return False
+
+        return True
+
+    def as_parfile_line_pair(self):
+        quantity = self.quantity
+        if self.quantity is None:
+            return ""
+        print(quantity)
+        line = "%-15s " % (self.name)
+        line += "%25s" % self.print_quantity(quantity[0])
+        line += "%25s" % self.print_quantity(quantity[1])
+
+        return line + "\n"
+
+    def new_param(self, index):
+        """Create a new but same style mask parameter
+        """
+        new_pair_param = pairParameter(name=self.origin_name, index=index,
+                                       long_double=self.long_double,
+                                       units= self.units,
+                                       aliases=self.prefix_aliases)
+        return new_pair_param
+
+    def set_quantity_pair(self, vals):
+        vals = [self.set_quantity_float(val) for val in vals]
+        return vals
+
+    @property
+    def value(self):
+        """Return the pure value of a parameter. This value will associate with
+        parameter default value, which is .units attribute.
+        """
+        if self._quantity is None:
+            return None
+        else:
+            return self.get_value(self._quantity)
+
+    @value.setter
+    def value(self, val):
+        """Method to set .value. Setting .value attribute will change the
+        .quantity attribute other than .value attribute.
+        """
+        if val is None:
+            if not isinstance(self.quantity, (str, bool)) and \
+                self._quantity is not None:
+                raise ValueError('This parameter value is number convertible. '
+                                 'Setting .value to None will lost the '
+                                 'parameter value.')
+            else:
+                self.value = val
+        self._quantity = self.set_quantity_pair(val)
+
+    def print_quantity_pair(self, quan):
+        """A function gives print quantity string.
+        """
+        try:
+            return self.print_quantity_float(quan)
+        except Exception as e:
+            print(e)
+
+        if not self._long_double:
+            quan0 = str(quan[0].to(self.units).value)
+            quan1 = str(quan[1].to(self.units).value)
+        else:
+            quan0 = longdouble2string(quan[0].to(self.units))
+            quan1 = longdouble2string(quan[1].to(self.units))
+        return quan0 + ' ' + quan1
