@@ -9,6 +9,7 @@ import astropy.units as u
 from pint.event_toas import load_NICER_TOAs
 from pint.event_toas import load_RXTE_TOAs
 from pint.event_toas import load_XMM_TOAs
+from pint.event_toas import load_NuSTAR_TOAs
 from pint.plot_utils import phaseogram_binned
 from pint.observatory.nicer_obs import NICERObs
 from pint.observatory.rxte_obs import RXTEObs
@@ -53,7 +54,7 @@ def main(argv=None):
         # Instantiate NICERObs once so it gets added to the observatory registry
         if args.orbfile is not None:
             log.info('Setting up NICER observatory')
-            NICERObs(name='NICER',FPorbname=args.orbfile,tt2tdb_mode='none')
+            NICERObs(name='NICER',FPorbname=args.orbfile,tt2tdb_mode='spacecraft')
         # Read event file and return list of TOA objects
         try:
             tl  = load_NICER_TOAs(args.eventfile)
@@ -65,12 +66,15 @@ def main(argv=None):
         if args.orbfile is not None:
             # Determine what observatory type is.
             log.info('Setting up RXTE observatory')
-            RXTEObs(name='RXTE',FPorbname=args.orbfile,tt2tdb_mode='none')
+            RXTEObs(name='RXTE',FPorbname=args.orbfile,tt2tdb_mode='spacecraft')
         # Read event file and return list of TOA objects
         tl  = load_RXTE_TOAs(args.eventfile)
     elif hdr['TELESCOP'].startswith('XMM'):
         # Not loading orbit file here, since that is not yet supported.
         tl  = load_XMM_TOAs(args.eventfile)
+    elif hdr['TELESCOP'].startswith('NuSTAR'):
+        # Not loading orbit file here, since that is not yet supported.
+        tl  = load_NuSTAR_TOAs(args.eventfile)
     else:
         log.error("FITS file not recognized, TELESCOPE = {0}, INSTRUMENT = {1}".format(
             hdr['TELESCOP'], hdr['INSTRUME']))

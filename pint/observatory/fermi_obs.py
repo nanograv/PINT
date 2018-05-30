@@ -96,7 +96,7 @@ class FermiObs(SpecialLocation):
         'spacecraft' = Give spacecraft ITRF position to astropy.Time()
     """
 
-    def __init__(self, name, ft2name, tt2tdb_mode = 'NONE'):
+    def __init__(self, name, ft2name, tt2tdb_mode = 'spacecraft'):
         self.FT2 = load_FT2(ft2name)
         # Now build the interpolator here:
         self.X = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['X'])
