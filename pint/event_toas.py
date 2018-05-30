@@ -15,6 +15,8 @@ mission_config = \
               "fits_columns": {"pha": "PHA"}},
      "nicer": {"fits_extension": "EVENTS", 'allow_local': True,
                "fits_columns": {"pha": "PHA"}},
+     "nustar": {"fits_extension": "EVENTS", 'allow_local': False,
+             "fits_columns": {"pi": "PI"}},
      "xmm": {"fits_extension": "EVENTS", 'allow_local': False,
              "fits_columns": {"pi": "PI"}}}
 
@@ -81,7 +83,7 @@ def load_event_TOAs(eventname, mission, weights=None):
 
     Correctly handles raw event files, or ones processed with axBary to have
     barycentered  TOAs. Different conditions may apply to different missions.
-    
+
     Parameters
     ----------
     eventname : str
@@ -89,9 +91,9 @@ def load_event_TOAs(eventname, mission, weights=None):
     mission : str
         Name of the mission (e.g. RXTE, XMM)
     weights : array or None
-        The array has to be of the same size as the event list. Overwrites 
+        The array has to be of the same size as the event list. Overwrites
         possible weight lists from mission-specific FITS files
-    
+
     Returns
     -------
     toalist : list of TOA objects
@@ -146,3 +148,6 @@ def load_NICER_TOAs(eventname):
 
 def load_XMM_TOAs(eventname):
     return load_event_TOAs(eventname, 'xmm')
+
+def load_NuSTAR_TOAs(eventname):
+    return load_event_TOAs(eventname, 'nustar')
