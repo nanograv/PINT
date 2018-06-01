@@ -40,7 +40,7 @@ class TestFermiPhase(unittest.TestCase):
         # computing positions doesn't crash. It doesn't validate any results.
         # Should probably run comparison with GEO or BARY phases.
         modelin = pint.models.get_model(parfile)
-        FermiObs(name='Fermi',ft2name=ft2file,tt2tdb_mode='none')
+        FermiObs(name='Fermi',ft2name=ft2file,tt2tdb_mode='spacecraft')
         tl  = load_Fermi_TOAs(eventfileraw, weightcolumn='PSRJ0030+0451')
         ts = toa.TOAs(toalist=tl)
         ts.filename = eventfileraw
