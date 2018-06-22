@@ -185,7 +185,7 @@ def tempo_polyco_table_reader(filename):
             binaryPhase = np.longdouble(0.0)
 
         # Read coefficients
-        nCoeffLines = np.ceil(nCoeff/3)
+        nCoeffLines = int(np.ceil(nCoeff/3))
 
         #if nCoeff%3>0:
         #    nCoeffLines += 1
