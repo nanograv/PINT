@@ -720,7 +720,7 @@ class TOAs(object):
         self.clock_corr_info.update({'include_bipm':include_bipm,
                                      'bipm_version':bipm_version,
                                      'include_gps':include_gps})
-
+	
     def compute_TDBs(self, method="astropy", ephem=None):
         """Compute and add TDB and TDB long double columns to the TOA table.
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table

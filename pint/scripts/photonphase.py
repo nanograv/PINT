@@ -33,6 +33,7 @@ def main(argv=None):
     parser.add_argument("--barytime",help="Write FITS file with a column containing the barycentric time as double precision MJD.",default=False,action='store_true')
     parser.add_argument("--outfile",help="Output FITS file name (default=same as eventfile)", default=None)
     parser.add_argument("--ephem",help="Planetary ephemeris to use (default=DE421)", default="DE421")
+    parser.add_argument('--tdbmethod',help="Method for computing TT to TDB (default=astropy)", default="astropy")
     parser.add_argument("--plot",help="Show phaseogram plot.", action='store_true', default=False)
 #    parser.add_argument("--fix",help="Apply 1.0 second offset for NICER", action='store_true', default=False)
     args = parser.parse_args(argv)
@@ -109,7 +110,7 @@ def main(argv=None):
 
     tztoa = toa.TOA(tzrmjd,obs=tzrsite,freq=tzrfrq)
     tz = toa.get_TOAs_list([tztoa],include_bipm=False,include_gps=False,
-        ephem=args.ephem, planets=use_planets)
+        ephem=args.ephem, planets=use_planets, tdb_method=args.tdbmethod)
 
     # Discard events outside of MJD range
     if args.maxMJD is not None:
@@ -124,7 +125,7 @@ def main(argv=None):
         print("post len : ",len(tlnew))
 
     ts = toa.get_TOAs_list(tl, ephem=args.ephem, include_bipm=False,
-        include_gps=False, planets=use_planets)
+        include_gps=False, planets=use_planets, tdb_method=args.tdbmethod)
     ts.filename = args.eventfile
 #    if args.fix:
 #        ts.adjust_TOAs(TimeDelta(np.ones(len(ts.table))*-1.0*u.s,scale='tt'))
