@@ -41,24 +41,26 @@ class resids(object):
         with u.set_enabled_equivalencies(dimensionless_cycles):
             return (self.phase_resids.to(u.Unit("")) / self.get_PSR_freq()).to(u.s)
 
-    def get_PSR_freq(self):
-        """Return pulsar rotational frequency in Hz. model.F0 must be defined."""
-        if self.model.F0.units != 'Hz':
-            ValueError('F0 units must be Hz')
-        # All residuals require the model pulsar frequency to be defined
-        F0names = ['F0', 'nu'] # recognized parameter names, needs to be changed
-        nF0 = 0
-        for n in F0names:
-            if n in self.model.params:
-                F0 = getattr(self.model, n).value
-                nF0 += 1
-        if nF0 == 0:
-            raise ValueError('no PSR frequency parameter found; ' +
-                             'valid names are %s' % F0names)
-        if nF0 > 1:
-            raise ValueError('more than one PSR frequency parameter found; ' +
-                             'should be only one from %s' % F0names)
-        return F0 * u.Hz
+    def get_PSR_freq(self, modelF0=False):
+        if modelF0:
+            """Return pulsar rotational frequency in Hz. model.F0 must be defined."""
+            if self.model.F0.units != 'Hz':
+                ValueError('F0 units must be Hz')
+            # All residuals require the model pulsar frequency to be defined
+            F0names = ['F0', 'nu'] # recognized parameter names, needs to be changed
+            nF0 = 0
+            for n in F0names:
+                if n in self.model.params:
+                    F0 = getattr(self.model, n).value
+                    nF0 += 1
+            if nF0 == 0:
+                raise ValueError('no PSR frequency parameter found; ' +
+                                 'valid names are %s' % F0names)
+            if nF0 > 1:
+                raise ValueError('more than one PSR frequency parameter found; ' +
+                                 'should be only one from %s' % F0names)
+            return F0 * u.Hz
+        return self.model.d_phase_d_toa(self.toas)
 
     def calc_chi2(self):
         """Return the weighted chi-squared for the model and toas."""
@@ -86,3 +88,20 @@ class resids(object):
     def get_reduced_chi2(self):
         """Return the weighted reduced chi-squared for the model and toas."""
         return self.calc_chi2() / self.get_dof()
+
+    def update(self, weighted_mean=True):
+        """Recalculate everything in residuals class
+            after changing model or TOAs"""
+        if self.toas is None or self.model is None:
+            self.phase_resids = None
+            self.time_resids = None
+        if self.toas is None: 
+            raise ValueError('No TOAs provided for residuals update')
+        if self.model is None:
+            raise ValueError('No model provided for residuals update')
+
+        self.phase_resids = self.calc_phase_resids(weighted_mean=weighted_mean)
+        self.time_resids = self.calc_time_resids(weighted_mean=weighted_mean)
+        self.chi2 = self.calc_chi2()
+        self.dof = self.get_dof()
+        self.chi2_reduced = self.chi2 / self.dof

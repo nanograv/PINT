@@ -133,10 +133,10 @@ def toa_format(line, fmt="Unknown"):
         return "Command"
     elif re.match(r"^\s+$", line):
         return "Blank"
-    elif len(line) > 80 or fmt == "Tempo2":
-        return "Tempo2"
     elif re.match(r"  ", line) and len(line) > 41 and line[41] == '.':
         return "Parkes"
+    elif len(line) > 80 or fmt == "Tempo2":
+        return "Tempo2"
     elif re.match(r"\S\S", line) and len(line) > 14 and line[14] == '.':
         # FIXME: This needs to be better
         return "ITOA"
@@ -200,7 +200,28 @@ def parse_TOA_line(line, fmt="Unknown"):
                     d[k] = v
     elif fmt == "Command":
         d[fmt] = line.split()
-    elif fmt == "Parkes" or fmt == "ITOA":
+    elif fmt == "Parkes":
+        '''
+        columns     item
+        1-1         Must be blank
+        26-34       Observing Frequency (MHz)
+        35-55       TOA (decimal point must be in column 42)
+        56-63       Phase offset (fraction of P0, added to TOA)
+        64-71       TOA uncertainty
+        80-80       Observatory (1 character)
+        '''
+        d["name"] = line[1:25]
+        d["freq"] = float(line[25:34])
+        ii = line[34:41]
+        ff = line[42:55]
+        MJD = (int(ii), float("0."+ff))
+        phaseoffset = float(line[55:62])
+        if phaseoffset != 0:
+            raise ValueError(
+                "Cannot interpret Parkes format with phaseoffset=%f yet" % phaseoffset)
+        d["error"] = float(line[63:71])
+        d["obs"] = get_obs(line[79].upper())
+    elif fmt == "ITOA":
         raise RuntimeError(
             "TOA format '%s' not implemented yet" % fmt)
     return MJD, d
@@ -619,7 +640,8 @@ class TOAs(object):
 
         # This adjustment invalidates the derived columns in the table, so delete
         # and recompute them
-        self.table['mjd_float'] = self.get_mjds(high_precision=False)
+        # Changed high_precision from False to True to avoid self referential get_mjds()
+        self.table['mjd_float'] = [t.mjd for t in self.get_mjds(high_precision=True)] * u.day
         self.compute_TDBs()
         self.compute_posvels(self.ephem, self.planets)
 

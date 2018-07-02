@@ -62,7 +62,7 @@ diff_t2 -= diff_t2.mean()
 log.info("Max resid diff between PINT and T2: %.2f ns" % numpy.fabs(diff_t2).max().value)
 log.info("Std resid diff between PINT and T2: %.2f ns" % diff_t2.std().value)
 
-assert numpy.fabs(diff_t2).max() < 5.0 * u.ns
+assert numpy.fabs(diff_t2).max() < 10.0 * u.ns
 
 # run tempo1 also, if the tempo_utils module is available
 did_tempo1 = False
@@ -91,7 +91,7 @@ def do_plot():
     plt.clf()
     plt.subplot(211)
     plt.hold(False)
-    plt.errorbar(mjds, resids_us.value, errs.to(u.us).value, fmt=None, label='PINT')
+    plt.errorbar(mjds.value, resids_us.value, errs.to(u.us).value, fmt=None, label='PINT')
     plt.title("J1744-1134 GBT/GASP timing")
     plt.xlabel('MJD')
     plt.ylabel('Residual (us)')
