@@ -1,7 +1,14 @@
 # observatory.py
 # Base class for PINT observatories
 from __future__ import absolute_import, print_function, division
+import pint.solar_system_ephemerides as sse
 import six
+from astropy import log
+from astropy.coordinates import EarthLocation
+from astropy.time import Time, TimeDelta
+import astropy.constants as const
+import astropy.units as u
+import numpy as np
 
 
 class Observatory(object):
@@ -120,6 +127,15 @@ class Observatory(object):
         at that time will be returned.
         """
         return None
+    
+    def get_gcrs(self, t, ephem=None):
+        '''Return position vector of observatory in GCRS
+        t is an astropy.Time or array of astropy.Time objects
+        ephem is a link to an ephemeris file. Needed for SSB observatory
+        Returns a 3-vector of Quantities representing the position
+        in GCRS coordinates.
+        '''
+        raise NotImplementedError 
 
     @property
     def timescale(self):
@@ -151,6 +167,9 @@ class Observatory(object):
                 Method of computing TDB
 
                 - 'astropy': Astropy time.Time object built-in converter, use FB90.
+                - 'astropy_corrected': Uses astropy and the (v/c).(r/c) topocentric correction
+                    NOTE: Should this be relabeled? Is this the planned function of the 
+                    'ephemeris' tag?
                 - 'ephemeris': JPL ephemeris included TDB-TT correction.
             ephme: str, optional
                 The ephemeris to get he TDB-TT correction. Required for the
@@ -169,6 +188,11 @@ class Observatory(object):
             return method(t, **options)
         elif meth == "astropy":
             return self._get_TDB_astropy(t)
+        elif meth == "astropy_corrected":
+            if ephem is None:
+                raise ValueError("A ephemeris file should be provided to get"
+                                    " the TDB-TT corrections.")
+            return self._get_TDB_astropy_correction(t, ephem)
         elif meth == "ephemeris":
             if ephem is None:
                 raise ValueError("A ephemeris file should be provided to get"
@@ -179,6 +203,26 @@ class Observatory(object):
 
     def _get_TDB_astropy(self, t):
         return t.tdb
+
+    def _get_TDB_astropy_correction(self, t, ephem):
+        """Uses astropy.Time location to add the topocentric correction term to
+            the Time object. The topocentric correction is given as (r/c).(v/c),
+            with r equal to the geocentric position of the observer, v being the 
+            barycentric velocity of the earth, and c being the speed of light.
+
+            The geocentric observer position can be obtained from Time object. 
+            The barycentric velocity can be obtained using solar_system_ephemerides
+            objPosVel_wrt_SSB
+        """
+        #Add in correction term to t.tdb equal to r.v / c^2
+        vel = sse.objPosVel_wrt_SSB('earth', t, ephem).vel
+        pos = self.get_gcrs(t)
+
+        dnom = const.c * const.c
+        corr = ((pos[0] * vel[0] + pos[1] * vel[1] + pos[2] * vel[2])/dnom).to(u.s)
+        log.info('\tTopocentric Correction:\t%s' % corr)
+
+        return t.tdb + corr
 
     def _get_TDB_ephem(self, t, ephem):
         """This is a function that reads the ephem TDB-TT column. This column is

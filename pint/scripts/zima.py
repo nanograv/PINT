@@ -32,6 +32,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="PINT tool for simulating TOAs")
     parser.add_argument("parfile",help="par file to read model from")
     parser.add_argument("timfile",help="Output TOA file name")
+    parser.add_argument("--inputtim",help="Input tim file for fake TOA sampling",type=str,default=None)
     parser.add_argument("--startMJD",help="MJD of first fake TOA (default=56000.0)",
                     type=float, default=56000.0)
     parser.add_argument("--ntoa",help="Number of fake TOAs to generate",type=int,default=100)
@@ -41,6 +42,7 @@ def main(argv=None):
                     type=float, default=1400.0)
     parser.add_argument("--error",help="Random error to apply to each TOA (us, default=1.0)",
                     type=float, default=1.0)
+    parser.add_argument("--fuzzdays",help="Standard deviation of 'fuzz' distribution (jd) (default: 0.0)",type=float, default=0.0)
     parser.add_argument("--plot",help="Plot residuals",action="store_true",default=False)
     parser.add_argument("--ephem",help="Ephemeris to use",default="DE421")
     parser.add_argument("--planets",help="Use planetary Shapiro delay",action="store_true",
@@ -51,22 +53,32 @@ def main(argv=None):
     log.info("Reading model from {0}".format(args.parfile))
     m = pint.models.get_model(args.parfile)
 
-    duration = args.duration*u.day
-    #start = Time(args.startMJD,scale='utc',format='pulsar_mjd',precision=9)
-    start = np.longdouble(args.startMJD) * u.day
-    error = args.error*u.microsecond
-    freq = np.atleast_1d(args.freq) * u.MHz
-    site = get_observatory(args.obs)
-    scale = site.timescale
     out_format = args.format
 
-    times = np.linspace(0,duration.to(u.day).value,args.ntoa)*u.day + start
-    # Add mulitple frequency
-    freq_array = get_freq_array(freq, len(times))
+    if args.inputtim is None:
+        log.info('Generating uniformly spaced TOAs')
+        duration = args.duration*u.day
+        #start = Time(args.startMJD,scale='utc',format='pulsar_mjd',precision=9)
+        start = np.longdouble(args.startMJD) * u.day
+        error = args.error*u.microsecond
+        freq = np.atleast_1d(args.freq) * u.MHz
+        site = get_observatory(args.obs)
+        scale = site.timescale
 
-    tl = [toa.TOA(t.value,error=error, obs=args.obs, freq=f,
-                 scale=scale) for t, f in zip(times, freq_array)]
-    ts = toa.TOAs(toalist=tl)
+        times = np.linspace(0,duration.to(u.day).value,args.ntoa)*u.day + start
+        
+        # 'Fuzz' out times
+        fuzz = np.random.normal(scale=args.fuzzdays,size=len(times))*u.day
+        times += fuzz
+
+        # Add mulitple frequency
+        freq_array = get_freq_array(freq, len(times))
+        tl = [toa.TOA(t.value,error=error, obs=args.obs, freq=f,
+                     scale=scale) for t, f in zip(times, freq_array)]
+        ts = toa.TOAs(toalist=tl)
+    else:
+        log.info('Reading initial TOAs from {0}'.format(args.inputtim))
+        ts = toa.TOAs(toafile=args.inputtim)
 
     # WARNING! I'm not sure how clock corrections should be handled here!
     # Do we apply them, or not?
@@ -87,8 +99,10 @@ def main(argv=None):
     rs = m.phase(ts.table).frac.value/F_local
 
     # Adjust the TOA times to put them where their residuals will be 0.0
+
     ts.adjust_TOAs(TimeDelta(-1.0*rs))
     rspost = m.phase(ts.table).frac.value/F_local
+
     log.info("Second iteration")
     # Do a second iteration
     ts.adjust_TOAs(TimeDelta(-1.0*rspost))

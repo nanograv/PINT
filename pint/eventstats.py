@@ -135,6 +135,21 @@ def z2mw(phases,weights,m=2):
 
     return np.cumsum(s) * (2./(weights**2).sum())
 
+def cosm(phases,m=2):
+    """ Return the cosine test for each harmonic up to the specified m.
+        See de Jager et al. 1994 for definition
+    """
+
+    phases = np.asarray(phases)*TWOPI   #phase in radians
+    n = len(phases)
+
+    if n < 5e3:
+        s = (np.cos(np.outer(np.arange(1,m+1),phases))).sum(axis=1)
+    else:
+        s = (np.asarray([np.cos(k*phases).sum() for k in range(1,m+1)]))
+
+    return (2./n)*np.cumsum(s)
+
 def sf_z2m(ts,m=2):
     """ Return the survival function (chance probability) according to the
         asymptotic calibration for the Z^2_m test.
