@@ -38,7 +38,7 @@ class RXTEObs(SpecialLocation):
         'spacecraft' = Give spacecraft ITRF position to astropy.Time()
     """
 
-    def __init__(self, name, FPorbname, tt2tdb_mode = 'none'):
+    def __init__(self, name, FPorbname, tt2tdb_mode = 'spacecraft'):
         self.FPorb = load_FPorbit(FPorbname)
         # Now build the interpolator here:
         self.X = interp1d(self.FPorb['MJD_TT'],self.FPorb['X'])

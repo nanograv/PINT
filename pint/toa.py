@@ -2,6 +2,7 @@ from __future__ import absolute_import, print_function, division
 import re, sys, os, numpy, gzip, copy
 from . import utils
 from .observatory import Observatory, get_observatory
+from .observatory.topo_obs import TopoObs
 from . import erfautils
 import astropy.time as time
 from . import pulsar_mjd
@@ -741,7 +742,26 @@ class TOAs(object):
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
             site = get_observatory(obs)
-            grpmjds = time.Time(grp['mjd'], location=grp['mjd'][0].location)
+            if isinstance(site,TopoObs):
+                # For TopoObs, it is safe to assume that all TOAs have same location
+                # I think we should report to astropy that initializing
+                # a Time from a list (or Column) of Times throws away the location information
+                grpmjds = time.Time(grp['mjd'], location=grp['mjd'][0].location)
+            else:
+                # Grab locations for each TOA
+                # It is crazy that I have to deconstruct the locations like
+                # this to build a single EarthLocation object with an array
+                # of locations contained in it.
+                # Is there a more efficient way to convert a list of EarthLocations
+                # into a single EarthLocation object with an array of values internally?
+                loclist = [t.location for t in grp['mjd']]
+                if loclist[0] is None:
+                    grpmjds = time.Time(grp['mjd'],location=None)
+                else:
+                    locs = EarthLocation(numpy.array([l.x.value for l in loclist])*u.m,
+                                         numpy.array([l.y.value for l in loclist])*u.m,
+                                         numpy.array([l.z.value for l in loclist])*u.m)
+                    grpmjds = time.Time(grp['mjd'],location=locs)
             grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
             tdbs[loind:hiind] = numpy.asarray([t for t in grptdbs])
 

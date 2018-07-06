@@ -101,7 +101,7 @@ setup(
     url = 'https://github.com/nanograv/PINT',
     license = 'TBD',
 
-    install_requires = ['astropy>=1.3'],
+    install_requires = ['astropy>=2.0'],
 
     entry_points={  
         'console_scripts': console_scripts, 

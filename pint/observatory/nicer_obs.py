@@ -93,7 +93,7 @@ class NICERObs(SpecialLocation):
         'spacecraft' = Give spacecraft ITRF position to astropy.Time()
 """
 
-    def __init__(self, name, FPorbname, tt2tdb_mode = 'none'):
+    def __init__(self, name, FPorbname, tt2tdb_mode = 'spacecraft'):
 
 
         if FPorbname.startswith('@'):
