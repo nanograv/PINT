@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function, division
 import numpy as np
 import pint.toa as toa
 import pint.models
-from pint.mcmc_fitter import MCMCFitter
+from pint.mcmc_fitter import MCMCFitter, MCMCFitterBinnedTemplate
 from pint.sampler import EmceeSampler
 import pint.fermi_toas as fermi
 import pint.plot_utils as plot_utils
@@ -171,8 +171,8 @@ def main(argv=None):
     phs = 0.0 if args.phs is None else args.phs
     
     sampler = EmceeSampler(nwalkers)
-    ftr = MCMCFitter(ts, modelin, sampler, template=gtemplate, weights=weights, \
-        phs=phs, phserr=args.phserr, minMJD=minMJD, maxMJD=maxMJD)
+    ftr = MCMCFitterBinnedTemplate(ts, modelin, sampler, template=gtemplate, \
+        weights=weights, phs=phs, phserr=args.phserr, minMJD=minMJD, maxMJD=maxMJD)
 
     fitkeys, fitvals, fiterrs = ftr.get_fit_keyvals()
 
