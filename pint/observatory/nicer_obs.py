@@ -155,6 +155,20 @@ class NICERObs(SpecialLocation):
     def tempo_code(self):
         return None
 
+    def get_gcrs(self, t, ephem=None):
+        '''Return position vector of NICER in GCRS
+        t is an astropy.Time or array of astropy.Time objects
+        Returns a 3-vector of Quantities representing the position
+        in GCRS coordinates.
+        '''
+        tmin = np.min(self.FPorb['MJD_TT'])
+        tmax = np.max(self.FPorb['MJD_TT'])
+        if (tmin-np.min(t.tt.mjd) > float(maxextrap)/(60*24) or
+            np.max(t.tt.mjd)-tmax > float(maxextrap)/(60*24)):
+            log.error('Extrapolating NICER position by more than %d minutes!'%maxextrap)
+            raise ValueError("Bad extrapolation of S/C file.")
+        return np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])*self.FPorb['X'].unit 
+
     def posvel(self, t, ephem, maxextrap=2):
         '''Return position and velocity vectors of NICER.
 

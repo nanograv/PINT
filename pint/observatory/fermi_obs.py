@@ -150,6 +150,14 @@ class FermiObs(SpecialLocation):
     def tempo_code(self):
         return None
 
+    def get_gcrs(self, t, ephem=None):
+        '''Return position vector of Fermi in GCRS
+        t is an astropy.Time or array of astropy.Time objects
+        Returns a 3-vector of Quantities representing the position
+        in GCRS coordinates.
+        '''
+        return np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)]) * self.FT2['X'].unit 
+
     def posvel(self, t, ephem):
         '''Return position and velocity vectors of Fermi, wrt SSB.
 

@@ -9,6 +9,7 @@ import unittest
 import numpy as np
 import pint.scripts.photonphase as photonphase
 from pinttestdata import testdir, datadir
+from astropy import log
 
 parfile = os.path.join(datadir, 'J1513-5908_PKS_alldata_white.par')
 eventfile = os.path.join(datadir, 'B1509_RXTE_short.fits')
@@ -17,8 +18,9 @@ orbfile = os.path.join(datadir, 'FPorbit_Day6223')
 class TestPhotonPhase(unittest.TestCase):
 
     def test_result(self):
+        #pass
         saved_stdout, photonphase.sys.stdout = photonphase.sys.stdout, StringIO('_')
-        cmd = '--plot --plotfile photontest.png --outfile photontest.fits {0} {1} --orbfile={2} '.format(eventfile,parfile,orbfile)
+        cmd = '--plot --plotfile photontest.png --outfile photontest.fits {0} {1} --orbfile={2} --tdbmethod astropy_corrected '.format(eventfile,parfile,orbfile)
         photonphase.main(cmd.split())
         lines = photonphase.sys.stdout.getvalue()
         v = 999.0
@@ -26,6 +28,7 @@ class TestPhotonPhase(unittest.TestCase):
             if l.startswith('Htest'):
                 v = float(l.split()[2])
         # Check that H-test is greater than 725
+        log.warning('V:\t%f' % v)
         self.assertTrue(v>725)
         photonphase.sys.stdout = saved_stdout
 

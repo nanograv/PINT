@@ -16,6 +16,7 @@ except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 
 jpl_kernel_http = 'https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/'
+nanograv_http = ' https://data.nanograv.org/static/data/ephem/'
 jpl_kernel_ftp = 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/'
 
 jpl_obj_code = {'ssb': 0,
@@ -35,7 +36,10 @@ jpl_obj_code = {'ssb': 0,
 
 def _load_kernel_link(ephem, link=''):
     load_kernel = False # a flag for checking if the kernel has been loaded
-    search_list = [link, jpl_kernel_http, jpl_kernel_ftp]
+    # search_list = [link,jpl_kernel_http, jpl_kernel_ftp]
+    # NOTE the JPL ftp site is disabled. Instead, we duplicated the JPL ftp
+    # site on nanograv server. 
+    search_list = [link, nanograv_http ,jpl_kernel_http]
     if link != '':
         search_list.append('')
     for l in search_list:

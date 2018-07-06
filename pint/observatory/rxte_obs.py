@@ -64,19 +64,23 @@ class RXTEObs(SpecialLocation):
             log.warning('Using location geocenter for TT to TDB conversion')
             return EarthLocation.from_geocentric(0.0*u.m,0.0*u.m,0.0*u.m)
         elif self.tt2tdb_mode.lower().startswith('spacecraft'):
+            log.warning('Using location=None for TT to TDB conversion')
+            return None
+        #elif self.tt2tdb_mode.lower().startswith('spacecraft'):
             # First, interpolate ECI geocentric location from orbit file.
             # These are inertial coorinates aligned with ICRF
-            pos_gcrs =  GCRS(CartesianRepresentation(self.X(time.tt.mjd)*u.m,
-                                                     self.Y(time.tt.mjd)*u.m,
-                                                     self.Z(time.tt.mjd)*u.m),
-                             obstime=time)
+            #log.warning('Performing GCRS to ITRS transformation')
+            #pos_gcrs =  GCRS(CartesianRepresentation(self.X(time.tt.mjd)*u.m,
+            #                                         self.Y(time.tt.mjd)*u.m,
+            #                                         self.Z(time.tt.mjd)*u.m),
+            #                 obstime=time)
 
             # Now transform ECI (GCRS) to ECEF (ITRS)
             # By default, this uses the WGS84 ellipsoid
-            pos_ITRS = pos_gcrs.transform_to(ITRS(obstime=time))
+            #pos_ITRS = pos_gcrs.transform_to(ITRS(obstime=time))
 
             # Return geocentric ITRS coordinates as an EarthLocation object
-            return pos_ITRS.earth_location
+            #return pos_ITRS.earth_location
         else:
             log.error('Unknown tt2tdb_mode %s, using None', self.tt2tdb_mode)
             return None
@@ -84,6 +88,14 @@ class RXTEObs(SpecialLocation):
     @property
     def tempo_code(self):
         return None
+
+    def get_gcrs(self, t, ephem=None):
+        '''Return position vector of RXTE in GCRS
+        t is an astropy.Time or array of astropy.Time objects
+        Returns a 3-vector of Quantities representing the position
+        in GCRS coordinates.
+        '''
+        return np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])*self.FPorb['X'].unit
 
     def posvel(self, t, ephem):
         '''Return position and velocity vectors of RXTE.

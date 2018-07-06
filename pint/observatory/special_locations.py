@@ -32,6 +32,11 @@ class BarycenterObs(SpecialLocation):
     @property
     def tempo2_code(self):
         return 'bat'
+    def get_gcrs(self, t, ephem=None):
+        if ephem is None:
+            raise ValueError('Ephemeris needed for BarycenterObs get_gcrs') 
+        ssb_pv = objPosVel_wrt_SSB('earth', t, ephem)
+        return -1 * ssb_pv.pos
     def posvel(self, t, ephem):
         vdim = (3,) + t.shape
         return PosVel(numpy.zeros(vdim)*u.m, numpy.zeros(vdim)*u.m/u.s,
@@ -50,6 +55,9 @@ class GeocenterObs(SpecialLocation):
     @property
     def tempo2_code(self):
         return 'coe'
+    def get_gcrs(self, t, ephem=None):
+        vdim = (3,) + t.shape
+        return np.zeros(vdim) * u.m
     def posvel(self, t, ephem):
         return objPosVel_wrt_SSB('earth', t, ephem)
 

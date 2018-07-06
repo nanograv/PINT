@@ -214,6 +214,16 @@ class TopoObs(Observatory):
                       location=self.earth_location_itrf())
         return result
 
+    def get_gcrs(self, t, ephem=None):
+        '''Return position vector of TopoObs in GCRS
+        t is an astropy.Time or array of astropy.Time objects
+        Returns a 3-vector of Quantities representing the position
+        in GCRS coordinates.
+        '''
+        obs_geocenter_pv = gcrs_posvel_from_itrf(self.earth_location_itrf(), t, \
+                                            obsname=self.name)
+        return obs_geocenter_pv.pos
+
     def posvel(self, t, ephem):
         if t.isscalar: t = Time([t])
         earth_pv = objPosVel_wrt_SSB('earth', t, ephem)
