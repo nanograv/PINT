@@ -1,3 +1,4 @@
+from __future__ import print_function, division, absolute_import
 from .observatory import Observatory, get_observatory
 
 # Include any files that define observatories here.  This will start
