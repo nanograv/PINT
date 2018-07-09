@@ -22,7 +22,7 @@ def lnprior_basic(ftr, theta):
     for val, key in zip(theta_model[:-1], ftr.fitkeys[:-1]):
         lnsum += getattr(ftr.model, key).prior_pdf(val, logpdf=True)
     #Add phase term
-    if theta[-1] > 1.0 or theta[-1] < 0.0:
+    if theta_model[-1] > 1.0 or theta_model[-1] < 0.0:
         return np.inf
     #Loop over template parameters here: hard coded uniform for now
     if theta_templ is not None:
@@ -100,6 +100,7 @@ class MCMCFitter(Fitter):
         self.numcalls = 0
         self.nsteps = 1
         self.maxpost = -np.inf
+        self.maxpost_fitvals = self.fitvals
 
     def set_template(self, template):
         """
@@ -190,8 +191,12 @@ class MCMCFitter(Fitter):
             elif key.startswith('GLPH'):
                 getattr(self.model,key).prior = Prior(uniform(-0.4, 1.0))
             else:
+                if e == 0:
+                    err = 0.01
+                else:
+                    err = e
                 getattr(self.model,key).prior = Prior(norm(loc=float(v),
-                                                        scale=float(e*priorerrfact)))
+                                                        scale=float(err*priorerrfact)))
 
     def get_event_phases(self):
         """
@@ -206,7 +211,6 @@ class MCMCFitter(Fitter):
         The log posterior (priors * likelihood)
         """
         self.numcalls += 1
-
         #Evaluate prior first. Don't compute posterior if prior is not finite
         lnprior = self.lnprior(self, theta)
         if not np.isfinite(lnprior):
@@ -214,7 +218,6 @@ class MCMCFitter(Fitter):
 
         lnlikelihood = self.lnlikelihood(self, theta)
         lnpost = lnprior + lnlikelihood
-
         if lnpost > self.maxpost:
             log.info("New max: %f" % lnpost)
             for name, val in zip(self.fitkeys, theta):
@@ -257,10 +260,10 @@ class MCMCFitter(Fitter):
 
         #Initialize sampler
         self.sampler.initialize_sampler(self.lnposterior, self.n_fit_params)
-
+        
         #Run sampler for some number of iterations
         self.sampler.run_mcmc(pos, maxiter)
-
+        
         #Process results and get chi2 for new parameters
         self.set_params(dict(zip(self.fitkeys[:-1], self.maxpost_fitvals[:-1])))
         self.resids.update()
