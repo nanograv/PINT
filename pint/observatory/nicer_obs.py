@@ -35,6 +35,9 @@ def load_FPorbit(orbit_filename):
     '''
     # Load photon times from FT1 file
     hdulist = pyfits.open(orbit_filename)
+    #log.info('orb file HDU name is {0}'.format(hdulist[1].name))
+    if hdulist[1].name != 'ORBIT':
+        log.error('NICER orb file first extension is {0}. It should be ORBIT'.format(hdulist[1].name))
     FPorbit_hdr=hdulist[1].header
     FPorbit_dat=hdulist[1].data
 
