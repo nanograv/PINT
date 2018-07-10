@@ -50,6 +50,28 @@ def lnlikelihood_chi2(ftr, theta):
     ftr.set_parameters(theta)
     return -resids(toas=ftr.toas, model=ftr.model).calc_chi2().value
 
+def set_priors_basic(ftr, priorerrfact=10.0):
+    """
+    Basic method to set priors on parameters in the model. This adds a gaussian
+    prior on each parameter with width equal to the par file uncertainty * priorerrfact
+    and then puts in some special cases
+    """
+    fkeys, fvals, ferrs = ftr.fitkeys, ftr.fitvals, ftr.fiterrs
+    for key, val, err in zip(fkeys[:-1], fvals[:-1], ferrs[:-1]):
+        if key == 'SINI' or key == 'E' or key == 'ECC':
+            getattr(ftr.model, key).prior = Prior(uniform(0.0, 1.0))
+        elif key == 'PX':
+            getattr(ftr.model, key).prior = Prior(uniform(0.0, 10.0))
+        elif key.startswith('GLPH'):
+            getattr(ftr.model, key).prior = Prior(uniform(-0.4, 1.0))
+        else:
+            if err == 0:
+                ftr.priors_set = False
+                raise ValueError('Paramater %s does not have uncertainty in par file' % key)
+            getattr(ftr.model, key).prior = Prior(norm(loc=float(val),
+                                                       scale=float(err*priorerrfact)))
+    ftr.priors_set = True
+
 class MCMCFitter(Fitter):
     """A class for Markov-Chain Monte Carlo optimization style-fitting,
         similar to that implemented in event_optimize.py
@@ -65,6 +87,7 @@ class MCMCFitter(Fitter):
         template - A template profile, for example, of a gaussian pulse 
         lnprior - The log prior function - defaults to lnprior above
         lnlike - The log likelihood function - defaults to lnlikelihood above
+        setpriors - The function for setting the priors on model parameters
         weights - Weights for likelihood calculations
         phs - Pulse phase - to be added to the model (remove when phs is part of par files)
         phserr - Error associated with pulse phase
@@ -78,6 +101,7 @@ class MCMCFitter(Fitter):
 
         self.lnprior = kwargs.get('lnprior', lnprior_basic)
         self.lnlikelihood = kwargs.get('lnlike', lnlikelihood_basic)
+        self.set_priors = kwargs.get('setpriors', set_priors_basic)
         
         template = kwargs.get('template', None)
         if not template is None:
@@ -101,6 +125,7 @@ class MCMCFitter(Fitter):
         self.nsteps = 1
         self.maxpost = -np.inf
         self.maxpost_fitvals = self.fitvals
+        self.priors_set = False
 
     def set_template(self, template):
         """
@@ -177,27 +202,6 @@ class MCMCFitter(Fitter):
         fiterrs.append(phserr)
         return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
-    def set_priors(self, priorerrfact=10.0):
-        """
-        Set priors on parameters in the model. This adds a gaussian prior
-        on each parameter with width equal to the par file uncertainty * priorerrfact,
-        and then puts in some special cases.
-        """
-        for key, v, e in zip(self.fitkeys[:-1], self.fitvals[:-1], self.fiterrs[:-1]):
-            if key == 'SINI' or key == 'E' or key == 'ECC':
-                getattr(self.model,key).prior = Prior(uniform(0.0, 1.0))
-            elif key == 'PX':
-                getattr(self.model,key).prior = Prior(uniform(0.0, 10.0))
-            elif key.startswith('GLPH'):
-                getattr(self.model,key).prior = Prior(uniform(-0.4, 1.0))
-            else:
-                if e == 0:
-                    err = 0.01
-                else:
-                    err = e
-                getattr(self.model,key).prior = Prior(norm(loc=float(v),
-                                                        scale=float(err*priorerrfact)))
-
     def get_event_phases(self):
         """
         Return pulse phases based on the current model
@@ -250,7 +254,10 @@ class MCMCFitter(Fitter):
             errfact - Multiplicative factor for errors in get_intial_pos
             priorerrfact - Error factor in setting prior widths
         """
-        self.set_priors(priorerrfact)
+        #Set model priors if it hasn't been done yet
+        if not self.priors_set:
+            self.set_priors(self, priorerrfact)
+        #Set initial positions for walkers if they haven't been specified
         if pos is None:
             pos = self.sampler.get_initial_pos(self.fitkeys, self.fitvals, self.fiterrs, 
                 errfact, minMJD=self.minMJD, maxMJD=self.maxMJD)

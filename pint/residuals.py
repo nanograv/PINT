@@ -29,6 +29,8 @@ class resids(object):
         else:
         # Errs for weighted sum.  Units don't matter since they will
         # cancel out in the weighted sum.
+            if np.any(self.toas.get_errors() == 0):
+                raise ValueError('TOA errors are zero - cannot calculate residuals')
             w = 1.0/(np.array(self.toas.get_errors())**2)
             wm = (rs.frac*w).sum() / w.sum()
             rs -= Phase(0.0,wm)
