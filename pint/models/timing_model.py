@@ -489,7 +489,7 @@ class TimingModel(object):
         # If the absolute phase flag is on, use the TZR parameters to compute
         # the absolute phase.
         if abs_phase:
-            if 'AbsPhase' not in list(self.component.keys()):
+            if 'AbsPhase' not in list(self.components.keys()):
                 log.warning("No absolute phase (TZRMJD, ...) model provided." +
                             " Returning the conventional phase.")
                 return phase
