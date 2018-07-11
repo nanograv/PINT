@@ -25,7 +25,7 @@ class AbsPhase(PhaseComponent):
                        description="Epoch of the zero phase."))
         self.add_param(p.strParameter(name="TZRSITE",
                        description="Observatory of the zero phase measured."))
-        self.add_param(p.floatParameter(name="TZRFREQ", units=u.MHz,
+        self.add_param(p.floatParameter(name="TZRFRQ", units=u.MHz,
                        description="The frequency of the zero phase mearsured."))
 
         self.category = 'absolute_phase'
@@ -42,8 +42,8 @@ class AbsPhase(PhaseComponent):
             self.TZRMJD.time_scale = 'tdb'
             log.info("The TZRSITE is set at the solar system barycenter.")
 
-        if self.TZRFREQ.value is None:
-            self.TZRFREQ = float("inf")
+        if self.TZRFRQ.value is None:
+            self.TZRFRQ = float("inf")
             log.info("The TZRFREQ is set at infinite.")
 
 
@@ -52,9 +52,9 @@ class AbsPhase(PhaseComponent):
             special TOA.
         """
         TZR_toa = toa.TOA(self.TZRMJD.quantity, obs=self.TZRSITE.value,
-                          freq=self.TZRFREQ.quantity)
+                          freq=self.TZRFRQ.quantity)
         clkc_info = toas.clock_corr_info
-        tz = toa.get_TOAs_list([TZR_toa,], include_bipm=clkc_info{'include_bipm'},
-                               include_gps=clkc_info{'include_gps'},
+        tz = toa.get_TOAs_list([TZR_toa,], include_bipm=clkc_info['include_bipm'],
+                               include_gps=clkc_info['include_gps'],
                                ephem=toas.ephem, planets=toas.planets)
         return tz
