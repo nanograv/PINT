@@ -26,7 +26,7 @@ class TestDDK(unittest.TestCase):
         # Calculate delays with PINT
         # NOTE tempo and PINT has different definition of parameter KOM. So lower the
         # threshold
-        pint_binary_delay = self.modelJ1713.binarymodel_delay(self.toasJ1713.table, None)
+        pint_binary_delay = self.modelJ1713.binarymodel_delay(self.toasJ1713, None)
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 5e-7), 'DDK J1713 TEST FAILED'
 
     def test_J1713(self):
@@ -39,7 +39,7 @@ class TestDDK(unittest.TestCase):
     def test_J1713_deriv(self):
         log= logging.getLogger( "TestJ1713.derivative_test")
         testp = tdu.get_derivative_params(self.modelJ1713)
-        delay = self.modelJ1713.delay(self.toasJ1713.table)
+        delay = self.modelJ1713.delay(self.toasJ1713)
         for p in testp.keys():
             # Only check the binary parameters
             if p not in self.modelJ1713.binary_instance.binary_params:
@@ -50,8 +50,8 @@ class TestDDK(unittest.TestCase):
             if type(par).__name__ is "boolParameter":
                 continue
             log.debug( "Runing derivative for %s", 'd_phase_d_'+p)
-            ndf = self.modelJ1713.d_phase_d_param_num(self.toasJ1713.table, p, testp[p])
-            adf = self.modelJ1713.d_phase_d_param(self.toasJ1713.table, delay, p)
+            ndf = self.modelJ1713.d_phase_d_param_num(self.toasJ1713, p, testp[p])
+            adf = self.modelJ1713.d_phase_d_param(self.toasJ1713, delay, p)
             diff = adf - ndf
             if not np.all(diff.value) == 0.0:
                 mean_der = (adf+ndf)/2.0
@@ -73,10 +73,10 @@ class TestDDK(unittest.TestCase):
         log= logging.getLogger( "TestJ1713 Switch of K96")
         self.modelJ1713.K96.value = False
         res = resids(self.toasJ1713, self.modelJ1713, False).time_resids.to(u.s)
-        delay = self.modelJ1713.delay(self.toasJ1713.table)
+        delay = self.modelJ1713.delay(self.toasJ1713)
         testp = tdu.get_derivative_params(self.modelJ1713)
         for p in testp.keys():
-            adf = self.modelJ1713.d_phase_d_param(self.toasJ1713.table, delay, p)
+            adf = self.modelJ1713.d_phase_d_param(self.toasJ1713, delay, p)
 
 
 if __name__ == '__main__':

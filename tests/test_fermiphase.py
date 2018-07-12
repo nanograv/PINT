@@ -46,7 +46,7 @@ class TestFermiPhase(unittest.TestCase):
         ts.filename = eventfileraw
         ts.compute_TDBs()
         ts.compute_posvels(ephem='DE405',planets=False)
-        phss = modelin.phase(ts.table)[1]
+        phss = modelin.phase(ts)[1]
         phases = np.where(phss < 0.0 * u.cycle, phss + 1.0 * u.cycle, phss)
 
 

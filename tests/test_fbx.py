@@ -28,7 +28,7 @@ class TestFBX(unittest.TestCase):
                                   '.tempo2_test',skip_header=1, unpack=True)
     def test_B1953_binary_delay(self):
         # Calculate binary delays with PINT
-        pint_binary_delay = self.modelJ0023.binarymodel_delay(self.toasJ0023.table, None)
+        pint_binary_delay = self.modelJ0023.binarymodel_delay(self.toasJ0023, None)
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-9), 'B1953 binary delay test failed.'
 
     def test_J0023(self):
@@ -38,13 +38,13 @@ class TestFBX(unittest.TestCase):
     def test_derivative(self):
         log= logging.getLogger( "test_J0023.derivative_test")
         testp = tdu.get_derivative_params(self.modelJ0023)
-        delay = self.modelJ0023.delay(self.toasJ0023.table)
+        delay = self.modelJ0023.delay(self.toasJ0023)
         for p in testp.keys():
             log.debug( "Runing derivative for %s", 'd_delay_d_'+p)
             if p in ['EPS2', 'EPS1']:
                 testp[p] = 10
-            ndf = self.modelJ0023.d_phase_d_param_num(self.toasJ0023.table, p, testp[p])
-            adf = self.modelJ0023.d_phase_d_param(self.toasJ0023.table, delay, p)
+            ndf = self.modelJ0023.d_phase_d_param_num(self.toasJ0023, p, testp[p])
+            adf = self.modelJ0023.d_phase_d_param(self.toasJ0023, delay, p)
             diff = adf - ndf
             if not np.all(diff.value) == 0.0:
                 mean_der = (adf+ndf)/2.0
