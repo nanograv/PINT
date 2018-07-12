@@ -84,8 +84,7 @@ except:
     pass
 
 if did_tempo1 and not planets:
-    print numpy.fabs(diff_t1).max()
-    #assert numpy.fabs(diff_t1).max() < 32.0 * u.ns
+    assert numpy.fabs(diff_t1).max() < 32.0 * u.ns
 
 def do_plot():
     plt.clf()
