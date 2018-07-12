@@ -91,6 +91,8 @@ class TimingModel(object):
         self.add_param_from_top(strParameter(name="PSR",
             description="Source name",
             aliases=["PSRJ", "PSRB"]), '')
+        self.add_param_from_top(strParameter(name="TRACK",
+            description="Tracking Information"), '')
 
         self.setup_components(components)
 
