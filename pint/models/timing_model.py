@@ -788,6 +788,9 @@ class TimingModel(object):
                 except:
                     if l.split()[0] not in ignore_params:
                         log.warn("Unrecognized parfile line '%s'" % l)
+                    if l.split()[0] == 'UNITS' and l.split()[1] == 'TCB':
+                        log.error("UNITS TCB not yet supported by PINT")
+                        raise Exception("UNITS TCB not yet supported by PINT")
 
             checked_param.append(name)
         # The "setup" functions contain tests for required parameters or
