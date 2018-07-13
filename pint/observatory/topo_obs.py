@@ -88,6 +88,7 @@ class TopoObs(Observatory):
         # Save clock file info, the data will be read only if clock
         # corrections for this site are requested.
         self.clock_file = clock_file
+        self._multiple_clock_files = not isinstance(clock_file,str)
         self.clock_dir = clock_dir
         self.clock_fmt = clock_fmt
         self._clock = None # The ClockFile object, will be read on demand
@@ -98,11 +99,11 @@ class TopoObs(Observatory):
                 and tempo_code is None):
             raise ValueError("No tempo_code set for observatory '%s'" % name)
 
-        # GPS corrections not implemented yet
+        # GPS corrections
         self.include_gps = include_gps
         self._gps_clock = None
 
-        # BIPM corrections not implemented yet
+        # BIPM corrections
         self.include_bipm = include_bipm
         self.bipm_version = bipm_version
         self._bipm_clock = None
@@ -118,6 +119,8 @@ class TopoObs(Observatory):
     def clock_fullpath(self):
         """Returns the full path to the clock file."""
         if self.clock_dir=='PINT':
+            if self._multiple_clock_files:
+                return [datapath(f) for f in self.clock_file]
             return datapath(self.clock_file)
         elif self.clock_dir=='TEMPO':
             # Technically should read $TEMPO/tempo.cfg and get clock file
@@ -127,6 +130,8 @@ class TopoObs(Observatory):
             dir = os.path.join(os.getenv('TEMPO2'),'clock')
         else:
             dir = self.clock_dir
+        if self._multiple_clock_files:
+            return [os.path.join(dir,f) for f in self.clock_file]
         return os.path.join(dir,self.clock_file)
 
     @property
@@ -164,11 +169,18 @@ class TopoObs(Observatory):
         # Read clock file if necessary
         # TODO provide some method for re-reading the clock file?
         if self._clock is None:
-            log.info('Observatory {0}, loading clock file {1}'.format(self.name, self.clock_fullpath))
-            self._clock = ClockFile.read(self.clock_fullpath,
-                    format=self.clock_fmt, obscode=self.tempo_code)
+            clock_files = self.clock_fullpath if self._multiple_clock_files else [self.clock_fullpath]
+            self._clock = []
+            for clock_file in clock_files:
+                log.info('Observatory {0}, loading clock file {1}'.format(self.name, clock_file))
+                self._clock.append(ClockFile.read(clock_file,
+                        format=self.clock_fmt, obscode=self.tempo_code))
         log.info('Evaluating observatory clock corrections.')
-        corr = self._clock.evaluate(t)
+        clocks = self._clock if self._multiple_clock_files else [self._clock]
+        corr = clocks[0].evaluate(t)
+        for clock in clocks[1:]:
+            corr += clock.evaluate(t)
+
         if self.include_gps:
             log.info('Applying GPS to UTC clock correction (~few nanoseconds)')
             if self._gps_clock is None:
@@ -176,6 +188,7 @@ class TopoObs(Observatory):
                 self._gps_clock = ClockFile.read(self.gps_fullpath,
                         format='tempo2')
             corr += self._gps_clock.evaluate(t)
+
         if self.include_bipm:
             log.info('Applying TT(TAI) to TT(BIPM) clock correction (~27 us)')
             tt2tai = 32.184 * 1e6 * u.us
