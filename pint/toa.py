@@ -31,7 +31,7 @@ JD_MJD = 2400000.5
 
 def get_TOAs(timfile, ephem="DE421", include_bipm=True, bipm_version='BIPM2015',
              include_gps=True, planets=False, usepickle=False,
-             tdb_method="astropy"):
+             tdb_method="default"):
     """Convenience function to load and prepare TOAs for PINT use.
 
     Loads TOAs from a '.tim' file, applies clock corrections, computes
@@ -100,7 +100,7 @@ def _check_pickle(toafilename, picklefilename=None):
 
 def get_TOAs_list(toa_list,ephem="DE421", include_bipm=True,
                   bipm_version='BIPM2015', include_gps=True, planets=False,
-                  tdb_method="astropy"):
+                  tdb_method="default"):
     """Load TOAs from a list of TOA objects.
 
     Compute the TDB time and observatory positions and velocity
@@ -386,7 +386,6 @@ class TOA(object):
 
         """
         site = get_observatory(obs)
-
         # If MJD is already a Time, just use it. Note that this will ignore
         # the 'scale' argument to the TOA() constructor!
         if isinstance(MJD,time.Time):
@@ -801,7 +800,7 @@ class TOAs(object):
                                      'bipm_version':bipm_version,
                                      'include_gps':include_gps})
 	
-    def compute_TDBs(self, method="astropy", ephem=None):
+    def compute_TDBs(self, method="default", ephem=None):
         """Compute and add TDB and TDB long double columns to the TOA table.
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
         for TDB times, using the Observatory locations and IERS A Earth
@@ -814,6 +813,13 @@ class TOAs(object):
         if 'tdbld' in self.table.colnames:
             log.info('tdbld column already exists. Deleting...')
             self.table.remove_column('tdbld')
+
+        if ephem is None:
+            if self.ephem is not None:
+                ephem = self.ephem
+            else:
+                log.warning('No ephemeris provided to TOAs object or compute_TDBs. Using DE421')
+                ephem = 'DE421'
 
         # Compute in observatory groups
         tdbs = numpy.zeros_like(self.table['mjd'])

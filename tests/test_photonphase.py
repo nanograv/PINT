@@ -20,7 +20,7 @@ class TestPhotonPhase(unittest.TestCase):
     def test_result(self):
         #pass
         saved_stdout, photonphase.sys.stdout = photonphase.sys.stdout, StringIO('_')
-        cmd = '--plot --plotfile photontest.png --outfile photontest.fits {0} {1} --orbfile={2} --tdbmethod astropy_corrected '.format(eventfile,parfile,orbfile)
+        cmd = '--plot --plotfile photontest.png --outfile photontest.fits {0} {1} --orbfile={2} '.format(eventfile,parfile,orbfile)
         photonphase.main(cmd.split())
         lines = photonphase.sys.stdout.getvalue()
         v = 999.0
