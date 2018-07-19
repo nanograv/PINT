@@ -43,7 +43,7 @@ class resids(object):
         with u.set_enabled_equivalencies(dimensionless_cycles):
             return (self.phase_resids.to(u.Unit("")) / self.get_PSR_freq()).to(u.s)
 
-    def get_PSR_freq(self, modelF0=False):
+    def get_PSR_freq(self, modelF0=True):
         if modelF0:
             """Return pulsar rotational frequency in Hz. model.F0 must be defined."""
             if self.model.F0.units != 'Hz':

@@ -168,6 +168,8 @@ class LCTemplate(object):
             except Exception:
                 print('%d phases were NaN!'%(np.sum(np.isnan(phases))))
                 indices[np.isnan(phases)] = 0
+                print('%d phases were outside cache length!' % (np.sum(indices >= len(self._cache))))
+                indices[indices >= len(self._cache)] = len(self._cache) - 1
                 return self._cache[indices]
         rvals,norms,norm = self._get_scales(phases,log10_ens)
         for n,prim in zip(norms,self.primitives):

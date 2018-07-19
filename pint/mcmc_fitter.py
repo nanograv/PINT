@@ -1,13 +1,29 @@
+import copy
 import numpy as np
 import astropy.units as u
 import scipy.optimize as opt, scipy.linalg as sl
 import matplotlib.pyplot as plt
 import pint.plot_utils as plot_utils
+import pint.toa
 from .residuals import resids
 from pint.fitter import Fitter
 from pint.models.priors import Prior
 from scipy.stats import norm, uniform 
 from astropy import log
+from astropy.table import vstack
+from pint.templates.lctemplate import LCTemplate
+
+def concat_toas(toas):
+    '''Concatenate a list of TOAs objects into a single TOAs object'''
+    if len(toas) == 1:
+        return toas[0]
+    ts = copy.deepcopy(toas[0])
+    for t in toas[1:]:
+        print(len(ts.table), len(t.table))
+        ts.table = vstack([ts.table, t.table])
+        print('\t%d' % len(ts.table))
+    ts.table = ts.table.group_by('obs')
+    return ts
 
 def lnprior_basic(ftr, theta):
     """
@@ -39,6 +55,9 @@ def lnlikelihood_basic(ftr, theta):
     ftr.set_parameters(theta)
     phases = ftr.get_event_phases()
     phss = phases.astype(np.float64) + theta[-1] 
+
+    phss[phss < 0] += 1.0
+    phss[phss >= 1] -= 1.0
 
     probs = ftr.get_template_vals(phss)
     if ftr.weights is None:
@@ -95,7 +114,17 @@ class MCMCFitter(Fitter):
         maxMJD - Maximum MJD in dataset (used sometimes for get_initial_pos)
     """
     def __init__(self, toas, model, sampler, **kwargs):
-        super(MCMCFitter, self).__init__(toas, model)
+        #super(MCMCFitter, self).__init__(toas, model)
+        self.toas = toas
+        self.model_init = model
+        if kwargs.get('resids', False):
+            self.resids_init = resids(toas=toas, model=model)
+            relf.reset_model()
+            self.use_resids = True
+        else:
+            self.model = model
+            self.use_resids = False
+
         self.method = 'MCMC'
         self.sampler = sampler
 
@@ -111,7 +140,7 @@ class MCMCFitter(Fitter):
 
         # Default values for these arguments were taken from event_optimize.py
         self.weights = kwargs.get('weights', None)
-        phs = kwargs.get('phs', 0.5)
+        phs = kwargs.get('phs', 0.0)
         phserr = kwargs.get('phserr', 0.03)
         self.minMJD = kwargs.get('minMJD', 54680)
         self.maxMJD = kwargs.get('maxMJD', 57250)
@@ -166,6 +195,12 @@ class MCMCFitter(Fitter):
         """
         raise NotImplementedError
 
+    def get_parameter_names(self):
+        """
+        Get parameter names for this fitter
+        """
+        raise NotImplementedError
+
     def set_parameters(self, theta):
         """
         Set timing and template parameters as necessary
@@ -202,6 +237,9 @@ class MCMCFitter(Fitter):
         fiterrs.append(phserr)
         return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
+    def get_weights(self):
+        return self.weights
+
     def get_event_phases(self):
         """
         Return pulse phases based on the current model
@@ -223,7 +261,7 @@ class MCMCFitter(Fitter):
         lnlikelihood = self.lnlikelihood(self, theta)
         lnpost = lnprior + lnlikelihood
         if lnpost > self.maxpost:
-            log.info("New max: %f" % lnpost)
+            log.info("New max: %f\tCall %d" % (lnpost, self.numcalls))
             for name, val in zip(self.fitkeys, theta):
                 log.info("\t%8s: %25.15g" % (name, val))
             self.maxpost = lnpost
@@ -273,7 +311,8 @@ class MCMCFitter(Fitter):
         
         #Process results and get chi2 for new parameters
         self.set_params(dict(zip(self.fitkeys[:-1], self.maxpost_fitvals[:-1])))
-        self.resids.update()
+        if self.use_resids:
+            self.resids.update()
         return self.lnposterior(self.maxpost_fitvals)
     
     def phaseogram(self, weights=None, bins=100, rotate=0.0, size=5,
@@ -283,7 +322,7 @@ class MCMCFitter(Fitter):
         """
         mjds = self.toas.table['tdbld'].quantity
         phss = self.get_event_phases()
-        plot_utils.phaseogram(mjds, phss, weights=self.weights, bins=bins,
+        plot_utils.phaseogram(mjds, phss, weights=self.get_weights(), bins=bins,
             rotate=rotate, size=size, alpha=alpha, plotfile=plotfile)
 
     def prof_vs_weights(self, nbins=50, use_weights=False):
@@ -295,10 +334,11 @@ class MCMCFitter(Fitter):
         phss = self.get_event_phases()
         htests = []
         weights = np.linspace(0.0, 0.95, 20)
+        swgts = self.get_weights()
         for ii, minwgt in enumerate(weights):
-            good = self.weights > minwgt
+            good = swgts > minwgt
             nphotons = np.sum(good)
-            wgts = self.weights[good] if use_weights else None
+            wgts = swgts[good] if use_weights else None
             if nphotons <= 0:
                 hval = 0
             else:
@@ -368,6 +408,9 @@ class MCMCFitterBinnedTemplate(MCMCFitter):
     def get_parameters(self):
         return self.fitvals
 
+    def get_parameter_names(self):
+        return self.fitkeys
+    
     def set_parameters(self, theta):
         self.set_params(dict(zip(self.fitkeys[:-1], theta[:-1])))
     
@@ -404,6 +447,9 @@ class MCMCFitterAnalyticTemplate(MCMCFitter):
             ret = np.clip(ret[:, i], lo, hi)
         return ret
 
+    def get_parameter_names(self):
+        return self.fitkeys + self.template.get_parameter_names()
+
     def get_model_parameters(self, theta):
         return theta[:len(self.fitkeys)]
 
@@ -417,5 +463,135 @@ class MCMCFitterAnalyticTemplate(MCMCFitter):
         self.set_params(dict(zip(self.fitkeys[:-1], self.get_model_parameters(theta)[:-1])))
         self.template.set_parameters(self.get_template_parameters(theta))
 
-    def get_errors(self, theta):
+    def get_errors(self):
         return np.append(self.fiterrs, self.tfiterrs)
+
+class CompositeMCMCFitter(MCMCFitter):
+    """A subclass of MCMCFitter, designed to work on composite datasets
+        Requires a list of TOAs objects formed from different datafiles
+        to make up the toas table, as well as a list of log-likelihood methods
+
+        Here, the toas argument to the constructor is a list of TOAs objects,
+        while the toas parameter for this class is a concatenated TOAs object
+        containing all TOA information from all datasets
+
+        The goal is to fit all of the data sets to a single model, so only one 
+        model is required in the construction of this object. In addition, only
+        one sampler is required.
+
+        Additional parameters: 
+            weights - an array of weight lists for weighting individual TOAs
+            set_weights - an array of weights for each individual data set in
+                toas_list. The basic lnlikelihood function will be given by
+                lnlike = sum(setweight(i) * lnlike(toas_list(i)))
+                Defaults to an array of 1s
+            lnlikes - a list of lnlikelihood functions to be used on each entry
+                in toas_list. This is a required argument
+            templates - a list of templates for fitting to each individual dataset.
+                Defaults to None for everything
+                TODO: Add support for fitting templates here
+    """
+    def __init__(self, toas, model, sampler, lnlikes, **kwargs):
+        self.toas_list = toas
+        self.toas = concat_toas(toas)
+        self.model = model
+        self.method = 'MCMC'
+        self.sampler = sampler
+        
+        self.lnprior = kwargs.get('lnprior', lnprior_basic)
+        self.lnlikelihoods = lnlikes
+        self.set_priors = kwargs.get('setpriors', set_priors_basic)
+
+        self.weights = kwargs.get('weights', [None] * len(self.toas_list))
+        self.set_weights = kwargs.get('set_weights', [1.0] * len(self.toas_list))
+        self.templates = kwargs.get('templates', [None] * len(self.toas_list))
+        self.xtemps = [None] * len(self.toas_list)
+        phs = kwargs.get('phs', 0.0)
+        phserr = kwargs.get('phserr', 0.03)
+
+        self.minMJD = kwargs.get('minMJD', 54680)
+        self.maxMJD = kwargs.get('maxMJD', 57250)
+
+        self.fitkeys, self.fitvals, self.fiterrs = \
+            self.generate_fit_keyvals(phs, phserr)
+        self.n_fit_params = len(self.fitvals)
+    
+        self.numcalls = 0
+        self.maxpost = -np.inf
+        self.maxpost_fitvals = self.fitvals
+        self.priors_set = False
+        self.use_resids = False
+
+    def clip_template_params(self, pos):
+        return pos
+
+    def get_model_parameters(self, theta):
+        return theta
+
+    def get_template_parameters(self, theta):
+        return None
+
+    def get_parameters(self):
+        return self.fitvals
+
+    def get_parameter_names(self):
+        return self.fitkeys
+
+    def set_parameters(self, theta):
+        self.set_params(dict(zip(self.fitkeys[:-1], theta[:-1])))
+
+    def get_errors(self):
+        return self.fiterrs
+
+    def get_event_phases(self, index=None):
+        '''Get phases for the TOAs object specified by index in toas_list.
+            If index is None, then it will return phases for all TOAs
+        '''
+        if index is None:
+            phases = self.model.phase(self.toas.table)[1]
+            print('Showing all %d phases' % len(phases))
+        else:
+            phases = self.model.phase(self.toas_list[index].table)[1]
+        return np.where(phases < 0.0 * u.cycle, phases + 1.0 * u.cycle, phases)
+
+    def get_template_vals(self, phases, index):
+        if self.templates[index] is None:
+            raise ValueError('Template for index %d has not been initialized in CompositeMCMCFitter' % index)
+        if isinstance(self.templates[index], LCTemplate):
+            return self.templates[index](phases, use_cache=True)
+        else:
+            if self.xtemps[index] is None:
+                ltemp = len(self.templates[index])
+                self.xtemps[index] = np.arange(ltemp) * 1.0 / ltemp
+            return np.interp(phases, self.xtemps[index], self.templates[index], \
+                             right=self.templates[index][0])
+
+    def get_weights(self, index=None):
+        if not index is None:
+            return self.weights[index]
+        else:
+            wgts = np.zeros(len(self.toas.table))
+            curr = 0
+            for i in range(len(self.toas_list)):
+                ts = self.toas_list[i]
+                nxt = curr + len(ts.table)
+                print(curr, nxt, len(ts.table))
+                if self.weights[i] is None:
+                    wgts[curr:nxt] = 1.0 * self.set_weights[i]
+                else:
+                    wgts[curr:nxt] = self.weights[i] * self.set_weights[i]
+                curr = nxt
+            return wgts
+
+    def lnlikelihood(self, fitter, theta):
+        '''Sum over the log-likelihood functions for each dataset
+            Multiply by weights in the sum
+            NOTE: Requires a fitter passed because that is how this
+                function is called by lnposterior in the super class
+        '''
+        self.set_parameters(theta)
+        lnsum = 0.0
+        curr = 0
+        for i in range(len(self.lnlikelihoods)):
+            lnsum += self.lnlikelihoods[i](self, theta, i) * self.set_weights[i]
+        return lnsum
