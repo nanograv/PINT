@@ -68,13 +68,14 @@ class Dispersion(DelayComponent):
         return dm_terms
 
     def base_dm(self, toas):
-        dm = np.zeros(len(toas))
+        tbl = toas.table
+        dm = np.zeros(len(tbl))
         dm_terms = self.get_DM_terms()
         if self.DMEPOCH.value is None:
-            DMEPOCH = toas['tdbld'][0]
+            DMEPOCH = tbl['tdbld'][0]
         else:
             DMEPOCH = self.DMEPOCH.value
-        dt = (toas['tdbld'] - DMEPOCH) * u.day
+        dt = (tbl['tdbld'] - DMEPOCH) * u.day
         dt_value = (dt.to(u.yr)).value
         dm_terms_value = [d.value for d in dm_terms]
         dm = taylor_horner(dt_value, dm_terms_value)
@@ -92,13 +93,14 @@ class Dispersion(DelayComponent):
         return dmdelay
 
     def dispersion_delay(self, toas, acc_delay=None):
+        tbl = toas.table
         try:
             bfreq = self.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
-            bfreq = toas['freq']
+            bfreq = tbl['freq']
 
-        dm = np.zeros(len(toas)) * self.DM.units
+        dm = np.zeros(len(tbl)) * self.DM.units
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
 
@@ -124,11 +126,12 @@ class Dispersion(DelayComponent):
     def d_delay_d_DMs(self, toas, param_name, acc_delay=None): # NOTE we should have a better name for this.
         """Derivatives for constant DM
         """
+        tbl = toas.table
         try:
             bfreq = self.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
-            bfreq = toas['freq']
+            bfreq = tbl['freq']
         par = getattr(self, param_name)
         unit = par.units
         if param_name == 'DM':
@@ -140,10 +143,10 @@ class Dispersion(DelayComponent):
         dm_terms = np.longdouble(np.zeros(len(dms)))
         dm_terms[order] = np.longdouble(1.0)
         if self.DMEPOCH.value is None:
-            DMEPOCH = toas['tdbld'][0]
+            DMEPOCH = tbl['tdbld'][0]
         else:
             DMEPOCH = self.DMEPOCH.value
-        dt = (toas['tdbld'] - DMEPOCH) * u.day
+        dt = (tbl['tdbld'] - DMEPOCH) * u.day
         dt_value = (dt.to(u.yr)).value
         d_dm_d_dm_param = taylor_horner(dt_value, dm_terms)* (self.DM.units/par.units)
         return DMconst * d_dm_d_dm_param/ bfreq**2.0
@@ -202,6 +205,7 @@ class DispersionDMX(Dispersion):
 
     def dmx_dm(self, toas):
         condition = {}
+        tbl = toas.table
         if not hasattr(self, 'dmx_toas_selector'):
             self.dmx_toas_selector = TOASelect(is_range=True)
         DMX_mapping = self.get_prefix_mapping_component('DMX_')
@@ -211,15 +215,16 @@ class DispersionDMX(Dispersion):
             r1 = getattr(self, DMXR1_mapping[epoch_ind]).quantity
             r2 = getattr(self, DMXR2_mapping[epoch_ind]).quantity
             condition[DMX_mapping[epoch_ind]] = (r1.mjd, r2.mjd)
-        select_idx = self.dmx_toas_selector.get_select_index(condition, toas['mjd_float'])
+        select_idx = self.dmx_toas_selector.get_select_index(condition, tbl['mjd_float'])
         #Get DMX delays
-        dm = np.zeros(len(toas)) * self.DM.units
+        dm = np.zeros(len(tbl)) * self.DM.units
         for k, v in select_idx.items():
            dm[v] = getattr(self, k).quantity
         return dm
 
     def d_delay_d_DMX(self, toas, param_name, acc_delay=None):
         condition = {}
+        tbl = toas.table
         if not hasattr(self, 'dmx_toas_selector'):
             self.dmx_toas_selector = TOASelect(is_range=True)
         param = getattr(self, param_name)
@@ -229,14 +234,14 @@ class DispersionDMX(Dispersion):
         r1 = getattr(self, DMXR1_mapping[dmx_index]).quantity
         r2 = getattr(self, DMXR2_mapping[dmx_index]).quantity
         condition = {param_name:(r1.mjd, r2.mjd)}
-        select_idx = self.dmx_toas_selector.get_select_index(condition, toas['mjd_float'])
+        select_idx = self.dmx_toas_selector.get_select_index(condition, tbl['mjd_float'])
 
         try:
             bfreq = self.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
-            bfreq = toas['freq']
-        dmx = np.zeros(len(toas))
+            bfreq = tbl['freq']
+        dmx = np.zeros(len(tbl))
         for k, v in select_idx.items():
            dmx[v] = 1.0
         return DMconst * dmx / bfreq**2.0

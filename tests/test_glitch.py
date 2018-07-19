@@ -29,9 +29,9 @@ class TestGlitch(unittest.TestCase):
         self.f.fit_toas()
         emsg = "RMS of " + self.m.PSR.value + " is too big."
         assert self.f.resids.time_resids.std().to(u.us).value < 950.0, emsg
-        
+
     def test_glith_der(self):
-        delay = self.m.delay(self.t.table)
+        delay = self.m.delay(self.t)
         for pf in self.m.glitch_prop:
             for idx in set(self.m.glitch_indices):
                 if pf in ['GLF0D_', 'GLTD_']:
@@ -41,8 +41,8 @@ class TestGlitch(unittest.TestCase):
                     getattr(self.m, 'GLF0D_%d' % idx ).value = 0.0
                     getattr(self.m , 'GLTD_%d' % idx ).value = 0.0
                 param = pf+str(idx)
-                adf = self.m.d_phase_d_param(self.t.table, delay, param)
-                ndf = self.m.d_phase_d_param_num(self.t.table, param)
+                adf = self.m.d_phase_d_param(self.t, delay, param)
+                ndf = self.m.d_phase_d_param_num(self.t, param)
                 diff = adf - ndf
                 mean = (adf + ndf)/2.0
                 r_diff = diff/mean

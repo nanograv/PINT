@@ -37,7 +37,8 @@ class DelayJump(DelayComponent):
         jump parameters. The delay value is determined by jump parameter value
         in the unit of seconds.
         """
-        jdelay = numpy.zeros(len(toas))
+        tbl = toas.table
+        jdelay = numpy.zeros(len(tbl))
         for jump in self.jumps:
             jump_par = getattr(self, jump)
             mask = jump_par.select_toa_mask(toas)
@@ -47,7 +48,8 @@ class DelayJump(DelayComponent):
         return jdelay * u.second
 
     def d_delay_d_jump(self, toas, jump_param, acc_delay=None):
-        d_delay_d_j = numpy.zeros(len(toas))
+        tbl = toas.table
+        d_delay_d_j = numpy.zeros(len(tbl))
         jpar = getattr(self, jump_param)
         mask = jpar.select_toa_mask(toas)
         d_delay_d_j[mask] = -1.0
@@ -84,7 +86,8 @@ class PhaseJump(PhaseComponent):
         jump parameters. The phase value is determined by jump parameter times
         F0.
         """
-        jphase = numpy.zeros(len(toas)) * (self.JUMP1.units * self.F0.units)
+        tbl = toas.table
+        jphase = numpy.zeros(len(tbl)) * (self.JUMP1.units * self.F0.units)
         for jump in self.jumps:
             jump_par = getattr(self, jump)
             mask = jump_par.select_toa_mask(toas)
@@ -94,8 +97,9 @@ class PhaseJump(PhaseComponent):
         return jphase
 
     def d_phase_d_jump(self, toas, jump_param, delay):
+        tbl = toas.table
         jpar = getattr(self, jump_param)
-        d_phase_d_j = numpy.zeros(len(toas))
+        d_phase_d_j = numpy.zeros(len(tbl))
         mask = jpar.select_toa_mask(toas)
         d_phase_d_j[mask] = self.F0.value
         with u.set_enabled_equivalencies(dimensionless_cycles):

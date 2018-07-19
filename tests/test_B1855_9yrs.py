@@ -18,7 +18,7 @@ class TestB1855(unittest.TestCase):
     def setUpClass(self):
         self.parfileB1855 = 'B1855+09_NANOGrav_9yv1.gls.par'
         self.timB1855 = 'B1855+09_NANOGrav_9yv1.tim'
-        self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE421", 
+        self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE421",
                                       planets=False, include_bipm=False)
         self.modelB1855 = mb.get_model(self.parfileB1855)
         # tempo result
@@ -33,11 +33,11 @@ class TestB1855(unittest.TestCase):
     def test_derivative(self):
         log= logging.getLogger( "TestB1855.derivative_test")
         testp = tdu.get_derivative_params(self.modelB1855)
-        delay = self.modelB1855.delay(self.toasB1855.table)
+        delay = self.modelB1855.delay(self.toasB1855)
         for p in testp.keys():
             log.debug( "Runing derivative for %s", 'd_delay_d_'+p)
-            ndf = self.modelB1855.d_phase_d_param_num(self.toasB1855.table, p, testp[p])
-            adf = self.modelB1855.d_phase_d_param(self.toasB1855.table, delay, p)
+            ndf = self.modelB1855.d_phase_d_param_num(self.toasB1855, p, testp[p])
+            adf = self.modelB1855.d_phase_d_param(self.toasB1855, delay, p)
             diff = adf - ndf
             if not np.all(diff.value) == 0.0:
                 mean_der = (adf+ndf)/2.0

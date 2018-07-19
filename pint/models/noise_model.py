@@ -113,7 +113,8 @@ class ScaleToaError(NoiseComponent):
         return pairs
 
     def scale_sigma(self, toas):
-        sigma_old = toas['error'].quantity
+        tbl = toas.table
+        sigma_old = tbl['error'].quantity
         sigma_scaled = np.zeros_like(sigma_old)
         EF_EQ_pairs = self.pair_EFAC_EQUAD()
         for pir in EF_EQ_pairs:
@@ -179,7 +180,8 @@ class EcorrNoise(NoiseComponent):
         The weights used are the square of the ECORR values.
 
         """
-        t = (toas['tdbld'].quantity * u.day).to(u.s).value
+        tbl = toas.table
+        t = (tbl['tdbld'].quantity * u.day).to(u.s).value
         ecorrs = self.get_ecorrs()
         Umats = []
         for ec in ecorrs:
@@ -260,8 +262,8 @@ class PLRedNoise(NoiseComponent):
         the dataset.
 
         """
-
-        t = (toas['tdbld'].quantity * u.day).to(u.s).value
+        tbl = toas.table
+        t = (tbl['tdbld'].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
         Fmat, f = create_fourier_design_matrix(t, nf)
         weight = powerlaw(f, amp, gam) * f[0]
@@ -272,24 +274,24 @@ class PLRedNoise(NoiseComponent):
         return np.dot(Fmat * phi[None,:], Fmat.T)
 
 
-def create_quantization_matrix(toas, dt=1, nmin=2):
+def create_quantization_matrix(toas_table, dt=1, nmin=2):
     """Create quantization matrix mapping TOAs to observing epochs."""
-    isort = np.argsort(toas)
+    isort = np.argsort(toas_table)
 
-    bucket_ref = [toas[isort[0]]]
+    bucket_ref = [toas_table[isort[0]]]
     bucket_ind = [[isort[0]]]
 
     for i in isort[1:]:
-        if toas[i] - bucket_ref[-1] < dt:
+        if toas_table[i] - bucket_ref[-1] < dt:
             bucket_ind[-1].append(i)
         else:
-            bucket_ref.append(toas[i])
+            bucket_ref.append(toas_table[i])
             bucket_ind.append([i])
 
     # find only epochs with more than 1 TOA
     bucket_ind2 = [ind for ind in bucket_ind if len(ind) >= nmin]
 
-    U = np.zeros((len(toas),len(bucket_ind2)),'d')
+    U = np.zeros((len(toas_table),len(bucket_ind2)),'d')
     for i,l in enumerate(bucket_ind2):
         U[l,i] = 1
 

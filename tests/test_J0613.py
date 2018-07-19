@@ -27,7 +27,7 @@ class TestJ0613(unittest.TestCase):
         print(self.ltres)
     def test_J0613_binary_delay(self):
         # Calculate delays with PINT
-        pint_binary_delay = self.modelJ0613.binarymodel_delay(self.toasJ0613.table, None)
+        pint_binary_delay = self.modelJ0613.binarymodel_delay(self.toasJ0613, None)
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-8), 'J0613 binary delay test failed.'
 
     def test_J0613(self):
@@ -42,7 +42,7 @@ class TestJ0613(unittest.TestCase):
         self.modelJ0613.EPS2DOT.value = 0.0
         self.modelJ0613.A1DOT.value = 0.0
         testp = tdu.get_derivative_params(self.modelJ0613)
-        delay = self.modelJ0613.delay(self.toasJ0613.table)
+        delay = self.modelJ0613.delay(self.toasJ0613)
         # Change parameter test step
         testp['EPS1'] = 1
         testp['EPS2'] = 1
@@ -50,8 +50,8 @@ class TestJ0613(unittest.TestCase):
         testp['PMRA'] = 1
         for p in testp.keys():
             log.debug( "Runing derivative for %s", 'd_delay_d_'+p)
-            ndf = self.modelJ0613.d_phase_d_param_num(self.toasJ0613.table, p, testp[p])
-            adf = self.modelJ0613.d_phase_d_param(self.toasJ0613.table, delay, p)
+            ndf = self.modelJ0613.d_phase_d_param_num(self.toasJ0613, p, testp[p])
+            adf = self.modelJ0613.d_phase_d_param(self.toasJ0613, delay, p)
             diff = adf - ndf
             if not np.all(diff.value) == 0.0:
                 mean_der = (adf+ndf)/2.0

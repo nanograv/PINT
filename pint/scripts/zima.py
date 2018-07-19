@@ -66,7 +66,7 @@ def main(argv=None):
         scale = site.timescale
 
         times = np.linspace(0,duration.to(u.day).value,args.ntoa)*u.day + start
-        
+
         # 'Fuzz' out times
         fuzz = np.random.normal(scale=args.fuzzdays,size=len(times))*u.day
         times += fuzz
@@ -96,12 +96,12 @@ def main(argv=None):
     # that TimeDelta understands
     log.info("Creating TOAs")
     F_local = m.d_phase_d_toa(ts)
-    rs = m.phase(ts.table).frac.value/F_local
+    rs = m.phase(ts).frac.value/F_local
 
     # Adjust the TOA times to put them where their residuals will be 0.0
 
     ts.adjust_TOAs(TimeDelta(-1.0*rs))
-    rspost = m.phase(ts.table).frac.value/F_local
+    rspost = m.phase(ts).frac.value/F_local
 
     log.info("Second iteration")
     # Do a second iteration
@@ -113,10 +113,10 @@ def main(argv=None):
     if args.plot:
         # This should be a very boring plot with all residuals flat at 0.0!
         import matplotlib.pyplot as plt
-        rspost2 = m.phase(ts.table).frac/F_local
+        rspost2 = m.phase(ts).frac/F_local
         plt.errorbar(ts.get_mjds().value,rspost2.to(u.us).value,yerr=ts.get_errors().to(u.us).value)
         newts = pint.toa.get_TOAs(args.timfile, ephem = args.ephem, planets=args.planets)
-        rsnew = m.phase(newts.table).frac/F_local
+        rsnew = m.phase(newts).frac/F_local
         plt.errorbar(newts.get_mjds().value,rsnew.to(u.us).value,yerr=newts.get_errors().to(u.us).value)
         #plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
         plt.xlabel('MJD')
