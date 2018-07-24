@@ -18,6 +18,7 @@ from .solar_system_ephemerides import objPosVel_wrt_SSB
 from pint import ls, J2000, J2000ld
 from .config import datapath
 from astropy import log
+import numpy as np
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "FMIN", "INCLUDE", "INFO", "JUMP", "MODE", "NOSKIP", "PHA1",
@@ -30,7 +31,7 @@ JD_MJD = 2400000.5
 
 def get_TOAs(timfile, ephem="DE421", include_bipm=True, bipm_version='BIPM2015',
              include_gps=True, planets=False, usepickle=False,
-             tdb_method="astropy"):
+             tdb_method="default"):
     """Convenience function to load and prepare TOAs for PINT use.
 
     Loads TOAs from a '.tim' file, applies clock corrections, computes
@@ -50,6 +51,7 @@ def get_TOAs(timfile, ephem="DE421", include_bipm=True, bipm_version='BIPM2015',
             # Pickle either did not exist or is out of date
             updatepickle = True
     t = TOAs(timfile)
+    t.pulse_column_from_flags()
     if not any(['clkcorr' in f for f in t.table['flags']]):
         t.apply_clock_corrections(include_gps=include_gps,
                                   include_bipm=include_bipm,
@@ -98,7 +100,7 @@ def _check_pickle(toafilename, picklefilename=None):
 
 def get_TOAs_list(toa_list,ephem="DE421", include_bipm=True,
                   bipm_version='BIPM2015', include_gps=True, planets=False,
-                  tdb_method="astropy"):
+                  tdb_method="default"):
     """Load TOAs from a list of TOA objects.
 
     Compute the TDB time and observatory positions and velocity
@@ -109,6 +111,7 @@ def get_TOAs_list(toa_list,ephem="DE421", include_bipm=True,
     [default=True].
     """
     t = TOAs(toalist = toa_list)
+    t.pulse_column_from_flags()
     if not any(['clkcorr' in f for f in t.table['flags']]):
         t.apply_clock_corrections(include_gps=include_gps,
                                   include_bipm=include_bipm,
@@ -383,7 +386,6 @@ class TOA(object):
 
         """
         site = get_observatory(obs)
-
         # If MJD is already a Time, just use it. Note that this will ignore
         # the 'scale' argument to the TOA() constructor!
         if isinstance(MJD,time.Time):
@@ -483,7 +485,6 @@ class TOAs(object):
                                       names=("index", "mjd", "mjd_float", "error",
                                              "freq", "obs", "flags"),
                                       meta={'filename':self.filename}).group_by("obs")
-
         # We don't need this now that we have a table
         del(self.toas)
 
@@ -561,6 +562,27 @@ class TOAs(object):
         else:
             return self.table['obs']
 
+    def get_pulse_numbers(self):
+        """Return a numpy array of the pulse numbers for each TOA"""
+        if hasattr(self, "toas"):
+            try:
+                return np.array([t.flags['pn'] for t in self.toas]) * u.cycle
+            except:
+                log.warning('No pulse numbers for TOAs')
+                return None
+        else:
+            if 'pn' in self.table['flags'][0]:
+                if 'pn' in self.table.colnames:
+                    log.error('Pulse number cannot be both a column and TOA flag')
+                    raise Exception('Pulse number cannot be both a column and a TOA flag')
+                return np.array(flags['pn'] for flags in self.table['flags']) * u.cycle
+            elif 'pn' in self.table.colnames:
+                return self.table['pn']
+            else:
+                log.warning('No pulse numbers for TOAs')
+                return None
+                
+
     def get_flags(self):
         """Return a numpy array of the TOA flags"""
         if hasattr(self, "toas"):
@@ -617,6 +639,27 @@ class TOAs(object):
     def print_summary(self):
         """Write a summary of the TOAs to stdout."""
         print(self.get_summary())
+    
+    def pulse_column_from_flags(self):
+        '''
+        Create a pulse numbers column if possible from the TOAs flags
+        Scans pulse numbers from the table flags and creates a new table column.
+        '''
+        #Add pn as a table column
+        try:
+            pns = [flags['pn'] for flags in self.table['flags']]
+            self.table['pn'] = pns
+            self.table['pn'].unit = u.cycle
+
+            #Remove pn from dictionary to prevent redundancies
+            for flags in self.table['flags']:
+                del flags['pn']
+        except:
+            log.info('No pn flags in model')
+
+    def compute_pulse_numbers(self, model):
+        phases = model.phase(self)
+        self.table['pn'] = phases.int
 
     def adjust_TOAs(self, delta):
         """Apply a time delta to TOAs
@@ -672,6 +715,14 @@ class TOAs(object):
         # NOTE(@paulray): This really should REMOVE any(?) clock corrections
         # that have been applied!
         # NOTE clock corrections has been removed.
+        
+        # Add pulse numbers to flags temporarily if there is a pulse number column
+        pnChange = False
+        if 'pn' in self.table.colnames:
+            pnChange = True
+            for i in range(len(self.table['flags'])):
+                self.table['flags'][i]['pn'] = self.table['pn'][i]
+
         for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'].quantity,
             self.table['freq'].quantity,self.table['obs'],self.table['flags']):
             obs_obj = Observatory.get(obs)
@@ -682,6 +733,12 @@ class TOAs(object):
             out_str = format_toa_line(toatime_out, toaerr, freq, obs_obj, name=name,
                       flags=flags, format=format)
             outf.write(out_str)
+
+        # If pulse numbers were added to flags, remove them again
+        if pnChange:
+            for flags in self.table['flags']:
+                del flags['pn']
+
         if not handle:
             outf.close()
 
@@ -743,7 +800,7 @@ class TOAs(object):
                                      'bipm_version':bipm_version,
                                      'include_gps':include_gps})
 	
-    def compute_TDBs(self, method="astropy", ephem=None):
+    def compute_TDBs(self, method="default", ephem=None):
         """Compute and add TDB and TDB long double columns to the TOA table.
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
         for TDB times, using the Observatory locations and IERS A Earth
@@ -756,6 +813,13 @@ class TOAs(object):
         if 'tdbld' in self.table.colnames:
             log.info('tdbld column already exists. Deleting...')
             self.table.remove_column('tdbld')
+
+        if ephem is None:
+            if self.ephem is not None:
+                ephem = self.ephem
+            else:
+                log.warning('No ephemeris provided to TOAs object or compute_TDBs. Using DE421')
+                ephem = 'DE421'
 
         # Compute in observatory groups
         tdbs = numpy.zeros_like(self.table['mjd'])

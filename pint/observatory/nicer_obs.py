@@ -93,7 +93,7 @@ class NICERObs(SpecialLocation):
         'spacecraft' = Give spacecraft ITRF position to astropy.Time()
 """
 
-    def __init__(self, name, FPorbname, tt2tdb_mode = 'spacecraft'):
+    def __init__(self, name, FPorbname, tt2tdb_mode = 'pint'):
 
 
         if FPorbname.startswith('@'):
@@ -114,13 +114,12 @@ class NICERObs(SpecialLocation):
         self.Vx = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Vx'])
         self.Vy = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Vy'])
         self.Vz = InterpolatedUnivariateSpline(self.FPorb['MJD_TT'],self.FPorb['Vz'])
-        self.tt2tdb_mode = tt2tdb_mode
+        super(NICERObs, self).__init__(name=name, tt2tdb_mode=tt2tdb_mode)
         # Print this warning once, mainly for @paulray
-        if self.tt2tdb_mode.lower().startswith('none'):
+        if self.tt2tdb_mode.lower().startswith('pint'):
             log.warning('Using location=None for TT to TDB conversion')
         elif self.tt2tdb_mode.lower().startswith('geo'):
             log.warning('Using location geocenter for TT to TDB conversion')
-        super(NICERObs, self).__init__(name=name)
 
     @property
     def timescale(self):
@@ -129,11 +128,11 @@ class NICERObs(SpecialLocation):
     def earth_location_itrf(self, time=None):
         '''Return NICER spacecraft location in ITRF coordinates'''
 
-        if self.tt2tdb_mode.lower().startswith('none'):
+        if self.tt2tdb_mode.lower().startswith('pint'):
             return None
         elif self.tt2tdb_mode.lower().startswith('geo'):
             return EarthLocation.from_geocentric(0.0*u.m,0.0*u.m,0.0*u.m)
-        elif self.tt2tdb_mode.lower().startswith('spacecraft'):
+        elif self.tt2tdb_mode.lower().startswith('astropy'):
             # First, interpolate ECI geocentric location from orbit file.
             # These are inertial coorinates aligned with ICRF
             pos_gcrs =  GCRS(CartesianRepresentation(self.X(time.tt.mjd)*u.m,
@@ -148,7 +147,7 @@ class NICERObs(SpecialLocation):
             # Return geocentric ITRS coordinates as an EarthLocation object
             return pos_ITRS.earth_location
         else:
-            log.error('Unknown tt2tdb_mode %s, using None', self.tt2tdb_mode)
+            log.error('Unknown tt2tdb_mode %s, using None' % self.tt2tdb_mode)
             return None
 
     @property
