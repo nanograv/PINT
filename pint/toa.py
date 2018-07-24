@@ -658,7 +658,7 @@ class TOAs(object):
             log.info('No pn flags in model')
 
     def compute_pulse_numbers(self, model):
-        phases = model.phase(self.table)
+        phases = model.phase(self)
         self.table['pn'] = phases.int
 
     def adjust_TOAs(self, delta):
