@@ -22,7 +22,6 @@ timfile = 'J1744-1134.Rcvr1_2.GASP.8y.x.tim'
 
 m = tm.get_model(parfile)
 log.info("model.as_parfile():\n%s"%m.as_parfile())
-
 try:
     planets = m.PLANET_SHAPIRO.value
 except AttributeError:

@@ -463,7 +463,7 @@ class TimingModel(object):
         Return the total delay which will be subtracted from the given
         TOA to get time of emission at the pulsar.
         """
-        delay = np.zeros(len(toas)) * u.second
+        delay = np.zeros(toas.ntoas) * u.second
         if cutoff_component == '':
             idx = len(self.DelayComponent_list)
         else:
@@ -483,7 +483,7 @@ class TimingModel(object):
         """Return the model-predicted pulse phase for the given TOAs."""
         # First compute the delays to "pulsar time"
         delay = self.delay(toas)
-        phase = Phase(np.zeros(len(toas)) , np.zeros(len(toas)))
+        phase = Phase(np.zeros(toas.ntoas) , np.zeros(toas.ntoas))
         # Then compute the relevant pulse phases
         for pf in self.phase_funcs:
             phase += Phase(pf(toas, delay))
@@ -494,11 +494,12 @@ class TimingModel(object):
            If there is no noise model component provided, a diagonal matrix with
            TOAs error as diagonal element will be returned.
         """
-        ntoa = len(toas)
+        ntoa = toas.ntoas
+        tbl = toas.table
         result = np.zeros((ntoa, ntoa))
         # When there is no noise model.
         if len(self.covariance_matrix_funcs) == 0:
-            result += np.diag(toas['error'].quantity.value**2)
+            result += np.diag(tbl['error'].quantity.value**2)
             return result
 
         for nf in self.covariance_matrix_funcs:
@@ -510,11 +511,12 @@ class TimingModel(object):
            If there is no noise model component provided, a vector with
            TOAs error as values will be returned.
         """
-        ntoa = len(toas)
+        ntoa = toas.ntoas
+        tbl = toas.table
         result = np.zeros(ntoa) * u.us
         # When there is no noise model.
         if len(self.scaled_sigma_funcs) == 0:
-            result += toas['error'].quantity
+            result += tbl['error'].quantity
             return result
 
         for nf in self.scaled_sigma_funcs:
@@ -546,7 +548,7 @@ class TimingModel(object):
         """This is a convenient function for calculate the barycentric TOAs.
            Parameter
            ---------
-           toas: TOAs table
+           toas: TOAs object
                The TOAs the barycentric corrections are applied on
            cutoff_delay: str, optional
                The cutoff delay component name. If it is not provided, it will
@@ -556,13 +558,14 @@ class TimingModel(object):
            astropy.quantity.
                Barycentered TOAs.
         """
+        tbl = toas.table
         if cutoff_component == '':
             delay_list = self.DelayComponent_list
             for cp in delay_list:
                 if cp.category == 'pulsar_system':
                     cutoff_component = cp.__class__.__name__
         corr = self.delay(toas, cutoff_component, False)
-        return toas['tdbld'] * u.day - corr
+        return tbl['tdbld'] * u.day - corr
 
     def d_phase_d_toa(self, toas, sample_step=None):
         """Return the derivative of phase wrt TOA
@@ -585,7 +588,7 @@ class TimingModel(object):
             dt_array = ([dt.value] * copy_toas.ntoas*dt._unit)
             deltaT = time.TimeDelta(dt_array)
             copy_toas.adjust_TOAs(deltaT)
-            phase = self.phase(copy_toas.table)
+            phase = self.phase(copy_toas)
             sample_phase.append(phase)
         #Use finite difference method.
         # phase'(t) = (phase(t+h)-phase(t-h))/2+ 1/6*F2*h^2 + ..
@@ -610,7 +613,7 @@ class TimingModel(object):
         # Is it safe to assume that any param affecting delay only affects
         # phase indirectly (and vice-versa)??
         par = getattr(self, param)
-        result = np.longdouble(np.zeros(len(toas))) * u.cycle/par.units
+        result = np.longdouble(np.zeros(toas.ntoas)) * u.cycle/par.units
         param_phase_derivs = []
         phase_derivs = self.phase_deriv_funcs
         delay_derivs = self.delay_deriv_funcs
@@ -627,7 +630,7 @@ class TimingModel(object):
             #                         d_delay_d_param
 
             d_delay_d_p = self.d_delay_d_param(toas, param)
-            dpdd_result = np.longdouble(np.zeros(len(toas))) * u.cycle/u.second
+            dpdd_result = np.longdouble(np.zeros(toas.ntoas)) * u.cycle/u.second
             for dpddf in self.d_phase_d_delay_funcs:
                 dpdd_result += dpddf(toas, delay)
             result = dpdd_result * d_delay_d_p
@@ -638,7 +641,7 @@ class TimingModel(object):
         Return the derivative of delay with respect to the parameter.
         """
         par = getattr(self, param)
-        result = np.longdouble(np.zeros(len(toas)) * u.s/par.units)
+        result = np.longdouble(np.zeros(toas.ntoas) * u.s/par.units)
         delay_derivs = self.delay_deriv_funcs
         if param not in list(delay_derivs.keys()):
             raise AttributeError("Derivative function for '%s' is not provided"
@@ -661,8 +664,8 @@ class TimingModel(object):
             h = ori_value * step
         parv = [par.value - h, par.value + h]
 
-        phaseI = np.zeros((len(toas),2), dtype=np.longdouble) * u.cycle
-        phaseF = np.zeros((len(toas),2), dtype=np.longdouble) * u.cycle
+        phaseI = np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.cycle
+        phaseF = np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.cycle
         for ii, val in enumerate(parv):
             par.value = val
             ph = self.phase(toas)
@@ -684,14 +687,14 @@ class TimingModel(object):
         if ori_value is None:
              # A parameter did not get to use in the model
             log.warn("Parameter '%s' is not used by timing model." % param)
-            return np.zeros(len(toas)) * (u.second/par.units)
+            return np.zeros(toas.ntoas) * (u.second/par.units)
         unit = par.units
         if ori_value == 0:
             h = 1.0 * step
         else:
             h = ori_value * step
         parv = [par.value-h, par.value+h]
-        delay = np.zeros((len(toas),2))
+        delay = np.zeros((toas.ntoas, 2))
         for ii, val in enumerate(parv):
             par.value = val
             try:
@@ -703,7 +706,7 @@ class TimingModel(object):
         par.value = ori_value
         return d_delay * (u.second/unit)
 
-    def designmatrix(self, toas,acc_delay=None, scale_by_F0=True, \
+    def designmatrix(self, toas, acc_delay=None, scale_by_F0=True, \
                      incfrozen=False, incoffset=True):
         """
         Return the design matrix: the matrix with columns of d_phase_d_param/F0
@@ -714,7 +717,7 @@ class TimingModel(object):
                 not getattr(self, par).frozen]
 
         F0 = self.F0.quantity        # 1/sec
-        ntoas = len(toas)
+        ntoas = toas.ntoas
         nparams = len(params)
         delay = self.delay(toas)
         units = []
@@ -865,7 +868,7 @@ class Component(object):
         self.category = ''
         self.deriv_funcs = {}
         self.component_special_params = []
-        
+
     def setup(self,):
         pass
 

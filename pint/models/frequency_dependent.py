@@ -47,11 +47,12 @@ class FD(DelayComponent):
         Eq.(2):
         FDdelay = sum(c_i * (log(obs_freq/1GHz))^i)
         """
+        tbl = toas.table
         try:
             bfreq = self.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for frequency dependent delay!")
-            bfreq = toas['freq']
+            bfreq = tbl['freq']
         FD_mapping = self.get_prefix_mapping_component('FD')
         log_freq = np.log(bfreq / (1 * u.GHz))
         non_finite = np.invert(np.isfinite(log_freq))
@@ -67,11 +68,12 @@ class FD(DelayComponent):
     def d_delay_FD_d_FDX(self, toas, param, acc_delay=None):
         """This is a derivative function for FD parameter
         """
+        tbl = toas.table
         try:
             bfreq = self.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for frequency dependent delay derivative!")
-            bfreq = toas['freq']
+            bfreq = tbl['freq']
         log_freq = np.log(bfreq / (1 * u.GHz))
         non_finite = np.invert(np.isfinite(log_freq))
         log_freq[non_finite] = 0.0
