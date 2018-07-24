@@ -19,14 +19,17 @@ tempo2_vals = tempo2_utils.general2(parfile, timfile,['pre'])
 print("PINT calculation")
 mdd = mb.get_model(parfile)
 # Get toas to pint
-toas = toa.get_TOAs(timfile, planets=False, ephem='DE405')
-tt = toas.table
+toas = toa.get_TOAs(timfile, planets=False, ephem='DE405', include_bipm=False)
 # Get residuals
 t2_resids = tempo2_vals['pre']
-presids_us = resids(toas, mdd).time_resids
+presids_us = resids(toas, mdd).time_resids.to(u.us)
 # Plot residuals
-plt.errorbar(toas.get_mjds(high_precision=False), presids_us.value,
-            toas.get_errors(), fmt='x')
+plt.errorbar(toas.get_mjds().value, presids_us.value, 
+             toas.get_errors().value, fmt='x')
+print(toas.get_errors().value)
+print(toas.get_mjds())
+
+print(presids_us.value)
 plt.title("%s Pre-Fit Timing Residuals" % mdd.PSR.value)
 plt.xlabel('MJD')
 plt.ylabel('Residual (us)')

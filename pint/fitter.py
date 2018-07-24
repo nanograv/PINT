@@ -85,7 +85,7 @@ class Fitter(object):
             getattr(self.model, k).uncertainty_value = v
 
     def get_designmatrix(self):
-        return self.model.designmatrix(toas=self.toas.table,
+        return self.model.designmatrix(toas=self.toas,
                 incfrozen=False, incoffset=True)
 
     def minimize_func(self, x, *args):
@@ -230,8 +230,8 @@ class GLSFitter(Fitter):
 
             # get any noise design matrices and weight vectors
             if not full_cov:
-                Mn = self.model.noise_model_designmatrix(self.toas.table)
-                phi = self.model.noise_model_basis_weight(self.toas.table)
+                Mn = self.model.noise_model_designmatrix(self.toas)
+                phi = self.model.noise_model_basis_weight(self.toas)
                 phiinv = np.zeros(M.shape[1])
                 if Mn is not None and phi is not None:
                     phiinv = np.concatenate((phiinv, 1/phi))
@@ -248,14 +248,14 @@ class GLSFitter(Fitter):
 
             # compute covariance matrices
             if full_cov:
-                cov = self.model.covariance_matrix(self.toas.table)
+                cov = self.model.covariance_matrix(self.toas)
                 cf = sl.cho_factor(cov)
                 cm = sl.cho_solve(cf, M)
                 mtcm = np.dot(M.T, cm)
                 mtcy = np.dot(cm.T, residuals)
 
             else:
-                Nvec = self.model.scaled_sigma(self.toas.table).to(u.s).value**2
+                Nvec = self.model.scaled_sigma(self.toas).to(u.s).value**2
                 cinv = 1 / Nvec
                 mtcm = np.dot(M.T, cinv[:,None]*M)
                 mtcm += np.diag(phiinv)

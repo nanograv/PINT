@@ -22,7 +22,7 @@ class resids(object):
 
     def calc_phase_resids(self, weighted_mean=True):
         """Return timing model residuals in pulse phase."""
-        rs = self.model.phase(self.toas.table)
+        rs = self.model.phase(self.toas)
         rs -= Phase(rs.int[0],rs.frac[0])
         if not weighted_mean:
             rs -= Phase(0.0,rs.frac.mean())
@@ -97,7 +97,7 @@ class resids(object):
         if self.toas is None or self.model is None:
             self.phase_resids = None
             self.time_resids = None
-        if self.toas is None: 
+        if self.toas is None:
             raise ValueError('No TOAs provided for residuals update')
         if self.model is None:
             raise ValueError('No model provided for residuals update')

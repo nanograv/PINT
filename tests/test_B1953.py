@@ -26,7 +26,7 @@ class TestB1953(unittest.TestCase):
         print(self.ltres)
     def test_B1953_binary_delay(self):
         # Calculate delays with PINT
-        pint_binary_delay = self.modelB1953.binarymodel_delay(self.toasB1953.table, None)
+        pint_binary_delay = self.modelB1953.binarymodel_delay(self.toasB1953, None)
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-8), 'B1953 binary delay test failed.'
 
     def test_B1953(self):
@@ -37,11 +37,11 @@ class TestB1953(unittest.TestCase):
     def test_derivative(self):
         log= logging.getLogger( "TestB1953.derivative_test")
         testp = tdu.get_derivative_params(self.modelB1953)
-        delay = self.modelB1953.delay(self.toasB1953.table)
+        delay = self.modelB1953.delay(self.toasB1953)
         for p in testp.keys():
             log.debug( "Runing derivative for %s", 'd_delay_d_'+p)
-            ndf = self.modelB1953.d_phase_d_param_num(self.toasB1953.table, p, testp[p])
-            adf = self.modelB1953.d_phase_d_param(self.toasB1953.table, delay, p)
+            ndf = self.modelB1953.d_phase_d_param_num(self.toasB1953, p, testp[p])
+            adf = self.modelB1953.d_phase_d_param(self.toasB1953, delay, p)
             diff = adf - ndf
             if not np.all(diff.value) == 0.0:
                 mean_der = (adf+ndf)/2.0

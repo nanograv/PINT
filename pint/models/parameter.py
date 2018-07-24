@@ -1327,7 +1327,7 @@ class maskParameter(floatParameter):
         """Select the toas.
         Parameter
         ---------
-        toas : toas table
+        toas : TOAs class
         Return
         ------
         A array of returned index.
@@ -1350,14 +1350,15 @@ class maskParameter(floatParameter):
         # TODO Right now it is only supports mjd, freq, tel, and flagkeys,
         # We need to consider some more complicated situation
         key = self.key.replace('-', '')
+        tbl = toas.table
         if key not in column_match.keys(): # This only works for the one with flags.
             section_name = key+'_section'
-            if section_name not in toas.keys():
-                flag_col = [x.get(key, None) for x in toas['flags']]
-                toas[section_name] = flag_col
-            col = toas[section_name]
+            if section_name not in tbl.keys():
+                flag_col = [x.get(key, None) for x in tbl['flags']]
+                tbl[section_name] = flag_col
+            col = tbl[section_name]
         else:
-            col = toas[column_match[key]]
+            col = tbl[column_match[key]]
         select_idx = self.toa_selector.get_select_index(condition, col)
 
         return select_idx[self.name]

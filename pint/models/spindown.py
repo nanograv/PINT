@@ -80,19 +80,19 @@ class Spindown(PhaseComponent):
         """Return dt, the time from the phase 0 epoch to each TOA.  The
         phase 0 epoch is assumed to be PEPOCH.  If PEPOCH is not set,
         the first TOA in the table is used instead.
-        
+
         Note, the phase 0 epoch as used here is only intended for
         computation internal to the Spindown class.  The "traditional"
         tempo-style TZRMJD and related parameters for specifying absolute
         pulse phase will be handled at a higher level in the code.
         """
-
+        tbl = toas.table
         if self.PEPOCH.value is None:
-            phsepoch_ld = time_to_longdouble(toas['tdb'][0] - delay[0])
+            phsepoch_ld = time_to_longdouble(tbl['tdb'][0] - delay[0])
         else:
             phsepoch_ld = time_to_longdouble(self.PEPOCH.quantity)
 
-        dt = (toas['tdbld'] - phsepoch_ld)*u.day - delay
+        dt = (tbl['tdbld'] - phsepoch_ld)*u.day - delay
 
         return dt
 
