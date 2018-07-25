@@ -96,7 +96,7 @@ class FermiObs(SpecialLocation):
         'spacecraft' = Give spacecraft ITRF position to astropy.Time()
     """
 
-    def __init__(self, name, ft2name, tt2tdb_mode = 'spacecraft'):
+    def __init__(self, name, ft2name, tt2tdb_mode = 'pint'):
         self.FT2 = load_FT2(ft2name)
         # Now build the interpolator here:
         self.X = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['X'])
@@ -105,13 +105,12 @@ class FermiObs(SpecialLocation):
         self.Vx = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Vx'])
         self.Vy = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Vy'])
         self.Vz = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Vz'])
-        self.tt2tdb_mode = tt2tdb_mode
+        super(FermiObs, self).__init__(name=name)
         # Print this warning once, mainly for @paulray
-        if self.tt2tdb_mode.lower().startswith('none'):
+        if self.tt2tdb_mode.lower().startswith('pint'):
             log.warning('Using location=None for TT to TDB conversion')
         elif self.tt2tdb_mode.lower().startswith('geo'):
             log.warning('Using location geocenter for TT to TDB conversion')
-        super(FermiObs, self).__init__(name=name)
 
     @property
     def timescale(self):
@@ -120,13 +119,13 @@ class FermiObs(SpecialLocation):
     def earth_location_itrf(self, time=None):
         '''Return Fermi spacecraft location in ITRF coordinates'''
 
-        if self.tt2tdb_mode.lower().startswith('none'):
+        if self.tt2tdb_mode.lower().startswith('pint'):
             #log.warning('Using location=None for TT to TDB conversion')
             return None
         elif self.tt2tdb_mode.lower().startswith('geo'):
             #log.warning('Using location geocenter for TT to TDB conversion')
             return EarthLocation.from_geocentric(0.0*u.m,0.0*u.m,0.0*u.m)
-        elif self.tt2tdb_mode.lower().startswith('spacecraft'):
+        elif self.tt2tdb_mode.lower().startswith('astropy'):
             # First, interpolate Earth-Centered Inertial (ECI) geocentric
             # location from orbit file.
             # These are inertial coordinates aligned with ICRS, called GCRS
@@ -143,7 +142,7 @@ class FermiObs(SpecialLocation):
             # Return geocentric ITRS coordinates as an EarthLocation object
             return pos_ITRS.earth_location
         else:
-            log.error('Unknown tt2tdb_mode %s, using None', self.tt2tdb_mode)
+            log.error('Unknown tt2tdb_mode %s, using None' % self.tt2tdb_mode)
             return None
 
     @property

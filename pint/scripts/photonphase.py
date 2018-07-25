@@ -33,7 +33,7 @@ def main(argv=None):
     parser.add_argument("--barytime",help="Write FITS file with a column containing the barycentric time as double precision MJD.",default=False,action='store_true')
     parser.add_argument("--outfile",help="Output FITS file name (default=same as eventfile)", default=None)
     parser.add_argument("--ephem",help="Planetary ephemeris to use (default=DE421)", default="DE421")
-    parser.add_argument('--tdbmethod',help="Method for computing TT to TDB (default=astropy)", default="astropy")
+    parser.add_argument('--tdbmethod',help="Method for computing TT to TDB (default=astropy)", default="default")
     parser.add_argument("--plot",help="Show phaseogram plot.", action='store_true', default=False)
 #    parser.add_argument("--fix",help="Apply 1.0 second offset for NICER", action='store_true', default=False)
     args = parser.parse_args(argv)
@@ -55,7 +55,7 @@ def main(argv=None):
         # Instantiate NICERObs once so it gets added to the observatory registry
         if args.orbfile is not None:
             log.info('Setting up NICER observatory')
-            NICERObs(name='NICER',FPorbname=args.orbfile,tt2tdb_mode='spacecraft')
+            NICERObs(name='NICER',FPorbname=args.orbfile,tt2tdb_mode='pint')
         # Read event file and return list of TOA objects
         try:
             tl  = load_NICER_TOAs(args.eventfile)
@@ -67,7 +67,7 @@ def main(argv=None):
         if args.orbfile is not None:
             # Determine what observatory type is.
             log.info('Setting up RXTE observatory')
-            RXTEObs(name='RXTE',FPorbname=args.orbfile,tt2tdb_mode='spacecraft')
+            RXTEObs(name='RXTE',FPorbname=args.orbfile,tt2tdb_mode='pint')
         # Read event file and return list of TOA objects
         tl  = load_RXTE_TOAs(args.eventfile)
     elif hdr['TELESCOP'].startswith('XMM'):
