@@ -47,7 +47,7 @@ def main(argv=None):
     parser.add_argument("--ephem",help="Ephemeris to use",default="DE421")
     parser.add_argument("--planets",help="Use planetary Shapiro delay",action="store_true",
                         default=False)
-    parser.add_argument("--format",help="The format of out put .tim file.", default='TEMPO')
+    parser.add_argument("--format",help="The format of out put .tim file.", default='TEMPO2')
     args = parser.parse_args(argv)
 
     log.info("Reading model from {0}".format(args.parfile))
