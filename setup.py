@@ -86,6 +86,7 @@ cmdclass.update(versioneer.get_cmdclass())
 # See http://python-packaging.readthedocs.io/en/latest/command-line-scripts.html#the-console-scripts-entry-point
 console_scripts = [ 'photonphase=pint.scripts.photonphase:main',
                     'event_optimize=pint.scripts.event_optimize:main',
+                    'event_optimize_multiple=pint.scripts.event_optimize_multiple:main',
                     'pintempo=pint.scripts.pintempo:main', 
                     'zima=pint.scripts.zima:main', 
                     'pintbary=pint.scripts.pintbary:main', 

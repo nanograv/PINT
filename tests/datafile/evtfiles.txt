@@ -1,0 +1,1 @@
+datafile/J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_GEO_wt.gt.0.4.fits prob datafile/templateJ0030.3gauss -weightcol PSRJ0030+0451
