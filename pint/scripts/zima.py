@@ -47,20 +47,20 @@ def main(argv=None):
     parser.add_argument("--ephem",help="Ephemeris to use",default="DE421")
     parser.add_argument("--planets",help="Use planetary Shapiro delay",action="store_true",
                         default=False)
-    parser.add_argument("--format",help="The format of out put .tim file.", default='TEMPO')
+    parser.add_argument("--format",help="The format of out put .tim file.", default='TEMPO2')
     args = parser.parse_args(argv)
 
     log.info("Reading model from {0}".format(args.parfile))
     m = pint.models.get_model(args.parfile)
 
     out_format = args.format
+    error = args.error*u.microsecond
 
     if args.inputtim is None:
         log.info('Generating uniformly spaced TOAs')
         duration = args.duration*u.day
         #start = Time(args.startMJD,scale='utc',format='pulsar_mjd',precision=9)
         start = np.longdouble(args.startMJD) * u.day
-        error = args.error*u.microsecond
         freq = np.atleast_1d(args.freq) * u.MHz
         site = get_observatory(args.obs)
         scale = site.timescale
@@ -79,6 +79,7 @@ def main(argv=None):
     else:
         log.info('Reading initial TOAs from {0}'.format(args.inputtim))
         ts = toa.TOAs(toafile=args.inputtim)
+        ts.table['error'][:] = error
 
     # WARNING! I'm not sure how clock corrections should be handled here!
     # Do we apply them, or not?
@@ -106,6 +107,10 @@ def main(argv=None):
     log.info("Second iteration")
     # Do a second iteration
     ts.adjust_TOAs(TimeDelta(-1.0*rspost))
+
+    err = np.random.randn(len(ts.table)) * error
+    #Add the actual error fuzzing
+    ts.adjust_TOAs(TimeDelta(err))
 
      # Write TOAs to a file
     ts.write_TOA_file(args.timfile,name='fake',format=out_format)
