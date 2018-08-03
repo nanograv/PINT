@@ -5,6 +5,7 @@ from warnings import warn
 from . import parameter as p
 from .timing_model import DelayComponent
 import astropy.units as u
+import astropy.constants as const
 import numpy as np
 import pint.utils as ut
 import astropy.time as time
@@ -17,6 +18,7 @@ from ..utils import taylor_horner, split_prefixed_name
 # This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
 # Astronomy, Second edition, Page 86, Note 1
 DMconst = 1.0/2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
+AUdist = 1.49598e11 * u.m
 
 class Dispersion(DelayComponent):
     """This class provides a base dispersion timing model. The dm varience will
@@ -35,6 +37,12 @@ class Dispersion(DelayComponent):
                        type_match='float', long_double=True))
         self.add_param(p.MJDParameter(name="DMEPOCH",
                        description="Epoch of DM measurement"))
+        self.add_param(p.floatParameter(name="NE_SW",
+                       units="cm^-3", value=4.0, aliases=['NE1AU', 'SOLARN0'],
+                       description="Solar Wind Parameter"))
+        self.add_param(p.floatParameter(name="SWM",
+                       value=0.0, units="",
+                       description="Solar Wind Model"))
 
         self.dm_value_funcs = [self.base_dm,]
         self.delay_funcs_component += [self.dispersion_delay,]
@@ -52,6 +60,7 @@ class Dispersion(DelayComponent):
 
         for dm_name in base_dms:
             self.register_deriv_funcs(self.d_delay_d_DMs, dm_name)
+        self.register_deriv_funcs(self.d_delay_d_ne_sw, 'NE_SW')
 
     def DM_dervative_unit(self, n):
         return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
@@ -92,6 +101,23 @@ class Dispersion(DelayComponent):
         dmdelay = DM * DMconst / freq**2.0
         return dmdelay
 
+    def solar_wind_time_delay(self, freq, toas):
+        '''Return the solar wind dispersion delay for a set of frequencies
+        Eventually different solar wind models will be supported
+        '''
+        if self.SWM.value == 0:
+            rsa = toas.table['obs_sun_pos'].quantity
+            pos = self.ssb_to_psb_xyz_ICRS(epoch=toas.table['tdbld'].astype(np.float64))
+            r = np.sqrt(np.sum(rsa*rsa, axis=1))
+            cos_theta = np.sum(rsa*pos, axis=1) / r
+            ret =  AUdist**2.0 * np.arccos(cos_theta) * DMconst * self.NE_SW.quantity / \
+                (r * np.sqrt(1.0 - cos_theta**2.0) * freq**2.0)
+            ret[freq < 1.0 * u.MHz] = 0.0
+            return ret
+        else:
+            #TODO Introduce the You et.al. (2007) Solar Wind Model for SWM=1
+            raise NotImplementedError('Solar Dispersion Delay not implemented for SWM %d' % self.SWM.value)
+
     def dispersion_delay(self, toas, acc_delay=None):
         tbl = toas.table
         try:
@@ -104,7 +130,10 @@ class Dispersion(DelayComponent):
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
 
-        return self.dispersion_time_delay(dm, bfreq)
+        t_delay = self.dispersion_time_delay(dm, bfreq)
+        sw_delay = self.solar_wind_time_delay(bfreq, toas)
+
+        return t_delay + sw_delay
 
     def print_par(self,):
         # TODO we need to have a better design for print out the parameters in
@@ -150,6 +179,28 @@ class Dispersion(DelayComponent):
         dt_value = (dt.to(u.yr)).value
         d_dm_d_dm_param = taylor_horner(dt_value, dm_terms)* (self.DM.units/par.units)
         return DMconst * d_dm_d_dm_param/ bfreq**2.0
+    
+    def d_delay_d_ne_sw(self, toas, param_name, acc_delay=None):
+        if self.SWM.value == 0:
+            tbl = toas.table
+            try:
+                bfreq = self.barycentric_radio_freq(toas)
+            except AttributeError:
+                warn('Using topocentric frequency for solar wind dedispersion!')
+                bfreq = tbl['freq']
+
+            rsa = tbl['obs_sun_pos'].quantity
+            pos = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tdbld'].astype(np.float64))
+            r = np.sqrt(np.sum(rsa*rsa, axis=1))
+            cos_theta = np.sum(rsa*pos, axis=1) / r
+            
+            #ret = AUdist**2.0 / const.c * np.arccos(cos_theta) * DMconst / \
+            ret = AUdist**2.0 * np.arccos(cos_theta) * DMconst / \
+                (r * np.sqrt(1 - cos_theta**2.0) * bfreq**2.0)
+            ret[bfreq < 1.0 * u.MHz] = 0.0
+            return ret
+        else:
+            raise NotImplementedError('Solar Dispersion Delay Derivative not implemented for SWM %d' % self.SWM.value)
 
 class DispersionDMX(Dispersion):
     """This class provides a DMX model based on the class of Dispersion.
@@ -258,4 +309,6 @@ class DispersionDMX(Dispersion):
             result += getattr(self, DMX_mapping[ii]).as_parfile_line()
             result += getattr(self, DMXR1_mapping[ii]).as_parfile_line()
             result += getattr(self, DMXR2_mapping[ii]).as_parfile_line()
+        result += getattr(self, 'SWM').as_parfile_line()
+        result += getattr(self, 'NE_SW').as_parfile_line()
         return result
