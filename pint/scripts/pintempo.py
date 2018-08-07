@@ -32,6 +32,8 @@ def main(argv=None):
     log.info("Reading model from {0}".format(args.parfile))
     m = pint.models.get_model(args.parfile)
 
+    log.warning(m.params)
+
     log.info("Reading TOAs")
     t = pint.toa.get_TOAs(args.timfile)
     prefit_resids = pint.residuals.resids(t, m).time_resids

@@ -26,6 +26,8 @@ class TestPintempo(unittest.TestCase):
             if l.startswith('RMS in time is'):
                 v = float(l.split()[4])
         # Check that RMS is less than 34 microseconds
+        from astropy import log
+        log.warning('%f' % v)
         self.assertTrue(v<34.0)
         pintempo.sys.stdout = saved_stdout
 
