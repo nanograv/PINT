@@ -84,9 +84,9 @@ def set_priors_basic(ftr, priorerrfact=10.0):
         elif key.startswith('GLPH'):
             getattr(ftr.model, key).prior = Prior(uniform(-0.4, 1.0))
         else:
-            if err == 0:
+            if err == 0 and not getattr(ftr.model, key).frozen:
                 ftr.priors_set = False
-                raise ValueError('Paramater %s does not have uncertainty in par file' % key)
+                raise ValueError('Parameter %s does not have uncertainty in par file' % key)
             getattr(ftr.model, key).prior = Prior(norm(loc=float(val),
                                                        scale=float(err*priorerrfact)))
     ftr.priors_set = True
@@ -103,7 +103,10 @@ class MCMCFitter(Fitter):
 
         Optional __init__ keyword arguments
         -----------------------------------
-        template - A template profile, for example, of a gaussian pulse 
+        template - A template profile, for example, of a gaussian pulse
+            If template is none, then all template methods will do nothing,
+            or raise an error, or return None. If a template is set, it is 
+            assumed that a subclass is being used.
         lnprior - The log prior function - defaults to lnprior above
         lnlike - The log likelihood function - defaults to lnlikelihood above
         setpriors - The function for setting the priors on model parameters
@@ -117,13 +120,12 @@ class MCMCFitter(Fitter):
         #super(MCMCFitter, self).__init__(toas, model)
         self.toas = toas
         self.model_init = model
-        if kwargs.get('resids', False):
+        self.use_resids = kwargs.get('resids', True)
+        if self.use_resids:
             self.resids_init = resids(toas=toas, model=model)
-            relf.reset_model()
-            self.use_resids = True
+            self.reset_model()
         else:
             self.model = model
-            self.use_resids = False
 
         self.method = 'MCMC'
         self.sampler = sampler
@@ -132,26 +134,26 @@ class MCMCFitter(Fitter):
         self.lnlikelihood = kwargs.get('lnlike', lnlikelihood_basic)
         self.set_priors = kwargs.get('setpriors', set_priors_basic)
         
+        # Default values for these arguments were taken from event_optimize.py
+        self.weights = kwargs.get('weights', None)
+        phs = kwargs.get('phs', 0.0)
+        phserr = kwargs.get('phserr', 0.01)
+        self.minMJD = kwargs.get('minMJD', 54680)
+        self.maxMJD = kwargs.get('maxMJD', 57250)
+
+        self.fitkeys, self.fitvals, self.fiterrs = \
+            self.generate_fit_keyvals(phs, phserr)
+        self.n_fit_params = len(self.fitvals)
+        
         template = kwargs.get('template', None)
         if not template is None:
             self.set_template(template)
         else:
             self.template = None
 
-        # Default values for these arguments were taken from event_optimize.py
-        self.weights = kwargs.get('weights', None)
-        phs = kwargs.get('phs', 0.0)
-        phserr = kwargs.get('phserr', 0.03)
-        self.minMJD = kwargs.get('minMJD', 54680)
-        self.maxMJD = kwargs.get('maxMJD', 57250)
-
-        self.fitkeys, self.fitvals, self.fiterrs = \
-            self.generate_fit_keyvals(phs, phserr)
         log.info('Fit Keys:\t%s' % (self.fitkeys))
         log.info('Fit Vals:\t%s' % (self.fitvals))
-        self.n_fit_params = len(self.fitvals)
         self.numcalls = 0
-        self.nsteps = 1
         self.maxpost = -np.inf
         self.maxpost_fitvals = self.fitvals
         self.priors_set = False
@@ -167,6 +169,8 @@ class MCMCFitter(Fitter):
         """
         Use the template (if it exists) to get probabilities for given phases
         """
+        if self.template is None:
+            return None
         raise NotImplementedError
 
     def clip_template_params(self, pos):
@@ -175,42 +179,57 @@ class MCMCFitter(Fitter):
         Any passing the template bounds will be clipped to the edges.
         If template is not being fit to, then this does nothing
         """
+        if self.template is None:
+            return pos
         raise NotImplementedError
 
     def get_model_parameters(self, theta):
         """
         Split the parameters related to the model
         """
+        if self.template is None:
+            return theta
         raise NotImplementedError
 
     def get_template_parameters(self, theta):
         """
         Split the parameters related to the template
         """
+        if self.template is None:
+            return None
         raise NotImplementedError
 
     def get_parameters(self):
         """
         Get all parameters for this fitter
         """
+        if self.template is None:
+            return self.fitvals
         raise NotImplementedError
 
     def get_parameter_names(self):
         """
         Get parameter names for this fitter
         """
+        if self.template is None:
+            return self.fitkeys
         raise NotImplementedError
 
     def set_parameters(self, theta):
         """
         Set timing and template parameters as necessary
         """
-        raise NotImplementedError
+        if self.template is None:
+            self.set_params(dict(zip(self.fitkeys[:-1], theta[:-1])))
+        else:
+            raise NotImplementedError
 
     def get_errors(self):
         """
         Get errors associated with all fit parameters
         """
+        if self.template is None:
+            return self.fiterrs
         raise NotImplementedError
 
     def get_fit_keyvals(self):
@@ -424,7 +443,6 @@ class MCMCFitterAnalyticTemplate(MCMCFitter):
     def __init__(self, toas, model, sampler, template, **kwargs):
             super(MCMCFitterAnalyticTemplate, self).__init__(toas, model, sampler, 
                 template=template, **kwargs)
-            self.n_fit_params = len(self.fitvals) + len(self.tfitvals)
     
     def set_template(self, template):
         """
@@ -435,6 +453,7 @@ class MCMCFitterAnalyticTemplate(MCMCFitter):
         self.tfitvals = template.get_parameters()
         self.tfiterrs = template.get_errors()
         self.tbounds = template.get_bounds()
+        self.n_fit_params = len(self.fitvals) + len(self.tfitvals)
 
     def get_template_vals(self, phases):
         return self.template(phases, use_cache=True)
