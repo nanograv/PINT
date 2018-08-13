@@ -38,8 +38,8 @@ def _load_kernel_link(ephem, link=''):
     load_kernel = False # a flag for checking if the kernel has been loaded
     # search_list = [link,jpl_kernel_http, jpl_kernel_ftp]
     # NOTE the JPL ftp site is disabled. Instead, we duplicated the JPL ftp
-    # site on nanograv server. 
-    search_list = [link, nanograv_http ,jpl_kernel_http]
+    # site on nanograv server.
+    search_list = [link, nanograv_http, jpl_kernel_http, jpl_kernel_ftp]
     if link != '':
         search_list.append('')
     for l in search_list:
