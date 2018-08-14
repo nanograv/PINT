@@ -13,6 +13,7 @@ from .binary_ddk import BinaryDDK
 from .dispersion_model import DispersionDM, DispersionDMX
 from .spindown import Spindown
 from .frequency_dependent import FD
+from .absolute_phase import AbsPhase
 from .glitch import Glitch
 from .jump import DelayJump, PhaseJump
 from .solar_system_shapiro import SolarSystemShapiro

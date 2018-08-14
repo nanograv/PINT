@@ -666,7 +666,7 @@ class MJDParameter(Parameter):
     def __init__(self, name=None, value=None, description=None,
                  uncertainty=None, frozen=True, continuous=True, aliases=None,
                  time_scale='utc', **kwargs):
-        self.time_scale = time_scale
+        self._time_scale = time_scale
         set_quantity = self.set_quantity_mjd
         print_quantity = time_to_mjd_string
         get_value = time_to_longdouble
@@ -684,6 +684,16 @@ class MJDParameter(Parameter):
         self.value_type = time.Time
         self.paramType = 'MJDParameter'
         self.special_arg += ['time_scale',]
+
+    @property
+    def time_scale(self):
+        return self._time_scale
+
+    @time_scale.setter
+    def time_scale(self, val):
+        self._time_scale = val
+        mjd = self.value
+        self.quantity = mjd
 
     @property
     def uncertainty_value(self):
