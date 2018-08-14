@@ -47,26 +47,26 @@ def main(argv=None):
     parser.add_argument("--ephem",help="Ephemeris to use",default="DE421")
     parser.add_argument("--planets",help="Use planetary Shapiro delay",action="store_true",
                         default=False)
-    parser.add_argument("--format",help="The format of out put .tim file.", default='TEMPO')
+    parser.add_argument("--format",help="The format of out put .tim file.", default='TEMPO2')
     args = parser.parse_args(argv)
 
     log.info("Reading model from {0}".format(args.parfile))
     m = pint.models.get_model(args.parfile)
 
     out_format = args.format
+    error = args.error*u.microsecond
 
     if args.inputtim is None:
         log.info('Generating uniformly spaced TOAs')
         duration = args.duration*u.day
         #start = Time(args.startMJD,scale='utc',format='pulsar_mjd',precision=9)
         start = np.longdouble(args.startMJD) * u.day
-        error = args.error*u.microsecond
         freq = np.atleast_1d(args.freq) * u.MHz
         site = get_observatory(args.obs)
         scale = site.timescale
 
         times = np.linspace(0,duration.to(u.day).value,args.ntoa)*u.day + start
-        
+
         # 'Fuzz' out times
         fuzz = np.random.normal(scale=args.fuzzdays,size=len(times))*u.day
         times += fuzz
@@ -79,6 +79,7 @@ def main(argv=None):
     else:
         log.info('Reading initial TOAs from {0}'.format(args.inputtim))
         ts = toa.TOAs(toafile=args.inputtim)
+        ts.table['error'][:] = error
 
     # WARNING! I'm not sure how clock corrections should be handled here!
     # Do we apply them, or not?
@@ -96,16 +97,20 @@ def main(argv=None):
     # that TimeDelta understands
     log.info("Creating TOAs")
     F_local = m.d_phase_d_toa(ts)
-    rs = m.phase(ts.table).frac.value/F_local
+    rs = m.phase(ts).frac.value/F_local
 
     # Adjust the TOA times to put them where their residuals will be 0.0
 
     ts.adjust_TOAs(TimeDelta(-1.0*rs))
-    rspost = m.phase(ts.table).frac.value/F_local
+    rspost = m.phase(ts).frac.value/F_local
 
     log.info("Second iteration")
     # Do a second iteration
     ts.adjust_TOAs(TimeDelta(-1.0*rspost))
+
+    err = np.random.randn(len(ts.table)) * error
+    #Add the actual error fuzzing
+    ts.adjust_TOAs(TimeDelta(err))
 
      # Write TOAs to a file
     ts.write_TOA_file(args.timfile,name='fake',format=out_format)
@@ -113,10 +118,10 @@ def main(argv=None):
     if args.plot:
         # This should be a very boring plot with all residuals flat at 0.0!
         import matplotlib.pyplot as plt
-        rspost2 = m.phase(ts.table).frac/F_local
+        rspost2 = m.phase(ts).frac/F_local
         plt.errorbar(ts.get_mjds().value,rspost2.to(u.us).value,yerr=ts.get_errors().to(u.us).value)
         newts = pint.toa.get_TOAs(args.timfile, ephem = args.ephem, planets=args.planets)
-        rsnew = m.phase(newts.table).frac/F_local
+        rsnew = m.phase(newts).frac/F_local
         plt.errorbar(newts.get_mjds().value,rsnew.to(u.us).value,yerr=newts.get_errors().to(u.us).value)
         #plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
         plt.xlabel('MJD')

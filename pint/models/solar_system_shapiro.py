@@ -69,11 +69,12 @@ class SolarSystemShapiro(DelayComponent):
         have been called with the planets=True argument.
         """
         # Start out with 0 delay with units of seconds
-        delay = numpy.zeros(len(toas))
-        for ii, key in enumerate(toas.groups.keys):
-            grp = toas.groups[ii]
-            obs = toas.groups.keys[ii]['obs']
-            loind, hiind = toas.groups.indices[ii:ii+2]
+        tbl = toas.table
+        delay = numpy.zeros(len(tbl))
+        for ii, key in enumerate(tbl.groups.keys):
+            grp = tbl.groups[ii]
+            obs = tbl.groups.keys[ii]['obs']
+            loind, hiind = tbl.groups.indices[ii:ii+2]
             if key['obs'].lower() == 'barycenter':
                 log.info("Skipping Shapiro delay for Barycentric TOAs")
                 continue

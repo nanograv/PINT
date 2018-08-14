@@ -98,7 +98,7 @@ def main(argv=None):
 
     # Compute model phase for each TOA
     # Subtracts off model phase at TZRMJD so that point defines phase 0.0
-    iphss,phss = modelin.phase(ts.table) - modelin.phase(tz.table)
+    iphss,phss = modelin.phase(ts) - modelin.phase(tz)
     # ensure all postive
     phases = np.where(phss < 0.0 * u.cycle, phss + 1.0 * u.cycle, phss)
     mjds = ts.get_mjds()

@@ -14,20 +14,19 @@ parfile = os.path.join(datadir, 'J0613-0200_NANOGrav_dfg+12_TAI_FB90.par')
 timfile = os.path.join(datadir, 'J0613-0200_NANOGrav_dfg+12.tim')
 
 # libstempo calculation
-print("libstempo calculation")
-psr = lt.tempopulsar(parfile, timfile)
+print("tempo2 calculation")
+tempo2_vals = tempo2_utils.general2(parfile, timfile,['pre'])
 # Build PINT model
 print("PINT calculation")
 m = mb.get_model(parfile)
 # Get toas to pint
-toas = toa.get_TOAs(timfile, planets=False, ephem='DE405')
-tt = toas.table
+toas = toa.get_TOAs(timfile, planets=False, ephem='DE405', include_bipm=False)
 
-t2_resids = psr.residuals()
-presids_us = resids(toas, m).time_resids
+t2_resids = tempo2_vals['pre']
+presids_us = resids(toas, m).time_resids.to(u.us)
 # Plot residuals
-plt.errorbar(toas.get_mjds(high_precision=False), presids_us.value,
-            toas.get_errors(), fmt='x')
+plt.errorbar(toas.get_mjds().value, presids_us.value,
+            toas.get_errors().value, fmt='x')
 plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
 plt.xlabel('MJD')
 plt.ylabel('Residual (us)')

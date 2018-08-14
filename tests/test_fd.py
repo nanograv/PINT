@@ -32,12 +32,12 @@ class TestFD(unittest.TestCase):
     def test_inf_freq(self):
         test_toas = copy.deepcopy(self.toas)
         test_toas.table['freq'][0:5] = np.inf * u.MHz
-        fd_delay = self.FDm.components['FD'].FD_delay(test_toas.table)
+        fd_delay = self.FDm.components['FD'].FD_delay(test_toas)
         assert np.all(np.isfinite), \
             "FD component is not handling infinite frequency right."
         assert np.all(fd_delay[0:5].value == 0.0), \
             "FD component did not compute infinite frequency delay right"
-        d_d_d_fd = self.FDm.d_delay_FD_d_FDX(test_toas.table, 'FD1')
+        d_d_d_fd = self.FDm.d_delay_FD_d_FDX(test_toas, 'FD1')
         assert np.all(np.isfinite), \
             "FD component is not handling infinite frequency right when doning"\
              + " derivatives."

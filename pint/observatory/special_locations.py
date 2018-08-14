@@ -57,7 +57,7 @@ class GeocenterObs(SpecialLocation):
         return 'coe'
     def get_gcrs(self, t, ephem=None):
         vdim = (3,) + t.shape
-        return np.zeros(vdim) * u.m
+        return numpy.zeros(vdim) * u.m
     def posvel(self, t, ephem):
         return objPosVel_wrt_SSB('earth', t, ephem)
 
