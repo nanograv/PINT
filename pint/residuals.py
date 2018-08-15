@@ -56,6 +56,8 @@ class resids(object):
         else:
         # Errs for weighted sum.  Units don't matter since they will
         # cancel out in the weighted sum.
+            if np.any(self.toas.get_errors() == 0):
+                raise ValueError('TOA errors are zero - cannot calculate residuals')
             w = 1.0/(np.array(self.toas.get_errors())**2)
             wm = (rs.frac*w).sum() / w.sum()
             rs -= Phase(0.0,wm)
@@ -68,7 +70,7 @@ class resids(object):
         with u.set_enabled_equivalencies(dimensionless_cycles):
             return (self.phase_resids.to(u.Unit("")) / self.get_PSR_freq()).to(u.s)
 
-    def get_PSR_freq(self, modelF0=False):
+    def get_PSR_freq(self, modelF0=True):
         if modelF0:
             """Return pulsar rotational frequency in Hz. model.F0 must be defined."""
             if self.model.F0.units != 'Hz':

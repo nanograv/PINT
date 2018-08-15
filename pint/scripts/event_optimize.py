@@ -53,7 +53,7 @@ def read_gaussfitfile(gaussfitfile, proflen):
         if line.lstrip().startswith("fwhm"):
             fwhms.append(float(line.split()[2]))
     if not (len(phass) == len(ampls) == len(fwhms)):
-        print("Number of phases, amplitudes, and FWHMs are not the same in '%s'!"%gaussfitfile)
+        log.warning("Number of phases, amplitudes, and FWHMs are not the same in '%s'!"%gaussfitfile)
         return 0.0
     phass = np.asarray(phass)
     ampls = np.asarray(ampls)
@@ -99,7 +99,7 @@ def gaussian_profile(N, phase, fwhm):
         np.put(retval, okzinds, np.exp(-0.5*(okzs)**2.0)/(sigma*np.sqrt(2*np.pi)))
         return retval
     except OverflowError:
-        print("Problem in gaussian prof:  mean = %f  sigma = %f" % \
+        log.warning("Problem in gaussian prof:  mean = %f  sigma = %f" % \
               (mean, sigma))
         return np.zeros(N, 'd')
 def measure_phase(profile, template, rotate_prof=True):
@@ -245,7 +245,7 @@ class emcee_fitter(Fitter):
 
         numcalls += 1
         if numcalls % (nwalkers * nsteps / 100) == 0:
-            print("~%d%% complete" % (numcalls / (nwalkers * nsteps / 100)))
+            log.info("~%d%% complete" % (numcalls / (nwalkers * nsteps / 100)))
 
         # Evaluate the prior FIRST, then don't even both computing
         # the posterior if the prior is not finite
@@ -259,9 +259,9 @@ class emcee_fitter(Fitter):
                                           phases, self.template, self.weights)
         lnpost = lnprior + lnlikelihood
         if lnpost > maxpost:
-            print("New max: ", lnpost)
+            log.info("New max: %f" % lnpost)
             for name, val in zip(ftr.fitkeys, theta):
-                print("  %8s: %25.15g" % (name, val))
+                log.info("  %8s: %25.15g" % (name, val))
             maxpost = lnpost
             self.maxpost_fitvals = theta
         return lnpost
@@ -434,7 +434,7 @@ def main(argv=None):
         # Limit the TOAs to ones in selected MJD range and above minWeight
         tl = [tl[ii] for ii in range(len(tl)) if (tl[ii].mjd.value > minMJD and tl[ii].mjd.value < maxMJD
             and (weightcol is None or tl[ii].flags['weight'] > minWeight))]
-        print("There are %d events we will use" % len(tl))
+        log.info("There are %d events we will use" % len(tl))
         # Now convert to TOAs object and compute TDBs and posvels
         ts = toa.TOAs(toalist=tl)
         ts.filename = eventfile
@@ -450,7 +450,7 @@ def main(argv=None):
     if weightcol is not None:
         if weightcol=='CALC':
             weights = np.asarray([x['weight'] for x in ts.table['flags']])
-            print("Original weights have min / max weights %.3f / %.3f" % \
+            log.info("Original weights have min / max weights %.3f / %.3f" % \
                 (weights.min(), weights.max()))
             # Rescale the weights, if requested (by having wgtexp != 0.0)
             if wgtexp != 0.0:
@@ -461,11 +461,11 @@ def main(argv=None):
             for ii, x in enumerate(ts.table['flags']):
                 x['weight'] = weights[ii]
         weights = np.asarray([x['weight'] for x in ts.table['flags']])
-        print("There are %d events, with min / max weights %.3f / %.3f" % \
+        log.info("There are %d events, with min / max weights %.3f / %.3f" % \
             (len(weights), weights.min(), weights.max()))
     else:
         weights = None
-        print("There are %d events, no weights are being used." % ts.ntoas)
+        log.info("There are %d events, no weights are being used." % ts.ntoas)
 
     # Now load in the gaussian template and normalize it
     gtemplate = read_gaussfitfile(gaussianfile, nbins)
@@ -506,14 +506,14 @@ def main(argv=None):
     phss = ftr.get_event_phases()
     maxbin, like_start = marginalize_over_phase(phss, gtemplate,
         weights=ftr.weights, minimize=True, showplot=False)
-    print("Starting pulse likelihood:", like_start)
+    log.info("Starting pulse likelihood: %f" % like_start)
     if args.phs is None:
         fitvals[-1] = 1.0 - maxbin[0] / float(len(gtemplate))
         if fitvals[-1] > 1.0: fitvals[-1] -= 1.0
         if fitvals[-1] < 0.0: fitvals[-1] += 1.0
-        print("Starting pulse phase:", fitvals[-1])
+        log.info("Starting pulse phase: %f" % fitvals[-1])
     else:
-        print("Measured starting pulse phase is %f, but using %f" % \
+        log.warning("Measured starting pulse phase is %f, but using %f" % \
             (1.0 - maxbin / float(len(gtemplate)), args.phs))
         fitvals[-1] = args.phs
     ftr.fitvals[-1] = fitvals[-1]
@@ -534,7 +534,7 @@ def main(argv=None):
         result = op.minimize(ftr.minimize_func, np.zeros_like(ftr.fitvals))
         newfitvals = np.asarray(result['x']) * ftr.fiterrs + ftr.fitvals
         like_optmin = -result['fun']
-        print("Optimization likelihood:", like_optmin)
+        log.info("Optimization likelihood: %f" % like_optmin)
         ftr.set_params(dict(zip(ftr.fitkeys, newfitvals)))
         ftr.phaseogram()
     else:
@@ -646,9 +646,9 @@ def main(argv=None):
     # Print the best MCMC values and ranges
     ranges = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
         zip(*np.percentile(samples, [16, 50, 84], axis=0)))
-    print("Post-MCMC values (50th percentile +/- (16th/84th percentile):")
+    log.info("Post-MCMC values (50th percentile +/- (16th/84th percentile):")
     for name, vals in zip(ftr.fitkeys, ranges):
-        print("%8s:"%name, "%25.15g (+ %12.5g  / - %12.5g)"%vals)
+        log.info("%8s:"%name + "%25.15g (+ %12.5g  / - %12.5g)"%vals)
 
     # Put the same stuff in a file
     f = open(ftr.model.PSR.value+"_results.txt", 'w')
