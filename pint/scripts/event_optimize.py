@@ -220,7 +220,7 @@ class emcee_fitter(Fitter):
         """
         Return pulse phases based on the current model
         """
-        phss = self.model.phase(self.toas.table)[1]
+        phss = self.model.phase(self.toas)[1]
         # ensure all postive
         return np.where(phss < 0.0*u.cycle, phss + 1.0*u.cycle, phss)
 

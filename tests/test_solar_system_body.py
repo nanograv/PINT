@@ -22,7 +22,7 @@ class TestSolarSystemDynamic(unittest.TestCase):
         ets = np.random.uniform(0.0, 9000.0, 10000) * SECPERJULDAY
         mjd = J2000_MJD + ets / SECPERJULDAY
         self.tdb_time = time.Time(mjd, scale='tdb', format='mjd')
-        self.ephem = ['de405', 'de421', 'de434', 'de430','de436']
+        self.ephem = ['de405', 'de421', 'de434', 'de430', 'de436']
         self.planets = ['jupiter', 'saturn', 'venus', 'uranus']
 
     # Here we only test if any errors happens.
