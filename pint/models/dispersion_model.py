@@ -5,6 +5,7 @@ from warnings import warn
 from . import parameter as p
 from .timing_model import DelayComponent
 import astropy.units as u
+import astropy.constants as const
 import numpy as np
 import pint.utils as ut
 import astropy.time as time
@@ -162,6 +163,7 @@ class DispersionDM(Dispersion):
         dt_value = (dt.to(u.yr)).value
         d_dm_d_dm_param = taylor_horner(dt_value, dm_terms)* (self.DM.units/par.units)
         return DMconst * d_dm_d_dm_param/ bfreq**2.0
+    
 
 class DispersionDMX(Dispersion):
     """This class provides a DMX model based on the class of Dispersion.

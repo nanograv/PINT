@@ -20,6 +20,9 @@ class TestB1855(unittest.TestCase):
         self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405",
                                       planets=False, include_bipm=False)
         self.modelB1855 = mb.get_model(self.parfileB1855)
+        from astropy import log as l
+        l.warning('%s' % self.modelB1855.components)
+        l.warning('%s' % self.modelB1855.params)
         # tempo result
         self.ltres= np.genfromtxt(self.parfileB1855 + \
                                   '.tempo2_test',skip_header=1, unpack=True)

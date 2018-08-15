@@ -18,7 +18,7 @@ from pint import dimensionless_cycles
 
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
-ignore_params = ['START', 'FINISH', 'SOLARN0', 'EPHEM', 'CLK', 'UNITS',
+ignore_params = ['START', 'FINISH', 'EPHEM', 'CLK', 'UNITS', 
                  'TIMEEPH', 'T2CMETHOD', 'CORRECT_TROPOSPHERE', 'DILATEFREQ',
                  'NTOA', 'CLOCK', 'TRES', 'TZRMJD', 'TZRFRQ', 'TZRSITE',
                  'NITS', 'IBOOT','BINARY']
@@ -475,8 +475,10 @@ class TimingModel(object):
             else:
                 raise KeyError("No delay component named '%s'." % cutoff_component)
 
-        for df in self.delay_funcs[0:idx]:
-            delay += df(toas, delay)
+        #Do NOT cycle through delay_funcs - cycle through components until cutoff
+        for dc in self.DelayComponent_list[:idx]:
+            for df in dc.delay_funcs_component:
+                delay += df(toas, delay)
         return delay
 
     def phase(self, toas, abs_phase=False):
@@ -807,11 +809,12 @@ class TimingModel(object):
                     if prefix not in ignore_prefix:
                         log.warn("Unrecognized parfile line '%s'" % l)
                 except:
-                    if l.split()[0] not in ignore_params:
-                        log.warn("Unrecognized parfile line '%s'" % l)
-                    if l.split()[0] == 'UNITS' and l.split()[1] == 'TCB':
+                    words = l.split()
+                    if words[0] == 'UNITS' and len(words) > 1 and words[1] == 'TCB':
                         log.error("UNITS TCB not yet supported by PINT")
                         raise Exception("UNITS TCB not yet supported by PINT")
+                    if l.split()[0] not in ignore_params:
+                        log.warn("Unrecognized parfile line '%s'" % l)
 
             checked_param.append(name)
         # The "setup" functions contain tests for required parameters or
