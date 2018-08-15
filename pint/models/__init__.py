@@ -20,6 +20,7 @@ from .jump import DelayJump, PhaseJump
 from .solar_system_shapiro import SolarSystemShapiro
 from .noise_model import ScaleToaError, EcorrNoise, PLRedNoise
 from .model_builder import get_model
+from .wave import Wave
 
 # Define a standard basic model
 StandardTimingModel = TimingModel("StandardTimingModel",

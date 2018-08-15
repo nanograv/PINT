@@ -14,9 +14,8 @@ import sys
 
 default_models = ["StandardTimingModel",]
 DEFAULT_ORDER = ['astrometry', 'jump_delay', 'solar_system_shapiro',
-                 'dispersion_constant', 'dispersion_dmx','pulsar_system',
-                 'frequency_dependent', 'spindown', 'phase_jump']
-
+                 'dispersion_constant', 'dispersion_dmx', 'pulsar_system',
+                 'frequency_dependent', 'spindown', 'phase_jump', 'wave']
                  
 class ModelBuilder(object):
     """A class for model construction interface.
