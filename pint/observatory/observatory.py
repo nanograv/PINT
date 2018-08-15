@@ -44,9 +44,10 @@ class Observatory(object):
         cls._register(obs, name)
         return obs
 
-    def __init__(self,name,aliases=None):
+    def __init__(self,name,aliases=None,tt2tdb_mode='pint'):
         if aliases is not None:
             Observatory._add_aliases(self,aliases)
+        self.tt2tdb_mode = tt2tdb_mode
 
     @classmethod
     def _register(cls,obs,name):
@@ -127,7 +128,7 @@ class Observatory(object):
         at that time will be returned.
         """
         return None
-    
+
     def get_gcrs(self, t, ephem=None):
         '''Return position vector of observatory in GCRS
         t is an astropy.Time or array of astropy.Time objects
@@ -135,7 +136,7 @@ class Observatory(object):
         Returns a 3-vector of Quantities representing the position
         in GCRS coordinates.
         '''
-        raise NotImplementedError 
+        raise NotImplementedError
 
     @property
     def timescale(self):
@@ -155,7 +156,7 @@ class Observatory(object):
         # TOA metadata which may be necessary in some cases.
         raise NotImplementedError
 
-    def get_TDBs(self, t,  method='astropy', ephem=None, options=None):
+    def get_TDBs(self, t,  method='default', ephem=None, options=None):
         """This is a high level function for converting TOAs to TDB time scale.
             Different method can be applied to obtain the result. Current supported
             methods are ['astropy', 'ephemeris']
@@ -166,16 +167,17 @@ class Observatory(object):
             method: str or callable, optional
                 Method of computing TDB
 
-                - 'astropy': Astropy time.Time object built-in converter, use FB90.
-                - 'astropy_corrected': Uses astropy and the (v/c).(r/c) topocentric correction
-                    NOTE: Should this be relabeled? Is this the planned function of the 
-                    'ephemeris' tag?
+                - 'default': Astropy time.Time object built-in converter, use FB90.
+                    Also uses topocentric correction term if self.tt2tdbmethod is
+                    pint.
                 - 'ephemeris': JPL ephemeris included TDB-TT correction.
             ephme: str, optional
                 The ephemeris to get he TDB-TT correction. Required for the
                 'ephemeris' method.
         """
         if t.isscalar: t = Time([t])
+        if t.scale == 'tdb':
+            return t
         # Check the method. This pattern is from numpy minize
         if callable(method):
             meth = "_custom"
@@ -186,13 +188,14 @@ class Observatory(object):
         if meth == "_custom":
             options = dict(options)
             return method(t, **options)
-        elif meth == "astropy":
-            return self._get_TDB_astropy(t)
-        elif meth == "astropy_corrected":
-            if ephem is None:
-                raise ValueError("A ephemeris file should be provided to get"
-                                    " the TDB-TT corrections.")
-            return self._get_TDB_astropy_correction(t, ephem)
+        if meth == 'default':
+            if self.tt2tdb_mode.lower().startswith('astropy'):
+                return self._get_TDB_astropy(t)
+            elif self.tt2tdb_mode.lower().startswith('pint'):
+                if ephem is None:
+                    raise ValueError("A ephemeris file should be provided to get"
+                                        " the TDB-TT corrections, or use tt2tdb_mode=astropy")
+                return self._get_TDB_PINT(t, ephem)
         elif meth == "ephemeris":
             if ephem is None:
                 raise ValueError("A ephemeris file should be provided to get"
@@ -204,23 +207,23 @@ class Observatory(object):
     def _get_TDB_astropy(self, t):
         return t.tdb
 
-    def _get_TDB_astropy_correction(self, t, ephem):
+    def _get_TDB_PINT(self, t, ephem):
         """Uses astropy.Time location to add the topocentric correction term to
             the Time object. The topocentric correction is given as (r/c).(v/c),
-            with r equal to the geocentric position of the observer, v being the 
+            with r equal to the geocentric position of the observer, v being the
             barycentric velocity of the earth, and c being the speed of light.
 
-            The geocentric observer position can be obtained from Time object. 
+            The geocentric observer position can be obtained from Time object.
             The barycentric velocity can be obtained using solar_system_ephemerides
             objPosVel_wrt_SSB
         """
         #Add in correction term to t.tdb equal to r.v / c^2
         vel = sse.objPosVel_wrt_SSB('earth', t, ephem).vel
-        pos = self.get_gcrs(t)
+        pos = self.get_gcrs(t, ephem=ephem)
 
         dnom = const.c * const.c
         corr = ((pos[0] * vel[0] + pos[1] * vel[1] + pos[2] * vel[2])/dnom).to(u.s)
-        log.info('\tTopocentric Correction:\t%s' % corr)
+        #log.info('\tTopocentric Correction:\t%s' % corr)
 
         return t.tdb + corr
 

@@ -37,7 +37,7 @@ def main(argv=None):
     parser.add_argument("--ephem",default="DE421",help="Ephemeris to use")
     parser.add_argument("--use_gps",default=False,action='store_true',help="Apply GPS to UTC clock corrections")
     parser.add_argument("--use_bipm",default=False,action='store_true',help="Use TT(BIPM) instead of TT(TAI)")
-    
+
 
     args = parser.parse_args(argv)
 
@@ -57,7 +57,7 @@ def main(argv=None):
 
     t = toa.TOA(t,freq=args.freq,obs=args.obs)
     # Build TOAs and compute TDBs and positions from ephemeris
-    ts = toa.get_TOAs_list([t],ephem=args.ephem, include_bipm=args.use_bipm, 
+    ts = toa.get_TOAs_list([t],ephem=args.ephem, include_bipm=args.use_bipm,
         include_gps=args.use_gps, planets=False)
 
     if args.parfile is not None:
@@ -70,7 +70,7 @@ def main(argv=None):
         m.DECJ.quantity = Angle(args.dec)
         m.DM.quantity = args.dm*u.parsec/u.cm**3
 
-    tdbtimes = m.get_barycentric_toas(ts.table)
+    tdbtimes = m.get_barycentric_toas(ts)
 
     print("{0:.16f}".format(tdbtimes[0].value))
     return

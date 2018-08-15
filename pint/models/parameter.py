@@ -666,7 +666,7 @@ class MJDParameter(Parameter):
     def __init__(self, name=None, value=None, description=None,
                  uncertainty=None, frozen=True, continuous=True, aliases=None,
                  time_scale='utc', **kwargs):
-        self.time_scale = time_scale
+        self._time_scale = time_scale
         set_quantity = self.set_quantity_mjd
         print_quantity = time_to_mjd_string
         get_value = time_to_longdouble
@@ -684,6 +684,16 @@ class MJDParameter(Parameter):
         self.value_type = time.Time
         self.paramType = 'MJDParameter'
         self.special_arg += ['time_scale',]
+
+    @property
+    def time_scale(self):
+        return self._time_scale
+
+    @time_scale.setter
+    def time_scale(self, val):
+        self._time_scale = val
+        mjd = self.value
+        self.quantity = mjd
 
     @property
     def uncertainty_value(self):
@@ -1327,7 +1337,7 @@ class maskParameter(floatParameter):
         """Select the toas.
         Parameter
         ---------
-        toas : toas table
+        toas : TOAs class
         Return
         ------
         A array of returned index.
@@ -1350,14 +1360,15 @@ class maskParameter(floatParameter):
         # TODO Right now it is only supports mjd, freq, tel, and flagkeys,
         # We need to consider some more complicated situation
         key = self.key.replace('-', '')
+        tbl = toas.table
         if key not in column_match.keys(): # This only works for the one with flags.
             section_name = key+'_section'
-            if section_name not in toas.keys():
-                flag_col = [x.get(key, None) for x in toas['flags']]
-                toas[section_name] = flag_col
-            col = toas[section_name]
+            if section_name not in tbl.keys():
+                flag_col = [x.get(key, None) for x in tbl['flags']]
+                tbl[section_name] = flag_col
+            col = tbl[section_name]
         else:
-            col = toas[column_match[key]]
+            col = tbl[column_match[key]]
         select_idx = self.toa_selector.get_select_index(condition, col)
 
         return select_idx[self.name]

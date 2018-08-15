@@ -112,7 +112,7 @@ class TopoObs(Observatory):
         for code in (tempo_code, itoa_code):
             if code is not None: aliases.append(code)
 
-        super(TopoObs,self).__init__(name,aliases=aliases)
+        super(TopoObs,self).__init__(name,aliases=aliases, tt2tdb_mode='astropy')
 
     @property
     def clock_fullpath(self):

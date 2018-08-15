@@ -1,5 +1,6 @@
 from __future__ import absolute_import, print_function, division
 import astropy.units as u
+from astropy import log
 import numpy as np
 from .phase import Phase
 from pint import dimensionless_cycles
@@ -22,8 +23,34 @@ class resids(object):
 
     def calc_phase_resids(self, weighted_mean=True):
         """Return timing model residuals in pulse phase."""
-        rs = self.model.phase(self.toas.table)
+        rs = self.model.phase(self.toas)
         rs -= Phase(rs.int[0],rs.frac[0])
+
+        #Track on pulse numbers, if necessary
+        if getattr(self.model, 'TRACK').value == '-2':
+            addpn = np.array([flags['pnadd'] if 'pnadd' in flags else 0.0 \
+                for flags in self.toas.table['flags']]) * u.cycle
+            addpn[0] -= 1. * u.cycle
+            addpn = np.cumsum(addpn)
+
+            pulse_num = self.toas.get_pulse_numbers()
+            if pulse_num is None:
+                log.error('No pulse numbers with TOAs using TRACK -2')
+                raise Exception('No pulse numbers with TOAs using TRACK -2')
+            
+            pn_act = rs.int
+            addPhase = pn_act - (pulse_num + addpn)
+
+            rs = rs.frac
+            rs += addPhase
+            if not weighted_mean:
+                rs -= rs.mean()
+            else:
+                w = 1.0 / (np.array(self.toas.get_errors())**2)
+                wm = (rs*w).sum() / w.sum()
+                rs -= wm
+            return rs
+
         if not weighted_mean:
             rs -= Phase(0.0,rs.frac.mean())
         else:
@@ -95,7 +122,7 @@ class resids(object):
         if self.toas is None or self.model is None:
             self.phase_resids = None
             self.time_resids = None
-        if self.toas is None: 
+        if self.toas is None:
             raise ValueError('No TOAs provided for residuals update')
         if self.model is None:
             raise ValueError('No model provided for residuals update')

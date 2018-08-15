@@ -30,8 +30,8 @@ class TestDMX(unittest.TestCase):
         log= logging.getLogger( "DMX.derivative_test")
         p = 'DMX_0002'
         log.debug( "Runing derivative for %s", 'd_delay_d_'+p)
-        ndf = self.DMXm.d_delay_d_param_num(self.toas.table, p)
-        adf = self.DMXm.d_delay_d_param(self.toas.table, p)
+        ndf = self.DMXm.d_delay_d_param_num(self.toas, p)
+        adf = self.DMXm.d_delay_d_param(self.toas, p)
         diff = adf - ndf
         if not np.all(diff.value) == 0.0:
             mean_der = (adf+ndf)/2.0

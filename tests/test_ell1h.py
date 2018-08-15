@@ -44,7 +44,7 @@ class TestELL1H(unittest.TestCase):
 
     def test_J1853_binary_delay(self):
         # Calculate delays with PINT
-        pint_binary_delay = self.modelJ1853.binarymodel_delay(self.toasJ1853.table, None)
+        pint_binary_delay = self.modelJ1853.binarymodel_delay(self.toasJ1853, None)
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 3e-8), 'J1853 binary delay test failed.'
 
 
@@ -54,15 +54,15 @@ class TestELL1H(unittest.TestCase):
         self.modelJ1853.H4.value = 0.0 # For test PBDOT
         self.modelJ1853.STIGMA.value = 0.0
         testp = tdu.get_derivative_params(self.modelJ1853)
-        delay = self.modelJ1853.delay(self.toasJ1853.table)
+        delay = self.modelJ1853.delay(self.toasJ1853)
         # Change parameter test step
         testp['H3'] = 5e-1
         testp['H4'] = 1e-2
         testp['STIGMA'] = 1e-2
         for p in test_params:
             log.debug( "Runing derivative for %s", 'd_delay_d_'+p)
-            ndf = self.modelJ1853.d_phase_d_param_num(self.toasJ1853.table, p, testp[p])
-            adf = self.modelJ1853.d_phase_d_param(self.toasJ1853.table, delay, p)
+            ndf = self.modelJ1853.d_phase_d_param_num(self.toasJ1853, p, testp[p])
+            adf = self.modelJ1853.d_phase_d_param(self.toasJ1853, delay, p)
             diff = adf - ndf
             if not np.all(diff.value) == 0.0:
                 mean_der = (adf+ndf)/2.0

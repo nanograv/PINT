@@ -38,7 +38,7 @@ class RXTEObs(SpecialLocation):
         'spacecraft' = Give spacecraft ITRF position to astropy.Time()
     """
 
-    def __init__(self, name, FPorbname, tt2tdb_mode = 'spacecraft'):
+    def __init__(self, name, FPorbname, tt2tdb_mode='pint'):
         self.FPorb = load_FPorbit(FPorbname)
         # Now build the interpolator here:
         self.X = interp1d(self.FPorb['MJD_TT'],self.FPorb['X'])
@@ -47,8 +47,7 @@ class RXTEObs(SpecialLocation):
         self.Vx = interp1d(self.FPorb['MJD_TT'],self.FPorb['Vx'])
         self.Vy = interp1d(self.FPorb['MJD_TT'],self.FPorb['Vy'])
         self.Vz = interp1d(self.FPorb['MJD_TT'],self.FPorb['Vz'])
-        self.tt2tdb_mode = tt2tdb_mode
-        super(RXTEObs, self).__init__(name=name)
+        super(RXTEObs, self).__init__(name=name, tt2tdb_mode=tt2tdb_mode)
 
     @property
     def timescale(self):
@@ -57,32 +56,26 @@ class RXTEObs(SpecialLocation):
     def earth_location_itrf(self, time=None):
         '''Return RXTE spacecraft location in ITRF coordinates'''
 
-        if self.tt2tdb_mode.lower().startswith('none'):
+        if self.tt2tdb_mode.lower().startswith('pint'):
             log.warning('Using location=None for TT to TDB conversion')
             return None
-        elif self.tt2tdb_mode.lower().startswith('geo'):
-            log.warning('Using location geocenter for TT to TDB conversion')
-            return EarthLocation.from_geocentric(0.0*u.m,0.0*u.m,0.0*u.m)
-        elif self.tt2tdb_mode.lower().startswith('spacecraft'):
-            log.warning('Using location=None for TT to TDB conversion')
-            return None
-        #elif self.tt2tdb_mode.lower().startswith('spacecraft'):
+        elif self.tt2tdb_mode.lower().startswith('astropy'):
             # First, interpolate ECI geocentric location from orbit file.
             # These are inertial coorinates aligned with ICRF
-            #log.warning('Performing GCRS to ITRS transformation')
-            #pos_gcrs =  GCRS(CartesianRepresentation(self.X(time.tt.mjd)*u.m,
-            #                                         self.Y(time.tt.mjd)*u.m,
-            #                                         self.Z(time.tt.mjd)*u.m),
-            #                 obstime=time)
+            log.warning('Performing GCRS to ITRS transformation')
+            pos_gcrs =  GCRS(CartesianRepresentation(self.X(time.tt.mjd)*u.m,
+                                                     self.Y(time.tt.mjd)*u.m,
+                                                     self.Z(time.tt.mjd)*u.m),
+                             obstime=time)
 
             # Now transform ECI (GCRS) to ECEF (ITRS)
             # By default, this uses the WGS84 ellipsoid
-            #pos_ITRS = pos_gcrs.transform_to(ITRS(obstime=time))
+            pos_ITRS = pos_gcrs.transform_to(ITRS(obstime=time))
 
             # Return geocentric ITRS coordinates as an EarthLocation object
-            #return pos_ITRS.earth_location
+            return pos_ITRS.earth_location
         else:
-            log.error('Unknown tt2tdb_mode %s, using None', self.tt2tdb_mode)
+            log.error('Unknown tt2tdb_mode %s, using None' % self.tt2tdb_mode)
             return None
 
     @property

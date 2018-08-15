@@ -51,9 +51,10 @@ class Astrometry(DelayComponent):
 
     def barycentric_radio_freq(self, toas):
         """Return radio frequencies (MHz) of the toas corrected for Earth motion"""
-        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=toas['tdbld'].astype(numpy.float64))
-        v_dot_L_array = numpy.sum(toas['ssb_obs_vel']*L_hat, axis=1)
-        return toas['freq'] * (1.0 - v_dot_L_array / const.c)
+        tbl = toas.table
+        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tdbld'].astype(numpy.float64))
+        v_dot_L_array = numpy.sum(tbl['ssb_obs_vel']*L_hat, axis=1)
+        return tbl['freq'] * (1.0 - v_dot_L_array / const.c)
 
     def solar_system_geometric_delay(self, toas, acc_delay=None):
         """Returns geometric delay (in sec) due to position of site in
@@ -62,14 +63,15 @@ class Astrometry(DelayComponent):
         NOTE: currently assumes XYZ location of TOA relative to SSB is
         available as 3-vector toa.xyz, in units of light-seconds.
         """
-        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=toas['tdbld'].astype(numpy.float64))
-        re_dot_L = numpy.sum(toas['ssb_obs_pos']*L_hat, axis=1)
+        tbl = toas.table
+        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tdbld'].astype(numpy.float64))
+        re_dot_L = numpy.sum(tbl['ssb_obs_pos']*L_hat, axis=1)
         delay = -re_dot_L.to(ls).value
         if self.PX.value != 0.0 \
-           and numpy.count_nonzero(toas['ssb_obs_pos']) > 0:
+           and numpy.count_nonzero(tbl['ssb_obs_pos']) > 0:
             L = ((1.0 / self.PX.value) * u.kpc)
             # TODO: numpy.sum currently loses units in some cases...
-            re_sqr = numpy.sum(toas['ssb_obs_pos']**2, axis=1) * toas['ssb_obs_pos'].unit**2
+            re_sqr = numpy.sum(tbl['ssb_obs_pos']**2, axis=1) * tbl['ssb_obs_pos'].unit**2
             delay += (0.5 * (re_sqr / L) * (1.0 - re_dot_L**2 / re_sqr)).to(ls).value
         return delay * u.second
 
@@ -81,12 +83,13 @@ class Astrometry(DelayComponent):
         # TODO: Should delay not have units of u.second?
         delay = self.delay(toas)
 
-        # TODO: toas['tdbld'].quantity should have units of u.day
+        # TODO: tbl['tdbld'].quantity should have units of u.day
         # NOTE: Do we need to include the delay here?
-        rd['epoch'] = toas['tdbld'].quantity * u.day #- delay * u.second
+        tbl = toas.table
+        rd['epoch'] = tbl['tdbld'].quantity * u.day #- delay * u.second
 
         # Distance from SSB to observatory, and from SSB to psr
-        ssb_obs = toas['ssb_obs_pos'].quantity
+        ssb_obs = tbl['ssb_obs_pos'].quantity
         ssb_psr = self.ssb_to_psb_xyz_ICRS(epoch=numpy.array(rd['epoch']))
 
         # Cartesian coordinates, and derived quantities
