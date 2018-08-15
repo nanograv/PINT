@@ -10,19 +10,20 @@ from .binary_bt import BinaryBT
 from .binary_dd import BinaryDD
 from .binary_ell1 import BinaryELL1, BinaryELL1H
 from .binary_ddk import BinaryDDK
-from .dispersion_model import Dispersion, DispersionDMX
+from .dispersion_model import DispersionDM, DispersionDMX
 from .solar_wind_dispersion import SolarWindDispersion
 from .spindown import Spindown
 from .frequency_dependent import FD
+from .absolute_phase import AbsPhase
 from .glitch import Glitch
-from .jump import DelayJump, PhaseJump 
+from .jump import DelayJump, PhaseJump
 from .solar_system_shapiro import SolarSystemShapiro
 from .noise_model import ScaleToaError, EcorrNoise, PLRedNoise
 from .model_builder import get_model
 
 # Define a standard basic model
 StandardTimingModel = TimingModel("StandardTimingModel",
-          (AstrometryEquatorial(), Spindown(), Dispersion(), SolarSystemShapiro()))
+          (AstrometryEquatorial(), Spindown(), DispersionDM(), SolarSystemShapiro()))
 # BTTimingModel = generate_timing_model("BTTimingModel",
 #         (Astrometry, Spindown, Dispersion, SolarSystemShapiro, BT))
 # DDTimingModel = generate_timing_model("DDTimingModel",

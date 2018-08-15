@@ -481,7 +481,7 @@ class TimingModel(object):
                 delay += df(toas, delay)
         return delay
 
-    def phase(self, toas):
+    def phase(self, toas, abs_phase=False):
         """Return the model-predicted pulse phase for the given TOAs."""
         # First compute the delays to "pulsar time"
         delay = self.delay(toas)
@@ -489,7 +489,23 @@ class TimingModel(object):
         # Then compute the relevant pulse phases
         for pf in self.phase_funcs:
             phase += Phase(pf(toas, delay))
-        return phase
+
+        # If the absolute phase flag is on, use the TZR parameters to compute
+        # the absolute phase.
+        if abs_phase:
+            if 'AbsPhase' not in list(self.components.keys()):
+                log.warning("No absolute phase (TZRMJD, ...) model provided." +
+                            " Returning the conventional phase.")
+                return phase
+            else:
+                tz_toa = self.get_TZR_toa(toas)
+                tz_delay = self.delay(tz_toa)
+                tz_phase = Phase(np.zeros(len(toas)) , np.zeros(len(toas)))
+                for pf in self.phase_funcs:
+                    tz_phase += Phase(pf(tz_toa, tz_delay))
+                return phase - tz_phase
+        else:
+            return phase
 
     def covariance_matrix(self, toas):
         """This a function to get the TOA covariance matrix for noise models.

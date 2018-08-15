@@ -38,8 +38,8 @@ def _load_kernel_link(ephem, link=''):
     load_kernel = False # a flag for checking if the kernel has been loaded
     # search_list = [link,jpl_kernel_http, jpl_kernel_ftp]
     # NOTE the JPL ftp site is disabled. Instead, we duplicated the JPL ftp
-    # site on nanograv server. 
-    search_list = [link, nanograv_http ,jpl_kernel_http]
+    # site on nanograv server.
+    search_list = [link, nanograv_http, jpl_kernel_http, jpl_kernel_ftp]
     if link != '':
         search_list.append('')
     for l in search_list:
@@ -57,7 +57,7 @@ def _load_kernel_link(ephem, link=''):
             #log.info('Exception! {0} {1} {2}'.format(type(ex), ex.args, ex))
             try:
                 log.info('Trying to download and set astropy ephemeris to {0}'.format(ephem_link))
-                aut.data.download_file(ephem_link, timeout=60, cache=True)
+                aut.data.download_file(ephem_link, timeout=300, cache=True)
                 coor.solar_system_ephemeris.set(ephem_link)
                 load_kernel = True
             except Exception as ex2:

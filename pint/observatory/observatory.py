@@ -128,7 +128,7 @@ class Observatory(object):
         at that time will be returned.
         """
         return None
-    
+
     def get_gcrs(self, t, ephem=None):
         '''Return position vector of observatory in GCRS
         t is an astropy.Time or array of astropy.Time objects
@@ -136,7 +136,7 @@ class Observatory(object):
         Returns a 3-vector of Quantities representing the position
         in GCRS coordinates.
         '''
-        raise NotImplementedError 
+        raise NotImplementedError
 
     @property
     def timescale(self):
@@ -176,6 +176,8 @@ class Observatory(object):
                 'ephemeris' method.
         """
         if t.isscalar: t = Time([t])
+        if t.scale == 'tdb':
+            return t
         # Check the method. This pattern is from numpy minize
         if callable(method):
             meth = "_custom"
@@ -208,10 +210,10 @@ class Observatory(object):
     def _get_TDB_PINT(self, t, ephem):
         """Uses astropy.Time location to add the topocentric correction term to
             the Time object. The topocentric correction is given as (r/c).(v/c),
-            with r equal to the geocentric position of the observer, v being the 
+            with r equal to the geocentric position of the observer, v being the
             barycentric velocity of the earth, and c being the speed of light.
 
-            The geocentric observer position can be obtained from Time object. 
+            The geocentric observer position can be obtained from Time object.
             The barycentric velocity can be obtained using solar_system_ephemerides
             objPosVel_wrt_SSB
         """
