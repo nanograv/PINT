@@ -176,9 +176,8 @@ class TopoObs(Observatory):
                 self._clock.append(ClockFile.read(clock_file,
                         format=self.clock_fmt, obscode=self.tempo_code))
         log.info('Evaluating observatory clock corrections.')
-        clocks = self._clock if self._multiple_clock_files else [self._clock]
-        corr = clocks[0].evaluate(t)
-        for clock in clocks[1:]:
+        corr = self._clock[0].evaluate(t)
+        for clock in self._clock[1:]:
             corr += clock.evaluate(t)
 
         if self.include_gps:
