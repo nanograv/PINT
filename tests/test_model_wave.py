@@ -21,5 +21,5 @@ def test_wave():
 
     print(m.as_parfile())
     print(m)
-    print(m.delay(t.table))
+    print(m.delay(t))
 

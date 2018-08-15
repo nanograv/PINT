@@ -62,7 +62,7 @@ class Wave(DelayComponent):
                       range(1, self.num_wave_terms + 1)]
         wave_terms = [getattr(self, name) for name in wave_names]
         wave_om = self.WAVE_OM.quantity
-        time = self.barycentric_time = toas['tdbld'] * u.day
+        time = self.barycentric_time = toas.table['tdbld'] * u.day
         for k, wave_term in enumerate(wave_terms):
             wave_a, wave_b = wave_term.quantity
             k = k + 1
