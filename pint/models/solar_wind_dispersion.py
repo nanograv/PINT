@@ -33,8 +33,6 @@ class SolarWindDispersion(Dispersion):
         '''Return the solar wind dispersion delay for a set of frequencies
         Eventually different solar wind models will be supported
         '''
-        from astropy import log
-        log.warning('%s\t%s\t%s' % (type(self), self.NE_SW, self.DM))
         if self.SWM.value == 0:
             tbl = toas.table
             try:
@@ -43,9 +41,6 @@ class SolarWindDispersion(Dispersion):
                 warn("Using topocentric frequency for dedispersion!")
                 bfreq = tbl['freq']
 
-            dm = np.zeros(len(tbl)) * self.DM.units
-            for dm_f in self.dm_value_funcs:
-                dm += dm_f(toas)
             rsa = tbl['obs_sun_pos'].quantity
             pos = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tdbld'].astype(np.float64))
             r = np.sqrt(np.sum(rsa*rsa, axis=1))

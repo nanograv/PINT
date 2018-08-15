@@ -105,9 +105,6 @@ class Dispersion(DelayComponent):
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
        
-        from astropy import log
-        log.warning('%s\t%s' % (type(self), self.DM))
-
         return self.dispersion_time_delay(dm, bfreq)
 
     def print_par(self,):
