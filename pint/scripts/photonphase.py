@@ -93,25 +93,6 @@ def main(argv=None):
         if modelin.PLANET_SHAPIRO.value:
             use_planets=True
 
-    # Read TZR parameters from parfile separately
-    tzrmjd = None
-    tzrsite = '@'
-    tzrfrq = np.inf*u.MHz
-    for line in open(args.parfile):
-        if line.startswith('TZRMJD'):
-            tzrmjd = np.longdouble(line.split()[1])
-        if line.startswith('TZRSITE'):
-            tzrsite = line.split()[1]
-        if line.startswith('TZRFRQ'):
-            tzrfrq = np.float(line.split()[1])*u.MHz
-
-    if tzrmjd is None:
-        tzrmjd = tl[0].mjd
-
-    tztoa = toa.TOA(tzrmjd,obs=tzrsite,freq=tzrfrq)
-    tz = toa.get_TOAs_list([tztoa],include_bipm=False,include_gps=False,
-        ephem=args.ephem, planets=use_planets, tdb_method=args.tdbmethod)
-
     # Discard events outside of MJD range
     if args.maxMJD is not None:
         tlnew = []
@@ -136,8 +117,7 @@ def main(argv=None):
 
 
     # Compute model phase for each TOA
-    # Subtracts off model phase at TZRMJD so that point defines phase 0.0
-    iphss,phss = modelin.phase(ts) - modelin.phase(tz)
+    iphss,phss = modelin.phase(ts)
     # ensure all postive
     negmask = phss < 0.0 * u.cycle
     phases = np.where(negmask, phss + 1.0 * u.cycle, phss)
