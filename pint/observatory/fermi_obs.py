@@ -66,7 +66,9 @@ def load_FT2(ft2_filename):
     # Trim off last point because array.diff() is one shorter
     Vx = np.gradient(X)[:-1]/(mjds_TT.diff().to(u.s))
     Vy = np.gradient(Y)[:-1]/(mjds_TT.diff().to(u.s))
-    Vz = np.gradient(Z)[:-1]/(mjds_TT.diff().to(u.s))
+    # Hack to fix gradient failing on example data file for reasons I don't understand. -- paulr
+    #Vz = np.gradient(Z)[:-1]/(mjds_TT.diff().to(u.s))
+    Vz = (np.gradient(Z.value)[:-1])*u.m/(mjds_TT.diff().to(u.s))
     X = X[:-1]
     Y = Y[:-1]
     Z = Z[:-1]
@@ -155,7 +157,7 @@ class FermiObs(SpecialLocation):
         Returns a 3-vector of Quantities representing the position
         in GCRS coordinates.
         '''
-        return np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)]) * self.FT2['X'].unit 
+        return np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)]) * self.FT2['X'].unit
 
     def posvel(self, t, ephem):
         '''Return position and velocity vectors of Fermi, wrt SSB.

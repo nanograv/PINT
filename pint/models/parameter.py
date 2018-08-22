@@ -508,7 +508,7 @@ class floatParameter(Parameter):
             num_value = setfunc_no_unit(val)
             if self.unit_scale:
                 if numpy.abs(num_value) > numpy.abs(self.scale_threshold):
-                    log.warning("Parameter %s's unit will be scaled to %s %s" \
+                    log.info("Parameter %s's unit will be scaled to %s %s" \
                              % (self.name, str(self.scale_factor), str(self._original_units)))
                     self.units = self.scale_factor * self._original_units
                 else:

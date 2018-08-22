@@ -18,7 +18,7 @@ from pint import dimensionless_cycles
 
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
-ignore_params = ['START', 'FINISH', 'EPHEM', 'CLK', 'UNITS', 
+ignore_params = ['START', 'FINISH', 'EPHEM', 'CLK', 'UNITS',
                  'TIMEEPH', 'T2CMETHOD', 'CORRECT_TROPOSPHERE', 'DILATEFREQ',
                  'NTOA', 'CLOCK', 'TRES', 'TZRMJD', 'TZRFRQ', 'TZRSITE',
                  'NITS', 'IBOOT','BINARY']
@@ -500,7 +500,7 @@ class TimingModel(object):
             else:
                 tz_toa = self.get_TZR_toa(toas)
                 tz_delay = self.delay(tz_toa)
-                tz_phase = Phase(np.zeros(len(toas)) , np.zeros(len(toas)))
+                tz_phase = Phase(np.zeros(len(toas.table)) , np.zeros(len(toas.table)))
                 for pf in self.phase_funcs:
                     tz_phase += Phase(pf(tz_toa, tz_delay))
                 return phase - tz_phase
