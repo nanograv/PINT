@@ -32,3 +32,6 @@ TopoObs('ps1',          tempo_code='p', itoa_code='PS',
         itrf_xyz=[-5461997.8, -2412559.0, 2243024.0])
 TopoObs('hobart',          tempo_code='4', itoa_code='HO',
         itrf_xyz=[-3950077.96,  2522377.31,  -4311667.52])
+TopoObs('most',         tempo_code='e', itoa_code='MO',
+        itrf_xyz=[-4483311.64, 2648815.92, -3671909.31],
+        clock_fmt='tempo2', clock_dir='TEMPO2', clock_file='mo2gps.clk')
