@@ -232,6 +232,7 @@ class PlkWidget(tk.Frame):
         self.plkDpi = 100
         self.plkFig = mpl.figure.Figure(dpi=self.plkDpi)
         self.plkCanvas = FigureCanvasTkAgg(self.plkFig, self)
+        self.plkCanvas.mpl_connect('button_press_event', self.canvasClickEvent)
 
         self.plkAxes = self.plkFig.add_subplot(111)
 
@@ -347,15 +348,17 @@ class PlkWidget(tk.Frame):
             y, yerr, ylabel = self.psr.data_from_label(yid)
 
             if x is not None and y is not None and np.sum(msk) > 0:
-                xp = x[msk]
-                yp = y[msk]
+                self.xvals = x[msk]
+                self.yvals = y[msk]
+                self.xlabel = xlabel
+                self.ylabel = ylabel
 
                 if yerr is not None:
-                    yerrp = yerr[msk]
+                    self.yerrs = yerr[msk]
                 else:
-                    yerrp = None
+                    self.yerrs = None
 
-                self.plotResiduals(xp, yp, yerrp, xlabel, ylabel, self.psr.name)
+                self.plotResiduals()
 
                 if xid in ['mjd', 'year', 'rounded MJD']:
                     self.plotPhaseJumps(self.psr.phasejumps())
@@ -364,30 +367,30 @@ class PlkWidget(tk.Frame):
 
         self.plkCanvas.draw()
 
-    def plotResiduals(self, x, y, yerr, xlabel, ylabel, title):
+    def plotResiduals(self):
         """
         Update the plot, given all the plotting info
         """
-        xave = 0.5 * (np.max(x) + np.min(x))
-        xmin = xave - 1.05 * (xave - np.min(x))
-        xmax = xave + 1.05 * (np.max(x) - xave)
-        if yerr is None:
-            yave = 0.5 * (np.max(y) + np.min(y))
-            ymin = yave - 1.05 * (yave - np.min(y))
-            ymax = yave + 1.05 * (np.max(y) - yave)
-            self.plkAxes.scatter(x, y, marker='.', color='blue')
+        xave = 0.5 * (np.max(self.xvals) + np.min(self.xvals))
+        xmin = xave - 1.05 * (xave - np.min(self.xvals))
+        xmax = xave + 1.05 * (np.max(self.xvals) - xave)
+        if self.yerrs is None:
+            yave = 0.5 * (np.max(self.yvals) + np.min(self.yvals))
+            ymin = yave - 1.05 * (yave - np.min(self.yvals))
+            ymax = yave + 1.05 * (np.max(self.yvals) - yave)
+            self.plkAxes.scatter(self.xvals, self.yvals, marker='.', color='blue')
         else:
-            yave = 0.5 * (np.max(y+yerr) + np.min(y-yerr))
-            ymin = yave - 1.05 * (yave - np.min(y-yerr))
-            ymax = yave + 1.05 * (np.max(y+yerr) - yave)
-            self.plkAxes.errorbar(x.reshape([-1, 1]), y.reshape([-1, 1]), \
-                                  yerr=yerr.reshape([-1, 1]), fmt='.', color='blue')
+            yave = 0.5 * (np.max(self.yvals+self.yerrs) + np.min(self.yvals-self.yerrs))
+            ymin = yave - 1.05 * (yave - np.min(self.yvals-self.yerrs))
+            ymax = yave + 1.05 * (np.max(self.yvals+self.yerrs) - yave)
+            self.plkAxes.errorbar(self.xvals.reshape([-1, 1]), self.yvals.reshape([-1, 1]), \
+                                  yerr=self.yerrs.reshape([-1, 1]), fmt='.', color='blue')
 
         self.plkAxes.axis([xmin.value, xmax.value, ymin.value, ymax.value])
         self.plkAxes.get_xaxis().get_major_formatter().set_useOffset(False)
-        self.plkAxes.set_xlabel(xlabel)
-        self.plkAxes.set_ylabel(ylabel)
-        self.plkAxes.set_title(title, y=1.03)
+        self.plkAxes.set_xlabel(self.xlabel)
+        self.plkAxes.set_ylabel(self.ylabel)
+        self.plkAxes.set_title(self.psr.name, y=1.03)
     
     def plotPhaseJumps(self, phasejumps):
         """
@@ -420,3 +423,37 @@ class PlkWidget(tk.Frame):
         Set the focus to the plk Canvas
         """
         self.plkCanvas.setFocus()
+
+    def coordToPoint(self, cx, cy):
+        '''
+        Given a set of x-y coordinates, get the TOA index closest to it
+        '''
+        ind = None
+
+        if self.psr is not None:
+            x = self.xvals.value
+            y = self.yvals.value
+
+            xmin, xmax, ymin, ymax = self.plkAxes.axis()
+            dist = ((x-cx)/(xmax-xmin))**2.0 + ((y-cy)/(ymax-ymin))**2.0
+            ind = np.argmin(dist)
+            val = dist[ind]
+            dist[ind] = 100000
+            ind2= np.argmin(dist)
+            dist[ind] = val
+            print('Closest point is %d:(%s, %s) at d=%f with next closest point at d=%f' % (ind, self.xvals[ind], self.yvals[ind], dist[ind], dist[ind2]))
+
+            if dist[ind] * 2  > dist[ind2]:
+                print('Selection is unclear between two points')
+                ind = None
+
+        return ind
+    
+    def canvasClickEvent(self, event):
+        '''
+        Call this function when the figure/canvas is clicked 
+        '''
+        print('Canvas click, you pressed', event.button, event.xdata, event.ydata)
+        if event.xdata is not None and event.ydata is not None:
+            ind = self.coordToPoint(event.xdata, event.ydata)
+            print(ind)
