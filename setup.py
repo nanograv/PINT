@@ -113,6 +113,7 @@ setup(
         'pint.extern',
         'pint.models',
         'pint.scripts',
+        'pint.pintkinter',
         'pint.models.stand_alone_psr_binaries',
         'pint.observatory',
         'pint.orbital',
