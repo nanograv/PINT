@@ -43,12 +43,12 @@ class Pulsar(object):
         print('STARTING LOADING OF PULSAR %s' % str(parfile))
         
         if parfile is not None and timfile is not None:
-            parfilename = parfile
-            timfilename = timfile
+            self.parfile = parfile
+            self.timfile = timfile
         else:
             raise ValueError("No valid pulsar to load")
 
-        self.prefit_model = pint.models.get_model(parfilename)
+        self.prefit_model = pint.models.get_model(self.parfile)
         print("prefit_model.as_parfile():")
         print(self.prefit_model.as_parfile())
 
@@ -57,7 +57,7 @@ class Pulsar(object):
         except AttributeError:
             planet_ephemes = False
 
-        self.toas = pint.toa.get_TOAs(timfilename)
+        self.toas = pint.toa.get_TOAs(self.timfile)
         self.toas.print_summary()
 
         self.prefit_resids = pint.residuals.resids(self.toas, self.prefit_model)
@@ -79,7 +79,31 @@ class Pulsar(object):
 
     def __contains__(self, key):
         return key in self.prefit_model.params
-    
+   
+    def reset_model(self):
+        self.prefit_model = pint.models.get_model(self.parfile)
+        self.postfit_model = None
+        self.postfit_resids = None
+        self.fitted = False
+        self.update_resids()
+
+    def reset_TOAs(self):
+        self.toas = pint.toa.get_TOAs(self.timfile)
+        self.update_resids()
+
+    def resetAll(self):
+        self.prefit_model = pint.models.get_model(self.parfile)
+        self.postfit_model = None
+        self.postfit_resids = None
+        self.fitted = False
+        self.toas = pint.toa.get_TOAs(self.timfile)
+        self.update_resids()
+   
+    def update_resids(self):
+        self.prefit_resids = pint.residuals.resids(self.toas, self.prefit_model)
+        if self.fitted:
+            self.postfit_resids = pint.residuals.resids(self.toas, self.postfit_model)
+
     def orbitalphase(self):
         '''
         For a binary pulsar, calculate the orbital phase. Otherwise, return
@@ -150,6 +174,10 @@ class Pulsar(object):
         '''
         Run a fit using the specified fitter
         '''
+        if self.fitted:
+            self.prefit_model = self.postfit_model
+            self.prefit_resids = self.postfit_resids
+
         if self.fitter == Fitters.POWELL:
             fitter = pint.fitter.PowellFitter(self.toas, self.prefit_model)
         elif self.fitter == Fitters.WLS:
@@ -163,7 +191,7 @@ class Pulsar(object):
         
         fitter.fit_toas(maxiter=1)
         self.postfit_model = fitter.model
-        self.postfit_resids = fitter.resids
+        self.postfit_resids = pint.residuals.resids(self.toas, self.postfit_model)
         self.fitted = True
         self.write_fit_summary()
     

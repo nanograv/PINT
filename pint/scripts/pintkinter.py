@@ -49,7 +49,7 @@ class PINTkinter(object):
 
     def initUI(self):
         self.mainFrame = tk.Frame(master=self.master)
-        self.mainFrame.grid(row=0, column=0)
+        self.mainFrame.pack(fill=tk.BOTH, expand=1)
 
     def createPlkWidget(self):
         self.plkWidget = PlkWidget(master=self.mainFrame)
@@ -58,12 +58,10 @@ class PINTkinter(object):
         pass
 
     def updateLayout(self):
-        ii = 0
         for widget in self.mainFrame.winfo_children():
             widget.grid_forget()
         if self.active['plk']:
-            self.plkWidget.grid(row=0, column=ii)
-            ii += 1
+            self.plkWidget.pack(fill=tk.BOTH, expand=1)
 
     def requestOpenPlk(self, parfile, timfile):
         self.openPlkPulsar(parfile, timfile)

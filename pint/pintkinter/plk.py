@@ -24,18 +24,15 @@ class PlkFitBoxesWidget(tk.Frame):
         self.boxChecked = None
         self.maxcols = 8
     
-    def setCallbacks(self, boxChecked, model):
+    def setCallbacks(self, boxChecked):
         '''
         Set the callback functions
-        @param boxChecked:  Callback function when box is checked
-        @param model:       psr.model
         '''
         self.boxChecked = boxChecked
-        self.addFitCheckBoxes(model)
 
     def addFitCheckBoxes(self, model):
         '''
-        Add the fitting checkboxes to the frame
+        Add the fitting checkboxes for the given model to the frame
         '''
         self.deleteFitCheckBoxes()
 
@@ -163,8 +160,7 @@ class PlkActionsWidget(tk.Frame):
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
 
-        self.updatePlot=None
-        self.reFit_callback=None
+        self.fit_callback=None
         self.clearAll_callback=None
         self.writePar_callback=None
         self.writeTim_callback=None
@@ -173,10 +169,10 @@ class PlkActionsWidget(tk.Frame):
         self.initPlkActions()
     
     def initPlkActions(self):
-        button = tk.Button(self, text='Re-fit', command=self.reFit)
-        button.grid(row=0, column=0)
+        self.fitbutton = tk.Button(self, text='Fit', command=self.fit)
+        self.fitbutton.grid(row=0, column=0)
 
-        button = tk.Button(self, text='Clear', command=self.clearAll)
+        button = tk.Button(self, text='Reset', command=self.reset)
         button.grid(row=0, column=1)
 
         button = tk.Button(self, text='Write par', command=self.writePar)
@@ -188,19 +184,22 @@ class PlkActionsWidget(tk.Frame):
         button = tk.Button(self, text='Save fig', command=self.saveFig)
         button.grid(row=0, column=4)
     
-    def setCallbacks(self, updatePlot, reFit, writePar, writeTim, saveFig):
+    def setCallbacks(self, fit, reset, writePar, writeTim, saveFig):
         """
         Callback functions
         """
-        self.updatePlot = updatePlot
-        self.reFit_callback = reFit
+        self.fit_callback = fit
+        self.reset_callback = reset
         self.writePar_callback = writePar
         self.writeTim_callback = writeTim
         self.saveFig_callback = saveFig
-        
-    def reFit(self):
-        if self.reFit_callback is not None:
-            self.reFit_callback()
+    
+    def setFitButtonText(self, text):
+        self.fitbutton.config(text=text)
+
+    def fit(self):
+        if self.fit_callback is not None:
+            self.fit_callback()
 
     def writePar(self):
         if self.writePar_callback is not None:
@@ -212,8 +211,10 @@ class PlkActionsWidget(tk.Frame):
             self.writeTim_callback()
         print("Write Tim clicked")
 
-    def clearAll(self):
-        print("Clear clicked")
+    def reset(self):
+        if self.reset_callback is not None:
+            self.reset_callback()
+        print("Reset clicked")
 
     def saveFig(self):
         if self.saveFig_callback is not None:
@@ -238,6 +239,7 @@ class PlkWidget(tk.Frame):
         self.plkFig = mpl.figure.Figure(dpi=self.plkDpi)
         self.plkCanvas = FigureCanvasTkAgg(self.plkFig, self)
         self.plkCanvas.mpl_connect('button_press_event', self.canvasClickEvent)
+        self.plkCanvas.mpl_connect('key_press_event', self.canvasKeyEvent)
 
         self.plkAxes = self.plkFig.add_subplot(111)
 
@@ -251,8 +253,8 @@ class PlkWidget(tk.Frame):
         self.plkCanvas.draw()
 
     def initPlkLayout(self):
-        self.xyChoiceWidget.grid(row=1, column=0)
-        self.plkCanvas.get_tk_widget().grid(row=1, column=1)
+        self.xyChoiceWidget.grid(row=1, column=0, sticky='nw')
+        self.plkCanvas.get_tk_widget().grid(row=1, column=1, sticky='nesw')
         self.actionsWidget.grid(row=2, column=0, columnspan=2, sticky='W')
 
         self.grid_columnconfigure(1, weight=10)
@@ -264,13 +266,14 @@ class PlkWidget(tk.Frame):
     def setPulsar(self, psr):
         self.psr = psr
 
-        self.fitboxesWidget.setCallbacks(self.fitboxChecked, psr.prefit_model)
+        self.fitboxesWidget.setCallbacks(self.fitboxChecked)
         self.xyChoiceWidget.setCallbacks(self.updatePlot)
-        self.actionsWidget.setCallbacks(self.updatePlot, self.reFit, 
+        self.actionsWidget.setCallbacks(self.fit, self.reset,
             self.writePar, self.writeTim, self.saveFig)
 
         self.fitboxesWidget.grid(row=0, column=0, columnspan=2, sticky='W')
 
+        self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
         self.xyChoiceWidget.setChoice()
         self.updatePlot()
     
@@ -283,15 +286,26 @@ class PlkWidget(tk.Frame):
         """
         getattr(self.psr.prefit_model, parchanged).frozen = not newstate
 
-    def reFit(self):
+    def fit(self):
         """
         We need to re-do the fit for this pulsar
         """
         if not self.psr is None:
             self.psr.fit()
+            self.actionsWidget.setFitButtonText('Re-fit')
             xid, yid = self.xyChoiceWidget.plotIDs()
             self.xyChoiceWidget.setChoice(xid=xid, yid='post-fit')
             self.updatePlot()
+
+    def reset(self):
+        '''
+        Reset all changes for this pulsar
+        '''
+        self.psr.resetAll()
+        self.actionsWidget.setFitButtonText('Fit')
+        self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+        self.xyChoiceWidget.setChoice()
+        self.updatePlot()
 
     def writePar(self):
         '''
@@ -317,6 +331,7 @@ class PlkWidget(tk.Frame):
         filename = tkFileDialog.asksaveasfilename(title='Choose output tim file')
         try:
             print('Chose output file %s' % filename)
+            self.psr.toas.write_TOA_file(filename)
         except:
             print('Count not save file to filename:\t%s' % filename)
 
@@ -352,7 +367,7 @@ class PlkWidget(tk.Frame):
             if x is not None and y is not None:
                 self.xvals, self.xlabel = x, xlabel
                 self.yvals, self.ylabel = y, ylabel
-                self.yerrs = yerr if yerr is not None else None
+                self.yerrs = yerr
 
                 self.plotResiduals()
 
@@ -480,7 +495,7 @@ class PlkWidget(tk.Frame):
             print("WARNING: parameter {0} not yet implemented".format(label))
         elif label == 'para. angle':
             print("WARNING: parameter {0} not yet implemented".format(label))
-        
+       
         return data, error, plotlabel
 
     def setFocusToCanvas(self):
@@ -518,7 +533,32 @@ class PlkWidget(tk.Frame):
         '''
         Call this function when the figure/canvas is clicked 
         '''
-        print('Canvas click, you pressed', event.button, event.xdata, event.ydata)
         if event.xdata is not None and event.ydata is not None:
             ind = self.coordToPoint(event.xdata, event.ydata)
-            print(ind)
+            if ind is not None:
+                #Right click is delete
+                if event.button == 3:
+                    self.psr.toas.table.remove_row(ind)
+                    self.psr.toas.table = self.psr.toas.table.group_by('obs')
+                    self.psr.update_resids()
+                    self.updatePlot()
+
+    def canvasKeyEvent(self, event):
+        '''
+        A key is pressed. Handle all the shortcuts here
+        '''
+
+        fkey = event.key
+        print('%s was pressed' % fkey)
+        from_canvas = True
+
+        xpos, ypos = event.xdata, event.ydata
+        ukey = ord(fkey[-1])
+        print(fkey)
+
+        if ukey == ord('r'):
+            #Reset the pane
+            self.reset()
+        if ukey == ord('x'):
+            #Re-do the fit, using post-fit values of parameters
+            self.fit()
