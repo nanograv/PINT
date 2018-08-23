@@ -90,7 +90,8 @@ console_scripts = [ 'photonphase=pint.scripts.photonphase:main',
                     'pintempo=pint.scripts.pintempo:main', 
                     'zima=pint.scripts.zima:main', 
                     'pintbary=pint.scripts.pintbary:main', 
-                    'fermiphase=pint.scripts.fermiphase:main' ]
+                    'fermiphase=pint.scripts.fermiphase:main',
+                    'pintkinter=pint.scripts.pintkinter:main' ]
 
 setup(
     name="pint",
