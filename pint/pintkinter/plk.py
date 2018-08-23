@@ -10,10 +10,10 @@ import tkFileDialog
 import matplotlib as mpl
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
-import time
+import astropy.units as u
 import copy
 
-import pulsar as pu
+import pint.pintkinter.pulsar as pu
 
 class PlkFitBoxesWidget(tk.Frame):
     '''
@@ -47,7 +47,6 @@ class PlkFitBoxesWidget(tk.Frame):
         ii = 0
         comps = model.components.keys()
         fitparams = [p for p in model.params if not getattr(model, p).frozen]
-        print(fitparams)
         for comp in comps:
             showpars = [p for p in model.components[comp].params \
                 if not p in pu.nofitboxpars and getattr(model, p).quantity is not None]
@@ -122,21 +121,27 @@ class PlkXYChoiceWidget(tk.Frame):
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure(2, weight=1)
 
+        self.xbuttons = []
+        self.ybuttons = []
+
         for ii, choice in enumerate(pu.plot_labels):
             label = tk.Label(self, text=choice)
             label.grid(row=ii+1, column=0)
 
-            radio = tk.Radiobutton(self, variable=self.xvar, value=choice, 
-                                   command=self.updateChoice)
-            if choice.lower() == 'mjd':
-                radio.select()
-            radio.grid(row=ii+1, column=1)
+            self.xbuttons.append(tk.Radiobutton(self, variable=self.xvar, value=choice, 
+                                  command=self.updateChoice))
+            self.xbuttons[ii].grid(row=ii+1, column=1)
 
-            radio = tk.Radiobutton(self, variable=self.yvar, value=choice, 
-                                   command=self.updateChoice)
-            if choice.lower() == 'post-fit':
-                radio.select()
-            radio.grid(row=ii+1, column=2)
+            self.ybuttons.append(tk.Radiobutton(self, variable=self.yvar, value=choice, 
+                                 command=self.updateChoice))
+            self.ybuttons[ii].grid(row=ii+1, column=2)
+
+    def setChoice(self, xid='mjd', yid='pre-fit'):
+        for ii, choice in enumerate(pu.plot_labels):
+            if choice.lower() == xid:
+                self.xbuttons[ii].select()
+            if choice.lower() == yid:
+                self.ybuttons[ii].select()
 
     def setCallbacks(self, updatePlot):
         '''
@@ -144,7 +149,7 @@ class PlkXYChoiceWidget(tk.Frame):
         '''
         self.updatePlot = updatePlot
 
-    def plotids(self):
+    def plotIDs(self):
         return self.xvar.get(), self.yvar.get()
 
     def updateChoice(self):
@@ -259,23 +264,24 @@ class PlkWidget(tk.Frame):
     def setPulsar(self, psr):
         self.psr = psr
 
-        self.fitboxesWidget.setCallbacks(self.fitboxChecked, psr._model)
+        self.fitboxesWidget.setCallbacks(self.fitboxChecked, psr.prefit_model)
         self.xyChoiceWidget.setCallbacks(self.updatePlot)
         self.actionsWidget.setCallbacks(self.updatePlot, self.reFit, 
             self.writePar, self.writeTim, self.saveFig)
 
         self.fitboxesWidget.grid(row=0, column=0, columnspan=2, sticky='W')
 
-        self.xyChoiceWidget.updateChoice()
+        self.xyChoiceWidget.setChoice()
+        self.updatePlot()
     
     def fitboxChecked(self, parchanged, newstate):
         """
         When a fitbox is (un)checked, this callback function is called
 
         @param parchanged:  Which parameter has been (un)checked
-        @param newstate:    The new state of the checkbox
+        @param newstate:    The new state of the checkbox (True if model should be fit)
         """
-        self.psr.set_fit_state(parchanged, newstate)
+        getattr(self.psr.prefit_model, parchanged).frozen = not newstate
 
     def reFit(self):
         """
@@ -283,6 +289,8 @@ class PlkWidget(tk.Frame):
         """
         if not self.psr is None:
             self.psr.fit()
+            xid, yid = self.xyChoiceWidget.plotIDs()
+            self.xyChoiceWidget.setChoice(xid=xid, yid='post-fit')
             self.updatePlot()
 
     def writePar(self):
@@ -292,11 +300,15 @@ class PlkWidget(tk.Frame):
         filename = tkFileDialog.asksaveasfilename(title='Choose output par file')
         try:
             fout = open(filename, 'w')
-            fout.write(self.psr._fitter.model.as_parfile())
+            if self.psr.fitted:
+                fout.write(self.psr.postfit_model.as_parfile())
+                print('Saved post-fit parfile to %s' % filename)
+            else:
+                fout.write(self.psr.prefit_model.as_parfile())
+                print('Pulsar has not been fitted! Saving pre-fit parfile to %s' % filename)
             fout.close()
-            print('Saved post-fit parfile to %s' % filename)
         except:
-            print('Count not save parfile to filename:\t%s' % filename)
+            print('Could not save parfile to filename:\t%s' % filename)
 
     def writeTim(self):
         '''
@@ -319,14 +331,6 @@ class PlkWidget(tk.Frame):
         except:
             print('Could not save figure to filename:\t%s' % filename)
 
-    def newFitParameters(self):
-        """
-        This function is called when we have new fitparameters
-
-        TODO: callback not used right now
-        """
-        pass
-    
     def updatePlot(self):
         """
         Update the plot/figure
@@ -336,27 +340,19 @@ class PlkWidget(tk.Frame):
 
         if self.psr is not None:
             # Get a mask for the plotting points
-            msk = self.psr.mask('plot')
-
-            #print("Mask has {0} toas".format(np.sum(msk)))
+            #msk = self.psr.mask('plot')
 
             # Get the IDs of the X and Y axis
-            xid, yid = self.xyChoiceWidget.plotids()
+            xid, yid = self.xyChoiceWidget.plotIDs()
 
             # Retrieve the data
-            x, xerr, xlabel = self.psr.data_from_label(xid)
-            y, yerr, ylabel = self.psr.data_from_label(yid)
+            x, xerr, xlabel = self.psr_data_from_label(xid)
+            y, yerr, ylabel = self.psr_data_from_label(yid)
 
-            if x is not None and y is not None and np.sum(msk) > 0:
-                self.xvals = x[msk]
-                self.yvals = y[msk]
-                self.xlabel = xlabel
-                self.ylabel = ylabel
-
-                if yerr is not None:
-                    self.yerrs = yerr[msk]
-                else:
-                    self.yerrs = None
+            if x is not None and y is not None:
+                self.xvals, self.xlabel = x, xlabel
+                self.yvals, self.ylabel = y, ylabel
+                self.yerrs = yerr if yerr is not None else None
 
                 self.plotResiduals()
 
@@ -388,8 +384,14 @@ class PlkWidget(tk.Frame):
 
         self.plkAxes.axis([xmin.value, xmax.value, ymin.value, ymax.value])
         self.plkAxes.get_xaxis().get_major_formatter().set_useOffset(False)
-        self.plkAxes.set_xlabel(self.xlabel)
-        self.plkAxes.set_ylabel(self.ylabel)
+        if type(self.xlabel) == list:
+            self.plkAxes.set_xlabel(self.xlabel[0])
+        else:
+            self.plkAxes.set_xlabel(self.xlabel)
+        if type(self.ylabel) == list:
+            self.plkAxes.set_ylabel(self.ylabel[0])
+        else:
+            self.plkAxes.set_ylabel(self.ylabel)
         self.plkAxes.set_title(self.psr.name, y=1.03)
     
     def plotPhaseJumps(self, phasejumps):
@@ -417,7 +419,70 @@ class PlkWidget(tk.Frame):
                             xy=(phasejumps[ii,0], ymax+dy), xycoords='data', \
                             annotation_clip=False, color='darkred', \
                             size=7.0)
-                    
+    
+    def psr_data_from_label(self, label):
+        '''
+        Given a label, get the corresponding data from the pulsar
+        
+        @param label: The label for the data we want
+        @return:    data, error, plotlabel
+        '''
+        data, error, plotlabel = None, None, None
+        if label == 'pre-fit':
+            data = self.psr.prefit_resids.time_resids.to(u.us)
+            error = self.psr.toas.get_errors().to(u.us)
+            plotlabel=[r'Pre-fit residual ($\mu$s)', 'Pre-fit residual (phase)']
+        elif label == 'post-fit':
+            if self.psr.fitted:
+                data = self.psr.postfit_resids.time_resids.to(u.us)
+            else:
+                print('Pulsar has not been fitted yet! Giving pre-fit residuals')
+                data = self.psr.prefit_resids.time_resids.to(u.us)
+            error = self.psr.toas.get_errors().to(u.us)
+            plotlabel=[r'Post-fit residual ($\mu$s)', 'Post-fit residual (phase)']
+        elif label == 'mjd':
+            data = self.psr.toas.get_mjds()
+            error = self.psr.toas.get_errors()
+            plotlabel = r'MJD'
+        elif label == 'orbital phase':
+            data = self.psr.orbitalphase()
+            error = None
+            plotlabel = 'Orbital Phase'
+        elif label == 'serial':
+            data = np.arange(self.psr.toas.ntoas) * u.m / u.m
+            error = None
+            plotlabel = 'TOA number'
+        elif label == 'day of year':
+            data = self.psr.dayofyear()
+            error = None
+            plotlabel = 'Day of the year'
+        elif label == 'year':
+            data = self.psr.year()
+            error = None
+            plotlabel = 'Year'
+        elif label == 'frequency':
+            data = self.psr.toas.get_freqs()
+            error = None
+            plotlabel = r"Observing frequency (MHz)"
+        elif label == 'TOA error':
+            data = self.psr.toas.get_errors().to(u.us)
+            error = None
+            plotlabel = "TOA uncertainty ($\mu$s)"
+        elif label == 'elevation':
+            print('WARNING: parameter {0} not yet implemented'.format(label))
+        elif label == 'rounded MJD':
+            data = np.floor(self.psr.toas.get_mjds() + 0.5 * u.d)
+            error = self.psr.toas.get_errors().to(u.d)
+            plotlabel = r'MJD'
+        elif label == 'sidereal time':
+            print("WARNING: parameter {0} not yet implemented".format(label))
+        elif label == 'hour angle':
+            print("WARNING: parameter {0} not yet implemented".format(label))
+        elif label == 'para. angle':
+            print("WARNING: parameter {0} not yet implemented".format(label))
+        
+        return data, error, plotlabel
+
     def setFocusToCanvas(self):
         """
         Set the focus to the plk Canvas
