@@ -44,6 +44,7 @@ class PlkFitBoxesWidget(tk.Frame):
         ii = 0
         comps = model.components.keys()
         fitparams = [p for p in model.params if not getattr(model, p).frozen]
+        print(fitparams)
         for comp in comps:
             showpars = [p for p in model.components[comp].params \
                 if not p in pu.nofitboxpars and getattr(model, p).quantity is not None]
@@ -228,6 +229,8 @@ class PlkWidget(tk.Frame):
         self.initPlk()
         self.initPlkLayout()
 
+        self.update_callback = None
+
         self.psr = None
 
     def initPlk(self):
@@ -263,8 +266,18 @@ class PlkWidget(tk.Frame):
         self.grid_rowconfigure(1, weight=10)
         self.grid_rowconfigure(2, weight=1)
 
-    def setPulsar(self, psr):
+    def update(self):
+        if self.psr is not None:
+            print('Updating')
+            self.psr.update_resids()
+            self.actionsWidget.setFitButtonText('Fit')
+            self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+            self.xyChoiceWidget.setChoice()
+            self.updatePlot()
+
+    def setPulsar(self, psr, update):
         self.psr = psr
+        self.update_callback = update
 
         self.fitboxesWidget.setCallbacks(self.fitboxChecked)
         self.xyChoiceWidget.setCallbacks(self.updatePlot)
@@ -285,6 +298,8 @@ class PlkWidget(tk.Frame):
         @param newstate:    The new state of the checkbox (True if model should be fit)
         """
         getattr(self.psr.prefit_model, parchanged).frozen = not newstate
+        if not self.update_callback is None:
+            self.update_callback()
 
     def fit(self):
         """
@@ -296,6 +311,8 @@ class PlkWidget(tk.Frame):
             xid, yid = self.xyChoiceWidget.plotIDs()
             self.xyChoiceWidget.setChoice(xid=xid, yid='post-fit')
             self.updatePlot()
+        if not self.update_callback is None:
+            self.update_callback()
 
     def reset(self):
         '''
@@ -306,6 +323,8 @@ class PlkWidget(tk.Frame):
         self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
         self.xyChoiceWidget.setChoice()
         self.updatePlot()
+        if not self.update_callback is None:
+            self.update_callback()
 
     def writePar(self):
         '''
