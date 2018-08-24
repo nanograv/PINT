@@ -56,13 +56,14 @@ class PINTkinter(object):
 
     def initUI(self):
         #Create top level menus
-        self.menuBar = tk.Menu(self.mainFrame.winfo_toplevel())
-        self.mainFrame.winfo_toplevel()['menu'] = self.menuBar
+        top = self.mainFrame.winfo_toplevel()
+        self.menuBar = tk.Menu(top)
+        top['menu'] = self.menuBar
 
         self.fileMenu = tk.Menu(self.menuBar)
         self.fileMenu.add_command(label='Open par/tim', command=self.openParTim)
         self.fileMenu.add_command(label='Exit', 
-                                 command=self.mainFrame.winfo_toplevel().destroy)
+                                 command=top.destroy)
         self.menuBar.add_cascade(label='File', menu=self.fileMenu)
 
         self.viewMenu = tk.Menu(self.menuBar)
@@ -75,6 +76,10 @@ class PINTkinter(object):
         self.helpMenu = tk.Menu(self.menuBar)
         self.helpMenu.add_command(label='About', command=self.about)
         self.menuBar.add_cascade(label='Help', menu=self.helpMenu)
+        
+        #Key bindings
+        top.bind('<Control-p>', lambda e:self.toggle('plk'))
+        top.bind('<Control-e>', lambda e:self.toggle('par'))
 
     def createWidgets(self):
         self.widgets = {'plk': PlkWidget(master=self.mainFrame),
@@ -96,7 +101,6 @@ class PINTkinter(object):
                 self.mainFrame.grid_columnconfigure(col, weight=1)
                 visible += 1
 
-
     def openPulsar(self, parfile, timfile):
         self.psr = pu.Pulsar(parfile, timfile)
         self.widgets['plk'].setPulsar(self.psr, updates=[self.widgets['par'].update])
@@ -107,6 +111,10 @@ class PINTkinter(object):
         timfile = tkFileDialog.askopenfilename(title='Open tim file')
         self.openPulsar(parfile, timfile)
     
+    def toggle(self, key):
+        self.active[key].set((self.active[key].get() + 1)%2)
+        self.updateLayout()
+
     def about(self):
         tkMessageBox.showinfo(title='About PINTkinter', 
                               message='A Tkinter based graphical interface to PINT')
