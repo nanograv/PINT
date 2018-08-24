@@ -25,7 +25,7 @@ plot_labels = ['pre-fit', 'post-fit', 'mjd', 'year', 'orbital phase', 'serial', 
 
 # Some parameters we do not want to add a fitting checkbox for:
 nofitboxpars = ['PSR', 'START', 'FINISH', 'POSEPOCH', 'PEPOCH', 'DMEPOCH', \
-    'EPHVER', 'TZRMJD', 'TZRFRQ', 'TRES']
+    'EPHVER', 'TZRMJD', 'TZRFRQ', 'TRES', 'PLANET_SHAPIRO']
 
 class Fitters(Enum):
     POWELL = 0
