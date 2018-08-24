@@ -44,6 +44,7 @@ class PlkFitBoxesWidget(tk.Frame):
         ii = 0
         comps = model.components.keys()
         fitparams = [p for p in model.params if not getattr(model, p).frozen]
+        print(fitparams)
         for comp in comps:
             showpars = [p for p in model.components[comp].params \
                 if not p in pu.nofitboxpars and getattr(model, p).quantity is not None]
@@ -228,7 +229,7 @@ class PlkWidget(tk.Frame):
         self.initPlk()
         self.initPlkLayout()
 
-        self.update_callback = None
+        self.update_callbacks = None
 
         self.psr = None
 
@@ -274,9 +275,9 @@ class PlkWidget(tk.Frame):
             self.xyChoiceWidget.setChoice()
             self.updatePlot()
 
-    def setPulsar(self, psr, update):
+    def setPulsar(self, psr, updates):
         self.psr = psr
-        self.update_callback = update
+        self.update_callbacks = updates
 
         self.fitboxesWidget.setCallbacks(self.fitboxChecked)
         self.xyChoiceWidget.setCallbacks(self.updatePlot)
@@ -288,7 +289,12 @@ class PlkWidget(tk.Frame):
         self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
         self.xyChoiceWidget.setChoice()
         self.updatePlot()
-    
+
+    def call_updates(self):
+        if not self.update_callbacks is None:
+            for ucb in self.update_callbacks:
+                ucb()
+
     def fitboxChecked(self, parchanged, newstate):
         """
         When a fitbox is (un)checked, this callback function is called
@@ -297,8 +303,7 @@ class PlkWidget(tk.Frame):
         @param newstate:    The new state of the checkbox (True if model should be fit)
         """
         getattr(self.psr.prefit_model, parchanged).frozen = not newstate
-        if not self.update_callback is None:
-            self.update_callback()
+        self.call_updates()
 
     def fit(self):
         """
@@ -310,20 +315,18 @@ class PlkWidget(tk.Frame):
             xid, yid = self.xyChoiceWidget.plotIDs()
             self.xyChoiceWidget.setChoice(xid=xid, yid='post-fit')
             self.updatePlot()
-        if not self.update_callback is None:
-            self.update_callback()
+        self.call_updates()
 
     def reset(self):
         '''
         Reset all changes for this pulsar
         '''
-        self.psr.resetAll()
+        self.psr.reset_TOAs()
         self.actionsWidget.setFitButtonText('Fit')
         self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
         self.xyChoiceWidget.setChoice()
         self.updatePlot()
-        if not self.update_callback is None:
-            self.update_callback()
+        self.call_updates()
 
     def writePar(self):
         '''

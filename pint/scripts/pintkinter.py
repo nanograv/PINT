@@ -7,6 +7,8 @@ from __future__ import absolute_import, print_function, division
 import os, sys
 import numpy as np
 import Tkinter as tk
+import tkFileDialog
+import tkMessageBox
 import code
 import argparse
 
@@ -38,50 +40,82 @@ class PINTkinter(object):
         self.master = master
         self.master.title('Tkinter interface to PINT')
 
-        self.initUI()
-
-        self.createWidgets()
-        self.requestOpenPlk(parfile=parfile, timfile=timfile)
-        
-        self.active = {'plk': True, 'par': True}
-        self.updateLayout()
-
-    def initUI(self):
         self.mainFrame = tk.Frame(master=self.master)
         self.mainFrame.grid(row=0, column=0, sticky='nesw')
         self.master.grid_rowconfigure(0, weight=1)
         self.master.grid_columnconfigure(0, weight=1)
 
+        self.maxcols = 2
+
+        self.createWidgets()
+        if parfile is not None and timfile is not None:
+            self.openPulsar(parfile=parfile, timfile=timfile)
+        
+        self.initUI()
+        self.updateLayout()
+
+    def initUI(self):
+        #Create top level menus
+        self.menuBar = tk.Menu(self.mainFrame.winfo_toplevel())
+        self.mainFrame.winfo_toplevel()['menu'] = self.menuBar
+
+        self.fileMenu = tk.Menu(self.menuBar)
+        self.fileMenu.add_command(label='Open par/tim', command=self.openParTim)
+        self.fileMenu.add_command(label='Exit', 
+                                 command=self.mainFrame.winfo_toplevel().destroy)
+        self.menuBar.add_cascade(label='File', menu=self.fileMenu)
+
+        self.viewMenu = tk.Menu(self.menuBar)
+        self.viewMenu.add_checkbutton(label='Plk', command=self.updateLayout,
+                                      variable=self.active['plk'])
+        self.viewMenu.add_checkbutton(label='Edit Par', command=self.updateLayout,
+                                      variable=self.active['par'])
+        self.menuBar.add_cascade(label='View', menu=self.viewMenu)
+
+        self.helpMenu = tk.Menu(self.menuBar)
+        self.helpMenu.add_command(label='About', command=self.about)
+        self.menuBar.add_cascade(label='Help', menu=self.helpMenu)
+
     def createWidgets(self):
-        self.plkWidget = PlkWidget(master=self.mainFrame)
-        self.parWidget = ParWidget(master=self.mainFrame)
+        self.widgets = {'plk': PlkWidget(master=self.mainFrame),
+                        'par': ParWidget(master=self.mainFrame)}
+        self.active = {'plk': tk.IntVar(), 'par': tk.IntVar()}
+        self.active['plk'].set(1)
 
     def updateLayout(self):
         for widget in self.mainFrame.winfo_children():
             widget.grid_forget()
-        ii = 0
-        if self.active['plk']:
-            self.plkWidget.grid(row=0, column=ii, sticky='nesw')
-            ii += 1
-        if self.active['par']:
-            self.parWidget.grid(row=0, column=ii, sticky='nesw')
-            ii += 1
-        for i in range(ii):
-            self.mainFrame.grid_columnconfigure(ii, weight=1)
-        self.mainFrame.grid_rowconfigure(0, weight=1)
+        
+        visible = 0
+        for key in self.active.keys():
+            if self.active[key].get():
+                row = int(visible / self.maxcols)
+                col = visible % self.maxcols
+                self.widgets[key].grid(row=row, column=col, sticky='nesw')
+                self.mainFrame.grid_rowconfigure(row, weight=1)
+                self.mainFrame.grid_columnconfigure(col, weight=1)
+                visible += 1
 
-    def requestOpenPlk(self, parfile, timfile):
-        self.openPlkPulsar(parfile, timfile)
 
-    def openPlkPulsar(self, parfile, timfile):
-        psr = pu.Pulsar(parfile, timfile)
-        self.plkWidget.setPulsar(psr, update=self.parWidget.update)
-        self.parWidget.setPulsar(psr, update=self.plkWidget.update)
+    def openPulsar(self, parfile, timfile):
+        self.psr = pu.Pulsar(parfile, timfile)
+        self.widgets['plk'].setPulsar(self.psr, updates=[self.widgets['par'].update])
+        self.widgets['par'].setPulsar(self.psr, updates=[self.widgets['plk'].update])
+
+    def openParTim(self):
+        parfile = tkFileDialog.askopenfilename(title='Open par file')
+        timfile = tkFileDialog.askopenfilename(title='Open tim file')
+        self.openPulsar(parfile, timfile)
+    
+    def about(self):
+        tkMessageBox.showinfo(title='About PINTkinter', 
+                              message='A Tkinter based graphical interface to PINT')
+        
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Tkinter interface for PINT pulsar timing tool')
-    parser.add_argument('parfile', help='parfile to use')
-    parser.add_argument('timfile', help='timfile to use')
+    parser.add_argument('-p', '--parfile', help='parfile to use')
+    parser.add_argument('-t', '--timfile', help='timfile to use')
 
     args = parser.parse_args(argv)
 

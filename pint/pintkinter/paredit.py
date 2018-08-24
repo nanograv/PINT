@@ -42,30 +42,40 @@ class ParActionsWidget(tk.Frame):
         tk.Frame.__init__(self, master)
 
         self.reset_callback = None
+        self.remove_callback = None
         self.apply_callback = None
         self.write_callback = None
 
         self.initLayout()
 
     def initLayout(self):
-        button = tk.Button(self, text='Reset Changes', command=self.resetChanges)
+        button = tk.Button(self, text='Reset parfile', command=self.resetParfile)
         button.grid(row=0, column=0)
 
-        button = tk.Button(self, text='Apply Changes', command=self.applyChanges)
+        button = tk.Button(self, text='Remove Changes', command=self.removeChanges)
         button.grid(row=0, column=1)
 
-        button = tk.Button(self, text='Write Par', command=self.writePar)
+        button = tk.Button(self, text='Apply Changes', command=self.applyChanges)
         button.grid(row=0, column=2)
+
+        button = tk.Button(self, text='Write Par', command=self.writePar)
+        button.grid(row=0, column=3)
     
-    def setCallbacks(self, resetChanges, applyChanges, writePar):
-        self.reset_callback = resetChanges
+    def setCallbacks(self, resetParfile, removeChanges, applyChanges, writePar):
+        self.reset_callback = resetParfile
+        self.remove_callback = removeChanges
         self.apply_callback = applyChanges
         self.write_callback = writePar
 
-    def resetChanges(self):
+    def resetParfile(self):
         if self.reset_callback is not None:
             self.reset_callback()
         print('Reset clicked')
+
+    def removeChanges(self):
+        if self.remove_callback is not None:
+            self.remove_callback()
+        print('Remove clicked')
 
     def applyChanges(self):
         if self.apply_callback is not None:
@@ -85,7 +95,7 @@ class ParWidget(tk.Frame):
         tk.Frame.__init__(self, master)
 
         self.psr = None
-        self.update_callback = None
+        self.update_callbacks = None
         self.initLayout()
     
     def initLayout(self):
@@ -109,41 +119,50 @@ class ParWidget(tk.Frame):
     def update(self):
         self.set_model()
 
-    def setPulsar(self, psr, update):
+    def setPulsar(self, psr, updates):
         self.psr = psr
 
         self.choiceWidget.setCallbacks(self.set_model)
-        self.actionsWidget.setCallbacks(self.set_model,
+        self.actionsWidget.setCallbacks(self.reset,
+                                        self.set_model,
                                         self.applyChanges,
                                         self.writePar)
         self.set_model()
-        self.update_callback = update
+        self.update_callbacks = updates
+
+    def call_updates(self):
+        if not self.update_callbacks is None:
+            for ucb in self.update_callbacks:
+                ucb()
+
+    def reset(self):
+        self.choiceWidget.prefit.select()
+        self.psr.reset_model()
+        self.set_model()
+        self.call_updates()
 
     def set_model(self):
         choice = self.choiceWidget.choice.get()
-        self.editor.delete('1.0', tk.END)
         if choice == 'postfit':
             if self.psr.fitted:
+                self.editor.delete('1.0', tk.END)
                 self.editor.insert('1.0', self.psr.postfit_model.as_parfile())
             else:   
                 print('There is no postfit model yet!')
-                self.editor.insert('1.0', self.psr.prefit_model.as_parfile())
+                self.choiceWidget.prefit.select()
         elif choice == 'prefit':
+            self.editor.delete('1.0', tk.END)
             self.editor.insert('1.0', self.psr.prefit_model.as_parfile())
 
-    def updateModel(self, model):
+    def applyChanges(self):
         pfilename = tempfile.mkstemp()[1]
         pfile = open(pfilename, 'w')
         pfile.write(self.editor.get('1.0', 'end-1c'))
         pfile.close()
-        model = pint.models.get_model(pfilename)
+        self.psr.prefit_model = pint.models.get_model(pfilename)
         os.remove(pfilename)
-        
-    def applyChanges(self):
-        self.updateModel(self.psr.prefit_model)
-        if self.update_callback is not None:
-            self.update_callback()
-
+        self.call_updates()
+    
     def writePar(self):
         filename = tkFileDialog.asksaveasfilename(title='Choose output par file')
         try:
