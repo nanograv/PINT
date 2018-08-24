@@ -49,7 +49,7 @@ class ParActionsWidget(tk.Frame):
         self.initLayout()
 
     def initLayout(self):
-        button = tk.Button(self, text='Reset parfile', command=self.resetParfile)
+        button = tk.Button(self, text='Reset Model', command=self.resetParfile)
         button.grid(row=0, column=0)
 
         button = tk.Button(self, text='Remove Changes', command=self.removeChanges)
@@ -115,9 +115,6 @@ class ParWidget(tk.Frame):
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=10)
         self.grid_rowconfigure(2, weight=1)
-
-    def update(self):
-        self.set_model()
 
     def setPulsar(self, psr, updates):
         self.psr = psr
