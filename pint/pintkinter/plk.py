@@ -44,7 +44,6 @@ class PlkFitBoxesWidget(tk.Frame):
         ii = 0
         comps = model.components.keys()
         fitparams = [p for p in model.params if not getattr(model, p).frozen]
-        print(fitparams)
         for comp in comps:
             showpars = [p for p in model.components[comp].params \
                 if not p in pu.nofitboxpars and getattr(model, p).quantity is not None]

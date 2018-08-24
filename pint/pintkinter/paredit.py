@@ -95,6 +95,10 @@ class ParWidget(tk.Frame):
         self.editor = tk.Text(self)
         self.editor.grid(row=1, column=0, sticky='nesw')
 
+        scrollbar = tk.Scrollbar(self, command=self.editor.yview)
+        scrollbar.grid(row=1, column=1, sticky='nesw')
+        self.editor['yscrollcommand'] = scrollbar.set
+
         self.actionsWidget = ParActionsWidget(master=self)
         self.actionsWidget.grid(row=2, column=0, sticky='w')
 
@@ -129,7 +133,6 @@ class ParWidget(tk.Frame):
 
     def updateModel(self, model):
         pfilename = tempfile.mkstemp()[1]
-        print(pfilename)
         pfile = open(pfilename, 'w')
         pfile.write(self.editor.get('1.0', 'end-1c'))
         pfile.close()
