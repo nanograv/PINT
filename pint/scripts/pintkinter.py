@@ -67,6 +67,8 @@ class PINTkinter(object):
 
         self.helpMenu = tk.Menu(self.menuBar)
         self.helpMenu.add_command(label='About', command=self.about)
+        self.helpMenu.add_command(label='Plk Help', 
+                                  command=lambda: print(PlkWidget.helpstring))
         self.menuBar.add_cascade(label='Help', menu=self.helpMenu)
         
         #Key bindings

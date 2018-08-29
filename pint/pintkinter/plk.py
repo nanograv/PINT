@@ -245,6 +245,27 @@ class PlkActionsWidget(tk.Frame):
         print("Reset clicked")
 
 class PlkWidget(tk.Frame):
+    helpstring = '''The following interactions are currently supported by the Plk pane in the PINTkinter GUI:
+
+Left click:     Highlight a point
+
+Right click:    Delete a point
+
+r:              Reset the pane - undo all deletions, selections, etc.
+
+f:              Perform a fit
+
+s:              Select the highlights points
+
+d:              Delete the highlighted points
+
+u:              Undo the most recent selection
+
+c:              Clear highlighter from map
+
+h:              Print help
+'''
+
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
 
@@ -678,3 +699,5 @@ class PlkWidget(tk.Frame):
         elif ukey == ord('c'):
             self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
             self.updatePlot()
+        elif ukey == ord('h'):
+            print(PlkWidget.helpstring)
