@@ -8,7 +8,7 @@ import os, sys
 import Tkinter as tk
 import tkFileDialog
 import matplotlib as mpl
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 import numpy as np
 import astropy.units as u
 import copy
@@ -153,6 +153,38 @@ class PlkXYChoiceWidget(tk.Frame):
         if self.updatePlot is not None:
             self.updatePlot()
 
+class PlkToolbar(NavigationToolbar2TkAgg):
+    '''
+    A modification of the stock Matplotlib toolbar to perform the
+    necessary selections/unselections on points
+    '''
+    toolitems = [t for t in NavigationToolbar2TkAgg.toolitems if
+                 t[0] in ('Back', 'Zoom', 'Save')]
+    def __init__(self, *args, **kwargs):
+        self.back_callback = None
+        self.draw_callback = None
+        
+        NavigationToolbar2TkAgg.__init__(self, *args, **kwargs)
+    
+    def setCallbacks(self, back_callback, draw_callback):
+        self.back_callback = back_callback
+        self.draw_callback = draw_callback
+
+    def back(self, *args):
+        if not self.back_callback is None:
+            self.back_callback()
+        NavigationToolbar2TkAgg.back(self, *args)
+
+    def release_zoom(self, event):
+        NavigationToolbar2TkAgg.release_zoom(self, event)
+        NavigationToolbar2TkAgg.zoom(self)
+
+    def draw(self):
+        NavigationToolbar2TkAgg.draw(self)
+        #Now that it has been redrawn, execute callback
+        if not self.draw_callback is None:
+            self.draw_callback()
+
 class PlkActionsWidget(tk.Frame):
     '''
     Shows action items like re-fit, write par, write tim, etc.
@@ -180,11 +212,8 @@ class PlkActionsWidget(tk.Frame):
 
         button = tk.Button(self, text='Write tim', command=self.writeTim)
         button.grid(row=0, column=3)
-        
-        button = tk.Button(self, text='Save fig', command=self.saveFig)
-        button.grid(row=0, column=4)
     
-    def setCallbacks(self, fit, reset, writePar, writeTim, saveFig):
+    def setCallbacks(self, fit, reset, writePar, writeTim):
         """
         Callback functions
         """
@@ -192,7 +221,6 @@ class PlkActionsWidget(tk.Frame):
         self.reset_callback = reset
         self.writePar_callback = writePar
         self.writeTim_callback = writeTim
-        self.saveFig_callback = saveFig
     
     def setFitButtonText(self, text):
         self.fitbutton.config(text=text)
@@ -216,11 +244,6 @@ class PlkActionsWidget(tk.Frame):
             self.reset_callback()
         print("Reset clicked")
 
-    def saveFig(self):
-        if self.saveFig_callback is not None:
-            self.saveFig_callback()
-        print("Save fig clicked")
-
 class PlkWidget(tk.Frame):
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
@@ -242,6 +265,7 @@ class PlkWidget(tk.Frame):
         self.plkCanvas = FigureCanvasTkAgg(self.plkFig, self)
         self.plkCanvas.mpl_connect('button_press_event', self.canvasClickEvent)
         self.plkCanvas.mpl_connect('key_press_event', self.canvasKeyEvent)
+        self.plkToolbar = PlkToolbar(self.plkCanvas, tk.Frame(self))
 
         self.plkAxes = self.plkFig.add_subplot(111)
 
@@ -255,20 +279,22 @@ class PlkWidget(tk.Frame):
         self.plkCanvas.draw()
 
     def initPlkLayout(self):
-        self.xyChoiceWidget.grid(row=1, column=0, sticky='nw')
-        self.plkCanvas.get_tk_widget().grid(row=1, column=1, sticky='nesw')
-        self.actionsWidget.grid(row=2, column=0, columnspan=2, sticky='W')
+        self.plkToolbar.master.grid(row=1, column=1, sticky='nesw')
+        self.xyChoiceWidget.grid(row=2, column=0, sticky='nw')
+        self.plkCanvas.get_tk_widget().grid(row=2, column=1, sticky='nesw')
+        self.actionsWidget.grid(row=3, column=0, columnspan=2, sticky='W')
 
         self.grid_columnconfigure(1, weight=10)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=10)
-        self.grid_rowconfigure(2, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=10)
+        self.grid_rowconfigure(3, weight=1)
 
     def update(self):
         if self.psr is not None:
-            print('Updating')
             self.psr.update_resids()
+            self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
             self.actionsWidget.setFitButtonText('Fit')
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.xyChoiceWidget.setChoice()
@@ -276,12 +302,14 @@ class PlkWidget(tk.Frame):
 
     def setPulsar(self, psr, updates):
         self.psr = psr
+        self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
         self.update_callbacks = updates
 
         self.fitboxesWidget.setCallbacks(self.fitboxChecked)
         self.xyChoiceWidget.setCallbacks(self.updatePlot)
+        self.plkToolbar.setCallbacks(self.unselect, self.zoom_select)
         self.actionsWidget.setCallbacks(self.fit, self.reset,
-            self.writePar, self.writeTim, self.saveFig)
+            self.writePar, self.writeTim)
 
         self.fitboxesWidget.grid(row=0, column=0, columnspan=2, sticky='W')
 
@@ -304,6 +332,31 @@ class PlkWidget(tk.Frame):
         getattr(self.psr.prefit_model, parchanged).frozen = not newstate
         self.call_updates()
 
+    def unselect(self):
+        '''
+        Undo a selection (but not deletes)
+        '''
+        self.psr.toas.unselect()
+        self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
+        self.psr.update_resids()
+        self.updatePlot()
+        self.call_updates()
+
+    def zoom_select(self):
+        '''
+        Apply a TOAs selection to points within the current view
+        '''
+        xmin, xmax = self.plkAxes.get_xlim()
+        ymin, ymax = self.plkAxes.get_ylim()
+
+        self.selected = (self.xvals.value > xmin) & (self.xvals.value < xmax)
+        self.selected &= (self.yvals.value > ymin) & (self.yvals.value < ymax)
+        self.psr.toas.select(self.selected)
+        self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
+        self.psr.update_resids()
+        self.updatePlot()
+        self.call_updates()
+
     def fit(self):
         """
         We need to re-do the fit for this pulsar
@@ -318,9 +371,10 @@ class PlkWidget(tk.Frame):
 
     def reset(self):
         '''
-        Reset all changes for this pulsar
+        Reset all plot changes for this pulsar
         '''
         self.psr.reset_TOAs()
+        self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
         self.actionsWidget.setFitButtonText('Fit')
         self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
         self.xyChoiceWidget.setChoice()
@@ -355,17 +409,6 @@ class PlkWidget(tk.Frame):
         except:
             print('Count not save file to filename:\t%s' % filename)
 
-    def saveFig(self):
-        '''
-        Save the current plot view to a file
-        '''
-        filename = tkFileDialog.asksaveasfilename(title='Choose output file')
-        try:
-            self.plkFig.savefig(filename)
-            print('Saved image to %s' % filename)
-        except:
-            print('Could not save figure to filename:\t%s' % filename)
-
     def updatePlot(self):
         """
         Update the plot/figure
@@ -398,6 +441,26 @@ class PlkWidget(tk.Frame):
 
         self.plkCanvas.draw()
 
+    def plotErrorbar(self, selected, color):
+        '''
+        For some reason, errorbar breaks completely when the plotting array is
+        of length 2. So this workaround is needed
+        '''
+        if selected.sum() != 2:
+            self.plkAxes.errorbar(self.xvals[selected].reshape([-1, 1]), 
+                                  self.yvals[selected].reshape([-1, 1]),
+                                  yerr=self.yerrs[selected].reshape([-1, 1]),
+                                  fmt='.', color=color)
+        else:
+            self.plkAxes.errorbar(self.xvals[selected][0].reshape([-1, 1]), 
+                                  self.yvals[selected][0].reshape([-1, 1]), 
+                                  yerr=self.yerrs[selected][0].reshape([-1, 1]),
+                                  fmt='.', color=color) 
+            self.plkAxes.errorbar(self.xvals[selected][1].reshape([-1, 1]), 
+                                  self.yvals[selected][1].reshape([-1, 1]), 
+                                  yerr=self.yerrs[selected][1].reshape([-1, 1]),
+                                  fmt='.', color=color)  
+
     def plotResiduals(self):
         """
         Update the plot, given all the plotting info
@@ -409,13 +472,16 @@ class PlkWidget(tk.Frame):
             yave = 0.5 * (np.max(self.yvals) + np.min(self.yvals))
             ymin = yave - 1.05 * (yave - np.min(self.yvals))
             ymax = yave + 1.05 * (np.max(self.yvals) - yave)
-            self.plkAxes.scatter(self.xvals, self.yvals, marker='.', color='blue')
+            self.plkAxes.scatter(self.xvals[~self.selected], self.yvals[~self.selected],   
+                marker='.', color='blue')
+            self.plkAxes.scatter(self.xvals[self.selected], self.yvals[self.selected],
+                marker='.', color='orange')
         else:
             yave = 0.5 * (np.max(self.yvals+self.yerrs) + np.min(self.yvals-self.yerrs))
             ymin = yave - 1.05 * (yave - np.min(self.yvals-self.yerrs))
             ymax = yave + 1.05 * (np.max(self.yvals+self.yerrs) - yave)
-            self.plkAxes.errorbar(self.xvals.reshape([-1, 1]), self.yvals.reshape([-1, 1]), \
-                                  yerr=self.yerrs.reshape([-1, 1]), fmt='.', color='blue')
+            self.plotErrorbar(~self.selected, color='blue')
+            self.plotErrorbar(self.selected, color='orange')
 
         self.plkAxes.axis([xmin.value, xmax.value, ymin.value, ymax.value])
         self.plkAxes.get_xaxis().get_major_formatter().set_useOffset(False)
@@ -541,7 +607,7 @@ class PlkWidget(tk.Frame):
             dist[ind] = 100000
             ind2= np.argmin(dist)
             dist[ind] = val
-            print('Closest point is %d:(%s, %s) at d=%f with next closest point at d=%f' % (ind, self.xvals[ind], self.yvals[ind], dist[ind], dist[ind2]))
+            #print('Closest point is %d:(%s, %s) at d=%f with next closest point at d=%f' % (ind, self.xvals[ind], self.yvals[ind], dist[ind], dist[ind2]))
 
             if dist[ind] * 2  > dist[ind2]:
                 print('Selection is unclear between two points')
@@ -556,10 +622,19 @@ class PlkWidget(tk.Frame):
         if event.xdata is not None and event.ydata is not None:
             ind = self.coordToPoint(event.xdata, event.ydata)
             if ind is not None:
-                #Right click is delete
-                if event.button == 3:
+                if event.button == 1:
+                    #Left click is select
+                    self.selected[ind] = not self.selected[ind]
+                    self.updatePlot()
+                elif event.button == 3:
+                    #Right click is delete
                     self.psr.toas.table.remove_row(ind)
                     self.psr.toas.table = self.psr.toas.table.group_by('obs')
+                    for i in range(len(self.psr.toas.table_selects)):
+                        self.psr.toas.table_selects[i].remove_row(ind)
+                        self.psr.toas.table_selects[i] = \
+                            self.psr.toas.table_selects[i].group_by('obs')
+                    self.selected = np.delete(self.selected, ind)
                     self.psr.update_resids()
                     self.updatePlot()
                     self.call_updates()
@@ -578,6 +653,28 @@ class PlkWidget(tk.Frame):
         if ukey == ord('r'):
             #Reset the pane
             self.reset()
-        if ukey == ord('x'):
+        elif ukey == ord('f'):
             #Re-do the fit, using post-fit values of parameters
             self.fit()
+        elif ukey == ord('d'):
+            #Delete the selected points
+            self.psr.toas.table = self.psr.toas.table[~self.selected].group_by('obs')
+            for i in range(len(self.psr.toas.table_selects)):
+                self.psr.toas.table_selects[i] = \
+                    self.psr.toas.table_selects[i][~self.selected].group_by('obs')
+            self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
+            self.psr.update_resids()
+            self.updatePlot()
+            self.call_updates()
+        elif ukey == ord('s'):
+            #Apply the selection to TOAs object
+            self.psr.toas.select(self.selected)
+            self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
+            self.psr.update_resids()
+            self.updatePlot()
+            self.call_updates()
+        elif ukey == ord('u'):
+            self.unselect()
+        elif ukey == ord('c'):
+            self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
+            self.updatePlot()

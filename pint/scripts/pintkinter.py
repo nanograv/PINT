@@ -12,26 +12,13 @@ import tkMessageBox
 import code
 import argparse
 
-import pint.pintkinter.pulsar as pu
+from pint.pintkinter.pulsar import Pulsar
 from pint.pintkinter.plk import PlkWidget
 from pint.pintkinter.paredit import ParWidget
 from pint.pintkinter.timedit import TimWidget
 
 from astropy import log
 log.setLevel('WARNING')
-
-banner = """
-      +----------------------------------------------+
-      |              PINT                            |
-      |              ====              ,~~~~.        |
-      |      Modern Pulsar Timing      i====i_       |
-      |                                |cccc|_)      |
-      |     Brought to you by the      |cccc|        |
-      |     NANOGrav collaboration     `-==-'        |
-      |                                              |
-      +----------------------------------------------+
-
-"""
 
 class PINTkinter(object):
     '''
@@ -110,7 +97,7 @@ class PINTkinter(object):
                 visible += 1
 
     def openPulsar(self, parfile, timfile):
-        self.psr = pu.Pulsar(parfile, timfile)
+        self.psr = Pulsar(parfile, timfile)
         self.widgets['plk'].setPulsar(self.psr, updates=[self.widgets['par'].set_model,
                                                          self.widgets['tim'].set_toas])
         self.widgets['par'].setPulsar(self.psr, updates=[self.widgets['plk'].update])
