@@ -266,6 +266,8 @@ c:              Clear highlighter from map
 h:              Print help
 '''
 
+    clickDist = 0.0005
+
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
 
@@ -372,11 +374,7 @@ h:              Print help
 
         self.selected = (self.xvals.value > xmin) & (self.xvals.value < xmax)
         self.selected &= (self.yvals.value > ymin) & (self.yvals.value < ymax)
-        self.psr.toas.select(self.selected)
-        self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
-        self.psr.update_resids()
         self.updatePlot()
-        self.call_updates()
 
     def fit(self):
         """
@@ -624,16 +622,12 @@ h:              Print help
             xmin, xmax, ymin, ymax = self.plkAxes.axis()
             dist = ((x-cx)/(xmax-xmin))**2.0 + ((y-cy)/(ymax-ymin))**2.0
             ind = np.argmin(dist)
-            val = dist[ind]
-            dist[ind] = 100000
-            ind2= np.argmin(dist)
-            dist[ind] = val
             #print('Closest point is %d:(%s, %s) at d=%f with next closest point at d=%f' % (ind, self.xvals[ind], self.yvals[ind], dist[ind], dist[ind2]))
-
-            if dist[ind] * 2  > dist[ind2]:
-                print('Selection is unclear between two points')
+            
+            if dist[ind] > PlkWidget.clickDist:
+                print('Not close enough to a point')
                 ind = None
-
+        
         return ind
     
     def canvasClickEvent(self, event):
@@ -651,10 +645,11 @@ h:              Print help
                     #Right click is delete
                     self.psr.toas.table.remove_row(ind)
                     self.psr.toas.table = self.psr.toas.table.group_by('obs')
-                    for i in range(len(self.psr.toas.table_selects)):
-                        self.psr.toas.table_selects[i].remove_row(ind)
-                        self.psr.toas.table_selects[i] = \
-                            self.psr.toas.table_selects[i].group_by('obs')
+                    if hasattr(self.psr.toas, 'table_selects'):
+                        for i in range(len(self.psr.toas.table_selects)):
+                            self.psr.toas.table_selects[i].remove_row(ind)
+                            self.psr.toas.table_selects[i] = \
+                                self.psr.toas.table_selects[i].group_by('obs')
                     self.selected = np.delete(self.selected, ind)
                     self.psr.update_resids()
                     self.updatePlot()
@@ -680,9 +675,10 @@ h:              Print help
         elif ukey == ord('d'):
             #Delete the selected points
             self.psr.toas.table = self.psr.toas.table[~self.selected].group_by('obs')
-            for i in range(len(self.psr.toas.table_selects)):
-                self.psr.toas.table_selects[i] = \
-                    self.psr.toas.table_selects[i][~self.selected].group_by('obs')
+            if hasattr(self.psr.toas, 'table_selects'):
+                for i in range(len(self.psr.toas.table_selects)):
+                    self.psr.toas.table_selects[i] = \
+                        self.psr.toas.table_selects[i][~self.selected].group_by('obs')
             self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
             self.psr.update_resids()
             self.updatePlot()
