@@ -35,6 +35,8 @@ def main(argv=None):
     parser.add_argument("--ephem",help="Planetary ephemeris to use (default=DE421)", default="DE421")
     parser.add_argument('--tdbmethod',help="Method for computing TT to TDB (default=astropy)", default="default")
     parser.add_argument("--plot",help="Show phaseogram plot.", action='store_true', default=False)
+    parser.add_argument("--use_gps",default=False,action='store_true',help="Apply GPS to UTC clock corrections")
+    parser.add_argument("--use_bipm",default=False,action='store_true',help="Use TT(BIPM) instead of TT(TAI)")
 #    parser.add_argument("--fix",help="Apply 1.0 second offset for NICER", action='store_true', default=False)
     args = parser.parse_args(argv)
 
@@ -105,8 +107,8 @@ def main(argv=None):
         tl=tlnew
         print("post len : ",len(tlnew))
 
-    ts = toa.get_TOAs_list(tl, ephem=args.ephem, include_bipm=False,
-        include_gps=False, planets=use_planets, tdb_method=args.tdbmethod)
+    ts = toa.get_TOAs_list(tl, ephem=args.ephem, include_bipm=args.use_bipm,
+        include_gps=args.use_gps, planets=use_planets, tdb_method=args.tdbmethod)
     ts.filename = args.eventfile
 #    if args.fix:
 #        ts.adjust_TOAs(TimeDelta(np.ones(len(ts.table))*-1.0*u.s,scale='tt'))
@@ -117,7 +119,7 @@ def main(argv=None):
 
 
     # Compute model phase for each TOA
-    iphss,phss = modelin.phase(ts)
+    iphss,phss = modelin.phase(ts,abs_phase=True)
     # ensure all postive
     negmask = phss < 0.0 * u.cycle
     phases = np.where(negmask, phss + 1.0 * u.cycle, phss)
