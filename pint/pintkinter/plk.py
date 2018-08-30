@@ -15,6 +15,21 @@ import copy
 
 import pint.pintkinter.pulsar as pu
 
+plotlabels = {'pre-fit': [r'Pre-fit residual ($\mu$s)', 'Pre-fit residual (phase)'],
+              'post-fit': [r'Post-fit residual ($\mu$s)', 'Post-fit residual (phase)'],
+              'mjd': r'MJD',
+              'orbital phase': 'Orbital Phase',
+              'serial': 'TOA number',
+              'day of year': 'Day of the year',
+              'year': 'Year',
+              'frequency': r'Observing Frequency (MHz)',
+              'TOA error': r'TOA uncertainty ($\mu$s)',
+              'elevation': None,
+              'rounded MJD': r'MJD',
+              'sidereal time': None,
+              'hour angle': None,
+              'para. angle': None}
+
 class PlkFitBoxesWidget(tk.Frame):
     '''
     Allows one to select which parameters to fit for
@@ -291,6 +306,8 @@ h:              Print help
         self.plkToolbar = PlkToolbar(self.plkCanvas, tk.Frame(self))
 
         self.plkAxes = self.plkFig.add_subplot(111)
+        self.plkAx2x = self.plkAxes.twinx()
+        self.plkAx2y = self.plkAxes.twiny()
 
         self.drawSomething()
 
@@ -353,6 +370,8 @@ h:              Print help
         @param newstate:    The new state of the checkbox (True if model should be fit)
         """
         getattr(self.psr.prefit_model, parchanged).frozen = not newstate
+        if self.psr.fitted:
+            getattr(self.psr.postfit_model, parchanged).frozen = not newstate
         self.call_updates()
 
     def unselect(self):
@@ -433,6 +452,8 @@ h:              Print help
         Update the plot/figure
         """
         self.plkAxes.clear()
+        self.plkAx2x.clear()
+        self.plkAx2y.clear()
         self.plkAxes.grid(True)
 
         if self.psr is not None:
@@ -440,24 +461,25 @@ h:              Print help
             #msk = self.psr.mask('plot')
 
             # Get the IDs of the X and Y axis
-            xid, yid = self.xyChoiceWidget.plotIDs()
+            self.xid, self.yid = self.xyChoiceWidget.plotIDs()
 
             # Retrieve the data
-            x, xerr, xlabel = self.psr_data_from_label(xid)
-            y, yerr, ylabel = self.psr_data_from_label(yid)
+            x, xerr = self.psr_data_from_label(self.xid)
+            y, yerr = self.psr_data_from_label(self.yid)
 
             if x is not None and y is not None:
-                self.xvals, self.xlabel = x, xlabel
-                self.yvals, self.ylabel = y, ylabel
+                self.xvals = x
+                self.yvals = y
                 self.yerrs = yerr
 
                 self.plotResiduals()
 
-                if xid in ['mjd', 'year', 'rounded MJD']:
+                if self.xid in ['mjd', 'year', 'rounded MJD']:
                     self.plotPhaseJumps(self.psr.phasejumps())
             else:
                 raise ValueError("Nothing to plot!")
 
+        self.plkFig.tight_layout()
         self.plkCanvas.draw()
 
     def plotErrorbar(self, selected, color):
@@ -504,15 +526,38 @@ h:              Print help
 
         self.plkAxes.axis([xmin.value, xmax.value, ymin.value, ymax.value])
         self.plkAxes.get_xaxis().get_major_formatter().set_useOffset(False)
-        if type(self.xlabel) == list:
-            self.plkAxes.set_xlabel(self.xlabel[0])
+        self.plkAx2y.set_visible(False)
+        self.plkAx2x.set_visible(False)
+
+        if self.xid in ['pre-fit', 'post-fit']:
+            self.plkAxes.set_xlabel(plotlabels[self.xid][0])
+            m = self.psr.prefit_model if self.xid == 'pre-fit' or not self.psr.fitted \
+                                      else self.psr.postfit_model
+            if hasattr(m, 'F0'):
+                self.plkAx2y.set_visible(True)
+                self.plkAx2y.set_xlabel(plotlabels[self.xid][1])
+                f0 = m.F0.quantity.to(u.Hz)
+                self.plkAx2y.set_xlim((xmin.to(u.s) * f0).value, (xmax.to(u.s) * f0).value)
+                self.plkAx2y.xaxis.set_major_locator(mpl.ticker.FixedLocator(
+                    self.plkAxes.get_xticks() * f0.to(u.MHz).value))
         else:
-            self.plkAxes.set_xlabel(self.xlabel)
-        if type(self.ylabel) == list:
-            self.plkAxes.set_ylabel(self.ylabel[0])
+            self.plkAxes.set_xlabel(plotlabels[self.xid])
+
+        if self.yid in ['pre-fit', 'post-fit']:
+            self.plkAxes.set_ylabel(plotlabels[self.yid][0])
+            m = self.psr.prefit_model if self.yid == 'pre-fit' or not self.psr.fitted \
+                                      else self.psr.postfit_model
+            if hasattr(m, 'F0'):
+                self.plkAx2x.set_visible(True)
+                self.plkAx2x.set_ylabel(plotlabels[self.yid][1])
+                f0 = m.F0.quantity.to(u.Hz)
+                self.plkAx2x.set_ylim((ymin.to(u.s) * f0).value, (ymax.to(u.s) * f0).value)
+                self.plkAx2x.yaxis.set_major_locator(mpl.ticker.FixedLocator(
+                    self.plkAxes.get_yticks() * f0.to(u.MHz).value))
         else:
-            self.plkAxes.set_ylabel(self.ylabel)
-        self.plkAxes.set_title(self.psr.name, y=1.03)
+            self.plkAxes.set_ylabel(plotlabels[self.yid])
+        
+        self.plkAxes.set_title(self.psr.name, y=1.1)
     
     def plotPhaseJumps(self, phasejumps):
         """
@@ -545,13 +590,12 @@ h:              Print help
         Given a label, get the corresponding data from the pulsar
         
         @param label: The label for the data we want
-        @return:    data, error, plotlabel
+        @return:    data, error
         '''
-        data, error, plotlabel = None, None, None
+        data, error = None, None
         if label == 'pre-fit':
             data = self.psr.prefit_resids.time_resids.to(u.us)
             error = self.psr.toas.get_errors().to(u.us)
-            plotlabel=[r'Pre-fit residual ($\mu$s)', 'Pre-fit residual (phase)']
         elif label == 'post-fit':
             if self.psr.fitted:
                 data = self.psr.postfit_resids.time_resids.to(u.us)
@@ -559,41 +603,32 @@ h:              Print help
                 print('Pulsar has not been fitted yet! Giving pre-fit residuals')
                 data = self.psr.prefit_resids.time_resids.to(u.us)
             error = self.psr.toas.get_errors().to(u.us)
-            plotlabel=[r'Post-fit residual ($\mu$s)', 'Post-fit residual (phase)']
         elif label == 'mjd':
             data = self.psr.toas.get_mjds()
             error = self.psr.toas.get_errors()
-            plotlabel = r'MJD'
         elif label == 'orbital phase':
             data = self.psr.orbitalphase()
             error = None
-            plotlabel = 'Orbital Phase'
         elif label == 'serial':
             data = np.arange(self.psr.toas.ntoas) * u.m / u.m
             error = None
-            plotlabel = 'TOA number'
         elif label == 'day of year':
             data = self.psr.dayofyear()
             error = None
-            plotlabel = 'Day of the year'
         elif label == 'year':
             data = self.psr.year()
             error = None
-            plotlabel = 'Year'
         elif label == 'frequency':
             data = self.psr.toas.get_freqs()
             error = None
-            plotlabel = r"Observing frequency (MHz)"
         elif label == 'TOA error':
             data = self.psr.toas.get_errors().to(u.us)
             error = None
-            plotlabel = "TOA uncertainty ($\mu$s)"
         elif label == 'elevation':
             print('WARNING: parameter {0} not yet implemented'.format(label))
         elif label == 'rounded MJD':
             data = np.floor(self.psr.toas.get_mjds() + 0.5 * u.d)
             error = self.psr.toas.get_errors().to(u.d)
-            plotlabel = r'MJD'
         elif label == 'sidereal time':
             print("WARNING: parameter {0} not yet implemented".format(label))
         elif label == 'hour angle':
@@ -601,7 +636,7 @@ h:              Print help
         elif label == 'para. angle':
             print("WARNING: parameter {0} not yet implemented".format(label))
        
-        return data, error, plotlabel
+        return data, error
 
     def setFocusToCanvas(self):
         """
