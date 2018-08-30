@@ -119,7 +119,7 @@ def main(argv=None):
 
 
     # Compute model phase for each TOA
-    iphss,phss = modelin.phase(ts)
+    iphss,phss = modelin.phase(ts,abs_phase=True)
     # ensure all postive
     negmask = phss < 0.0 * u.cycle
     phases = np.where(negmask, phss + 1.0 * u.cycle, phss)

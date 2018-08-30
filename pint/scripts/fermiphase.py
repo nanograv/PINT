@@ -78,7 +78,7 @@ def main(argv=None):
     print(mjds.min(),mjds.max())
 
     # Compute model phase for each TOA
-    iphss,phss = modelin.phase(ts)
+    iphss,phss = modelin.phase(ts,abs_phase=True)
     # ensure all postive
     phases = np.where(phss < 0.0 * u.cycle, phss + 1.0 * u.cycle, phss)
     mjds = ts.get_mjds()
