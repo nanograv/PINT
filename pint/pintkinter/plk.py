@@ -30,6 +30,29 @@ plotlabels = {'pre-fit': [r'Pre-fit residual ($\mu$s)', 'Pre-fit residual (phase
               'hour angle': None,
               'para. angle': None}
 
+helpstring = '''The following interactions are currently supported by the Plk pane in the PINTkinter GUI:
+
+Left click:     Highlight a point
+
+Right click:    Delete a point
+
+r:              Reset the pane - undo all deletions, selections, etc.
+
+f:              Perform a fit
+
+s:              Select the highlights points
+
+d:              Delete the highlighted points
+
+u:              Undo the most recent selection
+
+c:              Clear highlighter from map
+
+h:              Print help
+'''
+
+clickDist = 0.0005
+
 class PlkFitBoxesWidget(tk.Frame):
     '''
     Allows one to select which parameters to fit for
@@ -174,31 +197,7 @@ class PlkToolbar(NavigationToolbar2TkAgg):
     necessary selections/unselections on points
     '''
     toolitems = [t for t in NavigationToolbar2TkAgg.toolitems if
-                 t[0] in ('Back', 'Zoom', 'Save')]
-    def __init__(self, *args, **kwargs):
-        self.back_callback = None
-        self.draw_callback = None
-        
-        NavigationToolbar2TkAgg.__init__(self, *args, **kwargs)
-    
-    def setCallbacks(self, back_callback, draw_callback):
-        self.back_callback = back_callback
-        self.draw_callback = draw_callback
-
-    def back(self, *args):
-        if not self.back_callback is None:
-            self.back_callback()
-        NavigationToolbar2TkAgg.back(self, *args)
-
-    def release_zoom(self, event):
-        NavigationToolbar2TkAgg.release_zoom(self, event)
-        NavigationToolbar2TkAgg.zoom(self)
-
-    def draw(self):
-        NavigationToolbar2TkAgg.draw(self)
-        #Now that it has been redrawn, execute callback
-        if not self.draw_callback is None:
-            self.draw_callback()
+                 t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom', 'Save')]
 
 class PlkActionsWidget(tk.Frame):
     '''
@@ -260,29 +259,6 @@ class PlkActionsWidget(tk.Frame):
         print("Reset clicked")
 
 class PlkWidget(tk.Frame):
-    helpstring = '''The following interactions are currently supported by the Plk pane in the PINTkinter GUI:
-
-Left click:     Highlight a point
-
-Right click:    Delete a point
-
-r:              Reset the pane - undo all deletions, selections, etc.
-
-f:              Perform a fit
-
-s:              Select the highlights points
-
-d:              Delete the highlighted points
-
-u:              Undo the most recent selection
-
-c:              Clear highlighter from map
-
-h:              Print help
-'''
-
-    clickDist = 0.0005
-
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
 
@@ -290,6 +266,9 @@ h:              Print help
         self.initPlkLayout()
 
         self.update_callbacks = None
+
+        self.press = False
+        self.move = False
 
         self.psr = None
 
@@ -302,12 +281,15 @@ h:              Print help
         self.plkFig = mpl.figure.Figure(dpi=self.plkDpi)
         self.plkCanvas = FigureCanvasTkAgg(self.plkFig, self)
         self.plkCanvas.mpl_connect('button_press_event', self.canvasClickEvent)
+        self.plkCanvas.mpl_connect('button_release_event', self.canvasReleaseEvent)
+        self.plkCanvas.mpl_connect('motion_notify_event', self.canvasMotionEvent)
         self.plkCanvas.mpl_connect('key_press_event', self.canvasKeyEvent)
         self.plkToolbar = PlkToolbar(self.plkCanvas, tk.Frame(self))
 
         self.plkAxes = self.plkFig.add_subplot(111)
         self.plkAx2x = self.plkAxes.twinx()
         self.plkAx2y = self.plkAxes.twiny()
+        self.plkAxes.set_zorder(0.1)
 
         self.drawSomething()
 
@@ -338,7 +320,7 @@ h:              Print help
             self.actionsWidget.setFitButtonText('Fit')
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.xyChoiceWidget.setChoice()
-            self.updatePlot()
+            self.updatePlot(keepAxes=True)
 
     def setPulsar(self, psr, updates):
         self.psr = psr
@@ -347,7 +329,6 @@ h:              Print help
 
         self.fitboxesWidget.setCallbacks(self.fitboxChecked)
         self.xyChoiceWidget.setCallbacks(self.updatePlot)
-        self.plkToolbar.setCallbacks(self.unselect, self.zoom_select)
         self.actionsWidget.setCallbacks(self.fit, self.reset,
             self.writePar, self.writeTim)
 
@@ -355,7 +336,7 @@ h:              Print help
 
         self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
         self.xyChoiceWidget.setChoice()
-        self.updatePlot()
+        self.updatePlot(keepAxes=False)
 
     def call_updates(self):
         if not self.update_callbacks is None:
@@ -381,19 +362,8 @@ h:              Print help
         self.psr.toas.unselect()
         self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
         self.psr.update_resids()
-        self.updatePlot()
+        self.updatePlot(keepAxes=False)
         self.call_updates()
-
-    def zoom_select(self):
-        '''
-        Apply a TOAs selection to points within the current view
-        '''
-        xmin, xmax = self.plkAxes.get_xlim()
-        ymin, ymax = self.plkAxes.get_ylim()
-
-        self.selected = (self.xvals.value > xmin) & (self.xvals.value < xmax)
-        self.selected &= (self.yvals.value > ymin) & (self.yvals.value < ymax)
-        self.updatePlot()
 
     def fit(self):
         """
@@ -404,7 +374,7 @@ h:              Print help
             self.actionsWidget.setFitButtonText('Re-fit')
             xid, yid = self.xyChoiceWidget.plotIDs()
             self.xyChoiceWidget.setChoice(xid=xid, yid='post-fit')
-            self.updatePlot()
+            self.updatePlot(keepAxes=True)
         self.call_updates()
 
     def reset(self):
@@ -416,7 +386,7 @@ h:              Print help
         self.actionsWidget.setFitButtonText('Fit')
         self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
         self.xyChoiceWidget.setChoice()
-        self.updatePlot()
+        self.updatePlot(keepAxes=False)
         self.call_updates()
 
     def writePar(self):
@@ -447,15 +417,12 @@ h:              Print help
         except:
             print('Count not save file to filename:\t%s' % filename)
 
-    def updatePlot(self):
+    def updatePlot(self, keepAxes=False):
         """
         Update the plot/figure
-        """
-        self.plkAxes.clear()
-        self.plkAx2x.clear()
-        self.plkAx2y.clear()
-        self.plkAxes.grid(True)
 
+        @param keepAxes: Set to True whenever we want to preserve zoom
+        """
         if self.psr is not None:
             # Get a mask for the plotting points
             #msk = self.psr.mask('plot')
@@ -472,7 +439,7 @@ h:              Print help
                 self.yvals = y
                 self.yerrs = yerr
 
-                self.plotResiduals()
+                self.plotResiduals(keepAxes=keepAxes)
 
                 if self.xid in ['mjd', 'year', 'rounded MJD']:
                     self.plotPhaseJumps(self.psr.phasejumps())
@@ -502,29 +469,43 @@ h:              Print help
                                   yerr=self.yerrs[selected][1].reshape([-1, 1]),
                                   fmt='.', color=color)  
 
-    def plotResiduals(self):
+    def plotResiduals(self, keepAxes=False):
         """
         Update the plot, given all the plotting info
         """
-        xave = 0.5 * (np.max(self.xvals) + np.min(self.xvals))
-        xmin = xave - 1.05 * (xave - np.min(self.xvals))
-        xmax = xave + 1.05 * (np.max(self.xvals) - xave)
+        if keepAxes:
+            xmin, xmax = self.plkAxes.get_xlim()
+            ymin, ymax = self.plkAxes.get_ylim()
+        else:
+            xave = 0.5 * (np.max(self.xvals) + np.min(self.xvals))
+            xmin = xave - 1.05 * (xave - np.min(self.xvals))
+            xmax = xave + 1.05 * (np.max(self.xvals) - xave)
+            if self.yerrs is None:
+                yave = 0.5 * (np.max(self.yvals) + np.min(self.yvals))
+                ymin = yave - 1.05 * (yave - np.min(self.yvals))
+                ymax = yave + 1.05 * (np.max(self.yvals) - yave)
+            else:
+                yave = 0.5 * (np.max(self.yvals+self.yerrs) + np.min(self.yvals-self.yerrs))
+                ymin = yave - 1.05 * (yave - np.min(self.yvals-self.yerrs))
+                ymax = yave + 1.05 * (np.max(self.yvals+self.yerrs) - yave)
+            xmin, xmax = xmin.value, xmax.value
+            ymin, ymax = ymin.value, ymax.value
+        
+        self.plkAxes.clear()
+        self.plkAx2x.clear()
+        self.plkAx2y.clear()
+        self.plkAxes.grid(True)
+
         if self.yerrs is None:
-            yave = 0.5 * (np.max(self.yvals) + np.min(self.yvals))
-            ymin = yave - 1.05 * (yave - np.min(self.yvals))
-            ymax = yave + 1.05 * (np.max(self.yvals) - yave)
             self.plkAxes.scatter(self.xvals[~self.selected], self.yvals[~self.selected],   
                 marker='.', color='blue')
             self.plkAxes.scatter(self.xvals[self.selected], self.yvals[self.selected],
                 marker='.', color='orange')
         else:
-            yave = 0.5 * (np.max(self.yvals+self.yerrs) + np.min(self.yvals-self.yerrs))
-            ymin = yave - 1.05 * (yave - np.min(self.yvals-self.yerrs))
-            ymax = yave + 1.05 * (np.max(self.yvals+self.yerrs) - yave)
             self.plotErrorbar(~self.selected, color='blue')
             self.plotErrorbar(self.selected, color='orange')
 
-        self.plkAxes.axis([xmin.value, xmax.value, ymin.value, ymax.value])
+        self.plkAxes.axis([xmin, xmax, ymin, ymax])
         self.plkAxes.get_xaxis().get_major_formatter().set_useOffset(False)
         self.plkAx2y.set_visible(False)
         self.plkAx2x.set_visible(False)
@@ -536,10 +517,10 @@ h:              Print help
             if hasattr(m, 'F0'):
                 self.plkAx2y.set_visible(True)
                 self.plkAx2y.set_xlabel(plotlabels[self.xid][1])
-                f0 = m.F0.quantity.to(u.Hz)
-                self.plkAx2y.set_xlim((xmin.to(u.s) * f0).value, (xmax.to(u.s) * f0).value)
+                f0 = m.F0.quantity.to(u.MHz).value
+                self.plkAx2y.set_xlim(xmin * f0, xmax * f0)
                 self.plkAx2y.xaxis.set_major_locator(mpl.ticker.FixedLocator(
-                    self.plkAxes.get_xticks() * f0.to(u.MHz).value))
+                    self.plkAxes.get_xticks() * f0))
         else:
             self.plkAxes.set_xlabel(plotlabels[self.xid])
 
@@ -550,10 +531,10 @@ h:              Print help
             if hasattr(m, 'F0'):
                 self.plkAx2x.set_visible(True)
                 self.plkAx2x.set_ylabel(plotlabels[self.yid][1])
-                f0 = m.F0.quantity.to(u.Hz)
-                self.plkAx2x.set_ylim((ymin.to(u.s) * f0).value, (ymax.to(u.s) * f0).value)
+                f0 = m.F0.quantity.to(u.MHz).value
+                self.plkAx2x.set_ylim(ymin * f0, ymax * f0)
                 self.plkAx2x.yaxis.set_major_locator(mpl.ticker.FixedLocator(
-                    self.plkAxes.get_yticks() * f0.to(u.MHz).value))
+                    self.plkAxes.get_yticks() * f0))
         else:
             self.plkAxes.set_ylabel(plotlabels[self.yid])
         
@@ -657,9 +638,9 @@ h:              Print help
             xmin, xmax, ymin, ymax = self.plkAxes.axis()
             dist = ((x-cx)/(xmax-xmin))**2.0 + ((y-cy)/(ymax-ymin))**2.0
             ind = np.argmin(dist)
-            #print('Closest point is %d:(%s, %s) at d=%f with next closest point at d=%f' % (ind, self.xvals[ind], self.yvals[ind], dist[ind], dist[ind2]))
+            #print('Closest point is %d:(%s, %s) at d=%f' % (ind, self.xvals[ind], self.yvals[ind], dist[ind]))
             
-            if dist[ind] > PlkWidget.clickDist:
+            if dist[ind] > clickDist:
                 print('Not close enough to a point')
                 ind = None
         
@@ -669,14 +650,46 @@ h:              Print help
         '''
         Call this function when the figure/canvas is clicked 
         '''
-        if event.xdata is not None and event.ydata is not None:
+        if event.inaxes == self.plkAxes:
+            self.press = True
+            self.pressEvent = event
+
+    def canvasMotionEvent(self, event):
+        '''
+        Call this function when mouse is moved in the figure/canvas
+        '''
+        if event.inaxes == self.plkAxes and self.press:
+            self.move = True
+            #Draw bounding box
+            if self.plkToolbar._active is None:
+                x0, x1 = self.pressEvent.x, event.x
+                y0, y1 = self.pressEvent.y, event.y
+                height = self.plkFig.bbox.height
+                y0 = height - y0
+                y1 = height - y1
+                if hasattr(self, 'brect'):
+                    self.plkCanvas._tkcanvas.delete(self.brect)
+                self.brect = self.plkCanvas._tkcanvas.create_rectangle(x0, y0, x1, y1)
+
+    def canvasReleaseEvent(self, event):
+        '''
+        Call this function when the figure/canvas is released
+        '''
+        if self.press and not self.move:
+            self.stationaryClick(event)
+        elif self.press and self.move:
+            self.clickAndDrag(event)
+        self.press = False
+        self.move = False
+                
+    def stationaryClick(self, event):
+        '''
+        Call this function when the mouse is clicked but not moved
+        '''
+        if event.inaxes == self.plkAxes:
             ind = self.coordToPoint(event.xdata, event.ydata)
             if ind is not None:
-                if event.button == 1:
-                    #Left click is select
-                    self.selected[ind] = not self.selected[ind]
-                    self.updatePlot()
-                elif event.button == 3:
+                if event.button == 3:
                     #Right click is delete
                     self.psr.toas.table.remove_row(ind)
                     self.psr.toas.table = self.psr.toas.table.group_by('obs')
@@ -687,8 +700,28 @@ h:              Print help
                                 self.psr.toas.table_selects[i].group_by('obs')
                     self.selected = np.delete(self.selected, ind)
                     self.psr.update_resids()
-                    self.updatePlot()
+                    self.updatePlot(keepAxes=True)
                     self.call_updates()
+                elif event.button == 1 and self.plkToolbar._active is None:
+                    #Left click is select
+                    self.selected[ind] = not self.selected[ind]
+                    self.updatePlot(keepAxes=True) 
+
+    def clickAndDrag(self, event):
+        '''
+        Call this function when the mouse is clicked and dragged
+        '''
+        if event.inaxes == self.plkAxes and self.plkToolbar._active is None:
+            xmin, xmax = self.pressEvent.xdata, event.xdata
+            ymin, ymax = self.pressEvent.ydata, event.ydata
+            if xmin > xmax:
+                xmin, xmax = xmax, xmin
+            if ymin > ymax:
+                ymin, ymax = ymax, ymin
+            self.selected = (self.xvals.value > xmin) & (self.xvals.value < xmax)
+            self.selected &= (self.yvals.value > ymin) & (self.yvals.value < ymax)
+            self.updatePlot(keepAxes=True)
+            self.plkCanvas._tkcanvas.delete(self.brect)
 
     def canvasKeyEvent(self, event):
         '''
@@ -716,19 +749,19 @@ h:              Print help
                         self.psr.toas.table_selects[i][~self.selected].group_by('obs')
             self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
             self.psr.update_resids()
-            self.updatePlot()
+            self.updatePlot(keepAxes=True)
             self.call_updates()
         elif ukey == ord('s'):
             #Apply the selection to TOAs object
             self.psr.toas.select(self.selected)
             self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
             self.psr.update_resids()
-            self.updatePlot()
+            self.updatePlot(keepAxes=False)
             self.call_updates()
         elif ukey == ord('u'):
             self.unselect()
         elif ukey == ord('c'):
             self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
-            self.updatePlot()
+            self.updatePlot(keepAxes=True)
         elif ukey == ord('h'):
-            print(PlkWidget.helpstring)
+            print(helpstring)
