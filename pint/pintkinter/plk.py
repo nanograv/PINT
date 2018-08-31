@@ -13,7 +13,7 @@ import numpy as np
 import astropy.units as u
 import copy
 
-import pint.pintkinter.pulsar as pu
+import pint.pintkinter.pulsar as pulsar
 
 plotlabels = {'pre-fit': [r'Pre-fit residual ($\mu$s)', 'Pre-fit residual (phase)'],
               'post-fit': [r'Post-fit residual ($\mu$s)', 'Post-fit residual (phase)'],
@@ -24,11 +24,8 @@ plotlabels = {'pre-fit': [r'Pre-fit residual ($\mu$s)', 'Pre-fit residual (phase
               'year': 'Year',
               'frequency': r'Observing Frequency (MHz)',
               'TOA error': r'TOA uncertainty ($\mu$s)',
-              'elevation': None,
               'rounded MJD': r'MJD',
-              'sidereal time': None,
-              'hour angle': None,
-              'para. angle': None}
+              }
 
 helpstring = '''The following interactions are currently supported by the Plk pane in the PINTkinter GUI:
 
@@ -84,7 +81,7 @@ class PlkFitBoxesWidget(tk.Frame):
         fitparams = [p for p in model.params if not getattr(model, p).frozen]
         for comp in comps:
             showpars = [p for p in model.components[comp].params \
-                if not p in pu.nofitboxpars and getattr(model, p).quantity is not None]
+                if not p in pulsar.nofitboxpars and getattr(model, p).quantity is not None]
             #Don't bother showing components without any fittable parameters
             if len(showpars) == 0:
                 continue
@@ -159,7 +156,7 @@ class PlkXYChoiceWidget(tk.Frame):
         self.xbuttons = []
         self.ybuttons = []
 
-        for ii, choice in enumerate(pu.plot_labels):
+        for ii, choice in enumerate(pulsar.plot_labels):
             label = tk.Label(self, text=choice)
             label.grid(row=ii+1, column=0)
 
@@ -172,7 +169,7 @@ class PlkXYChoiceWidget(tk.Frame):
             self.ybuttons[ii].grid(row=ii+1, column=2)
 
     def setChoice(self, xid='mjd', yid='pre-fit'):
-        for ii, choice in enumerate(pu.plot_labels):
+        for ii, choice in enumerate(pulsar.plot_labels):
             if choice.lower() == xid:
                 self.xbuttons[ii].select()
             if choice.lower() == yid:
@@ -382,6 +379,7 @@ class PlkWidget(tk.Frame):
         Reset all plot changes for this pulsar
         '''
         self.psr.reset_TOAs()
+        self.psr.fitted = False
         self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
         self.actionsWidget.setFitButtonText('Fit')
         self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
@@ -440,9 +438,6 @@ class PlkWidget(tk.Frame):
                 self.yerrs = yerr
 
                 self.plotResiduals(keepAxes=keepAxes)
-
-                if self.xid in ['mjd', 'year', 'rounded MJD']:
-                    self.plotPhaseJumps(self.psr.phasejumps())
             else:
                 raise ValueError("Nothing to plot!")
 
@@ -540,32 +535,6 @@ class PlkWidget(tk.Frame):
         
         self.plkAxes.set_title(self.psr.name, y=1.1)
     
-    def plotPhaseJumps(self, phasejumps):
-        """
-        Plot the phase jump lines, if we have any
-        """
-        xmin, xmax, ymin, ymax = self.plkAxes.axis()
-        dy = 0.01 * (ymax-ymin)
-
-        if len(phasejumps) > 0:
-            phasejumps = np.array(phasejumps)
-
-            for ii in range(len(phasejumps)):
-                if phasejumps[ii,1] != 0:
-                    self.plkAxes.vlines(phasejumps[ii,0], ymin, ymax,
-                            color='darkred', linestyle='--', linewidth=0.5)
-
-                    if phasejumps[ii,1] < 0:
-                        jstr = str(phasejumps[ii,1])
-                    else:
-                        jstr = '+' + str(phasejumps[ii,1])
-
-                    # Print the jump size above the plot
-                    ann = self.plkAxes.annotate(jstr, \
-                            xy=(phasejumps[ii,0], ymax+dy), xycoords='data', \
-                            annotation_clip=False, color='darkred', \
-                            size=7.0)
-    
     def psr_data_from_label(self, label):
         '''
         Given a label, get the corresponding data from the pulsar
@@ -605,18 +574,10 @@ class PlkWidget(tk.Frame):
         elif label == 'TOA error':
             data = self.psr.toas.get_errors().to(u.us)
             error = None
-        elif label == 'elevation':
-            print('WARNING: parameter {0} not yet implemented'.format(label))
         elif label == 'rounded MJD':
             data = np.floor(self.psr.toas.get_mjds() + 0.5 * u.d)
             error = self.psr.toas.get_errors().to(u.d)
-        elif label == 'sidereal time':
-            print("WARNING: parameter {0} not yet implemented".format(label))
-        elif label == 'hour angle':
-            print("WARNING: parameter {0} not yet implemented".format(label))
-        elif label == 'para. angle':
-            print("WARNING: parameter {0} not yet implemented".format(label))
-       
+        
         return data, error
 
     def setFocusToCanvas(self):

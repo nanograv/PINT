@@ -20,8 +20,7 @@ import pint.fitter
 import pint.residuals
         
 plot_labels = ['pre-fit', 'post-fit', 'mjd', 'year', 'orbital phase', 'serial', \
-    'day of year', 'frequency', 'TOA error', 'elevation', \
-    'rounded MJD', 'sidereal time', 'hour angle', 'para. angle']
+    'day of year', 'frequency', 'TOA error', 'rounded MJD']
 
 # Some parameters we do not want to add a fitting checkbox for:
 nofitboxpars = ['PSR', 'START', 'FINISH', 'POSEPOCH', 'PEPOCH', 'DMEPOCH', \
@@ -141,7 +140,7 @@ class Pulsar(object):
         '''
         t = Time(self.toas.get_mjds(), format='mjd')
         return (t.decimalyear) * u.year
-        
+    
     def write_fit_summary(self):
         '''
         Summarize fitting results
@@ -194,6 +193,3 @@ class Pulsar(object):
         self.postfit_resids = pint.residuals.resids(self.toas, self.postfit_model)
         self.fitted = True
         self.write_fit_summary()
-    
-    def phasejumps(self):
-        return []
