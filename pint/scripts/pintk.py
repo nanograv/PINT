@@ -13,7 +13,7 @@ import code
 import argparse
 
 from pint.pintk.pulsar import Pulsar
-from pint.pintk.plk import PlkWidget
+from pint.pintk.plk import PlkWidget, helpstring
 from pint.pintk.paredit import ParWidget
 from pint.pintk.timedit import TimWidget
 
@@ -68,7 +68,7 @@ class PINTk(object):
         self.helpMenu = tk.Menu(self.menuBar)
         self.helpMenu.add_command(label='About', command=self.about)
         self.helpMenu.add_command(label='Plk Help', 
-                                  command=lambda: print(PlkWidget.helpstring))
+                                  command=lambda: print(helpstring))
         self.menuBar.add_cascade(label='Help', menu=self.helpMenu)
         
         #Key bindings

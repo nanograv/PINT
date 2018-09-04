@@ -64,6 +64,7 @@ class Pulsar(object):
               self.prefit_resids.time_resids.std().to(u.us).value)
         self.fitter = Fitters.WLS
         self.fitted = False
+        self.track_added = False
 
     @property
     def name(self):
@@ -88,6 +89,11 @@ class Pulsar(object):
 
     def reset_TOAs(self):
         self.toas = pint.toa.get_TOAs(self.timfile)
+        if self.track_added:
+            self.prefit_model.TRACK.value = ''
+            if self.fitted:
+                self.postfit_model.TRACK.value = ''
+            self.track_added = False
         self.update_resids()
 
     def resetAll(self):
@@ -172,10 +178,29 @@ class Pulsar(object):
                     except:
                         pass
                 print(line)
-                #print('%8s %8s\t%16.10g\t%16.10g\t%16.8g\t%16.8g' % (key, units,
-                #        preval, postval, unc, diff))
         else:
             print('Pulsar has not been fitted yet!')
+
+    def add_phase_wrap(self, selected, phase):
+        '''
+        Add a phase wrap to selected points in the TOAs object
+        Turn on pulse number tracking in the model, if it isn't already
+        '''
+        #Check if pulse numbers are in table already
+        if 'pn' not in self.toas.table.colnames:
+            self.toas.pulse_column_from_flags()
+            if 'pn' not in self.toas.table.colnames:
+                self.toas.compute_pulse_numbers(self.prefit_model)
+        self.toas.table['pn'][selected] += phase
+    
+        #Turn on pulse number tracking
+        if self.prefit_model.TRACK.value != '-2':
+            self.track_added = True
+            self.prefit_model.TRACK.value = '-2'
+            if self.fitted:
+                self.postfit_model.TRACK.value = '-2'
+
+        self.update_resids()
 
     def fit(self, iters=1):
         '''

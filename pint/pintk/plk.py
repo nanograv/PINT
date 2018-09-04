@@ -15,8 +15,8 @@ import copy
 
 import pint.pintk.pulsar as pulsar
 
-plotlabels = {'pre-fit': [r'Pre-fit residual ($\mu$s)', 'Pre-fit residual (phase)'],
-              'post-fit': [r'Post-fit residual ($\mu$s)', 'Post-fit residual (phase)'],
+plotlabels = {'pre-fit': [r'Pre-fit residual ($\mu$s)', 'Pre-fit residual (phase)', 'Pre-fit residual (us)'],
+              'post-fit': [r'Post-fit residual ($\mu$s)', 'Post-fit residual (phase)', 'Post-fit residual (us)'],
               'mjd': r'MJD',
               'orbital phase': 'Orbital Phase',
               'serial': 'TOA number',
@@ -44,6 +44,12 @@ d:              Delete the highlighted points
 u:              Undo the most recent selection
 
 c:              Clear highlighter from map
+
+p:              Print info about highlighted points (or all, if none are selected)
+
++:              Increase pulse number
+
+-:              Decrease pulse number
 
 h:              Print help
 '''
@@ -521,19 +527,81 @@ class PlkWidget(tk.Frame):
 
         if self.yid in ['pre-fit', 'post-fit']:
             self.plkAxes.set_ylabel(plotlabels[self.yid][0])
-            m = self.psr.prefit_model if self.yid == 'pre-fit' or not self.psr.fitted \
-                                      else self.psr.postfit_model
-            if hasattr(m, 'F0'):
+            try:
+                r = self.psr.prefit_resids if self.yid == 'pre-fit' or not self.psr.fitted \
+                        else self.psr.postfit_resids
+                f0 = r.get_PSR_freq().to(u.MHz).value
                 self.plkAx2x.set_visible(True)
                 self.plkAx2x.set_ylabel(plotlabels[self.yid][1])
-                f0 = m.F0.quantity.to(u.MHz).value
                 self.plkAx2x.set_ylim(ymin * f0, ymax * f0)
                 self.plkAx2x.yaxis.set_major_locator(mpl.ticker.FixedLocator(
                     self.plkAxes.get_yticks() * f0))
+            except:
+                pass
         else:
             self.plkAxes.set_ylabel(plotlabels[self.yid])
         
         self.plkAxes.set_title(self.psr.name, y=1.1)
+
+    def print_info(self):
+        '''
+        Write information about the current selection, or all points
+        Format is:
+        TOA_index   X_val   Y_val
+
+        or, if residuals:
+        TOA_index   X_val   time_resid  phase_resid
+        '''
+        if np.sum(self.selected) == 0:
+            selected = np.ones(self.psr.toas.ntoas, dtype=bool)
+        else:
+            selected = self.selected
+        
+        header = '%6s' % 'TOA'
+
+        f0x, f0y = None, None
+        xf, yf = False, False
+        if self.xid in ['pre-fit', 'post-fit']:
+            header += ' %16s' % plotlabels[self.xid][2]
+            try:
+                r = self.psr.prefit_resids if self.xid == 'pre-fit' or not self.psr.fitted \
+                    else self.psr.postfit_resids
+                f0x = r.get_PSR_freq().to(u.MHz).value
+                header += ' %16s' % plotlabels[self.xid][1]
+                xf = True
+            except:
+                pass
+        else:
+            header += ' %16s' % plotlabels[self.xid]
+        if self.yid in ['pre-fit', 'post-fit']:
+            header += ' %16s' % plotlabels[self.yid][2]
+            try:
+                r = self.psr.prefit_resids if self.xid == 'pre-fit' or not self.psr.fitted \
+                    else self.psr.postfit_resids
+                f0y = r.get_PSR_freq().to(u.MHz).value
+                header += ' %16s' % plotlabels[self.yid][1]
+                yf = True
+            except:
+                pass
+        else:
+            header += '%12s' % plotlabels[self.yid]
+
+        print(header)
+        print('-' * len(header))
+
+        xs = self.xvals[selected].value
+        ys = self.yvals[selected].value
+        inds = self.psr.toas.table['index'][selected]
+
+        for i in range(len(xs)):
+            line = '%6d' % inds[i]
+            line += ' %16.8g' % xs[i]
+            if xf:
+                line += ' %16.8g' % (xs[i] * f0x)
+            line += ' %16.8g' % ys[i]
+            if yf:
+                line += ' %16.8g' % (ys[i] * f0y)
+            print(line)
     
     def psr_data_from_label(self, label):
         '''
@@ -580,12 +648,6 @@ class PlkWidget(tk.Frame):
         
         return data, error
 
-    def setFocusToCanvas(self):
-        """
-        Set the focus to the plk Canvas
-        """
-        self.plkCanvas.setFocus()
-
     def coordToPoint(self, cx, cy):
         '''
         Given a set of x-y coordinates, get the TOA index closest to it
@@ -611,6 +673,7 @@ class PlkWidget(tk.Frame):
         '''
         Call this function when the figure/canvas is clicked 
         '''
+        self.plkCanvas.get_tk_widget().focus_set()
         if event.inaxes == self.plkAxes:
             self.press = True
             self.pressEvent = event
@@ -688,10 +751,7 @@ class PlkWidget(tk.Frame):
         '''
         A key is pressed. Handle all the shortcuts here
         '''
-
         fkey = event.key
-        from_canvas = True
-
         xpos, ypos = event.xdata, event.ydata
         ukey = ord(fkey[-1])
 
@@ -701,6 +761,14 @@ class PlkWidget(tk.Frame):
         elif ukey == ord('f'):
             #Re-do the fit, using post-fit values of parameters
             self.fit()
+        elif ukey == ord('-'):
+            self.psr.add_phase_wrap(self.selected, -1)
+            self.updatePlot(keepAxes=False)
+            self.call_updates()
+        elif ukey == ord('+'):
+            self.psr.add_phase_wrap(self.selected, 1)
+            self.updatePlot(keepAxes=False)
+            self.call_updates()
         elif ukey == ord('d'):
             #Delete the selected points
             self.psr.toas.table = self.psr.toas.table[~self.selected].group_by('obs')
@@ -724,5 +792,7 @@ class PlkWidget(tk.Frame):
         elif ukey == ord('c'):
             self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
             self.updatePlot(keepAxes=True)
+        elif ukey == ord('p'):
+            self.print_info()
         elif ukey == ord('h'):
             print(helpstring)
