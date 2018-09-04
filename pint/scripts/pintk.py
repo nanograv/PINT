@@ -1,6 +1,6 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore:DeprecationWarning
 '''
-PINTkinter: Tkinter interactive interface for PINT pulsar timing tool
+PINTk: Tkinter interactive interface for PINT pulsar timing tool
 '''
 
 from __future__ import absolute_import, print_function, division
@@ -12,17 +12,17 @@ import tkMessageBox
 import code
 import argparse
 
-from pint.pintkinter.pulsar import Pulsar
-from pint.pintkinter.plk import PlkWidget
-from pint.pintkinter.paredit import ParWidget
-from pint.pintkinter.timedit import TimWidget
+from pint.pintk.pulsar import Pulsar
+from pint.pintk.plk import PlkWidget
+from pint.pintk.paredit import ParWidget
+from pint.pintk.timedit import TimWidget
 
 from astropy import log
 log.setLevel('WARNING')
 
-class PINTkinter(object):
+class PINTk(object):
     '''
-    Main PINTkinter window
+    Main PINTk window
     '''
     def __init__(self, master, parfile=None, timfile=None, **kwargs):
         self.master = master
@@ -129,19 +129,19 @@ class PINTkinter(object):
         self.updateLayout()
 
     def about(self):
-        tkMessageBox.showinfo(title='About PINTkinter', 
+        tkMessageBox.showinfo(title='About PINTk', 
                               message='A Tkinter based graphical interface to PINT')
         
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Tkinter interface for PINT pulsar timing tool')
-    parser.add_argument('-p', '--parfile', help='parfile to use')
-    parser.add_argument('-t', '--timfile', help='timfile to use')
+    parser.add_argument('parfile', help='parfile to use')
+    parser.add_argument('timfile', help='timfile to use')
 
     args = parser.parse_args(argv)
 
     root = tk.Tk()
-    app = PINTkinter(root, parfile=args.parfile, timfile=args.timfile)
+    app = PINTk(root, parfile=args.parfile, timfile=args.timfile)
     root.protocol('WM_DELETE_WINDOW', root.destroy)
     root.mainloop()
 

@@ -71,7 +71,7 @@ class Parameter(object):
 
     Attributes
     ----------
-    quantity: Type depends on the parameter subclass, it can be anything
+    quantity: Type depends on the parameter s60class, it can be anything
         An internal storage for parameter value and units
     """
 
@@ -1069,7 +1069,7 @@ class prefixParameter(object):
             out += " (" + str(self.units) + ")"
         out += " " + self.print_quantity(self.quantity)
         if self.uncertainty is not None:
-            out += " +/- " + str(self.uncertainty.to(self.units))
+            out += " +/- " + self.print_uncertainty(self.uncertainty)
         return out
 
     # Define the function to call functions inside of parameter composition.
@@ -1084,6 +1084,9 @@ class prefixParameter(object):
 
     def print_quantity(self, quantity):
         return self.param_comp.print_quantity(quantity)
+    
+    def print_uncertainty(self, uncertainty):
+        return str(uncertainty.to(self.units).value)
 
     def name_matches(self, name):
         return self.param_comp.name_matches(name)

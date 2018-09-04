@@ -13,7 +13,7 @@ import numpy as np
 import astropy.units as u
 import copy
 
-import pint.pintkinter.pulsar as pulsar
+import pint.pintk.pulsar as pulsar
 
 plotlabels = {'pre-fit': [r'Pre-fit residual ($\mu$s)', 'Pre-fit residual (phase)'],
               'post-fit': [r'Post-fit residual ($\mu$s)', 'Post-fit residual (phase)'],

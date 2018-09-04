@@ -91,7 +91,7 @@ console_scripts = [ 'photonphase=pint.scripts.photonphase:main',
                     'zima=pint.scripts.zima:main', 
                     'pintbary=pint.scripts.pintbary:main', 
                     'fermiphase=pint.scripts.fermiphase:main',
-                    'pintkinter=pint.scripts.pintkinter:main' ]
+                    'pintk=pint.scripts.pintk:main' ]
 
 setup(
     name="pint",
@@ -113,7 +113,7 @@ setup(
         'pint.extern',
         'pint.models',
         'pint.scripts',
-        'pint.pintkinter',
+        'pint.pintk',
         'pint.models.stand_alone_psr_binaries',
         'pint.observatory',
         'pint.orbital',

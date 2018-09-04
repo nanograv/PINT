@@ -150,22 +150,30 @@ class Pulsar(object):
             wrms = np.sqrt(chi2 / self.toas.ntoas)
             print('Post-Fit Chi2:\t\t%.8g us^2' % chi2)
             print('Post-Fit Weighted RMS:\t%.8g us' % wrms)
-            print('%17s\t%16s\t%16s\t%16s\t%16s' % 
+            print('%19s\t%24s\t%24s\t%24s\t%24s' % 
                   ('Parameter', 'Pre-Fit', 'Post-Fit', 'Uncertainty', 'Difference'))
-            print('-' * 112)
+            print('-' * 144)
             fitparams = [p for p in self.prefit_model.params 
                          if not getattr(self.prefit_model, p).frozen]
             for key in fitparams:
-                post = getattr(self.postfit_model, key).quantity
-                units = post.unit
-                pre = getattr(self.prefit_model, key).quantity.to(units)
-                unc = getattr(self.postfit_model, key).uncertainty.to(units)
-                diff = (post - pre).to(units)
-                print('%8s %8s\t%16.10g\t%16.10g\t%16.8g\t%16.8g' % (key, units,
-                                                                 pre.value, 
-                                                                 post.value,
-                                                                 unc.value,
-                                                                 diff.value))
+                line = '%8s ' % key
+                pre = getattr(self.prefit_model, key)
+                post = getattr(self.postfit_model, key)
+                line += '%10s\t' % ('' if post.units is None else str(post.units))
+                if post.quantity is not None:
+                    line += '%24s\t' % pre.print_quantity(pre.quantity)
+                    line += '%24s\t' % post.print_quantity(post.quantity)
+                    if post.uncertainty is not None:
+                        line += '%24s \t' % post.print_uncertainty(post.uncertainty)
+                    else:
+                        line += '%24s \t' % ''
+                    try:
+                        line += '%24s' % (post.value - pre.value)
+                    except:
+                        pass
+                print(line)
+                #print('%8s %8s\t%16.10g\t%16.10g\t%16.8g\t%16.8g' % (key, units,
+                #        preval, postval, unc, diff))
         else:
             print('Pulsar has not been fitted yet!')
 
