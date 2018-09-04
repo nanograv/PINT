@@ -13,10 +13,10 @@ import numpy as np
 import astropy.units as u
 import copy
 
-import pint.pintkinter.pulsar as pu
+import pint.pintk.pulsar as pulsar
 
-plotlabels = {'pre-fit': [r'Pre-fit residual ($\mu$s)', 'Pre-fit residual (phase)'],
-              'post-fit': [r'Post-fit residual ($\mu$s)', 'Post-fit residual (phase)'],
+plotlabels = {'pre-fit': [r'Pre-fit residual ($\mu$s)', 'Pre-fit residual (phase)', 'Pre-fit residual (us)'],
+              'post-fit': [r'Post-fit residual ($\mu$s)', 'Post-fit residual (phase)', 'Post-fit residual (us)'],
               'mjd': r'MJD',
               'orbital phase': 'Orbital Phase',
               'serial': 'TOA number',
@@ -24,11 +24,8 @@ plotlabels = {'pre-fit': [r'Pre-fit residual ($\mu$s)', 'Pre-fit residual (phase
               'year': 'Year',
               'frequency': r'Observing Frequency (MHz)',
               'TOA error': r'TOA uncertainty ($\mu$s)',
-              'elevation': None,
               'rounded MJD': r'MJD',
-              'sidereal time': None,
-              'hour angle': None,
-              'para. angle': None}
+              }
 
 helpstring = '''The following interactions are currently supported by the Plk pane in the PINTkinter GUI:
 
@@ -47,6 +44,12 @@ d:              Delete the highlighted points
 u:              Undo the most recent selection
 
 c:              Clear highlighter from map
+
+p:              Print info about highlighted points (or all, if none are selected)
+
++:              Increase pulse number
+
+-:              Decrease pulse number
 
 h:              Print help
 '''
@@ -84,7 +87,7 @@ class PlkFitBoxesWidget(tk.Frame):
         fitparams = [p for p in model.params if not getattr(model, p).frozen]
         for comp in comps:
             showpars = [p for p in model.components[comp].params \
-                if not p in pu.nofitboxpars and getattr(model, p).quantity is not None]
+                if not p in pulsar.nofitboxpars and getattr(model, p).quantity is not None]
             #Don't bother showing components without any fittable parameters
             if len(showpars) == 0:
                 continue
@@ -159,7 +162,7 @@ class PlkXYChoiceWidget(tk.Frame):
         self.xbuttons = []
         self.ybuttons = []
 
-        for ii, choice in enumerate(pu.plot_labels):
+        for ii, choice in enumerate(pulsar.plot_labels):
             label = tk.Label(self, text=choice)
             label.grid(row=ii+1, column=0)
 
@@ -172,7 +175,7 @@ class PlkXYChoiceWidget(tk.Frame):
             self.ybuttons[ii].grid(row=ii+1, column=2)
 
     def setChoice(self, xid='mjd', yid='pre-fit'):
-        for ii, choice in enumerate(pu.plot_labels):
+        for ii, choice in enumerate(pulsar.plot_labels):
             if choice.lower() == xid:
                 self.xbuttons[ii].select()
             if choice.lower() == yid:
@@ -382,6 +385,7 @@ class PlkWidget(tk.Frame):
         Reset all plot changes for this pulsar
         '''
         self.psr.reset_TOAs()
+        self.psr.fitted = False
         self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
         self.actionsWidget.setFitButtonText('Fit')
         self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
@@ -440,9 +444,6 @@ class PlkWidget(tk.Frame):
                 self.yerrs = yerr
 
                 self.plotResiduals(keepAxes=keepAxes)
-
-                if self.xid in ['mjd', 'year', 'rounded MJD']:
-                    self.plotPhaseJumps(self.psr.phasejumps())
             else:
                 raise ValueError("Nothing to plot!")
 
@@ -526,45 +527,81 @@ class PlkWidget(tk.Frame):
 
         if self.yid in ['pre-fit', 'post-fit']:
             self.plkAxes.set_ylabel(plotlabels[self.yid][0])
-            m = self.psr.prefit_model if self.yid == 'pre-fit' or not self.psr.fitted \
-                                      else self.psr.postfit_model
-            if hasattr(m, 'F0'):
+            try:
+                r = self.psr.prefit_resids if self.yid == 'pre-fit' or not self.psr.fitted \
+                        else self.psr.postfit_resids
+                f0 = r.get_PSR_freq().to(u.MHz).value
                 self.plkAx2x.set_visible(True)
                 self.plkAx2x.set_ylabel(plotlabels[self.yid][1])
-                f0 = m.F0.quantity.to(u.MHz).value
                 self.plkAx2x.set_ylim(ymin * f0, ymax * f0)
                 self.plkAx2x.yaxis.set_major_locator(mpl.ticker.FixedLocator(
                     self.plkAxes.get_yticks() * f0))
+            except:
+                pass
         else:
             self.plkAxes.set_ylabel(plotlabels[self.yid])
         
         self.plkAxes.set_title(self.psr.name, y=1.1)
-    
-    def plotPhaseJumps(self, phasejumps):
-        """
-        Plot the phase jump lines, if we have any
-        """
-        xmin, xmax, ymin, ymax = self.plkAxes.axis()
-        dy = 0.01 * (ymax-ymin)
 
-        if len(phasejumps) > 0:
-            phasejumps = np.array(phasejumps)
+    def print_info(self):
+        '''
+        Write information about the current selection, or all points
+        Format is:
+        TOA_index   X_val   Y_val
 
-            for ii in range(len(phasejumps)):
-                if phasejumps[ii,1] != 0:
-                    self.plkAxes.vlines(phasejumps[ii,0], ymin, ymax,
-                            color='darkred', linestyle='--', linewidth=0.5)
+        or, if residuals:
+        TOA_index   X_val   time_resid  phase_resid
+        '''
+        if np.sum(self.selected) == 0:
+            selected = np.ones(self.psr.toas.ntoas, dtype=bool)
+        else:
+            selected = self.selected
+        
+        header = '%6s' % 'TOA'
 
-                    if phasejumps[ii,1] < 0:
-                        jstr = str(phasejumps[ii,1])
-                    else:
-                        jstr = '+' + str(phasejumps[ii,1])
+        f0x, f0y = None, None
+        xf, yf = False, False
+        if self.xid in ['pre-fit', 'post-fit']:
+            header += ' %16s' % plotlabels[self.xid][2]
+            try:
+                r = self.psr.prefit_resids if self.xid == 'pre-fit' or not self.psr.fitted \
+                    else self.psr.postfit_resids
+                f0x = r.get_PSR_freq().to(u.MHz).value
+                header += ' %16s' % plotlabels[self.xid][1]
+                xf = True
+            except:
+                pass
+        else:
+            header += ' %16s' % plotlabels[self.xid]
+        if self.yid in ['pre-fit', 'post-fit']:
+            header += ' %16s' % plotlabels[self.yid][2]
+            try:
+                r = self.psr.prefit_resids if self.xid == 'pre-fit' or not self.psr.fitted \
+                    else self.psr.postfit_resids
+                f0y = r.get_PSR_freq().to(u.MHz).value
+                header += ' %16s' % plotlabels[self.yid][1]
+                yf = True
+            except:
+                pass
+        else:
+            header += '%12s' % plotlabels[self.yid]
 
-                    # Print the jump size above the plot
-                    ann = self.plkAxes.annotate(jstr, \
-                            xy=(phasejumps[ii,0], ymax+dy), xycoords='data', \
-                            annotation_clip=False, color='darkred', \
-                            size=7.0)
+        print(header)
+        print('-' * len(header))
+
+        xs = self.xvals[selected].value
+        ys = self.yvals[selected].value
+        inds = self.psr.toas.table['index'][selected]
+
+        for i in range(len(xs)):
+            line = '%6d' % inds[i]
+            line += ' %16.8g' % xs[i]
+            if xf:
+                line += ' %16.8g' % (xs[i] * f0x)
+            line += ' %16.8g' % ys[i]
+            if yf:
+                line += ' %16.8g' % (ys[i] * f0y)
+            print(line)
     
     def psr_data_from_label(self, label):
         '''
@@ -605,25 +642,11 @@ class PlkWidget(tk.Frame):
         elif label == 'TOA error':
             data = self.psr.toas.get_errors().to(u.us)
             error = None
-        elif label == 'elevation':
-            print('WARNING: parameter {0} not yet implemented'.format(label))
         elif label == 'rounded MJD':
             data = np.floor(self.psr.toas.get_mjds() + 0.5 * u.d)
             error = self.psr.toas.get_errors().to(u.d)
-        elif label == 'sidereal time':
-            print("WARNING: parameter {0} not yet implemented".format(label))
-        elif label == 'hour angle':
-            print("WARNING: parameter {0} not yet implemented".format(label))
-        elif label == 'para. angle':
-            print("WARNING: parameter {0} not yet implemented".format(label))
-       
+        
         return data, error
-
-    def setFocusToCanvas(self):
-        """
-        Set the focus to the plk Canvas
-        """
-        self.plkCanvas.setFocus()
 
     def coordToPoint(self, cx, cy):
         '''
@@ -650,6 +673,7 @@ class PlkWidget(tk.Frame):
         '''
         Call this function when the figure/canvas is clicked 
         '''
+        self.plkCanvas.get_tk_widget().focus_set()
         if event.inaxes == self.plkAxes:
             self.press = True
             self.pressEvent = event
@@ -727,10 +751,7 @@ class PlkWidget(tk.Frame):
         '''
         A key is pressed. Handle all the shortcuts here
         '''
-
         fkey = event.key
-        from_canvas = True
-
         xpos, ypos = event.xdata, event.ydata
         ukey = ord(fkey[-1])
 
@@ -740,6 +761,14 @@ class PlkWidget(tk.Frame):
         elif ukey == ord('f'):
             #Re-do the fit, using post-fit values of parameters
             self.fit()
+        elif ukey == ord('-'):
+            self.psr.add_phase_wrap(self.selected, -1)
+            self.updatePlot(keepAxes=False)
+            self.call_updates()
+        elif ukey == ord('+'):
+            self.psr.add_phase_wrap(self.selected, 1)
+            self.updatePlot(keepAxes=False)
+            self.call_updates()
         elif ukey == ord('d'):
             #Delete the selected points
             self.psr.toas.table = self.psr.toas.table[~self.selected].group_by('obs')
@@ -763,5 +792,7 @@ class PlkWidget(tk.Frame):
         elif ukey == ord('c'):
             self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
             self.updatePlot(keepAxes=True)
+        elif ukey == ord('p'):
+            self.print_info()
         elif ukey == ord('h'):
             print(helpstring)

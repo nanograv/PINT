@@ -20,8 +20,7 @@ import pint.fitter
 import pint.residuals
         
 plot_labels = ['pre-fit', 'post-fit', 'mjd', 'year', 'orbital phase', 'serial', \
-    'day of year', 'frequency', 'TOA error', 'elevation', \
-    'rounded MJD', 'sidereal time', 'hour angle', 'para. angle']
+    'day of year', 'frequency', 'TOA error', 'rounded MJD']
 
 # Some parameters we do not want to add a fitting checkbox for:
 nofitboxpars = ['PSR', 'START', 'FINISH', 'POSEPOCH', 'PEPOCH', 'DMEPOCH', \
@@ -65,6 +64,7 @@ class Pulsar(object):
               self.prefit_resids.time_resids.std().to(u.us).value)
         self.fitter = Fitters.WLS
         self.fitted = False
+        self.track_added = False
 
     @property
     def name(self):
@@ -89,6 +89,11 @@ class Pulsar(object):
 
     def reset_TOAs(self):
         self.toas = pint.toa.get_TOAs(self.timfile)
+        if self.track_added:
+            self.prefit_model.TRACK.value = ''
+            if self.fitted:
+                self.postfit_model.TRACK.value = ''
+            self.track_added = False
         self.update_resids()
 
     def resetAll(self):
@@ -141,7 +146,7 @@ class Pulsar(object):
         '''
         t = Time(self.toas.get_mjds(), format='mjd')
         return (t.decimalyear) * u.year
-        
+    
     def write_fit_summary(self):
         '''
         Summarize fitting results
@@ -151,24 +156,51 @@ class Pulsar(object):
             wrms = np.sqrt(chi2 / self.toas.ntoas)
             print('Post-Fit Chi2:\t\t%.8g us^2' % chi2)
             print('Post-Fit Weighted RMS:\t%.8g us' % wrms)
-            print('%17s\t%16s\t%16s\t%16s\t%16s' % 
+            print('%19s\t%24s\t%24s\t%24s\t%24s' % 
                   ('Parameter', 'Pre-Fit', 'Post-Fit', 'Uncertainty', 'Difference'))
-            print('-' * 112)
+            print('-' * 144)
             fitparams = [p for p in self.prefit_model.params 
                          if not getattr(self.prefit_model, p).frozen]
             for key in fitparams:
-                post = getattr(self.postfit_model, key).quantity
-                units = post.unit
-                pre = getattr(self.prefit_model, key).quantity.to(units)
-                unc = getattr(self.postfit_model, key).uncertainty.to(units)
-                diff = (post - pre).to(units)
-                print('%8s %8s\t%16.10g\t%16.10g\t%16.8g\t%16.8g' % (key, units,
-                                                                 pre.value, 
-                                                                 post.value,
-                                                                 unc.value,
-                                                                 diff.value))
+                line = '%8s ' % key
+                pre = getattr(self.prefit_model, key)
+                post = getattr(self.postfit_model, key)
+                line += '%10s\t' % ('' if post.units is None else str(post.units))
+                if post.quantity is not None:
+                    line += '%24s\t' % pre.print_quantity(pre.quantity)
+                    line += '%24s\t' % post.print_quantity(post.quantity)
+                    if post.uncertainty is not None:
+                        line += '%24s \t' % post.print_uncertainty(post.uncertainty)
+                    else:
+                        line += '%24s \t' % ''
+                    try:
+                        line += '%24s' % (post.value - pre.value)
+                    except:
+                        pass
+                print(line)
         else:
             print('Pulsar has not been fitted yet!')
+
+    def add_phase_wrap(self, selected, phase):
+        '''
+        Add a phase wrap to selected points in the TOAs object
+        Turn on pulse number tracking in the model, if it isn't already
+        '''
+        #Check if pulse numbers are in table already
+        if 'pn' not in self.toas.table.colnames:
+            self.toas.pulse_column_from_flags()
+            if 'pn' not in self.toas.table.colnames:
+                self.toas.compute_pulse_numbers(self.prefit_model)
+        self.toas.table['pn'][selected] += phase
+    
+        #Turn on pulse number tracking
+        if self.prefit_model.TRACK.value != '-2':
+            self.track_added = True
+            self.prefit_model.TRACK.value = '-2'
+            if self.fitted:
+                self.postfit_model.TRACK.value = '-2'
+
+        self.update_resids()
 
     def fit(self, iters=1):
         '''
@@ -194,6 +226,3 @@ class Pulsar(object):
         self.postfit_resids = pint.residuals.resids(self.toas, self.postfit_model)
         self.fitted = True
         self.write_fit_summary()
-    
-    def phasejumps(self):
-        return []

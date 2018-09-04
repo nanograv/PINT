@@ -115,7 +115,7 @@ class TimWidget(tk.Frame):
         if 'pn' in toas.table.colnames:
             pnChange = True
             for i in range(len(toas.table['flags'])):
-                toas.table['flags'][i]['pn'] = self.table['pn'][i]
+                toas.table['flags'][i]['pn'] = toas.table['pn'][i]
         for time,err,freq,obs,flags in zip(toas.table['mjd'],toas.table['error'].quantity,
             toas.table['freq'].quantity,toas.table['obs'],toas.table['flags']):
             obs_obj = pint.observatory.Observatory.get(obs)
