@@ -43,7 +43,7 @@ def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
 
     logE = np.log10(energies)
 
-    sigma = np.sqrt(psfpar0*psfpar0*np.power(100./energies, 2.*psfpar1) + psfpar2*psfpar2)/scalepsf
+    sigma = np.sqrt(psfpar0*psfpar0*np.power(100.0/energies, 2.*psfpar1) + psfpar2*psfpar2)/scalepsf
 
     fgeom = norm*np.power(1+angseps.degree*angseps.degree/2./gam/sigma/sigma, -gam)
 
