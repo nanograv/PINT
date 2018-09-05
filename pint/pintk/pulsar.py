@@ -36,7 +36,7 @@ class Pulsar(object):
     Wrapper class for a pulsar. Contains the toas, model, residuals, and fitter
     '''
 
-    def __init__(self, parfile=None, timfile=None):
+    def __init__(self, parfile=None, timfile=None, ephem=None):
         super(Pulsar, self).__init__()
         
         print('STARTING LOADING OF PULSAR %s' % str(parfile))
@@ -50,13 +50,14 @@ class Pulsar(object):
         self.prefit_model = pint.models.get_model(self.parfile)
         print("prefit_model.as_parfile():")
         print(self.prefit_model.as_parfile())
-
-        try:
-            planet_ephems = self.prefit_model.PLANET_SHAPIRO.value
-        except AttributeError:
-            planet_ephemes = False
-
-        self.toas = pint.toa.get_TOAs(self.timfile)
+        
+        if ephem is not None:
+            self.toas = pint.toa.get_TOAs(self.timfile, ephem=ephem)
+            self.prefit_model.EPHEM.value = ephem
+        elif getattr(self.prefit_model, 'EPHEM').value is not None:
+            self.toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value)
+        else:
+            self.toas = pint.toa.get_TOAs(self.timfile)
         self.toas.print_summary()
 
         self.prefit_resids = pint.residuals.resids(self.toas, self.prefit_model)

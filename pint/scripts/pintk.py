@@ -24,7 +24,7 @@ class PINTk(object):
     '''
     Main PINTk window
     '''
-    def __init__(self, master, parfile=None, timfile=None, **kwargs):
+    def __init__(self, master, parfile=None, timfile=None, ephem=None, **kwargs):
         self.master = master
         self.master.title('Tkinter interface to PINT')
 
@@ -37,7 +37,7 @@ class PINTk(object):
 
         self.createWidgets()
         if parfile is not None and timfile is not None:
-            self.openPulsar(parfile=parfile, timfile=timfile)
+            self.openPulsar(parfile=parfile, timfile=timfile, ephem=ephem)
         
         self.initUI()
         self.updateLayout()
@@ -98,8 +98,8 @@ class PINTk(object):
                 self.mainFrame.grid_columnconfigure(col, weight=1)
                 visible += 1
 
-    def openPulsar(self, parfile, timfile):
-        self.psr = Pulsar(parfile, timfile)
+    def openPulsar(self, parfile, timfile, ephem=None):
+        self.psr = Pulsar(parfile, timfile, ephem)
         self.widgets['plk'].setPulsar(self.psr, updates=[self.widgets['par'].set_model,
                                                          self.widgets['tim'].set_toas])
         self.widgets['par'].setPulsar(self.psr, updates=[self.widgets['plk'].update])
@@ -137,11 +137,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description='Tkinter interface for PINT pulsar timing tool')
     parser.add_argument('parfile', help='parfile to use')
     parser.add_argument('timfile', help='timfile to use')
-
+    parser.add_argument('--ephem', help='Ephemeris to use', default=None)
     args = parser.parse_args(argv)
 
     root = tk.Tk()
-    app = PINTk(root, parfile=args.parfile, timfile=args.timfile)
+    app = PINTk(root, parfile=args.parfile, timfile=args.timfile, ephem=args.ephem)
     root.protocol('WM_DELETE_WINDOW', root.destroy)
     root.mainloop()
 
