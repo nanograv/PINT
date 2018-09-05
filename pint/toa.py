@@ -29,7 +29,7 @@ iers_a_file = None
 iers_a = None
 JD_MJD = 2400000.5
 
-def get_TOAs(timfile, ephem="DE421", include_bipm=True, bipm_version='BIPM2015',
+def get_TOAs(timfile, ephem=None, include_bipm=True, bipm_version='BIPM2015',
              include_gps=True, planets=False, usepickle=False,
              tdb_method="default"):
     """Convenience function to load and prepare TOAs for PINT use.
@@ -38,7 +38,7 @@ def get_TOAs(timfile, ephem="DE421", include_bipm=True, bipm_version='BIPM2015',
     key values (like TDB), computes the observatory position and velocity
     vectors, and pickles the file for later use (if requested).
 
-    Includes options to specify solar system ephemeris [default DE421],
+    Includes options to specify solar system ephemeris
     gps clock corrections [default=True], and BIPM clock corrections
     [default=True].
     """
@@ -98,7 +98,7 @@ def _check_pickle(toafilename, picklefilename=None):
     # All checks passed, return name of pickle.
     return picklefilename
 
-def get_TOAs_list(toa_list,ephem="DE421", include_bipm=True,
+def get_TOAs_list(toa_list,ephem=None, include_bipm=True,
                   bipm_version='BIPM2015', include_gps=True, planets=False,
                   tdb_method="default"):
     """Load TOAs from a list of TOA objects.
@@ -820,6 +820,11 @@ class TOAs(object):
             else:
                 log.warning('No ephemeris provided to TOAs object or compute_TDBs. Using DE421')
                 ephem = 'DE421'
+        else:
+            # If user specifies an ephemeris, make sure it is the same as the one already in the TOA object, to prevent mixing.
+            if (self.ephem is not None) and (ephem != self.ephem):
+                log.error('Ephemeris provided to compute_TDBs {0} is different than TOAs object ephemeris {1}!'.format(ephem,self.ephem))
+        self.ephem = ephem
 
         # Compute in observatory groups
         tdbs = numpy.zeros_like(self.table['mjd'])
@@ -857,7 +862,7 @@ class TOAs(object):
                 data=[utils.time_to_longdouble(t) for t in tdbs])
         self.table.add_columns([col_tdb, col_tdbld])
 
-    def compute_posvels(self, ephem="DE421", planets=False):
+    def compute_posvels(self, ephem=None, planets=False):
         """Compute positions and velocities of the observatories and Earth.
 
         Compute the positions and velocities of the observatory (wrt
@@ -866,7 +871,18 @@ class TOAs(object):
         using the 'ephem' parameter.  The positions and velocities are
         set with PosVel class instances which have astropy units.
         """
-        # Record the planets choice for this instance
+        if ephem is None:
+            if self.ephem is not None:
+                ephem = self.ephem
+            else:
+                log.warning('No ephemeris provided to TOAs object or compute_posvels. Using DE421')
+                ephem = 'DE421'
+        else:
+            # If user specifies an ephemeris, make sure it is the same as the one already in the TOA object, to prevent mixing.
+            if (self.ephem is not None) and (ephem != self.ephem):
+                log.error('Ephemeris provided to compute_posvels {0} is different than TOAs object ephemeris {1}!'.format(ephem,self.ephem))
+        # Record the choice of ephemeris and planets
+        self.ephem = ephem
         self.planets = planets
         log.info('Computing positions and velocities of observatories and Earth (planets = {0}), using {1} ephemeris'.format(planets, ephem))
         # Remove any existing columns
@@ -923,9 +939,6 @@ class TOAs(object):
             cols_to_add += plan_poss.values()
         log.info('Adding columns ' + ' '.join([cc.name for cc in cols_to_add]))
         self.table.add_columns(cols_to_add)
-        #update ephemeris info
-        self.ephem = ephem
-        self.planets = planets
 
     def read_pickle_file(self, filename):
         """Read the TOAs from the pickle file specified in filename.  Note
