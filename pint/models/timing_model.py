@@ -18,7 +18,7 @@ from pint import dimensionless_cycles
 
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
-ignore_params = ['START', 'FINISH', 'EPHEM', 'CLK', 'UNITS',
+ignore_params = ['START', 'FINISH', 'CLK', 'UNITS',
                  'TIMEEPH', 'T2CMETHOD', 'CORRECT_TROPOSPHERE', 'DILATEFREQ',
                  'NTOA', 'CLOCK', 'TRES', 'TZRMJD', 'TZRFRQ', 'TZRSITE',
                  'NITS', 'IBOOT','BINARY']
@@ -93,6 +93,8 @@ class TimingModel(object):
             aliases=["PSRJ", "PSRB"]), '')
         self.add_param_from_top(strParameter(name="TRACK",
             description="Tracking Information"), '')
+        self.add_param_from_top(strParameter(name="EPHEM",
+            description="Ephemeris to use"), '')
 
         self.setup_components(components)
 
