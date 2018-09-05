@@ -156,25 +156,28 @@ class Pulsar(object):
             wrms = np.sqrt(chi2 / self.toas.ntoas)
             print('Post-Fit Chi2:\t\t%.8g us^2' % chi2)
             print('Post-Fit Weighted RMS:\t%.8g us' % wrms)
-            print('%19s\t%24s\t%24s\t%24s\t%24s' % 
-                  ('Parameter', 'Pre-Fit', 'Post-Fit', 'Uncertainty', 'Difference'))
-            print('-' * 144)
+            print('%19s  %24s\t%24s\t%16s  %16s  %16s' % 
+                  ('Parameter', 'Pre-Fit', 'Post-Fit', 'Uncertainty', 'Difference', 'Diff/Unc'))
+            print('-' * 132)
             fitparams = [p for p in self.prefit_model.params 
                          if not getattr(self.prefit_model, p).frozen]
             for key in fitparams:
                 line = '%8s ' % key
                 pre = getattr(self.prefit_model, key)
                 post = getattr(self.postfit_model, key)
-                line += '%10s\t' % ('' if post.units is None else str(post.units))
+                line += '%10s  ' % ('' if post.units is None else str(post.units))
                 if post.quantity is not None:
                     line += '%24s\t' % pre.print_quantity(pre.quantity)
                     line += '%24s\t' % post.print_quantity(post.quantity)
-                    if post.uncertainty is not None:
-                        line += '%24s \t' % post.print_uncertainty(post.uncertainty)
-                    else:
-                        line += '%24s \t' % ''
                     try:
-                        line += '%24s' % (post.value - pre.value)
+                        line += '%16.8g  ' % post.uncertainty.value
+                    except:
+                        line += '%18s' % ''
+                    try:
+                        diff = post.value - pre.value
+                        line += '%16.8g  ' % diff
+                        if pre.uncertainty is not None:
+                            line += '%16.8g' % (diff / pre.uncertainty.value)
                     except:
                         pass
                 print(line)
