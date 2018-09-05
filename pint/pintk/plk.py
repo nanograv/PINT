@@ -35,6 +35,8 @@ Right click:    Delete a point
 
 r:              Reset the pane - undo all deletions, selections, etc.
 
+k:              (K)orrect the pane - rescale the axes
+
 f:              Perform a fit
 
 s:              Select the highlights points
@@ -47,9 +49,13 @@ c:              Clear highlighter from map
 
 p:              Print info about highlighted points (or all, if none are selected)
 
-+:              Increase pulse number
++:              Increase pulse number for selected points
 
--:              Decrease pulse number
+-:              Decrease pulse number for selected points
+
+>:              Increase pulse number for all points to the right of selection
+
+<:              Decrease pulse number for all points to the right of selection
 
 h:              Print help
 '''
@@ -758,6 +764,9 @@ class PlkWidget(tk.Frame):
         if ukey == ord('r'):
             #Reset the pane
             self.reset()
+        elif ukey == ord('k'):
+            #Rescale axes
+            self.updatePlot(keepAxes=False)
         elif ukey == ord('f'):
             #Re-do the fit, using post-fit values of parameters
             self.fit()
@@ -769,6 +778,22 @@ class PlkWidget(tk.Frame):
             self.psr.add_phase_wrap(self.selected, 1)
             self.updatePlot(keepAxes=False)
             self.call_updates()
+        elif ukey == ord('>'):
+            if np.sum(self.selected) > 0:
+                selected = copy.deepcopy(self.selected)
+                ind = np.nonzero(selected)[0][0]
+                selected[ind:] = True
+                self.psr.add_phase_wrap(selected, 1)
+                self.updatePlot(keepAxes=False)
+                self.call_updates()
+        elif ukey == ord('<'):
+            if np.sum(self.selected) > 0:
+                selected = copy.deepcopy(self.selected)
+                ind = np.nonzero(selected)[0][0]
+                selected[ind:] = True
+                self.psr.add_phase_wrap(selected, -1)
+                self.updatePlot(keepAxes=False)
+                self.call_updates()
         elif ukey == ord('d'):
             #Delete the selected points
             self.psr.toas.table = self.psr.toas.table[~self.selected].group_by('obs')
