@@ -42,16 +42,18 @@ class AbsPhase(PhaseComponent):
             self.TZRMJD.time_scale = 'tdb'
             log.info("The TZRSITE is set at the solar system barycenter.")
 
-        if self.TZRFRQ.value is None:
-            self.TZRFRQ = float("inf")
-            log.info("The TZRFREQ is set at infinite.")
+        if (self.TZRFRQ.value is None) or (self.TZRFRQ.value == 0.0):
+            self.TZRFRQ.quantity = float("inf")*u.MHz
+            log.info("TZRFRQ was 0.0 or None. Setting to infinite frequency.")
 
 
     def get_TZR_toa(self, toas):
         """ Get the TOAs class for the TZRMJD. We are treating the TZRMJD as a
             special TOA.
         """
-        TZR_toa = toa.TOA(self.TZRMJD.quantity, obs=self.TZRSITE.value,
+        # NOTE: Using TZRMJD.quantity.jd[1,2] so that the time scale can be properly
+        # set to the TZRSITE default timescale (e.g. UTC for TopoObs and TDB for SSB)
+        TZR_toa = toa.TOA((self.TZRMJD.quantity.jd1, self.TZRMJD.quantity.jd2), obs=self.TZRSITE.value,
                           freq=self.TZRFRQ.quantity)
         clkc_info = toas.clock_corr_info
         tz = toa.get_TOAs_list([TZR_toa,], include_bipm=clkc_info['include_bipm'],
