@@ -53,7 +53,7 @@ class AbsPhase(PhaseComponent):
         """
         # NOTE: Using TZRMJD.quantity.jd[1,2] so that the time scale can be properly
         # set to the TZRSITE default timescale (e.g. UTC for TopoObs and TDB for SSB)
-        TZR_toa = toa.TOA((self.TZRMJD.quantity.jd1, self.TZRMJD.quantity.jd2), obs=self.TZRSITE.value,
+        TZR_toa = toa.TOA((self.TZRMJD.quantity.jd1-2400000.5, self.TZRMJD.quantity.jd2), obs=self.TZRSITE.value,
                           freq=self.TZRFRQ.quantity)
         clkc_info = toas.clock_corr_info
         tz = toa.get_TOAs_list([TZR_toa,], include_bipm=clkc_info['include_bipm'],
