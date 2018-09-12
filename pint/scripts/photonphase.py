@@ -141,8 +141,8 @@ def main(argv=None):
         if args.absphase:
             data_to_add['ABS_PHASE'] = [iphss-negmask*u.cycle,'K']
         if args.barytime:
-            tdbs = np.asarray([t.mjd for t in ts.table['tdb']])
-            data_to_add['BARY_TIME'] = [tdbs,'D']
+            bats = modelin.get_barycentric_toas(ts)
+            data_to_add['BARY_TIME'] = [bats,'D']
         datacol = []
         for key in data_to_add.keys():
             if key in hdulist[1].columns.names:
