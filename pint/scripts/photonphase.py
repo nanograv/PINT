@@ -141,8 +141,9 @@ def main(argv=None):
         if args.absphase:
             data_to_add['ABS_PHASE'] = [iphss-negmask*u.cycle,'K']
         if args.barytime:
-            tdbs = np.asarray([t.mjd for t in ts.table['tdb']])
-            data_to_add['BARY_TIME'] = [tdbs,'D']
+            bats = modelin.get_barycentric_toas(ts)
+            data_to_add['BARY_TIME'] = [bats,'D']
+        datacol = []
         for key in data_to_add.keys():
             if key in hdulist[1].columns.names:
                 log.info('Found existing %s column, overwriting...'%key)
@@ -151,12 +152,15 @@ def main(argv=None):
             else:
                 # Construct and append new column, preserving HDU header and name
                 log.info('Adding new %s column.'%key)
-                datacol = pyfits.ColDefs([pyfits.Column(name=key,
-                    format=data_to_add[key][1], array=data_to_add[key][0])])
-                bt = pyfits.BinTableHDU.from_columns(
-                    hdulist[1].columns + datacol, header=hdulist[1].header,
-                    name=hdulist[1].name)
-                hdulist[1] = bt
+                datacol.append(pyfits.ColDefs([pyfits.Column(name=key,
+                    format=data_to_add[key][1], array=data_to_add[key][0])]))
+        if len(datacol)>0:
+            cols = hdulist[1].columns
+            for c in datacol:
+                cols = cols + c
+            bt = pyfits.BinTableHDU.from_columns(c, header=hdulist[1].header,
+                name=hdulist[1].name)
+            hdulist[1] = bt
         if args.outfile is None:
             # Overwrite the existing file
             log.info('Overwriting existing FITS file '+args.eventfile)

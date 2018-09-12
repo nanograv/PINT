@@ -65,12 +65,12 @@ def _get_columns_from_fits(hdu, cols):
 def _get_timesys_and_timeref(hdu):
     event_hdr = hdu.header
     timesys = event_hdr['TIMESYS']
-    log.info("TIMESYS {0}".format(timesys))
+    log.debug("TIMESYS {0}".format(timesys))
     if timesys not in ['TDB', 'TT']:
         raise ValueError('Timesys has to be TDB or TT')
 
     timeref = event_hdr['TIMEREF']
-    log.info("TIMEREF {0}".format(timeref))
+    log.debug("TIMEREF {0}".format(timeref))
     if timeref not in ['GEOCENTER', 'SOLARSYSTEM', 'LOCAL']:
         raise ValueError('Timeref is invalid')
 

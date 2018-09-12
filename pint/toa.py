@@ -581,7 +581,7 @@ class TOAs(object):
             else:
                 log.warning('No pulse numbers for TOAs')
                 return None
-                
+
 
     def get_flags(self):
         """Return a numpy array of the TOA flags"""
@@ -639,7 +639,7 @@ class TOAs(object):
     def print_summary(self):
         """Write a summary of the TOAs to stdout."""
         print(self.get_summary())
-    
+
     def pulse_column_from_flags(self):
         '''
         Create a pulse numbers column if possible from the TOAs flags
@@ -655,7 +655,7 @@ class TOAs(object):
             for flags in self.table['flags']:
                 del flags['pn']
         except:
-            log.info('No pn flags in model')
+            log.debug('No pn flags in model')
 
     def compute_pulse_numbers(self, model):
         phases = model.phase(self)
@@ -715,7 +715,7 @@ class TOAs(object):
         # NOTE(@paulray): This really should REMOVE any(?) clock corrections
         # that have been applied!
         # NOTE clock corrections has been removed.
-        
+
         # Add pulse numbers to flags temporarily if there is a pulse number column
         pnChange = False
         if 'pn' in self.table.colnames:
@@ -799,7 +799,7 @@ class TOAs(object):
         self.clock_corr_info.update({'include_bipm':include_bipm,
                                      'bipm_version':bipm_version,
                                      'include_gps':include_gps})
-	
+
     def compute_TDBs(self, method="default", ephem=None):
         """Compute and add TDB and TDB long double columns to the TOA table.
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
@@ -937,7 +937,7 @@ class TOAs(object):
         cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
         if planets:
             cols_to_add += plan_poss.values()
-        log.info('Adding columns ' + ' '.join([cc.name for cc in cols_to_add]))
+        log.debug('Adding columns ' + ' '.join([cc.name for cc in cols_to_add]))
         self.table.add_columns(cols_to_add)
 
     def read_pickle_file(self, filename):

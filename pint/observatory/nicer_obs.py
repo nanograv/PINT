@@ -47,13 +47,13 @@ def load_FPorbit(orbit_filename):
     # TIMEREF should be 'LOCAL', since no delays are applied
 
     timesys = FPorbit_hdr['TIMESYS']
-    log.info("FPorbit TIMESYS {0}".format(timesys))
+    log.debug("FPorbit TIMESYS {0}".format(timesys))
     timeref = FPorbit_hdr['TIMEREF']
-    log.info("FPorbit TIMEREF {0}".format(timeref))
+    log.debug("FPorbit TIMEREF {0}".format(timeref))
 
     mjds_TT = read_fits_event_mjds(hdulist[1])
     mjds_TT = mjds_TT*u.d
-    log.info("FPorbit spacing is {0}".format((mjds_TT[1]-mjds_TT[0]).to(u.s)))
+    log.debug("FPorbit spacing is {0}".format((mjds_TT[1]-mjds_TT[0]).to(u.s)))
     X = FPorbit_dat.field('X')*u.m
     Y = FPorbit_dat.field('Y')*u.m
     Z = FPorbit_dat.field('Z')*u.m
@@ -65,7 +65,7 @@ def load_FPorbit(orbit_filename):
             names = ('MJD_TT', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'),
             meta = {'name':'FPorbit'} )
     # Make sure table is sorted by time
-    log.info('Sorting FPorbit table')
+    log.debug('Sorting FPorbit table')
     FPorbit_table.sort('MJD_TT')
     # Now delete any bad entries where the positions are 0.0
     idx = np.where(np.logical_and(FPorbit_table['X'] != 0.0, FPorbit_table['Y'] != 0.0))[0]
@@ -89,8 +89,8 @@ class NICERObs(SpecialLocation):
     tt2tdb_mode: str
         Selection for mode to use for TT to TDB conversion.
         'none' = Give no position to astropy.Time()
+        'pint' = Give no position to astropy.Time() but apply topocentric part of TT->TDB in PINT
         'geo' = Give geocenter position to astropy.Time()
-        'spacecraft' = Give spacecraft ITRF position to astropy.Time()
 """
 
     def __init__(self, name, FPorbname, tt2tdb_mode = 'pint'):
@@ -117,7 +117,7 @@ class NICERObs(SpecialLocation):
         super(NICERObs, self).__init__(name=name, tt2tdb_mode=tt2tdb_mode)
         # Print this warning once, mainly for @paulray
         if self.tt2tdb_mode.lower().startswith('pint'):
-            log.warning('Using location=None for TT to TDB conversion')
+            log.debug('Using location=None for TT to TDB conversion (pint mode)')
         elif self.tt2tdb_mode.lower().startswith('geo'):
             log.warning('Using location geocenter for TT to TDB conversion')
 
