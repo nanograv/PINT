@@ -32,7 +32,7 @@ def read_fits_event_mjds_tuples(event_hdu,timecolumn='TIME'):
         TIMEZERO = np.longdouble(event_hdr['TIMEZERO'])
     except KeyError:
         TIMEZERO = np.longdouble(event_hdr['TIMEZERI']) + np.longdouble(event_hdr['TIMEZERF'])
-    log.info("TIMEZERO = {0}".format(TIMEZERO))
+    log.debug("TIMEZERO = {0}".format(TIMEZERO))
 
     # Collect MJDREF
     try:
@@ -46,7 +46,7 @@ def read_fits_event_mjds_tuples(event_hdu,timecolumn='TIME'):
             fortran_float(event_hdr['MJDREFF'])
         else:
             MJDREF = np.longdouble(event_hdr['MJDREFI']) + np.longdouble(event_hdr['MJDREFF'])
-    log.info("MJDREF = {0}".format(MJDREF))
+    log.debug("MJDREF = {0}".format(MJDREF))
 
     # Should check timecolumn units to be sure they are seconds!
 
@@ -74,7 +74,7 @@ def read_fits_event_mjds(event_hdu,timecolumn='TIME'):
         TIMEZERO = np.float(event_hdr['TIMEZERO'])
     except KeyError:
         TIMEZERO = np.float(event_hdr['TIMEZERI']) + np.float(event_hdr['TIMEZERF'])
-    log.info("TIMEZERO = {0}".format(TIMEZERO))
+    log.debug("TIMEZERO = {0}".format(TIMEZERO))
 
     # Collect MJDREF
     try:
@@ -88,7 +88,7 @@ def read_fits_event_mjds(event_hdu,timecolumn='TIME'):
             fortran_float(event_hdr['MJDREFF'])
         else:
             MJDREF = np.float(event_hdr['MJDREFI']) + np.float(event_hdr['MJDREFF'])
-    log.info("MJDREF = {0}".format(MJDREF))
+    log.debug("MJDREF = {0}".format(MJDREF))
 
     # Should check timecolumn units to be sure they are seconds!
 
