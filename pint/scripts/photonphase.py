@@ -158,7 +158,7 @@ def main(argv=None):
             cols = hdulist[1].columns
             for c in datacol:
                 cols = cols + c
-            bt = pyfits.BinTableHDU.from_columns(c, header=hdulist[1].header,
+            bt = pyfits.BinTableHDU.from_columns(cols, header=hdulist[1].header,
                 name=hdulist[1].name)
             hdulist[1] = bt
         if args.outfile is None:
