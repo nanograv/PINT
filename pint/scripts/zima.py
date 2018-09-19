@@ -36,7 +36,7 @@ def main(argv=None):
     parser.add_argument("--startMJD",help="MJD of first fake TOA (default=56000.0)",
                     type=float, default=56000.0)
     parser.add_argument("--ntoa",help="Number of fake TOAs to generate",type=int,default=100)
-    parser.add_argument("--duration",help="Span of TOAs to generate (days)",type=int,default=400)
+    parser.add_argument("--duration",help="Span of TOAs to generate (days)",type=float,default=400.0)
     parser.add_argument("--obs",help="Observatory code (default: GBT)",default="GBT")
     parser.add_argument("--freq",help="Frequency for TOAs (MHz) (default: 1400)",nargs='+',
                     type=float, default=1400.0)
