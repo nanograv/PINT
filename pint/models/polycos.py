@@ -209,7 +209,7 @@ def tempo_polyco_table_reader(filename):
                             nCoeff,coeffs,obs)
 
         entries.append((psrname, date, utc, tmid.value, dm, doppler, logrms,
-                        binaryPhase, tstart, tstop, obs, obsfreq, entry))
+                        binaryPhase, mjdspan, tstart, tstop, obs, obsfreq, entry))
     entry_list  = []
     for ii in range(len(entries[0])):
         entry_list.append([t[ii] for t in entries])
