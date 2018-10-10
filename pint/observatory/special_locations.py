@@ -32,7 +32,7 @@ class BarycenterObs(SpecialLocation):
     @property
     def tempo2_code(self):
         return 'bat'
-    def get_gcrs(self, t, ephem=None):
+    def get_gcrs(self, t, ephem=None, grp=None):
         if ephem is None:
             raise ValueError('Ephemeris needed for BarycenterObs get_gcrs') 
         ssb_pv = objPosVel_wrt_SSB('earth', t, ephem)
@@ -55,12 +55,70 @@ class GeocenterObs(SpecialLocation):
     @property
     def tempo2_code(self):
         return 'coe'
-    def get_gcrs(self, t, ephem=None):
+    def get_gcrs(self, t, ephem=None, grp=None):
         vdim = (3,) + t.shape
         return numpy.zeros(vdim) * u.m
     def posvel(self, t, ephem):
         return objPosVel_wrt_SSB('earth', t, ephem)
 
+class SpacecraftObs(SpecialLocation):
+    """Observatory-derived class for a spacecraft observatory."""
+    @property
+    def timescale(self):
+        return 'utc'
+    
+    def get_gcrs(self, t, ephem=None, grp=None):
+        """Return spacecraft GCRS position; this assumes position flags in tim file are in km"""
+
+        if grp is None:
+            raise ValueError('TOA group table needed for SpacecraftObs get_gcrs')
+
+        # Is there a better way to do this?
+        x = numpy.array([flags['telx'] for flags in grp['flags']])
+        y = numpy.array([flags['tely'] for flags in grp['flags']])
+        z = numpy.array([flags['telz'] for flags in grp['flags']])
+
+        pos = numpy.vstack((x,y,z))
+        vdim = (3,) + t.shape
+        if pos.shape != vdim:
+            raise ValueError('GCRS position vector has wrong shape: ',pos.shape,' instead of ',vdim.shape)
+
+        return pos * u.km
+
+    def posvel_gcrs(self, t, grp):
+        """Return spacecraft GCRS position and velocity; this assumes position flags in tim file are in km and velocity flags are in km/s"""
+        
+        if grp is None:
+            raise ValueError('TOA group table needed for SpacecraftObs posvel_gcrs')
+
+        # Is there a better way to do this?
+        vx = numpy.array([flags['vx'] for flags in grp['flags']])
+        vy = numpy.array([flags['vy'] for flags in grp['flags']])
+        vz = numpy.array([flags['vz'] for flags in grp['flags']])
+
+        vel_geo = numpy.vstack((vx,vy,vz)) * (u.km/u.s)
+        vdim = (3,) + t.shape
+        if vel_geo.shape != vdim:
+            raise ValueError('GCRS velocity vector has wrong shape: ',vel.shape,' instead of ',vdim.shape)
+
+        pos_geo = self.get_gcrs(t,ephem=None,grp=grp)
+        
+        stl_posvel = PosVel(pos_geo, vel_geo, origin='earth', obj='spacecraft')
+        return stl_posvel
+
+    def posvel(self, t, ephem, grp):
+
+        # Compute vector from SSB to Earth
+        geo_posvel = objPosVel_wrt_SSB('earth', t, ephem)
+
+        # Spacecraft posvel w.r.t. Earth
+        stl_posvel = self.posvel_gcrs(t,grp)
+
+        # Vector add to geo_posvel to get full posvel vector w.r.t. SSB.
+        return geo_posvel + stl_posvel
+
+    
 # Need to initialize one of each so that it gets added to the list
 BarycenterObs('barycenter', aliases=['@','ssb','bary','bat'])
 GeocenterObs('geocenter', aliases=['0','o','coe','geo'])
+SpacecraftObs('spacecraft', aliases=['STL_GEO'])
