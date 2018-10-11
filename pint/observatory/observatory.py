@@ -208,7 +208,7 @@ class Observatory(object):
     def _get_TDB_astropy(self, t):
         return t.tdb
 
-    def _get_TDB_PINT(self, t, ephem, grp):
+    def _get_TDB_PINT(self, t, ephem, grp=None):
         """Uses astropy.Time location to add the topocentric correction term to
             the Time object. The topocentric correction is given as (r/c).(v/c),
             with r equal to the geocentric position of the observer, v being the

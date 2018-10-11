@@ -47,6 +47,10 @@ tests/datafile/test_fitter_plot.pdf
 de405.bsp
 de421.bsp
 de430t.bsp
+de434.bsp
+de436.bsp
+de436t.bsp
+
 earth_latest_high_prec.bpc
 naif0010.tls
 naif0011.tls
