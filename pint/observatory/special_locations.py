@@ -73,11 +73,15 @@ class SpacecraftObs(SpecialLocation):
         if grp is None:
             raise ValueError('TOA group table needed for SpacecraftObs get_gcrs')
 
-        # Is there a better way to do this?
-        x = numpy.array([flags['telx'] for flags in grp['flags']])
-        y = numpy.array([flags['tely'] for flags in grp['flags']])
-        z = numpy.array([flags['telz'] for flags in grp['flags']])
-
+        try:
+            # Is there a better way to do this?
+            x = numpy.array([flags['telx'] for flags in grp['flags']])
+            y = numpy.array([flags['tely'] for flags in grp['flags']])
+            z = numpy.array([flags['telz'] for flags in grp['flags']])
+        except:
+            log.error('Missing flag. TOA line should have x,y,z flags for GCRS position in km.')
+            raise Exception('Missing flag. TOA line should have x,y,z flags for GCRS position in km.')
+            
         pos = numpy.vstack((x,y,z))
         vdim = (3,) + t.shape
         if pos.shape != vdim:
@@ -91,11 +95,15 @@ class SpacecraftObs(SpecialLocation):
         if grp is None:
             raise ValueError('TOA group table needed for SpacecraftObs posvel_gcrs')
 
-        # Is there a better way to do this?
-        vx = numpy.array([flags['vx'] for flags in grp['flags']])
-        vy = numpy.array([flags['vy'] for flags in grp['flags']])
-        vz = numpy.array([flags['vz'] for flags in grp['flags']])
-
+        try:
+            # Is there a better way to do this?
+            vx = numpy.array([flags['vx'] for flags in grp['flags']])
+            vy = numpy.array([flags['vy'] for flags in grp['flags']])
+            vz = numpy.array([flags['vz'] for flags in grp['flags']])
+        except:
+            log.error('Missing flag. TOA line should have vx,vy,vz flags for GCRS velocity in km/s.')
+            raise Exception('Missing flag. TOA line should have vx,vy,vz flags for GCRS velocity in km/s.')
+            
         vel_geo = numpy.vstack((vx,vy,vz)) * (u.km/u.s)
         vdim = (3,) + t.shape
         if vel_geo.shape != vdim:
