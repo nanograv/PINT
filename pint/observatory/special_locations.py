@@ -79,8 +79,8 @@ class SpacecraftObs(SpecialLocation):
             y = numpy.array([flags['tely'] for flags in grp['flags']])
             z = numpy.array([flags['telz'] for flags in grp['flags']])
         except:
-            log.error('Missing flag. TOA line should have x,y,z flags for GCRS position in km.')
-            raise Exception('Missing flag. TOA line should have x,y,z flags for GCRS position in km.')
+            log.error('Missing flag. TOA line should have telx,tely,telz flags for GCRS position in km.')
+            raise Exception('Missing flag. TOA line should have telx,tely,telz flags for GCRS position in km.')
             
         pos = numpy.vstack((x,y,z))
         vdim = (3,) + t.shape
