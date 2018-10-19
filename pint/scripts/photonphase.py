@@ -53,7 +53,9 @@ def main(argv=None):
 
     log.info('Event file TELESCOPE = {0}, INSTRUMENT = {1}'.format(hdr['TELESCOP'],
         hdr['INSTRUME']))
+    
     if hdr['TELESCOP'] == 'NICER':
+
         # Instantiate NICERObs once so it gets added to the observatory registry
         if args.orbfile is not None:
             log.info('Setting up NICER observatory')
@@ -65,6 +67,7 @@ def main(argv=None):
             log.error("Observatory not recognized.  This probably means you need to provide an orbit file or barycenter the event file.")
             sys.exit(1)
     elif hdr['TELESCOP'] == 'XTE':
+
         # Instantiate RXTEObs once so it gets added to the observatory registry
         if args.orbfile is not None:
             # Determine what observatory type is.
@@ -83,6 +86,7 @@ def main(argv=None):
             hdr['TELESCOP'], hdr['INSTRUME']))
         sys.exit(1)
 
+        
     # Now convert to TOAs object and compute TDBs and posvels
     if len(tl) == 0:
         log.error("No TOAs, exiting!")

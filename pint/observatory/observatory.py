@@ -129,7 +129,7 @@ class Observatory(object):
         """
         return None
 
-    def get_gcrs(self, t, ephem=None):
+    def get_gcrs(self, t, ephem=None, grp=None):
         '''Return position vector of observatory in GCRS
         t is an astropy.Time or array of astropy.Time objects
         ephem is a link to an ephemeris file. Needed for SSB observatory
@@ -156,7 +156,7 @@ class Observatory(object):
         # TOA metadata which may be necessary in some cases.
         raise NotImplementedError
 
-    def get_TDBs(self, t,  method='default', ephem=None, options=None):
+    def get_TDBs(self, t,  method='default', ephem=None, options=None, grp=None):
         """This is a high level function for converting TOAs to TDB time scale.
             Different method can be applied to obtain the result. Current supported
             methods are ['astropy', 'ephemeris']
@@ -175,6 +175,7 @@ class Observatory(object):
                 The ephemeris to get he TDB-TT correction. Required for the
                 'ephemeris' method.
         """
+
         if t.isscalar: t = Time([t])
         if t.scale == 'tdb':
             return t
@@ -195,7 +196,7 @@ class Observatory(object):
                 if ephem is None:
                     raise ValueError("A ephemeris file should be provided to get"
                                         " the TDB-TT corrections, or use tt2tdb_mode=astropy")
-                return self._get_TDB_PINT(t, ephem)
+                return self._get_TDB_PINT(t, ephem, grp)
         elif meth == "ephemeris":
             if ephem is None:
                 raise ValueError("A ephemeris file should be provided to get"
@@ -207,7 +208,7 @@ class Observatory(object):
     def _get_TDB_astropy(self, t):
         return t.tdb
 
-    def _get_TDB_PINT(self, t, ephem):
+    def _get_TDB_PINT(self, t, ephem, grp=None):
         """Uses astropy.Time location to add the topocentric correction term to
             the Time object. The topocentric correction is given as (r/c).(v/c),
             with r equal to the geocentric position of the observer, v being the
@@ -217,11 +218,12 @@ class Observatory(object):
             The barycentric velocity can be obtained using solar_system_ephemerides
             objPosVel_wrt_SSB
         """
+
         #Add in correction term to t.tdb equal to r.v / c^2
         vel = sse.objPosVel_wrt_SSB('earth', t, ephem).vel
-        pos = self.get_gcrs(t, ephem=ephem)
+        pos = self.get_gcrs(t, ephem=ephem, grp=grp)
+        dnom = const.c * const.c 
 
-        dnom = const.c * const.c
         corr = ((pos[0] * vel[0] + pos[1] * vel[1] + pos[2] * vel[2])/dnom).to(u.s)
         #log.info('\tTopocentric Correction:\t%s' % corr)
 
@@ -244,7 +246,7 @@ class Observatory(object):
 
 def get_observatory(name, include_gps=True, include_bipm=True,
                     bipm_version="BIPM2015"):
-    """Conviencience function to get observatory object with options.
+    """Convenience function to get observatory object with options.
 
     This function will simply call the ``Observatory.get`` method but
     will manually set options after the method is called.
