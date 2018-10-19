@@ -800,7 +800,7 @@ class TOAs(object):
             for jj in range(loind, hiind):
                 if corr[jj]:
                     flags[jj]['clkcorr'] = corr[jj]
-        # Updat clock correction info
+        # Update clock correction info
         self.clock_corr_info.update({'include_bipm':include_bipm,
                                      'bipm_version':bipm_version,
                                      'include_gps':include_gps})

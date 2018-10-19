@@ -225,7 +225,7 @@ class Observatory(object):
         dnom = const.c * const.c 
 
         corr = ((pos[0] * vel[0] + pos[1] * vel[1] + pos[2] * vel[2])/dnom).to(u.s)
-        log.info('\tTopocentric Correction:\t%s' % corr)
+        #log.info('\tTopocentric Correction:\t%s' % corr)
 
         return t.tdb + corr
 
@@ -246,7 +246,7 @@ class Observatory(object):
 
 def get_observatory(name, include_gps=True, include_bipm=True,
                     bipm_version="BIPM2015"):
-    """Conviencience function to get observatory object with options.
+    """Convenience function to get observatory object with options.
 
     This function will simply call the ``Observatory.get`` method but
     will manually set options after the method is called.
