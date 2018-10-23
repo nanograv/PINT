@@ -5,8 +5,16 @@ Interactive emulator of tempo2 plk
 from __future__ import print_function, division
 import os, sys
 
-import Tkinter as tk
-import tkFileDialog
+try:
+    # Python2
+    import Tkinter as tk
+    import tkFileDialog
+    import tkMessageBox
+except ImportError:
+    # Python3
+    import tkinter as tk
+    import tkinter.filedialog as tkFileDialog
+    import tkinter.messagebox as tkMessageBox
 import matplotlib as mpl
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 import numpy as np
