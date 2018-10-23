@@ -94,7 +94,7 @@ class FermiObs(SpecialLocation):
     tt2tdb_mode: str
         Selection for mode to use for TT to TDB conversion.
         'none' = Give no position to astropy.Time()
-        'geo' = Give geocenter position to astropy.Time()
+        'pint' = Give geocenter position to astropy.Time()
         'spacecraft' = Give spacecraft ITRF position to astropy.Time()
     """
 
@@ -110,7 +110,7 @@ class FermiObs(SpecialLocation):
         super(FermiObs, self).__init__(name=name)
         # Print this warning once, mainly for @paulray
         if self.tt2tdb_mode.lower().startswith('pint'):
-            log.warning('Using location=None for TT to TDB conversion')
+            log.warning('Using location=None for TT to TDB conversion (pint mode)')
         elif self.tt2tdb_mode.lower().startswith('geo'):
             log.warning('Using location geocenter for TT to TDB conversion')
 
