@@ -16,7 +16,7 @@ except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 
 jpl_kernel_http = 'https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/'
-nanograv_http = ' https://data.nanograv.org/static/data/ephem/'
+nanograv_http = 'https://data.nanograv.org/static/data/ephem/'
 jpl_kernel_ftp = 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/'
 
 jpl_obj_code = {'ssb': 0,

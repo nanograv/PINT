@@ -39,6 +39,7 @@ class RXTEObs(SpecialLocation):
     """
 
     def __init__(self, name, FPorbname, tt2tdb_mode='pint'):
+
         self.FPorb = load_FPorbit(FPorbname)
         # Now build the interpolator here:
         self.X = interp1d(self.FPorb['MJD_TT'],self.FPorb['X'])
@@ -82,7 +83,7 @@ class RXTEObs(SpecialLocation):
     def tempo_code(self):
         return None
 
-    def get_gcrs(self, t, ephem=None):
+    def get_gcrs(self, t, ephem=None, grp=None):
         '''Return position vector of RXTE in GCRS
         t is an astropy.Time or array of astropy.Time objects
         Returns a 3-vector of Quantities representing the position

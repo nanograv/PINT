@@ -19,6 +19,7 @@ from pint import ls, J2000, J2000ld
 from .config import datapath
 from astropy import log
 import numpy as np
+from .observatory.special_locations import SpacecraftObs
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "FMIN", "INCLUDE", "INFO", "JUMP", "MODE", "NOSKIP", "PHA1",
@@ -359,7 +360,7 @@ class TOA(object):
                  error=0.0, obs='Barycenter', freq=float("inf"),
                  scale=None,
                  **kwargs):  # keyword args that are completely optional
-        r"""
+        """
         Construct a TOA object
 
         Parameters
@@ -405,6 +406,7 @@ class TOA(object):
                 fmt = 'mjd'
             t = time.Time(arg1, arg2, scale=scale,
                     format=fmt, precision=9)
+                        
         # Now assign the site location to the Time, for use in the TDB conversion
         # Time objects are immutable so you must make a new one to add the location!
         # Use the intial time to look up the observatory location
@@ -726,6 +728,7 @@ class TOAs(object):
         for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'].quantity,
             self.table['freq'].quantity,self.table['obs'],self.table['flags']):
             obs_obj = Observatory.get(obs)
+            
             if 'clkcorr' in flags.keys():
                 toatime_out = toatime - time.TimeDelta(flags['clkcorr'])
             else:
@@ -734,6 +737,7 @@ class TOAs(object):
                       flags=flags, format=format)
             outf.write(out_str)
 
+            
         # If pulse numbers were added to flags, remove them again
         if pnChange:
             for flags in self.table['flags']:
@@ -761,6 +765,7 @@ class TOAs(object):
         https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
 
         """
+        
         # First make sure that we haven't already applied clock corrections
         flags = self.table['flags']
         if any(['clkcorr' in f for f in flags]):
@@ -795,7 +800,7 @@ class TOAs(object):
             for jj in range(loind, hiind):
                 if corr[jj]:
                     flags[jj]['clkcorr'] = corr[jj]
-        # Updat clock correction info
+        # Update clock correction info
         self.clock_corr_info.update({'include_bipm':include_bipm,
                                      'bipm_version':bipm_version,
                                      'include_gps':include_gps})
@@ -853,7 +858,11 @@ class TOAs(object):
                                          numpy.array([l.y.value for l in loclist])*u.m,
                                          numpy.array([l.z.value for l in loclist])*u.m)
                     grpmjds = time.Time(grp['mjd'],location=locs)
-            grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
+
+            if isinstance(site,SpacecraftObs): #spacecraft-topocentric toas
+                grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem, grp=grp)
+            else:
+                grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
             tdbs[loind:hiind] = numpy.asarray([t for t in grptdbs])
 
         # Now add the new columns to the table
@@ -871,6 +880,7 @@ class TOAs(object):
         using the 'ephem' parameter.  The positions and velocities are
         set with PosVel class instances which have astropy units.
         """
+        
         if ephem is None:
             if self.ephem is not None:
                 ephem = self.ephem
@@ -920,9 +930,14 @@ class TOAs(object):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
-            site = get_observatory(obs)
+            site = get_observatory(obs)            
             tdb = time.Time(grp['tdb'],precision=9)
-            ssb_obs = site.posvel(tdb,ephem)
+            
+            if isinstance(site,SpacecraftObs): #spacecraft-topocentric toas
+                ssb_obs = site.posvel(tdb,ephem,grp)
+            else:
+                ssb_obs = site.posvel(tdb,ephem)
+            
             log.debug("SSB obs pos {0}".format(ssb_obs.pos[:,0]))
             ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T.to(u.km)
             ssb_obs_vel[loind:hiind,:] = ssb_obs.vel.T.to(u.km/u.s)
