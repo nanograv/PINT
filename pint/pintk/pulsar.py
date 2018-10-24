@@ -50,7 +50,7 @@ class Pulsar(object):
         self.prefit_model = pint.models.get_model(self.parfile)
         print("prefit_model.as_parfile():")
         print(self.prefit_model.as_parfile())
-        
+
         if ephem is not None:
             self.toas = pint.toa.get_TOAs(self.timfile, ephem=ephem)
             self.prefit_model.EPHEM.value = ephem
@@ -89,7 +89,12 @@ class Pulsar(object):
         self.update_resids()
 
     def reset_TOAs(self):
-        self.toas = pint.toa.get_TOAs(self.timfile)
+
+        if getattr(self.prefit_model, 'EPHEM').value is not None:
+            self.toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value)
+        else:
+            self.toas = pint.toa.get_TOAs(self.timfile)
+
         if self.track_added:
             self.prefit_model.TRACK.value = ''
             if self.fitted:
@@ -102,7 +107,12 @@ class Pulsar(object):
         self.postfit_model = None
         self.postfit_resids = None
         self.fitted = False
-        self.toas = pint.toa.get_TOAs(self.timfile)
+
+        if getattr(self.prefit_model, 'EPHEM').value is not None:
+            self.toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value)
+        else:
+            self.toas = pint.toa.get_TOAs(self.timfile)
+        
         self.update_resids()
    
     def update_resids(self):
