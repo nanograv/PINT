@@ -42,7 +42,7 @@ def main(argv=None):
                     type=float, default=1400.0)
     parser.add_argument("--error",help="Random error to apply to each TOA (us, default=1.0)",
                     type=float, default=1.0)
-    parser.add_argument("--fuzzdays",help="Standard deviation of 'fuzz' distribution (jd) (default: 0.0)",type=float, default=0.0)
+    parser.add_argument("--fuzzdays",help="Standard deviation of 'fuzz' distribution (jd) (default: 0.01)",type=float, default=0.01)
     parser.add_argument("--plot",help="Plot residuals",action="store_true",default=False)
     parser.add_argument("--ephem",help="Ephemeris to use",default="DE421")
     parser.add_argument("--planets",help="Use planetary Shapiro delay",action="store_true",
@@ -88,7 +88,7 @@ def main(argv=None):
         ts.apply_clock_corrections()
     if 'tdb' not in ts.table.colnames:
         log.info("Getting IERS params and computing TDBs.")
-        ts.compute_TDBs()
+        ts.compute_TDBs(ephem=args.ephem)
     if 'ssb_obs_pos' not in ts.table.colnames:
         log.info("Computing observatory positions and velocities.")
         ts.compute_posvels(args.ephem, args.planets)
