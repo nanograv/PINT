@@ -42,7 +42,7 @@ def main(argv=None):
                     type=float, default=1400.0)
     parser.add_argument("--error",help="Random error to apply to each TOA (us, default=1.0)",
                     type=float, default=1.0)
-    parser.add_argument("--fuzzdays",help="Standard deviation of 'fuzz' distribution (jd) (default: 0.01)",type=float, default=0.01)
+    parser.add_argument("--fuzzdays",help="Standard deviation of 'fuzz' distribution (jd) (default: 0.0)",type=float, default=0.0)
     parser.add_argument("--plot",help="Plot residuals",action="store_true",default=False)
     parser.add_argument("--ephem",help="Ephemeris to use",default="DE421")
     parser.add_argument("--planets",help="Use planetary Shapiro delay",action="store_true",
@@ -68,8 +68,9 @@ def main(argv=None):
         times = np.linspace(0,duration.to(u.day).value,args.ntoa)*u.day + start
 
         # 'Fuzz' out times
-        fuzz = np.random.normal(scale=args.fuzzdays,size=len(times))*u.day
-        times += fuzz
+        if args.fuzzdays > 0.0:
+            fuzz = np.random.normal(scale=args.fuzzdays,size=len(times))*u.day
+            times += fuzz
 
         # Add mulitple frequency
         freq_array = get_freq_array(freq, len(times))
