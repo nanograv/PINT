@@ -7,11 +7,15 @@ from __future__ import absolute_import, print_function, division
 import os, sys
 import numpy as np
 try:
+    # Python2
     import Tkinter as tk
+    import tkFileDialog
+    import tkMessageBox
 except ImportError:
+    # Python3
     import tkinter as tk
-import tkFileDialog
-import tkMessageBox
+    import tkinter.filedialog as tkFileDialog
+    import tkinter.messagebox as tkMessageBox
 import code
 import argparse
 
