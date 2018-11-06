@@ -95,6 +95,8 @@ class TimingModel(object):
             description="Tracking Information"), '')
         self.add_param_from_top(strParameter(name="EPHEM",
             description="Ephemeris to use"), '')
+        self.add_param_from_top(strParameter(name="UNITS",
+            description="Units (TDB assumed)"), '')
 
         self.setup_components(components)
 
@@ -789,6 +791,12 @@ class TimingModel(object):
 
             k = l.split()
             name = k[0].upper()
+            
+            if name == 'UNITS' and len(k) > 1 and k[1] != 'TDB':
+                log.error("UNITS %s not yet supported by PINT" % k[1])
+                raise Exception("UNITS %s not yet supported by PINT" % k[1])
+
+            
             if name in checked_param:
                 if name in repeat_param.keys():
                     repeat_param[name] += 1
@@ -805,16 +813,13 @@ class TimingModel(object):
                     cmp = self
                 if cmp.__getattr__(par).from_parfile_line(l):
                     parsed = True
+
             if not parsed:
                 try:
                     prefix,f,v = utils.split_prefixed_name(l.split()[0])
                     if prefix not in ignore_prefix:
                         log.warn("Unrecognized parfile line '%s'" % l)
                 except:
-                    words = l.split()
-                    if words[0] == 'UNITS' and len(words) > 1 and words[1] == 'TCB':
-                        log.error("UNITS TCB not yet supported by PINT")
-                        raise Exception("UNITS TCB not yet supported by PINT")
                     if l.split()[0] not in ignore_params:
                         log.warn("Unrecognized parfile line '%s'" % l)
 

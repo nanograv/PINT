@@ -422,8 +422,8 @@ class PlkWidget(tk.Frame):
         '''
         filename = tkFileDialog.asksaveasfilename(title='Choose output tim file')
         try:
-            print('Chose output file %s' % filename)
-            self.psr.toas.write_TOA_file(filename)
+            print('Choose output file %s' % filename)
+            self.psr.toas.write_TOA_file(filename,format='TEMPO2')
         except:
             print('Count not save file to filename:\t%s' % filename)
 

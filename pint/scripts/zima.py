@@ -68,8 +68,9 @@ def main(argv=None):
         times = np.linspace(0,duration.to(u.day).value,args.ntoa)*u.day + start
 
         # 'Fuzz' out times
-        fuzz = np.random.normal(scale=args.fuzzdays,size=len(times))*u.day
-        times += fuzz
+        if args.fuzzdays > 0.0:
+            fuzz = np.random.normal(scale=args.fuzzdays,size=len(times))*u.day
+            times += fuzz
 
         # Add mulitple frequency
         freq_array = get_freq_array(freq, len(times))
@@ -88,7 +89,7 @@ def main(argv=None):
         ts.apply_clock_corrections()
     if 'tdb' not in ts.table.colnames:
         log.info("Getting IERS params and computing TDBs.")
-        ts.compute_TDBs()
+        ts.compute_TDBs(ephem=args.ephem)
     if 'ssb_obs_pos' not in ts.table.colnames:
         log.info("Computing observatory positions and velocities.")
         ts.compute_posvels(args.ephem, args.planets)
