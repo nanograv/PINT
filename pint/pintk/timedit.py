@@ -1,5 +1,13 @@
-import Tkinter as tk
-import tkFileDialog
+try:
+    # Python2
+    import Tkinter as tk
+    import tkFileDialog
+    import tkMessageBox
+except ImportError:
+    # Python3
+    import tkinter as tk
+    import tkinter.filedialog as tkFileDialog
+    import tkinter.messagebox as tkMessageBox
 import tempfile
 import copy
 import os

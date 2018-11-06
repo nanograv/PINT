@@ -6,9 +6,16 @@ PINTk: Tkinter interactive interface for PINT pulsar timing tool
 from __future__ import absolute_import, print_function, division
 import os, sys
 import numpy as np
-import Tkinter as tk
-import tkFileDialog
-import tkMessageBox
+try:
+    # Python2
+    import Tkinter as tk
+    import tkFileDialog
+    import tkMessageBox
+except ImportError:
+    # Python3
+    import tkinter as tk
+    import tkinter.filedialog as tkFileDialog
+    import tkinter.messagebox as tkMessageBox
 import code
 import argparse
 

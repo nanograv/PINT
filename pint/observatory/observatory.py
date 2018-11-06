@@ -191,8 +191,10 @@ class Observatory(object):
             return method(t, **options)
         if meth == 'default':
             if self.tt2tdb_mode.lower().startswith('astropy'):
+                log.info('Doing astropy mode TDB conversion')
                 return self._get_TDB_astropy(t)
             elif self.tt2tdb_mode.lower().startswith('pint'):
+                log.info('Doing PINT mode TDB conversion')
                 if ephem is None:
                     raise ValueError("A ephemeris file should be provided to get"
                                         " the TDB-TT corrections, or use tt2tdb_mode=astropy")
@@ -225,7 +227,7 @@ class Observatory(object):
         dnom = const.c * const.c 
 
         corr = ((pos[0] * vel[0] + pos[1] * vel[1] + pos[2] * vel[2])/dnom).to(u.s)
-        #log.info('\tTopocentric Correction:\t%s' % corr)
+        log.debug('\tTopocentric Correction:\t%s' % corr)
 
         return t.tdb + corr
 

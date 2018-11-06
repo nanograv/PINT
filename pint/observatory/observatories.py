@@ -22,6 +22,9 @@ TopoObs('ncyobs', aliases=['ncyobs'],
         clock_file='ncyobs2obspm.clk', clock_dir='TEMPO2')
 TopoObs('effelsberg',   tempo_code='g', itoa_code='EF', aliases=['eff'],
         itrf_xyz=[4033949.5, 486989.4, 4900430.8])
+TopoObs('gmrt',   tempo_code='r', itoa_code='GM', clock_fmt='tempo2',
+        clock_file='gmrt2gps.clk', clock_dir='TEMPO2',
+        itrf_xyz=[1656342.30, 5797947.77, 2073243.16])
 TopoObs('wsrt',         tempo_code='i', itoa_code='WB',
         itrf_xyz=[3828445.659, 445223.600, 5064921.5677])
 TopoObs('mwa',          tempo_code='u', itoa_code='MW',
