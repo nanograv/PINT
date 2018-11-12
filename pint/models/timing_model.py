@@ -752,7 +752,7 @@ class TimingModel(object):
         M = np.zeros((ntoas, nparams))
         for ii, param in enumerate(params):
             if param == 'Offset':
-                M[:,ii] = 1.0
+                M[:,ii] = self.d_phase_d_param(toas, delay, 'TZRMJD')
                 units.append(u.s/u.s)
             else:
                 # NOTE Here we add a negative sign. Since in pulsar timing

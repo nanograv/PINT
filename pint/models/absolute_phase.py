@@ -68,4 +68,4 @@ class AbsPhase(PhaseComponent):
         """ The derivative of phase with respect to the absolute phase refrence
             time, TZRMJD.
         """
-        return np.ones(len(toas)) * (u.cycle/u.cycle)
+        return np.ones(toas.ntoas) * (u.s/u.s)
