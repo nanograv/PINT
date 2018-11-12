@@ -22,7 +22,7 @@ class AbsPhase(PhaseComponent):
     def __init__(self):
         super(AbsPhase, self).__init__()
         self.add_param(p.MJDParameter(name="TZRMJD",
-                       description="Epoch of the zero phase."))
+                       description="Epoch of the zero phase.", frozen=False))
         self.add_param(p.strParameter(name="TZRSITE",
                        description="Observatory of the zero phase measured."))
         self.add_param(p.floatParameter(name="TZRFRQ", units=u.MHz,
@@ -46,6 +46,8 @@ class AbsPhase(PhaseComponent):
             self.TZRFRQ.quantity = float("inf")*u.MHz
             log.info("TZRFRQ was 0.0 or None. Setting to infinite frequency.")
 
+        # Add TZRMJD to the derivative functions
+        self.register_deriv_funcs(self.d_phase_d_TZRMJD, 'TZRMJD')
 
     def get_TZR_toa(self, toas):
         """ Get the TOAs class for the TZRMJD. We are treating the TZRMJD as a
@@ -53,10 +55,17 @@ class AbsPhase(PhaseComponent):
         """
         # NOTE: Using TZRMJD.quantity.jd[1,2] so that the time scale can be properly
         # set to the TZRSITE default timescale (e.g. UTC for TopoObs and TDB for SSB)
-        TZR_toa = toa.TOA((self.TZRMJD.quantity.jd1-2400000.5, self.TZRMJD.quantity.jd2), obs=self.TZRSITE.value,
+        TZR_toa = toa.TOA((self.TZRMJD.quantity.jd1-2400000.5,
+                           self.TZRMJD.quantity.jd2), obs=self.TZRSITE.value,
                           freq=self.TZRFRQ.quantity)
         clkc_info = toas.clock_corr_info
         tz = toa.get_TOAs_list([TZR_toa,], include_bipm=clkc_info['include_bipm'],
                                include_gps=clkc_info['include_gps'],
                                ephem=toas.ephem, planets=toas.planets)
         return tz
+
+    def d_phase_d_TZRMJD(self, toas, param, delay):
+        """ The derivative of phase with respect to the absolute phase refrence
+            time, TZRMJD.
+        """
+        return np.ones(len(toas)) * (u.cycle/u.cycle)

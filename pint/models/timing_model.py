@@ -755,7 +755,7 @@ class TimingModel(object):
                 M[:,ii] = 1.0
                 units.append(u.s/u.s)
             else:
-                # NOTE Here we have negative sign here. Since in pulsar timing
+                # NOTE Here we add a negative sign. Since in pulsar timing
                 # the residuals are calculated as (Phase - int(Phase)), which is different
                 # from the conventional definition of least square definition (Data - model)
                 # We decide to add minus sign here in the design matrix, so the fitter
@@ -791,12 +791,12 @@ class TimingModel(object):
 
             k = l.split()
             name = k[0].upper()
-            
+
             if name == 'UNITS' and len(k) > 1 and k[1] != 'TDB':
                 log.error("UNITS %s not yet supported by PINT" % k[1])
                 raise Exception("UNITS %s not yet supported by PINT" % k[1])
 
-            
+
             if name in checked_param:
                 if name in repeat_param.keys():
                     repeat_param[name] += 1
