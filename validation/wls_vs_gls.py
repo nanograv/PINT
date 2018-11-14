@@ -1,7 +1,11 @@
 import pint.models.model_builder as mb
 import pint.toa as toa
 import pint.fitter as fitter
+
+#import matplotlib
+#matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
+
 import astropy.units as u
 import numpy as np
 import os

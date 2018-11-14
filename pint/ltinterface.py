@@ -13,7 +13,11 @@ from .utils import has_astropy_unit
 import astropy.units as u
 import astropy.constants as ac
 import astropy.coordinates.angles as ang
+
+#import matplotlib
+#matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
+
 from astropy import log
 import time, copy
 
