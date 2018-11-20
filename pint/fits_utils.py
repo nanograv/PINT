@@ -28,10 +28,14 @@ def read_fits_event_mjds_tuples(event_hdu,timecolumn='TIME'):
 
     # Collect TIMEZERO
     # IMPORTANT: TIMEZERO is in SECONDS (not days)!
-    try:
-        TIMEZERO = np.longdouble(event_hdr['TIMEZERO'])
-    except KeyError:
-        TIMEZERO = np.longdouble(event_hdr['TIMEZERI']) + np.longdouble(event_hdr['TIMEZERF'])
+    if 'TIMEZERO' not in event_hdr and 'TIMEZERI' not in event_hdr:
+        TIMEZERO = 0
+    else:
+        try:
+            TIMEZERO = np.longdouble(event_hdr['TIMEZERO'])
+        except KeyError:
+            TIMEZERO = np.longdouble(event_hdr['TIMEZERI']) + np.longdouble(event_hdr['TIMEZERF'])
+
     log.debug("TIMEZERO = {0}".format(TIMEZERO))
 
     # Collect MJDREF
@@ -70,10 +74,13 @@ def read_fits_event_mjds(event_hdu,timecolumn='TIME'):
 
     # Collect TIMEZERO
     # IMPORTANT: TIMEZERO is in SECONDS (not days)!
-    try:
-        TIMEZERO = np.float(event_hdr['TIMEZERO'])
-    except KeyError:
-        TIMEZERO = np.float(event_hdr['TIMEZERI']) + np.float(event_hdr['TIMEZERF'])
+    if 'TIMEZERO' not in event_hdr and 'TIMEZERI' not in event_hdr:
+        TIMEZERO = 0
+    else:
+        try:
+            TIMEZERO = np.float(event_hdr['TIMEZERO'])
+        except KeyError:
+            TIMEZERO = np.float(event_hdr['TIMEZERI']) + np.float(event_hdr['TIMEZERF'])
     log.debug("TIMEZERO = {0}".format(TIMEZERO))
 
     # Collect MJDREF
