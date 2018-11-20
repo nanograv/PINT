@@ -16,14 +16,7 @@ from scipy.interpolate import interp1d
 
 
 def load_orbit(orb_filename):
-    '''Load data from a Fermi FT2 file
-
-        The contents of the FT2 file are described here:
-        https://fermi.gsfc.nasa.gov/ssc/data/analysis/documentation/Cicerone/Cicerone_Data/LAT_Data_Columns.html#SpacecraftFile
-        The coordinates are X, Y, Z in the ECI (Earth-Centered Inertial)
-        frame. I (@paulray) **believe** this is the same as astropy's GCRS
-        <http://docs.astropy.org/en/stable/api/astropy.coordinates.GCRS.html>,
-        but this should be confirmed.
+    '''Load data from a NuSTAR orbit file
 
         Parameters
         ----------
