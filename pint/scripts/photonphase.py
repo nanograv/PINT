@@ -12,6 +12,7 @@ from pint.event_toas import load_XMM_TOAs
 from pint.event_toas import load_NuSTAR_TOAs
 from pint.plot_utils import phaseogram_binned
 from pint.observatory.nicer_obs import NICERObs
+from pint.observatory.nustar_obs import NuSTARObs
 from pint.observatory.rxte_obs import RXTEObs
 from astropy.time import Time, TimeDelta
 from pint.eventstats import hmw, hm, h2sig
@@ -53,7 +54,7 @@ def main(argv=None):
 
     log.info('Event file TELESCOPE = {0}, INSTRUMENT = {1}'.format(hdr['TELESCOP'],
         hdr['INSTRUME']))
-    
+
     if hdr['TELESCOP'] == 'NICER':
 
         # Instantiate NICERObs once so it gets added to the observatory registry
@@ -78,15 +79,17 @@ def main(argv=None):
     elif hdr['TELESCOP'].startswith('XMM'):
         # Not loading orbit file here, since that is not yet supported.
         tl  = load_XMM_TOAs(args.eventfile)
-    elif hdr['TELESCOP'].startswith('NuSTAR'):
-        # Not loading orbit file here, since that is not yet supported.
-        tl  = load_NuSTAR_TOAs(args.eventfile)
+    elif hdr['TELESCOP'].lower().startswith('nustar'):
+        if args.orbfile is not None:
+            log.info('Setting up NuSTAR observatory')
+            NuSTARObs(name='NuSTAR',FPorbname=args.orbfile, tt2tdb_mode='pint')
+        tl = load_NuSTAR_TOAs(args.eventfile)
     else:
         log.error("FITS file not recognized, TELESCOPE = {0}, INSTRUMENT = {1}".format(
             hdr['TELESCOP'], hdr['INSTRUME']))
         sys.exit(1)
 
-        
+
     # Now convert to TOAs object and compute TDBs and posvels
     if len(tl) == 0:
         log.error("No TOAs, exiting!")
