@@ -97,7 +97,7 @@ class NuSTARObs(SpecialLocation):
         '''Return NuSTAR spacecraft location in ITRF coordinates'''
 
         if self.tt2tdb_mode.lower().startswith('pint'):
-            log.warning('Using location=None for TT to TDB conversion')
+            # log.warning('Using location=None for TT to TDB conversion')
             return None
         elif self.tt2tdb_mode.lower().startswith('astropy'):
             # First, interpolate ECI geocentric location from orbit file.

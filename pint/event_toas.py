@@ -15,7 +15,7 @@ mission_config = \
               "fits_columns": {"pha": "PHA"}},
      "nicer": {"fits_extension": "EVENTS", 'allow_local': True,
                "fits_columns": {"pha": "PHA"}},
-     "nustar": {"fits_extension": "EVENTS", 'allow_local': False,
+     "nustar": {"fits_extension": "EVENTS", 'allow_local': True,
              "fits_columns": {"pi": "PI"}},
      "xmm": {"fits_extension": "EVENTS", 'allow_local': False,
              "fits_columns": {"pi": "PI"}}}
