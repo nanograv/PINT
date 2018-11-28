@@ -63,16 +63,30 @@ def _get_columns_from_fits(hdu, cols):
 
 
 def _get_timesys_and_timeref(hdu):
-    return _get_timesys(hdu), _get_timeref(hdu)
+    timesys, timeref = _get_timesys(hdu), _get_timeref(hdu)
+    check_timesys(timesys)
+    check_timeref(timeref)
+    return timesys, timeref
+
+
+VALID_TIMESYS = ['TDB', 'TT']
+VALID_TIMEREF = ['GEOCENTER', 'SOLARSYSTEM', 'LOCAL']
+
+
+def check_timesys(timesys):
+    if timesys not in VALID_TIMESYS:
+        raise ValueError('Timesys has to be TDB or TT')
+
+
+def check_timeref(timeref):
+    if timeref not in VALID_TIMEREF:
+        raise ValueError('Timeref is invalid')
 
 
 def _get_timesys(hdu):
     event_hdr = hdu.header
     timesys = event_hdr['TIMESYS']
     log.debug("TIMESYS {0}".format(timesys))
-    if timesys not in ['TDB', 'TT']:
-        raise ValueError('Timesys has to be TDB or TT')
-
     return timesys
 
 
@@ -81,9 +95,6 @@ def _get_timeref(hdu):
 
     timeref = event_hdr['TIMEREF']
     log.debug("TIMEREF {0}".format(timeref))
-    if timeref not in ['GEOCENTER', 'SOLARSYSTEM', 'LOCAL']:
-        raise ValueError('Timeref is invalid')
-
     return timeref
 
 
@@ -104,6 +115,12 @@ def load_fits_TOAs(eventname, mission, weights=None, extension=None,
     weights : array or None
         The array has to be of the same size as the event list. Overwrites
         possible weight lists from mission-specific FITS files
+    extension : str
+        FITS extension to read
+    timesys : str, default None
+        Force this time system
+    timeref : str, default None
+        Forse this time reference
 
     Returns
     -------
@@ -120,7 +137,9 @@ def load_fits_TOAs(eventname, mission, weights=None, extension=None,
     if timesys is None:
         timesys = _get_timesys(hdulist[1])
     if timeref is None:
-        timeref = _get_timesys(hdulist[1])
+        timeref = _get_timeref(hdulist[1])
+    check_timesys(timesys)
+    check_timeref(timeref)
 
     if not mission_config[mission]['allow_local'] \
             and timesys != 'TDB':
@@ -131,8 +150,9 @@ def load_fits_TOAs(eventname, mission, weights=None, extension=None,
     # Read time column from FITS file
     mjds = read_fits_event_mjds_tuples(hdulist[1])
 
-    new_kwargs = _get_columns_from_fits(hdulist[1],
-                                        mission_config[mission]["fits_columns"])
+    new_kwargs = \
+        _get_columns_from_fits(hdulist[1],
+                               mission_config[mission]["fits_columns"])
 
     hdulist.close()
 

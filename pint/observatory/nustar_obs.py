@@ -35,6 +35,7 @@ def load_orbit(orb_filename):
                  "a solution precise only to the ~0.5ms level. Use the "
                  "pipeline-produced attitude-orbit file ('*.attorb.gz') for"
                  "better precision.")
+
     hdulist = pyfits.open(orb_filename)
     orb_hdr=hdulist[1].header
     orb_dat=hdulist[1].data
