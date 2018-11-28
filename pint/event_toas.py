@@ -63,21 +63,32 @@ def _get_columns_from_fits(hdu, cols):
 
 
 def _get_timesys_and_timeref(hdu):
+    return _get_timesys(hdu), _get_timeref(hdu)
+
+
+def _get_timesys(hdu):
     event_hdr = hdu.header
     timesys = event_hdr['TIMESYS']
     log.debug("TIMESYS {0}".format(timesys))
     if timesys not in ['TDB', 'TT']:
         raise ValueError('Timesys has to be TDB or TT')
 
+    return timesys
+
+
+def _get_timeref(hdu):
+    event_hdr = hdu.header
+
     timeref = event_hdr['TIMEREF']
     log.debug("TIMEREF {0}".format(timeref))
     if timeref not in ['GEOCENTER', 'SOLARSYSTEM', 'LOCAL']:
         raise ValueError('Timeref is invalid')
 
-    return timesys, timeref
+    return timeref
 
 
-def load_event_TOAs(eventname, mission, weights=None):
+def load_fits_TOAs(eventname, mission, weights=None, extension=None,
+                   timesys=None, timeref=None):
     '''
     Read photon event times out of a FITS file as PINT TOA objects.
 
@@ -101,14 +112,15 @@ def load_event_TOAs(eventname, mission, weights=None):
     # Load photon times from event file
     hdulist = pyfits.open(eventname)
 
-    extension = mission_config[mission]["fits_extension"]
-
-    if hdulist[1].name not in extension.split(','):
+    if extension is not None and hdulist[1].name not in extension.split(','):
         raise RuntimeError('First table in FITS file' +
                            'must be {}. Found {}'.format(extension,
                                                          hdulist[1].name))
 
-    timesys, timeref = _get_timesys_and_timeref(hdulist[1])
+    if timesys is None:
+        timesys = _get_timesys(hdulist[1])
+    if timeref is None:
+        timeref = _get_timesys(hdulist[1])
 
     if not mission_config[mission]['allow_local'] \
             and timesys != 'TDB':
@@ -136,6 +148,34 @@ def load_event_TOAs(eventname, mission, weights=None):
         toalist[i] = toa.TOA(mjds[i], obs=obs, scale=scale, **kw)
 
     return toalist
+
+
+def load_event_TOAs(eventname, mission, weights=None):
+    '''
+    Read photon event times out of a FITS file as PINT TOA objects.
+
+    Correctly handles raw event files, or ones processed with axBary to have
+    barycentered  TOAs. Different conditions may apply to different missions.
+
+    Parameters
+    ----------
+    eventname : str
+        File name of the FITS event list
+    mission : str
+        Name of the mission (e.g. RXTE, XMM)
+    weights : array or None
+        The array has to be of the same size as the event list. Overwrites
+        possible weight lists from mission-specific FITS files
+
+    Returns
+    -------
+    toalist : list of TOA objects
+    '''
+    # Load photon times from event file
+
+    extension = mission_config[mission]["fits_extension"]
+    return load_fits_TOAs(eventname, mission, weights=weights,
+                          extension=extension)
 
 
 def load_RXTE_TOAs(eventname):
