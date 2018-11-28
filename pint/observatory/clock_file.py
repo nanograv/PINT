@@ -90,6 +90,7 @@ class Tempo2ClockFile(ClockFile):
 
     def __init__(self, filename, **kwargs):
         self.filename = filename
+        log.info('Loading {0} observatory clock correction file {1}'.format(self.format,filename))
         mjd, clk, self.header = self.load_tempo2_clock_file(filename)
         #NOTE Clock correction file has a time far in the future as ending point
         with warnings.catch_warnings():
@@ -116,6 +117,7 @@ class TempoClockFile(ClockFile):
     def __init__(self, filename, obscode=None, **kwargs):
         self.filename = filename
         self.obscode = obscode
+        log.info('Loading {0} observatory ({1}) clock correction file {2}'.format(self.format,obscode,filename))
         mjd, clk = self.load_tempo1_clock_file(filename,site=obscode)
         #NOTE Clock correction file has a time far in the future as ending point
         # We are swithing off astropy warning only for gps correction.

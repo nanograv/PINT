@@ -209,7 +209,7 @@ class LCTemplate(object):
         if (c == r.shape[0]): return r
         m = self.norms.gradient(free=free)
         #r[c:,:] = (prim_terms*m).sum(axis=1)
-        for j in xrange(m.shape[0]):
+        for j in range(m.shape[0]):
             r[c,:] = (prim_terms*m[:,j]).sum(axis=1)
             c += 1
         return r
@@ -363,9 +363,9 @@ class LCTemplate(object):
         if len(prims)==1:
             raise ValueError('Template only has a single primitive.')
         if index < 0: index += len(prims)
-        nprims = [deepcopy(prims[i]) for i in xrange(len(prims)) if i!=index]
-        nnorms = np.asarray([norms()[i] for i in xrange(len(prims)) if i!= index])
-        norms_free = [norms.free[i] for i in xrange(len(prims)) if i!=index]
+        nprims = [deepcopy(prims[i]) for i in range(len(prims)) if i!=index]
+        nnorms = np.asarray([norms()[i] for i in range(len(prims)) if i!= index])
+        norms_free = [norms.free[i] for i in range(len(prims)) if i!=index]
         lct = LCTemplate(nprims,nnorms*norms().sum()/nnorms.sum())
         lct.norms.free[:] = norms_free
         return lct
@@ -374,9 +374,9 @@ class LCTemplate(object):
         """ [Convenience] -- return a new LCTemplate with the specified
             LCPrimitive added and renormalized."""
         norms,prims = self.norms,self.primitives
-        nprims = [prim] + [deepcopy(prims[i]) for i in xrange(len(prims))]
-        nnorms = np.asarray([norm]+[norms()[i] for i in xrange(len(prims))])
-        norms_free = [True]+[norms.free[i] for i in xrange(len(prims))]
+        nprims = [prim] + [deepcopy(prims[i]) for i in range(len(prims))]
+        nnorms = np.asarray([norm]+[norms()[i] for i in range(len(prims))])
+        norms_free = [True]+[norms.free[i] for i in range(len(prims))]
         lct = LCTemplate(nprims,nnorms*norms().sum()/nnorms.sum())
         lct.norms.free[:] = norms_free
         return lct
@@ -425,7 +425,7 @@ class LCTemplate(object):
         """ Return a string that can be "eval"ed to make a cloned set of
             primitives and template. """
         ps = '\n'.join(('p%d = %s'%(i,p.eval_string()) for i,p in enumerate(self.primitives)))
-        prims = '[%s]'%(','.join( ('p%d'%i for i in xrange(len(self.primitives)))))
+        prims = '[%s]'%(','.join( ('p%d'%i for i in range(len(self.primitives)))))
         ns = 'norms = %s'%(self.norms.eval_string())
         s = '%s(%s,norms)'%(self.__class__.__name__,prims)
         return s
@@ -568,7 +568,7 @@ class LCBridgeTemplate(LCTemplate):
         else:
             mask = (phases >= l1) | (phases <= l2)
         rvals = k/delta*mask # pedestal
-        norm_list = [norms[i] for i in xrange(0,len(norms)-2)] + [n1+dn1*mask,n2+dn2*mask]
+        norm_list = [norms[i] for i in range(0,len(norms)-2)] + [n1+dn1*mask,n2+dn2*mask]
         return rvals,norm_list,all_norms.sum(axis=0)
             
     def random(self,n,weights=None,return_partition=False):
