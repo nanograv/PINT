@@ -157,7 +157,7 @@ class UnweightedLCFitter(object):
         old_state = []
         counter = 0
         for p in self.template.primitives:
-            for i in xrange(len(p.p)):
+            for i in range(len(p.p)):
                 old_state.append(p.free[i])
                 if restore_state is not None:
                     p.free[i] = restore_state[counter]
@@ -375,7 +375,7 @@ class UnweightedLCFitter(object):
         if 'unbinned' not in fit_kwargs.keys():
             fit_kwargs['unbinned'] = True
         counter = 0
-        for i in xrange(nsamp*2):
+        for i in range(nsamp*2):
             if counter == nsamp:
                 break
             if i == (2*nsamp-1):
@@ -454,7 +454,7 @@ class UnweightedLCFitter(object):
         cod = template(dom)*(1-bg_level)+bg_level
         axes.plot(dom,cod,color='blue',lw=1)
         if plot_components:
-            for i in xrange(len(template.primitives)):
+            for i in range(len(template.primitives)):
                 cod = template.single_component(i,dom)*(1-bg_level)+bg_level
                 axes.plot(dom,cod,color='blue',lw=1,ls='--')
         pl.axis([0,1,pl.axis()[2],max(pl.axis()[3],cod.max()*1.05)])
@@ -550,7 +550,7 @@ class WeightedLCFitter(UnweightedLCFitter):
         self.counts_centers = []
         self.slices = []
         indices = np.arange(len(self.weights))
-        for i in xrange(nbins):
+        for i in range(nbins):
             mask = (self.phases >= bins[i]) & (self.phases < bins[i+1])
             if mask.sum() > 0:
                 w = self.weights[mask]
@@ -612,7 +612,7 @@ class WeightedLCFitter(UnweightedLCFitter):
         # distribute the central values to the unbinned phases/weights
         for tt,gt,sl in zip(template_terms,gradient_terms.transpose(),self.slices):
             phase_template_terms[sl] = tt
-            for j in xrange(nump):
+            for j in range(nump):
                 phase_gradient_terms[j,sl] = gt[j]
         numer = self.weights*phase_gradient_terms
         denom = 1+self.weights*(phase_template_terms)
@@ -684,9 +684,9 @@ def hessian(m,mf,*args,**kwargs):
         delta = [0.01]*len(p)
 
     hessian=np.zeros([len(p),len(p)])
-    for i in xrange(len(p)):
+    for i in range(len(p)):
         delt = delta[i]
-        for j in xrange(i,len(p)): #Second partials by finite difference; could be done analytically in a future revision
+        for j in range(i,len(p)): #Second partials by finite difference; could be done analytically in a future revision
          
             xhyh,xhyl,xlyh,xlyl=p.copy(),p.copy(),p.copy(),p.copy()
             xdelt = delt if p[i] >= 0 else -delt
@@ -723,7 +723,7 @@ def get_errors(template,total,n=100):
     errors_r = np.empty(n)
     delta = 0.01
     mean = 0
-    for i in xrange(n):
+    for i in range(n):
         template.set_overall_phase(ph0)
         ph = template.random(total)
         results = fmin(logl,ph0,args=(ph,),full_output=1,disp=0)
@@ -766,7 +766,7 @@ def approx_gradient(fitter,eps=1e-6):
         #func.set_parameters(p0,free=False)
         return fitter.loglikelihood(p0)
 
-    for i in xrange(len(orig_p)):
+    for i in range(len(orig_p)):
         # use a 4th-order central difference scheme
         for j,w in zip([2,1,-1,-2],weights):
             g[i] += w*do_step(i,j*eps)
@@ -793,7 +793,7 @@ def hess_from_grad(grad,par,step=1e-3,iterations=2):
             return M[0,0]
         rvals = np.zeros(1,dtype=M.dtype)
         toggle = 1.
-        for i in xrange(n):
+        for i in range(n):
             minor = np.delete(np.delete(M,0,0),i,1)
             rvals += M[0,i] * toggle * mdet(minor) 
             toggle *= -1
@@ -803,8 +803,8 @@ def hess_from_grad(grad,par,step=1e-3,iterations=2):
         """ Return inverse of M, using cofactor expansion."""
         n = M.shape[0]
         C = np.empty_like(M)
-        for i in xrange(n):
-            for j in xrange(n):
+        for i in range(n):
+            for j in range(n):
                 m = np.delete(np.delete(M,i,0),j,1)
                 C[i,j] = (-1)**(i+j)*mdet(m)
         det = (M[0,:]*C[0,:]).sum()
@@ -817,7 +817,7 @@ def hess_from_grad(grad,par,step=1e-3,iterations=2):
     def make_hess(p0,steps):
         npar = len(par)
         hess = np.empty([npar,npar],dtype=p0.dtype)
-        for i in xrange(npar):
+        for i in range(npar):
             par[i] = p0[i] + steps[i]
             gup = grad(par) 
             par[i] = p0[i] - steps[i]
@@ -831,7 +831,7 @@ def hess_from_grad(grad,par,step=1e-3,iterations=2):
         step = np.ones_like(p0)*step
     hessians = [make_hess(p0,step)]
 
-    for i in xrange(iterations):
+    for i in range(iterations):
         steps = np.diag(minv(hessians[-1]))**0.5
         mask = np.isnan(steps)
         if np.any(mask):
@@ -839,7 +839,7 @@ def hess_from_grad(grad,par,step=1e-3,iterations=2):
         hessians.append(make_hess(p0,steps))
 
     g = grad(p0) # reset parameters
-    for i in xrange(iterations,-1,-1):
+    for i in range(iterations,-1,-1):
         if not np.any(np.isnan(np.diag(minv(hessians[i]))**0.5)):
             return hessians[i].astype(float)
     return hessians[0].astype(float)
@@ -856,7 +856,7 @@ def calc_step_size(logl,par,minstep=1e-5,maxstep=1e-1):
         if abs(delta_ll) < 0.05:
             return 0
         return delta_ll
-    for i in xrange(len(par)):
+    for i in range(len(par)):
         if f(maxstep,i) <= 0:
             rvals[i] = maxstep
         else:

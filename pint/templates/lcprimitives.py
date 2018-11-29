@@ -68,7 +68,7 @@ def approx_gradient(func,phases,log10_ens,eps=1e-6):
         func.set_parameters(p0,free=False)
         return func(phases,log10_ens)
 
-    for i in xrange(len(orig_p)):
+    for i in range(len(orig_p)):
         # use a 4th-order central difference scheme
         for j,w in zip([2,1,-1,-2],weights):
             g[i,:] += w*do_step(i,j*eps)
@@ -93,7 +93,7 @@ def check_gradient(func,atol=1e-8,rtol=1e-5,quiet=False):
     g1 = func.gradient(ph,en,free=False)
     g2 = func.approx_gradient(ph,en,eps=eps)
     anyfail = False
-    for i in xrange(g1.shape[0]):
+    for i in range(g1.shape[0]):
         d1 = np.abs(g1[i]-g2[i])
         a = np.argmax(d1)
         fail = np.any(d1 > (atol + rtol*np.abs(g2)))
@@ -301,7 +301,7 @@ class LCPrimitive(object):
         m=max([len(n) for n in self.pnames])
         l = []
         errors = self.errors if hasattr(self,'errors') else [0]*len(self.pnames)
-        for i in xrange(len(self.pnames)):
+        for i in range(len(self.pnames)):
             fstring = '' if self.free[i] else ' [FIXED]'
             n=self.pnames[i][:m]
             t_n = n+(m-len(n))*' '
@@ -406,7 +406,7 @@ class LCWrappedFunction(LCPrimitive):
     def __call__(self,phases,log10_ens=3):
         """ Return wrapped template + DC component corresponding to truncation."""
         results = self.base_func(phases,log10_ens)
-        for i in xrange(1,MAXWRAPS+1):
+        for i in range(1,MAXWRAPS+1):
             t = self.base_func(phases,log10_ens,index= i)
             t += self.base_func(phases,log10_ens,index=-i)
             results += t
@@ -420,14 +420,14 @@ class LCWrappedFunction(LCPrimitive):
                      the num_parameter-dim gradient at each phase
         """
         results = self.base_grad(phases,log10_ens)
-        for i in xrange(1,MAXWRAPS+1):
+        for i in range(1,MAXWRAPS+1):
             t = self.base_grad(phases,log10_ens,index=i)
             t += self.base_grad(phases,log10_ens,index=-i)
             results += t
             if (i >= MINWRAPS) and (np.all(t < WRAPEPS)): break
         gn = self._grad_norm(i,log10_ens) 
         if gn is not None:
-            for i in xrange(len(gn)):
+            for i in range(len(gn)):
                 results[i,:] += gn[i]
         if free:
             return results[self.free]
@@ -437,7 +437,7 @@ class LCWrappedFunction(LCPrimitive):
         #if(x1==0) and (x2==0): return 1.
         # NB -- this method is probably overkill now.
         results = self.base_int(x1,x2,log10_ens,index=0)
-        for i in xrange(1,MAXWRAPS+1):
+        for i in range(1,MAXWRAPS+1):
             t = self.base_int(x1,x2,log10_ens,index=i)
             t += self.base_int(x1,x2,log10_ens,index=-i)
             results += t
@@ -885,7 +885,7 @@ class LCEmpiricalFourier(LCPrimitive):
     def to_file(self,output_file):
         f = open(output_file,'w')
         f.write('# fourier\n')
-        for i in xrange(self.nharm):
+        for i in range(self.nharm):
             f.write('%s\t%s\n'%(self.alphas[i],self.betas[i]))
 
     def __call__(self,phases,log10_ens=None):
@@ -1033,7 +1033,7 @@ class LCKernelDensity(LCPrimitive):
     def to_file(self,output_file):
         f = open(output_file,'w')
         f.write('# kernel\n')
-        for i in xrange(len(self.xvals)):
+        for i in range(len(self.xvals)):
             f.write('%s\t%s\n'%(self.xvals[i],self.yvals[i]))
 
     def integrate(self,x1=0,x2=1):
