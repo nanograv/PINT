@@ -29,6 +29,13 @@ def load_orbit(orb_filename):
 
     '''
     # Load photon times from FT1 file
+
+    if '_orb' in orb_filename:
+        log.warn("The NuSTAR orbit file you are providing is known to give"
+                 "a solution precise only to the ~0.5ms level. Use the "
+                 "pipeline-produced attitude-orbit file ('*.attorb.gz') for"
+                 "better precision.")
+
     hdulist = pyfits.open(orb_filename)
     orb_hdr=hdulist[1].header
     orb_dat=hdulist[1].data
@@ -38,7 +45,11 @@ def load_orbit(orb_filename):
     # TIMEREF should be 'LOCAL', since no delays are applied
     timesys = orb_hdr['TIMESYS']
     log.info("orb TIMESYS {0}".format(timesys))
-    timeref = orb_hdr['TIMEREF']
+    try:
+        timeref = orb_hdr['TIMEREF']
+    except KeyError:
+        timeref = 'LOCAL'
+
     log.info("orb TIMEREF {0}".format(timeref))
 
     # The X, Y, Z position are for the START time
