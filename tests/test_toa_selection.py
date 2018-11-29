@@ -1,6 +1,8 @@
 import pint.models.model_builder as mb
 import pint.toa as toa
 import numpy as np
+#import matplotlib
+#matplotlib.use('TKAgg')
 #import matplotlib.pyplot as plt
 from astropy.table import Table
 import astropy.units as u
