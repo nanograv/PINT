@@ -485,7 +485,7 @@ class TimingModel(object):
                 delay += df(toas, delay)
         return delay
 
-    def phase(self, toas, abs_phase=False):
+    def phase(self, toas, abs_phase=True):
         """Return the model-predicted pulse phase for the given TOAs."""
         # First compute the delays to "pulsar time"
         delay = self.delay(toas)
@@ -729,13 +729,12 @@ class TimingModel(object):
         return d_delay * (u.second/unit)
 
     def designmatrix(self, toas, acc_delay=None, scale_by_F0=True, \
-                     incfrozen=False, incoffset=True):
+                     incfrozen=False):
         """
         Return the design matrix: the matrix with columns of d_phase_d_param/F0
         or d_toa_d_param
         """
-        params = ['Offset',] if incoffset else []
-        params += [par for par in self.params if incfrozen or
+        params = [par for par in self.params if incfrozen or
                 not getattr(self, par).frozen]
 
         F0 = self.F0.quantity        # 1/sec
@@ -751,24 +750,18 @@ class TimingModel(object):
 
         M = np.zeros((ntoas, nparams))
         for ii, param in enumerate(params):
-            if param == 'Offset':
-                M[:,ii] = self.d_phase_d_param(toas, delay, 'TZRMJD')
-                units.append(u.s/u.s)
-            else:
-                # NOTE Here we add a negative sign. Since in pulsar timing
-                # the residuals are calculated as (Phase - int(Phase)), which is different
-                # from the conventional definition of least square definition (Data - model)
-                # We decide to add minus sign here in the design matrix, so the fitter
-                # keeps the conventional way.
-                q = - self.d_phase_d_param(toas, delay,param)
-                M[:,ii] = q
-                units.append(u.Unit("")/ getattr(self, param).units)
+            # NOTE Here we add a negative sign. Since in pulsar timing
+            # the residuals are calculated as (Phase - int(Phase)), which is different
+            # from the conventional definition of least square definition (Data - model)
+            # We decide to add minus sign here in the design matrix, so the fitter
+            # keeps the conventional way.
+            q = - self.d_phase_d_param(toas, delay,param)
+            M[:,ii] = q
+            units.append(u.cycle/ getattr(self, param).units)
 
         if scale_by_F0:
             mask = []
             for ii, un in enumerate(units):
-                if params[ii] == 'Offset':
-                    continue
                 units[ii] = un * u.second
                 mask.append(ii)
             M[:, mask] /= F0.value

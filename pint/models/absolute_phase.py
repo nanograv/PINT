@@ -8,6 +8,7 @@ from .timing_model import PhaseComponent
 import astropy.units as u
 import pint.toa as toa
 import numpy as np
+from pint import dimensionless_cycles
 
 class AbsPhase(PhaseComponent):
     """ This is a class that implements the absolute phase model. The model
@@ -68,4 +69,6 @@ class AbsPhase(PhaseComponent):
         """ The derivative of phase with respect to the absolute phase refrence
             time, TZRMJD.
         """
-        return np.ones(toas.ntoas) * (u.s/u.s)
+        with u.set_enabled_equivalencies(dimensionless_cycles):
+            return np.broadcast_to(self.F0.quantity.to(u.cycle/u.day),
+                                   toas.ntoas, True)

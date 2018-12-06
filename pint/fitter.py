@@ -86,7 +86,7 @@ class Fitter(object):
 
     def get_designmatrix(self):
         return self.model.designmatrix(toas=self.toas,
-                incfrozen=False, incoffset=True)
+                incfrozen=False)
 
     def minimize_func(self, x, *args):
         """Wrapper function for the residual class, meant to be passed to
