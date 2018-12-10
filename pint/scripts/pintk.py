@@ -145,12 +145,14 @@ def main(argv=None):
     parser.add_argument('parfile', help='parfile to use')
     parser.add_argument('timfile', help='timfile to use')
     parser.add_argument('--ephem', help='Ephemeris to use', default=None)
+    parser.add_argument('--test', help='Build UI and exit. Just for unit testing...',default=False, action='store_true')
     args = parser.parse_args(argv)
 
     root = tk.Tk()
     app = PINTk(root, parfile=args.parfile, timfile=args.timfile, ephem=args.ephem)
     root.protocol('WM_DELETE_WINDOW', root.destroy)
-    root.mainloop()
+    if not args.test:
+        root.mainloop()
 
 if __name__=='__main__':
     main()
