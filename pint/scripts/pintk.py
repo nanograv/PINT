@@ -149,9 +149,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     root = tk.Tk()
-    app = PINTk(root, parfile=args.parfile, timfile=args.timfile, ephem=args.ephem)
-    root.protocol('WM_DELETE_WINDOW', root.destroy)
     if not args.test:
+        app = PINTk(root, parfile=args.parfile, timfile=args.timfile, ephem=args.ephem)
+        root.protocol('WM_DELETE_WINDOW', root.destroy)
         root.mainloop()
 
 if __name__=='__main__':
