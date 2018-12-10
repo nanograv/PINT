@@ -217,7 +217,7 @@ def tempo_polyco_table_reader(filename):
     #Construct the polyco data table
     pTable = table.Table(entry_list,
                          names = ( 'psr','date','utc','tmid','dm',
-                         'doppler','logrms','binary_phase', 
+                         'doppler','logrms','binary_phase',
                          'mjd_span', 't_start', 't_stop',
                          'obs', 'obsfreq','entry'),
                          meta={'name': 'Polyco Data Table'})
@@ -303,7 +303,7 @@ def tempo_polyco_table_writer(polycoTable, filename = 'polyco.dat'):
         obs = entry.obs.ljust(43-39+1)
         tspan = str(round(entry.mjdspan.to('min').value,4))[0].ljust(49-44+1)
         if len(tspan) >= (49-44+1): # Hack to fix read errors in python
-            tspan = tspan+' ' 
+            tspan = tspan+' '
         ncoeff = str(entry.ncoeff).ljust(54-50+1)
         obsfreq = str(polycoTable['obsfreq'][i]).ljust(75-55+1)
         binPhase = str(polycoTable['binary_phase'][i]).ljust(80-76+1)
@@ -489,7 +489,7 @@ class Polycos(object):
                 toaMid = toa.get_TOAs_list([toa.TOA((np.modf(tmid.value)[1],
                                     np.modf(tmid.value)[0]),obs = obs,
                                     freq = obsFreq),])
-                refPhase = model.phase(toaMid.table)
+                refPhase = model.phase(toaMid)
                 mjdSpan = ((tStop-tStart)*u.day).to('min')
                 # Create node toas(Time sample using TOA class)
                 toaList = [toa.TOA((np.modf(toaNode)[1],
@@ -498,7 +498,7 @@ class Polycos(object):
 
                 toas = toa.get_TOAs_list(toaList)
 
-                ph = model.phase(toas.table)
+                ph = model.phase(toas)
                 dt = (nodes*u.day - tmid).to('min') # Use constant
                 rdcPhase = ph-refPhase
                 rdcPhase = rdcPhase.int-(dt.value*model.F0.value*60.0)*u.cycle+rdcPhase.frac
