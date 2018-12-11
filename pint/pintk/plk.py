@@ -16,7 +16,11 @@ except ImportError:
     import tkinter.filedialog as tkFileDialog
     import tkinter.messagebox as tkMessageBox
 import matplotlib as mpl
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+try:
+    from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
+except ImportError:
+    from matplotlib.backends.backend_tkagg import NavigationToolbar2TkAgg as NavigationToolbar2Tk
 import numpy as np
 import astropy.units as u
 import copy
@@ -208,12 +212,12 @@ class PlkXYChoiceWidget(tk.Frame):
         if self.updatePlot is not None:
             self.updatePlot()
 
-class PlkToolbar(NavigationToolbar2TkAgg):
+class PlkToolbar(NavigationToolbar2Tk):
     '''
     A modification of the stock Matplotlib toolbar to perform the
     necessary selections/unselections on points
     '''
-    toolitems = [t for t in NavigationToolbar2TkAgg.toolitems if
+    toolitems = [t for t in NavigationToolbar2Tk.toolitems if
                  t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom', 'Save')]
 
 class PlkActionsWidget(tk.Frame):
