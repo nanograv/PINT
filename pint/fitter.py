@@ -5,7 +5,7 @@ import astropy.units as u
 import abc
 import scipy.optimize as opt, scipy.linalg as sl
 from .residuals import resids
-
+from astropy import log
 
 class Fitter(object):
     """ Base class for fitter.
@@ -132,7 +132,13 @@ class WlsFitter(Fitter):
     def __init__(self, toas=None, model=None):
         super(WlsFitter, self).__init__(toas=toas, model=model)
         self.method = 'weighted_least_square'
+        self.parameter_cov_matrix = None
 
+    def get_parameter_cov_matrix(self):
+        if self.parameter_cov_matrix == None:
+            log.warning('Parameter cov. matrix unassigned, run fit_toas() first!')
+        return self.parameter_cov_matrix
+        
     def fit_toas(self, maxiter=1, threshold=False):
         """Run a linear weighted least-squared fitting method"""
         chi2 = 0
@@ -182,6 +188,7 @@ class WlsFitter(Fitter):
             # The post-fit parameter covariance matrix
             #   Sigma = V s^-2 V^T
             Sigma = np.dot(Vt.T / (s**2), Vt)
+            self.parameter_cov_matrix = Sigma
             # Parameter uncertainties.  Scale by fac recovers original units.
             errs = np.sqrt(np.diag(Sigma)) / fac
 
