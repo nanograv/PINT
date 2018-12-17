@@ -52,7 +52,10 @@ class polycoEntry:
     def __str__(self):
         return("Middle Point mjd : "+repr(self.tmid)+"\n"+
                "Time Span in mjd : "+repr(self.mjdspan)+"\n"+
+               "Time Start in mjd : "+repr(self.tstart)+"\n"+
+               "Time Stop in mjd : "+repr(self.tstop)+"\n"+
                "Reference Phase : "+repr(self.rphase)+"\n"+
+               "Reference Freq in Hz : "+repr(self.f0)+"\n"+
                "Number of Coefficients : "+repr(self.ncoeff)+"\n"+
                "Coefficients : "+repr(self.coeffs))
 
@@ -182,10 +185,10 @@ def tempo_polyco_table_reader(filename):
             binaryPhase = np.longdouble(0.0)
 
         # Read coefficients
-        nCoeffLines = nCoeff//3
+        nCoeffLines = int(np.ceil(nCoeff/3))
 
-        if nCoeff%3>0:
-            nCoeffLines += 1
+        #if nCoeff%3>0:
+        #    nCoeffLines += 1
         coeffs = []
 
         for i in range(nCoeffLines):
@@ -202,10 +205,11 @@ def tempo_polyco_table_reader(filename):
         rphase = Phase(refPhaseInt, refPhaseFrac)
         refF0 = np.longdouble(refF0)
         coeffs = np.longdouble(coeffs)
+        entry = polycoEntry(tmid,mjdspan,refPhaseInt,refPhaseFrac,refF0,
+                            nCoeff,coeffs,obs)
 
         entries.append((psrname, date, utc, tmid.value, dm, doppler, logrms,
-                        binaryPhase, obs, obsfreq, mjdSpan, tstart, tstop,
-                        rphase, refF0, nCoeff, coeffs))
+                        binaryPhase, mjdspan, tstart, tstop, obs, obsfreq, entry))
     entry_list  = []
     for ii in range(len(entries[0])):
         entry_list.append([t[ii] for t in entries])
@@ -213,10 +217,10 @@ def tempo_polyco_table_reader(filename):
     #Construct the polyco data table
     pTable = table.Table(entry_list,
                          names = ( 'psr','date','utc','tmid','dm',
-                         'dopper','logrms','binary_phase', 'obs', 'obsfreq',
-                         'mjd_span', 't_start', 't_stop','ref_phase','ref_freq',
-                         'num_coeffs', 'coeffs'),
-                         meta={'name': 'Ployco Data Table'})
+                         'doppler','logrms','binary_phase',
+                         'mjd_span', 't_start', 't_stop',
+                         'obs', 'obsfreq','entry'),
+                         meta={'name': 'Polyco Data Table'})
 
     pTable['index'] = np.arange(len(entries))
     return pTable
@@ -227,7 +231,7 @@ def tempo_polyco_table_writer(polycoTable, filename = 'polyco.dat'):
 
     Parameters
     ---------
-    polycoTalbe: astropy table
+    polycoTable: astropy table
         Polycos style table
     filename : str
         Name of the output poloco file.
@@ -273,12 +277,12 @@ def tempo_polyco_table_writer(polycoTable, filename = 'polyco.dat'):
     try:
         lenTable = len(polycoTable)
         if lenTable == 0:
-            errorMssg = ("No sufficent polyco data."+
-                         " Plese make sure polycoTable has data.")
+            errorMssg = ("Insufficent polyco data."+
+                         " Please make sure polycoTable has data.")
             raise AttributeError(errorMssg)
 
     except:
-        errorMssg = "No sufficent polycoTable. "
+        errorMssg = "Insufficent polycoTable. "
         raise AttributeError(errorMssg)
 
     for i in range(lenTable):
@@ -288,16 +292,18 @@ def tempo_polyco_table_writer(polycoTable, filename = 'polyco.dat'):
         utcHMS = polycoTable['utc'][i][0:9].ljust(10)
         tmidMjd = utils.longdouble2string(entry.tmid.value)+' '
         dm = str(polycoTable['dm'][i]).ljust(72-52+1)
-        dshift = str(polycoTable['dopper'][i]).ljust(79-74+1)
+        dshift = str(polycoTable['doppler'][i]).ljust(79-74+1)
         logrms = str(polycoTable['logrms'][i]).ljust(80-86+1)
-
         line1 = psrname+dateDMY+utcHMS+tmidMjd+dm+dshift+logrms+'\n'
+
         # Get the reference phase
-        rph = (entry.rphase.int+entry.rphase.frac).data[0]
+        rph = (entry.rphase.int+entry.rphase.frac).value[0]
         rphase  = utils.longdouble2string(rph)[0:19].ljust(20)
         f0 = ('%.12lf' % entry.f0).ljust(38-21+1)
         obs = entry.obs.ljust(43-39+1)
-        tspan = (str(entry.mjdspan.to('min')).split())[0].ljust(49-44+1)
+        tspan = str(round(entry.mjdspan.to('min').value,4))[0].ljust(49-44+1)
+        if len(tspan) >= (49-44+1): # Hack to fix read errors in python
+            tspan = tspan+' '
         ncoeff = str(entry.ncoeff).ljust(54-50+1)
         obsfreq = str(polycoTable['obsfreq'][i]).ljust(75-55+1)
         binPhase = str(polycoTable['binary_phase'][i]).ljust(80-76+1)
@@ -315,7 +321,7 @@ def tempo_polyco_table_writer(polycoTable, filename = 'polyco.dat'):
 
 class Polycos(object):
     """
-    A class for polycos model. Ployco is a fast phase calculator. It fits a set
+    A class for polycos model. Polyco is a fast phase calculator. It fits a set
     of data using polynomials.
 
 
@@ -350,8 +356,9 @@ class Polycos(object):
     def add_polyco_file_format(self, formatName, methodMood, readMethod = None,
                                 writeMethod = None):
         """
-        Add a polyco file format and its reading/writting method to the class.
+        Add a polyco file format and its reading/writing method to the class.
         Then register it to the table reading.
+
         Parameters
         ---------
         formatName : str
@@ -364,6 +371,7 @@ class Polycos(object):
             The method for reading the file format.
         writeMethod : method
             The method for writting the file to disk.
+
         """
         # Check if the format already exist.
         if (formatName in [f['format'] for f in self.polycoFormat]
@@ -391,7 +399,7 @@ class Polycos(object):
                                     pFormat['write_method'])
         elif methodMood == 'rw':
             if readMethod == None or writeMethod == None:
-                raise BaseException('Argument readMethod and writeMethod'
+                raise BaseException('Argument readMethod and writeMethod '
                                     'should not be \'None\'.')
 
             pFormat['read_method'] = readMethod
@@ -406,15 +414,15 @@ class Polycos(object):
 
 
     def generate_polycos(self, model, mjdStart, mjdEnd, obs,
-                         segLength, ncoeff, obsFreq, maxha,
-                         method = "TEMPO",numNodes = 20):
+                         segLength, ncoeff, obsFreq, maxha = 12.0,
+                         method = "TEMPO", numNodes = 20):
         """
-        Generate the polyco file data file.
+        Generate the polyco data.
 
         Parameters
         ---------
         model : TimingModel
-            TimingModel for generate the Polycos with parameters
+            TimingModel to generate the Polycos with parameters
             setup.
 
         mjdStart : float / nump longdouble
@@ -426,27 +434,27 @@ class Polycos(object):
         obs : str
             Observatory code
 
-        segLength :
+        segLength : float
             Length of polyco segement [unit: minutes]
 
-        ncoeff :
+        ncoeff : int
             number of coefficents
 
-        obsFreq :
-            observing frequency
+        obsFreq : float
+            observing frequency [unit: MHz]
 
-        maxha :
+        maxha : float optional. Default 12.0
             Maximum hour angle
 
-        method : sting optional ['TEMPO','TEMPO2',...] Default TEMPO
-            Method to generate polycos. Now it is only support the TEMPO method.
+        method : string optional ['TEMPO','TEMPO2',...] Default TEMPO
+            Method to generate polycos. Only the TEMPO method is supported for now.
 
         numNodes : int optional. Default 20
-            Number of nodes for fitting. It can not be less then the number of
+            Number of nodes for fitting. It cannot be less then the number of
             coefficents.
+
         Return
         ---------
-
         A polyco table.
 
 
@@ -469,6 +477,7 @@ class Polycos(object):
         # Make sure the number of nodes is bigger then number of coeffs.
         if numNodes < ncoeff:
             numNodes = ncoeff+1
+
         # generate the ploynomial coefficents
         if method == "TEMPO":
             # Using tempo1 method to create polycos
@@ -480,7 +489,7 @@ class Polycos(object):
                 toaMid = toa.get_TOAs_list([toa.TOA((np.modf(tmid.value)[1],
                                     np.modf(tmid.value)[0]),obs = obs,
                                     freq = obsFreq),])
-                refPhase = model.phase(toaMid.table)
+                refPhase = model.phase(toaMid)
                 mjdSpan = ((tStop-tStart)*u.day).to('min')
                 # Create node toas(Time sample using TOA class)
                 toaList = [toa.TOA((np.modf(toaNode)[1],
@@ -489,11 +498,11 @@ class Polycos(object):
 
                 toas = toa.get_TOAs_list(toaList)
 
-                ph = model.phase(toas.table)
+                ph = model.phase(toas)
                 dt = (nodes*u.day - tmid).to('min') # Use constant
                 rdcPhase = ph-refPhase
-                rdcPhase = rdcPhase.int-dt.value*model.F0.value*60.0+rdcPhase.frac
-                dtd = dt.value.astype(float)  # Trancate to double
+                rdcPhase = rdcPhase.int-(dt.value*model.F0.value*60.0)*u.cycle+rdcPhase.frac
+                dtd = dt.value.astype(float)  # Truncate to double
                 rdcPhased = rdcPhase.astype(float)
                 coeffs = np.polyfit(dtd,rdcPhased,ncoeff-1)
                 coeffs = coeffs[::-1]
@@ -507,12 +516,14 @@ class Polycos(object):
                                 refPhase.int,refPhase.frac, model.F0.value, ncoeff,
                                 coeffs,obs)
                 entryList.append((model.PSR.value, date, hms, tmid.value,
-                                  model.DM.value,0.0,0.0,0.0,obsFreq,entry))
+                                  model.DM.value,0.0,0.0,0.0,mjdSpan.to('day').value,
+                                  tStart,tStop,obs,obsFreq,entry))
 
             pTable = table.Table(rows = entryList, names = ('psr','date','utc',
-                                  'tmid','dm','dopper','logrms','binary_phase',
-                                  'obsfreq','entry'),
-                                   meta={'name': 'Ployco Data Table'})
+                                  'tmid','dm','doppler','logrms','binary_phase',
+                                  'mjd_span','t_start','t_stop',
+                                  'obs','obsfreq','entry'),
+                                   meta={'name': 'Polyco Data Table'})
             self.polycoTable = pTable
 
         else:
@@ -534,12 +545,13 @@ class Polycos(object):
         Return
         ---------
         Polycos Table with read_in data.
+
         """
         self.fileName = filename
 
         if format not in [f['format'] for f in self.polycoFormat]:
             raise Exception('Unknown polyco file format \''+ format +'\'\n'
-                            'Plese use function \'self.add_polyco_file_format()\''
+                            'Please use function \'self.add_polyco_file_format()\''
                             ' to register the format\n')
         else:
             self.fileFormat = format
@@ -552,7 +564,7 @@ class Polycos(object):
 
         if format not in [f['format'] for f in self.polycoFormat]:
             raise Exception('Unknown polyco file format \''+ format +'\'\n'
-                           'Plese use function \'self.add_polyco_file_format()\''
+                           'Please use function \'self.add_polyco_file_format()\''
                            ' to register the format\n')
         if filename is not None:
             self.polycoTable.write(filename,format = format)
@@ -568,12 +580,12 @@ class Polycos(object):
         try:
             lenEntry = len(self.polycoTable)
             if lenEntry == 0:
-                errorMssg = ("No sufficent polyco data."
-                             "Plese read or generate polyco data correctlly.")
+                errorMssg = ("Insufficent polyco data."
+                             "Please read or generate polyco data correctly.")
                 raise AttributeError(errorMssg)
 
         except:
-            errorMssg = "No sufficent polyco data. Plese read or generate polyco data correctlly."
+            errorMssg = "Insufficent polyco data. Please read or generate polyco data correctly."
             raise AttributeError(errorMssg)
 
         startIndex = np.searchsorted(self.polycoTable['t_start'], t)
@@ -583,7 +595,7 @@ class Polycos(object):
             errorMssg = "Input time "
             for i in overFlow:
                 errorMssg += str(t[i]) + " "
-            errorMssg += " may be not coverd by entries."
+            errorMssg += "may be not coverd by entries."
             raise ValueError(errorMssg)
 
         return entryIndex
@@ -595,15 +607,19 @@ class Polycos(object):
 
     def eval_abs_phase(self,t):
         '''
-        Polyco evalate absolute phase for a time array.
+        Polyco evaluate absolute phase for a time array.
+
         Parameters
         ---------
         t: numpy.ndarray or a single number.
            An time array in MJD. Time sample should be in order
+
         Returns
         ---------
         out: PINT Phase class
              Polyco evaluated absolute phase for t.
+
+        phase = refPh + DT*60*F0 + COEFF(1) + COEFF(2)*DT + COEFF(3)*DT**2 + ...
         '''
         if not isinstance(t, (np.ndarray, list)):
             t = np.array([t,])
@@ -627,7 +643,20 @@ class Polycos(object):
         return absPhase
 
     def eval_spin_freq(self,t):
-        """FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ....)
+        """
+        Polyco evaluate spin frequency for a time array.
+
+        Parameters
+        ---------
+        t: numpy.ndarray or a single number.
+           An time array in MJD. Time sample should be in order
+
+        Returns
+        ---------
+        out: numpy array of float128 frequencies in Hz
+             Polyco evaluated spin frequency at time t.
+
+        FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ...)
         """
         if not isinstance(t, np.ndarray) and not isinstance(t,list):
             t = np.array([t,])
@@ -638,10 +667,10 @@ class Polycos(object):
         dt = (np.longdouble(t) - self.polycoTable[entryIndex]['tmid']) * np.longdouble(1440.0)
         s = np.longdouble(0.0)
         for ii, (tt, eidx) in enumerate(zip(dt, entryIndex)):
-            coeffs = self.polycoTable[eidx]['coeffs']
+            coeffs = self.polycoTable['entry'][eidx].coeffs
             coeffs = np.longdouble(range(len(coeffs))) * coeffs
             coeffs = coeffs[::-1][:-1]
             poly_result[ii] = np.polyval(coeffs, tt)
-        spinFreq = self.polycoTable[entryIndex]['ref_freq'] + poly_result / np.longdouble(60.0)
+        spinFreq = np.array([self.polycoTable['entry'][eidx].f0 + poly_result[ii] / np.longdouble(60.0) for ii,eidx in zip(range(len(t)),entryIndex)])
 
         return spinFreq

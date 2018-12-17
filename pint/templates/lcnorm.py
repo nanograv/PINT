@@ -32,7 +32,7 @@ class NormAngles(object):
     def init(self):
         self.free = np.asarray([True]*self.dim,dtype=bool)
         self.errors = np.zeros(self.dim)
-        self.pnames = ['Ang%d'%(i+1) for i in xrange(self.dim)]
+        self.pnames = ['Ang%d'%(i+1) for i in range(self.dim)]
         self.name = 'NormAngles'
         self.shortname = 'None'
 
@@ -68,7 +68,7 @@ class NormAngles(object):
             fstring = '' if self.free[i] else ' [FIXED]'
             return 'P%d : %.4f +\- %.4f%s'%(i+1,norms[i],errs[i],fstring)
         s0 = '\nMixture Amplitudes\n------------------\n'+\
-             '\n'.join([norm_string(i) for i in xrange(self.dim)])+\
+             '\n'.join([norm_string(i) for i in range(self.dim)])+\
              '\nDC : %.4f +\- %.4f'%(1-self.get_total(),dcerr)
         return s0
 
@@ -90,7 +90,7 @@ class NormAngles(object):
                 raise ValueError('Invalid norm specification')
         angles = [asin(sines)]
         norms = np.asarray(norms)**0.5
-        for i in xrange(self.dim-1):
+        for i in range(self.dim-1):
             t = norms[i]/sines
             if (t > 1):
                 if (abs(t-1)<1e-12):
@@ -136,7 +136,7 @@ class NormAngles(object):
 
     def get_bounds(self):
         """ Angles are always [0,pi/2). """
-        return np.asarray([ [0,pi/2] for i in xrange(self.dim) ])[self.free]
+        return np.asarray([ [0,pi/2] for i in range(self.dim) ])[self.free]
 
     def sanity_checks(self,eps=1e-6):
         t1 = abs(self().sum() - sin(self.p[0])**2) < eps
@@ -160,7 +160,7 @@ class NormAngles(object):
         p = self.p
         m = sin(p[0]) # normalization
         norms = np.empty(self.dim)
-        for i in xrange(1,self.dim):
+        for i in range(1,self.dim):
             norms[i-1] = m * cos(p[i])
             m *= sin(p[i])
         norms[self.dim-1] = m
@@ -187,8 +187,8 @@ class NormAngles(object):
         n = self()
         p = self.p
         cots = 1./np.tan(p)
-        for i in xrange(self.dim):
-            for j in xrange(self.dim):
+        for i in range(self.dim):
+            for j in range(self.dim):
                 if j > (i+1): break
                 if j <= i:
                     m[i,j] = n[i]*cots[j]

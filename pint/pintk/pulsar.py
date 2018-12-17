@@ -52,12 +52,12 @@ class Pulsar(object):
         print(self.prefit_model.as_parfile())
 
         if ephem is not None:
-            self.toas = pint.toa.get_TOAs(self.timfile, ephem=ephem)
+            self.toas = pint.toa.get_TOAs(self.timfile, ephem=ephem, planets=True)
             self.prefit_model.EPHEM.value = ephem
         elif getattr(self.prefit_model, 'EPHEM').value is not None:
-            self.toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value)
+            self.toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value,planets=True)
         else:
-            self.toas = pint.toa.get_TOAs(self.timfile)
+            self.toas = pint.toa.get_TOAs(self.timfile,planets=True)
         self.toas.print_summary()
 
         self.prefit_resids = pint.residuals.resids(self.toas, self.prefit_model)
@@ -91,9 +91,9 @@ class Pulsar(object):
     def reset_TOAs(self):
 
         if getattr(self.prefit_model, 'EPHEM').value is not None:
-            self.toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value)
+            self.toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value,planets=True)
         else:
-            self.toas = pint.toa.get_TOAs(self.timfile)
+            self.toas = pint.toa.get_TOAs(self.timfile,planets=True)
 
         if self.track_added:
             self.prefit_model.TRACK.value = ''
@@ -109,9 +109,9 @@ class Pulsar(object):
         self.fitted = False
 
         if getattr(self.prefit_model, 'EPHEM').value is not None:
-            self.toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value)
+            self.toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value,planets=True)
         else:
-            self.toas = pint.toa.get_TOAs(self.timfile)
+            self.toas = pint.toa.get_TOAs(self.timfile,planets=True)
         
         self.update_resids()
    

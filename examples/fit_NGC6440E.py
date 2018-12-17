@@ -5,7 +5,11 @@ import pint.models
 import pint.fitter
 import pint.residuals
 import pint.models.model_builder as mb
+
+#import matplotlib
+#matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
+
 import astropy.units as u
 import os
 

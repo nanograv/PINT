@@ -4,7 +4,11 @@ import pint.models as tm
 from pint.phase import Phase
 from pint import toa
 from pint import fitter
+
+#import matplotlib
+#matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
+
 import numpy
 
 from pinttestdata import testdir, datadir

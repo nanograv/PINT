@@ -6,9 +6,16 @@ PINTk: Tkinter interactive interface for PINT pulsar timing tool
 from __future__ import absolute_import, print_function, division
 import os, sys
 import numpy as np
-import Tkinter as tk
-import tkFileDialog
-import tkMessageBox
+try:
+    # Python2
+    import Tkinter as tk
+    import tkFileDialog
+    import tkMessageBox
+except ImportError:
+    # Python3
+    import tkinter as tk
+    import tkinter.filedialog as tkFileDialog
+    import tkinter.messagebox as tkMessageBox
 import code
 import argparse
 
@@ -138,12 +145,14 @@ def main(argv=None):
     parser.add_argument('parfile', help='parfile to use')
     parser.add_argument('timfile', help='timfile to use')
     parser.add_argument('--ephem', help='Ephemeris to use', default=None)
+    parser.add_argument('--test', help='Build UI and exit. Just for unit testing...',default=False, action='store_true')
     args = parser.parse_args(argv)
 
     root = tk.Tk()
-    app = PINTk(root, parfile=args.parfile, timfile=args.timfile, ephem=args.ephem)
-    root.protocol('WM_DELETE_WINDOW', root.destroy)
-    root.mainloop()
+    if not args.test:
+        app = PINTk(root, parfile=args.parfile, timfile=args.timfile, ephem=args.ephem)
+        root.protocol('WM_DELETE_WINDOW', root.destroy)
+        root.mainloop()
 
 if __name__=='__main__':
     main()

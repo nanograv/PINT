@@ -289,7 +289,7 @@ class GLSFitter(Fitter):
             if full_cov:
                 chi2 = np.dot(newres, sl.cho_solve(cf, newres))
             else:
-                chi2 = np.dot(newres, cinv*newres)
+                chi2 = np.dot(newres, cinv*newres) + np.dot(xhat,phiinv*xhat)
 
             # compute absolute estimates, normalized errors, covariance matrix
             dpars = xhat/norm
