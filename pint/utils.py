@@ -141,7 +141,6 @@ def time_from_mjd_string(s, scale='utc'):
         imjd_s, fmjd_s = mjd_s
         imjd = int(imjd_s)
         fmjd = float("0." + fmjd_s)
-
     return astropy.time.Time(imjd, fmjd, scale=scale, format='pulsar_mjd',
                              precision=9)
 
@@ -159,10 +158,13 @@ def time_to_mjd_string(t, prec=15):
     if t.format == 'pulsar_mjd':
         (imjd, fmjd) = day_frac(t.jd1 - DJM0, t.jd2)
         imjd = int(imjd)
-        if fmjd<0.0: 
+        if fmjd<0.0:
             imjd -= 1
         y, mo, d, hmsf = d2dtf('UTC',9,t.jd1,t.jd2)
-        fmjd = (hmsf[...,0]/24.0 + hmsf[...,1]/1440.0 
+
+        if hmsf[0].size == 1:
+            hmsf = np.array([list(hmsf)])
+        fmjd = (hmsf[...,0]/24.0 + hmsf[...,1]/1440.0
                 + hmsf[...,2]/86400.0 + hmsf[...,3]/86400.0e9)
     else:
         (imjd, fmjd) = day_frac(t.jd1 - DJM0, t.jd2)
