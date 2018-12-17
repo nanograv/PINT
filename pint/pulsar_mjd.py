@@ -21,8 +21,9 @@ class TimePulsarMJD(TimeFormat):
             (y,mo,d,f) = erfa.jd2cal(erfa.DJM0+v1,v2)
             # Fractional day to HMS.  Uses 86400-second day always.
             # Seems like there should be a ERFA routine for this..
-            h = int(numpy.floor(f*24.0))
-            m = int(numpy.floor(numpy.remainder(f*1440.0,60)))
+            h = numpy.asarray(numpy.floor(f*24.0), dtype=int)
+            m = numpy.asarray(numpy.floor(numpy.remainder(f*1440.0,60)),
+                              dtype=int)
             s = numpy.remainder(f*86400.0,60)
             self.jd1, self.jd2 = erfa.dtf2d('UTC',y,mo,d,h,m,s)
         else:
