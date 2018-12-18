@@ -4,6 +4,15 @@ from astropy.time.utils import day_frac
 import astropy._erfa as erfa
 import numpy
 
+
+def safe_kind_conversion(values, dtype):
+    import collections
+    if isinstance(values, collections.Iterable):
+        return numpy.asarray(values, dtype=dtype)
+    else:
+        return dtype(values)
+
+
 class TimePulsarMJD(TimeFormat):
     """MJD using tempo/tempo2 convention for time within leap second days.
     This is only relevant if scale='utc', otherwise will act like the
@@ -21,8 +30,8 @@ class TimePulsarMJD(TimeFormat):
             (y,mo,d,f) = erfa.jd2cal(erfa.DJM0+v1,v2)
             # Fractional day to HMS.  Uses 86400-second day always.
             # Seems like there should be a ERFA routine for this..
-            h = numpy.asarray(numpy.floor(f*24.0), dtype=int)
-            m = numpy.asarray(numpy.floor(numpy.remainder(f*1440.0,60)),
+            h = safe_kind_conversion(numpy.floor(f*24.0), dtype=int)
+            m = safe_kind_conversion(numpy.floor(numpy.remainder(f*1440.0,60)),
                               dtype=int)
             s = numpy.remainder(f*86400.0,60)
             self.jd1, self.jd2 = erfa.dtf2d('UTC',y,mo,d,h,m,s)
