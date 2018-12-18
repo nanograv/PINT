@@ -14,7 +14,9 @@ from pint.pulsar_ecliptic import PulsarEcliptic, OBL
 from pint import ls
 from pint import utils
 import time
+import sys
 
+astropy_version = sys.modules['astropy'].__version__
 mas_yr = (u.mas / u.yr)
 
 try:
@@ -408,9 +410,17 @@ class AstrometryEcliptic(Astrometry):
         result = dict()
         # NOTE This feature below needs astropy version 2.0.
         dlon_coslat = self.PMELONG.quantity #* numpy.cos(self.ELAT.quantity.radian)
-
-        pv_ECL = PulsarEcliptic(lon=self.ELONG.quantity, lat=self.ELAT.quantity,
-                                d_lon_coslat=dlon_coslat, d_lat=self.PMELAT.quantity)
+        # Astropy2 and astropy3 have different APIs
+        if int(astropy_version.split('.')[0]) <= 2:
+            pv_ECL = PulsarEcliptic(lon=self.ELONG.quantity,
+                                    lat=self.ELAT.quantity,
+                                    d_lon_coslat=dlon_coslat,
+                                    d_lat=self.PMELAT.quantity)
+        else:
+            pv_ECL = PulsarEcliptic(lon=self.ELONG.quantity,
+                                    lat=self.ELAT.quantity,
+                                    pm_lon_coslat=dlon_coslat,
+                                    pm_lat=self.PMELAT.quantity)
         pv_ICRS = pv_ECL.transform_to(coords.ICRS)
         result['RAJ'] = pv_ICRS.ra.to(u.hourangle)
         result['DECJ'] = pv_ICRS.dec
