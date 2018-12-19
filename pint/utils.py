@@ -158,7 +158,7 @@ def time_to_mjd_string(t, prec=15):
     if t.format == 'pulsar_mjd':
         (imjd, fmjd) = day_frac(t.jd1 - DJM0, t.jd2)
         imjd = int(imjd)
-        if fmjd<0.0:
+        if fmjd < 0.0:
             imjd -= 1
         y, mo, d, hmsf = d2dtf('UTC',9,t.jd1,t.jd2)
 
