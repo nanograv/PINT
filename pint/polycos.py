@@ -3,14 +3,15 @@
 # information and the polynomial coefficients
 from __future__ import absolute_import, print_function, division
 import functools
-from ..phase import Phase
+from .phase import Phase
 import numpy as np
 import pint.toa as toa
 import pint.utils as utils
 import astropy.units as u
 import astropy.constants as const
 import astropy.time as at
-from .parameter import Parameter
+from .models.parameter import Parameter
+from .utils import data2longdouble
 import astropy.table as table
 from astropy.io import registry
 MIN_PER_DAY = 60.0*24.0
@@ -41,12 +42,12 @@ class polycoEntry:
     def __init__(self,tmid,mjdspan,rphaseInt,rphaseFrac,f0,ncoeff,coeffs,obs):
         self.tmid = tmid*u.day
         self.mjdspan = mjdspan*u.day
-        self.tstart = np.longdouble(self.tmid) - np.longdouble(self.mjdspan)/2.0
-        self.tstop = np.longdouble(self.tmid) + np.longdouble(self.mjdspan)/2.0
+        self.tstart = data2longdouble(self.tmid) - data2longdouble(self.mjdspan)/2.0
+        self.tstop = data2longdouble(self.tmid) + data2longdouble(self.mjdspan)/2.0
         self.rphase = Phase(rphaseInt,rphaseFrac)
-        self.f0 = np.longdouble(f0)
+        self.f0 = data2longdouble(f0)
         self.ncoeff = ncoeff
-        self.coeffs = np.longdouble(coeffs)
+        self.coeffs = data2longdouble(coeffs)
         self.obs = obs
 
     def __str__(self):
@@ -65,7 +66,7 @@ class polycoEntry:
 
     def evalabsphase(self,t):
         '''Return the phase at time t, computed with this polyco entry'''
-        dt = (np.longdouble(t)-self.tmid.value)*np.longdouble(1440.0)
+        dt = (data2longdouble(t)-self.tmid.value)*data2longdouble(1440.0)
         # Compute polynomial by factoring out the dt's
         phase = Phase(self.coeffs[self.ncoeff-1]) # Compute phase using two long double
         for i in range(self.ncoeff-2,-1,-1):
@@ -84,20 +85,20 @@ class polycoEntry:
 
     def evalfreq(self,t):
         '''Return the freq at time t, computed with this polyco entry'''
-        dt = (np.longdouble(t)-self.tmid.value)*np.longdouble(1440.0)
-        s = np.longdouble(0.0)
+        dt = (data2longdouble(t)-self.tmid.value)*data2longdouble(1440.0)
+        s = data2longdouble(0.0)
         for i in range(1,self.ncoeff):
-            s += np.longdouble(i) * self.coeffs[i] * dt**(i-1)
+            s += data2longdouble(i) * self.coeffs[i] * dt**(i-1)
         freq = self.f0 + s/60.0
         return(freq)
 
     def evalfreqderiv(self,t):
         """ Return the frequency derivative at time t."""
-        dt = (np.longdouble(t)-self.tmid.value)*np.longdouble(1440.0)
-        s = np.longdouble(0.0)
+        dt = (data2longdouble(t)-self.tmid.value)*data2longdouble(1440.0)
+        s = data2longdouble(0.0)
         for i in range(2,self.ncoeff):
             # Change to long double
-            s += np.longdouble(i) * np.longdouble(i-1) * self.coeffs[i] * dt**(i-2)
+            s += data2longdouble(i) * data2longdouble(i-1) * self.coeffs[i] * dt**(i-2)
         freqd = s/(60.0*60.0)
         return(freqd)
 
@@ -168,21 +169,21 @@ def tempo_polyco_table_reader(filename):
         line2 = f.readline()
         fields = line2.split()
         refPhaseInt,refPhaseFrac = fields[0].split('.')
-        refPhaseInt = np.longdouble(refPhaseInt)
-        refPhaseFrac = np.longdouble('.'+refPhaseFrac)
+        refPhaseInt = data2longdouble(refPhaseInt)
+        refPhaseFrac = data2longdouble('.'+refPhaseFrac)
         if refPhaseInt<0:
             refPhaseFrac = -refPhaseFrac
 
-        refF0 = np.longdouble(fields[1])
+        refF0 = data2longdouble(fields[1])
         obs = fields[2]
-        mjdSpan = np.longdouble(fields[3])/MIN_PER_DAY   # Here change to constant
+        mjdSpan = data2longdouble(fields[3])/MIN_PER_DAY   # Here change to constant
         nCoeff = int(fields[4])
         obsfreq = float(fields[5].strip())
 
         try:
-            binaryPhase = np.longdouble(fields[6])
+            binaryPhase = data2longdouble(fields[6])
         except:
-            binaryPhase = np.longdouble(0.0)
+            binaryPhase = data2longdouble(0.0)
 
         # Read coefficients
         nCoeffLines = int(np.ceil(nCoeff/3))
@@ -194,17 +195,17 @@ def tempo_polyco_table_reader(filename):
         for i in range(nCoeffLines):
             line = f.readline()
             for c in line.split():
-                coeffs.append(np.longdouble(c))
+                coeffs.append(data2longdouble(c))
         coeffs = np.array(coeffs)
 
 
         tmid = tmid*u.day
         mjdspan = mjdSpan*u.day
-        tstart = np.longdouble(tmid) - np.longdouble(mjdspan)/2.0
-        tstop = np.longdouble(tmid) + np.longdouble(mjdspan)/2.0
+        tstart = data2longdouble(tmid) - data2longdouble(mjdspan)/2.0
+        tstop = data2longdouble(tmid) + data2longdouble(mjdspan)/2.0
         rphase = Phase(refPhaseInt, refPhaseFrac)
-        refF0 = np.longdouble(refF0)
-        coeffs = np.longdouble(coeffs)
+        refF0 = data2longdouble(refF0)
+        coeffs = data2longdouble(coeffs)
         entry = polycoEntry(tmid,mjdspan,refPhaseInt,refPhaseFrac,refF0,
                             nCoeff,coeffs,obs)
 
@@ -459,15 +460,15 @@ class Polycos(object):
 
 
         """
-        mjdStart = np.longdouble(mjdStart)*u.day
-        mjdEnd = np.longdouble(mjdEnd)*u.day
+        mjdStart = data2longdouble(mjdStart)*u.day
+        mjdEnd = data2longdouble(mjdEnd)*u.day
         timeLength = mjdEnd-mjdStart
-        segLength = np.longdouble(segLength)*u.min
+        segLength = data2longdouble(segLength)*u.min
         obsFreq = float(obsFreq)
         month = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug',
                  'Sep','Oct','Nov','Dec']
         # Alocate memery
-        coeffs = np.longdouble(np.zeros(ncoeff))
+        coeffs = data2longdouble(np.zeros(ncoeff))
         entryList = []
         entryIntvl = np.arange(mjdStart.value,mjdEnd.value,
                                 segLength.to('day').value)
@@ -662,15 +663,15 @@ class Polycos(object):
             t = np.array([t,])
 
         entryIndex = self.find_entry(t)
-        poly_result = np.longdouble(np.zeros(len(t)))
+        poly_result = data2longdouble(np.zeros(len(t)))
 
-        dt = (np.longdouble(t) - self.polycoTable[entryIndex]['tmid']) * np.longdouble(1440.0)
-        s = np.longdouble(0.0)
+        dt = (data2longdouble(t) - self.polycoTable[entryIndex]['tmid']) * data2longdouble(1440.0)
+        s = data2longdouble(0.0)
         for ii, (tt, eidx) in enumerate(zip(dt, entryIndex)):
             coeffs = self.polycoTable['entry'][eidx].coeffs
-            coeffs = np.longdouble(range(len(coeffs))) * coeffs
+            coeffs = data2longdouble(range(len(coeffs))) * coeffs
             coeffs = coeffs[::-1][:-1]
             poly_result[ii] = np.polyval(coeffs, tt)
-        spinFreq = np.array([self.polycoTable['entry'][eidx].f0 + poly_result[ii] / np.longdouble(60.0) for ii,eidx in zip(range(len(t)),entryIndex)])
+        spinFreq = np.array([self.polycoTable['entry'][eidx].f0 + poly_result[ii] / data2longdouble(60.0) for ii,eidx in zip(range(len(t)),entryIndex)])
 
         return spinFreq
