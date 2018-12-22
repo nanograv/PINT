@@ -32,7 +32,7 @@ JD_MJD = 2400000.5
 
 def get_TOAs(timfile, ephem=None, include_bipm=True, bipm_version='BIPM2015',
              include_gps=True, planets=False, usepickle=False,
-             tdb_method="default"):
+             tdb_method="default", **kwargs):
     """Convenience function to load and prepare TOAs for PINT use.
 
     Loads TOAs from a '.tim' file, applies clock corrections, computes
@@ -101,7 +101,7 @@ def _check_pickle(toafilename, picklefilename=None):
 
 def get_TOAs_list(toa_list,ephem=None, include_bipm=True,
                   bipm_version='BIPM2015', include_gps=True, planets=False,
-                  tdb_method="default"):
+                  tdb_method="default", **kwargs):
     """Load TOAs from a list of TOA objects.
 
     Compute the TDB time and observatory positions and velocity
@@ -406,7 +406,7 @@ class TOA(object):
                 fmt = 'mjd'
             t = time.Time(arg1, arg2, scale=scale,
                     format=fmt, precision=9)
-                        
+
         # Now assign the site location to the Time, for use in the TDB conversion
         # Time objects are immutable so you must make a new one to add the location!
         # Use the intial time to look up the observatory location
@@ -728,7 +728,7 @@ class TOAs(object):
         for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'].quantity,
             self.table['freq'].quantity,self.table['obs'],self.table['flags']):
             obs_obj = Observatory.get(obs)
-            
+
             if 'clkcorr' in flags.keys():
                 toatime_out = toatime - time.TimeDelta(flags['clkcorr'])
             else:
@@ -737,7 +737,7 @@ class TOAs(object):
                       flags=flags, format=format)
             outf.write(out_str)
 
-            
+
         # If pulse numbers were added to flags, remove them again
         if pnChange:
             for flags in self.table['flags']:
@@ -765,7 +765,7 @@ class TOAs(object):
         https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
 
         """
-        
+
         # First make sure that we haven't already applied clock corrections
         flags = self.table['flags']
         if any(['clkcorr' in f for f in flags]):
@@ -880,7 +880,7 @@ class TOAs(object):
         using the 'ephem' parameter.  The positions and velocities are
         set with PosVel class instances which have astropy units.
         """
-        
+
         if ephem is None:
             if self.ephem is not None:
                 ephem = self.ephem
@@ -930,14 +930,14 @@ class TOAs(object):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
-            site = get_observatory(obs)            
+            site = get_observatory(obs)
             tdb = time.Time(grp['tdb'],precision=9)
-            
+
             if isinstance(site,SpacecraftObs): #spacecraft-topocentric toas
                 ssb_obs = site.posvel(tdb,ephem,grp)
             else:
                 ssb_obs = site.posvel(tdb,ephem)
-            
+
             log.debug("SSB obs pos {0}".format(ssb_obs.pos[:,0]))
             ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T.to(u.km)
             ssb_obs_vel[loind:hiind,:] = ssb_obs.vel.T.to(u.km/u.s)
