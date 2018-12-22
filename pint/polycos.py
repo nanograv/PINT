@@ -626,8 +626,8 @@ class Polycos(object):
             t = np.array([t,])
 
         entryIndex = self.find_entry(t)
-        phaseInt = np.array([])
-        phaseFrac= np.array([])
+        phaseInt = ()
+        phaseFrac= ()
         # Compute phase for time in each entry
         for i in range(len(self.polycoTable)):
             mask = np.where(entryIndex==i) # Build mask for time in each entry
@@ -636,10 +636,12 @@ class Polycos(object):
                 continue
             # Calculate the phase as an array
             absp = self.polycoTable['entry'][i].evalabsphase(t_in_entry)
-            phaseInt = np.hstack((phaseInt,absp.int))
-            phaseFrac = np.hstack((phaseFrac,absp.frac))
+            phaseInt += (absp.int,)
+            phaseFrac += (absp.frac,)
             # Maybe add sort function here, since the time has been masked.
-        absPhase = Phase(phaseInt,phaseFrac)
+        phaseInt = np.hstack(phaseInt).value * u.cycle
+        phaseFrac = np.hstack(phaseFrac).value * u.cycle
+        absPhase = Phase(phaseInt, phaseFrac)
 
         return absPhase
 
