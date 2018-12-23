@@ -1,4 +1,4 @@
-from pint.models.polycos import Polycos
+from pint.polycos import Polycos
 from pint.models import model_builder as mb
 import pint.toa as toa
 import numpy as np
