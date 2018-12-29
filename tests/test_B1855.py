@@ -37,7 +37,7 @@ class TestB1855(unittest.TestCase):
         testp = tdu.get_derivative_params(self.modelB1855)
         delay = self.modelB1855.delay(self.toasB1855)
         for p in testp.keys():
-            log.debug( "Runing derivative for %s", 'd_delay_d_'+p)
+            log.debug( "Runing derivative for %s", 'd_phase_d_'+p)
             ndf = self.modelB1855.d_phase_d_param_num(self.toasB1855, p, testp[p])
             adf = self.modelB1855.d_phase_d_param(self.toasB1855, delay, p)
             diff = adf - ndf
@@ -45,12 +45,12 @@ class TestB1855(unittest.TestCase):
                 mean_der = (adf+ndf)/2.0
                 relative_diff = np.abs(diff)/np.abs(mean_der)
                 #print "Diff Max is :", np.abs(diff).max()
-                msg = 'Derivative test failed at d_delay_d_%s with max relative difference %lf' % (p, np.nanmax(relative_diff).value)
+                msg = 'Derivative test failed at d_phase_d_%s with max relative difference %lf' % (p, np.nanmax(relative_diff).value)
                 if p in ['SINI']:
                     tol = 0.7
                 else:
                     tol = 1e-3
-                log.debug( "derivative relative diff for %s, %lf"%('d_delay_d_'+p, np.nanmax(relative_diff).value))
+                log.debug( "derivative relative diff for %s, %lf"%('d_phase_d_'+p, np.nanmax(relative_diff).value))
                 assert np.nanmax(relative_diff) < tol, msg
             else:
                 continue
