@@ -678,6 +678,11 @@ class TimingModel(object):
         """
         # TODO : We need to know the range of parameter.
         par = getattr(self, param)
+        # TODO this is hacky way to decide to use the absolute phase
+        if param == 'TZRMJD':
+            absp = True
+        else:
+            absp = False
         ori_value = par.value
         unit = par.units
         if ori_value == 0:
@@ -690,7 +695,7 @@ class TimingModel(object):
         phaseF = np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.cycle
         for ii, val in enumerate(parv):
             par.value = val
-            ph = self.phase(toas)
+            ph = self.phase(toas, abs_phase=absp)
             phaseI[:,ii] = ph.int
             phaseF[:,ii] = ph.frac
         resI = (- phaseI[:,0] + phaseI[:,1])
