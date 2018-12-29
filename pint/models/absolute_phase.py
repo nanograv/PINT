@@ -68,7 +68,13 @@ class AbsPhase(PhaseComponent):
     def d_phase_d_TZRMJD(self, toas, param, delay):
         """ The derivative of phase with respect to the absolute phase refrence
             time, TZRMJD.
+
+            Note:
+            ----
+            Since:
+            Phase = phase(toas) - phase(TZRMJD)
+            d_phase_d_TZRMJD ~= - f0
         """
         with u.set_enabled_equivalencies(dimensionless_cycles):
-            return np.broadcast_to(self.F0.quantity.to(u.cycle/u.day),
+            return np.broadcast_to(-self.F0.quantity.to(u.cycle/u.day),
                                    toas.ntoas, True)
