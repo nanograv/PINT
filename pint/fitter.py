@@ -142,6 +142,8 @@ class WlsFitter(Fitter):
             fitperrs = self.get_fitparams_uncertainty()
             # Define the linear system
             M, params, units, scale_by_F0 = self.get_designmatrix()
+            # DEBUG
+            self.M = M
             # Get residuals and TOA uncertainties in seconds
             self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value
@@ -198,6 +200,8 @@ class WlsFitter(Fitter):
                 fitpv[pn] = np.longdouble((pv+dpv) / fitp[pn].units)
                 #NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
+            # DEBUG
+            self.fitpv = fitpv
             chi2 = self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
             # Updata Uncertainties
             self.set_param_uncertainties(fitperrs)
