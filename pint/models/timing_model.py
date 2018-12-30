@@ -733,13 +733,14 @@ class TimingModel(object):
         par.value = ori_value
         return d_delay * (u.second/unit)
 
-    def designmatrix(self, toas, acc_delay=None, scale_by_F0=True, \
-                     incfrozen=False):
+    def designmatrix(self, toas, acc_delay=None, scale_by_F0=True,
+                     incfrozen=False, incoffset=True):
         """
         Return the design matrix: the matrix with columns of d_phase_d_param/F0
         or d_toa_d_param
         """
-        params = [par for par in self.params if incfrozen or
+        params = ['TZRMJD',] if incoffset else []
+        params += [par for par in self.params if incfrozen or
                 not getattr(self, par).frozen]
 
         F0 = self.F0.quantity        # 1/sec
@@ -761,8 +762,12 @@ class TimingModel(object):
             # We decide to add minus sign here in the design matrix, so the fitter
             # keeps the conventional way.
             q = - self.d_phase_d_param(toas, delay,param)
+            if param == 'TZRMJD':
+                q = q.to(u.cy/u.s)
+                units.append(u.cy/u.s)
+            else:
+                units.append(u.cycle/ getattr(self, param).units)
             M[:,ii] = q
-            units.append(u.cycle/ getattr(self, param).units)
 
         if scale_by_F0:
             mask = []
