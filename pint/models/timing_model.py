@@ -739,9 +739,15 @@ class TimingModel(object):
         Return the design matrix: the matrix with columns of d_phase_d_param/F0
         or d_toa_d_param
         """
-        params = ['TZRMJD',] if incoffset else []
-        params += [par for par in self.params if incfrozen or
+        # params = ['TZRMJD',] if incoffset else []
+        params = [par for par in self.params if incfrozen or
                 not getattr(self, par).frozen]
+        if 'TZRMJD' in params:
+            TZR_ind = params.index('TZRMJD')
+            params[0], params[TZR_ind] = params[TZR_ind], params[0]
+        else:
+            if incoffset:
+                params = ['TZRMJD',] + params
 
         F0 = self.F0.quantity        # 1/sec
         ntoas = toas.ntoas
