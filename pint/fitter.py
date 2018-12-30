@@ -5,6 +5,7 @@ import astropy.units as u
 import abc
 import scipy.optimize as opt, scipy.linalg as sl
 from .residuals import resids
+from pint import dimensionless_cycles
 
 
 class Fitter(object):
@@ -142,8 +143,6 @@ class WlsFitter(Fitter):
             fitperrs = self.get_fitparams_uncertainty()
             # Define the linear system
             M, params, units, scale_by_F0 = self.get_designmatrix()
-            # DEBUG
-            self.M = M
             # Get residuals and TOA uncertainties in seconds
             self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value
@@ -197,11 +196,10 @@ class WlsFitter(Fitter):
                 if scale_by_F0:
                     un *= u.s
                 pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
-                fitpv[pn] = np.longdouble((pv+dpv) / fitp[pn].units)
+                with u.set_enabled_equivalencies(dimensionless_cycles):
+                    fitpv[pn] = np.longdouble((pv+dpv) / fitp[pn].units)
                 #NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
-            # DEBUG
-            self.fitpv = fitpv
             chi2 = self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
             # Updata Uncertainties
             self.set_param_uncertainties(fitperrs)
