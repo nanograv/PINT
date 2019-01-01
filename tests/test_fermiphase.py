@@ -42,10 +42,10 @@ class TestFermiPhase(unittest.TestCase):
         modelin = pint.models.get_model(parfile)
         FermiObs(name='Fermi',ft2name=ft2file,tt2tdb_mode='spacecraft')
         tl  = load_Fermi_TOAs(eventfileraw, weightcolumn='PSRJ0030+0451')
-        ts = toa.TOAs(toalist=tl)
+        ts = toa.get_TOAs_list(tl, ephem='DE405',planets=False)
         ts.filename = eventfileraw
-        ts.compute_TDBs()
-        ts.compute_posvels(ephem='DE405',planets=False)
+        # ts.compute_TDBs()
+        # ts.compute_posvels(ephem='DE405',planets=False)
         phss = modelin.phase(ts)[1]
         phases = np.where(phss < 0.0 * u.cycle, phss + 1.0 * u.cycle, phss)
 
