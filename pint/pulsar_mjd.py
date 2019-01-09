@@ -19,6 +19,9 @@ class TimePulsarMJD(TimeFormat):
     standard astropy MJD time format."""
 
     name = 'pulsar_mjd'
+    # This can be removed once we only support astropy >=3.1.
+    # The str(c) is necessary for python2/numpy -> no unicode literals...
+    _new_ihmsfs_dtype = np.dtype([(str(c), np.intc) for c in 'hmsf'])
 
     def set_jds(self, val1, val2):
         self._check_scale(self._scale)
@@ -47,6 +50,10 @@ class TimePulsarMJD(TimeFormat):
             # leap seconds, so raise an exception in that
             # case.
             y, mo, d, hmsf = erfa.d2dtf('UTC',9,self.jd1,self.jd2)
+            # For ASTROPY_LT_3_1, convert to the new structured array dtype that
+            # is returned by the new erfa gufuncs.
+            if not hmsfs.dtype.names:
+                hmsfs = hmsfs.view(self._new_ihmsfs_dtype)
             if 60 in hmsf[...,2]:
                 raise ValueError('UTC times during a leap second cannot be represented in pulsar_mjd format')
             j1, j2 = erfa.cal2jd(y,mo,d)
@@ -57,5 +64,3 @@ class TimePulsarMJD(TimeFormat):
         else:
             # As in TimeMJD
             return (self.jd1 - erfa.DJM0) + self.jd2
-
-
