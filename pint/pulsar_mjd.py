@@ -54,8 +54,7 @@ class TimePulsarMJD(TimeFormat):
             # is returned by the new erfa gufuncs.
             if not hmsf.dtype.names:
                 hmsf = hmsf.view(self._new_ihmsfs_dtype)
-            print(hmsf)
-            if 60 in hmsf['s']:
+            if numpy.any(hmsf['s'] == 60):
                 raise ValueError('UTC times during a leap second cannot be represented in pulsar_mjd format')
             j1, j2 = erfa.cal2jd(y,mo,d)
             return (j1 - erfa.DJM0 + j2) + (hmsf['h']/24.0
