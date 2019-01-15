@@ -38,3 +38,5 @@ TopoObs('hobart',          tempo_code='4', itoa_code='HO',
 TopoObs('most',         tempo_code='e', itoa_code='MO',
         itrf_xyz=[-4483311.64, 2648815.92, -3671909.31],
         clock_fmt='tempo2', clock_dir='TEMPO2', clock_file='mo2gps.clk')
+TopoObs('chime',        tempo_code='y', itoa_code='CH',
+        itrf_xyz=[-2058795.0, -3621559.0, 4814280.0])
