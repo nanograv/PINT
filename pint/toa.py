@@ -406,7 +406,7 @@ class TOA(object):
                 fmt = 'mjd'
             t = time.Time(arg1, arg2, scale=scale,
                     format=fmt, precision=9)
-                        
+
         # Now assign the site location to the Time, for use in the TDB conversion
         # Time objects are immutable so you must make a new one to add the location!
         # Use the intial time to look up the observatory location
@@ -642,6 +642,51 @@ class TOAs(object):
         """Write a summary of the TOAs to stdout."""
         print(self.get_summary())
 
+    def get_flag_value(self, flag_name, dtype=str, unit=None, cache=False):
+        """Get flag value of all TOAs from each TOA's flag dictionary
+
+           Parameter
+           ---------
+           flag_name : str
+               The name of the request flags.
+           dtype : data type, optional
+               The return type of the request flag values. Default is string
+           unit : `~astropy.units.unit` object. optional
+               The unit of the returned values. Default is None which returns
+               a non-`~astropy.units.quantity` object.
+           cache : bool, optional
+               If `True`, the returned values will be saved in the TOA table as
+               a column named after the flag name.
+
+           Return
+           ------
+           `~astropy.time` masked column.
+
+           Raises
+           ------
+           ValueError
+               If the request flag does not show in the TOAs.
+        """
+        values = []
+        mask = np.empty(self.ntoas, dtype=bool)
+        mask.fill(False)
+        for ii, f in enumerate(self.table['flags']):
+            # Check if the singal TOA has the flag rquested.
+            if flag_name in f.keys():
+                # parse the flag value
+                values.append(f[flag_name])
+            else:
+                values.append(-9999)
+                mask[ii] = True
+        if len(values) == 0:
+            raise ValueError("No flag '{}' in TOAs.".format(flag_name))
+        result = table.MaskedColumn(values, name=flag_name, mask=mask,
+                                    dtype=dtype, unit=unit)
+        if cache:
+            self.table.add_column(result)
+
+        return result
+
     def pulse_column_from_flags(self):
         '''
         Create a pulse numbers column if possible from the TOAs flags
@@ -728,7 +773,7 @@ class TOAs(object):
         for toatime,toaerr,freq,obs,flags in zip(self.table['mjd'],self.table['error'].quantity,
             self.table['freq'].quantity,self.table['obs'],self.table['flags']):
             obs_obj = Observatory.get(obs)
-            
+
             if 'clkcorr' in flags.keys():
                 toatime_out = toatime - time.TimeDelta(flags['clkcorr'])
             else:
@@ -737,7 +782,7 @@ class TOAs(object):
                       flags=flags, format=format)
             outf.write(out_str)
 
-            
+
         # If pulse numbers were added to flags, remove them again
         if pnChange:
             for flags in self.table['flags']:
@@ -765,7 +810,7 @@ class TOAs(object):
         https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
 
         """
-        
+
         # First make sure that we haven't already applied clock corrections
         flags = self.table['flags']
         if any(['clkcorr' in f for f in flags]):
@@ -880,7 +925,7 @@ class TOAs(object):
         using the 'ephem' parameter.  The positions and velocities are
         set with PosVel class instances which have astropy units.
         """
-        
+
         if ephem is None:
             if self.ephem is not None:
                 ephem = self.ephem
@@ -930,14 +975,14 @@ class TOAs(object):
             grp = self.table.groups[ii]
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
-            site = get_observatory(obs)            
+            site = get_observatory(obs)
             tdb = time.Time(grp['tdb'],precision=9)
-            
+
             if isinstance(site,SpacecraftObs): #spacecraft-topocentric toas
                 ssb_obs = site.posvel(tdb,ephem,grp)
             else:
                 ssb_obs = site.posvel(tdb,ephem)
-            
+
             log.debug("SSB obs pos {0}".format(ssb_obs.pos[:,0]))
             ssb_obs_pos[loind:hiind,:] = ssb_obs.pos.T.to(u.km)
             ssb_obs_vel[loind:hiind,:] = ssb_obs.vel.T.to(u.km/u.s)
