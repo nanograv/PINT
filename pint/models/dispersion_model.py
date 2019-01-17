@@ -25,7 +25,11 @@ class Dispersion(DelayComponent):
     """
     def __init__(self):
         super(Dispersion, self).__init__()
+        self.add_param(p.boolParameter(name='DMDATA', value=0,
+                                       description="Flag for using the DM data"
+                                       " from the Wideband TOAs."))
         self.dm_value_funcs = []
+        self.dm_value_derivs = {}
 
     def dispersion_time_delay(self, DM, freq):
         """Return the dispersion time delay for a set of frequency.
@@ -50,6 +54,39 @@ class Dispersion(DelayComponent):
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
         return self.dispersion_time_delay(dm, bfreq)
+
+    def d_dm_d_param(self, toas, param_name, acc_delay=None):
+        par = getattr(self, param_name)
+        final_unit = self.DM.units / par.units
+        if param_name in self.dm_value_derivs.keys():
+            result = self.dm_value_derivs[param_name](toas, param_name,
+                                                      acc_delay=None)
+            return result.to(final_unit)
+        else:
+            return np.zeros(toas.ntoas) * final_unit
+
+
+    def dm_designmatrix(self, toas, acc_delay=None, scale_by_F0=True, \
+                        incfrozen=False, incoffset=True):
+        """Get the designmatrix for DM values. The API has kept the same with
+           designmatrix.
+        """
+        params = ['Offset',] if incoffset else []
+        params += [par for par in self._parent.params if incfrozen or
+                   not getattr(self, par).frozen]
+        units = []
+        nparams = len(params)
+        M = np.zeros((toas.ntoas, nparams))
+        for ii, param in enumerate(params):
+            if param == 'Offset':
+                M[:,ii] = 0.0
+                units.append(self.DM.units / u.day)
+            else:
+                der = self.d_dm_d_param(toas, param, acc_delay=None)
+                M[:,ii] = der
+                units.append(der.unit)
+        return M, params, units
+
 
 class DispersionDM(Dispersion):
     """
@@ -85,7 +122,7 @@ class DispersionDM(Dispersion):
 
         for dm_name in base_dms:
             self.register_deriv_funcs(self.d_delay_d_DMs, dm_name)
-
+            self.dm_value_derivs.update({dm_name: self.d_dm_d_DMs})
     def DM_dervative_unit(self, n):
         return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
 
@@ -136,22 +173,15 @@ class DispersionDM(Dispersion):
                 result += getattr(self, pm).as_parfile_line()
         return result
 
-    def d_delay_d_DMs(self, toas, param_name, acc_delay=None): # NOTE we should have a better name for this.
-        """Derivatives for constant DM
+    def d_dm_d_DMs(self, toas, param_name, acc_delay=None):
+        """Derivatives : d_dm_d_dm_params
         """
-        tbl = toas.table
-        try:
-            bfreq = self.barycentric_radio_freq(toas)
-        except AttributeError:
-            warn("Using topocentric frequency for dedispersion!")
-            bfreq = tbl['freq']
         par = getattr(self, param_name)
         unit = par.units
         if param_name == 'DM':
             order = 0
         else:
-            pn, idxf, idxv = split_prefixed_name(param_name)
-            order = idxv
+            pn, idxf, order = split_prefixed_name(param_name)
         dms = self.get_DM_terms()
         dm_terms = np.longdouble(np.zeros(len(dms)))
         dm_terms[order] = np.longdouble(1.0)
@@ -161,9 +191,22 @@ class DispersionDM(Dispersion):
             DMEPOCH = self.DMEPOCH.value
         dt = (tbl['tdbld'] - DMEPOCH) * u.day
         dt_value = (dt.to(u.yr)).value
-        d_dm_d_dm_param = taylor_horner(dt_value, dm_terms)* (self.DM.units/par.units)
-        return DMconst * d_dm_d_dm_param/ bfreq**2.0
-    
+        d_dm_d_DM = taylor_horner(dt_value,
+                                  dm_terms) * (self.DM.units / par.units)
+        return d_dm_d_DM
+
+    def d_delay_d_DMs(self, toas, param_name, acc_delay=None): # NOTE we should have a better name for this.
+        """Derivatives: d_delay_d_DMs
+        """
+        tbl = toas.table
+        try:
+            bfreq = self.barycentric_radio_freq(toas)
+        except AttributeError:
+            warn("Using topocentric frequency for dedispersion!")
+            bfreq = tbl['freq']
+        d_dm_d_DMs = self.d_dm_d_DMs(toas, param_name, acc_delay=None)
+        return DMconst * d_dm_d_DMs/ bfreq**2.0
+
 
 class DispersionDMX(Dispersion):
     """This class provides a DMX model based on the class of Dispersion.
@@ -218,6 +261,7 @@ class DispersionDMX(Dispersion):
         for prefix_par in self.get_params_of_type('prefixParameter'):
             if prefix_par.startswith('DMX_'):
                 self.register_deriv_funcs(self.d_delay_d_DMX, prefix_par)
+                self.dm_value_derivs.update({prefix_par: self.d_dm_d_DMX})
 
     def dmx_dm(self, toas):
         condition = {}
@@ -243,7 +287,9 @@ class DispersionDMX(Dispersion):
         """
         return self.dispersion_type_delay(toas)
 
-    def d_delay_d_DMX(self, toas, param_name, acc_delay=None):
+    def d_dm_d_DMX(self, toas, param_name, acc_delay=None):
+        """Derivatives : d_dm_d_dmx
+        """
         condition = {}
         tbl = toas.table
         if not hasattr(self, 'dmx_toas_selector'):
@@ -256,16 +302,19 @@ class DispersionDMX(Dispersion):
         r2 = getattr(self, DMXR2_mapping[dmx_index]).quantity
         condition = {param_name:(r1.mjd, r2.mjd)}
         select_idx = self.dmx_toas_selector.get_select_index(condition, tbl['mjd_float'])
+        d_dm_d_dmx = np.zeros(len(tbl))
+        for k, v in select_idx.items():
+           d_dm_d_dmx[v] = 1.0
+        return d_dm_d_dmx
 
+    def d_delay_d_DMX(self, toas, param_name, acc_delay=None):
         try:
             bfreq = self.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
             bfreq = tbl['freq']
-        dmx = np.zeros(len(tbl))
-        for k, v in select_idx.items():
-           dmx[v] = 1.0
-        return DMconst * dmx / bfreq**2.0
+        d_dm_d_dmx = self.d_dm_d_DMX(toas, param_name, acc_delay=None)
+        return DMconst * d_dm_d_dmx / bfreq**2.0
 
     def print_par(self,):
         result = ''

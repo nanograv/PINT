@@ -141,7 +141,7 @@ class TimingModel(object):
     def params(self,):
         p = self.top_level_params
         for cp in list(self.components.values()):
-            p = p+cp.params
+            p = p + cp.params
         return p
 
     @property
@@ -791,12 +791,12 @@ class TimingModel(object):
 
             k = l.split()
             name = k[0].upper()
-            
+
             if name == 'UNITS' and len(k) > 1 and k[1] != 'TDB':
                 log.error("UNITS %s not yet supported by PINT" % k[1])
                 raise Exception("UNITS %s not yet supported by PINT" % k[1])
 
-            
+
             if name in checked_param:
                 if name in repeat_param.keys():
                     repeat_param[name] += 1
