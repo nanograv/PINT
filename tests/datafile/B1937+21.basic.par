@@ -1,0 +1,54 @@
+PSR              B1937+21
+LAMBDA   301.9732445337270
+BETA      42.2967523367957
+PMLAMBDA           -0.0175
+PMBETA             -0.3971
+PX                  0.1515
+POSEPOCH        55321.0000
+F0    641.9282333345536244  1  0.0000000000000132
+F1     -4.330899370129D-14  1  2.149749089617D-22
+PEPOCH        55321.000000
+START            53267.085
+FINISH           57376.799
+# DM               71.021847  1            0.000003
+# DM               71.01602
+# From ingrid:
+DM               71.016633
+SOLARN0               0.00
+EPHEM               DE436
+ECL                 IERS2010
+CLK                 TT(BIPM2015)                    
+UNITS               TDB
+TIMEEPH             FB90
+T2CMETHOD           TEMPO
+CORRECT_TROPOSPHERE N
+PLANET_SHAPIRO      N
+DILATEFREQ          N
+NTOA                 14217
+TRES                  2.38
+TZRMJD  55337.18180550384118
+TZRFRQ            1730.480
+TZRSITE                  1
+MODE                     1
+NITS                     1
+INFO -f                              
+T2EFAC -f S-wide_ASP   1.438
+T2EFAC -f L-wide_PUPPI   2.597
+T2EFAC -f L-wide_ASP   2.034
+T2EFAC -f Rcvr_800_GUPPI   4.642
+T2EFAC -f S-wide_PUPPI   4.418
+T2EFAC -f Rcvr1_2_GASP   1.243
+T2EFAC -f Rcvr_800_GASP   2.464
+T2EFAC -f Rcvr1_2_GUPPI   1.553
+T2EQUAD -f S-wide_ASP   0.15610
+T2EQUAD -f L-wide_PUPPI   0.02360
+T2EQUAD -f L-wide_ASP   0.08010
+T2EQUAD -f Rcvr_800_GUPPI   0.04850
+T2EQUAD -f S-wide_PUPPI   0.01780
+T2EQUAD -f Rcvr1_2_GASP   0.06340
+T2EQUAD -f Rcvr_800_GASP   0.08320
+T2EQUAD -f Rcvr1_2_GUPPI   0.05250
+JUMP -fe Rcvr1_2      -0.000009556  1       0.000000003
+JUMP -fe Rcvr_800      -0.000012732  1       0.000000012
+JUMP -fe S-wide       0.000003439  1       0.000000009
+# Generated from 11y release par B1937+21_NANOGrav_11yv0
