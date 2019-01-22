@@ -678,7 +678,7 @@ class TOAs(object):
             else:
                 values.append(-9999)
                 mask[ii] = True
-        if len(values) == 0:
+        if np.all(mask):
             raise ValueError("No flag '{}' in TOAs.".format(flag_name))
         result = table.MaskedColumn(values, name=flag_name, mask=mask,
                                     dtype=dtype, unit=unit)
