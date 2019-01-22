@@ -29,7 +29,14 @@ class Dispersion(DelayComponent):
                                        description="Flag for using the DM data"
                                        " from the Wideband TOAs."))
         self.dm_value_funcs = []
-        self.dm_value_derivs = {}
+
+    def setup(self):
+        super(Dispersion, self).setup()
+        if not hasattr(self, 'dm_value_derivs'):
+            if self._parent:
+                setattr(self._parent, 'dm_value_derivs', {})
+            else:
+                setattr(self, 'dm_value_derivs', {})
 
     def dispersion_time_delay(self, DM, freq):
         """Return the dispersion time delay for a set of frequency.
@@ -111,7 +118,7 @@ class DispersionDM(Dispersion):
         self.delay_funcs_component += [self.constant_dispersion_delay,]
 
     def setup(self):
-        super(Dispersion, self).setup()
+        super(DispersionDM, self).setup()
         # If DM1 is set, we need DMEPOCH
         if self.DM1.value != 0.0:
             if self.DMEPOCH.value is None:
@@ -305,7 +312,7 @@ class DispersionDMX(Dispersion):
         d_dm_d_dmx = np.zeros(len(tbl))
         for k, v in select_idx.items():
            d_dm_d_dmx[v] = 1.0
-        return d_dm_d_dmx
+        return d_dm_d_dmx * u.Unit(1)
 
     def d_delay_d_DMX(self, toas, param_name, acc_delay=None):
         try:
