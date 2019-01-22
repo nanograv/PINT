@@ -227,6 +227,14 @@ class TimingModel(object):
                     deriv_funcs[k] = v
         return deriv_funcs
 
+    def get_component_common(self, name):
+        """Get the common element from components.
+        """
+        common = []
+        for d in list(self.components.values()):
+            common += getattr(d, name)
+        return common
+
     def search_cmp_attr(self, name):
         """
         This is a function for searching an attribute from all the components.
