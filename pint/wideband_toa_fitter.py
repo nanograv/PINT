@@ -36,6 +36,10 @@ class WidebandFitter(GLSFitter):
         if self.model.DMDATA.value:
             dm_data = self.toas.get_flag_value('pp_dm', dtype=float,
                                                unit=u.pc * u.cm**-3)
+            dm_model = np.zeros(self.toas.ntoas) * self.model.DM.units
+            for dm_f in self.model.get_component_common('dm_value_funcs'):
+                dm_model += dm_f(self.toas)
+                dm_res = dm_data - dm_model
             dm_error = self.toas.get_flag_value('pp_dme', dtype=float,
                                                 unit=u.pc * u.cm**-3)
 
@@ -51,7 +55,9 @@ class WidebandFitter(GLSFitter):
             self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value
             if self.model.DMDATA.value:
-                data = np.hstack((residuals, dm_data.quantity.value))
+                data = np.hstack((residuals, dm_res.quantity.value))
+            else:
+                data = residuals
             #TODO There should be a better design for handling this over all.
             if self.model.DMDATA.value:
                 M_dm, params_dm, units_dm = self.model.dm_designmatrix(self.toas)
