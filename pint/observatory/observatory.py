@@ -44,10 +44,12 @@ class Observatory(object):
         cls._register(obs, name)
         return obs
 
-    def __init__(self,name,aliases=None,tt2tdb_mode='pint'):
+    def __init__(self, name, aliases=None, tt2tdb_mode='pint',
+                 tt2tcb_mode='pint'):
         if aliases is not None:
             Observatory._add_aliases(self,aliases)
         self.tt2tdb_mode = tt2tdb_mode
+        self.tt2tcb_mode = tt2tcb_mode
 
     @classmethod
     def _register(cls,obs,name):
@@ -171,7 +173,7 @@ class Observatory(object):
                     Also uses topocentric correction term if self.tt2tdbmethod is
                     pint.
                 - 'ephemeris': JPL ephemeris included TDB-TT correction.
-            ephme: str, optional
+            ephem: str, optional
                 The ephemeris to get he TDB-TT correction. Required for the
                 'ephemeris' method.
         """
@@ -233,6 +235,87 @@ class Observatory(object):
 
     def _get_TDB_ephem(self, t, ephem):
         """This is a function that reads the ephem TDB-TT column. This column is
+            provided by DE4XXt version of ephemeris.
+        """
+        raise NotImplementedError
+
+    def get_TCBs(self, t,  method='default', ephem=None, options=None, grp=None):
+        """This is a high level function for converting TOAs to TCB time scale.
+            Different method can be applied to obtain the result. Current supported
+            methods are ['astropy', 'ephemeris']
+            Parameters
+            ----------
+            t: astropy.time.Time object
+                The time need for converting toas
+            method: str or callable, optional
+                Method of computing TCB
+
+                - 'default': Astropy time.Time object built-in converter, use FB90.
+                    Also uses topocentric correction term if self.tt2tcbmethod is
+                    pint.
+                - 'ephemeris': JPL ephemeris included TCB-TT correction.
+            ephem: str, optional
+                The ephemeris to get the TCB-TT correction. Required for the
+                'ephemeris' method.
+        """
+
+        if t.isscalar: t = Time([t])
+        if t.scale == 'tcb':
+            return t
+        # Check the method. This pattern is from numpy minize
+        if callable(method):
+            meth = "_custom"
+        else:
+            meth = method.lower()
+        if options is None:
+            options = {}
+        if meth == "_custom":
+            options = dict(options)
+            return method(t, **options)
+        if meth == 'default':
+            if self.tt2tcb_mode.lower().startswith('astropy'):
+                log.info('Doing astropy mode TCB conversion')
+                return self._get_TCB_astropy(t)
+            elif self.tt2tcb_mode.lower().startswith('pint'):
+                log.info('Doing PINT mode TCB conversion')
+                if ephem is None:
+                    raise ValueError("A ephemeris file should be provided to get"
+                                     " the TCB-TT corrections, or use tt2tcb_mode=astropy")
+                return self._get_TCB_PINT(t, ephem, grp)
+        elif meth == "ephemeris":
+            if ephem is None:
+                raise ValueError("A ephemeris file should be provided to get"
+                                 " the TCB-TT corrections.")
+            return self._get_TCB_ephem(t, ephem)
+        else:
+            raise ValueError("Unknown method '%s'." % method)
+
+    def _get_TCB_astropy(self, t):
+        return t.tcb
+
+    def _get_TCB_PINT(self, t, ephem, grp=None):
+        """Uses astropy.Time location to add the topocentric correction term to
+            the Time object. The topocentric correction is given as (r/c).(v/c),
+            with r equal to the geocentric position of the observer, v being the
+            barycentric velocity of the earth, and c being the speed of light.
+
+            The geocentric observer position can be obtained from Time object.
+            The barycentric velocity can be obtained using solar_system_ephemerides
+            objPosVel_wrt_SSB
+        """
+
+        #Add in correction term to t.tdb equal to r.v / c^2
+        vel = sse.objPosVel_wrt_SSB('earth', t, ephem).vel
+        pos = self.get_gcrs(t, ephem=ephem, grp=grp)
+        dnom = const.c * const.c 
+
+        corr = ((pos[0] * vel[0] + pos[1] * vel[1] + pos[2] * vel[2])/dnom).to(u.s)
+        log.debug('\tTopocentric Correction:\t%s' % corr)
+
+        return t.tcb + corr
+
+    def _get_TCB_ephem(self, t, ephem):
+        """This is a function that reads the ephem TCB-TT column. This column is
             provided by DE4XXt version of ephemeris.
         """
         raise NotImplementedError

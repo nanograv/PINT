@@ -32,7 +32,6 @@ class PulsarBinary(DelayComponent):
             units=u.day,
             description="Orbital period", long_double=True))
 
-
         self.add_param(p.floatParameter(name="PBDOT",
             units = u.day/u.day,
             description="Orbital period derivitve respect to time", \
@@ -89,6 +88,11 @@ class PulsarBinary(DelayComponent):
 
     def setup(self):
         super(PulsarBinary, self).setup()
+
+        if self.T0.value is not None:
+            # set the units
+            self.T0.scale = self.UNITS.value.lower()
+
         for bpar in self.params:
             self.register_deriv_funcs(self.d_binary_delay_d_xxxx, bpar)
         # Setup the model isinstance
@@ -137,17 +141,21 @@ class PulsarBinary(DelayComponent):
         """
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py
-        # Get barycnetric toa first
+        # Get barycentric toa first
         updates = {}
         tbl = toas.table
         if acc_delay is None:
             # If the accumulate delay is not provided, it will try to get
             # the barycentric correction.
             acc_delay = self.delay(toas, self.__class__.__name__, False)
-        self.barycentric_time = tbl['tdbld'] * u.day - acc_delay
+        if self.UNITS.value == 'TCB':
+            self.barycentric_time = tbl['tcbld'] * u.day - acc_delay
+            updates['psr_pos'] = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tcbld'].astype(np.float64))
+        else:
+            self.barycentric_time = tbl['tdbld'] * u.day - acc_delay
+            updates['psr_pos'] = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tdbld'].astype(np.float64))
         updates['barycentric_toa'] = self.barycentric_time
         updates['obs_pos'] = tbl['ssb_obs_pos'].quantity
-        updates['psr_pos'] = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tdbld'].astype(np.float64))
         for par in self.binary_instance.binary_params:
             binary_par_names = [par,]
             if par in self.binary_instance.param_aliases.keys():
@@ -183,7 +191,7 @@ class PulsarBinary(DelayComponent):
         return self.binary_instance.binary_delay()
 
     def d_binary_delay_d_xxxx(self, toas, param, acc_delay):
-        """Return the bianry model delay derivtives"""
+        """Return the binary model delay derivtives"""
         self.update_binary_object(toas, acc_delay)
         return self.binary_instance.d_binarydelay_d_par(param)
 

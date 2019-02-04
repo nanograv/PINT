@@ -63,8 +63,8 @@ class TimingModel(object):
         A list for register the timing model component type name. For example,
         delay components will be register as 'DelayComponent'.
     top_level_params : list
-        A parameter name list for thoes parameters belong to the top timing
-        model class rather than a specific component.
+        A parameter name list for those parameters that belong to the top
+        timing model class rather than a specific component.
 
     Properties
     ----------
@@ -96,7 +96,7 @@ class TimingModel(object):
         self.add_param_from_top(strParameter(name="EPHEM",
             description="Ephemeris to use"), '')
         self.add_param_from_top(strParameter(name="UNITS",
-            description="Units (TDB assumed)"), '')
+            description="Units", value="TDB"), '')  # defaults to TDB if not given
 
         self.setup_components(components)
 
@@ -378,7 +378,7 @@ class TimingModel(object):
         else:
             if target_component not in list(self.components.keys()):
                 raise AttributeError("Can not find component '%s' in "
-                                     "timging model." % target_component)
+                                     "timing model." % target_component)
             self.components[target_component].add_param(param)
 
     def remove_param(self, param):
@@ -424,6 +424,7 @@ class TimingModel(object):
                 param_type.upper() == par_prefix.upper():
                 result.append(par.name)
         return result
+
     def get_prefix_mapping(self, prefix):
         """Get the index mapping for the prefix parameters.
            Parameter
@@ -564,8 +565,6 @@ class TimingModel(object):
             result.append(nf(toas)[1])
         return np.hstack((r for r in result))
 
-
-
     def get_barycentric_toas(self, toas, cutoff_component=''):
         """This is a convenient function for calculate the barycentric TOAs.
            Parameter
@@ -587,7 +586,14 @@ class TimingModel(object):
                 if cp.category == 'pulsar_system':
                     cutoff_component = cp.__class__.__name__
         corr = self.delay(toas, cutoff_component, False)
-        return tbl['tdbld'] * u.day - corr
+
+        timescale = 'TDB' if not hasattr(self, 'UNITS') else getattr(self, 'UNITS').value
+        if timescale == 'TDB':
+            return tbl['tdbld'] * u.day - corr
+        elif timescale == 'TCB':
+            return tbl['tcbld'] * u.day - corr
+        else:
+            raise ValueError("Unknown 'UNITS' value")
 
     def d_phase_d_toa(self, toas, sample_step=None):
         """Return the derivative of phase wrt TOA
@@ -791,12 +797,18 @@ class TimingModel(object):
 
             k = l.split()
             name = k[0].upper()
-            
-            if name == 'UNITS' and len(k) > 1 and k[1] != 'TDB':
-                log.error("UNITS %s not yet supported by PINT" % k[1])
-                raise Exception("UNITS %s not yet supported by PINT" % k[1])
 
-            
+            if name == 'UNITS' and len(k) > 1:
+                if k[1] != 'TDB' and k[1] != 'TCB' and k[1] != 'SI':
+                    log.error("UNITS {} not yet supported by "
+                              "PINT".format(k[1]))
+                    raise Exception("UNITS {} not yet supported by "
+                                    "PINT".format(k[1]))
+
+                if k[1] == 'SI':
+                    # SI is just an alias for TCB so set to 'TCB'
+                    k[1] = 'TCB'
+
             if name in checked_param:
                 if name in repeat_param.keys():
                     repeat_param[name] += 1
@@ -1042,6 +1054,10 @@ class Component(object):
         """
         pNames_inpar = list(para_dict.keys())
         pNames_inModel = self.params
+        
+        # remove UNITS as many components contain it
+        if 'UNITS' in pNames_inModel:
+            del pNames_inModel[pNames_inModel.index('UNITS')]
 
         # For solar system Shapiro delay component
         if hasattr(self,'PLANET_SHAPIRO'):
@@ -1084,6 +1100,7 @@ class Component(object):
         for p in self.params:
             result += getattr(self, p).as_parfile_line()
         return result
+
 
 class DelayComponent(Component):
     def __init__(self,):

@@ -80,6 +80,8 @@ class DispersionDM(Dispersion):
             if self.DMEPOCH.value is None:
                 raise MissingParameter("Dispersion", "DMEPOCH",
                         "DMEPOCH is required if DM1 or higher are set")
+            else:
+                self.DMEPOCH.scale = self.UNITS.value.lower()
         base_dms = list(self.get_prefix_mapping_component('DM').values())
         base_dms += ['DM',]
 
@@ -105,10 +107,16 @@ class DispersionDM(Dispersion):
         dm = np.zeros(len(tbl))
         dm_terms = self.get_DM_terms()
         if self.DMEPOCH.value is None:
-            DMEPOCH = tbl['tdbld'][0]
+            if self.UNITS.value == 'TCB':
+                DMEPOCH = tbl['tcbld'][0]
+            else:
+                DMEPOCH = tbl['tdbld'][0]
         else:
             DMEPOCH = self.DMEPOCH.value
-        dt = (tbl['tdbld'] - DMEPOCH) * u.day
+        if self.UNITS.value == 'TCB':
+            dt = (tbl['tcbld'] - DMEPOCH) * u.day
+        else:
+            dt = (tbl['tdbld'] - DMEPOCH) * u.day
         dt_value = (dt.to(u.yr)).value
         dm_terms_value = [d.value for d in dm_terms]
         dm = taylor_horner(dt_value, dm_terms_value)
@@ -156,10 +164,16 @@ class DispersionDM(Dispersion):
         dm_terms = np.longdouble(np.zeros(len(dms)))
         dm_terms[order] = np.longdouble(1.0)
         if self.DMEPOCH.value is None:
-            DMEPOCH = tbl['tdbld'][0]
+            if self.UNITS.value == 'TCB':
+                DMEPOCH = tbl['tcbld'][0]
+            else:
+                DMEPOCH = tbl['tdbld'][0]
         else:
             DMEPOCH = self.DMEPOCH.value
-        dt = (tbl['tdbld'] - DMEPOCH) * u.day
+        if self.UNITS.value == 'TCB':
+            dt = (tbl['tcbld'] - DMEPOCH) * u.day
+        else:
+            dt = (tbl['tdbld'] - DMEPOCH) * u.day
         dt_value = (dt.to(u.yr)).value
         d_dm_d_dm_param = taylor_horner(dt_value, dm_terms)* (self.DM.units/par.units)
         return DMconst * d_dm_d_dm_param/ bfreq**2.0

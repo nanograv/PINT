@@ -42,7 +42,6 @@ class Astrometry(DelayComponent):
     def setup(self):
         super(Astrometry, self).setup()
 
-
     def ssb_to_psb_xyz_ICRS(self, epoch=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
 
@@ -54,7 +53,10 @@ class Astrometry(DelayComponent):
     def barycentric_radio_freq(self, toas):
         """Return radio frequencies (MHz) of the toas corrected for Earth motion"""
         tbl = toas.table
-        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tdbld'].astype(numpy.float64))
+        if self.UNITS.value == 'TCB':
+            L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tcbld'].astype(numpy.float64))
+        else:
+            L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tdbld'].astype(numpy.float64))
         v_dot_L_array = numpy.sum(tbl['ssb_obs_vel']*L_hat, axis=1)
         return tbl['freq'] * (1.0 - v_dot_L_array / const.c)
 
@@ -66,7 +68,10 @@ class Astrometry(DelayComponent):
         available as 3-vector toa.xyz, in units of light-seconds.
         """
         tbl = toas.table
-        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tdbld'].astype(numpy.float64))
+        if self.UNITS.value == 'TCB':
+            L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tcbld'].astype(numpy.float64))
+        else:
+            L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tdbld'].astype(numpy.float64))
         re_dot_L = numpy.sum(tbl['ssb_obs_pos']*L_hat, axis=1)
         delay = -re_dot_L.to(ls).value
         if self.PX.value != 0.0 \
@@ -88,7 +93,10 @@ class Astrometry(DelayComponent):
         # TODO: tbl['tdbld'].quantity should have units of u.day
         # NOTE: Do we need to include the delay here?
         tbl = toas.table
-        rd['epoch'] = tbl['tdbld'].quantity * u.day #- delay * u.second
+        if self.UNITS.value == 'TCB':
+            rd['epoch'] = tbl['tcbld'].quantity * u.day #- delay * u.second
+        else:
+            rd['epoch'] = tbl['tdbld'].quantity * u.day #- delay * u.second
 
         # Distance from SSB to observatory, and from SSB to psr
         ssb_obs = tbl['ssb_obs_pos'].quantity
@@ -190,6 +198,7 @@ class AstrometryEquatorial(Astrometry):
                             "POSEPOCH or PEPOCH are required if PM is set.")
                 else:
                     self.POSEPOCH.quantity = self.PEPOCH.quantity
+            self.POSEPOCH.scale = self.UNITS.value.lower()
 
     def print_par(self):
         result = ''
@@ -358,6 +367,7 @@ class AstrometryEcliptic(Astrometry):
                             "POSEPOCH or PEPOCH are required if PM is set.")
                 else:
                     self.POSEPOCH.quantity = self.PEPOCH.quantity
+                    self.POSEPOCH.scale = self.UNITS.value.lower()
 
     def get_psr_coords(self, epoch=None):
         """Returns pulsar sky coordinates as an astropy ecliptic oordinates
