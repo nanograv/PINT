@@ -19,7 +19,7 @@ TopoObs('nancay',       tempo_code='f', itoa_code='NC', aliases=['ncy'],
         itrf_xyz=[4324165.81, 165927.11, 4670132.83])
 TopoObs('ncyobs', aliases=['ncyobs'],
         itrf_xyz=[4324165.81, 165927.11, 4670132.83], clock_fmt='tempo2',
-        clock_file='ncyobs2obspm.clk', clock_dir='TEMPO2')
+        clock_file=['ncyobs2obspm.clk','obspm2gps.clk'], clock_dir='TEMPO2')
 TopoObs('effelsberg',   tempo_code='g', itoa_code='EF', aliases=['eff'],
         itrf_xyz=[4033949.5, 486989.4, 4900430.8])
 TopoObs('gmrt',   tempo_code='r', itoa_code='GM', clock_fmt='tempo2',
