@@ -56,7 +56,7 @@ class TopoObs(Observatory):
             include_bipm= Set False to disable UTC-> TT BIPM clock
                           correction. If False, it only apply TAI->TT correction
                           TT = TAI+32.184s, the same as TEMPO2 TT(TAI) in the
-                          parfile. If Ture, it will apply the correction from
+                          parfile. If True, it will apply the correction from
                           BIPM TT=TT(BIPMYYYY). See the link:
                           http://www.bipm.org/en/bipm-services/timescales/time-ftp/ttbipm.html
             bipm_version= Set the version of TT BIPM clock correction file to
