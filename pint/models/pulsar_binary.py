@@ -148,12 +148,8 @@ class PulsarBinary(DelayComponent):
             # If the accumulate delay is not provided, it will try to get
             # the barycentric correction.
             acc_delay = self.delay(toas, self.__class__.__name__, False)
-        if self.UNITS.value == 'TCB':
-            self.barycentric_time = tbl['tcbld'] * u.day - acc_delay
-            updates['psr_pos'] = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tcbld'].astype(np.float64))
-        else:
-            self.barycentric_time = tbl['tdbld'] * u.day - acc_delay
-            updates['psr_pos'] = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tdbld'].astype(np.float64))
+        self.barycentric_time = tbl[self.UNITS.value.lower()+'ld'] * u.day - acc_delay
+        updates['psr_pos'] = self.ssb_to_psb_xyz_ICRS(epoch=tbl[self.UNITS.value.lower()+'ld'].astype(np.float64))
         updates['barycentric_toa'] = self.barycentric_time
         updates['obs_pos'] = tbl['ssb_obs_pos'].quantity
         for par in self.binary_instance.binary_params:

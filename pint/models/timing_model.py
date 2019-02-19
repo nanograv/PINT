@@ -588,10 +588,8 @@ class TimingModel(object):
         corr = self.delay(toas, cutoff_component, False)
 
         timescale = 'TDB' if not hasattr(self, 'UNITS') else getattr(self, 'UNITS').value
-        if timescale == 'TDB':
-            return tbl['tdbld'] * u.day - corr
-        elif timescale == 'TCB':
-            return tbl['tcbld'] * u.day - corr
+        if timescale in ['TDB', 'TCB']:
+            return tbl[timescale.lower()+'ld'] * u.day - corr
         else:
             raise ValueError("Unknown 'UNITS' value")
 

@@ -42,7 +42,7 @@ class SolarWindDispersion(Dispersion):
                 bfreq = tbl['freq']
 
             rsa = tbl['obs_sun_pos'].quantity
-            pos = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tdbld'].astype(np.float64))
+            pos = self.ssb_to_psb_xyz_ICRS(epoch=tbl[self.UNITS.value.lower()+'ld'].astype(np.float64))
             r = np.sqrt(np.sum(rsa*rsa, axis=1))
             cos_theta = np.sum(rsa*pos, axis=1) / r
             ret =  const.au**2.0 * np.arccos(cos_theta) * DMconst * self.NE_SW.quantity / \
@@ -63,7 +63,7 @@ class SolarWindDispersion(Dispersion):
                 bfreq = tbl['freq']
 
             rsa = tbl['obs_sun_pos'].quantity
-            pos = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tdbld'].astype(np.float64))
+            pos = self.ssb_to_psb_xyz_ICRS(epoch=tbl[self.UNITS.value.lower()+'ld'].astype(np.float64))
             r = np.sqrt(np.sum(rsa*rsa, axis=1))
             cos_theta = np.sum(rsa*pos, axis=1) / r
             

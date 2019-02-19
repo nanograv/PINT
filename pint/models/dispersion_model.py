@@ -107,16 +107,10 @@ class DispersionDM(Dispersion):
         dm = np.zeros(len(tbl))
         dm_terms = self.get_DM_terms()
         if self.DMEPOCH.value is None:
-            if self.UNITS.value == 'TCB':
-                DMEPOCH = tbl['tcbld'][0]
-            else:
-                DMEPOCH = tbl['tdbld'][0]
+            DMEPOCH = tbl[self.UNITS.value.lower()+'ld'][0]
         else:
             DMEPOCH = self.DMEPOCH.value
-        if self.UNITS.value == 'TCB':
-            dt = (tbl['tcbld'] - DMEPOCH) * u.day
-        else:
-            dt = (tbl['tdbld'] - DMEPOCH) * u.day
+        dt = (tbl[self.UNITS.value.lower()+'ld'] - DMEPOCH) * u.day
         dt_value = (dt.to(u.yr)).value
         dm_terms_value = [d.value for d in dm_terms]
         dm = taylor_horner(dt_value, dm_terms_value)
@@ -164,16 +158,10 @@ class DispersionDM(Dispersion):
         dm_terms = np.longdouble(np.zeros(len(dms)))
         dm_terms[order] = np.longdouble(1.0)
         if self.DMEPOCH.value is None:
-            if self.UNITS.value == 'TCB':
-                DMEPOCH = tbl['tcbld'][0]
-            else:
-                DMEPOCH = tbl['tdbld'][0]
+            DMEPOCH = tbl[self.UNITS.value.lower()+'ld'][0]
         else:
             DMEPOCH = self.DMEPOCH.value
-        if self.UNITS.value == 'TCB':
-            dt = (tbl['tcbld'] - DMEPOCH) * u.day
-        else:
-            dt = (tbl['tdbld'] - DMEPOCH) * u.day
+        dt = (tbl[self.UNITS.value.lower()+'ld'] - DMEPOCH) * u.day
         dt_value = (dt.to(u.yr)).value
         d_dm_d_dm_param = taylor_horner(dt_value, dm_terms)* (self.DM.units/par.units)
         return DMconst * d_dm_d_dm_param/ bfreq**2.0

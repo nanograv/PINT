@@ -181,7 +181,7 @@ class EcorrNoise(NoiseComponent):
 
         """
         tbl = toas.table
-        t = (tbl['tdbld'].quantity * u.day).to(u.s).value
+        t = (tbl[self.UNITS.value.lower()+'ld'].quantity * u.day).to(u.s).value
         ecorrs = self.get_ecorrs()
         Umats = []
         for ec in ecorrs:
@@ -263,7 +263,7 @@ class PLRedNoise(NoiseComponent):
 
         """
         tbl = toas.table
-        t = (tbl['tdbld'].quantity * u.day).to(u.s).value
+        t = (tbl[self.UNITS.value.lower()+'ld'].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
         Fmat, f = create_fourier_design_matrix(t, nf)
         weight = powerlaw(f, amp, gam) * f[0]

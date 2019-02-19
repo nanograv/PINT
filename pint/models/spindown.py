@@ -91,20 +91,12 @@ class Spindown(PhaseComponent):
         pulse phase will be handled at a higher level in the code.
         """
         tbl = toas.table
-        if self.PEPOCH.scale == 'tcb':
-            if self.PEPOCH.value is None:
-                phsepoch_ld = time_to_longdouble(tbl['tcb'][0] - delay[0])
-            else:
-                phsepoch_ld = time_to_longdouble(self.PEPOCH.quantity)
-
-            dt = (tbl['tcbld'] - phsepoch_ld)*u.day - delay
+        if self.PEPOCH.value is None:
+            phsepoch_ld = time_to_longdouble(tbl[self.UNITS.value.lower()][0] - delay[0])
         else:
-            if self.PEPOCH.value is None:
-                phsepoch_ld = time_to_longdouble(tbl['tdb'][0] - delay[0])
-            else:
-                phsepoch_ld = time_to_longdouble(self.PEPOCH.quantity)
+            phsepoch_ld = time_to_longdouble(self.PEPOCH.quantity)
 
-            dt = (tbl['tdbld'] - phsepoch_ld)*u.day - delay
+        dt = (tbl[self.UNITS.value.lower()+'ld'] - phsepoch_ld)*u.day - delay
 
         return dt
 
