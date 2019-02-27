@@ -10,6 +10,7 @@ from astropy import log
 from astropy.utils.exceptions import AstropyWarning
 from astropy._erfa import ErfaWarning
 import warnings
+from .. import pulsar_mjd
 from six import add_metaclass
 
 
