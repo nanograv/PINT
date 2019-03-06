@@ -32,7 +32,8 @@ JD_MJD = 2400000.5
 
 def get_TOAs(timfile, ephem=None, include_bipm=True, bipm_version='BIPM2015',
              include_gps=True, planets=False, usepickle=False,
-             tdb_method="default", tcb_method="default"):
+             tdb_method="default", tcb_method="default", tt2tdb_mode=None,
+             tt2tcb_mode=None):
     """Convenience function to load and prepare TOAs for PINT use.
 
     Loads TOAs from a '.tim' file, applies clock corrections, computes
@@ -58,9 +59,11 @@ def get_TOAs(timfile, ephem=None, include_bipm=True, bipm_version='BIPM2015',
                                   include_bipm=include_bipm,
                                   bipm_version=bipm_version)
     if 'tdb' not in t.table.colnames:
-        t.compute_TDBs(method=tdb_method, ephem=ephem)
+        t.compute_TDBs(method=tdb_method, tt2tdb_mode=tt2tdb_mode,
+                       ephem=ephem)
     if 'tcb' not in t.table.colnames:
-        t.compute_TCBs(method=tcb_method, ephem=ephem)
+        t.compute_TCBs(method=tcb_method, tt2tcb_mode=tt2tcb_mode,
+                       ephem=ephem)
     if 'ssb_obs_pos' not in t.table.colnames:
         t.compute_posvels(ephem, planets)
     # Update pickle if needed:
@@ -103,7 +106,8 @@ def _check_pickle(toafilename, picklefilename=None):
 
 def get_TOAs_list(toa_list,ephem=None, include_bipm=True,
                   bipm_version='BIPM2015', include_gps=True, planets=False,
-                  tdb_method="default", tcb_method="default"):
+                  tdb_method="default", tcb_method="default", tt2tdb_mode=None,
+                  tt2tcb_mode=None):
     """Load TOAs from a list of TOA objects.
 
     Compute the TDB time and observatory positions and velocity
@@ -120,9 +124,9 @@ def get_TOAs_list(toa_list,ephem=None, include_bipm=True,
                                   include_bipm=include_bipm,
                                   bipm_version=bipm_version)
     if 'tdb' not in t.table.colnames:
-        t.compute_TDBs(method=tdb_method, ephem=ephem)
+        t.compute_TDBs(method=tdb_method, ephem=ephem, tt2tdb_mode=tt2tdb_mode)
     if 'tcb' not in t.table.colnames:
-        t.compute_TCBs(method=tcb_method, ephem=ephem)
+        t.compute_TCBs(method=tcb_method, ephem=ephem, tt2tcb_mode=tt2tcb_mode)
     if 'ssb_obs_pos' not in t.table.colnames:
         t.compute_posvels(ephem, planets)
     return t
@@ -810,7 +814,7 @@ class TOAs(object):
                                      'bipm_version':bipm_version,
                                      'include_gps':include_gps})
 
-    def compute_TDBs(self, method="default", ephem=None):
+    def compute_TDBs(self, method="default", ephem=None, tt2tdb_mode=None):
         """Compute and add TDB and TDB long double columns to the TOA table.
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
         for TDB times, using the Observatory locations and IERS A Earth
@@ -843,6 +847,7 @@ class TOAs(object):
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
             site = get_observatory(obs)
+            site.tt2tdb_mode = tt2tdb_mode
             if isinstance(site,TopoObs):
                 # For TopoObs, it is safe to assume that all TOAs have same location
                 # I think we should report to astropy that initializing
@@ -876,7 +881,7 @@ class TOAs(object):
                 data=[utils.time_to_longdouble(t) for t in tdbs])
         self.table.add_columns([col_tdb, col_tdbld])
 
-    def compute_TCBs(self, method="default", ephem=None):
+    def compute_TCBs(self, method="default", ephem=None, tt2tcb_mode=None):
         """Compute and add TCB and TCB long double columns to the TOA table.
         This routine creates new columns 'tcb' and 'tcbld' in a TOA table
         for TCB times, using the Observatory locations and IERS A Earth
@@ -909,6 +914,7 @@ class TOAs(object):
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
             site = get_observatory(obs)
+            site.tt2tcb_mode = tt2tcb_mode
             if isinstance(site, TopoObs):
                 # For TopoObs, it is safe to assume that all TOAs have same location
                 # I think we should report to astropy that initializing

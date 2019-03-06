@@ -44,12 +44,46 @@ class Observatory(object):
         cls._register(obs, name)
         return obs
 
-    def __init__(self, name, aliases=None, tt2tdb_mode='pint',
-                 tt2tcb_mode='pint'):
+    def __init__(self, name, aliases=None, tt2tdb_mode=None,
+                 tt2tcb_mode=None):
         if aliases is not None:
             Observatory._add_aliases(self,aliases)
         self.tt2tdb_mode = tt2tdb_mode
         self.tt2tcb_mode = tt2tcb_mode
+
+    @property
+    def tt2tdb_mode(self):
+        return self._tt2tdb_mode
+
+    @tt2tdb_mode.setter
+    def tt2tdb_mode(self, val):
+        if val is None:
+            # set default to 'pint'
+            self._tt2tdb_mode = 'pint'
+        elif isinstance(val, str):
+            if val.lower() not in ['pint', 'astropy']:
+                raise ValueError("tt2tdb mode must be 'astropy' or 'pint'")
+            else:
+                self._tt2tdb_mode = val.lower()
+        else:
+            raise TypeError("tt2tdb mode is the wrong type")
+
+    @property
+    def tt2tcb_mode(self):
+        return self._tt2tcb_mode
+
+    @tt2tcb_mode.setter
+    def tt2tcb_mode(self, val):
+        if val is None:
+            # set default to 'pint'
+            self._tt2tcb_mode = 'pint'
+        elif isinstance(val, str):
+            if val.lower() not in ['pint', 'astropy']:
+                raise ValueError("tt2tcb mode must be 'astropy' or 'pint'")
+            else:
+                self._tt2tcb_mode = val.lower()
+        else:
+            raise TypeError("tt2tcb mode is the wrong type")
 
     @classmethod
     def _register(cls,obs,name):
@@ -158,7 +192,7 @@ class Observatory(object):
         # TOA metadata which may be necessary in some cases.
         raise NotImplementedError
 
-    def get_TDBs(self, t,  method='default', ephem=None, options=None, grp=None):
+    def get_TDBs(self, t,  method='default', tt2tdbmode=None, ephem=None, options=None):
         """This is a high level function for converting TOAs to TDB time scale.
             Different method can be applied to obtain the result. Current supported
             methods are ['astropy', 'ephemeris']
@@ -168,11 +202,14 @@ class Observatory(object):
                 The time need for converting toas
             method: str or callable, optional
                 Method of computing TDB
-
                 - 'default': Astropy time.Time object built-in converter, use FB90.
                     Also uses topocentric correction term if self.tt2tdbmethod is
                     pint.
                 - 'ephemeris': JPL ephemeris included TDB-TT correction.
+            tt2tdbmode: str
+                If set this overrides the default tt2tdb_mode set on
+                initialization of the observatory. This can be 'astropy' or
+                'pint', which 'pint' computes the topocentric correction term.
             ephem: str, optional
                 The ephemeris to get he TDB-TT correction. Required for the
                 'ephemeris' method.
@@ -192,15 +229,19 @@ class Observatory(object):
             options = dict(options)
             return method(t, **options)
         if meth == 'default':
-            if self.tt2tdb_mode.lower().startswith('astropy'):
+            tt2tdb_mode = self.tt2tdb_mode.lower() if tt2tdbmode is None else tt2tdbmode.lower()
+
+            if tt2tdb_mode.startswith('astropy'):
                 log.info('Doing astropy mode TDB conversion')
                 return self._get_TDB_astropy(t)
-            elif self.tt2tdb_mode.lower().startswith('pint'):
+            elif tt2tdb_mode.startswith('pint'):
                 log.info('Doing PINT mode TDB conversion')
                 if ephem is None:
                     raise ValueError("A ephemeris file should be provided to get"
                                         " the TDB-TT corrections, or use tt2tdb_mode=astropy")
-                return self._get_TDB_PINT(t, ephem, grp)
+                return self._get_TDB_PINT(t, ephem)
+            else:
+                raise ValueError("The TDB-TT mode should be 'astropy' or 'pint'")
         elif meth == "ephemeris":
             if ephem is None:
                 raise ValueError("A ephemeris file should be provided to get"
@@ -212,7 +253,7 @@ class Observatory(object):
     def _get_TDB_astropy(self, t):
         return t.tdb
 
-    def _get_TDB_PINT(self, t, ephem, grp=None):
+    def _get_TDB_PINT(self, t, ephem):
         """Uses astropy.Time location to add the topocentric correction term to
             the Time object. The topocentric correction is given as (r/c).(v/c),
             with r equal to the geocentric position of the observer, v being the
@@ -225,7 +266,7 @@ class Observatory(object):
 
         #Add in correction term to t.tdb equal to r.v / c^2
         vel = sse.objPosVel_wrt_SSB('earth', t, ephem).vel
-        pos = self.get_gcrs(t, ephem=ephem, grp=grp)
+        pos = self.get_gcrs(t, ephem=ephem)
         dnom = const.c * const.c 
 
         corr = ((pos[0] * vel[0] + pos[1] * vel[1] + pos[2] * vel[2])/dnom).to(u.s)
@@ -239,7 +280,7 @@ class Observatory(object):
         """
         raise NotImplementedError
 
-    def get_TCBs(self, t,  method='default', ephem=None, options=None, grp=None):
+    def get_TCBs(self, t,  method='default', tt2tcbmode=None, ephem=None, options=None, grp=None):
         """This is a high level function for converting TOAs to TCB time scale.
             Different method can be applied to obtain the result. Current supported
             methods are ['astropy', 'ephemeris']
@@ -249,11 +290,14 @@ class Observatory(object):
                 The time need for converting toas
             method: str or callable, optional
                 Method of computing TCB
-
                 - 'default': Astropy time.Time object built-in converter, use FB90.
                     Also uses topocentric correction term if self.tt2tcbmethod is
                     pint.
                 - 'ephemeris': JPL ephemeris included TCB-TT correction.
+            tt2tcbmode: str
+                If set this overrides the default tt2tcb_mode set on
+                initialization of the observatory. This can be 'astropy' or
+                'pint', which 'pint' computes the topocentric correction term.
             ephem: str, optional
                 The ephemeris to get the TCB-TT correction. Required for the
                 'ephemeris' method.
@@ -273,15 +317,19 @@ class Observatory(object):
             options = dict(options)
             return method(t, **options)
         if meth == 'default':
-            if self.tt2tcb_mode.lower().startswith('astropy'):
+            tt2tcb_mode = self.tt2tcb_mode.lower() if tt2tcbmode is None else tt2tcbmode.lower()
+
+            if tt2tcb_mode.startswith('astropy'):
                 log.info('Doing astropy mode TCB conversion')
                 return self._get_TCB_astropy(t)
-            elif self.tt2tcb_mode.lower().startswith('pint'):
+            elif tt2tcb_mode.startswith('pint'):
                 log.info('Doing PINT mode TCB conversion')
                 if ephem is None:
                     raise ValueError("A ephemeris file should be provided to get"
                                      " the TCB-TT corrections, or use tt2tcb_mode=astropy")
                 return self._get_TCB_PINT(t, ephem, grp)
+            else:
+                raise ValueError("The TCB-TT mode should be 'astropy' or 'pint'")
         elif meth == "ephemeris":
             if ephem is None:
                 raise ValueError("A ephemeris file should be provided to get"
@@ -306,7 +354,7 @@ class Observatory(object):
 
         #Add in correction term to t.tdb equal to r.v / c^2
         vel = sse.objPosVel_wrt_SSB('earth', t, ephem).vel
-        pos = self.get_gcrs(t, ephem=ephem, grp=grp)
+        pos = self.get_gcrs(t, ephem=ephem)
         dnom = const.c * const.c 
 
         corr = ((pos[0] * vel[0] + pos[1] * vel[1] + pos[2] * vel[2])/dnom).to(u.s)
