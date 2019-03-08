@@ -125,9 +125,17 @@ class TopoObs(Observatory):
         elif self.clock_dir=='TEMPO':
             # Technically should read $TEMPO/tempo.cfg and get clock file
             # location from CLKDIR line...
-            dir = os.path.join(os.getenv('TEMPO'),'clock')
+            TEMPO_dir = os.getenv('TEMPO')
+            if TEMPO_dir is None:
+                raise RuntimeError("Cannot find TEMPO path from the"
+                                   " enviroment.")
+            dir = os.path.join(TEMPO_dir,'clock')
         elif self.clock_dir=='TEMPO2':
-            dir = os.path.join(os.getenv('TEMPO2'),'clock')
+            TEMPO2_dir = os.getenv('TEMPO2')
+            if TEMPO2_dir is None:
+                raise RuntimeError("Cannot find TEMPO2 path from the"
+                                   " enviroment.")
+            dir = os.path.join(TEMPO2_dir,'clock')
         else:
             dir = self.clock_dir
         if self._multiple_clock_files:
@@ -166,6 +174,13 @@ class TopoObs(Observatory):
         return self._loc_itrf
 
     def clock_corrections(self, t):
+        """Compute the total clock corrections,
+
+        Parameter
+        ---------
+        t : `~astropy.time.Time` object
+            The time when the clock correcions are applied.
+        """
         # Read clock file if necessary
         # TODO provide some method for re-reading the clock file?
         if self._clock is None:
