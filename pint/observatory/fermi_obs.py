@@ -107,7 +107,7 @@ class FermiObs(SpecialLocation):
         self.Vx = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Vx'])
         self.Vy = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Vy'])
         self.Vz = InterpolatedUnivariateSpline(self.FT2['MJD_TT'],self.FT2['Vz'])
-        super(FermiObs, self).__init__(name=name)
+        super(FermiObs, self).__init__(name=name,tt2tdb_mode=tt2tdb_mode)
         # Print this warning once, mainly for @paulray
         if self.tt2tdb_mode.lower().startswith('pint'):
             log.warning('Using location=None for TT to TDB conversion (pint mode)')
