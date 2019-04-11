@@ -44,7 +44,7 @@ class TestFermiPhase(unittest.TestCase):
         tl  = load_Fermi_TOAs(eventfileraw, weightcolumn='PSRJ0030+0451')
         ts = toa.TOAs(toalist=tl)
         ts.filename = eventfileraw
-        ts.compute_TDBs()
+        ts.compute_TDBs(ephem='DE405')
         ts.compute_posvels(ephem='DE405',planets=False)
         phss = modelin.phase(ts)[1]
         phases = np.where(phss < 0.0 * u.cycle, phss + 1.0 * u.cycle, phss)
