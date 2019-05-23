@@ -1,7 +1,7 @@
 """Miscellaneous potentially-helpful functions."""
 from __future__ import absolute_import, print_function, division
 import numpy as np
-from scipy.misc import factorial
+from scipy.special import factorial
 import string
 import astropy.time
 try:
