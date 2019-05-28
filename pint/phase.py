@@ -11,6 +11,8 @@ from collections import namedtuple
 import numpy
 import astropy.units as u
 from pint import dimensionless_cycles
+#comment
+print("A")
 
 class Phase(namedtuple('Phase', 'int frac')):
     """
