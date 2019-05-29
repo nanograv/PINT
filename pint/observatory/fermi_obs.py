@@ -64,10 +64,12 @@ def load_FT2(ft2_filename):
     dt = mjds_TT[1]-mjds_TT[0]
     log.info('FT2 spacing is '+str(dt.to(u.s)))
     # Trim off last point because array.diff() is one shorter
-    Vx = np.gradient(X)[:-1]/(mjds_TT.diff().to(u.s))
-    Vy = np.gradient(Y)[:-1]/(mjds_TT.diff().to(u.s))
+    #Vx = np.gradient(X)[:-1]/(mjds_TT.diff().to(u.s))
+    #Vy = np.gradient(Y)[:-1]/(mjds_TT.diff().to(u.s))
     # Hack to fix gradient failing on example data file for reasons I don't understand. -- paulr
     #Vz = np.gradient(Z)[:-1]/(mjds_TT.diff().to(u.s))
+    Vx = (np.gradient(X.value)[:-1])*u.m/(mjds_TT.diff().to(u.s))
+    Vy = (np.gradient(Y.value)[:-1])*u.m/(mjds_TT.diff().to(u.s))
     Vz = (np.gradient(Z.value)[:-1])*u.m/(mjds_TT.diff().to(u.s))
     X = X[:-1]
     Y = Y[:-1]

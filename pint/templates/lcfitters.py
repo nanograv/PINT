@@ -34,9 +34,9 @@ def weighted_light_curve(nbins,phases,weights,normed=False,phase_shift=0):
     """ Return a set of bins, values, and errors to represent a
         weighted light curve."""
     bins = np.linspace(0+phase_shift,1+phase_shift,nbins+1)
-    counts = np.histogram(phases,bins=bins,normed=False)[0]
-    w1 = (np.histogram(phases,bins=bins,weights=weights,normed=False)[0]).astype(float)
-    w2 = (np.histogram(phases,bins=bins,weights=weights**2,normed=False)[0]).astype(float)
+    counts = np.histogram(phases,bins=bins,density=False)[0]
+    w1 = (np.histogram(phases,bins=bins,weights=weights,density=False)[0]).astype(float)
+    w2 = (np.histogram(phases,bins=bins,weights=weights**2,density=False)[0]).astype(float)
     errors = np.where(counts > 1, w2**0.5, counts)
     norm = w1.sum()/nbins if normed else 1.
     return bins,w1/norm,errors/norm
@@ -743,7 +743,7 @@ def make_err_plot(template,totals=[10,20,50,100,500],n=1000):
     for tot in totals:
         f,e = get_errors(template,tot,n=n)
         fvals += [f]; errs += [e]
-        pl.hist(f/e,bins=np.arange(-5,5.1,0.5),histtype='step',normed=True,label='N = %d'%tot);
+        pl.hist(f/e,bins=np.arange(-5,5.1,0.5),histtype='step',density=True,label='N = %d'%tot);
     g = lambda x: (np.pi*2)**-0.5*np.exp(-x**2/2)
     dom = np.linspace(-5,5,101)
     pl.plot(dom,g(dom),color='k')
