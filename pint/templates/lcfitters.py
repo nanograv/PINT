@@ -245,7 +245,7 @@ class UnweightedLCFitter(object):
         print('Improved log likelihood by %.2f'%(self.ll-ll0))
         return True
 
-    def fit_position(self, unbinned=True):
+    def fit_position(self, unbinned=True, track=False):
         """ Fit overall template position.  Return shift and its error."""
         self._set_unbinned(unbinned)
         ph0 = self.template.get_location()
@@ -253,7 +253,10 @@ class UnweightedLCFitter(object):
             self.template.set_overall_phase(phase)
             return self.loglikelihood(self.template.get_parameters())
         # coarse grained search
-        dom = np.linspace(0,1,101)
+        if track:
+            dom = np.concatenate((np.linspace(0,0.2,25),np.linspace(0.8,1.0,25)))
+        else:
+            dom = np.linspace(0,1,101)
         cod = map(logl,0.5*(dom[1:]+dom[:-1]))
         idx = np.argmin(cod)
         ph1 = fmin(logl,[dom[idx]],full_output=True,disp=0)[0][0]

@@ -26,11 +26,11 @@ nsteps = 1000
 nbins = 256 # For likelihood calculation based on gaussians file
 outprof_nbins = 256 # in the text file, for pygaussfit.py, for instance
 minMJD = 54680.0 # Earliest MJD (limited by LAT data)
-maxMJD = 57250.0 # latest MJD to use (limited by IERS file usually)
+maxMJD = 58250.0 # latest MJD to use (limited by IERS file usually)
 # Set minWeight to 0.0 to get plots about how significant the
 # pulsations are before doing an expensive MCMC.  This allows
 # you to set minWeight intelligently.
-minWeight = 0.01 # if using weights, this is the minimum to include
+minWeight = 0.02 # if using weights, this is the minimum to include
 errfact = 10.0 # multiplier for gaussian priors based TEMPO errors
 do_opt_first = True
 # Raise the calculated weights to this power
