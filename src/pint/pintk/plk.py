@@ -13,6 +13,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 try:
     from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 except ImportError:
+    print("using old toolbar")
     from matplotlib.backends.backend_tkagg import NavigationToolbar2TkAgg as NavigationToolbar2Tk
 import numpy as np
 import astropy.units as u
@@ -210,9 +211,10 @@ class PlkToolbar(NavigationToolbar2Tk):
     A modification of the stock Matplotlib toolbar to perform the
     necessary selections/unselections on points
     '''
+    #toolitems = NavigationToolbar2Tk.toolitems
     toolitems = [t for t in NavigationToolbar2Tk.toolitems if
                  t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom', 'Save')]
-
+    
 class PlkActionsWidget(tk.Frame):
     '''
     Shows action items like re-fit, write par, write tim, etc.
@@ -299,8 +301,9 @@ class PlkWidget(tk.Frame):
         self.plkCanvas.mpl_connect('motion_notify_event', self.canvasMotionEvent)
         self.plkCanvas.mpl_connect('key_press_event', self.canvasKeyEvent)
         self.plkToolbar = PlkToolbar(self.plkCanvas, tk.Frame(self))
-
-        self.plkAxes = self.plkFig.add_subplot(111)
+        
+        print('in initPlk')
+        self.plkAxes = self.plkFig.add_subplot(111)#111
         self.plkAx2x = self.plkAxes.twinx()
         self.plkAx2y = self.plkAxes.twiny()
         self.plkAxes.set_zorder(0.1)
@@ -308,6 +311,7 @@ class PlkWidget(tk.Frame):
         self.drawSomething()
 
     def drawSomething(self):
+        print('in drawsomething')
         self.plkAxes.clear()
         self.plkAxes.grid(True)
         self.plkAxes.set_xlabel('MJD')
@@ -315,6 +319,7 @@ class PlkWidget(tk.Frame):
         self.plkCanvas.draw()
 
     def initPlkLayout(self):
+        print('plktoolbar.master',self.plkToolbar.master)
         self.plkToolbar.master.grid(row=1, column=1, sticky='nesw')
         self.xyChoiceWidget.grid(row=2, column=0, sticky='nw')
         self.plkCanvas.get_tk_widget().grid(row=2, column=1, sticky='nesw')
@@ -335,7 +340,8 @@ class PlkWidget(tk.Frame):
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.xyChoiceWidget.setChoice()
             self.updatePlot(keepAxes=True)
-
+            print('in update')
+            
     def setPulsar(self, psr, updates):
         self.psr = psr
         self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
@@ -438,6 +444,7 @@ class PlkWidget(tk.Frame):
 
         @param keepAxes: Set to True whenever we want to preserve zoom
         """
+        print('in updatePlot')
         if self.psr is not None:
             # Get a mask for the plotting points
             #msk = self.psr.mask('plot')
@@ -684,6 +691,7 @@ class PlkWidget(tk.Frame):
         '''
         Call this function when the figure/canvas is clicked
         '''
+        print('click event')
         self.plkCanvas.get_tk_widget().focus_set()
         if event.inaxes == self.plkAxes:
             self.press = True
@@ -710,6 +718,7 @@ class PlkWidget(tk.Frame):
         '''
         Call this function when the figure/canvas is released
         '''
+        print('release event')
         if self.press and not self.move:
             self.stationaryClick(event)
         elif self.press and self.move:
@@ -721,6 +730,7 @@ class PlkWidget(tk.Frame):
         '''
         Call this function when the mouse is clicked but not moved
         '''
+        print('stationary event')
         if event.inaxes == self.plkAxes:
             ind = self.coordToPoint(event.xdata, event.ydata)
             if ind is not None:
@@ -746,6 +756,7 @@ class PlkWidget(tk.Frame):
         '''
         Call this function when the mouse is clicked and dragged
         '''
+        print('click and drag event')
         if event.inaxes == self.plkAxes and self.plkToolbar._active is None:
             xmin, xmax = self.pressEvent.xdata, event.xdata
             ymin, ymax = self.pressEvent.ydata, event.ydata
@@ -762,6 +773,7 @@ class PlkWidget(tk.Frame):
         '''
         A key is pressed. Handle all the shortcuts here
         '''
+        print('key event')
         fkey = event.key
         xpos, ypos = event.xdata, event.ydata
         ukey = ord(fkey[-1])

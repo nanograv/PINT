@@ -4,6 +4,9 @@ from __future__ import absolute_import, division, print_function
 import re
 from contextlib import contextmanager
 
+import numpy as np
+from scipy.special import factorial
+import string
 import astropy.time
 import astropy.units as u
 import numpy as np
@@ -13,6 +16,10 @@ try:
     from astropy.erfa import DJM0, d2dtf
 except ImportError:
     from astropy._erfa import DJM0, d2dtf
+
+from astropy import log
+from pint.str2ld import str2ldarr1
+from copy import deepcopy
 
 try:
     maketrans = str.maketrans
@@ -34,6 +41,8 @@ __all__ = ['PosVel', 'fortran_float', 'time_from_mjd_string',
            'taylor_horner', 'taylor_horner_deriv', 'is_number', 'open_or_use',
            'lines_of', 'interesting_lines']
 
+def a(num):
+    return num
 
 class PosVel(object):
     """Position/Velocity class.
@@ -566,4 +575,78 @@ def interesting_lines(lines, comments=None):
         if comments is not None and ln.startswith(comments):
             continue
         yield ln
+
+def make_toas(startMJD, endMJD, ntoas, model, freq=1400, obs='GBT'):
+    '''make evenly spaced toas without error noise'''
+    print("TEST")
+    start = np.longdouble(startMJD)*u.day
+    end = np.longdouble(endMJD)*u.day
+    freq = np.atleast_1d(freq)*u.MHz
+    site = pint.observatory.get_observatory(obs)
+    times = np.linspace(start, end, ntoas) * u.day
+    def get_freq_array(bfv, ntoas):
+        freq = np.zeros(ntoas)
+        num_freqs = len(bfv)
+        for ii, fv in enumerate(bfv):
+            freq[ii::num_freqs] = fv
+        return freq
+    
+    freq_array = get_freq_array(freq, len(times))
+    t1 = [pint.toa.TOA(t.value, obs = obs, freq=f, scale=site.timescale) for t, f in zip(times, freq_array)]
+    ts = pint.toa.TOAs(toalist=t1)
+    ts.compute_TDBs()
+    ts.compute_posvels()
+    ts.clock_corr_info.update({'include_bipm':False,'bipm_version':'BIPM2015','include_gps':False})
+    print('clock_corr_info',ts.clock_corr_info)
+    return ts
+
+def show_cov_matrix(matrix,params,name,switchRD=False):
+    '''function to print covariance matrices in a clean and easily readable way'''
+    RAi = params.index('RAJ')
+    params1 = []
+    for param in params:
+        if len(param) < 3:
+            while len(param) != 3:
+                param = " " + param
+            params1.append(param)
+        elif len(param) > 3:
+            while len(param) != 3:
+                param = param[:-1]
+            params1.append(param)
+        else:
+            params1.append(param)
+    if switchRD:
+        #switch RA and DEC so cov matrix matches TEMPO
+        params1[RAi:RAi+2] = [params1[RAi+1],params1[RAi]]
+        i = 0
+        while i < 2:
+            RA = deepcopy(matrix[RAi])
+            matrix[RAi] = matrix[RAi + 1]
+            matrix[RAi + 1] = RA
+            matrix = matrix.T
+            i += 1
+    print(name, "switch RD =",switchRD)
+    print(' ',end='')
+    for param in params1:
+        print(" "*8,param, end='')
+    i = j = 0
+    while i < len(matrix):
+        print('\n'+params1[i],end=" :: ")
+        while j <= i:
+            num = matrix[i][j]
+            if num < 0.001 and num > -0.001:
+                print('{0: 1.2e}'.format(num), end = ' : ')
+            else:
+                print(' ','{0: 1.2f}'.format(num),' ', end = ' : ')
+            j += 1
+        i += 1
+        j = 0
+    print('\b:\n')
+                                            
+                                            
+if __name__ == "__main__":
+    assert taylor_horner(2.0, [10]) == 10
+    assert taylor_horner(2.0, [10, 3]) == 10 + 3*2.0
+    assert taylor_horner(2.0, [10, 3, 4]) == 10 + 3*2.0 + 4*2.0**2 / 2.0
+    assert taylor_horner(2.0, [10, 3, 4, 12]) == 10 + 3*2.0 + 4*2.0**2 / 2.0 + 12*2.0**3/(3.0*2.0)
 

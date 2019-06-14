@@ -67,7 +67,6 @@ class Residuals(object):
             return rs
 
         if not weighted_mean:
-            print('k')
             rs -= Phase(0.0,rs.frac.mean())
         else:
         # Errs for weighted sum.  Units don't matter since they will
@@ -76,7 +75,6 @@ class Residuals(object):
                 raise ValueError('TOA errors are zero - cannot calculate residuals')
             w = 1.0/(np.array(self.toas.get_errors())**2)
             wm = (rs.frac*w).sum() / w.sum()
-            print('j')
             rs -= Phase(0.0,wm)
         return rs.frac
 
@@ -163,14 +161,10 @@ class Residuals(object):
 
     def get_reduced_chi2(self):
         """Return the weighted reduced chi-squared for the model and toas."""
-        return self.chi2_reduced
-
-    def get_mean_vector(self):
-        #e = self.get_fitparams_num()
-        return 0
+        return self.calc_chi2() / self.get_dof()
     
     def get_covariance_matrix(self,scaled=False):
-        """returns the covariance matrix for the model and toas, either unscaled (with variances in the diagonal) or scaled (with 1s in the diagonal)"""
+        """returns the covariance matrix for the fit, either unscaled (with variances in the diagonal) or scaled (with 1s in the diagonal)"""
         #copied from fitter.py, cleaner way?
         M, params, units, Scale_by_F0 = self.model.designmatrix(toas=self.toas,incfrozen=False,incoffset=True)
         Nvec = self.toas.get_errors().to(u.s).value
@@ -180,39 +174,53 @@ class Residuals(object):
         M/= fac
         U, s, Vt = sl.svd(M, full_matrices=False)
         Sigma = np.dot(Vt.T / (s**2), Vt)
-        sigma_scaled = (Sigma/fac).T/fac
+        sigma_var = (Sigma/fac).T/fac
         if scaled is not True:
-            #removes first row and column (offset)
-            return sigma_scaled#[1:].T[1:].T
+            #scaled by fac to make into variance (variances in diagonal)
+            return sigma_var
         else:
-            errors = np.sqrt(np.diag(sigma_scaled))
-            sigma_scaled1 = (sigma_scaled/errors).T/errors
-            #removes first row and column (offset)
-            return sigma_scaled1#[1:].T[1:].T
-        
-    def show_matrix(self, matrix, name, switchRD=False):
-        top = "           F0          F1          RA          DEC         DM"
-        side = [" F0"," F1"," RA","DEC"," DM"]
+            #scaled by fac and errors to make into covariance (1s in diagonal)
+            errors = np.sqrt(np.diag(sigma_var))
+            sigma_cov = (sigma_var/errors).T/errors
+            return sigma_cov
+    
+    def show_cov_matrix(self,matrix,params,name,switchRD=False):
+        '''function to print covariance matrices in a clean and easily readable way'''
+        try:
+            RAi = params.index('RAJ')
+            DecTrue = params.index('DECJ')
+        except:
+            RAi = None
+            switchRD = False
+        params1 = []
+        for param in params:
+            if len(param) < 3:
+                while len(param) != 3:
+                    param = " " + param
+                params1.append(param)
+            elif len(param) > 3:
+                while len(param) != 3:
+                    param = param[:-1]
+                params1.append(param)
+            else:
+                params1.append(param)
         if switchRD:
-            top = "           F0          F1         DEC          RA          DM"
-            side = [" F0"," F1","DEC"," RA"," DM"]
             #switch RA and DEC so cov matrix matches TEMPO
-            i = 0 
+            params1[RAi:RAi+2] = [params1[RAi+1],params1[RAi]]
+            i = 0
             while i < 2:
-                RA = deepcopy(matrix[2])
-                matrix[2] = matrix[3]
-                matrix[3] = RA
+                RA = deepcopy(matrix[RAi])
+                matrix[RAi] = matrix[RAi + 1]
+                matrix[RAi + 1] = RA
                 matrix = matrix.T
                 i += 1
+        print(name, "switch RD =",switchRD)
+        print(' ',end='')
+        for param in params1:
+            print(" "*8,param, end='')
         i = j = 0
-        print(name)
-        print(top)
         while i < len(matrix):
-            if i == 0:
-                i += 1
-                j += 1
-                continue
-            print(side[i],end=" :: ")
+            print('\n'+params1[i],end=" :: ")
             while j <= i:
                 num = matrix[i][j]
                 if num < 0.001 and num > -0.001:
@@ -220,15 +228,13 @@ class Residuals(object):
                 else:
                     print(' ','{0: 1.2f}'.format(num),' ', end = ' : ')
                 j += 1
-            #print('\b:')
-            print()
             i += 1
             j = 0
-        print(':')
-                        
+        print('\b:\n')
+    
     def update(self, weighted_mean=True):
         """Recalculate everything in residuals class
-            after changing model or TOAs"""
+        after changing model or TOAs"""
         if self.toas is None or self.model is None:
             self.phase_resids = None
             self.time_resids = None
