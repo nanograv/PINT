@@ -1,10 +1,11 @@
 from __future__ import absolute_import, print_function, division
 import copy, numbers
+import collections
 import numpy as np
 import astropy.units as u
 import abc
 import scipy.optimize as opt, scipy.linalg as sl
-from .residuals import resids
+from residuals import resids
 
 
 class Fitter(object):
@@ -25,7 +26,7 @@ class Fitter(object):
         self.resids_init = resids(toas=toas, model=model)
         self.reset_model()
         self.method = None
-
+        
     def reset_model(self):
         """Reset the current model to the initial model."""
         self.model = copy.deepcopy(self.model_init)
@@ -55,21 +56,21 @@ class Fitter(object):
 
     def get_allparams(self):
         """Return a dict of all param names and values."""
-        return dict((k, getattr(self.model, k).quantity) for k in
+        return collections.OrderedDict((k, getattr(self.model, k).quantity) for k in
                     self.model.params)
 
     def get_fitparams(self):
         """Return a dict of fittable param names and quantity."""
-        return dict((k, getattr(self.model, k)) for k in
+        return collections.OrderedDict((k, getattr(self.model, k)) for k in
                     self.model.params if not getattr(self.model, k).frozen)
 
     def get_fitparams_num(self):
         """Return a dict of fittable param names and numeric values."""
-        return dict((k, getattr(self.model, k).value) for k in
+        return collections.OrderedDict((k, getattr(self.model, k).value) for k in
                     self.model.params if not getattr(self.model, k).frozen)
 
     def get_fitparams_uncertainty(self):
-        return dict((k, getattr(self.model, k).uncertainty_value) for k in
+        return collections.OrderedDict((k, getattr(self.model, k).uncertainty_value) for k in
                     self.model.params if not getattr(self.model, k).frozen)
 
     def set_params(self, fitp):
@@ -101,8 +102,8 @@ class Fitter(object):
 
     def fit_toas(self, maxiter=None):
         raise NotImplementedError
-
-
+    
+    
 class PowellFitter(Fitter):
     """A class for Scipy Powell fitting method. This method searches over
        parameter space. It is a relative basic method.
@@ -119,7 +120,7 @@ class PowellFitter(Fitter):
                                     options={'maxiter':maxiter},
                                     method=self.method)
         # Update model and resids, as the last iteration of minimize is not
-        # necessarily the one that yields the best fit
+        # necessarily the one that yields the best it
         self.minimize_func(np.atleast_1d(self.fitresult.x),
                            *list(fitp.keys()))
 
@@ -160,8 +161,7 @@ class WlsFitter(Fitter):
             # M[:,1:] -= M[:,1:].mean(axis=0)
             fac = M.std(axis=0)
             fac[0] = 1.0
-            M /= fac
-
+            M = M/fac
             # Singular value decomp of design matrix:
             #   M = U s V^T
             # Dimensions:
@@ -184,7 +184,50 @@ class WlsFitter(Fitter):
             Sigma = np.dot(Vt.T / (s**2), Vt)
             # Parameter uncertainties.  Scale by fac recovers original units.
             errs = np.sqrt(np.diag(Sigma)) / fac
-
+        
+            def show_matrix(matrix,matrix_name):
+                i = j = 0
+                print(matrix_name)
+                print("         F0      F1      RA      DEC      DM")
+                while i < len(matrix):
+                    if i == 0:
+                        i += 1
+                        continue
+                    elif i == 1:
+                        print(" F0",end=" ")
+                    elif i == 2:
+                        print(" F1",end=" ")
+                    elif i == 3:
+                        print(" RA",end=" ")
+                    elif i == 4:
+                        print("DEC",end=" ")
+                    else:
+                        print(" DM",end=" ")
+                    print(":: ",end='')    
+                    while j < len(matrix[0]):
+                        if j == 0:
+                            j += 1
+                            continue
+                        num = str(round(matrix[i][j],2))
+                        if '-' not in num:
+                            num = ' ' + num
+                        if len(num) < 5:
+                            num = num + '0'
+                        print(num, end = ' : ')
+                        j += 1
+                    print(' :')
+                    i += 1
+                    j = 0
+                print()
+                            
+            show_matrix(Sigma, '\nSigma')                
+            sigma_scaled = (Sigma/fac).T/fac
+            errors = np.sqrt(np.diag(sigma_scaled))
+            sigma_dscaled = (sigma_scaled/errors).T/errors
+            print("errors=",errors,"np.sqrt(np.diag(sigma_scaled))")
+            show_matrix(sigma_scaled, '\n(Sigma/fac.T/fac)')
+            show_matrix(sigma_dscaled, "\n(sigma_scaled/errors).T/errors")
+                                                                                                                            
             # The delta-parameter values
             #   dpars = V s^-1 U^T r
             # Scaling by fac recovers original units
@@ -198,6 +241,7 @@ class WlsFitter(Fitter):
                 fitpv[pn] = np.longdouble((pv+dpv) / fitp[pn].units)
                 #NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
+            print('fitpv.values' ,fitpv.values(),'fitp.keys',fitp.keys())
             chi2 = self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
             # Updata Uncertainties
             self.set_param_uncertainties(fitperrs)

@@ -2,8 +2,10 @@ from __future__ import absolute_import, print_function, division
 import astropy.units as u
 from astropy import log
 import numpy as np
-from .phase import Phase
+from phase import Phase
 from pint import dimensionless_cycles
+import scipy.linalg as sl
+from copy import deepcopy
 
 class resids(object):
     """resids(toa=None, model=None)"""
@@ -17,6 +19,9 @@ class resids(object):
             self.chi2 = self.calc_chi2()
             self.dof = self.get_dof()
             self.chi2_reduced = self.chi2 / self.dof
+            self.scaled_cov_matrix = self.get_covariance_matrix(scaled=True)
+            self.unscaled_cov_matrix = self.get_covariance_matrix(scaled=False)
+            self.mean_vector = self.get_mean_vector()
         else:
             self.phase_resids = None
             self.time_resids = None
@@ -25,7 +30,7 @@ class resids(object):
         """Return timing model residuals in pulse phase."""
         rs = self.model.phase(self.toas)
         rs -= Phase(rs.int[0],rs.frac[0])
-
+    
         #Track on pulse numbers, if necessary
         if getattr(self.model, 'TRACK').value == '-2':
             addpn = np.array([flags['pnadd'] if 'pnadd' in flags else 0.0 \
@@ -52,6 +57,7 @@ class resids(object):
             return rs
 
         if not weighted_mean:
+            print('k')
             rs -= Phase(0.0,rs.frac.mean())
         else:
         # Errs for weighted sum.  Units don't matter since they will
@@ -60,6 +66,7 @@ class resids(object):
                 raise ValueError('TOA errors are zero - cannot calculate residuals')
             w = 1.0/(np.array(self.toas.get_errors())**2)
             wm = (rs.frac*w).sum() / w.sum()
+            print('j')
             rs -= Phase(0.0,wm)
         return rs.frac
 
@@ -107,6 +114,7 @@ class resids(object):
             # This the fastest way, but highly depend on the assumption of time_resids and
             # error units.
             return ((self.time_resids / self.toas.get_errors().to(u.s))**2.0).sum()
+
     def get_dof(self):
         """Return number of degrees of freedom for the model."""
         dof = self.toas.ntoas
@@ -118,6 +126,67 @@ class resids(object):
         """Return the weighted reduced chi-squared for the model and toas."""
         return self.calc_chi2() / self.get_dof()
 
+    def get_mean_vector(self):
+        #e = self.get_fitparams_num()
+        return 0
+    
+    def get_covariance_matrix(self,scaled=False):
+        """returns the covariance matrix for the model and toas, either unscaled (with variances in the diagonal) or scaled (with 1s in the diagonal)"""
+        #copied from fitter.py, cleaner way?
+        M, params, units, Scale_by_F0 = self.model.designmatrix(toas=self.toas,incfrozen=False,incoffset=True)
+        Nvec = self.toas.get_errors().to(u.s).value
+        M = M/Nvec.reshape((-1,1))
+        fac = M.std(axis=0)
+        fac[0] = 1.0
+        M/= fac
+        U, s, Vt = sl.svd(M, full_matrices=False)
+        Sigma = np.dot(Vt.T / (s**2), Vt)
+        sigma_scaled = (Sigma/fac).T/fac
+        if scaled is not True:
+            #removes first row and column (offset)
+            return sigma_scaled#[1:].T[1:].T
+        else:
+            errors = np.sqrt(np.diag(sigma_scaled))
+            sigma_scaled1 = (sigma_scaled/errors).T/errors
+            #removes first row and column (offset)
+            return sigma_scaled1#[1:].T[1:].T
+        
+    def show_matrix(self, matrix, name, switchRD=False):
+        top = "           F0          F1          RA          DEC         DM"
+        side = [" F0"," F1"," RA","DEC"," DM"]
+        if switchRD:
+            top = "           F0          F1         DEC          RA          DM"
+            side = [" F0"," F1","DEC"," RA"," DM"]
+            #switch RA and DEC so cov matrix matches TEMPO
+            i = 0 
+            while i < 2:
+                RA = deepcopy(matrix[2])
+                matrix[2] = matrix[3]
+                matrix[3] = RA
+                matrix = matrix.T
+                i += 1
+        i = j = 0
+        print(name)
+        print(top)
+        while i < len(matrix):
+            if i == 0:
+                i += 1
+                j += 1
+                continue
+            print(side[i],end=" :: ")
+            while j <= i:
+                num = matrix[i][j]
+                if num < 0.001 and num > -0.001:
+                    print('{0: 1.2e}'.format(num), end = ' : ')
+                else:
+                    print(' ','{0: 1.2f}'.format(num),' ', end = ' : ')
+                j += 1
+            #print('\b:')
+            print()
+            i += 1
+            j = 0
+        print(':')
+                        
     def update(self, weighted_mean=True):
         """Recalculate everything in residuals class
             after changing model or TOAs"""

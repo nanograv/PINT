@@ -4,6 +4,7 @@ import numpy as np
 from scipy.special import factorial
 import string
 import astropy.time
+import pint
 try:
     from astropy.erfa import DJM0, d2dtf
 except ImportError:
@@ -438,6 +439,37 @@ def is_number(s):
     except (TypeError, ValueError):
         pass
     return False
+
+def make_toas(startMJD, endMJD, ntoas, model, freq=1400, obs='GBT'):
+    '''
+    make evenly spaced toas without error noise
+    '''
+    start = np.longdouble(startMJD)*u.day
+    end = np.longdouble(endMJD) *u.day
+    freq = np.atleast_1d(freq) *u.MHz
+    site = pint.observatory.get_observatory(obs)
+    times = np.linspace(start, end, ntoas) * u.day
+    def get_freq_array(bfv, ntoas):
+        freq = np.zeros(ntoas)
+        num_freqs = len(bfv)
+        for ii, fv in enumerate(bfv):
+            freq[ii::num_freqs] = fv
+        return freq
+    
+    freq_array = get_freq_array(freq, len(times))
+    t1 = [pint.toa.TOA(t.value, obs = obs, freq=f, scale=site.timescale) for t, f in zip(times, freq_array)]
+    ts = pint.toa.TOAs(toalist=t1)
+    #F_local = model.d_phase_d_toa(ts)
+    #F_local = model.F0
+    #rs = model.phase(ts).frac.value/F_local
+    
+    #ts.adjust_TOAs(TimeDelta(-1.0*rs))
+    #rspost = model.phase(ts).frac.value/F_local
+    #ts.adjust_TOAs(TimeDelta(-1.0*rspost))
+    ts.compute_TDBs()
+    ts.compute_posvels()
+    return ts
+
 
 if __name__ == "__main__":
     assert taylor_horner(2.0, [10]) == 10
