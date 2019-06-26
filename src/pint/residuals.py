@@ -164,8 +164,8 @@ class Residuals(object):
         return self.calc_chi2() / self.get_dof()
     
     def get_covariance_matrix(self,scaled=False):
-        """returns the covariance matrix for the fit, either unscaled (with variances in the diagonal) or scaled (with 1s in the diagonal)"""
-        #copied from fitter.py, cleaner way?
+        """returns the covariance matrix (and the scaling factor) for the model and toas, either unscaled (with variances in the diagonal) or scaled (with 1s in the diagonal)"""
+        #copied from fitter.py
         M, params, units, Scale_by_F0 = self.model.designmatrix(toas=self.toas,incfrozen=False,incoffset=True)
         Nvec = self.toas.get_errors().to(u.s).value
         M = M/Nvec.reshape((-1,1))
@@ -176,62 +176,14 @@ class Residuals(object):
         Sigma = np.dot(Vt.T / (s**2), Vt)
         sigma_var = (Sigma/fac).T/fac
         if scaled is not True:
-            #scaled by fac to make into variance (variances in diagonal)
-            return sigma_var
+            #scaled by fac to make into variance matrix (variances in diagonal)
+            return sigma_var, fac
         else:
-            #scaled by fac and errors to make into covariance (1s in diagonal)
+            #scaled by fac and errors to make into covariance matrix (1s in diagonal)
             errors = np.sqrt(np.diag(sigma_var))
             sigma_cov = (sigma_var/errors).T/errors
-            return sigma_cov
-    
-    def show_cov_matrix(self,matrix,params,name,switchRD=False):
-        '''function to print covariance matrices in a clean and easily readable way'''
-        try:
-            RAi = params.index('RAJ')
-            DecTrue = params.index('DECJ')
-        except:
-            RAi = None
-            switchRD = False
-        params1 = []
-        for param in params:
-            if len(param) < 3:
-                while len(param) != 3:
-                    param = " " + param
-                params1.append(param)
-            elif len(param) > 3:
-                while len(param) != 3:
-                    param = param[:-1]
-                params1.append(param)
-            else:
-                params1.append(param)
-        if switchRD:
-            #switch RA and DEC so cov matrix matches TEMPO
-            params1[RAi:RAi+2] = [params1[RAi+1],params1[RAi]]
-            i = 0
-            while i < 2:
-                RA = deepcopy(matrix[RAi])
-                matrix[RAi] = matrix[RAi + 1]
-                matrix[RAi + 1] = RA
-                matrix = matrix.T
-                i += 1
-        print(name, "switch RD =",switchRD)
-        print(' ',end='')
-        for param in params1:
-            print(" "*8,param, end='')
-        i = j = 0
-        while i < len(matrix):
-            print('\n'+params1[i],end=" :: ")
-            while j <= i:
-                num = matrix[i][j]
-                if num < 0.001 and num > -0.001:
-                    print('{0: 1.2e}'.format(num), end = ' : ')
-                else:
-                    print(' ','{0: 1.2f}'.format(num),' ', end = ' : ')
-                j += 1
-            i += 1
-            j = 0
-        print('\b:\n')
-    
+            return sigma_cov, fac, errors
+
     def update(self, weighted_mean=True):
         """Recalculate everything in residuals class
         after changing model or TOAs"""

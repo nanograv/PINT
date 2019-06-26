@@ -193,49 +193,6 @@ class WlsFitter(Fitter):
             # Parameter uncertainties.  Scale by fac recovers original units.
             errs = np.sqrt(np.diag(Sigma)) / fac
         
-            def show_matrix(matrix,matrix_name):
-                i = j = 0
-                print(matrix_name)
-                print("         F0      F1      RA      DEC      DM")
-                while i < len(matrix):
-                    if i == 0:
-                        i += 1
-                        continue
-                    elif i == 1:
-                        print(" F0",end=" ")
-                    elif i == 2:
-                        print(" F1",end=" ")
-                    elif i == 3:
-                        print(" RA",end=" ")
-                    elif i == 4:
-                        print("DEC",end=" ")
-                    else:
-                        print(" DM",end=" ")
-                    print(":: ",end='')    
-                    while j < len(matrix[0]):
-                        if j == 0:
-                            j += 1
-                            continue
-                        num = str(round(matrix[i][j],2))
-                        if '-' not in num:
-                            num = ' ' + num
-                        if len(num) < 5:
-                            num = num + '0'
-                        print(num, end = ' : ')
-                        j += 1
-                    print(' :')
-                    i += 1
-                    j = 0
-                print()
-                            
-            show_matrix(Sigma, '\nSigma')                
-            sigma_scaled = (Sigma/fac).T/fac
-            errors = np.sqrt(np.diag(sigma_scaled))
-            sigma_dscaled = (sigma_scaled/errors).T/errors
-            print("errors=",errors,"np.sqrt(np.diag(sigma_scaled))")
-            show_matrix(sigma_scaled, '\n(Sigma/fac.T/fac)')
-            show_matrix(sigma_dscaled, "\n(sigma_scaled/errors).T/errors")
-                                                                                                                            
             # The delta-parameter values
             #   dpars = V s^-1 U^T r
             # Scaling by fac recovers original units
@@ -249,7 +206,6 @@ class WlsFitter(Fitter):
                 fitpv[pn] = np.longdouble((pv+dpv) / fitp[pn].units)
                 #NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
-            print('fitpv.values' ,fitpv.values(),'fitp.keys',fitp.keys())
             chi2 = self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
             # Updata Uncertainties
             self.set_param_uncertainties(fitperrs)

@@ -61,3 +61,20 @@ class AbsPhase(PhaseComponent):
                                include_gps=clkc_info['include_gps'],
                                ephem=toas.ephem, planets=toas.planets)
         return tz
+    
+    def make_TZR_toa(self, toas):
+        """ Calculate the TZRMJD if one not given. TZRMJD = first toa 
+        after PEPOCH.
+        """
+        PEPOCH = self.PEPOCH.quantity
+        print(PEPOCH)
+        #add warning for PEPOCH far away from center of data?
+        TZRMJD = [i for i in toas.get_mjds() > PEPOCH].min()
+        print(TZRMJD)
+        TZR_toa = toa.TOA(TZRMJD-2400000.5,obs=self.TZRSITE.value, freq=self.TZRFRQ.quantity)
+        clkc_info = toas.clock_corr_info
+        tz = toa.get_TOAs_list([TZR_toa,], include_bipm=clkc_info['include_bipm'],
+                               include_gps=clkc_info['include_gps'],
+                               ephem=toas.ephem, planets=toas.planets)
+        return tz
+                                                                                  

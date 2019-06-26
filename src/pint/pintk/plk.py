@@ -335,7 +335,7 @@ class PlkWidget(tk.Frame):
     def update(self):
         if self.psr is not None:
             self.psr.update_resids()
-            self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
+            self.selected = np.zeros(self.psr.fulltoas.ntoas, dtype=bool)
             self.actionsWidget.setFitButtonText('Fit')
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.xyChoiceWidget.setChoice()
@@ -403,7 +403,7 @@ class PlkWidget(tk.Frame):
         '''
         self.psr.reset_TOAs()
         self.psr.fitted = False
-        self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
+        self.selected = np.zeros(self.psr.fulltoas.ntoas, dtype=bool)
         self.actionsWidget.setFitButtonText('Fit')
         self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
         self.xyChoiceWidget.setChoice()
@@ -455,12 +455,10 @@ class PlkWidget(tk.Frame):
             # Retrieve the data
             x, xerr = self.psr_data_from_label(self.xid)
             y, yerr = self.psr_data_from_label(self.yid)
-
             if x is not None and y is not None:
                 self.xvals = x
                 self.yvals = y
                 self.yerrs = yerr
-
                 self.plotResiduals(keepAxes=keepAxes)
             else:
                 raise ValueError("Nothing to plot!")
@@ -492,6 +490,7 @@ class PlkWidget(tk.Frame):
         """
         Update the plot, given all the plotting info
         """
+        print('in plotresiduals')
         if keepAxes:
             xmin, xmax = self.plkAxes.get_xlim()
             ymin, ymax = self.plkAxes.get_ylim()
@@ -560,7 +559,14 @@ class PlkWidget(tk.Frame):
             self.plkAxes.set_ylabel(plotlabels[self.yid])
 
         self.plkAxes.set_title(self.psr.name, y=1.1)
-
+        
+        if self.psr.fitted == True:
+            print("plotting random")
+            f_toas = self.psr.fake_toas
+            rs = self.psr.random_resids
+            for i in range(len(rs)):
+                self.plkAxes.plot(f_toas, rs[i], '-k', alpha=0.3)
+                                        
     def print_info(self):
         '''
         Write information about the current selection, or all points
@@ -631,22 +637,22 @@ class PlkWidget(tk.Frame):
         data, error = None, None
         if label == 'pre-fit':
             data = self.psr.prefit_resids.time_resids.to(u.us)
-            error = self.psr.toas.get_errors().to(u.us)
+            error = self.psr.fulltoas.get_errors().to(u.us)
         elif label == 'post-fit':
             if self.psr.fitted:
                 data = self.psr.postfit_resids.time_resids.to(u.us)
             else:
                 print('Pulsar has not been fitted yet! Giving pre-fit residuals')
                 data = self.psr.prefit_resids.time_resids.to(u.us)
-            error = self.psr.toas.get_errors().to(u.us)
+            error = self.psr.fulltoas.get_errors().to(u.us)
         elif label == 'mjd':
-            data = self.psr.toas.get_mjds()
-            error = self.psr.toas.get_errors()
+            data = self.psr.fulltoas.get_mjds()
+            error = self.psr.fulltoas.get_errors()
         elif label == 'orbital phase':
             data = self.psr.orbitalphase()
             error = None
         elif label == 'serial':
-            data = np.arange(self.psr.toas.ntoas) * u.m / u.m
+            data = np.arange(self.psr.fulltoas.ntoas) * u.m / u.m
             error = None
         elif label == 'day of year':
             data = self.psr.dayofyear()
@@ -655,15 +661,15 @@ class PlkWidget(tk.Frame):
             data = self.psr.year()
             error = None
         elif label == 'frequency':
-            data = self.psr.toas.get_freqs()
+            data = self.psr.fulltoas.get_freqs()
             error = None
         elif label == 'TOA error':
-            data = self.psr.toas.get_errors().to(u.us)
+            data = self.psr.fulltoas.get_errors().to(u.us)
             error = None
         elif label == 'rounded MJD':
-            data = np.floor(self.psr.toas.get_mjds() + 0.5 * u.d)
-            error = self.psr.toas.get_errors().to(u.d)
-
+            data = np.floor(self.psr.fulltoas.get_mjds() + 0.5 * u.d)
+            error = self.psr.fulltoas.get_errors().to(u.d)
+        
         return data, error
 
     def coordToPoint(self, cx, cy):
@@ -768,6 +774,13 @@ class PlkWidget(tk.Frame):
             self.selected &= (self.yvals.value > ymin) & (self.yvals.value < ymax)
             self.updatePlot(keepAxes=True)
             self.plkCanvas._tkcanvas.delete(self.brect)
+            #self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
+            self.psr.toas = copy.deepcopy(self.psr.fulltoas)
+            self.psr.toas.select(self.selected)
+            self.psr.update_resids()
+            #self.updatePlot(keepAxes=True)
+            self.call_updates()
+                                                            
 
     def canvasKeyEvent(self, event):
         '''
