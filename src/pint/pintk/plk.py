@@ -340,6 +340,7 @@ class PlkWidget(tk.Frame):
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.xyChoiceWidget.setChoice()
             self.updatePlot(keepAxes=True)
+            self.plkToolbar.update()
             print('in update')
             
     def setPulsar(self, psr, updates):
@@ -408,8 +409,9 @@ class PlkWidget(tk.Frame):
         self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
         self.xyChoiceWidget.setChoice()
         self.updatePlot(keepAxes=False)
+        self.plkToolbar.update()
         self.call_updates()
-
+        
     def writePar(self):
         '''
         Write the fit parfile to a file
