@@ -533,24 +533,16 @@ class TimingModel(object):
         # the absolute phase.
         if abs_phase:
             if 'AbsPhase' not in list(self.components.keys()):
-                #have to get it to actually have an AbsPhase component other than tempo made ones, how??????????
-                #tz_toa = self.make_TZR_toa(toas)
-                #tz_delay = self.delay(tz_toa)
-                #tz_phase = Phase(np.zeros(len(toas.table)) , np.zeros(len(toas.table)))
-                #for pf in self.phase_funcs:
-                #    tz_phase += Phase(pf(tz_toa, tz_delay))
-                #return phase - tz_phase
-                log.warning("No absolute phase (TZRMJD, ...) model provided." +
-                            " Returning the conventional phase.")
-                return phase
-            else:
-                #AbsPhase presupposes an AbsPhase component? cant figure out how to get it to setup without having an ABsPhase component already in place 
-                tz_toa = self.get_TZR_toa(toas)
-                tz_delay = self.delay(tz_toa)
-                tz_phase = Phase(np.zeros(len(toas.table)) , np.zeros(len(toas.table)))
-                for pf in self.phase_funcs:
-                    tz_phase += Phase(pf(tz_toa, tz_delay))
-                return phase - tz_phase
+                #if no absolute phase (TZRMJD), add the component to the model and calculate it
+                from pint.models import absolute_phase
+                self.add_component(absolute_phase.AbsPhase())
+                self.make_TZR_toa(toas)#needs timfile to get all toas, but model doesn't have access to timfile. different place for this? 
+            tz_toa = self.get_TZR_toa(toas)
+            tz_delay = self.delay(tz_toa)
+            tz_phase = Phase(np.zeros(len(toas.table)) , np.zeros(len(toas.table)))
+            for pf in self.phase_funcs:
+                tz_phase += Phase(pf(tz_toa, tz_delay))
+            return phase - tz_phase
         else:
             return phase
 

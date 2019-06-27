@@ -19,6 +19,8 @@ import matplotlib.pyplot as plt
 import astropy.units as u
 import os
 
+redge = 3
+ledge = 0.5
 datadir = os.path.dirname(os.path.abspath(str(__file__)))
 parfile = os.path.join(datadir, 'NGC6440E.par.orig')
 timfile = os.path.join(datadir, 'NGC6440E.tim')
@@ -91,8 +93,10 @@ if save:
     j.close()
 
 #create and plot random models    
-pint.random_models.random(f, rs_mean, ledge_multiplier=0.5, redge_multiplier=0.5, iter=iter)
-
+fake_toas, rss = pint.random_models.random(f, rs_mean, ledge_multiplier=ledge, redge_multiplier=redge, iter=iter)
+for rs in rss:
+    plt.plot(fake_toas, rs, '-k', alpha =0.3)
+    
 #plot post fit residuals with error bars
 plt.errorbar(xt.value,
              pint.residuals.resids(t0, f.model).time_resids.to(u.us).value,#f.resids.time_resids.to(u.us).value,

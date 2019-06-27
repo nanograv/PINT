@@ -54,6 +54,7 @@ class AbsPhase(PhaseComponent):
         """
         # NOTE: Using TZRMJD.quantity.jd[1,2] so that the time scale can be properly
         # set to the TZRSITE default timescale (e.g. UTC for TopoObs and TDB for SSB)
+        print('in get_TZR_toa')
         TZR_toa = toa.TOA((self.TZRMJD.quantity.jd1-2400000.5, self.TZRMJD.quantity.jd2), obs=self.TZRSITE.value,
                           freq=self.TZRFRQ.quantity)
         clkc_info = toas.clock_corr_info
@@ -62,19 +63,21 @@ class AbsPhase(PhaseComponent):
                                ephem=toas.ephem, planets=toas.planets)
         return tz
     
-    def make_TZR_toa(self, toas):
+    def make_TZR_toa(self, fulltoas):
         """ Calculate the TZRMJD if one not given. TZRMJD = first toa 
         after PEPOCH.
         """
-        PEPOCH = self.PEPOCH.quantity
-        print(PEPOCH)
+        print('in make_TZR_toa')
+        #fulltoas = pint.toa.get_TOAs(timfile)
+        PEPOCH = self.PEPOCH.quantity.value
         #add warning for PEPOCH far away from center of data?
-        TZRMJD = [i for i in toas.get_mjds() > PEPOCH].min()
-        print(TZRMJD)
-        TZR_toa = toa.TOA(TZRMJD-2400000.5,obs=self.TZRSITE.value, freq=self.TZRFRQ.quantity)
-        clkc_info = toas.clock_corr_info
-        tz = toa.get_TOAs_list([TZR_toa,], include_bipm=clkc_info['include_bipm'],
-                               include_gps=clkc_info['include_gps'],
-                               ephem=toas.ephem, planets=toas.planets)
-        return tz
+        TZRMJD = min([i for i in fulltoas.get_mjds() if i > PEPOCH*u.d])
+        self.TZRMJD.quantity = TZRMJD.value
+        self.setup()
+        #TZR_toa = toa.TOA(TZRMJD.quantity-2400000.5,obs=self.TZRSITE.value, freq=self.TZRFRQ.quantity)
+        #clkc_info = toas.clock_corr_info
+        #tz = toa.get_TOAs_list([TZR_toa,], include_bipm=clkc_info['include_bipm'],
+        #                       include_gps=clkc_info['include_gps'],
+        #                       ephem=toas.ephem, planets=toas.planets)
+        #return tz
                                                                                   
