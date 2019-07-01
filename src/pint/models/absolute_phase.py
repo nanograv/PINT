@@ -54,7 +54,6 @@ class AbsPhase(PhaseComponent):
         """
         # NOTE: Using TZRMJD.quantity.jd[1,2] so that the time scale can be properly
         # set to the TZRSITE default timescale (e.g. UTC for TopoObs and TDB for SSB)
-        print('in get_TZR_toa')
         TZR_toa = toa.TOA((self.TZRMJD.quantity.jd1-2400000.5, self.TZRMJD.quantity.jd2), obs=self.TZRSITE.value,
                           freq=self.TZRFRQ.quantity)
         clkc_info = toas.clock_corr_info
@@ -67,7 +66,6 @@ class AbsPhase(PhaseComponent):
         """ Calculate the TZRMJD if one not given. TZRMJD = first toa 
         after PEPOCH.
         """
-        print('in make_TZR_toa')
         #fulltoas = pint.toa.get_TOAs(timfile)
         PEPOCH = self.PEPOCH.quantity.value
         #add warning for PEPOCH far away from center of data?

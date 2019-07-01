@@ -24,6 +24,12 @@ def random(fitter, rs_mean, ledge_multiplier=4, redge_multiplier=4, iter=10, npo
     mean_vector *= fac
     cov_matrix = ((cov_matrix*fac).T*fac).T
     
+    minMJD = fitter.toas.get_mjds().min()
+    maxMJD = fitter.toas.get_mjds().max()
+
+    x = make_toas(minMJD-((maxMJD-minMJD)*ledge_multiplier),maxMJD+((maxMJD-minMJD)*redge_multiplier),npoints,mrand)
+    x2 = make_toas(minMJD,maxMJD,npoints,mrand)
+    
     rss=[]
     for i in range(iter):
         #create a set of randomized parameters based on mean vector and covariance matrix
@@ -34,10 +40,6 @@ def random(fitter, rs_mean, ledge_multiplier=4, redge_multiplier=4, iter=10, npo
         rparams = OrderedDict(zip(params.keys(),rparams_num))
         print("randomized parameters",rparams)
         f_rand.set_params(rparams)
-        minMJD = fitter.toas.get_mjds().min()
-        maxMJD = fitter.toas.get_mjds().max()
-        x = make_toas(minMJD-((maxMJD-minMJD)*ledge_multiplier),maxMJD+((maxMJD-minMJD)*redge_multiplier),npoints,mrand)
-        x2 = make_toas(minMJD,maxMJD,npoints,mrand)
         rs = mrand.phase(x,abs_phase=True)-fitter.model.phase(x, abs_phase=True)
         rs2 = mrand.phase(x2, abs_phase=True)-fitter.model.phase(x2, abs_phase=True)
         #from calc_phase_resids in residuals

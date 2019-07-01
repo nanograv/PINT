@@ -252,11 +252,12 @@ class Pulsar(object):
         self.fitted = True
         self.write_fit_summary()
         
+        
         q = list(self.fulltoas.get_mjds())
         index = q.index([i for i in self.fulltoas.get_mjds() if i > self.toas.get_mjds().min()][0])
         rs_mean = pint.residuals.resids(self.fulltoas,fitter.model).phase_resids[index:index+len(self.toas.get_mjds())].mean()
         if len(fitter.get_fitparams()) < 3:
-            redge = ledge = 100
+            redge = ledge = 30
             npoints = 400
         else:
             redge = ledge = 2.5

@@ -68,6 +68,9 @@ h:              Print help
 
 clickDist = 0.0005
 
+class state():
+    pass
+
 class PlkFitBoxesWidget(tk.Frame):
     '''
     Allows one to select which parameters to fit for
@@ -211,7 +214,6 @@ class PlkToolbar(NavigationToolbar2Tk):
     A modification of the stock Matplotlib toolbar to perform the
     necessary selections/unselections on points
     '''
-    #toolitems = NavigationToolbar2Tk.toolitems
     toolitems = [t for t in NavigationToolbar2Tk.toolitems if
                  t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom', 'Save')]
     
@@ -227,7 +229,9 @@ class PlkActionsWidget(tk.Frame):
         self.writePar_callback=None
         self.writeTim_callback=None
         self.saveFig_callback=None
-
+        #my stuff
+        self.revert_callback=None
+        
         self.initPlkActions()
 
     def initPlkActions(self):
@@ -242,8 +246,11 @@ class PlkActionsWidget(tk.Frame):
 
         button = tk.Button(self, text='Write tim', command=self.writeTim)
         button.grid(row=0, column=3)
-
-    def setCallbacks(self, fit, reset, writePar, writeTim):
+        
+        button = tk.Button(self, text='Revert', command=self.revert)
+        button.grid(row=0,column=4)
+        
+    def setCallbacks(self, fit, reset, writePar, writeTim, revert):
         """
         Callback functions
         """
@@ -251,7 +258,8 @@ class PlkActionsWidget(tk.Frame):
         self.reset_callback = reset
         self.writePar_callback = writePar
         self.writeTim_callback = writeTim
-
+        self.revert_callback = revert
+        
     def setFitButtonText(self, text):
         self.fitbutton.config(text=text)
 
@@ -273,14 +281,22 @@ class PlkActionsWidget(tk.Frame):
         if self.reset_callback is not None:
             self.reset_callback()
         print("Reset clicked")
-
+        
+    def revert(self):
+        if self.revert_callback is not None:
+            self.revert_callback()
+        print("Revert clicked")
+        
 class PlkWidget(tk.Frame):
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
 
         self.initPlk()
         self.initPlkLayout()
-
+        
+        self.current_state = state()
+        self.state_stack = []
+        
         self.update_callbacks = None
 
         self.press = False
@@ -301,25 +317,26 @@ class PlkWidget(tk.Frame):
         self.plkCanvas.mpl_connect('motion_notify_event', self.canvasMotionEvent)
         self.plkCanvas.mpl_connect('key_press_event', self.canvasKeyEvent)
         self.plkToolbar = PlkToolbar(self.plkCanvas, tk.Frame(self))
-        
+                
         print('in initPlk')
         self.plkAxes = self.plkFig.add_subplot(111)#111
         self.plkAx2x = self.plkAxes.twinx()
         self.plkAx2y = self.plkAxes.twiny()
         self.plkAxes.set_zorder(0.1)
-
+        
         self.drawSomething()
-
+        
     def drawSomething(self):
         print('in drawsomething')
         self.plkAxes.clear()
         self.plkAxes.grid(True)
         self.plkAxes.set_xlabel('MJD')
         self.plkAxes.set_ylabel('Residual ($\mu$s)')
+        self.plkFig.tight_layout()
+        self.plkToolbar.push_current()
         self.plkCanvas.draw()
-
+        
     def initPlkLayout(self):
-        print('plktoolbar.master',self.plkToolbar.master)
         self.plkToolbar.master.grid(row=1, column=1, sticky='nesw')
         self.xyChoiceWidget.grid(row=2, column=0, sticky='nw')
         self.plkCanvas.get_tk_widget().grid(row=2, column=1, sticky='nesw')
@@ -341,24 +358,36 @@ class PlkWidget(tk.Frame):
             self.xyChoiceWidget.setChoice()
             self.updatePlot(keepAxes=True)
             self.plkToolbar.update()
+            self.state_stack = [self.base_state]#reset state stack
+            self.current_state = state()
             print('in update')
             
     def setPulsar(self, psr, updates):
+        print('in setPulsar')
         self.psr = psr
         self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
         self.update_callbacks = updates
-
+        
+        try:#ensures only run base_state stuff once
+            self.base_state
+        except:
+            print('in here')
+            self.base_state = state()
+            self.base_state.psr = copy.deepcopy(self.psr)
+            self.base_state.selected = copy.deepcopy(self.selected)
+            self.state_stack.append(self.base_state)
+        
         self.fitboxesWidget.setCallbacks(self.fitboxChecked)
         self.xyChoiceWidget.setCallbacks(self.updatePlot)
         self.actionsWidget.setCallbacks(self.fit, self.reset,
-            self.writePar, self.writeTim)
+            self.writePar, self.writeTim, self.revert)
 
         self.fitboxesWidget.grid(row=0, column=0, columnspan=2, sticky='W')
 
         self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
         self.xyChoiceWidget.setChoice()
         self.updatePlot(keepAxes=False)
-
+        
     def call_updates(self):
         if not self.update_callbacks is None:
             for ucb in self.update_callbacks:
@@ -391,7 +420,11 @@ class PlkWidget(tk.Frame):
         We need to re-do the fit for this pulsar
         """
         if not self.psr is None:
+            if self.psr.fitted:
+                self.current_state.psr = copy.deepcopy(self.psr)
+                self.state_stack.append(copy.deepcopy(self.current_state))
             self.psr.fit()
+            self.current_state.selected = copy.deepcopy(self.selected)
             self.actionsWidget.setFitButtonText('Re-fit')
             xid, yid = self.xyChoiceWidget.plotIDs()
             self.xyChoiceWidget.setChoice(xid=xid, yid='post-fit')
@@ -404,12 +437,16 @@ class PlkWidget(tk.Frame):
         '''
         self.psr.reset_TOAs()
         self.psr.fitted = False
+        self.psr = copy.deepcopy(self.base_state.psr)
+        print('in reset, pre fit model', self.psr.prefit_model)
         self.selected = np.zeros(self.psr.fulltoas.ntoas, dtype=bool)
         self.actionsWidget.setFitButtonText('Fit')
-        self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+        self.fitboxesWidget.addFitCheckBoxes(self.base_state.psr.prefit_model)
         self.xyChoiceWidget.setChoice()
         self.updatePlot(keepAxes=False)
         self.plkToolbar.update()
+        self.current_state = state()
+        self.state_stack = [self.base_state]
         self.call_updates()
         
     def writePar(self):
@@ -440,6 +477,23 @@ class PlkWidget(tk.Frame):
         except:
             print('Count not save file to filename:\t%s' % filename)
 
+    def revert(self):
+        '''
+        revert to the last model
+        '''
+        if len(self.state_stack) > 0 and self.psr.fitted and self.psr is not None:
+            c_state = self.state_stack.pop()
+            self.psr = copy.deepcopy(c_state.psr)
+            self.selected = copy.deepcopy(c_state.selected)
+            self.fitboxesWidget.boxChecked = None
+            self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+            if len(self.state_stack) == 0:
+                self.actionsWidget.setFitButtonText('Fit')
+            self.psr.update_resids()
+            self.updatePlot(keepAxes=True)
+        else:
+            print("No model to revert to")
+            
     def updatePlot(self, keepAxes=False):
         """
         Update the plot/figure
@@ -515,7 +569,7 @@ class PlkWidget(tk.Frame):
         self.plkAx2x.clear()
         self.plkAx2y.clear()
         self.plkAxes.grid(True)
-
+                                                    
         if self.yerrs is None:
             self.plkAxes.scatter(self.xvals[~self.selected], self.yvals[~self.selected],
                 marker='.', color='blue')
@@ -529,7 +583,10 @@ class PlkWidget(tk.Frame):
         self.plkAxes.get_xaxis().get_major_formatter().set_useOffset(False)
         self.plkAx2y.set_visible(False)
         self.plkAx2x.set_visible(False)
-
+        #clears the views stack and puts the scaled view on top, fixes toolbar problems
+        self.plkToolbar._views.clear()
+        self.plkToolbar.push_current()
+        
         if self.xid in ['pre-fit', 'post-fit']:
             self.plkAxes.set_xlabel(plotlabels[self.xid][0])
             m = self.psr.prefit_model if self.xid == 'pre-fit' or not self.psr.fitted \
@@ -551,7 +608,7 @@ class PlkWidget(tk.Frame):
                         else self.psr.postfit_resids
                 f0 = r.get_PSR_freq().to(u.MHz).value
                 self.plkAx2x.set_visible(True)
-                self.plkAx2x.set_ylabel(plotlabels[self.yid][1])
+                self.plkAx2x.set_ylabel(plotlabels[self.yid][1])  
                 self.plkAx2x.set_ylim(ymin * f0, ymax * f0)
                 self.plkAx2x.yaxis.set_major_locator(mpl.ticker.FixedLocator(
                     self.plkAxes.get_yticks() * f0))
