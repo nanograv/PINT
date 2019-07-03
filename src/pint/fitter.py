@@ -43,7 +43,7 @@ class Fitter(object):
 
     def update_resids(self):
         """Update the residuals. Run after updating a model parameter."""
-        self.resids = Residuals(toas=self.toas, model=self.model)
+        self.resids = Residuals(toas=self.toas, model=self.model, set_pulse_nums=True)
 
     def set_fitparams(self, *params):
         """Update the "frozen" attribute of model parameters.

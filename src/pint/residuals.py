@@ -10,11 +10,11 @@ from pint import dimensionless_cycles
 class Residuals(object):
     """Residual(toa=None, model=None)"""
 
-    def __init__(self, toas=None, model=None, weighted_mean=True):
+    def __init__(self, toas=None, model=None, weighted_mean=True, set_pulse_nums=False):
         self.toas = toas
         self.model = model
         if toas is not None and model is not None:
-            self.phase_resids = self.calc_phase_resids(weighted_mean=weighted_mean)
+            self.phase_resids = self.calc_phase_resids(weighted_mean=weighted_mean, set_pulse_nums=set_pulse_nums)
             self.time_resids = self.calc_time_resids(weighted_mean=weighted_mean)
             self.dof = self.get_dof()
         else:
@@ -37,46 +37,64 @@ class Residuals(object):
         assert self._chi2 is not None
         return self._chi2
 
-    def calc_phase_resids(self, weighted_mean=True):
+    def calc_phase_resids(self, weighted_mean=True, set_pulse_nums=False):
         """Return timing model residuals in pulse phase."""
         rs = self.model.phase(self.toas)
         rs -= Phase(rs.int[0],rs.frac[0])
-    
+        try:
+            delta_pulse_numbers = self.toas.table['delta_pulse_numbers']
+        except:
+            self.toas.table['delta_pulse_numbers'] = np.zeros(len(self.toas.get_mjds()))#as long as the rest of the table (should be same as # of mjds, butter thing to use)
+            delta_pulse_numbers = self.toas.table['delta_pulse_numbers']
+        delta_pulse_numbers *= u.cycle#UNITS!!!!!
+        if set_pulse_nums:
+            delta_pulse_numbers *= 0
+            print('dpn post fit)',delta_pulse_numbers)
+        #print('Phase(dpn)',Phase(delta_pulse_numbers))
+        full = rs.frac + delta_pulse_numbers
+        print('full',full)
         #Track on pulse numbers, if necessary
         if getattr(self.model, 'TRACK').value == '-2':
-            addpn = np.array([flags['pnadd'] if 'pnadd' in flags else 0.0 \
-                for flags in self.toas.table['flags']]) * u.cycle
-            addpn[0] -= 1. * u.cycle
-            addpn = np.cumsum(addpn)
-
+            #addpn = np.array([flags['pnadd'] if 'pnadd' in flags else 0.0 \
+            #    for flags in self.toas.table['flags']]) * u.cycle
+            #addpn[0] -= 1. * u.cycle
+            #addpn = np.cumsum(addpn)
+            
             pulse_num = self.toas.get_pulse_numbers()
             if pulse_num is None:
                 raise ValueError('No pulse numbers with TOAs using TRACK -2')
 
             pn_act = rs.int
-            addPhase = pn_act - (pulse_num + addpn)
-
-            rs = rs.frac
-            rs += addPhase
+            print('pulse_num',pulse_num) 
+            print('delta_pulse_numbers',delta_pulse_numbers)
+            addPhase = pn_act - (pulse_num + delta_pulse_numbers)
+            rs -= Phase(rs.int)
+            rs += Phase(addPhase)
+            
             if not weighted_mean:
-                rs -= rs.mean()
+                rs -= Phase(0.0, (full).mean())
             else:
                 w = 1.0 / (np.array(self.toas.get_errors())**2)
-                wm = (rs*w).sum() / w.sum()
-                rs -= wm
-            return rs
+                wm  = ((full)*w).sum()/w.sum()
+                rs -= Phase(0.0,wm)
+                #wm = (rs*w).sum() / w.sum()
+                #rs -= wm
+            print('dpn',delta_pulse_numbers)
+            print('rs.frac', rs.frac)
+            print('delta_pulse_numbers + rs.frac',delta_pulse_numbers + rs.frac)
+            return full
 
         if not weighted_mean:
-            rs -= Phase(0.0,rs.frac.mean())
+            rs -= Phase(0.0,(full).mean())
         else:
         # Errs for weighted sum.  Units don't matter since they will
         # cancel out in the weighted sum.
             if np.any(self.toas.get_errors() == 0):
                 raise ValueError('TOA errors are zero - cannot calculate residuals')
             w = 1.0/(np.array(self.toas.get_errors())**2)
-            wm = (rs.frac*w).sum() / w.sum()
+            wm = ((full)*w).sum() / w.sum()
             rs -= Phase(0.0,wm)
-        return rs.frac
+        return full
 
     def calc_time_resids(self, weighted_mean=True):
         """Return timing model residuals in time (seconds)."""
@@ -158,7 +176,12 @@ class Residuals(object):
         for p in self.model.params:
             dof -= bool(not getattr(self.model, p).frozen)
         return dof
-
+    
+    def calc_pulse_numbers(self):
+        #fix, but not being used right now
+        #print('truncated self.phase_resids',np.trunc(self.phase_resids))
+        return np.trunc(self.phase_resids)
+    
     def get_reduced_chi2(self):
         """Return the weighted reduced chi-squared for the model and toas."""
         return self.calc_chi2() / self.get_dof()

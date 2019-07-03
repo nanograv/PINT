@@ -53,8 +53,4 @@ def random(fitter, rs_mean, ledge_multiplier=4, redge_multiplier=4, iter=10, npo
         #else:
         #    plt.plot(x.get_mjds(), rs, 'k-', alpha=0.3)
     
-    #scale back to actual units
-    mean_vector /= fac
-    cov_matrix = ((cov_matrix/fac).T/fac)
-    
     return x.get_mjds(),rss

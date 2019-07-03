@@ -31,6 +31,9 @@ m = mb.get_model(parfile)
 # Read in the TOAs
 t = pint.toa.get_TOAs(timfile)
 t0 = pint.toa.get_TOAs(timfile)
+
+print(t.table['groups'])
+t.get_highest_density_range(70)
 # Examples of how to select some subsets of TOAs
 # These can be un-done using t.unselect()
 #

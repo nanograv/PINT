@@ -65,7 +65,7 @@ class Pulsar(object):
             self.toas = pint.toa.get_TOAs(self.timfile,planets=True)
             self.fulltoas = pint.toa.get_TOAs(self.timfile,planets=True)
         self.toas.print_summary()
-
+        
         self.prefit_resids = pint.residuals.Residuals(self.toas, self.prefit_model)
         print("RMS PINT residuals are %.3f us\n" % \
               self.prefit_resids.time_resids.std().to(u.us).value)
@@ -211,12 +211,15 @@ class Pulsar(object):
         Turn on pulse number tracking in the model, if it isn't already
         """
         #Check if pulse numbers are in table already
-        if 'pn' not in self.toas.table.colnames:
-            self.toas.pulse_column_from_flags()
-            if 'pn' not in self.toas.table.colnames:
-                self.toas.compute_pulse_numbers(self.prefit_model)
-        self.toas.table['pn'][selected] += phase
-
+        if 'pn' not in self.fulltoas.table.colnames:
+            self.fulltoas.compute_pulse_numbers(self.prefit_model)
+            self.toas.compute_pulse_numbers(self.prefit_model)
+        if 'delta_pulse_numbers' not in self.fulltoas.table.colnames:
+            self.fulltoas.table['delta_pulse_numbers'] = np.zeros(len(self.fulltoas.get_mjds()))
+            self.toas.table['delta_pulse_numbers'] = np.zeros(len(self.toas.get_mjds()))
+            
+        self.fulltoas.table['delta_pulse_numbers'][selected] += phase
+        
         #Turn on pulse number tracking
         if self.prefit_model.TRACK.value != '-2':
             self.track_added = True
@@ -248,14 +251,14 @@ class Pulsar(object):
 
         fitter.fit_toas(maxiter=1)
         self.postfit_model = fitter.model
-        self.postfit_resids = pint.residuals.Residuals(self.fulltoas, self.postfit_model)
+        self.postfit_resids = pint.residuals.Residuals(self.fulltoas, self.postfit_model, set_pulse_nums = True)
         self.fitted = True
         self.write_fit_summary()
         
         
         q = list(self.fulltoas.get_mjds())
         index = q.index([i for i in self.fulltoas.get_mjds() if i > self.toas.get_mjds().min()][0])
-        rs_mean = pint.residuals.resids(self.fulltoas,fitter.model).phase_resids[index:index+len(self.toas.get_mjds())].mean()
+        rs_mean = pint.residuals.resids(self.fulltoas,fitter.model,set_pulse_nums=True).phase_resids[index:index+len(self.toas.get_mjds())].mean()
         if len(fitter.get_fitparams()) < 3:
             redge = ledge = 30
             npoints = 400

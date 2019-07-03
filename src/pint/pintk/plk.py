@@ -371,7 +371,6 @@ class PlkWidget(tk.Frame):
         try:#ensures only run base_state stuff once
             self.base_state
         except:
-            print('in here')
             self.base_state = state()
             self.base_state.psr = copy.deepcopy(self.psr)
             self.base_state.selected = copy.deepcopy(self.selected)
@@ -438,7 +437,6 @@ class PlkWidget(tk.Frame):
         self.psr.reset_TOAs()
         self.psr.fitted = False
         self.psr = copy.deepcopy(self.base_state.psr)
-        print('in reset, pre fit model', self.psr.prefit_model)
         self.selected = np.zeros(self.psr.fulltoas.ntoas, dtype=bool)
         self.actionsWidget.setFitButtonText('Fit')
         self.fitboxesWidget.addFitCheckBoxes(self.base_state.psr.prefit_model)
@@ -552,16 +550,16 @@ class PlkWidget(tk.Frame):
             ymin, ymax = self.plkAxes.get_ylim()
         else:
             xave = 0.5 * (np.max(self.xvals) + np.min(self.xvals))
-            xmin = xave - 1.05 * (xave - np.min(self.xvals))
-            xmax = xave + 1.05 * (np.max(self.xvals) - xave)
+            xmin = xave - 1.10 * (xave - np.min(self.xvals))
+            xmax = xave + 1.10 * (np.max(self.xvals) - xave)
             if self.yerrs is None:
                 yave = 0.5 * (np.max(self.yvals) + np.min(self.yvals))
-                ymin = yave - 1.05 * (yave - np.min(self.yvals))
-                ymax = yave + 1.05 * (np.max(self.yvals) - yave)
+                ymin = yave - 1.10 * (yave - np.min(self.yvals))
+                ymax = yave + 1.10 * (np.max(self.yvals) - yave)
             else:
                 yave = 0.5 * (np.max(self.yvals+self.yerrs) + np.min(self.yvals-self.yerrs))
-                ymin = yave - 1.05 * (yave - np.min(self.yvals-self.yerrs))
-                ymax = yave + 1.05 * (np.max(self.yvals+self.yerrs) - yave)
+                ymin = yave - 1.10 * (yave - np.min(self.yvals-self.yerrs))
+                ymax = yave + 1.10 * (np.max(self.yvals+self.yerrs) - yave)
             xmin, xmax = xmin.value, xmax.value
             ymin, ymax = ymin.value, ymax.value
 
@@ -569,7 +567,7 @@ class PlkWidget(tk.Frame):
         self.plkAx2x.clear()
         self.plkAx2y.clear()
         self.plkAxes.grid(True)
-                                                    
+        
         if self.yerrs is None:
             self.plkAxes.scatter(self.xvals[~self.selected], self.yvals[~self.selected],
                 marker='.', color='blue')
