@@ -35,7 +35,7 @@ def main(argv=None):
     log.warning(m.params)
 
     log.info("Reading TOAs")
-    t = pint.toa.get_TOAs(args.timfile)
+    t = pint.toa.get_TOAs(args.timfile, ephem=m.EPHEM.value)
     prefit_resids = pint.residuals.resids(t, m).time_resids
 
     log.info("Fitting...")

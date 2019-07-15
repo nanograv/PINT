@@ -76,6 +76,7 @@ class Glitch(PhaseComponent):
             if not hasattr(self, 'GLEP_%d' % idx):
                 msg = 'Glicth Epoch is needed for Glicth %d.' % idx
                 raise MissingParameter("Glitch", 'GLEP_%d' % idx, msg)
+            getattr(self, 'GLEP_%d' % idx).scale = self.UNITS.value.lower()
             for param in self.glitch_prop:
                 if not hasattr(self, param + '%d' % idx):
                     param0 = getattr(self, param + '1')
@@ -121,7 +122,7 @@ class Glitch(PhaseComponent):
                 dF0 = getattr(self, "GLF0_%d" % idx).quantity
                 dF1 = getattr(self, "GLF1_%d" % idx).quantity
                 dF2 = getattr(self, "GLF2_%d" % idx).quantity
-                dt = (tbl['tdbld'] - eph) * u.day - delay
+                dt = (tbl[self.UNITS.value.lower()+'ld'] - eph) * u.day - delay
                 dt = dt.to(u.second)
                 affected = dt > 0.0  # TOAs affected by glitch
                 # decay term
@@ -146,7 +147,7 @@ class Glitch(PhaseComponent):
             raise ValueError("Can not calculate d_phase_d_GLPH with respect to %s." % param)
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLPH = getattr(self, param)
-        dt = (tbl['tdbld'] - eph) * u.day - delay
+        dt = (tbl[self.UNITS.value.lower()+'ld'] - eph) * u.day - delay
         dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
         dpdGLPH = numpy.zeros(len(tbl), dtype=numpy.longdouble) * u.cycle/par_GLPH.units
@@ -163,7 +164,7 @@ class Glitch(PhaseComponent):
             raise ValueError("Can not calculate d_phase_d_GLF0 with respect to %s." % param)
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLF0 = getattr(self, param)
-        dt = (tbl['tdbld'] - eph) * u.day - delay
+        dt = (tbl[self.UNITS.value.lower()+'ld'] - eph) * u.day - delay
         dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
         dpdGLF0 = numpy.zeros(len(tbl), dtype=numpy.longdouble) * u.cycle/par_GLF0.units
@@ -179,7 +180,7 @@ class Glitch(PhaseComponent):
             raise ValueError("Can not calculate d_phase_d_GLF1 with respect to %s." % param)
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLF1 = getattr(self, param)
-        dt = (tbl['tdbld'] - eph) * u.day - delay
+        dt = (tbl[self.UNITS.value.lower()+'ld'] - eph) * u.day - delay
         dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
         dpdGLF1 = numpy.zeros(len(tbl), dtype=numpy.longdouble) * u.cycle/par_GLF1.units
@@ -195,7 +196,7 @@ class Glitch(PhaseComponent):
             raise ValueError("Can not calculate d_phase_d_GLF2 with respect to %s." % param)
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLF2 = getattr(self, param)
-        dt = (tbl['tdbld'] - eph) * u.day - delay
+        dt = (tbl[self.UNITS.value.lower()+'ld'] - eph) * u.day - delay
         dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
         dpdGLF2 = numpy.zeros(len(tbl), dtype=numpy.longdouble) * u.cycle/par_GLF2.units
@@ -213,7 +214,7 @@ class Glitch(PhaseComponent):
         eph = time_to_longdouble(getattr(self, "GLEP_" + ids).value)
         par_GLF0D = getattr(self, param)
         tau = getattr(self, "GLTD_%d" % idv).quantity
-        dt = (tbl['tdbld'] - eph) * u.day - delay
+        dt = (tbl[self.UNITS.value.lower()+'ld'] - eph) * u.day - delay
         dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
         dpdGLF0D = numpy.zeros(len(tbl), dtype=numpy.longdouble) * u.cycle/par_GLF0D.units
@@ -235,7 +236,7 @@ class Glitch(PhaseComponent):
             return numpy.zeros(len(tbl), dtype=numpy.longdouble) * u.cycle/par_GLTD.units
         glf0d = getattr(self, 'GLF0D_'+ids).quantity
         tau = par_GLTD.quantity
-        dt = (tbl['tdbld'] - eph) * u.day - delay
+        dt = (tbl[self.UNITS.value.lower()+'ld'] - eph) * u.day - delay
         dt = dt.to(u.second)
         affected = numpy.where(dt > 0.0)[0]
         dpdGLTD = numpy.zeros(len(tbl), dtype=numpy.longdouble) * u.cycle/par_GLTD.units

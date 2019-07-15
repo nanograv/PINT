@@ -32,7 +32,8 @@ JD_MJD = 2400000.5
 
 def get_TOAs(timfile, ephem=None, include_bipm=True, bipm_version='BIPM2015',
              include_gps=True, planets=False, usepickle=False,
-             tdb_method="default"):
+             tdb_method="default", tcb_method="default", tt2tdb_mode=None,
+             tt2tcb_mode=None):
     """Convenience function to load and prepare TOAs for PINT use.
 
     Loads TOAs from a '.tim' file, applies clock corrections, computes
@@ -58,7 +59,11 @@ def get_TOAs(timfile, ephem=None, include_bipm=True, bipm_version='BIPM2015',
                                   include_bipm=include_bipm,
                                   bipm_version=bipm_version)
     if 'tdb' not in t.table.colnames:
-        t.compute_TDBs(method=tdb_method, ephem=ephem)
+        t.compute_TDBs(method=tdb_method, tt2tdb_mode=tt2tdb_mode,
+                       ephem=ephem)
+    if 'tcb' not in t.table.colnames:
+        t.compute_TCBs(method=tcb_method, tt2tcb_mode=tt2tcb_mode,
+                       ephem=ephem)
     if 'ssb_obs_pos' not in t.table.colnames:
         t.compute_posvels(ephem, planets)
     # Update pickle if needed:
@@ -101,7 +106,8 @@ def _check_pickle(toafilename, picklefilename=None):
 
 def get_TOAs_list(toa_list,ephem=None, include_bipm=True,
                   bipm_version='BIPM2015', include_gps=True, planets=False,
-                  tdb_method="default"):
+                  tdb_method="default", tcb_method="default", tt2tdb_mode=None,
+                  tt2tcb_mode=None):
     """Load TOAs from a list of TOA objects.
 
     Compute the TDB time and observatory positions and velocity
@@ -118,7 +124,9 @@ def get_TOAs_list(toa_list,ephem=None, include_bipm=True,
                                   include_bipm=include_bipm,
                                   bipm_version=bipm_version)
     if 'tdb' not in t.table.colnames:
-        t.compute_TDBs(method=tdb_method, ephem=ephem)
+        t.compute_TDBs(method=tdb_method, ephem=ephem, tt2tdb_mode=tt2tdb_mode)
+    if 'tcb' not in t.table.colnames:
+        t.compute_TCBs(method=tcb_method, ephem=ephem, tt2tcb_mode=tt2tcb_mode)
     if 'ssb_obs_pos' not in t.table.colnames:
         t.compute_posvels(ephem, planets)
     return t
@@ -688,6 +696,7 @@ class TOAs(object):
         # Changed high_precision from False to True to avoid self referential get_mjds()
         self.table['mjd_float'] = [t.mjd for t in self.get_mjds(high_precision=True)] * u.day
         self.compute_TDBs()
+        self.compute_TCBs()
         self.compute_posvels(self.ephem, self.planets)
 
     def write_TOA_file(self,filename,name='pint', format='Princeton'):
@@ -805,7 +814,7 @@ class TOAs(object):
                                      'bipm_version':bipm_version,
                                      'include_gps':include_gps})
 
-    def compute_TDBs(self, method="default", ephem=None):
+    def compute_TDBs(self, method="default", ephem=None, tt2tdb_mode=None):
         """Compute and add TDB and TDB long double columns to the TOA table.
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
         for TDB times, using the Observatory locations and IERS A Earth
@@ -838,6 +847,7 @@ class TOAs(object):
             obs = self.table.groups.keys[ii]['obs']
             loind, hiind = self.table.groups.indices[ii:ii+2]
             site = get_observatory(obs)
+            site.tt2tdb_mode = tt2tdb_mode
             if isinstance(site,TopoObs):
                 # For TopoObs, it is safe to assume that all TOAs have same location
                 # I think we should report to astropy that initializing
@@ -870,6 +880,73 @@ class TOAs(object):
         col_tdbld = table.Column(name='tdbld',
                 data=[utils.time_to_longdouble(t) for t in tdbs])
         self.table.add_columns([col_tdb, col_tdbld])
+
+    def compute_TCBs(self, method="default", ephem=None, tt2tcb_mode=None):
+        """Compute and add TCB and TCB long double columns to the TOA table.
+        This routine creates new columns 'tcb' and 'tcbld' in a TOA table
+        for TCB times, using the Observatory locations and IERS A Earth
+        rotation corrections for UT1.
+        """
+        log.info('Computing TCB columns.')
+        if 'tcb' in self.table.colnames:
+            log.info('tcb column already exists. Deleting...')
+            self.table.remove_column('tcb')
+        if 'tcbld' in self.table.colnames:
+            log.info('tcbld column already exists. Deleting...')
+            self.table.remove_column('tcbld')
+
+        if ephem is None:
+            if self.ephem is not None:
+                ephem = self.ephem
+            else:
+                log.warning('No ephemeris provided to TOAs object or compute_TCBs. Using DE421')
+                ephem = 'DE421'
+        else:
+            # If user specifies an ephemeris, make sure it is the same as the one already in the TOA object, to prevent mixing.
+            if (self.ephem is not None) and (ephem != self.ephem):
+                log.error('Ephemeris provided to compute_TCBs {0} is different than TOAs object ephemeris {1}!'.format(ephem,self.ephem))
+        self.ephem = ephem
+
+        # Compute in observatory groups
+        tcbs = numpy.zeros_like(self.table['mjd'])
+        for ii, key in enumerate(self.table.groups.keys):
+            grp = self.table.groups[ii]
+            obs = self.table.groups.keys[ii]['obs']
+            loind, hiind = self.table.groups.indices[ii:ii+2]
+            site = get_observatory(obs)
+            site.tt2tcb_mode = tt2tcb_mode
+            if isinstance(site, TopoObs):
+                # For TopoObs, it is safe to assume that all TOAs have same location
+                # I think we should report to astropy that initializing
+                # a Time from a list (or Column) of Times throws away the location information
+                grpmjds = time.Time(grp['mjd'], location=grp['mjd'][0].location)
+            else:
+                # Grab locations for each TOA
+                # It is crazy that I have to deconstruct the locations like
+                # this to build a single EarthLocation object with an array
+                # of locations contained in it.
+                # Is there a more efficient way to convert a list of EarthLocations
+                # into a single EarthLocation object with an array of values internally?
+                loclist = [t.location for t in grp['mjd']]
+                if loclist[0] is None:
+                    grpmjds = time.Time(grp['mjd'],location=None)
+                else:
+                    locs = EarthLocation(numpy.array([l.x.value for l in loclist])*u.m,
+                                         numpy.array([l.y.value for l in loclist])*u.m,
+                                         numpy.array([l.z.value for l in loclist])*u.m)
+                    grpmjds = time.Time(grp['mjd'],location=locs)
+
+            if isinstance(site, SpacecraftObs): #spacecraft-topocentric toas
+                grptcbs = site.get_TCBs(grpmjds, method=method, ephem=ephem, grp=grp)
+            else:
+                grptcbs = site.get_TCBs(grpmjds, method=method, ephem=ephem)
+            tcbs[loind:hiind] = numpy.asarray([t for t in grptcbs])
+
+        # Now add the new columns to the table
+        col_tcb = table.Column(name='tcb', data=tcbs)
+        col_tcbld = table.Column(name='tcbld',
+                data=[utils.time_to_longdouble(t) for t in tcbs])
+        self.table.add_columns([col_tcb, col_tcbld])
 
     def compute_posvels(self, ephem=None, planets=False):
         """Compute positions and velocities of the observatories and Earth.

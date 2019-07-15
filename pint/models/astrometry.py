@@ -42,7 +42,6 @@ class Astrometry(DelayComponent):
     def setup(self):
         super(Astrometry, self).setup()
 
-
     def ssb_to_psb_xyz_ICRS(self, epoch=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
 
@@ -190,6 +189,7 @@ class AstrometryEquatorial(Astrometry):
                             "POSEPOCH or PEPOCH are required if PM is set.")
                 else:
                     self.POSEPOCH.quantity = self.PEPOCH.quantity
+            self.POSEPOCH.scale = self.UNITS.value.lower()
 
     def print_par(self):
         result = ''
@@ -358,6 +358,7 @@ class AstrometryEcliptic(Astrometry):
                             "POSEPOCH or PEPOCH are required if PM is set.")
                 else:
                     self.POSEPOCH.quantity = self.PEPOCH.quantity
+                    self.POSEPOCH.scale = self.UNITS.value.lower()
 
     def get_psr_coords(self, epoch=None):
         """Returns pulsar sky coordinates as an astropy ecliptic oordinates

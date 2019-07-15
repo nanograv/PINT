@@ -44,6 +44,10 @@ class Spindown(PhaseComponent):
             if getattr(self, p).value is None:
                 raise MissingParameter("Spindown", p)
 
+        if self.PEPOCH.value is not None:
+            # set the units
+            self.PEPOCH.scale = self.UNITS.value.lower()
+
         # Check continuity
         F_terms = list(self.get_prefix_mapping_component('F').keys())
         F_terms.sort()
@@ -88,11 +92,11 @@ class Spindown(PhaseComponent):
         """
         tbl = toas.table
         if self.PEPOCH.value is None:
-            phsepoch_ld = time_to_longdouble(tbl['tdb'][0] - delay[0])
+            phsepoch_ld = time_to_longdouble(tbl[self.UNITS.value.lower()][0] - delay[0])
         else:
             phsepoch_ld = time_to_longdouble(self.PEPOCH.quantity)
 
-        dt = (tbl['tdbld'] - phsepoch_ld)*u.day - delay
+        dt = (tbl[self.UNITS.value.lower()+'ld'] - phsepoch_ld)*u.day - delay
 
         return dt
 
