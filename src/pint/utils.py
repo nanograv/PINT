@@ -592,7 +592,7 @@ def make_toas(startMJD, endMJD, ntoas, model, freq=1400, obs='GBT'):
     ts.clock_corr_info.update({'include_bipm':False,'bipm_version':'BIPM2015','include_gps':False})
     return ts
 
-def show_cov_matrix(matrix,params,name,switchRD=False):
+def show_cov_matrix(matrix,params,name='Covaraince Matrix',switchRD=False):
     '''function to print covariance matrices in a clean and easily readable way'''
     matrix = deepcopy(matrix)
     try:

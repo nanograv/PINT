@@ -42,47 +42,42 @@ class Residuals(object):
         rs = self.model.phase(self.toas)
         rs -= Phase(rs.int[0],rs.frac[0])
         try:
-            delta_pulse_numbers = self.toas.table['delta_pulse_numbers']
+            delta_pulse_numbers = Phase(self.toas.table['delta_pulse_numbers'])
         except:
             self.toas.table['delta_pulse_numbers'] = np.zeros(len(self.toas.get_mjds()))#as long as the rest of the table (should be same as # of mjds, butter thing to use)
-            delta_pulse_numbers = self.toas.table['delta_pulse_numbers']
-        delta_pulse_numbers *= u.cycle#UNITS!!!!!
+            delta_pulse_numbers = Phase(self.toas.table['delta_pulse_numbers'])
         if set_pulse_nums:
-            delta_pulse_numbers *= 0
-            print('dpn post fit)',delta_pulse_numbers)
-        #print('Phase(dpn)',Phase(delta_pulse_numbers))
-        full = rs.frac + delta_pulse_numbers
-        print('full',full)
+            self.toas.table['delta_pulse_numbers'] = np.zeros(len(self.toas.get_mjds()))
+            delta_pulse_numbers = Phase(self.toas.table['delta_pulse_numbers'])
+        full = Phase(np.zeros_like(rs.frac),rs.frac) + delta_pulse_numbers
+        full = full.int + full.frac
+        #print(full)
+        #print(self.toas.table['delta_pulse_numbers'])
+        
         #Track on pulse numbers, if necessary
-        if getattr(self.model, 'TRACK').value == '-2':
+        #if getattr(self.model, 'TRACK').value == '-2':
             #addpn = np.array([flags['pnadd'] if 'pnadd' in flags else 0.0 \
             #    for flags in self.toas.table['flags']]) * u.cycle
             #addpn[0] -= 1. * u.cycle
             #addpn = np.cumsum(addpn)
-            
-            pulse_num = self.toas.get_pulse_numbers()
-            if pulse_num is None:
-                raise ValueError('No pulse numbers with TOAs using TRACK -2')
-
-            pn_act = rs.int
-            print('pulse_num',pulse_num) 
-            print('delta_pulse_numbers',delta_pulse_numbers)
-            addPhase = pn_act - (pulse_num + delta_pulse_numbers)
-            rs -= Phase(rs.int)
-            rs += Phase(addPhase)
-            
-            if not weighted_mean:
-                rs -= Phase(0.0, (full).mean())
-            else:
-                w = 1.0 / (np.array(self.toas.get_errors())**2)
-                wm  = ((full)*w).sum()/w.sum()
-                rs -= Phase(0.0,wm)
-                #wm = (rs*w).sum() / w.sum()
-                #rs -= wm
-            print('dpn',delta_pulse_numbers)
-            print('rs.frac', rs.frac)
-            print('delta_pulse_numbers + rs.frac',delta_pulse_numbers + rs.frac)
-            return full
+        #    pulse_num = self.toas.get_pulse_numbers()
+        #    if pulse_num is None:
+        #        log.error('No pulse numbers with TOAs using TRACK -2')
+        #        raise Exception('No pulse numbers with TOAs using TRACK -2')
+        #    pn_act = rs.int
+        #    addPhase = pn_act - (pulse_num + delta_pulse_numbers)
+        #    rs -= Phase(rs.int)
+        #    rs += Phase(addPhase)
+        #    
+        #    if not weighted_mean:
+        #rs -= Phase(0.0, (full).mean())
+        #    else:
+        #        w = 1.0 / (np.array(self.toas.get_errors())**2)
+        #        wm  = ((full)*w).sum()/w.sum()
+        #        rs -= Phase(0.0,wm)
+        #        #wm = (rs*w).sum() / w.sum()
+        #        #rs -= wm
+        #    return full
 
         if not weighted_mean:
             rs -= Phase(0.0,(full).mean())
@@ -188,24 +183,28 @@ class Residuals(object):
     
     def get_covariance_matrix(self,scaled=False):
         """returns the covariance matrix (and the scaling factor) for the model and toas, either unscaled (with variances in the diagonal) or scaled (with 1s in the diagonal)"""
+        pass
         #copied from fitter.py
-        M, params, units, Scale_by_F0 = self.model.designmatrix(toas=self.toas,incfrozen=False,incoffset=True)
-        Nvec = self.toas.get_errors().to(u.s).value
-        M = M/Nvec.reshape((-1,1))
-        fac = M.std(axis=0)
-        fac[0] = 1.0
-        M/= fac
-        U, s, Vt = sl.svd(M, full_matrices=False)
-        Sigma = np.dot(Vt.T / (s**2), Vt)
-        sigma_var = (Sigma/fac).T/fac
-        if scaled is not True:
-            #scaled by fac to make into variance matrix (variances in diagonal)
-            return sigma_var, fac
-        else:
-            #scaled by fac and errors to make into covariance matrix (1s in diagonal)
-            errors = np.sqrt(np.diag(sigma_var))
-            sigma_cov = (sigma_var/errors).T/errors
-            return sigma_cov, fac, errors
+        #M, params, units, Scale_by_F0 = self.model.designmatrix(toas=self.toas,incfrozen=False,incoffset=True)
+        #Nvec = self.toas.get_errors().to(u.s).value
+        #M = M/Nvec.reshape((-1,1))
+        #fac = M.std(axis=0)
+        #fac[0] = 1.0
+        #print(M)
+        #M/= fac
+        #print(fac)
+        #print(M)
+        #U, s, Vt = sl.svd(M, full_matrices=False)
+        #Sigma = np.dot(Vt.T / (s**2), Vt)
+        #sigma_var = (Sigma/fac).T/fac
+        #if scaled is not True:
+        #    #scaled by fac to make into variance matrix (variances in diagonal)
+        #    return sigma_var, fac
+        #else:
+        #    #scaled by fac and errors to make into covariance matrix (1s in diagonal)
+        #    errors = np.sqrt(np.diag(sigma_var))
+        #    sigma_cov = (sigma_var/errors).T/errors
+        #    return sigma_cov, fac, errors
 
     def update(self, weighted_mean=True):
         """Recalculate everything in residuals class

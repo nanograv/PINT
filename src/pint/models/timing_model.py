@@ -19,6 +19,7 @@ from astropy import log
 import pint.utils as utils
 from pint.utils import interesting_lines, lines_of
 from pint import dimensionless_cycles
+from . import parameter as p
 
 from ..phase import Phase
 from .parameter import strParameter
@@ -599,7 +600,77 @@ class TimingModel(object):
             result.append(nf(toas)[1])
         return np.hstack([r for r in result])
 
-
+    def jump_flags_to_params(self, toas):
+        '''convert jump flags in toas to jump parameters in the model'''
+        from . import jump
+        for dict in toas.table['flags']:
+            if 'jump' in dict.keys():
+                break
+        else:
+            print('no jump flags to process')
+            return None        
+        jump_nums = [dict['jump'] if 'jump' in dict.keys() else np.nan for dict in toas.table['flags']]
+        if 'PhaseJump' not in self.components:
+            print("PhaseJump component added")
+            a = jump.PhaseJump()
+            a.setup()
+            self.add_component(a)
+            self.remove_param("JUMP1")
+        for num in np.arange(1, np.nanmax(jump_nums)+1):
+            if 'JUMP'+str(int(num)) not in self.params:
+                param = p.maskParameter(name='JUMP', index=int(num), key='jump', key_value=int(num), value=0.0, units='second', uncertainty=0.0)
+                self.add_param_from_top(param, 'PhaseJump')
+                getattr(self, param.name).frozen = False
+        if 0 in jump_nums:
+            for dict in toas.table['flags']:
+                if 'jump' in dict.keys() and dict['jump'] == 0:
+                    dict['jump'] = int(np.nanmax(jump_nums)+1)
+            param = p.maskParameter(name='JUMP', index=int(np.nanmax(jump_nums)+1), key='jump', key_value=int(np.nanmax(jump_nums)+1), value=0.0, units='second', uncertainty=0.0)
+            self.add_param_from_top(param, 'PhaseJump')
+            getattr(self, param.name).frozen = False
+        self.components['PhaseJump'].setup()
+    
+        #ranges = []
+        #if 'PhaseJump' not in self.components:
+        #    print("PhaseJump component added")
+        #    a = jump.PhaseJump()
+        #    a.setup()
+        #    self.add_component(a)
+        #    self.remove_param("JUMP1")
+        #else:
+        #    for param in self.params:
+        #        if param.startswith("JUMP"):
+        #            ranges.append(getattr(self, param).key_value)
+        #nums = []
+        #for dict in toas.table['flags']:
+        #    if 'jump' in dict.keys():
+        #        nums.append(dict['jump'])
+        #    else:
+        #        nums.append(np.nan)
+        #print(toas.table['mjd_float'])
+        #print(toas.table['flags'])
+        #print(nums)
+        #if 0 in nums:
+        #    nums = list(np.asarray(nums) + 1)
+        #print(nums)
+        #for num in np.arange(1, np.nanmax(nums)+1):
+        #    i1 = nums.index(num)
+        #    i2 = len(nums) - 1 - nums[::-1].index(num)
+        #    if not all(elem == num for elem in nums[i1:i2+1]):
+        #        #if there are group numbers other than this groups between the first and
+        #        #last element, switch them one by one rather than as a range
+        #        mjds = [toas.table['mjd_float'][i] for i in np.arange(i1, i2+1) if nums[i] == num]
+        #    else:
+        #        mjds = toas.table['mjd_float'][i1:i2+1]
+        #    minmjd = min(mjds)
+        #    maxmjd = max(mjds)
+        #    if [minmjd, maxmjd] in ranges:
+        ##        print("JUMP{} with range {} to {} already exists".format(num, minmjd, maxmjd))
+          #      continue
+         #   param = p.maskParameter(name='JUMP', index=int(num), key='mjd', key_value=[minmjd, maxmjd], value=0.0, units='second')
+         #   self.add_param_from_top(param, 'PhaseJump')
+         #   getattr(self, param.name).frozen = False
+        #self.components['PhaseJump'].setup()
 
     def get_barycentric_toas(self, toas, cutoff_component=''):
         """Conveniently calculate the barycentric TOAs.
@@ -789,7 +860,6 @@ class TimingModel(object):
         nparams = len(params)
         delay = self.delay(toas)
         units = []
-
         # Apply all delays ?
         #tt = toas['tdbld']
         #for df in self.delay_funcs:

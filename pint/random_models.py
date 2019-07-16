@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 def random(fitter, rs_mean, ledge_multiplier=4, redge_multiplier=4, iter=10, npoints=100):
     params = fitter.get_fitparams_num()
     mean_vector = params.values()
-    cov_matrix = (((fitter.resids.unscaled_cov_matrix[0][1:]).T)[1:]).T
-    fac = fitter.resids.unscaled_cov_matrix[1][1:]
+    cov_matrix = (((fitter.unscaled_cov_matrix[1:]).T)[1:]).T#[0][1:]).T)[1:]).T
+    fac = fitter.fac[1:]#resids.unscaled_cov_matrix[1][1:]
     
     f_rand = deepcopy(fitter)
     mrand = f_rand.model

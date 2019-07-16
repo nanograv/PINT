@@ -20,6 +20,7 @@ from .config import datapath
 from astropy import log
 import numpy as np
 from .observatory.special_locations import SpacecraftObs
+from collections import OrderedDict
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "FMIN", "INCLUDE", "INFO", "JUMP", "MODE", "NOSKIP", "PHA1",
@@ -482,9 +483,11 @@ class TOAs(object):
             self.table = table.Table([numpy.arange(len(mjds)), mjds, self.get_mjds(),
                                       self.get_errors(), self.get_freqs(),
                                       self.get_obss(), self.get_flags(), 
-                                      numpy.zeros(len(mjds)) * u.cycle],
+                                      numpy.zeros(len(mjds)) * u.cycle,
+                                      self.get_groups()],
                                       names=("index", "mjd", "mjd_float", "error",
-                                             "freq", "obs", "flags", "delta_pulse_number"),
+                                             "freq", "obs", "flags", "delta_pulse_number",
+                                             "groups"),
                                       meta={'filename':self.filename}).group_by("obs")
             # Add pulse number column (if needed) or make PHASE adjustments
             self.phase_columns_from_flags()
@@ -593,6 +596,47 @@ class TOAs(object):
         else:
             return self.table['flags']
 
+    def get_groups(self, gap_limit=0.0833):
+        if hasattr(self, "toas") or gap_limit != 0.0833:
+            print("calculating groups")
+            gap_limit *= u.d
+            mjd_dict = OrderedDict()
+            for i in np.arange(len(self.get_mjds())):
+                mjd_dict[i]=self.get_mjds()[i].value
+            sorted_mjd_list = sorted(mjd_dict.items(), key=lambda kv:(kv[1], kv[0]))
+            indexes = [a[0] for a in sorted_mjd_list]
+            mjds = [a[1] for a in sorted_mjd_list]
+            gaps = np.diff(mjds)
+            lengths = []
+            count = 0
+            for i in range(len(gaps)):
+                if gaps[i]*u.d < gap_limit:
+                    count += 1                
+                else:
+                    lengths += [count + 1]
+                    count = 0
+            lengths += [count + 1]
+            sorted_groups = []
+            groupnum = 0
+            for length in lengths:
+                sorted_groups += [groupnum]*length
+                groupnum += 1
+                
+            group_dict = OrderedDict()
+            for i in np.arange(len(indexes)):
+                group_dict[indexes[i]] = sorted_groups[i]
+            groups = [group_dict[key] for key in sorted(group_dict)]
+            return groups
+        else:
+            return self.table['groups']
+        
+    def get_highest_density_range(self, nbins=10):
+        a = np.histogram(self.get_mjds(), nbins)
+        maxday = int(a[1][np.argmax(a[0])])
+        diff = int(a[1][1]-a[1][0])
+        print('max density range (in steps of {} days -- {} bins) is from MJD {} to {} with {} toas.'.format(diff, nbins, maxday, maxday+diff, a[0].max()))
+        return (maxday, maxday+diff)
+        
     def select(self, selectarray):
         """Apply a boolean selection or mask array to the TOA table."""
         if hasattr(self, "table"):
@@ -1080,3 +1124,4 @@ class TOAs(object):
             if top:
                 # Clean up our temporaries used when reading TOAs
                 del self.cdict
+
