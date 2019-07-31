@@ -1,4 +1,4 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, print_function, division, unicode_literals
 import re, sys, os, numpy, gzip, copy
 from . import utils
 from .observatory import Observatory, get_observatory

@@ -6,7 +6,11 @@ from . import parameter as p
 
 
 class Wave(DelayComponent):
-    """This class provides glitches."""
+    """This class provides harmonic signals.
+    
+    Historically, used for decomposition of timing noise into a series of
+    sine/cosine components.
+    """
     register = True
     def __init__(self):
         super(Wave, self).__init__()
@@ -62,12 +66,13 @@ class Wave(DelayComponent):
                       range(1, self.num_wave_terms + 1)]
         wave_terms = [getattr(self, name) for name in wave_names]
         wave_om = self.WAVE_OM.quantity
-        time = self.barycentric_time = toas.table['tdbld'] * u.day
+        base_phase = (wave_om*(
+                toas.table['tdbld']*u.day-self.WAVEEPOCH.value*u.day)).value
+
         for k, wave_term in enumerate(wave_terms):
             wave_a, wave_b = wave_term.quantity
-            k = k + 1
-            delay_term = wave_a * np.sin(k * wave_om * time) + \
-                         wave_b * np.cos(k * wave_om * time)
-            delays += delay_term
+            wave_phase = (k+1)*base_phase
+            delays += wave_a * np.sin(wave_phase)
+            delays += wave_b * np.cos(wave_phase)
 
         return delays
