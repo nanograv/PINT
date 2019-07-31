@@ -59,20 +59,29 @@ def load_FT2(ft2_filename):
     X = SC_POS[:,0]*u.m
     Y = SC_POS[:,1]*u.m
     Z = SC_POS[:,2]*u.m
-    # Compute velocities by differentiation because FT2 does not have velocities
-    # This is not the best way. Should fit an orbit and determine velocity from that.
-    dt = mjds_TT[1]-mjds_TT[0]
-    log.info('FT2 spacing is '+str(dt.to(u.s)))
-    # Trim off last point because array.diff() is one shorter
-    Vx = np.gradient(X)[:-1]/(mjds_TT.diff().to(u.s))
-    Vy = np.gradient(Y)[:-1]/(mjds_TT.diff().to(u.s))
-    # Hack to fix gradient failing on example data file for reasons I don't understand. -- paulr
-    #Vz = np.gradient(Z)[:-1]/(mjds_TT.diff().to(u.s))
-    Vz = (np.gradient(Z.value)[:-1])*u.m/(mjds_TT.diff().to(u.s))
-    X = X[:-1]
-    Y = Y[:-1]
-    Z = Z[:-1]
-    mjds_TT = mjds_TT[:-1]
+    try:
+        # If available, get the velocities from the FT2 file
+        SC_VEL = FT2_dat.field('SC_VELOCITY')
+        Vx = SC_VEL[:,0]*u.m/u.s
+        Vy = SC_VEL[:,1]*u.m/u.s
+        Vz = SC_VEL[:,2]*u.m/u.s
+    except:
+        # Otherwise, compute velocities by differentiation because FT2 does not have velocities
+        # This is not the best way. Should fit an orbit and determine velocity from that.
+        dt = mjds_TT[1]-mjds_TT[0]
+        log.info('FT2 spacing is '+str(dt.to(u.s)))
+        # Trim off last point because array.diff() is one shorter
+        #Vx = np.gradient(X)[:-1]/(mjds_TT.diff().to(u.s))
+        #Vy = np.gradient(Y)[:-1]/(mjds_TT.diff().to(u.s))
+        # Hack to fix gradient failing on example data file for reasons I don't understand. -- paulr
+        #Vz = np.gradient(Z)[:-1]/(mjds_TT.diff().to(u.s))
+        Vx = (np.gradient(X.value)[:-1])*u.m/(mjds_TT.diff().to(u.s))
+        Vy = (np.gradient(Y.value)[:-1])*u.m/(mjds_TT.diff().to(u.s))
+        Vz = (np.gradient(Z.value)[:-1])*u.m/(mjds_TT.diff().to(u.s))
+        X = X[:-1]
+        Y = Y[:-1]
+        Z = Z[:-1]
+        mjds_TT = mjds_TT[:-1]
     log.info('Building FT2 table covering MJDs {0} to {1}'.format(mjds_TT.min(), mjds_TT.max()))
     FT2_table = Table([mjds_TT, X, Y, Z, Vx, Vy, Vz],
             names = ('MJD_TT', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz'),

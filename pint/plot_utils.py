@@ -59,7 +59,7 @@ def phaseogram_binned(mjds, phases, weights=None, title=None, bins=64, rotate=0.
     """
     years = (mjds.value - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
-    phss[phss > 1.0] -= 1.0
+    phss[phss >= 1.0] -= 1.0
     fig = plt.figure(figsize=(width, 8))
     ax1 = plt.subplot2grid((3, 1), (0, 0))
     ax2 = plt.subplot2grid((3, 1), (1, 0), rowspan=2)
