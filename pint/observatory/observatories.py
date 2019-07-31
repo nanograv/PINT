@@ -40,7 +40,21 @@ TopoObs('most',         tempo_code='e', itoa_code='MO',
         clock_fmt='tempo2', clock_dir='TEMPO2', clock_file='mo2gps.clk')
 TopoObs('chime',        tempo_code='y', itoa_code='CH',
         itrf_xyz=[-2058795.0, -3621559.0, 4814280.0])
+
+# ground-based gravitational-wave observatories
+TopoObs('virgo', aliases=['v1'], include_bipm=False,
+        itrf_xyz=[4546374.0990, 842989.6976, 4378576.9624])
+TopoObs('lho', aliases=['h1', 'hanford'], include_bipm=False,
+        itrf_xyz=[-2161414.9264, -3834695.1789, 4600350.2266])
+TopoObs('llo', aliases=['l1', 'livingston'], include_bipm=False,
+        itrf_xyz=[-74276.0447, -5496283.7197, 3224257.0174])
+TopoObs('geo600', aliases=['geohf', 'g1'], include_bipm=False,
+        itrf_xyz=[3856309.9493, 666598.9563, 5019641.4172])
+TopoObs('kagra', aliases=['k1', 'lcgt'], include_bipm=False,
+        itrf_xyz=[-3777336.0240, 3484898.411, 3765313.6970])
+
 TopoObs('algonquin', itoa_code='AR', aliases=['aro', 'ARO'],
         itrf_xyz=[918091.6472072796, -4346129.702203057, 4562012.861165226])
 TopoObs('drao', itoa_code='DR', aliases=['drao', 'DRAO'],
         itrf_xyz=[-2058897.5725006417, -3621371.264826613, 4814353.577678314])
+
