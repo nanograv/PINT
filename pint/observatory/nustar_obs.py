@@ -84,8 +84,9 @@ class NuSTARObs(SpecialLocation):
     tt2tdb_mode: str
         Selection for mode to use for TT to TDB conversion.
         'none' = Give no position to astropy.Time()
+        'pint' = Use PINT routines for TT to TDB conversion.
         'geo' = Give geocenter position to astropy.Time()
-        'spacecraft' = Give spacecraft ITRF position to astropy.Time()
+        'astropy' = Give spacecraft ITRF position to astropy.Time()
     """
 
     def __init__(self, name, FPorbname, tt2tdb_mode='pint'):
