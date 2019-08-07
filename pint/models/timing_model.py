@@ -123,7 +123,7 @@ class TimingModel(object):
             else:
                 return super().__getattribute__(name)
         except AttributeError:
-            errmsg = "'TimingModel' object and its component has no attribute"
+            errmsg = "'TimingModel' object and its components have no attribute"
             errmsg += " '%s'." % name
             try:
                 if six.PY2:
@@ -161,6 +161,22 @@ class TimingModel(object):
             for cp in cps_list:
                 comps[cp.__class__.__name__] = cp
         return comps
+
+    @property
+    def categories(self):
+        categories = []
+        if six.PY2:
+            type_list = super(TimingModel, self).__getattribute__('component_types')
+        else:
+            type_list = super().__getattribute__('component_types')
+        for ct in type_list:
+            if six.PY2:
+                cps_list = super(TimingModel, self).__getattribute__(ct + '_list')
+            else:
+                cps_list = super().__getattribute__(ct + '_list')
+            for cp in cps_list:
+                categories.append(cp.category)
+        return categories
 
     @property
     def delay_funcs(self,):
@@ -424,6 +440,7 @@ class TimingModel(object):
                 param_type.upper() == par_prefix.upper():
                 result.append(par.name)
         return result
+
     def get_prefix_mapping(self, prefix):
         """Get the index mapping for the prefix parameters.
            Parameter
@@ -775,13 +792,32 @@ class TimingModel(object):
         return M, params, units, scale_by_F0
 
     def read_parfile(self, filename):
-        """Read values from the specified parfile into the model parameters."""
+        """Read parameter values from a .parfile.
+
+           Parameter
+           ---------
+           filename: str
+               .par file name.
+        """
+        pfile = open(filename, 'r')
+        self.read_parfile_string(pfile.readlines())
+
+    def read_parfile_string(self, par_strings):
+        """Read values from a parfile in string list format
+           into the model parameters.
+
+           Parameter
+           ---------
+           par_strings: list
+               List of parfile line strings.
+        """
         checked_param = []
         repeat_param = {}
         param_map = self.get_params_mapping()
         comps = self.components
-        pfile = open(filename, 'r')
-        for l in [pl.strip() for pl in pfile.readlines()]:
+        for l in [pl.strip() for pl in par_strings]:
+            # Making sure par file line is plain text
+            l = str(l)
             # Skip blank lines
             if not l:
                 continue
@@ -791,12 +827,12 @@ class TimingModel(object):
 
             k = l.split()
             name = k[0].upper()
-            
+
             if name == 'UNITS' and len(k) > 1 and k[1] != 'TDB':
                 log.error("UNITS %s not yet supported by PINT" % k[1])
                 raise Exception("UNITS %s not yet supported by PINT" % k[1])
 
-            
+
             if name in checked_param:
                 if name in repeat_param.keys():
                     repeat_param[name] += 1
