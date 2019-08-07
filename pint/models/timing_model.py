@@ -16,6 +16,7 @@ import six
 import inspect
 from pint import dimensionless_cycles
 
+
 # parameters or lines in parfiles to ignore (for now?), or at
 # least not to complain about
 ignore_params = ['START', 'FINISH', 'CLK', 'UNITS',
@@ -791,16 +792,25 @@ class TimingModel(object):
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
 
-    def read_parfile(self, filename):
+    def read_parfile(self, parfile):
         """Read parameter values from a .parfile.
 
            Parameter
            ---------
-           filename: str
+           parfile: str or .par file line lists
                .par file name.
         """
-        pfile = open(filename, 'r')
-        self.read_parfile_string(pfile.readlines())
+        if isinstance(parfile, str):
+            pfile = open(parfile, 'r')
+            plines = pfile.readlines()
+        elif isinstance(parfile, (list, tuple)):
+            plines = parfile
+        else:
+            raise ValueError("Acceptable .par file format: `filename` and "
+                             "`.par file line list.`")
+        self.read_parfile_string(plines)
+        if isinstance(parfile, str):
+            pfile.close()
 
     def read_parfile_string(self, par_strings):
         """Read values from a parfile in string list format
@@ -903,6 +913,7 @@ class TimingModel(object):
                 printed_cate.append(cat)
 
         return result_begin + result_middle + result_end
+
 
 class ModelMeta(abc.ABCMeta):
     """

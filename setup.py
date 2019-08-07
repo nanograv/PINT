@@ -87,9 +87,9 @@ cmdclass.update(versioneer.get_cmdclass())
 console_scripts = [ 'photonphase=pint.scripts.photonphase:main',
                     'event_optimize=pint.scripts.event_optimize:main',
                     'event_optimize_multiple=pint.scripts.event_optimize_multiple:main',
-                    'pintempo=pint.scripts.pintempo:main', 
-                    'zima=pint.scripts.zima:main', 
-                    'pintbary=pint.scripts.pintbary:main', 
+                    'pintempo=pint.scripts.pintempo:main',
+                    'zima=pint.scripts.zima:main',
+                    'pintbary=pint.scripts.pintbary:main',
                     'fermiphase=pint.scripts.fermiphase:main',
                     'pintk=pint.scripts.pintk:main' ]
 
@@ -105,8 +105,8 @@ setup(
 
     install_requires = ['astropy>=2.0'],
 
-    entry_points={  
-        'console_scripts': console_scripts, 
+    entry_points={
+        'console_scripts': console_scripts,
     },
 
     packages=['pint',
@@ -117,7 +117,8 @@ setup(
         'pint.models.stand_alone_psr_binaries',
         'pint.observatory',
         'pint.orbital',
-        'pint.templates'],
+        'pint.templates',
+        'pint.timing_utils'],
 
     package_data={'pint': [
         'datafiles/ecliptic.dat',

@@ -16,7 +16,7 @@ default_models = ["StandardTimingModel",]
 DEFAULT_ORDER = ['astrometry', 'jump_delay', 'solar_system_shapiro',
                  'dispersion_constant', 'dispersion_dmx', 'pulsar_system',
                  'frequency_dependent', 'spindown', 'phase_jump', 'wave']
-                 
+
 class ModelBuilder(object):
     """A class for model construction interface.
         Parameters
@@ -70,8 +70,15 @@ class ModelBuilder(object):
         """
         param = {}
         repeat_par = {}
-        pfile = open(parfile, 'r')
-        for l in [pl.strip() for pl in pfile.readlines()]:
+        if isinstance(parfile, str):
+            pfile = open(parfile, 'r')
+            plines = pfile.readlines()
+        elif isinstance(parfile, (list, tuple)):
+            plines = parfile
+        else:
+            raise ValueError("Acceptable .par file format: `filename` and "
+                             "`.par file line list.`")
+        for l in [pl.strip() for pl in plines]:
             # Skip blank lines
             if not l:
                 continue
@@ -90,7 +97,8 @@ class ModelBuilder(object):
         self.param_inparF = param
         for key in repeat_par.keys():
             self.param_inparF[key + str(1)] = self.param_inparF.pop(key)
-        pfile.close()
+        if isinstance(parfile, str):
+            pfile.close()
         return self.param_inparF
 
     def get_all_categories(self,):
@@ -241,16 +249,12 @@ def get_model(parfile):
     """A one step function to build model from a parfile
         Parameters
         ---------
-        name : str
-            Name for the model.
-        parfile : str
-            The parfile name
+        parfile : str or str list
+            The parfile name or a list of parfile lines.
 
         Return
         ---------
         Model instance get from parfile.
     """
-    name = os.path.basename(os.path.splitext(parfile)[0])
-
     mb = ModelBuilder(parfile)
     return mb.timing_model

@@ -1,0 +1,1212 @@
+# #! /usr/bin/env python
+#
+# # Script to call when finalizing timing for nanograv pulsars
+# # runs tempo, generates a summary pdf using pdflatex.
+#
+# import sys
+# import os
+# import re
+# import subprocess
+# import numpy
+#
+# # function that should be built into matplot lib but isn't
+#
+# def colorframe(ax,fcolor):
+#     for frameside in ('bottom','top','right','left'):
+#       ax.spines[frameside].set_color(fcolor)
+#     ax.tick_params(axis='x', colors=fcolor)
+#     ax.tick_params(axis='y', colors=fcolor)
+#     ax.xaxis.label.set_color(fcolor)
+#     ax.yaxis.label.set_color(fcolor)
+#
+# # Use system subprocess.check_output if it exists, otherwise use this
+# # equivalent func I found online.
+# try:
+#     from subprocess import check_output
+# except ImportError:
+#     # from https://gist.github.com/edufelipe/1027906
+#     def check_output(*popenargs, **kwargs):
+#         process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+#         output, unused_err = process.communicate()
+#         retcode = process.poll()
+#         if retcode:
+#             cmd = kwargs.get("args")
+#             if cmd is None:
+#                 cmd = popenargs[0]
+#             error = subprocess.CalledProcessError(retcode, cmd)
+#             error.output = output
+#             raise error
+#         return output
+#
+# npulsefile = "__npulse.tmp__"
+#
+# plot_fmt = 'pdf'
+# do_plot = True
+# do_pdf = True
+# do_tests = True
+# plot_mjd = False
+# do_gls = False
+# do_param_summary = False
+# max_freq_deriv = 2
+# do_solarn0_check = True
+#
+# from optparse import OptionParser
+# parser = OptionParser(usage="usage: %prog [options] parfile timfile")
+# parser.add_option('-g', '-G', '--gls', dest='gls',
+#         default=False, action='store_true',
+#         help='Do GLS fitting (default normal)')
+# parser.add_option('-2', '--tempo2', dest='tempo2',
+#         default=False, action='store_true',
+#         help='Use tempo2 for parameter F-tests')
+# parser.add_option('-e', '--allow-errors', dest='allowerrors',
+#         default=False, action='store_true',
+#         help='Allow errors such as incorrect ephemeris (print warnings but continue)')
+# parser.add_option('-i', '--interactive', dest='interactive',
+#         default=False, action='store_true',
+#         help='Interactive mode (no pdf, plot goes to screen)')
+# parser.add_option('-n', '--no-plot', dest='plot',
+#         default=True, action='store_false',
+#         help='Disable residual/DMX plot')
+# parser.add_option('-p', '--no-pdf', dest='pdf',
+#         default=True, action='store_false',
+#         help='Disable creation of summary pdf file')
+# parser.add_option('-f', '--plot-fmt', dest='fmt',
+#         action='store', type='string', default=plot_fmt,
+#         help='Residual plot format (default %s)' % plot_fmt)
+# parser.add_option('-s', '--no-solarn0-check', dest='solarn0check',
+#         default=True, action='store_false',
+#         help='Disable requirement that solarn0 be 0')
+# parser.add_option('-t', '--no-tests', dest='tests',
+#         default=True, action='store_false',
+#         help='Exit after plotting residuals (no parameter F-tests)')
+# parser.add_option('-m', '--mjd', dest='mjd',
+#         default=False, action='store_true',
+#         help='Plot data vs MJD (default vs year)')
+# parser.add_option('-a', '--append', dest='append',
+#         default=None, action='store', type='string',
+#         help='Append tex output to given file')
+# parser.add_option('-P', '--params', dest='params',
+#         default=False, action='store_true',
+#         help='Write param summary')
+# parser.add_option('-F', '--freq-derivs', dest='max_freq_deriv',
+#         default=max_freq_deriv, action='store', type='int',
+#         help='Max spin freq deriv to test (default %d)' % max_freq_deriv)
+# (opt,arg) = parser.parse_args()
+# try:
+#     parfile = arg[0]
+#     timfile = arg[1]
+# except IndexError:
+#     parser.print_help()
+#     sys.exit(1)
+#
+# do_plot = opt.plot
+# do_pdf = opt.pdf
+# plot_fmt = opt.fmt
+# do_tests = opt.tests
+# plot_mjd = opt.mjd
+# do_gls = opt.gls
+# do_param_summary = opt.params
+# max_freq_deriv = opt.max_freq_deriv
+# do_solarn0_check = opt.solarn0check
+# allow_errors = opt.allowerrors
+#
+# print "Testing: %s %s" % (parfile, timfile)
+#
+# if do_gls:
+#     print "Using GLS fitting."
+#
+# if opt.tempo2:
+#     print "Using tempo2 for parameter F-tests."
+#
+# if opt.interactive:
+#     do_plot = True
+#     do_pdf = False
+#     plot_fmt = 'screen'
+#
+# # Read in the whole parfile, get key/val pairs
+# parlines = open(parfile,'r').readlines()
+# params  = {}
+# paramsf = {}
+# fitflag = {}
+# flagpar = ("T2EFAC","T2EQUAD","ECORR","JUMP")
+# for l in parlines:
+#     x = l.split()
+#     try:
+#         if x[0] in flagpar:
+#           if x[0] not in paramsf:
+#             paramsf[x[0]] = {}
+#           paramsf[x[0]][x[2]] = x[3]
+#         else:
+#           params[x[0]] = x[1]
+#           if len(x) > 2:
+#               fitflag[x[0]] = x[2]
+#           else:
+#               fitflag[x[0]] = None
+#     except:
+#         pass # ignore unparseable lines
+#
+# if parfile == params['PSR'] + '.par':
+#     print "WARNING: tempo will overwrite your input par file!  Please rename it"
+#     sys.exit(1)
+#
+# ecl_coords = False
+# if params.has_key('LAMBDA') and params.has_key('BETA'):
+#     ecl_coords = True
+#
+# span = float(params['FINISH']) - float(params['START'])
+#
+# has_errors = False
+# def print_bad(msg):
+#     global has_errors
+#     print "ERROR: " + msg
+#     has_errors = True
+#
+# # Check things about the parfile
+# print "Testing par and tim file for errors:"
+#
+# # Check that a certain parameter exists and is enabled
+# def param_check(name, check_enabled=True):
+#     if not params.has_key(name):
+#         return False
+#     if check_enabled and fitflag[name]!='1':
+#         return False
+#     return True
+#
+# def get_fblist():
+#     fblist = {}
+#     for p in params.keys():
+#         if p.startswith("FB") and not p.startswith("FBJ"):
+#             if len(p)==2:
+#                 fblist[0] = p
+#             else:
+#                 fblist[int(p[2:])] = p
+#     fbbad = False
+#     # for i, ifb in zip(range(len(fblist)),sorted(fblist.keys())):
+#     k = sorted(fblist.keys())
+#     for i, ifb in zip(range(len(fblist)),sorted(fblist.keys())):
+#         if i!=ifb:
+#             fbbad = True
+#     if fbbad:
+#         print_bad("FB parameters not a series of integers: "+
+#              " ".join([fblist[i] for i in k]) )
+#     return fblist
+#
+# # Check whether we are using wideband data
+# is_wideband = bool(len(subprocess.Popen(["grep pp_dm %s"%timfile], shell=True,
+#     stdout=subprocess.PIPE).stdout.readlines()))
+# if params.has_key('DMDATA') and int(params['DMDATA']) == 1:
+#     has_dmdata = True
+# else:
+#     has_dmdata = False
+# if is_wideband:
+#     print "  these appear to be wideband TOAs"
+#     if has_dmdata:
+#         print "    ... and DMDATA is turned ON"
+#     else:
+#         print "    ... and DMDATA is turned OFF"
+# else:
+#     print "  these appear to be subbanded TOAs"
+#
+# fblist = get_fblist()
+# fbused = (len(fblist)>0)
+#
+# binary = False
+# if params.has_key('BINARY'):
+#     binary = True
+#
+# # required_params = ["F0", "F1", "PX"]
+# #
+# # if ecl_coords:
+# #     required_params += ["LAMBDA", "BETA"]
+# # else:
+# #     required_params += ["RAJ", "DECJ"]
+# #
+# # if binary:
+# #     required_params += ["A1"]
+# #     if not fbused:
+# #         required_params += ["PB"]
+# #     if params['BINARY'] == 'ELL1' or  params['BINARY'] == 'ELL1H':
+# #         required_params += ["TASC",]
+# #     else:
+# #         required_params += ["T0",]
+#
+# for p in required_params:
+#     if not param_check(p):
+#         print_bad("Required parameter '%s' not present/enabled" % p)
+#
+# has_pm = False
+# if ecl_coords:
+#     if param_check('PMLAMBDA') and param_check('PMBETA'):
+#         has_pm = True
+# else:
+#     if param_check('PMRA') and param_check('PMDEC'):
+#         has_pm = True
+#
+# #if float(params['SOLARN0']) != 10:
+# #    print_bad("SOLARN0 should be set to 10.")
+# if float(params['SOLARN0']) != 0 and do_solarn0_check:
+#     print_bad("SOLARN0 should be set to 0.")
+# if span>2.0*365.0 and not has_pm:
+#     print_bad("Proper motion should be added to the fit and enabled.")
+# # if params['CLK'] != 'TT(BIPM15)':
+# #     print_bad("CLK should be TT(BIPM15)")
+# # eph = 'DE430'
+# # if params['EPHEM'] != eph:
+# #     print_bad("EPHEM should be %s" % eph)
+# if 'START' in params and fitflag["START"]!=None:
+#      print_bad("Remove fit flag from START line in the .par file (presently set to "+`fitflag['START']`+")")
+# if 'FINISH' in params and fitflag["FINISH"]!=None:
+#      print_bad("Remove fit flag from FINISH line in the .par file (presently set to "+`fitflag['FINISH']`+")")
+#
+# def check_epoch(key):
+#     ep = float(params[key])
+#     if (ep < float(params['START']) or ep > float(params['FINISH'])):
+#         print_bad("%s is outside of data span" % key)
+#
+# check_epoch('PEPOCH')
+#
+# has_shapiro = False
+# has_ddk = False
+# has_ell1h = False
+# has_h3 = False
+# has_h4 = False
+# if param_check('M2') and param_check('SINI') or param_check('M2') and param_check('MTOT'):
+#     has_shapiro = True
+# if param_check('M2') and param_check('KIN') and param_check('KOM'):
+#     has_shapiro = True
+#     has_ddk = True
+# if binary and params['BINARY'] == 'ELL1H':
+#     has_ell1h = True
+# has_h3 = param_check('H3')
+# has_h4 = param_check('H4')
+# if has_h3 or has_h4:
+#     has_shapiro = True
+#
+# if binary:
+#     if params['BINARY'] == 'ELL1' or params['BINARY'] == 'ELL1H':
+#         check_epoch('TASC')
+#     else:
+#         check_epoch('T0')
+#
+#     # Change ELL1 parfiles with no shapiro to ELL1H for H3 test
+#     if params['BINARY']=='ELL1' and not has_shapiro:
+#         params['BINARY'] = 'ELL1H'
+#         has_ell1h = True
+#         parlines = ['BINARY ELL1H\n' if p.startswith('BINARY') else p
+#                 for p in parlines]
+#
+# # Read in tim file, does not follow includes...
+# timlines = open(timfile,'r').readlines()
+# has_efac = False
+# has_equad = False
+# has_emin = False
+# for l in timlines:
+#     if l.startswith("C "):
+#         continue
+#     if 'JUMP' in l:
+#         print_bad("JUMPs should be in parfile using tempo2 syntax")
+#     if 'EFAC' in l:
+#         has_efac = True
+#     if 'EQUAD' in l:
+#         has_equad = True
+#     if 'EMIN' in l:
+#         has_emin = True
+#
+# if not paramsf.has_key('JUMP'):
+#     print_bad("No JUMP was found (at least one is always necessary)")
+#
+# if has_h4 and not has_h3:
+#     print_bad("Timing solution has H4 but not H3.  Need to add H3.")
+#
+# # Runs tempo, returns (rms, chi2, ndof)
+# def run_tempo(par,tim,cleanup=True,save_cov=False,save_npulse=False,use_npulse=False,allow_errors=False):
+#     try: os.unlink("tempo.lis")
+#     except: pass
+#     try: os.unlink("datacov.tmp")
+#     except: pass
+#     tpocmd = ["tempo","-f",par,tim]
+#     if do_gls:
+#         tpocmd.append("-G")
+#         if save_cov:
+#             tpocmd.append("-C")
+#     if save_npulse:
+#         tpocmd.extend(("-no",save_npulse))
+#     if use_npulse:
+#         tpocmd.extend(("-ni",use_npulse))
+#     tempo_out = check_output(tpocmd)
+#     lis = open("tempo.lis",'r')
+#     ell1_diff = None
+#     rms = 0.0
+#     chi2 = 0.0
+#     ndof = 0
+#     if "No entry in clock file" in tempo_out:
+#         print_bad("Clock file (bipmnist.12.extrap) is out-of-date!")
+#     for l in lis.readlines():
+#         # Look for stuff we want to return:
+#         if "Difference ELL1-DD" in l:
+#             ell1_diff = float((l.split())[4])
+#         if "Weighted RMS residual:" in l:
+#             rms = float((l.split())[8])
+#         if "Chisqr/nfree:" in l:
+#             try:
+#                 # chi2 = float(l[14:23])
+#                 chi2 = float(l.split("/")[1].split(":")[1].strip()) # int(l[14:23])
+#             except ValueError:
+#                 chi2 = 0.0
+#             ndof = int(l.split("/")[2].split("=")[0].strip()) # int(l[24:30])
+#         # Check for various clock errors
+#         if "Clk corr error:" in l:
+#             print_bad("Clock file (time_gbt.dat/time_ao.dat) is out-of-date!")
+#             if not allow_errors: break
+#         if "outside UT1 table range" in l:
+#             print_bad("ut1.dat is out-of-date!")
+#             if not allow_errors: break
+#
+#     if ell1_diff != None:
+#         if (ell1_diff > 100.0):
+#             print_bad("ELL1-DD difference > 100 ns, switch binary to DD")
+#
+#     # Clean up
+#     if cleanup:
+#         for f in ("tempo.lis", "info.tmp", "matrix.tmp", "resid2.tmp"):
+#             try:
+#                 os.unlink(f)
+#             except:
+#                 pass
+#
+#     # Return info
+#     return (rms,chi2,ndof)
+#
+# # Runs tempo, returns (rms, chi2, ndof)
+# # Note, not all the options are implemented here
+# def run_tempo2(par,tim,cleanup=True,save_cov=False,
+#         save_npulse=False,use_npulse=False):
+#
+#     idstr = "ABCD"
+#     t2cmd = ["tempo2", "-nobs", "30000", "-output", "general",
+#             "-s", idstr + ' {nobs} {postrms} ', "-f", par, tim]
+#     t2out = check_output(t2cmd)
+#     # Not sure how general this is across tempo2 versions..
+#     svd_re = re.compile('SVD\s+nparams=(\d+)\s+nconst=(\d+)')
+#     (np,nc) = svd_re.search(t2out).groups()
+#     nfit = int(np) - int(nc)
+#     chi2_re = re.compile(idstr + ' (\d+) (\S+) chisq = (\S+)')
+#     (ntoa,rms,chi2) = chi2_re.search(t2out).groups()
+#     ndof = int(ntoa) - nfit
+#     return float(rms), float(chi2), ndof
+#
+# # Initial run of tempo
+# # Note, this is needed for residuals even if we are using tempo2 for
+# # parameter tests
+# (base_rms, base_chi2, base_ndof) = run_tempo(parfile,timfile,
+#         cleanup=False, save_cov=True, save_npulse=npulsefile, allow_errors=allow_errors)
+# # save values (they get overwritten in the tests for higher frequency derivatives)
+# if opt.tempo2:
+#     (base_rms, base_chi2, base_ndof) = run_tempo2(parfile,timfile,
+#             cleanup=False, save_cov=True, save_npulse=npulsefile)
+# chi2_0 = base_chi2
+# ndof_0 = base_ndof
+#
+# # If there is a covariance matrix saved, cache it for use in
+# # future tempo calls (NOTE: assume noise params will not change during
+# # this testing).
+# covfile = None
+# if os.path.exists('datacov.tmp'):
+#     covfile = parfile.split('/')[-1] + '.dcov.tmp'
+#     os.rename('datacov.tmp',covfile)
+#     parlines.append('DCOVFILE ' + covfile + '\n')
+#
+# # Read in residuals and daily-avg resids
+# if os.environ.has_key('TEMPODIST'):
+#   util = os.environ['TEMPODIST'] + '/util'
+# else:
+#   util = os.environ['TEMPO'] + '/util'
+#
+# rname = 'temp.res'
+#
+# # read standard residuals
+# rtmp = open(rname,'w')
+# subprocess.check_call([util+'/print_resid/print_resid', '-mfreoI'],stdout=rtmp)
+# rtmp.close()
+# resids = open(rname).read().split('\n')
+# avg_resids = check_output([util+'/res_avg/res_avg','-iinfo.tmp','-r'],
+#         stdin=open(rname)).split('\n')
+#
+# # read whitened residuals
+# rtmp = open(rname,'w')
+# subprocess.check_call([util+'/print_resid/print_resid', '-mfreoI','-W'],stdout=rtmp)
+# rtmp.close()
+# resids_w = open(rname).read().split('\n')
+# avg_resids_w = check_output([util+'/res_avg/res_avg','-iinfo.tmp','-r'],
+#         stdin=open(rname)).split('\n')
+#
+# dmx = check_output([util+'/dmxparse/dmxparse.py',
+#     params['PSR']+'.par']).split('\n')
+#
+# try:
+#     os.unlink(rname)
+# except:
+#     pass
+#
+# def get_col(lines, col, func=str):
+#     res = []
+#     for l in lines:
+#         if l.startswith('#'): continue
+#         try:
+#             res += [func((l.split())[col]),]
+#         except:
+#             pass
+#     return res
+#
+# # check for overlapping DMX ranges:
+# dmxr1 = get_col(dmx,3,func=float)
+# dmxr2 = get_col(dmx,4,func=float)
+# dmxid = get_col(dmx,7,func=str)
+# ndmx = len(dmxr1)
+# for i in range(ndmx):
+#     for j in range(ndmx):
+#         if i==j: continue
+#         if dmxr2[i]>dmxr1[j] and dmxr2[i]<dmxr2[j]:
+#             print_bad("DMX ranges %s and %s overlap" % (dmxid[i], dmxid[j]))
+#
+# # Quit now if errors were found
+# if has_errors:
+#     if allow_errors:
+#         print "    Warning: ERRORS FOUND.  Continuing anyway, as requested"
+#     else:
+#         print "    ERRORS FOUND.  Please fix them, then continue"
+#         sys.exit(1)
+# else:
+#     print "    no errors found!"
+#
+# # Returns False if a dmx line has < 10% frac BW
+# def check_dmx(line):
+#     if line.startswith('#'): return True
+#     try:
+#         (mjd,ddm,ddm_err,mjd1,mjd2,frq1,frq2,idx) = line.split()
+#         if float(frq2) / float(frq1) > 1.1: return True
+#         else: return False
+#     except:
+#         return True
+#
+# # Filter out 'bad' DMXs
+# if not is_wideband:
+#     baddmx = [l for l in dmx if not check_dmx(l)]
+#     if len(baddmx):
+#         print "\nBad DMX ranges found (%d/%d):" % (len(baddmx), ndmx)
+#         for l in baddmx:
+#             print l
+#             dmx.remove(l)
+#     else:
+#         print "\nNo bad DMX ranges found!"
+# else:
+#     baddmx = []
+#     print "\n No fractional bandwidth check for DMX ranges with wideband data!\n"
+#
+# def year(mjd):
+#     return (mjd - 51544.0)/365.25 + 2000.0
+#
+# # Test for pylab
+# if do_plot:
+#     try:
+#         import pylab
+#     except ImportError:
+#         print "Error importing pylab; no plots will be generated."
+#         do_plot = False
+#
+# # Make summary plots
+# plot_file_list = []
+# if do_plot:
+#
+#     print "Making summary plots."
+#
+#
+#     # iplot 0: residual plot + DM(t)
+#     #          use standard residuals
+#     # iplot 1: signifiance plot (res/err) + histograms
+#     #          use whitened residuals
+#
+#     framecolor = ("maroon","black","midnightblue")
+#     plotname =  ("_residplot","_residplot_w","_sigplot")
+#     ytext    =  ("Residual ($\mu$s)", "Residual ($\mu$s)\n(Whitened)", "Residual/Uncertainty\n(Whitened)" )
+#
+#     for iplot,plotsig,rr,avrr in ((0,False,resids,avg_resids),(1,False,resids_w,avg_resids_w),(2,True,resids_w,avg_resids_w)):
+#         if plot_fmt=='screen':
+#             pylab.figure(figsize=(12,7.0),dpi=100)
+#         else:
+#             pylab.figure(figsize=(8,10.0),dpi=100,facecolor='lightblue',edgecolor='darkgreen')
+#         pylab.hold(True)
+#         if binary:
+#             plt = 411
+#         else:
+#             plt = 311
+#         ax = None
+#         ax0 = None
+#         first = True
+#         for zz in [(rr,5), (avrr,6)]:
+#             r = zz[0]
+#             ax1 = pylab.subplot(plt,sharex=ax0)
+#             mjd = numpy.array(get_col(r,0,func=float))
+#             frq = numpy.array(get_col(r,1,func=float))
+#             res = numpy.array(get_col(r,2,func=float))
+#             err = numpy.array(get_col(r,3,func=float))
+#             orb = numpy.array(get_col(r,4,func=float))
+#             grp = numpy.array(get_col(r,zz[1]))
+#             for g in list(set(grp)):
+#                 idx = numpy.where(grp==g)
+#                 if plot_mjd: xx = mjd[idx]
+#                 else: xx = year(mjd[idx])
+#                 if plotsig:
+#                     sig = res[idx]/err[idx]
+#                     ax1.errorbar(xx,sig,yerr=len(err[idx])*[1],
+#                                    linestyle='None',label=g)
+#                 else:
+#                     ax1.errorbar(xx,res[idx],yerr=err[idx],
+#                                    linestyle='None',label=g)
+#
+#             ax1.grid(color=framecolor[iplot])
+#             ax1.set_ylabel(ytext[iplot])
+#             if plot_mjd: ax1.set_xlabel('MJD')
+#             else:
+#                 ax1.set_xlabel('Year')
+#                 ax2 = ax1.twiny()
+#                 ax2.set_xlim(ax1.get_xlim())
+#                 mjd0  = ((ax1.get_xlim()[0])-2004.0)*365.25+53005.
+#                 mjd1  = ((ax1.get_xlim()[1])-2004.0)*365.25+53005.
+#                 if (mjd1-mjd0>1200.): mjdstep=500.
+#                 elif (mjd1-mjd0>600.): mjdstep=200.
+#                 else: mjdstep=100.
+#                 mjd0 = int(mjd0/mjdstep)*mjdstep + mjdstep
+#                 mjd1 = int(mjd1/mjdstep)*mjdstep
+#                 mjdr = numpy.arange(mjd0,mjd1+mjdstep,mjdstep)
+#                 yrr = year(mjdr)
+#                 ax2.set_xticks(yrr)
+#                 ax2.set_xticklabels(["%5d" % m for m in mjdr])
+#             colorframe(ax1,framecolor[iplot])
+#             colorframe(ax2,framecolor[iplot])
+#
+#             if first:
+#                 leg = ax1.legend(prop={'size':'x-small'},
+#                         numpoints=1,
+#                         loc='lower center',
+#                         bbox_to_anchor=(0.5,1.15),
+#                         ncol=4)
+#                 leg.get_frame().set_edgecolor(framecolor[iplot])
+#                 for legtxt in leg.get_texts():
+#                     legtxt.set_color(framecolor[iplot])
+#
+#                 ax1.set_title(params['PSR'],loc='center',y=1.35, color=framecolor[iplot])
+#                 ax0 = ax1
+#                 first = False
+#             ax1.ticklabel_format(style='plain',axis='x',useOffset=False)
+#             plt += 1
+#
+#         if binary:
+#             ax1 = pylab.subplot(plt)
+#             for g in list(set(grp)):
+#                 idx = numpy.where(grp==g)
+#                 if plotsig:
+#                     sig = res[idx]/err[idx]
+#                     pylab.errorbar(orb[idx],sig,yerr=len(err[idx])*[1],
+#                                    linestyle='None',label=g)
+#                 else:
+#                     pylab.errorbar(orb[idx],res[idx],yerr=err[idx],
+#                                    linestyle='None',label=g)
+#             pylab.grid(color=framecolor[iplot])
+#             pylab.ylabel(ytext[iplot])
+#             pylab.xlabel('Orbital phase')
+#             pylab.xticks([0.0,0.25,0.5,0.75,1.0])
+#             colorframe(ax1,framecolor[iplot])
+#             plt += 1
+#
+#         if iplot==0:       # DMX plot
+#             ax1 = pylab.subplot(plt,sharex=ax0)
+#             ax1.ticklabel_format(style='plain',axis='x',useOffset=False)
+#             icol = 0
+#             colors = ['b','r']
+#             for dmxlist in (dmx, baddmx):
+#                 if len(dmxlist)>0:
+#                     mjd0 = numpy.array(get_col(dmxlist,3,func=float))
+#                     mjd1 = numpy.array(get_col(dmxlist,4,func=float))
+#                     dmx_val = numpy.array(get_col(dmxlist,1,func=float))
+#                     dmx_err = numpy.array(get_col(dmxlist,2,func=float))
+#                     if plot_mjd:
+#                         xx = 0.5*(mjd0+mjd1)
+#                         xe = 0.5*(mjd1-mjd0)
+#                     else:
+#                         xx = year(0.5*(mjd0+mjd1))
+#                         xe = 0.5*(mjd1-mjd0)/365.24
+#                     ax1.errorbar(xx,1e3*dmx_val,yerr=1e3*dmx_err,
+#                             xerr=xe,linestyle='None',ecolor='b')
+#                 icol += 1
+#             ax1.grid()
+#             ax1.set_ylabel('DMX (10$^{-3}$ pc cm$^{-3}$)')
+#             if plot_mjd: ax1.set_xlabel('MJD')
+#             else:
+#                 ax1.set_xlabel('Year')
+#                 ax2 = ax1.twiny()
+#                 ax2.set_xlim(ax1.get_xlim())
+#                 mjd0  = ((ax1.get_xlim()[0])-2004.0)*365.25+53005.
+#                 mjd1  = ((ax1.get_xlim()[1])-2004.0)*365.25+53005.
+#                 if (mjd1-mjd0>1200.): mjdstep=500.
+#                 elif (mjd1-mjd0>600.): mjdstep=200.
+#                 else: mjdstep=100.
+#                 mjd0 = int(mjd0/mjdstep)*mjdstep + mjdstep
+#                 mjd1 = int(mjd1/mjdstep)*mjdstep
+#                 mjdr = numpy.arange(mjd0,mjd1+mjdstep,mjdstep)
+#                 yrr = year(mjdr)
+#                 ax2.set_xticks(yrr)
+#                 ax2.set_xticklabels(["%5d" % m for m in mjdr])
+#                 colorframe(ax1,framecolor[iplot])
+#                 colorframe(ax2,framecolor[iplot])
+#         else:               # Residual histograms
+#             if binary:
+#                 plt = 427
+#             else:
+#                 plt = 325
+#             for zz in [(rr,5,50), (avrr,6,20)]:
+#                 r = zz[0]
+#                 nbin = zz[2]
+#                 ax1 = pylab.subplot(plt)
+#                 res = numpy.array(get_col(r,2,func=float))
+#                 err = numpy.array(get_col(r,3,func=float))
+#                 grp = numpy.array(get_col(r,zz[1]))
+#                 xmax = 0.
+#                 for g in list(set(grp)):
+#                     idx = numpy.where(grp==g)
+#                     if plotsig:
+#                         sig = res[idx]/err[idx]
+#                         ax1.hist(sig,nbin,label=g,histtype='step')
+#                         xmax = max(xmax,max(sig),max(-sig))
+#                     else:
+#                         ax1.hist(res[idx],nbin,label=g,histtype='step')
+#                         xmax = max(xmax,max(res[idx]),max(-res[idx]))
+#                 ax1.grid(color=framecolor[iplot])
+#                 ax1.set_ylabel("Number of measurements")
+#                 if plotsig:
+#                     ax1.set_xlabel('Residual/Uncertainty')
+#                 else:
+#                     ax1.set_xlabel('Residual ($\mu$s)')
+#                 ax1.set_xlim(-1.1*xmax,1.1*xmax)
+#                 colorframe(ax1,framecolor[iplot])
+#                 ax1.ticklabel_format(style='plain',axis='x',useOffset=False)
+#                 plt += 1
+#
+#         pylab.tight_layout()
+#         plot_file = params['PSR'] + plotname[iplot]
+#         plot_file_list.append(plot_file)
+#         if plot_fmt=='screen':
+#             pylab.show()
+#         else:
+#             pylab.savefig(plot_file+'.'+plot_fmt)
+#         pylab.close()
+#
+#
+#     # Plot frequency vs MJD
+#
+#     if plot_fmt=='screen':
+#         pylab.figure(figsize=(12,7.0),dpi=100)
+#     else:
+#         pylab.figure(figsize=(8.0,5.0),dpi=100,facecolor='k',edgecolor='k')
+#     pylab.hold(True)
+#
+#     ax1 = pylab.subplot(111)
+#     mjd = numpy.array(get_col(resids,0,func=float))
+#     frq = numpy.array(get_col(resids,1,func=float))
+#     grp = numpy.array(get_col(resids,5))
+#     for g in list(set(grp)):
+#         idx = numpy.where(grp==g)
+#         if plot_mjd: xx = mjd[idx]
+#         else: xx = year(mjd[idx])
+#         ax1.plot(xx,frq[idx],marker='x',markersize=4,linestyle="none",label=g)
+#     ax1.grid(color='k')
+#     ax1.set_ylabel("Frequency (MHz)")
+#     if plot_mjd: ax1.set_xlabel('MJD')
+#     else:
+#         ax1.set_xlabel('Year')
+#         ax2 = ax1.twiny()
+#         ax2.set_xlim(ax1.get_xlim())
+#         mjd0  = ((ax1.get_xlim()[0])-2004.0)*365.25+53005.
+#         mjd1  = ((ax1.get_xlim()[1])-2004.0)*365.25+53005.
+#         if (mjd1-mjd0>1200.): mjdstep=500.
+#         elif (mjd1-mjd0>600.): mjdstep=200.
+#         else: mjdstep=100.
+#         mjd0 = int(mjd0/mjdstep)*mjdstep + mjdstep
+#         mjd1 = int(mjd1/mjdstep)*mjdstep
+#         mjdr = numpy.arange(mjd0,mjd1+mjdstep,mjdstep)
+#         yrr = year(mjdr)
+#         ax2.set_xticks(yrr)
+#         ax2.set_xticklabels(["%5d" % m for m in mjdr])
+#         colorframe(ax1,'k')
+#         colorframe(ax2,'k')
+#
+#     leg = ax1.legend(prop={'size':'x-small'},
+#             numpoints=1,
+#             loc='lower center',
+#             bbox_to_anchor=(0.5,1.15),
+#             ncol=4)
+#     leg.get_frame().set_edgecolor('k')
+#     for legtxt in leg.get_texts():
+#         legtxt.set_color('k')
+#
+#     ax1.set_title(params['PSR'],loc='center',y=1.35, color='k')
+#     ax1.ticklabel_format(style='plain',axis='x',useOffset=False)
+#     pylab.tight_layout()
+#     plot_file = params['PSR'] + "_freqplot"
+#     plot_file_list.append(plot_file)
+#     if plot_fmt=='screen':
+#         pylab.show()
+#     else:
+#         pylab.savefig(plot_file+'.'+plot_fmt)
+#     pylab.close()
+#
+#
+# if not do_tests:
+#     sys.exit(0)
+#
+# ptests = {}
+# ptests['existing'] = []
+# ptests['additional'] = []
+# ptests['FD'] = []
+# ptests['F'] = []
+# ptests['fbremove'] = []
+# ptests['fbadd'] = []
+# def report_ptest(label,rms,chi2,ndof,ftest=None,group=""):
+#     global ptests
+#     ft_cutoff = 0.0027
+#     if ftest == None:
+#         line = "%42s %7.3f %9.2f %5d --" % (label, rms, chi2, ndof)
+#     elif ftest:
+#         line = "%42s %7.3f %9.2f %5d %.3g" % (label, rms, chi2, ndof, ftest)
+#         if ftest < ft_cutoff:
+#             line += " ***"
+#     else:
+#         line = "%42s %7.3f %9.2f %5d xxx" % (label, rms, chi2, ndof)
+#     print line
+#     if not ptests.has_key(group): ptests[group] = []
+#     ptests[group] += [line,]
+#
+# print "Testing additional parameters (*** = significant):"
+# hdrline = "%42s %7s %9s %5s %s" % ("", "RMS(us)", "Chi2", "NDOF", "Ftest")
+# print hdrline
+# #ptests += [hdrline,]
+# report_ptest("initial", base_rms, base_chi2, base_ndof, group='initial')
+#
+# #from psr_utils import Ftest
+# # F-test copied from PRESTO's psr_utils:
+# from scipy.special import fdtr
+# def Ftest(chi2_1, dof_1, chi2_2, dof_2):
+#     """
+#     Ftest(chi2_1, dof_1, chi2_2, dof_2):
+#         Compute an F-test to see if a model with extra parameters is
+#         significant compared to a simpler model.  The input values are the
+#         (non-reduced) chi^2 values and the numbers of DOF for '1' the
+#         original model and '2' for the new model (with more fit params).
+#         The probability is computed exactly like Sherpa's F-test routine
+#         (in Ciao) and is also described in the Wikipedia article on the
+#         F-test:  http://en.wikipedia.org/wiki/F-test
+#         The returned value is the probability that the improvement in
+#         chi2 is due to chance (i.e. a low probability means that the
+#         new fit is quantitatively better, while a value near 1 means
+#         that the new model should likely be rejected).
+#         If the new model has a higher chi^2 than the original model,
+#         returns value of False
+#     """
+#     delta_chi2 = chi2_1 - chi2_2
+#     if delta_chi2 > 0:
+#       delta_dof = dof_1 - dof_2
+#       new_redchi2 = chi2_2 / dof_2
+#       F = (delta_chi2 / delta_dof) / new_redchi2
+#       ft = 1.0 - fdtr(delta_dof, dof_2, F)
+#     else:
+#       ft = False
+#     return ft
+#
+#
+# # build list of extra stuff to try
+# extra_params = []
+#
+# # Build list of stuff to remove
+# current_params = []
+#
+# current_freq_deriv = 1
+# for i in range(2,21):
+#     p = "F%d" % i
+#     if param_check(p):
+#         current_freq_deriv = i
+#         current_params += [(p,),]
+#
+# if param_check("PX"):
+#     if not has_ddk: # Removal of PX causes DDK to die unless DIST is specified
+#         current_params += [("PX",),]
+# else:
+#     extra_params += [("PX",),]
+#
+# if not has_pm:
+#     if ecl_coords:
+#         extra_params += [("PMLABMDA","PMBETA"),]
+#     else:
+#         extra_params += [("PMRA","PMDEC"),]
+#
+# if binary:
+#     if not has_shapiro:
+#         if has_ell1h:
+#             extra_params += [("H3",),("H3","H4")]
+#         else:
+#             extra_params += [("M2","SINI"),]
+#     else:
+#         if has_ddk:
+#             print " PX, KOM and KIN cannot be removed in DDK."
+#             current_params += [("M2","K96",),]
+#         elif has_ell1h:
+#             if has_h3 and has_h4:
+#                 current_params += [("H3","H4"),("H4",),]
+#             else:
+#                 current_params += [("H3",),]
+#                 extra_params   += [("H4",),]
+#         else:
+#             current_params += [("M2","SINI"),]
+#     if not fbused:
+#       if not param_check("PBDOT"):
+#           extra_params += [("PBDOT",),]
+#       else:
+#           current_params += [("PBDOT",),]
+#     if not param_check("XDOT"):
+#         extra_params += [("XDOT",),]
+#     else:
+#         current_params += [("XDOT",),]
+#     if params['BINARY'] == 'ELL1' or params['BINARY'] == 'ELL1H':
+#         if not param_check("EPS1DOT"):
+#             extra_params += [("EPS1DOT","EPS2DOT"),]
+#         else:
+#             current_params += [("EPS1DOT","EPS2DOT"),]
+#     else:
+#         if not param_check("OMDOT"):
+#             extra_params += [("OMDOT",),]
+#         else:
+#             current_params += [("OMDOT",),]
+#         if not param_check("EDOT"):
+#             extra_params += [("EDOT",),]
+#         else:
+#             current_params += [("EDOT",),]
+#
+# def test_params(p,parlines,remove=False, group=None, label=None,
+#         allow_errors=False):
+#     partmp = parfile + ".tmp"
+#     outpar = params['PSR'] + ".par"
+#     f = open(partmp,'w')
+#     if remove:
+#         newparlines = list(parlines) # makes a copy
+#         for k in p:
+#             newparlines = [l for l in newparlines if not l.startswith(k)]
+#         f.writelines(newparlines)
+#     else:
+#         f.writelines(parlines)
+#         for k in p:
+#             val = 0.0
+#             if k=='M2': val=0.25
+#             if k=='SINI': val=0.8
+#             l = "%s %f 1\n" % (k,val)
+#             f.write(l)
+#     f.close()
+#     if opt.tempo2:
+#         (rms,chi2,ndof) = run_tempo2(partmp,timfile,use_npulse=npulsefile)
+#     else:
+#         (rms,chi2,ndof) = run_tempo(partmp,timfile,use_npulse=npulsefile,
+#                 allow_errors=allow_errors)
+#     try:
+#         os.unlink(partmp)
+#         os.unlink(outpar)
+#     except:
+#         pass
+#     try:
+#         if remove:
+#             ft = Ftest(chi2, ndof, base_chi2, base_ndof)
+#             if group is None: group = 'existing'
+#         else:
+#             ft = Ftest(base_chi2, base_ndof, chi2, ndof)
+#             if group is None: group = 'additional'
+#     except ZeroDivisionError:
+#         ft = 0.0
+#     if not label:
+#         label = p
+#     report_ptest(label, rms, chi2, ndof, ft, group=group)
+#     return (rms,chi2,ndof)
+#
+# for p in extra_params: test_params(p,parlines,allow_errors=allow_errors)
+#
+# print "Testing removal of parameters:"
+# for p in current_params: test_params(p,parlines,remove=True,allow_errors=allow_errors)
+#
+# # Test freq derivs
+# print "Testing spin freq derivs"
+# for i in range(current_freq_deriv+1,max_freq_deriv+1):
+#     p = [('F%d'%j) for j in range(current_freq_deriv+1, i+1)]
+#     (base_rms,base_chi2,base_ndof) = test_params(p,parlines,group='F',allow_errors=allow_errors)
+#
+# # Reset the base chi_2 and ndof (which get overwritten by the frequency derivative tests
+# base_chi2 = chi2_0
+# base_ndof = ndof_0
+# # Test fb parameters if appropriate:
+# fbmax = 5   # arbitrary maximum FB to try
+# if fbused:
+#   fbp = [fblist[ifb] for ifb in sorted(fblist.keys())]  # sorted list of fb parameters
+#   fbhdr =  "Testing FB parameters, present list: "+" ".join(fbp)
+#   print fbhdr
+#   if len(fblist)>1:
+#     print "Testing removal of FB parameters:"
+#     for i in range(1,len(fblist)):
+#       p = [fbp[j] for j in range(i,len(fbp))]
+#       test_params(p,parlines,remove=True,group='fbremove',allow_errors=allow_errors)
+#   if len(fblist)<fbmax+1:
+#     print "Testing addition of FB parameters:"
+#     for i in range(len(fblist),fbmax+1):
+#       p = ["FB%d" % (j) for j in range(len(fblist),i+1)]
+#       (base_rms,base_chi2,base_ndof) = test_params(p,parlines,group='fbadd',allow_errors=allow_errors)
+#   # Reset the base chi_2 and ndof (which get overwritten by the FBx-addition tests)
+#   base_chi2 = chi2_0
+#   base_ndof = ndof_0
+#
+# # test FD terms
+# cur_fd = [l.split()[0] for l in parlines if l.startswith("FD")]
+# print "Testing FD terms (", cur_fd, "enabled):"
+# if is_wideband:
+#     print "    (Should not need any of these for wideband data -- but testing through FD2)"
+# parlines_nofd = [l for l in parlines if not l.startswith("FD")]
+# parlines_fd =   [l for l in parlines if     l.startswith("FD")]
+# partmp = parfile + ".tmp"
+# open(partmp,'w').writelines(parlines_nofd)
+# if opt.tempo2:
+#     (base_rms, base_chi2, base_ndof) = run_tempo2(partmp,timfile,use_npulse=npulsefile)
+# else:
+#     (base_rms, base_chi2, base_ndof) = run_tempo(partmp,timfile,use_npulse=npulsefile, allow_errors=allow_errors)
+# print "%30s %6.3f %9.2f %5d" % ("no FD", base_rms, base_chi2, base_ndof)
+# report_ptest("no FD", base_rms, base_chi2, base_ndof, group='FD')
+# if is_wideband: max_fd = 2
+# else: max_fd = 6
+# for i in range(1,max_fd+1):
+#   parlines_x = parlines_nofd
+#   p = []
+#   for j in range (1,i+1):
+#     fd = "FD%d" % (j,)
+#     for pp in parlines_fd:
+#       if pp.startswith(fd):
+#         parlines_x.append(pp)
+#         break
+#     else:
+#       p.append(fd)
+#   (base_rms,base_chi2,base_ndof) = test_params(p,parlines_x,group='FD',label=("FD1 through FD%d"%(i)),allow_errors=allow_errors)
+#
+# # Parameter summary
+# if do_param_summary:
+#     # Find significant non-included params
+#     result = params['PSR'] + ' '
+#     for l in ptests['additional'] + ptests['F']:
+#         if l.find('***')>0:
+#             pars = l[l.find('(')+1:l.find(')')-1].replace('\'','').replace(' ','')
+#             result += ' +' + pars
+#     for l in ptests['existing']:
+#         if l.find('***')<0 and l.find('nan')<0:
+#             pars = l[l.find('(')+1:l.find(')')-1].replace('\'','').replace(' ','')
+#             result +=  ' -' + pars
+#     nfd = len(cur_fd)
+#     sig_fd = 0
+#     for l in ptests['FD'][1:]:
+#         if l.find('***')>0: sig_fd += 1
+#     if sig_fd != nfd:
+#         result += ' %+dFD' % (sig_fd - nfd)
+#     if len(baddmx):
+#         result += ' %dbadDMX' % (len(baddmx))
+#     open('param_summary.txt','a').write(result + '\n')
+#
+# if do_pdf:
+#     import time
+#     psr = params['PSR'].replace('-','$-$')
+#     write_header = True
+#     if opt.append is not None:
+#         texfile = opt.append
+#         if os.path.exists(texfile):
+#             write_header = False
+#         fsum = open(texfile,'a')
+#     else:
+#         texfile = params['PSR'] + '.summary.tex'
+#         fsum = open(texfile,'w')
+#     if write_header:
+#         fsum.write(r'\documentclass[11pt]{article}' + '\n')
+#         fsum.write(r'\usepackage{graphicx}' + '\n')
+#         fsum.write(r'\addtolength{\hoffset}{-2.5cm}' + '\n')
+#         fsum.write(r'\addtolength{\textwidth}{5.0cm}' + '\n')
+#         fsum.write(r'\addtolength{\voffset}{-2.5cm}' + '\n')
+#         fsum.write(r'\addtolength{\textheight}{5.0cm}' + '\n')
+#         fsum.write(r'\usepackage{fancyhdr}' + '\n')
+#         fsum.write(r'\pagestyle{fancy}' + '\n')
+#         fsum.write(r'\lhead{\leftmark}' + '\n')
+#         fsum.write(r'\rhead{\thepage}' + '\n')
+#         fsum.write(r'\cfoot{}' + '\n')
+#         fsum.write(r'\begin{document}' + '\n')
+#     else:
+#         fsum.write(r'\clearpage' + '\n')
+#         fsum.write(r'\newpage' + '\n')
+#
+#     fsum.write(r'\section*{PSR ' + psr + '\markboth{' + psr + '}{}}\n')
+#     #fsum.write(r'\thispagestyle{empty}')
+#
+#     fsum.write(r'Summary generated on ' + time.ctime() \
+#             + ' by ' + check_output('whoami').strip() \
+#             + r'\\' + '\n')
+#     fsum.write(r'Input files: \verb@' + parfile + r'@, ' \
+#             + r'\verb@' + timfile + r'@\\' + '\n')
+#     fsum.write('Span: %.1f years (%.1f -- %.1f)\\\\\n ' % (span/365.24,
+#         year(float(params['START'])), year(float(params['FINISH']))))
+#
+#     mjdlist = numpy.sort(get_col(avg_resids,0,func=float))
+#     maxepoch = 6.5
+#     nepoch = 1
+#     m0 = mjdlist[0]
+#     for m in mjdlist:
+#       if m>m0+maxepoch:
+#         nepoch += 1
+#         m0 = m
+#     fsum.write('Epochs (defined as observations within %.1f-day spans): %d\\\\\n' % (maxepoch,nepoch))
+#     fsum.write('Wideband data: %s\n' %{False:'No',True:'Yes'}[is_wideband])
+#     if is_wideband:
+#         fsum.write('\\\\DMDATA: %s\n' %{False:'No',True:'Yes'}[has_dmdata])
+#
+#
+#
+#     fsum.write(r'\subsection*{Timing model}' + '\n')
+#     fsum.write(r'\begin{verbatim}' + '\n')
+#     for l in parlines:
+#         if l.startswith('DMX'): continue
+#         fsum.write(l)
+#     fsum.write(r'\end{verbatim}' + '\n')
+#
+#     fsum.write(r'\subsection*{Residual stats}' + '\n')
+#     fsum.write(r'\begin{verbatim}' + '\n')
+#     for l in avg_resids:
+#         if not l.startswith('#'): continue
+#         fsum.write(l + '\n')
+#     fsum.write(r'\end{verbatim}' + '\n')
+#
+#     fsum.write(r'\subsection*{Parameter tests}' + '\n')
+#     fsum.write("F-test results used %s\n"
+#             % ("tempo2" if opt.tempo2 else "tempo"))
+#     fsum.write(r'\begin{verbatim}' + '\n')
+#     fsum.write(hdrline + '\n')
+#     fsum.write(ptests['initial'][0] + '\n')
+#     fsum.write('\nTesting additional parameters:\n')
+#     for l in ptests['additional']:
+#         fsum.write(l + '\n')
+#     fsum.write('\nTesting removal of parameters:\n')
+#     for l in ptests['existing']:
+#         fsum.write(l + '\n')
+#     fsum.write("\nTesting freq derivs (" + current_freq_deriv.__str__() + " enabled):\n")
+#     for l in ptests['F']:
+#         fsum.write(l + '\n')
+#     if fbused:
+#         fsum.write(fbhdr + '\n')
+#         if len(ptests['fbremove'])>0:
+#             fsum.write("Testing removal of FB parameters:\n")
+#             for l in ptests['fbremove']:
+#                 fsum.write(l + '\n')
+#         if len(ptests['fbadd'])>0:
+#             fsum.write("Testing additon of FB parameters:\n")
+#             for l in ptests['fbadd']:
+#                 fsum.write(l + '\n')
+#     fsum.write("\nTesting FD terms (" + cur_fd.__str__() + " enabled):\n")
+#     for l in ptests['FD']:
+#         fsum.write(l + '\n')
+#     fsum.write(r'\end{verbatim}' + '\n')
+#
+#
+#     fsum.write(r'\subsection*{Epochs near center of data span?}' + '\n')
+#     tmidspan = 0.5*(float(params['FINISH'])+float(params['START']))
+#     fsum.write('Middle of data span: midspan = %.0f\\\\\n' % (tmidspan))
+#     dtpepoch = float(params['PEPOCH'])-tmidspan
+#     fsum.write('PEPOCH - midspan = $%.0f$ days = $%.1f$ years\\\\\n'  % ( dtpepoch, dtpepoch/365.24))
+#     if param_check('TASC', check_enabled=False):
+#       dttasc = float(params['TASC'])-tmidspan
+#       fsum.write('TASC - midspan = $%.0f$ days = $%.1f$ years\\\\\n'  % ( dttasc, dttasc/365.24))
+#     if param_check('T0', check_enabled=False):
+#       dtt0 = float(params['T0'])-tmidspan
+#       fsum.write('TASC - midspan = $%.0f$ days = $%.1f$ years\\\\\n'  % ( dtt0, dtt0/365.24))
+#
+#     fsum.write('\n')
+#
+#     fsum.write(r'\subsection*{Reduced $\chi^2$ close to 1.00?}' + '\n')
+#     rchi= chi2_0/ndof_0
+#     fsum.write('Reduced $\chi^2$ is %f/%d = %f\n' % (chi2_0,ndof_0,rchi))
+#     if rchi<0.95 or rchi>1.05:
+#       fsum.write('\\\\ Warning: $\chi^2$ is far from 1.00\n')
+#
+#     fsum.write(r'\subsection*{Receivers and JUMPs}' + '\n')
+#     groups = set(numpy.array(get_col(resids,5)))
+#     receivers = set([g.replace("_GUPPI","").replace("_GASP","").replace("_PUPPI","").replace("_ASP","") for g in groups])
+#
+#     if "JUMP" in paramsf.keys():
+#       jumped = paramsf["JUMP"].keys()
+#     else:
+#       print "WARNING: no JUMPs"
+#       jumped = ()
+#     nnotjumped = 0
+#     fsum.write('{\\setlength{\\topsep}{6pt}%\n\\setlength{\\partopsep}{0pt}%\n')  # starts a new environment
+#     fsum.write('\\begin{tabbing}\\hspace*{72pt}\\=\\kill\n')
+#     fsum.write('Receivers:\\\\[4pt]')
+#     for r in receivers:
+#       fsum.write('\n')
+#       fsum.write(r.replace("_","\\_"))
+#       if r in jumped:
+#         fsum.write('\\> JUMP')
+#       else:
+#         nnotjumped += 1
+#       fsum.write('\\\\')
+#     if len(receivers)>0:
+#       fsum.write('[4pt]')
+#     if nnotjumped==1:
+#       fsum.write('One non-JUMPed receiver.  Good.\\\\')
+#     else:
+#       fsum.write('Warning: %d non-JUMPed receivers.\\\\' % (nnotjumped,))
+#     fsum.write('\end{tabbing}\n')
+#     fsum.write('}\n\n')   # ends environment started above.
+#
+#
+#     fsum.write(r'\subsection*{Pulsar name check in .par file}' + '\n')
+#     fsum.write('Name in .par file: %s\\\\\n' % (params['PSR']))
+#     if params['PSR'].startswith("B") or params['PSR'].startswith("J"):
+#       fsum.write('OK: starts with B or J\n')
+#     else:
+#       fsum.write('Warning: does not start with B or J\n')
+#
+#     fsum.write(r'\subsection*{Check for bad DMX ranges, less than 10\% bandwidth}' + '\n')
+#     if not is_wideband:
+#         if len(baddmx)==0:
+#           fsum.write('No bad dmx ranges\\\\\n')
+#         else:
+#           fsum.write('Bad DMX ranges found, %d out of %d DMX ranges:\\\\\n' % (len(baddmx),ndmx))
+#           for l in baddmx:
+#             fsum.write('{\\tt '+l+'}\\\\\n')
+#     else:
+#         fsum.write('No fractional bandwidth check for DMX ranges with wideband data!\\\\\n')
+#
+#     for plot_file in plot_file_list:
+#         fsum.write(r'\begin{figure}[p]' + '\n')
+#         #fsum.write(r'\begin{center}' + '\n')
+#         #fsum.write(r'\vspace*{-2.0em}' + '\n')
+#         fsum.write(r'\centerline{\includegraphics[]{' + plot_file + '}}\n')
+#         #fsum.write(r'\end{center}' + '\n')
+#         fsum.write(r'\end{figure}' + '\n')
+#
+#     if opt.append is None:
+#
+#         fsum.write(r'\end{document}' + '\n')
+#         fsum.close()
+#
+#         os.system('pdflatex -interaction=batchmode '
+#                 + texfile + ' 2>&1 > /dev/null')
+#
+# # clean up cov file
+# if covfile is not None:
+#     os.unlink(covfile)
+#
+# if os.path.exists(npulsefile):
+#     os.unlink(npulsefile)
