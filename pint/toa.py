@@ -592,6 +592,25 @@ class TOAs(object):
         else:
             return self.table['flags']
 
+    def get_flag_value(self, flag, fill_value=None):
+        """Get the request TOA flag values.
+
+           Parameter
+           ---------
+           flag_name: str
+               The request flag name.
+
+           Return
+           ------
+           A list of flag values from each TOA. If the TOA does not have
+           the flag, it will fill up with the fill_value. 
+        """
+        result = []
+        for flags in self.table['flags']:
+            val = flags.get(flag, fill_value)
+            result.append(val)
+        return result
+
     def select(self, selectarray):
         """Apply a boolean selection or mask array to the TOA table."""
         if hasattr(self, "table"):
