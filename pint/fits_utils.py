@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function, division
 import astropy.io.fits as pyfits
 import numpy as np
 from astropy import log
-from astropy.extern import six
+import six
 try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:

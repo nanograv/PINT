@@ -7,7 +7,7 @@ import pint.models
 import pint.residuals
 import astropy.units as u
 from astropy.coordinates import SkyCoord, EarthLocation
-from astropy.extern import six
+import six
 from pint.fits_utils import read_fits_event_mjds, read_fits_event_mjds_tuples
 from pint.observatory import get_observatory
 

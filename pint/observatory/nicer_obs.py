@@ -14,7 +14,7 @@ import numpy as np
 from astropy.time import Time
 from astropy.table import Table, vstack
 import astropy.io.fits as pyfits
-from astropy.extern import six
+import six
 from astropy import log
 from scipy.interpolate import InterpolatedUnivariateSpline
 
