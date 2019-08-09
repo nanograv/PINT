@@ -6,7 +6,7 @@ from .observatory.topo_obs import TopoObs
 from . import erfautils
 import astropy.time as time
 from . import pulsar_mjd
-from astropy.extern.six.moves import cPickle as pickle
+from six.moves import cPickle as pickle
 import astropy.table as table
 import astropy.units as u
 from astropy.coordinates import EarthLocation
