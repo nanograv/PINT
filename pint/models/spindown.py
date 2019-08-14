@@ -92,7 +92,7 @@ class Spindown(PhaseComponent):
         else:
             phsepoch_ld = time_to_longdouble(self.PEPOCH.quantity)
 
-        dt = (tbl['tdbld'] - phsepoch_ld)*u.day - delay
+        dt = (tbl['tdbld'] - phsepoch_ld) * u.day - delay
 
         return dt
 
@@ -112,6 +112,22 @@ class Spindown(PhaseComponent):
         with u.set_enabled_equivalencies(dimensionless_cycles):
             phs = taylor_horner(dt.to(u.second), fterms)
             return phs.to(u.cycle)
+
+    def move_pepoch(self, new_epoch, toas, delay):
+        """Move PEPOCH to a new time and change the related paramters.
+        """
+        tbl = toas.table
+        if self.PEPOCH.value is None:
+            phsepoch_ld = time_to_longdouble(tbl['tdb'][0] - delay[0])
+        else:
+            phsepoch_ld = time_to_longdouble(self.PEPOCH.quantity)
+        dt = (new_epoch - phsepoch_ld) * u.day
+        fterms = [0.0 * u.Unit("")] + self.get_spin_terms()
+        # rescale the fterms
+        for n in range(len(fterms) - 1):
+            f_par = getattr(self, 'F{}'.format(n))
+            f_par.value = taylor_horner_deriv(dt.to(u.second), fterms,
+                                              deriv_order=n+1)
 
     def print_par(self,):
         result = ''
