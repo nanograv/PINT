@@ -2,7 +2,7 @@
 import pint.models.model_builder as mb
 import pint.toa as toa
 import astropy.units as u
-from pint.residuals import resids
+from pint.residuals import Residuals
 import numpy as np
 import os, unittest
 from pinttestdata import testdir, datadir
@@ -31,7 +31,7 @@ class TestDDK(unittest.TestCase):
 
     def test_J1713(self):
         log= logging.getLogger( "TestJ1713.test_J1713")
-        pint_resids_us = resids(self.toasJ1713, self.modelJ1713, False).time_resids.to(u.s)
+        pint_resids_us = Residuals(self.toasJ1713, self.modelJ1713, False).time_resids.to(u.s)
         diff = pint_resids_us.value - self.ltres
         log.debug("Max diff %lf" % np.abs(diff - diff.mean()).max())
         assert np.all(np.abs(diff - diff.mean()) < 5e-7), 'DDK J1713 TEST FAILED'
@@ -72,7 +72,7 @@ class TestDDK(unittest.TestCase):
     def test_K96(self):
         log= logging.getLogger( "TestJ1713 Switch of K96")
         self.modelJ1713.K96.value = False
-        res = resids(self.toasJ1713, self.modelJ1713, False).time_resids.to(u.s)
+        res = Residuals(self.toasJ1713, self.modelJ1713, False).time_resids.to(u.s)
         delay = self.modelJ1713.delay(self.toasJ1713)
         testp = tdu.get_derivative_params(self.modelJ1713)
         for p in testp.keys():

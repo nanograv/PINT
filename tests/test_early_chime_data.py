@@ -2,7 +2,7 @@
 import pint.models.model_builder as mb
 import pint.toa as toa
 import astropy.units as u
-from pint.residuals import resids
+from pint.residuals import Residuals
 import numpy as np
 import os, unittest
 import test_derivative_utils as tdu
@@ -30,6 +30,6 @@ class Test_CHIME_data(unittest.TestCase):
         model = mb.get_model(self.parfile)
         toas = toa.get_TOAs(self.tim, ephem="DE436", planets=False,
                             include_bipm=True)
-        r = resids(toas, model)
+        r = Residuals(toas, model)
         assert np.all(np.abs(r.time_resids.to(u.us)) < 800 * u.us), \
             "Residuals did not computed correctly for early CHIME data."

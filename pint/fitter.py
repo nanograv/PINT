@@ -4,7 +4,7 @@ import numpy as np
 import astropy.units as u
 import abc
 import scipy.optimize as opt, scipy.linalg as sl
-from .residuals import resids
+from .residuals import Residuals
 
 
 class Fitter(object):
@@ -22,7 +22,7 @@ class Fitter(object):
     def __init__(self, toas, model):
         self.toas = toas
         self.model_init = model
-        self.resids_init = resids(toas=toas, model=model)
+        self.resids_init = Residuals(toas=toas, model=model)
         self.reset_model()
         self.method = None
 
@@ -34,7 +34,7 @@ class Fitter(object):
 
     def update_resids(self):
         """Update the residuals. Run after updating a model parameter."""
-        self.resids = resids(toas=self.toas, model=self.model)
+        self.resids = Residuals(toas=self.toas, model=self.model)
 
     def set_fitparams(self, *params):
         """Update the "frozen" attribute of model parameters.
@@ -204,13 +204,13 @@ class WlsFitter(Fitter):
 
         return chi2
 
-class GLSFitter(Fitter):
+class GlsFitter(Fitter):
     """
        A class for weighted least square fitting method. The design matrix is
        required.
     """
     def __init__(self, toas=None, model=None):
-        super(GLSFitter, self).__init__(toas=toas, model=model)
+        super(GlsFitter, self).__init__(toas=toas, model=model)
         self.method = 'generalized_least_square'
 
     def fit_toas(self, maxiter=1, threshold=False, full_cov=False):

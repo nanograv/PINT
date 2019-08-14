@@ -2,7 +2,7 @@
 import pint.models.model_builder as mb
 import pint.toa as toa
 import astropy.units as u
-from pint.residuals import resids
+from pint.residuals import Residuals
 import numpy as np
 import os, unittest
 import test_derivative_utils as tdu
@@ -20,15 +20,12 @@ class TestB1855(unittest.TestCase):
         self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405",
                                       planets=False, include_bipm=False)
         self.modelB1855 = mb.get_model(self.parfileB1855)
-        from astropy import log as l
-        l.warning('%s' % self.modelB1855.components)
-        l.warning('%s' % self.modelB1855.params)
         # tempo result
         self.ltres= np.genfromtxt(self.parfileB1855 + \
                                   '.tempo2_test',skip_header=1, unpack=True)
 
     def test_B1855(self):
-        pint_resids_us = resids(self.toasB1855, self.modelB1855, False).time_resids.to(u.s)
+        pint_resids_us = Residuals(self.toasB1855, self.modelB1855, False).time_resids.to(u.s)
         # Due to the gps2utc clock correction. We are at 3e-8 seconds level.
         assert np.all(np.abs(pint_resids_us.value - self.ltres) < 3e-8), 'B1855 residuals test failed.'
 

@@ -2,7 +2,7 @@
 import pint.models.model_builder as mb
 import pint.toa as toa
 import astropy.units as u
-from pint.residuals import resids
+from pint.residuals import Residuals
 import numpy as np
 import os, unittest
 import test_derivative_utils as tdu
@@ -31,7 +31,7 @@ class TestJ0613(unittest.TestCase):
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-8), 'J0613 binary delay test failed.'
 
     def test_J0613(self):
-        pint_resids_us = resids(self.toasJ0613, self.modelJ0613, False).time_resids.to(u.s)
+        pint_resids_us = Residuals(self.toasJ0613, self.modelJ0613, False).time_resids.to(u.s)
         # Due to the gps2utc clock correction. We are at 3e-8 seconds level.
         assert np.all(np.abs(pint_resids_us.value - self.ltres) < 3e-8), 'J0613 residuals test failed.'
 
