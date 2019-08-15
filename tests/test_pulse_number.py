@@ -18,6 +18,8 @@ class TestPulseNumber(unittest.TestCase):
     def test_pulse_number(self):
         model = pint.models.get_model(parfile)
         toas = pint.toa.get_TOAs(timfile)
+        print(toas.table['flags'])
+        print(toas.table.colnames)
         #Make sure pn table column was added
         self.assertTrue('pn' in toas.table.colnames)
 

@@ -1423,7 +1423,6 @@ class maskParameter(floatParameter):
             col = tbl[section_name]
         else:
             col = tbl[column_match[key]]
-
         select_idx = self.toa_selector.get_select_index(condition, col)
         return select_idx[self.name]
 

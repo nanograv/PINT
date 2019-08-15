@@ -50,6 +50,7 @@ class Phase(namedtuple('Phase', 'int frac')):
             return super(Phase, cls).__new__(cls, ii.to(u.cycle), ff.to(u.cycle))
 
     def __neg__(self):
+        #TODO: add type check for __neg__ and __add__, this currently doesn't work
         #if isinstance(self, tuple):
         #    try:
         #        self = Phase(self)

@@ -12,8 +12,9 @@ import matplotlib.pyplot as plt
 def random(fitter, rs_mean, ledge_multiplier=4, redge_multiplier=4, iter=10, npoints=100):
     params = fitter.get_fitparams_num()
     mean_vector = params.values()
-    cov_matrix = (((fitter.unscaled_cov_matrix[1:]).T)[1:]).T#[0][1:]).T)[1:]).T
-    fac = fitter.fac[1:]#resids.unscaled_cov_matrix[1][1:]
+    #remove the first column and row
+    cov_matrix = (((fitter.unscaled_cov_matrix[1:]).T)[1:]).T
+    fac = fitter.fac[1:]
     
     f_rand = deepcopy(fitter)
     mrand = f_rand.model
@@ -26,7 +27,8 @@ def random(fitter, rs_mean, ledge_multiplier=4, redge_multiplier=4, iter=10, npo
     
     minMJD = fitter.toas.get_mjds().min()
     maxMJD = fitter.toas.get_mjds().max()
-
+    
+    #ledge and redge _multiplier control how far the fake toas extend in either direction of the selected points
     x = make_toas(minMJD-((maxMJD-minMJD)*ledge_multiplier),maxMJD+((maxMJD-minMJD)*redge_multiplier),npoints,mrand)
     x2 = make_toas(minMJD,maxMJD,npoints,mrand)
     
@@ -43,14 +45,8 @@ def random(fitter, rs_mean, ledge_multiplier=4, redge_multiplier=4, iter=10, npo
         rs = mrand.phase(x,abs_phase=True)-fitter.model.phase(x, abs_phase=True)
         rs2 = mrand.phase(x2, abs_phase=True)-fitter.model.phase(x2, abs_phase=True)
         #from calc_phase_resids in residuals
-        #rs -= Phase(rs.int[0],rs.frac[0])
-        #rs2 -= Phase(rs2.int[0],rs2.frac[0])
         rs -= Phase(0.0,rs2.frac.mean()-rs_mean)
         rs = ((rs.int+rs.frac).value/fitter.model.F0.value)*10**6
         rss.append(rs)
-        #if i < 1:
-        #    plt.plot(x.get_mjds(), rs, 'k-', alpha=0.3, label='random' )
-        #else:
-        #    plt.plot(x.get_mjds(), rs, 'k-', alpha=0.3)
     
     return x.get_mjds(),rss

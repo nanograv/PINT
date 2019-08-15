@@ -16,14 +16,28 @@ import astropy.units as u
 import os
 
 datadir = os.path.dirname(os.path.abspath(str(__file__)))
-parfile = os.path.join(datadir, 'j_test.par')
+parfile = os.path.join(datadir, 'J1833-38.par.ell1good')
 timfile = os.path.join(datadir, 'j_test.tim')
 
 # Define the timing model
 m = mb.get_model(parfile)
 
+print('A1',m.A1)
+print('PB',m.PB)
+exit()
 # Read in the TOAs
 t = pint.toa.get_TOAs(timfile)
+
+print(type(t.table['flags']))
+s = deepcopy(t)
+table = deepcopy(t.table)
+s.table = table
+t.table['flags'][0]['testing']=123
+print(s == t)
+print(s.table['flags'])
+print(t.table['flags'])
+print(s.table == t.table)
+
 
 # Print a summary of the TOAs that we have
 t.print_summary()
@@ -53,6 +67,7 @@ print("RMS in phase is", f.resids.phase_resids.std())
 print("RMS in time is", f.resids.time_resids.std().to(u.us))
 print("\n Best model is:")
 print(f.model.as_parfile())
+print('f0',f.model.F0)
 #print(t.table['flags'])
 #print(m.JUMP1.toa_selector.select_result)
 print('phase_deriv_funcs',f.model.phase_deriv_funcs)

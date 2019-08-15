@@ -66,16 +66,10 @@ class AbsPhase(PhaseComponent):
         """ Calculate the TZRMJD if one not given. TZRMJD = first toa 
         after PEPOCH.
         """
-        #fulltoas = pint.toa.get_TOAs(timfile)
         PEPOCH = self.PEPOCH.quantity.value
-        #add warning for PEPOCH far away from center of data?
+        #TODO: add warning for PEPOCH far away from center of data?
         TZRMJD = min([i for i in fulltoas.get_mjds() if i > PEPOCH*u.d])
         self.TZRMJD.quantity = TZRMJD.value
         self.setup()
-        #TZR_toa = toa.TOA(TZRMJD.quantity-2400000.5,obs=self.TZRSITE.value, freq=self.TZRFRQ.quantity)
-        #clkc_info = toas.clock_corr_info
-        #tz = toa.get_TOAs_list([TZR_toa,], include_bipm=clkc_info['include_bipm'],
-        #                       include_gps=clkc_info['include_gps'],
-        #                       ephem=toas.ephem, planets=toas.planets)
-        #return tz
+        
                                                                                   

@@ -537,7 +537,7 @@ class TimingModel(object):
                 #if no absolute phase (TZRMJD), add the component to the model and calculate it
                 from pint.models import absolute_phase
                 self.add_component(absolute_phase.AbsPhase())
-                self.make_TZR_toa(toas)#needs timfile to get all toas, but model doesn't have access to timfile. different place for this? 
+                self.make_TZR_toa(toas)#TODO:needs timfile to get all toas, but model doesn't have access to timfile. different place for this? 
             tz_toa = self.get_TZR_toa(toas)
             tz_delay = self.delay(tz_toa)
             tz_phase = Phase(np.zeros(len(toas.table)) , np.zeros(len(toas.table)))
@@ -601,7 +601,7 @@ class TimingModel(object):
         return np.hstack([r for r in result])
 
     def jump_flags_to_params(self, toas):
-        '''convert jump flags in toas to jump parameters in the model'''
+        '''convert jump flags in toas.table["flags"] to jump parameters in the model'''
         from . import jump
         for dict in toas.table['flags']:
             if 'jump' in dict.keys():
@@ -629,48 +629,6 @@ class TimingModel(object):
             self.add_param_from_top(param, 'PhaseJump')
             getattr(self, param.name).frozen = False
         self.components['PhaseJump'].setup()
-    
-        #ranges = []
-        #if 'PhaseJump' not in self.components:
-        #    print("PhaseJump component added")
-        #    a = jump.PhaseJump()
-        #    a.setup()
-        #    self.add_component(a)
-        #    self.remove_param("JUMP1")
-        #else:
-        #    for param in self.params:
-        #        if param.startswith("JUMP"):
-        #            ranges.append(getattr(self, param).key_value)
-        #nums = []
-        #for dict in toas.table['flags']:
-        #    if 'jump' in dict.keys():
-        #        nums.append(dict['jump'])
-        #    else:
-        #        nums.append(np.nan)
-        #print(toas.table['mjd_float'])
-        #print(toas.table['flags'])
-        #print(nums)
-        #if 0 in nums:
-        #    nums = list(np.asarray(nums) + 1)
-        #print(nums)
-        #for num in np.arange(1, np.nanmax(nums)+1):
-        #    i1 = nums.index(num)
-        #    i2 = len(nums) - 1 - nums[::-1].index(num)
-        #    if not all(elem == num for elem in nums[i1:i2+1]):
-        #        #if there are group numbers other than this groups between the first and
-        #        #last element, switch them one by one rather than as a range
-        #        mjds = [toas.table['mjd_float'][i] for i in np.arange(i1, i2+1) if nums[i] == num]
-        #    else:
-        #        mjds = toas.table['mjd_float'][i1:i2+1]
-        #    minmjd = min(mjds)
-        #    maxmjd = max(mjds)
-        #    if [minmjd, maxmjd] in ranges:
-        ##        print("JUMP{} with range {} to {} already exists".format(num, minmjd, maxmjd))
-          #      continue
-         #   param = p.maskParameter(name='JUMP', index=int(num), key='mjd', key_value=[minmjd, maxmjd], value=0.0, units='second')
-         #   self.add_param_from_top(param, 'PhaseJump')
-         #   getattr(self, param.name).frozen = False
-        #self.components['PhaseJump'].setup()
 
     def get_barycentric_toas(self, toas, cutoff_component=''):
         """Conveniently calculate the barycentric TOAs.
