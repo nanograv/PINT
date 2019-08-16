@@ -422,7 +422,6 @@ class PlkWidget(tk.Frame):
         '''
         Undo a selection (but not deletes)
         '''
-        #self.psr.toas.unselect() --> doesn't work
         self.psr.toas = copy.deepcopy(self.psr.fulltoas)
         self.selected = np.zeros(self.psr.toas.ntoas, dtype=bool)
         self.updatePlot(keepAxes=True)
@@ -653,8 +652,9 @@ class PlkWidget(tk.Frame):
 
         self.plkAxes.set_title(self.psr.name, y=1.1)
         
-        #plot random lines
-        if self.psr.fitted == True: 
+        #plot random models
+        if self.psr.fitted == True:
+            #TODO: add random models on/off button
             print('plotting random models')
             f_toas = self.psr.fake_toas
             rs = self.psr.random_resids
@@ -862,6 +862,7 @@ class PlkWidget(tk.Frame):
         if event.inaxes == self.plkAxes:
             ind = self.coordToPoint(event.xdata, event.ydata)
             if ind is not None:
+                #TODO: right click to delete doesn't work, needs to be reinstated
                 #if event.button == 3:
                 #    #Right click is delete
                 #    self.psr.toas.table.remove_row(ind)

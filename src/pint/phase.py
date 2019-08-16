@@ -50,32 +50,10 @@ class Phase(namedtuple('Phase', 'int frac')):
             return super(Phase, cls).__new__(cls, ii.to(u.cycle), ff.to(u.cycle))
 
     def __neg__(self):
-        #TODO: add type check for __neg__ and __add__, this currently doesn't work
-        #if isinstance(self, tuple):
-        #    try:
-        #        self = Phase(self)
-        #    except:
-        #        raise ValueError('Tuple cannot be inerpretted as a Phase')
-        #if not isinstance(self,Phase):
-        #    try:
-        #        #try to convert input number to Phase object
-        #        self = Phase(float(self))
-        #    except:
-        #        raise ValueError('Trying to add a non-number to phase')
+        #TODO: add type check for __neg__ and __add__
         return Phase(-self.int, -self.frac)
 
     def __add__(self, other):
-        #if isinstance(other, tuple):
-        #    try:
-        #        other = Phase(other)
-        #    except:
-        #        raise ValueError('Tuple cannot be inerpretted as a Phase')
-        #if not isinstance(other,Phase):
-        #    try:
-        #        #try to convert input number to Phase object
-        #        other = Phase(float(other))
-        #    except:
-        #        raise ValueError('Trying to add a non-number to phase')
         ff = self.frac + other.frac
         with u.set_enabled_equivalencies(dimensionless_cycles):
             ii = numpy.modf(ff.to(u.Unit("")))[1]

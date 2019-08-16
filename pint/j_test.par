@@ -23,5 +23,5 @@ TZRFRQ            1949.609
 TZRSITE                  GB
 MODE                     1
 NITS                     1
-C JUMP mjd 53686 53695.7	 0.0 1
-C JUMP jump 0 	 		 0.0 1
+C JUMP mjd 53686 53695.7  0.0 1
+C JUMP jump 0 0.0 1

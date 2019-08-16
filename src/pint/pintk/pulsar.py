@@ -214,13 +214,13 @@ class Pulsar(object):
         if 'pn' not in self.fulltoas.table.colnames or 'pn' not in self.toas.table.colnames:
             self.fulltoas.compute_pulse_numbers(self.prefit_model)
             self.toas.compute_pulse_numbers(self.prefit_model)
-        if 'delta_pulse_numbers' not in self.fulltoas.table.colnames or 'delta_pulse_numbers' not in self.toas.table.colnames:
-            self.fulltoas.table['delta_pulse_numbers'] = np.zeros(len(self.fulltoas.get_mjds()))
-            self.toas.table['delta_pulse_numbers'] = np.zeros(len(self.toas.get_mjds()))
+        if 'delta_pulse_number' not in self.fulltoas.table.colnames or 'delta_pulse_number' not in self.toas.table.colnames:
+            self.fulltoas.table['delta_pulse_number'] = np.zeros(len(self.fulltoas.get_mjds()))
+            self.toas.table['delta_pulse_number'] = np.zeros(len(self.toas.get_mjds()))
         
         #add phase wrap    
-        self.fulltoas.table['delta_pulse_numbers'][selected] += phase
-        self.toas.table['delta_pulse_numbers'] += phase
+        self.fulltoas.table['delta_pulse_number'][selected] += phase
+        self.toas.table['delta_pulse_number'] += phase
 
         self.update_resids()
         
@@ -370,7 +370,7 @@ class Pulsar(object):
         
         #TODO: set pulse nums above not working to reset delta pulse nums, have to force it here
         #self.fulltoas.table['delta_pulse_numbers'] = np.zeros(self.fulltoas.ntoas)
-        self.toas.table['delta_pulse_numbers'] = np.zeros(self.toas.ntoas)
+        self.toas.table['delta_pulse_number'] = np.zeros(self.toas.ntoas)
         
         #plot the prefit without jumps
         pm_no_jumps = copy.deepcopy(self.postfit_model)
@@ -399,6 +399,6 @@ class Pulsar(object):
         else:
             redge = ledge = 3
             npoints = 200
-        f_toas, rs = pint.random_models.random(f, rs_mean=rs_mean, redge_multiplier=redge, ledge_multiplier=ledge, npoints=npoints, iter=10)
+        f_toas, rs = pint.random_models.random_models(f, rs_mean=rs_mean, redge_multiplier=redge, ledge_multiplier=ledge, npoints=npoints, iter=10)
         self.random_resids = rs
         self.fake_toas = f_toas

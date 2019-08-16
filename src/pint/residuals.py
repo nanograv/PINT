@@ -42,21 +42,41 @@ class Residuals(object):
         rs = self.model.phase(self.toas)
         rs -= Phase(rs.int[0],rs.frac[0])
         try:
-            delta_pulse_numbers = Phase(self.toas.table['delta_pulse_numbers'])
+            delta_pulse_numbers = Phase(self.toas.table['delta_pulse_number'])
         except:
-            self.toas.table['delta_pulse_numbers'] = np.zeros(len(self.toas.get_mjds()))
-            delta_pulse_numbers = Phase(self.toas.table['delta_pulse_numbers'])
+            self.toas.table['delta_pulse_number'] = np.zeros(len(self.toas.get_mjds()))
+            delta_pulse_numbers = Phase(self.toas.table['delta_pulse_number'])
         if set_pulse_nums:
-            self.toas.table['delta_pulse_numbers'] = np.zeros(len(self.toas.get_mjds()))
-            delta_pulse_numbers = Phase(self.toas.table['delta_pulse_numbers'])
+            self.toas.table['delta_pulse_number'] = np.zeros(len(self.toas.get_mjds()))
+            delta_pulse_numbers = Phase(self.toas.table['delta_pulse_number'])
         full = Phase(np.zeros_like(rs.frac), rs.frac) + delta_pulse_numbers
         full = full.int + full.frac
-
+        
+        #Track on pulse numbers, if necessary
+        if getattr(self.model, 'TRACK').value == '-2':
+            pulse_num = self.toas.get_pulse_numbers()
+            if pulse_num is None:
+                log.error('No pulse numbers with TOAs using TRACK -2')
+                raise Exception('No pulse numbers with TOAs using TRACK -2')
+            
+            pn_act = np.trunc(full)
+            addPhase = pn_act - pulse_num
+            full -= pn_act
+            full += addPhase
+            
+            if not weighted_mean:
+                full -= full.mean()
+            else:
+                w = 1.0 / (np.array(self.toas.get_errors())**2)
+                wm = (full*w).sum() / w.sum()
+                full -= wm
+            return full
+        
         if not weighted_mean:
             full -= full.mean()
         else:
-        # Errs for weighted sum.  Units don't matter since they will
-        # cancel out in the weighted sum.
+            # Errs for weighted sum.  Units don't matter since they will
+            # cancel out in the weighted sum.
             if np.any(self.toas.get_errors() == 0):
                 raise ValueError('TOA errors are zero - cannot calculate residuals')
             w = 1.0/(np.array(self.toas.get_errors())**2)

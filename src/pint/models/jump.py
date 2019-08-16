@@ -19,6 +19,7 @@ class DelayJump(DelayComponent):
     """
     register = False
     category = 'delay_jump'
+
     def __init__(self):
         super(DelayJump, self).__init__()
         # TODO: In the future we should have phase jump as well.

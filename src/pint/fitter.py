@@ -1,6 +1,5 @@
 from __future__ import absolute_import, print_function, division
 import copy, numbers
-import collections
 import numpy as np
 import astropy.units as u
 import abc
@@ -41,9 +40,9 @@ class Fitter(object):
         self.update_resids()
         self.fitresult = []
 
-    def update_resids(self):
+    def update_resids(self, set_pulse_nums=False):
         """Update the residuals. Run after updating a model parameter."""
-        self.resids = Residuals(toas=self.toas, model=self.model, set_pulse_nums=False)
+        self.resids = Residuals(toas=self.toas, model=self.model, set_pulse_nums=set_pulse_nums)
 
     def set_fitparams(self, *params):
         """Update the "frozen" attribute of model parameters.
@@ -64,21 +63,21 @@ class Fitter(object):
 
     def get_allparams(self):
         """Return a dict of all param names and values."""
-        return collections.OrderedDict((k, getattr(self.model, k).quantity) for k in
+        return dict((k, getattr(self.model, k).quantity) for k in
                     self.model.params)
 
     def get_fitparams(self):
         """Return a dict of fittable param names and quantity."""
-        return collections.OrderedDict((k, getattr(self.model, k)) for k in
+        return dict((k, getattr(self.model, k)) for k in
                     self.model.params if not getattr(self.model, k).frozen)
 
     def get_fitparams_num(self):
         """Return a dict of fittable param names and numeric values."""
-        return collections.OrderedDict((k, getattr(self.model, k).value) for k in
+        return dict((k, getattr(self.model, k).value) for k in
                     self.model.params if not getattr(self.model, k).frozen)
 
     def get_fitparams_uncertainty(self):
-        return collections.OrderedDict((k, getattr(self.model, k).uncertainty_value) for k in
+        return dict((k, getattr(self.model, k).uncertainty_value) for k in
                     self.model.params if not getattr(self.model, k).frozen)
 
     def set_params(self, fitp):

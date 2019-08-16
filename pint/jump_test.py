@@ -16,28 +16,14 @@ import astropy.units as u
 import os
 
 datadir = os.path.dirname(os.path.abspath(str(__file__)))
-parfile = os.path.join(datadir, 'J1833-38.par.ell1good')
+parfile = os.path.join(datadir, 'j_test.par')
 timfile = os.path.join(datadir, 'j_test.tim')
 
 # Define the timing model
 m = mb.get_model(parfile)
 
-print('A1',m.A1)
-print('PB',m.PB)
-exit()
 # Read in the TOAs
 t = pint.toa.get_TOAs(timfile)
-
-print(type(t.table['flags']))
-s = deepcopy(t)
-table = deepcopy(t.table)
-s.table = table
-t.table['flags'][0]['testing']=123
-print(s == t)
-print(s.table['flags'])
-print(t.table['flags'])
-print(s.table == t.table)
-
 
 # Print a summary of the TOAs that we have
 t.print_summary()
@@ -45,12 +31,12 @@ t.print_summary()
 # These are pre-fit residuals
 rs = pint.residuals.resids(t, m).phase_resids
 xt = t.get_mjds()
-#plt.plot(xt, rs, 'x', label = 'pre-fit')
-#plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
-#plt.xlabel('MJD')
-#plt.ylabel('Residual (phase)')
-#plt.grid()
-#plt.show()
+plt.plot(xt, rs, 'x', label = 'pre-fit')
+plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
+plt.xlabel('MJD')
+plt.ylabel('Residual (phase)')
+plt.grid()
+plt.show()
 
 #convert jump flags to params
 

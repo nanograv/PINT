@@ -22,6 +22,7 @@ import numpy as np
 from .observatory.special_locations import SpacecraftObs
 from collections import OrderedDict
 
+
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "FMIN", "INCLUDE", "INFO", "JUMP", "MODE", "NOSKIP", "PHA1",
                 "PHA2", "PHASE", "SEARCH", "SIGMA", "SIM", "SKIP", "TIME",
@@ -484,10 +485,9 @@ class TOAs(object):
                                       self.get_errors(), self.get_freqs(),
                                       self.get_obss(), self.get_flags(), 
                                       numpy.zeros(len(mjds)) * u.cycle,
-                                      self.get_groups()],
+                                      self.get_groups()]
                                       names=("index", "mjd", "mjd_float", "error",
-                                             "freq", "obs", "flags", "delta_pulse_number",
-                                             "groups"),
+                                             "freq", "obs", "flags", "delta_pulse_number", "groups"),
                                       meta={'filename':self.filename}).group_by("obs")
             # Add pulse number column (if needed) or make PHASE adjustments
             self.phase_columns_from_flags()
@@ -579,12 +579,12 @@ class TOAs(object):
                 return None
         else:
             if 'pn' in self.table['flags'][0]:
-                if 'pulse_numbers' in self.table.colnames:
+                if 'pulse_number' in self.table.colnames:
                     log.error('Pulse number cannot be both a column and TOA flag')
                     raise Exception('Pulse number cannot be both a column and a TOA flag')
                 return np.array(flags['pn'] for flags in self.table['flags']) * u.cycle
-            elif 'pulse_numbers' in self.table.colnames:
-                return self.table['pulse_numbers']
+            elif 'pulse_number' in self.table.colnames:
+                return self.table['pulse_number']
             else:
                 log.warning('No pulse numbers for TOAs')
                 return None
@@ -595,7 +595,7 @@ class TOAs(object):
             return numpy.array([t.flags for t in self.toas])
         else:
             return self.table['flags']
-
+    
     def get_groups(self, gap_limit=0.0833):
         '''flag toas within the gap limit (default 2h = 0.0833d) of each other as the same group'''
         if hasattr(self, "toas") or gap_limit != 0.0833:
@@ -629,16 +629,16 @@ class TOAs(object):
             return groups
         else:
             return self.table['groups']
-        
-    def get_highest_density_range(self, ndays=7):
-        '''print the range of mjds (default 7 days) with the most toas'''
-        nbins = int((max(self.get_mjds()) - min(self.get_mjds()))/(ndays*u.d))
-        a = np.histogram(self.get_mjds(), nbins)
-        maxday = int(a[1][np.argmax(a[0])])
-        diff = int(a[1][1]-a[1][0])
-        print('max density range (in steps of {} days -- {} bins) is from MJD {} to {} with {} toas.'.format(diff, nbins, maxday, maxday+diff, a[0].max()))
-        return (maxday, maxday+diff)
-        
+    
+        def get_highest_density_range(self, ndays=7):
+            '''print the range of mjds (default 7 days) with the most toas'''
+            nbins = int((max(self.get_mjds()) - min(self.get_mjds()))/(ndays*u.d))
+            a = np.histogram(self.get_mjds(), nbins)
+            maxday = int(a[1][np.argmax(a[0])])
+            diff = int(a[1][1]-a[1][0])
+            print('max density range (in steps of {} days -- {} bins) is from MJD {} to {} with {} toas.'.format(diff, nbins, maxday, maxday+diff, a[0].max()))
+            return (maxday, maxday+diff)
+    
     def select(self, selectarray):
         """Apply a boolean selection or mask array to the TOA table."""
         if hasattr(self, "table"):
@@ -713,11 +713,11 @@ class TOAs(object):
     def compute_pulse_numbers(self, model):
         '''
         Compute the pulse numbers for the TOAs given a model.  Store them
-        in  'pulse_numbers' column of the TOA table.
+        in  'pulse_number' column of the TOA table.
         '''
         phases = model.phase(self)
-        self.table['pulse_numbers'] = phases.int
-        self.table['pulse_numbers'].unit = u.cycle
+        self.table['pulse_number'] = phases.int
+        self.table['pulse_number'].unit = u.cycle
 
     def adjust_TOAs(self, delta):
         """Apply a time delta to TOAs

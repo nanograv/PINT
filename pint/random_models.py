@@ -9,7 +9,7 @@ from copy import deepcopy
 from collections import OrderedDict
 import matplotlib.pyplot as plt
 
-def random(fitter, rs_mean, ledge_multiplier=4, redge_multiplier=4, iter=10, npoints=100):
+def random_models(fitter, rs_mean, ledge_multiplier=4, redge_multiplier=4, iter=10, npoints=100):
     params = fitter.get_fitparams_num()
     mean_vector = params.values()
     #remove the first column and row
