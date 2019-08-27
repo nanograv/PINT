@@ -82,6 +82,9 @@ for fname in clock_files:
 import versioneer
 cmdclass.update(versioneer.get_cmdclass())
 
+with open("README.rst", "r") as fh:
+    long_description = fh.read()
+
 # These command-line scripts will be built by the setup process and installed in your PATH
 # See http://python-packaging.readthedocs.io/en/latest/command-line-scripts.html#the-console-scripts-entry-point
 console_scripts = [ 'photonphase=pint.scripts.photonphase:main',
@@ -97,6 +100,8 @@ setup(
     name="pint",
     version = versioneer.get_version(),
     description = 'A Pulsar Timing Package, written in Python from scratch',
+    long_description = long_description,
+    long_description_content_type = "text/x-rst",
 
     author = 'Luo Jing, Scott Ransom, Paul Demorest, Paul Ray, et al.',
     author_email = 'sransom@nrao.edu',
