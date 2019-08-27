@@ -1,2 +1,3 @@
 include versioneer.py
 include pint/extern/_version.py
+include pyproject.toml

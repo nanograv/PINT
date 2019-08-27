@@ -79,6 +79,7 @@ clock_files = ['gps2utc.clk', 'time.dat', 'tai2tt_bipm2015.clk',
 for fname in clock_files:
     data_files.append(os.path.join(data_dir, fname))
 
+sys.path.append(os.path.dirname(__file__))
 import versioneer
 cmdclass.update(versioneer.get_cmdclass())
 
@@ -90,9 +91,9 @@ with open("README.rst", "r") as fh:
 console_scripts = [ 'photonphase=pint.scripts.photonphase:main',
                     'event_optimize=pint.scripts.event_optimize:main',
                     'event_optimize_multiple=pint.scripts.event_optimize_multiple:main',
-                    'pintempo=pint.scripts.pintempo:main', 
-                    'zima=pint.scripts.zima:main', 
-                    'pintbary=pint.scripts.pintbary:main', 
+                    'pintempo=pint.scripts.pintempo:main',
+                    'zima=pint.scripts.zima:main',
+                    'pintbary=pint.scripts.pintbary:main',
                     'fermiphase=pint.scripts.fermiphase:main',
                     'pintk=pint.scripts.pintk:main' ]
 
@@ -110,8 +111,8 @@ setup(
 
     install_requires = ['astropy>=2.0'],
 
-    entry_points={  
-        'console_scripts': console_scripts, 
+    entry_points={
+        'console_scripts': console_scripts,
     },
 
     packages=['pint',
