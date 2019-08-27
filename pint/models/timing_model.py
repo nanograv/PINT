@@ -97,6 +97,7 @@ class TimingModel(object):
 
     def __init__(self, name='', components=[]):
         self.name = name
+        self.introduces_correlated_errors = False
         self.component_types = []
         self.top_level_params = []
         self.add_param_from_top(strParameter(name="PSR",
@@ -189,6 +190,15 @@ class TimingModel(object):
         for p in self.PhaseComponent_list:
             pfs += p.phase_funcs_component
         return pfs
+
+    @property
+    def has_correlated_errors(self,):
+        if 'NoiseComponent' in self.component_types:
+            for nc in self.NoiseComponent_list:
+                # recursive if necessary
+                if nc.introduces_correlated_errors:
+                    return True
+        return False
 
     @property
     def covariance_matrix_funcs(self,):

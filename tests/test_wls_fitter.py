@@ -46,3 +46,6 @@ class Testwls(unittest.TestCase):
             tol = 2.6
             msg = "Fitting parameter " + p + " failed. with chi2_red " + str(chi2_red)
             assert chi2_red < tol, msg
+
+    def test_has_correlated_errors(self):
+        assert not self.f.resids.model.has_correlated_errors

@@ -92,6 +92,8 @@ class Residuals(object):
 
     def calc_chi2(self):
         """Return the weighted chi-squared for the model and toas."""
+        if self.model.has_correlated_errors:
+            log.error("Chi-squared calculation is wrong in the presence of correlated errors.")
         # Residual units are in seconds. Error units are in microseconds.
         if (self.toas.get_errors()==0.0).any():
             return np.inf
