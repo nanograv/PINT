@@ -19,13 +19,6 @@ except AttributeError:
     # fallback for Python 2
     from string import maketrans
 
-# Define prefix parameter pattern
-pp1 = re.compile(r'([a-zA-Z]\d[a-zA-Z]+)(\d+)') # For the prefix like T2EFAC2
-pp2 = re.compile(r'([a-zA-Z]+)(\d+)')  # For the prefix like F12
-pp3 = re.compile(r'([a-zA-Z0-9]+_*)(\d+)')  # For the prefix like DMXR1_3
-
-prefixPattern = [pp1, pp2, pp3]
-
 
 class PosVel(object):
     """Position/Velocity class.
@@ -335,6 +328,17 @@ def str2longdouble(str_data):
     return str2ldarr1(input_str.encode())[0]
 
 
+# Define prefix parameter pattern
+prefixPattern = [
+    re.compile(r'([a-zA-Z]\d[a-zA-Z]+)(\d+)'), # For the prefix like T2EFAC2
+    re.compile(r'([a-zA-Z]+)(\d+)'), # For the prefix like F12
+    re.compile(r'([a-zA-Z0-9]+_*)(\d+)'), # For the prefix like DMXR1_3
+    #re.compile(r'([a-zA-Z]\d[a-zA-Z]+)(\d+)'), # for prefixes like PLANET_SHAPIRO2?
+]
+
+class PrefixError(ValueError):
+    pass
+
 def split_prefixed_name(name):
     """A utility function that splits a prefixed name.
        Parameter
@@ -364,7 +368,7 @@ def split_prefixed_name(name):
         break
 
     if namefield is None:
-        raise ValueError("Unrecognized prefix name pattern'%s'." % name)
+        raise PrefixError("Unrecognized prefix name pattern'%s'." % name)
     indexValue = int(indexPart)
     return prefixPart, indexPart, indexValue
 
