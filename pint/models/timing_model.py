@@ -552,7 +552,7 @@ class TimingModel(object):
 
         for nf in self.basis_funcs:
             result.append(nf(toas)[0])
-        return np.hstack((r for r in result))
+        return np.hstack([r for r in result])
 
 
     def noise_model_basis_weight(self, toas):
@@ -562,7 +562,7 @@ class TimingModel(object):
 
         for nf in self.basis_funcs:
             result.append(nf(toas)[1])
-        return np.hstack((r for r in result))
+        return np.hstack([r for r in result])
 
 
 
