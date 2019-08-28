@@ -11,6 +11,7 @@ import os
 from pint.config import datapath
 from pinttestdata import testdir, datadir
 from nose.tools import *
+from nose.plugins.attrib import attr
 
 
 os.chdir(datadir)
@@ -40,6 +41,7 @@ class TestObservatory(unittest.TestCase):
             clock_corr1 = site.clock_corrections(self.test_time[0])
             assert clock_corr1.shape == ()
 
+    @attr("ephem_server")
     def test_get_TDBs(self):
         for tobs in self.test_obs:
             site = get_observatory(tobs, include_gps=True, include_bipm=True,
@@ -58,7 +60,7 @@ class TestObservatory(unittest.TestCase):
                                  ephem='de430t')
             assert tdb1.shape == (1,)
 
-
+    @attr("ephem_server")
     def test_positions(self):
         for tobs in self.test_obs:
             site = get_observatory(tobs, include_gps=True, include_bipm=True,

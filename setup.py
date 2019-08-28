@@ -5,7 +5,15 @@ except ImportError:
     from distutils.core import setup
     from distutils.extension import Extension
 
-import numpy, os, sys, hashlib, os.path
+import binascii
+import os
+import sys
+import hashlib
+import os.path
+import subprocess
+# !! This means setup.py can't even be run without numpy installed!
+import numpy
+
 try:
     from Cython.Distutils import build_ext
 except ImportError:
@@ -41,33 +49,15 @@ ext_modules += [Extension("pint.str2ld", src,
 if use_cython:
     cmdclass.update({'build_ext': build_ext})
 
-# Download data files
-data_urls = [
-        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/earth_latest_high_prec.bpc",
-        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00010.tpc",
-        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls",
-        "http://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/de-403-masses.tpc"
-        ]
-# A list of the filenames
-fnames = [os.path.split(x)[1] for x in data_urls]
-# Following md5sums created using:
-# >  dict([(fname, hashlib.md5(open(fname, 'rb').read()).digest()) for fname in fnames])
-md5sums = {'de-403-masses.tpc': '\x00\x13{\xda\x957\xbbG\xcb\xd0v\xb6qoBg',
-           'earth_latest_high_prec.bpc': '\xd3\xefHO%\x1dc\xb4\x91\x06\xc1\x93\xf6\x01\xbb\x08',
-           'naif0012.tls': '%\xa2\xff\xf3\x0b\r\xed\xb4\xd7l\x06r{\x18\x95\xb1',
-           'pck00010.tpc': '\xda\x156A\xf74k\xd5\xb6\xa1"gx\xe0\xd5\x1b'}
+
+# Make sure data files are installed.
+def hex_hash(path):
+    h_f = hashlib.md5(open(path, 'rb').read()).digest()
+    return binascii.hexlify(h_f).decode('ascii')
+
+
 data_files = []
 data_dir = 'datafiles'
-for u in data_urls:
-    fname = os.path.split(u)[1]
-    # Download if not present or if md5sum doesn't match
-    path = os.path.join("pint", data_dir, fname)
-    if (not os.path.exists(path) or
-        hashlib.md5(open(path, 'rb').read()).digest() != md5sums[fname]):
-        os.system("wget -N -P pint/%s %s" % (data_dir, u))
-    else:
-        print("Downloaded file '%s' looks good." % fname)
-    data_files.append(os.path.join(data_dir, fname))
 
 # And now add the clock files (at least until we figure out a better
 # way of doint this.  This aids in automatic testing, though.
@@ -87,9 +77,9 @@ cmdclass.update(versioneer.get_cmdclass())
 console_scripts = [ 'photonphase=pint.scripts.photonphase:main',
                     'event_optimize=pint.scripts.event_optimize:main',
                     'event_optimize_multiple=pint.scripts.event_optimize_multiple:main',
-                    'pintempo=pint.scripts.pintempo:main', 
-                    'zima=pint.scripts.zima:main', 
-                    'pintbary=pint.scripts.pintbary:main', 
+                    'pintempo=pint.scripts.pintempo:main',
+                    'zima=pint.scripts.zima:main',
+                    'pintbary=pint.scripts.pintbary:main',
                     'fermiphase=pint.scripts.fermiphase:main',
                     'pintk=pint.scripts.pintk:main' ]
 
@@ -105,8 +95,8 @@ setup(
 
     install_requires = ['astropy>=2.0'],
 
-    entry_points={  
-        'console_scripts': console_scripts, 
+    entry_points={
+        'console_scripts': console_scripts,
     },
 
     packages=['pint',
@@ -120,8 +110,8 @@ setup(
         'pint.templates'],
 
     package_data={'pint': [
-        'datafiles/ecliptic.dat',
-        'datafiles/de432s.bsp',
+        'datafiles/ecliptic.dat', # for ecliptic coordinates
+        'datafiles/de432s.bsp',   # for testing purposes
         ] + data_files},
 
     cmdclass = cmdclass,

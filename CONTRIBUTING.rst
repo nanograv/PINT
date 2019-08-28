@@ -117,3 +117,4 @@ To track and checkout another user's branch::
     $ git remote add other-user-username https://github.com/other-user-username/pint.git
     $ git fetch other-user-username
     $ git checkout --track -b branch-name other-user-username/branch-name
+
