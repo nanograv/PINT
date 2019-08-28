@@ -19,11 +19,18 @@ class Fitter(object):
     model : a pint timing model instance
         The initial timing model for fitting.
     """
-    def __init__(self, toas, model):
+    def __init__(self, toas, model, residuals=None):
         self.toas = toas
         self.model_init = model
-        self.resids_init = Residuals(toas=toas, model=model)
-        self.reset_model()
+        if residuals is None:
+            self.resids_init = Residuals(toas=toas, model=model)
+            self.reset_model()
+        else:
+            # residuals were provided, we're just going to use them
+            # probably using GLSFitter to compute a chi-squared
+            self.model = copy.deepcopy(self.model_init)
+            self.resids = residuals
+            self.fitresult = []
         self.method = None
 
     def reset_model(self):
@@ -209,14 +216,39 @@ class GlsFitter(Fitter):
        A class for weighted least square fitting method. The design matrix is
        required.
     """
-    def __init__(self, toas=None, model=None):
-        super(GlsFitter, self).__init__(toas=toas, model=model)
+    def __init__(self, toas=None, model=None, residuals=None):
+        super(GlsFitter, self).__init__(toas=toas,
+                                        model=model,
+                                        residuals=residuals)
         self.method = 'generalized_least_square'
 
     def fit_toas(self, maxiter=1, threshold=False, full_cov=False):
-        """Run a Generalized least-squared fitting method"""
+        """Run a Generalized least-squared fitting method
+
+        If maxiter is less than one, no fitting is done, just the
+        chi-squared computation.
+
+        If maxiter is one or more, so fitting is actually done, the
+        chi-squared value returned is only approximately the chi-squared
+        of the improved(?) model. In fact it is the chi-squared of the
+        solution to the linear fitting problem, and the full non-linear
+        model should be evaluated and new residuals produced if an accurate
+        chi-squared is desired.
+
+        A first attempt is made to solve the fitting problem by Cholesky
+        decomposition, but if this fails singular value decomposition is
+        used instead. In this case singular values below threshold are removed.
+
+        full_cov determines which calculation is used. If true, the full
+        covariance matrix is constructed and the calculation is relatively
+        straightforward but the full covariance matrix may be enormous.
+        If false, an algorithm is used that takes advantage of the structure
+        of the covariance matrix, based on information provided by the noise
+        model. The two algorithms should give the same result to numerical
+        accuracy where they both can be applied.
+        """
         chi2 = 0
-        for i in range(maxiter):
+        for i in range(max(maxiter,1)):
             fitp = self.get_fitparams()
             fitpv = self.get_fitparams_num()
             fitperrs = self.get_fitparams_uncertainty()
@@ -225,7 +257,8 @@ class GlsFitter(Fitter):
             M, params, units, scale_by_F0 = self.get_designmatrix()
 
             # Get residuals and TOA uncertainties in seconds
-            self.update_resids()
+            if i==0:
+                self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value
 
             # get any noise design matrices and weight vectors
@@ -243,7 +276,8 @@ class GlsFitter(Fitter):
             if M.shape[1] > ntmpar:
                 norm[ntmpar:] = 1
             if np.any(norm == 0):
-                print("Warning: one or more of the design-matrix columns is null.")
+                # Make this a LinAlgError so it looks like other bad matrixness
+                raise sl.LinAlgError("One or more of the design-matrix columns is null.")
             M /= norm
 
             # compute covariance matrices
@@ -261,28 +295,33 @@ class GlsFitter(Fitter):
                 mtcm += np.diag(phiinv)
                 mtcy = np.dot(M.T, cinv*residuals)
 
+            if maxiter>0:
+                try:
+                    c = sl.cho_factor(mtcm)
+                    xhat = sl.cho_solve(c, mtcy)
+                    xvar = sl.cho_solve(c, np.eye(len(mtcy)))
+                except sl.LinAlgError:
+                    U, s, Vt = sl.svd(mtcm, full_matrices=False)
 
-            try:
-                c = sl.cho_factor(mtcm)
-                xhat = sl.cho_solve(c, mtcy)
-                xvar = sl.cho_solve(c, np.eye(len(mtcy)))
-            except sl.LinAlgError:
-                U, s, Vt = sl.svd(mtcm, full_matrices=False)
+                    if threshold:
+                        threshold_val = np.finfo(np.longdouble).eps * max(M.shape) * s[0]
+                        s[s<threshold_val] = 0.0
 
-                if threshold:
-                    threshold_val = np.finfo(np.longdouble).eps * max(M.shape) * s[0]
-                    s[s<threshold_val] = 0.0
-
-                xvar = np.dot(Vt.T / s, Vt)
-                xhat = np.dot(Vt.T, np.dot(U.T, mtcy)/s)
-
-
-            # compute linearized chisq
-            newres = residuals - np.dot(M, xhat)
-            if full_cov:
-                chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+                    xvar = np.dot(Vt.T / s, Vt)
+                    xhat = np.dot(Vt.T, np.dot(U.T, mtcy)/s)
+                newres = residuals - np.dot(M, xhat)
+                # compute linearized chisq
+                if full_cov:
+                    chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+                else:
+                    chi2 = np.dot(newres, cinv*newres) + np.dot(xhat,phiinv*xhat)
             else:
-                chi2 = np.dot(newres, cinv*newres) + np.dot(xhat,phiinv*xhat)
+                newres = residuals
+                if full_cov:
+                    chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+                else:
+                    chi2 = np.dot(newres, cinv*newres)
+                return chi2
 
             # compute absolute estimates, normalized errors, covariance matrix
             dpars = xhat/norm
