@@ -5,16 +5,19 @@
 from __future__ import absolute_import, print_function, division
 import numpy
 import astropy.units as u
+from astropy.time import Time
 try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
+
 from . import parameter as p
 from .timing_model import PhaseComponent, MissingParameter
 from ..phase import *
 from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble,\
     taylor_horner, time_from_longdouble, split_prefixed_name, taylor_horner_deriv
 from pint import dimensionless_cycles
+import pint.toa as toa
 
 
 class Spindown(PhaseComponent):
@@ -91,9 +94,7 @@ class Spindown(PhaseComponent):
             phsepoch_ld = time_to_longdouble(tbl['tdb'][0] - delay[0])
         else:
             phsepoch_ld = time_to_longdouble(self.PEPOCH.quantity)
-
-        dt = (tbl['tdbld'] - phsepoch_ld)*u.day - delay
-
+        dt = (tbl['tdbld'] - phsepoch_ld) * u.day - delay
         return dt
 
     def spindown_phase(self, toas, delay):
@@ -112,6 +113,45 @@ class Spindown(PhaseComponent):
         with u.set_enabled_equivalencies(dimensionless_cycles):
             phs = taylor_horner(dt.to(u.second), fterms)
             return phs.to(u.cycle)
+
+    def change_pepoch(self, new_epoch, toas=None, delay=None):
+        """Move PEPOCH to a new time and change the related paramters.
+
+        Parameter
+        ---------
+        new_epoch: float or `astropy.Time` object
+            The new PEPOCH value.
+        toas: `toa` object, optional.
+            If current PEPOCH is not provided, the first pulsar frame toa will
+            be treated as PEPOCH.
+        delay: `numpy.array` object
+            If current PEPOCH is not provided, it is required for computing the
+            first pulsar frame toa.
+        """
+        if isinstance(new_epoch, Time):
+            new_epoch = Time(new_epoch, scale='tdb', precision=9)
+        else:
+            new_epoch = Time(new_epoch, scale='tdb', format='mjd', precision=9)
+        # make new_epoch a toa for delay calculation.
+        new_epoch_toa = toa.get_TOAs_list([toa.TOA(new_epoch),],
+                                          ephem=toas.ephem)
+
+        if self.PEPOCH.value is None:
+            if toas is None or delay is None:
+                raise ValueError("`PEPOCH` is not in the model, thus, 'toa' and"
+                                 " 'delay' shoule be givne.")
+            tbl = toas.table
+            phsepoch_ld = time_to_longdouble(tbl['tdb'][0] - delay[0])
+        else:
+            phsepoch_ld = time_to_longdouble(self.PEPOCH.quantity)
+        dt = ((time_to_longdouble(new_epoch) - phsepoch_ld) * u.day) 
+        fterms = [0.0 * u.Unit("")] + self.get_spin_terms()
+        # rescale the fterms
+        for n in range(len(fterms) - 1):
+            f_par = getattr(self, 'F{}'.format(n))
+            f_par.value = taylor_horner_deriv(dt.to(u.second), fterms,
+                                              deriv_order=n+1)
+        self.PEPOCH.value = new_epoch
 
     def print_par(self,):
         result = ''

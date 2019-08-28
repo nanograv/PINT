@@ -121,7 +121,7 @@ class OrbitPB(orbits):
 
 
 class OrbitFBX(orbits):
-    def __init__(self, parent, orbit_params=['FB0', 'FB1']):
+    def __init__(self, parent, orbit_params=['FB0']):
         super(OrbitFBX, self).__init__('orbitFBX', parent, orbit_params)
         # add the rest of FBX parameters.
         for k in self.binary_params:

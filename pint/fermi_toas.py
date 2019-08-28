@@ -7,7 +7,7 @@ import pint.models
 import pint.residuals
 import astropy.units as u
 from astropy.coordinates import SkyCoord, EarthLocation
-from astropy.extern import six
+import six
 from pint.fits_utils import read_fits_event_mjds, read_fits_event_mjds_tuples
 from pint.observatory import get_observatory
 
@@ -115,9 +115,9 @@ def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1,
     if timesys == 'TDB':
         log.info("Building barycentered TOAs")
         if weightcolumn is None:
-            toalist=[toa.TOA(m,obs='Barycenter',scale='tdb',energy=e) for m,e in zip(mjds,energies)]
+            toalist=[toa.TOA(m,obs='Barycenter',scale='tdb',energy=e,error=1.0*u.us) for m,e in zip(mjds,energies)]
         else:
-            toalist=[toa.TOA(m,obs='Barycenter',scale='tdb',energy=e,weight=w) for m,e,w in zip(mjds,energies,weights)]
+            toalist=[toa.TOA(m,obs='Barycenter',scale='tdb',energy=e,weight=w,error=1.0*u.us) for m,e,w in zip(mjds,energies,weights)]
     else:
         if timeref == 'LOCAL':
             log.info('Building spacecraft local TOAs, with MJDs in range {0} to {1}'.format(mjds[0],mjds[-1]))
@@ -130,10 +130,10 @@ def load_Fermi_TOAs(ft1name,weightcolumn=None,targetcoord=None,logeref=4.1,
 
             try:
                 if weightcolumn is None:
-                    toalist=[toa.TOA(m, obs='Fermi', scale='tt',energy=e)
+                    toalist=[toa.TOA(m, obs='Fermi', scale='tt',energy=e,error=1.0*u.us)
                             for m,e in zip(mjds,energies)]
                 else:
-                    toalist=[toa.TOA(m, obs='Fermi', scale='tt',energy=e,weight=w)
+                    toalist=[toa.TOA(m, obs='Fermi', scale='tt',energy=e,weight=w,error=1.0*u.us)
                             for m,e,w in zip(mjds,energies,weights)]
             except KeyError:
                 log.error('Error processing Fermi TOAs. You may have forgotten to specify an FT2 file with --ft2')

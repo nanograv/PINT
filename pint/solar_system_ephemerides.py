@@ -3,7 +3,7 @@ import numpy as np
 import os
 import astropy.units as u
 import astropy.coordinates as coor
-from astropy.extern.six.moves import urllib
+from six.moves import urllib
 from astropy.time import Time
 from .utils import PosVel
 from astropy import log

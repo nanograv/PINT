@@ -1,4 +1,4 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, print_function, division, unicode_literals
 import re, sys, os, numpy, gzip, copy
 from . import utils
 from .observatory import Observatory, get_observatory
@@ -6,7 +6,7 @@ from .observatory.topo_obs import TopoObs
 from . import erfautils
 import astropy.time as time
 from . import pulsar_mjd
-from astropy.extern.six.moves import cPickle as pickle
+from six.moves import cPickle as pickle
 import astropy.table as table
 import astropy.units as u
 from astropy.coordinates import EarthLocation
@@ -591,6 +591,25 @@ class TOAs(object):
             return numpy.array([t.flags for t in self.toas])
         else:
             return self.table['flags']
+
+    def get_flag_value(self, flag, fill_value=None):
+        """Get the request TOA flag values.
+
+           Parameter
+           ---------
+           flag_name: str
+               The request flag name.
+
+           Return
+           ------
+           A list of flag values from each TOA. If the TOA does not have
+           the flag, it will fill up with the fill_value. 
+        """
+        result = []
+        for flags in self.table['flags']:
+            val = flags.get(flag, fill_value)
+            result.append(val)
+        return result
 
     def select(self, selectarray):
         """Apply a boolean selection or mask array to the TOA table."""

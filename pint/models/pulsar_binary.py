@@ -104,7 +104,8 @@ class PulsarBinary(DelayComponent):
                     raise MissingParameter(self.binary_model_name, fb_name + \
                                            " is required for FB orbits.")
                 self.binary_instance.add_binary_params(fb_name, fb_value)
-            self.binary_instance.orbits_cls = bo.OrbitFBX(self.binary_instance)
+            self.binary_instance.orbits_cls = bo.OrbitFBX(self.binary_instance,
+                                                          list(FBXs.keys()))
 
     def check_required_params(self, required_params):
         # seach for all the possible to get the parameters.
