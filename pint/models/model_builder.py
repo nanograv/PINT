@@ -164,7 +164,7 @@ class ModelBuilder(object):
                     pre,idxstr,idxV = split_prefixed_name(p)
                     if pre in [par.prefix,] + par.prefix_aliases:
                         prefixs[par.prefix].append(p)
-                except:
+                except: # FIXME: is this meant to catch KeyErrors?
                     continue
 
         return prefixs

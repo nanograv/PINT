@@ -266,7 +266,7 @@ class GlsFitter(Fitter):
                 c = sl.cho_factor(mtcm)
                 xhat = sl.cho_solve(c, mtcy)
                 xvar = sl.cho_solve(c, np.eye(len(mtcy)))
-            except:
+            except sl.LinAlgError:
                 U, s, Vt = sl.svd(mtcm, full_matrices=False)
 
                 if threshold:

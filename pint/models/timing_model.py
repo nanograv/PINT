@@ -134,6 +134,9 @@ class TimingModel(object):
             else:
                 return super().__getattribute__(name)
         except AttributeError:
+            # Note that there is a complex series of fallbacks that can wind up
+            # here - for example if a property inadvertently raises an
+            # AttributeError it looks like it's missing entirely
             errmsg = "'TimingModel' object and its component has no attribute"
             errmsg += " '%s'." % name
             try:
@@ -853,7 +856,6 @@ class TimingModel(object):
 
             checked_param.append(name)
         if wants_tcb:
-            log.error("UNITS %s not yet supported by PINT" % k[1])
             raise ValueError("UNITS %s not yet supported by PINT" % k[1])
         # The "setup" functions contain tests for required parameters or
         # combinations of parameters, etc, that can only be done
@@ -1087,7 +1089,7 @@ class Component(object):
                 return True
             else:
                 return False
-        except:
+        except (AttributeError, KeyError):
             pass
 
         # Compare the componets parameter names with par file parameters

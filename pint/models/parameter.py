@@ -111,7 +111,7 @@ class Parameter(object):
     @prior.setter
     def prior(self,p):
         if not isinstance(p,priors.Prior):
-            log.error("prior must be an instance of Prior()")
+            raise ValueError("prior must be an instance of Prior()")
         self._prior = p
 
     # Setup units property
@@ -131,7 +131,7 @@ class Parameter(object):
                 try:
                     if hasattr(self.quantity, 'unit'):
                         _ = self.quantity.to(unt)
-                except:
+                except ValueError:
                     log.warning('The value unit is not compatible with'
                                 ' parameter units right now.')
 
@@ -353,7 +353,7 @@ class Parameter(object):
                     ucty = 0.0
                 else:
                     ucty = fit_flag
-            except:
+            except ValueError:
                 if is_number(k[2]):
                     ucty = k[2]
                 else:
@@ -524,6 +524,10 @@ class floatParameter(Parameter):
             result = str(quan.to(self.units).value)
         else:
             result = longdouble2string(quan.to(self.units).value)
+            #try:
+            #    result = longdouble2string(quan.to(self.units).value)
+            #except AttributeError:
+            #    result = str(quan)
         return result
 
     def get_value_float(self, quan):
@@ -732,10 +736,13 @@ class MJDParameter(Parameter):
         elif isinstance(val, str):
             try:
                 result = time_from_mjd_string(val, self.time_scale)
-            except:
-                log.error('String ' + val + ' can not be converted to'
-                                 'a time object.' )
-                raise
+            except Exception as e:
+                # Would like to chain exceptions so we can keep the original
+                # and add the new message; raise ... from e will do that but
+                # isn't even valid syntax on Python 2
+                msg = ('String "' + val + '" can not be converted to '
+                                 'a time object via time_from_mjd_string.')
+                raise ValueError(msg)
 
         elif isinstance(val,time.Time):
             result = val
@@ -1277,7 +1284,7 @@ class maskParameter(floatParameter):
             if key_value_info[0] != str:
                 try:
                     kval = float(k[2 + ii])
-                except:
+                except ValueError:
                     kval = k[2 + ii]
             else:
                 kval = k[2 + ii]
@@ -1298,7 +1305,7 @@ class maskParameter(floatParameter):
                     ucty = 0.0
                 else:
                     ucty = fit_flag
-            except:
+            except ValueError:
                 if is_number(k[3 + len_key_v]):
                     ucty = k[3 + len_key_v]
                 else:
@@ -1519,9 +1526,13 @@ class pairParameter(floatParameter):
         """A function gives print quantity string.
         """
         try:
+            # Maybe it's a singleton quantity
             return self.print_quantity_float(quan)
-        except Exception as e:
-            print(e)
+        except AttributeError:
+            # Not a quantity, let's hope it's a list of length two?
+            if len(quan)!=2:
+                raise ValueError("Don't know how to print this as a pair: %s"
+                                 % (quan,))
 
         if not self._long_double:
             quan0 = str(quan[0].to(self.units).value)
