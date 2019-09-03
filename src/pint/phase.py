@@ -12,7 +12,6 @@ import numpy
 import astropy.units as u
 from pint import dimensionless_cycles
 
-
 class Phase(namedtuple('Phase', 'int frac')):
     """
     Phase class array version

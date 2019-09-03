@@ -603,15 +603,15 @@ class TimingModel(object):
     def jump_flags_to_params(self, toas):
         '''convert jump flags in toas.table["flags"] to jump parameters in the model'''
         from . import jump
-        for dict in toas.table['flags']:
-            if 'jump' in dict.keys():
+        for flag_dict in toas.table['flags']:
+            if 'jump' in flag_dict.keys():
                 break
         else:
-            print('no jump flags to process')
+            log.info('No jump flags to process')
             return None        
-        jump_nums = [dict['jump'] if 'jump' in dict.keys() else np.nan for dict in toas.table['flags']]
+        jump_nums = [flag_dict['jump'] if 'jump' in flag_dict.keys() else np.nan for flag_dict in toas.table['flags']]
         if 'PhaseJump' not in self.components:
-            print("PhaseJump component added")
+            log.info("PhaseJump component added")
             a = jump.PhaseJump()
             a.setup()
             self.add_component(a)
@@ -622,9 +622,9 @@ class TimingModel(object):
                 self.add_param_from_top(param, 'PhaseJump')
                 getattr(self, param.name).frozen = False
         if 0 in jump_nums:
-            for dict in toas.table['flags']:
-                if 'jump' in dict.keys() and dict['jump'] == 0:
-                    dict['jump'] = int(np.nanmax(jump_nums)+1)
+            for flag_dict in toas.table['flags']:
+                if 'jump' in flag_dict.keys() and flag_dict['jump'] == 0:
+                    flag_dict['jump'] = int(np.nanmax(jump_nums)+1)
             param = p.maskParameter(name='JUMP', index=int(np.nanmax(jump_nums)+1), key='jump', key_value=int(np.nanmax(jump_nums)+1), value=0.0, units='second', uncertainty=0.0)
             self.add_param_from_top(param, 'PhaseJump')
             getattr(self, param.name).frozen = False

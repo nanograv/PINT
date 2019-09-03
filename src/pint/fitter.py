@@ -6,7 +6,7 @@ import abc
 import scipy.optimize as opt, scipy.linalg as sl
 from .residuals import Residuals
 
-
+import collections
 
 class Fitter(object):
     """ Base class for fitter.
@@ -33,7 +33,7 @@ class Fitter(object):
             self.resids = residuals
             self.fitresult = []
         self.method = None
-        
+
     def reset_model(self):
         """Reset the current model to the initial model."""
         self.model = copy.deepcopy(self.model_init)
@@ -63,21 +63,21 @@ class Fitter(object):
 
     def get_allparams(self):
         """Return a dict of all param names and values."""
-        return dict((k, getattr(self.model, k).quantity) for k in
+        return collections.OrderedDict((k, getattr(self.model, k).quantity) for k in
                     self.model.params)
 
     def get_fitparams(self):
         """Return a dict of fittable param names and quantity."""
-        return dict((k, getattr(self.model, k)) for k in
+        return collections.OrderedDict((k, getattr(self.model, k)) for k in
                     self.model.params if not getattr(self.model, k).frozen)
 
     def get_fitparams_num(self):
         """Return a dict of fittable param names and numeric values."""
-        return dict((k, getattr(self.model, k).value) for k in
+        return collections.OrderedDict((k, getattr(self.model, k).value) for k in
                     self.model.params if not getattr(self.model, k).frozen)
 
     def get_fitparams_uncertainty(self):
-        return dict((k, getattr(self.model, k).uncertainty_value) for k in
+        return collections.OrderedDict((k, getattr(self.model, k).uncertainty_value) for k in
                     self.model.params if not getattr(self.model, k).frozen)
 
     def set_params(self, fitp):
@@ -109,8 +109,8 @@ class Fitter(object):
 
     def fit_toas(self, maxiter=None):
         raise NotImplementedError
-    
-    
+
+
 class PowellFitter(Fitter):
     """A class for Scipy Powell fitting method. This method searches over
        parameter space. It is a relative basic method.
@@ -127,7 +127,7 @@ class PowellFitter(Fitter):
                                     options={'maxiter':maxiter},
                                     method=self.method)
         # Update model and resids, as the last iteration of minimize is not
-        # necessarily the one that yields the best it
+        # necessarily the one that yields the best fit
         self.minimize_func(np.atleast_1d(self.fitresult.x),
                            *list(fitp.keys()))
 
@@ -188,16 +188,16 @@ class WlsFitter(Fitter):
             # The post-fit parameter covariance matrix
             #   Sigma = V s^-2 V^T
             Sigma = np.dot(Vt.T / (s**2), Vt)
-            # Parameter uncertainties.  Scale by fac recovers original units.
+            # Parameter uncertainties. Scale by fac recovers original units.
             errs = np.sqrt(np.diag(Sigma)) / fac
             #covariance matrix stuff (for randomized models in pintk)
             sigma_var = (Sigma/fac).T/fac
             errors = np.sqrt(np.diag(sigma_var))
             sigma_cov = (sigma_var/errors).T/errors
-            #unscaled = variances in diagonal, used for gaussian random models
-            self.unscaled_cov_matrix = sigma_var
-            #scaled = 1s in diagonal, use for comparison to tempo/tempo2 cov matrix
-            self.scaled_cov_matrix = sigma_cov
+            #correlation matrix = variances in diagonal, used for gaussian random models
+            self.correlation_matrix = sigma_var
+            #covariance matrix = 1s in diagonal, use for comparison to tempo/tempo2 cov matrix
+            self.covariance_matrix = sigma_cov
             self.fac = fac
             self.errors = errors
         

@@ -6,7 +6,7 @@ from .observatory.topo_obs import TopoObs
 from . import erfautils
 import astropy.time as time
 from . import pulsar_mjd
-from astropy.extern.six.moves import cPickle as pickle
+from six.moves import cPickle as pickle
 import astropy.table as table
 import astropy.units as u
 from astropy.coordinates import EarthLocation
@@ -21,7 +21,6 @@ from astropy import log
 import numpy as np
 from .observatory.special_locations import SpacecraftObs
 from collections import OrderedDict
-
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "FMIN", "INCLUDE", "INFO", "JUMP", "MODE", "NOSKIP", "PHA1",
@@ -485,7 +484,7 @@ class TOAs(object):
                                       self.get_errors(), self.get_freqs(),
                                       self.get_obss(), self.get_flags(), 
                                       numpy.zeros(len(mjds)) * u.cycle,
-                                      self.get_groups()]
+                                      self.get_groups()],
                                       names=("index", "mjd", "mjd_float", "error",
                                              "freq", "obs", "flags", "delta_pulse_number", "groups"),
                                       meta={'filename':self.filename}).group_by("obs")
@@ -571,6 +570,7 @@ class TOAs(object):
 
     def get_pulse_numbers(self):
         """Return a numpy array of the pulse numbers for each TOA if they exist"""
+        #TODO: masked array, only some pulse numbers may be known
         if hasattr(self, "toas"):
             try:
                 return np.array([t.flags['pn'] for t in self.toas]) * u.cycle
@@ -596,13 +596,20 @@ class TOAs(object):
         else:
             return self.table['flags']
     
-    def get_groups(self, gap_limit=0.0833):
-        '''flag toas within the gap limit (default 2h = 0.0833d) of each other as the same group'''
+    def get_groups(self, gap_limit=None):
+        '''flag toas within the gap limit (default 2h = 0.0833d) of each other as the same group
+        
+        groups can be larger than the gap limit - if toas are seperated by a gap larger than
+        the gap limit, a new group starts and continues until another such gap is found'''
+        #TODO: make all values Quantity objects for consistency
+        if gap_limit == None:
+            gap_limit = 0.0833 
         if hasattr(self, "toas") or gap_limit != 0.0833:
             gap_limit *= u.d
             mjd_dict = OrderedDict()
-            for i in np.arange(len(self.get_mjds())):
-                mjd_dict[i]=self.get_mjds()[i].value
+            mjd_values = self.get_mjds().value
+            for i in np.arange(len(mjd_values)):
+                mjd_dict[i] = mjd_values[i]
             sorted_mjd_list = sorted(mjd_dict.items(), key=lambda kv:(kv[1], kv[0]))
             indexes = [a[0] for a in sorted_mjd_list]
             mjds = [a[1] for a in sorted_mjd_list]
@@ -632,6 +639,7 @@ class TOAs(object):
     
         def get_highest_density_range(self, ndays=7):
             '''print the range of mjds (default 7 days) with the most toas'''
+            #TODO: implement sliding window
             nbins = int((max(self.get_mjds()) - min(self.get_mjds()))/(ndays*u.d))
             a = np.histogram(self.get_mjds(), nbins)
             maxday = int(a[1][np.argmax(a[0])])
@@ -1126,4 +1134,3 @@ class TOAs(object):
             if top:
                 # Clean up our temporaries used when reading TOAs
                 del self.cdict
-

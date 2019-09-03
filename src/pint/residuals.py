@@ -71,7 +71,7 @@ class Residuals(object):
                 wm = (full*w).sum() / w.sum()
                 full -= wm
             return full
-        
+
         if not weighted_mean:
             full -= full.mean()
         else:
@@ -164,11 +164,11 @@ class Residuals(object):
         for p in self.model.params:
             dof -= bool(not getattr(self.model, p).frozen)
         return dof
-    
+
     def get_reduced_chi2(self):
         """Return the weighted reduced chi-squared for the model and toas."""
         return self.calc_chi2() / self.get_dof()
-    
+
     def update(self, weighted_mean=True):
         """Recalculate everything in residuals class
         after changing model or TOAs"""

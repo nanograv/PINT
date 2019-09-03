@@ -86,7 +86,7 @@ class PhaseJump(PhaseComponent):
             if j in self.deriv_funcs.keys():
                 del self.deriv_funcs[j]
             self.register_deriv_funcs(self.d_phase_d_jump, j)
-    
+
     def jump_phase(self, toas, delay):
         """This method returns the jump phase for each toas section collected by
         jump parameters. The phase value is determined by jump parameter times
