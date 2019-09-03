@@ -61,23 +61,29 @@ def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
     [Form the celestial to intermediate-frame-of-date matrix given the CIP
     X,Y and the CIO locator s].
     """
+    unpack = False
     # If the input is a single TOA (i.e. a row from the table),
     # then put it into a list
     if type(toas) == table.row.Row:
         ttoas = Time([toas['mjd']])
+        unpack = True
     elif type(toas) == table.table.Table:
         ttoas = toas['mjd']
     elif isinstance(toas,Time):
         if toas.isscalar:
             ttoas = Time([toas])
+            unpack = True
         else:
             ttoas = toas
     else:
         if np.isscalar(toas):
             ttoas = Time([toas],format="mjd")
+            unpack = True
         else:
             ttoas = toas
     N = len(ttoas)
+    if len(ttoas.shape) != 1:
+        raise ValueError("At most one-dimensional array of times possible, shape was {}".format(ttoas.shape))
 
     # Get various times from the TOAs as arrays
     tts = np.asarray([(t.jd1, t.jd2) for t in ttoas.tt]).T
@@ -132,12 +138,16 @@ def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
     vels = np.empty((N, 3), dtype=np.float64)
     poss = np.einsum('ij,ijk->ik', iposs, rc2i)
     vels = np.einsum('ij,ijk->ik', ivels, rc2i)
-    return utils.PosVel(poss.T * u.m, vels.T * u.m / u.s, obj=obsname, origin="earth")
+    r = utils.PosVel(poss.T * u.m, vels.T * u.m / u.s, obj=obsname, origin="earth")
+    if unpack:
+        return r[0]
+    else:
+        return r
 
 
 # This seems to be never used!  It also has no docstring!
 # Astropy uses IERS A data, which differs from IERS B data.
-def astropy_gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
+def astropy_gcrs_posvel_from_itrf(loc, toas, obsname=None):
     """Return a list of PosVel instances for the observatory at the TOA times.
 
     Observatory location should be given in the loc argument as an astropy
@@ -154,21 +164,37 @@ def astropy_gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
     a terrestrial observing station] with an extra rotation from c2ixys()
     [Form the celestial to intermediate-frame-of-date matrix given the CIP
     X,Y and the CIO locator s].
+
+    This version uses astropy's internal routines, which use IERS A data
+    rather than the final IERS B values. These do differ, and yield results
+    that are different by ~20 m.
     """
-    if isinstance(toas, table.row.Row):
-        t = Time([toas['mjd']])
-    elif isinstance(toas, table.table.Table):
-        # FIXME: is this guaranteed to be a Time?
-        t = toas['mjd']
+    unpack = False
+    # If the input is a single TOA (i.e. a row from the table),
+    # then put it into a list
+    if type(toas) == table.row.Row:
+        ttoas = Time([toas['mjd']])
+        unpack = True
+    elif type(toas) == table.table.Table:
+        ttoas = toas['mjd']
     elif isinstance(toas,Time):
-        t = toas
-    elif np.isscalar(toas):
-        log.warning("Scalar time has unspecified scale, using default (UTC?)")
-        t = Time([toas], format="mjd")
+        if toas.isscalar:
+            ttoas = Time([toas])
+            unpack = True
+        else:
+            ttoas = toas
     else:
-        log.warning("Array time has unspecified scale, using default (UTC?)")
-        t = Time(toas, format="mjd")
+        if np.isscalar(toas):
+            ttoas = Time([toas],format="mjd")
+            unpack = True
+        else:
+            ttoas = toas
+    t = ttoas
 
     #t = Time(toas['tdbld'], scale='tdb', format='mjd')
     pos, vel = loc.get_gcrs_posvel(t)
-    return utils.PosVel(pos.xyz, vel.xyz, obj=obsname, origin="earth")
+    r = utils.PosVel(pos.xyz, vel.xyz, obj=obsname, origin="earth")
+    if unpack:
+        return r[0]
+    else:
+        return r

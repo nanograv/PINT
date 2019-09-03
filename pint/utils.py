@@ -93,6 +93,13 @@ class PosVel(object):
                     + " " + self.origin + "->" + self.obj)
         else:
             return str(self.pos)+", "+str(self.vel)
+    def __getitem__(self, k):
+        """Allow extraction of slices of the contained arrays"""
+        return self.__class__(
+                self.pos[:,k],
+                self.vel[:,k],
+                obj=self.obj,
+                origin=self.origin)
 
 def fortran_float(x):
     """Convert Fortran-format floating-point strings.
