@@ -1,13 +1,14 @@
 from __future__ import absolute_import, print_function, division
 
 import numpy as np
-import astropy.units as u
+from astropy import log
 try:
     import astropy.erfa as erfa
 except ImportError:
     import astropy._erfa as erfa
 import astropy.table as table
 from astropy.time import Time
+import astropy.units as u
 
 from pint.observatory import Observatory
 from pint import toa, utils, erfautils
@@ -19,14 +20,16 @@ from pinttestdata import testdir, datadir
 
 SECS_PER_DAY = erfa.DAYSEC
 
-from astropy.utils.iers import IERS_A, IERS_A_URL, IERS_B, IERS_B_URL, IERS
+from astropy.utils.iers import IERS_A, IERS_A_URL, IERS_B, IERS_B_URL, IERS, IERS_Auto
 from astropy.utils.data import download_file
 # iers_a_file = download_file(IERS_A_URL, cache=True)
-iers_b_file = download_file(IERS_B_URL, cache=True)
+#iers_b_file = download_file(IERS_B_URL, cache=True)
 # iers_a = IERS_A.open(iers_a_file)
-iers_b = IERS_B.open(iers_b_file)
-IERS.iers_table = iers_b
-iers_tab = IERS.iers_table
+#iers_b = IERS_B.open(iers_b_file)
+#IERS.iers_table = iers_b
+#iers_tab = IERS.iers_table
+iers_tab = IERS_Auto.open()
+iers_b_tab = IERS_B.open()
 
 # Earth rotation rate in radians per UT1 second
 #
@@ -62,16 +65,19 @@ def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
     # then put it into a list
     if type(toas) == table.row.Row:
         ttoas = Time([toas['mjd']])
-        N = 1
     elif type(toas) == table.table.Table:
-        N = len(toas)
         ttoas = toas['mjd']
-    else:
+    elif isinstance(toas,Time):
         if toas.isscalar:
             ttoas = Time([toas])
         else:
             ttoas = toas
-        N = len(ttoas)
+    else:
+        if np.isscalar(toas):
+            ttoas = Time([toas],format="mjd")
+        else:
+            ttoas = toas
+    N = len(ttoas)
 
     # Get various times from the TOAs as arrays
     tts = np.asarray([(t.jd1, t.jd2) for t in ttoas.tt]).T
@@ -85,8 +91,15 @@ def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
     #dX = np.interp(mjds, iers_tab['MJD'], iers_tab['dX_2000A_B']) * asec2rad
     #dY = np.interp(mjds, iers_tab['MJD'], iers_tab['dY_2000A_B']) * asec2rad
     # Get dX and dY from IERS B in arcsec and convert to radians
-    dX = np.interp(mjds, iers_tab['MJD'], iers_tab['dX_2000A']) * asec2rad
-    dY = np.interp(mjds, iers_tab['MJD'], iers_tab['dY_2000A']) * asec2rad
+    dX = np.interp(mjds, iers_tab['MJD'], iers_tab['dX_2000A_B'],
+            left=np.nan, right=np.nan) * asec2rad
+    dY = np.interp(mjds, iers_tab['MJD'], iers_tab['dY_2000A_B'],
+            left=np.nan, right=np.nan) * asec2rad
+    dX_B = np.interp(mjds, iers_b_tab['MJD'], iers_b_tab['dX_2000A'],
+            left=np.nan, right=np.nan) * asec2rad
+    dY_B = np.interp(mjds, iers_b_tab['MJD'], iers_b_tab['dY_2000A'],
+            left=np.nan, right=np.nan) * asec2rad
+    assert (dX, dY) == (dX_B,dY_B)
 
     # Get GCRS to CIRS matrices
     rc2i = erfa.c2ixys(X+dX, Y+dY, S)
@@ -98,8 +111,10 @@ def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
     #xp = np.interp(mjds, iers_tab['MJD'], iers_tab['PM_X_B']) * asec2rad
     #yp = np.interp(mjds, iers_tab['MJD'], iers_tab['PM_Y_B']) * asec2rad
     # Get X and Y from IERS B in arcsec and convert to radians
-    xp = np.interp(mjds, iers_tab['MJD'], iers_tab['PM_x']) * asec2rad
-    yp = np.interp(mjds, iers_tab['MJD'], iers_tab['PM_y']) * asec2rad
+    xp = np.interp(mjds, iers_tab['MJD'], iers_tab['PM_X_B'],
+            left=np.nan, right=np.nan) * asec2rad
+    yp = np.interp(mjds, iers_tab['MJD'], iers_tab['PM_Y_B'],
+            left=np.nan, right=np.nan) * asec2rad
 
     # Get the polar motion matrices
     rpm = erfa.pom00(xp, yp, sp)
@@ -127,26 +142,25 @@ def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
     return utils.PosVel(poss.T * u.m, vels.T * u.m / u.s, obj=obsname, origin="earth")
 
 
-# This seems to be never used!  It also has no docstring!
-# def astropy_gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
-#     t = Time(toas['tdbld'], scale='tdb', format='mjd')
-#     pos, vel = loc.get_gcrs_posvel(t)
-#     return utils.PosVel(pos, vel, obj=obsname, origin="earth")
-
 def test_erfautils_compare_to_direct_implementation():
-    ts = toa.get_TOAs(datadir + "/testtimes.tim",
-                      include_bipm=False, usepickle=False)
-
+    o = "Arecibo"
+    loc = Observatory.get(o).earth_location_itrf()
     # is this for loop really needed?
-    for TOA in ts.table:
+    for mjd in [56000.,56500.,57000.]:
+        t = Time(mjd, scale="tdb", format="mjd")
         local_posvel = gcrs_posvel_from_itrf(
-            Observatory.get(TOA['obs']).earth_location_itrf(),
-            TOA, obsname=TOA['obs'])
+            loc, t, obsname=o)
         posvel = erfautils.gcrs_posvel_from_itrf(
-            Observatory.get(TOA['obs']).earth_location_itrf(),
-            TOA, obsname=TOA['obs'])
+            loc, t, obsname=o)
         dopv = local_posvel - posvel
         dpos = np.sqrt(np.dot(dopv.pos.to(u.m)[:,0], dopv.pos.to(u.m)[:,0]))
         dvel = np.sqrt(np.dot(dopv.vel.to(u.mm/u.s)[:,0], dopv.vel.to(u.mm/u.s)[:,0]))
         assert dpos<2, "position difference in meters"
         assert dvel<0.02, "velocity difference in mm/s"
+
+def test_iers_discrepancies():
+    iers_auto = IERS_Auto.open()
+    iers_b = IERS_B.open()
+    for mjd in [56000,56500,57000]:
+        t = Time(mjd, scale="tdb", format="mjd")
+        assert iers_b.pm_xy(t) == iers_auto.pm_xy(t)

@@ -9,7 +9,7 @@ import os
 
 from pinttestdata import testdir, datadir
 
-def test_times():
+def test_times_against_tempo2():
     log.setLevel('ERROR')
     # for nice output info, set the following instead
     #log.setLevel('INFO')
