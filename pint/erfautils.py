@@ -1,7 +1,6 @@
 from __future__ import absolute_import, print_function, division
 from . import utils
 import numpy as np
-from astropy import log
 import astropy.units as u
 try:
     import astropy.erfa as erfa
@@ -11,7 +10,10 @@ import astropy.table as table
 from astropy.time import Time
 
 from astropy.utils.iers import IERS_B, IERS_B_URL
-from astropy.utils.data import download_file, clear_download_cache, is_url_in_cache
+from astropy.utils.data import (
+        download_file, clear_download_cache, is_url_in_cache
+        )
+
 
 def get_iers_b_up_to_date(mjd):
     """Update the IERS B table to include MJD if necessary
@@ -26,11 +28,12 @@ def get_iers_b_up_to_date(mjd):
         clear_download_cache(IERS_B_URL)
         iers_b = IERS_B.open(download_file(IERS_B_URL, cache=True))
     if iers_b[-1]['MJD'].to(u.d).value < mjd:
-        raise ValueError("IERS B data not yet available for MJD {}".format(mjd))
+        raise ValueError("IERS B data not yet available for MJD {}"
+                         .format(mjd))
     return iers_b
 
-SECS_PER_DAY = erfa.DAYSEC
 
+SECS_PER_DAY = erfa.DAYSEC
 # Earth rotation rate in radians per UT1 second
 #
 # This is from Capitaine, Guinot, McCarthy, 2000 and is
@@ -39,9 +42,9 @@ SECS_PER_DAY = erfa.DAYSEC
 # below is a defining constant.  See here:
 # http://iau-c31.nict.go.jp/pdf/2009_IAUGA_JD6/JD06_capitaine_wallace.pdf
 OM = 1.00273781191135448 * 2.0 * np.pi / SECS_PER_DAY
-
 # arcsec to radians
 asec2rad = 4.84813681109536e-06
+
 
 def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
     """Return a list of PosVel instances for the observatory at the TOA times.
@@ -69,7 +72,7 @@ def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
         unpack = True
     elif type(toas) == table.table.Table:
         ttoas = toas['mjd']
-    elif isinstance(toas,Time):
+    elif isinstance(toas, Time):
         if toas.isscalar:
             ttoas = Time([toas])
             unpack = True
@@ -77,13 +80,14 @@ def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
             ttoas = toas
     else:
         if np.isscalar(toas):
-            ttoas = Time([toas],format="mjd")
+            ttoas = Time([toas], format="mjd")
             unpack = True
         else:
             ttoas = toas
     N = len(ttoas)
     if len(ttoas.shape) != 1:
-        raise ValueError("At most one-dimensional array of times possible, shape was {}".format(ttoas.shape))
+        raise ValueError("At most one-dimensional array of times possible, "
+                         "shape was {}".format(ttoas.shape))
 
     # Get various times from the TOAs as arrays
     tts = np.asarray([(t.jd1, t.jd2) for t in ttoas.tt]).T
@@ -96,8 +100,8 @@ def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
     X, Y, S = erfa.xys00a(*tts)
 
     # Get dX and dY from IERS A in arcsec and convert to radians
-    #dX = np.interp(mjds, iers_tab['MJD'], iers_tab['dX_2000A_B']) * asec2rad
-    #dY = np.interp(mjds, iers_tab['MJD'], iers_tab['dY_2000A_B']) * asec2rad
+    # dX = np.interp(mjds, iers_tab['MJD'], iers_tab['dX_2000A_B']) * asec2rad
+    # dY = np.interp(mjds, iers_tab['MJD'], iers_tab['dY_2000A_B']) * asec2rad
     # Get dX and dY from IERS B in arcsec and convert to radians
     dX = np.interp(mjds, iers_b['MJD'], iers_b['dX_2000A']) * asec2rad
     dY = np.interp(mjds, iers_b['MJD'], iers_b['dY_2000A']) * asec2rad
@@ -109,8 +113,8 @@ def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
     sp = erfa.sp00(*tts)
 
     # Get X and Y from IERS A in arcsec and convert to radians
-    #xp = np.interp(mjds, iers_tab['MJD'], iers_tab['PM_X_B']) * asec2rad
-    #yp = np.interp(mjds, iers_tab['MJD'], iers_tab['PM_Y_B']) * asec2rad
+    # xp = np.interp(mjds, iers_tab['MJD'], iers_tab['PM_X_B']) * asec2rad
+    # yp = np.interp(mjds, iers_tab['MJD'], iers_tab['PM_Y_B']) * asec2rad
     # Get X and Y from IERS B in arcsec and convert to radians
     xp = np.interp(mjds, iers_b['MJD'], iers_b['PM_x']) * asec2rad
     yp = np.interp(mjds, iers_b['MJD'], iers_b['PM_y']) * asec2rad
@@ -130,7 +134,7 @@ def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
 
     # Initial positions and velocities
     iposs = np.asarray([cx - sy, sx + cy, z]).T
-    ivels = np.asarray([OM * (-sx - cy), OM * (cx - sy), \
+    ivels = np.asarray([OM * (-sx - cy), OM * (cx - sy),
                         np.zeros_like(x)]).T
     # There is probably a way to do this with np.einsum or something...
     # and here it is .
@@ -138,7 +142,8 @@ def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
     vels = np.empty((N, 3), dtype=np.float64)
     poss = np.einsum('ij,ijk->ik', iposs, rc2i)
     vels = np.einsum('ij,ijk->ik', ivels, rc2i)
-    r = utils.PosVel(poss.T * u.m, vels.T * u.m / u.s, obj=obsname, origin="earth")
+    r = utils.PosVel(poss.T * u.m, vels.T * u.m / u.s,
+                     obj=obsname, origin="earth")
     if unpack:
         return r[0]
     else:
@@ -177,7 +182,7 @@ def astropy_gcrs_posvel_from_itrf(loc, toas, obsname=None):
         unpack = True
     elif type(toas) == table.table.Table:
         ttoas = toas['mjd']
-    elif isinstance(toas,Time):
+    elif isinstance(toas, Time):
         if toas.isscalar:
             ttoas = Time([toas])
             unpack = True
@@ -185,13 +190,12 @@ def astropy_gcrs_posvel_from_itrf(loc, toas, obsname=None):
             ttoas = toas
     else:
         if np.isscalar(toas):
-            ttoas = Time([toas],format="mjd")
+            ttoas = Time([toas], format="mjd")
             unpack = True
         else:
             ttoas = toas
     t = ttoas
 
-    #t = Time(toas['tdbld'], scale='tdb', format='mjd')
     pos, vel = loc.get_gcrs_posvel(t)
     r = utils.PosVel(pos.xyz, vel.xyz, obj=obsname, origin="earth")
     if unpack:

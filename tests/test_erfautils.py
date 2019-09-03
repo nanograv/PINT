@@ -21,7 +21,7 @@ def test_simpler_erfa_import():
 def test_compare_erfautils_astropy():
     o = "Arecibo"
     loc = Observatory.get(o).earth_location_itrf()
-    mjds = np.linspace(56000,58000,256)
+    mjds = np.linspace(50000,58000,512)
     t = Time(mjds, scale="tdb", format="mjd")
     posvel = erfautils.gcrs_posvel_from_itrf(loc, t, obsname=o)
     astropy_posvel = erfautils.astropy_gcrs_posvel_from_itrf(
@@ -30,7 +30,9 @@ def test_compare_erfautils_astropy():
     dpos = np.sqrt((dopv.pos**2).sum(axis=0))
     dvel = np.sqrt((dopv.vel**2).sum(axis=0))
     assert len(dpos)==len(mjds)
-    assert dpos.max()<2*u.m, "position difference of %s" % dpos.max().to(u.m/u.s)
+    # This is just above the level of observed difference
+    assert dpos.max()<0.05*u.m, "position difference of %s" % dpos.max().to(u.m)
+    # This level is what is permitted as a velocity difference from tempo2 in test_times.py
     assert dvel.max()<0.02*u.mm/u.s, "velocity difference of %s" % dvel.max().to(u.mm/u.s)
 
 def test_iers_discrepancies():
