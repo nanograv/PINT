@@ -329,32 +329,32 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
 class TOA(object):
     """A time of arrival (TOA) class.
 
-    pint.toa.TOA provides a class for representing a single pulse arrival
+    This is a class for representing a single pulse arrival
     time measurement. It carries both the time - which needs careful handling
-    as we often need more precision than python `float`s can provide - and
+    as we often need more precision than python floats can provide - and
     a collection of additional data necessary to work with the data. These
-    are often obtained by reading `.tim` files produced by pulsar data
+    are often obtained by reading ``.tim`` files produced by pulsar data
     analysis software, but they can also be constructed as python objects.
 
     Parameters
     ----------
-    MJD : astropy Time, float, or tuple of floats
+    MJD : astropy.time.Time, float, or tuple of floats
         The time of the TOA, which can be expressed as an astropy Time,
         a floating point MJD (64 or 80 bit precision), or a tuple
         of (MJD1,MJD2) whose sum is the full precision MJD (usually the
         integer and fractional part of the MJD)
-    obs : string
+    obs : str
         The observatory code for the TOA
-    freq : float or astropy Quantity
+    freq : float or astropy.units.Quantity
         Frequency corresponding to the TOA.  Either a Quantity with frequency
         units, or a number for which MHz is assumed.
-    scale : string
+    scale : str
         Time scale for the TOA time.  Defaults to the timescale appropriate
         to the site, but can be overridden
 
     Notes
     -----
-    MJD will be stored in astropy.time.Time format, and can be
+    MJDs will be stored in astropy.time.Time format, and can be
     passed as a double (not recommended), a string, a
     tuple of component parts (usually day and fraction of day).
     error is the TOA uncertainty in microseconds

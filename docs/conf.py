@@ -47,7 +47,7 @@ extensions = [
         'sphinx.ext.mathjax',
         'sphinx.ext.viewcode',
         'sphinx.ext.intersphinx',
-        #'numpydoc',
+        'sphinx.ext.napoleon', # get docstring formatting
         ]
 #                            'astropy_helpers.sphinx.ext.numpydoc',
 #                            'astropy_helpers.sphinx.ext.automodapi',
@@ -131,11 +131,6 @@ intersphinx_mapping = {
     'matplotlib': ('https://matplotlib.org/', None),
 }
 
-numpydoc_xref_aliases = {
-    'Quantity': 'astropy.units.Quantity',
-}
-
-numpydoc_class_members_toctree = False
 # -- Options for HTML output -------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
