@@ -1,3 +1,4 @@
+"""This module contains tools for working with pulse time-of-arrival (TOA) data. """
 from __future__ import absolute_import, print_function, division, unicode_literals
 import re, sys, os, numpy, gzip, copy
 from . import utils
@@ -328,25 +329,63 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
 class TOA(object):
     """A time of arrival (TOA) class.
 
-        MJD will be stored in astropy.time.Time format, and can be
-            passed as a double (not recommended), a string, a
-            tuple of component parts (usually day and fraction of day).
-        error is the TOA uncertainty in microseconds
-        obs is the observatory name as defined by the Observatory class
-        freq is the observatory-centric frequency in MHz
-        other keyword/value pairs can be specified as needed
+    pint.toa.TOA provides a class for representing a single pulse arrival
+    time measurement. It carries both the time - which needs careful handling
+    as we often need more precision than python `float`s can provide - and
+    a collection of additional data necessary to work with the data. These
+    are often obtained by reading `.tim` files produced by pulsar data
+    analysis software, but they can also be constructed as python objects.
 
-        A discussion of times and clock corrections in PINT is available here:
-        https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
+    Parameters
+    ----------
+    MJD : astropy Time, float, or tuple of floats
+        The time of the TOA, which can be expressed as an astropy Time,
+        a floating point MJD (64 or 80 bit precision), or a tuple
+        of (MJD1,MJD2) whose sum is the full precision MJD (usually the
+        integer and fractional part of the MJD)
+    obs : string
+        The observatory code for the TOA
+    freq : float or astropy Quantity
+        Frequency corresponding to the TOA.  Either a Quantity with frequency
+        units, or a number for which MHz is assumed.
+    scale : string
+        Time scale for the TOA time.  Defaults to the timescale appropriate
+        to the site, but can be overridden
 
-    Example:
+    Notes
+    -----
+    MJD will be stored in astropy.time.Time format, and can be
+    passed as a double (not recommended), a string, a
+    tuple of component parts (usually day and fraction of day).
+    error is the TOA uncertainty in microseconds
+    obs is the observatory name as defined by the Observatory class
+    freq is the observatory-centric frequency in MHz
+    other keyword/value pairs can be specified as needed
+
+    It is VERY important that all astropy.Time() objects are created
+    with precision=9. This is ensured in the code and is checked for any
+    Time object passed to the TOA constructor.
+
+    A discussion of times and clock corrections in PINT is available here:
+    https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
+
+    Observatory codes are (semi-)standardized short strings describing
+    particular observatories. PINT needs to know considerable additional
+    information about the observatory, including its precise position and
+    clock correction details.
+
+    Examples
+    --------
+
+    Constructing a TOA object::
+
         >>> a = TOA((54567, 0.876876876876876), 4.5, freq=1400.0,
         ...         obs="GBT", backend="GUPPI")
         >>> print a
         54567.876876876876876:  4.500 us error from 'GBT' at 1400.0000 MHz {'backend': 'GUPPI'}
 
+    What happens if IERS data is not available for the date::
 
-    What happens if IERS data is not available for the date:
         >>> a = TOA((154567, 0.876876876876876), 4.5, freq=1400.0,
         ...         obs="GBT", backend="GUPPI")
 
@@ -354,38 +393,11 @@ class TOA(object):
           omitted
         IndexError: (some) times are outside of range covered by IERS table.
 
-
     """
     def __init__(self, MJD, # required
                  error=0.0, obs='Barycenter', freq=float("inf"),
                  scale=None,
                  **kwargs):  # keyword args that are completely optional
-        """
-        Construct a TOA object
-
-        Parameters
-        ----------
-        MJD : astropy Time, float, or tuple of floats
-            The time of the TOA, which can be expressed as an astropy Time,
-            a floating point MJD (64 or 128 bit precision), or a tuple
-            of (MJD1,MJD2) whose sum is the full precision MJD (usually the
-            integer and fractional part of the MJD)
-        obs : string
-            The observatory code for the TOA
-        freq : float or astropy Quantity
-            Frequency corresponding to the TOA.  Either a Quantity with frequency
-            units, or a number for which MHz is assumed.
-        scale : string
-            Time scale for the TOA time.  Defaults to the timescale appropriate
-            to the site, but can be overridden
-
-        Notes
-        -----
-        It is VERY important that all astropy.Time() objects are created
-        with precision=9. This is ensured in the code and is checked for any
-        Time object passed to the TOA constructor.
-
-        """
         site = get_observatory(obs)
         # If MJD is already a Time, just use it. Note that this will ignore
         # the 'scale' argument to the TOA() constructor!
@@ -593,15 +605,16 @@ class TOAs(object):
     def get_flag_value(self, flag, fill_value=None):
         """Get the request TOA flag values.
 
-           Parameter
-           ---------
-           flag_name: str
+           Parameters
+           ----------
+           flag_name : str
                The request flag name.
 
-           Return
-           ------
-           A list of flag values from each TOA. If the TOA does not have
-           the flag, it will fill up with the fill_value. 
+           Returns
+           -------
+           values : list
+               A list of flag values from each TOA. If the TOA does not have
+               the flag, it will fill up with the fill_value.
         """
         result = []
         for flags in self.table['flags']:

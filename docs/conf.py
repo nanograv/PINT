@@ -41,8 +41,14 @@ import pint
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.coverage',
-                            'sphinx.ext.mathjax', 'sphinx.ext.viewcode']
+extensions = [
+        'sphinx.ext.autodoc',
+        'sphinx.ext.coverage',
+        'sphinx.ext.mathjax',
+        'sphinx.ext.viewcode',
+        'sphinx.ext.intersphinx',
+        #'numpydoc',
+        ]
 #                            'astropy_helpers.sphinx.ext.numpydoc',
 #                            'astropy_helpers.sphinx.ext.automodapi',
 #                            'astropy_helpers.sphinx.ext.automodsumm']
@@ -67,7 +73,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'pint'
-copyright = u"2017, PINT Developers"
+copyright = u"2017-2019 PINT Developers"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -117,7 +123,19 @@ pygments_style = 'sphinx'
 # documents.
 #keep_warnings = False
 
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3/', None),
+    'numpy': ('https://docs.scipy.org/doc/numpy', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/reference', None),
+    'astropy': ('http://docs.astropy.org/en/stable', None),
+    'matplotlib': ('https://matplotlib.org/', None),
+}
 
+numpydoc_xref_aliases = {
+    'Quantity': 'astropy.units.Quantity',
+}
+
+numpydoc_class_members_toctree = False
 # -- Options for HTML output -------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
