@@ -1,10 +1,11 @@
 from pint import toa
 import os
+import unittest
 
 from pinttestdata import testdir, datadir
 os.chdir(datadir)
 
-class TestTOAReader:
+class TestTOAReader(unittest.TestCase):
     def setUp(self):
         self.x = toa.TOAs("test1.tim")
         self.x.apply_clock_corrections()

@@ -27,6 +27,7 @@ develop-eggs
 lib
 lib64
 __pycache__
+.eggs
 
 # Installer logs
 pip-log.txt
@@ -34,11 +35,13 @@ pip-log.txt
 # Unit test / coverage reports
 .coverage
 .tox
+.pytest_cache
 nosetests.xml
 coverage
 doc/_build
 doc/api
 tests/datafile/test_fitter_plot.pdf
+htmlcov
 
 # Translations
 *.mo
@@ -71,3 +74,12 @@ de-403-masses.tpc
 
 .idea
 .cache
+
+# Test output/intermediate files
+tests/datafile/fake_testzima.tim
+tests/datafile/fermitest.fits
+tests/datafile/fermitest.png
+tests/datafile/photontest.fits
+tests/datafile/photontest.png
+tests/datafile/test_parfile_write.par
+

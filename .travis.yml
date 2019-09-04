@@ -42,7 +42,7 @@ install:
 #    - make test
 
 script:
-    - (cd tests ; nosetests -v --with-coverage --cover-package=pint --ignore-files=.\*DISABLED.py)
+    - ( cd tests ; pytest --cov=pint )
 
 after_success:
     ( cd tests ; coveralls )
