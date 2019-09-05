@@ -749,11 +749,6 @@ class TOAs(object):
         format : str
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1')
 
-        Bugs
-        ----
-        Currently does not undo any clock corrections that were applied,
-        so TOA file won't match the input TOA file if any were applied.
-
         """
         try:
             outf = open(filename,'w')
@@ -763,9 +758,6 @@ class TOAs(object):
             handle = True
         if format.upper() in ('TEMPO2','1'):
             outf.write('FORMAT 1\n')
-        # NOTE(@paulray): This really should REMOVE any(?) clock corrections
-        # that have been applied!
-        # NOTE clock corrections has been removed.
 
         # Add pulse numbers to flags temporarily if there is a pulse number column
         pnChange = False
@@ -785,7 +777,6 @@ class TOAs(object):
             out_str = format_toa_line(toatime_out, toaerr, freq, obs_obj, name=name,
                       flags=flags, format=format)
             outf.write(out_str)
-
 
         # If pulse numbers were added to flags, remove them again
         if pnChange:
@@ -818,8 +809,12 @@ class TOAs(object):
         # First make sure that we haven't already applied clock corrections
         flags = self.table['flags']
         if any(['clkcorr' in f for f in flags]):
-            log.warn("Some TOAs have 'clkcorr' flag.  Not applying new clock corrections.")
-            return
+            if all(['clkcorr' in f for f in flags]):
+                log.warn("Clock corrections already applied. Not re-applying.")
+                return
+            else:
+                # FIXME: could apply clock corrections to just the ones that don't have any
+                raise ValueError("Some TOAs have 'clkcorr' flag and some do not!")
         # An array of all the time corrections, one for each TOA
         log.info("Applying clock corrections (include_GPS = {0}, include_BIPM = {1}.".format(include_gps,include_bipm))
         corr = numpy.zeros(self.ntoas) * u.s
@@ -1005,9 +1000,14 @@ class TOAs(object):
         self.table.add_columns(cols_to_add)
 
     def read_pickle_file(self, filename):
-        """Read the TOAs from the pickle file specified in filename.  Note
-        the filename should include any pickle-specific extensions (ie
-        ".pickle.gz" or similar), these will not be added automatically."""
+        """Read the TOAs from the pickle file specified in filename.
+
+        Note the filename should include any pickle-specific extensions (ie
+        ".pickle.gz" or similar), these will not be added automatically.
+
+        If the file ends with ".gz" it will be uncompressed before extracting
+        the pickle.
+        """
 
         log.info("Reading pickled TOAs from '%s'..." % filename)
         if os.path.splitext(filename)[1] == '.gz':
@@ -1023,9 +1023,22 @@ class TOAs(object):
         self.commands = tmp.commands
 
     def read_toa_file(self, filename, process_includes=True, top=True):
-        """Read the given filename and return a list of TOA objects.
+        """Read TOAs from the given filename.
 
         Will process INCLUDEd files unless process_includes is False.
+
+        Parameters
+        ----------
+        filename : str
+            The name of the file to open.
+        process_includes : bool, optional
+            If true, obey INCLUDE directives in the file and read other
+            files.
+        top : bool, optional
+            If true, wipe this instance's contents, otherwise append
+            new TOAs. Used recursively; note that surprises may ensue
+            if this function is called on an already existing and
+            processed TOAs object.
         """
         ntoas = 0
         if top:
