@@ -343,6 +343,9 @@ class TOA(object):
         a floating point MJD (64 or 80 bit precision), or a tuple
         of (MJD1,MJD2) whose sum is the full precision MJD (usually the
         integer and fractional part of the MJD)
+    error : astropy.units.Quantity or float
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
     obs : str
         The observatory code for the TOA
     freq : float or astropy.units.Quantity
@@ -351,6 +354,9 @@ class TOA(object):
     scale : str
         Time scale for the TOA time.  Defaults to the timescale appropriate
         to the site, but can be overridden
+    flags : dict
+        Flags associated with the TOA.  If flags is not provided, any
+        additional keyword arguments are interpreted as flags.
 
     Notes
     -----
@@ -373,6 +379,7 @@ class TOA(object):
     particular observatories. PINT needs to know considerable additional
     information about the observatory, including its precise position and
     clock correction details.
+
 
     Examples
     --------
@@ -397,17 +404,20 @@ class TOA(object):
     def __init__(self, MJD, # required
                  error=0.0, obs='Barycenter', freq=float("inf"),
                  scale=None,
-                 **kwargs):  # keyword args that are completely optional
+                 flags=None,
+                 **kwargs):
         site = get_observatory(obs)
         # If MJD is already a Time, just use it. Note that this will ignore
         # the 'scale' argument to the TOA() constructor!
         if isinstance(MJD,time.Time):
+            if scale is not None:
+                raise ValueError("scale argument is ignored when Time is provided")
             t = MJD
         else:
-            if numpy.isscalar(MJD):
+            try:
+                arg1, arg2 = MJD
+            except TypeError:
                 arg1, arg2 = MJD, None
-            else:
-                arg1, arg2 = MJD[0], MJD[1]
             if scale is None:
                 scale = site.timescale
             # First build a time without a location
@@ -433,7 +443,10 @@ class TOA(object):
         self.mjd = time.Time(t, location=loc, precision=9)
 
         if hasattr(error,'unit'):
-            self.error = error
+            try:
+                self.error = error.to(u.microsecond)
+            except u.UnitConversionError:
+                raise u.UnitConversionError("Uncertainty for TOA with incompatible unit {0}".format(error))
         else:
             self.error = error * u.microsecond
         self.obs = site.name
@@ -441,19 +454,24 @@ class TOA(object):
             try:
                 self.freq = freq.to(u.MHz)
             except u.UnitConversionError:
-                raise ValueError("Frequency for TOA with incompatible unit {0}".format(freq))
+                raise u.UnitConversionError("Frequency for TOA with incompatible unit {0}".format(freq))
         else:
             self.freq = freq * u.MHz
         if self.freq == 0.0*u.MHz:
             self.freq = numpy.inf*u.MHz
-        self.flags = kwargs
+        if flags is None:
+            self.flags = kwargs
+        else:
+            self.flags = flags
+            if kwargs:
+                raise TypeError("TOA constructor does not accept keyword arguments {}".format(kwargs))
 
 
     def __str__(self):
         s = utils.time_to_mjd_string(self.mjd) + \
             ": %6.3f %s error from '%s' at %.4f %s " % \
             (self.error.value, self.error.unit, self.obs, self.freq.value,self.freq.unit)
-        if len(self.flags):
+        if self.flags:
             s += str(self.flags)
         return s
 

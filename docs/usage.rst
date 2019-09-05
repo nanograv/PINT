@@ -30,6 +30,7 @@ Use -h to get help. This is not fully developed yet, so extensions to this
 .. _PINT_walkthough.ipynb: https://github.com/nanograv/PINT/blob/master/examples/PINT_walkthrough.ipynb
 .. _examples/fit_NGC6440E.py: https://github.com/nanograv/PINT/blob/master/examples/fit_NGC6440E.py
 
+
 Time
 ----
 
@@ -183,8 +184,12 @@ deviations of this observatory clock and record them in a file. PINT
 also needs up-to-date versions of these observatory clock correction files
 to produce accurate results. 
 
+Even more detail about how PINT handles time scales is available on the 
+github wiki_.
+
 .. _International_Earth_Rotation_Service: https://www.iers.org/IERS/EN/Home/home_node.html
 .. _TAI: https://www.bipm.org/en/bipm-services/timescales/tai.html
+.. _wiki: https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
 
 External Data
 -------------
