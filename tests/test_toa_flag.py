@@ -3,7 +3,6 @@
 
 import pint.toa as toa
 import astropy.units as u
-from pint.residuals import resids
 import numpy as np
 import os, unittest
 from pinttestdata import testdir, datadir

@@ -36,7 +36,7 @@ def main(argv=None):
 
     log.info("Reading TOAs")
     t = pint.toa.get_TOAs(args.timfile)
-    prefit_resids = pint.residuals.resids(t, m).time_resids
+    prefit_resids = pint.residuals.Residuals(t, m).time_resids
 
     log.info("Fitting...")
     f = pint.fitter.WlsFitter(t, m)

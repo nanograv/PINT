@@ -5,8 +5,8 @@ import numpy as np
 from .phase import Phase
 from pint import dimensionless_cycles
 
-class resids(object):
-    """resids(toa=None, model=None)"""
+class Residuals(object):
+    """Residual(toa=None, model=None)"""
 
     def __init__(self, toas=None, model=None, weighted_mean=True):
         self.toas = toas
@@ -37,7 +37,7 @@ class resids(object):
             if pulse_num is None:
                 log.error('No pulse numbers with TOAs using TRACK -2')
                 raise Exception('No pulse numbers with TOAs using TRACK -2')
-            
+
             pn_act = rs.int
             addPhase = pn_act - (pulse_num + addpn)
 

@@ -6,7 +6,6 @@ import numpy as np
 import os
 import pint.models
 import pint.toa
-from pint.residuals import resids
 from pinttestdata import testdir, datadir
 
 from astropy import units as u
@@ -24,5 +23,3 @@ class TestAbsPhase(unittest.TestCase):
         # Check that integer and fractional phase values are very close to 0.0
         self.assertAlmostEqual(ph[0].value,0.0)
         self.assertAlmostEqual(ph[1].value,0.0)
-
-

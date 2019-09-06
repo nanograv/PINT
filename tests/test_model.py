@@ -3,7 +3,7 @@ import time, sys, os, numpy
 import pint.models as tm
 from pint.phase import Phase
 from pint import toa
-from pint.residuals import resids
+from pint.residuals import Residuals
 import astropy.units as u
 
 #import matplotlib
@@ -44,7 +44,7 @@ errs = t.get_errors()
 
 log.info("Computing residuals...")
 t0 = time.time()
-resids_us = resids(t, m, False).time_resids.to(u.us)
+resids_us = Residuals(t, m, False).time_resids.to(u.us)
 time_phase = time.time() - t0
 log.info("Computed phases and residuals in %.3f sec" % time_phase)
 

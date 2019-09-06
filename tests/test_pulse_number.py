@@ -6,7 +6,7 @@ import numpy as np
 import os
 import pint.models
 import pint.toa
-from pint.residuals import resids
+from pint.residuals import Residuals
 from pinttestdata import testdir, datadir
 
 from astropy import units as u
@@ -22,18 +22,18 @@ class TestPulseNumber(unittest.TestCase):
         self.assertTrue('pn' in toas.table.colnames)
 
         #Tracking pn should result in runaway residuals
-        track_resids = resids(toas, model).time_resids
+        track_resids = Residuals(toas, model).time_resids
         self.assertFalse(np.max(track_resids) < 0.2 * u.second)
 
         #Not tracking pn should keep residuals bounded
         getattr(model, 'TRACK').value = '0'
-        notrack_resids = resids(toas, model).time_resids
+        notrack_resids = Residuals(toas, model).time_resids
         self.assertTrue(np.max(notrack_resids) < 0.2 * u.second)
-        
+
         #Make sure Exceptions are thrown when trying to track nonexistent pn
         del toas.table['pn']
         getattr(model, 'TRACK').value = '-2'
-        self.assertRaises(Exception, resids, toas, model)
+        self.assertRaises(Exception, Residuals, toas, model)
 
         #Make sure pn can be added back by using the model
         self.assertTrue(toas.get_pulse_numbers() is None)

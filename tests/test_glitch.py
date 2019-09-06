@@ -27,7 +27,7 @@ class TestGlitch(unittest.TestCase):
         self.f = pint.fitter.PowellFitter(self.t, self.m)
     def test_glitch(self):
         print("Test prefix parameter via a glitch model")
-        rs = pint.residuals.resids(self.t, self.m).phase_resids
+        rs = pint.residuals.Residuals(self.t, self.m).phase_resids
         # Now do the fit
         print("Fitting...")
         self.f.fit_toas()
