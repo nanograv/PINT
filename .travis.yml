@@ -14,7 +14,7 @@ matrix:
         - python: "3.7"
           name: "Tests that don't need the ephemeris server"
           script:
-            - (cd tests ; nosetests -v -a '!ephem_server' --with-coverage --cover-package=pint --ignore-files=.\*DISABLED.py)
+            - (cd tests && pytest --cov=pint --remote-data=none)
         - python: "2.7"
         - python: "3.5"
         - python: "3.6"
@@ -42,8 +42,8 @@ install:
 #    - make test
 
 script:
-    - ( cd tests ; pytest --cov=pint )
+    - ( cd tests && pytest --cov=pint )
 
 after_success:
-    ( cd tests ; coveralls )
+    ( cd tests && coveralls )
 
