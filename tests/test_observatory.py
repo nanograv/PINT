@@ -8,8 +8,11 @@ from pint import pulsar_mjd
 import numpy as np
 from astropy.time import Time
 import os
+import pytest
+
 from pint.config import datapath
 from pinttestdata import testdir, datadir
+
 
 
 class TestObservatory(unittest.TestCase):
