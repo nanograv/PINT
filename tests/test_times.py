@@ -9,7 +9,7 @@ import os
 
 from pinttestdata import testdir, datadir
 
-def test_times():
+def test_times_against_tempo2():
     log.setLevel('ERROR')
     # for nice output info, set the following instead
     #log.setLevel('INFO')
@@ -64,7 +64,7 @@ def test_times():
         pint_opv = erfautils.gcrs_posvel_from_itrf(
                 Observatory.get(TOA['obs']).earth_location_itrf(),
                 TOA, obsname=TOA['obs'])
-        pint_opv = utils.PosVel(pint_opv.pos.T[0], pint_opv.vel.T[0])
+        pint_opv = utils.PosVel(pint_opv.pos, pint_opv.vel)
         #print " obs  T2:", t2_opv.pos.to(u.m).value, t2_opv.vel.to(u.m/u.s)
         #print " obs PINT:", pint_opv.pos.to(u.m), pint_opv.vel.to(u.m/u.s)
         dopv = pint_opv - t2_opv
