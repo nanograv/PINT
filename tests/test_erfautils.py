@@ -18,7 +18,9 @@ from pinttestdata import testdir, datadir
 def test_simpler_erfa_import():
     import astropy._erfa as erfa
 
-@pytest.mark.xfail(reason="astropy doesn't include up-to-date IERS B")
+@pytest.mark.xfail(reason="astropy doesn't include up-to-date IERS B - "
+                          "if this starts passing we can ditch the "
+                          "implementation in erfautils")
 def test_compare_erfautils_astropy():
     o = "Arecibo"
     loc = Observatory.get(o).earth_location_itrf()
@@ -54,11 +56,14 @@ def test_scalar():
     assert posvel.pos.shape == (3,)
 
 def test_matrix():
+    """Confirm higher-dimensional arrays raise an exception"""
     with pytest.raises(ValueError):
         o = "Arecibo"
         loc = Observatory.get(o).earth_location_itrf()
         t = Time(56000*np.ones((4,5)), scale="tdb", format="mjd")
         posvel = erfautils.gcrs_posvel_from_itrf(loc, t, obsname=o)
+
+# The below explore why astropy might disagree with PINT internal code
 
 @pytest.mark.xfail(reason="astropy doesn't include up-to-date IERS B")
 def test_IERS_B_all_in_IERS_Auto():
