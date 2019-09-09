@@ -53,17 +53,9 @@ test: ## run tests quickly with the default Python
 
 		pytest tests
 
-test-ephemfree: ## run tests that don't need the ephem server
+test-noremote: ## run tests that don't need the ephem server
 
-		python setup.py nosetests -a '!ephem_server'
-
-test-nonetwork: ## run tests with download_file returning errors immediately
-
-		python nosetests_no_network.py
-
-test-nonanograv: ## run tests with NANOGrav and the JPL server inaccessible
-
-		python nosetests_no_network.py
+		pytest tests --remote-data=none
 
 coverage: ## check code coverage quickly with the default Python
 

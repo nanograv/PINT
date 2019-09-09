@@ -8,7 +8,7 @@ import numpy as np
 import astropy.time as time
 import os
 from pint.config import datapath
-from nose.plugins.attrib import attr
+import pytest
 
 
 from pinttestdata import testdir, datadir
@@ -27,7 +27,7 @@ class TestSolarSystemDynamic(unittest.TestCase):
         self.ephem = ['de405', 'de421', 'de434', 'de430', 'de436']
         self.planets = ['jupiter', 'saturn', 'venus', 'uranus']
 
-    @attr("ephem_server")
+    @pytest.mark.remote_data
     # Here we only test if any errors happens.
     def test_earth(self):
         for ep in self.ephem:
@@ -36,7 +36,7 @@ class TestSolarSystemDynamic(unittest.TestCase):
             assert a.pos.shape == (3, 10000)
             assert a.vel.shape == (3, 10000)
 
-    @attr("ephem_server")
+    @pytest.mark.remote_data
     def test_sun(self):
         for ep in self.ephem:
             a = objPosVel_wrt_SSB('sun', self.tdb_time ,ephem = ep)
@@ -44,7 +44,7 @@ class TestSolarSystemDynamic(unittest.TestCase):
             assert a.pos.shape == (3, 10000)
             assert a.vel.shape == (3, 10000)
 
-    @attr("ephem_server")
+    @pytest.mark.remote_data
     def test_planets(self):
         for p in self.planets:
             for ep in self.ephem:
@@ -53,7 +53,7 @@ class TestSolarSystemDynamic(unittest.TestCase):
                 assert a.pos.shape == (3, 10000)
                 assert a.vel.shape == (3, 10000)
 
-    @attr("ephem_server")
+    @pytest.mark.remote_data
     def test_earth2obj(self):
         objs = self.planets + ['sun']
         for obj in objs:

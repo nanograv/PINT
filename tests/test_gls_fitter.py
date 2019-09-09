@@ -7,13 +7,13 @@ from pint.fitter import WlsFitter, GlsFitter
 import numpy as np
 import astropy.units as u
 import json
-from nose.plugins.attrib import attr
+import pytest
 
 
 from pinttestdata import testdir, datadir
 
 os.chdir(datadir)
-@attr('ephem_server')
+@pytest.mark.remote_data
 class TestGls(unittest.TestCase):
     """Compare delays from the dd model with tempo and PINT"""
     @classmethod
