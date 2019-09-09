@@ -2,8 +2,10 @@ from __future__ import absolute_import, print_function, division
 import astropy.units as u
 from astropy import log
 import numpy as np
+import scipy.linalg as sl
 from .phase import Phase
 from pint import dimensionless_cycles
+# also we import from fitter, down below to avoid circular relative imports
 
 class Residuals(object):
     """Residual(toa=None, model=None)"""
@@ -14,12 +16,26 @@ class Residuals(object):
         if toas is not None and model is not None:
             self.phase_resids = self.calc_phase_resids(weighted_mean=weighted_mean)
             self.time_resids = self.calc_time_resids(weighted_mean=weighted_mean)
-            self.chi2 = self.calc_chi2()
             self.dof = self.get_dof()
-            self.chi2_reduced = self.chi2 / self.dof
         else:
             self.phase_resids = None
             self.time_resids = None
+        # delay chi-squared computation until needed to avoid infinite recursion
+        # also it's expensive
+        # only relevant if there are correlated errors
+        self._chi2 = None
+
+    @property
+    def chi2_reduced(self):
+        return self.chi2 / self.dof
+
+    @property
+    def chi2(self):
+        """Compute chi-squared as needed and cache the result"""
+        if self._chi2 is None:
+            self._chi2 = self.calc_chi2()
+        assert self._chi2 is not None
+        return self._chi2
 
     def calc_phase_resids(self, weighted_mean=True):
         """Return timing model residuals in pulse phase."""
@@ -90,22 +106,52 @@ class Residuals(object):
             return F0 * u.Hz
         return self.model.d_phase_d_toa(self.toas)
 
-    def calc_chi2(self):
-        """Return the weighted chi-squared for the model and toas."""
-        # Residual units are in seconds. Error units are in microseconds.
-        if (self.toas.get_errors()==0.0).any():
-            return np.inf
+    def calc_chi2(self, full_cov=False):
+        """Return the weighted chi-squared for the model and toas.
+
+        If the errors on the TOAs are independent this is a straightforward
+        calculation, but if the noise model introduces correlated errors then
+        obtaining a meaningful chi-squared value requires a Cholesky
+        decomposition. This is carried out, here, by constructing a GlsFitter
+        and asking it to do the chi-squared computation but not a fit.
+
+        The return value here is available as self.chi2, which will not
+        redo the computation unless necessary.
+
+        The chi-squared value calculated here is suitable for use in downhill
+        minimization algorithms and Bayesian approaches.
+
+        Handling of problematic results - degenerate conditions explored by
+        a minimizer for example - may need to be checked to confirm that they
+        correctly return infinity.
+        """
+        if self.model.has_correlated_errors:
+            # Use GLS but don't actually fit
+            from .fitter import GlsFitter
+            f = GlsFitter(self.toas, self.model,
+                          residuals=self)
+            try:
+                return f.fit_toas(maxiter=0, full_cov=full_cov)
+            except sl.LinAlgError as e:
+                log.warning("Degenerate conditions encountered when "
+                            "computing chi-squared: %s" % (e,))
+                return np.inf
         else:
-            # The self.time_resids is in the unit of "s", the error "us".
-            # This is more correct way, but it is the slowest.
-            #return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
+            # Residual units are in seconds. Error units are in microseconds.
+            if (self.toas.get_errors()==0.0).any():
+                return np.inf
+            else:
+                # The self.time_resids is in the unit of "s", the error "us".
+                # This is more correct way, but it is the slowest.
+                #return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
 
-            # This method is faster then the method above but not the most correct way
-            #return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
+                # This method is faster then the method above but not the most correct way
+                #return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
 
-            # This the fastest way, but highly depend on the assumption of time_resids and
-            # error units.
-            return ((self.time_resids / self.toas.get_errors().to(u.s))**2.0).sum()
+                # This the fastest way, but highly depend on the assumption of time_resids and
+                # error units.
+                return ((self.time_resids / self.toas.get_errors().to(u.s))**2.0).sum()
+
     def get_dof(self):
         """Return number of degrees of freedom for the model."""
         dof = self.toas.ntoas
@@ -115,7 +161,7 @@ class Residuals(object):
 
     def get_reduced_chi2(self):
         """Return the weighted reduced chi-squared for the model and toas."""
-        return self.calc_chi2() / self.get_dof()
+        return self.chi2_reduced
 
     def update(self, weighted_mean=True):
         """Recalculate everything in residuals class
@@ -130,6 +176,5 @@ class Residuals(object):
 
         self.phase_resids = self.calc_phase_resids(weighted_mean=weighted_mean)
         self.time_resids = self.calc_time_resids(weighted_mean=weighted_mean)
-        self.chi2 = self.calc_chi2()
+        self._chi2 = None # trigger chi2 recalculation when needed
         self.dof = self.get_dof()
-        self.chi2_reduced = self.chi2 / self.dof

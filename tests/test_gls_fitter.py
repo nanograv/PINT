@@ -53,3 +53,6 @@ class TestGls(unittest.TestCase):
         self.fit(full_cov=True)
         chi22 = self.f.resids.chi2
         assert np.allclose(chi21, chi22)
+
+    def test_has_correlated_errors(self):
+        assert self.f.resids.model.has_correlated_errors

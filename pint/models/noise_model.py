@@ -139,6 +139,7 @@ class EcorrNoise(NoiseComponent):
     register = True
     def __init__(self,):
         super(EcorrNoise, self).__init__()
+        self.introduces_correlated_errors = True
         self.category = 'ecorr_noise'
         self.add_param(p.maskParameter(name='ECORR', units="us",\
                                        aliases=['TNECORR'],
@@ -214,6 +215,7 @@ class PLRedNoise(NoiseComponent):
     register = True
     def __init__(self,):
         super(PLRedNoise, self).__init__()
+        self.introduces_correlated_errors = True
         self.category = 'pl_red_noise'
         self.add_param(p.floatParameter(name='RNAMP', units="",\
                                        aliases=[],
