@@ -94,6 +94,8 @@ setup(
     license = 'TBD',
 
     install_requires = ['astropy>=2.0'],
+    setup_requires = ['pytest-runner>=2.0,<3dev'],
+    tests_require = ['pytest'],
 
     entry_points={
         'console_scripts': console_scripts,

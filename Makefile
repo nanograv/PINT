@@ -51,23 +51,11 @@ lint: ## check style with flake8
 
 test: ## run tests quickly with the default Python
 
-		python setup.py nosetests
-
-test-ephemfree: ## run tests that don't need the ephem server
-
-		python setup.py nosetests -a '!ephem_server'
-
-test-nonetwork: ## run tests with download_file returning errors immediately
-
-		python nosetests_no_network.py
-
-test-nonanograv: ## run tests with NANOGrav and the JPL server inaccessible
-
-		python nosetests_no_network.py
+		pytest tests
 
 coverage: ## check code coverage quickly with the default Python
 
-		coverage run --source pint setup.py nosetests
+		pytest tests --cov=pint
 
 		coverage report -m
 		coverage html

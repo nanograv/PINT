@@ -8,18 +8,16 @@ import os, unittest
 import test_derivative_utils as tdu
 import logging
 from pinttestdata import testdir, datadir
-from nose.plugins.attrib import attr
-
-os.chdir(datadir)
 
 
-@attr('ephem_server')
+
 class TestFBX(unittest.TestCase):
     """Compare delays and derivatives from the FBX parameterization with tempo
     and PINT
     """
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.parfileJ0023 = 'J0023+0923_NANOGrav_11yv0.gls.par'
         self.timJ0023 = 'J0023+0923_NANOGrav_11yv0.tim'
         self.toasJ0023 = toa.get_TOAs(self.timJ0023, ephem="DE436",

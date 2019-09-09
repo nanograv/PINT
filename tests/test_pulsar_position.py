@@ -10,11 +10,11 @@ import logging
 
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
 
 class TestPulsarPosition(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         # This uses ELONG and ELAT
         self.m1 = mb.get_model('B1855+09_NANOGrav_9yv1.gls.par')
         # This uses RA and DEC

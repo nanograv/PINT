@@ -13,6 +13,8 @@ import sys
 import os
 import unittest
 import numpy as np
+import pytest
+
 from pinttestdata import testdir, datadir
 
 parfile = os.path.join(datadir, 'prefixtest.par')
@@ -34,7 +36,8 @@ class TestGlitch(unittest.TestCase):
         emsg = "RMS of " + self.m.PSR.value + " is too big."
         assert self.f.resids.time_resids.std().to(u.us).value < 950.0, emsg
 
-    def test_glith_der(self):
+    @pytest.mark.filterwarnings("ignore:invalid value")
+    def test_glitch_der(self):
         delay = self.m.delay(self.t)
         for pf in self.m.glitch_prop:
             for idx in set(self.m.glitch_indices):

@@ -7,11 +7,12 @@ import numpy as np
 import os, unittest
 import copy
 from pinttestdata import testdir, datadir
-os.chdir(datadir)
+
 
 class TestFD(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.parf = 'test_FD.par'
         self.timf = 'test_FD.simulate.pint_corrected'
         self.FDm = mb.get_model(self.parf)

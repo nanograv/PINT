@@ -9,12 +9,12 @@ from pint import pulsar_mjd
 from pinttestdata import testdir, datadir
 
 
-os.chdir(datadir)
 
 
 class TestPsrMjd(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.leap_second_days = ["2016-12-31T12:00:00", "2015-06-30T12:00:00"]
         self.normal_days = ["2016-12-11T12:00:00", "2015-06-02T12:00:00"]
 

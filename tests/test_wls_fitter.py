@@ -13,11 +13,12 @@ import numpy
 
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
+
 class Testwls(unittest.TestCase):
     """Compare delays from the dd model with tempo and PINT"""
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.par = 'B1855+09_NANOGrav_dfg+12_TAI_FB90.par'
         self.tim = 'B1855+09_NANOGrav_dfg+12.tim'
         self.m = mb.get_model(self.par)

@@ -8,11 +8,12 @@ from scipy.stats import norm
 import os
 
 from pinttestdata import testdir, datadir
-os.chdir(datadir)
+
 
 class TestPriors(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.m = pint.models.get_model('B1855+09_NANOGrav_dfg+12_modified.par')
 
     def test_uniform(self):

@@ -5,12 +5,12 @@ import numpy as np
 import pint.utils as ut
 import os, unittest
 from pinttestdata import testdir, datadir
-os.chdir(datadir)
 
 
 class TestD_phase_d_toa(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.parfileB1855 = 'B1855+09_polycos.par'
         self.timB1855 = 'B1855_polyco.tim'
         self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405",

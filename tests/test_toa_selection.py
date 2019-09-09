@@ -11,11 +11,12 @@ from pint.toa_select import TOASelect
 import copy
 from pinttestdata import testdir, datadir
 import logging
-os.chdir(datadir)
+
 
 class TestTOAselection(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.parf= 'B1855+09_NANOGrav_9yv1.gls.par'
         self.timf = 'B1855+09_NANOGrav_9yv1.tim'
         self.toas = toa.get_TOAs(self.timf, ephem="DE421", planets=False)

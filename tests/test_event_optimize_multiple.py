@@ -9,15 +9,16 @@ except ImportError:
     from io import StringIO
 import unittest
 import numpy as np
-import pint.scripts.event_optimize_multiple as event_optimize_multiple
 from pinttestdata import testdir, datadir
 
 parfile = os.path.join(datadir, 'PSRJ0030+0451_psrcat.par')
 eventfile = os.path.join(datadir, 'evtfiles.txt')
 
+@unittest.skip
 class TestEventOptimizeMultiple(unittest.TestCase):
 
     def test_result(self):
+        import pint.scripts.event_optimize_multiple as event_optimize_multiple
         saved_stdout, event_optimize_multiple.sys.stdout = event_optimize_multiple.sys.stdout, StringIO('_')
         cmd = '{0} {1} --minWeight=0.9 --nwalkers=10 --nsteps=50 --burnin 10'.format(eventfile,parfile)
         event_optimize_multiple.main(cmd.split())

@@ -7,12 +7,12 @@ import numpy as np
 import os, unittest
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
 
 class TestDD(unittest.TestCase):
     """Compare delays from the dd model with libstempo and PINT"""
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.parfileB1855 = 'B1855+09_NANOGrav_dfg+12_modified_DD.par'
         self.timB1855 = 'B1855+09_NANOGrav_dfg+12.tim'
         self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405",
