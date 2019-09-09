@@ -1,4 +1,10 @@
-"""This module contains tools for working with pulse time-of-arrival (TOA) data. """
+"""This module contains tools for working with pulse time-of-arrival (TOA) data.
+
+In particular, single TOAs are represented by :class:`pint.toa.TOA` objects, and if you
+want to manage a collection of these we recommend you use a :class:`pint.toa.TOAs` object
+as this makes certain operations much more convenient.
+
+"""
 from __future__ import absolute_import, print_function, division, unicode_literals
 import re, sys, os, numpy, gzip, copy
 from . import utils
@@ -358,6 +364,19 @@ class TOA(object):
         Flags associated with the TOA.  If flags is not provided, any
         additional keyword arguments are interpreted as flags.
 
+    Attributes
+    ----------
+    mjd : astropy.time.Time
+        The pulse arrival time
+    error : astropy.units.Quantity
+        The uncertainty on the pulse arrival time
+    obs : str
+        The observatory code
+    freq : astropy.units.Quantity
+        The observing frequency
+    flags : dict
+        Any additional flags that were set for this TOA
+
     Notes
     -----
     MJDs will be stored in astropy.time.Time format, and can be
@@ -379,7 +398,6 @@ class TOA(object):
     particular observatories. PINT needs to know considerable additional
     information about the observatory, including its precise position and
     clock correction details.
-
 
     Examples
     --------
@@ -477,7 +495,43 @@ class TOA(object):
 
 
 class TOAs(object):
-    """A class of multiple TOAs, loaded from zero or more files."""
+    """A class of multiple TOAs, loaded from zero or more files.
+
+    The contents are stored in an `astropy.table.Table`
+
+    Parameters
+    ----------
+    toafile : str, optional
+        Filename to load TOAs from.
+    toalist : list of TOA objects, optional
+        The TOA objects this TOAs should contain.  Exactly one of
+        these two parameters must be provided.
+
+    Attributes
+    ----------
+    table : astropy.table.Table
+        The data for all the TOAs is stored in here. It has the columns
+        ``index`` (the location of the TOA in the original input),
+        ``mjd`` (an :class:`astropy.time.Time` object), ``mjd_float`` (a
+        floating-point version of the time), ``error`` (an
+        :class:`astropy.units.Quantity` describing the claimed uncertainty
+        on the pulse arrival time), ``freq`` (an :class:`astropy.units.Quantity`
+        describing the observing frequency), ``obs`` (a
+        :class:`pint.observatory.Observatory` object),
+        and ``flags`` (a dictionary of flags and their values). The table may
+        also contain a column ``pn`` (integers) that is the pulse numbers
+        of the TOAs.  The table is grouped by ``obs``, that is, it is
+        not in the same order as the original TOAs.
+    commands : list of str
+        "Commands" that were written in the file; these can affect
+        how some or all TOAs are interpreted.
+    filename : str, optional
+        The filename (if any) that the TOAs were loaded from.
+    planets : bool
+    ephem : object
+    clock_corr_info : dict
+
+    """
 
     def __init__(self, toafile=None, toalist=None):
         # First, just make an empty container
@@ -641,7 +695,12 @@ class TOAs(object):
         return result
 
     def select(self, selectarray):
-        """Apply a boolean selection or mask array to the TOA table."""
+        """Apply a boolean selection or mask array to the TOA table.
+
+        This operation modifies the TOAs object in place, shrinking its
+        table down to just those TOAs where selectarray is True. This
+        function also stores the old table in a stack.
+        """
         if hasattr(self, "table"):
             # Allow for selection undos
             if not hasattr(self, "table_selects"):
@@ -650,14 +709,15 @@ class TOAs(object):
             # Our TOA table must be grouped by observatory for phase calcs
             self.table = self.table[selectarray].group_by('obs')
         else:
-            log.warn("TOA selection not implemented for TOA lists.")
+            raise ValueError("TOA selection not implemented for TOA lists.")
 
     def unselect(self):
         """Return to previous selected version of the TOA table (stored in stack)."""
-        if hasattr(self, "table_selects") and len(self.table_selects):
+        if hasattr(self, "table_selects"):
+            # may raise an exception about an empty list
             self.table = self.table_selects.pop()
         else:
-            log.warn("No previous TOA table found.  No changes made.")
+            raise ValueError("No previous TOA table found.  No changes made.")
 
     def pickle(self, filename=None):
         """Write the TOAs to a .pickle file with optional filename."""
@@ -666,7 +726,7 @@ class TOAs(object):
         elif self.filename is not None:
             pickle.dump(self, gzip.open(self.filename+".pickle.gz", "wb"))
         else:
-            log.warn("TOA pickle method needs a filename.")
+            raise ValueError("TOA pickle method needs a filename.")
 
     def get_summary(self):
         """Return a short ASCII summary of the TOAs."""
@@ -691,9 +751,10 @@ class TOAs(object):
         print(self.get_summary())
 
     def pulse_column_from_flags(self):
-        '''
-        Create a pulse numbers column if possible from the TOAs flags
+        '''Create a pulse numbers column if possible from the TOAs flags
+
         Scans pulse numbers from the table flags and creates a new table column.
+        Removes the pulse numbers from the flags.
         '''
         #Add pn as a table column
         try:
@@ -704,11 +765,16 @@ class TOAs(object):
             #Remove pn from dictionary to prevent redundancies
             for flags in self.table['flags']:
                 del flags['pn']
-        except:
-            # FIXME: what happens when some but not all havve pulse numbers?
-            log.debug('No pn flags in model')
+        except IndexError:
+            raise ValueError('Not all TOAs have pn flags')
 
     def compute_pulse_numbers(self, model):
+        """Set pulse numbers based on model
+
+        Replace any existing pulse numbers by computing phases according to
+        model and then setting the pulse number of each to their integer part,
+        presumably the nearest integer.
+        """
         phases = model.phase(self)
         self.table['pn'] = phases.int
 
@@ -716,7 +782,10 @@ class TOAs(object):
         """Apply a time delta to TOAs
 
         Adjusts the time (MJD) of the TOAs by applying delta, which should
-        be a numpy.time.TimeDelta instance with the same shape as self.table['mjd']
+        be a numpy.time.TimeDelta instance with the same shape as self.table['mjd'].
+        This function does not change the pulse numbers column, if present, but
+        does recompute ``mjd_float``, the TDB times, and the observatory positions
+        and velocities.
 
         Parameters
         ----------
@@ -725,7 +794,7 @@ class TOAs(object):
 
         """
         col = self.table['mjd']
-        if type(delta) != time.TimeDelta:
+        if not isinstance(delta, time.TimeDelta):
             raise ValueError('Type of argument must be TimeDelta')
         if delta.shape != col.shape:
             raise ValueError('Shape of mjd column and delta must be compatible')
@@ -851,9 +920,11 @@ class TOAs(object):
 
     def compute_TDBs(self, method="default", ephem=None):
         """Compute and add TDB and TDB long double columns to the TOA table.
+
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
         for TDB times, using the Observatory locations and IERS A Earth
         rotation corrections for UT1.
+
         """
         log.info('Computing TDB columns.')
         if 'tdb' in self.table.colnames:
@@ -923,6 +994,7 @@ class TOAs(object):
         SSB) for each TOA.  The JPL solar system ephemeris can be set
         using the 'ephem' parameter.  The positions and velocities are
         set with PosVel class instances which have astropy units.
+
         """
 
         if ephem is None:

@@ -10,6 +10,7 @@ Contents:
    design
    installation
    usage
+   api
    contributing
    authors
    history
