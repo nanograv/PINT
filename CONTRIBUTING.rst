@@ -118,3 +118,78 @@ To track and checkout another user's branch::
     $ git fetch other-user-username
     $ git checkout --track -b branch-name other-user-username/branch-name
 
+Coding Style
+------------
+
+We would like `pint` to be easy to use and easy to contribute to. To
+this end we'd like to ask that if you're going to contribute code or
+documentation that you try to follow the below style advice. We know
+that not all of the existing code does this, and it's something we'd
+like to change.
+
+   - Functions, modules, and classes should have docstrings. These should
+     start with a short one-line description of what the function (or module
+     or class) does. Then, if you want to say more than fits in a line, a
+     blank line and a longer description. If you can, if it's something that
+     will be used widely, please follow the numpy docstring guidelines_ -
+     these result in very helpful usage descriptions in both the interpreter
+     and online docs.    
+   - Code should follow PEP8_. Most importantly, if at all possible, class
+     names should be in CamelCase, while function names should be in
+     snake_case. There is also advice there on line length and whitespace.
+     You can check your code with the tool ``flake8``, but I'm afraid
+     much of PINT's existing code emits a blizzard of warnings.
+   - Tests are great! When there is a good test suite, you can
+     make changes without fear you're going to break something. *Unit*
+     tests are a special kind of test, that isolate the functionality
+     of a small piece of code and test it rigorously.
+      - When you write a new function, write a few tests for it. You
+        will never have a clearer idea of how it's supposed to work
+        than right after you wrote it. And anyway you probably used
+        some code to see if it works, right? Make that into a test,
+        it's not hard. Feed it some bogus data, make sure it raises
+        an exception. Make sure it does the right thing on empty lists, 
+        multidimensional arrays, and NaNs as input - even if that's to 
+        raise an exception. We use pytest_. You can easily run just your
+        new tests.
+      - When you find a bug, you presumably have some code that triggers
+        it. You'll want to narrow that down as much as possible for
+        debugging purposes, so please turn that bug test case into a
+        test - before you fix the bug! That way you know the bug *stays*
+        fixed.
+      - If you're trying to track down a tricky bug and you have a test
+        case that triggers it, running 
+        ``pytest tests/test_my_buggy_code.py --pdb`` will drop you into
+        the python debugger pdb_ at the moment failure occurs so you
+        can inspect local variables and generally poke around.
+   - When you're working with a physical quantity or an array of these,
+     something that has units, please use `astropy.units.Quantity` to
+     keep track of what these units are. If you need a plain floating-point
+     number, use ``.to(u.m).value``, where ``u.m`` should be replaced by
+     the units you want the number to be in. This will raise an exception
+     (good!) if the units can't be converted (``u.kg`` for example) and
+     convert if it's in a compatible unit (``u.cm``, say). Adding units
+     when you know what they are is as simple as multiplying.
+   - When you want to let the user know some information from deep inside
+     `pint`, remember that they might be running a GUI application where
+     they can't see what comes out of `print`. Please use `astropy.log`.
+     Conveniently, this has levels `astropy.log.debug`, `astropy.log.info`,
+     `astropy.log.warning`, and `astropy.log.error`; the end user can
+     decide which levels of severity they want to see.
+   - When something goes wrong and your code can't continue and still
+     produce a sensible result, please raise an exception. Usually
+     you will want to raise a ValueError with a description of what
+     went wrong, but if you want users to be able to do something with
+     the specific thing that went wrong (for example, they might want to
+     use an exception to know that they have emptied a container), you 
+     can quickly create a new exception class (no more than 
+     ``class PulsarProblem(ValueError): pass``)
+     that the user can specifically catch and distinguish from other
+     exceptions. Similarly, if you're catching an exception some code might
+     raise, use ``except PulsarProblem:`` to catch just the kind you
+     can deal with.
+
+.. _guidelines: https://numpy.org/devdocs/docs/howto_document.html
+.. _PEP8: https://www.python.org/dev/peps/pep-0008/
+.. _pytest: https://docs.pytest.org/en/latest/
+.. _pdb: https://docs.python.org/3/library/pdb.html

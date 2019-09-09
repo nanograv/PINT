@@ -1,3 +1,10 @@
+"""This module contains tools for working with pulse time-of-arrival (TOA) data.
+
+In particular, single TOAs are represented by :class:`pint.toa.TOA` objects, and if you
+want to manage a collection of these we recommend you use a :class:`pint.toa.TOAs` object
+as this makes certain operations much more convenient.
+
+"""
 from __future__ import absolute_import, print_function, division, unicode_literals
 import re, sys, os, numpy, gzip, copy
 from . import utils
@@ -52,7 +59,10 @@ def get_TOAs(timfile, ephem=None, include_bipm=True, bipm_version='BIPM2015',
             # Pickle either did not exist or is out of date
             updatepickle = True
     t = TOAs(timfile)
-    t.pulse_column_from_flags()
+    try:
+        t.pulse_column_from_flags()
+    except ValueError:
+        log.info("No pulse numbers found in {}".format(timfile))
     if not any(['clkcorr' in f for f in t.table['flags']]):
         t.apply_clock_corrections(include_gps=include_gps,
                                   include_bipm=include_bipm,
@@ -112,7 +122,10 @@ def get_TOAs_list(toa_list,ephem=None, include_bipm=True,
     [default=True].
     """
     t = TOAs(toalist = toa_list)
-    t.pulse_column_from_flags()
+    try:
+        t.pulse_column_from_flags()
+    except ValueError:
+        log.info("Not all provided TOAs have pulse numbers")
     if not any(['clkcorr' in f for f in t.table['flags']]):
         t.apply_clock_corrections(include_gps=include_gps,
                                   include_bipm=include_bipm,
@@ -328,25 +341,82 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
 class TOA(object):
     """A time of arrival (TOA) class.
 
-        MJD will be stored in astropy.time.Time format, and can be
-            passed as a double (not recommended), a string, a
-            tuple of component parts (usually day and fraction of day).
-        error is the TOA uncertainty in microseconds
-        obs is the observatory name as defined by the Observatory class
-        freq is the observatory-centric frequency in MHz
-        other keyword/value pairs can be specified as needed
+    This is a class for representing a single pulse arrival
+    time measurement. It carries both the time - which needs careful handling
+    as we often need more precision than python floats can provide - and
+    a collection of additional data necessary to work with the data. These
+    are often obtained by reading ``.tim`` files produced by pulsar data
+    analysis software, but they can also be constructed as python objects.
 
-        A discussion of times and clock corrections in PINT is available here:
-        https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
+    Parameters
+    ----------
+    MJD : astropy.time.Time, float, or tuple of floats
+        The time of the TOA, which can be expressed as an astropy Time,
+        a floating point MJD (64 or 80 bit precision), or a tuple
+        of (MJD1,MJD2) whose sum is the full precision MJD (usually the
+        integer and fractional part of the MJD)
+    error : astropy.units.Quantity or float
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
+    obs : str
+        The observatory code for the TOA
+    freq : float or astropy.units.Quantity
+        Frequency corresponding to the TOA.  Either a Quantity with frequency
+        units, or a number for which MHz is assumed.
+    scale : str
+        Time scale for the TOA time.  Defaults to the timescale appropriate
+        to the site, but can be overridden
+    flags : dict
+        Flags associated with the TOA.  If flags is not provided, any
+        additional keyword arguments are interpreted as flags.
 
-    Example:
+    Attributes
+    ----------
+    mjd : astropy.time.Time
+        The pulse arrival time
+    error : astropy.units.Quantity
+        The uncertainty on the pulse arrival time
+    obs : str
+        The observatory code
+    freq : astropy.units.Quantity
+        The observing frequency
+    flags : dict
+        Any additional flags that were set for this TOA
+
+    Notes
+    -----
+    MJDs will be stored in astropy.time.Time format, and can be
+    passed as a double (not recommended), a string, a
+    tuple of component parts (usually day and fraction of day).
+    error is the TOA uncertainty in microseconds
+    obs is the observatory name as defined by the Observatory class
+    freq is the observatory-centric frequency in MHz
+    other keyword/value pairs can be specified as needed
+
+    It is VERY important that all astropy.Time() objects are created
+    with precision=9. This is ensured in the code and is checked for any
+    Time object passed to the TOA constructor.
+
+    A discussion of times and clock corrections in PINT is available here:
+    https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
+
+    Observatory codes are (semi-)standardized short strings describing
+    particular observatories. PINT needs to know considerable additional
+    information about the observatory, including its precise position and
+    clock correction details.
+
+    Examples
+    --------
+
+    Constructing a TOA object::
+
         >>> a = TOA((54567, 0.876876876876876), 4.5, freq=1400.0,
         ...         obs="GBT", backend="GUPPI")
         >>> print a
         54567.876876876876876:  4.500 us error from 'GBT' at 1400.0000 MHz {'backend': 'GUPPI'}
 
+    What happens if IERS data is not available for the date::
 
-    What happens if IERS data is not available for the date:
         >>> a = TOA((154567, 0.876876876876876), 4.5, freq=1400.0,
         ...         obs="GBT", backend="GUPPI")
 
@@ -354,48 +424,24 @@ class TOA(object):
           omitted
         IndexError: (some) times are outside of range covered by IERS table.
 
-
     """
     def __init__(self, MJD, # required
                  error=0.0, obs='Barycenter', freq=float("inf"),
                  scale=None,
-                 **kwargs):  # keyword args that are completely optional
-        """
-        Construct a TOA object
-
-        Parameters
-        ----------
-        MJD : astropy Time, float, or tuple of floats
-            The time of the TOA, which can be expressed as an astropy Time,
-            a floating point MJD (64 or 128 bit precision), or a tuple
-            of (MJD1,MJD2) whose sum is the full precision MJD (usually the
-            integer and fractional part of the MJD)
-        obs : string
-            The observatory code for the TOA
-        freq : float or astropy Quantity
-            Frequency corresponding to the TOA.  Either a Quantity with frequency
-            units, or a number for which MHz is assumed.
-        scale : string
-            Time scale for the TOA time.  Defaults to the timescale appropriate
-            to the site, but can be overridden
-
-        Notes
-        -----
-        It is VERY important that all astropy.Time() objects are created
-        with precision=9. This is ensured in the code and is checked for any
-        Time object passed to the TOA constructor.
-
-        """
+                 flags=None,
+                 **kwargs):
         site = get_observatory(obs)
         # If MJD is already a Time, just use it. Note that this will ignore
         # the 'scale' argument to the TOA() constructor!
         if isinstance(MJD,time.Time):
+            if scale is not None:
+                raise ValueError("scale argument is ignored when Time is provided")
             t = MJD
         else:
-            if numpy.isscalar(MJD):
+            try:
+                arg1, arg2 = MJD
+            except TypeError:
                 arg1, arg2 = MJD, None
-            else:
-                arg1, arg2 = MJD[0], MJD[1]
             if scale is None:
                 scale = site.timescale
             # First build a time without a location
@@ -421,7 +467,10 @@ class TOA(object):
         self.mjd = time.Time(t, location=loc, precision=9)
 
         if hasattr(error,'unit'):
-            self.error = error
+            try:
+                self.error = error.to(u.microsecond)
+            except u.UnitConversionError:
+                raise u.UnitConversionError("Uncertainty for TOA with incompatible unit {0}".format(error))
         else:
             self.error = error * u.microsecond
         self.obs = site.name
@@ -429,25 +478,66 @@ class TOA(object):
             try:
                 self.freq = freq.to(u.MHz)
             except u.UnitConversionError:
-                raise ValueError("Frequency for TOA with incompatible unit {0}".format(freq))
+                raise u.UnitConversionError("Frequency for TOA with incompatible unit {0}".format(freq))
         else:
             self.freq = freq * u.MHz
         if self.freq == 0.0*u.MHz:
             self.freq = numpy.inf*u.MHz
-        self.flags = kwargs
+        if flags is None:
+            self.flags = kwargs
+        else:
+            self.flags = flags
+            if kwargs:
+                raise TypeError("TOA constructor does not accept keyword arguments {}".format(kwargs))
 
 
     def __str__(self):
         s = utils.time_to_mjd_string(self.mjd) + \
             ": %6.3f %s error from '%s' at %.4f %s " % \
             (self.error.value, self.error.unit, self.obs, self.freq.value,self.freq.unit)
-        if len(self.flags):
+        if self.flags:
             s += str(self.flags)
         return s
 
 
 class TOAs(object):
-    """A class of multiple TOAs, loaded from zero or more files."""
+    """A class of multiple TOAs, loaded from zero or more files.
+
+    The contents are stored in an `astropy.table.Table`
+
+    Parameters
+    ----------
+    toafile : str, optional
+        Filename to load TOAs from.
+    toalist : list of TOA objects, optional
+        The TOA objects this TOAs should contain.  Exactly one of
+        these two parameters must be provided.
+
+    Attributes
+    ----------
+    table : astropy.table.Table
+        The data for all the TOAs is stored in here. It has the columns
+        ``index`` (the location of the TOA in the original input),
+        ``mjd`` (an :class:`astropy.time.Time` object), ``mjd_float`` (a
+        floating-point version of the time), ``error`` (an
+        :class:`astropy.units.Quantity` describing the claimed uncertainty
+        on the pulse arrival time), ``freq`` (an :class:`astropy.units.Quantity`
+        describing the observing frequency), ``obs`` (a
+        :class:`pint.observatory.Observatory` object),
+        and ``flags`` (a dictionary of flags and their values). The table may
+        also contain a column ``pn`` (integers) that is the pulse numbers
+        of the TOAs.  The table is grouped by ``obs``, that is, it is
+        not in the same order as the original TOAs.
+    commands : list of str
+        "Commands" that were written in the file; these can affect
+        how some or all TOAs are interpreted.
+    filename : str, optional
+        The filename (if any) that the TOAs were loaded from.
+    planets : bool
+    ephem : object
+    clock_corr_info : dict
+
+    """
 
     def __init__(self, toafile=None, toalist=None):
         # First, just make an empty container
@@ -593,15 +683,16 @@ class TOAs(object):
     def get_flag_value(self, flag, fill_value=None):
         """Get the request TOA flag values.
 
-           Parameter
-           ---------
-           flag_name: str
+           Parameters
+           ----------
+           flag_name : str
                The request flag name.
 
-           Return
-           ------
-           A list of flag values from each TOA. If the TOA does not have
-           the flag, it will fill up with the fill_value. 
+           Returns
+           -------
+           values : list
+               A list of flag values from each TOA. If the TOA does not have
+               the flag, it will fill up with the fill_value.
         """
         result = []
         for flags in self.table['flags']:
@@ -610,7 +701,12 @@ class TOAs(object):
         return result
 
     def select(self, selectarray):
-        """Apply a boolean selection or mask array to the TOA table."""
+        """Apply a boolean selection or mask array to the TOA table.
+
+        This operation modifies the TOAs object in place, shrinking its
+        table down to just those TOAs where selectarray is True. This
+        function also stores the old table in a stack.
+        """
         if hasattr(self, "table"):
             # Allow for selection undos
             if not hasattr(self, "table_selects"):
@@ -619,14 +715,15 @@ class TOAs(object):
             # Our TOA table must be grouped by observatory for phase calcs
             self.table = self.table[selectarray].group_by('obs')
         else:
-            log.warn("TOA selection not implemented for TOA lists.")
+            raise ValueError("TOA selection not implemented for TOA lists.")
 
     def unselect(self):
         """Return to previous selected version of the TOA table (stored in stack)."""
-        if hasattr(self, "table_selects") and len(self.table_selects):
+        if hasattr(self, "table_selects"):
+            # may raise an exception about an empty list
             self.table = self.table_selects.pop()
         else:
-            log.warn("No previous TOA table found.  No changes made.")
+            raise ValueError("No previous TOA table found.  No changes made.")
 
     def pickle(self, filename=None):
         """Write the TOAs to a .pickle file with optional filename."""
@@ -635,7 +732,7 @@ class TOAs(object):
         elif self.filename is not None:
             pickle.dump(self, gzip.open(self.filename+".pickle.gz", "wb"))
         else:
-            log.warn("TOA pickle method needs a filename.")
+            raise ValueError("TOA pickle method needs a filename.")
 
     def get_summary(self):
         """Return a short ASCII summary of the TOAs."""
@@ -660,9 +757,10 @@ class TOAs(object):
         print(self.get_summary())
 
     def pulse_column_from_flags(self):
-        '''
-        Create a pulse numbers column if possible from the TOAs flags
+        '''Create a pulse numbers column if possible from the TOAs flags
+
         Scans pulse numbers from the table flags and creates a new table column.
+        Removes the pulse numbers from the flags.
         '''
         #Add pn as a table column
         try:
@@ -673,11 +771,16 @@ class TOAs(object):
             #Remove pn from dictionary to prevent redundancies
             for flags in self.table['flags']:
                 del flags['pn']
-        except:
-            # FIXME: what happens when some but not all havve pulse numbers?
-            log.debug('No pn flags in model')
+        except KeyError:
+            raise ValueError('Not all TOAs have pn flags')
 
     def compute_pulse_numbers(self, model):
+        """Set pulse numbers based on model
+
+        Replace any existing pulse numbers by computing phases according to
+        model and then setting the pulse number of each to their integer part,
+        presumably the nearest integer.
+        """
         phases = model.phase(self)
         self.table['pn'] = phases.int
 
@@ -685,7 +788,10 @@ class TOAs(object):
         """Apply a time delta to TOAs
 
         Adjusts the time (MJD) of the TOAs by applying delta, which should
-        be a numpy.time.TimeDelta instance with the same shape as self.table['mjd']
+        be a numpy.time.TimeDelta instance with the same shape as self.table['mjd'].
+        This function does not change the pulse numbers column, if present, but
+        does recompute ``mjd_float``, the TDB times, and the observatory positions
+        and velocities.
 
         Parameters
         ----------
@@ -694,7 +800,7 @@ class TOAs(object):
 
         """
         col = self.table['mjd']
-        if type(delta) != time.TimeDelta:
+        if not isinstance(delta, time.TimeDelta):
             raise ValueError('Type of argument must be TimeDelta')
         if delta.shape != col.shape:
             raise ValueError('Shape of mjd column and delta must be compatible')
@@ -718,11 +824,6 @@ class TOAs(object):
         format : str
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1')
 
-        Bugs
-        ----
-        Currently does not undo any clock corrections that were applied,
-        so TOA file won't match the input TOA file if any were applied.
-
         """
         try:
             outf = open(filename,'w')
@@ -732,9 +833,6 @@ class TOAs(object):
             handle = True
         if format.upper() in ('TEMPO2','1'):
             outf.write('FORMAT 1\n')
-        # NOTE(@paulray): This really should REMOVE any(?) clock corrections
-        # that have been applied!
-        # NOTE clock corrections has been removed.
 
         # Add pulse numbers to flags temporarily if there is a pulse number column
         pnChange = False
@@ -754,7 +852,6 @@ class TOAs(object):
             out_str = format_toa_line(toatime_out, toaerr, freq, obs_obj, name=name,
                       flags=flags, format=format)
             outf.write(out_str)
-
 
         # If pulse numbers were added to flags, remove them again
         if pnChange:
@@ -787,8 +884,12 @@ class TOAs(object):
         # First make sure that we haven't already applied clock corrections
         flags = self.table['flags']
         if any(['clkcorr' in f for f in flags]):
-            log.warn("Some TOAs have 'clkcorr' flag.  Not applying new clock corrections.")
-            return
+            if all(['clkcorr' in f for f in flags]):
+                log.warn("Clock corrections already applied. Not re-applying.")
+                return
+            else:
+                # FIXME: could apply clock corrections to just the ones that don't have any
+                raise ValueError("Some TOAs have 'clkcorr' flag and some do not!")
         # An array of all the time corrections, one for each TOA
         log.info("Applying clock corrections (include_GPS = {0}, include_BIPM = {1}.".format(include_gps,include_bipm))
         corr = numpy.zeros(self.ntoas) * u.s
@@ -825,9 +926,11 @@ class TOAs(object):
 
     def compute_TDBs(self, method="default", ephem=None):
         """Compute and add TDB and TDB long double columns to the TOA table.
+
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
         for TDB times, using the Observatory locations and IERS A Earth
         rotation corrections for UT1.
+
         """
         log.info('Computing TDB columns.')
         if 'tdb' in self.table.colnames:
@@ -897,6 +1000,7 @@ class TOAs(object):
         SSB) for each TOA.  The JPL solar system ephemeris can be set
         using the 'ephem' parameter.  The positions and velocities are
         set with PosVel class instances which have astropy units.
+
         """
 
         if ephem is None:
@@ -974,9 +1078,14 @@ class TOAs(object):
         self.table.add_columns(cols_to_add)
 
     def read_pickle_file(self, filename):
-        """Read the TOAs from the pickle file specified in filename.  Note
-        the filename should include any pickle-specific extensions (ie
-        ".pickle.gz" or similar), these will not be added automatically."""
+        """Read the TOAs from the pickle file specified in filename.
+
+        Note the filename should include any pickle-specific extensions (ie
+        ".pickle.gz" or similar), these will not be added automatically.
+
+        If the file ends with ".gz" it will be uncompressed before extracting
+        the pickle.
+        """
 
         log.info("Reading pickled TOAs from '%s'..." % filename)
         if os.path.splitext(filename)[1] == '.gz':
@@ -992,9 +1101,22 @@ class TOAs(object):
         self.commands = tmp.commands
 
     def read_toa_file(self, filename, process_includes=True, top=True):
-        """Read the given filename and return a list of TOA objects.
+        """Read TOAs from the given filename.
 
         Will process INCLUDEd files unless process_includes is False.
+
+        Parameters
+        ----------
+        filename : str
+            The name of the file to open.
+        process_includes : bool, optional
+            If true, obey INCLUDE directives in the file and read other
+            files.
+        top : bool, optional
+            If true, wipe this instance's contents, otherwise append
+            new TOAs. Used recursively; note that surprises may ensue
+            if this function is called on an already existing and
+            processed TOAs object.
         """
         ntoas = 0
         if top:
