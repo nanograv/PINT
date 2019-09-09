@@ -182,7 +182,7 @@ def tempo_polyco_table_reader(filename):
 
         try:
             binaryPhase = data2longdouble(fields[6])
-        except:
+        except ValueError:
             binaryPhase = data2longdouble(0.0)
 
         # Read coefficients
@@ -275,15 +275,10 @@ def tempo_polyco_table_writer(polycoTable, filename = 'polyco.dat'):
         http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
     """
     f = open(filename,'w')
-    try:
-        lenTable = len(polycoTable)
-        if lenTable == 0:
-            errorMssg = ("Insufficent polyco data."+
-                         " Please make sure polycoTable has data.")
-            raise AttributeError(errorMssg)
-
-    except:
-        errorMssg = "Insufficent polycoTable. "
+    lenTable = len(polycoTable)
+    if lenTable == 0:
+        errorMssg = ("Insufficent polyco data."+
+                     " Please make sure polycoTable has data.")
         raise AttributeError(errorMssg)
 
     for i in range(lenTable):
@@ -378,13 +373,13 @@ class Polycos(object):
         if (formatName in [f['format'] for f in self.polycoFormat]
             or formatName in registry.get_formats()['Format']):
             errorMssg = 'Format name \''+formatName+ '\' is already exist. '
-            raise Exception(errorMssg)
+            raise ValueError(errorMssg)
 
         pFormat = {'format' : formatName}
 
         if methodMood == 'r':
             if readMethod == None:
-                raise BaseException('Argument readMethod should not be \'None\'.')
+                raise ValueError('Argument readMethod should not be \'None\'.')
 
             pFormat['read_method'] = readMethod
             pFormat['write_method'] = writeMethod
@@ -392,7 +387,7 @@ class Polycos(object):
                                     pFormat['read_method'])
         elif methodMood == 'w':
             if writeMethod == None:
-                raise BaseException('Argument writeMethod should not be \'None\'.')
+                raise ValueError('Argument writeMethod should not be \'None\'.')
 
             pFormat['read_method'] = readMethod
             pFormat['write_method'] = writeMethod
@@ -400,7 +395,7 @@ class Polycos(object):
                                     pFormat['write_method'])
         elif methodMood == 'rw':
             if readMethod == None or writeMethod == None:
-                raise BaseException('Argument readMethod and writeMethod '
+                raise ValueError('Argument readMethod and writeMethod '
                                     'should not be \'None\'.')
 
             pFormat['read_method'] = readMethod
@@ -526,7 +521,8 @@ class Polycos(object):
                                   'obs','obsfreq','entry'),
                                    meta={'name': 'Polyco Data Table'})
             self.polycoTable = pTable
-
+            if len(self.polycoTable)==0:
+                raise ValueError("Zero polycos found for table")
         else:
                 #  Reading from an old polycofile
             pass
@@ -551,20 +547,23 @@ class Polycos(object):
         self.fileName = filename
 
         if format not in [f['format'] for f in self.polycoFormat]:
-            raise Exception('Unknown polyco file format \''+ format +'\'\n'
+            raise ValueError('Unknown polyco file format \''+ format +'\'\n'
                             'Please use function \'self.add_polyco_file_format()\''
                             ' to register the format\n')
         else:
             self.fileFormat = format
 
         self.polycoTable = table.Table.read(filename, format = format)
+        if len(self.polycoTable)==0:
+            raise ValueError("Zero polycos found for table")
+
 
     def write_polyco_file(self,format,filename=None):
         """ Write Polyco table to a file.
         """
 
         if format not in [f['format'] for f in self.polycoFormat]:
-            raise Exception('Unknown polyco file format \''+ format +'\'\n'
+            raise ValueError('Unknown polyco file format \''+ format +'\'\n'
                            'Please use function \'self.add_polyco_file_format()\''
                            ' to register the format\n')
         if filename is not None:
@@ -578,16 +577,8 @@ class Polycos(object):
         if not isinstance(t, (np.ndarray, list)):
             t = np.array([t,])
         # Check if polyco table exist
-        try:
-            lenEntry = len(self.polycoTable)
-            if lenEntry == 0:
-                errorMssg = ("Insufficent polyco data."
-                             "Please read or generate polyco data correctly.")
-                raise AttributeError(errorMssg)
-
-        except:
-            errorMssg = "Insufficent polyco data. Please read or generate polyco data correctly."
-            raise AttributeError(errorMssg)
+        if self.polycoTable is None:
+            raise ValueError("polycoTable not set!")
 
         startIndex = np.searchsorted(self.polycoTable['t_start'], t)
         entryIndex = startIndex-1

@@ -299,7 +299,7 @@ def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk',
         # Now set observatory code. Use obs.name unless overridden by tempo2_code
         try:
             obscode = obs.tempo2_code
-        except:
+        except AttributeError:
             obscode = obs.name
         out = "%s %f %s %.3f %s %s\n" % (name,freq.to(u.MHz).value,
             toa_str,toaerr.to(u.us).value,obscode,flagstring)
@@ -415,7 +415,7 @@ class TOA(object):
         try:
             loc = site.earth_location_itrf(time=t)
         except:
-            print("Error computing earth_location_itrf at time {0}, {1}".format(t,type(t)))
+            log.error("Error computing earth_location_itrf at time {0}, {1}".format(t,type(t)))
             raise
         # Then construct the full time, with observatory location set
         self.mjd = time.Time(t, location=loc, precision=9)
@@ -427,10 +427,9 @@ class TOA(object):
         self.obs = site.name
         if hasattr(freq,'unit'):
             try:
-                junk = freq.to(u.MHz)
+                self.freq = freq.to(u.MHz)
             except u.UnitConversionError:
-                log.error("Frequency for TOA with incompatible unit {0}".format(freq))
-            self.freq = freq
+                raise ValueError("Frequency for TOA with incompatible unit {0}".format(freq))
         else:
             self.freq = freq * u.MHz
         if self.freq == 0.0*u.MHz:
@@ -460,7 +459,7 @@ class TOAs(object):
         self.clock_corr_info = {}
 
         if (toalist is not None) and (toafile is not None):
-            log.error('Cannot initialize TOAs from both file and list.')
+            raise ValueError('Cannot initialize TOAs from both file and list.')
 
         if toafile is not None:
             # FIXME: work with file-like objects as well
@@ -475,7 +474,7 @@ class TOAs(object):
 
         if toalist is not None:
             if not isinstance(toalist, (list, tuple)):
-                log.error('Trying to initialize TOAs from a non-list class')
+                raise ValueError('Trying to initialize TOAs from a non-list class')
             self.toas = toalist
 
         if not hasattr(self, 'table'):
@@ -569,14 +568,13 @@ class TOAs(object):
         if hasattr(self, "toas"):
             try:
                 return np.array([t.flags['pn'] for t in self.toas]) * u.cycle
-            except:
-                log.warning('No pulse numbers for TOAs')
+            except KeyError:
+                log.warning('Not all TOAs have pulse numbers, using none')
                 return None
         else:
             if 'pn' in self.table['flags'][0]:
                 if 'pn' in self.table.colnames:
-                    log.error('Pulse number cannot be both a column and TOA flag')
-                    raise Exception('Pulse number cannot be both a column and a TOA flag')
+                    raise ValueError('Pulse number cannot be both a column and a TOA flag')
                 return np.array(flags['pn'] for flags in self.table['flags']) * u.cycle
             elif 'pn' in self.table.colnames:
                 return self.table['pn']
@@ -676,6 +674,7 @@ class TOAs(object):
             for flags in self.table['flags']:
                 del flags['pn']
         except:
+            # FIXME: what happens when some but not all havve pulse numbers?
             log.debug('No pn flags in model')
 
     def compute_pulse_numbers(self, model):
@@ -847,7 +846,7 @@ class TOAs(object):
         else:
             # If user specifies an ephemeris, make sure it is the same as the one already in the TOA object, to prevent mixing.
             if (self.ephem is not None) and (ephem != self.ephem):
-                log.error('Ephemeris provided to compute_TDBs {0} is different than TOAs object ephemeris {1}!'.format(ephem,self.ephem))
+                log.error('Ephemeris provided to compute_TDBs {0} is different than TOAs object ephemeris {1}! Using TDB ephemeris.'.format(ephem,self.ephem))
         self.ephem = ephem
 
         # Compute in observatory groups
@@ -909,7 +908,7 @@ class TOAs(object):
         else:
             # If user specifies an ephemeris, make sure it is the same as the one already in the TOA object, to prevent mixing.
             if (self.ephem is not None) and (ephem != self.ephem):
-                log.error('Ephemeris provided to compute_posvels {0} is different than TOAs object ephemeris {1}!'.format(ephem,self.ephem))
+                log.error('Ephemeris provided to compute_posvels {0} is different than TOAs object ephemeris {1}! Using posvels ephemeris.'.format(ephem,self.ephem))
         # Record the choice of ephemeris and planets
         self.ephem = ephem
         self.planets = planets

@@ -16,12 +16,23 @@ import six
 import inspect
 from pint import dimensionless_cycles
 
-# parameters or lines in parfiles to ignore (for now?), or at
-# least not to complain about
-ignore_params = ['START', 'FINISH', 'CLK', 'UNITS',
+# Parameters or lines in parfiles we don't understand but shouldn't
+# complain about. These are still passed to components so that they
+# can use them if they want to.
+#
+# Other unrecognized parameters produce warnings and possibly indicate
+# errors in the par file.
+#
+# Do people use C in the first column to "comment out" par file entries?
+# That could be supported by simply adding "C" here.
+#
+# What about case (in)sensitivity? Anybody use un-capitalized versions?
+ignore_params = ['START', 'FINISH', 'CLK', 'EPHVER', 'UNITS',
                  'TIMEEPH', 'T2CMETHOD', 'CORRECT_TROPOSPHERE', 'DILATEFREQ',
                  'NTOA', 'CLOCK', 'TRES', 'TZRMJD', 'TZRFRQ', 'TZRSITE',
-                 'NITS', 'IBOOT','BINARY']
+                 'NITS', 'IBOOT','BINARY',
+                 'CHI2R', 'MODE', 'INFO', 'PLANET_SHAPIRO2', 'NE_SW', 'NE_SW2',
+                ]
 ignore_prefix = ['DMXF1_','DMXF2_','DMXEP_'] # DMXEP_ for now.
 
 
@@ -123,6 +134,9 @@ class TimingModel(object):
             else:
                 return super().__getattribute__(name)
         except AttributeError:
+            # Note that there is a complex series of fallbacks that can wind up
+            # here - for example if a property inadvertently raises an
+            # AttributeError it looks like it's missing entirely
             errmsg = "'TimingModel' object and its component has no attribute"
             errmsg += " '%s'." % name
             try:
@@ -552,7 +566,7 @@ class TimingModel(object):
 
         for nf in self.basis_funcs:
             result.append(nf(toas)[0])
-        return np.hstack((r for r in result))
+        return np.hstack([r for r in result])
 
 
     def noise_model_basis_weight(self, toas):
@@ -562,7 +576,7 @@ class TimingModel(object):
 
         for nf in self.basis_funcs:
             result.append(nf(toas)[1])
-        return np.hstack((r for r in result))
+        return np.hstack([r for r in result])
 
 
 
@@ -781,6 +795,7 @@ class TimingModel(object):
         param_map = self.get_params_mapping()
         comps = self.components
         pfile = open(filename, 'r')
+        wants_tcb = None
         for l in [pl.strip() for pl in pfile.readlines()]:
             # Skip blank lines
             if not l:
@@ -791,12 +806,20 @@ class TimingModel(object):
 
             k = l.split()
             name = k[0].upper()
-            
-            if name == 'UNITS' and len(k) > 1 and k[1] != 'TDB':
-                log.error("UNITS %s not yet supported by PINT" % k[1])
-                raise Exception("UNITS %s not yet supported by PINT" % k[1])
 
-            
+            if name == 'UNITS':
+                if len(k) > 1 and k[1] == 'TDB':
+                    wants_tcb = False
+                else:
+                    wants_tcb = k[1]
+
+            if name == 'EPHVER':
+                if len(k)>1 and k[1] != '2' and wants_tcb is None:
+                    wants_tcb = l
+                log.warning("EPHVER %s does nothing in PINT" % k[1])
+                #actually people expect EPHVER 5 to work
+                #even though it's supposed to imply TCB which doesn't
+
             if name in checked_param:
                 if name in repeat_param.keys():
                     repeat_param[name] += 1
@@ -815,15 +838,25 @@ class TimingModel(object):
                     parsed = True
 
             if not parsed:
+                p = l.split()[0]
+                if p in ignore_params:
+                    log.debug("Ignoring parfile line '%s'" % (l,))
+                    parsed = True
+            if not parsed:
+                p = l.split()[0]
                 try:
                     prefix,f,v = utils.split_prefixed_name(l.split()[0])
-                    if prefix not in ignore_prefix:
-                        log.warn("Unrecognized parfile line '%s'" % l)
-                except:
-                    if l.split()[0] not in ignore_params:
-                        log.warn("Unrecognized parfile line '%s'" % l)
+                    if prefix in ignore_prefix:
+                        log.debug("Ignoring prefix parfile line '%s'" % (l,))
+                        parsed = True
+                except utils.PrefixError:
+                    pass
+            if not parsed:
+                log.warn("Unrecognized parfile line '%s'" % (l,))
 
             checked_param.append(name)
+        if wants_tcb:
+            raise ValueError("UNITS %s not yet supported by PINT" % k[1])
         # The "setup" functions contain tests for required parameters or
         # combinations of parameters, etc, that can only be done
         # after the entire parfile is read
@@ -1056,7 +1089,7 @@ class Component(object):
                 return True
             else:
                 return False
-        except:
+        except (AttributeError, KeyError):
             pass
 
         # Compare the componets parameter names with par file parameters
@@ -1098,7 +1131,7 @@ class PhaseComponent(Component):
         self.phase_derivs_wrt_delay = []
 
 
-class TimingModelError(Exception):
+class TimingModelError(ValueError):
     """Generic base class for timing model errors."""
     pass
 
@@ -1121,3 +1154,4 @@ class MissingParameter(TimingModelError):
         if self.msg is not None:
             result += "\n  " + self.msg
         return result
+

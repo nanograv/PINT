@@ -45,7 +45,7 @@ class PulsarBinary(DelayComponent):
         # take both.
         self.add_param(p.floatParameter(name = "A1DOT", aliases = ['XDOT'],
             units=ls/u.s,
-            description="Derivitve of projected semi-major axis, da*sin(i)/dt", \
+            description="Derivative of projected semi-major axis, da*sin(i)/dt", \
             unit_scale=True, scale_factor=1e-12, scale_threshold=1e-7))
 
         self.add_param(p.floatParameter(name="ECC",
@@ -116,10 +116,16 @@ class PulsarBinary(DelayComponent):
                 method_name = p.lower() + "_func"
                 try:
                     par_method = getattr(self.binary_instance, method_name)
-                    _ = par_method()
-                except:
+                except AttributeError:
                     raise MissingParameter(self.binary_model_name, p + \
                                            " is required for '%s'." %
+                                           self.binary_model_name)
+                try:
+                    _ = par_method()
+                except:
+                    raise MissingParameter(self.binary_model_name, p +
+                                           " is present but somehow "
+                                           "broken for '%s'." %
                                            self.binary_model_name)
 
     # With new parameter class set up, do we need this?

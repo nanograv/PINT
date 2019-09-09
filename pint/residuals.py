@@ -35,8 +35,7 @@ class Residuals(object):
 
             pulse_num = self.toas.get_pulse_numbers()
             if pulse_num is None:
-                log.error('No pulse numbers with TOAs using TRACK -2')
-                raise Exception('No pulse numbers with TOAs using TRACK -2')
+                raise ValueError('No pulse numbers with TOAs using TRACK -2')
 
             pn_act = rs.int
             addPhase = pn_act - (pulse_num + addpn)
