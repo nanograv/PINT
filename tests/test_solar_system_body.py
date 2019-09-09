@@ -64,6 +64,7 @@ class TestSolarSystemDynamic(unittest.TestCase):
                 assert a.pos.shape == (3, 10000)
                 assert a.vel.shape == (3, 10000)
 
+    @pytest.mark.remote_data
     def test_from_dir(self):
         path = datapath('de432s.bsp')
         a = objPosVel_wrt_SSB('earth', self.tdb_time , 'de432s', path=path)
