@@ -180,8 +180,10 @@ like to change.
      produce a sensible result, please raise an exception. Usually
      you will want to raise a ValueError with a description of what
      went wrong, but if you want users to be able to do something with
-     the specific thing that went wrong, you can quickly create a new
-     exception class (no more than ``class PulsarProblem(ValueError): pass``)
+     the specific thing that went wrong (for example, they might want to
+     use an exception to know that they have emptied a container), you 
+     can quickly create a new exception class (no more than 
+     ``class PulsarProblem(ValueError): pass``)
      that the user can specifically catch and distinguish from other
      exceptions. Similarly, if you're catching an exception some code might
      raise, use ``except PulsarProblem:`` to catch just the kind you
