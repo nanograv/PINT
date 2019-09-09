@@ -10,6 +10,7 @@ from astropy.time import Time
 import astropy.units as u
 from astropy.utils.iers import IERS_Auto, IERS_B, IERS_B_URL, IERS_B_FILE
 from astropy.utils.data import download_file
+#import pytest
 
 from pint.observatory import Observatory
 from pint import toa, utils, erfautils
@@ -61,7 +62,7 @@ class TestERFAUtils(unittest.TestCase):
         t = Time(56000*np.ones((4,5)), scale="tdb", format="mjd")
         posvel = erfautils.gcrs_posvel_from_itrf(loc, t, obsname=o)
 
-    @unittest.expectedFailure # Not true in current astropy; wish we had knownfail!
+    @unittest.expectedFailure # Not true in current astropy
     def test_IERS_B_all_in_IERS_Auto(self):
         B = IERS_B.open(download_file(IERS_B_URL, cache=True))
         mjd = B['MJD'].to(u.day).value
@@ -70,8 +71,8 @@ class TestERFAUtils(unittest.TestCase):
         i_A = np.searchsorted(A['MJD'].to(u.day).value, mjd)
         assert_equal(A['dX_2000A_B'][i_A], B['dX_2000A'])
 
-    @unittest.expectedFailure # Disagreement in current astropy
-    def test_IERS_B_agree_with_IERS_Auto(self):
+    @unittest.expectedFailure # IERS B changes old values :(.
+    def test_IERS_B_agree_with_IERS_Auto_dX(self):
         A = IERS_Auto.open()
         B = IERS_B.open(download_file(IERS_B_URL, cache=True))
         mjd = B['MJD'].to(u.day).value
@@ -87,12 +88,40 @@ class TestERFAUtils(unittest.TestCase):
 
         mjds_A = A['MJD'][ok_A].to(u.day).value
         i_B = np.searchsorted(B['MJD'].to(u.day).value, mjds_A)
+        assert np.all(np.diff(i_B)==1), "Valid region not contiguous"
         assert_equal(A['MJD'][ok_A], B['MJD'][i_B], "MJDs don't make sense")
-        assert_allclose(
-                A['dX_2000A_B'][ok_A].to(u.marcsec).value,
-                B['dX_2000A'][i_B].to(u.marcsec).value,
-                atol=1e-5, rtol=1e-3,
-                err_msg="Inserted IERS B values don't match current IERS B values")
+        for tag in ["dX_2000A", "dY_2000A"]:
+            assert_allclose(
+                    A[tag+'_B'][ok_A].to(u.marcsec).value,
+                    B[tag][i_B].to(u.marcsec).value,
+                    atol=1e-5, rtol=1e-3,
+                    err_msg="IERS A-derived IERS B {} values don't match current IERS B values".format(tag))
+
+    @unittest.expectedFailure # IERS B changes old values :(.
+    def test_IERS_B_agree_with_IERS_Auto(self):
+        A = IERS_Auto.open()
+        B = IERS_B.open(download_file(IERS_B_URL, cache=True))
+        mjd = B['MJD'].to(u.day).value
+        A.pm_xy(mjd) # ensure that data is available for this date
+
+        # Let's get rid of some trouble values and see if they agree on a restricted subset
+        # IERS Auto ends with a bunch of 1e20 values meant as sentinels (?)
+        ok_A = abs(A['PM_X_B']) < 1e6*u.marcsec
+        # Maybe the old values are bogus?
+        ok_A &= A['MJD'] > 50000*u.d
+
+        mjds_A = A['MJD'][ok_A].to(u.day).value
+        i_B = np.searchsorted(B['MJD'].to(u.day).value, mjds_A)
+        assert np.all(np.diff(i_B)==1), "Valid region not contiguous"
+        assert_equal(A['MJD'][ok_A], B['MJD'][i_B], "MJDs don't make sense")
+        for atag, btag, unit in [('UT1_UTC_B', 'UT1_UTC', u.s), # s, six decimal places
+                                 ('PM_X_B', 'PM_x', u.arcsec),
+                                 ('PM_Y_B', 'PM_y', u.arcsec)]:
+            assert_allclose(
+                    A[atag][ok_A].to(unit).value,
+                    B[btag][i_B].to(unit).value,
+                    atol=1e-5, rtol=1e-5, # should be "close enough"
+                    err_msg="Inserted IERS B {} values don't match IERS_B_URL {} values".format(atag,btag))
 
     def test_astropy_IERS_B_vs_downloaded(self):
         P = IERS_B.open(IERS_B_FILE)
@@ -100,7 +129,7 @@ class TestERFAUtils(unittest.TestCase):
         assert B['MJD'][-1]>P['MJD'][-1]
 
     @unittest.expectedFailure # Disagreement in current astropy (!)
-    def test_IERS_B_builtin_agree_with_IERS_Auto(self):
+    def test_IERS_B_builtin_agree_with_IERS_Auto_dX(self):
         A = IERS_Auto.open()
         B = IERS_B.open(IERS_B_FILE)
         mjd = B['MJD'].to(u.day).value
@@ -125,4 +154,66 @@ class TestERFAUtils(unittest.TestCase):
                 A['dX_2000A_B'][ok_A].to(u.marcsec).value,
                 B['dX_2000A'][i_B].to(u.marcsec).value,
                 atol=1e-5, rtol=1e-3,
-                err_msg="Inserted IERS B values don't match IERS_B_FILE values")
+                err_msg="IERS B values included in IERS A (dX_2000A) don't match IERS_B_FILE values")
+
+    def test_IERS_B_builtin_agree_with_IERS_Auto(self):
+        """The UT1-UTC, PM_X, and PM_Y values are correctly copied"""
+        A = IERS_Auto.open()
+        B = IERS_B.open(IERS_B_FILE)
+        mjd = B['MJD'].to(u.day).value
+        A.pm_xy(mjd) # ensure that data is available for these dates
+
+        # We're going to look up the OK auto values in the B table
+        ok_A = A['MJD'] < B['MJD'][-1]
+        # Let's get rid of some trouble values and see if they agree on a restricted subset
+        # IERS Auto ends with a bunch of 1e20 values meant as sentinels (?)
+        ok_A &= abs(A['PM_X_B']) < 1e6*u.marcsec
+        # For some reason IERS B starts with zeros up to MJD 45700? IERS Auto doesn't match this
+        ok_A &= A['MJD'] > 45700*u.d
+        # Maybe the old values are bogus?
+        ok_A &= A['MJD'] > 50000*u.d
+
+        mjds_A = A['MJD'][ok_A].to(u.day).value
+        i_B = np.searchsorted(B['MJD'].to(u.day).value, mjds_A)
+
+        assert np.all(np.diff(i_B)==1), "Valid region not contiguous"
+        assert_equal(A['MJD'][ok_A], B['MJD'][i_B], "MJDs don't make sense")
+        for atag, btag, unit in [('UT1_UTC_B', 'UT1_UTC', u.s),
+                                 ('PM_X_B', 'PM_x', u.arcsec),
+                                 ('PM_Y_B', 'PM_y', u.arcsec)]:
+            assert_allclose(
+                    A[atag][ok_A].to(unit).value,
+                    B[btag][i_B].to(unit).value,
+                    atol=1e-5, rtol=1e-5, # should be exactly equal
+                    err_msg="Inserted IERS B {} values don't match IERS_B_FILE {} values".format(atag,btag))
+
+    copy_columns = [
+        ("UT1_UTC", "UT1_UTC_B"),
+        ("PM_x", "PM_X_B"),
+        ("PM_y", "PM_Y_B"),
+        ("dX_2000A", "dX_2000A_B"),
+        ("dY_2000A", "dY_2000A_B"),
+    ]
+    #@pytest.mark.parametrize("b_name,a_name", copy_columns)
+    @unittest.expectedFailure
+    def test_IERS_B_parameters_loaded_into_IERS_Auto(self):
+        for (b_name, a_name) in self.copy_columns:
+            A = IERS_Auto.open()
+            A[a_name]
+            B = IERS_B.open(IERS_B_FILE)
+
+            ok_A = A["MJD"] < B["MJD"][-1]
+
+            mjds_A = A["MJD"][ok_A].to(u.day).value
+            i_B = np.searchsorted(B["MJD"].to(u.day).value, mjds_A)
+
+            assert_equal(np.diff(i_B), 1, err_msg="Valid region not contiguous")
+            assert_equal(A["MJD"][ok_A], B["MJD"][i_B], err_msg="MJDs don't make sense")
+            assert_equal(
+                A[a_name][ok_A],
+                B[b_name][i_B],
+                err_msg="IERS B parameter {} not copied over IERS A parameter {}".format(
+                    b_name, a_name
+                ),
+            )
+
