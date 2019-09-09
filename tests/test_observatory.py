@@ -10,15 +10,12 @@ from astropy.time import Time
 import os
 from pint.config import datapath
 from pinttestdata import testdir, datadir
-import pytest
-
-
-os.chdir(datadir)
 
 
 class TestObservatory(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.test_obs = ['aro', 'ao', 'chime', 'drao']
         self.test_time = Time(np.linspace(55000, 58000, num=100),
                               scale='utc', format='pulsar_mjd')
@@ -40,7 +37,6 @@ class TestObservatory(unittest.TestCase):
             clock_corr1 = site.clock_corrections(self.test_time[0])
             assert clock_corr1.shape == ()
 
-    @pytest.mark.remote_data
     def test_get_TDBs(self):
         for tobs in self.test_obs:
             site = get_observatory(tobs, include_gps=True, include_bipm=True,
@@ -59,7 +55,6 @@ class TestObservatory(unittest.TestCase):
                                  ephem='de430t')
             assert tdb1.shape == (1,)
 
-    @pytest.mark.remote_data
     def test_positions(self):
         for tobs in self.test_obs:
             site = get_observatory(tobs, include_gps=True, include_bipm=True,

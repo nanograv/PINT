@@ -53,10 +53,6 @@ test: ## run tests quickly with the default Python
 
 		pytest tests
 
-test-noremote: ## run tests that don't need the ephem server
-
-		pytest tests --remote-data=none
-
 coverage: ## check code coverage quickly with the default Python
 
 		pytest tests --cov=pint

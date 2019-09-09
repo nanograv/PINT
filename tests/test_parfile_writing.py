@@ -12,14 +12,13 @@ import logging
 
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
-
 
 class TestParfileWriting(unittest.TestCase):
     """This is a unit test class for parfile writing.
     """
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.parfileB1855 = 'B1855+09_NANOGrav_9yv1.gls.par'
         self.timB1855 = 'B1855+09_NANOGrav_9yv1.tim'
         self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE421",

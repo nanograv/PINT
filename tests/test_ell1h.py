@@ -11,12 +11,12 @@ import logging
 
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
 
 class TestELL1H(unittest.TestCase):
     """Compare delays from the ELL1 model with tempo and PINT"""
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.parfileJ1853 = "J1853+1303_NANOGrav_11yv0.gls.par"
         self.timfileJ1853 = "J1853+1303_NANOGrav_11yv0.tim"
         self.toasJ1853 = toa.get_TOAs(self.timfileJ1853, ephem="DE421",

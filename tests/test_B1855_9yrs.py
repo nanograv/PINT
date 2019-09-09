@@ -10,12 +10,12 @@ import logging
 
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
 
 class TestB1855(unittest.TestCase):
     """Compare delays from the dd model with tempo and PINT"""
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.parfileB1855 = 'B1855+09_NANOGrav_9yv1.gls.par'
         self.timB1855 = 'B1855+09_NANOGrav_9yv1.tim'
         self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE421",
@@ -52,6 +52,3 @@ class TestB1855(unittest.TestCase):
                 assert np.nanmax(relative_diff) < tol, msg
             else:
                 continue
-
-if __name__ == '__main__':
-    pass

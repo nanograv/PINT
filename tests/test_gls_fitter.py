@@ -7,17 +7,15 @@ from pint.fitter import WlsFitter, GlsFitter
 import numpy as np
 import astropy.units as u
 import json
-import pytest
-
 
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
-@pytest.mark.remote_data
+
 class TestGls(unittest.TestCase):
     """Compare delays from the dd model with tempo and PINT"""
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.par = 'B1855+09_NANOGrav_9yv1.gls.par'
         self.tim = 'B1855+09_NANOGrav_9yv1.tim'
         self.m = mb.get_model(self.par)

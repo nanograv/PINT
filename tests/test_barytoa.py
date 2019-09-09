@@ -10,15 +10,16 @@ import os, sys
 
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
 
-# This par file has a very simple model in it
-m = mb.get_model('slug.par')
+def test_barytoa():
+    os.chdir(datadir)
+    # This par file has a very simple model in it
+    m = mb.get_model('slug.par')
 
-# This .tim file has TOAs at the barycenter, and at infinite frequency
-t = pint.toa.get_TOAs('slug.tim')
+    # This .tim file has TOAs at the barycenter, and at infinite frequency
+    t = pint.toa.get_TOAs('slug.tim')
 
-rs = pint.residuals.Residuals(t, m).time_resids
+    rs = pint.residuals.Residuals(t, m).time_resids
 
-# Residuals should be less than 2.0 ms
-assert rs.std() < 2.0*u.ms
+    # Residuals should be less than 2.0 ms
+    assert rs.std() < 2.0*u.ms

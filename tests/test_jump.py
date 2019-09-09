@@ -9,12 +9,11 @@ from pinttestdata import testdir, datadir
 import test_derivative_utils as tdu
 import logging
 
-os.chdir(datadir)
-
 
 class TestJUMP(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.parf = 'B1855+09_NANOGrav_dfg+12_TAI.par'
         self.timf = 'B1855+09_NANOGrav_dfg+12.tim'
         self.JUMPm = mb.get_model(self.parf)

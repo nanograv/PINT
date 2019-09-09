@@ -9,12 +9,12 @@ import test_derivative_utils as tdu
 import logging
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
 
 class TestB1855(unittest.TestCase):
     """Compare delays from the dd model with tempo and PINT"""
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.parfileB1855 = 'B1855+09_NANOGrav_dfg+12_TAI_FB90.par'
         self.timB1855 = 'B1855+09_NANOGrav_dfg+12.tim'
         self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405",

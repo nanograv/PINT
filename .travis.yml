@@ -11,10 +11,6 @@ matrix:
           after_success: []
           git:
               clone: false
-        - python: "3.7"
-          name: "Tests that don't need the ephemeris server"
-          script:
-            - (cd tests && pytest --cov=pint --remote-data=none)
         - python: "2.7"
         - python: "3.5"
         - python: "3.6"

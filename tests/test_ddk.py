@@ -9,12 +9,12 @@ from pinttestdata import testdir, datadir
 import test_derivative_utils as tdu
 import logging
 
-os.chdir(datadir)
 
 class TestDDK(unittest.TestCase):
     """Compare delays from the dd model with libstempo and PINT"""
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.parfileJ1713 = 'J1713+0747_NANOGrav_11yv0.gls.par'
         self.timJ1713 = 'J1713+0747_NANOGrav_11yv0_short.tim'
         self.toasJ1713 = toa.get_TOAs(self.timJ1713, ephem="DE421", planets=False)

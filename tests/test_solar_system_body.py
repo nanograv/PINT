@@ -8,15 +8,14 @@ import numpy as np
 import astropy.time as time
 import os
 from pint.config import datapath
-import pytest
-
 
 from pinttestdata import testdir, datadir
-os.chdir(datadir)
+
 
 class TestSolarSystemDynamic(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         MJDREF = 2400000.5
         J2000_JD = 2451545.0
         J2000_MJD = J2000_JD - MJDREF
@@ -27,7 +26,6 @@ class TestSolarSystemDynamic(unittest.TestCase):
         self.ephem = ['de405', 'de421', 'de434', 'de430', 'de436']
         self.planets = ['jupiter', 'saturn', 'venus', 'uranus']
 
-    @pytest.mark.remote_data
     # Here we only test if any errors happens.
     def test_earth(self):
         for ep in self.ephem:
@@ -36,7 +34,6 @@ class TestSolarSystemDynamic(unittest.TestCase):
             assert a.pos.shape == (3, 10000)
             assert a.vel.shape == (3, 10000)
 
-    @pytest.mark.remote_data
     def test_sun(self):
         for ep in self.ephem:
             a = objPosVel_wrt_SSB('sun', self.tdb_time ,ephem = ep)
@@ -44,7 +41,6 @@ class TestSolarSystemDynamic(unittest.TestCase):
             assert a.pos.shape == (3, 10000)
             assert a.vel.shape == (3, 10000)
 
-    @pytest.mark.remote_data
     def test_planets(self):
         for p in self.planets:
             for ep in self.ephem:
@@ -53,7 +49,6 @@ class TestSolarSystemDynamic(unittest.TestCase):
                 assert a.pos.shape == (3, 10000)
                 assert a.vel.shape == (3, 10000)
 
-    @pytest.mark.remote_data
     def test_earth2obj(self):
         objs = self.planets + ['sun']
         for obj in objs:
@@ -64,7 +59,6 @@ class TestSolarSystemDynamic(unittest.TestCase):
                 assert a.pos.shape == (3, 10000)
                 assert a.vel.shape == (3, 10000)
 
-    @pytest.mark.remote_data
     def test_from_dir(self):
         path = datapath('de432s.bsp')
         a = objPosVel_wrt_SSB('earth', self.tdb_time , 'de432s', path=path)
