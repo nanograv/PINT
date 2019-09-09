@@ -1,2 +1,5 @@
 include versioneer.py
 include pint/extern/_version.py
+include database_urls.txt
+include database_urls_md5.txt
+include update_datafile_md5.py

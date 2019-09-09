@@ -12,12 +12,17 @@ SECS_PER_DAY = erfa.DAYSEC
 
 from astropy.utils.iers import IERS_A, IERS_A_URL, IERS_B, IERS_B_URL, IERS
 from astropy.utils.data import download_file
-# iers_a_file = download_file(IERS_A_URL, cache=True)
-iers_b_file = download_file(IERS_B_URL, cache=True)
-# iers_a = IERS_A.open(iers_a_file)
-iers_b = IERS_B.open(iers_b_file)
-IERS.iers_table = iers_b
-iers_tab = IERS.iers_table
+
+iers_tab = None
+def _download_IERS():
+    global IERS, iers_tab
+    #FIXME: downloading a changing file with cache
+    # iers_a_file = download_file(IERS_A_URL, cache=True)
+    iers_b_file = download_file(IERS_B_URL, cache=True)
+    # iers_a = IERS_A.open(iers_a_file)
+    iers_b = IERS_B.open(iers_b_file)
+    IERS.iers_table = iers_b
+    iers_tab = IERS.iers_table
 
 # Earth rotation rate in radians per UT1 second
 #
@@ -72,6 +77,8 @@ def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
     # Get x, y coords of Celestial Intermediate Pole and CIO locator s
     X, Y, S = erfa.xys00a(*tts)
 
+    if iers_tab is None:
+        _download_IERS()
     # Get dX and dY from IERS A in arcsec and convert to radians
     #dX = np.interp(mjds, iers_tab['MJD'], iers_tab['dX_2000A_B']) * asec2rad
     #dY = np.interp(mjds, iers_tab['MJD'], iers_tab['dY_2000A_B']) * asec2rad

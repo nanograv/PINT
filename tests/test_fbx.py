@@ -8,10 +8,12 @@ import os, unittest
 import test_derivative_utils as tdu
 import logging
 from pinttestdata import testdir, datadir
+from nose.plugins.attrib import attr
 
 os.chdir(datadir)
 
 
+@attr('ephem_server')
 class TestFBX(unittest.TestCase):
     """Compare delays and derivatives from the FBX parameterization with tempo
     and PINT

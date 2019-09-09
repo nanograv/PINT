@@ -4,11 +4,21 @@ language: python
 
 matrix:
     include:
+        - script: wget https://data.nanograv.org/static/data/ephem/de405.bsp
+          name: "NANOGrav ephemeris server accessible"
+          install: []
+          services: []
+          after_success: []
+          git:
+              clone: false
+        - python: "3.7"
+          name: "Tests that don't need the ephemeris server"
+          script:
+            - (cd tests ; nosetests -v -a '!ephem_server' --with-coverage --cover-package=pint --ignore-files=.\*DISABLED.py)
         - python: "2.7"
         - python: "3.5"
         - python: "3.6"
         - python: "3.7"
-
 sudo: required
 
 # https://docs.travis-ci.com/user/gui-and-headless-browsers/#Using-xvfb-to-Run-Tests-That-Require-a-GUI
@@ -21,8 +31,10 @@ services:
     - xvfb
 
 install:
-    - pip install -r requirements.txt
+    # We need to require the dev requirements first in case they're more
+    # stringent (on version numbers)
     - pip install -r requirements_dev.txt
+    - pip install -r requirements.txt
     - pip install .
 
 #script:
@@ -34,3 +46,4 @@ script:
 
 after_success:
     ( cd tests ; coveralls )
+

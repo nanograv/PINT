@@ -6,6 +6,7 @@ import numpy as np
 import os, unittest
 import test_derivative_utils as tdu
 import logging
+from nose.plugins.attrib import attr
 
 from pinttestdata import testdir, datadir
 
@@ -17,6 +18,7 @@ class TestTDBMethod(unittest.TestCase):
     def setUpClass(self):
         self.tim = 'B1855+09_NANOGrav_9yv1.tim'
 
+    @attr("ephem_server")
     def test_astropy_ephem(self):
         t_astropy = toa.get_TOAs(self.tim, ephem='DE436t')
         t_ephem = toa.get_TOAs(self.tim, ephem='DE436t', tdb_method="ephemeris")

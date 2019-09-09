@@ -1,23 +1,32 @@
 from __future__ import absolute_import, print_function, division
-import numpy as np
+
 import os
+
+from six.moves.urllib.parse import urljoin
+import numpy as np
 import astropy.units as u
 import astropy.coordinates as coor
-from six.moves import urllib
 from astropy.time import Time
-from .utils import PosVel
 from astropy import log
-import astropy.utils as aut
+from astropy.utils.data import download_file
 from jplephem.spk import SPK
-from .config import datapath
 try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 
-jpl_kernel_http = 'https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/'
-nanograv_http = 'https://data.nanograv.org/static/data/ephem/'
-jpl_kernel_ftp = 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/'
+from .utils import PosVel
+from .config import datapath
+
+
+ephemeris_mirrors = [
+    # NOTE the JPL ftp site is disabled for our automatic builds. Instead,
+    # we duplicated the JPL ftp site on the nanograv server.
+    # Search nanograv server first, then the other two.
+    'https://data.nanograv.org/static/data/ephem/',
+    'ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/',
+    'https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/',
+]
 
 jpl_obj_code = {'ssb': 0,
                 'sun': 10,
@@ -33,58 +42,133 @@ jpl_obj_code = {'ssb': 0,
                 'neptune': 8,
                 'pluto': 9}
 
+_ephemeris_hits = {}
+_ephemeris_failures = set()
 
-def _load_kernel_link(ephem, link=''):
-    load_kernel = False # a flag for checking if the kernel has been loaded
-    # search_list = [link,jpl_kernel_http, jpl_kernel_ftp]
-    # NOTE the JPL ftp site is disabled. Instead, we duplicated the JPL ftp
-    # site on nanograv server.
-    search_list = [link, nanograv_http, jpl_kernel_http, jpl_kernel_ftp]
-    if link != '':
-        search_list.append('')
-    for l in search_list:
-        if l == '':
-            ephem_link = ephem # Astropy default ephem does not like .bsp in the end.
-        else:
-            ephem_link = l+"%s.bsp" % ephem
-        if load_kernel:
-            break
-        try:
-            log.debug('Trying to set astropy ephemeris to {0}'.format(ephem_link))
-            coor.solar_system_ephemeris.set(ephem_link)
-            load_kernel = True
-        except Exception as ex:
-            #log.info('Exception! {0} {1} {2}'.format(type(ex), ex.args, ex))
-            try:
-                log.debug('Trying to download and set astropy ephemeris to {0}'.format(ephem_link))
-                aut.data.download_file(ephem_link, timeout=300, cache=True)
-                coor.solar_system_ephemeris.set(ephem_link)
-                load_kernel = True
-            except Exception as ex2:
-                #log.info('Exception2! {0} {1} {2}'.format(type(ex2), ex2.args, ex2))
-                load_kernel = False
-    return load_kernel
-
-
-def _load_kernel_local(ephem, path=''):
-    load_kernel = False # a flag for checking if the kernel has been loaded
-    if path.endswith("%s.bsp" % ephem):
-        custom_path = path
+def _load_kernel_link(ephem, link=None):
+    if link=='':
+        raise ValueError("Empty string is not a valid URL")
+    try:
+        # If we found it earlier just pull it from cache
+        l = _ephemeris_hits[ephem]
+        download_file(l, cache=True)
+        coor.solar_system_ephemeris.set(l)
+        return True
+    except KeyError:
+        pass
+    except ValueError:
+        log.warning("Previously found ephemeris '{}' at '{}' but "
+                    "it is now missing from both the cache and the "
+                    "internet location".format(ephem, l))
+    if link is not None:
+        search_list = [link] + ephemeris_mirrors
     else:
-        custom_path = os.path.join(path, "%s.bsp" % ephem)
-    search_list = [custom_path, datapath("%s.bsp" % ephem)]
-    for p in search_list:
-        if load_kernel:
-            break
-        try:# Bipass the astropy kernel loading system.
-            coor.solar_system_ephemeris._kernel = SPK.open(p)
-            coor.solar_system_ephemeris._value = p
-            coor.solar_system_ephemeris._kernel.origin = coor.solar_system_ephemeris._value
-            load_kernel = True
-        except:
-            load_kernel = False
-    return load_kernel
+        search_list = ephemeris_mirrors
+    for l in search_list:
+        ephem_link = urljoin(l, "%s.bsp" % ephem)
+        if ephem_link in _ephemeris_failures:
+            continue
+        try:
+            coor.solar_system_ephemeris.set(ephem_link)
+            _ephemeris_hits[ephem] = ephem_link
+            return True
+        except (ValueError, IOError) as e:
+            log.warning("Did not find '{}' because: {}, will retry".format(ephem_link, e))
+            # FIXME: detect which errors are worth retrying seconds later
+            # with a longer timeout and only retry those
+    log.info("Retrying network requests with a longer timeout")
+    for l in search_list:
+        ephem_link = urljoin(l, "%s.bsp" % ephem)
+        if ephem_link in _ephemeris_failures:
+            continue
+        try:
+            log.debug('Re-trying to set astropy ephemeris to {0}'.format(ephem_link))
+            download_file(ephem_link, timeout=300, cache=True)
+            log.warning("Only able to download '{}' on a second try".format(ephem_link))
+            coor.solar_system_ephemeris.set(ephem_link)
+            _ephemeris_hits[ephem] = ephem_link
+            return True
+        except (ValueError, IOError) as e:
+            # Retry failures are not surprising
+            log.info("Retry did not find '{}' because: {}".format(ephem_link, e))
+            _ephemeris_failures.add(ephem_link)
+    return False
 
+
+def _load_kernel_local(ephem, path):
+    ephem_bsp = "%s.bsp" % ephem
+    if os.path.isdir(path):
+        custom_path = os.path.join(path, ephem_bsp)
+    else:
+        custom_path = path
+    search_list = [custom_path, datapath(ephem_bsp)]
+    for p in search_list:
+        if os.path.exists(p):
+            # .set() can accept a path to an ephemeris
+            coor.solar_system_ephemeris.set(ephem)
+            return True
+
+            # Instead bypass the astropy kernel loading system.
+            #coor.solar_system_ephemeris._kernel = SPK.open(p)
+            #coor.solar_system_ephemeris._value = p
+            #coor.solar_system_ephemeris._kernel.origin = coor.solar_system_ephemeris._value
+            #return True
+    return False
+
+def load_kernel(ephem, path=None, link=None):
+    """Load the solar system ephemeris `ephem`
+
+    Ephemeris files may be obtained through astropy's internal
+    collection (which primarily downloads them from the network
+    but caches them in a user-wide cache directory), from an
+    additional network location via the astropy mechanism,
+    or from a file on the local system.  If the ephemeris cannot
+    be found a ValueError is raised.
+
+    If a kernel must be obtained from the network, it is first looked
+    for in the location specified by `link`, then in a list mirrors
+    of the JPL ephemeris collection.
+
+    Parameters
+    ----------
+    ephem : str
+        Short name of the ephemeris, for example `de421`. Case-insensitive.
+    path : str, optional
+        Local path to the ephemeris file.
+    link : str, optional
+        Location of path on the internet.
+    path: str, optional
+        Load the ephemeris from the file specified in path, rather than
+        requesting it from the network or astropy's collection of
+        ephemerides. The file is searched for by treating path as relative
+        to the current directory, or failing that, as relative to the
+        data directory specified in PINT's configuration.
+    link: str, optional
+        Suggest the URL as a possible location astropy should search
+        for the ephemeris.
+
+
+    Note
+    ----
+    If both path and link are provided. Path will be first to try.
+    """
+    ephem = ephem.lower()
+    # If a local path is provided, the local search will be considered first.
+    if path is not None:
+        if _load_kernel_local(ephem, path=path):
+            return
+    # Links are just suggestions, try just plain loading
+    try:
+        coor.solar_system_ephemeris.set(ephem)
+        return
+    except ValueError as e:
+        log.info("Ephemeris '{}' not found: '{}' "
+                 "trying to download from non-astropy "
+                 "locations".format(ephem, e))
+    if _load_kernel_link(ephem, link=link):
+        return
+    else:
+        raise ValueError("Unable to load ephemeris '{}'".format(ephem))
 
 def objPosVel_wrt_SSB(objname, t, ephem, path=None, link=None):
     """This function computes a solar system object position and velocity respect
@@ -103,47 +187,26 @@ def objPosVel_wrt_SSB(objname, t, ephem, path=None, link=None):
         Observation time in Astropy.time.Time object format.
     ephem: str
         The ephem to for computing solar system object position and velocity
-    path: str optional
-        The data directory point to a local ephemeris.
-    link: str optional
-        The link where to download the ephemeris.
+    path : str, optional
+        Local path to the ephemeris file.
+    link : str, optional
+        Location of path on the internet.
 
     Returns
     -------
     PosVel object with 3-vectors for the position and velocity of the object
-
-    Note
-    ----
-    If both path and link are provided. Path will be first to try.
     """
-    ephem = ephem.lower()
     objname = objname.lower()
-    # Use astropy to compute postion.
-    # If a local path is provided, the local search will be considered first.
-    # If the path is not provided, try link first, then local data file.
-    if path is None:
-        if link is None:
-            link_str = ''
-        else:
-            link_str = link
-        is_load = _load_kernel_link(ephem, link=link_str)
-        if not is_load: # Link does not Try to load from data path.
-            path_str = ''
-            is_load = _load_kernel_local(ephem, path=path_str)
-        if not is_load:
-            raise ValueError("Can not load the ephemeris file '%s.bsp'. " % ephem)
-    else:
-        path_str = path
-        is_load = _load_kernel_local(ephem, path=path_str)
-        if not is_load:
-            raise ValueError("Can not load the ephemeris file '%s.bsp' from the"
-                             " local directory %s." % (ephem, path_str))
+
+    load_kernel(ephem, path=path, link=link)
     pos, vel = coor.get_body_barycentric_posvel(objname, t)
     return PosVel(pos.xyz, vel.xyz.to(u.km/u.second), origin='ssb', obj=objname)
 
-def objPosVel(obj1, obj2, t, ephem):
+def objPosVel(obj1, obj2, t, ephem, path=None, link=None):
     """Compute the position and velocity for solar system obj2 referenced at obj1.
+
     This function uses astropy solar system Ephemerides module.
+
     Parameters
     ----------
     obj1: str
@@ -154,6 +217,11 @@ def objPosVel(obj1, obj2, t, ephem):
         TDB time in Astropy.time.Time object format
     ephem: str
         The ephem to for computing solar system object position and velocity
+    path : str, optional
+        Local path to the ephemeris file.
+    link : str, optional
+        Location of path on the internet.
+
     Return
     ------
     PosVel object.
@@ -161,54 +229,42 @@ def objPosVel(obj1, obj2, t, ephem):
         J2000 cartesian coordinate.
     """
     if obj1.lower() == 'ssb' and obj2.lower() != 'ssb':
-        obj2pv = objPosVel_wrt_SSB(obj2,t,ephem)
+        obj2pv = objPosVel_wrt_SSB(obj2,t,ephem,path=path,link=link)
         return obj2pv
     elif obj2.lower() == 'ssb' and obj1.lower() != 'ssb':
-        obj1pv = objPosVel_wrt_SSB(obj1,t,ephem)
+        obj1pv = objPosVel_wrt_SSB(obj1,t,ephem,path=path,link=link)
         return -obj1pv
     elif obj2.lower() != 'ssb' and obj1.lower() != 'ssb':
-        obj1pv = objPosVel_wrt_SSB(obj1,t,ephem)
-        obj2pv = objPosVel_wrt_SSB(obj2,t,ephem)
+        obj1pv = objPosVel_wrt_SSB(obj1,t,ephem,path=path,link=link)
+        obj2pv = objPosVel_wrt_SSB(obj2,t,ephem,path=path,link=link)
         return obj2pv - obj1pv
     else:
+        # user asked for velocity between ssb and ssb
         return PosVel(np.zeros((3,len(t)))*u.km, np.zeros((3,len(t)))*u.km/u.second)
 
 def get_tdb_tt_ephem_geocenter(tt, ephem, path=None, link=None):
     """The is a function to read the TDB_TT correction from the JPL DExxxt.bsp
-       ephemeris file.
-       Parameter
-       ---------
-       t: Astropy.time.Time object
-           Observation time in Astropy.time.Time object format.
-       ephem: str
-           Ephemeris name.
-       Note
-       ----
-       Only the DEXXXt.bsp type ephemeris has the TDB-TT information, others do
-       not provide it. The definition for TDB-TT column is described in the
-       paper:
-       https://ipnpr.jpl.nasa.gov/progress_report/42-196/196C.pdf page 6.
-    """
-    # Load kernel
-    ephem = ephem.lower()
+    ephemeris file.
 
-    if path is None:
-        if link is None:
-            link_str = ''
-        else:
-            link_str = link
-        is_load = _load_kernel_link(ephem, link=link_str)
-        if not is_load: # Link does not Try to load from data path.
-            path_str = ''
-            is_load = _load_kernel_local(ephem, path=path_str)
-        if not is_load:
-            raise ValueError("Can not load the ephemeris file '%s.bsp'. " % ephem)
-    else:
-        path_str = path
-        is_load = _load_kernel_local(ephem, path=path_str)
-        if not is_load:
-            raise ValueError("Can not load the ephemeris file '%s.bsp' from the"
-                             " local directory %s." % (ephem, path_str))
+    Parameter
+    ---------
+    t: Astropy.time.Time object
+        Observation time in Astropy.time.Time object format.
+    ephem: str
+        Ephemeris name.
+    path : str, optional
+        Local path to the ephemeris file.
+    link : str, optional
+        Location of path on the internet.
+
+    Note
+    ----
+    Only the DEXXXt.bsp type ephemeris has the TDB-TT information, others do
+    not provide it. The definition for TDB-TT column is described in the
+    paper:
+    https://ipnpr.jpl.nasa.gov/progress_report/42-196/196C.pdf page 6.
+    """
+    load_kernel(ephem, path=path, link=link)
     kernel = coor.solar_system_ephemeris._kernel
     try:
         # JPL ID defines this column.
