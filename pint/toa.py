@@ -59,7 +59,10 @@ def get_TOAs(timfile, ephem=None, include_bipm=True, bipm_version='BIPM2015',
             # Pickle either did not exist or is out of date
             updatepickle = True
     t = TOAs(timfile)
-    t.pulse_column_from_flags()
+    try:
+        t.pulse_column_from_flags()
+    except ValueError:
+        log.info("No pulse numbers found in {}".format(timfile))
     if not any(['clkcorr' in f for f in t.table['flags']]):
         t.apply_clock_corrections(include_gps=include_gps,
                                   include_bipm=include_bipm,
@@ -119,7 +122,10 @@ def get_TOAs_list(toa_list,ephem=None, include_bipm=True,
     [default=True].
     """
     t = TOAs(toalist = toa_list)
-    t.pulse_column_from_flags()
+    try:
+        t.pulse_column_from_flags()
+    except ValueError:
+        log.info("Not all provided TOAs have pulse numbers")
     if not any(['clkcorr' in f for f in t.table['flags']]):
         t.apply_clock_corrections(include_gps=include_gps,
                                   include_bipm=include_bipm,
@@ -765,7 +771,7 @@ class TOAs(object):
             #Remove pn from dictionary to prevent redundancies
             for flags in self.table['flags']:
                 del flags['pn']
-        except IndexError:
+        except KeyError:
             raise ValueError('Not all TOAs have pn flags')
 
     def compute_pulse_numbers(self, model):
