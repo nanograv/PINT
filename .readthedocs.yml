@@ -10,6 +10,9 @@ version: 2
 sphinx:
   configuration: docs/conf.py
 
+# Can add back in pdf, epub if wanted
+formats: []
+
 # Build documentation with MkDocs
 #mkdocs:
 #  configuration: mkdocs.yml
