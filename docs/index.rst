@@ -4,13 +4,12 @@ Welcome to pint's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    readme
-   design
    installation
    usage
-   api
+   api/pint
    contributing
    authors
    history

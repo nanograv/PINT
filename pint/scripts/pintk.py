@@ -1,7 +1,5 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore:DeprecationWarning
-'''
-PINTk: Tkinter interactive interface for PINT pulsar timing tool
-'''
+'''Tkinter interactive interface for PINT pulsar timing tool'''
 
 from __future__ import absolute_import, print_function, division
 import os, sys
@@ -45,7 +43,7 @@ class PINTk(object):
         self.createWidgets()
         if parfile is not None and timfile is not None:
             self.openPulsar(parfile=parfile, timfile=timfile, ephem=ephem)
-        
+
         self.initUI()
         self.updateLayout()
 
@@ -59,7 +57,7 @@ class PINTk(object):
         self.fileMenu.add_command(label='Open par/tim', command=self.openParTim)
         self.fileMenu.add_command(label='Switch model', command=self.switchModel)
         self.fileMenu.add_command(label='Switch TOAs', command=self.switchTOAs)
-        self.fileMenu.add_command(label='Exit', 
+        self.fileMenu.add_command(label='Exit',
                                  command=top.destroy)
         self.menuBar.add_cascade(label='File', menu=self.fileMenu)
 
@@ -74,10 +72,10 @@ class PINTk(object):
 
         self.helpMenu = tk.Menu(self.menuBar)
         self.helpMenu.add_command(label='About', command=self.about)
-        self.helpMenu.add_command(label='Plk Help', 
+        self.helpMenu.add_command(label='Plk Help',
                                   command=lambda: print(helpstring))
         self.menuBar.add_cascade(label='Help', menu=self.helpMenu)
-        
+
         #Key bindings
         top.bind('<Control-p>', lambda e:self.toggle('plk'))
         top.bind('<Control-m>', lambda e:self.toggle('par'))
@@ -94,7 +92,7 @@ class PINTk(object):
     def updateLayout(self):
         for widget in self.mainFrame.winfo_children():
             widget.grid_forget()
-        
+
         visible = 0
         for key in self.active.keys():
             if self.active[key].get():
@@ -130,15 +128,15 @@ class PINTk(object):
         parfile = tkFileDialog.askopenfilename(title='Open par file')
         timfile = tkFileDialog.askopenfilename(title='Open tim file')
         self.openPulsar(parfile, timfile)
-    
+
     def toggle(self, key):
         self.active[key].set((self.active[key].get() + 1)%2)
         self.updateLayout()
 
     def about(self):
-        tkMessageBox.showinfo(title='About PINTk', 
+        tkMessageBox.showinfo(title='About PINTk',
                               message='A Tkinter based graphical interface to PINT')
-        
+
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Tkinter interface for PINT pulsar timing tool')

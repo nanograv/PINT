@@ -1,15 +1,13 @@
-"""
-A module implementing binned and unbinned likelihood for weighted and
-unweighted sets of photon phases.  The model is encapsulated in LCTemplate,
-a mixture model.
+"""Likelihood for sets of photon phases.
 
-LCPrimitives are combined to form a light curve (LCTemplate).  
-LCFitter then performs a maximum likielihood fit to determine the 
+Binned and unbinned likelihood for weighted and unweighted sets of photon phases.
+The model is encapsulated in LCTemplate, a mixture model.
+
+LCPrimitives are combined to form a light curve (LCTemplate).
+LCFitter then performs a maximum likielihood fit to determine the
 light curve parameters.
 
 LCFitter also allows fits to subsets of the phases for TOA calculation.
-
-$Header: /nfs/slac/g/glast/ground/cvs/pointlike/python/uw/pulsar/lcfitters.py,v 1.54 2017/03/24 18:48:51 kerrm Exp $
 
 author: M. Kerr <matthew.kerr@gmail.com>
 
@@ -25,7 +23,7 @@ SECSPERDAY = 86400.
 
 def shifted(m,delta=0.5):
     """ Produce a copy of a binned profile shifted in phase by delta."""
-    f = np.fft.fft(m,axis=-1) 
+    f = np.fft.fft(m,axis=-1)
     n = f.shape[-1]
     arg = np.fft.fftfreq(n)*(n*np.pi*2.j*delta)
     return np.real(np.fft.ifft(np.exp(arg)*f,axis=-1))
@@ -121,7 +119,7 @@ class UnweightedLCFitter(object):
     def __call__(self):
         """ Shortcut for log likelihood at current param values."""
         return self.loglikelihood(self.template.get_parameters())
-      
+
     def unbinned_gradient(self,p,*args):
         t = self.template
         t.set_parameters(p);
@@ -174,10 +172,10 @@ class UnweightedLCFitter(object):
         else:
             self.loglikelihood = self.binned_loglikelihood
             self.gradient = self.binned_gradient
-         
-    def fit(self,quick_fit_first=False, unbinned=True, use_gradient=True, 
-            overall_position_first=False, positions_first=False, 
-            estimate_errors=False, prior=None, 
+
+    def fit(self,quick_fit_first=False, unbinned=True, use_gradient=True,
+            overall_position_first=False, positions_first=False,
+            estimate_errors=False, prior=None,
             unbinned_refit=True, try_bootstrap=True):
         # NB use of priors currently not supported by quick_fit, positions first, etc.
         self._set_unbinned(unbinned)
@@ -331,7 +329,7 @@ class UnweightedLCFitter(object):
         return fit
 
     def hess_errors(self,use_gradient=True):
-        """ Set errors from hessian.  Fit should be called first...""" 
+        """ Set errors from hessian.  Fit should be called first..."""
         p = self.template.get_parameters()
         nump = len(p)
         self.cov_matrix = np.zeros([nump,nump],dtype=float)
@@ -341,7 +339,7 @@ class UnweightedLCFitter(object):
             c1 = scipy.linalg.inv(h1)
             if np.all(np.diag(c1)>0):
                 self.cov_matrix = c1
-            else: 
+            else:
                 print('Could not estimate errors from hessian.')
                 return False
         else:
@@ -511,7 +509,7 @@ class UnweightedLCFitter(object):
 
             Note the sense of the statistic is such that more negative
             implies a better fit.
-            
+
             This should work for energy-dependent templates provided the
             template and fitter match types."""
         if template is not None:
@@ -659,7 +657,7 @@ class ChiSqLCFitter(object):
             self.template.set_errors(np.diag(cov)**0.5)
         if get_results:
             return results
-    
+
     def __str__(self):
         return str(self.template)
 
@@ -690,7 +688,7 @@ def hessian(m,mf,*args,**kwargs):
     for i in range(len(p)):
         delt = delta[i]
         for j in range(i,len(p)): #Second partials by finite difference; could be done analytically in a future revision
-         
+
             xhyh,xhyl,xlyh,xlyl=p.copy(),p.copy(),p.copy(),p.copy()
             xdelt = delt if p[i] >= 0 else -delt
             ydelt = delt if p[j] >= 0 else -delt
@@ -756,7 +754,7 @@ def make_err_plot(template,totals=[10,20,50,100,500],n=1000):
 def approx_gradient(fitter,eps=1e-6):
     """ Numerically approximate the gradient of an instance of one of the
         light curve fitters.
-        
+
         TODO -- potentially merge this with the code in lcprimitives"""
     func = fitter.template
     orig_p = func.get_parameters(free=True).copy()
@@ -780,7 +778,7 @@ def approx_gradient(fitter,eps=1e-6):
 def hess_from_grad(grad,par,step=1e-3,iterations=2):
     """ Use gradient to compute hessian.  Proceed iteratively to take steps
         roughly equal to the 1-sigma errors.
-    
+
         The initial step can be:
             [scalar] use the same step for the initial iteration
             [array] specify a step for each parameters.
@@ -798,7 +796,7 @@ def hess_from_grad(grad,par,step=1e-3,iterations=2):
         toggle = 1.
         for i in range(n):
             minor = np.delete(np.delete(M,0,0),i,1)
-            rvals += M[0,i] * toggle * mdet(minor) 
+            rvals += M[0,i] * toggle * mdet(minor)
             toggle *= -1
         return rvals
 
@@ -822,7 +820,7 @@ def hess_from_grad(grad,par,step=1e-3,iterations=2):
         hess = np.empty([npar,npar],dtype=p0.dtype)
         for i in range(npar):
             par[i] = p0[i] + steps[i]
-            gup = grad(par) 
+            gup = grad(par)
             par[i] = p0[i] - steps[i]
             gdn = grad(par)
             par[:] = p0

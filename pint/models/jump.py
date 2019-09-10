@@ -1,5 +1,4 @@
-"""This module implements phase jumps.
-"""
+"""Phase jumps. """
 # phase_jump.py
 # Defines PhaseJump timing model class
 from __future__ import absolute_import, print_function, division
@@ -11,9 +10,12 @@ from pint import dimensionless_cycles
 
 
 class DelayJump(DelayComponent):
-    """This is a class to implement phase jumps
-       NOTE: this component is disable for now, since we don't have any method
-       to identify the phase jumps and delay jumps.
+    """Phase jumps
+
+    Note
+    ----
+    this component is disable for now, since we don't have any method
+    to identify the phase jumps and delay jumps.
     """
     register = False
     def __init__(self):

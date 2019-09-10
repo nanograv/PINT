@@ -1,5 +1,4 @@
-"""This module implements a simple model of a base dispersion delay.
-   And DMX dispersion"""
+"""A simple model of a base dispersion delay and DMX dispersion."""
 from __future__ import absolute_import, print_function, division
 from warnings import warn
 from . import parameter as p
@@ -21,14 +20,14 @@ DMconst = 1.0/2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
 
 
 class Dispersion(DelayComponent):
-    """This class provides a base dispersion timing model.
-    """
+    """A base dispersion timing model."""
     def __init__(self):
         super(Dispersion, self).__init__()
         self.dm_value_funcs = []
 
     def dispersion_time_delay(self, DM, freq):
         """Return the dispersion time delay for a set of frequency.
+
         This equation if cited from Duncan Lorimer, Michael Kramer,
         Handbook of Pulsar Astronomy, Second edition, Page 86, Equation [4.7]
         Here we assume the reference frequency is at infinity and the EM wave
@@ -52,8 +51,9 @@ class Dispersion(DelayComponent):
         return self.dispersion_time_delay(dm, bfreq)
 
 class DispersionDM(Dispersion):
-    """
-    This is the DM dispersion model. This model uses Taylor expansion to model
+    """The DM dispersion model.
+
+    This model uses Taylor expansion to model
     the DM variation over time. It is also can be used for the constant DM model.
     """
     register = True

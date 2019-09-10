@@ -1,4 +1,4 @@
-"""This module implements polynomial pulsar spindown.
+"""Polynomial pulsar spindown.
 """
 # spindown.py
 # Defines Spindown timing model class
@@ -21,7 +21,7 @@ import pint.toa as toa
 
 
 class Spindown(PhaseComponent):
-    """This class provides a simple timing model for an isolated pulsar."""
+    """A simple timing model for an isolated pulsar."""
     register = True
     def __init__(self):
         super(Spindown, self).__init__()
@@ -144,7 +144,7 @@ class Spindown(PhaseComponent):
             phsepoch_ld = time_to_longdouble(tbl['tdb'][0] - delay[0])
         else:
             phsepoch_ld = time_to_longdouble(self.PEPOCH.quantity)
-        dt = ((time_to_longdouble(new_epoch) - phsepoch_ld) * u.day) 
+        dt = ((time_to_longdouble(new_epoch) - phsepoch_ld) * u.day)
         fterms = [0.0 * u.Unit("")] + self.get_spin_terms()
         # rescale the fterms
         for n in range(len(fterms) - 1):

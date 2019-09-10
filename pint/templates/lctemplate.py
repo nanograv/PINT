@@ -1,7 +1,6 @@
-"""
-A module implementing a mixture model of LCPrimitives to form a
-normalized template representing directional data.
-$Header: /nfs/slac/g/glast/ground/cvs/pointlike/python/uw/pulsar/lctemplate.py,v 1.24 2017/04/07 19:32:20 kerrm Exp $
+"""Normalized template representing directional data
+
+Implements a mixture model of LCPrimitives to form a normalized template representing directional data.
 
 author: M. Kerr <matthew.kerr@gmail.com>
 
@@ -16,15 +15,18 @@ from astropy import log
 
 class LCTemplate(object):
     """Manage a lightcurve template (collection of LCPrimitive objects).
-   
-       IMPORTANT: a constant background is assumed in the overall model, 
-       so there is no need to furnish this separately.
+
+    IMPORTANT: a constant background is assumed in the overall model,
+    so there is no need to furnish this separately.
+
+    Parameters
+    ----------
+    primitives : list of LCPrimitive
+    norms : NormAngles or tuple of float, optional
+        If a tuple, they are relative amplitudes for the primitive components.
     """
 
     def __init__(self,primitives,norms=None):
-        """ primitives -- a list of LCPrimitive instances
-            norms -- either an instance of NormAngles, or a tuple of
-                relative amplitudes for the primitive components."""
         self.primitives = primitives
         self.shift_mode = np.any([p.shift_mode for p in self.primitives])
         if norms is None:
@@ -137,12 +139,12 @@ class LCTemplate(object):
         for n,prim in zip(norms,self.primitives):
             rvals += n*prim.integrate(phi1,phi2,log10_ens)
         rvals.sum(axis=0)
-        if suppress_bg: 
+        if suppress_bg:
             return rvals / t
         return (1-t)*dphi + rvals
 
     def cdf(self,x,log10_ens=3):
-        return self.integrate(0,x,log10_ens,suppress_bg=False) 
+        return self.integrate(0,x,log10_ens,suppress_bg=False)
 
     def max(self,resolution=0.01):
         return self(np.arange(0,1,resolution)).max()
@@ -179,7 +181,7 @@ class LCTemplate(object):
 
     def set_cache(self,ncache=1000):
         t = self(np.linspace(0,1,ncache+1))
-        self._cache = 0.5*(t[1:]+t[:-1]) 
+        self._cache = 0.5*(t[1:]+t[:-1])
         self._cache_out_of_date = False
 
     def single_component(self,index,phases,log10_ens=3):
@@ -229,14 +231,14 @@ class LCTemplate(object):
     def Delta(self,delta=False):
         """ Report peak separation -- reckoned by default as the distance
             between the first and final component locations.
-            
+
             delta [False] -- if True, return the first peak position"""
         if len(self.primitives)==1: return -1,0
         prim0,prim1 = self[0],self[-1]
         for p in self.primitives:
             if p.get_location() < prim0.get_location(): prim0 = p
             if p.get_location() > prim1.get_location(): prim1 = p
-        p1,e1 = prim0.get_location(error=True) 
+        p1,e1 = prim0.get_location(error=True)
         p2,e2 = prim1.get_location(error=True)
         if delta: return p1,e1
         return (p2-p1,(e1**2+e2**2)**0.5)
@@ -263,7 +265,7 @@ class LCTemplate(object):
         rstrings = []
         dashes = '-'*25
         norm,errnorm = 0,0
-      
+
         for nprim,prim in enumerate(self.primitives):
             phas = prim.get_location(error=True)
             fwhm = 2*prim.get_width(error=True,hwhm=True)
@@ -279,10 +281,10 @@ class LCTemplate(object):
             f.write('# gauss\n')
             for s in rstring: f.write(s+'\n')
         return '\n'.join(rstring)
-       
+
     def random(self,n,weights=None,return_partition=False,
         randomize_partition=True):
-        """ Return n pseudo-random variables drawn from the distribution 
+        """ Return n pseudo-random variables drawn from the distribution
             given by this light curve template.
 
             Uses a mulitinomial to divvy the n phases up amongs the various
@@ -384,8 +386,8 @@ class LCTemplate(object):
     def order_primitives(self,indices,zeropt=0,order_by_amplitude=False):
         """ Order the primitives specified by the indices by position.
             x0 specifies an alternative zeropt.
-            
-            If specified, the peaks will instead be ordered by descending 
+
+            If specified, the peaks will instead be ordered by descending
             maximum amplitude."""
         def dist(index):
             p = self.primitives[index]
@@ -434,7 +436,7 @@ class LCTemplate(object):
         return min((p.closest_to_peak(phases) for p in self.primitives))
 
     def mean_value(self,phases,log10_ens=None,weights=None,bins=20):
-        """ Compute the mean value of the profile over the codomain of 
+        """ Compute the mean value of the profile over the codomain of
             phases.  Mean is taken over energy and is unweighted unless
             a set of weights are provided."""
         if (log10_ens is None) or (not self.is_energy_dependent()):
@@ -516,7 +518,7 @@ class LCBridgeTemplate(LCTemplate):
 
     def has_bridge(self):
         return True
-    
+
     def __init__(self,primitives,norms=None):
         """ primitives -- a list of LCPrimitive instances of len >= 2; the
                 last two components are interpreted as P1 and P2
@@ -570,7 +572,7 @@ class LCBridgeTemplate(LCTemplate):
         rvals = k/delta*mask # pedestal
         norm_list = [norms[i] for i in range(0,len(norms)-2)] + [n1+dn1*mask,n2+dn2*mask]
         return rvals,norm_list,all_norms.sum(axis=0)
-            
+
     def random(self,n,weights=None,return_partition=False):
         # note -- this wouldn't be that hard to do, just do multinomial as
         # usual, then an additional step to determine which part of the peaks
@@ -649,7 +651,7 @@ def get_2pb(pulse_frac=0.9,lorentzian=False):
 def make_twoside_gaussian(one_side_gaussian):
     """ Make a two-sided gaussian with the same initial shape as the
         input one-sided gaussian."""
-    g2 = LCGaussian2() 
+    g2 = LCGaussian2()
     g1 = one_side_gaussian
     g2.p[0] = g2.p[1]= g1.p[0]
     g2.p[-1] = g1.p[-1]
@@ -663,7 +665,7 @@ class GaussianPrior(object):
         self.mod = np.asarray(mod)
         if mask is None:
             self.mask = np.asarray([True]*len(locations))
-        else: 
+        else:
             self.mask = np.asarray(mask)
             self.x0 = self.x0[self.mask]
             self.s0 = self.s0[self.mask]
@@ -676,7 +678,7 @@ class GaussianPrior(object):
     def __call__(self,parameters):
         if not np.any(self.mask): return 0
         parameters = parameters[self.mask]
-        parameters = np.where(self.mod,np.mod(parameters,1),parameters) 
+        parameters = np.where(self.mod,np.mod(parameters,1),parameters)
         return np.sum(((parameters-self.x0)/self.s0)**2)
 
     def gradient(self,parameters):

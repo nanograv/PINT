@@ -1,6 +1,8 @@
+"""The BT (Blandford & Teukolsky) model.
 
-"""This model provides the BT (Blandford & Teukolsky 1976, ApJ, 205, 580) model.
-    """
+See Blandford & Teukolsky 1976, ApJ, 205, 580.
+
+"""
 from __future__ import absolute_import, print_function, division
 from pint import ls,GMsun,Tsun
 from .stand_alone_psr_binaries.BT_model import BTmodel
@@ -10,7 +12,9 @@ from .timing_model import TimingModel, MissingParameter
 import astropy.units as u
 
 class BinaryBT(PulsarBinary):
-    """This is a PINT pulsar binary BT model class a subclass of PulsarBinary.
+    """Model implemenring the BT model.
+
+    This is a PINT pulsar binary BT model class a subclass of PulsarBinary.
     It is a wrapper for stand alone BTmodel class defined in
     ./stand_alone_psr_binary/BT_model.py
     All the detailed calculations are in the stand alone BTmodel.

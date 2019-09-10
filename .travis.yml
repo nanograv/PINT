@@ -15,6 +15,12 @@ matrix:
         - python: "3.5"
         - python: "3.6"
         - python: "3.7"
+        - script: make docs-build
+          name: "Documentation build"
+          after_success: []
+          # FIXME: eventually can turn warnings into errors so Travis will fail 
+          # on dead links and formatting problems; right now we have a bazillion
+          # dead links and formatting problems.
 sudo: required
 
 # https://docs.travis-ci.com/user/gui-and-headless-browsers/#Using-xvfb-to-Run-Tests-That-Require-a-GUI

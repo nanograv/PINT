@@ -1,6 +1,7 @@
-'''
-A wrapper around pulsar functions for pintkinter to use. This object will be shared
-between widgets in the main frame and will contain the pre/post fit model, toas, 
+'''A wrapper around pulsar functions for pintkinter to use.
+
+This object will be shared between widgets in the main frame
+and will contain the pre/post fit model, toas,
 pre/post fit residuals, and other useful information.
 '''
 from __future__ import print_function
@@ -18,7 +19,7 @@ import pint.models
 import pint.toa
 import pint.fitter
 import pint.residuals
-        
+
 plot_labels = ['pre-fit', 'post-fit', 'mjd', 'year', 'orbital phase', 'serial', \
     'day of year', 'frequency', 'TOA error', 'rounded MJD']
 
@@ -38,9 +39,9 @@ class Pulsar(object):
 
     def __init__(self, parfile=None, timfile=None, ephem=None):
         super(Pulsar, self).__init__()
-        
+
         print('STARTING LOADING OF PULSAR %s' % str(parfile))
-        
+
         if parfile is not None and timfile is not None:
             self.parfile = parfile
             self.timfile = timfile
@@ -80,7 +81,7 @@ class Pulsar(object):
 
     def __contains__(self, key):
         return key in self.prefit_model.params
-   
+
     def reset_model(self):
         self.prefit_model = pint.models.get_model(self.parfile)
         self.postfit_model = None
@@ -112,9 +113,9 @@ class Pulsar(object):
             self.toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value,planets=True)
         else:
             self.toas = pint.toa.get_TOAs(self.timfile,planets=True)
-        
+
         self.update_resids()
-   
+
     def update_resids(self):
         self.prefit_resids = pint.residuals.resids(self.toas, self.prefit_model)
         if self.fitted:
@@ -138,7 +139,7 @@ class Pulsar(object):
         else:
             print("ERROR: Neither T0 nor TASC set")
             return np.zeros(len(toas))
-        
+
         phase = np.modf(tpb)[0]
         phase[phase < 0] += 1
         return phase * u.cycle
@@ -157,7 +158,7 @@ class Pulsar(object):
         '''
         t = Time(self.toas.get_mjds(), format='mjd')
         return (t.decimalyear) * u.year
-    
+
     def write_fit_summary(self):
         '''
         Summarize fitting results
@@ -167,10 +168,10 @@ class Pulsar(object):
             wrms = np.sqrt(chi2 / self.toas.ntoas)
             print('Post-Fit Chi2:\t\t%.8g us^2' % chi2)
             print('Post-Fit Weighted RMS:\t%.8g us' % wrms)
-            print('%19s  %24s\t%24s\t%16s  %16s  %16s' % 
+            print('%19s  %24s\t%24s\t%16s  %16s  %16s' %
                   ('Parameter', 'Pre-Fit', 'Post-Fit', 'Uncertainty', 'Difference', 'Diff/Unc'))
             print('-' * 132)
-            fitparams = [p for p in self.prefit_model.params 
+            fitparams = [p for p in self.prefit_model.params
                          if not getattr(self.prefit_model, p).frozen]
             for key in fitparams:
                 line = '%8s ' % key
@@ -206,7 +207,7 @@ class Pulsar(object):
             if 'pn' not in self.toas.table.colnames:
                 self.toas.compute_pulse_numbers(self.prefit_model)
         self.toas.table['pn'][selected] += phase
-    
+
         #Turn on pulse number tracking
         if self.prefit_model.TRACK.value != '-2':
             self.track_added = True
@@ -234,7 +235,7 @@ class Pulsar(object):
         wrms = np.sqrt(chi2 / self.toas.ntoas)
         print('Pre-Fit Chi2:\t\t%.8g us^2' % chi2)
         print('Pre-Fit Weighted RMS:\t%.8g us' % wrms)
-        
+
         fitter.fit_toas(maxiter=1)
         self.postfit_model = fitter.model
         self.postfit_resids = pint.residuals.resids(self.toas, self.postfit_model)
