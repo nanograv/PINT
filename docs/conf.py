@@ -19,7 +19,6 @@ from packaging.version import parse
 
 import sphinx.ext.apidoc
 
-import pint
 
 # If extensions (or modules to document with autodoc) are in another
 # directory, add these directories to sys.path here. If the directory is
@@ -36,6 +35,7 @@ project_root = os.path.join(cwd, "..")  # parent directory of wherever this file
 # This lets us ensure that the source package is imported, and that its
 # version is used.
 sys.path.insert(0, project_root)
+import pint
 
 # -- General configuration ---------------------------------------------
 

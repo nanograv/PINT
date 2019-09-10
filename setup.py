@@ -10,7 +10,6 @@ import os
 import sys
 import hashlib
 import os.path
-import subprocess
 # !! This means setup.py can't even be run without numpy installed!
 import numpy
 
@@ -20,6 +19,8 @@ except ImportError:
     use_cython = False
 else:
     use_cython = True
+
+import versioneer
 
 # We need to find PySPICE. Can be done in one of two ways:
 # Set the environment variable $PYSPICE, or use
@@ -69,7 +70,6 @@ clock_files = ['gps2utc.clk', 'time.dat', 'tai2tt_bipm2015.clk',
 for fname in clock_files:
     data_files.append(os.path.join(data_dir, fname))
 
-import versioneer
 cmdclass.update(versioneer.get_cmdclass())
 
 # These command-line scripts will be built by the setup process and installed in your PATH
