@@ -184,6 +184,7 @@ def test_IERS_B_builtin_agree_with_IERS_Auto_dX():
     )
 
 
+@pytest.mark.skip
 def test_IERS_B_builtin_agree_with_IERS_Auto():
     """The UT1-UTC, PM_X, and PM_Y values are correctly copied"""
     A = IERS_Auto.open()
@@ -235,6 +236,7 @@ copy_columns = [
 ]
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("b_name,a_name", copy_columns)
 def test_IERS_B_parameters_loaded_into_IERS_Auto(b_name, a_name):
     A = IERS_Auto.open()
