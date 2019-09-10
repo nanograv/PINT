@@ -1,5 +1,4 @@
-"""This module implements pulsar timing glitches.
-"""
+"""Pulsar timing glitches.  """
 # glitch.py
 # Defines glitch timing model class
 from __future__ import absolute_import, print_function, division

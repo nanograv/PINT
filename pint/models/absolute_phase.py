@@ -1,5 +1,4 @@
-""" This module implements the timing model absolute phase (TZRMJD, TZRSITE ...)
-"""
+"""Timing model absolute phase (TZRMJD, TZRSITE ...)"""
 from __future__ import absolute_import, print_function, division
 from warnings import warn
 from astropy import log
@@ -10,12 +9,14 @@ import pint.toa as toa
 import numpy as np
 
 class AbsPhase(PhaseComponent):
-    """ This is a class that implements the absolute phase model. The model
-        defines the absolute phase's reference time and observatory.
-        Note
-        ----
-        Although this class is condisder as a phase component, it does not
-        provide the phase_func
+    """Absolute phase model.
+
+    The model defines the absolute phase's reference time and observatory.
+
+    Note
+    ----
+    Although this class is condisder as a phase component, it does not
+    provide the phase_func
     """
     register = True
 
@@ -48,8 +49,9 @@ class AbsPhase(PhaseComponent):
 
 
     def get_TZR_toa(self, toas):
-        """ Get the TOAs class for the TZRMJD. We are treating the TZRMJD as a
-            special TOA.
+        """Get the TOAs class for the TZRMJD.
+
+        We are treating the TZRMJD as a special TOA.
         """
         # NOTE: Using TZRMJD.quantity.jd[1,2] so that the time scale can be properly
         # set to the TZRSITE default timescale (e.g. UTC for TopoObs and TDB for SSB)

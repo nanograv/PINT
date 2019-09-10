@@ -1,4 +1,4 @@
-"""This module implements a frequency evolution of pulsar profiles model"""
+"""A frequency evolution of pulsar profiles model"""
 from __future__ import absolute_import, print_function, division
 from warnings import warn
 from . import parameter as p
@@ -9,9 +9,7 @@ import pint.utils as ut
 import astropy.time as time
 
 class FD(DelayComponent):
-    """This class provides a timing model for frequency evolution of pulsar
-    profiles model.
-    """
+    """A timing model for frequency evolution of pulsar profiles."""
     register = True
     def __init__(self):
         super(FD, self).__init__()
@@ -40,7 +38,8 @@ class FD(DelayComponent):
             self.register_deriv_funcs(self.d_delay_FD_d_FDX, val)
 
     def FD_delay(self, toas, acc_delay=None):
-        """This is a function for calculation of frequency dependent delay.
+        """Calculate frequency dependent delay.
+
         Z. Arzoumanian, The NANOGrav Nine-year Data Set: Observations, Arrival
         Time Measurements, and Analysis of 37 Millisecond Pulsars, The
         Astrophysical Journal, Volume 813, Issue 1, article id. 65, 31 pp.(2015).

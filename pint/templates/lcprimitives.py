@@ -1,9 +1,9 @@
-""" A module containing LCPrimitive and its subclasses.  They implement
+"""Components of a pulsar light curve.
+
+LCPrimitive and its subclasses implement
 components of a pulsar light curve.  Includes primitives (Gaussian,
 Lorentzian), etc.  as well as more sophisticated holistic templates that
 provide single-parameter (location) representations of the light curve.
-
-$Header: /nfs/slac/g/glast/ground/cvs/pointlike/python/uw/pulsar/lcprimitives.py,v 1.36 2017/04/06 20:48:05 kerrm Exp $
 
 author: M. Kerr <matthew.kerr@gmail.com>
 
@@ -33,16 +33,22 @@ WRAPEPS  = 1e-8
 # TODO -- possible "LCBase" class with certain method common to LCPrimitive and LCTemplate
 
 def two_comp_mc(n,w1,w2,loc,func):
-    """ Helper function to generate MC photons from a two-sided 
-        distribution.
+    """Generate MC photons from a two-sided distribution.
 
-        NB -- this should work as is if w1,w2,loc are vectors.
+    Helper function.  This should work as is if w1,w2,loc are vectors.
 
-        n -- total number of photons
-        w1 -- scale parameter for func, lefthand peak
-        w2 -- scale parameter for func, righthand peak
-        loc -- position of peak
-        func -- an 'rvs' function from scipy
+    Parameters
+    ----------
+    n : int
+        total number of photons
+    w1 : float or array-like
+        scale parameter for func, lefthand peak
+    w2 : float or array-like
+        scale parameter for func, righthand peak
+    loc : float or array-like
+        position of peak
+    func : callable
+        an 'rvs' function from scipy
     """
     frac1 = w1/(w1+w2)
     # number of photons required from left side
@@ -79,7 +85,7 @@ def approx_gradient(func,phases,log10_ens,eps=1e-6):
 def check_gradient(func,atol=1e-8,rtol=1e-5,quiet=False):
     """ Test gradient function with a set of MC photons.
         This works with either LCPrimitive or LCTemplate objects.
-        
+
         TODO -- there is trouble with the numerical gradient when
         a for the location-related parameters when the finite step
         causes the peak to shift from one side of an evaluation phase
@@ -169,7 +175,7 @@ class LCPrimitive(object):
                     self.__dict__[key] = np.asarray(v,dtype=bool if 'free' in key else float)
 
     def _default_bounds(self):
-        bounds = [[]] *len(self.p) 
+        bounds = [[]] *len(self.p)
         # this order works for LCHarmonic, too
         bounds[0] = [0.005,0.5] # width
         bounds[-1] = [-1,1] # position
@@ -182,7 +188,7 @@ class LCPrimitive(object):
         width = np.asarray([0.1]*len(self.p))
         enable = np.asarray([False]*len(self.p))
         return loc,width,enable
-         
+
     def __init__(self,**kwargs):
         """ Generally, class-specific setup work is performed in init.
             Here, init is called and certain guaranteed default members
@@ -241,7 +247,7 @@ class LCPrimitive(object):
 
     def enable_gauss_prior(self,enable=True):
         """ [Convenience] Turn on gaussian prior."""
-        self.gauss_prior_enable[:] = enable    
+        self.gauss_prior_enable[:] = enable
 
     def center_gauss_prior(self,enable=False):
         """ [Convenience] Set gauss mode to current params."""
@@ -272,7 +278,7 @@ class LCPrimitive(object):
         scale = self.hwhm(right=right)/self.p[int(right)] if hwhm else 1
         if error: return np.asarray([self.p[int(right)],self.errors[int(right)]])*scale
         return self.p[int(right)]*scale
-    
+
     def get_gradient(self,phases,log10_ens=3):
         raise DeprecationWarning()
         return self.gradient(phases,log10_ens,free=True)
@@ -281,7 +287,7 @@ class LCPrimitive(object):
         raise NotImplementedError('No gradient function found for this object.')
 
     def random(self,n):
-        """ Default is accept/reject.""" 
+        """ Default is accept/reject."""
         if n < 1: return 0
         M = self(np.asarray([self.p[-1]])) # peak amplitude
         rvals    = np.empty(n)
@@ -296,7 +302,7 @@ class LCPrimitive(object):
             position += ncands
             if position >= n: break
         return rvals
-      
+
     def __str__(self):
         m=max([len(n) for n in self.pnames])
         l = []
@@ -374,7 +380,7 @@ class LCPrimitive(object):
 
 class LCWrappedFunction(LCPrimitive):
     """ Super-class for profiles derived from wrapped functions.
-        
+
         While some distributions (e.g. the wrapped normal) converge
         quickly, others (e.g. the wrapped Lorentzian) converge very slowly
         and must be truncated before machine precision is reached.
@@ -416,7 +422,7 @@ class LCWrappedFunction(LCPrimitive):
     def gradient(self,phases,log10_ens=3,free=False):
         """ Return the gradient evaluated at a vector of phases.
 
-            output : a num_parameter x len(phases) ndarray, 
+            output : a num_parameter x len(phases) ndarray,
                      the num_parameter-dim gradient at each phase
         """
         results = self.base_grad(phases,log10_ens)
@@ -425,7 +431,7 @@ class LCWrappedFunction(LCPrimitive):
             t += self.base_grad(phases,log10_ens,index=-i)
             results += t
             if (i >= MINWRAPS) and (np.all(t < WRAPEPS)): break
-        gn = self._grad_norm(i,log10_ens) 
+        gn = self._grad_norm(i,log10_ens)
         if gn is not None:
             for i in range(len(gn)):
                 results[i,:] += gn[i]
@@ -441,18 +447,18 @@ class LCWrappedFunction(LCPrimitive):
             t = self.base_int(x1,x2,log10_ens,index=i)
             t += self.base_int(x1,x2,log10_ens,index=-i)
             results += t
-            if np.all(t < WRAPEPS): 
+            if np.all(t < WRAPEPS):
                 break
         return results+(x2-x1)*self._norm(i,log10_ens)
 
     def base_func(self,phases,log10_ens=3,index=0):
         raise NotImplementedError(
             'No base_func function found for this object.')
-        
+
     def base_grad(self,phases,log10_ens=3,index=0):
         raise NotImplementedError(
             'No base_grad function found for this object.')
-        
+
     def base_int(self,phases,log10_ens=3,index=0):
         raise NotImplementedError(
             'No base_int function found for this object.')
@@ -561,7 +567,7 @@ class LCGaussian2(LCWrappedFunction):
 
 class LCLorentzian(LCPrimitive):
     """ Represent a (wrapped) Lorentzian peak.
-   
+
         Parameters
         Width     the width paramater of the wrapped Cauchy distribution,
                     namely HWHM*2PI for narrow distributions
@@ -690,7 +696,7 @@ class LCLorentzian2(LCWrappedFunction):
 class LCVonMises(LCPrimitive):
     """ Represent a peak from the von Mises distribution.  This function is
         used in directional statistics and is naturally wrapped.
-   
+
         Parameters:
             Width     inverse of the 'kappa' parameter in the std. def.
             Location  the center of the peak in phase
@@ -778,7 +784,7 @@ class LCKing(LCWrappedFunction):
 
 class LCTopHat(LCPrimitive):
     """ Represent a top hat function.
-   
+
         Parameters:
             Width     right edge minus left edge
             Location  center of top hat
@@ -806,7 +812,7 @@ class LCTopHat(LCPrimitive):
 
 class LCHarmonic(LCPrimitive):
     """Represent a sinusoidal shape corresponding to a harmonic in a Fourier expansion.
-   
+
       Parameters:
          Location  the phase of maximum
 
@@ -832,7 +838,7 @@ class LCEmpiricalFourier(LCPrimitive):
     """ Calculate a Fourier representation of the light curve.
         The only parameter is an overall shift.
         Cannot be used with other LCPrimitive objects!
-   
+
         Parameters:
            Shift     :     overall shift from original template phase
     """
@@ -893,7 +899,7 @@ class LCEmpiricalFourier(LCPrimitive):
         shift = self.p[0] ; harm = self.harmonics
         if shift != 0:
             """ shift theorem, for real coefficients
-                It's probably a wash whether it is faster to simply 
+                It's probably a wash whether it is faster to simply
                 subtract from the phases, but it's more fun this way! """
             c = np.cos(harm * shift)
             s = np.sin(harm * shift)
@@ -1017,7 +1023,7 @@ class LCKernelDensity(LCPrimitive):
 
         xvals,yvals = np.asarray(toks).astype(float).transpose()
         self.xvals,self.yvals = xvals,yvals
-        self.interpolator = interp1d(xvals,yvals)   
+        self.interpolator = interp1d(xvals,yvals)
 
     def __call__(self,phases):
         shift = self.p[0]
@@ -1028,7 +1034,7 @@ class LCKernelDensity(LCPrimitive):
         if shift >= 0 : phc[phc<0] += 1
         else: phc[phc > 1] -= 1
         """
-        return self.interpolator(phc) 
+        return self.interpolator(phc)
 
     def to_file(self,output_file):
         f = open(output_file,'w')

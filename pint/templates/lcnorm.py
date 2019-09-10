@@ -1,12 +1,8 @@
-"""
-A module for handling normalization of light curves with an arbitrary
-number of primitive components.
+"""Handling normalization of light curves with an arbitrary number of primitive components.
 
-This is done by treating each primitives' normalization parameter as
+This is done by treating each primitive's normalization parameter as
 the square of a cartesian variable lying within or on an
 n-dimensional ball of unit radius.
-
-$Header: /nfs/slac/g/glast/ground/cvs/pointlike/python/uw/pulsar/lcnorm.py,v 1.9 2017/04/07 19:31:37 kerrm Exp $
 
 author: M. Kerr <matthew.kerr@gmail.com>
 """
@@ -18,13 +14,18 @@ from math import sin,cos,asin,acos,pi
 # TODO -- error propagation to norms
 
 class NormAngles(object):
-    """ Keep track of N angles (0 to pi/2) representing the coordinates
-        inside a unit radius N-ball.
-        
-        Generally, the apportionment of the amplitudes of components is
-        indicated by the position of the vector, while the overall
-        normalization is given by the an additional angle, the sine of
-        which provides the (squared) normalization."""
+    """Keep track of N angles (0 to pi/2) representing the coordinates inside a unit radius N-ball.
+
+    Generally, the apportionment of the amplitudes of components is
+    indicated by the position of the vector, while the overall
+    normalization is given by the an additional angle, the sine of
+    which provides the (squared) normalization.
+
+    Parameters
+    ----------
+    norms : tuple or array
+        The amplitudes of a set of components; their sum must be <= 1.
+    """
 
     def is_energy_dependent(self):
         return False
@@ -48,8 +49,6 @@ class NormAngles(object):
                     self.__dict__[key] = np.asarray(v,dtype=bool if 'free' in key else float)
 
     def __init__(self,norms,**kwargs):
-        """ norms -- a tuple or array with the amplitudes of a set of
-            components; their sum must be <= 1."""
         self.dim = len(norms)
         self.init()
         if not self._check_norms(norms):
@@ -98,7 +97,7 @@ class NormAngles(object):
                 else:
                     raise ValueError('Invalid norm specification')
             phi = acos(t)
-            sines *= sin(phi)            
+            sines *= sin(phi)
             angles.append(phi)
         return np.asarray(angles)
 
