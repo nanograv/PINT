@@ -7,6 +7,7 @@ import numpy as np
 import os, unittest
 import test_derivative_utils as tdu
 import logging
+import pytest
 from pinttestdata import testdir, datadir
 
 
@@ -17,8 +18,11 @@ class TestB1855(unittest.TestCase):
         os.chdir(datadir)
         self.parfileB1855 = 'B1855+09_NANOGrav_dfg+12_TAI_FB90.par'
         self.timB1855 = 'B1855+09_NANOGrav_dfg+12.tim'
-        self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405",
-                                      planets=False, include_bipm=False)
+        try:
+            self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405",
+                                          planets=False, include_bipm=False)
+        except IOError:
+            pytest.skip("Unable to fetch ephemeris")
         self.modelB1855 = mb.get_model(self.parfileB1855)
         logging.debug('%s' % self.modelB1855.components)
         logging.debug('%s' % self.modelB1855.params)
