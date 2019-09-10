@@ -15,7 +15,7 @@
 
 import os
 import sys
-import packaging
+from packaging.version import parse
 
 import sphinx.ext.apidoc
 
@@ -157,7 +157,7 @@ def run_apidoc(_):
         '--no-toc',
         '--no-headings',
         module]
-    if version.parse(sphinx.__version__) >=version.parse("2.2"):
+    if parse(sphinx.__version__) >=parse("2.2"):
         args = ['-t', '_templates/apidoc'] + args
     else:
         print("WARNING: old version of sphinx, {}, upgrade to "
