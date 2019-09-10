@@ -21,8 +21,8 @@ If you are reporting a bug, please include:
 
 * Your operating system name and version.
 * The output of ``pint.__version__`` and ``pint.__file__``
-* Any details about your local setup that might be helpful in troubleshooting,
-such as the command used to install PINT and whether you are using a virtualenv.
+* Any details about your local setup that might be helpful in troubleshooting, 
+  such as the command used to install PINT and whether you are using a virtualenv.
 * Detailed steps to reproduce the bug, as simply as possible.
 
 Fix Bugs
@@ -143,6 +143,7 @@ like to change.
      make changes without fear you're going to break something. *Unit*
      tests are a special kind of test, that isolate the functionality
      of a small piece of code and test it rigorously.
+
       - When you write a new function, write a few tests for it. You
         will never have a clearer idea of how it's supposed to work
         than right after you wrote it. And anyway you probably used
@@ -152,6 +153,9 @@ like to change.
         multidimensional arrays, and NaNs as input - even if that's to 
         raise an exception. We use pytest_. You can easily run just your
         new tests.
+      - If your function depends on complicated other functions or data,
+        consider using something like `unittest.Mock` to replace that
+        complexity with mock functions that return specific values.
       - When you find a bug, you presumably have some code that triggers
         it. You'll want to narrow that down as much as possible for
         debugging purposes, so please turn that bug test case into a
@@ -162,6 +166,7 @@ like to change.
         ``pytest tests/test_my_buggy_code.py --pdb`` will drop you into
         the python debugger pdb_ at the moment failure occurs so you
         can inspect local variables and generally poke around.
+
    - When you're working with a physical quantity or an array of these,
      something that has units, please use `astropy.units.Quantity` to
      keep track of what these units are. If you need a plain floating-point
@@ -188,6 +193,32 @@ like to change.
      exceptions. Similarly, if you're catching an exception some code might
      raise, use ``except PulsarProblem:`` to catch just the kind you
      can deal with.
+
+
+The Zen of Python
+~~~~~~~~~~~~~~~~~
+by Tim Peters
+
+| Beautiful is better than ugly.
+| Explicit is better than implicit.
+| Simple is better than complex.
+| Complex is better than complicated.
+| Flat is better than nested.
+| Sparse is better than dense.
+| Readability counts.
+| Special cases aren't special enough to break the rules.
+| Although practicality beats purity.
+| Errors should never pass silently.
+| Unless explicitly silenced.
+| In the face of ambiguity, refuse the temptation to guess.
+| There should be one-- and preferably only one --obvious way to do it.
+| Although that way may not be obvious at first unless you're Dutch.
+| Now is better than never.
+| Although never is often better than *right* now.
+| If the implementation is hard to explain, it's a bad idea.
+| If the implementation is easy to explain, it may be a good idea.
+| Namespaces are one honking great idea -- let's do more of those!
+
 
 .. _guidelines: https://numpy.org/devdocs/docs/howto_document.html
 .. _PEP8: https://www.python.org/dev/peps/pep-0008/

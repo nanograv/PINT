@@ -16,6 +16,8 @@
 import sys
 import os
 
+import sphinx.ext.apidoc
+
 # If extensions (or modules to document with autodoc) are in another
 # directory, add these directories to sys.path here. If the directory is
 # relative to the documentation root, use os.path.abspath to make it
@@ -24,7 +26,8 @@ import os
 
 # Get the project root dir, which is the parent dir of this
 cwd = os.getcwd()
-project_root = os.path.dirname(cwd)
+#project_root = os.path.dirname(cwd)
+project_root = os.path.join(cwd,"..") # parent directory of wherever this file is
 
 # Insert the project root dir as the first element in the PYTHONPATH.
 # This lets us ensure that the source package is imported, and that its
@@ -58,6 +61,9 @@ autoclass_content = 'both'
 
 # make order or docs 'groupwise'
 autodoc_member_order = 'groupwise'
+#autodoc_member_order = 'bysource'
+
+autodoc_mock_imports = ['psr_utils', 'fftfit', 'pint.cutils.str2ld_py']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -130,6 +136,11 @@ intersphinx_mapping = {
     'astropy': ('http://docs.astropy.org/en/stable', None),
     'matplotlib': ('https://matplotlib.org/', None),
 }
+
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_use_ivar = True # How to format Attributes sections
+napoleon_use_param = True
 
 # -- Options for HTML output -------------------------------------------
 
@@ -298,17 +309,17 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
+
+
+
+# -- apidoc ----------------------------------------------------------
+
 # allows readthedocs to auto-generate docs
-import subprocess
 def run_apidoc(_):
     modules = ['../pint']
     for module in modules:
-        output_path = os.path.abspath(os.path.dirname(__file__))
-        cmd_path = 'sphinx-apidoc'
-        if hasattr(sys, 'real_prefix'):  # Check to see if we are in a virtualenv
-            # If we are, assemble the path manually
-            cmd_path = os.path.abspath(os.path.join(sys.prefix, 'bin', 'sphinx-apidoc'))
-        subprocess.check_call([cmd_path, '-o', output_path, '-f', '-M', module])
+        output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),"gen"))
+        sphinx.ext.apidoc.main(['--separate', '-o', output_path, '-f', '-M', module])
 
 def setup(app):
     app.connect('builder-inited', run_apidoc)

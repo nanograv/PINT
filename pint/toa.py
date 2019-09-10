@@ -245,45 +245,52 @@ def parse_TOA_line(line, fmt="Unknown"):
 
 def format_toa_line(toatime, toaerr, freq, obs, dm=0.0*u.pc/u.cm**3, name='unk', flags={},
     format='Princeton'):
-    """
-    Format TOA line for writing
+    """Format TOA line for writing
 
-    Inputs
-    ------
-    toatime   Time object containing TOA arrival time
-    toaerr    TOA error as a Quantity with units
-    freq      Frequency as a Quantity with units (NB: value of np.inf is allowed)
-    obs       Observatory object
-
-    dm        DM for the TOA as a Quantity with units (not printed if 0.0 pc/cm^3)
-    name      Name to embed in TOA line (conventionally the data file name)
-    format    (Princeton | Tempo2)
-    flags     Any Tempo2 flags to append to the TOA line
-
-    Bugs
-    ----
-    This implementation is currently incomplete in that it will not
-    undo things like TIME statements and probably other things.
-
-    Princeton format
-    ----------------
-    columns  item
-    1-1     Observatory (one-character code) '@' is barycenter
-    2-2     must be blank
-    16-24   Observing frequency (MHz)
-    25-44   TOA (decimal point must be in column 30 or column 31)
-    45-53   TOA uncertainty (microseconds)
-    69-78   DM correction (pc cm^-3)
-
-    Tempo2 format
-    -------------
-    First line of file should be "FORMAT 1"
-    TOA format is "file freq sat satErr siteID <flags>"
+    Parameters
+    ----------
+    toatime
+        Time object containing TOA arrival time
+    toaerr
+        TOA error as a Quantity with units
+    freq
+        Frequency as a Quantity with units (NB: value of np.inf is allowed)
+    obs
+        Observatory object
+    dm
+        DM for the TOA as a Quantity with units (not printed if 0.0 pc/cm^3)
+    name
+        Name to embed in TOA line (conventionally the data file name)
+    format
+        (Princeton | Tempo2)
+    flags
+        Any Tempo2 flags to append to the TOA line
 
     Returns
     -------
     out : string
         Formatted TOA line
+
+    Note
+    ----
+    This implementation is currently incomplete in that it will not
+    undo things like TIME statements and probably other things.
+
+    Princeton format::
+
+        columns  item
+        1-1     Observatory (one-character code) '@' is barycenter
+        2-2     must be blank
+        16-24   Observing frequency (MHz)
+        25-44   TOA (decimal point must be in column 30 or column 31)
+        45-53   TOA uncertainty (microseconds)
+        69-78   DM correction (pc cm^-3)
+
+    Tempo2 format:
+
+        - First line of file should be "``FORMAT 1``"
+        - TOA format is ``file freq sat satErr siteID <flags>``
+
     """
     from .utils import time_to_mjd_string
     if format.upper() in ('TEMPO2','1'):

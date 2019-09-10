@@ -9,5 +9,5 @@ Basic objects
 .. toctree::
    :maxdepth: 2
 
-   Pulse time-of-arrival objects (``pint.toa``) <pint.toa>
+   Pulse time-of-arrival objects (``pint.toa``) <gen/pint.toa>
 

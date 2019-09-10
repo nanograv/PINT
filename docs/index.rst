@@ -7,10 +7,10 @@ Contents:
    :maxdepth: 2
 
    readme
-   design
    installation
    usage
    api
+   gen/modules
    contributing
    authors
    history

@@ -5,10 +5,10 @@ import scipy.optimize as opt, scipy.linalg as sl
 import matplotlib.pyplot as plt
 import pint.plot_utils as plot_utils
 import pint.toa
-from .residuals import resids
+from .residuals import Residuals
 from pint.fitter import Fitter
 from pint.models.priors import Prior
-from scipy.stats import norm, uniform 
+from scipy.stats import norm, uniform
 from astropy import log
 from astropy.table import vstack
 from pint.templates.lctemplate import LCTemplate
@@ -26,11 +26,11 @@ def concat_toas(toas):
     return ts
 
 def lnprior_basic(ftr, theta):
-    """
-    Basic implementation of log prior. This will work for both analytic and 
+    """Basic implementation of log prior.
+
+    This will work for both analytic and
     binned templates, including when the template parameters are part of the
-    search space.
-    Assumes that phase is the last parameter in the parameter list
+    search space.  Assumes that phase is the last parameter in the parameter list
     """
     theta_model = ftr.get_model_parameters(theta)
     theta_templ = ftr.get_template_parameters(theta)
@@ -48,13 +48,13 @@ def lnprior_basic(ftr, theta):
     return lnsum
 
 def lnlikelihood_basic(ftr, theta):
-    """
-    The log of the likelihood function, basic implementation. 
+    """The log of the likelihood function, basic implementation.
+
     Assumes that the phase is the last parmameter in the parameter list
     """
     ftr.set_parameters(theta)
     phases = ftr.get_event_phases()
-    phss = phases.astype(np.float64) + theta[-1] 
+    phss = phases.astype(np.float64) + theta[-1]
 
     phss[phss < 0] += 1.0
     phss[phss >= 1] -= 1.0
@@ -70,10 +70,10 @@ def lnlikelihood_chi2(ftr, theta):
     return -resids(toas=ftr.toas, model=ftr.model).calc_chi2().value
 
 def set_priors_basic(ftr, priorerrfact=10.0):
-    """
-    Basic method to set priors on parameters in the model. This adds a gaussian
-    prior on each parameter with width equal to the par file uncertainty * priorerrfact
-    and then puts in some special cases
+    """Basic method to set priors on parameters in the model.
+
+    This adds a gaussian prior on each parameter with width equal to
+    the par file uncertainty * priorerrfact and then puts in some special cases
     """
     fkeys, fvals, ferrs = ftr.fitkeys, ftr.fitvals, ftr.fiterrs
     for key, val, err in zip(fkeys[:-1], fvals[:-1], ferrs[:-1]):
@@ -92,29 +92,37 @@ def set_priors_basic(ftr, priorerrfact=10.0):
     ftr.priors_set = True
 
 class MCMCFitter(Fitter):
-    """A class for Markov-Chain Monte Carlo optimization style-fitting,
-        similar to that implemented in event_optimize.py
+    """A class for Markov-Chain Monte Carlo optimization style-fitting
 
-        Required __init__ arguments
-        ---------------------------
-        toas
-        model
-        sampler - A subclass of pint.sampler.MCMCSampler
+    This fitting is similar to that implemented in event_optimize.py
 
-        Optional __init__ keyword arguments
-        -----------------------------------
-        template - A template profile, for example, of a gaussian pulse
-            If template is none, then all template methods will do nothing,
-            or raise an error, or return None. If a template is set, it is 
-            assumed that a subclass is being used.
-        lnprior - The log prior function - defaults to lnprior above
-        lnlike - The log likelihood function - defaults to lnlikelihood above
-        setpriors - The function for setting the priors on model parameters
-        weights - Weights for likelihood calculations
-        phs - Pulse phase - to be added to the model (remove when phs is part of par files)
-        phserr - Error associated with pulse phase
-        minMJD - Minimium MJD in dataset (used sometimes for get_initial_pos)
-        maxMJD - Maximum MJD in dataset (used sometimes for get_initial_pos)
+    Parameters
+    ----------
+    toas : pint.toas.TOAs
+    model
+    sampler : pint.sampler.MCMCSampler
+    template : object or None
+        A template profile, for example, of a gaussian pulse.
+        If template is none, then all template methods will do nothing,
+        or raise an error, or return None. If a template is set, it is
+        assumed that a subclass is being used.
+    lnprior : callable
+        The log prior function - defaults to lnprior above
+    lnlike : callable
+        The log likelihood function - defaults to lnlikelihood above
+    setpriors : callable
+        The function for setting the priors on model parameters
+    weights : optional
+        Weights for likelihood calculations
+    phs : optional
+        Pulse phase - to be added to the model (remove when phs is part of par files)
+    phserr : optional
+        Error associated with pulse phase
+    minMJD : optional
+        Minimium MJD in dataset (used sometimes for get_initial_pos)
+    maxMJD : optional
+        Maximum MJD in dataset (used sometimes for get_initial_pos)
+
     """
     def __init__(self, toas, model, sampler, **kwargs):
         #super(MCMCFitter, self).__init__(toas, model)
@@ -133,7 +141,7 @@ class MCMCFitter(Fitter):
         self.lnprior = kwargs.get('lnprior', lnprior_basic)
         self.lnlikelihood = kwargs.get('lnlike', lnlikelihood_basic)
         self.set_priors = kwargs.get('setpriors', set_priors_basic)
-        
+
         # Default values for these arguments were taken from event_optimize.py
         self.weights = kwargs.get('weights', None)
         phs = kwargs.get('phs', 0.0)
@@ -144,7 +152,7 @@ class MCMCFitter(Fitter):
         self.fitkeys, self.fitvals, self.fiterrs = \
             self.generate_fit_keyvals(phs, phserr)
         self.n_fit_params = len(self.fitvals)
-        
+
         template = kwargs.get('template', None)
         if not template is None:
             self.set_template(template)
@@ -239,10 +247,10 @@ class MCMCFitter(Fitter):
         return self.fitkeys, self.fitvals, self.fiterrs
 
     def generate_fit_keyvals(self, phs, phserr):
-        """Read the model to determine fitted keys and their values and errors 
+        """Read the model to determine fitted keys and their values and errors
             from the par file
         """
-        fitkeys = [p for p in self.model.params if not 
+        fitkeys = [p for p in self.model.params if not
             getattr(self.model,p).frozen]
         fitvals = []
         fiterrs = []
@@ -288,52 +296,56 @@ class MCMCFitter(Fitter):
         return lnpost
 
     def minimize_func(self, theta):
-        """
-        Override superclass minimize_func to make compatible with scipy.optimize
-        """
+        """Override superclass minimize_func to make compatible with scipy.optimize"""
         #Scale params based on errors
         ntheta = (self.get_model_parameters(theta)[:-1] * self.fiterrs[:-1]) \
             + self.fitvals[:-1]
         self.set_params(dict(zip(self.fitkeys[:-1], ntheta)))
         if not np.isfinite(self.lnprior(self, ntheta)):
             return np.inf
-        lnlikelihood = self.lnlikelihood(self, theta) 
-        
-        return -lnlikelihood
-    
-    def fit_toas(self, maxiter=100, pos=None, errfact=0.1, priorerrfact=10.0):
-        """
-        Fitting function - calls sampler.run_mcmc to converge using MCMC approach
+        lnlikelihood = self.lnlikelihood(self, theta)
 
-            maxiter - The number of iterations to run_mcmc for
-            pos - The intiial position of the sampler. Default behavior calls
-                    sampler.get_initial_pos()
-            errfact - Multiplicative factor for errors in get_intial_pos
-            priorerrfact - Error factor in setting prior widths
+        return -lnlikelihood
+
+    def fit_toas(self, maxiter=100, pos=None, errfact=0.1, priorerrfact=10.0):
+        """Fitting function - calls sampler.run_mcmc to converge using MCMC approach
+
+        Parameters
+        ----------
+        maxiter : int
+            The number of iterations to run_mcmc for
+        pos
+            The intiial position of the sampler. Default behavior calls
+                sampler.get_initial_pos()
+        errfact : float, optional
+            Multiplicative factor for errors in get_intial_pos
+        priorerrfact : float, optional
+            Error factor in setting prior widths
+
         """
         #Set model priors if it hasn't been done yet
         if not self.priors_set:
             self.set_priors(self, priorerrfact)
         #Set initial positions for walkers if they haven't been specified
         if pos is None:
-            pos = self.sampler.get_initial_pos(self.fitkeys, self.fitvals, self.fiterrs, 
+            pos = self.sampler.get_initial_pos(self.fitkeys, self.fitvals, self.fiterrs,
                 errfact, minMJD=self.minMJD, maxMJD=self.maxMJD)
-        
+
         #If template exists, make sure that template params are within tbound
         pos = self.clip_template_params(pos)
 
         #Initialize sampler
         self.sampler.initialize_sampler(self.lnposterior, self.n_fit_params)
-        
+
         #Run sampler for some number of iterations
         self.sampler.run_mcmc(pos, maxiter)
-        
+
         #Process results and get chi2 for new parameters
         self.set_params(dict(zip(self.fitkeys[:-1], self.maxpost_fitvals[:-1])))
         if self.use_resids:
             self.resids.update()
         return self.lnposterior(self.maxpost_fitvals)
-    
+
     def phaseogram(self, weights=None, bins=100, rotate=0.0, size=5,
         alpha=0.25, plotfile=None):
         """
@@ -394,13 +406,13 @@ class MCMCFitter(Fitter):
         plt.close()
 
 class MCMCFitterBinnedTemplate(MCMCFitter):
-    """A subclass of MCMCFitter, designed to use a binned template with 
+    """A subclass of MCMCFitter, designed to use a binned template with
         interpolation instead of an analytic function
     """
     def __init__(self, toas, model, sampler, **kwargs):
-            super(MCMCFitterBinnedTemplate, self).__init__(toas, model, sampler, 
+            super(MCMCFitterBinnedTemplate, self).__init__(toas, model, sampler,
                 **kwargs)
-    
+
     def set_template(self, template):
         """
         Set template and template metadata. For binned template, we want to
@@ -429,10 +441,10 @@ class MCMCFitterBinnedTemplate(MCMCFitter):
 
     def get_parameter_names(self):
         return self.fitkeys
-    
+
     def set_parameters(self, theta):
         self.set_params(dict(zip(self.fitkeys[:-1], theta[:-1])))
-    
+
     def get_errors(self):
         return self.fiterrs
 
@@ -441,9 +453,9 @@ class MCMCFitterAnalyticTemplate(MCMCFitter):
         than a binned one that uses interpolation.
     """
     def __init__(self, toas, model, sampler, template, **kwargs):
-            super(MCMCFitterAnalyticTemplate, self).__init__(toas, model, sampler, 
+            super(MCMCFitterAnalyticTemplate, self).__init__(toas, model, sampler,
                 template=template, **kwargs)
-    
+
     def set_template(self, template):
         """
         Metadata for analytic template
@@ -457,7 +469,7 @@ class MCMCFitterAnalyticTemplate(MCMCFitter):
 
     def get_template_vals(self, phases):
         return self.template(phases, use_cache=True)
-   
+
     def clip_template_params(self, pos):
         nfitkeys = len(self.fitkeys)
         ret = pos
@@ -487,28 +499,35 @@ class MCMCFitterAnalyticTemplate(MCMCFitter):
 
 class CompositeMCMCFitter(MCMCFitter):
     """A subclass of MCMCFitter, designed to work on composite datasets
-        Requires a list of TOAs objects formed from different datafiles
-        to make up the toas table, as well as a list of log-likelihood methods
 
-        Here, the toas argument to the constructor is a list of TOAs objects,
-        while the toas parameter for this class is a concatenated TOAs object
-        containing all TOA information from all datasets
+    Requires a list of TOAs objects formed from different datafiles
+    to make up the toas table, as well as a list of log-likelihood methods
 
-        The goal is to fit all of the data sets to a single model, so only one 
-        model is required in the construction of this object. In addition, only
-        one sampler is required.
+    Here, the toas argument to the constructor is a list of TOAs objects,
+    while the toas parameter for this class is a concatenated TOAs object
+    containing all TOA information from all datasets
 
-        Additional parameters: 
-            weights - an array of weight lists for weighting individual TOAs
-            set_weights - an array of weights for each individual data set in
-                toas_list. The basic lnlikelihood function will be given by
-                lnlike = sum(setweight(i) * lnlike(toas_list(i)))
-                Defaults to an array of 1s
-            lnlikes - a list of lnlikelihood functions to be used on each entry
-                in toas_list. This is a required argument
-            templates - a list of templates for fitting to each individual dataset.
-                Defaults to None for everything
-                TODO: Add support for fitting templates here
+    The goal is to fit all of the data sets to a single model, so only one
+    model is required in the construction of this object. In addition, only
+    one sampler is required.
+
+    Parameters
+    ----------
+    weights
+        an array of weight lists for weighting individual TOAs
+    set_weights
+        an array of weights for each individual data set in
+        toas_list. The basic lnlikelihood function will be given by
+        lnlike = sum(setweight(i) * lnlike(toas_list(i)))
+        Defaults to an array of 1s
+    lnlikes
+        a list of lnlikelihood functions to be used on each entry
+        in toas_list. This is a required argument
+    templates
+         a list of templates for fitting to each individual dataset.
+        Defaults to None for everything
+        TODO: Add support for fitting templates here
+
     """
     def __init__(self, toas, model, sampler, lnlikes, **kwargs):
         self.toas_list = toas
@@ -516,7 +535,7 @@ class CompositeMCMCFitter(MCMCFitter):
         self.model = model
         self.method = 'MCMC'
         self.sampler = sampler
-        
+
         self.lnprior = kwargs.get('lnprior', lnprior_basic)
         self.lnlikelihoods = lnlikes
         self.set_priors = kwargs.get('setpriors', set_priors_basic)
@@ -534,7 +553,7 @@ class CompositeMCMCFitter(MCMCFitter):
         self.fitkeys, self.fitvals, self.fiterrs = \
             self.generate_fit_keyvals(phs, phserr)
         self.n_fit_params = len(self.fitvals)
-    
+
         self.numcalls = 0
         self.maxpost = -np.inf
         self.maxpost_fitvals = self.fitvals

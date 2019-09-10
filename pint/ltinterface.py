@@ -7,7 +7,7 @@ import pint.models as pm
 import pint.toa as pt
 
 from pint.phase import Phase
-from pint.residuals import resids
+from pint.residuals import Residuals
 from pint import fitter
 from .utils import has_astropy_unit
 import astropy.units as u
@@ -38,17 +38,17 @@ u.lts = u.def_unit(['lightsecond','ls','lts'], ac.c * u.s)
 map_units = {
              'F0': u.Hz,
              'F1': u.Hz/u.s,
-             'F2': u.Hz/u.s**2, 
-             'F3': u.Hz/u.s**3, 
-             'F4': u.Hz/u.s**4, 
-             'F5': u.Hz/u.s**5, 
-             'F6': u.Hz/u.s**6, 
-             'F7': u.Hz/u.s**7, 
-             'F8': u.Hz/u.s**8, 
-             'F9': u.Hz/u.s**9, 
-             'F10': u.Hz/u.s**10, 
-             'F11': u.Hz/u.s**11, 
-             'F12': u.Hz/u.s**12, 
+             'F2': u.Hz/u.s**2,
+             'F3': u.Hz/u.s**3,
+             'F4': u.Hz/u.s**4,
+             'F5': u.Hz/u.s**5,
+             'F6': u.Hz/u.s**6,
+             'F7': u.Hz/u.s**7,
+             'F8': u.Hz/u.s**8,
+             'F9': u.Hz/u.s**9,
+             'F10': u.Hz/u.s**10,
+             'F11': u.Hz/u.s**11,
+             'F12': u.Hz/u.s**12,
              'RAJ': u.rad,
              'DECJ': u.rad,
              'ELONG': u.deg,
@@ -302,7 +302,7 @@ class pintpulsar(object):
         return self.deleted
 
     def flags(self):
-        """Returns the list of flags defined in this dataset (for at least some observations).""" 
+        """Returns the list of flags defined in this dataset (for at least some observations)."""
 
         return self.flagnames_
 
@@ -352,7 +352,7 @@ class pintpulsar(object):
         def __set__(self,value):
             model_bytes = value.encode('ascii')
 
-            if len(model_bytes) < 100:    
+            if len(model_bytes) < 100:
                 stdio.sprintf(self.psr[0].binaryModel,"%s",<char *>model_bytes)
             else:
                 raise ValueError
@@ -412,7 +412,7 @@ class pintpulsar(object):
 
         Notes:
 
-        - Passing values as anything else than numpy longdoubles may result in loss of precision. 
+        - Passing values as anything else than numpy longdoubles may result in loss of precision.
         - Not all parameters in the selection need to be set.
         - Setting an unset parameter sets its `set` flag (obviously).
         - Unlike in earlier libstempo versions, setting a parameter does not set its error to zero."""
@@ -570,7 +570,7 @@ class pintpulsar(object):
     def rms(self,removemean='weighted'):
         """tempopulsar.rms(removemean='weighted')
 
-        Computes the current residual rms, 
+        Computes the current residual rms,
         removing the noise-weighted residual, unless
         specified otherwise."""
         err = self.toaerrs
