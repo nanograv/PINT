@@ -66,7 +66,6 @@ docs: ## generate Sphinx HTML documentation, including API docs
 	mkdir -p docs/gen
 	rm -f docs/gen/*
 	rm -f docs/modules.rst
-	# sphinx-apidoc --separate -o docs/ -M pint # run inside conf.py
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	$(BROWSER) docs/_build/html/index.html

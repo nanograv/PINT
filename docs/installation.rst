@@ -7,8 +7,9 @@ Installation
 Prerequisites
 -------------
 
-* Python 2.7 or 3.5 or later (Note that Python 3 support is currently not
-  complete, but is a design goal)
+* Python 2.7 or 3.5 or later (Note that Python 2 is ceasing even bug fixes as of
+  the end of 2019, so upgrades are becoming urgent; we know that some key pulsar
+  software remains in the Stone Age of python-2-only.)
 
 * The current list of required python packages is in
 
@@ -18,15 +19,16 @@ Prerequisites
 .. _requirements.txt: https://github.com/nanograv/PINT/blob/master/requirements.txt
 .. _requirements_dev.txt: https://github.com/nanograv/PINT/blob/master/requirements_dev.txt
 
-* The simplest way to install the prerequisites, if you are in virtualenv or
+* The simplest way to install the prerequisites, if you are in a virtualenv or
   want to install them in the system python is to use pip [1]_::
 
-    pip install -r requirements.txt
     pip install -r requirements_dev.txt
+    pip install -r requirements.txt
 
   If you want to install them in your local user site-packages, rather than the
   system python (perhaps because you don't have sudo privileges),
-  append ``--user`` to those command lines.
+  append ``--user`` to those command lines. Note that using your user site-packages
+  can dramatically complicate your using virtualenvs, so we do not recommend it.
 
   Some of those packages may have been already installed, for example by MacPorts.
   For MacPorts users, this command will get many of the requirements::
@@ -54,6 +56,9 @@ Prerequisites
 
 Installing from Source
 ----------------------
+
+As PINT is not ready for a release yet, installing from the source code is
+the only option.
 
 The sources for pint can be downloaded from the `Github repo`_.
 
@@ -110,7 +115,7 @@ the test suite.  This can be done using::
 
 or::
 
-  python setup.py nosetests
+  pytest
 
 Build the documentation
 -----------------------
@@ -130,9 +135,8 @@ Data files
 PINT requires detailed ephemerides for the Solar System motion and for the
 Earth's rotation. Many of these files are downloaded automatically by
 astropy. Others are distributed with PINT in the ``pint/datafiles`` directory
-or are automatically downloaded by setup.py; the total volume is a few hundred
-megabytes. On installation, the data files are copied into the install
-directory, so you end up with two copies (unless you install in develop mode).
+or are automatically downloaded and kept when needed; the total volume is a
+few hundred megabytes.
 
 PINT also requires observatory clock correction data. The PINT distribution
 includes a set in the datafiles directory, but clock corrections can also be
