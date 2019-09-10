@@ -13,8 +13,9 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys
 import os
+import sys
+import packaging
 
 import sphinx.ext.apidoc
 
@@ -50,7 +51,7 @@ extensions = [
         'sphinx.ext.mathjax',
         'sphinx.ext.viewcode',
         'sphinx.ext.intersphinx',
-        'sphinx.ext.napoleon', # get docstring formatting
+        'sphinx.ext.napoleon',  # get docstring formatting
         ]
 #                            'astropy_helpers.sphinx.ext.numpydoc',
 #                            'astropy_helpers.sphinx.ext.automodapi',
@@ -148,15 +149,21 @@ napoleon_use_param = True
 def run_apidoc(_):
     module = '../pint'
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),"api"))
-    sphinx.ext.apidoc.main([
+    args = [
         '--separate',
         '-o', output_path,
         '-f',
-        '-t', '_templates/apidoc',
         '--module-first',
         '--no-toc',
         '--no-headings',
-        module])
+        module]
+    if version.parse(sphinx.__version__) >=version.parse("2.2"):
+        args = ['-t', '_templates/apidoc'] + args
+    else:
+        print("WARNING: old version of sphinx, {}, upgrade to "
+              "at least 2.2 to get nicer formatting"
+              .format(sphinx.__version__))
+    sphinx.ext.apidoc.main(args)
 
 # -- Nicer automodule output ----------------------------------------
 
