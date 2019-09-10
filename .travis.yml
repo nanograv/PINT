@@ -24,6 +24,8 @@ matrix:
           # dead links and formatting problems.
         - script: flake8
           name: "python style checker"
+          services: []
+          after_success: []
     allow_failures:
         - script: flake8
 sudo: required
