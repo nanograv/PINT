@@ -11,4 +11,4 @@ wheel>=0.29.0
 pytest>=3.6
 pytest-cov>=2.7.1
 pytest-runner>=5.1
-
+flake8>=3.6
