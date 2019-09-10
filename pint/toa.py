@@ -1,4 +1,4 @@
-"""This module contains tools for working with pulse time-of-arrival (TOA) data.
+"""Tools for working with pulse time-of-arrival (TOA) data.
 
 In particular, single TOAs are represented by :class:`pint.toa.TOA` objects, and if you
 want to manage a collection of these we recommend you use a :class:`pint.toa.TOAs` object
