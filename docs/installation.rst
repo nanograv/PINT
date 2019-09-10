@@ -13,11 +13,11 @@ Prerequisites
 
 * The current list of required python packages is in
 
-  - requirements.txt_
-  - requirements_dev.txt_
+  - requirements_dev.txt_ - python packages needed to work on PINT
+  - requirements.txt_ - python packages needed to use PINT
 
-.. _requirements.txt: https://github.com/nanograv/PINT/blob/master/requirements.txt
 .. _requirements_dev.txt: https://github.com/nanograv/PINT/blob/master/requirements_dev.txt
+.. _requirements.txt: https://github.com/nanograv/PINT/blob/master/requirements.txt
 
 * The simplest way to install the prerequisites, if you are in a virtualenv or
   want to install them in the system python is to use pip [1]_::
