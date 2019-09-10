@@ -13,10 +13,13 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys
 import os
+import sys
+from packaging.version import parse
 
 import sphinx.ext.apidoc
+
+import pint
 
 # If extensions (or modules to document with autodoc) are in another
 # directory, add these directories to sys.path here. If the directory is
@@ -26,16 +29,13 @@ import sphinx.ext.apidoc
 
 # Get the project root dir, which is the parent dir of this
 cwd = os.getcwd()
-#project_root = os.path.dirname(cwd)
-project_root = os.path.join(cwd,"..") # parent directory of wherever this file is
+# project_root = os.path.dirname(cwd)
+project_root = os.path.join(cwd, "..")  # parent directory of wherever this file is
 
 # Insert the project root dir as the first element in the PYTHONPATH.
 # This lets us ensure that the source package is imported, and that its
 # version is used.
 sys.path.insert(0, project_root)
-
-import pint
-
 
 # -- General configuration ---------------------------------------------
 
@@ -50,7 +50,7 @@ extensions = [
         'sphinx.ext.mathjax',
         'sphinx.ext.viewcode',
         'sphinx.ext.intersphinx',
-        'sphinx.ext.napoleon', # get docstring formatting
+        'sphinx.ext.napoleon',  # get docstring formatting
         ]
 #                            'astropy_helpers.sphinx.ext.numpydoc',
 #                            'astropy_helpers.sphinx.ext.automodapi',
@@ -139,26 +139,34 @@ intersphinx_mapping = {
 
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
-napoleon_use_ivar = True # How to format Attributes sections
+napoleon_use_ivar = True  # How to format Attributes sections
 napoleon_use_param = True
 
 # -- apidoc ----------------------------------------------------------
 
+
 # allows readthedocs to auto-generate docs
 def run_apidoc(_):
     module = '../pint'
-    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__),"api"))
-    sphinx.ext.apidoc.main([
+    output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "api"))
+    args = [
         '--separate',
         '-o', output_path,
         '-f',
-        '-t', '_templates/apidoc',
         '--module-first',
         '--no-toc',
         '--no-headings',
-        module])
+        module]
+    if parse(sphinx.__version__) >= parse("2.2"):
+        args = ['-t', '_templates/apidoc'] + args
+    else:
+        print("WARNING: old version of sphinx, {}, upgrade to "
+              "at least 2.2 to get nicer formatting"
+              .format(sphinx.__version__))
+    sphinx.ext.apidoc.main(args)
 
 # -- Nicer automodule output ----------------------------------------
+
 
 def _process_module_docstring(app, what, name, obj, options, lines):
     """Process module docstring
@@ -176,9 +184,9 @@ def _process_module_docstring(app, what, name, obj, options, lines):
         else:
             desc = ""
         heading = "``{}``{}".format(name, desc)
-        lines.insert(0,heading)
-        lines.insert(1,"="*len(heading)) # how to get the right kind of heading?
-        lines.insert(2,"")
+        lines.insert(0, heading)
+        lines.insert(1, "="*len(heading))  # how to get the right kind of heading?
+        lines.insert(2, "")
 
 
 def setup(app):
@@ -186,6 +194,7 @@ def setup(app):
     app.connect('autodoc-process-docstring', _process_module_docstring)
 
 # -- Options for HTML output -------------------------------------------
+
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
@@ -351,7 +360,3 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
-
-
-
-

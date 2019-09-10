@@ -3,6 +3,7 @@
 language: python
 
 matrix:
+    fast_finish: true
     include:
         - script: wget https://data.nanograv.org/static/data/ephem/de405.bsp
           name: "NANOGrav ephemeris server accessible"
@@ -21,6 +22,12 @@ matrix:
           # FIXME: eventually can turn warnings into errors so Travis will fail 
           # on dead links and formatting problems; right now we have a bazillion
           # dead links and formatting problems.
+        - script: flake8
+          name: "python style checker"
+          services: []
+          after_success: []
+    allow_failures:
+        - script: flake8
 sudo: required
 
 # https://docs.travis-ci.com/user/gui-and-headless-browsers/#Using-xvfb-to-Run-Tests-That-Require-a-GUI
