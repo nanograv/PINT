@@ -61,8 +61,8 @@ extensions = [
 autoclass_content = 'both'
 
 # make order or docs 'groupwise'
-autodoc_member_order = 'groupwise'
-#autodoc_member_order = 'bysource'
+#autodoc_member_order = 'groupwise'
+autodoc_member_order = 'bysource'
 
 autodoc_mock_imports = ['psr_utils', 'fftfit', 'pint.cutils.str2ld_py']
 

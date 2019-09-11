@@ -1,20 +1,26 @@
-# timing_model.py
-# Defines the basic timing model interface classes
-from __future__ import absolute_import, print_function, division
-import functools
-from .parameter import Parameter, strParameter
-from ..phase import Phase
-from astropy import log
-import astropy.time as time
-import numpy as np
-import pint.utils as utils
-import astropy.units as u
-from astropy.table import Table
-import copy
+"""Timing model objects.
+
+Defines the basic timing model interface classes.
+"""
+from __future__ import absolute_import, division, print_function
+
 import abc
-import six
+from collections import defaultdict
+import copy
+import functools
 import inspect
+
+import astropy.time as time
+import astropy.units as u
+import numpy as np
+import six
+from astropy import log
+
+import pint.utils as utils
 from pint import dimensionless_cycles
+
+from ..phase import Phase
+from .parameter import strParameter
 
 # Parameters or lines in parfiles we don't understand but shouldn't
 # complain about. These are still passed to components so that they
@@ -37,7 +43,8 @@ ignore_prefix = ['DMXF1_','DMXF2_','DMXEP_'] # DMXEP_ for now.
 
 
 class TimingModel(object):
-    """
+    """Base class for timing models and components
+
     Base-level object provides an interface for implementing pulsar timing
     models. A timing model contains different model components, for example
     astrometry delays and spindown phase. All the components will be stored in
@@ -96,6 +103,10 @@ class TimingModel(object):
     """
 
     def __init__(self, name='', components=[]):
+        if not isinstance(name, str):
+            raise ValueError(
+                "First parameter should be the model name, was {!r}"
+                .format(name))
         self.name = name
         self.introduces_correlated_errors = False
         self.component_types = []
@@ -111,6 +122,9 @@ class TimingModel(object):
             description="Units (TDB assumed)"), '')
 
         self.setup_components(components)
+
+    def __repr__(self):
+        return "<{} {}>".format(self.__class__.__name__, self.components)
 
     def setup(self):
         """This is a abstract class for setting up timing model class. It is designed for
@@ -153,16 +167,16 @@ class TimingModel(object):
                 raise AttributeError(errmsg)
 
     @property
-    def params(self,):
+    def params(self):
+        """Parameters of this model and all its components."""
         p = self.top_level_params
         for cp in list(self.components.values()):
             p = p+cp.params
         return p
 
     @property
-    def components(self,):
-        """This will return a dictionary of all the components
-        """
+    def components(self):
+        """All the components indexed by name."""
         comps = {}
         if six.PY2:
             type_list = super(TimingModel, self).__getattribute__('component_types')
@@ -178,21 +192,24 @@ class TimingModel(object):
         return comps
 
     @property
-    def delay_funcs(self,):
+    def delay_funcs(self):
+        """List of all delay functions."""
         dfs = []
         for d in self.DelayComponent_list:
             dfs += d.delay_funcs_component
         return dfs
 
     @property
-    def phase_funcs(self,):
+    def phase_funcs(self):
+        """List of all phase functions."""
         pfs = []
         for p in self.PhaseComponent_list:
             pfs += p.phase_funcs_component
         return pfs
 
     @property
-    def has_correlated_errors(self,):
+    def has_correlated_errors(self):
+        """Whether or not this model has correlated errors."""
         if 'NoiseComponent' in self.component_types:
             for nc in self.NoiseComponent_list:
                 # recursive if necessary
@@ -202,6 +219,7 @@ class TimingModel(object):
 
     @property
     def covariance_matrix_funcs(self,):
+        """List of covariance matrix functions."""
         cvfs = []
         if 'NoiseComponent' in self.component_types:
             for nc in self.NoiseComponent_list:
@@ -210,6 +228,7 @@ class TimingModel(object):
 
     @property
     def scaled_sigma_funcs(self,):
+        """List of scaled uncertainty functions."""
         ssfs = []
         if 'NoiseComponent' in self.component_types:
             for nc in self.NoiseComponent_list:
@@ -218,6 +237,7 @@ class TimingModel(object):
 
     @property
     def basis_funcs(self,):
+        """List of scaled uncertainty functions."""
         bfs = []
         if 'NoiseComponent' in self.component_types:
             for nc in self.NoiseComponent_list:
@@ -226,62 +246,64 @@ class TimingModel(object):
 
     @property
     def phase_deriv_funcs(self):
+        """List of derivative functions for phase components."""
         return self.get_deriv_funcs('PhaseComponent')
 
     @property
     def delay_deriv_funcs(self):
+        """List of derivative functions for delay components."""
         return self.get_deriv_funcs('DelayComponent')
 
     @property
     def d_phase_d_delay_funcs(self):
+        """List of d_phase_d_delay functions."""
         Dphase_Ddelay = []
         for cp in self.PhaseComponent_list:
             Dphase_Ddelay += cp.phase_derivs_wrt_delay
         return Dphase_Ddelay
 
     def get_deriv_funcs(self, component_type):
-        componet_list_name = component_type + '_list'
-        type_components = getattr(self, componet_list_name)
-        deriv_funcs = {}
-        for cp in type_components:
-            for k, v in list(cp.deriv_funcs.items()):
-                if k in deriv_funcs:
-                    deriv_funcs[k] += v
-                else:
-                    deriv_funcs[k] = v
-        return deriv_funcs
+        """Combined dictionary of derivative functions."""
+        deriv_funcs = defaultdict(list)
+        for cp in getattr(self, component_type + '_list'):
+            for k, v in cp.deriv_funcs.items():
+                deriv_funcs[k] += v
+        return dict(deriv_funcs)
 
     def search_cmp_attr(self, name):
-        """
-        This is a function for searching an attribute from all the components.
-        If the multiple components has same attribute, it will return the first
+        """Search for an attribute in all components.
+
+        Return the component, or None.
+
+        If multiple components have same attribute, it will return the first
         component.
+
         """
-        cmp = None
         for cp in list(self.components.values()):
             try:
-                _ = super(cp.__class__, cp).__getattribute__(name)
-                cmp = cp
-                break
+                super(cp.__class__, cp).__getattribute__(name)
+                return cp
             except AttributeError:
                 continue
-        return cmp
 
     def get_component_type(self, component):
         """A function to identify the component object's type.
-           Parameter
-           ---------
-           component: component instance
-               The component object need to be inspected.
-           NOTE
-           ----
-           Since a component can be an inheritance from other component We inspect
-           all the component object bases. "inspect getmro" method returns the
-           base classes (including 'object') in method resolution order. The
-           third level of inheritance class name is what we want.
-           Object --> component --> TypeComponent. (i.e. DelayComponent)
-           This class type is in the third to the last of the getmro returned
-           result.
+
+        Parameters
+        ----------
+        component: component instance
+           The component object need to be inspected.
+
+        Note
+        ----
+        Since a component can be an inheritance from other component We inspect
+        all the component object bases. "inspect getmro" method returns the
+        base classes (including 'object') in method resolution order. The
+        third level of inheritance class name is what we want.
+        Object --> component --> TypeComponent. (i.e. DelayComponent)
+        This class type is in the third to the last of the getmro returned
+        result.
+
         """
         # check component type
         comp_base = inspect.getmro(component.__class__)
@@ -468,18 +490,16 @@ class TimingModel(object):
         return mapping
 
     def param_help(self):
-        """Print help lines for all available parameters in model.
-        """
-        s = "Available parameters for %s\n" % self.__class__
-        for par, cp in list(self.get_params_mapping().items()) :
-            s += "%s\nLocated in component '%s'\n" % \
-                 (getattr(self, par).help_line(), cp)
-        return s
+        """Print help lines for all available parameters in model."""
+        return "".join(
+            "{:<40}{}\n".format(cp, getattr(self, par).help_line())
+            for par, cp in self.get_params_mapping().items())
 
     def delay(self, toas, cutoff_component='', include_last=True):
         """Total delay for the TOAs.
-        Parameter
-        ---------
+
+        Parameters
+        ----------
         toas: toa.table
             The toas for analysis delays.
         cutoff_component: str
@@ -490,6 +510,7 @@ class TimingModel(object):
 
         Return the total delay which will be subtracted from the given
         TOA to get time of emission at the pulsar.
+
         """
         delay = np.zeros(toas.ntoas) * u.second
         if cutoff_component == '':
@@ -912,10 +933,12 @@ class TimingModel(object):
         return result_begin + result_middle + result_end
 
 class ModelMeta(abc.ABCMeta):
-    """
-    This is a Meta class for timing model registration. In order to get a
-    timing model registered, a member called 'register' has to be set true in the
-    TimingModel subclass.
+    """Ensure timing model registration.
+
+    When a new subclass of Component is created, record its identity in
+    a class attribute ``_component_list``, provided that the class has
+    an attribute ``register``.
+
     """
     def __init__(cls, name, bases, dct):
         regname = '_component_list'
@@ -929,8 +952,7 @@ class ModelMeta(abc.ABCMeta):
 
 @six.add_metaclass(ModelMeta)
 class Component(object):
-    """ This is a base class for timing model components.
-    """
+    """A base class for timing model components."""
     def __init__(self,):
         self.params = []
         self._parent = None
@@ -938,7 +960,11 @@ class Component(object):
         self.deriv_funcs = {}
         self.component_special_params = []
 
-    def setup(self,):
+    def __repr__(self):
+        return "<{} {}>".format(
+            self.__class__.__name__, self.params)
+
+    def setup(self):
         pass
 
     def __getattr__(self, name):
@@ -957,19 +983,45 @@ class Component(object):
                                     (self.__class__.__name__, name))
 
     def add_param(self, param):
+        """Add a parameter to the Component.
+
+        The parameter is stored in an attribute on the Component object.
+        Its name is also recorded in a list, ``self.params``.
+
+        Parameters
+        ----------
+        param : pint.models.Parameter
+            The parameter to be added.
+
         """
-        Add a parameter into the Component
-        Parameter
-        ---------
-        param: str
-            The name of parameter need to be add.
-        """
+        if (param.name in self.params
+                and getattr(self, param.name) is not param):
+            raise ValueError(
+                "Tried to add a second parameter called {}. "
+                "Old value: {} New value: {}"
+                .format(param.name, getattr(self, param.name), param))
         setattr(self, param.name, param)
-        self.params += [param.name,]
+        self.params.append(param.name)
 
     def remove_param(self, param):
-        self.params.remove(param)
-        par = getattr(self, param)
+        """Remove a parameter from the Component.
+
+        Parameters
+        ----------
+        param : str or pint.models.Parameter
+            The parameter to remove.
+
+        """
+        if isinstance(param, str):
+            param_name = param
+        else:
+            param_name = param.name
+        if param_name not in self.params:
+            raise ValueError(
+                "Tried to remove parameter {} but it is not listed: {}"
+                .formmat(param_name, self.params))
+        self.params.remove(param_name)
+        par = getattr(self, param_name)
         all_names = [param, ] + par.aliases
         if param in self.component_special_params:
             for pn in all_names:
@@ -1010,12 +1062,15 @@ class Component(object):
     #@Cache.use_cache
     def get_prefix_mapping_component(self,prefix):
         """Get the index mapping for the prefix parameters.
-           Parameter
-           ----------
-           prefix : str
-               Name of prefix.
-           Return
-           ----------
+
+        Parameters
+        ----------
+        prefix : str
+           Name of prefix.
+
+        Returns
+        ----------
+        d
            A dictionary with prefix parameter real index as key and parameter
            name as value.
         """
@@ -1050,15 +1105,15 @@ class Component(object):
         return ''
 
     def register_deriv_funcs(self, func, param):
-        """
-        This is a function to register the derivative function in to the
-        deriv_func dictionaries.
-        Parameter
-        ---------
-        func: method
-            The method calculates the derivative
-        param: str
-            Name of parameter the derivative respect to
+        """Register the derivative function in to the deriv_func dictionaries.
+
+        Parameters
+        ----------
+        func : callable
+            Calculates the derivative
+        param : str
+            Name of parameter the derivative is with respect to
+
         """
         pn = self.match_param_aliases(param)
         if pn == '':
@@ -1070,18 +1125,19 @@ class Component(object):
             self.deriv_funcs[pn] += [func,]
 
     def is_in_parfile(self,para_dict):
-        """ Check if this subclass included in parfile.
-            Parameters
-            ------------
-            para_dict : dictionary
-                A dictionary contain all the parameters with values in string
-                from one parfile
-            Return
-            ------------
-            True : bool
-                The subclass is included in the parfile.
-            False : bool
-                The subclass is not included in the parfile.
+        """Check if this subclass included in parfile.
+
+        Parameters
+        ----------
+        para_dict : dictionary
+            A dictionary contain all the parameters with values in string
+            from one parfile
+
+        Returns
+        -------
+        bool
+            Whether the subclass is included in the parfile.
+
         """
         pNames_inpar = list(para_dict.keys())
         pNames_inModel = self.params
@@ -1148,13 +1204,18 @@ class TimingModelError(ValueError):
 class MissingParameter(TimingModelError):
     """A required model parameter was not included.
 
-    Attributes:
-      module = name of the model class that raised the error
-      param = name of the missing parameter
-      msg = additional message
+    Parameters
+    ----------
+    module
+        name of the model class that raised the error
+    param
+        name of the missing parameter
+    msg
+        additional message
+
     """
     def __init__(self, module, param, msg=None):
-        super(MissingParameter, self).__init__()
+        super(MissingParameter, self).__init__(msg)
         self.module = module
         self.param = param
         self.msg = msg
