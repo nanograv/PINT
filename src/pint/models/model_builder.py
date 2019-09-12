@@ -1,22 +1,21 @@
 # model_builder.py
 # Defines the automatic timing model generator interface
-from __future__ import absolute_import, print_function, division
-import os
+from __future__ import absolute_import, division, print_function
 
-# The timing models that we will be using
-from .timing_model import TimingModel, Component
-from pint.utils import split_prefixed_name
-from .parameter import prefixParameter
-import inspect, fnmatch
 import glob
+import os
 import sys
+from collections import defaultdict
 
+from pint.utils import split_prefixed_name
+
+from .timing_model import Component, TimingModel
 
 default_models = ["StandardTimingModel",]
 DEFAULT_ORDER = ['astrometry', 'jump_delay', 'solar_system_shapiro',
                  'dispersion_constant', 'dispersion_dmx', 'pulsar_system',
                  'frequency_dependent', 'spindown', 'phase_jump', 'wave']
-                 
+
 class ModelBuilder(object):
     """A class for model construction interface.
         Parameters
@@ -94,22 +93,16 @@ class ModelBuilder(object):
         return self.param_inparF
 
     def get_all_categories(self,):
-        comp_category = {}
-        for k, cp in list(Component._component_list.items()):
-            ci = cp()
-            category = ci.category
-            if category not in list(comp_category.keys()):
-                comp_category[category] = [ci,]
-            else:
-                comp_category[category].append(ci)
-        return comp_category
+        """Obtain a dictionary from category to a list of instances."""
+        comp_category = defaultdict(list)
+        for k, cp in Component.component_types.items():
+            comp_category[cp.category].append(cp())
+        return dict(comp_category)
 
     def get_comp_from_parfile(self, parfile):
-        """Right now we only have one component on each category.
-        """
+        """Right now we only have one component on each category."""
         params_inpar = self.preprocess_parfile(parfile)
-        comp_categories = self.get_all_categories()
-        for cat, cmps in list(comp_categories.items()):
+        for cat, cmps in self.get_all_categories().items():
             selected_c = None
             for cpi in cmps:
                 if cpi.component_special_params != []:
@@ -127,25 +120,25 @@ class ModelBuilder(object):
                 self.select_comp[cat] = selected_c
 
     def sort_components(self, category_order=DEFAULT_ORDER):
-        """
-        This is a function to sort the component order.
-        Parameter
-        ---------
+        """This is a function to sort the component order.
+
+        Parameters
+        ----------
         category_order: list, optional
            The order for the order sensitive component categories.
+
         Note
         ----
         If a category is not listed in the category_order, it will be treated
         as order non-sensitive category and put in the end of sorted order list.
+
         """
-        cur_category = list(self.select_comp.keys())
-        all_categories = list(self.get_all_categories().keys())
         sorted_components = []
-        for cat in all_categories:
+        for cat in self.get_all_categories():
             if cat not in category_order:
                 category_order.append(cat)
         for co in category_order:
-            if co not in cur_category:
+            if co not in self.select_comp:
                 continue
             cp = self.select_comp[co]
             sorted_components.append(cp)

@@ -1,15 +1,18 @@
-from __future__ import absolute_import, print_function, division
+"""Dispersion due to the solar wind."""
+from __future__ import absolute_import, division, print_function
+
 from warnings import warn
-from . import parameter as p
-from .timing_model import DelayComponent
-from .dispersion_model import Dispersion, DMconst
-import astropy.units as u
+
 import astropy.constants as const
+import astropy.units as u
 import numpy as np
+
 import pint.utils as ut
-import astropy.time as time
+
 from ..toa_select import TOASelect
-from ..utils import taylor_horner, split_prefixed_name
+from . import parameter as p
+from .dispersion_model import Dispersion, DMconst
+
 
 class SolarWindDispersion(Dispersion):
     """Dispersion due to the solar wind (basic model).

@@ -517,8 +517,7 @@ class floatParameter(Parameter):
         return result
 
     def print_quantity_float(self, quan):
-        """A function gives print quantity string.
-        """
+        """Quantity as a string (for floating-point values)."""
         if not self._long_double:
             result = str(quan.to(self.units).value)
         else:
@@ -892,48 +891,56 @@ class AngleParameter(Parameter):
 
 
 class prefixParameter(object):
-    """ This is a Parameter type for prefix parameters, for example DMX_
+    """Prefix parameters, for example DMX_*.
+
     Create a prefix parameter, is like create a normal parameter. But the
     name should be in the format of prefix and index. For example DMX_0001 or
     F22.
+
     To create a prefix parameter with the same prefix but different index, just
     use the `.new_param` method. It will return a new prefix parameter with the
     same setup but the index. Some parameters' unit and description will
     be changed once the index has been changed. In order to get the right units
     and description, `.unitTplt` and `.descriptionTplt` should be provided. If
     not the new prefix parameter will use the same units and description with
-    the old one. A typical description and units template is like:
-    >>> descritionTplt = lambda x: 'This is the description of parameter %d'%x
-    >>> unitTplt = lambda x: 'second^%d'%x
-    Parameter
-    ---------
+    the old one. A typical description and units template is like::
+
+        >>> descrition_template = lambda x: 'This is the description of parameter %d'%x
+        >>> unit_template = lambda x: 'second^%d'%x
+
+    Parameters
+    ----------
+    parameter_type : str, optional
+        Example parameter class template for quantity and value setter
     name : str optional
         The name of the parameter. It has to be in the format of prefix + index.
-    units :  str optional
-        The unit of parameter
-    unitTplt : lambda method
+    value
+    units :  str, optional
+        Units that the value is expressed in
+    unit_template : callable
         The unit template for prefixed parameter
-    description : str optional
+    description : str, optional
         Description for the parameter
-    descriptionTplt : lambda method optional
+    description_template : callable
         Description template for prefixed parameters
-    prefix_aliases : list of str optional
+    prefix_aliases : list of str, optional
         Alias for the prefix
     frozen : bool, optional
         A flag specifying whether "fitters" should adjust the value of this
         parameter or leave it fixed.
     continuous : bool
-    parameter_type : str, optional, default 'float'
+    parameter_type : str, optional
         Example parameter class template for quantity and value setter
     long_double : bool, optional default 'double'
         Set float type quantity and value in long double
-    time_scale : str, optional default 'utc'
+    time_scale : str, optional
         Time scale for MJDParameter class.
+
     """
     def __init__(self, parameter_type='float',name=None, value=None, units=None,
                  unit_template=None, description=None, description_template=None,
                  uncertainty=None, frozen=True, continuous=True,
-                 prefix_aliases=None, long_double=False, unit_scale=False, \
+                 prefix_aliases=None, long_double=False, unit_scale=False,
                  scale_factor=None, scale_threshold=None,  time_scale='utc',
                  **kwargs):
         # Split prefixed name, if the name is not in the prefixed format, error
@@ -1448,13 +1455,13 @@ class pairParameter(floatParameter):
             return super(pairParameter, self).name_matches(name_idx)
 
     def from_parfile_line_pair(self, line):
-        """
-        This is a method to read mask parameter line (e.g. JUMP)
+        """Read mask parameter line (e.g. JUMP)
 
         Notes
         -----
         The accepted format:
             NAME value_a value_b
+
         """
         try:
             k = line.split()
@@ -1484,8 +1491,7 @@ class pairParameter(floatParameter):
         return line + "\n"
 
     def new_param(self, index):
-        """Create a new but same style mask parameter
-        """
+        """Create a new but same style mask parameter."""
         new_pair_param = pairParameter(name=self.origin_name, index=index,
                                        long_double=self.long_double,
                                        units= self.units,
@@ -1498,8 +1504,10 @@ class pairParameter(floatParameter):
 
     @property
     def value(self):
-        """Return the pure value of a parameter. This value will associate with
-        parameter default value, which is .units attribute.
+        """Return the pure value of a parameter.
+
+        This value will associate with parameter default value, which is .units attribute.
+
         """
         if self._quantity is None:
             return None
@@ -1515,15 +1523,14 @@ class pairParameter(floatParameter):
             if not isinstance(self.quantity, (str, bool)) and \
                 self._quantity is not None:
                 raise ValueError('This parameter value is number convertible. '
-                                 'Setting .value to None will lost the '
+                                 'Setting .value to None will lose the '
                                  'parameter value.')
             else:
                 self.value = val
         self._quantity = self.set_quantity_pair(val)
 
     def print_quantity_pair(self, quan):
-        """A function gives print quantity string.
-        """
+        """Return quantity as a string."""
         try:
             # Maybe it's a singleton quantity
             return self.print_quantity_float(quan)

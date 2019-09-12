@@ -922,14 +922,13 @@ class ModelMeta(abc.ABCMeta):
     """Ensure timing model registration.
 
     When a new subclass of Component is created, record its identity in
-    a class attribute ``_component_list``, provided that the class has
-    an attribute ``register``.
+    a class attribute ``component_types``, provided that the class has
+    an attribute ``register``. This makes sure all timing model components
+    are listed in ``Component.component_types``.
 
     """
     def __init__(cls, name, bases, dct):
-        regname = '_component_list'
-        if not hasattr(cls,regname):
-            setattr(cls,regname,{})
+        regname = 'component_types'
         if 'register' in dct:
             if cls.register:
                 getattr(cls,regname)[name] = cls
@@ -939,7 +938,17 @@ class ModelMeta(abc.ABCMeta):
 @six.add_metaclass(ModelMeta)
 class Component(object):
     """A base class for timing model components."""
-    def __init__(self,):
+
+    component_types = {}
+    """A list of all registered subtypes.
+
+    Note that classes are registered when their modules are imported,
+    so ensure all classes of interest are imported before this list
+    is checked.
+
+    """
+
+    def __init__(self):
         self.params = []
         self._parent = None
         self.deriv_funcs = {}

@@ -13,16 +13,16 @@ def test_forgot_name():
 
 
 @pytest.fixture
-def T():
+def model():
     return TimingModel(components=[AstrometryEquatorial(), DispersionDM(), DispersionDMX()])
 
 
-def test_category_dict(T):
-    d = T.components
+def test_category_dict(model):
+    d = model.components
     assert len(d) == 3
     #assert set(d.keys()) == set(T.component_types)
     #assert d==T.get_component_of_category()
 
-def test_component_categories(T):
-    for k, v in T.components.items():
-        assert T.get_component_type(v) != v.category
+def test_component_categories(model):
+    for k, v in model.components.items():
+        assert model.get_component_type(v) != v.category

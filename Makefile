@@ -53,9 +53,7 @@ test: ## run tests quickly with the default Python
 		cd tests && pytest --ff
 
 coverage: ## check code coverage quickly with the default Python
-
 		pytest tests --cov=pint
-
 		coverage report -m
 		coverage html
 		$(BROWSER) htmlcov/index.html
