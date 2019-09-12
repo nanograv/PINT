@@ -14,16 +14,16 @@ class DelayJump(DelayComponent):
 
     Note
     ----
-    this component is disable for now, since we don't have any method
+    This component is disabled for now, since we don't have any method
     to identify the phase jumps and delay jumps.
     """
     register = False
+    category = 'delay_jump'
     def __init__(self):
         super(DelayJump, self).__init__()
         # TODO: In the future we should have phase jump as well.
         self.add_param(p.maskParameter(name = 'JUMP', units='second'))
         self.delay_funcs_component += [self.jump_delay,]
-        self.category = 'delay_jump'
 
     def setup(self):
         super(DelayJump, self).setup()
@@ -68,11 +68,11 @@ class PhaseJump(PhaseComponent):
     """This is a class to implement phase jumps
     """
     register = True
+    category = 'phase_jump'
     def __init__(self):
         super(PhaseJump, self).__init__()
         self.add_param(p.maskParameter(name = 'JUMP', units='second'))
         self.phase_funcs_component += [self.jump_phase,]
-        self.category = 'phase_jump'
 
     def setup(self):
         super(PhaseJump, self).setup()

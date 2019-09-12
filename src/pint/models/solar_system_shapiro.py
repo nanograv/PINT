@@ -1,3 +1,6 @@
+"""Solar system Shapiro delay.
+
+"""
 # solar_system_shapiro.py
 # Add in Shapiro delays due to solar system objects
 from __future__ import absolute_import, print_function, division
@@ -11,10 +14,13 @@ from .. import Tsun, Tmercury, Tvenus, Tearth, Tmars, \
         Tjupiter, Tsaturn, Turanus, Tneptune
 
 class SolarSystemShapiro(DelayComponent):
+    """Shapiro delay due to light bending near Solar System objects."""
+
     register = True
+    category = 'solar_system_shapiro'
+
     def __init__(self):
         super(SolarSystemShapiro, self).__init__()
-        self.category = 'solar_system_shapiro'
         self.add_param(p.boolParameter(name="PLANET_SHAPIRO",
              value=False, description="Include planetary Shapiro delays (Y/N)"))
         self.delay_funcs_component += [self.solar_system_shapiro_delay,]

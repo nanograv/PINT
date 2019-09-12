@@ -942,7 +942,6 @@ class Component(object):
     def __init__(self,):
         self.params = []
         self._parent = None
-        self.category = ''
         self.deriv_funcs = {}
         self.component_special_params = []
 
@@ -952,6 +951,11 @@ class Component(object):
 
     def setup(self):
         pass
+
+    @property
+    def category(self):
+        """Category is a feature the class, so delegate."""
+        return self.__class__.category
 
     def __getattr__(self, name):
         try:
@@ -1013,7 +1017,6 @@ class Component(object):
             for pn in all_names:
                 self.component_special_params.remove(pn)
         delattr(self, param)
-
 
     def set_special_params(self, spcl_params):
         als = []

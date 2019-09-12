@@ -7,11 +7,12 @@ from . import parameter as p
 
 class Wave(DelayComponent):
     """This class provides harmonic signals.
-    
+
     Historically, used for decomposition of timing noise into a series of
     sine/cosine components.
     """
     register = True
+    category = 'wave'
     def __init__(self):
         super(Wave, self).__init__()
 
@@ -26,7 +27,6 @@ class Wave(DelayComponent):
                        description="Reference epoch for wave solution",
                        time_scale='tdb'))
         self.delay_funcs_component += [self.wave_delay,]
-        self.category = 'wave'
 
     def setup(self):
         super(Wave, self).setup()

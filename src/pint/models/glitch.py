@@ -1,4 +1,4 @@
-"""Pulsar timing glitches.  """
+"""Pulsar timing glitches."""
 # glitch.py
 # Defines glitch timing model class
 from __future__ import absolute_import, print_function, division
@@ -19,8 +19,10 @@ maxglitches = 10  # Have not use this one in the new version.
 
 
 class Glitch(PhaseComponent):
-    """This class provides glitches."""
+    """Pulsar spin-down glitches."""
     register = True
+    category = 'glitch'
+
     def __init__(self):
         super(Glitch, self).__init__()
 
@@ -62,7 +64,6 @@ class Glitch(PhaseComponent):
                        unitTplt=lambda x: 'day',
                        type_match='float'))
         self.phase_funcs_component += [self.glitch_phase]
-        self.category = 'glitch'
 
     def setup(self):
         super(Glitch, self).setup()

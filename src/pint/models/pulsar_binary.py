@@ -1,3 +1,9 @@
+"""Support for independent binary models.
+
+This module if for wrapping standalone binary models so that they work
+as PINT timing models.
+
+"""
 # This is a wapper for independent binary model. It is a PINT timing model class
 from __future__ import absolute_import, print_function, division
 import astropy.units as u
@@ -10,21 +16,24 @@ from .stand_alone_psr_binaries import binary_orbits as bo
 
 
 class PulsarBinary(DelayComponent):
-    """ A wapper class for independent pulsar binary model interact with PINT
-    platform. The calculations are done by the classes located at
-    pint/models/stand_alone_psr_binary
+    """Wrapper class for independent pulsar binary model.
+
+    The calculations are done by the classes located in
+    :module:`pint.models.stand_alone_psr_binary`.
+
     Binary variables naming:
-    Eccentric Anomaly               E (not parameter ECC)
-    Mean Anomaly                    M
-    True Anomaly                    nu
-    Eccentric                       ecc
-    Longitude of periastron         omega
-    projected semi-major axis of orbit   a1
+
+        - Eccentric Anomaly:               E (not parameter ECC)
+        - Mean Anomaly:                    M
+        - True Anomaly:                    nu
+        - Eccentric:                       ecc
+        - Longitude of periastron:         omega
+        - Projected semi-major axis of orbit:   a1
 
     """
+    category = 'pulsar_system'
     def __init__(self,):
         super(PulsarBinary, self).__init__()
-        self.category = 'pulsar_system'
         self.binary_model_name = None
         self.barycentric_time = None
         self.binary_model_class = None
