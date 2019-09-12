@@ -12,6 +12,11 @@ matrix:
           after_success: []
           git:
               clone: false
+        - script: flake8-diff
+          name: "python style checker for changed code"
+          services: []
+          after_success: []
+          before_script: git fetch --unshallow
         - python: "2.7"
         - python: "3.5"
         - python: "3.6"
@@ -19,15 +24,6 @@ matrix:
         - script: make docs-build
           name: "Documentation build"
           after_success: []
-          # FIXME: eventually can turn warnings into errors so Travis will fail 
-          # on dead links and formatting problems; right now we have a bazillion
-          # dead links and formatting problems.
-        - script: flake8
-          name: "python style checker"
-          services: []
-          after_success: []
-    allow_failures:
-        - script: flake8
 sudo: required
 
 # https://docs.travis-ci.com/user/gui-and-headless-browsers/#Using-xvfb-to-Run-Tests-That-Require-a-GUI
