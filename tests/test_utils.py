@@ -67,7 +67,7 @@ def test_open_or_use_file_read():
 
 @pytest.mark.parametrize("contents", ["", " ", "\n", "aa", "a\na", contents])
 def test_lines_of(contents):
-    lines = contents.splitlines(keepends=True)
+    lines = contents.splitlines(True)
     assert list(lines_of(lines)) == lines
     with NamedTemporaryFile("w") as w:
         w.write(contents)

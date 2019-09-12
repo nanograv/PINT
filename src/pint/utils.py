@@ -28,6 +28,17 @@ if np.finfo(np.longdouble).eps > 2e-19:
     raise ValueError("This platform does not support extended precision "
                      "floating-point, and PINT cannot run without this.")
 
+__all__ = ['PosVel', 'fortran_float', 'time_from_mjd_string',
+           'time_from_longdouble', 'time_to_mjd_string',
+           'time_to_mjd_string_array', 'time_to_longdouble',
+           'GEO_WGS84_to_ITRF', 'numeric_partial', 'numeric_partials',
+           'check_all_partials', 'has_astropy_unit', 'longdouble2string',
+           'MJD_string2longdouble', 'ddouble2ldouble', 'str2longdouble',
+           'PrefixError', 'split_prefixed_name', 'data2longdouble',
+           'taylor_horner', 'taylor_horner_deriv', 'is_number', 'open_or_use',
+           'lines_of', 'interesting_lines']
+
+
 class PosVel(object):
     """Position/Velocity class.
 
@@ -44,6 +55,7 @@ class PosVel(object):
     be used to specify names for endpoints of the vectors.  If present,
     addition/subtraction will check that vectors are being combined in
     a consistent way.
+
     """
     def __init__(self, pos, vel, obj=None, origin=None):
         if len(pos) != 3:
@@ -217,10 +229,10 @@ def time_to_mjd_string_array(t, prec=15):
 def time_to_longdouble(t):
     """ Return an astropy Time value as MJD in longdouble
 
-    ## SUGGESTION(@paulray): This function is at least partly redundant with
-    ## ddouble2ldouble() below...
+    SUGGESTION(@paulray): This function is at least partly redundant with
+    ddouble2ldouble() below...
 
-    ## Also, is it certain that this calculation retains the full precision?
+    Also, is it certain that this calculation retains the full precision?
 
     """
     try:
@@ -234,7 +246,7 @@ def GEO_WGS84_to_ITRF(lon, lat, hgt):
 
     Convert WGS-84 references lon, lat, height (using astropy
     units) to ITRF x,y,z rectangular coords (m)
-    .
+
     """
     x, y, z = astropy.time.erfa_time.era_gd2gc(1, lon.to(u.rad).value,
                                                lat.to(u.rad).value,
@@ -248,8 +260,9 @@ def numeric_partial(f, args, ix=0, delta=1e-6):
     This uses symmetric differences to estimate the partial derivative
     of a function (that takes some number of numeric arguments and may
     return an array) with respect to one of its arguments.
+
     """
-    #r = np.array(f(*args))
+    # r = np.array(f(*args))
     args2 = list(args)
     args2[ix] = args[ix]+delta/2.
     r2 = np.array(f(*args2))
@@ -296,12 +309,12 @@ def check_all_partials(f, args, delta=1e-6, atol=1e-4, rtol=1e-4):
 
 
 def has_astropy_unit(x):
-    """
-    has_astropy_unit(x):
+    """Check whether x has an associated unit.
 
     Return True/False if x has an astropy unit type associated with it. This is
     useful, because different data types can still have units associated with
     them.
+
     """
     return hasattr(x, 'unit') and isinstance(x.unit, u.core.UnitBase)
 
@@ -312,19 +325,17 @@ def longdouble2string(x):
 
 
 def MJD_string2longdouble(s):
-    """
-    MJD_string2longdouble(s):
-        Convert a MJD string to a numpy longdouble
-    """
+    """Convert a MJD string to a numpy longdouble."""
     ii, ff = s.split(".")
     return np.longdouble(ii) + np.longdouble("0."+ff)
 
 
 def ddouble2ldouble(t1, t2, format='jd'):
-    """
-    ddouble2ldouble(t1, t2, format='jd'):
-        inputs two double-precision numbers representing JD times,
-        converts them to a single long double MJD value
+    """Convert double-double to long double.
+
+    inputs two double-precision numbers representing JD times,
+    converts them to a single long double MJD value
+
     """
     if format == 'jd':
         t1 = np.longdouble(t1) - np.longdouble(2400000.5)
@@ -336,37 +347,57 @@ def ddouble2ldouble(t1, t2, format='jd'):
 
 
 def str2longdouble(str_data):
-    """Return a numpy long double scalar from the input string, using strtold()
-    """
+    """Return a numpy long double scalar from the input string, using strtold()."""
     input_str = str_data.translate(maketrans('Dd', 'ee'))
     return np.longdouble(input_str.encode())
 
 
 # Define prefix parameter pattern
 prefixPattern = [
-    re.compile(r'([a-zA-Z]\d[a-zA-Z]+)(\d+)'), # For the prefix like T2EFAC2
-    re.compile(r'([a-zA-Z]+)(\d+)'), # For the prefix like F12
-    re.compile(r'([a-zA-Z0-9]+_*)(\d+)'), # For the prefix like DMXR1_3
-    #re.compile(r'([a-zA-Z]\d[a-zA-Z]+)(\d+)'), # for prefixes like PLANET_SHAPIRO2?
+    re.compile(r'^([a-zA-Z]*\d+[a-zA-Z]+)(\d+)$'),  # For the prefix like T2EFAC2
+    re.compile(r'^([a-zA-Z]+)(\d+)$'),  # For the prefix like F12
+    re.compile(r'^([a-zA-Z0-9]+_)(\d+)$'),  # For the prefix like DMXR1_3
+    #re.compile(r'([a-zA-Z]\d[a-zA-Z]+)(\d+)'),  # for prefixes like PLANET_SHAPIRO2?
 ]
 
 class PrefixError(ValueError):
     pass
 
 def split_prefixed_name(name):
-    """A utility function that splits a prefixed name.
-       Parameter
-       ----------
-       name : str
-           Prefixed name
-       Return
-       ----------
-       prefixPart : str
-           The prefix part of the name
-       indexPart : str
-           The index part from the name
-       indexValue : int
-           The absolute index valeu
+    """Split a prefixed name.
+
+    Parameters
+    ----------
+    name : str
+       Prefixed name
+
+    Returns
+    -------
+    prefixPart : str
+       The prefix part of the name
+    indexPart : str
+       The index part from the name
+    indexValue : int
+       The absolute index value
+
+    Example
+    -------
+
+        >>> split_prefixed_name("DMX_0123")
+        ('DMX_', '0123', 123)
+        >>> split_prefixed_name("T2EFAC17")
+        ('T2EFAC', '17', 17)
+        >>> split_prefixed_name("F12")
+        ('F', '12', 12)
+        >>> split_prefixed_name("DMXR1_2")
+        ('DMXR1_', '2', 2)
+        >>> split_prefixed_name("PEPOCH")
+        Traceback (most recent call last):
+          File "<stdin>", line 1, in <module>
+          File "pint/utils.py", line 406, in split_prefixed_name
+            raise PrefixError("Unrecognized prefix name pattern '%s'." % name)
+        pint.utils.PrefixError: Unrecognized prefix name pattern 'PEPOCH'.
+
     """
     for pt in prefixPattern:
         namefield = pt.match(name)
@@ -382,7 +413,7 @@ def split_prefixed_name(name):
         break
 
     if namefield is None:
-        raise PrefixError("Unrecognized prefix name pattern'%s'." % name)
+        raise PrefixError("Unrecognized prefix name pattern '%s'." % name)
     indexValue = int(indexPart)
     return prefixPart, indexPart, indexValue
 
@@ -403,10 +434,13 @@ def data2longdouble(data):
 
 def taylor_horner(x, coeffs):
     """Evaluate a Taylor series of coefficients at x via the Horner scheme.
+
     For example, if we want: 10 + 3*x/1! + 4*x^2/2! + 12*x^3/3! with
-    x evaluated at 2.0, we would do:
-    In [1]: taylor_horner(2.0, [10, 3, 4, 12])
-    Out[1]: 40.0
+    x evaluated at 2.0, we would do::
+
+        In [1]: taylor_horner(2.0, [10, 3, 4, 12])
+        Out[1]: 40.0
+
     """
     result = 0.0
     if hasattr(coeffs[-1], 'unit'):
@@ -421,12 +455,14 @@ def taylor_horner(x, coeffs):
 
 
 def taylor_horner_deriv(x, coeffs, deriv_order=1):
-    """Evaluate the nth derivative of a Taylor series of coefficients at x via
-    the Horner scheme.
+    """Evaluate the nth derivative of a Taylor series.
+
     For example, if we want: first order of (10 + 3*x/1! + 4*x^2/2! + 12*x^3/3!)
-    with respect to x evaluated at 2.0, we would do:
-    In [1]: taylor_horner_deriv(2.0, [10, 3, 4, 12], 1)
-    Out[1]: 15.0
+    with respect to x evaluated at 2.0, we would do::
+
+        In [1]: taylor_horner_deriv(2.0, [10, 3, 4, 12], 1)
+        Out[1]: 15.0
+
     """
     result = 0.0
     if hasattr(coeffs[-1], 'unit'):
@@ -442,6 +478,10 @@ def taylor_horner_deriv(x, coeffs, deriv_order=1):
 
 def is_number(s):
     """Check if it is a number string.
+
+    Note that this may return False for Fortran-style floating-point
+    numbers (1.0d10).
+
     """
     try:
         float(s)
