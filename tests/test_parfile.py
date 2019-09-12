@@ -36,6 +36,7 @@ params = tm.get_model(parfile).params
 params.remove("TZRMJD")
 params.append(pytest.param("TZRMJD", marks=pytest.mark.xfail(reason="Bug #519")))
 
+
 @pytest.fixture
 def roundtrip():
     m = tm.get_model(parfile)

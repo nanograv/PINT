@@ -1,4 +1,5 @@
 """Time format pulsar_mjd to handle leap seconds differently."""
+
 from __future__ import absolute_import, division, print_function
 
 import astropy._erfa as erfa

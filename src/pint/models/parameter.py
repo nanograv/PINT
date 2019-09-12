@@ -1,5 +1,22 @@
-# parameter.py
-# Defines Parameter class for timing model parameters
+"""Timing model parameters encapsulated as objects.
+
+Defines Parameter class for timing model parameters. These objects keep
+track of values, uncertainties, and units. They can hold a variety of
+types, both numeric - python floats and numpy longdoubles - and other -
+string, angles, times.
+
+These classes also contain code to allow them to read and write values
+in both exact and human-readable forms, as well as detecting when they
+have occurred in ``.aor`` files.
+
+One major complication is that timing models can often have variable
+numbers of parameters: for example the ``DMX`` family of parameters
+can have one parameter for each group of TOAs in the input, allowing
+potentially very many. These are handled in two separate ways, as "prefix
+parameters" and "mask parameters" depending on how they occur in the
+``.par`` and ``.tim`` files.
+
+"""
 from __future__ import absolute_import, print_function, division
 from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
     time_to_longdouble, is_number, time_from_longdouble, str2longdouble, \
@@ -275,8 +292,8 @@ class Parameter(object):
     def print_uncertainty(self, uncertainty):
         return str(uncertainty.to(self.units).value)
 
-    def __str__(self):
-        out = self.name
+    def __repr__(self):
+        out = self.__class__.__name__+"("+self.name
         if self.units is not None:
             out += " (" + str(self.units) + ")"
         if self.quantity is not None:
@@ -286,6 +303,7 @@ class Parameter(object):
             return out
         if self.uncertainty is not None and isinstance(self.value, numbers.Number):
             out += " +/- " + str(self.uncertainty.to(self.units))
+        out += ")"
         return out
 
     def set(self, value):
@@ -905,7 +923,7 @@ class prefixParameter(object):
     not the new prefix parameter will use the same units and description with
     the old one. A typical description and units template is like::
 
-        >>> descrition_template = lambda x: 'This is the description of parameter %d'%x
+        >>> description_template = lambda x: 'This is the description of parameter %d'%x
         >>> unit_template = lambda x: 'second^%d'%x
 
     Parameters
@@ -1076,18 +1094,9 @@ class prefixParameter(object):
     def special_arg(self):
         return self.param_comp.special_arg
 
-    def __str__(self):
-        out = self.name
-        if self.units is not None:
-            out += " (" + str(self.units) + ")"
-        out += " " + self.print_quantity(self.quantity)
-        if self.uncertainty is not None:
-            out += " +/- " + self.print_uncertainty(self.uncertainty)
-        return out
-
     # Define the function to call functions inside of parameter composition.
-    def __str__(self):
-        return self.param_comp.__str__()
+    def __repr__(self):
+        return self.param_comp.__repr__()
 
     def from_parfile_line(self, line):
         return self.param_comp.from_parfile_line(line)
@@ -1137,45 +1146,50 @@ class prefixParameter(object):
 
 
 class maskParameter(floatParameter):
-    """ This is a Parameter type for mask parameters which is to select a
+    """Mask parameters are ones that apply to a subset of TOAs.
+
+    This is a Parameter type for mask parameters which is to select a
     certain subset of TOAs and apply changes on the subset of TOAs, for example
     JUMP. This type of parameter does not require index input. But eventrully
     an index part will be added, for the purpose of parsing the right value
-    from the parfile. For example,
-    >>> p = maskParameter(name='JUMP', index=2)
-    >>> p.name
-    'JUMP2'
-    Parameter
-    ---------
-    name : str optional
+    from the parfile. For example::
+
+        >>> p = maskParameter(name='JUMP', index=2)
+        >>> p.name
+        'JUMP2'
+
+    Parameters
+    ----------
+    name : str, optional
         The name of the parameter.
-    index : int optional [default 1]
+    index : int, optional
         The index number for the prefixed parameter.
-    key : str optional
+    key : str, optional
         The key words/flag for the selecting TOAs
     key_value :  list/single value optional
         The value for key words/flags. Value can take one value as a flag value.
         or two value as a range.
-        e.g. JUMP freq 430.0 1440.0. or JUMP -fe G430
-    value : float or long_double optinal
+        e.g. ``JUMP freq 430.0 1440.0``. or ``JUMP -fe G430``
+    value : float or np.longdouble, optional
         Toas/phase adjust value
-    long_double : bool, optional default 'double'
+    long_double : bool, optional
         Set float type quantity and value in long double
-    units : str optional
+    units : str, optional
         Unit for the offset value
-    description : str optional
+    description : str, optional
         Description for the parameter
     uncertainty: float or np.longdouble
         uncertainty of the parameter.
     frozen : bool, optional
         A flag specifying whether "fitters" should adjust the value of this
         parameter or leave it fixed.
-    continuous : bool optional
-    aliases : list optional
+    continuous : bool, optional
+    aliases : list, optional
         List of aliases for parameter name.
 
     TODO: Is mask parameter provide some other type of parameters other then
     floatParameter?
+
     """
     def __init__(self, name=None, index=1, key=None, key_value=None,
                  value=None, long_double=False, units= None, description=None,
@@ -1227,14 +1241,13 @@ class maskParameter(floatParameter):
         self.as_parfile_line = self.as_parfile_line_mask
         self.is_prefix = True
 
-    def __str__(self):
-        out = self.name
-        if self.units is not None:
-            out += " (" + str(self.units) + ")"
-
-        out += " " + self.key
-        for kv in self.key_value:
-            out += " " + str(kv)
+    def __repr__(self):
+        out = self.__class__.__name__+"("+self.name
+        if self.key is not None:
+            out += " " + self.key
+        if self.key_value is not None:
+            for kv in self.key_value:
+                out += " " + str(kv)
         if self.quantity is not None:
             out += " " + self.print_quantity(self.quantity)
         else:
@@ -1242,6 +1255,10 @@ class maskParameter(floatParameter):
             return out
         if self.uncertainty is not None and isinstance(self.value, numbers.Number):
             out += " +/- " + str(self.uncertainty.to(self.units))
+        if self.units is not None:
+            out += " (" + str(self.units) + ")"
+        out += ")"
+
         return out
 
     def name_matches(self, name):
@@ -1252,11 +1269,17 @@ class maskParameter(floatParameter):
             return super(maskParameter, self).name_matches(name_idx)
 
     def from_parfile_line_mask(self, line):
-        """
-        This is a method to read mask parameter line (e.g. JUMP)
+        """Read mask parameter line (e.g. JUMP)
+
+        Returns
+        -------
+        bool
+            Whether the parfile line is meaningful to this class
+
         Notes
         -----
-        The accepted format:
+        The accepted format::
+
             NAME key key_value parameter_value
             NAME key key_value parameter_value fit_flag
             NAME key key_value parameter_value fit_flag uncertainty
@@ -1265,26 +1288,30 @@ class maskParameter(floatParameter):
             NAME key key_value1 key_value2 parameter_value fit_flag
             NAME key key_value1 key_value2 parameter_value fit_flag uncertainty
             NAME key key_value1 key_value2 parameter_value uncertainty
+
+        where NAME is the name for this class as reported by ``self.name_matches``.
+
         """
-        try:
-            k = line.split()
-            name = k[0].upper()
-        except IndexError:
+        k = line.split()
+        if not k:
             return False
         # Test that name matches
+        name = k[0]
         if not self.name_matches(name):
             return False
 
         try:
             self.key = k[1]
         except IndexError:
-            return False
-
+            raise ValueError("{}: No key found on timfile line {!r}"
+                             .format(self.name, line))
 
         key_value_info = self.key_identifier.get(self.key.lower(), (str, 1))
         len_key_v = key_value_info[1]
         if len(k) < 3 + len_key_v:
-            return False
+            raise ValueError(
+                "{}: Expected at least {} entries on timfile line {!r}"
+                .format(self.name, 3+len_key_v, line))
 
         for ii in range(len_key_v):
             if key_value_info[0] != str:

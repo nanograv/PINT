@@ -14,16 +14,21 @@ import astropy.units as u
 from warnings import warn
 
 class BinaryELL1Base(PulsarBinary):
-    """This is a PINT pulsar binary ELL1 model class a subclass of PulsarBinary.
+    """PINT wrapper around standalone ELL1 model.
+
+    This is a PINT pulsar binary ELL1 model class a subclass of PulsarBinary.
     It is a wrapper for stand alone ELL1model class defined in ./pulsar_binary/ELL1_model.py
     All the detailed calculations are in the stand alone ELL1model.
     The aim for this class is to connect the stand alone binary model with PINT platform
+
     ELL1model special parameters:
-    TASC Epoch of ascending node
-    EPS1 First Laplace-Lagrange parameter, ECC x sin(OM) for ELL1 model
-    EPS2 Second Laplace-Lagrange parameter, ECC x cos(OM) for ELL1 model
-    EPS1DOT First derivative of first Laplace-Lagrange parameter
-    EPS2DOT Second derivative of second Laplace-Lagrange parameter
+
+        - TASC Epoch of ascending node
+        - EPS1 First Laplace-Lagrange parameter, ECC x sin(OM) for ELL1 model
+        - EPS2 Second Laplace-Lagrange parameter, ECC x cos(OM) for ELL1 model
+        - EPS1DOT First derivative of first Laplace-Lagrange parameter
+        - EPS2DOT Second derivative of second Laplace-Lagrange parameter
+
     """
     def __init__(self):
         super(BinaryELL1Base, self).__init__()
@@ -79,12 +84,15 @@ class BinaryELL1(BinaryELL1Base):
         super(BinaryELL1, self).setup()
 
 class BinaryELL1H(BinaryELL1Base):
-    """This is modified version of ELL1 model. a new parameter H3 is introduced
-       to model the shapiro delay.
-       Note
-       ----
-       Ref:  Freire and Wex 2010
-       Only the Medium-inclination case model is implemented.
+    """Modified ELL1 to with H3 parameter.
+
+    This is modified version of ELL1 model. a new parameter H3 is
+    introduced to model the shapiro delay.
+
+    Note
+    ----
+    Ref:  Freire and Wex 2010; Only the Medium-inclination case model is implemented.
+
     """
     register = True
     def __init__(self):

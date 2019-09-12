@@ -17,6 +17,7 @@ import six
 from astropy import log
 
 import pint.utils as utils
+from pint.utils import interesting_lines, lines_of
 from pint import dimensionless_cycles
 
 from ..phase import Phase
@@ -111,23 +112,23 @@ class TimingModel(object):
         self.setup_components(components)
 
     def __repr__(self):
-        return "<{} {}>".format(self.__class__.__name__, self.components)
+        return "{}(\n\t{})".format(
+            self.__class__.__name__,
+            ",\n\t".join(str(v) for k, v in sorted(self.components.items())))
 
     def setup(self):
-        """This is a abstract class for setting up timing model class. It is designed for
-        reading .par file and check parameters.
-        """
+        """Run setup methods od all components."""
         for cp in self.components.values():
             cp.setup()
 
-    def __str__(self):
-        result = ""
-        comps = self.components
-        for k, cp in list(comps.items()):
-            result += "In component '%s'" % k + "\n\n"
-            for pp in cp.params:
-                result += str(getattr(cp, pp)) + "\n"
-        return result
+    #def __str__(self):
+    #    result = ""
+    #    comps = self.components
+    #    for k, cp in list(comps.items()):
+    #        result += "In component '%s'" % k + "\n\n"
+    #        for pp in cp.params:
+    #            result += str(getattr(cp, pp)) + "\n"
+    #    return result
 
     def __getattr__(self, name):
         try:
@@ -157,7 +158,7 @@ class TimingModel(object):
     def params(self):
         """Parameters of this model and all its components."""
         p = self.top_level_params
-        for cp in list(self.components.values()):
+        for cp in self.components.values():
             p = p+cp.params
         return p
 
@@ -402,8 +403,7 @@ class TimingModel(object):
         return dict(category)
 
     def add_param_from_top(self, param, target_component):
-        """Add a parameter to a timing model component.
-        """
+        """Add a parameter to a timing model component."""
         if target_component == '':
             setattr(self, param.name, param)
             self.top_level_params += [param.name]
@@ -420,6 +420,7 @@ class TimingModel(object):
         ---------
         param: str
             The name of parameter to be removed.
+
         """
         param_map = self.get_params_mapping()
         if param not in list(param_map.keys()):
@@ -432,10 +433,7 @@ class TimingModel(object):
             self.components[target_component].remove_param(param)
 
     def get_params_mapping(self):
-        """
-        This is a method to map all the parameters to the component they belong
-        to.
-        """
+        """Report whick component each parameter name comes from."""
         param_mapping = {}
         for p in self.top_level_params:
             param_mapping[p] = 'timing_model'
@@ -458,14 +456,18 @@ class TimingModel(object):
         return result
     def get_prefix_mapping(self, prefix):
         """Get the index mapping for the prefix parameters.
-           Parameter
-           ----------
-           prefix : str
-               Name of prefix.
-           Return
-           ----------
+
+        Parameters
+        ----------
+        prefix : str
+           Name of prefix.
+
+        Returns
+        -------
+        dict
            A dictionary with prefix pararameter real index as key and parameter
            name as value.
+
         """
         parnames = [x for x in self.params if x.startswith(prefix)]
         mapping = dict()
@@ -805,75 +807,86 @@ class TimingModel(object):
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
 
-    def read_parfile(self, filename):
-        """Read values from the specified parfile into the model parameters."""
-        checked_param = []
-        repeat_param = {}
-        param_map = self.get_params_mapping()
-        comps = self.components
-        pfile = open(filename, 'r')
-        wants_tcb = None
-        for l in [pl.strip() for pl in pfile.readlines()]:
-            # Skip blank lines
-            if not l:
-                continue
-            # Skip commented lines
-            if l.startswith('#') or l[:2]=="C ":
-                continue
+    def read_parfile(self, file):
+        """Read values from the specified parfile into the model parameters.
 
-            k = l.split()
+        Parameters
+        ----------
+        file : str or list or file-like
+            The parfile to read from. May be specified as a filename,
+            a list of lines, or a readable file-like object.
+
+        """
+        repeat_param = defaultdict(int)
+        param_map = self.get_params_mapping()
+        comps = self.components.copy()
+        comps['timing_model'] = self
+        wants_tcb = None
+        stray_lines = []
+        for li in interesting_lines(lines_of(file), comments=("#", "C ")):
+            k = li.split()
             name = k[0].upper()
 
             if name == 'UNITS':
+                if name in repeat_param:
+                    raise ValueError("UNITS is repeated in par file")
+                else:
+                    repeat_param[name] += 1
                 if len(k) > 1 and k[1] == 'TDB':
                     wants_tcb = False
                 else:
-                    wants_tcb = k[1]
+                    wants_tcb = li
+                continue
 
             if name == 'EPHVER':
                 if len(k)>1 and k[1] != '2' and wants_tcb is None:
-                    wants_tcb = l
+                    wants_tcb = li
                 log.warning("EPHVER %s does nothing in PINT" % k[1])
                 #actually people expect EPHVER 5 to work
                 #even though it's supposed to imply TCB which doesn't
+                continue
 
-            if name in checked_param:
-                if name in repeat_param.keys():
-                    repeat_param[name] += 1
-                else:
-                    repeat_param[name] = 2
+            repeat_param[name] += 1
+            if repeat_param[name] > 1:
                 k[0] = k[0] + str(repeat_param[name])
-                l = ' '.join(k)
-            parsed = False
-            for par in param_map.keys():
-                host_comp = param_map[par]
-                if host_comp != 'timing_model':
-                    cmp = comps[host_comp]
-                else:
-                    cmp = self
-                if cmp.__getattr__(par).from_parfile_line(l):
-                    parsed = True
+                li = ' '.join(k)
 
-            if not parsed:
-                p = l.split()[0]
-                if p in ignore_params:
-                    log.debug("Ignoring parfile line '%s'" % (l,))
-                    parsed = True
-            if not parsed:
-                p = l.split()[0]
-                try:
-                    prefix,f,v = utils.split_prefixed_name(l.split()[0])
-                    if prefix in ignore_prefix:
-                        log.debug("Ignoring prefix parfile line '%s'" % (l,))
-                        parsed = True
-                except utils.PrefixError:
-                    pass
-            if not parsed:
-                log.warning("Unrecognized parfile line '%s'" % (l,))
+            used = []
+            for p, c in param_map.items():
+                if getattr(comps[c], p).from_parfile_line(li):
+                    used.append((c, p))
+            if len(used) > 1:
+                log.warning("More than one component made use of par file "
+                            "line {!r}: {}".format(li, used))
+            if used:
+                continue
 
-            checked_param.append(name)
+            if name in ignore_params:
+                log.debug("Ignoring parfile line '%s'" % (li,))
+                continue
+
+            try:
+                prefix, f, v = utils.split_prefixed_name(name)
+                if prefix in ignore_prefix:
+                    log.debug("Ignoring prefix parfile line '%s'" % (li,))
+                    continue
+            except utils.PrefixError:
+                pass
+
+            stray_lines.append(li)
+
         if wants_tcb:
-            raise ValueError("UNITS %s not yet supported by PINT" % k[1])
+            raise ValueError(
+                "Only UNITS TDB supported by PINT but parfile has {}"
+                .format(wants_tcb))
+        if stray_lines:
+            for l in stray_lines:
+                log.warning("Unrecognized parfile line {!r}".format(l))
+            for name, param in getattr(self, "discarded_components", []):
+                log.warning("Model component {} was rejected because we "
+                            "didn't find parameter {}".format(name, param))
+            log.warning("Final object: {}".format(self))
+
         # The "setup" functions contain tests for required parameters or
         # combinations of parameters, etc, that can only be done
         # after the entire parfile is read
@@ -955,8 +968,9 @@ class Component(object):
         self.component_special_params = []
 
     def __repr__(self):
-        return "<{} {}>".format(
-            self.__class__.__name__, self.params)
+        return "{}({})".format(
+            self.__class__.__name__,
+            ", ".join(str(getattr(self, p)) for p in self.params))
 
     def setup(self):
         pass
@@ -1141,6 +1155,8 @@ class Component(object):
         pNames_inpar = list(para_dict.keys())
         pNames_inModel = self.params
 
+        # FIXME: we have derived classes, this is the sort of thing that
+        # should go in them.
         # For solar system Shapiro delay component
         if hasattr(self,'PLANET_SHAPIRO'):
             if "NO_SS_SHAPIRO" in pNames_inpar:
@@ -1148,14 +1164,16 @@ class Component(object):
             else:
                 return True
 
-        # For Binary model component
         try:
-            if getattr(self,'binary_model_name') == para_dict['BINARY'][0]:
-                return True
+            bmn = getattr(self, 'binary_model_name')
+        except AttributeError:
+            # This isn't a binary model, keep looking
+            pass
+        else:
+            if 'BINARY' in para_dict:
+                return bmn == para_dict['BINARY'][0]
             else:
                 return False
-        except (AttributeError, KeyError):
-            pass
 
         # Compare the componets parameter names with par file parameters
         compr = list(set(pNames_inpar).intersection(pNames_inModel))

@@ -1,19 +1,25 @@
 """Miscellaneous potentially-helpful functions."""
-from __future__ import absolute_import, print_function, division
-import numpy as np
-from scipy.special import factorial
+from __future__ import absolute_import, division, print_function
+
+import re
 import string
+from contextlib import contextmanager
+
 import astropy.time
+import astropy.units as u
+import numpy as np
+from astropy import log
+from astropy.time.utils import day_frac
+
+from .str2ld import str2ldarr1
+
 try:
     from astropy.erfa import DJM0, d2dtf
 except ImportError:
     from astropy._erfa import DJM0, d2dtf
-from astropy.time.utils import day_frac
-import astropy.units as u
-from astropy import log
-import re
+
 try:
-    maketrans = ''.maketrans
+    maketrans = str.maketrans
 except AttributeError:
     # fallback for Python 2
     from string import maketrans
@@ -451,8 +457,61 @@ def is_number(s):
         pass
     return False
 
-if __name__ == "__main__":
-    assert taylor_horner(2.0, [10]) == 10
-    assert taylor_horner(2.0, [10, 3]) == 10 + 3*2.0
-    assert taylor_horner(2.0, [10, 3, 4]) == 10 + 3*2.0 + 4*2.0**2 / 2.0
-    assert taylor_horner(2.0, [10, 3, 4, 12]) == 10 + 3*2.0 + 4*2.0**2 / 2.0 + 12*2.0**3/(3.0*2.0)
+
+@contextmanager
+def open_or_use(f, mode="r"):
+    """Open a filename or use an open file.
+
+    Specifically, if f is a string, try to use it as an argument to
+    open. Otherwise just yield it. In particular anything that is not
+    a subclass of ``str`` will be passed through untouched.
+
+    """
+    if isinstance(f, str):
+        with open(f, mode) as fl:
+            yield fl
+    else:
+        yield f
+
+
+def lines_of(f):
+    """Iterate over the lines of a file, an open file, or an iterator.
+
+    If ``f`` is a string, try to open a file of that name. Otherwise
+    treat it as an iterator and yield its values. For open files, this
+    results in the lines one-by-one. For lists or other iterators it
+    just yields them right through.
+
+    """
+    with open_or_use(f) as fo:
+        for l in fo:
+            yield l
+
+
+def interesting_lines(lines, comments=None):
+    """Iterate over lines skipping whitespace and comments.
+
+    Each line has its whitespace stripped and then it is checked whether
+    it .startswith(comments) . This means comments can be a string or
+    a list of strings.
+
+    """
+    if comments is None:
+        cc = ()
+    elif isinstance(comments, tuple):
+        cc = comments
+    else:
+        cc = comments,
+    for c in cc:
+        cs = c.strip()
+        if not cs or not c.startswith(cs):
+            raise ValueError(
+                "Unable to deal with comments that start with whitespace, "
+                "but comment string {!r} was requested.".format(c))
+    for ln in lines:
+        ln = ln.strip()
+        if not ln:
+            continue
+        if comments is not None and ln.startswith(comments):
+            continue
+        yield ln

@@ -905,7 +905,7 @@ class TOAs(object):
         flags = self.table['flags']
         if any(['clkcorr' in f for f in flags]):
             if all(['clkcorr' in f for f in flags]):
-                log.warn("Clock corrections already applied. Not re-applying.")
+                log.warning("Clock corrections already applied. Not re-applying.")
                 return
             else:
                 # FIXME: could apply clock corrections to just the ones that don't have any
