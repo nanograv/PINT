@@ -336,7 +336,7 @@ class GlsFitter(Fitter):
                 fitpv[pn] = np.longdouble((pv+dpv) / fitp[pn].units)
                 #NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
-            _ = self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
+            self.minimize_func(list(fitpv.values()),*list(fitp.keys()))
             # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
 
