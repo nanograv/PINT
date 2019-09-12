@@ -48,13 +48,13 @@ class TimingModel(object):
     Base-level object provides an interface for implementing pulsar timing
     models. A timing model contains different model components, for example
     astrometry delays and spindown phase. All the components will be stored in
-    a ordered list.
+    a dictionary by category. Each category is kept as an ordered list.
 
     Parameters
     ----------
     name: str, optional
         The name of the timing model.
-    components: list of component object
+    components: list of Component, optional
         The model components for timing model. The order of the components in
         timing model will follow the order of input.
 
@@ -67,39 +67,26 @@ class TimingModel(object):
 
     All timing model component classes should subclass this timing model base class.
     Each timing model component generally requires the following parts:
-        Timing Parameters
-        Delay/Phase functions which implements the time delay and phase.
-        Derivatives of delay and phase respect to parameter for fitting toas.
-    Each timing parameters are stored as TimingModel attribute in the type of `pint.model.parameter`
-    delay or phase and its derivatives are implemented as TimingModel Methods.
+
+        - Timing Parameters
+        - Delay/Phase functions which implements the time delay and phase.
+        - Derivatives of delay and phase respect to parameter for fitting toas.
+
+    Each timing parameters are stored as TimingModel attribute in the type of
+    :class:`pint.models.parameter.Parameter` delay or phase and its derivatives are implemented
+    as TimingModel Methods.
 
     Attributes
     ----------
     name : str
         The name of the timing model
     component_types : list
-        A list for register the timing model component type name. For example,
+        A list of the distinct categories of component. For example,
         delay components will be register as 'DelayComponent'.
     top_level_params : list
-        A parameter name list for thoes parameters belong to the top timing
-        model class rather than a specific component.
+        Names of parameters belonging to the TimingModel as a whole
+        rather than to any particular component.
 
-    Properties
-    ----------
-    components:
-        Returns a dictionary of all the components with the component's name as
-        the key.
-    delay_funcs:
-        Gives all the delay functions.
-    phase_funcs:
-        Gives all the phase functions.
-    phase_deriv_funcs:
-        Dictionary, Gives all the functions for phase derivatives.
-    delay_deriv_funcs:
-        Dictionary, Gives all the functions for delay derivatives.
-    d_phase_d_delay_funcs:
-        Dictionary, Gives all the functions for phase derivatives with respect
-        to total delay.
     """
 
     def __init__(self, name='', components=[]):
@@ -130,7 +117,7 @@ class TimingModel(object):
         """This is a abstract class for setting up timing model class. It is designed for
         reading .par file and check parameters.
         """
-        for cp in list(self.components.values()):
+        for cp in self.components.values():
             cp.setup()
 
     def __str__(self):
@@ -318,61 +305,64 @@ class TimingModel(object):
         return comp_type
 
     def setup_components(self, components):
-        """
-        A function to set components list according to the component types,
-        i.e., delays or phases.
+        """Set components list according to the component types.
+
         Note
         ----
         The method will reset the component list.
+
         """
-        comp_types = {}
+        if self.component_types:
+            raise ValueError(
+                "setup_components is being run when the model already has a "
+                "few components: {}"
+                .format(self.component_types))
+
+        comp_types = defaultdict(list)
         for cp in components:
             comp_type = self.get_component_type(cp)
-            if comp_type in list(comp_types.keys()):
-                comp_types[comp_type].append(cp)
-            else:
-                comp_types[comp_type] = [cp,]
+            comp_types[comp_type].append(cp)
             cp._parent = self
 
-        for types in comp_types.keys():
-            if types not in self.component_types:
-                self.component_types.append(types)
-        for ct in comp_types.keys():
+        for type_ in comp_types:
+            if type_ not in self.component_types:
+                self.component_types.append(type_)
+        for ct in comp_types:
             setattr(self, ct+'_list', comp_types[ct])
 
     def add_component(self, component, order=None, force=False):
-        """
-        This is a method to add a component to the timing model
-        Parameter
-        ---------
-        component: component instance
-            The component need to be added to the timing model
-        order: int, optional
-            The order of component. The order starts from zero.
-        force: bool, optional
-            If add a duplicated type of component
+        """This is a method to add a component to the timing model.
+
+        Parameters
+        ----------
+        component : Component
+            The component to be added to the timing model.
+        order : int, optional
+            Where in the list of components to insert the new one.
+        force : bool, optional
+            If true, add a duplicate component.
+
         """
         comp_type = self.get_component_type(component)
         if comp_type in self.component_types:
             comp_list = getattr(self, comp_type+'_list')
             # Check if the component has been added already.
-            comp_classes = [x.__class__ for x in comp_list]
-            if component.__class__ in comp_classes:
-                log.warning("Component '%s' is already added." %
-                            component.__class__.__name__)
+            if component.__class__ in (x.__class__ for x in comp_list):
+                log.warning("Component '%s' is already present but was added again."
+                            % component.__class__.__name__)
                 if not force:
-                    log.warning("Component '%s' will not be added. To force add it, use"
-                                " force option." % component.__class__.__name__)
-                    return
-            if order is None:
-                comp_list.append(component)
-            else:
-                if order > len(comp_list):
-                    order = len(comp_list)
-                comp_list.insert(order, component)
+                    raise ValueError(
+                        "Component '%s' is already present and will not be "
+                        "added again. To force add it, use force=True option."
+                        % component.__class__.__name__)
         else:
-            comp_list = [component,]
-        self.setup_components(comp_list)
+            self.component_types.append(comp_type)
+            comp_list = []
+            setattr(self, comp_type+'_list', comp_list)
+        if order is None:
+            comp_list.append(component)
+        else:
+            comp_list.insert(order, component)
 
     def replicate(self, components = [], copy_component=False):
         new_tm = TimingModel()
@@ -406,14 +396,10 @@ class TimingModel(object):
         return comp, order, comp_type_list, comp_type
 
     def get_component_of_category(self):
-        category = {}
-        for cp in list(self.components.values()):
-            cat = cp.category
-            if cat in list(category.keys()):
-                category[cat].append(cp)
-            else:
-                category[cat] = [cp,]
-        return category
+        category = defaultdict(list)
+        for cp in self.components.values():
+            category[cp.category].append(cp)
+        return dict(category)
 
     def add_param_from_top(self, param, target_component):
         """Add a parameter to a timing model component.
@@ -428,12 +414,12 @@ class TimingModel(object):
             self.components[target_component].add_param(param)
 
     def remove_param(self, param):
-        """
-        Remove a parameter from timing model
+        """Remove a parameter from timing model
+
         Parameter
         ---------
         param: str
-            The name of parameter need to be removed.
+            The name of parameter to be removed.
         """
         param_map = self.get_params_mapping()
         if param not in list(param_map.keys()):
@@ -895,7 +881,7 @@ class TimingModel(object):
 
     def as_parfile(self, start_order=['astrometry', 'spindown', 'dispersion'],
                          last_order=['jump_delay']):
-        """Returns a parfile representation of the entire model as a string."""
+        """A parfile representation of the entire model as a string."""
         result_begin = ""
         result_end = ""
         result_middle = ""
@@ -1069,10 +1055,11 @@ class Component(object):
            Name of prefix.
 
         Returns
-        ----------
-        d
+        -------
+        dict
            A dictionary with prefix parameter real index as key and parameter
            name as value.
+
         """
         parnames = [x for x in self.params if x.startswith(prefix)]
         mapping = dict()

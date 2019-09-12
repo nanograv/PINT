@@ -25,7 +25,7 @@ except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 
 class Astrometry(DelayComponent):
-    register = True
+    register = False
     def __init__(self):
         super(Astrometry, self).__init__()
         self.add_param(p.MJDParameter(name="POSEPOCH",
