@@ -30,6 +30,7 @@ class BinaryELL1Base(PulsarBinary):
         - EPS2DOT Second derivative of second Laplace-Lagrange parameter
 
     """
+
     def __init__(self):
         super(BinaryELL1Base, self).__init__()
         self.add_param(p.MJDParameter(name="TASC",
@@ -94,6 +95,7 @@ class BinaryELL1H(BinaryELL1Base):
     Ref:  Freire and Wex 2010; Only the Medium-inclination case model is implemented.
 
     """
+
     register = True
     def __init__(self):
         super(BinaryELL1H, self).__init__()

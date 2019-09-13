@@ -20,10 +20,12 @@ class BinaryDDK(BinaryDD):
     DDKmodel special parameters:
     KIN inclination angle
     KOM the longitude of the ascending node, Kopeikin (1995) Eq 9. OMEGA
+
     Reference
     ---------
     KOPEIKIN. 1995, 1996
     """
+
     register = True
     def __init__(self,):
         super(BinaryDDK, self).__init__()

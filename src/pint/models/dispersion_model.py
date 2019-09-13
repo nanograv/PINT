@@ -57,6 +57,7 @@ class DispersionDM(Dispersion):
     can also be used for a constant DM.
 
     """
+
     register = True
     category = 'dispersion_constant'
     def __init__(self):
@@ -173,6 +174,7 @@ class DispersionDMX(Dispersion):
     DM value in each time range.
 
     """
+
     register = True
     category = "dispersion_dmx"
     def __init__(self):

@@ -44,7 +44,7 @@ ignore_prefix = ['DMXF1_','DMXF2_','DMXEP_'] # DMXEP_ for now.
 
 
 class TimingModel(object):
-    """Base class for timing models and components
+    """Base class for timing models and components.
 
     Base-level object provides an interface for implementing pulsar timing
     models. A timing model contains different model components, for example
@@ -251,7 +251,7 @@ class TimingModel(object):
         return Dphase_Ddelay
 
     def get_deriv_funcs(self, component_type):
-        """Combined dictionary of derivative functions."""
+        """Return dictionary of derivative functions."""
         deriv_funcs = defaultdict(list)
         for cp in getattr(self, component_type + '_list'):
             for k, v in cp.deriv_funcs.items():
@@ -332,7 +332,7 @@ class TimingModel(object):
             setattr(self, ct+'_list', comp_types[ct])
 
     def add_component(self, component, order=None, force=False):
-        """This is a method to add a component to the timing model.
+        """Add a component to the timing model.
 
         Parameters
         ----------
@@ -414,7 +414,7 @@ class TimingModel(object):
             self.components[target_component].add_param(param)
 
     def remove_param(self, param):
-        """Remove a parameter from timing model
+        """Remove a parameter from timing model.
 
         Parameter
         ---------
@@ -894,7 +894,7 @@ class TimingModel(object):
 
     def as_parfile(self, start_order=['astrometry', 'spindown', 'dispersion'],
                          last_order=['jump_delay']):
-        """A parfile representation of the entire model as a string."""
+        """Represent the entire model as a parfile string."""
         result_begin = ""
         result_end = ""
         result_middle = ""
@@ -940,6 +940,7 @@ class ModelMeta(abc.ABCMeta):
     are listed in ``Component.component_types``.
 
     """
+
     def __init__(cls, name, bases, dct):
         regname = 'component_types'
         if 'register' in dct:
@@ -973,6 +974,7 @@ class Component(object):
             ", ".join(str(getattr(self, p)) for p in self.params))
 
     def setup(self):
+        """Finalize construction and validate loaded values."""
         pass
 
     @property

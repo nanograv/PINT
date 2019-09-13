@@ -919,7 +919,7 @@ class prefixParameter(object):
     use the `.new_param` method. It will return a new prefix parameter with the
     same setup but the index. Some parameters' unit and description will
     be changed once the index has been changed. In order to get the right units
-    and description, `.unitTplt` and `.descriptionTplt` should be provided. If
+    and description, ``.unitTplt`` and ``.descriptionTplt`` should be provided. If
     not the new prefix parameter will use the same units and description with
     the old one. A typical description and units template is like::
 
@@ -933,7 +933,8 @@ class prefixParameter(object):
     name : str optional
         The name of the parameter. It has to be in the format of prefix + index.
     value
-    units :  str, optional
+        Initial parameter value
+    units : str, optional
         Units that the value is expressed in
     unit_template : callable
         The unit template for prefixed parameter
@@ -947,14 +948,16 @@ class prefixParameter(object):
         A flag specifying whether "fitters" should adjust the value of this
         parameter or leave it fixed.
     continuous : bool
+        Whether derivatives with respect to this parameter make sense.
     parameter_type : str, optional
         Example parameter class template for quantity and value setter
-    long_double : bool, optional default 'double'
-        Set float type quantity and value in long double
+    long_double : bool, optional
+        Set float type quantity and value in numpy long doubles.
     time_scale : str, optional
         Time scale for MJDParameter class.
 
     """
+
     def __init__(self, parameter_type='float',name=None, value=None, units=None,
                  unit_template=None, description=None, description_template=None,
                  uncertainty=None, frozen=True, continuous=True,
@@ -1184,6 +1187,7 @@ class maskParameter(floatParameter):
         A flag specifying whether "fitters" should adjust the value of this
         parameter or leave it fixed.
     continuous : bool, optional
+        Whether derivatives with respect to this parameter make sense.
     aliases : list, optional
         List of aliases for parameter name.
 
@@ -1191,6 +1195,7 @@ class maskParameter(floatParameter):
     floatParameter?
 
     """
+
     def __init__(self, name=None, index=1, key=None, key_value=None,
                  value=None, long_double=False, units= None, description=None,
                  uncertainty=None, frozen=True, continuous=False, aliases=[]):
@@ -1269,7 +1274,7 @@ class maskParameter(floatParameter):
             return super(maskParameter, self).name_matches(name_idx)
 
     def from_parfile_line_mask(self, line):
-        """Read mask parameter line (e.g. JUMP)
+        """Read mask parameter line (e.g. JUMP).
 
         Returns
         -------
@@ -1482,7 +1487,7 @@ class pairParameter(floatParameter):
             return super(pairParameter, self).name_matches(name_idx)
 
     def from_parfile_line_pair(self, line):
-        """Read mask parameter line (e.g. JUMP)
+        """Read mask parameter line (e.g. JUMP).
 
         Notes
         -----

@@ -1,6 +1,4 @@
-"""Solar system Shapiro delay.
-
-"""
+"""Solar system Shapiro delay."""
 # solar_system_shapiro.py
 # Add in Shapiro delays due to solar system objects
 from __future__ import absolute_import, print_function, division

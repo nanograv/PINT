@@ -12,7 +12,7 @@ parfile = os.path.join(datadir, "J1744-1134.basic.par")
 
 
 def demo_parfile():
-
+    """Load a parfile and print some stuff out."""
     m = tm.get_model(parfile)
 
     print("model.param_help():")
@@ -39,6 +39,7 @@ params.append(pytest.param("TZRMJD", marks=pytest.mark.xfail(reason="Bug #519"))
 
 @pytest.fixture
 def roundtrip():
+    """Set up a pair of models via a par file write and read."""
     m = tm.get_model(parfile)
     with tempfile.NamedTemporaryFile("wt") as f:
         f.write(m.as_parfile())
@@ -48,6 +49,7 @@ def roundtrip():
 
 
 def test_roundtrip(roundtrip):
+    """Check that the round trip preserves general structure."""
     m, m2 = roundtrip
     assert set(m.components.keys()) == set(m2.components.keys())
     assert set(m.params) == set(m2.params)
@@ -55,6 +57,7 @@ def test_roundtrip(roundtrip):
 
 @pytest.mark.parametrize("p", params)
 def test_roundtrip_parameter(roundtrip, p):
+    """Check each parameter is preserved exactly."""
     m, m2 = roundtrip
     pm = getattr(m, p)
     pm2 = getattr(m2, p)

@@ -129,7 +129,7 @@ class ModelBuilder(object):
                 self.select_comp[cat] = selected_c
 
     def sort_components(self, category_order=DEFAULT_ORDER):
-        """This is a function to sort the component order.
+        """Sort the components into order.
 
         Parameters
         ----------
@@ -256,14 +256,14 @@ def get_model(parfile):
     """A one step function to build model from a parfile
 
     Parameters
-    ---------
+    ----------
     name : str
         Name for the model.
     parfile : str
         The parfile name
 
-    Return
-    ---------
+    Returns
+    -------
     Model instance get from parfile.
 
     """
@@ -273,7 +273,8 @@ def get_model(parfile):
     return mb.timing_model
 
 
-def choose_model(parfile, category_order=None, name=None):
+def choose_model(parfile, category_order=None, name=None,
+                 check_for_missing_parameters=False):
     """Determine which model components are appropriate for parfile."""
     if name is None:
         if isinstance(parfile, str):
@@ -310,17 +311,17 @@ def choose_model(parfile, category_order=None, name=None):
             for l in par_lines:
                 for param in m.params:
                     getattr(m, param).from_parfile_line(l)
-            try:
-                m.setup()
-            except MissingParameter as e:
-                discarded_components.append((m_type.__name__, e.param))
-                continue
+            if check_for_missing_parameters:
+                try:
+                    m.setup()
+                except MissingParameter as e:
+                    discarded_components.append((m_type.__name__, e.param))
+                    continue
             acceptable.append(m_type)
             # discard the instance m as we might have mangled it by running setup
         if len(acceptable) > 1:
             raise ValueError(
-                "Multiple models are compatible with this par file, choosing "
-                "the first one imported: {}".format(acceptable))
+                "Multiple models are compatible with this par file: {}".format(acceptable))
         if acceptable:
             # Construct an instance for use
             models_to_use[category] = acceptable[0]()
@@ -356,18 +357,19 @@ def choose_model(parfile, category_order=None, name=None):
 
 
 def get_model_new(parfile):
-    """A one step function to build model from a parfile
+    """Build model from a parfile.
 
     Parameters
     ----------
     name : str
         Name for the model.
     parfile : str
-        The parfile name
+        The parfile name.
 
-    Return
-    ------
-    Model instance get from parfile.
+    Returns
+    -------
+    pint.models.timing_model.TimingModel
+        The constructed model with parameter values loaded.
 
     """
     tm = choose_model(parfile)

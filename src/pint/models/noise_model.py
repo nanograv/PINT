@@ -149,6 +149,7 @@ class EcorrNoise(NoiseComponent):
     Ref: NanoGrav 11 yrs data
 
     """
+
     register = True
     category = 'ecorr_noise'
     def __init__(self,):
@@ -234,6 +235,7 @@ class PLRedNoise(NoiseComponent):
     Ref: NanoGrav 11 yrs data
 
     """
+
     register = True
     category = 'pl_red_noise'
     def __init__(self,):

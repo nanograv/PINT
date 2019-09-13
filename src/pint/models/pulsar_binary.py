@@ -4,15 +4,18 @@ This module if for wrapping standalone binary models so that they work
 as PINT timing models.
 
 """
-# This is a wapper for independent binary model. It is a PINT timing model class
-from __future__ import absolute_import, print_function, division
+
+from __future__ import absolute_import, division, print_function
+
 import astropy.units as u
 import numpy as np
-from . import parameter as p
-from .timing_model import DelayComponent, MissingParameter
 from astropy import log
-from pint import ls,GMsun,Tsun
+
+from pint import ls
+
+from . import parameter as p
 from .stand_alone_psr_binaries import binary_orbits as bo
+from .timing_model import DelayComponent, MissingParameter
 
 
 class PulsarBinary(DelayComponent):
@@ -31,6 +34,7 @@ class PulsarBinary(DelayComponent):
         - Projected semi-major axis of orbit:   a1
 
     """
+
     category = 'pulsar_system'
     def __init__(self,):
         super(PulsarBinary, self).__init__()
@@ -180,12 +184,12 @@ class PulsarBinary(DelayComponent):
         self.binary_instance.update_input(**updates)
 
     def binarymodel_delay(self, toas, acc_delay=None):
-        """Return the binary model independent delay call"""
+        """Return the binary model independent delay call."""
         self.update_binary_object(toas, acc_delay)
         return self.binary_instance.binary_delay()
 
     def d_binary_delay_d_xxxx(self, toas, param, acc_delay):
-        """Return the binary model delay derivtives"""
+        """Return the binary model delay derivtives."""
         self.update_binary_object(toas, acc_delay)
         return self.binary_instance.d_binarydelay_d_par(param)
 

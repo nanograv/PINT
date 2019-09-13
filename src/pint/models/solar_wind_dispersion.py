@@ -21,6 +21,7 @@ class SolarWindDispersion(Dispersion):
     only in its amplitude.
 
     """
+
     register = True
     category = 'solar_wind'
 

@@ -20,6 +20,7 @@ maxglitches = 10  # Have not use this one in the new version.
 
 class Glitch(PhaseComponent):
     """Pulsar spin-down glitches."""
+
     register = True
     category = 'glitch'
 
