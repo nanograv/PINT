@@ -19,7 +19,8 @@ except AttributeError:
     from string import maketrans
 
 if np.finfo(np.longdouble).eps > 2e-19 or not hasattr(np, "float128"):
-    raise ValueError("This platform does not support extended precision floating-point, and PINT cannot run without this.")
+    raise ValueError("This platform does not support extended precision "
+                     "floating-point, and PINT cannot run without this.")
 
 class PosVel(object):
     """Position/Velocity class.
