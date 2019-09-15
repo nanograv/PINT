@@ -8,13 +8,14 @@ import re
 from pint import utils as ut
 import astropy.units as u
 import astropy.constants as c
+from pint import ls, Tsun
+from .binary_orbits import OrbitPB
+from pint.utils import extended_precision
 try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
-from pint import ls,GMsun,Tsun,light_second_equivalency
-from .binary_orbits import OrbitPB
 
 class PSR_BINARY(object):
     """A base (generic) object for psr binary models. In this class, a set of
@@ -95,23 +96,25 @@ class PSR_BINARY(object):
     def __init__(self,):
         # Necessary parameters for all binary model
         self.binary_name = None
-        self.param_default_value = {'PB':np.longdouble(10.0)*u.day,
-                           'PBDOT':0.0*u.day/u.day,
-                           'ECC': 0.0*u.Unit('') ,
-                           'EDOT':0.0/u.second ,
-                           'A1':10.0*ls,'A1DOT':0.0*ls/u.second,
-                           'T0':np.longdouble(54000.0)*u.day,
-                           'OM':0.0*u.deg,
-                           'OMDOT':0.0*u.deg/u.year,
-                           'XPBDOT':0.0*u.day/u.day,
-                           'M2':0.0*u.M_sun,
-                           'SINI':0*u.Unit(''),
-                           'GAMMA':0*u.second,
-                           'FB0': 1.1574e-6*u.Unit("")/u.second}
+        self.param_default_value = {
+            'PB': extended_precision(10.0)*u.day,
+            'PBDOT': 0.0*u.day/u.day,
+            'ECC': 0.0*u.Unit('') ,
+            'EDOT': 0.0/u.second ,
+            'A1': 10.0*ls,'A1DOT':0.0*ls/u.second,
+            'T0': extended_precision(54000.0)*u.day,
+            'OM': 0.0*u.deg,
+            'OMDOT': 0.0*u.deg/u.year,
+            'XPBDOT': 0.0*u.day/u.day,
+            'M2': 0.0*u.M_sun,
+            'SINI': 0*u.Unit(''),
+            'GAMMA': 0*u.second,
+            'FB0': 1.1574e-6*u.Unit("")/u.second,
+        }
         # For Binary phase calculation
         self.param_default_value.update({'P0': 1.0*u.second,
                                          'P1': 0.0*u.second/u.second,
-                                         'PEPOCH': np.longdouble(54000.0)*u.day
+                                         'PEPOCH': extended_precision(54000.0)*u.day
                                         })
         self.param_aliases = {'ECC':['E'],'EDOT':['ECCDOT'],
                               'A1DOT':['XDOT']}
@@ -234,7 +237,7 @@ class PSR_BINARY(object):
         ----------
         Pulsar binary delay in the units of second
         """
-        bdelay = np.longdouble(np.zeros(len(self.t)))*u.s
+        bdelay = extended_precision(np.zeros(len(self.t)))*u.s
         for bdf in self.binary_delay_funcs:
             bdelay+= bdf()
         return bdelay
@@ -280,7 +283,7 @@ class PSR_BINARY(object):
             raise ValueError(errorMesg)
         # derivative to itself
         if x == y:
-            return np.longdouble(np.ones(len(self.tt0)))*u.Unit('')
+            return extended_precision(np.ones(len(self.tt0)))*u.Unit('')
         # Get the unit right
 
         yAttr = getattr(self,y)
@@ -319,7 +322,7 @@ class PSR_BINARY(object):
             result = getattr(self,dername)(x)
 
         else:
-            result = np.longdouble(np.zeros(len(self.tt0)))
+            result = extended_precision(np.zeros(len(self.tt0)))
 
         if hasattr(result,'unit'):
             return result.to(derU,equivalencies=u.dimensionless_angles())
@@ -342,7 +345,8 @@ class PSR_BINARY(object):
             in radians.
         """
         if hasattr(eccentricity,'unit'):
-            e = np.longdouble(eccentricity).value
+            # FIXME: isn't this an error?
+            e = extended_precision(eccentricity).value
         else:
             e = eccentricity
 
@@ -350,7 +354,7 @@ class PSR_BINARY(object):
             raise ValueError('Eccentricity should be in the range of [0,1).')
 
         if hasattr(mean_anomaly,'unit'):
-            ma = np.longdouble(mean_anomaly).value
+            ma = extended_precision(mean_anomaly).value
         else:
             ma = mean_anomaly
         k = lambda E: E-e*np.sin(E)-ma   # Kepler Equation
@@ -388,7 +392,7 @@ class PSR_BINARY(object):
         return result*u.Unit(self.EDOT.unit)
 
     def d_ecc_d_ECC(self):
-        return np.longdouble(np.ones(len(self.tt0)))*u.Unit("")
+        return extended_precision(np.ones(len(self.tt0)))*u.Unit("")
 
     def d_ecc_d_EDOT(self):
         return self.tt0
@@ -398,7 +402,7 @@ class PSR_BINARY(object):
         return self.A1 + self.tt0*self.A1DOT
 
     def d_a1_d_A1(self):
-        return np.longdouble(np.ones(len(self.tt0)))*u.Unit('')
+        return extended_precision(np.ones(len(self.tt0)))*u.Unit('')
 
     def d_a1_d_T0(self):
         result = np.empty(len(self.tt0))
@@ -654,13 +658,13 @@ class PSR_BINARY(object):
             dername = 'd_omega_d_' + par
             return getattr(self,dername)()
         else:
-            return np.longdouble(np.zeros(len(self.tt0))) * self.OM.unit/par_obj.unit
+            return extended_precision(np.zeros(len(self.tt0))) * self.OM.unit/par_obj.unit
 
 
     def d_omega_d_OM(self):
         """dOmega/dOM = 1
         """
-        return np.longdouble(np.ones((len(self.tt0))))*u.Unit('')
+        return extended_precision(np.ones((len(self.tt0))))*u.Unit('')
 
 
     def d_omega_d_OMDOT(self):

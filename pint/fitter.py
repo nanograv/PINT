@@ -5,6 +5,7 @@ import astropy.units as u
 import abc
 import scipy.optimize as opt, scipy.linalg as sl
 from .residuals import Residuals
+from pint.utils import extended_precision
 
 
 class Fitter(object):
@@ -183,7 +184,7 @@ class WlsFitter(Fitter):
             # Note, Check the threshold from data precision level.Borrowed from
             # np Curve fit.
             if threshold:
-                threshold_val = np.finfo(np.longdouble).eps * max(M.shape) * s[0]
+                threshold_val = np.finfo(extended_precision).eps * max(M.shape) * s[0]
                 s[s<threshold_val] = 0.0
             # Sigma = np.dot(Vt.T / s, U.T)
             # The post-fit parameter covariance matrix
@@ -202,7 +203,7 @@ class WlsFitter(Fitter):
                 if scale_by_F0:
                     un *= u.s
                 pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
-                fitpv[pn] = np.longdouble((pv+dpv) / fitp[pn].units)
+                fitpv[pn] = extended_precision((pv+dpv) / fitp[pn].units)
                 #NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
             chi2 = self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
@@ -304,7 +305,7 @@ class GlsFitter(Fitter):
                     U, s, Vt = sl.svd(mtcm, full_matrices=False)
 
                     if threshold:
-                        threshold_val = np.finfo(np.longdouble).eps * max(M.shape) * s[0]
+                        threshold_val = np.finfo(extended_precision).eps * max(M.shape) * s[0]
                         s[s<threshold_val] = 0.0
 
                     xvar = np.dot(Vt.T / s, Vt)
@@ -333,7 +334,7 @@ class GlsFitter(Fitter):
                 if scale_by_F0:
                     un *= u.s
                 pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
-                fitpv[pn] = np.longdouble((pv+dpv) / fitp[pn].units)
+                fitpv[pn] = extended_precision((pv+dpv) / fitp[pn].units)
                 #NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
             self.minimize_func(list(fitpv.values()), *list(fitp.keys()))

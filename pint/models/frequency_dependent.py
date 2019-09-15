@@ -7,6 +7,7 @@ import astropy.units as u
 import numpy as np
 import pint.utils as ut
 import astropy.time as time
+from pint.utils import extended_precision
 
 class FD(DelayComponent):
     """A timing model for frequency evolution of pulsar profiles."""
@@ -83,7 +84,7 @@ class FD(DelayComponent):
             raise ValueError('FD model has no FD%d term' % FD_term)
         # make the selected FD coefficient 1, others 0
         FD_coeff = np.zeros(len(FD_mapping)+1)
-        FD_coeff[-1-FD_term] = np.longdouble(1.0)
+        FD_coeff[-1-FD_term] = extended_precision(1.0)
         d_delay_d_FD = np.polyval(FD_coeff, log_freq)
         return d_delay_d_FD * u.second / FD_par.units
 

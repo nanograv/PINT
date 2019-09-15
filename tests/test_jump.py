@@ -6,6 +6,7 @@ from pint.residuals import Residuals
 import numpy as np
 import os, unittest
 from pinttestdata import testdir, datadir
+from pint.utils import extended_precision
 import test_derivative_utils as tdu
 import logging
 
@@ -20,7 +21,11 @@ class TestJUMP(unittest.TestCase):
         self.toas = toa.get_TOAs(self.timf, ephem="DE405",
                                  planets=False, include_bipm=False)
         # libstempo calculation
-        self.ltres = np.genfromtxt(self.parf + '.tempo_test', unpack=True, names=True, dtype='float128')
+        self.ltres = np.genfromtxt(
+            self.parf + '.tempo_test',
+            unpack=True,
+            names=True,
+            dtype=extended_precision)
     def test_jump(self):
         presids_s = Residuals(self.toas, self.JUMPm, False).time_resids.to(u.s)
         assert np.all(np.abs(presids_s.value - self.ltres['residuals']) < 1e-7), "JUMP test failed."

@@ -9,7 +9,7 @@ import numpy as np
 import pint.utils as ut
 import astropy.time as time
 from ..toa_select import TOASelect
-from ..utils import taylor_horner, split_prefixed_name
+from ..utils import taylor_horner, split_prefixed_name, extended_precision
 
 # The units on this are not completely correct
 # as we don't really use the "pc cm^3" units on DM.
@@ -153,8 +153,8 @@ class DispersionDM(Dispersion):
             pn, idxf, idxv = split_prefixed_name(param_name)
             order = idxv
         dms = self.get_DM_terms()
-        dm_terms = np.longdouble(np.zeros(len(dms)))
-        dm_terms[order] = np.longdouble(1.0)
+        dm_terms = extended_precision(np.zeros(len(dms)))
+        dm_terms[order] = extended_precision(1.0)
         if self.DMEPOCH.value is None:
             DMEPOCH = tbl['tdbld'][0]
         else:

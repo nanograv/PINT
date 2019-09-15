@@ -647,7 +647,7 @@ class Polycos(object):
 
         Returns
         ---------
-        out: numpy array of float128 frequencies in Hz
+        out: numpy array of extended_precision frequencies in Hz
              Polyco evaluated spin frequency at time t.
 
         FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ...)

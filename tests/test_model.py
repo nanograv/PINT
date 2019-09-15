@@ -4,6 +4,7 @@ import pint.models as tm
 from pint.phase import Phase
 from pint import toa
 from pint.residuals import Residuals
+from pint.utils import extended_precision
 import astropy.units as u
 
 #import matplotlib
@@ -58,8 +59,8 @@ def test_model():
     # tempo2_vals = tempo2_utils.general2(parfile, timfile,
     #                                     ['tt2tb', 'roemer', 'post_phase',
     #                                      'shapiro', 'shapiroJ'])
-    tempo2_vals = numpy.genfromtxt(parfile + '.tempo2_test', names=True, comments = '#',
-                                   dtype = 'float128')
+    tempo2_vals = numpy.genfromtxt(parfile + '.tempo2_test', names=True, comments='#',
+                                   dtype=extended_precision)
     t2_resids = tempo2_vals['post_phase'] / float(m.F0.value) * 1e6 * u.us
     diff_t2 = (resids_us - t2_resids).to(u.ns)
     diff_t2 -= diff_t2.mean()
@@ -73,8 +74,8 @@ def test_model():
     try:
         import tempo_utils
         log.info("Running TEMPO1...")
-        t1_result = numpy.genfromtxt(t1_parfile + '.tempo_test', names=True, comments = '#',
-                                    dtype = 'float128')
+        t1_result = numpy.genfromtxt(t1_parfile + '.tempo_test', names=True, comments='#',
+                                     dtype=extended_precision)
         t1_resids = t1_result['residuals_phase']/ float(m.F0.value) * 1e6 * u.us
         did_tempo1 = True
         diff_t1 = (resids_us - t1_resids).to(u.ns)

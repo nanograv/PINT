@@ -13,6 +13,7 @@ from pint import pulsar_mjd
 import astropy.units as u
 from astropy.time import Time, TimeDelta
 from pint.observatory import Observatory, get_observatory
+from pint.utils import extended_precision
 
 from astropy import log
 log.setLevel('INFO')
@@ -60,7 +61,7 @@ def main(argv=None):
         log.info('Generating uniformly spaced TOAs')
         duration = args.duration*u.day
         #start = Time(args.startMJD,scale='utc',format='pulsar_mjd',precision=9)
-        start = np.longdouble(args.startMJD) * u.day
+        start = extended_precision(args.startMJD) * u.day
         freq = np.atleast_1d(args.freq) * u.MHz
         site = get_observatory(args.obs)
         scale = site.timescale

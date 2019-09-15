@@ -15,6 +15,7 @@ import abc
 import six
 import inspect
 from pint import dimensionless_cycles
+from pint.utils import extended_precision
 
 # Parameters or lines in parfiles we don't understand but shouldn't
 # complain about. These are still passed to components so that they
@@ -659,7 +660,7 @@ class TimingModel(object):
         # Is it safe to assume that any param affecting delay only affects
         # phase indirectly (and vice-versa)??
         par = getattr(self, param)
-        result = np.longdouble(np.zeros(toas.ntoas)) * u.cycle/par.units
+        result = extended_precision(np.zeros(toas.ntoas)) * u.cycle/par.units
         param_phase_derivs = []
         phase_derivs = self.phase_deriv_funcs
         delay_derivs = self.delay_deriv_funcs
@@ -676,7 +677,7 @@ class TimingModel(object):
             #                         d_delay_d_param
 
             d_delay_d_p = self.d_delay_d_param(toas, param)
-            dpdd_result = np.longdouble(np.zeros(toas.ntoas)) * u.cycle/u.second
+            dpdd_result = extended_precision(np.zeros(toas.ntoas)) * u.cycle/u.second
             for dpddf in self.d_phase_d_delay_funcs:
                 dpdd_result += dpddf(toas, delay)
             result = dpdd_result * d_delay_d_p
@@ -687,7 +688,7 @@ class TimingModel(object):
         Return the derivative of delay with respect to the parameter.
         """
         par = getattr(self, param)
-        result = np.longdouble(np.zeros(toas.ntoas) * u.s/par.units)
+        result = extended_precision(np.zeros(toas.ntoas) * u.s/par.units)
         delay_derivs = self.delay_deriv_funcs
         if param not in list(delay_derivs.keys()):
             raise AttributeError("Derivative function for '%s' is not provided"
@@ -710,15 +711,15 @@ class TimingModel(object):
             h = ori_value * step
         parv = [par.value - h, par.value + h]
 
-        phaseI = np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.cycle
-        phaseF = np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.cycle
+        phase_i = np.zeros((toas.ntoas, 2), dtype=extended_precision) * u.cycle
+        phase_f = np.zeros((toas.ntoas, 2), dtype=extended_precision) * u.cycle
         for ii, val in enumerate(parv):
             par.value = val
             ph = self.phase(toas)
-            phaseI[:,ii] = ph.int
-            phaseF[:,ii] = ph.frac
-        resI = (- phaseI[:,0] + phaseI[:,1])
-        resF = (- phaseF[:,0] + phaseF[:,1])
+            phase_i[:,ii] = ph.int
+            phase_f[:,ii] = ph.frac
+        resI = (- phase_i[:,0] + phase_i[:,1])
+        resF = (- phase_f[:,0] + phase_f[:,1])
         result = (resI + resF)/(2.0 * h * unit)
         # shift value back to the original value
         par.quantity = ori_value

@@ -11,6 +11,7 @@ from astropy import log
 import astropy.units as u
 import argparse
 from pint import pulsar_mjd
+from pint.utils import extended_precision
 
 log.setLevel('INFO')
 
@@ -42,13 +43,13 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.format in ("mjd","jd", "unix"):
-        # These formats require conversion from string to longdouble first
+        # These formats require conversion from string to extended_precision first
         fmt = args.format
         # Never allow format == 'mjd' because it fails when scale is 'utc'
         # Change 'mjd' to 'pulsar_mjd' to deal with this.
         if fmt == "mjd":
             fmt = "pulsar_mjd"
-        t = Time(np.longdouble(args.time),scale=args.timescale,format=fmt,
+        t = Time(extended_precision(args.time), scale=args.timescale, format=fmt,
             precision=9)
         print(t)
     else:

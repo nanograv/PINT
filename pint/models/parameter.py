@@ -9,6 +9,7 @@ import astropy.time as time
 from astropy import log
 from pint import pint_units
 from pint import pulsar_mjd
+from pint.utils import extended_precision
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
@@ -373,8 +374,7 @@ class Parameter(object):
                                                            self.aliases))
 
 class floatParameter(Parameter):
-    """This is a Parameter type that is specific to the parameters has a float/
-    float128 quantity as its value.
+    """Parameter with float or extended_precision value.
 
     `.quantity` stores current parameter value and its unit in an
     `astropy.units.quantity` class. The unit of `.quantity` can be any unit
@@ -404,7 +404,7 @@ class floatParameter(Parameter):
         A flag specifying whether phase derivatives with respect to this
         parameter exist.
     long_double : bool, optional, default False
-        A flag specifying whether value is float or float128/longdouble.
+        A flag specifying whether value is float or extended_precision.
 
     Example::
         >>> from parameter import floatParameter
@@ -731,7 +731,7 @@ class MJDParameter(Parameter):
            mjd string
         """
         if isinstance(val, numbers.Number):
-            val = numpy.longdouble(val)
+            val = extended_precision(val)
             result = time_from_longdouble(val, self.time_scale)
         elif isinstance(val, str):
             try:
@@ -927,7 +927,7 @@ class prefixParameter(object):
     parameter_type : str, optional, default 'float'
         Example parameter class template for quantity and value setter
     long_double : bool, optional default 'double'
-        Set float type quantity and value in numpy float128
+        Set float type quantity and value in extended_precision
     time_scale : str, optional default 'utc'
         Time scale for MJDParameter class.
     """
@@ -1091,7 +1091,7 @@ class prefixParameter(object):
 
     def print_quantity(self, quantity):
         return self.param_comp.print_quantity(quantity)
-    
+
     def print_uncertainty(self, uncertainty):
         return str(uncertainty.to(self.units).value)
 
@@ -1154,12 +1154,12 @@ class maskParameter(floatParameter):
     value : float or long_double optinal
         Toas/phase adjust value
     long_double : bool, optional default 'double'
-        Set float type quantity and value in numpy float128
+        Set float type quantity and value in extended_precision
     units : str optional
         Unit for the offset value
     description : str optional
         Description for the parameter
-    uncertainty: float/longdouble
+    uncertainty: float/extended_precision
         uncertainty of the parameter.
     frozen : bool, optional
         A flag specifying whether "fitters" should adjust the value of this

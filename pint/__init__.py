@@ -14,6 +14,7 @@ import astropy.constants as c
 import astropy.time as time
 import numpy as np
 from . import utils
+from .utils import extended_precision
 
 # light-second unit
 ls = u.def_unit('ls', c.c * 1.0 * u.s)
@@ -25,7 +26,7 @@ dmu = u.def_unit('dmu', u.pc*u.cm**-3)
 light_second_equivalency = [(ls, si.second, lambda x: x, lambda x: x)]
 dimensionless_cycles = [(u.cycle, None)]
 # hourangle_second unit
-hourangle_second = u.def_unit('hourangle_second', u.hourangle/np.longdouble(3600.0))
+hourangle_second = u.def_unit('hourangle_second', u.hourangle/extended_precision(3600.0))
 
 # Following are from here:
 # http://ssd.jpl.nasa.gov/?constants (grabbed on 30 Dec 2013)
