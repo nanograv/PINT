@@ -11,7 +11,6 @@ except ImportError:
 from astropy.time.utils import day_frac
 import astropy.units as u
 from astropy import log
-from .str2ld import str2ldarr1
 import re
 try:
     maketrans = ''.maketrans
@@ -334,7 +333,7 @@ def str2longdouble(str_data):
     """Return a numpy long double scalar from the input string, using strtold()
     """
     input_str = str_data.translate(maketrans('Dd', 'ee'))
-    return str2ldarr1(input_str.encode())[0]
+    return np.longdouble(input_str.encode())
 
 
 # Define prefix parameter pattern

@@ -13,13 +13,6 @@ import os.path
 # !! This means setup.py can't even be run without numpy installed!
 import numpy
 
-try:
-    from Cython.Distutils import build_ext
-except ImportError:
-    use_cython = False
-else:
-    use_cython = True
-
 import versioneer
 
 # We need to find PySPICE. Can be done in one of two ways:
@@ -34,22 +27,6 @@ sys.argv = argv_replace
 # python setup.py build_ext --inplace
 
 cmdclass = {}
-ext_modules = []
-
-if use_cython:
-    print("Using cython...")
-    src = ["pint/cutils/str2ld_py.pyx"]
-else:
-    print("Using existing 'C' source file...")
-    src = ["pint/cutils/str2ld_py.c"]
-
-ext_modules += [Extension("pint.str2ld", src,
-                          include_dirs = [numpy.get_include(),],
-                          )]
-
-if use_cython:
-    cmdclass.update({'build_ext': build_ext})
-
 
 # Make sure data files are installed.
 def hex_hash(path):
@@ -117,7 +94,6 @@ setup(
         ] + data_files},
 
     cmdclass = cmdclass,
-    ext_modules=ext_modules,
     #test_suite='tests',
     #tests_require=[]
 )
