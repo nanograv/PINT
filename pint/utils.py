@@ -11,7 +11,6 @@ except ImportError:
 from astropy.time.utils import day_frac
 import astropy.units as u
 from astropy import log
-from .str2ld import str2ldarr1
 import re
 try:
     maketrans = ''.maketrans
@@ -19,6 +18,9 @@ except AttributeError:
     # fallback for Python 2
     from string import maketrans
 
+if np.finfo(np.longdouble).eps > 2e-19 or not hasattr(np, "float128"):
+    raise ValueError("This platform does not support extended precision "
+                     "floating-point, and PINT cannot run without this.")
 
 class PosVel(object):
     """Position/Velocity class.
@@ -332,7 +334,7 @@ def str2longdouble(str_data):
     """Return a numpy long double scalar from the input string, using strtold()
     """
     input_str = str_data.translate(maketrans('Dd', 'ee'))
-    return str2ldarr1(input_str.encode())[0]
+    return np.longdouble(input_str.encode())
 
 
 # Define prefix parameter pattern
