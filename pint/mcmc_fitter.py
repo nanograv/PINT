@@ -67,7 +67,7 @@ def lnlikelihood_basic(ftr, theta):
 
 def lnlikelihood_chi2(ftr, theta):
     ftr.set_parameters(theta)
-    return -resids(toas=ftr.toas, model=ftr.model).calc_chi2().value
+    return -Residuals(toas=ftr.toas, model=ftr.model).calc_chi2().value
 
 def set_priors_basic(ftr, priorerrfact=10.0):
     """Basic method to set priors on parameters in the model.
@@ -130,7 +130,7 @@ class MCMCFitter(Fitter):
         self.model_init = model
         self.use_resids = kwargs.get('resids', True)
         if self.use_resids:
-            self.resids_init = resids(toas=toas, model=model)
+            self.resids_init = Residuals(toas=toas, model=model)
             self.reset_model()
         else:
             self.model = model
