@@ -20,3 +20,4 @@ jupyter
 nbconvert
 nbsphinx
 nbdime
+pandoc
