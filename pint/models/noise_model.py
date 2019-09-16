@@ -1,11 +1,12 @@
-# noise_model.py
-# Defines the pulsar timing noise model.
-from __future__ import absolute_import, print_function, division
-from .timing_model import Component,  MissingParameter
-from . import parameter as p
-import numpy as np
+"""Pulsar timing noise models."""
+from __future__ import absolute_import, division, print_function
+
 import astropy.units as u
+import numpy as np
 from astropy import log
+
+from . import parameter as p
+from .timing_model import Component
 
 
 class NoiseComponent(Component):
@@ -17,10 +18,13 @@ class NoiseComponent(Component):
 
 class ScaleToaError(NoiseComponent):
     """This is a class to correct template fitting timing noise.
-    Notes
-    -----
+
+    Note
+    ----
     Ref: NanoGrav 11 yrs data
+
     """
+
     register = True
     def __init__(self,):
         super(ScaleToaError, self).__init__()
