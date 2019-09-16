@@ -126,8 +126,8 @@ def time_from_mjd_string(s, scale='utc'):
         num, expon = ss.split("e")
         expon = int(expon)
         if expon < 0:
-            log.warn("Likely bogus sci notation input in " +
-                     "time_from_mjd_string ('%s')!" % s)
+            log.warning("Likely bogus sci notation input in " +
+                        "time_from_mjd_string ('%s')!" % s)
             # This could cause a loss of precision...
             # maybe throw an exception instead?
             imjd, fmjd = 0, float(ss)

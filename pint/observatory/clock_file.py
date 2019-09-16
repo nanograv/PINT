@@ -77,7 +77,7 @@ class ClockFile(object):
         if numpy.any(t<self.time[0]) or numpy.any(t>self.time[-1]):
             msg = "Data points out of range in clock file '%s'" % self.filename
             if limits=='warn':
-                log.warn(msg)
+                log.warning(msg)
             elif limits=='error':
                 raise RuntimeError(msg)
 

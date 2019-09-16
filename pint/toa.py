@@ -938,7 +938,7 @@ class TOAs(object):
             corr[loind:hiind] += gcorr
             # Now update the flags with the clock correction used
             for jj in range(loind, hiind):
-                if corr[jj]:
+                if corr[jj] != 0:
                     flags[jj]['clkcorr'] = corr[jj]
         # Update clock correction info
         self.clock_corr_info.update({'include_bipm': include_bipm,

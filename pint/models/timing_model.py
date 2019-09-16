@@ -336,11 +336,11 @@ class TimingModel(object):
             # Check if the component has been added already.
             comp_classes = [x.__class__ for x in comp_list]
             if component.__class__ in comp_classes:
-                log.warn("Component '%s' is already added." %
-                         component.__class__.__name__)
+                log.warning("Component '%s' is already added." %
+                            component.__class__.__name__)
                 if not force:
-                    log.warn("Component '%s' will not be added. To force add it, use"
-                             " force option." % component.__class__.__name__)
+                    log.warning("Component '%s' will not be added. To force add it, use"
+                                " force option." % component.__class__.__name__)
                     return
             if order is None:
                 comp_list.append(component)
@@ -732,7 +732,7 @@ class TimingModel(object):
         ori_value = par.value
         if ori_value is None:
              # A parameter did not get to use in the model
-            log.warn("Parameter '%s' is not used by timing model." % param)
+            log.warning("Parameter '%s' is not used by timing model." % param)
             return np.zeros(toas.ntoas) * (u.second/par.units)
         unit = par.units
         if ori_value == 0:
@@ -862,7 +862,7 @@ class TimingModel(object):
                 except utils.PrefixError:
                     pass
             if not parsed:
-                log.warn("Unrecognized parfile line '%s'" % (l,))
+                log.warning("Unrecognized parfile line '%s'" % (l,))
 
             checked_param.append(name)
         if wants_tcb:

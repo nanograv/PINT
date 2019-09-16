@@ -1,13 +1,18 @@
-from __future__ import absolute_import, print_function, division
-from astropy.time.formats import TimeFormat
-from astropy.time.utils import day_frac
+"""Time format pulsar_mjd to handle leap seconds differently."""
+from __future__ import absolute_import, division, print_function
+
 import astropy._erfa as erfa
 import numpy
+from astropy.time.formats import TimeFormat
+from astropy.time.utils import day_frac
 
 
 def safe_kind_conversion(values, dtype):
-    import collections
-    if isinstance(values, collections.Iterable):
+    try:
+        from collections.abc import Iterable
+    except ImportError:
+        from collections import Iterable
+    if isinstance(values, Iterable):
         return numpy.asarray(values, dtype=dtype)
     else:
         return dtype(values)
@@ -15,8 +20,11 @@ def safe_kind_conversion(values, dtype):
 
 class TimePulsarMJD(TimeFormat):
     """MJD using tempo/tempo2 convention for time within leap second days.
+
     This is only relevant if scale='utc', otherwise will act like the
-    standard astropy MJD time format."""
+    standard astropy MJD time format.
+
+    """
 
     name = 'pulsar_mjd'
     # This can be removed once we only support astropy >=3.1.
