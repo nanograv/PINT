@@ -16,19 +16,28 @@ you will fint PINT sufficient for all your needs!
 Examples
 --------
 
-Start using PINT by going through the PINT_walkthough.ipynb_ IPython notebook.
+A number of examples are available in the ``examples`` directory_. Those
+that are Jupyter notebooks are also included below.  To see how PINT is
+used programmatically, look at ``examples/fit_NGC6440E.py`` (on GitHub_).
 
-To see how it is used programmatically, look at examples/fit_NGC6440E.py_
-
-You can also run it from the command line with::
+You can also run PINT from the command line with::
 
   pintempo --plot parfile.par timfile.tim
 
-Use -h to get help. This is not fully developed yet, so extensions to this
-(like a nice GUI) are most welcome.
+Use ``-h`` to get help. This is not fully developed yet, so extensions to
+this (like a nice GUI) are most welcome.
 
-.. _PINT_walkthough.ipynb: https://github.com/nanograv/PINT/blob/master/examples/PINT_walkthrough.ipynb
-.. _examples/fit_NGC6440E.py: https://github.com/nanograv/PINT/blob/master/examples/fit_NGC6440E.py
+.. _directory: https://github.com/nanograv/PINT/blob/master/examples/
+.. _GitHub: https://github.com/nanograv/PINT/blob/master/examples/fit_NGC6440E.py
+
+.. toctree::
+   :maxdepth: 2
+
+   examples/PINT_walkthrough
+   examples/MCMC_walkthrough
+   examples/Example of parameter usage
+   examples/TimingModel_composition
+   examples/Timing_model_update_example
 
 
 Time
@@ -39,7 +48,7 @@ intervals and an absolute time scale - to stupendous accuracy. Pulsar
 timing is a powerful tool in large part because it takes advantage of
 that accuracy. Getting time measurements and calculations right to this
 level of accuracy does require a certain amount of care, in general and
-while using (and writing PINT). 
+while using (and writing PINT).
 
 Precision
 '''''''''
@@ -74,7 +83,7 @@ That is, if I want to represent a ten-year span, the smallest increment
 python's floating-point can cope with is about 70 nanoseconds - not enough
 for accurate pulsar timing work! There are a number of ways to approach
 this problem, all somewhat awkward in python. One approach of interest
-is that ``numpy`` provides floating-point types, for example, 
+is that ``numpy`` provides floating-point types, for example,
 ``numpy.longdouble``, with more precision::
 
    >>> np.finfo(np.longdouble).eps
@@ -91,20 +100,20 @@ aligned just so in memory, so ``numpy`` generally pads these numbers out
 with zeroes and stores them in larger memory spaces. Thus you will often
 see ``np.float96`` and ``np.float128`` types; these contain only
 numbers with 80-bit precision. Actual 128-bit precision is not currently
-available in ``numpy``, in part because on almost all current machines all 
+available in ``numpy``, in part because on almost all current machines all
 calculations must be carried out in software, which takes 20-50 times as
-long. 
+long.
 
 An alternative approach to dealing with more precision than your machine's
 floating-point numbers natively support is to represent numbers as a pair
 of double-precision values, with the second providing additional digits
-of precision to the first. These are generically called double-double 
+of precision to the first. These are generically called double-double
 numbers, and can be faster than "proper" 128-bit floating-point numbers.
 Sadly these are not implemented in ``numpy`` either. But because it is
 primarily *time* that requires such precision, ``astropy`` provides a type
 ``astropy.time.Time`` (and ``astropy.time.TimeDelta``) that uses a similar
 representation internally: two floating-point numbers, one of which is
-the integer number of days (in the Julian-Day_ system) and one of which 
+the integer number of days (in the Julian-Day_ system) and one of which
 is the fractional day. This allows very satisfactory precision::
 
    >>> (1*u.day*np.finfo(float).eps).to(u.ns)
@@ -147,7 +156,7 @@ On a more human scale, observations are recorded in convenient time units,
 often UTC; but UTC has leap seconds, so some days have one more second (or
 one fewer) than others!
 
-The upshot of all this is that if you care about accuracy, you need to be 
+The upshot of all this is that if you care about accuracy, you need to be
 quite careful about how you measure your time. Fortunately, there is a
 well-defined system of time scales, and ``astropy.time.Time`` automatically
 keeps track of which one your time is in and does the appropriate
@@ -160,31 +169,31 @@ in, and what kind of time you're asking for::
    >>> t.tdb
    <Time object: scale='tdb' format='iso' value=2019-08-19 00:01:09.183>
 
-The conventional time scale for working with pulsars, and the one PINT 
+The conventional time scale for working with pulsars, and the one PINT
 uses, is Barycentric Dynamical Time (TDB). You should be aware that there
-is another time scale, not yet supported in PINT, called Baycentric 
-Coordinate Time (TCB), and that because of different handling of 
+is another time scale, not yet supported in PINT, called Baycentric
+Coordinate Time (TCB), and that because of different handling of
 relativistic corrections, it does not advance at the same rate as TDB
 (there is also a many-second offset). TEMPO2 uses TCB by default, so
 you may encounter pulsar timing models or even measurements that use
 TCB. PINT will attempt to detect this and let you know.
 
 Note that the need for leap seconds is because the Earth's rotation is
-somewhat erratic - no, we're not about to be thrown off, but its 
+somewhat erratic - no, we're not about to be thrown off, but its
 unpredictability can get as large as a second after a few years. So
 the International_Earth_Rotation_Service_ announces leap seconds about
 six months in advance. This means that ``astropy`` and pint need to
-keep their lists of leap seconds up-to-date by checking the IERS 
-website from time to time. 
+keep their lists of leap seconds up-to-date by checking the IERS
+website from time to time.
 
 It is also conventional to record pulsar data with reference to an
 observatory clock, usually a maser, that may drift with respect to
 International Atomic Time (TAI_). Usually GPS is used to track the
 deviations of this observatory clock and record them in a file. PINT
 also needs up-to-date versions of these observatory clock correction files
-to produce accurate results. 
+to produce accurate results.
 
-Even more detail about how PINT handles time scales is available on the 
+Even more detail about how PINT handles time scales is available on the
 github wiki_.
 
 .. _International_Earth_Rotation_Service: https://www.iers.org/IERS/EN/Home/home_node.html
@@ -195,24 +204,24 @@ External Data
 -------------
 
 In order to provide sub-microsecond accuracy, PINT needs a certain
-number of data files, for example Solar System ephemerides, that 
+number of data files, for example Solar System ephemerides, that
 would be cumbersome to include in the package itself. Further, some
 of this external data needs to be kept up-to-date - precise measurements
 of the Earth's rotation, for example, or observatory clock corrections.
 
-Most of this external data is obtained through ``astropy``'s data downloading 
-mechanism (see ``astropy.utils.data``). This will result in the data being 
+Most of this external data is obtained through ``astropy``'s data downloading
+mechanism (see ``astropy.utils.data``). This will result in the data being
 downloaded the first time it
 is required on your machine but thereafter stored in a "cache" in your home
 directory. If you plan to operate offline, you may want to run some commands
-before disconnecting to ensure that this data has been downloaded. Data 
-that must be up-to-date is generally in the form of a time series, and 
+before disconnecting to ensure that this data has been downloaded. Data
+that must be up-to-date is generally in the form of a time series, and
 "up-to-date" generally means that it must cover the times that occur in
 your data. This can be an issue for simulation and forecasting; there should
 always be a mechanism to allow out-of-date data if you can accept lower
 accuracy.
 
-Not all the data that PINT uses is easily accessible for programs to 
+Not all the data that PINT uses is easily accessible for programs to
 download. Observatory clock corrections, for example, may need to be
 obtained from the observatory through various means (often talking to a
 support scientist). We intend that PINT should notify you when this is

@@ -13,6 +13,10 @@ matrix:
           git:
               clone: false
         - script: flake8-diff
+          install: 
+            - pip install -r requirements_dev.txt
+            - pip install -r requirements.txt
+            - pip install .
           name: "python style checker for changed code"
           services: []
           after_success: []
@@ -21,8 +25,16 @@ matrix:
         - python: "3.5"
         - python: "3.6"
         - python: "3.7"
+        - script: make notebooks
+          name: "Example notebooks (python 3.7)"
+          python: "3.7"
         - script: make docs-build
+          install: 
+            - pip install -r requirements_dev.txt
+            - pip install -r requirements.txt
+            - pip install .
           name: "Documentation build"
+          python: "3.7"
           after_success: []
 sudo: required
 
@@ -35,12 +47,16 @@ sudo: required
 services:
     - xvfb
 
+before_install:
+    - sudo apt-get install pandoc
+
 install:
     # We need to require the dev requirements first in case they're more
     # stringent (on version numbers)
     - pip install -r requirements_dev.txt
     - pip install -r requirements.txt
     - pip install .
+    - python -c "from astropy.utils.data import download_file; from astropy.utils.iers import IERS_A_URL; download_file(IERS_A_URL, cache=True)"
 
 #script:
 #    - pwd
@@ -52,3 +68,6 @@ script:
 after_success:
     ( cd tests && coveralls )
 
+cache:
+  directories:
+    - $HOME/.astropy/cache

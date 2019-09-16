@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 import astropy.table
 import astropy.units as u
 import scipy.optimize as op
-import sys, os, copy, fftfit
+import sys
+import os
 from astropy.coordinates import SkyCoord
 from astropy import log
 import argparse
@@ -110,6 +111,7 @@ def measure_phase(profile, template, rotate_prof=True):
             (returned as a tuple).  These are defined as in Taylor's
             talk at the Royal Society.
     """
+    import fftfit
     c,amp,pha = fftfit.cprof(template)
     pha1 = pha[0]
     if (rotate_prof):

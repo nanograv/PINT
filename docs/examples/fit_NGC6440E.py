@@ -1,20 +1,22 @@
 #! /usr/bin/env python
+"""Demonstrate use of pint in a script."""
 from __future__ import print_function, division
 import pint.toa
 import pint.models
-import pint.mcmc_fitter
-import pint.sampler
+import pint.fitter
 import pint.residuals
 import pint.models.model_builder as mb
+
+#import matplotlib
+#matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
+
 import astropy.units as u
 import os
 
 datadir = os.path.dirname(os.path.abspath(str(__file__)))
 parfile = os.path.join(datadir, 'NGC6440E.par')
 timfile = os.path.join(datadir, 'NGC6440E.tim')
-nwalkers = 16
-nsteps = 250
 
 # Define the timing model
 m = mb.get_model(parfile)
@@ -49,12 +51,8 @@ plt.show()
 
 # Now do the fit
 print("Fitting...")
-sampler = pint.sampler.EmceeSampler(nwalkers)
-f = pint.mcmc_fitter.MCMCFitter(t, m, sampler,
-                                resids=True,
-                                phserr=0,
-                                lnlike=pint.mcmc_fitter.lnlikelihood_chi2)
-print(f.fit_toas(nsteps))
+f = pint.fitter.WlsFitter(t, m)
+print(f.fit_toas())
 
 # Print some basic params
 print("Best fit has reduced chi^2 of", f.resids.chi2_reduced)
