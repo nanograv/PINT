@@ -16,19 +16,19 @@ you will fint PINT sufficient for all your needs!
 Examples
 --------
 
-Start using PINT by going through the PINT_walkthough.ipynb_ IPython notebook.
+A number of examples are available in the ``examples`` directory_. Those
+that are Jupyter notebooks are also included below.  To see how PINT is
+used programmatically, look at ``examples/fit_NGC6440E.py`` (on GitHub_).
 
-To see how it is used programmatically, look at examples/fit_NGC6440E.py_
-
-You can also run it from the command line with::
+You can also run PINT from the command line with::
 
   pintempo --plot parfile.par timfile.tim
 
-Use -h to get help. This is not fully developed yet, so extensions to this
-(like a nice GUI) are most welcome.
+Use ``-h`` to get help. This is not fully developed yet, so extensions to
+this (like a nice GUI) are most welcome.
 
-.. _PINT_walkthough.ipynb: https://github.com/nanograv/PINT/blob/master/examples/PINT_walkthrough.ipynb
-.. _examples/fit_NGC6440E.py: https://github.com/nanograv/PINT/blob/master/examples/fit_NGC6440E.py
+.. _directory: https://github.com/nanograv/PINT/blob/master/examples/
+.. _GitHub: https://github.com/nanograv/PINT/blob/master/examples/fit_NGC6440E.py
 
 .. toctree::
    :maxdepth: 2

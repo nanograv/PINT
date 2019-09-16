@@ -191,6 +191,7 @@ def _process_module_docstring(app, what, name, obj, options, lines):
 
 
 def setup(app):
+    app.add_stylesheet("custom.css")
     app.connect('builder-inited', run_apidoc)
     app.connect('autodoc-process-docstring', _process_module_docstring)
 
