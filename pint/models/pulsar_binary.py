@@ -175,8 +175,8 @@ class PulsarBinary(DelayComponent):
                     instance_par_val = instance_par
                 if binObjpar.value is None:
                     if binObjpar.name in self.warn_default_params:
-                        log.warn("'%s' is not set, using the default value %f "
-                                 "instead." % (binObjpar.name, instance_par_val))
+                        log.warning("'%s' is not set, using the default value %f "
+                                    "instead." % (binObjpar.name, instance_par_val))
                     continue
                 if binObjpar.units is not None:
                     updates[par] = binObjpar.value * binObjpar.units

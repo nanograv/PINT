@@ -6,8 +6,11 @@ import numpy
 
 
 def safe_kind_conversion(values, dtype):
-    import collections
-    if isinstance(values, collections.Iterable):
+    try:
+        from collections.abc import Iterable
+    except ImportError:
+        from collections import Iterable
+    if isinstance(values, Iterable):
         return numpy.asarray(values, dtype=dtype)
     else:
         return dtype(values)

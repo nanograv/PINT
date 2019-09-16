@@ -31,10 +31,10 @@ def load_orbit(orb_filename):
     # Load photon times from FT1 file
 
     if '_orb' in orb_filename:
-        log.warn("The NuSTAR orbit file you are providing is known to give"
-                 "a solution precise only to the ~0.5ms level. Use the "
-                 "pipeline-produced attitude-orbit file ('*.attorb.gz') for"
-                 "better precision.")
+        log.warning("The NuSTAR orbit file you are providing is known to give"
+                    "a solution precise only to the ~0.5ms level. Use the "
+                    "pipeline-produced attitude-orbit file ('*.attorb.gz') for"
+                    "better precision.")
 
     hdulist = pyfits.open(orb_filename)
     orb_hdr=hdulist[1].header

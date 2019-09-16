@@ -5,6 +5,7 @@ from .timing_model import Component,  MissingParameter
 from . import parameter as p
 import numpy as np
 import astropy.units as u
+from astropy import log
 
 
 class NoiseComponent(Component):
@@ -69,8 +70,8 @@ class ScaleToaError(NoiseComponent):
             if tneq_par.key is None:
                 continue
             if self.TNEQs[tneq] in list(self.EQUADs.values()):
-                log.warn("'%s %s %s' is provided by parameter EQUAD, using" \
-                         " EQUAD instead. " % (tneq, tneq_par.key, tneq_par.key_value))
+                log.warning("'%s %s %s' is provided by parameter EQUAD, using"
+                            " EQUAD instead. " % (tneq, tneq_par.key, tneq_par.key_value))
             else:
                 EQUAD_name = 'EQUAD' + str(tneq_par.index)
                 if EQUAD_name in list(self.EQUADs.keys()):
@@ -184,21 +185,21 @@ class EcorrNoise(NoiseComponent):
         tbl = toas.table
         t = (tbl['tdbld'].quantity * u.day).to(u.s).value
         ecorrs = self.get_ecorrs()
-        Umats = []
+        umats = []
         for ec in ecorrs:
             mask = ec.select_toa_mask(toas)
-            Umats.append(create_quantization_matrix(t[mask]))
-        nc = np.sum(U.shape[1] for U in Umats)
-        Umat = np.zeros((len(t), nc))
+            umats.append(create_quantization_matrix(t[mask]))
+        nc = sum(u.shape[1] for u in umats)
+        umat = np.zeros((len(t), nc))
         weight = np.zeros(nc)
         nctot = 0
         for ct, ec in enumerate(ecorrs):
             mask = ec.select_toa_mask(toas)
-            nn = Umats[ct].shape[1]
-            Umat[mask, nctot:nn+nctot] = Umats[ct]
+            nn = umats[ct].shape[1]
+            umat[mask, nctot:nn+nctot] = umats[ct]
             weight[nctot:nn+nctot] = ec.quantity.to(u.s).value ** 2
             nctot += nn
-        return (Umat, weight)
+        return (umat, weight)
 
     def ecorr_cov_matrix(self, toas):
         """Full ECORR covariance matrix."""

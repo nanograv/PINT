@@ -290,7 +290,7 @@ class pintpulsar(object):
     def ssbfreqs(self):
         """Return SSB frequencies"""
 
-        log.warn('Not using freqSSB just yet.')
+        log.warning('Not using freqSSB just yet.')
         return np.array(self.t.get_freqs())
 
     def deletedmask(self):
