@@ -13,6 +13,10 @@ matrix:
           git:
               clone: false
         - script: flake8-diff
+          install: 
+            - pip install -r requirements_dev.txt
+            - pip install -r requirements.txt
+            - pip install .
           name: "python style checker for changed code"
           services: []
           after_success: []
@@ -25,6 +29,10 @@ matrix:
           name: "Example notebooks (python 3.7)"
           python: "3.7"
         - script: make docs-build
+          install: 
+            - pip install -r requirements_dev.txt
+            - pip install -r requirements.txt
+            - pip install .
           name: "Documentation build"
           python: "3.7"
           after_success: []
@@ -57,3 +65,6 @@ script:
 after_success:
     ( cd tests && coveralls )
 
+cache:
+  directories:
+    - $HOME/.astropy/cache
