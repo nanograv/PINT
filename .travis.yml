@@ -47,6 +47,9 @@ sudo: required
 services:
     - xvfb
 
+before_install:
+    - sudo apt-get install pandoc
+
 install:
     # We need to require the dev requirements first in case they're more
     # stringent (on version numbers)
