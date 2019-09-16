@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+"""Demonstrate use of pint in a script."""
 from __future__ import print_function, division
 import pint.toa
 import pint.models

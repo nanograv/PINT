@@ -19,3 +19,4 @@ flake8-diff>=0.2.2
 jupyter
 nbconvert
 nbsphinx
+nbdime
