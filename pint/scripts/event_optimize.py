@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 import astropy.table
 import astropy.units as u
 import scipy.optimize as op
-import sys, os, copy
+import sys
+import os
 from astropy.coordinates import SkyCoord
 from astropy import log
 import argparse

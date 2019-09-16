@@ -1,7 +1,6 @@
 """Various tests to assess the performance of the J0623-0200."""
 import pint.models.model_builder as mb
 import pint.toa as toa
-import libstempo as lt
 
 #import matplotlib
 #matplotlib.use('TKAgg')
@@ -19,7 +18,7 @@ timfile = os.path.join(datadir, 'J0613-0200_NANOGrav_dfg+12.tim')
 
 # libstempo calculation
 print("tempo2 calculation")
-tempo2_vals = tempo2_utils.general2(parfile, timfile,['pre'])
+tempo2_vals = tempo2_utils.general2(parfile, timfile, ['pre'])
 # Build PINT model
 print("PINT calculation")
 m = mb.get_model(parfile)
@@ -30,7 +29,7 @@ t2_resids = tempo2_vals['pre']
 presids_us = resids(toas, m).time_resids.to(u.us)
 # Plot residuals
 plt.errorbar(toas.get_mjds().value, presids_us.value,
-            toas.get_errors().value, fmt='x')
+             toas.get_errors().value, fmt='x')
 plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
 plt.xlabel('MJD')
 plt.ylabel('Residual (us)')

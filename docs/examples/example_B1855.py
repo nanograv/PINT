@@ -17,7 +17,7 @@ timfile = os.path.join(datadir, 'B1855+09_NANOGrav_dfg+12.tim')
 
 # libstempo calculation
 print("tempo2 calculation")
-tempo2_vals = tempo2_utils.general2(parfile, timfile,['pre'])
+tempo2_vals = tempo2_utils.general2(parfile, timfile, ['pre'])
 # Build PINT model
 print("PINT calculation")
 mdd = mb.get_model(parfile)
@@ -27,7 +27,7 @@ toas = toa.get_TOAs(timfile, planets=False, ephem='DE405', include_bipm=False)
 t2_resids = tempo2_vals['pre']
 presids_us = resids(toas, mdd).time_resids.to(u.us)
 # Plot residuals
-plt.errorbar(toas.get_mjds().value, presids_us.value, 
+plt.errorbar(toas.get_mjds().value, presids_us.value,
              toas.get_errors().value, fmt='x')
 print(toas.get_errors().value)
 print(toas.get_mjds())
