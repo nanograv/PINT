@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 from __future__ import division, print_function
 import sys, os
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from six import StringIO
 import unittest
 import numpy as np
+import pytest
 import pint.scripts.photonphase as photonphase
 from pinttestdata import testdir, datadir
 from astropy import log
@@ -15,6 +13,10 @@ parfile = os.path.join(datadir, 'J1513-5908_PKS_alldata_white.par')
 eventfile = os.path.join(datadir, 'B1509_RXTE_short.fits')
 orbfile = os.path.join(datadir, 'FPorbit_Day6223')
 
+
+@pytest.mark.skipif(
+    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
+)
 class TestPhotonPhase(unittest.TestCase):
 
     def test_result(self):

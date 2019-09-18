@@ -12,3 +12,14 @@ omit =
     pint/profiling/*
 	pint/str2ld.py
 	pint/tmtestfuncs.py
+parallel = True
+branch = True
+
+[paths]
+source =
+    src
+    */site-packages
+
+[report]
+show_missing = True
+precision = 2

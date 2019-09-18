@@ -25,6 +25,14 @@ matrix:
         - python: "3.5"
         - python: "3.6"
         - python: "3.7"
+        - name: "tox"
+          sudo: false
+          language: python
+          python: 
+            - "3.7"
+            - "2.7"
+          install: pip install tox-travis
+          script: tox
         - script: make notebooks
           name: "Example notebooks (python 3.7)"
           python: "3.7"
@@ -36,6 +44,8 @@ matrix:
           name: "Documentation build"
           python: "3.7"
           after_success: []
+    allow_failures:
+        - script: flake8-diff
 sudo: required
 
 # https://docs.travis-ci.com/user/gui-and-headless-browsers/#Using-xvfb-to-Run-Tests-That-Require-a-GUI

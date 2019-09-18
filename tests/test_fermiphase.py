@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 from __future__ import division, print_function
 import sys, os
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from six import StringIO
 import unittest
 import numpy as np
 import astropy.units as u
+import pytest
 import pint.scripts.fermiphase as fermiphase
 from pint.observatory.fermi_obs import FermiObs
 from pint.fermi_toas import load_Fermi_TOAs
@@ -20,6 +18,11 @@ eventfile = os.path.join(datadir, 'J0030+0451_P8_15.0deg_239557517_458611204_ft1
 
 eventfileraw = os.path.join(datadir, 'J0030+0451_w323_ft1weights.fits')
 ft2file = os.path.join(datadir, 'lat_spacecraft_weekly_w323_p202_v001.fits')
+
+
+@pytest.mark.skipif(
+    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
+)
 class TestFermiPhase(unittest.TestCase):
 
     def test_GEO_Htest_result(self):
