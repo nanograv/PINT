@@ -10,8 +10,6 @@ import os
 import sys
 import hashlib
 import os.path
-# !! This means setup.py can't even be run without numpy installed!
-import numpy
 
 import versioneer
 
