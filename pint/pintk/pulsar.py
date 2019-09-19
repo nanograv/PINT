@@ -61,7 +61,7 @@ class Pulsar(object):
             self.toas = pint.toa.get_TOAs(self.timfile,planets=True)
         self.toas.print_summary()
 
-        self.prefit_resids = pint.residuals.resids(self.toas, self.prefit_model)
+        self.prefit_resids = pint.residuals.Residuals(self.toas, self.prefit_model)
         print("RMS PINT residuals are %.3f us\n" % \
               self.prefit_resids.time_resids.std().to(u.us).value)
         self.fitter = Fitters.WLS
@@ -117,9 +117,9 @@ class Pulsar(object):
         self.update_resids()
 
     def update_resids(self):
-        self.prefit_resids = pint.residuals.resids(self.toas, self.prefit_model)
+        self.prefit_resids = pint.residuals.Residuals(self.toas, self.prefit_model)
         if self.fitted:
-            self.postfit_resids = pint.residuals.resids(self.toas, self.postfit_model)
+            self.postfit_resids = pint.residuals.Residuals(self.toas, self.postfit_model)
 
     def orbitalphase(self):
         '''
@@ -238,6 +238,6 @@ class Pulsar(object):
 
         fitter.fit_toas(maxiter=1)
         self.postfit_model = fitter.model
-        self.postfit_resids = pint.residuals.resids(self.toas, self.postfit_model)
+        self.postfit_resids = pint.residuals.Residuals(self.toas, self.postfit_model)
         self.fitted = True
         self.write_fit_summary()
