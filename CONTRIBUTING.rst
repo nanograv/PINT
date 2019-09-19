@@ -156,7 +156,13 @@ can go up and down the call history and inspect local variables::
 
 Under ``examples/`` there are a few Jupyter notebooks. These actually get incorporated
 into the online documentation (you may have seen them). If you change them, please
-rebuild
+rebuild them with ``make notebooks``.
+
+If you make a mistake and get ``git`` into a strange or awkward
+state. Don't panic, and try Googling the specific error message. ``git``
+is quite thorough about keeping history around, so you can probably undo
+whatever has happened, especially if you have been pushing your changes
+to GitHub.
 
 Coding Style
 ------------
@@ -268,6 +274,12 @@ these are installed through PINT's ``requirements.txt``.
      It may require an additional installation step.
    - There is a JupyterLab git plugin that may make working with versioned
      notebooks easier.
+
+Your editor, whether it is emacs, vi, JupyterLab, Spyder, or some more
+graphical tool, can probably be made to understand that you are editing
+python and do things like highlight syntax, offer tab completion on
+identifiers, automatically indent text, automatically strip trailing
+white space, and possibly integrate some of the above tools.
 
 The Zen of Python
 ~~~~~~~~~~~~~~~~~
