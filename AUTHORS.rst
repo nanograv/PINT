@@ -2,6 +2,10 @@
 Credits
 =======
 
+Development of PINT is partially supported by the NANOGrav_ pulsar timing array project.
+
+.. _NANOGrav: http://nanograv.org/
+
 Development Leads
 -----------------
 
@@ -19,7 +23,7 @@ In alphabetical order:
 * Michele Vallisneri
 * Rutger van Haasteren
 
-Contributors
-------------
+Other contributors
+------------------
 
 None yet. Why not be the first?
