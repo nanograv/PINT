@@ -4,7 +4,6 @@ import numpy as np
 import astropy.units as u
 import astropy.constants as c
 from pint import ls,GMsun,Tsun
-from pint.utils import extended_precision
 
 
 class DDmodel(PSR_BINARY):
@@ -105,7 +104,7 @@ class DDmodel(PSR_BINARY):
     def d_omega_d_OM(self):
         """dOmega/dOM = 1
         """
-        return np.ones(len(self.tt0), dtype=extended_precision)*u.Unit('')
+        return np.ones(len(self.tt0), dtype=np.longdouble)*u.Unit('')
 
     def d_omega_d_OMDOT(self):
         """dOmega/dOMDOT = 1/n*nu
@@ -123,7 +122,7 @@ class DDmodel(PSR_BINARY):
         return self.ecc()+self.DR
 
     def d_er_d_DR(self):
-        return extended_precision(np.ones(len(self.tt0)))*u.Unit("")
+        return np.longdouble(np.ones(len(self.tt0)))*u.Unit("")
 
     def d_er_d_par(self,par):
         if par not in self.binary_params:
@@ -139,7 +138,7 @@ class DDmodel(PSR_BINARY):
                 return getattr(self,dername)()
             else:
                 par_obj = getattr(self, par)
-                return (np.zeros(len(self.tt0), dtype=extended_precision)
+                return (np.zeros(len(self.tt0), dtype=np.longdouble)
                         * (u.Unit("") / par_obj.unit))
 
     ##########
@@ -147,7 +146,7 @@ class DDmodel(PSR_BINARY):
         return self.ecc()+self.DTH
 
     def d_eTheta_d_DTH(self):
-        return extended_precision(np.ones(len(self.tt0)))*u.Unit("")
+        return np.longdouble(np.ones(len(self.tt0)))*u.Unit("")
 
     def d_eTheta_d_par(self,par):
         if par not in self.binary_params:
@@ -163,7 +162,7 @@ class DDmodel(PSR_BINARY):
             if hasattr(self,dername):
                 return getattr(self,dername)()
             else:
-                return extended_precision(np.zeros(len(self.tt0))) * u.Unit("") / par_obj.unit
+                return np.longdouble(np.zeros(len(self.tt0))) * u.Unit("") / par_obj.unit
     ##########
     def alpha(self):
         """Alpha defined in
@@ -202,7 +201,7 @@ class DDmodel(PSR_BINARY):
         #         cosOmg=np.cos(self.omega())
         #         return self.a1()/c.c*cosOmg*getattr(self,dername)()
         #     else:
-        #         return extended_precision(np.zeros(len(self.tt0)))
+        #         return np.longdouble(np.zeros(len(self.tt0)))
         return dAlpha_dpar.to(alpha.unit/par_obj.unit)
 
     # def d_alpha_d_A1(self):
@@ -269,7 +268,7 @@ class DDmodel(PSR_BINARY):
         #         sinOmg = np.sin(self.omega())
         #         return -a1/c.c*(1-eTheta**2)**0.5*sinOmg*getattr(self,dername)()
         #     else:
-        #         return extended_precision(np.zeros(len(self.tt0)))
+        #         return np.longdouble(np.zeros(len(self.tt0)))
 
     def d_beta_d_A1(self):
         """dBeta/dA1 = 1.0/c*(1-eTheta**2)**0.5*cos(omega) * d_a1_d_A1

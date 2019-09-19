@@ -4,12 +4,11 @@ from __future__ import absolute_import, print_function, division
 from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
     time_to_longdouble, is_number, time_from_longdouble, str2longdouble, \
     longdouble2string, data2longdouble, split_prefixed_name
-import numpy
+import numpy as np
 import astropy.time as time
 from astropy import log
 from pint import pint_units
 from pint import pulsar_mjd
-from pint.utils import extended_precision
 import astropy.units as u
 import astropy.constants as const
 from astropy.coordinates.angles import Angle
@@ -247,7 +246,7 @@ class Parameter(object):
 
         # This is avoiding negtive unvertainty input.
         if self._uncertainty is not None and self.uncertainty_value < 0:
-            self.uncertainty_value = numpy.abs(self.uncertainty_value)
+            self.uncertainty_value = np.abs(self.uncertainty_value)
 
     @property
     def uncertainty_value(self):
@@ -374,7 +373,7 @@ class Parameter(object):
                                                            self.aliases))
 
 class floatParameter(Parameter):
-    """Parameter with float or extended_precision value.
+    """Parameter with float or long double value.
 
     `.quantity` stores current parameter value and its unit in an
     `astropy.units.quantity` class. The unit of `.quantity` can be any unit
@@ -404,7 +403,7 @@ class floatParameter(Parameter):
         A flag specifying whether phase derivatives with respect to this
         parameter exist.
     long_double : bool, optional, default False
-        A flag specifying whether value is float or extended_precision.
+        A flag specifying whether value is float or long double.
 
     Example::
         >>> from parameter import floatParameter
@@ -507,7 +506,7 @@ class floatParameter(Parameter):
             # This will happen if the input value did not have units
             num_value = setfunc_no_unit(val)
             if self.unit_scale:
-                if numpy.abs(num_value) > numpy.abs(self.scale_threshold):
+                if np.abs(num_value) > np.abs(self.scale_threshold):
                     log.info("Parameter %s's unit will be scaled to %s %s" \
                              % (self.name, str(self.scale_factor), str(self._original_units)))
                     self.units = self.scale_factor * self._original_units
@@ -731,7 +730,7 @@ class MJDParameter(Parameter):
            mjd string
         """
         if isinstance(val, numbers.Number):
-            val = extended_precision(val)
+            val = np.longdouble(val)
             result = time_from_longdouble(val, self.time_scale)
         elif isinstance(val, str):
             try:
@@ -927,7 +926,7 @@ class prefixParameter(object):
     parameter_type : str, optional, default 'float'
         Example parameter class template for quantity and value setter
     long_double : bool, optional default 'double'
-        Set float type quantity and value in extended_precision
+        Set float type quantity and value in long double
     time_scale : str, optional default 'utc'
         Time scale for MJDParameter class.
     """
@@ -1154,12 +1153,12 @@ class maskParameter(floatParameter):
     value : float or long_double optinal
         Toas/phase adjust value
     long_double : bool, optional default 'double'
-        Set float type quantity and value in extended_precision
+        Set float type quantity and value in long double
     units : str optional
         Unit for the offset value
     description : str optional
         Description for the parameter
-    uncertainty: float/extended_precision
+    uncertainty: float or np.longdouble
         uncertainty of the parameter.
     frozen : bool, optional
         A flag specifying whether "fitters" should adjust the value of this

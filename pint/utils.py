@@ -21,8 +21,6 @@ except AttributeError:
 if np.finfo(np.longdouble).eps > 2e-19:
     raise ValueError("This platform does not support extended precision "
                      "floating-point, and PINT cannot run without this.")
-else:
-    extended_precision = np.longdouble
 
 class PosVel(object):
     """Position/Velocity class.
@@ -220,9 +218,9 @@ def time_to_longdouble(t):
 
     """
     try:
-        return extended_precision(t.jd1 - DJM0) + extended_precision(t.jd2)
+        return np.longdouble(t.jd1 - DJM0) + np.longdouble(t.jd2)
     except:
-        return extended_precision(t)
+        return np.longdouble(t)
 
 
 def GEO_WGS84_to_ITRF(lon, lat, hgt):
@@ -313,7 +311,7 @@ def MJD_string2longdouble(s):
         Convert a MJD string to a numpy longdouble
     """
     ii, ff = s.split(".")
-    return extended_precision(ii) + extended_precision("0."+ff)
+    return np.longdouble(ii) + np.longdouble("0."+ff)
 
 
 def ddouble2ldouble(t1, t2, format='jd'):
@@ -323,11 +321,11 @@ def ddouble2ldouble(t1, t2, format='jd'):
         converts them to a single long double MJD value
     """
     if format == 'jd':
-        t1 = extended_precision(t1) - extended_precision(2400000.5)
-        t = extended_precision(t1) + extended_precision(t2)
+        t1 = np.longdouble(t1) - np.longdouble(2400000.5)
+        t = np.longdouble(t1) + np.longdouble(t2)
         return t
     else:
-        t = extended_precision([t1, t2])
+        t = np.longdouble([t1, t2])
     return t[0]+t[1]
 
 
@@ -335,7 +333,7 @@ def str2longdouble(str_data):
     """Return a numpy long double scalar from the input string, using strtold()
     """
     input_str = str_data.translate(maketrans('Dd', 'ee'))
-    return extended_precision(input_str.encode())
+    return np.longdouble(input_str.encode())
 
 
 # Define prefix parameter pattern
@@ -395,7 +393,7 @@ def data2longdouble(data):
     if type(data) is str:
         return str2longdouble(data)
     else:
-        return extended_precision(data)
+        return np.longdouble(data)
 
 def taylor_horner(x, coeffs):
     """Evaluate a Taylor series of coefficients at x via the Horner scheme.

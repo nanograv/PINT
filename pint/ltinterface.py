@@ -9,7 +9,7 @@ import pint.toa as pt
 from pint.phase import Phase
 from pint.residuals import Residuals
 from pint import fitter
-from .utils import has_astropy_unit, extended_precision
+from .utils import has_astropy_unit
 import astropy.units as u
 import astropy.constants as ac
 import astropy.coordinates.angles as ang
@@ -265,7 +265,7 @@ class pintpulsar(object):
     def toas(self, updatebats=False):
         """Return TDB arrival times in MJDs"""
 
-        # TODO: do high-precision as extended_precision
+        # TODO: do high-precision as long double
 
         return np.array(self.t.table['tdbld'])[~self.deleted]
 
@@ -404,7 +404,7 @@ class pintpulsar(object):
         - if `which` is 'all', all parameters;
         - if `which` is a sequence, all parameters listed there.
 
-        Parameter values are returned as a numpy extended_precision array.
+        Parameter values are returned as a numpy long double array.
 
         Values to be set can be passed as a numpy array, sequence (in which case they
         are taken to correspond to parameters in the order given by `pars(which=which)`),
@@ -412,14 +412,14 @@ class pintpulsar(object):
 
         Notes:
 
-        - Passing values as anything else than numpy extended_precision may result in loss of precision.
+        - Passing values as anything else than numpy long double may result in loss of precision.
         - Not all parameters in the selection need to be set.
         - Setting an unset parameter sets its `set` flag (obviously).
         - Unlike in earlier libstempo versions, setting a parameter does not set its error to zero."""
 
         if values is None:
             return np.fromiter((self[par].val for par in
-                    self.pars(which)),extended_precision)
+                    self.pars(which)),np.longdouble)
         elif isinstance(values,collections.Mapping):
             for par in values:
                 self[par].val = values[par]
@@ -435,9 +435,9 @@ class pintpulsar(object):
         Same as `vals()`, but for parameter errors."""
         if values is None:
             #return np.fromiter((getattr(self.model, par).uncertainty for par in
-            #        self.pars(which)),extended_precision)
+            #        self.pars(which)),np.longdouble)
             return np.fromiter((self[par].err for par in
-                    self.pars(which)),extended_precision)
+                    self.pars(which)),np.longdouble)
         elif isinstance(values,collections.Mapping):
             for par in values:
                 self[par].err = values[par]
@@ -450,7 +450,7 @@ class pintpulsar(object):
     def designmatrix(self,updatebats=True,fixunits=True,fixsigns=True,incoffset=True):
         """tempopulsar.designmatrix(updatebats=True,fixunits=True,incoffset=True)
 
-        Returns the design matrix [nobs x (ndim+1)] as a extended_precision array
+        Returns the design matrix [nobs x (ndim+1)] as a long double array
         for current fit-parameter values. If fixunits=True, adjust the units
         of the design-matrix columns so that they match the tempo2
         parameter units. If fixsigns=True, adjust the sign of the columns

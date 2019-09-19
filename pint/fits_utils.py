@@ -8,7 +8,7 @@ try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
-from .utils import fortran_float, extended_precision
+from .utils import fortran_float
 
 def read_fits_event_mjds_tuples(event_hdu,timecolumn='TIME'):
     """Read a set of MJDs from a FITS HDU, with proper converstion of times to MJD
@@ -32,24 +32,24 @@ def read_fits_event_mjds_tuples(event_hdu,timecolumn='TIME'):
         TIMEZERO = 0
     else:
         try:
-            TIMEZERO = extended_precision(event_hdr['TIMEZERO'])
+            TIMEZERO = np.longdouble(event_hdr['TIMEZERO'])
         except KeyError:
-            TIMEZERO = extended_precision(event_hdr['TIMEZERI']) + extended_precision(event_hdr['TIMEZERF'])
+            TIMEZERO = np.longdouble(event_hdr['TIMEZERI']) + np.longdouble(event_hdr['TIMEZERF'])
 
     log.debug("TIMEZERO = {0}".format(TIMEZERO))
 
     # Collect MJDREF
     try:
-        MJDREF = extended_precision(event_hdr['MJDREF'])
+        MJDREF = np.longdouble(event_hdr['MJDREF'])
     except KeyError:
         # Here I have to work around an issue where the MJDREFF key is stored
         # as a string in the header and uses the "1.234D-5" syntax for floats, which
         # is not supported by Python
         if isinstance(event_hdr['MJDREFF'],six.string_types):
-            MJDREF = extended_precision(event_hdr['MJDREFI']) + \
+            MJDREF = np.longdouble(event_hdr['MJDREFI']) + \
             fortran_float(event_hdr['MJDREFF'])
         else:
-            MJDREF = extended_precision(event_hdr['MJDREFI']) + extended_precision(event_hdr['MJDREFF'])
+            MJDREF = np.longdouble(event_hdr['MJDREFI']) + np.longdouble(event_hdr['MJDREFF'])
     log.debug("MJDREF = {0}".format(MJDREF))
 
     # Should check timecolumn units to be sure they are seconds!

@@ -4,7 +4,6 @@ import numpy as np
 import astropy.units as u
 import astropy.constants as c
 from pint import ls,GMsun,Tsun
-from pint.utils import extended_precision
 
 class ELL1BaseModel(PSR_BINARY):
     """This is a class for base ELL1 pulsar binary model.
@@ -19,7 +18,7 @@ class ELL1BaseModel(PSR_BINARY):
                                          'EPS2': 0*u.Unit(''),
                                          'EPS1DOT': 0/u.second,
                                          'EPS2DOT': 0/u.second,
-                                         'TASC': extended_precision(54000.0)*u.day})
+                                         'TASC': np.longdouble(54000.0)*u.day})
         self.binary_params = list(self.param_default_value.keys())
         self.set_param_values() # Set parameters to default values.
         self.ELL1_interVars = ['eps1', 'eps2', 'Phi', 'Dre', 'Drep', 'Drepp', 'nhat']
@@ -49,7 +48,7 @@ class ELL1BaseModel(PSR_BINARY):
         return self.A1 + self.ttasc()*self.A1DOT
 
     def d_a1_d_A1(self):
-        return extended_precision(np.ones(len(self.ttasc())))*u.Unit('')
+        return np.longdouble(np.ones(len(self.ttasc())))*u.Unit('')
 
     def d_a1_d_T0(self):
         result = np.empty(len(self.ttasc()))
@@ -63,7 +62,7 @@ class ELL1BaseModel(PSR_BINARY):
         return self.EPS1 + self.ttasc() * self.EPS1DOT
 
     def d_eps1_d_EPS1(self):
-        return extended_precision(np.ones(len(self.t))) * u.Unit('')
+        return np.longdouble(np.ones(len(self.t))) * u.Unit('')
 
     def d_eps1_d_TASC(self):
         result = np.empty(len(self.t))
@@ -77,7 +76,7 @@ class ELL1BaseModel(PSR_BINARY):
         return self.EPS2 + self.ttasc() * self.EPS2DOT
 
     def d_eps2_d_EPS2(self):
-        return extended_precision(np.ones(len(self.t))) * u.Unit('')
+        return np.longdouble(np.ones(len(self.t))) * u.Unit('')
 
     def d_eps2_d_TASC(self):
         result = np.empty(len(self.t))
