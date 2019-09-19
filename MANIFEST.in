@@ -1,5 +1,6 @@
 include versioneer.py
-graft src
+include pint/datafiles/*
 global-exclude *.py[co]
 global-exclude __pycache__
 global-exclude *.egg-info
+
