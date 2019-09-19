@@ -274,8 +274,11 @@ these are installed through PINT's ``requirements.txt``.
      It may require an additional installation step.
    - There is a JupyterLab git plugin that may make working with versioned
      notebooks easier.
+   - ``editorconfig`` allows PINT to specify how your editor should format
+     PINT files in a way that many editors can understand (though some,
+     including vim and emacs, require a plugin to notice).
 
-Your editor, whether it is emacs, vi, JupyterLab, Spyder, or some more
+Your editor, whether it is emacs, vim, JupyterLab, Spyder, or some more
 graphical tool, can probably be made to understand that you are editing
 python and do things like highlight syntax, offer tab completion on
 identifiers, automatically indent text, automatically strip trailing
