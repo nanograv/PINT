@@ -21,3 +21,4 @@ nbconvert
 nbsphinx
 nbdime
 pandoc
+hypothesis

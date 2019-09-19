@@ -164,7 +164,7 @@ def time_from_mjd_string(s, scale='utc'):
 
 
 def time_from_longdouble(t, scale='utc'):
-    st = longdouble2string(t)
+    st = longdouble2str(t)
     return time_from_mjd_string(st, scale)
 
 
@@ -317,10 +317,11 @@ def has_astropy_unit(x):
     return hasattr(x, 'unit') and isinstance(x.unit, u.core.UnitBase)
 
 
-def longdouble2string(x):
+def longdouble2str(x):
     """Convert numpy longdouble to string"""
     return repr(x)
-
+# Bad name!
+longdouble2string = longdouble2str
 
 def MJD_string2longdouble(s):
     """Convert a MJD string to a numpy longdouble."""
@@ -346,6 +347,8 @@ def ddouble2ldouble(t1, t2, format='jd'):
 
 def str2longdouble(str_data):
     """Return a numpy long double scalar from the input string, using strtold()."""
+    if not isinstance(str_data, str):
+        raise TypeError("Need a string: {!r}".format(str_data))
     input_str = str_data.translate(maketrans('Dd', 'ee'))
     return np.longdouble(input_str.encode())
 
