@@ -17,7 +17,7 @@ branch = True
 
 [paths]
 source =
-    src
+    ..
     */site-packages
 
 [report]
