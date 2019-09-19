@@ -13,16 +13,31 @@ Prerequisites
 
 * The current list of required python packages is in
 
-  - requirements_dev.txt_ - python packages needed to work on PINT
-  - requirements.txt_ - python packages needed to use PINT
+  - setup.cfg_ - python packages needed to use PINT
+  - requirements.txt_ - python packages needed to work on PINT
 
-.. _requirements_dev.txt: https://github.com/nanograv/PINT/blob/master/requirements_dev.txt
-.. _requirements.txt: https://github.com/nanograv/PINT/blob/master/requirements.txt
+.. _setup.cfg: https://github.com/nanograv/PINT/blob/master/setup.cfg
+.. _requirements_dev.txt: https://github.com/nanograv/PINT/blob/master/requirements.txt
+
+* It is probably best to use and especially to work on PINT from within
+  a virtualenv_; this lets you install packages as required without the
+  help of a system administrator and without disturbing other users or
+  even other pieces of python software. The tool virtualenvwerapper_
+  is a reasonable way to manage virtualenv. The tool conda_ provides
+  similar isolation and more powerful package installation; while PINT
+  is not itself available from conda, you can set up a conda environment
+  to get access to tools like numpy, scipy, matplotlib, and jupyter-lab,
+  then install PINT and any remaining dependencies with pip.
+
+.. _virtualenv: https://virtualenv.pypa.io/en/latest/
+.. _virtualenvwrapper: https://virtualenvwrapper.readthedocs.io/en/latest/
+.. _conda: https://docs.conda.io/en/latest/
 
 * The simplest way to install the prerequisites, if you are in a virtualenv or
-  want to install them in the system python is to use pip [1]_::
+  want to install them in the system python, is to use pip [1]_. Dependencies
+  of PINT itself will be automatically installed when you install it with pip.
+  If you want to install tools needed only to work on PINT you can run::
 
-    pip install -r requirements_dev.txt
     pip install -r requirements.txt
 
   If you want to install them in your local user site-packages, rather than the
@@ -78,13 +93,13 @@ you can install it with:
 
 .. code-block:: console
 
-  $ python setup.py install
+  $ pip install .
 
-Or, synonymously:
+Or, alternatively:
 
 .. code-block:: console
 
-  $ make install
+  $ python setup.py install
 
 Or, to install it in your local user site-packages
 
@@ -97,6 +112,12 @@ take effect without having to re-run setup.py, you can install using links
 to the source itself, like this (again append ``--user`` if you want
 to install in your per-user site-packages location). *This is how most PINT
 developers work*:
+
+.. code-block:: console
+
+  $ pip install -e .
+
+Or, alternatively:
 
 .. code-block:: console
 
@@ -116,6 +137,12 @@ the test suite.  This can be done using::
 or::
 
   pytest
+
+If you want to test the distribution on multiple versions of python and
+get code coverage reports (most useful for developers) you can use the
+tool tox_::
+
+   tox
 
 Build the documentation
 -----------------------
