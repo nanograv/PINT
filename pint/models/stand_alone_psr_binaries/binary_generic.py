@@ -8,13 +8,13 @@ import re
 from pint import utils as ut
 import astropy.units as u
 import astropy.constants as c
+from pint import ls, Tsun
+from .binary_orbits import OrbitPB
 try:
     from astropy.erfa import DAYSEC as SECS_PER_DAY
 except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
-from pint import ls,GMsun,Tsun,light_second_equivalency
-from .binary_orbits import OrbitPB
 
 class PSR_BINARY(object):
     """A base (generic) object for psr binary models. In this class, a set of
@@ -95,19 +95,21 @@ class PSR_BINARY(object):
     def __init__(self,):
         # Necessary parameters for all binary model
         self.binary_name = None
-        self.param_default_value = {'PB':np.longdouble(10.0)*u.day,
-                           'PBDOT':0.0*u.day/u.day,
-                           'ECC': 0.0*u.Unit('') ,
-                           'EDOT':0.0/u.second ,
-                           'A1':10.0*ls,'A1DOT':0.0*ls/u.second,
-                           'T0':np.longdouble(54000.0)*u.day,
-                           'OM':0.0*u.deg,
-                           'OMDOT':0.0*u.deg/u.year,
-                           'XPBDOT':0.0*u.day/u.day,
-                           'M2':0.0*u.M_sun,
-                           'SINI':0*u.Unit(''),
-                           'GAMMA':0*u.second,
-                           'FB0': 1.1574e-6*u.Unit("")/u.second}
+        self.param_default_value = {
+            'PB': np.longdouble(10.0)*u.day,
+            'PBDOT': 0.0*u.day/u.day,
+            'ECC': 0.0*u.Unit('') ,
+            'EDOT': 0.0/u.second ,
+            'A1': 10.0*ls,'A1DOT':0.0*ls/u.second,
+            'T0': np.longdouble(54000.0)*u.day,
+            'OM': 0.0*u.deg,
+            'OMDOT': 0.0*u.deg/u.year,
+            'XPBDOT': 0.0*u.day/u.day,
+            'M2': 0.0*u.M_sun,
+            'SINI': 0*u.Unit(''),
+            'GAMMA': 0*u.second,
+            'FB0': 1.1574e-6*u.Unit("")/u.second,
+        }
         # For Binary phase calculation
         self.param_default_value.update({'P0': 1.0*u.second,
                                          'P1': 0.0*u.second/u.second,
@@ -342,6 +344,7 @@ class PSR_BINARY(object):
             in radians.
         """
         if hasattr(eccentricity,'unit'):
+            # FIXME: isn't this an error?
             e = np.longdouble(eccentricity).value
         else:
             e = eccentricity

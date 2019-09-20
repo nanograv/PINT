@@ -42,13 +42,13 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.format in ("mjd","jd", "unix"):
-        # These formats require conversion from string to longdouble first
+        # These formats require conversion from string to long double first
         fmt = args.format
         # Never allow format == 'mjd' because it fails when scale is 'utc'
         # Change 'mjd' to 'pulsar_mjd' to deal with this.
         if fmt == "mjd":
             fmt = "pulsar_mjd"
-        t = Time(np.longdouble(args.time),scale=args.timescale,format=fmt,
+        t = Time(np.longdouble(args.time), scale=args.timescale, format=fmt,
             precision=9)
         print(t)
     else:

@@ -104,7 +104,7 @@ class DDmodel(PSR_BINARY):
     def d_omega_d_OM(self):
         """dOmega/dOM = 1
         """
-        return np.longdouble(np.ones((len(self.tt0))))*u.Unit('')
+        return np.ones(len(self.tt0), dtype=np.longdouble)*u.Unit('')
 
     def d_omega_d_OMDOT(self):
         """dOmega/dOMDOT = 1/n*nu
@@ -138,7 +138,8 @@ class DDmodel(PSR_BINARY):
                 return getattr(self,dername)()
             else:
                 par_obj = getattr(self, par)
-                return np.longdouble(np.zeros(len(self.tt0)))* u.Unit("") / par_obj.unit
+                return (np.zeros(len(self.tt0), dtype=np.longdouble)
+                        * (u.Unit("") / par_obj.unit))
 
     ##########
     def eTheta(self):

@@ -1,18 +1,17 @@
 #! /usr/bin/env python
-import time, sys, os, numpy
-import pint.models as tm
-from pint.phase import Phase
-from pint import toa
-from pint.residuals import Residuals
+import os
+import time
+
 import astropy.units as u
-
-#import matplotlib
-#matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
-
+import numpy as np
 from astropy import log
 
-from pinttestdata import testdir, datadir
+import pint.models as tm
+from pint import toa
+from pint.residuals import Residuals
+from pinttestdata import datadir
+
 
 def test_model():
     log.setLevel('ERROR')
@@ -58,38 +57,38 @@ def test_model():
     # tempo2_vals = tempo2_utils.general2(parfile, timfile,
     #                                     ['tt2tb', 'roemer', 'post_phase',
     #                                      'shapiro', 'shapiroJ'])
-    tempo2_vals = numpy.genfromtxt(parfile + '.tempo2_test', names=True, comments = '#',
-                                   dtype = 'float128')
+    tempo2_vals = np.genfromtxt(parfile + '.tempo2_test', names=True, comments='#',
+                                   dtype=np.longdouble)
     t2_resids = tempo2_vals['post_phase'] / float(m.F0.value) * 1e6 * u.us
     diff_t2 = (resids_us - t2_resids).to(u.ns)
     diff_t2 -= diff_t2.mean()
-    log.info("Max resid diff between PINT and T2: %.2f ns" % numpy.fabs(diff_t2).max().value)
+    log.info("Max resid diff between PINT and T2: %.2f ns" % np.fabs(diff_t2).max().value)
     log.info("Std resid diff between PINT and T2: %.2f ns" % diff_t2.std().value)
 
-    assert numpy.fabs(diff_t2).max() < 10.0 * u.ns
+    assert np.fabs(diff_t2).max() < 10.0 * u.ns
 
     # run tempo1 also, if the tempo_utils module is available
     did_tempo1 = False
     try:
         import tempo_utils
         log.info("Running TEMPO1...")
-        t1_result = numpy.genfromtxt(t1_parfile + '.tempo_test', names=True, comments = '#',
-                                    dtype = 'float128')
+        t1_result = np.genfromtxt(t1_parfile + '.tempo_test', names=True, comments='#',
+                                     dtype=np.longdouble)
         t1_resids = t1_result['residuals_phase']/ float(m.F0.value) * 1e6 * u.us
         did_tempo1 = True
         diff_t1 = (resids_us - t1_resids).to(u.ns)
         diff_t1 -= diff_t1.mean()
-        log.info("Max resid diff between PINT and T1: %.2f ns" % numpy.fabs(diff_t1).max().value)
+        log.info("Max resid diff between PINT and T1: %.2f ns" % np.fabs(diff_t1).max().value)
         log.info("Std resid diff between PINT and T1: %.2f ns" % diff_t1.std().value)
         diff_t2_t1 = (t2_resids - t1_resids).to(u.ns)
         diff_t2_t1 -= diff_t2_t1.mean()
-        log.info("Max resid diff between T1 and T2: %.2f ns" % numpy.fabs(diff_t2_t1).max().value)
+        log.info("Max resid diff between T1 and T2: %.2f ns" % np.fabs(diff_t2_t1).max().value)
         log.info("Std resid diff between T1 and T2: %.2f ns" % diff_t2_t1.std().value)
     except:
         pass
 
     if did_tempo1 and not planets:
-        assert numpy.fabs(diff_t1).max() < 32.0 * u.ns
+        assert np.fabs(diff_t1).max() < 32.0 * u.ns
 
     def do_plot():
         plt.clf()

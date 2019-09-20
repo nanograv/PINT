@@ -265,7 +265,7 @@ class pintpulsar(object):
     def toas(self, updatebats=False):
         """Return TDB arrival times in MJDs"""
 
-        # TODO: do high-precision as np.longdouble
+        # TODO: do high-precision as long double
 
         return np.array(self.t.table['tdbld'])[~self.deleted]
 
@@ -404,7 +404,7 @@ class pintpulsar(object):
         - if `which` is 'all', all parameters;
         - if `which` is a sequence, all parameters listed there.
 
-        Parameter values are returned as a numpy longdouble array.
+        Parameter values are returned as a numpy long double array.
 
         Values to be set can be passed as a numpy array, sequence (in which case they
         are taken to correspond to parameters in the order given by `pars(which=which)`),
@@ -412,7 +412,7 @@ class pintpulsar(object):
 
         Notes:
 
-        - Passing values as anything else than numpy longdoubles may result in loss of precision.
+        - Passing values as anything else than numpy long double may result in loss of precision.
         - Not all parameters in the selection need to be set.
         - Setting an unset parameter sets its `set` flag (obviously).
         - Unlike in earlier libstempo versions, setting a parameter does not set its error to zero."""
@@ -450,7 +450,7 @@ class pintpulsar(object):
     def designmatrix(self,updatebats=True,fixunits=True,fixsigns=True,incoffset=True):
         """tempopulsar.designmatrix(updatebats=True,fixunits=True,incoffset=True)
 
-        Returns the design matrix [nobs x (ndim+1)] as a numpy.longdouble array
+        Returns the design matrix [nobs x (ndim+1)] as a long double array
         for current fit-parameter values. If fixunits=True, adjust the units
         of the design-matrix columns so that they match the tempo2
         parameter units. If fixsigns=True, adjust the sign of the columns

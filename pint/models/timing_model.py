@@ -710,15 +710,15 @@ class TimingModel(object):
             h = ori_value * step
         parv = [par.value - h, par.value + h]
 
-        phaseI = np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.cycle
-        phaseF = np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.cycle
+        phase_i = np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.cycle
+        phase_f = np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.cycle
         for ii, val in enumerate(parv):
             par.value = val
             ph = self.phase(toas)
-            phaseI[:,ii] = ph.int
-            phaseF[:,ii] = ph.frac
-        resI = (- phaseI[:,0] + phaseI[:,1])
-        resF = (- phaseF[:,0] + phaseF[:,1])
+            phase_i[:,ii] = ph.int
+            phase_f[:,ii] = ph.frac
+        resI = (- phase_i[:,0] + phase_i[:,1])
+        resF = (- phase_f[:,0] + phase_f[:,1])
         result = (resI + resF)/(2.0 * h * unit)
         # shift value back to the original value
         par.quantity = ori_value

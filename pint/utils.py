@@ -18,7 +18,7 @@ except AttributeError:
     # fallback for Python 2
     from string import maketrans
 
-if np.finfo(np.longdouble).eps > 2e-19 or not hasattr(np, "float128"):
+if np.finfo(np.longdouble).eps > 2e-19:
     raise ValueError("This platform does not support extended precision "
                      "floating-point, and PINT cannot run without this.")
 
@@ -311,7 +311,7 @@ def MJD_string2longdouble(s):
         Convert a MJD string to a numpy longdouble
     """
     ii, ff = s.split(".")
-    return np.longfloat(ii) + np.longfloat("0."+ff)
+    return np.longdouble(ii) + np.longdouble("0."+ff)
 
 
 def ddouble2ldouble(t1, t2, format='jd'):
@@ -321,7 +321,6 @@ def ddouble2ldouble(t1, t2, format='jd'):
         converts them to a single long double MJD value
     """
     if format == 'jd':
-    # determine if the two double are JD time
         t1 = np.longdouble(t1) - np.longdouble(2400000.5)
         t = np.longdouble(t1) + np.longdouble(t2)
         return t

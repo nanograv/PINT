@@ -21,7 +21,8 @@ class TestD_phase_d_toa(unittest.TestCase):
         self.plc.read_polyco_file('B1855_polyco.dat', 'tempo')
     def TestD_phase_d_toa(self):
         pint_d_phase_d_toa = self.modelB1855.d_phase_d_toa(self.toasB1855)
-        mjd = np.array([np.longdouble(t.jd1 - ut.DJM0)+np.longdouble(t.jd2) for t in self.toasB1855.table['mjd']])
+        mjd = np.array([np.longdouble(t.jd1 - ut.DJM0)+np.longdouble(t.jd2)
+                        for t in self.toasB1855.table['mjd']])
         tempo_d_phase_d_toa = self.plc.eval_spin_freq(mjd)
         diff = pint_d_phase_d_toa.value - tempo_d_phase_d_toa
         relative_diff = diff/tempo_d_phase_d_toa
