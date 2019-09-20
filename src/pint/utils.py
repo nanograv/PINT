@@ -224,32 +224,19 @@ def time_to_mjd_string_array(t, prec=15):
     return s
 
 
+longdouble_mjd_eps = (70000*u.day*np.finfo(np.longdouble).eps).to(u.ns)
+
+
 def time_to_longdouble(t):
     """ Return an astropy Time value as MJD in longdouble
 
-    SUGGESTION(@paulray): This function is at least partly redundant with
-    ddouble2ldouble() below...
-
-    Also, is it certain that this calculation retains the full precision?
+    The returned value is accurate to within a nanosecond, while the precision of long
+    double MJDs (near the present) is roughly 0.7 ns.
 
     """
-    try:
-        return np.longdouble(t.jd1 - DJM0) + np.longdouble(t.jd2)
-    except:
-        return np.longdouble(t)
-
-
-def GEO_WGS84_to_ITRF(lon, lat, hgt):
-    """Convert lat/long/height to rectangular.
-
-    Convert WGS-84 references lon, lat, height (using astropy
-    units) to ITRF x,y,z rectangular coords (m)
-
-    """
-    x, y, z = astropy.time.erfa_time.era_gd2gc(1, lon.to(u.rad).value,
-                                               lat.to(u.rad).value,
-                                               hgt.to(u.m).value)
-    return x * u.m, y * u.m, z * u.m
+    i_djm0 = np.longdouble(np.floor(DJM0))
+    f_djm0 = np.longdouble(DJM0)-i_djm0
+    return (np.longdouble(t.jd1) - i_djm0) + (np.longdouble(t.jd2)-f_djm0)
 
 
 def numeric_partial(f, args, ix=0, delta=1e-6):
@@ -307,46 +294,26 @@ def check_all_partials(f, args, delta=1e-6, atol=1e-4, rtol=1e-4):
 
 
 def has_astropy_unit(x):
-    """Check whether x has an associated unit.
+    """Test whether x has a unit attribute containing an astropy unit.
 
-    Return True/False if x has an astropy unit type associated with it. This is
-    useful, because different data types can still have units associated with
-    them.
+    This is useful, because different data types can still have units
+    associated with them.
 
     """
     return hasattr(x, 'unit') and isinstance(x.unit, u.core.UnitBase)
 
 
 def longdouble2str(x):
-    """Convert numpy longdouble to string"""
+    """Convert numpy longdouble to string."""
     return repr(x)
-# Bad name!
-longdouble2string = longdouble2str
-
-def MJD_string2longdouble(s):
-    """Convert a MJD string to a numpy longdouble."""
-    ii, ff = s.split(".")
-    return np.longdouble(ii) + np.longdouble("0."+ff)
-
-
-def ddouble2ldouble(t1, t2, format='jd'):
-    """Convert double-double to long double.
-
-    inputs two double-precision numbers representing JD times,
-    converts them to a single long double MJD value
-
-    """
-    if format == 'jd':
-        t1 = np.longdouble(t1) - np.longdouble(2400000.5)
-        t = np.longdouble(t1) + np.longdouble(t2)
-        return t
-    else:
-        t = np.longdouble([t1, t2])
-    return t[0]+t[1]
 
 
 def str2longdouble(str_data):
-    """Return a numpy long double scalar from the input string, using strtold()."""
+    """Return a long double from the input string.
+
+    Accepts Fortran-style exponent notation (1.0d2).
+
+    """
     if not isinstance(str_data, str):
         raise TypeError("Need a string: {!r}".format(str_data))
     input_str = str_data.translate(maketrans('Dd', 'ee'))
@@ -421,17 +388,25 @@ def split_prefixed_name(name):
 
 def data2longdouble(data):
     """Return a numpy long double scalar form different type of data
-       Parameters
-       ---------
-       data : str, ndarray, or a number
-       Return
-       ---------
-       numpy long double type of data.
+
+    If a string, permit Fortran-format scientific notation (1.0d2). Otherwise just use
+    np.longdouble to convert. In particular if ``data`` is an array, convert all the
+    elements.
+
+    Parameters
+    ----------
+    data : str, np.array, or number
+
+    Returns
+    -------
+    np.longdouble
+
     """
     if type(data) is str:
         return str2longdouble(data)
     else:
         return np.longdouble(data)
+
 
 def taylor_horner(x, coeffs):
     """Evaluate a Taylor series of coefficients at x via the Horner scheme.
@@ -476,6 +451,7 @@ def taylor_horner_deriv(x, coeffs, deriv_order=1):
         result = result * x / fact + coeff
         fact -= 1.0
     return result
+
 
 def is_number(s):
     """Check if it is a number string.

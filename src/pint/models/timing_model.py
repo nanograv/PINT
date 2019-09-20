@@ -731,9 +731,9 @@ class TimingModel(object):
             ph = self.phase(toas)
             phase_i[:,ii] = ph.int
             phase_f[:,ii] = ph.frac
-        resI = (- phase_i[:,0] + phase_i[:,1])
-        resF = (- phase_f[:,0] + phase_f[:,1])
-        result = (resI + resF)/(2.0 * h * unit)
+        res_i = (- phase_i[:,0] + phase_i[:,1])
+        res_f = (- phase_f[:,0] + phase_f[:,1])
+        result = (res_i + res_f)/(2.0 * h * unit)
         # shift value back to the original value
         par.quantity = ori_value
         return result

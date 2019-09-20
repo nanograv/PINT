@@ -19,8 +19,8 @@ parameters" and "mask parameters" depending on how they occur in the
 """
 from __future__ import absolute_import, print_function, division
 from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
-    time_to_longdouble, is_number, time_from_longdouble, str2longdouble, \
-    longdouble2string, data2longdouble, split_prefixed_name
+    time_to_longdouble, time_from_longdouble, str2longdouble, \
+    longdouble2str, data2longdouble, split_prefixed_name
 import numpy as np
 import astropy.time as time
 from astropy import log
@@ -145,7 +145,7 @@ class Parameter(object):
                     log.warning(wmsg)
                 try:
                     if hasattr(self.quantity, 'unit'):
-                        _ = self.quantity.to(unt)
+                        self.quantity.to(unt)
                 except ValueError:
                     log.warning('The value unit is not compatible with'
                                 ' parameter units right now.')
@@ -335,11 +335,12 @@ class Parameter(object):
         return line + "\n"
 
     def from_parfile_line_regular(self, line):
-        """
-        Parse a parfile line into the current state of the parameter.
+        """Parse a parfile line into the current state of the parameter.
+
         Returns True if line was successfully parsed, False otherwise.
-        Notes
-        -----
+
+        Note
+        ----
         The accepted format:
             NAME value
             NAME value fit_flag
@@ -360,6 +361,7 @@ class Parameter(object):
             self.set(k[1])
         if len(k) >= 3:
             try:
+                # FIXME! this is not right
                 fit_flag = int(k[2])
                 if fit_flag == 0:
                     self.frozen = True
@@ -370,9 +372,10 @@ class Parameter(object):
                 else:
                     ucty = fit_flag
             except ValueError:
-                if is_number(k[2]):
+                try:
+                    str2longdouble(k[2])
                     ucty = k[2]
-                else:
+                except ValueError:
                     errmsg = 'Unidentified string ' + k[2] + ' in'
                     errmsg += ' parfile line ' + k
                     raise ValueError(errmsg)
@@ -500,23 +503,26 @@ class floatParameter(Parameter):
 
     def set_quantity_float(self, val):
         """Set value method specific for float parameter
+
         accept format
+
         1. Astropy quantity
         2. float
         3. string
+
         """
         # Check long_double
         if not self._long_double:
             setfunc_with_unit = lambda x: x
             setfunc_no_unit = lambda x: fortran_float(x)
         else:
-            setfunc_with_unit = lambda x: data2longdouble(x.value)*x.unit
+            setfunc_with_unit = lambda x: data2longdouble(x.to(x.unit).value)*x.unit
             setfunc_no_unit = lambda x:  data2longdouble(x)
 
         # First try to use astropy unit conversion
         try:
             # If this fails, it will raise UnitConversionError
-            _ = val.to(self.units)
+            val.to(self.units)
             result = setfunc_with_unit(val)
         except AttributeError:
             # This will happen if the input value did not have units
@@ -537,9 +543,9 @@ class floatParameter(Parameter):
         if not self._long_double:
             result = str(quan.to(self.units).value)
         else:
-            result = longdouble2string(quan.to(self.units).value)
+            result = longdouble2str(quan.to(self.units).value)
             #try:
-            #    result = longdouble2string(quan.to(self.units).value)
+            #    result = longdouble2str(quan.to(self.units).value)
             #except AttributeError:
             #    result = str(quan)
         return result
@@ -778,7 +784,7 @@ class MJDParameter(Parameter):
         return result
 
     def print_uncertainty(self, uncertainty):
-        return longdouble2string(self.uncertainty_value)
+        return longdouble2str(self.uncertainty_value)
 
 
 class AngleParameter(Parameter):
@@ -851,14 +857,16 @@ class AngleParameter(Parameter):
 
     def set_quantity_angle(self, val):
         """ This function is to set value to angle parameters.
+
         Accepted format:
         1. Astropy angle object
         2. float
         3. number string
         """
         if isinstance(val, numbers.Number):
-            result = Angle(data2longdouble(val) * self.units)
+            result = Angle(np.longdouble(val) * self.units)
         elif isinstance(val, str):
+            # FIXME: what if the user included a unit suffix?
             result = Angle(val + self.unitsuffix)
         elif hasattr(val, 'unit'):
             result = Angle(val.to(self.units))
@@ -873,12 +881,8 @@ class AngleParameter(Parameter):
         if isinstance(val, numbers.Number):
             result =Angle(val * self.unit_identifier[self._str_unit.lower()][2])
         elif isinstance(val, str):
-
-            result =Angle(str2longdouble(val) * \
-                          self.unit_identifier[self._str_unit.lower()][2])
-            #except:
-            #    raise ValueError('Srting ' + val + ' can not be converted to'
-            #                     ' astropy angle.')
+            result = Angle(str2longdouble(val) *
+                           self.unit_identifier[self._str_unit.lower()][2])
         elif hasattr(val, 'unit'):
             result = Angle(val.to(self.unit_identifier[self._str_unit.lower()][2]))
         else:
@@ -1345,9 +1349,10 @@ class maskParameter(floatParameter):
                 else:
                     ucty = fit_flag
             except ValueError:
-                if is_number(k[3 + len_key_v]):
+                try:
+                    str2longdouble(k[3 + len_key_v])
                     ucty = k[3 + len_key_v]
-                else:
+                except ValueError:
                     errmsg = 'Unidentified string ' + k[3 + len_key_v] + ' in'
                     errmsg += ' parfile line ' + k
                     raise ValueError(errmsg)
@@ -1577,6 +1582,6 @@ class pairParameter(floatParameter):
             quan0 = str(quan[0].to(self.units).value)
             quan1 = str(quan[1].to(self.units).value)
         else:
-            quan0 = longdouble2string(quan[0].to(self.units))
-            quan1 = longdouble2string(quan[1].to(self.units))
+            quan0 = longdouble2str(quan[0].to(self.units).value)
+            quan1 = longdouble2str(quan[1].to(self.units).value)
         return quan0 + ' ' + quan1

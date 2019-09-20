@@ -1,9 +1,10 @@
 import tempo_utils as t1u
-from pint.utils import longdouble2string
+from pint.utils import longdouble2str
 import argparse
 
 def get_tempo_result(parfile, timfile):
     """This function is to get the results from tempo and write them to a file.
+
     Parameter
     ---------
     parfile : str
@@ -26,7 +27,7 @@ def get_tempo_result(parfile, timfile):
     outstr += '\n'
     f.write(outstr)
     for res in t1_resids:
-        outstr = longdouble2string(res) + '\n'
+        outstr = longdouble2str(res) + '\n'
         f.write(outstr)
     f.close()
 
