@@ -37,14 +37,10 @@ Installing
 ----------
 
 Currently PINT is not available via PyPI or Conda. To install it you must
-obtain the source from GitHub (for example by cloning it), then ensure that
-all PINT's dependencies are available::
+obtain the source from GitHub (for example by cloning it), then install
+it, ensuring that all dependencies needed to run PINT are available::
 
-    $ pip install -r requirements.txt
-
-Then you can just install PINT::
-
-    $ python setup.py install
+    $ pip install .
 
 Be aware that both PINT and AstroPy require data files from the Internet,
 for example the International Earth Rotation Service bulletins, which are

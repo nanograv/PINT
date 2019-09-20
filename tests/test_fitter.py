@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 import time, sys, os
+import pytest
 import pint.models as tm
 from pint.phase import Phase
 from pint import toa
@@ -13,6 +14,10 @@ import numpy
 
 from pinttestdata import testdir, datadir
 
+
+@pytest.mark.skipif(
+    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
+)
 def test_fitter():
     # Get model
 
