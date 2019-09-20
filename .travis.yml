@@ -36,7 +36,7 @@ matrix:
           name: "Documentation build"
           python: "3.7"
           after_success: []
-    allowed_failures:
+    allow_failures:
         - script: flake8-diff
 sudo: required
 
