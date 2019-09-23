@@ -15,6 +15,10 @@ PINT
     :target: https://landscape.io/github/nanograv/PINT/master
     :alt: Code Health
 
+.. image:: https://badges.gitter.im/nanograv-PINT/community.svg
+   :target: https://gitter.im/nanograv-PINT/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
+   :alt: Gitter chat
+
 PINT is not TEMPO3
 ------------------
 
