@@ -294,6 +294,7 @@ def choose_model(parfile, category_order=None, name=None,
         ll = l.split()
         k = ll[0]
         if k in par_dict:
+            # FIXME: what happens with JUMPs?
             log.info("Lines with duplicate keys in par file: {} and {}"
                      .format([k]+par_dict[k], ll))
         par_dict[k] = ll[1:]
