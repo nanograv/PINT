@@ -3,21 +3,23 @@ PINT
 
 .. image:: https://travis-ci.org/nanograv/PINT.svg?branch=master
     :target: https://travis-ci.org/nanograv/PINT
+    :alt: Build Status
 
 .. image:: https://readthedocs.org/projects/nanograv-pint/badge/?version=latest
     :target: http://nanograv-pint.readthedocs.io/en/latest/?badge=latest
-    :alt: Documentation Status
+    :alt: Documentation Build Status
 
 .. image:: https://coveralls.io/repos/github/nanograv/PINT/badge.svg?branch=master
     :target: https://coveralls.io/github/nanograv/PINT?branch=master
+    :alt: Code Coverage
 
 .. image:: https://landscape.io/github/nanograv/PINT/master/landscape.svg?style=flat
     :target: https://landscape.io/github/nanograv/PINT/master
     :alt: Code Health
 
 .. image:: https://badges.gitter.im/nanograv-PINT/community.svg
-   :target: https://gitter.im/nanograv-PINT/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
-   :alt: Gitter chat
+    :target: https://gitter.im/nanograv-PINT/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
+    :alt: Gitter chat
 
 PINT is not TEMPO3
 ------------------
