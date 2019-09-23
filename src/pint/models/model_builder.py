@@ -9,7 +9,7 @@ from collections import defaultdict
 
 from astropy import log
 
-from pint.utils import split_prefixed_name, interesting_lines, lines_of
+from pint.utils import split_prefixed_name, interesting_lines, lines_of, PrefixError
 
 from .timing_model import Component, TimingModel, MissingParameter
 
@@ -348,11 +348,44 @@ def choose_model(parfile, category_order=None, name=None,
         except KeyError:
             pass
     models_in_order.extend(v for k, v in sorted(models_to_use.items()))
-    # FIXME: Handle models with arrays of parameters
-    # If there are any prefix models or mask models we need to go back
-    # and fill out their parameter sets based on what's in the par file
+
     tm = TimingModel(name, models_in_order)
     tm.discarded_components = discarded_components
+
+    # FIXME: this should go in TimingModel for when you try to
+    # add conflicting components
+    alias_map = {}
+    for prefix_type in ['prefixParameter', 'maskParameter']:
+        for pn in tm.get_params_of_type(prefix_type):
+            par = getattr(tm,  pn)
+            for a in [par.prefix] + par.prefix_aliases:
+                if a in alias_map:
+                    raise ValueError(
+                        "Two prefix/mask parameters have the same "
+                        "alias {}: {} and {}".format(a,alias_map[a],par))
+                alias_map[a] = par
+
+    leftover_params = par_dict.copy()
+    for k in tm.get_params_mapping():
+        leftover_params.pop(k, None)
+        for a in getattr(tm, k).aliases:
+            leftover_params.pop(a, None)
+
+    for p in leftover_params:
+        try:
+            pre,idxstr,idxV = split_prefixed_name(p)
+            try:
+                par = alias_map[pre]
+            except KeyError:
+                raise ValueError("Mystery parameter {}".format(p))
+            component = tm.get_params_mapping()[par.name]
+            new_parameter = par.new_param(idxV)
+            if hasattr(tm, new_parameter.name):
+                raise ValueError("Received duplicate parameter {}".format(new_parameter.name))
+            tm.add_param_from_top(new_parameter, component)
+        except PrefixError:
+            pass
+
     return tm
 
 

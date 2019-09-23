@@ -11,8 +11,6 @@ import numpy as np
 from astropy import log
 from astropy.time.utils import day_frac
 
-from .str2ld import str2ldarr1
-
 try:
     from astropy.erfa import DJM0, d2dtf
 except ImportError:
