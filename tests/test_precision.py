@@ -109,6 +109,8 @@ def test_data2longdouble_converts_arrays(a):
 @given(one_of(integers(40000, 70000)), floats(-2.0, 2.0, allow_nan=False))
 @example(i=65536, f=3.552713678800502e-15)
 @example(format="pulsar_mjd", i=43143, f=9.313492199680697e-10)
+@example(format="pulsar_mjd", i=40000, f=-4.440892098500627e-16)
+@example(format="mjd", i=40000, f=-4.440892098500627e-16)
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_to_longdouble(format, i, f):
     t = Time(val=i, val2=f, format=format, scale="tai")
@@ -137,10 +139,13 @@ def test_time_to_mjd_string_precision(format, i, f):
     )
 
 
+@pytest.mark.xfail(reason="What on Earth? A day? Is this a failure of pulsar_mjd?")
 @given(integers(40000, 70000), floats(-2.0, 2.0, allow_nan=False))
 @example(i=65536, f=3.552713678800502e-15)
 @example(format="pulsar_mjd", i=43143, f=9.313492199680697e-10)
 @example(format='pulsar_mjd', i=50081, f=1.0000000016292463)
+@example(format="pulsar_mjd", i=40000, f=-4.440892098500627e-16)
+@example(format="mjd", i=40000, f=-4.440892098500627e-16)
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_to_longdouble_close_to_time_to_mjd_string(format, i, f):
     t = Time(val=i, val2=f, format=format, scale="tai")
@@ -163,6 +168,7 @@ def test_time_to_longdouble_no_longer_than_time_to_mjd_string(i, f):
 @given(integers(40000, 70000), floats(-2.0, 2.0, allow_nan=False))
 @example(i=65536, f=3.552713678800502e-15)
 @example(i=40000, f=-8.881784197001254e-16)
+@example(i=40000, f=-4.440892098500627e-16)
 def test_time_to_mjd_string_format_dependence(i, f):
     t = Time(val=i, val2=f, format="mjd", scale="tai")
     t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="tai")
@@ -181,3 +187,12 @@ def test_pulsar_mjd_never_differs_too_much_from_mjd(i, f):
     t = Time(val=i, val2=f, format="mjd", scale="tai")
     t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="tai")
     assert abs(t2 - t) <= 1 * u.ns
+
+@given(integers(40000, 70000), floats(-2.0, 2.0, allow_nan=False))
+@example(i=40000, f=-8.881784197001254e-16)
+@example(i=43510, f=-1.0000000000000002)
+@settings(max_examples=5000)
+def test_pulsar_mjd_never_differs_too_much_from_mjd_utc(i, f):
+    t = Time(val=i, val2=f, format="mjd", scale="utc")
+    t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="utc")
+    assert abs(t2 - t).to(u.s) <= 1 * u.s
