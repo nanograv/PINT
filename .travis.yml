@@ -13,7 +13,7 @@ matrix:
           git:
               clone: false
         - script: flake8-diff
-          install: 
+          install:
             - pip install -r requirements_dev.txt
             - pip install -r requirements.txt
             - pip install .
@@ -28,7 +28,7 @@ matrix:
         - name: "tox"
           sudo: false
           language: python
-          python: 
+          python:
             - "3.7"
             - "2.7"
           install: pip install tox-travis
@@ -37,7 +37,7 @@ matrix:
           name: "Example notebooks (python 3.7)"
           python: "3.7"
         - script: make docs-build
-          install: 
+          install:
             - pip install -r requirements_dev.txt
             - pip install -r requirements.txt
             - pip install .
@@ -81,3 +81,12 @@ after_success:
 cache:
   directories:
     - $HOME/.astropy/cache
+
+notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/4af3554bec203d05337e
+    on_success: change  # options: [always|never|change] default: always
+    on_failure: always  # options: [always|never|change] default: always
+    on_start: never     # options: [always|never|change] default: always
+
