@@ -4,9 +4,23 @@ from __future__ import absolute_import, division, print_function
 
 from tempfile import NamedTemporaryFile
 
-import pytest
-
 from pint.utils import open_or_use, taylor_horner, lines_of, interesting_lines
+import astropy.units as u
+import numpy as np
+import pytest
+from hypothesis import assume, given
+from hypothesis.extra.numpy import array_shapes, arrays, scalar_dtypes
+from hypothesis.strategies import (
+    composite,
+    frozensets,
+    integers,
+    just,
+    sampled_from,
+    slices,
+)
+from numpy.testing import assert_array_equal
+
+from pint.utils import PosVel, taylor_horner
 
 
 def test_taylor_horner_basic():
@@ -102,3 +116,118 @@ def test_interesting_lines_input_validation():
     with pytest.raises(ValueError):
         for l in interesting_lines([""], comments=" C "):
             pass
+
+
+def test_posvel_rejects_misshapen_quantity():
+    with pytest.raises((ValueError, TypeError)):
+        PosVel(1 * u.m, 1 * u.m / u.s)
+
+
+def test_posvel_respects_label_constraints():
+    p1 = [1, 0, 0]
+    p2 = [0, 1, 0]
+    v1 = [1, 0, 0]
+    v2 = [0, 1, 0]
+
+    earth_mars = PosVel(p1, v1, origin="earth", obj="mars")
+    mars_earth = PosVel(p2, v2, origin="mars", obj="earth")
+
+    pv = earth_mars + mars_earth
+    assert pv.origin == pv.obj == "earth"
+    pv = mars_earth + earth_mars
+    assert pv.origin == pv.obj == "mars"
+
+    with pytest.raises(ValueError):
+        pv = earth_mars - mars_earth
+
+    with pytest.raises(ValueError):
+        PosVel(p2, v2, origin="else")
+    with pytest.raises(ValueError):
+        PosVel(p2, v2, obj="else")
+
+
+@composite
+def posvel_arrays(draw):
+    s = draw(array_shapes())
+    dtype = draw(scalar_dtypes())
+    pos = draw(arrays(dtype, (3,) + s))
+    vel = draw(arrays(dtype, (3,) + s))
+    return pos, vel
+
+
+@composite
+def posvel_arrays_and_indices(draw):
+    pos, vel = draw(posvel_arrays())
+    ix = tuple(draw(slices(n)) for n in pos.shape[1:])
+    return pos, vel, ix
+
+
+@given(posvel_arrays_and_indices())
+def test_posvel_slice_indexing(pos_vel_ix):
+    pos, vel, ix = pos_vel_ix
+    pv = PosVel(pos, vel)
+    pvs = pv[ix]
+    ix_full = (slice(None, None, None),) + ix
+    assert_array_equal(pvs.pos, pos[ix_full])
+    assert_array_equal(pvs.vel, vel[ix_full])
+
+
+def test_posvel_different_lengths_raises():
+    pos = np.random.randn(3, 4, 5)
+    vel = np.random.randn(3, 6)
+    with pytest.raises(ValueError):
+        PosVel(pos, vel)
+
+
+@composite
+def posvel_arrays_broadcastable(draw):
+    s, s_pos, s_vel = draw(broadcastable_subshapes(array_shapes()))
+    dtype = draw(scalar_dtypes())
+    pos = draw(arrays(dtype, (3,) + tuple(s_pos)))
+    vel = draw(arrays(dtype, (3,) + tuple(s_vel)))
+    return pos, vel, (3,) + s
+
+
+@composite
+def boolean_subsets(draw, set_arrays):
+    a = np.array(draw(set_arrays), dtype=bool)
+    n = int(np.sum(a))
+    r = np.zeros_like(a)
+    if n > 0:
+        r[a] = draw(arrays(just(bool), just((n,))))
+    return a
+
+
+@composite
+def broadcastable_subshapes(draw, shapes):
+    s = draw(shapes)
+    b = draw(arrays(just(bool), just((len(s),))))
+    b_pos = draw(boolean_subsets(just(b)))
+    b_vel = b & (~b_pos)
+
+    s_pos = np.array(s)
+    s_pos[b_pos] = 1
+    s_vel = np.array(s)
+    s_vel[b_vel] = 1
+
+    return s, tuple(int(s) for s in s_pos), tuple(int(s) for s in s_vel)
+
+
+@given(posvel_arrays_broadcastable())
+def test_posvel_broadcasts(pos_vel_shape):
+    pos, vel, shape = pos_vel_shape
+    pv = PosVel(pos, vel)
+    assert pv.pos.shape == pv.vel.shape == shape
+
+
+@given(
+    posvel_arrays_broadcastable(),
+    sampled_from([u.m, u.pc]),
+    sampled_from([u.s, u.year]),
+)
+def test_posvel_broadcast_retains_quantity(pos_vel_shape, l_unit, t_unit):
+    pos, vel, shape = pos_vel_shape
+    pv = PosVel(pos * l_unit, vel * l_unit / t_unit)
+    assert pv.pos.shape == pv.vel.shape == shape
+    assert pv.pos.unit == l_unit
+    assert pv.vel.unit == l_unit / t_unit

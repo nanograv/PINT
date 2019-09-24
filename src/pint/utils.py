@@ -54,6 +54,11 @@ class PosVel(object):
     addition/subtraction will check that vectors are being combined in
     a consistent way.
 
+    Specifically, if two PosVel objects are added, the obj of one must
+    equal the origin of the other (either way around). If the two
+    vectors agree on both ends, then the result vector will choose the
+    origin of the vector on the left.
+
     """
     def __init__(self, pos, vel, obj=None, origin=None):
         if len(pos) != 3:
@@ -72,8 +77,24 @@ class PosVel(object):
         else:
             self.vel = np.asarray(vel)
 
+        if len(self.pos.shape) != len(self.vel.shape):
+            # FIXME: could broadcast them, but have to be careful
+            raise ValueError(
+                "pos and vel must have the same number of dimensions but are {} and {}"
+                .format(self.pos.shape, self.vel.shape)
+            )
+        elif self.pos.shape != self.vel.shape:
+            self.pos, self.vel = np.broadcast_arrays(
+                self.pos, self.vel, subok=True
+            )
+
+        if bool(obj is None) != bool(origin is None):
+            raise ValueError(
+                "If one of obj and origin is specified, the other must be too."
+            )
         self.obj = obj
         self.origin = origin
+        # FIXME: what about dtype compatibility?
 
     def _has_labels(self):
         return (self.obj is not None) and (self.origin is not None)
@@ -94,10 +115,10 @@ class PosVel(object):
                 origin = other.origin
                 obj = self.obj
             else:
-                raise RuntimeError("Attempting to add incompatible vectors: " +
-                                   "%s->%s + %s->%s" % (self.origin, self.obj,
-                                                        other.origin,
-                                                        other.obj))
+                raise ValueError("Attempting to add incompatible vectors: " +
+                                 "%s->%s + %s->%s" % (self.origin, self.obj,
+                                                      other.origin,
+                                                      other.obj))
 
         return PosVel(self.pos + other.pos, self.vel + other.vel,
                       obj=obj, origin=origin)
@@ -113,9 +134,14 @@ class PosVel(object):
             return str(self.pos)+", "+str(self.vel)
     def __getitem__(self, k):
         """Allow extraction of slices of the contained arrays"""
+        colon = slice(None,None,None)
+        if isinstance(k, tuple):
+            ix = (colon,) + k
+        else:
+            ix = (colon, k)
         return self.__class__(
-                self.pos[:,k],
-                self.vel[:,k],
+                self.pos[ix],
+                self.vel[ix],
                 obj=self.obj,
                 origin=self.origin)
 

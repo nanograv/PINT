@@ -12,6 +12,7 @@ from numpy.testing import assert_array_equal
 
 import pint.pulsar_mjd
 from pint.utils import (
+    PosVel,
     data2longdouble,
     longdouble2str,
     str2longdouble,
@@ -143,7 +144,7 @@ def test_time_to_mjd_string_precision(format, i, f):
 @given(integers(40000, 70000), floats(-2.0, 2.0, allow_nan=False))
 @example(i=65536, f=3.552713678800502e-15)
 @example(format="pulsar_mjd", i=43143, f=9.313492199680697e-10)
-@example(format='pulsar_mjd', i=50081, f=1.0000000016292463)
+@example(format="pulsar_mjd", i=50081, f=1.0000000016292463)
 @example(format="pulsar_mjd", i=40000, f=-4.440892098500627e-16)
 @example(format="mjd", i=40000, f=-4.440892098500627e-16)
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
@@ -182,11 +183,11 @@ def test_time_to_mjd_string_format_dependence(i, f):
 
 @given(integers(40000, 70000), floats(-2.0, 2.0, allow_nan=False))
 @example(i=40000, f=-8.881784197001254e-16)
-@settings(max_examples=5000)
 def test_pulsar_mjd_never_differs_too_much_from_mjd(i, f):
     t = Time(val=i, val2=f, format="mjd", scale="tai")
     t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="tai")
     assert abs(t2 - t) <= 1 * u.ns
+
 
 @given(integers(40000, 70000), floats(-2.0, 2.0, allow_nan=False))
 @example(i=40000, f=-8.881784197001254e-16)
@@ -196,3 +197,13 @@ def test_pulsar_mjd_never_differs_too_much_from_mjd_utc(i, f):
     t = Time(val=i, val2=f, format="mjd", scale="utc")
     t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="utc")
     assert abs(t2 - t).to(u.s) <= 1 * u.s
+
+
+def test_posvel_respects_longdouble():
+    pos = np.ones(3,dtype=np.longdouble)
+    pos[0] += np.finfo(np.longdouble).eps
+    vel = np.ones(3,dtype=np.longdouble)
+    vel[1] += np.finfo(np.longdouble).eps
+    pv = PosVel(pos,vel)
+    assert_array_equal(pv.pos, pos)
+    assert_array_equal(pv.vel, vel)
