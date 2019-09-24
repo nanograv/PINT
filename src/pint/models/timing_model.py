@@ -1154,6 +1154,11 @@ class Component(object):
             Whether the subclass is included in the parfile.
 
         """
+        if self.component_special_params:
+            for p in self.component_special_params:
+                if p in para_dict:
+                    return True
+            return False
         pNames_inpar = list(para_dict.keys())
         pNames_inModel = self.params
 

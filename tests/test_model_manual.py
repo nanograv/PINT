@@ -82,4 +82,4 @@ def test_compare_get_model_new_and_old():
     m_new = get_model_new(parfile)
     m_old = get_model(parfile)
 
-    assert set(m_new.get_params_mapping.keys()) == set(m_old.get_params_mapping.keys())
+    assert set(m_new.get_params_mapping().keys()) == set(m_old.get_params_mapping().keys())
