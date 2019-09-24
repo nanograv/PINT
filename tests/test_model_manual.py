@@ -1,5 +1,6 @@
 """Test model building and structure for simple models."""
 
+from glob import glob
 from os.path import join
 from tempfile import NamedTemporaryFile
 
@@ -82,4 +83,28 @@ def test_compare_get_model_new_and_old():
     m_new = get_model_new(parfile)
     m_old = get_model(parfile)
 
-    assert set(m_new.get_params_mapping().keys()) == set(m_old.get_params_mapping().keys())
+    assert set(m_new.get_params_mapping().keys()) \
+            == set(m_old.get_params_mapping().keys())
+    assert set(m_new.components.keys()) == \
+            set(m_old.components.keys())
+
+@pytest.mark.xfail(
+    reason="This parfile includes both ecliptic and equatorial coordinates")
+@pytest.mark.parametrize("gm", [get_model, get_model_new])
+def test_ecliptic(gm):
+    parfile = join(datadir, "J1744-1134.basic.ecliptic.par")
+    m = gm(parfile)
+    assert "AstrometryEcliptic" in m.components
+
+@pytest.mark.parametrize("parfile", glob(join(datadir, "*.par")))
+def test_compare_get_model_new_and_old_all_parfiles(parfile):
+    try:
+        m_old = get_model(parfile)
+    except (IOError, MissingParameter) as e:
+        pytest.skip("Existing code raised an exception {}".format(e))
+    m_new = get_model(parfile)
+
+    assert set(m_new.get_params_mapping().keys()) \
+            == set(m_old.get_params_mapping().keys())
+    assert set(m_new.components.keys()) == \
+            set(m_old.components.keys())

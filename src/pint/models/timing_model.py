@@ -1159,6 +1159,7 @@ class Component(object):
                 if p in para_dict:
                     return True
             return False
+
         pNames_inpar = list(para_dict.keys())
         pNames_inModel = self.params
 

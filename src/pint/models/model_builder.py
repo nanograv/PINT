@@ -301,31 +301,17 @@ def choose_model(parfile, category_order=None, name=None,
         par_lines.append(l)
 
     models_to_use = {}
-    discarded_components = []
     for category, models in models_by_category.items():
         acceptable = []
         for m_type in models:
-            # Need an instance to do these tests
             m = m_type()
-            if not m.is_in_parfile(par_dict):
-                continue
-            for l in par_lines:
-                for param in m.params:
-                    getattr(m, param).from_parfile_line(l)
-            if check_for_missing_parameters:
-                try:
-                    m.setup()
-                except MissingParameter as e:
-                    discarded_components.append((m_type.__name__, e.param))
-                    continue
-            acceptable.append(m_type)
-            # discard the instance m as we might have mangled it by running setup
+            if m.is_in_parfile(par_dict):
+                acceptable.append(m)
         if len(acceptable) > 1:
             raise ValueError(
                 "Multiple models are compatible with this par file: {}".format(acceptable))
         if acceptable:
-            # Construct an instance for use
-            models_to_use[category] = acceptable[0]()
+            models_to_use[category] = acceptable[0]
 
     if "BINARY" in par_dict:
         vals = par_dict["BINARY"]
@@ -351,7 +337,6 @@ def choose_model(parfile, category_order=None, name=None,
     models_in_order.extend(v for k, v in sorted(models_to_use.items()))
 
     tm = TimingModel(name, models_in_order)
-    tm.discarded_components = discarded_components
 
     # FIXME: this should go in TimingModel for when you try to
     # add conflicting components
