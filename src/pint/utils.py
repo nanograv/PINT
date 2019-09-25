@@ -128,10 +128,10 @@ class PosVel(object):
 
     def __str__(self):
         if self._has_labels():
-            return (str(self.pos)+", "+str(self.vel)
-                    + " " + self.origin + "->" + self.obj)
+            return ("PosVel(" + str(self.pos)+", "+str(self.vel)
+                    + " " + self.origin + "->" + self.obj + ")")
         else:
-            return str(self.pos)+", "+str(self.vel)
+            return "PosVel(" + str(self.pos)+", "+str(self.vel) + ")"
     def __getitem__(self, k):
         """Allow extraction of slices of the contained arrays"""
         colon = slice(None,None,None)
@@ -172,11 +172,13 @@ def time_from_mjd_string(s, scale='utc'):
                         "time_from_mjd_string ('%s')!" % s)
             # This could cause a loss of precision...
             # maybe throw an exception instead?
-            imjd, fmjd = 0, float(ss)
+            imjd, fmjd = 0, np.longdouble(ss)
         else:
             imjd_s, fmjd_s = num.split('.')
             imjd = int(imjd_s + fmjd_s[:expon])
             fmjd = float("0."+fmjd_s[expon:])
+            if imjd<0:
+                fmjd = -fmjd
     else:
         mjd_s = ss.split('.')
         # If input was given as an integer, add floating "0"
@@ -185,6 +187,8 @@ def time_from_mjd_string(s, scale='utc'):
         imjd_s, fmjd_s = mjd_s
         imjd = int(imjd_s)
         fmjd = float("0." + fmjd_s)
+        if imjd<0:
+            fmjd = -fmjd
     return astropy.time.Time(imjd, fmjd, scale=scale, format='pulsar_mjd',
                              precision=9)
 

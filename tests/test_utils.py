@@ -231,3 +231,22 @@ def test_posvel_broadcast_retains_quantity(pos_vel_shape, l_unit, t_unit):
     assert pv.pos.shape == pv.vel.shape == shape
     assert pv.pos.unit == l_unit
     assert pv.vel.unit == l_unit / t_unit
+
+
+def test_posvel_reject_bogus_sizes():
+    with pytest.raises(ValueError):
+        PosVel([1,0],[1,0,0])
+    with pytest.raises(ValueError):
+        PosVel([1,0,0],[1,0,0,0])
+    with pytest.raises(ValueError):
+        PosVel(np.array([1,0])*u.m,[1,0,0])
+    with pytest.raises(ValueError):
+        PosVel([1,0,0,0], np.array([1,0])*u.m)
+
+def test_posvel_str_sensible():
+    assert "->" in str(PosVel([1,0,0],[0,1,0],"earth","mars"))
+    assert "earth" in str(PosVel([1,0,0],[0,1,0],"earth","mars"))
+    assert "mars" in str(PosVel([1,0,0],[0,1,0],"earth","mars"))
+    assert "->" not in str(PosVel([1,0,0],[0,1,0]))
+    assert "17" in str(PosVel([17,0,0],[0,1,0]))
+    assert str(PosVel([17,0,0],[0,1,0])).startswith("PosVel(")

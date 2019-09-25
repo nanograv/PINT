@@ -18,6 +18,7 @@ from pint.utils import (
     str2longdouble,
     time_to_longdouble,
     time_to_mjd_string,
+    time_from_mjd_string,
 )
 
 
@@ -192,7 +193,6 @@ def test_pulsar_mjd_never_differs_too_much_from_mjd(i, f):
 @given(integers(40000, 70000), floats(-2.0, 2.0, allow_nan=False))
 @example(i=40000, f=-8.881784197001254e-16)
 @example(i=43510, f=-1.0000000000000002)
-@settings(max_examples=5000)
 def test_pulsar_mjd_never_differs_too_much_from_mjd_utc(i, f):
     t = Time(val=i, val2=f, format="mjd", scale="utc")
     t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="utc")
@@ -207,3 +207,34 @@ def test_posvel_respects_longdouble():
     pv = PosVel(pos,vel)
     assert_array_equal(pv.pos, pos)
     assert_array_equal(pv.vel, vel)
+
+
+@given(
+    one_of(integers(40000, 60000), integers(-3000000, 3000000), just(0)),
+    floats(-2, 2, allow_nan=False),
+)
+@example(i=-1, f=0.9)
+@example(i=0, f=-0.00010000000000021106)
+def test_time_from_mjd_string_accuracy_vs_longdouble(i, f):
+    mjd = np.longdouble(i)+np.longdouble(f)
+    s = str(mjd)
+    t = Time(val=i, val2=f, format='mjd', scale='utc')
+    assert abs(time_from_mjd_string(s)-t).to(u.us) < 1*u.us
+    if 40000 <= i <= 60000:
+        assert abs(time_from_mjd_string(s)-t).to(u.us) < 1*u.ns
+
+@given(
+    one_of(integers(40000, 60000), integers(-3000000, 3000000), just(0)),
+    floats(-2, 2, allow_nan=False),
+)
+@example(i=-1, f=0.9)
+@example(i=0, f=-0.00010000000000021106)
+def test_time_from_longdouble_accuracy_vs_longdouble(i, f):
+    mjd = np.longdouble(i)+np.longdouble(f)
+    s = str(mjd)
+    t = Time(mjd, format='mjd', scale='utc')
+    assert abs(time_from_mjd_string(s)-t).to(u.us) < 1*u.us
+    if 40000 <= i <= 60000:
+        assert abs(time_from_mjd_string(s)-t).to(u.us) < 1*u.ns
+
+# should be exact on 50000+np.finfo(float).eps
