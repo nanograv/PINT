@@ -34,13 +34,15 @@ from .parameter import strParameter
 # That could be supported by simply adding "C" here.
 #
 # What about case (in)sensitivity? Anybody use un-capitalized versions?
-ignore_params = ['START', 'FINISH', 'CLK', 'EPHVER', 'UNITS',
-                 'TIMEEPH', 'T2CMETHOD', 'CORRECT_TROPOSPHERE', 'DILATEFREQ',
-                 'NTOA', 'CLOCK', 'TRES', 'TZRMJD', 'TZRFRQ', 'TZRSITE',
-                 'NITS', 'IBOOT','BINARY',
-                 'CHI2R', 'MODE', 'INFO', 'PLANET_SHAPIRO2', 'NE_SW', 'NE_SW2',
-                ]
-ignore_prefix = ['DMXF1_','DMXF2_','DMXEP_'] # DMXEP_ for now.
+ignore_params = set([
+    'START', 'FINISH', 'CLK', 'EPHVER', 'UNITS',
+    'TIMEEPH', 'T2CMETHOD', 'CORRECT_TROPOSPHERE', 'DILATEFREQ',
+    'NTOA', 'CLOCK', 'TRES', 'TZRMJD', 'TZRFRQ', 'TZRSITE',
+    'NITS', 'IBOOT','BINARY',
+    'CHI2R', 'MODE', 'INFO', 'PLANET_SHAPIRO2',
+#    'NE_SW', 'NE_SW2',
+])
+ignore_prefix = set(['DMXF1_','DMXF2_','DMXEP_']) # DMXEP_ for now.
 
 
 class TimingModel(object):
@@ -731,9 +733,9 @@ class TimingModel(object):
             ph = self.phase(toas)
             phase_i[:,ii] = ph.int
             phase_f[:,ii] = ph.frac
-        resI = (- phase_i[:,0] + phase_i[:,1])
-        resF = (- phase_f[:,0] + phase_f[:,1])
-        result = (resI + resF)/(2.0 * h * unit)
+        res_i = (- phase_i[:,0] + phase_i[:,1])
+        res_f = (- phase_f[:,0] + phase_f[:,1])
+        result = (res_i + res_f)/(2.0 * h * unit)
         # shift value back to the original value
         par.quantity = ori_value
         return result

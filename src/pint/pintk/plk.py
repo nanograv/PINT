@@ -5,16 +5,9 @@ Interactive emulator of tempo2 plk
 from __future__ import print_function, division
 import os, sys
 
-try:
-    # Python2
-    import Tkinter as tk
-    import tkFileDialog
-    import tkMessageBox
-except ImportError:
-    # Python3
-    import tkinter as tk
-    import tkinter.filedialog as tkFileDialog
-    import tkinter.messagebox as tkMessageBox
+import six.moves.tkinter as tk
+import six.moves.tkinter_filedialog as tkFileDialog
+import six.moves.tkinter_messagebox as tkMessageBox
 import matplotlib as mpl
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 try:
@@ -82,7 +75,7 @@ class PlkFitBoxesWidget(tk.Frame):
         tk.Frame.__init__(self, master)
         self.boxChecked = None
         self.maxcols = 8
-    
+
     def setCallbacks(self, boxChecked):
         '''
         Set the callback functions
@@ -113,12 +106,12 @@ class PlkFitBoxesWidget(tk.Frame):
             self.compVisible.append(tk.IntVar())
             self.compCBs.append(tk.Checkbutton(self, text=comp,
                 variable=self.compVisible[ii], command=self.updateLayout))
-            
+
             self.compGrids.append([])
             for pp, par in enumerate(showpars):
                 self.parVars[par] = tk.IntVar()
                 self.compGrids[ii].append(tk.Checkbutton(self, text=par,
-                    variable=self.parVars[par], 
+                    variable=self.parVars[par],
                     command=lambda p=par: self.changedFitCheckBox(p)))
                 if par in fitparams:
                     self.compCBs[ii].select()
@@ -130,7 +123,7 @@ class PlkFitBoxesWidget(tk.Frame):
     def deleteFitCheckBoxes(self):
         for widget in self.winfo_children():
             widget.destroy()
-   
+
     def clear_grid(self):
         for widget in self.winfo_children():
             widget.grid_forget()
@@ -145,7 +138,7 @@ class PlkFitBoxesWidget(tk.Frame):
                     row = int(pp / self.maxcols)
                     col = pp % self.maxcols + 1
                     cb.grid(row=rowCount+row, column=col, sticky='W')
-                rowCount += int(len(self.compGrids[ii]) / self.maxcols) 
+                rowCount += int(len(self.compGrids[ii]) / self.maxcols)
             rowCount += 1
 
     def changedFitCheckBox(self, par):
@@ -184,11 +177,11 @@ class PlkXYChoiceWidget(tk.Frame):
             label = tk.Label(self, text=choice)
             label.grid(row=ii+1, column=0)
 
-            self.xbuttons.append(tk.Radiobutton(self, variable=self.xvar, value=choice, 
+            self.xbuttons.append(tk.Radiobutton(self, variable=self.xvar, value=choice,
                                   command=self.updateChoice))
             self.xbuttons[ii].grid(row=ii+1, column=1)
 
-            self.ybuttons.append(tk.Radiobutton(self, variable=self.yvar, value=choice, 
+            self.ybuttons.append(tk.Radiobutton(self, variable=self.yvar, value=choice,
                                  command=self.updateChoice))
             self.ybuttons[ii].grid(row=ii+1, column=2)
 
@@ -234,7 +227,7 @@ class PlkActionsWidget(tk.Frame):
         self.saveFig_callback=None
 
         self.initPlkActions()
-    
+
     def initPlkActions(self):
         self.fitbutton = tk.Button(self, text='Fit', command=self.fit)
         self.fitbutton.grid(row=0, column=0)
@@ -247,7 +240,7 @@ class PlkActionsWidget(tk.Frame):
 
         button = tk.Button(self, text='Write tim', command=self.writeTim)
         button.grid(row=0, column=3)
-    
+
     def setCallbacks(self, fit, reset, writePar, writeTim):
         """
         Callback functions
@@ -256,7 +249,7 @@ class PlkActionsWidget(tk.Frame):
         self.reset_callback = reset
         self.writePar_callback = writePar
         self.writeTim_callback = writeTim
-    
+
     def setFitButtonText(self, text):
         self.fitbutton.config(text=text)
 
@@ -474,19 +467,19 @@ class PlkWidget(tk.Frame):
         of length 2. So this workaround is needed
         '''
         if selected.sum() != 2:
-            self.plkAxes.errorbar(self.xvals[selected].reshape([-1, 1]), 
+            self.plkAxes.errorbar(self.xvals[selected].reshape([-1, 1]),
                                   self.yvals[selected].reshape([-1, 1]),
                                   yerr=self.yerrs[selected].reshape([-1, 1]),
                                   fmt='.', color=color)
         else:
-            self.plkAxes.errorbar(self.xvals[selected][0].reshape([-1, 1]), 
-                                  self.yvals[selected][0].reshape([-1, 1]), 
+            self.plkAxes.errorbar(self.xvals[selected][0].reshape([-1, 1]),
+                                  self.yvals[selected][0].reshape([-1, 1]),
                                   yerr=self.yerrs[selected][0].reshape([-1, 1]),
-                                  fmt='.', color=color) 
-            self.plkAxes.errorbar(self.xvals[selected][1].reshape([-1, 1]), 
-                                  self.yvals[selected][1].reshape([-1, 1]), 
+                                  fmt='.', color=color)
+            self.plkAxes.errorbar(self.xvals[selected][1].reshape([-1, 1]),
+                                  self.yvals[selected][1].reshape([-1, 1]),
                                   yerr=self.yerrs[selected][1].reshape([-1, 1]),
-                                  fmt='.', color=color)  
+                                  fmt='.', color=color)
 
     def plotResiduals(self, keepAxes=False):
         """
@@ -509,14 +502,14 @@ class PlkWidget(tk.Frame):
                 ymax = yave + 1.05 * (np.max(self.yvals+self.yerrs) - yave)
             xmin, xmax = xmin.value, xmax.value
             ymin, ymax = ymin.value, ymax.value
-        
+
         self.plkAxes.clear()
         self.plkAx2x.clear()
         self.plkAx2y.clear()
         self.plkAxes.grid(True)
 
         if self.yerrs is None:
-            self.plkAxes.scatter(self.xvals[~self.selected], self.yvals[~self.selected],   
+            self.plkAxes.scatter(self.xvals[~self.selected], self.yvals[~self.selected],
                 marker='.', color='blue')
             self.plkAxes.scatter(self.xvals[self.selected], self.yvals[self.selected],
                 marker='.', color='orange')
@@ -558,7 +551,7 @@ class PlkWidget(tk.Frame):
                 pass
         else:
             self.plkAxes.set_ylabel(plotlabels[self.yid])
-        
+
         self.plkAxes.set_title(self.psr.name, y=1.1)
 
     def print_info(self):
@@ -574,7 +567,7 @@ class PlkWidget(tk.Frame):
             selected = np.ones(self.psr.toas.ntoas, dtype=bool)
         else:
             selected = self.selected
-        
+
         header = '%6s' % 'TOA'
 
         f0x, f0y = None, None
@@ -620,11 +613,11 @@ class PlkWidget(tk.Frame):
             if yf:
                 line += ' %16.8g' % (ys[i] * f0y)
             print(line)
-    
+
     def psr_data_from_label(self, label):
         '''
         Given a label, get the corresponding data from the pulsar
-        
+
         @param label: The label for the data we want
         @return:    data, error
         '''
@@ -663,7 +656,7 @@ class PlkWidget(tk.Frame):
         elif label == 'rounded MJD':
             data = np.floor(self.psr.toas.get_mjds() + 0.5 * u.d)
             error = self.psr.toas.get_errors().to(u.d)
-        
+
         return data, error
 
     def coordToPoint(self, cx, cy):
@@ -680,16 +673,16 @@ class PlkWidget(tk.Frame):
             dist = ((x-cx)/(xmax-xmin))**2.0 + ((y-cy)/(ymax-ymin))**2.0
             ind = np.argmin(dist)
             #print('Closest point is %d:(%s, %s) at d=%f' % (ind, self.xvals[ind], self.yvals[ind], dist[ind]))
-            
+
             if dist[ind] > clickDist:
                 print('Not close enough to a point')
                 ind = None
-        
+
         return ind
-    
+
     def canvasClickEvent(self, event):
         '''
-        Call this function when the figure/canvas is clicked 
+        Call this function when the figure/canvas is clicked
         '''
         self.plkCanvas.get_tk_widget().focus_set()
         if event.inaxes == self.plkAxes:
@@ -723,7 +716,7 @@ class PlkWidget(tk.Frame):
             self.clickAndDrag(event)
         self.press = False
         self.move = False
-                
+
     def stationaryClick(self, event):
         '''
         Call this function when the mouse is clicked but not moved
@@ -747,7 +740,7 @@ class PlkWidget(tk.Frame):
                 elif event.button == 1 and self.plkToolbar._active is None:
                     #Left click is select
                     self.selected[ind] = not self.selected[ind]
-                    self.updatePlot(keepAxes=True) 
+                    self.updatePlot(keepAxes=True)
 
     def clickAndDrag(self, event):
         '''

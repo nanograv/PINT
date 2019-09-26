@@ -2,13 +2,11 @@
 from __future__ import absolute_import, division, print_function
 
 import re
-import string
 from contextlib import contextmanager
 
 import astropy.time
 import astropy.units as u
 import numpy as np
-from astropy import log
 from astropy.time.utils import day_frac
 
 try:
@@ -29,9 +27,9 @@ if np.finfo(np.longdouble).eps > 2e-19:
 __all__ = ['PosVel', 'fortran_float', 'time_from_mjd_string',
            'time_from_longdouble', 'time_to_mjd_string',
            'time_to_mjd_string_array', 'time_to_longdouble',
-           'GEO_WGS84_to_ITRF', 'numeric_partial', 'numeric_partials',
-           'check_all_partials', 'has_astropy_unit', 'longdouble2string',
-           'MJD_string2longdouble', 'ddouble2ldouble', 'str2longdouble',
+           'numeric_partial', 'numeric_partials',
+           'check_all_partials', 'has_astropy_unit',
+           'str2longdouble',
            'PrefixError', 'split_prefixed_name', 'data2longdouble',
            'taylor_horner', 'taylor_horner_deriv', 'is_number', 'open_or_use',
            'lines_of', 'interesting_lines']
@@ -54,6 +52,11 @@ class PosVel(object):
     addition/subtraction will check that vectors are being combined in
     a consistent way.
 
+    Specifically, if two PosVel objects are added, the obj of one must
+    equal the origin of the other (either way around). If the two
+    vectors agree on both ends, then the result vector will choose the
+    origin of the vector on the left.
+
     """
     def __init__(self, pos, vel, obj=None, origin=None):
         if len(pos) != 3:
@@ -72,8 +75,24 @@ class PosVel(object):
         else:
             self.vel = np.asarray(vel)
 
+        if len(self.pos.shape) != len(self.vel.shape):
+            # FIXME: could broadcast them, but have to be careful
+            raise ValueError(
+                "pos and vel must have the same number of dimensions but are {} and {}"
+                .format(self.pos.shape, self.vel.shape)
+            )
+        elif self.pos.shape != self.vel.shape:
+            self.pos, self.vel = np.broadcast_arrays(
+                self.pos, self.vel, subok=True
+            )
+
+        if bool(obj is None) != bool(origin is None):
+            raise ValueError(
+                "If one of obj and origin is specified, the other must be too."
+            )
         self.obj = obj
         self.origin = origin
+        # FIXME: what about dtype compatibility?
 
     def _has_labels(self):
         return (self.obj is not None) and (self.origin is not None)
@@ -94,10 +113,10 @@ class PosVel(object):
                 origin = other.origin
                 obj = self.obj
             else:
-                raise RuntimeError("Attempting to add incompatible vectors: " +
-                                   "%s->%s + %s->%s" % (self.origin, self.obj,
-                                                        other.origin,
-                                                        other.obj))
+                raise ValueError("Attempting to add incompatible vectors: " +
+                                 "%s->%s + %s->%s" % (self.origin, self.obj,
+                                                      other.origin,
+                                                      other.obj))
 
         return PosVel(self.pos + other.pos, self.vel + other.vel,
                       obj=obj, origin=origin)
@@ -107,17 +126,24 @@ class PosVel(object):
 
     def __str__(self):
         if self._has_labels():
-            return (str(self.pos)+", "+str(self.vel)
-                    + " " + self.origin + "->" + self.obj)
+            return ("PosVel(" + str(self.pos)+", "+str(self.vel)
+                    + " " + self.origin + "->" + self.obj + ")")
         else:
-            return str(self.pos)+", "+str(self.vel)
+            return "PosVel(" + str(self.pos)+", "+str(self.vel) + ")"
+
     def __getitem__(self, k):
         """Allow extraction of slices of the contained arrays"""
+        colon = slice(None, None, None)
+        if isinstance(k, tuple):
+            ix = (colon,) + k
+        else:
+            ix = (colon, k)
         return self.__class__(
-                self.pos[:,k],
-                self.vel[:,k],
+                self.pos[ix],
+                self.vel[ix],
                 obj=self.obj,
                 origin=self.origin)
+
 
 def fortran_float(x):
     """Convert Fortran-format floating-point strings.
@@ -136,21 +162,25 @@ def fortran_float(x):
 
 def time_from_mjd_string(s, scale='utc'):
     """Returns an astropy Time object generated from a MJD string input."""
-    ss = s.lower()
+    ss = s.lower().strip()
     if "e" in ss or "d" in ss:
         ss = ss.translate(maketrans("d", "e"))
         num, expon = ss.split("e")
         expon = int(expon)
         if expon < 0:
-            log.warning("Likely bogus sci notation input in " +
-                        "time_from_mjd_string ('%s')!" % s)
-            # This could cause a loss of precision...
-            # maybe throw an exception instead?
-            imjd, fmjd = 0, float(ss)
+            imjd, fmjd = 0, np.longdouble(ss)
         else:
-            imjd_s, fmjd_s = num.split('.')
-            imjd = int(imjd_s + fmjd_s[:expon])
-            fmjd = float("0."+fmjd_s[expon:])
+            mjd_s = num.split('.')
+            # If input was given as an integer, add floating "0"
+            if len(mjd_s) == 1:
+                mjd_s.append("0")
+            imjd_s, fmjd_s = mjd_s
+            imjd = np.longdouble(int(imjd_s))
+            fmjd = np.longdouble("0." + fmjd_s)
+            if ss.startswith("-"):
+                fmjd = -fmjd
+            imjd *= 10**expon
+            fmjd *= 10**expon
     else:
         mjd_s = ss.split('.')
         # If input was given as an integer, add floating "0"
@@ -159,12 +189,14 @@ def time_from_mjd_string(s, scale='utc'):
         imjd_s, fmjd_s = mjd_s
         imjd = int(imjd_s)
         fmjd = float("0." + fmjd_s)
+        if ss.startswith("-"):
+            fmjd = -fmjd
     return astropy.time.Time(imjd, fmjd, scale=scale, format='pulsar_mjd',
                              precision=9)
 
 
 def time_from_longdouble(t, scale='utc'):
-    st = longdouble2string(t)
+    st = longdouble2str(t)
     return time_from_mjd_string(st, scale)
 
 
@@ -173,25 +205,26 @@ def time_to_mjd_string(t, prec=15):
 
     astropy does not seem to provide this capability (yet?).
     """
+
     if t.format == 'pulsar_mjd':
         (imjd, fmjd) = day_frac(t.jd1 - DJM0, t.jd2)
         imjd = int(imjd)
         if fmjd < 0.0:
             imjd -= 1
-        y, mo, d, hmsf = d2dtf('UTC',9,t.jd1,t.jd2)
+        y, mo, d, hmsf = d2dtf('UTC', 9, t.jd1, t.jd2)
 
         if hmsf[0].size == 1:
             hmsf = np.array([list(hmsf)])
-        fmjd = (hmsf[...,0]/24.0 + hmsf[...,1]/1440.0
-                + hmsf[...,2]/86400.0 + hmsf[...,3]/86400.0e9)
+        fmjd = (hmsf[..., 0]/24.0 + hmsf[..., 1]/1440.0
+                + hmsf[..., 2]/86400.0 + hmsf[..., 3]/86400.0e9)
     else:
         (imjd, fmjd) = day_frac(t.jd1 - DJM0, t.jd2)
         imjd = int(imjd)
         assert np.fabs(fmjd) < 2.0
-        if fmjd >= 1.0:
+        while fmjd >= 1.0:
             imjd += 1
             fmjd -= 1.0
-        if fmjd < 0.0:
+        while fmjd < 0.0:
             imjd -= 1
             fmjd += 1.0
 
@@ -224,32 +257,19 @@ def time_to_mjd_string_array(t, prec=15):
     return s
 
 
+longdouble_mjd_eps = (70000*u.day*np.finfo(np.longdouble).eps).to(u.ns)
+
+
 def time_to_longdouble(t):
     """ Return an astropy Time value as MJD in longdouble
 
-    SUGGESTION(@paulray): This function is at least partly redundant with
-    ddouble2ldouble() below...
-
-    Also, is it certain that this calculation retains the full precision?
+    The returned value is accurate to within a nanosecond, while the precision of long
+    double MJDs (near the present) is roughly 0.7 ns.
 
     """
-    try:
-        return np.longdouble(t.jd1 - DJM0) + np.longdouble(t.jd2)
-    except:
-        return np.longdouble(t)
-
-
-def GEO_WGS84_to_ITRF(lon, lat, hgt):
-    """Convert lat/long/height to rectangular.
-
-    Convert WGS-84 references lon, lat, height (using astropy
-    units) to ITRF x,y,z rectangular coords (m)
-
-    """
-    x, y, z = astropy.time.erfa_time.era_gd2gc(1, lon.to(u.rad).value,
-                                               lat.to(u.rad).value,
-                                               hgt.to(u.m).value)
-    return x * u.m, y * u.m, z * u.m
+    i_djm0 = np.longdouble(np.floor(DJM0))
+    f_djm0 = np.longdouble(DJM0)-i_djm0
+    return (np.longdouble(t.jd1) - i_djm0) + (np.longdouble(t.jd2)-f_djm0)
 
 
 def numeric_partial(f, args, ix=0, delta=1e-6):
@@ -307,59 +327,44 @@ def check_all_partials(f, args, delta=1e-6, atol=1e-4, rtol=1e-4):
 
 
 def has_astropy_unit(x):
-    """Check whether x has an associated unit.
+    """Test whether x has a unit attribute containing an astropy unit.
 
-    Return True/False if x has an astropy unit type associated with it. This is
-    useful, because different data types can still have units associated with
-    them.
+    This is useful, because different data types can still have units
+    associated with them.
 
     """
     return hasattr(x, 'unit') and isinstance(x.unit, u.core.UnitBase)
 
 
-def longdouble2string(x):
-    """Convert numpy longdouble to string"""
+def longdouble2str(x):
+    """Convert numpy longdouble to string."""
     return repr(x)
 
 
-def MJD_string2longdouble(s):
-    """Convert a MJD string to a numpy longdouble."""
-    ii, ff = s.split(".")
-    return np.longdouble(ii) + np.longdouble("0."+ff)
+def str2longdouble(str_data):
+    """Return a long double from the input string.
 
-
-def ddouble2ldouble(t1, t2, format='jd'):
-    """Convert double-double to long double.
-
-    inputs two double-precision numbers representing JD times,
-    converts them to a single long double MJD value
+    Accepts Fortran-style exponent notation (1.0d2).
 
     """
-    if format == 'jd':
-        t1 = np.longdouble(t1) - np.longdouble(2400000.5)
-        t = np.longdouble(t1) + np.longdouble(t2)
-        return t
-    else:
-        t = np.longdouble([t1, t2])
-    return t[0]+t[1]
-
-
-def str2longdouble(str_data):
-    """Return a numpy long double scalar from the input string, using strtold()."""
+    if not isinstance(str_data, str):
+        raise TypeError("Need a string: {!r}".format(str_data))
     input_str = str_data.translate(maketrans('Dd', 'ee'))
     return np.longdouble(input_str.encode())
 
 
 # Define prefix parameter pattern
-prefixPattern = [
+prefix_pattern = [
     re.compile(r'^([a-zA-Z]*\d+[a-zA-Z]+)(\d+)$'),  # For the prefix like T2EFAC2
     re.compile(r'^([a-zA-Z]+)(\d+)$'),  # For the prefix like F12
     re.compile(r'^([a-zA-Z0-9]+_)(\d+)$'),  # For the prefix like DMXR1_3
     #re.compile(r'([a-zA-Z]\d[a-zA-Z]+)(\d+)'),  # for prefixes like PLANET_SHAPIRO2?
 ]
 
+
 class PrefixError(ValueError):
     pass
+
 
 def split_prefixed_name(name):
     """Split a prefixed name.
@@ -397,13 +402,13 @@ def split_prefixed_name(name):
         pint.utils.PrefixError: Unrecognized prefix name pattern 'PEPOCH'.
 
     """
-    for pt in prefixPattern:
+    for pt in prefix_pattern:
         namefield = pt.match(name)
         if namefield is None:
             continue
-        prefixPart, indexPart = namefield.groups()
+        prefix_part, index_part = namefield.groups()
         if '_' in name:
-            if '_' in prefixPart:
+            if '_' in prefix_part:
                 break
             else:
                 continue
@@ -412,23 +417,30 @@ def split_prefixed_name(name):
 
     if namefield is None:
         raise PrefixError("Unrecognized prefix name pattern '%s'." % name)
-    indexValue = int(indexPart)
-    return prefixPart, indexPart, indexValue
+    return prefix_part, index_part, int(index_part)
 
 
 def data2longdouble(data):
     """Return a numpy long double scalar form different type of data
-       Parameters
-       ---------
-       data : str, ndarray, or a number
-       Return
-       ---------
-       numpy long double type of data.
+
+    If a string, permit Fortran-format scientific notation (1.0d2). Otherwise just use
+    np.longdouble to convert. In particular if ``data`` is an array, convert all the
+    elements.
+
+    Parameters
+    ----------
+    data : str, np.array, or number
+
+    Returns
+    -------
+    np.longdouble
+
     """
     if type(data) is str:
         return str2longdouble(data)
     else:
         return np.longdouble(data)
+
 
 def taylor_horner(x, coeffs):
     """Evaluate a Taylor series of coefficients at x via the Horner scheme.
@@ -473,6 +485,7 @@ def taylor_horner_deriv(x, coeffs, deriv_order=1):
         result = result * x / fact + coeff
         fact -= 1.0
     return result
+
 
 def is_number(s):
     """Check if it is a number string.
