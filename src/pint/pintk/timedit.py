@@ -1,13 +1,6 @@
-try:
-    # Python2
-    import Tkinter as tk
-    import tkFileDialog
-    import tkMessageBox
-except ImportError:
-    # Python3
-    import tkinter as tk
-    import tkinter.filedialog as tkFileDialog
-    import tkinter.messagebox as tkMessageBox
+import six.moves.tkinter as tk
+import six.moves.tkinter_filedialog as tkFileDialog
+import six.moves.tkinter_messagebox as tkMessageBox
 import tempfile
 import copy
 import os
@@ -40,7 +33,7 @@ class TimActionsWidget(tk.Frame):
 
         button = tk.Button(self, text='Write Tim', command=self.writeTim)
         button.grid(row=0, column=3)
-    
+
     def setCallbacks(self, resetTimfile, removeChanges, applyChanges, writeTim):
         self.reset_callback = resetTimfile
         self.remove_callback = removeChanges
@@ -77,7 +70,7 @@ class TimWidget(tk.Frame):
         self.psr = None
         self.update_callbacks = None
         self.initLayout()
-    
+
     def initLayout(self):
         self.editor = tk.Text(self)
         self.editor.grid(row=0, column=0, sticky='nesw')
@@ -115,7 +108,7 @@ class TimWidget(tk.Frame):
     def set_toas(self):
         self.editor.delete('1.0', tk.END)
 
-        #Pretty much copying TOAs.write_TOA_file here but without creating an 
+        #Pretty much copying TOAs.write_TOA_file here but without creating an
         #intermediate filename
         toas = self.psr.toas
         asfile = 'FORMAT 1\n'
@@ -147,7 +140,7 @@ class TimWidget(tk.Frame):
         self.psr.toas = pint.toa.get_TOAs(tfilename)
         os.remove(tfilename)
         self.call_updates()
-    
+
     def writeTim(self):
         filename = tkFileDialog.asksaveasfilename(title='Choose output tim file')
         try:

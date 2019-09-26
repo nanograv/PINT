@@ -5,13 +5,13 @@ from __future__ import absolute_import, division, print_function
 import glob
 import os
 import sys
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 from astropy import log
 
 from pint.utils import split_prefixed_name, interesting_lines, lines_of, PrefixError
 
-from .timing_model import Component, TimingModel, MissingParameter
+from .timing_model import Component, TimingModel, MissingParameter, ignore_prefix
 
 default_models = ["StandardTimingModel",]
 DEFAULT_ORDER = ['astrometry', 'jump_delay', 'solar_system_shapiro',
@@ -288,9 +288,14 @@ def choose_model(parfile, category_order=None, name=None,
 
     par_dict = {}
     par_lines = []
+    multi_tags = set(["JUMP", "ECORR", "T2EFAC", "T2EQUAD", "EQUAD", "EFAC"])
+    multi_line = Counter()
     for l in interesting_lines(lines_of(parfile), comments=("#", "C ")):
         ll = l.split()
         k = ll[0]
+        if k in multi_tags:
+            multi_line[k] += 1
+            k = k+str(multi_line[k])
         if k in par_dict:
             # FIXME: what happens with JUMPs?
             log.info("Lines with duplicate keys in par file: {} and {}"
@@ -361,11 +366,18 @@ def choose_model(parfile, category_order=None, name=None,
             try:
                 par = alias_map[pre]
             except KeyError:
-                raise ValueError("Mystery parameter {}".format(p))
+                if pre in ignore_prefix:
+                    log.warning("Ignoring unhandled prefix {}".format(pre))
+                    continue
+                else:
+                    raise ValueError(
+                        "Mystery parameter {}, prefix {} with number {}"
+                        .format(p, pre, idxV))
             component = tm.get_params_mapping()[par.name]
             new_parameter = par.new_param(idxV)
             if hasattr(tm, new_parameter.name):
-                raise ValueError("Received duplicate parameter {}".format(new_parameter.name))
+                raise ValueError(
+                    "Received duplicate parameter {}".format(new_parameter.name))
             tm.add_param_from_top(new_parameter, component)
         except PrefixError:
             pass

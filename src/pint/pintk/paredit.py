@@ -1,13 +1,6 @@
-try:
-    # Python2
-    import Tkinter as tk
-    import tkFileDialog
-    import tkMessageBox
-except ImportError:
-    # Python3
-    import tkinter as tk
-    import tkinter.filedialog as tkFileDialog
-    import tkinter.messagebox as tkMessageBox
+import six.moves.tkinter as tk
+import six.moves.tkinter_filedialog as tkFileDialog
+import six.moves.tkinter_messagebox as tkMessageBox
 import tempfile
 import copy
 import os
@@ -21,7 +14,7 @@ class ParChoiceWidget(tk.Frame):
     '''
     def __init__(self, master=None):
         tk.Frame.__init__(self, master)
-        
+
         self.choose_callback = None
         self.initLayout()
 
@@ -68,7 +61,7 @@ class ParActionsWidget(tk.Frame):
 
         button = tk.Button(self, text='Write Par', command=self.writePar)
         button.grid(row=0, column=3)
-    
+
     def setCallbacks(self, resetParfile, removeChanges, applyChanges, writePar):
         self.reset_callback = resetParfile
         self.remove_callback = removeChanges
@@ -105,7 +98,7 @@ class ParWidget(tk.Frame):
         self.psr = None
         self.update_callbacks = None
         self.initLayout()
-    
+
     def initLayout(self):
         self.choiceWidget = ParChoiceWidget(master=self)
         self.choiceWidget.grid(row=0, column=0, sticky='nw')
@@ -152,7 +145,7 @@ class ParWidget(tk.Frame):
             if self.psr.fitted:
                 self.editor.delete('1.0', tk.END)
                 self.editor.insert('1.0', self.psr.postfit_model.as_parfile())
-            else:   
+            else:
                 print('There is no postfit model yet!')
                 self.choiceWidget.prefit.select()
         elif choice == 'prefit':
@@ -167,7 +160,7 @@ class ParWidget(tk.Frame):
         self.psr.prefit_model = pint.models.get_model(pfilename)
         os.remove(pfilename)
         self.call_updates()
-    
+
     def writePar(self):
         filename = tkFileDialog.asksaveasfilename(title='Choose output par file')
         try:

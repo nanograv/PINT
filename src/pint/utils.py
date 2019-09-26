@@ -2,13 +2,11 @@
 from __future__ import absolute_import, division, print_function
 
 import re
-import string
 from contextlib import contextmanager
 
 import astropy.time
 import astropy.units as u
 import numpy as np
-from astropy import log
 from astropy.time.utils import day_frac
 
 try:
@@ -29,9 +27,9 @@ if np.finfo(np.longdouble).eps > 2e-19:
 __all__ = ['PosVel', 'fortran_float', 'time_from_mjd_string',
            'time_from_longdouble', 'time_to_mjd_string',
            'time_to_mjd_string_array', 'time_to_longdouble',
-           'GEO_WGS84_to_ITRF', 'numeric_partial', 'numeric_partials',
-           'check_all_partials', 'has_astropy_unit', 'longdouble2string',
-           'MJD_string2longdouble', 'ddouble2ldouble', 'str2longdouble',
+           'numeric_partial', 'numeric_partials',
+           'check_all_partials', 'has_astropy_unit',
+           'str2longdouble',
            'PrefixError', 'split_prefixed_name', 'data2longdouble',
            'taylor_horner', 'taylor_horner_deriv', 'is_number', 'open_or_use',
            'lines_of', 'interesting_lines']
@@ -132,9 +130,10 @@ class PosVel(object):
                     + " " + self.origin + "->" + self.obj + ")")
         else:
             return "PosVel(" + str(self.pos)+", "+str(self.vel) + ")"
+
     def __getitem__(self, k):
         """Allow extraction of slices of the contained arrays"""
-        colon = slice(None,None,None)
+        colon = slice(None, None, None)
         if isinstance(k, tuple):
             ix = (colon,) + k
         else:
@@ -144,6 +143,7 @@ class PosVel(object):
                 self.vel[ix],
                 obj=self.obj,
                 origin=self.origin)
+
 
 def fortran_float(x):
     """Convert Fortran-format floating-point strings.
@@ -211,12 +211,12 @@ def time_to_mjd_string(t, prec=15):
         imjd = int(imjd)
         if fmjd < 0.0:
             imjd -= 1
-        y, mo, d, hmsf = d2dtf('UTC',9,t.jd1,t.jd2)
+        y, mo, d, hmsf = d2dtf('UTC', 9, t.jd1, t.jd2)
 
         if hmsf[0].size == 1:
             hmsf = np.array([list(hmsf)])
-        fmjd = (hmsf[...,0]/24.0 + hmsf[...,1]/1440.0
-                + hmsf[...,2]/86400.0 + hmsf[...,3]/86400.0e9)
+        fmjd = (hmsf[..., 0]/24.0 + hmsf[..., 1]/1440.0
+                + hmsf[..., 2]/86400.0 + hmsf[..., 3]/86400.0e9)
     else:
         (imjd, fmjd) = day_frac(t.jd1 - DJM0, t.jd2)
         imjd = int(imjd)
@@ -354,15 +354,17 @@ def str2longdouble(str_data):
 
 
 # Define prefix parameter pattern
-prefixPattern = [
+prefix_pattern = [
     re.compile(r'^([a-zA-Z]*\d+[a-zA-Z]+)(\d+)$'),  # For the prefix like T2EFAC2
     re.compile(r'^([a-zA-Z]+)(\d+)$'),  # For the prefix like F12
     re.compile(r'^([a-zA-Z0-9]+_)(\d+)$'),  # For the prefix like DMXR1_3
     #re.compile(r'([a-zA-Z]\d[a-zA-Z]+)(\d+)'),  # for prefixes like PLANET_SHAPIRO2?
 ]
 
+
 class PrefixError(ValueError):
     pass
+
 
 def split_prefixed_name(name):
     """Split a prefixed name.
@@ -400,13 +402,13 @@ def split_prefixed_name(name):
         pint.utils.PrefixError: Unrecognized prefix name pattern 'PEPOCH'.
 
     """
-    for pt in prefixPattern:
+    for pt in prefix_pattern:
         namefield = pt.match(name)
         if namefield is None:
             continue
-        prefixPart, indexPart = namefield.groups()
+        prefix_part, index_part = namefield.groups()
         if '_' in name:
-            if '_' in prefixPart:
+            if '_' in prefix_part:
                 break
             else:
                 continue
@@ -415,8 +417,7 @@ def split_prefixed_name(name):
 
     if namefield is None:
         raise PrefixError("Unrecognized prefix name pattern '%s'." % name)
-    indexValue = int(indexPart)
-    return prefixPart, indexPart, indexValue
+    return prefix_part, index_part, int(index_part)
 
 
 def data2longdouble(data):

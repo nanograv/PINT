@@ -5,3 +5,4 @@ jplephem>=2.6
 matplotlib>=1.5.3
 emcee>=2.2.1
 corner>=2.0.1
+pathlib2; python_version < "3.0"

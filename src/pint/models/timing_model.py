@@ -34,13 +34,15 @@ from .parameter import strParameter
 # That could be supported by simply adding "C" here.
 #
 # What about case (in)sensitivity? Anybody use un-capitalized versions?
-ignore_params = ['START', 'FINISH', 'CLK', 'EPHVER', 'UNITS',
-                 'TIMEEPH', 'T2CMETHOD', 'CORRECT_TROPOSPHERE', 'DILATEFREQ',
-                 'NTOA', 'CLOCK', 'TRES', 'TZRMJD', 'TZRFRQ', 'TZRSITE',
-                 'NITS', 'IBOOT','BINARY',
-                 'CHI2R', 'MODE', 'INFO', 'PLANET_SHAPIRO2', 'NE_SW', 'NE_SW2',
-                ]
-ignore_prefix = ['DMXF1_','DMXF2_','DMXEP_'] # DMXEP_ for now.
+ignore_params = set([
+    'START', 'FINISH', 'CLK', 'EPHVER', 'UNITS',
+    'TIMEEPH', 'T2CMETHOD', 'CORRECT_TROPOSPHERE', 'DILATEFREQ',
+    'NTOA', 'CLOCK', 'TRES', 'TZRMJD', 'TZRFRQ', 'TZRSITE',
+    'NITS', 'IBOOT','BINARY',
+    'CHI2R', 'MODE', 'INFO', 'PLANET_SHAPIRO2',
+#    'NE_SW', 'NE_SW2',
+])
+ignore_prefix = set(['DMXF1_','DMXF2_','DMXEP_']) # DMXEP_ for now.
 
 
 class TimingModel(object):
