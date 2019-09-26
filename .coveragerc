@@ -10,14 +10,13 @@ omit =
     pint/observatory/__init__*
     pint/orbital/__init__*
     pint/profiling/*
-	pint/str2ld.py
 	pint/tmtestfuncs.py
 parallel = True
 branch = True
 
 [paths]
 source =
-    ..
+    src
     */site-packages
 
 [report]
