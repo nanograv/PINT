@@ -1,28 +1,31 @@
+"""Tool for selecting a subset of TOAs."""
+
 from __future__ import absolute_import, print_function, division
 import numpy as np
 import copy
 
 
 class TOASelect(object):
-    """
-    This class is designed for select toas from toa table based on a given
-    condition. The selection result will be saved in the `select_result`
+    """Select toas from toa table based on a given condition.
+
+    The selection result will be saved in the `select_result`
     attribute as a mini caching for the future calculation.
-    Parameter
-    ---------
+
+    Parameters
+    ----------
     is_range: bool
         If this toa seclection a range selection.
     use_hash: bool, optional [defualt: False]
         If use hash for caching.
+
     Note
     ----
     The supported condition types are:
-        Ranged condition in the format of
-        {'DMX_0001':(54000, 54001), ...}
-        Key condition in the format of
-        {'JUMP1': 'L-wide', ...}
+        - Ranged condition in the format of {'DMX_0001':(54000, 54001), ...}
+        - Key condition in the format of {'JUMP1': 'L-wide', ...}
 
     Putting an object as condition will slow the process dramtically.
+
     """
     def __init__(self, is_range, use_hash=False):
         self.is_range = is_range
@@ -32,13 +35,16 @@ class TOASelect(object):
         self.select_result = {}
 
     def check_condition(self, new_cond):
-        """
-        Check if the condition that same with old input. The new condition's
+        """Check if the condition that same with old input.
+
+        The new condition's
         information will be updated to the 'condition' attribute.
-        Parameter
-        ---------
+
+        Parameters
+        ----------
         new_cond : dict
             New condition for selection.
+
         """
         condition_chg = {}
         condition_unchg = {}
@@ -58,18 +64,21 @@ class TOASelect(object):
         return condition_unchg, condition_chg
 
     def check_table_column(self, new_column):
-        """
-        This is a function checks if a table column has been changed from the old
-        one. The column information will be updated to the new column if they
+        """check if a table column has been changed from the old one.
+
+        The column information will be updated to the new column if they
         are not the same.
-        Parameter
-        ---------
+
+        Parameters
+        ----------
         column: toas.table column
             The toa table column that the condition is applied on
-        Return
-        ------
-        True for column is the same as old one
-        False for column has been changed.
+
+        Returns
+        -------
+        bool
+            True for column is the same as old one
+            False for column has been changed.
         """
         if self.use_hash:
             if new_column.name not in self.hash_dict.keys():

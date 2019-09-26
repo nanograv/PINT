@@ -28,7 +28,7 @@ Use ``-h`` to get help. This is not fully developed yet, so extensions to
 this (like a nice GUI) are most welcome.
 
 .. _directory: https://github.com/nanograv/PINT/blob/master/examples/
-.. _GitHub: https://github.com/nanograv/PINT/blob/master/examples/fit_NGC6440E.py
+.. _GitHub: https://github.com/nanograv/PINT/blob/master/docs/examples/fit_NGC6440E.py
 
 .. toctree::
    :maxdepth: 2

@@ -267,13 +267,17 @@ class LCPrimitive(object):
         return 1
 
     def get_width(self,error=False,hwhm=False,right=False):
-        """ Return the width of the distribution.
-            Keyword arguments:
-            -----------------
-            error   [False] if True, return tuple with value and error
-            hwhm    [False] if True, scale width to be HWHM
-            right   [False] if True, return "right" component, else "left".
-                            There is no distinction for symmetric dists.
+        """Return the width of the distribution.
+
+        Parameters
+        ----------
+        error : bool
+            if True, return tuple with value and error
+        hwhm : bool
+            if True, scale width to be HWHM
+        right : bool
+            if True, return "right" component, else "left".
+            There is no distinction for symmetric dists.
         """
         scale = self.hwhm(right=right)/self.p[int(right)] if hwhm else 1
         if error: return np.asarray([self.p[int(right)],self.errors[int(right)]])*scale
@@ -566,12 +570,15 @@ class LCGaussian2(LCWrappedFunction):
         return two_comp_mc(n,self.p[0],self.p[1],self.p[-1],norm.rvs)
 
 class LCLorentzian(LCPrimitive):
-    """ Represent a (wrapped) Lorentzian peak.
+    """Represent a (wrapped) Lorentzian peak.
 
-        Parameters
-        Width     the width paramater of the wrapped Cauchy distribution,
-                    namely HWHM*2PI for narrow distributions
-        Location  the center of the peak in phase
+    Parameters
+    ----------
+    Width
+        the width paramater of the wrapped Cauchy distribution, namely HWHM*2PI
+        for narrow distributions
+    Location
+        the center of the peak in phase
     """
     def init(self):
         self.p = np.asarray([0.1,0.5])

@@ -37,33 +37,31 @@ from ..toa_select import TOASelect
 
 class Parameter(object):
     """A base PINT class describing a single timing model parameter.
-    PINT Parameter class will have
 
-    A `Parameter` object can be created with one of the subclasses provided by
-    `PINT` depending on the parameter usage.
-    Current Parameter type:
-    [`floatParameter`, `strParameter`, `boolParameter`, `MDJParameter`,
-     `AngleParameter`, `prefixParameter`, `maskParameter`]
+    A ``Parameter`` object can be created with one of the subclasses provided by
+    ``PINT`` depending on the parameter usage.
 
-    Parameter Mechanism
-    Parameter current value information will be stored at `.quantity` property
-    which can be a flexible format, for example astropy.quantity in
-    floatParameter and string in strParameter, (For more detail see Parameter
+    Current Parameter types:
+    [``floatParameter``, ``strParameter``, ``boolParameter``, ``MDJParameter``,
+    ``AngleParameter``, ``prefixParameter``, ``maskParameter``]
+
+    Parameter current value information will be stored at ``.quantity`` property
+    which can be a flexible format, for example `astropy.quantity.Quantity` in
+    ``floatParameter`` and string in ``strParameter``, (For more detail see Parameter
     subclasses docstrings). If applicable, Parameter default unit is
-    stored at`.units` property which is an `astropy.unit` object. Property
-    `.value` always returns a pure value associate with `.units` from
-    `.quantity`. `.uncertainty` provides the storage for parameter uncertainty
-    and `.uncertainty_value` for pure uncertainty value. Like `.value`,
-    `.uncertainty_value` always associate with default unit.
+    stored at ``.units`` property which is an ``astropy.units.Unit``. Property
+    ``.value`` always returns a pure value associated with ``.units`` from
+    ``.quantity``. ``.uncertainty`` provides the storage for parameter uncertainty
+    and ``.uncertainty_value`` for pure uncertainty value. Like ``.value``,
+    ``.uncertainty_value`` always associate with default unit.
 
     Parameters
     ----------
     name : str, optional
         The name of the parameter.
-    value : number, str, `Astropy.units.Quantity` object, or other data type or
-            object
+    value : number, str, `astropy.units.Quantity` object, or other data type or object
         The input parameter value.
-    units : str or Astropy.units, optional
+    units : str or astropy.units.Unit, optional
         Parameter default unit. Parameter .value and .uncertainty_value attribute
         will associate with the default units.
     description : str, optional
@@ -555,12 +553,13 @@ class floatParameter(Parameter):
 
 class strParameter(Parameter):
     """This is a Parameter type that is specific to string values.
+
     `.quantity` stores current parameter information in a string. `.value`
     returns the same with `.quantity`. `.units` is not applicable.
     `strParameter` is not fitable.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     name : str
         The name of the parameter.
     value : str
@@ -602,8 +601,8 @@ class boolParameter(Parameter):
     returns the same with `.quantity`. `.units` is not applicable.
     `boolParameter` is not fitable.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     name : str
         The name of the parameter.
     value : str, bool, [0,1]
@@ -655,8 +654,8 @@ class MJDParameter(Parameter):
     in the format of MJD. `.value` returns the pure MJD value. `.units` is in
     day as default unit.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     name : str
         The name of the parameter.
     value : astropy Time, str, float in mjd, str in mjd.
@@ -789,8 +788,8 @@ class AngleParameter(Parameter):
     `.units` currently can accept angle format  {'h:m:s': u.hourangle,
     'd:m:s': u.deg, 'rad': u.rad, 'deg': u.deg}
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     name : str
         The name of the parameter.
     value : angle string, float, astropy angle object
@@ -916,7 +915,7 @@ class prefixParameter(object):
     F22.
 
     To create a prefix parameter with the same prefix but different index, just
-    use the `.new_param` method. It will return a new prefix parameter with the
+    use the ``.new_param`` method. It will return a new prefix parameter with the
     same setup but the index. Some parameters' unit and description will
     be changed once the index has been changed. In order to get the right units
     and description, ``.unitTplt`` and ``.descriptionTplt`` should be provided. If
@@ -1127,12 +1126,14 @@ class prefixParameter(object):
 
     def new_param(self, index):
         """Get one prefix parameter with the same type.
-        Parameter
+
+        Parameters
         ----------
         index : int
             index of prefixed parameter.
-        Return
-        ----------
+
+        Returns
+        -------
         A prefixed parameter with the same type of instance.
         """
 
@@ -1427,8 +1428,8 @@ class pairParameter(floatParameter):
 
     One example are WAVE parameters.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     name : str
         The name of the parameter.
     value : astropy Time, str, float in mjd, str in mjd.

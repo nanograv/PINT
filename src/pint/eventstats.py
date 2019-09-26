@@ -1,6 +1,4 @@
-"""
-A collection of various routines for calculating pulsation test
-test statistics on event data and helper functions.
+"""Various routines for calculating pulsation test statistics on event data and helper functions.
 
 author: M. Kerr <matthew.kerr@gmail.com>
 """
@@ -24,22 +22,21 @@ def from_array(x):
 
 
 def sig2sigma(sig,two_tailed=True,logprob=False):
-    """Convert tail probability to "sigma" units, i.e., find the value of the
-       argument for the normal distribution beyond which the integrated tail
-       probability is sig.  Note that the default is to interpret this number
-       as the two-tailed value, as this is the quantity that goes to 0
-       when sig goes to 1.
+    """Convert tail probability to "sigma" units.
 
-       args
-       ----
-       sig     the chance probability
+    Find the value of the argument for the normal distribution beyond which the
+    integrated tail probability is sig.  Note that the default is to interpret this
+    number as the two-tailed value, as this is the quantity that goes to 0 when sig goes
+    to 1.
 
-       kwargs
-       ------
-       two_tailed [True] interpret sig as two-tailed or one-tailed
-                          probability in converting
-       logprob [False] if True, the argument is the natural logarithm
-                       of the probability
+    Parameters
+    ----------
+    sig
+        the chance probability
+    two_tailed : bool, optional
+        interpret sig as two-tailed or one-tailed probability in converting
+    logprob : bool, optional
+        if True, the argument is the natural logarithm of the probability
     """
     from scipy.special import erfc,erfcinv
     from scipy.optimize import fsolve
@@ -221,14 +218,22 @@ def hmw(phases,weights,m=20,c=4):
 
 #@vec
 def sf_hm(h,m=20,c=4,logprob=False):
-    """ Return (analytic, asymptotic) survival function (1-F(h))
-        for the generalized H-test.
-        For more details see:
-            docstrings for hm, hmw
-            M. Kerr dissertation (arXiv:1101.6072)
-            Kerr, ApJ 732, 38, 2011 (arXiv:1103.2128)
+    """Return (analytic, asymptotic) survival function (1-F(h)) for the generalized H-test.
 
-        logprob [False] return natural logarithm of probability
+    For more details see:
+
+        - docstrings for hm, hmw
+        - M. Kerr dissertation (arXiv:1101.6072)
+        - Kerr, ApJ 732, 38, 2011 (arXiv:1103.2128)
+
+    Parameters
+    ----------
+    logprob : bool, optional
+
+    Returns
+    -------
+    float
+        natural logarithm of probability
     """
     if h < 1e-16: return 1.
     from numpy import exp,arange,log,empty

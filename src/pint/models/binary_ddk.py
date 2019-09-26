@@ -21,8 +21,8 @@ class BinaryDDK(BinaryDD):
     KIN inclination angle
     KOM the longitude of the ascending node, Kopeikin (1995) Eq 9. OMEGA
 
-    Reference
-    ---------
+    References
+    ----------
     KOPEIKIN. 1995, 1996
     """
 

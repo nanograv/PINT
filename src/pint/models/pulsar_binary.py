@@ -22,7 +22,7 @@ class PulsarBinary(DelayComponent):
     """Wrapper class for independent pulsar binary model.
 
     The calculations are done by the classes located in
-    :module:`pint.models.stand_alone_psr_binary`.
+    :mod:`pint.models.stand_alone_psr_binary`.
 
     Binary variables naming:
 

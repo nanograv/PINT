@@ -1,3 +1,4 @@
+"""Kopeikin corrected DD model."""
 from __future__ import absolute_import, print_function, division
 from .DD_model import DDmodel
 import numpy as np
@@ -9,14 +10,16 @@ u.set_enabled_equivalencies(u.dimensionless_angles())
 
 
 class DDKmodel(DDmodel):
-    """
-    This is a class for implement DDK model, a Kopeikin method corrected DD model.
+    """DDK model, a Kopeikin method corrected DD model.
     The main difference is that DDK model considers the annual parallax of earth and
     the proper motion of the pulsar.
     effects on the pulsar binary parameters.
     Speical parameters are:
-    @ KIN the inclination angle
-    @ KOM the longitude of the ascending node, Kopeikin (1995) Eq 9. OMEGA
+
+        KIN
+            the inclination angle
+        KOM
+            the longitude of the ascending node, Kopeikin (1995) Eq 9. OMEGA
 
     """
     def __init__(self, t=None, input_params=None):
@@ -284,12 +287,16 @@ class DDKmodel(DDmodel):
                 self.obs_pos[:,2] * self.cos_delta
 
     def delta_sini_parallax(self):
-        """
-        Reference (Kopeikin 1995 Eq 18)
-        x_obs = ap * sini_obs/c
-        Since ap and c will not be changed by parallax.
-        x_obs = ap /c *(sini_intrisic + delta_sini)
-        delta_sini = sini_intrisic * coti_intrisic / d * (deltaI0 * sin_kom - deltaJ0 * cos_kom)
+        """Reference (Kopeikin 1995 Eq 18)
+
+        Computes::
+
+            x_obs = ap * sini_obs/c
+
+        Since ap and c will not be changed by parallax::
+
+            x_obs = ap /c *(sini_intrisic + delta_sini)
+            delta_sini = sini_intrisic * coti_intrisic / d * (deltaI0 * sin_kom - deltaJ0 * cos_kom)
         """
         PX_kpc= self.PX.to(u.kpc, equivalencies=u.parallax())
         delta_sini = np.cos(self.KIN) / PX_kpc * (self.delta_I0() * self.sin_KOM - \
@@ -422,10 +429,10 @@ class DDKmodel(DDmodel):
                                      equivalencies=u.dimensionless_angles())
 
     def a1_k(self, proper_motion=True, parallax=True):
-        """
-        A function to compute Kopeikin corrected projected semi-major axis.
-        Parameter
-        ---------
+        """A function to compute Kopeikin corrected projected semi-major axis.
+
+        Parameters
+        ----------
         proper_motion: boolean, optional, default True
             Flag for proper_motion correction
         parallax: boolean, optional, default True
@@ -464,10 +471,10 @@ class DDKmodel(DDmodel):
             return self.d_a1_k_d_par(par, proper_motion=False)
 
     def omega_k(self, proper_motion=True, parallax=True):
-        """
-        A function to compute Kopeikin corrected projected omega.
-        Parameter
-        ---------
+        """A function to compute Kopeikin corrected projected omega.
+
+        Parameters
+        ----------
         proper_motion: boolean, optional, default True
             Flag for proper_motion correction
         parallax: boolean, optional, default True

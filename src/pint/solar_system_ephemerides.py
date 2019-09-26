@@ -246,8 +246,8 @@ def get_tdb_tt_ephem_geocenter(tt, ephem, path=None, link=None):
     """The is a function to read the TDB_TT correction from the JPL DExxxt.bsp
     ephemeris file.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     t: Astropy.time.Time object
         Observation time in Astropy.time.Time object format.
     ephem: str

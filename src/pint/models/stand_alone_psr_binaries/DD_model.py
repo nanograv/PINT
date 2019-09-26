@@ -1,3 +1,4 @@
+"""Damour and Deruelle binary model."""
 from __future__ import absolute_import, print_function, division
 from .binary_generic import PSR_BINARY
 import numpy as np
@@ -7,7 +8,9 @@ from pint import ls,GMsun,Tsun
 
 
 class DDmodel(PSR_BINARY):
-    """This is a class independent from PINT platform for pulsar DD binary model.
+    """DD binary model.
+
+    This is a class independent from PINT platform for pulsar DD binary model.
     Refence: T. Damour and N. Deruelle(1986)
     It is a subclass of PSR_BINARY class defined in file binary_generic.py in
     the same dierectory. This class is desined for PINT platform but can be used
@@ -15,16 +18,15 @@ class DDmodel(PSR_BINARY):
     To interact with PINT platform, a pulsar_binary wrapper is needed.
     See the source file pint/models/pulsar_binary_dd.py
 
-    Return
-    ----------
-    A dd binary model class with paramters, delay calculations and derivatives.
     Example
-    ----------
-    >>> import numpy
-    >>> t = numpy.linspace(54200.0,55000.0,800)
-    >>> binary_model = DDmodel()
-    >>> paramters_dict = {'A0':0.5,'ECC':0.01}
-    >>> binary_model.update_input(t, paramters_dict)
+    -------
+
+        >>> import numpy as np
+        >>> t = np.linspace(54200.0,55000.0,800)
+        >>> binary_model = DDmodel()
+        >>> paramters_dict = {'A0':0.5,'ECC':0.01}
+        >>> binary_model.update_input(t, paramters_dict)
+
     Here the binary has time input and parameters input, the delay can be
     calculated.
     """
@@ -53,9 +55,13 @@ class DDmodel(PSR_BINARY):
     # DDmodel special omega.
     def omega(self):
         """T. Damour and N. Deruelle(1986)equation [25]
+
+        Calculates::
+
            omega = OM+nu*k
-           k = OMDOT/n  (T. Damour and N. Deruelle(1986)equation between Eq 16
-                         Eq 17)
+           k = OMDOT/n
+
+        (T. Damour and N. Deruelle(1986)equation between Eq 16 Eq 17)
         """
         PB = self.pb()
         PB = PB.to('second')
@@ -67,16 +73,21 @@ class DDmodel(PSR_BINARY):
 
     def d_omega_d_par(self,par):
         """derivative for omega respect to user input Parameter.
+
+        Calculates::
+
            if par is not 'OM','OMDOT','PB'
            dOmega/dPar =  k*dAe/dPar
            k = OMDOT/n
-           Parameters
-           ----------
-           par : string
-                 parameter name
-           Return
-           ----------
-           Derivitve of omega respect to par
+
+        Parameters
+        ----------
+        par : string
+             parameter name
+
+        Returns
+        -------
+        Derivitve of omega respect to par
         """
         if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
@@ -102,14 +113,17 @@ class DDmodel(PSR_BINARY):
                                      equivalencies = u.dimensionless_angles())
 
     def d_omega_d_OM(self):
-        """dOmega/dOM = 1
-        """
+        """dOmega/dOM = 1 """
         return np.ones(len(self.tt0), dtype=np.longdouble)*u.Unit('')
 
     def d_omega_d_OMDOT(self):
-        """dOmega/dOMDOT = 1/n*nu
-           n = 2*pi/PB
-           dOmega/dOMDOT = PB/2*pi*nu
+        """Derivative.
+
+        Calculates::
+
+            dOmega/dOMDOT = 1/n*nu
+            n = 2*pi/PB
+            dOmega/dOMDOT = PB/2*pi*nu
         """
         PB = (self.pb()).to('second')
         nu = self.nu()
@@ -165,15 +179,20 @@ class DDmodel(PSR_BINARY):
                 return np.longdouble(np.zeros(len(self.tt0))) * u.Unit("") / par_obj.unit
     ##########
     def alpha(self):
-        """Alpha defined in
-           T. Damour and N. Deruelle(1986)equation [46]
-           alpha = A1/c*sin(omega)
+        """Alpha defined in T. Damour and N. Deruelle(1986)equation [46]
+
+        Computes::
+
+            alpha = A1/c*sin(omega)
         """
         sinOmg = np.sin(self.omega())
         return self.a1()/c.c*sinOmg
 
     def d_alpha_d_par(self,par):
         """T. Damour and N. Deruelle(1986)equation [46]
+
+        Computes::
+
            alpha = a1/c*sin(omega)
            dAlpha/dpar = d_a1_d_par /c * sin(omega) + a1/c*cos(omega)*dOmega/dPar
         """
@@ -214,8 +233,10 @@ class DDmodel(PSR_BINARY):
     ##############################################
 
     def beta(self):
-        """Beta defined in
-           T. Damour and N. Deruelle(1986)equation [47]
+        """Beta defined in T. Damour and N. Deruelle(1986)equation [47]
+
+        Computes::
+
            beta = A1/c*(1-eTheta**2)**0.5*cos(omega)
         """
         eTheta = self.eTheta()
@@ -223,7 +244,11 @@ class DDmodel(PSR_BINARY):
         return self.a1()/c.c*(1-eTheta**2)**0.5*cosOmg
 
     def d_beta_d_par(self,par):
-        """beta = A1/c*(1-eTheta**2)**0.5*cos(omega)
+        """Derivative.
+
+        Computes::
+
+           beta = A1/c*(1-eTheta**2)**0.5*cos(omega)
            eTheta = ecc+Dth  ??
            dBeta/dA1 = 1.0/c*(1-eTheta**2)**0.5*cos(omega)
            dBeta/dECC = A1/c*((-(e+dr)/sqrt(1-(e+dr)**2)*cos(omega)*de/dECC-
@@ -271,7 +296,11 @@ class DDmodel(PSR_BINARY):
         #         return np.longdouble(np.zeros(len(self.tt0)))
 
     def d_beta_d_A1(self):
-        """dBeta/dA1 = 1.0/c*(1-eTheta**2)**0.5*cos(omega) * d_a1_d_A1
+        """Derivative.
+
+        Computes::
+
+            dBeta/dA1 = 1.0/c*(1-eTheta**2)**0.5*cos(omega) * d_a1_d_A1
         """
         eTheta = self.eTheta()
         cosOmg = np.cos(self.omega())
@@ -279,7 +308,11 @@ class DDmodel(PSR_BINARY):
         return d_a1_d_A1/c.c*(1-eTheta**2)**0.5*cosOmg
 
     def d_beta_d_A1DOT(self):
-        """dBeta/dA1DOT = * d_a1_d_A1DOT/c*(1-eTheta**2)**0.5*cos(omega)
+        """Derivative.
+
+        Computes::
+
+            dBeta/dA1DOT = * d_a1_d_A1DOT/c*(1-eTheta**2)**0.5*cos(omega)
         """
         eTheta = self.eTheta()
         cosOmg = np.cos(self.omega())
@@ -287,7 +320,11 @@ class DDmodel(PSR_BINARY):
         return d_a1_d_A1DOT/c.c*(1-eTheta**2)**0.5*cosOmg
 
     def d_beta_d_T0(self):
-        """dBeta/dT0 = * d_a1_d_T0/c*(1-eTheta**2)**0.5*cos(omega)
+        """Derivative.
+
+        Computes::
+
+            dBeta/dT0 = * d_a1_d_T0/c*(1-eTheta**2)**0.5*cos(omega)
         """
         eTheta = self.eTheta()
         cosOmg = np.cos(self.omega())
@@ -296,7 +333,11 @@ class DDmodel(PSR_BINARY):
 
 
     def d_beta_d_ECC(self):
-        """dBeta/dECC = A1/c*((-(e+dtheta)/sqrt(1-(e+dtheta)**2)*cos(omega)*de/dECC-
+        """Derivative.
+
+        Computes::
+
+           dBeta/dECC = A1/c*((-(e+dtheta)/sqrt(1-(e+dtheta)**2)*cos(omega)*de/dECC-
                         (1-eTheta**2)**0.5*sin(omega)*domega/dECC
            de/dECC = 1
         """
@@ -309,7 +350,10 @@ class DDmodel(PSR_BINARY):
                    (1-eTheta**2)**0.5*sinOmg*self.d_omega_d_par('ECC'))
 
     def d_beta_d_EDOT(self):
-        """dBeta/dEDOT = A1/c*((-(e+dtheta)/sqrt(1-(e+dtheta)**2)*cos(omega)*de/dEDOT- \
+        """Derivative.
+
+        Computes::
+           dBeta/dEDOT = A1/c*((-(e+dtheta)/sqrt(1-(e+dtheta)**2)*cos(omega)*de/dEDOT- \
            (1-eTheta**2)**0.5*sin(omega)*domega/dEDOT
            de/dEDOT = tt0
         """
@@ -322,7 +366,11 @@ class DDmodel(PSR_BINARY):
                    (1-eTheta**2)**0.5*sinOmg*self.d_omega_d_par('EDOT'))
 
     def d_beta_d_DTH(self):
-        """dBeta/dDth = a1/c*((-(e+dr)/sqrt(1-(e+dr)**2)*cos(omega)
+        """Derivative.
+
+        Computes::
+
+            dBeta/dDth = a1/c*((-(e+dr)/sqrt(1-(e+dr)**2)*cos(omega)
         """
         eTheta = self.eTheta()
         cosOmg = np.cos(self.omega())
@@ -331,9 +379,11 @@ class DDmodel(PSR_BINARY):
 
     ##################################################
     def Dre(self):
-        """Dre defined in
-           T. Damour and N. Deruelle(1986)equation [48]
-           Dre = alpha*(cos(E)-er)+(beta+gamma)*sin(E)
+        """Dre defined in T. Damour and N. Deruelle(1986)equation [48]
+
+        Computes::
+
+            Dre = alpha*(cos(E)-er)+(beta+gamma)*sin(E)
         """
         er = self.er()
         sinE = np.sin(self.E())
@@ -342,15 +392,17 @@ class DDmodel(PSR_BINARY):
                (self.beta()+self.GAMMA)*sinE
 
     def d_Dre_d_par(self,par):
-        """Dre = alpha*(cos(E)-er)+(beta+gamma)*sin(E)
+        """Derivative.
+
+        Computes::
+
+           Dre = alpha*(cos(E)-er)+(beta+gamma)*sin(E)
            dDre = alpha*(-der-dE*sin(E)) + (cos[E]-er)*dalpha +
                   (dBeta+dGamma)*sin(E) + (beta+gamma)*cos(E)*dE
-
            dDre/dpar = alpha*(-der/dpar-dE/dpar*sin(E)) +
                        (cos[E]-er)*dalpha/dpar +
                        (dBeta/dpar+dGamma/dpar)*sin(E) +
                        (beta+gamma)*cos(E)*dE/dpar
-
             er = e + Dr
         """
         Dre = self.Dre()
@@ -371,8 +423,10 @@ class DDmodel(PSR_BINARY):
 
     #################################################
     def Drep(self):
-        """Dervitive of Dre respect to E
-           T. Damour and N. Deruelle(1986)equation [49]
+        """Dervitive of Dre respect to E T. Damour and N. Deruelle(1986)equation [49]
+
+        Computes::
+
            Drep = -alpha*sin(E)+(beta+gamma)*cos(E)
         """
         sinE = np.sin(self.E())
@@ -380,7 +434,11 @@ class DDmodel(PSR_BINARY):
         return -self.alpha()*sinE+(self.beta()+self.GAMMA)*cosE
 
     def d_Drep_d_par(self,par):
-        """Drep = -alpha*sin(E)+(beta+gamma)*cos(E)
+        """Derivative.
+
+        Computes::
+
+           Drep = -alpha*sin(E)+(beta+gamma)*cos(E)
            dDrep = -alpha*cos(E)*dE + cos(E)*(dbeta+dgamma)
                    -(beta+gamma)*dE*sin(E)-dalpha*sin(E)
            dDrep/dPar = -sin(E)*dalpha/dPar
@@ -405,8 +463,10 @@ class DDmodel(PSR_BINARY):
 
     #################################################
     def Drepp(self):
-        """Dervitive of Drep respect to E
-           T. Damour and N. Deruelle(1986)equation [50]
+        """Dervitive of Drep respect to E T. Damour and N. Deruelle(1986)equation [50]
+
+        Computes::
+
            Drepp = -alpha*cos(E)-(beta+GAMMA)*sin(E)
         """
         sinE = np.sin(self.E())
@@ -414,13 +474,16 @@ class DDmodel(PSR_BINARY):
         return -self.alpha()*cosE-(self.beta()+self.GAMMA)*sinE
 
     def d_Drepp_d_par(self,par):
-        """Drepp = -alpha*cos(E)-(beta+GAMMA)*sin(E)
-           dDrepp = -(beta+gamma)*cos(E)*dE - cos(E)*dalpha
-                    +alpha*sin(E)*dE - (dbeta+dgamma)*sin(E)
+        """Derivative.
 
-           dDrepp/dPar = -cos(E)*dalpha/dPar
-                         +(alpha*sin(E)-(beta+gamma)*cos(E))*dE/dPar
-                         -(dbeta/dPar+dgamma/dPar)*sin(E)
+        Computes::
+
+            Drepp = -alpha*cos(E)-(beta+GAMMA)*sin(E)
+            dDrepp = -(beta+gamma)*cos(E)*dE - cos(E)*dalpha
+                     +alpha*sin(E)*dE - (dbeta+dgamma)*sin(E)
+            dDrepp/dPar = -cos(E)*dalpha/dPar
+                          +(alpha*sin(E)-(beta+gamma)*cos(E))*dE/dPar
+                          -(dbeta/dPar+dgamma/dPar)*sin(E)
         """
         sinE = np.sin(self.E())
         cosE = np.cos(self.E())
@@ -439,8 +502,10 @@ class DDmodel(PSR_BINARY):
     #################################################
 
     def nhat(self):
-        """nhat defined as
-           T. Damour and N. Deruelle(1986)equation [51]
+        """nhat defined as T. Damour and N. Deruelle(1986)equation [51]
+
+        Computes::
+
            nhat = n/(1-ecc*cos(E))
            n = 2*pi/PB # should here be M()
         """
@@ -448,11 +513,14 @@ class DDmodel(PSR_BINARY):
         return 2.0*np.pi/self.pb().to('second')/(1-self.ecc()*cosE)
 
     def d_nhat_d_par(self,par):
-        """nhat = n/(1-ecc*cos(E))
+        """Derivative.
+
+        Computes::
+
+           nhat = n/(1-ecc*cos(E))
            n = 2*pi/PB # should here be M()?
            dnhat = -2*pi*dPB/PB^2*(1-ecc*cos(E))
                    -2*pi*(-cos(E)*decc+ecc*sin(E)*dE)/PB*(1-ecc*cos(E))^2
-
            dnhat/dPar = -2*pi/(PB*(1-ecc*cos(E))*((dPB/dPar)/PB -
                         (-cos(E)*decc/dPar+ecc*sin(E)*dE/dpar)/(1-e*cos(E)))
         """
@@ -469,23 +537,30 @@ class DDmodel(PSR_BINARY):
     #################################################
     def delayInverse(self):
         """DD model Inverse timing delay.
+
         T. Damour and N. Deruelle(1986)equation [46-52]
+
         This part is convert the delay argument from proper time to coordinate
         time. The Romoer delay and Einstein are included in the calculation.
         It uses there iterations to approximate the Roemer delay and Einstein
         delay.
+
         T. Damour and N. Deruelle(1986)equation [43]. The equation [52] gives a
         taylor expension of equation [43].
-        u - e*sin(u) = n(t-T0)
-        nhat = du/dt
-        nhatp  = d^2u/dt^2
-        Drep = dDre/du
-        Drepp = d^2Dre/du^2
-        Dre(t-Dre(t-Dre(t)))  =  Dre(u) - Drep(u)*nhat*Dre(t-Dre(t))
-                              =  Dre(u) - Drep(u)*nhat*(Dre(u)-Drep(u)*nhat*Dre(t))
-                                 + 1/2 (Drepp(u)*nhat^2 + Drep(u) * nhat * nhatp) * (Dre(t)-...)^2
-                              = Dre(t)*(1 - nhat * Drep(u) + (nhat*Drep)^2 +
-                                1/2*nhat^2* Dre*Drepp - 1/2*e*sin(u)/(1-e*cos(u)*nhat^2*Drep*Drep))
+
+        Computes::
+
+            u - e*sin(u) = n(t-T0)
+            nhat = du/dt
+            nhatp  = d^2u/dt^2
+            Drep = dDre/du
+            Drepp = d^2Dre/du^2
+            Dre(t-Dre(t-Dre(t)))  =  Dre(u) - Drep(u)*nhat*Dre(t-Dre(t))
+                                  =  Dre(u) - Drep(u)*nhat*(Dre(u)-Drep(u)*nhat*Dre(t))
+                                     + 1/2 (Drepp(u)*nhat^2 + Drep(u) * nhat * nhatp) * (Dre(t)-...)^2
+                                  = Dre(t)*(1 - nhat * Drep(u) + (nhat*Drep)^2 +
+                                    1/2*nhat^2* Dre*Drepp - 1/2*e*sin(u)/(1-e*cos(u)*nhat^2*Drep*Drep))
+
         Here u is equivalent to E in the function.
         """
         Dre = self.Dre()
@@ -499,8 +574,7 @@ class DDmodel(PSR_BINARY):
                 1.0/2*e*sinE/(1-e*cosE)*nHat**2*Dre*Drep)).decompose()
 
     def d_delayI_d_par(self,par):
-        """Derivative on delay inverse.
-        """
+        """Derivative on delay inverse.  """
         e = self.ecc()
         sE = np.sin(self.E())
         cE = np.cos(self.E())
@@ -536,7 +610,8 @@ class DDmodel(PSR_BINARY):
     #################################################
     def delayS(self):
         """Binary shapiro delay
-           T. Damour and N. Deruelle(1986)equation [26]
+
+        T. Damour and N. Deruelle(1986)equation [26]
         """
         e = self.ecc()
         cE = np.cos(self.E())
@@ -550,7 +625,11 @@ class DDmodel(PSR_BINARY):
         return sDelay
 
     def d_delayS_d_par(self,par):
-        """dsDelay/dPar = dsDelay/dTM2*dTM2/dPar+
+        """Derivative.
+
+        Computes::
+
+           dsDelay/dPar = dsDelay/dTM2*dTM2/dPar+
                           dsDelay/decc*decc/dPar+
                           dsDelay/dE*dE/dPar+
                           dsDelay/domega*domega/dPar+
@@ -583,13 +662,18 @@ class DDmodel(PSR_BINARY):
     #################################################
     def delayE(self):
         """Binary Einstein delay
-            T. Damour and N. Deruelle(1986)equation [25]
+
+        T. Damour and N. Deruelle(1986)equation [25]
         """
         sinE = np.sin(self.E())
         return self.GAMMA
 
     def d_delayE_d_par(self,par):
-        """eDelay = gamma*sin[E]
+        """Derivative.
+
+        Computes::
+
+           eDelay = gamma*sin[E]
            deDelay_dPar = deDelay/dgamma*dgamma/dPar +
                           deDelay/dE*dE/dPar
         """
@@ -601,7 +685,8 @@ class DDmodel(PSR_BINARY):
 
     def delayA(self):
         """Binary Abberation delay
-            T. Damour and N. Deruelle(1986)equation [27]
+
+        T. Damour and N. Deruelle(1986)equation [27]
         """
         omgPlusAe = self.omega()+self.nu()
         et = self.ecc()
@@ -612,7 +697,11 @@ class DDmodel(PSR_BINARY):
         return aDelay
 
     def d_delayA_d_par(self,par):
-        """aDelay = A0*(sin(omega+E)+e*sin(omega))+B0*(cos(omega+E)+e*cos(omega))
+        """Derivative.
+
+        Computes::
+
+           aDelay = A0*(sin(omega+E)+e*sin(omega))+B0*(cos(omega+E)+e*cos(omega))
            daDelay/dpar = daDelay/dA0*dA0/dPar+     (1)
                           daDelay/dB0*dB0/dPar+     (2)
                           daDelay/domega*domega/dPar+    (3)
@@ -650,8 +739,7 @@ class DDmodel(PSR_BINARY):
         return self.delayInverse()+self.delayS()+self.delayA()
 
     def d_DDdelay_d_par(self,par):
-        """Full DD model delay derivtive
-        """
+        """Full DD model delay derivtive """
         with u.set_enabled_equivalencies(u.dimensionless_angles()):
             return self.d_delayI_d_par(par)+self.d_delayS_d_par(par)+ \
                    self.d_delayA_d_par(par)

@@ -36,12 +36,19 @@ class custom_timing(pint.models.spindown.Spindown,
 
 
 def read_gaussfitfile(gaussfitfile, proflen):
-    """
-    read_gaussfitfile(gaussfitfile, proflen):
-        Read a Gaussian-fit file as created by the output of pygaussfit.py.
-            The input parameters are the name of the file and the number of
-            bins to include in the resulting template file.  A numpy array
-            of that length is returned.
+    """Read a Gaussian-fit file as created by the output of pygaussfit.py.
+
+    Parameters
+    ----------
+    gaussfitfile : str
+        Name of the input file.
+    proflen : int
+        The number of bins to include in the resulting template.
+
+    Returns
+    -------
+    np.array
+        A template of length ``proflen``.
     """
     phass = []
     ampls = []
@@ -74,14 +81,21 @@ def read_gaussfitfile(gaussfitfile, proflen):
     return template
 
 def gaussian_profile(N, phase, fwhm):
-    """
-    gaussian_profile(N, phase, fwhm):
-        Return a gaussian pulse profile with 'N' bins and
-        an integrated 'flux' of 1 unit.
-            'N' = the number of points in the profile
-            'phase' = the pulse phase (0-1)
-            'fwhm' = the gaussian pulses full width at half-max
-        Note:  The FWHM of a gaussian is approx 2.35482 sigma
+    """Return a gaussian pulse profile with 'N' bins and an integrated 'flux' of 1 unit.
+
+    Parameters
+    ----------
+    N : int
+        the number of points in the profile
+    phase : float
+        the pulse phase (0-1)
+    fwhm : float
+        the gaussian pulses full width at half-max
+
+
+    Note
+    ----
+    The FWHM of a gaussian is approx 2.35482 sigma.
     """
     sigma = fwhm / 2.35482
     mean = phase % 1.0

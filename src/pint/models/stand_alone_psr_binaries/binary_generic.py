@@ -17,54 +17,55 @@ except ImportError:
 SECS_PER_JUL_YEAR = SECS_PER_DAY*365.25
 
 class PSR_BINARY(object):
-    """A base (generic) object for psr binary models. In this class, a set of
-    generally used binary paramters and several commonly used calculations are
-    defined. For each binary model, the specific parameters and calculations
-    are defined in the subclass.
+    """A base (generic) object for psr binary models.
+
+    In this class, a set of generally used binary paramters and several commonly used
+    calculations are defined. For each binary model, the specific parameters and
+    calculations are defined in the subclass.
 
     A binary model takes the solar system barycentric time (ssb time) as input.
     When a binary model is instantiated, the parameters are set to the default
     values and input time is not initialized. The update those values, method
-    `.updata_input()` should be used.
+    `.update_input()` should be used.
 
-    Example of build a sepcific binary model class
-    -------
-    >>> from pint.models.stand_alone_psr_binaries.pulsar_binary import PSR_BINARY
-    >>> import numpy
-    >>> class foo(PSR_BINARY):
-            def __init__(self):
-                # This is to initialize the mother class attributes.
-                super(foo, self).__init__()
-                self.binary_name = 'foo'
-                # Add parameter that specific for my_binary, with default value and units
-                self.param_default_value.update({'A0':0*u.second,'B0':0*u.second,
-                                       'DR':0*u.Unit(''),'DTH':0*u.Unit(''),
-                                       'GAMMA':0*u.second,})
-                self.set_param_values() # This is to set all the parameters to attributes
-                self.binary_delay_funcs += [self.foo_delay]
-                self.d_binarydelay_d_par_funcs += [self.d_foo_delay_d_par]
-                # If you have intermedia value in the calculation
-                self.dd_interVars = ['er','eTheta','beta','alpha','Dre','Drep','Drepp',
-                                     'nhat', 'TM2']
-                self.add_inter_vars(self.dd_interVars)
+    Example of build a sepcific binary model class::
 
-            def foo_delay(self):
-                pass
+        >>> from pint.models.stand_alone_psr_binaries.pulsar_binary import PSR_BINARY
+        >>> import numpy
+        >>> class foo(PSR_BINARY):
+                def __init__(self):
+                    # This is to initialize the mother class attributes.
+                    super(foo, self).__init__()
+                    self.binary_name = 'foo'
+                    # Add parameter that specific for my_binary, with default value and units
+                    self.param_default_value.update({'A0':0*u.second,'B0':0*u.second,
+                                           'DR':0*u.Unit(''),'DTH':0*u.Unit(''),
+                                           'GAMMA':0*u.second,})
+                    self.set_param_values() # This is to set all the parameters to attributes
+                    self.binary_delay_funcs += [self.foo_delay]
+                    self.d_binarydelay_d_par_funcs += [self.d_foo_delay_d_par]
+                    # If you have intermedia value in the calculation
+                    self.dd_interVars = ['er','eTheta','beta','alpha','Dre','Drep','Drepp',
+                                         'nhat', 'TM2']
+                    self.add_inter_vars(self.dd_interVars)
 
-            def d_foo_delay_d_par(self):
-                pass
-    >>> # To build a model instance
-    >>> binary_foo = foo()
-    >>> # binary_foo class has the defualt parameter value without toa input.
-    >>> # Update the toa input and parameters
-    >>> t = numpy.linspace(54200.0,55000.0,800)
-    >>> paramters_dict = {'A0':0.5,'ECC':0.01}
-    >>> binary_foo.update_input(t, paramters_dict)
-    >>> # Now the binary delay and derivatives can be computed.
+                def foo_delay(self):
+                    pass
+
+                def d_foo_delay_d_par(self):
+                    pass
+        >>> # To build a model instance
+        >>> binary_foo = foo()
+        >>> # binary_foo class has the defualt parameter value without toa input.
+        >>> # Update the toa input and parameters
+        >>> t = numpy.linspace(54200.0,55000.0,800)
+        >>> paramters_dict = {'A0':0.5,'ECC':0.01}
+        >>> binary_foo.update_input(t, paramters_dict)
+        >>> # Now the binary delay and derivatives can be computed.
 
     To acess the binary model class from pint platform, a pint pulsar binary
-    wrapper is needed. See docstrings in the source code of pint/models/pul
-    sar_binary class `PulsarBinary`.
+    wrapper is needed. See docstrings in the source code of pint/models/pulsar_binary
+    class `PulsarBinary`.
 
     Included general parameters:
     @param PB:          Binary period [days]
@@ -87,10 +88,6 @@ class PSR_BINARY(object):
     projected semi-major axis of orbit   a1
     TM2
 
-    Generic methon provided:
-    binary_delay()  Binary total delay
-    d_binarydelay_d_par()   Derivatives respect to one parameter
-    prtl_der()    partial derivatives respect to some variable
     """
     def __init__(self,):
         # Necessary parameters for all binary model
@@ -147,8 +144,7 @@ class PSR_BINARY(object):
         return self._tt0
 
     def update_input(self, **updates):
-        """ A function updates the toas and parameters
-        """
+        """Update the toas and parameters."""
         # Update toas
         if 'barycentric_toa' in updates:
             self.t = np.atleast_1d(updates['barycentric_toa'])
@@ -172,7 +168,8 @@ class PSR_BINARY(object):
             setattr(self, '_' + cv, None)
 
     def set_param_values(self, valDict = None):
-        """A function that sets the parameters and assign values
+        """Set the parameters and assign values,
+
         If the valDict is not provided, it will set parameter as default value
         """
         if valDict is None:
@@ -201,8 +198,7 @@ class PSR_BINARY(object):
                 setattr(self,parname,val)
 
     def add_binary_params(self,parameter, defaultValue, unit=False):
-        """Add one parameter to the binary class
-        """
+        """Add one parameter to the binary class."""
         if parameter not in self.binary_params:
             self.binary_params.append(parameter)
             if not hasattr(defaultValue, 'unit'):
@@ -232,9 +228,12 @@ class PSR_BINARY(object):
 
     def binary_delay(self):
         """Returns total pulsar binary delay.
-        Return
-        ----------
-        Pulsar binary delay in the units of second
+
+        Returns
+        -------
+        float
+            Pulsar binary delay in the units of second
+
         """
         bdelay = np.longdouble(np.zeros(len(self.t)))*u.s
         for bdf in self.binary_delay_funcs:
@@ -243,8 +242,9 @@ class PSR_BINARY(object):
 
     def d_binarydelay_d_par(self, par):
         """Get the binary delay derivatives respect to parameters.
-        Parameter
-        ---------
+
+        Parameters
+        ----------
         par : str
             Parameter name.
         """
@@ -261,17 +261,19 @@ class PSR_BINARY(object):
         return result
 
     def prtl_der(self,y,x):
-        """Find the partial derivatives in binary model
-           pdy/pdx
-           Parameters
-           ---------
-           y : str
-               Name of variable to be differentiated
-           x : str
-               Name of variable the derivative respect to
-           Return
-           ---------
-           pdy/pdx : The derivatives
+        """Find the partial derivatives in binary model pdy/pdx
+
+        Parameters
+        ----------
+        y : str
+           Name of variable to be differentiated
+        x : str
+           Name of variable the derivative respect to
+
+        Returns
+        -------
+        np.array
+           The derivatives pdy/pdx
         """
         if y not in self.binary_params+self.inter_vars:
             errorMesg = y + " is not in binary parameter and variables list."
@@ -329,14 +331,15 @@ class PSR_BINARY(object):
             return (result*derU)
 
     def compute_eccentric_anomaly(self, eccentricity, mean_anomaly):
-        """compute eccentric anomaly, solve for Kepler Equation,
-        E - e * sin(E) = M
-        Parameter
+        """Solve the Kepler Equation, E - e * sin(E) = M
+
+        Parameters
         ----------
         eccentricity : array_like
             Eccentricity of binary system
         mean_anomaly : array_like
             Mean anomaly of the binary system
+
         Returns
         -------
         array_like
@@ -363,11 +366,8 @@ class PSR_BINARY(object):
             U = U-k(U)/dk(U)
         return U*u.rad
 
-        ####################################
     def get_tt0(self,barycentricTOA):
-        """
-        tt0 = barycentricTOA - T0
-        """
+        """ tt0 = barycentricTOA - T0 """
         if barycentricTOA is None or self.T0 is None:
             tt0 = None
             return tt0
@@ -377,10 +377,8 @@ class PSR_BINARY(object):
         tt0 = (barycentricTOA - T0).to('second')
         return tt0
 
-    ####################################
     def ecc(self):
-        """Calculate ecctricity with EDOT
-        """
+        """Calculate ecctricity with EDOT """
         ECC = self.ECC
         EDOT = self.EDOT
         return ECC + (self.tt0*EDOT).decompose()
@@ -396,7 +394,6 @@ class PSR_BINARY(object):
     def d_ecc_d_EDOT(self):
         return self.tt0
 
-    #####################################
     def a1(self):
         return self.A1 + self.tt0*self.A1DOT
 
@@ -424,19 +421,20 @@ class PSR_BINARY(object):
         result = func()
         return result
 
-    ######################################
     def pb(self):
         return self.orbits_cls.pbprime()
 
     def d_pb_d_par(self, par):
         """derivative for pbprime respect to bianry parameter.
-           Parameters
-           ----------
-           par : string
-                 parameter name
-           Return
-           ----------
-           Derivitve of M respect to par
+
+        Parameters
+        ----------
+        par : string
+             parameter name
+
+        Returns
+        -------
+        Derivitve of M respect to par
         """
         if par not in self.binary_params:
             errorMesg = par + " is not in binary parameter list."
@@ -446,28 +444,27 @@ class PSR_BINARY(object):
         result = self.orbits_cls.d_pbprime_d_par(par)
         return result.to(self.PB.unit/par_obj.unit)
 
-    ######################################
     def pbdot(self):
         return self.orbits_cls.pbdot_orbit()
 
-    ######################################
     def orbits(self):
         return self.orbits_cls.orbits()
 
     def M(self):
-        """Orbit phase
-        """
+        """Orbit phase."""
         return self.orbits_cls.orbit_phase()
 
     def d_M_d_par(self, par):
         """derivative for M respect to bianry parameter.
-           Parameters
-           ----------
-           par : string
-                 parameter name
-           Return
-           ----------
-           Derivitve of M respect to par
+
+        Parameters
+        ----------
+        par : string
+             parameter name
+
+        Returns
+        -------
+        Derivitve of M respect to par
         """
         if par not in self.binary_params:
             errorMesg = par + " is not in binary parameter list."
@@ -480,8 +477,7 @@ class PSR_BINARY(object):
     ###############################################
 
     def E(self):
-        """Eccentric Anomaly
-        """
+        """Eccentric Anomaly """
         if not hasattr(self, '_E') or self._E is None:
             self._E = self.compute_eccentric_anomaly(self.ecc(),self.M())
         return self._E
@@ -489,9 +485,11 @@ class PSR_BINARY(object):
     # Analytically calculate derivtives.
 
     def d_E_d_T0(self):
-        """d(E-e*sinE)/dT0 = dM/dT0
-           dE/dT0(1-cosE*e)-de/dT0*sinE = dM/dT0
-           dE/dT0(1-cosE*e)+eDot*sinE = dM/dT0
+        """Analytic derivative
+
+        d(E-e*sinE)/dT0 = dM/dT0
+        dE/dT0(1-cosE*e)-de/dT0*sinE = dM/dT0
+        dE/dT0(1-cosE*e)+eDot*sinE = dM/dT0
         """
         RHS = self.prtl_der('M','T0')
         E = self.E()
@@ -509,13 +507,15 @@ class PSR_BINARY(object):
 
     def d_E_d_par(self, par):
         """derivative for E respect to bianry parameter.
-           Parameters
-           ----------
-           par : string
-                 parameter name
-           Return
-           ----------
-           Derivitve of E respect to par
+
+        Parameters
+        ----------
+        par : string
+             parameter name
+
+        Returns
+        -------
+        Derivitve of E respect to par
         """
         if par not in self.binary_params:
             errorMesg = par + " is not in binary parameter list."
@@ -532,10 +532,8 @@ class PSR_BINARY(object):
                 E = self.E()
                 return np.zeros(len(self.tt0)) * E.unit/par_obj.unit
 
-    #####################################################
     def nu(self):
-        """True anomaly  (Ae)
-        """
+        """True anomaly  (Ae) """
         if not hasattr(self, '_nu') or self._nu is None:
             ecc = self.ecc()
             nu = 2*np.arctan(np.sqrt((1.0+ ecc)/(1.0- ecc)) * np.tan(self.E()/2.0))
@@ -559,8 +557,10 @@ class PSR_BINARY(object):
         return np.sin(E)**2/(ecc*np.cos(E)-1)**2/np.sin(self.nu())
 
     def d_nu_d_T0(self):
-        """dnu/dT0 = dnu/de*de/dT0+dnu/dE*dE/dT0
-           de/dT0 = -EDOT
+        """Analytic calculation.
+
+        dnu/dT0 = dnu/de*de/dT0+dnu/dE*dE/dT0
+        de/dT0 = -EDOT
         """
         with u.set_enabled_equivalencies(u.dimensionless_angles()):
             return self.d_nu_d_ecc()*(-self.EDOT)+self.d_nu_d_E()*self.d_E_d_T0()
@@ -589,9 +589,11 @@ class PSR_BINARY(object):
 
 
     def d_nu_d_ECC(self):
-        """dnu(e,E)/dECC = dnu/de*de/dECC+dnu/dE*dE/dECC
-           de/dECC = 1
-           dnu/dPBDOT = dnu/dE*dE/dECC+dnu/de
+        """Analytic calculation.
+
+        dnu(e,E)/dECC = dnu/de*de/dECC+dnu/dE*dE/dECC
+        de/dECC = 1
+        dnu/dPBDOT = dnu/dE*dE/dECC+dnu/de
         """
         return self.d_nu_d_ecc()+self.d_nu_d_E()*self.d_E_d_ECC()
 
@@ -601,13 +603,14 @@ class PSR_BINARY(object):
 
     def d_nu_d_par(self, par):
         """derivative for nu respect to bianry parameter.
-           Parameters
-           ----------
-           par : string
-                 parameter name
-           Return
-           ----------
-           Derivitve of nu respect to par
+
+        Parameters
+        ----------
+        par : string
+             parameter name
+        Returns
+        -------
+        Derivitve of nu respect to par
         """
         if par not in self.binary_params:
             errorMesg = par + " is not in binary parameter list."
@@ -624,11 +627,7 @@ class PSR_BINARY(object):
                 nu = self.nu()
                 return np.zeros(len(self.tt0)) * nu.unit/par_obj.unit
 
-    #############################################
-
     def omega(self):
-        """
-        """
         PB = self.pb().to('second')
         OMDOT = self.OMDOT
         OM = self.OM
@@ -637,13 +636,14 @@ class PSR_BINARY(object):
 
     def d_omega_d_par(self,par):
         """derivative for omega respect to user input Parameter.
-           Parameters
-           ----------
-           par : string
-                 parameter name
-           Return
-           ----------
-           Derivitve of omega respect to par
+
+        Parameters
+        ----------
+        par : string
+             parameter name
+        Returns
+        -------
+        Derivitve of omega respect to par
         """
         if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
@@ -661,36 +661,28 @@ class PSR_BINARY(object):
 
 
     def d_omega_d_OM(self):
-        """dOmega/dOM = 1
-        """
+        """dOmega/dOM = 1 """
         return np.longdouble(np.ones((len(self.tt0))))*u.Unit('')
 
 
     def d_omega_d_OMDOT(self):
-        """dOmega/dOMDOT = tt0
-        """
+        """dOmega/dOMDOT = tt0 """
         return self.tt0
 
     def d_omega_d_T0(self):
-        """dOmega/dPB = dnu/dPB*k+dk/dPB*nu
-        """
+        """dOmega/dPB = dnu/dPB*k+dk/dPB*nu """
         result = np.empty(len(self.tt0))
         result.fill(-self.EDOT.value)
         return result*u.Unit(self.EDOT.unit)
-
-    ############################################################
 
     def TM2(self):
         return self.M2.value*Tsun
 
     def d_TM2_d_M2(self):
         return Tsun/(1.0*u.Msun)
-    ###########################################################
 
     def pbprime(self):
         return self.pb() - self.pbdot() * self.tt0
-
-    ################# Calculation for binary phase ################
 
     def P(self):
         return self.P0 + self.P1*(self.t - self.PEPOCH).to('second')

@@ -25,23 +25,21 @@ class UnknownBinaryModel(ValueError):
 
 class ModelBuilder(object):
     """A class for model construction interface.
-        Parameters
-        ---------
-        name : str
-            Name for the model.
-        parfile : str optional
-            The .par file input for select components. If the parfile is
-            provided the self.model_instance will be put model instance
-            with .par file read in. If it is not provided, self.model_instance
-            will return as None.
 
-        Return
-        ---------
-        A class contains the result model instance if parfile is provided and
-        method to build the model.
+    Parameters
+    ---------
+    name : str
+        Name for the model.
+    parfile : str optional
+        The .par file input for select components. If the parfile is
+        provided the self.model_instance will be put model instance
+        with .par file read in. If it is not provided, self.model_instance
+        will return as None.
 
-        Examples
-        --------
+    Returns
+    -------
+    A class contains the result model instance if parfile is provided and
+    method to build the model.
     """
     def __init__(self, parfile = None, name=''):
         self.timing_model = None

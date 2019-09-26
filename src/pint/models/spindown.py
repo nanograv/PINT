@@ -116,8 +116,8 @@ class Spindown(PhaseComponent):
     def change_pepoch(self, new_epoch, toas=None, delay=None):
         """Move PEPOCH to a new time and change the related paramters.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         new_epoch: float or `astropy.Time` object
             The new PEPOCH value.
         toas: `toa` object, optional.

@@ -17,12 +17,12 @@ Prerequisites
   - requirements.txt_ - python packages needed to work on PINT
 
 .. _setup.cfg: https://github.com/nanograv/PINT/blob/master/setup.cfg
-.. _requirements_dev.txt: https://github.com/nanograv/PINT/blob/master/requirements.txt
+.. _requirements.txt: https://github.com/nanograv/PINT/blob/master/requirements.txt
 
 * It is probably best to use and especially to work on PINT from within
   a virtualenv_; this lets you install packages as required without the
   help of a system administrator and without disturbing other users or
-  even other pieces of python software. The tool virtualenvwerapper_
+  even other pieces of python software. The tool virtualenvwrapper_
   is a reasonable way to manage virtualenv. The tool conda_ provides
   similar isolation and more powerful package installation; while PINT
   is not itself available from conda, you can set up a conda environment
@@ -66,8 +66,8 @@ Prerequisites
 .. [1] If you don't have `pip`_ installed, this `Python installation guide`_ can guide
    you through the process.
 
-.. _pip: https://pip.pypa.io
-.. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
+.. _pip: https://pip.pypa.io/en/stable/
+.. _Python installation guide: https://docs.python-guide.org/starting/installation/
 
 Installing from Source
 ----------------------
@@ -144,6 +144,14 @@ tool tox_::
 
    tox
 
+This runs a variety of tests, builds the documentation, and generates a
+coverage report. You can run test suites in parallel (``tox --parallel=auto``),
+restrict it to a specific python version (``tox -e py37``), or run a different
+command in the environments it generates (``tox -e py37 -- pytest --ff
+--pdb``).
+
+.. _tox: https://tox.readthedocs.io/en/latest/
+
 Build the documentation
 -----------------------
 
@@ -154,7 +162,7 @@ but you can build your own copy for offline use::
 
 At completion, a browser will open with the documentaion.
 
-.. _online: http://nanograv-pint.readthedocs.io/en/latest/
+.. _online: https://nanograv-pint.readthedocs.io/en/latest/
 
 Data files
 ----------

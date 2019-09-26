@@ -140,7 +140,7 @@ class Glitch(PhaseComponent):
             return phs.to(u.cycle)
 
     def d_phase_d_GLPH(self, toas, param, delay):
-        """Calculate the derivative wrt GLPH_"""
+        """Calculate the derivative wrt GLPH"""
         tbl = toas.table
         p, ids, idv = split_prefixed_name(param)
         if p !=  'GLPH_':
@@ -155,9 +155,7 @@ class Glitch(PhaseComponent):
         return dpdGLPH
 
     def d_phase_d_GLF0(self, toas, param, delay):
-        """
-        Calculate the derivative wrt GLF0_
-        """
+        """Calculate the derivative wrt GLF0"""
         tbl = toas.table
         p, ids, idv = split_prefixed_name(param)
         if p !=  'GLF0_':

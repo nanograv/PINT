@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+"""Work with Fermi TOAs."""
 from __future__ import absolute_import, print_function, division
 import os,sys
 import numpy as np
@@ -14,24 +14,31 @@ from pint.observatory import get_observatory
 from astropy import log
 
 def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
-    """
+    """Compute photon weights based on PSF.
+
     This function computes photon weights based on the energy-dependent
     PSF, as defined in Philippe Bruel's SearchPulsation code.
     It was built by David Smith, based on some code from Lucas Guillemot.
     This computation uses only the PSF as a function of energy, not a full
     spectral model of the region, so is less exact than gtsrcprob.
 
-    The input values are:
-    energies : Array of photon energies in MeV
-    angseps : Angular separations between photon direction and target
-              This should be astropy Angle array, such as returned from
-              SkyCoord_photons.separation(SkyCoord_target)
-    logeref : Parameter from SearchPulsation optimization
-    logesig : Parameter from SearchPulsation optimization
+    Parameters
+    ----------
+    energies : np.array
+        Array of photon energies in MeV
+    angseps : array of astropy Angles
+        Angular separations between photon direction and target
+        This should be astropy Angle array, such as returned from
+        SkyCoord_photons.separation(SkyCoord_target)
+    logeref : Parameter
+        from SearchPulsation optimization
+    logesig : Parameter
+        from SearchPulsation optimization
 
-    Returns a numpy array of weights (probabilities that the photons came
-    from the target, based on the PSF).
-
+    Returns
+    -------
+    np.array
+        weights (probabilities that the photons came from the target, based on the PSF).
     """
     # A few parameters that define the PSF shape
     psfpar0 =  5.445
