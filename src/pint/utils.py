@@ -162,23 +162,25 @@ def fortran_float(x):
 
 def time_from_mjd_string(s, scale='utc'):
     """Returns an astropy Time object generated from a MJD string input."""
-    ss = s.lower()
+    ss = s.lower().strip()
     if "e" in ss or "d" in ss:
         ss = ss.translate(maketrans("d", "e"))
         num, expon = ss.split("e")
         expon = int(expon)
         if expon < 0:
-            log.warning("Likely bogus sci notation input in " +
-                        "time_from_mjd_string ('%s')!" % s)
-            # This could cause a loss of precision...
-            # maybe throw an exception instead?
             imjd, fmjd = 0, np.longdouble(ss)
         else:
-            imjd_s, fmjd_s = num.split('.')
-            imjd = int(imjd_s + fmjd_s[:expon])
-            fmjd = float("0."+fmjd_s[expon:])
-            if imjd<0:
+            mjd_s = num.split('.')
+            # If input was given as an integer, add floating "0"
+            if len(mjd_s) == 1:
+                mjd_s.append("0")
+            imjd_s, fmjd_s = mjd_s
+            imjd = np.longdouble(int(imjd_s))
+            fmjd = np.longdouble("0." + fmjd_s)
+            if ss.startswith("-"):
                 fmjd = -fmjd
+            imjd *= 10**expon
+            fmjd *= 10**expon
     else:
         mjd_s = ss.split('.')
         # If input was given as an integer, add floating "0"
@@ -187,7 +189,7 @@ def time_from_mjd_string(s, scale='utc'):
         imjd_s, fmjd_s = mjd_s
         imjd = int(imjd_s)
         fmjd = float("0." + fmjd_s)
-        if imjd<0:
+        if ss.startswith("-"):
             fmjd = -fmjd
     return astropy.time.Time(imjd, fmjd, scale=scale, format='pulsar_mjd',
                              precision=9)
@@ -203,6 +205,7 @@ def time_to_mjd_string(t, prec=15):
 
     astropy does not seem to provide this capability (yet?).
     """
+
     if t.format == 'pulsar_mjd':
         (imjd, fmjd) = day_frac(t.jd1 - DJM0, t.jd2)
         imjd = int(imjd)
@@ -218,10 +221,10 @@ def time_to_mjd_string(t, prec=15):
         (imjd, fmjd) = day_frac(t.jd1 - DJM0, t.jd2)
         imjd = int(imjd)
         assert np.fabs(fmjd) < 2.0
-        if fmjd >= 1.0:
+        while fmjd >= 1.0:
             imjd += 1
             fmjd -= 1.0
-        if fmjd < 0.0:
+        while fmjd < 0.0:
             imjd -= 1
             fmjd += 1.0
 

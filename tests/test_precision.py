@@ -16,10 +16,12 @@ from pint.utils import (
     data2longdouble,
     longdouble2str,
     str2longdouble,
+    time_from_mjd_string,
     time_to_longdouble,
     time_to_mjd_string,
-    time_from_mjd_string,
 )
+
+time_eps = (np.finfo(float).eps * u.day).to(u.ns)
 
 
 @given(
@@ -148,6 +150,7 @@ def test_time_to_mjd_string_precision(format, i, f):
 @example(format="pulsar_mjd", i=50081, f=1.0000000016292463)
 @example(format="pulsar_mjd", i=40000, f=-4.440892098500627e-16)
 @example(format="mjd", i=40000, f=-4.440892098500627e-16)
+@example(format='pulsar_mjd', i=40000, f=-4.440892098500627e-16)
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_to_longdouble_close_to_time_to_mjd_string(format, i, f):
     t = Time(val=i, val2=f, format=format, scale="tai")
@@ -184,6 +187,7 @@ def test_time_to_mjd_string_format_dependence(i, f):
 
 @given(integers(40000, 70000), floats(-2.0, 2.0, allow_nan=False))
 @example(i=40000, f=-8.881784197001254e-16)
+@example(i=69666, f=-1.4552476513551895)
 def test_pulsar_mjd_never_differs_too_much_from_mjd(i, f):
     t = Time(val=i, val2=f, format="mjd", scale="tai")
     t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="tai")
@@ -200,41 +204,70 @@ def test_pulsar_mjd_never_differs_too_much_from_mjd_utc(i, f):
 
 
 def test_posvel_respects_longdouble():
-    pos = np.ones(3,dtype=np.longdouble)
+    pos = np.ones(3, dtype=np.longdouble)
     pos[0] += np.finfo(np.longdouble).eps
-    vel = np.ones(3,dtype=np.longdouble)
+    vel = np.ones(3, dtype=np.longdouble)
     vel[1] += np.finfo(np.longdouble).eps
-    pv = PosVel(pos,vel)
+    pv = PosVel(pos, vel)
     assert_array_equal(pv.pos, pos)
     assert_array_equal(pv.vel, vel)
 
 
 @given(
-    one_of(integers(40000, 60000), integers(-3000000, 3000000), just(0)),
+    one_of(integers(40000, 60000), integers(-1000000, 3000000), just(0)),
     floats(-2, 2, allow_nan=False),
 )
 @example(i=-1, f=0.9)
 @example(i=0, f=-0.00010000000000021106)
+@example(i=40000, f=1.2434497875801756e-14)
+@example(i=524288, f=1.1567635738174434e-11)
 def test_time_from_mjd_string_accuracy_vs_longdouble(i, f):
-    mjd = np.longdouble(i)+np.longdouble(f)
+    mjd = np.longdouble(i) + np.longdouble(f)
     s = str(mjd)
-    t = Time(val=i, val2=f, format='mjd', scale='utc')
-    assert abs(time_from_mjd_string(s)-t).to(u.us) < 1*u.us
+    t = Time(val=i, val2=f, format="mjd", scale="utc")
+    assert abs(time_from_mjd_string(s) - t).to(u.us) < 1 * u.us
     if 40000 <= i <= 60000:
-        assert abs(time_from_mjd_string(s)-t).to(u.us) < 1*u.ns
+        assert abs(time_from_mjd_string(s) - t).to(u.us) < 1 * u.ns
+
 
 @given(
     one_of(integers(40000, 60000), integers(-3000000, 3000000), just(0)),
     floats(-2, 2, allow_nan=False),
 )
+def test_time_from_mjd_string_roundtrip_very_close(i, f):
+    i = 50000
+    f = np.finfo(float).eps
+    t = Time(val=i, val2=f, format="pulsar_mjd", scale="utc")
+    s = time_to_mjd_string(t)
+    assert abs(time_from_mjd_string(s) - t).to(u.ns) <= 4 * time_eps
+
+
+def test_astropy_time_epsilon():
+    t1 = Time(val=50000, val2=np.finfo(float).eps, format="mjd", scale="utc")
+    t2 = Time(val=50000, val2=0, format="mjd", scale="utc")
+    assert t1 != t2
+    assert t1 - t2 > 0.9 * np.finfo(float).eps * u.day
+    assert t1 - t2 <= 1.1 * np.finfo(float).eps * u.day
+
+
+@given(
+    one_of(integers(40000, 60000), integers(-1000000, 3000000), just(0)),
+    floats(-2, 2, allow_nan=False),
+)
 @example(i=-1, f=0.9)
 @example(i=0, f=-0.00010000000000021106)
-def test_time_from_longdouble_accuracy_vs_longdouble(i, f):
-    mjd = np.longdouble(i)+np.longdouble(f)
-    s = str(mjd)
-    t = Time(mjd, format='mjd', scale='utc')
-    assert abs(time_from_mjd_string(s)-t).to(u.us) < 1*u.us
-    if 40000 <= i <= 60000:
-        assert abs(time_from_mjd_string(s)-t).to(u.us) < 1*u.ns
+@example(i=40000, f=1.2434497875801756e-14)
+@example(i=524288, f=1.1567635738174434e-11)
+def test_make_pulsar_mjd_ancient(i, f):
+    Time(val=i, val2=f, format="pulsar_mjd", scale="utc")
 
-# should be exact on 50000+np.finfo(float).eps
+
+@given(
+    one_of(integers(40000, 60000), integers(-1000000, 3000000), just(0)),
+    floats(-2, 2, allow_nan=False),
+)
+@example(i=-1, f=0.9)
+@example(i=0, f=-0.00010000000000021106)
+@example(i=40000, f=1.2434497875801756e-14)
+def test_make_mjd_ancient(i, f):
+    Time(val=i, val2=f, format="mjd", scale="utc")
