@@ -13,10 +13,9 @@ from pint.models.model_builder import UnknownBinaryModel, get_model, get_model_n
 from pint.models.timing_model import MissingParameter, TimingModel
 from pinttestdata import datadir
 
-if six.PY2:
-    @pytest.fixture
-    def tmp_path(tmpdir):
-        yield str(tmpdir)
+@pytest.fixture
+def tmp_dir(tmpdir):
+    yield str(tmpdir)
 
 def test_forgot_name():
     """Check argument validation in case 'name' is forgotten."""
@@ -71,14 +70,14 @@ binary_models = [
 
 
 @pytest.mark.parametrize("func, name, expectation", binary_models)
-def test_valid_model(tmp_path, func, name, expectation):
+def test_valid_model(tmp_dir, func, name, expectation):
     """Check handling of bogus binary models.
 
     Note that ``get_model_new`` currently reports different errors
     from the old ``get_model``.
 
     """
-    fn = join(tmp_path, "file.par")
+    fn = join(tmp_dir, "file.par")
     with open(fn, "w") as f:
         f.write(par_template.format(name))
     with expectation:
@@ -121,7 +120,7 @@ def test_compare_get_model_new_and_old_all_parfiles(parfile):
 
 #@pytest.mark.xfail(reason="inexact conversions")
 @pytest.mark.parametrize("parfile", glob(join(datadir, "*.par")))
-def test_get_model_roundtrip(tmp_path, parfile):
+def test_get_model_roundtrip(tmp_dir, parfile):
     if basename(parfile) in bad_trouble:
         pytest.skip("This parfile is unclear")
     try:
@@ -129,7 +128,7 @@ def test_get_model_roundtrip(tmp_path, parfile):
     except (IOError, MissingParameter) as e:
         pytest.skip("Existing code raised an exception {}".format(e))
 
-    fn = join(tmp_path, "file.par")
+    fn = join(tmp_dir, "file.par")
     with open(fn,"w") as f:
         f.write(m_old.as_parfile())
     m_roundtrip = get_model(fn)
