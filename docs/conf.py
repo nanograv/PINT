@@ -29,7 +29,7 @@ import sphinx.ext.apidoc
 # Get the project root dir, which is the parent dir of this
 cwd = os.getcwd()
 # project_root = os.path.dirname(cwd)
-project_root = os.path.join(cwd, "..")  # parent directory of wherever this file is
+project_root = os.path.join(cwd, "../src")  # parent directory of wherever this file is
 
 # Insert the project root dir as the first element in the PYTHONPATH.
 # This lets us ensure that the source package is imported, and that its
@@ -148,7 +148,7 @@ napoleon_use_param = True
 
 # allows readthedocs to auto-generate docs
 def run_apidoc(_):
-    module = '../pint'
+    module = '../src/pint'
     output_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "api"))
     args = [
         '--separate',
