@@ -11,6 +11,8 @@ import astropy.time as time
 class FD(DelayComponent):
     """A timing model for frequency evolution of pulsar profiles."""
     register = True
+    category = 'frequency_dependent'
+
     def __init__(self):
         super(FD, self).__init__()
         self.add_param(p.prefixParameter(name='FD1', units="second", value=0.0,
@@ -20,7 +22,6 @@ class FD(DelayComponent):
                        type_match='float'))
 
         self.delay_funcs_component += [self.FD_delay]
-        self.category = 'frequency_dependent'
 
     def setup(self):
         super(FD, self).setup()

@@ -1,22 +1,28 @@
 # model_builder.py
 # Defines the automatic timing model generator interface
-from __future__ import absolute_import, print_function, division
-import os
+from __future__ import absolute_import, division, print_function
 
-# The timing models that we will be using
-from .timing_model import TimingModel, Component
-from pint.utils import split_prefixed_name
-from .parameter import prefixParameter
-import inspect, fnmatch
 import glob
+import os
 import sys
+from collections import defaultdict
 
+from astropy import log
+
+from pint.utils import split_prefixed_name, interesting_lines, lines_of, PrefixError
+
+from .timing_model import Component, TimingModel, MissingParameter
 
 default_models = ["StandardTimingModel",]
 DEFAULT_ORDER = ['astrometry', 'jump_delay', 'solar_system_shapiro',
                  'dispersion_constant', 'dispersion_dmx', 'pulsar_system',
                  'frequency_dependent', 'spindown', 'phase_jump', 'wave']
-                 
+
+
+class UnknownBinaryModel(ValueError):
+    """Signal that the par file requested a binary model no in PINT."""
+
+
 class ModelBuilder(object):
     """A class for model construction interface.
         Parameters
@@ -64,9 +70,11 @@ class ModelBuilder(object):
 
     def preprocess_parfile(self, parfile):
         """Preprocess the par file.
+
         Return
-        ---------
+        ------
         A dictionary with all the parfile parameters with values in string
+
         """
         param = {}
         repeat_par = {}
@@ -94,27 +102,21 @@ class ModelBuilder(object):
         return self.param_inparF
 
     def get_all_categories(self,):
-        comp_category = {}
-        for k, cp in list(Component._component_list.items()):
-            ci = cp()
-            category = ci.category
-            if category not in list(comp_category.keys()):
-                comp_category[category] = [ci,]
-            else:
-                comp_category[category].append(ci)
-        return comp_category
+        """Obtain a dictionary from category to a list of instances."""
+        comp_category = defaultdict(list)
+        for k, cp in Component.component_types.items():
+            comp_category[cp.category].append(cp())
+        return dict(comp_category)
 
     def get_comp_from_parfile(self, parfile):
-        """Right now we only have one component on each category.
-        """
+        """Right now we only have one component on each category."""
         params_inpar = self.preprocess_parfile(parfile)
-        comp_categories = self.get_all_categories()
-        for cat, cmps in list(comp_categories.items()):
+        for cat, cmps in self.get_all_categories().items():
             selected_c = None
             for cpi in cmps:
-                if cpi.component_special_params != []:
-                    if any(par in params_inpar.keys() for par in \
-                           cpi.component_special_params):
+                if cpi.component_special_params:
+                    if any(par in params_inpar
+                           for par in cpi.component_special_params):
                         selected_c = cpi
                         # Once have match, stop searching
                         break
@@ -127,25 +129,25 @@ class ModelBuilder(object):
                 self.select_comp[cat] = selected_c
 
     def sort_components(self, category_order=DEFAULT_ORDER):
-        """
-        This is a function to sort the component order.
-        Parameter
-        ---------
+        """Sort the components into order.
+
+        Parameters
+        ----------
         category_order: list, optional
            The order for the order sensitive component categories.
+
         Note
         ----
         If a category is not listed in the category_order, it will be treated
         as order non-sensitive category and put in the end of sorted order list.
+
         """
-        cur_category = list(self.select_comp.keys())
-        all_categories = list(self.get_all_categories().keys())
         sorted_components = []
-        for cat in all_categories:
+        for cat in self.get_all_categories():
             if cat not in category_order:
                 category_order.append(cat)
         for co in category_order:
-            if co not in cur_category:
+            if co not in self.select_comp:
                 continue
             cp = self.select_comp[co]
             sorted_components.append(cp)
@@ -198,12 +200,12 @@ class ModelBuilder(object):
                     self.param_unrecognized[pp] = self.param_inparF[pp]
 
             for ptype in ['prefixParameter', 'maskParameter']:
-                prefix_param = \
-                    self.search_prefix_param( \
-                         list(self.param_unrecognized.keys()),self.timing_model,
-                         ptype)
+                prefix_param = self.search_prefix_param(
+                    self.param_unrecognized,
+                    self.timing_model,
+                    ptype)
                 prefix_in_model = self.timing_model.get_params_of_type(ptype)
-                for key in prefix_param.keys():
+                for key in prefix_param:
                     ppnames = [x for x in prefix_in_model if x.startswith(key)]
                     for ppn in ppnames:
                         pfx, idxs, idxv = split_prefixed_name(ppn)
@@ -220,6 +222,19 @@ class ModelBuilder(object):
                             new_par = exm_par.new_param(idx)
                             self.timing_model.add_param_from_top(new_par,
                                                                  exm_par_comp)
+            if "BINARY" in self.param_inparF:
+                vals = self.param_inparF["BINARY"]
+                if len(vals) != 1:
+                    raise ValueError(
+                        "Mal-formed binary model selection: {}"
+                        .format(repr(" ".join(["BINARY"]+vals))))
+                bm, = vals
+                cats = self.timing_model.get_component_of_category()
+                if "pulsar_system" not in cats:
+                    raise UnknownBinaryModel(
+                        "Unknown binary model requested in par file: {}"
+                        .format(bm))
+                # FIXME: consistency check - the componens actually chosen should know the name bm
 
         if parfile is not None:
             self.timing_model.read_parfile(parfile)
@@ -239,18 +254,143 @@ class ModelBuilder(object):
 
 def get_model(parfile):
     """A one step function to build model from a parfile
-        Parameters
-        ---------
-        name : str
-            Name for the model.
-        parfile : str
-            The parfile name
 
-        Return
-        ---------
-        Model instance get from parfile.
+    Parameters
+    ----------
+    name : str
+        Name for the model.
+    parfile : str
+        The parfile name
+
+    Returns
+    -------
+    Model instance get from parfile.
+
     """
     name = os.path.basename(os.path.splitext(parfile)[0])
 
     mb = ModelBuilder(parfile)
     return mb.timing_model
+
+
+def choose_model(parfile, category_order=None, name=None,
+                 check_for_missing_parameters=False):
+    """Determine which model components are appropriate for parfile."""
+    if name is None:
+        if isinstance(parfile, str):
+            name = os.path.basename(parfile)
+        else:
+            name = ""
+    if category_order is None:
+        category_order = DEFAULT_ORDER
+
+    models_by_category = defaultdict(list)
+    for k, c_type in Component.component_types.items():
+        models_by_category[c_type.category].append(c_type)
+
+    par_dict = {}
+    par_lines = []
+    for l in interesting_lines(lines_of(parfile), comments=("#", "C ")):
+        ll = l.split()
+        k = ll[0]
+        if k in par_dict:
+            # FIXME: what happens with JUMPs?
+            log.info("Lines with duplicate keys in par file: {} and {}"
+                     .format([k]+par_dict[k], ll))
+        par_dict[k] = ll[1:]
+        par_lines.append(l)
+
+    models_to_use = {}
+    for category, models in models_by_category.items():
+        acceptable = []
+        for m_type in models:
+            m = m_type()
+            if m.is_in_parfile(par_dict):
+                acceptable.append(m)
+        if len(acceptable) > 1:
+            raise ValueError(
+                "Multiple models are compatible with this par file: {}".format(acceptable))
+        if acceptable:
+            models_to_use[category] = acceptable[0]
+
+    if "BINARY" in par_dict:
+        vals = par_dict["BINARY"]
+        if len(vals) != 1:
+            raise ValueError(
+                "Mal-formed binary model selection: {}"
+                .format(repr(" ".join(["BINARY"]+vals))))
+        bm, = vals
+        if "pulsar_system" not in models_to_use:
+            # Either we're missing parameters or the model is bogus
+            # FIXME: distinguish
+            raise UnknownBinaryModel(
+                "Unknown binary model requested in par file: {}"
+                .format(bm))
+        # FIXME: consistency check - the componens actually chosen should know the name bm
+
+    models_in_order = []
+    for category in category_order:
+        try:
+            models_in_order.append(models_to_use.pop(category))
+        except KeyError:
+            pass
+    models_in_order.extend(v for k, v in sorted(models_to_use.items()))
+
+    tm = TimingModel(name, models_in_order)
+
+    # FIXME: this should go in TimingModel for when you try to
+    # add conflicting components
+    alias_map = {}
+    for prefix_type in ['prefixParameter', 'maskParameter']:
+        for pn in tm.get_params_of_type(prefix_type):
+            par = getattr(tm,  pn)
+            for a in [par.prefix] + par.prefix_aliases:
+                if a in alias_map:
+                    raise ValueError(
+                        "Two prefix/mask parameters have the same "
+                        "alias {}: {} and {}".format(a,alias_map[a],par))
+                alias_map[a] = par
+
+    leftover_params = par_dict.copy()
+    for k in tm.get_params_mapping():
+        leftover_params.pop(k, None)
+        for a in getattr(tm, k).aliases:
+            leftover_params.pop(a, None)
+
+    for p in leftover_params:
+        try:
+            pre,idxstr,idxV = split_prefixed_name(p)
+            try:
+                par = alias_map[pre]
+            except KeyError:
+                raise ValueError("Mystery parameter {}".format(p))
+            component = tm.get_params_mapping()[par.name]
+            new_parameter = par.new_param(idxV)
+            if hasattr(tm, new_parameter.name):
+                raise ValueError("Received duplicate parameter {}".format(new_parameter.name))
+            tm.add_param_from_top(new_parameter, component)
+        except PrefixError:
+            pass
+
+    return tm
+
+
+def get_model_new(parfile):
+    """Build model from a parfile.
+
+    Parameters
+    ----------
+    name : str
+        Name for the model.
+    parfile : str
+        The parfile name.
+
+    Returns
+    -------
+    pint.models.timing_model.TimingModel
+        The constructed model with parameter values loaded.
+
+    """
+    tm = choose_model(parfile)
+    tm.read_parfile(parfile)
+    return tm

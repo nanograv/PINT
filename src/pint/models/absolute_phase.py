@@ -19,6 +19,7 @@ class AbsPhase(PhaseComponent):
     provide the phase_func
     """
     register = True
+    category = 'absolute_phase'
 
     def __init__(self):
         super(AbsPhase, self).__init__()
@@ -28,8 +29,6 @@ class AbsPhase(PhaseComponent):
                        description="Observatory of the zero phase measured."))
         self.add_param(p.floatParameter(name="TZRFRQ", units=u.MHz,
                        description="The frequency of the zero phase mearsured."))
-
-        self.category = 'absolute_phase'
 
     def setup(self):
         super(AbsPhase, self).setup()

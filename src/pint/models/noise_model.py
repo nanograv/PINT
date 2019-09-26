@@ -1,4 +1,5 @@
 """Pulsar timing noise models."""
+
 from __future__ import absolute_import, division, print_function
 
 import astropy.units as u
@@ -17,7 +18,7 @@ class NoiseComponent(Component):
         self.basis_funcs = []
 
 class ScaleToaError(NoiseComponent):
-    """This is a class to correct template fitting timing noise.
+    """Correct reported template fitting uncertainties.
 
     Note
     ----
@@ -26,9 +27,9 @@ class ScaleToaError(NoiseComponent):
     """
 
     register = True
+    category = 'scale_toa_error'
     def __init__(self,):
         super(ScaleToaError, self).__init__()
-        self.category = 'scale_toa_error'
         self.add_param(p.maskParameter(name ='EFAC', units="",
                                        aliases=['T2EFAC', 'TNEF'],
                                        description="A multiplication factor on" \
@@ -136,16 +137,24 @@ class ScaleToaError(NoiseComponent):
 
 
 class EcorrNoise(NoiseComponent):
-    """This is a class to model ECORR type noise.
-    Notes
-    -----
+    """Noise correlated between nearby TOAs.
+
+    This can occur, for example, if multiple TOAs were taken at different
+    frequencies simultaneously: pulsar intrinsic emission jitters back
+    and forth within the average profile, and this effect is the same
+    for all frequencies. Thus these TOAs have correlated errors.
+
+    Note
+    ----
     Ref: NanoGrav 11 yrs data
+
     """
+
     register = True
+    category = 'ecorr_noise'
     def __init__(self,):
         super(EcorrNoise, self).__init__()
         self.introduces_correlated_errors = True
-        self.category = 'ecorr_noise'
         self.add_param(p.maskParameter(name='ECORR', units="us",\
                                        aliases=['TNECORR'],
                                        description="An error term added that"\
@@ -212,16 +221,26 @@ class EcorrNoise(NoiseComponent):
 
 
 class PLRedNoise(NoiseComponent):
-    """This is a class to model Powerlaw red noise type noise.
-    Notes
-    -----
+    """Timing noise with a power-law spectrum.
+
+    Over the long term, pulsars are observed to experience timing noise
+    dominated by low frequencies. This can occur, for example, if the
+    torque on the pulsar varies randomly. If the torque experiences
+    white noise, the phase we observe will experience "red" noise, that
+    is noise dominated by the lowest frequency. This results in errors
+    that are correlated between TOAs over fairly long time spans.
+
+    Note
+    ----
     Ref: NanoGrav 11 yrs data
+
     """
+
     register = True
+    category = 'pl_red_noise'
     def __init__(self,):
         super(PLRedNoise, self).__init__()
         self.introduces_correlated_errors = True
-        self.category = 'pl_red_noise'
         self.add_param(p.floatParameter(name='RNAMP', units="",\
                                        aliases=[],
                                        description="Amplitude of powerlaw "\

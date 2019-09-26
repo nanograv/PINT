@@ -1,18 +1,21 @@
-from __future__ import absolute_import, print_function, division
-from . import utils
-import numpy as np
+"""Observatory position and velocity calculation."""
+from __future__ import absolute_import, division, print_function
+
+import astropy.table as table
 import astropy.units as u
+import numpy as np
+from astropy.time import Time
+from astropy.utils.data import (clear_download_cache, download_file,
+                                is_url_in_cache)
+from astropy.utils.iers import IERS_B, IERS_B_URL
+
+from . import utils
+
 try:
     import astropy.erfa as erfa
 except ImportError:
     import astropy._erfa as erfa
-import astropy.table as table
-from astropy.time import Time
 
-from astropy.utils.iers import IERS_B, IERS_B_URL
-from astropy.utils.data import (
-        download_file, clear_download_cache, is_url_in_cache
-        )
 
 
 def get_iers_b_up_to_date(mjd):

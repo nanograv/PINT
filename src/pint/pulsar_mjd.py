@@ -1,4 +1,18 @@
-"""Time format pulsar_mjd to handle leap seconds differently."""
+"""PulsarMJD special time format.
+
+MJDs seem simple but if you want to use them with the UTC time scale
+you have to deal with the fact that every so often a UTC day is either
+86401 or 64399 seconds long. :class:`astropy.time.Time` has a policy
+on how to interpret MJDs in UTC, and in that time scale there are times
+that cannot be expressed in MJD, and there are MJDs that do not express
+valid times. So ``pulsar_mjd`` is a different definition of what MJDs in
+UTC mean (on days with a leap second MJDs advance very slightly faster
+or slower than one MJD per day.
+
+This is not a theoretical consideration: at least one pulsar observer
+was observing the sky at the moment a leap second was introduced.
+
+"""
 from __future__ import absolute_import, division, print_function
 
 import astropy._erfa as erfa
@@ -19,8 +33,9 @@ def safe_kind_conversion(values, dtype):
 
 
 class TimePulsarMJD(TimeFormat):
-    """MJD using tempo/tempo2 convention for time within leap second days.
+    """Change handling of days with leap seconds.
 
+    MJD using tempo/tempo2 convention for time within leap second days.
     This is only relevant if scale='utc', otherwise will act like the
     standard astropy MJD time format.
 

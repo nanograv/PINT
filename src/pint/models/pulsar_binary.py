@@ -1,43 +1,53 @@
-# This is a wapper for independent binary model. It is a PINT timing model class
-from __future__ import absolute_import, print_function, division
+"""Support for independent binary models.
+
+This module if for wrapping standalone binary models so that they work
+as PINT timing models.
+
+"""
+
+from __future__ import absolute_import, division, print_function
+
 import astropy.units as u
 import numpy as np
-from . import parameter as p
-from .timing_model import DelayComponent, MissingParameter
 from astropy import log
-from pint import ls,GMsun,Tsun
+
+from pint import ls
+
+from . import parameter as p
 from .stand_alone_psr_binaries import binary_orbits as bo
+from .timing_model import DelayComponent, MissingParameter
 
 
 class PulsarBinary(DelayComponent):
-    """ A wapper class for independent pulsar binary model interact with PINT
-    platform. The calculations are done by the classes located at
-    pint/models/stand_alone_psr_binary
+    """Wrapper class for independent pulsar binary model.
+
+    The calculations are done by the classes located in
+    :module:`pint.models.stand_alone_psr_binary`.
+
     Binary variables naming:
-    Eccentric Anomaly               E (not parameter ECC)
-    Mean Anomaly                    M
-    True Anomaly                    nu
-    Eccentric                       ecc
-    Longitude of periastron         omega
-    projected semi-major axis of orbit   a1
+
+        - Eccentric Anomaly:               E (not parameter ECC)
+        - Mean Anomaly:                    M
+        - True Anomaly:                    nu
+        - Eccentric:                       ecc
+        - Longitude of periastron:         omega
+        - Projected semi-major axis of orbit:   a1
 
     """
+
+    category = 'pulsar_system'
     def __init__(self,):
         super(PulsarBinary, self).__init__()
-        self.category = 'pulsar_system'
         self.binary_model_name = None
         self.barycentric_time = None
         self.binary_model_class = None
         self.add_param(p.floatParameter(name="PB",
             units=u.day,
             description="Orbital period", long_double=True))
-
-
         self.add_param(p.floatParameter(name="PBDOT",
             units = u.day/u.day,
             description="Orbital period derivitve respect to time", \
             unit_scale=True, scale_factor=1e-12, scale_threshold=1e-7))
-
         self.add_param(p.floatParameter(name="A1",
             units=ls,
             description="Projected semi-major axis, a*sin(i)"))
@@ -47,41 +57,32 @@ class PulsarBinary(DelayComponent):
             units=ls/u.s,
             description="Derivative of projected semi-major axis, da*sin(i)/dt", \
             unit_scale=True, scale_factor=1e-12, scale_threshold=1e-7))
-
         self.add_param(p.floatParameter(name="ECC",
             units="",
             aliases = ["E"],
             description="Eccentricity"))
-
         self.add_param(p.floatParameter(name="EDOT",
              units="1/s",
              description="Eccentricity derivitve respect to time", \
              unit_scale=True, scale_factor=1e-12, scale_threshold=1e-7))
-
         self.add_param(p.MJDParameter(name="T0",
             description="Epoch of periastron passage", time_scale='tdb'))
-
         self.add_param(p.floatParameter(name="OM",
             units=u.deg,
             description="Longitude of periastron",long_double=True))
-
         self.add_param(p.floatParameter(name="OMDOT",
             units="deg/year",
             description="Longitude of periastron", long_double=True))
-
         self.add_param(p.floatParameter(name="M2",
              units=u.M_sun,
              description="Mass of companian in the unit Sun mass"))
-
         self.add_param(p.floatParameter(name="SINI", units="",
              description="Sine of inclination angle"))
-
         self.add_param(p.prefixParameter(name="FB0", value=None, units='1/s^1',
                        description="0th time derivative of frequency of orbit",
                        unit_template=self.FBX_unit, aliases = ['FB'],
                        description_template=self.FBX_description,
                        type_match='float', long_double=True))
-
         self.interal_params = []
         self.warn_default_params = ['ECC', 'OM']
         # Set up delay function
@@ -98,11 +99,12 @@ class PulsarBinary(DelayComponent):
         FBXs = {}
         for fbn in FBX_mapping.values():
             FBXs[fbn] = getattr(self, fbn).quantity
-        if None not in list(FBXs.values()):
+        if None not in FBXs.values():
             for fb_name, fb_value in FBXs.items():
                 if fb_value is None:
-                    raise MissingParameter(self.binary_model_name, fb_name + \
-                                           " is required for FB orbits.")
+                    raise MissingParameter(
+                        self.binary_model_name,
+                        fb_name + " is required for FB orbits.")
                 self.binary_instance.add_binary_params(fb_name, fb_value)
             self.binary_instance.orbits_cls = bo.OrbitFBX(self.binary_instance,
                                                           list(FBXs.keys()))
@@ -117,21 +119,20 @@ class PulsarBinary(DelayComponent):
                 try:
                     par_method = getattr(self.binary_instance, method_name)
                 except AttributeError:
-                    raise MissingParameter(self.binary_model_name, p + \
-                                           " is required for '%s'." %
-                                           self.binary_model_name)
+                    raise MissingParameter(
+                        self.binary_model_name,
+                        p + " is required for '%s'." % self.binary_model_name)
                 try:
-                    _ = par_method()
+                    par_method()
                 except:
-                    raise MissingParameter(self.binary_model_name, p +
-                                           " is present but somehow "
-                                           "broken for '%s'." %
-                                           self.binary_model_name)
+                    raise MissingParameter(
+                        self.binary_model_name,
+                        p + " is present but somehow broken for '%s'."
+                            % self.binary_model_name)
 
     # With new parameter class set up, do we need this?
     def apply_units(self):
-        """Apply units to parameter value.
-        """
+        """Apply units to parameter value."""
         for bpar in self.binary_params:
             bparObj = getattr(self,bpar)
             if bparObj.value is None or bparObj.units is None:
@@ -139,9 +140,7 @@ class PulsarBinary(DelayComponent):
             bparObj.value = bparObj.value * u.Unit(bparObj.units)
 
     def update_binary_object(self, toas, acc_delay=None):
-        """
-        Update binary object instance for this set of parameters/toas
-        """
+        """Update binary object instance for this set of parameters/toas."""
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py
         # Get barycnetric toa first
@@ -185,12 +184,12 @@ class PulsarBinary(DelayComponent):
         self.binary_instance.update_input(**updates)
 
     def binarymodel_delay(self, toas, acc_delay=None):
-        """Return the binary model independent delay call"""
+        """Return the binary model independent delay call."""
         self.update_binary_object(toas, acc_delay)
         return self.binary_instance.binary_delay()
 
     def d_binary_delay_d_xxxx(self, toas, param, acc_delay):
-        """Return the bianry model delay derivtives"""
+        """Return the binary model delay derivtives."""
         self.update_binary_object(toas, acc_delay)
         return self.binary_instance.d_binarydelay_d_par(param)
 

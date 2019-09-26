@@ -1,5 +1,4 @@
-"""Polynomial pulsar spindown.
-"""
+"""Polynomial pulsar spindown."""
 # spindown.py
 # Defines Spindown timing model class
 from __future__ import absolute_import, print_function, division
@@ -23,6 +22,7 @@ import pint.toa as toa
 class Spindown(PhaseComponent):
     """A simple timing model for an isolated pulsar."""
     register = True
+    category = 'spindown'
     def __init__(self):
         super(Spindown, self).__init__()
         self.add_param(p.floatParameter(name="F0", value=0.0, units="Hz",
@@ -37,7 +37,6 @@ class Spindown(PhaseComponent):
                        time_scale='tdb'))
 
         self.phase_funcs_component += [self.spindown_phase,]
-        self.category = 'spindown'
         self.phase_derivs_wrt_delay += [self.d_spindown_phase_d_delay,]
 
     def setup(self):

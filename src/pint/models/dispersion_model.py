@@ -51,12 +51,15 @@ class Dispersion(DelayComponent):
         return self.dispersion_time_delay(dm, bfreq)
 
 class DispersionDM(Dispersion):
-    """The DM dispersion model.
+    """Simple DM dispersion model.
 
-    This model uses Taylor expansion to model
-    the DM variation over time. It is also can be used for the constant DM model.
+    This model uses Taylor expansion to model DM variation over time. It
+    can also be used for a constant DM.
+
     """
+
     register = True
+    category = 'dispersion_constant'
     def __init__(self):
         super(DispersionDM, self).__init__()
         self.add_param(p.floatParameter(name="DM", units="pc cm^-3", value=0.0,
@@ -70,7 +73,6 @@ class DispersionDM(Dispersion):
                        description="Epoch of DM measurement"))
 
         self.dm_value_funcs += [self.base_dm,]
-        self.category = 'dispersion_constant'
         self.delay_funcs_component += [self.constant_dispersion_delay,]
 
     def setup(self):
@@ -166,9 +168,15 @@ class DispersionDM(Dispersion):
 
 
 class DispersionDMX(Dispersion):
-    """This class provides a DMX model based on the class of Dispersion.
+    """This class provides a DMX model - multiple DM values.
+
+    This model lets the user specify time ranges and fit for a different
+    DM value in each time range.
+
     """
+
     register = True
+    category = "dispersion_dmx"
     def __init__(self):
         super(DispersionDMX, self).__init__()
         # DMX is for info output right now
@@ -195,7 +203,6 @@ class DispersionDMX(Dispersion):
         self.dm_value_funcs += [self.dmx_dm,]
         self.set_special_params(['DMX_0001', 'DMXR1_0001','DMXR2_0001'])
         self.delay_funcs_component += [self.DMX_dispersion_delay,]
-        self.category = "dispersion_dmx"
 
     def setup(self):
         super(DispersionDMX, self).setup()

@@ -1,3 +1,4 @@
+"""The DDK model - DD with kinematics."""
 from __future__ import absolute_import, print_function, division
 from pint import ls,GMsun,Tsun
 from .stand_alone_psr_binaries.DDK_model import DDKmodel
@@ -9,7 +10,9 @@ from astropy import log
 
 
 class BinaryDDK(BinaryDD):
-    """This is a PINT pulsar binary ddk model class a subclass of DD model.
+    """Wrapper for the DDK model - DD with kinematics.
+
+    This is a PINT pulsar binary ddk model class a subclass of DD model.
     It is a wrapper for independent DDKmodel class defined in
     ./stand_alone_psr_binary/DDK_model.py
     All the detailed calculations are in the independent DDKmodel.
@@ -17,10 +20,12 @@ class BinaryDDK(BinaryDD):
     DDKmodel special parameters:
     KIN inclination angle
     KOM the longitude of the ascending node, Kopeikin (1995) Eq 9. OMEGA
+
     Reference
     ---------
     KOPEIKIN. 1995, 1996
     """
+
     register = True
     def __init__(self,):
         super(BinaryDDK, self).__init__()
