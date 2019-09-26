@@ -1,3 +1,5 @@
+"""Model parametrizing Shapiro delay differently."""
+
 # This Python file uses the following encoding: utf-8
 from __future__ import absolute_import, print_function, division
 from .ELL1_model import ELL1BaseModel
@@ -8,19 +10,17 @@ from pint import ls,GMsun,Tsun
 
 
 class ELL1Hmodel(ELL1BaseModel):
-    """
-       This is a class for ELL1H pulsar binary model using H3, H4 or STIGMA as
-       shapiro delay parameter.
+    """ELL1H pulsar binary model using H3, H4 or STIGMA as shapiro delay parameter.
 
-       Note
-       ----
-       Ref : Paulo C. C. Freire and Norbert Wex, Mon. Not. R. Astron. Soc. 409,
-       ELL1H model parameterize the shapiro delay differently compare to ELL1
-       model. A fourier series expansion is used for the shapiro delay.
-       Ds = -2r * (a0/2 + sum(a_k*cos(k*phi)) + sum(b_k * sin(k*phi))
-       The first two harmonics are generlly absorbed by ELL1 roemer delay.
-       Thus, when ELL1 parameterize shapiro delay uses the series from the third
-       harmonic or higher.
+    Note
+    ----
+    Ref : Paulo C. C. Freire and Norbert Wex, Mon. Not. R. Astron. Soc. 409,
+    ELL1H model parameterize the shapiro delay differently compare to ELL1
+    model. A fourier series expansion is used for the shapiro delay.
+    Ds = -2r * (a0/2 + sum(a_k*cos(k*phi)) + sum(b_k * sin(k*phi))
+    The first two harmonics are generlly absorbed by ELL1 roemer delay.
+    Thus, when ELL1 parameterize shapiro delay uses the series from the third
+    harmonic or higher.
     """
     def __init__(self):
         super(ELL1Hmodel, self).__init__()
@@ -73,9 +73,7 @@ class ELL1Hmodel(ELL1BaseModel):
         return (self.H3) ** 4 / (self.H4) ** 3
 
     def _ELL1H_fourier_basis(self, k, derivative=False):
-        """ This is a function to select the fourier basis and part of the
-        coefficent depend on the parity of the harmonics k
-        """
+        """Select the fourier basis and part of the coefficent depend on the parity of the harmonics k """
         if k % 2 == 0:
             pwr = (k + 2)/2
             if not derivative :
@@ -92,20 +90,22 @@ class ELL1Hmodel(ELL1BaseModel):
 
     def fourier_component(self, stigma, k, factor_out_power=0):
         """(P. Freire and N. Wex 2010) paper Eq (13)
-           parameter
-           ---------
-           stigma: float
-               Orthometric ratio
-           k: positive integer
-               Order of harmonics.
-           factor_out_power: int
-               The power factor out from the coefficent. For example, when
-               factor_out_power = 1, for k = 3. we have:
-               (-1) ^ ((k+1)/2) * 2 / k * stigma ^ 2, the one extra stigma is
-               factored out to other terms.
-           Return
-           ------
-           The coefficent of fourier component and the basis.
+
+        Parameters
+        ----------
+        stigma: float
+           Orthometric ratio
+        k: positive integer
+           Order of harmonics.
+        factor_out_power: int
+           The power factor out from the coefficent. For example, when
+           factor_out_power = 1, for k = 3. we have:
+           (-1) ^ ((k+1)/2) * 2 / k * stigma ^ 2, the one extra stigma is
+           factored out to other terms.
+
+        Returns
+        -------
+        The coefficent of fourier component and the basis.
         """
 
         if k != 0:
@@ -118,8 +118,7 @@ class ELL1Hmodel(ELL1BaseModel):
             return -1.0 * np.log(1 + stigma ** 2) * stigma ** (- factor_out_power), basis_func
 
     def d_fourier_component_d_stigma(self, stigma, k, factor_out_power=0):
-        """This is a method to compute the derivative of a fourier component.
-        """
+        """This is a method to compute the derivative of a fourier component."""
         if k != 0:
             pwr, basis_func = self._ELL1H_fourier_basis(k)
             # prevent factor out zeros.
@@ -161,20 +160,23 @@ class ELL1Hmodel(ELL1BaseModel):
 
     def ELL1H_shapiro_delay_fourier_harms(self, selected_harms, phi, stigma, \
                                     factor_out_power=0):
-        """This is a function that impletements the fourier series harms of
-           shapiro delay. One can select the start term and end term, in other
-           words, a part the fourier series term can be selected.
-           (P. Freire and N. Wex 2010) paper Eq (10)
-           Parameter
-           ---------
-           selected_harms: numpy.array or list of positive integers
-               The selected harms for fourier harms
-           phi: float
-               Orbit phase in ELL1 model
-           stigma: float
-           Return
-           ------
-           The summation of harmonics
+        """Fourier series harms of shapiro delay.
+
+        One can select the start term and end term, in other
+        words, a part the fourier series term can be selected.
+        (P. Freire and N. Wex 2010) paper Eq (10)
+
+        Parameters
+        ----------
+        selected_harms: numpy.array or list of positive integers
+           The selected harms for fourier harms
+        phi: float
+           Orbit phase in ELL1 model
+        stigma: float
+
+        Returns
+        -------
+        The summation of harmonics
         """
         harms = np.zeros((len(selected_harms), len(phi)))
         # To prevent factor out zeros
@@ -190,8 +192,7 @@ class ELL1Hmodel(ELL1BaseModel):
 
     def d_ELL1H_fourier_harms_d_par(self, selected_harms, phi, stigma, par,
                                     factor_out_power=0):
-        """This is a overall derivative  function.
-        """
+        """This is a overall derivative  function.  """
         # Find the right derivative  function for fourier components
         df_name = 'd_fourier_component_d_' + par.lower()
         par_obj = getattr(self, par)
@@ -212,9 +213,9 @@ class ELL1Hmodel(ELL1BaseModel):
         return np.sum(d_harms, axis=0)
 
     def delayS3p_H3_STIGMA_approximate(self, H3, stigma, end_harm=6):
-        """
-           Shapiro delay third harmonics or higher harms defined in the
-           (P. Freire and N. Wex 2010) paper Eq (19).
+        """Shapiro delay third harmonics or higher harms
+
+        defined in the (P. Freire and N. Wex 2010) paper Eq (19).
         """
         Phi = self.Phi()
         selected_harms = np.arange(3, end_harm + 1)
@@ -225,8 +226,7 @@ class ELL1Hmodel(ELL1BaseModel):
         return ds
 
     def d_delayS3p_H3_STIGMA_approximate_d_H3(self, H3, stigma, end_harm=6):
-        """derivative  of delayS3p_H3_STIGMA with respect to H3
-        """
+        """derivative  of delayS3p_H3_STIGMA with respect to H3 """
         Phi = self.Phi()
         selected_harms = np.arange(3, end_harm + 1)
         sum_fharms = self.ELL1H_shapiro_delay_fourier_harms(selected_harms, Phi,
@@ -234,8 +234,7 @@ class ELL1Hmodel(ELL1BaseModel):
         return -2.0 * sum_fharms
 
     def d_delayS3p_H3_STIGMA_approximate_d_STIGMA(self, H3, stigma, end_harm=6):
-        """derivative  of delayS3p_H3_STIGMA with respect to STIGMA
-        """
+        """derivative  of delayS3p_H3_STIGMA with respect to STIGMA """
         Phi = self.Phi()
         selected_harms = np.arange(3, end_harm + 1)
         sum_d_fharms = self.d_ELL1H_fourier_harms_d_par(selected_harms, Phi, stigma, \
@@ -243,8 +242,7 @@ class ELL1Hmodel(ELL1BaseModel):
         return -2.0 * H3 * sum_d_fharms
 
     def d_delayS3p_H3_STIGMA_approximate_d_Phi(self, H3, stigma, end_harm=6):
-        """derivative  of delayS3p_H3_STIGMA with respect to Phi
-        """
+        """derivative  of delayS3p_H3_STIGMA with respect to Phi """
         Phi = self.Phi()
         selected_harms = np.arange(3, end_harm + 1)
         sum_d_fharms = self.d_ELL1H_fourier_harms_d_par(selected_harms, Phi, stigma, \
@@ -252,8 +250,9 @@ class ELL1Hmodel(ELL1BaseModel):
         return -2.0 * H3 * sum_d_fharms
 
     def delayS3p_H3_STIGMA_exact(self, H3, stigma, end_harm=None):
-        """Shapiro delay third harmonics or higher harms exact format defined
-           in the P. Freire and N. Wex 2010 paper Eq (28).
+        """Shapiro delay third harmonics or higher harms
+
+        exact format defined in the P. Freire and N. Wex 2010 paper Eq (28).
         """
         Phi = self.Phi()
         lognum = 1 + stigma ** 2 - 2 * stigma * np.sin(Phi)
@@ -262,8 +261,9 @@ class ELL1Hmodel(ELL1BaseModel):
         return ds
 
     def d_delayS3p_H3_STIGMA_exact_d_H3(self, H3, stigma, end_harm=None):
-        """derivative  of Shapiro delay third harmonics or higher harms exact
-           format with respect to H3
+        """derivative  of Shapiro delay third harmonics or higher harms
+
+        exact format with respect to H3
         """
         Phi = self.Phi()
         lognum = 1 + stigma ** 2 - 2 * stigma * np.sin(Phi)
@@ -272,8 +272,9 @@ class ELL1Hmodel(ELL1BaseModel):
         return d_ds_d_h3
 
     def d_delayS3p_H3_STIGMA_exact_d_STIGMA(self, H3, stigma, end_harm=None):
-        """derivative  of Shapiro delay third harmonics or higher harms exact
-           format with respect to STIGMA
+        """derivative  of Shapiro delay third harmonics or higher harms
+
+        exact format with respect to STIGMA
         """
         Phi = self.Phi()
         lognum = 1 + stigma ** 2 - 2 * stigma * np.sin(Phi)
@@ -283,8 +284,9 @@ class ELL1Hmodel(ELL1BaseModel):
         return d_ds_d_stigma
 
     def d_delayS3p_H3_STIGMA_exact_d_Phi(self, H3, stigma, end_harm=None):
-        """derivative  of Shapiro delay third harmonics or higher harms exact
-           format with respect to STIGMA
+        """derivative  of Shapiro delay third harmonics or higher harms
+
+        exact format with respect to STIGMA
         """
         Phi = self.Phi()
         lognum = 1 + stigma ** 2 - 2 * stigma * np.sin(Phi)
@@ -293,8 +295,7 @@ class ELL1Hmodel(ELL1BaseModel):
         return d_ds_d_Phi
 
     def delayS_H3_STIGMA_exact(self, H3, stigma, end_harm=None):
-        """P. Freire and N. Wex 2010 paper Eq (29)
-        """
+        """P. Freire and N. Wex 2010 paper Eq (29) """
         Phi = self.Phi()
         lognum = 1 + stigma ** 2 - 2 * stigma * np.sin(Phi)
         ds = -2 * H3 / stigma ** 3 * np.log(lognum)

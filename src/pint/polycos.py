@@ -18,12 +18,12 @@ MIN_PER_DAY = 60.0*24.0
 
 
 class polycoEntry:
-    """
-    Polyco Entry class:
-    A Class for one Polyco entry.
+    """One Polyco entry.
+
     Referenced from polyco.py authored by
-        Paul S. Ray <paul.ray@nrl.navy.mil>
-        Matthew Kerr <matthew.kerr@gmail.com>
+        - Paul S. Ray <paul.ray@nrl.navy.mil>
+        - Matthew Kerr <matthew.kerr@gmail.com>
+
     Parameters
     ---------
     tmid : float
@@ -104,49 +104,50 @@ class polycoEntry:
 
 # Read polycos file data to table
 def tempo_polyco_table_reader(filename):
-    """
-    Read tempo style polyco file to an astropy table
+    """Read tempo style polyco file to an astropy table.
 
-    Parameters
-    ---------
-    filename : str
-        Name of the input poloco file.
+    Tempo style: The polynomial ephemerides are written to file 'polyco.dat'.  Entries
+    are listed sequentially within the file.  The file format is::
 
-    Tempo style:
-    The polynomial ephemerides are written to file 'polyco.dat'.  Entries
-    are listed sequentially within the file.  The file format is:
-
-    Line  Columns     Item
-    ----  -------   -----------------------------------
-     1       1-10   Pulsar Name
-            11-19   Date (dd-mmm-yy)
-            20-31   UTC (hhmmss.ss)
-            32-51   TMID (MJD)
-            52-72   DM
-            74-79   Doppler shift due to earth motion (10^-4)
-            80-86   Log_10 of fit rms residual in periods
-     2       1-20   Reference Phase (RPHASE)
-            21-38   Reference rotation frequency (F0)
-            39-43   Observatory number
-            44-49   Data span (minutes)
-            50-54   Number of coefficients
-            55-75   Observing frequency (MHz)
-            76-80   Binary phase
-     3*      1-25   Coefficient 1 (COEFF(1))
-            26-50   Coefficient 2 (COEFF(2))
-            51-75   Coefficient 3 (COEFF(3))
-
-    * Subsequent lines have three coefficients each, up to NCOEFF
+        ====  =======   ============================================
+        Line  Columns     Item
+        ====  =======   ============================================
+         1       1-10   Pulsar Name
+                11-19   Date (dd-mmm-yy)
+                20-31   UTC (hhmmss.ss)
+                32-51   TMID (MJD)
+                52-72   DM
+                74-79   Doppler shift due to earth motion (10^-4)
+                80-86   Log_10 of fit rms residual in periods
+         2       1-20   Reference Phase (RPHASE)
+                21-38   Reference rotation frequency (F0)
+                39-43   Observatory number
+                44-49   Data span (minutes)
+                50-54   Number of coefficients
+                55-75   Observing frequency (MHz)
+                76-80   Binary phase
+         3*      1-25   Coefficient 1 (COEFF(1))
+                26-50   Coefficient 2 (COEFF(2))
+                51-75   Coefficient 3 (COEFF(3))
+        ====  =======   ============================================
+        * Subsequent lines have three coefficients each, up to NCOEFF
 
     One polyco file could include more then one entrie
 
-    The pulse phase and frequency at time T are then calculated as:
-    DT = (T-TMID)*1440
-    PHASE = RPHASE + DT*60*F0 + COEFF(1) + DT*COEFF(2) + DT^2*COEFF(3) + ....
-    FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ....)
+    The pulse phase and frequency at time T are then calculated as::
 
-    Reference:
-        http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
+        DT = (T-TMID)*1440
+        PHASE = RPHASE + DT*60*F0 + COEFF(1) + DT*COEFF(2) + DT^2*COEFF(3) + ....
+        FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ....)
+
+    Parameters
+    ----------
+    filename : str
+        Name of the input poloco file.
+
+    References
+    ----------
+    http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
     """
     f = open(filename, "r")
     # Read entries to the end of file
@@ -230,6 +231,39 @@ def tempo_polyco_table_writer(polycoTable, filename = 'polyco.dat'):
     """
     Write tempo style polyco file from an astropy table
 
+    Tempo style polyco file:
+    The polynomial ephemerides are written to file 'polyco.dat'.  Entries
+    are listed sequentially within the file.  The file format is::
+
+        Line  Columns     Item
+        ----  -------   -----------------------------------
+         1       1-10   Pulsar Name
+                11-19   Date (dd-mmm-yy)
+                20-31   UTC (hhmmss.ss)
+                32-51   TMID (MJD)
+                52-72   DM
+                74-79   Doppler shift due to earth motion (10^-4)
+                80-86   Log_10 of fit rms residual in periods
+         2       1-20   Reference Phase (RPHASE)
+                21-38   Reference rotation frequency (F0)
+                39-43   Observatory number
+                44-49   Data span (minutes)
+                50-54   Number of coefficients
+                55-75   Observing frequency (MHz)
+                76-80   Binary phase
+         3*      1-25   Coefficient 1 (COEFF(1))
+                26-50   Coefficient 2 (COEFF(2))
+                51-75   Coefficient 3 (COEFF(3))
+        * Subsequent lines have three coefficients each, up to NCOEFF
+
+    One polyco file could include more then one entrie
+
+    The pulse phase and frequency at time T are then calculated as::
+
+        DT = (T-TMID)*1440
+        PHASE = RPHASE + DT*60*F0 + COEFF(1) + DT*COEFF(2) + DT^2*COEFF(3) + ....
+        FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ....)
+
     Parameters
     ---------
     polycoTable: astropy table
@@ -237,42 +271,9 @@ def tempo_polyco_table_writer(polycoTable, filename = 'polyco.dat'):
     filename : str
         Name of the output poloco file.
 
-
-    Tempo style polyco file:
-    The polynomial ephemerides are written to file 'polyco.dat'.  Entries
-    are listed sequentially within the file.  The file format is:
-
-    Line  Columns     Item
-    ----  -------   -----------------------------------
-     1       1-10   Pulsar Name
-            11-19   Date (dd-mmm-yy)
-            20-31   UTC (hhmmss.ss)
-            32-51   TMID (MJD)
-            52-72   DM
-            74-79   Doppler shift due to earth motion (10^-4)
-            80-86   Log_10 of fit rms residual in periods
-     2       1-20   Reference Phase (RPHASE)
-            21-38   Reference rotation frequency (F0)
-            39-43   Observatory number
-            44-49   Data span (minutes)
-            50-54   Number of coefficients
-            55-75   Observing frequency (MHz)
-            76-80   Binary phase
-     3*      1-25   Coefficient 1 (COEFF(1))
-            26-50   Coefficient 2 (COEFF(2))
-            51-75   Coefficient 3 (COEFF(3))
-
-    * Subsequent lines have three coefficients each, up to NCOEFF
-
-    One polyco file could include more then one entrie
-
-    The pulse phase and frequency at time T are then calculated as:
-    DT = (T-TMID)*1440
-    PHASE = RPHASE + DT*60*F0 + COEFF(1) + DT*COEFF(2) + DT^2*COEFF(3) + ....
-    FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ....)
-
-    Reference:
-        http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
+    References
+    ----------
+    http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
     """
     f = open(filename,'w')
     lenTable = len(polycoTable)

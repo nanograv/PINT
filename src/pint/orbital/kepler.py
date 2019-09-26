@@ -16,15 +16,21 @@ G = 36768.59290949113 # Based on standard gravitational parameter
 def true_from_eccentric(e, eccentric_anomaly):
     """Compute the true anomaly from the eccentric anomaly.
 
-    Inputs:
-        e - the eccentricity
-        eccentric_anomaly - the eccentric anomaly
+    Parameters
+    ----------
+    e : float
+        the eccentricity
+    eccentric_anomaly : float
+        the eccentric anomaly
 
-    Outputs:
-        true_anomaly - the true anomaly
-        true_anomaly_de - derivative of true anomaly with respect to e
-        true_anomaly_prime - derivative of true anomaly with respect to
-            eccentric anomaly
+    Returns
+    -------
+    true_anomaly : float
+        the true anomaly
+    true_anomaly_de : float
+        derivative of true anomaly with respect to e
+    true_anomaly_prime : float
+        derivative of true anomaly with respect to eccentric anomaly
     """
     true_anomaly = 2*np.arctan2(np.sqrt(1+e)*np.sin(eccentric_anomaly/2),
                                 np.sqrt(1-e)*np.cos(eccentric_anomaly/2))
@@ -36,13 +42,19 @@ def true_from_eccentric(e, eccentric_anomaly):
 def eccentric_from_mean(e, mean_anomaly):
     """Compute the eccentric anomaly from the mean anomaly.
 
-    Inputs:
-        e - the eccentricity
-        mean_anomaly - the mean anomaly
+    Parameters
+    ----------
+    e : float
+        the eccentricity
+    mean_anomaly : float
+        the mean anomaly
 
-    Outputs:
-        eccentric_anomaly - the true anomaly
-        derivatives - pair of derivatives with respect to the two inputs
+    Returns
+    -------
+    eccentric_anomaly : float
+        the true anomaly
+    derivatives : float
+        pair of derivatives with respect to the two inputs
     """
     eccentric_anomaly = newton(
             lambda E: E-e*np.sin(E)-mean_anomaly,
@@ -73,9 +85,7 @@ def mass_partials(a, pb):
 
 
 def btx_parameters(asini, pb, eps1, eps2, tasc):
-    """Attempt to convert parameters from ELL1 to BTX.
-
-    """
+    """Attempt to convert parameters from ELL1 to BTX."""
     e = np.hypot(eps1, eps2)
     om = np.arctan2(eps1, eps2)
     true_anomaly = -om # True anomaly at the ascending node
@@ -92,10 +102,17 @@ class Kepler2DParameters(
                                "a pb eps1 eps2 t0")):
     """Parameters to describe a one-object 2D Keplerian orbit.
 
-    a - semimajor axis
-    pb - binary period
-    eps1, eps2 - eccentricity parameters
-    t0 - time of the ascending node
+    Parameters
+    ----------
+    a : float
+        semimajor axis
+    pb : float
+        binary period
+    eps1 : float
+    eps2 : float
+        eccentricity parameters
+    t0 : float
+        time of the ascending node
     """
     __slots__ = ()
 
@@ -290,12 +307,21 @@ class Kepler3DParameters(
                                "a pb eps1 eps2 i lan t0")):
     """Parameters to describe a one-object 3D Keplerian orbit.
 
-    a - semimajor axis
-    pb - binary period
-    eps1, eps2 - eccentricity parameters
-    i - inclination angle
-    lan - longitude of the ascending node
-    t0 - time of the ascending node
+    Parameters
+    ----------
+    a : float
+        semimajor axis
+    pb : float
+        binary period
+    eps1 : float
+    eps2 : float
+        eccentricity parameters
+    i : float
+        inclination angle
+    lan : float
+        longitude of the ascending node
+    t0 : float
+        time of the ascending node
     """
     __slots__ = ()
 
@@ -355,8 +381,7 @@ def kepler_3d(params,t):
     return xyv4, jac4
 
 def inverse_kepler_3d(xyv, m, t):
-    """Inverse Kepler one-body calculation.
-    """
+    """Inverse Kepler one-body calculation."""
     L = np.cross(xyv[:3],xyv[3:])
     i = np.arccos(L[2]/np.sqrt(np.dot(L,L)))
     lan = (-np.arctan2(L[0],-L[1])) % (2*np.pi)
@@ -391,15 +416,30 @@ class KeplerTwoBodyParameters(
             "a pb eps1 eps2 i lan q x_cm y_cm z_cm vx_cm vy_cm vz_cm tasc")):
     """Parameters to describe a one-object 3D Keplerian orbit.
 
-    a - semimajor axis
-    pb - binary period
-    eps1, eps2 - eccentricity parameters
-    i - inclination angle
-    lan - longitude of the ascending node
-    q - mass ratio of bodies (companion over primary)
-    x_cm, y_cm, z_cm - position of the center of mass
-    vx_cm, vy_cm, vz_cm - velocity of the center of mass
-    tasc - time of the ascending node
+    Parameters
+    ----------
+    a : float
+        semimajor axis
+    pb : float
+        binary period
+    eps1, eps2 : float
+        eccentricity parameters
+    i : float
+        inclination angle
+    lan : float
+        longitude of the ascending node
+    q : float
+        mass ratio of bodies (companion over primary)
+    x_cm : float
+    y_cm : float
+    z_cm : float
+        position of the center of mass
+    vx_cm : float
+    vy_cm : float
+    vz_cm : float
+        velocity of the center of mass
+    tasc : float
+        time of the ascending node
     """
     __slots__ = ()
 

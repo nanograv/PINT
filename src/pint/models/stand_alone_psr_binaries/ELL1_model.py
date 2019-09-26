@@ -1,3 +1,4 @@
+"""The ELL1 model for approximately handling near-circular orbits."""
 from __future__ import absolute_import, print_function, division
 from .binary_generic import PSR_BINARY
 import numpy as np
@@ -7,9 +8,10 @@ from pint import ls,GMsun,Tsun
 
 class ELL1BaseModel(PSR_BINARY):
     """This is a class for base ELL1 pulsar binary model.
-       ELL1 model is BT model in the small eccentricity case.
-       The shapiro delay is computed differently by different subclass of
-       ELL1Base.
+
+    ELL1 model is BT model in the small eccentricity case.
+    The shapiro delay is computed differently by different subclass of
+    ELL1Base.
     """
     def __init__(self):
         super(ELL1BaseModel, self).__init__()
@@ -42,8 +44,10 @@ class ELL1BaseModel(PSR_BINARY):
         return ttasc
 
     def a1(self):
-        """ELL1 model a1 calculation. This method overrides the a1() method in
-        pulsar_binary.py. Instead of tt0, it uses ttasc.
+        """ELL1 model a1 calculation.
+
+        This method overrides the a1() method in pulsar_binary.py. Instead of tt0,
+        it uses ttasc.
         """
         return self.A1 + self.ttasc()*self.A1DOT
 
@@ -113,12 +117,14 @@ class ELL1BaseModel(PSR_BINARY):
 
     def d_Phi_d_par(self, par):
         """The derivative of Phi with respect to parameter
+
          Parameters
          ----------
          par : string
                parameter name
-         Return
-         ----------
+
+         Returns
+         -------
          Derivitve of Phi respect to par
         """
         if par not in self.binary_params:
@@ -133,9 +139,13 @@ class ELL1BaseModel(PSR_BINARY):
             return self.d_M_d_par(par)
 
     def d_Dre_d_par(self, par):
-        """Dre = delayR = a1/c.c*(sin(phi) - 0.5* eps1*cos(2*phi) +  0.5* eps2*sin(2*phi))
-        d_Dre_d_par = d_a1_d_par /c.c*(sin(phi) - 0.5* eps1*cos(2*phi) +  0.5* eps2*sin(2*phi)) +
-                      d_Dre_d_Phi * d_Phi_d_par + d_Dre_d_eps1*d_eps1_d_par + d_Dre_d_eps2*d_eps2_d_par
+        """Derivative computation.
+
+        Computes::
+
+            Dre = delayR = a1/c.c*(sin(phi) - 0.5* eps1*cos(2*phi) +  0.5* eps2*sin(2*phi))
+            d_Dre_d_par = d_a1_d_par /c.c*(sin(phi) - 0.5* eps1*cos(2*phi) +  0.5* eps2*sin(2*phi)) +
+                          d_Dre_d_Phi * d_Phi_d_par + d_Dre_d_eps1*d_eps1_d_par + d_Dre_d_eps2*d_eps2_d_par
         """
         a1 = self.a1()
         Phi = self.Phi()
@@ -164,10 +174,14 @@ class ELL1BaseModel(PSR_BINARY):
         return a1/c.c*(np.cos(Phi) + eps1 * np.sin(2.0 * Phi) + eps2 * np.cos(2.0 * Phi))
 
     def d_Drep_d_par(self, par):
-        """Drep = d_Dre_d_Phi = a1/c.c*(cos(Phi) + eps1 * sin(Phi) + eps2 * cos(Phi))
-        d_Drep_d_par = d_a1_d_par /c.c*(cos(Phi) + eps1 * sin(Phi) + eps2 * cos(Phi)) +
-                      d_Drep_d_Phi * d_Phi_d_par + d_Drep_d_eps1*d_eps1_d_par +
-                      d_Drep_d_eps2*d_eps2_d_par
+        """Derivative computation.
+
+        Computes::
+
+            Drep = d_Dre_d_Phi = a1/c.c*(cos(Phi) + eps1 * sin(Phi) + eps2 * cos(Phi))
+            d_Drep_d_par = d_a1_d_par /c.c*(cos(Phi) + eps1 * sin(Phi) + eps2 * cos(Phi)) +
+                          d_Drep_d_Phi * d_Phi_d_par + d_Drep_d_eps1*d_eps1_d_par +
+                          d_Drep_d_eps2*d_eps2_d_par
         """
         a1 = self.a1()
         Phi = self.Phi()
@@ -191,10 +205,14 @@ class ELL1BaseModel(PSR_BINARY):
         return a1/c.c*(-np.sin(Phi) + 2.0 * (eps1 * np.cos(2.0 * Phi) - eps2 * np.sin(2.0 * Phi)))
 
     def d_Drepp_d_par(self, par):
-        """Drepp = d_Drep_d_Phi = a1/c.c*(-sin(Phi) + 2.0* (eps1 * cos(2.0*Phi) - eps2 * sin(2.0*Phi)))
-        d_Drepp_d_par = d_a1_d_par /c.c*(-sin(Phi) + 2.0* (eps1 * cos(2.0*Phi) - eps2 * sin(2.0*Phi))) +
-                      d_Drepp_d_Phi * d_Phi_d_par + d_Drepp_d_eps1*d_eps1_d_par +
-                      d_Drepp_d_eps2*d_eps2_d_par
+        """Derivative computation
+
+        Computes::
+
+            Drepp = d_Drep_d_Phi = a1/c.c*(-sin(Phi) + 2.0* (eps1 * cos(2.0*Phi) - eps2 * sin(2.0*Phi)))
+            d_Drepp_d_par = d_a1_d_par /c.c*(-sin(Phi) + 2.0* (eps1 * cos(2.0*Phi) - eps2 * sin(2.0*Phi))) +
+                          d_Drepp_d_Phi * d_Phi_d_par + d_Drepp_d_eps1*d_eps1_d_par +
+                          d_Drepp_d_eps2*d_eps2_d_par
         """
         a1 = self.a1()
         Phi = self.Phi()
@@ -213,25 +231,27 @@ class ELL1BaseModel(PSR_BINARY):
                d_Drepp_d_eps2 * self.prtl_der('eps2', par)
 
     def delayR(self):
-        """ELL1 Roemer delay in proper time. Ch. Lange,1 F. Camilo, 2001 eq. A6
-        """
+        """ELL1 Roemer delay in proper time. Ch. Lange,1 F. Camilo, 2001 eq. A6 """
         Phi = self.Phi()
         return (self.a1()/c.c*(np.sin(Phi) + 0.5 * (self.eps2() * np.sin(2*Phi)
                           - self.eps1() * np.cos(2*Phi)))).decompose()
 
     def delayI(self):
-        """Inverse time delay formular. The treatment is similar to the one
-        in DD model(T. Damour and N. Deruelle(1986)equation [46-52])
-        Dre = a1*(sin(Phi)+eps1/2*sin(2*Phi)+eps1/2*cos(2*Phi))
-        Drep = dDre/dt
-        Drepp = d^2 Dre/dt^2
-        nhat = dPhi/dt = 2pi/pb
-        nhatp = d^2Phi/dt^2 = 0
-        Dre(t-Dre(t-Dre(t)))  = Dre(Phi) - Drep(Phi)*nhat*Dre(t-Dre(t))
-                              = Dre(Phi) - Drep(Phi)*nhat*(Dre(Phi)-Drep(Phi)*nhat*Dre(t))
-                                + 1/2 (Drepp(u)*nhat^2 + Drep(u) * nhat * nhatp) * (Dre(t)-...)^2
-                              = Dre(Phi)(1 - nhat*Drep(Phi) + (nhat*Drep(Phi))^2
-                                + 1/2*nhat^2* Dre*Drepp)
+        """Inverse time delay formular.
+
+        The treatment is similar to the one
+        in DD model(T. Damour and N. Deruelle(1986)equation [46-52])::
+
+            Dre = a1*(sin(Phi)+eps1/2*sin(2*Phi)+eps1/2*cos(2*Phi))
+            Drep = dDre/dt
+            Drepp = d^2 Dre/dt^2
+            nhat = dPhi/dt = 2pi/pb
+            nhatp = d^2Phi/dt^2 = 0
+            Dre(t-Dre(t-Dre(t)))  = Dre(Phi) - Drep(Phi)*nhat*Dre(t-Dre(t))
+                                  = Dre(Phi) - Drep(Phi)*nhat*(Dre(Phi)-Drep(Phi)*nhat*Dre(t))
+                                    + 1/2 (Drepp(u)*nhat^2 + Drep(u) * nhat * nhatp) * (Dre(t)-...)^2
+                                  = Dre(Phi)(1 - nhat*Drep(Phi) + (nhat*Drep(Phi))^2
+                                    + 1/2*nhat^2* Dre*Drepp)
         """
         Dre = self.delayR()
         Drep = self.Drep()
@@ -247,9 +267,13 @@ class ELL1BaseModel(PSR_BINARY):
         return -2*np.pi/self.pb()**2 * self.d_pb_d_par(par)
 
     def d_delayI_d_par(self, par):
-        """delayI = Dre*(1 - nhat*Drep + (nhat*Drep)**2 + 1.0/2*nhat**2*Dre*Drepp)
-        d_delayI_d_par = d_delayI_d_Dre * d_Dre_d_par + d_delayI_d_Drep * d_Drep_d_par +
-                         d_delayI_d_Drepp * d_Drepp_d_par + d_delayI_d_nhat * d_nhat_d_par
+        """Delay derivative.
+
+        Computes::
+
+            delayI = Dre*(1 - nhat*Drep + (nhat*Drep)**2 + 1.0/2*nhat**2*Dre*Drepp)
+            d_delayI_d_par = d_delayI_d_Dre * d_Dre_d_par + d_delayI_d_Drep * d_Drep_d_par +
+                             d_delayI_d_Drepp * d_Drepp_d_par + d_delayI_d_nhat * d_nhat_d_par
         """
         Dre = self.delayR()
         Drep = self.Drep()
@@ -302,9 +326,12 @@ class ELL1model(ELL1BaseModel):
 
     def d_delayS_d_par(self, par):
         """Derivative for bianry Shaprio delay.
-        delayS = -2 * TM2 * np.log(1 - self.SINI * np.sin(Phi))
-        d_delayS_d_par = d_delayS_d_TM2 * d_TM2_d_par + d_delayS_d_SINI*d_SINI_d_par +
-                         d_delayS_d_Phi * d_Phi_d_par
+
+        Computes::
+
+            delayS = -2 * TM2 * np.log(1 - self.SINI * np.sin(Phi))
+            d_delayS_d_par = d_delayS_d_TM2 * d_TM2_d_par + d_delayS_d_SINI*d_SINI_d_par +
+                             d_delayS_d_Phi * d_Phi_d_par
         """
         TM2 = self.TM2()
         Phi = self.Phi()

@@ -16,8 +16,8 @@ import numpy as np
 class Prior(object):
     r"""Class for evaluation of prior probability densities
 
-     Any Prior object returns the probability density using
-    the pdf() and logpdf() methods.  For generality, these
+    Any Prior object returns the probability density using
+    the ``pdf()`` and ``logpdf()`` methods.  For generality, these
     are written so that they work on a scalar value or a numpy array
     of values.
 
@@ -27,25 +27,29 @@ class Prior(object):
         Private member that holds an instance of rv_frozen used
         to evaluate the prior. It must be a 'frozen distribution', with all
         location and shape parameters set.
-        See <http://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_continuous.html#scipy.stats.rv_continuous>
+        See <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_continuous.html#scipy.stats.rv_continuous>
 
     Priors are evaluated at values corresponding to the num_value of the parameter
     and don't currently use units (the num_unit is the assumed unit)
 
     Examples
     --------
-    # A uniform prior of F0, with no bounds (any value is acceptable)
-    model.F0.prior = Prior(UniformUnboundedRV())
+    A uniform prior of F0, with no bounds (any value is acceptable)
 
-    # A uniform prior on F0 between 50 and 60 Hz (because num_unit is Hz)
-    model.F0.prior = Prior(UniformBoundedRV(50.0,60.0))
+        >>> model.F0.prior = Prior(UniformUnboundedRV())
 
-    # A Gaussian prior on PB with mean 32 days and std dev 1.0 day
-    model.PB.prior = Prior(scipy.stats.norm(loc=32.0,scale=1.0))
+    A uniform prior on F0 between 50 and 60 Hz (because num_unit is Hz)
 
-    # A bounded gaussian prior that ensure that eccentrity never gets > 1.0
-    model.ECC.prior = Prior(GaussianBoundedRV(loc=0.9,scale=0.1,
-                lower_bound=0.0,upper_bound=1.0))
+        >>> model.F0.prior = Prior(UniformBoundedRV(50.0,60.0))
+
+    A Gaussian prior on PB with mean 32 days and std dev 1.0 day
+
+        >>> model.PB.prior = Prior(scipy.stats.norm(loc=32.0,scale=1.0))
+
+    A bounded gaussian prior that ensure that eccentrity never gets > 1.0
+
+        >>> model.ECC.prior = Prior(GaussianBoundedRV(loc=0.9,scale=0.1,
+        ...            lower_bound=0.0,upper_bound=1.0))
 
     """
 

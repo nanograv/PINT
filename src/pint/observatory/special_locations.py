@@ -1,7 +1,8 @@
-# special_locations.py
+"""Special locations that are not really observatories.
 
-# Special "site" locations (eg, barycenter) which do not need clock
-# corrections or much else done.
+Special "site" locations (eg, barycenter) which do not need clock
+corrections or much else done.
+"""
 from __future__ import absolute_import, print_function, division
 from . import Observatory
 import numpy
@@ -14,10 +15,33 @@ from ..config import datapath
 from .clock_file import ClockFile
 
 class SpecialLocation(Observatory):
-    """Observatory-derived class for special sites that are not really
+    """Special locations that are not really observatories.
+
+    Observatory-derived class for special sites that are not really
     observatories but sometimes are used as TOA locations (eg, solar
     system barycenter).  Currently the only feature of this class is
-    that clock corrections are zero."""
+    that clock corrections are zero.
+
+    Parameters
+    ----------
+    name : string
+        The name of the observatory
+    aliases : str, optional
+        List of other aliases for the observatory name.
+    include_gps : bool, optional
+        Set False to disable UTC(GPS)->UTC clock correction.
+    include_bipm : bool, optional
+        Set False to disable UTC-> TT BIPM clock
+        correction. If False, it only apply TAI->TT correction
+        TT = TAI+32.184s, the same as TEMPO2 TT(TAI) in the
+        parfile. If True, it will apply the correction from
+        BIPM TT=TT(BIPMYYYY). See the link:
+        http://www.bipm.org/en/bipm-services/timescales/time-ftp/ttbipm.html
+    bipm_version : str, optional
+        Set the version of TT BIPM clock correction file to
+        use, the default is BIPM2015.  It has to be in the format
+        like 'BIPM2015'
+    """
 
     #def clock_corrections(self, t):
     #    log.info('Special observatory location. No clock corrections applied.')
@@ -25,26 +49,6 @@ class SpecialLocation(Observatory):
 
     def __init__(self, name, aliases=None, include_gps=True, include_bipm=True,
                  bipm_version='BIPM2015', tt2tdb_mode='pint'):
-        """
-        Required arguments:
-
-            name     = The name of the observatory
-
-        Optional arguments:
-
-            aliases     = List of other aliases for the observatory name.
-            include_gps = Set False to disable UTC(GPS)->UTC clock
-                          correction.
-            include_bipm= Set False to disable UTC-> TT BIPM clock
-                          correction. If False, it only apply TAI->TT correction
-                          TT = TAI+32.184s, the same as TEMPO2 TT(TAI) in the
-                          parfile. If True, it will apply the correction from
-                          BIPM TT=TT(BIPMYYYY). See the link:
-                          http://www.bipm.org/en/bipm-services/timescales/time-ftp/ttbipm.html
-            bipm_version= Set the version of TT BIPM clock correction file to
-                          use, the default is BIPM2015.  It has to be in the format
-                          like 'BIPM2015'
-        """
         # GPS corrections not implemented yet
         self.include_gps = include_gps
         self._gps_clock = None
@@ -55,7 +59,7 @@ class SpecialLocation(Observatory):
         self._bipm_clock = None
 
         super(SpecialLocation,self).__init__(name,aliases=aliases,tt2tdb_mode=tt2tdb_mode)
-        
+
     @property
     def gps_fullpath(self):
         """Returns full path to the GPS-UTC clock file.  Will first try PINT
@@ -102,7 +106,7 @@ class SpecialLocation(Observatory):
             corr += self._bipm_clock.evaluate(t) - tt2tai
         return corr
 
-    
+
 class BarycenterObs(SpecialLocation):
     """Observatory-derived class for the solar system barycenter.  Time
     scale is assumed to be tdb."""
@@ -117,7 +121,7 @@ class BarycenterObs(SpecialLocation):
         return 'bat'
     def get_gcrs(self, t, ephem=None, grp=None):
         if ephem is None:
-            raise ValueError('Ephemeris needed for BarycenterObs get_gcrs') 
+            raise ValueError('Ephemeris needed for BarycenterObs get_gcrs')
         ssb_pv = objPosVel_wrt_SSB('earth', t, ephem)
         return -1 * ssb_pv.pos
     def posvel(self, t, ephem):
@@ -152,7 +156,7 @@ class SpacecraftObs(SpecialLocation):
     @property
     def timescale(self):
         return 'utc'
-    
+
     def get_gcrs(self, t, ephem=None, grp=None):
         """Return spacecraft GCRS position; this assumes position flags in tim file are in km"""
 
@@ -167,7 +171,7 @@ class SpacecraftObs(SpecialLocation):
         except:
             log.error('Missing flag. TOA line should have telx,tely,telz flags for GCRS position in km.')
             raise ValueError('Missing flag. TOA line should have telx,tely,telz flags for GCRS position in km.')
-            
+
         pos = numpy.vstack((x,y,z))
         vdim = (3,) + t.shape
         if pos.shape != vdim:
@@ -177,7 +181,7 @@ class SpacecraftObs(SpecialLocation):
 
     def posvel_gcrs(self, t, grp):
         """Return spacecraft GCRS position and velocity; this assumes position flags in tim file are in km and velocity flags are in km/s"""
-        
+
         if grp is None:
             raise ValueError('TOA group table needed for SpacecraftObs posvel_gcrs')
 
@@ -189,14 +193,14 @@ class SpacecraftObs(SpecialLocation):
         except:
             log.error('Missing flag. TOA line should have vx,vy,vz flags for GCRS velocity in km/s.')
             raise ValueError('Missing flag. TOA line should have vx,vy,vz flags for GCRS velocity in km/s.')
-            
+
         vel_geo = numpy.vstack((vx,vy,vz)) * (u.km/u.s)
         vdim = (3,) + t.shape
         if vel_geo.shape != vdim:
             raise ValueError('GCRS velocity vector has wrong shape: ',vel.shape,' instead of ',vdim.shape)
 
         pos_geo = self.get_gcrs(t,ephem=None,grp=grp)
-        
+
         stl_posvel = PosVel(pos_geo, vel_geo, origin='earth', obj='spacecraft')
         return stl_posvel
 
@@ -211,7 +215,7 @@ class SpacecraftObs(SpecialLocation):
         # Vector add to geo_posvel to get full posvel vector w.r.t. SSB.
         return geo_posvel + stl_posvel
 
-    
+
 # Need to initialize one of each so that it gets added to the list
 BarycenterObs('barycenter', aliases=['@','ssb','bary','bat'])
 GeocenterObs('geocenter', aliases=['0','o','coe','geo'])

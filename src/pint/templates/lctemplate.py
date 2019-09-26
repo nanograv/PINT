@@ -479,14 +479,18 @@ class LCTemplate(object):
             prim.set_location(new_location)
 
     def write_profile(self,fname,nbin,integral=False,suppress_bg=False):
-        """ Write out a two-column tabular profile to file fname.
+        """Write out a two-column tabular profile to file fname.
 
         The first column indicates the left edge of the phase bin, while
         the right column indicates the profile value.
 
-        integral -- if True, integrate the profile over the bins.
-                    Otherwise, differential value at indicated bin phase.
-        suppress_bg -- if True, do not include the unpulsed (DC) component
+        Parameters
+        ----------
+        integral : bool
+            if True, integrate the profile over the bins.  Otherwise, differential
+            value at indicated bin phase.
+        suppress_bg : bool
+            if True, do not include the unpulsed (DC) component
 
         """
 

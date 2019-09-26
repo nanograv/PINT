@@ -1,3 +1,4 @@
+"""nuSTAR as an observatory."""
 from __future__ import absolute_import, print_function, division
 
 # Special "site" location for the NuSTAR satelite
@@ -18,14 +19,15 @@ from scipy.interpolate import interp1d
 def load_orbit(orb_filename):
     '''Load data from a NuSTAR orbit file
 
-        Parameters
-        ----------
-        orb_filename : str
-            Name of file to load
+    Parameters
+    ----------
+    orb_filename : str
+        Name of file to load
 
-        Returns
-        -------
-        astropy Table containing Time, x, y, z, v_x, v_y, v_z data
+    Returns
+    -------
+    astropy.table.Table
+        containing Time, x, y, z, v_x, v_y, v_z data
 
     '''
     # Load photon times from FT1 file
@@ -74,7 +76,9 @@ def load_orbit(orb_filename):
 
 class NuSTARObs(SpecialLocation):
     """Observatory-derived class for the NuSTAR photon data.
+
     Note that this must be instantiated once to be put into the Observatory registry.
+
     Parameters
     ----------
     name: str
@@ -83,10 +87,15 @@ class NuSTARObs(SpecialLocation):
         File name to read spacecraft position information from
     tt2tdb_mode: str
         Selection for mode to use for TT to TDB conversion.
-        'none' = Give no position to astropy.Time()
-        'pint' = Use PINT routines for TT to TDB conversion.
-        'geo' = Give geocenter position to astropy.Time()
-        'astropy' = Give spacecraft ITRF position to astropy.Time()
+
+        none
+            Give no position to `astropy.time.Time`
+        pint
+            Use PINT routines for TT to TDB conversion.
+        geo
+            Give geocenter position to `astropy.time.Time`
+        astropy
+            Give spacecraft ITRF position to `astropy.time.Time`
     """
 
     def __init__(self, name, FPorbname, tt2tdb_mode='pint'):

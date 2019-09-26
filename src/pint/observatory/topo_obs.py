@@ -18,52 +18,61 @@ from pint import JD_MJD
 
 
 class TopoObs(Observatory):
-    """Class for representing observatories that are at a fixed location
-    on the surface of the Earth.  This behaves very similarly to "standard"
-    site definitions in tempo/tempo2.  Clock correction files are read and
-    computed, observatory coordinates are specified in ITRF XYZ, etc."""
+    """Observatories that are at a fixed location on the surface of the Earth.
+
+    This behaves very similarly to "standard" site definitions in tempo/tempo2.  Clock
+    correction files are read and computed, observatory coordinates are specified in
+    ITRF XYZ, etc.
+
+    Parameters
+    ----------
+
+    name : str
+        The name of the observatory
+    itrf_xyz : astropy.units.Quantity or array-like
+        IRTF site coordinates (len-3 array).  Can include
+       astropy units.  If no units are given, meters are
+       assumed.
+
+    tempo_code : str, optional
+        1-character tempo code for the site.  Will be
+        automatically added to aliases.  Note, this is
+        REQUIRED only if using TEMPO time.dat clock file.
+    itoa_code : str, optional
+        2-character ITOA code.  Will be added to aliases.
+    aliases : list of str, optional
+        List of other aliases for the observatory name.
+    clock_file : str, optional
+        Name of the clock correction file.
+    clock_dir : str, optional
+        Location of the clock file.  Special values
+        'TEMPO', 'TEMPO2', or 'PINT' mean to use the
+        standard directory for the package.  Otherwise
+        can be set to a full path to the directory
+        containing the clock_file.  Default='TEMPO'
+    clock_fmt : str, optional
+        Format of clock file (see ClockFile class for allowed
+        values).
+    include_gps : bool, optional
+        Set False to disable UTC(GPS)->UTC clock correction.
+    include_bipm : bool, optional
+        Set False to disable UTC-> TT BIPM clock
+        correction. If False, it only apply TAI->TT correction
+        TT = TAI+32.184s, the same as TEMPO2 TT(TAI) in the
+        parfile. If True, it will apply the correction from
+        BIPM TT=TT(BIPMYYYY). See the link:
+        http://www.bipm.org/en/bipm-services/timescales/time-ftp/ttbipm.html
+    bipm_version : str, optionial
+        Set the version of TT BIPM clock correction file to
+        use, the default is BIPM2015.  It has to be in the format
+        like 'BIPM2015'
+    """
+
 
     def __init__(self, name, tempo_code=None, itoa_code=None, aliases=None,
                  itrf_xyz=None, clock_file='time.dat', clock_dir='PINT',
                  clock_fmt='tempo', include_gps=True, include_bipm=True,
                  bipm_version='BIPM2015'):
-        """
-        Required arguments:
-
-            name     = The name of the observatory
-            itrf_xyz = IRTF site coordinates (len-3 array).  Can include
-                       astropy units.  If no units are given, meters are
-                       assumed.
-
-        Optional arguments:
-
-            tempo_code  = 1-character tempo code for the site.  Will be
-                          automatically added to aliases.  Note, this is
-                          REQUIRED only if using TEMPO time.dat clock file.
-            itoa_code   = 2-character ITOA code.  Will be added to aliases.
-            aliases     = List of other aliases for the observatory name.
-            clock_file  = Name of the clock correction file.
-                          Default='time.dat'
-            clock_dir   = Location of the clock file.  Special values
-                          'TEMPO', 'TEMPO2', or 'PINT' mean to use the
-                          standard directory for the package.  Otherwise
-                          can be set to a full path to the directory
-                          containing the clock_file.  Default='TEMPO'
-            clock_fmt   = Format of clock file (see ClockFile class for allowed
-                          values).  Default='tempo'
-            include_gps = Set False to disable UTC(GPS)->UTC clock
-                          correction.
-            include_bipm= Set False to disable UTC-> TT BIPM clock
-                          correction. If False, it only apply TAI->TT correction
-                          TT = TAI+32.184s, the same as TEMPO2 TT(TAI) in the
-                          parfile. If True, it will apply the correction from
-                          BIPM TT=TT(BIPMYYYY). See the link:
-                          http://www.bipm.org/en/bipm-services/timescales/time-ftp/ttbipm.html
-            bipm_version= Set the version of TT BIPM clock correction file to
-                          use, the default is BIPM2015.  It has to be in the format
-                          like 'BIPM2015'
-        """
-
         # ITRF coordinates are required
         if itrf_xyz is None:
             raise ValueError(
@@ -154,8 +163,10 @@ class TopoObs(Observatory):
 
     @property
     def bipm_fullpath(self,):
-        """Returns full path to the TAI TT(BIPM) clock file.  Will first try PINT
-        data dirs, then fall back on $TEMPO2/clock."""
+        """Returns full path to the TAI TT(BIPM) clock file.
+
+        Will first try PINT data dirs, then fall back on $TEMPO2/clock.
+        """
         fname = 'tai2tt_' + self.bipm_version.lower() + '.clk'
         fullpath = datapath(fname)
         if fullpath is not None:
@@ -176,9 +187,9 @@ class TopoObs(Observatory):
     def clock_corrections(self, t):
         """Compute the total clock corrections,
 
-        Parameter
-        ---------
-        t : `~astropy.time.Time` object
+        Parameters
+        ----------
+        t : astropy.time.Time
             The time when the clock correcions are applied.
         """
         # Read clock file if necessary
@@ -217,9 +228,11 @@ class TopoObs(Observatory):
         return corr
 
     def _get_TDB_ephem(self, t, ephem):
-        """This is a function that reads the ephem TDB-TT column. This column is
-            provided by DE4XXt version of ephemeris. This function is only for
-            the ground-based observatories
+        """Read the ephem TDB-TT column.
+
+        This column is provided by DE4XXt version of ephemeris. This function is only
+        for the ground-based observatories
+
         """
         geo_tdb_tt = get_tdb_tt_ephem_geocenter(t.tt, ephem)
         # NOTE The earth velocity is need to compute the time correcion from
@@ -243,9 +256,15 @@ class TopoObs(Observatory):
 
     def get_gcrs(self, t, ephem=None):
         '''Return position vector of TopoObs in GCRS
-        t is an astropy.Time or array of astropy.Time objects
-        Returns a 3-vector of Quantities representing the position
-        in GCRS coordinates.
+
+        Parameters
+        ----------
+        t : astropy.time.Time or array of astropy.time.Time
+
+        Returns
+        -------
+        np.array
+            a 3-vector of Quantities representing the position in GCRS coordinates.
         '''
         obs_geocenter_pv = gcrs_posvel_from_itrf(self.earth_location_itrf(), t, \
                                             obsname=self.name)

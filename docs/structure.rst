@@ -54,12 +54,12 @@ components.
    - Components are organized into categories. No more than one component from
      each category may be present; some categories may be required but in
      others no component is necessary:
-      - Solar system dispersion
-      - Astrometry
-      - Interstellar dispersion
-      - Binary
-      - Spin-down
-      - Timing noise
+     - Solar system dispersion
+     - Astrometry
+     - Interstellar dispersion
+     - Binary
+     - Spin-down
+     - Timing noise
    - Each component may indicate that it supersedes one or more others, that
      is, that its parameters are a superset of the previous model. In this
      case, if both are suggested by the parameter file, the component that is

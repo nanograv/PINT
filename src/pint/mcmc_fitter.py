@@ -583,7 +583,8 @@ class CompositeMCMCFitter(MCMCFitter):
 
     def get_event_phases(self, index=None):
         '''Get phases for the TOAs object specified by index in toas_list.
-            If index is None, then it will return phases for all TOAs
+
+        If index is None, then it will return phases for all TOAs
         '''
         if index is None:
             phases = self.model.phase(self.toas)[1]
@@ -622,10 +623,12 @@ class CompositeMCMCFitter(MCMCFitter):
             return wgts
 
     def lnlikelihood(self, fitter, theta):
-        '''Sum over the log-likelihood functions for each dataset
-            Multiply by weights in the sum
-            NOTE: Requires a fitter passed because that is how this
-                function is called by lnposterior in the super class
+        '''Sum over the log-likelihood functions for each dataset, multiply by weights in the sum.
+
+        Note
+        ----
+        Requires a fitter passed because that is how this function is called by
+        lnposterior in the super class.
         '''
         self.set_parameters(theta)
         lnsum = 0.0

@@ -1,7 +1,5 @@
-# special_locations.py
+"""NICER as an observatory."""
 from __future__ import absolute_import, print_function, division
-
-# Special "site" location for NICER experiment
 
 from . import Observatory
 from .special_locations import SpecialLocation
@@ -21,16 +19,16 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 def load_FPorbit(orbit_filename):
     '''Load data from an (RXTE or NICER) FPorbit file
 
-        Reads a FPorbit FITS file
+    Reads a FPorbit FITS file
 
-        Parameters
-        ----------
-        orbit_filename : str
-            Name of file to load
+    Parameters
+    ----------
+    orbit_filename : str
+        Name of file to load
 
-        Returns
-        -------
-        astropy Table containing Time, x, y, z, v_x, v_y, v_z data
+    Returns
+    -------
+    astropy Table containing Time, x, y, z, v_x, v_y, v_z data
 
     '''
     # Load photon times from FT1 file
@@ -88,10 +86,14 @@ class NICERObs(SpecialLocation):
         File name to read spacecraft position information from
     tt2tdb_mode: str
         Selection for mode to use for TT to TDB conversion.
-        'none' = Give no position to astropy.Time()
-        'pint' = Give no position to astropy.Time() but apply topocentric part of TT->TDB in PINT
-        'geo' = Give geocenter position to astropy.Time()
-"""
+
+        none
+            Give no position to astropy.Time()
+        pint
+            Give no position to astropy.Time() but apply topocentric part of TT->TDB in PINT
+        geo
+            Give geocenter position to astropy.Time()
+    """
 
     def __init__(self, name, FPorbname, tt2tdb_mode = 'pint'):
 
@@ -127,7 +129,7 @@ class NICERObs(SpecialLocation):
 
     def earth_location_itrf(self, time=None):
         '''Return NICER spacecraft location in ITRF coordinates'''
-        
+
         if self.tt2tdb_mode.lower().startswith('pint'):
             return None
         elif self.tt2tdb_mode.lower().startswith('geo'):
@@ -156,11 +158,12 @@ class NICERObs(SpecialLocation):
 
     def get_gcrs(self, t, ephem=None, grp=None, maxextrap=2):
         '''Return position vector of NICER in GCRS
-        t is an astropy.Time or array of astropy.Time objects
+
+        t is an astropy.Time or array of `astropy.time.Time` objects
         Returns a 3-vector of Quantities representing the position
         in GCRS coordinates.
         '''
-        
+
         tmin = np.min(self.FPorb['MJD_TT'])
         tmax = np.max(self.FPorb['MJD_TT'])
         if (tmin-np.min(t.tt.mjd) > float(maxextrap)/(60*24) or
@@ -174,7 +177,7 @@ class NICERObs(SpecialLocation):
 
         t is an astropy.Time or array of astropy.Times
         maxextrap is the longest (in minutes) it is acceptable to
-            extrapolate the S/C position
+        extrapolate the S/C position
         '''
 
         # this is a simple edge check mainly to prevent use of the wrong
@@ -201,9 +204,9 @@ class NICERObs(SpecialLocation):
 
         t is an astropy.Time or array of astropy.Times
         maxextrap is the longest (in minutes) it is acceptable to
-            extrapolate the S/C position
+        extrapolate the S/C position
         '''
-        
+
         # this is a simple edge check mainly to prevent use of the wrong
         # orbit file or a single orbit file with a merged event file; if
         # needed, can check to make sure there is a spline anchor point
@@ -214,7 +217,7 @@ class NICERObs(SpecialLocation):
             np.max(t.tt.mjd)-tmax > float(maxextrap)/(60*24)):
             log.error('Extrapolating NICER position by more than %d minutes!'%maxextrap)
             raise ValueError("Bad extrapolation of S/C file.")
-        
+
         # Now add vector from Earth to NICER
         nicer_pos_geo = np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])*self.FPorb['X'].unit
         nicer_vel_geo = np.array([self.Vx(t.tt.mjd), self.Vy(t.tt.mjd), self.Vz(t.tt.mjd)])*self.FPorb['Vx'].unit

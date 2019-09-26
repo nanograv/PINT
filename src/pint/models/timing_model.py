@@ -416,8 +416,8 @@ class TimingModel(object):
     def remove_param(self, param):
         """Remove a parameter from timing model.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         param: str
             The name of parameter to be removed.
 
@@ -600,18 +600,21 @@ class TimingModel(object):
 
 
     def get_barycentric_toas(self, toas, cutoff_component=''):
-        """This is a convenient function for calculate the barycentric TOAs.
-           Parameter
-           ---------
-           toas: TOAs object
-               The TOAs the barycentric corrections are applied on
-           cutoff_delay: str, optional
-               The cutoff delay component name. If it is not provided, it will
-               search for binary delay and apply all the delay before binary.
-           Return
-           ------
-           astropy.quantity.
-               Barycentered TOAs.
+        """Conveniently calculate the barycentric TOAs.
+
+       Parameters
+       ----------
+       toas: TOAs object
+           The TOAs the barycentric corrections are applied on
+       cutoff_delay: str, optional
+           The cutoff delay component name. If it is not provided, it will
+           search for binary delay and apply all the delay before binary.
+
+       Return
+       ------
+       astropy.quantity.
+           Barycentered TOAs.
+
         """
         tbl = toas.table
         if cutoff_component == '':
@@ -623,14 +626,16 @@ class TimingModel(object):
         return tbl['tdbld'] * u.day - corr
 
     def d_phase_d_toa(self, toas, sample_step=None):
-        """Return the derivative of phase wrt TOA
-        Parameter
-        ---------
+        """Return the derivative of phase wrt TOA.
+
+        Parameters
+        ----------
         toas : PINT TOAs class
             The toas when the derivative of phase will be evaluated at.
         sample_step : float optional
             Finite difference steps. If not specified, it will take 1/10 of the
             spin period.
+
         """
         copy_toas = copy.deepcopy(toas)
         if sample_step is None:
@@ -662,8 +667,7 @@ class TimingModel(object):
         pass
 
     def d_phase_d_param(self, toas, delay, param):
-        """ Return the derivative of phase with respect to the parameter.
-        """
+        """Return the derivative of phase with respect to the parameter."""
         # TODO need to do correct chain rule stuff wrt delay derivs, etc
         # Is it safe to assume that any param affecting delay only affects
         # phase indirectly (and vice-versa)??
@@ -692,9 +696,7 @@ class TimingModel(object):
         return result.to(result.unit, equivalencies=u.dimensionless_angles())
 
     def d_delay_d_param(self, toas, param, acc_delay=None):
-        """
-        Return the derivative of delay with respect to the parameter.
-        """
+        """Return the derivative of delay with respect to the parameter."""
         par = getattr(self, param)
         result = np.longdouble(np.zeros(toas.ntoas) * u.s/par.units)
         delay_derivs = self.delay_deriv_funcs
@@ -707,7 +709,10 @@ class TimingModel(object):
         return result
 
     def d_phase_d_param_num(self, toas, param, step=1e-2):
-        """ Return the derivative of phase with respect to the parameter.
+        """Return the derivative of phase with respect to the parameter.
+
+        Compute the value numerically, using a symmetric finite difference.
+
         """
         # TODO : We need to know the range of parameter.
         par = getattr(self, param)
@@ -734,7 +739,10 @@ class TimingModel(object):
         return result
 
     def d_delay_d_param_num(self, toas, param, step=1e-2):
-        """ Return the derivative of phase with respect to the parameter.
+        """Return the derivative of delay with respect to the parameter.
+
+        Compute the value numerically, using a symmetric finite difference.
+
         """
         # TODO : We need to know the range of parameter.
         par = getattr(self, param)
@@ -761,11 +769,14 @@ class TimingModel(object):
         par.value = ori_value
         return d_delay * (u.second/unit)
 
-    def designmatrix(self, toas, acc_delay=None, scale_by_F0=True, \
+    def designmatrix(self, toas, acc_delay=None, scale_by_F0=True,
                      incfrozen=False, incoffset=True):
-        """
-        Return the design matrix: the matrix with columns of d_phase_d_param/F0
-        or d_toa_d_param
+        """Return the design matrix.
+
+        The design matrix is the matrix with columns of d_phase_d_param/F0
+        or d_toa_d_param; it is used in fitting and calculating parameter
+        covariances.
+
         """
         params = ['Offset',] if incoffset else []
         params += [par for par in self.params if incfrozen or
@@ -954,7 +965,7 @@ class Component(object):
     """A base class for timing model components."""
 
     component_types = {}
-    """A list of all registered subtypes.
+    """An index of all registered subtypes.
 
     Note that classes are registered when their modules are imported,
     so ensure all classes of interest are imported before this list
@@ -1053,16 +1064,14 @@ class Component(object):
                 self.component_special_params.append(sp)
 
     def param_help(self):
-        """Print help lines for all available parameters in model.
-        """
+        """Print help lines for all available parameters in model."""
         s = "Available parameters for %s\n" % self.__class__
         for par in self.params:
             s += "%s\n" % getattr(self, par).help_line()
         return s
 
     def get_params_of_type(self, param_type):
-        """ Get all the parameters in timing model for one specific type
-        """
+        """Get all the parameters in timing model for one specific type."""
         result = []
         for p in self.params:
             par = getattr(self, p)

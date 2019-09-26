@@ -12,9 +12,9 @@ import numpy as np
 
 
 class Observatory(object):
-    """
-    The Observatory class defines observatory locations and related
-    site-dependent properties (eg, TOA time scales, clock corrections).
+    """Observatory locations and related site-dependent properties
+
+    For example, TOA time scales, clock corrections.
     Any new Observtory that is declared will be automatically added to
     a registry that is keyed on observatory name.  Aside from their initial
     declaration (for examples, see pint/observatory/observatories.py),
@@ -158,22 +158,27 @@ class Observatory(object):
 
     def get_TDBs(self, t,  method='default', ephem=None, options=None, grp=None):
         """This is a high level function for converting TOAs to TDB time scale.
-            Different method can be applied to obtain the result. Current supported
-            methods are ['astropy', 'ephemeris']
-            Parameters
-            ----------
-            t: astropy.time.Time object
-                The time need for converting toas
-            method: str or callable, optional
-                Method of computing TDB
 
-                - 'default': Astropy time.Time object built-in converter, use FB90.
-                    Also uses topocentric correction term if self.tt2tdbmethod is
-                    pint.
-                - 'ephemeris': JPL ephemeris included TDB-TT correction.
-            ephme: str, optional
-                The ephemeris to get he TDB-TT correction. Required for the
-                'ephemeris' method.
+        Different method can be applied to obtain the result. Current supported
+        methods are ['astropy', 'ephemeris']
+
+        Parameters
+        ----------
+        t: astropy.time.Time object
+            The time need for converting toas
+        method: str or callable, optional
+            Method of computing TDB
+
+            default
+                Astropy time.Time object built-in converter, use FB90.
+                Also uses topocentric correction term if self.tt2tdbmethod is
+                pint.
+            ephemeris
+                JPL ephemeris included TDB-TT correction.
+
+        ephem: str, optional
+            The ephemeris to get he TDB-TT correction. Required for the
+            'ephemeris' method.
         """
 
         if t.isscalar: t = Time([t])
@@ -224,7 +229,7 @@ class Observatory(object):
         #Add in correction term to t.tdb equal to r.v / c^2
         vel = sse.objPosVel_wrt_SSB('earth', t, ephem).vel
         pos = self.get_gcrs(t, ephem=ephem, grp=grp)
-        dnom = const.c * const.c 
+        dnom = const.c * const.c
 
         corr = ((pos[0] * vel[0] + pos[1] * vel[1] + pos[2] * vel[2])/dnom).to(u.s)
         log.debug('\tTopocentric Correction:\t%s' % corr)
@@ -253,17 +258,16 @@ def get_observatory(name, include_gps=True, include_bipm=True,
     This function will simply call the ``Observatory.get`` method but
     will manually set options after the method is called.
 
-    Required arguments:
-
-        name = The name of the observatory
-
-    Optional Arguments
-
-        include_gps = Set False to disable UTC(GPS)->UTC clock
-                      correction.
-        include_bipm = Set False to disable TAI TT(BIPM) clock
-                      correction.
-        bipm_version = Set the version of TT BIPM clock correction files.
+    Parameters
+    ----------
+    name : str
+        The name of the observatory
+    include_gps : bool, optional
+        Set False to disable UTC(GPS)->UTC clock correction.
+    include_bipm : bool, optional
+        Set False to disable TAI TT(BIPM) clock correction.
+    bipm_version : str, optional
+        Set the version of TT BIPM clock correction files.
 
     .. note:: This function can and should be expanded if more clock
         file switches/options are added at a public API level.
