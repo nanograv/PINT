@@ -50,23 +50,27 @@ lint: ## check style with flake8
 	flake8 --ignore=E265,E226 pint tests
 
 test: ## run tests quickly with the default Python
-
-		python setup.py nosetests
+		cd tests && pytest --ff
 
 coverage: ## check code coverage quickly with the default Python
-
-		coverage run --source pint setup.py nosetests
-
+		pytest tests --cov=pint
 		coverage report -m
 		coverage html
 		$(BROWSER) htmlcov/index.html
 
-docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/pint*.rst
+notebooks:
+	jupyter nbconvert --execute --inplace examples/*.ipynb
+
+docs-clean:
+	mkdir -p docs/api
+	rm -f docs/api/*
 	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ -M pint
 	$(MAKE) -C docs clean
+
+docs-build: docs-clean ## generate Sphinx HTML documentation, including API docs
 	$(MAKE) -C docs html
+
+docs: docs-build
 	$(BROWSER) docs/_build/html/index.html
 
 servedocs: docs ## compile the docs watching for changes

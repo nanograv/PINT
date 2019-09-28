@@ -13,6 +13,8 @@ import sys
 import os
 import unittest
 import numpy as np
+import pytest
+
 from pinttestdata import testdir, datadir
 
 parfile = os.path.join(datadir, 'prefixtest.par')
@@ -27,14 +29,15 @@ class TestGlitch(unittest.TestCase):
         self.f = pint.fitter.PowellFitter(self.t, self.m)
     def test_glitch(self):
         print("Test prefix parameter via a glitch model")
-        rs = pint.residuals.resids(self.t, self.m).phase_resids
+        rs = pint.residuals.Residuals(self.t, self.m).phase_resids
         # Now do the fit
         print("Fitting...")
         self.f.fit_toas()
         emsg = "RMS of " + self.m.PSR.value + " is too big."
         assert self.f.resids.time_resids.std().to(u.us).value < 950.0, emsg
 
-    def test_glith_der(self):
+    @pytest.mark.filterwarnings("ignore:invalid value")
+    def test_glitch_der(self):
         delay = self.m.delay(self.t)
         for pf in self.m.glitch_prop:
             for idx in set(self.m.glitch_indices):

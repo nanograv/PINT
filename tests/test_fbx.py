@@ -2,14 +2,13 @@
 import pint.models.model_builder as mb
 import pint.toa as toa
 import astropy.units as u
-from pint.residuals import resids
+from pint.residuals import Residuals
 import numpy as np
 import os, unittest
 import test_derivative_utils as tdu
 import logging
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
 
 
 class TestFBX(unittest.TestCase):
@@ -18,6 +17,7 @@ class TestFBX(unittest.TestCase):
     """
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.parfileJ0023 = 'J0023+0923_NANOGrav_11yv0.gls.par'
         self.timJ0023 = 'J0023+0923_NANOGrav_11yv0.tim'
         self.toasJ0023 = toa.get_TOAs(self.timJ0023, ephem="DE436",
@@ -32,7 +32,7 @@ class TestFBX(unittest.TestCase):
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-9), 'B1953 binary delay test failed.'
 
     def test_J0023(self):
-        pint_resids_us = resids(self.toasJ0023, self.modelJ0023, False).time_resids.to(u.s)
+        pint_resids_us = Residuals(self.toasJ0023, self.modelJ0023, False).time_resids.to(u.s)
         assert np.all(np.abs(pint_resids_us.value - self.ltres) < 1e-8), 'J0023 residuals test failed.'
 
     def test_derivative(self):

@@ -2,17 +2,17 @@
 import pint.models.model_builder as mb
 import pint.toa as toa
 import astropy.units as u
-from pint.residuals import resids
+from pint.residuals import Residuals
 import numpy as np
 import os, unittest
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
 
 class TestDD(unittest.TestCase):
     """Compare delays from the dd model with libstempo and PINT"""
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.parfileB1855 = 'B1855+09_NANOGrav_dfg+12_modified_DD.par'
         self.timB1855 = 'B1855+09_NANOGrav_dfg+12.tim'
         self.toasB1855 = toa.get_TOAs(self.timB1855, ephem="DE405",
@@ -26,7 +26,7 @@ class TestDD(unittest.TestCase):
         assert np.all(np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-11), 'DD B1855 TEST FAILED'
     # TODO: PINT can still incresase the precision by adding more components
     def test_B1855(self):
-        pint_resids_us = resids(self.toasB1855, self.modelB1855, False).time_resids.to(u.s)
+        pint_resids_us = Residuals(self.toasB1855, self.modelB1855, False).time_resids.to(u.s)
         assert np.all(np.abs(pint_resids_us.value - self.ltres) < 1e-7), 'DD B1855 TEST FAILED'
 
 

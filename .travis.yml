@@ -3,11 +3,48 @@
 language: python
 
 matrix:
+    fast_finish: true
     include:
+        - script: wget https://data.nanograv.org/static/data/ephem/de405.bsp
+          name: "NANOGrav ephemeris server accessible"
+          install: []
+          services: []
+          after_success: []
+          git:
+              clone: false
+        - script: flake8-diff
+          install:
+            - pip install -r requirements_dev.txt
+            - pip install -r requirements.txt
+            - pip install .
+          name: "python style checker for changed code"
+          services: []
+          after_success: []
+          before_script: git fetch --unshallow
         - python: "2.7"
         - python: "3.5"
         - python: "3.6"
-
+        - python: "3.7"
+        - name: "tox"
+          sudo: false
+          language: python
+          python:
+            - "3.7"
+          install: pip install tox-travis
+          script: tox
+        - script: make notebooks
+          name: "Example notebooks (python 3.7)"
+          python: "3.7"
+        - script: make docs-build
+          install:
+            - pip install -r requirements_dev.txt
+            - pip install -r requirements.txt
+            - pip install .
+          name: "Documentation build"
+          python: "3.7"
+          after_success: []
+    allow_failures:
+        - script: flake8-diff
 sudo: required
 
 # https://docs.travis-ci.com/user/gui-and-headless-browsers/#Using-xvfb-to-Run-Tests-That-Require-a-GUI
@@ -19,17 +56,36 @@ sudo: required
 services:
     - xvfb
 
+before_install:
+    - sudo apt-get install pandoc
+
 install:
-    - pip install -r requirements.txt
+    # We need to require the dev requirements first in case they're more
+    # stringent (on version numbers)
     - pip install -r requirements_dev.txt
+    - pip install -r requirements.txt
     - pip install .
+    - python -c "from astropy.utils.data import download_file; from astropy.utils.iers import IERS_A_URL; download_file(IERS_A_URL, cache=True)"
 
 #script:
 #    - pwd
 #    - make test
 
 script:
-    - (cd tests ; nosetests -v --with-coverage --cover-package=pint --ignore-files=.\*DISABLED.py)
+    - ( cd tests && pytest --cov=pint )
 
 after_success:
-    ( cd tests ; coveralls )
+    ( cd tests && coveralls )
+
+cache:
+  directories:
+    - $HOME/.astropy/cache
+
+notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/4af3554bec203d05337e
+    on_success: always  # options: [always|never|change] default: always
+    on_failure: always  # options: [always|never|change] default: always
+    on_start: never     # options: [always|never|change] default: always
+

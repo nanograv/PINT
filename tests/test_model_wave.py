@@ -6,12 +6,8 @@ from astropy import log
 
 from pinttestdata import datadir
 
-log.setLevel('ERROR')
-# for nice output info, set the following instead
-#log.setLevel('INFO')
-os.chdir(datadir)
-
 def test_wave():
+    os.chdir(datadir)
     parfile = 'J1513-5908_PKS_alldata_white.par'
     timfile = 'J1744-1134.Rcvr1_2.GASP.8y.x.tim'
     t = toa.get_TOAs(timfile, usepickle=False)

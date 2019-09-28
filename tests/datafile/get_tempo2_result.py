@@ -1,7 +1,7 @@
 """This is a script for getting tempo/tempo2/libstempo result for the propose
 of testing PINT
 """
-from pint.utils import longdouble2string
+from pint.utils import longdouble2str
 try:
     import tempo2_utils as t2u
     has_tempo2_utils = True
@@ -42,10 +42,10 @@ def get_tempo2_result(parfile, timfile, general2=None):
     outstr += '\n'
     f.write(outstr)
     for ii in range(len(residuals)):
-        outstr = longdouble2string(residuals[ii])  +' '
+        outstr = longdouble2str(residuals[ii])  +' '
         if general2 is not None:
             for keys in general2:
-                outstr += longdouble2string(tempo2_vals[keys][ii])+' '
+                outstr += longdouble2str(tempo2_vals[keys][ii])+' '
         outstr += '\n'
         f.write(outstr)
     f.close()

@@ -20,7 +20,7 @@ class TestDMX(unittest.TestCase):
 
     def test_DMX(self):
         print("Testing DMX module.")
-        rs = residuals.resids(self.toas, self.DMXm, False).time_resids.to(u.s).value
+        rs = residuals.Residuals(self.toas, self.DMXm, False).time_resids.to(u.s).value
         ltres, _ = np.genfromtxt(self.parf+ '.tempo_test', unpack=True)
         resDiff = rs-ltres
         assert np.all(np.abs(resDiff) < 2e-8),\

@@ -3,17 +3,16 @@
 
 import pint.toa as toa
 import astropy.units as u
-from pint.residuals import resids
 import numpy as np
 import os, unittest
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
 
 class TestToaFlag(unittest.TestCase):
     """Compare delays from the dd model with tempo and PINT"""
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.tim = 'B1855+09_NANOGrav_dfg+12.tim'
         self.toas = toa.get_TOAs(self.tim, ephem="DE405",
                                       planets=False, include_bipm=False)

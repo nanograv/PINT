@@ -8,17 +8,17 @@ from pint import pulsar_mjd
 import numpy as np
 from astropy.time import Time
 import os
+import pytest
+
 from pint.config import datapath
 from pinttestdata import testdir, datadir
-from nose.tools import *
 
-
-os.chdir(datadir)
 
 
 class TestObservatory(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.test_obs = ['aro', 'ao', 'chime', 'drao']
         self.test_time = Time(np.linspace(55000, 58000, num=100),
                               scale='utc', format='pulsar_mjd')
@@ -58,7 +58,6 @@ class TestObservatory(unittest.TestCase):
                                  ephem='de430t')
             assert tdb1.shape == (1,)
 
-
     def test_positions(self):
         for tobs in self.test_obs:
             site = get_observatory(tobs, include_gps=True, include_bipm=True,
@@ -67,9 +66,9 @@ class TestObservatory(unittest.TestCase):
             assert posvel.pos.shape == (3, len(self.test_time))
             assert posvel.vel.shape == (3, len(self.test_time))
 
-    @raises(KeyError)
     def test_wrong_name(self):
-        _ = get_observatory('Wrong_name')
+        with pytest.raises(KeyError):
+            get_observatory('Wrong_name')
 
     def test_wrong_path(self):
         # observatory clock correction path expections.

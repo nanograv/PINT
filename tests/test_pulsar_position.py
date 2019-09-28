@@ -3,7 +3,6 @@
 import pint.models.model_builder as mb
 import pint.toa as toa
 import astropy.units as u
-from pint.residuals import resids
 import numpy as np
 import os, unittest
 import test_derivative_utils as tdu
@@ -11,11 +10,11 @@ import logging
 
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
 
 class TestPulsarPosition(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         # This uses ELONG and ELAT
         self.m1 = mb.get_model('B1855+09_NANOGrav_9yv1.gls.par')
         # This uses RA and DEC

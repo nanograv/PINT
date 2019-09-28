@@ -13,11 +13,12 @@ import numpy
 
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
+
 class Testwls(unittest.TestCase):
     """Compare delays from the dd model with tempo and PINT"""
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.par = 'B1855+09_NANOGrav_dfg+12_TAI_FB90.par'
         self.tim = 'B1855+09_NANOGrav_dfg+12.tim'
         self.m = mb.get_model(self.par)
@@ -45,3 +46,6 @@ class Testwls(unittest.TestCase):
             tol = 2.6
             msg = "Fitting parameter " + p + " failed. with chi2_red " + str(chi2_red)
             assert chi2_red < tol, msg
+
+    def test_has_correlated_errors(self):
+        assert not self.f.resids.model.has_correlated_errors

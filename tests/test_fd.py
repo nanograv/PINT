@@ -7,11 +7,12 @@ import numpy as np
 import os, unittest
 import copy
 from pinttestdata import testdir, datadir
-os.chdir(datadir)
+
 
 class TestFD(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.parf = 'test_FD.par'
         self.timf = 'test_FD.simulate.pint_corrected'
         self.FDm = mb.get_model(self.parf)
@@ -20,7 +21,7 @@ class TestFD(unittest.TestCase):
         self.ltres, self.ltbindelay = np.genfromtxt(self.parf + '.tempo_test', unpack=True)
     def test_FD(self):
         print("Testing FD module.")
-        rs = pint.residuals.resids(self.toas, self.FDm, False).time_resids.to(u.s).value
+        rs = pint.residuals.Residuals(self.toas, self.FDm, False).time_resids.to(u.s).value
         resDiff = rs - self.ltres
         #NOTE : This prescision is a lower then 1e-7 seconds level, due to some
         # early parks clock corrections are treated differently.

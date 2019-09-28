@@ -3,23 +3,24 @@ import time, sys, os, unittest
 import pint.models.model_builder as mb
 from pint.phase import Phase
 from pint import toa
-from pint.fitter import WlsFitter, GLSFitter
+from pint.fitter import WlsFitter, GlsFitter
 import numpy as np
 import astropy.units as u
 import json
 
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
-class TestGLS(unittest.TestCase):
+
+class TestGls(unittest.TestCase):
     """Compare delays from the dd model with tempo and PINT"""
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.par = 'B1855+09_NANOGrav_9yv1.gls.par'
         self.tim = 'B1855+09_NANOGrav_9yv1.tim'
         self.m = mb.get_model(self.par)
         self.t = toa.get_TOAs(self.tim, ephem='DE436')
-        self.f = GLSFitter(self.t, self.m)
+        self.f = GlsFitter(self.t, self.m)
         # get tempo2 parameter dict
         with open('B1855+09_tempo2_gls_pars.json', 'r') as fp:
             self.t2d = json.load(fp)
@@ -52,3 +53,6 @@ class TestGLS(unittest.TestCase):
         self.fit(full_cov=True)
         chi22 = self.f.resids.chi2
         assert np.allclose(chi21, chi22)
+
+    def test_has_correlated_errors(self):
+        assert self.f.resids.model.has_correlated_errors

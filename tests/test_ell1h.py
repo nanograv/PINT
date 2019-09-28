@@ -3,7 +3,7 @@ import pint.models as model
 import pint.toa as toa
 import astropy.units as u
 import pint.fitter as ff
-from pint.residuals import resids
+from pint.residuals import Residuals
 import numpy as np
 import os, unittest
 import test_derivative_utils as tdu
@@ -11,12 +11,12 @@ import logging
 
 from pinttestdata import testdir, datadir
 
-os.chdir(datadir)
 
 class TestELL1H(unittest.TestCase):
     """Compare delays from the ELL1 model with tempo and PINT"""
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.parfileJ1853 = "J1853+1303_NANOGrav_11yv0.gls.par"
         self.timfileJ1853 = "J1853+1303_NANOGrav_11yv0.tim"
         self.toasJ1853 = toa.get_TOAs(self.timfileJ1853, ephem="DE421",
@@ -34,7 +34,7 @@ class TestELL1H(unittest.TestCase):
         self.modelJ0613_STIG = model.get_model(self.parfileJ0613_STIG)
 
     def test_J1853(self):
-        pint_resids_us = resids(self.toasJ1853, self.modelJ1853, False).time_resids.to(u.s)
+        pint_resids_us = Residuals(self.toasJ1853, self.modelJ1853, False).time_resids.to(u.s)
         # Due to PINT has higher order of ELL1 model, Tempo2 gives a difference around 3e-8
         # Changed to 4e-8 since modification to get_PSR_freq() makes this 3.1e-8
         log=logging.getLogger( "TestJ1853.J1853_residuals")
@@ -80,7 +80,7 @@ class TestELL1H(unittest.TestCase):
 
     def test_J0613_H4(self):
         log= logging.getLogger( "TestJ0613.fit_tests")
-        f = ff.GLSFitter(self.toasJ0613, self.modelJ0613)
+        f = ff.GlsFitter(self.toasJ0613, self.modelJ0613)
         f.fit_toas()
         f.set_fitparams('H3', 'H4')
         for pn, p in (f.get_fitparams()).items():
@@ -91,7 +91,7 @@ class TestELL1H(unittest.TestCase):
             assert sigma < 0.7, "refit %s is %lf sigma different from original value" % (pn, sigma)
     def test_J0613_STIG(self):
         log= logging.getLogger( "TestJ0613.fit_tests_stig")
-        f = ff.GLSFitter(self.toasJ0613, self.modelJ0613_STIG)
+        f = ff.GlsFitter(self.toasJ0613, self.modelJ0613_STIG)
         f.fit_toas()
         f.set_fitparams('H3', 'STIGMA')
         for pn, p in (f.get_fitparams()).items():

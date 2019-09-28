@@ -7,26 +7,43 @@ Installation
 Prerequisites
 -------------
 
-* Python 2.7 or 3.5 or later (Note that Python 3 support is currently not
-  complete, but is a design goal)
+* Python 2.7 or 3.5 or later (Note that Python 2 is ceasing even bug fixes as of
+  the end of 2019, so upgrades are becoming urgent; we know that some key pulsar
+  software remains in the Stone Age of python-2-only.)
 
 * The current list of required python packages is in
 
-  - requirements.txt_
-  - requirements_dev.txt_
+  - setup.cfg_ - python packages needed to use PINT
+  - requirements.txt_ - python packages needed to work on PINT
 
+.. _setup.cfg: https://github.com/nanograv/PINT/blob/master/setup.cfg
 .. _requirements.txt: https://github.com/nanograv/PINT/blob/master/requirements.txt
-.. _requirements_dev.txt: https://github.com/nanograv/PINT/blob/master/requirements_dev.txt
 
-* The simplest way to install the prerequisites, if you are in virtualenv or
-  want to install them in the system python is to use pip [1]_::
+* It is probably best to use and especially to work on PINT from within
+  a virtualenv_; this lets you install packages as required without the
+  help of a system administrator and without disturbing other users or
+  even other pieces of python software. The tool virtualenvwrapper_
+  is a reasonable way to manage virtualenv. The tool conda_ provides
+  similar isolation and more powerful package installation; while PINT
+  is not itself available from conda, you can set up a conda environment
+  to get access to tools like numpy, scipy, matplotlib, and jupyter-lab,
+  then install PINT and any remaining dependencies with pip.
+
+.. _virtualenv: https://virtualenv.pypa.io/en/latest/
+.. _virtualenvwrapper: https://virtualenvwrapper.readthedocs.io/en/latest/
+.. _conda: https://docs.conda.io/en/latest/
+
+* The simplest way to install the prerequisites, if you are in a virtualenv or
+  want to install them in the system python, is to use pip [1]_. Dependencies
+  of PINT itself will be automatically installed when you install it with pip.
+  If you want to install tools needed only to work on PINT you can run::
 
     pip install -r requirements.txt
-    pip install -r requirements_dev.txt
 
   If you want to install them in your local user site-packages, rather than the
   system python (perhaps because you don't have sudo privileges),
-  append ``--user`` to those command lines.
+  append ``--user`` to those command lines. Note that using your user site-packages
+  can dramatically complicate your using virtualenvs, so we do not recommend it.
 
   Some of those packages may have been already installed, for example by MacPorts.
   For MacPorts users, this command will get many of the requirements::
@@ -49,11 +66,14 @@ Prerequisites
 .. [1] If you don't have `pip`_ installed, this `Python installation guide`_ can guide
    you through the process.
 
-.. _pip: https://pip.pypa.io
-.. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
+.. _pip: https://pip.pypa.io/en/stable/
+.. _Python installation guide: https://docs.python-guide.org/starting/installation/
 
 Installing from Source
 ----------------------
+
+As PINT is not ready for a release yet, installing from the source code is
+the only option.
 
 The sources for pint can be downloaded from the `Github repo`_.
 
@@ -73,13 +93,13 @@ you can install it with:
 
 .. code-block:: console
 
-  $ python setup.py install
+  $ pip install .
 
-Or, synonymously:
+Or, alternatively:
 
 .. code-block:: console
 
-  $ make install
+  $ python setup.py install
 
 Or, to install it in your local user site-packages
 
@@ -92,6 +112,12 @@ take effect without having to re-run setup.py, you can install using links
 to the source itself, like this (again append ``--user`` if you want
 to install in your per-user site-packages location). *This is how most PINT
 developers work*:
+
+.. code-block:: console
+
+  $ pip install -e .
+
+Or, alternatively:
 
 .. code-block:: console
 
@@ -110,7 +136,21 @@ the test suite.  This can be done using::
 
 or::
 
-  python setup.py nosetests
+  pytest
+
+If you want to test the distribution on multiple versions of python and
+get code coverage reports (most useful for developers) you can use the
+tool tox_::
+
+   tox
+
+This runs a variety of tests, builds the documentation, and generates a
+coverage report. You can run test suites in parallel (``tox --parallel=auto``),
+restrict it to a specific python version (``tox -e py37``), or run a different
+command in the environments it generates (``tox -e py37 -- pytest --ff
+--pdb``).
+
+.. _tox: https://tox.readthedocs.io/en/latest/
 
 Build the documentation
 -----------------------
@@ -122,7 +162,7 @@ but you can build your own copy for offline use::
 
 At completion, a browser will open with the documentaion.
 
-.. _online: http://nanograv-pint.readthedocs.io/en/latest/
+.. _online: https://nanograv-pint.readthedocs.io/en/latest/
 
 Data files
 ----------
@@ -130,9 +170,8 @@ Data files
 PINT requires detailed ephemerides for the Solar System motion and for the
 Earth's rotation. Many of these files are downloaded automatically by
 astropy. Others are distributed with PINT in the ``pint/datafiles`` directory
-or are automatically downloaded by setup.py; the total volume is a few hundred
-megabytes. On installation, the data files are copied into the install
-directory, so you end up with two copies (unless you install in develop mode).
+or are automatically downloaded and kept when needed; the total volume is a
+few hundred megabytes.
 
 PINT also requires observatory clock correction data. The PINT distribution
 includes a set in the datafiles directory, but clock corrections can also be

@@ -8,7 +8,6 @@ import astropy.units as u
 import numpy, os, unittest
 
 from pinttestdata import testdir, datadir
-os.chdir(datadir)
 
 """
 The behavior we want for numerical Parameter variables (p):
@@ -41,6 +40,7 @@ The behavior we want for numerical Parameter variables (p):
 class TestParameters(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        os.chdir(datadir)
         self.m = mb.get_model('B1855+09_NANOGrav_dfg+12_modified.par')
         self.mp = mb.get_model('prefixtest.par')
     def test_read_par_line(self):
