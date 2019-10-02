@@ -1,89 +1,116 @@
 """PulsarMJD special time format.
 
-MJDs seem simple but if you want to use them with the UTC time scale
-you have to deal with the fact that every so often a UTC day is either
-86401 or 64399 seconds long. :class:`astropy.time.Time` has a policy
-on how to interpret MJDs in UTC, and in that time scale there are times
-that cannot be expressed in MJD, and there are MJDs that do not express
-valid times. So ``pulsar_mjd`` is a different definition of what MJDs in
-UTC mean (on days with a leap second MJDs advance very slightly faster
-or slower than one MJD per day.
+MJDs seem simple but if you want to use them with the UTC time scale you have
+to deal with the fact that every so often a UTC day is either 86401 or 86399
+seconds long. :class:`astropy.time.Time` has a policy on how to interpret MJDs
+in UTC, and in that time scale all times can be expressed in MJD, but the rate
+at which MJDs advance is not one day per 86400 SI seconds. (This technique,
+when applied to UNIX time, is called a "leap_smear_" and is used by all Google
+APIs.) This is not how (some? all?) observatories construct the MJDs they
+record; observatories record times by converting UNIX time to MJDs in a way
+that ignores leap seconds; this means that there is more than one time that
+will produce the same MJD on a leap second day. (Observatories usually use a
+maser to keep very accurate time, but this is used only to identify the
+beginnings of seconds; NTP is used to determine which second to record.) We
+therefore introduce the "pulsar_mjd" time format to capture the way in which
+our data actually occurs.
+
+An MJD expressed in the "pulsar_mjd" time scale will never occur during a
+leap second. No negative leap seconds have yet been inserted, that is,
+all days have been either 86400 or 86401 seconds long. If a negative leap
+second does occur, it is not totally clear what will happen if an MJD
+is provided that corresponds to a nonexistent time.
 
 This is not a theoretical consideration: at least one pulsar observer
 was observing the sky at the moment a leap second was introduced.
 
+.. _leap_smear: https://developers.google.com/time/smear
 """
 from __future__ import absolute_import, division, print_function
 
-import astropy._erfa as erfa
-import numpy
+import numpy as np
 from astropy.time.formats import TimeFormat
-from astropy.time.utils import day_frac
+
+from pint.utils import (
+    jds_to_mjds,
+    jds_to_mjds_pulsar,
+    mjds_to_jds,
+    mjds_to_jds_pulsar,
+    mjds_to_str,
+    str_to_mjds,
+)
 
 
-def safe_kind_conversion(values, dtype):
-    try:
-        from collections.abc import Iterable
-    except ImportError:
-        from collections import Iterable
-    if isinstance(values, Iterable):
-        return numpy.asarray(values, dtype=dtype)
-    else:
-        return dtype(values)
-
-
-class TimePulsarMJD(TimeFormat):
+class PulsarMJD(TimeFormat):
     """Change handling of days with leap seconds.
 
     MJD using tempo/tempo2 convention for time within leap second days.
     This is only relevant if scale='utc', otherwise will act like the
     standard astropy MJD time format.
-
     """
 
-    name = 'pulsar_mjd'
-    # This can be removed once we only support astropy >=3.1.
-    # The str(c) is necessary for python2/numpy -> no unicode literals...
-    _new_ihmsfs_dtype = numpy.dtype([(str(c), numpy.intc) for c in 'hmsf'])
+    name = "pulsar_mjd"
 
     def set_jds(self, val1, val2):
         self._check_scale(self._scale)
-        if self._scale == 'utc':
-            # To get around leap second issues, first convert to YMD,
-            # then back to astropy/ERFA-convention jd1,jd2 using the
-            # ERFA dtf2d() routine which handles leap seconds.
-            v1, v2 = day_frac(val1, val2)
-            (y,mo,d,f) = erfa.jd2cal(erfa.DJM0+v1,v2)
-            # Fractional day to HMS.  Uses 86400-second day always.
-            # Seems like there should be a ERFA routine for this..
-            h = safe_kind_conversion(numpy.floor(f*24.0), dtype=int)
-            m = safe_kind_conversion(numpy.floor(numpy.remainder(f*1440.0,60)),
-                              dtype=int)
-            s = numpy.remainder(f*86400.0,60)
-            self.jd1, self.jd2 = erfa.dtf2d('UTC',y,mo,d,h,m,s)
+        # for times before the first leap second we don't need to do anything
+        # it's annoying to handle parts-of-arrays like this though
+        if self._scale == "utc":
+            self.jd1, self.jd2 = mjds_to_jds_pulsar(val1, val2)
         else:
-            self.jd1, self.jd2 = day_frac(val1, val2)
-            self.jd1 += erfa.DJM0
+            self.jd1, self.jd2 = mjds_to_jds(val1, val2)
 
     @property
     def value(self):
-        if self._scale == 'utc':
-            # Do the reverse of the above calculation
-            # Note this will return an incorrect value during
-            # leap seconds, so raise an exception in that
-            # case.
-            y, mo, d, hmsf = erfa.d2dtf('UTC',9,self.jd1,self.jd2)
-            # For ASTROPY_LT_3_1, convert to the new structured array dtype that
-            # is returned by the new erfa gufuncs.
-            if not hmsf.dtype.names:
-                hmsf = hmsf.view(self._new_ihmsfs_dtype)
-            if numpy.any(hmsf['s'] == 60):
-                raise ValueError('UTC times during a leap second cannot be represented in pulsar_mjd format')
-            j1, j2 = erfa.cal2jd(y,mo,d)
-            return (j1 - erfa.DJM0 + j2) + (hmsf['h']/24.0
-                    + hmsf['m']/1440.0
-                    + hmsf['s']/86400.0
-                    + hmsf['f']/86400.0e9)
+        if self._scale == "utc":
+            mjd1, mjd2 = jds_to_mjds_pulsar(self.jd1, self.jd2)
+            return mjd1 + np.longdouble(mjd2)
         else:
-            # As in TimeMJD
-            return (self.jd1 - erfa.DJM0) + self.jd2
+            mjd1, mjd2 = jds_to_mjds(self.jd1, self.jd2)
+            return mjd1 + np.longdouble(mjd2)
+
+
+class MJDLong(TimeFormat):
+    """Support conversion of MJDs to or from long double.
+
+    On machines with 80-bit floating-point (in particular x86 hardware), this
+    representation gives a quantization error a bit under a nanosecond.
+    """
+
+    name = "mjd_long"
+
+
+class MJDString(TimeFormat):
+    """Support full-accuracy reading and writing of MJDs in string form."""
+
+    name = "mjd_string"
+
+    # FIXME: arrays!
+    def set_jds(self, val1, val2):
+        # What do I do with val2?
+        self._check_scale(self._scale)
+        self.jd1, self.jd2 = str_to_mjds(val1)
+
+    @property
+    def value(self):
+        return mjds_to_str(self.jd1, self.jd2)
+
+
+class PulsarMJDLong(TimeFormat):
+    """Support conversion of pulsar MJDs to or from long double."""
+
+
+class PulsarMJDString(TimeFormat):
+    """Support full-accuracy reading and writing of pulsar MJDs in string form."""
+
+    name = "pulsar_mjd_string"
+
+    # FIXME: arrays!
+    def set_jds(self, val1, val2):
+        # What do I do with val2?
+        self._check_scale(self._scale)
+        self.jd1, self.jd2 = str_to_mjds(val1)
+
+    @property
+    def value(self):
+        return mjds_to_str(self.jd1, self.jd2)

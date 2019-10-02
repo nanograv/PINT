@@ -498,7 +498,7 @@ class floatParameter(Parameter):
                 raise ValueError("The scale threshold should be given if unit_scale"
                                  " is set to be True.")
         else:
-            if old_unit_scale: # This makes sure the unit_scale if from True to false
+            if old_unit_scale:  # This makes sure the unit_scale if from True to false
                 self.units = self._original_units
 
     def set_quantity_float(self, val):
@@ -529,7 +529,7 @@ class floatParameter(Parameter):
             num_value = setfunc_no_unit(val)
             if self.unit_scale:
                 if np.abs(num_value) > np.abs(self.scale_threshold):
-                    log.info("Parameter %s's unit will be scaled to %s %s" \
+                    log.info("Parameter %s's unit will be scaled to %s %s"
                              % (self.name, str(self.scale_factor), str(self._original_units)))
                     self.units = self.scale_factor * self._original_units
                 else:

@@ -4,23 +4,36 @@ from __future__ import absolute_import, division, print_function
 
 from tempfile import NamedTemporaryFile
 
-from pint.utils import open_or_use, taylor_horner, lines_of, interesting_lines
 import astropy.units as u
 import numpy as np
 import pytest
-from hypothesis import assume, given
+from hypothesis import assume, example, given
 from hypothesis.extra.numpy import array_shapes, arrays, scalar_dtypes
 from hypothesis.strategies import (
     composite,
+    floats,
     frozensets,
     integers,
     just,
+    one_of,
     sampled_from,
     slices,
 )
 from numpy.testing import assert_array_equal
 
-from pint.utils import PosVel, taylor_horner
+from pint.utils import (
+    PosVel,
+    interesting_lines,
+    jds_to_mjds,
+    jds_to_mjds_pulsar,
+    lines_of,
+    mjds_to_jds,
+    mjds_to_jds_pulsar,
+    mjds_to_str,
+    open_or_use,
+    str_to_mjds,
+    taylor_horner,
+)
 
 
 def test_taylor_horner_basic():
@@ -94,6 +107,7 @@ def test_lines_of(contents):
         ([" text stuff \n"], ["text stuff"], None),
         ([" text stuff \n\n"], ["text stuff"], None),
         ([" text stuff "], ["text stuff"], None),
+        (["a\n", "\n", "\n", "b"], ["a", "b"], None),
         ([" text stuff \n"] * 7, ["text stuff"] * 7, None),
         (["\ttext stuff \n"], ["text stuff"], None),
         (["#\ttext stuff \n"], [], "#"),
@@ -104,6 +118,7 @@ def test_lines_of(contents):
         (["#\ttext stuff \n"], [], ("#", "C ")),
         (["C \ttext stuff \n"], [], ("#", "C ")),
         (["C\ttext stuff \n"], ["C\ttext stuff"], ("#", "C ")),
+        (["C\ttext stuff \n"], [], ("#", "C ", "C\t")),
     ],
 )
 def test_interesting_lines(lines, goodlines, comments):
@@ -235,18 +250,195 @@ def test_posvel_broadcast_retains_quantity(pos_vel_shape, l_unit, t_unit):
 
 def test_posvel_reject_bogus_sizes():
     with pytest.raises(ValueError):
-        PosVel([1,0],[1,0,0])
+        PosVel([1, 0], [1, 0, 0])
     with pytest.raises(ValueError):
-        PosVel([1,0,0],[1,0,0,0])
+        PosVel([1, 0, 0], [1, 0, 0, 0])
     with pytest.raises(ValueError):
-        PosVel(np.array([1,0])*u.m,[1,0,0])
+        PosVel(np.array([1, 0]) * u.m, [1, 0, 0])
     with pytest.raises(ValueError):
-        PosVel([1,0,0,0], np.array([1,0])*u.m)
+        PosVel([1, 0, 0, 0], np.array([1, 0]) * u.m)
+
 
 def test_posvel_str_sensible():
-    assert "->" in str(PosVel([1,0,0],[0,1,0],"earth","mars"))
-    assert "earth" in str(PosVel([1,0,0],[0,1,0],"earth","mars"))
-    assert "mars" in str(PosVel([1,0,0],[0,1,0],"earth","mars"))
-    assert "->" not in str(PosVel([1,0,0],[0,1,0]))
-    assert "17" in str(PosVel([17,0,0],[0,1,0]))
-    assert str(PosVel([17,0,0],[0,1,0])).startswith("PosVel(")
+    assert "->" in str(PosVel([1, 0, 0], [0, 1, 0], "earth", "mars"))
+    assert "earth" in str(PosVel([1, 0, 0], [0, 1, 0], "earth", "mars"))
+    assert "mars" in str(PosVel([1, 0, 0], [0, 1, 0], "earth", "mars"))
+    assert "->" not in str(PosVel([1, 0, 0], [0, 1, 0]))
+    assert "17" in str(PosVel([17, 0, 0], [0, 1, 0]))
+    assert str(PosVel([17, 0, 0], [0, 1, 0])).startswith("PosVel(")
+
+
+# Test that the simplified functions all behave well when handed arrays as well
+# as singletons
+
+
+@composite
+def array_pair(draw, dtype1, elements1, dtype2, elements2):
+    s = draw(array_shapes())
+    a = draw(arrays(dtype1, s, elements1))
+    b = draw(arrays(dtype2, s, elements2))
+    return s, a, b
+
+
+@composite
+def array_pair_broadcast(draw, dtype1, elements1, dtype2, elements2):
+    s, s_a, s_b = draw(broadcastable_subshapes(array_shapes()))
+    a = draw(arrays(dtype1, s_a, elements1))
+    b = draw(arrays(dtype2, s_b, elements2))
+    return s, a, b
+
+
+@composite
+def mjd_strs(draw):
+    i = draw(integers(40000, 70000))
+    f = draw(floats(0, 1, allow_nan=False))
+    return mjds_to_str(i, f)
+
+
+@given(
+    one_of(
+        array_pair(
+            np.int, integers(40000, 70000), np.float, floats(0, 1, allow_nan=False)
+        ),
+        array_pair_broadcast(
+            np.int, integers(40000, 70000), np.float, floats(0, 1, allow_nan=False)
+        ),
+    )
+)
+def test_mjds_to_str_array(sif):
+    s, i, f = sif
+    assume(s != ())
+    r = mjds_to_str(i, f)
+    assert np.shape(r) == s
+    for r_i, i_i, f_i in np.nditer([r, i, f], flags=["refs_ok"]):
+        assert r_i == mjds_to_str(i_i, f_i)
+
+
+@given(
+    one_of(
+        array_pair(
+            np.int, integers(40000, 70000), np.float, floats(0, 1, allow_nan=False)
+        ),
+        array_pair_broadcast(
+            np.int, integers(40000, 70000), np.float, floats(0, 1, allow_nan=False)
+        ),
+    )
+)
+def test_mjds_to_str_array_roundtrip_doesnt_crash(sif):
+    s, i, f = sif
+    assume(s != ())
+    str_to_mjds(mjds_to_str(i, f))
+
+
+@given(
+    one_of(
+        array_pair(
+            np.int, integers(40000, 70000), np.float, floats(0, 1, allow_nan=False)
+        ),
+        array_pair_broadcast(
+            np.int, integers(40000, 70000), np.float, floats(0, 1, allow_nan=False)
+        ),
+    )
+)
+def test_mjds_to_str_array_roundtrip_close(sif):
+    s, i, f = sif
+    assume(s != ())
+    i_o, f_o = str_to_mjds(mjds_to_str(i, f))
+
+    l = i.astype(np.longdouble) + f.astype(np.longdouble)
+    l_o = i_o.astype(np.longdouble) + f_o.astype(np.longdouble)
+
+    assert np.all(np.abs(l - l_o) * 86400 < 1e-9)
+
+
+def test_mjds_to_str_singleton():
+    assert isinstance(mjds_to_str(40000, 0.0), str)
+
+
+def test_mjds_to_jds_singleton():
+    jd1, jd2 = mjds_to_jds(40000, 0.0)
+    assert isinstance(jd1, float)
+    assert isinstance(jd2, float)
+
+
+@given(arrays(np.object, array_shapes(), elements=mjd_strs()))
+def test_str_to_mjds_array(s):
+    i, f = str_to_mjds(s)
+    assert np.shape(i) == np.shape(f) == np.shape(s)
+    for i_i, f_i, s_i in np.nditer([i, f, s], flags=["refs_ok"]):
+        assert i_i, f_i == str_to_mjds(s_i)
+
+
+@given(
+    one_of(
+        array_pair(
+            np.int, integers(40000, 70000), np.float, floats(0, 1, allow_nan=False)
+        ),
+        array_pair_broadcast(
+            np.int, integers(40000, 70000), np.float, floats(0, 1, allow_nan=False)
+        ),
+    )
+)
+def test_mjds_to_jds_array(sif):
+    s, i, f = sif
+    jd1, jd2 = mjds_to_jds(i, f)
+    assert np.shape(jd1) == np.shape(jd2) == s
+    for jd1_i, jd2_i, i_i, f_i in np.nditer([jd1, jd2, i, f]):
+        assert jd1_i, jd2_i == mjds_to_jds(i_i, f_i)
+
+
+@given(
+    one_of(
+        array_pair(
+            np.int, integers(40000, 70000), np.float, floats(0, 1, allow_nan=False)
+        ),
+        array_pair_broadcast(
+            np.int, integers(40000, 70000), np.float, floats(0, 1, allow_nan=False)
+        ),
+    )
+)
+def test_mjds_to_jds_pulsar_array(sif):
+    s, i, f = sif
+    jd1, jd2 = mjds_to_jds_pulsar(i, f)
+    assert np.shape(jd1) == np.shape(jd2) == s
+    for jd1_i, jd2_i, i_i, f_i in np.nditer([jd1, jd2, i, f]):
+        assert jd1_i, jd2_i == mjds_to_jds_pulsar(i_i, f_i)
+
+
+@given(
+    one_of(
+        array_pair(
+            np.int, integers(2440000, 2470000), np.float, floats(0, 1, allow_nan=False)
+        ),
+        array_pair_broadcast(
+            np.int, integers(2440000, 2470000), np.float, floats(0, 1, allow_nan=False)
+        ),
+    )
+)
+@example(s12=((1,), np.array([2440000]), np.array([0.0])))
+def test_jds_to_mjds_array(s12):
+    s, jd1, jd2 = s12
+    i, f = jds_to_mjds(jd1, jd2)
+    assert np.shape(f) == s
+    assert np.shape(i) == s
+    for jd1_i, jd2_i, i_i, f_i in np.nditer([jd1, jd2, i, f]):
+        assert i_i, f_i == jds_to_mjds(jd1_i, jd2_i)
+
+
+@given(
+    one_of(
+        array_pair(
+            np.int, integers(2440000, 2470000), np.float, floats(0, 1, allow_nan=False)
+        ),
+        array_pair_broadcast(
+            np.int, integers(2440000, 2470000), np.float, floats(0, 1, allow_nan=False)
+        ),
+    )
+)
+def test_jds_to_mjds_pulsar_array(s12):
+    s, jd1, jd2 = s12
+    i, f = jds_to_mjds_pulsar(jd1, jd2)
+    assert np.shape(f) == s
+    assert np.shape(i) == s
+    for jd1_i, jd2_i, i_i, f_i in np.nditer([jd1, jd2, i, f]):
+        assert i_i, f_i == jds_to_mjds_pulsar(jd1_i, jd2_i)

@@ -77,6 +77,11 @@ We intend that PINT have facilities for managing parameter files that are
 ambiguous by this definition, whether by applying heuristics or by allowing
 users to clarify their intent.
 
+This scheme as it stands has a problem: some parameter files found "in the
+wild" specify equatorial coordinates for the pulsar but ecliptic values for the
+proper motion. These files should certainly use ecliptic coordinates for
+fitting.
+
 Timing files (``.tim``)
 -----------------------
 
