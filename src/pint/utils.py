@@ -18,7 +18,6 @@ except ImportError:
     from astropy._erfa import DJM0, d2dtf
 
 from astropy import log
-from pint.str2ld import str2ldarr1
 from copy import deepcopy
 
 try:
