@@ -81,8 +81,6 @@ class TestObservatory(unittest.TestCase):
                                bipm_version='BIPM2015')
         try:
             site.clock_corrections(self.test_time)
-        except FileNotFoundError as e:
-            assert os.path.basename(e.filename) == 'fake2gps.clk'
         except OSError as e:
             assert e.errno == 2
             assert os.path.basename(e.filename) == 'fake2gps.clk'
@@ -116,8 +114,8 @@ class TestObservatory(unittest.TestCase):
         site = get_observatory('ao', include_gps=True, include_bipm=True,
                                bipm_version='BIPM2015')
         with self.assertRaises(ValueError):
-            _ = site.get_TDBs(self.test_time, method='ephemeris')
+            site.get_TDBs(self.test_time, method='ephemeris')
         with self.assertRaises(ValueError):
-            _ = site.get_TDBs(self.test_time, method='Unknown_method')
+            site.get_TDBs(self.test_time, method='Unknown_method')
         with self.assertRaises(ValueError):
-            _ = site.get_TDBs(self.test_time, method='ephemeris', ephem='de436')
+            site.get_TDBs(self.test_time, method='ephemeris', ephem='de436')
