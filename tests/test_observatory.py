@@ -70,15 +70,47 @@ class TestObservatory(unittest.TestCase):
         with pytest.raises(KeyError):
             get_observatory('Wrong_name')
 
-    def test_wrong_path(self):
+    def test_clock_correction_file_not_available(self):
+        if os.getenv('TEMPO2') is None:
+            pytest.skip("TEMPO2 evnironment variable is not set, can't run this test")
         # observatory clock correction path expections.
         fake_obs = TopoObs('Fake1', tempo_code='?', itoa_code='FK',
                             clock_fmt='tempo2', clock_file='fake2gps.clk',
                             clock_dir='TEMPO2', itrf_xyz=[0.00, 0.0, 0.0])
         site = get_observatory('Fake1', include_gps=True, include_bipm=True,
                                bipm_version='BIPM2015')
-        with self.assertRaises(RuntimeError):
-            _ = site.clock_corrections(self.test_time)
+        try:
+            site.clock_corrections(self.test_time)
+        except FileNotFoundError as e:
+            assert os.path.basename(e.filename) == 'fake2gps.clk'
+        except OSError as e:
+            assert e.errno == 2
+            assert os.path.basename(e.filename) == 'fake2gps.clk'
+
+
+    def test_no_tempo2_but_tempo2_clock_requested(self):
+        if os.getenv('TEMPO2') is not None:
+            pytest.skip("TEMPO2 evnironment variable is set, can't run this test")
+        # observatory clock correction path expections.
+        fake_obs = TopoObs('Fake1', tempo_code='?', itoa_code='FK',
+                            clock_fmt='tempo2', clock_file='fake2gps.clk',
+                            clock_dir='TEMPO2', itrf_xyz=[0.00, 0.0, 0.0])
+        site = get_observatory('Fake1', include_gps=True, include_bipm=True,
+                               bipm_version='BIPM2015')
+        with pytest.raises(RuntimeError):
+            site.clock_corrections(self.test_time)
+
+    def test_no_tempo_but_tempo_clock_requested(self):
+        if os.getenv('TEMPO') is not None:
+            pytest.skip("TEMPO evnironment variable is set, can't run this test")
+        # observatory clock correction path expections.
+        fake_obs = TopoObs('Fake1', tempo_code='?', itoa_code='FK',
+                            clock_fmt='tempo', clock_file='fake2gps.clk',
+                            clock_dir='TEMPO', itrf_xyz=[0.00, 0.0, 0.0])
+        site = get_observatory('Fake1', include_gps=True, include_bipm=True,
+                               bipm_version='BIPM2015')
+        with pytest.raises(RuntimeError):
+            site.clock_corrections(self.test_time)
 
     def test_wrong_TDB_method(self):
         site = get_observatory('ao', include_gps=True, include_bipm=True,
