@@ -2,6 +2,7 @@ import emcee
 import corner
 import numpy as np
 
+
 class MCMCSampler(object):
     """ Base class for samplers used in MCMC fitting
 
@@ -27,8 +28,9 @@ class MCMCSampler(object):
         #Initialize the sampler at some point before use using
         sampler.initialize_sampler(fitter.lnposterior)
     """
+
     def __init__(self):
-        self.method=None
+        self.method = None
 
     def initialize_sampler(self, lnpostfn, ndim):
         """Initialize the internals of the sampler using the posterior probability function
@@ -53,12 +55,16 @@ class MCMCSampler(object):
         """
         raise NotImplementedError
 
+
 class EmceeSampler(MCMCSampler):
     """Wrapper class around the emcee sampling package.
 
     This is to let it work within the PINT Fitter framework
 
+    Be warned: emcee can only handle double precision. You will never get a
+    longdouble response back.
     """
+
     def __init__(self, nwalkers):
         super(EmceeSampler, self).__init__()
         self.method = 'Emcee'
@@ -85,10 +91,14 @@ class EmceeSampler(MCMCSampler):
         fitkeys, fitvals, fiterrs, and errfact all come from the Fitter,
         kwargs might contain min/maxMJD in the event of a glep_1 parameter
         """
+        if len(fitkeys) != len(fitvals):
+            raise ValueError("Number of keys does ({}) not match number of values ({})!".format(
+                len(fitkeys), len(fitvals)))
         n_fit_params = len(fitvals)
         pos = [fitvals + fiterrs * errfact *
-            np.random.randn(n_fit_params) for ii in range(self.nwalkers)]
-        #set starting params
+               np.random.randn(n_fit_params) for ii in range(self.nwalkers)]
+        # set starting params
+        # FIXME: what about other glitch phase parameters? This can't be right!
         for param in ['glph_1', 'glep_1', 'sini', 'm2', 'e', 'ecc', 'px', 'a1']:
             if param in fitkeys:
                 idx = fitkeys.index(param)
@@ -108,11 +118,11 @@ class EmceeSampler(MCMCSampler):
                     svals = np.fabs(fitvals[idx] + fiterrs[idx] *
                                     np.random.randn(self.nwalkers))
                     if param in ['e', 'ecc']:
-                        svals[svals>1.0] = 1.0 - (svals[svals>1.0] - 1.0)
+                        svals[svals > 1.0] = 1.0 - (svals[svals > 1.0] - 1.0)
                 for ii in range(self.nwalkers):
                     pos[ii][idx] = svals[ii]
         pos[0] = fitvals
-        return pos
+        return [pos_i.astype(np.float) for pos_i in pos]
 
     def get_chain(self):
         """
@@ -128,8 +138,8 @@ class EmceeSampler(MCMCSampler):
         """
         if self.sampler is None:
             raise ValueError("MCMCSampler object has not called initialize_sampler()")
-        chains = [self.sampler.chain[:,:,ii].T for ii in range(len(names))]
-        return dict(zip(names,chains))
+        chains = [self.sampler.chain[:, :, ii].T for ii in range(len(names))]
+        return dict(zip(names, chains))
 
     def run_mcmc(self, pos, nsteps):
         """
@@ -138,4 +148,3 @@ class EmceeSampler(MCMCSampler):
         if self.sampler is None:
             raise ValueError("MCMCSampler object has not called initialize_sampler()")
         self.sampler.run_mcmc(pos, nsteps)
-
