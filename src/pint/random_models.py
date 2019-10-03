@@ -2,7 +2,7 @@ import numpy as np
 import pint.toa
 import pint.models
 import pint.fitter
-import .residuals
+import pint.residuals
 from pint.phase import Phase
 from pint.utils import make_toas
 from copy import deepcopy
