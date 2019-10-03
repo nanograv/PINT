@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 
 import re
 from contextlib import contextmanager
-
+import StringIO
 import numpy as np
 from scipy.special import factorial
 import string
@@ -614,8 +614,8 @@ def show_param_cov_matrix(matrix,params,name='Covaraince Matrix',switchRD=False)
     :param name: title to be printed above, default Covariance Matrix
     :param switchRD: if True, switch the positions of RA and DEC to match setup of TEMPO cov. matrices
     
-    :return None, prints the matrix'''
-    #TODO: return stringIO object instead of printing
+    :return string to be printed'''
+    output = StringIO.StringIO()
     matrix = deepcopy(matrix)
     try:
         RAi = params.index('RAJ')
@@ -644,23 +644,26 @@ def show_param_cov_matrix(matrix,params,name='Covaraince Matrix',switchRD=False)
             matrix[RAi + 1] = RA
             matrix = matrix.T
             i += 1
-    print(name, "switch RD =",switchRD)
-    print(' ',end='')
+    output.write(name+" switch RD = "+str(switchRD)+"\n")
+    output.write(' ')
     for param in params1:
-        print(" "*8,param, end='')
+        output.write('         '+param)
     i = j = 0
     while i < len(matrix):
-        print('\n'+params1[i],end=" :: ")
+        output.write('\n'+params1[i]+' :: ')
         while j <= i:
             num = matrix[i][j]
             if num < 0.001 and num > -0.001:
-                print('{0: 1.2e}'.format(num), end = ' : ')
+                output.write('{0: 1.2e}'.format(num)+'   : ')
             else:
-                print(' ','{0: 1.2f}'.format(num),' ', end = ' : ')
+                output.write('  '+'{0: 1.2f}'.format(num)+'   : ')
             j += 1
         i += 1
         j = 0
-    print('\b:\n')
+    output.write('\b:\n')
+    contents = output.getvalue()
+    output.close()
+    return contents
 
 
 if __name__ == "__main__":
