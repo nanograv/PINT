@@ -1,3 +1,4 @@
+attrs>=19.2
 pip>=9.0.1
 coverage>=4.3.4
 Sphinx>=1.8.5; python_version < "3.0"
@@ -8,7 +9,7 @@ astropy>=3.1; python_version >="3.0"
 sphinx-rtd-theme>=0.1.9
 coveralls>=1.1
 wheel>=0.29.0
-pytest>=3.6
+pytest>=4.3
 pytest-cov>=2.7.1
 pytest-runner>=5.1
 flake8>=3.7
