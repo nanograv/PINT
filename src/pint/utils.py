@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 
 import re
 from contextlib import contextmanager
-import StringIO
+from six import StringIO
 import numpy as np
 from scipy.special import factorial
 import string
