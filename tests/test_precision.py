@@ -213,6 +213,7 @@ def test_posvel_respects_longdouble():
     assert_array_equal(pv.vel, vel)
 
 
+@pytest.mark.xfail
 @given(
     one_of(integers(40000, 60000), integers(-1000000, 3000000), just(0)),
     floats(-2, 2, allow_nan=False),
