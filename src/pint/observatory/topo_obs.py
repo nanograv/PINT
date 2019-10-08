@@ -1,20 +1,24 @@
+"""Ground-based fixed observatories."""
 # topo_obs.py
 # Code for dealing with "standard" ground-based observatories.
-from __future__ import absolute_import, print_function, division
-from . import Observatory
-from .clock_file import ClockFile
+from __future__ import absolute_import, division, print_function
+
 import os
-import numpy
-import astropy.units as u
+
 import astropy.constants as c
+import astropy.units as u
+import numpy
 from astropy import log
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
-from ..utils import PosVel, has_astropy_unit
-from ..solar_system_ephemerides import objPosVel_wrt_SSB, get_tdb_tt_ephem_geocenter
-from ..config import datapath
-from ..erfautils import gcrs_posvel_from_itrf, SECS_PER_DAY
+
 from pint import JD_MJD
+from pint.config import datapath
+from pint.erfautils import SECS_PER_DAY, gcrs_posvel_from_itrf
+from pint.observatory import Observatory
+from pint.observatory.clock_file import ClockFile
+from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
+from pint.utils import PosVel, has_astropy_unit
 
 
 class TopoObs(Observatory):

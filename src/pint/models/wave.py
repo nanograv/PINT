@@ -1,8 +1,10 @@
-from __future__ import absolute_import, print_function, division
-import numpy as np
+from __future__ import absolute_import, division, print_function
+
 import astropy.units as u
-from .timing_model import DelayComponent, MissingParameter
-from . import parameter as p
+import numpy as np
+
+from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
+from pint.models.timing_model import DelayComponent, MissingParameter
 
 
 class Wave(DelayComponent):
@@ -16,14 +18,14 @@ class Wave(DelayComponent):
     def __init__(self):
         super(Wave, self).__init__()
 
-        self.add_param(p.floatParameter(name="WAVE_OM",
+        self.add_param(floatParameter(name="WAVE_OM",
                        description="Base frequency of wave solution",
                        units='1/d'))
-        self.add_param(p.prefixParameter(name="WAVE1", units='s',
-                                         description="Wave components",
-                                         type_match='pair', long_double=True,
-                                         parameter_type='pair'))
-        self.add_param(p.MJDParameter(name="WAVEEPOCH",
+        self.add_param(prefixParameter(name="WAVE1", units='s',
+                                       description="Wave components",
+                                       type_match='pair', long_double=True,
+                                       parameter_type='pair'))
+        self.add_param(MJDParameter(name="WAVEEPOCH",
                        description="Reference epoch for wave solution",
                        time_scale='tdb'))
         self.delay_funcs_component += [self.wave_delay,]

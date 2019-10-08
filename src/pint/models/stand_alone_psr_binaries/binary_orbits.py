@@ -1,5 +1,6 @@
 import re
 import pint.utils as ut
+from pint.utils import taylor_horner, taylor_horner_deriv
 import numpy as np
 import astropy.units as u
 
@@ -135,7 +136,7 @@ class OrbitFBX(orbits):
         while 'FB' + str(ii) in self.orbit_params:
             FBXs.append(getattr(self, 'FB' + str(ii)))
             ii += 1
-        orbits = ut.taylor_horner(self.tt0, FBXs)
+        orbits = taylor_horner(self.tt0, FBXs)
         return orbits.decompose()
 
     def pbprime(self):
@@ -144,7 +145,7 @@ class OrbitFBX(orbits):
         while 'FB' + str(ii) in self.orbit_params:
             FBXs.append(getattr(self, 'FB' + str(ii)))
             ii += 1
-        orbit_freq = ut.taylor_horner_deriv(self.tt0, FBXs, 1)
+        orbit_freq = taylor_horner_deriv(self.tt0, FBXs, 1)
         return 1.0 / orbit_freq
 
     def pbdot_orbit(self):
@@ -153,7 +154,7 @@ class OrbitFBX(orbits):
         while 'FB' + str(ii) in self.orbit_params:
             FBXs.append(getattr(self, 'FB' + str(ii)))
             ii += 1
-        orbit_freq_dot = ut.taylor_horner_deriv(self.tt0, FBXs, 2)
+        orbit_freq_dot = taylor_horner_deriv(self.tt0, FBXs, 2)
         return -(self.pbprime() ** 2) * orbit_freq_dot
 
     def d_orbits_d_par(self, par):
@@ -173,7 +174,7 @@ class OrbitFBX(orbits):
             else:
                 FBXs.append(1.0 * getattr(self, 'FB' + str(ii)).unit)
             ii += 1
-        d_orbits = ut.taylor_horner(self.tt0, FBXs) / par.unit
+        d_orbits = taylor_horner(self.tt0, FBXs) / par.unit
         return d_orbits.decompose()*2*np.pi*u.rad
 
     def d_pbprime_d_FBX(self, FBX):
@@ -186,7 +187,7 @@ class OrbitFBX(orbits):
             else:
                 FBXs.append(1.0 * getattr(self, 'FB' + str(ii)).unit)
             ii += 1
-        d_FB = ut.taylor_horner_deriv(self.tt0, FBXs, 1) / par.unit
+        d_FB = taylor_horner_deriv(self.tt0, FBXs, 1) / par.unit
         return -(self.pbprime() ** 2) * d_FB
 
     def d_pbprime_d_par(self, par):

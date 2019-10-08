@@ -2,16 +2,11 @@
 # given interval using polynomial expansion. The return will be some necessary
 # information and the polynomial coefficients
 from __future__ import absolute_import, print_function, division
-import functools
 from .phase import Phase
 import numpy as np
 import pint.toa as toa
-import pint.utils as utils
-import astropy.units as u
-import astropy.constants as const
 import astropy.time as at
-from .models.parameter import Parameter
-from .utils import data2longdouble
+from pint.pulsar_mjd import data2longdouble
 import astropy.table as table
 from astropy.io import registry
 MIN_PER_DAY = 60.0*24.0
@@ -162,7 +157,7 @@ def tempo_polyco_table_reader(filename):
         psrname = fields[0].strip()
         date = fields[1].strip()
         utc = fields[2]
-        tmid = utils.str2longdouble(fields[3])
+        tmid = np.longdouble(fields[3])
         dm = float(fields[4])
         doppler = float(fields[5])
         logrms = float(fields[6])
@@ -287,7 +282,7 @@ def tempo_polyco_table_writer(polycoTable, filename = 'polyco.dat'):
         psrname = polycoTable['psr'][i].ljust(10)
         dateDMY = polycoTable['date'][i].ljust(10)
         utcHMS = polycoTable['utc'][i][0:9].ljust(10)
-        tmid_mjd = utils.longdouble2str(entry.tmid.value)+' '
+        tmid_mjd = str(entry.tmid.value)+' '
         dm = str(polycoTable['dm'][i]).ljust(72-52+1)
         dshift = str(polycoTable['doppler'][i]).ljust(79-74+1)
         logrms = str(polycoTable['logrms'][i]).ljust(80-86+1)
@@ -296,7 +291,7 @@ def tempo_polyco_table_writer(polycoTable, filename = 'polyco.dat'):
         # Get the reference phase
         rph = (entry.rphase.int+entry.rphase.frac).value[0]
         # FIXME: sometimes raises error, sometimes loses precision!
-        rphase  = utils.longdouble2str(rph)[0:19].ljust(20)
+        rphase  = str(rph)[0:19].ljust(20)
         f0 = ('%.12lf' % entry.f0).ljust(38-21+1)
         obs = entry.obs.ljust(43-39+1)
         tspan = str(round(entry.mjdspan.to('min').value,4))[0].ljust(49-44+1)

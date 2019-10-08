@@ -1,12 +1,12 @@
 """The DDK model - DD with kinematics."""
-from __future__ import absolute_import, print_function, division
-from pint import ls,GMsun,Tsun
-from .stand_alone_psr_binaries.DDK_model import DDKmodel
-from .binary_dd import BinaryDD
-from . import parameter as p
-from .timing_model import MissingParameter
-import astropy.units as u
+from __future__ import absolute_import, division, print_function
+
 from astropy import log
+
+from pint.models.binary_dd import BinaryDD
+from pint.models.parameter import boolParameter, floatParameter
+from pint.models.stand_alone_psr_binaries.DDK_model import DDKmodel
+from pint.models.timing_model import MissingParameter
 
 
 class BinaryDDK(BinaryDD):
@@ -32,19 +32,19 @@ class BinaryDDK(BinaryDD):
         self.binary_model_name = 'DDK'
         self.binary_model_class = DDKmodel
 
-        self.add_param(p.floatParameter(name='KIN', value=0.0, units="deg",
+        self.add_param(floatParameter(name='KIN', value=0.0, units="deg",
                        description="Inclination angle"))
-        self.add_param(p.floatParameter(name='KOM', value=0.0, units="deg",
+        self.add_param(floatParameter(name='KOM', value=0.0, units="deg",
                        description="The longitude of the ascending node"))
-        self.add_param(p.boolParameter(name='K96',
-                       description="Flag for Kopeikin binary model proper motion" + \
+        self.add_param(boolParameter(name='K96',
+                       description="Flag for Kopeikin binary model proper motion"
                        " correction"))
         self.interal_params += ['PMRA_DDK', 'PMDEC_DDK']
 
     @property
     def PMRA_DDK(self):
         params = self.get_params_as_ICRS()
-        par_obj = p.floatParameter(name="PMRA",
+        par_obj = floatParameter(name="PMRA",
             units="mas/year", value=params["PMRA"],
             description="Proper motion in RA")
         return par_obj
@@ -52,7 +52,7 @@ class BinaryDDK(BinaryDD):
     @property
     def PMDEC_DDK(self):
         params = self.get_params_as_ICRS()
-        par_obj = p.floatParameter(name="PMDEC",
+        par_obj = floatParameter(name="PMDEC",
             units="mas/year", value=params["PMDEC"],
             description="Proper motion in DEC")
         return par_obj

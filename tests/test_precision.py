@@ -24,9 +24,7 @@ from hypothesis.strategies import (
 )
 from numpy.testing import assert_array_equal
 
-import pint.pulsar_mjd
-from pint.utils import (
-    PosVel,
+from pint.pulsar_mjd import (
     data2longdouble,
     day_frac,
     jds_to_mjds,
@@ -44,6 +42,7 @@ from pint.utils import (
     time_to_mjd_string,
     two_sum,
 )
+from pint.utils import PosVel
 
 time_eps = (np.finfo(float).eps * u.day).to(u.ns)
 
@@ -295,12 +294,13 @@ def test_time_to_longdouble(scale, i_f):
     assert (abs(time_to_longdouble(t) - ld) * u.day).to(u.ns) < 1 * u.ns
 
 
-@pytest.mark.xfail(reason="astropy bug #9327; fixed in 3.2.2")
+@pytest.mark.xfail
 @given(reasonable_mjd())
 @example(format="pulsar_mjd", i_f=(43143, 9.313492199680697e-10))
 @example(format="pulsar_mjd", i_f=(40000, -4.440892098500627e-16))
 @example(i_f=(65536, 3.637978807091714e-12))
 @example(format="mjd", i_f=(40000, -4.440892098500627e-16))
+@example(i_f=(42710, 0.45015659432648014))
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_to_longdouble_utc(format, scale, i_f):
     i, f = i_f
@@ -311,6 +311,7 @@ def test_time_to_longdouble_utc(format, scale, i_f):
     )
 
 
+# @pytest.mark.xfail
 @given(reasonable_mjd())
 @example(i_f=(65536, 3.552713678800502e-15))
 @example(i_f=(43143, 9.313492199680697e-10))
@@ -348,6 +349,7 @@ def test_time_from_longdouble_utc(format, i_f):
 # time_to_mjd_string, time_from_mjd_string
 
 
+# @pytest.mark.xfail
 @given(reasonable_mjd())
 @example(i_f=(65536, 3.552713678800502e-15))
 @example(format="pulsar_mjd", i_f=(43143, 9.313492199680697e-10))
@@ -355,16 +357,8 @@ def test_time_from_longdouble_utc(format, i_f):
 @example(format="mjd", i_f=(40000, -4.440892098500627e-16))
 @example(format="pulsar_mjd", i_f=(40001, -4.440892098500627e-16))
 @example(format="pulsar_mjd", i_f=(50081, 1.0000000016292463))
-@pytest.mark.parametrize(
-    "format",
-    [
-        "mjd",
-        pytest.param(
-            "pulsar_mjd",
-            marks=pytest.mark.xfail(reason="astropy bug #9327; fixed in 3.2.2"),
-        ),
-    ],
-)
+@example(i_f=(43143, 9.313492199680697e-10))
+@pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_to_longdouble_close_to_time_to_mjd_string(format, i_f):
     i, f = i_f
     t = Time(val=i, val2=f, format=format, scale="utc")
@@ -381,27 +375,35 @@ def test_time_to_longdouble_no_longer_than_time_to_mjd_string(i_f):
     assert len(time_to_mjd_string(t)) >= len(str(time_to_longdouble(t)))
 
 
+# @pytest.mark.xfail
 @given(reasonable_mjd())
 @example(i_f=(65536, 3.552713678800502e-15))
 @example(format="pulsar_mjd", i_f=(43143, 9.313492199680697e-10))
 @example(format="pulsar_mjd", i_f=(40000, -4.440892098500627e-16))
 @example(format="mjd", i_f=(40000, -4.440892098500627e-16))
 @example(format="pulsar_mjd", i_f=(40001, -4.440892098500627e-16))
-@pytest.mark.parametrize(
-    "format",
-    [
-        "mjd",
-        pytest.param(
-            "pulsar_mjd",
-            marks=pytest.mark.xfail(reason="astropy bug #9327; fixed in 3.2.2"),
-        ),
-    ],
-)
+@example(format="mjd", i_f=(43143, 9.313492199680697e-10))
+@pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_to_mjd_string_versus_longdouble(format, i_f):
     i, f = i_f
     m = i + np.longdouble(f)
     t = Time(val=i, val2=f, format=format, scale="utc")
     assert (abs(np.longdouble(time_to_mjd_string(t)) - m) * u.day).to(u.ns) < 1 * u.ns
+
+
+@given(reasonable_mjd())
+@example(i_f=(65536, 3.552713678800502e-15))
+@example(format="pulsar_mjd", i_f=(43143, 9.313492199680697e-10))
+@example(format="pulsar_mjd", i_f=(40000, -4.440892098500627e-16))
+@example(format="mjd", i_f=(40000, -4.440892098500627e-16))
+@example(format="pulsar_mjd", i_f=(40001, -4.440892098500627e-16))
+@example(format="mjd", i_f=(43143, 9.313492199680697e-10))
+@pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
+def test_time_to_mjd_string_versus_decimal(dec, format, i_f):
+    i, f = i_f
+    m = Decimal(i) + Decimal(f)
+    t = Time(val=i, val2=f, format=format, scale="utc")
+    assert (abs(Decimal(time_to_mjd_string(t)) - m) * u.day).to(u.ns) < 1 * u.ns
 
 
 @given(reasonable_mjd())
@@ -511,6 +513,14 @@ def test_time_from_mjd_string_roundtrip(format, i_f):
         abs(t - time_from_mjd_string(time_to_mjd_string(t), format=format)).to(u.ns)
         < 1 * u.ns
     )
+
+
+@given(reasonable_mjd())
+def test_mjd_equals_pulsar_mjd_in_tai(i_f):
+    i, f = i_f
+    t = Time(val=i, val2=f, format="mjd", scale="tai")
+    t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="tai")
+    assert t == t2
 
 
 def test_astropy_time_epsilon():
@@ -757,9 +767,9 @@ def test_mjd_jd_pulsar_round_trip(dec, i_f):
     assert_closer_than_ns(jds_to_mjds_pulsar(*jds), i_f, 1)
 
 
-@pytest.mark.xfail(
-    reason="Round-trip roundoff error winds up in a leap second; probably fine"
-)
+# @pytest.mark.xfail(
+#    reason="Round-trip roundoff error winds up in a leap second; probably fine"
+# )
 @given(leap_sec_day_mjd())
 @example(i_f=(41498, 0.9999999999999982))
 def test_mjd_jd_pulsar_round_trip_leap_sec_day_edge(dec, i_f):
@@ -792,12 +802,14 @@ def test_jds_to_mjds_pulsar_raises_during_leap_second():
 @example(i_f=(43875, -1.000000000000002))
 @example(i_f=(48803, 1.0769154457079824e-09))
 @example(i_f=(48803, 1.0000079160299438e-06))
+@example(i_f=(43143, 9.313492199680697e-10))
 def test_str_to_mjds(dec, i_f):
     i, f = i_f
     assert_closer_than_ns(str_to_mjds(str(decimalify(i, f))), i_f, 1)
 
 
 @given(reasonable_mjd())
+@example(i_f=(43143, 9.313492199680697e-10))
 @example(i_f=(41498, 0.9999999999999982))
 def test_mjds_to_str(dec, i_f):
     i, f = i_f
@@ -805,6 +817,17 @@ def test_mjds_to_str(dec, i_f):
     d = Decimal(s) * 86400 * 10 ** 9
     d2 = decimalify(i, f) * 86400 * 10 ** 9
     assert abs(d2 - d) < 1
+
+
+@given(reasonable_mjd())
+@example(i_f=(43143, 9.313492199680697e-10))
+# @settings(max_examples=5000)
+def test_mjds_to_str_roundtrip(i_f):
+    i, f = i_f
+    d = (decimalify(i, f) * u.day).to(u.ns)
+    i_o, f_o = str_to_mjds(mjds_to_str(i, f))
+    d_o = (decimalify(i_o, f_o) * u.day).to(u.ns)
+    assert abs(d_o - d) < time_eps
 
 
 @given(reasonable_mjd())

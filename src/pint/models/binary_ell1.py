@@ -1,17 +1,13 @@
-from __future__ import absolute_import, print_function, division
-import numpy as np
-import time
-from pint import ls,GMsun,Tsun
-from pint import utils
-from .stand_alone_psr_binaries.ELL1_model import ELL1model
-from .stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
-from .pulsar_binary import PulsarBinary
-from . import parameter as p
-from .timing_model import MissingParameter
-import astropy
-from ..utils import time_from_mjd_string, time_to_longdouble
-import astropy.units as u
+from __future__ import absolute_import, division, print_function
+
 from warnings import warn
+
+from pint.models.parameter import MJDParameter, floatParameter
+from pint.models.pulsar_binary import PulsarBinary
+from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
+from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
+from pint.models.timing_model import MissingParameter
+
 
 class BinaryELL1Base(PulsarBinary):
     """PINT wrapper around standalone ELL1 model.
@@ -33,22 +29,22 @@ class BinaryELL1Base(PulsarBinary):
 
     def __init__(self):
         super(BinaryELL1Base, self).__init__()
-        self.add_param(p.MJDParameter(name="TASC",
+        self.add_param(MJDParameter(name="TASC",
                        description="Epoch of ascending node", time_scale='tdb'))
 
-        self.add_param(p.floatParameter(name="EPS1", units="",
+        self.add_param(floatParameter(name="EPS1", units="",
              description="First Laplace-Lagrange parameter, ECC x sin(OM) for ELL1 model",
              long_double = True))
 
-        self.add_param(p.floatParameter(name="EPS2", units="",
+        self.add_param(floatParameter(name="EPS2", units="",
              description="Second Laplace-Lagrange parameter, ECC x cos(OM) for ELL1 model",
              long_double = True))
 
-        self.add_param(p.floatParameter(name="EPS1DOT", units="1e-12/s",
+        self.add_param(floatParameter(name="EPS1DOT", units="1e-12/s",
              description="First derivative of first Laplace-Lagrange parameter",
              long_double = True))
 
-        self.add_param(p.floatParameter(name="EPS2DOT", units="1e-12/s",
+        self.add_param(floatParameter(name="EPS2DOT", units="1e-12/s",
              description="Second derivative of first Laplace-Lagrange parameter",
              long_double = True))
 
@@ -102,18 +98,18 @@ class BinaryELL1H(BinaryELL1Base):
         self.binary_model_name = 'ELL1H'
         self.binary_model_class = ELL1Hmodel
 
-        self.add_param(p.floatParameter(name="H3", units="second",
+        self.add_param(floatParameter(name="H3", units="second",
                   description="Shapiro delay parameter H3 as in Freire and Wex 2010 Eq(20)",
                   long_double = True))
 
-        self.add_param(p.floatParameter(name="H4", units="second",
+        self.add_param(floatParameter(name="H4", units="second",
                   description="Shapiro delay parameter H4 as in Freire and Wex 2010 Eq(21)",
                   long_double = True))
 
-        self.add_param(p.floatParameter(name="STIGMA", units="",
+        self.add_param(floatParameter(name="STIGMA", units="",
                   description="Shapiro delay parameter STIGMA as in Freire and Wex 2010 Eq(12)",
                   long_double = True))
-        self.add_param(p.floatParameter(name="NHARMS", units="", value=3,
+        self.add_param(floatParameter(name="NHARMS", units="", value=3,
                   description="Number of harmonics for ELL1H shapiro delay."))
 
     @property

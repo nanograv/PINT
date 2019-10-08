@@ -1,45 +1,17 @@
 """Miscellaneous potentially-helpful functions."""
 from __future__ import absolute_import, division, print_function
 
-import decimal
 import re
-import string
 from contextlib import contextmanager
 from copy import deepcopy
-from decimal import Decimal
 
-import astropy._erfa as erfa
-import astropy.time
 import astropy.units as u
 import numpy as np
-from astropy import log
-from astropy._erfa import DJM0, d2dtf
-from scipy.special import factorial
+import six
 from six import StringIO
-
-try:
-    maketrans = str.maketrans
-except AttributeError:
-    # fallback for Python 2
-    from string import maketrans
-
-# FIXME: can we make this exception raise on install instead of on use?
-if np.finfo(np.longdouble).eps > 2e-19:
-    raise ValueError(
-        "This platform does not support extended precision "
-        "floating-point, and PINT cannot run without this."
-    )
 
 __all__ = [
     "PosVel",
-    "fortran_float",
-    "longdouble2str",
-    "str2longdouble",
-    "data2longdouble",
-    "time_from_longdouble",
-    "time_to_longdouble",
-    "time_from_mjd_string",
-    "time_to_mjd_string",
     "numeric_partial",
     "numeric_partials",
     "check_all_partials",
@@ -51,144 +23,11 @@ __all__ = [
     "open_or_use",
     "lines_of",
     "interesting_lines",
-    "mjds_to_str",
-    "str_to_mjds",
-    "mjds_to_jds",
-    "jds_to_mjds",
-    "mjds_to_jds_pulsar",
-    "jds_to_mjds_pulsar",
+    "show_param_cov_matrix",
 ]
 
 
-# These routines are from astropy but were broken in < 3.2.2 and <= 2.0.15
-
-
-def day_frac(val1, val2, factor=None, divisor=None):
-    """Return the sum of ``val1`` and ``val2`` as two float64s.
-
-    The returned floats are an integer part and the fractional remainder,
-    with the latter guaranteed to be within -0.5 and 0.5 (inclusive on
-    either side, as the integer is rounded to even).
-
-    The arithmetic is all done with exact floating point operations so no
-    precision is lost to rounding error.  It is assumed the sum is less
-    than about 1e16, otherwise the remainder will be greater than 1.0.
-
-    Parameters
-    ----------
-    val1, val2 : array of float
-        Values to be summed.
-    factor : float, optional
-        If given, multiply the sum by it.
-    divisor : float, optional
-        If given, divide the sum by it.
-
-    Returns
-    -------
-    day, frac : float64
-        Integer and fractional part of val1 + val2.
-    """
-    # Add val1 and val2 exactly, returning the result as two float64s.
-    # The first is the approximate sum (with some floating point error)
-    # and the second is the error of the float64 sum.
-    sum12, err12 = two_sum(val1, val2)
-
-    if factor is not None:
-        sum12, carry = two_product(sum12, factor)
-        carry += err12 * factor
-        sum12, err12 = two_sum(sum12, carry)
-
-    if divisor is not None:
-        q1 = sum12 / divisor
-        p1, p2 = two_product(q1, divisor)
-        d1, d2 = two_sum(sum12, -p1)
-        d2 += err12
-        d2 -= p2
-        q2 = (d1 + d2) / divisor  # 3-part float fine here; nothing can be lost
-        sum12, err12 = two_sum(q1, q2)
-
-    # get integer fraction
-    day = np.round(sum12)
-    extra, frac = two_sum(sum12, -day)
-    frac += extra + err12
-    # Our fraction can now have gotten >0.5 or <-0.5, which means we would
-    # loose one bit of precision. So, correct for that.
-    excess = np.round(frac)
-    day += excess
-    extra, frac = two_sum(sum12, -day)
-    frac += extra + err12
-    return day, frac
-
-
-def two_sum(a, b):
-    """
-    Add ``a`` and ``b`` exactly, returning the result as two float64s.
-    The first is the approximate sum (with some floating point error)
-    and the second is the error of the float64 sum.
-
-    Using the procedure of Shewchuk, 1997,
-    Discrete & Computational Geometry 18(3):305-363
-    http://www.cs.berkeley.edu/~jrs/papers/robustr.pdf
-
-    Returns
-    -------
-    sum, err : float64
-        Approximate sum of a + b and the exact floating point error
-    """
-    x = a + b
-    eb = x - a  # bvirtual in Shewchuk
-    ea = x - eb  # avirtual in Shewchuk
-    eb = b - eb  # broundoff in Shewchuk
-    ea = a - ea  # aroundoff in Shewchuk
-    return x, ea + eb
-
-
-def two_product(a, b):
-    """
-    Multiple ``a`` and ``b`` exactly, returning the result as two float64s.
-    The first is the approximate product (with some floating point error)
-    and the second is the error of the float64 product.
-
-    Uses the procedure of Shewchuk, 1997,
-    Discrete & Computational Geometry 18(3):305-363
-    http://www.cs.berkeley.edu/~jrs/papers/robustr.pdf
-
-    Returns
-    -------
-    prod, err : float64
-        Approximate product a * b and the exact floating point error
-    """
-    x = a * b
-    ah, al = split(a)
-    bh, bl = split(b)
-    y1 = ah * bh
-    y = x - y1
-    y2 = al * bh
-    y -= y2
-    y3 = ah * bl
-    y -= y3
-    y4 = al * bl
-    y = y4 - y
-    return x, y
-
-
-def split(a):
-    """
-    Split float64 in two aligned parts.
-
-    Uses the procedure of Shewchuk, 1997,
-    Discrete & Computational Geometry 18(3):305-363
-    http://www.cs.berkeley.edu/~jrs/papers/robustr.pdf
-
-    """
-    c = 134217729.0 * a  # 2**27+1.
-    abig = c - a
-    ah = c - abig
-    al = a - ah
-    return ah, al
-
-
-# Back to your regularly scheduled PINT
+# Actual exported tools
 
 
 class PosVel(object):
@@ -422,19 +261,12 @@ def split_prefixed_name(name):
 
     """
     for pt in prefix_pattern:
-        namefield = pt.match(name)
-        if namefield is None:
+        try:
+            prefix_part, index_part = pt.match(name).groups()
+            break
+        except AttributeError:
             continue
-        prefix_part, index_part = namefield.groups()
-        if "_" in name:
-            if "_" in prefix_part:
-                break
-            else:
-                continue
-        # when we have a match
-        break
-
-    if namefield is None:
+    else:
         raise PrefixError("Unrecognized prefix name pattern '%s'." % name)
     return prefix_part, index_part, int(index_part)
 
@@ -493,7 +325,7 @@ def open_or_use(f, mode="r"):
     a subclass of ``str`` will be passed through untouched.
 
     """
-    if isinstance(f, str):
+    if isinstance(f, six.string_types):
         with open(f, mode) as fl:
             yield fl
     else:
@@ -524,10 +356,10 @@ def interesting_lines(lines, comments=None):
     """
     if comments is None:
         cc = ()
-    elif isinstance(comments, tuple):
-        cc = comments
-    else:
+    elif isinstance(comments, six.string_types):
         cc = (comments,)
+    else:
+        cc = tuple(comments)
     for c in cc:
         cs = c.strip()
         if not cs or not c.startswith(cs):
@@ -539,7 +371,7 @@ def interesting_lines(lines, comments=None):
         ln = ln.strip()
         if not ln:
             continue
-        if comments is not None and ln.startswith(comments):
+        if ln.startswith(cc):
             continue
         yield ln
 
@@ -602,260 +434,3 @@ def show_param_cov_matrix(matrix, params, name="Covaraince Matrix", switchRD=Fal
     contents = output.getvalue()
     output.close()
     return contents
-
-
-# Precision-aware conversion functions
-
-
-def fortran_float(x):
-    """Convert Fortran-format floating-point strings.
-
-    returns a copy of the input string with all 'D' or 'd' turned
-    into 'e' characters.  Intended for dealing with exponential
-    notation in tempo1-generated parfiles.
-    """
-    try:
-        # First treat it as a string, wih d->e
-        return float(x.translate(maketrans("Dd", "ee")))
-    except AttributeError:
-        # If that didn't work it may already be a numeric type
-        return float(x)
-
-
-def time_from_mjd_string(s, scale="utc", format="pulsar_mjd"):
-    """Returns an astropy Time object generated from a MJD string input."""
-    i, f = str_to_mjds(s)
-    return astropy.time.Time(val=i, val2=f, scale=scale, format=format)
-
-
-def time_from_longdouble(t, scale="utc", format="pulsar_mjd"):
-    t = np.longdouble(t)
-    i = np.floor(t)
-    f = t - i
-    return astropy.time.Time(val=i, val2=f, format=format, scale=scale)
-
-
-def time_to_mjd_string(t):
-    """Print an MJD time with lots of digits.
-
-    astropy does not seem to provide this capability (yet?).
-    """
-    if t.scale == "utc" and t.format == "pulsar_mjd":
-        i, f = jds_to_mjds_pulsar(t.jd1, t.jd2)
-    else:
-        i, f = jds_to_mjds(t.jd1, t.jd2)
-    return mjds_to_str(i, f)
-
-
-longdouble_mjd_eps = (70000 * u.day * np.finfo(np.longdouble).eps).to(u.ns)
-
-
-def time_to_longdouble(t):
-    """ Return an astropy Time value as MJD in longdouble
-
-    The returned value is accurate to within a nanosecond, while the precision of long
-    double MJDs (near the present) is roughly 0.7 ns.
-
-    """
-    if t.scale == "utc" and t.format == "pulsar_mjd":
-        i, f = jds_to_mjds_pulsar(t.jd1, t.jd2)
-    else:
-        i, f = jds_to_mjds(t.jd1, t.jd2)
-    return np.longdouble(i) + np.longdouble(f)
-
-
-def data2longdouble(data):
-    """Return a numpy long double scalar form different type of data
-
-    If a string, permit Fortran-format scientific notation (1.0d2). Otherwise just use
-    np.longdouble to convert. In particular if ``data`` is an array, convert all the
-    elements.
-
-    Parameters
-    ----------
-    data : str, np.array, or number
-
-    Returns
-    -------
-    np.longdouble
-
-    """
-    if type(data) is str:
-        return str2longdouble(data)
-    else:
-        return np.longdouble(data)
-
-
-def longdouble2str(x):
-    """Convert numpy longdouble to string."""
-    return repr(x)
-
-
-def str2longdouble(str_data):
-    """Return a long double from the input string.
-
-    Accepts Fortran-style exponent notation (1.0d2).
-
-    """
-    if not isinstance(str_data, str):
-        raise TypeError("Need a string: {!r}".format(str_data))
-    return np.longdouble(str_data.translate(maketrans("Dd", "ee")))
-
-
-# Simplified functions: These core functions, if they can be made to work
-# reliably and efficiently, should implement everything else.
-
-
-def safe_kind_conversion(values, dtype):
-    try:
-        from collections.abc import Iterable
-    except ImportError:
-        from collections import Iterable
-    if isinstance(values, Iterable):
-        return np.asarray(values, dtype=dtype)
-    else:
-        return dtype(values)
-
-
-# This can be removed once we only support astropy >=3.1.
-# The str(c) is necessary for python2/numpy -> no unicode literals...
-_new_ihmsfs_dtype = np.dtype([(str(c), np.intc) for c in "hmsf"])
-
-
-def jds_to_mjds(jd1, jd2):
-    return day_frac(jd1 - DJM0, jd2)
-
-
-def mjds_to_jds(mjd1, mjd2):
-    return day_frac(mjd1 + DJM0, mjd2)
-
-
-_digits = 9
-
-
-def jds_to_mjds_pulsar(jd1, jd2):
-    # Do the reverse of the above calculation
-    # Note this will return an incorrect value during
-    # leap seconds, so raise an exception in that
-    # case.
-    y, mo, d, hmsf = erfa.d2dtf("UTC", _digits, jd1, jd2)
-    # For ASTROPY_LT_3_1, convert to the new structured array dtype that
-    # is returned by the new erfa gufuncs.
-    if not hmsf.dtype.names:
-        hmsf = hmsf.view(_new_ihmsfs_dtype)[..., 0]
-    if np.any(hmsf["s"] == 60):
-        raise ValueError(
-            "UTC times during a leap second cannot be represented in pulsar_mjd format"
-        )
-    j1, j2 = erfa.cal2jd(y, mo, d)
-    return day_frac(
-        j1 - erfa.DJM0 + j2,
-        hmsf["h"] / 24.0
-        + hmsf["m"] / 1440.0
-        + hmsf["s"] / 86400.0
-        + hmsf["f"] / 86400.0 / 10 ** _digits,
-    )
-
-
-def mjds_to_jds_pulsar(mjd1, mjd2):
-    # To get around leap second issues, first convert to YMD,
-    # then back to astropy/ERFA-convention jd1,jd2 using the
-    # ERFA dtf2d() routine which handles leap seconds.
-    v1, v2 = day_frac(mjd1, mjd2)
-    (y, mo, d, f) = erfa.jd2cal(erfa.DJM0 + v1, v2)
-    # Fractional day to HMS.  Uses 86400-second day always.
-    # Seems like there should be a ERFA routine for this..
-    # There is: erfa.d2tf. Unfortunately it takes a "number of
-    # digits" argument and returns some kind of bogus
-    # fractional-part-as-an-integer thing.
-    # Worse, it fails to provide nanosecond accuracy.
-    # Good idea, though, because using np.remainder is
-    # numerically unstable and gives bogus values now
-    # and then. This is more stable.
-    f *= 24
-    h = safe_kind_conversion(np.floor(f), dtype=int)
-    f -= h
-    f *= 60
-    m = safe_kind_conversion(np.floor(f), dtype=int)
-    f -= m
-    f *= 60
-    s = f
-    return erfa.dtf2d("UTC", y, mo, d, h, m, s)
-
-
-# Please forgive the horrible hacks to make these work cleanly on both arrays
-# and single elements
-
-
-def _str_to_mjds(s):
-    ss = s.lower().strip()
-    if "e" in ss or "d" in ss:
-        ss = ss.translate(maketrans("d", "e"))
-        num, expon = ss.split("e")
-        expon = int(expon)
-        if expon < 0:
-            imjd, fmjd = 0, np.longdouble(ss)
-        else:
-            mjd_s = num.split(".")
-            # If input was given as an integer, add floating "0"
-            if len(mjd_s) == 1:
-                mjd_s.append("0")
-            imjd_s, fmjd_s = mjd_s
-            imjd = np.longdouble(int(imjd_s))
-            fmjd = np.longdouble("0." + fmjd_s)
-            if ss.startswith("-"):
-                fmjd = -fmjd
-            imjd *= 10 ** expon
-            fmjd *= 10 ** expon
-    else:
-        mjd_s = ss.split(".")
-        # If input was given as an integer, add floating "0"
-        if len(mjd_s) == 1:
-            mjd_s.append("0")
-        imjd_s, fmjd_s = mjd_s
-        imjd = int(imjd_s)
-        fmjd = float("0." + fmjd_s)
-        if ss.startswith("-"):
-            fmjd = -fmjd
-    return day_frac(imjd, fmjd)
-
-
-def str_to_mjds(s):
-    if isinstance(s, str):
-        return _str_to_mjds(s)
-    else:
-        imjd = np.empty_like(s, dtype=int)
-        fmjd = np.empty_like(s, dtype=float)
-        with np.nditer(
-            [s, imjd, fmjd],
-            flags=["refs_ok"],
-            op_flags=[["readonly"], ["writeonly"], ["writeonly"]],
-        ) as it:
-            for si, i, f in it:
-                si = si[()]
-                if not isinstance(si, str):
-                    raise TypeError("Requires an array of strings")
-                i[...], f[...] = _str_to_mjds(si)
-            return it.operands[1], it.operands[2]
-
-
-def _mjds_to_str(mjd1, mjd2):
-    (imjd, fmjd) = day_frac(mjd1, mjd2)
-    imjd = int(imjd)
-    assert np.fabs(fmjd) < 1.0
-    while fmjd < 0.0:
-        imjd -= 1
-        fmjd += 1.0
-    assert 0 <= fmjd < 1
-    return str(imjd) + "{:.16f}".format(fmjd)[1:]
-
-
-_v_mjds_to_str = np.vectorize(_mjds_to_str, otypes=[np.object])
-
-
-def mjds_to_str(mjd1, mjd2):
-    r = _v_mjds_to_str(mjd1, mjd2)
-    if r.shape == ():
-        return r[()]
-    else:
-        return r

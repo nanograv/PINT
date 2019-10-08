@@ -11,7 +11,7 @@ from astropy import log
 
 from pint.utils import split_prefixed_name, interesting_lines, lines_of, PrefixError
 
-from .timing_model import Component, TimingModel, MissingParameter, ignore_prefix
+from pint.models.timing_model import Component, TimingModel, MissingParameter, ignore_prefix
 
 default_models = ["StandardTimingModel",]
 DEFAULT_ORDER = ['astrometry', 'jump_delay', 'solar_system_shapiro',

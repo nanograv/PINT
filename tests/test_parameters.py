@@ -1,11 +1,11 @@
 from pint.models import parameter as p
 from pint.models import model_builder as mb
 from pint import pint_units
-from pint.utils import str2longdouble
 from astropy.coordinates.angles import Angle
 import astropy.time as time
 import astropy.units as u
-import numpy, os, unittest
+import numpy as np
+import os, unittest
 
 from pinttestdata import testdir, datadir
 
@@ -48,68 +48,68 @@ class TestParameters(unittest.TestCase):
         self.assertEqual(test_m.F2.frozen, True)
         self.assertEqual(test_m.F3.frozen, True)
         self.assertTrue(
-                numpy.isclose(test_m.F3.value, 0.0))
+                np.isclose(test_m.F3.value, 0.0))
         self.assertTrue(
-                numpy.isclose(test_m.F3.uncertainty_value, 0.0))
+                np.isclose(test_m.F3.uncertainty_value, 0.0))
         self.assertEqual(test_m.F4.frozen, True)
         self.assertTrue(
-                numpy.isclose(test_m.F4.value, 0.0))
+                np.isclose(test_m.F4.value, 0.0))
         self.assertTrue(
-                numpy.isclose(test_m.F4.uncertainty_value, 0.001))
+                np.isclose(test_m.F4.uncertainty_value, 0.001))
         self.assertEqual(test_m.F5.frozen, True)
         self.assertTrue(
-                numpy.isclose(test_m.F5.value, 0.0))
+                np.isclose(test_m.F5.value, 0.0))
         self.assertTrue(
-                numpy.isclose(test_m.F5.uncertainty_value, 0.001))
+                np.isclose(test_m.F5.uncertainty_value, 0.001))
         self.assertEqual(test_m.F6.frozen, False)
         self.assertTrue(
-                numpy.isclose(test_m.F6.value, 0.0))
+                np.isclose(test_m.F6.value, 0.0))
         self.assertTrue(
-                numpy.isclose(test_m.F6.uncertainty_value, 0.001))
+                np.isclose(test_m.F6.uncertainty_value, 0.001))
         self.assertEqual(test_m.F7.frozen, True)
         self.assertTrue(
-                numpy.isclose(test_m.F7.value, 0.0))
+                np.isclose(test_m.F7.value, 0.0))
         self.assertTrue(
-                numpy.isclose(test_m.F7.uncertainty_value, 3.0))
+                np.isclose(test_m.F7.uncertainty_value, 3.0))
         self.assertEqual(test_m.F8.frozen, True)
         self.assertTrue(
-                numpy.isclose(test_m.F8.value, 0.0))
+                np.isclose(test_m.F8.value, 0.0))
         self.assertTrue(
-                numpy.isclose(test_m.F8.uncertainty_value, 10))
+                np.isclose(test_m.F8.uncertainty_value, 10))
         self.assertEqual(test_m.JUMP1.frozen, True)
         self.assertEqual(test_m.JUMP1.key, 'MJD')
         self.assertTrue(
-                numpy.isclose(test_m.JUMP1.key_value[0], 52742.0, atol=1e-10))
+                np.isclose(test_m.JUMP1.key_value[0], 52742.0, atol=1e-10))
         self.assertTrue(
-                numpy.isclose(test_m.JUMP1.key_value[1], 52745.0, atol=1e-10))
+                np.isclose(test_m.JUMP1.key_value[1], 52745.0, atol=1e-10))
         self.assertTrue(
-                numpy.isclose(test_m.JUMP1.value, 0.2))
+                np.isclose(test_m.JUMP1.value, 0.2))
 
         self.assertEqual(test_m.JUMP2.frozen, True)
         self.assertTrue(
-                numpy.isclose(test_m.JUMP2.value, 0.1))
+                np.isclose(test_m.JUMP2.value, 0.1))
         self.assertTrue(
-                numpy.isclose(test_m.JUMP2.uncertainty_value, 0.0))
+                np.isclose(test_m.JUMP2.uncertainty_value, 0.0))
         self.assertTrue(
-                numpy.isclose(test_m.JUMP7.value, 0.1))
+                np.isclose(test_m.JUMP7.value, 0.1))
         self.assertTrue(
-                numpy.isclose(test_m.JUMP7.uncertainty_value, 10.5))
+                np.isclose(test_m.JUMP7.uncertainty_value, 10.5))
         self.assertTrue(
-                numpy.isclose(test_m.JUMP6.value, 0.1))
+                np.isclose(test_m.JUMP6.value, 0.1))
         self.assertTrue(
-                numpy.isclose(test_m.JUMP6.uncertainty_value, 10.0))
+                np.isclose(test_m.JUMP6.uncertainty_value, 10.0))
         self.assertEqual(test_m.JUMP12.key, '-testflag')
         self.assertEqual(test_m.JUMP12.frozen, False)
         self.assertEqual(test_m.JUMP12.key_value[0], 'flagvalue')
         self.assertTrue(
-                numpy.isclose(test_m.JUMP12.value, 0.1))
+                np.isclose(test_m.JUMP12.value, 0.1))
         self.assertTrue(
-                numpy.isclose(test_m.JUMP12.uncertainty_value, 2.0))
+                np.isclose(test_m.JUMP12.uncertainty_value, 2.0))
         self.assertTrue(
-                numpy.isclose(test_m.RAJ.uncertainty_value, 476.94611148516092061223))
+                np.isclose(test_m.RAJ.uncertainty_value, 476.94611148516092061223))
 
         self.assertTrue(
-                numpy.isclose(test_m.DECJ.uncertainty_value, 190996312986311097848351.00000000000000000000))
+                np.isclose(test_m.DECJ.uncertainty_value, 190996312986311097848351.00000000000000000000))
         self.assertTrue(test_m.RAJ.uncertainty.unit, pint_units['hourangle_second'])
         self.assertTrue(test_m.RAJ.uncertainty.unit, u.arcsecond)
     def test_RAJ(self):
@@ -132,11 +132,11 @@ class TestParameters(unittest.TestCase):
     def test_F0(self):
         """Check whether the value and units of F0 parameter are ok"""
         units = u.Hz
-        value = str2longdouble('186.49408156698235146')
+        value = np.longdouble('186.49408156698235146')
 
         self.assertEqual(self.m.F0.units, units)
         self.assertTrue(
-                numpy.isclose(self.m.F0.value, value, atol=1e-19))
+                np.isclose(self.m.F0.value, value, atol=1e-19))
         self.assertEqual(self.m.F0.value, value)
 
     def test_F0_uncertainty(self):
@@ -144,11 +144,11 @@ class TestParameters(unittest.TestCase):
         units = self.m.F0.units
         # Test stored uncertainty value
         self.assertTrue(
-                numpy.isclose(self.m.F0.uncertainty.to(units).value,
+                np.isclose(self.m.F0.uncertainty.to(units).value,
                 uncertainty, atol=1e-20))
         # Test parameter.uncertainty_value returned value
         self.assertTrue(
-                numpy.isclose(self.m.F0.uncertainty_value, uncertainty,
+                np.isclose(self.m.F0.uncertainty_value, uncertainty,
                 atol=1e-20))
 
 
@@ -167,15 +167,15 @@ class TestParameters(unittest.TestCase):
         # Set it to 186.49 Hz: the 'standard' value
         self.m.F0.quantity = value * units
         self.assertTrue(
-                numpy.isclose(self.m.F0.value, value, atol=1e-13))
+                np.isclose(self.m.F0.value, value, atol=1e-13))
 
         # Now change the units
         self.m.F0.units = str_unit_new
         self.assertTrue(
-                numpy.isclose(self.m.F0.value, value_new, atol=1e-13))
+                np.isclose(self.m.F0.value, value_new, atol=1e-13))
 
         self.assertTrue(
-                numpy.isclose(self.m.F0.uncertainty_value, uncertainty_value_new,
+                np.isclose(self.m.F0.uncertainty_value, uncertainty_value_new,
                               atol=1e-13))
         # Change the units back, and then set them implicitly
         # The value will be associate with the new units
@@ -183,18 +183,18 @@ class TestParameters(unittest.TestCase):
         self.m.F0.quantity = value_new * units_new
         self.m.F0.uncertainty = uncertainty_value_new * units_new
         self.assertTrue(
-                numpy.isclose(self.m.F0.value, value, atol=1e-13))
+                np.isclose(self.m.F0.value, value, atol=1e-13))
         self.assertTrue(
-                numpy.isclose(self.m.F0.uncertainty_value, uncertainty_value,
+                np.isclose(self.m.F0.uncertainty_value, uncertainty_value,
                               atol=1e-20))
         # Check the ratio, using the old units as a reference
         ratio = self.m.F0.quantity / (value * units)
         ratio_uncertainty = self.m.F0.uncertainty / (uncertainty_value * units)
         self.assertTrue(
-                numpy.isclose(ratio.decompose(u.si.bases), 1.0, atol=1e-13))
+                np.isclose(ratio.decompose(u.si.bases), 1.0, atol=1e-13))
 
         self.assertTrue(
-                numpy.isclose(ratio_uncertainty.decompose(u.si.bases), 1.0,
+                np.isclose(ratio_uncertainty.decompose(u.si.bases), 1.0,
                               atol=1e-20))
 
     def set_units_fail(self):
@@ -223,7 +223,7 @@ class TestParameters(unittest.TestCase):
         self.m.T0.value = 50044.3322
         # I don't understand why this is failing...  something about float128
         # Does not fail for me (both lines)  -- RvH 02/22/2015
-        self.assertTrue(numpy.isclose(self.m.T0.value, 50044.3322))
+        self.assertTrue(np.isclose(self.m.T0.value, 50044.3322))
         self.assertEqual(self.m.T0.value, 50044.3322)
 
     def set_num_to_none(self):

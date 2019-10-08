@@ -5,26 +5,27 @@ want to manage a collection of these we recommend you use a :class:`pint.toa.TOA
 as this makes certain operations much more convenient.
 
 """
-from __future__ import absolute_import, print_function, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import copy
 import gzip
 import os
 import re
+from collections import OrderedDict
 
-from astropy import log
-from astropy.coordinates import EarthLocation
 import astropy.table as table
 import astropy.time as time
 import astropy.units as u
 import numpy as np
+from astropy import log
+from astropy.coordinates import EarthLocation
 from six.moves import cPickle as pickle
 
-from . import utils
-from .observatory import Observatory, get_observatory
-from .observatory.topo_obs import TopoObs
-from .solar_system_ephemerides import objPosVel_wrt_SSB
-from .observatory.special_locations import SpacecraftObs
-from collections import OrderedDict
+from pint.observatory import Observatory, get_observatory
+from pint.observatory.special_locations import SpacecraftObs
+from pint.observatory.topo_obs import TopoObs
+from pint.pulsar_mjd import Time
+from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 
 toa_commands = ("DITHER", "EFAC", "EMAX", "EMAP", "EMIN", "EQUAD", "FMAX",
                 "FMIN", "INCLUDE", "INFO", "JUMP", "MODE", "NOSKIP", "PHA1",
@@ -289,9 +290,8 @@ def format_toa_line(toatime, toaerr, freq, obs,
         - TOA format is ``file freq sat satErr siteID <flags>``
 
     """
-    from .utils import time_to_mjd_string
     if format.upper() in ('TEMPO2', '1'):
-        toa_str = time_to_mjd_string(toatime)
+        toa_str = Time(toatime, format="pulsar_mjd_string", scale="utc")
         # In Tempo2 format, freq=0.0 means infinite frequency
         if freq == np.inf*u.MHz:
             freq = 0.0*u.MHz
@@ -322,7 +322,7 @@ def format_toa_line(toatime, toaerr, freq, obs,
                   toa_str, toaerr.to(u.us).value,
                   obscode, flagstring))
     elif format.upper() in ('PRINCETON', 'TEMPO'):
-        toa_str = time_to_mjd_string(toatime, prec=13)
+        toa_str = Time(toatime, format="pulsar_mjd_string", scale="utc")
         # In TEMPO/Princeton format, freq=0.0 means infinite frequency
         if freq == np.inf*u.MHz:
             freq = 0.0*u.MHz
@@ -533,7 +533,7 @@ class TOA(object):
                                 .format(kwargs))
 
     def __str__(self):
-        s = utils.time_to_mjd_string(self.mjd) + \
+        s = self.mjd.mjd_string + \
             ": %6.3f %s error from '%s' at %.4f %s " % \
             (self.error.value, self.error.unit, self.obs, self.freq.value, self.freq.unit)
         if self.flags:
@@ -665,16 +665,18 @@ class TOAs(object):
             return self.table['freq'].quantity
 
     def get_mjds(self, high_precision=False):
-        """ With high_precision is True
-            Return an array of the astropy.times (UTC) of the TOAs
+        """Array of MJDs in the TOAs object
 
-            With high_precision is False
-            Return an array of toas in mjd as double precision floats
+        With high_precision is True
+        Return an array of the astropy.times (UTC) of the TOAs
 
-            WARNING: Depending on the situation, you may get MJDs in a
-            different scales (e.g. UTC, TT, or TDB) or even a mixture
-            of scales if some TOAs are barycentred and some are not (a
-            perfectly valid situation when fitting both Fermi and radio TOAs)
+        With high_precision is False
+        Return an array of toas in mjd as double precision floats
+
+        WARNING: Depending on the situation, you may get MJDs in a
+        different scales (e.g. UTC, TT, or TDB) or even a mixture
+        of scales if some TOAs are barycentred and some are not (a
+        perfectly valid situation when fitting both Fermi and radio TOAs)
         """
         if high_precision:
             if hasattr(self, "toas"):
@@ -1103,7 +1105,7 @@ class TOAs(object):
         # Now add the new columns to the table
         col_tdb = table.Column(name='tdb', data=tdbs)
         col_tdbld = table.Column(name='tdbld',
-                                 data=[utils.time_to_longdouble(t) for t in tdbs])
+                                 data=[t.tdb.mjd_long for t in tdbs])
         self.table.add_columns([col_tdb, col_tdbld])
 
     def compute_posvels(self, ephem=None, planets=False):

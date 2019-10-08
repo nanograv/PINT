@@ -2,17 +2,19 @@
 
 from __future__ import absolute_import, division, print_function
 
+from itertools import product
 from tempfile import NamedTemporaryFile
 
 import astropy.units as u
 import numpy as np
 import pytest
+import six
+from astropy.time import Time
 from hypothesis import assume, example, given
 from hypothesis.extra.numpy import array_shapes, arrays, scalar_dtypes
 from hypothesis.strategies import (
     composite,
     floats,
-    frozensets,
     integers,
     just,
     one_of,
@@ -21,19 +23,17 @@ from hypothesis.strategies import (
 )
 from numpy.testing import assert_array_equal
 
-from pint.utils import (
-    PosVel,
-    interesting_lines,
+from pint.pulsar_mjd import (
     jds_to_mjds,
     jds_to_mjds_pulsar,
-    lines_of,
     mjds_to_jds,
     mjds_to_jds_pulsar,
     mjds_to_str,
-    open_or_use,
     str_to_mjds,
-    taylor_horner,
+    time_to_longdouble,
+    time_from_mjd_string,
 )
+from pint.utils import PosVel, interesting_lines, lines_of, open_or_use, taylor_horner
 
 
 def test_taylor_horner_basic():
@@ -117,6 +117,7 @@ def test_lines_of(contents):
         (["C\ttext stuff \n"], ["C\ttext stuff"], "C "),
         (["#\ttext stuff \n"], [], ("#", "C ")),
         (["C \ttext stuff \n"], [], ("#", "C ")),
+        (["C \ttext stuff \n"], [], ["#", "C "]),
         (["C\ttext stuff \n"], ["C\ttext stuff"], ("#", "C ")),
         (["C\ttext stuff \n"], [], ("#", "C ", "C\t")),
     ],
@@ -307,8 +308,8 @@ def mjd_strs(draw):
 )
 def test_mjds_to_str_array(sif):
     s, i, f = sif
-    assume(s != ())
     r = mjds_to_str(i, f)
+    assert hasattr(r, "dtype")
     assert np.shape(r) == s
     for r_i, i_i, f_i in np.nditer([r, i, f], flags=["refs_ok"]):
         assert r_i == mjds_to_str(i_i, f_i)
@@ -342,9 +343,10 @@ def test_mjds_to_str_array_roundtrip_doesnt_crash(sif):
 )
 def test_mjds_to_str_array_roundtrip_close(sif):
     s, i, f = sif
-    assume(s != ())
     i_o, f_o = str_to_mjds(mjds_to_str(i, f))
 
+    assert hasattr(i_o, "dtype")
+    assert hasattr(f_o, "dtype")
     l = i.astype(np.longdouble) + f.astype(np.longdouble)
     l_o = i_o.astype(np.longdouble) + f_o.astype(np.longdouble)
 
@@ -352,7 +354,33 @@ def test_mjds_to_str_array_roundtrip_close(sif):
 
 
 def test_mjds_to_str_singleton():
-    assert isinstance(mjds_to_str(40000, 0.0), str)
+    assert isinstance(mjds_to_str(40000, 0.0), six.string_types)
+
+
+def test_str_to_mjds_singleton():
+    jd1, jd2 = str_to_mjds("41498.0")
+    assert isinstance(jd1, float)
+    assert isinstance(jd2, float)
+
+
+def test_str_to_mjds_exponential():
+    assert str_to_mjds("4.1498e4") == str_to_mjds("41498")
+
+
+def test_str_to_mjds_exponential_negative():
+    str_to_mjds("4.1498e-4")
+
+
+def test_str_to_mjds_exponential_fortran():
+    assert str_to_mjds("4.1498d4") == str_to_mjds("41498")
+
+
+def test_str_to_mjds_singleton_arrayobj():
+    s = np.array(["41498.0"])[0]
+    assert isinstance(s, str)
+    jd1, jd2 = str_to_mjds(s)
+    assert isinstance(jd1, float)
+    assert isinstance(jd2, float)
 
 
 def test_mjds_to_jds_singleton():
@@ -442,3 +470,97 @@ def test_jds_to_mjds_pulsar_array(s12):
     assert np.shape(i) == s
     for jd1_i, jd2_i, i_i, f_i in np.nditer([jd1, jd2, i, f]):
         assert i_i, f_i == jds_to_mjds_pulsar(jd1_i, jd2_i)
+
+
+# pulsar_mjd and related formats
+
+
+@pytest.mark.parametrize(
+    "format_, type_",
+    [
+        ("mjd", float),
+        ("pulsar_mjd", float),
+        ("mjd_long", np.longdouble),
+        ("pulsar_mjd_long", np.longdouble),
+        ("mjd_string", six.string_types),
+        ("pulsar_mjd_string", six.string_types),
+    ],
+)
+def test_singleton_type(format_, type_):
+    t = Time.now()
+    assert isinstance(getattr(t, format_), type_)
+    t.format = format_
+    assert isinstance(t.value, type_)
+
+
+@pytest.mark.parametrize(
+    "format_, val, val2",
+    [
+        ("mjd", 40000, 1e-10),
+        ("pulsar_mjd", 40000, 1e-10),
+        pytest.param(
+            "mjd_long",
+            np.longdouble(40000) + np.longdouble(1e-10),
+            None,
+            marks=pytest.mark.xfail(reason="astropy limitations"),
+        ),
+        pytest.param(
+            "mjd_long",
+            np.longdouble(40000),
+            np.longdouble(1e-10),
+            marks=pytest.mark.xfail(reason="astropy limitations"),
+        ),
+        pytest.param(
+            "pulsar_mjd_long",
+            np.longdouble(40000) + np.longdouble(1e-10),
+            None,
+            marks=pytest.mark.xfail(reason="astropy limitations"),
+        ),
+        pytest.param(
+            "pulsar_mjd_long",
+            np.longdouble(40000),
+            np.longdouble(1e-10),
+            marks=pytest.mark.xfail(reason="astropy limitations"),
+        ),
+        ("mjd_string", "40000.0000000001", None),
+        ("pulsar_mjd_string", "40000.0000000001", None),
+    ],
+)
+def test_singleton_import(format_, val, val2):
+    Time(val=val, val2=val2, format=format_, scale="utc")
+
+
+# time_to
+
+
+@pytest.mark.parametrize("format_", ["mjd", "pulsar_mjd"])
+def test_time_to_longdouble_types(format_):
+    t = Time.now()
+    t.format = format_
+    assert isinstance(time_to_longdouble(t), np.longdouble)
+
+    t2 = Time(val=50000.0, val2=np.linspace(0, 1, 10), format=format_, scale="utc")
+    assert time_to_longdouble(t2).dtype == np.longdouble
+
+
+@pytest.mark.parametrize(
+    "format_, val",
+    product(
+        ["mjd_string", "pulsar_mjd_string"],
+        [1, False, lambda: False, {1: 2, 3: 4}, {1, 2, 3, 4}],
+    ),
+)
+def test_mjd_string_bogus_types(format_, val):
+    with pytest.raises(ValueError):
+        Time(val=val, format=format_, scale="utc")
+
+
+@pytest.mark.parametrize("format_", ["mjd", "pulsar_mjd"])
+def test_mjd_string_rejects_val2(format_):
+    with pytest.raises(ValueError):
+        Time(val="58000", val2="foo", format=format_, scale="utc")
+
+
+def test_time_from_mjd_string_rejects_other_formats():
+    with pytest.raises(ValueError):
+        time_from_mjd_string("58000", format="cxcsec")

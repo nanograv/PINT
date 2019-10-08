@@ -1,10 +1,9 @@
-from __future__ import absolute_import, print_function, division
-from pint import ls,GMsun,Tsun
-from .stand_alone_psr_binaries.DD_model import DDmodel
-from .pulsar_binary import PulsarBinary
-from . import parameter as p
-from .timing_model import MissingParameter
-import astropy.units as u
+from __future__ import absolute_import, division, print_function
+
+from pint.models.parameter import floatParameter
+from pint.models.pulsar_binary import PulsarBinary
+from pint.models.stand_alone_psr_binaries.DD_model import DDmodel
+from pint.models.timing_model import MissingParameter
 
 
 class BinaryDD(PulsarBinary):
@@ -25,23 +24,23 @@ class BinaryDD(PulsarBinary):
         super(BinaryDD, self).__init__()
         self.binary_model_name = 'DD'
         self.binary_model_class = DDmodel
-        self.add_param(p.floatParameter(name="A0", value=0.0,
+        self.add_param(floatParameter(name="A0", value=0.0,
              units="s",
              description="DD model aberration parameter A0"))
 
-        self.add_param(p.floatParameter(name="B0", value=0.0,
+        self.add_param(floatParameter(name="B0", value=0.0,
              units="s",
              description="DD model aberration parameter B0",))
 
-        self.add_param(p.floatParameter(name="GAMMA", value=0.0,
+        self.add_param(floatParameter(name="GAMMA", value=0.0,
              units="second",
              description="Time dilation & gravitational redshift"))
 
-        self.add_param(p.floatParameter(name="DR", value=0.0,
+        self.add_param(floatParameter(name="DR", value=0.0,
              units="",
              description="Relativistic deformation of the orbit"))
 
-        self.add_param(p.floatParameter(name="DTH", value=0.0,
+        self.add_param(floatParameter(name="DTH", value=0.0,
              units="",
              description="Relativistic deformation of the orbit",))
 

@@ -1,12 +1,13 @@
 """Timing model absolute phase (TZRMJD, TZRSITE ...)"""
-from __future__ import absolute_import, print_function, division
-from warnings import warn
-from astropy import log
-from . import parameter as p
-from .timing_model import PhaseComponent, MissingParameter
+from __future__ import absolute_import, division, print_function
+
 import astropy.units as u
+from astropy import log
+
 import pint.toa as toa
-import numpy as np
+from pint.models.parameter import MJDParameter, floatParameter, strParameter
+from pint.models.timing_model import MissingParameter, PhaseComponent
+
 
 class AbsPhase(PhaseComponent):
     """Absolute phase model.
@@ -23,11 +24,11 @@ class AbsPhase(PhaseComponent):
 
     def __init__(self):
         super(AbsPhase, self).__init__()
-        self.add_param(p.MJDParameter(name="TZRMJD",
+        self.add_param(MJDParameter(name="TZRMJD",
                        description="Epoch of the zero phase."))
-        self.add_param(p.strParameter(name="TZRSITE",
+        self.add_param(strParameter(name="TZRSITE",
                        description="Observatory of the zero phase measured."))
-        self.add_param(p.floatParameter(name="TZRFRQ", units=u.MHz,
+        self.add_param(floatParameter(name="TZRFRQ", units=u.MHz,
                        description="The frequency of the zero phase mearsured."))
 
     def setup(self):
@@ -57,13 +58,13 @@ class AbsPhase(PhaseComponent):
         TZR_toa = toa.TOA((self.TZRMJD.quantity.jd1-2400000.5, self.TZRMJD.quantity.jd2), obs=self.TZRSITE.value,
                           freq=self.TZRFRQ.quantity)
         clkc_info = toas.clock_corr_info
-        tz = toa.get_TOAs_list([TZR_toa,], include_bipm=clkc_info['include_bipm'],
+        tz = toa.get_TOAs_list([TZR_toa], include_bipm=clkc_info['include_bipm'],
                                include_gps=clkc_info['include_gps'],
                                ephem=toas.ephem, planets=toas.planets)
         return tz
 
     def make_TZR_toa(self, toas):
-        """ Calculate the TZRMJD if one not given. 
+        """ Calculate the TZRMJD if one not given.
         TZRMJD = first toa after PEPOCH.
         """
         PEPOCH = self.PEPOCH.quantity.value

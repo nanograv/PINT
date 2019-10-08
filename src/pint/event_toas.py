@@ -4,7 +4,7 @@ import numpy as np
 import pint.toa as toa
 from astropy import log
 import astropy.io.fits as pyfits
-from .fits_utils import read_fits_event_mjds_tuples
+from pint.fits_utils import read_fits_event_mjds_tuples
 
 # fits_extension can be a single name or a comma-separated list of allowed
 # extension names.

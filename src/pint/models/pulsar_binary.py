@@ -12,10 +12,9 @@ import numpy as np
 from astropy import log
 
 from pint import ls
-
-from . import parameter as p
-from .stand_alone_psr_binaries import binary_orbits as bo
-from .timing_model import DelayComponent, MissingParameter
+from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
+from pint.models.stand_alone_psr_binaries import binary_orbits as bo
+from pint.models.timing_model import DelayComponent, MissingParameter
 
 
 class PulsarBinary(DelayComponent):
@@ -41,44 +40,44 @@ class PulsarBinary(DelayComponent):
         self.binary_model_name = None
         self.barycentric_time = None
         self.binary_model_class = None
-        self.add_param(p.floatParameter(name="PB",
+        self.add_param(floatParameter(name="PB",
             units=u.day,
             description="Orbital period", long_double=True))
-        self.add_param(p.floatParameter(name="PBDOT",
+        self.add_param(floatParameter(name="PBDOT",
             units = u.day/u.day,
             description="Orbital period derivitve respect to time", \
             unit_scale=True, scale_factor=1e-12, scale_threshold=1e-7))
-        self.add_param(p.floatParameter(name="A1",
+        self.add_param(floatParameter(name="A1",
             units=ls,
             description="Projected semi-major axis, a*sin(i)"))
         # NOTE: the DOT here takes the value and times 1e-12, tempo/tempo2 can
         # take both.
-        self.add_param(p.floatParameter(name = "A1DOT", aliases = ['XDOT'],
+        self.add_param(floatParameter(name = "A1DOT", aliases = ['XDOT'],
             units=ls/u.s,
             description="Derivative of projected semi-major axis, da*sin(i)/dt", \
             unit_scale=True, scale_factor=1e-12, scale_threshold=1e-7))
-        self.add_param(p.floatParameter(name="ECC",
+        self.add_param(floatParameter(name="ECC",
             units="",
             aliases = ["E"],
             description="Eccentricity"))
-        self.add_param(p.floatParameter(name="EDOT",
+        self.add_param(floatParameter(name="EDOT",
              units="1/s",
              description="Eccentricity derivitve respect to time", \
              unit_scale=True, scale_factor=1e-12, scale_threshold=1e-7))
-        self.add_param(p.MJDParameter(name="T0",
+        self.add_param(MJDParameter(name="T0",
             description="Epoch of periastron passage", time_scale='tdb'))
-        self.add_param(p.floatParameter(name="OM",
+        self.add_param(floatParameter(name="OM",
             units=u.deg,
             description="Longitude of periastron",long_double=True))
-        self.add_param(p.floatParameter(name="OMDOT",
+        self.add_param(floatParameter(name="OMDOT",
             units="deg/year",
             description="Longitude of periastron", long_double=True))
-        self.add_param(p.floatParameter(name="M2",
+        self.add_param(floatParameter(name="M2",
              units=u.M_sun,
              description="Mass of companian in the unit Sun mass"))
-        self.add_param(p.floatParameter(name="SINI", units="",
+        self.add_param(floatParameter(name="SINI", units="",
              description="Sine of inclination angle"))
-        self.add_param(p.prefixParameter(name="FB0", value=None, units='1/s^1',
+        self.add_param(prefixParameter(name="FB0", value=None, units='1/s^1',
                        description="0th time derivative of frequency of orbit",
                        unit_template=self.FBX_unit, aliases = ['FB'],
                        description_template=self.FBX_description,

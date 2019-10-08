@@ -5,10 +5,10 @@ See Blandford & Teukolsky 1976, ApJ, 205, 580.
 """
 from __future__ import absolute_import, print_function, division
 from pint import ls,GMsun,Tsun
-from .stand_alone_psr_binaries.BT_model import BTmodel
-from .pulsar_binary import PulsarBinary
-from . import parameter as p
-from .timing_model import TimingModel, MissingParameter
+from pint.models.stand_alone_psr_binaries.BT_model import BTmodel
+from pint.models.pulsar_binary import PulsarBinary
+from pint.models.parameter import floatParameter
+from pint.models.timing_model import TimingModel, MissingParameter
 import astropy.units as u
 
 class BinaryBT(PulsarBinary):
@@ -28,7 +28,7 @@ class BinaryBT(PulsarBinary):
         self.binary_model_name = 'BT'
         self.binary_model_class = BTmodel
 
-        self.add_param(p.floatParameter(name="GAMMA", value=0.0,
+        self.add_param(floatParameter(name="GAMMA", value=0.0,
              units="second",
              description="Time dilation & gravitational redshift"))
         # remove unused parameter.

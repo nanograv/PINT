@@ -9,10 +9,10 @@ import numpy
 import astropy.units as u
 from astropy.coordinates import EarthLocation
 from astropy import log
-from ..utils import PosVel
-from ..solar_system_ephemerides import objPosVel_wrt_SSB
-from ..config import datapath
-from .clock_file import ClockFile
+from pint.utils import PosVel
+from pint.solar_system_ephemerides import objPosVel_wrt_SSB
+from pint.config import datapath
+from pint.observatory.clock_file import ClockFile
 
 class SpecialLocation(Observatory):
     """Special locations that are not really observatories.

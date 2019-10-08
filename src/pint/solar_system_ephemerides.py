@@ -7,17 +7,11 @@ from six.moves.urllib.parse import urljoin
 import numpy as np
 import astropy.units as u
 import astropy.coordinates as coor
-from astropy.time import Time
 from astropy import log
 from astropy.utils.data import download_file
-from jplephem.spk import SPK
-try:
-    from astropy.erfa import DAYSEC as SECS_PER_DAY
-except ImportError:
-    from astropy._erfa import DAYSEC as SECS_PER_DAY
 
-from .utils import PosVel
-from .config import datapath
+from pint.utils import PosVel
+from pint.config import datapath
 
 
 ephemeris_mirrors = [

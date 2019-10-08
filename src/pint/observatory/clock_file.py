@@ -1,17 +1,19 @@
 # clock_file.py
 
 # Routines for reading various formats of clock file.
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function
+
 import os
-import numpy
-import astropy.units as u
-from astropy.time import Time
-from astropy import log
-from astropy.utils.exceptions import AstropyWarning
-from astropy._erfa import ErfaWarning
 import warnings
-from .. import pulsar_mjd
+
+import astropy.units as u
+import numpy
+from astropy import log
+from astropy._erfa import ErfaWarning
+from astropy.time import Time
 from six import add_metaclass
+
+import pint.pulsar_mjd  # noqa
 
 
 class ClockFileMeta(type):
@@ -82,7 +84,7 @@ class ClockFile(object):
                 raise RuntimeError(msg)
 
         # Can't pass Times directly to numpy.interp.  This should be OK:
-        return numpy.interp(t.mjd, self.time.mjd, self.clock.to(u.us))*u.us
+        return numpy.interp(t.mjd, self.time.mjd, self.clock.to(u.us).value)*u.us
 
 
 class Tempo2ClockFile(ClockFile):
