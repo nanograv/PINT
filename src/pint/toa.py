@@ -842,7 +842,7 @@ class TOAs(object):
         except KeyError:
             raise ValueError('Not all TOAs have pn flags')
         # modify the delta_pulse_number column if required
-        dphs = np.asarray([flags['phase'] if 'phase' in flags else 0..0 \
+        dphs = np.asarray([flags['phase'] if 'phase' in flags else 0.0 \
                            for flags in self.table['flags']])
         self.table['delta_pulse_number'] += dphs
 ￼
