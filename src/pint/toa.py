@@ -590,9 +590,9 @@ class TOAs(object):
                                      meta={'filename': self.filename}).group_by("obs")
             # Add pulse number column (if needed) or make PHASE adjustments
             try:
-                t.phase_columns_from_flags()
+                self.phase_columns_from_flags()
             except ValueError:
-                log.info("No pulse numbers found in {}".format(timfile))
+                log.info("No pulse numbers found in the TOAs")
 
         # We don't need this now that we have a table
         del(self.toas)
