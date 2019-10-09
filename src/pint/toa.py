@@ -845,7 +845,7 @@ class TOAs(object):
         dphs = np.asarray([flags['phase'] if 'phase' in flags else 0.0 \
                            for flags in self.table['flags']])
         self.table['delta_pulse_number'] += dphs
-￼
+
     def compute_pulse_numbers(self, model):
         """Set pulse numbers (in TOA table column pulse_numbers) based on model
 
