@@ -1,13 +1,15 @@
 """Various tests to assess the performance of early CHIME data."""
+import os
+import unittest
+
+import astropy.units as u
+import numpy as np
+from astropy.tests.helper import assert_quantity_allclose
+
 import pint.models.model_builder as mb
 import pint.toa as toa
-import astropy.units as u
 from pint.residuals import Residuals
-import numpy as np
-import os, unittest
-import test_derivative_utils as tdu
-import logging
-from pinttestdata import testdir, datadir
+from pinttestdata import datadir, testdir
 
 
 class Test_CHIME_data(unittest.TestCase):
@@ -30,5 +32,4 @@ class Test_CHIME_data(unittest.TestCase):
         toas = toa.get_TOAs(self.tim, ephem="DE436", planets=False,
                             include_bipm=True)
         r = Residuals(toas, model)
-        assert np.all(np.abs(r.time_resids.to(u.us)) < 800 * u.us), \
-            "Residuals did not computed correctly for early CHIME data."
+        assert_quantity_allclose(r.time_resids.to(u.us), 0*u.us, atol=800*u.us, rtol=0)
