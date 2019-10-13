@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function, division
 from warnings import warn
 from astropy import log
 from . import parameter as p
-from .timing_model import PhaseComponent
+from .timing_model import PhaseComponent, MissingParameter
 import astropy.units as u
 import pint.toa as toa
 import numpy as np
@@ -61,3 +61,13 @@ class AbsPhase(PhaseComponent):
                                include_gps=clkc_info['include_gps'],
                                ephem=toas.ephem, planets=toas.planets)
         return tz
+
+    def make_TZR_toa(self, toas):
+        """ Calculate the TZRMJD if one not given. 
+        TZRMJD = first toa after PEPOCH.
+        """
+        PEPOCH = self.PEPOCH.quantity.value
+        #TODO: add warning for PEPOCH far away from center of data?
+        TZRMJD = min([i for i in toas.get_mjds() if i > PEPOCH*u.d])
+        self.TZRMJD.quantity = TZRMJD.value
+        self.setup()

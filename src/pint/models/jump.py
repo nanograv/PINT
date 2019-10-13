@@ -19,6 +19,7 @@ class DelayJump(DelayComponent):
     """
     register = False
     category = 'delay_jump'
+
     def __init__(self):
         super(DelayJump, self).__init__()
         # TODO: In the future we should have phase jump as well.
@@ -81,6 +82,9 @@ class PhaseJump(PhaseComponent):
             if mask_par.startswith('JUMP'):
                 self.jumps.append(mask_par)
         for j in self.jumps:
+            #prevents duplicates from being added to phase_deriv_funcs
+            if j in self.deriv_funcs.keys():
+                del self.deriv_funcs[j]
             self.register_deriv_funcs(self.d_phase_d_jump, j)
 
     def jump_phase(self, toas, delay):

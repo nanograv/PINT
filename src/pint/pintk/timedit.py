@@ -110,7 +110,7 @@ class TimWidget(tk.Frame):
 
         #Pretty much copying TOAs.write_TOA_file here but without creating an
         #intermediate filename
-        toas = self.psr.toas
+        toas = self.psr.selected_toas
         asfile = 'FORMAT 1\n'
         pnChange = False
         if 'pn' in toas.table.colnames:
@@ -137,7 +137,7 @@ class TimWidget(tk.Frame):
         tfile = open(tfilename, 'w')
         tfile.write(self.editor.get('1.0', 'end-1c'))
         tfile.close()
-        self.psr.toas = pint.toa.get_TOAs(tfilename)
+        self.psr.selected_toas = pint.toa.get_TOAs(tfilename)
         os.remove(tfilename)
         self.call_updates()
 

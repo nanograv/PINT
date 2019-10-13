@@ -1417,14 +1417,16 @@ class maskParameter(floatParameter):
         tbl = toas.table
         if key not in column_match.keys(): # This only works for the one with flags.
             section_name = key+'_section'
-            if section_name not in tbl.keys():
-                flag_col = [x.get(key, None) for x in tbl['flags']]
-                tbl[section_name] = flag_col
+            #if section_name not in tbl.keys():
+            #if statement removed so that flags recompute every time. If don't
+            #recompute, flags can only be added to the toa table once and then never update, 
+            #making it impossible to add additional jump parameters after the par file is read in (pintk)
+            flag_col = [x.get(key, None) for x in tbl['flags']]
+            tbl[section_name] = flag_col
             col = tbl[section_name]
         else:
             col = tbl[column_match[key]]
         select_idx = self.toa_selector.get_select_index(condition, col)
-
         return select_idx[self.name]
 
 

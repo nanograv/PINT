@@ -49,6 +49,7 @@ class Phase(namedtuple('Phase', 'int frac')):
             return super(Phase, cls).__new__(cls, ii.to(u.cycle), ff.to(u.cycle))
 
     def __neg__(self):
+        #TODO: add type check for __neg__ and __add__
         return Phase(-self.int, -self.frac)
 
     def __add__(self, other):

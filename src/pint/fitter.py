@@ -6,6 +6,7 @@ import abc
 import scipy.optimize as opt, scipy.linalg as sl
 from .residuals import Residuals
 
+import collections
 
 class Fitter(object):
     """ Base class for fitter.
@@ -39,9 +40,9 @@ class Fitter(object):
         self.update_resids()
         self.fitresult = []
 
-    def update_resids(self):
+    def update_resids(self, set_pulse_nums=False):
         """Update the residuals. Run after updating a model parameter."""
-        self.resids = Residuals(toas=self.toas, model=self.model)
+        self.resids = Residuals(toas=self.toas, model=self.model, set_pulse_nums=set_pulse_nums)
 
     def set_fitparams(self, *params):
         """Update the "frozen" attribute of model parameters.
@@ -62,21 +63,21 @@ class Fitter(object):
 
     def get_allparams(self):
         """Return a dict of all param names and values."""
-        return dict((k, getattr(self.model, k).quantity) for k in
+        return collections.OrderedDict((k, getattr(self.model, k).quantity) for k in
                     self.model.params)
 
     def get_fitparams(self):
         """Return a dict of fittable param names and quantity."""
-        return dict((k, getattr(self.model, k)) for k in
+        return collections.OrderedDict((k, getattr(self.model, k)) for k in
                     self.model.params if not getattr(self.model, k).frozen)
 
     def get_fitparams_num(self):
         """Return a dict of fittable param names and numeric values."""
-        return dict((k, getattr(self.model, k).value) for k in
+        return collections.OrderedDict((k, getattr(self.model, k).value) for k in
                     self.model.params if not getattr(self.model, k).frozen)
 
     def get_fitparams_uncertainty(self):
-        return dict((k, getattr(self.model, k).uncertainty_value) for k in
+        return collections.OrderedDict((k, getattr(self.model, k).uncertainty_value) for k in
                     self.model.params if not getattr(self.model, k).frozen)
 
     def set_params(self, fitp):
@@ -168,7 +169,6 @@ class WlsFitter(Fitter):
             fac = M.std(axis=0)
             fac[0] = 1.0
             M /= fac
-
             # Singular value decomp of design matrix:
             #   M = U s V^T
             # Dimensions:
@@ -176,7 +176,6 @@ class WlsFitter(Fitter):
             #   s is Nparam x Nparam diagonal matrix encoded as 1-D vector
             #   V^T is Nparam x Nparam
             U, s, Vt = sl.svd(M, full_matrices=False)
-
             # Note, here we could do various checks like report
             # matrix condition number or zero out low singular values.
             #print 'log_10 cond=', np.log10(s.max()/s.min())
@@ -189,9 +188,19 @@ class WlsFitter(Fitter):
             # The post-fit parameter covariance matrix
             #   Sigma = V s^-2 V^T
             Sigma = np.dot(Vt.T / (s**2), Vt)
-            # Parameter uncertainties.  Scale by fac recovers original units.
+            # Parameter uncertainties. Scale by fac recovers original units.
             errs = np.sqrt(np.diag(Sigma)) / fac
-
+            #covariance matrix stuff (for randomized models in pintk)
+            sigma_var = (Sigma/fac).T/fac
+            errors = np.sqrt(np.diag(sigma_var))
+            sigma_cov = (sigma_var/errors).T/errors
+            #correlation matrix = variances in diagonal, used for gaussian random models
+            self.correlation_matrix = sigma_var
+            #covariance matrix = 1s in diagonal, use for comparison to tempo/tempo2 cov matrix
+            self.covariance_matrix = sigma_cov
+            self.fac = fac
+            self.errors = errors
+        
             # The delta-parameter values
             #   dpars = V s^-1 U^T r
             # Scaling by fac recovers original units
