@@ -627,7 +627,7 @@ class PlkWidget(tk.Frame):
         self.plkAx2y.set_visible(False)
         self.plkAx2x.set_visible(False)
         #clears the views stack and puts the scaled view on top, fixes toolbar problems
-        self.plkToolbar._views.clear()
+        #self.plkToolbar._views.clear()
         self.plkToolbar.push_current()
 
         if self.xid in ['pre-fit', 'post-fit']:
@@ -667,6 +667,7 @@ class PlkWidget(tk.Frame):
             #TODO: add random models on/off button
             log.info('plotting random models')
             f_toas = self.psr.fake_toas
+            print("Computing random models based on parameter covariance matrix...")
             rs = self.psr.random_resids
             for i in range(len(rs)):
                 self.plkAxes.plot(f_toas, rs[i], '-k', alpha=0.3)

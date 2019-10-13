@@ -19,11 +19,10 @@ import copy
 
 #Pint imports
 import pint.models
-import pint.toa
 import pint.fitter
-import pint.residuals
-import pint.random_models
-
+from pint.toa import get_TOAs
+from pint.residuals import Residuals
+from pint.random_models import random_models
 
 plot_labels = ['pre-fit', 'post-fit', 'mjd', 'year', 'orbital phase', 'serial', \
     'day of year', 'frequency', 'TOA error', 'rounded MJD']
@@ -57,17 +56,14 @@ class Pulsar(object):
 
         if ephem is not None:
             #TODO: EPHEM overwrite message?
-            self.selected_toas = pint.toa.get_TOAs(self.timfile, ephem=ephem, planets=True)
-            self.all_toas = pint.toa.get_TOAs(self.timfile, ephem=ephem, planets=True)
+            self.all_toas = get_TOAs(self.timfile, ephem=ephem, planets=True)
             self.prefit_model.EPHEM.value = ephem
         elif getattr(self.prefit_model, 'EPHEM').value is not None:
-            self.selected_toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value,planets=True)
-            self.all_toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value,planets=True)
+            self.all_toas = get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value, planets=True)
         else:
-            self.selected_toas = pint.toa.get_TOAs(self.timfile,planets=True)
-            self.all_toas = pint.toa.get_TOAs(self.timfile,planets=True)
+            self.all_toas = get_TOAs(self.timfile, planets=True)
 
-        #turns pre-existing jump flags in toas.table['flags'] into parameters in parfile
+        # turns pre-existing jump flags in toas.table['flags'] into parameters in parfile
         self.prefit_model.jump_flags_to_params(self.all_toas)
         self.selected_toas = copy.deepcopy(self.all_toas)
         print("prefit_model.as_parfile():")
@@ -75,7 +71,7 @@ class Pulsar(object):
 
         self.all_toas.print_summary()
 
-        self.prefit_resids = pint.residuals.Residuals(self.selected_toas, self.prefit_model)
+        self.prefit_resids = Residuals(self.selected_toas, self.prefit_model)
         print("RMS PINT residuals are %.3f us\n" % \
               self.prefit_resids.time_resids.std().to(u.us).value)
         self.fitter = Fitters.WLS
@@ -104,11 +100,10 @@ class Pulsar(object):
 
     def reset_TOAs(self):
         if getattr(self.prefit_model, 'EPHEM').value is not None:
-            self.selected_toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value,planets=True)
-            self.all_toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value,planets=True)
+            self.all_toas = get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value, planets=True)
         else:
-            self.selected_toas = pint.toa.get_TOAs(self.timfile,planets=True)
-            self.all_toas = pint.toa.get_TOAs(self.timfile,planets=True)
+            self.all_toas = get_TOAs(self.timfile, planets=True)
+        self.selected_toas = copy.deepcopy(self.all_toas)
         self.update_resids()
 
     def resetAll(self):
@@ -116,21 +111,13 @@ class Pulsar(object):
         self.postfit_model = None
         self.postfit_resids = None
         self.fitted = False
-
-        if getattr(self.prefit_model, 'EPHEM').value is not None:
-            self.selected_toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value,planets=True)
-            self.all_toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value,planets=True)
-        else:
-            self.selected_toas = pint.toa.get_TOAs(self.timfile,planets=True)
-            self.all_toas = pint.toa.get_TOAs(self.timfile, ephem=self.prefit_model.EPHEM.value,planets=True)
-
-        self.update_resids()
+        self.reset_TOAs()
 
     def update_resids(self):
         #update the pre and post fit residuals using all_toas 
-        self.prefit_resids = pint.residuals.resids(self.all_toas, self.prefit_model)
+        self.prefit_resids = Residuals(self.all_toas, self.prefit_model)
         if self.fitted:
-            self.postfit_resids = pint.residuals.resids(self.all_toas, self.postfit_model)
+            self.postfit_resids = Residuals(self.all_toas, self.postfit_model)
 
     def orbitalphase(self):
         '''
@@ -322,25 +309,29 @@ class Pulsar(object):
         '''
         Run a fit using the specified fitter
         '''
+        # Select all the TOAs if none are explicitly set
         if not any(selected):
             selected = ~selected
 
         """JUMP check, TODO: put in fitter?"""
         if 'PhaseJump' in self.prefit_model.components:
-            #if attempted fit (selected) 
-            #A) contains only jumps, don't do the fit and return an error
-            #B) excludes a jump, turn that jump off
-            #C) partially contains a jump, redefine that jump only with the overlap
+            # if attempted fit (selected)
+            # A) contains only jumps, don't do the fit and return an error
+            # B) excludes a jump, turn that jump off
+            # C) partially contains a jump, redefine that jump only with the overlap
             fit_jumps = []
             for param in self.prefit_model.params:
                 if getattr(self.prefit_model, param).frozen == False and param.startswith('JUMP'):
                     fit_jumps.append(int(param[4:]))
-            jumps = [True if 'jump' in dict.keys() and dict['jump'] in fit_jumps else False for dict in self.selected_toas.table['flags']]
+            jumps = [True if 'jump' in dict.keys() and dict['jump'] in fit_jumps
+                     else False for dict in self.selected_toas.table['flags']]
             if all(jumps):
                 log.warn('toas being fit must not all be jumped. Remove or uncheck at least one jump in the selected toas before fitting.')
                 return None
-            sel_jump_nums = [dict['jump'] if 'jump' in dict.keys() else np.nan for dict in self.selected_toas.table['flags']]
-            full_jump_nums = [dict['jump'] if 'jump' in dict.keys() else np.nan for dict in self.all_toas.table['flags']]
+            sel_jump_nums = [dict['jump'] if 'jump' in dict.keys()
+                             else np.nan for dict in self.selected_toas.table['flags']]
+            full_jump_nums = [dict['jump'] if 'jump' in dict.keys()
+                              else np.nan for dict in self.all_toas.table['flags']]
             for num in range(1, int(np.nanmax(full_jump_nums)+1)):
                 num = int(num)
                 if num not in sel_jump_nums:
@@ -373,7 +364,7 @@ class Pulsar(object):
 
         fitter.fit_toas(maxiter=1)
         self.postfit_model = fitter.model
-        self.postfit_resids = pint.residuals.Residuals(self.all_toas, self.postfit_model, set_pulse_nums = True)
+        self.postfit_resids = Residuals(self.all_toas, self.postfit_model, set_pulse_nums=True)
         self.fitted = True
         self.write_fit_summary()
 
@@ -387,27 +378,48 @@ class Pulsar(object):
             if param.startswith('JUMP'):
                 getattr(pm_no_jumps, param).value = 0.0
                 getattr(pm_no_jumps, param).frozen = True
-        self.prefit_resids_no_jumps = pint.residuals.resids(self.all_toas, pm_no_jumps, set_pulse_nums = True)
+        self.prefit_resids_no_jumps = Residuals(self.all_toas, pm_no_jumps, set_pulse_nums = True)
 
         f = copy.deepcopy(fitter)
         no_jumps = [False if 'jump' in dict.keys() else True for dict in f.toas.table['flags']]
         f.toas.select(no_jumps)
 
+        selectedMJDs = self.selected_toas.get_mjds()
         if all(no_jumps):
             q = list(self.all_toas.get_mjds())
-            index = q.index([i for i in self.all_toas.get_mjds() if i > self.selected_toas.get_mjds().min()][0])
-            rs_mean = pint.residuals.resids(self.all_toas, f.model, set_pulse_nums=True).phase_resids[index:index+len(self.selected_toas.get_mjds())].mean()
+            index = q.index([i for i in self.all_toas.get_mjds() if i > selectedMJDs.min()][0])
+            rs_mean = Residuals(self.all_toas, f.model, set_pulse_nums=True).phase_resids[index:index+len(selectedMJDs)].mean()
         else:
             rs_mean = self.prefit_resids_no_jumps.phase_resids[no_jumps].mean()
 
-        #determines how far on either side fake toas go
-        #TODO: hard limit on how far fake toas can go --> can get clkcorr errors if go before GBT existed, etc.
-        if len(f.get_fitparams()) < 3:
+        # determines how far on either side fake toas go
+        # TODO: hard limit on how far fake toas can go --> can get clkcorr
+        # errors if go before GBT existed, etc.
+        minMJD, maxMJD = selectedMJDs.min(), selectedMJDs.max()
+        spanMJDs = maxMJD - minMJD
+        if (spanMJDs < 30*u.d):
             redge = ledge = 4
             npoints = 400
-        else:
-            redge = ledge = 3
+        elif (spanMJDs < 90*u.d):
+            redge = ledge = 2
+            npoints = 300
+        elif (spanMJDs < 200*u.d):
+            redge = ledge = 1
+            npoints = 300
+        elif (spanMJDs < 400*u.d):
+            redge = ledge = 0.5
             npoints = 200
-        f_toas, rs = pint.random_models.random_models(f, rs_mean=rs_mean, redge_multiplier=redge, ledge_multiplier=ledge, npoints=npoints, iter=10)
+        else:
+            redge = ledge = 0.2
+            npoints = 150
+        # Check to see if too recent
+        nowish = (Time.now().mjd - 40) * u.d
+        if (maxMJD + spanMJDs * redge > nowish):
+            redge = (nowish - maxMJD) / spanMJDs
+            if redge < 0.0:
+                redge = 0.0
+        f_toas, rs = random_models(f, rs_mean=rs_mean,
+                                   redge_multiplier=redge,
+                                   ledge_multiplier=ledge, npoints=npoints, iter=10)
         self.random_resids = rs
         self.fake_toas = f_toas
