@@ -342,6 +342,38 @@ def format_toa_line(toatime, toaerr, freq, obs,
 
     return out
 
+def make_toas(startMJD, endMJD, ntoas, model, freq=1400, obs='GBT'):
+    '''make evenly spaced toas with residuals = 0 and  without errors
+
+    might be able to do different frequencies if fed an array of frequencies,
+    only works with one observatory at a time
+
+    :param startMJD: starting MJD for fake toas
+    :param endMJD: ending MJD for fake toas
+    :param ntoas: number of fake toas to create between startMJD and endMJD
+    :param model: current model
+    :param freq: frequency of the fake toas, default 1400
+    :param obs: observatory for fake toas, default GBT
+
+    :return TOAs object with evenly spaced toas spanning given start and end MJD with ntoas toas, without errors
+    '''
+    #TODO:make all variables Quantity objects
+    #TODO: freq default to inf
+    def get_freq_array(bfv, ntoas):
+        freq = np.zeros(ntoas)
+        num_freqs = len(bfv)
+        for ii, fv in enumerate(bfv):
+            freq[ii::num_freqs] = fv
+        return freq
+    times = np.linspace(np.longdouble(startMJD)*u.d, np.longdouble(endMJD)*u.d, ntoas) * u.day
+    freq_array = get_freq_array(np.atleast_1d(freq)*u.MHz, len(times))
+    t1 = [TOA(t.value, obs = obs, freq=f,
+              scale=get_observatory(obs).timescale) for t, f in zip(times, freq_array)]
+    ts = TOAs(toalist=t1)
+    ts.compute_TDBs()
+    ts.compute_posvels()
+    ts.clock_corr_info.update({'include_bipm':False,'bipm_version':'BIPM2015','include_gps':False})
+    return ts
 
 class TOA(object):
     """A time of arrival (TOA) class.
@@ -757,15 +789,15 @@ class TOAs(object):
         else:
             return self.table['groups']
 
-        def get_highest_density_range(self, ndays=7):
-            '''print the range of mjds (default 7 days) with the most toas'''
-            #TODO: implement sliding window
-            nbins = int((max(self.get_mjds()) - min(self.get_mjds()))/(ndays*u.d))
-            a = np.histogram(self.get_mjds(), nbins)
-            maxday = int(a[1][np.argmax(a[0])])
-            diff = int(a[1][1]-a[1][0])
-            print('max density range (in steps of {} days -- {} bins) is from MJD {} to {} with {} toas.'.format(diff, nbins, maxday, maxday+diff, a[0].max()))
-            return (maxday, maxday+diff)
+    def get_highest_density_range(self, ndays=7):
+        '''print the range of mjds (default 7 days) with the most toas'''
+        #TODO: implement sliding window
+        nbins = int((max(self.get_mjds()) - min(self.get_mjds()))/(ndays*u.d))
+        a = np.histogram(self.get_mjds(), nbins)
+        maxday = int(a[1][np.argmax(a[0])])
+        diff = int(a[1][1]-a[1][0])
+        print('max density range (in steps of {} days -- {} bins) is from MJD {} to {} with {} toas.'.format(diff, nbins, maxday, maxday+diff, a[0].max()))
+        return (maxday, maxday+diff)
 
     def select(self, selectarray):
         """Apply a boolean selection or mask array to the TOA table.

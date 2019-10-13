@@ -572,40 +572,6 @@ def interesting_lines(lines, comments=None):
             continue
         yield ln
 
-def make_toas(startMJD, endMJD, ntoas, model, freq=1400, obs='GBT'):
-    '''make evenly spaced toas with residuals = 0 and  without errors
-    
-    might be able to do different frequencies if fed an array of frequencies,
-    only works with one observatory at a time
-    
-    :param startMJD: starting MJD for fake toas
-    :param endMJD: ending MJD for fake toas
-    :param ntoas: number of fake toas to create between startMJD and endMJD
-    :param model: current model
-    :param freq: frequency of the fake toas, default 1400
-    :param obs: observatory for fake toas, default GBT
-    
-    :return TOAs object with evenly spaced toas spanning given start and end MJD with ntoas toas, without errors
-    '''
-    #TODO:make all variables Quantity objects
-    #TODO: freq default to inf
-    def get_freq_array(bfv, ntoas):
-        freq = np.zeros(ntoas)
-        num_freqs = len(bfv)
-        for ii, fv in enumerate(bfv):
-            freq[ii::num_freqs] = fv
-        return freq
-
-    times = np.linspace(np.longdouble(startMJD)*u.d, np.longdouble(endMJD)*u.d, ntoas) * u.day
-    freq_array = get_freq_array(np.atleast_1d(freq)*u.MHz, len(times))
-    t1 = [pint.toa.TOA(t.value, obs = obs, freq=f,
-                       scale=pint.observatory.get_observatory(obs).timescale) for t, f in zip(times, freq_array)]
-    ts = pint.toa.TOAs(toalist=t1)
-    ts.compute_TDBs()
-    ts.compute_posvels()
-    ts.clock_corr_info.update({'include_bipm':False,'bipm_version':'BIPM2015','include_gps':False})
-    return ts
-
 def show_param_cov_matrix(matrix,params,name='Covaraince Matrix',switchRD=False):
     '''function to print covariance matrices in a clean and easily readable way
     
