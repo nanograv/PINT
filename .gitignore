@@ -90,3 +90,6 @@ docs/_build
 
 # hypothesis testing database
 .hypothesis
+
+# Jupyter notebooks should not be in git; they are built from md files
+docs/examples/*.ipynb

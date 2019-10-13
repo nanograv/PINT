@@ -41,6 +41,7 @@ The primary reasons we are developing PINT are:
 
    installation
    usage
+   command-line
    structure
    api/pint
    contributing

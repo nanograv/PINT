@@ -36,7 +36,7 @@ class SpecialLocation(Observatory):
         TT = TAI+32.184s, the same as TEMPO2 TT(TAI) in the
         parfile. If True, it will apply the correction from
         BIPM TT=TT(BIPMYYYY). See the link:
-        http://www.bipm.org/en/bipm-services/timescales/time-ftp/ttbipm.html
+        https://www.bipm.org/en/bipm-services/timescales/time-ftp/ttbipm.html
     bipm_version : str, optional
         Set the version of TT BIPM clock correction file to
         use, the default is BIPM2015.  It has to be in the format

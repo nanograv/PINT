@@ -17,6 +17,7 @@ import os
 import sys
 from packaging.version import parse
 
+import jupytext
 import sphinx.ext.apidoc
 
 
@@ -142,6 +143,10 @@ napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_use_ivar = True  # How to format Attributes sections
 napoleon_use_param = True
+
+nbsphinx_custom_formats = {
+    '.md': lambda s: jupytext.reads(s, '.md'),
+}
 
 # -- apidoc ----------------------------------------------------------
 
