@@ -2,6 +2,7 @@ from __future__ import absolute_import, print_function, division
 
 import os
 
+from six import raise_from
 from six.moves.urllib.parse import urljoin
 import numpy as np
 import astropy.units as u
@@ -45,54 +46,53 @@ jpl_obj_code = {'ssb': 0,
 _ephemeris_hits = {}
 _ephemeris_failures = set()
 
+
 def _load_kernel_link(ephem, link=None):
-    if link=='':
+    if link == '':
         raise ValueError("Empty string is not a valid URL")
-    try:
+    # NOTE: as of astropy 4 this should be able to be much simpler
+
+    if ephem in _ephemeris_hits:
         # If we found it earlier just pull it from cache
-        l = _ephemeris_hits[ephem]
-        download_file(l, cache=True)
-        coor.solar_system_ephemeris.set(l)
-        return True
-    except KeyError:
-        pass
-    except ValueError:
-        log.warning("Previously found ephemeris '{}' at '{}' but "
-                    "it is now missing from both the cache and the "
-                    "internet location".format(ephem, l))
-    if link is not None:
-        search_list = [link] + ephemeris_mirrors
-    else:
-        search_list = ephemeris_mirrors
-    for l in search_list:
-        ephem_link = urljoin(l, "%s.bsp" % ephem)
-        if ephem_link in _ephemeris_failures:
-            continue
+        coor.solar_system_ephemeris.set(_ephemeris_hits[ephem])
+        return
+
+    # FIXME: is link supposed to be a URL for the file or a directory?
+    search_list = [urljoin(e, "{}.bsp".format(ephem))
+                   for e in (([] if link is None else [link]) + ephemeris_mirrors)
+                   if e not in _ephemeris_failures]
+    errors = []
+    for ephem_link in search_list:
         try:
             coor.solar_system_ephemeris.set(ephem_link)
             _ephemeris_hits[ephem] = ephem_link
-            return True
+            return
         except (ValueError, IOError) as e:
-            log.warning("Did not find '{}' because: {}, will retry".format(ephem_link, e))
+            log.debug("Did not find '{}' because: {}, will retry".format(ephem_link, e))
             # FIXME: detect which errors are worth retrying seconds later
             # with a longer timeout and only retry those
+            errors.append((ephem_link, e, ""))
     log.info("Retrying network requests with a longer timeout")
-    for l in search_list:
-        ephem_link = urljoin(l, "%s.bsp" % ephem)
-        if ephem_link in _ephemeris_failures:
-            continue
+    for ephem_link in search_list:
         try:
             log.debug('Re-trying to set astropy ephemeris to {0}'.format(ephem_link))
             download_file(ephem_link, timeout=300, cache=True)
-            log.warning("Only able to download '{}' on a second try".format(ephem_link))
+            log.debug("Only able to download '{}' on a second try".format(ephem_link))
             coor.solar_system_ephemeris.set(ephem_link)
             _ephemeris_hits[ephem] = ephem_link
-            return True
+            return
         except (ValueError, IOError) as e:
-            # Retry failures are not surprising
-            log.info("Retry did not find '{}' because: {}".format(ephem_link, e))
+            log.info("Retry did not find '{}', blacklisting it now, because: {}"
+                     .format(ephem_link, e))
             _ephemeris_failures.add(ephem_link)
-    return False
+            errors.append((ephem_link, e, "retry"))
+    if errors:
+        raise_from(
+            IOError("Unable to retrieve ephemeris {} in spite of multiple tries: {}"
+                    .format(ephem, errors)),
+            errors[0][1])
+    else:
+        raise ValueError("All urls we might download {} from have previously experienced errors.")
 
 
 def _load_kernel_local(ephem, path):
@@ -106,14 +106,9 @@ def _load_kernel_local(ephem, path):
         if os.path.exists(p):
             # .set() can accept a path to an ephemeris
             coor.solar_system_ephemeris.set(ephem)
-            return True
 
-            # Instead bypass the astropy kernel loading system.
-            #coor.solar_system_ephemeris._kernel = SPK.open(p)
-            #coor.solar_system_ephemeris._value = p
-            #coor.solar_system_ephemeris._kernel.origin = coor.solar_system_ephemeris._value
-            #return True
-    return False
+    raise OSError("ephemeris file {} not found in any of {}".format(ephem, search_list))
+
 
 def load_kernel(ephem, path=None, link=None):
     """Load the solar system ephemeris `ephem`
@@ -155,20 +150,21 @@ def load_kernel(ephem, path=None, link=None):
     ephem = ephem.lower()
     # If a local path is provided, the local search will be considered first.
     if path is not None:
-        if _load_kernel_local(ephem, path=path):
+        try:
+            _load_kernel_local(ephem, path=path)
             return
+        except OSError:
+            pass
     # Links are just suggestions, try just plain loading
     try:
         coor.solar_system_ephemeris.set(ephem)
         return
-    except ValueError as e:
-        log.info("Ephemeris '{}' not found: '{}' "
-                 "trying to download from non-astropy "
-                 "locations".format(ephem, e))
-    if _load_kernel_link(ephem, link=link):
-        return
-    else:
-        raise ValueError("Unable to load ephemeris '{}'".format(ephem))
+    except ValueError:
+        # Just means it wasn't a standard astropy ephemeris
+        pass
+    # If this raises an exception our last hope is gone so let it propagate
+    _load_kernel_link(ephem, link=link)
+
 
 def objPosVel_wrt_SSB(objname, t, ephem, path=None, link=None):
     """This function computes a solar system object position and velocity respect
@@ -201,6 +197,7 @@ def objPosVel_wrt_SSB(objname, t, ephem, path=None, link=None):
     load_kernel(ephem, path=path, link=link)
     pos, vel = coor.get_body_barycentric_posvel(objname, t)
     return PosVel(pos.xyz, vel.xyz.to(u.km/u.second), origin='ssb', obj=objname)
+
 
 def objPosVel(obj1, obj2, t, ephem, path=None, link=None):
     """Compute the position and velocity for solar system obj2 referenced at obj1.
@@ -241,6 +238,7 @@ def objPosVel(obj1, obj2, t, ephem, path=None, link=None):
     else:
         # user asked for velocity between ssb and ssb
         return PosVel(np.zeros((3,len(t)))*u.km, np.zeros((3,len(t)))*u.km/u.second)
+
 
 def get_tdb_tt_ephem_geocenter(tt, ephem, path=None, link=None):
     """The is a function to read the TDB_TT correction from the JPL DExxxt.bsp
