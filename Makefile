@@ -59,7 +59,9 @@ coverage: ## check code coverage quickly with the default Python
 		$(BROWSER) htmlcov/index.html
 
 notebooks:
+	jupytext --sync examples/*.md
 	jupyter nbconvert --execute --inplace examples/*.ipynb
+	jupytext --sync examples/*.ipynb
 
 docs-clean:
 	mkdir -p docs/api

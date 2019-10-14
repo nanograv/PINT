@@ -3,6 +3,6 @@ astropy>=2.0
 scipy>=0.18.1
 jplephem>=2.6
 matplotlib>=1.5.3
-emcee>=2.2.1
+emcee>=3.0
 corner>=2.0.1
 pathlib2; python_version < "3.0"

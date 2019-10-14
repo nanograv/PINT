@@ -72,6 +72,7 @@ Ready to contribute? Here's how to set up `pint` for local development.
 
     $ mkvirtualenv pint
     $ cd PINT/
+    $ pip install -r requirements_dev.txt
     $ pip install -r requirements.txt
     $ pip install -e .
 
@@ -115,8 +116,8 @@ Pull Request Guidelines
 
 Before you submit a pull request, check that it meets these guidelines:
 
-1. Try to follow good coding style and think about how others might use
-   your new code.
+1. Try to write clear pythonic_ code, follow our_coding_style_, and think
+   about how others might use your new code.
 2. The pull request should include tests that cover both the expected
    behaviour and sensible error reporting when given bad input.
 3. If the pull request adds or changes functionality, the docs should
@@ -127,8 +128,8 @@ Before you submit a pull request, check that it meets these guidelines:
    https://travis-ci.org/nanograv/pint/pull_requests
    and make sure that the tests pass for all supported Python versions.
 
-Tips
-----
+Additional Tools
+----------------
 
 To track and checkout another user's branch::
 
@@ -136,47 +137,137 @@ To track and checkout another user's branch::
     $ git fetch other-user-username
     $ git checkout --track -b branch-name other-user-username/branch-name
 
+To run tests on just one file::
+
+   $ pytest tests/test_my_new_thing.py
+
+To run just one test::
+
+   $ pytest tests/test_my_new_thing.py::test_specific
+
+To test everything but start with tests that failed last time, stopping when
+something goes wrong (this is great when you're trying to fix that one bug; if
+you haven't you'll get new error messages, if you have, it'll continue on to
+run all the tests)::
+
+   $ pytest --ff -x
+
+To drop into the python debugger at the point where a test fails so you can
+investigate_, for example go up and down the call history and inspect local
+variables::
+
+   $ pytest --pdb -x
+
+The python_debugger_ also allows you to step through your code, put in
+breakpoints, and many other things. It can save a ton of time compared to
+putting print statements in and rerunning your code, especially if the code
+takes a while and you don't know exactly what you want to inspect. There is a
+friendlier version, pdbpp_, that you can transparently swap in::
+
+   $ pip install pdbpp
+
 To run tests on multiple python versions and build
 the documentation in parallel::
 
    $ tox --parallel=auto
 
-To run tests on just one file::
+If this finds a problem in just one python environment that doesn't appear in
+your development environment, you can run just the problem environment::
 
-   $ pytest tests/test_my_new_thing.py
+   $ tox -e py27
 
-To test everything but start with tests that failed last time::
+You can also run other things in the environments ``tox`` uses, including
+interactive python sessions (though these will include only PINT's installation
+requirements, so no IPython)::
 
-   $ pytest --ff
+   $ tox -e py27 -- pytest --ff --pdb -x
+   $ tox -e py27 -- pytest tests/test_my_new_thing.py
+   $ tox -e py27 -- python
 
-To drop into the python debugger at the point where a test fails so you
-can go up and down the call history and inspect local variables::
+Under ``examples/`` there are a few Jupyter notebooks. These actually get
+incorporated into the online documentation (you may have seen them). To avoid
+headaches, we don't store these as notebooks on github but as special markdown
+files. If you are using ``jupyter`` or ``jupyter-lab``, it should be smart
+enough to synchronize these between the storage format and normal notebooks,
+but if there is any confusion, try ``make notebooks``, which synchronizes the
+two formats and runs all the notebooks to fill in the outputs. If something
+goes wrong, try ``jupytext --sync``, which synchronizes the code between the
+notebooks and the storage format but doesn't run the notebooks.
 
-   $ pytest --pdb -x
+If you make a mistake and get ``git`` into a strange or awkward state. Don't
+panic, and try Googling the specific error message. ``git`` is quite thorough
+about keeping history around, so you can probably undo whatever has happened,
+especially if you have been pushing your changes to GitHub. If it helps, there
+is "Dang_it_git_" (there is a ruder version which may feel more appropriate
+in the moment).
 
-Under ``examples/`` there are a few Jupyter notebooks. These actually get incorporated
-into the online documentation (you may have seen them). If you change them, please
-rebuild them with ``make notebooks``.
+.. _investigate: https://realpython.com/python-debugging-pdb/
+.. _python_debugger: https://docs.python.org/3/library/pdb.html
+.. _pdbpp: https://github.com/pdbpp/pdbpp
+.. _Dang_it_git: https://dangitgit.com/
 
-If you make a mistake and get ``git`` into a strange or awkward
-state. Don't panic, and try Googling the specific error message. ``git``
-is quite thorough about keeping history around, so you can probably undo
-whatever has happened, especially if you have been pushing your changes
-to GitHub.
+.. _our_coding_style:
 
 Coding Style
 ------------
 
-We would like `pint` to be easy to use and easy to contribute to. To
+We would like `PINT` to be easy to use and easy to contribute to. To
 this end we'd like to ask that if you're going to contribute code or
 documentation that you try to follow the below style advice. We know
 that not all of the existing code does this, and it's something we'd
 like to change.
 
+Concrete rules:
+
+   - Code should follow PEP8_. This constrains whitespace,
+     formatting, and naming.
+   - Code should follow the black_ style.
+   - Use the standard formats for imports.
+
+      - The only abbreviated imports are ``import numpy as np``,
+        ``import astropy.units as u``, and
+        ``import astropy.constants as c``; always use these modules
+        in this form.
+      - If you want to import a deeply nested module, use
+        ``from pint.models import parameter``.
+      - If you are using a function frequently or the module name
+        is long, use ``from pint.utils import interesting_lines``
+      - Sort imports with isort_.
+      - Remove all unused imports.
+
+   - Raise an exception if the code cannot continue and produce
+     correct results.
+   - Use :mod:`~astropy.log` to signal conditions the user should
+     know about but that do not prevent the code from producing
+     correct results.
+   - Use keyword argument names when calling a function with more
+     than two or three arguments.
+   - Every public function or class should have a docstring. It
+     should be in the correct format (numpy guidelines_).
+   - Use :class:`~astropy.units.Quantity` for things with physical units.
+   - PINT should work with python 2.7, 3.5, 3.6, 3.7, and later. There
+     is no need to maintain compatibility with older versions, so use
+     approprate modern constructs like sets and iterators.
+   - Use six_ to manage python 2/3 compatibility problems.
+
+More general rules and explanations:
+
    - Think about how someone might want to use your code in various ways.
      Is it called something helpful so that they will be able to find it?
      Will they be able to do something different with it than you wrote
      it for? How will it respond if they give it incorrect values?
+   - Code should follow PEP8_. Most importantly, if at all possible, class
+     names should be in CamelCase, while function names should be in
+     snake_case. There is also advice there on line length and whitespace.
+     You can check your code with the tool ``flake8``, but I'm afraid
+     much of PINT's existing code emits a blizzard of warnings.
+   - Files should be formatted according to the much more specific rules
+     enforced by the tool black_. This is as simple as ``pip install black``
+     and then running ``black`` on a python file. If an existing file does not
+     follow this style please don't convert it unless you are modifying almost
+     all the file anyway; it will mix in formatting changes with the actual
+     substantive changes you are making when it comes time for us to review
+     your pull request.
    - Functions, modules, and classes should have docstrings. These should
      start with a short one-line description of what the function (or module
      or class) does. Then, if you want to say more than fits in a line, a
@@ -185,11 +276,6 @@ like to change.
      these result in very helpful usage descriptions in both the interpreter
      and online docs. Check the HTML documentation for the thing you are
      modifying to see if it looks okay.
-   - Code should follow PEP8_. Most importantly, if at all possible, class
-     names should be in CamelCase, while function names should be in
-     snake_case. There is also advice there on line length and whitespace.
-     You can check your code with the tool ``flake8``, but I'm afraid
-     much of PINT's existing code emits a blizzard of warnings.
    - Tests are great! When there is a good test suite, you can
      make changes without fear you're going to break something. *Unit*
      tests are a special kind of test, that isolate the functionality
@@ -204,6 +290,12 @@ like to change.
         multidimensional arrays, and NaNs as input - even if that's to
         raise an exception. We use pytest_. You can easily run just your
         new tests.
+      - Give tests names that describe what property of what thing they
+        are testing.  We don't call test functions ourselves so there
+        is no advantage to them having short names. It is perfectly
+        reasonable to have a function called
+        ``test_download_parallel_fills_cache`` or
+        ``test_cache_size_changes_correctly_when_files_are_added_and_removed``.
       - If your function depends on complicated other functions or data,
         consider using something like `unittest.Mock` to replace that
         complexity with mock functions that return specific values. This
@@ -221,7 +313,7 @@ like to change.
         can inspect local variables and generally poke around.
 
    - When you're working with a physical quantity or an array of these,
-     something that has units, please use `astropy.units.Quantity` to
+     something that has units, please use :class:`~astropy.units.Quantity` to
      keep track of what these units are. If you need a plain floating-point
      number out of one, use ``.to(u.m).value``, where ``u.m`` should be
      replaced by the units you want the number to be in. This will raise
@@ -230,10 +322,10 @@ like to change.
      Adding units to a number when you know what they are is as simple as
      multiplying.
    - When you want to let the user know some information from deep inside
-     `pint`, remember that they might be running a GUI application where
-     they can't see what comes out of ``print``. Please use ``astropy.log``.
-     Conveniently, this has levels ``astropy.log.debug``, ``astropy.log.info``,
-     ``astropy.log.warning``, and ``astropy.log.error``; the end user can
+     PINT, remember that they might be running a GUI application where
+     they can't see what comes out of ``print``. Please use :mod:`~astropy.logger`.
+     Conveniently, this has levels ``debug``, ``info``,
+     ``warning``, and ``error``; the end user can
      decide which levels of severity they want to see.
    - When something goes wrong and your code can't continue and still
      produce a sensible result, please raise an exception. Usually
@@ -250,31 +342,26 @@ like to change.
 
 There are a number of tools out there that can help with the mechanical
 aspects of cleaning up your code and catching some obvious bugs. Most of
-these are installed through PINT's ``requirements.txt``.
+these are installed through PINT's ``requirements_dev.txt``.
 
-   - ``flake8`` reads through code and warns about style issues, things like
+   - flake8_ reads through code and warns about style issues, things like
      confusing indentation, unused variable names, un-initialized variables
      (usually a typo), and names that don't follow python conventions.
      Unfortunately a lot of existing PINT code has some or all of these
      problems. ``flake8-diff`` checks only the code that you have touched -
      for the most part this pushes you to clean up functions and modules
      you work on as you go.
-   - ``isort`` sorts your module's import section into conventional order.
-   - ``black`` is a draconian code formatter that completely rearranges the
+   - isort_ sorts your module's import section into conventional order.
+   - black_ is a draconian code formatter that completely rearranges the
      whitespace in your code to standardize the appearance of your
      formatting. ``blackcellmagic`` allows you to have ``black`` format the
      cells in a Jupyter notebook.
-   - ``pre-commit`` allows ``git`` to automatically run some checks before
+   - pre-commit_ allows ``git`` to automatically run some checks before
      you check in your code. It may require an additional installation
      step.
    - ``make coverage`` can show you if your tests aren't even exercising
      certain parts of your code.
-   - ``nbdime`` enhances git's ability to deal with Jupyter notebooks. In
-     particular it will present side-by-side comparisons of changed notebooks.
-     It may require an additional installation step.
-   - There is a JupyterLab git plugin that may make working with versioned
-     notebooks easier.
-   - ``editorconfig`` allows PINT to specify how your editor should format
+   - editorconfig_ allows PINT to specify how your editor should format
      PINT files in a way that many editors can understand (though some,
      including vim and emacs, require a plugin to notice).
 
@@ -283,6 +370,15 @@ graphical tool, can probably be made to understand that you are editing
 python and do things like highlight syntax, offer tab completion on
 identifiers, automatically indent text, automatically strip trailing
 white space, and possibly integrate some of the above tools.
+
+.. _six: https://six.readthedocs.io/
+.. _black: https://black.readthedocs.io/en/stable/
+.. _isort: https://pypi.org/project/isort/
+.. _flake8: http://flake8.pycqa.org/en/latest/
+.. _pre-commit: https://pre-commit.com/
+.. _editorconfig: https://editorconfig.org/
+
+.. _pythonic:
 
 The Zen of Python
 ~~~~~~~~~~~~~~~~~
