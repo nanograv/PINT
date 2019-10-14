@@ -19,6 +19,7 @@ from astropy import log
 import pint.utils as utils
 from pint.utils import interesting_lines, lines_of
 from pint import dimensionless_cycles
+from . import parameter as p
 
 from ..phase import Phase
 from .parameter import strParameter
@@ -533,16 +534,16 @@ class TimingModel(object):
         # the absolute phase.
         if abs_phase:
             if 'AbsPhase' not in list(self.components.keys()):
-                log.warning("No absolute phase (TZRMJD, ...) model provided." +
-                            " Returning the conventional phase.")
-                return phase
-            else:
-                tz_toa = self.get_TZR_toa(toas)
-                tz_delay = self.delay(tz_toa)
-                tz_phase = Phase(np.zeros(len(toas.table)) , np.zeros(len(toas.table)))
-                for pf in self.phase_funcs:
-                    tz_phase += Phase(pf(tz_toa, tz_delay))
-                return phase - tz_phase
+                #if no absolute phase (TZRMJD), add the component to the model and calculate it
+                from pint.models import absolute_phase
+                self.add_component(absolute_phase.AbsPhase())
+                self.make_TZR_toa(toas)#TODO:needs timfile to get all toas, but model doesn't have access to timfile. different place for this? 
+            tz_toa = self.get_TZR_toa(toas)
+            tz_delay = self.delay(tz_toa)
+            tz_phase = Phase(np.zeros(len(toas.table)) , np.zeros(len(toas.table)))
+            for pf in self.phase_funcs:
+                tz_phase += Phase(pf(tz_toa, tz_delay))
+            return phase - tz_phase
         else:
             return phase
 
@@ -599,7 +600,35 @@ class TimingModel(object):
             result.append(nf(toas)[1])
         return np.hstack([r for r in result])
 
-
+    def jump_flags_to_params(self, toas):
+        '''convert jump flags in toas.table["flags"] to jump parameters in the model'''
+        from . import jump
+        for flag_dict in toas.table['flags']:
+            if 'jump' in flag_dict.keys():
+                break
+        else:
+            log.info('No jump flags to process')
+            return None        
+        jump_nums = [flag_dict['jump'] if 'jump' in flag_dict.keys() else np.nan for flag_dict in toas.table['flags']]
+        if 'PhaseJump' not in self.components:
+            log.info("PhaseJump component added")
+            a = jump.PhaseJump()
+            a.setup()
+            self.add_component(a)
+            self.remove_param("JUMP1")
+        for num in np.arange(1, np.nanmax(jump_nums)+1):
+            if 'JUMP'+str(int(num)) not in self.params:
+                param = p.maskParameter(name='JUMP', index=int(num), key='jump', key_value=int(num), value=0.0, units='second', uncertainty=0.0)
+                self.add_param_from_top(param, 'PhaseJump')
+                getattr(self, param.name).frozen = False
+        if 0 in jump_nums:
+            for flag_dict in toas.table['flags']:
+                if 'jump' in flag_dict.keys() and flag_dict['jump'] == 0:
+                    flag_dict['jump'] = int(np.nanmax(jump_nums)+1)
+            param = p.maskParameter(name='JUMP', index=int(np.nanmax(jump_nums)+1), key='jump', key_value=int(np.nanmax(jump_nums)+1), value=0.0, units='second', uncertainty=0.0)
+            self.add_param_from_top(param, 'PhaseJump')
+            getattr(self, param.name).frozen = False
+        self.components['PhaseJump'].setup()
 
     def get_barycentric_toas(self, toas, cutoff_component=''):
         """Conveniently calculate the barycentric TOAs.
@@ -789,7 +818,6 @@ class TimingModel(object):
         nparams = len(params)
         delay = self.delay(toas)
         units = []
-
         # Apply all delays ?
         #tt = toas['tdbld']
         #for df in self.delay_funcs:

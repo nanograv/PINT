@@ -3,7 +3,10 @@ from __future__ import absolute_import, division, print_function
 
 import re
 from contextlib import contextmanager
-
+from six import StringIO
+import numpy as np
+from scipy.special import factorial
+import string
 import astropy.time
 import astropy.units as u
 import numpy as np
@@ -13,6 +16,9 @@ try:
     from astropy.erfa import DJM0, d2dtf
 except ImportError:
     from astropy._erfa import DJM0, d2dtf
+
+from astropy import log
+from copy import deepcopy
 
 try:
     maketrans = str.maketrans
@@ -33,7 +39,6 @@ __all__ = ['PosVel', 'fortran_float', 'time_from_mjd_string',
            'PrefixError', 'split_prefixed_name', 'data2longdouble',
            'taylor_horner', 'taylor_horner_deriv', 'is_number', 'open_or_use',
            'lines_of', 'interesting_lines']
-
 
 class PosVel(object):
     """Position/Velocity class.
@@ -566,3 +571,70 @@ def interesting_lines(lines, comments=None):
         if comments is not None and ln.startswith(comments):
             continue
         yield ln
+
+def show_param_cov_matrix(matrix,params,name='Covaraince Matrix',switchRD=False):
+    '''function to print covariance matrices in a clean and easily readable way
+    
+    :param matrix: matrix to be printed, should be square, list of lists
+    :param params: name of the parameters in the matrix, list
+    :param name: title to be printed above, default Covariance Matrix
+    :param switchRD: if True, switch the positions of RA and DEC to match setup of TEMPO cov. matrices
+    
+    :return string to be printed'''
+    output = StringIO.StringIO()
+    matrix = deepcopy(matrix)
+    try:
+        RAi = params.index('RAJ')
+    except:
+        RAi = None
+        switchRD = False
+    params1 = []
+    for param in params:
+        if len(param) < 3:
+            while len(param) != 3:
+                param = " " + param
+            params1.append(param)
+        elif len(param) > 3:
+            while len(param) != 3:
+                param = param[:-1]
+            params1.append(param)
+        else:
+            params1.append(param)
+    if switchRD:
+        #switch RA and DEC so cov matrix matches TEMPO
+        params1[RAi:RAi+2] = [params1[RAi+1],params1[RAi]]
+        i = 0
+        while i < 2:
+            RA = deepcopy(matrix[RAi])
+            matrix[RAi] = matrix[RAi + 1]
+            matrix[RAi + 1] = RA
+            matrix = matrix.T
+            i += 1
+    output.write(name+" switch RD = "+str(switchRD)+"\n")
+    output.write(' ')
+    for param in params1:
+        output.write('         '+param)
+    i = j = 0
+    while i < len(matrix):
+        output.write('\n'+params1[i]+' :: ')
+        while j <= i:
+            num = matrix[i][j]
+            if num < 0.001 and num > -0.001:
+                output.write('{0: 1.2e}'.format(num)+'   : ')
+            else:
+                output.write('  '+'{0: 1.2f}'.format(num)+'   : ')
+            j += 1
+        i += 1
+        j = 0
+    output.write('\b:\n')
+    contents = output.getvalue()
+    output.close()
+    return contents
+
+
+if __name__ == "__main__":
+    assert taylor_horner(2.0, [10]) == 10
+    assert taylor_horner(2.0, [10, 3]) == 10 + 3*2.0
+    assert taylor_horner(2.0, [10, 3, 4]) == 10 + 3*2.0 + 4*2.0**2 / 2.0
+    assert taylor_horner(2.0, [10, 3, 4, 12]) == 10 + 3*2.0 + 4*2.0**2 / 2.0 + 12*2.0**3/(3.0*2.0)
+
