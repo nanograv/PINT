@@ -19,20 +19,21 @@ class DelayJump(DelayComponent):
     This component is disabled for now, since we don't have any method
     to identify the phase jumps and delay jumps.
     """
+
     register = False
-    category = 'delay_jump'
+    category = "delay_jump"
 
     def __init__(self):
         super(DelayJump, self).__init__()
         # TODO: In the future we should have phase jump as well.
-        self.add_param(maskParameter(name = 'JUMP', units='second'))
-        self.delay_funcs_component += [self.jump_delay,]
+        self.add_param(maskParameter(name="JUMP", units="second"))
+        self.delay_funcs_component += [self.jump_delay]
 
     def setup(self):
         super(DelayJump, self).setup()
         self.jumps = []
-        for mask_par in self.get_params_of_type('maskParameter'):
-            if mask_par.startswith('JUMP'):
+        for mask_par in self.get_params_of_type("maskParameter"):
+            if mask_par.startswith("JUMP"):
                 self.jumps.append(mask_par)
         for j in self.jumps:
             self.register_deriv_funcs(self.d_delay_d_jump, j)
@@ -58,33 +59,36 @@ class DelayJump(DelayComponent):
         jpar = getattr(self, jump_param)
         mask = jpar.select_toa_mask(toas)
         d_delay_d_j[mask] = -1.0
-        return d_delay_d_j * u.second/jpar.units
+        return d_delay_d_j * u.second / jpar.units
 
     def print_par(self):
-        result = ''
+        result = ""
         for jump in self.jumps:
             jump_par = getattr(self, jump)
             result += jump_par.as_parfile_line()
         return result
 
+
 class PhaseJump(PhaseComponent):
     """This is a class to implement phase jumps
     """
+
     register = True
-    category = 'phase_jump'
+    category = "phase_jump"
+
     def __init__(self):
         super(PhaseJump, self).__init__()
-        self.add_param(maskParameter(name = 'JUMP', units='second'))
-        self.phase_funcs_component += [self.jump_phase,]
+        self.add_param(maskParameter(name="JUMP", units="second"))
+        self.phase_funcs_component += [self.jump_phase]
 
     def setup(self):
         super(PhaseJump, self).setup()
         self.jumps = []
-        for mask_par in self.get_params_of_type('maskParameter'):
-            if mask_par.startswith('JUMP'):
+        for mask_par in self.get_params_of_type("maskParameter"):
+            if mask_par.startswith("JUMP"):
                 self.jumps.append(mask_par)
         for j in self.jumps:
-            #prevents duplicates from being added to phase_deriv_funcs
+            # prevents duplicates from being added to phase_deriv_funcs
             if j in self.deriv_funcs.keys():
                 del self.deriv_funcs[j]
             self.register_deriv_funcs(self.d_phase_d_jump, j)
@@ -111,10 +115,10 @@ class PhaseJump(PhaseComponent):
         mask = jpar.select_toa_mask(toas)
         d_phase_d_j[mask] = self.F0.value
         with u.set_enabled_equivalencies(dimensionless_cycles):
-            return (d_phase_d_j * self.F0.units).to(u.cycle/u.second)
+            return (d_phase_d_j * self.F0.units).to(u.cycle / u.second)
 
     def print_par(self):
-        result = ''
+        result = ""
         for jump in self.jumps:
             jump_par = getattr(self, jump)
             result += jump_par.as_parfile_line()

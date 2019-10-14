@@ -1,15 +1,15 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function
 
-from astropy.time import Time
 import astropy.units as u
-from astropy.utils.iers import IERS_Auto, IERS_B, IERS_B_URL, IERS_B_FILE
-from astropy.utils.data import download_file
 import numpy as np
-from numpy.testing import assert_equal, assert_allclose
 import pytest
+from astropy.time import Time
+from astropy.utils.data import download_file
+from astropy.utils.iers import IERS_B, IERS_B_FILE, IERS_B_URL, IERS_Auto
+from numpy.testing import assert_allclose, assert_equal
 
-from pint.observatory import Observatory
 from pint import erfautils
+from pint.observatory import Observatory
 
 
 def test_simpler_erfa_import():

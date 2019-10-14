@@ -16,23 +16,43 @@ from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
 class Spindown(PhaseComponent):
     """A simple timing model for an isolated pulsar."""
+
     register = True
-    category = 'spindown'
+    category = "spindown"
+
     def __init__(self):
         super(Spindown, self).__init__()
-        self.add_param(floatParameter(name="F0", value=0.0, units="Hz",
-                       description="Spin-frequency", long_double=True))
-        self.add_param(prefixParameter(name="F1", value=0.0, units='Hz/s^1',
-                       description="Spindown-rate",
-                       unit_template=self.F_unit,
-                       description_template=self.F_description,
-                       type_match='float', long_double=True))
-        self.add_param(MJDParameter(name="PEPOCH",
-                       description="Reference epoch for spin-down",
-                       time_scale='tdb'))
+        self.add_param(
+            floatParameter(
+                name="F0",
+                value=0.0,
+                units="Hz",
+                description="Spin-frequency",
+                long_double=True,
+            )
+        )
+        self.add_param(
+            prefixParameter(
+                name="F1",
+                value=0.0,
+                units="Hz/s^1",
+                description="Spindown-rate",
+                unit_template=self.F_unit,
+                description_template=self.F_description,
+                type_match="float",
+                long_double=True,
+            )
+        )
+        self.add_param(
+            MJDParameter(
+                name="PEPOCH",
+                description="Reference epoch for spin-down",
+                time_scale="tdb",
+            )
+        )
 
-        self.phase_funcs_component += [self.spindown_phase,]
-        self.phase_derivs_wrt_delay += [self.d_spindown_phase_d_delay,]
+        self.phase_funcs_component += [self.spindown_phase]
+        self.phase_derivs_wrt_delay += [self.d_spindown_phase_d_delay]
 
     def setup(self):
         super(Spindown, self).setup()
@@ -42,21 +62,22 @@ class Spindown(PhaseComponent):
                 raise MissingParameter("Spindown", p)
 
         # Check continuity
-        F_terms = list(self.get_prefix_mapping_component('F').keys())
+        F_terms = list(self.get_prefix_mapping_component("F").keys())
         F_terms.sort()
-        F_in_order = list(range(1, max(F_terms)+1))
+        F_in_order = list(range(1, max(F_terms) + 1))
         if not F_terms == F_in_order:
             diff = list(set(F_in_order) - set(F_terms))
-            raise MissingParameter("Spindown", "F%d"%diff[0])
+            raise MissingParameter("Spindown", "F%d" % diff[0])
 
         # If F1 is set, we need PEPOCH
         if self.F1.value != 0.0:
             if self.PEPOCH.value is None:
-                raise MissingParameter("Spindown", "PEPOCH",
-                        "PEPOCH is required if F1 or higher are set")
+                raise MissingParameter(
+                    "Spindown", "PEPOCH", "PEPOCH is required if F1 or higher are set"
+                )
         self.num_spin_terms = len(F_terms) + 1
         # Add derivative functions
-        for fp in list(self.get_prefix_mapping_component('F').values()) + ['F0',]:
+        for fp in list(self.get_prefix_mapping_component("F").values()) + ["F0"]:
             self.register_deriv_funcs(self.d_phase_d_F, fp)
 
     def F_description(self, n):
@@ -70,8 +91,7 @@ class Spindown(PhaseComponent):
     def get_spin_terms(self):
         """Return a list of the spin term values in the model: [F0, F1, ..., FN]
         """
-        return [getattr(self, "F%d" % ii).quantity for ii in
-                range(self.num_spin_terms)]
+        return [getattr(self, "F%d" % ii).quantity for ii in range(self.num_spin_terms)]
 
     def get_dt(self, toas, delay):
         """Return dt, the time from the phase 0 epoch to each TOA.  The
@@ -85,10 +105,10 @@ class Spindown(PhaseComponent):
         """
         tbl = toas.table
         if self.PEPOCH.value is None:
-            phsepoch_ld = (tbl['tdb'][0] - delay[0]).tdb.mjd_long
+            phsepoch_ld = (tbl["tdb"][0] - delay[0]).tdb.mjd_long
         else:
-            phsepoch_ld = (self.PEPOCH.quantity.tdb.mjd_long)
-        dt = (tbl['tdbld'] - phsepoch_ld) * u.day - delay
+            phsepoch_ld = self.PEPOCH.quantity.tdb.mjd_long
+        dt = (tbl["tdbld"] - phsepoch_ld) * u.day - delay
         return dt
 
     def spindown_phase(self, toas, delay):
@@ -123,39 +143,40 @@ class Spindown(PhaseComponent):
             first pulsar frame toa.
         """
         if isinstance(new_epoch, Time):
-            new_epoch = Time(new_epoch, scale='tdb', precision=9)
+            new_epoch = Time(new_epoch, scale="tdb", precision=9)
         else:
-            new_epoch = Time(new_epoch, scale='tdb', format='mjd', precision=9)
+            new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
         # make new_epoch a toa for delay calculation.
-        new_epoch_toa = toa.get_TOAs_list([toa.TOA(new_epoch),],
-                                          ephem=toas.ephem)
+        new_epoch_toa = toa.get_TOAs_list([toa.TOA(new_epoch)], ephem=toas.ephem)
 
         if self.PEPOCH.value is None:
             if toas is None or delay is None:
-                raise ValueError("`PEPOCH` is not in the model, thus, 'toa' and"
-                                 " 'delay' shoule be givne.")
+                raise ValueError(
+                    "`PEPOCH` is not in the model, thus, 'toa' and"
+                    " 'delay' shoule be givne."
+                )
             tbl = toas.table
-            phsepoch_ld = (tbl['tdb'][0] - delay[0]).tdb.mjd_long
+            phsepoch_ld = (tbl["tdb"][0] - delay[0]).tdb.mjd_long
         else:
-            phsepoch_ld = (self.PEPOCH.quantity.tdb.mjd_long)
-        dt = ((new_epoch.tdb.mjd_long - phsepoch_ld) * u.day)
+            phsepoch_ld = self.PEPOCH.quantity.tdb.mjd_long
+        dt = (new_epoch.tdb.mjd_long - phsepoch_ld) * u.day
         fterms = [0.0 * u.Unit("")] + self.get_spin_terms()
         # rescale the fterms
         for n in range(len(fterms) - 1):
-            f_par = getattr(self, 'F{}'.format(n))
-            f_par.value = taylor_horner_deriv(dt.to(u.second), fterms,
-                                              deriv_order=n+1)
+            f_par = getattr(self, "F{}".format(n))
+            f_par.value = taylor_horner_deriv(
+                dt.to(u.second), fterms, deriv_order=n + 1
+            )
         self.PEPOCH.value = new_epoch
 
     def print_par(self,):
-        result = ''
-        f_terms = ["F%d" % ii for ii in
-                range(self.num_spin_terms)]
+        result = ""
+        f_terms = ["F%d" % ii for ii in range(self.num_spin_terms)]
         for ft in f_terms:
             par = getattr(self, ft)
             result += par.as_parfile_line()
-        if hasattr(self, 'components'):
-            p_default = self.components['Spindown'].params
+        if hasattr(self, "components"):
+            p_default = self.components["Spindown"].params
         else:
             p_default = self.params
         for param in p_default:
@@ -171,16 +192,16 @@ class Spindown(PhaseComponent):
         order = idxv + 1
         fterms = [0.0 * u.Unit("")] + self.get_spin_terms()
         # make the choosen fterms 1 others 0
-        fterms = [ft * numpy.longdouble(0.0)/unit for ft in fterms]
+        fterms = [ft * numpy.longdouble(0.0) / unit for ft in fterms]
         fterms[order] += numpy.longdouble(1.0)
         dt = self.get_dt(toas, delay)
         with u.set_enabled_equivalencies(dimensionless_cycles):
             d_pphs_d_f = taylor_horner(dt.to(u.second), fterms)
-            return d_pphs_d_f.to(u.cycle/unit)
+            return d_pphs_d_f.to(u.cycle / unit)
 
     def d_spindown_phase_d_delay(self, toas, delay):
         dt = self.get_dt(toas, delay)
         fterms = [0.0] + self.get_spin_terms()
         with u.set_enabled_equivalencies(dimensionless_cycles):
             d_pphs_d_delay = taylor_horner_deriv(dt.to(u.second), fterms)
-            return -d_pphs_d_delay.to(u.cycle/u.second)
+            return -d_pphs_d_delay.to(u.cycle / u.second)

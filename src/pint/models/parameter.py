@@ -30,7 +30,6 @@ from astropy.coordinates.angles import Angle
 
 from pint import pint_units
 from pint.models import priors
-from pint.toa_select import TOASelect
 from pint.pulsar_mjd import (
     Time,
     data2longdouble,
@@ -40,6 +39,7 @@ from pint.pulsar_mjd import (
     time_to_longdouble,
     time_to_mjd_string,
 )
+from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name
 
 
@@ -98,12 +98,22 @@ class Parameter(object):
         An internal storage for parameter value and units
     """
 
-    def __init__(self, name=None, value=None, units=None, description=None,
-                 uncertainty=None, frozen=True, aliases=None, continuous=True,
-                 print_quantity=str, set_quantity=lambda x: x,
-                 get_value=lambda x: x,
-                 prior=priors.Prior(priors.UniformUnboundedRV()),
-                 set_uncertainty=fortran_float):
+    def __init__(
+        self,
+        name=None,
+        value=None,
+        units=None,
+        description=None,
+        uncertainty=None,
+        frozen=True,
+        aliases=None,
+        continuous=True,
+        print_quantity=str,
+        set_quantity=lambda x: x,
+        get_value=lambda x: x,
+        prior=priors.Prior(priors.UniformUnboundedRV()),
+        set_uncertainty=fortran_float,
+    ):
 
         self.name = name  # name of the parameter
         self.units = units  # Default unit
@@ -124,16 +134,17 @@ class Parameter(object):
         self.continuous = continuous
         self.aliases = [] if aliases is None else aliases
         self.is_prefix = False
-        self.paramType = 'Not specified'  # Type of parameter. Here is general type
+        self.paramType = "Not specified"  # Type of parameter. Here is general type
         self.valueType = None
         self.special_arg = []
+
     @property
     def prior(self):
         return self._prior
 
     @prior.setter
-    def prior(self,p):
-        if not isinstance(p,priors.Prior):
+    def prior(self, p):
+        if not isinstance(p, priors.Prior):
             raise ValueError("prior must be an instance of Prior()")
         self._prior = p
 
@@ -145,19 +156,20 @@ class Parameter(object):
     @units.setter
     def units(self, unt):
         # Check if this is the first time set units and check compatibility
-        if hasattr(self, 'quantity'):
+        if hasattr(self, "quantity"):
             if self.units is not None:
                 if unt != self.units:
-                    wmsg = 'Parameter '+self.name+' default units has been '
-                    wmsg += ' reset to ' + str(unt) + ' from '+ str(self.units)
+                    wmsg = "Parameter " + self.name + " default units has been "
+                    wmsg += " reset to " + str(unt) + " from " + str(self.units)
                     log.warning(wmsg)
                 try:
-                    if hasattr(self.quantity, 'unit'):
+                    if hasattr(self.quantity, "unit"):
                         self.quantity.to(unt)
                 except ValueError:
-                    log.warning('The value unit is not compatible with'
-                                ' parameter units right now.')
-
+                    log.warning(
+                        "The value unit is not compatible with"
+                        " parameter units right now."
+                    )
 
         if unt is None:
             self._units = None
@@ -175,10 +187,10 @@ class Parameter(object):
             # ValueError will be raised.
             self._units = u.Unit(unt)
 
-        if hasattr(self, 'quantity') and hasattr(self.quantity, 'unit'):
+        if hasattr(self, "quantity") and hasattr(self.quantity, "unit"):
             # Change quantity unit to new unit
             self.quantity = self.quantity.to(self._units)
-        if hasattr(self, 'uncertainty') and hasattr(self.uncertainty, 'unit'):
+        if hasattr(self, "uncertainty") and hasattr(self.uncertainty, "unit"):
             # Change uncertainty unit to new unit
             self.uncertainty = self.uncertainty.to(self._units)
 
@@ -195,15 +207,14 @@ class Parameter(object):
         parameters, the setter method is stored at .set_quantity attribute.
         """
         if val is None:
-            if hasattr(self, 'quantity') and self.quantity is not None:
-                raise ValueError('Setting an exist value to None is not'
-                                 ' allowed.')
+            if hasattr(self, "quantity") and self.quantity is not None:
+                raise ValueError("Setting an exist value to None is not" " allowed.")
             else:
                 self._quantity = val
                 return
         self._quantity = self.set_quantity(val)
 
-    def prior_pdf(self,value=None, logpdf=False):
+    def prior_pdf(self, value=None, logpdf=False):
         """Return the prior probability, evaluated at the current value of
         the parameter, or at a proposed value.
 
@@ -214,7 +225,11 @@ class Parameter(object):
         Probabilities are evaluated using the value attribute
         """
         if value is None:
-            return self.prior.pdf(self.value) if not logpdf else self.prior.logpdf(self.value)
+            return (
+                self.prior.pdf(self.value)
+                if not logpdf
+                else self.prior.logpdf(self.value)
+            )
         else:
             return self.prior.pdf(value) if not logpdf else self.prior.logpdf(value)
 
@@ -237,11 +252,15 @@ class Parameter(object):
         .quantity attribute other than .value attribute.
         """
         if val is None:
-            if not isinstance(self.quantity, (str, bool)) and \
-                self._quantity is not None:
-                raise ValueError('This parameter value is number convertible. '
-                                 'Setting .value to None will lost the '
-                                 'parameter value.')
+            if (
+                not isinstance(self.quantity, (str, bool))
+                and self._quantity is not None
+            ):
+                raise ValueError(
+                    "This parameter value is number convertible. "
+                    "Setting .value to None will lost the "
+                    "parameter value."
+                )
             else:
                 self.value = val
         self._quantity = self.set_quantity(val)
@@ -258,9 +277,10 @@ class Parameter(object):
         at .set_uncertainty attribute
         """
         if val is None:
-            if hasattr(self, 'uncertainty') and self.uncertainty is not None:
-                raise ValueError('Setting an exist uncertainty to None is not'
-                                 ' allowed.')
+            if hasattr(self, "uncertainty") and self.uncertainty is not None:
+                raise ValueError(
+                    "Setting an exist uncertainty to None is not" " allowed."
+                )
             else:
                 self._uncertainty = val
                 self._uncertainty_value = self._uncertainty
@@ -287,10 +307,14 @@ class Parameter(object):
         the .uncertainty attribute.
         """
         if val is None:
-            if not isinstance(self.uncertainty, (str, bool)) and \
-                self._uncertainty_value is not None:
-                log.warning('This parameter has uncertainty value. '
-                            'Change it to None will lost information.')
+            if (
+                not isinstance(self.uncertainty, (str, bool))
+                and self._uncertainty_value is not None
+            ):
+                log.warning(
+                    "This parameter has uncertainty value. "
+                    "Change it to None will lost information."
+                )
             else:
                 self.uncertainty_value = val
         self._uncertainty = self.set_uncertainty(val)
@@ -299,7 +323,7 @@ class Parameter(object):
         return str(uncertainty.to(self.units).value)
 
     def __repr__(self):
-        out = self.__class__.__name__+"("+self.name
+        out = self.__class__.__name__ + "(" + self.name
         if self.units is not None:
             out += " (" + str(self.units) + ")"
         if self.quantity is not None:
@@ -326,7 +350,7 @@ class Parameter(object):
         """Return a help line containing parameter name, description and units."""
         out = "%-12s %s" % (self.name, self.description)
         if self.units is not None:
-            out += ' (' + str(self.units) + ')'
+            out += " (" + str(self.units) + ")"
         return out
 
     def as_parfile_line(self):
@@ -336,8 +360,10 @@ class Parameter(object):
             return ""
         line = "%-15s %25s" % (self.name, self.print_quantity(self.quantity))
         if self.uncertainty is not None:
-            line += " %d %s" % (0 if self.frozen else 1, \
-                                self.print_uncertainty(self.uncertainty))
+            line += " %d %s" % (
+                0 if self.frozen else 1,
+                self.print_uncertainty(self.uncertainty),
+            )
         elif not self.frozen:
             line += " 1"
         return line + "\n"
@@ -384,8 +410,8 @@ class Parameter(object):
                     str2longdouble(k[2])
                     ucty = k[2]
                 except ValueError:
-                    errmsg = 'Unidentified string ' + k[2] + ' in'
-                    errmsg += ' parfile line ' + k
+                    errmsg = "Unidentified string " + k[2] + " in"
+                    errmsg += " parfile line " + k
                     raise ValueError(errmsg)
 
             if len(k) >= 4:
@@ -396,8 +422,10 @@ class Parameter(object):
     def name_matches(self, name):
         """Whether or not the parameter name matches the provided name
         """
-        return (name == self.name.upper()) or (name in map(lambda x: x.upper(),
-                                                           self.aliases))
+        return (name == self.name.upper()) or (
+            name in map(lambda x: x.upper(), self.aliases)
+        )
+
 
 class floatParameter(Parameter):
     """Parameter with float or long double value.
@@ -438,10 +466,23 @@ class floatParameter(Parameter):
         >>> print test
         test1 (s) 100.0
     """
-    def __init__(self, name=None, value=None, units=None, description=None,
-                 uncertainty=None, frozen=True, aliases=None, continuous=True,
-                 long_double=False, unit_scale=False, scale_factor=None,
-                 scale_threshold=None, **kwargs):
+
+    def __init__(
+        self,
+        name=None,
+        value=None,
+        units=None,
+        description=None,
+        uncertainty=None,
+        frozen=True,
+        aliases=None,
+        continuous=True,
+        long_double=False,
+        unit_scale=False,
+        scale_factor=None,
+        scale_threshold=None,
+        **kwargs
+    ):
         self.long_double = long_double
         self.scale_factor = scale_factor
         self.scale_threshold = scale_threshold
@@ -450,19 +491,27 @@ class floatParameter(Parameter):
         get_value = self.get_value_float
         set_uncertainty = self.set_quantity_float
         self._unit_scale = False
-        super(floatParameter, self).__init__(name=name, value=value,
-                                             units=units, frozen=True,
-                                             aliases=aliases,
-                                             continuous=continuous,
-                                             description=description,
-                                             uncertainty=uncertainty,
-                                             print_quantity=print_quantity,
-                                             set_quantity=set_quantity,
-                                             get_value=get_value,
-                                             set_uncertainty=set_uncertainty)
-        self.paramType = 'floatParameter'
-        self.special_arg += ['long_double', 'unit_scale', 'scale_threshold',
-                             'scale_factor']
+        super(floatParameter, self).__init__(
+            name=name,
+            value=value,
+            units=units,
+            frozen=True,
+            aliases=aliases,
+            continuous=continuous,
+            description=description,
+            uncertainty=uncertainty,
+            print_quantity=print_quantity,
+            set_quantity=set_quantity,
+            get_value=get_value,
+            set_uncertainty=set_uncertainty,
+        )
+        self.paramType = "floatParameter"
+        self.special_arg += [
+            "long_double",
+            "unit_scale",
+            "scale_threshold",
+            "scale_factor",
+        ]
         self.unit_scale = unit_scale
         self._original_units = self.units
 
@@ -477,13 +526,14 @@ class floatParameter(Parameter):
         type.
         """
         if not isinstance(val, bool):
-            raise ValueError("long_double property can only be set as boolean"
-                             " type")
-        if hasattr(self, 'long_double'):
-            if self.long_double != val and hasattr(self, 'quantity'):
+            raise ValueError("long_double property can only be set as boolean" " type")
+        if hasattr(self, "long_double"):
+            if self.long_double != val and hasattr(self, "quantity"):
                 if not val:
-                    log.warning("Setting floatParameter from long double to float,"
-                                " precision will be lost.")
+                    log.warning(
+                        "Setting floatParameter from long double to float,"
+                        " precision will be lost."
+                    )
                 # Reset quantity to its asked type
                 self._long_double = val
                 self.quantity = self.quantity
@@ -500,11 +550,15 @@ class floatParameter(Parameter):
         self._unit_scale = val
         if self._unit_scale:
             if self.scale_factor is None:
-                raise ValueError("The scale factor should be given if unit_scale"
-                                 " is set to be True.")
+                raise ValueError(
+                    "The scale factor should be given if unit_scale"
+                    " is set to be True."
+                )
             if self.scale_threshold is None:
-                raise ValueError("The scale threshold should be given if unit_scale"
-                                 " is set to be True.")
+                raise ValueError(
+                    "The scale threshold should be given if unit_scale"
+                    " is set to be True."
+                )
         else:
             if old_unit_scale:  # This makes sure the unit_scale if from True to false
                 self.units = self._original_units
@@ -524,8 +578,8 @@ class floatParameter(Parameter):
             setfunc_with_unit = lambda x: x
             setfunc_no_unit = lambda x: fortran_float(x)
         else:
-            setfunc_with_unit = lambda x: data2longdouble(x.to(x.unit).value)*x.unit
-            setfunc_no_unit = lambda x:  data2longdouble(x)
+            setfunc_with_unit = lambda x: data2longdouble(x.to(x.unit).value) * x.unit
+            setfunc_no_unit = lambda x: data2longdouble(x)
 
         # First try to use astropy unit conversion
         try:
@@ -537,8 +591,10 @@ class floatParameter(Parameter):
             num_value = setfunc_no_unit(val)
             if self.unit_scale:
                 if np.abs(num_value) > np.abs(self.scale_threshold):
-                    log.info("Parameter %s's unit will be scaled to %s %s"
-                             % (self.name, str(self.scale_factor), str(self._original_units)))
+                    log.info(
+                        "Parameter %s's unit will be scaled to %s %s"
+                        % (self.name, str(self.scale_factor), str(self._original_units))
+                    )
                     self.units = self.scale_factor * self._original_units
                 else:
                     self.units = self._original_units
@@ -551,7 +607,9 @@ class floatParameter(Parameter):
         v = quan.to(self.units).value
         if self._long_double:
             if not isinstance(v, np.longdouble):
-                raise ValueError("Parameter is supposed to contain long double values but contains a float")
+                raise ValueError(
+                    "Parameter is supposed to contain long double values but contains a float"
+                )
         return str(v)
 
     def get_value_float(self, quan):
@@ -586,22 +644,26 @@ class strParameter(Parameter):
         >>> print test
         test1 This is a test
     """
-    def __init__(self, name=None, value=None, description=None,
-                 aliases=None, **kwargs):
+
+    def __init__(self, name=None, value=None, description=None, aliases=None, **kwargs):
         print_quantity = str
         get_value = lambda x: x
         set_quantity = lambda x: str(x)
         set_uncertainty = lambda x: None
 
-        super(strParameter, self).__init__(name=name, value=value,
-                                           description=None, frozen=True,
-                                           aliases=aliases,
-                                           print_quantity=print_quantity,
-                                           set_quantity=set_quantity,
-                                           get_value=get_value,
-                                           set_uncertainty=set_uncertainty)
+        super(strParameter, self).__init__(
+            name=name,
+            value=value,
+            description=None,
+            frozen=True,
+            aliases=aliases,
+            print_quantity=print_quantity,
+            set_quantity=set_quantity,
+            get_value=get_value,
+            set_uncertainty=set_uncertainty,
+        )
 
-        self.paramType = 'strParameter'
+        self.paramType = "strParameter"
         self.value_type = str
 
 
@@ -629,34 +691,47 @@ class boolParameter(Parameter):
         >>> print test
         test1 N
     """
-    def __init__(self, name=None, value=None, description=None, frozen=True,
-                 aliases=None, **kwargs):
-        print_quantity = lambda x: 'Y' if x else 'N'
+
+    def __init__(
+        self,
+        name=None,
+        value=None,
+        description=None,
+        frozen=True,
+        aliases=None,
+        **kwargs
+    ):
+        print_quantity = lambda x: "Y" if x else "N"
         set_quantity = self.set_quantity_bool
         get_value = lambda x: x
         set_uncertainty = lambda x: None
-        super(boolParameter, self).__init__(name=name, value=value,
-                                            description=None, frozen=True,
-                                            aliases=aliases,
-                                            print_quantity=print_quantity,
-                                            set_quantity=set_quantity,
-                                            get_value=get_value,
-                                            set_uncertainty=set_uncertainty)
+        super(boolParameter, self).__init__(
+            name=name,
+            value=value,
+            description=None,
+            frozen=True,
+            aliases=aliases,
+            print_quantity=print_quantity,
+            set_quantity=set_quantity,
+            get_value=get_value,
+            set_uncertainty=set_uncertainty,
+        )
         self.value_type = bool
-        self.paramType = 'boolParameter'
+        self.paramType = "boolParameter"
 
     def set_quantity_bool(self, val):
         """ This function is to get boolean value for boolParameter class
         """
         # First try strings
         try:
-            if val.upper() in ['Y','YES','T','TRUE','1']:
+            if val.upper() in ["Y", "YES", "T", "TRUE", "1"]:
                 return True
             else:
                 return False
         except AttributeError:
             # Will get here on non-string types
             return bool(val)
+
 
 class MJDParameter(Parameter):
     """This is a Parameter type that is specific to MJD values.
@@ -692,27 +767,41 @@ class MJDParameter(Parameter):
         >>> print test
         test1 (d) 54000.000000000000000
     """
-    def __init__(self, name=None, value=None, description=None,
-                 uncertainty=None, frozen=True, continuous=True, aliases=None,
-                 time_scale='utc', **kwargs):
+
+    def __init__(
+        self,
+        name=None,
+        value=None,
+        description=None,
+        uncertainty=None,
+        frozen=True,
+        continuous=True,
+        aliases=None,
+        time_scale="utc",
+        **kwargs
+    ):
         self._time_scale = time_scale
         set_quantity = self.set_quantity_mjd
         print_quantity = time_to_mjd_string
         get_value = time_to_longdouble
         set_uncertainty = self.set_uncertainty_mjd
-        super(MJDParameter, self).__init__(name=name, value=value, units="MJD",
-                                           description=description,
-                                           uncertainty=uncertainty,
-                                           frozen=frozen,
-                                           continuous=continuous,
-                                           aliases=aliases,
-                                           print_quantity=print_quantity,
-                                           set_quantity=set_quantity,
-                                           get_value=get_value,
-                                           set_uncertainty=set_uncertainty)
+        super(MJDParameter, self).__init__(
+            name=name,
+            value=value,
+            units="MJD",
+            description=description,
+            uncertainty=uncertainty,
+            frozen=frozen,
+            continuous=continuous,
+            aliases=aliases,
+            print_quantity=print_quantity,
+            set_quantity=set_quantity,
+            get_value=get_value,
+            set_uncertainty=set_uncertainty,
+        )
         self.value_type = time.Time
-        self.paramType = 'MJDParameter'
-        self.special_arg += ['time_scale',]
+        self.paramType = "MJDParameter"
+        self.special_arg += ["time_scale"]
 
     @property
     def time_scale(self):
@@ -740,10 +829,14 @@ class MJDParameter(Parameter):
         the .uncertainty attribute.
         """
         if val is None:
-            if not isinstance(self.uncertainty, (str, bool)) and \
-                self._uncertainty_value is not None:
-                log.warning('This parameter has uncertainty value. '
-                            'Change it to None will lost information.')
+            if (
+                not isinstance(self.uncertainty, (str, bool))
+                and self._uncertainty_value is not None
+            ):
+                log.warning(
+                    "This parameter has uncertainty value. "
+                    "Change it to None will lost information."
+                )
             else:
                 self.uncertainty_value = val
         self._uncertainty = self.set_uncertainty(val)
@@ -763,8 +856,9 @@ class MJDParameter(Parameter):
         elif isinstance(val, time.Time):
             result = val
         else:
-            raise ValueError('MJD parameter can not accept '
-                             + type(val).__name__ + 'format.')
+            raise ValueError(
+                "MJD parameter can not accept " + type(val).__name__ + "format."
+            )
         return result
 
     def set_uncertainty_mjd(self, val):
@@ -815,40 +909,53 @@ class AngleParameter(Parameter):
         >>> print test
         test1 (hourangle) 12:20:10.00000000
     """
-    def __init__(self, name=None, value=None, description=None, units='rad',
-             uncertainty=None, frozen=True, continuous=True, aliases=None,
-             **kwargs):
+
+    def __init__(
+        self,
+        name=None,
+        value=None,
+        description=None,
+        units="rad",
+        uncertainty=None,
+        frozen=True,
+        continuous=True,
+        aliases=None,
+        **kwargs
+    ):
         self._str_unit = units
         self.unit_identifier = {
-            'h:m:s': (u.hourangle, 'h', pint_units['hourangle_second']),
-            'd:m:s': (u.deg, 'd', u.arcsec),
-            'rad': (u.rad, 'rad', u.rad),
-            'deg': (u.deg, 'deg', u.deg),
+            "h:m:s": (u.hourangle, "h", pint_units["hourangle_second"]),
+            "d:m:s": (u.deg, "d", u.arcsec),
+            "rad": (u.rad, "rad", u.rad),
+            "deg": (u.deg, "deg", u.deg),
         }
         # Check unit format
         if units.lower() not in self.unit_identifier.keys():
-            raise ValueError('Unidentified unit ' + units)
+            raise ValueError("Unidentified unit " + units)
 
         self.unitsuffix = self.unit_identifier[units.lower()][1]
         set_quantity = self.set_quantity_angle
         print_quantity = self.print_quantity_angle
-        #get_value = lambda x: Angle(x * self.unit_identifier[units.lower()][0])
+        # get_value = lambda x: Angle(x * self.unit_identifier[units.lower()][0])
         get_value = lambda x: x.value
         set_uncertainty = self.set_uncertainty_angle
         self.value_type = Angle
-        self.paramType = 'AngleParameter'
+        self.paramType = "AngleParameter"
 
-        super(AngleParameter, self).__init__(name=name, value=value,
-                                             units=units,
-                                             description=description,
-                                             uncertainty=uncertainty,
-                                             frozen=frozen,
-                                             continuous=continuous,
-                                             aliases=aliases,
-                                             print_quantity=print_quantity,
-                                             set_quantity=set_quantity,
-                                             get_value=get_value,
-                                             set_uncertainty=set_uncertainty)
+        super(AngleParameter, self).__init__(
+            name=name,
+            value=value,
+            units=units,
+            description=description,
+            uncertainty=uncertainty,
+            frozen=frozen,
+            continuous=continuous,
+            aliases=aliases,
+            print_quantity=print_quantity,
+            set_quantity=set_quantity,
+            get_value=get_value,
+            set_uncertainty=set_uncertainty,
+        )
 
     def set_quantity_angle(self, val):
         """ This function is to set value to angle parameters.
@@ -863,47 +970,50 @@ class AngleParameter(Parameter):
         elif isinstance(val, str):
             # FIXME: what if the user included a unit suffix?
             result = Angle(val + self.unitsuffix)
-        elif hasattr(val, 'unit'):
+        elif hasattr(val, "unit"):
             result = Angle(val.to(self.units))
         else:
-            raise ValueError('Angle parameter can not accept '
-                             + type(val).__name__ + 'format.')
+            raise ValueError(
+                "Angle parameter can not accept " + type(val).__name__ + "format."
+            )
         return result
 
     def set_uncertainty_angle(self, val):
         """This function is to set the uncertainty for an angle parameter.
         """
         if isinstance(val, numbers.Number):
-            result =Angle(val * self.unit_identifier[self._str_unit.lower()][2])
+            result = Angle(val * self.unit_identifier[self._str_unit.lower()][2])
         elif isinstance(val, str):
-            result = Angle(str2longdouble(val) *
-                           self.unit_identifier[self._str_unit.lower()][2])
-        elif hasattr(val, 'unit'):
+            result = Angle(
+                str2longdouble(val) * self.unit_identifier[self._str_unit.lower()][2]
+            )
+        elif hasattr(val, "unit"):
             result = Angle(val.to(self.unit_identifier[self._str_unit.lower()][2]))
         else:
-            raise ValueError('Angle parameter can not accept '
-                             + type(val).__name__ + 'format.')
+            raise ValueError(
+                "Angle parameter can not accept " + type(val).__name__ + "format."
+            )
         return result
 
     def print_quantity_angle(self, quan):
         """This is a function to print out the angle parameter.
         """
-        if ':' in self._str_unit:
-            return quan.to_string(sep=':', precision=8)
+        if ":" in self._str_unit:
+            return quan.to_string(sep=":", precision=8)
         else:
-            return quan.to_string(decimal = True, precision=15)
+            return quan.to_string(decimal=True, precision=15)
 
     def print_uncertainty(self, unc):
         """This is a function for printing out the uncertainty
         """
-        if ':' in self._str_unit:
+        if ":" in self._str_unit:
             angle_arcsec = unc.to(u.arcsec)
             if self.units == u.hourangle:
                 # Triditionaly hourangle uncertainty is in hourangle seconds
-                angle_arcsec  /= 15.0
-            return angle_arcsec.to_string(decimal = True, precision=20)
+                angle_arcsec /= 15.0
+            return angle_arcsec.to_string(decimal=True, precision=20)
         else:
-            return unc.to_string(decimal = True, precision=20)
+            return unc.to_string(decimal=True, precision=20)
 
 
 class prefixParameter(object):
@@ -956,25 +1066,44 @@ class prefixParameter(object):
 
     """
 
-    def __init__(self, parameter_type='float',name=None, value=None, units=None,
-                 unit_template=None, description=None, description_template=None,
-                 uncertainty=None, frozen=True, continuous=True,
-                 prefix_aliases=None, long_double=False, unit_scale=False,
-                 scale_factor=None, scale_threshold=None,  time_scale='utc',
-                 **kwargs):
+    def __init__(
+        self,
+        parameter_type="float",
+        name=None,
+        value=None,
+        units=None,
+        unit_template=None,
+        description=None,
+        description_template=None,
+        uncertainty=None,
+        frozen=True,
+        continuous=True,
+        prefix_aliases=None,
+        long_double=False,
+        unit_scale=False,
+        scale_factor=None,
+        scale_threshold=None,
+        time_scale="utc",
+        **kwargs
+    ):
         # Split prefixed name, if the name is not in the prefixed format, error
         # will be raised
         self.name = name
         self.prefix, self.idxfmt, self.index = split_prefixed_name(name)
         # Type identifier
-        self.type_mapping = {'float': floatParameter, 'str': strParameter,
-                             'bool': boolParameter, 'mjd': MJDParameter,
-                             'angle': AngleParameter, 'pair': pairParameter}
+        self.type_mapping = {
+            "float": floatParameter,
+            "str": strParameter,
+            "bool": boolParameter,
+            "mjd": MJDParameter,
+            "angle": AngleParameter,
+            "pair": pairParameter,
+        }
         self.parameter_type = parameter_type
         try:
             self.param_class = self.type_mapping[self.parameter_type.lower()]
         except KeyError:
-            raise ValueError("Unknow parameter type '"+ parameter_type + "' ")
+            raise ValueError("Unknow parameter type '" + parameter_type + "' ")
 
         # Set up other attributes in the wrapper class
         self.unit_template = unit_template
@@ -997,19 +1126,23 @@ class prefixParameter(object):
             aliases.append(pa + self.idxfmt)
         self.long_double = long_double
         # initiate parameter class
-        self.param_comp = self.param_class(name=self.name, value=value,
-                                           units=real_units,
-                                           description=real_description,
-                                           uncertainty=uncertainty,
-                                           frozen=frozen,
-                                           continuous=continuous,
-                                           aliases=aliases,
-                                           long_double=long_double,
-                                           time_scale=time_scale,
-                                           unit_scale=unit_scale, \
-                                           scale_factor=scale_factor,\
-                                           scale_threshold=scale_threshold)
+        self.param_comp = self.param_class(
+            name=self.name,
+            value=value,
+            units=real_units,
+            description=real_description,
+            uncertainty=uncertainty,
+            frozen=frozen,
+            continuous=continuous,
+            aliases=aliases,
+            long_double=long_double,
+            time_scale=time_scale,
+            unit_scale=unit_scale,
+            scale_factor=scale_factor,
+            scale_threshold=scale_threshold,
+        )
         self.is_prefix = True
+
     # Define prpoerties for access the parameter composition
     @property
     def units(self):
@@ -1056,7 +1189,7 @@ class prefixParameter(object):
         return self.param_comp.prior
 
     @prior.setter
-    def prior(self,p):
+    def prior(self, p):
         self.param_comp.prior = p
 
     @property
@@ -1064,7 +1197,7 @@ class prefixParameter(object):
         return self.param_comp.aliases
 
     @aliases.setter
-    def aliases(self,a):
+    def aliases(self, a):
         self.param_comp.aliases = a
 
     @property
@@ -1102,7 +1235,7 @@ class prefixParameter(object):
     def from_parfile_line(self, line):
         return self.param_comp.from_parfile_line(line)
 
-    def prior_pdf(self,value=None, logpdf=False):
+    def prior_pdf(self, value=None, logpdf=False):
         return self.param_comp.prior_pdf(value, logpdf)
 
     def print_quantity(self, quantity):
@@ -1136,11 +1269,20 @@ class prefixParameter(object):
         A prefixed parameter with the same type of instance.
         """
 
-        new_name = self.prefix + format(index, '0'+ str(len(self.idxfmt)))
+        new_name = self.prefix + format(index, "0" + str(len(self.idxfmt)))
         kws = dict()
-        for key in ['units', 'unit_template', 'description','description_template',
-                    'frozen', 'continuous', 'prefix_aliases', 'long_double',
-                    'time_scale', 'parameter_type']:
+        for key in [
+            "units",
+            "unit_template",
+            "description",
+            "description_template",
+            "frozen",
+            "continuous",
+            "prefix_aliases",
+            "long_double",
+            "time_scale",
+            "parameter_type",
+        ]:
             if hasattr(self, key):
                 kws[key] = getattr(self, key)
 
@@ -1196,26 +1338,38 @@ class maskParameter(floatParameter):
 
     """
 
-    def __init__(self, name=None, index=1, key=None, key_value=None,
-                 value=None, long_double=False, units= None, description=None,
-                 uncertainty=None, frozen=True, continuous=False, aliases=[]):
+    def __init__(
+        self,
+        name=None,
+        index=1,
+        key=None,
+        key_value=None,
+        value=None,
+        long_double=False,
+        units=None,
+        description=None,
+        uncertainty=None,
+        frozen=True,
+        continuous=False,
+        aliases=[],
+    ):
         self.is_mask = True
-        self.key_identifier = {'mjd': (lambda x: time.Time(x, format='mjd').mjd, 2),
-                                'freq': (float, 2),
-                                'name': (str, 1),
-                                'tel': (str, 1)}
+        self.key_identifier = {
+            "mjd": (lambda x: time.Time(x, format="mjd").mjd, 2),
+            "freq": (float, 2),
+            "name": (str, 1),
+            "tel": (str, 1),
+        }
         if key_value is None:
             key_value = []
         elif not isinstance(key_value, list):
             key_value = [key_value]
 
         # Check key and key value
-        if key is not None \
-            and key.lower() in self.key_identifier.keys():
+        if key is not None and key.lower() in self.key_identifier.keys():
             key_info = self.key_identifier[key.lower()]
             if len(key_value) != key_info[1]:
-                errmsg = "key " + key + " takes " + key_info[1] + \
-                         " element."
+                errmsg = "key " + key + " takes " + key_info[1] + " element."
                 raise ValueError(errmsg)
 
         self.key = key
@@ -1229,14 +1383,17 @@ class maskParameter(floatParameter):
         for al in aliases:
             idx_aliases.append(al + str(self.index))
         self.prefix_aliases = aliases
-        super(maskParameter, self).__init__(name=name_param, value=value,
-                                            units=units,
-                                            description=description,
-                                            uncertainty=uncertainty,
-                                            frozen=frozen,
-                                            continuous=continuous,
-                                            aliases=idx_aliases,
-                                            long_double=long_double)
+        super(maskParameter, self).__init__(
+            name=name_param,
+            value=value,
+            units=units,
+            description=description,
+            uncertainty=uncertainty,
+            frozen=frozen,
+            continuous=continuous,
+            aliases=idx_aliases,
+            long_double=long_double,
+        )
 
         # For the first mask parameter, add name to aliases for the reading
         # first mask parameter from parfile.
@@ -1247,7 +1404,7 @@ class maskParameter(floatParameter):
         self.is_prefix = True
 
     def __repr__(self):
-        out = self.__class__.__name__+"("+self.name
+        out = self.__class__.__name__ + "(" + self.name
         if self.key is not None:
             out += " " + self.key
         if self.key_value is not None:
@@ -1308,15 +1465,18 @@ class maskParameter(floatParameter):
         try:
             self.key = k[1]
         except IndexError:
-            raise ValueError("{}: No key found on timfile line {!r}"
-                             .format(self.name, line))
+            raise ValueError(
+                "{}: No key found on timfile line {!r}".format(self.name, line)
+            )
 
         key_value_info = self.key_identifier.get(self.key.lower(), (str, 1))
         len_key_v = key_value_info[1]
         if len(k) < 3 + len_key_v:
             raise ValueError(
-                "{}: Expected at least {} entries on timfile line {!r}"
-                .format(self.name, 3+len_key_v, line))
+                "{}: Expected at least {} entries on timfile line {!r}".format(
+                    self.name, 3 + len_key_v, line
+                )
+            )
 
         for ii in range(len_key_v):
             if key_value_info[0] != str:
@@ -1326,7 +1486,7 @@ class maskParameter(floatParameter):
                     kval = k[2 + ii]
             else:
                 kval = k[2 + ii]
-            if ii > len(self.key_value)-1:
+            if ii > len(self.key_value) - 1:
                 self.key_value.append(key_value_info[0](kval))
             else:
                 self.key_value[ii] = key_value_info[0](kval)
@@ -1334,7 +1494,7 @@ class maskParameter(floatParameter):
             self.set(k[2 + len_key_v])
         if len(k) >= 4 + len_key_v:
             try:
-                fit_flag =  int(k[3 + len_key_v])
+                fit_flag = int(k[3 + len_key_v])
                 if fit_flag == 0:
                     self.frozen = True
                     ucty = 0.0
@@ -1348,8 +1508,8 @@ class maskParameter(floatParameter):
                     str2longdouble(k[3 + len_key_v])
                     ucty = k[3 + len_key_v]
                 except ValueError:
-                    errmsg = 'Unidentified string ' + k[3 + len_key_v] + ' in'
-                    errmsg += ' parfile line ' + k
+                    errmsg = "Unidentified string " + k[3 + len_key_v] + " in"
+                    errmsg += " parfile line " + k
                     raise ValueError(errmsg)
 
             if len(k) >= 5 + len_key_v:
@@ -1376,10 +1536,13 @@ class maskParameter(floatParameter):
     def new_param(self, index):
         """Create a new but same style mask parameter
         """
-        new_mask_param = maskParameter(name=self.origin_name, index=index,
-                                       long_double=self.long_double,
-                                       units= self.units,
-                                       aliases=self.prefix_aliases)
+        new_mask_param = maskParameter(
+            name=self.origin_name,
+            index=index,
+            long_double=self.long_double,
+            units=self.units,
+            aliases=self.prefix_aliases,
+        )
         return new_mask_param
 
     def select_toa_mask(self, toas):
@@ -1391,32 +1554,32 @@ class maskParameter(floatParameter):
         ------
         A array of returned index.
         """
-        column_match = {'mjd': 'mjd_float',
-                        'freq': 'freq',
-                        'tel': 'obs'}
+        column_match = {"mjd": "mjd_float", "freq": "freq", "tel": "obs"}
         if len(self.key_value) == 1:
-            if not hasattr(self, 'toa_selector'):
+            if not hasattr(self, "toa_selector"):
                 self.toa_selector = TOASelect(is_range=False, use_hash=True)
             condition = {self.name: self.key_value[0]}
         elif len(self.key_value) == 2:
-            if not hasattr(self, 'toa_selector'):
+            if not hasattr(self, "toa_selector"):
                 self.toa_selector = TOASelect(is_range=True, use_hash=True)
             condition = {self.name: tuple(self.key_value)}
         else:
-            raise ValueError('Parameter %s has more key values than '
-                             'expected.(Expect 1 or 2 key values)' % self.name)
+            raise ValueError(
+                "Parameter %s has more key values than "
+                "expected.(Expect 1 or 2 key values)" % self.name
+            )
         # get the table columns
         # TODO Right now it is only supports mjd, freq, tel, and flagkeys,
         # We need to consider some more complicated situation
-        key = self.key.replace('-', '')
+        key = self.key.replace("-", "")
         tbl = toas.table
-        if key not in column_match.keys(): # This only works for the one with flags.
-            section_name = key+'_section'
-            #if section_name not in tbl.keys():
-            #if statement removed so that flags recompute every time. If don't
-            #recompute, flags can only be added to the toa table once and then never update, 
-            #making it impossible to add additional jump parameters after the par file is read in (pintk)
-            flag_col = [x.get(key, None) for x in tbl['flags']]
+        if key not in column_match.keys():  # This only works for the one with flags.
+            section_name = key + "_section"
+            # if section_name not in tbl.keys():
+            # if statement removed so that flags recompute every time. If don't
+            # recompute, flags can only be added to the toa table once and then never update,
+            # making it impossible to add additional jump parameters after the par file is read in (pintk)
+            flag_col = [x.get(key, None) for x in tbl["flags"]]
             tbl[section_name] = flag_col
             col = tbl[section_name]
         else:
@@ -1450,10 +1613,21 @@ class pairParameter(floatParameter):
         List of aliases for the current parameter
 
     """
-    def __init__(self, name=None, index=None,
-                 value=None, long_double=False, units=None, description=None,
-                 uncertainty=None, frozen=True, continuous=False, aliases=[],
-                 **kwargs):
+
+    def __init__(
+        self,
+        name=None,
+        index=None,
+        value=None,
+        long_double=False,
+        units=None,
+        description=None,
+        uncertainty=None,
+        frozen=True,
+        continuous=False,
+        aliases=[],
+        **kwargs
+    ):
 
         self.index = index
         name_param = name
@@ -1462,17 +1636,20 @@ class pairParameter(floatParameter):
 
         self.prefix_aliases = aliases
 
-        super(pairParameter, self).__init__(name=name_param, value=value,
-                                            units=units,
-                                            description=description,
-                                            uncertainty=uncertainty,
-                                            frozen=frozen,
-                                            continuous=continuous,
-                                            aliases=aliases,
-                                            long_double=long_double,
-                                            set_quantity=self.set_quantity_pair,
-                                            set_uncertainty=self.set_quantity_pair,
-                                            **kwargs)
+        super(pairParameter, self).__init__(
+            name=name_param,
+            value=value,
+            units=units,
+            description=description,
+            uncertainty=uncertainty,
+            frozen=frozen,
+            continuous=continuous,
+            aliases=aliases,
+            long_double=long_double,
+            set_quantity=self.set_quantity_pair,
+            set_uncertainty=self.set_quantity_pair,
+            **kwargs
+        )
 
         self.set_quantity = self.set_quantity_pair
         self.set_uncertainty = self.set_quantity_pair
@@ -1527,10 +1704,13 @@ class pairParameter(floatParameter):
 
     def new_param(self, index):
         """Create a new but same style mask parameter."""
-        new_pair_param = pairParameter(name=self.origin_name, index=index,
-                                       long_double=self.long_double,
-                                       units= self.units,
-                                       aliases=self.prefix_aliases)
+        new_pair_param = pairParameter(
+            name=self.origin_name,
+            index=index,
+            long_double=self.long_double,
+            units=self.units,
+            aliases=self.prefix_aliases,
+        )
         return new_pair_param
 
     def set_quantity_pair(self, vals):
@@ -1555,11 +1735,15 @@ class pairParameter(floatParameter):
         .quantity attribute other than .value attribute.
         """
         if val is None:
-            if not isinstance(self.quantity, (str, bool)) and \
-                self._quantity is not None:
-                raise ValueError('This parameter value is number convertible. '
-                                 'Setting .value to None will lose the '
-                                 'parameter value.')
+            if (
+                not isinstance(self.quantity, (str, bool))
+                and self._quantity is not None
+            ):
+                raise ValueError(
+                    "This parameter value is number convertible. "
+                    "Setting .value to None will lose the "
+                    "parameter value."
+                )
             else:
                 self.value = val
         self._quantity = self.set_quantity_pair(val)
@@ -1571,17 +1755,24 @@ class pairParameter(floatParameter):
             return self.print_quantity_float(quan)
         except AttributeError:
             # Not a quantity, let's hope it's a list of length two?
-            if len(quan)!=2:
-                raise ValueError("Don't know how to print this as a pair: %s"
-                                 % (quan,))
+            if len(quan) != 2:
+                raise ValueError("Don't know how to print this as a pair: %s" % (quan,))
 
         v0 = quan[0].to(self.units).value
         v1 = quan[1].to(self.units).value
         if self._long_double:
             if not isinstance(v0, np.longdouble):
-                raise TypeError("Parameter {} is supposed to contain long doubles but contains a float".format(self))
+                raise TypeError(
+                    "Parameter {} is supposed to contain long doubles but contains a float".format(
+                        self
+                    )
+                )
             if not isinstance(v1, np.longdouble):
-                raise TypeError("Parameter {} is supposed to contain long doubles but contains a float".format(self))
+                raise TypeError(
+                    "Parameter {} is supposed to contain long doubles but contains a float".format(
+                        self
+                    )
+                )
         quan0 = str(v0)
         quan1 = str(v1)
-        return quan0 + ' ' + quan1
+        return quan0 + " " + quan1

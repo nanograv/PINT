@@ -10,22 +10,22 @@ import astropy.units as u
 import numpy
 from astropy import log
 from astropy._erfa import ErfaWarning
-from astropy.time import Time
 from six import add_metaclass
 
-import pint.pulsar_mjd  # noqa
+from pint.pulsar_mjd import Time
 
 
 class ClockFileMeta(type):
     """Metaclass that provides a registry for different clock file formats.
     ClockFile implementations should define a 'format' class member giving
     the name of the format."""
+
     def __init__(cls, name, bases, members):
-        regname = '_formats'
-        if not hasattr(cls,regname):
-            setattr(cls,regname,{})
-        if 'format' in members:
-            getattr(cls,regname)[cls.format] = cls
+        regname = "_formats"
+        if not hasattr(cls, regname):
+            setattr(cls, regname, {})
+        if "format" in members:
+            getattr(cls, regname)[cls.format] = cls
         super(ClockFileMeta, cls).__init__(name, bases, members)
 
 
@@ -56,19 +56,21 @@ class ClockFile(object):
     """
 
     @classmethod
-    def read(cls, filename, format='tempo', **kwargs):
+    def read(cls, filename, format="tempo", **kwargs):
         if format in cls._formats.keys():
             return cls._formats[format](filename, **kwargs)
         else:
             raise ValueError("clock file format '%s' not defined" % format)
 
     @property
-    def time(self): return self._time
+    def time(self):
+        return self._time
 
     @property
-    def clock(self): return self._clock
+    def clock(self):
+        return self._clock
 
-    def evaluate(self,t,limits='warn'):
+    def evaluate(self, t, limits="warn"):
         """Evaluate the clock corrections at the times t (given as an
         array-valued Time object).  By default, values are linearly
         interpolated but this could be overridden by derived classes
@@ -76,29 +78,33 @@ class ClockFile(object):
         the data range.  If limits=='warn' this will also issue a warning.
         If limits=='error' an exception will be raised."""
 
-        if numpy.any(t<self.time[0]) or numpy.any(t>self.time[-1]):
+        if numpy.any(t < self.time[0]) or numpy.any(t > self.time[-1]):
             msg = "Data points out of range in clock file '%s'" % self.filename
-            if limits=='warn':
+            if limits == "warn":
                 log.warning(msg)
-            elif limits=='error':
+            elif limits == "error":
                 raise RuntimeError(msg)
 
         # Can't pass Times directly to numpy.interp.  This should be OK:
-        return numpy.interp(t.mjd, self.time.mjd, self.clock.to(u.us).value)*u.us
+        return numpy.interp(t.mjd, self.time.mjd, self.clock.to(u.us).value) * u.us
 
 
 class Tempo2ClockFile(ClockFile):
 
-    format = 'tempo2'
+    format = "tempo2"
 
     def __init__(self, filename, **kwargs):
         self.filename = filename
-        log.info('Loading {0} observatory clock correction file {1}'.format(self.format,filename))
+        log.info(
+            "Loading {0} observatory clock correction file {1}".format(
+                self.format, filename
+            )
+        )
         mjd, clk, self.header = self.load_tempo2_clock_file(filename)
-        #NOTE Clock correction file has a time far in the future as ending point
+        # NOTE Clock correction file has a time far in the future as ending point
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore', ErfaWarning)
-            self._time = Time(mjd, format='pulsar_mjd', scale='utc')
+            warnings.simplefilter("ignore", ErfaWarning)
+            self._time = Time(mjd, format="pulsar_mjd", scale="utc")
         self._clock = clk * u.s
 
     @staticmethod
@@ -107,34 +113,40 @@ class Tempo2ClockFile(ClockFile):
         (mjd, clk, hdrline).  The first two are float arrays of MJD and
         clock corrections (seconds).  hdrline is the first line of the file
         that specifies the two clock scales connected by the file."""
-        f = open(filename,'r')
+        f = open(filename, "r")
         hdrline = f.readline().rstrip()
-        mjd, clk = numpy.loadtxt(f,unpack=True)
+        mjd, clk = numpy.loadtxt(f, unpack=True)
         return mjd, clk, hdrline
 
 
 class TempoClockFile(ClockFile):
 
-    format = 'tempo'
+    format = "tempo"
 
     def __init__(self, filename, obscode=None, **kwargs):
         self.filename = filename
         self.obscode = obscode
-        log.info('Loading {0} observatory ({1}) clock correction file {2}'.format(self.format,obscode,filename))
-        mjd, clk = self.load_tempo1_clock_file(filename,site=obscode)
-        #NOTE Clock correction file has a time far in the future as ending point
+        log.info(
+            "Loading {0} observatory ({1}) clock correction file {2}".format(
+                self.format, obscode, filename
+            )
+        )
+        mjd, clk = self.load_tempo1_clock_file(filename, site=obscode)
+        # NOTE Clock correction file has a time far in the future as ending point
         # We are swithing off astropy warning only for gps correction.
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore', ErfaWarning)
+            warnings.simplefilter("ignore", ErfaWarning)
             try:
-                self._time = Time(mjd, format='pulsar_mjd', scale='utc')
+                self._time = Time(mjd, format="pulsar_mjd", scale="utc")
             except ValueError:
-                log.error('Filename {0}, site {1}: Bad MJD {2}'.format(filename,obscode,mjd))
+                log.error(
+                    "Filename {0}, site {1}: Bad MJD {2}".format(filename, obscode, mjd)
+                )
                 raise
         self._clock = clk * u.us
 
     @staticmethod
-    def load_tempo1_clock_file(filename,site=None):
+    def load_tempo1_clock_file(filename, site=None):
         """
         Given the specified full path to the tempo1-format clock file,
         will return two numpy arrays containing the MJDs and the clock
@@ -154,15 +166,17 @@ class TempoClockFile(ClockFile):
         clkcorrs = []
         for l in open(filename).readlines():
             # Ignore comment lines
-            if l.startswith('#'): continue
+            if l.startswith("#"):
+                continue
 
             # Process INCLUDE
             # Assumes included file is in same dir as this one
-            if l.startswith('INCLUDE'):
+            if l.startswith("INCLUDE"):
                 clkdir = os.path.dirname(os.path.abspath(filename))
                 filename1 = os.path.join(clkdir, l.split()[1])
                 mjds1, clkcorrs1 = TempoClockFile.load_tempo1_clock_file(
-                        filename1, site=site)
+                    filename1, site=site
+                )
                 mjds.extend(mjds1)
                 clkcorrs.extend(clkcorrs1)
                 continue
@@ -170,7 +184,8 @@ class TempoClockFile(ClockFile):
             # Parse MJD
             try:
                 mjd = float(l[0:9])
-                if mjd<39000 or mjd>100000: mjd=None
+                if mjd < 39000 or mjd > 100000:
+                    mjd = None
             except (ValueError, IndexError):
                 mjd = None
             # Parse two clkcorr values
@@ -188,16 +203,22 @@ class TempoClockFile(ClockFile):
                 csite = l[34].lower()
             except IndexError:
                 csite = None
-            if (site is not None) and (site.lower()!=csite): continue
+            if (site is not None) and (site.lower() != csite):
+                continue
 
             # Need MJD and at least one of the two clkcorrs
-            if mjd is None: continue
-            if (clkcorr1 is None) and (clkcorr2 is None): continue
+            if mjd is None:
+                continue
+            if (clkcorr1 is None) and (clkcorr2 is None):
+                continue
             # If one of the clkcorrs is missing, it defaults to zero
-            if clkcorr1 is None: clkcorr1 = 0.0
-            if clkcorr2 is None: clkcorr2 = 0.0
+            if clkcorr1 is None:
+                clkcorr1 = 0.0
+            if clkcorr2 is None:
+                clkcorr2 = 0.0
             # This adjustment is hard-coded in tempo:
-            if clkcorr1>800.0: clkcorr1 -= 818.8
+            if clkcorr1 > 800.0:
+                clkcorr1 -= 818.8
             # Add the value to the list
             mjds.append(mjd)
             clkcorrs.append(clkcorr2 - clkcorr1)

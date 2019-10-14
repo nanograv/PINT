@@ -5,18 +5,31 @@ from __future__ import absolute_import, division, print_function
 import glob
 import os
 import sys
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 
 from astropy import log
 
-from pint.utils import split_prefixed_name, interesting_lines, lines_of, PrefixError
+from pint.models.timing_model import (
+    Component,
+    MissingParameter,
+    TimingModel,
+    ignore_prefix,
+)
+from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
-from pint.models.timing_model import Component, TimingModel, MissingParameter, ignore_prefix
-
-default_models = ["StandardTimingModel",]
-DEFAULT_ORDER = ['astrometry', 'jump_delay', 'solar_system_shapiro',
-                 'dispersion_constant', 'dispersion_dmx', 'pulsar_system',
-                 'frequency_dependent', 'spindown', 'phase_jump', 'wave']
+default_models = ["StandardTimingModel"]
+DEFAULT_ORDER = [
+    "astrometry",
+    "jump_delay",
+    "solar_system_shapiro",
+    "dispersion_constant",
+    "dispersion_dmx",
+    "pulsar_system",
+    "frequency_dependent",
+    "spindown",
+    "phase_jump",
+    "wave",
+]
 
 
 class UnknownBinaryModel(ValueError):
@@ -41,7 +54,8 @@ class ModelBuilder(object):
     A class contains the result model instance if parfile is provided and
     method to build the model.
     """
-    def __init__(self, parfile = None, name=''):
+
+    def __init__(self, parfile=None, name=""):
         self.timing_model = None
         self.name = name
         self.param_inparF = None
@@ -50,19 +64,19 @@ class ModelBuilder(object):
         self.param_prefix = {}
 
         self.select_comp = {}
-        self.control_params = ['EPHEM', 'CLK']
+        self.control_params = ["EPHEM", "CLK"]
         if parfile is not None:
             self.parfile = parfile
             self.build_model(self.parfile, self.name)
 
     def __str__(self):
-        result = 'Model name : ' + self.name + '\n'
-        result += 'Components in the model : \n'
+        result = "Model name : " + self.name + "\n"
+        result += "Components in the model : \n"
         for c in self.select_comp:
-            result += '    '+str(c)+'\n'
+            result += "    " + str(c) + "\n"
         if self.model_instance is not None:
-            result += 'Read parameters from : '+ self.parfile +'\n'
-            result += 'The model instance is :\n'+str(self.model_instance)
+            result += "Read parameters from : " + self.parfile + "\n"
+            result += "The model instance is :\n" + str(self.model_instance)
 
         return result
 
@@ -76,16 +90,18 @@ class ModelBuilder(object):
         """
         param = {}
         repeat_par = {}
-        pfile = open(parfile, 'r')
+        pfile = open(parfile, "r")
         for l in [pl.strip() for pl in pfile.readlines()]:
             # Skip blank lines
             if not l:
                 continue
                 # Skip commented lines
-            if l.startswith('#') or l[:2]=="C ":
+            if l.startswith("#") or l[:2] == "C ":
                 continue
             k = l.split()
-            if k[0] in param.keys(): # repeat parameter TODO: add JUMP1 even there is only one
+            if (
+                k[0] in param.keys()
+            ):  # repeat parameter TODO: add JUMP1 even there is only one
                 if k[0] in repeat_par.keys():
                     repeat_par[k[0]] += 1
                 else:
@@ -113,8 +129,7 @@ class ModelBuilder(object):
             selected_c = None
             for cpi in cmps:
                 if cpi.component_special_params:
-                    if any(par in params_inpar
-                           for par in cpi.component_special_params):
+                    if any(par in params_inpar for par in cpi.component_special_params):
                         selected_c = cpi
                         # Once have match, stop searching
                         break
@@ -157,19 +172,19 @@ class ModelBuilder(object):
         prefixs = {}
         prefix_inModel = model.get_params_of_type(prefix_type)
         for pn in prefix_inModel:
-            par = getattr(model,  pn)
+            par = getattr(model, pn)
             prefixs[par.prefix] = []
             for p in paramList:
                 try:
-                    pre,idxstr,idxV = split_prefixed_name(p)
-                    if pre in [par.prefix,] + par.prefix_aliases:
+                    pre, idxstr, idxV = split_prefixed_name(p)
+                    if pre in [par.prefix] + par.prefix_aliases:
                         prefixs[par.prefix].append(p)
-                except: # FIXME: is this meant to catch KeyErrors?
+                except:  # FIXME: is this meant to catch KeyErrors?
                     continue
 
         return prefixs
 
-    def build_model(self, parfile=None, name=''):
+    def build_model(self, parfile=None, name=""):
         """Read parfile using the model_instance attribute.
         Parameters
         ---------
@@ -189,7 +204,7 @@ class ModelBuilder(object):
             parName = []
             # add aliases
             for p in list(param_inModel.keys()):
-                parName+= getattr(self.timing_model, p).aliases
+                parName += getattr(self.timing_model, p).aliases
 
             parName += param_inModel.keys()
 
@@ -197,11 +212,10 @@ class ModelBuilder(object):
                 if pp not in parName:
                     self.param_unrecognized[pp] = self.param_inparF[pp]
 
-            for ptype in ['prefixParameter', 'maskParameter']:
+            for ptype in ["prefixParameter", "maskParameter"]:
                 prefix_param = self.search_prefix_param(
-                    self.param_unrecognized,
-                    self.timing_model,
-                    ptype)
+                    self.param_unrecognized, self.timing_model, ptype
+                )
                 prefix_in_model = self.timing_model.get_params_of_type(ptype)
                 for key in prefix_param:
                     ppnames = [x for x in prefix_in_model if x.startswith(key)]
@@ -213,25 +227,26 @@ class ModelBuilder(object):
                             continue
                     exm_par_comp = param_inModel[exm_par.name]
                     for parname in prefix_param[key]:
-                        pre,idstr,idx = split_prefixed_name(parname)
+                        pre, idstr, idx = split_prefixed_name(parname)
                         if idx == exm_par.index:
                             continue
-                        if hasattr(exm_par, 'new_param'):
+                        if hasattr(exm_par, "new_param"):
                             new_par = exm_par.new_param(idx)
-                            self.timing_model.add_param_from_top(new_par,
-                                                                 exm_par_comp)
+                            self.timing_model.add_param_from_top(new_par, exm_par_comp)
             if "BINARY" in self.param_inparF:
                 vals = self.param_inparF["BINARY"]
                 if len(vals) != 1:
                     raise ValueError(
-                        "Mal-formed binary model selection: {}"
-                        .format(repr(" ".join(["BINARY"]+vals))))
+                        "Mal-formed binary model selection: {}".format(
+                            repr(" ".join(["BINARY"] + vals))
+                        )
+                    )
                 bm, = vals
                 cats = self.timing_model.get_component_of_category()
                 if "pulsar_system" not in cats:
                     raise UnknownBinaryModel(
-                        "Unknown binary model requested in par file: {}"
-                        .format(bm))
+                        "Unknown binary model requested in par file: {}".format(bm)
+                    )
                 # FIXME: consistency check - the componens actually chosen should know the name bm
 
         if parfile is not None:
@@ -249,6 +264,7 @@ class ModelBuilder(object):
                         if p.startswith(ctrlp):
                             info[ctrlp] = self.param_unrecognized[ctrlp]
         return info
+
 
 def get_model(parfile):
     """A one step function to build model from a parfile
@@ -271,8 +287,9 @@ def get_model(parfile):
     return mb.timing_model
 
 
-def choose_model(parfile, category_order=None, name=None,
-                 check_for_missing_parameters=False):
+def choose_model(
+    parfile, category_order=None, name=None, check_for_missing_parameters=False
+):
     """Determine which model components are appropriate for parfile."""
     if name is None:
         if isinstance(parfile, str):
@@ -295,11 +312,14 @@ def choose_model(parfile, category_order=None, name=None,
         k = ll[0]
         if k in multi_tags:
             multi_line[k] += 1
-            k = k+str(multi_line[k])
+            k = k + str(multi_line[k])
         if k in par_dict:
             # FIXME: what happens with JUMPs?
-            log.info("Lines with duplicate keys in par file: {} and {}"
-                     .format([k]+par_dict[k], ll))
+            log.info(
+                "Lines with duplicate keys in par file: {} and {}".format(
+                    [k] + par_dict[k], ll
+                )
+            )
         par_dict[k] = ll[1:]
         par_lines.append(l)
 
@@ -312,7 +332,10 @@ def choose_model(parfile, category_order=None, name=None,
                 acceptable.append(m)
         if len(acceptable) > 1:
             raise ValueError(
-                "Multiple models are compatible with this par file: {}".format(acceptable))
+                "Multiple models are compatible with this par file: {}".format(
+                    acceptable
+                )
+            )
         if acceptable:
             models_to_use[category] = acceptable[0]
 
@@ -320,15 +343,17 @@ def choose_model(parfile, category_order=None, name=None,
         vals = par_dict["BINARY"]
         if len(vals) != 1:
             raise ValueError(
-                "Mal-formed binary model selection: {}"
-                .format(repr(" ".join(["BINARY"]+vals))))
+                "Mal-formed binary model selection: {}".format(
+                    repr(" ".join(["BINARY"] + vals))
+                )
+            )
         bm, = vals
         if "pulsar_system" not in models_to_use:
             # Either we're missing parameters or the model is bogus
             # FIXME: distinguish
             raise UnknownBinaryModel(
-                "Unknown binary model requested in par file: {}"
-                .format(bm))
+                "Unknown binary model requested in par file: {}".format(bm)
+            )
         # FIXME: consistency check - the componens actually chosen should know the name bm
 
     models_in_order = []
@@ -344,14 +369,15 @@ def choose_model(parfile, category_order=None, name=None,
     # FIXME: this should go in TimingModel for when you try to
     # add conflicting components
     alias_map = {}
-    for prefix_type in ['prefixParameter', 'maskParameter']:
+    for prefix_type in ["prefixParameter", "maskParameter"]:
         for pn in tm.get_params_of_type(prefix_type):
-            par = getattr(tm,  pn)
+            par = getattr(tm, pn)
             for a in [par.prefix] + par.prefix_aliases:
                 if a in alias_map:
                     raise ValueError(
                         "Two prefix/mask parameters have the same "
-                        "alias {}: {} and {}".format(a,alias_map[a],par))
+                        "alias {}: {} and {}".format(a, alias_map[a], par)
+                    )
                 alias_map[a] = par
 
     leftover_params = par_dict.copy()
@@ -362,7 +388,7 @@ def choose_model(parfile, category_order=None, name=None,
 
     for p in leftover_params:
         try:
-            pre,idxstr,idxV = split_prefixed_name(p)
+            pre, idxstr, idxV = split_prefixed_name(p)
             try:
                 par = alias_map[pre]
             except KeyError:
@@ -371,13 +397,16 @@ def choose_model(parfile, category_order=None, name=None,
                     continue
                 else:
                     raise ValueError(
-                        "Mystery parameter {}, prefix {} with number {}"
-                        .format(p, pre, idxV))
+                        "Mystery parameter {}, prefix {} with number {}".format(
+                            p, pre, idxV
+                        )
+                    )
             component = tm.get_params_mapping()[par.name]
             new_parameter = par.new_param(idxV)
             if hasattr(tm, new_parameter.name):
                 raise ValueError(
-                    "Received duplicate parameter {}".format(new_parameter.name))
+                    "Received duplicate parameter {}".format(new_parameter.name)
+                )
             tm.add_param_from_top(new_parameter, component)
         except PrefixError:
             pass

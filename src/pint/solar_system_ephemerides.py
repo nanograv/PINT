@@ -1,48 +1,49 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function
 
 import os
 
-from six import raise_from
-from six.moves.urllib.parse import urljoin
-import numpy as np
-import astropy.units as u
 import astropy.coordinates as coor
+import astropy.units as u
+import numpy as np
 from astropy import log
 from astropy.utils.data import download_file
+from six import raise_from
+from six.moves.urllib.parse import urljoin
 
-from pint.utils import PosVel
 from pint.config import datapath
-
+from pint.utils import PosVel
 
 ephemeris_mirrors = [
     # NOTE the JPL ftp site is disabled for our automatic builds. Instead,
     # we duplicated the JPL ftp site on the nanograv server.
     # Search nanograv server first, then the other two.
-    'https://data.nanograv.org/static/data/ephem/',
-    'ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/',
-    'https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/',
+    "https://data.nanograv.org/static/data/ephem/",
+    "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/",
+    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/",
 ]
 
-jpl_obj_code = {'ssb': 0,
-                'sun': 10,
-                'mercury': 199,
-                'venus': 299,
-                'earth-moon-barycenter': 3,
-                'earth': 399,
-                'moon': 301,
-                'mars': 499,
-                'jupiter': 5,
-                'saturn': 6,
-                'uranus': 7,
-                'neptune': 8,
-                'pluto': 9}
+jpl_obj_code = {
+    "ssb": 0,
+    "sun": 10,
+    "mercury": 199,
+    "venus": 299,
+    "earth-moon-barycenter": 3,
+    "earth": 399,
+    "moon": 301,
+    "mars": 499,
+    "jupiter": 5,
+    "saturn": 6,
+    "uranus": 7,
+    "neptune": 8,
+    "pluto": 9,
+}
 
 _ephemeris_hits = {}
 _ephemeris_failures = set()
 
 
 def _load_kernel_link(ephem, link=None):
-    if link == '':
+    if link == "":
         raise ValueError("Empty string is not a valid URL")
     # NOTE: as of astropy 4 this should be able to be much simpler
 
@@ -52,9 +53,11 @@ def _load_kernel_link(ephem, link=None):
         return
 
     # FIXME: is link supposed to be a URL for the file or a directory?
-    search_list = [urljoin(e, "{}.bsp".format(ephem))
-                   for e in (([] if link is None else [link]) + ephemeris_mirrors)
-                   if e not in _ephemeris_failures]
+    search_list = [
+        urljoin(e, "{}.bsp".format(ephem))
+        for e in (([] if link is None else [link]) + ephemeris_mirrors)
+        if e not in _ephemeris_failures
+    ]
     errors = []
     for ephem_link in search_list:
         try:
@@ -69,24 +72,33 @@ def _load_kernel_link(ephem, link=None):
     log.info("Retrying network requests with a longer timeout")
     for ephem_link in search_list:
         try:
-            log.debug('Re-trying to set astropy ephemeris to {0}'.format(ephem_link))
+            log.debug("Re-trying to set astropy ephemeris to {0}".format(ephem_link))
             download_file(ephem_link, timeout=300, cache=True)
             log.debug("Only able to download '{}' on a second try".format(ephem_link))
             coor.solar_system_ephemeris.set(ephem_link)
             _ephemeris_hits[ephem] = ephem_link
             return
         except (ValueError, IOError) as e:
-            log.info("Retry did not find '{}', blacklisting it now, because: {}"
-                     .format(ephem_link, e))
+            log.info(
+                "Retry did not find '{}', blacklisting it now, because: {}".format(
+                    ephem_link, e
+                )
+            )
             _ephemeris_failures.add(ephem_link)
             errors.append((ephem_link, e, "retry"))
     if errors:
         raise_from(
-            IOError("Unable to retrieve ephemeris {} in spite of multiple tries: {}"
-                    .format(ephem, errors)),
-            errors[0][1])
+            IOError(
+                "Unable to retrieve ephemeris {} in spite of multiple tries: {}".format(
+                    ephem, errors
+                )
+            ),
+            errors[0][1],
+        )
     else:
-        raise ValueError("All urls we might download {} from have previously experienced errors.")
+        raise ValueError(
+            "All urls we might download {} from have previously experienced errors."
+        )
 
 
 def _load_kernel_local(ephem, path):
@@ -190,7 +202,7 @@ def objPosVel_wrt_SSB(objname, t, ephem, path=None, link=None):
 
     load_kernel(ephem, path=path, link=link)
     pos, vel = coor.get_body_barycentric_posvel(objname, t)
-    return PosVel(pos.xyz, vel.xyz.to(u.km/u.second), origin='ssb', obj=objname)
+    return PosVel(pos.xyz, vel.xyz.to(u.km / u.second), origin="ssb", obj=objname)
 
 
 def objPosVel(obj1, obj2, t, ephem, path=None, link=None):
@@ -219,19 +231,21 @@ def objPosVel(obj1, obj2, t, ephem, path=None, link=None):
         solar system obj1's position and velocity with respect to obj2 in the
         J2000 cartesian coordinate.
     """
-    if obj1.lower() == 'ssb' and obj2.lower() != 'ssb':
-        obj2pv = objPosVel_wrt_SSB(obj2,t,ephem,path=path,link=link)
+    if obj1.lower() == "ssb" and obj2.lower() != "ssb":
+        obj2pv = objPosVel_wrt_SSB(obj2, t, ephem, path=path, link=link)
         return obj2pv
-    elif obj2.lower() == 'ssb' and obj1.lower() != 'ssb':
-        obj1pv = objPosVel_wrt_SSB(obj1,t,ephem,path=path,link=link)
+    elif obj2.lower() == "ssb" and obj1.lower() != "ssb":
+        obj1pv = objPosVel_wrt_SSB(obj1, t, ephem, path=path, link=link)
         return -obj1pv
-    elif obj2.lower() != 'ssb' and obj1.lower() != 'ssb':
-        obj1pv = objPosVel_wrt_SSB(obj1,t,ephem,path=path,link=link)
-        obj2pv = objPosVel_wrt_SSB(obj2,t,ephem,path=path,link=link)
+    elif obj2.lower() != "ssb" and obj1.lower() != "ssb":
+        obj1pv = objPosVel_wrt_SSB(obj1, t, ephem, path=path, link=link)
+        obj2pv = objPosVel_wrt_SSB(obj2, t, ephem, path=path, link=link)
         return obj2pv - obj1pv
     else:
         # user asked for velocity between ssb and ssb
-        return PosVel(np.zeros((3,len(t)))*u.km, np.zeros((3,len(t)))*u.km/u.second)
+        return PosVel(
+            np.zeros((3, len(t))) * u.km, np.zeros((3, len(t))) * u.km / u.second
+        )
 
 
 def get_tdb_tt_ephem_geocenter(tt, ephem, path=None, link=None):

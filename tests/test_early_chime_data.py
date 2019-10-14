@@ -14,23 +14,23 @@ from pinttestdata import datadir, testdir
 
 class Test_CHIME_data(unittest.TestCase):
     """Compare delays from the dd model with tempo and PINT"""
+
     @classmethod
     def setUpClass(self):
         os.chdir(datadir)
-        self.parfile = 'B1937+21.basic.par'
-        self.tim = 'B1937+21.CHIME.CHIME.NG.N.tim'
+        self.parfile = "B1937+21.basic.par"
+        self.tim = "B1937+21.CHIME.CHIME.NG.N.tim"
 
     def test_toa_read(self):
-        toas = toa.get_TOAs(self.tim, ephem="DE436", planets=False,
-                            include_bipm=True)
+        toas = toa.get_TOAs(self.tim, ephem="DE436", planets=False, include_bipm=True)
         assert toas.ntoas == 848, "CHIME TOAs did not read correctly."
-        assert list(set(toas.get_obss())) == ['chime'], \
-            "CHIME did not recognized by observatory module."
+        assert list(set(toas.get_obss())) == [
+            "chime"
+        ], "CHIME did not recognized by observatory module."
 
     def test_residuals(self):
         model = mb.get_model(self.parfile)
-        toas = toa.get_TOAs(self.tim, ephem="DE436", planets=False,
-                            include_bipm=True)
+        toas = toa.get_TOAs(self.tim, ephem="DE436", planets=False, include_bipm=True)
         r = Residuals(toas, model)
         # Comment out the following test for now, since the new residual
         # code makes it fail, and it probably shouldn't -- SMR

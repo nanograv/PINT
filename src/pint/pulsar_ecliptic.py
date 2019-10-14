@@ -1,11 +1,15 @@
-from __future__ import absolute_import, print_function, division
-import numpy as np
-from astropy.coordinates import frame_transform_graph, DynamicMatrixTransform
-from astropy.coordinates.matrix_utilities import rotation_matrix
+from __future__ import absolute_import, division, print_function
+
+import os
+
 import astropy.coordinates as coord
 import astropy.units as u
+import numpy as np
+from astropy.coordinates import DynamicMatrixTransform, frame_transform_graph
+from astropy.coordinates.matrix_utilities import rotation_matrix
+
 from .config import datapath
-import os
+
 
 # Load obliquity data
 # Assume the data file is in the ./datafile directory
@@ -13,17 +17,18 @@ def load_obliquity_file(filename):
     obliquity_data = {}
     for l in open(filename).readlines():
         l = l.strip()
-        if l.startswith('Obliquity of the ecliptic'):
+        if l.startswith("Obliquity of the ecliptic"):
             continue
-        if l.startswith('#'):
+        if l.startswith("#"):
             continue
-        if l == '':
+        if l == "":
             continue
         line = l.split()
-        obliquity_data[line[0]] = float(line[1])* u.arcsecond
+        obliquity_data[line[0]] = float(line[1]) * u.arcsecond
     return obliquity_data
 
-OBL = load_obliquity_file(datapath('ecliptic.dat'))
+
+OBL = load_obliquity_file(datapath("ecliptic.dat"))
 
 
 class PulsarEcliptic(coord.BaseCoordinateFrame):
@@ -43,10 +48,11 @@ class PulsarEcliptic(coord.BaseCoordinateFrame):
     distance : `Quantity`, optional, must be keyword
         The Distance for this object along the line-of-sight.
     """
+
     default_representation = coord.SphericalRepresentation
     # NOTE: The feature below needs astropy verison 2.0. Disable it right now
     default_differential = coord.SphericalCosLatDifferential
-    obliquity = OBL['DEFAULT']
+    obliquity = OBL["DEFAULT"]
     # def __init__(self, obliquity=OBL['DEFAULT'], *argu, **kwargs)
     #     super(PulsarEcliptic, self).__init__(*argu, **kwargs):
     #     self.obliquity = obliquity
@@ -56,13 +62,18 @@ def _ecliptic_rotation_matrix_pulsar(obl):
     """Here we only do the obliquity angle rotation. Astropy will add the
     precession-nutation correction.
     """
-    return rotation_matrix(obl, 'x')
+    return rotation_matrix(obl, "x")
 
-@frame_transform_graph.transform(coord.DynamicMatrixTransform, coord.ICRS, PulsarEcliptic)
+
+@frame_transform_graph.transform(
+    coord.DynamicMatrixTransform, coord.ICRS, PulsarEcliptic
+)
 def icrs_to_pulsarecliptic(from_coo, to_frame):
     return _ecliptic_rotation_matrix_pulsar(to_frame.obliquity)
 
 
-@frame_transform_graph.transform(coord.DynamicMatrixTransform, PulsarEcliptic, coord.ICRS)
+@frame_transform_graph.transform(
+    coord.DynamicMatrixTransform, PulsarEcliptic, coord.ICRS
+)
 def pulsarecliptic_to_icrs(from_coo, to_frame):
     return icrs_to_pulsarecliptic(to_frame, from_coo).T

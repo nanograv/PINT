@@ -27,44 +27,70 @@ class BinaryDDK(BinaryDD):
     """
 
     register = True
+
     def __init__(self,):
         super(BinaryDDK, self).__init__()
-        self.binary_model_name = 'DDK'
+        self.binary_model_name = "DDK"
         self.binary_model_class = DDKmodel
 
-        self.add_param(floatParameter(name='KIN', value=0.0, units="deg",
-                       description="Inclination angle"))
-        self.add_param(floatParameter(name='KOM', value=0.0, units="deg",
-                       description="The longitude of the ascending node"))
-        self.add_param(boolParameter(name='K96',
-                       description="Flag for Kopeikin binary model proper motion"
-                       " correction"))
-        self.interal_params += ['PMRA_DDK', 'PMDEC_DDK']
+        self.add_param(
+            floatParameter(
+                name="KIN", value=0.0, units="deg", description="Inclination angle"
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="KOM",
+                value=0.0,
+                units="deg",
+                description="The longitude of the ascending node",
+            )
+        )
+        self.add_param(
+            boolParameter(
+                name="K96",
+                description="Flag for Kopeikin binary model proper motion"
+                " correction",
+            )
+        )
+        self.interal_params += ["PMRA_DDK", "PMDEC_DDK"]
 
     @property
     def PMRA_DDK(self):
         params = self.get_params_as_ICRS()
-        par_obj = floatParameter(name="PMRA",
-            units="mas/year", value=params["PMRA"],
-            description="Proper motion in RA")
+        par_obj = floatParameter(
+            name="PMRA",
+            units="mas/year",
+            value=params["PMRA"],
+            description="Proper motion in RA",
+        )
         return par_obj
 
     @property
     def PMDEC_DDK(self):
         params = self.get_params_as_ICRS()
-        par_obj = floatParameter(name="PMDEC",
-            units="mas/year", value=params["PMDEC"],
-            description="Proper motion in DEC")
+        par_obj = floatParameter(
+            name="PMDEC",
+            units="mas/year",
+            value=params["PMDEC"],
+            description="Proper motion in DEC",
+        )
         return par_obj
-
 
     def setup(self):
         """Check out parameters setup.
         """
-        super(BinaryDDK,self).setup()
-        log.info("Using ICRS equatorial coordinate. The parameter KOM is"
-                 " measured respect to equatorial North.")
-        if 'PMRA' not in self._parent.params or 'PMDEC' not in self._parent.params:
+        super(BinaryDDK, self).setup()
+        log.info(
+            "Using ICRS equatorial coordinate. The parameter KOM is"
+            " measured respect to equatorial North."
+        )
+        if "PMRA" not in self._parent.params or "PMDEC" not in self._parent.params:
             # Check ecliptic coordinates proper motion.
-            if 'PMELONG' not in self._parent.params or 'PMELAT' not in self._parent.params:
-                raise MissingParameter("DDK", "DDK model needs proper motion parameters.")
+            if (
+                "PMELONG" not in self._parent.params
+                or "PMELAT" not in self._parent.params
+            ):
+                raise MissingParameter(
+                    "DDK", "DDK model needs proper motion parameters."
+                )

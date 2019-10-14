@@ -6,22 +6,28 @@
 # I think I understand it, but it would be good to have it stated.
 # Also, probably one of the comparisons below should be <= or >=, so the
 # range is [-0.5,0.5) or (-0.5,0.5].
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function
+
 from collections import namedtuple
-import numpy
+
 import astropy.units as u
+import numpy
+
 from pint import dimensionless_cycles
 
-class Phase(namedtuple('Phase', 'int frac')):
+
+class Phase(namedtuple("Phase", "int frac")):
     """
     Phase class array version
     """
+
     __slots__ = ()
+
     def __new__(cls, arg1, arg2=None):
         # Assume inputs are numerical, could add an extra
         # case to parse strings as input.
         # if it is not a list, convert to a list
-        if not hasattr(arg1, 'unit'):
+        if not hasattr(arg1, "unit"):
             arg1 = arg1 * u.cycle
         if arg1.shape == ():
             arg1 = arg1.reshape((1,))
@@ -29,27 +35,27 @@ class Phase(namedtuple('Phase', 'int frac')):
             arg1 = arg1.to(u.Unit(""))
             # Since modf does not like dimensioned quantity
             if arg2 is None:
-                ff,ii = numpy.modf(arg1)
+                ff, ii = numpy.modf(arg1)
             else:
-                if not hasattr(arg2, 'unit'):
+                if not hasattr(arg2, "unit"):
                     arg2 = arg2 * u.cycle
                 if arg2.shape == ():
                     arg2 = arg2.reshape((1,))
                 arg2 = arg2.to(u.Unit(""))
                 arg1S = numpy.modf(arg1)
                 arg2S = numpy.modf(arg2)
-                ii = arg1S[1]+arg2S[1]
+                ii = arg1S[1] + arg2S[1]
                 ff = arg2S[0]
             index = numpy.where(ff < -0.5)
             ff[index] += 1.0
             ii[index] -= 1
-            index = numpy.where(ff > 0.5 )
+            index = numpy.where(ff > 0.5)
             ff[index] -= 1.0
             ii[index] += 1
             return super(Phase, cls).__new__(cls, ii.to(u.cycle), ff.to(u.cycle))
 
     def __neg__(self):
-        #TODO: add type check for __neg__ and __add__
+        # TODO: add type check for __neg__ and __add__
         return Phase(-self.int, -self.frac)
 
     def __add__(self, other):

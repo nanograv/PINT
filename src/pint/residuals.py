@@ -1,11 +1,16 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function
+
 import astropy.units as u
-from astropy import log
 import numpy as np
 import scipy.linalg as sl
-from .phase import Phase
+from astropy import log
+
 from pint import dimensionless_cycles
+
+from .phase import Phase
+
 # also we import from fitter, down below to avoid circular relative imports
+
 
 class Residuals(object):
     """Residual(toa=None, model=None)"""
@@ -14,7 +19,9 @@ class Residuals(object):
         self.toas = toas
         self.model = model
         if toas is not None and model is not None:
-            self.phase_resids = self.calc_phase_resids(weighted_mean=weighted_mean, set_pulse_nums=set_pulse_nums)
+            self.phase_resids = self.calc_phase_resids(
+                weighted_mean=weighted_mean, set_pulse_nums=set_pulse_nums
+            )
             self.time_resids = self.calc_time_resids(weighted_mean=weighted_mean)
             self.dof = self.get_dof()
         else:
@@ -40,35 +47,35 @@ class Residuals(object):
     def calc_phase_resids(self, weighted_mean=True, set_pulse_nums=False):
         """Return timing model residuals in pulse phase."""
         rs = self.model.phase(self.toas)
-        rs -= Phase(rs.int[0],rs.frac[0])
+        rs -= Phase(rs.int[0], rs.frac[0])
         try:
-            delta_pulse_numbers = Phase(self.toas.table['delta_pulse_number'])
+            delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
         except:
-            self.toas.table['delta_pulse_number'] = np.zeros(len(self.toas.get_mjds()))
-            delta_pulse_numbers = Phase(self.toas.table['delta_pulse_number'])
+            self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
+            delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
         if set_pulse_nums:
-            self.toas.table['delta_pulse_number'] = np.zeros(len(self.toas.get_mjds()))
-            delta_pulse_numbers = Phase(self.toas.table['delta_pulse_number'])
+            self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
+            delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
         full = Phase(np.zeros_like(rs.frac), rs.frac) + delta_pulse_numbers
         full = full.int + full.frac
-        
-        #Track on pulse numbers, if necessary
-        if getattr(self.model, 'TRACK').value == '-2':
+
+        # Track on pulse numbers, if necessary
+        if getattr(self.model, "TRACK").value == "-2":
             pulse_num = self.toas.get_pulse_numbers()
             if pulse_num is None:
-                log.error('No pulse numbers with TOAs using TRACK -2')
-                raise Exception('No pulse numbers with TOAs using TRACK -2')
-            
+                log.error("No pulse numbers with TOAs using TRACK -2")
+                raise Exception("No pulse numbers with TOAs using TRACK -2")
+
             pn_act = np.trunc(full)
             addPhase = pn_act - pulse_num
             full -= pn_act
             full += addPhase
-            
+
             if not weighted_mean:
                 full -= full.mean()
             else:
-                w = 1.0 / (np.array(self.toas.get_errors())**2)
-                wm = (full*w).sum() / w.sum()
+                w = 1.0 / (np.array(self.toas.get_errors()) ** 2)
+                wm = (full * w).sum() / w.sum()
                 full -= wm
             return full
 
@@ -78,9 +85,9 @@ class Residuals(object):
             # Errs for weighted sum.  Units don't matter since they will
             # cancel out in the weighted sum.
             if np.any(self.toas.get_errors() == 0):
-                raise ValueError('TOA errors are zero - cannot calculate residuals')
-            w = 1.0/(np.array(self.toas.get_errors())**2)
-            wm = (full*w).sum() / w.sum()
+                raise ValueError("TOA errors are zero - cannot calculate residuals")
+            w = 1.0 / (np.array(self.toas.get_errors()) ** 2)
+            wm = (full * w).sum() / w.sum()
             full -= wm
         return full
 
@@ -94,21 +101,25 @@ class Residuals(object):
     def get_PSR_freq(self, modelF0=True):
         if modelF0:
             """Return pulsar rotational frequency in Hz. model.F0 must be defined."""
-            if self.model.F0.units != 'Hz':
-                ValueError('F0 units must be Hz')
+            if self.model.F0.units != "Hz":
+                ValueError("F0 units must be Hz")
             # All residuals require the model pulsar frequency to be defined
-            F0names = ['F0', 'nu'] # recognized parameter names, needs to be changed
+            F0names = ["F0", "nu"]  # recognized parameter names, needs to be changed
             nF0 = 0
             for n in F0names:
                 if n in self.model.params:
                     F0 = getattr(self.model, n).value
                     nF0 += 1
             if nF0 == 0:
-                raise ValueError('no PSR frequency parameter found; ' +
-                                 'valid names are %s' % F0names)
+                raise ValueError(
+                    "no PSR frequency parameter found; "
+                    + "valid names are %s" % F0names
+                )
             if nF0 > 1:
-                raise ValueError('more than one PSR frequency parameter found; ' +
-                                 'should be only one from %s' % F0names)
+                raise ValueError(
+                    "more than one PSR frequency parameter found; "
+                    + "should be only one from %s" % F0names
+                )
             return F0 * u.Hz
         return self.model.d_phase_d_toa(self.toas)
 
@@ -134,29 +145,33 @@ class Residuals(object):
         if self.model.has_correlated_errors:
             # Use GLS but don't actually fit
             from .fitter import GlsFitter
-            f = GlsFitter(self.toas, self.model,
-                          residuals=self)
+
+            f = GlsFitter(self.toas, self.model, residuals=self)
             try:
                 return f.fit_toas(maxiter=0, full_cov=full_cov)
             except sl.LinAlgError as e:
-                log.warning("Degenerate conditions encountered when "
-                            "computing chi-squared: %s" % (e,))
+                log.warning(
+                    "Degenerate conditions encountered when "
+                    "computing chi-squared: %s" % (e,)
+                )
                 return np.inf
         else:
             # Residual units are in seconds. Error units are in microseconds.
-            if (self.toas.get_errors()==0.0).any():
+            if (self.toas.get_errors() == 0.0).any():
                 return np.inf
             else:
                 # The self.time_resids is in the unit of "s", the error "us".
                 # This is more correct way, but it is the slowest.
-                #return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
+                # return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
 
                 # This method is faster then the method above but not the most correct way
-                #return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
+                # return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
 
                 # This the fastest way, but highly depend on the assumption of time_resids and
                 # error units.
-                return ((self.time_resids / self.toas.get_errors().to(u.s))**2.0).sum()
+                return (
+                    (self.time_resids / self.toas.get_errors().to(u.s)) ** 2.0
+                ).sum()
 
     def get_dof(self):
         """Return number of degrees of freedom for the model."""
@@ -176,11 +191,11 @@ class Residuals(object):
             self.phase_resids = None
             self.time_resids = None
         if self.toas is None:
-            raise ValueError('No TOAs provided for residuals update')
+            raise ValueError("No TOAs provided for residuals update")
         if self.model is None:
-            raise ValueError('No model provided for residuals update')
+            raise ValueError("No model provided for residuals update")
 
         self.phase_resids = self.calc_phase_resids(weighted_mean=weighted_mean)
         self.time_resids = self.calc_time_resids(weighted_mean=weighted_mean)
-        self._chi2 = None # trigger chi2 recalculation when needed
+        self._chi2 = None  # trigger chi2 recalculation when needed
         self.dof = self.get_dof()

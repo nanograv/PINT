@@ -1,9 +1,7 @@
 """Test model building and structure for simple models."""
 
 from glob import glob
-from os.path import join, basename
-import six
-from tempfile import NamedTemporaryFile
+from os.path import basename, join
 
 import pytest
 
@@ -13,9 +11,11 @@ from pint.models.model_builder import UnknownBinaryModel, get_model, get_model_n
 from pint.models.timing_model import MissingParameter, TimingModel
 from pinttestdata import datadir
 
+
 @pytest.fixture
 def tmp_dir(tmpdir):
     yield str(tmpdir)
+
 
 def test_forgot_name():
     """Check argument validation in case 'name' is forgotten."""
@@ -83,26 +83,30 @@ def test_valid_model(tmp_dir, func, name, expectation):
     with expectation:
         func(f.name)
 
+
 def test_compare_get_model_new_and_old():
     m_new = get_model_new(parfile)
     m_old = get_model(parfile)
 
-    assert set(m_new.get_params_mapping().keys()) \
-            == set(m_old.get_params_mapping().keys())
-    assert set(m_new.components.keys()) == \
-            set(m_old.components.keys())
+    assert set(m_new.get_params_mapping().keys()) == set(
+        m_old.get_params_mapping().keys()
+    )
+    assert set(m_new.components.keys()) == set(m_old.components.keys())
+
 
 @pytest.mark.xfail(
-    reason="This parfile includes both ecliptic and equatorial coordinates")
+    reason="This parfile includes both ecliptic and equatorial coordinates"
+)
 @pytest.mark.parametrize("gm", [get_model, get_model_new])
 def test_ecliptic(gm):
     parfile = join(datadir, "J1744-1134.basic.ecliptic.par")
     m = gm(parfile)
     assert "AstrometryEcliptic" in m.components
 
-bad_trouble = [
-    "J1923+2515_NANOGrav_9yv1.gls.par",
-]
+
+bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par"]
+
+
 @pytest.mark.parametrize("parfile", glob(join(datadir, "*.par")))
 def test_compare_get_model_new_and_old_all_parfiles(parfile):
     if basename(parfile) in bad_trouble:
@@ -113,12 +117,13 @@ def test_compare_get_model_new_and_old_all_parfiles(parfile):
         pytest.skip("Existing code raised an exception {}".format(e))
     m_new = get_model_new(parfile)
 
-    assert set(m_new.components.keys()) == \
-            set(m_old.components.keys())
-    assert set(m_new.get_params_mapping().keys()) \
-            == set(m_old.get_params_mapping().keys())
+    assert set(m_new.components.keys()) == set(m_old.components.keys())
+    assert set(m_new.get_params_mapping().keys()) == set(
+        m_old.get_params_mapping().keys()
+    )
 
-#@pytest.mark.xfail(reason="inexact conversions")
+
+# @pytest.mark.xfail(reason="inexact conversions")
 @pytest.mark.parametrize("parfile", glob(join(datadir, "*.par")))
 def test_get_model_roundtrip(tmp_dir, parfile):
     if basename(parfile) in bad_trouble:
@@ -129,13 +134,13 @@ def test_get_model_roundtrip(tmp_dir, parfile):
         pytest.skip("Existing code raised an exception {}".format(e))
 
     fn = join(tmp_dir, "file.par")
-    with open(fn,"w") as f:
+    with open(fn, "w") as f:
         f.write(m_old.as_parfile())
     m_roundtrip = get_model(fn)
-    assert set(m_roundtrip.get_params_mapping().keys()) \
-            == set(m_old.get_params_mapping().keys())
-    assert set(m_roundtrip.components.keys()) == \
-            set(m_old.components.keys())
+    assert set(m_roundtrip.get_params_mapping().keys()) == set(
+        m_old.get_params_mapping().keys()
+    )
+    assert set(m_roundtrip.components.keys()) == set(m_old.components.keys())
 
-    #for p in m_old.get_params_mapping():
+    # for p in m_old.get_params_mapping():
     #    assert getattr(m_old, p).quantity == getattr(m_roundtrip, p).quantity

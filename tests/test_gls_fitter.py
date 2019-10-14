@@ -1,29 +1,31 @@
 #! /usr/bin/env python
-import time, sys, os, unittest
-import pint.models.model_builder as mb
-from pint.phase import Phase
-from pint import toa
-from pint.fitter import WlsFitter, GlsFitter
-import numpy as np
-import astropy.units as u
 import json
+import os
+import unittest
 
-from pinttestdata import testdir, datadir
+import astropy.units as u
+import numpy as np
+
+import pint.models.model_builder as mb
+from pint import toa
+from pint.fitter import GlsFitter
+from pinttestdata import datadir
 
 
 class TestGls(unittest.TestCase):
     """Compare delays from the dd model with tempo and PINT"""
+
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         os.chdir(datadir)
-        self.par = 'B1855+09_NANOGrav_9yv1.gls.par'
-        self.tim = 'B1855+09_NANOGrav_9yv1.tim'
-        self.m = mb.get_model(self.par)
-        self.t = toa.get_TOAs(self.tim, ephem='DE436')
-        self.f = GlsFitter(self.t, self.m)
+        cls.par = "B1855+09_NANOGrav_9yv1.gls.par"
+        cls.tim = "B1855+09_NANOGrav_9yv1.tim"
+        cls.m = mb.get_model(cls.par)
+        cls.t = toa.get_TOAs(cls.tim, ephem="DE436")
+        cls.f = GlsFitter(cls.t, cls.m)
         # get tempo2 parameter dict
-        with open('B1855+09_tempo2_gls_pars.json', 'r') as fp:
-            self.t2d = json.load(fp)
+        with open("B1855+09_tempo2_gls_pars.json", "r") as fp:
+            cls.t2d = json.load(fp)
 
     def fit(self, full_cov):
         self.f.reset_model()
@@ -34,18 +36,24 @@ class TestGls(unittest.TestCase):
         for full_cov in [True, False]:
             self.fit(full_cov)
             for par, val in sorted(self.t2d.items()):
-                if par not in ['F0']:
-                    v = (getattr(self.f.model, par).value if par not in
-                         ['ELONG', 'ELAT'] else
-                         getattr(self.f.model, par).quantity.to(u.rad).value)
+                if par not in ["F0"]:
+                    v = (
+                        getattr(self.f.model, par).value
+                        if par not in ["ELONG", "ELAT"]
+                        else getattr(self.f.model, par).quantity.to(u.rad).value
+                    )
 
-                    e = (getattr(self.f.model, par).uncertainty.value if par not
-                         in ['ELONG', 'ELAT'] else
-                         getattr(self.f.model, par).uncertainty.to(u.rad).value)
-                    msg = 'Parameter {} does not match T2 for full_cov={}'.format(par, full_cov)
-                    assert np.abs(v-val[0]) <= val[1], msg
-                    assert np.abs(v-val[0]) <= e, msg
-                    assert np.abs(1 - val[1]/e) < 0.1, msg
+                    e = (
+                        getattr(self.f.model, par).uncertainty.value
+                        if par not in ["ELONG", "ELAT"]
+                        else getattr(self.f.model, par).uncertainty.to(u.rad).value
+                    )
+                    msg = "Parameter {} does not match T2 for full_cov={}".format(
+                        par, full_cov
+                    )
+                    assert np.abs(v - val[0]) <= val[1], msg
+                    assert np.abs(v - val[0]) <= e, msg
+                    assert np.abs(1 - val[1] / e) < 0.1, msg
 
     def test_gls_compare(self):
         self.fit(full_cov=False)
