@@ -193,8 +193,15 @@ deviations of this observatory clock and record them in a file. PINT
 also needs up-to-date versions of these observatory clock correction files
 to produce accurate results.
 
-Even more detail about how PINT handles time scales is available on the
-github wiki_.
+Even more detail about how PINT handles time scales is available on the github
+wiki_.
+
+Specifically, there is a complexity in using MJDs to specify times in the UTC
+time scale, which is the customary way observatories work. PINT attempts to
+handle this correctly by default, but if you see timing anomalies on days with
+leap seconds, this may be the problem. Alternatively, you may not be using
+up-to-date leap-second data files, or the process that generated the MJDs may
+not (this is a particular concern when working with X-ray or gamma-ray data).
 
 .. _International_Earth_Rotation_Service: https://www.iers.org/IERS/EN/Home/home_node.html
 .. _TAI: https://www.bipm.org/en/bipm-services/timescales/tai.html

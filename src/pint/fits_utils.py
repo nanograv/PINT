@@ -4,11 +4,8 @@ import astropy.io.fits as pyfits
 import numpy as np
 from astropy import log
 import six
-try:
-    from astropy.erfa import DAYSEC as SECS_PER_DAY
-except ImportError:
-    from astropy._erfa import DAYSEC as SECS_PER_DAY
-from .utils import fortran_float
+from astropy._erfa import DAYSEC as SECS_PER_DAY
+from pint.pulsar_mjd import fortran_float
 
 def read_fits_event_mjds_tuples(event_hdu,timecolumn='TIME'):
     """Read a set of MJDs from a FITS HDU, with proper converstion of times to MJD

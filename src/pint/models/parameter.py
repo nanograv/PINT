@@ -17,22 +17,30 @@ parameters" and "mask parameters" depending on how they occur in the
 ``.par`` and ``.tim`` files.
 
 """
-from __future__ import absolute_import, print_function, division
-from ..utils import fortran_float, time_from_mjd_string, time_to_mjd_string,\
-    time_to_longdouble, time_from_longdouble, str2longdouble, \
-    longdouble2str, data2longdouble, split_prefixed_name
-import numpy as np
-import astropy.time as time
-from astropy import log
-from pint import pint_units
-from pint import pulsar_mjd
-import astropy.units as u
-import astropy.constants as const
-from astropy.coordinates.angles import Angle
-import re
+from __future__ import absolute_import, division, print_function
+
 import numbers
-from . import priors
-from ..toa_select import TOASelect
+
+import astropy.time as time
+import astropy.units as u
+import numpy as np
+import six
+from astropy import log
+from astropy.coordinates.angles import Angle
+
+from pint import pint_units
+from pint.models import priors
+from pint.toa_select import TOASelect
+from pint.pulsar_mjd import (
+    Time,
+    data2longdouble,
+    fortran_float,
+    str2longdouble,
+    time_from_longdouble,
+    time_to_longdouble,
+    time_to_mjd_string,
+)
+from pint.utils import split_prefixed_name
 
 
 class Parameter(object):
@@ -498,7 +506,7 @@ class floatParameter(Parameter):
                 raise ValueError("The scale threshold should be given if unit_scale"
                                  " is set to be True.")
         else:
-            if old_unit_scale: # This makes sure the unit_scale if from True to false
+            if old_unit_scale:  # This makes sure the unit_scale if from True to false
                 self.units = self._original_units
 
     def set_quantity_float(self, val):
@@ -529,7 +537,7 @@ class floatParameter(Parameter):
             num_value = setfunc_no_unit(val)
             if self.unit_scale:
                 if np.abs(num_value) > np.abs(self.scale_threshold):
-                    log.info("Parameter %s's unit will be scaled to %s %s" \
+                    log.info("Parameter %s's unit will be scaled to %s %s"
                              % (self.name, str(self.scale_factor), str(self._original_units)))
                     self.units = self.scale_factor * self._original_units
                 else:
@@ -540,15 +548,11 @@ class floatParameter(Parameter):
 
     def print_quantity_float(self, quan):
         """Quantity as a string (for floating-point values)."""
-        if not self._long_double:
-            result = str(quan.to(self.units).value)
-        else:
-            result = longdouble2str(quan.to(self.units).value)
-            #try:
-            #    result = longdouble2str(quan.to(self.units).value)
-            #except AttributeError:
-            #    result = str(quan)
-        return result
+        v = quan.to(self.units).value
+        if self._long_double:
+            if not isinstance(v, np.longdouble):
+                raise ValueError("Parameter is supposed to contain long double values but contains a float")
+        return str(v)
 
     def get_value_float(self, quan):
         if quan is None:
@@ -749,23 +753,14 @@ class MJDParameter(Parameter):
            Accepted format:
            Astropy time object
            mjd float
-           mjd string
+           mjd string (in pulsar_mjd format)
         """
         if isinstance(val, numbers.Number):
             val = np.longdouble(val)
             result = time_from_longdouble(val, self.time_scale)
-        elif isinstance(val, str):
-            try:
-                result = time_from_mjd_string(val, self.time_scale)
-            except Exception as e:
-                # Would like to chain exceptions so we can keep the original
-                # and add the new message; raise ... from e will do that but
-                # isn't even valid syntax on Python 2
-                msg = ('String "' + val + '" can not be converted to '
-                                 'a time object via time_from_mjd_string.')
-                raise ValueError(msg)
-
-        elif isinstance(val,time.Time):
+        elif isinstance(val, six.string_types):
+            result = Time(val, scale=self.time_scale, format="pulsar_mjd_string")
+        elif isinstance(val, time.Time):
             result = val
         else:
             raise ValueError('MJD parameter can not accept '
@@ -784,7 +779,7 @@ class MJDParameter(Parameter):
         return result
 
     def print_uncertainty(self, uncertainty):
-        return longdouble2str(self.uncertainty_value)
+        return str(self.uncertainty_value)
 
 
 class AngleParameter(Parameter):
@@ -1580,10 +1575,13 @@ class pairParameter(floatParameter):
                 raise ValueError("Don't know how to print this as a pair: %s"
                                  % (quan,))
 
-        if not self._long_double:
-            quan0 = str(quan[0].to(self.units).value)
-            quan1 = str(quan[1].to(self.units).value)
-        else:
-            quan0 = longdouble2str(quan[0].to(self.units).value)
-            quan1 = longdouble2str(quan[1].to(self.units).value)
+        v0 = quan[0].to(self.units).value
+        v1 = quan[1].to(self.units).value
+        if self._long_double:
+            if not isinstance(v0, np.longdouble):
+                raise TypeError("Parameter {} is supposed to contain long doubles but contains a float".format(self))
+            if not isinstance(v1, np.longdouble):
+                raise TypeError("Parameter {} is supposed to contain long doubles but contains a float".format(self))
+        quan0 = str(v0)
+        quan1 = str(v1)
         return quan0 + ' ' + quan1

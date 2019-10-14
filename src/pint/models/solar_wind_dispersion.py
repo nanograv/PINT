@@ -9,9 +9,9 @@ import numpy as np
 
 import pint.utils as ut
 
-from ..toa_select import TOASelect
-from . import parameter as p
-from .dispersion_model import Dispersion, DMconst
+from pint.toa_select import TOASelect
+from pint.models.parameter import floatParameter
+from pint.models.dispersion_model import Dispersion, DMconst
 
 
 class SolarWindDispersion(Dispersion):
@@ -27,10 +27,10 @@ class SolarWindDispersion(Dispersion):
 
     def __init__(self):
         super(SolarWindDispersion, self).__init__()
-        self.add_param(p.floatParameter(name="NE_SW",
+        self.add_param(floatParameter(name="NE_SW",
                        units="cm^-3", value=0.0, aliases=['NE1AU', 'SOLARN0'],
                        description="Solar Wind Parameter"))
-        self.add_param(p.floatParameter(name="SWM",
+        self.add_param(floatParameter(name="SWM",
                        value=0.0, units="",
                        description="Solar Wind Model"))
         self.delay_funcs_component += [self.solar_wind_delay,]

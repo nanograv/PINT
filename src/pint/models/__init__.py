@@ -1,25 +1,24 @@
-# __init__.py for PINT models/ directory
 """Implementations of pulsar timing models."""
 # Import the main timing model classes
-from .timing_model import TimingModel
+from pint.models.timing_model import TimingModel
 
 # Import all standard model components here
-from .astrometry import AstrometryEquatorial, AstrometryEcliptic
-from .binary_bt import BinaryBT
-from .binary_dd import BinaryDD
-from .binary_ell1 import BinaryELL1, BinaryELL1H
-from .binary_ddk import BinaryDDK
-from .dispersion_model import DispersionDM, DispersionDMX
-from .solar_wind_dispersion import SolarWindDispersion
-from .spindown import Spindown
-from .frequency_dependent import FD
-from .absolute_phase import AbsPhase
-from .glitch import Glitch
-from .jump import DelayJump, PhaseJump
-from .solar_system_shapiro import SolarSystemShapiro
-from .noise_model import ScaleToaError, EcorrNoise, PLRedNoise
-from .model_builder import get_model
-from .wave import Wave
+from pint.models.astrometry import AstrometryEquatorial, AstrometryEcliptic
+from pint.models.binary_bt import BinaryBT
+from pint.models.binary_dd import BinaryDD
+from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H
+from pint.models.binary_ddk import BinaryDDK
+from pint.models.dispersion_model import DispersionDM, DispersionDMX
+from pint.models.solar_wind_dispersion import SolarWindDispersion
+from pint.models.spindown import Spindown
+from pint.models.frequency_dependent import FD
+from pint.models.absolute_phase import AbsPhase
+from pint.models.glitch import Glitch
+from pint.models.jump import DelayJump, PhaseJump
+from pint.models.solar_system_shapiro import SolarSystemShapiro
+from pint.models.noise_model import ScaleToaError, EcorrNoise, PLRedNoise
+from pint.models.model_builder import get_model
+from pint.models.wave import Wave
 
 # Define a standard basic model
 StandardTimingModel = TimingModel("StandardTimingModel",

@@ -1,22 +1,17 @@
 """Polynomial pulsar spindown."""
 # spindown.py
 # Defines Spindown timing model class
-from __future__ import absolute_import, print_function, division
-import numpy
-import astropy.units as u
-from astropy.time import Time
-try:
-    from astropy.erfa import DAYSEC as SECS_PER_DAY
-except ImportError:
-    from astropy._erfa import DAYSEC as SECS_PER_DAY
+from __future__ import absolute_import, division, print_function
 
-from . import parameter as p
-from .timing_model import PhaseComponent, MissingParameter
-from ..phase import *
-from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble,\
-    taylor_horner, time_from_longdouble, split_prefixed_name, taylor_horner_deriv
-from pint import dimensionless_cycles
+import astropy.units as u
+import numpy
+
 import pint.toa as toa
+from pint import dimensionless_cycles
+from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
+from pint.models.timing_model import MissingParameter, PhaseComponent
+from pint.pulsar_mjd import Time
+from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
 
 class Spindown(PhaseComponent):
@@ -25,14 +20,14 @@ class Spindown(PhaseComponent):
     category = 'spindown'
     def __init__(self):
         super(Spindown, self).__init__()
-        self.add_param(p.floatParameter(name="F0", value=0.0, units="Hz",
+        self.add_param(floatParameter(name="F0", value=0.0, units="Hz",
                        description="Spin-frequency", long_double=True))
-        self.add_param(p.prefixParameter(name="F1", value=0.0, units='Hz/s^1',
+        self.add_param(prefixParameter(name="F1", value=0.0, units='Hz/s^1',
                        description="Spindown-rate",
                        unit_template=self.F_unit,
                        description_template=self.F_description,
                        type_match='float', long_double=True))
-        self.add_param(p.MJDParameter(name="PEPOCH",
+        self.add_param(MJDParameter(name="PEPOCH",
                        description="Reference epoch for spin-down",
                        time_scale='tdb'))
 
@@ -90,9 +85,9 @@ class Spindown(PhaseComponent):
         """
         tbl = toas.table
         if self.PEPOCH.value is None:
-            phsepoch_ld = time_to_longdouble(tbl['tdb'][0] - delay[0])
+            phsepoch_ld = (tbl['tdb'][0] - delay[0]).tdb.mjd_long
         else:
-            phsepoch_ld = time_to_longdouble(self.PEPOCH.quantity)
+            phsepoch_ld = (self.PEPOCH.quantity.tdb.mjd_long)
         dt = (tbl['tdbld'] - phsepoch_ld) * u.day - delay
         return dt
 
@@ -140,10 +135,10 @@ class Spindown(PhaseComponent):
                 raise ValueError("`PEPOCH` is not in the model, thus, 'toa' and"
                                  " 'delay' shoule be givne.")
             tbl = toas.table
-            phsepoch_ld = time_to_longdouble(tbl['tdb'][0] - delay[0])
+            phsepoch_ld = (tbl['tdb'][0] - delay[0]).tdb.mjd_long
         else:
-            phsepoch_ld = time_to_longdouble(self.PEPOCH.quantity)
-        dt = ((time_to_longdouble(new_epoch) - phsepoch_ld) * u.day)
+            phsepoch_ld = (self.PEPOCH.quantity.tdb.mjd_long)
+        dt = ((new_epoch.tdb.mjd_long - phsepoch_ld) * u.day)
         fterms = [0.0 * u.Unit("")] + self.get_spin_terms()
         # rescale the fterms
         for n in range(len(fterms) - 1):

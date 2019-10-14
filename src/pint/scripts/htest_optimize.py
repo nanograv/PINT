@@ -10,12 +10,9 @@ from pint.fitter import Fitter
 import pint.fermi_toas as fermi
 from pint.eventstats import hmw, hm, sf_hm
 import matplotlib.pyplot as plt
-import astropy.table
 import pint.plot_utils
-import astropy.units as u
-import psr_utils as pu
 import scipy.optimize as op
-import sys, os, copy, fftfit
+import sys, os, copy
 from astropy.coordinates import SkyCoord
 
 
@@ -155,7 +152,7 @@ class emcee_fitter(Fitter):
         """
         mjds = self.toas.table['tdbld'].astype(np.float64)
         phss = self.get_event_phases()
-        plot_utils.phaseogram(mjds, phss, weights=self.weights, bins=bins,
+        pint.plot_utils.phaseogram(mjds, phss, weights=self.weights, bins=bins,
             rotate=rotate, size=size, alpha=alpha, file=file)
 
     def prof_vs_weights(self, nbins=50, use_weights=False):

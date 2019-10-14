@@ -1,12 +1,14 @@
 """A frequency evolution of pulsar profiles model"""
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function
+
 from warnings import warn
-from . import parameter as p
-from .timing_model import DelayComponent, MissingParameter
+
 import astropy.units as u
 import numpy as np
-import pint.utils as ut
-import astropy.time as time
+
+from pint.models.parameter import prefixParameter
+from pint.models.timing_model import DelayComponent, MissingParameter
+
 
 class FD(DelayComponent):
     """A timing model for frequency evolution of pulsar profiles."""
@@ -15,7 +17,7 @@ class FD(DelayComponent):
 
     def __init__(self):
         super(FD, self).__init__()
-        self.add_param(p.prefixParameter(name='FD1', units="second", value=0.0,
+        self.add_param(prefixParameter(name='FD1', units="second", value=0.0,
                        descriptionTplt=lambda x: ("%d term of frequency"
                                                   " dependent  coefficients" % x),
                        unitTplt=lambda x: 'second',

@@ -1,15 +1,15 @@
 """A simple model of a base dispersion delay and DMX dispersion."""
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function
+
 from warnings import warn
-from . import parameter as p
-from .timing_model import DelayComponent, MissingParameter
+
 import astropy.units as u
-import astropy.constants as const
 import numpy as np
-import pint.utils as ut
-import astropy.time as time
-from ..toa_select import TOASelect
-from ..utils import taylor_horner, split_prefixed_name
+
+from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
+from pint.models.timing_model import DelayComponent, MissingParameter
+from pint.toa_select import TOASelect
+from pint.utils import split_prefixed_name, taylor_horner
 
 # The units on this are not completely correct
 # as we don't really use the "pc cm^3" units on DM.
@@ -62,14 +62,14 @@ class DispersionDM(Dispersion):
     category = 'dispersion_constant'
     def __init__(self):
         super(DispersionDM, self).__init__()
-        self.add_param(p.floatParameter(name="DM", units="pc cm^-3", value=0.0,
+        self.add_param(floatParameter(name="DM", units="pc cm^-3", value=0.0,
                        description="Dispersion measure", long_double=True))
-        self.add_param(p.prefixParameter(name="DM1", value=0.0, units='pc cm^-3/yr^1',
+        self.add_param(prefixParameter(name="DM1", value=0.0, units='pc cm^-3/yr^1',
                        description="First order time derivative of the dispersion measure",
                        unit_template=self.DM_dervative_unit,
                        description_template=self.DM_dervative_description,
                        type_match='float', long_double=True))
-        self.add_param(p.MJDParameter(name="DMEPOCH",
+        self.add_param(MJDParameter(name="DMEPOCH",
                        description="Epoch of DM measurement"))
 
         self.dm_value_funcs += [self.base_dm,]
@@ -180,22 +180,22 @@ class DispersionDMX(Dispersion):
     def __init__(self):
         super(DispersionDMX, self).__init__()
         # DMX is for info output right now
-        self.add_param(p.floatParameter(name="DMX",
+        self.add_param(floatParameter(name="DMX",
                        units="pc cm^-3", value=0.0,
                        description="Dispersion measure"))
-        self.add_param(p.prefixParameter(name='DMX_0001',
+        self.add_param(prefixParameter(name='DMX_0001',
                        units="pc cm^-3", value=0.0,
                        unit_template=lambda x: "pc cm^-3",
                        description='Dispersion measure variation',
                        description_template=lambda x: "Dispersion measure",
                        paramter_type='float'))
-        self.add_param(p.prefixParameter(name='DMXR1_0001',
+        self.add_param(prefixParameter(name='DMXR1_0001',
                        units="MJD",
                        unit_template=lambda x: "MJD",
                        description='Beginning of DMX interval',
                        description_template=lambda x: 'Beginning of DMX interval',
                        parameter_type='MJD', time_scale='utc'))
-        self.add_param(p.prefixParameter(name='DMXR2_0001', units="MJD",
+        self.add_param(prefixParameter(name='DMXR2_0001', units="MJD",
                        unit_template=lambda x: "MJD",
                        description='End of DMX interval',
                        description_template=lambda x: 'End of DMX interval',

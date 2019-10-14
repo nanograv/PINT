@@ -1,13 +1,13 @@
-from pint import toa, utils, erfautils
+from pint import toa, erfautils
 from pint.observatory import Observatory
 import math, shlex, subprocess, numpy
 import astropy.constants as const
 import astropy.units as u
 from pint.utils import PosVel
+from pint.pulsar_mjd import Time
 from astropy import log
-import os
 
-from pinttestdata import testdir, datadir
+from pinttestdata import datadir
 
 def test_times_against_tempo2():
     log.setLevel('ERROR')
@@ -47,14 +47,14 @@ def test_times_against_tempo2():
               tp0, tp1, tp2, tv0, tv1, tv2, Ttt = \
               (float(x) for x in line.split())
 
-        t2_epv = utils.PosVel(numpy.asarray([ep0, ep1, ep2]) * ls,
+        t2_epv = PosVel(numpy.asarray([ep0, ep1, ep2]) * ls,
                               numpy.asarray([ev0, ev1, ev2]) * ls/u.s)
-        t2_opv = utils.PosVel(numpy.asarray([tp0, tp1, tp2]) * ls,
+        t2_opv = PosVel(numpy.asarray([tp0, tp1, tp2]) * ls,
                               numpy.asarray([tv0, tv1, tv2]) * ls/u.s)
 
         t2_ssb2obs = t2_epv + t2_opv
-        # print utils.time_toq_mjd_string(TOA.mjd.tt), line.split()[-1]
-        tempo_tt = utils.time_from_mjd_string(line.split()[-1], scale='tt')
+        # print time_to_mjd_string(TOA.mjd.tt), line.split()[-1]
+        tempo_tt = Time(line.split()[-1], format='mjd_string', scale='tt')
         # Ensure that the clock corrections are accurate to better than 0.1 ns
         assert(math.fabs((oclk*u.s + gps_utc*u.s - TOA['flags']["clkcorr"]).to(u.ns).value) < 0.1)
 
@@ -64,7 +64,7 @@ def test_times_against_tempo2():
         pint_opv = erfautils.gcrs_posvel_from_itrf(
                 Observatory.get(TOA['obs']).earth_location_itrf(),
                 TOA, obsname=TOA['obs'])
-        pint_opv = utils.PosVel(pint_opv.pos, pint_opv.vel)
+        pint_opv = PosVel(pint_opv.pos, pint_opv.vel)
         #print " obs  T2:", t2_opv.pos.to(u.m).value, t2_opv.vel.to(u.m/u.s)
         #print " obs PINT:", pint_opv.pos.to(u.m), pint_opv.vel.to(u.m/u.s)
         dopv = pint_opv - t2_opv

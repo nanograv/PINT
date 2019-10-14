@@ -1,21 +1,15 @@
 """Pulsar timing glitches."""
 # glitch.py
 # Defines glitch timing model class
-from __future__ import absolute_import, print_function, division
-import numpy as np
-import astropy.units as u
-try:
-    from astropy.erfa import DAYSEC as SECS_PER_DAY
-except ImportError:
-    from astropy._erfa import DAYSEC as SECS_PER_DAY
-from .parameter import Parameter, MJDParameter, prefixParameter
-from .timing_model import PhaseComponent, MissingParameter
-from ..phase import *
-from ..utils import time_from_mjd_string, str2longdouble, \
-    taylor_horner, split_prefixed_name
+from __future__ import absolute_import, division, print_function
 
-# The maximum number of glitches we allow
-maxglitches = 10  # Have not use this one in the new version.
+import astropy.units as u
+import numpy as np
+
+from pint import dimensionless_cycles
+from pint.models.parameter import prefixParameter
+from pint.models.timing_model import MissingParameter, PhaseComponent
+from pint.utils import split_prefixed_name
 
 
 class Glitch(PhaseComponent):

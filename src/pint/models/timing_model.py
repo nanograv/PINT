@@ -5,10 +5,9 @@ Defines the basic timing model interface classes.
 from __future__ import absolute_import, division, print_function
 
 import abc
-from collections import defaultdict
 import copy
-import functools
 import inspect
+from collections import defaultdict
 
 import astropy.time as time
 import astropy.units as u
@@ -16,13 +15,10 @@ import numpy as np
 import six
 from astropy import log
 
-import pint.utils as utils
-from pint.utils import interesting_lines, lines_of
 from pint import dimensionless_cycles
-from . import parameter as p
-
-from ..phase import Phase
-from .parameter import strParameter
+from pint.models.parameter import strParameter
+from pint.phase import Phase
+from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
 # Parameters or lines in parfiles we don't understand but shouldn't
 # complain about. These are still passed to components so that they
@@ -537,7 +533,7 @@ class TimingModel(object):
                 #if no absolute phase (TZRMJD), add the component to the model and calculate it
                 from pint.models import absolute_phase
                 self.add_component(absolute_phase.AbsPhase())
-                self.make_TZR_toa(toas)#TODO:needs timfile to get all toas, but model doesn't have access to timfile. different place for this? 
+                self.make_TZR_toa(toas)#TODO:needs timfile to get all toas, but model doesn't have access to timfile. different place for this?
             tz_toa = self.get_TZR_toa(toas)
             tz_delay = self.delay(tz_toa)
             tz_phase = Phase(np.zeros(len(toas.table)) , np.zeros(len(toas.table)))
@@ -608,7 +604,7 @@ class TimingModel(object):
                 break
         else:
             log.info('No jump flags to process')
-            return None        
+            return None
         jump_nums = [flag_dict['jump'] if 'jump' in flag_dict.keys() else np.nan for flag_dict in toas.table['flags']]
         if 'PhaseJump' not in self.components:
             log.info("PhaseJump component added")
@@ -907,11 +903,11 @@ class TimingModel(object):
                 continue
 
             try:
-                prefix, f, v = utils.split_prefixed_name(name)
+                prefix, f, v = split_prefixed_name(name)
                 if prefix in ignore_prefix:
                     log.debug("Ignoring prefix parfile line '%s'" % (li,))
                     continue
-            except utils.PrefixError:
+            except PrefixError:
                 pass
 
             stray_lines.append(li)

@@ -5,34 +5,25 @@ import numpy
 import astropy.coordinates as coords
 import astropy.units as u
 import astropy.constants as const
-from astropy.coordinates.angles import Angle
-from astropy import log
-from . import parameter as p
-from .timing_model import DelayComponent, MissingParameter
-from ..utils import time_from_mjd_string, time_to_longdouble, str2longdouble
+from pint.models.parameter import MJDParameter, floatParameter, AngleParameter, strParameter
+from pint.models.timing_model import DelayComponent, MissingParameter
 from pint.pulsar_ecliptic import PulsarEcliptic, OBL
 from pint import ls
-from pint import utils
-import time
 import sys
 
 astropy_version = sys.modules['astropy'].__version__
 mas_yr = (u.mas / u.yr)
 
-try:
-    from astropy.erfa import DAYSEC as SECS_PER_DAY
-except ImportError:
-    from astropy._erfa import DAYSEC as SECS_PER_DAY
 
 class Astrometry(DelayComponent):
     register = False
     category = "astrometry"
     def __init__(self):
         super(Astrometry, self).__init__()
-        self.add_param(p.MJDParameter(name="POSEPOCH",
+        self.add_param(MJDParameter(name="POSEPOCH",
             description="Reference epoch for position"))
 
-        self.add_param(p.floatParameter(name="PX",
+        self.add_param(floatParameter(name="PX",
             units="mas", value=0.0,
             description="Parallax"))
 
@@ -153,21 +144,21 @@ class AstrometryEquatorial(Astrometry):
     register = True
     def __init__(self):
         super(AstrometryEquatorial, self).__init__()
-        self.add_param(p.AngleParameter(name="RAJ",
+        self.add_param(AngleParameter(name="RAJ",
             units="H:M:S",
             description="Right ascension (J2000)",
             aliases=["RA"]))
 
-        self.add_param(p.AngleParameter(name="DECJ",
+        self.add_param(AngleParameter(name="DECJ",
             units="D:M:S",
             description="Declination (J2000)",
             aliases=["DEC"]))
 
-        self.add_param(p.floatParameter(name="PMRA",
+        self.add_param(floatParameter(name="PMRA",
             units="mas/year", value=0.0,
             description="Proper motion in RA"))
 
-        self.add_param(p.floatParameter(name="PMDEC",
+        self.add_param(floatParameter(name="PMDEC",
             units="mas/year", value=0.0,
             description="Proper motion in DEC"))
         self.set_special_params(['RAJ', 'DECJ', 'PMRA', 'PMDEC'])
@@ -279,7 +270,7 @@ class AstrometryEquatorial(Astrometry):
 
         psr_ra = self.RAJ.quantity
 
-        te = rd['epoch'] - time_to_longdouble(self.POSEPOCH.quantity) * u.day
+        te = rd['epoch'] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
         geom = numpy.cos(rd['earth_dec'])*numpy.sin(psr_ra-rd['earth_ra'])
 
         deriv = rd['ssb_obs_r'] * geom * te / (const.c * u.radian)
@@ -299,7 +290,7 @@ class AstrometryEquatorial(Astrometry):
         psr_ra = self.RAJ.quantity
         psr_dec = self.DECJ.quantity
 
-        te = rd['epoch'] - time_to_longdouble(self.POSEPOCH.quantity) * u.day
+        te = rd['epoch'] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
         geom = numpy.cos(rd['earth_dec'])*numpy.sin(psr_dec)*\
                 numpy.cos(psr_ra-rd['earth_ra']) - numpy.cos(psr_dec)*\
                 numpy.sin(rd['earth_dec'])
@@ -315,27 +306,27 @@ class AstrometryEcliptic(Astrometry):
     register = True
     def __init__(self):
         super(AstrometryEcliptic, self).__init__()
-        self.add_param(p.AngleParameter(name="ELONG",
+        self.add_param(AngleParameter(name="ELONG",
             units="deg",
             description="Ecliptic longitude",
             aliases=["LAMBDA"]))
 
-        self.add_param(p.AngleParameter(name="ELAT",
+        self.add_param(AngleParameter(name="ELAT",
             units="deg",
             description="Ecliptic latitude",
             aliases=["BETA"]))
 
-        self.add_param(p.floatParameter(name="PMELONG",
+        self.add_param(floatParameter(name="PMELONG",
             units="mas/year", value=0.0,
             description="Proper motion in ecliptic longitude",
             aliases=["PMLAMBDA"]))
 
-        self.add_param(p.floatParameter(name="PMELAT",
+        self.add_param(floatParameter(name="PMELAT",
             units="mas/year", value=0.0,
             description="Proper motion in ecliptic latitude",
             aliases=["PMBETA"]))
 
-        self.add_param(p.strParameter(name="ECL", value='IERS2003',
+        self.add_param(strParameter(name="ECL", value='IERS2003',
             description="Obliquity angle value secetion"))
 
         self.set_special_params(['ELONG', 'ELAT', 'PMELONG','PMELAT'])
@@ -491,7 +482,7 @@ class AstrometryEcliptic(Astrometry):
         psr_elong = self.ELONG.quantity
         psr_elat = self.ELAT.quantity
 
-        te = rd['epoch'] - time_to_longdouble(self.POSEPOCH.quantity) * u.day
+        te = rd['epoch'] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
         geom = numpy.cos(rd['earth_elat'])*numpy.sin(psr_elong-rd['earth_elong'])
 
         deriv = rd['ssb_obs_r'] * geom * te / (const.c * u.radian)
@@ -511,7 +502,7 @@ class AstrometryEcliptic(Astrometry):
         psr_elong = self.ELONG.quantity
         psr_elat = self.ELAT.quantity
 
-        te = rd['epoch'] - time_to_longdouble(self.POSEPOCH.quantity) * u.day
+        te = rd['epoch'] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
         geom = numpy.cos(rd['earth_elat'])*numpy.sin(psr_elat)*\
                 numpy.cos(psr_elong-rd['earth_elong']) - numpy.cos(psr_elat)*\
                 numpy.sin(rd['earth_elat'])

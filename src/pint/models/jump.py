@@ -1,12 +1,14 @@
 """Phase jumps. """
 # phase_jump.py
 # Defines PhaseJump timing model class
-from __future__ import absolute_import, print_function, division
-import numpy
+from __future__ import absolute_import, division, print_function
+
 import astropy.units as u
-from .timing_model import DelayComponent, PhaseComponent, MissingParameter
-from . import parameter as p
+import numpy
+
 from pint import dimensionless_cycles
+from pint.models.parameter import maskParameter
+from pint.models.timing_model import DelayComponent, MissingParameter, PhaseComponent
 
 
 class DelayJump(DelayComponent):
@@ -23,7 +25,7 @@ class DelayJump(DelayComponent):
     def __init__(self):
         super(DelayJump, self).__init__()
         # TODO: In the future we should have phase jump as well.
-        self.add_param(p.maskParameter(name = 'JUMP', units='second'))
+        self.add_param(maskParameter(name = 'JUMP', units='second'))
         self.delay_funcs_component += [self.jump_delay,]
 
     def setup(self):
@@ -72,7 +74,7 @@ class PhaseJump(PhaseComponent):
     category = 'phase_jump'
     def __init__(self):
         super(PhaseJump, self).__init__()
-        self.add_param(p.maskParameter(name = 'JUMP', units='second'))
+        self.add_param(maskParameter(name = 'JUMP', units='second'))
         self.phase_funcs_component += [self.jump_phase,]
 
     def setup(self):

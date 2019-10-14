@@ -3,13 +3,13 @@ from __future__ import absolute_import, print_function, division
 
 # Special "site" location for RXTE satellite
 
-from . import Observatory
-from .special_locations import SpecialLocation
+from pint.observatory import Observatory
+from pint.observatory.special_locations import SpecialLocation
 import astropy.units as u
 from astropy.coordinates import GCRS, ITRS, EarthLocation, CartesianRepresentation
-from ..utils import PosVel
-from ..fits_utils import read_fits_event_mjds
-from ..solar_system_ephemerides import objPosVel_wrt_SSB
+from pint.utils import PosVel
+from pint.fits_utils import read_fits_event_mjds
+from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 import numpy as np
 from astropy.time import Time
 from astropy.table import Table
@@ -17,7 +17,7 @@ import astropy.io.fits as pyfits
 import six
 from astropy import log
 from scipy.interpolate import interp1d
-from .nicer_obs import load_FPorbit
+from pint.observatory.nicer_obs import load_FPorbit
 
 class RXTEObs(SpecialLocation):
     """Observatory-derived class for the RXTE photon data.

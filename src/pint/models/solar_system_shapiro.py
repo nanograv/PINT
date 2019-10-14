@@ -1,15 +1,27 @@
 """Solar system Shapiro delay."""
 # solar_system_shapiro.py
 # Add in Shapiro delays due to solar system objects
-from __future__ import absolute_import, print_function, division
-import numpy
-import astropy.units as u
+from __future__ import absolute_import, division, print_function
+
 import astropy.constants as const
+import astropy.units as u
+import numpy
 from astropy import log
-from . import parameter as p
-from .timing_model import DelayComponent
-from .. import Tsun, Tmercury, Tvenus, Tearth, Tmars, \
-        Tjupiter, Tsaturn, Turanus, Tneptune
+
+from pint import (
+    Tearth,
+    Tjupiter,
+    Tmars,
+    Tmercury,
+    Tneptune,
+    Tsaturn,
+    Tsun,
+    Turanus,
+    Tvenus,
+)
+from pint.models.parameter import boolParameter
+from pint.models.timing_model import DelayComponent
+
 
 class SolarSystemShapiro(DelayComponent):
     """Shapiro delay due to light bending near Solar System objects."""
@@ -19,7 +31,7 @@ class SolarSystemShapiro(DelayComponent):
 
     def __init__(self):
         super(SolarSystemShapiro, self).__init__()
-        self.add_param(p.boolParameter(name="PLANET_SHAPIRO",
+        self.add_param(boolParameter(name="PLANET_SHAPIRO",
              value=False, description="Include planetary Shapiro delays (Y/N)"))
         self.delay_funcs_component += [self.solar_system_shapiro_delay,]
 

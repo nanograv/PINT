@@ -6,8 +6,8 @@ import astropy.units as u
 import numpy as np
 from astropy import log
 
-from . import parameter as p
-from .timing_model import Component
+from pint.models.parameter import maskParameter, floatParameter
+from pint.models.timing_model import Component
 
 
 class NoiseComponent(Component):
@@ -30,23 +30,23 @@ class ScaleToaError(NoiseComponent):
     category = 'scale_toa_error'
     def __init__(self,):
         super(ScaleToaError, self).__init__()
-        self.add_param(p.maskParameter(name ='EFAC', units="",
-                                       aliases=['T2EFAC', 'TNEF'],
-                                       description="A multiplication factor on" \
-                                                   " the measured TOA uncertainties,"))
+        self.add_param(maskParameter(name ='EFAC', units="",
+                                     aliases=['T2EFAC', 'TNEF'],
+                                     description="A multiplication factor on"
+                                                 " the measured TOA uncertainties,"))
 
-        self.add_param(p.maskParameter(name='EQUAD', units="us",\
-                                       aliases=['T2EQUAD'],
-                                       description="An error term added in "
+        self.add_param(maskParameter(name='EQUAD', units="us",
+                                     aliases=['T2EQUAD'],
+                                     description="An error term added in "
                                                   "quadrature to the scaled (by"
                                                   " EFAC) TOA uncertainty."))
 
-        self.add_param(p.maskParameter(name='TNEQ', \
-                                       units=u.LogUnit(physical_unit=u.second),\
-                                       description="An error term added in "
-                                                  "quadrature to the scaled (by"
-                                                  " EFAC) TOA uncertainty in "
-                                                  " the unit of log10(second)."))
+        self.add_param(maskParameter(name='TNEQ',
+                                     units=u.LogUnit(physical_unit=u.second),
+                                     description="An error term added in "
+                                                 "quadrature to the scaled (by"
+                                                 " EFAC) TOA uncertainty in "
+                                                 " the unit of log10(second)."))
         self.covariance_matrix_funcs += [self.sigma_scaled_cov_matrix, ]
         self.scaled_sigma_funcs += [self.scale_sigma, ]
 
@@ -155,11 +155,11 @@ class EcorrNoise(NoiseComponent):
     def __init__(self,):
         super(EcorrNoise, self).__init__()
         self.introduces_correlated_errors = True
-        self.add_param(p.maskParameter(name='ECORR', units="us",\
-                                       aliases=['TNECORR'],
-                                       description="An error term added that"\
-                                                  " correlated all TOAs in an"\
-                                                  " observing epoch."))
+        self.add_param(maskParameter(name='ECORR', units="us",
+                                     aliases=['TNECORR'],
+                                     description="An error term added that"
+                                                 " correlated all TOAs in an"
+                                                 " observing epoch."))
 
 
         self.covariance_matrix_funcs += [self.ecorr_cov_matrix, ]
@@ -241,26 +241,26 @@ class PLRedNoise(NoiseComponent):
     def __init__(self,):
         super(PLRedNoise, self).__init__()
         self.introduces_correlated_errors = True
-        self.add_param(p.floatParameter(name='RNAMP', units="",\
-                                       aliases=[],
-                                       description="Amplitude of powerlaw "\
-                                                "red noise."))
-        self.add_param(p.floatParameter(name='RNIDX', units="",\
-                                       aliases=[],
-                                       description="Spectral index of "\
-                                                "powerlaw red noise."))
+        self.add_param(floatParameter(name='RNAMP', units="",
+                                      aliases=[],
+                                      description="Amplitude of powerlaw "
+                                                  "red noise."))
+        self.add_param(floatParameter(name='RNIDX', units="",
+                                      aliases=[],
+                                      description="Spectral index of "
+                                                  "powerlaw red noise."))
 
-        self.add_param(p.floatParameter(name='TNRedAmp', units="",\
-                                       aliases=[],
-                                       description="Amplitude of powerlaw "\
-                                       "red noise in tempo2 format"))
-        self.add_param(p.floatParameter(name='TNRedGam', units="",\
-                                       aliases=[],
-                                       description="Spectral index of powerlaw "\
-                                       "red noise in tempo2 format"))
-        self.add_param(p.floatParameter(name='TNRedC', units="",\
-                                       aliases=[],
-                                       description="Number of red noise frequencies."))
+        self.add_param(floatParameter(name='TNRedAmp', units="",
+                                      aliases=[],
+                                      description="Amplitude of powerlaw "
+                                      "red noise in tempo2 format"))
+        self.add_param(floatParameter(name='TNRedGam', units="",
+                                      aliases=[],
+                                      description="Spectral index of powerlaw "
+                                      "red noise in tempo2 format"))
+        self.add_param(floatParameter(name='TNRedC', units="",
+                                      aliases=[],
+                                      description="Number of red noise frequencies."))
 
 
         self.covariance_matrix_funcs += [self.pl_rn_cov_matrix, ]

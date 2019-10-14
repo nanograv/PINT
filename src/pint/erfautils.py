@@ -9,7 +9,7 @@ from astropy.utils.data import (clear_download_cache, download_file,
                                 is_url_in_cache)
 from astropy.utils.iers import IERS_B, IERS_B_URL
 
-from . import utils
+from pint.utils import PosVel
 
 try:
     import astropy.erfa as erfa
@@ -145,7 +145,7 @@ def gcrs_posvel_from_itrf(loc, toas, obsname='obs'):
     vels = np.empty((N, 3), dtype=np.float64)
     poss = np.einsum('ij,ijk->ik', iposs, rc2i)
     vels = np.einsum('ij,ijk->ik', ivels, rc2i)
-    r = utils.PosVel(poss.T * u.m, vels.T * u.m / u.s,
+    r = PosVel(poss.T * u.m, vels.T * u.m / u.s,
                      obj=obsname, origin="earth")
     if unpack:
         return r[0]
@@ -200,7 +200,7 @@ def astropy_gcrs_posvel_from_itrf(loc, toas, obsname=None):
     t = ttoas
 
     pos, vel = loc.get_gcrs_posvel(t)
-    r = utils.PosVel(pos.xyz, vel.xyz, obj=obsname, origin="earth")
+    r = PosVel(pos.xyz, vel.xyz, obj=obsname, origin="earth")
     if unpack:
         return r[0]
     else:

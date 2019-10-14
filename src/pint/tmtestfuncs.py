@@ -1,7 +1,9 @@
-# Test timing model functions to test out the residuals class
-from __future__ import absolute_import, print_function, division
-from astropy.time import Time
+"""Test timing model functions to test out the residuals class."""
+from __future__ import absolute_import, division, print_function
+
 import numpy
+from astropy.time import Time
+
 
 def F0(toa, model):
 
@@ -11,7 +13,3 @@ def F0(toa, model):
     ph = numpy.array([x.sec*model.F0.value for x in dt])
 
     return ph
-
-
-
-
