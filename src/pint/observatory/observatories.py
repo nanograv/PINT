@@ -27,6 +27,8 @@ TopoObs('gmrt',   tempo_code='r', itoa_code='GM', clock_fmt='tempo2',
         itrf_xyz=[1656342.30, 5797947.77, 2073243.16])
 TopoObs('wsrt',         tempo_code='i', itoa_code='WB',
         itrf_xyz=[3828445.659, 445223.600, 5064921.5677])
+TopoObs('fast',         tempo_code='k', itoa_code='FA',
+        itrf_xyz=[-1668557.0, 5506838.0, 2744934.0])
 TopoObs('mwa',          tempo_code='u', itoa_code='MW',
         itrf_xyz=[-2559454.08, 5095372.14, -2849057.18])
 TopoObs('lwa1',         tempo_code='x', itoa_code='LW',
