@@ -1,8 +1,10 @@
 """Tool for selecting a subset of TOAs."""
 
-from __future__ import absolute_import, print_function, division
-import numpy as np
+from __future__ import absolute_import, division, print_function
+
 import copy
+
+import numpy as np
 
 
 class TOASelect(object):
@@ -27,6 +29,7 @@ class TOASelect(object):
     Putting an object as condition will slow the process dramtically.
 
     """
+
     def __init__(self, is_range, use_hash=False):
         self.is_range = is_range
         self.use_hash = use_hash
@@ -48,7 +51,7 @@ class TOASelect(object):
         """
         condition_chg = {}
         condition_unchg = {}
-        if not hasattr(self, 'condition'):
+        if not hasattr(self, "condition"):
             self.condition = new_cond
             condition_chg = new_cond
         else:
@@ -99,7 +102,7 @@ class TOASelect(object):
                 if np.array_equal(self.columns_info[new_column.name], new_column):
                     return True
                 else:
-                    self.columns_info[new_column.name] =  new_column
+                    self.columns_info[new_column.name] = new_column
                     return False
 
     def get_select_range(self, condition, column):

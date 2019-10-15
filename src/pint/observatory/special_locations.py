@@ -3,16 +3,20 @@
 Special "site" locations (eg, barycenter) which do not need clock
 corrections or much else done.
 """
-from __future__ import absolute_import, print_function, division
-from . import Observatory
-import numpy
+from __future__ import absolute_import, division, print_function
+
 import astropy.units as u
-from astropy.coordinates import EarthLocation
+import numpy
 from astropy import log
-from pint.utils import PosVel
-from pint.solar_system_ephemerides import objPosVel_wrt_SSB
+from astropy.coordinates import EarthLocation
+
 from pint.config import datapath
 from pint.observatory.clock_file import ClockFile
+from pint.solar_system_ephemerides import objPosVel_wrt_SSB
+from pint.utils import PosVel
+
+from . import Observatory
+
 
 class SpecialLocation(Observatory):
     """Special locations that are not really observatories.
@@ -43,12 +47,19 @@ class SpecialLocation(Observatory):
         like 'BIPM2015'
     """
 
-    #def clock_corrections(self, t):
+    # def clock_corrections(self, t):
     #    log.info('Special observatory location. No clock corrections applied.')
     #    return numpy.zeros(t.shape)*u.s
 
-    def __init__(self, name, aliases=None, include_gps=True, include_bipm=True,
-                 bipm_version='BIPM2015', tt2tdb_mode='pint'):
+    def __init__(
+        self,
+        name,
+        aliases=None,
+        include_gps=True,
+        include_bipm=True,
+        bipm_version="BIPM2015",
+        tt2tdb_mode="pint",
+    ):
         # GPS corrections not implemented yet
         self.include_gps = include_gps
         self._gps_clock = None
@@ -58,51 +69,63 @@ class SpecialLocation(Observatory):
         self.bipm_version = bipm_version
         self._bipm_clock = None
 
-        super(SpecialLocation,self).__init__(name,aliases=aliases,tt2tdb_mode=tt2tdb_mode)
+        super(SpecialLocation, self).__init__(
+            name, aliases=aliases, tt2tdb_mode=tt2tdb_mode
+        )
 
     @property
     def gps_fullpath(self):
         """Returns full path to the GPS-UTC clock file.  Will first try PINT
         data dirs, then fall back on $TEMPO2/clock."""
-        fname = 'gps2utc.clk'
+        fname = "gps2utc.clk"
         fullpath = datapath(fname)
         if fullpath is not None:
             return fullpath
-        return os.path.join(os.getenv('TEMPO2'),'clock',fname)
+        return os.path.join(os.getenv("TEMPO2"), "clock", fname)
 
     @property
     def bipm_fullpath(self,):
         """Returns full path to the TAI TT(BIPM) clock file.  Will first try PINT
         data dirs, then fall back on $TEMPO2/clock."""
-        fname = 'tai2tt_' + self.bipm_version.lower() + '.clk'
+        fname = "tai2tt_" + self.bipm_version.lower() + ".clk"
         fullpath = datapath(fname)
         if fullpath is not None:
             return fullpath
         else:
             try:
-                return os.path.join(os.getenv('TEMPO2'),'clock',fname)
+                return os.path.join(os.getenv("TEMPO2"), "clock", fname)
             except:
                 return None
 
     def clock_corrections(self, t):
-        corr = numpy.zeros(t.shape)*u.s
+        corr = numpy.zeros(t.shape) * u.s
         if self.include_gps:
-            log.info('Applying GPS to UTC clock correction (~few nanoseconds)')
+            log.info("Applying GPS to UTC clock correction (~few nanoseconds)")
             if self._gps_clock is None:
-                log.info('Observatory {0}, loading GPS clock file {1}'.format(self.name, self.gps_fullpath))
-                self._gps_clock = ClockFile.read(self.gps_fullpath,
-                        format='tempo2')
+                log.info(
+                    "Observatory {0}, loading GPS clock file {1}".format(
+                        self.name, self.gps_fullpath
+                    )
+                )
+                self._gps_clock = ClockFile.read(self.gps_fullpath, format="tempo2")
             corr += self._gps_clock.evaluate(t)
         if self.include_bipm:
-            log.info('Applying TT(TAI) to TT(BIPM) clock correction (~27 us)')
+            log.info("Applying TT(TAI) to TT(BIPM) clock correction (~27 us)")
             tt2tai = 32.184 * 1e6 * u.us
             if self._bipm_clock is None:
                 try:
-                    log.info('Observatory {0}, loading BIPM clock file {1}'.format(self.name, self.bipm_fullpath))
-                    self._bipm_clock = ClockFile.read(self.bipm_fullpath,
-                                                      format='tempo2')
+                    log.info(
+                        "Observatory {0}, loading BIPM clock file {1}".format(
+                            self.name, self.bipm_fullpath
+                        )
+                    )
+                    self._bipm_clock = ClockFile.read(
+                        self.bipm_fullpath, format="tempo2"
+                    )
                 except:
-                    raise ValueError("Can not find TT BIPM file '%s'. " % self.bipm_version)
+                    raise ValueError(
+                        "Can not find TT BIPM file '%s'. " % self.bipm_version
+                    )
             corr += self._bipm_clock.evaluate(t) - tt2tai
         return corr
 
@@ -110,72 +133,100 @@ class SpecialLocation(Observatory):
 class BarycenterObs(SpecialLocation):
     """Observatory-derived class for the solar system barycenter.  Time
     scale is assumed to be tdb."""
+
     @property
     def timescale(self):
-        return 'tdb'
+        return "tdb"
+
     @property
     def tempo_code(self):
-        return '@'
+        return "@"
+
     @property
     def tempo2_code(self):
-        return 'bat'
+        return "bat"
+
     def get_gcrs(self, t, ephem=None, grp=None):
         if ephem is None:
-            raise ValueError('Ephemeris needed for BarycenterObs get_gcrs')
-        ssb_pv = objPosVel_wrt_SSB('earth', t, ephem)
+            raise ValueError("Ephemeris needed for BarycenterObs get_gcrs")
+        ssb_pv = objPosVel_wrt_SSB("earth", t, ephem)
         return -1 * ssb_pv.pos
+
     def posvel(self, t, ephem):
         vdim = (3,) + t.shape
-        return PosVel(numpy.zeros(vdim)*u.m, numpy.zeros(vdim)*u.m/u.s,
-                obj=self.name, origin='ssb')
+        return PosVel(
+            numpy.zeros(vdim) * u.m,
+            numpy.zeros(vdim) * u.m / u.s,
+            obj=self.name,
+            origin="ssb",
+        )
+
     def clock_corrections(self, t):
-        log.info('Special observatory location. No clock corrections applied.')
-        return numpy.zeros(t.shape)*u.s
+        log.info("Special observatory location. No clock corrections applied.")
+        return numpy.zeros(t.shape) * u.s
+
 
 class GeocenterObs(SpecialLocation):
     """Observatory-derived class for the Earth geocenter."""
+
     @property
     def timescale(self):
-        return 'utc'
+        return "utc"
+
     def earth_location_itrf(self, time=None):
-        return EarthLocation.from_geocentric(0.0,0.0,0.0,unit=u.m)
+        return EarthLocation.from_geocentric(0.0, 0.0, 0.0, unit=u.m)
+
     @property
     def tempo_code(self):
-        return '0'
+        return "0"
+
     @property
     def tempo2_code(self):
-        return 'coe'
+        return "coe"
+
     def get_gcrs(self, t, ephem=None, grp=None):
         vdim = (3,) + t.shape
         return numpy.zeros(vdim) * u.m
+
     def posvel(self, t, ephem):
-        return objPosVel_wrt_SSB('earth', t, ephem)
+        return objPosVel_wrt_SSB("earth", t, ephem)
+
 
 class SpacecraftObs(SpecialLocation):
     """Observatory-derived class for a spacecraft observatory."""
+
     @property
     def timescale(self):
-        return 'utc'
+        return "utc"
 
     def get_gcrs(self, t, ephem=None, grp=None):
         """Return spacecraft GCRS position; this assumes position flags in tim file are in km"""
 
         if grp is None:
-            raise ValueError('TOA group table needed for SpacecraftObs get_gcrs')
+            raise ValueError("TOA group table needed for SpacecraftObs get_gcrs")
 
         try:
             # Is there a better way to do this?
-            x = numpy.array([flags['telx'] for flags in grp['flags']])
-            y = numpy.array([flags['tely'] for flags in grp['flags']])
-            z = numpy.array([flags['telz'] for flags in grp['flags']])
+            x = numpy.array([flags["telx"] for flags in grp["flags"]])
+            y = numpy.array([flags["tely"] for flags in grp["flags"]])
+            z = numpy.array([flags["telz"] for flags in grp["flags"]])
         except:
-            log.error('Missing flag. TOA line should have telx,tely,telz flags for GCRS position in km.')
-            raise ValueError('Missing flag. TOA line should have telx,tely,telz flags for GCRS position in km.')
+            log.error(
+                "Missing flag. TOA line should have telx,tely,telz flags for GCRS position in km."
+            )
+            raise ValueError(
+                "Missing flag. TOA line should have telx,tely,telz flags for GCRS position in km."
+            )
 
-        pos = numpy.vstack((x,y,z))
+        pos = numpy.vstack((x, y, z))
         vdim = (3,) + t.shape
         if pos.shape != vdim:
-            raise ValueError('GCRS position vector has wrong shape: ',pos.shape,' instead of ',vdim.shape)
+            raise ValueError(
+                "GCRS position vector has wrong shape: ",
+                pos.shape,
+                " instead of ",
+                vdim.shape,
+            )
 
         return pos * u.km
 
@@ -183,40 +234,49 @@ class SpacecraftObs(SpecialLocation):
         """Return spacecraft GCRS position and velocity; this assumes position flags in tim file are in km and velocity flags are in km/s"""
 
         if grp is None:
-            raise ValueError('TOA group table needed for SpacecraftObs posvel_gcrs')
+            raise ValueError("TOA group table needed for SpacecraftObs posvel_gcrs")
 
         try:
             # Is there a better way to do this?
-            vx = numpy.array([flags['vx'] for flags in grp['flags']])
-            vy = numpy.array([flags['vy'] for flags in grp['flags']])
-            vz = numpy.array([flags['vz'] for flags in grp['flags']])
+            vx = numpy.array([flags["vx"] for flags in grp["flags"]])
+            vy = numpy.array([flags["vy"] for flags in grp["flags"]])
+            vz = numpy.array([flags["vz"] for flags in grp["flags"]])
         except:
-            log.error('Missing flag. TOA line should have vx,vy,vz flags for GCRS velocity in km/s.')
-            raise ValueError('Missing flag. TOA line should have vx,vy,vz flags for GCRS velocity in km/s.')
+            log.error(
+                "Missing flag. TOA line should have vx,vy,vz flags for GCRS velocity in km/s."
+            )
+            raise ValueError(
+                "Missing flag. TOA line should have vx,vy,vz flags for GCRS velocity in km/s."
+            )
 
-        vel_geo = numpy.vstack((vx,vy,vz)) * (u.km/u.s)
+        vel_geo = numpy.vstack((vx, vy, vz)) * (u.km / u.s)
         vdim = (3,) + t.shape
         if vel_geo.shape != vdim:
-            raise ValueError('GCRS velocity vector has wrong shape: ',vel.shape,' instead of ',vdim.shape)
+            raise ValueError(
+                "GCRS velocity vector has wrong shape: ",
+                vel.shape,
+                " instead of ",
+                vdim.shape,
+            )
 
-        pos_geo = self.get_gcrs(t,ephem=None,grp=grp)
+        pos_geo = self.get_gcrs(t, ephem=None, grp=grp)
 
-        stl_posvel = PosVel(pos_geo, vel_geo, origin='earth', obj='spacecraft')
+        stl_posvel = PosVel(pos_geo, vel_geo, origin="earth", obj="spacecraft")
         return stl_posvel
 
     def posvel(self, t, ephem, grp):
 
         # Compute vector from SSB to Earth
-        geo_posvel = objPosVel_wrt_SSB('earth', t, ephem)
+        geo_posvel = objPosVel_wrt_SSB("earth", t, ephem)
 
         # Spacecraft posvel w.r.t. Earth
-        stl_posvel = self.posvel_gcrs(t,grp)
+        stl_posvel = self.posvel_gcrs(t, grp)
 
         # Vector add to geo_posvel to get full posvel vector w.r.t. SSB.
         return geo_posvel + stl_posvel
 
 
 # Need to initialize one of each so that it gets added to the list
-BarycenterObs('barycenter', aliases=['@','ssb','bary','bat'])
-GeocenterObs('geocenter', aliases=['0','o','coe','geo'])
-SpacecraftObs('spacecraft', aliases=['STL_GEO'])
+BarycenterObs("barycenter", aliases=["@", "ssb", "bary", "bat"])
+GeocenterObs("geocenter", aliases=["0", "o", "coe", "geo"])
+SpacecraftObs("spacecraft", aliases=["STL_GEO"])

@@ -1,27 +1,28 @@
 """
 An interface for pint compatible to the interface of libstempo
 """
-from __future__ import absolute_import, print_function, division
-import numpy as np
-import pint.models as pm
-import pint.toa as pt
-
-from pint.phase import Phase
-from pint.residuals import Residuals
-from pint import fitter
-from pint.utils import has_astropy_unit
-import astropy.units as u
-import astropy.constants as ac
-import astropy.coordinates.angles as ang
-
-#import matplotlib
-#matplotlib.use('TKAgg')
-import matplotlib.pyplot as plt
-
-from astropy import log
-import time, copy
+from __future__ import absolute_import, division, print_function
 
 import collections
+import copy
+import time
+
+import astropy.constants as ac
+import astropy.coordinates.angles as ang
+import astropy.units as u
+
+# import matplotlib
+# matplotlib.use('TKAgg')
+import matplotlib.pyplot as plt
+import numpy as np
+from astropy import log
+
+import pint.models as pm
+import pint.toa as pt
+from pint import fitter
+from pint.phase import Phase
+from pint.residuals import Residuals
+from pint.utils import has_astropy_unit
 
 try:
     from collections import OrderedDict
@@ -29,62 +30,64 @@ except ImportError:
     from ordereddict import OrderedDict
 
 # Make sure we have the minuteangle and secondangle units
-u.minuteangle = u.def_unit('minuteangle', u.hourangle / 60)
-u.secondangle = u.def_unit('secondangle', u.minuteangle / 60)
-u.lts = u.def_unit(['lightsecond','ls','lts'], ac.c * u.s)
+u.minuteangle = u.def_unit("minuteangle", u.hourangle / 60)
+u.secondangle = u.def_unit("secondangle", u.minuteangle / 60)
+u.lts = u.def_unit(["lightsecond", "ls", "lts"], ac.c * u.s)
 
 # In the case of a unitless interface, we need to make sure we provide the
 # 'correct' tempo2-like units
 map_units = {
-             'F0': u.Hz,
-             'F1': u.Hz/u.s,
-             'F2': u.Hz/u.s**2,
-             'F3': u.Hz/u.s**3,
-             'F4': u.Hz/u.s**4,
-             'F5': u.Hz/u.s**5,
-             'F6': u.Hz/u.s**6,
-             'F7': u.Hz/u.s**7,
-             'F8': u.Hz/u.s**8,
-             'F9': u.Hz/u.s**9,
-             'F10': u.Hz/u.s**10,
-             'F11': u.Hz/u.s**11,
-             'F12': u.Hz/u.s**12,
-             'RAJ': u.rad,
-             'DECJ': u.rad,
-             'ELONG': u.deg,
-             'ELAT': u.deg,
-             'PMRA': u.mas / u.yr,
-             'PMDEC': u.mas / u.yr,
-             'PMELONG': u.mas / u.yr,
-             'PMELAT': u.mas / u.yr,
-             'PX': u.mas,
-             'PB': u.d,
-             'E': u.dimensionless_unscaled,         # == ECC
-             'ECC': u.dimensionless_unscaled,
-             'A1': u.lts,
-             'OM': u.deg,
-             'EPS1': u.dimensionless_unscaled,
-             'EPS2': u.dimensionless_unscaled,
-             # KOM, KIN?
-             'SHAPMAX': u.dimensionless_unscaled,
-             'OMDOT': u.deg/u.yr,
-             # PBDOT?
-             'ECCDOT': 1/u.s,
-             'A1DOT': u.lts/u.s,                      # == XDOT
-             'XDOT': u.lts/u.s,
-             'GAMMA': u.s,
-             # XPBDOT?
-             # EPS1DOT, EPS2DOT?
-             'MTOT': u.Msun,'M2': u.Msun,
-             # DTHETA, XOMDOT
-             'SIN1': u.dimensionless_unscaled,
-             # DR, A0, B0, BP, BPP, AFAC
-             'DM': u.cm**-3 * u.pc,
-             'DM1': u.cm**-3 * u.pc * u.yr**-1, # how many should we do?
-             'POSEPOCH': u.day,
-             'T0': u.day,
-             'TASC': u.day
-             }
+    "F0": u.Hz,
+    "F1": u.Hz / u.s,
+    "F2": u.Hz / u.s ** 2,
+    "F3": u.Hz / u.s ** 3,
+    "F4": u.Hz / u.s ** 4,
+    "F5": u.Hz / u.s ** 5,
+    "F6": u.Hz / u.s ** 6,
+    "F7": u.Hz / u.s ** 7,
+    "F8": u.Hz / u.s ** 8,
+    "F9": u.Hz / u.s ** 9,
+    "F10": u.Hz / u.s ** 10,
+    "F11": u.Hz / u.s ** 11,
+    "F12": u.Hz / u.s ** 12,
+    "RAJ": u.rad,
+    "DECJ": u.rad,
+    "ELONG": u.deg,
+    "ELAT": u.deg,
+    "PMRA": u.mas / u.yr,
+    "PMDEC": u.mas / u.yr,
+    "PMELONG": u.mas / u.yr,
+    "PMELAT": u.mas / u.yr,
+    "PX": u.mas,
+    "PB": u.d,
+    "E": u.dimensionless_unscaled,  # == ECC
+    "ECC": u.dimensionless_unscaled,
+    "A1": u.lts,
+    "OM": u.deg,
+    "EPS1": u.dimensionless_unscaled,
+    "EPS2": u.dimensionless_unscaled,
+    # KOM, KIN?
+    "SHAPMAX": u.dimensionless_unscaled,
+    "OMDOT": u.deg / u.yr,
+    # PBDOT?
+    "ECCDOT": 1 / u.s,
+    "A1DOT": u.lts / u.s,  # == XDOT
+    "XDOT": u.lts / u.s,
+    "GAMMA": u.s,
+    # XPBDOT?
+    # EPS1DOT, EPS2DOT?
+    "MTOT": u.Msun,
+    "M2": u.Msun,
+    # DTHETA, XOMDOT
+    "SIN1": u.dimensionless_unscaled,
+    # DR, A0, B0, BP, BPP, AFAC
+    "DM": u.cm ** -3 * u.pc,
+    "DM1": u.cm ** -3 * u.pc * u.yr ** -1,  # how many should we do?
+    "POSEPOCH": u.day,
+    "T0": u.day,
+    "TASC": u.day,
+}
+
 
 class pintpar(object):
     """
@@ -124,12 +127,12 @@ class pintpar(object):
 
     @property
     def fit(self):
-        return (not self._par.frozen)
+        return not self._par.frozen
 
     @fit.setter
     def fit(self, value):
         # TODO: When we set it, this value seems decoupled from self._par.frozen
-        self._par.frozen = (not value)
+        self._par.frozen = not value
 
     @property
     def frozen(self):
@@ -153,9 +156,16 @@ class pintpulsar(object):
     Pulsar object class with an interface similar to tempopulsar of libstempo
     """
 
-    def __init__(self, parfile, timfile=None, warnings=False,
-            fixprefiterrors=True, dofit=False, maxobs=None,
-            units=False):
+    def __init__(
+        self,
+        parfile,
+        timfile=None,
+        warnings=False,
+        fixprefiterrors=True,
+        dofit=False,
+        maxobs=None,
+        units=False,
+    ):
         """
         The same init function as used in libstempo
 
@@ -179,9 +189,9 @@ class pintpulsar(object):
             Whether or not we are using the 'units' interface of libstempo
         """
         if warnings:
-            log.setLevel('INFO')
+            log.setLevel("INFO")
         else:
-            log.setLevel('ERROR')
+            log.setLevel("ERROR")
 
         self.loadparfile(parfile)
 
@@ -196,7 +206,6 @@ class pintpulsar(object):
 
         self._units = units
 
-
     def loadparfile(self, parfile):
         """
         Load a parfile with pint
@@ -206,7 +215,7 @@ class pintpulsar(object):
         """
 
         self.model = pm.get_model(parfile)
-        log.info("model.as_parfile():\n%s"%self.model.as_parfile())
+        log.info("model.as_parfile():\n%s" % self.model.as_parfile())
 
         try:
             self.planets = self.model.PLANET_SHAPIRO.value
@@ -233,7 +242,7 @@ class pintpulsar(object):
         """
 
         t0 = time.time()
-        self.t = pt.get_TOAs(timfile, planets=self.planets,usepickle=False)
+        self.t = pt.get_TOAs(timfile, planets=self.planets, usepickle=False)
         time_toa = time.time() - t0
         log.info("Read/corrected TOAs in %.3f sec" % time_toa)
 
@@ -254,12 +263,12 @@ class pintpulsar(object):
 
                 if flag not in self.flagnames_:
                     self.flagnames_.append(flag)
-                    self.flags_[flag] = [''] * self.t.ntoas
+                    self.flags_[flag] = [""] * self.t.ntoas
 
                 self.flags_[flag][ii] = obsflags[flag]
 
         # As is done in libstempo
-        #for flag in self.flags_:
+        # for flag in self.flags_:
         #    self.flags_[flag].flags.writeable = False
 
     def toas(self, updatebats=False):
@@ -267,7 +276,7 @@ class pintpulsar(object):
 
         # TODO: do high-precision as long double
 
-        return np.array(self.t.table['tdbld'])[~self.deleted]
+        return np.array(self.t.table["tdbld"])[~self.deleted]
 
     @property
     def stoas(self):
@@ -290,7 +299,7 @@ class pintpulsar(object):
     def ssbfreqs(self):
         """Return SSB frequencies"""
 
-        log.warning('Not using freqSSB just yet.')
+        log.warning("Not using freqSSB just yet.")
         return np.array(self.t.get_freqs())
 
     def deletedmask(self):
@@ -328,7 +337,7 @@ class pintpulsar(object):
         # resids in (approximate) us:
         log.info("RMS PINT residuals are %.3f us" % self.resids_us.std().value)
 
-    def residuals(self,updatebats=True,formresiduals=True,removemean=True):
+    def residuals(self, updatebats=True, formresiduals=True, removemean=True):
         """Returns residuals"""
         self.formresiduals()
 
@@ -359,18 +368,18 @@ class pintpulsar(object):
         """
         return None
 
-    def pars(self,which='fit'):
+    def pars(self, which="fit"):
         """Return parameter keys"""
 
-        if which == 'fit':
-            return [par for par in self.model.params
-                    if not getattr(self.model, par).frozen]
-        elif which == 'set':
+        if which == "fit":
+            return [
+                par for par in self.model.params if not getattr(self.model, par).frozen
+            ]
+        elif which == "set":
             return [par for par in self.model.params]
-        if which == 'frozen':
-            return [par for par in self.model.params
-                    if getattr(self.model, par).frozen]
-        elif which == 'all':
+        if which == "frozen":
+            return [par for par in self.model.params if getattr(self.model, par).frozen]
+        elif which == "all":
             raise NotImplementedError("PINT does not track 'all' parameters")
 
     @property
@@ -383,18 +392,18 @@ class pintpulsar(object):
     def ndim(self, incoffset=True):
         """Number of dimensions."""
 
-        return int(incoffset) + len(self.pars(which='fit'))
+        return int(incoffset) + len(self.pars(which="fit"))
 
     # --- dictionary access to parameters
     def __contains__(self, key):
         return key in self.model.params
 
     def __getitem__(self, key):
-        #return getattr(self.model, key).value
+        # return getattr(self.model, key).value
         return self.pardict[key]
 
     # --- bulk access to parameter values
-    def vals(self, values=None, which='fit'):
+    def vals(self, values=None, which="fit"):
         """tempopulsar.vals(values=None,which='fit')
 
         Get (if no `values` provided) or set the parameter values, depending on `which`:
@@ -418,36 +427,40 @@ class pintpulsar(object):
         - Unlike in earlier libstempo versions, setting a parameter does not set its error to zero."""
 
         if values is None:
-            return np.fromiter((self[par].val for par in
-                    self.pars(which)),np.longdouble)
-        elif isinstance(values,collections.Mapping):
+            return np.fromiter(
+                (self[par].val for par in self.pars(which)), np.longdouble
+            )
+        elif isinstance(values, collections.Mapping):
             for par in values:
                 self[par].val = values[par]
-        elif isinstance(values,collections.Iterable):
-            for par,val in zip(self.pars(which), values):
+        elif isinstance(values, collections.Iterable):
+            for par, val in zip(self.pars(which), values):
                 self[par].val = val
         else:
             raise TypeError
 
-    def errs(self, values=None, which='fit'):
+    def errs(self, values=None, which="fit"):
         """tempopulsar.errs(values=None,which='fit')
 
         Same as `vals()`, but for parameter errors."""
         if values is None:
-            #return np.fromiter((getattr(self.model, par).uncertainty for par in
+            # return np.fromiter((getattr(self.model, par).uncertainty for par in
             #        self.pars(which)),np.longdouble)
-            return np.fromiter((self[par].err for par in
-                    self.pars(which)),np.longdouble)
-        elif isinstance(values,collections.Mapping):
+            return np.fromiter(
+                (self[par].err for par in self.pars(which)), np.longdouble
+            )
+        elif isinstance(values, collections.Mapping):
             for par in values:
                 self[par].err = values[par]
-        elif isinstance(values,collections.Iterable):
-            for par,val in zip(self.pars(which), values):
+        elif isinstance(values, collections.Iterable):
+            for par, val in zip(self.pars(which), values):
                 self[par].err = val
         else:
             raise TypeError
 
-    def designmatrix(self,updatebats=True,fixunits=True,fixsigns=True,incoffset=True):
+    def designmatrix(
+        self, updatebats=True, fixunits=True, fixsigns=True, incoffset=True
+    ):
         """tempopulsar.designmatrix(updatebats=True,fixunits=True,incoffset=True)
 
         Returns the design matrix [nobs x (ndim+1)] as a long double array
@@ -457,8 +470,9 @@ class pintpulsar(object):
         corresponding to FX (F0, F1, ...) and JUMP parameters, so that
         they match finite-difference derivatives. If incoffset=False, the
         constant phaseoffset column is not included in the designmatrix."""
-        M, params, units = self.model.designmatrix(self.t.table, incfrozen=False,
-                incoffset=incoffset)
+        M, params, units = self.model.designmatrix(
+            self.t.table, incfrozen=False, incoffset=incoffset
+        )
         return M
 
     def telescope(self):
@@ -524,7 +538,7 @@ class pintpulsar(object):
         """
         return self.model.phase(self.t.table).int.quantity.value
 
-    def pulsenumbers(self,updatebats=True,formresiduals=True,removemean=True):
+    def pulsenumbers(self, updatebats=True, formresiduals=True, removemean=True):
         """Return the pulse number relative to PEPOCH, as detected by tempo2
 
         Returns the pulse numbers as a numpy array. Will update the
@@ -534,14 +548,14 @@ class pintpulsar(object):
         """
         return self.model.phase(self.t.table).int.quantity.value
 
-    def fit(self,iters=1):
+    def fit(self, iters=1):
         """tempopulsar.fit(iters=1)
 
         Runs `iters` iterations of the tempo2 fit, recomputing
         barycentric TOAs and residuals each time."""
         f = fitter.wls_fitter(toas=self.t, model=self.model)
 
-        for ii in range(iters+1):
+        for ii in range(iters + 1):
             f.call_minimize()
 
         fitp = f.get_fitparams()
@@ -557,7 +571,7 @@ class pintpulsar(object):
 
             self[p].val = val
 
-    def chisq(self,removemean='weighted'):
+    def chisq(self, removemean="weighted"):
         """tempopulsar.chisq(removemean='weighted')
 
         Computes the chisq of current residuals vs errors,
@@ -567,7 +581,7 @@ class pintpulsar(object):
 
         return np.sum(res * res / (1e-12 * err * err))
 
-    def rms(self,removemean='weighted'):
+    def rms(self, removemean="weighted"):
         """tempopulsar.rms(removemean='weighted')
 
         Computes the current residual rms,
@@ -578,13 +592,13 @@ class pintpulsar(object):
 
         return np.sqrt(self.chisq(removemean=removemean) / norm)
 
-    def savepar(self,parfile):
+    def savepar(self, parfile):
         """tempopulsar.savepar(parfile)
 
         Save current par file (calls tempo2's `textOutput(...)`)."""
         pass
 
-    def savetim(self,timfile):
+    def savetim(self, timfile):
         """tempopulsar.savetim(timfile)
 
         Save current par file (calls tempo2's `writeTim(...)`)."""

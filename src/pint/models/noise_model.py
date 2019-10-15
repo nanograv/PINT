@@ -6,7 +6,7 @@ import astropy.units as u
 import numpy as np
 from astropy import log
 
-from pint.models.parameter import maskParameter, floatParameter
+from pint.models.parameter import floatParameter, maskParameter
 from pint.models.timing_model import Component
 
 
@@ -16,6 +16,7 @@ class NoiseComponent(Component):
         self.covariance_matrix_funcs = []
         self.scaled_sigma_funcs = []
         self.basis_funcs = []
+
 
 class ScaleToaError(NoiseComponent):
     """Correct reported template fitting uncertainties.
@@ -27,28 +28,43 @@ class ScaleToaError(NoiseComponent):
     """
 
     register = True
-    category = 'scale_toa_error'
+    category = "scale_toa_error"
+
     def __init__(self,):
         super(ScaleToaError, self).__init__()
-        self.add_param(maskParameter(name ='EFAC', units="",
-                                     aliases=['T2EFAC', 'TNEF'],
-                                     description="A multiplication factor on"
-                                                 " the measured TOA uncertainties,"))
+        self.add_param(
+            maskParameter(
+                name="EFAC",
+                units="",
+                aliases=["T2EFAC", "TNEF"],
+                description="A multiplication factor on"
+                " the measured TOA uncertainties,",
+            )
+        )
 
-        self.add_param(maskParameter(name='EQUAD', units="us",
-                                     aliases=['T2EQUAD'],
-                                     description="An error term added in "
-                                                  "quadrature to the scaled (by"
-                                                  " EFAC) TOA uncertainty."))
+        self.add_param(
+            maskParameter(
+                name="EQUAD",
+                units="us",
+                aliases=["T2EQUAD"],
+                description="An error term added in "
+                "quadrature to the scaled (by"
+                " EFAC) TOA uncertainty.",
+            )
+        )
 
-        self.add_param(maskParameter(name='TNEQ',
-                                     units=u.LogUnit(physical_unit=u.second),
-                                     description="An error term added in "
-                                                 "quadrature to the scaled (by"
-                                                 " EFAC) TOA uncertainty in "
-                                                 " the unit of log10(second)."))
-        self.covariance_matrix_funcs += [self.sigma_scaled_cov_matrix, ]
-        self.scaled_sigma_funcs += [self.scale_sigma, ]
+        self.add_param(
+            maskParameter(
+                name="TNEQ",
+                units=u.LogUnit(physical_unit=u.second),
+                description="An error term added in "
+                "quadrature to the scaled (by"
+                " EFAC) TOA uncertainty in "
+                " the unit of log10(second).",
+            )
+        )
+        self.covariance_matrix_funcs += [self.sigma_scaled_cov_matrix]
+        self.scaled_sigma_funcs += [self.scale_sigma]
 
     def setup(self):
         super(ScaleToaError, self).setup()
@@ -56,14 +72,14 @@ class ScaleToaError(NoiseComponent):
         self.EFACs = {}
         self.EQUADs = {}
         self.TNEQs = {}
-        for mask_par in self.get_params_of_type('maskParameter'):
-            if mask_par.startswith('EFAC'):
+        for mask_par in self.get_params_of_type("maskParameter"):
+            if mask_par.startswith("EFAC"):
                 par = getattr(self, mask_par)
                 self.EFACs[mask_par] = (par.key, par.key_value)
-            elif mask_par.startswith('EQUAD'):
+            elif mask_par.startswith("EQUAD"):
                 par = getattr(self, mask_par)
                 self.EQUADs[mask_par] = (par.key, par.key_value)
-            elif  mask_par.startswith('TNEQ'):
+            elif mask_par.startswith("TNEQ"):
                 par = getattr(self, mask_par)
                 self.TNEQs[mask_par] = (par.key, par.key_value)
             else:
@@ -75,33 +91,40 @@ class ScaleToaError(NoiseComponent):
             if tneq_par.key is None:
                 continue
             if self.TNEQs[tneq] in list(self.EQUADs.values()):
-                log.warning("'%s %s %s' is provided by parameter EQUAD, using"
-                            " EQUAD instead. " % (tneq, tneq_par.key, tneq_par.key_value))
+                log.warning(
+                    "'%s %s %s' is provided by parameter EQUAD, using"
+                    " EQUAD instead. " % (tneq, tneq_par.key, tneq_par.key_value)
+                )
             else:
-                EQUAD_name = 'EQUAD' + str(tneq_par.index)
+                EQUAD_name = "EQUAD" + str(tneq_par.index)
                 if EQUAD_name in list(self.EQUADs.keys()):
                     EQUAD_par = getattr(self, EQUAD_name)
                     EQUAD_par.key = tneq_par.key
                     EQUAD_par.key_value = tneq_par.key_value
                     EQUAD_par.quantity = tneq_par.quantity.to(u.us)
                 else:
-                    self.add_param(p.maskParameter(name='EQUAD', units="us",
-                                                   index=tneq_par.index,
-                                                   aliases=['T2EQUAD'],
-                                                   description="An error term "\
-                                                   " added in quadrature to the"\
-                                                   " scaled (by EFAC) TOA uncertainty."))
+                    self.add_param(
+                        p.maskParameter(
+                            name="EQUAD",
+                            units="us",
+                            index=tneq_par.index,
+                            aliases=["T2EQUAD"],
+                            description="An error term "
+                            " added in quadrature to the"
+                            " scaled (by EFAC) TOA uncertainty.",
+                        )
+                    )
                     EQUAD_par = getattr(self, EQUAD_name)
                     EQUAD_par.key = tneq_par.key
                     EQUAD_par.key_value = tneq_par.key_value
                     EQUAD_par.quantity = tneq_par.quantity.to(u.us)
         for pp in self.params:
-            if pp.startswith('EQUAD'):
+            if pp.startswith("EQUAD"):
                 par = getattr(self, pp)
                 self.EQUADs[pp] = (par.key, par.key_value)
         # check duplicate
-        for el in ['EFACs', 'EQUADs']:
-            l  = list(getattr(self, el).values())
+        for el in ["EFACs", "EQUADs"]:
+            l = list(getattr(self, el).values())
             if [x for x in l if l.count(x) > 1] != []:
                 raise ValueError("'%s' have duplicated keys and key values." % el)
 
@@ -114,25 +137,28 @@ class ScaleToaError(NoiseComponent):
                     pairs.append((getattr(self, efac), getattr(self, equad)))
         if len(pairs) != len(list(self.EFACs.items())):
             # TODO may be define an parameter error would be helpful
-            raise ValueError("Can not pair up EFACs and EQUADs, please "
-                             " check the EFAC/EQUAD keys and key values.")
+            raise ValueError(
+                "Can not pair up EFACs and EQUADs, please "
+                " check the EFAC/EQUAD keys and key values."
+            )
         return pairs
 
     def scale_sigma(self, toas):
         tbl = toas.table
-        sigma_old = tbl['error'].quantity
+        sigma_old = tbl["error"].quantity
         sigma_scaled = np.zeros_like(sigma_old)
         EF_EQ_pairs = self.pair_EFAC_EQUAD()
         for pir in EF_EQ_pairs:
             efac = pir[0]
             equad = pir[1]
             mask = efac.select_toa_mask(toas)
-            sigma_scaled[mask] = efac.quantity * np.sqrt(sigma_old[mask] ** 2 + \
-                                 (equad.quantity)**2)
+            sigma_scaled[mask] = efac.quantity * np.sqrt(
+                sigma_old[mask] ** 2 + (equad.quantity) ** 2
+            )
         return sigma_scaled
 
     def sigma_scaled_cov_matrix(self, toas):
-        scaled_sigma = self.scale_sigma(toas).to(u.s).value**2
+        scaled_sigma = self.scale_sigma(toas).to(u.s).value ** 2
         return np.diag(scaled_sigma)
 
 
@@ -151,34 +177,39 @@ class EcorrNoise(NoiseComponent):
     """
 
     register = True
-    category = 'ecorr_noise'
+    category = "ecorr_noise"
+
     def __init__(self,):
         super(EcorrNoise, self).__init__()
         self.introduces_correlated_errors = True
-        self.add_param(maskParameter(name='ECORR', units="us",
-                                     aliases=['TNECORR'],
-                                     description="An error term added that"
-                                                 " correlated all TOAs in an"
-                                                 " observing epoch."))
+        self.add_param(
+            maskParameter(
+                name="ECORR",
+                units="us",
+                aliases=["TNECORR"],
+                description="An error term added that"
+                " correlated all TOAs in an"
+                " observing epoch.",
+            )
+        )
 
-
-        self.covariance_matrix_funcs += [self.ecorr_cov_matrix, ]
-        self.basis_funcs += [self.ecorr_basis_weight_pair, ]
+        self.covariance_matrix_funcs += [self.ecorr_cov_matrix]
+        self.basis_funcs += [self.ecorr_basis_weight_pair]
 
     def setup(self):
         super(EcorrNoise, self).setup()
         # Get all the EFAC parameters and EQUAD
         self.ECORRs = {}
-        for mask_par in self.get_params_of_type('maskParameter'):
-            if mask_par.startswith('ECORR'):
+        for mask_par in self.get_params_of_type("maskParameter"):
+            if mask_par.startswith("ECORR"):
                 par = getattr(self, mask_par)
                 self.ECORRs[mask_par] = (par.key, par.key_value)
             else:
                 continue
 
         # check duplicate
-        for el in ['ECORRs']:
-            l  = list(getattr(self, el).values())
+        for el in ["ECORRs"]:
+            l = list(getattr(self, el).values())
             if [x for x in l if l.count(x) > 1] != []:
                 raise ValueError("'%s' have duplicated keys and key values." % el)
 
@@ -196,7 +227,7 @@ class EcorrNoise(NoiseComponent):
 
         """
         tbl = toas.table
-        t = (tbl['tdbld'].quantity * u.day).to(u.s).value
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         ecorrs = self.get_ecorrs()
         umats = []
         for ec in ecorrs:
@@ -209,15 +240,15 @@ class EcorrNoise(NoiseComponent):
         for ct, ec in enumerate(ecorrs):
             mask = ec.select_toa_mask(toas)
             nn = umats[ct].shape[1]
-            umat[mask, nctot:nn+nctot] = umats[ct]
-            weight[nctot:nn+nctot] = ec.quantity.to(u.s).value ** 2
+            umat[mask, nctot : nn + nctot] = umats[ct]
+            weight[nctot : nn + nctot] = ec.quantity.to(u.s).value ** 2
             nctot += nn
         return (umat, weight)
 
     def ecorr_cov_matrix(self, toas):
         """Full ECORR covariance matrix."""
         U, Jvec = self.ecorr_basis_weight_pair(toas)
-        return np.dot(U * Jvec[None,:], U.T)
+        return np.dot(U * Jvec[None, :], U.T)
 
 
 class PLRedNoise(NoiseComponent):
@@ -237,34 +268,55 @@ class PLRedNoise(NoiseComponent):
     """
 
     register = True
-    category = 'pl_red_noise'
+    category = "pl_red_noise"
+
     def __init__(self,):
         super(PLRedNoise, self).__init__()
         self.introduces_correlated_errors = True
-        self.add_param(floatParameter(name='RNAMP', units="",
-                                      aliases=[],
-                                      description="Amplitude of powerlaw "
-                                                  "red noise."))
-        self.add_param(floatParameter(name='RNIDX', units="",
-                                      aliases=[],
-                                      description="Spectral index of "
-                                                  "powerlaw red noise."))
+        self.add_param(
+            floatParameter(
+                name="RNAMP",
+                units="",
+                aliases=[],
+                description="Amplitude of powerlaw " "red noise.",
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="RNIDX",
+                units="",
+                aliases=[],
+                description="Spectral index of " "powerlaw red noise.",
+            )
+        )
 
-        self.add_param(floatParameter(name='TNRedAmp', units="",
-                                      aliases=[],
-                                      description="Amplitude of powerlaw "
-                                      "red noise in tempo2 format"))
-        self.add_param(floatParameter(name='TNRedGam', units="",
-                                      aliases=[],
-                                      description="Spectral index of powerlaw "
-                                      "red noise in tempo2 format"))
-        self.add_param(floatParameter(name='TNRedC', units="",
-                                      aliases=[],
-                                      description="Number of red noise frequencies."))
+        self.add_param(
+            floatParameter(
+                name="TNRedAmp",
+                units="",
+                aliases=[],
+                description="Amplitude of powerlaw " "red noise in tempo2 format",
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNRedGam",
+                units="",
+                aliases=[],
+                description="Spectral index of powerlaw " "red noise in tempo2 format",
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNRedC",
+                units="",
+                aliases=[],
+                description="Number of red noise frequencies.",
+            )
+        )
 
-
-        self.covariance_matrix_funcs += [self.pl_rn_cov_matrix, ]
-        self.basis_funcs += [self.pl_rn_basis_weight_pair, ]
+        self.covariance_matrix_funcs += [self.pl_rn_cov_matrix]
+        self.basis_funcs += [self.pl_rn_basis_weight_pair]
 
     def setup(self):
         super(PLRedNoise, self).setup()
@@ -272,10 +324,10 @@ class PLRedNoise(NoiseComponent):
     def get_pl_vals(self):
         nf = int(self.TNRedC.value) if self.TNRedC.value is not None else 30
         if self.TNRedAmp.value is not None and self.TNRedGam.value is not None:
-            amp, gam= 10**self.TNRedAmp.value, self.TNRedGam.value
+            amp, gam = 10 ** self.TNRedAmp.value, self.TNRedGam.value
         elif self.RNAMP.value is not None and self.RNIDX is not None:
-            fac = (86400.*365.24*1e6)/(2.0*np.pi*np.sqrt(3.0))
-            amp, gam = self.RNAMP.value/fac, -1*self.RNIDX.value
+            fac = (86400.0 * 365.24 * 1e6) / (2.0 * np.pi * np.sqrt(3.0))
+            amp, gam = self.RNAMP.value / fac, -1 * self.RNIDX.value
         return (amp, gam, nf)
 
     def pl_rn_basis_weight_pair(self, toas):
@@ -289,7 +341,7 @@ class PLRedNoise(NoiseComponent):
 
         """
         tbl = toas.table
-        t = (tbl['tdbld'].quantity * u.day).to(u.s).value
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
         Fmat, f = create_fourier_design_matrix(t, nf)
         weight = powerlaw(f, amp, gam) * f[0]
@@ -297,7 +349,7 @@ class PLRedNoise(NoiseComponent):
 
     def pl_rn_cov_matrix(self, toas):
         Fmat, phi = self.pl_rn_basis_weight_pair(toas)
-        return np.dot(Fmat * phi[None,:], Fmat.T)
+        return np.dot(Fmat * phi[None, :], Fmat.T)
 
 
 def create_quantization_matrix(toas_table, dt=1, nmin=2):
@@ -317,11 +369,12 @@ def create_quantization_matrix(toas_table, dt=1, nmin=2):
     # find only epochs with more than 1 TOA
     bucket_ind2 = [ind for ind in bucket_ind if len(ind) >= nmin]
 
-    U = np.zeros((len(toas_table),len(bucket_ind2)),'d')
-    for i,l in enumerate(bucket_ind2):
-        U[l,i] = 1
+    U = np.zeros((len(toas_table), len(bucket_ind2)), "d")
+    for i, l in enumerate(bucket_ind2):
+        U[l, i] = 1
 
     return U
+
 
 def create_fourier_design_matrix(t, nmodes, Tspan=None):
     """
@@ -348,10 +401,11 @@ def create_fourier_design_matrix(t, nmodes, Tspan=None):
     Ffreqs[0::2] = f
     Ffreqs[1::2] = f
 
-    F[:,::2] = np.sin(2*np.pi*t[:,None]*f[None,:])
-    F[:,1::2] = np.cos(2*np.pi*t[:,None]*f[None,:])
+    F[:, ::2] = np.sin(2 * np.pi * t[:, None] * f[None, :])
+    F[:, 1::2] = np.cos(2 * np.pi * t[:, None] * f[None, :])
 
     return F, Ffreqs
+
 
 def powerlaw(f, A=1e-16, gamma=5):
     """Power-law PSD.
@@ -362,4 +416,4 @@ def powerlaw(f, A=1e-16, gamma=5):
     """
 
     fyr = 1 / 3.16e7
-    return A**2 / 12.0 / np.pi**2 * fyr**(gamma-3) * f**(-gamma)
+    return A ** 2 / 12.0 / np.pi ** 2 * fyr ** (gamma - 3) * f ** (-gamma)

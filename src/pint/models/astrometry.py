@@ -1,38 +1,47 @@
 # astrometry.py
 # Defines Astrometry timing model class
-from __future__ import absolute_import, print_function, division
-import numpy
-import astropy.coordinates as coords
-import astropy.units as u
-import astropy.constants as const
-from pint.models.parameter import MJDParameter, floatParameter, AngleParameter, strParameter
-from pint.models.timing_model import DelayComponent, MissingParameter
-from pint.pulsar_ecliptic import PulsarEcliptic, OBL
-from pint import ls
+from __future__ import absolute_import, division, print_function
+
 import sys
 
-astropy_version = sys.modules['astropy'].__version__
-mas_yr = (u.mas / u.yr)
+import astropy.constants as const
+import astropy.coordinates as coords
+import astropy.units as u
+import numpy
+
+from pint import ls
+from pint.models.parameter import (
+    AngleParameter,
+    MJDParameter,
+    floatParameter,
+    strParameter,
+)
+from pint.models.timing_model import DelayComponent, MissingParameter
+from pint.pulsar_ecliptic import OBL, PulsarEcliptic
+
+astropy_version = sys.modules["astropy"].__version__
+mas_yr = u.mas / u.yr
 
 
 class Astrometry(DelayComponent):
     register = False
     category = "astrometry"
+
     def __init__(self):
         super(Astrometry, self).__init__()
-        self.add_param(MJDParameter(name="POSEPOCH",
-            description="Reference epoch for position"))
+        self.add_param(
+            MJDParameter(name="POSEPOCH", description="Reference epoch for position")
+        )
 
-        self.add_param(floatParameter(name="PX",
-            units="mas", value=0.0,
-            description="Parallax"))
+        self.add_param(
+            floatParameter(name="PX", units="mas", value=0.0, description="Parallax")
+        )
 
-        self.delay_funcs_component += [self.solar_system_geometric_delay,]
-        self.register_deriv_funcs(self.d_delay_astrometry_d_PX, 'PX')
+        self.delay_funcs_component += [self.solar_system_geometric_delay]
+        self.register_deriv_funcs(self.d_delay_astrometry_d_PX, "PX")
 
     def setup(self):
         super(Astrometry, self).setup()
-
 
     def ssb_to_psb_xyz_ICRS(self, epoch=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
@@ -45,9 +54,9 @@ class Astrometry(DelayComponent):
     def barycentric_radio_freq(self, toas):
         """Return radio frequencies (MHz) of the toas corrected for Earth motion"""
         tbl = toas.table
-        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tdbld'].astype(numpy.float64))
-        v_dot_L_array = numpy.sum(tbl['ssb_obs_vel']*L_hat, axis=1)
-        return tbl['freq'] * (1.0 - v_dot_L_array / const.c)
+        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(numpy.float64))
+        v_dot_L_array = numpy.sum(tbl["ssb_obs_vel"] * L_hat, axis=1)
+        return tbl["freq"] * (1.0 - v_dot_L_array / const.c)
 
     def solar_system_geometric_delay(self, toas, acc_delay=None):
         """Returns geometric delay (in sec) due to position of site in
@@ -57,15 +66,17 @@ class Astrometry(DelayComponent):
         available as 3-vector toa.xyz, in units of light-seconds.
         """
         tbl = toas.table
-        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl['tdbld'].astype(numpy.float64))
-        re_dot_L = numpy.sum(tbl['ssb_obs_pos']*L_hat, axis=1)
+        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(numpy.float64))
+        re_dot_L = numpy.sum(tbl["ssb_obs_pos"] * L_hat, axis=1)
         delay = -re_dot_L.to(ls).value
-        if self.PX.value != 0.0 \
-           and numpy.count_nonzero(tbl['ssb_obs_pos']) > 0:
-            L = ((1.0 / self.PX.value) * u.kpc)
+        if self.PX.value != 0.0 and numpy.count_nonzero(tbl["ssb_obs_pos"]) > 0:
+            L = (1.0 / self.PX.value) * u.kpc
             # TODO: numpy.sum currently loses units in some cases...
-            re_sqr = numpy.sum(tbl['ssb_obs_pos']**2, axis=1) * tbl['ssb_obs_pos'].unit**2
-            delay += (0.5 * (re_sqr / L) * (1.0 - re_dot_L**2 / re_sqr)).to(ls).value
+            re_sqr = (
+                numpy.sum(tbl["ssb_obs_pos"] ** 2, axis=1)
+                * tbl["ssb_obs_pos"].unit ** 2
+            )
+            delay += (0.5 * (re_sqr / L) * (1.0 - re_dot_L ** 2 / re_sqr)).to(ls).value
         return delay * u.second
 
     def get_d_delay_quantities(self, toas):
@@ -79,23 +90,23 @@ class Astrometry(DelayComponent):
         # TODO: tbl['tdbld'].quantity should have units of u.day
         # NOTE: Do we need to include the delay here?
         tbl = toas.table
-        rd['epoch'] = tbl['tdbld'].quantity * u.day #- delay * u.second
+        rd["epoch"] = tbl["tdbld"].quantity * u.day  # - delay * u.second
 
         # Distance from SSB to observatory, and from SSB to psr
-        ssb_obs = tbl['ssb_obs_pos'].quantity
-        ssb_psr = self.ssb_to_psb_xyz_ICRS(epoch=numpy.array(rd['epoch']))
+        ssb_obs = tbl["ssb_obs_pos"].quantity
+        ssb_psr = self.ssb_to_psb_xyz_ICRS(epoch=numpy.array(rd["epoch"]))
 
         # Cartesian coordinates, and derived quantities
-        rd['ssb_obs_r'] = numpy.sqrt(numpy.sum(ssb_obs**2, axis=1))
-        rd['ssb_obs_z'] = ssb_obs[:,2]
-        rd['ssb_obs_xy'] = numpy.sqrt(ssb_obs[:,0]**2 + ssb_obs[:,1]**2)
-        rd['ssb_obs_x'] = ssb_obs[:,0]
-        rd['ssb_obs_y'] = ssb_obs[:,1]
-        rd['in_psr_obs'] = numpy.sum(ssb_obs * ssb_psr, axis=1)
+        rd["ssb_obs_r"] = numpy.sqrt(numpy.sum(ssb_obs ** 2, axis=1))
+        rd["ssb_obs_z"] = ssb_obs[:, 2]
+        rd["ssb_obs_xy"] = numpy.sqrt(ssb_obs[:, 0] ** 2 + ssb_obs[:, 1] ** 2)
+        rd["ssb_obs_x"] = ssb_obs[:, 0]
+        rd["ssb_obs_y"] = ssb_obs[:, 1]
+        rd["in_psr_obs"] = numpy.sum(ssb_obs * ssb_psr, axis=1)
 
         # Earth right ascension and declination
-        rd['earth_dec'] = numpy.arctan2(rd['ssb_obs_z'], rd['ssb_obs_xy'])
-        rd['earth_ra'] = numpy.arctan2(rd['ssb_obs_y'], rd['ssb_obs_x'])
+        rd["earth_dec"] = numpy.arctan2(rd["ssb_obs_z"], rd["ssb_obs_xy"])
+        rd["earth_ra"] = numpy.arctan2(rd["ssb_obs_y"], rd["ssb_obs_x"])
 
         return rd
 
@@ -105,7 +116,7 @@ class Astrometry(DelayComponent):
     def get_psr_coords(self, epoch=None):
         raise NotImplementedError
 
-    def d_delay_astrometry_d_PX(self, toas, param='', acc_delay=None):
+    def d_delay_astrometry_d_PX(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt PX
 
         Roughly following Smart, 1977, chapter 9.
@@ -129,41 +140,61 @@ class Astrometry(DelayComponent):
         """
         rd = self.get_d_delay_quantities(toas)
 
-        px_r = numpy.sqrt(rd['ssb_obs_r']**2-rd['in_psr_obs']**2)
-        dd_dpx = 0.5*(px_r**2 / (u.AU*const.c)) * (u.mas / u.radian)
+        px_r = numpy.sqrt(rd["ssb_obs_r"] ** 2 - rd["in_psr_obs"] ** 2)
+        dd_dpx = 0.5 * (px_r ** 2 / (u.AU * const.c)) * (u.mas / u.radian)
 
         # We want to return sec / mas
         return dd_dpx.decompose(u.si.bases) / u.mas
 
-    def d_delay_astrometry_d_POSEPOCH(self, toas, param='', acc_delay=None):
+    def d_delay_astrometry_d_POSEPOCH(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt POSEPOCH
         """
         pass
 
+
 class AstrometryEquatorial(Astrometry):
     register = True
+
     def __init__(self):
         super(AstrometryEquatorial, self).__init__()
-        self.add_param(AngleParameter(name="RAJ",
-            units="H:M:S",
-            description="Right ascension (J2000)",
-            aliases=["RA"]))
+        self.add_param(
+            AngleParameter(
+                name="RAJ",
+                units="H:M:S",
+                description="Right ascension (J2000)",
+                aliases=["RA"],
+            )
+        )
 
-        self.add_param(AngleParameter(name="DECJ",
-            units="D:M:S",
-            description="Declination (J2000)",
-            aliases=["DEC"]))
+        self.add_param(
+            AngleParameter(
+                name="DECJ",
+                units="D:M:S",
+                description="Declination (J2000)",
+                aliases=["DEC"],
+            )
+        )
 
-        self.add_param(floatParameter(name="PMRA",
-            units="mas/year", value=0.0,
-            description="Proper motion in RA"))
+        self.add_param(
+            floatParameter(
+                name="PMRA",
+                units="mas/year",
+                value=0.0,
+                description="Proper motion in RA",
+            )
+        )
 
-        self.add_param(floatParameter(name="PMDEC",
-            units="mas/year", value=0.0,
-            description="Proper motion in DEC"))
-        self.set_special_params(['RAJ', 'DECJ', 'PMRA', 'PMDEC'])
-        for param in ['RAJ', 'DECJ', 'PMRA', 'PMDEC']:
-            deriv_func_name = 'd_delay_astrometry_d_' + param
+        self.add_param(
+            floatParameter(
+                name="PMDEC",
+                units="mas/year",
+                value=0.0,
+                description="Proper motion in DEC",
+            )
+        )
+        self.set_special_params(["RAJ", "DECJ", "PMRA", "PMDEC"])
+        for param in ["RAJ", "DECJ", "PMRA", "PMDEC"]:
+            deriv_func_name = "d_delay_astrometry_d_" + param
             func = getattr(self, deriv_func_name)
             self.register_deriv_funcs(func, param)
 
@@ -177,14 +208,17 @@ class AstrometryEquatorial(Astrometry):
         if self.PMRA.value != 0.0 or self.PMDEC.value != 0.0:
             if self.POSEPOCH.quantity is None:
                 if self.PEPOCH.quantity is None:
-                    raise MissingParameter("AstrometryEquatorial", "POSEPOCH",
-                            "POSEPOCH or PEPOCH are required if PM is set.")
+                    raise MissingParameter(
+                        "AstrometryEquatorial",
+                        "POSEPOCH",
+                        "POSEPOCH or PEPOCH are required if PM is set.",
+                    )
                 else:
                     self.POSEPOCH.quantity = self.PEPOCH.quantity
 
     def print_par(self):
-        result = ''
-        print_order = ['RAJ', 'DECJ', 'PMRA', 'PMDEC', 'PX', 'POSEPOCH']
+        result = ""
+        print_order = ["RAJ", "DECJ", "PMRA", "PMDEC", "PX", "POSEPOCH"]
         for p in print_order:
             par = getattr(self, p)
             if par.quantity is not None:
@@ -205,19 +239,23 @@ class AstrometryEquatorial(Astrometry):
             dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
             dRA = dt * self.PMRA.quantity / numpy.cos(self.DECJ.quantity.radian)
             dDEC = dt * self.PMDEC.quantity
-            return coords.ICRS(ra=self.RAJ.quantity+dRA, dec=self.DECJ.quantity+dDEC)
+            return coords.ICRS(
+                ra=self.RAJ.quantity + dRA, dec=self.DECJ.quantity + dDEC
+            )
 
     def coords_as_ICRS(self, epoch=None):
         return self.get_psr_coords(epoch)
 
     def get_params_as_ICRS(self):
-        result  = {'RAJ': self.RAJ.quantity,
-                   'DECJ': self.DECJ.quantity,
-                   'PMRA': self.PMRA.quantity,
-                   'PMDEC': self.PMDEC.quantity}
+        result = {
+            "RAJ": self.RAJ.quantity,
+            "DECJ": self.DECJ.quantity,
+            "PMRA": self.PMRA.quantity,
+            "PMDEC": self.PMDEC.quantity,
+        }
         return result
 
-    def d_delay_astrometry_d_RAJ(self, toas, param='', acc_delay=None):
+    def d_delay_astrometry_d_RAJ(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt RAJ
 
         For the RAJ and DEC derivatives, use the following approximate model for
@@ -237,13 +275,16 @@ class AstrometryEquatorial(Astrometry):
         psr_ra = self.RAJ.quantity
         psr_dec = self.DECJ.quantity
 
-        geom = numpy.cos(rd['earth_dec'])*numpy.cos(psr_dec)*\
-                numpy.sin(psr_ra-rd['earth_ra'])
-        dd_draj = rd['ssb_obs_r'] * geom / (const.c * u.radian)
+        geom = (
+            numpy.cos(rd["earth_dec"])
+            * numpy.cos(psr_dec)
+            * numpy.sin(psr_ra - rd["earth_ra"])
+        )
+        dd_draj = rd["ssb_obs_r"] * geom / (const.c * u.radian)
 
         return dd_draj.decompose(u.si.bases)
 
-    def d_delay_astrometry_d_DECJ(self, toas, param='', acc_delay=None):
+    def d_delay_astrometry_d_DECJ(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt DECJ
 
         Definitions as in d_delay_d_RAJ
@@ -253,14 +294,14 @@ class AstrometryEquatorial(Astrometry):
         psr_ra = self.RAJ.quantity
         psr_dec = self.DECJ.quantity
 
-        geom = numpy.cos(rd['earth_dec'])*numpy.sin(psr_dec)*\
-                numpy.cos(psr_ra-rd['earth_ra']) - numpy.sin(rd['earth_dec'])*\
-                numpy.cos(psr_dec)
-        dd_ddecj = rd['ssb_obs_r'] * geom / (const.c * u.radian)
+        geom = numpy.cos(rd["earth_dec"]) * numpy.sin(psr_dec) * numpy.cos(
+            psr_ra - rd["earth_ra"]
+        ) - numpy.sin(rd["earth_dec"]) * numpy.cos(psr_dec)
+        dd_ddecj = rd["ssb_obs_r"] * geom / (const.c * u.radian)
 
         return dd_ddecj.decompose(u.si.bases)
 
-    def d_delay_astrometry_d_PMRA(self, toas, param='', acc_delay=None):
+    def d_delay_astrometry_d_PMRA(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt PMRA
 
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
@@ -270,16 +311,16 @@ class AstrometryEquatorial(Astrometry):
 
         psr_ra = self.RAJ.quantity
 
-        te = rd['epoch'] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
-        geom = numpy.cos(rd['earth_dec'])*numpy.sin(psr_ra-rd['earth_ra'])
+        te = rd["epoch"] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
+        geom = numpy.cos(rd["earth_dec"]) * numpy.sin(psr_ra - rd["earth_ra"])
 
-        deriv = rd['ssb_obs_r'] * geom * te / (const.c * u.radian)
+        deriv = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
         dd_dpmra = deriv * u.mas / u.year
 
         # We want to return sec / (mas / yr)
         return dd_dpmra.decompose(u.si.bases) / (u.mas / u.year)
 
-    def d_delay_astrometry_d_PMDEC(self, toas, param='', acc_delay=None):
+    def d_delay_astrometry_d_PMDEC(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt PMDEC
 
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
@@ -290,12 +331,12 @@ class AstrometryEquatorial(Astrometry):
         psr_ra = self.RAJ.quantity
         psr_dec = self.DECJ.quantity
 
-        te = rd['epoch'] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
-        geom = numpy.cos(rd['earth_dec'])*numpy.sin(psr_dec)*\
-                numpy.cos(psr_ra-rd['earth_ra']) - numpy.cos(psr_dec)*\
-                numpy.sin(rd['earth_dec'])
+        te = rd["epoch"] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
+        geom = numpy.cos(rd["earth_dec"]) * numpy.sin(psr_dec) * numpy.cos(
+            psr_ra - rd["earth_ra"]
+        ) - numpy.cos(psr_dec) * numpy.sin(rd["earth_dec"])
 
-        deriv = rd['ssb_obs_r'] * geom * te / (const.c * u.radian)
+        deriv = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
         dd_dpmdec = deriv * u.mas / u.year
 
         # We want to return sec / (mas / yr)
@@ -304,34 +345,58 @@ class AstrometryEquatorial(Astrometry):
 
 class AstrometryEcliptic(Astrometry):
     register = True
+
     def __init__(self):
         super(AstrometryEcliptic, self).__init__()
-        self.add_param(AngleParameter(name="ELONG",
-            units="deg",
-            description="Ecliptic longitude",
-            aliases=["LAMBDA"]))
+        self.add_param(
+            AngleParameter(
+                name="ELONG",
+                units="deg",
+                description="Ecliptic longitude",
+                aliases=["LAMBDA"],
+            )
+        )
 
-        self.add_param(AngleParameter(name="ELAT",
-            units="deg",
-            description="Ecliptic latitude",
-            aliases=["BETA"]))
+        self.add_param(
+            AngleParameter(
+                name="ELAT",
+                units="deg",
+                description="Ecliptic latitude",
+                aliases=["BETA"],
+            )
+        )
 
-        self.add_param(floatParameter(name="PMELONG",
-            units="mas/year", value=0.0,
-            description="Proper motion in ecliptic longitude",
-            aliases=["PMLAMBDA"]))
+        self.add_param(
+            floatParameter(
+                name="PMELONG",
+                units="mas/year",
+                value=0.0,
+                description="Proper motion in ecliptic longitude",
+                aliases=["PMLAMBDA"],
+            )
+        )
 
-        self.add_param(floatParameter(name="PMELAT",
-            units="mas/year", value=0.0,
-            description="Proper motion in ecliptic latitude",
-            aliases=["PMBETA"]))
+        self.add_param(
+            floatParameter(
+                name="PMELAT",
+                units="mas/year",
+                value=0.0,
+                description="Proper motion in ecliptic latitude",
+                aliases=["PMBETA"],
+            )
+        )
 
-        self.add_param(strParameter(name="ECL", value='IERS2003',
-            description="Obliquity angle value secetion"))
+        self.add_param(
+            strParameter(
+                name="ECL",
+                value="IERS2003",
+                description="Obliquity angle value secetion",
+            )
+        )
 
-        self.set_special_params(['ELONG', 'ELAT', 'PMELONG','PMELAT'])
-        for param in ['ELAT', 'ELONG', 'PMELAT', 'PMELONG']:
-            deriv_func_name = 'd_delay_astrometry_d_' + param
+        self.set_special_params(["ELONG", "ELAT", "PMELONG", "PMELAT"])
+        for param in ["ELAT", "ELONG", "PMELAT", "PMELONG"]:
+            deriv_func_name = "d_delay_astrometry_d_" + param
             func = getattr(self, deriv_func_name)
             self.register_deriv_funcs(func, param)
 
@@ -345,8 +410,11 @@ class AstrometryEcliptic(Astrometry):
         if self.PMELONG.value != 0.0 or self.PMELAT.value != 0.0:
             if self.POSEPOCH.quantity is None:
                 if self.PEPOCH.quantity is None:
-                    raise MissingParameter("Astrometry", "POSEPOCH",
-                            "POSEPOCH or PEPOCH are required if PM is set.")
+                    raise MissingParameter(
+                        "Astrometry",
+                        "POSEPOCH",
+                        "POSEPOCH or PEPOCH are required if PM is set.",
+                    )
                 else:
                     self.POSEPOCH.quantity = self.PEPOCH.quantity
 
@@ -359,8 +427,10 @@ class AstrometryEcliptic(Astrometry):
         try:
             PulsarEcliptic.obliquity = OBL[self.ECL.value]
         except KeyError:
-            raise ValueError("No obliquity " + str(self.ECL.value) + " provided. "
-                             "Check your pint/datafile/ecliptic.dat file.")
+            raise ValueError(
+                "No obliquity " + str(self.ECL.value) + " provided. "
+                "Check your pint/datafile/ecliptic.dat file."
+            )
         if epoch is None or (self.PMELONG.value == 0.0 and self.PMELAT.value == 0.0):
             dELONG = 0.0 * self.ELONG.units
             dELAT = 0.0 * self.ELAT.units
@@ -369,7 +439,9 @@ class AstrometryEcliptic(Astrometry):
             dELONG = dt * self.PMELONG.quantity / numpy.cos(self.ELAT.quantity.radian)
             dELAT = dt * self.PMELAT.quantity
 
-        pos_ecl = PulsarEcliptic(lon=self.ELONG.quantity+dELONG, lat=self.ELAT.quantity+dELAT)
+        pos_ecl = PulsarEcliptic(
+            lon=self.ELONG.quantity + dELONG, lat=self.ELAT.quantity + dELAT
+        )
         return pos_ecl
 
     def coords_as_ICRS(self, epoch=None):
@@ -386,40 +458,46 @@ class AstrometryEcliptic(Astrometry):
         try:
             PulsarEcliptic.obliquity = OBL[self.ECL.value]
         except KeyError:
-            raise ValueError("No obliquity " + self.ECL.value + " provided. "
-                             "Check your pint/datafile/ecliptic.dat file.")
+            raise ValueError(
+                "No obliquity " + self.ECL.value + " provided. "
+                "Check your pint/datafile/ecliptic.dat file."
+            )
 
         rd = self.get_d_delay_quantities(toas)
-        coords_icrs = coords.ICRS(ra=rd['earth_ra'], dec=rd['earth_dec'])
+        coords_icrs = coords.ICRS(ra=rd["earth_ra"], dec=rd["earth_dec"])
         coords_elpt = coords_icrs.transform_to(PulsarEcliptic)
-        rd['earth_elong'] = coords_elpt.lon
-        rd['earth_elat'] = coords_elpt.lat
+        rd["earth_elong"] = coords_elpt.lon
+        rd["earth_elat"] = coords_elpt.lat
 
         return rd
 
     def get_params_as_ICRS(self):
         result = dict()
         # NOTE This feature below needs astropy version 2.0.
-        dlon_coslat = self.PMELONG.quantity #* numpy.cos(self.ELAT.quantity.radian)
+        dlon_coslat = self.PMELONG.quantity  # * numpy.cos(self.ELAT.quantity.radian)
         # Astropy2 and astropy3 have different APIs
-        if int(astropy_version.split('.')[0]) <= 2:
-            pv_ECL = PulsarEcliptic(lon=self.ELONG.quantity,
-                                    lat=self.ELAT.quantity,
-                                    d_lon_coslat=dlon_coslat,
-                                    d_lat=self.PMELAT.quantity)
+        if int(astropy_version.split(".")[0]) <= 2:
+            pv_ECL = PulsarEcliptic(
+                lon=self.ELONG.quantity,
+                lat=self.ELAT.quantity,
+                d_lon_coslat=dlon_coslat,
+                d_lat=self.PMELAT.quantity,
+            )
         else:
-            pv_ECL = PulsarEcliptic(lon=self.ELONG.quantity,
-                                    lat=self.ELAT.quantity,
-                                    pm_lon_coslat=dlon_coslat,
-                                    pm_lat=self.PMELAT.quantity)
+            pv_ECL = PulsarEcliptic(
+                lon=self.ELONG.quantity,
+                lat=self.ELAT.quantity,
+                pm_lon_coslat=dlon_coslat,
+                pm_lat=self.PMELAT.quantity,
+            )
         pv_ICRS = pv_ECL.transform_to(coords.ICRS)
-        result['RAJ'] = pv_ICRS.ra.to(u.hourangle)
-        result['DECJ'] = pv_ICRS.dec
-        result['PMRA'] = pv_ICRS.pm_ra_cosdec
-        result['PMDEC'] = pv_ICRS.pm_dec
+        result["RAJ"] = pv_ICRS.ra.to(u.hourangle)
+        result["DECJ"] = pv_ICRS.dec
+        result["PMRA"] = pv_ICRS.pm_ra_cosdec
+        result["PMDEC"] = pv_ICRS.pm_dec
         return result
 
-    def d_delay_astrometry_d_ELONG(self, toas, param='', acc_delay=None):
+    def d_delay_astrometry_d_ELONG(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt RAJ
 
         For the RAJ and DEC derivatives, use the following approximate model for
@@ -448,13 +526,16 @@ class AstrometryEcliptic(Astrometry):
         psr_elong = self.ELONG.quantity
         psr_elat = self.ELAT.quantity
 
-        geom = numpy.cos(rd['earth_elat'])*numpy.cos(psr_elat)*\
-                numpy.sin(psr_elong-rd['earth_elong'])
-        dd_delong = rd['ssb_obs_r'] * geom / (const.c * u.radian)
+        geom = (
+            numpy.cos(rd["earth_elat"])
+            * numpy.cos(psr_elat)
+            * numpy.sin(psr_elong - rd["earth_elong"])
+        )
+        dd_delong = rd["ssb_obs_r"] * geom / (const.c * u.radian)
 
         return dd_delong.decompose(u.si.bases)
 
-    def d_delay_astrometry_d_ELAT(self, toas, param='', acc_delay=None):
+    def d_delay_astrometry_d_ELAT(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt DECJ
 
         Definitions as in d_delay_d_RAJ
@@ -464,14 +545,14 @@ class AstrometryEcliptic(Astrometry):
         psr_elong = self.ELONG.quantity
         psr_elat = self.ELAT.quantity
 
-        geom = numpy.cos(rd['earth_elat'])*numpy.sin(psr_elat)*\
-                numpy.cos(psr_elong-rd['earth_elong']) - numpy.sin(rd['earth_elat'])*\
-                numpy.cos(psr_elat)
-        dd_delat = rd['ssb_obs_r'] * geom / (const.c * u.radian)
+        geom = numpy.cos(rd["earth_elat"]) * numpy.sin(psr_elat) * numpy.cos(
+            psr_elong - rd["earth_elong"]
+        ) - numpy.sin(rd["earth_elat"]) * numpy.cos(psr_elat)
+        dd_delat = rd["ssb_obs_r"] * geom / (const.c * u.radian)
 
         return dd_delat.decompose(u.si.bases)
 
-    def d_delay_astrometry_d_PMELONG(self, toas, param='', acc_delay=None):
+    def d_delay_astrometry_d_PMELONG(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt PMRA
 
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
@@ -482,16 +563,16 @@ class AstrometryEcliptic(Astrometry):
         psr_elong = self.ELONG.quantity
         psr_elat = self.ELAT.quantity
 
-        te = rd['epoch'] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
-        geom = numpy.cos(rd['earth_elat'])*numpy.sin(psr_elong-rd['earth_elong'])
+        te = rd["epoch"] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
+        geom = numpy.cos(rd["earth_elat"]) * numpy.sin(psr_elong - rd["earth_elong"])
 
-        deriv = rd['ssb_obs_r'] * geom * te / (const.c * u.radian)
+        deriv = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
         dd_dpmelong = deriv * u.mas / u.year
 
         # We want to return sec / (mas / yr)
         return dd_dpmelong.decompose(u.si.bases) / (u.mas / u.year)
 
-    def d_delay_astrometry_d_PMELAT(self, toas, param='', acc_delay=None):
+    def d_delay_astrometry_d_PMELAT(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt PMDEC
 
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
@@ -502,20 +583,20 @@ class AstrometryEcliptic(Astrometry):
         psr_elong = self.ELONG.quantity
         psr_elat = self.ELAT.quantity
 
-        te = rd['epoch'] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
-        geom = numpy.cos(rd['earth_elat'])*numpy.sin(psr_elat)*\
-                numpy.cos(psr_elong-rd['earth_elong']) - numpy.cos(psr_elat)*\
-                numpy.sin(rd['earth_elat'])
+        te = rd["epoch"] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
+        geom = numpy.cos(rd["earth_elat"]) * numpy.sin(psr_elat) * numpy.cos(
+            psr_elong - rd["earth_elong"]
+        ) - numpy.cos(psr_elat) * numpy.sin(rd["earth_elat"])
 
-        deriv = rd['ssb_obs_r'] * geom * te / (const.c * u.radian)
+        deriv = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
         dd_dpmelat = deriv * u.mas / u.year
 
         # We want to return sec / (mas / yr)
         return dd_dpmelat.decompose(u.si.bases) / (u.mas / u.year)
 
     def print_par(self):
-        result = ''
-        print_order = ['ELONG', 'ELAT', 'PMELONG', 'PMELAT', 'PX', 'ECL','POSEPOCH']
+        result = ""
+        print_order = ["ELONG", "ELAT", "PMELONG", "PMELAT", "PX", "ECL", "POSEPOCH"]
         for p in print_order:
             par = getattr(self, p)
             if par.quantity is not None:

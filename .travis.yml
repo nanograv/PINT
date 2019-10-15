@@ -12,6 +12,12 @@ matrix:
           after_success: []
           git:
               clone: false
+        - script: black --check src tests examples
+          install:
+            - pip install black
+          name: "check code style is black"
+          services: []
+          after_success: []
         - script: flake8-diff
           install:
             - pip install -r requirements_dev.txt
@@ -101,4 +107,3 @@ notifications:
     on_success: always  # options: [always|never|change] default: always
     on_failure: always  # options: [always|never|change] default: always
     on_start: never     # options: [always|never|change] default: always
-

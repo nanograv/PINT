@@ -1,24 +1,39 @@
 """Generic function to load TOAs from events files."""
-from __future__ import absolute_import, print_function, division
-import numpy as np
-import pint.toa as toa
-from astropy import log
+from __future__ import absolute_import, division, print_function
+
 import astropy.io.fits as pyfits
+import numpy as np
+from astropy import log
+
+import pint.toa as toa
 from pint.fits_utils import read_fits_event_mjds_tuples
 
 # fits_extension can be a single name or a comma-separated list of allowed
 # extension names.
 # For weight we use the same conventions used for Fermi: None, a valid FITS
 # extension name or CALC.
-mission_config = \
-    {"rxte": {"fits_extension": "XTE_SE", 'allow_local': True,
-              "fits_columns": {"pha": "PHA"}},
-     "nicer": {"fits_extension": "EVENTS", 'allow_local': True,
-               "fits_columns": {"pha": "PHA"}},
-     "nustar": {"fits_extension": "EVENTS", 'allow_local': True,
-             "fits_columns": {"pi": "PI"}},
-     "xmm": {"fits_extension": "EVENTS", 'allow_local': False,
-             "fits_columns": {"pi": "PI"}}}
+mission_config = {
+    "rxte": {
+        "fits_extension": "XTE_SE",
+        "allow_local": True,
+        "fits_columns": {"pha": "PHA"},
+    },
+    "nicer": {
+        "fits_extension": "EVENTS",
+        "allow_local": True,
+        "fits_columns": {"pha": "PHA"},
+    },
+    "nustar": {
+        "fits_extension": "EVENTS",
+        "allow_local": True,
+        "fits_columns": {"pi": "PI"},
+    },
+    "xmm": {
+        "fits_extension": "EVENTS",
+        "allow_local": False,
+        "fits_columns": {"pi": "PI"},
+    },
+}
 
 
 def _default_obs_and_scale(mission, timesys, timeref):
@@ -34,16 +49,15 @@ def _default_obs_and_scale(mission, timesys, timeref):
         'LOCAL' for unmodified events
 
     """
-    if timesys == 'TDB':
+    if timesys == "TDB":
         log.info("Building barycentered TOAs")
-        obs, scale = 'Barycenter', 'tdb'
-    elif timeref == 'LOCAL':
-        log.info(
-            'Building spacecraft local TOAs')
-        obs, scale = mission, 'tt'
+        obs, scale = "Barycenter", "tdb"
+    elif timeref == "LOCAL":
+        log.info("Building spacecraft local TOAs")
+        obs, scale = mission, "tt"
     else:
         log.info("Building geocentered TOAs")
-        obs, scale = 'Geocenter', 'tt'
+        obs, scale = "Geocenter", "tt"
 
     return obs, scale
 
@@ -69,23 +83,23 @@ def _get_timesys_and_timeref(hdu):
     return timesys, timeref
 
 
-VALID_TIMESYS = ['TDB', 'TT']
-VALID_TIMEREF = ['GEOCENTER', 'SOLARSYSTEM', 'LOCAL']
+VALID_TIMESYS = ["TDB", "TT"]
+VALID_TIMEREF = ["GEOCENTER", "SOLARSYSTEM", "LOCAL"]
 
 
 def check_timesys(timesys):
     if timesys not in VALID_TIMESYS:
-        raise ValueError('Timesys has to be TDB or TT')
+        raise ValueError("Timesys has to be TDB or TT")
 
 
 def check_timeref(timeref):
     if timeref not in VALID_TIMEREF:
-        raise ValueError('Timeref is invalid')
+        raise ValueError("Timeref is invalid")
 
 
 def _get_timesys(hdu):
     event_hdr = hdu.header
-    timesys = event_hdr['TIMESYS']
+    timesys = event_hdr["TIMESYS"]
     log.debug("TIMESYS {0}".format(timesys))
     return timesys
 
@@ -93,14 +107,15 @@ def _get_timesys(hdu):
 def _get_timeref(hdu):
     event_hdr = hdu.header
 
-    timeref = event_hdr['TIMEREF']
+    timeref = event_hdr["TIMEREF"]
     log.debug("TIMEREF {0}".format(timeref))
     return timeref
 
 
-def load_fits_TOAs(eventname, mission, weights=None, extension=None,
-                   timesys=None, timeref=None):
-    '''
+def load_fits_TOAs(
+    eventname, mission, weights=None, extension=None, timesys=None, timeref=None
+):
+    """
     Read photon event times out of a FITS file as PINT TOA objects.
 
     Correctly handles raw event files, or ones processed with axBary to have
@@ -125,14 +140,15 @@ def load_fits_TOAs(eventname, mission, weights=None, extension=None,
     Returns
     -------
     toalist : list of TOA objects
-    '''
+    """
     # Load photon times from event file
     hdulist = pyfits.open(eventname)
 
-    if extension is not None and hdulist[1].name not in extension.split(','):
-        raise RuntimeError('First table in FITS file' +
-                           'must be {}. Found {}'.format(extension,
-                                                         hdulist[1].name))
+    if extension is not None and hdulist[1].name not in extension.split(","):
+        raise RuntimeError(
+            "First table in FITS file"
+            + "must be {}. Found {}".format(extension, hdulist[1].name)
+        )
 
     if timesys is None:
         timesys = _get_timesys(hdulist[1])
@@ -141,18 +157,17 @@ def load_fits_TOAs(eventname, mission, weights=None, extension=None,
     check_timesys(timesys)
     check_timeref(timeref)
 
-    if not mission_config[mission]['allow_local'] \
-            and timesys != 'TDB':
-        log.error('Raw spacecraft TOAs not yet supported for ' + mission)
+    if not mission_config[mission]["allow_local"] and timesys != "TDB":
+        log.error("Raw spacecraft TOAs not yet supported for " + mission)
 
     obs, scale = _default_obs_and_scale(mission, timesys, timeref)
 
     # Read time column from FITS file
     mjds = read_fits_event_mjds_tuples(hdulist[1])
 
-    new_kwargs = \
-        _get_columns_from_fits(hdulist[1],
-                               mission_config[mission]["fits_columns"])
+    new_kwargs = _get_columns_from_fits(
+        hdulist[1], mission_config[mission]["fits_columns"]
+    )
 
     hdulist.close()
 
@@ -171,7 +186,7 @@ def load_fits_TOAs(eventname, mission, weights=None, extension=None,
 
 
 def load_event_TOAs(eventname, mission, weights=None):
-    '''
+    """
     Read photon event times out of a FITS file as PINT TOA objects.
 
     Correctly handles raw event files, or ones processed with axBary to have
@@ -190,24 +205,24 @@ def load_event_TOAs(eventname, mission, weights=None):
     Returns
     -------
     toalist : list of TOA objects
-    '''
+    """
     # Load photon times from event file
 
     extension = mission_config[mission]["fits_extension"]
-    return load_fits_TOAs(eventname, mission, weights=weights,
-                          extension=extension)
+    return load_fits_TOAs(eventname, mission, weights=weights, extension=extension)
 
 
 def load_RXTE_TOAs(eventname):
-    return load_event_TOAs(eventname, 'rxte')
+    return load_event_TOAs(eventname, "rxte")
 
 
 def load_NICER_TOAs(eventname):
-    return load_event_TOAs(eventname, 'nicer')
+    return load_event_TOAs(eventname, "nicer")
 
 
 def load_XMM_TOAs(eventname):
-    return load_event_TOAs(eventname, 'xmm')
+    return load_event_TOAs(eventname, "xmm")
+
 
 def load_NuSTAR_TOAs(eventname):
-    return load_event_TOAs(eventname, 'nustar')
+    return load_event_TOAs(eventname, "nustar")

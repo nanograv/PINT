@@ -33,8 +33,8 @@ import astropy.units as u
 import numpy as np
 import six
 from astropy._erfa import DJM0
-from astropy.time.formats import TimeFormat
 from astropy.time import Time
+from astropy.time.formats import TimeFormat
 
 try:
     maketrans = str.maketrans

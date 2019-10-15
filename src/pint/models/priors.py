@@ -6,12 +6,13 @@ in the model class, that implements priors on combinations of parameters,
 such as total proper motion, 2-d sky location, etc.
 
 """
-from __future__ import absolute_import, print_function, division
-import scipy.stats
-from scipy.stats import rv_continuous, rv_discrete, norm, uniform
+from __future__ import absolute_import, division, print_function
 
-from astropy import log
 import numpy as np
+import scipy.stats
+from astropy import log
+from scipy.stats import norm, rv_continuous, rv_discrete, uniform
+
 
 class Prior(object):
     r"""Class for evaluation of prior probability densities
@@ -57,20 +58,21 @@ class Prior(object):
         self._rv = rv
         pass
 
-    def pdf(self,value):
+    def pdf(self, value):
         # The astype() calls prevent unsafe cast messages
         if type(value) == np.ndarray:
-            v = value.astype(np.float64,casting='same_kind')
+            v = value.astype(np.float64, casting="same_kind")
         else:
             v = np.float(value)
         return self._rv.pdf(v)
 
-    def logpdf(self,value):
+    def logpdf(self, value):
         if type(value) == np.ndarray:
-            v = value.astype(np.float64,casting='same_kind')
+            v = value.astype(np.float64, casting="same_kind")
         else:
             v = np.float(value)
         return self._rv.logpdf(v)
+
 
 class UniformUnboundedRV(rv_continuous):
     r"""A uniform prior distribution (equivalent to no prior)
@@ -78,12 +80,14 @@ class UniformUnboundedRV(rv_continuous):
     """
 
     # The astype() calls prevent unsafe cast messages
-    def _pdf(self,x):
-        return np.ones_like(x).astype(np.float64,casting='same_kind')
-    def _logpdf(self,x):
-        return np.zeros_like(x).astype(np.float64,casting='same_kind')
+    def _pdf(self, x):
+        return np.ones_like(x).astype(np.float64, casting="same_kind")
 
-def UniformBoundedRV(lower_bound,upper_bound):
+    def _logpdf(self, x):
+        return np.zeros_like(x).astype(np.float64, casting="same_kind")
+
+
+def UniformBoundedRV(lower_bound, upper_bound):
     r"""A uniform prior between two bounds
 
     Parameters
@@ -97,8 +101,9 @@ def UniformBoundedRV(lower_bound,upper_bound):
     Returns a frozen rv_continuous instance with a uniform probability
     inside the range lower_bound to upper_bound and 0.0 outside
     """
-    uu = uniform(lower_bound,(upper_bound-lower_bound))
+    uu = uniform(lower_bound, (upper_bound - lower_bound))
     return uu
+
 
 class GaussianRV_gen(rv_continuous):
     r"""A Gaussian prior between two bounds.
@@ -115,8 +120,9 @@ class GaussianRV_gen(rv_continuous):
     """
 
     def _pdf(self, x):
-        ret = np.exp(-x**2/2)/np.sqrt(2*np.pi)
+        ret = np.exp(-x ** 2 / 2) / np.sqrt(2 * np.pi)
         return ret
+
 
 def GaussianBoundedRV(loc=0.0, scale=1.0, lower_bound=-np.inf, upper_bound=np.inf):
     r"""A gaussian prior between two bounds
@@ -132,9 +138,8 @@ def GaussianBoundedRV(loc=0.0, scale=1.0, lower_bound=-np.inf, upper_bound=np.in
     Returns a frozen rv_continuous instance with a gaussian probability
     inside the range lower_bound to upper_bound and 0.0 outside
     """
-    ymin = (lower_bound-loc)/scale
-    ymax = (upper_bound-loc)/scale
-    n = GaussianRV_gen(name='bounded_gaussian',a=ymin,b=ymax)
-    nn = n(loc=loc,scale=scale)
+    ymin = (lower_bound - loc) / scale
+    ymax = (upper_bound - loc) / scale
+    n = GaussianRV_gen(name="bounded_gaussian", a=ymin, b=ymax)
+    nn = n(loc=loc, scale=scale)
     return nn
-

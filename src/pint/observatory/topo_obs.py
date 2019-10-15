@@ -10,15 +10,16 @@ import astropy.units as u
 import numpy
 from astropy import log
 from astropy.coordinates import EarthLocation
-from astropy.time import Time
+from six import raise_from
 
 from pint import JD_MJD
 from pint.config import datapath
-from pint.erfautils import SECS_PER_DAY, gcrs_posvel_from_itrf
+from pint.erfautils import gcrs_posvel_from_itrf
 from pint.observatory import Observatory
 from pint.observatory.clock_file import ClockFile
+from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
-from pint.utils import PosVel, has_astropy_unit
+from pint.utils import has_astropy_unit
 
 
 class TopoObs(Observatory):
@@ -72,15 +73,23 @@ class TopoObs(Observatory):
         like 'BIPM2015'
     """
 
-
-    def __init__(self, name, tempo_code=None, itoa_code=None, aliases=None,
-                 itrf_xyz=None, clock_file='time.dat', clock_dir='PINT',
-                 clock_fmt='tempo', include_gps=True, include_bipm=True,
-                 bipm_version='BIPM2015'):
+    def __init__(
+        self,
+        name,
+        tempo_code=None,
+        itoa_code=None,
+        aliases=None,
+        itrf_xyz=None,
+        clock_file="time.dat",
+        clock_dir="PINT",
+        clock_fmt="tempo",
+        include_gps=True,
+        include_bipm=True,
+        bipm_version="BIPM2015",
+    ):
         # ITRF coordinates are required
         if itrf_xyz is None:
-            raise ValueError(
-                    "ITRF coordinates not given for observatory '%s'" % name)
+            raise ValueError("ITRF coordinates not given for observatory '%s'" % name)
 
         # Convert coords to standard format.  If no units are given, assume
         # meters.
@@ -92,8 +101,8 @@ class TopoObs(Observatory):
         # Check for correct array dims
         if xyz.shape != (3,):
             raise ValueError(
-                    "Incorrect coordinate dimensions for observatory '%s'" % (
-                        name))
+                "Incorrect coordinate dimensions for observatory '%s'" % (name)
+            )
 
         # Convert to astropy EarthLocation, ensuring use of ITRF geocentric coordinates
         self._loc_itrf = EarthLocation.from_geocentric(*xyz)
@@ -101,15 +110,14 @@ class TopoObs(Observatory):
         # Save clock file info, the data will be read only if clock
         # corrections for this site are requested.
         self.clock_file = clock_file
-        self._multiple_clock_files = not isinstance(clock_file,str)
+        self._multiple_clock_files = not isinstance(clock_file, str)
         self.clock_dir = clock_dir
         self.clock_fmt = clock_fmt
-        self._clock = None # The ClockFile object, will be read on demand
+        self._clock = None  # The ClockFile object, will be read on demand
 
         # If using TEMPO time.dat we need to know the 1-char tempo-style
         # observatory code.
-        if (clock_dir=='TEMPO' and clock_file=='time.dat'
-                and tempo_code is None):
+        if clock_dir == "TEMPO" and clock_file == "time.dat" and tempo_code is None:
             raise ValueError("No tempo_code set for observatory '%s'" % name)
 
         # GPS corrections
@@ -122,48 +130,48 @@ class TopoObs(Observatory):
         self._bipm_clock = None
 
         self.tempo_code = tempo_code
-        if aliases is None: aliases = []
+        if aliases is None:
+            aliases = []
         for code in (tempo_code, itoa_code):
-            if code is not None: aliases.append(code)
+            if code is not None:
+                aliases.append(code)
 
-        super(TopoObs,self).__init__(name,aliases=aliases, tt2tdb_mode='astropy')
+        super(TopoObs, self).__init__(name, aliases=aliases, tt2tdb_mode="astropy")
 
     @property
     def clock_fullpath(self):
         """Returns the full path to the clock file."""
-        if self.clock_dir=='PINT':
+        if self.clock_dir == "PINT":
             if self._multiple_clock_files:
                 return [datapath(f) for f in self.clock_file]
             return datapath(self.clock_file)
-        elif self.clock_dir=='TEMPO':
+        elif self.clock_dir == "TEMPO":
             # Technically should read $TEMPO/tempo.cfg and get clock file
             # location from CLKDIR line...
-            TEMPO_dir = os.getenv('TEMPO')
+            TEMPO_dir = os.getenv("TEMPO")
             if TEMPO_dir is None:
-                raise RuntimeError("Cannot find TEMPO path from the"
-                                   " enviroment.")
-            dir = os.path.join(TEMPO_dir,'clock')
-        elif self.clock_dir=='TEMPO2':
-            TEMPO2_dir = os.getenv('TEMPO2')
+                raise RuntimeError("Cannot find TEMPO path from the" " enviroment.")
+            dir = os.path.join(TEMPO_dir, "clock")
+        elif self.clock_dir == "TEMPO2":
+            TEMPO2_dir = os.getenv("TEMPO2")
             if TEMPO2_dir is None:
-                raise RuntimeError("Cannot find TEMPO2 path from the"
-                                   " enviroment.")
-            dir = os.path.join(TEMPO2_dir,'clock')
+                raise RuntimeError("Cannot find TEMPO2 path from the" " enviroment.")
+            dir = os.path.join(TEMPO2_dir, "clock")
         else:
             dir = self.clock_dir
         if self._multiple_clock_files:
-            return [os.path.join(dir,f) for f in self.clock_file]
-        return os.path.join(dir,self.clock_file)
+            return [os.path.join(dir, f) for f in self.clock_file]
+        return os.path.join(dir, self.clock_file)
 
     @property
     def gps_fullpath(self):
         """Returns full path to the GPS-UTC clock file.  Will first try PINT
         data dirs, then fall back on $TEMPO2/clock."""
-        fname = 'gps2utc.clk'
+        fname = "gps2utc.clk"
         fullpath = datapath(fname)
         if fullpath is not None:
             return fullpath
-        return os.path.join(os.getenv('TEMPO2'),'clock',fname)
+        return os.path.join(os.getenv("TEMPO2"), "clock", fname)
 
     @property
     def bipm_fullpath(self,):
@@ -171,19 +179,22 @@ class TopoObs(Observatory):
 
         Will first try PINT data dirs, then fall back on $TEMPO2/clock.
         """
-        fname = 'tai2tt_' + self.bipm_version.lower() + '.clk'
+        fname = "tai2tt_" + self.bipm_version.lower() + ".clk"
         fullpath = datapath(fname)
         if fullpath is not None:
             return fullpath
         else:
             try:
-                return os.path.join(os.getenv('TEMPO2'),'clock',fname)
-            except:
-                return None
+                return os.path.join(os.getenv("TEMPO2"), "clock", fname)
+            except OSError as e:
+                if e.errno == 2:  # File not found
+                    return None
+                else:
+                    raise
 
     @property
     def timescale(self):
-        return 'utc'
+        return "utc"
 
     def earth_location_itrf(self, time=None):
         return self._loc_itrf
@@ -199,35 +210,59 @@ class TopoObs(Observatory):
         # Read clock file if necessary
         # TODO provide some method for re-reading the clock file?
         if self._clock is None:
-            clock_files = self.clock_fullpath if self._multiple_clock_files else [self.clock_fullpath]
+            clock_files = (
+                self.clock_fullpath
+                if self._multiple_clock_files
+                else [self.clock_fullpath]
+            )
             self._clock = []
             for clock_file in clock_files:
-                log.info('Observatory {0}, loading clock file {1}'.format(self.name, clock_file))
-                self._clock.append(ClockFile.read(clock_file,
-                        format=self.clock_fmt, obscode=self.tempo_code))
-        log.info('Evaluating observatory clock corrections.')
+                log.info(
+                    "Observatory {0}, loading clock file {1}".format(
+                        self.name, clock_file
+                    )
+                )
+                self._clock.append(
+                    ClockFile.read(
+                        clock_file, format=self.clock_fmt, obscode=self.tempo_code
+                    )
+                )
+        log.info("Evaluating observatory clock corrections.")
         corr = self._clock[0].evaluate(t)
         for clock in self._clock[1:]:
             corr += clock.evaluate(t)
 
         if self.include_gps:
-            log.info('Applying GPS to UTC clock correction (~few nanoseconds)')
+            log.info("Applying GPS to UTC clock correction (~few nanoseconds)")
             if self._gps_clock is None:
-                log.info('Observatory {0}, loading GPS clock file {1}'.format(self.name, self.gps_fullpath))
-                self._gps_clock = ClockFile.read(self.gps_fullpath,
-                        format='tempo2')
+                log.info(
+                    "Observatory {0}, loading GPS clock file {1}".format(
+                        self.name, self.gps_fullpath
+                    )
+                )
+                self._gps_clock = ClockFile.read(self.gps_fullpath, format="tempo2")
             corr += self._gps_clock.evaluate(t)
 
         if self.include_bipm:
-            log.info('Applying TT(TAI) to TT(BIPM) clock correction (~27 us)')
+            log.info("Applying TT(TAI) to TT(BIPM) clock correction (~27 us)")
             tt2tai = 32.184 * 1e6 * u.us
             if self._bipm_clock is None:
                 try:
-                    log.info('Observatory {0}, loading BIPM clock file {1}'.format(self.name, self.bipm_fullpath))
-                    self._bipm_clock = ClockFile.read(self.bipm_fullpath,
-                                                      format='tempo2')
-                except:
-                    raise ValueError("Can not find TT BIPM file '%s'. " % self.bipm_version)
+                    log.info(
+                        "Observatory {0}, loading BIPM clock file {1}".format(
+                            self.name, self.bipm_fullpath
+                        )
+                    )
+                    self._bipm_clock = ClockFile.read(
+                        self.bipm_fullpath, format="tempo2"
+                    )
+                except Exception as e:
+                    raise_from(
+                        ValueError(
+                            "Can not find TT BIPM file '%s'. " % self.bipm_version
+                        ),
+                        e,
+                    )
             corr += self._bipm_clock.evaluate(t) - tt2tai
         return corr
 
@@ -243,23 +278,28 @@ class TopoObs(Observatory):
         # Topocenter to Geocenter
         # Since earth velocity is not going to change a lot in 3ms. The
         # differences between TT and TDB can be ignored.
-        earth_pv = objPosVel_wrt_SSB('earth', t.tdb, ephem)
-        obs_geocenter_pv = gcrs_posvel_from_itrf(self.earth_location_itrf(), t,\
-                                               obsname=self.name)
+        earth_pv = objPosVel_wrt_SSB("earth", t.tdb, ephem)
+        obs_geocenter_pv = gcrs_posvel_from_itrf(
+            self.earth_location_itrf(), t, obsname=self.name
+        )
         # NOTE
         # Moyer (1981) and Murray (1983), with fundamental arguments adapted
         # from Simon et al. 1994.
-        topo_time_corr = numpy.sum(earth_pv.vel/c.c * obs_geocenter_pv.pos /c.c,
-                                       axis=0)
+        topo_time_corr = numpy.sum(
+            earth_pv.vel / c.c * obs_geocenter_pv.pos / c.c, axis=0
+        )
         topo_tdb_tt = geo_tdb_tt - topo_time_corr
-        result = Time(t.tt.jd1 - JD_MJD, \
-                      t.tt.jd2 - topo_tdb_tt.to(u.day).value, \
-                      format='pulsar_mjd', scale='tdb', \
-                      location=self.earth_location_itrf())
+        result = Time(
+            t.tt.jd1 - JD_MJD,
+            t.tt.jd2 - topo_tdb_tt.to(u.day).value,
+            format="pulsar_mjd",
+            scale="tdb",
+            location=self.earth_location_itrf(),
+        )
         return result
 
     def get_gcrs(self, t, ephem=None):
-        '''Return position vector of TopoObs in GCRS
+        """Return position vector of TopoObs in GCRS
 
         Parameters
         ----------
@@ -269,14 +309,17 @@ class TopoObs(Observatory):
         -------
         np.array
             a 3-vector of Quantities representing the position in GCRS coordinates.
-        '''
-        obs_geocenter_pv = gcrs_posvel_from_itrf(self.earth_location_itrf(), t, \
-                                            obsname=self.name)
+        """
+        obs_geocenter_pv = gcrs_posvel_from_itrf(
+            self.earth_location_itrf(), t, obsname=self.name
+        )
         return obs_geocenter_pv.pos
 
     def posvel(self, t, ephem):
-        if t.isscalar: t = Time([t])
-        earth_pv = objPosVel_wrt_SSB('earth', t, ephem)
-        obs_geocenter_pv = gcrs_posvel_from_itrf(self.earth_location_itrf(), t, \
-                                           obsname=self.name)
+        if t.isscalar:
+            t = Time([t])
+        earth_pv = objPosVel_wrt_SSB("earth", t, ephem)
+        obs_geocenter_pv = gcrs_posvel_from_itrf(
+            self.earth_location_itrf(), t, obsname=self.name
+        )
         return obs_geocenter_pv + earth_pv

@@ -19,36 +19,62 @@ class BinaryDD(PulsarBinary):
     DR Relativistic deformation of the orbit
     DTH Relativistic deformation of the orbit
     """
+
     register = True
+
     def __init__(self,):
         super(BinaryDD, self).__init__()
-        self.binary_model_name = 'DD'
+        self.binary_model_name = "DD"
         self.binary_model_class = DDmodel
-        self.add_param(floatParameter(name="A0", value=0.0,
-             units="s",
-             description="DD model aberration parameter A0"))
+        self.add_param(
+            floatParameter(
+                name="A0",
+                value=0.0,
+                units="s",
+                description="DD model aberration parameter A0",
+            )
+        )
 
-        self.add_param(floatParameter(name="B0", value=0.0,
-             units="s",
-             description="DD model aberration parameter B0",))
+        self.add_param(
+            floatParameter(
+                name="B0",
+                value=0.0,
+                units="s",
+                description="DD model aberration parameter B0",
+            )
+        )
 
-        self.add_param(floatParameter(name="GAMMA", value=0.0,
-             units="second",
-             description="Time dilation & gravitational redshift"))
+        self.add_param(
+            floatParameter(
+                name="GAMMA",
+                value=0.0,
+                units="second",
+                description="Time dilation & gravitational redshift",
+            )
+        )
 
-        self.add_param(floatParameter(name="DR", value=0.0,
-             units="",
-             description="Relativistic deformation of the orbit"))
+        self.add_param(
+            floatParameter(
+                name="DR",
+                value=0.0,
+                units="",
+                description="Relativistic deformation of the orbit",
+            )
+        )
 
-        self.add_param(floatParameter(name="DTH", value=0.0,
-             units="",
-             description="Relativistic deformation of the orbit",))
-
+        self.add_param(
+            floatParameter(
+                name="DTH",
+                value=0.0,
+                units="",
+                description="Relativistic deformation of the orbit",
+            )
+        )
 
     def setup(self):
         """Check out parameters setup.
         """
-        super(BinaryDD,self).setup()
+        super(BinaryDD, self).setup()
         self.check_required_params(["T0", "A1"])
         # If any *DOT is set, we need T0
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
@@ -58,8 +84,7 @@ class BinaryDD(PulsarBinary):
 
             if getattr(self, p).value is not None:
                 if self.T0.value is None:
-                    raise MissingParameter("DD", "T0",
-                        "T0 is required if *DOT is set")
+                    raise MissingParameter("DD", "T0", "T0 is required if *DOT is set")
 
         if self.GAMMA.value is None:
             self.GAMMA.set("0")

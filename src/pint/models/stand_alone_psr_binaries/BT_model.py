@@ -1,9 +1,14 @@
-from __future__ import absolute_import, print_function, division
-from .binary_generic import PSR_BINARY
-import numpy as np
-import astropy.units as u
+from __future__ import absolute_import, division, print_function
+
 import astropy.constants as c
-from pint import ls,GMsun,Tsun
+import astropy.units as u
+import numpy as np
+
+from pint import GMsun, Tsun, ls
+
+from .binary_generic import PSR_BINARY
+
+
 """
 This version of the BT model is under construction. Overview of progress:
 
@@ -38,6 +43,7 @@ Open issues
 [ ] Tempo2 BTmodel automatically sets EDOT to zero
 
 """
+
 
 class BTmodel(PSR_BINARY):
     """This is a class independent from PINT platform for pulsar BT binary model.
@@ -78,9 +84,9 @@ class BTmodel(PSR_BINARY):
 
     def __init__(self, t=None, input_params=None):
         super(BTmodel, self).__init__()
-        self.binary_name = 'BT'
+        self.binary_name = "BT"
         self.binary_params = list(self.param_default_value.keys())
-        self.set_param_values() # Set parameters to default values.
+        self.set_param_values()  # Set parameters to default values.
         self.binary_delay_funcs = [self.BTdelay]
         self.d_binarydelay_d_par_funcs = [self.d_BTdelay_d_par]
         if t is not None:
@@ -97,7 +103,7 @@ class BTmodel(PSR_BINARY):
         alpha = a1*sin(omega)
         Here a1 is in the unit of light second as distance
         """
-        return self.a1()/c.c*np.sin(self.omega())*(np.cos(self.E())-self.ecc())
+        return self.a1() / c.c * np.sin(self.omega()) * (np.cos(self.E()) - self.ecc())
 
     def delayL2(self):
         """Second term of Blandford & Teukolsky (1976), ApJ, 205,
@@ -108,9 +114,10 @@ class BTmodel(PSR_BINARY):
         beta = (1-e^2)*a1*cos(omega)
         Here a1 is in the unit of light second as distance
         """
-        a1 = self.a1()/c.c
-        return (a1*np.cos(self.omega())*\
-                np.sqrt(1-self.ecc()**2)+self.GAMMA)*np.sin(self.E())
+        a1 = self.a1() / c.c
+        return (
+            a1 * np.cos(self.omega()) * np.sqrt(1 - self.ecc() ** 2) + self.GAMMA
+        ) * np.sin(self.E())
 
     def delayR(self):
         """Third term of Blandford & Teukolsky (1976), ApJ, 205,
@@ -122,80 +129,84 @@ class BTmodel(PSR_BINARY):
         (alpha*(cosE-e)+(beta+gamma)*sinE) is define in delayL1
         and delayL2
         """
-        a1 = self.a1()/c.c
+        a1 = self.a1() / c.c
         omega = self.omega()
         ecc = self.ecc()
         E = self.E()
-        num = a1 * np.cos(omega)* np.sqrt(1 - ecc**2)*np.cos(E) -\
-              a1 * np.sin(omega) * np.sin(E)
+        num = a1 * np.cos(omega) * np.sqrt(1 - ecc ** 2) * np.cos(E) - a1 * np.sin(
+            omega
+        ) * np.sin(E)
         den = 1.0 - ecc * np.cos(E)
 
         # In BTmodel.C, they do not use pbprime here, just pb...
         # Is it not more appropriate to include the effects of PBDOT?
-        #return 1.0 - 2*np.pi*num / (den * self.pbprime())
-        return 1.0 - 2*np.pi*num / (den * self.pb().to(u.second))
+        # return 1.0 - 2*np.pi*num / (den * self.pbprime())
+        return 1.0 - 2 * np.pi * num / (den * self.pb().to(u.second))
 
     def BTdelay(self):
         """Full BT model delay"""
         return (self.delayL1() + self.delayL2()) * self.delayR()
 
-
-
     # NOTE: Below, OMEGA is supposed to be in RADIANS!
     # TODO: Fix UNITS!!!
     def d_delayL1_d_E(self):
-        a1 = self.a1()/c.c
-        return -a1*np.sin(self.omega())*np.sin(self.E())
+        a1 = self.a1() / c.c
+        return -a1 * np.sin(self.omega()) * np.sin(self.E())
 
     def d_delayL2_d_E(self):
-        a1 = self.a1()/c.c
-        return (a1*np.cos(self.omega())*np.sqrt(1-self.ecc()**2)+self.GAMMA) * np.cos(self.E())
+        a1 = self.a1() / c.c
+        return (
+            a1 * np.cos(self.omega()) * np.sqrt(1 - self.ecc() ** 2) + self.GAMMA
+        ) * np.cos(self.E())
 
     def d_delayL1_d_A1(self):
-        return np.sin(self.omega())*(np.cos(self.E()) - self.ecc())/c.c
+        return np.sin(self.omega()) * (np.cos(self.E()) - self.ecc()) / c.c
 
     def d_delayL1_d_A1DOT(self):
         return self.tt0 * self.d_delayL1_d_A1()
 
     def d_delayL2_d_A1(self):
-        return np.cos(self.omega())*np.sqrt(1-self.ecc()**2)*np.sin(self.E())/c.c
+        return (
+            np.cos(self.omega()) * np.sqrt(1 - self.ecc() ** 2) * np.sin(self.E()) / c.c
+        )
 
     def d_delayL2_d_A1DOT(self):
         return self.tt0 * self.d_delayL2_d_A1()
 
     def d_delayL1_d_OM(self):
-        a1 = self.a1()/c.c
-        return a1*np.cos(self.omega())*(np.cos(self.E())-self.ecc())
+        a1 = self.a1() / c.c
+        return a1 * np.cos(self.omega()) * (np.cos(self.E()) - self.ecc())
 
     def d_delayL1_d_OMDOT(self):
         return self.tt0 * self.d_delayL1_d_OM()
 
     def d_delayL2_d_OM(self):
-        a1 = self.a1()/c.c
-        return -a1*np.sin(self.omega())*np.sqrt(1-self.ecc()**2)*np.sin(self.E())
+        a1 = self.a1() / c.c
+        return (
+            -a1 * np.sin(self.omega()) * np.sqrt(1 - self.ecc() ** 2) * np.sin(self.E())
+        )
 
     def d_delayL2_d_OMDOT(self):
         return self.tt0 * self.d_delayL2_d_OM()
 
     def d_delayL1_d_ECC(self):
-        a1 = self.a1()/c.c
-        return a1*np.sin(self.omega()) + \
-               self.d_delayL1_d_E() * self.d_E_d_ECC()
+        a1 = self.a1() / c.c
+        return a1 * np.sin(self.omega()) + self.d_delayL1_d_E() * self.d_E_d_ECC()
 
     def d_delayL1_d_EDOT(self):
         return self.tt0 * self.d_delayL1_d_ECC()
 
     def d_delayL2_d_ECC(self):
-        a1 = self.a1()/c.c
-        num = -a1*np.cos(self.omega())*self.ecc()*np.sin(self.E())
-        den = np.sqrt(1-self.ecc()**2)
-        return num/den + self.d_delayL2_d_E() * self.d_E_d_ECC()
+        a1 = self.a1() / c.c
+        num = -a1 * np.cos(self.omega()) * self.ecc() * np.sin(self.E())
+        den = np.sqrt(1 - self.ecc() ** 2)
+        return num / den + self.d_delayL2_d_E() * self.d_E_d_ECC()
 
     def d_delayL2_d_EDOT(self):
         return self.tt0 * self.d_delayL2_d_ECC()
 
     def d_delayL1_d_GAMMA(self):
-        return np.zeros(len(self.t)) * u.second/u.second
+        return np.zeros(len(self.t)) * u.second / u.second
 
     def d_delayL2_d_GAMMA(self):
         return np.sin(self.E())
@@ -212,14 +223,14 @@ class BTmodel(PSR_BINARY):
             raise ValueError(errorMesg)
 
         par_obj = getattr(self, par)
-        if hasattr(self, 'd_delayL1_d_'+ par):
-            func = getattr(self, 'd_delayL1_d_'+ par)
+        if hasattr(self, "d_delayL1_d_" + par):
+            func = getattr(self, "d_delayL1_d_" + par)
             return func()
         else:
             if par in self.orbits_cls.orbit_params:
                 return self.d_delayL1_d_E() * self.d_E_d_par(par)
             else:
-                return np.zeros(len(self.t)) * u.second/par_obj.unit
+                return np.zeros(len(self.t)) * u.second / par_obj.unit
 
     def d_delayL2_d_par(self, par):
         if par not in self.binary_params:
@@ -227,15 +238,14 @@ class BTmodel(PSR_BINARY):
             raise ValueError(errorMesg)
 
         par_obj = getattr(self, par)
-        if hasattr(self, 'd_delayL2_d_'+ par):
-            func = getattr(self, 'd_delayL2_d_'+ par)
+        if hasattr(self, "d_delayL2_d_" + par):
+            func = getattr(self, "d_delayL2_d_" + par)
             return func()
         else:
             if par in self.orbits_cls.orbit_params:
                 return self.d_delayL2_d_E() * self.d_E_d_par(par)
             else:
-                return np.zeros(len(self.t)) * u.second/par_obj.unit
+                return np.zeros(len(self.t)) * u.second / par_obj.unit
 
     def d_BTdelay_d_par(self, par):
-        return self.delayR() * (self.d_delayL1_d_par(par) + \
-                         self.d_delayL2_d_par(par))
+        return self.delayR() * (self.d_delayL1_d_par(par) + self.d_delayL2_d_par(par))

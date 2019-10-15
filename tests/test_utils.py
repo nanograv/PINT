@@ -30,8 +30,8 @@ from pint.pulsar_mjd import (
     mjds_to_jds_pulsar,
     mjds_to_str,
     str_to_mjds,
-    time_to_longdouble,
     time_from_mjd_string,
+    time_to_longdouble,
 )
 from pint.utils import PosVel, interesting_lines, lines_of, open_or_use, taylor_horner
 

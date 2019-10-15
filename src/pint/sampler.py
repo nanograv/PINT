@@ -1,5 +1,5 @@
-import emcee
 import corner
+import emcee
 import numpy as np
 
 
@@ -67,7 +67,7 @@ class EmceeSampler(MCMCSampler):
 
     def __init__(self, nwalkers):
         super(EmceeSampler, self).__init__()
-        self.method = 'Emcee'
+        self.method = "Emcee"
         self.nwalkers = nwalkers
         self.sampler = None
 
@@ -92,32 +92,41 @@ class EmceeSampler(MCMCSampler):
         kwargs might contain min/maxMJD in the event of a glep_1 parameter
         """
         if len(fitkeys) != len(fitvals):
-            raise ValueError("Number of keys does ({}) not match number of values ({})!".format(
-                len(fitkeys), len(fitvals)))
+            raise ValueError(
+                "Number of keys does ({}) not match number of values ({})!".format(
+                    len(fitkeys), len(fitvals)
+                )
+            )
         n_fit_params = len(fitvals)
-        pos = [fitvals + fiterrs * errfact *
-               np.random.randn(n_fit_params) for ii in range(self.nwalkers)]
+        pos = [
+            fitvals + fiterrs * errfact * np.random.randn(n_fit_params)
+            for ii in range(self.nwalkers)
+        ]
         # set starting params
         # FIXME: what about other glitch phase parameters? This can't be right!
-        for param in ['glph_1', 'glep_1', 'sini', 'm2', 'e', 'ecc', 'px', 'a1']:
+        for param in ["glph_1", "glep_1", "sini", "m2", "e", "ecc", "px", "a1"]:
             if param in fitkeys:
                 idx = fitkeys.index(param)
-                if param == 'glph_1':
+                if param == "glph_1":
                     svals = np.random.uniform(-0.5, 0.5, self.nwalkers)
-                elif param == 'glep_1':
-                    if 'minMJD' in kwargs and 'maxMJD' in kwargs:
+                elif param == "glep_1":
+                    if "minMJD" in kwargs and "maxMJD" in kwargs:
                         svals = np.random.uniform(
-                            kwargs['minMJD']+100, kwargs['maxMJD']-100, self.nwalkers)
+                            kwargs["minMJD"] + 100,
+                            kwargs["maxMJD"] - 100,
+                            self.nwalkers,
+                        )
                     else:
                         raise ValueError("minMJD or maxMJD is None for glep_1 param")
-                elif param == 'sini':
+                elif param == "sini":
                     svals = np.random.uniform(0.0, 1.0, self.nwalkers)
-                elif param == 'm2':
+                elif param == "m2":
                     svals = np.random.uniform(0.1, 0.6, self.nwalkers)
-                elif param in ['e', 'ecc', 'px', 'a1']:
-                    svals = np.fabs(fitvals[idx] + fiterrs[idx] *
-                                    np.random.randn(self.nwalkers))
-                    if param in ['e', 'ecc']:
+                elif param in ["e", "ecc", "px", "a1"]:
+                    svals = np.fabs(
+                        fitvals[idx] + fiterrs[idx] * np.random.randn(self.nwalkers)
+                    )
+                    if param in ["e", "ecc"]:
                         svals[svals > 1.0] = 1.0 - (svals[svals > 1.0] - 1.0)
                 for ii in range(self.nwalkers):
                     pos[ii][idx] = svals[ii]
