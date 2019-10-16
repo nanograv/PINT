@@ -159,6 +159,11 @@ def main(argv=None):
     if "PLANET_SHAPIRO" in modelin.params:
         if modelin.PLANET_SHAPIRO.value:
             use_planets = True
+    if not "AbsPhase" in modelin.components:
+        log.error(
+            "TimingModel does not include AbsPhase component, which is required for computing phases. Make sure you have TZR* parameters in your par file!"
+        )
+        raise ValueError("Model missing AbsPhase component.")
 
     # Discard events outside of MJD range
     if args.maxMJD is not None:
