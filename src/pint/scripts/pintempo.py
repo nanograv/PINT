@@ -43,13 +43,13 @@ def main(argv=None):
     log.warning(m.params)
 
     log.info("Reading TOAs")
-    use_planets=False
+    use_planets = False
     if m.PLANET_SHAPIRO.value:
         use_planets = True
-    model_ephem='DE421'
+    model_ephem = "DE421"
     if m.EPHEM is not None:
         model_ephem = m.EPHEM.value
-    t = pint.toa.get_TOAs(args.timfile,planets=use_planets,ephem=model_ephem)
+    t = pint.toa.get_TOAs(args.timfile, planets=use_planets, ephem=model_ephem)
     prefit_resids = pint.residuals.Residuals(t, m).time_resids
 
     log.info("Fitting...")
