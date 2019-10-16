@@ -5,8 +5,6 @@ import os
 import unittest
 
 import pytest
-from astropy import log
-from six import StringIO
 
 import pint.scripts.photonphase as photonphase
 from pinttestdata import datadir
@@ -19,21 +17,50 @@ orbfile = os.path.join(datadir, "FPorbit_Day6223")
 @pytest.mark.skipif(
     "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
 )
-def test_result():
-    saved_stdout, photonphase.sys.stdout = photonphase.sys.stdout, StringIO("_")
+def test_result(capsys):
+    "Test that processing RXTE data with orbit file gives correct result"
     cmd = "--plot --plotfile photontest.png --outfile photontest.fits {0} {1} --orbfile={2} ".format(
         eventfile, parfile, orbfile
     )
     photonphase.main(cmd.split())
-    lines = photonphase.sys.stdout.getvalue()
-    v = 999.0
-    for l in lines.split("\n"):
+    out, err = capsys.readouterr()
+    v = 0.0
+    for l in out.split("\n"):
         if l.startswith("Htest"):
             v = float(l.split()[2])
     # Check that H-test is greater than 725
-    log.warning("V:\t%f" % v)
     assert v > 725
-    photonphase.sys.stdout = saved_stdout
+
+
+parfile_nicer = os.path.join(datadir, "ngc300nicer.par")
+parfile_nicerbad = os.path.join(datadir, "ngc300nicernoTZR.par")
+eventfile_nicer = os.path.join(datadir, "ngc300nicer_bary.evt")
+
+
+@pytest.mark.skipif(
+    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
+)
+def test_nicer_result(capsys):
+    "Check that barycentered NICER data is processed correctly."
+    cmd = "{0} {1}".format(eventfile_nicer, parfile_nicer)
+    photonphase.main(cmd.split())
+    out, err = capsys.readouterr()
+    v = 0.0
+    for l in out.split("\n"):
+        if l.startswith("Htest"):
+            v = float(l.split()[2])
+    # Check that H-test is greater than 725
+    assert v > 200.0
+
+
+@pytest.mark.skipif(
+    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
+)
+def test_AbsPhase_exception():
+    "Verify that passing par file with no TZR* parameters raises exception"
+    with pytest.raises(ValueError):
+        cmd = "{0} {1}".format(eventfile_nicer, parfile_nicerbad)
+        photonphase.main(cmd.split())
 
 
 if __name__ == "__main__":
