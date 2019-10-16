@@ -52,13 +52,13 @@ def random_models(
     spanMJDs = maxMJD - minMJD
     # ledge and redge _multiplier control how far the fake toas extend
     # in either direction of the selected points
-    x = toa.make_toas(
+    x = toa.make_fake_toas(
         minMJD - spanMJDs * ledge_multiplier,
         maxMJD + spanMJDs * redge_multiplier,
         npoints,
         mrand,
     )
-    x2 = toa.make_toas(minMJD, maxMJD, npoints, mrand)
+    x2 = toa.make_fake_toas(minMJD, maxMJD, npoints, mrand)
 
     rss = []
     for i in range(iter):
