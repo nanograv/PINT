@@ -5,8 +5,6 @@ import os
 import unittest
 
 import pytest
-from astropy import log
-from six import StringIO
 
 import pint.scripts.photonphase as photonphase
 from pinttestdata import datadir
@@ -31,7 +29,6 @@ def test_result(capsys):
         if l.startswith("Htest"):
             v = float(l.split()[2])
     # Check that H-test is greater than 725
-    log.warning("V:\t%f" % v)
     assert v > 725
 
 
@@ -53,7 +50,6 @@ def test_nicer_result(capsys):
         if l.startswith("Htest"):
             v = float(l.split()[2])
     # Check that H-test is greater than 725
-    log.warning("V:\t%f" % v)
     assert v > 200.0
 
 
