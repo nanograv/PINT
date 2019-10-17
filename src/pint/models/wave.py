@@ -91,7 +91,7 @@ class Wave(DelayComponent):
         for k, wave_term in enumerate(wave_terms):
             wave_a, wave_b = wave_term.quantity
             wave_phase = (k + 1) * base_phase
-            delays += wave_a * np.sin(wave_phase)
-            delays += wave_b * np.cos(wave_phase)
+            delays -= wave_a * np.sin(wave_phase)
+            delays -= wave_b * np.cos(wave_phase)
 
         return delays
