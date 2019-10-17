@@ -29,7 +29,6 @@ TZRFRQ         1370.2919919999999365
 TZRSITE        pks   
 TRES           310.453      
 EPHVER         2                           
-NE_SW          9.9610000000000000001       
 CLK            TT(TAI)
 MODE 1
 UNITS          TDB
