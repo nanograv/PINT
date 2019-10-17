@@ -345,7 +345,7 @@ def numerical_gradient(norms, delta=1e-3):
     """
     rvals = np.empty((norms.dim, norms.dim))
     p = norms.p.copy()
-    for i in xrange(norms.dim):
+    for i in range(norms.dim):
         norms.p[i] = p[i] + delta
         hi = norms()
         norms.p[i] = p[i] - delta
@@ -358,8 +358,8 @@ def numerical_gradient(norms, delta=1e-3):
 def numerical_hessian(norms, delta=1e-3):
     rvals = np.empty((norms.dim, norms.dim, norms.dim))
     p = norms.p.copy()
-    for i in xrange(norms.dim):
-        for j in xrange(i, norms.dim):
+    for i in range(norms.dim):
+        for j in range(i, norms.dim):
 
             norms.p[i] += delta
             norms.p[j] += delta

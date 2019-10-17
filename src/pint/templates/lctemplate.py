@@ -1006,6 +1006,6 @@ def check_gradient_derivative(templ):
     ngd = templ.gradient(dom)
     ngd = (ngd[:, 1:] - ngd[:, :-1]) / (dom[1] - dom[0])
     gd = templ.gradient_derivative(templ, pcs)
-    for i in xrange(gd.shape[0]):
+    for i in range(gd.shape[0]):
         print(np.max(np.abs(gd[i] - ngd[i])))
     return pcs, gd, ngd
