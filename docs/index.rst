@@ -36,15 +36,46 @@ The primary reasons we are developing PINT are:
 * To make a system that is easy to extend and modify due to a good design
   and the use of a modern programming language, techniques, and libraries.
 
+How the documentation is organized
+----------------------------------
+
+We try to keep the PINT documentation divided into four categories:
+
+Tutorials
+   Easy-to-follow walkthroughs to show new users what PINT can do. No
+   explanations or alternatives or fallback methods, just getting people to a
+   point where they know what questions to ask. These should work for everyone
+   without surprises or problems. Jupyter notebooks are a natural format for
+   these.
+Explanation
+   Descriptions of how PINT works, why certain design choices were made, what
+   the underlying concepts are and so forth. This is for users who know more
+   or less what to do but want to understand what is going on.
+Reference
+   Specific details of how particular things work. This is for users who are
+   trying to use PINT and know what function or object or method they need but
+   need the details of how it works.
+How-tos
+   Detailed guides on how to accomplish specific things, for people who
+   already know what questions to ask. Explanations and reference are not
+   needed here but even experienced users can benefit from being pointed
+   at the right way to do something, with fallbacks and troubleshooting
+   advice.
+
+This is based on the Django_ documentation structure, and it is intended both
+to help users find the correct information and to help documentation writers
+keep clear in our heads who we are writing for and what we are trying to
+communicate to them.
+
+.. _Django: https://docs.djangoproject.com/en/2.2/
+
 .. toctree::
    :maxdepth: 3
 
-   installation
-   usage
-   command-line
-   structure
-   api/pint
-   contributing
+   tutorials
+   explanation
+   reference
+   howto
    authors
    history
 
