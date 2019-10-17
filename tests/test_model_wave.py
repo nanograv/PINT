@@ -17,19 +17,19 @@ from pinttestdata import datadir
 parfile = os.path.join(datadir, "vela_wave.par")
 timfile = os.path.join(datadir, "vela_wave.tim")
 
+
 class TestWave(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.m = pint.models.get_model(parfile)
         cls.t = pint.toa.get_TOAs(timfile, ephem="DE405", include_bipm=False)
-        #cls.f = pint.fitter.PowellFitter(cls.t, cls.m)
 
     def test_vela(self):
         print("Test RMS of a VELA ephemeris with WAVE parameters.")
-        rs = pint.residuals.resids(self.t, self.m).calc_time_resids()
+        rs = pint.residuals.Residuals(self.t, self.m).time_resids
         rms = rs.to(u.us).std()
         emsg = "RMS of " + str(rms.value) + " is too big."
-        assert rms < 350.0*u.us, emsg
+        assert rms < 350.0 * u.us, emsg
 
 
 if __name__ == "__main__":
