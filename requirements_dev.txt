@@ -17,7 +17,7 @@ pep8-naming>=0.8.2
 flake8-docstrings>=1.4
 flake8-rst-docstrings>=0.0.11
 flake8-diff>=0.2.2
-pluggy>=0.12.0
+pluggy>=0.12.0; python_version >= "3.0"
 jupyter
 nbconvert
 nbsphinx
@@ -28,4 +28,4 @@ jupytext
 pdbpp
 tox
 pre-commit
-black
+black; python_version >= "3.6"
