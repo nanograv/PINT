@@ -8,3 +8,4 @@ This section is to provide specific detail for when you know what you're looking
 
    command-line
    api/pint
+   coding-style

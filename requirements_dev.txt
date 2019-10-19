@@ -24,3 +24,6 @@ nbdime
 pandoc
 hypothesis
 jupytext
+pdbpp
+tox
+pre-commit

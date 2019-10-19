@@ -302,3 +302,178 @@ lines, but in some cases they can contain structure in the form of blocks that
 are meant to be omitted from reading or have their time adjusted. We recommend
 use of the most flexible format, that defined by TEMPO2 and now also supported
 (to the extent that the engine permits) by TEMPO.
+
+
+Coding Style
+------------
+
+We would like `PINT` to be easy to use and easy to contribute to. To
+this end we'd like to ask that if you're going to contribute code or
+documentation that you try to follow the below style advice. We know
+that not all of the existing code does this, and it's something we'd
+like to change.
+
+For a specific listing of the rules we try to write PINT code by, please see
+:ref:`CodingStyle`.
+
+More general rules and explanations:
+
+   - Think about how someone might want to use your code in various ways.
+     Is it called something helpful so that they will be able to find it?
+     Will they be able to do something different with it than you wrote
+     it for? How will it respond if they give it incorrect values?
+   - Code should follow PEP8_. Most importantly, if at all possible, class
+     names should be in CamelCase, while function names should be in
+     snake_case. There is also advice there on line length and whitespace.
+     You can check your code with the tool ``flake8``, but I'm afraid
+     much of PINT's existing code emits a blizzard of warnings.
+   - Files should be formatted according to the much more specific rules
+     enforced by the tool black_. This is as simple as ``pip install black``
+     and then running ``black`` on a python file. If an existing file does not
+     follow this style please don't convert it unless you are modifying almost
+     all the file anyway; it will mix in formatting changes with the actual
+     substantive changes you are making when it comes time for us to review
+     your pull request.
+   - Functions, modules, and classes should have docstrings. These should
+     start with a short one-line description of what the function (or module
+     or class) does. Then, if you want to say more than fits in a line, a
+     blank line and a longer description. If you can, if it's something that
+     will be used widely, please follow the numpy docstring guidelines_ -
+     these result in very helpful usage descriptions in both the interpreter
+     and online docs. Check the HTML documentation for the thing you are
+     modifying to see if it looks okay.
+   - Tests are great! When there is a good test suite, you can
+     make changes without fear you're going to break something. *Unit*
+     tests are a special kind of test, that isolate the functionality
+     of a small piece of code and test it rigorously.
+
+      - When you write a new function, write a few tests for it. You
+        will never have a clearer idea of how it's supposed to work
+        than right after you wrote it. And anyway you probably used
+        some code to see if it works, right? Make that into a test,
+        it's not hard. Feed it some bogus data, make sure it raises
+        an exception. Make sure it does the right thing on empty lists,
+        multidimensional arrays, and NaNs as input - even if that's to
+        raise an exception. We use pytest_. You can easily run just your
+        new tests.
+      - Give tests names that describe what property of what thing they
+        are testing.  We don't call test functions ourselves so there
+        is no advantage to them having short names. It is perfectly
+        reasonable to have a function called
+        ``test_download_parallel_fills_cache`` or
+        ``test_cache_size_changes_correctly_when_files_are_added_and_removed``.
+      - If your function depends on complicated other functions or data,
+        consider using something like `unittest.Mock` to replace that
+        complexity with mock functions that return specific values. This
+        is designed to let you test your function specifically in
+        isolation from potential bugs in other parts of the code.
+      - When you find a bug, you presumably have some code that triggers
+        it. You'll want to narrow that down as much as possible for
+        debugging purposes, so please turn that bug test case into a
+        test - before you fix the bug! That way you know the bug *stays*
+        fixed.
+      - If you're trying to track down a tricky bug and you have a test
+        case that triggers it, running
+        ``pytest tests/test_my_buggy_code.py --pdb`` will drop you into
+        the python debugger pdb_ at the moment failure occurs so you
+        can inspect local variables and generally poke around.
+
+   - When you're working with a physical quantity or an array of these,
+     something that has units, please use :class:`~astropy.units.Quantity` to
+     keep track of what these units are. If you need a plain floating-point
+     number out of one, use ``.to(u.m).value``, where ``u.m`` should be
+     replaced by the units you want the number to be in. This will raise
+     an exception (good!) if the units can't be converted (``u.kg`` for
+     example) and convert if it's in a compatible unit (``u.cm``, say).
+     Adding units to a number when you know what they are is as simple as
+     multiplying.
+   - When you want to let the user know some information from deep inside
+     PINT, remember that they might be running a GUI application where
+     they can't see what comes out of ``print``. Please use :mod:`~astropy.logger`.
+     Conveniently, this has levels ``debug``, ``info``,
+     ``warning``, and ``error``; the end user can
+     decide which levels of severity they want to see.
+   - When something goes wrong and your code can't continue and still
+     produce a sensible result, please raise an exception. Usually
+     you will want to raise a ValueError with a description of what
+     went wrong, but if you want users to be able to do something with
+     the specific thing that went wrong (for example, they might want to
+     use an exception to know that they have emptied a container), you
+     can quickly create a new exception class (no more than
+     ``class PulsarProblem(ValueError): pass``)
+     that the user can specifically catch and distinguish from other
+     exceptions. Similarly, if you're catching an exception some code might
+     raise, use ``except PulsarProblem:`` to catch just the kind you
+     can deal with.
+
+There are a number of tools out there that can help with the mechanical
+aspects of cleaning up your code and catching some obvious bugs. Most of
+these are installed through PINT's ``requirements_dev.txt``.
+
+   - flake8_ reads through code and warns about style issues, things like
+     confusing indentation, unused variable names, un-initialized variables
+     (usually a typo), and names that don't follow python conventions.
+     Unfortunately a lot of existing PINT code has some or all of these
+     problems. ``flake8-diff`` checks only the code that you have touched -
+     for the most part this pushes you to clean up functions and modules
+     you work on as you go.
+   - isort_ sorts your module's import section into conventional order.
+   - black_ is a draconian code formatter that completely rearranges the
+     whitespace in your code to standardize the appearance of your
+     formatting. ``blackcellmagic`` allows you to have ``black`` format the
+     cells in a Jupyter notebook.
+   - pre-commit_ allows ``git`` to automatically run some checks before
+     you check in your code. It may require an additional installation
+     step.
+   - ``make coverage`` can show you if your tests aren't even exercising
+     certain parts of your code.
+   - editorconfig_ allows PINT to specify how your editor should format
+     PINT files in a way that many editors can understand (though some,
+     including vim and emacs, require a plugin to notice).
+
+Your editor, whether it is emacs, vim, JupyterLab, Spyder, or some more
+graphical tool, can probably be made to understand that you are editing
+python and do things like highlight syntax, offer tab completion on
+identifiers, automatically indent text, automatically strip trailing
+white space, and possibly integrate some of the above tools.
+
+.. _six: https://six.readthedocs.io/
+.. _black: https://black.readthedocs.io/en/stable/
+.. _isort: https://pypi.org/project/isort/
+.. _flake8: http://flake8.pycqa.org/en/latest/
+.. _pre-commit: https://pre-commit.com/
+.. _editorconfig: https://editorconfig.org/
+
+.. _pythonic:
+
+The Zen of Python
+'''''''''''''''''
+by Tim Peters::
+
+   >>> import this
+   The Zen of Python, by Tim Peters
+
+   Beautiful is better than ugly.
+   Explicit is better than implicit.
+   Simple is better than complex.
+   Complex is better than complicated.
+   Flat is better than nested.
+   Sparse is better than dense.
+   Readability counts.
+   Special cases aren't special enough to break the rules.
+   Although practicality beats purity.
+   Errors should never pass silently.
+   Unless explicitly silenced.
+   In the face of ambiguity, refuse the temptation to guess.
+   There should be one-- and preferably only one --obvious way to do it.
+   Although that way may not be obvious at first unless you're Dutch.
+   Now is better than never.
+   Although never is often better than *right* now.
+   If the implementation is hard to explain, it's a bad idea.
+   If the implementation is easy to explain, it may be a good idea.
+   Namespaces are one honking great idea -- let's do more of those!
+
+.. _guidelines: https://numpy.org/devdocs/docs/howto_document.html
+.. _PEP8: https://www.python.org/dev/peps/pep-0008/
+.. _pytest: https://docs.pytest.org/en/latest/
+.. _pdb: https://docs.python.org/3/library/pdb.html
