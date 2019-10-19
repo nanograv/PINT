@@ -1,4 +1,5 @@
 .. highlight:: shell
+.. _`Installation`:
 
 ===================
 How to Install PINT
@@ -19,6 +20,8 @@ If your python setup is "nice", you should be able to install as easily as::
    $ cd PINT
    $ mkvirtualenv -p `which python3` pint
    (pint) $ pip install -e .
+   (pint) $ python
+   >>> import pint
 
 This *should* install PINT along with any python packages it needs to run. (If
 you want to run the test suite or work on PINT code, see below.)

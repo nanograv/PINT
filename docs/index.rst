@@ -41,21 +41,21 @@ How the documentation is organized
 
 We try to keep the PINT documentation divided into four categories:
 
-Tutorials
+:ref:`Tutorials`
    Easy-to-follow walkthroughs to show new users what PINT can do. No
    explanations or alternatives or fallback methods, just getting people to a
    point where they know what questions to ask. These should work for everyone
    without surprises or problems. Jupyter notebooks are a natural format for
-   these.
-Explanation
+   these. Includes :ref:`basic-installation`.
+:ref:`Explanation`
    Descriptions of how PINT works, why certain design choices were made, what
    the underlying concepts are and so forth. This is for users who know more
    or less what to do but want to understand what is going on.
-Reference
+:ref:`Reference`
    Specific details of how particular things work. This is for users who are
    trying to use PINT and know what function or object or method they need but
    need the details of how it works.
-How-tos
+:ref:`How-tos`
    Detailed guides on how to accomplish specific things, for people who
    already know what questions to ask. Explanations and reference are not
    needed here but even experienced users can benefit from being pointed

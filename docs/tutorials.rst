@@ -1,3 +1,5 @@
+.. _`Tutorials`:
+
 Tutorials
 =========
 
@@ -7,6 +9,7 @@ We don't really have any proper tutorials yet. But for the moment, we have a few
 
 .. toctree::
 
+   basic-installation
    examples/PINT_walkthrough
    examples/MCMC_walkthrough
    examples/Example of parameter usage

@@ -1,5 +1,7 @@
-Explanations
-============
+.. _`Explanation`:
+
+Explanation
+===========
 
 This section is to explain pulsar timing, how PINT works, and why it is built the way it is.
 
