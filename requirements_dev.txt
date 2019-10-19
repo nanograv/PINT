@@ -27,3 +27,4 @@ jupytext
 pdbpp
 tox
 pre-commit
+black
