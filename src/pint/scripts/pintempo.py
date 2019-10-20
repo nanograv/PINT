@@ -11,17 +11,16 @@ This is currently just a stub and should be added to and expanded, as desired.
 from __future__ import absolute_import, division, print_function
 
 import argparse
-import os
 import sys
 
 import astropy.units as u
-import numpy as np
 from astropy import log
 
 import pint.fitter
 import pint.models
 import pint.residuals
-import pint.toa as toa
+
+__all__ = ["main"]
 
 
 def main(argv=None):
@@ -53,7 +52,7 @@ def main(argv=None):
     prefit_resids = pint.residuals.Residuals(t, m).time_resids
 
     log.info("Fitting...")
-    f = pint.fitter.WlsFitter(t, m)
+    f = pint.fitter.WLSFitter(t, m)
     f.fit_toas()
 
     # Print some basic params

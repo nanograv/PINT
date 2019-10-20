@@ -8,11 +8,11 @@ import numpy as np
 
 import pint.models.model_builder as mb
 from pint import toa
-from pint.fitter import GlsFitter
+from pint.fitter import GLSFitter
 from pinttestdata import datadir
 
 
-class TestGls(unittest.TestCase):
+class TestGLS(unittest.TestCase):
     """Compare delays from the dd model with tempo and PINT"""
 
     @classmethod
@@ -22,7 +22,7 @@ class TestGls(unittest.TestCase):
         cls.tim = "B1855+09_NANOGrav_9yv1.tim"
         cls.m = mb.get_model(cls.par)
         cls.t = toa.get_TOAs(cls.tim, ephem="DE436")
-        cls.f = GlsFitter(cls.t, cls.m)
+        cls.f = GLSFitter(cls.t, cls.m)
         # get tempo2 parameter dict
         with open("B1855+09_tempo2_gls_pars.json", "r") as fp:
             cls.t2d = json.load(fp)

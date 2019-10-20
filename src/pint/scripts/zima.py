@@ -14,7 +14,9 @@ import pint.models
 import pint.toa as toa
 from pint.observatory import get_observatory
 
-log.setLevel("INFO")
+__all__ = ["main"]
+
+# log.setLevel("INFO")
 
 
 def get_freq_array(base_freq_values, ntoas):

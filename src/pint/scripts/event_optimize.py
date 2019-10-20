@@ -28,6 +28,7 @@ from pint.models.priors import (
 )
 from pint.observatory.fermi_obs import FermiObs
 
+__all__ = ["read_gaussfitfile", "marginalize_over_phase", "main"]
 # log.setLevel('DEBUG')
 # np.seterr(all='raise')
 
@@ -182,13 +183,12 @@ def marginalize_over_phase(
     lophs=0.0,
     hiphs=1.0,
 ):
-    """
-    def marginalize_over_phase(phases, template, weights=None, resolution=1.0/1024,
-        minimize=True, fftfit=False, showplot=False, lophs=0.0, hiphs=1.0):
-            a pulse profile comprised of combined photon phases.  A maximum
-            likelood technique is used.  The shift and the max log likehood
-            are returned.  You probably want to use "minimize" rathre than
-            "fftfit" unless you are only sampling very close to your known min.
+    """Find the best fit pulse profile
+
+    a pulse profile comprised of combined photon phases.  A maximum
+    likelood technique is used.  The shift and the max log likehood
+    are returned.  You probably want to use "minimize" rathre than
+    "fftfit" unless you are only sampling very close to your known min.
     """
     ltemp = len(template)
     xtemp = np.arange(ltemp) * 1.0 / ltemp

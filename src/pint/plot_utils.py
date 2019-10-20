@@ -4,6 +4,8 @@ from __future__ import absolute_import, division, print_function
 import matplotlib.pyplot as plt
 import numpy as np
 
+__all__ = ["phaseogram", "phaseogram_binned"]
+
 
 def phaseogram(
     mjds,
@@ -18,13 +20,11 @@ def phaseogram(
     maxphs=2.0,
     plotfile=None,
 ):
-    """
-    Make a nice 2-panel phaseogram
-    """
+    """Make a nice 2-panel phaseogram"""
     years = (mjds.value - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
     phss[phss > 1.0] -= 1.0
-    fig = plt.figure(figsize=(width, 8))
+    plt.figure(figsize=(width, 8))
     ax1 = plt.subplot2grid((3, 1), (0, 0))
     ax2 = plt.subplot2grid((3, 1), (1, 0), rowspan=2)
     wgts = None if weights is None else np.concatenate((weights, weights))
@@ -91,7 +91,7 @@ def phaseogram_binned(
     years = (mjds.value - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
     phss[phss >= 1.0] -= 1.0
-    fig = plt.figure(figsize=(width, 8))
+    plt.figure(figsize=(width, 8))
     ax1 = plt.subplot2grid((3, 1), (0, 0))
     ax2 = plt.subplot2grid((3, 1), (1, 0), rowspan=2)
     wgts = None if weights is None else np.concatenate((weights, weights))

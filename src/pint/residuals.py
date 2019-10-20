@@ -2,12 +2,13 @@ from __future__ import absolute_import, division, print_function
 
 import astropy.units as u
 import numpy as np
-import scipy.linalg as sl
+from scipy.linalg import LinAlgError
 from astropy import log
 
 from pint import dimensionless_cycles
+from pint.phase import Phase
 
-from .phase import Phase
+__all__ = ["Residuals"]
 
 # also we import from fitter, down below to avoid circular relative imports
 
@@ -63,8 +64,9 @@ class Residuals(object):
         if getattr(self.model, "TRACK").value == "-2":
             pulse_num = self.toas.get_pulse_numbers()
             if pulse_num is None:
-                log.error("No pulse numbers with TOAs using TRACK -2")
-                raise Exception("No pulse numbers with TOAs using TRACK -2")
+                raise ValueError(
+                    "Pulse numbers missing from TOAs but TRACK -2 requires them"
+                )
 
             pn_act = np.trunc(full)
             addPhase = pn_act - pulse_num
@@ -129,7 +131,7 @@ class Residuals(object):
         If the errors on the TOAs are independent this is a straightforward
         calculation, but if the noise model introduces correlated errors then
         obtaining a meaningful chi-squared value requires a Cholesky
-        decomposition. This is carried out, here, by constructing a GlsFitter
+        decomposition. This is carried out, here, by constructing a GLSFitter
         and asking it to do the chi-squared computation but not a fit.
 
         The return value here is available as self.chi2, which will not
@@ -144,12 +146,12 @@ class Residuals(object):
         """
         if self.model.has_correlated_errors:
             # Use GLS but don't actually fit
-            from .fitter import GlsFitter
+            from pint.fitter import GLSFitter
 
-            f = GlsFitter(self.toas, self.model, residuals=self)
+            f = GLSFitter(self.toas, self.model, residuals=self)
             try:
                 return f.fit_toas(maxiter=0, full_cov=full_cov)
-            except sl.LinAlgError as e:
+            except LinAlgError as e:
                 log.warning(
                     "Degenerate conditions encountered when "
                     "computing chi-squared: %s" % (e,)
@@ -185,8 +187,7 @@ class Residuals(object):
         return self.calc_chi2() / self.get_dof()
 
     def update(self, weighted_mean=True):
-        """Recalculate everything in residuals class
-        after changing model or TOAs"""
+        """Recalculate everything in residuals class after changing model or TOAs"""
         if self.toas is None or self.model is None:
             self.phase_resids = None
             self.time_resids = None

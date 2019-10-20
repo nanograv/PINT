@@ -1,16 +1,16 @@
 from __future__ import absolute_import, division, print_function
 
-import abc
 import collections
 import copy
-import numbers
 
 import astropy.units as u
 import numpy as np
 import scipy.linalg as sl
 import scipy.optimize as opt
 
-from .residuals import Residuals
+from pint.residuals import Residuals
+
+__all__ = ["Fitter", "PowellFitter", "GLSFitter", "WLSFitter"]
 
 
 class Fitter(object):
@@ -152,14 +152,14 @@ class PowellFitter(Fitter):
         self.minimize_func(np.atleast_1d(self.fitresult.x), *list(fitp.keys()))
 
 
-class WlsFitter(Fitter):
+class WLSFitter(Fitter):
     """
        A class for weighted least square fitting method. The design matrix is
        required.
     """
 
     def __init__(self, toas=None, model=None):
-        super(WlsFitter, self).__init__(toas=toas, model=model)
+        super(WLSFitter, self).__init__(toas=toas, model=model)
         self.method = "weighted_least_square"
 
     def fit_toas(self, maxiter=1, threshold=False):
@@ -242,14 +242,14 @@ class WlsFitter(Fitter):
         return chi2
 
 
-class GlsFitter(Fitter):
+class GLSFitter(Fitter):
     """
        A class for weighted least square fitting method. The design matrix is
        required.
     """
 
     def __init__(self, toas=None, model=None, residuals=None):
-        super(GlsFitter, self).__init__(toas=toas, model=model, residuals=residuals)
+        super(GLSFitter, self).__init__(toas=toas, model=model, residuals=residuals)
         self.method = "generalized_least_square"
 
     def fit_toas(self, maxiter=1, threshold=False, full_cov=False):

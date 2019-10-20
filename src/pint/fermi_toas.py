@@ -1,20 +1,16 @@
 """Work with Fermi TOAs."""
 from __future__ import absolute_import, division, print_function
 
-import os
-import sys
-
 import astropy.units as u
 import numpy as np
-import six
 from astropy import log
-from astropy.coordinates import EarthLocation, SkyCoord
+from astropy.coordinates import SkyCoord
 
-import pint.models
-import pint.residuals
 import pint.toa as toa
-from pint.fits_utils import read_fits_event_mjds, read_fits_event_mjds_tuples
+from pint.fits_utils import read_fits_event_mjds_tuples
 from pint.observatory import get_observatory
+
+__all__ = ["load_Fermi_TOAs"]
 
 
 def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):

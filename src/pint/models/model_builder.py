@@ -17,6 +17,8 @@ from pint.models.timing_model import (
 )
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
+__all__ = ["get_model", "get_model_new"]
+
 default_models = ["StandardTimingModel"]
 DEFAULT_ORDER = [
     "astrometry",

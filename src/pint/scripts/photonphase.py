@@ -24,6 +24,8 @@ from pint.observatory.rxte_obs import RXTEObs
 from pint.plot_utils import phaseogram_binned
 from pint.pulsar_mjd import Time
 
+__all__ = ["main"]
+
 
 def main(argv=None):
     import argparse

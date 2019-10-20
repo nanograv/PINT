@@ -1,15 +1,15 @@
+"""Generate random models distributed like the results of a fit"""
 from collections import OrderedDict
 from copy import deepcopy
 
-import matplotlib.pyplot as plt
 import numpy as np
 from astropy import log
 
-import pint.fitter as fitter
 import pint.toa as toa
 from pint.phase import Phase
 
-log.setLevel("INFO")
+__all__ = ["random_models"]
+# log.setLevel("INFO")
 
 
 def random_models(
@@ -22,16 +22,25 @@ def random_models(
     edge_multipliers determine how far beyond the selected toas the random models are plotted.
     This uses an approximate method based on the cov matrix, it doesn't use MCMC.
 
-    :param fitter: fitter object with model and toas to vary from
-    :param rs_mean: average phase residual for toas in fitter object, used to plot random models
-    :param ledge_multiplier: how far the lines will plot to the left in multiples of the fit toas span, default 4
-    :param redge_multiplier: how far the lines will plot to the right in multiples of the fit toas span, default 4
-    :param iter: how many random models will be computed, default 1
-    :param npoints: how many fake toas will be reated for the random lines, default 100
+    Parameters
+    ----------
+    fitter
+        fitter object with model and toas to vary from
+    rs_mean
+        average phase residual for toas in fitter object, used to plot random models
+    ledge_multiplier
+        how far the lines will plot to the left in multiples of the fit toas span, default 4
+    redge_multiplier
+        how far the lines will plot to the right in multiples of the fit toas span, default 4
+    iter
+        how many random models will be computed, default 1
+    npoints
+        how many fake toas will be reated for the random lines, default 100
 
-    :return TOAs object containing the evenly spaced fake toas to plot the random lines with
-    :return list of residual objects for the random models (one residual object each)
-
+    Returns
+    -------
+        TOAs object containing the evenly spaced fake toas to plot the random lines with
+        list of residual objects for the random models (one residual object each)
     """
     params = fitter.get_fitparams_num()
     mean_vector = params.values()
@@ -42,8 +51,8 @@ def random_models(
     mrand = f_rand.model
 
     # scale by fac
-    log.info("errors", np.sqrt(np.diag(cor_matrix)))
-    log.info("mean vector", mean_vector)
+    log.debug("errors", np.sqrt(np.diag(cor_matrix)))
+    log.debug("mean vector", mean_vector)
     mean_vector *= fac
     cov_matrix = ((cor_matrix * fac).T * fac).T
 
@@ -52,13 +61,13 @@ def random_models(
     spanMJDs = maxMJD - minMJD
     # ledge and redge _multiplier control how far the fake toas extend
     # in either direction of the selected points
-    x = toa.make_toas(
+    x = toa.make_fake_toas(
         minMJD - spanMJDs * ledge_multiplier,
         maxMJD + spanMJDs * redge_multiplier,
         npoints,
         mrand,
     )
-    x2 = toa.make_toas(minMJD, maxMJD, npoints, mrand)
+    x2 = toa.make_fake_toas(minMJD, maxMJD, npoints, mrand)
 
     rss = []
     for i in range(iter):

@@ -29,7 +29,7 @@ def test_fitter():
         planet_ephems = False
     t.compute_posvels(planets=planet_ephems)
 
-    f = fitter.WlsFitter(toas=t, model=m)
+    f = fitter.WLSFitter(toas=t, model=m)
 
     # Print initial chi2
     print("chi^2 is initially %0.2f" % f.resids.chi2)

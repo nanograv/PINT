@@ -2,38 +2,25 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
-import copy
-import os
 import sys
 
-import astropy.table
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.optimize as op
 from astropy import log
 from astropy.coordinates import SkyCoord
-from scipy.stats import norm, uniform
 
-import fftfit
 import pint.fermi_toas as fermi
 import pint.models
-import pint.plot_utils as plot_utils
 import pint.toa as toa
-from pint.eventstats import hm, hmw
 from pint.mcmc_fitter import CompositeMCMCFitter
-from pint.models.priors import (
-    GaussianBoundedRV,
-    Prior,
-    UniformBoundedRV,
-    UniformUnboundedRV,
-)
 from pint.observatory.fermi_obs import FermiObs
 from pint.sampler import EmceeSampler
-from pint.scripts.event_optimize import marginalize_over_phase, read_gaussfitfile
+from pint.scripts.event_optimize import read_gaussfitfile
 
+__all__ = ["main"]
 # log.setLevel('DEBUG')
-log.setLevel("INFO")
+# log.setLevel("INFO")
 # np.seterr(all='raise')
 
 # initialization values
@@ -47,7 +34,7 @@ def get_toas(evtfile, flags, tcoords=None, minweight=0, minMJD=0, maxMJD=100000)
         usepickle = False
         if "usepickle" in flags:
             usepickle = flags["usepickle"]
-        ts = toa.get_TOAs(evtfile, usepickle=False)
+        ts = toa.get_TOAs(evtfile, usepickle=usepickle)
         # Prune out of range MJDs
         mask = np.logical_or(
             ts.get_mjds() < minMJD * u.day, ts.get_mjds() > maxMJD * u.day
@@ -161,7 +148,7 @@ def lnlikelihood_prob(ftr, theta, index):
 
 
 def lnlikelihood_resid(ftr, theta, index):
-    return -resids(toas=ftr.toas_list[index], model=ftr.model).chi2.value
+    return -Residuals(toas=ftr.toas_list[index], model=ftr.model).chi2.value
 
 
 def main(argv=None):

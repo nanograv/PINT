@@ -3,19 +3,23 @@ import copy
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.linalg as sl
-import scipy.optimize as opt
 from astropy import log
 from astropy.table import vstack
 from scipy.stats import norm, uniform
 
 import pint.plot_utils as plot_utils
-import pint.toa
+from pint.eventstats import hm, hmw
 from pint.fitter import Fitter
 from pint.models.priors import Prior
+from pint.residuals import Residuals
 from pint.templates.lctemplate import LCTemplate
 
-from .residuals import Residuals
+__all__ = [
+    "MCMCFitter",
+    "MCMCFitterAnalyticTemplate",
+    "MCMCFitterBinnedTemplate",
+    "CompositeMCMCFitter",
+]
 
 
 def concat_toas(toas):
@@ -169,7 +173,7 @@ class MCMCFitter(Fitter):
         self.n_fit_params = len(self.fitvals)
 
         template = kwargs.get("template", None)
-        if not template is None:
+        if template is not None:
             self.set_template(template)
         else:
             self.template = None
@@ -370,9 +374,7 @@ class MCMCFitter(Fitter):
     def phaseogram(
         self, weights=None, bins=100, rotate=0.0, size=5, alpha=0.25, plotfile=None
     ):
-        """
-        Make a nice 2-panel phaseogram for the current model
-        """
+        """Make a nice 2-panel phaseogram for the current model"""
         mjds = self.toas.table["tdbld"].quantity
         phss = self.get_event_phases()
         plot_utils.phaseogram(
