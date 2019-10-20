@@ -1,27 +1,22 @@
 from __future__ import absolute_import, division, print_function
 
-import os
-
 import astropy.coordinates as coord
 import astropy.units as u
-import numpy as np
-from astropy.coordinates import DynamicMatrixTransform, frame_transform_graph
+from astropy.coordinates import frame_transform_graph
 from astropy.coordinates.matrix_utilities import rotation_matrix
 
-from .config import datapath
+from pint.config import datapath
+from pint.utils import interesting_lines, lines_of
+
+__all__ = ["OBL", "PulsarEcliptic"]
 
 
 # Load obliquity data
 # Assume the data file is in the ./datafile directory
 def load_obliquity_file(filename):
     obliquity_data = {}
-    for l in open(filename).readlines():
-        l = l.strip()
+    for l in interesting_lines(lines_of(filename), comments="#"):
         if l.startswith("Obliquity of the ecliptic"):
-            continue
-        if l.startswith("#"):
-            continue
-        if l == "":
             continue
         line = l.split()
         obliquity_data[line[0]] = float(line[1]) * u.arcsecond

@@ -193,7 +193,7 @@ The fitter is *completely* separate from the model and the TOA code.  So you can
 ```python
 import pint.fitter as fit
 
-f = fit.WlsFitter(t, m)
+f = fit.WLSFitter(t, m)
 f.fit_toas()
 ```
 

@@ -4,30 +4,22 @@ An interface for pint compatible to the interface of libstempo
 from __future__ import absolute_import, division, print_function
 
 import collections
-import copy
 import time
+from collections import OrderedDict
 
 import astropy.constants as ac
 import astropy.coordinates.angles as ang
 import astropy.units as u
-
-# import matplotlib
-# matplotlib.use('TKAgg')
-import matplotlib.pyplot as plt
 import numpy as np
 from astropy import log
 
 import pint.models as pm
 import pint.toa as pt
 from pint import fitter
-from pint.phase import Phase
-from pint.residuals import Residuals
 from pint.utils import has_astropy_unit
+from pint.residuals import Residuals
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
+__all__ = ["PINTPar", "PINTPulsar"]
 
 # Make sure we have the minuteangle and secondangle units
 u.minuteangle = u.def_unit("minuteangle", u.hourangle / 60)
@@ -89,7 +81,7 @@ map_units = {
 }
 
 
-class pintpar(object):
+class PINTPar(object):
     """
     Similar to the parameter class defined in libstempo, this class gives a nice
     interface to the timing model parameters
@@ -151,7 +143,7 @@ class pintpar(object):
         self._set = value
 
 
-class pintpulsar(object):
+class PINTPulsar(object):
     """
     Pulsar object class with an interface similar to tempopulsar of libstempo
     """
@@ -228,7 +220,7 @@ class pintpulsar(object):
         """Process the timing model parameters, libstempo style"""
         self.pardict = OrderedDict()
         for par in self.model.params:
-            self.pardict[par] = pintpar(getattr(self.model, par), par)
+            self.pardict[par] = PINTPar(getattr(self.model, par), par)
 
     def loadtimfile(self, timfile):
         """
@@ -330,7 +322,7 @@ class pintpulsar(object):
 
         log.info("Computing residuals...")
         t0 = time.time()
-        self.resids_us = resids(self.t, self.model).time_resids.to(u.us)
+        self.resids_us = Residuals(self.t, self.model).time_resids.to(u.us)
         time_phase = time.time() - t0
         log.info("Computed phases and residuals in %.3f sec" % time_phase)
 

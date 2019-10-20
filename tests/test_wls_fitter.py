@@ -4,7 +4,7 @@ import unittest
 
 from pint.models.model_builder import get_model
 from pint import toa
-from pint.fitter import WlsFitter
+from pint.fitter import WLSFitter
 from pinttestdata import datadir
 
 
@@ -18,7 +18,7 @@ class Testwls(unittest.TestCase):
         cls.tim = "B1855+09_NANOGrav_dfg+12.tim"
         cls.m = get_model(cls.par)
         cls.t = toa.get_TOAs(cls.tim, ephem="DE405")
-        cls.f = WlsFitter(cls.t, cls.m)
+        cls.f = WLSFitter(cls.t, cls.m)
         # set perturb parameter step
         cls.per_param = {
             "A1": 1e-05,

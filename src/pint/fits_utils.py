@@ -1,13 +1,14 @@
 """FITS handling functions"""
 from __future__ import absolute_import, division, print_function
 
-import astropy.io.fits as pyfits
 import numpy as np
 import six
 from astropy import log
 from astropy._erfa import DAYSEC as SECS_PER_DAY
 
 from pint.pulsar_mjd import fortran_float
+
+__all__ = ["read_fits_event_mjds", "read_fits_event_mjds_tuples"]
 
 
 def read_fits_event_mjds_tuples(event_hdu, timecolumn="TIME"):

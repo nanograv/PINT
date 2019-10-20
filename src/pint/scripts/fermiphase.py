@@ -18,6 +18,8 @@ from pint.observatory.fermi_obs import FermiObs
 from pint.plot_utils import phaseogram
 from pint.pulsar_mjd import Time
 
+__all__ = ["main"]
+
 # log.setLevel('DEBUG')
 
 

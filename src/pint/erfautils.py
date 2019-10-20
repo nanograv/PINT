@@ -11,6 +11,12 @@ from astropy.utils.iers import IERS_B, IERS_B_URL
 from pint.pulsar_mjd import Time
 from pint.utils import PosVel
 
+__all__ = [
+    "get_iers_b_up_to_date",
+    "gcrs_posvel_from_itrf",
+    "astropy_gcrs_posvel_from_itrf",
+]
+
 
 def get_iers_b_up_to_date(mjd):
     """Update the IERS B table to include MJD if necessary

@@ -450,7 +450,7 @@ class Pulsar(object):
         if self.fitter == Fitters.POWELL:
             fitter = pint.fitter.PowellFitter(self.selected_toas, self.prefit_model)
         elif self.fitter == Fitters.WLS:
-            fitter = pint.fitter.WlsFitter(self.selected_toas, self.prefit_model)
+            fitter = pint.fitter.WLSFitter(self.selected_toas, self.prefit_model)
         elif self.fitter == Fitters.GLS:
             fitter = pint.fitter.GLSFitter(self.selected_toas, self.prefit_model)
         chi2 = self.prefit_resids.chi2

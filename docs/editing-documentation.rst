@@ -54,7 +54,7 @@ In a ``.rst`` file:
      a line ``.. _`label`:``
    - To refer to a class, module, or function in text, use
      ``:class:`~astropy.module.ClassName```, ``:mod:`~astropy.module```,
-     or ``:fun:`~astropy.module.function```.
+     or ``:func:`~astropy.module.function```.
    - To get ``typewriter font`` for text, use double back-ticks. Single back-ticks
      are for Sphinx special objects like links and class names and things.
    - To get *emphasis*, use asterisks.
@@ -90,7 +90,7 @@ still the indended one and not `something else`_.
 .. _Sphinx: http://www.sphinx-doc.org/en/master/
 .. _reStructuredText: http://docutils.sourceforge.net/rst.html
 .. _readthedocs: https://readthedocs.org/
-.. _here: https://readthedocs.org/
+.. _here: https://nanograv-pint.readthedocs.io/en/latest/
 .. _`docstring guidelines`: https://numpydoc.readthedocs.io/en/latest/format.html
 .. _napoleon: https://sphinxcontrib-napoleon.readthedocs.io/en/latest/
 .. _`something else`: https://placekitten.com/

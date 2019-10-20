@@ -1,4 +1,5 @@
-# Top-level PINT __init__.py
+"""PINT Is Not TEMPO3!"""
+
 import astropy.constants as c
 import astropy.time as time
 import astropy.units as u
@@ -8,12 +9,30 @@ from astropy.units import si
 import pint.pulsar_mjd
 from pint.extern._version import get_versions
 
-"""
-PINT Is Not TEMPO3!
-"""
+__all__ = [
+    "__version__",
+    "ls",
+    "dmu",
+    "light_second_equivalency",
+    "dimensionless_cycles",
+    "hourangle_second",
+    "GMsun",
+    "Tsun",
+    "Tmercury",
+    "Tvenus",
+    "Tearth",
+    "Tmars",
+    "Tjupiter",
+    "Tsaturn",
+    "Turanus",
+    "Tneptune",
+    "J2000",
+    "J2000ld",
+    "JD_MJD",
+    "pint_units",
+]
 
 __version__ = get_versions()["version"]
-del get_versions
 
 # Define a few important constants
 

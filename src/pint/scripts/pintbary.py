@@ -12,7 +12,9 @@ import pint.models
 import pint.toa as toa
 from pint.pulsar_mjd import Time
 
-log.setLevel("INFO")
+__all__ = ["main"]
+
+# log.setLevel("INFO")
 
 
 def main(argv=None):
