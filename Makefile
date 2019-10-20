@@ -59,10 +59,8 @@ coverage: ## check code coverage quickly with the default Python
 		$(BROWSER) htmlcov/index.html
 
 notebooks:
-	#jupytext --version
 	jupytext --sync examples/*.md
-	#black --version
-	#jupytext --pipe black examples/*.ipynb
+	jupytext --pipe black --pipe-fmt py:percent examples/*.ipynb
 	jupyter nbconvert --execute --inplace examples/*.ipynb
 	jupytext --sync examples/*.ipynb
 
