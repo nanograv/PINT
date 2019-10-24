@@ -45,14 +45,23 @@ quantity_support()
 ```python
 # Here is how to create a single TOA in Python
 import pint.toa as toa
-a = toa.TOA((54567, 0.876876876876876), 4.5, freq=1400.0, obs="GBT", backend="GUPPI",location=None)
+
+a = toa.TOA(
+    (54567, 0.876876876876876),
+    4.5,
+    freq=1400.0,
+    obs="GBT",
+    backend="GUPPI",
+    location=None,
+)
 print(a)
 ```
 
 ```python
 # An example of reading a TOA file
 import pint.toa as toa
-t = toa.get_TOAs("NGC6440E.tim",usepickle=False)
+
+t = toa.get_TOAs("NGC6440E.tim", usepickle=False)
 ```
 
 ```python
@@ -65,7 +74,7 @@ t.print_summary()
 t.get_mjds()[0]
 ```
 
-TOAs are stored in a [Astropy Table](https://astropy.readthedocs.org/latest/table/)  in an instance of the TOAs class. 
+TOAs are stored in a [Astropy Table](https://astropy.readthedocs.org/latest/table/)  in an instance of the TOAs class.
 
 ```python
 # List the table columns, which include pre-computed TDB times and solar system positions and velocities
@@ -75,32 +84,32 @@ t.table.colnames
 Lots of cool things that tables can do...
 
 ```python
-# This pops open a browser window showing the contents of the table 
+# This pops open a browser window showing the contents of the table
 tt = t.table
-#tt.show_in_browser()
+# tt.show_in_browser()
 ```
 
 Can do fancy sorting, selecting, re-arranging very easily.
 
 ```python
-select = t.get_errors() < 20*u.us
+select = t.get_errors() < 20 * u.us
 print(select)
 ```
 
 ```python
-tt['tdb'][select]
+tt["tdb"][select]
 ```
 
 Many PINT routines / classes / functions use [Astropy Units](https://astropy.readthedocs.org/latest/units/) internally or externally:
 
 ```python
-t.get_errors() 
+t.get_errors()
 ```
 
 The times in each row contain (or are derived from) [Astropy Time](https://astropy.readthedocs.org/latest/time/) objects:
 
 ```python
-t0 = tt['mjd'][0]
+t0 = tt["mjd"][0]
 ```
 
 ```python
@@ -110,7 +119,7 @@ t0.tai
 But the most useful timescale, TDB is also stored as long double numpy arrays, to maintain precision:
 
 ```python
-tt['tdbld'][:3]
+tt["tdbld"][:3]
 ```
 
 ## Timing (or other) Models
@@ -120,6 +129,7 @@ Now let's define and load a timing model
 
 ```python
 import pint.models as models
+
 m = models.get_model("NGC6440E.par")
 ```
 
@@ -145,8 +155,9 @@ print(ds)
 ```
 
 ```python
-plt.plot(t.get_mjds(high_precision=False), ds*1e6, 'x')
-plt.xlabel("MJD") ; plt.ylabel("Delay ($\mu$s)")
+plt.plot(t.get_mjds(high_precision=False), ds * 1e6, "x")
+plt.xlabel("MJD")
+plt.ylabel("Delay ($\mu$s)")
 ```
 
 or all of the terms added together:
@@ -177,18 +188,21 @@ rs = r.Residuals(t, m)
 plt.errorbar(rs.toas.get_mjds(), rs.time_resids.to(u.us), yerr=rs.toas.get_errors().to(u.us), 
              fmt='.')
 plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
-plt.xlabel('MJD'); plt.ylabel('Residual (phase)')
+plt.xlabel("MJD")
+plt.ylabel("Residual (phase)")
 plt.grid()
 ```
+
 
 ## Fitting and Post-Fit residuals
 
 
-The fitter is *completely* separate from the model and the TOA code.  So you can use any type of fitter with some easy coding.  This example uses a very simple Powell minimizer from the SciPy optimize module. 
+The fitter is *completely* separate from the model and the TOA code.  So you can use any type of fitter with some easy coding.  This example uses a very simple Powell minimizer from the SciPy optimize module.
 
 ```python
 import pint.fitter as fit
-f = fit.WlsFitter(t, m)
+
+f = fit.WLSFitter(t, m)
 f.fit_toas()
 ```
 
@@ -198,15 +212,16 @@ print("RMS in phase is", f.resids.phase_resids.std())
 print("RMS in time is", f.resids.time_resids.std().to(u.us))
 print("\n Best model is:")
 print(f.model.as_parfile())
-
 ```
+
 
 ```python
 plt.errorbar(t.get_mjds(),
              f.resids.time_resids.to(u.us),
-             t.get_errors().to(u.us), fmt='x')
+             t.get_errors().to(u.us), fmt="x")
 plt.title("%s Post-Fit Timing Residuals" % m.PSR.value)
-plt.xlabel('MJD'); plt.ylabel('Residual (us)')
+plt.xlabel("MJD")
+plt.ylabel("Residual (us)")
 plt.grid()
 ```
 

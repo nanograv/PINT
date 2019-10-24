@@ -158,10 +158,11 @@ class NormAngles(object):
     def __call__(self, log10_ens=3):
         """ Return the squared value of the Cartesian coordinates.
 
-            E.g., for a 3-sphere, return
-            z^2 = sin^2(a)*cos^2(b)
-            x^2 = sin^2(a)*sin^2(b)*cos^2(c)
-            y^2 = sin^2(a)*sin^2(b)*sin^2(c)
+            E.g., for a 4-sphere, return
+            x0^2 = sin^2(a)*cos^2(b)
+            x1^2 = sin^2(a)*sin^2(b)*cos^2(c)
+            x2^2 = sin^2(a)*sin^2(b)*sin^2(c)*cos^2(d)
+            x3^2 = sin^2(a)*sin^2(b)*sin^2(c)*sin^2(d)
 
             Recall that the normalization is *also* given as an angle,
             s.t. the vector lies within the unit sphere.
@@ -185,35 +186,95 @@ class NormAngles(object):
 
             M_ij = dn_i/dphi_j
 
+            This is the relevant quantity because it is the angles that are
+            actually fit for, so this allows the application of the chain
+            rule.
+
             Because of the way the normalizations are defined, the ith
             normalization only depends on the (i+1)th first angles, so
             the upper half of M_ij is zero (see break statement below).
 
-            Likewise, as can either be seen by logs or trigonometry, the
-            general form of the derivative is M_ij = n_i*cot(phi_j) if
-            n_i depends on phi_j through sin^2, else M_ij = n_i/cot(phi_j).
-            The cos^2 dependence only occurs on the diagonal terms (i==j
-            below) except for the final normalization (i==dim-1) which again
-            depends on phi_j through sin^2.
+            For taking higher derivatives, it is convenient to express
+            the derivative as so:
+            -d(cos^2(x)) = d(sin^2(x)) = sin(2x)
+            So that any non-zero derivative can be expressed by taking
+            the norm, dividing by sin^2/cos^2 as appropriate, and
+            multiplying by +/- sin(2x).  Then higher derivatives simply
+            pop out a factor of +/-2 and toggle sin/cos.
         """
         m = np.zeros([self.dim, self.dim], dtype=float)
         n = self()
         p = self.p
-        cots = 1.0 / np.tan(p)
+        s2p = np.sin(2 * p)
+        cp = -s2p / np.cos(p) ** 2
+        sp = s2p / np.sin(p) ** 2
+        # loop over normalizations
         for i in range(self.dim):
             for j in range(self.dim):
-                if j > (i + 1):
+                if j > i + 1:
                     break
                 if j <= i:
-                    m[i, j] = n[i] * cots[j]
+                    # these will always be sin^2 terms
+                    m[i, j] = n[i] * sp[j]
                 else:
-                    if i == (self.dim - 1):
-                        m[i, j] = n[i] * cots[j]
-                    else:
-                        m[i, j] = -n[i] / cots[j]  # -cotangent
+                    # last term is cosine for all but last norm, but we won't
+                    # get to it here because j==i is the last term then
+                    m[i, j] = n[i] * cp[j]
         if free:
-            return (2 * m)[:, self.free]
-        return 2 * m
+            return m[:, self.free]
+        return m
+
+    def hessian(self, log10_ens=3, free=False):
+        """ Return a matrix giving the value of the 2nd partial derivative
+            of the ith normalization with respect to the jth and kth
+            angles,
+
+            M_ijk = dn2_i/dphi_j/dphi_k
+
+            See above notes for gradient.  In general, the cases are
+
+            j < k <= i; just calculate as gradient, getting two sin(2x) terms
+            j = k <= i; in this case, pick up a single 2*cos(2x) instead
+
+
+        """
+        m = np.zeros([self.dim, self.dim, self.dim], dtype=float)
+        n = self()
+        p = self.p
+        s2p = np.sin(2 * p)
+        c2p = np.cos(2 * p)
+        cp = -s2p / np.cos(p) ** 2
+        sp = s2p / np.sin(p) ** 2
+        # loop over normalizations
+        g = self.gradient(free=False)
+        for i in range(self.dim):
+            for j in range(self.dim):
+                if j > i + 1:
+                    break
+                for k in range(self.dim):
+                    if k > i + 1:
+                        break
+                    if (j <= i) and (k <= i):
+                        if j != k:
+                            # two separate sines replacing sin^2
+                            m[i, j, k] = n[i] * sp[j] * sp[k]
+                        else:
+                            # diff same sine twice, getting a 2*cos
+                            m[i, j, k] = n[i] * 2 * c2p[j] / np.sin(p[j]) ** 2
+                    else:
+                        # at least one of j, k is a cos^2 term, so we pick up
+                        # a negative and need to divide by cos^2
+                        if j != k:
+                            if j == i + 1:
+                                m[i, j, k] = n[i] * cp[j] * sp[k]
+                            elif k == i + 1:
+                                m[i, j, k] = n[i] * sp[j] * cp[k]
+                        else:
+                            # both are the cos^2 term, so we get a -2*cos
+                            m[i, j, k] = n[i] * (-2) * c2p[j] / np.cos(p[j]) ** 2
+        if free:
+            return m[:, self.free, self.free]
+        return m
 
     def get_total(self):
         """ Return the amplitude of all norms."""
@@ -277,3 +338,49 @@ class NormAngles(object):
             "slope_free = %s"
             % (str(list(self.slope_free)) if hasattr(self, "slope_free") else None),
         ]
+
+
+def numerical_gradient(norms, delta=1e-3):
+    """ Check the accuracy of analytic version.  (HINT -- it checks out.)
+    """
+    rvals = np.empty((norms.dim, norms.dim))
+    p = norms.p.copy()
+    for i in range(norms.dim):
+        norms.p[i] = p[i] + delta
+        hi = norms()
+        norms.p[i] = p[i] - delta
+        lo = norms()
+        rvals[:, i] = (hi - lo) / (2 * delta)
+        norms.p[:] = p
+    return rvals
+
+
+def numerical_hessian(norms, delta=1e-3):
+    rvals = np.empty((norms.dim, norms.dim, norms.dim))
+    p = norms.p.copy()
+    for i in range(norms.dim):
+        for j in range(i, norms.dim):
+
+            norms.p[i] += delta
+            norms.p[j] += delta
+            hihi = norms()
+            norms.p[:] = p
+
+            norms.p[i] += delta
+            norms.p[j] -= delta
+            hilo = norms()
+            norms.p[:] = p
+
+            norms.p[i] -= delta
+            norms.p[j] += delta
+            lohi = norms()
+            norms.p[:] = p
+
+            norms.p[i] -= delta
+            norms.p[j] -= delta
+            lolo = norms()
+            norms.p[:] = p
+
+            rvals[:, i, j] = (hihi + lolo - hilo - lohi) / (4 * delta ** 2)
+            rvals[:, j, i] = rvals[:, i, j]
+    return rvals

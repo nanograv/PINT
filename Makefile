@@ -60,6 +60,7 @@ coverage: ## check code coverage quickly with the default Python
 
 notebooks:
 	jupytext --sync examples/*.md
+	jupytext --pipe black --pipe-fmt py:percent examples/*.ipynb
 	jupyter nbconvert --execute --inplace examples/*.ipynb
 	jupytext --sync examples/*.ipynb
 

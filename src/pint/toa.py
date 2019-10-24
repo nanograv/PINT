@@ -27,6 +27,15 @@ from pint.observatory.topo_obs import TopoObs
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 
+__all__ = [
+    "get_TOAs",
+    "get_TOAs_list",
+    "format_toa_line",
+    "make_fake_toas",
+    "TOA",
+    "TOAs",
+]
+
 toa_commands = (
     "DITHER",
     "EFAC",
@@ -171,7 +180,7 @@ def get_TOAs_list(
     return t
 
 
-def toa_format(line, fmt="Unknown"):
+def _toa_format(line, fmt="Unknown"):
     """Determine the type of a TOA line.
 
     Identifies a TOA line as one of the following types:
@@ -196,12 +205,7 @@ def toa_format(line, fmt="Unknown"):
         return "Unknown"
 
 
-def get_obs(obscode):
-    """Return the standard name for the given code."""
-    return get_observatory(obscode).name
-
-
-def parse_TOA_line(line, fmt="Unknown"):
+def _parse_TOA_line(line, fmt="Unknown"):
     """Parse a one-line ASCII time-of-arrival.
 
     Return an MJD tuple and a dictionary of other TOA information.
@@ -210,7 +214,7 @@ def parse_TOA_line(line, fmt="Unknown"):
 
     """
     MJD = None
-    fmt = toa_format(line, fmt)
+    fmt = _toa_format(line, fmt)
     d = dict(format=fmt)
     if fmt == "Princeton":
         # Princeton format
@@ -222,7 +226,7 @@ def parse_TOA_line(line, fmt="Unknown"):
         # 25-44   TOA (decimal point must be in column 30 or column 31)
         # 45-53   TOA uncertainty (microseconds)
         # 69-78   DM correction (pc cm^-3)
-        d["obs"] = get_obs(line[0].upper())
+        d["obs"] = get_observatory(line[0].upper()).name
         d["freq"] = float(line[15:24])
         d["error"] = float(line[44:53])
         ii, ff = line[24:44].split(".")
@@ -239,7 +243,7 @@ def parse_TOA_line(line, fmt="Unknown"):
         ii, ff = fields[2].split(".")
         MJD = (int(ii), float("0." + ff))
         d["error"] = float(fields[3])
-        d["obs"] = get_obs(fields[4].upper())
+        d["obs"] = get_observatory(fields[4].upper()).name
         # All the rest should be flags
         flags = fields[5:]
         for i in range(0, len(flags), 2):
@@ -274,7 +278,7 @@ def parse_TOA_line(line, fmt="Unknown"):
                 "Cannot interpret Parkes format with phaseoffset=%f yet" % phaseoffset
             )
         d["error"] = float(line[63:71])
-        d["obs"] = get_obs(line[79].upper())
+        d["obs"] = get_observatory(line[79].upper()).name
     elif fmt == "ITOA":
         raise RuntimeError("TOA format '%s' not implemented yet" % fmt)
     return MJD, d
@@ -402,20 +406,32 @@ def format_toa_line(
     return out
 
 
-def make_toas(startMJD, endMJD, ntoas, model, freq=1400, obs="GBT"):
-    """make evenly spaced toas with residuals = 0 and  without errors
+def make_fake_toas(startMJD, endMJD, ntoas, model, freq=1400, obs="GBT"):
+    """Make evenly spaced toas with residuals = 0 and  without errors
 
     might be able to do different frequencies if fed an array of frequencies,
     only works with one observatory at a time
 
-    :param startMJD: starting MJD for fake toas
-    :param endMJD: ending MJD for fake toas
-    :param ntoas: number of fake toas to create between startMJD and endMJD
-    :param model: current model
-    :param freq: frequency of the fake toas, default 1400
-    :param obs: observatory for fake toas, default GBT
+    Parameters
+    ----------
+    startMJD
+        starting MJD for fake toas
+    endMJD
+        ending MJD for fake toas
+    ntoas
+        number of fake toas to create between startMJD and endMJD
+    model
+        current model
+    freq : float, optional
+        frequency of the fake toas, default 1400
+    obs : str, optional
+        observatory for fake toas, default GBT
 
-    :return TOAs object with evenly spaced toas spanning given start and end MJD with ntoas toas, without errors
+    Returns
+    -------
+    TOAs
+        object with evenly spaced toas spanning given start and end MJD with
+        ntoas toas, without errors
     """
     # TODO:make all variables Quantity objects
     # TODO: freq default to inf
@@ -625,6 +641,18 @@ class TOA(object):
         if self.flags:
             s += str(self.flags)
         return s
+
+    def as_line(self, format="Tempo2", name="_", dm=0 * u.pc / u.cm ** 3):
+        return format_toa_line(
+            mjd=self.mjd,
+            error=self.error,
+            freq=self.freq,
+            obs=self.obs,
+            dm=dm,
+            name=name,
+            format=format,
+            flags=self.flags,
+        )
 
 
 class TOAs(object):
@@ -1418,7 +1446,7 @@ class TOAs(object):
             }
         with open(filename, "r") as f:
             for l in f.readlines():
-                MJD, d = parse_TOA_line(l, fmt=self.cdict["FORMAT"])
+                MJD, d = _parse_TOA_line(l, fmt=self.cdict["FORMAT"])
                 if d["format"] == "Command":
                     cmd = d["Command"][0]
                     self.commands.append((d["Command"], ntoas))

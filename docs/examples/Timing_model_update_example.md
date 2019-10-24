@@ -20,25 +20,25 @@ import pint.models.model_builder as mb
 # To get all the model componets
 
 ```python jupyter={"outputs_hidden": false}
-#mb.get_components()
+# mb.get_components()
 ```
 
 # Update on timing model
 
 ```python jupyter={"outputs_hidden": false}
-model = mb.get_model('NGC6440E.par')
+model = mb.get_model("NGC6440E.par")
 ```
 
 ```python jupyter={"outputs_hidden": false}
-model.get_params_of_type('str')
+model.get_params_of_type("str")
 ```
 
 ```python jupyter={"outputs_hidden": false}
-model.get_params_of_type('float')
+model.get_params_of_type("float")
 ```
 
 ```python jupyter={"outputs_hidden": false}
-model.get_params_of_type('prefix')
+model.get_params_of_type("prefix")
 ```
 
 ```python jupyter={"outputs_hidden": false}

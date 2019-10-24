@@ -21,7 +21,6 @@ matrix:
         - script: flake8-diff
           install:
             - pip install -r requirements_dev.txt
-            - pip install -r requirements.txt
             - pip install .
           name: "python style checker for changed code"
           services: []
@@ -44,19 +43,20 @@ matrix:
             - git clone https://github.com/nanograv/tempo.git
             - git clone https://bitbucket.org/psrsoft/tempo2.git
             - pip install -r requirements_dev.txt
-            - pip install -r requirements.txt
             - pip install .
             - python -c "from astropy.utils.data import download_file; from astropy.utils.iers import IERS_A_URL; download_file(IERS_A_URL, cache=True)"
           env:
             - TEMPO=tempo/
             - TEMPO2=tempo2/T2Runtime/
         - script: make notebooks
+          install:
+            - pip install -r requirements_dev.txt
+            - pip install .
           name: "Example notebooks (python 3.7)"
           python: "3.7"
         - script: make docs-build
           install:
             - pip install -r requirements_dev.txt
-            - pip install -r requirements.txt
             - pip install .
           name: "Documentation build"
           python: "3.7"
@@ -81,7 +81,6 @@ install:
     # We need to require the dev requirements first in case they're more
     # stringent (on version numbers)
     - pip install -r requirements_dev.txt
-    - pip install -r requirements.txt
     - pip install .
     - pip list
     - python -c "from astropy.utils.data import download_file; from astropy.utils.iers import IERS_A_URL; download_file(IERS_A_URL, cache=True)"

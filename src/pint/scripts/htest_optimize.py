@@ -4,7 +4,6 @@
 # It will not be installed by setup.py and not tested by nosetests.
 from __future__ import absolute_import, division, print_function
 
-import copy
 import os
 import sys
 
@@ -19,6 +18,8 @@ import pint.plot_utils
 import pint.toa as toa
 from pint.eventstats import hm, hmw, sf_hm
 from pint.fitter import Fitter
+
+__all__ = ["main"]
 
 # Params you might want to edit
 nwalkers = 200
@@ -423,7 +424,7 @@ def main(argv=None):
         fig = corner.corner(samples, labels=ftr.fitkeys, bins=50)
         fig.savefig(ftr.model.PSR.value + "_triangle.png")
         plt.close()
-    except:
+    except ImportError:
         pass
 
     # Make a phaseogram with the 50th percentile values

@@ -91,7 +91,7 @@ class TestELL1H(unittest.TestCase):
 
     def test_J0613_H4(self):
         log = logging.getLogger("TestJ0613.fit_tests")
-        f = ff.GlsFitter(self.toasJ0613, self.modelJ0613)
+        f = ff.GLSFitter(self.toasJ0613, self.modelJ0613)
         f.fit_toas()
         f.set_fitparams("H3", "H4")
         for pn, p in (f.get_fitparams()).items():
@@ -105,7 +105,7 @@ class TestELL1H(unittest.TestCase):
 
     def test_J0613_STIG(self):
         log = logging.getLogger("TestJ0613.fit_tests_stig")
-        f = ff.GlsFitter(self.toasJ0613, self.modelJ0613_STIG)
+        f = ff.GLSFitter(self.toasJ0613, self.modelJ0613_STIG)
         f.fit_toas()
         f.set_fitparams("H3", "STIGMA")
         for pn, p in (f.get_fitparams()).items():

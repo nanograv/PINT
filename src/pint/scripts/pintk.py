@@ -19,7 +19,9 @@ from pint.pintk.plk import PlkWidget, helpstring
 from pint.pintk.pulsar import Pulsar
 from pint.pintk.timedit import TimWidget
 
-log.setLevel("WARNING")
+__all__ = ["main"]
+
+# log.setLevel("WARNING")
 
 
 class PINTk(object):

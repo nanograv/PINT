@@ -1,22 +1,32 @@
-# This program is designed to predict the pulsar's phase and pulse-period over a
-# given interval using polynomial expansion. The return will be some necessary
-# information and the polynomial coefficients
+"""Polynomial coefficients for phase prediction
+
+This program is designed to predict the pulsar's phase and pulse-period over a
+given interval using polynomial expansion. The return will be some necessary
+information and the polynomial coefficients
+"""
 from __future__ import absolute_import, division, print_function
 
 import astropy.table as table
-import astropy.time as at
+import astropy.units as u
 import numpy as np
 from astropy.io import registry
+from astropy.time import Time
 
 import pint.toa as toa
+from pint.phase import Phase
 from pint.pulsar_mjd import data2longdouble
-
-from .phase import Phase
 
 MIN_PER_DAY = 60.0 * 24.0
 
+__all__ = [
+    "PolycoEntry",
+    "tempo_polyco_table_reader",
+    "tempo_polyco_table_writer",
+    "Polycos",
+]
 
-class polycoEntry:
+
+class PolycoEntry:
     """One Polyco entry.
 
     Referenced from polyco.py authored by
@@ -233,7 +243,7 @@ def tempo_polyco_table_reader(filename):
         rphase = Phase(refPhaseInt, refPhaseFrac)
         refF0 = data2longdouble(refF0)
         coeffs = data2longdouble(coeffs)
-        entry = polycoEntry(
+        entry = PolycoEntry(
             tmid, mjdspan, refPhaseInt, refPhaseFrac, refF0, nCoeff, coeffs, obs
         )
 
@@ -407,12 +417,12 @@ class Polycos(object):
         # Register the table built-in reading and writing format
         for fmt in self.polycoFormat:
             if fmt["format"] not in registry.get_formats()["Format"]:
-                if fmt["read_method"] != None:
+                if fmt["read_method"] is not None:
                     registry.register_reader(
                         fmt["format"], table.Table, fmt["read_method"]
                     )
 
-                if fmt["write_method"] != None:
+                if fmt["write_method"] is not None:
                     registry.register_writer(
                         fmt["format"], table.Table, fmt["write_method"]
                     )
@@ -449,7 +459,7 @@ class Polycos(object):
         pFormat = {"format": formatName}
 
         if methodMood == "r":
-            if readMethod == None:
+            if readMethod is None:
                 raise ValueError("Argument readMethod should not be 'None'.")
 
             pFormat["read_method"] = readMethod
@@ -458,7 +468,7 @@ class Polycos(object):
                 pFormat["format"], table.Table, pFormat["read_method"]
             )
         elif methodMood == "w":
-            if writeMethod == None:
+            if writeMethod is None:
                 raise ValueError("Argument writeMethod should not be 'None'.")
 
             pFormat["read_method"] = readMethod
@@ -467,7 +477,7 @@ class Polycos(object):
                 pFormat["format"], table.Table, pFormat["write_method"]
             )
         elif methodMood == "rw":
-            if readMethod == None or writeMethod == None:
+            if readMethod is None or writeMethod is None:
                 raise ValueError(
                     "Argument readMethod and writeMethod " "should not be 'None'."
                 )
@@ -613,14 +623,14 @@ class Polycos(object):
                 rdcPhased = rdcPhase.astype(float)
                 coeffs = np.polyfit(dtd, rdcPhased, ncoeff - 1)
                 coeffs = coeffs[::-1]
-                midTime = at.Time(
+                midTime = Time(
                     int(tmid.value), np.modf(tmid.value)[0], format="mjd", scale="utc"
                 )
                 date, hms = midTime.iso.split()
                 yy, mm, dd = date.split("-")
                 date = dd + "-" + month[int(mm) - 1] + "-" + yy[2:4]
                 hms = hms.replace(":", "")
-                entry = polycoEntry(
+                entry = PolycoEntry(
                     tmid.value,
                     mjdSpan.to("day").value,
                     refPhase.int,

@@ -2,36 +2,24 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
-import copy
 import os
 import sys
 
-import astropy.table
-import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as op
 from astropy import log
 from astropy.coordinates import SkyCoord
-from scipy.stats import norm, uniform
 
-import fftfit
 import pint.fermi_toas as fermi
 import pint.models
-import pint.plot_utils as plot_utils
 import pint.toa as toa
-from pint.eventstats import hm, hmw
-from pint.mcmc_fitter import MCMCFitter, MCMCFitterBinnedTemplate
-from pint.models.priors import (
-    GaussianBoundedRV,
-    Prior,
-    UniformBoundedRV,
-    UniformUnboundedRV,
-)
+from pint.mcmc_fitter import MCMCFitterBinnedTemplate
 from pint.observatory.fermi_obs import FermiObs
 from pint.sampler import EmceeSampler
 from pint.scripts.event_optimize import marginalize_over_phase, read_gaussfitfile
 
+__all__ = ["main"]
 # log.setLevel('DEBUG')
 # np.seterr(all='raise')
 
