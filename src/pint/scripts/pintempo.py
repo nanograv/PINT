@@ -64,20 +64,15 @@ def main(argv=None):
     if args.plot:
         import matplotlib.pyplot as plt
 
+        # Turn on support for plotting quantities
+        from astropy.visualization import quantity_support
+
+        quantity_support()
+
         fig, ax = plt.subplots(figsize=(8, 4.5))
         xt = t.get_mjds()
-        ax.errorbar(
-            xt.value,
-            prefit_resids.to(u.us).value,
-            t.get_errors().to(u.us).value,
-            fmt="o",
-        )
-        ax.errorbar(
-            xt.value,
-            f.resids.time_resids.to(u.us).value,
-            t.get_errors().to(u.us).value,
-            fmt="x",
-        )
+        ax.errorbar(xt, prefit_resids.to(u.us), t.get_errors().to(u.us), fmt="o")
+        ax.errorbar(xt, f.resids.time_resids.to(u.us), t.get_errors().to(u.us), fmt="x")
         ax.set_title("%s Timing Residuals" % m.PSR.value)
         ax.set_xlabel("MJD")
         ax.set_ylabel("Residual (us)")
