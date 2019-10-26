@@ -333,6 +333,8 @@ class Parameter(object):
             return out
         if self.uncertainty is not None and isinstance(self.value, numbers.Number):
             out += " +/- " + str(self.uncertainty.to(self.units))
+        if self.frozen:
+            out += " FROZEN"
         out += ")"
         return out
 
