@@ -35,6 +35,14 @@ import astropy.units as u
 ```
 
 ```python
+%matplotlib inline
+import matplotlib.pyplot as plt
+# Turn on quantity support for plotting. This is very helpful!
+from astropy.visualization import quantity_support
+quantity_support() 
+```
+
+```python
 # Here is how to create a single TOA in Python
 import pint.toa as toa
 
@@ -147,9 +155,6 @@ print(ds)
 ```
 
 ```python
-import matplotlib.pyplot as plt
-
-%matplotlib inline
 plt.plot(t.get_mjds(high_precision=False), ds * 1e6, "x")
 plt.xlabel("MJD")
 plt.ylabel("Delay ($\mu$s)")
@@ -172,12 +177,16 @@ import pint.residuals as r
 ```
 
 ```python
-rs = r.Residuals(t, m).phase_resids
+rs = r.Residuals(t, m)
 ```
 
 ```python
-# The get_mjds() function returns float MJDs for easy plotting, rather than astropy Time objects
-plt.plot(t.get_mjds(), rs, "x")
+# Note that the Residuals object contains a toas member that has the TOAs used to compute
+# the residuals, so you can use that to get the MJDs and uncertainties for each TOA
+# Also note that plotting astropy Quantities must be enabled using 
+# astropy quanity_support() first (see beginning of this notebook)
+plt.errorbar(rs.toas.get_mjds(), rs.time_resids.to(u.us), yerr=rs.toas.get_errors().to(u.us), 
+             fmt='.')
 plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
 plt.xlabel("MJD")
 plt.ylabel("Residual (phase)")
@@ -207,12 +216,9 @@ print(f.model.as_parfile())
 
 
 ```python
-plt.errorbar(
-    t.get_mjds().value,
-    f.resids.time_resids.to(u.us).value,
-    t.get_errors().to(u.us).value,
-    fmt="x",
-)
+plt.errorbar(t.get_mjds(),
+             f.resids.time_resids.to(u.us),
+             t.get_errors().to(u.us), fmt="x")
 plt.title("%s Post-Fit Timing Residuals" % m.PSR.value)
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
