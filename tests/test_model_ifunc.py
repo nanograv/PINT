@@ -7,6 +7,7 @@ import astropy.units as u
 import pint.models
 import pint.residuals
 import pint.toa
+import pint.fitter
 from pinttestdata import datadir
 
 # Not included in the test here, but as a sanity check I used this same
@@ -34,7 +35,7 @@ class TestIFunc(unittest.TestCase):
         assert chi2.value < 1.1, emsg
 
         # test a fit
-        f = pint.fitter.WlsFitter(self.t, self.m)
+        f = pint.fitter.WLSFitter(self.t, self.m)
         f.fit_toas()
         rs = f.resids
         rms = rs.time_resids.to(u.us).std()
