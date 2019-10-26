@@ -138,6 +138,9 @@ class TimingModel(object):
             ",\n  ".join(str(v) for k, v in sorted(self.components.items())),
         )
 
+    def __str__(self):
+        return self.as_parfile()
+
     def setup(self):
         """Run setup methods od all components."""
         for cp in self.components.values():

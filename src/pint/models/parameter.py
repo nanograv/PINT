@@ -323,18 +323,16 @@ class Parameter(object):
         return str(uncertainty.to(self.units).value)
 
     def __repr__(self):
-        out = self.__class__.__name__ + "(" + self.name
+        out = "{0:16s}{1:16s}".format(self.__class__.__name__+"(",self.name)
+        if self.quantity is None:
+            out += "UNSET"
+            return out
+        out += "{:17s}".format(self.print_quantity(self.quantity))
         if self.units is not None:
             out += " (" + str(self.units) + ")"
-        if self.quantity is not None:
-            out += " " + self.print_quantity(self.quantity)
-        else:
-            out += " " + "UNSET"
-            return out
         if self.uncertainty is not None and isinstance(self.value, numbers.Number):
             out += " +/- " + str(self.uncertainty.to(self.units))
-        if self.frozen:
-            out += " FROZEN"
+        out += " frozen={}".format(self.frozen)
         out += ")"
         return out
 
