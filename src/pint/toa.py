@@ -248,6 +248,9 @@ def _parse_TOA_line(line, fmt="Unknown"):
         flags = fields[5:]
         for i in range(0, len(flags), 2):
             k, v = flags[i].lstrip("-"), flags[i + 1]
+            if k in ["error", "freq", "scale", "MJD", "flags", "obs"]:
+                log.error("TOA flag ({0}) will overwrite TOA parameter!".format(k))
+                raise (ValueError)
             try:  # Convert what we can to floats and ints
                 d[k] = int(v)
             except ValueError:
