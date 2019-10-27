@@ -323,7 +323,7 @@ class Parameter(object):
         return str(uncertainty.to(self.units).value)
 
     def __repr__(self):
-        out = "{0:16s}{1:16s}".format(self.__class__.__name__+"(",self.name)
+        out = "{0:16s}{1:16s}".format(self.__class__.__name__ + "(", self.name)
         if self.quantity is None:
             out += "UNSET"
             return out
