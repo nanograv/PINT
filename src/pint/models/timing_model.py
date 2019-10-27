@@ -996,7 +996,7 @@ class TimingModel(object):
                     "Model component {} was rejected because we "
                     "didn't find parameter {}".format(name, param)
                 )
-            log.warning("Final object: {}".format(self))
+            log.warning("Final object: {}".format(repr(self)))
 
         # The "setup" functions contain tests for required parameters or
         # combinations of parameters, etc, that can only be done
