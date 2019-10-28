@@ -94,7 +94,12 @@ class Wave(PhaseComponent):
         wave_terms = [getattr(self, name) for name in wave_names]
         wave_om = self.WAVE_OM.quantity
         base_phase = (
-            wave_om * (toas.table["tdbld"] * u.day - self.WAVEEPOCH.value * u.day - delays.to(u.day))
+            wave_om
+            * (
+                toas.table["tdbld"] * u.day
+                - self.WAVEEPOCH.value * u.day
+                - delays.to(u.day)
+            )
         ).value
 
         for k, wave_term in enumerate(wave_terms):
