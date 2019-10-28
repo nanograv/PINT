@@ -88,20 +88,20 @@ class Wave(PhaseComponent):
 
         return result
 
-    def wave_phase(self, toas, acc_delay=None):
-        delays = 0
+    def wave_phase(self, toas, delays):
+        times = 0
         wave_names = ["WAVE%d" % ii for ii in range(1, self.num_wave_terms + 1)]
         wave_terms = [getattr(self, name) for name in wave_names]
         wave_om = self.WAVE_OM.quantity
         base_phase = (
-            wave_om * (toas.table["tdbld"] * u.day - self.WAVEEPOCH.value * u.day)
+            wave_om * (toas.table["tdbld"] * u.day - self.WAVEEPOCH.value * u.day - delays.to(u.day))
         ).value
 
         for k, wave_term in enumerate(wave_terms):
             wave_a, wave_b = wave_term.quantity
             wave_phase = (k + 1) * base_phase
-            delays += wave_a * np.sin(wave_phase)
-            delays += wave_b * np.cos(wave_phase)
+            times += wave_a * np.sin(wave_phase)
+            times += wave_b * np.cos(wave_phase)
 
-        phase = ((delays) * self.F0.quantity * 2 * np.pi).to(u.cycle)
+        phase = ((times) * self.F0.quantity * 2 * np.pi).to(u.cycle)
         return phase
