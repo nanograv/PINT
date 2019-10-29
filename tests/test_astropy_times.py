@@ -75,7 +75,18 @@ class TestAstroPyTime(unittest.TestCase):
         # FIXME: might use cached IERS_A_URL?
         # FIXME: what would this actually be testing?
         # astropy has auto-updating IERS data now
-        iers_a = IERS_A.open(IERS_A_URL)
+        # Tries the main URL first, then falls back to MIRROR
+        try:
+            from urllib.error import HTTPError
+
+            iers_a = IERS_A.open(IERS_A_URL)
+        except HTTPError:
+            try:
+                from astropy.utils.iers import IERS_A_URL_MIRROR
+
+                iers_a = IERS_A.open(IERS_A_URL_MIRROR)
+            except ImportError:
+                raise
         t2 = astropy.time.Time.now()
         t2.delta_ut1_utc = t2.get_delta_ut1_utc(iers_a)
         print(t2.tdb.iso)

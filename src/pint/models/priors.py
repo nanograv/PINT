@@ -120,7 +120,7 @@ class GaussianRV_gen(rv_continuous):
     """
 
     def _pdf(self, x):
-        ret = np.exp(-x ** 2 / 2) / np.sqrt(2 * np.pi)
+        ret = np.exp(-(x ** 2) / 2) / np.sqrt(2 * np.pi)
         return ret
 
 

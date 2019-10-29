@@ -193,19 +193,19 @@ def kepler_2d(params, t):
 
     mean_anomaly = 2 * np.pi * t / pb + mean_anomaly_0
     d_mean_anomaly = (
-        2 * np.pi * np.array([0, -t / pb ** 2, 0, 0, -pb ** (-1), pb ** (-1)])
+        2 * np.pi * np.array([0, -t / pb ** 2, 0, 0, -(pb ** (-1)), pb ** (-1)])
         + d_mean_anomaly_0
     )
     # return mean_anomaly, d_mean_anomaly
 
     mean_anomaly_dot = 2 * np.pi / pb
-    d_mean_anomaly_dot = 2 * np.pi * np.array([0, -pb ** (-2), 0, 0, 0, 0])
+    d_mean_anomaly_dot = 2 * np.pi * np.array([0, -(pb ** (-2)), 0, 0, 0, 0])
     # return ([mean_anomaly, mean_anomaly_dot],
     #        [d_mean_anomaly, d_mean_anomaly_dot])
 
-    eccentric_anomaly, (
-        eccentric_anomaly_de,
-        eccentric_anomaly_prime,
+    (
+        eccentric_anomaly,
+        (eccentric_anomaly_de, eccentric_anomaly_prime,),
     ) = eccentric_from_mean(e, mean_anomaly)
     eccentric_anomaly_dot = eccentric_anomaly_prime * mean_anomaly_dot
 

@@ -45,9 +45,27 @@ def test_times_against_tempo2():
         assert (
             len(line.split()) == 19
         ), "tempo2 general2 does not support all needed outputs"
-        oclk, gps_utc, tai_utc, tt_tai, ttcorr, tt2tb, ep0, ep1, ep2, ev0, ev1, ev2, tp0, tp1, tp2, tv0, tv1, tv2, Ttt = (
-            float(x) for x in line.split()
-        )
+        (
+            oclk,
+            gps_utc,
+            tai_utc,
+            tt_tai,
+            ttcorr,
+            tt2tb,
+            ep0,
+            ep1,
+            ep2,
+            ev0,
+            ev1,
+            ev2,
+            tp0,
+            tp1,
+            tp2,
+            tv0,
+            tv1,
+            tv2,
+            Ttt,
+        ) = (float(x) for x in line.split())
 
         t2_epv = PosVel(
             numpy.asarray([ep0, ep1, ep2]) * ls,

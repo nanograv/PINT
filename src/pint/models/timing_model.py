@@ -27,10 +27,7 @@ from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_
 # Other unrecognized parameters produce warnings and possibly indicate
 # errors in the par file.
 #
-# Do people use C in the first column to "comment out" par file entries?
-# That could be supported by simply adding "C" here.
-#
-# What about case (in)sensitivity? Anybody use un-capitalized versions?
+# Comparisons with keywords in par file lines is done in a case insensitive way.
 ignore_params = set(
     [
         "START",
@@ -136,10 +133,13 @@ class TimingModel(object):
         self.setup_components(components)
 
     def __repr__(self):
-        return "{}(\n\t{})".format(
+        return "{}(\n  {}\n)".format(
             self.__class__.__name__,
-            ",\n\t".join(str(v) for k, v in sorted(self.components.items())),
+            ",\n  ".join(str(v) for k, v in sorted(self.components.items())),
         )
+
+    def __str__(self):
+        return self.as_parfile()
 
     def setup(self):
         """Run setup methods od all components."""
@@ -996,7 +996,7 @@ class TimingModel(object):
                     "Model component {} was rejected because we "
                     "didn't find parameter {}".format(name, param)
                 )
-            log.warning("Final object: {}".format(self))
+            log.warning("Final object: {}".format(repr(self)))
 
         # The "setup" functions contain tests for required parameters or
         # combinations of parameters, etc, that can only be done
@@ -1084,9 +1084,9 @@ class Component(object):
         self.component_special_params = []
 
     def __repr__(self):
-        return "{}({})".format(
+        return "{}(\n    {})".format(
             self.__class__.__name__,
-            ", ".join(str(getattr(self, p)) for p in self.params),
+            ",\n    ".join(str(getattr(self, p)) for p in self.params),
         )
 
     def setup(self):

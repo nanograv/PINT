@@ -252,9 +252,11 @@ class LCPrimitive(object):
         self.free = np.asarray([True] * len(self.p))
         self.__dict__.update(kwargs)
         self._asarrays()
-        self.gauss_prior_loc, self.gauss_prior_width, self.gauss_prior_enable = (
-            self._default_priors()
-        )
+        (
+            self.gauss_prior_loc,
+            self.gauss_prior_width,
+            self.gauss_prior_enable,
+        ) = self._default_priors()
         self.shift_mode = False
 
     def _make_p(self, log10_ens=3):
@@ -841,7 +843,7 @@ class LCLorentzian(LCPrimitive):
         if order == 1:
             return (-TWOPI / s1) * (f ** 2 * s)
         elif order == 2:
-            return (-TWOPI ** 2 / s1) * f ** 2 * (c - 2 * f * s ** 2 / s1)
+            return (-(TWOPI ** 2) / s1) * f ** 2 * (c - 2 * f * s ** 2 / s1)
         else:
             raise NotImplementedError
 

@@ -18,6 +18,13 @@ class Fitter(object):
 
     The fitting function should be defined as the fit_toas() method.
 
+    Note that the Fitter object makes a deepcopy of the model, so changes to the model
+    will not be noticed after the Fitter has been instantiated!  Use Fitter.model instead.
+
+    The Fitter also caches a copy of the original model so it can be restored with reset_model()
+
+
+
     Parameters
     ----------
     toas : a pint TOAs instance

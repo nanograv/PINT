@@ -760,7 +760,7 @@ class DDmodel(PSR_BINARY):
                 -2
                 * TM2
                 / logNum
-                * (-(1 - e ** 2) ** 0.5 * cOmega * sE - (cE - e) * sOmega)
+                * (-((1 - e ** 2) ** 0.5) * cOmega * sE - (cE - e) * sOmega)
             )
             return (
                 dTM2_dpar * dsDelay_dTM2

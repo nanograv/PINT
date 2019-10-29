@@ -188,9 +188,9 @@ def _toa_format(line, fmt="Unknown"):
     """
     if re.match(r"[0-9a-z@] ", line):
         return "Princeton"
-    elif line.startswith("C ") or line[0] == "#":
+    elif line.startswith("C ") or line.startswith("c ") or line[0] == "#":
         return "Comment"
-    elif line.startswith(toa_commands):
+    elif line.upper().startswith(toa_commands):
         return "Command"
     elif re.match(r"^\s+$", line):
         return "Blank"
@@ -248,6 +248,9 @@ def _parse_TOA_line(line, fmt="Unknown"):
         flags = fields[5:]
         for i in range(0, len(flags), 2):
             k, v = flags[i].lstrip("-"), flags[i + 1]
+            if k in ["error", "freq", "scale", "MJD", "flags", "obs"]:
+                log.error("TOA flag ({0}) will overwrite TOA parameter!".format(k))
+                raise (ValueError)
             try:  # Convert what we can to floats and ints
                 d[k] = int(v)
             except ValueError:
@@ -1448,7 +1451,7 @@ class TOAs(object):
             for l in f.readlines():
                 MJD, d = _parse_TOA_line(l, fmt=self.cdict["FORMAT"])
                 if d["format"] == "Command":
-                    cmd = d["Command"][0]
+                    cmd = d["Command"][0].upper()
                     self.commands.append((d["Command"], ntoas))
                     if cmd == "SKIP":
                         self.cdict[cmd] = True

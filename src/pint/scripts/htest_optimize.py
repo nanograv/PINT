@@ -243,7 +243,7 @@ def main(argv=None):
     # Read in initial model
     modelin = pint.models.get_model(parfile)
     # Remove the dispersion delay as it is unnecessary
-    modelin.delay_funcs["L1"].remove(modelin.dispersion_delay)
+    modelin.delay_funcs.remove(modelin.dispersion_delay)
     # Set the target coords for automatic weighting if necessary
     if "ELONG" in modelin.params:
         tc = SkyCoord(
