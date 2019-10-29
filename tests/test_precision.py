@@ -413,7 +413,7 @@ def test_time_from_mjd_string_versus_longdouble_tai(i_f):
     s = str(m)
     assert (
         abs(
-            time_from_mjd_string(s, scale="tai") - time_from_longdouble(s, scale="tai")
+            time_from_mjd_string(s, scale="tai") - time_from_longdouble(m, scale="tai")
         ).to(u.ns)
         < 1 * u.ns
     )
