@@ -243,7 +243,7 @@ class ModelBuilder(object):
                             repr(" ".join(["BINARY"] + vals))
                         )
                     )
-                bm, = vals
+                (bm,) = vals
                 cats = self.timing_model.get_component_of_category()
                 if "pulsar_system" not in cats:
                     raise UnknownBinaryModel(
@@ -349,7 +349,7 @@ def choose_model(
                     repr(" ".join(["BINARY"] + vals))
                 )
             )
-        bm, = vals
+        (bm,) = vals
         if "pulsar_system" not in models_to_use:
             # Either we're missing parameters or the model is bogus
             # FIXME: distinguish

@@ -895,7 +895,7 @@ def make_err_plot(template, totals=[10, 20, 50, 100, 500], n=1000):
             density=True,
             label="N = %d" % tot,
         )
-    g = lambda x: (np.pi * 2) ** -0.5 * np.exp(-x ** 2 / 2)
+    g = lambda x: (np.pi * 2) ** -0.5 * np.exp(-(x ** 2) / 2)
     dom = np.linspace(-5, 5, 101)
     pl.plot(dom, g(dom), color="k")
     pl.legend()
