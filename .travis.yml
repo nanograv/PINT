@@ -44,7 +44,7 @@ matrix:
             - git clone https://bitbucket.org/psrsoft/tempo2.git
             - pip install -r requirements_dev.txt
             - pip install .
-            - python -c "from astropy.utils.data import download_file; from astropy.utils.iers import IERS_A_URL; download_file(IERS_A_URL, cache=True)"
+            - python cache_IERS.py
           env:
             - TEMPO=tempo/
             - TEMPO2=tempo2/T2Runtime/

@@ -1,7 +1,8 @@
 import pytest
 from astropy.table import Table
 from astropy.utils.data import download_file
-from astropy.utils.iers import IERS_A_README, IERS_A_URL
+from astropy.utils.iers import IERS_A, IERS_A_README, IERS_A_URL
+from urllib.error import HTTPError
 
 masks_needed = ["UT1_UTC_A", "PolPMFlag_A"]
 
