@@ -345,7 +345,10 @@ def format_toa_line(
 
     """
     if format.upper() in ("TEMPO2", "1"):
-        toa_str = Time(toatime, format="pulsar_mjd_string", scale="utc")
+        if obs.tempo2_code == "bat":
+            toa_str = Time(toatime, format="pulsar_mjd_string", scale="tdb")
+        else:
+            toa_str = Time(toatime, format="pulsar_mjd_string", scale="utc")
         # In Tempo2 format, freq=0.0 means infinite frequency
         if freq == np.inf * u.MHz:
             freq = 0.0 * u.MHz
@@ -380,7 +383,10 @@ def format_toa_line(
             flagstring,
         )
     elif format.upper() in ("PRINCETON", "TEMPO"):
-        toa_str = Time(toatime, format="pulsar_mjd_string", scale="utc")
+        if obs.tempo2_code == "bat":
+            toa_str = Time(toatime, format="pulsar_mjd_string", scale="tdb")
+        else:
+            toa_str = Time(toatime, format="pulsar_mjd_string", scale="utc")
         # In TEMPO/Princeton format, freq=0.0 means infinite frequency
         if freq == np.inf * u.MHz:
             freq = 0.0 * u.MHz
