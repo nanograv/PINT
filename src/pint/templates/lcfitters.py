@@ -3,8 +3,8 @@ A module implementing binned and unbinned likelihood for weighted and
 unweighted sets of photon phases.  The model is encapsulated in LCTemplate,
 a mixture model.
 
-LCPrimitives are combined to form a light curve (LCTemplate).  
-LCFitter then performs a maximum likielihood fit to determine the 
+LCPrimitives are combined to form a light curve (LCTemplate).
+LCFitter then performs a maximum likielihood fit to determine the
 light curve parameters.
 
 LCFitter also allows fits to subsets of the phases for TOA calculation.
@@ -229,11 +229,11 @@ class UnweightedLCFitter(object):
 
             # coarse grained
             dom = np.linspace(0, 1, 101)
-            cod = map(logl, 0.5 * (dom[1:] + dom[:-1]))
+            cod = [logl(x) for x in 0.5 * (dom[1:] + dom[:-1])]
             idx = np.argmin(cod)
             # fine grained
             dom = np.linspace(dom[idx], dom[idx + 1], 101)
-            cod = map(logl, dom)
+            cod = [logl(x) for x in dom]
             # set to best fit phase shift
             ph0 = dom[np.argmin(cod)]
             self.template.set_overall_phase(ph0)
@@ -299,7 +299,25 @@ class UnweightedLCFitter(object):
         return True
 
     def fit_position(self, unbinned=True, track=False):
-        """ Fit overall template position.  Return shift and its error."""
+        """Fit overall template position.  Return shift and its error.
+
+        Parameters
+        ----------
+        unbinned : bool
+            Use unbinned likelihood; will be very slow for many photons.
+        track : bool
+            Limit best-fit solution to +/- 0.2 periods of zero phase.
+            Helps to avoid 0.5period ambiguity for two-peaked profiles.
+
+        Returns
+        -------
+        delta_phi : float
+            overall phase shift from template
+        delta_phi_err : float
+            estimated uncertainty on phase shift from likelihood hessian
+
+        """
+
         self._set_unbinned(unbinned)
         ph0 = self.template.get_location()
 
@@ -309,12 +327,11 @@ class UnweightedLCFitter(object):
 
         # coarse grained search
         if track:
-            dom = np.concatenate((np.linspace(0, 0.2, 25), np.linspace(0.8, 1.0, 25)))
+            dom = np.append(np.linspace(0.0, 0.2, 25), np.linspace(0.8, 1.0, 25)[:-1])
         else:
             dom = np.linspace(0, 1, 101)
-        cod = map(logl, 0.5 * (dom[1:] + dom[:-1]))
-        idx = np.argmin(cod)
-        ph1 = fmin(logl, [dom[idx]], full_output=True, disp=0)[0][0]
+        dombest = min(dom, key=logl)
+        ph1 = fmin(logl, [dombest], full_output=True, disp=0)[0][0]
         delta = 0.01
         d2 = (logl(ph1 + delta) - 2 * logl(ph1) + logl(ph1 - delta)) / delta ** 2
         self.template.set_overall_phase(ph1)
@@ -336,15 +353,13 @@ class UnweightedLCFitter(object):
         old_total = self.template.norms.get_total()
 
         grid = np.linspace(0, 1, 51)[1:]
-        logls = np.asarray(map(logl, grid))
-        bestidx = np.argmin(logls)
-        gmax = min(grid[-1], grid[bestidx] + 0.02)
-        gmin = max(grid[0], grid[bestidx] - 0.02)
+        gridbest = min(grid, key=logl)
+        gmax = min(grid[-1], gridbest + 0.02)
+        gmin = max(grid[0], gridbest - 0.02)
         grid = np.linspace(gmin, gmax, 51)
-        logls = np.asarray(map(logl, grid))
-        bestval = grid[np.argmin(logls)]
-        self.template.norms.set_total(bestval)
-        return bestval
+        gridbest = min(grid, key=logl)
+        self.template.norms.set_total(gridbest)
+        return gridbest
 
     def fit_fmin(self, fit_func, ftol=1e-5):
         x0 = self.template.get_parameters()
@@ -629,7 +644,7 @@ class UnweightedLCFitter(object):
 
             Note the sense of the statistic is such that more negative
             implies a better fit.
-            
+
             This should work for energy-dependent templates provided the
             template and fitter match types."""
         if template is not None:
@@ -908,7 +923,7 @@ def make_err_plot(template, totals=[10, 20, 50, 100, 500], n=1000):
 def approx_gradient(fitter, eps=1e-6):
     """ Numerically approximate the gradient of an instance of one of the
         light curve fitters.
-        
+
         TODO -- potentially merge this with the code in lcprimitives"""
     func = fitter.template
     orig_p = func.get_parameters(free=True).copy()
@@ -933,7 +948,7 @@ def approx_gradient(fitter, eps=1e-6):
 def hess_from_grad(grad, par, step=1e-3, iterations=2):
     """ Use gradient to compute hessian.  Proceed iteratively to take steps
         roughly equal to the 1-sigma errors.
-    
+
         The initial step can be:
             [scalar] use the same step for the initial iteration
             [array] specify a step for each parameters.
