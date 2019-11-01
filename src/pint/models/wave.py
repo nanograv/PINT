@@ -4,14 +4,19 @@ import astropy.units as u
 import numpy as np
 
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
-from pint.models.timing_model import DelayComponent, MissingParameter
+from pint.models.timing_model import PhaseComponent, MissingParameter
 
 
-class Wave(DelayComponent):
+class Wave(PhaseComponent):
     """This class provides harmonic signals.
 
     Historically, used for decomposition of timing noise into a series of
     sine/cosine components.
+
+    For consistency with the implementation in tempo2, this signal is treated
+    as a time series, but trivially converted into phase by multiplication by
+    F0, which could makes changes to PEPOCH fragile if there is strong spin
+    frequency evolution.
     """
 
     register = True
@@ -44,7 +49,7 @@ class Wave(DelayComponent):
                 time_scale="tdb",
             )
         )
-        self.delay_funcs_component += [self.wave_delay]
+        self.phase_funcs_component += [self.wave_phase]
 
     def setup(self):
         super(Wave, self).setup()
@@ -57,6 +62,10 @@ class Wave(DelayComponent):
                 )
             else:
                 self.WAVEEPOCH = self.PEPOCH
+        if (not hasattr(self, "F0")) or (self.F0.quantity is None):
+            raise MissingParameter(
+                "Wave", "F0", "F0 is required if WAVE entries are present."
+            )
 
         wave_terms = list(self.get_prefix_mapping_component("WAVE").keys())
         wave_terms.sort()
@@ -79,19 +88,25 @@ class Wave(DelayComponent):
 
         return result
 
-    def wave_delay(self, toas, acc_delay=None):
-        delays = 0
+    def wave_phase(self, toas, delays):
+        times = 0
         wave_names = ["WAVE%d" % ii for ii in range(1, self.num_wave_terms + 1)]
         wave_terms = [getattr(self, name) for name in wave_names]
         wave_om = self.WAVE_OM.quantity
         base_phase = (
-            wave_om * (toas.table["tdbld"] * u.day - self.WAVEEPOCH.value * u.day)
+            wave_om
+            * (
+                toas.table["tdbld"] * u.day
+                - self.WAVEEPOCH.value * u.day
+                - delays.to(u.day)
+            )
         ).value
 
         for k, wave_term in enumerate(wave_terms):
             wave_a, wave_b = wave_term.quantity
             wave_phase = (k + 1) * base_phase
-            delays += wave_a * np.sin(wave_phase)
-            delays += wave_b * np.cos(wave_phase)
+            times += wave_a * np.sin(wave_phase)
+            times += wave_b * np.cos(wave_phase)
 
-        return delays
+        phase = ((times) * self.F0.quantity * 2 * np.pi).to(u.cycle)
+        return phase

@@ -20,6 +20,7 @@ from pint.models.spindown import Spindown
 # Import the main timing model classes
 from pint.models.timing_model import TimingModel
 from pint.models.wave import Wave
+from pint.models.ifunc import IFunc
 
 # Define a standard basic model
 StandardTimingModel = TimingModel(
