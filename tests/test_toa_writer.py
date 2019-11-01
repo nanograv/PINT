@@ -9,9 +9,9 @@ from astropy.time import Time
 
 
 class TestRoundtripToFiles(unittest.TestCase):
-    @classmethod
-    def setUp(self):
-        os.chdir(datadir)
+    #   @classmethod
+    #    def setUp(self):
+    #        os.chdir(datadir)
 
     # Try writing and reading TEMPO and Tempo2 format .tim files
     # Use several observatories, including Topo and Bary
