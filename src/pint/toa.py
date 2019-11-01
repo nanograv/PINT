@@ -345,7 +345,7 @@ def format_toa_line(
 
     """
     if format.upper() in ("TEMPO2", "1"):
-        if obs.tempo2_code == "bat":
+        if obs.tempo_code == "@":
             toa_str = Time(toatime, format="pulsar_mjd_string", scale="tdb")
         else:
             toa_str = Time(toatime, format="pulsar_mjd_string", scale="utc")
