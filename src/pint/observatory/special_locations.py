@@ -199,6 +199,10 @@ class SpacecraftObs(SpecialLocation):
     def timescale(self):
         return "utc"
 
+    @property
+    def tempo_code(self):
+        return None
+
     def get_gcrs(self, t, ephem=None, grp=None):
         """Return spacecraft GCRS position; this assumes position flags in tim file are in km"""
 

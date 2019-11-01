@@ -3,8 +3,8 @@ A module implementing binned and unbinned likelihood for weighted and
 unweighted sets of photon phases.  The model is encapsulated in LCTemplate,
 a mixture model.
 
-LCPrimitives are combined to form a light curve (LCTemplate).  
-LCFitter then performs a maximum likielihood fit to determine the 
+LCPrimitives are combined to form a light curve (LCTemplate).
+LCFitter then performs a maximum likielihood fit to determine the
 light curve parameters.
 
 LCFitter also allows fits to subsets of the phases for TOA calculation.
@@ -300,7 +300,7 @@ class UnweightedLCFitter(object):
 
     def fit_position(self, unbinned=True, track=False):
         """Fit overall template position.  Return shift and its error.
-        
+
         Parameters
         ----------
         unbinned : bool
@@ -317,6 +317,7 @@ class UnweightedLCFitter(object):
             estimated uncertainty on phase shift from likelihood hessian
 
         """
+
         self._set_unbinned(unbinned)
         ph0 = self.template.get_location()
 
@@ -643,7 +644,7 @@ class UnweightedLCFitter(object):
 
             Note the sense of the statistic is such that more negative
             implies a better fit.
-            
+
             This should work for energy-dependent templates provided the
             template and fitter match types."""
         if template is not None:
@@ -922,7 +923,7 @@ def make_err_plot(template, totals=[10, 20, 50, 100, 500], n=1000):
 def approx_gradient(fitter, eps=1e-6):
     """ Numerically approximate the gradient of an instance of one of the
         light curve fitters.
-        
+
         TODO -- potentially merge this with the code in lcprimitives"""
     func = fitter.template
     orig_p = func.get_parameters(free=True).copy()
@@ -947,7 +948,7 @@ def approx_gradient(fitter, eps=1e-6):
 def hess_from_grad(grad, par, step=1e-3, iterations=2):
     """ Use gradient to compute hessian.  Proceed iteratively to take steps
         roughly equal to the 1-sigma errors.
-    
+
         The initial step can be:
             [scalar] use the same step for the initial iteration
             [array] specify a step for each parameters.
