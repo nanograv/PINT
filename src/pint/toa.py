@@ -345,6 +345,7 @@ def format_toa_line(
 
     """
     if format.upper() in ("TEMPO2", "1"):
+        # This should probably use obs.timescale instaed of this hack
         if obs.tempo_code == "@":
             toa_str = Time(toatime, format="pulsar_mjd_string", scale="tdb")
         else:
@@ -383,14 +384,19 @@ def format_toa_line(
             flagstring,
         )
     elif format.upper() in ("PRINCETON", "TEMPO"):
-        if obs.tempo2_code == "bat":
-            toa_str = Time(toatime, format="pulsar_mjd_string", scale="tdb")
+        # This should probably use obs.timescale instead of this hack
+        if obs.tempo_code == "@":
+            toa_str = str(Time(toatime, format="pulsar_mjd_string", scale="tdb"))
         else:
-            toa_str = Time(toatime, format="pulsar_mjd_string", scale="utc")
+            toa_str = str(Time(toatime, format="pulsar_mjd_string", scale="utc"))
+        # The Princeton format can only deal with MJDs that have up to 20
+        # digits, so truncate if longer.
+        if len(toa_str) > 20:
+            toa_str = toa_str[:20]
         # In TEMPO/Princeton format, freq=0.0 means infinite frequency
         if freq == np.inf * u.MHz:
             freq = 0.0 * u.MHz
-        if len(obs.tempo_code) != 1:
+        if obs.tempo_code is None:
             raise ValueError(
                 "Observatory {} does not have 1-character tempo_code!".format(obs.name)
             )
