@@ -60,6 +60,8 @@ class TestRoundtripToFiles(unittest.TestCase):
         assert ts.table["tdb"][0] - ts2.table["tdb"][0] < 1.0e-15
 
     def test_roundtrip_gmrt_toa_Tempo2format(self):
+        if os.getenv("TEMPO2") is None:
+            pytest.skip("TEMPO2 evnironment variable is not set, can't run this test")
         # Create a barycentric TOA
         t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
         t1 = toa.TOA(t1time, obs="gmrt", freq=0.0)
@@ -71,6 +73,8 @@ class TestRoundtripToFiles(unittest.TestCase):
         assert ts.table["tdb"][0] - ts2.table["tdb"][0] < 1.0e-15
 
     def test_roundtrip_ncyobs_toa_Tempo2format(self):
+        if os.getenv("TEMPO2") is None:
+            pytest.skip("TEMPO2 evnironment variable is not set, can't run this test")
         # Create a barycentric TOA
         t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
         t1 = toa.TOA(t1time, obs="ncyobs", freq=0.0)
@@ -82,6 +86,8 @@ class TestRoundtripToFiles(unittest.TestCase):
         assert ts.table["tdb"][0] - ts2.table["tdb"][0] < 1.0e-15
 
     def test_roundtrip_ncyobs_toa_TEMPOformat(self):
+        if os.getenv("TEMPO2") is None:
+            pytest.skip("TEMPO2 evnironment variable is not set, can't run this test")
         # Create a barycentric TOA
         t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
         t1 = toa.TOA(t1time, obs="ncyobs", freq=0.0)
