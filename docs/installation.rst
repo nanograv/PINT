@@ -54,6 +54,26 @@ almost everyone has ceased support for python 2. Unfortunately, as you probably
 know if you have read this far, some systems and software are still in the
 Stone Age and don't work with python 3.
 
+Old setuptools (``egg-info`` error message)
+'''''''''''''''''''''''''''''''''''''''''''
+
+PINT's ``setup.cfg`` is written in a declarative style that does not work with
+older versions of ``setuptools``. The lack of a sufficiently recent version of
+``setuptools`` is often signalled by the otherwise impenetrable error message
+``error: 'egg_base' must be a directory name (got src)``. You can upgrade with
+``pip``::
+
+   $ pip install -U pip setuptools
+
+If this does not help, check your versions of installed things::
+
+   $ pip list
+
+You should be able to upgrade to ``setuptools`` version at least ``0.41``. If
+running ``pip`` does not change the version that appears on this list, or if
+your version changes but the problem persists, you may have a problem with your
+python setup; read on.
+
 Bad ``PYTHONPATH``
 ''''''''''''''''''
 
@@ -63,9 +83,7 @@ affecting or being affected by anything in any other environment. Unfortunately
 it is possible to defeat this by setting the ``PYTHONPATH`` environment
 vairable. Double unfortunately, setting the ``PYTHONPATH`` environment used to
 be the Right Way to use python things that weren't part of your operating
-system. So many of us have ``PYTHONPATH`` set in our shells. This is often
-signalled by the otherwise impenetrable error message "error: 'egg_base' must
-be a directory name (got src)". You can check this::
+system. So many of us have ``PYTHONPATH`` set in our shells. You can check this::
 
    $ printenv PYTHONPATH
 
