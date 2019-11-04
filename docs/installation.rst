@@ -126,9 +126,19 @@ correction files in ``$TEMPO/clock``
 `Tempo2`_ is not required, but if you have it installed PINT can find clock
 correction files in ``$TEMPO2/clock``
 
+PINT development (building the documentation) requires pandoc_, which isn't a
+python package and therefore needs to be installed in some way appropriate for
+your operating system. On Linux you may be able to just run::
+
+   $ apt install pandoc
+
+Otherwise, there are several ways to `install pandoc`_
+
 .. _[1]: If you don't have `pip`_ installed, this `Python installation guide`_ can guide
    you through the process.
 .. _pip: https://pip.pypa.io/en/stable/
 .. _TEMPO: http://tempo.sourceforge.net
 .. _Tempo2: https://bitbucket.org/psrsoft/tempo2
 .. _Python installation guide: https://docs.python-guide.org/starting/installation/
+.. _pandoc: https://pandoc.org/
+.. _`install pandoc`: https://pandoc.org/installing.html
