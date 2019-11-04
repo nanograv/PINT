@@ -53,7 +53,7 @@ def random_models(
     # scale by fac
     log.debug("errors", np.sqrt(np.diag(cor_matrix)))
     log.debug("mean vector", mean_vector)
-    mean_vector *= fac
+    mean_vector = np.array(list(mean_vector)) * fac
     cov_matrix = ((cor_matrix * fac).T * fac).T
 
     toa_mjds = fitter.toas.get_mjds()
