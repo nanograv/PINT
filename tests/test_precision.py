@@ -332,6 +332,7 @@ def test_time_from_longdouble(scale, i_f):
 @example(format="mjd", i_f=(40000, 0.7333333333333333))
 # @example(format="mjd", i_f=(41498, 0.9999999999999982))
 # @example(format="pulsar_mjd", i_f=(41498, 0.9999999999999982))
+@settings(deadline=2000)
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_from_longdouble_utc(format, i_f):
     i, f = i_f
