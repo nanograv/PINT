@@ -14,14 +14,14 @@ matrix:
               clone: false
         - script: black --check src tests examples
           install:
-            - pip install black
+            - travis_retry pip install black
           name: "check code style is black"
           services: []
           after_success: []
         - script: flake8-diff
           install:
-            - pip install -r requirements_dev.txt
-            - pip install .
+            - travis_retry pip install -r requirements_dev.txt
+            - travis_retry pip install .
           name: "python style checker for changed code"
           services: []
           after_success: []
@@ -35,29 +35,29 @@ matrix:
           language: python
           python:
             - "3.7"
-          install: pip install tox-travis
+          install: travis_retry pip install tox-travis
           script: tox
         - python: "3.7"
           name: "External clock files"
           install:
-            - git clone https://github.com/nanograv/tempo.git
-            - git clone https://bitbucket.org/psrsoft/tempo2.git
-            - pip install -r requirements_dev.txt
-            - pip install .
-            - python cache_IERS.py
+            - travis_retry git clone https://github.com/nanograv/tempo.git
+            - travis_retry git clone https://bitbucket.org/psrsoft/tempo2.git
+            - travis_retry pip install -r requirements_dev.txt
+            - travis_retry pip install .
+            - travis_retry python cache_IERS.py
           env:
             - TEMPO=tempo/
             - TEMPO2=tempo2/T2Runtime/
         - script: make notebooks
           install:
-            - pip install -r requirements_dev.txt
-            - pip install .
+            - travis_retry pip install -r requirements_dev.txt
+            - travis_retry pip install .
           name: "Example notebooks (python 3.7)"
           python: "3.7"
         - script: make docs-build
           install:
-            - pip install -r requirements_dev.txt
-            - pip install .
+            - travis_retry pip install -r requirements_dev.txt
+            - travis_retry pip install .
           name: "Documentation build"
           python: "3.7"
           after_success: []
@@ -80,10 +80,10 @@ before_install:
 install:
     # We need to require the dev requirements first in case they're more
     # stringent (on version numbers)
-    - pip install -r requirements_dev.txt
-    - pip install .
+    - travis_retry pip install -r requirements_dev.txt
+    - travis_retry pip install .
     - pip list
-    - python cache_IERS.py
+    - travis_retry python cache_IERS.py
 
 #script:
 #    - pwd
