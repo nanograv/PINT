@@ -107,6 +107,16 @@ print(select)
 tt["tdb"][select]
 ```
 
+TOAs objects have a select() method to select based on a boolean mask. This selection can be undone later with unselect.
+
+```python
+t.print_summary()
+t.select(select)
+t.print_summary()
+t.unselect()
+t.print_summary()
+```
+
 Many PINT routines / classes / functions use [Astropy Units](https://astropy.readthedocs.org/latest/units/) internally or externally:
 
 ```python
