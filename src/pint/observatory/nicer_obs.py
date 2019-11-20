@@ -217,6 +217,11 @@ class NICERObs(SpecialLocation):
             log.error(
                 "Extrapolating NICER position by more than %d minutes!" % maxextrap
             )
+            log.error(
+                "Orbit file goes {0} to {1}, Events go {2} to {3}".format(
+                    tmin, tmax, np.min(t.tt.mjd), np.max(t.tt.mjd)
+                )
+            )
             raise ValueError("Bad extrapolation of S/C file.")
         # Compute vector from SSB to Earth
         geo_posvel = objPosVel_wrt_SSB("earth", t, ephem)

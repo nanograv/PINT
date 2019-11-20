@@ -5,9 +5,9 @@ PINT
     :target: https://travis-ci.org/nanograv/PINT
     :alt: Build Status
 
-.. image:: https://readthedocs.org/projects/nanograv-pint/badge/?version=latest
-    :target: http://nanograv-pint.readthedocs.io/en/latest/?badge=latest
-    :alt: Documentation Build Status
+.. image:: https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat
+    :target: http://nanograv-pint.readthedocs.io/en/latest/
+    :alt: Documentation
 
 .. image:: https://coveralls.io/repos/github/nanograv/PINT/badge.svg?branch=master
     :target: https://coveralls.io/github/nanograv/PINT?branch=master
@@ -57,4 +57,3 @@ Using
 See the online documentation_.
 
 .. _documentation:   http://nanograv-pint.readthedocs.io/en/latest/
-
