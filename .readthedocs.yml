@@ -18,9 +18,6 @@ formats:
 #mkdocs:
 #  configuration: mkdocs.yml
 
-# Optionally build your docs in additional formats such as PDF and ePub
-formats: all
-
 # Optionally set the version of Python and requirements required to build your docs
 python:
   version: 3.7
