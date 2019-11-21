@@ -12,7 +12,7 @@ sphinx:
 
 # Can add back in pdf, epub if wanted
 formats:
-  html
+  - html
 
 # Build documentation with MkDocs
 #mkdocs:
