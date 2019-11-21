@@ -206,12 +206,19 @@ def load_Fermi_TOAs(
             log.info("Building geocentered TOAs")
             if weightcolumn is None:
                 toalist = [
-                    toa.TOA(m, obs="Geocenter", scale="tt", energy=e)
+                    toa.TOA(m, obs="Geocenter", scale="tt", energy=e, error=1.0 * u.us)
                     for m, e in zip(mjds, energies)
                 ]
             else:
                 toalist = [
-                    toa.TOA(m, obs="Geocenter", scale="tt", energy=e, weight=w)
+                    toa.TOA(
+                        m,
+                        obs="Geocenter",
+                        scale="tt",
+                        energy=e,
+                        weight=w,
+                        error=1.0 * u.us,
+                    )
                     for m, e, w in zip(mjds, energies, weights)
                 ]
 
