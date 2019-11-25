@@ -468,6 +468,6 @@ def main(argv=None):
     f.write(ftr.model.as_parfile())
     f.close()
 
-    import cPickle
+    from six.moves import cPickle as pickle
 
-    cPickle.dump(samples, open(ftr.model.PSR.value + "_samples.pickle", "wb"))
+    pickle.dump(samples, open(ftr.model.PSR.value + "_samples.pickle", "wb"))
