@@ -20,6 +20,8 @@ from pint.models.parameter import strParameter, maskParameter
 from pint.phase import Phase
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
+
+__all__ = ["DEFAULT_ORDER", "TimingModel"]
 # Parameters or lines in parfiles we don't understand but shouldn't
 # complain about. These are still passed to components so that they
 # can use them if they want to.
@@ -55,7 +57,21 @@ ignore_params = set(
         #    'NE_SW', 'NE_SW2',
     ]
 )
+
 ignore_prefix = set(["DMXF1_", "DMXF2_", "DMXEP_"])  # DMXEP_ for now.
+
+DEFAULT_ORDER = [
+    "astrometry",
+    "jump_delay",
+    "solar_system_shapiro",
+    "dispersion_constant",
+    "dispersion_dmx",
+    "pulsar_system",
+    "frequency_dependent",
+    "spindown",
+    "phase_jump",
+    "wave",
+]
 
 
 class TimingModel(object):
@@ -130,7 +146,9 @@ class TimingModel(object):
             strParameter(name="UNITS", description="Units (TDB assumed)"), ""
         )
 
-        self.setup_components(components)
+        #self.setup_components(components)
+        for cp in components:
+            self.add_component(cp)
 
     def __repr__(self):
         return "{}(\n  {}\n)".format(
@@ -371,14 +389,14 @@ class TimingModel(object):
         for ct in comp_types:
             setattr(self, ct + "_list", comp_types[ct])
 
-    def add_component(self, component, order=None, force=False):
+    def add_component(self, component, order=DEFAULT_ORDER, force=False):
         """Add a component to the timing model.
 
         Parameters
         ----------
         component : Component
             The component to be added to the timing model.
-        order : int, optional
+        order : list, optional
             Where in the list of components to insert the new one.
         force : bool, optional
             If true, add a duplicate component.
@@ -387,6 +405,9 @@ class TimingModel(object):
         comp_type = self.get_component_type(component)
         if comp_type in self.component_types:
             comp_list = getattr(self, comp_type + "_list")
+            cur_cps = []
+            for cp in comp_list:
+                cur_cps.append((order.index(cp.category), cp))
             # Check if the component has been added already.
             if component.__class__ in (x.__class__ for x in comp_list):
                 log.warning(
@@ -401,12 +422,20 @@ class TimingModel(object):
                     )
         else:
             self.component_types.append(comp_type)
-            comp_list = []
-            setattr(self, comp_type + "_list", comp_list)
-        if order is None:
-            comp_list.append(component)
+            cur_cps = []
+
+        # link new component to TimingModel
+        component._parent = self
+        # If the categore is not in the order list, it will be added to the end.
+        if component.category not in order:
+            new_cp = tuple((len(order) + 1, component))
         else:
-            comp_list.insert(order, component)
+            new_cp = tuple((order.index(component.category), component))
+        # add new component
+        cur_cps.append(new_cp)
+        cur_cps.sort()
+        new_comp_list = [c[1] for c in cur_cps]
+        setattr(self, comp_type + "_list", new_comp_list)
 
     def replicate(self, components=[], copy_component=False):
         new_tm = TimingModel()
