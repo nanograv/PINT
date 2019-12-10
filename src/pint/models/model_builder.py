@@ -14,24 +14,13 @@ from pint.models.timing_model import (
     MissingParameter,
     TimingModel,
     ignore_prefix,
+    DEFAULT_ORDER,
 )
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
 __all__ = ["get_model", "get_model_new"]
 
 default_models = ["StandardTimingModel"]
-DEFAULT_ORDER = [
-    "astrometry",
-    "jump_delay",
-    "solar_system_shapiro",
-    "dispersion_constant",
-    "dispersion_dmx",
-    "pulsar_system",
-    "frequency_dependent",
-    "spindown",
-    "phase_jump",
-    "wave",
-]
 
 
 class UnknownBinaryModel(ValueError):
