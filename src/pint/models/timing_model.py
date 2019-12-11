@@ -426,6 +426,9 @@ class TimingModel(object):
 
         # link new component to TimingModel
         component._parent = self
+        # FIXME How do we setup the component?
+        # If a bare component without parameter values, it will fail.
+        #component.setup()
         # If the categore is not in the order list, it will be added to the end.
         if component.category not in order:
             new_cp = tuple((len(order) + 1, component))
