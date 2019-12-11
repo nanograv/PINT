@@ -19,7 +19,7 @@ from pint.models import (
 from pinttestdata import datadir
 
 
-class TestModelBuilding
+class TestModelBuilding:
 
     def setup(self):
         self.parfile = os.path.join(datadir,
