@@ -6,7 +6,7 @@ import pytest
 import os
 import numpy
 from pint.models import TimingModel
-from pint.models.timing_model import DEFAULTORDER
+from pint.models.timing_model import DEFAULT_ORDER
 from pint.models import get_model
 from pint.models import (
     AstrometryEquatorial,
