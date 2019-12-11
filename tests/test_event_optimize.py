@@ -19,7 +19,6 @@ eventfile = os.path.join(
 temfile = os.path.join(datadir, "templateJ0030.3gauss")
 
 
-@unittest.skip
 class TestEventOptimize(unittest.TestCase):
     def test_result(self):
 

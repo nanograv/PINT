@@ -17,7 +17,6 @@ eventfile = os.path.join(
 temfile = os.path.join(datadir, "templateJ0030.3gauss")
 
 
-@unittest.skip
 class TestEventOptimizeMCMCFitter(unittest.TestCase):
     def test_result(self):
         import pint.scripts.event_optimize_MCMCFitter as event_optimize
