@@ -27,7 +27,7 @@ class TestModelBuilding:
 
     def test_from_par(self):
         tm = get_model(self.parfile)
-        assert len(tm.componenets) == 6
+        assert len(tm.components) == 6
         assert len(tm.DelayComponent_list) == 4
         assert len(tm.PhaseComponent_list) == 2
 
