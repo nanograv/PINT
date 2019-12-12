@@ -30,7 +30,7 @@ def load_FPorbit(orbit_filename):
     astropy Table containing Time, x, y, z, v_x, v_y, v_z data
 
     """
-    # Load photon times from FT1 file
+    # Load orbit FITS file
     hdulist = pyfits.open(orbit_filename)
     # log.info('orb file HDU name is {0}'.format(hdulist[1].name))
     if hdulist[1].name != "ORBIT":

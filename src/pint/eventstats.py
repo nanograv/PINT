@@ -94,7 +94,7 @@ def sig2sigma(sig, two_tailed=True, logprob=False):
         elif mysig > 1e-15:
             results[isig] = erfcinv(mysig) * 2 ** 0.5
         else:
-            results[isig] = fsolve(inverfc, [8], (sig,))
+            results[isig] = fsolve(inverfc, [8], (mysig,))
     return from_array(results)
 
 
