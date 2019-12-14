@@ -148,7 +148,7 @@ class TimingModel(object):
 
         #self.setup_components(components)
         for cp in components:
-            self.add_component(cp)
+            self._add_plain_component(cp)
 
     def __repr__(self):
         return "{}(\n  {}\n)".format(
@@ -363,43 +363,19 @@ class TimingModel(object):
             comp_type = comp_base[-3].__name__
         return comp_type
 
-    def setup_components(self, components):
-        """Set components list according to the component types.
+    def _add_plain_component(self, component, order=DEFAULT_ORDER, force=False):
+        """Add a component that has no parameter values into TimingModel.
 
-        Note
-        ----
-        The method will reset the component list.
-
-        """
-        if self.component_types:
-            raise ValueError(
-                "setup_components is being run when the model already has a "
-                "few components: {}".format(self.component_types)
-            )
-
-        comp_types = defaultdict(list)
-        for cp in components:
-            comp_type = self.get_component_type(cp)
-            comp_types[comp_type].append(cp)
-            cp._parent = self
-
-        for type_ in comp_types:
-            if type_ not in self.component_types:
-                self.component_types.append(type_)
-        for ct in comp_types:
-            setattr(self, ct + "_list", comp_types[ct])
-
-    def add_component(self, component, order=DEFAULT_ORDER, force=False):
-        """Add a component to the timing model.
+        In other words, this function does not do component.setup()
 
         Parameters
         ----------
         component : Component
             The component to be added to the timing model.
         order : list, optional
-            Where in the list of components to insert the new one.
+            The component category order list. Default is the DEFAULT_ORDER.
         force : bool, optional
-            If true, add a duplicate component.
+            If true, add a duplicate component. Default is False.
 
         """
         comp_type = self.get_component_type(component)
@@ -426,9 +402,7 @@ class TimingModel(object):
 
         # link new component to TimingModel
         component._parent = self
-        # FIXME How do we setup the component?
-        # If a bare component without parameter values, it will fail.
-        #component.setup()
+
         # If the categore is not in the order list, it will be added to the end.
         if component.category not in order:
             new_cp = tuple((len(order) + 1, component))
@@ -439,6 +413,30 @@ class TimingModel(object):
         cur_cps.sort()
         new_comp_list = [c[1] for c in cur_cps]
         setattr(self, comp_type + "_list", new_comp_list)
+
+    def add_component(self, component, param_info, order=DEFAULT_ORDER,
+                      force=False):
+        """Add a component to the timing model.
+
+        Parameters
+        ----------
+        component : Component
+            The component to be added to the timing model.
+        param_info: dict
+            Input parameter information. The key should be the parameter name
+            and the parameter information should be provided by a dictonary of
+            parameter field.
+        order : list, optional
+            Where in the list of components to insert the new one.
+        force : bool, optional
+            If true, add a duplicate component.
+        """
+        for param, info in param_info.items():
+            param_object = getattr(component, param)
+            for field, value in info.items():
+                setattr(param_object, field, value)
+        self._add_plain_component(component, order=order, force=force)
+        self.setup()
 
     def replicate(self, components=[], copy_component=False):
         new_tm = TimingModel()
