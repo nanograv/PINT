@@ -994,7 +994,7 @@ class TOAs(object):
             len(self.observatories),
             list(self.observatories),
         )
-        s += "MJD span:  %.3f to %.3f\n" % (self.first_MJD.value, self.last_MJD.value)
+        s += "MJD span:  %.3f to %.3f\n" % (self.first_MJD.mjd, self.last_MJD.mjd)
         for ii, key in enumerate(self.table.groups.keys):
             grp = self.table.groups[ii]
             s += "%s TOAs (%d):\n" % (key["obs"], len(grp))
@@ -1041,9 +1041,10 @@ class TOAs(object):
 
         Replace any existing pulse numbers by computing phases according to
         model and then setting the pulse number of each to their integer part,
-        presumably the nearest integer.
+        which the nearest integer since Phase objects ensure that.
         """
-        phases = model.phase(self)
+        # paulr: I think pulse numbers should be computed with abs_phase=True!
+        phases = model.phase(self, abs_phase=True)
         self.table["pulse_number"] = phases.int
         self.table["pulse_number"].unit = u.cycle
 
