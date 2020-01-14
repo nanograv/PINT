@@ -80,5 +80,6 @@ class TestModelBuilding:
         cp_pos = tm.DelayComponent_list.index(cp)
         assert cp_pos == 2
 
-        # TODO add test component setup function.
-        assert hasattr(cp, 'JUMP')
+        # TODO add test component setup function. use jump1 right now, this
+        # should be updated in the future. 
+        assert hasattr(cp, 'JUMP1')
