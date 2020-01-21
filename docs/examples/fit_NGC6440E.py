@@ -51,7 +51,7 @@ plt.show()
 
 # Now do the fit
 print("Fitting...")
-f = pint.fitter.WlsFitter(t, m)
+f = pint.fitter.WLSFitter(t, m)
 print(f.fit_toas())
 
 # Print some basic params
