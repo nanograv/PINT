@@ -61,7 +61,7 @@ class TestELL1H(unittest.TestCase):
         testp = tdu.get_derivative_params(self.modelJ1853)
         delay = self.modelJ1853.delay(self.toasJ1853)
         # Change parameter test step
-        testp["H3"] = 5e-1
+        testp["H3"] = 6e-1
         testp["H4"] = 1e-2
         testp["STIGMA"] = 1e-2
         for p in test_params:
