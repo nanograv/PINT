@@ -16,7 +16,7 @@ import six
 from astropy import log
 
 from pint import dimensionless_cycles
-from pint.models.parameter import strParameter
+from pint.models.parameter import strParameter, maskParameter
 from pint.phase import Phase
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
@@ -662,7 +662,7 @@ class TimingModel(object):
             self.remove_param("JUMP1")
         for num in np.arange(1, np.nanmax(jump_nums) + 1):
             if "JUMP" + str(int(num)) not in self.params:
-                param = p.maskParameter(
+                param = maskParameter(
                     name="JUMP",
                     index=int(num),
                     key="jump",
@@ -677,7 +677,7 @@ class TimingModel(object):
             for flag_dict in toas.table["flags"]:
                 if "jump" in flag_dict.keys() and flag_dict["jump"] == 0:
                     flag_dict["jump"] = int(np.nanmax(jump_nums) + 1)
-            param = p.maskParameter(
+            param = maskParameter(
                 name="JUMP",
                 index=int(np.nanmax(jump_nums) + 1),
                 key="jump",

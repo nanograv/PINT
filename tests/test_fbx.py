@@ -52,7 +52,7 @@ class TestFBX(unittest.TestCase):
         for p in testp.keys():
             log.debug("Runing derivative for %s", "d_delay_d_" + p)
             if p in ["EPS2", "EPS1"]:
-                testp[p] = 10
+                testp[p] = 15
             ndf = self.modelJ0023.d_phase_d_param_num(self.toasJ0023, p, testp[p])
             adf = self.modelJ0023.d_phase_d_param(self.toasJ0023, delay, p)
             diff = adf - ndf

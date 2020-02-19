@@ -146,8 +146,6 @@ class Spindown(PhaseComponent):
             new_epoch = Time(new_epoch, scale="tdb", precision=9)
         else:
             new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
-        # make new_epoch a toa for delay calculation.
-        new_epoch_toa = toa.get_TOAs_list([toa.TOA(new_epoch)], ephem=toas.ephem)
 
         if self.PEPOCH.value is None:
             if toas is None or delay is None:
