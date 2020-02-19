@@ -151,6 +151,16 @@ class Astrometry(DelayComponent):
         """
         pass
 
+    def change_posepoch(self, new_epoch):
+        """Change POSEPOCH to a new value and update the position accordingly.
+
+        Parameters
+        ----------
+        new_epoch: float or `astropy.Time` object
+            The new POSEPOCH value.
+        """
+        raise NotImplementedError
+
 
 class AstrometryEquatorial(Astrometry):
     register = True
@@ -344,6 +354,26 @@ class AstrometryEquatorial(Astrometry):
 
         # We want to return sec / (mas / yr)
         return dd_dpmdec.decompose(u.si.bases) / (u.mas / u.year)
+
+    def change_posepoch(self, new_epoch):
+        """Change POSEPOCH to a new value and update the position accordingly.
+
+        Parameters
+        ----------
+        new_epoch: float or `astropy.Time` object
+            The new POSEPOCH value.
+        """
+        if isinstance(new_epoch, Time):
+            new_epoch = Time(new_epoch, scale="tdb", precision=9)
+        else:
+            new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
+
+        if self.POSEPOCH.value is None:
+            raise ValueError("POSEPOCH is not currently set.")
+        new_coords = get_psr_coords(self, new_epoch)
+        self.RAJ = new_coords.ra
+        self.DECJ = new_coords.dec
+        self.POSEPOCH.value = new_epoch
 
 
 class AstrometryEcliptic(Astrometry):
@@ -592,3 +622,23 @@ class AstrometryEcliptic(Astrometry):
             if par.quantity is not None:
                 result += getattr(self, p).as_parfile_line()
         return result
+
+    def change_posepoch(self, new_epoch):
+        """Change POSEPOCH to a new value and update the position accordingly.
+
+        Parameters
+        ----------
+        new_epoch: float or `astropy.Time` object
+            The new POSEPOCH value.
+        """
+        if isinstance(new_epoch, Time):
+            new_epoch = Time(new_epoch, scale="tdb", precision=9)
+        else:
+            new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
+
+        if self.POSEPOCH.value is None:
+            raise ValueError("POSEPOCH is not currently set.")
+        new_coords = get_psr_coords(self, new_epoch)
+        self.ELONG = new_coords.lon
+        self.ELAT = new_coords.lat
+        self.POSEPOCH.value = new_epoch
