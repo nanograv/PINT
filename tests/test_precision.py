@@ -363,9 +363,13 @@ def test_time_from_longdouble_utc(format, i_f):
 def test_time_to_longdouble_close_to_time_to_mjd_string(format, i_f):
     i, f = i_f
     t = Time(val=i, val2=f, format=format, scale="utc")
-    assert (
-        abs(np.longdouble(time_to_mjd_string(t)) - time_to_longdouble(t)) * u.day
-    ).to(u.ns) < 1 * u.ns
+    tld = time_to_longdouble(t)
+    tstr = time_to_mjd_string(t)
+    # NOTE: have to add str() here, because of a numpy bug which treats
+    # numpy string type differently from python str.
+    # See https://github.com/numpy/numpy/issues/15608
+    tld_str = np.longdouble(str(tstr))
+    assert abs(tld_str - tld) * u.day < 1 * u.ns
 
 
 @given(reasonable_mjd())
@@ -389,7 +393,12 @@ def test_time_to_mjd_string_versus_longdouble(format, i_f):
     i, f = i_f
     m = i + np.longdouble(f)
     t = Time(val=i, val2=f, format=format, scale="utc")
-    assert (abs(np.longdouble(time_to_mjd_string(t)) - m) * u.day).to(u.ns) < 1 * u.ns
+    tstr = time_to_mjd_string(t)
+    # NOTE: have to add str() here, because of a numpy bug which treats
+    # numpy string type differently from python str.
+    # See https://github.com/numpy/numpy/issues/15608
+    tld_str = np.longdouble(str(tstr))
+    assert abs(tld_str - m) * u.day < 1 * u.ns
 
 
 @given(reasonable_mjd())
