@@ -107,8 +107,12 @@ def gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
     # dX = np.interp(mjds, iers_tab['MJD'], iers_tab['dX_2000A_B']) * asec2rad
     # dY = np.interp(mjds, iers_tab['MJD'], iers_tab['dY_2000A_B']) * asec2rad
     # Get dX and dY from IERS B in arcsec and convert to radians
-    dX = np.interp(mjds, iers_b["MJD"].to_value(u.d), iers_b["dX_2000A"].to_value(u.rad))
-    dY = np.interp(mjds, iers_b["MJD"].to_value(u.d), iers_b["dY_2000A"].to_value(u.rad))
+    dX = np.interp(
+        mjds, iers_b["MJD"].to_value(u.d), iers_b["dX_2000A"].to_value(u.rad)
+    )
+    dY = np.interp(
+        mjds, iers_b["MJD"].to_value(u.d), iers_b["dY_2000A"].to_value(u.rad)
+    )
 
     # Get GCRS to CIRS matrices
     rc2i = erfa.c2ixys(X + dX, Y + dY, S)
