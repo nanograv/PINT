@@ -100,8 +100,9 @@ def test_times_against_tempo2():
         # print " obs PINT:", pint_opv.pos.to(u.m), pint_opv.vel.to(u.m/u.s)
         dopv = pint_opv - t2_opv
         dpos = numpy.sqrt(numpy.dot(dopv.pos.to_value(u.m), dopv.pos.to_value(u.m)))
-        dvel = numpy.sqrt(numpy.dot(dopv.vel.to_value(u.mm / u.s),
-                                    dopv.vel.to_value(u.mm / u.s)))
+        dvel = numpy.sqrt(
+            numpy.dot(dopv.vel.to_value(u.mm / u.s), dopv.vel.to_value(u.mm / u.s))
+        )
         log.info(" obs diff: %.2f m, %.3f mm/s" % (dpos, dvel))
         assert dpos < 2.0 and dvel < 0.02
 
@@ -115,7 +116,8 @@ def test_times_against_tempo2():
         # print " topo PINT:", pint_ssb2obs.pos.to(u.km), pint_ssb2obs.vel.to(u.km/u.s)
         dtopo = pint_ssb2obs - t2_ssb2obs
         dpos = numpy.sqrt(numpy.dot(dtopo.pos.to_value(u.m), dtopo.pos.to_value(u.m)))
-        dvel = numpy.sqrt(numpy.dot(dtopo.vel.to_value(u.mm / u.s),
-                                    dtopo.vel.to_value(u.mm / u.s)))
+        dvel = numpy.sqrt(
+            numpy.dot(dtopo.vel.to_value(u.mm / u.s), dtopo.vel.to_value(u.mm / u.s))
+        )
         log.info(" topo diff: %.2f m, %.3f m/s" % (dpos, dvel))
         assert dpos < 2.0 and dvel < 0.02
