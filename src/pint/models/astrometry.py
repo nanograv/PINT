@@ -240,7 +240,10 @@ class AstrometryEquatorial(Astrometry):
             dRA = dt * self.PMRA.quantity / numpy.cos(self.DECJ.quantity.radian)
             dDEC = dt * self.PMDEC.quantity
             return coords.ICRS(
-                ra=self.RAJ.quantity + dRA, dec=self.DECJ.quantity + dDEC
+                ra=self.RAJ.quantity + dRA,
+                dec=self.DECJ.quantity + dDEC,
+                pm_ra_cosdec=self.PMRA.quantity,
+                pm_dec=self.PMDEC.quantity,
             )
 
     def coords_as_ICRS(self, epoch=None):
@@ -440,7 +443,10 @@ class AstrometryEcliptic(Astrometry):
             dELAT = dt * self.PMELAT.quantity
 
         pos_ecl = PulsarEcliptic(
-            lon=self.ELONG.quantity + dELONG, lat=self.ELAT.quantity + dELAT
+            lon=self.ELONG.quantity + dELONG,
+            lat=self.ELAT.quantity + dELAT,
+            pm_lon_coslat=self.PMELONG.quantity,
+            pm_lat=self.PMELAT.quantity,
         )
         return pos_ecl
 
@@ -473,23 +479,7 @@ class AstrometryEcliptic(Astrometry):
 
     def get_params_as_ICRS(self):
         result = dict()
-        # NOTE This feature below needs astropy version 2.0.
-        dlon_coslat = self.PMELONG.quantity  # * numpy.cos(self.ELAT.quantity.radian)
-        # Astropy2 and astropy3 have different APIs
-        if int(astropy_version.split(".")[0]) <= 2:
-            pv_ECL = PulsarEcliptic(
-                lon=self.ELONG.quantity,
-                lat=self.ELAT.quantity,
-                d_lon_coslat=dlon_coslat,
-                d_lat=self.PMELAT.quantity,
-            )
-        else:
-            pv_ECL = PulsarEcliptic(
-                lon=self.ELONG.quantity,
-                lat=self.ELAT.quantity,
-                pm_lon_coslat=dlon_coslat,
-                pm_lat=self.PMELAT.quantity,
-            )
+        pv_ECL = self.get_psr_coords()
         pv_ICRS = pv_ECL.transform_to(coords.ICRS)
         result["RAJ"] = pv_ICRS.ra.to(u.hourangle)
         result["DECJ"] = pv_ICRS.dec
