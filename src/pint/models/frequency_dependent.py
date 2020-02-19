@@ -64,7 +64,7 @@ class FD(DelayComponent):
             warn("Using topocentric frequency for frequency dependent delay!")
             bfreq = tbl["freq"]
         FD_mapping = self.get_prefix_mapping_component("FD")
-        log_freq = np.log(bfreq / (1 * u.GHz))
+        log_freq = np.log(bfreq.to_value(u.GHz))
         non_finite = np.invert(np.isfinite(log_freq))
         log_freq[non_finite] = 0.0
         FD_coeff = [

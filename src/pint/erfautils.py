@@ -26,11 +26,11 @@ def get_iers_b_up_to_date(mjd):
         raise ValueError("IERS B data requested for future MJD {}".format(mjd))
     might_be_old = is_url_in_cache(IERS_B_URL)
     iers_b = IERS_B.open(download_file(IERS_B_URL, cache=True))
-    if might_be_old and iers_b[-1]["MJD"].to(u.d).value < mjd:
+    if might_be_old and iers_b[-1]["MJD"].to_value(u.d) < mjd:
         # Try wiping the download and re-downloading
         clear_download_cache(IERS_B_URL)
         iers_b = IERS_B.open(download_file(IERS_B_URL, cache=True))
-    if iers_b[-1]["MJD"].to(u.d).value < mjd:
+    if iers_b[-1]["MJD"].to_value(u.d) < mjd:
         raise ValueError("IERS B data not yet available for MJD {}".format(mjd))
     return iers_b
 
@@ -107,8 +107,8 @@ def gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
     # dX = np.interp(mjds, iers_tab['MJD'], iers_tab['dX_2000A_B']) * asec2rad
     # dY = np.interp(mjds, iers_tab['MJD'], iers_tab['dY_2000A_B']) * asec2rad
     # Get dX and dY from IERS B in arcsec and convert to radians
-    dX = np.interp(mjds, iers_b["MJD"], iers_b["dX_2000A"]) * asec2rad
-    dY = np.interp(mjds, iers_b["MJD"], iers_b["dY_2000A"]) * asec2rad
+    dX = np.interp(mjds, iers_b["MJD"].to_value(u.d), iers_b["dX_2000A"].to_value(u.rad))
+    dY = np.interp(mjds, iers_b["MJD"].to_value(u.d), iers_b["dY_2000A"].to_value(u.rad))
 
     # Get GCRS to CIRS matrices
     rc2i = erfa.c2ixys(X + dX, Y + dY, S)
@@ -120,14 +120,14 @@ def gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
     # xp = np.interp(mjds, iers_tab['MJD'], iers_tab['PM_X_B']) * asec2rad
     # yp = np.interp(mjds, iers_tab['MJD'], iers_tab['PM_Y_B']) * asec2rad
     # Get X and Y from IERS B in arcsec and convert to radians
-    xp = np.interp(mjds, iers_b["MJD"], iers_b["PM_x"]) * asec2rad
-    yp = np.interp(mjds, iers_b["MJD"], iers_b["PM_y"]) * asec2rad
+    xp = np.interp(mjds, iers_b["MJD"].to_value(u.d), iers_b["PM_x"].to_value(u.rad))
+    yp = np.interp(mjds, iers_b["MJD"].to_value(u.d), iers_b["PM_y"].to_value(u.rad))
 
     # Get the polar motion matrices
     rpm = erfa.pom00(xp, yp, sp)
 
     # Observatory geocentric coords in m
-    xyzm = np.array([a.to(u.m).value for a in loc.geocentric])
+    xyzm = np.array([a.to_value(u.m) for a in loc.geocentric])
     x, y, z = np.dot(xyzm, rpm).T
 
     # Functions of Earth Rotation Angle
