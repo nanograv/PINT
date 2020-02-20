@@ -2,8 +2,9 @@ import unittest
 
 import astropy.units as u
 from astropy.time import Time
-
-from pint.toa import TOA
+import astropy.units as u
+from pint.toa import TOA, TOAs
+from pint.observatory import get_observatory
 
 
 class TestTOA(unittest.TestCase):
@@ -37,3 +38,29 @@ class TestTOA(unittest.TestCase):
         TOA(self.MJD, errror=1)
         with self.assertRaises(TypeError):
             TOA(self.MJD, errror=1, flags={})
+
+
+class TestTOAs(unittest.TestCase):
+    def setUp(self):
+        self.freq = 1440.012345678 * u.MHz
+        self.obs = 'gbt'
+        self.MJD = 57000
+        self.error = 3.0
+
+    def test_make_TOAs(self):
+        t = TOA(self.MJD, freq=self.freq, obs=self.obs, error=self.error)
+        t_list = [t, t]
+        assert t_list[0].mjd.precision == 9
+        assert t_list[1].mjd.precision == 9
+        assert t_list[0].mjd.location is not None
+        assert t_list[1].mjd.location is not None
+        # Check information in the TOAs table
+        toas = TOAs(toalist=t_list)
+        assert toas.table[1]['freq'] == self.freq.to_value(u.MHz)
+        assert toas.table['freq'].unit == self.freq.unit
+        assert toas.table[1]['obs'] == self.obs
+        assert toas.table[1]['error'] == self.error
+        assert toas.table['error'].unit == u.us
+        assert toas.table['mjd'][0].precision == 9
+        assert toas.table['mjd'][0].location is not None
+   
