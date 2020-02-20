@@ -467,16 +467,18 @@ class AstrometryEcliptic(Astrometry):
         if epoch is None or (self.PMELONG.value == 0.0 and self.PMELAT.value == 0.0):
             dELONG = 0.0 * self.ELONG.units
             dELAT = 0.0 * self.ELAT.units
+            broadcast = 1
         else:
             dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
             dELONG = dt * self.PMELONG.quantity / numpy.cos(self.ELAT.quantity.radian)
             dELAT = dt * self.PMELAT.quantity
+            broadcast = numpy.ones_like(epoch)
 
         pos_ecl = PulsarEcliptic(
             lon=self.ELONG.quantity + dELONG,
             lat=self.ELAT.quantity + dELAT,
-            pm_lon_coslat=self.PMELONG.quantity * numpy.ones_like(epoch),
-            pm_lat=self.PMELAT.quantity * numpy.ones_like(epoch),
+            pm_lon_coslat=self.PMELONG.quantity * broadcast,
+            pm_lat=self.PMELAT.quantity * broadcast,
         )
         return pos_ecl
 
