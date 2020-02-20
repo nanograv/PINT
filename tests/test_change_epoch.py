@@ -1,6 +1,7 @@
 import os.path
 
 import astropy.units as u
+import numpy as np
 import pytest
 from astropy.time import Time
 
@@ -21,3 +22,21 @@ def test_change_pepoch(model):
     F0_at_t0 = model.F0.quantity + model.F1.quantity * epoch_diff.to(u.s)
     model.change_pepoch(t0)
     assert model.F0.quantity == F0_at_t0
+
+
+def test_change_posepoch(model):
+    t0 = Time(56000, scale="tdb", format="mjd")
+    epoch_diff = (t0.mjd_long - model.POSEPOCH.quantity.mjd_long) * u.day
+
+    orig_coords = model.get_psr_coords()
+    lon = orig_coords.spherical.lon
+    lat = orig_coords.spherical.lat
+    pm_lon_coslat, pm_lat = orig_coords.proper_motion
+    new_lon = lon + pm_lon_coslat / np.cos(lat) * epoch_diff
+    new_lat = lat + pm_lat * epoch_diff
+
+    model.change_posepoch(t0)
+    new_coords = model.get_psr_coords()
+
+    assert np.abs(new_coords.spherical.lon - new_lon) < 40 * u.uas
+    assert np.abs(new_coords.spherical.lat - new_lat) < 40 * u.uas
