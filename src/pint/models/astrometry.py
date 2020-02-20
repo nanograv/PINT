@@ -252,8 +252,8 @@ class AstrometryEquatorial(Astrometry):
             return coords.ICRS(
                 ra=self.RAJ.quantity + dRA,
                 dec=self.DECJ.quantity + dDEC,
-                pm_ra_cosdec=self.PMRA.quantity,
-                pm_dec=self.PMDEC.quantity,
+                pm_ra_cosdec=self.PMRA.quantity * numpy.ones_like(epoch),
+                pm_dec=self.PMDEC.quantity * numpy.ones_like(epoch),
             )
 
     def coords_as_ICRS(self, epoch=None):
@@ -475,8 +475,8 @@ class AstrometryEcliptic(Astrometry):
         pos_ecl = PulsarEcliptic(
             lon=self.ELONG.quantity + dELONG,
             lat=self.ELAT.quantity + dELAT,
-            pm_lon_coslat=self.PMELONG.quantity,
-            pm_lat=self.PMELAT.quantity,
+            pm_lon_coslat=self.PMELONG.quantity * numpy.ones_like(epoch),
+            pm_lat=self.PMELAT.quantity * numpy.ones_like(epoch),
         )
         return pos_ecl
 
