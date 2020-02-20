@@ -8,6 +8,7 @@ import astropy.constants as const
 import astropy.coordinates as coords
 import astropy.units as u
 import numpy
+from astropy.time import Time
 
 from pint import ls
 from pint.models.parameter import (
@@ -370,7 +371,7 @@ class AstrometryEquatorial(Astrometry):
 
         if self.POSEPOCH.value is None:
             raise ValueError("POSEPOCH is not currently set.")
-        new_coords = get_psr_coords(self, new_epoch)
+        new_coords = self.get_psr_coords(new_epoch.mjd_long)
         self.RAJ = new_coords.ra
         self.DECJ = new_coords.dec
         self.POSEPOCH.value = new_epoch
@@ -640,7 +641,7 @@ class AstrometryEcliptic(Astrometry):
 
         if self.POSEPOCH.value is None:
             raise ValueError("POSEPOCH is not currently set.")
-        new_coords = get_psr_coords(self, new_epoch)
-        self.ELONG = new_coords.lon
-        self.ELAT = new_coords.lat
+        new_coords = self.get_psr_coords(new_epoch.mjd_long)
+        self.ELONG.value = new_coords.lon
+        self.ELAT.value = new_coords.lat
         self.POSEPOCH.value = new_epoch
