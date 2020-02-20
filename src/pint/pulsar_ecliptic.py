@@ -50,7 +50,7 @@ class PulsarEcliptic(coord.BaseCoordinateFrame):
     default_representation = coord.SphericalRepresentation
     # NOTE: The feature below needs astropy verison 2.0. Disable it right now
     default_differential = coord.SphericalCosLatDifferential
-    obliquity = QuantityAttribute(default=OBL["DEFAULT"])
+    obliquity = QuantityAttribute(default=OBL["DEFAULT"], unit=u.arcsec)
 
     def __init__(self, *args, **kwargs):
         # Allow using 'pm_lat' and 'pm_lon_coslat' keywords under astropy 2.
