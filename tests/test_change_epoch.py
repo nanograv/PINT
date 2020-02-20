@@ -31,7 +31,9 @@ def test_change_posepoch(model):
     orig_coords = model.get_psr_coords()
     lon = orig_coords.spherical.lon
     lat = orig_coords.spherical.lat
-    pm_lon_coslat, pm_lat = orig_coords.proper_motion
+    differentials = orig_coords.sphericalcoslat.differentials["s"]
+    pm_lon_coslat = differentials.d_lon_coslat
+    pm_lat = differentials.d_lat
     new_lon = lon + pm_lon_coslat / np.cos(lat) * epoch_diff
     new_lat = lat + pm_lat * epoch_diff
 
