@@ -423,8 +423,8 @@ class AstrometryEcliptic(Astrometry):
         self.add_param(
             strParameter(
                 name="ECL",
-                value="IERS2003",
-                description="Obliquity angle value secetion",
+                value="IERS2010",
+                description="Obliquity of the ecliptic (reference)",
             )
         )
 
