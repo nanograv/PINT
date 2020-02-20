@@ -459,7 +459,7 @@ class AstrometryEcliptic(Astrometry):
         the position at the given epoch.
         """
         try:
-            PulsarEcliptic.obliquity = OBL[self.ECL.value]
+            obliquity = OBL[self.ECL.value]
         except KeyError:
             raise ValueError(
                 "No obliquity " + str(self.ECL.value) + " provided. "
@@ -476,6 +476,7 @@ class AstrometryEcliptic(Astrometry):
             broadcast = numpy.ones_like(epoch)
 
         pos_ecl = PulsarEcliptic(
+            obliquity=obliquity,
             lon=self.ELONG.quantity + dELONG,
             lat=self.ELAT.quantity + dELAT,
             pm_lon_coslat=self.PMELONG.quantity * broadcast,
@@ -495,7 +496,7 @@ class AstrometryEcliptic(Astrometry):
         rd = dict()
         # From the earth_ra dec to earth_elong and elat
         try:
-            PulsarEcliptic.obliquity = OBL[self.ECL.value]
+            obliquity = OBL[self.ECL.value]
         except KeyError:
             raise ValueError(
                 "No obliquity " + self.ECL.value + " provided. "
@@ -504,7 +505,7 @@ class AstrometryEcliptic(Astrometry):
 
         rd = self.get_d_delay_quantities(toas)
         coords_icrs = coords.ICRS(ra=rd["earth_ra"], dec=rd["earth_dec"])
-        coords_elpt = coords_icrs.transform_to(PulsarEcliptic)
+        coords_elpt = coords_icrs.transform_to(PulsarEcliptic(obliquity=obliquity))
         rd["earth_elong"] = coords_elpt.lon
         rd["earth_elat"] = coords_elpt.lat
 
