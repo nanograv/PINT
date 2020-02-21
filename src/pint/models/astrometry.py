@@ -8,6 +8,7 @@ import astropy.constants as const
 import astropy.coordinates as coords
 import astropy.units as u
 import numpy
+from astropy.time import Time
 
 from pint import ls
 from pint.models.parameter import (
@@ -151,6 +152,16 @@ class Astrometry(DelayComponent):
         """
         pass
 
+    def change_posepoch(self, new_epoch):
+        """Change POSEPOCH to a new value and update the position accordingly.
+
+        Parameters
+        ----------
+        new_epoch: float or `astropy.Time` object
+            The new POSEPOCH value.
+        """
+        raise NotImplementedError
+
 
 class AstrometryEquatorial(Astrometry):
     register = True
@@ -240,7 +251,10 @@ class AstrometryEquatorial(Astrometry):
             dRA = dt * self.PMRA.quantity / numpy.cos(self.DECJ.quantity.radian)
             dDEC = dt * self.PMDEC.quantity
             return coords.ICRS(
-                ra=self.RAJ.quantity + dRA, dec=self.DECJ.quantity + dDEC
+                ra=self.RAJ.quantity + dRA,
+                dec=self.DECJ.quantity + dDEC,
+                pm_ra_cosdec=self.PMRA.quantity * numpy.ones_like(epoch),
+                pm_dec=self.PMDEC.quantity * numpy.ones_like(epoch),
             )
 
     def coords_as_ICRS(self, epoch=None):
@@ -342,6 +356,26 @@ class AstrometryEquatorial(Astrometry):
         # We want to return sec / (mas / yr)
         return dd_dpmdec.decompose(u.si.bases) / (u.mas / u.year)
 
+    def change_posepoch(self, new_epoch):
+        """Change POSEPOCH to a new value and update the position accordingly.
+
+        Parameters
+        ----------
+        new_epoch: float or `astropy.Time` object
+            The new POSEPOCH value.
+        """
+        if isinstance(new_epoch, Time):
+            new_epoch = Time(new_epoch, scale="tdb", precision=9)
+        else:
+            new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
+
+        if self.POSEPOCH.value is None:
+            raise ValueError("POSEPOCH is not currently set.")
+        new_coords = self.get_psr_coords(new_epoch.mjd_long)
+        self.RAJ = new_coords.ra
+        self.DECJ = new_coords.dec
+        self.POSEPOCH.value = new_epoch
+
 
 class AstrometryEcliptic(Astrometry):
     register = True
@@ -434,13 +468,18 @@ class AstrometryEcliptic(Astrometry):
         if epoch is None or (self.PMELONG.value == 0.0 and self.PMELAT.value == 0.0):
             dELONG = 0.0 * self.ELONG.units
             dELAT = 0.0 * self.ELAT.units
+            broadcast = 1
         else:
             dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
             dELONG = dt * self.PMELONG.quantity / numpy.cos(self.ELAT.quantity.radian)
             dELAT = dt * self.PMELAT.quantity
+            broadcast = numpy.ones_like(epoch)
 
         pos_ecl = PulsarEcliptic(
-            lon=self.ELONG.quantity + dELONG, lat=self.ELAT.quantity + dELAT
+            lon=self.ELONG.quantity + dELONG,
+            lat=self.ELAT.quantity + dELAT,
+            pm_lon_coslat=self.PMELONG.quantity * broadcast,
+            pm_lat=self.PMELAT.quantity * broadcast,
         )
         return pos_ecl
 
@@ -473,23 +512,7 @@ class AstrometryEcliptic(Astrometry):
 
     def get_params_as_ICRS(self):
         result = dict()
-        # NOTE This feature below needs astropy version 2.0.
-        dlon_coslat = self.PMELONG.quantity  # * numpy.cos(self.ELAT.quantity.radian)
-        # Astropy2 and astropy3 have different APIs
-        if int(astropy_version.split(".")[0]) <= 2:
-            pv_ECL = PulsarEcliptic(
-                lon=self.ELONG.quantity,
-                lat=self.ELAT.quantity,
-                d_lon_coslat=dlon_coslat,
-                d_lat=self.PMELAT.quantity,
-            )
-        else:
-            pv_ECL = PulsarEcliptic(
-                lon=self.ELONG.quantity,
-                lat=self.ELAT.quantity,
-                pm_lon_coslat=dlon_coslat,
-                pm_lat=self.PMELAT.quantity,
-            )
+        pv_ECL = self.get_psr_coords()
         pv_ICRS = pv_ECL.transform_to(coords.ICRS)
         result["RAJ"] = pv_ICRS.ra.to(u.hourangle)
         result["DECJ"] = pv_ICRS.dec
@@ -602,3 +625,23 @@ class AstrometryEcliptic(Astrometry):
             if par.quantity is not None:
                 result += getattr(self, p).as_parfile_line()
         return result
+
+    def change_posepoch(self, new_epoch):
+        """Change POSEPOCH to a new value and update the position accordingly.
+
+        Parameters
+        ----------
+        new_epoch: float or `astropy.Time` object
+            The new POSEPOCH value.
+        """
+        if isinstance(new_epoch, Time):
+            new_epoch = Time(new_epoch, scale="tdb", precision=9)
+        else:
+            new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
+
+        if self.POSEPOCH.value is None:
+            raise ValueError("POSEPOCH is not currently set.")
+        new_coords = self.get_psr_coords(new_epoch.mjd_long)
+        self.ELONG.value = new_coords.lon
+        self.ELAT.value = new_coords.lat
+        self.POSEPOCH.value = new_epoch
