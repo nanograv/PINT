@@ -1,13 +1,14 @@
 import unittest
-
 import astropy.units as u
 from astropy.time import Time
-import astropy.units as u
 from pint.toa import TOA, TOAs
 from pint.observatory import get_observatory
 
 
 class TestTOA(unittest.TestCase):
+    """Test of TOA class
+    """
+
     def setUp(self):
         self.MJD = 57000
 
@@ -41,9 +42,12 @@ class TestTOA(unittest.TestCase):
 
 
 class TestTOAs(unittest.TestCase):
+    """Test of TOAs class
+    """
+
     def setUp(self):
         self.freq = 1440.012345678 * u.MHz
-        self.obs = 'gbt'
+        self.obs = "gbt"
         self.MJD = 57000
         self.error = 3.0
 
@@ -56,38 +60,37 @@ class TestTOAs(unittest.TestCase):
         assert t_list[1].mjd.location is not None
         # Check information in the TOAs table
         toas = TOAs(toalist=t_list)
-        assert toas.table[1]['freq'] == self.freq.to_value(u.MHz)
-        assert toas.table['freq'].unit == self.freq.unit
-        assert toas.table[1]['obs'] == self.obs
-        assert toas.table[1]['error'] == self.error
-        assert toas.table['error'].unit == u.us
-        assert toas.table['mjd'][0].precision == 9
-        assert toas.table['mjd'][0].location is not None
+        assert toas.table[1]["freq"] == self.freq.to_value(u.MHz)
+        assert toas.table["freq"].unit == self.freq.unit
+        assert toas.table[1]["obs"] == self.obs
+        assert toas.table[1]["error"] == self.error
+        assert toas.table["error"].unit == u.us
+        assert toas.table["mjd"][0].precision == 9
+        assert toas.table["mjd"][0].location is not None
 
     def test_mulit_obs(self):
-        obs1 = 'gbt'
-        obs2 = 'ao'
-        obs3 = 'barycenter'
+        obs1 = "gbt"
+        obs2 = "ao"
+        obs3 = "barycenter"
         site1 = get_observatory(obs1)
         site2 = get_observatory(obs2)
         site3 = get_observatory(obs3)
-        t1 = TOA(self.MJD, freq=self.freq, obs=obs1, error=self.error) 
+        t1 = TOA(self.MJD, freq=self.freq, obs=obs1, error=self.error)
         t2 = TOA(self.MJD + 1.0, freq=self.freq, obs=obs2, error=self.error)
         t3 = TOA(self.MJD + 1.0, freq=self.freq, obs=obs3, error=self.error)
-        
+
         toas = TOAs(toalist=[t1, t2, t3])
-        
-        # Table will be grouped by observatories, and will be sorted by the 
+
+        # Table will be grouped by observatories, and will be sorted by the
         # observatory so the TOA order will be different
-        assert toas.table['obs'][0] == site2.name
-        assert toas.table['mjd'][0] == t2.mjd 
-        assert toas.table['obs'][1] == site3.name
-        assert toas.table['mjd'][1] == t3.mjd
-        assert toas.table['obs'][2] == site1.name
-        assert toas.table['mjd'][2] == t1.mjd
+        assert toas.table["obs"][0] == site2.name
+        assert toas.table["mjd"][0] == t2.mjd
+        assert toas.table["obs"][1] == site3.name
+        assert toas.table["mjd"][1] == t3.mjd
+        assert toas.table["obs"][2] == site1.name
+        assert toas.table["mjd"][2] == t1.mjd
 
         # obs in time object
-        assert toas.table['mjd'][0].location == site2.earth_location_itrf()
-        assert toas.table['mjd'][1].location == site3.earth_location_itrf()
-        assert toas.table['mjd'][2].location == site1.earth_location_itrf()
-
+        assert toas.table["mjd"][0].location == site2.earth_location_itrf()
+        assert toas.table["mjd"][1].location == site3.earth_location_itrf()
+        assert toas.table["mjd"][2].location == site1.earth_location_itrf()
