@@ -33,7 +33,7 @@ def load_FPorbit(orbit_filename):
     # Load orbit FITS file
     hdulist = pyfits.open(orbit_filename)
     # log.info('orb file HDU name is {0}'.format(hdulist[1].name))
-    if hdulist[1].name != "ORBIT":
+    if hdulist[1].name not in ("ORBIT", "XTE_PE"):
         log.error(
             "NICER orb file first extension is {0}. It should be ORBIT".format(
                 hdulist[1].name
