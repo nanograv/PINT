@@ -52,7 +52,7 @@ class PulsarEcliptic(coord.BaseCoordinateFrame):
     default_differential = coord.SphericalCosLatDifferential
     obliquity = QuantityAttribute(default=OBL["DEFAULT"], unit=u.arcsec)
 
-    def __init__(self, *args, ecl=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         # Allow using 'pm_lat' and 'pm_lon_coslat' keywords under astropy 2.
         # This matches the behavior of the built-in frames in astropy 2,
         # and the behavior of custom frames in astropy 3+.
@@ -68,14 +68,15 @@ class PulsarEcliptic(coord.BaseCoordinateFrame):
             except KeyError:
                 pass
 
-        if ecl is not None:
+        if "ecl" in kwargs:
             try:
-                kwargs["obliquity"] = OBL[ecl]
+                kwargs["obliquity"] = OBL[kwargs["ecl"]]
             except KeyError:
                 raise ValueError(
-                    "No obliquity " + ecl + " provided. "
+                    "No obliquity " + kwargs["ecl"] + " provided. "
                     "Check your pint/datafile/ecliptic.dat file."
                 )
+            del kwargs["ecl"]
 
         super(PulsarEcliptic, self).__init__(*args, **kwargs)
 
