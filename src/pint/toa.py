@@ -743,7 +743,7 @@ class TOAs(object):
             self.table = table.Table(
                 [
                     np.arange(len(mjds)),
-                    mjds,
+                    table.Column(mjds),
                     self.get_mjds(),
                     self.get_errors(),
                     self.get_freqs(),
