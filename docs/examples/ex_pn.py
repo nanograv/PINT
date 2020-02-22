@@ -8,6 +8,7 @@ import pint.toa
 from pint.residuals import Residuals
 import matplotlib.pyplot as plt
 from astropy.visualization import quantity_support
+from astropy import log
 
 quantity_support()
 
@@ -83,26 +84,29 @@ modelin.WAVE5.frozen = False
 
 prefitresids = Residuals(realtoas, modelin)
 
-f = fit.WLSFitter(realtoas, modelin)
-f.fit_toas()
-
-fig, ax = plt.subplots(figsize=(16, 9))
-ax.set_title("Residuals using PN from compute_pulse_numbers")
-ax.errorbar(
-    prefitresids.toas.get_mjds(),
-    prefitresids.time_resids,
-    yerr=prefitresids.toas.get_errors(),
-    fmt=".",
-    label="Prefit",
-)
-ax.errorbar(
-    f.resids.toas.get_mjds(),
-    f.resids.time_resids,
-    yerr=f.resids.toas.get_errors(),
-    fmt=".",
-    label="Postfit",
-)
-ax.legend()
-ax.grid(True)
-
-plt.show()
+try:
+    f = fit.WLSFitter(realtoas, modelin)
+    f.fit_toas()
+    fig, ax = plt.subplots(figsize=(16, 9))
+    ax.set_title("Residuals using PN from compute_pulse_numbers")
+    ax.errorbar(
+        prefitresids.toas.get_mjds(),
+        prefitresids.time_resids,
+        yerr=prefitresids.toas.get_errors(),
+        fmt=".",
+        label="Prefit",
+    )
+    ax.errorbar(
+        f.resids.toas.get_mjds(),
+        f.resids.time_resids,
+        yerr=f.resids.toas.get_errors(),
+        fmt=".",
+        label="Postfit",
+    )
+    ax.legend()
+    ax.grid(True)
+    plt.show()
+except:
+    log.error(
+        "The fit crashed!  We need to fix issue #593 to get it working."
+    )
