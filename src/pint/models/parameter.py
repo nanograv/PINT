@@ -1695,7 +1695,6 @@ class pairParameter(floatParameter):
         quantity = self.quantity
         if self.quantity is None:
             return ""
-        print(quantity)
         line = "%-15s " % (self.name)
         line += "%25s" % self.print_quantity(quantity[0])
         line += "%25s" % self.print_quantity(quantity[1])

@@ -64,6 +64,9 @@ class AbsPhase(PhaseComponent):
         """Get the TOAs class for the TZRMJD.
 
         We are treating the TZRMJD as a special TOA.
+        Note that any observatory clock corrections will be applied
+        to this TOA, as with any other TOA. This does not affect the
+        value of the TZRMJD parmeter, however.
         """
         # NOTE: Using TZRMJD.quantity.jd[1,2] so that the time scale can be properly
         # set to the TZRSITE default timescale (e.g. UTC for TopoObs and TDB for SSB)

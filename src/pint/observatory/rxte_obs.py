@@ -55,12 +55,12 @@ class RXTEObs(SpecialLocation):
         """Return RXTE spacecraft location in ITRF coordinates"""
 
         if self.tt2tdb_mode.lower().startswith("pint"):
-            log.warning("Using location=None for TT to TDB conversion")
+            log.debug("Using location=None for TT to TDB conversion")
             return None
         elif self.tt2tdb_mode.lower().startswith("astropy"):
             # First, interpolate ECI geocentric location from orbit file.
             # These are inertial coorinates aligned with ICRF
-            log.warning("Performing GCRS to ITRS transformation")
+            log.debug("Performing GCRS to ITRS transformation")
             pos_gcrs = GCRS(
                 CartesianRepresentation(
                     self.X(time.tt.mjd) * u.m,

@@ -47,47 +47,67 @@ class Residuals(object):
 
     def calc_phase_resids(self, weighted_mean=True, set_pulse_nums=False):
         """Return timing model residuals in pulse phase."""
-        rs = self.model.phase(self.toas)
-        rs -= Phase(rs.int[0], rs.frac[0])
+        # Please define what set_pulse_nums means!
+
+        # Read any delta_pulse_numbers that are in the TOAs table.
+        # These are for PHASE statements as well as user-inserted phase jumps
+        # Check for the column, and if not there then create it as zeros
         try:
             delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
         except:
             self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
             delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
+
+        # I have no idea what this is trying to do. It just sets delta_pulse_number to zero
         if set_pulse_nums:
             self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
             delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
-        full = Phase(np.zeros_like(rs.frac), rs.frac) + delta_pulse_numbers
-        full = full.int + full.frac
 
-        # Track on pulse numbers, if necessary
+        # Compute model phase
+        rs = self.model.phase(self.toas)
+
+        # Track on pulse numbers, if requested
         if getattr(self.model, "TRACK").value == "-2":
             pulse_num = self.toas.get_pulse_numbers()
             if pulse_num is None:
                 raise ValueError(
                     "Pulse numbers missing from TOAs but TRACK -2 requires them"
                 )
+            # Compute model phase. For pulse numbers tracking
+            # we need absolute phases, since TZRMJD serves as the pulse
+            # number reference.
+            rs = self.model.phase(self.toas, abs_phase=True)
+            # First assign each TOA to the correct relative pulse number
+            rs -= Phase(pulse_num, np.zeros_like(pulse_num))
+            # Then subtract the constant offset since that is irrelevant
+            rs -= Phase(rs.int[0], rs.frac[0])
+            full = rs + delta_pulse_numbers
+            full = full.int + full.frac
 
-            pn_act = np.trunc(full)
-            addPhase = pn_act - pulse_num
-            full -= pn_act
-            full += addPhase
+        # If not tracking then do the usual nearest pulse number calculation
+        else:
+            # Compute model phase
+            rs = self.model.phase(self.toas)
+            # Here it subtracts the first phase, so making the first TOA be the
+            # reference. Not sure this is a good idea.
+            rs -= Phase(rs.int[0], rs.frac[0])
 
-            if not weighted_mean:
-                full -= full.mean()
-            else:
-                w = 1.0 / (np.array(self.toas.get_errors()) ** 2)
-                wm = (full * w).sum() / w.sum()
-                full -= wm
-            return full
+            # What exactly is full?
+            full = Phase(np.zeros_like(rs.frac), rs.frac) + delta_pulse_numbers
+            # This converts full from a Phase object to a np.float128
+            full = full.int + full.frac
 
+        # If we are using pulse numbers, do we really want to subtract any kind of mean?
+        # Perhaps there should be an option to not subtract any mean?
         if not weighted_mean:
             full -= full.mean()
         else:
             # Errs for weighted sum.  Units don't matter since they will
             # cancel out in the weighted sum.
             if np.any(self.toas.get_errors() == 0):
-                raise ValueError("TOA errors are zero - cannot calculate residuals")
+                raise ValueError(
+                    "Some TOA errors are zero - cannot calculate residuals"
+                )
             w = 1.0 / (np.array(self.toas.get_errors()) ** 2)
             wm = (full * w).sum() / w.sum()
             full -= wm
