@@ -5,8 +5,7 @@ from __future__ import absolute_import, division, print_function
 import pytest
 import os
 import numpy as np
-from pint.models import TimingModel
-from pint.models.timing_model import DEFAULT_ORDER
+from pint.models import TimingModel, DEFAULT_ORDER
 from pint.models import get_model
 from pint.models import (
     AstrometryEquatorial,
@@ -35,12 +34,12 @@ class TestModelBuilding:
         order = []
         for dcp in tm.DelayComponent_list:
             order.append(DEFAULT_ORDER.index(dcp.category))
-        assert np.diff(np.array(order)) > 0
+        assert all(np.diff(np.array(order)) > 0)
         # Check phase component order
         order = []
         for dcp in tm.PhaseComponent_list:
             order.append(DEFAULT_ORDER.index(dcp.category))
-        assert np.diff(np.array(order)) > 0
+        assert all(np.diff(np.array(order)) > 0)
 
     def test_from_scratch(self):
         tm = TimingModel("TestTimingModel", [BinaryELL1(),
@@ -55,14 +54,14 @@ class TestModelBuilding:
         # Test Delay order
         order = []
         for dcp in tm.DelayComponent_list:
-            order.append(DEFAULTORDER.index(dcp.category))
-        assert np.diff(np.array(order)) > 0
+            order.append(DEFAULT_ORDER.index(dcp.category))
+        assert all(np.diff(np.array(order)) > 0)
 
         # Test Phase order
         order = []
         for dcp in tm.PhaseComponent_list:
-            order.append(DEFAULTORDER.index(dcp.category))
-        assert np.diff(np.array(order)) > 0
+            order.append(DEFAULT_ORDER.index(dcp.category))
+        assert all(np.diff(np.array(order)) > 0)
 
     def test_add_component(self):
         tm = TimingModel("TestTimingModel", [BinaryELL1(),
@@ -70,10 +69,11 @@ class TestModelBuilding:
                                              Spindown()])
 
         tm.add_component(DelayJump(), {'JUMP': {'value': 0, 'key': 'mjd',
-                                                'key_value': [55000, 56000]}})
+                                                'key_value': [55000, 56000]}},
+                         build_mood=True)
         # Test link
         # TODO may be add a get_component function
-        cp = tm.components('DelayJump')
+        cp = tm.components['DelayJump']
         assert cp._parent == tm
 
         # Test order
@@ -81,5 +81,5 @@ class TestModelBuilding:
         assert cp_pos == 2
 
         # TODO add test component setup function. use jump1 right now, this
-        # should be updated in the future. 
+        # should be updated in the future.
         assert hasattr(cp, 'JUMP1')
