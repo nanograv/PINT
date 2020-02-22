@@ -148,7 +148,7 @@ class TimingModel(object):
 
         #self.setup_components(components)
         for cp in components:
-            self._add_plain_component(cp)
+            self._add_component_object(cp)
 
     def __repr__(self):
         return "{}(\n  {}\n)".format(
@@ -363,7 +363,7 @@ class TimingModel(object):
             comp_type = comp_base[-3].__name__
         return comp_type
 
-    def _add_plain_component(self, component, order=DEFAULT_ORDER, force=False):
+    def _add_component_object(self, component, order=DEFAULT_ORDER, force=False):
         """Add a component that has no parameter values into TimingModel.
 
         In other words, this function does not do component.setup()
@@ -415,7 +415,7 @@ class TimingModel(object):
         setattr(self, comp_type + "_list", new_comp_list)
 
     def add_component(self, component, param_info, order=DEFAULT_ORDER,
-                      force=False):
+                      build_mood=False, force=False):
         """Add a component to the timing model.
 
         Parameters
@@ -428,15 +428,85 @@ class TimingModel(object):
             parameter field.
         order : list, optional
             Where in the list of components to insert the new one.
+        build_mood: bool
+            If true, don't run setup.
         force : bool, optional
             If true, add a duplicate component.
         """
         for param, info in param_info.items():
-            param_object = getattr(component, param)
+            # update the parameters in the component
+            param_object = getattr(component, param, None)
+            # new parameter to the component. Generally only mask or prefix
+            # parameter can be add to a component instance.
+            if param_object is None:
+                # check if the new parameter a  maskParameter, only
+                # maskParameter can be duplicatedly added.
+                prefixs = component.param_prefixs
+
+                try:
+                    prefix, index_str, index = split_prefixed_name(param)
+                except PrefixError:
+                    # Can not seperate parameter perfix, then assume param name
+                    # as the prefix name.
+                    prefix = param
+                    index = -1
+                example_params = prefixs.get(prefix, None)
+                if example_params is None:
+                    raise ValueError("Can not find any initialization of '{}'."
+                                     " Please check your model component class.")
+                else:
+                    prefix_mapping = component.get_prefix_mapping(prefix)
+                    if index < 0:
+                        for ep in example_params:
+                            exm_par = getattr(component, ep)
+                            if exm_par.quantity is None:
+                                param_object = exm_par
+                            else:
+                                continue
+                        # Did not find empty parameter to fill in
+                        if param_object is None:
+                            index = max(list(prefix_mapping.keys())) + 1
+                            new_par = exm_par.new_par(index)
+                            component.add_param(new_par)
+                            param_object = getattr(component, new_par.name)
             for field, value in info.items():
                 setattr(param_object, field, value)
-        self._add_plain_component(component, order=order, force=force)
-        self.setup()
+        self._add_component_object(component, order=order, force=force)
+        if not build_mood:
+            self.setup()
+
+    def _locate_param_host(self, components, param):
+        """ Search for the parameter host component.
+
+        Parameters
+        ----------
+        components: list
+            Searching component list.
+        param: str
+            Target parameter.
+
+        Return
+        ------
+        List of tuples. The first element is the component object that have the
+        target parameter, the second one is the parameter object. If it is a
+        prefix-style parameter, it will return one example of such parameter.
+        """
+        result_comp = []
+        for cp in components:
+            if param in cp.params:
+                result_comp.append((cp, getattr(cp, param),))
+            else:
+                # search for prefixed parameter
+                prefixs = cp.param_prefixs
+                try:
+                    prefix, index_str, index = split_prefixed_name(param)
+                except PrefixError:
+                    prefix = param
+
+                if prefix in prefixs.keys():
+                    result_comp.append(cp, getattr(cp, prefixs[param][0]))
+
+        return result_comp
 
     def replicate(self, components=[], copy_component=False):
         new_tm = TimingModel()
@@ -518,20 +588,20 @@ class TimingModel(object):
                 param_mapping[pp] = cp.__class__.__name__
         return param_mapping
 
-    def get_params_of_type(self, param_type):
-        """ Get all the parameters in timing model for one specific type
-        """
-        result = []
-        for p in self.params:
-            par = getattr(self, p)
-            par_type = type(par).__name__
-            par_prefix = par_type[:-9]
-            if (
-                param_type.upper() == par_type.upper()
-                or param_type.upper() == par_prefix.upper()
-            ):
-                result.append(par.name)
-        return result
+    # def get_params_of_type(self, param_type):
+    #     """ Get all the parameters in timing model for one specific type
+    #     """
+    #     result = []
+    #     for p in self.params:
+    #         par = getattr(self, p)
+    #         par_type = type(par).__name__
+    #         par_prefix = par_type[:-9]
+    #         if (
+    #             param_type.upper() == par_type.upper()
+    #             or param_type.upper() == par_prefix.upper()
+    #         ):
+    #             result.append(par.name)
+    #     return result
 
     def get_prefix_mapping(self, prefix):
         """Get the index mapping for the prefix parameters.
@@ -1162,7 +1232,57 @@ class Component(object):
                     % (self.__class__.__name__, name)
                 )
 
-    def add_param(self, param):
+    @property
+    def param_prefixs(self):
+        prefixs = {}
+        for p in self.params:
+            par = getattr(self, p)
+            if par.is_prefix:
+                if par.prefix not in prefixs.keys():
+                    prefixs[par.prefix] = [p,]
+                else:
+                    prefixs[par.prefix].append(p)
+        return prefixs
+
+    def get_params_of_type(self, param_type):
+        """ Get all the parameters in timing model for one specific type
+        """
+        result = []
+        for p in self.params:
+            par = getattr(self, p)
+            par_type = type(par).__name__
+            par_prefix = par_type[:-9]
+            if (
+                param_type.upper() == par_type.upper()
+                or param_type.upper() == par_prefix.upper()
+            ):
+                result.append(par.name)
+        return result
+
+    def get_prefix_mapping(self, prefix):
+        """Get the index mapping for the prefix parameters.
+
+        Parameters
+        ----------
+        prefix : str
+           Name of prefix.
+
+        Returns
+        -------
+        dict
+           A dictionary with prefix pararameter real index as key and parameter
+           name as value.
+
+        """
+        parnames = [x for x in self.params if x.startswith(prefix)]
+        mapping = dict()
+        for parname in parnames:
+            par = getattr(self, parname)
+            if par.is_prefix == True and par.prefix == prefix:
+                mapping[par.index] = parname
+        return mapping
+
+    def add_param(self, param, deriv_func=None, build_mood=True):
         """Add a parameter to the Component.
 
         The parameter is stored in an attribute on the Component object.
@@ -1172,9 +1292,27 @@ class Component(object):
         ----------
         param : pint.models.Parameter
             The parameter to be added.
-
+        deriv_func: function
+            Derivative function for parameter.
+        build_mood: bool
+            If it is in the build mood, add_param will not run setup function.
         """
-        if param.name in self.params and getattr(self, param.name) is not param:
+        # This is the case for add "JUMP" like parameters, It will add an
+        # index to the parameter name for avoding the conflicts
+        # TODO: this is a work around in the current system, but it will be
+        # optimized in the future release.
+        if isinstance(param, maskParameter):
+            prefix_map = self.get_prefix_mapping_component(param.name)
+            try:
+                prefix, idx_str, idx = split_prefixed_name(param.name)
+            except PrefixError:
+                prefix = param.name
+                idx = -1
+            if idx < 0: # No index provided
+                param.name = param.name + str(list(prefix_map.keys()).max() + 1)
+
+        if (param.name in self.params and
+            getattr(self, param.name) is not param):
             raise ValueError(
                 "Tried to add a second parameter called {}. "
                 "Old value: {} New value: {}".format(
@@ -1183,6 +1321,11 @@ class Component(object):
             )
         setattr(self, param.name, param)
         self.params.append(param.name)
+        # Component derivative should setup in the setup function.
+        if not build_mood:
+            self.setup()
+        if deriv_func is not None:
+            self.register_deriv_funcs(func, param.name)
 
     def remove_param(self, param):
         """Remove a parameter from the Component.
@@ -1241,7 +1384,6 @@ class Component(object):
                 result.append(par.name)
         return result
 
-    # @Cache.use_cache
     def get_prefix_mapping_component(self, prefix):
         """Get the index mapping for the prefix parameters.
 
