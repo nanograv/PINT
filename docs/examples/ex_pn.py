@@ -107,6 +107,4 @@ try:
     ax.grid(True)
     plt.show()
 except:
-    log.error(
-        "The fit crashed!  We need to fix issue #593 to get it working."
-    )
+    log.error("The fit crashed!  We need to fix issue #593 to get it working.")
