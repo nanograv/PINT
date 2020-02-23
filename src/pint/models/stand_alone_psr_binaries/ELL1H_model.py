@@ -414,11 +414,13 @@ class ELL1Hmodel(ELL1BaseModel):
         d_Phi_d_par = self.prtl_der("Phi", par)
         d_STIGMA_d_par = self.prtl_der("STIGMA", par)
 
-        return (
-            d_delayS_d_H3 * d_H3_d_par
-            + d_delayS_d_Phi * d_Phi_d_par
-            + d_delayS_d_STIGMA * d_STIGMA_d_par
-        )
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            d_delayS_d_par = (
+                d_delayS_d_H3 * d_H3_d_par
+                + d_delayS_d_Phi * d_Phi_d_par
+                + d_delayS_d_STIGMA * d_STIGMA_d_par
+            )
+        return d_delayS_d_par
 
     def d_ELL1Hdelay_d_par(self, par):
         return self.d_delayI_d_par(par) + self.d_delayS_d_par(par)

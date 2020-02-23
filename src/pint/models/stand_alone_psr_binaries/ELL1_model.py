@@ -166,18 +166,20 @@ class ELL1BaseModel(PSR_BINARY):
         d_Dre_d_eps1 = a1 / c.c * (-0.5 * np.cos(2 * Phi))
         d_Dre_d_eps2 = a1 / c.c * (0.5 * np.sin(2 * Phi))
 
-        return (
-            d_a1_d_par
-            / c.c
-            * (
-                np.sin(Phi)
-                - 0.5 * eps1 * np.cos(2 * Phi)
-                + 0.5 * eps2 * np.sin(2 * Phi)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            d_Dre_d_par = (
+                d_a1_d_par
+                / c.c
+                * (
+                    np.sin(Phi)
+                    - 0.5 * eps1 * np.cos(2 * Phi)
+                    + 0.5 * eps2 * np.sin(2 * Phi)
+                )
+                + d_Dre_d_Phi * d_Phi_d_par
+                + d_Dre_d_eps1 * self.prtl_der("eps1", par)
+                + d_Dre_d_eps2 * self.prtl_der("eps2", par)
             )
-            + d_Dre_d_Phi * d_Phi_d_par
-            + d_Dre_d_eps1 * self.prtl_der("eps1", par)
-            + d_Dre_d_eps2 * self.prtl_der("eps2", par)
-        )
+        return d_Dre_d_par
 
     def Drep(self):
         """ dDre/dPhi
@@ -215,14 +217,16 @@ class ELL1BaseModel(PSR_BINARY):
         d_Drep_d_eps1 = a1 / c.c * np.sin(2.0 * Phi)
         d_Drep_d_eps2 = a1 / c.c * np.cos(2.0 * Phi)
 
-        return (
-            d_a1_d_par
-            / c.c
-            * (np.cos(Phi) + eps1 * np.sin(2.0 * Phi) + eps2 * np.cos(2.0 * Phi))
-            + d_Drep_d_Phi * d_Phi_d_par
-            + d_Drep_d_eps1 * self.prtl_der("eps1", par)
-            + d_Drep_d_eps2 * self.prtl_der("eps2", par)
-        )
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            d_Drep_d_par = (
+                d_a1_d_par
+                / c.c
+                * (np.cos(Phi) + eps1 * np.sin(2.0 * Phi) + eps2 * np.cos(2.0 * Phi))
+                + d_Drep_d_Phi * d_Phi_d_par
+                + d_Drep_d_eps1 * self.prtl_der("eps1", par)
+                + d_Drep_d_eps2 * self.prtl_der("eps2", par)
+            )
+        return d_Drep_d_par
 
     def Drepp(self):
         a1 = self.a1()
@@ -265,17 +269,19 @@ class ELL1BaseModel(PSR_BINARY):
         d_Drepp_d_eps1 = a1 / c.c * 2.0 * np.cos(2.0 * Phi)
         d_Drepp_d_eps2 = -a1 / c.c * 2.0 * np.sin(2.0 * Phi)
 
-        return (
-            d_a1_d_par
-            / c.c
-            * (
-                -np.sin(Phi)
-                + 2.0 * (eps1 * np.cos(2.0 * Phi) - eps2 * np.sin(2.0 * Phi))
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            d_Drepp_d_par = (
+                d_a1_d_par
+                / c.c
+                * (
+                    -np.sin(Phi)
+                    + 2.0 * (eps1 * np.cos(2.0 * Phi) - eps2 * np.sin(2.0 * Phi))
+                )
+                + d_Drepp_d_Phi * d_Phi_d_par
+                + d_Drepp_d_eps1 * self.prtl_der("eps1", par)
+                + d_Drepp_d_eps2 * self.prtl_der("eps2", par)
             )
-            + d_Drepp_d_Phi * d_Phi_d_par
-            + d_Drepp_d_eps1 * self.prtl_der("eps1", par)
-            + d_Drepp_d_eps2 * self.prtl_der("eps2", par)
-        )
+        return d_Drepp_d_par
 
     def delayR(self):
         """ELL1 Roemer delay in proper time. Ch. Lange,1 F. Camilo, 2001 eq. A6 """
@@ -407,11 +413,13 @@ class ELL1model(ELL1BaseModel):
         d_SINI_d_par = self.prtl_der("SINI", par)
         d_Phi_d_par = self.prtl_der("Phi", par)
 
-        return (
-            d_delayS_d_TM2 * d_TM2_d_par
-            + d_delayS_d_SINI * d_SINI_d_par
-            + d_delayS_d_Phi * d_Phi_d_par
-        )
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            d_delayS_d_par = (
+                d_delayS_d_TM2 * d_TM2_d_par
+                + d_delayS_d_SINI * d_SINI_d_par
+                + d_delayS_d_Phi * d_Phi_d_par
+            )
+        return d_delayS_d_par
 
     def ELL1delay(self):
         # TODO need add aberration delay
