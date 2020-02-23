@@ -291,7 +291,8 @@ class MCMCFitter(Fitter):
         """
         phases = self.model.phase(self.toas)[1]
         # ensure all positive
-        return np.where(phases < 0.0 * u.cycle, phases + 1.0 * u.cycle, phases)
+        phases = phases.to(u.cycle).value
+        return np.where(phases < 0.0, phases + 1.0, phases)
 
     def lnposterior(self, theta):
         """
@@ -641,7 +642,8 @@ class CompositeMCMCFitter(MCMCFitter):
             print("Showing all %d phases" % len(phases))
         else:
             phases = self.model.phase(self.toas_list[index])[1]
-        return np.where(phases < 0.0 * u.cycle, phases + 1.0 * u.cycle, phases)
+        phases = phases.to(u.cycle).value
+        return np.where(phases < 0.0, phases + 1.0, phases)
 
     def get_template_vals(self, phases, index):
         if self.templates[index] is None:
