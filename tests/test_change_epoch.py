@@ -10,9 +10,9 @@ from pint import models
 from pinttestdata import datadir
 
 
-@pytest.fixture
-def model():
-    parfile = os.path.join(datadir, "J1600-3053_test.par")
+@pytest.fixture(params=["J1600-3053_test.par", "J2317+1439_ell1h_simple.par"])
+def model(request):
+    parfile = os.path.join(datadir, request.param)
     return models.get_model(parfile)
 
 
