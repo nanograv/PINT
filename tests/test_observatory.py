@@ -88,7 +88,7 @@ class TestObservatory(unittest.TestCase):
         )
         try:
             site.clock_corrections(self.test_time)
-        except OSError as e:
+        except (OSError, IOError) as e:
             assert e.errno == 2
             assert os.path.basename(e.filename) == "fake2gps.clk"
 
