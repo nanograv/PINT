@@ -245,17 +245,20 @@ class AstrometryEquatorial(Astrometry):
         If the ecliptic coordinates are provided,
         """
         if epoch is None or (self.PMRA.value == 0.0 and self.PMDEC.value == 0.0):
-            return coords.ICRS(ra=self.RAJ.quantity, dec=self.DECJ.quantity)
+            dRA = 0.0 * u.hourangle
+            dDEC = 0.0 * u.deg
+            broadcast = 1
         else:
             dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
             dRA = dt * self.PMRA.quantity / numpy.cos(self.DECJ.quantity.radian)
             dDEC = dt * self.PMDEC.quantity
-            return coords.ICRS(
-                ra=self.RAJ.quantity + dRA,
-                dec=self.DECJ.quantity + dDEC,
-                pm_ra_cosdec=self.PMRA.quantity * numpy.ones_like(epoch),
-                pm_dec=self.PMDEC.quantity * numpy.ones_like(epoch),
-            )
+            broadcast = numpy.ones_like(epoch)
+        return coords.ICRS(
+            ra=self.RAJ.quantity + dRA,
+            dec=self.DECJ.quantity + dDEC,
+            pm_ra_cosdec=self.PMRA.quantity * broadcast,
+            pm_dec=self.PMDEC.quantity * broadcast,
+        )
 
     def coords_as_ICRS(self, epoch=None):
         return self.get_psr_coords(epoch)
@@ -372,8 +375,8 @@ class AstrometryEquatorial(Astrometry):
         if self.POSEPOCH.value is None:
             raise ValueError("POSEPOCH is not currently set.")
         new_coords = self.get_psr_coords(new_epoch.mjd_long)
-        self.RAJ = new_coords.ra
-        self.DECJ = new_coords.dec
+        self.RAJ.value = new_coords.ra
+        self.DECJ.value = new_coords.dec
         self.POSEPOCH.value = new_epoch
 
 
