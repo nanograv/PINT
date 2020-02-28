@@ -115,7 +115,10 @@ class Tempo2ClockFile(ClockFile):
         that specifies the two clock scales connected by the file."""
         f = open(filename, "r")
         hdrline = f.readline().rstrip()
-        mjd, clk = numpy.loadtxt(f, unpack=True)
+        try:
+            mjd, clk = numpy.loadtxt(f, usecols=(0,1), unpack=True)
+        except:
+            log.error("Failed loading clock file {0}".format(f))
         return mjd, clk, hdrline
 
 

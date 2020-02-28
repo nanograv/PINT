@@ -77,6 +77,9 @@ TopoObs(
     "wsrt",
     tempo_code="i",
     itoa_code="WB",
+    clock_fmt="tempo2",
+    clock_dir="TEMPO2",
+    clock_file="wsrt2gps.clk",
     itrf_xyz=[3828445.659, 445223.600, 5064921.5677],
 )
 TopoObs(
