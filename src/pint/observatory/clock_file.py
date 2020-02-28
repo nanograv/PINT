@@ -116,9 +116,10 @@ class Tempo2ClockFile(ClockFile):
         f = open(filename, "r")
         hdrline = f.readline().rstrip()
         try:
-            mjd, clk = numpy.loadtxt(f, usecols=(0, 1), unpack=True)
+            mjd, clk = numpy.loadtxt(f, usecols=(0,1), unpack=True)
         except:
             log.error("Failed loading clock file {0}".format(f))
+            raise
         return mjd, clk, hdrline
 
 
