@@ -11,7 +11,7 @@ class IFunc(PhaseComponent):
     """This class implements tabulated delays.
 
     These mimic a tempo2 feature, which supports piecewise, linear, and sinc
-    interpolation.  The implementation here currently only supports the 
+    interpolation.  The implementation here currently only supports the
     first two formulae.
 
     For consistency with tempo2, although the IFuncs represent time series,
@@ -29,7 +29,7 @@ class IFunc(PhaseComponent):
     0 == piecewise (no interpolation)
     1 == sinc (not supported)
     2 == linear
-    
+
     NB that the trailing 0.0s are necessary for accurate tempo2 parsing.
     NB also that tempo2 has a static setting MAX_IFUNC whose default value
     is 1000.
@@ -130,5 +130,5 @@ class IFunc(PhaseComponent):
         else:
             raise ValueError("Interpolation type %d not supported.".format(itype))
 
-        phase = ((times * u.s) * self.F0.quantity * 2 * np.pi).to(u.cycle)
+        phase = (times * u.s) * self.F0.quantity * u.cycle
         return phase

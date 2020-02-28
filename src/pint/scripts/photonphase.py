@@ -199,8 +199,9 @@ def main(argv=None):
     # Compute model phase for each TOA
     iphss, phss = modelin.phase(ts, abs_phase=True)
     # ensure all postive
-    negmask = phss < 0.0 * u.cycle
-    phases = np.where(negmask, phss + 1.0 * u.cycle, phss)
+    phss = phss.to(u.cycle).value
+    negmask = phss < 0.0
+    phases = np.where(negmask, phss + 1.0, phss)
     h = float(hm(phases))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
     if args.plot:

@@ -483,6 +483,7 @@ def test_posvel_respects_longdouble():
 @example(i_f=(43875, -1.000000000000002))
 @example(i_f=(48803, 1.0769154457079824e-09))
 @example(i_f=(48803, 1.0000079160299438e-06))
+@settings(deadline=1000)
 @pytest.mark.parametrize("format", ["pulsar_mjd", "mjd"])
 def test_time_from_mjd_string_accuracy_vs_longdouble(format, i_f):
     i, f = i_f

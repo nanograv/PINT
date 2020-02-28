@@ -483,7 +483,9 @@ class PSR_BINARY(object):
 
         par_obj = getattr(self, par)
         result = self.orbits_cls.d_orbits_d_par(par)
-        return result.to(u.Unit("") / par_obj.unit)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            result = result.to(u.Unit("") / par_obj.unit)
+        return result
 
     ###############################################
 

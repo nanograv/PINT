@@ -5,12 +5,9 @@ import astropy.constants as c
 import astropy.units as u
 import numpy as np
 from astropy import log
-
 from pint import GMsun, Tsun, ls
 
 from .DD_model import DDmodel
-
-u.set_enabled_equivalencies(u.dimensionless_angles())
 
 
 class DDKmodel(DDmodel):
