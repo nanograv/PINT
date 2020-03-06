@@ -362,7 +362,7 @@ def choose_model(
     # add conflicting components
     alias_map = {}
     for prefix_type in ["prefixParameter", "maskParameter"]:
-        for pn in tm.get_params_of_type(prefix_type):
+        for pn in tm.get_params_of_type_top(prefix_type):
             par = getattr(tm, pn)
             for a in [par.prefix] + par.prefix_aliases:
                 if a in alias_map:
