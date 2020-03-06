@@ -31,6 +31,8 @@ __all__ = [
     "J2000ld",
     "JD_MJD",
     "pint_units",
+    "PulsarEcliptic",
+    "PulsarMJD",
 ]
 
 __version__ = get_versions()["version"]
