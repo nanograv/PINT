@@ -4,10 +4,11 @@ import astropy.constants as c
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-from astropy.units import si
-
 import pint.pulsar_mjd
+from astropy.units import si
 from pint.extern._version import get_versions
+from pint.pulsar_ecliptic import PulsarEcliptic
+from pint.pulsar_mjd import PulsarMJD
 
 __all__ = [
     "__version__",
