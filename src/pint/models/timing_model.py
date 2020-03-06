@@ -588,20 +588,11 @@ class TimingModel(object):
                 param_mapping[pp] = cp.__class__.__name__
         return param_mapping
 
-    # def get_params_of_type(self, param_type):
-    #     """ Get all the parameters in timing model for one specific type
-    #     """
-    #     result = []
-    #     for p in self.params:
-    #         par = getattr(self, p)
-    #         par_type = type(par).__name__
-    #         par_prefix = par_type[:-9]
-    #         if (
-    #             param_type.upper() == par_type.upper()
-    #             or param_type.upper() == par_prefix.upper()
-    #         ):
-    #             result.append(par.name)
-    #     return result
+    def get_params_of_type_top(self, param_type):
+        result = []
+        for cp in self.components.values():
+            result += cp.get_params_of_type(param_type)
+        return result
 
     def get_prefix_mapping(self, prefix):
         """Get the index mapping for the prefix parameters.
