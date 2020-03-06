@@ -222,10 +222,10 @@ class WLSFitter(Fitter):
             sigma_var = (Sigma / fac).T / fac
             errors = np.sqrt(np.diag(sigma_var))
             sigma_cov = (sigma_var / errors).T / errors
-            # correlation matrix = variances in diagonal, used for gaussian random models
-            self.correlation_matrix = sigma_var
-            # covariance matrix = 1s in diagonal, use for comparison to tempo/tempo2 cov matrix
-            self.covariance_matrix = sigma_cov
+            # covariance matrix = variances in diagonal, used for gaussian random models
+            self.covariance_matrix = sigma_var
+            # correlation matrix = 1s in diagonal, use for comparison to tempo/tempo2 cov matrix
+            self.correlation_matrix = sigma_cov
             self.fac = fac
             self.errors = errors
 

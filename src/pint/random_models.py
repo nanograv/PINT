@@ -45,16 +45,16 @@ def random_models(
     params = fitter.get_fitparams_num()
     mean_vector = params.values()
     # remove the first column and row (absolute phase)
-    cor_matrix = (((fitter.correlation_matrix[1:]).T)[1:]).T
+    cov_matrix = (((fitter.covariance_matrix[1:]).T)[1:]).T
     fac = fitter.fac[1:]
     f_rand = deepcopy(fitter)
     mrand = f_rand.model
 
     # scale by fac
-    log.debug("errors", np.sqrt(np.diag(cor_matrix)))
+    log.debug("errors", np.sqrt(np.diag(cov_matrix)))
     log.debug("mean vector", mean_vector)
     mean_vector = np.array(list(mean_vector)) * fac
-    cov_matrix = ((cor_matrix * fac).T * fac).T
+    cov_matrix = ((cov_matrix * fac).T * fac).T
 
     toa_mjds = fitter.toas.get_mjds()
     minMJD, maxMJD = toa_mjds.min(), toa_mjds.max()
