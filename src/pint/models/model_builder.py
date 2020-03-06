@@ -161,7 +161,7 @@ class ModelBuilder(object):
         """ Check if the Unrecognized parameter has prefix parameter
         """
         prefixs = {}
-        prefix_inModel = model.get_params_of_type(prefix_type)
+        prefix_inModel = model.get_params_of_type_top(prefix_type)
         for pn in prefix_inModel:
             par = getattr(model, pn)
             prefixs[par.prefix] = []
@@ -207,7 +207,8 @@ class ModelBuilder(object):
                 prefix_param = self.search_prefix_param(
                     self.param_unrecognized, self.timing_model, ptype
                 )
-                prefix_in_model = self.timing_model.get_params_of_type(ptype)
+                prefix_in_model = self.timing_model.get_params_of_type_top(ptype)
+                print(prefix_param)
                 for key in prefix_param:
                     ppnames = [x for x in prefix_in_model if x.startswith(key)]
                     for ppn in ppnames:
@@ -399,6 +400,7 @@ def choose_model(
                     "Received duplicate parameter {}".format(new_parameter.name)
                 )
             tm.add_param_from_top(new_parameter, component)
+            print("added", new_parameter)
         except PrefixError:
             pass
 
