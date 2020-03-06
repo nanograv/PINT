@@ -367,6 +367,9 @@ class GLSFitter(Fitter):
             # compute absolute estimates, normalized errors, covariance matrix
             dpars = xhat / norm
             errs = np.sqrt(np.diag(xvar)) / norm
+            covmat = (xvar / norm).T / norm
+            self.covariance_matrix = covmat
+            self.correlation_matrix = (covmat / errs).T / errs
 
             for ii, pn in enumerate(fitp.keys()):
                 uind = params.index(pn)  # Index of designmatrix
