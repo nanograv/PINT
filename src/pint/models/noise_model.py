@@ -122,7 +122,7 @@ class ScaleToaError(NoiseComponent):
             if pp.startswith("EQUAD"):
                 par = getattr(self, pp)
                 self.EQUADs[pp] = (par.key, par.key_value)
-        
+
     def validate(self):
         # check duplicate
         for el in ["EFACs", "EQUADs"]:

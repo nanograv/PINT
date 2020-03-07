@@ -84,7 +84,7 @@ class BinaryDD(PulsarBinary):
             if getattr(self, p).value is None:
                 getattr(self, p).set("0")
                 getattr(self, p).frozen = True
-            # TODO This steps seems duplicated. 
+            # TODO This steps seems duplicated.
             if getattr(self, p).value is not None:
                 if self.T0.value is None:
                     raise MissingParameter("DD", "T0", "T0 is required if *DOT is set")

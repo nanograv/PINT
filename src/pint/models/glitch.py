@@ -126,7 +126,7 @@ class Glitch(PhaseComponent):
             if not hasattr(self, "GLEP_%d" % idx):
                 msg = "Glicth Epoch is needed for Glicth %d." % idx
                 raise MissingParameter("Glitch", "GLEP_%d" % idx, msg)
-       
+
         # Check the Decay Term.
         glf0dparams = [x for x in self.params if x.startswith("GLF0D_")]
         for glf0dnm in glf0dparams:

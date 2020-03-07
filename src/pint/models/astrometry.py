@@ -213,11 +213,11 @@ class AstrometryEquatorial(Astrometry):
             self.register_deriv_funcs(func, param)
 
     def setup(self):
-        super(AstrometryEquatorial, self).setup() 
+        super(AstrometryEquatorial, self).setup()
 
     def validate(self):
-        ''' Validate the input parameter.
-        '''
+        """ Validate the input parameter.
+        """
         super(AstrometryEquatorial, self).validate()
         # RA/DEC are required
         for p in ("RAJ", "DECJ"):

@@ -63,10 +63,10 @@ class IFunc(PhaseComponent):
             )
         )
         self.phase_funcs_component += [self.ifunc_phase]
-    
+
     def setup(self):
         super(IFunc, self).setup()
-        self.terms = list(self.get_prefix_mapping_component("IFUNC").keys())        
+        self.terms = list(self.get_prefix_mapping_component("IFUNC").keys())
         self.num_terms = len(self.terms)
 
     def validate(self):

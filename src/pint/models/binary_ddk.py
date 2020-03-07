@@ -85,6 +85,7 @@ class BinaryDDK(BinaryDD):
             "Using ICRS equatorial coordinate. The parameter KOM is"
             " measured respect to equatorial North."
         )
+
     def validate(self):
         """ Validate parameters
         """

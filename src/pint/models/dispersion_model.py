@@ -100,7 +100,7 @@ class DispersionDM(Dispersion):
 
         for dm_name in base_dms:
             self.register_deriv_funcs(self.d_delay_d_DMs, dm_name)
-    
+
     def validate(self):
         """ Validate the DM parameters input.
         """
@@ -111,7 +111,7 @@ class DispersionDM(Dispersion):
                     "Dispersion",
                     "DMEPOCH",
                     "DMEPOCH is required if DM1 or higher are set",
-                )    
+                )
 
     def DM_dervative_unit(self, n):
         return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"

@@ -75,7 +75,7 @@ class Spindown(PhaseComponent):
         if not self.F_terms == F_in_order:
             diff = list(set(F_in_order) - set(self.F_terms))
             raise MissingParameter("Spindown", "F%d" % diff[0])
-         # If F1 is set, we need PEPOCH
+        # If F1 is set, we need PEPOCH
         if self.F1.value != 0.0:
             if self.PEPOCH.value is None:
                 raise MissingParameter(

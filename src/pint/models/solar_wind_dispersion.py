@@ -46,7 +46,7 @@ class SolarWindDispersion(Dispersion):
     def setup(self):
         super(SolarWindDispersion, self).setup()
         self.register_deriv_funcs(self.d_delay_d_ne_sw, "NE_SW")
-    
+
     def validate(self):
         pass
 

@@ -40,8 +40,7 @@ class FD(DelayComponent):
         self.num_FD_terms = len(self.FD_mapping)
         # set up derivative functions
         for val in self.FD_mapping.values():
-            self.register_deriv_funcs(self.d_delay_FD_d_FDX, val)        
-
+            self.register_deriv_funcs(self.d_delay_FD_d_FDX, val)
 
     def validate(self):
         FD_terms = list(self.FD_mapping.keys())

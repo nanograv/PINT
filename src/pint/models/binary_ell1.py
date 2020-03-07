@@ -108,9 +108,10 @@ class BinaryELL1(BinaryELL1Base):
 
     def setup(self):
         super(BinaryELL1, self).setup()
-    
+
     def validate(self):
         super(BinaryELL1, self).validate()
+
 
 class BinaryELL1H(BinaryELL1Base):
     """Modified ELL1 to with H3 parameter.
@@ -180,7 +181,7 @@ class BinaryELL1H(BinaryELL1Base):
         """
         super(BinaryELL1H, self).validate()
         if self.H3.quantity is None:
-            raise MissingParameter('ELL1H', 'H3', "'H3' is required for ELL1H model")
+            raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")
         if self.SINI.quantity is not None:
             warn("'SINI' will not be used in ELL1H model. ")
         if self.M2.quantity is not None:

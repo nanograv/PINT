@@ -1006,7 +1006,7 @@ class TimingModel(object):
                     "didn't find parameter {}".format(name, param)
                 )
             log.info("Final object: {}".format(repr(self)))
-        
+
         self.setup()
         # The "validate" functions contain tests for required parameters or
         # combinations of parameters, etc, that can only be done
@@ -1103,7 +1103,7 @@ class Component(object):
     def setup(self):
         """Finalize construction loaded values."""
         pass
-    
+
     def validate(self):
         """ Validate loaded values."""
         pass
