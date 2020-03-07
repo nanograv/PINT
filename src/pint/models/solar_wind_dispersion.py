@@ -46,6 +46,9 @@ class SolarWindDispersion(Dispersion):
     def setup(self):
         super(SolarWindDispersion, self).setup()
         self.register_deriv_funcs(self.d_delay_d_ne_sw, "NE_SW")
+    
+    def validate(self):
+        pass
 
     def solar_wind_delay(self, toas, acc_delay=None):
         """Return the solar wind dispersion delay for a set of frequencies

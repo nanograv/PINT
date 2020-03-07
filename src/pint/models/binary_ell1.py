@@ -74,9 +74,11 @@ class BinaryELL1Base(PulsarBinary):
         self.warn_default_params = []
 
     def setup(self):
-        """Check out parameters setup.
-        """
         super(BinaryELL1Base, self).setup()
+
+    def validate(self):
+        """ Validate parameters
+        """
         for p in ["EPS1", "EPS2"]:
             if getattr(self, p).value is None:
                 raise MissingParameter("ELL1", p, p + " is required for ELL1 model.")
@@ -106,7 +108,9 @@ class BinaryELL1(BinaryELL1Base):
 
     def setup(self):
         super(BinaryELL1, self).setup()
-
+    
+    def validate(self):
+        super(BinaryELL1, self).validate()
 
 class BinaryELL1H(BinaryELL1Base):
     """Modified ELL1 to with H3 parameter.
@@ -167,11 +171,16 @@ class BinaryELL1H(BinaryELL1Base):
         return self.binary_instance.ds_func_list
 
     def setup(self):
-        """Check out parameters setup.
+        """ Parameter setup.
         """
         super(BinaryELL1H, self).setup()
+
+    def validate(self):
+        """ Parameter validate
+        """
+        super(BinaryELL1H, self).validate()
         if self.H3.quantity is None:
-            raise MissingParameter("'H3' is required for ELL1H model")
+            raise MissingParameter('ELL1H', 'H3', "'H3' is required for ELL1H model")
         if self.SINI.quantity is not None:
             warn("'SINI' will not be used in ELL1H model. ")
         if self.M2.quantity is not None:

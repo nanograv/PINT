@@ -146,6 +146,15 @@ class TimingModel(object):
         for cp in self.components.values():
             cp.setup()
 
+    def validate(self):
+        """ Validate component setup. 
+            The checks includes:
+            - Required parameters
+            - Parameter values
+        """
+        for cp in self.components.values():
+            cp.validate()
+
     # def __str__(self):
     #    result = ""
     #    comps = self.components
@@ -914,7 +923,7 @@ class TimingModel(object):
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
 
-    def read_parfile(self, file):
+    def read_parfile(self, file, validate=True):
         """Read values from the specified parfile into the model parameters.
 
         Parameters
@@ -997,11 +1006,13 @@ class TimingModel(object):
                     "didn't find parameter {}".format(name, param)
                 )
             log.info("Final object: {}".format(repr(self)))
-
-        # The "setup" functions contain tests for required parameters or
+        
+        self.setup()
+        # The "validate" functions contain tests for required parameters or
         # combinations of parameters, etc, that can only be done
         # after the entire parfile is read
-        self.setup()
+        if validate:
+            self.validate()
 
     def as_parfile(
         self,
@@ -1090,7 +1101,11 @@ class Component(object):
         )
 
     def setup(self):
-        """Finalize construction and validate loaded values."""
+        """Finalize construction loaded values."""
+        pass
+    
+    def validate(self):
+        """ Validate loaded values."""
         pass
 
     @property

@@ -47,8 +47,11 @@ class BinaryBT(PulsarBinary):
 
     def setup(self):
         super(BinaryBT, self).setup()
-        # If any necessary parameter is missing, raise MissingParameter.
-        # This will probably be updated after ELL1 model is added.
+
+    def validate(self):
+        """ Validate BT model parameters
+        """
+        super(BinaryBT, self).validate()
         for p in ("T0", "A1"):
             if getattr(self, p).value is None:
                 raise MissingParameter("BT", p, "%s is required for BT" % p)
