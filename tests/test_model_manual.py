@@ -147,19 +147,21 @@ def test_get_model_roundtrip(tmp_dir, parfile):
     # for p in m_old.get_params_mapping():
     #    assert getattr(m_old, p).quantity == getattr(m_roundtrip, p).quantity
 
-def test_simple_manual():
-    tm = TimingModel(name='test_manual', components=[AstrometryEquatorial(),
-                                                     Spindown()])
-    tm.setup()
-    assert 'F0' in tm.phase_deriv_funcs.keys()
-    assert 'F1' in tm.phase_deriv_funcs.keys()
-    assert 'RAJ' in tm.delay_deriv_funcs.keys()
-    assert 'DECJ' in tm.delay_deriv_funcs.keys()
 
-    with pytest.raises(MissingParameter): # No RA and DEC input
+def test_simple_manual():
+    tm = TimingModel(
+        name="test_manual", components=[AstrometryEquatorial(), Spindown()]
+    )
+    tm.setup()
+    assert "F0" in tm.phase_deriv_funcs.keys()
+    assert "F1" in tm.phase_deriv_funcs.keys()
+    assert "RAJ" in tm.delay_deriv_funcs.keys()
+    assert "DECJ" in tm.delay_deriv_funcs.keys()
+
+    with pytest.raises(MissingParameter):  # No RA and DEC input
         tm.validate()
 
-    tm.RAJ.value = '19:59:48'
-    tm.DECJ.value = '20:48:36'
+    tm.RAJ.value = "19:59:48"
+    tm.DECJ.value = "20:48:36"
     tm.F0.value = 622.122030511927 * u.Hz
-    tm.validate() # This should work.
+    tm.validate()  # This should work.
