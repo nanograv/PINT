@@ -433,7 +433,7 @@ class TimingModel(object):
         force : bool, optional
             If true, add a duplicate component.
         """
-        for param, info in param_info.items():
+        for param, info in param_info:
             # update the parameters in the component
             param_object = getattr(component, param, None)
             # new parameter to the component. Generally only mask or prefix
@@ -466,7 +466,7 @@ class TimingModel(object):
                         # Did not find empty parameter to fill in
                         if param_object is None:
                             index = max(list(prefix_mapping.keys())) + 1
-                            new_par = exm_par.new_par(index)
+                            new_par = exm_par.new_param(index)
                             component.add_param(new_par)
                             param_object = getattr(component, new_par.name)
             for field, value in info.items():
@@ -1324,7 +1324,6 @@ class Component(object):
                 idx = -1
             if idx < 0: # No index provided
                 param.name = param.name + str(list(prefix_map.keys()).max() + 1)
-
         if (param.name in self.params and
             getattr(self, param.name) is not param):
             raise ValueError(
