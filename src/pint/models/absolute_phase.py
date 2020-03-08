@@ -42,7 +42,10 @@ class AbsPhase(PhaseComponent):
         )
 
     def setup(self):
-        super(AbsPhase, self).setup()
+        pass
+    
+    def validate(self):
+        super(AbsPhase, self).validate()
         # Check input Parameters
         if self.TZRMJD.value is None:
             raise MissingParameter(
