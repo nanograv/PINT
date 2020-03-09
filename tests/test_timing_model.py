@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 import pytest
 import os
 import numpy as np
+import astropy.units as u
 from pint.models import TimingModel, DEFAULT_ORDER
 from pint.models import get_model
 from pint.models import (
@@ -15,6 +16,7 @@ from pint.models import (
     BinaryELL1,
     Wave
 )
+from pint.models import parameter as p
 from pinttestdata import datadir
 
 
@@ -68,13 +70,7 @@ class TestModelBuilding:
                                              AstrometryEquatorial(),
                                              Spindown()])
 
-        tm.add_component(DelayJump(), [('JUMP', {'value': 0.1, 'key': 'mjd',
-                                                'key_value': [55000, 56000]}),
-                                       ('JUMP', {'value': 0.2, 'key': 'freq',
-                                                'key_value': [1440, 2000]}),
-                                       ('JUMP', {'value': 0.3, 'key': 'tel',
-                                                'key_value': 'ao'})],
-                                        build_mood=False)
+        tm.add_component(DelayJump(), validate=False)
         # Test link
         # TODO may be add a get_component function
         cp = tm.components['DelayJump']
@@ -84,6 +80,24 @@ class TestModelBuilding:
         cp_pos = tm.DelayComponent_list.index(cp)
         assert cp_pos == 2
 
+        print(cp.params)
+        print(cp.get_prefix_mapping_component('JUMP'))
+        print(id(cp), "test")
+        add_jumps = [('JUMP', {'value': 0.1, 'key': 'mjd',
+                                'key_value': [55000, 56000]}),
+                     ('JUMP', {'value': 0.2, 'key': 'freq',
+                                'key_value': [1440, 2000]}),
+                     ('JUMP', {'value': 0.3, 'key': 'tel', 'key_value': 'ao'})]
+
+        for jp in add_jumps:
+            p_name = jp[0]
+            print('test1', p_name)
+            p_vals = jp[1]
+            par = p.maskParameter(name=p_name, key=p_vals['key'],
+                                  value=p_vals['value'],
+                                  key_value=p_vals['key_value'], units=u.s)
+            print("test", par.name)
+            cp.add_param(par, setup=True)
         # TODO add test component setup function. use jump1 right now, this
         # should be updated in the future.
         assert hasattr(cp, 'JUMP1')
@@ -105,13 +119,13 @@ class TestModelBuilding:
         # Check jump key value
         assert jump1.key_value == [55000, 56000]
         assert jump2.key_value == [1440, 2000]
-        assert jump3.key_value == 'ao'
+        assert jump3.key_value == ['ao']
         assert tm.jumps == ['JUMP1', 'JUMP2', 'JUMP3']
 
-    def test_add_param(self):
-        tm1 = TimingModel("TestTimingModel", [BinaryELL1(),
-                                             AstrometryEquatorial(),
-                                             DispersionDMX(),
-                                             DelayJump(),
-                                             Spindown()])
-        # Add parameters
+    # def test_add_param(self):
+    #     tm1 = TimingModel("TestTimingModel", [BinaryELL1(),
+    #                                          AstrometryEquatorial(),
+    #                                          DispersionDMX(),
+    #                                          DelayJump(),
+    #                                          Spindown()])
+    #     # Add parameters
