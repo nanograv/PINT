@@ -14,17 +14,15 @@ from pint.models import (
     DelayJump,
     DispersionDM,
     BinaryELL1,
-    Wave
+    Wave,
 )
 from pint.models import parameter as p
 from pinttestdata import datadir
 
 
 class TestModelBuilding:
-
     def setup(self):
-        self.parfile = os.path.join(datadir,
-                                    "J0437-4715.par")
+        self.parfile = os.path.join(datadir, "J0437-4715.par")
 
     def test_from_par(self):
         tm = get_model(self.parfile)
@@ -44,10 +42,10 @@ class TestModelBuilding:
         assert all(np.diff(np.array(order)) > 0)
 
     def test_component_input(self):
-        tm = TimingModel("TestTimingModel", [BinaryELL1(),
-                                             Wave(),
-                                             AstrometryEquatorial(),
-                                             Spindown()])
+        tm = TimingModel(
+            "TestTimingModel",
+            [BinaryELL1(), Wave(), AstrometryEquatorial(), Spindown()],
+        )
 
         for k, v in tm.components.items():
             # test the link to timing model
@@ -66,14 +64,14 @@ class TestModelBuilding:
         assert all(np.diff(np.array(order)) > 0)
 
     def test_add_component(self):
-        tm = TimingModel("TestTimingModel", [BinaryELL1(),
-                                             AstrometryEquatorial(),
-                                             Spindown()])
+        tm = TimingModel(
+            "TestTimingModel", [BinaryELL1(), AstrometryEquatorial(), Spindown()]
+        )
 
         tm.add_component(DelayJump(), validate=False)
         # Test link
         # TODO may be add a get_component function
-        cp = tm.components['DelayJump']
+        cp = tm.components["DelayJump"]
         assert cp._parent == tm
 
         # Test order
@@ -81,37 +79,41 @@ class TestModelBuilding:
         assert cp_pos == 2
 
         print(cp.params)
-        print(cp.get_prefix_mapping_component('JUMP'))
+        print(cp.get_prefix_mapping_component("JUMP"))
         print(id(cp), "test")
-        add_jumps = [('JUMP', {'value': 0.1, 'key': 'mjd',
-                                'key_value': [55000, 56000]}),
-                     ('JUMP', {'value': 0.2, 'key': 'freq',
-                                'key_value': [1440, 2000]}),
-                     ('JUMP', {'value': 0.3, 'key': 'tel', 'key_value': 'ao'})]
+        add_jumps = [
+            ("JUMP", {"value": 0.1, "key": "mjd", "key_value": [55000, 56000]}),
+            ("JUMP", {"value": 0.2, "key": "freq", "key_value": [1440, 2000]}),
+            ("JUMP", {"value": 0.3, "key": "tel", "key_value": "ao"}),
+        ]
 
         for jp in add_jumps:
             p_name = jp[0]
-            print('test1', p_name)
+            print("test1", p_name)
             p_vals = jp[1]
-            par = p.maskParameter(name=p_name, key=p_vals['key'],
-                                  value=p_vals['value'],
-                                  key_value=p_vals['key_value'], units=u.s)
+            par = p.maskParameter(
+                name=p_name,
+                key=p_vals["key"],
+                value=p_vals["value"],
+                key_value=p_vals["key_value"],
+                units=u.s,
+            )
             print("test", par.name)
             cp.add_param(par, setup=True)
         # TODO add test component setup function. use jump1 right now, this
         # should be updated in the future.
-        assert hasattr(cp, 'JUMP1')
-        assert hasattr(cp, 'JUMP2')
-        assert hasattr(cp, 'JUMP3')
-        assert hasattr(tm, 'JUMP1')
-        assert hasattr(tm, 'JUMP2')
-        assert hasattr(tm, 'JUMP3')
-        jump1 = getattr(tm, 'JUMP1')
-        jump2 = getattr(tm, 'JUMP2')
-        jump3 = getattr(tm, 'JUMP3')
-        assert jump1.key == 'mjd'
-        assert jump2.key == 'freq'
-        assert jump3.key == 'tel'
+        assert hasattr(cp, "JUMP1")
+        assert hasattr(cp, "JUMP2")
+        assert hasattr(cp, "JUMP3")
+        assert hasattr(tm, "JUMP1")
+        assert hasattr(tm, "JUMP2")
+        assert hasattr(tm, "JUMP3")
+        jump1 = getattr(tm, "JUMP1")
+        jump2 = getattr(tm, "JUMP2")
+        jump3 = getattr(tm, "JUMP3")
+        assert jump1.key == "mjd"
+        assert jump2.key == "freq"
+        assert jump3.key == "tel"
         # Check jump value
         assert jump1.value == 0.1
         assert jump2.value == 0.2
@@ -119,13 +121,5 @@ class TestModelBuilding:
         # Check jump key value
         assert jump1.key_value == [55000, 56000]
         assert jump2.key_value == [1440, 2000]
-        assert jump3.key_value == ['ao']
-        assert tm.jumps == ['JUMP1', 'JUMP2', 'JUMP3']
-
-    # def test_add_param(self):
-    #     tm1 = TimingModel("TestTimingModel", [BinaryELL1(),
-    #                                          AstrometryEquatorial(),
-    #                                          DispersionDMX(),
-    #                                          DelayJump(),
-    #                                          Spindown()])
-    #     # Add parameters
+        assert jump3.key_value == ["ao"]
+        assert tm.jumps == ["JUMP1", "JUMP2", "JUMP3"]
