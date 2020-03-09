@@ -363,8 +363,7 @@ class TimingModel(object):
             comp_type = comp_base[-3].__name__
         return comp_type
 
-    def add_component(self, component, order=DEFAULT_ORDER, force=False,
-                      validate=True):
+    def add_component(self, component, order=DEFAULT_ORDER, force=False, validate=True):
         """Add a component into TimingModel.
 
         Parameters
@@ -418,67 +417,67 @@ class TimingModel(object):
         if validate:
             self.validate()
 
-#    def add_component(self, component, param_info, order=DEFAULT_ORDER,
-#                      build_mood=False, force=False):
-#        """Add a component to the timing model.
-#
-#        Parameters
-#        ----------
-#        component : Component
-#            The component to be added to the timing model.
-#        param_info: dict
-#            Input parameter information. The key should be the parameter name
-#            and the parameter information should be provided by a dictonary of
-#            parameter field.
-#        order : list, optional
-#            Where in the list of components to insert the new one.
-#        build_mood: bool
-#            If true, don't run setup.
-#        force : bool, optional
-#            If true, add a duplicate component.
-#        """
-#        for param, info in param_info:
-#            # update the parameters in the component
-#            param_object = getattr(component, param, None)
-#            # new parameter to the component. Generally only mask or prefix
-#            # parameter can be add to a component instance.
-#            if param_object is None:
-#                # check if the new parameter a  maskParameter, only
-#                # maskParameter can be duplicatedly added.
-#                prefixs = component.param_prefixs
-#
-#                try:
-#                    prefix, index_str, index = split_prefixed_name(param)
-#                except PrefixError:
-#                    # Can not seperate parameter perfix, then assume param name
-#                    # as the prefix name.
-#                    prefix = param
-#                    index = -1
-#                example_params = prefixs.get(prefix, None)
-#                if example_params is None:
-#                    raise ValueError("Can not find any initialization of '{}'."
-#                                     " Please check your model component class.")
-#                else:
-#                    prefix_mapping = component.get_prefix_mapping(prefix)
-#                    if index < 0:
-#                        for ep in example_params:
-#                            exm_par = getattr(component, ep)
-#                            if exm_par.quantity is None:
-#                                param_object = exm_par
-#                            else:
-#                                continue
-#                        # Did not find empty parameter to fill in
-#                        if param_object is None:
-#                            index = max(list(prefix_mapping.keys())) + 1
-#                            new_par = exm_par.new_param(index)
-#                            component.add_param(new_par)
-#                            param_object = getattr(component, new_par.name)
-#            for field, value in info.items():
-#                setattr(param_object, field, value)
-#        self._add_component_object(component, order=order, force=force)
-#        if not build_mood:
-#            self.setup()
-#
+    #    def add_component(self, component, param_info, order=DEFAULT_ORDER,
+    #                      build_mood=False, force=False):
+    #        """Add a component to the timing model.
+    #
+    #        Parameters
+    #        ----------
+    #        component : Component
+    #            The component to be added to the timing model.
+    #        param_info: dict
+    #            Input parameter information. The key should be the parameter name
+    #            and the parameter information should be provided by a dictonary of
+    #            parameter field.
+    #        order : list, optional
+    #            Where in the list of components to insert the new one.
+    #        build_mood: bool
+    #            If true, don't run setup.
+    #        force : bool, optional
+    #            If true, add a duplicate component.
+    #        """
+    #        for param, info in param_info:
+    #            # update the parameters in the component
+    #            param_object = getattr(component, param, None)
+    #            # new parameter to the component. Generally only mask or prefix
+    #            # parameter can be add to a component instance.
+    #            if param_object is None:
+    #                # check if the new parameter a  maskParameter, only
+    #                # maskParameter can be duplicatedly added.
+    #                prefixs = component.param_prefixs
+    #
+    #                try:
+    #                    prefix, index_str, index = split_prefixed_name(param)
+    #                except PrefixError:
+    #                    # Can not seperate parameter perfix, then assume param name
+    #                    # as the prefix name.
+    #                    prefix = param
+    #                    index = -1
+    #                example_params = prefixs.get(prefix, None)
+    #                if example_params is None:
+    #                    raise ValueError("Can not find any initialization of '{}'."
+    #                                     " Please check your model component class.")
+    #                else:
+    #                    prefix_mapping = component.get_prefix_mapping(prefix)
+    #                    if index < 0:
+    #                        for ep in example_params:
+    #                            exm_par = getattr(component, ep)
+    #                            if exm_par.quantity is None:
+    #                                param_object = exm_par
+    #                            else:
+    #                                continue
+    #                        # Did not find empty parameter to fill in
+    #                        if param_object is None:
+    #                            index = max(list(prefix_mapping.keys())) + 1
+    #                            new_par = exm_par.new_param(index)
+    #                            component.add_param(new_par)
+    #                            param_object = getattr(component, new_par.name)
+    #            for field, value in info.items():
+    #                setattr(param_object, field, value)
+    #        self._add_component_object(component, order=order, force=force)
+    #        if not build_mood:
+    #            self.setup()
+    #
     def _locate_param_host(self, components, param):
         """ Search for the parameter host component.
 
@@ -1234,7 +1233,9 @@ class Component(object):
             par = getattr(self, p)
             if par.is_prefix:
                 if par.prefix not in prefixs.keys():
-                    prefixs[par.prefix] = [p,]
+                    prefixs[par.prefix] = [
+                        p,
+                    ]
                 else:
                     prefixs[par.prefix].append(p)
         return prefixs
@@ -1310,8 +1311,7 @@ class Component(object):
             prefix_map = self.get_prefix_mapping_component(prefix)
             exist_par_name = prefix_map.get(idx, None)
             # Check if parameter value has been set.
-            if (exist_par_name and
-                getattr(self, exist_par_name).value is not None):
+            if exist_par_name and getattr(self, exist_par_name).value is not None:
                 idx = max(list(prefix_map.keys())) + 1
 
             # TODO here we have an assumption that maskParameter follow the
@@ -1326,12 +1326,12 @@ class Component(object):
                 raise ValueError(
                     "Tried to add a second parameter called {}. "
                     "Old value: {} New value: {}".format(
-                    param.name, getattr(self, param.name), param
+                        param.name, getattr(self, param.name), param
                     )
                 )
             else:
                 setattr(self, param.name, param)
-        else: # When parameter not in the params list, we also need to add it.
+        else:  # When parameter not in the params list, we also need to add it.
             setattr(self, param.name, param)
             self.params.append(param.name)
         # Adding parameters to an existing model sometimes need to run setup()
@@ -1464,7 +1464,7 @@ class Component(object):
             # TODO:
             # Runing setup() mulitple times can lead to adding derivative
             # function multiple times. This prevent it from happening now. But
-            # in the future, we should think a better way to do so.  
+            # in the future, we should think a better way to do so.
             if func in self.deriv_funcs[pn]:
                 return
             else:
