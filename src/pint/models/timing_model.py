@@ -64,6 +64,7 @@ DEFAULT_ORDER = [
     "astrometry",
     "jump_delay",
     "solar_system_shapiro",
+    "solar_wind",
     "dispersion_constant",
     "dispersion_dmx",
     "pulsar_system",
@@ -164,7 +165,7 @@ class TimingModel(object):
             cp.setup()
 
     def validate(self):
-        """ Validate component setup. 
+        """ Validate component setup.
             The checks includes:
             - Required parameters
             - Parameter values
@@ -366,8 +367,6 @@ class TimingModel(object):
                       validate=True):
         """Add a component into TimingModel.
 
-        In other words, this function does not do component.setup()
-
         Parameters
         ----------
         component : Component
@@ -410,7 +409,7 @@ class TimingModel(object):
             new_cp = tuple((order.index(component.category), component))
         # add new component
         cur_cps.append(new_cp)
-        cur_cps.sort()
+        cur_cps.sort(key=lambda x: x[0])
         new_comp_list = [c[1] for c in cur_cps]
         setattr(self, comp_type + "_list", new_comp_list)
         # Set up components
@@ -418,7 +417,7 @@ class TimingModel(object):
         # Validate inputs
         if validate:
             self.validate()
-        
+
 #    def add_component(self, component, param_info, order=DEFAULT_ORDER,
 #                      build_mood=False, force=False):
 #        """Add a component to the timing model.
@@ -1301,7 +1300,7 @@ class Component(object):
                 mapping[par.index] = parname
         return mapping
 
-    def add_param(self, param, deriv_func=None, build_mood=True):
+    def add_param(self, param, deriv_func=None, setup=False):
         """Add a parameter to the Component.
 
         The parameter is stored in an attribute on the Component object.
@@ -1313,34 +1312,54 @@ class Component(object):
             The parameter to be added.
         deriv_func: function
             Derivative function for parameter.
-        build_mood: bool
-            If it is in the build mood, add_param will not run setup function.
         """
         # This is the case for add "JUMP" like parameters, It will add an
         # index to the parameter name for avoding the conflicts
         # TODO: this is a work around in the current system, but it will be
         # optimized in the future release.
         if isinstance(param, maskParameter):
-            prefix_map = self.get_prefix_mapping_component(param.name)
+            # TODO, right now maskParameter add index to parameter name by
+            # default. But This is should be optimized. In the future versions,
+            # it will change.
+
+            # First get prefix and index from input parameter name
             try:
                 prefix, idx_str, idx = split_prefixed_name(param.name)
             except PrefixError:
                 prefix = param.name
-                idx = -1
-            if idx < 0: # No index provided
-                param.name = param.name + str(list(prefix_map.keys()).max() + 1)
-        if (param.name in self.params and
-            getattr(self, param.name) is not param):
-            raise ValueError(
-                "Tried to add a second parameter called {}. "
-                "Old value: {} New value: {}".format(
+                idx = 1
+
+            # Check existing prefix
+            prefix_map = self.get_prefix_mapping_component(prefix)
+            exist_par_name = prefix_map.get(idx, None)
+            # Check if parameter value has been set.
+            if (exist_par_name and
+                getattr(self, exist_par_name).value is not None):
+                idx = max(list(prefix_map.keys())) + 1
+
+            # TODO here we have an assumption that maskParameter follow the
+            # convention of name + no_leading_zero_index
+            param.name = prefix + str(idx)
+            param.index = idx
+
+        # A more general check
+        if param.name in self.params:
+            exist_par = getattr(self, param.name)
+            if exist_par.value is not None:
+                raise ValueError(
+                    "Tried to add a second parameter called {}. "
+                    "Old value: {} New value: {}".format(
                     param.name, getattr(self, param.name), param
+                    )
                 )
-            )
-        setattr(self, param.name, param)
-        self.params.append(param.name)
-        # Component derivative should setup in the setup function.
-        if not build_mood:
+            else:
+                setattr(self, param.name, param)
+        else: # When parameter not in the params list, we also need to add it.
+            setattr(self, param.name, param)
+            self.params.append(param.name)
+        # Adding parameters to an existing model sometimes need to run setup()
+        # function again.
+        if setup:
             self.setup()
         if deriv_func is not None:
             self.register_deriv_funcs(func, param.name)

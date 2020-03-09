@@ -208,7 +208,6 @@ class ModelBuilder(object):
                     self.param_unrecognized, self.timing_model, ptype
                 )
                 prefix_in_model = self.timing_model.get_params_of_type_top(ptype)
-                print(prefix_param)
                 for key in prefix_param:
                     ppnames = [x for x in prefix_in_model if x.startswith(key)]
                     for ppn in ppnames:
