@@ -43,7 +43,7 @@ class AbsPhase(PhaseComponent):
 
     def setup(self):
         pass
-    
+
     def validate(self):
         super(AbsPhase, self).validate()
         # Check input Parameters

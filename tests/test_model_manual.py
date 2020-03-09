@@ -166,13 +166,13 @@ def test_simple_manual():
     tm.F0.value = 622.122030511927 * u.Hz
     tm.validate()  # This should work.
 
+
 def test_add_all_components():
     # models_by_category = defaultdict(list)
     # for k, c_type in Component.component_types.items():
     #     print(k, c_type)
     #     models_by_category[c_type.category].append(c_type)
     comps = [x() for x in Component.component_types.values()]
-    tm = TimingModel(
-        name="test_manual", components=comps)
-    tm.setup() # This should not have any parameter check.
+    tm = TimingModel(name="test_manual", components=comps)
+    tm.setup()  # This should not have any parameter check.
     assert len(tm.components) == len(comps)
