@@ -1484,7 +1484,14 @@ class Component(object):
         if pn not in list(self.deriv_funcs.keys()):
             self.deriv_funcs[pn] = [func]
         else:
-            self.deriv_funcs[pn] += [func]
+            # TODO:
+            # Runing setup() mulitple times can lead to adding derivative
+            # function multiple times. This prevent it from happening now. But
+            # in the future, we should think a better way to do so.  
+            if func in self.deriv_funcs[pn]:
+                return
+            else:
+                self.deriv_funcs[pn] += [func]
 
     def is_in_parfile(self, para_dict):
         """Check if this subclass included in parfile.
