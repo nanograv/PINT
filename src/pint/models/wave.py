@@ -53,20 +53,6 @@ class Wave(PhaseComponent):
 
     def setup(self):
         super(Wave, self).setup()
-        if self.WAVEEPOCH.quantity is None:
-            if self.PEPOCH.quantity is None:
-                raise MissingParameter(
-                    "Wave",
-                    "WAVEEPOCH",
-                    "WAVEEPOCH or PEPOCH are required if " "WAVE_OM is set.",
-                )
-            else:
-                self.WAVEEPOCH = self.PEPOCH
-        if (not hasattr(self, "F0")) or (self.F0.quantity is None):
-            raise MissingParameter(
-                "Wave", "F0", "F0 is required if WAVE entries are present."
-            )
-
         self.wave_terms = list(self.get_prefix_mapping_component("WAVE").keys())
         self.num_wave_terms = len(self.wave_terms)
 
