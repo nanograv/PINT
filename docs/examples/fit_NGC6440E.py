@@ -50,15 +50,19 @@ plt.grid()
 plt.show()
 
 # Now do the fit
-print("Fitting...")
+print("Fitting.")
 f = pint.fitter.WLSFitter(t, m)
-print(f.fit_toas())
+f.fit_toas()
 
 # Print some basic params
 print("Best fit has reduced chi^2 of", f.resids.chi2_reduced)
 print("RMS in phase is", f.resids.phase_resids.std())
 print("RMS in time is", f.resids.time_resids.std().to(u.us))
-print("\n Best model is:")
+
+# Show the parameter correlation matrix
+corm = f.get_correlation_matrix(pretty_print=True)
+
+print("Best model is:")
 print(f.model.as_parfile())
 
 plt.errorbar(
