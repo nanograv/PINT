@@ -5,11 +5,11 @@ from warnings import warn
 
 import astropy.units as u
 import numpy as np
-
+from astropy.time import Time
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
 from pint.models.timing_model import DelayComponent, MissingParameter
 from pint.toa_select import TOASelect
-from pint.utils import split_prefixed_name, taylor_horner
+from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
 # The units on this are not completely correct
 # as we don't really use the "pc cm^3" units on DM.
@@ -190,6 +190,33 @@ class DispersionDM(Dispersion):
             self.DM.units / par.units
         )
         return DMconst * d_dm_d_dm_param / bfreq ** 2.0
+
+    def change_dmepoch(self, new_epoch):
+        """Change DMEPOCH to a new value and update DM accordingly.
+
+        Parameters
+        ----------
+        new_epoch: float MJD (in TDB) or `astropy.Time` object
+            The new DMEPOCH value.
+        """
+        if isinstance(new_epoch, Time):
+            new_epoch = Time(new_epoch, scale="tdb", precision=9)
+        else:
+            new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
+
+        if self.DMEPOCH.value is None:
+            raise ValueError("DMEPOCH is not currently set.")
+
+        dmepoch_ld = self.DMEPOCH.quantity.tdb.mjd_long
+        dt = (new_epoch.tdb.mjd_long - dmepoch_ld) * u.day
+        dmterms = [0.0 * u.Unit("")] + self.get_DM_terms()
+
+        for n in range(len(dmterms) - 1):
+            cur_deriv = self.DM if n == 0 else getattr(self, "DM{}".format(n))
+            cur_deriv.value = taylor_horner_deriv(
+                dt.to(u.yr), dmterms, deriv_order=n + 1
+            )
+        self.DMEPOCH.value = new_epoch
 
 
 class DispersionDMX(Dispersion):
