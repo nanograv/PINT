@@ -7,6 +7,7 @@ import astropy.units as u
 import numpy as np
 import scipy.linalg as sl
 import scipy.optimize as opt
+from astropy import log
 
 from pint.residuals import Residuals
 
@@ -133,6 +134,76 @@ class Fitter(object):
 
     def fit_toas(self, maxiter=None):
         raise NotImplementedError
+
+    def get_covariance_matrix(self, with_phase=False, pretty_print=False, prec=3):
+        """Show the parameter covariance matrix post-fit.
+        If with_phase, then show and return the phase column as well.
+        If pretty_print, then also pretty-print on stdout the matrix.
+        prec is the precision of the floating point results.
+        """
+        if hasattr(self, "covariance_matrix"):
+            fps = list(self.get_fitparams().keys())
+            cm = self.covariance_matrix
+            if with_phase:
+                fps = ["PHASE"] + fps
+            else:
+                cm = cm[1:, 1:]
+            if pretty_print:
+                lens = [max(len(fp) + 2, prec + 8) for fp in fps]
+                maxlen = max(lens)
+                print("\nParameter covariance matrix:")
+                line = "{0:^{width}}".format("", width=maxlen)
+                for fp, ln in zip(fps, lens):
+                    line += "{0:^{width}}".format(fp, width=ln)
+                print(line)
+                for ii, fp1 in enumerate(fps):
+                    line = "{0:^{width}}".format(fp1, width=maxlen)
+                    for jj, (fp2, ln) in enumerate(zip(fps, lens)):
+                        line += "{0:^{width}.{prec}g}".format(
+                            cm[ii, jj], width=ln, prec=prec
+                        )
+                    print(line)
+                print("\n")
+            return cm
+        else:
+            log.error("You must run .fit_toas() before accessing the covariance matrix")
+            raise AttributeError
+
+    def get_correlation_matrix(self, with_phase=False, pretty_print=False, prec=3):
+        """Show the parameter correlation matrix post-fit.
+        If with_phase, then show and return the phase column as well.
+        If pretty_print, then also pretty-print on stdout the matrix.
+        prec is the precision of the floating point results.
+        """
+        if hasattr(self, "correlation_matrix"):
+            fps = list(self.get_fitparams().keys())
+            cm = self.correlation_matrix
+            if with_phase:
+                fps = ["PHASE"] + fps
+            else:
+                cm = cm[1:, 1:]
+            if pretty_print:
+                lens = [max(len(fp) + 2, prec + 4) for fp in fps]
+                maxlen = max(lens)
+                print("\nParameter correlation matrix:")
+                line = "{0:^{width}}".format("", width=maxlen)
+                for fp, ln in zip(fps, lens):
+                    line += "{0:^{width}}".format(fp, width=ln)
+                print(line)
+                for ii, fp1 in enumerate(fps):
+                    line = "{0:^{width}}".format(fp1, width=maxlen)
+                    for jj, (fp2, ln) in enumerate(zip(fps, lens)):
+                        line += "{0:^{width}.{prec}f}".format(
+                            cm[ii, jj], width=ln, prec=prec
+                        )
+                    print(line)
+                print("\n")
+            return cm
+        else:
+            log.error(
+                "You must run .fit_toas() before accessing the correlation matrix"
+            )
+            raise AttributeError
 
 
 class PowellFitter(Fitter):
