@@ -42,3 +42,13 @@ def test_change_posepoch(model):
 
     assert np.abs(new_coords.spherical.lon - new_lon) < 40 * u.uas
     assert np.abs(new_coords.spherical.lat - new_lat) < 40 * u.uas
+
+
+def test_change_dmepoch():
+    parfile = os.path.join(datadir, "J2229+2643_dm1.par")
+    model = models.get_model(parfile)
+    t0 = Time(56000, scale="tdb", format="mjd")
+    epoch_diff = (t0.mjd_long - model.DMEPOCH.quantity.mjd_long) * u.day
+    DM_at_t0 = model.DM.quantity + model.DM1.quantity * epoch_diff.to(u.s)
+    model.change_dmepoch(t0)
+    assert np.abs(model.DM.quantity - DM_at_t0) < 1e-8 * u.pc / u.cm ** 3
