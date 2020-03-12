@@ -2,6 +2,10 @@
 
 language: python
 
+compiler: gcc
+
+os: linux
+
 matrix:
     fast_finish: true
     include:
@@ -26,7 +30,7 @@ matrix:
           services: []
           after_success: []
           before_script: git fetch --unshallow
-        - name: "Test oldest dependencies"
+        - name: "Test oldest Python3 dependencies"
           python: 
             - "3.7"
           sudo: false
