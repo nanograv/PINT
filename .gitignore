@@ -75,6 +75,7 @@ de-403-masses.tpc
 
 .idea
 .cache
+.vscode
 
 # Test output/intermediate files
 tests/datafile/fake_testzima.tim
