@@ -122,6 +122,7 @@ class Glitch(PhaseComponent):
     def validate(self):
         """ Validate parameters input.
         """
+        super(Glitch, self).validate()
         for idx in set(self.glitch_indices):
             if not hasattr(self, "GLEP_%d" % idx):
                 msg = "Glicth Epoch is needed for Glicth %d." % idx

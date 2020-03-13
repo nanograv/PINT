@@ -160,7 +160,7 @@ class PulsarBinary(DelayComponent):
             )
 
     def validate(self):
-        pass
+        super(PulsarBinary, self).validate()
 
     def check_required_params(self, required_params):
         # seach for all the possible to get the parameters.

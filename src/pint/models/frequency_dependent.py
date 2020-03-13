@@ -43,7 +43,7 @@ class FD(DelayComponent):
             self.register_deriv_funcs(self.d_delay_FD_d_FDX, val)
 
     def validate(self):
-        FD_terms = list(self.FD_mapping.keys())
+        super(FD, self).validate()
         FD_terms.sort()
         FD_in_order = list(range(1, max(FD_terms) + 1))
         if not FD_terms == FD_in_order:

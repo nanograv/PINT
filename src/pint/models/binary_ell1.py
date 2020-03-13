@@ -79,6 +79,8 @@ class BinaryELL1Base(PulsarBinary):
     def validate(self):
         """ Validate parameters
         """
+        super(BinaryELL1Base, self).validate()
+
         for p in ["EPS1", "EPS2"]:
             if getattr(self, p).value is None:
                 raise MissingParameter("ELL1", p, p + " is required for ELL1 model.")
@@ -177,7 +179,7 @@ class BinaryELL1H(BinaryELL1Base):
         super(BinaryELL1H, self).setup()
 
     def validate(self):
-        """ Parameter validate
+        """ Parameter validation.
         """
         super(BinaryELL1H, self).validate()
         if self.H3.quantity is None:

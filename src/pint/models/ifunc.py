@@ -70,7 +70,7 @@ class IFunc(PhaseComponent):
         self.num_terms = len(self.terms)
 
     def validate(self):
-        self.setup()
+        super(IFunc, self).validate()
         if self.SIFUNC.quantity is None:
             raise MissingParameter(
                 "IFunc", "SIFUNC", "SIFUNC is required if IFUNC entries are present."

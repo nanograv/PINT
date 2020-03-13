@@ -104,6 +104,7 @@ class DispersionDM(Dispersion):
     def validate(self):
         """ Validate the DM parameters input.
         """
+        super(Dispersion, self).validate()
         # If DM1 is set, we need DMEPOCH
         if self.DM1.value != 0.0:
             if self.DMEPOCH.value is None:
@@ -291,8 +292,9 @@ class DispersionDMX(Dispersion):
                 self.register_deriv_funcs(self.d_delay_d_DMX, prefix_par)
 
     def validate(self):
-        """ Validate the DMX parameters. 
+        """ Validate the DMX parameters.
         """
+        super(DispersionDMX, self).validate()
         DMX_mapping = self.get_prefix_mapping_component("DMX_")
         DMXR1_mapping = self.get_prefix_mapping_component("DMXR1_")
         DMXR2_mapping = self.get_prefix_mapping_component("DMXR2_")

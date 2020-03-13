@@ -42,7 +42,7 @@ class AbsPhase(PhaseComponent):
         )
 
     def setup(self):
-        pass
+        super(AbsPhase, self).setup()
 
     def validate(self):
         super(AbsPhase, self).validate()

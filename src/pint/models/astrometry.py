@@ -45,7 +45,7 @@ class Astrometry(DelayComponent):
         super(Astrometry, self).setup()
 
     def validate(self):
-        pass
+        super(Astrometry, self).validate()
 
     def ssb_to_psb_xyz_ICRS(self, epoch=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
@@ -451,6 +451,7 @@ class AstrometryEcliptic(Astrometry):
     def validate(self):
         """ Validate Ecliptic coordinate parameter inputs.
         """
+        super(AstrometryEcliptic, self).validate()
         # ELONG/ELAT are required
         for p in ("ELONG", "ELAT"):
             if getattr(self, p).value is None:

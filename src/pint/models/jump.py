@@ -39,7 +39,7 @@ class DelayJump(DelayComponent):
             self.register_deriv_funcs(self.d_delay_d_jump, j)
 
     def validate(self):
-        pass
+        super(DelayJump, self).validate()
 
     def jump_delay(self, toas, acc_delay=None):
         """This method returns the jump delays for each toas section collected by
@@ -97,7 +97,7 @@ class PhaseJump(PhaseComponent):
             self.register_deriv_funcs(self.d_phase_d_jump, j)
 
     def validate(self):
-        pass
+        super(PhaseJump, self).validate()
 
     def jump_phase(self, toas, delay):
         """This method returns the jump phase for each toas section collected by
