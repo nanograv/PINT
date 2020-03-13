@@ -31,16 +31,14 @@ matrix:
           after_success: []
           before_script: git fetch --unshallow
         - name: "Test oldest Python3 dependencies"
-          python: 
-            - "3.7"
+          python: "3.7"
           sudo: false
           language: python
           install: travis_retry pip install tox-travis
           script: 
             - tox -e oldestdeps
         - name: "Test oldest Python2 dependencies"
-          python: 
-            - "2.7"
+          python: "2.7"
           sudo: false
           language: python
           install: travis_retry pip install tox-travis

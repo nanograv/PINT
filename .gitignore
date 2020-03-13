@@ -84,6 +84,15 @@ tests/datafile/fermitest.png
 tests/datafile/photontest.fits
 tests/datafile/photontest.png
 tests/datafile/test_parfile_write.par
+tests/datafile/J0030+0451_chains.png
+tests/datafile/J0030+0451_post.par
+tests/datafile/J0030+0451_post.png
+tests/datafile/J0030+0451_pre.png
+tests/datafile/J0030+0451_prof_post.txt
+tests/datafile/J0030+0451_prof_pre.txt
+tests/datafile/J0030+0451_results.txt
+tests/datafile/J0030+0451_samples.pickle
+tests/datafile/J0030+0451_triangle.png
 fermitest.fits
 fermitest.png
 photontest.fits
