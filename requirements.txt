@@ -1,5 +1,5 @@
 numpy>=1.15.0
-astropy>=2.0; python_version < "3.0"
+astropy>=2.0.15; python_version < "3.0"
 astropy>=3.2; python_version >="3.0"
 scipy>=0.18.1
 jplephem>=2.6

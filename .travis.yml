@@ -38,6 +38,14 @@ matrix:
           install: travis_retry pip install tox-travis
           script: 
             - tox -e oldestdeps
+        - name: "Test oldest Python2 dependencies"
+          python: 
+            - "2.7"
+          sudo: false
+          language: python
+          install: travis_retry pip install tox-travis
+          script: 
+            - tox -e oldestdeps2
         - python: "2.7"
         - python: "3.5"
         - python: "3.6"
