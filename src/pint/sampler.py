@@ -105,12 +105,22 @@ class EmceeSampler(MCMCSampler):
         ]
         # set starting params
         # FIXME: what about other glitch phase parameters? This can't be right!
-        for param in ["glph_1", "glep_1", "sini", "m2", "e", "ecc", "px", "a1"]:
+        for param in [
+            "GLPH_1",
+            "GLEP_1",
+            "SINI",
+            "M2",
+            "E",
+            "ECC",
+            "PX",
+            "A1",
+            "PHASE",
+        ]:
             if param in fitkeys:
                 idx = fitkeys.index(param)
-                if param == "glph_1":
+                if param == "GLPH_1":
                     svals = np.random.uniform(-0.5, 0.5, self.nwalkers)
-                elif param == "glep_1":
+                elif param == "GLEP_1":
                     if "minMJD" in kwargs and "maxMJD" in kwargs:
                         svals = np.random.uniform(
                             kwargs["minMJD"] + 100,
@@ -119,15 +129,17 @@ class EmceeSampler(MCMCSampler):
                         )
                     else:
                         raise ValueError("minMJD or maxMJD is None for glep_1 param")
-                elif param == "sini":
+                elif param == "SINI":
                     svals = np.random.uniform(0.0, 1.0, self.nwalkers)
-                elif param == "m2":
+                elif param == "M2":
                     svals = np.random.uniform(0.1, 0.6, self.nwalkers)
-                elif param in ["e", "ecc", "px", "a1"]:
+                elif param == "PHASE":
+                    svals = np.random.uniform(0.0, 1.0, self.nwalkers)
+                elif param in ["E", "ECC", "PX", "A1"]:
                     svals = np.fabs(
                         fitvals[idx] + fiterrs[idx] * np.random.randn(self.nwalkers)
                     )
-                    if param in ["e", "ecc"]:
+                    if param in ["E", "ECC"]:
                         svals[svals > 1.0] = 1.0 - (svals[svals > 1.0] - 1.0)
                 for ii in range(self.nwalkers):
                     pos[ii][idx] = svals[ii]
