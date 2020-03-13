@@ -36,14 +36,15 @@ class FD(DelayComponent):
     def setup(self):
         super(FD, self).setup()
         # Check if FD terms are in order.
-        self.FD_mapping = self.get_prefix_mapping_component("FD")
-        self.num_FD_terms = len(self.FD_mapping)
+        FD_mapping = self.get_prefix_mapping_component("FD")
+        self.num_FD_terms = len(FD_mapping)
         # set up derivative functions
-        for val in self.FD_mapping.values():
+        for val in FD_mapping.values():
             self.register_deriv_funcs(self.d_delay_FD_d_FDX, val)
 
     def validate(self):
         super(FD, self).validate()
+        FD_terms = list(self.get_prefix_mapping_component("FD").keys())
         FD_terms.sort()
         FD_in_order = list(range(1, max(FD_terms) + 1))
         if not FD_terms == FD_in_order:

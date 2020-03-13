@@ -56,7 +56,6 @@ class Spindown(PhaseComponent):
 
     def setup(self):
         super(Spindown, self).setup()
-        self.F_terms = list(self.get_prefix_mapping_component("F").keys())
         self.num_spin_terms = len(self.F_terms) + 1
         # Add derivative functions
         for fp in list(self.get_prefix_mapping_component("F").values()) + ["F0"]:
@@ -69,11 +68,10 @@ class Spindown(PhaseComponent):
             if getattr(self, p).value is None:
                 raise MissingParameter("Spindown", p)
         # Check continuity
-        F_terms = list(self.get_prefix_mapping_component("F").keys())
-        self.F_terms.sort()
+        sort_F_terms = sorted(self.F_terms)
         F_in_order = list(range(1, max(self.F_terms) + 1))
-        if not self.F_terms == F_in_order:
-            diff = list(set(F_in_order) - set(self.F_terms))
+        if not sort_F_terms == F_in_order:
+            diff = list(set(F_in_order) - set(sort_F_terms))
             raise MissingParameter("Spindown", "F%d" % diff[0])
         # If F1 is set, we need PEPOCH
         if self.F1.value != 0.0:
@@ -81,6 +79,10 @@ class Spindown(PhaseComponent):
                 raise MissingParameter(
                     "Spindown", "PEPOCH", "PEPOCH is required if F1 or higher are set"
                 )
+
+    @property
+    def F_terms(self):
+        return list(self.get_prefix_mapping_component("F").keys())
 
     def F_description(self, n):
         """Template function for description"""
