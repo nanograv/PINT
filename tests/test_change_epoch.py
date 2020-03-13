@@ -61,6 +61,7 @@ def test_change_dmepoch():
         "J2317+1439_ell1h_simple.par",
         "J1955+2908_dd_simple.par",
         "J1713+0747_ddk_simple.par",
+        "J0437-4715.par",
     ]
 )
 def binary_model(request):
