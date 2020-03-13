@@ -19,6 +19,10 @@ class SolarWindDispersion(Dispersion):
     The model is a simple spherically-symmetric model that varies
     only in its amplitude.
 
+    References
+    ----------
+    Madison et al. 2019, ApJ, 872, 150; Section 3.1
+
     """
 
     register = True
