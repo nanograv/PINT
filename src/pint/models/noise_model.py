@@ -17,7 +17,7 @@ class NoiseComponent(Component):
         self.scaled_sigma_funcs = []
         self.basis_funcs = []
 
-    def validate(self, ):
+    def validate(self,):
         super(NoiseComponent, self).validate()
 
 
