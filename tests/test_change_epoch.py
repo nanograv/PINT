@@ -77,18 +77,29 @@ def test_change_binary_epoch(binary_model):
     epoch_name = "TASC" if model_kind in ["ELL1", "ELL1H"] else "T0"
     orig_epoch = getattr(model, epoch_name).quantity
 
+    # Get PB and PBDOT from model
+    if model.PB.quantity is not None:
+        PB = model.PB.quantity
+        PBDOT = model.PBDOT.quantity  # will be set to 0.0 if not in par file
+    else:
+        PB = 1.0 / model.FB0.quantity
+        try:
+            PBDOT = -model.FB1.quantity / model.FB0.quantity ** 2
+        except AttributeError:
+            PBDOT = 0.0 * u.Unit("")
+
     model.change_binary_epoch(t0)
     new_epoch = getattr(model, epoch_name).quantity
     elapsed_time = (new_epoch.mjd_long - orig_epoch.mjd_long) * u.day
-    elapsed_periods = elapsed_time / (model.PB + model.PBDOT * elapsed_time / 2)
+    elapsed_periods = elapsed_time / (PB + PBDOT * elapsed_time / 2)
     n = np.round(elapsed_periods)
 
     # new_epoch is very close to an integer number of binary periods
     # away from orig_epoch
-    assert np.abs(elapsed_periods - n) < 1e-18 * model.PB
+    assert np.abs(elapsed_periods - n) < 1e-14
 
-    start_time = new_epoch - model.PB / 2 - (n - 0.5) / 2 * model.PB * model.PBDOT
-    end_time = new_epoch + model.PB / 2 + (n + 0.5) / 2 * model.PB * model.PBDOT
+    start_time = new_epoch - PB / 2 - (n - 0.5) / 2 * PB * PBDOT
+    end_time = new_epoch + PB / 2 + (n + 0.5) / 2 * PB * PBDOT
 
     # new_epoch is within a single binary period of t0
     assert start_time < t0 < end_time
