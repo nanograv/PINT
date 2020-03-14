@@ -137,7 +137,7 @@ class BinaryELL1Base(PulsarBinary):
         tasc_ld = self.TASC.quantity.tdb.mjd_long
         dt = (new_epoch.tdb.mjd_long - tasc_ld) * u.day
         d_orbits = dt / PB - PBDOT * dt ** 2 / (2.0 * PB ** 2)
-        n_orbits = np.round(d_orbits)
+        n_orbits = np.round(d_orbits.to(u.Unit("")))
         dt_integer_orbits = PB * n_orbits + PB * PBDOT * n_orbits ** 2 / 2.0
         self.TASC.quantity = self.TASC.quantity + dt_integer_orbits
 

@@ -92,11 +92,12 @@ def test_change_binary_epoch(binary_model):
     new_epoch = getattr(model, epoch_name).quantity
     elapsed_time = (new_epoch.mjd_long - orig_epoch.mjd_long) * u.day
     elapsed_periods = elapsed_time / (PB + PBDOT * elapsed_time / 2)
+    elapsed_periods = elapsed_periods.to(u.Unit(""))
     n = np.round(elapsed_periods)
 
     # new_epoch is very close to an integer number of binary periods
     # away from orig_epoch
-    assert np.abs(elapsed_periods - n) < 1e-14
+    assert np.abs(elapsed_periods - n) < 1e-12
 
     start_time = new_epoch - PB / 2 - (n - 0.5) / 2 * PB * PBDOT
     end_time = new_epoch + PB / 2 + (n + 0.5) / 2 * PB * PBDOT
