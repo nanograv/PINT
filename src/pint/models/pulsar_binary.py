@@ -15,6 +15,7 @@ from pint import ls
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.timing_model import DelayComponent, MissingParameter
+from pint.utils import taylor_horner_deriv
 
 
 class PulsarBinary(DelayComponent):
@@ -311,6 +312,20 @@ class PulsarBinary(DelayComponent):
         n_orbits = np.round(d_orbits.to(u.Unit("")))
         dt_integer_orbits = PB * n_orbits + PB * PBDOT * n_orbits ** 2 / 2.0
         self.T0.quantity = self.T0.quantity + dt_integer_orbits
+
+        # Update PB or FB0, FB1, etc.
+        if isinstance(self.binary_instance.orbits_cls, bo.OrbitPB):
+            dPB = PBDOT * dt_integer_orbits
+            self.PB.quantity = self.PB.quantity + dPB
+        else:
+            fbterms = [getattr(self, k).quantity for k in self.get_prefix_mapping('FB').values()]
+            fbterms = [0.0 * u.Unit("")] + fbterms
+
+            for n in range(len(fbterms) - 1):
+                cur_deriv = getattr(self, "FB{}".format(n))
+                cur_deriv.value = taylor_horner_deriv(
+                    dt.to(u.s), fbterms, deriv_order=n + 1
+                )
 
         # Update ECC, OM, and A1
         dECC = self.EDOT.quantity * dt_integer_orbits

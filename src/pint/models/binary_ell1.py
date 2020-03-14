@@ -6,10 +6,12 @@ import numpy as np
 from astropy import units as u
 from astropy.time import Time
 from pint.models.parameter import MJDParameter, floatParameter
+from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
 from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
 from pint.models.timing_model import MissingParameter
+from pint.utils import taylor_horner_deriv
 
 
 class BinaryELL1Base(PulsarBinary):
@@ -143,6 +145,20 @@ class BinaryELL1Base(PulsarBinary):
         n_orbits = np.round(d_orbits.to(u.Unit("")))
         dt_integer_orbits = PB * n_orbits + PB * PBDOT * n_orbits ** 2 / 2.0
         self.TASC.quantity = self.TASC.quantity + dt_integer_orbits
+
+        # Update PB or FB0, FB1, etc.
+        if isinstance(self.binary_instance.orbits_cls, bo.OrbitPB):
+            dPB = PBDOT * dt_integer_orbits
+            self.PB.quantity = self.PB.quantity + dPB
+        else:
+            fbterms = [getattr(self, k).quantity for k in self.get_prefix_mapping('FB').values()]
+            fbterms = [0.0 * u.Unit("")] + fbterms
+
+            for n in range(len(fbterms) - 1):
+                cur_deriv = getattr(self, "FB{}".format(n))
+                cur_deriv.value = taylor_horner_deriv(
+                    dt.to(u.s), fbterms, deriv_order=n + 1
+                )
 
         # Update EPS1, EPS2, and A1
         if self.EPS1DOT.quantity is not None:
