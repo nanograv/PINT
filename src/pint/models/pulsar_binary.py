@@ -293,7 +293,10 @@ class PulsarBinary(DelayComponent):
         # Get PB and PBDOT from model
         if self.PB.quantity is not None:
             PB = self.PB.quantity
-            PBDOT = self.PBDOT.quantity  # will be set to 0.0 if not in par file
+            if self.PBDOT.quantity is not None:
+                PBDOT = self.PBDOT.quantity
+            else:
+                PBDOT = 0.0 * u.Unit("")
         else:
             PB = 1.0 / self.FB0.quantity
             try:

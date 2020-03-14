@@ -80,7 +80,10 @@ def test_change_binary_epoch(binary_model):
     # Get PB and PBDOT from model
     if model.PB.quantity is not None:
         PB = model.PB.quantity
-        PBDOT = model.PBDOT.quantity  # will be set to 0.0 if not in par file
+        if model.PBDOT.quantity is not None:
+            PBDOT = model.PBDOT.quantity
+        else:
+            PBDOT = 0.0 * u.Unit("")
     else:
         PB = 1.0 / model.FB0.quantity
         try:
