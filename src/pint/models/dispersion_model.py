@@ -95,6 +95,16 @@ class DispersionDM(Dispersion):
 
     def setup(self):
         super(Dispersion, self).setup()
+        base_dms = list(self.get_prefix_mapping_component("DM").values())
+        base_dms += ["DM"]
+
+        for dm_name in base_dms:
+            self.register_deriv_funcs(self.d_delay_d_DMs, dm_name)
+
+    def validate(self):
+        """ Validate the DM parameters input.
+        """
+        super(Dispersion, self).validate()
         # If DM1 is set, we need DMEPOCH
         if self.DM1.value != 0.0:
             if self.DMEPOCH.value is None:
@@ -103,11 +113,6 @@ class DispersionDM(Dispersion):
                     "DMEPOCH",
                     "DMEPOCH is required if DM1 or higher are set",
                 )
-        base_dms = list(self.get_prefix_mapping_component("DM").values())
-        base_dms += ["DM"]
-
-        for dm_name in base_dms:
-            self.register_deriv_funcs(self.d_delay_d_DMs, dm_name)
 
     def DM_dervative_unit(self, n):
         return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
@@ -281,6 +286,15 @@ class DispersionDMX(Dispersion):
     def setup(self):
         super(DispersionDMX, self).setup()
         # Get DMX mapping.
+        # Register the DMX derivatives
+        for prefix_par in self.get_params_of_type("prefixParameter"):
+            if prefix_par.startswith("DMX_"):
+                self.register_deriv_funcs(self.d_delay_d_DMX, prefix_par)
+
+    def validate(self):
+        """ Validate the DMX parameters.
+        """
+        super(DispersionDMX, self).validate()
         DMX_mapping = self.get_prefix_mapping_component("DMX_")
         DMXR1_mapping = self.get_prefix_mapping_component("DMXR1_")
         DMXR2_mapping = self.get_prefix_mapping_component("DMXR2_")
@@ -295,10 +309,6 @@ class DispersionDMX(Dispersion):
             errorMsg += "equals to Number of DMXR2_ parameters. "
             errorMsg += "Please check your prefixed parameters."
             raise AttributeError(errorMsg)
-        # create d_delay_d_dmx functions
-        for prefix_par in self.get_params_of_type("prefixParameter"):
-            if prefix_par.startswith("DMX_"):
-                self.register_deriv_funcs(self.d_delay_d_DMX, prefix_par)
 
     def dmx_dm(self, toas):
         condition = {}

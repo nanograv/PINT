@@ -53,6 +53,12 @@ class Wave(PhaseComponent):
 
     def setup(self):
         super(Wave, self).setup()
+        self.wave_terms = list(self.get_prefix_mapping_component("WAVE").keys())
+        self.num_wave_terms = len(self.wave_terms)
+
+    def validate(self):
+        super(Wave, self).validate()
+        self.setup()
         if self.WAVEEPOCH.quantity is None:
             if self.PEPOCH.quantity is None:
                 raise MissingParameter(
@@ -62,19 +68,16 @@ class Wave(PhaseComponent):
                 )
             else:
                 self.WAVEEPOCH = self.PEPOCH
+
         if (not hasattr(self, "F0")) or (self.F0.quantity is None):
             raise MissingParameter(
                 "Wave", "F0", "F0 is required if WAVE entries are present."
             )
-
-        wave_terms = list(self.get_prefix_mapping_component("WAVE").keys())
-        wave_terms.sort()
-        wave_in_order = list(range(1, max(wave_terms) + 1))
-        if not wave_terms == wave_in_order:
-            diff = list(set(wave_in_order) - set(wave_terms))
+        self.wave_terms.sort()
+        wave_in_order = list(range(1, max(self.wave_terms) + 1))
+        if not self.wave_terms == wave_in_order:
+            diff = list(set(wave_in_order) - set(self.wave_terms))
             raise MissingParameter("Wave", "WAVE%d" % diff[0])
-
-        self.num_wave_terms = len(wave_terms)
 
     def print_par(self,):
         result = ""
