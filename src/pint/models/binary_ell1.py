@@ -124,6 +124,15 @@ class BinaryELL1Base(PulsarBinary):
         else:
             new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
 
+        try:
+            FB2 = self.FB2.quantity
+            log.warning(
+                "Ignoring orbital frequency derivatives higher than FB1"
+                "in computing new T0"
+            )
+        except AttributeError:
+            pass
+
         # Get PB and PBDOT from model
         if self.PB.quantity is not None:
             PB = self.PB.quantity
