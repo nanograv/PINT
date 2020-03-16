@@ -32,3 +32,4 @@ black; python_version >= "3.6"
 pygments
 ipython
 pathlib2
+twine
