@@ -3,11 +3,11 @@ from __future__ import absolute_import, division, print_function
 from warnings import warn
 
 import numpy as np
-from astropy import units as u
+from astropy import log, units as u
 from astropy.time import Time
 from pint.models.parameter import MJDParameter, floatParameter
-from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.pulsar_binary import PulsarBinary
+from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
 from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
 from pint.models.timing_model import MissingParameter
@@ -128,7 +128,7 @@ class BinaryELL1Base(PulsarBinary):
             FB2 = self.FB2.quantity
             log.warning(
                 "Ignoring orbital frequency derivatives higher than FB1"
-                "in computing new T0"
+                "in computing new TASC"
             )
         except AttributeError:
             pass
