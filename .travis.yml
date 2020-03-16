@@ -2,6 +2,10 @@
 
 language: python
 
+compiler: gcc
+
+os: linux
+
 matrix:
     fast_finish: true
     include:
@@ -26,7 +30,22 @@ matrix:
           services: []
           after_success: []
           before_script: git fetch --unshallow
-        - python: "2.7"
+        - name: "Test oldest Python3 dependencies"
+          python: "3.7"
+          sudo: false
+          language: python
+          install: travis_retry pip install tox-travis
+          script: 
+            - tox -e oldestdeps
+#        - name: "Test oldest Python2 dependencies"
+#          python: "2.7"
+#          sudo: false
+#          language: python
+#          install: travis_retry pip install tox-travis
+#          script: 
+#            - tox -e oldestdeps2
+        - name: "Test under Python 2.7"
+          python: "2.7"
         - python: "3.5"
         - python: "3.6"
         - python: "3.7"
