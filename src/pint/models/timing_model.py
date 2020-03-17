@@ -490,8 +490,19 @@ class TimingModel(object):
             category[cp.category].append(cp)
         return dict(category)
 
-    def add_param_from_top(self, param, target_component):
-        """Add a parameter to a timing model component."""
+    def add_param_from_top(self, param, target_component, setup=False):
+        """ Add a parameter to a timing model component.
+           
+            Parameters
+            ----------
+            param: str
+                Parameter name
+            target_component: str
+                Parameter host component name. If given as "" it would add
+                parameter to the top level `TimingModel` class
+            setup: bool, optional
+                Flag to run setup() function.  
+        """
         if target_component == "":
             setattr(self, param.name, param)
             self.top_level_params += [param.name]
@@ -501,7 +512,7 @@ class TimingModel(object):
                     "Can not find component '%s' in "
                     "timging model." % target_component
                 )
-            self.components[target_component].add_param(param, setup=True)
+            self.components[target_component].add_param(param, setup=setup)
 
     def remove_param(self, param):
         """Remove a parameter from timing model.

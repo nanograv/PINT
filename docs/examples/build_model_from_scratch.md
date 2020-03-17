@@ -162,7 +162,8 @@ Add DMX parameters
 ```python
 dmx_0002 = p.prefixParameter(parameter_type='float', name='DMX_0002', 
                              value=None, unit=u.pc/u.cm**3)
-tm.add_param_from_top(dmx_0002, 'DispersionDMX') # Component should given by its name string.
+tm.add_param_from_top(dmx_0002, 'DispersionDMX', setup=True) 
+# Component should given by its name string. use setup=True make sure new parameter get registered.
 assert hasattr(tm, 'DMX_0002')
 print(tm.delay_deriv_funcs['DMX_0002']) # the derivative function should be added. 
 ```
