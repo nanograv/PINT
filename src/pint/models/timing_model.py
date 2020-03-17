@@ -69,6 +69,7 @@ DEFAULT_ORDER = [
     "dispersion_dmx",
     "pulsar_system",
     "frequency_dependent",
+    "absolute_phase",
     "spindown",
     "phase_jump",
     "wave",
@@ -363,7 +364,8 @@ class TimingModel(object):
             comp_type = comp_base[-3].__name__
         return comp_type
 
-    def add_component(self, component, order=DEFAULT_ORDER, force=False, validate=True):
+    def add_component(self, component, order=DEFAULT_ORDER, force=False,
+                      validate=True):
         """Add a component into TimingModel.
 
         Parameters
@@ -417,67 +419,6 @@ class TimingModel(object):
         if validate:
             self.validate()
 
-    #    def add_component(self, component, param_info, order=DEFAULT_ORDER,
-    #                      build_mood=False, force=False):
-    #        """Add a component to the timing model.
-    #
-    #        Parameters
-    #        ----------
-    #        component : Component
-    #            The component to be added to the timing model.
-    #        param_info: dict
-    #            Input parameter information. The key should be the parameter name
-    #            and the parameter information should be provided by a dictonary of
-    #            parameter field.
-    #        order : list, optional
-    #            Where in the list of components to insert the new one.
-    #        build_mood: bool
-    #            If true, don't run setup.
-    #        force : bool, optional
-    #            If true, add a duplicate component.
-    #        """
-    #        for param, info in param_info:
-    #            # update the parameters in the component
-    #            param_object = getattr(component, param, None)
-    #            # new parameter to the component. Generally only mask or prefix
-    #            # parameter can be add to a component instance.
-    #            if param_object is None:
-    #                # check if the new parameter a  maskParameter, only
-    #                # maskParameter can be duplicatedly added.
-    #                prefixs = component.param_prefixs
-    #
-    #                try:
-    #                    prefix, index_str, index = split_prefixed_name(param)
-    #                except PrefixError:
-    #                    # Can not seperate parameter perfix, then assume param name
-    #                    # as the prefix name.
-    #                    prefix = param
-    #                    index = -1
-    #                example_params = prefixs.get(prefix, None)
-    #                if example_params is None:
-    #                    raise ValueError("Can not find any initialization of '{}'."
-    #                                     " Please check your model component class.")
-    #                else:
-    #                    prefix_mapping = component.get_prefix_mapping(prefix)
-    #                    if index < 0:
-    #                        for ep in example_params:
-    #                            exm_par = getattr(component, ep)
-    #                            if exm_par.quantity is None:
-    #                                param_object = exm_par
-    #                            else:
-    #                                continue
-    #                        # Did not find empty parameter to fill in
-    #                        if param_object is None:
-    #                            index = max(list(prefix_mapping.keys())) + 1
-    #                            new_par = exm_par.new_param(index)
-    #                            component.add_param(new_par)
-    #                            param_object = getattr(component, new_par.name)
-    #            for field, value in info.items():
-    #                setattr(param_object, field, value)
-    #        self._add_component_object(component, order=order, force=force)
-    #        if not build_mood:
-    #            self.setup()
-    #
     def _locate_param_host(self, components, param):
         """ Search for the parameter host component.
 
@@ -560,7 +501,7 @@ class TimingModel(object):
                     "Can not find component '%s' in "
                     "timging model." % target_component
                 )
-            self.components[target_component].add_param(param)
+            self.components[target_component].add_param(param, setup=True)
 
     def remove_param(self, param):
         """Remove a parameter from timing model.
