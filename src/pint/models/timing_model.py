@@ -367,21 +367,21 @@ class TimingModel(object):
     def map_component(self, component):
         """ Get the location of component.
 
-            Parameter
-            ---------
-            component: str or `Component` object
-                Component name or component object.
+        Parameter
+        ---------
+        component: str or `Component` object
+            Component name or component object.
             
-            Returns
-            -------
-            comp: object
-                Component object.
-            order: int
-                The index/order of the component in the component list
-            host_list: list
-                The host list of the component.
-            comp_type: str
-                The component type (e.g., Delay or Phase)
+        Returns
+        -------
+        comp: object
+            Component object.
+        order: int
+            The index/order of the component in the component list
+        host_list: list
+            The host list of the component.
+        comp_type: str
+            The component type (e.g., Delay or Phase)
         """
         comps = self.components
         if isinstance(component, str):
