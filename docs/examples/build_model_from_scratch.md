@@ -5,8 +5,8 @@ jupyter:
     text_representation:
       extension: .md
       format_name: markdown
-      format_version: '1.1'
-      jupytext_version: 1.2.4
+      format_version: '1.2'
+      jupytext_version: 1.4.0
   kernelspec:
     display_name: Python 3
     language: python
@@ -33,28 +33,6 @@ Timing model can be put together from the components and then fill up the with p
 
 We are going to build the model for "NGC6440E.par" from scratch
 
-Here is the parameters for NGC6440E.par
-
-PSR              1748-2021E
-RAJ       17:48:52.75  1 0.05
-DECJ      -20:21:29.0  1 0.4
-F0       61.485476554  1 5e-10
-F1         -1.181D-15  1 1e-18
-PEPOCH        53750.000000
-POSEPOCH      53750.000000
-DM              223.9  1 0.3
-SOLARN0               0.00
-EPHEM               DE421
-CLK              UTC(NIST)
-UNITS               TDB
-TIMEEPH             FB90
-T2CMETHOD           TEMPO
-CORRECT_TROPOSPHERE N
-PLANET_SHAPIRO      N
-DILATEFREQ          N
-TZRMJD  53801.38605120074849
-TZRFRQ            1949.609
-TZRSITE                  1
 
 ```python
 # list all the existing component
