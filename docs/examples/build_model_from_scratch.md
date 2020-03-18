@@ -24,7 +24,7 @@ jupyter:
 ```python
 import astropy.units as u
 from pint.models import parameter as p
-from pint.models.timing_model import Component
+from pint.models.timing_model import TimingModel, Component
 ```
 
 ### Building a timing model from scrath

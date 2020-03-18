@@ -364,8 +364,7 @@ class TimingModel(object):
             comp_type = comp_base[-3].__name__
         return comp_type
 
-    def add_component(self, component, order=DEFAULT_ORDER, force=False,
-                      validate=True):
+    def add_component(self, component, order=DEFAULT_ORDER, force=False, validate=True):
         """Add a component into TimingModel.
 
         Parameters
