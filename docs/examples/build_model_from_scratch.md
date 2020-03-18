@@ -117,18 +117,30 @@ tm.DM.uncertainty = 0.3
 
 Deleting a component will remove the component from component list
 
+```python
+# Remove by name
+tm.remove_component("DispersionDM")
+print(tm.components)
+```
+or remove by object
+
+```python
+# Remove by object
+tm.add_component(dispersion, validate=False)
+print("Before\n",tm.components)
+tm.remove_component(dispersion)
+print("After\n", tm.components)
+```
+
 You can find where does the component stroed using name string via map_component() method
 
 ```python
-# First find where does the component stroed
-component, order, from_list, comp_type = tm.map_component("DispersionDM")
+component, order, from_list, comp_type = tm.map_component("Spindown")
 # This function return the component instance, the order it in the list, the list it is
 # stored and the type of the component class.
-```
-Removing a component is just remove it from the list.
-```python
-from_list.remove(component)
-print(tm.components)
+print(component)
+print(from_list)
+print(comp_type)
 ```
 Let us switch the 'DispersionDM' model to 'DisperisonDMX' model. 
 
