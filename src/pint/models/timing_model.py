@@ -364,6 +364,42 @@ class TimingModel(object):
             comp_type = comp_base[-3].__name__
         return comp_type
 
+    def map_component(self, component):
+        """ Get the location of component.
+
+            Parameter
+            ---------
+            component: str or `Component` object
+                Component name or component object.
+            
+            Returns
+            -------
+            comp: object
+                Component object.
+            order: int
+                The index/order of the component in the component list
+            host_list: list
+                The host list of the component.
+            comp_type: str
+                The component type (e.g., Delay or Phase)
+        """
+        comps = self.components
+        if isinstance(component, str):
+            if component not in list(comps.keys()):
+                raise AttributeError("No '%s' in the timing model." % component)
+            comp = comps[component]
+        else:  # When component is an component instance.
+            if component not in list(comps.values()):
+                raise AttributeError(
+                    "No '%s' in the timing model." % component.__class__.__name__
+                )
+            else:
+                comp = component
+        comp_type = self.get_component_type(comp)
+        host_list = getattr(self, comp_type + "_list")
+        order = host_list.index(comp)
+        return comp, order, host_list, comp_type
+
     def add_component(self, component, order=DEFAULT_ORDER, force=False, validate=True):
         """Add a component into TimingModel.
 
@@ -418,6 +454,17 @@ class TimingModel(object):
         if validate:
             self.validate()
 
+    def remove_component(self, component):
+        """ Remove one component from the timing model. 
+            
+            Parameter
+            ---------
+            component: str or `Component` object
+                Component name or component object.
+        """
+        cp, co_order, host, cp_type = self.map_component(component)
+        host.remove(cp)
+
     def _locate_param_host(self, components, param):
         """ Search for the parameter host component.
 
@@ -464,24 +511,6 @@ class TimingModel(object):
                 new_tm.setup_components(new_comp_list)
         new_tm.top_level_params = self.top_level_params
         return new_tm
-
-    def map_component(self, component):
-        comps = self.components
-        if isinstance(component, str):
-            if component not in list(comps.keys()):
-                raise AttributeError("No '%s' in the timing model." % component)
-            comp = comps[component]
-        else:  # When component is an component instance.
-            if component not in list(comps.values()):
-                raise AttributeError(
-                    "No '%s' in the timing model." % component.__class__.__name__
-                )
-            else:
-                comp = component
-        comp_type = self.get_component_type(comp)
-        comp_type_list = getattr(self, comp_type + "_list")
-        order = comp_type_list.index(comp)
-        return comp, order, comp_type_list, comp_type
 
     def get_component_of_category(self):
         category = defaultdict(list)
