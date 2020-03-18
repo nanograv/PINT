@@ -123,3 +123,25 @@ class TestModelBuilding:
         assert jump2.key_value == [1440, 2000]
         assert jump3.key_value == ["ao"]
         assert tm.jumps == ["JUMP1", "JUMP2", "JUMP3"]
+
+    def test_remove_component(self):
+        tm = TimingModel(
+            "TestTimingModel", [BinaryELL1(), AstrometryEquatorial(), Spindown()]
+        )
+        
+        remove_cp = tm.components['BinaryELL1']
+        
+        # test remove by name
+        tm.remove_component('BinaryELL1')
+        assert not 'BinaryELL1' in tm.components.keys()
+        assert not  remove_cp in tm.DelayComponent_list
+        
+        # test remove by component
+        tm2 = TimingModel(
+            "TestTimingModel", [BinaryELL1(), AstrometryEquatorial(), Spindown()]
+        )
+
+        remove_cp2 = tm2.components['BinaryELL1']
+        tm2.remove(remove_cp2)
+        assert not 'BinaryELL1' in tm2.components.keys()
+        assert not  remove_cp2 in tm2.DelayComponent_list
