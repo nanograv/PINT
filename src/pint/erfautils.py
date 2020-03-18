@@ -48,7 +48,7 @@ OM = 1.00273781191135448 * 2.0 * np.pi / SECS_PER_DAY
 asec2rad = 4.84813681109536e-06
 
 
-def gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
+def old_gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
     """Return a list of PosVel instances for the observatory at the TOA times.
 
     Observatory location should be given in the loc argument as an astropy
@@ -158,7 +158,7 @@ def gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
 
 # This seems to be never used!  It also has no docstring!
 # Astropy uses IERS A data, which differs from IERS B data.
-def astropy_gcrs_posvel_from_itrf(loc, toas, obsname=None):
+def gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
     """Return a list of PosVel instances for the observatory at the TOA times.
 
     Observatory location should be given in the loc argument as an astropy
