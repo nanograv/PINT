@@ -457,10 +457,10 @@ class TimingModel(object):
     def remove_component(self, component):
         """ Remove one component from the timing model. 
             
-            Parameter
-            ---------
-            component: str or `Component` object
-                Component name or component object.
+        Parameters
+        ----------
+        component: str or `Component` object
+            Component name or component object.
         """
         cp, co_order, host, cp_type = self.map_component(component)
         host.remove(cp)
