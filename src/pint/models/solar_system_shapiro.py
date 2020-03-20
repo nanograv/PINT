@@ -43,6 +43,9 @@ class SolarSystemShapiro(DelayComponent):
     def setup(self):
         super(SolarSystemShapiro, self).setup()
 
+    def validate(self):
+        super(SolarSystemShapiro, self).validate()
+
     # Put masses in a convenient dictionary
     _ss_mass_sec = {
         "sun": Tsun.value,

@@ -17,6 +17,9 @@ class NoiseComponent(Component):
         self.scaled_sigma_funcs = []
         self.basis_funcs = []
 
+    def validate(self,):
+        super(NoiseComponent, self).validate()
+
 
 class ScaleToaError(NoiseComponent):
     """Correct reported template fitting uncertainties.
@@ -122,6 +125,9 @@ class ScaleToaError(NoiseComponent):
             if pp.startswith("EQUAD"):
                 par = getattr(self, pp)
                 self.EQUADs[pp] = (par.key, par.key_value)
+
+    def validate(self):
+        super(ScaleToaError, self).validate()
         # check duplicate
         for el in ["EFACs", "EQUADs"]:
             l = list(getattr(self, el).values())
@@ -206,6 +212,15 @@ class EcorrNoise(NoiseComponent):
                 self.ECORRs[mask_par] = (par.key, par.key_value)
             else:
                 continue
+
+        # check duplicate
+        for el in ["ECORRs"]:
+            l = list(getattr(self, el).values())
+            if [x for x in l if l.count(x) > 1] != []:
+                raise ValueError("'%s' have duplicated keys and key values." % el)
+
+    def validate(self):
+        super(EcorrNoise, self).validate()
 
         # check duplicate
         for el in ["ECORRs"]:
@@ -320,6 +335,9 @@ class PLRedNoise(NoiseComponent):
 
     def setup(self):
         super(PLRedNoise, self).setup()
+
+    def validate(self):
+        super(PLRedNoise, self).validate()
 
     def get_pl_vals(self):
         nf = int(self.TNRedC.value) if self.TNRedC.value is not None else 30

@@ -2,13 +2,15 @@
 
 from glob import glob
 from os.path import basename, join
-
+from collections import defaultdict
 import pytest
 
+import astropy.units as u
 from pint.models.astrometry import AstrometryEquatorial
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
+from pint.models.spindown import Spindown
 from pint.models.model_builder import UnknownBinaryModel, get_model, get_model_new
-from pint.models.timing_model import MissingParameter, TimingModel
+from pint.models.timing_model import MissingParameter, TimingModel, Component
 from pinttestdata import datadir
 
 
@@ -144,3 +146,33 @@ def test_get_model_roundtrip(tmp_dir, parfile):
 
     # for p in m_old.get_params_mapping():
     #    assert getattr(m_old, p).quantity == getattr(m_roundtrip, p).quantity
+
+
+def test_simple_manual():
+    tm = TimingModel(
+        name="test_manual", components=[AstrometryEquatorial(), Spindown()]
+    )
+    tm.setup()
+    assert "F0" in tm.phase_deriv_funcs.keys()
+    assert "F1" in tm.phase_deriv_funcs.keys()
+    assert "RAJ" in tm.delay_deriv_funcs.keys()
+    assert "DECJ" in tm.delay_deriv_funcs.keys()
+
+    with pytest.raises(MissingParameter):  # No RA and DEC input
+        tm.validate()
+
+    tm.RAJ.value = "19:59:48"
+    tm.DECJ.value = "20:48:36"
+    tm.F0.value = 622.122030511927 * u.Hz
+    tm.validate()  # This should work.
+
+
+def test_add_all_components():
+    # models_by_category = defaultdict(list)
+    # for k, c_type in Component.component_types.items():
+    #     print(k, c_type)
+    #     models_by_category[c_type.category].append(c_type)
+    comps = [x() for x in Component.component_types.values()]
+    tm = TimingModel(name="test_manual", components=comps)
+    tm.setup()  # This should not have any parameter check.
+    assert len(tm.components) == len(comps)

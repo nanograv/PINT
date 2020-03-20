@@ -37,16 +37,19 @@ class FD(DelayComponent):
         super(FD, self).setup()
         # Check if FD terms are in order.
         FD_mapping = self.get_prefix_mapping_component("FD")
-        FD_terms = list(FD_mapping.keys())
+        self.num_FD_terms = len(FD_mapping)
+        # set up derivative functions
+        for val in FD_mapping.values():
+            self.register_deriv_funcs(self.d_delay_FD_d_FDX, val)
+
+    def validate(self):
+        super(FD, self).validate()
+        FD_terms = list(self.get_prefix_mapping_component("FD").keys())
         FD_terms.sort()
         FD_in_order = list(range(1, max(FD_terms) + 1))
         if not FD_terms == FD_in_order:
             diff = list(set(FD_in_order) - set(FD_terms))
             raise MissingParameter("FD", "FD%d" % diff[0])
-        self.num_FD_terms = len(FD_terms)
-        # set up derivative functions
-        for ii, val in FD_mapping.items():
-            self.register_deriv_funcs(self.d_delay_FD_d_FDX, val)
 
     def FD_delay(self, toas, acc_delay=None):
         """Calculate frequency dependent delay.

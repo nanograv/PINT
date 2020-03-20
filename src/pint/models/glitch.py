@@ -110,9 +110,6 @@ class Glitch(PhaseComponent):
             if x in y
         ]
         for idx in set(self.glitch_indices):
-            if not hasattr(self, "GLEP_%d" % idx):
-                msg = "Glicth Epoch is needed for Glicth %d." % idx
-                raise MissingParameter("Glitch", "GLEP_%d" % idx, msg)
             for param in self.glitch_prop:
                 if not hasattr(self, param + "%d" % idx):
                     param0 = getattr(self, param + "1")
@@ -121,6 +118,15 @@ class Glitch(PhaseComponent):
                 self.register_deriv_funcs(
                     getattr(self, "d_phase_d_" + param[0:-1]), param + "%d" % idx
                 )
+
+    def validate(self):
+        """ Validate parameters input.
+        """
+        super(Glitch, self).validate()
+        for idx in set(self.glitch_indices):
+            if not hasattr(self, "GLEP_%d" % idx):
+                msg = "Glicth Epoch is needed for Glicth %d." % idx
+                raise MissingParameter("Glitch", "GLEP_%d" % idx, msg)
 
         # Check the Decay Term.
         glf0dparams = [x for x in self.params if x.startswith("GLF0D_")]

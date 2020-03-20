@@ -66,6 +66,11 @@ class IFunc(PhaseComponent):
 
     def setup(self):
         super(IFunc, self).setup()
+        self.terms = list(self.get_prefix_mapping_component("IFUNC").keys())
+        self.num_terms = len(self.terms)
+
+    def validate(self):
+        super(IFunc, self).validate()
         if self.SIFUNC.quantity is None:
             raise MissingParameter(
                 "IFunc", "SIFUNC", "SIFUNC is required if IFUNC entries are present."
@@ -78,13 +83,10 @@ class IFunc(PhaseComponent):
         # this is copied from the wave model, but I don't think this check
         # is strictly necessary.  An ephemeris could remain perfectly valid
         # if some IFUNC terms were "missing".  (The same is true for WAVE.)
-        terms = list(self.get_prefix_mapping_component("IFUNC").keys())
-        terms.sort()
-        for i, term in enumerate(terms):
+        self.terms.sort()
+        for i, term in enumerate(self.terms):
             if (i + 1) != term:
                 raise MissingParameter("IFunc", "IFUNC%d" % (i + 1))
-
-        self.num_terms = len(terms)
 
     def print_par(self,):
         result = self.SIFUNC.as_parfile_line()
