@@ -72,16 +72,21 @@ class BinaryDD(PulsarBinary):
         )
 
     def setup(self):
-        """Check out parameters setup.
+        """setup.
         """
         super(BinaryDD, self).setup()
+
+    def validate(self):
+        """ Validate the input parameters.
+        """
+        super(BinaryDD, self).validate()
         self.check_required_params(["T0", "A1"])
         # If any *DOT is set, we need T0
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
             if getattr(self, p).value is None:
                 getattr(self, p).set("0")
                 getattr(self, p).frozen = True
-
+            # TODO This steps seems duplicated.
             if getattr(self, p).value is not None:
                 if self.T0.value is None:
                     raise MissingParameter("DD", "T0", "T0 is required if *DOT is set")

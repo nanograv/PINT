@@ -147,20 +147,20 @@ class PulsarBinary(DelayComponent):
         # Setup the model isinstance
         self.binary_instance = self.binary_model_class()
         # Setup the FBX orbits if FB is set.
+        # TODO this should use a smarter way to set up orbit.
         FBX_mapping = self.get_prefix_mapping_component("FB")
         FBXs = {}
         for fbn in FBX_mapping.values():
             FBXs[fbn] = getattr(self, fbn).quantity
         if None not in FBXs.values():
             for fb_name, fb_value in FBXs.items():
-                if fb_value is None:
-                    raise MissingParameter(
-                        self.binary_model_name, fb_name + " is required for FB orbits."
-                    )
                 self.binary_instance.add_binary_params(fb_name, fb_value)
             self.binary_instance.orbits_cls = bo.OrbitFBX(
                 self.binary_instance, list(FBXs.keys())
             )
+
+    def validate(self):
+        super(PulsarBinary, self).validate()
 
     def check_required_params(self, required_params):
         # seach for all the possible to get the parameters.
