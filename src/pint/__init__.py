@@ -9,6 +9,7 @@ from astropy.units import si
 from pint.extern._version import get_versions
 from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import PulsarMJD
+from pint.erfautils import get_iers_up_to_date
 
 __all__ = [
     "__version__",
@@ -84,3 +85,6 @@ pint_units = {
     "pulse phase": u.cycle,
     "hourangle_second": hourangle_second,
 }
+
+# Prepare IERS and update tables if needed
+get_iers_up_to_date()
