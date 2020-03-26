@@ -455,4 +455,15 @@ class GLSFitter(Fitter):
             # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
 
+            # Compute the noise realizations if possible
+            if not full_cov:
+                noise_dims = self.model.noise_model_dimensions(self.toas)
+                noise_resids = {}
+                for comp in noise_dims.keys():
+                    p0 = noise_dims[comp][0] + ntmpar
+                    p1 = p0 + noise_dims[comp][1]
+                    noise_resids[comp] = np.dot(M[:,p0:p1], xhat[p0:p1]) * u.s
+                self.resids.noise_resids = noise_resids
+
+
         return chi2
