@@ -462,8 +462,7 @@ class GLSFitter(Fitter):
                 for comp in noise_dims.keys():
                     p0 = noise_dims[comp][0] + ntmpar
                     p1 = p0 + noise_dims[comp][1]
-                    noise_resids[comp] = np.dot(M[:,p0:p1], xhat[p0:p1]) * u.s
+                    noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
                 self.resids.noise_resids = noise_resids
-
 
         return chi2

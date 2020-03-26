@@ -662,7 +662,8 @@ class TimingModel(object):
         ntot = 0
         for nc in self.NoiseComponent_list:
             bfs = nc.basis_funcs
-            if len(bfs)==0: continue
+            if len(bfs) == 0:
+                continue
             nbf = 0
             for bf in bfs:
                 nbf += len(bf(toas)[1])
