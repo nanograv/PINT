@@ -247,7 +247,7 @@ When tagging, always use "annotated tags" by specifying ``-a``::
 Releasing
 '''''''''
 
-To release, you need to have your PyPI API token in ``~/.pypirc`. 
+To release, you need to have your PyPI API token in ``~/.pypirc``. 
 You must be on a clean, tagged, version of the nanograv/master branch. Then you can just::
 
    $ make release
