@@ -1,13 +1,12 @@
 ---
 jupyter:
   jupytext:
-    cell_metadata_json: true
     formats: ipynb,md
     text_representation:
       extension: .md
       format_name: markdown
-      format_version: '1.2'
-      jupytext_version: 1.4.0
+      format_version: '1.1'
+      jupytext_version: 1.2.4
   kernelspec:
     display_name: Python 3
     language: python
@@ -323,9 +322,7 @@ print(par.uncertainty)
 <!-- #endregion -->
 
 ```python
-cat = pp.prefixParameter(
-    parameter_type="float", name="CAT0", units=u.ml, long_double=True
-)
+cat = pp.prefixParameter(parameter_type='float', name="CAT0", units=u.ml, long_double=True)
 ```
 
 ```python
