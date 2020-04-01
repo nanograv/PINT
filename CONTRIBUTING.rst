@@ -1,5 +1,4 @@
 .. highlight:: shell
-.. _`Contributing`:
 
 =========================
 How to Contribute to PINT
