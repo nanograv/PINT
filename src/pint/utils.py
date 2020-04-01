@@ -444,8 +444,8 @@ def dmxparse(fitter, save=False):
     Inputs:
     :param fitter: PINT fitter used to get timing residuals, must have already run GLS fit
     :param save: boolean; if True saves output to text file in the format used for the TEMPO version. 
-          If not output save file is desired, save = False (which is the default)
-          Output file name is dmxparse.out"""
+    If not output save file is desired, save = False (which is the default)
+    Output file name is dmxparse.out"""
     # We get the DMX values, errors, and mjds (same as in getting the DMX values for DMX v. time)
     # Get number of DMX epochs
     dmx_epochs = 0
@@ -459,23 +459,21 @@ def dmxparse(fitter, save=False):
     DMX_R1 = []
     DMX_R2 = []
     DMX_center_MJD = []
-    for ii in range(dmx_epochs):
-        ii += 1
+    for ii in range(1, dmx_epochs + 1):
         if ii < 10:
             ext = "000%s" % (ii)
         elif ii >= 10 and ii < 100:
             ext = "00%s" % (ii)
         elif ii >= 100 and ii < 1000:
             ext = "0%s" % (ii)
-        exec("DMX_keys.append('DMX_%s')" % (ext))
-        exec("DMXs.append(fitter.model.DMX_%s.value)" % (ext))
-        exec("DMX_Errs.append(fitter.model.DMX_%s.uncertainty.value)" % (ext))
-        exec("DMX_R1.append(fitter.model.DMXR1_%s.value)" % ext)
-        exec("DMX_R2.append(fitter.model.DMXR2_%s.value)" % ext)
-        exec(
-            "DMX_center_MJD.append((fitter.model.DMXR1_%s.value+fitter.model.DMXR1_%s.value)/2)"
-            % (ext, ext)
-        )
+        DMX_keys.append("DMX_%s" % (ext))
+        DMXs.append(getattr(fitter.model, "DMX_%s" % (ext)).value)
+        DMX_Errs.append(getattr(fitter.model, "DMX_%s" % (ext)).uncertainty_value)
+        dmxr1 = getattr(fitter.model, "DMXR1_%s" % (ext)).value
+        dmxr2 = getattr(fitter.model, "DMXR2_%s" % (ext)).value
+        DMX_R1.append(dmxr1)
+        DMX_R2.append(dmxr2)
+        DMX_center_MJD.append((dmxr1 + dmxr2) / 2)
     DMXs = np.array(DMXs)
     DMX_Errs = np.array(DMX_Errs)
     DMX_R1 = np.array(DMX_R1)

@@ -33,7 +33,14 @@ from pint.pulsar_mjd import (
     time_from_mjd_string,
     time_to_longdouble,
 )
-from pint.utils import PosVel, interesting_lines, lines_of, open_or_use, taylor_horner, dmxparse
+from pint.utils import (
+    PosVel,
+    interesting_lines,
+    lines_of,
+    open_or_use,
+    taylor_horner,
+    dmxparse,
+)
 
 import pint.models as tm
 from pint import fitter, toa
@@ -569,6 +576,7 @@ def test_mjd_string_rejects_val2(format_):
 def test_time_from_mjd_string_rejects_other_formats():
     with pytest.raises(ValueError):
         time_from_mjd_string("58000", format="cxcsec")
+
 
 def test_dmxparse():
     """test for dmxparse function"""
