@@ -579,7 +579,7 @@ def test_time_from_mjd_string_rejects_other_formats():
 
 
 def test_dmxparse():
-    """test for dmxparse function"""
+    """Test for dmxparse function."""
     m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
     t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
     f = fitter.GLSFitter(toas=t, model=m)

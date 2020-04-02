@@ -438,14 +438,16 @@ def show_param_cov_matrix(matrix, params, name="Covaraince Matrix", switchRD=Fal
 
 
 def dmxparse(fitter, save=False):
-    """Function to run dmxparse in python using PINT objects and results.
-    Based off of dmxparse by Paul Demorest (https://github.com/nanograv/tempo/tree/master/util/dmxparse)
+    """Run dmxparse in python using PINT objects and results.
     
+    Based off dmxparse by P. Demorest (https://github.com/nanograv/tempo/tree/master/util/dmxparse)
+
     Inputs:
     :param fitter: PINT fitter used to get timing residuals, must have already run GLS fit
-    :param save: boolean; if True saves output to text file in the format used for the TEMPO version. 
+    :param save: boolean; if True saves output to text file in the format of the TEMPO version.
     If not output save file is desired, save = False (which is the default)
-    Output file name is dmxparse.out"""
+    Output file name is dmxparse.out
+    """
     # We get the DMX values, errors, and mjds (same as in getting the DMX values for DMX v. time)
     # Get number of DMX epochs
     dmx_epochs = 0
@@ -495,6 +497,8 @@ def dmxparse(fitter, save=False):
         DMX_p_idxs[ii] = (
             int(np.where(params == DMX_keys[ii])[0]) + 1
         )  # extra 1 is for offset parameters
+    # Sort the array in numerical order for 2.7. 3.5
+    DMX_p_idxs = np.sort(DMX_p_idxs)
     # Define a matrix that is just the DMX covariances
     cc = p_cov_mat[
         DMX_p_idxs[0] : DMX_p_idxs[-1] + 1, DMX_p_idxs[0] : DMX_p_idxs[-1] + 1
