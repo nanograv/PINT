@@ -439,7 +439,7 @@ def show_param_cov_matrix(matrix, params, name="Covaraince Matrix", switchRD=Fal
 
 def dmxparse(fitter, save=False):
     """Run dmxparse in python using PINT objects and results.
-    
+
     Based off dmxparse by P. Demorest (https://github.com/nanograv/tempo/tree/master/util/dmxparse)
 
     Inputs:
