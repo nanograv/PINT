@@ -138,7 +138,7 @@ Before you submit a pull request, check that it meets these guidelines:
    be updated. Put your new functionality into a function with a
    docstring. Check the HTML documentation produced by ``make docs``
    to make sure your new documentation appears and looks reasonable.
-4. The pull request should work for Python 2.7 and 3.5+. Check
+4. The pull request should work for Python 2.7 and 3.6+. Check
    https://travis-ci.org/nanograv/pint/pull_requests
    and make sure that the tests pass for all supported Python versions.
 
