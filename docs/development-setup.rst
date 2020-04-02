@@ -1,5 +1,9 @@
+.. _`Developing PINT`:
+
 How to Set Up Your Environment For PINT Development
 ===================================================
+
+See also :ref:`Contributing`
 
 Working on PINT code requires a few more tools than simply running PINT, and
 there are a few settings that can make it much easier. Some of what follows
@@ -37,6 +41,7 @@ PINT is developed with ``git`` and on GitHub_. Some operations are presented
 graphically in the web interface, but in many cases you will want to do
 something direct on your local machine. Having the right tools available and
 configured should make this easy.
+
 
 In your development virtualenv, install the development requirements::
 
@@ -212,6 +217,43 @@ especially if you have been pushing your changes to GitHub. If it helps, there
 is `Dang it, git!`_ (there is a ruder version which may feel more appropriate
 in the moment), or the `git choose-your-own-adventure` (which is extremely
 useful as well as amusing).
+
+Tagging and Releasing versions
+------------------------------
+
+This portion is only for developers with permission to modify the master NANOGrav repository!
+
+Tagging
+'''''''
+
+The current version string is available as ``pint.__version__``
+
+PINT uses MAJOR.MINOR.PATCH versioning inspired by, but not strictly following, Semantic Versioning. 
+PINT uses versioneer.py to make sure that ``pint.__version__`` is available in the code for version checking. 
+This constructs the version string from git using tags and commit hashes.
+
+To create a new tagged version of PINT (assuming you are going from 0.5.0 to 0.5.1):
+
+First make sure you are on the PINT master branch in the ``nanograv/PINT`` repository and your working copy is clean (``git status``), then::
+
+   git push origin
+
+Now wait 15 minutes and check that travis-ci says that the build is OK, before tagging! If needed, push any bug fixes.
+When tagging, always use "annotated tags" by specifying ``-a``::
+
+   git tag -a 0.5.1 -m "PINT version 0.5.1"
+   git push origin --tags
+
+Releasing
+'''''''''
+
+To release, you need to have your PyPI API token in ``~/.pypirc``. 
+You must be on a clean, tagged, version of the nanograv/master branch. Then you can just::
+
+   $ make release
+
+This will build the distribution source and wheel packages and use ``twine`` to upload to PyPI.
+
 
 .. _GitHub: https://github.com/nanograv/PINT
 .. _investigate: https://realpython.com/python-debugging-pdb/
