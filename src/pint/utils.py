@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 
 import astropy.units as u
+from astropy import log
 import numpy as np
 import six
 from six import StringIO
@@ -462,17 +463,13 @@ def dmxparse(fitter, save=False):
     DMX_R2 = []
     DMX_center_MJD = []
     for ii in range(1, dmx_epochs + 1):
-        if ii < 10:
-            ext = "000%s" % (ii)
-        elif ii >= 10 and ii < 100:
-            ext = "00%s" % (ii)
-        elif ii >= 100 and ii < 1000:
-            ext = "0%s" % (ii)
-        DMX_keys.append("DMX_%s" % (ext))
-        DMXs.append(getattr(fitter.model, "DMX_%s" % (ext)).value)
-        DMX_Errs.append(getattr(fitter.model, "DMX_%s" % (ext)).uncertainty_value)
-        dmxr1 = getattr(fitter.model, "DMXR1_%s" % (ext)).value
-        dmxr2 = getattr(fitter.model, "DMXR2_%s" % (ext)).value
+        DMX_keys.append("DMX_{:04d}".format(ii))
+        DMXs.append(getattr(fitter.model, "DMX_{:04d}".format(ii)).value)
+        DMX_Errs.append(
+            getattr(fitter.model, "DMX_{:04d}".format(ii)).uncertainty_value
+        )
+        dmxr1 = getattr(fitter.model, "DMX_{:04d}".format(ii)).value
+        dmxr2 = getattr(fitter.model, "DMX_{:04d}".format(ii)).value
         DMX_R1.append(dmxr1)
         DMX_R2.append(dmxr2)
         DMX_center_MJD.append((dmxr1 + dmxr2) / 2)
@@ -485,11 +482,7 @@ def dmxparse(fitter, save=False):
     # now get the full parameter covariance matrix from pint
     # NOTE: we will need to increase all indices by 1 to account for the 'Offset' parameter
     # that is the first index of the designmatrix
-    fparams = fitter.get_fitparams().keys()
-    params = []
-    for p in fparams:
-        params.append(p)
-    params = np.array(params)
+    params = np.array(list(fitter.get_fitparams().keys()))
     p_cov_mat = fitter.covariance_matrix
     # Now we get the indices that correspond to the DMX values
     DMX_p_idxs = np.zeros(dmx_epochs, dtype=int)
@@ -516,8 +509,8 @@ def dmxparse(fitter, save=False):
         DMX_vErrs[i] = np.sqrt(cc[i, i])
     # Check we have the right number of params
     if len(DMXs) != len(DMX_Errs) or len(DMXs) != len(DMX_vErrs):
-        print("ERROR! Number of DMX entries do not match!")
-        exit()
+        log.error("ERROR! Number of DMX entries do not match!")
+        raise RuntimeError("Number of DMX entries do not match!")
 
     # Output the results'
     if save:
