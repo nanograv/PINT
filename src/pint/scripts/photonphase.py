@@ -174,7 +174,7 @@ def main(argv=None):
         )
         raise ValueError("Model missing AbsPhase component.")
 
-    if (args.addorbphase is not None) and (not hasattr(modelin,'binary_model_name')):
+    if args.addorbphase and (not hasattr(modelin,'binary_model_name')):
         log.error(
             "TimingModel does not include a binary model, which is required for "
             "computing orbital phases. Make sure you have BINARY and associated "
