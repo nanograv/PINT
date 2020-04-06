@@ -174,14 +174,14 @@ def main(argv=None):
         )
         raise ValueError("Model missing AbsPhase component.")
 
-    if args.addorbphase and (not hasattr(modelin,'binary_model_name')):
+    if args.addorbphase and (not hasattr(modelin, "binary_model_name")):
         log.error(
             "TimingModel does not include a binary model, which is required for "
             "computing orbital phases. Make sure you have BINARY and associated "
             "model parameters in your par file!"
         )
         raise ValueError("Model missing BINARY component.")
-    
+
     # Discard events outside of MJD range
     if args.maxMJD is not None:
         tlnew = []
@@ -228,7 +228,7 @@ def main(argv=None):
         # These lines are already in orbits.orbit_phase() in binary_orbits.py.
         # What is the correct syntax is to call this function here?
         norbits = np.array(np.floor(orbits), dtype=np.long)
-        orbphases = orbits - norbits #fractional phase 
+        orbphases = orbits - norbits  # fractional phase
 
     if args.addphase or args.addorbphase:
         # Read input FITS file (again).
@@ -240,23 +240,23 @@ def main(argv=None):
 
         datacol = []
         data_to_add = {}
-        
+
         if args.addphase:
             if len(hdulist[1].data) != len(phases):
                 raise RuntimeError(
                     "Mismatch between length of FITS table ({0}) and length of phase array ({1})!".format(
                         len(hdulist[1].data), len(phases)
-                )
+                    )
                 )
             data_to_add["PULSE_PHASE"] = [phases, "D"]
-            
+
         if args.absphase:
             data_to_add["ABS_PHASE"] = [iphss - negmask * u.cycle, "K"]
-            
+
         if args.barytime:
             bats = modelin.get_barycentric_toas(ts)
             data_to_add["BARY_TIME"] = [bats, "D"]
-      
+
         if args.addorbphase:
             if len(hdulist[1].data) != len(orbphases):
                 raise RuntimeError(
@@ -266,7 +266,7 @@ def main(argv=None):
                 )
             data_to_add["ORBIT_PHASE"] = [orbphases, "D"]
         # End if args.addorbphase
-        
+
         for key in data_to_add.keys():
             if key in hdulist[1].columns.names:
                 log.info("Found existing %s column, overwriting..." % key)
@@ -285,8 +285,8 @@ def main(argv=None):
                             )
                         ]
                     )
-                )            
-            
+                )
+
         if len(datacol) > 0:
             cols = hdulist[1].columns
             for c in datacol:
@@ -295,7 +295,7 @@ def main(argv=None):
                 cols, header=hdulist[1].header, name=hdulist[1].name
             )
             hdulist[1] = bt
-            
+
         if args.outfile is None:
             # Overwrite the existing file
             log.info("Overwriting existing FITS file " + args.eventfile)
