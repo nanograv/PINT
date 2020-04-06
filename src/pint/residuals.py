@@ -221,3 +221,68 @@ class Residuals(object):
         self.time_resids = self.calc_time_resids(weighted_mean=weighted_mean)
         self._chi2 = None  # trigger chi2 recalculation when needed
         self.dof = self.get_dof()
+
+    def epoch_average(self, use_noise_model=True):
+        """
+        Uses the ECORR noise model time-binning to compute "epoch-averaged"
+        residuals.  Requires ECORR be used in the timing model.  If
+        use_noise_model is true, the noise model terms (EFAC, EQUAD, ECORR) will
+        be applied to the TOA uncertainties, otherwise only the raw
+        uncertainties will be used.  
+        
+        Returns a dictionary with the following entries:
+
+          mjds           Average MJD for each segment
+
+          freqs          Average topocentric frequency for each segment
+
+          time_resids    Average residual for each segment, time units
+
+          noise_resids   Dictionary of per-noise-component average residual
+
+          errors         Uncertainty on averaged residuals
+
+          indices        List of lists giving the indices of TOAs in the original
+                         TOA table for each segment
+        """
+
+        # ECORR is required
+        try:
+            ecorr = self.model.get_component_of_category()["ecorr_noise"][0]
+        except KeyError:
+            raise ValueError("ECORR not present in noise model")
+
+        # "U" matrix gives the TOA binning, "weight" is ECORR
+        # uncertainty in seconds, squared.
+        U, ecorr_err2 = ecorr.ecorr_basis_weight_pair(self.toas)
+        ecorr_err2 *= u.s * u.s
+
+        if use_noise_model:
+            err = self.model.scaled_sigma(self.toas)
+        else:
+            err = self.toas.get_errors()
+            ecorr_err2 *= 0.0
+
+        # Weight for sums, and normalization
+        wt = 1.0 / (err * err)
+        a_norm = np.dot(U.T, wt)
+
+        def wtsum(x):
+            return np.dot(U.T, wt * x) / a_norm
+
+        # Weighted average of various quantities
+        avg = {}
+        avg["mjds"] = wtsum(self.toas.get_mjds())
+        avg["freqs"] = wtsum(self.toas.get_freqs())
+        avg["time_resids"] = wtsum(self.time_resids)
+        avg["noise_resids"] = {}
+        for k in self.noise_resids.keys():
+            avg["noise_resids"][k] = wtsum(self.noise_resids[k])
+
+        # Uncertainties
+        avg["errors"] = np.sqrt(1.0 / a_norm + ecorr_err2)
+
+        # Indices back into original TOA list
+        avg["indices"] = [list(np.where(U[:, i])[0]) for i in range(U.shape[1])]
+
+        return avg
