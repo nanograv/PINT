@@ -176,7 +176,10 @@ def main(argv=None):
 
     if (args.addorbphase is not None) and (not hasattr(modelin,'binary_model_name')):
         log.error(
-            "TimingModel does not include a binary model, which is required for computing orbital phases. Make sure you have BINARY and associated model parameters in your par file!")
+            "TimingModel does not include a binary model, which is required for "
+            "computing orbital phases. Make sure you have BINARY and associated "
+            "model parameters in your par file!"
+        )
         raise ValueError("Model missing BINARY component.")
     
     # Discard events outside of MJD range
