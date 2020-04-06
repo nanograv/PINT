@@ -1,9 +1,11 @@
 import tempo_utils as t1u
-from pint.utils import longdouble2string
+from pint.utils import longdouble2str
 import argparse
+
 
 def get_tempo_result(parfile, timfile):
     """This function is to get the results from tempo and write them to a file.
+
     Parameter
     ---------
     parfile : str
@@ -18,22 +20,23 @@ def get_tempo_result(parfile, timfile):
   """
     t1_toas = t1u.read_toa_file(timfile)
     t1u.run_tempo(t1_toas, parfile)
-    t1_resids = t1_toas.get_resids(units='phase')
+    t1_resids = t1_toas.get_resids(units="phase")
 
-    outfile = parfile + '.tempo_test'
-    f = open(outfile, 'w')
-    outstr = 'residuals_phase '
-    outstr += '\n'
+    outfile = parfile + ".tempo_test"
+    f = open(outfile, "w")
+    outstr = "residuals_phase "
+    outstr += "\n"
     f.write(outstr)
     for res in t1_resids:
-        outstr = longdouble2string(res) + '\n'
+        outstr = longdouble2str(res) + "\n"
         f.write(outstr)
     f.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="A script to get tempo results.")
-    parser.add_argument("parfile",help="par file to read model from.")
-    parser.add_argument("timfile",help="tim file to read toas from.")
+    parser.add_argument("parfile", help="par file to read model from.")
+    parser.add_argument("timfile", help="tim file to read toas from.")
 
     args = parser.parse_args()
     get_tempo_result(args.parfile, args.timfile)

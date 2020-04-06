@@ -2,31 +2,126 @@
 
 language: python
 
-matrix:
-    include:
-        - python: "2.7"
-        - python: "3.5"
-        - python: "3.6"
+compiler: gcc
 
+os: linux
+
+matrix:
+    fast_finish: true
+    include:
+        - script: wget https://data.nanograv.org/static/data/ephem/de405.bsp
+          name: "NANOGrav ephemeris server accessible"
+          install: []
+          services: []
+          after_success: []
+          git:
+              clone: false
+        - script: black --check src tests examples
+          install:
+            - travis_retry pip install black
+          name: "check code style is black"
+          services: []
+          after_success: []
+        - script: flake8-diff
+          install:
+            - travis_retry pip install -r requirements_dev.txt
+            - travis_retry pip install .
+          name: "python style checker for changed code"
+          services: []
+          after_success: []
+          before_script: git fetch --unshallow
+        - name: "Test oldest Python3 dependencies"
+          python: "3.7"
+          sudo: false
+          language: python
+          install: travis_retry pip install tox-travis
+          script: 
+            - tox -e oldestdeps
+#        - name: "Test oldest Python2 dependencies"
+#          python: "2.7"
+#          sudo: false
+#          language: python
+#          install: travis_retry pip install tox-travis
+#          script: 
+#            - tox -e oldestdeps2
+        - name: "Test under Python 2.7"
+          python: "2.7"
+        - python: "3.6"
+        - python: "3.7"
+        - python: "3.8"
+        - name: "tox"
+          sudo: false
+          language: python
+          python:
+            - "3.7"
+          install: travis_retry pip install tox-travis
+          script: tox
+        - python: "3.7"
+          name: "External clock files"
+          install:
+            - travis_retry git clone https://github.com/nanograv/tempo.git
+            - travis_retry git clone https://bitbucket.org/psrsoft/tempo2.git
+            - travis_retry pip install -r requirements_dev.txt
+            - travis_retry pip install .
+            - travis_retry python cache_IERS.py
+          env:
+            - TEMPO=tempo/
+            - TEMPO2=tempo2/T2Runtime/
+        - script: make notebooks
+          install:
+            - travis_retry pip install -r requirements_dev.txt
+            - travis_retry pip install .
+          name: "Example notebooks (python 3.7)"
+          python: "3.7"
+        - script: make docs-build
+          install:
+            - travis_retry pip install -r requirements_dev.txt
+            - travis_retry pip install .
+          name: "Documentation build"
+          python: "3.7"
+          after_success: []
+    allow_failures:
+        - script: flake8-diff
 sudo: required
 
 # https://docs.travis-ci.com/user/gui-and-headless-browsers/#Using-xvfb-to-Run-Tests-That-Require-a-GUI
-before_script:
-    - "export DISPLAY=:99.0"
-    - "sh -e /etc/init.d/xvfb start"
-    - sleep 3 # give xvfb some time to start
+#before_script:
+#    - "export DISPLAY=:99.0"
+#    - "sh -e /etc/init.d/xvfb start"
+#    - sleep 3 # give xvfb some time to start
+
+services:
+    - xvfb
+
+before_install:
+    - sudo apt-get install pandoc
 
 install:
-    - pip install -r requirements.txt
-    - pip install -r requirements_dev.txt
-    - pip install .
+    # We need to require the dev requirements first in case they're more
+    # stringent (on version numbers)
+    - travis_retry pip install -r requirements_dev.txt
+    - travis_retry pip install .
+    - pip list
+    - travis_retry python cache_IERS.py
 
 #script:
 #    - pwd
 #    - make test
 
 script:
-    - (cd tests ; nosetests -v --with-coverage --cover-package=pint --ignore-files=.\*DISABLED.py)
+    - ( cd tests && pytest --cov=pint )
 
 after_success:
-    ( cd tests ; coveralls )
+    ( cd tests && coveralls )
+
+cache:
+  directories:
+    - $HOME/.astropy/cache
+
+notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/4af3554bec203d05337e
+    on_success: always  # options: [always|never|change] default: always
+    on_failure: always  # options: [always|never|change] default: always
+    on_start: never     # options: [always|never|change] default: always

@@ -1,160 +1,188 @@
 .. highlight:: shell
+.. _`Installation`:
 
-============
-Installation
-============
+===================
+How to Install PINT
+===================
+
+There are two kinds of PINT installation you might be interested in. The first
+is a simple PINT installation for someone who just wants to use PINT. The
+second is an installation for someone who wants to be able to run the tests and
+develop PINT code. The latter naturally requires more other python packages and
+is more complicated (but not too much).
 
 Prerequisites
 -------------
 
-* Python 2.7 or 3.5 or later (Note that Python 3 support is currently not
-  complete, but is a design goal)
+You need a python interpreter (either provided by your operating system or your favorite package manager).
+You should use Python 3.x -- it's time. Python 2 has been `sunset <https://www.python.org/doc/sunset-python-2/>`_ as of January 1, 2020.
+Importantly, astropy versions 3 and later have completely dropped support for Python 2.
 
-* The current list of required python packages is in
+However, for PINT version 0.7.x and earlier both Python 2.7 and Python 3.5+ are supported. 
 
-  - requirements.txt_
-  - requirements_dev.txt_
+For PINT versions 0.8 or later only Python 3.x will be supported.
 
-.. _requirements.txt: https://github.com/nanograv/PINT/blob/master/requirements.txt
-.. _requirements_dev.txt: https://github.com/nanograv/PINT/blob/master/requirements_dev.txt
+Your Python must have the package installation tool pip_ installed.  Also make sure your setuptools are up to date (e.g. ``pip install -U setuptools``).
 
-* The simplest way to install the prerequisites, if you are in virtualenv or
-  want to install them in the system python is to use pip [1]_::
+We highly recommend using the package isolation tool virtualenv_ and, if you are a bash user, the convenience functions
+in virtualenvwrapper_ are handy.  
+You probably
+need to  have these installed system-wide or in some other way.  Sorry. Try some
+Googling if you don't. 
 
-    pip install -r requirements.txt
-    pip install -r requirements_dev.txt
+TEMPO and Tempo2
+''''''''''''''''
 
-  If you want to install them in your local user site-packages, rather than the
-  system python (perhaps because you don't have sudo privileges),
-  append ``--user`` to those command lines.
+`TEMPO`_ is not required, but if you have it installed PINT can find clock
+correction files in ``$TEMPO/clock``
 
-  Some of those packages may have been already installed, for example by MacPorts.
-  For MacPorts users, this command will get many of the requirements::
+`Tempo2`_ is not required, but if you have it installed PINT can find clock
+correction files in ``$TEMPO2/clock``
 
-    port install py27-numpy py27-scipy py27-astropy py27-nose py27-cython py27-emcee py27-sphinx py27-sphinx_rtd_theme
+Basic Install via pip
+---------------------
 
-  You probably want to avoid having multiple versions of packages installed,
-  to reduce confusion.  Working in a virtualenv can be helpful.
+PINT is now available via PyPI as the package `pint-pulsar <https://pypi.org/project/pint-pulsar>`_, so it is now simple to install via pip.
+This will get you the latest *released* version of PINT.
 
-* `TEMPO`_ is not required, but if you have it installed PINT can find clock
-  correction files in ``$TEMPO/clock``
+For most users, who don't want to develop the PINT code, installation should just be a matter of::
 
-.. _TEMPO: http://tempo.sourceforge.net
+   $ pip install pint-pulsar
 
-* `Tempo2`_ is not required, but if you have it installed PINT can find clock
-  correction files in ``$TEMPO2/clock``
+By default this will install in your system site-packages.  Depending on your system and preferences, you may want to append ``--user`` 
+to install it for just yourself (e.g. if you don't have permission to write in the system site-packages), or you may want to create a 
+virtualenv to work on PINT (using a virtualenv is highly recommended by the PINT developers).  In that case, you just activate your 
+virtualenv before running the ``pip`` command above.
 
-.. _Tempo2: https://bitbucket.org/psrsoft/tempo2
 
-.. [1] If you don't have `pip`_ installed, this `Python installation guide`_ can guide
+Install from Source
+-------------------
+
+If you want access to the latest development version of PINT, or want to be able to make any edits to the code, you can install
+from source by cloning the git repository.
+
+If your python setup is "nice", you should be able to install as easily as::
+
+   $ git clone https://github.com/nanograv/PINT.git
+   $ cd PINT
+   $ mkvirtualenv -p `which python3` pint
+   (pint) $ pip install -e .
+   (pint) $ python
+   >>> import pint
+
+Note that you can use your own method to activate your virtualenv if you don't have virtualenvwrapper_ installed.
+This *should* install PINT along with any python packages it needs to run. (If
+you want to run the test suite or work on PINT code, see below.)
+Note that the ``-e`` installs PINT in "editable" or "develop" mode.  This means that the source code is what is actually being run,
+rather than making a copy in a site-packages directory. Thus, if you edit any .py file, or do a ``git pull`` to update the code
+this will take effect **immediately** rather than having to run ``pip install`` again.  This is a choice, but is the way 
+most developers work.
+
+Unfortunately there are a number of reasons the install can go wrong. Most have to do
+with not having a "nice" python environment. See the next section for some tips.
+
+Potential Install Issues
+------------------------
+
+Old setuptools (``egg-info`` error message)
+'''''''''''''''''''''''''''''''''''''''''''
+
+PINT's ``setup.cfg`` is written in a declarative style that does not work with
+older versions of ``setuptools``. The lack of a sufficiently recent version of
+``setuptools`` is often signalled by the otherwise impenetrable error message
+``error: 'egg_base' must be a directory name (got src)``. You can upgrade with
+``pip``::
+
+   $ pip install -U pip setuptools
+
+If this does not help, check your versions of installed things::
+
+   $ pip list
+
+You should be able to upgrade to ``setuptools`` version at least ``0.41``. If
+running ``pip`` does not change the version that appears on this list, or if
+your version changes but the problem persists, you may have a problem with your
+python setup; read on.
+
+Bad ``PYTHONPATH``
+''''''''''''''''''
+
+The virtualenv mechanism uses environment variables to create an isolated
+python environment into which you can install and upgrade packages without
+affecting or being affected by anything in any other environment. Unfortunately
+it is possible to defeat this by setting the ``PYTHONPATH`` environment
+vairable. Double unfortunately, setting the ``PYTHONPATH`` environment used to
+be the Right Way to use python things that weren't part of your operating
+system. So many of us have ``PYTHONPATH`` set in our shells. You can check this::
+
+   $ printenv PYTHONPATH
+
+If you see any output, chances are that's causing problems with your
+virtualenvs. You probably need to go look in your ``.bashrc`` and/or
+``.bash_profile`` to see where that variable is being set and remove it. Yes,
+it is very annoying that you have to do this.
+
+Previous use of ``pip install --user``
+''''''''''''''''''''''''''''''''''''''
+
+Similarly, it used to be recommended to install packages locally as your user
+by running ``pip install --user thing``. Unfortunately this causes something of
+the same problem as having a ``PYTHONPATH`` set, where packages installed
+outside your virtualenv can obscure the ones you have inside, producing bizarre
+error messages. Record your current packages with ``pip freeze``, then try,
+outside a virtualenv, doing ``pip list`` with various options, and ``pip
+uninstall``; you shouldn't be able to uninstall anything system-wise (do not
+use ``sudo``!) and you shouldn't be able to uninstall anything in an inactive
+virtualenv. So once you've blown away all those packages, you should be able to
+work in clean virtualenvs. If you saved the output of ``pip freeze`` above, you
+should be able to use it to create a virtualenv with all the same packages you
+used to have in your user directory.
+
+Bad ``conda`` setup
+'''''''''''''''''''
+
+Conda_ is a tool that attempts to create isolated environments, like a
+combination of virtualenv and ``pip``. It should make installing scientific
+software with lots of dependencies easy and reliable, and you should just be
+able to set up an appropriate ``conda`` environment and use the basic install
+instructions above. But it may not work.
+
+Specifically, for some reason the python 3 version of ``conda`` does not
+provide the ``gdbm`` module, which ``astropy`` needs to work on Linux. Good
+luck.
+
+.. _virtualenv: https://virtualenv.pypa.io/en/latest/
+.. _virtualenvwrapper: https://virtualenvwrapper.readthedocs.io/en/latest/
+.. _Conda: https://docs.conda.io/en/latest/
+
+Installing PINT for Developers
+------------------------------
+
+You will need to be able to carry out a basic install of PINT as above.
+You very likely want to install in a virtualenv_ and using the develop mode ``pip -e``. 
+Then you will need to install the additional development dependencies::
+
+   $ pip install -Ur requirements_dev.txt
+
+
+PINT development (building the documentation) requires pandoc_, which isn't a
+python package and therefore needs to be installed in some way appropriate for
+your operating system. On Linux you may be able to just run::
+
+   $ apt install pandoc
+
+On a Mac using MacPorts this would be::
+
+   $ sudo port install pandoc
+
+Otherwise, there are several ways to `install pandoc`_
+
+For further development instructions see :ref:`Developing PINT`
+
+.. _1: If you don't have `pip`_ installed, this `Python installation guide`_ can guide
    you through the process.
-
-.. _pip: https://pip.pypa.io
-.. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
-
-Installing from Source
-----------------------
-
-The sources for pint can be downloaded from the `Github repo`_.
-
-First, clone the public repository:
-
-.. code-block:: console
-
-    $ git clone https://github.com/nanograv/PINT.git
-
-Normally, you want to use the ``master`` branch, since PINT is in active
-development and this makes it easy to get the latest fixes with a simple
-``git pull``.
-
-Once you have a copy of the source, if you are using a virtualenv, or want
-to install PINT in your system site-packages (may require sudo),
-you can install it with:
-
-.. code-block:: console
-
-  $ python setup.py install
-
-Or, synonymously:
-
-.. code-block:: console
-
-  $ make install
-
-Or, to install it in your local user site-packages
-
-.. code-block:: console
-
-  $ python setup.py install --user
-
-Finally, if you want to be able to edit or pull changes and have them
-take effect without having to re-run setup.py, you can install using links
-to the source itself, like this (again append ``--user`` if you want
-to install in your per-user site-packages location). *This is how most PINT
-developers work*:
-
-.. code-block:: console
-
-  $ python setup.py develop
-
-.. _Github repo: https://github.com/nanograv/pint
-.. _tarball: https://github.com/nanograv/pint/tarball/master
-
-Running tests
--------------
-
-To verify that your installed pint is functional, you can (and should) run
-the test suite.  This can be done using::
-
-  make test
-
-or::
-
-  python setup.py nosetests
-
-Build the documentation
------------------------
-
-This is not normally needed, since the documentation is available online_
-but you can build your own copy for offline use::
-
-  make docs
-
-At completion, a browser will open with the documentaion.
-
-.. _online: http://nanograv-pint.readthedocs.io/en/latest/
-
-Data files
-----------
-
-PINT requires detailed ephemerides for the Solar System motion and for the
-Earth's rotation. Many of these files are downloaded automatically by
-astropy. Others are distributed with PINT in the ``pint/datafiles`` directory
-or are automatically downloaded by setup.py; the total volume is a few hundred
-megabytes. On installation, the data files are copied into the install
-directory, so you end up with two copies (unless you install in develop mode).
-
-PINT also requires observatory clock correction data. The PINT distribution
-includes a set in the datafiles directory, but clock corrections can also be
-read from TEMPO or Tempo2 clock directories if they are installed.
-
-Other Makefile features
------------------------
-
-The makefile can do several other useful things including cleaning up cruft,
-and building tar distributions.
-
-.. code-block:: console
-
-  $ make help
-  clean                remove all build, test, coverage and Python artifacts
-  clean-build          remove build artifacts
-  clean-pyc            remove Python file artifacts
-  clean-test           remove test and coverage artifacts
-  lint                 check style with flake8
-  test                 run tests quickly with the default Python
-  coverage             check code coverage quickly with the default Python
-  docs                 generate Sphinx HTML documentation, including API docs
-  servedocs            compile the docs watching for changes
-  dist                 builds source and wheel package
-  install              install the package to the active Python's site-packages
+.. _pip: https://pip.pypa.io/en/stable/
+.. _TEMPO: http://tempo.sourceforge.net
+.. _Tempo2: https://bitbucket.org/psrsoft/tempo2
+.. _pandoc: https://pandoc.org/
+.. _`install pandoc`: https://pandoc.org/installing.html

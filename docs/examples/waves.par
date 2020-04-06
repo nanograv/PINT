@@ -1,0 +1,37 @@
+PSRJ           J0209-7427
+RAJ            02:09:34.76 
+DECJ           -74:27:14.0                 
+F0             0.10751565540167931144      
+F1             -1.4056799171911481396e-11   
+F2             1.2587609349536313526e-16   
+PEPOCH         58810                       
+POSEPOCH       58810                       
+DMEPOCH        58810                       
+START          58807.932508879047031   
+FINISH         58836.484244901996252   
+TRACK          -2                          
+TZRMJD         58822.259730400780057       
+TZRFRQ         0                        
+TZRSITE        @   
+TRES           34247.017    
+EPHVER         5                           
+NE_SW          4                           
+CLK            TT(TAI)
+MODE 1
+UNITS          TDB
+TIMEEPH        IF99
+DILATEFREQ     Y
+PLANET_SHAPIRO Y
+T2CMETHOD      IAU2000B
+CORRECT_TROPOSPHERE  N
+EPHEM          DE405
+NITS           1
+NTOA           85
+CHI2R          14.0312 74
+WAVEEPOCH 58819
+WAVE_OM 0.10142449848601 0
+WAVE1 -232.10545051711 -255.96666742642
+WAVE2 269.97605059178 75.905757140344
+WAVE3 -154.34445438056 6.9829679866823
+WAVE4 59.964614085478 -8.116947905712
+WAVE5 -10.856955918154 1.6459220343943
