@@ -63,5 +63,15 @@ def test_AbsPhase_exception():
         photonphase.main(cmd.split())
 
 
+@pytest.mark.skipif(
+    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
+)
+def test_OrbPhase_exception():
+    "Verify that trying to add ORBIT_PHASE column with no BINARY parameter in the par file raises exception"
+    with pytest.raises(ValueError):
+        cmd = "--addorbphase {0} {1}".format(eventfile_nicer, parfile_nicer)
+        photonphase.main(cmd.split())
+
+
 if __name__ == "__main__":
     unittest.main()
