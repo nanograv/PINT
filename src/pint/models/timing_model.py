@@ -649,6 +649,29 @@ class TimingModel(object):
             result.append(nf(toas)[1])
         return np.hstack([r for r in result])
 
+    def noise_model_dimensions(self, toas):
+        """Returns a dictionary of correlated-noise components in the noise
+        model.  Each entry contains a tuple (offset, size) where size is the
+        number of basis funtions for the component, and offset is their
+        starting location in the design matrix and weights vector."""
+        result = {}
+
+        # Correct results rely on this ordering being the
+        # same as what is done in the self.basis_funcs
+        # property.
+        ntot = 0
+        for nc in self.NoiseComponent_list:
+            bfs = nc.basis_funcs
+            if len(bfs) == 0:
+                continue
+            nbf = 0
+            for bf in bfs:
+                nbf += len(bf(toas)[1])
+            result[nc.category] = (ntot, nbf)
+            ntot += nbf
+
+        return result
+
     def jump_flags_to_params(self, toas):
         """convert jump flags in toas.table["flags"] to jump parameters in the model"""
         from . import jump
