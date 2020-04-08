@@ -448,6 +448,24 @@ def dmxparse(fitter, save=False):
     :param save: boolean; if True saves output to text file in the format of the TEMPO version.
     If not output save file is desired, save = False (which is the default)
     Output file name is dmxparse.out
+    
+    Returns a dictionary with the following entries:
+
+        dmxs        mean-subtraced dmx values
+
+        dmx_verrs   dmx variance errors
+
+        dmxeps      center mjds of the dmx bins
+
+        r1s         lower mjd bounds on the dmx bins
+
+        r2s         upper mjd bounds on the dmx bins
+
+        bins        dmx bins
+
+        mean_dmx    mean dmx value
+
+        avg_dm_err  uncertainty in average dmx
     """
     # We get the DMX values, errors, and mjds (same as in getting the DMX values for DMX v. time)
     # Get number of DMX epochs
@@ -514,13 +532,13 @@ def dmxparse(fitter, save=False):
 
     # Output the results'
     if save:
-        dmx = "DMX"
+        DMX = "DMX"
         lines = []
-        lines.append("# Mean %s value = %+.6e \n" % (dmx, DMX_mean))
+        lines.append("# Mean %s value = %+.6e \n" % (DMX, DMX_mean))
         lines.append("# Uncertainty in average %s = %.5e \n" % ("DM", DMX_mean_err))
         lines.append(
             "# Columns: %sEP %s_value %s_var_err %sR1 %sR2 %s_bin \n"
-            % (dmx, dmx, dmx, dmx, dmx, dmx)
+            % (DMX, DMX, DMX, DMX, DMX, DMX)
         )
         for k in range(dmx_epochs):
             lines.append(
@@ -530,7 +548,7 @@ def dmxparse(fitter, save=False):
                     DMXs[k] - DMX_mean,
                     DMX_vErrs[k],
                     DMX_R1[k],
-                    DMX_R1[k],
+                    DMX_R2[k],
                     DMX_keys[k],
                 )
             )
@@ -539,4 +557,16 @@ def dmxparse(fitter, save=False):
             dmxout.close()
     # return the new mean subtracted values
     mean_sub_DMXs = DMXs - DMX_mean
-    return mean_sub_DMXs, DMX_vErrs
+
+    # define the output dictionary
+    dmx = {}
+    dmx["dmxs"] = mean_sub_DMXs
+    dmx["dmx_verrs"] = DMX_vErrs
+    dmx["dmxeps"] = DMX_center_MJD
+    dmx["r1s"] = DMX_R1
+    dmx["r2s"] = DMX_R2
+    dmx["bins"] = DMX_keys
+    dmx["mean_dmx"] = DMX_mean
+    dmx["avg_dm_err"] = DMX_mean_err
+
+    return dmx

@@ -584,4 +584,4 @@ def test_dmxparse():
     t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
     f = fitter.GLSFitter(toas=t, model=m)
     f.fit_toas()
-    mean_sub_dmx, dmx_verrs = dmxparse(f, save=False)
+    dmx = dmxparse(f, save=False)
