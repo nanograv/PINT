@@ -76,7 +76,10 @@ def test_OrbPhase_exception():
 
 
 parfile_nicer_binary = os.path.join(datadir, "PSR_J0218+4232.par")
-eventfile_nicer_binary = os.path.join(datadir, "J0218_nicer_2070030405_cleanfilt_cut_bary.evt")
+eventfile_nicer_binary = os.path.join(
+    datadir, "J0218_nicer_2070030405_cleanfilt_cut_bary.evt"
+)
+
 
 @pytest.mark.skipif(
     "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
@@ -84,8 +87,10 @@ eventfile_nicer_binary = os.path.join(datadir, "J0218_nicer_2070030405_cleanfilt
 def test_OrbPhase_column():
     "Verify that the ORBIT_PHASE column is calculated and added correctly"
 
-    outfile = 'photonphase-test.evt'
-    cmd = "--addorbphase --outfile {0} {1} {2}".format(outfile,eventfile_nicer_binary, parfile_nicer_binary)
+    outfile = "photonphase-test.evt"
+    cmd = "--addorbphase --outfile {0} {1} {2}".format(
+        outfile, eventfile_nicer_binary, parfile_nicer_binary
+    )
     photonphase.main(cmd.split())
 
     # Check that output file got made
@@ -96,13 +101,14 @@ def test_OrbPhase_column():
     assert "ORBIT_PHASE" in cols
     # Check that first and last entry have expected values and values are monotonic
     data = hdul[1].data
-    orbphases = data['ORBIT_PHASE']
-    assert abs(orbphases[0]-0.1763) < 0.0001
-    assert abs(orbphases[-1]-0.3140) < 0.0001
+    orbphases = data["ORBIT_PHASE"]
+    assert abs(orbphases[0] - 0.1763) < 0.0001
+    assert abs(orbphases[-1] - 0.3140) < 0.0001
     assert np.all(np.diff(orbphases) > 0)
-    
+
     hdul.close()
     os.remove(outfile)
-    
+
+
 if __name__ == "__main__":
     unittest.main()
