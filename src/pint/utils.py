@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 
 import astropy.units as u
+from astropy import log
 import numpy as np
 import six
 from six import StringIO
@@ -24,6 +25,7 @@ __all__ = [
     "lines_of",
     "interesting_lines",
     "show_param_cov_matrix",
+    "dmxparse",
 ]
 
 
@@ -434,3 +436,137 @@ def show_param_cov_matrix(matrix, params, name="Covaraince Matrix", switchRD=Fal
     contents = output.getvalue()
     output.close()
     return contents
+
+
+def dmxparse(fitter, save=False):
+    """Run dmxparse in python using PINT objects and results.
+
+    Based off dmxparse by P. Demorest (https://github.com/nanograv/tempo/tree/master/util/dmxparse)
+
+    Inputs:
+    :param fitter: PINT fitter used to get timing residuals, must have already run GLS fit
+    :param save: boolean; if True saves output to text file in the format of the TEMPO version.
+    If not output save file is desired, save = False (which is the default)
+    Output file name is dmxparse.out
+    
+    Returns a dictionary with the following entries:
+
+        dmxs        mean-subtraced dmx values
+
+        dmx_verrs   dmx variance errors
+
+        dmxeps      center mjds of the dmx bins
+
+        r1s         lower mjd bounds on the dmx bins
+
+        r2s         upper mjd bounds on the dmx bins
+
+        bins        dmx bins
+
+        mean_dmx    mean dmx value
+
+        avg_dm_err  uncertainty in average dmx
+    """
+    # We get the DMX values, errors, and mjds (same as in getting the DMX values for DMX v. time)
+    # Get number of DMX epochs
+    dmx_epochs = 0
+    for p in fitter.model.params:
+        if "DMX_" in p:
+            dmx_epochs += 1
+    # Get DMX values (will be in units of 10^-3 pc cm^-3)
+    DMX_keys = []
+    DMXs = []
+    DMX_Errs = []
+    DMX_R1 = []
+    DMX_R2 = []
+    DMX_center_MJD = []
+    for ii in range(1, dmx_epochs + 1):
+        DMX_keys.append("DMX_{:04d}".format(ii))
+        DMXs.append(getattr(fitter.model, "DMX_{:04d}".format(ii)).value)
+        DMX_Errs.append(
+            getattr(fitter.model, "DMX_{:04d}".format(ii)).uncertainty_value
+        )
+        dmxr1 = getattr(fitter.model, "DMX_{:04d}".format(ii)).value
+        dmxr2 = getattr(fitter.model, "DMX_{:04d}".format(ii)).value
+        DMX_R1.append(dmxr1)
+        DMX_R2.append(dmxr2)
+        DMX_center_MJD.append((dmxr1 + dmxr2) / 2)
+    DMXs = np.array(DMXs)
+    DMX_Errs = np.array(DMX_Errs)
+    DMX_R1 = np.array(DMX_R1)
+    DMX_R2 = np.array(DMX_R2)
+    DMX_center_MJD = np.array(DMX_center_MJD)
+
+    # now get the full parameter covariance matrix from pint
+    # NOTE: we will need to increase all indices by 1 to account for the 'Offset' parameter
+    # that is the first index of the designmatrix
+    params = np.array(list(fitter.get_fitparams().keys()))
+    p_cov_mat = fitter.covariance_matrix
+    # Now we get the indices that correspond to the DMX values
+    DMX_p_idxs = np.zeros(dmx_epochs, dtype=int)
+    for ii in range(dmx_epochs):
+        DMX_p_idxs[ii] = (
+            int(np.where(params == DMX_keys[ii])[0]) + 1
+        )  # extra 1 is for offset parameters
+    # Sort the array in numerical order for 2.7. 3.5
+    DMX_p_idxs = np.sort(DMX_p_idxs)
+    # Define a matrix that is just the DMX covariances
+    cc = p_cov_mat[
+        DMX_p_idxs[0] : DMX_p_idxs[-1] + 1, DMX_p_idxs[0] : DMX_p_idxs[-1] + 1
+    ]
+    n = len(DMX_Errs)
+    # Find error in mean DM
+    DMX_mean = np.mean(DMXs)
+    DMX_mean_err = np.sqrt(cc.sum()) / float(n)
+    # Do the correction for varying DM
+    m = np.identity(n) - np.ones((n, n)) / float(n)
+    cc = np.dot(np.dot(m, cc), m)
+    DMX_vErrs = np.zeros(n)
+    # We also need to correct for the units here
+    for i in range(n):
+        DMX_vErrs[i] = np.sqrt(cc[i, i])
+    # Check we have the right number of params
+    if len(DMXs) != len(DMX_Errs) or len(DMXs) != len(DMX_vErrs):
+        log.error("ERROR! Number of DMX entries do not match!")
+        raise RuntimeError("Number of DMX entries do not match!")
+
+    # Output the results'
+    if save:
+        DMX = "DMX"
+        lines = []
+        lines.append("# Mean %s value = %+.6e \n" % (DMX, DMX_mean))
+        lines.append("# Uncertainty in average %s = %.5e \n" % ("DM", DMX_mean_err))
+        lines.append(
+            "# Columns: %sEP %s_value %s_var_err %sR1 %sR2 %s_bin \n"
+            % (DMX, DMX, DMX, DMX, DMX, DMX)
+        )
+        for k in range(dmx_epochs):
+            lines.append(
+                "%.4f %+.7e %.3e %.4f %.4f %s \n"
+                % (
+                    DMX_center_MJD[k],
+                    DMXs[k] - DMX_mean,
+                    DMX_vErrs[k],
+                    DMX_R1[k],
+                    DMX_R2[k],
+                    DMX_keys[k],
+                )
+            )
+        with open("dmxparse.out", "w") as dmxout:
+            dmxout.writelines(lines)
+            dmxout.close()
+    # return the new mean subtracted values
+    mean_sub_DMXs = DMXs - DMX_mean
+
+    # define the output dictionary
+    dmx = {}
+    dmx["dmxs"] = mean_sub_DMXs
+    dmx["dmx_verrs"] = DMX_vErrs
+    dmx["dmxeps"] = DMX_center_MJD
+    dmx["r1s"] = DMX_R1
+    dmx["r2s"] = DMX_R2
+    dmx["bins"] = DMX_keys
+    dmx["mean_dmx"] = DMX_mean
+    dmx["avg_dm_err"] = DMX_mean_err
+
+    return dmx
