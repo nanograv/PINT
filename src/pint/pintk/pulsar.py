@@ -286,7 +286,7 @@ class Pulsar(object):
             )
             self.prefit_model.add_param_from_top(param, "PhaseJump")
             getattr(self.prefit_model, param.name).frozen = False
-            self.prefit_model.components['PhaseJump']._parent = self.prefit_model
+            self.prefit_model.components["PhaseJump"]._parent = self.prefit_model
             if self.fitted:
                 self.postfit_model.add_component(a)
             for dict1, dict2 in zip(
