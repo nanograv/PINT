@@ -17,6 +17,13 @@ PINT
     :target: https://gitter.im/nanograv-PINT/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
     :alt: Gitter chat
 
+.. image:: https://img.shields.io/pypi/l/pint-pulsar
+    :target: https://github.com/nanograv/PINT/blob/master/LICENSE.md
+    :alt: License:BSD
+
+.. image:: https://img.shields.io/pypi/pyversions/pint-pulsar.svg
+    :alt: Python:3
+
 PINT is not TEMPO3
 ------------------
 
