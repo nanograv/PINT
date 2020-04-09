@@ -32,6 +32,7 @@ class Residuals(object):
         # also it's expensive
         # only relevant if there are correlated errors
         self._chi2 = None
+        self.noise_resids = {}
 
     @property
     def chi2_reduced(self):

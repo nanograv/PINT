@@ -11,8 +11,55 @@ second is an installation for someone who wants to be able to run the tests and
 develop PINT code. The latter naturally requires more other python packages and
 is more complicated (but not too much).
 
-Basic Install
+Prerequisites
 -------------
+
+You need a python interpreter (either provided by your operating system or your favorite package manager).
+You should use Python 3.x -- it's time. Python 2 has been `sunset <https://www.python.org/doc/sunset-python-2/>`_ as of January 1, 2020.
+Importantly, astropy versions 3 and later have completely dropped support for Python 2.
+
+However, for PINT version 0.7.x and earlier both Python 2.7 and Python 3.5+ are supported. 
+
+For PINT versions 0.8 or later only Python 3.x will be supported.
+
+Your Python must have the package installation tool pip_ installed.  Also make sure your setuptools are up to date (e.g. ``pip install -U setuptools``).
+
+We highly recommend using the package isolation tool virtualenv_ and, if you are a bash user, the convenience functions
+in virtualenvwrapper_ are handy.  
+You probably
+need to  have these installed system-wide or in some other way.  Sorry. Try some
+Googling if you don't. 
+
+TEMPO and Tempo2
+''''''''''''''''
+
+`TEMPO`_ is not required, but if you have it installed PINT can find clock
+correction files in ``$TEMPO/clock``
+
+`Tempo2`_ is not required, but if you have it installed PINT can find clock
+correction files in ``$TEMPO2/clock``
+
+Basic Install via pip
+---------------------
+
+PINT is now available via PyPI as the package `pint-pulsar <https://pypi.org/project/pint-pulsar>`_, so it is now simple to install via pip.
+This will get you the latest *released* version of PINT.
+
+For most users, who don't want to develop the PINT code, installation should just be a matter of::
+
+   $ pip install pint-pulsar
+
+By default this will install in your system site-packages.  Depending on your system and preferences, you may want to append ``--user`` 
+to install it for just yourself (e.g. if you don't have permission to write in the system site-packages), or you may want to create a 
+virtualenv to work on PINT (using a virtualenv is highly recommended by the PINT developers).  In that case, you just activate your 
+virtualenv before running the ``pip`` command above.
+
+
+Install from Source
+-------------------
+
+If you want access to the latest development version of PINT, or want to be able to make any edits to the code, you can install
+from source by cloning the git repository.
 
 If your python setup is "nice", you should be able to install as easily as::
 
@@ -23,36 +70,19 @@ If your python setup is "nice", you should be able to install as easily as::
    (pint) $ python
    >>> import pint
 
+Note that you can use your own method to activate your virtualenv if you don't have virtualenvwrapper_ installed.
 This *should* install PINT along with any python packages it needs to run. (If
 you want to run the test suite or work on PINT code, see below.)
+Note that the ``-e`` installs PINT in "editable" or "develop" mode.  This means that the source code is what is actually being run,
+rather than making a copy in a site-packages directory. Thus, if you edit any .py file, or do a ``git pull`` to update the code
+this will take effect **immediately** rather than having to run ``pip install`` again.  This is a choice, but is the way 
+most developers work.
 
-Unfortunately there are a number of reasons this can go wrong. Most have to do
-with not having a "nice" python environment.
+Unfortunately there are a number of reasons the install can go wrong. Most have to do
+with not having a "nice" python environment. See the next section for some tips.
 
-Basic dependencies
-''''''''''''''''''
-
-You need a python interpreter (probably came with your operating system), its
-support for the package isolation tool virtualenv_, the convenience functions
-in virtualenvwrapper_, and the package installation tool pip_.  You probably
-need to  have these installed system-wide or in some other way. Sorry. Try some
-Googling if you don't.[1]_
-
-No python 3
-'''''''''''
-
-Install python 3. It's time.
-
-But if you can't, PINT will work with python 2, so just change the last two
-lines::
-
-   $ mkvirtualenv -p `which python2` pint
-   (pint) $ pip install -e .
-
-This will leave you with an old version of astropy and many other packages, as
-almost everyone has ceased support for python 2. Unfortunately, as you probably
-know if you have read this far, some systems and software are still in the
-Stone Age and don't work with python 3.
+Potential Install Issues
+------------------------
 
 Old setuptools (``egg-info`` error message)
 '''''''''''''''''''''''''''''''''''''''''''
@@ -125,24 +155,15 @@ luck.
 .. _virtualenvwrapper: https://virtualenvwrapper.readthedocs.io/en/latest/
 .. _Conda: https://docs.conda.io/en/latest/
 
-Installing PINT for Development
--------------------------------
+Installing PINT for Developers
+------------------------------
 
-You will need to be able to carry out a basic install of PINT as above. So try
-that first. Then you will need to install the additional development dependencies::
+You will need to be able to carry out a basic install of PINT as above.
+You very likely want to install in a virtualenv_ and using the develop mode ``pip -e``. 
+Then you will need to install the additional development dependencies::
 
    $ pip install -Ur requirements_dev.txt
 
-Some of those packages may have been already installed, for example by MacPorts.
-For MacPorts users, this command will get many of the requirements::
-
-    port install py27-numpy py27-scipy py27-astropy py27-nose py27-cython py27-emcee py27-sphinx py27-sphinx_rtd_theme
-
-`TEMPO`_ is not required, but if you have it installed PINT can find clock
-correction files in ``$TEMPO/clock``
-
-`Tempo2`_ is not required, but if you have it installed PINT can find clock
-correction files in ``$TEMPO2/clock``
 
 PINT development (building the documentation) requires pandoc_, which isn't a
 python package and therefore needs to be installed in some way appropriate for
@@ -150,13 +171,18 @@ your operating system. On Linux you may be able to just run::
 
    $ apt install pandoc
 
+On a Mac using MacPorts this would be::
+
+   $ sudo port install pandoc
+
 Otherwise, there are several ways to `install pandoc`_
 
-.. _[1]: If you don't have `pip`_ installed, this `Python installation guide`_ can guide
+For further development instructions see :ref:`Developing PINT`
+
+.. _1: If you don't have `pip`_ installed, this `Python installation guide`_ can guide
    you through the process.
 .. _pip: https://pip.pypa.io/en/stable/
 .. _TEMPO: http://tempo.sourceforge.net
 .. _Tempo2: https://bitbucket.org/psrsoft/tempo2
-.. _Python installation guide: https://docs.python-guide.org/starting/installation/
 .. _pandoc: https://pandoc.org/
 .. _`install pandoc`: https://pandoc.org/installing.html

@@ -165,3 +165,8 @@ TopoObs(
     aliases=["drao", "DRAO"],
     itrf_xyz=[-2058897.5725006417, -3621371.264826613, 4814353.577678314],
 )
+TopoObs(
+    "acre",
+    aliases=["acreroad", "a", "AR"],
+    itrf_xyz=[3573741.1, -269156.74, 5258407.3],
+)
