@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 
 import astropy._erfa as erfa
 import astropy.units as u
+from astropy import log
 import numpy as np
 from astropy import table
 from astropy.utils.data import clear_download_cache, download_file, is_url_in_cache
@@ -11,7 +12,7 @@ from astropy.utils.iers import IERS_B, IERS_B_URL, IERS_Auto, earth_orientation_
 from pint.pulsar_mjd import Time
 from pint.utils import PosVel
 
-__all__ = ["get_iers_b_up_to_date", "gcrs_posvel_from_itrf"]
+__all__ = ["get_iers_up_to_date", "gcrs_posvel_from_itrf"]
 
 
 def get_iers_up_to_date(mjd=Time.now().mjd - 45.0):

@@ -104,7 +104,7 @@ def test_times_against_tempo2():
             numpy.dot(dopv.vel.to_value(u.mm / u.s), dopv.vel.to_value(u.mm / u.s))
         )
         log.info(" obs diff: %.2f m, %.3f mm/s" % (dpos, dvel))
-        assert dpos < 2.0 and dvel < 0.02
+        assert dpos < 2.0 and dvel < 0.03
 
         pint_ssb2obs = PosVel(
             numpy.asarray(TOA["ssb_obs_pos"]) * u.km,
@@ -120,4 +120,4 @@ def test_times_against_tempo2():
             numpy.dot(dtopo.vel.to_value(u.mm / u.s), dtopo.vel.to_value(u.mm / u.s))
         )
         log.info(" topo diff: %.2f m, %.3f m/s" % (dpos, dvel))
-        assert dpos < 2.0 and dvel < 0.02
+        assert dpos < 2.0 and dvel < 0.07

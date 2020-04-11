@@ -87,4 +87,11 @@ pint_units = {
 }
 
 # Prepare IERS and update tables if needed
-get_iers_up_to_date()
+import astropy.version
+
+if astropy.version.major < 4:
+    log.warning(
+        "Using astropy version {}. To get most recent IERS data, upgrade to astropy >= 4.0"
+    )
+else:
+    get_iers_up_to_date()
