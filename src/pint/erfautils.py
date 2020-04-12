@@ -7,7 +7,18 @@ from astropy import log
 import numpy as np
 from astropy import table
 from astropy.utils.data import clear_download_cache, download_file, is_url_in_cache
-from astropy.utils.iers import IERS_B, IERS_B_URL, IERS_Auto, earth_orientation_table
+from astropy.utils.iers import IERS_B, IERS_B_URL, IERS_Auto
+import astropy.version
+import astropy
+
+if astropy.version.major < 4:
+    log.warning(
+        "Using astropy version {}. To get most recent IERS data, upgrade to astropy >= 4.0".format(
+            astropy.__version__
+        )
+    )
+else:
+    from astropy.utils.iers import earth_orientation_table
 
 from pint.pulsar_mjd import Time
 from pint.utils import PosVel
@@ -39,8 +50,9 @@ def get_iers_up_to_date(mjd=Time.now().mjd - 45.0):
     # Now open IERS_Auto with no argument, so it should use the IERS_B that we just made sure was up to date
     iers_auto = IERS_Auto.open()
 
-    # Tell astropy to use this table for all future transformations
-    earth_orientation_table.set(iers_auto)
+    if astropy.version.major >= 4:
+        # Tell astropy to use this table for all future transformations
+        earth_orientation_table.set(iers_auto)
 
 
 # This version is outdated since astropy now includes IERS_Auto (see improved version above)

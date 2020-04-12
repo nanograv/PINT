@@ -1,5 +1,6 @@
 """PINT Is Not TEMPO3!"""
 
+import astropy
 import astropy.constants as c
 import astropy.time as time
 import astropy.units as u
@@ -91,7 +92,9 @@ import astropy.version
 
 if astropy.version.major < 4:
     log.warning(
-        "Using astropy version {}. To get most recent IERS data, upgrade to astropy >= 4.0"
+        "Using astropy version {}. To get most recent IERS data, upgrade to astropy >= 4.0".format(
+            astropy.__version__
+        )
     )
 else:
     get_iers_up_to_date()
