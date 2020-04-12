@@ -5,12 +5,12 @@ import astropy.constants as c
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-import pint.pulsar_mjd
 from astropy.units import si
 from pint.extern._version import get_versions
 from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import PulsarMJD
 from pint.erfautils import get_iers_up_to_date
+import pint.pulsar_mjd
 from astropy import log
 
 __all__ = [
@@ -20,6 +20,7 @@ __all__ = [
     "light_second_equivalency",
     "dimensionless_cycles",
     "hourangle_second",
+    "pulsar_mjd",
     "GMsun",
     "Tsun",
     "Tmercury",
