@@ -19,6 +19,11 @@ class SolarWindDispersion(Dispersion):
     The model is a simple spherically-symmetric model that varies
     only in its amplitude.
 
+    References
+    ----------
+    Madison et al. 2019, ApJ, 872, 150; Section 3.1
+    Edwards et al. 2006, MNRAS, 372, 1549; Setion 2.5.4
+
     """
 
     register = True
@@ -53,6 +58,12 @@ class SolarWindDispersion(Dispersion):
     def solar_wind_delay(self, toas, acc_delay=None):
         """Return the solar wind dispersion delay for a set of frequencies
         Eventually different solar wind models will be supported
+
+        Implements equations 29, 30 of Edwards et al. 2006,
+        where their rho is given as theta here
+
+        rvec: radial vector from observatory to the center of the Sun
+        pos: pulsar position
         """
         if self.SWM.value == 0:
             tbl = toas.table
@@ -62,10 +73,10 @@ class SolarWindDispersion(Dispersion):
                 warn("Using topocentric frequency for dedispersion!")
                 bfreq = tbl["freq"]
 
-            rsa = tbl["obs_sun_pos"].quantity
+            rvec = tbl["obs_sun_pos"].quantity
             pos = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(np.float64))
-            r = np.sqrt(np.sum(rsa * rsa, axis=1))
-            cos_theta = (np.sum(rsa * pos, axis=1) / r).to(u.Unit("")).value
+            r = np.sqrt(np.sum(rvec * rvec, axis=1))
+            cos_theta = (np.sum(rvec * pos, axis=1) / r).to(u.Unit("")).value
             ret = (
                 const.au ** 2.0
                 * np.arccos(cos_theta)
@@ -90,10 +101,10 @@ class SolarWindDispersion(Dispersion):
                 warn("Using topocentric frequency for solar wind dedispersion!")
                 bfreq = tbl["freq"]
 
-            rsa = tbl["obs_sun_pos"].quantity
+            rvec = tbl["obs_sun_pos"].quantity
             pos = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(np.float64))
-            r = np.sqrt(np.sum(rsa * rsa, axis=1))
-            cos_theta = np.sum(rsa * pos, axis=1) / r
+            r = np.sqrt(np.sum(rvec * rvec, axis=1))
+            cos_theta = np.sum(rvec * pos, axis=1) / r
 
             # ret = AUdist**2.0 / const.c * np.arccos(cos_theta) * DMconst / \
             ret = (
