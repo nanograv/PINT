@@ -222,7 +222,7 @@ class Residuals(object):
         self._chi2 = None  # trigger chi2 recalculation when needed
         self.dof = self.get_dof()
 
-    def epoch_average(self, use_noise_model=True):
+    def ecorr_average(self, use_noise_model=True):
         """
         Uses the ECORR noise model time-binning to compute "epoch-averaged"
         residuals.  Requires ECORR be used in the timing model.  If
@@ -280,6 +280,7 @@ class Residuals(object):
             avg["noise_resids"][k] = wtsum(self.noise_resids[k])
 
         # Uncertainties
+        # TODO could add an option to incorporate residual scatter
         avg["errors"] = np.sqrt(1.0 / a_norm + ecorr_err2)
 
         # Indices back into original TOA list
