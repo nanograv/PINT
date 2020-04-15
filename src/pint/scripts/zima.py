@@ -161,20 +161,23 @@ def main(argv=None):
         # This should be a very boring plot with all residuals flat at 0.0!
         import matplotlib.pyplot as plt
 
-        rspost2 = m.phase(ts).frac / F_local
-        plt.errorbar(
-            ts.get_mjds().value,
-            rspost2.to(u.us).value,
-            yerr=ts.get_errors().to(u.us).value,
-        )
-        newts = pint.toa.get_TOAs(args.timfile, ephem=args.ephem, planets=args.planets)
-        rsnew = m.phase(newts).frac / F_local
-        plt.errorbar(
-            newts.get_mjds().value,
-            rsnew.to(u.us).value,
-            yerr=newts.get_errors().to(u.us).value,
-        )
-        # plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
-        plt.xlabel("MJD")
-        plt.ylabel("Residual (us)")
-        plt.show()
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            rspost2 = m.phase(ts).frac / F_local
+            plt.errorbar(
+                ts.get_mjds().value,
+                rspost2.to(u.us).value,
+                yerr=ts.get_errors().to(u.us).value,
+            )
+            newts = pint.toa.get_TOAs(
+                args.timfile, ephem=args.ephem, planets=args.planets
+            )
+            rsnew = m.phase(newts).frac / F_local
+            plt.errorbar(
+                newts.get_mjds().value,
+                rsnew.to(u.us).value,
+                yerr=newts.get_errors().to(u.us).value,
+            )
+            # plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
+            plt.xlabel("MJD")
+            plt.ylabel("Residual (us)")
+            plt.show()
