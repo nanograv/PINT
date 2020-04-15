@@ -28,7 +28,7 @@ def test_compare_erfautils_astropy():
     loc = Observatory.get(o).earth_location_itrf()
     mjds = np.linspace(50000, 58000, 512)
     t = Time(mjds, scale="tdb", format="mjd")
-    posvel = erfautils.gcrs_posvel_from_itrf(loc, t, obsname=o)
+    posvel = erfautils.old_gcrs_posvel_from_itrf(loc, t, obsname=o)
     astropy_posvel = erfautils.astropy_gcrs_posvel_from_itrf(loc, t, obsname=o)
     dopv = astropy_posvel - posvel
     dpos = np.sqrt((dopv.pos ** 2).sum(axis=0))

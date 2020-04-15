@@ -23,7 +23,7 @@ else:
 from pint.pulsar_mjd import Time
 from pint.utils import PosVel
 
-__all__ = ["get_iers_up_to_date", "gcrs_posvel_from_itrf"]
+__all__ = ["get_iers_up_to_date", "gcrs_posvel_from_itrf", "old_gcrs_posvel_from_itrf"]
 
 
 def get_iers_up_to_date(mjd=Time.now().mjd - 45.0):
