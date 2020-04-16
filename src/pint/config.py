@@ -33,4 +33,6 @@ def datapath(fname):
         if os.path.exists(full_fname):
             return full_fname
 
-    raise ValueError("Unable to find {} in directories {}".format(fname, search_dirs))
+    # See issue #652 for discussion of this <https://github.com/nanograv/PINT/issues/652>
+    # raise ValueError("Unable to find {} in directories {}".format(fname, search_dirs))
+    return None
