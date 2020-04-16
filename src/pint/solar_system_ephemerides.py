@@ -109,12 +109,18 @@ def _load_kernel_local(ephem, path):
         custom_path = os.path.join(path, ephem_bsp)
     else:
         custom_path = path
-    search_list = [custom_path, datapath(ephem_bsp)]
+    search_list = [custom_path]
+    try:
+        search_list.append(datapath(ephem_bsp))
+    except FileNotFoundError:
+        # If not found in datapath, just continue. Error will be raised later if also not in "path"
+        pass
     for p in search_list:
         if os.path.exists(p):
             # .set() can accept a path to an ephemeris
             coor.solar_system_ephemeris.set(ephem)
-
+    # Question(paulr): How does this work? It looks like this function should always get to this exception!
+    # I think it should return right after calling set(ephem)!
     raise OSError("ephemeris file {} not found in any of {}".format(ephem, search_list))
 
 

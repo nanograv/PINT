@@ -18,7 +18,7 @@ def datapath(fname):
 
     Will first search the appdirs user_data_dir (typically
     $HOME/.local/share/pint on linux) then the installed data files dir
-    (__file__/datafiles).  If the file is not found, returns None.
+    (__file__/datafiles).  If the file is not found, raises FileNotFoundError.
 
     """
 
@@ -34,5 +34,6 @@ def datapath(fname):
             return full_fname
 
     # See issue #652 for discussion of this <https://github.com/nanograv/PINT/issues/652>
-    # raise ValueError("Unable to find {} in directories {}".format(fname, search_dirs))
-    return None
+    raise FileNotFoundError(
+        "Unable to find {} in directories {}".format(fname, search_dirs)
+    )
