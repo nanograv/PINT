@@ -213,12 +213,6 @@ class EcorrNoise(NoiseComponent):
             else:
                 continue
 
-        # check duplicate
-        for el in ["ECORRs"]:
-            l = list(getattr(self, el).values())
-            if [x for x in l if l.count(x) > 1] != []:
-                raise ValueError("'%s' have duplicated keys and key values." % el)
-
     def validate(self):
         super(EcorrNoise, self).validate()
 

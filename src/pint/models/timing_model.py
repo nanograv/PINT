@@ -20,6 +20,8 @@ from pint.models.parameter import strParameter, maskParameter
 from pint.phase import Phase
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
+
+__all__ = ["DEFAULT_ORDER", "TimingModel"]
 # Parameters or lines in parfiles we don't understand but shouldn't
 # complain about. These are still passed to components so that they
 # can use them if they want to.
@@ -55,7 +57,23 @@ ignore_params = set(
         #    'NE_SW', 'NE_SW2',
     ]
 )
+
 ignore_prefix = set(["DMXF1_", "DMXF2_", "DMXEP_"])  # DMXEP_ for now.
+
+DEFAULT_ORDER = [
+    "astrometry",
+    "jump_delay",
+    "solar_system_shapiro",
+    "solar_wind",
+    "dispersion_constant",
+    "dispersion_dmx",
+    "pulsar_system",
+    "frequency_dependent",
+    "absolute_phase",
+    "spindown",
+    "phase_jump",
+    "wave",
+]
 
 
 class TimingModel(object):
@@ -130,7 +148,8 @@ class TimingModel(object):
             strParameter(name="UNITS", description="Units (TDB assumed)"), ""
         )
 
-        self.setup_components(components)
+        for cp in components:
+            self.add_component(cp, validate=False)
 
     def __repr__(self):
         return "{}(\n  {}\n)".format(
@@ -147,7 +166,7 @@ class TimingModel(object):
             cp.setup()
 
     def validate(self):
-        """ Validate component setup. 
+        """ Validate component setup.
             The checks includes:
             - Required parameters
             - Parameter values
@@ -345,48 +364,61 @@ class TimingModel(object):
             comp_type = comp_base[-3].__name__
         return comp_type
 
-    def setup_components(self, components):
-        """Set components list according to the component types.
+    def map_component(self, component):
+        """ Get the location of component.
 
-        Note
-        ----
-        The method will reset the component list.
-
+        Parameters
+        ----------
+        component: str or `Component` object
+            Component name or component object.
+            
+        Returns
+        -------
+        comp: `Component` object
+            Component object.
+        order: int
+            The index/order of the component in the component list
+        host_list: List
+            The host list of the component.
+        comp_type: str
+            The component type (e.g., Delay or Phase)
         """
-        if self.component_types:
-            raise ValueError(
-                "setup_components is being run when the model already has a "
-                "few components: {}".format(self.component_types)
-            )
+        comps = self.components
+        if isinstance(component, str):
+            if component not in list(comps.keys()):
+                raise AttributeError("No '%s' in the timing model." % component)
+            comp = comps[component]
+        else:  # When component is an component instance.
+            if component not in list(comps.values()):
+                raise AttributeError(
+                    "No '%s' in the timing model." % component.__class__.__name__
+                )
+            else:
+                comp = component
+        comp_type = self.get_component_type(comp)
+        host_list = getattr(self, comp_type + "_list")
+        order = host_list.index(comp)
+        return comp, order, host_list, comp_type
 
-        comp_types = defaultdict(list)
-        for cp in components:
-            comp_type = self.get_component_type(cp)
-            comp_types[comp_type].append(cp)
-            cp._parent = self
-
-        for type_ in comp_types:
-            if type_ not in self.component_types:
-                self.component_types.append(type_)
-        for ct in comp_types:
-            setattr(self, ct + "_list", comp_types[ct])
-
-    def add_component(self, component, order=None, force=False):
-        """Add a component to the timing model.
+    def add_component(self, component, order=DEFAULT_ORDER, force=False, validate=True):
+        """Add a component into TimingModel.
 
         Parameters
         ----------
         component : Component
             The component to be added to the timing model.
-        order : int, optional
-            Where in the list of components to insert the new one.
+        order : list, optional
+            The component category order list. Default is the DEFAULT_ORDER.
         force : bool, optional
-            If true, add a duplicate component.
+            If true, add a duplicate component. Default is False.
 
         """
         comp_type = self.get_component_type(component)
         if comp_type in self.component_types:
             comp_list = getattr(self, comp_type + "_list")
+            cur_cps = []
+            for cp in comp_list:
+                cur_cps.append((order.index(cp.category), cp))
             # Check if the component has been added already.
             if component.__class__ in (x.__class__ for x in comp_list):
                 log.warning(
@@ -401,12 +433,70 @@ class TimingModel(object):
                     )
         else:
             self.component_types.append(comp_type)
-            comp_list = []
-            setattr(self, comp_type + "_list", comp_list)
-        if order is None:
-            comp_list.append(component)
+            cur_cps = []
+
+        # link new component to TimingModel
+        component._parent = self
+
+        # If the categore is not in the order list, it will be added to the end.
+        if component.category not in order:
+            new_cp = tuple((len(order) + 1, component))
         else:
-            comp_list.insert(order, component)
+            new_cp = tuple((order.index(component.category), component))
+        # add new component
+        cur_cps.append(new_cp)
+        cur_cps.sort(key=lambda x: x[0])
+        new_comp_list = [c[1] for c in cur_cps]
+        setattr(self, comp_type + "_list", new_comp_list)
+        # Set up components
+        self.setup()
+        # Validate inputs
+        if validate:
+            self.validate()
+
+    def remove_component(self, component):
+        """ Remove one component from the timing model. 
+            
+        Parameters
+        ----------
+        component: str or `Component` object
+            Component name or component object.
+        """
+        cp, co_order, host, cp_type = self.map_component(component)
+        host.remove(cp)
+
+    def _locate_param_host(self, components, param):
+        """ Search for the parameter host component.
+
+        Parameters
+        ----------
+        components: list
+            Searching component list.
+        param: str
+            Target parameter.
+
+        Return
+        ------
+        List of tuples. The first element is the component object that have the
+        target parameter, the second one is the parameter object. If it is a
+        prefix-style parameter, it will return one example of such parameter.
+        """
+        result_comp = []
+        for cp in components:
+            if param in cp.params:
+                result_comp.append((cp, getattr(cp, param),))
+            else:
+                # search for prefixed parameter
+                prefixs = cp.param_prefixs
+                try:
+                    prefix, index_str, index = split_prefixed_name(param)
+                except PrefixError:
+                    prefix = param
+
+                if prefix in prefixs.keys():
+                    result_comp.append(cp, getattr(cp, prefixs[param][0]))
+
+        return result_comp
 
     def replicate(self, components=[], copy_component=False):
         new_tm = TimingModel()
@@ -422,32 +512,25 @@ class TimingModel(object):
         new_tm.top_level_params = self.top_level_params
         return new_tm
 
-    def map_component(self, component):
-        comps = self.components
-        if isinstance(component, str):
-            if component not in list(comps.keys()):
-                raise AttributeError("No '%s' in the timing model." % component)
-            comp = comps[component]
-        else:  # When component is an component instance.
-            if component not in list(comps.values()):
-                raise AttributeError(
-                    "No '%s' in the timing model." % component.__class__.__name__
-                )
-            else:
-                comp = component
-        comp_type = self.get_component_type(comp)
-        comp_type_list = getattr(self, comp_type + "_list")
-        order = comp_type_list.index(comp)
-        return comp, order, comp_type_list, comp_type
-
     def get_component_of_category(self):
         category = defaultdict(list)
         for cp in self.components.values():
             category[cp.category].append(cp)
         return dict(category)
 
-    def add_param_from_top(self, param, target_component):
-        """Add a parameter to a timing model component."""
+    def add_param_from_top(self, param, target_component, setup=False):
+        """ Add a parameter to a timing model component.
+           
+            Parameters
+            ----------
+            param: str
+                Parameter name
+            target_component: str
+                Parameter host component name. If given as "" it would add
+                parameter to the top level `TimingModel` class
+            setup: bool, optional
+                Flag to run setup() function.  
+        """
         if target_component == "":
             setattr(self, param.name, param)
             self.top_level_params += [param.name]
@@ -457,7 +540,7 @@ class TimingModel(object):
                     "Can not find component '%s' in "
                     "timging model." % target_component
                 )
-            self.components[target_component].add_param(param)
+            self.components[target_component].add_param(param, setup=setup)
 
     def remove_param(self, param):
         """Remove a parameter from timing model.
@@ -488,19 +571,10 @@ class TimingModel(object):
                 param_mapping[pp] = cp.__class__.__name__
         return param_mapping
 
-    def get_params_of_type(self, param_type):
-        """ Get all the parameters in timing model for one specific type
-        """
+    def get_params_of_type_top(self, param_type):
         result = []
-        for p in self.params:
-            par = getattr(self, p)
-            par_type = type(par).__name__
-            par_prefix = par_type[:-9]
-            if (
-                param_type.upper() == par_type.upper()
-                or param_type.upper() == par_prefix.upper()
-            ):
-                result.append(par.name)
+        for cp in self.components.values():
+            result += cp.get_params_of_type(param_type)
         return result
 
     def get_prefix_mapping(self, prefix):
@@ -1155,7 +1229,59 @@ class Component(object):
                     % (self.__class__.__name__, name)
                 )
 
-    def add_param(self, param):
+    @property
+    def param_prefixs(self):
+        prefixs = {}
+        for p in self.params:
+            par = getattr(self, p)
+            if par.is_prefix:
+                if par.prefix not in prefixs.keys():
+                    prefixs[par.prefix] = [
+                        p,
+                    ]
+                else:
+                    prefixs[par.prefix].append(p)
+        return prefixs
+
+    def get_params_of_type(self, param_type):
+        """ Get all the parameters in timing model for one specific type
+        """
+        result = []
+        for p in self.params:
+            par = getattr(self, p)
+            par_type = type(par).__name__
+            par_prefix = par_type[:-9]
+            if (
+                param_type.upper() == par_type.upper()
+                or param_type.upper() == par_prefix.upper()
+            ):
+                result.append(par.name)
+        return result
+
+    def get_prefix_mapping(self, prefix):
+        """Get the index mapping for the prefix parameters.
+
+        Parameters
+        ----------
+        prefix : str
+           Name of prefix.
+
+        Returns
+        -------
+        dict
+           A dictionary with prefix pararameter real index as key and parameter
+           name as value.
+
+        """
+        parnames = [x for x in self.params if x.startswith(prefix)]
+        mapping = dict()
+        for parname in parnames:
+            par = getattr(self, parname)
+            if par.is_prefix == True and par.prefix == prefix:
+                mapping[par.index] = parname
+        return mapping
+
+    def add_param(self, param, deriv_func=None, setup=False):
         """Add a parameter to the Component.
 
         The parameter is stored in an attribute on the Component object.
@@ -1165,17 +1291,58 @@ class Component(object):
         ----------
         param : pint.models.Parameter
             The parameter to be added.
-
+        deriv_func: function
+            Derivative function for parameter.
         """
-        if param.name in self.params and getattr(self, param.name) is not param:
-            raise ValueError(
-                "Tried to add a second parameter called {}. "
-                "Old value: {} New value: {}".format(
-                    param.name, getattr(self, param.name), param
+        # This is the case for add "JUMP" like parameters, It will add an
+        # index to the parameter name for avoding the conflicts
+        # TODO: this is a work around in the current system, but it will be
+        # optimized in the future release.
+        if isinstance(param, maskParameter):
+            # TODO, right now maskParameter add index to parameter name by
+            # default. But This is should be optimized. In the future versions,
+            # it will change.
+
+            # First get prefix and index from input parameter name
+            try:
+                prefix, idx_str, idx = split_prefixed_name(param.name)
+            except PrefixError:
+                prefix = param.name
+                idx = 1
+
+            # Check existing prefix
+            prefix_map = self.get_prefix_mapping_component(prefix)
+            exist_par_name = prefix_map.get(idx, None)
+            # Check if parameter value has been set.
+            if exist_par_name and getattr(self, exist_par_name).value is not None:
+                idx = max(list(prefix_map.keys())) + 1
+
+            # TODO here we have an assumption that maskParameter follow the
+            # convention of name + no_leading_zero_index
+            param.name = prefix + str(idx)
+            param.index = idx
+
+        # A more general check
+        if param.name in self.params:
+            exist_par = getattr(self, param.name)
+            if exist_par.value is not None:
+                raise ValueError(
+                    "Tried to add a second parameter called {}. "
+                    "Old value: {} New value: {}".format(
+                        param.name, getattr(self, param.name), param
+                    )
                 )
-            )
-        setattr(self, param.name, param)
-        self.params.append(param.name)
+            else:
+                setattr(self, param.name, param)
+        else:  # When parameter not in the params list, we also need to add it.
+            setattr(self, param.name, param)
+            self.params.append(param.name)
+        # Adding parameters to an existing model sometimes need to run setup()
+        # function again.
+        if setup:
+            self.setup()
+        if deriv_func is not None:
+            self.register_deriv_funcs(func, param.name)
 
     def remove_param(self, param):
         """Remove a parameter from the Component.
@@ -1234,7 +1401,6 @@ class Component(object):
                 result.append(par.name)
         return result
 
-    # @Cache.use_cache
     def get_prefix_mapping_component(self, prefix):
         """Get the index mapping for the prefix parameters.
 
@@ -1298,7 +1464,14 @@ class Component(object):
         if pn not in list(self.deriv_funcs.keys()):
             self.deriv_funcs[pn] = [func]
         else:
-            self.deriv_funcs[pn] += [func]
+            # TODO:
+            # Runing setup() mulitple times can lead to adding derivative
+            # function multiple times. This prevent it from happening now. But
+            # in the future, we should think a better way to do so.
+            if func in self.deriv_funcs[pn]:
+                return
+            else:
+                self.deriv_funcs[pn] += [func]
 
     def is_in_parfile(self, para_dict):
         """Check if this subclass included in parfile.
