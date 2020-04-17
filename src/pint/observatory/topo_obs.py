@@ -180,10 +180,10 @@ class TopoObs(Observatory):
         Will first try PINT data dirs, then fall back on $TEMPO2/clock.
         """
         fname = "tai2tt_" + self.bipm_version.lower() + ".clk"
-        fullpath = datapath(fname)
-        if fullpath is not None:
+        try:
+            fullpath = datapath(fname)
             return fullpath
-        else:
+        except ValueError:
             try:
                 return os.path.join(os.getenv("TEMPO2"), "clock", fname)
             except OSError as e:
