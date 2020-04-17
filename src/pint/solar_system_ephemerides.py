@@ -109,13 +109,20 @@ def _load_kernel_local(ephem, path):
         custom_path = os.path.join(path, ephem_bsp)
     else:
         custom_path = path
-    search_list = [custom_path, datapath(ephem_bsp)]
+    search_list = [custom_path]
+    try:
+        search_list.append(datapath(ephem_bsp))
+    except FileNotFoundError:
+        # If not found in datapath, just continue. Error will be raised later if also not in "path"
+        pass
     for p in search_list:
         if os.path.exists(p):
             # .set() can accept a path to an ephemeris
             coor.solar_system_ephemeris.set(ephem)
-
-    raise OSError("ephemeris file {} not found in any of {}".format(ephem, search_list))
+            return
+    raise FileNotFoundError(
+        "ephemeris file {} not found in any of {}".format(ephem, search_list)
+    )
 
 
 def load_kernel(ephem, path=None, link=None):
@@ -137,16 +144,12 @@ def load_kernel(ephem, path=None, link=None):
     ephem : str
         Short name of the ephemeris, for example `de421`. Case-insensitive.
     path : str, optional
-        Local path to the ephemeris file.
-    link : str, optional
-        Location of path on the internet.
-    path: str, optional
         Load the ephemeris from the file specified in path, rather than
         requesting it from the network or astropy's collection of
         ephemerides. The file is searched for by treating path as relative
         to the current directory, or failing that, as relative to the
         data directory specified in PINT's configuration.
-    link: str, optional
+    link : str, optional
         Suggest the URL as a possible location astropy should search
         for the ephemeris.
 
@@ -162,6 +165,11 @@ def load_kernel(ephem, path=None, link=None):
             _load_kernel_local(ephem, path=path)
             return
         except OSError:
+            log.info(
+                "Failed to load local solar system ephemeris kernel {}, falling back on astropy".format(
+                    path
+                )
+            )
             pass
     # Links are just suggestions, try just plain loading
     try:

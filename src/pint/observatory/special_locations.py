@@ -78,24 +78,33 @@ class SpecialLocation(Observatory):
         """Returns full path to the GPS-UTC clock file.  Will first try PINT
         data dirs, then fall back on $TEMPO2/clock."""
         fname = "gps2utc.clk"
-        fullpath = datapath(fname)
-        if fullpath is not None:
+        try:
+            fullpath = datapath(fname)
             return fullpath
-        return os.path.join(os.getenv("TEMPO2"), "clock", fname)
+        except FileNotFoundError:
+            log.info(
+                "{} not found in PINT data dirs, falling back on TEMPO2/clock directory".format(
+                    fname
+                )
+            )
+            return os.path.join(os.getenv("TEMPO2"), "clock", fname)
 
     @property
     def bipm_fullpath(self,):
         """Returns full path to the TAI TT(BIPM) clock file.  Will first try PINT
         data dirs, then fall back on $TEMPO2/clock."""
         fname = "tai2tt_" + self.bipm_version.lower() + ".clk"
-        fullpath = datapath(fname)
-        if fullpath is not None:
+        try:
+            fullpath = datapath(fname)
             return fullpath
-        else:
-            try:
-                return os.path.join(os.getenv("TEMPO2"), "clock", fname)
-            except:
-                return None
+        except FileNotFoundError:
+            pass
+        log.info(
+            "{} not found in PINT data dirs, falling back on TEMPO2/clock directory".format(
+                fname
+            )
+        )
+        return os.path.join(os.getenv("TEMPO2"), "clock", fname)
 
     def clock_corrections(self, t):
         corr = numpy.zeros(t.shape) * u.s
