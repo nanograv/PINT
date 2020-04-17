@@ -52,6 +52,7 @@ def _load_kernel_link(ephem, link=None):
     if ephem in _ephemeris_hits:
         # If we found it earlier just pull it from cache
         coor.solar_system_ephemeris.set(_ephemeris_hits[ephem])
+        log.info("Set solar system ephemeris to link {}".format(_ephemeris_hits[ephem]))
         return
 
     # FIXME: is link supposed to be a URL for the file or a directory?
@@ -65,6 +66,9 @@ def _load_kernel_link(ephem, link=None):
         try:
             coor.solar_system_ephemeris.set(ephem_link)
             _ephemeris_hits[ephem] = ephem_link
+            log.info(
+                "Set solar system ephemeris to link {}".format(_ephemeris_hits[ephem])
+            )
             return
         except (ValueError, IOError) as e:
             log.debug("Did not find '{}' because: {}, will retry".format(ephem_link, e))
@@ -79,6 +83,9 @@ def _load_kernel_link(ephem, link=None):
             log.debug("Only able to download '{}' on a second try".format(ephem_link))
             coor.solar_system_ephemeris.set(ephem_link)
             _ephemeris_hits[ephem] = ephem_link
+            log.info(
+                "Set solar system ephemeris to link {}".format(_ephemeris_hits[ephem])
+            )
             return
         except (ValueError, IOError) as e:
             log.info(
@@ -119,6 +126,7 @@ def _load_kernel_local(ephem, path):
         if os.path.exists(p):
             # .set() can accept a path to an ephemeris
             coor.solar_system_ephemeris.set(ephem)
+            log.info("Set solar system ephemeris to local file {}".format(ephem))
             return
     raise FileNotFoundError(
         "ephemeris file {} not found in any of {}".format(ephem, search_list)
@@ -174,6 +182,7 @@ def load_kernel(ephem, path=None, link=None):
     # Links are just suggestions, try just plain loading
     try:
         coor.solar_system_ephemeris.set(ephem)
+        log.info("Set solar system ephemeris to {}".format(ephem))
         return
     except ValueError:
         # Just means it wasn't a standard astropy ephemeris
