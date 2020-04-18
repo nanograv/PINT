@@ -52,7 +52,12 @@ def _load_kernel_link(ephem, link=None):
     if ephem in _ephemeris_hits:
         # If we found it earlier just pull it from cache
         coor.solar_system_ephemeris.set(_ephemeris_hits[ephem])
-        log.info("Set solar system ephemeris to link {}".format(_ephemeris_hits[ephem]))
+        # Don't use log.info since this is using a cached version. No need to say it again
+        log.debug(
+            "Set solar system ephemeris to (cached) link {}".format(
+                _ephemeris_hits[ephem]
+            )
+        )
         return
 
     # FIXME: is link supposed to be a URL for the file or a directory?
@@ -67,7 +72,9 @@ def _load_kernel_link(ephem, link=None):
             coor.solar_system_ephemeris.set(ephem_link)
             _ephemeris_hits[ephem] = ephem_link
             log.info(
-                "Set solar system ephemeris to link {}".format(_ephemeris_hits[ephem])
+                "Set solar system ephemeris to link:\n\t{}".format(
+                    _ephemeris_hits[ephem]
+                )
             )
             return
         except (ValueError, IOError) as e:
@@ -84,7 +91,9 @@ def _load_kernel_link(ephem, link=None):
             coor.solar_system_ephemeris.set(ephem_link)
             _ephemeris_hits[ephem] = ephem_link
             log.info(
-                "Set solar system ephemeris to link {}".format(_ephemeris_hits[ephem])
+                "Set solar system ephemeris to link (with long timeout) {}".format(
+                    _ephemeris_hits[ephem]
+                )
             )
             return
         except (ValueError, IOError) as e:
@@ -126,7 +135,7 @@ def _load_kernel_local(ephem, path):
         if os.path.exists(p):
             # .set() can accept a path to an ephemeris
             coor.solar_system_ephemeris.set(ephem)
-            log.info("Set solar system ephemeris to local file {}".format(ephem))
+            log.info("Set solar system ephemeris to local file:\n\t{}".format(ephem))
             return
     raise FileNotFoundError(
         "ephemeris file {} not found in any of {}".format(ephem, search_list)
