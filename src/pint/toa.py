@@ -769,7 +769,7 @@ class TOAs(object):
             try:
                 self.phase_columns_from_flags()
             except ValueError:
-                log.info("No pulse numbers found in the TOAs")
+                log.debug("No pulse numbers found in the TOAs")
 
         # We don't need this now that we have a table
         del self.toas
@@ -995,6 +995,7 @@ class TOAs(object):
             list(self.observatories),
         )
         s += "MJD span:  %.3f to %.3f\n" % (self.first_MJD.mjd, self.last_MJD.mjd)
+        s += "Date span: {} to {}\n".format(self.first_MJD.iso, self.last_MJD.iso)
         for ii, key in enumerate(self.table.groups.keys):
             grp = self.table.groups[ii]
             s += "%s TOAs (%d):\n" % (key["obs"], len(grp))
@@ -1171,7 +1172,7 @@ class TOAs(object):
                 raise ValueError("Some TOAs have 'clkcorr' flag and some do not!")
         # An array of all the time corrections, one for each TOA
         log.info(
-            "Applying clock corrections (include_GPS = {0}, include_BIPM = {1}.".format(
+            "Applying clock corrections (include_GPS = {0}, include_BIPM = {1})".format(
                 include_gps, include_bipm
             )
         )
@@ -1321,10 +1322,17 @@ class TOAs(object):
         # Record the choice of ephemeris and planets
         self.ephem = ephem
         self.planets = planets
-        log.info(
-            "Computing positions and velocities of observatories and Earth "
-            "(planets = {0}), using {1} ephemeris".format(planets, ephem)
-        )
+        if planets:
+            log.info(
+                "Computing PosVels of observatories, Earth and planets, using {}".format(
+                    ephem
+                )
+            )
+
+        else:
+            log.info(
+                "Computing PosVels of observatories and Earth, using {}".format(ephem)
+            )
         # Remove any existing columns
         cols_to_remove = ["ssb_obs_pos", "ssb_obs_vel", "obs_sun_pos"]
         for c in cols_to_remove:

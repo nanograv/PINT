@@ -1,5 +1,4 @@
 """Various tests to assess the performance of the FBX model."""
-import logging
 import os
 import unittest
 
@@ -46,11 +45,10 @@ class TestFBX(unittest.TestCase):
         ), "J0023 residuals test failed."
 
     def test_derivative(self):
-        log = logging.getLogger("test_J0023.derivative_test")
         testp = tdu.get_derivative_params(self.modelJ0023)
         delay = self.modelJ0023.delay(self.toasJ0023)
         for p in testp.keys():
-            log.debug("Runing derivative for %s", "d_delay_d_" + p)
+            print("Runing derivative for %s", "d_delay_d_" + p)
             if p in ["EPS2", "EPS1"]:
                 testp[p] = 15
             ndf = self.modelJ0023.d_phase_d_param_num(self.toasJ0023, p, testp[p])
@@ -74,7 +72,7 @@ class TestFBX(unittest.TestCase):
                     tol = 0.08
                 else:
                     tol = 1e-3
-                log.debug(
+                print(
                     "derivative relative diff for %s, %lf"
                     % ("d_delay_d_" + p, np.nanmax(relative_diff).value)
                 )
