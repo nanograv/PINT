@@ -22,38 +22,69 @@ jupyter:
  * Add prefix-able parameter
 
 ```python
-import astropy.units as u
-from pint.models import parameter as p
-from pint.models.timing_model import TimingModel, Component
+import astropy.units as u  # Astropy units is a very useful module.
+from pint.models import parameter as p # We would like to add parameters to the model, so we need parameter module.
+from pint.models.timing_model import TimingModel, Component # Interface for timing model
 ```
 
-### Building a timing model from scrath
+## Building a timing model from scratch
 
 Timing model can be put together from the components and then fill up the with parameter values.
 
 We are going to build the model for "NGC6440E.par" from scratch
 
+### First let us see what components do we have. 
+
+All built-in component classes can be viewed from `Component` class, which uses the meta-class to collect the built-in component class. For how to make a component class, see example "make_component_class"(in preperation) 
 
 ```python
 # list all the existing component
-all_components = Component.component_types
-print(all_components)
+# all_components below is a dictionary, with the component name as the key and component class as the value.
+all_components = Component.component_types 
+# Print the component class names. 
+_ = [print(x) for x in all_components] # '_' means the out put is not very important. 
 ```
 
 ### Choose your components
-We are not adding dispersion model here, for the demo later.
+
+Let's start from a relative simple model, with 
+`AbsPhase`: The absolute phase of the pulsar, typical parameters, `TZRMJD`, `TZRFREQ`...
+`AstrometryEquatorial`: The ICRS equatorial coordinate, parameters, `RAJ`, `DECJ`, `PMRA`, `PMDEC`...  
+`Spindown`: The pulsar spin-down model, parameters, `F0`, `F1`...
+
+We will add dispersion model as demo.
 
 ```python
 selected_components = ["AbsPhase", "AstrometryEquatorial", "Spindown"]
-components = []
-# Initiate the components
-for cp_name in selected_components:
-    cp = all_components[cp_name]()
-    components.append(cp)
+component_instances = []
 
-tm = TimingModel("NGC6400E", components)
+# Initiate the component instances
+for cp_name in selected_components:
+    component_class = all_components[cp_name]  # Get the component class
+    component_instance = component_class()  # Instantiate component instance
+    component_instances.append(component_instance)  # Add component instances into the component instances list
+
+
+
+```
+
+### Make timing model (i.e., `TimingModel` instance)
+
+`TimingModel` class provides the storage and interface for the components. It also manages the components internally. 
+
+```python
+# Make timing model instance. 
+tm = TimingModel("NGC6400E", component_instances)
+```
+
+### View the components in the timing model instance.
+
+To view all the components in `TimingModel` instance, we can use the property `.components`, which returns a dictionary (name as the key, component instance as the value)  
+
+```python
 # print the components in the timing model
-print(tm.components)
+for cp_name, cp_instance in tm.components.items(): # loop over the items in the dictionary. 
+    print(cp_name, cp_instance)
 ```
 
 ### Add parameter values
