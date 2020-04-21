@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import unittest
+import pytest
 
 import astropy.time as time
 import numpy as np
@@ -26,6 +27,11 @@ class TestSolarSystemDynamic(unittest.TestCase):
         cls.tdb_time = time.Time(mjd, scale="tdb", format="mjd")
         cls.ephem = ["de405", "de421", "de434", "de430", "de436"]
         cls.planets = ["jupiter", "saturn", "venus", "uranus"]
+
+    def test_datapath(self):
+        # Check that datapath of a non-existent file raises FileNotFoundError exception.
+        with pytest.raises(FileNotFoundError):
+            d = datapath("foobar")
 
     # Here we only test if any errors happens.
     def test_earth(self):
