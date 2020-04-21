@@ -457,29 +457,35 @@ def dmxparse(fitter, save=False):
 
     Based off dmxparse by P. Demorest (https://github.com/nanograv/tempo/tree/master/util/dmxparse)
 
-    Inputs:
-    :param fitter: PINT fitter used to get timing residuals, must have already run GLS fit
-    :param save: boolean; if True saves output to text file in the format of the TEMPO version.
-    If not output save file is desired, save = False (which is the default)
-    Output file name is dmxparse.out
+    Parameters
+    ----------
+    fitter
+        PINT fitter used to get timing residuals, must have already run GLS fit
+    save : bool
+        if True saves output to text file in the format of the TEMPO version.
+        If not output save file is desired, save = False (which is the default)
+        Output file name is dmxparse.out
     
-    Returns a dictionary with the following entries:
+    Returns
+    -------
+    dictionary
 
-        dmxs        mean-subtraced dmx values
+        dmxs : mean-subtraced dmx values
 
-        dmx_verrs   dmx variance errors
+        dmx_verrs : dmx variance errors
 
-        dmxeps      center mjds of the dmx bins
+        dmxeps : center mjds of the dmx bins
 
-        r1s         lower mjd bounds on the dmx bins
+        r1s : lower mjd bounds on the dmx bins
 
-        r2s         upper mjd bounds on the dmx bins
+        r2s : upper mjd bounds on the dmx bins
 
-        bins        dmx bins
+        bins : dmx bins
 
-        mean_dmx    mean dmx value
+        mean_dmx : mean dmx value
 
-        avg_dm_err  uncertainty in average dmx
+        avg_dm_err : uncertainty in average dmx
+
     """
     # We get the DMX values, errors, and mjds (same as in getting the DMX values for DMX v. time)
     # Get number of DMX epochs
@@ -829,8 +835,8 @@ def ELL1_check(A1, E, TRES, NTOA, outstring=True):
 
     Checks whether the assumptions that allow ELL1 to be safely used are 
     satisfied. To work properly, we should have:
-            asini/c * ecc**2 << timing precision / sqrt(# TOAs)
-            or A1 * E**2 << TRES / sqrt(NTOA)
+    asini/c * ecc**2 << timing precision / sqrt(# TOAs)
+    or A1 * E**2 << TRES / sqrt(NTOA)
 
     Parameters
     ----------
