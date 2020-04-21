@@ -588,6 +588,10 @@ def test_dmxparse():
     dmx = dmxparse(f, save=False)
 
 
+# Remove this xfail once our minimum numpy can bump up to 1.17, but this requires excluding Python 2
+@pytest.mark.xfail(
+    reason="numpy 1.16.* does not support isclose with units, fixed in 1.17"
+)
 def test_psr_utils():
 
     from pint.utils import (
