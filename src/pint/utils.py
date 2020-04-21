@@ -506,8 +506,8 @@ def dmxparse(fitter, save=False):
         DMX_Errs.append(
             getattr(fitter.model, "DMX_{:04d}".format(ii)).uncertainty_value
         )
-        dmxr1 = getattr(fitter.model, "DMX_{:04d}".format(ii)).value
-        dmxr2 = getattr(fitter.model, "DMX_{:04d}".format(ii)).value
+        dmxr1 = getattr(fitter.model, "DMXR1_{:04d}".format(ii)).value
+        dmxr2 = getattr(fitter.model, "DMXR2_{:04d}".format(ii)).value
         DMX_R1.append(dmxr1)
         DMX_R2.append(dmxr2)
         DMX_center_MJD.append((dmxr1 + dmxr2) / 2)
