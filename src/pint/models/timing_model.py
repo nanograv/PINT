@@ -553,7 +553,7 @@ class TimingModel(object):
         """
         param_map = self.get_params_mapping()
         if param not in list(param_map.keys()):
-            raise AttributeError("Can not find '%s' in timing model." % param.name)
+            raise AttributeError("Can not find '%s' in timing model." % param)
         if param_map[param] == "timing_model":
             delattr(self, param)
             self.top_level_params.remove(param)
