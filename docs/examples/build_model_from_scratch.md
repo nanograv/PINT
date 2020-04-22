@@ -29,7 +29,7 @@ from pint.models.timing_model import TimingModel, Component # Interface for timi
 
 ## Building a timing model from scratch
 
-Timing model can be put together from the components and then fill up the with parameter values.
+Timing model can be put together from the model components and then fill up the with parameter values.
 
 We are going to build the model for "NGC6440E.par" from scratch
 
@@ -80,6 +80,8 @@ tm = TimingModel("NGC6400E", component_instances)
 ### View the components in the timing model instance.
 
 To view all the components in `TimingModel` instance, we can use the property `.components`, which returns a dictionary (name as the key, component instance as the value).  
+
+Internally, the components are stored in a list(ordered list, you will see why this is important below) according to their types. All the delay type of components (inheritances of `DelayComponent` class) are stored in the `DelayComponent_list`, and the phase type of components(inheritances of `PhaseComponent` class) in the `PhaseComponent_list`. 
 
 ```python
 # print the components in the timing model
