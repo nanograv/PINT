@@ -5,6 +5,12 @@ import os
 
 from .extern import appdirs
 
+# Hack to support FileNotFoundError in Python 2
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
+
 # Values for appdirs calls
 _app = "pint"
 _auth = "pint"
