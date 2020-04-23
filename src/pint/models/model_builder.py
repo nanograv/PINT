@@ -233,7 +233,7 @@ class ModelBuilder(object):
                         )
                     )
                 (bm,) = vals
-                cats = self.timing_model.get_component_of_category()
+                cats = self.timing_model.get_components_by_category()
                 if "pulsar_system" not in cats:
                     raise UnknownBinaryModel(
                         "Unknown binary model requested in par file: {}".format(bm)

@@ -90,7 +90,7 @@ class Fitter(object):
     def get_allparams(self):
         """Return a dict of all param names and values."""
         return collections.OrderedDict(
-            (k, getattr(self.model, k).quantity) for k in self.model.params
+            (k, getattr(self.model, k).quantity) for k in self.model.params_ordered
         )
 
     def get_fitparams(self):
