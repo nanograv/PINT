@@ -90,7 +90,7 @@ class Fitter(object):
     def get_allparams(self):
         """Return a dict of all param names and values."""
         return collections.OrderedDict(
-            (k, getattr(self.model, k).quantity) for k in self.model.params_ordered
+            (k, getattr(self.model, k).quantity) for k in self.model.params
         )
 
     def get_fitparams(self):
@@ -146,7 +146,7 @@ class Fitter(object):
         raise NotImplementedError
 
     def get_summary(self):
-        """Return a short ASCII summary of the Fitter results."""
+        """Return a human-readable summary of the Fitter results."""
 
         # Need to check that fit has been done first!
         if not hasattr(self, "covariance_matrix"):
@@ -174,7 +174,7 @@ class Fitter(object):
         s += "{:<14s} {:>20s} {:>28s} {}\n".format(
             "=" * 14, "=" * 20, "=" * 28, "=" * 5
         )
-        for pn in self.get_allparams().keys():
+        for pn in list(self.get_allparams().keys()):
             prefitpar = getattr(self.model_init, pn)
             par = getattr(self.model, pn)
             if par.value is not None:

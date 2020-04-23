@@ -211,7 +211,7 @@ class TimingModel(object):
 
     @property
     def params(self):
-        """Return list all parameter names in this model and all its components (order is arbitrary)."""
+        """List of all parameter names in this model and all its components (order is arbitrary)."""
         p = self.top_level_params
         for cp in self.components.values():
             p = p + cp.params
@@ -219,7 +219,7 @@ class TimingModel(object):
 
     @property
     def params_ordered(self):
-        """Return list all parameter names in this model and all its components, in a sensible order."""
+        """List of all parameter names in this model and all its components, in a sensible order."""
 
         # Define the order of components in the list
         # Any not included will be printed between the first and last set.
@@ -227,12 +227,12 @@ class TimingModel(object):
         last_order = ["jump_delay"]
         compdict = self.get_components_by_category()
         used_cats = []
-        p = self.top_level_params
+        pstart = self.top_level_params
         for cat in start_order:
-            if cat in compdict.keys():
+            if cat in list(compdict.keys()):
                 cp = compdict[cat]
                 for cpp in cp:
-                    p += cpp.params
+                    pstart += cpp.params
                 used_cats.append(cat)
             else:
                 continue
@@ -249,16 +249,16 @@ class TimingModel(object):
 
         # Now collect any components that haven't already been included in the list
         pmid = []
-        for c in compdict.keys():
-            if c in used_cats:
+        for cat in list(compdict.keys()):
+            if cat in used_cats:
                 continue
             else:
-                cp = compdict[c]
+                cp = compdict[cat]
                 for cpp in cp:
                     pmid += cpp.params
                 used_cats.append(cat)
 
-        return p + pmid + pend
+        return pstart + pmid + pend
 
     @property
     def components(self):
@@ -1187,11 +1187,11 @@ class TimingModel(object):
             else:
                 continue
 
-        for c in list(cates_comp.keys()):
-            if c in printed_cate:
+        for cat in list(cates_comp.keys()):
+            if cat in printed_cate:
                 continue
             else:
-                cp = cates_comp[c]
+                cp = cates_comp[cat]
                 for cpp in cp:
                     result_middle += cpp.print_par()
                 printed_cate.append(cat)
