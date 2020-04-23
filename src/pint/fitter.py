@@ -126,7 +126,8 @@ class Fitter(object):
 
     def set_param_uncertainties(self, fitp):
         for k, v in fitp.items():
-            getattr(self.model, k).uncertainty_value = v
+            parunit = getattr(self.model, k).units
+            getattr(self.model, k).uncertainty = v * parunit
 
     def get_designmatrix(self):
         return self.model.designmatrix(toas=self.toas, incfrozen=False, incoffset=True)
@@ -189,11 +190,15 @@ class Fitter(object):
                             pn, str(prefitpar.quantity), "", par.units
                         )
                     else:
+                        if par.units == u.hourangle:
+                            uncertainty_unit = pint.hourangle_second
+                        else:
+                            uncertainty_unit = u.arcsec
                         s += "{:14s} {:>20s}  {:>16s} +/- {:.2g} \n".format(
                             pn,
                             str(prefitpar.quantity),
                             str(par.quantity),
-                            par.uncertainty.to(u.arcsec),
+                            par.uncertainty.to(uncertainty_unit),
                         )
 
                 else:
