@@ -6,8 +6,8 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 from numpy import exp, arange, log
-from scipy.special import erfc,gamma
-from scipy.stats import chi2,norm
+from scipy.special import erfc, gamma
+from scipy.stats import chi2, norm
 
 __all__ = [
     "sig2sigma",
@@ -39,7 +39,7 @@ def vec(func):
     return vectorize(func, doc=func.__doc__)
 
 
-def to_array(x,dtype=None):
+def to_array(x, dtype=None):
     x = np.asarray(x, dtype=dtype)
     if len(x.shape) == 0:
         return np.asarray([x])
@@ -79,7 +79,7 @@ def sig2sigma(sig, two_tailed=True, logprob=False):
     logprob : bool, optional
         if True, the argument is the natural logarithm of the probability
     """
-    sig = to_array(sig,dtype=float)
+    sig = to_array(sig, dtype=float)
     if logprob:
         logsig = sig.copy()
         sig = np.exp(sig)

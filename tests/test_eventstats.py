@@ -30,8 +30,8 @@ def test_h_and_z():
     res = es.hmw(phases, weights)
     assert_allclose(res, ans, atol=1.0e-7)
 
-    res = es.z2m(phases,m=4)
-    assert(len(res)==4)
+    res = es.z2m(phases, m=4)
+    assert len(res) == 4
     ans = 0.0792079207920788
     assert_allclose(res[3], ans, atol=1.0e-7)
 
@@ -39,8 +39,7 @@ def test_h_and_z():
     res = es.hmw(phases, weights)
     assert_allclose(res, ans, atol=1.0e-7)
 
-    res = es.z2mw(phases,weights,m=4)
-    assert(len(res)==4)
+    res = es.z2mw(phases, weights, m=4)
+    assert len(res) == 4
     ans = 45.05833019383544
     assert_allclose(res[3], ans, atol=1.0e-7)
-
