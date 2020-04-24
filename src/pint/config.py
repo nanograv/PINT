@@ -5,6 +5,12 @@ import os
 
 from .extern import appdirs
 
+# Hack to support FileNotFoundError in Python 2
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
+
 # Values for appdirs calls
 _app = "pint"
 _auth = "pint"
@@ -18,7 +24,7 @@ def datapath(fname):
 
     Will first search the appdirs user_data_dir (typically
     $HOME/.local/share/pint on linux) then the installed data files dir
-    (__file__/datafiles).  If the file is not found, returns None.
+    (__file__/datafiles).  If the file is not found, raises FileNotFoundError.
 
     """
 
@@ -33,4 +39,7 @@ def datapath(fname):
         if os.path.exists(full_fname):
             return full_fname
 
-    raise ValueError("Unable to find {} in directories {}".format(fname, search_dirs))
+    # See issue #652 for discussion of this <https://github.com/nanograv/PINT/issues/652>
+    raise FileNotFoundError(
+        "Unable to find {} in directories {}".format(fname, search_dirs)
+    )

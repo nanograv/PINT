@@ -4,12 +4,14 @@ from __future__ import absolute_import, division, print_function
 import re
 from contextlib import contextmanager
 from copy import deepcopy
-
 import astropy.units as u
 from astropy import log
+import astropy.constants as const
 import numpy as np
 import six
-from six import StringIO
+import scipy.optimize.zeros as zeros
+
+from io import StringIO
 
 __all__ = [
     "PosVel",
@@ -26,6 +28,18 @@ __all__ = [
     "interesting_lines",
     "show_param_cov_matrix",
     "dmxparse",
+    "p_to_f",
+    "pferrs",
+    "weighted_mean",
+    "ELL1_check",
+    "mass_funct",
+    "mass_funct2",
+    "pulsar_mass",
+    "companion_mass",
+    "pulsar_age",
+    "pulsar_edot",
+    "pulsar_B",
+    "pulsar_B_lightcyl",
 ]
 
 
@@ -378,7 +392,7 @@ def interesting_lines(lines, comments=None):
         yield ln
 
 
-def show_param_cov_matrix(matrix, params, name="Covaraince Matrix", switchRD=False):
+def show_param_cov_matrix(matrix, params, name="Covariance Matrix", switchRD=False):
     """function to print covariance matrices in a clean and easily readable way
 
     :param matrix: matrix to be printed, should be square, list of lists
@@ -387,7 +401,7 @@ def show_param_cov_matrix(matrix, params, name="Covaraince Matrix", switchRD=Fal
     :param switchRD: if True, switch the positions of RA and DEC to match setup of TEMPO cov. matrices
 
     :return string to be printed"""
-    output = StringIO.StringIO()
+    output = StringIO()
     matrix = deepcopy(matrix)
     try:
         RAi = params.index("RAJ")
@@ -443,29 +457,35 @@ def dmxparse(fitter, save=False):
 
     Based off dmxparse by P. Demorest (https://github.com/nanograv/tempo/tree/master/util/dmxparse)
 
-    Inputs:
-    :param fitter: PINT fitter used to get timing residuals, must have already run GLS fit
-    :param save: boolean; if True saves output to text file in the format of the TEMPO version.
-    If not output save file is desired, save = False (which is the default)
-    Output file name is dmxparse.out
+    Parameters
+    ----------
+    fitter
+        PINT fitter used to get timing residuals, must have already run GLS fit
+    save : bool
+        if True saves output to text file in the format of the TEMPO version.
+        If not output save file is desired, save = False (which is the default)
+        Output file name is dmxparse.out
     
-    Returns a dictionary with the following entries:
+    Returns
+    -------
+    dictionary
 
-        dmxs        mean-subtraced dmx values
+        dmxs : mean-subtraced dmx values
 
-        dmx_verrs   dmx variance errors
+        dmx_verrs : dmx variance errors
 
-        dmxeps      center mjds of the dmx bins
+        dmxeps : center mjds of the dmx bins
 
-        r1s         lower mjd bounds on the dmx bins
+        r1s : lower mjd bounds on the dmx bins
 
-        r2s         upper mjd bounds on the dmx bins
+        r2s : upper mjd bounds on the dmx bins
 
-        bins        dmx bins
+        bins : dmx bins
 
-        mean_dmx    mean dmx value
+        mean_dmx : mean dmx value
 
-        avg_dm_err  uncertainty in average dmx
+        avg_dm_err : uncertainty in average dmx
+
     """
     # We get the DMX values, errors, and mjds (same as in getting the DMX values for DMX v. time)
     # Get number of DMX epochs
@@ -486,8 +506,8 @@ def dmxparse(fitter, save=False):
         DMX_Errs.append(
             getattr(fitter.model, "DMX_{:04d}".format(ii)).uncertainty_value
         )
-        dmxr1 = getattr(fitter.model, "DMX_{:04d}".format(ii)).value
-        dmxr2 = getattr(fitter.model, "DMX_{:04d}".format(ii)).value
+        dmxr1 = getattr(fitter.model, "DMXR1_{:04d}".format(ii)).value
+        dmxr2 = getattr(fitter.model, "DMXR2_{:04d}".format(ii)).value
         DMX_R1.append(dmxr1)
         DMX_R2.append(dmxr2)
         DMX_center_MJD.append((dmxr1 + dmxr2) / 2)
@@ -570,3 +590,292 @@ def dmxparse(fitter, save=False):
     dmx["avg_dm_err"] = DMX_mean_err
 
     return dmx
+
+
+def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
+    """Compute weighted mean of input values
+
+    Calculate the weighted mean, error, and optionally standard deviation of
+    an input array.  By default error is calculated assuming the weights are
+    1/err^2, but if you send calcerr=True this assumption is dropped and the
+    error is determined from the weighted scatter.
+
+    Parameters
+    ----------
+    arrin : array
+    Array containing the numbers whose weighted mean is desired.      
+    weights: array
+    A set of weights for each element in array. For measurements with 
+    uncertainties, these should be 1/sigma^2.
+    inputmean: float, optional
+        An input mean value, around which the mean is calculated.
+    calcerr : bool, optional
+        Calculate the weighted error.  By default the error is calculated as
+        1/sqrt( weights.sum() ).  If calcerr=True it is calculated as 
+        sqrt((w**2 * (arr-mean)**2).sum() )/weights.sum().
+    sdev : bool, optional
+        If True, also return the weighted standard deviation as a third
+        element in the tuple. Defaults to False.
+
+    Returns
+    -------
+    wmean, werr: tuple
+    A tuple of the weighted mean and error. If sdev=True the
+    tuple will also contain sdev: wmean,werr,wsdev
+
+    Notes
+    -----
+    Converted from IDL: 2006-10-23. Erin Sheldon, NYU
+    Copied from PRESTO to PINT : 2020-04-18
+
+   """
+    arr = arrin
+    weights = weights_in
+    wtot = weights.sum()
+    # user has input a mean value
+    if inputmean is None:
+        wmean = (weights * arr).sum() / wtot
+    else:
+        wmean = float(inputmean)
+    # how should error be calculated?
+    if calcerr:
+        werr2 = (weights ** 2 * (arr - wmean) ** 2).sum()
+        werr = np.sqrt(werr2) / wtot
+    else:
+        werr = 1.0 / np.sqrt(wtot)
+    # should output include the weighted standard deviation?
+    if sdev:
+        wvar = (weights * (arr - wmean) ** 2).sum() / wtot
+        wsdev = np.sqrt(wvar)
+        return wmean, werr, wsdev
+    else:
+        return wmean, werr
+
+
+def p_to_f(p, pd, pdd=None):
+    """Converts P, Pdot to F, Fdot (or vice versa)
+
+    Convert period, period derivative and period second
+    derivative to the equivalent frequency counterparts.
+    Will also convert from f to p.
+    """
+    f = 1.0 / p
+    fd = -pd / (p * p)
+    if pdd is None:
+        return [f, fd]
+    else:
+        if pdd == 0.0:
+            fdd = 0.0
+        else:
+            fdd = 2.0 * pd * pd / (p ** 3.0) - pdd / (p * p)
+        return [f, fd, fdd]
+
+
+def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
+    """Convert P, Pdot to F, Fdot with uncertainties.
+
+    Calculate the period or frequency errors and
+    the pdot or fdot errors from the opposite one.
+    """
+    if pdorfd is None:
+        return [1.0 / porf, porferr / porf ** 2.0]
+    else:
+        forperr = porferr / porf ** 2.0
+        fdorpderr = np.sqrt(
+            (4.0 * pdorfd ** 2.0 * porferr ** 2.0) / porf ** 6.0
+            + pdorfderr ** 2.0 / porf ** 4.0
+        )
+        [forp, fdorpd] = p_to_f(porf, pdorfd)
+        return [forp, forperr, fdorpd, fdorpderr]
+
+
+def pulsar_age(f, fdot, n=3, fo=1e99 * u.Hz):
+    """Compute pulsar characteristic age
+
+    Return the age of a pulsar given the spin frequency
+    and frequency derivative.  By default, the characteristic age
+    is returned (assuming a braking index 'n'=3 and an initial
+    spin frequency fo >> f).  But 'n' and 'fo' can be set.
+    """
+    return (-f / ((n - 1.0) * fdot) * (1.0 - (f / fo) ** (n - 1.0))).to(u.yr)
+
+
+def pulsar_edot(f, fdot, I=1.0e45 * u.g * u.cm ** 2):
+    """Compute pulsar spindown energy loss rate
+
+    Return the pulsar Edot (in erg/s) given the spin frequency and
+    frequency derivative. The NS moment of inertia is assumed to be
+    I = 1.0e45 g cm^2 by default.
+    """
+    return (-4.0 * np.pi ** 2 * I * f * fdot).to(u.erg / u.s)
+
+
+def pulsar_B(f, fdot):
+    """Compute pulsar surface magnetic field
+    
+    Return the estimated pulsar surface magnetic field strength
+    given the spin frequency and frequency derivative.
+    """
+    # This is a hack to use the traditional formula by stripping the units.
+    # It would be nice to improve this to a  proper formula with units
+    return 3.2e19 * u.G * np.sqrt(-fdot.to(u.Hz / u.s).value / f.to(u.Hz).value ** 3.0)
+
+
+def pulsar_B_lightcyl(f, fdot):
+    """Compute pulsar magnetic field at the light cylinder
+    
+    Return the estimated pulsar magnetic field strength at the
+    light cylinder given the spin frequency and
+    frequency derivative.
+    """
+    p, pd = p_to_f(f, fdot)
+    # This is a hack to use the traditional formula by stripping the units.
+    # It would be nice to improve this to a  proper formula with units
+    return (
+        2.9e8
+        * u.G
+        * p.to(u.s).value ** (-5.0 / 2.0)
+        * np.sqrt(pd.to(u.dimensionless_unscaled).value)
+    )
+
+
+def mass_funct(pb, x):
+    """Compute binary mass function from period and semi-major axis
+
+    Parameters
+    ----------
+    pb : Quantity
+        Binary period
+    x : Quantity in `pint.ls`
+        Semi-major axis, A1SINI, in units of ls
+
+    Returns
+    -------
+    f_m : Quantity
+        Mass function in solar masses
+    """
+    fm = 4.0 * np.pi ** 2 * x ** 3 / (const.G * pb ** 2)
+    return fm.to(u.solMass)
+
+
+def mass_funct2(mp, mc, i):
+    """Compute binary mass function from masses and inclination
+
+    Parameters
+    ----------
+    mp : Quantity
+        Pulsar mass, typically in u.solMass
+    mc : Quantity
+        Companion mass, typically in u.solMass
+    i : Angle
+        Inclination angle, in u.deg or u.rad
+
+    Notes
+    -----
+    Inclination is such that edge on is `i = 90*u.deg`
+    An 'average' orbit has cos(i) = 0.5, or `i = 60*u.deg`
+    """
+    return (mc * np.sin(i)) ** 3.0 / (mc + mp) ** 2.0
+
+
+def pulsar_mass(pb, x, mc, inc):
+    """Compute pulsar mass from orbit and Shapiro delay parameters
+
+    Return the pulsar mass (in solar mass units) for a binary.
+    Finds the value using a bisection technique.
+ 
+    Parameters
+    ----------
+    pb : Quantity
+        Binary orbital period
+    x : Quantity
+        Projected semi-major axis (aka ASINI) in `pint.ls`
+    mc : Quantity
+        Companion mass in u.solMass
+    inc : Angle
+        Inclination angle, in u.deg or u.rad
+    """
+    massfunct = mass_funct(pb, x)
+
+    # Do some unit manipulation here so that scipy bisect doesn't see the units
+    def localmf(mp, mc=mc, mf=massfunct, i=inc):
+        return (mass_funct2(mp * u.solMass, mc, i) - mf).value
+
+    return zeros.bisect(localmf, 0.0, 1000.0)
+
+
+def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
+    """Commpute the companion mass from the orbital parameters
+
+    Compute companion mass for a binary system from orbital mechanics,
+    not Shapiro delay.
+
+    Parameters
+    ----------
+    pb : Quantity
+        Binary orbital period
+    x : Quantity
+        Projected semi-major axis (aka ASINI) in `pint.ls`
+    inc : Angle, optional
+        Inclination angle, in u.deg or u.rad. Default is 60 deg.
+    mpsr : Quantity, optional
+        Pulsar mass in u.solMass. Default is 1.4 Msun
+    """
+    massfunct = mass_funct(pb, x)
+
+    # Do some unit manipulation here so that scipy bisect doesn't see the units
+    def localmf(mc, mp=mpsr, mf=massfunct, i=inc):
+        return (mass_funct2(mp, mc * u.solMass, i) - mf).value
+
+    return zeros.bisect(localmf, 0.001, 1000.1)
+
+
+def ELL1_check(A1, E, TRES, NTOA, outstring=True):
+    """Check for validity of assumptions in ELL1 binary model
+
+    Checks whether the assumptions that allow ELL1 to be safely used are 
+    satisfied. To work properly, we should have:
+    asini/c * ecc**2 << timing precision / sqrt(# TOAs)
+    or A1 * E**2 << TRES / sqrt(NTOA)
+
+    Parameters
+    ----------
+    A1 : Quantity
+        Projected semi-major axis (aka ASINI) in `pint.ls`
+    E : Quantity (dimensionless)
+        Eccentricity
+    TRES : Quantity
+        RMS TOA uncertainty
+    NTOA : int
+        Number of TOAs in the fit
+    outstring : bool, optional
+
+    Returns
+    -------
+    bool or str
+        Returns True if ELL1 is safe to use, otherwise False.
+        If outstring is True then returns a string summary instead.
+
+    """
+    lhs = A1 / const.c * E ** 2.0
+    rhs = TRES / np.sqrt(NTOA)
+    if outstring:
+        s = "Checking applicability of ELL1 model -- \n"
+        s += "    Condition is asini/c * ecc**2 << timing precision / sqrt(# TOAs) to use ELL1\n"
+        s += "    asini/c * ecc**2    = {:.3g} \n".format(lhs.to(u.us))
+        s += "    TRES / sqrt(# TOAs) = {:.3g} \n".format(rhs.to(u.us))
+    if lhs * 50.0 < rhs:
+        if outstring:
+            s += "    Should be fine.\n"
+            return s
+        return True
+    elif lhs * 5.0 < rhs:
+        if outstring:
+            s += "    Should be OK, but not optimal.\n"
+            return s
+        return True
+    else:
+        if outstring:
+            s += "    *** WARNING*** Should probably use BT or DD instead!\n"
+            return s
+        return False

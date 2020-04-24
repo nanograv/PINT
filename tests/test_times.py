@@ -26,7 +26,6 @@ def test_times_against_tempo2():
     ts.table.sort("index")
 
     log.info("Calling TEMPO2")
-    # cmd = 'tempo2 -output general2 -f tests/testtimes.par tests/testtimes.tim -s "XXX {clock0} {clock1} {clock2} {clock3} {tt} {t2tb} {telSSB} {telVel} {Ttt}\n"'
     # cmd = 'tempo2 -output general2 -f ' + datadir+'/testtimes.par ' + datadir + \
     #       '/testtimes.tim -s "XXX {clock0} {clock1} {clock2} {clock3} {tt} {t2tb} {earth_ssb1} {earth_ssb2} {earth_ssb3} {earth_ssb4} {earth_ssb5} {earth_ssb6} {telEpos} {telEVel} {Ttt}\n"'
     # args = shlex.split(cmd)
@@ -104,7 +103,7 @@ def test_times_against_tempo2():
             numpy.dot(dopv.vel.to_value(u.mm / u.s), dopv.vel.to_value(u.mm / u.s))
         )
         log.info(" obs diff: %.2f m, %.3f mm/s" % (dpos, dvel))
-        assert dpos < 2.0 and dvel < 0.02
+        assert dpos < 2.0 and dvel < 0.25
 
         pint_ssb2obs = PosVel(
             numpy.asarray(TOA["ssb_obs_pos"]) * u.km,
@@ -120,4 +119,4 @@ def test_times_against_tempo2():
             numpy.dot(dtopo.vel.to_value(u.mm / u.s), dtopo.vel.to_value(u.mm / u.s))
         )
         log.info(" topo diff: %.2f m, %.3f m/s" % (dpos, dvel))
-        assert dpos < 2.0 and dvel < 0.02
+        assert dpos < 2.0 and dvel < 0.2

@@ -7,6 +7,7 @@ from astropy import log
 
 from pint import dimensionless_cycles
 from pint.phase import Phase
+from pint.utils import weighted_mean
 
 __all__ = ["Residuals"]
 
@@ -45,6 +46,17 @@ class Residuals(object):
             self._chi2 = self.calc_chi2()
         assert self._chi2 is not None
         return self._chi2
+
+    def rms_weighted(self):
+        """Compute weighted RMS of the residals in time."""
+        if np.any(self.toas.get_errors() == 0):
+            raise ValueError(
+                "Some TOA errors are zero - cannot calculate weighted RMS of residuals"
+            )
+        w = 1.0 / (self.toas.get_errors().to(u.s) ** 2)
+
+        wmean, werr, wsdev = weighted_mean(self.time_resids, w, sdev=True)
+        return wsdev.to(u.us)
 
     def calc_phase_resids(self, weighted_mean=True, set_pulse_nums=False):
         """Return timing model residuals in pulse phase."""

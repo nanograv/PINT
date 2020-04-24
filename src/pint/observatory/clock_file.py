@@ -95,7 +95,7 @@ class Tempo2ClockFile(ClockFile):
 
     def __init__(self, filename, **kwargs):
         self.filename = filename
-        log.info(
+        log.debug(
             "Loading {0} observatory clock correction file {1}".format(
                 self.format, filename
             )
@@ -130,7 +130,7 @@ class TempoClockFile(ClockFile):
     def __init__(self, filename, obscode=None, **kwargs):
         self.filename = filename
         self.obscode = obscode
-        log.info(
+        log.debug(
             "Loading {0} observatory ({1}) clock correction file {2}".format(
                 self.format, obscode, filename
             )
