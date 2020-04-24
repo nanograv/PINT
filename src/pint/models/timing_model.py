@@ -227,7 +227,7 @@ class TimingModel(object):
         last_order = ["jump_delay"]
         compdict = self.get_components_by_category()
         used_cats = []
-        pstart = self.top_level_params.copy()
+        pstart = copy.copy(self.top_level_params)
         for cat in start_order:
             if cat in list(compdict.keys()):
                 cp = compdict[cat]
