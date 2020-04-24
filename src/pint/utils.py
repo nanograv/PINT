@@ -465,7 +465,7 @@ def dmxparse(fitter, save=False):
         if True saves output to text file in the format of the TEMPO version.
         If not output save file is desired, save = False (which is the default)
         Output file name is dmxparse.out
-    
+
     Returns
     -------
     dictionary
@@ -489,10 +489,10 @@ def dmxparse(fitter, save=False):
     """
     # We get the DMX values, errors, and mjds (same as in getting the DMX values for DMX v. time)
     # Get number of DMX epochs
-    dmx_epochs = 0
+    dmx_epochs = []
     for p in fitter.model.params:
         if "DMX_" in p:
-            dmx_epochs += 1
+            dmx_epochs.append(p.split("_")[-1])
     # Get DMX values (will be in units of 10^-3 pc cm^-3)
     DMX_keys = []
     DMXs = []
@@ -500,14 +500,12 @@ def dmxparse(fitter, save=False):
     DMX_R1 = []
     DMX_R2 = []
     DMX_center_MJD = []
-    for ii in range(1, dmx_epochs + 1):
-        DMX_keys.append("DMX_{:04d}".format(ii))
-        DMXs.append(getattr(fitter.model, "DMX_{:04d}".format(ii)).value)
-        DMX_Errs.append(
-            getattr(fitter.model, "DMX_{:04d}".format(ii)).uncertainty_value
-        )
-        dmxr1 = getattr(fitter.model, "DMXR1_{:04d}".format(ii)).value
-        dmxr2 = getattr(fitter.model, "DMXR2_{:04d}".format(ii)).value
+    for ii in dmx_epochs:
+        DMX_keys.append("DMX_{:}".format(ii))
+        DMXs.append(getattr(fitter.model, "DMX_{:}".format(ii)).value)
+        DMX_Errs.append(getattr(fitter.model, "DMX_{:}".format(ii)).uncertainty_value)
+        dmxr1 = getattr(fitter.model, "DMXR1_{:}".format(ii)).value
+        dmxr2 = getattr(fitter.model, "DMXR2_{:}".format(ii)).value
         DMX_R1.append(dmxr1)
         DMX_R2.append(dmxr2)
         DMX_center_MJD.append((dmxr1 + dmxr2) / 2)
@@ -517,34 +515,43 @@ def dmxparse(fitter, save=False):
     DMX_R2 = np.array(DMX_R2)
     DMX_center_MJD = np.array(DMX_center_MJD)
 
-    # now get the full parameter covariance matrix from pint
-    # NOTE: we will need to increase all indices by 1 to account for the 'Offset' parameter
-    # that is the first index of the designmatrix
-    params = np.array(list(fitter.get_fitparams().keys()))
-    p_cov_mat = fitter.covariance_matrix
-    # Now we get the indices that correspond to the DMX values
-    DMX_p_idxs = np.zeros(dmx_epochs, dtype=int)
-    for ii in range(dmx_epochs):
-        DMX_p_idxs[ii] = (
-            int(np.where(params == DMX_keys[ii])[0]) + 1
-        )  # extra 1 is for offset parameters
-    # Sort the array in numerical order for 2.7. 3.5
-    DMX_p_idxs = np.sort(DMX_p_idxs)
-    # Define a matrix that is just the DMX covariances
-    cc = p_cov_mat[
-        DMX_p_idxs[0] : DMX_p_idxs[-1] + 1, DMX_p_idxs[0] : DMX_p_idxs[-1] + 1
-    ]
-    n = len(DMX_Errs)
-    # Find error in mean DM
-    DMX_mean = np.mean(DMXs)
-    DMX_mean_err = np.sqrt(cc.sum()) / float(n)
-    # Do the correction for varying DM
-    m = np.identity(n) - np.ones((n, n)) / float(n)
-    cc = np.dot(np.dot(m, cc), m)
-    DMX_vErrs = np.zeros(n)
-    # We also need to correct for the units here
-    for i in range(n):
-        DMX_vErrs[i] = np.sqrt(cc[i, i])
+    # Make sure that the fitter has a covariance matrix, otherwise return the initial values
+    if hasattr(fitter, "covariance_matrix"):
+        # now get the full parameter covariance matrix from pint
+        # NOTE: we will need to increase all indices by 1 to account for the 'Offset' parameter
+        # that is the first index of the designmatrix
+        params = np.array(list(fitter.get_fitparams().keys()))
+        p_cov_mat = fitter.covariance_matrix
+        # Now we get the indices that correspond to the DMX values
+        DMX_p_idxs = np.zeros(len(dmx_epochs), dtype=int)
+        for ii in range(len(dmx_epochs)):
+            DMX_p_idxs[ii] = (
+                int(np.where(params == DMX_keys[ii])[0]) + 1
+            )  # extra 1 is for offset parameters
+        # Sort the array in numerical order for 2.7. 3.5
+        DMX_p_idxs = np.sort(DMX_p_idxs)
+        # Define a matrix that is just the DMX covariances
+        cc = p_cov_mat[
+            DMX_p_idxs[0] : DMX_p_idxs[-1] + 1, DMX_p_idxs[0] : DMX_p_idxs[-1] + 1
+        ]
+        n = len(DMX_Errs)
+        # Find error in mean DM
+        DMX_mean = np.mean(DMXs)
+        DMX_mean_err = np.sqrt(cc.sum()) / float(n)
+        # Do the correction for varying DM
+        m = np.identity(n) - np.ones((n, n)) / float(n)
+        cc = np.dot(np.dot(m, cc), m)
+        DMX_vErrs = np.zeros(n)
+        # We also need to correct for the units here
+        for i in range(n):
+            DMX_vErrs[i] = np.sqrt(cc[i, i])
+    else:
+        log.warning(
+            "Fitter does not have covariance matrix, returning values from model"
+        )
+        DMX_mean = np.mean(DMXs)
+        DMX_mean_err = np.mean(DMX_Errs)
+        DMX_vErrs = DMX_Errs
     # Check we have the right number of params
     if len(DMXs) != len(DMX_Errs) or len(DMXs) != len(DMX_vErrs):
         log.error("ERROR! Number of DMX entries do not match!")
