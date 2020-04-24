@@ -5,6 +5,9 @@ author: M. Kerr <matthew.kerr@gmail.com>
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+from numpy import exp, arange, log
+from scipy.special import erfc, gamma
+from scipy.stats import chi2, norm
 
 __all__ = [
     "sig2sigma",
@@ -36,8 +39,8 @@ def vec(func):
     return vectorize(func, doc=func.__doc__)
 
 
-def to_array(x):
-    x = np.asarray(x)
+def to_array(x, dtype=None):
+    x = np.asarray(x, dtype=dtype)
     if len(x.shape) == 0:
         return np.asarray([x])
     return x
@@ -53,9 +56,19 @@ def sig2sigma(sig, two_tailed=True, logprob=False):
     """Convert tail probability to "sigma" units.
 
     Find the value of the argument for the normal distribution beyond which the
-    integrated tail probability is sig.  Note that the default is to interpret this
-    number as the two-tailed value, as this is the quantity that goes to 0 when sig goes
-    to 1.
+    integrated tail probability is sig.  Note that the default is to interpret 
+    this number as the two-tailed value, as this is the quantity that goes to 0
+    when sig goes to 1 and is also what most people mean by "sigma", i.e. a
+    chance probability of 0.32 will return a value of 1 sigma.
+
+    Two-tailed:
+    \int_{-sigma}^{+sigma} norm(x) dx = sig
+
+    One-tailed:
+    \int_{-inf}^{sigma} norm(x) dx = sig
+
+    Note that if sig >= 0.5, the one-tailed result will be negative.
+
 
     Parameters
     ----------
@@ -66,35 +79,35 @@ def sig2sigma(sig, two_tailed=True, logprob=False):
     logprob : bool, optional
         if True, the argument is the natural logarithm of the probability
     """
-    from scipy.special import erfc, erfcinv
-    from scipy.optimize import fsolve
-
-    sig = to_array(sig)
+    sig = to_array(sig, dtype=float)
     if logprob:
         logsig = sig.copy()
         sig = np.exp(sig)
     results = np.empty_like(sig)
 
-    if np.any((sig > 1) | (not logprob and sig <= 0)):
-        raise ValueError("Probability must be between 0 and 1.")
+    if logprob:
+        if np.any(logsig > 0):
+            raise ValueError("Probability must be between 0 and 1.")
+    else:
+        if np.any((sig > 1) | (sig <= 0)):
+            raise ValueError("Probability must be between 0 and 1.")
 
     if not two_tailed:
         sig *= 2
+        if logprob:
+            logsig += np.log(2)
 
-    def inverfc(x, *args):
-        return erfc(x / 2 ** 0.5) - args[0]
+    # Use the exact value for "large" probabilities; for those where numerical
+    # precision is a problem, use the asymptotic expansion.
+    mask = sig > 1e-300
+    results[mask] = norm.isf(sig[mask] * 0.5)
+    mask = ~mask
+    if logprob:
+        x0 = (-2 * (logsig[mask] + np.log(np.pi ** 0.5))) ** 0.5
+    else:
+        x0 = (-2 * np.log(sig[mask] * (np.pi) ** 0.5)) ** 0.5
+    results[mask] = x0 - np.log(x0) / (1 + 2 * x0)
 
-    for isig, mysig in enumerate(sig):
-        if mysig < 1e-120:  # approx on asymptotic erfc
-            if logprob:
-                x0 = (-2 * (logsig + np.log(np.pi ** 0.5))) ** 0.5
-            else:
-                x0 = (-2 * np.log(mysig * (np.pi) ** 0.5)) ** 0.5
-            results[isig] = x0 - np.log(x0) / (1 + 2 * x0)
-        elif mysig > 1e-15:
-            results[isig] = erfcinv(mysig) * 2 ** 0.5
-        else:
-            results[isig] = fsolve(inverfc, [8], (mysig,))
     return from_array(results)
 
 
@@ -111,7 +124,6 @@ def sigma2sig(sigma, two_tailed=True):
        two_tailed [True] if True, return twice the integral, else once
     """
     # this appears to handle up to machine precision with no problem
-    from scipy.special import erfc
 
     if two_tailed:
         return erfc(sigma / 2 ** 0.5)
@@ -199,7 +211,6 @@ def sf_z2m(ts, m=2):
         ----
         ts      result of the Z^2_m test
     """
-    from scipy.stats import chi2
 
     return chi2.sf(ts, 2 * m)
 
@@ -295,13 +306,11 @@ def sf_hm(h, m=20, c=4, logprob=False):
     """
     if h < 1e-16:
         return 1.0
-    from numpy import exp, arange, log, empty
-    from scipy.special import gamma
 
     fact = lambda x: gamma(x + 1)
 
     # first, calculate the integrals of unity for all needed orders
-    ints = empty(m)
+    ints = np.empty(m)
     for i in range(m):
         sv = i - arange(0, i)  # summation vector
         ints[i] = exp(i * log(h + i * c) - log(fact(i)))
@@ -347,7 +356,6 @@ def sf_stackedh(k, h, l=0.398405):
         null df for H is exponentially distributed with scale l and that
         there are k sub-integrations yielding a total TS of h.  See, e.g.
         de Jager & Busching 2010."""
-    from scipy.special import gamma
 
     fact = lambda x: gamma(x + 1)
     p = 0
