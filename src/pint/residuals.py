@@ -213,6 +213,11 @@ class Residuals(object):
         dof = self.toas.ntoas
         for p in self.model.params:
             dof -= bool(not getattr(self.model, p).frozen)
+        # Now subtract 1 for the implicit global offset parameter
+        # Note that we should do two things eventually
+        # 1. Make the offset not be a hidden parameter
+        # 2. Have a model object return the number of free parameters instead of having to count non-frozen parameters like above
+        dof -= 1
         return dof
 
     def get_reduced_chi2(self):
