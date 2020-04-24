@@ -237,8 +237,10 @@ class TestParameters(unittest.TestCase):
         self.assertRaises(TypeError, self.set_OM_to_time)
 
     def test_PBDOT(self):
+        # Check that parameter scaling is working as expected
+        # Units are not modified, just the value is scaled
         self.m.PBDOT.value = 20
-        self.assertEqual(self.m.PBDOT.units, 1e-12 * u.day / u.day)
+        self.assertEqual(self.m.PBDOT.units, u.day / u.day)
         self.assertEqual(self.m.PBDOT.quantity, 20 * 1e-12 * u.day / u.day)
         self.m.PBDOT.value = 1e-11
         self.assertEqual(self.m.PBDOT.units, u.day / u.day)
