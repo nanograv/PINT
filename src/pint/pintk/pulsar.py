@@ -529,7 +529,7 @@ class Pulsar(object):
             redge = (nowish - maxMJD) / spanMJDs
             if redge < 0.0:
                 redge = 0.0
-        f_toas, rs = random_models(
+        f_toas, rs, mrands = random_models(
             f,
             rs_mean=rs_mean,
             redge_multiplier=redge,
