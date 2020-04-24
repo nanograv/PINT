@@ -121,8 +121,14 @@ class Fitter(object):
 
         Ex. fitter.set_params({'F0':60.1,'F1':-1.3e-15})
         """
-        for k, v in fitp.items():
-            getattr(self.model, k).value = v
+        # In Powell fitter this sometimes fails because after some iterations the values change from
+        # plain float to Quantities. No idea why.
+        if isinstance(list(fitp.values())[0], u.Quantity):
+            for k, v in fitp.items():
+                getattr(self.model, k).value = v.value
+        else:
+            for k, v in fitp.items():
+                getattr(self.model, k).value = v
 
     def set_param_uncertainties(self, fitp):
         for k, v in fitp.items():
@@ -483,6 +489,8 @@ class PowellFitter(Fitter):
         # Update model and resids, as the last iteration of minimize is not
         # necessarily the one that yields the best fit
         self.minimize_func(np.atleast_1d(self.fitresult.x), *list(fitp.keys()))
+
+        return self.resids.chi2
 
 
 class WLSFitter(Fitter):
