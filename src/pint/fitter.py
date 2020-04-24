@@ -146,6 +146,27 @@ class Fitter(object):
     def fit_toas(self, maxiter=None):
         raise NotImplementedError
 
+    def plot(self):
+        """Make residuals plot"""
+        import matplotlib.pyplot as plt
+        from astropy.visualization import quantity_support
+
+        quantity_support()
+        fig, ax = plt.subplots(figsize=(16, 9))
+        mjds = self.toas.get_mjds()
+        ax.errorbar(mjds, self.resids.time_resids, yerr=self.toas.get_errors(), fmt="+")
+        ax.set_xlabel("MJD")
+        ax.set_ylabel("Residuals")
+        try:
+            psr = self.model.PSR
+        except:
+            psr = self.model.PSRJ
+        else:
+            psr = "Residuals"
+        ax.set_title(psr)
+        ax.grid(True)
+        plt.show()
+
     def get_summary(self):
         """Return a human-readable summary of the Fitter results."""
 
@@ -286,8 +307,8 @@ class Fitter(object):
                         self.model.EPS1.uncertainty.value,
                     )
                     eps2 = ufloat(
-                        self.model.EPS1.quantity.value,
-                        self.model.EPS1.uncertainty.value,
+                        self.model.EPS2.quantity.value,
+                        self.model.EPS2.uncertainty.value,
                     )
                     tasc = ufloat(
                         # This is a time in MJD
@@ -305,7 +326,7 @@ class Fitter(object):
                     if om < 0.0:
                         om += 360.0
                     s += "OM  = {:P}\n".format(om)
-                    t0 = tasc + pb / (360.0 * om)
+                    t0 = tasc + pb * om / 360.0
                     s += "T0  = {:SP}\n".format(t0)
 
                     s += pint.utils.ELL1_check(
