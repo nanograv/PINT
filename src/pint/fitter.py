@@ -123,6 +123,8 @@ class Fitter(object):
         """
         # In Powell fitter this sometimes fails because after some iterations the values change from
         # plain float to Quantities. No idea why.
+        if len(fitp.values()) < 1:
+            return
         if isinstance(list(fitp.values())[0], u.Quantity):
             for k, v in fitp.items():
                 getattr(self.model, k).value = v.value
