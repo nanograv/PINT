@@ -18,14 +18,14 @@ from pint.models.solar_wind_dispersion import SolarWindDispersion
 from pint.models.spindown import Spindown
 
 # Import the main timing model classes
-from pint.models.timing_model import TimingModel
+from pint.models.timing_model import TimingModel, DEFAULT_ORDER
 from pint.models.wave import Wave
 from pint.models.ifunc import IFunc
 
 # Define a standard basic model
 StandardTimingModel = TimingModel(
     "StandardTimingModel",
-    (AstrometryEquatorial(), Spindown(), DispersionDM(), SolarSystemShapiro()),
+    [AstrometryEquatorial(), Spindown(), DispersionDM(), SolarSystemShapiro()],
 )
 # BTTimingModel = generate_timing_model("BTTimingModel",
 #         (Astrometry, Spindown, Dispersion, SolarSystemShapiro, BT))
