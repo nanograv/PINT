@@ -3,21 +3,59 @@ from __future__ import absolute_import, division, print_function
 
 import astropy._erfa as erfa
 import astropy.units as u
+from astropy import log
 import numpy as np
 from astropy import table
 from astropy.utils.data import clear_download_cache, download_file, is_url_in_cache
-from astropy.utils.iers import IERS_B, IERS_B_URL
+from astropy.utils.iers import IERS_B, IERS_B_URL, IERS_Auto
+import astropy.version
+import astropy
+
+if astropy.version.major < 4:
+    log.warning(
+        "Using astropy version {}. To get most recent IERS data, upgrade to astropy >= 4.0".format(
+            astropy.__version__
+        )
+    )
+else:
+    from astropy.utils.iers import earth_orientation_table
 
 from pint.pulsar_mjd import Time
 from pint.utils import PosVel
 
-__all__ = [
-    "get_iers_b_up_to_date",
-    "gcrs_posvel_from_itrf",
-    "astropy_gcrs_posvel_from_itrf",
-]
+__all__ = ["get_iers_up_to_date", "gcrs_posvel_from_itrf", "old_gcrs_posvel_from_itrf"]
 
 
+def get_iers_up_to_date(mjd=Time.now().mjd - 45.0):
+    """
+    Update the IERS B table to include MJD (defaults to 45 days ago) and open IERS_Auto
+
+    """
+
+    # First clear the IERS_Auto table
+    IERS_Auto.iers_table = None
+
+    if mjd > Time.now().mjd:
+        raise ValueError("IERS B data requested for future MJD {}".format(mjd))
+    might_be_old = is_url_in_cache(IERS_B_URL)
+    iers_b = IERS_B.open(download_file(IERS_B_URL, cache=True))
+    if might_be_old and iers_b[-1]["MJD"].to_value(u.d) < mjd:
+        # Try wiping the download and re-downloading
+        log.info("IERS B Table appears to be old. Attempting to re-download.")
+        clear_download_cache(IERS_B_URL)
+        iers_b = IERS_B.open(download_file(IERS_B_URL, cache=True))
+    if iers_b[-1]["MJD"].to_value(u.d) < mjd:
+        log.warning("IERS B data not yet available for MJD {}".format(mjd))
+
+    # Now open IERS_Auto with no argument, so it should use the IERS_B that we just made sure was up to date
+    iers_auto = IERS_Auto.open()
+
+    if astropy.version.major >= 4:
+        # Tell astropy to use this table for all future transformations
+        earth_orientation_table.set(iers_auto)
+
+
+# This version is outdated since astropy now includes IERS_Auto (see improved version above)
 def get_iers_b_up_to_date(mjd):
     """Update the IERS B table to include MJD if necessary
 
@@ -26,11 +64,11 @@ def get_iers_b_up_to_date(mjd):
         raise ValueError("IERS B data requested for future MJD {}".format(mjd))
     might_be_old = is_url_in_cache(IERS_B_URL)
     iers_b = IERS_B.open(download_file(IERS_B_URL, cache=True))
-    if might_be_old and iers_b[-1]["MJD"].to(u.d).value < mjd:
+    if might_be_old and iers_b[-1]["MJD"].to_value(u.d) < mjd:
         # Try wiping the download and re-downloading
         clear_download_cache(IERS_B_URL)
         iers_b = IERS_B.open(download_file(IERS_B_URL, cache=True))
-    if iers_b[-1]["MJD"].to(u.d).value < mjd:
+    if iers_b[-1]["MJD"].to_value(u.d) < mjd:
         raise ValueError("IERS B data not yet available for MJD {}".format(mjd))
     return iers_b
 
@@ -48,7 +86,7 @@ OM = 1.00273781191135448 * 2.0 * np.pi / SECS_PER_DAY
 asec2rad = 4.84813681109536e-06
 
 
-def gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
+def old_gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
     """Return a list of PosVel instances for the observatory at the TOA times.
 
     Observatory location should be given in the loc argument as an astropy
@@ -107,8 +145,12 @@ def gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
     # dX = np.interp(mjds, iers_tab['MJD'], iers_tab['dX_2000A_B']) * asec2rad
     # dY = np.interp(mjds, iers_tab['MJD'], iers_tab['dY_2000A_B']) * asec2rad
     # Get dX and dY from IERS B in arcsec and convert to radians
-    dX = np.interp(mjds, iers_b["MJD"], iers_b["dX_2000A"]) * asec2rad
-    dY = np.interp(mjds, iers_b["MJD"], iers_b["dY_2000A"]) * asec2rad
+    dX = np.interp(
+        mjds, iers_b["MJD"].to_value(u.d), iers_b["dX_2000A"].to_value(u.rad)
+    )
+    dY = np.interp(
+        mjds, iers_b["MJD"].to_value(u.d), iers_b["dY_2000A"].to_value(u.rad)
+    )
 
     # Get GCRS to CIRS matrices
     rc2i = erfa.c2ixys(X + dX, Y + dY, S)
@@ -120,14 +162,14 @@ def gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
     # xp = np.interp(mjds, iers_tab['MJD'], iers_tab['PM_X_B']) * asec2rad
     # yp = np.interp(mjds, iers_tab['MJD'], iers_tab['PM_Y_B']) * asec2rad
     # Get X and Y from IERS B in arcsec and convert to radians
-    xp = np.interp(mjds, iers_b["MJD"], iers_b["PM_x"]) * asec2rad
-    yp = np.interp(mjds, iers_b["MJD"], iers_b["PM_y"]) * asec2rad
+    xp = np.interp(mjds, iers_b["MJD"].to_value(u.d), iers_b["PM_x"].to_value(u.rad))
+    yp = np.interp(mjds, iers_b["MJD"].to_value(u.d), iers_b["PM_y"].to_value(u.rad))
 
     # Get the polar motion matrices
     rpm = erfa.pom00(xp, yp, sp)
 
     # Observatory geocentric coords in m
-    xyzm = np.array([a.to(u.m).value for a in loc.geocentric])
+    xyzm = np.array([a.to_value(u.m) for a in loc.geocentric])
     x, y, z = np.dot(xyzm, rpm).T
 
     # Functions of Earth Rotation Angle
@@ -152,9 +194,7 @@ def gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
         return r
 
 
-# This seems to be never used!  It also has no docstring!
-# Astropy uses IERS A data, which differs from IERS B data.
-def astropy_gcrs_posvel_from_itrf(loc, toas, obsname=None):
+def gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
     """Return a list of PosVel instances for the observatory at the TOA times.
 
     Observatory location should be given in the loc argument as an astropy

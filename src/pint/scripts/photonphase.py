@@ -52,6 +52,12 @@ def main(argv=None):
         action="store_true",
     )
     parser.add_argument(
+        "--addorbphase",
+        help="Write FITS file with added orbital phase column",
+        default=False,
+        action="store_true",
+    )
+    parser.add_argument(
         "--absphase",
         help="Write FITS file with integral portion of pulse phase (ABS_PHASE)",
         default=False,
@@ -168,6 +174,14 @@ def main(argv=None):
         )
         raise ValueError("Model missing AbsPhase component.")
 
+    if args.addorbphase and (not hasattr(modelin, "binary_model_name")):
+        log.error(
+            "TimingModel does not include a binary model, which is required for "
+            "computing orbital phases. Make sure you have BINARY and associated "
+            "model parameters in your par file!"
+        )
+        raise ValueError("Model missing BINARY component.")
+
     # Discard events outside of MJD range
     if args.maxMJD is not None:
         tlnew = []
@@ -199,33 +213,60 @@ def main(argv=None):
     # Compute model phase for each TOA
     iphss, phss = modelin.phase(ts, abs_phase=True)
     # ensure all postive
-    negmask = phss < 0.0 * u.cycle
-    phases = np.where(negmask, phss + 1.0 * u.cycle, phss)
+    phss = phss.to(u.cycle).value
+    negmask = phss < 0.0
+    phases = np.where(negmask, phss + 1.0, phss)
     h = float(hm(phases))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
     if args.plot:
         phaseogram_binned(mjds, phases, bins=100, plotfile=args.plotfile)
 
-    if args.addphase:
+    # Compute orbital phases for each photon TOA
+    if args.addorbphase:
+        delay = modelin.delay(ts)
+        orbits = modelin.binary_instance.orbits()
+        # These lines are already in orbits.orbit_phase() in binary_orbits.py.
+        # What is the correct syntax is to call this function here?
+        norbits = np.array(np.floor(orbits), dtype=np.long)
+        orbphases = orbits - norbits  # fractional phase
+
+    if args.addphase or args.addorbphase:
         # Read input FITS file (again).
         # If overwriting, open in 'update' mode
         if args.outfile is None:
             hdulist = pyfits.open(args.eventfile, mode="update")
         else:
             hdulist = pyfits.open(args.eventfile)
-        if len(hdulist[1].data) != len(phases):
-            raise RuntimeError(
-                "Mismatch between length of FITS table ({0}) and length of phase array ({1})!".format(
-                    len(hdulist[1].data), len(phases)
+
+        datacol = []
+        data_to_add = {}
+
+        if args.addphase:
+            if len(hdulist[1].data) != len(phases):
+                raise RuntimeError(
+                    "Mismatch between length of FITS table ({0}) and length of phase array ({1})!".format(
+                        len(hdulist[1].data), len(phases)
+                    )
                 )
-            )
-        data_to_add = {"PULSE_PHASE": [phases, "D"]}
+            data_to_add["PULSE_PHASE"] = [phases, "D"]
+
         if args.absphase:
             data_to_add["ABS_PHASE"] = [iphss - negmask * u.cycle, "K"]
+
         if args.barytime:
             bats = modelin.get_barycentric_toas(ts)
             data_to_add["BARY_TIME"] = [bats, "D"]
-        datacol = []
+
+        if args.addorbphase:
+            if len(hdulist[1].data) != len(orbphases):
+                raise RuntimeError(
+                    "Mismatch between length of FITS table ({0}) and length of orbital phase array ({1})!".format(
+                        len(hdulist[1].data), len(orbphases)
+                    )
+                )
+            data_to_add["ORBIT_PHASE"] = [orbphases, "D"]
+        # End if args.addorbphase
+
         for key in data_to_add.keys():
             if key in hdulist[1].columns.names:
                 log.info("Found existing %s column, overwriting..." % key)
@@ -245,6 +286,7 @@ def main(argv=None):
                         ]
                     )
                 )
+
         if len(datacol) > 0:
             cols = hdulist[1].columns
             for c in datacol:
@@ -253,6 +295,7 @@ def main(argv=None):
                 cols, header=hdulist[1].header, name=hdulist[1].name
             )
             hdulist[1] = bt
+
         if args.outfile is None:
             # Overwrite the existing file
             log.info("Overwriting existing FITS file " + args.eventfile)

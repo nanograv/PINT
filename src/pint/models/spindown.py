@@ -56,29 +56,33 @@ class Spindown(PhaseComponent):
 
     def setup(self):
         super(Spindown, self).setup()
+        self.num_spin_terms = len(self.F_terms) + 1
+        # Add derivative functions
+        for fp in list(self.get_prefix_mapping_component("F").values()) + ["F0"]:
+            self.register_deriv_funcs(self.d_phase_d_F, fp)
+
+    def validate(self):
+        super(Spindown, self).validate()
         # Check for required params
         for p in ("F0",):
             if getattr(self, p).value is None:
                 raise MissingParameter("Spindown", p)
-
         # Check continuity
-        F_terms = list(self.get_prefix_mapping_component("F").keys())
-        F_terms.sort()
-        F_in_order = list(range(1, max(F_terms) + 1))
-        if not F_terms == F_in_order:
-            diff = list(set(F_in_order) - set(F_terms))
+        sort_F_terms = sorted(self.F_terms)
+        F_in_order = list(range(1, max(self.F_terms) + 1))
+        if not sort_F_terms == F_in_order:
+            diff = list(set(F_in_order) - set(sort_F_terms))
             raise MissingParameter("Spindown", "F%d" % diff[0])
-
         # If F1 is set, we need PEPOCH
         if self.F1.value != 0.0:
             if self.PEPOCH.value is None:
                 raise MissingParameter(
                     "Spindown", "PEPOCH", "PEPOCH is required if F1 or higher are set"
                 )
-        self.num_spin_terms = len(F_terms) + 1
-        # Add derivative functions
-        for fp in list(self.get_prefix_mapping_component("F").values()) + ["F0"]:
-            self.register_deriv_funcs(self.d_phase_d_F, fp)
+
+    @property
+    def F_terms(self):
+        return list(self.get_prefix_mapping_component("F").keys())
 
     def F_description(self, n):
         """Template function for description"""
@@ -146,8 +150,6 @@ class Spindown(PhaseComponent):
             new_epoch = Time(new_epoch, scale="tdb", precision=9)
         else:
             new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
-        # make new_epoch a toa for delay calculation.
-        new_epoch_toa = toa.get_TOAs_list([toa.TOA(new_epoch)], ephem=toas.ephem)
 
         if self.PEPOCH.value is None:
             if toas is None or delay is None:

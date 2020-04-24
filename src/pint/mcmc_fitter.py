@@ -164,8 +164,8 @@ class MCMCFitter(Fitter):
         self.weights = kwargs.get("weights", None)
         phs = kwargs.get("phs", 0.0)
         phserr = kwargs.get("phserr", 0.01)
-        self.minMJD = kwargs.get("minMJD", 54680)
-        self.maxMJD = kwargs.get("maxMJD", 57250)
+        self.minMJD = kwargs.get("minMJD", 40000)
+        self.maxMJD = kwargs.get("maxMJD", 60000)
 
         self.fitkeys, self.fitvals, self.fiterrs = self.generate_fit_keyvals(
             phs, phserr
@@ -291,7 +291,8 @@ class MCMCFitter(Fitter):
         """
         phases = self.model.phase(self.toas)[1]
         # ensure all positive
-        return np.where(phases < 0.0 * u.cycle, phases + 1.0 * u.cycle, phases)
+        phases = phases.to(u.cycle).value
+        return np.where(phases < 0.0, phases + 1.0, phases)
 
     def lnposterior(self, theta):
         """
@@ -641,7 +642,8 @@ class CompositeMCMCFitter(MCMCFitter):
             print("Showing all %d phases" % len(phases))
         else:
             phases = self.model.phase(self.toas_list[index])[1]
-        return np.where(phases < 0.0 * u.cycle, phases + 1.0 * u.cycle, phases)
+        phases = phases.to(u.cycle).value
+        return np.where(phases < 0.0, phases + 1.0, phases)
 
     def get_template_vals(self, phases, index):
         if self.templates[index] is None:

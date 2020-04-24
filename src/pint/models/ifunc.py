@@ -11,7 +11,7 @@ class IFunc(PhaseComponent):
     """This class implements tabulated delays.
 
     These mimic a tempo2 feature, which supports piecewise, linear, and sinc
-    interpolation.  The implementation here currently only supports the 
+    interpolation.  The implementation here currently only supports the
     first two formulae.
 
     For consistency with tempo2, although the IFuncs represent time series,
@@ -29,7 +29,7 @@ class IFunc(PhaseComponent):
     0 == piecewise (no interpolation)
     1 == sinc (not supported)
     2 == linear
-    
+
     NB that the trailing 0.0s are necessary for accurate tempo2 parsing.
     NB also that tempo2 has a static setting MAX_IFUNC whose default value
     is 1000.
@@ -66,6 +66,11 @@ class IFunc(PhaseComponent):
 
     def setup(self):
         super(IFunc, self).setup()
+        self.terms = list(self.get_prefix_mapping_component("IFUNC").keys())
+        self.num_terms = len(self.terms)
+
+    def validate(self):
+        super(IFunc, self).validate()
         if self.SIFUNC.quantity is None:
             raise MissingParameter(
                 "IFunc", "SIFUNC", "SIFUNC is required if IFUNC entries are present."
@@ -78,13 +83,10 @@ class IFunc(PhaseComponent):
         # this is copied from the wave model, but I don't think this check
         # is strictly necessary.  An ephemeris could remain perfectly valid
         # if some IFUNC terms were "missing".  (The same is true for WAVE.)
-        terms = list(self.get_prefix_mapping_component("IFUNC").keys())
-        terms.sort()
-        for i, term in enumerate(terms):
+        self.terms.sort()
+        for i, term in enumerate(self.terms):
             if (i + 1) != term:
                 raise MissingParameter("IFunc", "IFUNC%d" % (i + 1))
-
-        self.num_terms = len(terms)
 
     def print_par(self,):
         result = self.SIFUNC.as_parfile_line()
@@ -130,5 +132,5 @@ class IFunc(PhaseComponent):
         else:
             raise ValueError("Interpolation type %d not supported.".format(itype))
 
-        phase = ((times * u.s) * self.F0.quantity * 2 * np.pi).to(u.cycle)
+        phase = (times * u.s) * self.F0.quantity * u.cycle
         return phase

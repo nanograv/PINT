@@ -95,7 +95,7 @@ class Tempo2ClockFile(ClockFile):
 
     def __init__(self, filename, **kwargs):
         self.filename = filename
-        log.info(
+        log.debug(
             "Loading {0} observatory clock correction file {1}".format(
                 self.format, filename
             )
@@ -115,7 +115,11 @@ class Tempo2ClockFile(ClockFile):
         that specifies the two clock scales connected by the file."""
         f = open(filename, "r")
         hdrline = f.readline().rstrip()
-        mjd, clk = numpy.loadtxt(f, unpack=True)
+        try:
+            mjd, clk = numpy.loadtxt(f, usecols=(0, 1), unpack=True)
+        except:
+            log.error("Failed loading clock file {0}".format(f))
+            raise
         return mjd, clk, hdrline
 
 
@@ -126,7 +130,7 @@ class TempoClockFile(ClockFile):
     def __init__(self, filename, obscode=None, **kwargs):
         self.filename = filename
         self.obscode = obscode
-        log.info(
+        log.debug(
             "Loading {0} observatory ({1}) clock correction file {2}".format(
                 self.format, obscode, filename
             )

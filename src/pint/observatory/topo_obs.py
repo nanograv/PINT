@@ -180,10 +180,10 @@ class TopoObs(Observatory):
         Will first try PINT data dirs, then fall back on $TEMPO2/clock.
         """
         fname = "tai2tt_" + self.bipm_version.lower() + ".clk"
-        fullpath = datapath(fname)
-        if fullpath is not None:
+        try:
+            fullpath = datapath(fname)
             return fullpath
-        else:
+        except FileNotFoundError:
             try:
                 return os.path.join(os.getenv("TEMPO2"), "clock", fname)
             except OSError as e:
@@ -218,7 +218,7 @@ class TopoObs(Observatory):
             self._clock = []
             for clock_file in clock_files:
                 log.info(
-                    "Observatory {0}, loading clock file {1}".format(
+                    "Observatory {0}, loading clock file \n\t{1}".format(
                         self.name, clock_file
                     )
                 )
@@ -227,7 +227,7 @@ class TopoObs(Observatory):
                         clock_file, format=self.clock_fmt, obscode=self.tempo_code
                     )
                 )
-        log.info("Evaluating observatory clock corrections.")
+        log.info("Applying observatory clock corrections.")
         corr = self._clock[0].evaluate(t)
         for clock in self._clock[1:]:
             corr += clock.evaluate(t)
@@ -236,7 +236,7 @@ class TopoObs(Observatory):
             log.info("Applying GPS to UTC clock correction (~few nanoseconds)")
             if self._gps_clock is None:
                 log.info(
-                    "Observatory {0}, loading GPS clock file {1}".format(
+                    "Observatory {0}, loading GPS clock file \n\t{1}".format(
                         self.name, self.gps_fullpath
                     )
                 )
@@ -249,7 +249,7 @@ class TopoObs(Observatory):
             if self._bipm_clock is None:
                 try:
                     log.info(
-                        "Observatory {0}, loading BIPM clock file {1}".format(
+                        "Observatory {0}, loading BIPM clock file \n\t{1}".format(
                             self.name, self.bipm_fullpath
                         )
                     )

@@ -52,6 +52,11 @@ def test_fitter():
     print("chi^2 is %0.2f after 4-param fit" % f.resids.chi2)
     p2 = plt.errorbar(xt, f.resids.time_resids.value, yerr.value, fmt="go")
 
+    # Make sure the summary printing works
+    f.print_summary()
+
+    # Try a few utils
+
     # Now perturb F1 and fit only that. This doesn't work, though tempo2 easily fits
     # it.
     f.model.F1.value = 1.1 * f.model.F1.value

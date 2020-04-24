@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 from itertools import product
 from tempfile import NamedTemporaryFile
 
+import pint
 import astropy.units as u
 import numpy as np
 import pytest
@@ -33,7 +34,19 @@ from pint.pulsar_mjd import (
     time_from_mjd_string,
     time_to_longdouble,
 )
-from pint.utils import PosVel, interesting_lines, lines_of, open_or_use, taylor_horner
+from pint.utils import (
+    PosVel,
+    interesting_lines,
+    lines_of,
+    open_or_use,
+    taylor_horner,
+    dmxparse,
+)
+
+import pint.models as tm
+from pint import fitter, toa
+from pinttestdata import datadir
+import os
 
 
 def test_taylor_horner_basic():
@@ -564,3 +577,64 @@ def test_mjd_string_rejects_val2(format_):
 def test_time_from_mjd_string_rejects_other_formats():
     with pytest.raises(ValueError):
         time_from_mjd_string("58000", format="cxcsec")
+
+
+def test_dmxparse():
+    """Test for dmxparse function."""
+    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
+    t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
+    f = fitter.GLSFitter(toas=t, model=m)
+    f.fit_toas()
+    dmx = dmxparse(f, save=False)
+
+
+# Remove this xfail once our minimum numpy can bump up to 1.17, but this requires excluding Python 2
+@pytest.mark.xfail(
+    reason="numpy 1.16.* does not support isclose with units, fixed in 1.17"
+)
+def test_psr_utils():
+
+    from pint.utils import (
+        mass_funct,
+        mass_funct2,
+        pulsar_mass,
+        companion_mass,
+        pulsar_age,
+        pulsar_edot,
+        pulsar_B,
+        pulsar_B_lightcyl,
+    )
+
+    pb = 1.0 * u.d
+    x = 2.0 * pint.ls
+
+    # Mass function
+    assert np.isclose(mass_funct(pb, x), 0.008589595519643776 * u.solMass)
+
+    # Mass function, second form
+    assert np.isclose(
+        mass_funct2(1.4 * u.solMass, 0.2 * u.solMass, 60.0 * u.deg),
+        0.0020297470401197783 * u.solMass,
+    )
+
+    # Characteristic age
+    assert np.isclose(
+        pulsar_age(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s), 261426.72446573884 * u.yr
+    )
+
+    # Edot
+    assert np.isclose(
+        pulsar_edot(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s),
+        2.6055755618875905e30 * u.erg / u.s,
+    )
+
+    # B
+    assert np.isclose(
+        pulsar_B(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s), 238722891596281.66 * u.G
+    )
+
+    # B_lc
+    assert np.isclose(
+        pulsar_B_lightcyl(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s),
+        0.07774704753236616 * u.G,
+    )

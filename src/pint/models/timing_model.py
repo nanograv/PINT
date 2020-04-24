@@ -146,6 +146,15 @@ class TimingModel(object):
         for cp in self.components.values():
             cp.setup()
 
+    def validate(self):
+        """ Validate component setup. 
+            The checks includes:
+            - Required parameters
+            - Parameter values
+        """
+        for cp in self.components.values():
+            cp.validate()
+
     # def __str__(self):
     #    result = ""
     #    comps = self.components
@@ -640,6 +649,29 @@ class TimingModel(object):
             result.append(nf(toas)[1])
         return np.hstack([r for r in result])
 
+    def noise_model_dimensions(self, toas):
+        """Returns a dictionary of correlated-noise components in the noise
+        model.  Each entry contains a tuple (offset, size) where size is the
+        number of basis funtions for the component, and offset is their
+        starting location in the design matrix and weights vector."""
+        result = {}
+
+        # Correct results rely on this ordering being the
+        # same as what is done in the self.basis_funcs
+        # property.
+        ntot = 0
+        for nc in self.NoiseComponent_list:
+            bfs = nc.basis_funcs
+            if len(bfs) == 0:
+                continue
+            nbf = 0
+            for bf in bfs:
+                nbf += len(bf(toas)[1])
+            result[nc.category] = (ntot, nbf)
+            ntot += nbf
+
+        return result
+
     def jump_flags_to_params(self, toas):
         """convert jump flags in toas.table["flags"] to jump parameters in the model"""
         from . import jump
@@ -914,7 +946,7 @@ class TimingModel(object):
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
 
-    def read_parfile(self, file):
+    def read_parfile(self, file, validate=True):
         """Read values from the specified parfile into the model parameters.
 
         Parameters
@@ -998,10 +1030,12 @@ class TimingModel(object):
                 )
             log.info("Final object: {}".format(repr(self)))
 
-        # The "setup" functions contain tests for required parameters or
+        self.setup()
+        # The "validate" functions contain tests for required parameters or
         # combinations of parameters, etc, that can only be done
         # after the entire parfile is read
-        self.setup()
+        if validate:
+            self.validate()
 
     def as_parfile(
         self,
@@ -1090,7 +1124,11 @@ class Component(object):
         )
 
     def setup(self):
-        """Finalize construction and validate loaded values."""
+        """Finalize construction loaded values."""
+        pass
+
+    def validate(self):
+        """ Validate loaded values."""
         pass
 
     @property

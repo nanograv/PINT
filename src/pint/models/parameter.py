@@ -1573,7 +1573,9 @@ class maskParameter(floatParameter):
         # We need to consider some more complicated situation
         key = self.key.replace("-", "")
         tbl = toas.table
-        if key not in column_match.keys():  # This only works for the one with flags.
+        if (
+            key.lower() not in column_match.keys()
+        ):  # This only works for the one with flags.
             section_name = key + "_section"
             # if section_name not in tbl.keys():
             # if statement removed so that flags recompute every time. If don't
@@ -1583,7 +1585,7 @@ class maskParameter(floatParameter):
             tbl[section_name] = flag_col
             col = tbl[section_name]
         else:
-            col = tbl[column_match[key]]
+            col = tbl[column_match[key.lower()]]
         select_idx = self.toa_selector.get_select_index(condition, col)
         return select_idx[self.name]
 
@@ -1695,7 +1697,6 @@ class pairParameter(floatParameter):
         quantity = self.quantity
         if self.quantity is None:
             return ""
-        print(quantity)
         line = "%-15s " % (self.name)
         line += "%25s" % self.print_quantity(quantity[0])
         line += "%25s" % self.print_quantity(quantity[1])

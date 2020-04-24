@@ -9,7 +9,11 @@ import os
 import sys
 
 import numpy as np
-import six.moves.tkinter as tk
+
+try:
+    from six.moves import Tkinter as tk
+except ImportError:
+    from six.moves import tkinter as tk
 import six.moves.tkinter_filedialog as tkFileDialog
 import six.moves.tkinter_messagebox as tkMessageBox
 from astropy import log

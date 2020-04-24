@@ -19,6 +19,8 @@ from pint import dimensionless_cycles
 class Phase(namedtuple("Phase", "int frac")):
     """
     Phase class array version
+
+    Ensures that the fractional part stays in [-0.5, 0.5)
     """
 
     __slots__ = ()
@@ -49,7 +51,9 @@ class Phase(namedtuple("Phase", "int frac")):
             index = numpy.where(ff < -0.5)
             ff[index] += 1.0
             ii[index] -= 1
-            index = numpy.where(ff > 0.5)
+            # The next line is >= so that the range is the interval [-0.5,0.5)
+            # Otherwise, the same phase could be represented 0,0.5 or 1,-0.5
+            index = numpy.where(ff >= 0.5)
             ff[index] -= 1.0
             ii[index] += 1
             return super(Phase, cls).__new__(cls, ii.to(u.cycle), ff.to(u.cycle))
