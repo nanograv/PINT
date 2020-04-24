@@ -448,7 +448,7 @@ def dmxparse(fitter, save=False):
     :param save: boolean; if True saves output to text file in the format of the TEMPO version.
     If not output save file is desired, save = False (which is the default)
     Output file name is dmxparse.out
-    
+
     Returns a dictionary with the following entries:
 
         dmxs        mean-subtraced dmx values
