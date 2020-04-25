@@ -70,6 +70,7 @@ def random_models(
     x2 = toa.make_fake_toas(minMJD, maxMJD, npoints, mrand)
 
     rss = []
+    random_models = []
     for i in range(iter):
         # create a set of randomized parameters based on mean vector and covariance matrix
         rparams_num = np.random.multivariate_normal(mean_vector, cov_matrix)
@@ -86,5 +87,6 @@ def random_models(
         # TODO: use units here!
         rs = ((rs.int + rs.frac).value / fitter.model.F0.value) * 10 ** 6
         rss.append(rs)
+        random_models.append(deepcopy(mrand))
 
-    return x.get_mjds(), rss
+    return x.get_mjds(), rss, random_models
