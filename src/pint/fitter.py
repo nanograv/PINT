@@ -90,7 +90,7 @@ class Fitter(object):
     def get_allparams(self):
         """Return a dict of all param names and values."""
         return collections.OrderedDict(
-            (k, getattr(self.model, k).quantity) for k in self.model.params
+            (k, getattr(self.model, k).quantity) for k in self.model.params_ordered
         )
 
     def get_fitparams(self):
@@ -121,12 +121,21 @@ class Fitter(object):
 
         Ex. fitter.set_params({'F0':60.1,'F1':-1.3e-15})
         """
-        for k, v in fitp.items():
-            getattr(self.model, k).value = v
+        # In Powell fitter this sometimes fails because after some iterations the values change from
+        # plain float to Quantities. No idea why.
+        if len(fitp.values()) < 1:
+            return
+        if isinstance(list(fitp.values())[0], u.Quantity):
+            for k, v in fitp.items():
+                getattr(self.model, k).value = v.value
+        else:
+            for k, v in fitp.items():
+                getattr(self.model, k).value = v
 
     def set_param_uncertainties(self, fitp):
         for k, v in fitp.items():
-            getattr(self.model, k).uncertainty_value = v
+            parunit = getattr(self.model, k).units
+            getattr(self.model, k).uncertainty = v * parunit
 
     def get_designmatrix(self):
         return self.model.designmatrix(toas=self.toas, incfrozen=False, incoffset=True)
@@ -145,8 +154,29 @@ class Fitter(object):
     def fit_toas(self, maxiter=None):
         raise NotImplementedError
 
+    def plot(self):
+        """Make residuals plot"""
+        import matplotlib.pyplot as plt
+        from astropy.visualization import quantity_support
+
+        quantity_support()
+        fig, ax = plt.subplots(figsize=(16, 9))
+        mjds = self.toas.get_mjds()
+        ax.errorbar(mjds, self.resids.time_resids, yerr=self.toas.get_errors(), fmt="+")
+        ax.set_xlabel("MJD")
+        ax.set_ylabel("Residuals")
+        try:
+            psr = self.model.PSR
+        except:
+            psr = self.model.PSRJ
+        else:
+            psr = "Residuals"
+        ax.set_title(psr)
+        ax.grid(True)
+        plt.show()
+
     def get_summary(self):
-        """Return a short ASCII summary of the Fitter results."""
+        """Return a human-readable summary of the Fitter results."""
 
         # Need to check that fit has been done first!
         if not hasattr(self, "covariance_matrix"):
@@ -174,7 +204,7 @@ class Fitter(object):
         s += "{:<14s} {:>20s} {:>28s} {}\n".format(
             "=" * 14, "=" * 20, "=" * 28, "=" * 5
         )
-        for pn in self.get_allparams().keys():
+        for pn in list(self.get_allparams().keys()):
             prefitpar = getattr(self.model_init, pn)
             par = getattr(self.model, pn)
             if par.value is not None:
@@ -189,11 +219,15 @@ class Fitter(object):
                             pn, str(prefitpar.quantity), "", par.units
                         )
                     else:
+                        if par.units == u.hourangle:
+                            uncertainty_unit = pint.hourangle_second
+                        else:
+                            uncertainty_unit = u.arcsec
                         s += "{:14s} {:>20s}  {:>16s} +/- {:.2g} \n".format(
                             pn,
                             str(prefitpar.quantity),
                             str(par.quantity),
-                            par.uncertainty.to(u.arcsec),
+                            par.uncertainty.to(uncertainty_unit),
                         )
 
                 else:
@@ -281,8 +315,8 @@ class Fitter(object):
                         self.model.EPS1.uncertainty.value,
                     )
                     eps2 = ufloat(
-                        self.model.EPS1.quantity.value,
-                        self.model.EPS1.uncertainty.value,
+                        self.model.EPS2.quantity.value,
+                        self.model.EPS2.uncertainty.value,
                     )
                     tasc = ufloat(
                         # This is a time in MJD
@@ -300,7 +334,7 @@ class Fitter(object):
                     if om < 0.0:
                         om += 360.0
                     s += "OM  = {:P}\n".format(om)
-                    t0 = tasc + pb / (360.0 * om)
+                    t0 = tasc + pb * om / 360.0
                     s += "T0  = {:SP}\n".format(t0)
 
                     s += pint.utils.ELL1_check(
@@ -457,6 +491,8 @@ class PowellFitter(Fitter):
         # Update model and resids, as the last iteration of minimize is not
         # necessarily the one that yields the best fit
         self.minimize_func(np.atleast_1d(self.fitresult.x), *list(fitp.keys()))
+
+        return self.resids.chi2
 
 
 class WLSFitter(Fitter):

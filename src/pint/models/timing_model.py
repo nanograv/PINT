@@ -211,11 +211,54 @@ class TimingModel(object):
 
     @property
     def params(self):
-        """Parameters of this model and all its components."""
+        """List of all parameter names in this model and all its components (order is arbitrary)."""
         p = self.top_level_params
         for cp in self.components.values():
             p = p + cp.params
         return p
+
+    @property
+    def params_ordered(self):
+        """List of all parameter names in this model and all its components, in a sensible order."""
+
+        # Define the order of components in the list
+        # Any not included will be printed between the first and last set.
+        start_order = ["astrometry", "spindown", "dispersion"]
+        last_order = ["jump_delay"]
+        compdict = self.get_components_by_category()
+        used_cats = []
+        pstart = copy.copy(self.top_level_params)
+        for cat in start_order:
+            if cat in list(compdict.keys()):
+                cp = compdict[cat]
+                for cpp in cp:
+                    pstart += cpp.params
+                used_cats.append(cat)
+            else:
+                continue
+
+        pend = []
+        for cat in last_order:
+            if cat in list(compdict.keys()):
+                cp = compdict[cat]
+                for cpp in cp:
+                    pend += cpp.parms
+                used_cats.append(cat)
+            else:
+                continue
+
+        # Now collect any components that haven't already been included in the list
+        pmid = []
+        for cat in list(compdict.keys()):
+            if cat in used_cats:
+                continue
+            else:
+                cp = compdict[cat]
+                for cpp in cp:
+                    pmid += cpp.params
+                used_cats.append(cat)
+
+        return pstart + pmid + pend
 
     @property
     def components(self):
@@ -484,7 +527,7 @@ class TimingModel(object):
         result_comp = []
         for cp in components:
             if param in cp.params:
-                result_comp.append((cp, getattr(cp, param),))
+                result_comp.append((cp, getattr(cp, param)))
             else:
                 # search for prefixed parameter
                 prefixs = cp.param_prefixs
@@ -512,11 +555,13 @@ class TimingModel(object):
         new_tm.top_level_params = self.top_level_params
         return new_tm
 
-    def get_component_of_category(self):
-        category = defaultdict(list)
+    def get_components_by_category(self):
+        """Return a dict of this model's component objects keyed by the category name"""
+        categorydict = defaultdict(list)
         for cp in self.components.values():
-            category[cp.category].append(cp)
-        return dict(category)
+            categorydict[cp.category].append(cp)
+        # Convert from defaultdict to dict
+        return dict(categorydict)
 
     def add_param_from_top(self, param, target_component, setup=False):
         """ Add a parameter to a timing model component.
@@ -1121,7 +1166,7 @@ class TimingModel(object):
         result_begin = ""
         result_end = ""
         result_middle = ""
-        cates_comp = self.get_component_of_category()
+        cates_comp = self.get_components_by_category()
         printed_cate = []
         for p in self.top_level_params:
             result_begin += getattr(self, p).as_parfile_line()
@@ -1143,11 +1188,11 @@ class TimingModel(object):
             else:
                 continue
 
-        for c in list(cates_comp.keys()):
-            if c in printed_cate:
+        for cat in list(cates_comp.keys()):
+            if cat in printed_cate:
                 continue
             else:
-                cp = cates_comp[c]
+                cp = cates_comp[cat]
                 for cpp in cp:
                     result_middle += cpp.print_par()
                 printed_cate.append(cat)
@@ -1237,9 +1282,7 @@ class Component(object):
             par = getattr(self, p)
             if par.is_prefix:
                 if par.prefix not in prefixs.keys():
-                    prefixs[par.prefix] = [
-                        p,
-                    ]
+                    prefixs[par.prefix] = [p]
                 else:
                     prefixs[par.prefix].append(p)
         return prefixs

@@ -513,7 +513,6 @@ class floatParameter(Parameter):
             "scale_factor",
         ]
         self.unit_scale = unit_scale
-        self._original_units = self.units
 
     @property
     def long_double(self):
@@ -546,7 +545,6 @@ class floatParameter(Parameter):
 
     @unit_scale.setter
     def unit_scale(self, val):
-        old_unit_scale = self._unit_scale
         self._unit_scale = val
         if self._unit_scale:
             if self.scale_factor is None:
@@ -559,9 +557,6 @@ class floatParameter(Parameter):
                     "The scale threshold should be given if unit_scale"
                     " is set to be True."
                 )
-        else:
-            if old_unit_scale:  # This makes sure the unit_scale if from True to false
-                self.units = self._original_units
 
     def set_quantity_float(self, val):
         """Set value method specific for float parameter
@@ -590,15 +585,15 @@ class floatParameter(Parameter):
             # This will happen if the input value did not have units
             num_value = setfunc_no_unit(val)
             if self.unit_scale:
+                # For some parameters, if the value is above a threshold, it is assumed to be in units of scale_factor
+                # e.g. "PBDOT 7.2" is interpreted as "PBDOT 7.2E-12", since the scale_factor is 1E-12 and the scale_threshold is 1E-7
                 if np.abs(num_value) > np.abs(self.scale_threshold):
                     log.info(
-                        "Parameter %s's unit will be scaled to %s %s"
-                        % (self.name, str(self.scale_factor), str(self._original_units))
+                        "Parameter %s's value will be scaled by %s"
+                        % (self.name, str(self.scale_factor))
                     )
-                    self.units = self.scale_factor * self._original_units
-                else:
-                    self.units = self._original_units
-            result = (num_value) * self.units
+                    num_value *= self.scale_factor
+            result = num_value * self.units
 
         return result
 
