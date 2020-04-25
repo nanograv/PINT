@@ -681,7 +681,7 @@ class TimingModel(object):
         result = np.zeros((ntoa, ntoa))
         # When there is no noise model.
         if len(self.covariance_matrix_funcs) == 0:
-            result += np.diag(tbl["error"].quantity.value ** 2)
+            result += np.diag(tbl["error"].quantity.to(u.s).value ** 2)
             return result
 
         for nf in self.covariance_matrix_funcs:
