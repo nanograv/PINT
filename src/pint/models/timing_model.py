@@ -681,7 +681,7 @@ class TimingModel(object):
         result = np.zeros((ntoa, ntoa))
         # When there is no noise model.
         if len(self.covariance_matrix_funcs) == 0:
-            result += np.diag(tbl["error"].quantity.value ** 2)
+            result += np.diag(tbl["error"].quantity.to(u.s).value ** 2)
             return result
 
         for nf in self.covariance_matrix_funcs:
@@ -733,16 +733,17 @@ class TimingModel(object):
         # Correct results rely on this ordering being the
         # same as what is done in the self.basis_funcs
         # property.
-        ntot = 0
-        for nc in self.NoiseComponent_list:
-            bfs = nc.basis_funcs
-            if len(bfs) == 0:
-                continue
-            nbf = 0
-            for bf in bfs:
-                nbf += len(bf(toas)[1])
-            result[nc.category] = (ntot, nbf)
-            ntot += nbf
+        if len(self.basis_funcs) > 0:
+            ntot = 0
+            for nc in self.NoiseComponent_list:
+                bfs = nc.basis_funcs
+                if len(bfs) == 0:
+                    continue
+                nbf = 0
+                for bf in bfs:
+                    nbf += len(bf(toas)[1])
+                result[nc.category] = (ntot, nbf)
+                ntot += nbf
 
         return result
 
