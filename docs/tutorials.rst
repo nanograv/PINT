@@ -11,8 +11,8 @@ We don't really have any proper tutorials yet. But for the moment, we have a few
 
    basic-installation
    examples/PINT_walkthrough
-   examples/MCMC_walkthrough
-   examples/Example of parameter usage
-   examples/TimingModel_composition
-   examples/Timing_model_update_example
+   examples/understanding_timing_models
+   examples/understanding_parameters
    examples/build_model_from_scratch
+   examples/understanding_fitters
+   examples/MCMC_walkthrough
