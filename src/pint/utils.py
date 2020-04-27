@@ -567,7 +567,7 @@ def dmxparse(fitter, save=False):
             "# Columns: %sEP %s_value %s_var_err %sR1 %sR2 %s_bin \n"
             % (DMX, DMX, DMX, DMX, DMX, DMX)
         )
-        for k in range(dmx_epochs):
+        for k in range(len(dmx_epochs)):
             lines.append(
                 "%.4f %+.7e %.3e %.4f %.4f %s \n"
                 % (
@@ -585,16 +585,20 @@ def dmxparse(fitter, save=False):
     # return the new mean subtracted values
     mean_sub_DMXs = DMXs - DMX_mean
 
+    # Get units to multiply returned arrays by
+    DMX_units = getattr(fitter.model, "DMX_{:}".format(dmx_epochs[0])).units
+    DMXR_units = getattr(fitter.model, "DMXR1_{:}".format(dmx_epochs[0])).units
+
     # define the output dictionary
     dmx = {}
-    dmx["dmxs"] = mean_sub_DMXs
-    dmx["dmx_verrs"] = DMX_vErrs
-    dmx["dmxeps"] = DMX_center_MJD
-    dmx["r1s"] = DMX_R1
-    dmx["r2s"] = DMX_R2
+    dmx["dmxs"] = mean_sub_DMXs * DMX_units
+    dmx["dmx_verrs"] = DMX_vErrs * DMX_units
+    dmx["dmxeps"] = DMX_center_MJD * DMXR_units
+    dmx["r1s"] = DMX_R1 * DMXR_units
+    dmx["r2s"] = DMX_R2 * DMXR_units
     dmx["bins"] = DMX_keys
-    dmx["mean_dmx"] = DMX_mean
-    dmx["avg_dm_err"] = DMX_mean_err
+    dmx["mean_dmx"] = DMX_mean * DMX_units
+    dmx["avg_dm_err"] = DMX_mean_err * DMX_units
 
     return dmx
 
