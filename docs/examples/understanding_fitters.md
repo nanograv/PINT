@@ -120,6 +120,11 @@ powfit.print_summary()
 
 ***!!! Note that the Powell fitter does not produce a covariance matrix or estimates of the uncertainties. !!!***
 
+There also a convenience function for pretty printing a comparison of two models with the differences measured in sigma.
+
+```python
+print(wlsfit.model.compare(powfit.model))
+```
 
 ## Generalized Least Squares fitter
 

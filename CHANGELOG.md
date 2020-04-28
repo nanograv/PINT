@@ -6,7 +6,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 
 ## [Unreleased]
 ### Added
-- Added function ot change binary epoch
+- Added model comparison pretty printer
+- Added functions to change PEPOCH, DMEPOCH, and binary epoch
 - Aded dmxparse function
 - Added code to ensure that IERS B table is up to date
 - Added fitter.print_summary()

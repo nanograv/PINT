@@ -15,10 +15,17 @@ import numpy as np
 import six
 from astropy import log
 
+import pint
 from pint import dimensionless_cycles
 from pint.models.parameter import strParameter, maskParameter
 from pint.phase import Phase
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
+from pint.models.parameter import (
+    AngleParameter,
+    prefixParameter,
+    strParameter,
+    floatParameter,
+)
 
 
 __all__ = ["DEFAULT_ORDER", "TimingModel"]
@@ -1065,6 +1072,108 @@ class TimingModel(object):
                 mask.append(ii)
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
+
+    def compare(self, othermodel):
+        """Print comparison with another model"""
+
+        from uncertainties import ufloat
+        import uncertainties.umath as um
+
+        s = "{:14s} {:>28s} {:>28s} {:14s}\n".format(
+            "PARAMETER", "Self   ", "Other   ", "Diff_Sigma"
+        )
+        s += "{:14s} {:>28s} {:>28s} {:14s}\n".format(
+            "---------", "----------", "----------", "----------"
+        )
+        for pn in self.params_ordered:
+            par = getattr(self, pn)
+            if par.value is None:
+                continue
+            try:
+                otherpar = getattr(othermodel, pn)
+            except AttributeError:
+                # s += "Parameter {} missing in other model\n".format(par.name)
+                otherpar = None
+            if isinstance(par, strParameter):
+                s += "{:14s} {:>28s}".format(pn, par.value)
+                if otherpar is not None:
+                    s += " {:>28s}\n".format(otherpar.value)
+                else:
+                    s += " {:>28s}\n".format("Missing")
+            elif isinstance(par, AngleParameter):
+                if par.frozen:
+                    # If not fitted, just print both values
+                    s += "{:14s} {:>28s}".format(pn, str(par.quantity))
+                    if otherpar is not None:
+                        s += " {:>28s}\n".format(str(otherpar.quantity))
+                    else:
+                        s += " {:>28s}\n".format("Missing")
+                else:
+                    # If fitted, print both values with uncertainties
+                    if par.units == u.hourangle:
+                        uncertainty_unit = pint.hourangle_second
+                    else:
+                        uncertainty_unit = u.arcsec
+                    s += "{:14s} {:>16s} +/- {:7.2g}".format(
+                        pn,
+                        str(par.quantity),
+                        par.uncertainty.to(uncertainty_unit).value,
+                    )
+                    if otherpar is not None:
+                        try:
+                            s += " {:>16s} +/- {:7.2g}".format(
+                                str(otherpar.quantity),
+                                otherpar.uncertainty.to(uncertainty_unit).value,
+                            )
+                        except AttributeError:
+                            # otherpar must have no uncertainty
+                            if otherpar.quantity is not None:
+                                s += " {:>28s}".format(str(otherpar.quantity))
+                            else:
+                                s += " {:>28s}".format("Missing")
+                    else:
+                        s += " {:>28s}".format("Missing")
+                    try:
+                        diff = otherpar.value - par.value
+                        diff_sigma = diff / par.uncertainty.value
+                        s += " {:>10.2f}\n".format(diff_sigma)
+                    except (AttributeError, TypeError):
+                        s += "\n"
+            else:
+                # Assume numerical parameter
+                if par.frozen:
+                    # If not fitted, just print both values
+                    s += "{:14s} {:28f}".format(pn, par.value)
+                    if otherpar is not None:
+                        s += " {:28f}\n".format(otherpar.value)
+                    else:
+                        s += " {:>28s}\n".format("Missing")
+                else:
+                    # If fitted, print both values with uncertainties
+                    s += "{:14s} {:28SP}".format(
+                        pn, ufloat(par.value, par.uncertainty.value)
+                    )
+                    if otherpar is not None:
+                        try:
+                            s += " {:28SP}".format(
+                                ufloat(otherpar.value, otherpar.uncertainty.value)
+                            )
+                        except AttributeError:
+                            # otherpar must have no uncertainty
+                            if otherpar.value is not None:
+                                s += " {:28f}".format(otherpar.value)
+                            else:
+                                s += " {:>28s}".format("Missing")
+                    else:
+                        s += " {:>28s}".format("Missing")
+                    try:
+                        diff = otherpar.value - par.value
+                        diff_sigma = diff / par.uncertainty.value
+                        s += " {:>10.2f}\n".format(diff_sigma)
+                    except (AttributeError, TypeError):
+                        s += "\n"
+
+        return s
 
     def read_parfile(self, file, validate=True):
         """Read values from the specified parfile into the model parameters.
