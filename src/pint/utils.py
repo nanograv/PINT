@@ -493,6 +493,9 @@ def dmxparse(fitter, save=False):
     for p in fitter.model.params:
         if "DMX_" in p:
             dmx_epochs.append(p.split("_")[-1])
+    # Check to make sure that there are DMX values in the model
+    if not dmx_epochs:
+        raise RuntimeError("No DMX values in model!")
     # Get DMX values (will be in units of 10^-3 pc cm^-3)
     DMX_keys = []
     DMXs = []
@@ -500,9 +503,11 @@ def dmxparse(fitter, save=False):
     DMX_R1 = []
     DMX_R2 = []
     DMX_center_MJD = []
+    mask_idxs = []
     for ii in dmx_epochs:
         DMX_keys.append("DMX_{:}".format(ii))
         DMXs.append(getattr(fitter.model, "DMX_{:}".format(ii)).value)
+        mask_idxs.append(getattr(fitter.model, "DMX_{:}".format(ii)).frozen)
         DMX_Errs.append(getattr(fitter.model, "DMX_{:}".format(ii)).uncertainty_value)
         dmxr1 = getattr(fitter.model, "DMXR1_{:}".format(ii)).value
         dmxr2 = getattr(fitter.model, "DMXR2_{:}".format(ii)).value
@@ -514,6 +519,15 @@ def dmxparse(fitter, save=False):
     DMX_R1 = np.array(DMX_R1)
     DMX_R2 = np.array(DMX_R2)
     DMX_center_MJD = np.array(DMX_center_MJD)
+    # If any value need to be masked, do it
+    if True in mask_idxs:
+        log.warning(
+            "Some DMX bins were not fit for, masking these bins for computation."
+        )
+        DMX_Errs = np.ma.array(DMX_Errs, mask=mask_idxs)
+        DMX_keys_ma = np.ma.array(DMX_keys, mask=mask_idxs)
+    else:
+        DMX_keys_ma = None
 
     # Make sure that the fitter has a covariance matrix, otherwise return the initial values
     if hasattr(fitter, "covariance_matrix"):
@@ -525,16 +539,23 @@ def dmxparse(fitter, save=False):
         # Now we get the indices that correspond to the DMX values
         DMX_p_idxs = np.zeros(len(dmx_epochs), dtype=int)
         for ii in range(len(dmx_epochs)):
-            DMX_p_idxs[ii] = (
-                int(np.where(params == DMX_keys[ii])[0]) + 1
-            )  # extra 1 is for offset parameters
+            if DMX_keys_ma is None:
+                key = DMX_keys[ii]
+            else:
+                key = DMX_keys_ma[ii]
+            if "DMX" not in key:
+                pass
+            else:
+                DMX_p_idxs[ii] = (
+                    int(np.where(params == key)[0]) + 1
+                )  # extra 1 is for offset parameters
         # Sort the array in numerical order for 2.7. 3.5
-        DMX_p_idxs = np.sort(DMX_p_idxs)
+        DMX_p_idxs = np.trim_zeros(np.sort(DMX_p_idxs))
         # Define a matrix that is just the DMX covariances
         cc = p_cov_mat[
             DMX_p_idxs[0] : DMX_p_idxs[-1] + 1, DMX_p_idxs[0] : DMX_p_idxs[-1] + 1
         ]
-        n = len(DMX_Errs)
+        n = len(DMX_Errs) - np.sum(mask_idxs)
         # Find error in mean DM
         DMX_mean = np.mean(DMXs)
         DMX_mean_err = np.sqrt(cc.sum()) / float(n)
@@ -545,6 +566,10 @@ def dmxparse(fitter, save=False):
         # We also need to correct for the units here
         for i in range(n):
             DMX_vErrs[i] = np.sqrt(cc[i, i])
+        # If array was masked, we need to add values back in where they were masked
+        if DMX_keys_ma is not None:
+            # Only need to add value to DMX_vErrs
+            DMX_vErrs = np.insert(DMX_vErrs, np.where(mask_idxs)[0], None)
     else:
         log.warning(
             "Fitter does not have covariance matrix, returning values from model"
