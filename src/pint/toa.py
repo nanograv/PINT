@@ -999,11 +999,11 @@ class TOAs(object):
         for ii, key in enumerate(self.table.groups.keys):
             grp = self.table.groups[ii]
             s += "%s TOAs (%d):\n" % (key["obs"], len(grp))
-            s += "  Min error:     %.3g us\n" % np.min(grp["error"])
-            s += "  Max error:     %.3g us\n" % np.max(grp["error"])
-            s += "  Mean error:    %.3g us\n" % np.mean(grp["error"])
-            s += "  Median error:  %.3g us\n" % np.median(grp["error"])
-            s += "  Error stddev:  %.3g us\n" % np.std(grp["error"])
+            s += "  Min freq:      {:.3f} \n".format(np.min(grp["freq"].to(u.MHz)))
+            s += "  Max freq:      {:.3f} \n".format(np.max(grp["freq"].to(u.MHz)))
+            s += "  Min error:     {:.3g}\n".format(np.min(grp["error"].to(u.us)))
+            s += "  Max error:     {:.3g}\n".format(np.max(grp["error"].to(u.us)))
+            s += "  Median error:  {:.3g}\n".format(np.median(grp["error"].to(u.us)))
         return s
 
     def print_summary(self):
