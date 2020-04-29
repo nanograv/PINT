@@ -1020,14 +1020,17 @@ def shklovskii_factor(pmtot, D):
     This is the factor by which Pdot/P is increased due to the transverse velocity.
     Note that this affects both the measured spin period and the orbital period.
     If we call this Shklovskii acceleration a_s, then
-        Pdot_intrinsic = Pdot_obs-a_s*P
+        Pdot_intrinsic = Pdot_observed - a_s*P
 
     Parameters
     ----------
-    pmtot : Quanitity
+    pmtot : Quantity, typically units of u.mas/u.yr
         Total proper motion of the pulsar (system)
-    D : Quantity
+    D : Quantity, typically in units of u.kpc or u.pc
         Distance to the pulsar
     """
-    a_s = (D * pmtot ** 2 / const.c).to(u.s ** -1)
+    # This uses the small angle approximation that sin(x) = x, so we need to
+    # make our angle dimensionless.
+    with u.set_enabled_equivalencies(u.dimensionless_angles()):
+        a_s = (D * pmtot ** 2 / const.c).to(u.s ** -1)
     return a_s

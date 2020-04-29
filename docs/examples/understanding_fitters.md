@@ -120,6 +120,8 @@ powfit.print_summary()
 
 ***!!! Note that the Powell fitter does not produce a covariance matrix or estimates of the uncertainties. !!!***
 
+## Comparing models
+
 There also a convenience function for pretty printing a comparison of two models with the differences measured in sigma.
 
 ```python
@@ -184,10 +186,8 @@ glsfit = pint.fitter.GLSFitter(toas=ts1855, model=m1855)
 glsfit.fit_toas(maxiter=1)
 ```
 
-Now make a new fitter with the residuals of the previous one to do the final evaluation of chi^2
-# PaulD, is this the right way to do it?
-
 ```python
+# Not sure how to do this properly yet.
 # glsfit2 = pint.fitter.GLSFitter(toas=t, model=glsfit.model, residuals=glsfit.resids)
 # glsfit2.fit_toas(maxiter=0)
 ```
@@ -196,8 +196,7 @@ Now make a new fitter with the residuals of the previous one to do the final eva
 glsfit.print_summary()
 ```
 
-The GLS fitter produces two types of residuals, the normal residuals and those from the noise model.
-# PaulD, can you expand this explanation?
+The GLS fitter produces two types of residuals, the normal residuals to the deterministic model and those from the noise model.
 
 ```python
 glsfit.resids.time_resids
@@ -216,7 +215,7 @@ ax.plot(mjds, glsfit.resids.time_resids, ".")
 ax.plot(mjds, glsfit.resids.noise_resids["pl_red_noise"], ".")
 ```
 
-The MCMC fitter is considerably more complicated, so it has its own dedicated walkthrough in `examples/fit_NGC6440E_MCMC.py`.
+The MCMC fitter is considerably more complicated, so it has its own dedicated walkthroughs in `MCMC_walkthrough.ipynb` (for photon data) and `examples/fit_NGC6440E_MCMC.py` (for fitting TOAs).
 
 ```python
 

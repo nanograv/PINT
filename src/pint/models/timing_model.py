@@ -1073,17 +1073,30 @@ class TimingModel(object):
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
 
-    def compare(self, othermodel):
-        """Print comparison with another model"""
+    def compare(self, othermodel, nodmx=True):
+        """Print comparison with another model
+        
+        Parameters
+        ----------
+        othermodel
+            TimingModel object to compare to
+        nodmx : bool
+            If True (which is the default), don't print the DMX parameters in the comparison
+
+        Returns
+        -------
+        str 
+            Human readable comparison, for printing
+        """
 
         from uncertainties import ufloat
         import uncertainties.umath as um
 
-        s = "{:14s} {:>28s} {:>28s} {:14s}\n".format(
-            "PARAMETER", "Self   ", "Other   ", "Diff_Sigma"
+        s = "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
+            "PARAMETER", "Self   ", "Other   ", "Diff_Sigma1", "Diff_Sigma2"
         )
-        s += "{:14s} {:>28s} {:>28s} {:14s}\n".format(
-            "---------", "----------", "----------", "----------"
+        s += "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
+            "---------", "----------", "----------", "----------", "----------"
         )
         for pn in self.params_ordered:
             par = getattr(self, pn)
@@ -1136,15 +1149,18 @@ class TimingModel(object):
                     try:
                         diff = otherpar.value - par.value
                         diff_sigma = diff / par.uncertainty.value
-                        s += " {:>10.2f}\n".format(diff_sigma)
+                        s += " {:>10.2f}".format(diff_sigma)
+                        diff_sigma2 = diff / otherpar.uncertainty.value
+                        s += " {:>10.2f}".format(diff_sigma2)
                     except (AttributeError, TypeError):
-                        s += "\n"
+                        pass
+                    s += "\n"
             else:
                 # Assume numerical parameter
                 if par.frozen:
                     # If not fitted, just print both values
                     s += "{:14s} {:28f}".format(pn, par.value)
-                    if otherpar is not None:
+                    if otherpar is not None and otherpar.value is not None:
                         s += " {:28f}\n".format(otherpar.value)
                     else:
                         s += " {:>28s}\n".format("Missing")
@@ -1153,7 +1169,7 @@ class TimingModel(object):
                     s += "{:14s} {:28SP}".format(
                         pn, ufloat(par.value, par.uncertainty.value)
                     )
-                    if otherpar is not None:
+                    if otherpar is not None and otherpar.value is not None:
                         try:
                             s += " {:28SP}".format(
                                 ufloat(otherpar.value, otherpar.uncertainty.value)
@@ -1169,10 +1185,24 @@ class TimingModel(object):
                     try:
                         diff = otherpar.value - par.value
                         diff_sigma = diff / par.uncertainty.value
-                        s += " {:>10.2f}\n".format(diff_sigma)
+                        s += " {:>10.2f}".format(diff_sigma)
+                        diff_sigma2 = diff / otherpar.uncertainty.value
+                        s += " {:>10.2f}".format(diff_sigma2)
                     except (AttributeError, TypeError):
-                        s += "\n"
-
+                        pass
+                    s += "\n"
+        # Now print any parametrs in othermodel that were missing in self.
+        mypn = self.params_ordered
+        for opn in othermodel.params_ordered:
+            if opn in mypn:
+                continue
+            try:
+                otherpar = getattr(othermodel, opn)
+            except AttributeError:
+                otherpar = None
+            s += "{:14s} {:>28s}".format(opn, "Missing")
+            s += " {:>28s}".format(str(otherpar.quantity))
+            s += "\n"
         return s
 
     def read_parfile(self, file, validate=True):
