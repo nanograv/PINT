@@ -661,8 +661,6 @@ def dmx_ranges(
                 frozen=False,
             )
             dmx_comp.add_param(dmx_par, setup=True)
-            # Somehow frozen is getting set to True, try to force it to False
-            getattr(dmx_comp, "DMX_{:04d}".format(ii + 1)).frozen = False
 
             dmxr1_par = pint.models.parameter.prefixParameter(
                 parameter_type="mjd",
