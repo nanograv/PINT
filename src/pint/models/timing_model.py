@@ -1157,6 +1157,8 @@ class TimingModel(object):
                     s += "\n"
             else:
                 # Assume numerical parameter
+                if nodmx and pn.startswith("DMX"):
+                    continue
                 if par.frozen:
                     # If not fitted, just print both values
                     s += "{:14s} {:28f}".format(pn, par.value)
@@ -1195,6 +1197,8 @@ class TimingModel(object):
         mypn = self.params_ordered
         for opn in othermodel.params_ordered:
             if opn in mypn:
+                continue
+            if nodmx and opn.startswith("DMX"):
                 continue
             try:
                 otherpar = getattr(othermodel, opn)
