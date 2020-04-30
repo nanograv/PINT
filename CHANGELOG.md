@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.6.1] - 2020-04-30
 ### Added
 - Added dmx_ranges to compute DMX bins and build a Component
 - Add function to compute epoch averaged residuals based on ECORR
@@ -29,7 +31,6 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fix some bugs when adding JUMPs
 - Fixed bug in zima plotting
 - Fixed bug in Powell fitter (actually accommodate upstream issue with scipy)
-### Deprecated
 
 ## [0.5.7] - 2020-03-16
 ### Added
