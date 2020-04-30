@@ -453,6 +453,38 @@ def show_param_cov_matrix(matrix, params, name="Covariance Matrix", switchRD=Fal
     return contents
 
 
+def pmtot(model):
+    """Compute and return the total proper motion from a model object
+    
+    Calculates total proper motion from the parameters of the model, in either
+    equatorial or ecliptic coordinates.  Note that in both cases, pulsar timing
+    codes define the proper motion in the longitude coordinate to be the 
+    the actual angular rate of change of position on the sky rather than the change in coordinate value,
+    so PMRA = (d(RAJ)/dt)*cos(DECJ). This is different from the astrometry community where mu_alpha = d(alpha)/dt.
+    Thus, we don't need to include cos(DECJ) or cos(ELAT) in our calculation.
+
+    Returns
+    -------
+    pmtot : Quantity
+        Returns total proper motion with units of u.mas/u.yr
+
+    Raises
+    ------
+        AttributeError if no Astrometry component is found in the model
+    """
+
+    if "AstrometryEcliptic" in model.components.keys():
+        return np.sqrt(model.PMELONG.quantity ** 2 + model.PMELAT.quantity ** 2).to(
+            u.mas / u.yr
+        )
+    elif "AstrometryEquatorial" in model.components.keys():
+        return np.sqrt(model.PMRA.quantity ** 2 + model.PMDEC.quantity ** 2).to(
+            u.mas / u.yr
+        )
+    else:
+        raise AttributeError("No Astrometry component found")
+
+
 class dmxrange:
     def __init__(self, lofreqs, hifreqs):
         self.los = lofreqs

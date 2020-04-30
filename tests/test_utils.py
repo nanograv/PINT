@@ -594,6 +594,23 @@ def test_dmxparse():
     dmx = dmxparse(f, save=False)
 
 
+def test_pmtot():
+    """Test pmtot calculation"""
+    from pint.utils import pmtot
+
+    # This is ecliptic
+    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
+    # Replace with units when we are at numpy 1.17+
+    assert np.isclose(pmtot(m).value, 6.056830627)
+    # This is euqatorial
+    m2 = tm.get_model(os.path.join(datadir, "PSR_J0218+4232.par"))
+    # Replace with units when we are at numpy 1.17+
+    assert np.isclose(pmtot(m2).value, 6.323257250021364)
+    m2.remove_component("AstrometryEquatorial")
+    with pytest.raises(AttributeError):
+        pmtot(m2)
+
+
 # Remove this xfail once our minimum numpy can bump up to 1.17, but this requires excluding Python 2
 @pytest.mark.xfail(
     reason="numpy 1.16.* does not support isclose with units, fixed in 1.17"
