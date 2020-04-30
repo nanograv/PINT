@@ -6,6 +6,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 
 ## [Unreleased]
 ### Added
+- Added dmx_ranges to compute DMX bins and build a Component
+- Add function to compute epoch averaged residuals based on ECORR
 - Added model comparison pretty printer
 - Added functions to change PEPOCH, DMEPOCH, and binary epoch
 - Aded dmxparse function
@@ -16,6 +18,9 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Increased minimum version required for numpy
 - Change calculation of positions and velocities to use astropy
 - Changed the way scaled parameters like PBDOT are handled (no longer scales units)
+- Reworked tutorial notebooks in docs
+- Changed random_models to return list of models
+- Adjusted logging to have fewer unnecessary INFO messages
 ### Removed
 - Remove Python 3.5 support
 ### Fixed
