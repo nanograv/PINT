@@ -265,7 +265,7 @@ class Residuals(object):
 
         # ECORR is required
         try:
-            ecorr = self.model.get_component_of_category()["ecorr_noise"][0]
+            ecorr = self.model.get_components_by_category()["ecorr_noise"][0]
         except KeyError:
             raise ValueError("ECORR not present in noise model")
 

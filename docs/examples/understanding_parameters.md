@@ -7,32 +7,40 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.2'
-      jupytext_version: 1.4.0
+      jupytext_version: 1.4.1
   kernelspec:
     display_name: Python 3
     language: python
     name: python3
 ---
 
-# Example of parameter usage
+# Understanding Parameters
 
 ```python jupyter={"outputs_hidden": false}
-import pint.models.model_builder as mb
+import pint.models
 import pint.models.parameter as pp
 import astropy.units as u
 from astropy.coordinates.angles import Angle
-import pytest
+from astropy.time import Time
 ```
 
 ```python jupyter={"outputs_hidden": false}
-model = mb.get_model("B1855+09_NANOGrav_dfg+12_TAI.par")
+# Load a model to play with
+model = pint.models.get_model("B1855+09_NANOGrav_dfg+12_TAI.par")
 ```
 
 ```python jupyter={"outputs_hidden": false}
-print(model.params)
+# This model has a large number of parameters of various types
+model.params
 ```
 
-## Attributions in Parameters
+## Attributes of Parameters
+
+Each parameter has attributes that specify the name and type of the parameter, its units, and the uncertainty.
+The `par.quantity` and `par.uncertainty` are both astropy quantities with units. If you need the bare values,
+access `par.value` and `par.uncertainty_value`, which will be numerical values in the units of `par.units`
+
+Let's look at those for each of the types of parameters in this model.
 
 ```python jupyter={"outputs_hidden": false}
 printed = []
@@ -51,22 +59,39 @@ for p in model.params:
     print("Parfile Style  ", par.as_parfile_line())
     print()
     printed.append(type(par))
-# Note JUMP and DMX is different.
 ```
 
-## Making a parameter
+Note that DMX_nnnn is an example of a `prefixParameter`. These are parameters that are indexed by a numerical value and a componenent can have an arbitrary number of them.
+In some cases, like `Fn` they are coefficients of a Taylor expansion and so all indices up to the maximum must be present. For others, like `DMX_nnnn` some indices can be missing without a problem.
+
+`prefixParameter`s can be used to hold indexed parameters of various types ( float, bool, str, MJD, angle ). Each one will instantiate a parameter of that type as `par.param_comp`.
+When you print the parameter it looks like the `param_comp` type.
+
+```python
+# Note that for each instance of a prefix parameter is of type `prefixParameter`
+print("Type = ", type(model.DMX_0016))
+print("param_comp type = ", type(model.DMX_0016.param_comp))
+print("Printing gives : ", model.DMX_0016)
+```
+
+## Constructing a parameter
+
+You can make a Parameter instance by calling its constructor
 
 ```python jupyter={"outputs_hidden": false}
+# You can specify the vaue as a number
 t = pp.floatParameter(name="TEST", value=100, units="Hz", uncertainty=0.03)
 print(t)
 ```
 
 ```python jupyter={"outputs_hidden": false}
+# Or as a string that will be parsed
 t2 = pp.floatParameter(name="TEST", value="200", units="Hz", uncertainty=".04")
 print(t2)
 ```
 
 ```python jupyter={"outputs_hidden": false}
+# Or as an astropy Quantity with units (this is the preferred method!)
 t3 = pp.floatParameter(
     name="TEST", value=0.3 * u.kHz, units="Hz", uncertainty=4e-5 * u.kHz
 )
@@ -77,10 +102,21 @@ print(t3.uncertainty)
 print(t3.uncertainty_value)
 ```
 
-## Change Parameter quantity of value
+## Setting Parameters
+
+The value of a parameter can be set in multiple ways. As usual, the preferred method is to set it using an astropy Quantity, so units will be checked and respected
 
 ```python jupyter={"outputs_hidden": false}
 par = model.F0
+# Here we set it using a Quantity in kHz. Because astropy Quantities are used, it does the right thing!
+par.quantity = 0.3 * u.kHz
+print("Quantity       ", par.quantity, type(par.quantity))
+print("Value          ", par.value)
+print(par)
+```
+
+```python jupyter={"outputs_hidden": false}
+# Here we set it with a bare number, which is interpreted as being in the units `par.units`
 print(par)
 par.quantity = 200
 print("Quantity       ", par.quantity, type(par.quantity))
@@ -89,43 +125,8 @@ print(par)
 ```
 
 ```python jupyter={"outputs_hidden": false}
-# Test F0
-print(par)
-par.value = 150
-print("Quantity       ", par.quantity, type(par.quantity))
-print("Value          ", par.value)
-print(par)
-```
-
-```python jupyter={"outputs_hidden": false}
-# Example for F0
-print(par)
-par.value = "100"
-print("Quantity       ", par.quantity, type(par.quantity))
-print("Value          ", par.value)
-print(par)
-```
-
-```python jupyter={"outputs_hidden": false}
-# Example for F0
-print(par)
-par.quantity = "300"
-print("Quantity       ", par.quantity, type(par.quantity))
-print("Value          ", par.value)
-print(par)
-```
-
-```python jupyter={"outputs_hidden": false}
-# Examle  F0
-par.quantity = 0.3 * u.kHz
-print("Quantity       ", par.quantity, type(par.quantity))
-print("Value          ", par.value)
-print(par)
-```
-
-```python jupyter={"outputs_hidden": false}
+# If you try to set the parameter to a quantity that isn't compatible with the units, it raises an exception
 try:
-    # Examle  F0
     print(par)
     par.value = 100 * u.second  # SET F0 to seconds as time.
     print("Quantity       ", par.quantity, type(par.quantity))
@@ -137,7 +138,9 @@ else:
     raise ValueError("That was supposed to raise an exception!")
 ```
 
-### For MJD parameters
+### MJD parameters
+
+These parameters hold a date as an astropy `Time` object. Numbers will be interpreted as MJDs in the default time scale of the parameter (which is UTC for the TZRMJD parameter)
 
 ```python jupyter={"outputs_hidden": false}
 par = model.TZRMJD
@@ -150,39 +153,41 @@ par.quantity
 ```
 
 ```python jupyter={"outputs_hidden": false}
-# Example for TZRMJD
-par.quantity = "54001"
+# And of course, you can set them with a `Time` object
+par.quantity = Time.now()
 print("Quantity       ", par.quantity, type(par.quantity))
 print("Value          ", par.value)
 print(par)
 par.quantity
 ```
 
-```python jupyter={"outputs_hidden": false}
-# Example for TZRMJD
-par.value = 54002
+```python
+# I wonder if this should get converted to UTC?
+par.quantity = Time(58000.0, format="mjd", scale="tdb")
 print("Quantity       ", par.quantity, type(par.quantity))
 print("Value          ", par.value)
 print(par)
 par.quantity
 ```
 
-```python jupyter={"outputs_hidden": false}
-# Example for TZRMJD
-par.value = "54003"
-print("Quantity       ", par.quantity, type(par.quantity))
-print("Value          ", par.value)
-print(par)
-par.quantity
-```
+### AngleParameters
 
-### For AngleParameters
+These store quanities as angles using astropy coordinates
 
 ```python jupyter={"outputs_hidden": false}
-# Example for RAJ
+# The unit for RAJ is hourangle
 par = model.RAJ
 print(par)
-par.quantity = 50
+par.quantity = 12
+print("Quantity       ", par.quantity, type(par.quantity))
+print("Value          ", par.value)
+print(par)
+```
+
+```python jupyter={"outputs_hidden": false}
+# Best practice is to set using a quantity with units
+print(par)
+par.quantity = 30.5 * u.hourangle
 print("Quantity       ", par.quantity, type(par.quantity))
 print("Value          ", par.value)
 print(par)
@@ -190,30 +195,7 @@ par.quantity
 ```
 
 ```python jupyter={"outputs_hidden": false}
-import astropy
-```
-
-```python jupyter={"outputs_hidden": false}
-astropy.__version__
-```
-
-```python jupyter={"outputs_hidden": false}
-Angle(50.0 * u.hourangle)
-```
-
-```python jupyter={"outputs_hidden": false}
-# Example for RAJ
-print(par)
-par.quantity = 30.5
-print("Quantity       ", par.quantity, type(par.quantity))
-print("Value          ", par.value)
-print(par)
-par.quantity
-```
-
-```python jupyter={"outputs_hidden": false}
-# Example for RAJ
-print(par)
+# But a string will work
 par.quantity = "20:30:00"
 print("Quantity       ", par.quantity, type(par.quantity))
 print("Value          ", par.value)
@@ -222,17 +204,7 @@ par.quantity
 ```
 
 ```python jupyter={"outputs_hidden": false}
-# Example for RAJ
-print(par)
-par.value = "20:05:0"
-print("Quantity       ", par.quantity, type(par.quantity))
-print("Value          ", par.value)
-print(par)
-par.quantity
-```
-
-```python jupyter={"outputs_hidden": false}
-# Example for RAJ
+# And the units can be anything that is convertable to hourangle
 print(par)
 par.quantity = 30 * u.deg
 print("Quantity       ", par.quantity, type(par.quantity))
@@ -243,103 +215,16 @@ par.quantity
 ```
 
 ```python jupyter={"outputs_hidden": false}
-# Example for RAJ
-print(par)
-par.value = 40 * u.rad
-print("Quantity       ", par.quantity, type(par.quantity))
-print("Quantity in rad", par.quantity.to(u.rad))
-print("Value          ", par.value)
-print(par)
-par.quantity
-```
-
-Test for wrong unit
-
-```python jupyter={"outputs_hidden": false}
-# Example for RAJ
-try:
-    print(par)
-    par.value = 40 * u.second  #  Here second is in the unit of time, not hourangle
-    print("Quantity       ", par.quantity, type(par.quantity))
-    print("Quantity in rad", par.quantity.to(u.rad))
-    print("Value          ", par.value)
-    print(par)
-    par.quantity
-except u.UnitConversionError as e:
-    print("Exception raised:", e)
-else:
-    raise ValueError("That was supposed to raise an exception!")
-```
-
-```python jupyter={"outputs_hidden": false}
+# Here, setting RAJ to an incompatible unit will raise an exception
 try:
     # Example for RAJ
     print(par)
     par.quantity = 30 * u.hour  # Here hour is in the unit of time, not hourangle
     print("Quantity       ", par.quantity, type(par.quantity))
-    print("Quantity in deg", par.quantity.to(u.deg))
-    print("Value          ", par.value)
     print(par)
     par.quantity
 except u.UnitConversionError as e:
     print("Exception raised:", e)
 else:
     raise ValueError("That was supposed to raise an exception!")
-```
-
-## Example for uncertainty
-
-```python jupyter={"outputs_hidden": false}
-par = model.F0
-```
-
-
-```python jupyter={"outputs_hidden": false}
-# Example for F0
-print(par.uncertainty)
-print(par.uncertainty_value)
-par.uncertainty = par.uncertainty_value / 1000.0 * u.kHz
-print(par)
-print(par.uncertainty)
-```
-
-
-```python jupyter={"outputs_hidden": false}
-# Example for F0
-par.uncertainty_value = 6e-13
-print(par)
-print(par.uncertainty)
-```
-
-```python jupyter={"outputs_hidden": false}
-# Example for F0
-par.uncertainty_value = 7e-16 * u.kHz
-print(par)
-print(par.uncertainty)
-```
-
-<!-- #region {"jupyter": {"outputs_hidden": false}} -->
-## How do "prefix parameters" and "mask parameters" work?
-<!-- #endregion -->
-
-```python
-cat = pp.prefixParameter(
-    parameter_type="float", name="CAT0", units=u.ml, long_double=True
-)
-```
-
-```python
-dir(cat)
-```
-
-```python
-cat.is_prefix
-```
-
-```python
-cat.index
-```
-
-```python
-
 ```

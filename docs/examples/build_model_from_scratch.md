@@ -6,20 +6,20 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.2'
-      jupytext_version: 1.4.0
+      jupytext_version: 1.4.1
   kernelspec:
     display_name: Python 3
     language: python
     name: python3
 ---
 
-# Examples of building a timing model from scratch
+# Building a timing model from scratch
 
-## This example includes:
- * Construct a timing model object from scratch
- * Add and delete components
- * Assign parameter values
- * Add prefix-able parameters
+This example includes:
+ * Constructing a timing model object from scratch
+ * Adding and deleting components
+ * Assigning parameter values
+ * Adding prefix-able parameters
 
 ```python
 import astropy.units as u  # Astropy units is a very useful module.
@@ -33,8 +33,6 @@ from pint.models.timing_model import (
 import pint
 from astropy.time import Time  # PINT uses astropy Time objects to represent times
 ```
-
-## Building a timing model from scratch
 
 Typically, timing models are built by reading a par file with the `get_model()` function, but it is possible to construct them entirely programmatically from scratch. Also, once you have a `TimingModel` object (no matter how you built it), you can modify it by adding or removing parameters or entire components. This example show how this is done.
 
@@ -165,7 +163,7 @@ for name, info in params.items():
             par.frozen = False  # Frozen means not fit.
         par.uncertainty = info[2]
 ```
-### After assigning the parameters, it is important to validate the model
+### Validating the model
 
 Validating model checks if there is any important parameter values missing, and if the
 parameters are assigned correctly. If there is anything not assigned correctly, it will raise an exception.
