@@ -2,11 +2,11 @@ import os.path
 
 import astropy.units as u
 import numpy as np
+import pint
 import pytest
 from astropy.time import Time
-
-import pint
 from pint import models
+
 from pinttestdata import datadir
 
 
@@ -52,3 +52,58 @@ def test_change_dmepoch():
     DM_at_t0 = model.DM.quantity + model.DM1.quantity * epoch_diff.to(u.s)
     model.change_dmepoch(t0)
     assert np.abs(model.DM.quantity - DM_at_t0) < 1e-8 * u.pc / u.cm ** 3
+
+
+@pytest.fixture(
+    params=[
+        "J1737+0811_bt_simple.par",
+        "J0023+0923_ell1_simple.par",
+        "J2317+1439_ell1h_simple.par",
+        "J1955+2908_dd_simple.par",
+        "J1713+0747_ddk_simple.par",
+        "J0437-4715.par",
+    ]
+)
+def binary_model(request):
+    parfile = os.path.join(datadir, request.param)
+    return models.get_model(parfile)
+
+
+def test_change_binary_epoch(binary_model):
+    model = binary_model
+    t0 = Time(56000, scale="tdb", format="mjd")
+
+    model_kind = model.binary_model_name
+    epoch_name = "TASC" if model_kind in ["ELL1", "ELL1H"] else "T0"
+    orig_epoch = getattr(model, epoch_name).quantity
+
+    # Get PB and PBDOT from model
+    if model.PB.quantity is not None:
+        PB = model.PB.quantity
+        if model.PBDOT.quantity is not None:
+            PBDOT = model.PBDOT.quantity
+        else:
+            PBDOT = 0.0 * u.Unit("")
+    else:
+        PB = 1.0 / model.FB0.quantity
+        try:
+            PBDOT = -model.FB1.quantity / model.FB0.quantity ** 2
+        except AttributeError:
+            PBDOT = 0.0 * u.Unit("")
+
+    model.change_binary_epoch(t0)
+    new_epoch = getattr(model, epoch_name).quantity
+    elapsed_time = (new_epoch.mjd_long - orig_epoch.mjd_long) * u.day
+    elapsed_periods = elapsed_time / (PB + PBDOT * elapsed_time / 2)
+    elapsed_periods = elapsed_periods.to(u.Unit(""))
+    n = np.round(elapsed_periods)
+
+    # new_epoch is very close to an integer number of binary periods
+    # away from orig_epoch
+    assert np.abs(elapsed_periods - n) < 1e-12
+
+    start_time = new_epoch - PB / 2 - (n - 0.5) / 2 * PB * PBDOT
+    end_time = new_epoch + PB / 2 + (n + 0.5) / 2 * PB * PBDOT
+
+    # new_epoch is within a single binary period of t0
+    assert start_time < t0 < end_time

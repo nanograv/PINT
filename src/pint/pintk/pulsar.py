@@ -279,13 +279,14 @@ class Pulsar(object):
             log.info("PhaseJump component added")
             a = pint.models.jump.PhaseJump()
             a.setup()
-            self.prefit_model.add_component(a)
+            self.prefit_model.add_component(a, order=-1)
             self.prefit_model.remove_param("JUMP1")
             param = pint.models.parameter.maskParameter(
                 name="JUMP", index=1, key="jump", key_value=1, value=0.0, units="second"
             )
             self.prefit_model.add_param_from_top(param, "PhaseJump")
             getattr(self.prefit_model, param.name).frozen = False
+            self.prefit_model.components["PhaseJump"]._parent = self.prefit_model
             if self.fitted:
                 self.postfit_model.add_component(a)
             for dict1, dict2 in zip(
@@ -528,7 +529,7 @@ class Pulsar(object):
             redge = (nowish - maxMJD) / spanMJDs
             if redge < 0.0:
                 redge = 0.0
-        f_toas, rs = random_models(
+        f_toas, rs, mrands = random_models(
             f,
             rs_mean=rs_mean,
             redge_multiplier=redge,

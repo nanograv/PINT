@@ -205,7 +205,7 @@ def kepler_2d(params, t):
 
     (
         eccentric_anomaly,
-        (eccentric_anomaly_de, eccentric_anomaly_prime,),
+        (eccentric_anomaly_de, eccentric_anomaly_prime),
     ) = eccentric_from_mean(e, mean_anomaly)
     eccentric_anomaly_dot = eccentric_anomaly_prime * mean_anomaly_dot
 

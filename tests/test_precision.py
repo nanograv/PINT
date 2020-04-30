@@ -83,6 +83,9 @@ near_leap_sec_days = list(
     sorted([d - 1 for d in leap_sec_days] + [d + 1 for d in leap_sec_days])
 )
 
+settings.register_profile("relaxed", deadline=2000)
+settings.load_profile("relaxed")
+
 
 @composite
 def possible_leap_sec_days(draw):
@@ -332,7 +335,6 @@ def test_time_from_longdouble(scale, i_f):
 @example(format="mjd", i_f=(40000, 0.7333333333333333))
 # @example(format="mjd", i_f=(41498, 0.9999999999999982))
 # @example(format="pulsar_mjd", i_f=(41498, 0.9999999999999982))
-@settings(deadline=2000)
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_from_longdouble_utc(format, i_f):
     i, f = i_f
@@ -483,7 +485,6 @@ def test_posvel_respects_longdouble():
 @example(i_f=(43875, -1.000000000000002))
 @example(i_f=(48803, 1.0769154457079824e-09))
 @example(i_f=(48803, 1.0000079160299438e-06))
-@settings(deadline=1000)
 @pytest.mark.parametrize("format", ["pulsar_mjd", "mjd"])
 def test_time_from_mjd_string_accuracy_vs_longdouble(format, i_f):
     i, f = i_f

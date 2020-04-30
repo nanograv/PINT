@@ -40,7 +40,7 @@ def test_category_dict(model):
     d = model.components
     assert len(d) == 3
     # assert set(d.keys()) == set(T.component_types)
-    # assert d==T.get_component_of_category()
+    # assert d==T.get_components_by_category()
 
 
 def test_component_categories(model):

@@ -5,8 +5,8 @@ jupyter:
     text_representation:
       extension: .md
       format_name: markdown
-      format_version: '1.1'
-      jupytext_version: 1.2.4
+      format_version: '1.2'
+      jupytext_version: 1.4.0
   kernelspec:
     display_name: Python 3
     language: python
@@ -70,7 +70,7 @@ a = AstrometryEcliptic()  # init the AstrometryEcliptic instance
 Add the new component instance into time model with order 3
 
 ```python
-m.add_component(a, 3)
+m.add_component(a, validate=False)
 ```
 
 ```python

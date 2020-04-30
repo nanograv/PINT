@@ -26,6 +26,11 @@ class TestGLS(unittest.TestCase):
         # get tempo2 parameter dict
         with open("B1855+09_tempo2_gls_pars.json", "r") as fp:
             cls.t2d = json.load(fp)
+        # Get tempo whitened resids
+        mjd, cls.twres = (
+            np.genfromtxt("B1855+09_NANOGrav_9yv1_whitened.tempo_test", unpack=True)
+            * u.us
+        )
 
     def fit(self, full_cov):
         self.f.reset_model()
@@ -54,6 +59,14 @@ class TestGLS(unittest.TestCase):
                     assert np.abs(v - val[0]) <= val[1], msg
                     assert np.abs(v - val[0]) <= e, msg
                     assert np.abs(1 - val[1] / e) < 0.1, msg
+
+    def test_whitening(self):
+        self.fit(full_cov=False)
+        wres = self.f.resids.time_resids - self.f.resids.noise_resids["pl_red_noise"]
+        wres_diff = wres - self.twres
+        wres_diff -= wres_diff.mean()
+        assert wres_diff.std() < 10.0 * u.ns
+        assert np.abs(wres_diff).max() < 50.0 * u.ns
 
     def test_gls_compare(self):
         self.fit(full_cov=False)

@@ -14,24 +14,13 @@ from pint.models.timing_model import (
     MissingParameter,
     TimingModel,
     ignore_prefix,
+    DEFAULT_ORDER,
 )
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
 __all__ = ["get_model", "get_model_new"]
 
 default_models = ["StandardTimingModel"]
-DEFAULT_ORDER = [
-    "astrometry",
-    "jump_delay",
-    "solar_system_shapiro",
-    "dispersion_constant",
-    "dispersion_dmx",
-    "pulsar_system",
-    "frequency_dependent",
-    "spindown",
-    "phase_jump",
-    "wave",
-]
 
 
 class UnknownBinaryModel(ValueError):
@@ -172,7 +161,7 @@ class ModelBuilder(object):
         """ Check if the Unrecognized parameter has prefix parameter
         """
         prefixs = {}
-        prefix_inModel = model.get_params_of_type(prefix_type)
+        prefix_inModel = model.get_params_of_type_top(prefix_type)
         for pn in prefix_inModel:
             par = getattr(model, pn)
             prefixs[par.prefix] = []
@@ -218,7 +207,7 @@ class ModelBuilder(object):
                 prefix_param = self.search_prefix_param(
                     self.param_unrecognized, self.timing_model, ptype
                 )
-                prefix_in_model = self.timing_model.get_params_of_type(ptype)
+                prefix_in_model = self.timing_model.get_params_of_type_top(ptype)
                 for key in prefix_param:
                     ppnames = [x for x in prefix_in_model if x.startswith(key)]
                     for ppn in ppnames:
@@ -244,7 +233,7 @@ class ModelBuilder(object):
                         )
                     )
                 (bm,) = vals
-                cats = self.timing_model.get_component_of_category()
+                cats = self.timing_model.get_components_by_category()
                 if "pulsar_system" not in cats:
                     raise UnknownBinaryModel(
                         "Unknown binary model requested in par file: {}".format(bm)
@@ -372,7 +361,7 @@ def choose_model(
     # add conflicting components
     alias_map = {}
     for prefix_type in ["prefixParameter", "maskParameter"]:
-        for pn in tm.get_params_of_type(prefix_type):
+        for pn in tm.get_params_of_type_top(prefix_type):
             par = getattr(tm, pn)
             for a in [par.prefix] + par.prefix_aliases:
                 if a in alias_map:
@@ -410,6 +399,7 @@ def choose_model(
                     "Received duplicate parameter {}".format(new_parameter.name)
                 )
             tm.add_param_from_top(new_parameter, component)
+            print("added", new_parameter)
         except PrefixError:
             pass
 

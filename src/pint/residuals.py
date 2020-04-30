@@ -7,6 +7,7 @@ from astropy import log
 
 from pint import dimensionless_cycles
 from pint.phase import Phase
+from pint.utils import weighted_mean
 
 __all__ = ["Residuals"]
 
@@ -32,6 +33,7 @@ class Residuals(object):
         # also it's expensive
         # only relevant if there are correlated errors
         self._chi2 = None
+        self.noise_resids = {}
 
     @property
     def chi2_reduced(self):
@@ -44,6 +46,17 @@ class Residuals(object):
             self._chi2 = self.calc_chi2()
         assert self._chi2 is not None
         return self._chi2
+
+    def rms_weighted(self):
+        """Compute weighted RMS of the residals in time."""
+        if np.any(self.toas.get_errors() == 0):
+            raise ValueError(
+                "Some TOA errors are zero - cannot calculate weighted RMS of residuals"
+            )
+        w = 1.0 / (self.toas.get_errors().to(u.s) ** 2)
+
+        wmean, werr, wsdev = weighted_mean(self.time_resids, w, sdev=True)
+        return wsdev.to(u.us)
 
     def calc_phase_resids(self, weighted_mean=True, set_pulse_nums=False):
         """Return timing model residuals in pulse phase."""
@@ -200,6 +213,11 @@ class Residuals(object):
         dof = self.toas.ntoas
         for p in self.model.params:
             dof -= bool(not getattr(self.model, p).frozen)
+        # Now subtract 1 for the implicit global offset parameter
+        # Note that we should do two things eventually
+        # 1. Make the offset not be a hidden parameter
+        # 2. Have a model object return the number of free parameters instead of having to count non-frozen parameters like above
+        dof -= 1
         return dof
 
     def get_reduced_chi2(self):
@@ -220,3 +238,69 @@ class Residuals(object):
         self.time_resids = self.calc_time_resids(weighted_mean=weighted_mean)
         self._chi2 = None  # trigger chi2 recalculation when needed
         self.dof = self.get_dof()
+
+    def ecorr_average(self, use_noise_model=True):
+        """
+        Uses the ECORR noise model time-binning to compute "epoch-averaged"
+        residuals.  Requires ECORR be used in the timing model.  If
+        use_noise_model is true, the noise model terms (EFAC, EQUAD, ECORR) will
+        be applied to the TOA uncertainties, otherwise only the raw
+        uncertainties will be used.  
+        
+        Returns a dictionary with the following entries:
+
+          mjds           Average MJD for each segment
+
+          freqs          Average topocentric frequency for each segment
+
+          time_resids    Average residual for each segment, time units
+
+          noise_resids   Dictionary of per-noise-component average residual
+
+          errors         Uncertainty on averaged residuals
+
+          indices        List of lists giving the indices of TOAs in the original
+                         TOA table for each segment
+        """
+
+        # ECORR is required
+        try:
+            ecorr = self.model.get_component_of_category()["ecorr_noise"][0]
+        except KeyError:
+            raise ValueError("ECORR not present in noise model")
+
+        # "U" matrix gives the TOA binning, "weight" is ECORR
+        # uncertainty in seconds, squared.
+        U, ecorr_err2 = ecorr.ecorr_basis_weight_pair(self.toas)
+        ecorr_err2 *= u.s * u.s
+
+        if use_noise_model:
+            err = self.model.scaled_sigma(self.toas)
+        else:
+            err = self.toas.get_errors()
+            ecorr_err2 *= 0.0
+
+        # Weight for sums, and normalization
+        wt = 1.0 / (err * err)
+        a_norm = np.dot(U.T, wt)
+
+        def wtsum(x):
+            return np.dot(U.T, wt * x) / a_norm
+
+        # Weighted average of various quantities
+        avg = {}
+        avg["mjds"] = wtsum(self.toas.get_mjds())
+        avg["freqs"] = wtsum(self.toas.get_freqs())
+        avg["time_resids"] = wtsum(self.time_resids)
+        avg["noise_resids"] = {}
+        for k in self.noise_resids.keys():
+            avg["noise_resids"][k] = wtsum(self.noise_resids[k])
+
+        # Uncertainties
+        # TODO could add an option to incorporate residual scatter
+        avg["errors"] = np.sqrt(1.0 / a_norm + ecorr_err2)
+
+        # Indices back into original TOA list
+        avg["indices"] = [list(np.where(U[:, i])[0]) for i in range(U.shape[1])]
+
+        return avg

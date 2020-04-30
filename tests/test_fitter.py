@@ -49,8 +49,19 @@ def test_fitter():
     # Do a 4-parameter fit
     f.set_fitparams("F0", "F1", "RA", "DEC")
     f.fit_toas()
+
+    # Check the number of degrees of freedom in the fit.
+    # Fitting the 4 params above, plus the 1 implicit global offset = 5 free parameters.
+    # NTOA = 62, so DOF = 62 - 5 = 57
+    assert f.resids.dof == 57
+
     print("chi^2 is %0.2f after 4-param fit" % f.resids.chi2)
     p2 = plt.errorbar(xt, f.resids.time_resids.value, yerr.value, fmt="go")
+
+    # Make sure the summary printing works
+    f.print_summary()
+
+    # Try a few utils
 
     # Now perturb F1 and fit only that. This doesn't work, though tempo2 easily fits
     # it.
