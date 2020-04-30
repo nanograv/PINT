@@ -601,8 +601,12 @@ def dmx_ranges(
             if DMX.min < oldmax:
                 print("Ack!  This shouldn't be happening!")
             oldmax = DMX.max
-    # Init mask to all True
-    mask = np.ones_like(MJDs, dtype=np.bool)
+    # Init mask to all False
+    mask = np.zeros_like(MJDs.value, dtype=np.bool)
+    # Mark TOAs as True if they are in any DMX bin
+    for DMX in DMXs:
+        mask[np.logical_and(MJDs > DMX.min - offset, MJDs < DMX.max + offset)] = True
+    log.info("{} out of {} TOAs are not in a DMX bin".format(mask.sum(), len(mask)))
     # Instantiate a DMX component
     dmx_class = Component.component_types["DispersionDMX"]
     dmx_comp = dmx_class()

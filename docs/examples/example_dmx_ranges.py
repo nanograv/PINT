@@ -8,6 +8,9 @@ import pint.fitter
 import pint.utils
 
 import matplotlib.pyplot as plt
+from astropy.visualization import quantity_support
+
+quantity_support()
 
 # This example shows how to construct and add a set of DMX components to a model.
 # In this case the model we load already has a DMX component, so we remove it first
@@ -24,6 +27,9 @@ m1855.remove_component("DispersionDMX")
 mask, dmx_comp = pint.utils.dmx_ranges(
     ts1855, max_diff=15.0 * u.d, divide_freq=1000.0 * u.MHz
 )
+
+# Mask out any TOAs that couldn't be included in a DMX range
+ts1855.select(mask)
 
 # Add it to the model
 m1855.add_component(dmx_comp, validate=True)
