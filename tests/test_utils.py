@@ -586,6 +586,12 @@ def test_dmxparse():
     f = fitter.GLSFitter(toas=t, model=m)
     f.fit_toas()
     dmx = dmxparse(f, save=False)
+    # Check exception handling
+    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_dfg+12_DMX.par"))
+    t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_dfg+12.tim"))
+    f = fitter.WLSFitter(toas=t, model=m)
+    f.fit_toas()
+    dmx = dmxparse(f, save=False)
 
 
 # Remove this xfail once our minimum numpy can bump up to 1.17, but this requires excluding Python 2
