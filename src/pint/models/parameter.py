@@ -495,7 +495,7 @@ class floatParameter(Parameter):
             name=name,
             value=value,
             units=units,
-            frozen=True,
+            frozen=frozen,
             aliases=aliases,
             continuous=continuous,
             description=description,
