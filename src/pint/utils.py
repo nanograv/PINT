@@ -474,7 +474,13 @@ class dmxrange:
         print("")
 
 
-def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, offset=0.1 * u.d, max_diff=15.0 * u.d):
+def dmx_ranges(
+    toas,
+    divide_freq=1000.0 * u.MHz,
+    offset=0.1 * u.d,
+    max_diff=15.0 * u.d,
+    verbose=False,
+):
     """Compute initial DMX ranges for a set of TOAs
     
     This is a rudimentary translation of $TEMPO/utils/dmx_ranges/DMX_ranges2.py,
@@ -489,7 +495,18 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, offset=0.1 * u.d, max_diff=15.0
         The buffer to include around each DMX range. Warning, may cause bins to overlap?!?
     max_diff : Quantity, days
         Maximum duration of a DMX bin
+    verbose : bool
+        If True, print out verbose information about the DMX ranges including par file lines.
+
+    Returns
+    -------
+    mask : bool array
+        Array with True for all TOAs that got assigned to a DMX bin
+    component : TimingModel.Component object
+        A DMX Component class with the DMX ranges included
     """
+    from pint.models.timing_model import Component
+    import pint.models.parameter
 
     MJDs = toas.get_mjds()
     freqs = toas.table["freq"]
@@ -499,8 +516,10 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, offset=0.1 * u.d, max_diff=15.0
     # Round off the dates to 0.1 days and only keep unique values so we ignore closely spaced TOAs
     loMJDs = np.unique(loMJDs.round(1))
     hiMJDs = np.unique(hiMJDs.round(1))
-    print("There are {} dates with freqs > {} MHz".format(len(hiMJDs), divide_freq))
-    print("There are {} dates with freqs < {} MHz\n".format(len(loMJDs), divide_freq))
+    log.info("There are {} dates with freqs > {} MHz".format(len(hiMJDs), divide_freq))
+    log.info(
+        "There are {} dates with freqs < {} MHz\n".format(len(loMJDs), divide_freq)
+    )
 
     DMXs = []
 
@@ -559,28 +578,75 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, offset=0.1 * u.d, max_diff=15.0
     bad_his = set(hiMJDs) - good_his
     bad_his = sorted(list(bad_his))
 
-    print("\n These are the 'good' ranges for DMX and days are low/high freq:")
-    for DMX in DMXs:
-        DMX.sum_print()
+    if verbose:
+        print("\n These are the 'good' ranges for DMX and days are low/high freq:")
+        for DMX in DMXs:
+            DMX.sum_print()
 
-    print("\nRemove high-frequency data from these days:")
-    for hibad in bad_his:
-        print("{:8.2f}".format(hibad.value))
-    print("\nRemove low-frequency data from these days:")
-    for lobad in bad_los:
-        print("{:8.2f}".format(lobad.value))
+        print("\nRemove high-frequency data from these days:")
+        for hibad in bad_his:
+            print("{:8.2f}".format(hibad.value))
+        print("\nRemove low-frequency data from these days:")
+        for lobad in bad_los:
+            print("{:8.2f}".format(lobad.value))
 
-    print("\n Enter the following in your parfile")
-    print("-------------------------------------")
-    print("DMX         {:.2f}".format(max_diff.value))
-    oldmax = 0.0
+        print("\n Enter the following in your parfile")
+        print("-------------------------------------")
+        print("DMX         {:.2f}".format(max_diff.value))
+        oldmax = 0.0
+        for ii, DMX in enumerate(DMXs):
+            print("DMX_{:04d}      0.0       {}".format(ii + 1, 1))
+            print("DMXR1_{:04d}      {:10.4f}".format(ii + 1, (DMX.min - offset).value))
+            print("DMXR2_{:04d}      {:10.4f}".format(ii + 1, (DMX.max + offset).value))
+            if DMX.min < oldmax:
+                print("Ack!  This shouldn't be happening!")
+            oldmax = DMX.max
+    # Init mask to all True
+    mask = np.ones_like(MJDs, dtype=np.bool)
+    # Instantiate a DMX component
+    dmx_class = Component.component_types["DispersionDMX"]
+    dmx_comp = dmx_class()
+    # Add parameters
     for ii, DMX in enumerate(DMXs):
-        print("DMX_{:04d}      0.0       {}".format(ii + 1, 1))
-        print("DMXR1_{:04d}      {:10.4f}".format(ii + 1, (DMX.min - offset).value))
-        print("DMXR2_{:04d}      {:10.4f}".format(ii + 1, (DMX.max + offset).value))
-        if DMX.min < oldmax:
-            print("Ack!  This shouldn't be happening!")
-        oldmax = DMX.max
+        if ii == 0:
+            # Already have DMX_0001 in component, so just set parameters
+            dmx_comp.DMX_0001.value = 0.0
+            dmx_comp.DMX_0001.frozen = False
+            dmx_comp.DMXR1_0001.value = (DMX.min - offset).value
+            dmx_comp.DMXR2_0001.value = (DMX.min + offset).value
+
+        else:
+            # Add the DMX parameters
+            dmx_par = pint.models.parameter.prefixParameter(
+                parameter_type="float",
+                name="DMX_{:04d}".format(ii + 1),
+                value=0.0,
+                units=u.pc / u.cm ** 3,
+                frozen=False,
+            )
+            dmx_comp.add_param(dmx_par, setup=True)
+            # Somehow frozen is getting set to True, try to force it to False
+            getattr(dmx_comp, "DMX_{:04d}".format(ii + 1)).frozen = False
+
+            dmxr1_par = pint.models.parameter.prefixParameter(
+                parameter_type="mjd",
+                name="DMXR1_{:04d}".format(ii + 1),
+                value=(DMX.min - offset).value,
+                units=u.d,
+            )
+            dmx_comp.add_param(dmxr1_par, setup=True)
+
+            dmxr2_par = pint.models.parameter.prefixParameter(
+                parameter_type="mjd",
+                name="DMXR2_{:04d}".format(ii + 1),
+                value=(DMX.min + offset).value,
+                units=u.d,
+            )
+            dmx_comp.add_param(dmxr2_par, setup=True)
+    # Validate component
+    dmx_comp.validate()
+
+    return mask, dmx_comp
 
 
 def dmxparse(fitter, save=False):
