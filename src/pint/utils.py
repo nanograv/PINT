@@ -606,7 +606,7 @@ def dmx_ranges(
     # Mark TOAs as True if they are in any DMX bin
     for DMX in DMXs:
         mask[np.logical_and(MJDs > DMX.min - offset, MJDs < DMX.max + offset)] = True
-    log.info("{} out of {} TOAs are not in a DMX bin".format(mask.sum(), len(mask)))
+    log.info("{} out of {} TOAs are in a DMX bin".format(mask.sum(), len(mask)))
     # Instantiate a DMX component
     dmx_class = Component.component_types["DispersionDMX"]
     dmx_comp = dmx_class()
