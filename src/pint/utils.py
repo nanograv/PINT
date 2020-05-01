@@ -28,6 +28,7 @@ __all__ = [
     "interesting_lines",
     "show_param_cov_matrix",
     "dmxparse",
+    "dmxstats",
     "dmx_ranges",
     "p_to_f",
     "pferrs",
@@ -683,6 +684,41 @@ def dmx_ranges(
     return mask, dmx_comp
 
 
+def dmxstats(fitter):
+    """Run dmxparse in python using PINT objects and results.
+
+    Based off dmxparse by P. Demorest (https://github.com/nanograv/tempo/tree/master/util/dmxparse)
+
+    Parameters
+    ----------
+    fitter
+        PINT fitter used to get timing residuals, must have already run GLS fit
+    """
+
+    model = fitter.model
+    mjds = fitter.toas.get_mjds()
+    freqs = fitter.toas.table["freq"]
+    ii = 1
+    while hasattr(model, "DMX_{:04d}".format(ii)):
+        mmask = np.logical_and(
+            mjds.value > getattr(model, "DMXR1_{:04d}".format(ii)).value,
+            mjds.value < getattr(model, "DMXR2_{:04d}".format(ii)).value,
+        )
+        mjds_in_bin = mjds[mmask]
+        freqs_in_bin = freqs[mmask]
+        span = (mjds_in_bin.max() - mjds_in_bin.min()).to(u.d)
+        # Warning: min() and max() seem to strip the units
+        freqspan = freqs_in_bin.max() - freqs_in_bin.min()
+        print(
+            "DMX_{:04d}: NTOAS={:5d}, MJDSpan={:14.4f}, FreqSpan={:8.3f}-{:8.3f}".format(
+                ii, mmask.sum(), span, freqs_in_bin.min(), freqs_in_bin.max()
+            )
+        )
+        ii += 1
+
+    return
+
+
 def dmxparse(fitter, save=False):
     """Run dmxparse in python using PINT objects and results.
 
@@ -716,6 +752,10 @@ def dmxparse(fitter, save=False):
         mean_dmx : mean dmx value
 
         avg_dm_err : uncertainty in average dmx
+
+    Raises
+    ------
+    RuntimeError : If the model has no DMX parameters, or if there is a parsing problem
 
     """
     # We get the DMX values, errors, and mjds (same as in getting the DMX values for DMX v. time)
