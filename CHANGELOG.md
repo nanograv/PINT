@@ -7,7 +7,9 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## [Unreleased]
 ### Added
 - Added pmtot() convenience function
-
+- Added dmxstats() utility function
+### Fixed
+- Cleaned up some unnecessary warnings in tests
 
 ## [0.6.1] - 2020-04-30
 ### Added
