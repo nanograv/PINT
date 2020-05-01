@@ -8,6 +8,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Added
 - Added pmtot() convenience function
 - Added dmxstats() utility function
+- Added chisq gridding utilities
 ### Fixed
 - Cleaned up some unnecessary warnings in tests
 
