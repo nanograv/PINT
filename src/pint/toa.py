@@ -749,7 +749,7 @@ class TOAs(object):
                     self.get_freqs(),
                     self.get_obss(),
                     self.get_flags(),
-                    np.zeros(len(mjds)) * u.cycle,
+                    np.zeros(len(mjds)),
                     self.get_groups(),
                 ],
                 names=(
@@ -854,7 +854,7 @@ class TOAs(object):
         # TODO: use a masked array?  Only some pulse numbers may be known
         if hasattr(self, "toas"):
             try:
-                return np.array([t.flags["pn"] for t in self.toas]) * u.cycle
+                return np.array([t.flags["pn"] for t in self.toas])
             except KeyError:
                 log.warning("Not all TOAs have pulse numbers, using none")
                 return None
@@ -864,7 +864,7 @@ class TOAs(object):
                     raise ValueError(
                         "Pulse number cannot be both a column and a TOA flag"
                     )
-                return np.array(flags["pn"] for flags in self.table["flags"]) * u.cycle
+                return np.array(flags["pn"] for flags in self.table["flags"])
             elif "pulse_number" in self.table.colnames:
                 return self.table["pulse_number"]
             else:
@@ -1021,7 +1021,7 @@ class TOAs(object):
         try:
             pns = [flags["pn"] for flags in self.table["flags"]]
             self.table["pulse_number"] = pns
-            self.table["pulse_number"].unit = u.cycle
+            self.table["pulse_number"].unit = u.dimensionless_unscaled
 
             # Remove pn from dictionary to prevent redundancies
             for flags in self.table["flags"]:
@@ -1047,7 +1047,7 @@ class TOAs(object):
         # paulr: I think pulse numbers should be computed with abs_phase=True!
         phases = model.phase(self, abs_phase=True)
         self.table["pulse_number"] = phases.int
-        self.table["pulse_number"].unit = u.cycle
+        self.table["pulse_number"].unit = u.dimensionless_unscaled
 
     def adjust_TOAs(self, delta):
         """Apply a time delta to TOAs

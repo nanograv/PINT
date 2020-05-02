@@ -111,5 +111,5 @@ class Wave(PhaseComponent):
             times += wave_a * np.sin(wave_phase)
             times += wave_b * np.cos(wave_phase)
 
-        phase = (times) * self.F0.quantity * u.cycle
+        phase = ((times) * self.F0.quantity).to(u.dimensionless_unscaled)
         return phase

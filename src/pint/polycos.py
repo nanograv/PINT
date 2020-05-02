@@ -615,9 +615,7 @@ class Polycos(object):
                 dt = (nodes * u.day - tmid).to("min")  # Use constant
                 rdcPhase = ph - refPhase
                 rdcPhase = (
-                    rdcPhase.int
-                    - (dt.value * model.F0.value * 60.0) * u.cycle
-                    + rdcPhase.frac
+                    rdcPhase.int - (dt.value * model.F0.value * 60.0) + rdcPhase.frac
                 )
                 dtd = dt.value.astype(float)  # Truncate to double
                 rdcPhased = rdcPhase.astype(float)
@@ -791,8 +789,8 @@ class Polycos(object):
             phaseInt += (absp.int,)
             phaseFrac += (absp.frac,)
             # Maybe add sort function here, since the time has been masked.
-        phaseInt = np.hstack(phaseInt).value * u.cycle
-        phaseFrac = np.hstack(phaseFrac).value * u.cycle
+        phaseInt = np.hstack(phaseInt).value
+        phaseFrac = np.hstack(phaseFrac).value
         absPhase = Phase(phaseInt, phaseFrac)
 
         return absPhase
