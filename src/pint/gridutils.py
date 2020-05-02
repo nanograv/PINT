@@ -11,13 +11,16 @@ from astropy import log
 import astropy.constants as const
 import pint.utils
 
+__all__ = ["grid_chisq", "grid_chisq_mp", "plot_grid_chisq"]
 
-def grid_docol(ftr, par1_name, par1, par2_name, par2_grid, ii, q):
+
+def _grid_docol(ftr, par1_name, par1, par2_name, par2_grid, ii, q):
     """Worker process that computes one row of the chisq grid"""
     for jj, par2 in enumerate(par2_grid):
         # Make a full copy of the fitter to work with
         myftr = copy.deepcopy(ftr)
         # Freeze the two params we are going to grid over and set their values
+        # All other unfrozen parameters will be fitted for at each grid point
         getattr(myftr.model, par1_name).frozen = True
         getattr(myftr.model, par2_name).frozen = True
         getattr(myftr.model, par1_name).quantity = par1
@@ -27,28 +30,51 @@ def grid_docol(ftr, par1_name, par1, par2_name, par2_grid, ii, q):
         q.put([ii, jj, chisq])
 
 
-def grid_chisq_mp(ftr, par1_name, par1_grid, par2_name, par2_grid):
-    """Compute chisq over a grid of two parameters, multiprocessing version"""
+def grid_chisq_mp(ftr, par1_name, par1_grid, par2_name, par2_grid, ncpu=None):
+    """Compute chisq over a grid of two parameters, multiprocessing version
+    
+    Use Python's multiprocessing package to do a parallel computation of 
+    chisq over 2-D grid of parameters.
 
-    ncpu = multiprocessing.cpu_count()
+    Parameters
+    ----------
+    ftr
+        The base fitter to use.
+    par1_name : str
+        Name of the first parameter to grid over
+    par1_grid : array, Quantity
+        Array of par1 values for column of the output matrix
+    par2_name : str
+        Name of the second parameter to grid over
+    par2_grid : array, Quantity
+        Array of par2 values for column of the output matrix
+    ncpu : int, optional
+        Number of processes to use in parallel. Default is number of CPUs available
+
+    Returns
+    -------
+    array : 2-D array of chisq values with par1 varying in columns and par2 varying in rows
+    """
+
+    if ncpu is None:
+        # Use al available CPUs
+        ncpu = multiprocessing.cpu_count()
+
     # Instantiate a Queue for getting return values from the worker processes
     q = Queue()
-    # grid_info("main with {} cpus".format(ncpu))
-    # Save the current model so we can tweak it for gridding, then restore it at the end
-
-    # All other unfrozen parameters will be fitted for at each grid point
 
     chi2 = np.zeros((len(par1_grid), len(par2_grid)))
     # First create all the processes and put them in a list
     processes = []
     # Want par1 on X-axis and par2 on y-axis
     for ii, par1 in enumerate(par1_grid):
+        # ii indexes rows, now for have each column done by a different process
         proc = Process(
-            target=grid_docol, args=(ftr, par1_name, par1, par2_name, par2_grid, ii, q)
+            target=_grid_docol, args=(ftr, par1_name, par1, par2_name, par2_grid, ii, q)
         )
         processes.append(proc)
 
-    # Now consume the list by starting up to ncpu processes at a time
+    # Now consume the list of processes by starting up to ncpu processes at a time
     while len(processes):
         # Start up to ncpu processes
         started = []
@@ -75,7 +101,28 @@ def grid_chisq_mp(ftr, par1_name, par1_grid, par2_name, par2_grid):
 
 
 def grid_chisq(ftr, par1_name, par1_grid, par2_name, par2_grid):
-    """Compute chisq over a grid of two parameters, serial version"""
+    """Compute chisq over a grid of two parameters, serial version
+    
+    Single-threaded computation of chisq over 2-D grid of parameters.
+
+    Parameters
+    ----------
+    ftr
+        The base fitter to use.
+    par1_name : str
+        Name of the first parameter to grid over
+    par1_grid : array, Quantity
+        Array of par1 values for column of the output matrix
+    par2_name : str
+        Name of the second parameter to grid over
+    par2_grid : array, Quantity
+        Array of par2 values for column of the output matrix
+
+    Returns
+    -------
+    array : 2-D array of chisq values with par1 varying in columns and par2 varying in rows
+    
+    """
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
     savemod = self.model
@@ -107,7 +154,23 @@ def grid_chisq(ftr, par1_name, par1_grid, par2_name, par2_grid):
 def plot_grid_chisq(
     par1_name, par1_grid, par2_name, par2_grid, chi2, title="Chisq Heatmap"
 ):
-    """Plot results of chi2 grid"""
+    """Plot results of chi2 grid
+    
+    Parameters
+    ----------
+    ftr
+        The base fitter to use.
+    par1_name : str
+        Name of the first parameter to grid over
+    par1_grid : array, Quantity
+        Array of par1 values for column of the output matrix
+    par2_name : str
+        Name of the second parameter to grid over
+    par2_grid : array, Quantity
+        Array of par2 values for column of the output matrix
+    title : str, optional
+        Title for plot    
+    """
 
     import matplotlib.pyplot as plt
 
@@ -145,5 +208,6 @@ def plot_grid_chisq(
     )
     ax.set_xlabel(par1_name)
     ax.set_ylabel(par2_name)
+    ax.grid(True)
     ax.set_title(title)
     return
