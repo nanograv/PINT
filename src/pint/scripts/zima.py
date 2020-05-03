@@ -135,16 +135,13 @@ def main(argv=None):
         log.info("Computing observatory positions and velocities.")
         ts.compute_posvels(args.ephem, args.planets)
 
-    # F_local has units of Hz; discard cycles unit in phase to get a unit
-    # that TimeDelta understands
     log.info("Creating TOAs")
     F_local = m.d_phase_d_toa(ts)
-    rs = m.phase(ts).frac.value / F_local
+    rs = m.phase(ts).frac / F_local
 
     # Adjust the TOA times to put them where their residuals will be 0.0
-
     ts.adjust_TOAs(TimeDelta(-1.0 * rs))
-    rspost = m.phase(ts).frac.value / F_local
+    rspost = m.phase(ts).frac / F_local
 
     log.info("Second iteration")
     # Do a second iteration
@@ -160,24 +157,21 @@ def main(argv=None):
     if args.plot:
         # This should be a very boring plot with all residuals flat at 0.0!
         import matplotlib.pyplot as plt
+        from astropy.visualization import quantity_support
 
-        with u.set_enabled_equivalencies(u.dimensionless_angles()):
-            rspost2 = m.phase(ts).frac / F_local
-            plt.errorbar(
-                ts.get_mjds().value,
-                rspost2.to(u.us).value,
-                yerr=ts.get_errors().to(u.us).value,
-            )
-            newts = pint.toa.get_TOAs(
-                args.timfile, ephem=args.ephem, planets=args.planets
-            )
-            rsnew = m.phase(newts).frac / F_local
-            plt.errorbar(
-                newts.get_mjds().value,
-                rsnew.to(u.us).value,
-                yerr=newts.get_errors().to(u.us).value,
-            )
-            # plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
-            plt.xlabel("MJD")
-            plt.ylabel("Residual (us)")
-            plt.show()
+        quantity_support()
+
+        rspost2 = m.phase(ts).frac / F_local
+        plt.errorbar(
+            ts.get_mjds(), rspost2.to(u.us), yerr=ts.get_errors().to(u.us), fmt="."
+        )
+        newts = pint.toa.get_TOAs(args.timfile, ephem=args.ephem, planets=args.planets)
+        rsnew = m.phase(newts).frac / F_local
+        plt.errorbar(
+            newts.get_mjds(), rsnew.to(u.us), yerr=newts.get_errors().to(u.us), fmt="."
+        )
+        # plt.plot(ts.get_mjds(),rspost.to(u.us),'x')
+        plt.xlabel("MJD")
+        plt.ylabel("Residual (us)")
+        plt.grid(True)
+        plt.show()
