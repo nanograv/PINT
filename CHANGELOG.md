@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Added pmtot() convenience function
+- Added dmxstats() utility function
+- Added chisq gridding utilities
+### Fixed
+- Cleaned up some unnecessary warnings in tests
+### Changed
+- Defer updating IERS B from when pint is imported to when erfautils is imported (for conda testing)
+- Fixed installation instructions in README
 
 ## [0.6.1] - 2020-04-30
 ### Added

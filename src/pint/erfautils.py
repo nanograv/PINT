@@ -73,6 +73,10 @@ def get_iers_b_up_to_date(mjd):
     return iers_b
 
 
+# On import, make sure the IERS table is updated.
+log.info("Running get_iers_up_to_date() to update IERS B table")
+get_iers_up_to_date()
+
 SECS_PER_DAY = erfa.DAYSEC
 # Earth rotation rate in radians per UT1 second
 #

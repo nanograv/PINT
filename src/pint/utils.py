@@ -28,6 +28,7 @@ __all__ = [
     "interesting_lines",
     "show_param_cov_matrix",
     "dmxparse",
+    "dmxstats",
     "dmx_ranges",
     "p_to_f",
     "pferrs",
@@ -453,6 +454,38 @@ def show_param_cov_matrix(matrix, params, name="Covariance Matrix", switchRD=Fal
     return contents
 
 
+def pmtot(model):
+    """Compute and return the total proper motion from a model object
+    
+    Calculates total proper motion from the parameters of the model, in either
+    equatorial or ecliptic coordinates.  Note that in both cases, pulsar timing
+    codes define the proper motion in the longitude coordinate to be the 
+    the actual angular rate of change of position on the sky rather than the change in coordinate value,
+    so PMRA = (d(RAJ)/dt)*cos(DECJ). This is different from the astrometry community where mu_alpha = d(alpha)/dt.
+    Thus, we don't need to include cos(DECJ) or cos(ELAT) in our calculation.
+
+    Returns
+    -------
+    pmtot : Quantity
+        Returns total proper motion with units of u.mas/u.yr
+
+    Raises
+    ------
+        AttributeError if no Astrometry component is found in the model
+    """
+
+    if "AstrometryEcliptic" in model.components.keys():
+        return np.sqrt(model.PMELONG.quantity ** 2 + model.PMELAT.quantity ** 2).to(
+            u.mas / u.yr
+        )
+    elif "AstrometryEquatorial" in model.components.keys():
+        return np.sqrt(model.PMRA.quantity ** 2 + model.PMDEC.quantity ** 2).to(
+            u.mas / u.yr
+        )
+    else:
+        raise AttributeError("No Astrometry component found")
+
+
 class dmxrange:
     def __init__(self, lofreqs, hifreqs):
         self.los = lofreqs
@@ -629,8 +662,6 @@ def dmx_ranges(
                 frozen=False,
             )
             dmx_comp.add_param(dmx_par, setup=True)
-            # Somehow frozen is getting set to True, try to force it to False
-            getattr(dmx_comp, "DMX_{:04d}".format(ii + 1)).frozen = False
 
             dmxr1_par = pint.models.parameter.prefixParameter(
                 parameter_type="mjd",
@@ -651,6 +682,41 @@ def dmx_ranges(
     dmx_comp.validate()
 
     return mask, dmx_comp
+
+
+def dmxstats(fitter):
+    """Run dmxparse in python using PINT objects and results.
+
+    Based off dmxparse by P. Demorest (https://github.com/nanograv/tempo/tree/master/util/dmxparse)
+
+    Parameters
+    ----------
+    fitter
+        PINT fitter used to get timing residuals, must have already run GLS fit
+    """
+
+    model = fitter.model
+    mjds = fitter.toas.get_mjds()
+    freqs = fitter.toas.table["freq"]
+    ii = 1
+    while hasattr(model, "DMX_{:04d}".format(ii)):
+        mmask = np.logical_and(
+            mjds.value > getattr(model, "DMXR1_{:04d}".format(ii)).value,
+            mjds.value < getattr(model, "DMXR2_{:04d}".format(ii)).value,
+        )
+        mjds_in_bin = mjds[mmask]
+        freqs_in_bin = freqs[mmask]
+        span = (mjds_in_bin.max() - mjds_in_bin.min()).to(u.d)
+        # Warning: min() and max() seem to strip the units
+        freqspan = freqs_in_bin.max() - freqs_in_bin.min()
+        print(
+            "DMX_{:04d}: NTOAS={:5d}, MJDSpan={:14.4f}, FreqSpan={:8.3f}-{:8.3f}".format(
+                ii, mmask.sum(), span, freqs_in_bin.min(), freqs_in_bin.max()
+            )
+        )
+        ii += 1
+
+    return
 
 
 def dmxparse(fitter, save=False):
@@ -686,6 +752,10 @@ def dmxparse(fitter, save=False):
         mean_dmx : mean dmx value
 
         avg_dm_err : uncertainty in average dmx
+
+    Raises
+    ------
+    RuntimeError : If the model has no DMX parameters, or if there is a parsing problem
 
     """
     # We get the DMX values, errors, and mjds (same as in getting the DMX values for DMX v. time)

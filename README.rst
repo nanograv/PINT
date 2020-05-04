@@ -45,18 +45,25 @@ The primary reasons we are developing PINT are:
 Installing
 ----------
 
-Currently PINT is not available via PyPI or Conda. To install it you must
-obtain the source from GitHub (for example by cloning it), then install
+PINT is now available via PyPI as the package `pint-pulsar <https://pypi.org/project/pint-pulsar>`_, so it is now simple to install via pip.
+For most users, who don't want to develop the PINT code, installation should just be a matter of::
+
+   $ pip install pint-pulsar
+
+By default this will install in your system site-packages.  Depending on your system and preferences, you may want to append ``--user`` 
+to install it for just yourself (e.g. if you don't have permission to write in the system site-packages), or you may want to create a 
+virtualenv to work on PINT (using a virtualenv is highly recommended by the PINT developers).
+
+If you want access to the source code, example notebooks, and tests, you can install from source, by 
+cloning the source repository from GitHub, then install
 it, ensuring that all dependencies needed to run PINT are available::
 
     $ pip install .
 
-Be aware that both PINT and AstroPy require data files from the Internet,
-for example the International Earth Rotation Service bulletins, which are
-regularly updated.  These files are cached, where possible, so once they
-have been downloaded you should be able to use PINT and AstroPy offline
-unless you require new data (for example you request a time more recent
-than your IERS bulletin contains).
+Complete installation instructions are availble here_.
+
+.. _here: https://nanograv-pint.readthedocs.io/en/latest/installation.html
+
 
 Using
 -----

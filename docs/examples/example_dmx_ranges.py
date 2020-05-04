@@ -39,6 +39,9 @@ glsfit = pint.fitter.GLSFitter(toas=ts1855, model=m1855)
 glsfit.fit_toas(maxiter=1)
 glsfit.print_summary()
 
+# You can print some statistics on the DMXs like this:
+pint.utils.dmxstats(glsfit)
+
 # dmxparse will pull out the DMX values and compute correct errors from the covariance matrix, which we can easily plot
 dmx = pint.utils.dmxparse(glsfit)
 

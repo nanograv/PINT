@@ -175,8 +175,14 @@ class Fitter(object):
         ax.grid(True)
         plt.show()
 
-    def get_summary(self):
-        """Return a human-readable summary of the Fitter results."""
+    def get_summary(self, nodmx=False):
+        """Return a human-readable summary of the Fitter results.
+        
+        Parameters
+        ----------
+        nodmx : bool
+            Set to True to suppress printing DMX parameters in summary
+        """
 
         # Need to check that fit has been done first!
         if not hasattr(self, "covariance_matrix"):
@@ -205,6 +211,8 @@ class Fitter(object):
             "=" * 14, "=" * 20, "=" * 28, "=" * 5
         )
         for pn in list(self.get_allparams().keys()):
+            if nodmx and pn.startswith("DMX"):
+                continue
             prefitpar = getattr(self.model_init, pn)
             par = getattr(self.model, pn)
             if par.value is not None:
