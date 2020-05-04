@@ -11,6 +11,9 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added chisq gridding utilities
 ### Fixed
 - Cleaned up some unnecessary warnings in tests
+### Changed
+- Defer updating IERS B from when pint is imported to when erfautils is imported (for conda testing)
+- Fixed installation instructions in README
 
 ## [0.6.1] - 2020-04-30
 ### Added
