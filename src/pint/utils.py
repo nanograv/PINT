@@ -1101,6 +1101,10 @@ def pulsar_mass(pb, x, mc, inc):
         Companion mass in u.solMass
     inc : Angle
         Inclination angle, in u.deg or u.rad
+
+    Returns
+    -------
+    mass : Quantity in u.solMass
     """
     massfunct = mass_funct(pb, x)
 
@@ -1108,7 +1112,7 @@ def pulsar_mass(pb, x, mc, inc):
     def localmf(mp, mc=mc, mf=massfunct, i=inc):
         return (mass_funct2(mp * u.solMass, mc, i) - mf).value
 
-    return zeros.bisect(localmf, 0.0, 1000.0)
+    return zeros.bisect(localmf, 0.0, 1000.0) * u.solMass
 
 
 def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
@@ -1127,6 +1131,10 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
         Inclination angle, in u.deg or u.rad. Default is 60 deg.
     mpsr : Quantity, optional
         Pulsar mass in u.solMass. Default is 1.4 Msun
+
+    Returns
+    -------
+    mass : Quantity in u.solMass
     """
     massfunct = mass_funct(pb, x)
 
@@ -1134,7 +1142,7 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     def localmf(mc, mp=mpsr, mf=massfunct, i=inc):
         return (mass_funct2(mp, mc * u.solMass, i) - mf).value
 
-    return zeros.bisect(localmf, 0.001, 1000.1)
+    return zeros.bisect(localmf, 0.001, 1000.1) * u.solMass
 
 
 def ELL1_check(A1, E, TRES, NTOA, outstring=True):
