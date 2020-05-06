@@ -971,11 +971,10 @@ class TOAs(object):
 
     def unselect(self):
         """Return to previous selected version of the TOA table (stored in stack)."""
-        if hasattr(self, "table_selects"):
-            # may raise an exception about an empty list
+        try:
             self.table = self.table_selects.pop()
-        else:
-            raise ValueError("No previous TOA table found.  No changes made.")
+        except (AttributeError, IndexError) as e:
+            log.error("No previous TOA table found.  No changes made.")
 
     def pickle(self, filename=None):
         """Write the TOAs to a .pickle file with optional filename."""
