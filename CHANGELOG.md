@@ -7,12 +7,21 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## [Unreleased]
 ### Changed
 - Changed units of Phase to be u.dimensionless_unscaled instead of u.cycle, which was confusing
+
+## [0.6.3] - 2020-05-04
 ### Added
 - Added pmtot() convenience function
 - Added dmxstats() utility function
 - Added chisq gridding utilities
 ### Fixed
 - Cleaned up some unnecessary warnings in tests
+### Changed
+- Defer updating IERS B from when pint is imported to when erfautils is imported (for conda testing)
+- Fixed installation instructions in README
+
+## [0.6.2] - 2020-05-04
+### Changed
+- Removed deprecated pytest-runner from setup.cfg 
 
 ## [0.6.1] - 2020-04-30
 ### Added
