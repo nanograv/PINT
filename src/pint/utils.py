@@ -487,38 +487,37 @@ def pmtot(model):
 
 
 class dmxrange:
+    """Internal class for building DMX ranges"""
+
     def __init__(self, lofreqs, hifreqs):
+        """lofreqs and hifreqs are lists of MJDs that are in the low or high band respectively"""
         self.los = lofreqs
         self.his = hifreqs
-        self.min = min(lofreqs + hifreqs)
-        self.max = max(lofreqs + hifreqs)
+        self.min = min(lofreqs + hifreqs) - 0.001 * u.d
+        self.max = max(lofreqs + hifreqs) + 0.001 * u.d
 
     def sum_print(self):
         print(
-            "{:8.2f}-{:8.2f} ({:.2f}): ".format(
-                self.min.value, self.max.value, self.max - self.min
-            ),
-            end="",
+            "{:8.2f}-{:8.2f} ({:8.2f}): NLO={:5d} NHI={:5d}".format(
+                self.min.value,
+                self.max.value,
+                self.max - self.min,
+                len(self.los),
+                len(self.his),
+            )
         )
-        print("lofs: ", end="")
-        [print(f.value, end=" ") for f in self.los]
-        print("hifs: ")
-        [print(f.value, end=" ") for f in self.his]
-        print("")
 
 
 def dmx_ranges(
     toas,
     divide_freq=1000.0 * u.MHz,
-    offset=0.1 * u.d,
+    offset=0.01 * u.d,
     max_diff=15.0 * u.d,
     verbose=False,
 ):
     """Compute initial DMX ranges for a set of TOAs
     
-    This is a rudimentary translation of $TEMPO/utils/dmx_ranges/DMX_ranges2.py,
-    which at least reads the MJDs and freqs from a TOAs object but that is it.
-    It should be updated to fill the resulting DMX ranges into a model object.
+    This is a rudimentary translation of $TEMPO/utils/dmx_ranges/DMX_ranges2.py
 
     Parameters
     ----------
@@ -650,7 +649,7 @@ def dmx_ranges(
             dmx_comp.DMX_0001.value = 0.0
             dmx_comp.DMX_0001.frozen = False
             dmx_comp.DMXR1_0001.value = (DMX.min - offset).value
-            dmx_comp.DMXR2_0001.value = (DMX.min + offset).value
+            dmx_comp.DMXR2_0001.value = (DMX.max + offset).value
 
         else:
             # Add the DMX parameters
@@ -674,7 +673,118 @@ def dmx_ranges(
             dmxr2_par = pint.models.parameter.prefixParameter(
                 parameter_type="mjd",
                 name="DMXR2_{:04d}".format(ii + 1),
-                value=(DMX.min + offset).value,
+                value=(DMX.max + offset).value,
+                units=u.d,
+            )
+            dmx_comp.add_param(dmxr2_par, setup=True)
+    # Validate component
+    dmx_comp.validate()
+
+    return mask, dmx_comp
+
+
+def dmx_ranges2(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=False):
+    """Compute initial DMX ranges for a set of TOAs
+    
+    This is an alternative algorithm for computing DMX ranges
+
+    Parameters
+    ----------
+    divide_freq : Quantity, MHz
+        Requires TOAs above and below this freq for a good DMX range
+    offset : Quantity, days
+        The buffer to include around each DMX range. Warning, may cause bins to overlap?!?
+    max_diff : Quantity, days
+        Maximum duration of a DMX bin
+    verbose : bool
+        If True, print out verbose information about the DMX ranges including par file lines.
+
+    Returns
+    -------
+    mask : bool array
+        Array with True for all TOAs that got assigned to a DMX bin
+    component : TimingModel.Component object
+        A DMX Component class with the DMX ranges included
+    """
+    from pint.models.timing_model import Component
+    import pint.models.parameter
+
+    MJDs = toas.get_mjds()
+    freqs = toas.table["freq"]
+
+    DMXs = []
+
+    prevbinR2 = MJDs[0] - 0.001 * u.d
+    while True:
+        # Consider all TOAs with times after the last bin up through a total span of binwidth
+        # Get indexes that should be in this bin
+        # If there are no more MJDs to process, we are done.
+        if not np.any(MJDs > prevbinR2):
+            break
+        startMJD = MJDs[MJDs > prevbinR2][0]
+        binidx = np.logical_and(MJDs > prevbinR2, MJDs <= startMJD + binwidth)
+        if not np.any(binidx):
+            break
+        binMJDs = MJDs[binidx]
+        binfreqs = freqs[binidx]
+        loMJDs = binMJDs[binfreqs < divide_freq]
+        hiMJDs = binMJDs[binfreqs >= divide_freq]
+        # If we have freqs below and above the divide, this is a good bin
+        if np.any(binfreqs < divide_freq) and np.any(binfreqs > divide_freq):
+            DMXs.append(dmxrange(list(loMJDs), list(hiMJDs)))
+        else:
+            # These TOAs cannot be used
+            pass
+        prevbinR2 = binMJDs.max()
+
+    if verbose:
+        print(
+            "\n These are the good DMX ranges with number of TOAs above/below the dividing freq:"
+        )
+        for DMX in DMXs:
+            DMX.sum_print()
+
+    # Init mask to all False
+    mask = np.zeros_like(MJDs.value, dtype=np.bool)
+    # Mark TOAs as True if they are in any DMX bin
+    for DMX in DMXs:
+        mask[np.logical_and(MJDs >= DMX.min, MJDs <= DMX.max)] = True
+    log.info("{} out of {} TOAs are in a DMX bin".format(mask.sum(), len(mask)))
+    # Instantiate a DMX component
+    dmx_class = Component.component_types["DispersionDMX"]
+    dmx_comp = dmx_class()
+    # Add parameters
+    for ii, DMX in enumerate(DMXs):
+        if ii == 0:
+            # Already have DMX_0001 in component, so just set parameters
+            dmx_comp.DMX_0001.value = 0.0
+            dmx_comp.DMX_0001.frozen = False
+            dmx_comp.DMXR1_0001.value = DMX.min.value
+            dmx_comp.DMXR2_0001.value = DMX.max.value
+
+        else:
+            # Add the DMX parameters
+            dmx_par = pint.models.parameter.prefixParameter(
+                parameter_type="float",
+                name="DMX_{:04d}".format(ii + 1),
+                value=0.0,
+                units=u.pc / u.cm ** 3,
+                frozen=False,
+            )
+            dmx_comp.add_param(dmx_par, setup=True)
+
+            dmxr1_par = pint.models.parameter.prefixParameter(
+                parameter_type="mjd",
+                name="DMXR1_{:04d}".format(ii + 1),
+                value=DMX.min.value,
+                units=u.d,
+            )
+            dmx_comp.add_param(dmxr1_par, setup=True)
+
+            dmxr2_par = pint.models.parameter.prefixParameter(
+                parameter_type="mjd",
+                name="DMXR2_{:04d}".format(ii + 1),
+                value=DMX.max.value,
                 units=u.d,
             )
             dmx_comp.add_param(dmxr2_par, setup=True)
@@ -704,16 +814,23 @@ def dmxstats(fitter):
             mjds.value > getattr(model, "DMXR1_{:04d}".format(ii)).value,
             mjds.value < getattr(model, "DMXR2_{:04d}".format(ii)).value,
         )
-        mjds_in_bin = mjds[mmask]
-        freqs_in_bin = freqs[mmask]
-        span = (mjds_in_bin.max() - mjds_in_bin.min()).to(u.d)
-        # Warning: min() and max() seem to strip the units
-        freqspan = freqs_in_bin.max() - freqs_in_bin.min()
-        print(
-            "DMX_{:04d}: NTOAS={:5d}, MJDSpan={:14.4f}, FreqSpan={:8.3f}-{:8.3f}".format(
-                ii, mmask.sum(), span, freqs_in_bin.min(), freqs_in_bin.max()
+        if np.any(mmask):
+            mjds_in_bin = mjds[mmask]
+            freqs_in_bin = freqs[mmask]
+            span = (mjds_in_bin.max() - mjds_in_bin.min()).to(u.d)
+            # Warning: min() and max() seem to strip the units
+            freqspan = freqs_in_bin.max() - freqs_in_bin.min()
+            print(
+                "DMX_{:04d}: NTOAS={:5d}, MJDSpan={:14.4f}, FreqSpan={:8.3f}-{:8.3f}".format(
+                    ii, mmask.sum(), span, freqs_in_bin.min(), freqs_in_bin.max()
+                )
             )
-        )
+        else:
+            print(
+                "DMX_{:04d}: NTOAS={:5d}, MJDSpan={:14.4f}, FreqSpan={:8.3f}-{:8.3f}".format(
+                    ii, mmask.sum(), 0 * u.d, 0 * u.MHz, 0 * u.MHz
+                )
+            )
         ii += 1
 
     return
