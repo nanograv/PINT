@@ -211,7 +211,8 @@ def main(argv=None):
     print(mjds.min(), mjds.max())
 
     # Compute model phase for each TOA
-    iphss, phss = modelin.phase(ts, abs_phase=True)
+    phs = modelin.phase(ts, abs_phase=True)
+    iphss, phss = phs.int, phs.frac
     # ensure all postive
     negmask = phss < 0.0
     phases = np.where(negmask, phss + 1.0, phss)

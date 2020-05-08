@@ -289,7 +289,7 @@ class MCMCFitter(Fitter):
         """
         Return pulse phases based on the current model
         """
-        phases = self.model.phase(self.toas)[1]
+        phases = self.model.phase(self.toas)['frac']
         # ensure all positive
         return np.where(phases < 0.0, phases + 1.0, phases)
 
@@ -637,10 +637,11 @@ class CompositeMCMCFitter(MCMCFitter):
         If index is None, then it will return phases for all TOAs
         """
         if index is None:
-            phases = self.model.phase(self.toas)[1]
+            phases = self.model.phase(self.toas)['frac']
             print("Showing all %d phases" % len(phases))
         else:
-            phases = self.model.phase(self.toas_list[index])[1]
+            phases = self.model.phase(self.toas_list[index])['frac']
+        phases = phases.to(u.cycle).value
         return np.where(phases < 0.0, phases + 1.0, phases)
 
     def get_template_vals(self, phases, index):

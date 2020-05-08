@@ -420,7 +420,7 @@ class TimingModel(object):
         ----------
         component: str or `Component` object
             Component name or component object.
-            
+
         Returns
         -------
         comp: `Component` object
@@ -504,8 +504,8 @@ class TimingModel(object):
             self.validate()
 
     def remove_component(self, component):
-        """ Remove one component from the timing model. 
-            
+        """ Remove one component from the timing model.
+
         Parameters
         ----------
         component: str or `Component` object
@@ -571,7 +571,7 @@ class TimingModel(object):
 
     def add_param_from_top(self, param, target_component, setup=False):
         """ Add a parameter to a timing model component.
-           
+
             Parameters
             ----------
             param: str
@@ -580,7 +580,7 @@ class TimingModel(object):
                 Parameter host component name. If given as "" it would add
                 parameter to the top level `TimingModel` class
             setup: bool, optional
-                Flag to run setup() function.  
+                Flag to run setup() function.
         """
         if target_component == "":
             setattr(self, param.name, param)
@@ -1077,7 +1077,7 @@ class TimingModel(object):
 
     def compare(self, othermodel, nodmx=True):
         """Print comparison with another model
-        
+
         Parameters
         ----------
         othermodel
@@ -1087,7 +1087,7 @@ class TimingModel(object):
 
         Returns
         -------
-        str 
+        str
             Human readable comparison, for printing
         """
 
