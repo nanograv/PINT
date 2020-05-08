@@ -8,6 +8,8 @@ from astropy.coordinates import Angle, Longitude
 from astropy.time.utils import two_sum, two_product
 from astropy.utils import minversion
 
+from pint import dimensionless_cycles
+
 
 __all__ = ['Phase', 'FractionalPhase']
 
@@ -167,8 +169,10 @@ class FractionalPhase(Longitude):
         # maybe via astype.
         if isinstance(angle, Phase):
             angle = angle['frac']
-        return super().__new__(cls, angle, unit=unit, wrap_angle=wrap_angle,
-                               **kwargs)
+
+        with u.add_enabled_equivalencies(dimensionless_cycles):
+            return super().__new__(cls, angle, unit=unit, wrap_angle=wrap_angle,
+                                   **kwargs)
 
 
 def check_imaginary(a):
@@ -252,7 +256,8 @@ class Phase(Angle):
                 phase1 = phase1.view(cls)
             return phase1.copy() if copy else phase1
 
-        phase1 = Angle(phase1, cls._unit, copy=False)
+        with u.add_enabled_equivalencies(dimensionless_cycles):
+            phase1 = Angle(phase1, cls._unit, copy=False)
 
         if phase2 is not None:
             if isinstance(phase2, Phase):
@@ -261,7 +266,8 @@ class Phase(Angle):
                     phase2 = phase2.view(cls)
                 return phase2
 
-            phase2 = Angle(phase2, cls._unit, copy=False)
+            with u.add_enabled_equivalencies(dimensionless_cycles):
+                phase2 = Angle(phase2, cls._unit, copy=False)
 
         return cls.from_angles(phase1, phase2)
 
