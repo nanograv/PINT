@@ -257,8 +257,8 @@ class Residuals(object):
         residuals.  Requires ECORR be used in the timing model.  If
         use_noise_model is true, the noise model terms (EFAC, EQUAD, ECORR) will
         be applied to the TOA uncertainties, otherwise only the raw
-        uncertainties will be used.  
-        
+        uncertainties will be used.
+
         Returns a dictionary with the following entries:
 
           mjds           Average MJD for each segment
@@ -316,3 +316,31 @@ class Residuals(object):
         avg["indices"] = [list(np.where(U[:, i])[0]) for i in range(U.shape[1])]
 
         return avg
+
+
+class GeneralResiduals(Residuals):
+    """ Subclass for generalized residuals.
+
+    This class computes for the residuals from TOAs and other independently
+    measured data (e.g., DM values from wide band TOAs). The independently
+    measured data have to be at the same epoch as the TOAs (i.e.,
+    non_TOA_residuals(TOA) = non_TOA_measurements(TOA) -  non_TOA_model(TOA))
+
+    Note
+    ----
+    If the non-TOA data is not provided separately, this class will search such
+    data in the TOA class. The model for non_TOA data must be a part of the
+    timing model (e.g., DM values as function of TOA).
+    """
+
+    def __init__(self, toas=None, model=None, non_TOA_data={},
+                 non_TOA_model=[], weighted_mean=True,
+                 set_pulse_nums=False):
+        # Construct the triditional TOA residuals first.
+        super(GeneralResiduals, self).__init__(toas=toas,
+                                               model=model,
+                                               weighted_mean=True,
+                                               set_pulse_nums=False)
+
+        # Check the input for non-TOA data and model.
+        
