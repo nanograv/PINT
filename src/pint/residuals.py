@@ -318,29 +318,91 @@ class Residuals(object):
         return avg
 
 
-class GeneralResiduals(Residuals):
-    """ Subclass for generalized residuals.
+class ResidualBase:
+    """ Base class for general residuals.
 
-    This class computes for the residuals from TOAs and other independently
-    measured data (e.g., DM values from wide band TOAs). The independently
-    measured data have to be at the same epoch as the TOAs (i.e.,
-    non_TOA_residuals(TOA) = non_TOA_measurements(TOA) -  non_TOA_model(TOA))
+    This class computes the residuals using data - modeled value.
+    Parameter
+    ---------
+    data: `numpy.ndarray` or array-like object
+        The input data
+
+    model_fun:  callable
+        The model function that compare to the data. The returned size has to
+        be the same as data.
+        The callable's arguments follow
+        ``model_fun(*args)``
+
+    args: tuple, optional
+        Input argument to a callable model.
+
+    data_errors: `numpy.array` or array-like object
+        The errors of measured data.
 
     Note
     ----
-    If the non-TOA data is not provided separately, this class will search such
-    data in the TOA class. The model for non_TOA data must be a part of the
-    timing model (e.g., DM values as function of TOA).
+
     """
 
-    def __init__(self, toas=None, model=None, non_TOA_data={},
-                 non_TOA_model=[], weighted_mean=True,
-                 set_pulse_nums=False):
-        # Construct the triditional TOA residuals first.
-        super(GeneralResiduals, self).__init__(toas=toas,
-                                               model=model,
-                                               weighted_mean=True,
-                                               set_pulse_nums=False)
+    def __init__(self, data, model_fun, args=(), data_error=None):
+        self.data = data
+        self.model_fun = model_fun
+        self.data_errors = data_errors
+        self.args = args
+
+
+    def calc_resids(self, reduce_mean=True, weighted_mean=True):
+        model_value = self.model_fun(self.args)
+        resids = data - model_value
+        if reduce_mean:
+            if not weighted_mean:
+                resids = resids - resids.mean()
+            else:
+           # Errs for weighted sum.  Units don't matter since they will
+           # cancel out in the weighted sum.
+                if np.any(self.data_errors == 0):
+                    raise ValueError(
+                      "Some data errors are zero - cannot calculate residuals"
+                    )
+                    w = 1.0 / (self.data_errors ** 2)
+                    wm = (resids * w).sum() / w.sum()
+                    resids -= wm
+
+        return resids
+
+    @property
+    def chi2_reduced(self):
+        return self.chi2 / self.dof
+
+    @property
+    def chi2(self):
+        """Compute chi-squared as needed and cache the result"""
+        if self._chi2 is None:
+            self._chi2 = self.calc_chi2()
+        assert self._chi2 is not None
+        return self._chi2
+
+    def rms_weighted(self, resids):
+        """Compute weighted RMS of the residals in time."""
+        if np.any(self.data_errors == 0):
+            raise ValueError(
+                "Some data errors are zero - cannot calculate weighted RMS of residuals"
+            )
+        w = 1.0 / (self.data_errors ** 2)
+
+        wmean, werr, wsdev = weighted_mean(resids, w, sdev=True)
+        return wsdev
+
+
+    def get_dof(self, num_param):
+        """Return number of degrees of freedom for the model.
+
+        Parameter
+        ---------
+        num_param: int
+            the number of parameters that fit for the modeled values
+        """
+        dof = len(self.data) - num_param
+        return dof
 
         # Check the input for non-TOA data and model.
-        
