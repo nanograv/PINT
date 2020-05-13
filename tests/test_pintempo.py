@@ -20,10 +20,10 @@ def test_result():
     lines = sys.stdout.getvalue()
     v = 999.0
     # This line is in the output:
-    # Prefit residuals 1090.580262221985 us, Postfit residuals 21.182038051610704 us
+    # Prefit residuals Wrms = 1090.580262221985 us, Postfit residuals Wrms = 21.182038051610704 us
     for l in lines.split("\n"):
         if l.startswith("Prefit residuals"):
-            v = float(l.split()[6])
+            v = float(l.split()[-2])
     # Check that RMS is less than 30 microseconds
     assert v < 30.0
     sys.stdout = saved_stdout
