@@ -22,6 +22,7 @@ In alphabetical order:
 * Chris Sheehy
 * Michele Vallisneri
 * Rutger van Haasteren
+* Zac Hatfield-Dodds
 
 Other contributors
 ------------------
