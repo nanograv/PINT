@@ -58,6 +58,8 @@ If you want access to the source code, example notebooks, and tests, you can ins
 cloning the source repository from GitHub, then install
 it, ensuring that all dependencies needed to run PINT are available::
 
+    $ git checkout https://github.com/nanograv/PINT.git
+    $ cd PINT
     $ pip install .
 
 Complete installation instructions are availble here_.

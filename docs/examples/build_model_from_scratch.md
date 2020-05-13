@@ -271,7 +271,7 @@ The prefix type of parameters have to use `prefixParameter` class from `pint.mod
 ```python
 # Add prefix parameters
 dmx_0003 = p.prefixParameter(
-    parameter_type="float", name="DMX_0003", value=None, unit=u.pc / u.cm ** 3
+    parameter_type="float", name="DMX_0003", value=None, units=u.pc / u.cm ** 3
 )
 
 tm.components["DispersionDMX"].add_param(dmx_0003, setup=True)
@@ -290,10 +290,10 @@ However only adding DMX_0003 is not enough, since one DMX parameter also need a 
 
 ```python
 dmxr1_0003 = p.prefixParameter(
-    parameter_type="mjd", name="DMXR1_0003", value=None, unit=u.day
+    parameter_type="mjd", name="DMXR1_0003", value=None, units=u.day
 )  # DMXR1 is a type of MJD parameter internally.
 dmxr2_0003 = p.prefixParameter(
-    parameter_type="mjd", name="DMXR2_0003", value=None, unit=u.day
+    parameter_type="mjd", name="DMXR2_0003", value=None, units=u.day
 )  # DMXR1 is a type of MJD parameter internally.
 
 tm.components["DispersionDMX"].add_param(dmxr1_0003, setup=True)

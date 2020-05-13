@@ -31,7 +31,11 @@ class Astrometry(DelayComponent):
     def __init__(self):
         super(Astrometry, self).__init__()
         self.add_param(
-            MJDParameter(name="POSEPOCH", description="Reference epoch for position")
+            MJDParameter(
+                name="POSEPOCH",
+                description="Reference epoch for position",
+                time_scale="tdb",
+            )
         )
 
         self.add_param(

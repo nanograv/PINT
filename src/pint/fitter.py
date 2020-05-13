@@ -197,7 +197,7 @@ class Fitter(object):
         s = "Fitted model using {} method with {} free parameters to {} TOAs\n".format(
             self.method, len(self.get_fitparams()), self.toas.ntoas
         )
-        s += "Prefit residuals {}, Postfit residuals {}\n".format(
+        s += "Prefit residuals Wrms = {}, Postfit residuals Wrms = {}\n".format(
             self.resids_init.rms_weighted(), self.resids.rms_weighted()
         )
         s += "Chisq = {:.3f} for {} d.o.f. for reduced Chisq of {:.3f}\n".format(
