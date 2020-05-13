@@ -350,7 +350,6 @@ class ResidualBase:
         self.data_errors = data_errors
         self.args = args
 
-        self._chi2 = None
 
     def calc_resids(self, reduce_mean=True, weighted_mean=True):
         model_value = self.model_fun(self.args)
@@ -363,12 +362,17 @@ class ResidualBase:
            # cancel out in the weighted sum.
                 if np.any(self.data_errors == 0):
                     raise ValueError(
-                        "Some data errors are zero - cannot calculate residuals"
+                      "Some data errors are zero - cannot calculate residuals"
                     )
                     w = 1.0 / (self.data_errors ** 2)
                     wm = (resids * w).sum() / w.sum()
                     resids -= wm
+
         return resids
+
+    @property
+    def chi2_reduced(self):
+        return self.chi2 / self.dof
 
     @property
     def chi2(self):
@@ -377,10 +381,6 @@ class ResidualBase:
             self._chi2 = self.calc_chi2()
         assert self._chi2 is not None
         return self._chi2
-
-    @property
-    def chi2_reduced(self):
-        return self.chi2 / self.dof
 
     def rms_weighted(self, resids):
         """Compute weighted RMS of the residals in time."""
