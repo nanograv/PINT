@@ -5,7 +5,6 @@ import numpy as np
 from scipy.linalg import LinAlgError
 from astropy import log
 
-from pint import dimensionless_cycles
 from pint.phase import Phase
 from pint.utils import weighted_mean
 
@@ -130,8 +129,7 @@ class Residuals(object):
         """Return timing model residuals in time (seconds)."""
         if self.phase_resids is None:
             self.phase_resids = self.calc_phase_resids(weighted_mean=weighted_mean)
-        with u.set_enabled_equivalencies(dimensionless_cycles):
-            return (self.phase_resids.to(u.Unit("")) / self.get_PSR_freq()).to(u.s)
+        return (self.phase_resids / self.get_PSR_freq()).to(u.s)
 
     def get_PSR_freq(self, modelF0=True):
         if modelF0:

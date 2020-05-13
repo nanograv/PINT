@@ -279,7 +279,6 @@ class emcee_fitter(Fitter):
         """
         phss = self.model.phase(self.toas)[1]
         # ensure all postive
-        phss = phss.to(u.cycle).value
         return np.where(phss < 0.0, phss + 1.0, phss)
 
     def lnprior(self, theta):

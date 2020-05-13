@@ -17,7 +17,6 @@ __all__ = [
     "ls",
     "dmu",
     "light_second_equivalency",
-    "dimensionless_cycles",
     "hourangle_second",
     "pulsar_mjd",
     "GMsun",
@@ -50,7 +49,6 @@ dmu = u.def_unit("dmu", u.pc * u.cm ** -3)
 
 # define equivalency for astropy units
 light_second_equivalency = [(ls, si.second, lambda x: x, lambda x: x)]
-dimensionless_cycles = [(u.cycle, None)]
 # hourangle_second unit
 hourangle_second = u.def_unit("hourangle_second", u.hourangle / np.longdouble(3600.0))
 
@@ -84,7 +82,7 @@ pint_units = {
     "Tsun": Tsun,
     "GMsun": GMsun,
     "MJD": u.day,
-    "pulse phase": u.cycle,
+    "pulse phase": u.dimensionless_unscaled,
     "hourangle_second": hourangle_second,
 }
 

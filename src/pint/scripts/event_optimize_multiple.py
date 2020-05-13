@@ -322,7 +322,7 @@ def main(argv=None):
                 gtemplate = cPickle.load(file(tname))
             except:
                 phases = (modelin.phase(ts)[1]).astype(np.float64)
-                phases[phases < 0] += 1 * u.cycle
+                phases[phases < 0] += 1 * u.dimensionless_unscaled
                 gtemplate = lctemplate.get_gauss2()
                 lcf = lcfitters.LCFitter(gtemplate, phases, weights=wlist[i])
                 lcf.fit(unbinned=False)
@@ -332,7 +332,7 @@ def main(argv=None):
                     protocol=2,
                 )
             phases = (modelin.phase(ts)[1]).astype(np.float64)
-            phases[phases < 0] += 1 * u.cycle
+            phases[phases < 0] += 1 * u.dimensionless_unscaled
             lcf = lcfitters.LCFitter(
                 gtemplate, phases.value, weights=wlist[i], binned_bins=200
             )

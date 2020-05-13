@@ -132,5 +132,5 @@ class IFunc(PhaseComponent):
         else:
             raise ValueError("Interpolation type %d not supported.".format(itype))
 
-        phase = (times * u.s) * self.F0.quantity * u.cycle
+        phase = ((times * u.s) * self.F0.quantity).to(u.dimensionless_unscaled)
         return phase
