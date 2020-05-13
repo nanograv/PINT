@@ -6,7 +6,6 @@ from __future__ import absolute_import, division, print_function
 import astropy.units as u
 import numpy
 
-from pint import dimensionless_cycles
 from pint.models.parameter import maskParameter
 from pint.models.timing_model import DelayComponent, MissingParameter, PhaseComponent
 
@@ -120,8 +119,7 @@ class PhaseJump(PhaseComponent):
         d_phase_d_j = numpy.zeros(len(tbl))
         mask = jpar.select_toa_mask(toas)
         d_phase_d_j[mask] = self.F0.value
-        with u.set_enabled_equivalencies(dimensionless_cycles):
-            return (d_phase_d_j * self.F0.units).to(u.cycle / u.second)
+        return (d_phase_d_j * self.F0.units).to(1 / u.second)
 
     def print_par(self):
         result = ""

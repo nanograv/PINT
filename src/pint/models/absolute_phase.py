@@ -26,7 +26,9 @@ class AbsPhase(PhaseComponent):
     def __init__(self):
         super(AbsPhase, self).__init__()
         self.add_param(
-            MJDParameter(name="TZRMJD", description="Epoch of the zero phase.")
+            MJDParameter(
+                name="TZRMJD", description="Epoch of the zero phase.", time_scale="utc"
+            )
         )
         self.add_param(
             strParameter(

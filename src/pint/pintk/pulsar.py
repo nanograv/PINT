@@ -168,7 +168,7 @@ class Pulsar(object):
 
         phase = np.modf(tpb)[0]
         phase[phase < 0] += 1
-        return phase * u.cycle
+        return phase
 
     def dayofyear(self):
         """

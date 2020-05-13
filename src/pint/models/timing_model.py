@@ -16,7 +16,6 @@ import six
 from astropy import log
 
 import pint
-from pint import dimensionless_cycles
 from pint.models.parameter import strParameter, maskParameter
 from pint.phase import Phase
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
@@ -906,8 +905,7 @@ class TimingModel(object):
         dp = sample_phase[1] - sample_phase[0]
         d_phase_d_toa = dp.int / (2 * sample_step) + dp.frac / (2 * sample_step)
         del copy_toas
-        with u.set_enabled_equivalencies(dimensionless_cycles):
-            return d_phase_d_toa.to(u.Hz)
+        return d_phase_d_toa.to(u.Hz)
 
     def d_phase_d_tpulsar(self, toas):
         """Return the derivative of phase wrt time at the pulsar.
@@ -922,7 +920,7 @@ class TimingModel(object):
         # Is it safe to assume that any param affecting delay only affects
         # phase indirectly (and vice-versa)??
         par = getattr(self, param)
-        result = np.longdouble(np.zeros(toas.ntoas)) * u.cycle / par.units
+        result = np.longdouble(np.zeros(toas.ntoas)) / par.units
         param_phase_derivs = []
         phase_derivs = self.phase_deriv_funcs
         delay_derivs = self.delay_deriv_funcs
@@ -940,7 +938,7 @@ class TimingModel(object):
             #                         d_delay_d_param
 
             d_delay_d_p = self.d_delay_d_param(toas, param)
-            dpdd_result = np.longdouble(np.zeros(toas.ntoas)) * u.cycle / u.second
+            dpdd_result = np.longdouble(np.zeros(toas.ntoas)) / u.second
             for dpddf in self.d_phase_d_delay_funcs:
                 dpdd_result += dpddf(toas, delay)
             result = dpdd_result * d_delay_d_p
@@ -978,8 +976,12 @@ class TimingModel(object):
             h = ori_value * step
         parv = [par.value - h, par.value + h]
 
-        phase_i = np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.cycle
-        phase_f = np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.cycle
+        phase_i = (
+            np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.dimensionless_unscaled
+        )
+        phase_f = (
+            np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.dimensionless_unscaled
+        )
         for ii, val in enumerate(parv):
             par.value = val
             ph = self.phase(toas)

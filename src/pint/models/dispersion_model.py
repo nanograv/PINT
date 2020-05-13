@@ -84,7 +84,9 @@ class DispersionDM(Dispersion):
             )
         )
         self.add_param(
-            MJDParameter(name="DMEPOCH", description="Epoch of DM measurement")
+            MJDParameter(
+                name="DMEPOCH", description="Epoch of DM measurement", time_scale="tdb"
+            )
         )
 
         self.dm_value_funcs += [self.base_dm]
