@@ -30,13 +30,14 @@ As listed in the PINT paper:
 * Michael Lam
 * Rick Jenet
 
-Other contributors
-------------------
+Other contributors (alphabetical)
+---------------------------------
 
 * Bastian Beischer
 * Chris Deil
 * Julia Deneva
 * Justin A. Ellis
+* Zac Hatfield-Dodds
 * Maarten van Kerkwijk
 * Matt Pitkin
 * Ben Shapiro-Albert
