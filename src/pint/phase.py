@@ -83,3 +83,12 @@ class Phase(namedtuple("Phase", "int frac")):
 
     def __sub__(self, other):
         return self.__add__(other.__neg__())
+
+    def __mul__(self, num):
+        # for multiplying phase by a scalar
+        product = (self.int + self.frac) * num
+        ff, ii = numpy.modf(product)
+        return Phase(ii, ff)
+
+    def __rmul__(self, num):
+        return self.__mul__(num)
