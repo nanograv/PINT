@@ -4,6 +4,7 @@ import pytest
 import numpy as np
 import astropy.units as u
 from pint.phase import Phase
+import math
 
 # modified from @mhvk's test_phase_class.py
 def assert_equal(first, second):
@@ -13,7 +14,7 @@ def assert_equal(first, second):
     else:
         # if floating point, cannot check for equality, check for closeness
         # .all() for vector implementation (array returned)
-        assert np.isclose(first, second).all()
+        assert np.isclose(first, second, rtol=1e-9, atol=0).all()
     assert first.unit == second.unit == u.dimensionless_unscaled
 
 
@@ -130,11 +131,10 @@ class TestScalarArithmeticFunc:
         assert_equal(product3.frac, u.Quantity(0.2))
 
     def test_precision(self):
-        phase = Phase(1e5, 1e-9)
+        phase = Phase(1e5, 0.1)
         phase2 = phase + Phase(0, 1e-9)
-        test = Phase(1e5, 2e-9)
-        assert_equal(phase2.int, test.int)
-        assert_equal(phase2.frac, test.frac)
+        assert_equal(phase2.int, u.Quantity(1e5))
+        assert_equal(phase2.frac, u.Quantity(0.100000001))
 
 
 class TestVectorArithmeticFunc:

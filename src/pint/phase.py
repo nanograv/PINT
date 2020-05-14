@@ -86,8 +86,9 @@ class Phase(namedtuple("Phase", "int frac")):
 
     def __mul__(self, num):
         # for multiplying phase by a scalar
-        product = (self.int + self.frac) * num
-        ff, ii = numpy.modf(product)
+        ii = self.int * num
+        ff = self.frac * num
+        # if frac out of [-0.5, 0.5) range, Phase() takes care of it
         return Phase(ii, ff)
 
     def __rmul__(self, num):
