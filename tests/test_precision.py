@@ -411,11 +411,12 @@ def test_time_to_mjd_string_versus_longdouble(format, i_f):
 @example(format="pulsar_mjd", i_f=(40001, -4.440892098500627e-16))
 @example(format="mjd", i_f=(43143, 9.313492199680697e-10))
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
-def test_time_to_mjd_string_versus_decimal(dec, format, i_f):
+def test_time_to_mjd_string_versus_decimal(format, i_f):
     i, f = i_f
-    m = Decimal(i) + Decimal(f)
-    t = Time(val=i, val2=f, format=format, scale="utc")
-    assert (abs(Decimal(time_to_mjd_string(t)) - m) * u.day).to(u.ns) < 1 * u.ns
+    with decimal.localcontext(decimal.Context(prec=40)):
+        m = Decimal(i) + Decimal(f)
+        t = Time(val=i, val2=f, format=format, scale="utc")
+        assert (abs(Decimal(time_to_mjd_string(t)) - m) * u.day).to(u.ns) < 1 * u.ns
 
 
 @given(reasonable_mjd())
@@ -750,12 +751,6 @@ def test_d2tf_tf2d_roundtrip(ndp, k, f):
 # New functions
 
 
-@pytest.fixture
-def dec():
-    with decimal.localcontext(decimal.Context(prec=40)):
-        yield
-
-
 def decimalify(i, f):
     return Decimal(i) + Decimal(f)
 
@@ -767,16 +762,18 @@ def assert_closer_than_ns(i_f, i_f_2, amt):
 
 
 @given(reasonable_mjd())
-def test_mjd_jd_round_trip(dec, i_f):
-    assert_closer_than_ns(jds_to_mjds(*mjds_to_jds(*i_f)), i_f, 1)
+def test_mjd_jd_round_trip(i_f):
+    with decimal.localcontext(decimal.Context(prec=40)):
+        assert_closer_than_ns(jds_to_mjds(*mjds_to_jds(*i_f)), i_f, 1)
 
 
 @given(reasonable_mjd())
-def test_mjd_jd_pulsar_round_trip(dec, i_f):
+def test_mjd_jd_pulsar_round_trip(i_f):
     i, f = i_f
     assume(not (i in leap_sec_days and (1 - f) * 86400 < 1e-9))
-    jds = mjds_to_jds_pulsar(*i_f)
-    assert_closer_than_ns(jds_to_mjds_pulsar(*jds), i_f, 1)
+    with decimal.localcontext(decimal.Context(prec=40)):
+        jds = mjds_to_jds_pulsar(*i_f)
+        assert_closer_than_ns(jds_to_mjds_pulsar(*jds), i_f, 1)
 
 
 # @pytest.mark.xfail(
@@ -784,9 +781,10 @@ def test_mjd_jd_pulsar_round_trip(dec, i_f):
 # )
 @given(leap_sec_day_mjd())
 @example(i_f=(41498, 0.9999999999999982))
-def test_mjd_jd_pulsar_round_trip_leap_sec_day_edge(dec, i_f):
-    jds = mjds_to_jds_pulsar(*i_f)
-    assert_closer_than_ns(jds_to_mjds_pulsar(*jds), i_f, 1)
+def test_mjd_jd_pulsar_round_trip_leap_sec_day_edge(i_f):
+    with decimal.localcontext(decimal.Context(prec=40)):
+        jds = mjds_to_jds_pulsar(*i_f)
+        assert_closer_than_ns(jds_to_mjds_pulsar(*jds), i_f, 1)
 
 
 def test_mjds_to_jds_pulsar_ok_near_leap_second():
@@ -815,20 +813,22 @@ def test_jds_to_mjds_pulsar_raises_during_leap_second():
 @example(i_f=(48803, 1.0769154457079824e-09))
 @example(i_f=(48803, 1.0000079160299438e-06))
 @example(i_f=(43143, 9.313492199680697e-10))
-def test_str_to_mjds(dec, i_f):
+def test_str_to_mjds(i_f):
     i, f = i_f
-    assert_closer_than_ns(str_to_mjds(str(decimalify(i, f))), i_f, 1)
+    with decimal.localcontext(decimal.Context(prec=40)):
+        assert_closer_than_ns(str_to_mjds(str(decimalify(i, f))), i_f, 1)
 
 
 @given(reasonable_mjd())
 @example(i_f=(43143, 9.313492199680697e-10))
 @example(i_f=(41498, 0.9999999999999982))
-def test_mjds_to_str(dec, i_f):
+def test_mjds_to_str(i_f):
     i, f = i_f
-    s = mjds_to_str(i, f)
-    d = Decimal(s) * 86400 * 10 ** 9
-    d2 = decimalify(i, f) * 86400 * 10 ** 9
-    assert abs(d2 - d) < 1
+    with decimal.localcontext(decimal.Context(prec=40)):
+        s = mjds_to_str(i, f)
+        d = Decimal(s) * 86400 * 10 ** 9
+        d2 = decimalify(i, f) * 86400 * 10 ** 9
+        assert abs(d2 - d) < 1
 
 
 @given(reasonable_mjd())

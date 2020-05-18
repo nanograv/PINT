@@ -19,12 +19,11 @@ def test_result():
     pintempo.main(cmd.split())
     lines = sys.stdout.getvalue()
     v = 999.0
+    # This line is in the output:
+    # Prefit residuals Wrms = 1090.580262221985 us, Postfit residuals Wrms = 21.182038051610704 us
     for l in lines.split("\n"):
-        if l.startswith("RMS in time is"):
-            v = float(l.split()[4])
-    # Check that RMS is less than 34 microseconds
-    from astropy import log
-
-    log.warning("%f" % v)
-    assert v < 34.0
+        if l.startswith("Prefit residuals"):
+            v = float(l.split()[-2])
+    # Check that RMS is less than 30 microseconds
+    assert v < 30.0
     sys.stdout = saved_stdout

@@ -15,10 +15,16 @@ import numpy as np
 import six
 from astropy import log
 
-from pint import dimensionless_cycles
+import pint
 from pint.models.parameter import strParameter, maskParameter
 from pint.phase import Phase
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
+from pint.models.parameter import (
+    AngleParameter,
+    prefixParameter,
+    strParameter,
+    floatParameter,
+)
 
 
 __all__ = ["DEFAULT_ORDER", "TimingModel"]
@@ -899,8 +905,7 @@ class TimingModel(object):
         dp = sample_phase[1] - sample_phase[0]
         d_phase_d_toa = dp.int / (2 * sample_step) + dp.frac / (2 * sample_step)
         del copy_toas
-        with u.set_enabled_equivalencies(dimensionless_cycles):
-            return d_phase_d_toa.to(u.Hz)
+        return d_phase_d_toa.to(u.Hz)
 
     def d_phase_d_tpulsar(self, toas):
         """Return the derivative of phase wrt time at the pulsar.
@@ -915,7 +920,7 @@ class TimingModel(object):
         # Is it safe to assume that any param affecting delay only affects
         # phase indirectly (and vice-versa)??
         par = getattr(self, param)
-        result = np.longdouble(np.zeros(toas.ntoas)) * u.cycle / par.units
+        result = np.longdouble(np.zeros(toas.ntoas)) / par.units
         param_phase_derivs = []
         phase_derivs = self.phase_deriv_funcs
         delay_derivs = self.delay_deriv_funcs
@@ -933,7 +938,7 @@ class TimingModel(object):
             #                         d_delay_d_param
 
             d_delay_d_p = self.d_delay_d_param(toas, param)
-            dpdd_result = np.longdouble(np.zeros(toas.ntoas)) * u.cycle / u.second
+            dpdd_result = np.longdouble(np.zeros(toas.ntoas)) / u.second
             for dpddf in self.d_phase_d_delay_funcs:
                 dpdd_result += dpddf(toas, delay)
             result = dpdd_result * d_delay_d_p
@@ -971,8 +976,12 @@ class TimingModel(object):
             h = ori_value * step
         parv = [par.value - h, par.value + h]
 
-        phase_i = np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.cycle
-        phase_f = np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.cycle
+        phase_i = (
+            np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.dimensionless_unscaled
+        )
+        phase_f = (
+            np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.dimensionless_unscaled
+        )
         for ii, val in enumerate(parv):
             par.value = val
             ph = self.phase(toas)
@@ -1065,6 +1074,142 @@ class TimingModel(object):
                 mask.append(ii)
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
+
+    def compare(self, othermodel, nodmx=True):
+        """Print comparison with another model
+        
+        Parameters
+        ----------
+        othermodel
+            TimingModel object to compare to
+        nodmx : bool
+            If True (which is the default), don't print the DMX parameters in the comparison
+
+        Returns
+        -------
+        str 
+            Human readable comparison, for printing
+        """
+
+        from uncertainties import ufloat
+        import uncertainties.umath as um
+
+        s = "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
+            "PARAMETER", "Self   ", "Other   ", "Diff_Sigma1", "Diff_Sigma2"
+        )
+        s += "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
+            "---------", "----------", "----------", "----------", "----------"
+        )
+        for pn in self.params_ordered:
+            par = getattr(self, pn)
+            if par.value is None:
+                continue
+            try:
+                otherpar = getattr(othermodel, pn)
+            except AttributeError:
+                # s += "Parameter {} missing in other model\n".format(par.name)
+                otherpar = None
+            if isinstance(par, strParameter):
+                s += "{:14s} {:>28s}".format(pn, par.value)
+                if otherpar is not None:
+                    s += " {:>28s}\n".format(otherpar.value)
+                else:
+                    s += " {:>28s}\n".format("Missing")
+            elif isinstance(par, AngleParameter):
+                if par.frozen:
+                    # If not fitted, just print both values
+                    s += "{:14s} {:>28s}".format(pn, str(par.quantity))
+                    if otherpar is not None:
+                        s += " {:>28s}\n".format(str(otherpar.quantity))
+                    else:
+                        s += " {:>28s}\n".format("Missing")
+                else:
+                    # If fitted, print both values with uncertainties
+                    if par.units == u.hourangle:
+                        uncertainty_unit = pint.hourangle_second
+                    else:
+                        uncertainty_unit = u.arcsec
+                    s += "{:14s} {:>16s} +/- {:7.2g}".format(
+                        pn,
+                        str(par.quantity),
+                        par.uncertainty.to(uncertainty_unit).value,
+                    )
+                    if otherpar is not None:
+                        try:
+                            s += " {:>16s} +/- {:7.2g}".format(
+                                str(otherpar.quantity),
+                                otherpar.uncertainty.to(uncertainty_unit).value,
+                            )
+                        except AttributeError:
+                            # otherpar must have no uncertainty
+                            if otherpar.quantity is not None:
+                                s += " {:>28s}".format(str(otherpar.quantity))
+                            else:
+                                s += " {:>28s}".format("Missing")
+                    else:
+                        s += " {:>28s}".format("Missing")
+                    try:
+                        diff = otherpar.value - par.value
+                        diff_sigma = diff / par.uncertainty.value
+                        s += " {:>10.2f}".format(diff_sigma)
+                        diff_sigma2 = diff / otherpar.uncertainty.value
+                        s += " {:>10.2f}".format(diff_sigma2)
+                    except (AttributeError, TypeError):
+                        pass
+                    s += "\n"
+            else:
+                # Assume numerical parameter
+                if nodmx and pn.startswith("DMX"):
+                    continue
+                if par.frozen:
+                    # If not fitted, just print both values
+                    s += "{:14s} {:28f}".format(pn, par.value)
+                    if otherpar is not None and otherpar.value is not None:
+                        s += " {:28f}\n".format(otherpar.value)
+                    else:
+                        s += " {:>28s}\n".format("Missing")
+                else:
+                    # If fitted, print both values with uncertainties
+                    s += "{:14s} {:28SP}".format(
+                        pn, ufloat(par.value, par.uncertainty.value)
+                    )
+                    if otherpar is not None and otherpar.value is not None:
+                        try:
+                            s += " {:28SP}".format(
+                                ufloat(otherpar.value, otherpar.uncertainty.value)
+                            )
+                        except AttributeError:
+                            # otherpar must have no uncertainty
+                            if otherpar.value is not None:
+                                s += " {:28f}".format(otherpar.value)
+                            else:
+                                s += " {:>28s}".format("Missing")
+                    else:
+                        s += " {:>28s}".format("Missing")
+                    try:
+                        diff = otherpar.value - par.value
+                        diff_sigma = diff / par.uncertainty.value
+                        s += " {:>10.2f}".format(diff_sigma)
+                        diff_sigma2 = diff / otherpar.uncertainty.value
+                        s += " {:>10.2f}".format(diff_sigma2)
+                    except (AttributeError, TypeError):
+                        pass
+                    s += "\n"
+        # Now print any parametrs in othermodel that were missing in self.
+        mypn = self.params_ordered
+        for opn in othermodel.params_ordered:
+            if opn in mypn:
+                continue
+            if nodmx and opn.startswith("DMX"):
+                continue
+            try:
+                otherpar = getattr(othermodel, opn)
+            except AttributeError:
+                otherpar = None
+            s += "{:14s} {:>28s}".format(opn, "Missing")
+            s += " {:>28s}".format(str(otherpar.quantity))
+            s += "\n"
+        return s
 
     def read_parfile(self, file, validate=True):
         """Read values from the specified parfile into the model parameters.

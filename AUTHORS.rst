@@ -6,24 +6,41 @@ Development of PINT is partially supported by the NANOGrav_ pulsar timing array 
 
 .. _NANOGrav: http://nanograv.org/
 
+If you use PINT for your work, please cite the PINT paper and the ASCL entry_ .
+
+.. _entry: http://ascl.net/1902.007
+
 Development Leads
 -----------------
 
-In alphabetical order:
+As listed in the PINT paper:
 
-* Anne Archibald
-* Matteo Bachetti
-* Paul Demorest
-* Justin A. Ellis
 * Luo Jing
-* Rick Jenet
 * Scott Ransom
+* Paul Demorest
 * Paul Ray
-* Chris Sheehy
-* Michele Vallisneri
+* Anne Archibald
+* Matthew Kerr
+* Ross Jennings
+* Matteo Bachetti
 * Rutger van Haasteren
+* Jonathan Colen
+* Camryn Phillips
+* Kevin Stovall
+* Michael Lam
+* Rick Jenet
 
-Other contributors
-------------------
+Other contributors (alphabetical)
+---------------------------------
 
-None yet. Why not be the first?
+* Bastian Beischer
+* Chris Deil
+* Julia Deneva
+* Justin A. Ellis
+* Zac Hatfield-Dodds
+* Maarten van Kerkwijk
+* Matt Pitkin
+* Ben Shapiro-Albert
+* Chris Sheehy
+* Renee Spiewak
+* Michele Vallisneri

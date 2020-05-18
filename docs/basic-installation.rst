@@ -13,4 +13,11 @@ By default this will install in your system site-packages.  Depending on your sy
 to install it for just yourself (e.g. if you don't have permission to write in the system site-packages), or you may want to create a 
 virtualenv to work on PINT (using a virtualenv is highly recommended by the PINT developers).
 
+If you want access to the source code, example notebooks, and tests, you can install from source, by 
+cloning the source repository from GitHub, then install it, ensuring that all dependencies needed to run PINT are available::
+
+    $ git checkout https://github.com/nanograv/PINT.git
+    $ cd PINT
+    $ pip install .
+
 If this fails, or for more explicit installation and troubleshooting instructions see :ref:`Installation`.

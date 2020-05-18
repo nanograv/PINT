@@ -7,7 +7,6 @@ import astropy.units as u
 import numpy
 
 import pint.toa as toa
-from pint import dimensionless_cycles
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
 from pint.models.timing_model import MissingParameter, PhaseComponent
 from pint.pulsar_mjd import Time
@@ -127,10 +126,9 @@ class Spindown(PhaseComponent):
         """
         dt = self.get_dt(toas, delay)
         # Add the [0.0] because that is the constant phase term
-        fterms = [0.0 * u.cycle] + self.get_spin_terms()
-        with u.set_enabled_equivalencies(dimensionless_cycles):
-            phs = taylor_horner(dt.to(u.second), fterms)
-            return phs.to(u.cycle)
+        fterms = [0.0 * u.dimensionless_unscaled] + self.get_spin_terms()
+        phs = taylor_horner(dt.to(u.second), fterms)
+        return phs.to(u.dimensionless_unscaled)
 
     def change_pepoch(self, new_epoch, toas=None, delay=None):
         """Move PEPOCH to a new time and change the related paramters.
@@ -197,13 +195,11 @@ class Spindown(PhaseComponent):
         fterms = [ft * numpy.longdouble(0.0) / unit for ft in fterms]
         fterms[order] += numpy.longdouble(1.0)
         dt = self.get_dt(toas, delay)
-        with u.set_enabled_equivalencies(dimensionless_cycles):
-            d_pphs_d_f = taylor_horner(dt.to(u.second), fterms)
-            return d_pphs_d_f.to(u.cycle / unit)
+        d_pphs_d_f = taylor_horner(dt.to(u.second), fterms)
+        return d_pphs_d_f.to(1 / unit)
 
     def d_spindown_phase_d_delay(self, toas, delay):
         dt = self.get_dt(toas, delay)
         fterms = [0.0] + self.get_spin_terms()
-        with u.set_enabled_equivalencies(dimensionless_cycles):
-            d_pphs_d_delay = taylor_horner_deriv(dt.to(u.second), fterms)
-            return -d_pphs_d_delay.to(u.cycle / u.second)
+        d_pphs_d_delay = taylor_horner_deriv(dt.to(u.second), fterms)
+        return -d_pphs_d_delay.to(1 / u.second)

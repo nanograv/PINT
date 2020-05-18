@@ -11,9 +11,6 @@ from pint.models.timing_model import DelayComponent, MissingParameter
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
-# The units on this are not completely correct
-# as we don't really use the "pc cm^3" units on DM.
-# But the time and freq portions are correct
 # This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
 # Astronomy, Second edition, Page 86, Note 1
 DMconst = 1.0 / 2.41e-4 * u.MHz * u.MHz * u.s * u.cm ** 3 / u.pc
@@ -87,7 +84,9 @@ class DispersionDM(Dispersion):
             )
         )
         self.add_param(
-            MJDParameter(name="DMEPOCH", description="Epoch of DM measurement")
+            MJDParameter(
+                name="DMEPOCH", description="Epoch of DM measurement", time_scale="tdb"
+            )
         )
 
         self.dm_value_funcs += [self.base_dm]

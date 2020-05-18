@@ -749,7 +749,7 @@ class TOAs(object):
                     self.get_freqs(),
                     self.get_obss(),
                     self.get_flags(),
-                    np.zeros(len(mjds)) * u.cycle,
+                    np.zeros(len(mjds)),
                     self.get_groups(),
                 ],
                 names=(
@@ -854,7 +854,7 @@ class TOAs(object):
         # TODO: use a masked array?  Only some pulse numbers may be known
         if hasattr(self, "toas"):
             try:
-                return np.array([t.flags["pn"] for t in self.toas]) * u.cycle
+                return np.array([t.flags["pn"] for t in self.toas])
             except KeyError:
                 log.warning("Not all TOAs have pulse numbers, using none")
                 return None
@@ -864,7 +864,7 @@ class TOAs(object):
                     raise ValueError(
                         "Pulse number cannot be both a column and a TOA flag"
                     )
-                return np.array(flags["pn"] for flags in self.table["flags"]) * u.cycle
+                return np.array(flags["pn"] for flags in self.table["flags"])
             elif "pulse_number" in self.table.colnames:
                 return self.table["pulse_number"]
             else:
@@ -971,11 +971,10 @@ class TOAs(object):
 
     def unselect(self):
         """Return to previous selected version of the TOA table (stored in stack)."""
-        if hasattr(self, "table_selects"):
-            # may raise an exception about an empty list
+        try:
             self.table = self.table_selects.pop()
-        else:
-            raise ValueError("No previous TOA table found.  No changes made.")
+        except (AttributeError, IndexError) as e:
+            log.error("No previous TOA table found.  No changes made.")
 
     def pickle(self, filename=None):
         """Write the TOAs to a .pickle file with optional filename."""
@@ -999,11 +998,11 @@ class TOAs(object):
         for ii, key in enumerate(self.table.groups.keys):
             grp = self.table.groups[ii]
             s += "%s TOAs (%d):\n" % (key["obs"], len(grp))
-            s += "  Min error:     %.3g us\n" % np.min(grp["error"])
-            s += "  Max error:     %.3g us\n" % np.max(grp["error"])
-            s += "  Mean error:    %.3g us\n" % np.mean(grp["error"])
-            s += "  Median error:  %.3g us\n" % np.median(grp["error"])
-            s += "  Error stddev:  %.3g us\n" % np.std(grp["error"])
+            s += "  Min freq:      {:.3f} \n".format(np.min(grp["freq"].to(u.MHz)))
+            s += "  Max freq:      {:.3f} \n".format(np.max(grp["freq"].to(u.MHz)))
+            s += "  Min error:     {:.3g}\n".format(np.min(grp["error"].to(u.us)))
+            s += "  Max error:     {:.3g}\n".format(np.max(grp["error"].to(u.us)))
+            s += "  Median error:  {:.3g}\n".format(np.median(grp["error"].to(u.us)))
         return s
 
     def print_summary(self):
@@ -1021,7 +1020,7 @@ class TOAs(object):
         try:
             pns = [flags["pn"] for flags in self.table["flags"]]
             self.table["pulse_number"] = pns
-            self.table["pulse_number"].unit = u.cycle
+            self.table["pulse_number"].unit = u.dimensionless_unscaled
 
             # Remove pn from dictionary to prevent redundancies
             for flags in self.table["flags"]:
@@ -1047,7 +1046,7 @@ class TOAs(object):
         # paulr: I think pulse numbers should be computed with abs_phase=True!
         phases = model.phase(self, abs_phase=True)
         self.table["pulse_number"] = phases.int
-        self.table["pulse_number"].unit = u.cycle
+        self.table["pulse_number"].unit = u.dimensionless_unscaled
 
     def adjust_TOAs(self, delta):
         """Apply a time delta to TOAs

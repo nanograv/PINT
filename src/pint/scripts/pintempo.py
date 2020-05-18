@@ -55,10 +55,11 @@ def main(argv=None):
     f = pint.fitter.WLSFitter(t, m)
     f.fit_toas()
 
-    # Print some basic params
-    print("Best fit has reduced chi^2 of", f.resids.chi2_reduced)
-    print("RMS in phase is", f.resids.phase_resids.std())
-    print("RMS in time is", f.resids.time_resids.std().to(u.us))
+    # Print fit summary
+    print(
+        "============================================================================"
+    )
+    f.print_summary()
 
     if args.plot:
         import matplotlib.pyplot as plt

@@ -6,10 +6,18 @@ import pint.toa as toa
 # matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 
-import tempo2_utils
 import astropy.units as u
+from astropy import log
 from pint.residuals import Residuals as resids
 import os
+
+try:
+    import tempo2_utils
+except ImportError:
+    log.error(
+        "This example requires tempo_utils, download from: https://github.com/demorest/tempo_utils and 'pip install .'"
+    )
+    raise
 
 # Using Nanograv data J0623-0200
 datadir = "../../tests/datafile"

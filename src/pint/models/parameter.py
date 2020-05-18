@@ -495,7 +495,7 @@ class floatParameter(Parameter):
             name=name,
             value=value,
             units=units,
-            frozen=True,
+            frozen=frozen,
             aliases=aliases,
             continuous=continuous,
             description=description,
@@ -753,7 +753,7 @@ class MJDParameter(Parameter):
     aliases : list, optional
         An optional list of strings specifying alternate names that can also
         be accepted for this parameter.
-    time_scale : str, optional, default 'utc'
+    time_scale : str, optional, default 'tdb'
         MJD parameter time scale.
 
     Example::
@@ -772,7 +772,7 @@ class MJDParameter(Parameter):
         frozen=True,
         continuous=True,
         aliases=None,
-        time_scale="utc",
+        time_scale="tdb",
         **kwargs
     ):
         self._time_scale = time_scale
