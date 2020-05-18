@@ -133,7 +133,6 @@ TopoObs(
     aliases=['lst'],
     include_bipm=False,
     itrf_xyz=[5326832.7629, -1719636.1588, 3051795.1913],
-    #EarthLocation.from_geodetic(-17.89139 * u.deg, 28.76139 * u.deg, 2184 * u.m)
 )
 
 # ground-based gravitational-wave observatories
