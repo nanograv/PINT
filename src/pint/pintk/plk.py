@@ -682,33 +682,13 @@ class PlkWidget(tk.Frame):
         self.plkCanvas.draw()
 
     def plotErrorbar(self, selected, color):
-        """
-        For some reason, errorbar breaks completely when the plotting array is
-        of length 2. So this workaround is needed
-        """
-        if selected.sum() != 2:
-            self.plkAxes.errorbar(
-                self.xvals[selected].reshape([-1, 1]),
-                self.yvals[selected].reshape([-1, 1]),
-                yerr=self.yerrs[selected].reshape([-1, 1]),
-                fmt=".",
-                color=color,
-            )
-        else:
-            self.plkAxes.errorbar(
-                self.xvals[selected][0].reshape([-1, 1]),
-                self.yvals[selected][0].reshape([-1, 1]),
-                yerr=self.yerrs[selected][0].reshape([-1, 1]),
-                fmt=".",
-                color=color,
-            )
-            self.plkAxes.errorbar(
-                self.xvals[selected][1].reshape([-1, 1]),
-                self.yvals[selected][1].reshape([-1, 1]),
-                yerr=self.yerrs[selected][1].reshape([-1, 1]),
-                fmt=".",
-                color=color,
-            )
+        self.plkAxes.errorbar(
+            self.xvals[selected].reshape([-1, 1]),
+            self.yvals[selected].reshape([-1, 1]),
+            yerr=self.yerrs[selected],
+            fmt=".",
+            color=color,
+        )
 
     def plotResiduals(self, keepAxes=False):
         """
