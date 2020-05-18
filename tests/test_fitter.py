@@ -5,10 +5,12 @@ import os
 # matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 import pytest
+import astropy.units as u
 
 import pint.models as tm
 from pint import fitter, toa
 from pinttestdata import datadir
+import pint.models.parameter as param
 
 
 @pytest.mark.skipif(
@@ -109,3 +111,21 @@ def test_fitter():
     #            loc=3)
     # #plt.show()
     # plt.savefig(os.path.join(datadir,"test_fitter_plot.pdf"))
+
+
+def test_ftest():
+    """Test for fitter class F-test"""
+    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
+    t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
+    f = fitter.WLSFitter(toas=t, model=m)
+    f.fit_toas()
+    # Test adding parameters
+    FD4 = param.prefixParameter(
+        parameter_type="float", name="FD4", value=0.0, units=u.s, frozen=False
+    )
+    ft = f.ftest(FD4, "FD", remove=False)
+    # Test removing parameter
+    FD3 = param.prefixParameter(
+        parameter_type="float", name="FD3", value=0.0, units=u.s, frozen=False
+    )
+    ft = f.ftest(FD3, "FD", remove=True)

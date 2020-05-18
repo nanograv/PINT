@@ -12,6 +12,7 @@ import astropy.constants as const
 import pint.utils
 from pint.models.pulsar_binary import PulsarBinary
 from pint import Tsun
+from scipy.special import fdtr
 
 from pint.residuals import Residuals
 from pint.models.parameter import (
@@ -475,6 +476,105 @@ class Fitter(object):
                 "You must run .fit_toas() before accessing the correlation matrix"
             )
             raise AttributeError
+
+    def ftest(self, parameter, component, remove=False):
+        """Function for comparing the significance of adding/removing parameters to a timing model.
+    
+        Parameters:
+        -----------
+        parameter : PINT parameter object
+            (may be a list of parameter objects)
+        component : String
+            Name of component of timing model that the parameter(s) should be added to (may be a list)
+            The number of components must equal number of parameters.
+        remove : Bool
+            If False, will add the listed parameters to the model. If True will remove the input
+            parameters from the timing model.
+
+        Returns:
+        --------
+        ft : Float
+            F-test significance value for the model with the larger number of
+            components over the other. The probability is computed exactly like
+            Sherpa's F-test routine (in Ciao) and is also described in
+            the Wikipedia article on the
+            F-test:  http://en.wikipedia.org/wiki/F-test
+            The returned value is the probability that the improvement in
+            chi2 is due to chance (i.e. a low probability means that the
+            new fit is quantitatively better, while a value near 1 means
+            that the new model should likely be rejected).
+        """
+        # Number of times to run the fit
+        NITS = 1
+        # Before getting a new model, we needd the original degrees of freedome and chi-squared value
+        # Because this applies to nested models, model 1 must always have fewer parameters
+        if remove:
+            dof_2 = self.resids.get_dof()
+            chi2_2 = self.resids.calc_chi2()
+        else:
+            dof_1 = self.resids.get_dof()
+            chi2_1 = self.resids.calc_chi2()
+        # First make sure single inputs are converted to lists to handle arb. number of parameteres
+        if type(parameter) is not list:
+            parameter = [parameter]
+        # also do the components
+        if type(component) is not list:
+            component = [component]
+        # if not the same length, exit with error
+        if len(parameter) != len(component):
+            raise RuntimeError(
+                "Number of input parameters must match number of input components."
+            )
+        # Now check if we want to remove or add components; start with removing
+        if remove:
+            # Remove all parameters
+            for p in parameter:
+                self.model.remove_param(p.name)
+            # validate model
+            self.model.validate()
+            # Now refit
+            self.fit_toas(NITS)
+            # Now get the new values
+            dof_1 = self.resids.get_dof()
+            chi2_1 = self.resids.calc_chi2()
+        else:
+            # Add the parameters
+            for ii in range(len(parameter)):
+                self.model.components[component[ii]].add_param(
+                    parameter[ii], setup=True
+                )
+            # validate model
+            self.model.validate()
+            # Now refit
+            self.fit_toas(NITS)
+            # Now get the new values
+            dof_2 = self.resids.get_dof()
+            chi2_2 = self.resids.calc_chi2()
+        # Now run the actual F-test
+        delta_chi2 = chi2_1 - chi2_2
+        if delta_chi2 > 0:
+            delta_dof = dof_1 - dof_2
+            new_redchi2 = chi2_2 / dof_2
+            F = np.float64(
+                (delta_chi2 / delta_dof) / new_redchi2
+            )  # fdtr doesn't like float128
+            ft = 1.0 - fdtr(delta_dof, dof_2, F)
+        else:
+            log.warning(
+                "Chi-Squared for Model 2 is larger than Chi-Squared for Model 1, cannot preform F-test"
+            )
+            ft = False
+
+        # Now remove the new parameters that were tested
+        for p in parameter:
+            self.model.remove_param(p.name)
+        # validate and setup model
+        self.model.validate()
+        self.model.setup()
+        # Re-run fit so that original input values are retained
+        self.fit_toas(NITS)
+
+        return ft
 
 
 class PowellFitter(Fitter):
