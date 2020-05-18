@@ -10,6 +10,8 @@ import astropy.constants as const
 import numpy as np
 import six
 import scipy.optimize.zeros as zeros
+from scipy.special import fdtr
+
 
 from io import StringIO
 
@@ -42,6 +44,7 @@ __all__ = [
     "pulsar_edot",
     "pulsar_B",
     "pulsar_B_lightcyl",
+    "FTest",
 ]
 
 
@@ -1335,3 +1338,49 @@ def shklovskii_factor(pmtot, D):
     with u.set_enabled_equivalencies(u.dimensionless_angles()):
         a_s = (D * pmtot ** 2 / const.c).to(u.s ** -1)
     return a_s
+
+
+def FTest(chi2_1, dof_1, chi2_2, dof_2):
+    """Compute an F-test to see if a model with extra parameters is
+    significant compared to a simpler model.  The input values are the
+    (non-reduced) chi^2 values and the numbers of DOF for '1' the
+    original model and '2' for the new model (with more fit params).
+    The probability is computed exactly like Sherpa's F-test routine
+    (in Ciao) and is also described in the Wikipedia article on the
+    F-test:  http://en.wikipedia.org/wiki/F-test
+    The returned value is the probability that the improvement in
+    chi2 is due to chance (i.e. a low probability means that the
+    new fit is quantitatively better, while a value near 1 means
+    that the new model should likely be rejected).
+
+    Parameters:
+    -----------
+    chi2_1 : Float
+        Chi-squared value of model with fewer parameters
+    dof_1 : Int
+        Degrees of freedom of model with fewer parameters
+    chi2_2 : Float
+        Chi-squared value of model with more parameters
+    dof_2 : Int
+        Degrees of freedom of model with more parameters   
+        
+    Returns:
+    --------
+    ft : Float
+        F-test significance value for the model with the larger number of
+        components over the other.
+    """
+    delta_chi2 = chi2_1 - chi2_2
+    if delta_chi2 > 0:
+        delta_dof = dof_1 - dof_2
+        new_redchi2 = chi2_2 / dof_2
+        F = np.float64(
+            (delta_chi2 / delta_dof) / new_redchi2
+        )  # fdtr doesn't like float128
+        ft = 1.0 - fdtr(delta_dof, dof_2, F)
+    else:
+        log.warning(
+            "Chi-Squared for Model 2 is larger than Chi-Squared for Model 1, cannot preform F-test"
+        )
+        ft = False
+    return ft

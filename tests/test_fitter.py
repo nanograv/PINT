@@ -114,7 +114,7 @@ def test_fitter():
 
 
 def test_ftest():
-    """Test for fitter class F-test"""
+    """Test for fitter class F-test."""
     m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
     t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
     f = fitter.WLSFitter(toas=t, model=m)
