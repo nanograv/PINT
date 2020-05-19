@@ -344,12 +344,13 @@ class ResidualBase:
 
     """
 
-    def __init__(self, data, model_fun, args=(), data_error=None):
+    def __init__(self, data, data_error, model_fun, args=()):
         self.data = data
         self.model_fun = model_fun
         self.data_errors = data_errors
         self.args = args
 
+        self._chi2 = None
 
     def calc_resids(self, reduce_mean=True, weighted_mean=True):
         model_value = self.model_fun(self.args)
@@ -362,17 +363,12 @@ class ResidualBase:
            # cancel out in the weighted sum.
                 if np.any(self.data_errors == 0):
                     raise ValueError(
-                      "Some data errors are zero - cannot calculate residuals"
+                        "Some data errors are zero - cannot calculate residuals"
                     )
                     w = 1.0 / (self.data_errors ** 2)
                     wm = (resids * w).sum() / w.sum()
                     resids -= wm
-
         return resids
-
-    @property
-    def chi2_reduced(self):
-        return self.chi2 / self.dof
 
     @property
     def chi2(self):
@@ -381,6 +377,10 @@ class ResidualBase:
             self._chi2 = self.calc_chi2()
         assert self._chi2 is not None
         return self._chi2
+
+    @property
+    def chi2_reduced(self):
+        return self.chi2 / self.dof
 
     def rms_weighted(self, resids):
         """Compute weighted RMS of the residals in time."""
@@ -406,3 +406,33 @@ class ResidualBase:
         return dof
 
         # Check the input for non-TOA data and model.
+
+    def calc_chi2(self):
+        return (
+            (self.time_resids / self.data_error) ** 2.0
+        ).sum()
+
+
+class DMResiduals(ResidualBase):
+    """ Residuals class for independent DM measurments for wideband TOAs
+    """
+
+    def __init__(self, toas, model, weighted_mean=True):
+        self.toas = toas
+        self.model = model
+
+        super().
+        if toas is not None and model is not None:
+            self.phase_resids = self.calc_phase_resids(
+                weighted_mean=weighted_mean, set_pulse_nums=set_pulse_nums
+            )
+            self.time_resids = self.calc_time_resids(weighted_mean=weighted_mean)
+            self.dof = self.get_dof()
+        else:
+            self.phase_resids = None
+            self.time_resids = None
+        # delay chi-squared computation until needed to avoid infinite recursion
+        # also it's expensive
+        # only relevant if there are correlated errors
+        self._chi2 = None
+        self.noise_resids = {}
