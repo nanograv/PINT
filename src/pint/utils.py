@@ -29,6 +29,7 @@ __all__ = [
     "show_param_cov_matrix",
     "dmxparse",
     "dmxstats",
+    "dmx_ranges_old",
     "dmx_ranges",
     "p_to_f",
     "pferrs",
@@ -508,7 +509,7 @@ class dmxrange:
         )
 
 
-def dmx_ranges(
+def dmx_ranges_old(
     toas,
     divide_freq=1000.0 * u.MHz,
     offset=0.01 * u.d,
@@ -683,7 +684,7 @@ def dmx_ranges(
     return mask, dmx_comp
 
 
-def dmx_ranges2(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=False):
+def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=False):
     """Compute initial DMX ranges for a set of TOAs
     
     This is an alternative algorithm for computing DMX ranges
