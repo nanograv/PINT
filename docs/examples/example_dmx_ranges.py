@@ -25,7 +25,7 @@ m1855.remove_component("DispersionDMX")
 
 # Build the new component with maximum DMX bin of 15 days ensuring that there are TOAs above and below 1000 MHz in each gin
 mask, dmx_comp = pint.utils.dmx_ranges(
-    ts1855, max_diff=15.0 * u.d, divide_freq=1000.0 * u.MHz
+    ts1855, binwidth=15.0 * u.d, divide_freq=1000.0 * u.MHz
 )
 
 # Mask out any TOAs that couldn't be included in a DMX range
