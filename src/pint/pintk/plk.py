@@ -682,9 +682,14 @@ class PlkWidget(tk.Frame):
         self.plkCanvas.draw()
 
     def plotErrorbar(self, selected, color):
+        """ 
+        For some reason, xvals will not plot unless unitless. 
+        Tried using quantity_support and time_support, which plots x & yvals,
+        but then yerrs fails - cannot find work-around in this case.
+        """
         self.plkAxes.errorbar(
-            self.xvals[selected].reshape([-1, 1]),
-            self.yvals[selected].reshape([-1, 1]),
+            self.xvals[selected].value,
+            self.yvals[selected],
             yerr=self.yerrs[selected],
             fmt=".",
             color=color,
