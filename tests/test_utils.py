@@ -48,6 +48,7 @@ import pint.models as tm
 from pint import fitter, toa
 from pinttestdata import datadir
 import os
+from scipy.stats import f
 
 
 def test_taylor_horner_basic():
@@ -713,3 +714,11 @@ def test_ftest():
     chi2_2 = 5110.749818644068647
     dof_2 = 4960
     ft = FTest(chi2_1, dof_1, chi2_2, dof_2)
+    # Test against scipy F-CDF
+    delta_dof = dof_1 - dof_2
+    delta_chi2 = chi2_1 - chi2_2
+    delta_dof = dof_1 - dof_2
+    new_redchi2 = chi2_2 / dof_2
+    F = np.float64((delta_chi2 / delta_dof) / new_redchi2)
+    val = f.cdf(F, delta_dof, dof_2)
+    assert np.isclose(1 - val, ft)
