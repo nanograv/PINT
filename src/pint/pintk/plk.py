@@ -801,8 +801,14 @@ class PlkWidget(tk.Frame):
             f_toas = self.psr.fake_toas
             print("Computing random models based on parameter covariance matrix...")
             rs = self.psr.random_resids
+            # look at axes, allow random models to plot on x-axes other than MJD
+            xid, yid = self.xyChoiceWidget.plotIDs()
+            if xid == "year":
+                f_toas_plot = self.psr.fake_year()  # uses f_toas inside pulsar.py
+            else:
+                f_toas_plot = f_toas.get_mjds()  # old implementation only used this
             for i in range(len(rs)):
-                self.plkAxes.plot(f_toas, rs[i], "-k", alpha=0.3)
+                self.plkAxes.plot(f_toas_plot, rs[i], "-k", alpha=0.3)
 
     def print_info(self):
         """
