@@ -1341,7 +1341,10 @@ def shklovskii_factor(pmtot, D):
 
 
 def FTest(chi2_1, dof_1, chi2_2, dof_2):
-    """Compute an F-test to see if a model with extra parameters is
+    """
+    Run F-test.
+
+    Compute an F-test to see if a model with extra parameters is
     significant compared to a simpler model.  The input values are the
     (non-reduced) chi^2 values and the numbers of DOF for '1' the
     original model and '2' for the new model (with more fit params).
@@ -1362,8 +1365,8 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
     chi2_2 : Float
         Chi-squared value of model with more parameters
     dof_2 : Int
-        Degrees of freedom of model with more parameters   
-        
+        Degrees of freedom of model with more parameters
+
     Returns:
     --------
     ft : Float

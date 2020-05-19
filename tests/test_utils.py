@@ -707,7 +707,7 @@ def test_psr_utils():
 
 
 def test_ftest():
-    "test for FTest. Numbers from example test."
+    """Test for FTest. Numbers from example test."""
     chi2_1 = 5116.3297879409574835
     dof_1 = 4961
     chi2_2 = 5110.749818644068647

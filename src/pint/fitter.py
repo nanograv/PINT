@@ -478,7 +478,7 @@ class Fitter(object):
             raise AttributeError
 
     def ftest(self, parameter, component, remove=False):
-        """Compares the significance of adding/removing parameters to a timing model.
+        """Compare the significance of adding/removing parameters to a timing model.
 
         Parameters:
         -----------
@@ -499,7 +499,7 @@ class Fitter(object):
         """
         # Number of times to run the fit
         NITS = 1
-        # Before getting a new model, we needd the original degrees of freedome and chi-squared value
+        # We need the original degrees of freedome and chi-squared value
         # Because this applies to nested models, model 1 must always have fewer parameters
         if remove:
             dof_2 = self.resids.get_dof()
@@ -523,8 +523,9 @@ class Fitter(object):
             # Remove all parameters
             for p in parameter:
                 self.model.remove_param(p.name)
-            # validate model
+            # validate and setup model
             self.model.validate()
+            self.model.setup()
             # Now refit
             self.fit_toas(NITS)
             # Now get the new values
@@ -536,8 +537,9 @@ class Fitter(object):
                 self.model.components[component[ii]].add_param(
                     parameter[ii], setup=True
                 )
-            # validate model
+            # validate and setup model
             self.model.validate()
+            self.model.setup()
             # Now refit
             self.fit_toas(NITS)
             # Now get the new values
@@ -546,9 +548,16 @@ class Fitter(object):
         # Now run the actual F-test
         ft = FTest(chi2_1, dof_1, chi2_2, dof_2)
 
-        # Now remove the new parameters that were tested
-        for p in parameter:
-            self.model.remove_param(p.name)
+        # Now add/remove the new parameters that were tested
+        # Now add/remove the new parameters that were tested
+        if remove:
+            for ii in range(len(parameter)):
+                self.model.components[component[ii]].add_param(
+                    parameter[ii], setup=True
+                )
+        else:
+            for p in parameter:
+                self.model.remove_param(p.name)
         # validate and setup model
         self.model.validate()
         self.model.setup()
