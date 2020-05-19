@@ -480,7 +480,7 @@ class Fitter(object):
     def ftest(self, parameter, component, remove=False):
         """Compare the significance of adding/removing parameters to a timing model.
 
-        Parameters:
+        Parameters
         -----------
         parameter : PINT parameter object
             (may be a list of parameter objects)
@@ -491,7 +491,7 @@ class Fitter(object):
             If False, will add the listed parameters to the model. If True will remove the input
             parameters from the timing model.
 
-        Returns:
+        Returns
         --------
         ft : Float
             F-test significance value for the model with the larger number of

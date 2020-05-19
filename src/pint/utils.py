@@ -1356,7 +1356,7 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
     new fit is quantitatively better, while a value near 1 means
     that the new model should likely be rejected).
 
-    Parameters:
+    Parameters
     -----------
     chi2_1 : Float
         Chi-squared value of model with fewer parameters
@@ -1367,7 +1367,7 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
     dof_2 : Int
         Degrees of freedom of model with more parameters
 
-    Returns:
+    Returns
     --------
     ft : Float
         F-test significance value for the model with the larger number of
