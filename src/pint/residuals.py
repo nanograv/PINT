@@ -393,7 +393,6 @@ class ResidualBase:
         wmean, werr, wsdev = weighted_mean(resids, w, sdev=True)
         return wsdev
 
-
     def get_dof(self, num_param):
         """Return number of degrees of freedom for the model.
 
@@ -421,18 +420,7 @@ class DMResiduals(ResidualBase):
         self.toas = toas
         self.model = model
 
-        super().
-        if toas is not None and model is not None:
-            self.phase_resids = self.calc_phase_resids(
-                weighted_mean=weighted_mean, set_pulse_nums=set_pulse_nums
-            )
-            self.time_resids = self.calc_time_resids(weighted_mean=weighted_mean)
-            self.dof = self.get_dof()
-        else:
-            self.phase_resids = None
-            self.time_resids = None
-        # delay chi-squared computation until needed to avoid infinite recursion
-        # also it's expensive
-        # only relevant if there are correlated errors
-        self._chi2 = None
-        self.noise_resids = {}
+        super(DMResiduals, self).__init__(self.toas.get_flag_value('dm_value'),
+                                          self.toas.get_flag_value('dm_ee'),
+                                          self.model.dm_value,
+                                          args=(self.toas))
