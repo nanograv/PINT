@@ -21,6 +21,7 @@ from astropy import log
 from astropy.coordinates import EarthLocation
 from six.moves import cPickle as pickle
 
+import pint
 from pint.observatory import Observatory, get_observatory
 from pint.observatory.special_locations import SpacecraftObs
 from pint.observatory.topo_obs import TopoObs
