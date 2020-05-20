@@ -43,10 +43,14 @@ class Dispersion(DelayComponent):
             warn("Using topocentric frequency for dedispersion!")
             bfreq = tbl["freq"]
 
+        dm = self.dm_value(toas)
+        return self.dispersion_time_delay(dm, bfreq)
+
+    def dm_value(self, toas):
         dm = np.zeros(len(tbl)) * self.DM.units
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
-        return self.dispersion_time_delay(dm, bfreq)
+        return dm
 
 
 class DispersionDM(Dispersion):
