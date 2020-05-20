@@ -89,4 +89,4 @@ def random_models(
         rss.append(rs)
         random_models.append(deepcopy(mrand))
 
-    return x.get_mjds(), rss, random_models
+    return x, rss, random_models
