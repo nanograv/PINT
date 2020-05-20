@@ -1441,6 +1441,8 @@ class TOAs(object):
             self.table = tmp.table.group_by("obs")
         self.commands = tmp.commands
         self.clock_corr_info = tmp.clock_corr_info
+        self.ephem = tmp.ephem
+        self.planets = tmp.planets
 
     def read_toa_file(self, filename, process_includes=True, top=True):
         """Read TOAs from the given filename.
