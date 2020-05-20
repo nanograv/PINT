@@ -209,6 +209,43 @@ class PlkFitBoxesWidget(tk.Frame):
         log.info("%s set to %d" % (par, self.parVars[par].get()))
 
 
+class PlkRandomModelSelect(tk.Frame):
+    """
+    Allows one to select whether to fit with random models or not
+    """
+
+    def __init__(self, master=None, **kwargs):
+        tk.Frame.__init__(self, master)
+        self.boxChecked = None
+        self.var = tk.IntVar()
+
+    def addRandomCheckbox(self, master):
+        self.clear_grid()
+        checkbox = tk.Checkbutton(
+            master,
+            text="Random Models",
+            variable=self.var,
+            command=self.changedRMCheckBox(),
+        )
+        checkbox.grid(row=1, column=1, sticky="N")
+
+    def setCallbacks(self, boxChecked):
+        """
+        Set the callback functions
+        """
+        self.boxChecked = boxChecked
+
+    def clear_grid(self):
+        for widget in self.winfo_children():
+            widget.grid_forget()
+
+    def changedRMCheckBox(self):
+        log.info("Random Models set to %d" % (self.var.get()))
+
+    def getRandomModel(self):
+        return self.var.get()
+
+
 class PlkXYChoiceWidget(tk.Frame):
     """
     Allows one to choose which quantities to plot against one another
@@ -380,6 +417,7 @@ class PlkWidget(tk.Frame):
         self.fitboxesWidget = PlkFitBoxesWidget(master=self)
         self.xyChoiceWidget = PlkXYChoiceWidget(master=self)
         self.actionsWidget = PlkActionsWidget(master=self)
+        self.randomboxWidget = PlkRandomModelSelect(master=self)
 
         self.plkDpi = 100
         self.plkFig = mpl.figure.Figure(dpi=self.plkDpi)
@@ -426,6 +464,7 @@ class PlkWidget(tk.Frame):
             self.jumped = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
             self.actionsWidget.setFitButtonText("Fit")
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+            self.randomboxWidget.addRandomCheckbox(self)
             self.xyChoiceWidget.setChoice()
             self.updatePlot(keepAxes=True)
             self.plkToolbar.update()
@@ -466,6 +505,7 @@ class PlkWidget(tk.Frame):
 
         self.fitboxesWidget.grid(row=0, column=0, columnspan=2, sticky="W")
         self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+        self.randomboxWidget.addRandomCheckbox(self)
         self.xyChoiceWidget.setChoice()
         self.updatePlot(keepAxes=False)
 
@@ -521,6 +561,7 @@ class PlkWidget(tk.Frame):
             self.current_state.selected = copy.deepcopy(self.selected)
             self.actionsWidget.setFitButtonText("Re-fit")
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+            self.randomboxWidget.addRandomCheckbox(self)
             xid, yid = self.xyChoiceWidget.plotIDs()
             self.xyChoiceWidget.setChoice(xid=xid, yid="post-fit")
             self.jumped = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
@@ -553,6 +594,7 @@ class PlkWidget(tk.Frame):
                 self.updateJumped(param)
         self.actionsWidget.setFitButtonText("Fit")
         self.fitboxesWidget.addFitCheckBoxes(self.base_state.psr.prefit_model)
+        self.randomboxWidget.addRandomCheckbox(self)
         self.xyChoiceWidget.setChoice()
         self.updatePlot(keepAxes=False)
         self.plkToolbar.update()
@@ -603,6 +645,7 @@ class PlkWidget(tk.Frame):
             self.jumped = copy.deepcopy(c_state.jumped)
             self.selected = copy.deepcopy(c_state.selected)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+            self.randomboxWidget.addRandomCheckbox(self)
             if len(self.state_stack) == 0:
                 self.state_stack.append(self.base_state)
                 self.actionsWidget.setFitButtonText("Fit")
@@ -639,33 +682,18 @@ class PlkWidget(tk.Frame):
         self.plkCanvas.draw()
 
     def plotErrorbar(self, selected, color):
+        """ 
+        For some reason, xvals will not plot unless unitless. 
+        Tried using quantity_support and time_support, which plots x & yvals,
+        but then yerrs fails - cannot find work-around in this case.
         """
-        For some reason, errorbar breaks completely when the plotting array is
-        of length 2. So this workaround is needed
-        """
-        if selected.sum() != 2:
-            self.plkAxes.errorbar(
-                self.xvals[selected].reshape([-1, 1]),
-                self.yvals[selected].reshape([-1, 1]),
-                yerr=self.yerrs[selected].reshape([-1, 1]),
-                fmt=".",
-                color=color,
-            )
-        else:
-            self.plkAxes.errorbar(
-                self.xvals[selected][0].reshape([-1, 1]),
-                self.yvals[selected][0].reshape([-1, 1]),
-                yerr=self.yerrs[selected][0].reshape([-1, 1]),
-                fmt=".",
-                color=color,
-            )
-            self.plkAxes.errorbar(
-                self.xvals[selected][1].reshape([-1, 1]),
-                self.yvals[selected][1].reshape([-1, 1]),
-                yerr=self.yerrs[selected][1].reshape([-1, 1]),
-                fmt=".",
-                color=color,
-            )
+        self.plkAxes.errorbar(
+            self.xvals[selected].value,
+            self.yvals[selected],
+            yerr=self.yerrs[selected],
+            fmt=".",
+            color=color,
+        )
 
     def plotResiduals(self, keepAxes=False):
         """
@@ -768,14 +796,19 @@ class PlkWidget(tk.Frame):
         self.plkAxes.set_title(self.psr.name, y=1.1)
 
         # plot random models
-        if self.psr.fitted == True:
-            # TODO: add random models on/off button
+        if self.psr.fitted == True and self.randomboxWidget.getRandomModel() == 1:
             log.info("plotting random models")
             f_toas = self.psr.fake_toas
             print("Computing random models based on parameter covariance matrix...")
             rs = self.psr.random_resids
+            # look at axes, allow random models to plot on x-axes other than MJD
+            xid, yid = self.xyChoiceWidget.plotIDs()
+            if xid == "year":
+                f_toas_plot = self.psr.fake_year()  # uses f_toas inside pulsar.py
+            else:
+                f_toas_plot = f_toas.get_mjds()  # old implementation only used this
             for i in range(len(rs)):
-                self.plkAxes.plot(f_toas, rs[i], "-k", alpha=0.3)
+                self.plkAxes.plot(f_toas_plot, rs[i], "-k", alpha=0.3)
 
     def print_info(self):
         """
@@ -1116,6 +1149,7 @@ class PlkWidget(tk.Frame):
             jump_name = self.psr.add_jump(self.selected)
             self.updateJumped(jump_name)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+            self.randomboxWidget.addRandomCheckbox(self)
             self.updatePlot(keepAxes=True)
             self.call_updates()
         elif ukey == ord("v"):
@@ -1151,6 +1185,7 @@ class PlkWidget(tk.Frame):
             ):
                 self.psr.selected_toas.select(self.selected)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+            self.randomboxWidget.addRandomCheckbox(self)
             self.updatePlot(keepAxes=True)
             self.call_updates()
         elif ukey == ord("c"):

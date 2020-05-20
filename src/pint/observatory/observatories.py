@@ -121,6 +121,19 @@ TopoObs(
     itoa_code="CH",
     itrf_xyz=[-2058795.0, -3621559.0, 4814280.0],
 )
+TopoObs(
+    "magic",
+    aliases=["magic"],
+    include_bipm=False,
+    itrf_xyz=[5326878.7967, -1719509.5201, 3051884.5175],
+)
+
+TopoObs(
+    "lst",
+    aliases=["lst"],
+    include_bipm=False,
+    itrf_xyz=[5326832.7629, -1719636.1588, 3051795.1913],
+)
 
 # ground-based gravitational-wave observatories
 TopoObs(
