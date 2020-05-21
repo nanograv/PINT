@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ This is a script for profiling a python script.
 NOTE:
 this script uses a program gprof2dot which can be downloaded at

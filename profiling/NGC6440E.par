@@ -1,0 +1,25 @@
+PSR              1748-2021E  
+RAJ      17:48:52.80034717  1          0.00013525
+DECJ     -20:21:29.3832087  1           0.0328528
+POSEPOCH        53750.0000
+F0     61.4854765543727595  1  0.0000000000180861
+F1     -1.181337028639D-15  1  1.441855022456D-18
+PEPOCH        53750.000000
+START            53478.285
+FINISH           54187.588
+DM              224.113798  1            0.034939
+SOLARN0               0.00
+EPHEM               DE421
+CLK                 UTC(NIST)   
+UNITS               TDB
+TIMEEPH             FB90
+T2CMETHOD           TEMPO
+CORRECT_TROPOSPHERE N
+PLANET_SHAPIRO      N
+DILATEFREQ          N
+NTOA                    62
+TRES                 21.18
+TZRMJD  53801.38605120074849
+TZRFRQ            1949.609
+TZRSITE                  1
+NITS                     1
