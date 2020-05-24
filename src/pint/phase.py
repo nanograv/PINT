@@ -8,8 +8,6 @@ from astropy.coordinates import Angle, Longitude
 from astropy.time.utils import two_sum, two_product
 from astropy.utils import minversion
 
-from pint import dimensionless_cycles
-
 
 __all__ = ['Phase', 'FractionalPhase']
 
@@ -20,6 +18,9 @@ FRACTION_UFUNCS = {np.cos, np.sin, np.tan, np.spacing}
 COMPARISON_UFUNCS = {
     np.equal, np.not_equal,
     np.less, np.less_equal, np.greater, np.greater_equal}
+
+
+dimensionless_cycles = [(u.cycle, None)]
 
 
 def day_frac(val1, val2, factor=None, divisor=None):
@@ -169,6 +170,9 @@ class FractionalPhase(Longitude):
         # maybe via astype.
         if isinstance(angle, Phase):
             angle = angle['frac']
+
+        if unit is None:
+            unit = cls._default_unit
 
         with u.add_enabled_equivalencies(dimensionless_cycles):
             return super().__new__(cls, angle, unit=unit, wrap_angle=wrap_angle,
