@@ -1384,7 +1384,7 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
     else:
         if delta_chi2 <= 0:
             log.warning(
-                "Chi-Squared for Model 2 is larger than Chi-Squared for Model 1, cannot preform F-test."
+                "Chi^2 for Model 2 is larger than Chi^2 for Model 1, cannot preform F-test."
             )
         elif dof_1 == dof_2:
             log.warning("Models have equal degrees of freedom, cannot preform F-test.")
