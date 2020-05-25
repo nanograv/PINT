@@ -48,7 +48,6 @@ import pint.models as tm
 from pint import fitter, toa
 from pinttestdata import datadir
 import os
-from scipy.stats import f
 
 
 def test_taylor_horner_basic():

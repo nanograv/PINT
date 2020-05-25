@@ -124,8 +124,10 @@ def test_ftest():
         parameter_type="float", name="FD4", value=0.0, units=u.s, frozen=False
     )
     ft = f.ftest(FD4, "FD", remove=False)
+    assert isinstance(ft, float) or isinstance(ft, bool)
     # Test removing parameter
     FD3 = param.prefixParameter(
         parameter_type="float", name="FD3", value=0.0, units=u.s, frozen=False
     )
     ft = f.ftest(FD3, "FD", remove=True)
+    assert isinstance(ft, float) or isinstance(ft, bool)
