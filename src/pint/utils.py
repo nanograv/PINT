@@ -10,7 +10,7 @@ import astropy.constants as const
 import numpy as np
 import six
 import scipy.optimize.zeros as zeros
-from scipy.special import fdtr
+from scipy.special import fdtrc
 
 
 from io import StringIO
@@ -1380,7 +1380,7 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
         F = np.float64(
             (delta_chi2 / delta_dof) / new_redchi2
         )  # fdtr doesn't like float128
-        ft = 1.0 - fdtr(delta_dof, dof_2, F)
+        ft = fdtrc(delta_dof, dof_2, F)
     else:
         log.warning(
             "Chi-Squared for Model 2 is larger than Chi-Squared for Model 1, cannot preform F-test"
