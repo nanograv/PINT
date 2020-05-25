@@ -497,6 +497,8 @@ class Fitter(object):
             F-test significance value for the model with the larger number of
             components over the other. Computed with pint.utils.FTest().
         """
+        # Copy the fitter that we do not change the initial model and fitter
+        fitter_copy = copy.deepcopy(self)
         # Number of times to run the fit
         NITS = 1
         # We need the original degrees of freedome and chi-squared value
@@ -520,49 +522,43 @@ class Fitter(object):
             )
         # Now check if we want to remove or add components; start with removing
         if remove:
-            # Remove all parameters
+            # Set values to zero and freeze them
             for p in parameter:
-                self.model.remove_param(p.name)
+                getattr(fitter_copy.model, "{:}".format(p.name)).value = 0.0
+                getattr(fitter_copy.model, "{:}".format(p.name)).uncertainty_value = 0.0
+                getattr(fitter_copy.model, "{:}".format(p.name)).frozen = True
             # validate and setup model
-            self.model.validate()
-            self.model.setup()
+            fitter_copy.model.validate()
+            fitter_copy.model.setup()
             # Now refit
-            self.fit_toas(NITS)
+            fitter_copy.fit_toas(NITS)
             # Now get the new values
-            dof_1 = self.resids.get_dof()
-            chi2_1 = self.resids.calc_chi2()
+            dof_1 = fitter_copy.resids.get_dof()
+            chi2_1 = fitter_copy.resids.calc_chi2()
         else:
             # Add the parameters
             for ii in range(len(parameter)):
-                self.model.components[component[ii]].add_param(
-                    parameter[ii], setup=True
-                )
+                # Check if parameter already exists in model
+                if hasattr(fitter_copy.model, "{:}".format(parameter[ii].name)):
+                    # Set frozen to False
+                    getattr(
+                        fitter_copy.model, "{:}".format(parameter[ii].name)
+                    ).frozen = False
+                # If not, add it to the model
+                else:
+                    fitter_copy.model.components[component[ii]].add_param(
+                        parameter[ii], setup=True
+                    )
             # validate and setup model
-            self.model.validate()
-            self.model.setup()
+            fitter_copy.model.validate()
+            fitter_copy.model.setup()
             # Now refit
-            self.fit_toas(NITS)
+            fitter_copy.fit_toas(NITS)
             # Now get the new values
-            dof_2 = self.resids.get_dof()
-            chi2_2 = self.resids.calc_chi2()
+            dof_2 = fitter_copy.resids.get_dof()
+            chi2_2 = fitter_copy.resids.calc_chi2()
         # Now run the actual F-test
         ft = FTest(chi2_1, dof_1, chi2_2, dof_2)
-
-        # Now add/remove the new parameters that were tested
-        # Now add/remove the new parameters that were tested
-        if remove:
-            for ii in range(len(parameter)):
-                self.model.components[component[ii]].add_param(
-                    parameter[ii], setup=True
-                )
-        else:
-            for p in parameter:
-                self.model.remove_param(p.name)
-        # validate and setup model
-        self.model.validate()
-        self.model.setup()
-        # Re-run fit so that original input values are retained
-        self.fit_toas(NITS)
 
         return ft
 
