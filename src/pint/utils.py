@@ -1374,7 +1374,7 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
         components over the other.
     """
     delta_chi2 = chi2_1 - chi2_2
-    if delta_chi2 > 0:
+    if delta_chi2 > 0 and dof_1 != dof_2:
         delta_dof = dof_1 - dof_2
         new_redchi2 = chi2_2 / dof_2
         F = np.float64(
@@ -1382,8 +1382,11 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
         )  # fdtr doesn't like float128
         ft = fdtrc(delta_dof, dof_2, F)
     else:
-        log.warning(
-            "Chi-Squared for Model 2 is larger than Chi-Squared for Model 1, cannot preform F-test"
-        )
+        if delta_chi2 <= 0:
+            log.warning(
+                "Chi-Squared for Model 2 is larger than Chi-Squared for Model 1, cannot preform F-test."
+            )
+        elif dof_1 == dof_2:
+            log.warning("Models have equal degrees of freedom, cannot preform F-test.")
         ft = False
     return ft
