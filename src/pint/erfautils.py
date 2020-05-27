@@ -74,7 +74,7 @@ def get_iers_b_up_to_date(mjd):
 
 
 # On import, make sure the IERS table is updated.
-log.info("Running get_iers_up_to_date() to update IERS B table")
+log.debug("Running get_iers_up_to_date() to update IERS B table")
 get_iers_up_to_date()
 
 SECS_PER_DAY = erfa.DAYSEC

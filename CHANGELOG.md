@@ -9,7 +9,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Changed units of Phase to be u.dimensionless_unscaled instead of u.cycle, which was confusing
 - Added checkbox to enable/disable random model plotting in GUI
 - Changed algorithm for basic dmx_ranges() function.
-- Renamed old dmx_ranges() to dmx_ranges_old() 
+- Renamed old dmx_ranges() to dmx_ranges_old() and fix bug under Python 2.7
 ### Added
 - Added safety check so for pickled TOAs to ensure they were created with same PINT version
 - Added unit tests for Phase()

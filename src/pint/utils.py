@@ -711,7 +711,7 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=Fa
     import pint.models.parameter
 
     MJDs = toas.get_mjds()
-    freqs = toas.table["freq"]
+    freqs = toas.table["freq"].quantity
 
     DMXs = []
 
