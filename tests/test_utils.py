@@ -41,6 +41,7 @@ from pint.utils import (
     open_or_use,
     taylor_horner,
     dmxparse,
+    FTest,
 )
 
 import pint.models as tm
@@ -703,3 +704,14 @@ def test_psr_utils():
         pulsar_B_lightcyl(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s),
         0.07774704753236616 * u.G,
     )
+
+
+def test_ftest():
+    """Test for FTest. Numbers from example test."""
+    chi2_1 = 5116.3297879409574835
+    dof_1 = 4961
+    chi2_2 = 5110.749818644068647
+    dof_2 = 4960
+    ft = FTest(chi2_1, dof_1, chi2_2, dof_2)
+    # Test against scipy F-CDF, hardcoded test value
+    assert np.isclose(0.020000171879625623, ft)
