@@ -13,10 +13,6 @@ PINT Is Not TEMPO3
     :target: https://coveralls.io/github/nanograv/PINT?branch=master
     :alt: Code Coverage
 
-.. image:: https://landscape.io/github/nanograv/PINT/master/landscape.svg?style=flat
-    :target: https://landscape.io/github/nanograv/PINT/master
-    :alt: Code Health
-
 .. image:: https://badges.gitter.im/nanograv-PINT/community.svg
     :target: https://gitter.im/nanograv-PINT/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
     :alt: Gitter chat
