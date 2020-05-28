@@ -17,5 +17,4 @@ pylint:
   disable:
     - logging-format-interpolation
 python-targets:
-    - 2
     - 3
