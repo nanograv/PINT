@@ -3,8 +3,9 @@ from __future__ import absolute_import, division, print_function
 
 from warnings import warn
 
-import astropy.units as u
 import numpy as np
+import astropy.units as u
+from astropy.table import Table
 from astropy.time import Time
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
 from pint.models.timing_model import DelayComponent, MissingParameter
@@ -47,7 +48,24 @@ class Dispersion(DelayComponent):
         return self.dispersion_time_delay(dm, bfreq)
 
     def dm_value(self, toas):
-        dm = np.zeros(len(tbl)) * self.DM.units
+        """ Compute modeled DM value at given TOAs.
+
+        Parameter
+        ---------
+        toas: `TOAs` object or TOA table(TOAs.table)
+             If given a TOAs object, it will use the whole TOA table in the
+             `TOAs` object.
+
+        Return
+        ------
+            DM values at given TOAs in the unit of DM.
+        """
+        if isinstance(toas, Table):
+            toas_table = toas
+        else:
+            toas_table = toas.table
+            
+        dm = np.zeros(len(toas_table)) * self.DM.units
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
         return dm

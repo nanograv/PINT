@@ -909,3 +909,20 @@ class GLSFitter(Fitter):
                 self.resids.noise_resids = noise_resids
 
         return chi2
+
+
+class GlobalFitter(): # Is GLSFitter the best here?
+    """ GlobalFitter aims to fit mulitply data set together.
+
+    Parameter
+    ---------
+    data_model: list
+        The input data model object pair list. The format is [(data, model)]
+    residual_type: one residual class or a list of residual class, optional.
+        If data-model pairs uses more than one type of residuals, the full list
+        of residual class for each data-model pair are required. Default is the
+        TOA residuals.
+    """
+
+    def __init__(self, data_model, residual_type=Residuals):
+        self.method = "global_least_square"
