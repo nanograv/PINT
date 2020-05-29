@@ -320,6 +320,100 @@ class Residuals(object):
 
 # TODO, we should consider a generic residual structure for mulitple type of
 #  model and data, with different units
+class ResidualBase(object):
+    """ This is the base class for the residuals that is not TOA residual.
+
+    Parameter
+    ---------
+    data: object, list or ndarray
+        Input data.
+    data_error: object, list or ndarray, optional.
+        Input data error.
+    model: callable
+        Function to compute the model values.
+
+    Note
+    ----
+    In the future, the TOA residual is going to be based on this base class.
+    """
+
+    def __init__(self, model_func, xdata, ydata, yerror=None, model_args={})
+        self.model_func = model_func
+        self.xdata = xdata
+        self.ydata = ydata
+        self.model_args = model_args
+        self.yerror = yerror
+
+    def get_model_value(self):
+        return model_func(self.xdata, *self.model_args)
+
+    def calc_resids(self, subtract_mean=True, weighted_mean=True):
+        model_value = self.get_model_value()
+        resids = self.ydata - model_value
+        if subtract_mean:
+            if not weighted_mean:
+                resids -= resids.mean()
+            else:
+                # Errs for weighted sum.  Units don't matter since they will
+                # cancel out in the weighted sum.
+                if (self.yerror is None or np.any(self.yerror == 0)):
+                    raise ValueError(
+                        "Some DM errors are zero - cannot calculate the"
+                        " weighted residuals."
+                    )
+                w = 1.0 / (self.yerror ** 2)
+                wm = (resids * w).sum() / w.sum()
+               resids -= wm
+        return resids
+
+    def calc_chi2(self):
+        if  (self.yerror is None or np.any(self.yerror == 0)):
+            return np.inf
+        else:
+            return (
+                (self.calc_resids() / self.yerror) ** 2.0
+                ).sum()
+
+
+class DMResiduals(ResidualBase):
+    """ Residuals for independent DM measurement (i.e. Wideband TOAs).
+    """
+    def __init__(self, toa, model, weighted_mean=True):
+        self.toas = toas
+        self.model = model
+        dm_data, dm_error, valid = self.get_dm_data()
+        super().__init__(self.model.dm_value, xdata = self.toas.table[valid],
+                         dm_data, dm_error)
+
+    def get_dm_data(self):
+        """Get the independent measured DM data from TOA flags.
+
+        Return
+        ------
+        dm_data: list
+            Independent measured DM data from TOA line. If a TOA does not have
+            DM data, this TOA's dm_data will be marked as None.
+
+        valide_index:
+            The None DM data index.
+        """
+        dm_data = self.toas.get_flag_value('pp_dm')
+        dm_error = self.toas.get_flag_value('pp_dme')
+        # Check if all toas has dm. We assument DM and DM error have same size.
+        valid_index = [i for i, v in enumerate(dm_data) if v != None]
+        valid_dm = np.array(dm_data[valid_index])
+        valid_error = np.array(dm_error[valid_index])
+        # Check valid error, if an error is none, change it to zero
+        none_index = np.where(valid_error == None)[0]
+        valid_error[none_index] = 0
+        return valid_dm, valid_error, valid_index
+
+
+
+
+
+
+
 class WideBandResiduals(Residuals):
     """ Residuals class for wideband TOAa with independent DM measurments.
     """
@@ -386,7 +480,7 @@ class WideBandResiduals(Residuals):
                 ).sum()
 
 
-    def calc_wideband_resids(self, subtract_mean=True, weighted_mean=True):
+    def (self, subtract_mean=True, weighted_mean=True):
         """ Calculate the wideband residuals, TOA residuals + DM residuals.
 
         Since the residuals are in different units, the returned value will
