@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import abc
 import astropy.units as u
 import numpy as np
 from scipy.linalg import LinAlgError
@@ -9,8 +10,6 @@ from pint.phase import Phase
 from pint.utils import weighted_mean
 
 __all__ = ["Residuals"]
-
-# also we import from fitter, down below to avoid circular relative imports
 
 
 class Residuals(object):
@@ -327,8 +326,6 @@ class Residuals(object):
         return avg
 
 
-# TODO, we should consider a generic residual structure for mulitple type of
-#  model and data, with different units
 class ResidualBase(object):
     """ This is the base class for the residuals that is not TOA residual.
 
@@ -362,7 +359,7 @@ class ResidualBase(object):
         return self.calc_resids(subtract_mean=self.subtract_mean,
                                 weighted_mean=self.weighted_mean)
     @property
-    def calc_chi2(self):
+    def chi2(self):
         if  (self.yerror is None or np.any(self.yerror == 0)):
             return np.inf
         else:
@@ -404,7 +401,7 @@ class ResidualBase(object):
         return resids
 
 
-class DMResiduals(ResidualBase):
+class WidebandDMResiduals(ResidualBase):
     """ Residuals for independent DM measurement (i.e. Wideband TOAs).
     """
     def __init__(self, toa, model, subtract_mean=True, weighted_mean=True):
@@ -421,20 +418,61 @@ class DMResiduals(ResidualBase):
 
         Return
         ------
-        dm_data: list
-            Independent measured DM data from TOA line. If a TOA does not have
-            DM data, this TOA's dm_data will be marked as None.
+        valid_dm: `numpy.ndarray`
+            Independent measured DM data from TOA line. It only returns the DM
+            values that is present in the TOA flags.
 
-        valide_index:
-            The None DM data index.
+        valid_error: `numpy.ndarray`
+            The error associated with DM values in the TOAs.
+
+        valide_index: list
+            The TOA with DM data index.
         """
         dm_data = self.toas.get_flag_value('pp_dm')
         dm_error = self.toas.get_flag_value('pp_dme')
         # Check if all toas has dm. We assument DM and DM error have same size.
         valid_index = [i for i, v in enumerate(dm_data) if v != None]
+        if valid_index == []:
+            raise ValueError("Input TOA object does not have wideband DM values")
         valid_dm = np.array(dm_data[valid_index])
         valid_error = np.array(dm_error[valid_index])
         # Check valid error, if an error is none, change it to zero
         none_index = np.where(valid_error == None)[0]
         valid_error[none_index] = 0
         return valid_dm, valid_error, valid_index
+
+
+class ResidualCollector(object):
+    """ A class provides uniformed API that collects result from different type
+    of residuals.
+
+    Parameter
+    ---------
+    residuals: List of residual objects
+        A list of different typs of residual objects
+
+    Note
+    ----
+    Since different type of residuals has different of units. The overall
+    residuals will have no units.
+    """
+    def __init__(self, residuals):
+        self.residuals = residuals
+
+    @property
+    def resids(self):
+        """ Residuals from all of the residual types.
+        """
+        all_resids = []
+        for res in self.residuals:
+            all_resids.append(res.reresids_value)
+
+        return np.hstack(all_resids)
+
+
+    @property
+    def chi2(self):
+        chi2 = 0
+        for res in self.residuals:
+            chi2 += res.chi2
+    return chi2

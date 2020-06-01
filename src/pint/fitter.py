@@ -11,6 +11,9 @@ import scipy.linalg as sl
 import scipy.optimize as opt
 from astropy import log
 from pint import Tsun
+from pint.utils import FTest
+import pint.residuals as pr
+
 from pint.models.parameter import (
     AngleParameter,
     boolParameter,
@@ -49,7 +52,7 @@ class Fitter(object):
         self.toas = toas
         self.model_init = model
         if residuals is None:
-            self.resids_init = Residuals(toas=toas, model=model)
+            self.resids_init = pr.Residuals(toas=toas, model=model)
             self.reset_model()
         else:
             # residuals were provided, we're just going to use them
@@ -911,7 +914,7 @@ class GLSFitter(Fitter):
         return chi2
 
 
-class GlobalFitter(Fitter): # Is GLSFitter the best here?
+class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
     """ A class to for fitting TOAs and other independent measured data.
 
     Parameters
@@ -920,8 +923,44 @@ class GlobalFitter(Fitter): # Is GLSFitter the best here?
         The input toas.
     model : a pint timing model instance
         The initial timing model for fitting.
+    from_toa: bool, optional
+        A flag indicate if the fit data is from TOAs object. Default is True
+    residual_types: list of residual class, optional
+        A list of the residual type class. Fitter will initialize residual
+        objects according to the given types. When `from_toa` flag is true,
+        this is required. Default is [Residuals]
+    residuals: `pint.residuals ResidualCollector` object. optional
+        A residual collector class that helps the fitter to treat different
+        residuals as one. Default is None.
     """
 
-    def __init__(self, toas=None, model=None, residuals=None):
-        super(GlobalFitter, self).__init__(toas=toas, model=model)
-        self.method = "generalized_least_square"
+    def __init__(self, toas=None, model=None, from_toa=True,
+                 residual_types=[pr.Residuals, ], residuals=None):
+        self.toas = toas
+        self.model_init = model
+        # Check input
+        if from_toa:
+            if toas is None:
+                raise ValueError("TOA object is required, if `from_toa` is True")
+            if len(residual_types) == 0:
+                raise ValueError("Residual types should be give, if"
+                                 " `from_toa` is True")
+            resid_obj = []
+            for rt in residual_types:
+                r_obj = rt(toa, model)
+                resid_obj.append(r_obj)
+            # Place the residual collector
+            self.resid_init = pr.ResidualCollector(resid_obj)
+            self.reset_model()
+
+        else:
+            if residuals is None:
+                raise ValueError("Residual collector instances are required, if"
+                                 " `from_toa` is False")
+            # residuals were provided, we're just going to use them
+            # probably using GLSFitter to compute a chi-squared
+            self.model = copy.deepcopy(self.model_init)
+            self.resid_init = residuals
+            self.fitresult = []
+
+        self.method = "General_Data_Fitter"
