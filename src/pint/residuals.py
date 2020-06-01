@@ -15,7 +15,7 @@ __all__ = ["Residuals"]
 
 class Residuals(object):
     """Class to compute residuals between TOAs and a TimingModel
-    
+
     Parameters
     ----------
     subtract_mean : bool
@@ -67,6 +67,15 @@ class Residuals(object):
             self._chi2 = self.calc_chi2()
         assert self._chi2 is not None
         return self._chi2
+
+    @property
+    def resids_value(self):
+        """ Get pure value of the residuals use the given base unit.
+        """
+        if isinstance(self.time_resids, u.Quantity):
+            return self.time_resids.to_value(self.unit)
+        else: # We don't expect any other types of result.
+            return self.time_resids
 
     def rms_weighted(self):
         """Compute weighted RMS of the residals in time."""
@@ -337,12 +346,40 @@ class ResidualBase(object):
     In the future, the TOA residual is going to be based on this base class.
     """
 
-    def __init__(self, model_func, xdata, ydata, yerror=None, model_args={})
+    def __init__(self, model_func, xdata, ydata, yerror=None, unit=None,
+                 model_args={}, subtract_mean=True, weighted_mean=True)
         self.model_func = model_func
         self.xdata = xdata
         self.ydata = ydata
         self.model_args = model_args
         self.yerror = yerror
+        self.unit = unit
+        self.subtract_mean=subtract_mean
+        self.weighted_mean=weight_mean
+
+    @property
+    def resids(self):
+        return self.calc_resids(subtract_mean=self.subtract_mean,
+                                weighted_mean=self.weighted_mean)
+    @property
+    def calc_chi2(self):
+        if  (self.yerror is None or np.any(self.yerror == 0)):
+            return np.inf
+        else:
+            chi2 = (
+                (self.resids() / self.yerror) ** 2.0
+                ).sum()
+            if isinstance(chi2, u.Quantity):
+                return chi2.to(u.Unit(None))
+
+    @property
+    def resids_value(self):
+        """ Get pure value of the residuals use the given base unit.
+        """
+        if isinstance(self.resids, u.Quantity):
+            return self.resids.to_value(self.unit)
+        else: # We don't expect any other types of result.
+            return self.resids
 
     def get_model_value(self):
         return model_func(self.xdata, *self.model_args)
@@ -366,24 +403,18 @@ class ResidualBase(object):
                resids -= wm
         return resids
 
-    def calc_chi2(self):
-        if  (self.yerror is None or np.any(self.yerror == 0)):
-            return np.inf
-        else:
-            return (
-                (self.calc_resids() / self.yerror) ** 2.0
-                ).sum()
-
 
 class DMResiduals(ResidualBase):
     """ Residuals for independent DM measurement (i.e. Wideband TOAs).
     """
-    def __init__(self, toa, model, weighted_mean=True):
+    def __init__(self, toa, model, subtract_mean=True, weighted_mean=True):
         self.toas = toas
         self.model = model
         dm_data, dm_error, valid = self.get_dm_data()
         super().__init__(self.model.dm_value, xdata = self.toas.table[valid],
-                         dm_data, dm_error)
+                         dm_data, dm_error, unit=u.pc/u.cm**3,
+                         subtract_mean=subtract_mean,
+                         weighted_mean=weighted_mean)
 
     def get_dm_data(self):
         """Get the independent measured DM data from TOA flags.
@@ -407,89 +438,3 @@ class DMResiduals(ResidualBase):
         none_index = np.where(valid_error == None)[0]
         valid_error[none_index] = 0
         return valid_dm, valid_error, valid_index
-
-
-
-
-
-
-
-class WideBandResiduals(Residuals):
-    """ Residuals class for wideband TOAa with independent DM measurments.
-    """
-    def __init__(self, toas=None, model=None, weighted_mean=True,
-                 set_pulse_nums=False):
-        super(WideBandResiduals, self).__init__(toas=toas, model=model,
-                                                weighted_mean=weight_mean,
-                                                set_pulse_nums=set_pulse_num)
-
-    def get_dm_data(self):
-        """Get the independent measured DM data from TOA flags.
-
-        Return
-        ------
-        dm_data: list
-            Independent measured DM data from TOA line. If a TOA does not have
-            DM data, this TOA's dm_data will be marked as None.
-
-        valide_index:
-            The None DM data index.
-        """
-        dm_data = self.toas.get_flag_value('pp_dm')
-        dm_error = self.toas.get_flag_value('pp_dme')
-        # Check if all toas has dm
-        valide_index = [i for i, v in enumerate(dm_data) if v != None]
-        return dm_data, dm_error, valide_index
-
-    def calc_DM_resids(self, subtract_mean=True, weighted_mean=True):
-        dm_data, dm_error, valide_index = self.get_dm_data()
-        dm_model = self.model.dm_value(self.toas.table[valide_index])
-        resids = dm_data[valide_index] - dm_model
-
-        if subtract_mean:
-            if not weighted_mean:
-                resids -= resids.mean()
-            else:
-                # Errs for weighted sum.  Units don't matter since they will
-                # cancel out in the weighted sum.
-                if np.any(dm_error[valide_index] == 0):
-                    raise ValueError(
-                        "Some DM errors are zero - cannot calculate the"
-                        " weighted residuals."
-                    )
-                w = 1.0 / (np.array(dm_error[valide_index]) ** 2)
-                wm = (resids * w).sum() / w.sum()
-               resids -= wm
-        return resids
-
-    def calc_DM_chi2(self):
-        if (self.toas.get_errors() == 0.0).any():
-                return np.inf
-            else:
-                # The self.time_resids is in the unit of "s", the error "us".
-                # This is more correct way, but it is the slowest.
-                # return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
-
-                # This method is faster then the method above but not the most correct way
-                # return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
-
-                # This the fastest way, but highly depend on the assumption of time_resids and
-                # error units.
-                return (
-                    (self.time_resids / self.toas.get_errors().to(u.s)) ** 2.0
-                ).sum()
-
-
-    def (self, subtract_mean=True, weighted_mean=True):
-        """ Calculate the wideband residuals, TOA residuals + DM residuals.
-
-        Since the residuals are in different units, the returned value will
-        lost it units. For the time residual, the unit is second, and DM
-        residual is pc/cm^-3.
-        """
-        time_resids = self.calc_time_resids(weighted_mean=weighted_mean).to(u.s)
-        dm_resids = self.calc_DM_resids(weighted_mean=weighted_mean).to(u.pc / u.cm**-3)
-        all_resids = np.hstack(time_resids, am_resids)
-        return all_resids
-
-    def calc_wideband_chi2(self):
