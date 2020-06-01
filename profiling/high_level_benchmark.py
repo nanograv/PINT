@@ -2,8 +2,8 @@
 """ 
 This script provides a top-level, brief outline of the profile of 
 various benchmarks.
-Uses script cpuinfo.py -- 'pip install py-cpuinfo' 
-Accessed here: https://pypi.org/project/py-cpuinfo/ 
+Uses script cpuinfo.py: https://pypi.org/project/py-cpuinfo/ 
+Install with: pip install py-cpuinfo
 """
 
 from __future__ import print_function
@@ -17,77 +17,100 @@ import cProfile
 import pstats
 import pint
 import sys
+import os
+import platform
+from parser import parse_file
 
-def bench_file(script, args):
+def bench_file(script):
       outfile = script.replace(".py", "_prof_summary")
-      if args.sort is None:
-            cline = "python -m cProfile -o " + outfile + " " + script
-      else:
-            cline = (
-                  "python -m cProfile -o " + outfile + " -s " + args.sort + " " + script
-            )
+#      if args.sort is None:
+      cline = "python -m cProfile -o " + outfile + " " + script
+#      else:
+#            cline = (
+#                  "python -m cProfile -o " + outfile + " -s " + args.sort + " " + script
+#            )
       print(cline)
-      subprocess.call(cline, shell=True)
+      subprocess.call(cline, shell=True, stdout=subprocess.DEVNULL, 
+                     stderr=subprocess.DEVNULL)
       return outfile
 
-def display_results(script, outfile):
+def get_results(script, outfile):
+      print("*******************************************************************")
+      print("OUTPUT FOR " + script.upper() + ":")
+      # put output in file for parsing
+      f = open("bench.out", "w")
+      old_stdout = sys.stdout
+      sys.stdout = f
       # Check stats
       p = pstats.Stats(outfile)
       p.strip_dirs()
-      print("*******************************************************************")
-      print("OUTPUT FOR " + script.upper() + ":")
       # choose the functions to display
       if script == "bench_load_TOAs.py":
-            p.sort_stats(args.sort).print_stats('\(__init__', 'toa')
-            p.sort_stats(args.sort).print_stats('\(apply_clock')
-            p.sort_stats(args.sort).print_stats('\(compute_TDBs')
-            p.sort_stats(args.sort).print_stats('\(compute_posvels')
+            p.print_stats('\(__init__', 'toa')
+            p.print_stats('\(apply_clock')
+            p.print_stats('\(compute_TDBs')
+            p.print_stats('\(compute_posvels')
       elif script == "bench_chisq_grid.py" or script == "bench_chisq_grid_WLSFitter.py":
-            p.sort_stats(args.sort).print_stats('\(get_designmatrix')
-            p.sort_stats(args.sort).print_stats('\(update_resid')
-            p.sort_stats(args.sort).print_stats('\(cho_factor')
-            p.sort_stats(args.sort).print_stats('\(cho_solve')
-            p.sort_stats(args.sort).print_stats('svd')
+            p.print_stats('\(get_designmatrix')
+            p.print_stats('\(update_resid')
+            p.print_stats('\(cho_factor')
+            p.print_stats('\(cho_solve')
+            p.print_stats('\(svd')
       else:
-            p.sort_stats(args.sort).print_stats('only print total time')  # for MCMC, only display total runtime
-      
+            p.print_stats('only print total time')  # for MCMC, only display total runtime
+      f.close()
+      # return output to terminal
+      sys.stdout = old_stdout 
+      # parse file for desired info and format user-friendly output 
+      parse_file("bench.out")   
+      os.remove("bench.out")
+      os.remove(outfile)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="High-level summary of python file timing.")
-    parser.add_argument(
-        "--sort",
-        help="The key for sort result ['cumtime','time']."
-        " See https://docs.python.org/2/library/profile.html",
-        type=str,
-        default="time",
-    )
-    args = parser.parse_args()
-    # scripts to be evaluated
-    script1 = "bench_load_TOAs.py"
-    script2 = "bench_chisq_grid.py"
-    script3 = "bench_chisq_grid_WLSFitter.py"
-    script4 = "bench_MCMC.py"
+      parser = argparse.ArgumentParser(description="High-level summary of python file timing.")
+#      parser.add_argument(
+#            "--sort",
+#           help="The key for sort result ['cumtime','time']."
+#            " See https://docs.python.org/2/library/profile.html",
+#            type=str,
+#            default="time",
+#      )
+#      args = parser.parse_args()
+      # scripts to be evaluated
+      script1 = "bench_load_TOAs.py"
+      script2 = "bench_chisq_grid.py"
+      script3 = "bench_chisq_grid_WLSFitter.py"
+      script4 = "bench_MCMC.py"
 
-    # display computer & software info
-    compID = cpuinfo.get_cpu_info()['brand']
-    print("Processor running this script: " + compID)
-    spversion = scipy.__version__
-    apversion = astropy.__version__
-    npversion = numpy.__version__
-    pintversion = pint.__version__
-    print("SciPy version: " + spversion + ", AstroPy version: " + apversion 
-          + ", NumPy version: " + npversion)
-    print("PINT version: " + pintversion)
+      # time scripts
+      output1 = bench_file(script1)
+      output2 = bench_file(script2)
+      output3 = bench_file(script3)
+      output4 = bench_file(script4)
+      print()
 
-    # time scripts
-    output1 = bench_file(script1, args)
-    output2 = bench_file(script2, args)
-    output3 = bench_file(script3, args)
-    output4 = bench_file(script4, args)
-    # output results  
-    display_results(script1, output1)
-    display_results(script2, output2)
-    display_results(script3, output3)
-    display_results(script4, output4)
+      # display computer & software info
+      compID = cpuinfo.get_cpu_info()['brand']
+      print("Processor running this script: " + compID)
+      pyversion = platform.python_version()
+      spversion = scipy.__version__
+      apversion = astropy.__version__
+      npversion = numpy.__version__
+      pintversion = pint.__version__
+      print("Python version: " + pyversion)
+      print("SciPy version: " + spversion + ", AstroPy version: " + apversion 
+            + ", NumPy version: " + npversion)
+      print("PINT version: " + pintversion)
+
+      # output results
+      print()
+      get_results(script1, output1)
+      print()
+      get_results(script2, output2)
+      print()
+      get_results(script3, output3)
+      print()
+      get_results(script4, output4)
+      print()          
 
 

@@ -28,9 +28,9 @@ thankmod = pint.models.get_model("J0740+6620.par")
 thankftr = pint.fitter.WLSFitter(toas=thanktoas, model=thankmod)
 chisq = thankftr.fit_toas()
 
-# Fit 5 x 5 grid of chisq values
-sini_grid = np.sin(np.linspace(86.25 * u.deg, 88.5 * u.deg, 5))
-m2_grid = np.linspace(0.2 * u.solMass, 0.30 * u.solMass, 5)
+# Fit 3 x 3 grid of chisq values
+sini_grid = np.sin(np.linspace(86.25 * u.deg, 88.5 * u.deg, 3))
+m2_grid = np.linspace(0.2 * u.solMass, 0.30 * u.solMass, 3)
 thankftr_chi2grid = grid_chisq(thankftr, "M2", m2_grid, "SINI", sini_grid)
 
 print("Done")
