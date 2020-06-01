@@ -7,7 +7,10 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Removed
 - Removed Python 2.7 support from travis and tox testing suites and from requirements files
-
+### Fixed
+- Fixed bug in processing of PHASE commands in .tim file. They are now applied even if pulse numbers are not being used
+### Added
+- Added support for -padd flag on TOAs to add phase turns to individual TOAs (matching TEMPO and Tempo2)
 
 ## [0.7.0] - 2020-05-27
 ### Changed
