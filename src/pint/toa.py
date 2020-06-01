@@ -1024,7 +1024,20 @@ class TOAs(object):
         Modifes the delta_pulse_number column, if required.
         Removes the pulse numbers from the flags.
         """
-        # Add pulse_number as a table column if possible
+        # First get any PHASE commands
+        dphs = np.asarray(
+            [
+                flags["phase"] if "phase" in flags else 0.0
+                for flags in self.table["flags"]
+            ]
+        )
+        # Then add any -padd flag values
+        dphs += np.asarray(
+            [flags["padd"] if "padd" in flags else 0.0 for flags in self.table["flags"]]
+        )
+        self.table["delta_pulse_number"] += dphs
+
+        # Then, add pulse_number as a table column if possible
         try:
             pns = [flags["pn"] for flags in self.table["flags"]]
             self.table["pulse_number"] = pns
@@ -1035,14 +1048,6 @@ class TOAs(object):
                 del flags["pn"]
         except KeyError:
             raise ValueError("Not all TOAs have pn flags")
-        # modify the delta_pulse_number column if required
-        dphs = np.asarray(
-            [
-                flags["phase"] if "phase" in flags else 0.0
-                for flags in self.table["flags"]
-            ]
-        )
-        self.table["delta_pulse_number"] += dphs
 
     def compute_pulse_numbers(self, model):
         """Set pulse numbers (in TOA table column pulse_numbers) based on model

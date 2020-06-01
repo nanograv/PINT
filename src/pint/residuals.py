@@ -62,7 +62,7 @@ class Residuals(object):
         # Please define what set_pulse_nums means!
 
         # Read any delta_pulse_numbers that are in the TOAs table.
-        # These are for PHASE statements as well as user-inserted phase jumps
+        # These are for PHASE statements, -padd flags, as well as user-inserted phase jumps
         # Check for the column, and if not there then create it as zeros
         try:
             delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
@@ -71,6 +71,7 @@ class Residuals(object):
             delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
 
         # I have no idea what this is trying to do. It just sets delta_pulse_number to zero
+        # This will wipe out any PHASE or -padd commands from the .tim file!!!
         if set_pulse_nums:
             self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
             delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
