@@ -150,11 +150,11 @@ class Pulsar(object):
     def orbitalphase(self):
         """
         For a binary pulsar, calculate the orbital phase. Otherwise, return
-        an array of zeros
+        an array of unitless quantities of zeros
         """
         if "PB" not in self:
             log.warn("This is not a binary pulsar")
-            return np.zeros(len(self.selected_toas))
+            return u.Quantity(np.zeros(self.selected_toas.ntoas))
 
         toas = self.selected_toas.get_mjds()
 
@@ -539,3 +539,11 @@ class Pulsar(object):
         )
         self.random_resids = rs
         self.fake_toas = f_toas
+
+    def fake_year(self):
+        """
+        Function to support plotting of random models on multiple x-axes.
+        Return the decimal year for all the TOAs of this pulsar
+        """
+        t = Time(self.fake_toas.get_mjds(), format="mjd")
+        return (t.decimalyear) * u.year

@@ -384,22 +384,28 @@ class Fitter(object):
                     )
 
                 if hasattr(self.model, "SINI"):
-                    if not self.model.SINI.frozen:
-                        si = ufloat(
-                            self.model.SINI.quantity.value,
-                            self.model.SINI.uncertainty.value,
-                        )
-                        s += "From SINI in model:\n"
-                        s += "    cos(i) = {:SP}\n".format(um.sqrt(1 - si ** 2))
-                        s += "    i = {:SP} deg\n".format(um.asin(si) * 180.0 / np.pi)
+                    try:
+                        # Put this in a try in case SINI is UNSET or an illegal value
+                        if not self.model.SINI.frozen:
+                            si = ufloat(
+                                self.model.SINI.quantity.value,
+                                self.model.SINI.uncertainty.value,
+                            )
+                            s += "From SINI in model:\n"
+                            s += "    cos(i) = {:SP}\n".format(um.sqrt(1 - si ** 2))
+                            s += "    i = {:SP} deg\n".format(
+                                um.asin(si) * 180.0 / np.pi
+                            )
 
-                    psrmass = pint.utils.pulsar_mass(
-                        self.model.PB.quantity,
-                        self.model.A1.quantity,
-                        self.model.M2.quantity,
-                        np.arcsin(self.model.SINI.quantity),
-                    )
-                    s += "Pulsar mass (Shapiro Delay) = {}".format(psrmass)
+                        psrmass = pint.utils.pulsar_mass(
+                            self.model.PB.quantity,
+                            self.model.A1.quantity,
+                            self.model.M2.quantity,
+                            np.arcsin(self.model.SINI.quantity),
+                        )
+                        s += "Pulsar mass (Shapiro Delay) = {}".format(psrmass)
+                    except:
+                        pass
 
         return s
 

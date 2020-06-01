@@ -21,6 +21,7 @@ from astropy import log
 from astropy.coordinates import EarthLocation
 from six.moves import cPickle as pickle
 
+import pint
 from pint.observatory import Observatory, get_observatory
 from pint.observatory.special_locations import SpacecraftObs
 from pint.observatory.topo_obs import TopoObs
@@ -188,7 +189,12 @@ def _toa_format(line, fmt="Unknown"):
     """
     if re.match(r"[0-9a-z@] ", line):
         return "Princeton"
-    elif line.startswith("C ") or line.startswith("c ") or line[0] == "#":
+    elif (
+        line.startswith("C ")
+        or line.startswith("c ")
+        or line[0] == "#"
+        or line.startswith("CC ")
+    ):
         return "Comment"
     elif line.upper().startswith(toa_commands):
         return "Command"
@@ -978,6 +984,8 @@ class TOAs(object):
 
     def pickle(self, filename=None):
         """Write the TOAs to a .pickle file with optional filename."""
+        # Save the PINT version used to create this pickle file
+        self.pintversion = pint.__version__
         if filename is not None:
             pickle.dump(self, open(filename, "wb"))
         elif self.filename is not None:
@@ -1420,12 +1428,21 @@ class TOAs(object):
         else:
             infile = open(filename, "rb")
         tmp = pickle.load(infile)
+        if not hasattr(tmp, "pintversion") or tmp.pintversion != pint.__version__:
+            log.error(
+                "PINT version in pickle file is different than current version!\n*** Suggest deleting {}".format(
+                    filename
+                )
+            )
         self.filename = tmp.filename
         if hasattr(tmp, "toas"):
             self.toas = tmp.toas
         if hasattr(tmp, "table"):
             self.table = tmp.table.group_by("obs")
         self.commands = tmp.commands
+        self.clock_corr_info = tmp.clock_corr_info
+        self.ephem = tmp.ephem
+        self.planets = tmp.planets
 
     def read_toa_file(self, filename, process_includes=True, top=True):
         """Read TOAs from the given filename.
