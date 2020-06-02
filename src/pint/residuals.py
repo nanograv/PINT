@@ -94,7 +94,7 @@ class Residuals(object):
             rs -= Phase(pulse_num, np.zeros_like(pulse_num))
             # Then subtract the constant offset since that is irrelevant
             rs -= Phase(rs.int[0], rs.frac[0])
-            full = full.int + full.frac
+            full = rs.int + rs.frac
 
         # If not tracking then do the usual nearest pulse number calculation
         else:
