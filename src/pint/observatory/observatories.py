@@ -62,6 +62,9 @@ TopoObs(
     tempo_code="g",
     itoa_code="EF",
     aliases=["eff"],
+    clock_fmt="tempo2",
+    clock_dir="TEMPO2",
+    clock_file="eff2gps.clk",
     itrf_xyz=[4033949.5, 486989.4, 4900430.8],
 )
 TopoObs(
@@ -179,7 +182,5 @@ TopoObs(
     itrf_xyz=[-2058897.5725006417, -3621371.264826613, 4814353.577678314],
 )
 TopoObs(
-    "acre",
-    aliases=["acreroad", "a", "AR"],
-    itrf_xyz=[3573741.1, -269156.74, 5258407.3],
+    "acre", aliases=["acreroad", "a", "AR"], itrf_xyz=[3573741.1, -269156.74, 5258407.3]
 )
