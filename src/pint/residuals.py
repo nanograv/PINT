@@ -89,24 +89,23 @@ class Residuals(object):
             # Compute model phase. For pulse numbers tracking
             # we need absolute phases, since TZRMJD serves as the pulse
             # number reference.
-            rs = self.model.phase(self.toas, abs_phase=True)
+            rs = self.model.phase(self.toas, abs_phase=True) + delta_pulse_numbers
             # First assign each TOA to the correct relative pulse number
             rs -= Phase(pulse_num, np.zeros_like(pulse_num))
             # Then subtract the constant offset since that is irrelevant
             rs -= Phase(rs.int[0], rs.frac[0])
-            full = rs + delta_pulse_numbers
             full = full.int + full.frac
 
         # If not tracking then do the usual nearest pulse number calculation
         else:
             # Compute model phase
-            rs = self.model.phase(self.toas)
+            rs = self.model.phase(self.toas) + delta_pulse_numbers
             # Here it subtracts the first phase, so making the first TOA be the
             # reference. Not sure this is a good idea.
             rs -= Phase(rs.int[0], rs.frac[0])
 
             # What exactly is full?
-            full = Phase(np.zeros_like(rs.frac), rs.frac) + delta_pulse_numbers
+            full = Phase(np.zeros_like(rs.frac), rs.frac)
             # This converts full from a Phase object to a np.float128
             full = full.int + full.frac
 
