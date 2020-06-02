@@ -344,7 +344,7 @@ class ResidualBase(object):
     """
 
     def __init__(self, model_func, xdata, ydata, yerror=None, unit=None,
-                 model_args={}, subtract_mean=True, weighted_mean=True)
+                 model_args={}, subtract_mean=True, weighted_mean=True):
         self.model_func = model_func
         self.xdata = xdata
         self.ydata = ydata
