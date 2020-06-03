@@ -26,7 +26,7 @@ def bench_file(script):
       cline = "python -m cProfile -o " + outfile + " " + script
       print(cline)
       # use DENULL to suppress logging output
-      subprocess.call(cline, shell=True, stdout=subprocess.DEVNULL, 
+      subprocess.call(cline, shell=True, stdout=subprocess.DEVNULL,
                      stderr=subprocess.DEVNULL)
       return outfile
 
@@ -61,7 +61,6 @@ def get_results(script, outfile):
       # parse file for desired info and format user-friendly output 
       parse_file("bench.out")   
       os.remove("bench.out")
-      os.remove(outfile)
 
 if __name__ == "__main__":
       parser = argparse.ArgumentParser(description="High-level summary of python file timing.")

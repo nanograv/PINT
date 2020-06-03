@@ -16,9 +16,9 @@ thanktoas = pint.toa.get_TOAs(
     ephem="DE436",
     planets=True,
     usepickle=False,
-    include_gps=True,
+    include_gps=False,
     bipm_version="BIPM2015",
-    include_bipm=True,
+    include_bipm=False,
 )
 
 # Load model
@@ -29,8 +29,15 @@ thankftr = pint.fitter.WLSFitter(toas=thanktoas, model=thankmod)
 chisq = thankftr.fit_toas()
 
 # Fit 3 x 3 grid of chisq values
-sini_grid = np.sin(np.linspace(86.25 * u.deg, 88.5 * u.deg, 3))
-m2_grid = np.linspace(0.2 * u.solMass, 0.30 * u.solMass, 3)
+n = 3
+sini_grid = np.sin(np.linspace(86.25 * u.deg, 88.5 * u.deg, n))
+m2_grid = np.linspace(0.2 * u.solMass, 0.30 * u.solMass, n)
 thankftr_chi2grid = grid_chisq(thankftr, "M2", m2_grid, "SINI", sini_grid)
+
+print()
+print("Number of TOAs: " + str(thanktoas.ntoas))
+print("Grid size of parameters: " + str(n) + "x" + str(n))
+print("Number of fits: 1")
+print()
 
 print("Done")
