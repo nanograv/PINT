@@ -483,7 +483,7 @@ class Fitter(object):
             )
             raise AttributeError
 
-    def ftest(self, parameter, component, remove=False):
+    def ftest(self, parameter, component, remove=False, full_output=False):
         """Compare the significance of adding/removing parameters to a timing model.
 
         Parameters
@@ -496,12 +496,23 @@ class Fitter(object):
         remove : Bool
             If False, will add the listed parameters to the model. If True will remove the input
             parameters from the timing model.
+        full_output : Bool
+            If False, just returns the result of the F-Test. If True, will also return the new
+            model's residual RMS (us), chi-squared, and number of degrees of freedom of 
+            new model.
 
         Returns
         --------
         ft : Float
             F-test significance value for the model with the larger number of
             components over the other. Computed with pint.utils.FTest().
+        resid_rms_test : Float (Quantity)
+            If full_output is True, returns the RMS of the residuals of the tested model
+            fit. Will be in units of microseconds as an astropy quantity.
+        chi2_test : Float
+            If full_output is True, returns the chi-squared of the tested model.
+        dof_test : Int
+            If full_output is True, returns the degrees of freedom of the tested model.
         """
         # Copy the fitter that we do not change the initial model and fitter
         fitter_copy = copy.deepcopy(self)
@@ -566,7 +577,17 @@ class Fitter(object):
         # Now run the actual F-test
         ft = FTest(chi2_1, dof_1, chi2_2, dof_2)
 
-        return ft
+        if full_output:
+            if remove:
+                dof_test = dof_1
+                chi2_test = chi2_1
+            else:
+                dof_test = dof_2
+                chi2_test = chi2_2
+            resid_rms_test = fitter_copy.resids.time_resids.std().to(u.us)
+            return ft, resid_rms_test, chi2_test, dof_test
+        else:
+            return ft
 
 
 class PowellFitter(Fitter):
