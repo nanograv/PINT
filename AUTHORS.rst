@@ -34,6 +34,7 @@ Other contributors (alphabetical)
 ---------------------------------
 
 * Bastian Beischer
+* Chloe Champagne
 * Chris Deil
 * Julia Deneva
 * Justin A. Ellis
