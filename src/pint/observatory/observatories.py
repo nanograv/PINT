@@ -47,6 +47,9 @@ TopoObs(
     tempo_code="f",
     itoa_code="NC",
     aliases=["ncy"],
+    clock_fmt="tempo2",
+    clock_dir="TEMPO2",
+    clock_file="ncy2gps.clk",
     itrf_xyz=[4324165.81, 165927.11, 4670132.83],
 )
 TopoObs(
