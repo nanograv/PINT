@@ -62,7 +62,7 @@ class Residuals(object):
         # Please define what set_pulse_nums means!
 
         # Read any delta_pulse_numbers that are in the TOAs table.
-        # These are for PHASE statements as well as user-inserted phase jumps
+        # These are for PHASE statements, -padd flags, as well as user-inserted phase jumps
         # Check for the column, and if not there then create it as zeros
         try:
             delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
@@ -71,6 +71,7 @@ class Residuals(object):
             delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
 
         # I have no idea what this is trying to do. It just sets delta_pulse_number to zero
+        # This will wipe out any PHASE or -padd commands from the .tim file!!!
         if set_pulse_nums:
             self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
             delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
@@ -88,24 +89,23 @@ class Residuals(object):
             # Compute model phase. For pulse numbers tracking
             # we need absolute phases, since TZRMJD serves as the pulse
             # number reference.
-            rs = self.model.phase(self.toas, abs_phase=True)
+            rs = self.model.phase(self.toas, abs_phase=True) + delta_pulse_numbers
             # First assign each TOA to the correct relative pulse number
             rs -= Phase(pulse_num, np.zeros_like(pulse_num))
             # Then subtract the constant offset since that is irrelevant
             rs -= Phase(rs.int[0], rs.frac[0])
-            full = rs + delta_pulse_numbers
-            full = full.int + full.frac
+            full = rs.int + rs.frac
 
         # If not tracking then do the usual nearest pulse number calculation
         else:
             # Compute model phase
-            rs = self.model.phase(self.toas)
+            rs = self.model.phase(self.toas) + delta_pulse_numbers
             # Here it subtracts the first phase, so making the first TOA be the
             # reference. Not sure this is a good idea.
             rs -= Phase(rs.int[0], rs.frac[0])
 
             # What exactly is full?
-            full = Phase(np.zeros_like(rs.frac), rs.frac) + delta_pulse_numbers
+            full = Phase(np.zeros_like(rs.frac), rs.frac)
             # This converts full from a Phase object to a np.float128
             full = full.int + full.frac
 

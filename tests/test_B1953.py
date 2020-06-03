@@ -1,5 +1,5 @@
 """Various tests to assess the performance of the B1953+29."""
-import logging
+from astropy import log
 import os
 import unittest
 
@@ -48,11 +48,11 @@ class TestB1953(unittest.TestCase):
         ), "B1953 residuals test failed."
 
     def test_derivative(self):
-        log = logging.getLogger("TestB1953.derivative_test")
+        log.setLevel("DEBUG")
         testp = tdu.get_derivative_params(self.modelB1953)
         delay = self.modelB1953.delay(self.toasB1953)
         for p in testp.keys():
-            log.debug("Runing derivative for %s", "d_delay_d_" + p)
+            log.debug("Runing derivative for %s".format("d_delay_d_" + p))
             ndf = self.modelB1953.d_phase_d_param_num(self.toasB1953, p, testp[p])
             adf = self.modelB1953.d_phase_d_param(self.toasB1953, delay, p)
             diff = adf - ndf
