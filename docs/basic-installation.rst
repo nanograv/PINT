@@ -3,6 +3,10 @@
 Basic installation
 ==================
 
+**IMPORTANT Note: **
+PINT has a naming conflict with the `pint <https://pypi.org/project/Pint/>`_ units package available from PyPI (i.e. using pip) and conda.  
+Do **NOT** ``pip install pint`` or ``conda install pint``!  See below!
+
 PINT is now available via PyPI as the package `pint-pulsar <https://pypi.org/project/pint-pulsar>`_, so it is now simple to install via pip.
 
 For most users, who don't want to develop the PINT code, installation should just be a matter of::

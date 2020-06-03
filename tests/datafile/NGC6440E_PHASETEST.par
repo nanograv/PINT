@@ -1,0 +1,27 @@
+PSRJ           1748-2021E
+RAJ             17:48:52.8003467         0  0.00013949383730842319   
+DECJ           -20:21:29.38334           0  0.03388470148684479467   
+F0             61.485476554372754669     0  0.00000000001865404849   
+F1             -1.1813360278317655979e-15 0  1.4871327379093092576e-18
+PEPOCH         53750                       
+POSEPOCH       53750                       
+DMEPOCH        53750                       
+DM             224.11380173409225813     0 0.03603614001675170542   
+START          53478.2858714192189         
+FINISH         54187.587324169915501       
+TZRMJD         53833.297810302184519       
+TZRFRQ         1949.6089999999999236    
+TZRSITE        1   
+TRES           21.182       
+NE_SW          0                           
+MODE 1
+UNITS          TDB
+TIMEEPH        FB90
+DILATEFREQ     N
+PLANET_SHAPIRO N
+T2CMETHOD      TEMPO
+CORRECT_TROPOSPHERE  N
+EPHEM          DE421
+NITS           1
+NTOA           62
+CHI2R          1.0638 56

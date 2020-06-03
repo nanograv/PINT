@@ -7,7 +7,7 @@ import os
 import warnings
 
 import astropy.units as u
-import numpy
+import numpy as np
 from astropy import log
 from astropy._erfa import ErfaWarning
 from six import add_metaclass
@@ -78,15 +78,15 @@ class ClockFile(object):
         the data range.  If limits=='warn' this will also issue a warning.
         If limits=='error' an exception will be raised."""
 
-        if numpy.any(t < self.time[0]) or numpy.any(t > self.time[-1]):
+        if np.any(t < self.time[0]) or np.any(t > self.time[-1]):
             msg = "Data points out of range in clock file '%s'" % self.filename
             if limits == "warn":
                 log.warning(msg)
             elif limits == "error":
                 raise RuntimeError(msg)
 
-        # Can't pass Times directly to numpy.interp.  This should be OK:
-        return numpy.interp(t.mjd, self.time.mjd, self.clock.to(u.us).value) * u.us
+        # Can't pass Times directly to np.interp.  This should be OK:
+        return np.interp(t.mjd, self.time.mjd, self.clock.to(u.us).value) * u.us
 
 
 class Tempo2ClockFile(ClockFile):
@@ -116,10 +116,15 @@ class Tempo2ClockFile(ClockFile):
         f = open(filename, "r")
         hdrline = f.readline().rstrip()
         try:
-            mjd, clk = numpy.loadtxt(f, usecols=(0, 1), unpack=True)
+            mjd, clk = np.loadtxt(f, usecols=(0, 1), unpack=True)
         except:
             log.error("Failed loading clock file {0}".format(f))
             raise
+        if not np.all(mjd[:-1] <= mjd[1:]):
+            log.error(
+                "Clock file {} is invalid. MJDs must be in order!".format(filename)
+            )
+            raise RuntimeError
         return mjd, clk, hdrline
 
 
