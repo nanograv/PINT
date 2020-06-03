@@ -44,3 +44,9 @@ if __name__ == "__main__":
     p = pstats.Stats(outfile)
     p.strip_dirs()
     p.sort_stats(args.sort).print_stats(100)
+
+    # if you would like to view the outfile with an interactive html viewer,
+    # use cprofilev, https://github.com/ymichael/cprofilev (pip install cprofilev):
+    # cline = "cprofilev -f " + outfile
+    # print(cline)
+    # subprocess.call(cline, shell=True)

@@ -45,32 +45,35 @@ def parse_file(file):
             if key == 'time':
                 # if match, read next line to get time
                 line = filename.readline()
+                n = 1
                 # while there's a nonblank line under the keywork line...
                 while line.strip():
                     # extract values separated by spaces in the line, store in vals
                     vals = line.split()
                     runtime = vals[3]
                     func = vals[5]
-                    if func == 'toa.py:575(__init__)':
+                    if '__init__' in func and n == 1:
                         func = 'Construct TOA Object'
-                    elif func == 'toa.py:721(__init__)':
+                    elif '__init__' in func and n == 2:
                         func = 'Construct TOAs Object'
-                    elif func == 'toa.py:1154(apply_clock_corrections)':
+                    elif 'apply_clock_corrections' in func:
                         func = 'Apply Clock Corrections'
-                    elif func == 'toa.py:1228(compute_TDBs)':
+                    elif 'compute_TDBs' in func:
                         func = 'Compute TDBs'
-                    elif func == 'toa.py:1303(compute_posvels)':
+                    elif 'compute_posvels' in func:
                         func = 'Compute Posvels'
-                    elif func == 'fitter.py:143(get_designmatrix)':
+                    elif 'get_designmatrix' in func:
                         func = 'Get Designmatrix'
-                    elif func == 'fitter.py:70(update_resids)':
+                    elif 'update_resids' in func:
                         func = 'Update Resids'
-                    elif func == 'decomp_cholesky.py:95(cho_factor)':
+                    elif 'cho_factor' in func:
                         func = 'Cho Factor'
-                    elif func == 'decomp_cholesky.py:159(cho_solve)':
+                    elif 'cho_solve' in func:
                         func = 'Cho Solve'
-                    elif func == 'decomp_svd.py:16(svd)':
+                    elif 'svd' in func:
                         func = 'svd'
+                    elif 'select_toa_mask' in func:
+                        func = 'Select TOA Mask'
                     row = {
                         'Function': func,
                         'Time(s)': runtime
@@ -78,6 +81,7 @@ def parse_file(file):
                     # add row to data array and go to next line in file
                     data.append(row)
                     line = filename.readline()
+                    n = n + 1
             # go to next line in file
             line = filename.readline()
         # put data into pandas' DataFrame for automatic formatting

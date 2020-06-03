@@ -23,13 +23,9 @@ from parser import parse_file
 
 def bench_file(script):
       outfile = script.replace(".py", "_prof_summary")
-#      if args.sort is None:
       cline = "python -m cProfile -o " + outfile + " " + script
-#      else:
-#            cline = (
-#                  "python -m cProfile -o " + outfile + " -s " + args.sort + " " + script
-#            )
       print(cline)
+      # use DENULL to suppress logging output
       subprocess.call(cline, shell=True, stdout=subprocess.DEVNULL, 
                      stderr=subprocess.DEVNULL)
       return outfile
@@ -56,6 +52,7 @@ def get_results(script, outfile):
             p.print_stats('\(cho_factor')
             p.print_stats('\(cho_solve')
             p.print_stats('\(svd')
+            p.print_stats('\(select_toa_mask')
       else:
             p.print_stats('only print total time')  # for MCMC, only display total runtime
       f.close()
@@ -68,14 +65,6 @@ def get_results(script, outfile):
 
 if __name__ == "__main__":
       parser = argparse.ArgumentParser(description="High-level summary of python file timing.")
-#      parser.add_argument(
-#            "--sort",
-#           help="The key for sort result ['cumtime','time']."
-#            " See https://docs.python.org/2/library/profile.html",
-#            type=str,
-#            default="time",
-#      )
-#      args = parser.parse_args()
       # scripts to be evaluated
       script1 = "bench_load_TOAs.py"
       script2 = "bench_chisq_grid.py"
@@ -111,6 +100,6 @@ if __name__ == "__main__":
       get_results(script3, output3)
       print()
       get_results(script4, output4)
-      print()          
+      print()        
 
 
