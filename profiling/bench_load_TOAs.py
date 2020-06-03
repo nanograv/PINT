@@ -15,3 +15,6 @@ thanktoas = pint.toa.get_TOAs(
     bipm_version="BIPM2015",
     include_bipm=True,
 )
+print()
+print("Number of TOAs: " + str(thanktoas.ntoas))
+print()
