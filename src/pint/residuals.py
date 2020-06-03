@@ -400,6 +400,9 @@ class ResidualBase(object):
                resids -= wm
         return resids
 
+    def update_model(self, new_model):
+        self.model_func = new_model
+
 
 class WidebandDMResiduals(ResidualBase):
     """ Residuals for independent DM measurement (i.e. Wideband TOAs).
@@ -441,6 +444,17 @@ class WidebandDMResiduals(ResidualBase):
         valid_error[none_index] = 0
         return valid_dm, valid_error, valid_index
 
+    def update_model(self, new_model, **kwargs):
+        """ Up date DM models from a new PINT timing model
+
+        Parameter
+        ---------
+        new_model: `pint.timing_model.TimingModel`
+        """
+
+        self.model = new_model
+        self.model_func = self.model.dm_value
+
 
 class ResidualCollector(object):
     """ A class provides uniformed API that collects result from different type
@@ -476,3 +490,5 @@ class ResidualCollector(object):
         for res in self.residuals:
             chi2 += res.chi2
     return chi2
+
+    

@@ -945,22 +945,42 @@ class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
             if len(residual_types) == 0:
                 raise ValueError("Residual types should be give, if"
                                  " `from_toa` is True")
-            resid_obj = []
-            for rt in residual_types:
-                r_obj = rt(toa, model)
-                resid_obj.append(r_obj)
-            # Place the residual collector
-            self.resid_init = pr.ResidualCollector(resid_obj)
+
+            self.resids_init = self._make_residuals_from_toa(toa, model, )
             self.reset_model()
 
         else:
+            # When from TOA is swithed off, we assume the data is stored in
+            # the residual class and the input would not change.
             if residuals is None:
                 raise ValueError("Residual collector instances are required, if"
                                  " `from_toa` is False")
-            # residuals were provided, we're just going to use them
-            # probably using GLSFitter to compute a chi-squared
             self.model = copy.deepcopy(self.model_init)
-            self.resid_init = residuals
+            self.resids_init = residuals
             self.fitresult = []
 
         self.method = "General_Data_Fitter"
+
+    def _make_residuals_from_toa(self, toa, model, *kwargs):
+        resid_obj = []
+        for rt in residual_types:
+            r_obj = rt(toa, model, **kwargs)
+            resid_obj.append(r_obj)
+        # Place the residual collector
+        return pr.ResidualCollector(resid_obj)
+
+    def reset_model(self):
+        """Reset the current model to the initial model."""
+        self.model = copy.deepcopy(self.model_init)
+        self.update_resids()
+        self.fitresult = []
+
+    def update_resids(self, **kwargs):
+        """Update the residuals. Run after updating a model parameter."""
+        if from_toa:
+            self.resids = self._make_residuals_from_toa(self.toas,
+                                                        self.model,
+                                                        **kwargs)
+        else:
+            self.resids = copy.deepcopy(self.resids_init)
+            self.resids.update_model(self.model, **kwargs)
