@@ -16,8 +16,8 @@ parfile = os.path.join(datadir, "NGC6440E.par")
 timfile = os.path.join(datadir, "NGC6440E.tim")
 print(parfile)
 print(timfile)
-nwalkers = 50
-nsteps = 200
+nwalkers = 25
+nsteps = 20
 
 # Define the timing model
 m = mb.get_model(parfile)
