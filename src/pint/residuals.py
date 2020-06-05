@@ -397,7 +397,7 @@ class ResidualBase(object):
                     )
                 w = 1.0 / (self.yerror ** 2)
                 wm = (resids * w).sum() / w.sum()
-               resids -= wm
+                resids -= wm
         return resids
 
     def update_model(self, new_model):
@@ -490,5 +490,3 @@ class ResidualCollector(object):
         for res in self.residuals:
             chi2 += res.chi2
     return chi2
-
-    
