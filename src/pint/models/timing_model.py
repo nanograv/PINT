@@ -82,6 +82,43 @@ DEFAULT_ORDER = [
 ]
 
 
+def get_component_type(component):
+    """A function to identify the component object's type.
+
+    Parameters
+    ----------
+    component: component instance
+       The component object need to be inspected.
+
+    Note
+    ----
+    Since a component can be an inheritance from other component We inspect
+    all the component object bases. "inspect getmro" method returns the
+    base classes (including 'object') in method resolution order. The
+    third level of inheritance class name is what we want.
+    Object --> component --> TypeComponent. (i.e. DelayComponent)
+    This class type is in the third to the last of the getmro returned
+    result.
+
+    """
+    # check component type
+    comp_base = inspect.getmro(component.__class__)
+    if comp_base[-2].__name__ != "Component":
+        raise TypeError(
+            "Class '%s' is not a Component type class."
+            % component.__class__.__name__
+        )
+    elif len(comp_base) < 3:
+        raise TypeError(
+            "'%s' class is not a subclass of 'Component' class."
+            % component.__class__.__name__
+        )
+    else:
+        comp_type = comp_base[-3].__name__
+    return comp_type
+
+
+
 class TimingModel(object):
     """Base class for timing models and components.
 
@@ -354,14 +391,6 @@ class TimingModel(object):
             Dphase_Ddelay += cp.phase_derivs_wrt_delay
         return Dphase_Ddelay
 
-    def get_deriv_funcs(self, component_type):
-        """Return dictionary of derivative functions."""
-        deriv_funcs = defaultdict(list)
-        for cp in getattr(self, component_type + "_list"):
-            for k, v in cp.deriv_funcs.items():
-                deriv_funcs[k] += v
-        return dict(deriv_funcs)
-
     def search_cmp_attr(self, name):
         """Search for an attribute in all components.
 
@@ -378,41 +407,6 @@ class TimingModel(object):
             except AttributeError:
                 continue
 
-    def get_component_type(self, component):
-        """A function to identify the component object's type.
-
-        Parameters
-        ----------
-        component: component instance
-           The component object need to be inspected.
-
-        Note
-        ----
-        Since a component can be an inheritance from other component We inspect
-        all the component object bases. "inspect getmro" method returns the
-        base classes (including 'object') in method resolution order. The
-        third level of inheritance class name is what we want.
-        Object --> component --> TypeComponent. (i.e. DelayComponent)
-        This class type is in the third to the last of the getmro returned
-        result.
-
-        """
-        # check component type
-        comp_base = inspect.getmro(component.__class__)
-        if comp_base[-2].__name__ != "Component":
-            raise TypeError(
-                "Class '%s' is not a Component type class."
-                % component.__class__.__name__
-            )
-        elif len(comp_base) < 3:
-            raise TypeError(
-                "'%s' class is not a subclass of 'Component' class."
-                % component.__class__.__name__
-            )
-        else:
-            comp_type = comp_base[-3].__name__
-        return comp_type
-
     def map_component(self, component):
         """ Get the location of component.
 
@@ -420,7 +414,7 @@ class TimingModel(object):
         ----------
         component: str or `Component` object
             Component name or component object.
-            
+
         Returns
         -------
         comp: `Component` object
@@ -444,7 +438,7 @@ class TimingModel(object):
                 )
             else:
                 comp = component
-        comp_type = self.get_component_type(comp)
+        comp_type = get_component_type(comp)
         host_list = getattr(self, comp_type + "_list")
         order = host_list.index(comp)
         return comp, order, host_list, comp_type
@@ -462,7 +456,7 @@ class TimingModel(object):
             If true, add a duplicate component. Default is False.
 
         """
-        comp_type = self.get_component_type(component)
+        comp_type = get_component_type(component)
         if comp_type in self.component_types:
             comp_list = getattr(self, comp_type + "_list")
             cur_cps = []
@@ -504,8 +498,8 @@ class TimingModel(object):
             self.validate()
 
     def remove_component(self, component):
-        """ Remove one component from the timing model. 
-            
+        """ Remove one component from the timing model.
+
         Parameters
         ----------
         component: str or `Component` object
@@ -571,7 +565,7 @@ class TimingModel(object):
 
     def add_param_from_top(self, param, target_component, setup=False):
         """ Add a parameter to a timing model component.
-           
+
             Parameters
             ----------
             param: str
@@ -580,7 +574,7 @@ class TimingModel(object):
                 Parameter host component name. If given as "" it would add
                 parameter to the top level `TimingModel` class
             setup: bool, optional
-                Flag to run setup() function.  
+                Flag to run setup() function.
         """
         if target_component == "":
             setattr(self, param.name, param)
@@ -613,7 +607,7 @@ class TimingModel(object):
             self.components[target_component].remove_param(param)
 
     def get_params_mapping(self):
-        """Report whick component each parameter name comes from."""
+        """Report which component each parameter name comes from."""
         param_mapping = {}
         for p in self.top_level_params:
             param_mapping[p] = "timing_model"
@@ -657,41 +651,6 @@ class TimingModel(object):
             "{:<40}{}\n".format(cp, getattr(self, par).help_line())
             for par, cp in self.get_params_mapping().items()
         )
-
-    def delay(self, toas, cutoff_component="", include_last=True):
-        """Total delay for the TOAs.
-
-        Parameters
-        ----------
-        toas: toa.table
-            The toas for analysis delays.
-        cutoff_component: str
-            The delay component name that a user wants the calculation to stop
-            at.
-        include_last: bool
-            If the cutoff delay component is included.
-
-        Return the total delay which will be subtracted from the given
-        TOA to get time of emission at the pulsar.
-
-        """
-        delay = np.zeros(toas.ntoas) * u.second
-        if cutoff_component == "":
-            idx = len(self.DelayComponent_list)
-        else:
-            delay_names = [x.__class__.__name__ for x in self.DelayComponent_list]
-            if cutoff_component in delay_names:
-                idx = delay_names.index(cutoff_component)
-                if include_last:
-                    idx += 1
-            else:
-                raise KeyError("No delay component named '%s'." % cutoff_component)
-
-        # Do NOT cycle through delay_funcs - cycle through components until cutoff
-        for dc in self.DelayComponent_list[:idx]:
-            for df in dc.delay_funcs_component:
-                delay += df(toas, delay)
-        return delay
 
     def phase(self, toas, abs_phase=False):
         """Return the model-predicted pulse phase for the given TOAs."""
@@ -847,32 +806,6 @@ class TimingModel(object):
             self.add_param_from_top(param, "PhaseJump")
             getattr(self, param.name).frozen = False
         self.components["PhaseJump"].setup()
-
-    def get_barycentric_toas(self, toas, cutoff_component=""):
-        """Conveniently calculate the barycentric TOAs.
-
-       Parameters
-       ----------
-       toas: TOAs object
-           The TOAs the barycentric corrections are applied on
-       cutoff_delay: str, optional
-           The cutoff delay component name. If it is not provided, it will
-           search for binary delay and apply all the delay before binary.
-
-       Return
-       ------
-       astropy.quantity.
-           Barycentered TOAs.
-
-        """
-        tbl = toas.table
-        if cutoff_component == "":
-            delay_list = self.DelayComponent_list
-            for cp in delay_list:
-                if cp.category == "pulsar_system":
-                    cutoff_component = cp.__class__.__name__
-        corr = self.delay(toas, cutoff_component, False)
-        return tbl["tdbld"] * u.day - corr
 
     def d_phase_d_toa(self, toas, sample_step=None):
         """Return the derivative of phase wrt TOA.
@@ -1077,7 +1010,7 @@ class TimingModel(object):
 
     def compare(self, othermodel, nodmx=True):
         """Print comparison with another model
-        
+
         Parameters
         ----------
         othermodel
@@ -1087,7 +1020,7 @@ class TimingModel(object):
 
         Returns
         -------
-        str 
+        str
             Human readable comparison, for printing
         """
 
@@ -1749,6 +1682,157 @@ class PhaseComponent(Component):
         super(PhaseComponent, self).__init__()
         self.phase_funcs_component = []
         self.phase_derivs_wrt_delay = []
+
+class ModelSector(object):
+    """ A class that groups the same type of component and provide the API for
+    gathering the information from each component.
+
+    Parameter
+    ---------
+    components: list of `Component` sub-class object.
+        Components that are belong to the same type, for example, DelayComponent.
+
+    Note
+    ----
+    The order of the component in the list is the order a component get computed.
+    """
+    _apis = ('component_names', 'component_classes')
+
+    def __init__(self, components):
+        # Check if the components are the same type
+        self.sector_name = ''
+        for cp in components:
+            cp_type = get_component_type(cp)
+            if self.sector_name == '':
+                self.sector_name = cp_type
+
+            if cp_type != self.sector_name:
+                raise ValueError("Component {} is not a {} of"
+                                 " component.".format(cp.__class__.__name__,
+                                                      self.sector_name))
+        self.component_list = components
+
+    @property
+    def component_names(self):
+        return [cp.__class__.__name__ for cp in self.component_list]
+
+    @property
+    def component_classes(self):
+        return [cp.__class__ for cp in self.component_list]
+
+    def get_quantity_funcs(self, func_list_name):
+        """List of all model sector functions that contribute to the final
+        modeled quantity.
+        """
+        dfs = []
+        for d in self.component_list:
+            dfs += getattr(d, func_list_name)
+        return dfs
+
+    def get_deriv_funcs(self, deriv_dict_name):
+        """Return dictionary of derivative functions."""
+        deriv_funcs = defaultdict(list)
+        for cp in self.component_list:
+            for k, v in getattr(cp, deriv_dict_name).items():
+                deriv_funcs[k] += v
+        return dict(deriv_funcs)
+
+
+class DelaySector(ModelSector):
+    """ Class for holding all delay components and their APIs
+    """
+    _apis = ('component_names', 'component_classes', 'delay', 'delay_funcs',
+             'get_barycentric_toas', 'd_delay_d_param', 'delay_deriv_funcs')
+
+    def __init__(self, delay_components):
+        super(DelaySector, self).__init__(delay_components)
+
+    @property
+    def delay_funcs(self):
+        return self.get_quantity_funcs('delay_funcs_component')
+
+    @property
+    def delay_deriv_funcs(self):
+        """List of derivative functions for delay components."""
+        return self.get_deriv_funcs("deriv_funcs")
+
+    def delay(self, toas, cutoff_component="", include_last=True):
+        """Total delay for the TOAs.
+
+        Parameters
+        ----------
+        toas: toa.table
+            The toas for analysis delays.
+        cutoff_component: str
+            The delay component name that a user wants the calculation to stop
+            at.
+        include_last: bool
+            If the cutoff delay component is included.
+
+        Return the total delay which will be subtracted from the given
+        TOA to get time of emission at the pulsar.
+
+        """
+        delay = np.zeros(toas.ntoas) * u.second
+        if cutoff_component == "":
+            idx = len(self.component_list)
+        else:
+            delay_names = self.component_names
+            if cutoff_component in delay_names:
+                idx = delay_names.index(cutoff_component)
+                if include_last:
+                    idx += 1
+            else:
+                raise KeyError("No delay component named '%s'." % cutoff_component)
+
+        # Do NOT cycle through delay_funcs - cycle through components until cutoff
+        for dc in self.component_list[:idx]:
+            for df in dc.delay_funcs_component:
+                delay += df(toas, delay)
+        return delay
+
+    def get_barycentric_toas(self, toas, cutoff_component=""):
+        """Conveniently calculate the barycentric TOAs.
+
+       Parameters
+       ----------
+       toas: TOAs object
+           The TOAs the barycentric corrections are applied on
+       cutoff_delay: str, optional
+           The cutoff delay component name. If it is not provided, it will
+           search for binary delay and apply all the delay before binary.
+
+       Return
+       ------
+       astropy.quantity.
+           Barycentered TOAs.
+
+        """
+        tbl = toas.table
+        if cutoff_component == "":
+            delay_list = self.component_list
+            for cp in delay_list:
+                if cp.category == "pulsar_system":
+                    cutoff_component = cp.__class__.__name__
+        corr = self.delay(toas, cutoff_component, False)
+        return tbl["tdbld"] * u.day - corr
+
+
+    def d_delay_d_param(self, toas, param, acc_delay=None):
+        """Return the derivative of delay with respect to the parameter."""
+        par = getattr(self, param)
+        result = np.longdouble(np.zeros(toas.ntoas) * u.s / par.units)
+        delay_derivs = self.delay_deriv_funcs
+        if param not in list(delay_derivs.keys()):
+            raise AttributeError(
+                "Derivative function for '%s' is not provided"
+                " or not registered. " % param
+            )
+        for df in delay_derivs[param]:
+            result += df(toas, param, acc_delay).to(
+                result.unit, equivalencies=u.dimensionless_angles()
+            )
+        return result
 
 
 class TimingModelError(ValueError):
