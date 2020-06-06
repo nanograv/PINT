@@ -19,6 +19,7 @@ import astropy.units as u
 import numpy as np
 from astropy import log
 from astropy.coordinates import EarthLocation
+from astropy.coordinates import ICRS, CartesianDifferential, CartesianRepresentation
 from six.moves import cPickle as pickle
 
 import pint
@@ -27,6 +28,7 @@ from pint.observatory.special_locations import SpacecraftObs
 from pint.observatory.topo_obs import TopoObs
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
+from pint.pulsar_ecliptic import PulsarEcliptic
 
 __all__ = [
     "get_TOAs",
@@ -1346,7 +1348,12 @@ class TOAs(object):
                 "Computing PosVels of observatories and Earth, using {}".format(ephem)
             )
         # Remove any existing columns
-        cols_to_remove = ["ssb_obs_pos", "ssb_obs_vel", "obs_sun_pos"]
+        cols_to_remove = [
+            "ssb_obs_pos",
+            "ssb_obs_vel",
+            "ssb_obs_vel_ecl",
+            "obs_sun_pos",
+        ]
         for c in cols_to_remove:
             if c in self.table.colnames:
                 log.info("Column {0} already exists. Removing...".format(c))
@@ -1366,6 +1373,12 @@ class TOAs(object):
         )
         ssb_obs_vel = table.Column(
             name="ssb_obs_vel",
+            data=np.zeros((self.ntoas, 3), dtype=np.float64),
+            unit=u.km / u.s,
+            meta={"origin": "SSB", "obj": "OBS"},
+        )
+        ssb_obs_vel_ecl = table.Column(
+            name="ssb_obs_vel_ecl",
             data=np.zeros((self.ntoas, 3), dtype=np.float64),
             unit=u.km / u.s,
             meta={"origin": "SSB", "obj": "OBS"},
@@ -1403,6 +1416,20 @@ class TOAs(object):
             log.debug("SSB obs pos {0}".format(ssb_obs.pos[:, 0]))
             ssb_obs_pos[loind:hiind, :] = ssb_obs.pos.T.to(u.km)
             ssb_obs_vel[loind:hiind, :] = ssb_obs.vel.T.to(u.km / u.s)
+            # convert ssb_obs pos and vel to ecliptic coordinates
+            coord = ICRS(
+                x=ssb_obs.pos[0],
+                y=ssb_obs.pos[1],
+                z=ssb_obs.pos[2],
+                v_x=ssb_obs.vel[0],
+                v_y=ssb_obs.vel[1],
+                v_z=ssb_obs.vel[2],
+                representation_type=CartesianRepresentation,
+                differential_type=CartesianDifferential,
+            )
+            coord = coord.transform_to(PulsarEcliptic)
+            # get velocity vector from coordinate frame
+            ssb_obs_vel_ecl[loind:hiind, :] = coord.velocity.d_xyz.T.to(u.km / u.s)
             sun_obs = objPosVel_wrt_SSB("sun", tdb, ephem) - ssb_obs
             obs_sun_pos[loind:hiind, :] = sun_obs.pos.T.to(u.km)
             if planets:
@@ -1411,7 +1438,7 @@ class TOAs(object):
                     dest = p
                     pv = objPosVel_wrt_SSB(dest, tdb, ephem) - ssb_obs
                     plan_poss[name][loind:hiind, :] = pv.pos.T.to(u.km)
-        cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
+        cols_to_add = [ssb_obs_pos, ssb_obs_vel, ssb_obs_vel_ecl, obs_sun_pos]
         if planets:
             cols_to_add += plan_poss.values()
         log.debug("Adding columns " + " ".join([cc.name for cc in cols_to_add]))
