@@ -27,7 +27,7 @@ from pint.models.parameter import (
 )
 
 
-__all__ = ["DEFAULT_ORDER", "TimingModel"]
+__all__ = ["DEFAULT_ORDER", "TimingModel", "Component", "ModelSector"]
 # Parameters or lines in parfiles we don't understand but shouldn't
 # complain about. These are still passed to components so that they
 # can use them if they want to.
@@ -80,7 +80,6 @@ DEFAULT_ORDER = [
     "phase_jump",
     "wave",
 ]
-
 
 def get_component_type(component):
     """A function to identify the component object's type.
@@ -173,8 +172,9 @@ class TimingModel(object):
             )
         self.name = name
         self.introduces_correlated_errors = False
-        self.component_types = []
         self.top_level_params = []
+        self.model_sectors = {}
+
         self.add_param_from_top(
             strParameter(
                 name="PSR", description="Source name", aliases=["PSRJ", "PSRB"]
@@ -457,8 +457,8 @@ class TimingModel(object):
 
         """
         comp_type = get_component_type(component)
-        if comp_type in self.component_types:
-            comp_list = getattr(self, comp_type + "_list")
+        if comp_type in self.model_sectors.keys():
+            comp_list = self.model_sectors[comp_type].component_list
             cur_cps = []
             for cp in comp_list:
                 cur_cps.append((order.index(cp.category), cp))
@@ -475,7 +475,7 @@ class TimingModel(object):
                         % component.__class__.__name__
                     )
         else:
-            self.component_types.append(comp_type)
+            self.model_sectors[comp_type] = ModelSector([component])
             cur_cps = []
 
         # link new component to TimingModel
@@ -490,7 +490,7 @@ class TimingModel(object):
         cur_cps.append(new_cp)
         cur_cps.sort(key=lambda x: x[0])
         new_comp_list = [c[1] for c in cur_cps]
-        setattr(self, comp_type + "_list", new_comp_list)
+        self.model_sectors[com_type].component_list = new_comp_list
         # Set up components
         self.setup()
         # Validate inputs
@@ -1698,7 +1698,19 @@ class ModelSector(object):
     """
     _apis = ('component_names', 'component_classes')
 
+    def __new__(cls, component, sector_map={}):
+        # Map a sector subclass from component type;
+        all_sector_map = builtin_sector_map.update(sector_map)
+        try:
+            com_type = get_component_type(component)
+            cls = sector_map[com_type]
+
+        return super().__new__(cls)
+
     def __init__(self, components):
+        # If only one component is given, convert it to a list
+        if not isinstance(components, (list, tuple)):
+            components = [components,]
         # Check if the components are the same type
         self.sector_name = ''
         for cp in components:
@@ -1833,6 +1845,18 @@ class DelaySector(ModelSector):
                 result.unit, equivalencies=u.dimensionless_angles()
             )
         return result
+
+
+class PhaseSector(ModelSector):
+    """ Class for holding all phase components and their APIs
+    """
+    def __init__(self, phase_components):
+        super(PhaseSector, self).__init__(phase_components)
+
+
+builtin_sector_map = {'DelayComponent': DelaySector,
+                      'PhaseComponent': PhaseSector,
+                     }
 
 
 class TimingModelError(ValueError):
