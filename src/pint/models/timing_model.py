@@ -307,18 +307,14 @@ class TimingModel(object):
     def components(self):
         """All the components indexed by name."""
         comps = {}
-        if six.PY2:
-            type_list = super(TimingModel, self).__getattribute__("component_types")
-        else:
-            type_list = super().__getattribute__("component_types")
-        for ct in type_list:
-            if six.PY2:
-                cps_list = super(TimingModel, self).__getattribute__(ct + "_list")
-            else:
-                cps_list = super().__getattribute__(ct + "_list")
-            for cp in cps_list:
+        for k, v in self.model_sectors.items():
+            for cp in v.component_list:
                 comps[cp.__class__.__name__] = cp
         return comps
+
+    @property
+    def component_types(self):
+        return self.model_sector.keys()
 
     @property
     def delay_funcs(self):
@@ -1701,17 +1697,20 @@ class ModelSector(object):
 
     def __new__(cls, components, sector_map={}):
         # Map a sector subclass from component type;
-        all_sector_map = builtin_sector_map.update(sector_map)
+        all_sector_map = builtin_sector_map
+        all_sector_map.update(sector_map)
+        if not isinstance(components, (list, tuple)):
+            components = [components,]
         # Assuem the first component's type is the type for all other components.
         com_type = get_component_type(components[0])
         try:
-            cls = sector_map[com_type]
+            cls = all_sector_map[com_type]
         except KeyError:
             ValueError("Can not find the Sector class for {}".format(com_type))
 
         return super().__new__(cls)
 
-    def __init__(self, components):
+    def __init__(self, components, sector_map={}):
         # If only one component is given, convert it to a list
         if not isinstance(components, (list, tuple)):
             components = [components,]
@@ -1760,8 +1759,8 @@ class DelaySector(ModelSector):
     _apis = ('component_names', 'component_classes', 'delay', 'delay_funcs',
              'get_barycentric_toas', 'd_delay_d_param', 'delay_deriv_funcs')
 
-    def __init__(self, delay_components):
-        super(DelaySector, self).__init__(delay_components)
+    def __init__(self, delay_components, sector_map={}):
+        super(DelaySector, self).__init__(delay_components, sector_map=sector_map)
 
     @property
     def delay_funcs(self):
@@ -1854,8 +1853,8 @@ class DelaySector(ModelSector):
 class PhaseSector(ModelSector):
     """ Class for holding all phase components and their APIs
     """
-    def __init__(self, phase_components):
-        super(PhaseSector, self).__init__(phase_components)
+    def __init__(self, phase_components, sector_map={}):
+        super(PhaseSector, self).__init__(phase_components, sector_map=sector_map)
 
 
 builtin_sector_map = {'DelayComponent': DelaySector,

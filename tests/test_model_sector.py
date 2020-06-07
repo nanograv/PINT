@@ -14,9 +14,14 @@ from pint.models.timing_model import (
 )
 
 
-class test_sector:
+class TestSector:
     def setup(self):
         self.all_components = Component.component_types
 
-    def test_init(self):
-        sector = ModelSector(self.all_components['AstrometryEquatorial'])
+    def test_sector_init(self):
+        sector = ModelSector(self.all_components['AstrometryEquatorial']())
+        
+        assert sector.__class__.__name__ == 'DelaySector'
+        assert len(sector.component_list) == 1
+
+     
