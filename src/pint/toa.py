@@ -725,6 +725,7 @@ class TOAs(object):
         self.planets = False
         self.ephem = None
         self.clock_corr_info = {}
+        self.ssb_obs = None
 
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
@@ -1377,12 +1378,6 @@ class TOAs(object):
             unit=u.km / u.s,
             meta={"origin": "SSB", "obj": "OBS"},
         )
-        ssb_obs_vel_ecl = table.Column(
-            name="ssb_obs_vel_ecl",
-            data=np.zeros((self.ntoas, 3), dtype=np.float64),
-            unit=u.km / u.s,
-            meta={"origin": "SSB", "obj": "OBS"},
-        )
         obs_sun_pos = table.Column(
             name="obs_sun_pos",
             data=np.zeros((self.ntoas, 3), dtype=np.float64),
@@ -1413,9 +1408,50 @@ class TOAs(object):
             else:
                 ssb_obs = site.posvel(tdb, ephem)
 
+            self.ssb_obs = ssb_obs
+
             log.debug("SSB obs pos {0}".format(ssb_obs.pos[:, 0]))
             ssb_obs_pos[loind:hiind, :] = ssb_obs.pos.T.to(u.km)
             ssb_obs_vel[loind:hiind, :] = ssb_obs.vel.T.to(u.km / u.s)
+            sun_obs = objPosVel_wrt_SSB("sun", tdb, ephem) - ssb_obs
+            obs_sun_pos[loind:hiind, :] = sun_obs.pos.T.to(u.km)
+            if planets:
+                for p in ("jupiter", "saturn", "venus", "uranus"):
+                    name = "obs_" + p + "_pos"
+                    dest = p
+                    pv = objPosVel_wrt_SSB(dest, tdb, ephem) - ssb_obs
+                    plan_poss[name][loind:hiind, :] = pv.pos.T.to(u.km)
+        cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
+        if planets:
+            cols_to_add += plan_poss.values()
+        log.debug("Adding columns " + " ".join([cc.name for cc in cols_to_add]))
+        self.table.add_columns(cols_to_add)
+
+    def add_vel_ecl(self):
+        """Compute and add a column to self.table with velocities in ecliptic coordinates.
+
+        Called in barycentric_radio_freq() in AstrometryEcliptic (astrometry.py) 
+        if ssb_obs_vel_ecl column does not already exist.
+        If compute_posvels() called again for a TOAs object (aka TOAs modified), 
+        deletes this column so that this function will be called again and 
+        velocities will be calculated with updated ssb_obs.
+        """
+        # Remove any existing columns
+        col_to_remove = "ssb_obs_vel_ecl"
+        if col_to_remove in self.table.colnames:
+            self.table.remove_column(col_to_remove)
+
+        ssb_obs_vel_ecl = table.Column(
+            name="ssb_obs_vel_ecl",
+            data=np.zeros((self.ntoas, 3), dtype=np.float64),
+            unit=u.km / u.s,
+            meta={"origin": "SSB", "obj": "OBS"},
+        )
+
+        # Now step through in observatory groups
+        for ii, key in enumerate(self.table.groups.keys):
+            loind, hiind = self.table.groups.indices[ii : ii + 2]
+            ssb_obs = self.ssb_obs
             # convert ssb_obs pos and vel to ecliptic coordinates
             coord = ICRS(
                 x=ssb_obs.pos[0],
@@ -1430,19 +1466,9 @@ class TOAs(object):
             coord = coord.transform_to(PulsarEcliptic)
             # get velocity vector from coordinate frame
             ssb_obs_vel_ecl[loind:hiind, :] = coord.velocity.d_xyz.T.to(u.km / u.s)
-            sun_obs = objPosVel_wrt_SSB("sun", tdb, ephem) - ssb_obs
-            obs_sun_pos[loind:hiind, :] = sun_obs.pos.T.to(u.km)
-            if planets:
-                for p in ("jupiter", "saturn", "venus", "uranus"):
-                    name = "obs_" + p + "_pos"
-                    dest = p
-                    pv = objPosVel_wrt_SSB(dest, tdb, ephem) - ssb_obs
-                    plan_poss[name][loind:hiind, :] = pv.pos.T.to(u.km)
-        cols_to_add = [ssb_obs_pos, ssb_obs_vel, ssb_obs_vel_ecl, obs_sun_pos]
-        if planets:
-            cols_to_add += plan_poss.values()
-        log.debug("Adding columns " + " ".join([cc.name for cc in cols_to_add]))
-        self.table.add_columns(cols_to_add)
+        col = ssb_obs_vel_ecl
+        log.debug("Adding columns " + " ".join(col.name))
+        self.table.add_column(col)
 
     def read_pickle_file(self, filename):
         """Read the TOAs from the pickle file specified in filename.
