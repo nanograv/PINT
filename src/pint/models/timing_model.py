@@ -490,7 +490,7 @@ class TimingModel(object):
         cur_cps.append(new_cp)
         cur_cps.sort(key=lambda x: x[0])
         new_comp_list = [c[1] for c in cur_cps]
-        self.model_sectors[com_type].component_list = new_comp_list
+        self.model_sectors[comp_type].component_list = new_comp_list
         # Set up components
         self.setup()
         # Validate inputs
@@ -1683,6 +1683,7 @@ class PhaseComponent(Component):
         self.phase_funcs_component = []
         self.phase_derivs_wrt_delay = []
 
+
 class ModelSector(object):
     """ A class that groups the same type of component and provide the API for
     gathering the information from each component.
@@ -1698,12 +1699,15 @@ class ModelSector(object):
     """
     _apis = ('component_names', 'component_classes')
 
-    def __new__(cls, component, sector_map={}):
+    def __new__(cls, components, sector_map={}):
         # Map a sector subclass from component type;
         all_sector_map = builtin_sector_map.update(sector_map)
+        # Assuem the first component's type is the type for all other components.
+        com_type = get_component_type(components[0])
         try:
-            com_type = get_component_type(component)
             cls = sector_map[com_type]
+        except KeyError:
+            ValueError("Can not find the Sector class for {}".format(com_type))
 
         return super().__new__(cls)
 

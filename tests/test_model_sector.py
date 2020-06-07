@@ -7,7 +7,7 @@ import os
 import numpy as np
 import astropy.units as u
 
-from pint.models import (
+from pint.models.timing_model import (
     TimingModel,
     ModelSector,
     Component
