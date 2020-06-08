@@ -23,5 +23,6 @@ class TestSector:
         
         assert sector.__class__.__name__ == 'DelaySector'
         assert len(sector.component_list) == 1
-
+        assert hasattr(sector, 'delay')
+        assert hasattr(sector, 'delay_funcs')
      

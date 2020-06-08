@@ -238,6 +238,9 @@ class TimingModel(object):
             # AttributeError it looks like it's missing entirely
             errmsg = "'TimingModel' object and its component has no attribute"
             errmsg += " '%s'." % name
+            if name in self.sector_methods.keys():
+                sector = self.sector_methods[name]
+                return getattr(self.model_sectors[sector], name)
             try:
                 if six.PY2:
                     cp = super(TimingModel, self).__getattribute__("search_cmp_attr")(
@@ -251,6 +254,16 @@ class TimingModel(object):
                     raise AttributeError(errmsg)
             except:
                 raise AttributeError(errmsg)
+    
+    @property
+    def sector_methods(self):
+        """ Get all the sector method and reorganise it by {method_name: sector_name}
+        """
+        md = {}
+        for k, v in self.model_sectors.items():
+            for method in v._methods:
+                md[method] = k
+        return md
 
     @property
     def params(self):
@@ -314,7 +327,7 @@ class TimingModel(object):
 
     @property
     def component_types(self):
-        return self.model_sector.keys()
+        return self.model_sectors.keys()
 
     @property
     def delay_funcs(self):
@@ -402,7 +415,7 @@ class TimingModel(object):
                 return cp
             except AttributeError:
                 continue
-
+    
     def map_component(self, component):
         """ Get the location of component.
 
@@ -438,6 +451,19 @@ class TimingModel(object):
         host_list = getattr(self, comp_type + "_list")
         order = host_list.index(comp)
         return comp, order, host_list, comp_type
+    
+    def _make_sector(self, component):
+        sector = ModelSector(component)
+        if sector.sector_name in self.model_sectors.keys():
+            log.warn("Sector {} is already in the timing model. skip...")
+            return 
+        common_method = set(sector._methods).intersection(self.sector_methods.keys())
+        if len(common_method) != 0:
+            raise ValueError("Sector {}'s methods have the same method with the current " 
+                              "sector methods. But sector methods should be unique."
+                              "Please check .sector_methods for the current sector"
+                              " methods.".format(sector.sector_name))
+        self.model_sectors[comp_type] = sector
 
     def add_component(self, component, order=DEFAULT_ORDER, force=False, validate=True):
         """Add a component into TimingModel.
@@ -471,7 +497,7 @@ class TimingModel(object):
                         % component.__class__.__name__
                     )
         else:
-            self.model_sectors[comp_type] = ModelSector([component])
+            self._make_sector(component)
             cur_cps = []
 
         # link new component to TimingModel
@@ -1693,7 +1719,7 @@ class ModelSector(object):
     ----
     The order of the component in the list is the order a component get computed.
     """
-    _apis = ('component_names', 'component_classes')
+    _apis = tuple()
 
     def __new__(cls, components, sector_map={}):
         # Map a sector subclass from component type;
@@ -1756,8 +1782,8 @@ class ModelSector(object):
 class DelaySector(ModelSector):
     """ Class for holding all delay components and their APIs
     """
-    _apis = ('component_names', 'component_classes', 'delay', 'delay_funcs',
-             'get_barycentric_toas', 'd_delay_d_param', 'delay_deriv_funcs')
+    _methods = ('delay', 'delay_funcs', 'get_barycentric_toas', 'd_delay_d_param', 
+                'delay_deriv_funcs')
 
     def __init__(self, delay_components, sector_map={}):
         super(DelaySector, self).__init__(delay_components, sector_map=sector_map)
@@ -1853,6 +1879,7 @@ class DelaySector(ModelSector):
 class PhaseSector(ModelSector):
     """ Class for holding all phase components and their APIs
     """
+    _methods = tuple()
     def __init__(self, phase_components, sector_map={}):
         super(PhaseSector, self).__init__(phase_components, sector_map=sector_map)
 
