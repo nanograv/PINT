@@ -74,6 +74,24 @@ class Prior(object):
         return self._rv.logpdf(v)
 
 
+class InclinationPrior(rv_continuous):
+    """ Prior returning the pdf for sin(i) given a uniform prior on cos(i).
+
+        p(sin i) == p(x) = x/(1-x**2)**0.5
+    """
+
+    def __init__(self, **kwargs):
+        kwargs["a"] = 0
+        kwargs["b"] = 1
+        super(InclinationPrior, self).__init__(**kwargs)
+
+    def _pdf(self, v):
+        return v / (1 - v ** 2) ** 0.5
+
+    def _logpdf(self, v):
+        return np.log(v) - 0.5 * np.log(1 - v ** 2)
+
+
 class UniformUnboundedRV(rv_continuous):
     r"""A uniform prior distribution (equivalent to no prior)
 
