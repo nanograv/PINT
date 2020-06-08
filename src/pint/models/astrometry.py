@@ -494,7 +494,11 @@ class AstrometryEcliptic(Astrometry):
         tbl = toas.table
         L_hat = self.ssb_to_psb_xyz_Eclip(epoch=tbl["tdbld"].astype(numpy.float64))
         v_dot_L_array = numpy.sum(tbl["ssb_obs_vel_ecl"] * L_hat, axis=1)
-        return tbl["freq"] * (1.0 - v_dot_L_array / const.c)
+        ans = tbl["freq"] * (1.0 - v_dot_L_array / const.c)
+        f = open("freq.out", "a")
+        f.write(str(ans))
+        f.close()
+        return ans
 
     def get_psr_coords(self, epoch=None):
         """Returns pulsar sky coordinates as an astropy ecliptic coordinates

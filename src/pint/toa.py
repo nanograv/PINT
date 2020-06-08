@@ -725,7 +725,6 @@ class TOAs(object):
         self.planets = False
         self.ephem = None
         self.clock_corr_info = {}
-        self.ssb_obs = None
 
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
@@ -1408,8 +1407,6 @@ class TOAs(object):
             else:
                 ssb_obs = site.posvel(tdb, ephem)
 
-            self.ssb_obs = ssb_obs
-
             log.debug("SSB obs pos {0}".format(ssb_obs.pos[:, 0]))
             ssb_obs_pos[loind:hiind, :] = ssb_obs.pos.T.to(u.km)
             ssb_obs_vel[loind:hiind, :] = ssb_obs.vel.T.to(u.km / u.s)
@@ -1434,7 +1431,7 @@ class TOAs(object):
         if ssb_obs_vel_ecl column does not already exist.
         If compute_posvels() called again for a TOAs object (aka TOAs modified), 
         deletes this column so that this function will be called again and 
-        velocities will be calculated with updated ssb_obs.
+        velocities will be calculated with updated TOAs.
         """
         # Remove any existing columns
         col_to_remove = "ssb_obs_vel_ecl"
@@ -1448,10 +1445,20 @@ class TOAs(object):
             meta={"origin": "SSB", "obj": "OBS"},
         )
 
+        ephem = self.ephem
         # Now step through in observatory groups
         for ii, key in enumerate(self.table.groups.keys):
+            grp = self.table.groups[ii]
+            obs = self.table.groups.keys[ii]["obs"]
             loind, hiind = self.table.groups.indices[ii : ii + 2]
-            ssb_obs = self.ssb_obs
+            site = get_observatory(obs)
+            tdb = time.Time(grp["tdb"], precision=9)
+
+            if isinstance(site, SpacecraftObs):
+                ssb_obs = site.posvel(tdb, ephem, grp)
+            else:
+                ssb_obs = site.posvel(tdb, ephem)
+
             # convert ssb_obs pos and vel to ecliptic coordinates
             coord = ICRS(
                 x=ssb_obs.pos[0],
