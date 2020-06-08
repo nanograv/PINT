@@ -42,6 +42,7 @@ class AbsPhase(PhaseComponent):
                 description="The frequency of the zero phase mearsured.",
             )
         )
+        self.tz_cache = None
 
     def setup(self):
         super(AbsPhase, self).setup()
@@ -73,6 +74,17 @@ class AbsPhase(PhaseComponent):
         to this TOA, as with any other TOA. This does not affect the
         value of the TZRMJD parmeter, however.
         """
+        clkc_info = toas.clock_corr_info
+        # If we have cached the TZR TOA and all the clock info has not changed, then don't rebuild it
+        if self.tz_cache is not None:
+            if (
+                self.tz_clkc_info["include_bipm"] == clkc_info["include_bipm"]
+                and self.tz_clkc_info["include_gps"] == clkc_info["include_gps"]
+                and self.tz_planets == toas.planets
+                and self.tz_ephem == toas.ephem
+            ):
+                return self.tz_cache
+        # Otherwise we have to build the TOA and apply clock corrections
         # NOTE: Using TZRMJD.quantity.jd[1,2] so that the time scale can be properly
         # set to the TZRSITE default timescale (e.g. UTC for TopoObs and TDB for SSB)
         TZR_toa = toa.TOA(
@@ -80,7 +92,6 @@ class AbsPhase(PhaseComponent):
             obs=self.TZRSITE.value,
             freq=self.TZRFRQ.quantity,
         )
-        clkc_info = toas.clock_corr_info
         tz = toa.get_TOAs_list(
             [TZR_toa],
             include_bipm=clkc_info["include_bipm"],
@@ -88,6 +99,10 @@ class AbsPhase(PhaseComponent):
             ephem=toas.ephem,
             planets=toas.planets,
         )
+        self.tz_cache = tz
+        self.tz_clkc_info = clkc_info
+        self.tz_planets = toas.planets
+        self.tz_ephem = toas.ephem
         return tz
 
     def make_TZR_toa(self, toas):
