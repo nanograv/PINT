@@ -287,8 +287,9 @@ class AstrometryEquatorial(Astrometry):
         return self.get_psr_coords(epoch)
 
     def coords_as_ECL(self, epoch=None):
+        obliquity = OBL[self.ECL.value]
         pos_icrs = self.get_psr_coords(epoch=epoch)
-        return pos_icrs.transform_to(PulsarEcliptic)
+        return pos_icrs.transform_to(PulsarEcliptic(obliquity=obliquity))
 
     def get_params_as_ICRS(self):
         result = {
