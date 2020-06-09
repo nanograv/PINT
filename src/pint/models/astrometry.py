@@ -59,13 +59,13 @@ class Astrometry(DelayComponent):
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
         return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
-    def ssb_to_psb_xyz_Eclip(self, epoch=None):
+    def ssb_to_psb_xyz_ECL(self, epoch=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter under Ecliptic coordinates.
 
         If epochs (MJD) are given, proper motion is included in the calculation.
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
-        return self.coords_as_Eclip(epoch=epoch).cartesian.xyz.transpose()
+        return self.coords_as_ECL(epoch=epoch).cartesian.xyz.transpose()
 
     def barycentric_radio_freq(self, toas):
         raise NotImplementedError
@@ -286,7 +286,7 @@ class AstrometryEquatorial(Astrometry):
     def coords_as_ICRS(self, epoch=None):
         return self.get_psr_coords(epoch)
 
-    def coords_as_Eclip(self, epoch=None):
+    def coords_as_ECL(self, epoch=None):
         pos_icrs = self.get_psr_coords(epoch=epoch)
         return pos_icrs.transform_to(PulsarEcliptic)
 
@@ -492,7 +492,7 @@ class AstrometryEcliptic(Astrometry):
         if "ssb_obs_vel_ecl" not in toas.table.colnames:
             toas.add_vel_ecl()
         tbl = toas.table
-        L_hat = self.ssb_to_psb_xyz_Eclip(epoch=tbl["tdbld"].astype(numpy.float64))
+        L_hat = self.ssb_to_psb_xyz_ECL(epoch=tbl["tdbld"].astype(numpy.float64))
         v_dot_L_array = numpy.sum(tbl["ssb_obs_vel_ecl"] * L_hat, axis=1)
         return tbl["freq"] * (1.0 - v_dot_L_array / const.c)
 
@@ -534,7 +534,7 @@ class AstrometryEcliptic(Astrometry):
         pos_ecl = self.get_psr_coords(epoch=epoch)
         return pos_ecl.transform_to(coords.ICRS)
 
-    def coords_as_Eclip(self, epoch=None):
+    def coords_as_ECL(self, epoch=None):
         return self.get_psr_coords(epoch)
 
     def get_d_delay_quantities_ecliptical(self, toas):
