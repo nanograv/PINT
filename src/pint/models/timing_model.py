@@ -1165,7 +1165,12 @@ class TimingModel(object):
                     # If not fitted, just print both values
                     s += "{:14s} {:28f}".format(pn, par.value)
                     if otherpar is not None and otherpar.value is not None:
-                        s += " {:28f}\n".format(otherpar.value)
+                        try:
+                            s += " {:28SP}\n".format(
+                                ufloat(otherpar.value, otherpar.uncertainty.value)
+                            )
+                        except:
+                            s += " {:28f}\n".format(otherpar.value)
                     else:
                         s += " {:>28s}\n".format("Missing")
                 else:
