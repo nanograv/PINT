@@ -49,6 +49,8 @@ class AbsPhase(PhaseComponent):
 
     def validate(self):
         super(AbsPhase, self).validate()
+        # Make sure the cached TOA is cleared
+        self.tz_cache = None
         # Check input Parameters
         if self.TZRMJD.value is None:
             raise MissingParameter(
