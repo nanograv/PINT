@@ -725,6 +725,7 @@ class TOAs(object):
         self.planets = False
         self.ephem = None
         self.clock_corr_info = {}
+        self.obliquity = None
 
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
@@ -1424,7 +1425,7 @@ class TOAs(object):
         log.debug("Adding columns " + " ".join([cc.name for cc in cols_to_add]))
         self.table.add_columns(cols_to_add)
 
-    def add_vel_ecl(self):
+    def add_vel_ecl(self, obliquity):
         """Compute and add a column to self.table with velocities in ecliptic coordinates.
 
         Called in barycentric_radio_freq() in AstrometryEcliptic (astrometry.py) 
@@ -1433,6 +1434,7 @@ class TOAs(object):
         deletes this column so that this function will be called again and 
         velocities will be calculated with updated TOAs.
         """
+
         # Remove any existing columns
         col_to_remove = "ssb_obs_vel_ecl"
         if col_to_remove in self.table.colnames:
@@ -1445,6 +1447,7 @@ class TOAs(object):
             meta={"origin": "SSB", "obj": "OBS"},
         )
 
+        self.obliquity = obliquity
         ephem = self.ephem
         # Now step through in observatory groups
         for ii, key in enumerate(self.table.groups.keys):
@@ -1470,7 +1473,7 @@ class TOAs(object):
                 representation_type=CartesianRepresentation,
                 differential_type=CartesianDifferential,
             )
-            coord = coord.transform_to(PulsarEcliptic)
+            coord = coord.transform_to(PulsarEcliptic(obliquity=obliquity))
             # get velocity vector from coordinate frame
             ssb_obs_vel_ecl[loind:hiind, :] = coord.velocity.d_xyz.T.to(u.km / u.s)
         col = ssb_obs_vel_ecl

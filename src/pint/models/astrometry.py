@@ -490,7 +490,8 @@ class AstrometryEcliptic(Astrometry):
     def barycentric_radio_freq(self, toas):
         """Return radio frequencies (MHz) of the toas corrected for Earth motion"""
         if "ssb_obs_vel_ecl" not in toas.table.colnames:
-            toas.add_vel_ecl()
+            obliquity = OBL[self.ECL.value]
+            toas.add_vel_ecl(obliquity)
         tbl = toas.table
         L_hat = self.ssb_to_psb_xyz_ECL(epoch=tbl["tdbld"].astype(numpy.float64))
         v_dot_L_array = numpy.sum(tbl["ssb_obs_vel_ecl"] * L_hat, axis=1)
