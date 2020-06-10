@@ -27,17 +27,17 @@ class TestModelBuilding:
     def test_from_par(self):
         tm = get_model(self.parfile)
         assert len(tm.components) == 6
-        assert len(tm.DelayComponent_list) == 4
-        assert len(tm.PhaseComponent_list) == 2
+        assert len(tm.delay_components) == 4
+        assert len(tm.phase_components) == 2
 
         # Check delay component order
         order = []
-        for dcp in tm.DelayComponent_list:
+        for dcp in tm.delay_components:
             order.append(DEFAULT_ORDER.index(dcp.category))
         assert all(np.diff(np.array(order)) > 0)
         # Check phase component order
         order = []
-        for dcp in tm.PhaseComponent_list:
+        for dcp in tm.phase_components:
             order.append(DEFAULT_ORDER.index(dcp.category))
         assert all(np.diff(np.array(order)) > 0)
 
@@ -53,13 +53,13 @@ class TestModelBuilding:
 
         # Test Delay order
         order = []
-        for dcp in tm.DelayComponent_list:
+        for dcp in tm.delay_components:
             order.append(DEFAULT_ORDER.index(dcp.category))
         assert all(np.diff(np.array(order)) > 0)
 
         # Test Phase order
         order = []
-        for dcp in tm.PhaseComponent_list:
+        for dcp in tm.phase_components:
             order.append(DEFAULT_ORDER.index(dcp.category))
         assert all(np.diff(np.array(order)) > 0)
 
@@ -75,7 +75,7 @@ class TestModelBuilding:
         assert cp._parent == tm
 
         # Test order
-        cp_pos = tm.DelayComponent_list.index(cp)
+        cp_pos = tm.delay_components.index(cp)
         assert cp_pos == 2
 
         print(cp.params)
@@ -134,7 +134,7 @@ class TestModelBuilding:
         # test remove by name
         tm.remove_component("BinaryELL1")
         assert not "BinaryELL1" in tm.components.keys()
-        assert not remove_cp in tm.DelayComponent_list
+        assert not remove_cp in tm.delay_components
 
         # test remove by component
         tm2 = TimingModel(
@@ -144,4 +144,4 @@ class TestModelBuilding:
         remove_cp2 = tm2.components["BinaryELL1"]
         tm2.remove_component(remove_cp2)
         assert not "BinaryELL1" in tm2.components.keys()
-        assert not remove_cp2 in tm2.DelayComponent_list
+        assert not remove_cp2 in tm2.delay_components

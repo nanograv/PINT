@@ -27,6 +27,7 @@ StandardTimingModel = TimingModel(
     "StandardTimingModel",
     [AstrometryEquatorial(), Spindown(), DispersionDM(), SolarSystemShapiro()],
 )
+
 # BTTimingModel = generate_timing_model("BTTimingModel",
 #         (Astrometry, Spindown, Dispersion, SolarSystemShapiro, BT))
 # DDTimingModel = generate_timing_model("DDTimingModel",
