@@ -11,6 +11,7 @@ from pint.models.dispersion_model import DispersionDM, DispersionDMX
 from pint.models.spindown import Spindown
 from pint.models.model_builder import UnknownBinaryModel, get_model, get_model_new
 from pint.models.timing_model import MissingParameter, TimingModel, Component
+from pint.utils import get_component_type
 from pinttestdata import datadir
 
 
@@ -50,7 +51,7 @@ def test_component_categories(model):
 
     """
     for k, v in model.components.items():
-        assert model.get_component_type(v) != v.category
+        assert get_component_type(v) != v.category
 
 
 parfile = join(datadir, "J1744-1134.basic.par")

@@ -18,7 +18,7 @@ from pint.models.solar_wind_dispersion import SolarWindDispersion
 from pint.models.spindown import Spindown
 
 # Import the main timing model classes
-from pint.models.timing_model import TimingModel, DEFAULT_ORDER, ModelSector
+from pint.models.timing_model import TimingModel, DEFAULT_ORDER
 from pint.models.wave import Wave
 from pint.models.ifunc import IFunc
 

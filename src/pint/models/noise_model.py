@@ -7,7 +7,7 @@ import numpy as np
 from astropy import log
 
 from pint.models.parameter import floatParameter, maskParameter
-from pint.models.timing_model import Component, ModelSector
+from pint.models.timing_model import Component
 
 
 class NoiseComponent(Component):
@@ -19,119 +19,6 @@ class NoiseComponent(Component):
 
     def validate(self,):
         super(NoiseComponent, self).validate()
-
-
-class NoiseSector(ModelSector):
-    """ Class for holding all delay components and their APIs
-    """
-    _methods = ('has_correlated_errors', 'covariance_matrix_funcs', 'scaled_sigma_funcs',
-                'basis_funcs', 'covariance_matrix', 'scaled_sigma', 'noise_model_designmatrix',
-                'noise_model_basis_weight', 'noise_model_dimensions')
-
-    def __init__(self, noise_components):
-        self.sector_name = 'NoiseComponent'
-        super(NoiseSector, self).__init__(noise_components)
-
-    @property
-    def has_correlated_errors(self):
-        """Whether or not this model has correlated errors."""
-        if "NoiseComponent" in self.component_types:
-            for nc in self.component_list:
-                # recursive if necessary
-                if nc.introduces_correlated_errors:
-                    return True
-        return False
-
-    @property
-    def covariance_matrix_funcs(self,):
-        """List of covariance matrix functions."""
-        return self.get_quantity_funcs('covariance_matrix_funcs')
-
-    @property
-    def scaled_sigma_funcs(self,):
-        """List of scaled uncertainty functions."""
-        return self.get_quantity_funcs('scaled_sigma_funcs')
-
-    @property
-    def basis_funcs(self,):
-        """List of scaled uncertainty functions."""
-        return self.get_quantity_funcs('basis_funcs')
-
-    def covariance_matrix(self, toas):
-        """This a function to get the TOA covariance matrix for noise models.
-           If there is no noise model component provided, a diagonal matrix with
-           TOAs error as diagonal element will be returned.
-        """
-        ntoa = toas.ntoas
-        tbl = toas.table
-        result = np.zeros((ntoa, ntoa))
-        # When there is no noise model.
-        if len(self.covariance_matrix_funcs) == 0:
-            result += np.diag(tbl["error"].quantity.to(u.s).value ** 2)
-            return result
-
-        for nf in self.covariance_matrix_funcs:
-            result += nf(toas)
-        return result
-
-    def scaled_sigma(self, toas):
-        """This a function to get the scaled TOA uncertainties noise models.
-           If there is no noise model component provided, a vector with
-           TOAs error as values will be returned.
-        """
-        ntoa = toas.ntoas
-        tbl = toas.table
-        result = np.zeros(ntoa) * u.us
-        # When there is no noise model.
-        if len(self.scaled_sigma_funcs) == 0:
-            result += tbl["error"].quantity
-            return result
-
-        for nf in self.scaled_sigma_funcs:
-            result += nf(toas)
-        return result
-
-    def noise_model_designmatrix(self, toas):
-        result = []
-        if len(self.basis_funcs) == 0:
-            return None
-
-        for nf in self.basis_funcs:
-            result.append(nf(toas)[0])
-        return np.hstack([r for r in result])
-
-    def noise_model_basis_weight(self, toas):
-        result = []
-        if len(self.basis_funcs) == 0:
-            return None
-
-        for nf in self.basis_funcs:
-            result.append(nf(toas)[1])
-        return np.hstack([r for r in result])
-
-    def noise_model_dimensions(self, toas):
-        """Returns a dictionary of correlated-noise components in the noise
-        model.  Each entry contains a tuple (offset, size) where size is the
-        number of basis funtions for the component, and offset is their
-        starting location in the design matrix and weights vector."""
-        result = {}
-
-        # Correct results rely on this ordering being the
-        # same as what is done in the self.basis_funcs
-        # property.
-        if len(self.basis_funcs) > 0:
-            ntot = 0
-            for nc in self.component_list:
-                bfs = nc.basis_funcs
-                if len(bfs) == 0:
-                    continue
-                nbf = 0
-                for bf in bfs:
-                    nbf += len(bf(toas)[1])
-                result[nc.category] = (ntot, nbf)
-                ntot += nbf
-
-        return result
 
 
 class ScaleToaError(NoiseComponent):
@@ -476,40 +363,6 @@ class PLRedNoise(NoiseComponent):
         Fmat, phi = self.pl_rn_basis_weight_pair(toas)
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
-
-class NoiseSector(ModelSector):
-    """ Class for holding all delay components and their APIs
-    """
-    _methods = ()
-
-    def __init__(self, noise_components, sector_map={}):
-        self.sector_name = 'NoiseComponent'
-        super(NoiseSector, self).__init__(noise_components)
-
-    @property
-    def has_correlated_errors(self):
-        """Whether or not this model has correlated errors."""
-        if "NoiseComponent" in self.component_types:
-            for nc in self.NoiseComponent_list:
-                # recursive if necessary
-                if nc.introduces_correlated_errors:
-                    return True
-        return False
-
-    @property
-    def covariance_matrix_funcs(self,):
-        """List of covariance matrix functions."""
-        return self.get_quantity_funcs('covariance_matrix_funcs')
-
-    @property
-    def scaled_sigma_funcs(self,):
-        """List of scaled uncertainty functions."""
-        return self.get_quantity_funcs('scaled_sigma_funcs')
-
-    @property
-    def basis_funcs(self,):
-        """List of scaled uncertainty functions."""
-        return self.get_quantity_funcs('basis_funcs')
 
 def create_quantization_matrix(toas_table, dt=1, nmin=2):
     """Create quantization matrix mapping TOAs to observing epochs."""

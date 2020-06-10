@@ -10,9 +10,11 @@ from copy import deepcopy
 
 from pint.models.timing_model import (
     TimingModel,
+    Component,
+)
+from pint.models.model_sector import (
     ModelSector,
     DelaySector,
-    Component
 )
 
 
