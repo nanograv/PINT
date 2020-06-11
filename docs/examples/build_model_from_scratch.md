@@ -6,7 +6,7 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.2'
-      jupytext_version: 1.4.1
+      jupytext_version: 1.4.0
   kernelspec:
     display_name: Python 3
     language: python
@@ -84,7 +84,7 @@ tm = TimingModel("NGC6400E", component_instances)
 
 To view all the components in `TimingModel` instance, we can use the property `.components`, which returns a dictionary (name as the key, component instance as the value).
 
-Internally, the components are stored in a list(ordered list, you will see why this is important below) according to their types. All the delay type of components (subclasses of `DelayComponent` class) are stored in the `DelayComponent_list`, and the phase type of components (subclasses of `PhaseComponent` class) in the `PhaseComponent_list`.
+Internally, the components are stored in the `.model_sectors`, a dictionary with the component type name as the key and `ModelSector` subclasses as the value. `ModelSector` class also have the methods to collect results from each component. For instance, `DelaySector` has `delay()` that compute the total delay from all the `DelayComponet` objects and `PhaseSector` has `phase()` for total phase. But these methods can be accessed from the `TimingModel` class. 
 
 ```python
 # print the components in the timing model
@@ -100,10 +100,10 @@ for (cp_name, cp_instance) in tm.components.items():
 * `TimingModel.params()`               : List all the parameters in the timing model from all components.
 * `TimingModel.setup()`                : Setup the components (e.g., register the derivatives).
 * `TimingModel.validate()`             : Validate the components see if the parameters are setup properly.
-* `TimingModel.delay()`                : Compute the total delay.
-* `TimingModel.phase()`                : Compute the total phase.
-* `TimingModel.delay_funcs()`          : List all the delay functions from all the delay components.
-* `TimingModel.phase_funcs()`          : List all the phase functions from all the phase components.
+* `TimingModel.delay()`                : Compute the total delay, if DelayComponent exists.
+* `TimingModel.phase()`                : Compute the total phase, if PhaseComponent exists.
+* `TimingModel.delay_funcs()`          : List all the delay functions from all the delay components, if DelayComponent exists.
+* `TimingModel.phase_funcs()`          : List all the phase functions from all the phase components, if DelayComponent exists.
 * `TimingModel.get_component_type()`   : Get all the components from one category
 * `TimingModel.map_component()`        : Get the component location. It returns the component's instance, order in                                          the list, host list and its type.
 * `TimingModel.get_params_mapping()`   : Report which component each parameter comes from.
@@ -201,10 +201,10 @@ print("All components in timing model:")
 display(tm.components)
 
 print("\n")
-print("Delay components in the DelayComponent_list (order matters!):")
+print("Delay components in the DelayComponent sector (order matters!):")
 
 # print the delay component order, dispersion should be after the astrometry
-display(tm.DelayComponent_list)
+display(tm.model_sectors['DelayComponent'].componet_list)
 ```
 
 The DM value can be set as we set the parameters above.
