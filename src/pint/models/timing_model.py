@@ -947,7 +947,7 @@ class TimingModel(object):
     def d_delay_d_param(self, toas, param, acc_delay=None):
         """Return the derivative of delay with respect to the parameter."""
         par = getattr(self, param)
-        result = np.longdouble(np.zeros(toas.ntoas) * u.s / par.units)
+        result = np.longdouble(np.zeros(toas.ntoas) << (u.s / par.units))
         delay_derivs = self.delay_deriv_funcs
         if param not in list(delay_derivs.keys()):
             raise AttributeError(
