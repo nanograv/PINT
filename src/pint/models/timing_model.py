@@ -18,9 +18,9 @@ import pint
 from pint.models.parameter import strParameter, maskParameter
 from pint.phase import Phase
 from pint.utils import (
-    PrefixError, 
-    interesting_lines, 
-    lines_of, 
+    PrefixError,
+    interesting_lines,
+    lines_of,
     split_prefixed_name,
     get_component_type,
 )
@@ -140,7 +140,7 @@ class TimingModel(object):
         rather than to any particular component.
 
     """
-    
+
     def __init__(self, name="", components=[], external_sector_map={}):
         if not isinstance(name, str):
             raise ValueError(
@@ -168,8 +168,9 @@ class TimingModel(object):
         )
 
         for cp in components:
-            self.add_component(cp, validate=False,
-                               external_sector_map=external_sector_map)
+            self.add_component(
+                cp, validate=False, external_sector_map=external_sector_map
+            )
 
     def __repr__(self):
         return "{}(\n  {}\n)".format(
@@ -216,10 +217,12 @@ class TimingModel(object):
             errmsg = "'TimingModel' object and its component has no attribute"
             errmsg += " '%s'." % name
             if six.PY2:
-                sector_methods = super(TimingModel, self).__getattribute__('sector_methods')
+                sector_methods = super(TimingModel, self).__getattribute__(
+                    "sector_methods"
+                )
             else:
-                sector_methods = super().__getattribute__('sector_methods')
-               
+                sector_methods = super().__getattribute__("sector_methods")
+
             if name in sector_methods.keys():
                 sector = sector_methods[name]
                 return getattr(sector, name)
@@ -244,9 +247,9 @@ class TimingModel(object):
         """
         md = {}
         if six.PY2:
-            sectors = super(TimingModel, self).__getattribute__('model_sectors')
+            sectors = super(TimingModel, self).__getattribute__("model_sectors")
         else:
-            sectors = super().__getattribute__('model_sectors')
+            sectors = super().__getattribute__("model_sectors")
         for k, v in sectors.items():
             for method in v._methods:
                 md[method] = v
@@ -373,30 +376,39 @@ class TimingModel(object):
         all_sector_map = builtin_sector_map
         all_sector_map.update(external_sector_map)
         if not isinstance(component, (list, tuple)):
-            components = [component,]
+            components = [
+                component,
+            ]
         # Assuem the first component's type is the type for all other components.
         com_type = get_component_type(components[0])
         try:
             sector_cls = all_sector_map[com_type]
         except KeyError:
-            raise ValueError("Can not find the Sector class for"
-                             " {}".format(com_type))
+            raise ValueError("Can not find the Sector class for" " {}".format(com_type))
         sector = sector_cls(component)
         if sector.sector_name in self.model_sectors.keys():
             log.warn("Sector {} is already in the timing model. skip...")
             return
         common_method = set(sector._methods).intersection(self.sector_methods.keys())
         if len(common_method) != 0:
-            raise ValueError("Sector {}'s methods have the same method with the current "
-                              "sector methods. But sector methods should be unique."
-                              "Please check .sector_methods for the current sector"
-                              " methods.".format(sector.sector_name))
+            raise ValueError(
+                "Sector {}'s methods have the same method with the current "
+                "sector methods. But sector methods should be unique."
+                "Please check .sector_methods for the current sector"
+                " methods.".format(sector.sector_name)
+            )
         self.model_sectors[sector.sector_name] = sector
         # Link sector to the Timing model class.
         self.model_sectors[sector.sector_name]._parent = self
 
-    def add_component(self, component, order=DEFAULT_ORDER, force=False,
-                      validate=True, external_sector_map={}):
+    def add_component(
+        self,
+        component,
+        order=DEFAULT_ORDER,
+        force=False,
+        validate=True,
+        external_sector_map={},
+    ):
         """Add a component into TimingModel.
 
         Parameters
@@ -432,8 +444,7 @@ class TimingModel(object):
                         % component.__class__.__name__
                     )
         else:
-            self._make_sector(component,
-                              external_sector_map=external_sector_map)
+            self._make_sector(component, external_sector_map=external_sector_map)
             cur_cps = []
 
         # link new component to TimingModel
@@ -715,19 +726,19 @@ class TimingModel(object):
         tbl = toas.table
         result = np.zeros((ntoa, ntoa))
         # When there is no noise model.
-        if 'NoiseComponent'not in self.component_types:
+        if "NoiseComponent" not in self.component_types:
             result += np.diag(tbl["error"].quantity.to(u.s).value ** 2)
             return result
 
         for nf in self.covariance_matrix_funcs:
             result += nf(toas)
         return result
-    
+
     @property
     def has_correlated_errors(self):
         """Whether or not this model has correlated errors."""
         if "NoiseComponent" in self.component_types:
-            for nc in self.model_sectors['NoiseComponent'].component_list:
+            for nc in self.model_sectors["NoiseComponent"].component_list:
                 # recursive if necessary
                 if nc.introduces_correlated_errors:
                     return True
@@ -742,7 +753,7 @@ class TimingModel(object):
         tbl = toas.table
         result = np.zeros(ntoa) * u.us
         # When there is no noise model.
-        if 'NoiseComponent' not in self.component_types:
+        if "NoiseComponent" not in self.component_types:
             result += tbl["error"].quantity
             return result
 

@@ -24,23 +24,28 @@ class ModelSector(object):
     ----
     The order of the component in the list is the order a component get computed.
     """
+
     _methods = tuple()
 
     def __init__(self, components):
-        if not hasattr(self, 'sector_name'):
-            raise TypeError("Please use ModelSector's subclass to "
-                            "initialize for a specific model sector."
-                            )
+        if not hasattr(self, "sector_name"):
+            raise TypeError(
+                "Please use ModelSector's subclass to "
+                "initialize for a specific model sector."
+            )
         # If only one component is given, convert it to a list
         if not isinstance(components, (list, tuple)):
-            components = [components,]
+            components = [
+                components,
+            ]
         # Check if the components are the same type
         for cp in components:
             cp_type = get_component_type(cp)
             if cp_type != self.sector_name:
-                raise ValueError("Component {} is not a {} of"
-                                 " component.".format(cp.__class__.__name__,
-                                                      self.sector_name))
+                raise ValueError(
+                    "Component {} is not a {} of"
+                    " component.".format(cp.__class__.__name__, self.sector_name)
+                )
         self.component_list = components
         self._parent = None
 
@@ -92,12 +97,20 @@ class ModelSector(object):
 class DelaySector(ModelSector):
     """ Class for holding all delay components and their APIs
     """
-    _methods = ('delay_components','delay', 'delay_funcs',
-                'get_barycentric_toas', 'd_delay_d_param',
-                'delay_deriv_funcs', 'd_delay_d_param_num', 'delay')
+
+    _methods = (
+        "delay_components",
+        "delay",
+        "delay_funcs",
+        "get_barycentric_toas",
+        "d_delay_d_param",
+        "delay_deriv_funcs",
+        "d_delay_d_param_num",
+        "delay",
+    )
 
     def __init__(self, delay_components, sector_map={}):
-        self.sector_name = 'DelayComponent'
+        self.sector_name = "DelayComponent"
         super(DelaySector, self).__init__(delay_components)
 
     @property
@@ -106,7 +119,7 @@ class DelaySector(ModelSector):
 
     @property
     def delay_funcs(self):
-        return self.get_quantity_funcs('delay_funcs_component')
+        return self.get_quantity_funcs("delay_funcs_component")
 
     @property
     def delay_deriv_funcs(self):
@@ -174,7 +187,6 @@ class DelaySector(ModelSector):
         corr = self.delay(toas, cutoff_component, False)
         return tbl["tdbld"] * u.day - corr
 
-
     def d_delay_d_param(self, toas, param, acc_delay=None):
         """Return the derivative of delay with respect to the parameter."""
         par = getattr(self, param)
@@ -229,12 +241,21 @@ class PhaseSector(ModelSector):
     Parameters
     ----------
     """
-    _methods = ('phase_components', 'phase_func', 'phase', 'phase_deriv_funcs',
-                'd_phase_d_param', 'd_phase_d_param_num', 'd_phase_d_toa',
-                'd_phase_d_delay_funcs', 'get_spin_frequency')
+
+    _methods = (
+        "phase_components",
+        "phase_func",
+        "phase",
+        "phase_deriv_funcs",
+        "d_phase_d_param",
+        "d_phase_d_param_num",
+        "d_phase_d_toa",
+        "d_phase_d_delay_funcs",
+        "get_spin_frequency",
+    )
 
     def __init__(self, phase_components, sector_map={}):
-        self.sector_name = 'PhaseComponent'
+        self.sector_name = "PhaseComponent"
         super(PhaseSector, self).__init__(phase_components)
 
     @property
@@ -244,7 +265,7 @@ class PhaseSector(ModelSector):
     @property
     def phase_funcs(self):
         """List of all phase functions."""
-        return self.get_quantity_funcs('phase_funcs_component')
+        return self.get_quantity_funcs("phase_funcs_component")
 
     @property
     def phase_deriv_funcs(self):
@@ -405,28 +426,35 @@ class PhaseSector(ModelSector):
 class NoiseSector(ModelSector):
     """ Class for holding all delay components and their APIs
     """
-    _methods = ('covariance_matrix_funcs', 'scaled_sigma_funcs',
-                'basis_funcs', 'scaled_sigma', 'noise_model_designmatrix',
-                'noise_model_basis_weight', 'noise_model_dimensions')
+
+    _methods = (
+        "covariance_matrix_funcs",
+        "scaled_sigma_funcs",
+        "basis_funcs",
+        "scaled_sigma",
+        "noise_model_designmatrix",
+        "noise_model_basis_weight",
+        "noise_model_dimensions",
+    )
 
     def __init__(self, noise_components):
-        self.sector_name = 'NoiseComponent'
+        self.sector_name = "NoiseComponent"
         super(NoiseSector, self).__init__(noise_components)
 
     @property
     def covariance_matrix_funcs(self,):
         """List of covariance matrix functions."""
-        return self.get_quantity_funcs('covariance_matrix_funcs')
+        return self.get_quantity_funcs("covariance_matrix_funcs")
 
     @property
     def scaled_sigma_funcs(self,):
         """List of scaled uncertainty functions."""
-        return self.get_quantity_funcs('scaled_sigma_funcs')
+        return self.get_quantity_funcs("scaled_sigma_funcs")
 
     @property
     def basis_funcs(self,):
         """List of scaled uncertainty functions."""
-        return self.get_quantity_funcs('basis_funcs')
+        return self.get_quantity_funcs("basis_funcs")
 
     def noise_model_designmatrix(self, toas):
         result = []
@@ -470,7 +498,9 @@ class NoiseSector(ModelSector):
 
         return result
 
-builtin_sector_map = {'DelayComponent': DelaySector,
-                      'PhaseComponent': PhaseSector,
-                      'NoiseComponent': NoiseSector,
-                     }
+
+builtin_sector_map = {
+    "DelayComponent": DelaySector,
+    "PhaseComponent": PhaseSector,
+    "NoiseComponent": NoiseSector,
+}
