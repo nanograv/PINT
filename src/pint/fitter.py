@@ -743,7 +743,7 @@ class GLSFitter(Fitter):
         accuracy where they both can be applied.
         """
         chi2 = 0
-        has_noise_model = 'NoiseComponent' in self.model.component_types
+        has_noise_model = "NoiseComponent" in self.model.component_types
         for i in range(max(maxiter, 1)):
             fitp = self.get_fitparams()
             fitpv = self.get_fitparams_num()

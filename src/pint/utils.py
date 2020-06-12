@@ -1417,8 +1417,7 @@ def get_component_type(component):
     comp_base = inspect.getmro(component.__class__)
     if comp_base[-2].__name__ != "Component":
         raise TypeError(
-            "Class '%s' is not a Component type class."
-            % component.__class__.__name__
+            "Class '%s' is not a Component type class." % component.__class__.__name__
         )
     elif len(comp_base) < 3:
         raise TypeError(
