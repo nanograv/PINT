@@ -298,7 +298,11 @@ class PhaseSector(ModelSector):
         `~pint.phase.Phase` object. The spin phase that at given TOAs.
         """
         # First compute the delays to "pulsar time"
-        delay = self.delay(toas)
+        if 'DelayComponent' in self.component_types:
+            delay = self.delay(toas)
+        else:
+            delay = np.zeros(toas.ntoas) * u.second
+
         phase = Phase(np.zeros(toas.ntoas), np.zeros(toas.ntoas))
         # Then compute the relevant pulse phases
         for pf in self.phase_funcs:
