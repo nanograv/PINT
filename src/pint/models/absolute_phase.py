@@ -85,7 +85,7 @@ class AbsPhase(PhaseComponent):
                 and self.tz_planets == toas.planets
                 and self.tz_ephem == toas.ephem
                 and self.tz_hash
-                == hash((self.TZRMJD.quantity, self.TZRSITE.value, self.TZRFRQ.value))
+                == hash((self.TZRMJD.value, self.TZRSITE.value, self.TZRFRQ.value))
             ):
                 return self.tz_cache
         # Otherwise we have to build the TOA and apply clock corrections
@@ -104,9 +104,7 @@ class AbsPhase(PhaseComponent):
             planets=toas.planets,
         )
         self.tz_cache = tz
-        self.tz_hash = hash(
-            (self.TZRMJD.quantity, self.TZRSITE.value, self.TZRFRQ.value)
-        )
+        self.tz_hash = hash((self.TZRMJD.value, self.TZRSITE.value, self.TZRFRQ.value))
         self.tz_clkc_info = clkc_info
         self.tz_planets = toas.planets
         self.tz_ephem = toas.ephem
