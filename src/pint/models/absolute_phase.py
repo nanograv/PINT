@@ -77,13 +77,15 @@ class AbsPhase(PhaseComponent):
         value of the TZRMJD parmeter, however.
         """
         clkc_info = toas.clock_corr_info
-        # If we have cached the TZR TOA and all the clock info has not changed, then don't rebuild it
+        # If we have cached the TZR TOA and all the TZR* and clock info has not changed, then don't rebuild it
         if self.tz_cache is not None:
             if (
                 self.tz_clkc_info["include_bipm"] == clkc_info["include_bipm"]
                 and self.tz_clkc_info["include_gps"] == clkc_info["include_gps"]
                 and self.tz_planets == toas.planets
                 and self.tz_ephem == toas.ephem
+                and self.tz_hash
+                == hash((self.TZRMJD.quantity, self.TZRSITE.value, self.TZRFRQ.value))
             ):
                 return self.tz_cache
         # Otherwise we have to build the TOA and apply clock corrections
@@ -102,6 +104,9 @@ class AbsPhase(PhaseComponent):
             planets=toas.planets,
         )
         self.tz_cache = tz
+        self.tz_hash = hash(
+            (self.TZRMJD.quantity, self.TZRSITE.value, self.TZRFRQ.value)
+        )
         self.tz_clkc_info = clkc_info
         self.tz_planets = toas.planets
         self.tz_ephem = toas.ephem
