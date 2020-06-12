@@ -1245,6 +1245,7 @@ class TimingModel(object):
                     wants_tcb = False
                 else:
                     wants_tcb = li
+                self.UNITS.value = k[1]
                 continue
 
             if name == "EPHVER":
