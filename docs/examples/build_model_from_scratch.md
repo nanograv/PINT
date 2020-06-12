@@ -84,7 +84,7 @@ tm = TimingModel("NGC6400E", component_instances)
 
 To view all the components in `TimingModel` instance, we can use the property `.components`, which returns a dictionary (name as the key, component instance as the value).
 
-Internally, the components are stored in the `.model_sectors`, a dictionary with the component type name as the key and `ModelSector` subclasses as the value. `ModelSector` class also have the methods to collect results from each component. For instance, `DelaySector` has `delay()` that compute the total delay from all the `DelayComponet` objects and `PhaseSector` has `phase()` for total phase. But these methods can be accessed from the `TimingModel` class. 
+Internally, the components are stored in the `.model_sectors`, a dictionary with the component type name as the key and `ModelSector` subclasses as the value. `ModelSector` class also have the methods to collect results from each component. For instance, `DelaySector` has `delay()` that compute the total delay from all the `DelayComponent` objects and `PhaseSector` has `phase()` for total phase. But these methods can be accessed from the `TimingModel` class. 
 
 ```python
 # print the components in the timing model
@@ -204,7 +204,7 @@ print("\n")
 print("Delay components in the DelayComponent sector (order matters!):")
 
 # print the delay component order, dispersion should be after the astrometry
-display(tm.model_sectors['DelayComponent'].componet_list)
+display(tm.model_sectors['DelayComponent'].component_list)
 ```
 
 The DM value can be set as we set the parameters above.
