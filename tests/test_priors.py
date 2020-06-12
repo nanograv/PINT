@@ -10,7 +10,12 @@ from scipy.stats import norm
 import pint.models
 
 # from pint.models.priors import *
-from pint.models.priors import Prior, UniformBoundedRV, GaussianBoundedRV
+from pint.models.priors import (
+    Prior,
+    UniformBoundedRV,
+    GaussianBoundedRV,
+    InclinationPrior,
+)
 from pinttestdata import datadir
 
 
@@ -48,6 +53,19 @@ class TestPriors(unittest.TestCase):
         self.m.F1.prior = Prior(norm(loc=v, scale=s))
         print(self.m.F1.prior_pdf(v))
         assert np.isclose(self.m.F1.prior_pdf(v), 1.0 / (s * np.sqrt(2.0 * np.pi)))
+
+    def test_inclination_prior(self):
+        self.m.SINI.prior = Prior(InclinationPrior())
+        v = 0.5
+        # Check the prior PDF matches hand computation
+        assert np.isclose(self.m.SINI.prior_pdf(v), 0.5773502691896258)
+        # Check that np.exp(logpdf) == pdf
+        assert np.isclose(self.m.SINI.prior.pdf(v), np.exp(self.m.SINI.prior.logpdf(v)))
+        v = 0.9
+        # Check the prior PDF matches hand computation
+        assert np.isclose(self.m.SINI.prior_pdf(v), 2.0647416048350564)
+        # Check that np.exp(logpdf) == pdf
+        assert np.isclose(self.m.SINI.prior.pdf(v), np.exp(self.m.SINI.prior.logpdf(v)))
 
     def test_gaussian_bounded(self):
         print("test_gaussian_bounded")
