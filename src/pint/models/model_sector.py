@@ -244,7 +244,7 @@ class PhaseSector(ModelSector):
 
     _methods = (
         "phase_components",
-        "phase_func",
+        "phase_funcs",
         "phase",
         "phase_deriv_funcs",
         "d_phase_d_param",
