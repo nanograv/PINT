@@ -6,7 +6,7 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.2'
-      jupytext_version: 1.4.1
+      jupytext_version: 1.4.0
   kernelspec:
     display_name: Python 3
     language: python
@@ -56,12 +56,12 @@ The TimingModel class stores lists of the delay model components and phase compo
 
 ```python
 # When this list gets printed, it shows the parameters that are associated with each component as well.
-m.DelayComponent_list
+m.model_sectors['DelayComponent'].component_list
 ```
 
 ```python
 # Now let's look at the phase components. These include the absolute phase, the spindown model, and phase jumps
-m.PhaseComponent_list
+m.model_sectors['PhaseComponent'].component_list
 ```
 
 We can add a component to an existing model
@@ -82,7 +82,7 @@ m.add_component(a, validate=False)
 ```
 
 ```python
-m.DelayComponent_list  # The new instance is added to delay component list
+m.model_sectors['DelayComponent'].component_list  # The new instance is added to delay component list
 ```
 
 There are two ways to remove a component from a model. This simplest is to use the `remove_component` method to remove it by name.
@@ -112,7 +112,7 @@ from_list.remove(component)
 ```
 
 ```python
-m.DelayComponent_list  # AstrometryEcliptic has been removed from delay list.
+m.model_sectors['DelayComponent'].component_list  # AstrometryEcliptic has been removed from delay list.
 ```
 
 To switch the order of a component, just change the order of the component list
@@ -121,7 +121,7 @@ To switch the order of a component, just change the order of the component list
 
 ```python
 # Let's look at the order of the components in the delay list first
-_ = [print(dc.__class__) for dc in m.DelayComponent_list]
+_ = [print(dc.__class__) for dc in m.model_sectors['DelayComponent'].component_list]
 ```
 
 ```python
@@ -133,7 +133,7 @@ from_list[order], from_list[new_order] = from_list[new_order], from_list[order]
 
 ```python
 # Print the classes to see the order switch
-_ = [print(dc.__class__) for dc in m.DelayComponent_list]
+_ = [print(dc.__class__) for dc in m.model_sectors['DelayComponent'].component_list]
 ```
 
 Delays are always computed in the order of the DelayComponent_list
@@ -180,4 +180,8 @@ for comp, tp in Component.component_types.items():
 
 
 special
+```
+
+```python
+
 ```
