@@ -13,6 +13,11 @@ class TestTOAReader(unittest.TestCase):
         self.x.compute_TDBs()
         self.x.table.sort("index")
 
+    def test_read_parkes(self):
+        ts = toa.get_TOAs("parkes.toa")
+        assert "arecibo" in ts.observatories
+        assert ts.ntoas == 8
+
     def test_commands(self):
         assert len(self.x.commands) == 18
 
