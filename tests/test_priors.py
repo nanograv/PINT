@@ -14,7 +14,7 @@ from pint.models.priors import (
     Prior,
     UniformBoundedRV,
     GaussianBoundedRV,
-    InclinationPrior,
+    RandomInclinationPrior,
 )
 from pinttestdata import datadir
 
@@ -55,7 +55,7 @@ class TestPriors(unittest.TestCase):
         assert np.isclose(self.m.F1.prior_pdf(v), 1.0 / (s * np.sqrt(2.0 * np.pi)))
 
     def test_inclination_prior(self):
-        self.m.SINI.prior = Prior(InclinationPrior())
+        self.m.SINI.prior = Prior(RandomInclinationPrior())
         v = 0.5
         # Check the prior PDF matches hand computation
         assert np.isclose(self.m.SINI.prior_pdf(v), 0.5773502691896258)
