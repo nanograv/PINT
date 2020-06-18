@@ -10,9 +10,12 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Removed "landscape" code checker since that package is no longer supported by its author
 ### Fixed
 - Fixed bug in processing of PHASE commands in .tim file. They are now applied even if pulse numbers are not being used
+- Fixed bug that prevented reading Parkes-format TOAs
 ### Added
 - Added support for -padd flag on TOAs to add phase turns to individual TOAs (matching TEMPO and Tempo2)
 - Added check to ensure clock files are ordered by MJD since interpolation assumes that
+### Changed
+- Large speed increase when using Ecliptic coordinates
 
 ## [0.7.0] - 2020-05-27
 ### Changed
