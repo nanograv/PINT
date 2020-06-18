@@ -203,7 +203,7 @@ def _toa_format(line, fmt="Unknown"):
         return "Command"
     elif re.match(r"^\s+$", line):
         return "Blank"
-    elif re.match(r"  ", line) and len(line) > 41 and line[41] == ".":
+    elif re.match(r"^ ", line) and len(line) > 41 and line[41] == ".":
         return "Parkes"
     elif len(line) > 80 or fmt == "Tempo2":
         return "Tempo2"
