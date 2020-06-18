@@ -4,6 +4,11 @@ import unittest
 from pint import toa
 from pinttestdata import datadir
 
+# For this test, turn off the check for the age of the IERS A table
+from astropy.utils.iers import conf
+
+conf.auto_max_age = None
+
 
 class TestTOAReader(unittest.TestCase):
     def setUp(self):
