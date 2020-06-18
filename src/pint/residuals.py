@@ -76,9 +76,6 @@ class Residuals(object):
             self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
             delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
 
-        # Compute model phase
-        rs = self.model.phase(self.toas)
-
         # Track on pulse numbers, if requested
         if getattr(self.model, "TRACK").value == "-2":
             pulse_num = self.toas.get_pulse_numbers()

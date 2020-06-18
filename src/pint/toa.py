@@ -28,6 +28,7 @@ from pint.observatory.special_locations import SpacecraftObs
 from pint.observatory.topo_obs import TopoObs
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
+from pint.phase import Phase
 from pint.pulsar_ecliptic import PulsarEcliptic
 
 __all__ = [
@@ -1060,7 +1061,8 @@ class TOAs(object):
         which the nearest integer since Phase objects ensure that.
         """
         # paulr: I think pulse numbers should be computed with abs_phase=True!
-        phases = model.phase(self, abs_phase=True)
+        delta_pulse_numbers = Phase(self.table["delta_pulse_number"])
+        phases = model.phase(self, abs_phase=True) + delta_pulse_numbers
         self.table["pulse_number"] = phases.int
         self.table["pulse_number"].unit = u.dimensionless_unscaled
 
