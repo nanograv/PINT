@@ -54,9 +54,30 @@ class TroposphereDelay(DelayComponent):
     B_HT = 5.49e-3
     C_HT = 1.14e-3
 
+    WA = (
+        np.array([0.0, 5.8021897, 5.6794847, 5.8118019, 5.9727542, 6.1641693, 0.0])
+        * 1e-4
+    )
+    WB = (
+        np.array([0.0, 1.4275268, 1.5138625, 1.4572752, 1.5007428, 1.7599082, 0.0])
+        * 1e-3
+    )
+    WC = (
+        np.array([0.0, 4.3472961, 4.6729510, 4.3908931, 4.4626982, 5.4736038, 0.0])
+        * 1e-2
+    )
+
     LAT = np.array([0, 15, 30, 45, 60, 75, 90]) * u.deg  # in degrees
 
     DOY_OFFSET = -28  # add this into the MJD value to get the right phase
+
+    @staticmethod
+    def _herring_map(alt, a, b, c):
+        sinAlt = np.sin(alt)
+        return 1 / (
+            (1 / (1 + a / (1 + b / (1 + c))))
+            / (1 / (sinAlt + a / (sinAlt + b / (sinAlt + c))))
+        )
 
     def __init__(self):
         super(TroposphereDelay, self).__init__()
@@ -68,6 +89,9 @@ class TroposphereDelay(DelayComponent):
             self.A_AMP,
             self.B_AMP,
             self.C_AMP,
+            self.WA,
+            self.WB,
+            self.WC,
         ]:
             array[0] = array[1]
             array[-1] = array[-2]
@@ -122,7 +146,7 @@ class TroposphereDelay(DelayComponent):
 
         return self.zenith_delay(lat, H.to(u.km)) * self.mapping_function(
             alt, lat, H, mjd
-        )
+        ) + self.wet_zenith_delay() * self.wet_map(alt, lat)
 
     def zenith_delay(self, lat, H):
         # return 7.7 * u.ns
@@ -133,6 +157,10 @@ class TroposphereDelay(DelayComponent):
             / (const.c.value * (1 - 0.00266 * np.cos(2 * lat) + 0.00028 * H.value))
             * u.second
         )
+
+    def wet_zenith_delay(self):
+        return 0.0  # i will update this method later
+        # default for TEMPO2 is zero wet delay if not specified
 
     def _coefficient_func(self, average, amplitudes, yearFraction):
         return average + 0 * amplitudes * np.cos(2 * np.pi * yearFraction)
@@ -188,13 +216,16 @@ class TroposphereDelay(DelayComponent):
 
         # now finally the mapping formula
         # return 1 / np.sin(alt)
-
+        """
         baseMap = 1 / (
             (1 / (1 + a / (1 + b / (1 + c))))
             / (1 / (np.sin(alt) + a / (np.sin(alt) + b / (np.sin(alt) + c))))
         )
+        """
+        baseMap = self._herring_map(alt, a, b, c)
 
         # now add in the mapping correction based on height
+        """
         fcorrection = 1 / (
             (1 / (1 + self.A_HT / (1 + self.B_HT / (1 + self.C_HT))))
             / (
@@ -205,6 +236,8 @@ class TroposphereDelay(DelayComponent):
                 )
             )
         )
+        """
+        fcorrection = self._herring_map(alt, self.A_HT, self.B_HT, self.C_HT)
 
         return baseMap + (1 / np.sin(alt) - fcorrection) * H.to(u.km).value
 
@@ -216,6 +249,25 @@ class TroposphereDelay(DelayComponent):
             altitudes[i] = altaz.alt.value
         return altitudes
         """
+
+    def wet_map(self, alt, lat):
+        # very similar to the normal mapping function except it uses different coefficients
+        # and i believe that there isn't an explicit height correction to the mapping function,
+        # but i'll double check the literature.
+
+        latIndex = self._find_latitude_index(lat)  # lattitude dependent
+
+        aNeighbors = self.AW[latIndex : latIndex + 2]
+        bNeighbors = self.BW[latIndex : latIndex + 2]
+        cNeighbors = self.CW[latIndex : latIndex + 2]
+
+        latNeighbors = self.LAT[latIndex : latIndex + 2]
+
+        a = self._interp(np.abs(lat), latNeighbors, aNeighbors)
+        b = self._interp(np.abs(lat), latNeighbors, bNeighbors)
+        c = self._interp(np.abs(lat), latNeighbors, cNeighbors)
+
+        return self._herring_map(alt, a, b, c)
 
     @staticmethod
     def _interp(x, xn, yn):
