@@ -11,7 +11,6 @@ import astropy.units as u
 # curl -O https://data.nanograv.org/static/data/J0740+6620.cfr+19.tim
 # curl -O https://data.nanograv.org/static/data/J0740+6620.par
 
-# This will load the TOAs, compute the positions of the Earth and planets, and apply clock corrections and build the table.
 thanktoas = pint.toa.get_TOAs(
     "J0740+6620.cfr+19.tim",
     ephem="DE436",
@@ -26,7 +25,7 @@ thanktoas = pint.toa.get_TOAs(
 thankmod = pint.models.get_model("J0740+6620.par")
 
 # Fit one time
-thankftr = pint.fitter.GLSFitter(toas=thanktoas, model=thankmod)
+thankftr = pint.fitter.WLSFitter(toas=thanktoas, model=thankmod)
 chisq = thankftr.fit_toas()
 
 # Fit 3 x 3 grid of chisq values

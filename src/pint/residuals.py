@@ -89,7 +89,7 @@ class Residuals(object):
         # This will wipe out any PHASE or -padd commands from the .tim file!!!
         if set_pulse_nums:
             self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
-            delta_pulse_numbers = self.toas.table["delta_pulse_number"]
+            delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
 
         # Track on pulse numbers, if requested
         if getattr(self.model, "TRACK").value == "-2":

@@ -498,7 +498,7 @@ class Fitter(object):
             parameters from the timing model.
         full_output : Bool
             If False, just returns the result of the F-Test. If True, will also return the new
-            model's residual RMS (us), chi-squared, and number of degrees of freedom of 
+            model's residual RMS (us), chi-squared, and number of degrees of freedom of
             new model.
 
         Returns
@@ -553,6 +553,14 @@ class Fitter(object):
             dof_1 = fitter_copy.resids.get_dof()
             chi2_1 = fitter_copy.resids.calc_chi2()
         else:
+            # Dictionary of parameters to check to makes sure input value isn't zero
+            check_params = {
+                "M2": 0.25,
+                "SINI": 0.8,
+                "PB": 10.0,
+                "T0": 54000.0,
+                "FB0": 1.1574e-6,
+            }
             # Add the parameters
             for ii in range(len(parameter)):
                 # Check if parameter already exists in model
@@ -561,6 +569,17 @@ class Fitter(object):
                     getattr(
                         fitter_copy.model, "{:}".format(parameter[ii].name)
                     ).frozen = False
+                    # Check if parameter is one that needs to be checked
+                    if parameter[ii].name in check_params.keys():
+                        if parameter[ii].value == 0.0:
+                            log.warning(
+                                "Default value for %s cannot be 0, resetting to %s"
+                                % (parameter[ii].name, check_params[parameter[ii].name])
+                            )
+                            parameter[ii].value = check_params[parameter[ii].name]
+                    getattr(
+                        fitter_copy.model, "{:}".format(parameter[ii].name)
+                    ).value = parameter[ii].value
                 # If not, add it to the model
                 else:
                     fitter_copy.model.components[component[ii]].add_param(

@@ -947,7 +947,7 @@ class TimingModel(object):
     def d_delay_d_param(self, toas, param, acc_delay=None):
         """Return the derivative of delay with respect to the parameter."""
         par = getattr(self, param)
-        result = np.longdouble(np.zeros(toas.ntoas) * u.s / par.units)
+        result = np.longdouble(np.zeros(toas.ntoas) << (u.s / par.units))
         delay_derivs = self.delay_deriv_funcs
         if param not in list(delay_derivs.keys()):
             raise AttributeError(
@@ -1165,7 +1165,12 @@ class TimingModel(object):
                     # If not fitted, just print both values
                     s += "{:14s} {:28f}".format(pn, par.value)
                     if otherpar is not None and otherpar.value is not None:
-                        s += " {:28f}\n".format(otherpar.value)
+                        try:
+                            s += " {:28SP}\n".format(
+                                ufloat(otherpar.value, otherpar.uncertainty.value)
+                            )
+                        except:
+                            s += " {:28f}\n".format(otherpar.value)
                     else:
                         s += " {:>28s}\n".format("Missing")
                 else:
@@ -1240,6 +1245,7 @@ class TimingModel(object):
                     wants_tcb = False
                 else:
                     wants_tcb = li
+                self.UNITS.value = k[1]
                 continue
 
             if name == "EPHVER":

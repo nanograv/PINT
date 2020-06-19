@@ -21,9 +21,6 @@ PINT
     :target: https://github.com/nanograv/PINT/blob/master/LICENSE.md
     :alt: License:BSD
 
-.. image:: https://img.shields.io/pypi/pyversions/pint-pulsar.svg
-    :alt: Python:3
-
 PINT is not TEMPO3
 ------------------
 
@@ -51,9 +48,17 @@ Do **NOT** ``pip install pint`` or ``conda install pint``!  See below!
 Installing
 ----------
 
-[![Conda Version](https://img.shields.io/conda/vn/conda-forge/pint-pulsar.svg)](https://anaconda.org/conda-forge/pint-pulsar)
-[![Pypi](https://img.shields.io/pypi/v/pint-pulsar.svg)](https://pypi.python.org/pypi/pint-pulsar)
-[![pyversions](https://img.shields.io/pypi/pyversions/pint-pulsar.svg)](https://pypi.python.org/pypi/pint-pulsar)
+.. image:: https://img.shields.io/conda/vn/conda-forge/pint-pulsar.svg
+   :target: https://anaconda.org/conda-forge/pint-pulsar
+   :alt: Conda Version
+
+.. image:: https://img.shields.io/pypi/v/pint-pulsar.svg
+   :target: https://pypi.python.org/pypi/pint-pulsar
+   :alt: PyPI
+
+.. image:: https://img.shields.io/pypi/pyversions/pint-pulsar.svg
+   :target: https://pypi.python.org/pypi/pint-pulsar
+   :alt: PyVersions
 
 PINT is now available via PyPI as the package `pint-pulsar <https://pypi.org/project/pint-pulsar>`_, so it is now simple to install via pip.
 For most users, who don't want to develop the PINT code, installation should just be a matter of::
