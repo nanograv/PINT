@@ -16,27 +16,16 @@ __all__ = ["Residuals"]
 class Residuals(object):
     """Class to compute residuals between TOAs and a TimingModel"""
 
-    ### I think probably subtract_mean and use_weighted_mean should be saved at __init___ as self.subtract_mean and then used
-    ### for the instance instead of having to specify them every call to update() and phase_resids() etc...
     def __init__(
-        self,
-        toas=None,
-        model=None,
-        subtract_mean=True,
-        use_weighted_mean=True,
-        set_pulse_nums=False,
+        self, toas=None, model=None, subtract_mean=True, use_weighted_mean=True
     ):
         self.toas = toas
         self.model = model
+        self.subtract_mean = subtract_mean
+        self.use_weighted_mean = use_weighted_mean
         if toas is not None and model is not None:
-            self.phase_resids = self.calc_phase_resids(
-                subtract_mean=subtract_mean,
-                use_weighted_mean=use_weighted_mean,
-                set_pulse_nums=set_pulse_nums,
-            )
-            self.time_resids = self.calc_time_resids(
-                use_weighted_mean=use_weighted_mean
-            )
+            self.phase_resids = self.calc_phase_resids()
+            self.time_resids = self.calc_time_resids()
             self.dof = self.get_dof()
         else:
             self.phase_resids = None
@@ -70,24 +59,15 @@ class Residuals(object):
         wmean, werr, wsdev = weighted_mean(self.time_resids, w, sdev=True)
         return wsdev.to(u.us)
 
-    def calc_phase_resids(
-        self, subtract_mean=True, use_weighted_mean=True, set_pulse_nums=False
-    ):
+    def calc_phase_resids(self):
         """Return timing model residuals in pulse phase."""
-        # Please define what set_pulse_nums means!
 
         # Read any delta_pulse_numbers that are in the TOAs table.
         # These are for PHASE statements, -padd flags, as well as user-inserted phase jumps
         # Check for the column, and if not there then create it as zeros
         try:
-            delta_pulse_numbers = self.toas.table["delta_pulse_number"]
+            delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
         except:
-            self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
-            delta_pulse_numbers = self.toas.table["delta_pulse_number"]
-
-        # I have no idea what this is trying to do. It just sets delta_pulse_number to zero
-        # This will wipe out any PHASE or -padd commands from the .tim file!!!
-        if set_pulse_nums:
             self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
             delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
 
@@ -115,17 +95,16 @@ class Residuals(object):
             modelphase = self.model.phase(self.toas) + delta_pulse_numbers
             # Here it subtracts the first phase, so making the first TOA be the
             # reference. Not sure this is a good idea.
-            # modelphase -= Phase(rs.int[0], rs.frac[0])
+            modelphase -= Phase(modelphase.int[0], modelphase.frac[0])
 
-            # Here we discard the integer portion of the residual and replace it with 0, or any delta_pulse_numbers
-            # that have been assigned by the GUI or PHASE statements
+            # Here we discard the integer portion of the residual and replace it with 0
             residualphase = Phase(np.zeros_like(modelphase.frac), modelphase.frac)
             # This converts from a Phase object to a np.float128
             full = residualphase.int + residualphase.frac
         # If we are using pulse numbers, do we really want to subtract any kind of mean?
-        if not subtract_mean:
+        if not self.subtract_mean:
             return full
-        if not use_weighted_mean:
+        if not self.use_weighted_mean:
             mean = full.mean()
         else:
             # Errs for weighted sum.  Units don't matter since they will
@@ -138,12 +117,10 @@ class Residuals(object):
             mean, err = weighted_mean(full, w)
         return full - mean
 
-    def calc_time_resids(self, use_weighted_mean=True, subtract_mean=True):
+    def calc_time_resids(self):
         """Return timing model residuals in time (seconds)."""
         if self.phase_resids is None:
-            self.phase_resids = self.calc_phase_resids(
-                subtract_mean=subtract_mean, use_weighted_mean=use_weighted_mean
-            )
+            self.phase_resids = self.calc_phase_resids()
         return (self.phase_resids / self.get_PSR_freq()).to(u.s)
 
     def get_PSR_freq(self, modelF0=True):
@@ -237,7 +214,7 @@ class Residuals(object):
         """Return the weighted reduced chi-squared for the model and toas."""
         return self.calc_chi2() / self.get_dof()
 
-    def update(self, subtract_mean=True, use_weighted_mean=True):
+    def update(self):
         """Recalculate everything in residuals class after changing model or TOAs"""
         if self.toas is None or self.model is None:
             self.phase_resids = None
@@ -247,12 +224,8 @@ class Residuals(object):
         if self.model is None:
             raise ValueError("No model provided for residuals update")
 
-        self.phase_resids = self.calc_phase_resids(
-            subtract_mean=subtract_mean, use_weighted_mean=use_weighted_mean
-        )
-        self.time_resids = self.calc_time_resids(
-            subtract_mean=subtract_mean, use_weighted_mean=use_weighted_mean
-        )
+        self.phase_resids = self.calc_phase_resids()
+        self.time_resids = self.calc_time_resids()
         self._chi2 = None  # trigger chi2 recalculation when needed
         self.dof = self.get_dof()
 

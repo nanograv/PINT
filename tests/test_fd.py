@@ -26,7 +26,7 @@ class TestFD(unittest.TestCase):
     def test_FD(self):
         print("Testing FD module.")
         rs = (
-            pint.residuals.Residuals(self.toas, self.FDm, False)
+            pint.residuals.Residuals(self.toas, self.FDm, use_weighted_mean=False)
             .time_resids.to(u.s)
             .value
         )

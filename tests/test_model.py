@@ -42,7 +42,7 @@ def test_model():
 
     log.info("Computing residuals...")
     t0 = time.time()
-    resids_us = Residuals(t, m, False).time_resids.to(u.us)
+    resids_us = Residuals(t, m, use_weighted_mean=False).time_resids.to(u.us)
     time_phase = time.time() - t0
     log.info("Computed phases and residuals in %.3f sec" % time_phase)
 
