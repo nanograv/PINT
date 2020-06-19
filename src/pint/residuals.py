@@ -14,15 +14,35 @@ __all__ = ["Residuals"]
 
 
 class Residuals(object):
-    """Class to compute residuals between TOAs and a TimingModel"""
+    """Class to compute residuals between TOAs and a TimingModel
+    
+    Parameters
+    ----------
+    subtract_mean : bool
+        Controls whether mean will be subtracted from the residuals
+    use_weighted_mean : bool
+        Controls whether mean compution is weighted (by errors) or not.
+    track_mode : "nearest", "use_pulse_numbers"
+        Controls how pulse numbers are assigned. The default "nearest" assigns each TOA to the nearest integer pulse.
+        "use_pulse_numbers" uses the pulse_number column of the TOAs table to assign pulse numbers. This mode is
+        selected automatically if the model has parameter TRACK == "-2".
+    """
 
     def __init__(
-        self, toas=None, model=None, subtract_mean=True, use_weighted_mean=True
+        self,
+        toas=None,
+        model=None,
+        subtract_mean=True,
+        use_weighted_mean=True,
+        track_mode="nearest",
     ):
         self.toas = toas
         self.model = model
         self.subtract_mean = subtract_mean
         self.use_weighted_mean = use_weighted_mean
+        self.track_mode = track_mode
+        if getattr(self.model, "TRACK").value == "-2":
+            self.track_mode = "use_pulse_numbers"
         if toas is not None and model is not None:
             self.phase_resids = self.calc_phase_resids()
             self.time_resids = self.calc_time_resids()
@@ -72,11 +92,11 @@ class Residuals(object):
             delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
 
         # Track on pulse numbers, if requested
-        if getattr(self.model, "TRACK").value == "-2":
+        if self.track_mode == "use_pulse_numbers":
             pulse_num = self.toas.get_pulse_numbers()
             if pulse_num is None:
                 raise ValueError(
-                    "Pulse numbers missing from TOAs but TRACK -2 requires them"
+                    "Pulse numbers missing from TOAs but track_mode requires them"
                 )
             # Compute model phase. For pulse numbers tracking
             # we need absolute phases, since TZRMJD serves as the pulse
