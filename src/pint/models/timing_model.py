@@ -167,7 +167,7 @@ class TimingModel(object):
         return self.as_parfile()
 
     def setup(self):
-        """Run setup methods od all components."""
+        """Run setup methods on all components."""
         for cp in self.components.values():
             cp.setup()
 
@@ -549,15 +549,14 @@ class TimingModel(object):
 
     def replicate(self, components=[], copy_component=False):
         new_tm = TimingModel()
-        for ct in self.component_types:
-            comp_list = getattr(self, ct + "_list").values()
+        for cp in self.components:
             if not copy_component:
                 # if not copied, the components' _parent will point to the new
                 # TimingModel class.
-                new_tm.setup_components(comp_list)
+                new_tm.add_component(component=cp)
             else:
-                new_comp_list = [copy.deepcopy(c) for c in comp_list]
-                new_tm.setup_components(new_comp_list)
+                new_comp = copy.deepcopy(cp)
+                new_tm.add_component(component=new_comp)
         new_tm.top_level_params = self.top_level_params
         return new_tm
 

@@ -279,7 +279,7 @@ class Pulsar(object):
             log.info("PhaseJump component added")
             a = pint.models.jump.PhaseJump()
             a.setup()
-            self.prefit_model.add_component(a, order=-1)
+            self.prefit_model.add_component(a)
             self.prefit_model.remove_param("JUMP1")
             param = pint.models.parameter.maskParameter(
                 name="JUMP", index=1, key="jump", key_value=1, value=0.0, units="second"
@@ -298,11 +298,35 @@ class Pulsar(object):
             return param.name
         # if gets here, has at least one jump param already
         # if doesnt overlap or cancel, add the param
+        jump_nums_par = [
+            jump_par.select_toa_mask(self.all_toas)
+            for jump_par in self.prefit_model.components[
+                "PhaseJump"
+            ].get_jump_param_objects()
+        ]
+        print(jump_nums_par)
         jump_nums = [
             int(dict["jump"]) if "jump" in dict.keys() else np.nan
             for dict in self.all_toas.table["flags"]
         ]
-        for num in range(1, int(np.nanmax(jump_nums) + 1)):
+        # if only par file jumps in PhaseJump object
+        if np.isnan(np.nanmax(jump_nums)):
+            # for every jump, set appropriate flag for TOAs it jumps
+            for jump_par in self.prefit_model.components[
+                "PhaseJump"
+            ].get_jump_param_objects():
+                # find TOAs jump applies to
+                mask = jump_par.select_toa_mask(self.all_toas)
+                # apply to dictionaries for future use
+                for dict in self.all_toas.table["flags"][mask]:
+                    dict["jump"] = jump_par.index
+            jump_nums = [
+                int(dict["jump"]) if "jump" in dict.keys() else np.nan
+                for dict in self.all_toas.table["flags"]
+            ]
+        print(jump_nums)
+        numjumps = self.prefit_model.components["PhaseJump"].get_number_of_jumps()
+        for num in range(1, numjumps + 1):
             num = int(num)
             jump_select = [num == jump_num for jump_num in jump_nums]
             if np.array_equal(jump_select, selected):
@@ -316,7 +340,7 @@ class Pulsar(object):
                 ):
                     if "jump" in dict1.keys() and dict1["jump"] == num:
                         del dict1["jump"]  # somehow deletes from both
-                nums_subset = range(num + 1, int(np.nanmax(jump_nums) + 1))
+                nums_subset = range(num + 1, numjumps + 1)
                 for n in nums_subset:
                     # iterate through jump params and rename them so that they are always in numerical order starting with JUMP1
                     n = int(n)
@@ -347,11 +371,7 @@ class Pulsar(object):
                     comp_list = getattr(self.prefit_model, "PhaseComponent_list")
                     for item in comp_list:
                         if isinstance(item, pint.models.jump.PhaseJump):
-                            comp_list.remove(item)
-                            break
-                    self.prefit_model.setup_components(comp_list)
-                    if self.fitted:
-                        self.postfit_model.setup_components(comp_list)
+                            self.prefit_model.remove_component(item)
                 else:
                     self.prefit_model.components["PhaseJump"].setup()
                     if self.fitted:
@@ -368,13 +388,13 @@ class Pulsar(object):
         for dict1, dict2 in zip(
             self.all_toas.table["flags"][selected], self.selected_toas.table["flags"]
         ):
-            dict1["jump"] = int(np.nanmax(jump_nums)) + 1
-            dict2["jump"] = int(np.nanmax(jump_nums)) + 1
+            dict1["jump"] = numjumps + 1
+            dict2["jump"] = numjumps + 1
         param = pint.models.parameter.maskParameter(
             name="JUMP",
-            index=int(np.nanmax(jump_nums)) + 1,
+            index=numjumps + 1,
             key="jump",
-            key_value=int(np.nanmax(jump_nums)) + 1,
+            key_value=numjumps + 1,
             value=0.0,
             units="second",
             aliases=["JUMP"],
