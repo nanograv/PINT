@@ -299,8 +299,13 @@ class Pulsar(object):
             for dict in self.all_toas.table["flags"]
         ]
         numjumps = self.prefit_model.components["PhaseJump"].get_number_of_jumps()
+        if numjumps == 0:
+            log.warn(
+                "There are no jumps (maskParameter objects) in PhaseJump. Please delete the PhaseJump object and try again. "
+            )
+            return None
         # if only par file jumps in PhaseJump object
-        if np.isnan(np.nanmax(jump_nums)) and numjumps != 0:
+        if np.isnan(np.nanmax(jump_nums)):
             # for every jump, set appropriate flag for TOAs it jumps
             for jump_par in self.prefit_model.components[
                 "PhaseJump"
@@ -413,11 +418,17 @@ class Pulsar(object):
                 if getattr(
                     self.prefit_model, param
                 ).frozen == False and param.startswith("JUMP"):
-                    fit_jumps.append(param.index)
+                    fit_jumps.append(int(param[4:]))
             jumps = [
                 True if "jump" in dict.keys() and dict["jump"] in fit_jumps else False
                 for dict in self.selected_toas.table["flags"]
             ]
+            numjumps = self.prefit_model.components["PhaseJump"].get_number_of_jumps()
+            if numjumps == 0:
+                log.warn(
+                    "There are no jumps (maskParameter objects) in PhaseJump. Please delete the PhaseJump object and try again. "
+                )
+                return None
             # if only par file jumps in PhaseJump object
             if not any(jumps):
                 # for every jump, set appropriate flag for TOAs it jumps
@@ -448,7 +459,6 @@ class Pulsar(object):
                 dict["jump"] if "jump" in dict.keys() else np.nan
                 for dict in self.all_toas.table["flags"]
             ]
-            numjumps = self.prefit_model.components["PhaseJump"].get_number_of_jumps()
             for num in range(1, numjumps + 1):
                 num = int(num)
                 if num not in sel_jump_nums:

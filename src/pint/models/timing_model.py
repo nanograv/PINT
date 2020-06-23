@@ -1353,7 +1353,9 @@ class TimingModel(object):
         """Sanity check to ensure all maskParameters select at least one TOA."""
         for maskpar in self.get_params_of_type_top("maskParameter"):
             par = getattr(self, maskpar)
-            if len(par.select_toa_mask(toas)) == 0:
+            if "TNEQ" in str(par.name):
+                continue
+            if par.is_mask and len(par.select_toa_mask(toas)) == 0:
                 raise AttributeError(
                     "The maskParameter '%s' has no TOAs selected. " % maskpar
                 )
