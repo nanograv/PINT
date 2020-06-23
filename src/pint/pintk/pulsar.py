@@ -309,8 +309,9 @@ class Pulsar(object):
             int(dict["jump"]) if "jump" in dict.keys() else np.nan
             for dict in self.all_toas.table["flags"]
         ]
+        numjumps = self.prefit_model.components["PhaseJump"].get_number_of_jumps()
         # if only par file jumps in PhaseJump object
-        if np.isnan(np.nanmax(jump_nums)):
+        if np.isnan(np.nanmax(jump_nums)) and numjumps != 0:
             # for every jump, set appropriate flag for TOAs it jumps
             for jump_par in self.prefit_model.components[
                 "PhaseJump"
@@ -325,7 +326,6 @@ class Pulsar(object):
                 for dict in self.all_toas.table["flags"]
             ]
         print(jump_nums)
-        numjumps = self.prefit_model.components["PhaseJump"].get_number_of_jumps()
         for num in range(1, numjumps + 1):
             num = int(num)
             jump_select = [num == jump_num for jump_num in jump_nums]
@@ -334,12 +334,9 @@ class Pulsar(object):
                 self.prefit_model.remove_param("JUMP" + str(num))
                 if self.fitted:
                     self.postfit_model.remove_param("JUMP" + str(num))
-                for dict1, dict2 in zip(
-                    self.all_toas.table["flags"][selected],
-                    self.selected_toas.table["flags"],
-                ):
+                for dict1 in self.all_toas.table["flags"][selected]:
                     if "jump" in dict1.keys() and dict1["jump"] == num:
-                        del dict1["jump"]  # somehow deletes from both
+                        del dict1["jump"]
                 nums_subset = range(num + 1, numjumps + 1)
                 for n in nums_subset:
                     # iterate through jump params and rename them so that they are always in numerical order starting with JUMP1
@@ -385,11 +382,8 @@ class Pulsar(object):
                 )
                 return None
         # if here, then doesn't overlap or match anything
-        for dict1, dict2 in zip(
-            self.all_toas.table["flags"][selected], self.selected_toas.table["flags"]
-        ):
+        for dict1 in self.all_toas.table["flags"][selected]:
             dict1["jump"] = numjumps + 1
-            dict2["jump"] = numjumps + 1
         param = pint.models.parameter.maskParameter(
             name="JUMP",
             index=numjumps + 1,
@@ -431,11 +425,28 @@ class Pulsar(object):
                 if getattr(
                     self.prefit_model, param
                 ).frozen == False and param.startswith("JUMP"):
-                    fit_jumps.append(int(param[4:]))
+                    fit_jumps.append(param.index)
             jumps = [
                 True if "jump" in dict.keys() and dict["jump"] in fit_jumps else False
                 for dict in self.selected_toas.table["flags"]
             ]
+            # if only par file jumps in PhaseJump object
+            if not any(jumps):
+                # for every jump, set appropriate flag for TOAs it jumps
+                for jump_par in self.prefit_model.components[
+                    "PhaseJump"
+                ].get_jump_param_objects():
+                    # find TOAs jump applies to
+                    mask = jump_par.select_toa_mask(self.all_toas)
+                    # apply to dictionaries for future use
+                    for dict in self.all_toas.table["flags"][mask]:
+                        dict["jump"] = jump_par.index
+                jumps = [
+                    True
+                    if "jump" in dict.keys() and dict["jump"] in fit_jumps
+                    else False
+                    for dict in self.selected_toas.table["flags"]
+                ]
             if all(jumps):
                 log.warn(
                     "toas being fit must not all be jumped. Remove or uncheck at least one jump in the selected toas before fitting."
@@ -449,7 +460,8 @@ class Pulsar(object):
                 dict["jump"] if "jump" in dict.keys() else np.nan
                 for dict in self.all_toas.table["flags"]
             ]
-            for num in range(1, int(np.nanmax(full_jump_nums) + 1)):
+            numjumps = self.prefit_model.components["PhaseJump"].get_number_of_jumps()
+            for num in range(1, numjumps + 1):
                 num = int(num)
                 if num not in sel_jump_nums:
                     getattr(self.prefit_model, "JUMP" + str(num)).frozen = True
