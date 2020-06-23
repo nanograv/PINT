@@ -289,22 +289,11 @@ class Pulsar(object):
             self.prefit_model.components["PhaseJump"]._parent = self.prefit_model
             if self.fitted:
                 self.postfit_model.add_component(a)
-            for dict1, dict2 in zip(
-                self.all_toas.table["flags"][selected],
-                self.selected_toas.table["flags"],
-            ):
+            for dict1 in self.all_toas.table["flags"][selected]:
                 dict1["jump"] = 1
-                dict2["jump"] = 1
             return param.name
         # if gets here, has at least one jump param already
         # if doesnt overlap or cancel, add the param
-        jump_nums_par = [
-            jump_par.select_toa_mask(self.all_toas)
-            for jump_par in self.prefit_model.components[
-                "PhaseJump"
-            ].get_jump_param_objects()
-        ]
-        print(jump_nums_par)
         jump_nums = [
             int(dict["jump"]) if "jump" in dict.keys() else np.nan
             for dict in self.all_toas.table["flags"]
@@ -325,7 +314,6 @@ class Pulsar(object):
                 int(dict["jump"]) if "jump" in dict.keys() else np.nan
                 for dict in self.all_toas.table["flags"]
             ]
-        print(jump_nums)
         for num in range(1, numjumps + 1):
             num = int(num)
             jump_select = [num == jump_num for jump_num in jump_nums]
