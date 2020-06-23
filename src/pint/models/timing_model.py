@@ -1349,6 +1349,15 @@ class TimingModel(object):
 
         return result_begin + result_middle + result_end
 
+    def sanity_check(self, toas):
+        """Sanity check to ensure all maskParameters select at least one TOA."""
+        for maskpar in self.get_params_of_type_top("maskParameter"):
+            par = getattr(self, maskpar)
+            if len(par.select_toa_mask(toas)) == 0:
+                raise AttributeError(
+                    "The maskParameter '%s' has no TOAs selected. " % maskpar
+                )
+
 
 class ModelMeta(abc.ABCMeta):
     """Ensure timing model registration.
