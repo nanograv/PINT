@@ -9,6 +9,7 @@ import numpy as np
 import pint.utils as ut
 from astropy import log
 from astropy.coordinates import AltAz, SkyCoord
+from pint.models.parameter import boolParameter
 from pint.models.timing_model import DelayComponent
 from pint.observatory import get_observatory
 from pint.toa_select import TOASelect
@@ -54,15 +55,15 @@ class TroposphereDelay(DelayComponent):
     B_HT = 5.49e-3
     C_HT = 1.14e-3
 
-    WA = (
+    AW = (
         np.array([0.0, 5.8021897, 5.6794847, 5.8118019, 5.9727542, 6.1641693, 0.0])
         * 1e-4
     )
-    WB = (
+    BW = (
         np.array([0.0, 1.4275268, 1.5138625, 1.4572752, 1.5007428, 1.7599082, 0.0])
         * 1e-3
     )
-    WC = (
+    CW = (
         np.array([0.0, 4.3472961, 4.6729510, 4.3908931, 4.4626982, 5.4736038, 0.0])
         * 1e-2
     )
@@ -81,6 +82,16 @@ class TroposphereDelay(DelayComponent):
 
     def __init__(self):
         super(TroposphereDelay, self).__init__()
+        self.add_param(
+            boolParameter(
+                name="CORRECT_TROPOSPHERE",
+                value="N",
+                description="Enable Troposphere Delay Model",
+            )
+        )
+
+        self.delay_funcs_component += [self.troposphere_delay]
+
         # copy over the
         for array in [
             self.A_AVG,
@@ -89,9 +100,9 @@ class TroposphereDelay(DelayComponent):
             self.A_AMP,
             self.B_AMP,
             self.C_AMP,
-            self.WA,
-            self.WB,
-            self.WC,
+            self.AW,
+            self.BW,
+            self.CW,
         ]:
             array[0] = array[1]
             array[-1] = array[-2]
@@ -107,12 +118,12 @@ class TroposphereDelay(DelayComponent):
         alt = radec.transform_to(transformAltaz).alt  # * u.deg
         return alt
 
-    def troposphere_delay(self, toas, model):
+    def troposphere_delay(self, toas, acc_delay=None):
         # must include model to get ra/dec of target, plus maybe proper motion?
         tab = toas.table
 
         radec = SkyCoord(
-            model.RAJ.value * model.RAJ.units, model.DECJ.value * model.DECJ.units
+            self.RAJ.value * self.RAJ.units, self.DECJ.value * self.DECJ.units
         )  # just do this once instead of adjusting over time
 
         # okie so I need to do this more efficiently, so i'll group by the observatory
@@ -159,7 +170,7 @@ class TroposphereDelay(DelayComponent):
         )
 
     def wet_zenith_delay(self):
-        return 0.0  # i will update this method later
+        return 0.0 * u.second  # i will update this method later
         # default for TEMPO2 is zero wet delay if not specified
 
     def _coefficient_func(self, average, amplitudes, yearFraction):
