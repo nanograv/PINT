@@ -1,5 +1,7 @@
 import unittest
 
+import pytest
+import os
 import astropy.units as u
 import numpy
 from pinttestdata import datadir
@@ -16,6 +18,8 @@ class TestClockcorrection(unittest.TestCase):
     # from tempo2 version 2020-06-01 or so.
     def test_parkes(self):
         obs = Observatory.get("Parkes")
+        if os.getenv("TEMPO2") is None:
+            pytest.skip("TEMPO2 evnironment variable is not set, can't run this test")
         cf = ClockFile.read(
             obs.clock_fullpath, format=obs.clock_fmt, obscode=obs.tempo_code
         )
