@@ -1418,6 +1418,24 @@ class maskParameter(floatParameter):
 
         return out
 
+    def create_new_index_copy(self, index):
+        """Sets up copy of current param with a new index."""
+        new_mask_param = maskParameter(
+            name=self.origin_name,
+            index=index,
+            key=self.key,
+            key_value=self.key_value,
+            value=self.value,
+            long_double=self.long_double,
+            units=self.units,
+            description=self.description,
+            uncertainty=self.uncertainty,
+            frozen=self.frozen,
+            continuous=self.continuous,
+            aliases=self.prefix_aliases,
+        )
+        return new_mask_param
+
     def name_matches(self, name):
         if super(maskParameter, self).name_matches(name):
             return True

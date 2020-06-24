@@ -337,25 +337,15 @@ class Pulsar(object):
                     for dict in self.all_toas.table["flags"]:
                         if "jump" in dict.keys() and dict["jump"] == n:
                             dict["jump"] = n - 1
-                    param = pint.models.parameter.maskParameter(
-                        name="JUMP",
-                        index=int(n - 1),
-                        key="jump",
-                        key_value=int(n - 1),
-                        value=getattr(self.prefit_model, "JUMP" + str(n)).value,
-                        units="second",
+                    param = getattr(
+                        self.prefit_model.components["PhaseJump"], "JUMP" + str(n)
                     )
-                    self.prefit_model.add_param_from_top(param, "PhaseJump")
-                    getattr(self.prefit_model, param.name).frozen = getattr(
-                        self.prefit_model, "JUMP" + str(n)
-                    ).frozen
-                    self.prefit_model.remove_param("JUMP" + str(n))
+                    newpar = param.create_new_index_copy(n - 1)
+                    self.prefit_model.add_param_from_top(newpar, "PhaseJump")
+                    self.prefit_model.remove_param(param.name)
                     if self.fitted:
-                        self.postfit_model.add_param_from_top(param, "PhaseJump")
-                        getattr(self.postfit_model, param.name).frozen = getattr(
-                            self.postfit_model, "JUMP" + str(n)
-                        ).frozen
-                        self.postfit_model.remove_param("JUMP" + str(n))
+                        self.postfit_model.add_param_from_top(newpar, "PhaseJump")
+                        self.postfit_model.remove_param(param.name)
                 if "JUMP1" not in self.prefit_model.params:
                     # remove PhaseJump component if no jump params
                     comp_list = getattr(self.prefit_model, "PhaseComponent_list")
