@@ -762,6 +762,7 @@ class GLSFitter(Fitter):
         accuracy where they both can be applied.
         """
         chi2 = 0
+        has_noise_model = "NoiseComponent" in self.model.component_types
         for i in range(max(maxiter, 1)):
             fitp = self.get_fitparams()
             fitpv = self.get_fitparams_num()
@@ -777,8 +778,12 @@ class GLSFitter(Fitter):
 
             # get any noise design matrices and weight vectors
             if not full_cov:
-                Mn = self.model.noise_model_designmatrix(self.toas)
-                phi = self.model.noise_model_basis_weight(self.toas)
+                if has_noise_model:
+                    Mn = self.model.noise_model_designmatrix(self.toas)
+                    phi = self.model.noise_model_basis_weight(self.toas)
+                else:
+                    Mn = None
+                    phi = None
                 phiinv = np.zeros(M.shape[1])
                 if Mn is not None and phi is not None:
                     phiinv = np.concatenate((phiinv, 1 / phi))
@@ -863,7 +868,10 @@ class GLSFitter(Fitter):
 
             # Compute the noise realizations if possible
             if not full_cov:
-                noise_dims = self.model.noise_model_dimensions(self.toas)
+                if has_noise_model:
+                    noise_dims = self.model.noise_model_dimensions(self.toas)
+                else:
+                    noise_dims = {}
                 noise_resids = {}
                 for comp in noise_dims.keys():
                     p0 = noise_dims[comp][0] + ntmpar

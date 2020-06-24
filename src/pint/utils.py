@@ -9,6 +9,7 @@ from astropy import log
 import astropy.constants as const
 import numpy as np
 import six
+import inspect
 import scipy.optimize.zeros as zeros
 from scipy.special import fdtrc
 
@@ -1391,3 +1392,38 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
             log.warning("Models have equal degrees of freedom, cannot preform F-test.")
         ft = False
     return ft
+
+
+def get_component_type(component):
+    """A function to identify the component object's type.
+
+    Parameters
+    ----------
+    component: component instance
+       The component object need to be inspected.
+
+    Note
+    ----
+    Since a component can be an inheritance from other component We inspect
+    all the component object bases. "inspect getmro" method returns the
+    base classes (including 'object') in method resolution order. The
+    third level of inheritance class name is what we want.
+    Object --> component --> TypeComponent. (i.e. DelayComponent)
+    This class type is in the third to the last of the getmro returned
+    result.
+
+    """
+    # check component type
+    comp_base = inspect.getmro(component.__class__)
+    if comp_base[-2].__name__ != "Component":
+        raise TypeError(
+            "Class '%s' is not a Component type class." % component.__class__.__name__
+        )
+    elif len(comp_base) < 3:
+        raise TypeError(
+            "'%s' class is not a subclass of 'Component' class."
+            % component.__class__.__name__
+        )
+    else:
+        comp_type = comp_base[-3].__name__
+    return comp_type

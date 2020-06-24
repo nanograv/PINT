@@ -6,7 +6,6 @@ from __future__ import absolute_import, division, print_function
 
 import abc
 import copy
-import inspect
 from collections import defaultdict
 
 import astropy.time as time
@@ -18,16 +17,23 @@ from astropy import log
 import pint
 from pint.models.parameter import strParameter, maskParameter
 from pint.phase import Phase
-from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
+from pint.utils import (
+    PrefixError,
+    interesting_lines,
+    lines_of,
+    split_prefixed_name,
+    get_component_type,
+)
 from pint.models.parameter import (
     AngleParameter,
     prefixParameter,
     strParameter,
     floatParameter,
 )
+from pint.models.model_sector import builtin_sector_map
 
 
-__all__ = ["DEFAULT_ORDER", "TimingModel"]
+__all__ = ["DEFAULT_ORDER", "TimingModel", "Component"]
 # Parameters or lines in parfiles we don't understand but shouldn't
 # complain about. These are still passed to components so that they
 # can use them if they want to.
@@ -83,7 +89,7 @@ DEFAULT_ORDER = [
 
 
 class TimingModel(object):
-    """Base class for timing models and components.
+    """High level interface class for timing models and components.
 
     Base-level object provides an interface for implementing pulsar timing
     models. A timing model contains different model components, for example
@@ -97,6 +103,12 @@ class TimingModel(object):
     components: list of Component, optional
         The model components for timing model. The order of the components in
         timing model will follow the order of input.
+
+    external_sector_map: dict, optional
+        The sector map for non-built-in sectors. It follows the convention,
+        {'Component type': ModelSector sub-class for this component}. Default is
+        '{}'. The built-in sectors are listed in the
+        `timing_model.builtin_sector_map`.
 
     Notes
     -----
@@ -129,15 +141,16 @@ class TimingModel(object):
 
     """
 
-    def __init__(self, name="", components=[]):
+    def __init__(self, name="", components=[], external_sector_map={}):
         if not isinstance(name, str):
             raise ValueError(
                 "First parameter should be the model name, was {!r}".format(name)
             )
+        self.model_sectors = {}
         self.name = name
         self.introduces_correlated_errors = False
-        self.component_types = []
         self.top_level_params = []
+
         self.add_param_from_top(
             strParameter(
                 name="PSR", description="Source name", aliases=["PSRJ", "PSRB"]
@@ -155,7 +168,9 @@ class TimingModel(object):
         )
 
         for cp in components:
-            self.add_component(cp, validate=False)
+            self.add_component(
+                cp, validate=False, external_sector_map=external_sector_map
+            )
 
     def __repr__(self):
         return "{}(\n  {}\n)".format(
@@ -201,6 +216,17 @@ class TimingModel(object):
             # AttributeError it looks like it's missing entirely
             errmsg = "'TimingModel' object and its component has no attribute"
             errmsg += " '%s'." % name
+            if six.PY2:
+                sector_methods = super(TimingModel, self).__getattribute__(
+                    "sector_methods"
+                )
+            else:
+                sector_methods = super().__getattribute__("sector_methods")
+
+            if name in sector_methods.keys():
+                sector = sector_methods[name]
+                return getattr(sector, name)
+
             try:
                 if six.PY2:
                     cp = super(TimingModel, self).__getattribute__("search_cmp_attr")(
@@ -214,6 +240,20 @@ class TimingModel(object):
                     raise AttributeError(errmsg)
             except:
                 raise AttributeError(errmsg)
+
+    @property
+    def sector_methods(self):
+        """ Get all the sector method and reorganise it by {method_name: sector_name}
+        """
+        md = {}
+        if six.PY2:
+            sectors = super(TimingModel, self).__getattribute__("model_sectors")
+        else:
+            sectors = super().__getattribute__("model_sectors")
+        for k, v in sectors.items():
+            for method in v._methods:
+                md[method] = v
+        return md
 
     @property
     def params(self):
@@ -270,97 +310,14 @@ class TimingModel(object):
     def components(self):
         """All the components indexed by name."""
         comps = {}
-        if six.PY2:
-            type_list = super(TimingModel, self).__getattribute__("component_types")
-        else:
-            type_list = super().__getattribute__("component_types")
-        for ct in type_list:
-            if six.PY2:
-                cps_list = super(TimingModel, self).__getattribute__(ct + "_list")
-            else:
-                cps_list = super().__getattribute__(ct + "_list")
-            for cp in cps_list:
+        for k, v in self.model_sectors.items():
+            for cp in v.component_list:
                 comps[cp.__class__.__name__] = cp
         return comps
 
     @property
-    def delay_funcs(self):
-        """List of all delay functions."""
-        dfs = []
-        for d in self.DelayComponent_list:
-            dfs += d.delay_funcs_component
-        return dfs
-
-    @property
-    def phase_funcs(self):
-        """List of all phase functions."""
-        pfs = []
-        for p in self.PhaseComponent_list:
-            pfs += p.phase_funcs_component
-        return pfs
-
-    @property
-    def has_correlated_errors(self):
-        """Whether or not this model has correlated errors."""
-        if "NoiseComponent" in self.component_types:
-            for nc in self.NoiseComponent_list:
-                # recursive if necessary
-                if nc.introduces_correlated_errors:
-                    return True
-        return False
-
-    @property
-    def covariance_matrix_funcs(self,):
-        """List of covariance matrix functions."""
-        cvfs = []
-        if "NoiseComponent" in self.component_types:
-            for nc in self.NoiseComponent_list:
-                cvfs += nc.covariance_matrix_funcs
-        return cvfs
-
-    @property
-    def scaled_sigma_funcs(self,):
-        """List of scaled uncertainty functions."""
-        ssfs = []
-        if "NoiseComponent" in self.component_types:
-            for nc in self.NoiseComponent_list:
-                ssfs += nc.scaled_sigma_funcs
-        return ssfs
-
-    @property
-    def basis_funcs(self,):
-        """List of scaled uncertainty functions."""
-        bfs = []
-        if "NoiseComponent" in self.component_types:
-            for nc in self.NoiseComponent_list:
-                bfs += nc.basis_funcs
-        return bfs
-
-    @property
-    def phase_deriv_funcs(self):
-        """List of derivative functions for phase components."""
-        return self.get_deriv_funcs("PhaseComponent")
-
-    @property
-    def delay_deriv_funcs(self):
-        """List of derivative functions for delay components."""
-        return self.get_deriv_funcs("DelayComponent")
-
-    @property
-    def d_phase_d_delay_funcs(self):
-        """List of d_phase_d_delay functions."""
-        Dphase_Ddelay = []
-        for cp in self.PhaseComponent_list:
-            Dphase_Ddelay += cp.phase_derivs_wrt_delay
-        return Dphase_Ddelay
-
-    def get_deriv_funcs(self, component_type):
-        """Return dictionary of derivative functions."""
-        deriv_funcs = defaultdict(list)
-        for cp in getattr(self, component_type + "_list"):
-            for k, v in cp.deriv_funcs.items():
-                deriv_funcs[k] += v
-        return dict(deriv_funcs)
+    def component_types(self):
+        return self.model_sectors.keys()
 
     def search_cmp_attr(self, name):
         """Search for an attribute in all components.
@@ -378,41 +335,6 @@ class TimingModel(object):
             except AttributeError:
                 continue
 
-    def get_component_type(self, component):
-        """A function to identify the component object's type.
-
-        Parameters
-        ----------
-        component: component instance
-           The component object need to be inspected.
-
-        Note
-        ----
-        Since a component can be an inheritance from other component We inspect
-        all the component object bases. "inspect getmro" method returns the
-        base classes (including 'object') in method resolution order. The
-        third level of inheritance class name is what we want.
-        Object --> component --> TypeComponent. (i.e. DelayComponent)
-        This class type is in the third to the last of the getmro returned
-        result.
-
-        """
-        # check component type
-        comp_base = inspect.getmro(component.__class__)
-        if comp_base[-2].__name__ != "Component":
-            raise TypeError(
-                "Class '%s' is not a Component type class."
-                % component.__class__.__name__
-            )
-        elif len(comp_base) < 3:
-            raise TypeError(
-                "'%s' class is not a subclass of 'Component' class."
-                % component.__class__.__name__
-            )
-        else:
-            comp_type = comp_base[-3].__name__
-        return comp_type
-
     def map_component(self, component):
         """ Get the location of component.
 
@@ -420,7 +342,7 @@ class TimingModel(object):
         ----------
         component: str or `Component` object
             Component name or component object.
-            
+
         Returns
         -------
         comp: `Component` object
@@ -444,27 +366,68 @@ class TimingModel(object):
                 )
             else:
                 comp = component
-        comp_type = self.get_component_type(comp)
-        host_list = getattr(self, comp_type + "_list")
+        comp_type = get_component_type(comp)
+        host_list = self.model_sectors[comp_type].component_list
         order = host_list.index(comp)
         return comp, order, host_list, comp_type
 
-    def add_component(self, component, order=DEFAULT_ORDER, force=False, validate=True):
+    def _make_sector(self, component, external_sector_map={}):
+        # Map a sector subclass from component type;
+        all_sector_map = builtin_sector_map
+        all_sector_map.update(external_sector_map)
+        if not isinstance(component, (list, tuple)):
+            components = [
+                component,
+            ]
+        # Assuem the first component's type is the type for all other components.
+        com_type = get_component_type(components[0])
+        try:
+            sector_cls = all_sector_map[com_type]
+        except KeyError:
+            raise ValueError("Can not find the Sector class for" " {}".format(com_type))
+        sector = sector_cls(component)
+        if sector.sector_name in self.model_sectors.keys():
+            log.warn("Sector {} is already in the timing model. skip...")
+            return
+        common_method = set(sector._methods).intersection(self.sector_methods.keys())
+        if len(common_method) != 0:
+            raise ValueError(
+                "Sector {}'s methods have the same method with the current "
+                "sector methods. But sector methods should be unique."
+                "Please check .sector_methods for the current sector"
+                " methods.".format(sector.sector_name)
+            )
+        self.model_sectors[sector.sector_name] = sector
+        # Link sector to the Timing model class.
+        self.model_sectors[sector.sector_name]._parent = self
+
+    def add_component(
+        self,
+        component,
+        order=DEFAULT_ORDER,
+        force=False,
+        validate=True,
+        external_sector_map={},
+    ):
         """Add a component into TimingModel.
 
         Parameters
         ----------
-        component : Component
+        component : `pint.modle.Component` object.
             The component to be added to the timing model.
-        order : list, optional
+        order : list, optional.
             The component category order list. Default is the DEFAULT_ORDER.
-        force : bool, optional
+        force : bool, optional.
             If true, add a duplicate component. Default is False.
-
+        validate: bool, optional.
+            If true, validate the component. Default is True.
+        external_sector_map: dict, optional.
+            Non built-in sector maps. Default is {}.
         """
-        comp_type = self.get_component_type(component)
-        if comp_type in self.component_types:
-            comp_list = getattr(self, comp_type + "_list")
+        comp_type = get_component_type(component)
+        print(self.model_sectors)
+        if comp_type in self.model_sectors.keys():
+            comp_list = self.model_sectors[comp_type].component_list
             cur_cps = []
             for cp in comp_list:
                 cur_cps.append((order.index(cp.category), cp))
@@ -481,7 +444,7 @@ class TimingModel(object):
                         % component.__class__.__name__
                     )
         else:
-            self.component_types.append(comp_type)
+            self._make_sector(component, external_sector_map=external_sector_map)
             cur_cps = []
 
         # link new component to TimingModel
@@ -496,7 +459,7 @@ class TimingModel(object):
         cur_cps.append(new_cp)
         cur_cps.sort(key=lambda x: x[0])
         new_comp_list = [c[1] for c in cur_cps]
-        setattr(self, comp_type + "_list", new_comp_list)
+        self.model_sectors[comp_type].component_list = new_comp_list
         # Set up components
         self.setup()
         # Validate inputs
@@ -504,8 +467,8 @@ class TimingModel(object):
             self.validate()
 
     def remove_component(self, component):
-        """ Remove one component from the timing model. 
-            
+        """ Remove one component from the timing model.
+
         Parameters
         ----------
         component: str or `Component` object
@@ -548,18 +511,7 @@ class TimingModel(object):
         return result_comp
 
     def replicate(self, components=[], copy_component=False):
-        new_tm = TimingModel()
-        for ct in self.component_types:
-            comp_list = getattr(self, ct + "_list").values()
-            if not copy_component:
-                # if not copied, the components' _parent will point to the new
-                # TimingModel class.
-                new_tm.setup_components(comp_list)
-            else:
-                new_comp_list = [copy.deepcopy(c) for c in comp_list]
-                new_tm.setup_components(new_comp_list)
-        new_tm.top_level_params = self.top_level_params
-        return new_tm
+        raise NotImplementError()
 
     def get_components_by_category(self):
         """Return a dict of this model's component objects keyed by the category name"""
@@ -571,16 +523,16 @@ class TimingModel(object):
 
     def add_param_from_top(self, param, target_component, setup=False):
         """ Add a parameter to a timing model component.
-           
-            Parameters
-            ----------
-            param: str
-                Parameter name
-            target_component: str
-                Parameter host component name. If given as "" it would add
-                parameter to the top level `TimingModel` class
-            setup: bool, optional
-                Flag to run setup() function.  
+
+        Parameters
+        ----------
+        param: str
+            Parameter name
+        target_component: str
+            Parameter host component name. If given as "" it would add
+            parameter to the top level `TimingModel` class
+        setup: bool, optional
+            Flag to run setup() function.
         """
         if target_component == "":
             setattr(self, param.name, param)
@@ -613,7 +565,7 @@ class TimingModel(object):
             self.components[target_component].remove_param(param)
 
     def get_params_mapping(self):
-        """Report whick component each parameter name comes from."""
+        """Report which component each parameter name comes from."""
         param_mapping = {}
         for p in self.top_level_params:
             param_mapping[p] = "timing_model"
@@ -657,146 +609,6 @@ class TimingModel(object):
             "{:<40}{}\n".format(cp, getattr(self, par).help_line())
             for par, cp in self.get_params_mapping().items()
         )
-
-    def delay(self, toas, cutoff_component="", include_last=True):
-        """Total delay for the TOAs.
-
-        Parameters
-        ----------
-        toas: toa.table
-            The toas for analysis delays.
-        cutoff_component: str
-            The delay component name that a user wants the calculation to stop
-            at.
-        include_last: bool
-            If the cutoff delay component is included.
-
-        Return the total delay which will be subtracted from the given
-        TOA to get time of emission at the pulsar.
-
-        """
-        delay = np.zeros(toas.ntoas) * u.second
-        if cutoff_component == "":
-            idx = len(self.DelayComponent_list)
-        else:
-            delay_names = [x.__class__.__name__ for x in self.DelayComponent_list]
-            if cutoff_component in delay_names:
-                idx = delay_names.index(cutoff_component)
-                if include_last:
-                    idx += 1
-            else:
-                raise KeyError("No delay component named '%s'." % cutoff_component)
-
-        # Do NOT cycle through delay_funcs - cycle through components until cutoff
-        for dc in self.DelayComponent_list[:idx]:
-            for df in dc.delay_funcs_component:
-                delay += df(toas, delay)
-        return delay
-
-    def phase(self, toas, abs_phase=False):
-        """Return the model-predicted pulse phase for the given TOAs."""
-        # First compute the delays to "pulsar time"
-        delay = self.delay(toas)
-        phase = Phase(np.zeros(toas.ntoas), np.zeros(toas.ntoas))
-        # Then compute the relevant pulse phases
-        for pf in self.phase_funcs:
-            phase += Phase(pf(toas, delay))
-
-        # If the absolute phase flag is on, use the TZR parameters to compute
-        # the absolute phase.
-        if abs_phase:
-            if "AbsPhase" not in list(self.components.keys()):
-                # if no absolute phase (TZRMJD), add the component to the model and calculate it
-                from pint.models import absolute_phase
-
-                self.add_component(absolute_phase.AbsPhase())
-                self.make_TZR_toa(
-                    toas
-                )  # TODO:needs timfile to get all toas, but model doesn't have access to timfile. different place for this?
-            tz_toa = self.get_TZR_toa(toas)
-            tz_delay = self.delay(tz_toa)
-            tz_phase = Phase(np.zeros(len(toas.table)), np.zeros(len(toas.table)))
-            for pf in self.phase_funcs:
-                tz_phase += Phase(pf(tz_toa, tz_delay))
-            return phase - tz_phase
-        else:
-            return phase
-
-    def covariance_matrix(self, toas):
-        """This a function to get the TOA covariance matrix for noise models.
-           If there is no noise model component provided, a diagonal matrix with
-           TOAs error as diagonal element will be returned.
-        """
-        ntoa = toas.ntoas
-        tbl = toas.table
-        result = np.zeros((ntoa, ntoa))
-        # When there is no noise model.
-        if len(self.covariance_matrix_funcs) == 0:
-            result += np.diag(tbl["error"].quantity.to(u.s).value ** 2)
-            return result
-
-        for nf in self.covariance_matrix_funcs:
-            result += nf(toas)
-        return result
-
-    def scaled_sigma(self, toas):
-        """This a function to get the scaled TOA uncertainties noise models.
-           If there is no noise model component provided, a vector with
-           TOAs error as values will be returned.
-        """
-        ntoa = toas.ntoas
-        tbl = toas.table
-        result = np.zeros(ntoa) * u.us
-        # When there is no noise model.
-        if len(self.scaled_sigma_funcs) == 0:
-            result += tbl["error"].quantity
-            return result
-
-        for nf in self.scaled_sigma_funcs:
-            result += nf(toas)
-        return result
-
-    def noise_model_designmatrix(self, toas):
-        result = []
-        if len(self.basis_funcs) == 0:
-            return None
-
-        for nf in self.basis_funcs:
-            result.append(nf(toas)[0])
-        return np.hstack([r for r in result])
-
-    def noise_model_basis_weight(self, toas):
-        result = []
-        if len(self.basis_funcs) == 0:
-            return None
-
-        for nf in self.basis_funcs:
-            result.append(nf(toas)[1])
-        return np.hstack([r for r in result])
-
-    def noise_model_dimensions(self, toas):
-        """Returns a dictionary of correlated-noise components in the noise
-        model.  Each entry contains a tuple (offset, size) where size is the
-        number of basis funtions for the component, and offset is their
-        starting location in the design matrix and weights vector."""
-        result = {}
-
-        # Correct results rely on this ordering being the
-        # same as what is done in the self.basis_funcs
-        # property.
-        if len(self.basis_funcs) > 0:
-            ntot = 0
-            for nc in self.NoiseComponent_list:
-                bfs = nc.basis_funcs
-                if len(bfs) == 0:
-                    continue
-                nbf = 0
-                for bf in bfs:
-                    nbf += len(bf(toas)[1])
-                result[nc.category] = (ntot, nbf)
-                ntot += nbf
-
-        return result
 
     def jump_flags_to_params(self, toas):
         """convert jump flags in toas.table["flags"] to jump parameters in the model"""
@@ -848,182 +660,12 @@ class TimingModel(object):
             getattr(self, param.name).frozen = False
         self.components["PhaseJump"].setup()
 
-    def get_barycentric_toas(self, toas, cutoff_component=""):
-        """Conveniently calculate the barycentric TOAs.
-
-       Parameters
-       ----------
-       toas: TOAs object
-           The TOAs the barycentric corrections are applied on
-       cutoff_delay: str, optional
-           The cutoff delay component name. If it is not provided, it will
-           search for binary delay and apply all the delay before binary.
-
-       Return
-       ------
-       astropy.quantity.
-           Barycentered TOAs.
-
-        """
-        tbl = toas.table
-        if cutoff_component == "":
-            delay_list = self.DelayComponent_list
-            for cp in delay_list:
-                if cp.category == "pulsar_system":
-                    cutoff_component = cp.__class__.__name__
-        corr = self.delay(toas, cutoff_component, False)
-        return tbl["tdbld"] * u.day - corr
-
-    def d_phase_d_toa(self, toas, sample_step=None):
-        """Return the derivative of phase wrt TOA.
-
-        Parameters
-        ----------
-        toas : PINT TOAs class
-            The toas when the derivative of phase will be evaluated at.
-        sample_step : float optional
-            Finite difference steps. If not specified, it will take 1/10 of the
-            spin period.
-
-        """
-        copy_toas = copy.deepcopy(toas)
-        if sample_step is None:
-            pulse_period = 1.0 / (self.F0.quantity)
-            sample_step = pulse_period * 1000
-        sample_dt = [-sample_step, 2 * sample_step]
-
-        sample_phase = []
-        for dt in sample_dt:
-            dt_array = [dt.value] * copy_toas.ntoas * dt._unit
-            deltaT = time.TimeDelta(dt_array)
-            copy_toas.adjust_TOAs(deltaT)
-            phase = self.phase(copy_toas)
-            sample_phase.append(phase)
-        # Use finite difference method.
-        # phase'(t) = (phase(t+h)-phase(t-h))/2+ 1/6*F2*h^2 + ..
-        # The error should be near 1/6*F2*h^2
-        dp = sample_phase[1] - sample_phase[0]
-        d_phase_d_toa = dp.int / (2 * sample_step) + dp.frac / (2 * sample_step)
-        del copy_toas
-        return d_phase_d_toa.to(u.Hz)
-
     def d_phase_d_tpulsar(self, toas):
         """Return the derivative of phase wrt time at the pulsar.
 
         NOT implemented yet.
         """
-        pass
-
-    def d_phase_d_param(self, toas, delay, param):
-        """Return the derivative of phase with respect to the parameter."""
-        # TODO need to do correct chain rule stuff wrt delay derivs, etc
-        # Is it safe to assume that any param affecting delay only affects
-        # phase indirectly (and vice-versa)??
-        par = getattr(self, param)
-        result = np.longdouble(np.zeros(toas.ntoas)) / par.units
-        param_phase_derivs = []
-        phase_derivs = self.phase_deriv_funcs
-        delay_derivs = self.delay_deriv_funcs
-        if param in list(phase_derivs.keys()):
-            for df in phase_derivs[param]:
-                result += df(toas, param, delay).to(
-                    result.unit, equivalencies=u.dimensionless_angles()
-                )
-        else:
-            # Apply chain rule for the parameters in the delay.
-            # total_phase = Phase1(delay(param)) + Phase2(delay(param))
-            # d_total_phase_d_param = d_Phase1/d_delay*d_delay/d_param +
-            #                         d_Phase2/d_delay*d_delay/d_param
-            #                       = (d_Phase1/d_delay + d_Phase2/d_delay) *
-            #                         d_delay_d_param
-
-            d_delay_d_p = self.d_delay_d_param(toas, param)
-            dpdd_result = np.longdouble(np.zeros(toas.ntoas)) / u.second
-            for dpddf in self.d_phase_d_delay_funcs:
-                dpdd_result += dpddf(toas, delay)
-            result = dpdd_result * d_delay_d_p
-        return result.to(result.unit, equivalencies=u.dimensionless_angles())
-
-    def d_delay_d_param(self, toas, param, acc_delay=None):
-        """Return the derivative of delay with respect to the parameter."""
-        par = getattr(self, param)
-        result = np.longdouble(np.zeros(toas.ntoas) << (u.s / par.units))
-        delay_derivs = self.delay_deriv_funcs
-        if param not in list(delay_derivs.keys()):
-            raise AttributeError(
-                "Derivative function for '%s' is not provided"
-                " or not registered. " % param
-            )
-        for df in delay_derivs[param]:
-            result += df(toas, param, acc_delay).to(
-                result.unit, equivalencies=u.dimensionless_angles()
-            )
-        return result
-
-    def d_phase_d_param_num(self, toas, param, step=1e-2):
-        """Return the derivative of phase with respect to the parameter.
-
-        Compute the value numerically, using a symmetric finite difference.
-
-        """
-        # TODO : We need to know the range of parameter.
-        par = getattr(self, param)
-        ori_value = par.value
-        unit = par.units
-        if ori_value == 0:
-            h = 1.0 * step
-        else:
-            h = ori_value * step
-        parv = [par.value - h, par.value + h]
-
-        phase_i = (
-            np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.dimensionless_unscaled
-        )
-        phase_f = (
-            np.zeros((toas.ntoas, 2), dtype=np.longdouble) * u.dimensionless_unscaled
-        )
-        for ii, val in enumerate(parv):
-            par.value = val
-            ph = self.phase(toas)
-            phase_i[:, ii] = ph.int
-            phase_f[:, ii] = ph.frac
-        res_i = -phase_i[:, 0] + phase_i[:, 1]
-        res_f = -phase_f[:, 0] + phase_f[:, 1]
-        result = (res_i + res_f) / (2.0 * h * unit)
-        # shift value back to the original value
-        par.quantity = ori_value
-        return result
-
-    def d_delay_d_param_num(self, toas, param, step=1e-2):
-        """Return the derivative of delay with respect to the parameter.
-
-        Compute the value numerically, using a symmetric finite difference.
-
-        """
-        # TODO : We need to know the range of parameter.
-        par = getattr(self, param)
-        ori_value = par.value
-        if ori_value is None:
-            # A parameter did not get to use in the model
-            log.warning("Parameter '%s' is not used by timing model." % param)
-            return np.zeros(toas.ntoas) * (u.second / par.units)
-        unit = par.units
-        if ori_value == 0:
-            h = 1.0 * step
-        else:
-            h = ori_value * step
-        parv = [par.value - h, par.value + h]
-        delay = np.zeros((toas.ntoas, 2))
-        for ii, val in enumerate(parv):
-            par.value = val
-            try:
-                delay[:, ii] = self.delay(toas)
-            except:
-                par.value = ori_value
-                raise
-        d_delay = (-delay[:, 0] + delay[:, 1]) / 2.0 / h
-        par.value = ori_value
-        return d_delay * (u.second / unit)
+        raise NotImplementedError()
 
     def designmatrix(
         self, toas, acc_delay=None, scale_by_F0=True, incfrozen=False, incoffset=True
@@ -1075,9 +717,53 @@ class TimingModel(object):
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
 
+    def covariance_matrix(self, toas):
+        """This a function to get the TOA covariance matrix for noise models.
+           If there is no noise model component provided, a diagonal matrix with
+           TOAs error as diagonal element will be returned.
+        """
+        ntoa = toas.ntoas
+        tbl = toas.table
+        result = np.zeros((ntoa, ntoa))
+        # When there is no noise model.
+        if "NoiseComponent" not in self.component_types:
+            result += np.diag(tbl["error"].quantity.to(u.s).value ** 2)
+            return result
+
+        for nf in self.covariance_matrix_funcs:
+            result += nf(toas)
+        return result
+
+    @property
+    def has_correlated_errors(self):
+        """Whether or not this model has correlated errors."""
+        if "NoiseComponent" in self.component_types:
+            for nc in self.model_sectors["NoiseComponent"].component_list:
+                # recursive if necessary
+                if nc.introduces_correlated_errors:
+                    return True
+        return False
+
+    def scaled_sigma(self, toas):
+        """This a function to get the scaled TOA uncertainties noise models.
+           If there is no noise model component provided, a vector with
+           TOAs error as values will be returned.
+        """
+        ntoa = toas.ntoas
+        tbl = toas.table
+        result = np.zeros(ntoa) * u.us
+        # When there is no noise model.
+        if "NoiseComponent" not in self.component_types:
+            result += tbl["error"].quantity
+            return result
+
+        for nf in self.scaled_sigma_funcs:
+            result += nf(toas)
+        return result
+
     def compare(self, othermodel, nodmx=True):
         """Print comparison with another model
-        
+
         Parameters
         ----------
         othermodel
@@ -1087,7 +773,7 @@ class TimingModel(object):
 
         Returns
         -------
-        str 
+        str
             Human readable comparison, for printing
         """
 
