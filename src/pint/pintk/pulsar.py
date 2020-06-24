@@ -352,6 +352,8 @@ class Pulsar(object):
                     for item in comp_list:
                         if isinstance(item, pint.models.jump.PhaseJump):
                             self.prefit_model.remove_component(item)
+                            if self.fitted:
+                                self.postfit_model.remove_component(item)
                 else:
                     self.prefit_model.components["PhaseJump"].setup()
                     if self.fitted:
