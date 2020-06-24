@@ -1349,7 +1349,7 @@ class TimingModel(object):
 
         return result_begin + result_middle + result_end
 
-    def sanity_check(self, toas):
+    def maskPar_has_toas_check(self, toas):
         """Sanity check to ensure all maskParameters select at least one TOA."""
         for maskpar in self.get_params_of_type_top("maskParameter"):
             par = getattr(self, maskpar)
