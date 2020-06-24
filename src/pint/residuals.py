@@ -115,9 +115,11 @@ class Residuals(object):
             modelphase = self.model.phase(self.toas) + delta_pulse_numbers
             # Here it subtracts the first phase, so making the first TOA be the
             # reference. Not sure this is a good idea.
-            modelphase -= Phase(modelphase.int[0], modelphase.frac[0])
+            if self.subtract_mean:
+                modelphase -= Phase(modelphase.int[0], modelphase.frac[0])
 
             # Here we discard the integer portion of the residual and replace it with 0
+            # This is effectively selecting the nearst pulse to compute the residual to.
             residualphase = Phase(np.zeros_like(modelphase.frac), modelphase.frac)
             # This converts from a Phase object to a np.float128
             full = residualphase.int + residualphase.frac
