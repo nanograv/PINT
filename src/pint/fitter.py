@@ -601,7 +601,7 @@ class PowellFitter(Fitter):
 
     def fit_toas(self, maxiter=20):
         # check that params of timing model have necessary components
-        # self.model_init.maskPar_has_toas_check(self.toas)
+        self.model_init.maskPar_has_toas_check(self.toas)
         # Initial guesses are model params
         fitp = self.get_fitparams_num()
         self.fitresult = opt.minimize(
@@ -631,7 +631,7 @@ class WLSFitter(Fitter):
     def fit_toas(self, maxiter=1, threshold=False):
         """Run a linear weighted least-squared fitting method"""
         # check that params of timing model have necessary components
-        # self.model_init.maskPar_has_toas_check(self.toas)
+        self.model_init.maskPar_has_toas_check(self.toas)
         chi2 = 0
         for i in range(maxiter):
             fitp = self.get_fitparams()
@@ -747,7 +747,7 @@ class GLSFitter(Fitter):
         accuracy where they both can be applied.
         """
         # check that params of timing model have necessary components
-        # self.model_init.maskPar_has_toas_check(self.toas)
+        self.model_init.maskPar_has_toas_check(self.toas)
         chi2 = 0
         for i in range(max(maxiter, 1)):
             fitp = self.get_fitparams()
