@@ -85,7 +85,7 @@ class TroposphereDelay(DelayComponent):
         self.add_param(
             boolParameter(
                 name="CORRECT_TROPOSPHERE",
-                value="N",
+                value="Y",
                 description="Enable Troposphere Delay Model",
             )
         )
@@ -120,38 +120,44 @@ class TroposphereDelay(DelayComponent):
 
     def troposphere_delay(self, toas, acc_delay=None):
         # must include model to get ra/dec of target, plus maybe proper motion?
-        tab = toas.table
-
-        radec = SkyCoord(
-            self.RAJ.value * self.RAJ.units, self.DECJ.value * self.DECJ.units
-        )  # just do this once instead of adjusting over time
-
-        # okie so I need to do this more efficiently, so i'll group by the observatory
-
-        # for loop copied from solary_system_shapiro_delay
         tbl = toas.table
         delay = np.zeros(len(tbl))
-        for ii, key in enumerate(tbl.groups.keys):
-            grp = tbl.groups[ii]
-            loind, hiind = tbl.groups.indices[ii : ii + 2]
-            if key["obs"].lower() == "barycenter":
-                log.debug("Skipping Troposphere delay for Barycentric TOAs")
-                continue
 
-            obs = get_observatory(tbl.groups.keys[ii]["obs"]).earth_location_itrf()
+        if self.CORRECT_TROPOSPHERE.value:
 
-            alt = self._get_target_altitude(obs, grp, radec)
+            try:
+                radec = SkyCoord(
+                    self.RAJ.value * self.RAJ.units, self.DECJ.value * self.DECJ.units
+                )  # just do this once instead of adjusting over time
+            except AttributeError:
+                radec = SkyCoord(
+                    self.ELONG.value * self.ELONG.units,
+                    self.ELAT.value * self.ELAT.units,
+                    frame="barycentricmeanecliptic",
+                )
+            # okie so I need to do this more efficiently, so i'll group by the observatory
 
-            # now actually calculate the atmospheric delay based on the models
-            # start with 7.7 ns and plane atmosphere
+            for ii, key in enumerate(tbl.groups.keys):
+                grp = tbl.groups[ii]
+                loind, hiind = tbl.groups.indices[ii : ii + 2]
+                if key["obs"].lower() == "barycenter":
+                    log.debug("Skipping Troposphere delay for Barycentric TOAs")
+                    continue
 
-            # delay[loind:hiind] = 7.7 * u.nanosecond / np.sin(alt)
+                obs = get_observatory(tbl.groups.keys[ii]["obs"]).earth_location_itrf()
 
-            delay[loind:hiind] = self.delay_model(
-                alt, obs.lat, obs.height, grp["tdbld"]
-            )
+                alt = self._get_target_altitude(obs, grp, radec)
 
-        return delay
+                # now actually calculate the atmospheric delay based on the models
+                # start with 7.7 ns and plane atmosphere
+
+                # delay[loind:hiind] = 7.7 * u.nanosecond / np.sin(alt)
+
+                delay[loind:hiind] = self.delay_model(
+                    alt, obs.lat, obs.height, grp["tdbld"]
+                )
+        # else just return the default value of zeros
+        return delay * u.s
 
     def delay_model(self, alt, lat, H, mjd):
 
@@ -163,14 +169,12 @@ class TroposphereDelay(DelayComponent):
         # return 7.7 * u.ns
 
         p = 101
-        return (
-            (p / 43.921)
-            / (const.c.value * (1 - 0.00266 * np.cos(2 * lat) + 0.00028 * H.value))
-            * u.second
+        return (p / 43.921) / (
+            const.c.value * (1 - 0.00266 * np.cos(2 * lat) + 0.00028 * H.value)
         )
 
     def wet_zenith_delay(self):
-        return 0.0 * u.second  # i will update this method later
+        return 0.0  # i will update this method later
         # default for TEMPO2 is zero wet delay if not specified
 
     def _coefficient_func(self, average, amplitudes, yearFraction):
