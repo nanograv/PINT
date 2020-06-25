@@ -74,7 +74,7 @@ class Prior(object):
         return self._rv.logpdf(v)
 
 
-class InclinationPrior(rv_continuous):
+class RandomInclinationPrior(rv_continuous):
     """ Prior returning the pdf for sin(i) given a uniform prior on cos(i).
 
         p(sin i) == p(x) = x/(1-x**2)**0.5
@@ -83,7 +83,7 @@ class InclinationPrior(rv_continuous):
     def __init__(self, **kwargs):
         kwargs["a"] = 0
         kwargs["b"] = 1
-        super(InclinationPrior, self).__init__(**kwargs)
+        super(RandomInclinationPrior, self).__init__(**kwargs)
 
     def _pdf(self, v):
         return v / (1 - v ** 2) ** 0.5
