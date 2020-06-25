@@ -159,11 +159,51 @@ class TroposphereDelay(DelayComponent):
         # else just return the default value of zeros
         return delay * u.s
 
-    def delay_model(self, alt, lat, H, mjd):
+    def _validate_altitudes(self, alt, obs=""):
+        # this method checks if any of the TOAs occur at invalid altitudes
+        # for example, if the pulsar position is incorrect, it would likely
+        # result in negative altitudes
+        # to correct for this is two steps: i'll make a numpy boolean array
+        # to store whether each TOA is valid or not, to let me know later
+        # then, to allow for fast numpy math, i'll correct the individual invalid TOAs
+        # to make them appear at the zenith, then afterwards i'll make that part of
+        # the delay be zero
+        # optionally pass obs to list which observatory the invalid altitues are from
+        isPositive = np.greater_equal(alt, 0 * u.deg)
+        isLessThan90 = np.less_equal(alt, 90 * u.deg)
+        isValid = np.logical_and(isPositive, isLessThan90)
 
-        return self.zenith_delay(lat, H.to(u.km)) * self.mapping_function(
+        # now make corrections to alt based on the valid status
+        # if not valid, make them appear at the zenith to make the math happy
+        if not np.all(isValid):
+            # i might want to count how many TOAs are invalid
+            numInvalid = len(isValid) - np.count_nonzero(isValid)
+            message = "Invalid altitude calculated for %i TOAS" % numInvalid
+            if obs:
+                message += " from observatory " + obs
+            log.warning(message)
+
+            # now correct the values
+            # first make them zeros
+            alt *= isValid  # multilpy valids by 1, else make zero
+            alt += (
+                90 * u.deg * np.logical_not(isValid)
+            )  # increase the invalid ones to 90 deg
+            # this will prevent unexpected behaviour from occuring for negative altitudes
+        return isValid
+
+    def delay_model(self, alt, lat, H, mjd):
+        # make sure teh altitudes are reasonable values, warn if not
+        altIsValid = self._validate_altitudes(alt)
+
+        delay = self.zenith_delay(lat, H.to(u.km)) * self.mapping_function(
             alt, lat, H, mjd
         ) + self.wet_zenith_delay() * self.wet_map(alt, lat)
+
+        # modify the delay if any of the alittudes are invalid
+        if not np.all(altIsValid):
+            delay *= altIsValid  # this will make the invalid delays zero
+        return delay
 
     def zenith_delay(self, lat, H):
         # return 7.7 * u.ns
