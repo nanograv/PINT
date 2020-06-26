@@ -145,3 +145,13 @@ class TestModelBuilding:
         tm2.remove_component(remove_cp2)
         assert not "BinaryELL1" in tm2.components.keys()
         assert not remove_cp2 in tm2.DelayComponent_list
+
+    def test_replicate(self):
+        tm1 = TimingModel("TestTimingModel", [DelayJump(), Spindown()])
+
+        tm2 = tm1.replicate()
+
+        assert len(tm1.components) == len(tm2.components)
+
+        for cp1, cp2 in zip(tm1.components, tm2.components):
+            assert cp1 == cp2

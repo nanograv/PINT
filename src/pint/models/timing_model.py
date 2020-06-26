@@ -547,16 +547,12 @@ class TimingModel(object):
 
         return result_comp
 
-    def replicate(self, components=[], copy_component=False):
+    def replicate(self):
+        """Creates new TimingModel with same components as current."""
         new_tm = TimingModel()
         for cp in self.components:
-            if not copy_component:
-                # if not copied, the components' _parent will point to the new
-                # TimingModel class.
-                new_tm.add_component(component=cp)
-            else:
-                new_comp = copy.deepcopy(cp)
-                new_tm.add_component(component=new_comp)
+            new_comp = copy.deepcopy(self.components[cp])
+            new_tm.add_component(component=new_comp)
         new_tm.top_level_params = self.top_level_params
         return new_tm
 
@@ -1355,6 +1351,7 @@ class TimingModel(object):
             par = getattr(self, maskpar)
             if "TNEQ" in str(par.name) or par.frozen:
                 continue
+            print(par.select_toa_mask(toas))
             if par.is_mask and len(par.select_toa_mask(toas)) == 0:
                 raise AttributeError(
                     "The maskParameter '%s %s %s' has no TOAs selected. "
