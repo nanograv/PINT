@@ -864,7 +864,7 @@ class PlkWidget(tk.Frame):
 
         xs = self.xvals[selected].value
         ys = self.yvals[selected].value
-        inds = self.psr.selected_toas.table["index"][selected]
+        inds = self.psr.selected_toas.table["index"]
 
         for i in range(len(xs)):
             line = "%6d" % inds[i]
