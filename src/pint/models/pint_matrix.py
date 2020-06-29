@@ -3,11 +3,13 @@ and the covariance matrix
 """
 
 import numpy as np
+from itertools import combinations
+
 
 __all__ = ["PintMatrix", "DesignMatrix", "CovarianceMatrix"]
 
 
-class PintMatrixBase:
+class PintMatrix:
     """ PINT matrix is a base class for PINT fitters matrix.
 
     Parameters
@@ -27,6 +29,9 @@ class PintMatrixBase:
             raise ValueError("Axis label dimension does not match the data "
                              "dimension.")
 
+        # Check label index overlap TODO: should we allow overlap?
+        self._check_index_overlap()
+
     @property
     def ndim(self):
         return self.data.ndim
@@ -42,47 +47,73 @@ class PintMatrixBase:
             labels.append(dim.keys())
         return labels
 
-    def get_label_slice(self, label_names):
+    def _check_index_overlap(self):
+        for ii, dim in enumerate(self.axis_labels):
+            comb = combinations(list(dim.values), 2)
+            for cb in comb:
+                if cb[0][0] <= cb[1][1] and cb[1][0] <= cb[0][1]:
+                    raise ValueError("Label index in dim {} has"
+                                     " overlap".format(ii))
+
+    def _get_label(self, lable):
+        """ Get the label entry and its dimension. We assume the labels are
+        unique in the matrix.
+        """
+        for ii, dim in enumerate(self.axis_labels):
+            if label in dim.keys():
+                return(ii, label, dim[label]))
+        raise KeyError("Label {} is not in the matrix".format(label))
+
+    def get_label_slice(self, labels):
         """ Return the given lable slices.
         """
-        pass
+        dim_slices = dict([(d, slice(None) for d in range(self.ndim))])
+        new_labels =  dict([(d, {} for d in range(self.ndim))])
+        for lb in labels:
+            lable_info = self._get_label(lb)
+            label_size = label_info[2][1] - label_info[2][0] + 1
+            # if slice is a list, there is a label already added.
+            if isinstance(dim_slices[label_info[0]], list):
+                # The start of the new matrix.
+                start = len(dim_slices[label_info[0]]) + 1
+                dim_slices[label_info[0]] += range(label_info[2][0],
+                                                   label_info[2][1] + 1)
 
-    def labeled_data(self, label_names):
-        """ Return the data by given labels.
+            else:
+                start = 0
+                dim_slices[label_info[0]] = range(label_info[2][0],
+                                                  label_info[2][1] + 1)
+
+            new_labels[label_info[0]].update({lb: (start, start + label_size)})
+        return list(dim_slices.values()), list(new_labels.values())
+
+    def get_label_matrix(self, labels):
+        """ Get a sub-matrix data according to the given labels.
         """
-        pass
-
-
+        slice, new_labels = self.get_label_slice(labels)
+        return PintMatrix(self.data[slice], new_labels)
 
     def match_labels(self, pint_matrix):
         """ Match the label index between the current matrix and input pint
-        matrix.
+        matrix. The labels will be matched along axises, not cross the axises.
 
         Parametere
         ----------
-        pint_matrix: `PintMatrixBase` object or its sub-classes.
+        pint_matrix: `PintMatrix` object or its sub-classes.
             The input pint matrix for label matching.
+
+        Return
+        ------
+            Index map between the current labels and input matrix labels.
         """
+        pass
 
-
-    def append_x(self, pint_matrix):
+    def append_along_axis(self, pint_matrix, axis):
         """ Append one pint matrix on x axis.
         """
-        # Check shape and resize data
-        new_shape = (max(self.shape[0], pint_matrix.shape[0]),
-                     max(self.shape[1], pint_matrix.shape[1]))
-        # Match the input matrix y axis to the current y axis
-        for y in self.y_axis:
-            if y in pint_matrix.y_axis:
-                input_idx = pint_matrix.y_axis.index(y)
+        pass
 
-
-    def append_y(self, pint_matrix):
-        """ Append one pint matrix on the y axis.
-        """
-
-
-class DesignMatrix(PintMatrixBase):
+class DesignMatrix(PintMatrix):
     """ Design matrix for least square fitting.
 
     Parameters
