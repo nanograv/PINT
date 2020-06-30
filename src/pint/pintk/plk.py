@@ -1048,6 +1048,14 @@ class PlkWidget(tk.Frame):
                     # Left click is select
                     self.selected[ind] = not self.selected[ind]
                     self.updatePlot(keepAxes=True)
+                    self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
+                    # if point is being selected (instead of unselected) or
+                    # point is unselected but other points remain selected
+                    if self.selected[ind] or any(self.selected):
+                        # update selected_toas object w/ selected points
+                        self.psr.selected_toas.select(self.selected)
+                        self.psr.update_resids()
+                        self.call_updates()
 
     def clickAndDrag(self, event):
         """

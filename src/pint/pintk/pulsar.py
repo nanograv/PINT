@@ -289,8 +289,12 @@ class Pulsar(object):
             self.prefit_model.components["PhaseJump"]._parent = self.prefit_model
             if self.fitted:
                 self.postfit_model.add_component(a)
-            for dict1 in self.all_toas.table["flags"][selected]:
+            for dict1, dict2 in zip(
+                self.all_toas.table["flags"][selected],
+                self.selected_toas.table["flags"],
+            ):
                 dict1["jump"] = 1
+                dict2["jump"] = 1
             return param.name
         # if gets here, has at least one jump param already
         # if doesnt overlap or cancel, add the param
@@ -327,9 +331,14 @@ class Pulsar(object):
                 self.prefit_model.remove_param("JUMP" + str(num))
                 if self.fitted:
                     self.postfit_model.remove_param("JUMP" + str(num))
-                for dict1 in self.all_toas.table["flags"][selected]:
+                for dict1, dict2 in zip(
+                    self.all_toas.table["flags"][selected],
+                    self.selected_toas.table["flags"],
+                ):
                     if "jump" in dict1.keys() and dict1["jump"] == num:
                         del dict1["jump"]
+                    if "jump" in dict2.keys() and dict2["jump"] == num:
+                        del dict2["jump"]
                 nums_subset = range(num + 1, numjumps + 1)
                 for n in nums_subset:
                     # iterate through jump params and rename them so that they are always in numerical order starting with JUMP1
@@ -367,8 +376,11 @@ class Pulsar(object):
                 )
                 return None
         # if here, then doesn't overlap or match anything
-        for dict1 in self.all_toas.table["flags"][selected]:
+        for dict1, dict2 in zip(
+            self.all_toas.table["flags"][selected], self.selected_toas.table["flags"]
+        ):
             dict1["jump"] = numjumps + 1
+            dict2["jump"] = numjumps + 1
         param = pint.models.parameter.maskParameter(
             name="JUMP",
             index=numjumps + 1,
@@ -411,17 +423,19 @@ class Pulsar(object):
                     self.prefit_model, param
                 ).frozen == False and param.startswith("JUMP"):
                     fit_jumps.append(int(param[4:]))
-            jumps = [
-                True if "jump" in dict.keys() and dict["jump"] in fit_jumps else False
-                for dict in self.selected_toas.table["flags"]
-            ]
+
             numjumps = self.prefit_model.components["PhaseJump"].get_number_of_jumps()
             if numjumps == 0:
                 log.warn(
                     "There are no jumps (maskParameter objects) in PhaseJump. Please delete the PhaseJump object and try again. "
                 )
                 return None
-            # if only par file jumps in PhaseJump object
+            # boolean array to determine if all selected toas are jumped
+            jumps = [
+                True if "jump" in dict.keys() and dict["jump"] in fit_jumps else False
+                for dict in self.all_toas.table["flags"][selected]
+            ]
+            # check if par file jumps in PhaseJump object
             if not any(jumps):
                 # for every jump, set appropriate flag for TOAs it jumps
                 for jump_par in self.prefit_model.components[
@@ -436,17 +450,19 @@ class Pulsar(object):
                     True
                     if "jump" in dict.keys() and dict["jump"] in fit_jumps
                     else False
-                    for dict in self.selected_toas.table["flags"]
+                    for dict in self.all_toas.table["flags"][selected]
                 ]
             if all(jumps):
                 log.warn(
                     "toas being fit must not all be jumped. Remove or uncheck at least one jump in the selected toas before fitting."
                 )
                 return None
+            # numerical array of selected jump flags
             sel_jump_nums = [
                 dict["jump"] if "jump" in dict.keys() else np.nan
-                for dict in self.selected_toas.table["flags"]
+                for dict in self.all_toas.table["flags"][selected]
             ]
+            # numerical array of all jump flags
             full_jump_nums = [
                 dict["jump"] if "jump" in dict.keys() else np.nan
                 for dict in self.all_toas.table["flags"]
