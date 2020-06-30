@@ -1351,7 +1351,6 @@ class TimingModel(object):
             par = getattr(self, maskpar)
             if "TNEQ" in str(par.name) or par.frozen:
                 continue
-            print(par.select_toa_mask(toas))
             if par.is_mask and len(par.select_toa_mask(toas)) == 0:
                 raise AttributeError(
                     "The maskParameter '%s %s %s' has no TOAs selected. "
