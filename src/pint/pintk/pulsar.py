@@ -518,7 +518,7 @@ class Pulsar(object):
                 getattr(pm_no_jumps, param).value = 0.0
                 getattr(pm_no_jumps, param).frozen = True
         self.prefit_resids_no_jumps = Residuals(
-            self.all_toas, pm_no_jumps, set_pulse_nums=True
+            self.selected_toas, pm_no_jumps, set_pulse_nums=True
         )
 
         f = copy.deepcopy(fitter)
