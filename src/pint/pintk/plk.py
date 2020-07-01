@@ -816,6 +816,9 @@ class PlkWidget(tk.Frame):
         Format is:
         TOA_index   X_val   Y_val
 
+        or, if jumps:
+        TOA_index   X_val   Y_val   jump_key
+
         or, if residuals:
         TOA_index   X_val   time_resid  phase_resid
         """
@@ -859,12 +862,32 @@ class PlkWidget(tk.Frame):
         else:
             header += "%12s" % plotlabels[self.yid]
 
-        print(header)
-        print("-" * len(header))
-
         xs = self.xvals[selected].value
         ys = self.yvals[selected].value
         inds = self.psr.all_toas.table["index"][selected]
+
+        # gather jumps, if any
+        jumps = {}  # layout: jumps = {'toa index':'jump_key'}
+        if "PhaseJump" in self.psr.prefit_model.components:
+            for jump in self.psr.prefit_model.components[
+                "PhaseJump"
+            ].get_jump_param_objects():
+                # find common toa indices between jumped toas and selected toas
+                common = np.intersect1d(jump.select_toa_mask(self.psr.all_toas), inds)
+                if common.size > 0:
+                    for num in common:
+                        # display -gui_jump flag for jumps added thru pintk
+                        if jump.key == "jump":
+                            jumps[num] = "-gui_jump"
+                        else:
+                            jumps[num] = jump.key
+
+        # if there are jumps, add header for it
+        if jumps:
+            header += "%12s" % "JUMPS"
+
+        print(header)
+        print("-" * len(header))
 
         for i in range(len(xs)):
             line = "%6d" % inds[i]
@@ -874,6 +897,8 @@ class PlkWidget(tk.Frame):
             line += " %16.8g" % ys[i]
             if yf:
                 line += " %16.8g" % (ys[i] * f0y)
+            if inds[i] in jumps:
+                line += " %25s" % jumps[inds[i]]
             print(line)
 
     def psr_data_from_label(self, label):
