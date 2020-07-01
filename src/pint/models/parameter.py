@@ -1541,6 +1541,7 @@ class maskParameter(floatParameter):
     def as_parfile_line_mask(self):
         if self.quantity is None:
             return ""
+        # display -gui_jump flag for jumps added thru pintk
         if self.key == "jump":
             line = "%-15s -gui_jump " % (self.origin_name)
         else:

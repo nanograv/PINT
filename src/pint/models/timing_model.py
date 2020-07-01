@@ -1343,6 +1343,7 @@ class TimingModel(object):
             if "TNEQ" in str(par.name) or par.frozen:
                 continue
             if par.is_mask and len(par.select_toa_mask(toas)) == 0:
+                # display -gui_jump flag for jumps added thru pintk
                 if par.key == "jump":
                     key = "-gui_jump"
                 else:
