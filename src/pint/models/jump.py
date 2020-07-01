@@ -133,8 +133,13 @@ class PhaseJump(PhaseComponent):
         return result
 
     def get_number_of_jumps(self):
+        """Returns the number of jumps contained in this PhaseJump object."""
         return len(self.jumps)
 
     def get_jump_param_objects(self):
+        """
+        Returns a list of the maskParameter objects representing the jumps 
+        in this PhaseJump object.
+        """
         jump_obs = [getattr(self, jump) for jump in self.jumps]
         return jump_obs

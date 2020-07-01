@@ -1419,7 +1419,15 @@ class maskParameter(floatParameter):
         return out
 
     def create_new_index_copy(self, index):
-        """Sets up copy of current param with a new index."""
+        """
+        Sets up copy of current param with a new index. This function allows 
+        for easy decrementing of jump indeces when deleting jumps, particularly 
+        in pintk. 
+            ex. deleting JUMP2 of [JUMP1, JUMP2, JUMP3] results in JUMP3 reindexing
+            to JUMP2 -> [JUMP1, JUMP2] instead of [JUMP1, JUMP3]
+        This way, the name and aliases are updated with the index while
+        keeping the rest of the jump the same.
+        """
         new_mask_param = maskParameter(
             name=self.origin_name,
             index=index,
