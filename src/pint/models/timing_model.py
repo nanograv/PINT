@@ -547,15 +547,6 @@ class TimingModel(object):
 
         return result_comp
 
-    def replicate(self):
-        """Creates new TimingModel with same components as current."""
-        new_tm = TimingModel()
-        for cp in self.components:
-            new_comp = copy.deepcopy(self.components[cp])
-            new_tm.add_component(component=new_comp)
-        new_tm.top_level_params = self.top_level_params
-        return new_tm
-
     def get_components_by_category(self):
         """Return a dict of this model's component objects keyed by the category name"""
         categorydict = defaultdict(list)
