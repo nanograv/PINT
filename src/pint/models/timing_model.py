@@ -1343,9 +1343,13 @@ class TimingModel(object):
             if "TNEQ" in str(par.name) or par.frozen:
                 continue
             if par.is_mask and len(par.select_toa_mask(toas)) == 0:
+                if par.key == "jump":
+                    key = "-gui_jump"
+                else:
+                    key = par.key
                 raise AttributeError(
                     "The maskParameter '%s %s %s' has no TOAs selected. "
-                    % (maskpar, par.key, par.key_value)
+                    % (maskpar, key, par.key_value)
                 )
 
 
