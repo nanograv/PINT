@@ -21,7 +21,7 @@ class TestGlitch(unittest.TestCase):
     def setUpClass(cls):
         cls.m = pint.models.get_model(parfile)
         cls.t = pint.toa.get_TOAs(timfile, ephem="DE405", include_bipm=False)
-        cls.f = pint.fitter.PowellFitter(cls.t, cls.m)
+        cls.f = pint.fitter.WLSFitter(cls.t, cls.m)
 
     @pytest.mark.skipif(
         "TEMPO2" not in os.environ,
