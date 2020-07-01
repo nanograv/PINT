@@ -28,7 +28,7 @@ except ImportError:
     import tkinter.messagebox as tkMessageBox
 
 log.setLevel("INFO")
-log.info("This should show up")
+log.debug("This should show up")
 
 try:
     from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
@@ -38,7 +38,7 @@ except ImportError:
     )
 
 
-log.info(
+log.debug(
     "This should also show up. test click revert, turn params on and off, and prefit model"
 )
 

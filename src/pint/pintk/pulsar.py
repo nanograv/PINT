@@ -64,7 +64,7 @@ class Pulsar(object):
     def __init__(self, parfile=None, timfile=None, ephem=None):
         super(Pulsar, self).__init__()
 
-        print("STARTING LOADING OF PULSAR %s" % str(parfile))
+        log.info("STARTING LOADING OF PULSAR %s" % str(parfile))
 
         if parfile is not None and timfile is not None:
             self.parfile = parfile
