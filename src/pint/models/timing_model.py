@@ -832,6 +832,13 @@ class TimingModel(object):
             )
             self.add_param_from_top(param, "PhaseJump")
             getattr(self, param.name).frozen = False
+        # convert string list key_value from file into int list for jumps
+        # previously added thru pintk
+        for flag_dict in toas.table["flags"]:
+            if "gui_jump" in flag_dict.keys():
+                num = flag_dict["gui_jump"]
+                jump = getattr(self.components["PhaseJump"], "JUMP" + str(num))
+                jump.key_value = list(map(int, jump.key_value))
         self.components["PhaseJump"].setup()
 
     def get_barycentric_toas(self, toas, cutoff_component=""):
@@ -1343,14 +1350,9 @@ class TimingModel(object):
             if "TNEQ" in str(par.name) or par.frozen:
                 continue
             if par.is_mask and len(par.select_toa_mask(toas)) == 0:
-                # display -gui_jump flag for jumps added thru pintk
-                if par.key == "jump":
-                    key = "-gui_jump"
-                else:
-                    key = par.key
                 raise AttributeError(
                     "The maskParameter '%s %s %s' has no TOAs selected. "
-                    % (maskpar, key, par.key_value)
+                    % (maskpar, par.key, par.key_value)
                 )
 
 

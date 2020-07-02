@@ -876,11 +876,7 @@ class PlkWidget(tk.Frame):
                 common = np.intersect1d(jump.select_toa_mask(self.psr.all_toas), inds)
                 if common.size > 0:
                     for num in common:
-                        # display -gui_jump flag for jumps added thru pintk
-                        if jump.key == "jump":
-                            jumps[num] = "-gui_jump"
-                        else:
-                            jumps[num] = jump.key
+                        jumps[num] = jump.key
 
         # if there are jumps, add header for it
         if jumps:

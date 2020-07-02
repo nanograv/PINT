@@ -282,7 +282,12 @@ class Pulsar(object):
             self.prefit_model.add_component(a)
             self.prefit_model.remove_param("JUMP1")
             param = pint.models.parameter.maskParameter(
-                name="JUMP", index=1, key="jump", key_value=1, value=0.0, units="second"
+                name="JUMP",
+                index=1,
+                key="-gui_jump",
+                key_value=1,
+                value=0.0,
+                units="second",
             )
             self.prefit_model.add_param_from_top(param, "PhaseJump")
             getattr(self.prefit_model, param.name).frozen = False
@@ -293,7 +298,9 @@ class Pulsar(object):
                 self.all_toas.table["flags"][selected],
                 self.selected_toas.table["flags"],
             ):
+                dict1["gui_jump"] = 1
                 dict1["jump"] = 1
+                dict2["gui_jump"] = 1
                 dict2["jump"] = 1
             return param.name
         # if gets here, has at least one jump param already
@@ -337,18 +344,25 @@ class Pulsar(object):
                 ):
                     if "jump" in dict1.keys() and dict1["jump"] == num:
                         del dict1["jump"]
+                        if "gui_jump" in dict1.keys():
+                            del dict1["gui_jump"]
                     if "jump" in dict2.keys() and dict2["jump"] == num:
                         del dict2["jump"]
+                        if "gui_jump" in dict2.keys():
+                            del dict2["gui_jump"]
                 nums_subset = range(num + 1, numjumps + 1)
                 for n in nums_subset:
                     # iterate through jump params and rename them so that they are always in numerical order starting with JUMP1
                     n = int(n)
-                    for dict in self.all_toas.table["flags"]:
-                        if "jump" in dict.keys() and dict["jump"] == n:
-                            dict["jump"] = n - 1
                     param = getattr(
                         self.prefit_model.components["PhaseJump"], "JUMP" + str(n)
                     )
+                    for dict in self.all_toas.table["flags"]:
+                        if "jump" in dict.keys() and dict["jump"] == n:
+                            dict["jump"] = n - 1
+                            if "gui_jump" in dict.keys():
+                                dict["gui_jump"] = n - 1
+                                param.key_value = n - 1
                     newpar = param.create_new_index_copy(n - 1)
                     self.prefit_model.add_param_from_top(newpar, "PhaseJump")
                     self.prefit_model.remove_param(param.name)
@@ -380,11 +394,13 @@ class Pulsar(object):
             self.all_toas.table["flags"][selected], self.selected_toas.table["flags"]
         ):
             dict1["jump"] = numjumps + 1
+            dict1["gui_jump"] = numjumps + 1
             dict2["jump"] = numjumps + 1
+            dict2["gui_jump"] = numjumps + 1
         param = pint.models.parameter.maskParameter(
             name="JUMP",
             index=numjumps + 1,
-            key="jump",
+            key="-gui_jump",
             key_value=numjumps + 1,
             value=0.0,
             units="second",
