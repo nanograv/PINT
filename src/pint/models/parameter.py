@@ -1418,34 +1418,6 @@ class maskParameter(floatParameter):
 
         return out
 
-    def create_new_index_copy(self, index):
-        """
-        Sets up copy of current param with a new index. This function allows 
-        for easy decrementing of jump indeces when deleting jumps, particularly 
-        in pintk. 
-
-        ex. Deleting JUMP2 of [JUMP1, JUMP2, JUMP3] results in JUMP3 reindexing
-        to JUMP2 -> [JUMP1, JUMP2] instead of [JUMP1, JUMP3]
-
-        This way, the name and aliases are updated with the index while
-        keeping the rest of the jump the same.
-        """
-        new_mask_param = maskParameter(
-            name=self.origin_name,
-            index=index,
-            key=self.key,
-            key_value=self.key_value,
-            value=self.value,
-            long_double=self.long_double,
-            units=self.units,
-            description=self.description,
-            uncertainty=self.uncertainty,
-            frozen=self.frozen,
-            continuous=self.continuous,
-            aliases=self.prefix_aliases,
-        )
-        return new_mask_param
-
     def name_matches(self, name):
         if super(maskParameter, self).name_matches(name):
             return True
@@ -1560,16 +1532,32 @@ class maskParameter(floatParameter):
             line += " 1"
         return line + "\n"
 
-    def new_param(self, index):
+    def new_param(self, index, copy_all=False):
         """Create a new but same style mask parameter
         """
-        new_mask_param = maskParameter(
-            name=self.origin_name,
-            index=index,
-            long_double=self.long_double,
-            units=self.units,
-            aliases=self.prefix_aliases,
-        )
+        if not copy_all:
+            new_mask_param = maskParameter(
+                name=self.origin_name,
+                index=index,
+                long_double=self.long_double,
+                units=self.units,
+                aliases=self.prefix_aliases,
+            )
+        else:
+            new_mask_param = maskParameter(
+                name=self.origin_name,
+                index=index,
+                key=self.key,
+                key_value=self.key_value,
+                value=self.value,
+                long_double=self.long_double,
+                units=self.units,
+                description=self.description,
+                uncertainty=self.uncertainty,
+                frozen=self.frozen,
+                continuous=self.continuous,
+                aliases=self.prefix_aliases,
+            )
         return new_mask_param
 
     def select_toa_mask(self, toas):

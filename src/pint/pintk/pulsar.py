@@ -363,7 +363,7 @@ class Pulsar(object):
                             if "gui_jump" in dict.keys():
                                 dict["gui_jump"] = n - 1
                                 param.key_value = n - 1
-                    newpar = param.create_new_index_copy(n - 1)
+                    newpar = param.new_param(index=(n - 1), copy_all=True)
                     self.prefit_model.add_param_from_top(newpar, "PhaseJump")
                     self.prefit_model.remove_param(param.name)
                     if self.fitted:
