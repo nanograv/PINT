@@ -154,40 +154,48 @@ class DesignMatrix(PintMatrix):
     -----
         The incoffset maybe replaced by the absolute phase fitting in the future.
     """
-    def __init__(self, data, model, derivative_quantity, derivative_param,
-                 scaled_by_F0=True, incoffset=True):
+    def __init__(self, data, model, derivative_quantity, quantity_unit,
+                 derivative_param, scaled_by_F0=True, incoffset=True):
         # Check if the derivate quantity a phase derivative
-        if derivative_param = 'phase':
-            params = ["Offset"] if incoffset else []
+        if derivative_quantity = 'phase':
+            self.params = ["Offset"] if incoffset else []
+            self.params += derivative_param
+        else:
+            self.params =  derivative_param
 
-        param += derivative_param
         self.data = data
         self.model = model
         self.derivative_quantity = derivative_quantity
+        self.quantity_unit = quantity_unit
+        # Searching for the derivative functions. The derivative function should
+        # be a wrapper function like d_phase_d_param()
         self.deriv_func = getattr(self.model,
             'd_{}_d_param'.format(derivative_quantity))
-
-
+        self.units = []
 
         super(DesignMatrix, self).__init__(toa, model, derivative_quantity)
 
-    def make_design_matrix(self):
+    def make_design_matrix(self,):
         """ Create the design matrix from the derivatives.
         """
         M = np.zeros((ntoas, nparams))
         for ii, param in enumerate(params):
             if param == "Offset":
                 M[:, ii] = 1.0
-                units.append(u.s / u.s)
+                self.units.append(u.s / u.s)
             else:
+                q = self.d_phase_d_param(toas, delay, param)
+                if self.derivative_quantity == 'Phase'
                 # NOTE Here we have negative sign here. Since in pulsar timing
                 # the residuals are calculated as (Phase - int(Phase)), which is different
                 # from the conventional definition of least square definition (Data - model)
                 # We decide to add minus sign here in the design matrix, so the fitter
                 # keeps the conventional way.
-                q = -self.d_phase_d_param(toas, delay, param)
-                M[:, ii] = q
-                units.append(u.Unit("") / getattr(self, param).units)
+
+                    M[:, ii] = -q
+                else:
+                    M[:, ii] = q
+                self.units.append(self.quantity_unit / getattr(self, param).units)
 
         if self.derivative_quantity == 'phase':
             if scale_by_F0:
