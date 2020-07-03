@@ -57,8 +57,14 @@ class PintMatrix:
                     raise ValueError("Label index in dim {} has"
                                      " overlap".format(ii))
 
+    def _get_label_start(self, label_entry):
+        return label_entry[1][0]
+
     def get_axis_labels(self, axis):
-        return self.axis_labels[axis]
+        dim_label = list(self.axis_labels[axis].items())
+        return dim_label.sort(key=self._get_label_start)
+
+
 
     def get_label(self, label):
         """ Get the label entry and its dimension. We assume the labels are
@@ -172,13 +178,18 @@ class DesignMatrix(PintMatrix):
         self.deriv_func = getattr(self.model,
             'd_{}_d_param'.format(derivative_quantity))
         self.units = []
+        self.scaled_by_F0 = scaled_by_F0
+        matrix, labels = self.make_design_matrix()
 
-        super(DesignMatrix, self).__init__(toa, model, derivative_quantity)
+        super(DesignMatrix, self).__init__(matrix, labels)
 
     def make_design_matrix(self,):
         """ Create the design matrix from the derivatives.
         """
+        labels = []
         M = np.zeros((ntoas, nparams))
+        labels.append({self.derivative_quantity: (0, M.shape[0])})
+        labels_dim2 = {}
         for ii, param in enumerate(params):
             if param == "Offset":
                 M[:, ii] = 1.0
@@ -191,24 +202,26 @@ class DesignMatrix(PintMatrix):
                 # from the conventional definition of least square definition (Data - model)
                 # We decide to add minus sign here in the design matrix, so the fitter
                 # keeps the conventional way.
-
                     M[:, ii] = -q
                 else:
                     M[:, ii] = q
                 self.units.append(self.quantity_unit / getattr(self, param).units)
+            labels_dims[param] = (ii, ii + 1)
+
+        labels.append(label_dims)
 
         if self.derivative_quantity == 'phase':
-            if scale_by_F0:
+            if self.scale_by_F0:
                 mask = []
                 for ii, un in enumerate(units):
                     if params[ii] == "Offset":
                         continue
-                    units[ii] = un * u.second
+                    self.units[ii] = un * u.second
                     mask.append(ii)
-                M[:, mask] /= F0.value
-        return M, params, units, scale_by_F0
+                M[:, mask] /= self.mdoel.F0.value
+        return M, labels
 
 
 class CovarianceMatrix(PintMatrix):
     def __init__(self, toas, model):
-        super(CovarianceMatrix, self).__init__(toa, model)
+        pass
