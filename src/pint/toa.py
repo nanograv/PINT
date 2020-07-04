@@ -784,6 +784,9 @@ class TOAs(object):
         # We don't need this now that we have a table
         del self.toas
 
+    def __len__(self):
+        return self.ntoas
+
     @property
     def ntoas(self):
         return len(self.table) if hasattr(self, "table") else len(self.toas)
@@ -1430,10 +1433,10 @@ class TOAs(object):
     def add_vel_ecl(self, obliquity):
         """Compute and add a column to self.table with velocities in ecliptic coordinates.
 
-        Called in barycentric_radio_freq() in AstrometryEcliptic (astrometry.py) 
+        Called in barycentric_radio_freq() in AstrometryEcliptic (astrometry.py)
         if ssb_obs_vel_ecl column does not already exist.
-        If compute_posvels() called again for a TOAs object (aka TOAs modified), 
-        deletes this column so that this function will be called again and 
+        If compute_posvels() called again for a TOAs object (aka TOAs modified),
+        deletes this column so that this function will be called again and
         velocities will be calculated with updated TOAs.
         """
 

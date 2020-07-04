@@ -4,6 +4,7 @@ and the covariance matrix
 
 import numpy as np
 from itertools import combinations
+import astropy.units as u
 
 
 __all__ = ["PintMatrix", "DesignMatrix", "CovarianceMatrix"]
@@ -23,12 +24,12 @@ class PintMatrix:
         The start and end follows the python slice convention (i.e.,
         end = size + 1).
     """
-    def __init__(self, data, axis_labels):
-        self.data = data
+    def __init__(self, matrix, axis_labels):
+        self.matrix = matrix
         self.axis_labels = axis_labels
         # Check dimensions
-        if len(axis_label) != self.data.ndim:
-            raise ValueError("Axis label dimension does not match the data "
+        if len(axis_labels) != self.matrix.ndim:
+            raise ValueError("Axis label dimension does not match the matrix "
                              "dimension.")
 
         # Check label index overlap TODO: should we allow overlap?
@@ -36,11 +37,11 @@ class PintMatrix:
 
     @property
     def ndim(self):
-        return self.data.ndim
+        return self.matrix.ndim
 
     @property
     def shape(self):
-        return self.data.shape
+        return self.matrix.shape
 
     @property
     def labels(self):
@@ -50,10 +51,11 @@ class PintMatrix:
         return labels
 
     def _check_index_overlap(self):
-        for ii, dim in enumerate(self.axis_labels):
-            comb = combinations(list(dim.values), 2)
+        for ii in range(self.ndim):
+            axis_labels = self.get_axis_labels(ii)
+            comb = combinations(axis_labels, 2)
             for cb in comb:
-                if cb[0][0] <= cb[1][1] and cb[1][0] <= cb[0][1]:
+                if cb[0][1][0] <= cb[1][1][1] and cb[1][1][0] <= cb[0][1][1] -1:
                     raise ValueError("Label index in dim {} has"
                                      " overlap".format(ii))
 
@@ -62,8 +64,8 @@ class PintMatrix:
 
     def get_axis_labels(self, axis):
         dim_label = list(self.axis_labels[axis].items())
-        return dim_label.sort(key=self._get_label_start)
-
+        dim_label.sort(key=self._get_label_start)
+        return dim_label
 
 
     def get_label(self, label):
@@ -72,14 +74,14 @@ class PintMatrix:
         """
         for ii, dim in enumerate(self.axis_labels):
             if label in dim.keys():
-                return(label, ii, dim[label]))
+                return(label, ii, dim[label])
         raise KeyError("Label {} is not in the matrix".format(label))
 
     def get_label_slice(self, labels):
         """ Return the given lable slices.
         """
-        dim_slices = dict([(d, slice(None) for d in range(self.ndim))])
-        new_labels =  dict([(d, {} for d in range(self.ndim))])
+        dim_slices = dict([(d, slice(None)) for d in range(self.ndim)])
+        new_labels =  dict([(d, {}) for d in range(self.ndim)])
         for lb in labels:
             lable_info = self.get_label(lb)
             label_size = label_info[2][1] - label_info[2][0]
@@ -102,7 +104,7 @@ class PintMatrix:
         """ Get a sub-matrix data according to the given labels.
         """
         slice, new_labels = self.get_label_slice(labels)
-        return PintMatrix(self.data[slice], new_labels)
+        return PintMatrix(self.matrix[slice], new_labels)
 
     def match_labels_along_axis(self, pint_matrix, axis):
         """ Match one axis' labels index between the current matrix and input
@@ -163,12 +165,7 @@ class DesignMatrix(PintMatrix):
     def __init__(self, data, model, derivative_quantity, quantity_unit,
                  derivative_param, scaled_by_F0=True, incoffset=True):
         # Check if the derivate quantity a phase derivative
-        if derivative_quantity = 'phase':
-            self.params = ["Offset"] if incoffset else []
-            self.params += derivative_param
-        else:
-            self.params =  derivative_param
-
+        self.params =  derivative_param
         self.data = data
         self.model = model
         self.derivative_quantity = derivative_quantity
@@ -176,9 +173,8 @@ class DesignMatrix(PintMatrix):
         # Searching for the derivative functions. The derivative function should
         # be a wrapper function like d_phase_d_param()
         self.deriv_func = getattr(self.model,
-            'd_{}_d_param'.format(derivative_quantity))
+            'd_{}_d_param'.format(self.derivative_quantity))
         self.units = []
-        self.scaled_by_F0 = scaled_by_F0
         matrix, labels = self.make_design_matrix()
 
         super(DesignMatrix, self).__init__(matrix, labels)
@@ -186,8 +182,8 @@ class DesignMatrix(PintMatrix):
     def make_design_matrix(self,):
         """ Create the design matrix from the derivatives.
         """
-        labels = []
-        M = np.zeros((ntoas, nparams))
+        labels = [{''}]
+        M = np.zeros((len(data), len(self.params)))
         labels.append({self.derivative_quantity: (0, M.shape[0])})
         labels_dim2 = {}
         for ii, param in enumerate(params):
@@ -195,8 +191,8 @@ class DesignMatrix(PintMatrix):
                 M[:, ii] = 1.0
                 self.units.append(u.s / u.s)
             else:
-                q = self.d_phase_d_param(toas, delay, param)
-                if self.derivative_quantity == 'Phase'
+                q = self.d_phase_d_param(data, delay, param)
+                if self.derivative_quantity == 'Phase':
                 # NOTE Here we have negative sign here. Since in pulsar timing
                 # the residuals are calculated as (Phase - int(Phase)), which is different
                 # from the conventional definition of least square definition (Data - model)
@@ -206,7 +202,7 @@ class DesignMatrix(PintMatrix):
                 else:
                     M[:, ii] = q
                 self.units.append(self.quantity_unit / getattr(self, param).units)
-            labels_dims[param] = (ii, ii + 1)
+            labels_dims2[param] = (ii, ii + 1)
 
         labels.append(label_dims)
 
@@ -219,6 +215,75 @@ class DesignMatrix(PintMatrix):
                     self.units[ii] = un * u.second
                     mask.append(ii)
                 M[:, mask] /= self.mdoel.F0.value
+        return M, labels
+
+
+class PhaseDesignMatrix(DesignMatrix):
+    """ Design matrix for least square fitting.
+
+    Parameters
+    ----------
+    toa: `pint.toa.TOAs` object.
+        The data point where the derivatives are evaluated.
+    model: `pint.models.TimingModel` object
+        The model that provides the derivatives.
+    derivative_param: list
+        The parameter list for the derivatives 'd_quantity_d_param'
+    scale_by_F0: bool, optional
+        If it is a phase derivative, if it is scaled by spin period. Default is
+        True.
+    incoffset: bool, optional
+        If add the absolute phase offset. Default is True.
+
+    Note:
+    -----
+        The incoffset maybe replaced by the absolute phase fitting in the future.
+    """
+    def __init__(self, toa, model, derivative_param, scaled_by_F0=True,
+                 incoffset=True):
+        # Check if the derivate quantity a phase derivative
+        d_params = ["Offset"] if incoffset else []
+        d_params += derivative_param
+        self.scaled_by_F0 = scaled_by_F0
+
+        super(PhaseDesignMatrix, self).__init__(toa, model, 'phase', u.Unit(""),
+                                                d_params)
+
+    def make_design_matrix(self,):
+        """ Create the design matrix from the derivatives.
+        """
+        labels = []
+        M = np.zeros((self.data.ntoas, len(self.params)))
+        labels.append({self.derivative_quantity: (0, M.shape[0])})
+        labels_dim2 = {}
+        delay = self.model.delay(self.data)
+        for ii, param in enumerate(self.params):
+            if param == "Offset":
+                M[:, ii] = 1.0
+                self.units.append(u.s / u.s)
+            else:
+                q = self.deriv_func(self.data, delay, param)
+
+                # NOTE Here we have negative sign here. Since in pulsar timing
+                # the residuals are calculated as (Phase - int(Phase)), which is different
+                # from the conventional definition of least square definition (Data - model)
+                # We decide to add minus sign here in the design matrix, so the fitter
+                # keeps the conventional way.
+                M[:, ii] = -q
+                self.units.append(self.quantity_unit / getattr(self.model,
+                                                               param).units)
+            labels_dim2[param] = (ii, ii + 1)
+
+        labels.append(labels_dim2)
+
+        if self.scaled_by_F0:
+            mask = []
+            for ii, un in enumerate(self.units):
+                if self.params[ii] == "Offset":
+                    continue
+                self.units[ii] = un * u.second
+                mask.append(ii)
+            M[:, mask] /= self.model.F0.value
         return M, labels
 
 

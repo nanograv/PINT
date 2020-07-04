@@ -89,8 +89,10 @@ class Dispersion(DelayComponent):
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
             bfreq = tbl["freq"]
-
-        d_dm_d_dmparam = self.dm_deriv_funcs[param_name](toa, param_name)
+        param_unit = getattr(self, param_name).units
+        d_dm_d_dmparam = np.zeros(toas.ntoas) * u.pc / u.cm**3 / param_unit
+        for df in self.dm_deriv_funcs[param_name]:
+            d_dm_d_dmparam += df(toas, param_name)
         return DMconst * d_dm_d_dmparam / bfreq ** 2.0
 
     def register_dm_deriv_funcs(self, func, param):
@@ -479,7 +481,7 @@ class DispersionJump(Dispersion):
         for j in self.dm_jumps:
             self.register_dm_deriv_funcs(self.d_dm_d_dm_jump, j)
             self.register_deriv_funcs(self.d_delay_d_dmparam, j)
-            
+
     def validate(self):
         super(DispersionJump, self).validate()
 

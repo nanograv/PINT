@@ -1020,6 +1020,9 @@ class TimingModel(object):
         par.value = ori_value
         return d_delay * (u.second / unit)
 
+    def d_dm_d_param(self, data, param):
+        return np.zeros(len(data))
+
     def designmatrix(
         self, toas, acc_delay=None, scale_by_F0=True, incfrozen=False, incoffset=True
     ):
@@ -1294,7 +1297,8 @@ class TimingModel(object):
                     "Model component {} was rejected because we "
                     "didn't find parameter {}".format(name, param)
                 )
-            log.info("Final object: {}".format(repr(self)))
+            # Disable here for now.
+            #log.info("Final object: {}".format(repr(self)))
 
         self.setup()
         # The "validate" functions contain tests for required parameters or
