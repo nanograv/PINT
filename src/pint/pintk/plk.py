@@ -626,6 +626,10 @@ class PlkWidget(tk.Frame):
         """
         Write the current timfile to a file
         """
+        # remove jump flags from toas (don't want model-specific jumps being saved)
+        for dict in self.psr.all_toas.table["flags"]:
+            if "jump" in dict.keys():
+                del dict["jump"]
         filename = tkFileDialog.asksaveasfilename(title="Choose output tim file")
         try:
             log.info("Choose output file %s" % filename)

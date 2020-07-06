@@ -789,49 +789,51 @@ class TimingModel(object):
         from . import jump
 
         for flag_dict in toas.table["flags"]:
-            if "jump" in flag_dict.keys():
+            if "jump" or "gui_jump" in flag_dict.keys():
                 break
         else:
             log.info("No jump flags to process")
             return None
-        jump_nums = [
-            flag_dict["jump"] if "jump" in flag_dict.keys() else np.nan
-            for flag_dict in toas.table["flags"]
-        ]
-        if "PhaseJump" not in self.components:
-            log.info("PhaseJump component added")
-            a = jump.PhaseJump()
-            a.setup()
-            self.add_component(a)
-            self.remove_param("JUMP1")
-        for num in np.arange(1, np.nanmax(jump_nums) + 1):
-            if "JUMP" + str(int(num)) not in self.params:
-                param = maskParameter(
-                    name="JUMP",
-                    index=int(num),
-                    key="jump",
-                    key_value=int(num),
-                    value=0.0,
-                    units="second",
-                    uncertainty=0.0,
-                )
-                self.add_param_from_top(param, "PhaseJump")
-                getattr(self, param.name).frozen = False
-        if 0 in jump_nums:
-            for flag_dict in toas.table["flags"]:
-                if "jump" in flag_dict.keys() and flag_dict["jump"] == 0:
-                    flag_dict["jump"] = int(np.nanmax(jump_nums) + 1)
-            param = maskParameter(
-                name="JUMP",
-                index=int(np.nanmax(jump_nums) + 1),
-                key="jump",
-                key_value=int(np.nanmax(jump_nums) + 1),
-                value=0.0,
-                units="second",
-                uncertainty=0.0,
-            )
-            self.add_param_from_top(param, "PhaseJump")
-            getattr(self, param.name).frozen = False
+        for flag_dict in toas.table["flags"]:
+            if "jump" in flag_dict.keys():
+                jump_nums = [
+                    flag_dict["jump"] if "jump" in flag_dict.keys() else np.nan
+                    for flag_dict in toas.table["flags"]
+                ]
+                if "PhaseJump" not in self.components:
+                    log.info("PhaseJump component added")
+                    a = jump.PhaseJump()
+                    a.setup()
+                    self.add_component(a)
+                    self.remove_param("JUMP1")
+                for num in np.arange(1, np.nanmax(jump_nums) + 1):
+                    if "JUMP" + str(int(num)) not in self.params:
+                        param = maskParameter(
+                            name="JUMP",
+                            index=int(num),
+                            key="jump",
+                            key_value=int(num),
+                            value=0.0,
+                            units="second",
+                            uncertainty=0.0,
+                        )
+                        self.add_param_from_top(param, "PhaseJump")
+                        getattr(self, param.name).frozen = False
+                if 0 in jump_nums:
+                    for flag_dict in toas.table["flags"]:
+                        if "jump" in flag_dict.keys() and flag_dict["jump"] == 0:
+                            flag_dict["jump"] = int(np.nanmax(jump_nums) + 1)
+                    param = maskParameter(
+                        name="JUMP",
+                        index=int(np.nanmax(jump_nums) + 1),
+                        key="jump",
+                        key_value=int(np.nanmax(jump_nums) + 1),
+                        value=0.0,
+                        units="second",
+                        uncertainty=0.0,
+                    )
+                    self.add_param_from_top(param, "PhaseJump")
+                    getattr(self, param.name).frozen = False
         # convert string list key_value from file into int list for jumps
         # previously added thru pintk
         for flag_dict in toas.table["flags"]:
@@ -1349,7 +1351,7 @@ class TimingModel(object):
             par = getattr(self, maskpar)
             if "TNEQ" in str(par.name) or par.frozen:
                 continue
-            if par.is_mask and len(par.select_toa_mask(toas)) == 0:
+            if len(par.select_toa_mask(toas)) == 0:
                 raise AttributeError(
                     "The maskParameter '%s %s %s' has no TOAs selected. "
                     % (maskpar, par.key, par.key_value)
