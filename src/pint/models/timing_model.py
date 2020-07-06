@@ -789,7 +789,9 @@ class TimingModel(object):
         from . import jump
 
         for flag_dict in toas.table["flags"]:
-            if "jump" or "gui_jump" in flag_dict.keys():
+            if "jump" in flag_dict.keys():
+                break
+            elif "gui_jump" in flag_dict.keys():
                 break
         else:
             log.info("No jump flags to process")
