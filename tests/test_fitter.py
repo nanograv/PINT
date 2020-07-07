@@ -124,7 +124,7 @@ def test_ftest():
         parameter_type="float", name="FD4", value=0.0, units=u.s, frozen=False
     )
     ft = f.ftest(FD4, "FD", remove=False)
-    assert isinstance(ft, float) or isinstance(ft, bool)
+    assert isinstance(ft["ft"], float) or isinstance(ft["ft"], bool)
     # Test return the full output
     Ftest_dict = f.ftest(FD4, "FD", remove=False, full_output=True)
     # Test removing parameter
@@ -132,5 +132,5 @@ def test_ftest():
         parameter_type="float", name="FD3", value=0.0, units=u.s, frozen=False
     )
     ft = f.ftest(FD3, "FD", remove=True)
-    assert isinstance(ft, float) or isinstance(ft, bool)
+    assert isinstance(ft["ft"], float) or isinstance(ft["ft"], bool)
     Ftest_dict = f.ftest(FD3, "FD", remove=True, full_output=True)
