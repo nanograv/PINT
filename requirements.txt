@@ -1,6 +1,6 @@
 numpy>=1.16.0
 astropy>=3.2,!=4.0.1,!=4.0.1.post1
-scipy>=0.18.1
+scipy>=0.18.1,<1.5
 jplephem>=2.6
 matplotlib>=1.5.3
 emcee>=3.0

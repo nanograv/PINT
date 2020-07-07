@@ -41,7 +41,7 @@ class TestDDK(unittest.TestCase):
     def test_J1713(self):
         log = logging.getLogger("TestJ1713.test_J1713")
         pint_resids_us = Residuals(
-            self.toasJ1713, self.modelJ1713, False
+            self.toasJ1713, self.modelJ1713, use_weighted_mean=False
         ).time_resids.to(u.s)
         diff = pint_resids_us.value - self.ltres
         log.debug("Max diff %lf" % np.abs(diff - diff.mean()).max())
@@ -89,7 +89,9 @@ class TestDDK(unittest.TestCase):
     def test_K96(self):
         log = logging.getLogger("TestJ1713 Switch of K96")
         self.modelJ1713.K96.value = False
-        res = Residuals(self.toasJ1713, self.modelJ1713, False).time_resids.to(u.s)
+        res = Residuals(
+            self.toasJ1713, self.modelJ1713, use_weighted_mean=False
+        ).time_resids.to(u.s)
         delay = self.modelJ1713.delay(self.toasJ1713)
         testp = tdu.get_derivative_params(self.modelJ1713)
         for p in testp.keys():

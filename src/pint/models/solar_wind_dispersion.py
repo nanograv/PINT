@@ -106,9 +106,8 @@ class SolarWindDispersion(Dispersion):
             r = np.sqrt(np.sum(rvec * rvec, axis=1))
             cos_theta = np.sum(rvec * pos, axis=1) / r
 
-            # ret = AUdist**2.0 / const.c * np.arccos(cos_theta) * DMconst / \
             ret = (
-                AUdist ** 2.0
+                const.au ** 2.0
                 * np.arccos(cos_theta)
                 * DMconst
                 / (r * np.sqrt(1 - cos_theta ** 2.0) * bfreq ** 2.0)

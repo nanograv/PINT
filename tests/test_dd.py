@@ -38,7 +38,7 @@ class TestDD(unittest.TestCase):
     # TODO: PINT can still incresase the precision by adding more components
     def test_B1855(self):
         pint_resids_us = Residuals(
-            self.toasB1855, self.modelB1855, False
+            self.toasB1855, self.modelB1855, use_weighted_mean=False
         ).time_resids.to(u.s)
         assert np.all(
             np.abs(pint_resids_us.value - self.ltres) < 1e-7

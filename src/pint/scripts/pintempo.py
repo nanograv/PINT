@@ -50,6 +50,9 @@ def main(argv=None):
         model_ephem = m.EPHEM.value
     t = pint.toa.get_TOAs(args.timfile, planets=use_planets, ephem=model_ephem)
 
+    # turns pre-existing jump flags in t.table['flags'] into parameters in parfile
+    m.jump_flags_to_params(t)
+
     if m.TRACK.value == "-2":
         if "pn" in t.table.colnames:
             log.info("Already have pulse numbers from TOA flags.")
