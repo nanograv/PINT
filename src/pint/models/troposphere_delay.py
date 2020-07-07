@@ -12,6 +12,7 @@ from astropy.coordinates import AltAz, SkyCoord
 from pint.models.parameter import boolParameter
 from pint.models.timing_model import DelayComponent
 from pint.observatory import get_observatory
+from pint.observatory.topo_obs import TopoObs
 from pint.toa_select import TOASelect
 
 
@@ -72,6 +73,8 @@ class TroposphereDelay(DelayComponent):
 
     DOY_OFFSET = -28  # add this into the MJD value to get the right phase
 
+    EARTH_R = 6356766 * u.m  # earth radius at 45 degree latitude
+
     @staticmethod
     def _herring_map(alt, a, b, c):
         sinAlt = np.sin(alt)
@@ -118,6 +121,20 @@ class TroposphereDelay(DelayComponent):
         alt = radec.transform_to(transformAltaz).alt  # * u.deg
         return alt
 
+    def _get_target_skycoord(self):
+        # return the sky coordiantes for the target, either from equatorial or ecliptic coordinates
+        try:
+            radec = SkyCoord(
+                self.RAJ.value * self.RAJ.units, self.DECJ.value * self.DECJ.units
+            )  # just do this once instead of adjusting over time
+        except AttributeError:
+            radec = SkyCoord(
+                self.ELONG.value * self.ELONG.units,
+                self.ELAT.value * self.ELAT.units,
+                frame="barycentricmeanecliptic",
+            )
+        return radec
+
     def troposphere_delay(self, toas, acc_delay=None):
         # must include model to get ra/dec of target, plus maybe proper motion?
         tbl = toas.table
@@ -125,26 +142,22 @@ class TroposphereDelay(DelayComponent):
 
         if self.CORRECT_TROPOSPHERE.value:
 
-            try:
-                radec = SkyCoord(
-                    self.RAJ.value * self.RAJ.units, self.DECJ.value * self.DECJ.units
-                )  # just do this once instead of adjusting over time
-            except AttributeError:
-                radec = SkyCoord(
-                    self.ELONG.value * self.ELONG.units,
-                    self.ELAT.value * self.ELAT.units,
-                    frame="barycentricmeanecliptic",
-                )
+            radec = self._get_target_skycoord()
             # okie so I need to do this more efficiently, so i'll group by the observatory
 
             for ii, key in enumerate(tbl.groups.keys):
                 grp = tbl.groups[ii]
                 loind, hiind = tbl.groups.indices[ii : ii + 2]
-                if key["obs"].lower() == "barycenter":
-                    log.debug("Skipping Troposphere delay for Barycentric TOAs")
+                # if key["obs"].lower() == "barycenter":
+                obsobj = get_observatory(tbl.groups.keys[ii]["obs"])
+                if not isinstance(obsobj, TopoObs):
+                    log.debug(
+                        "Skipping Troposphere delay for non Topocentric TOA: %s"
+                        % obsobj.name
+                    )
                     continue
 
-                obs = get_observatory(tbl.groups.keys[ii]["obs"]).earth_location_itrf()
+                obs = obsobj.earth_location_itrf()
 
                 alt = self._get_target_altitude(obs, grp, radec)
 
@@ -205,12 +218,23 @@ class TroposphereDelay(DelayComponent):
             delay *= altIsValid  # this will make the invalid delays zero
         return delay
 
+    def pressure_from_altitude(self, H):
+        """
+        From CRC Handbook Chapter 14 page 19 US Standard Atmosphere
+        """
+        gph = self.EARTH_R * H / (self.EARTH_R + H)  # geopotential height
+        if gph > 11 * u.km:
+            warn("Pressure approximation invalid for elevations above 11 km")
+        T = 288.15 - 0.0065 * H.to(u.m).value  # temperature lapse
+        P = 101.325 * (288.15 / T) ** -5.25575 * u.kPa
+        return P
+
     def zenith_delay(self, lat, H):
         # return 7.7 * u.ns
 
-        p = 101
+        p = self.pressure_from_altitude(H)
         return (p / 43.921) / (
-            const.c.value * (1 - 0.00266 * np.cos(2 * lat) + 0.00028 * H.value)
+            const.c.value * (1 - 0.00266 * np.cos(2 * lat) - 0.00028 * H.value)
         )
 
     def wet_zenith_delay(self):
