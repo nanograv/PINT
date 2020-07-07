@@ -934,8 +934,7 @@ class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
         residuals as one. Default is None.
     """
 
-    def __init__(self, toas=None, model=None, from_toa=True,
-                 residual_types=[pr.Residuals, ], residuals=None):
+    def __init__(self, model=None, data_type, data, fitting_method):
         self.toas = toas
         self.model_init = model
         # Check input
