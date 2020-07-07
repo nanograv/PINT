@@ -28,7 +28,7 @@ except ImportError:
     import tkinter.messagebox as tkMessageBox
 
 log.setLevel("INFO")
-log.info("This should show up")
+log.debug("This should show up")
 
 try:
     from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
@@ -38,7 +38,7 @@ except ImportError:
     )
 
 
-log.info(
+log.debug(
     "This should also show up. test click revert, turn params on and off, and prefit model"
 )
 
@@ -626,6 +626,10 @@ class PlkWidget(tk.Frame):
         """
         Write the current timfile to a file
         """
+        # remove jump flags from toas (don't want model-specific jumps being saved)
+        for dict in self.psr.all_toas.table["flags"]:
+            if "jump" in dict.keys():
+                del dict["jump"]
         filename = tkFileDialog.asksaveasfilename(title="Choose output tim file")
         try:
             log.info("Choose output file %s" % filename)
@@ -816,6 +820,9 @@ class PlkWidget(tk.Frame):
         Format is:
         TOA_index   X_val   Y_val
 
+        or, if jumps:
+        TOA_index   X_val   Y_val   jump_key
+
         or, if residuals:
         TOA_index   X_val   time_resid  phase_resid
         """
@@ -859,12 +866,28 @@ class PlkWidget(tk.Frame):
         else:
             header += "%12s" % plotlabels[self.yid]
 
-        print(header)
-        print("-" * len(header))
-
         xs = self.xvals[selected].value
         ys = self.yvals[selected].value
-        inds = self.psr.selected_toas.table["index"][selected]
+        inds = self.psr.all_toas.table["index"][selected]
+
+        # gather jumps, if any
+        jumps = {}  # layout: jumps = {'toa index':'jump_key'}
+        if "PhaseJump" in self.psr.prefit_model.components:
+            for jump in self.psr.prefit_model.components[
+                "PhaseJump"
+            ].get_jump_param_objects():
+                # find common toa indices between jumped toas and selected toas
+                common = np.intersect1d(jump.select_toa_mask(self.psr.all_toas), inds)
+                if common.size > 0:
+                    for num in common:
+                        jumps[num] = jump.key
+
+        # if there are jumps, add header for it
+        if jumps:
+            header += "%12s" % "JUMPS"
+
+        print(header)
+        print("-" * len(header))
 
         for i in range(len(xs)):
             line = "%6d" % inds[i]
@@ -874,6 +897,8 @@ class PlkWidget(tk.Frame):
             line += " %16.8g" % ys[i]
             if yf:
                 line += " %16.8g" % (ys[i] * f0y)
+            if inds[i] in jumps:
+                line += " %25s" % jumps[inds[i]]
             print(line)
 
     def psr_data_from_label(self, label):
@@ -1048,6 +1073,14 @@ class PlkWidget(tk.Frame):
                     # Left click is select
                     self.selected[ind] = not self.selected[ind]
                     self.updatePlot(keepAxes=True)
+                    self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
+                    # if point is being selected (instead of unselected) or
+                    # point is unselected but other points remain selected
+                    if self.selected[ind] or any(self.selected):
+                        # update selected_toas object w/ selected points
+                        self.psr.selected_toas.select(self.selected)
+                        self.psr.update_resids()
+                        self.call_updates()
 
     def clickAndDrag(self, event):
         """

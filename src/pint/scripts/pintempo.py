@@ -49,6 +49,17 @@ def main(argv=None):
     if m.EPHEM is not None:
         model_ephem = m.EPHEM.value
     t = pint.toa.get_TOAs(args.timfile, planets=use_planets, ephem=model_ephem)
+
+    # turns pre-existing jump flags in t.table['flags'] into parameters in parfile
+    m.jump_flags_to_params(t)
+
+    if m.TRACK.value == "-2":
+        if "pn" in t.table.colnames:
+            log.info("Already have pulse numbers from TOA flags.")
+        else:
+            log.info("Adding pulse numbers")
+            t.compute_pulse_numbers(m)
+
     prefit_resids = pint.residuals.Residuals(t, m).time_resids
 
     log.info("Fitting...")

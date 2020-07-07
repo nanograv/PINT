@@ -6,7 +6,7 @@ https://github.com/jrfonseca/gprof2dot
 
 The 100 most time consumed runs will be listed in the screen. Depending the
 selected output sort key.
-A .png image file with the name <script_name> + <git_branch_name>.png will be
+A .pdf file with the name <script_name> + <git_branch_name>.pdf will be
 generated for listing all the calls.
 """
 from __future__ import print_function
@@ -37,10 +37,16 @@ if __name__ == "__main__":
     print(cline)
     subprocess.call(cline, shell=True)
     call_tree_line = (
-        "gprof2dot -f pstats " + outfile + " | dot -Tpng -o " + outfile + ".png"
+        "gprof2dot -f pstats " + outfile + " | dot -Tpdf -o " + outfile + ".pdf"
     )
     subprocess.call(call_tree_line, shell=True)
     # Check stats
     p = pstats.Stats(outfile)
     p.strip_dirs()
     p.sort_stats(args.sort).print_stats(100)
+
+    # if you would like to view the outfile with an interactive html viewer,
+    # use cprofilev, https://github.com/ymichael/cprofilev (pip install cprofilev):
+    # cline = "cprofilev -f " + outfile
+    # print(cline)
+    # subprocess.call(cline, shell=True)

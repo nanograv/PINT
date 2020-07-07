@@ -19,6 +19,7 @@ import astropy.units as u
 import numpy as np
 from astropy import log
 from astropy.coordinates import EarthLocation
+from astropy.coordinates import ICRS, CartesianDifferential, CartesianRepresentation
 from six.moves import cPickle as pickle
 
 import pint
@@ -27,6 +28,8 @@ from pint.observatory.special_locations import SpacecraftObs
 from pint.observatory.topo_obs import TopoObs
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
+from pint.phase import Phase
+from pint.pulsar_ecliptic import PulsarEcliptic
 
 __all__ = [
     "get_TOAs",
@@ -200,7 +203,7 @@ def _toa_format(line, fmt="Unknown"):
         return "Command"
     elif re.match(r"^\s+$", line):
         return "Blank"
-    elif re.match(r"  ", line) and len(line) > 41 and line[41] == ".":
+    elif re.match(r"^ ", line) and len(line) > 41 and line[41] == ".":
         return "Parkes"
     elif len(line) > 80 or fmt == "Tempo2":
         return "Tempo2"
@@ -723,6 +726,7 @@ class TOAs(object):
         self.planets = False
         self.ephem = None
         self.clock_corr_info = {}
+        self.obliquity = None
 
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
@@ -1024,7 +1028,20 @@ class TOAs(object):
         Modifes the delta_pulse_number column, if required.
         Removes the pulse numbers from the flags.
         """
-        # Add pulse_number as a table column if possible
+        # First get any PHASE commands
+        dphs = np.asarray(
+            [
+                flags["phase"] if "phase" in flags else 0.0
+                for flags in self.table["flags"]
+            ]
+        )
+        # Then add any -padd flag values
+        dphs += np.asarray(
+            [flags["padd"] if "padd" in flags else 0.0 for flags in self.table["flags"]]
+        )
+        self.table["delta_pulse_number"] += dphs
+
+        # Then, add pulse_number as a table column if possible
         try:
             pns = [flags["pn"] for flags in self.table["flags"]]
             self.table["pulse_number"] = pns
@@ -1035,14 +1052,6 @@ class TOAs(object):
                 del flags["pn"]
         except KeyError:
             raise ValueError("Not all TOAs have pn flags")
-        # modify the delta_pulse_number column if required
-        dphs = np.asarray(
-            [
-                flags["phase"] if "phase" in flags else 0.0
-                for flags in self.table["flags"]
-            ]
-        )
-        self.table["delta_pulse_number"] += dphs
 
     def compute_pulse_numbers(self, model):
         """Set pulse numbers (in TOA table column pulse_numbers) based on model
@@ -1052,7 +1061,8 @@ class TOAs(object):
         which the nearest integer since Phase objects ensure that.
         """
         # paulr: I think pulse numbers should be computed with abs_phase=True!
-        phases = model.phase(self, abs_phase=True)
+        delta_pulse_numbers = Phase(self.table["delta_pulse_number"])
+        phases = model.phase(self, abs_phase=True) + delta_pulse_numbers
         self.table["pulse_number"] = phases.int
         self.table["pulse_number"].unit = u.dimensionless_unscaled
 
@@ -1341,7 +1351,12 @@ class TOAs(object):
                 "Computing PosVels of observatories and Earth, using {}".format(ephem)
             )
         # Remove any existing columns
-        cols_to_remove = ["ssb_obs_pos", "ssb_obs_vel", "obs_sun_pos"]
+        cols_to_remove = [
+            "ssb_obs_pos",
+            "ssb_obs_vel",
+            "ssb_obs_vel_ecl",
+            "obs_sun_pos",
+        ]
         for c in cols_to_remove:
             if c in self.table.colnames:
                 log.info("Column {0} already exists. Removing...".format(c))
@@ -1411,6 +1426,61 @@ class TOAs(object):
             cols_to_add += plan_poss.values()
         log.debug("Adding columns " + " ".join([cc.name for cc in cols_to_add]))
         self.table.add_columns(cols_to_add)
+
+    def add_vel_ecl(self, obliquity):
+        """Compute and add a column to self.table with velocities in ecliptic coordinates.
+
+        Called in barycentric_radio_freq() in AstrometryEcliptic (astrometry.py) 
+        if ssb_obs_vel_ecl column does not already exist.
+        If compute_posvels() called again for a TOAs object (aka TOAs modified), 
+        deletes this column so that this function will be called again and 
+        velocities will be calculated with updated TOAs.
+        """
+
+        # Remove any existing columns
+        col_to_remove = "ssb_obs_vel_ecl"
+        if col_to_remove in self.table.colnames:
+            self.table.remove_column(col_to_remove)
+
+        ssb_obs_vel_ecl = table.Column(
+            name="ssb_obs_vel_ecl",
+            data=np.zeros((self.ntoas, 3), dtype=np.float64),
+            unit=u.km / u.s,
+            meta={"origin": "SSB", "obj": "OBS"},
+        )
+
+        self.obliquity = obliquity
+        ephem = self.ephem
+        # Now step through in observatory groups
+        for ii, key in enumerate(self.table.groups.keys):
+            grp = self.table.groups[ii]
+            obs = self.table.groups.keys[ii]["obs"]
+            loind, hiind = self.table.groups.indices[ii : ii + 2]
+            site = get_observatory(obs)
+            tdb = time.Time(grp["tdb"], precision=9)
+
+            if isinstance(site, SpacecraftObs):
+                ssb_obs = site.posvel(tdb, ephem, grp)
+            else:
+                ssb_obs = site.posvel(tdb, ephem)
+
+            # convert ssb_obs pos and vel to ecliptic coordinates
+            coord = ICRS(
+                x=ssb_obs.pos[0],
+                y=ssb_obs.pos[1],
+                z=ssb_obs.pos[2],
+                v_x=ssb_obs.vel[0],
+                v_y=ssb_obs.vel[1],
+                v_z=ssb_obs.vel[2],
+                representation_type=CartesianRepresentation,
+                differential_type=CartesianDifferential,
+            )
+            coord = coord.transform_to(PulsarEcliptic(obliquity=obliquity))
+            # get velocity vector from coordinate frame
+            ssb_obs_vel_ecl[loind:hiind, :] = coord.velocity.d_xyz.T.to(u.km / u.s)
+        col = ssb_obs_vel_ecl
+        log.debug("Adding columns " + " ".join(col.name))
+        self.table.add_column(col)
 
     def read_pickle_file(self, filename):
         """Read the TOAs from the pickle file specified in filename.

@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+### Removed
+- Removed Python 2.7 support from travis and tox testing suites and from requirements files
+- Removed "landscape" code checker since that package is no longer supported by its author
+### Fixed
+- Fixed bug in processing of PHASE commands in .tim file. They are now applied even if pulse numbers are not being used
+- Substantial speed increase in Residuals calculation due to removal of redundant phase calculation
+- Fixed bug that prevented reading Parkes-format TOAs
+- Fixed bug in solar wind model that prevented fitting
+- Fix pintempo script so it will respect JUMPs in the TOA file.
+### Added
+- Added support for -padd flag on TOAs to add phase turns to individual TOAs (matching TEMPO and Tempo2)
+- Added caching of TZRMJD TOA to speed up and prevent repeated INFO prints about applying clock corrections
+- Added check to ensure clock files are ordered by MJD since interpolation assumes that
+- Added ability to disable subtracting mean from residuals
+- Added track_mode to Residuals to select pulse number tracking without needing the model to have TRACK -2
+### Changed
+- Large speed increase when using Ecliptic coordinates
+- Changed Residuals so that use_weighted_mean and subtract_mean are attributes set on initialization
+
 ## [0.7.0] - 2020-05-27
 ### Changed
 - Changed units of Phase to be u.dimensionless_unscaled instead of u.cycle, which was confusing
