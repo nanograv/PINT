@@ -919,26 +919,39 @@ class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
 
     Parameters
     ----------
-    toas : a pint TOAs instance
-        The input toas.
-    model : a pint timing model instance
+    model: a pint timing model instance
         The initial timing model for fitting.
-    from_toa: bool, optional
-        A flag indicate if the fit data is from TOAs object. Default is True
-    residual_types: list of residual class, optional
-        A list of the residual type class. Fitter will initialize residual
-        objects according to the given types. When `from_toa` flag is true,
-        this is required. Default is [Residuals]
-    residuals: `pint.residuals ResidualCollector` object. optional
-        A residual collector class that helps the fitter to treat different
-        residuals as one. Default is None.
+    fit_data_names: list of str
+        The names of the data fit for.
+    fit_data: data object or a tuple of data objects.
+        The data to fit for. If one data are give, it will assume all the fit
+        data set are packed in this one data object. If more than one data
+        objects are provided, the size of 'fit_data' has to match the
+        'fit_data_names'.
+    fitting_method: str
+        Algorithm of fitting.
     """
 
-    def __init__(self, model=None, data_type, data, fitting_method):
-        self.toas = toas
+    def __init__(self, model=None, fit_data_names, fit_data, fitting_method,
+                 additional_makers={}):
         self.model_init = model
-        # Check input
-        if from_toa:
+        # Check input data and data_type
+        self.fit_data_names = fit_data_names
+        # convert the non tuple input to a tuple
+        if not isinstance(fit_data, (tuple)):
+            fit_data = (fit_data,)
+        if len(fit_data) > 1 and len(fit_data_names) != len(fit_data):
+            raise ValueError("If one more data sets are provided, the fit "
+                             "data has to match the fit data names.")
+
+       # Get the makers for fitting parts.
+
+        self.makers = {'resdiual':[], 'desigan_matrix':[]}
+        self.makers.update(ad)
+
+
+
+
             if toas is None:
                 raise ValueError("TOA object is required, if `from_toa` is True")
             if len(residual_types) == 0:
@@ -983,3 +996,6 @@ class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
         else:
             self.resids = copy.deepcopy(self.resids_init)
             self.resids.update_model(self.model, **kwargs)
+
+    def fit_data(self):
+        pass

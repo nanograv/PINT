@@ -40,7 +40,6 @@ class TestDesignMatrix:
 
         # Test labels
         labels = phase_designmatrix.labels
-        print(labels)
         assert len(labels) == 2
         assert len(labels[0]) == 1
         assert len(labels[1]) == len(self.test_param_lite) + 1

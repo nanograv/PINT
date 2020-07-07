@@ -12,7 +12,7 @@ from pint.utils import weighted_mean
 __all__ = ["Residuals"]
 
 
-class Residuals(object):
+class Residuals(ResidualBase):
     """Class to compute residuals between TOAs and a TimingModel
 
     Parameters
@@ -26,16 +26,34 @@ class Residuals(object):
         "use_pulse_numbers" uses the pulse_number column of the TOAs table to assign pulse numbers. This mode is
         selected automatically if the model has parameter TRACK == "-2".
     """
-
-    def __init__(
-        self,
-        toas=None,
+    def __new__(
+        cls,
+        data=None,
         model=None,
+        residual_type='phase',
         subtract_mean=True,
         use_weighted_mean=True,
         track_mode="nearest",
     ):
-        self.toas = toas
+        try:
+            cls = residual_map[data_type]
+        except KeyError:
+            raise ValueError("'{}' is not a PINT supported residual. Currently "
+                "support data type are {}".format(data_type,
+                list(residual_map.keys())))
+
+        return super().__new__(cls)
+
+    def __init__(
+        self,
+        data=None,
+        model=None,
+        residual_type='phase',
+        subtract_mean=True,
+        use_weighted_mean=True,
+        track_mode="nearest",
+    ):
+        self.toas = data
         self.model = model
         self.subtract_mean = subtract_mean
         self.use_weighted_mean = use_weighted_mean
@@ -326,7 +344,92 @@ class Residuals(object):
         return avg
 
 
-class ResidualBase(object):
+class WidebandDMResiduals(Residuals):
+    """ Residuals for independent DM measurement (i.e. Wideband TOAs).
+    """
+    def __init__(
+        self,
+        data=None,
+        model=None,
+        residual_type='phase',
+        subtract_mean=True,
+        use_weighted_mean=True,
+        ):
+
+        self.toas = toas
+        self.model = model
+        self.subtract_mean = subtract_mean
+        self.use_weighted_mean = use_weighted_mean
+
+        dm_data, dm_error, valid = self.get_dm_data()
+        super().__init__(self.model.dm_value, xdata = self.toas.table[valid],
+                         dm_data, dm_error, unit=u.pc/u.cm**3,
+                         subtract_mean=subtract_mean,
+                         weighted_mean=weighted_mean)
+
+    def calc_resids(
+        self,
+        subtract_mean=self.subtract_mean,
+        weighted_mean=self.use_weighted_mean
+        ):
+        model_value = self.get_model_value()
+        resids = self.ydata - model_value
+        if subtract_mean:
+            if not weighted_mean:
+                resids -= resids.mean()
+            else:
+                # Errs for weighted sum.  Units don't matter since they will
+                # cancel out in the weighted sum.
+                if (self.yerror is None or np.any(self.yerror == 0)):
+                    raise ValueError(
+                        "Some DM errors are zero - cannot calculate the"
+                        " weighted residuals."
+                    )
+                w = 1.0 / (self.yerror ** 2)
+                wm = (resids * w).sum() / w.sum()
+                resids -= wm
+        return resids
+
+    def get_dm_data(self):
+        """Get the independent measured DM data from TOA flags.
+
+        Return
+        ------
+        valid_dm: `numpy.ndarray`
+            Independent measured DM data from TOA line. It only returns the DM
+            values that is present in the TOA flags.
+
+        valid_error: `numpy.ndarray`
+            The error associated with DM values in the TOAs.
+
+        valide_index: list
+            The TOA with DM data index.
+        """
+        dm_data = self.toas.get_flag_value('pp_dm')
+        dm_error = self.toas.get_flag_value('pp_dme')
+        # Check if all toas has dm. We assument DM and DM error have same size.
+        valid_index = [i for i, v in enumerate(dm_data) if v != None]
+        if valid_index == []:
+            raise ValueError("Input TOA object does not have wideband DM values")
+        valid_dm = np.array(dm_data[valid_index])
+        valid_error = np.array(dm_error[valid_index])
+        # Check valid error, if an error is none, change it to zero
+        none_index = np.where(valid_error == None)[0]
+        valid_error[none_index] = 0
+        return valid_dm, valid_error, valid_index
+
+    def update_model(self, new_model, **kwargs):
+        """ Up date DM models from a new PINT timing model
+
+        Parameter
+        ---------
+        new_model: `pint.timing_model.TimingModel`
+        """
+
+        self.model = new_model
+        self.model_func = self.model.dm_value
+
+lass ResidualBase(object):
     """ This is the base class for the residuals that is not TOA residual.
 
     Parameter
@@ -381,79 +484,14 @@ class ResidualBase(object):
     def get_model_value(self):
         return model_func(self.xdata, *self.model_args)
 
-    def calc_resids(self, subtract_mean=True, weighted_mean=True):
-        model_value = self.get_model_value()
-        resids = self.ydata - model_value
-        if subtract_mean:
-            if not weighted_mean:
-                resids -= resids.mean()
-            else:
-                # Errs for weighted sum.  Units don't matter since they will
-                # cancel out in the weighted sum.
-                if (self.yerror is None or np.any(self.yerror == 0)):
-                    raise ValueError(
-                        "Some DM errors are zero - cannot calculate the"
-                        " weighted residuals."
-                    )
-                w = 1.0 / (self.yerror ** 2)
-                wm = (resids * w).sum() / w.sum()
-                resids -= wm
-        return resids
+
 
     def update_model(self, new_model):
         self.model_func = new_model
 
 
-class WidebandDMResiduals(ResidualBase):
-    """ Residuals for independent DM measurement (i.e. Wideband TOAs).
-    """
-    def __init__(self, toa, model, subtract_mean=True, weighted_mean=True):
-        self.toas = toas
-        self.model = model
-        dm_data, dm_error, valid = self.get_dm_data()
-        super().__init__(self.model.dm_value, xdata = self.toas.table[valid],
-                         dm_data, dm_error, unit=u.pc/u.cm**3,
-                         subtract_mean=subtract_mean,
-                         weighted_mean=weighted_mean)
 
-    def get_dm_data(self):
-        """Get the independent measured DM data from TOA flags.
 
-        Return
-        ------
-        valid_dm: `numpy.ndarray`
-            Independent measured DM data from TOA line. It only returns the DM
-            values that is present in the TOA flags.
-
-        valid_error: `numpy.ndarray`
-            The error associated with DM values in the TOAs.
-
-        valide_index: list
-            The TOA with DM data index.
-        """
-        dm_data = self.toas.get_flag_value('pp_dm')
-        dm_error = self.toas.get_flag_value('pp_dme')
-        # Check if all toas has dm. We assument DM and DM error have same size.
-        valid_index = [i for i, v in enumerate(dm_data) if v != None]
-        if valid_index == []:
-            raise ValueError("Input TOA object does not have wideband DM values")
-        valid_dm = np.array(dm_data[valid_index])
-        valid_error = np.array(dm_error[valid_index])
-        # Check valid error, if an error is none, change it to zero
-        none_index = np.where(valid_error == None)[0]
-        valid_error[none_index] = 0
-        return valid_dm, valid_error, valid_index
-
-    def update_model(self, new_model, **kwargs):
-        """ Up date DM models from a new PINT timing model
-
-        Parameter
-        ---------
-        new_model: `pint.timing_model.TimingModel`
-        """
-
-        self.model = new_model
-        self.model_func = self.model.dm_value
 
 
 class ResidualCollector(object):
