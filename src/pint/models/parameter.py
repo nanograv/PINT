@@ -1515,7 +1515,11 @@ class maskParameter(floatParameter):
     def as_parfile_line_mask(self):
         if self.quantity is None:
             return ""
-        line = "%-15s %s " % (self.origin_name, self.key)
+        # display -gui_jump flag for jumps added thru pintk
+        if self.key == "jump":
+            line = "%-15s -gui_jump " % (self.origin_name)
+        else:
+            line = "%-15s %s " % (self.origin_name, self.key)
         for kv in self.key_value:
             if not isinstance(kv, time.Time):
                 line += "%s " % kv
@@ -1528,16 +1532,32 @@ class maskParameter(floatParameter):
             line += " 1"
         return line + "\n"
 
-    def new_param(self, index):
+    def new_param(self, index, copy_all=False):
         """Create a new but same style mask parameter
         """
-        new_mask_param = maskParameter(
-            name=self.origin_name,
-            index=index,
-            long_double=self.long_double,
-            units=self.units,
-            aliases=self.prefix_aliases,
-        )
+        if not copy_all:
+            new_mask_param = maskParameter(
+                name=self.origin_name,
+                index=index,
+                long_double=self.long_double,
+                units=self.units,
+                aliases=self.prefix_aliases,
+            )
+        else:
+            new_mask_param = maskParameter(
+                name=self.origin_name,
+                index=index,
+                key=self.key,
+                key_value=self.key_value,
+                value=self.value,
+                long_double=self.long_double,
+                units=self.units,
+                description=self.description,
+                uncertainty=self.uncertainty,
+                frozen=self.frozen,
+                continuous=self.continuous,
+                aliases=self.prefix_aliases,
+            )
         return new_mask_param
 
     def select_toa_mask(self, toas):

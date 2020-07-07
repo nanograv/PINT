@@ -167,7 +167,7 @@ class TimingModel(object):
         return self.as_parfile()
 
     def setup(self):
-        """Run setup methods od all components."""
+        """Run setup methods on all components."""
         for cp in self.components.values():
             cp.setup()
 
@@ -547,20 +547,6 @@ class TimingModel(object):
 
         return result_comp
 
-    def replicate(self, components=[], copy_component=False):
-        new_tm = TimingModel()
-        for ct in self.component_types:
-            comp_list = getattr(self, ct + "_list").values()
-            if not copy_component:
-                # if not copied, the components' _parent will point to the new
-                # TimingModel class.
-                new_tm.setup_components(comp_list)
-            else:
-                new_comp_list = [copy.deepcopy(c) for c in comp_list]
-                new_tm.setup_components(new_comp_list)
-        new_tm.top_level_params = self.top_level_params
-        return new_tm
-
     def get_components_by_category(self):
         """Return a dict of this model's component objects keyed by the category name"""
         categorydict = defaultdict(list)
@@ -805,47 +791,58 @@ class TimingModel(object):
         for flag_dict in toas.table["flags"]:
             if "jump" in flag_dict.keys():
                 break
+            elif "gui_jump" in flag_dict.keys():
+                break
         else:
             log.info("No jump flags to process")
             return None
-        jump_nums = [
-            flag_dict["jump"] if "jump" in flag_dict.keys() else np.nan
-            for flag_dict in toas.table["flags"]
-        ]
-        if "PhaseJump" not in self.components:
-            log.info("PhaseJump component added")
-            a = jump.PhaseJump()
-            a.setup()
-            self.add_component(a)
-            self.remove_param("JUMP1")
-        for num in np.arange(1, np.nanmax(jump_nums) + 1):
-            if "JUMP" + str(int(num)) not in self.params:
-                param = maskParameter(
-                    name="JUMP",
-                    index=int(num),
-                    key="jump",
-                    key_value=int(num),
-                    value=0.0,
-                    units="second",
-                    uncertainty=0.0,
-                )
-                self.add_param_from_top(param, "PhaseJump")
-                getattr(self, param.name).frozen = False
-        if 0 in jump_nums:
-            for flag_dict in toas.table["flags"]:
-                if "jump" in flag_dict.keys() and flag_dict["jump"] == 0:
-                    flag_dict["jump"] = int(np.nanmax(jump_nums) + 1)
-            param = maskParameter(
-                name="JUMP",
-                index=int(np.nanmax(jump_nums) + 1),
-                key="jump",
-                key_value=int(np.nanmax(jump_nums) + 1),
-                value=0.0,
-                units="second",
-                uncertainty=0.0,
-            )
-            self.add_param_from_top(param, "PhaseJump")
-            getattr(self, param.name).frozen = False
+        for flag_dict in toas.table["flags"]:
+            if "jump" in flag_dict.keys():
+                jump_nums = [
+                    flag_dict["jump"] if "jump" in flag_dict.keys() else np.nan
+                    for flag_dict in toas.table["flags"]
+                ]
+                if "PhaseJump" not in self.components:
+                    log.info("PhaseJump component added")
+                    a = jump.PhaseJump()
+                    a.setup()
+                    self.add_component(a)
+                    self.remove_param("JUMP1")
+                for num in np.arange(1, np.nanmax(jump_nums) + 1):
+                    if "JUMP" + str(int(num)) not in self.params:
+                        param = maskParameter(
+                            name="JUMP",
+                            index=int(num),
+                            key="jump",
+                            key_value=int(num),
+                            value=0.0,
+                            units="second",
+                            uncertainty=0.0,
+                        )
+                        self.add_param_from_top(param, "PhaseJump")
+                        getattr(self, param.name).frozen = False
+                if 0 in jump_nums:
+                    for flag_dict in toas.table["flags"]:
+                        if "jump" in flag_dict.keys() and flag_dict["jump"] == 0:
+                            flag_dict["jump"] = int(np.nanmax(jump_nums) + 1)
+                    param = maskParameter(
+                        name="JUMP",
+                        index=int(np.nanmax(jump_nums) + 1),
+                        key="jump",
+                        key_value=int(np.nanmax(jump_nums) + 1),
+                        value=0.0,
+                        units="second",
+                        uncertainty=0.0,
+                    )
+                    self.add_param_from_top(param, "PhaseJump")
+                    getattr(self, param.name).frozen = False
+        # convert string list key_value from file into int list for jumps
+        # previously added thru pintk
+        for flag_dict in toas.table["flags"]:
+            if "gui_jump" in flag_dict.keys():
+                num = flag_dict["gui_jump"]
+                jump = getattr(self.components["PhaseJump"], "JUMP" + str(num))
+                jump.key_value = list(map(int, jump.key_value))
         self.components["PhaseJump"].setup()
 
     def get_barycentric_toas(self, toas, cutoff_component=""):
@@ -1349,6 +1346,18 @@ class TimingModel(object):
                 printed_cate.append(cat)
 
         return result_begin + result_middle + result_end
+
+    def maskPar_has_toas_check(self, toas):
+        """Sanity check to ensure all maskParameters select at least one TOA."""
+        for maskpar in self.get_params_of_type_top("maskParameter"):
+            par = getattr(self, maskpar)
+            if "TNEQ" in str(par.name) or par.frozen:
+                continue
+            if len(par.select_toa_mask(toas)) == 0:
+                raise AttributeError(
+                    "The maskParameter '%s %s %s' has no TOAs selected. "
+                    % (maskpar, par.key, par.key_value)
+                )
 
 
 class ModelMeta(abc.ABCMeta):
