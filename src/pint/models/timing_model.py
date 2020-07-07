@@ -345,6 +345,11 @@ class TimingModel(object):
         return self.get_deriv_funcs("DelayComponent")
 
     @property
+    def dm_derivs(self): #  TODO need to be careful about the name here.
+        """List of dm derivative functions."""
+        return self.get_deriv_funcs("DelayComponent", 'dm')
+
+    @property
     def d_phase_d_delay_funcs(self):
         """List of d_phase_d_delay functions."""
         Dphase_Ddelay = []
@@ -352,11 +357,15 @@ class TimingModel(object):
             Dphase_Ddelay += cp.phase_derivs_wrt_delay
         return Dphase_Ddelay
 
-    def get_deriv_funcs(self, component_type):
-        """Return dictionary of derivative functions."""
+    def get_deriv_funcs(self, component_type, derivative_type=''):
+        """Return dictionary of derivative functions.
+        """
+        # TODO, this function can be a more generical function collector.
         deriv_funcs = defaultdict(list)
+        if not derivative_type == '':
+            derivative_type += '_'
         for cp in getattr(self, component_type + "_list"):
-            for k, v in cp.deriv_funcs.items():
+            for k, v in getattr(cp, derivative_type + 'deriv_funcs').items():
                 deriv_funcs[k] += v
         return dict(deriv_funcs)
 
@@ -1020,8 +1029,25 @@ class TimingModel(object):
         par.value = ori_value
         return d_delay * (u.second / unit)
 
+
     def d_dm_d_param(self, data, param):
-        return np.zeros(len(data))
+        """Return the derivative of dm with respect to the parameter."""
+        par = getattr(self, param)
+        result = np.zeros(len(data)) << (u.pc / u.cm ** 3 / par.units)
+        dm_df = self.dm_derivs.get(param, None)
+        if dm_df is None:
+            if param not in self.params: # Maybe add differentitable params
+                raise AttributeError(
+                "Parametre {} does not exist".format(param)
+            )
+            else:
+                return result
+
+        for df in dm_df:
+            result += df(data, param).to(
+                result.unit, equivalencies=u.dimensionless_angles()
+            )
+        return result
 
     def designmatrix(
         self, toas, acc_delay=None, scale_by_F0=True, incfrozen=False, incoffset=True
@@ -1297,7 +1323,7 @@ class TimingModel(object):
                     "Model component {} was rejected because we "
                     "didn't find parameter {}".format(name, param)
                 )
-            # Disable here for now.
+            # Disable here for now. TODO  need to modified.
             #log.info("Final object: {}".format(repr(self)))
 
         self.setup()
