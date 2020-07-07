@@ -126,11 +126,11 @@ def test_ftest():
     ft = f.ftest(FD4, "FD", remove=False)
     assert isinstance(ft, float) or isinstance(ft, bool)
     # Test return the full output
-    ft, r_rms, r_wrms, chi2, dof = f.ftest(FD4, "FD", remove=False, full_output=True)
+    Ftest_dict = f.ftest(FD4, "FD", remove=False, full_output=True)
     # Test removing parameter
     FD3 = param.prefixParameter(
         parameter_type="float", name="FD3", value=0.0, units=u.s, frozen=False
     )
     ft = f.ftest(FD3, "FD", remove=True)
     assert isinstance(ft, float) or isinstance(ft, bool)
-    ft, r_rms, r_wrms, chi2, dof = f.ftest(FD3, "FD", remove=True, full_output=True)
+    Ftest_dict = f.ftest(FD3, "FD", remove=True, full_output=True)
