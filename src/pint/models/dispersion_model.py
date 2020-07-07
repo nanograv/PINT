@@ -7,7 +7,12 @@ import numpy as np
 import astropy.units as u
 from astropy.table import Table
 from astropy.time import Time
-from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
+from pint.models.parameter import (
+    MJDParameter,
+    floatParameter,
+    prefixParameter,
+    maskParameter,
+    )
 from pint.models.timing_model import DelayComponent, MissingParameter
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
@@ -435,7 +440,7 @@ class DispersionDMX(Dispersion):
         dmx = np.zeros(len(tbl))
         for k, v in select_idx.items():
             dmx[v] = 1.0
-        return dmx
+        return dmx * (u.pc / u.cm ** 3) / (u.pc / u.cm ** 3)
 
     def print_par(self,):
         result = ""
@@ -454,7 +459,6 @@ class DispersionDMX(Dispersion):
 class DispersionJump(Dispersion):
     """This class provides the contant offsets to the DM values.
     """
-
     register = True
     category = "dispersion_jump"
 
@@ -462,9 +466,8 @@ class DispersionJump(Dispersion):
         super(DispersionJump, self).__init__()
         self.dm_value_funcs += [self.jump_dm]
 
-
         self.add_param(
-            floatParameter(
+            maskParameter(
                 name="DMJUMP",
                 units="pc cm^-3",
                 value=None,
@@ -479,7 +482,7 @@ class DispersionJump(Dispersion):
             if mask_par.startswith("DMJUMP"):
                 self.dm_jumps.append(mask_par)
         for j in self.dm_jumps:
-            self.register_dm_deriv_funcs(self.d_dm_d_dm_jump, j)
+            self.register_dm_deriv_funcs(self.d_dm_d_dmjump, j)
             self.register_deriv_funcs(self.d_delay_d_dmparam, j)
 
     def validate(self):
@@ -491,7 +494,7 @@ class DispersionJump(Dispersion):
         in the unit of seconds.
         """
         tbl = toas.table
-        jdm = numpy.zeros(len(tbl))
+        jdm = np.zeros(len(tbl))
         for dm_jump in self.dm_jumps:
             dm_jump_par = getattr(self, dm_jump)
             mask = dm_jump_par.select_toa_mask(toas)
@@ -504,7 +507,7 @@ class DispersionJump(Dispersion):
         """ Derivative of dm values wrt dm jumps.
         """
         tbl = toas.table
-        d_dm_d_j = numpy.zeros(len(tbl))
+        d_dm_d_j = np.zeros(len(tbl))
         jpar = getattr(self, jump_param)
         mask = jpar.select_toa_mask(toas)
         d_dm_d_j[mask] = 1.0
