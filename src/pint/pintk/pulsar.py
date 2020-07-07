@@ -515,14 +515,14 @@ class Pulsar(object):
 
         fitter.fit_toas(maxiter=1)
         self.postfit_model = fitter.model
-        self.postfit_resids = Residuals(
-            self.all_toas, self.postfit_model, set_pulse_nums=True
-        )
+        self.postfit_resids = Residuals(self.all_toas, self.postfit_model)
         self.fitted = True
         self.write_fit_summary()
 
-        # TODO: set pulse nums above not working to reset delta pulse nums, have to force it here
-        # self.fulltoas.table['delta_pulse_numbers'] = np.zeros(self.fulltoas.ntoas)
+        # TODO: delta_pulse_numbers need some work. They serve both for PHASE and -padd functions from the TOAs
+        # as well as for phase jumps added manually in the GUI. They really should not be zeroed out here because
+        # that will wipe out preexisting values
+        self.fulltoas.table["delta_pulse_numbers"] = np.zeros(self.fulltoas.ntoas)
         self.selected_toas.table["delta_pulse_number"] = np.zeros(
             self.selected_toas.ntoas
         )
@@ -533,9 +533,7 @@ class Pulsar(object):
             if param.startswith("JUMP"):
                 getattr(pm_no_jumps, param).value = 0.0
                 getattr(pm_no_jumps, param).frozen = True
-        self.prefit_resids_no_jumps = Residuals(
-            self.selected_toas, pm_no_jumps, set_pulse_nums=True
-        )
+        self.prefit_resids_no_jumps = Residuals(self.selected_toas, pm_no_jumps)
 
         f = copy.deepcopy(fitter)
         no_jumps = [
@@ -550,7 +548,7 @@ class Pulsar(object):
                 [i for i in self.all_toas.get_mjds() if i > selectedMJDs.min()][0]
             )
             rs_mean = (
-                Residuals(self.all_toas, f.model, set_pulse_nums=True)
+                Residuals(self.all_toas, f.model)
                 .phase_resids[index : index + len(selectedMJDs)]
                 .mean()
             )

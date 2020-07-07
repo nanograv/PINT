@@ -56,8 +56,8 @@ matrix:
             - travis_retry pip install .
             - travis_retry python cache_IERS.py
           env:
-            - TEMPO=tempo/
-            - TEMPO2=tempo2/T2Runtime/
+            - TEMPO=$PWD/tempo/
+            - TEMPO2=$PWD/tempo2/T2runtime/
         - script: make notebooks
           install:
             - travis_retry pip install -r requirements_dev.txt

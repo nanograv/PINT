@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 import os
 import unittest
+import pytest
 
 import astropy.units as u
 
@@ -23,6 +24,10 @@ class TestWave(unittest.TestCase):
         cls.m = pint.models.get_model(parfile)
         cls.t = pint.toa.get_TOAs(timfile, ephem="DE405", include_bipm=False)
 
+    @pytest.mark.skipif(
+        "TEMPO2" not in os.environ,
+        reason="Needs TEMPO2 clock files, but TEMPO2 envariable not set",
+    )
     def test_vela(self):
         print("Test RMS of a VELA ephemeris with WAVE parameters.")
         rs = pint.residuals.Residuals(self.t, self.m).time_resids

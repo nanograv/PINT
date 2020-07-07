@@ -38,7 +38,7 @@ class TestFBX(unittest.TestCase):
 
     def test_J0023(self):
         pint_resids_us = Residuals(
-            self.toasJ0023, self.modelJ0023, False
+            self.toasJ0023, self.modelJ0023, use_weighted_mean=False
         ).time_resids.to(u.s)
         assert np.all(
             np.abs(pint_resids_us.value - self.ltres) < 1e-8

@@ -33,6 +33,9 @@ TopoObs(
     tempo_code="7",
     itoa_code="PK",
     aliases=["pks"],
+    clock_fmt="tempo2",
+    clock_dir="TEMPO2",
+    clock_file="pks2gps.clk",
     itrf_xyz=[-4554231.5, 2816759.1, -3454036.3],
 )
 TopoObs(

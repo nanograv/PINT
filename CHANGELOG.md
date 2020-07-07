@@ -12,12 +12,17 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fixed bug in processing of PHASE commands in .tim file. They are now applied even if pulse numbers are not being used
 - Substantial speed increase in Residuals calculation due to removal of redundant phase calculation
 - Fixed bug that prevented reading Parkes-format TOAs
+- Fixed bug in solar wind model that prevented fitting
+- Fix pintempo script so it will respect JUMPs in the TOA file.
 ### Added
 - Added support for -padd flag on TOAs to add phase turns to individual TOAs (matching TEMPO and Tempo2)
 - Added caching of TZRMJD TOA to speed up and prevent repeated INFO prints about applying clock corrections
 - Added check to ensure clock files are ordered by MJD since interpolation assumes that
+- Added ability to disable subtracting mean from residuals
+- Added track_mode to Residuals to select pulse number tracking without needing the model to have TRACK -2
 ### Changed
 - Large speed increase when using Ecliptic coordinates
+- Changed Residuals so that use_weighted_mean and subtract_mean are attributes set on initialization
 
 ## [0.7.0] - 2020-05-27
 ### Changed

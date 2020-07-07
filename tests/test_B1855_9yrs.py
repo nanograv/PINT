@@ -32,7 +32,7 @@ class TestB1855(unittest.TestCase):
 
     def test_B1855(self):
         pint_resids_us = Residuals(
-            self.toasB1855, self.modelB1855, False
+            self.toasB1855, self.modelB1855, use_weighted_mean=False
         ).time_resids.to(u.s)
         # Due to the gps2utc clock correction. We are at 3e-8 seconds level.
         assert np.all(

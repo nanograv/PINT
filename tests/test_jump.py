@@ -28,7 +28,9 @@ class TestJUMP(unittest.TestCase):
         )
 
     def test_jump(self):
-        presids_s = Residuals(self.toas, self.JUMPm, False).time_resids.to(u.s)
+        presids_s = Residuals(
+            self.toas, self.JUMPm, use_weighted_mean=False
+        ).time_resids.to(u.s)
         assert np.all(
             np.abs(presids_s.value - self.ltres["residuals"]) < 1e-7
         ), "JUMP test failed."

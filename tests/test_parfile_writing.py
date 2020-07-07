@@ -39,12 +39,16 @@ class TestParfileWriting(unittest.TestCase):
                     continue
                 else:
                     par.value = ov * 0.8
-        self.res = Residuals(self.toasB1855, self.modelB1855, False).time_resids.to(u.s)
+        self.res = Residuals(
+            self.toasB1855, self.modelB1855, use_weighted_mean=False
+        ).time_resids.to(u.s)
         f = open(self.out_parfile, "w")
         f.write(self.modelB1855.as_parfile())
         f.close()
         read_model = mb.get_model(self.out_parfile)
-        read_res = Residuals(self.toasB1855, read_model, False).time_resids.to(u.s)
+        read_res = Residuals(
+            self.toasB1855, read_model, use_weighted_mean=False
+        ).time_resids.to(u.s)
         assert np.all(
             np.abs(read_res.value - self.res.value) < 1e-15
         ), "Output parfile did not produce same residuals."
