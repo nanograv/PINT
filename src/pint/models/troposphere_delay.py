@@ -233,7 +233,7 @@ class TroposphereDelay(DelayComponent):
         # return 7.7 * u.ns
 
         p = self.pressure_from_altitude(H)
-        return (p / 43.921) / (
+        return (p / (43.921 * u.kPa)) / (
             const.c.value * (1 - 0.00266 * np.cos(2 * lat) - 0.00028 * H.value)
         )
 
