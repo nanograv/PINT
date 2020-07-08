@@ -76,7 +76,8 @@ class TroposphereDelay(DelayComponent):
 
     @staticmethod
     def _herring_map(alt, a, b, c):
-        # equation 4 from the Niell mapping function
+        """equation 4 from the Niell mapping function
+        """
         sinAlt = np.sin(alt)
         return 1 / (
             (1 / (1 + a / (1 + b / (1 + c))))
@@ -95,7 +96,8 @@ class TroposphereDelay(DelayComponent):
 
         self.delay_funcs_component += [self.troposphere_delay]
 
-        # copy over the
+        # copy over the arrays to provide constant values within 15 deg
+        # of the poles and equator
         for array in [
             self.A_AVG,
             self.B_AVG,
@@ -117,13 +119,15 @@ class TroposphereDelay(DelayComponent):
         super(TroposphereDelay, self).validate()
 
     def _get_target_altitude(self, obs, grp, radec):
-        # convert the sky coordinates of the target to the angular altitude at each TOA
+        """convert the sky coordinates of the target to the angular altitude at each TOA
+        """
         transformAltaz = AltAz(location=obs, obstime=grp["mjd"])
         alt = radec.transform_to(transformAltaz).alt  # * u.deg
         return alt
 
     def _get_target_skycoord(self):
-        # return the sky coordiantes for the target, either from equatorial or ecliptic coordinates
+        """return the sky coordiantes for the target, either from equatorial or ecliptic coordinates
+        """
         try:
             radec = SkyCoord(
                 self.RAJ.value * self.RAJ.units, self.DECJ.value * self.DECJ.units
@@ -137,20 +141,26 @@ class TroposphereDelay(DelayComponent):
         return radec
 
     def troposphere_delay(self, toas, acc_delay=None):
-        # main funciton, pass in toas and get the delays
+        """This is the main function for the troposphere delay.
+        Pass in the TOAs and it will calculate the delay for each TOA,
+        accounting for the observatory locaiton, target coordiantes, and time of observation
+        """
         tbl = toas.table
         delay = np.zeros(len(tbl))
 
+        # if not correcting for troposphere, return the default zero delay
         if self.CORRECT_TROPOSPHERE.value:
 
             radec = self._get_target_skycoord()
-            # okie so I need to do this more efficiently, so i'll group by the observatory
 
+            # the only python for loop is to iterate through the unique observatory locations
+            # all other math is computed through numpy
             for ii, key in enumerate(tbl.groups.keys):
                 grp = tbl.groups[ii]
                 loind, hiind = tbl.groups.indices[ii : ii + 2]
-                # if key["obs"].lower() == "barycenter":
                 obsobj = get_observatory(tbl.groups.keys[ii]["obs"])
+
+                # exclude non topocentric observations
                 if not isinstance(obsobj, TopoObs):
                     log.debug(
                         "Skipping Troposphere delay for non Topocentric TOA: %s"
@@ -163,34 +173,35 @@ class TroposphereDelay(DelayComponent):
                 alt = self._get_target_altitude(obs, grp, radec)
 
                 # now actually calculate the atmospheric delay based on the models
-                # start with 7.7 ns and plane atmosphere
-
-                # delay[loind:hiind] = 7.7 * u.nanosecond / np.sin(alt)
 
                 delay[loind:hiind] = self.delay_model(
                     alt, obs.lat, obs.height, grp["tdbld"]
                 )
-        # else just return the default value of zeros
         return delay * u.s
 
     def _validate_altitudes(self, alt, obs=""):
-        # this method checks if any of the TOAs occur at invalid altitudes
-        # for example, if the pulsar position is incorrect, it would likely
-        # result in negative altitudes
-        # to correct for this is two steps: i'll make a numpy boolean array
-        # to store whether each TOA is valid or not, to let me know later
-        # then, to allow for fast numpy math, i'll correct the individual invalid TOAs
-        # to make them appear at the zenith, then afterwards i'll make that part of
-        # the delay be zero
-        # optionally pass obs to list which observatory the invalid altitues are from
+        """This method checks if any of the TOAs occur at invalid altitudes
+        for example, if the pulsar position is incorrect, it would likely
+        result in negative altitudes.
+        To correct for this is two steps: first make a numpy boolean array
+        to store whether each TOA is valid or not, to let me know for later.
+        The boolean array is returned at the end of the function.
+        Then, to allow for fast numpy math, correct the individual invalid TOAs
+        to make them appear at the zenith, then afterwards make that part of
+        the delay be zero.
+        This alitude correction is applied to the alt numpy array passed in as argument
+        optionally pass obs to list which observatory the invalid altitues are from
+
+        This has been tested and it does work, even though it's slightly convoluted
+        """
         isPositive = np.greater_equal(alt, 0 * u.deg)
         isLessThan90 = np.less_equal(alt, 90 * u.deg)
         isValid = np.logical_and(isPositive, isLessThan90)
 
         # now make corrections to alt based on the valid status
-        # if not valid, make them appear at the zenith to make the math happy
+        # if not valid, make them appear at the zenith to make the math sensical
         if not np.all(isValid):
-            # i might want to count how many TOAs are invalid
+            # it's probably helpful to count how many are invalid
             numInvalid = len(isValid) - np.count_nonzero(isValid)
             message = "Invalid altitude calculated for %i TOAS" % numInvalid
             if obs:
@@ -198,16 +209,18 @@ class TroposphereDelay(DelayComponent):
             log.warning(message)
 
             # now correct the values
-            # first make them zeros
+            # first make the invalid altitudes zeros
             alt *= isValid  # multilpy valids by 1, else make zero
             alt += (
                 90 * u.deg * np.logical_not(isValid)
-            )  # increase the invalid ones to 90 deg
+            )  # increase the invalid ones to 90 deg (zenith)
             # this will prevent unexpected behaviour from occuring for negative altitudes
         return isValid
 
     def delay_model(self, alt, lat, H, mjd):
-        # make sure teh altitudes are reasonable values, warn if not
+        """validate the observed altitudes, then combine dry and wet delays
+        """
+        # make sure the altitudes are reasonable values, warn if not
         altIsValid = self._validate_altitudes(alt)
 
         delay = self.zenith_delay(lat, H.to(u.km)) * self.mapping_function(
@@ -220,8 +233,7 @@ class TroposphereDelay(DelayComponent):
         return delay
 
     def pressure_from_altitude(self, H):
-        """
-        From CRC Handbook Chapter 14 page 19 US Standard Atmosphere
+        """From CRC Handbook Chapter 14 page 19 US Standard Atmosphere
         """
         gph = self.EARTH_R * H / (self.EARTH_R + H)  # geopotential height
         if gph > 11 * u.km:
@@ -231,25 +243,27 @@ class TroposphereDelay(DelayComponent):
         return P
 
     def zenith_delay(self, lat, H):
-        # the hydrostatic delay at zenith
-
+        """Calculate the hydrostatic zenith delay
+        """
         p = self.pressure_from_altitude(H)
         return (p / (43.921 * u.kPa)) / (
             const.c.value * (1 - 0.00266 * np.cos(2 * lat) - 0.00028 * H.value)
         )
 
     def wet_zenith_delay(self):
-        # the wet delay at zentih
-        return 0.0  # i will update this method later
+        """ calculate the wet delay at zentih
+        """
+        return 0.0  # this method will be updated in the future to
+        # either allow explicit specification of the wet zenith delay
+        # or approximate it from weather data
         # default for TEMPO2 is zero wet delay if not specified
 
     def _coefficient_func(self, average, amplitudes, yearFraction):
-        # from the Niell mapping function with annual variations
+        """from the Niell mapping function with annual variations"""
         return average + 0 * amplitudes * np.cos(2 * np.pi * yearFraction)
 
     def _find_latitude_index(self, lat):
-        """
-        find the index corresponding to the upper bound on latitude
+        """find the index corresponding to the upper bound on latitude
         for nearest neighbor interpolation in the mapping function
         """
         absLat = np.abs(lat)
@@ -260,8 +274,8 @@ class TroposphereDelay(DelayComponent):
         raise ValueError("Invaid latitude: %s must be between -90 and 90 degrees" % lat)
 
     def mapping_function(self, alt, lat, H, mjd):
-
-        # this implements the niell mapping function for hydrostatic
+        """this implements the niell mapping function for hydrostatic
+        """
 
         yearFraction = self._get_year_fraction_fast(mjd, lat)
         """
@@ -303,9 +317,10 @@ class TroposphereDelay(DelayComponent):
         return baseMap + (1 / np.sin(alt) - fcorrection) * H.to(u.km).value
 
     def wet_map(self, alt, lat):
-        # very similar to the normal mapping function except it uses different coefficients
-        # and i believe that there isn't an explicit height correction to the mapping function,
-        # but i'll double check the literature.
+        """this is very similar to the normal mapping function except it uses different coefficients
+        and i believe that there isn't an explicit height correction to the mapping function,
+        but i'll double check the literature.
+        """
 
         latIndex = self._find_latitude_index(lat)  # lattitude dependent
 
@@ -323,7 +338,7 @@ class TroposphereDelay(DelayComponent):
 
     @staticmethod
     def _interp(x, xn, yn):
-        # vectorized 1d interpolation for 2 points only
+        """ vectorized 1d interpolation for 2 points only"""
         return (x - xn[0]) * (yn[1] - yn[0]) / (xn[1] - xn[0]) + yn[0]
 
     def _get_year_fraction_slow(self, mjd, lat):
