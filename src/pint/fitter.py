@@ -501,16 +501,25 @@ class Fitter(object):
 
         Returns
         --------
-        ft : Float
-            F-test significance value for the model with the larger number of
-            components over the other. Computed with pint.utils.FTest().
-        resid_rms_test : Float (Quantity)
-            If full_output is True, returns the RMS of the residuals of the tested model
-            fit. Will be in units of microseconds as an astropy quantity.
-        chi2_test : Float
-            If full_output is True, returns the chi-squared of the tested model.
-        dof_test : Int
-            If full_output is True, returns the degrees of freedom of the tested model.
+        dictionary
+
+            ft : Float
+                F-test significance value for the model with the larger number of
+                components over the other. Computed with pint.utils.FTest().
+
+            resid_rms_test : Float (Quantity)
+                If full_output is True, returns the RMS of the residuals of the tested model
+                fit. Will be in units of microseconds as an astropy quantity.
+
+            resid_wrms_test : Float (Quantity)
+                If full_output is True, returns the Weighted RMS of the residuals of the tested model
+                fit. Will be in units of microseconds as an astropy quantity.
+
+            chi2_test : Float
+                If full_output is True, returns the chi-squared of the tested model.
+
+            dof_test : Int
+                If full_output is True, returns the degrees of freedom of the tested model.
         """
         # Copy the fitter that we do not change the initial model and fitter
         fitter_copy = copy.deepcopy(self)
@@ -602,9 +611,16 @@ class Fitter(object):
                 dof_test = dof_2
                 chi2_test = chi2_2
             resid_rms_test = fitter_copy.resids.time_resids.std().to(u.us)
-            return ft, resid_rms_test, chi2_test, dof_test
+            resid_wrms_test = fitter_copy.resids.rms_weighted()  # units: us
+            return {
+                "ft": ft,
+                "resid_rms_test": resid_rms_test,
+                "resid_wrms_test": resid_wrms_test,
+                "chi2_test": chi2_test,
+                "dof_test": dof_test,
+            }
         else:
-            return ft
+            return {"ft": ft}
 
 
 class PowellFitter(Fitter):
