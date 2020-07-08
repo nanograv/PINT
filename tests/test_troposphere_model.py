@@ -21,7 +21,7 @@ class TestTroposphereDelay(unittest.TestCase):
     FLOAT_THRESHOLD = 1e-12  #
 
     def setUp(self):
-        ngc = "datafile/NGC6440E"
+        ngc = "tests/datafile/NGC6440E"
 
         self.toas = toa.get_TOAs(ngc + ".tim")
         self.model = pint.models.get_model(ngc + ".par")
