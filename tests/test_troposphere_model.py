@@ -13,6 +13,8 @@ from astropy.time import Time
 from pint.models.troposphere_delay import TroposphereDelay
 from pint.observatory import get_observatory
 
+from pinttestdata import testdir
+
 
 class TestTroposphereDelay(unittest.TestCase):
 
@@ -21,14 +23,17 @@ class TestTroposphereDelay(unittest.TestCase):
     FLOAT_THRESHOLD = 1e-12  #
 
     def setUp(self):
-        ngc = "NGC6440E"
 
-        self.toas = toa.get_TOAs(ngc + ".tim")
-        self.model = pint.models.get_model(ngc + ".par")
-        self.modelWithTD = pint.models.get_model(ngc + ".par")
+        datadir = os.path.join(testdir, "datafile")
+        # parfile = os.path.join(datadir, "J1744-1134.basic.par")
+        # ngc = os.path.join(datadir, "NGC6440E")
+
+        self.toas = toa.get_TOAs(os.path.join(datadir, "NGC6440E.tim"))
+        self.model = pint.models.get_model(os.path.join(datadir, "NGC6440E.par"))
+        self.modelWithTD = pint.models.get_model(os.path.join(datadir, "NGC6440E.par"))
         self.modelWithTD.CORRECT_TROPOSPHERE.value = True
 
-        self.toasInvalid = toa.get_TOAs(ngc + ".tim")
+        self.toasInvalid = toa.get_TOAs(os.path.join(datadir, "NGC6440E.tim"))
 
         for i in range(len(self.toasInvalid.table)):
             # adjust the timing by half a day to make them invalid
