@@ -17,20 +17,19 @@ from pint.toa_select import TOASelect
 
 
 class TroposphereDelay(DelayComponent):
-    """Dispersion due to the solar wind (basic model).
+    """
 
-    The model is a simple spherically-symmetric model that varies
-    only in its amplitude.
+    Model for accounting for the troposphere delay for topocentric TOAs.
 
-    References
-    ----------
-    Madison et al. 2019, ApJ, 872, 150; Section 3.1
-    Edwards et al. 2006, MNRAS, 372, 1549; Setion 2.5.4
+    Based on Davis zenith hydrostatic delay (Davis et al., 1985, Appendix A)
+    Niell Mapping Functions (Niell, 1996, Eq 4)
+    additional altitude correction to atmospheric pressure
+    from CRC Handbook Chapter 14 page 19 "US Standard Atmosphere"
 
     """
 
     register = True
-    category = "troposphere"
+    category = "troposphere"  # is this the correct category?
 
     # zero padding will provide constant within 15degrees of the poles or equator
     A_AVG = (
@@ -77,6 +76,7 @@ class TroposphereDelay(DelayComponent):
 
     @staticmethod
     def _herring_map(alt, a, b, c):
+        # equation 4 from the Niell mapping function
         sinAlt = np.sin(alt)
         return 1 / (
             (1 / (1 + a / (1 + b / (1 + c))))
@@ -117,6 +117,7 @@ class TroposphereDelay(DelayComponent):
         super(TroposphereDelay, self).validate()
 
     def _get_target_altitude(self, obs, grp, radec):
+        # convert the sky coordinates of the target to the angular altitude at each TOA
         transformAltaz = AltAz(location=obs, obstime=grp["mjd"])
         alt = radec.transform_to(transformAltaz).alt  # * u.deg
         return alt
@@ -136,7 +137,7 @@ class TroposphereDelay(DelayComponent):
         return radec
 
     def troposphere_delay(self, toas, acc_delay=None):
-        # must include model to get ra/dec of target, plus maybe proper motion?
+        # main funciton, pass in toas and get the delays
         tbl = toas.table
         delay = np.zeros(len(tbl))
 
@@ -230,7 +231,7 @@ class TroposphereDelay(DelayComponent):
         return P
 
     def zenith_delay(self, lat, H):
-        # return 7.7 * u.ns
+        # the hydrostatic delay at zenith
 
         p = self.pressure_from_altitude(H)
         return (p / (43.921 * u.kPa)) / (
@@ -238,10 +239,12 @@ class TroposphereDelay(DelayComponent):
         )
 
     def wet_zenith_delay(self):
+        # the wet delay at zentih
         return 0.0  # i will update this method later
         # default for TEMPO2 is zero wet delay if not specified
 
     def _coefficient_func(self, average, amplitudes, yearFraction):
+        # from the Niell mapping function with annual variations
         return average + 0 * amplitudes * np.cos(2 * np.pi * yearFraction)
 
     def _find_latitude_index(self, lat):
@@ -258,9 +261,7 @@ class TroposphereDelay(DelayComponent):
 
     def mapping_function(self, alt, lat, H, mjd):
 
-        # yearFraction = np.mod(jyear, 1)
-        # for now just set the year fraction to 0 and don't change anything
-        # yearFraction = np.zeros(len(mjd))  # come back and fix this later
+        # this implements the niell mapping function for hydrostatic
 
         yearFraction = self._get_year_fraction_fast(mjd, lat)
         """
@@ -293,41 +294,13 @@ class TroposphereDelay(DelayComponent):
         b = self._interp(np.abs(lat), latNeighbors, bNeighbors)
         c = self._interp(np.abs(lat), latNeighbors, cNeighbors)
 
-        # now finally the mapping formula
-        # return 1 / np.sin(alt)
-        """
-        baseMap = 1 / (
-            (1 / (1 + a / (1 + b / (1 + c))))
-            / (1 / (np.sin(alt) + a / (np.sin(alt) + b / (np.sin(alt) + c))))
-        )
-        """
+        # the base mapping function
         baseMap = self._herring_map(alt, a, b, c)
 
         # now add in the mapping correction based on height
-        """
-        fcorrection = 1 / (
-            (1 / (1 + self.A_HT / (1 + self.B_HT / (1 + self.C_HT))))
-            / (
-                1
-                / (
-                    np.sin(alt)
-                    + self.A_HT / (np.sin(alt) + self.B_HT / (np.sin(alt) + self.C_HT))
-                )
-            )
-        )
-        """
         fcorrection = self._herring_map(alt, self.A_HT, self.B_HT, self.C_HT)
 
         return baseMap + (1 / np.sin(alt) - fcorrection) * H.to(u.km).value
-
-        """
-        for i in range(len(tab["obs"])):
-            obs = get_observatory(tab["obs"][i]).earth_location_itrf()
-            transAltaz = AltAz(location=obs, obstime=tab["mjd"][i])
-            altaz = radec.transform_to(transAltaz)
-            altitudes[i] = altaz.alt.value
-        return altitudes
-        """
 
     def wet_map(self, alt, lat):
         # very similar to the normal mapping function except it uses different coefficients
