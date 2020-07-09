@@ -211,7 +211,8 @@ class DesignMatrixMaker:
     """
 
     def __new__(cls, derivative_quantity, quantity_unit):
-        target_cls = design_matrix_maker_map.get(derivative_quantity, None)
+        target_cls = design_matrix_maker_map.get(derivative_quantity.lower(),
+                                                 None)
         # If there is no matching maker, use the current one.
         if target_cls is not None:
             cls = target_cls
@@ -309,8 +310,9 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
             else:
                 param_unit = getattr(model, param).units
                 q = deriv_func(data, delay, param).to(
-                    self.quantity_unit / getattr(model, param).units
+                    self.quantity_unit / param_unit
                         )
+
 
         # NOTE Here we have negative sign here. Since in pulsar timing
         # the residuals are calculated as (Phase - int(Phase)), which is different
@@ -329,10 +331,9 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
                     continue
                 mask.append(ii)
             M[:, mask] /= model.F0.value
-            self.quantity_unit *= u.second
             # TODO maybe use defined label is better
             labels[0] = {self.derivative_quantity:
-                (0, M.shape[0], self.quantity_unit)}
+                (0, M.shape[0], self.quantity_unit * u.s)}
         d_matrix = DesignMatrix(M, labels)
         d_matrix.scaled_by_F0 = scaled_by_F0
         return d_matrix

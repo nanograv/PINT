@@ -9,10 +9,10 @@ from astropy import log
 from pint.phase import Phase
 from pint.utils import weighted_mean
 
-__all__ = ["Residuals"]
+__all__ = ["Residuals", "WidebandDMResiduals", "residual_map"]
 
 
-class Residuals(ResidualBase):
+class Residuals:
     """Class to compute residuals between TOAs and a TimingModel
 
     Parameters
@@ -31,12 +31,14 @@ class Residuals(ResidualBase):
         data=None,
         model=None,
         residual_type='phase',
+        unit=u.Unit(""),
         subtract_mean=True,
         use_weighted_mean=True,
         track_mode="nearest",
+        scaled_by_F0=True
     ):
         try:
-            cls = residual_map[data_type]
+            cls = residual_map[residual_type.lower()]
         except KeyError:
             raise ValueError("'{}' is not a PINT supported residual. Currently "
                 "support data type are {}".format(data_type,
@@ -49,18 +51,21 @@ class Residuals(ResidualBase):
         data=None,
         model=None,
         residual_type='phase',
+        unit=u.Unit(""),
         subtract_mean=True,
         use_weighted_mean=True,
         track_mode="nearest",
+        scaled_by_F0=True,
     ):
         self.toas = data
         self.model = model
+        self.residual_type = residual_type
         self.subtract_mean = subtract_mean
         self.use_weighted_mean = use_weighted_mean
         self.track_mode = track_mode
         if getattr(self.model, "TRACK").value == "-2":
             self.track_mode = "use_pulse_numbers"
-        if toas is not None and model is not None:
+        if data is not None and model is not None:
             self.phase_resids = self.calc_phase_resids()
             self.time_resids = self.calc_time_resids()
             self.dof = self.get_dof()
@@ -72,6 +77,18 @@ class Residuals(ResidualBase):
         # only relevant if there are correlated errors
         self._chi2 = None
         self.noise_resids = {}
+        self.scaled_by_F0 = scaled_by_F0
+        # We should be carefully for the other type of residuals
+        self.unit = unit
+
+    @property
+    def resids(self):
+        if self.scaled_by_F0:
+            return self.time_resids
+        else:
+            if self.phase_resids is None:
+                self.phase_resids = self.calc_phase_resids()
+            return self.phase_resids
 
     @property
     def chi2_reduced(self):
@@ -89,10 +106,10 @@ class Residuals(ResidualBase):
     def resids_value(self):
         """ Get pure value of the residuals use the given base unit.
         """
-        if isinstance(self.time_resids, u.Quantity):
-            return self.time_resids.to_value(self.unit)
-        else: # We don't expect any other types of result.
-            return self.time_resids
+        if not self.scaled_by_F0:
+            return self.resids.to_value(self.unit)
+        else:
+            return self.resids.to_value(self.unit * u.s)
 
     def rms_weighted(self):
         """Compute weighted RMS of the residals in time."""
@@ -351,41 +368,43 @@ class WidebandDMResiduals(Residuals):
         self,
         data=None,
         model=None,
-        residual_type='phase',
+        residual_type='dm',
+        unit=u.pc / u.cm ** 3,
         subtract_mean=True,
         use_weighted_mean=True,
+        scaled_by_F0=False,
         ):
 
-        self.toas = toas
+        self.toas = data
         self.model = model
+        self.residual_type = residual_type
+        self.unit = unit
         self.subtract_mean = subtract_mean
         self.use_weighted_mean = use_weighted_mean
+        self.base_unit = u.pc/u.cm**3
+        self.get_model_value = self.model.dm_value
+        self.dm_data, self.dm_error, self.valid = self.get_dm_data()
+        self.scaled_by_F0 = scaled_by_F0
 
-        dm_data, dm_error, valid = self.get_dm_data()
-        super().__init__(self.model.dm_value, xdata = self.toas.table[valid],
-                         dm_data, dm_error, unit=u.pc/u.cm**3,
-                         subtract_mean=subtract_mean,
-                         weighted_mean=weighted_mean)
+    @property
+    def resids(self):
+        return self.calc_resids()
 
-    def calc_resids(
-        self,
-        subtract_mean=self.subtract_mean,
-        weighted_mean=self.use_weighted_mean
-        ):
-        model_value = self.get_model_value()
-        resids = self.ydata - model_value
-        if subtract_mean:
-            if not weighted_mean:
+    def calc_resids(self):
+        model_value = self.get_model_value(self.toas)
+        resids = self.dm_data - model_value
+        if self.subtract_mean:
+            if not self.use_weighted_mean:
                 resids -= resids.mean()
             else:
                 # Errs for weighted sum.  Units don't matter since they will
                 # cancel out in the weighted sum.
-                if (self.yerror is None or np.any(self.yerror == 0)):
+                if (self.dm_error is None or np.any(self.dm_error == 0)):
                     raise ValueError(
                         "Some DM errors are zero - cannot calculate the"
                         " weighted residuals."
                     )
-                w = 1.0 / (self.yerror ** 2)
+                w = 1.0 / (self.dm_error ** 2)
                 wm = (resids * w).sum() / w.sum()
                 resids -= wm
         return resids
@@ -411,12 +430,12 @@ class WidebandDMResiduals(Residuals):
         valid_index = [i for i, v in enumerate(dm_data) if v != None]
         if valid_index == []:
             raise ValueError("Input TOA object does not have wideband DM values")
-        valid_dm = np.array(dm_data[valid_index])
-        valid_error = np.array(dm_error[valid_index])
+        valid_dm = np.array(dm_data)[valid_index]
+        valid_error = np.array(dm_error)[valid_index]
         # Check valid error, if an error is none, change it to zero
         none_index = np.where(valid_error == None)[0]
         valid_error[none_index] = 0
-        return valid_dm, valid_error, valid_index
+        return valid_dm * self.unit, valid_error * self.unit, valid_index
 
     def update_model(self, new_model, **kwargs):
         """ Up date DM models from a new PINT timing model
@@ -429,72 +448,11 @@ class WidebandDMResiduals(Residuals):
         self.model = new_model
         self.model_func = self.model.dm_value
 
-lass ResidualBase(object):
-    """ This is the base class for the residuals that is not TOA residual.
-
-    Parameter
-    ---------
-    data: object, list or ndarray
-        Input data.
-    data_error: object, list or ndarray, optional.
-        Input data error.
-    model: callable
-        Function to compute the model values.
-
-    Note
-    ----
-    In the future, the TOA residual is going to be based on this base class.
-    """
-
-    def __init__(self, model_func, xdata, ydata, yerror=None, unit=None,
-                 model_args={}, subtract_mean=True, weighted_mean=True):
-        self.model_func = model_func
-        self.xdata = xdata
-        self.ydata = ydata
-        self.model_args = model_args
-        self.yerror = yerror
-        self.unit = unit
-        self.subtract_mean=subtract_mean
-        self.weighted_mean=weight_mean
-
-    @property
-    def resids(self):
-        return self.calc_resids(subtract_mean=self.subtract_mean,
-                                weighted_mean=self.weighted_mean)
-    @property
-    def chi2(self):
-        if  (self.yerror is None or np.any(self.yerror == 0)):
-            return np.inf
-        else:
-            chi2 = (
-                (self.resids() / self.yerror) ** 2.0
-                ).sum()
-            if isinstance(chi2, u.Quantity):
-                return chi2.to(u.Unit(None))
-
-    @property
-    def resids_value(self):
-        """ Get pure value of the residuals use the given base unit.
-        """
-        if isinstance(self.resids, u.Quantity):
-            return self.resids.to_value(self.unit)
-        else: # We don't expect any other types of result.
-            return self.resids
-
-    def get_model_value(self):
-        return model_func(self.xdata, *self.model_args)
+residual_map = {'phase': Residuals, 'dm': WidebandDMResiduals}
 
 
 
-    def update_model(self, new_model):
-        self.model_func = new_model
-
-
-
-
-
-
-class ResidualCollector(object):
+class CombinedResiduals(object):
     """ A class provides uniformed API that collects result from different type
     of residuals.
 
@@ -509,22 +467,24 @@ class ResidualCollector(object):
     residuals will have no units.
     """
     def __init__(self, residuals):
-        self.residuals = residuals
+        self.residual_objs = residuals
 
     @property
     def resids(self):
         """ Residuals from all of the residual types.
         """
         all_resids = []
-        for res in self.residuals:
-            all_resids.append(res.reresids_value)
-
+        for res in self.residual_objs:
+            all_resids.append(res.resids_value)
         return np.hstack(all_resids)
 
+    @property
+    def unit(self):
+        return [res.unit for res in self.residuals]
 
     @property
     def chi2(self):
         chi2 = 0
-        for res in self.residuals:
+        for res in self.residual_objs:
             chi2 += res.chi2
-    return chi2
+        return chi2

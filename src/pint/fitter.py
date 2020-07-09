@@ -12,6 +12,11 @@ import scipy.optimize as opt
 from astropy import log
 from pint import Tsun
 from pint.utils import FTest
+from pint.pint_matrix import (
+    DesignMatrixMaker,
+    combine_design_matrixs,
+    )
+
 import pint.residuals as pr
 
 from pint.models.parameter import (
@@ -77,7 +82,10 @@ class Fitter(object):
 
         Ex. fitter.set_fitparams('F0','F1')
         """
+        # TODO, maybe reconsider for the input?
         fit_params_name = []
+        if isinstance(params[0], (list, tuple)):
+            params = params[0]
         for pn in params:
             if pn in self.model.params:
                 fit_params_name.append(pn)
@@ -932,54 +940,47 @@ class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
         Algorithm of fitting.
     """
 
-    def __init__(self, model=None, fit_data_names, fit_data, fitting_method,
-                 additional_makers={}):
+    def __init__(self, model, fit_data_names, fit_data, additional_args={}):
         self.model_init = model
         # Check input data and data_type
         self.fit_data_names = fit_data_names
         # convert the non tuple input to a tuple
         if not isinstance(fit_data, (tuple)):
-            fit_data = (fit_data,)
+            fit_data = tuple(fit_data)
+        if len(fit_data_names) == 0:
+            raise ValueError("Please specify the fit data.")
         if len(fit_data) > 1 and len(fit_data_names) != len(fit_data):
             raise ValueError("If one more data sets are provided, the fit "
-                             "data has to match the fit data names.")
-
-       # Get the makers for fitting parts.
-
-        self.makers = {'resdiual':[], 'desigan_matrix':[]}
-        self.makers.update(ad)
-
-
-
-
-            if toas is None:
-                raise ValueError("TOA object is required, if `from_toa` is True")
-            if len(residual_types) == 0:
-                raise ValueError("Residual types should be give, if"
-                                 " `from_toa` is True")
-
-            self.resids_init = self._make_residuals_from_toa(toa, model, )
-            self.reset_model()
-
-        else:
-            # When from TOA is swithed off, we assume the data is stored in
-            # the residual class and the input would not change.
-            if residuals is None:
-                raise ValueError("Residual collector instances are required, if"
-                                 " `from_toa` is False")
-            self.model = copy.deepcopy(self.model_init)
-            self.resids_init = residuals
-            self.fitresult = []
+                             "data have to match the fit data names.")
+        self.fit_data = fit_data
+        self.additional_args = additional_args
+        # Get the makers for fitting parts.
+        self.reset_model()
+        self.designmatrix_makers = []
+        for data_resids in self.resids.residual_objs:
+            self.designmatrix_makers.append(DesignMatrixMaker(
+                data_resids.residual_type,
+                data_resids.unit)
+                )
 
         self.method = "General_Data_Fitter"
 
-    def _make_residuals_from_toa(self, toa, model, *kwargs):
+    def make_combined_residuals(self, add_args={}):
         resid_obj = []
-        for rt in residual_types:
-            r_obj = rt(toa, model, **kwargs)
-            resid_obj.append(r_obj)
+        if len(self.fit_data) == 1:
+            for data_name in self.fit_data_names:
+                r_obj = pr.Residuals(self.fit_data[0], self.model,
+                                  residual_type=data_name,
+                                  **add_args.get(data_name, {}))
+                resid_obj.append(r_obj)
+        else:
+            for ii, data_name in enumerate(self.fit_data_names):
+                r_obj = pr.Residuals(self.fit_data[ii], self.model,
+                                  residual_type=data_name,
+                                  **add_args.get(data_name, {}))
+                resid_obj.append(r_obj)
         # Place the residual collector
-        return pr.ResidualCollector(resid_obj)
+        return pr.CombinedResiduals(resid_obj)
 
     def reset_model(self):
         """Reset the current model to the initial model."""
@@ -987,15 +988,143 @@ class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
         self.update_resids()
         self.fitresult = []
 
-    def update_resids(self, **kwargs):
+    def update_resids(self):
         """Update the residuals. Run after updating a model parameter."""
-        if from_toa:
-            self.resids = self._make_residuals_from_toa(self.toas,
-                                                        self.model,
-                                                        **kwargs)
-        else:
-            self.resids = copy.deepcopy(self.resids_init)
-            self.resids.update_model(self.model, **kwargs)
+        self.resids = self.make_combined_residuals(self.additional_args)
 
-    def fit_data(self):
-        pass
+    def get_designmatrix(self):
+        design_matrixs = []
+        fit_params = list(self.get_fitparams().keys())
+        if len(self.fit_data) == 1:
+            for ii, dmatrix_maker in enumerate(self.designmatrix_makers):
+                design_matrixs.append(dmatrix_maker(self.fit_data[0],
+                                                    self.model,
+                                                    fit_params,
+                                                    offset=True))
+        else:
+            for ii, dmatrix_maker in enumerate(self.designmatrix_makers):
+                design_matrixs.append(dmatrix_maker(self.fit_data[ii],
+                                                    self.model,
+                                                    fit_params,
+                                                    offset=True))
+        return combine_design_matrixs(design_matrixs)
+
+    def fit_toas(self, maxiter=1, threshold=False, full_cov=False):
+        # Maybe change the name to do_fit?
+        # check that params of timing model have necessary components
+        #self.model.maskPar_has_toas_check(self.toas)
+        chi2 = 0
+        for i in range(max(maxiter, 1)):
+            fitp = self.get_fitparams()
+            fitpv = self.get_fitparams_num()
+            fitperrs = self.get_fitparams_uncertainty()
+
+            # Define the linear system
+            d_matrix = self.get_designmatrix()
+            M, params, units, scale_by_F0 = (d_matrix.matrix,
+                                             d_matrix.derivative_params,
+                                             d_matrix.param_units,
+                                             d_matrix.scaled_by_F0)
+
+        # Get residuals and TOA uncertainties in seconds
+        if i == 0:
+            self.update_resids()
+        residuals = self.resids
+
+        # # get any noise design matrices and weight vectors
+        # if not full_cov:
+        #     Mn = self.model.noise_model_designmatrix(self.toas)
+        #     phi = self.model.noise_model_basis_weight(self.toas)
+        #     phiinv = np.zeros(M.shape[1])
+        #     if Mn is not None and phi is not None:
+        #         phiinv = np.concatenate((phiinv, 1 / phi))
+        #         M = np.hstack((M, Mn))
+        #
+        # # normalize the design matrix
+        # norm = np.sqrt(np.sum(M ** 2, axis=0))
+        # ntmpar = len(fitp)
+        # if M.shape[1] > ntmpar:
+        #     norm[ntmpar:] = 1
+        # if np.any(norm == 0):
+        #     # Make this a LinAlgError so it looks like other bad matrixness
+        #     raise sl.LinAlgError(
+        #         "One or more of the design-matrix columns is null."
+        #     )
+        # M /= norm
+        #
+        # # compute covariance matrices
+        # if full_cov:
+        #     cov = self.model.covariance_matrix(self.toas)
+        #     cf = sl.cho_factor(cov)
+        #     cm = sl.cho_solve(cf, M)
+        #     mtcm = np.dot(M.T, cm)
+        #     mtcy = np.dot(cm.T, residuals)
+        #
+        # else:
+        #     Nvec = self.model.scaled_sigma(self.toas).to(u.s).value ** 2
+        #     cinv = 1 / Nvec
+        #     mtcm = np.dot(M.T, cinv[:, None] * M)
+        #     mtcm += np.diag(phiinv)
+        #     mtcy = np.dot(M.T, cinv * residuals)
+        #
+        # if maxiter > 0:
+        #     try:
+        #         c = sl.cho_factor(mtcm)
+        #         xhat = sl.cho_solve(c, mtcy)
+        #         xvar = sl.cho_solve(c, np.eye(len(mtcy)))
+        #     except sl.LinAlgError:
+        #         U, s, Vt = sl.svd(mtcm, full_matrices=False)
+        #
+        #         if threshold:
+        #             threshold_val = (
+        #                 np.finfo(np.longdouble).eps * max(M.shape) * s[0]
+        #             )
+        #             s[s < threshold_val] = 0.0
+        #
+        #         xvar = np.dot(Vt.T / s, Vt)
+        #         xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+        #     newres = residuals - np.dot(M, xhat)
+        #     # compute linearized chisq
+        #     if full_cov:
+        #         chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+        #     else:
+        #         chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+        # else:
+        #     newres = residuals
+        #     if full_cov:
+        #         chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+        #     else:
+        #         chi2 = np.dot(newres, cinv * newres)
+        #     return chi2
+        #
+        # # compute absolute estimates, normalized errors, covariance matrix
+        # dpars = xhat / norm
+        # errs = np.sqrt(np.diag(xvar)) / norm
+        # covmat = (xvar / norm).T / norm
+        # self.covariance_matrix = covmat
+        # self.correlation_matrix = (covmat / errs).T / errs
+        #
+        # for ii, pn in enumerate(fitp.keys()):
+        #     uind = params.index(pn)  # Index of designmatrix
+        #     un = 1.0 / (units[uind])  # Unit in designmatrix
+        #     if scale_by_F0:
+        #         un *= u.s
+        #     pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
+        #     fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
+        #     # NOTE We need some way to use the parameter limits.
+        #     fitperrs[pn] = errs[uind]
+        # self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
+        # # Update Uncertainties
+        # self.set_param_uncertainties(fitperrs)
+        #
+        # # Compute the noise realizations if possible
+        # if not full_cov:
+        #     noise_dims = self.model.noise_model_dimensions(self.toas)
+        #     noise_resids = {}
+        #     for comp in noise_dims.keys():
+        #         p0 = noise_dims[comp][0] + ntmpar
+        #         p1 = p0 + noise_dims[comp][1]
+        #         noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
+        #     self.resids.noise_resids = noise_resids
+
+        return chi2
