@@ -313,7 +313,7 @@ class emcee_fitter(Fitter):
                     hval = hm(phss[good])
             htests.append(hval)
             if ii > 0 and ii%2==0 and ii<20:
-                r, c = ((ii-2)/2)/3, ((ii-2)/2)%3
+                r, c = int(((ii-2)/2)/3), int(((ii-2)/2)%3)
                 ax[r][c].hist(phss[good], nbins, range=[0,1],
                               weights=wgts, color='k',
                               histtype='step')
