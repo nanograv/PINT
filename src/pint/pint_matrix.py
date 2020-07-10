@@ -338,6 +338,19 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
         d_matrix.scaled_by_F0 = scaled_by_F0
         return d_matrix
 
+
+class NoiseDesignMatrixMaker(DesignMatrixMaker):
+    """ Specific design matrix for noise model
+    """
+    def __call__(self, data, model, derivative_params,
+                 scaled_by_F0=True, offset=True,
+                 offset_padding=0.0):
+        pass
+
+
+
+
+
 design_matrix_maker_map = {'phase': PhaseDesignMatrixMaker}
 
 

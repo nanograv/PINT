@@ -1009,6 +1009,9 @@ class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
                                                     offset=True))
         return combine_design_matrixs(design_matrixs)
 
+    def scaled_sigma(self, data):
+        pass
+
     def fit_toas(self, maxiter=1, threshold=False, full_cov=False):
         # Maybe change the name to do_fit?
         # check that params of timing model have necessary components
@@ -1029,39 +1032,42 @@ class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
         # Get residuals and TOA uncertainties in seconds
         if i == 0:
             self.update_resids()
+        # Since the residuals may not have the same unit. Thus the residual here
+        # has no unit.
         residuals = self.resids
 
-        # # get any noise design matrices and weight vectors
-        # if not full_cov:
-        #     Mn = self.model.noise_model_designmatrix(self.toas)
-        #     phi = self.model.noise_model_basis_weight(self.toas)
-        #     phiinv = np.zeros(M.shape[1])
-        #     if Mn is not None and phi is not None:
-        #         phiinv = np.concatenate((phiinv, 1 / phi))
-        #         M = np.hstack((M, Mn))
-        #
-        # # normalize the design matrix
-        # norm = np.sqrt(np.sum(M ** 2, axis=0))
-        # ntmpar = len(fitp)
-        # if M.shape[1] > ntmpar:
-        #     norm[ntmpar:] = 1
-        # if np.any(norm == 0):
-        #     # Make this a LinAlgError so it looks like other bad matrixness
-        #     raise sl.LinAlgError(
-        #         "One or more of the design-matrix columns is null."
-        #     )
-        # M /= norm
-        #
-        # # compute covariance matrices
-        # if full_cov:
-        #     cov = self.model.covariance_matrix(self.toas)
-        #     cf = sl.cho_factor(cov)
-        #     cm = sl.cho_solve(cf, M)
-        #     mtcm = np.dot(M.T, cm)
-        #     mtcy = np.dot(cm.T, residuals)
-        #
-        # else:
-        #     Nvec = self.model.scaled_sigma(self.toas).to(u.s).value ** 2
+        # get any noise design matrices and weight vectors
+        if not full_cov:
+            Mn = self.model.noise_model_designmatrix(self.toas)
+            phi = self.model.noise_model_basis_weight(self.toas)
+            phiinv = np.zeros(M.shape[1])
+            if Mn is not None and phi is not None:
+                phiinv = np.concatenate((phiinv, 1 / phi))
+                M = np.hstack((M, Mn))
+
+        # normalize the design matrix
+        norm = np.sqrt(np.sum(M ** 2, axis=0))
+        ntmpar = len(fitp)
+        if M.shape[1] > ntmpar:
+            norm[ntmpar:] = 1
+        if np.any(norm == 0):
+            # Make this a LinAlgError so it looks like other bad matrixness
+            raise sl.LinAlgError(
+                "One or more of the design-matrix columns is null."
+            )
+        M /= norm
+
+        # compute covariance matrices
+        if full_cov:
+            cov = self.model.covariance_matrix(self.toas)
+            cf = sl.cho_factor(cov)
+            cm = sl.cho_solve(cf, M)
+            mtcm = np.dot(M.T, cm)
+            mtcy = np.dot(cm.T, residuals)
+
+        else:
+            Nvec = self.scaled_sigma(self.toas).to(u.s).value ** 2
+
         #     cinv = 1 / Nvec
         #     mtcm = np.dot(M.T, cinv[:, None] * M)
         #     mtcm += np.diag(phiinv)

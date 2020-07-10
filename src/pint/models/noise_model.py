@@ -67,7 +67,7 @@ class ScaleToaError(NoiseComponent):
             )
         )
         self.covariance_matrix_funcs += [self.sigma_scaled_cov_matrix]
-        self.scaled_sigma_funcs += [self.scale_sigma]
+        self.scaled_toa_sigma_funcs += [self.scale_toa_sigma]
 
     def setup(self):
         super(ScaleToaError, self).setup()
@@ -149,7 +149,7 @@ class ScaleToaError(NoiseComponent):
             )
         return pairs
 
-    def scale_sigma(self, toas):
+    def scale_toa_sigma(self, toas):
         tbl = toas.table
         sigma_old = tbl["error"].quantity
         sigma_scaled = np.zeros_like(sigma_old)
@@ -165,6 +165,100 @@ class ScaleToaError(NoiseComponent):
 
     def sigma_scaled_cov_matrix(self, toas):
         scaled_sigma = self.scale_sigma(toas).to(u.s).value ** 2
+        return np.diag(scaled_sigma)
+
+
+class ScaleDmError(NoiseComponent):
+     """Correction for estimated wideband DM measurement uncertainty.
+
+     Note
+     ----
+     Ref: NanoGrav 12.5 yrs wideband data
+
+     """
+
+     register = True
+     category = "scale_toa_error"
+
+     def __init__(self,):
+         super(ScaleDmError, self).__init__()
+         self.add_param(
+             maskParameter(
+                 name="DMEFAC",
+                 units="",
+                 description="A multiplication factor on"
+                 " the measured DM uncertainties,",
+             )
+         )
+
+         self.add_param(
+             maskParameter(
+                 name="DMEQUAD",
+                 units="us",
+                 aliases=["T2EQUAD"],
+                 description="An error term added in "
+                 "quadrature to the scaled (by"
+                 " EFAC) TOA uncertainty.",
+             )
+         )
+
+    self.covariance_matrix_funcs += [self.dm_sigma_scaled_cov_matrix]
+    self.scaled_dm_sigma_funcs += [self.scale_dm_sigma]
+
+    def setup(self):
+        super(ScaleDmError, self).setup()
+        # Get all the EFAC parameters and EQUAD
+        self.DMEFACs = {}
+        self.DMEQUADs = {}
+        for mask_par in self.get_params_of_type("maskParameter"):
+            if mask_par.startswith("DMEFAC"):
+                par = getattr(self, mask_par)
+                self.DMEFACs[mask_par] = (par.key, par.key_value)
+            elif mask_par.startswith("DMEQUAD"):
+                par = getattr(self, mask_par)
+                self.DMEQUADs[mask_par] = (par.key, par.key_value)
+            else:
+                continue
+
+    def validate(self):
+        super(ScaleDmError, self).validate()
+        # check duplicate
+        for el in ["DMEFACs", "DMEQUADs"]:
+            l = list(getattr(self, el).values())
+            if [x for x in l if l.count(x) > 1] != []:
+                raise ValueError("'%s' have duplicated keys and key values." % el)
+
+    # pairing up EFAC and EQUAD
+    def pair_DMEFAC_DMEQUAD(self):
+        pairs = []
+        for efac, efac_key in list(self.DMEFACs.items()):
+            for equad, equad_key in list(self.DMEQUADs.items()):
+                if efac_key == equad_key:
+                    pairs.append((getattr(self, efac), getattr(self, equad)))
+        if len(pairs) != len(list(self.DMEFACs.items())):
+            # TODO may be define an parameter error would be helpful
+            raise ValueError(
+                "Can not pair up DMEFACs and DMEQUADs, please "
+                " check the DMEFAC/DMEQUAD keys and key values."
+            )
+        return pairs
+
+    def scale_dm_sigma(self, dm_data_error):
+        # We should handle the
+        sigma_old = toas.get_flag_value('pp_dme') * u.pc / u.cm ** 3
+        sigma_scaled = np.zeros_like(sigma_old)
+        EF_EQ_pairs = self.pair_DMEFAC_DMEQUAD()
+        for pir in EF_EQ_pairs:
+            efac = pir[0]
+            equad = pir[1]
+            mask = efac.select_toa_mask(toas)
+            sigma_scaled[mask] = efac.quantity * np.sqrt(
+                sigma_old[mask] ** 2 + (equad.quantity) ** 2
+            )
+        return sigma_scaled
+
+    def dm_sigma_scaled_cov_matrix(self, toas):
+        scaled_sigma = self.scale_dm_sigma(toas).to_value(u.pc / u.cm ** 3) ** 2
         return np.diag(scaled_sigma)
 
 

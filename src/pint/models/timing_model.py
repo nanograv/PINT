@@ -317,12 +317,12 @@ class TimingModel(object):
         return cvfs
 
     @property
-    def scaled_sigma_funcs(self,):
+    def scaled_toa_sigma_funcs(self,):
         """List of scaled uncertainty functions."""
         ssfs = []
         if "NoiseComponent" in self.component_types:
             for nc in self.NoiseComponent_list:
-                ssfs += nc.scaled_sigma_funcs
+                ssfs += nc.scaled_toa_sigma_funcs
         return ssfs
 
     @property
@@ -733,7 +733,7 @@ class TimingModel(object):
         return result
 
     def scaled_sigma(self, toas):
-        """This a function to get the scaled TOA uncertainties noise models.
+        """This a function to get the scaled data uncertainties noise models.
            If there is no noise model component provided, a vector with
            TOAs error as values will be returned.
         """
@@ -741,11 +741,11 @@ class TimingModel(object):
         tbl = toas.table
         result = np.zeros(ntoa) * u.us
         # When there is no noise model.
-        if len(self.scaled_sigma_funcs) == 0:
+        if len(self.scaled_toa_sigma_funcs) == 0:
             result += tbl["error"].quantity
             return result
 
-        for nf in self.scaled_sigma_funcs:
+        for nf in self.scaled_toa_sigma_funcs:
             result += nf(toas)
         return result
 

@@ -91,6 +91,10 @@ class Residuals:
             return self.phase_resids
 
     @property
+    def data_error(self):
+        return self.toas.get_error()
+
+    @property
     def chi2_reduced(self):
         return self.chi2 / self.dof
 
@@ -390,6 +394,10 @@ class WidebandDMResiduals(Residuals):
     def resids(self):
         return self.calc_resids()
 
+    @property
+    def data_error(self):
+        return self.dm_error * self.unit
+
     def calc_resids(self):
         model_value = self.get_model_value(self.toas)
         resids = self.dm_data - model_value
@@ -488,3 +496,14 @@ class CombinedResiduals(object):
         for res in self.residual_objs:
             chi2 += res.chi2
         return chi2
+
+    @property
+    def data_error(self):
+        dr = self.get_data_error()
+        return np.array([rv.value for rv in dr.values()]
+
+    def get_data_error(self):
+        errors = []
+        for rs in self.resids:
+            errors.append(rs.residual_type, rs.data_error)
+        return collections.OrderedDict(errors)
