@@ -7,6 +7,7 @@ import astropy.constants as const
 import astropy.units as u
 import numpy as np
 import pint.utils as ut
+import scipy.interpolate
 from astropy import log
 from astropy.coordinates import AltAz, SkyCoord
 from pint.models.parameter import boolParameter
@@ -25,6 +26,16 @@ class TroposphereDelay(DelayComponent):
     Niell Mapping Functions (Niell, 1996, Eq 4)
     additional altitude correction to atmospheric pressure
     from CRC Handbook Chapter 14 page 19 "US Standard Atmosphere"
+
+    The Zenith delay is the actual time delay for radio waves arriving directly
+    overhead the observatory.  The mapping function is a dimensionless number that
+    scales the zenith delay to recover the correct delay for sources anywhere else
+    in the sky (closer to the horizon).
+
+    The hydrostatic delay is best described as the relatively non-changing component to the
+    delay, depending primarily on atmospheric pressure.
+    The wet delay represents changes due to dynamical variation in the
+    atmosphere (ie changing water vapor) and is ususally around 10% of the hydrostatic delay
 
     """
 
@@ -76,7 +87,10 @@ class TroposphereDelay(DelayComponent):
 
     @staticmethod
     def _herring_map(alt, a, b, c):
-        """equation 4 from the Niell mapping function
+        """equation 4 from the Niell mapping function.
+        It is a modification to the plane-parallel atmosphere model (1 / sin(alt))
+        The coefficients a b and c provide the correction for the correct map
+        near the horizion, while still producing the correct mapping at zenith (1)
         """
         sinAlt = np.sin(alt)
         return 1 / (
@@ -126,7 +140,7 @@ class TroposphereDelay(DelayComponent):
         return alt
 
     def _get_target_skycoord(self):
-        """return the sky coordiantes for the target, either from equatorial or ecliptic coordinates
+        """return the sky coordinates for the target, either from equatorial or ecliptic coordinates
         """
         try:
             radec = SkyCoord(
@@ -251,7 +265,7 @@ class TroposphereDelay(DelayComponent):
         )
 
     def wet_zenith_delay(self):
-        """ calculate the wet delay at zentih
+        """ calculate the wet delay at zenith
         """
         return 0.0  # this method will be updated in the future to
         # either allow explicit specification of the wet zenith delay
@@ -274,7 +288,7 @@ class TroposphereDelay(DelayComponent):
         raise ValueError("Invaid latitude: %s must be between -90 and 90 degrees" % lat)
 
     def mapping_function(self, alt, lat, H, mjd):
-        """this implements the niell mapping function for hydrostatic
+        """this implements the Niell mapping function for hydrostatic delays
         """
 
         yearFraction = self._get_year_fraction_fast(mjd, lat)
@@ -317,9 +331,13 @@ class TroposphereDelay(DelayComponent):
         return baseMap + (1 / np.sin(alt) - fcorrection) * H.to(u.km).value
 
     def wet_map(self, alt, lat):
-        """this is very similar to the normal mapping function except it uses different coefficients
-        and i believe that there isn't an explicit height correction to the mapping function,
-        but i'll double check the literature.
+        """This is very similar to the normal mapping function except it uses different
+        coefficients.  In addition, there is no height correction.  From Niell (1996):
+
+        "This does not apply to the wet mapping function since the
+        water vapor is not in hydrostatic equilibrium, and the
+        height distribution of the water vapor is not expected
+        to be predictable from the station height"
         """
 
         latIndex = self._find_latitude_index(lat)  # lattitude dependent
@@ -340,6 +358,8 @@ class TroposphereDelay(DelayComponent):
     def _interp(x, xn, yn):
         """ vectorized 1d interpolation for 2 points only"""
         return (x - xn[0]) * (yn[1] - yn[0]) / (xn[1] - xn[0]) + yn[0]
+        # f = scipy.interpolate.interp1d(xn, yn)
+        # return f(x)
 
     def _get_year_fraction_slow(self, mjd, lat):
         """
