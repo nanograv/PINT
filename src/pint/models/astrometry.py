@@ -8,6 +8,7 @@ import astropy.constants as const
 import astropy.coordinates as coords
 import astropy.units as u
 import numpy
+from astropy import log
 from astropy.time import Time
 
 from pint import ls
@@ -284,12 +285,22 @@ class AstrometryEquatorial(Astrometry):
         )
 
     def coords_as_ICRS(self, epoch=None):
+        """Return the pulsar's ICRS coordinates as an astropy coordinate object."""
         return self.get_psr_coords(epoch)
 
-    def coords_as_ECL(self, epoch=None):
-        obliquity = OBL[self.ECL.value]
+    def coords_as_ECL(self, epoch=None, ecl=None):
+        """Return the pulsar's ecliptic coordinates as an astropy coordinate object.
+        
+        The value used for the obliquity of the ecliptic can be controlled with the
+        `ecl` keyword, which should be one of the codes listed in `ecliptic.dat`.
+        If `ecl` is left unspecified, the global default IERS2010 will be used.
+        """
+        if ecl is None:
+            log.info("ECL not specified; using IERS2010.")
+            ecl = "IERS2010"
+
         pos_icrs = self.get_psr_coords(epoch=epoch)
-        return pos_icrs.transform_to(PulsarEcliptic(obliquity=obliquity))
+        return pos_icrs.transform_to(PulsarEcliptic(ecl=ecl))
 
     def get_params_as_ICRS(self):
         result = {
@@ -531,13 +542,21 @@ class AstrometryEcliptic(Astrometry):
         return pos_ecl
 
     def coords_as_ICRS(self, epoch=None):
-        """This function transform the pulsar ecliptic coordinates to ICRS
-        """
+        """Return the pulsar's ICRS coordinates as an astropy coordinate object."""
         pos_ecl = self.get_psr_coords(epoch=epoch)
         return pos_ecl.transform_to(coords.ICRS)
 
-    def coords_as_ECL(self, epoch=None):
-        return self.get_psr_coords(epoch)
+    def coords_as_ECL(self, epoch=None, ecl=None):
+        """Return the pulsar's ecliptic coordinates as an astropy coordinate object.
+        
+        The value used for the obliquity of the ecliptic can be controlled with the
+        `ecl` keyword, which should be one of the codes listed in `ecliptic.dat`.
+        If `ecl` is left unspecified, the model's ECL parameter will be used.
+        """
+        pos_ecl = self.get_psr_coords(epoch)
+        if ecl is not None:
+            pos_ecl = pos_ecl.transform_to(PulsarEcliptic(ecl=ecl))
+        return pos_ecl
 
     def get_d_delay_quantities_ecliptical(self, toas):
         """Calculate values needed for many d_delay_d_param functions """
