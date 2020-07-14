@@ -281,9 +281,9 @@ class TroposphereDelay(DelayComponent):
         for nearest neighbor interpolation in the mapping function
         """
         absLat = np.abs(lat)
-        for lInd in range(len(self.LAT)):
-            if absLat >= self.LAT[lInd - 1]:
-                return lInd
+        for lInd in range(1, len(self.LAT)):
+            if absLat <= self.LAT[lInd]:
+                return lInd - 1
         # else this is an invalid latitude... huh?
         raise ValueError("Invaid latitude: %s must be between -90 and 90 degrees" % lat)
 
@@ -302,18 +302,24 @@ class TroposphereDelay(DelayComponent):
         # first I need to find the nearest latitude neighbors
         latIndex = self._find_latitude_index(lat)
 
-        aNeighbors = [
-            self._coefficient_func(self.A_AVG[i], self.A_AMP[i], yearFraction)
-            for i in range(latIndex, latIndex + 2)
-        ]
-        bNeighbors = [
-            self._coefficient_func(self.B_AVG[i], self.B_AMP[i], yearFraction)
-            for i in range(latIndex, latIndex + 2)
-        ]
-        cNeighbors = [
-            self._coefficient_func(self.C_AVG[i], self.C_AMP[i], yearFraction)
-            for i in range(latIndex, latIndex + 2)
-        ]
+        aNeighbors = np.array(
+            [
+                self._coefficient_func(self.A_AVG[i], self.A_AMP[i], yearFraction)
+                for i in range(latIndex, latIndex + 2)
+            ]
+        ).transpose()
+        bNeighbors = np.array(
+            [
+                self._coefficient_func(self.B_AVG[i], self.B_AMP[i], yearFraction)
+                for i in range(latIndex, latIndex + 2)
+            ]
+        ).transpose()
+        cNeighbors = np.array(
+            [
+                self._coefficient_func(self.C_AVG[i], self.C_AMP[i], yearFraction)
+                for i in range(latIndex, latIndex + 2)
+            ]
+        ).transpose()
 
         # now time to interpolate between them
         latNeighbors = self.LAT[latIndex : latIndex + 2]
@@ -357,9 +363,12 @@ class TroposphereDelay(DelayComponent):
     @staticmethod
     def _interp(x, xn, yn):
         """ vectorized 1d interpolation for 2 points only"""
-        return (x - xn[0]) * (yn[1] - yn[0]) / (xn[1] - xn[0]) + yn[0]
-        # f = scipy.interpolate.interp1d(xn, yn)
-        # return f(x)
+        # return (x - xn[0]) * (yn[1] - yn[0]) / (xn[1] - xn[0]) + yn[0]
+        print("x", x.shape, x)
+        print("xn", xn.shape, xn)
+        print("yn", yn.shape, yn)
+        f = scipy.interpolate.interp1d(xn, yn)
+        return f(x)
 
     def _get_year_fraction_slow(self, mjd, lat):
         """

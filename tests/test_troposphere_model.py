@@ -74,3 +74,18 @@ class TestTroposphereDelay(unittest.TestCase):
                 self.FLOAT_THRESHOLD * u.s,
             )
         )
+
+    def test_latitude_index(self):
+        # the code relies on finding the neighboring latitudes to any site
+        # for atmospheric constants defined at every 15 degrees
+        # so I will test the nearest neighbors function
+
+        l1 = self.td._find_latitude_index(20 * u.deg)
+        l2 = self.td._find_latitude_index(-80 * u.deg)
+        l3 = self.td._find_latitude_index(0 * u.deg)
+        l4 = self.td._find_latitude_index(-90 * u.deg)
+
+        assert self.td.LAT[l1] <= 20 * u.deg < self.td.LAT[l1 + 1]
+        assert self.td.LAT[l2] <= 80 * u.deg <= self.td.LAT[l2 + 1]
+        assert self.td.LAT[l3] <= 0 * u.deg <= self.td.LAT[l3 + 1]
+        assert self.td.LAT[l4] <= 90 * u.deg <= self.td.LAT[l4 + 1]
