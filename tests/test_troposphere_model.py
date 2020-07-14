@@ -10,7 +10,6 @@ import pint.observatory
 import pint.toa as toa
 from astropy.coordinates import AltAz, SkyCoord
 from astropy.time import Time
-from pint.models.troposphere_delay import TroposphereDelay
 from pint.observatory import get_observatory
 
 from pinttestdata import testdir
@@ -63,6 +62,7 @@ class TestTroposphereDelay(unittest.TestCase):
     def test_model_access(self):
         # make sure that the model components are linked correctly to the troposphere delay
         assert hasattr(self.model, "CORRECT_TROPOSPHERE")
+        assert "TroposphereDelay" in self.modelWithTD.components.keys()
 
         # the model should have the sky coordinates defined
         assert self.td._get_target_skycoord() is not None
