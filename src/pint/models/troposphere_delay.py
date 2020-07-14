@@ -274,7 +274,7 @@ class TroposphereDelay(DelayComponent):
 
     def _coefficient_func(self, average, amplitudes, yearFraction):
         """from the Niell mapping function with annual variations"""
-        return average + 0 * amplitudes * np.cos(2 * np.pi * yearFraction)
+        return average + amplitudes * np.cos(2 * np.pi * yearFraction)
 
     def _find_latitude_index(self, lat):
         """find the index corresponding to the upper bound on latitude
