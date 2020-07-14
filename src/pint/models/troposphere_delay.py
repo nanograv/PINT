@@ -364,9 +364,6 @@ class TroposphereDelay(DelayComponent):
     def _interp(x, xn, yn):
         """ vectorized 1d interpolation for 2 points only"""
         # return (x - xn[0]) * (yn[1] - yn[0]) / (xn[1] - xn[0]) + yn[0]
-        print("x", x.shape, x)
-        print("xn", xn.shape, xn)
-        print("yn", yn.shape, yn)
         f = scipy.interpolate.interp1d(xn, yn)
         return f(x)
 
