@@ -26,6 +26,7 @@ As listed in the PINT paper:
 * Rutger van Haasteren
 * Jonathan Colen
 * Camryn Phillips
+* Josef Zimmerman
 * Kevin Stovall
 * Michael Lam
 * Rick Jenet
