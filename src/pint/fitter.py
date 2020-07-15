@@ -78,7 +78,7 @@ class Fitter(object):
 
     def update_resids(self):
         """Update the residuals. Run after updating a model parameter."""
-        self.resids = Residuals(toas=self.toas, model=self.model)
+        self.resids = pr.Residuals(toas=self.toas, model=self.model)
 
     def set_fitparams(self, *params):
         """Update the "frozen" attribute of model parameters.
@@ -850,14 +850,14 @@ class GLSFitter(Fitter):
 
             # compute covariance matrices
             if full_cov:
-                cov = self.model.covariance_matrix(self.toas)
+                cov = self.model.toa_covariance_matrix(self.toas)
                 cf = sl.cho_factor(cov)
                 cm = sl.cho_solve(cf, M)
                 mtcm = np.dot(M.T, cm)
                 mtcy = np.dot(cm.T, residuals)
 
             else:
-                Nvec = self.model.scaled_sigma(self.toas).to(u.s).value ** 2
+                Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
                 cinv = 1 / Nvec
                 mtcm = np.dot(M.T, cinv[:, None] * M)
                 mtcm += np.diag(phiinv)
@@ -931,20 +931,20 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
 
     Parameters
     ----------
-    model: a pint timing model instance
-        The initial timing model for fitting.
     fit_data: data object or a tuple of data objects.
         The data to fit for. If one data are give, it will assume all the fit
         data set are packed in this one data object. If more than one data
         objects are provided, the size of 'fit_data' has to match the
         'fit_data_names'. In this fitter, the first fit data should be a TOAs object.
+    model: a pint timing model instance
+        The initial timing model for fitting.
     fit_data_names: list of str
         The names of the data fit for.
     additional_args: dict, optional
         The additional arguments for making residuals.
     """
 
-    def __init__(self, model, fit_data, fit_data_names=['toa', 'dm'],  additional_args={}):
+    def __init__(self, fit_data, model, fit_data_names=['toa', 'dm'],  additional_args={}):
         self.model_init = model
         # Check input data and data_type
         self.fit_data_names = fit_data_names

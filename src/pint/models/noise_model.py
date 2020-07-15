@@ -165,7 +165,7 @@ class ScaleToaError(NoiseComponent):
         return sigma_scaled
 
     def sigma_scaled_cov_matrix(self, toas):
-        scaled_sigma = self.scale_sigma(toas).to(u.s).value ** 2
+        scaled_sigma = self.scale_toa_sigma(toas).to(u.s).value ** 2
         return np.diag(scaled_sigma)
 
 

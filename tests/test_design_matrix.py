@@ -75,5 +75,5 @@ class TestDesignMatrix:
         model = get_model("B1855+09_NANOGrav_9yv1.gls.par")
         noise_designmatrix = self.noise_designmatrix_maker(toas, model)
         assert noise_designmatrix.shape[0] == toas.ntoas
-        assert noise_designmatrix.derivative_quantity == ["phase"]
+        assert noise_designmatrix.derivative_quantity == ["toa"]
         assert noise_designmatrix.derivative_params == ['toa_noise_params']

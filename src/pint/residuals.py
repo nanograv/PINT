@@ -29,7 +29,7 @@ class Residuals:
     """
     def __new__(
         cls,
-        data=None,
+        toas=None,
         model=None,
         residual_type='toa',
         unit=u.s,
@@ -50,7 +50,7 @@ class Residuals:
 
     def __init__(
         self,
-        data=None,
+        toas=None,
         model=None,
         residual_type='toa',
         unit=u.s,
@@ -59,7 +59,7 @@ class Residuals:
         track_mode="nearest",
         scaled_by_F0=True,
     ):
-        self.toas = data
+        self.toas = toas
         self.model = model
         self.residual_type = residual_type
         self.subtract_mean = subtract_mean
@@ -67,7 +67,7 @@ class Residuals:
         self.track_mode = track_mode
         if getattr(self.model, "TRACK").value == "-2":
             self.track_mode = "use_pulse_numbers"
-        if data is not None and model is not None:
+        if toas is not None and model is not None:
             self.phase_resids = self.calc_phase_resids()
             self.time_resids = self.calc_time_resids()
             self.dof = self.get_dof()
@@ -336,7 +336,7 @@ class Residuals:
         ecorr_err2 *= u.s * u.s
 
         if use_noise_model:
-            err = self.model.scaled_sigma(self.toas)
+            err = self.model.scaled_toa_uncertainty(self.toas)
         else:
             err = self.toas.get_errors()
             ecorr_err2 *= 0.0
@@ -372,7 +372,7 @@ class WidebandDMResiduals(Residuals):
     """
     def __init__(
         self,
-        data=None,
+        toas=None,
         model=None,
         residual_type='dm',
         unit=u.pc / u.cm ** 3,
@@ -381,7 +381,7 @@ class WidebandDMResiduals(Residuals):
         scaled_by_F0=False,
         ):
 
-        self.toas = data
+        self.toas = toas
         self.model = model
         self.residual_type = residual_type
         self.unit = unit
@@ -524,7 +524,7 @@ class CombinedResiduals(object):
 
     @property
     def unit(self):
-        return [res.unit for res in self.residuals]
+        return [res.unit for res in self.residual_objs]
 
     @property
     def chi2(self):

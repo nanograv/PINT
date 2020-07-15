@@ -7,7 +7,6 @@ import pytest
 
 from pint.models import get_model
 from pint.toa import get_TOAs
-from pint.fitter import GeneralDataFitter
 from pinttestdata import datadir
 
 
