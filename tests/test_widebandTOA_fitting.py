@@ -21,21 +21,19 @@ class TestWidebandTOAFitter:
                                 'DMX_0022']
 
     def test_fitter_init(self):
-        fitter = WidebandTOAFitter(self.model, self.fit_data_name,
-                                   [self.toas,], additional_args={})
+        fitter = WidebandTOAFitter(self.model, [self.toas,], additional_args={})
 
         # test making residuals
         assert len(fitter.resids.resids) == 2 * self.toas.ntoas
         # test additional args
         add_args = {}
         add_args['toa'] = {'subtract_mean': False}
-        fitter2= WidebandTOAFitter(self.model, self.fit_data_name,
-                                   [self.toas,], add_args)
+        fitter2= WidebandTOAFitter(self.model, [self.toas,],
+                                   additional_args=add_args)
         assert fitter2.resids.residual_objs[0].subtract_mean == False
 
     def test_fitter_designmatrix(self):
-        fitter = WidebandTOAFitter(self.model, self.fit_data_name,
-                                   [self.toas,], additional_args={})
+        fitter = WidebandTOAFitter(self.model, [self.toas,], additional_args={})
         fitter.set_fitparams(self.fit_params_lite)
         assert set(fitter.get_fitparams()) == set(self.fit_params_lite)
         # test making design matrix
@@ -47,15 +45,13 @@ class TestWidebandTOAFitter:
             list(fitter.get_fitparams().keys()))
 
     def test_fitting_no_full_cov(self):
-        fitter = WidebandTOAFitter(self.model, self.fit_data_name,
-                                   [self.toas,], additional_args={})
+        fitter = WidebandTOAFitter(self.model, [self.toas,], additional_args={})
         rms_pre = fitter.resids_init.rms_weighted()
         fitter.fit_toas()
         assert fitter.resids.rms_weighted() - rms_pre < 1e-9
 
     def test_fitting_full_cov(self):
-        fitter = WidebandTOAFitter(self.model, self.fit_data_name,
-                                   [self.toas,], additional_args={})
+        fitter = WidebandTOAFitter(self.model, [self.toas,], additional_args={})
         rms_pre = fitter.resids_init.rms_weighted()
         fitter.fit_toas(full_cov=True)
         assert fitter.resids.rms_weighted() - rms_pre < 1e-9

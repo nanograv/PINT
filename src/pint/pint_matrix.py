@@ -445,7 +445,8 @@ def combine_design_matrices_by_quantity(design_matrices):
             for olb in old_labels:
                 # apply offset to the next label.
                 new_labels.append((olb[0], (olb[1][0] + offset,
-                                            olb[1][1] + offset)))
+                                            olb[1][1] + offset,
+                                            olb[1][2])))
                 off_set = new_labels[-1][1][1]
             axis_labels[0].update(dict(new_labels))
         all_matrix.append(d_matrix.matrix)
@@ -561,10 +562,11 @@ class CovarianceMatrixMaker:
         The unit of the derivative quantity.
     """
 
-    def __init__(self, covariance_quantity):
+    def __init__(self, covariance_quantity, quantity_unit):
         self.covariance_quantity = covariance_quantity
+        self.quantity_unit = quantity_unit
         # The derivative function should be a wrapper function like d_phase_d_param()
-        self.cov_func_name = 'scaled_{}_uncertainty'.format(self.covariance_quantity)
+        self.cov_func_name = '{}_covariance_matrix'.format(self.covariance_quantity)
 
     def __call__(self, data, model):
         """ A general method to make design matrix.
@@ -576,7 +578,10 @@ class CovarianceMatrixMaker:
         model: `pint.models.TimingModel` object
             The model that provides the derivatives.
         """
-        pass
+        func = getattr(model, self.cov_func_name)
+        M = func(data)
+        label = [{self.covariance_quantity: (0, M.shape[0], self.quantity_unit**2)}] * 2
+        return CovarianceMatrix(M, label)
 
 
 def combine_covariance_matrix(covariance_matrices,

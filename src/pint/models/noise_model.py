@@ -203,7 +203,7 @@ class ScaleDmError(NoiseComponent):
             )
         )
 
-        self.covariance_matrix_funcs += [self.dm_sigma_scaled_cov_matrix]
+        self.dm_covariance_matrix_funcs = [self.dm_sigma_scaled_cov_matrix]
         self.scaled_dm_sigma_funcs += [self.scale_dm_sigma]
         self.match_param=True
 
@@ -237,14 +237,14 @@ class ScaleDmError(NoiseComponent):
         pairs = []
         p_map = {0: (self.DMEFAC1, 1), 1: (self.DMEQUAD1, 0)}
         keys_param_pairs = {}
+        # We first check efac than check equad. This pair function will be
+        # updated by the parameter update.
         for efac, efac_key in self.DMEFACs.items():
             keys_param_pairs[efac_key] = [efac, None]
-        # TODO need to change here.
+        #
         for equad, equad_key in self.DMEQUADs.items():
             if equad_key in keys_param_pairs.keys():
                 keys_param_pairs[efac_key][1] = equad
-            else:
-                keys_param_pairs[efac_key] = [None, equad]
 
         for key, params in keys_param_pairs.items():
             if None in params:
@@ -281,11 +281,8 @@ class ScaleDmError(NoiseComponent):
         sigma_scaled = np.zeros_like(sigma_old)
         EF_EQ_pairs = self.pair_DMEFAC_DMEQUAD()
         for pir in EF_EQ_pairs:
-            print(pir)
             efac = getattr(self, pir[0])
             equad = getattr(self, pir[1])
-            print(efac.key_value)
-            print(equad.key_value)
             mask = efac.select_toa_mask(toas)
             sigma_scaled[mask] = efac.quantity * np.sqrt(
                 sigma_old[mask] ** 2 + (equad.quantity) ** 2

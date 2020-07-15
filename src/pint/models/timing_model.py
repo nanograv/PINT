@@ -317,6 +317,15 @@ class TimingModel(object):
         return cvfs
 
     @property
+    def dm_covariance_matrix_funcs(self,):
+        """List of covariance matrix functions."""
+        cvfs = []
+        if "NoiseComponent" in self.component_types:
+            for nc in self.NoiseComponent_list:
+                cvfs += nc.dm_covariance_matrix_funcs
+        return cvfs
+
+    @property
     def scaled_toa_sigma_funcs(self,):
         """List of scaled uncertainty functions."""
         ssfs = []
@@ -715,7 +724,7 @@ class TimingModel(object):
         else:
             return phase
 
-    def covariance_matrix(self, toas):
+    def toa_covariance_matrix(self, toas):
         """This a function to get the TOA covariance matrix for noise models.
            If there is no noise model component provided, a diagonal matrix with
            TOAs error as diagonal element will be returned.
@@ -729,6 +738,26 @@ class TimingModel(object):
             return result
 
         for nf in self.covariance_matrix_funcs:
+            result += nf(toas)
+        return result
+
+    def dm_covariance_matrix(self, toas):
+        """This a function to get the DM covariance matrix for noise models.
+           If there is no noise model component provided, a diagonal matrix with
+           TOAs error as diagonal element will be returned.
+        """
+        dms, valid_dm = toas.get_flag_value('pp_dm')
+        dmes, valid_dme = toas.get_flag_value('pp_dme')
+        dms = np.array(dms)[valid_dm]
+        n_dms = len(dms)
+        dmes = np.array(dmes)[valid_dme]
+        result = np.zeros((n_dms, n_dms))
+        # When there is no noise model.
+        if len(self.dm_covariance_matrix_funcs) == 0:
+            result += np.diag(dmes.value ** 2)
+            return result
+
+        for nf in self.dm_covariance_matrix_funcs:
             result += nf(toas)
         return result
 
@@ -765,7 +794,7 @@ class TimingModel(object):
             The input data object for DM uncertainty.
         """
         dm_error, valid = toas.get_flag_value('pp_dme')
-        dm_error = np.array(dm_error[valid]) * u.pc/u.cm ** 3
+        dm_error = np.array(dm_error)[valid] * u.pc/u.cm ** 3
         result = np.zeros(len(dm_error)) * u.pc/u.cm ** 3
         # When there is no noise model.
         if len(self.scaled_dm_sigma_funcs) == 0:
@@ -773,7 +802,7 @@ class TimingModel(object):
             return result
 
         for nf in self.scaled_dm_sigma_funcs:
-            result += nf(dm_error)
+            result += nf(toas)
         return result
 
     def noise_model_designmatrix(self, toas):
