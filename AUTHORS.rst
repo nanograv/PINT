@@ -24,6 +24,7 @@ As listed in the PINT paper:
 * Ross Jennings
 * Matteo Bachetti
 * Rutger van Haasteren
+* Chloe Champagne
 * Jonathan Colen
 * Camryn Phillips
 * Josef Zimmerman
@@ -35,7 +36,6 @@ Other contributors (alphabetical)
 ---------------------------------
 
 * Bastian Beischer
-* Chloe Champagne
 * Chris Deil
 * Julia Deneva
 * Justin A. Ellis
