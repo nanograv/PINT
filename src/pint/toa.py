@@ -906,10 +906,23 @@ class TOAs(object):
                the flag, it will fill up with the fill_value.
         """
         result = []
-        for flags in self.table["flags"]:
-            val = flags.get(flag, fill_value)
+        valid_index = []
+        for ii, flags in enumerate(self.table["flags"]):
+            try:
+                val = flags[flag]
+                valid_index.append(ii)
+            except KeyError:
+                val = fill_value
             result.append(val)
-        return result
+        return result, valid_index
+
+    def get_dm_errors(self):
+        """ Get the Wideband DM data error
+        """
+        result, valid = self.get_flag_value('pp_dme')
+        if valid == []:
+            raise AttributeError("No DM error is provided.")
+        return np.array(result)[valid] * u.pc / u.cm ** 3
 
     def get_groups(self, gap_limit=None):
         """flag toas within gap limit (default 2h = 0.0833d) of each other as the same group

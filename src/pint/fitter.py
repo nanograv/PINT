@@ -14,7 +14,8 @@ from pint import Tsun
 from pint.utils import FTest
 from pint.pint_matrix import (
     DesignMatrixMaker,
-    combine_design_matrixs,
+    combine_design_matrices_by_quantity,
+    combine_design_matrices_by_param,
     )
 
 import pint.residuals as pr
@@ -158,6 +159,7 @@ class Fitter(object):
         """
         self.set_params({k: v for k, v in zip(args, x)})
         self.update_resids()
+        print(type(self.resids))
         # Return chi^2
         return self.resids.chi2
 
@@ -922,7 +924,7 @@ class GLSFitter(Fitter):
         return chi2
 
 
-class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
+class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
     """ A class to for fitting TOAs and other independent measured data.
 
     Parameters
@@ -935,7 +937,7 @@ class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
         The data to fit for. If one data are give, it will assume all the fit
         data set are packed in this one data object. If more than one data
         objects are provided, the size of 'fit_data' has to match the
-        'fit_data_names'.
+        'fit_data_names'. In this fitter, the first fit data should be a TOAs object.
     fitting_method: str
         Algorithm of fitting.
     """
@@ -947,6 +949,8 @@ class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
         # convert the non tuple input to a tuple
         if not isinstance(fit_data, (tuple)):
             fit_data = tuple(fit_data)
+        if not isinstance(fit_data[0], TOAs):
+            raise ValueError("The first data set should be a TOAs object.")
         if len(fit_data_names) == 0:
             raise ValueError("Please specify the fit data.")
         if len(fit_data) > 1 and len(fit_data_names) != len(fit_data):
@@ -956,6 +960,7 @@ class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
         self.additional_args = additional_args
         # Get the makers for fitting parts.
         self.reset_model()
+        self.resids_init = copy.deepcopy(self.resids)
         self.designmatrix_makers = []
         for data_resids in self.resids.residual_objs:
             self.designmatrix_makers.append(DesignMatrixMaker(
@@ -963,7 +968,14 @@ class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
                 data_resids.unit)
                 )
 
+        # Add noise design matrix maker
+        self.noise_designmatrix_maker = DesignMatrixMaker('toa_noise', u.s)
+
         self.method = "General_Data_Fitter"
+
+    @property
+    def toas(self):
+        return self.fit_data[0]
 
     def make_combined_residuals(self, add_args={}):
         resid_obj = []
@@ -1007,10 +1019,56 @@ class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
                                                     self.model,
                                                     fit_params,
                                                     offset=True))
-        return combine_design_matrixs(design_matrixs)
+        return combine_design_matrices_by_quantity(design_matrixs)
 
-    def scaled_sigma(self, data):
-        pass
+    def get_data_uncertainty(self, data_name, data_obj):
+        """ Get the data uncertainty from the data  object.
+
+        Note
+        ----
+        TODO, make this more general.
+        """
+        func_map = {'toa': 'get_errors', 'dm': 'get_dm_errors'}
+        error_func_name = func_map[data_name]
+        if hasattr(data_obj, error_func_name):
+            return getattr(data_obj, error_func_name)()
+        else:
+            raise ValueError("No method to access data error is provided.")
+
+    def scaled_all_sigma(self,):
+        """ Scale all data's uncertainty. If the function of scaled_`data`_sigma
+        is not given. It will just return the original data uncertainty.
+        """
+        scaled_sigmas = []
+        for ii, fd_name in enumerate(self.fit_data_names):
+            func_name = 'scaled_{}_uncertaity'.format(fd_name)
+            if hasattr(self.model, func_name):
+                scale_func = getattr(self.model,
+                                     'scaled_{}_uncertaity'.format(fd_name))
+                if len(self.fit_data) == 1:
+                    scaled_sigmas.append(scale_func(self.fit_data[0]))
+                else:
+                    scaled_sigmas.append(scale_func(self.fit_data[ii]))
+            else:
+                if len(self.fit_data) == 1:
+                    original_sigma = self.get_data_uncertainty(
+                        fd_name,
+                        self.fit_data[0]
+                        )
+                else:
+                    original_sigma = self.get_data_uncertainty(
+                        fd_name,
+                        self.fit_data[ii]
+                        )
+                scaled_sigmas.append(original_sigma)
+
+        scaled_sigmas_no_unit = []
+        for scaled_sigma in scaled_sigmas:
+            if hasattr(scaled_sigma, 'unit'):
+                scaled_sigmas_no_unit.append(scaled_sigma.value)
+            else:
+                scaled_sigmas_no_unit.append(scaled_sigma)
+        return np.hstack(scaled_sigmas_no_unit)
 
     def fit_toas(self, maxiter=1, threshold=False, full_cov=False):
         # Maybe change the name to do_fit?
@@ -1034,11 +1092,12 @@ class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
             self.update_resids()
         # Since the residuals may not have the same unit. Thus the residual here
         # has no unit.
-        residuals = self.resids
+        residuals = self.resids.resids
 
         # get any noise design matrices and weight vectors
         if not full_cov:
-            Mn = self.model.noise_model_designmatrix(self.toas)
+            # We assume the fit date type is toa
+            Mn = self.noise_designmatrix_maker(self.toas, self.model)
             phi = self.model.noise_model_basis_weight(self.toas)
             phiinv = np.zeros(M.shape[1])
             if Mn is not None and phi is not None:
@@ -1059,78 +1118,80 @@ class GeneralDataFitter(Fitter): # Is GLSFitter the best here?
 
         # compute covariance matrices
         if full_cov:
-            cov = self.model.covariance_matrix(self.toas)
+            cov = self.model.covariance_matrix(self.fit_data[0])
             cf = sl.cho_factor(cov)
             cm = sl.cho_solve(cf, M)
             mtcm = np.dot(M.T, cm)
             mtcy = np.dot(cm.T, residuals)
 
         else:
-            Nvec = self.scaled_sigma(self.toas).to(u.s).value ** 2
+            Nvec = self.scaled_all_sigma() ** 2
 
-        #     cinv = 1 / Nvec
-        #     mtcm = np.dot(M.T, cinv[:, None] * M)
-        #     mtcm += np.diag(phiinv)
-        #     mtcy = np.dot(M.T, cinv * residuals)
-        #
-        # if maxiter > 0:
-        #     try:
-        #         c = sl.cho_factor(mtcm)
-        #         xhat = sl.cho_solve(c, mtcy)
-        #         xvar = sl.cho_solve(c, np.eye(len(mtcy)))
-        #     except sl.LinAlgError:
-        #         U, s, Vt = sl.svd(mtcm, full_matrices=False)
-        #
-        #         if threshold:
-        #             threshold_val = (
-        #                 np.finfo(np.longdouble).eps * max(M.shape) * s[0]
-        #             )
-        #             s[s < threshold_val] = 0.0
-        #
-        #         xvar = np.dot(Vt.T / s, Vt)
-        #         xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
-        #     newres = residuals - np.dot(M, xhat)
-        #     # compute linearized chisq
-        #     if full_cov:
-        #         chi2 = np.dot(newres, sl.cho_solve(cf, newres))
-        #     else:
-        #         chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
-        # else:
-        #     newres = residuals
-        #     if full_cov:
-        #         chi2 = np.dot(newres, sl.cho_solve(cf, newres))
-        #     else:
-        #         chi2 = np.dot(newres, cinv * newres)
-        #     return chi2
-        #
-        # # compute absolute estimates, normalized errors, covariance matrix
-        # dpars = xhat / norm
-        # errs = np.sqrt(np.diag(xvar)) / norm
-        # covmat = (xvar / norm).T / norm
-        # self.covariance_matrix = covmat
-        # self.correlation_matrix = (covmat / errs).T / errs
-        #
-        # for ii, pn in enumerate(fitp.keys()):
-        #     uind = params.index(pn)  # Index of designmatrix
-        #     un = 1.0 / (units[uind])  # Unit in designmatrix
-        #     if scale_by_F0:
-        #         un *= u.s
-        #     pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
-        #     fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
-        #     # NOTE We need some way to use the parameter limits.
-        #     fitperrs[pn] = errs[uind]
-        # self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
-        # # Update Uncertainties
-        # self.set_param_uncertainties(fitperrs)
-        #
-        # # Compute the noise realizations if possible
-        # if not full_cov:
-        #     noise_dims = self.model.noise_model_dimensions(self.toas)
-        #     noise_resids = {}
-        #     for comp in noise_dims.keys():
-        #         p0 = noise_dims[comp][0] + ntmpar
-        #         p1 = p0 + noise_dims[comp][1]
-        #         noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
-        #     self.resids.noise_resids = noise_resids
+            cinv = 1 / Nvec
+            mtcm = np.dot(M.T, cinv[:, None] * M)
+            mtcm += np.diag(phiinv)
+            mtcy = np.dot(M.T, cinv * residuals)
+
+        if maxiter > 0:
+            try:
+                c = sl.cho_factor(mtcm)
+                xhat = sl.cho_solve(c, mtcy)
+                xvar = sl.cho_solve(c, np.eye(len(mtcy)))
+            except sl.LinAlgError:
+                U, s, Vt = sl.svd(mtcm, full_matrices=False)
+
+                if threshold:
+                    threshold_val = (
+                        np.finfo(np.longdouble).eps * max(M.shape) * s[0]
+                    )
+                    s[s < threshold_val] = 0.0
+
+                xvar = np.dot(Vt.T / s, Vt)
+                xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+            newres = residuals - np.dot(M, xhat)
+            # compute linearized chisq
+            if full_cov:
+                chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+            else:
+                chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+        else:
+            newres = residuals
+            if full_cov:
+                chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+            else:
+                chi2 = np.dot(newres, cinv * newres)
+            return chi2
+
+        # compute absolute estimates, normalized errors, covariance matrix
+        dpars = xhat / norm
+        errs = np.sqrt(np.diag(xvar)) / norm
+        covmat = (xvar / norm).T / norm
+        self.covariance_matrix = covmat
+        self.correlation_matrix = (covmat / errs).T / errs
+
+        for ii, pn in enumerate(fitp.keys()):
+            uind = params.index(pn)  # Index of designmatrix
+            # Here we use design matrix's label, so the unit goes to normal.
+            # instead of un = 1 / (units[uind])
+            un = units[uind]
+            if scale_by_F0:
+                un *= u.s
+            pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
+            fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
+            # NOTE We need some way to use the parameter limits.
+            fitperrs[pn] = errs[uind]
+        self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
+        # Update Uncertainties
+        self.set_param_uncertainties(fitperrs)
+
+        # Compute the noise realizations if possible
+        if not full_cov:
+            noise_dims = self.model.noise_model_dimensions(self.toas)
+            noise_resids = {}
+            for comp in noise_dims.keys():
+                p0 = noise_dims[comp][0] + ntmpar
+                p1 = p0 + noise_dims[comp][1]
+                noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
+            self.resids.noise_resids = noise_resids
 
         return chi2

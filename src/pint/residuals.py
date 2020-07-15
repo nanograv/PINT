@@ -5,6 +5,7 @@ import astropy.units as u
 import numpy as np
 from scipy.linalg import LinAlgError
 from astropy import log
+import collections
 
 from pint.phase import Phase
 from pint.utils import weighted_mean
@@ -30,19 +31,20 @@ class Residuals:
         cls,
         data=None,
         model=None,
-        residual_type='phase',
+        residual_type='toa',
         unit=u.Unit(""),
         subtract_mean=True,
         use_weighted_mean=True,
         track_mode="nearest",
         scaled_by_F0=True
     ):
-        try:
-            cls = residual_map[residual_type.lower()]
-        except KeyError:
-            raise ValueError("'{}' is not a PINT supported residual. Currently "
-                "support data type are {}".format(data_type,
-                list(residual_map.keys())))
+        if cls is Residuals:
+            try:
+                cls = residual_map[residual_type.lower()]
+            except KeyError:
+                raise ValueError("'{}' is not a PINT supported residual. Currently "
+                    "support data type are {}".format(residual_type,
+                    list(residual_map.keys())))
 
         return super().__new__(cls)
 
@@ -92,7 +94,7 @@ class Residuals:
 
     @property
     def data_error(self):
-        return self.toas.get_error()
+        return self.toas.get_errors()
 
     @property
     def chi2_reduced(self):
@@ -387,8 +389,9 @@ class WidebandDMResiduals(Residuals):
         self.use_weighted_mean = use_weighted_mean
         self.base_unit = u.pc/u.cm**3
         self.get_model_value = self.model.dm_value
-        self.dm_data, self.dm_error, self.valid = self.get_dm_data()
+        self.dm_data, self.dm_error = self.get_dm_data()
         self.scaled_by_F0 = scaled_by_F0
+        self._chi2 = None
 
     @property
     def resids(self):
@@ -396,7 +399,15 @@ class WidebandDMResiduals(Residuals):
 
     @property
     def data_error(self):
-        return self.dm_error * self.unit
+        return self.dm_error
+    
+    @property
+    def chi2(self): 
+        """Compute chi-squared as needed and cache the result"""
+        if self._chi2 is None:
+            self._chi2 = self.calc_chi2()
+        assert self._chi2 is not None
+        return self._chi2
 
     def calc_resids(self):
         model_value = self.get_model_value(self.toas)
@@ -416,6 +427,25 @@ class WidebandDMResiduals(Residuals):
                 wm = (resids * w).sum() / w.sum()
                 resids -= wm
         return resids
+    
+    def calc_chi2(self):
+        if (self.data_error.value == 0.0).any():
+            return np.inf
+        else:
+            return (
+                    (self.resids / self.data_error) ** 2.0
+               ).sum().decompose()
+    
+    def rms_weighted(self):
+        """Compute weighted RMS of the residals in time."""
+        if np.any(self.data_error.value == 0):
+            raise ValueError(
+                "Some TOA errors are zero - cannot calculate weighted RMS of residuals"
+            )
+        w = 1.0 / (self.data_error ** 2)
+
+        wmean, werr, wsdev = weighted_mean(self.resids, w, sdev=True)
+        return wsdev
 
     def get_dm_data(self):
         """Get the independent measured DM data from TOA flags.
@@ -432,18 +462,18 @@ class WidebandDMResiduals(Residuals):
         valide_index: list
             The TOA with DM data index.
         """
-        dm_data = self.toas.get_flag_value('pp_dm')
-        dm_error = self.toas.get_flag_value('pp_dme')
-        # Check if all toas has dm. We assument DM and DM error have same size.
-        valid_index = [i for i, v in enumerate(dm_data) if v != None]
-        if valid_index == []:
+        dm_data, valid_data = self.toas.get_flag_value('pp_dm')
+        dm_error, valid_error  = self.toas.get_flag_value('pp_dme')
+        if valid_data == []:
             raise ValueError("Input TOA object does not have wideband DM values")
-        valid_dm = np.array(dm_data)[valid_index]
-        valid_error = np.array(dm_error)[valid_index]
+        if valid_error == []:
+            raise ValueError("Input TOA object does not have wideband DM errors")
+        valid_dm = np.array(dm_data)[valid_data]
+        valid_error = np.array(dm_error)[valid_error]
         # Check valid error, if an error is none, change it to zero
-        none_index = np.where(valid_error == None)[0]
-        valid_error[none_index] = 0
-        return valid_dm * self.unit, valid_error * self.unit, valid_index
+        if len(valid_dm) != len(valid_error):
+            raise ValueError("Input TOA object' DM data and DM errors do not match.")
+        return valid_dm * self.unit, valid_error * self.unit
 
     def update_model(self, new_model, **kwargs):
         """ Up date DM models from a new PINT timing model
@@ -455,9 +485,9 @@ class WidebandDMResiduals(Residuals):
 
         self.model = new_model
         self.model_func = self.model.dm_value
+    
 
-residual_map = {'phase': Residuals, 'dm': WidebandDMResiduals}
-
+residual_map = {'toa': Residuals, 'dm': WidebandDMResiduals}
 
 
 class CombinedResiduals(object):
@@ -499,11 +529,23 @@ class CombinedResiduals(object):
 
     @property
     def data_error(self):
+        # Since it is the combinde residual, the units are removed.
         dr = self.get_data_error()
-        return np.array([rv.value for rv in dr.values()]
+        return np.hstack([rv.value for rv in dr.values()])
 
     def get_data_error(self):
         errors = []
-        for rs in self.resids:
-            errors.append(rs.residual_type, rs.data_error)
+        for rs in self.residual_objs:
+            errors.append((rs.residual_type, rs.data_error))
         return collections.OrderedDict(errors)
+
+    def rms_weighted(self):
+        """Compute weighted RMS of the residals in time."""
+        if np.any(self.data_error == 0):
+            raise ValueError(
+                "Some data errors are zero - cannot calculate weighted RMS of residuals"
+            )
+        w = 1.0 / (self.data_error ** 2)
+
+        wmean, werr, wsdev = weighted_mean(self.resids, w, sdev=True)
+        return wsdev

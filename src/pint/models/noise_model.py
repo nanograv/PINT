@@ -14,7 +14,8 @@ class NoiseComponent(Component):
     def __init__(self,):
         super(NoiseComponent, self).__init__()
         self.covariance_matrix_funcs = []
-        self.scaled_sigma_funcs = []
+        self.scaled_toa_sigma_funcs = [] # Need to move this to a speical place.
+        self.scaled_dm_sigma_funcs = []
         self.basis_funcs = []
 
     def validate(self,):
@@ -169,41 +170,42 @@ class ScaleToaError(NoiseComponent):
 
 
 class ScaleDmError(NoiseComponent):
-     """Correction for estimated wideband DM measurement uncertainty.
+    """Correction for estimated wideband DM measurement uncertainty.
 
-     Note
-     ----
-     Ref: NanoGrav 12.5 yrs wideband data
+    Note
+    ----
+    Ref: NanoGrav 12.5 yrs wideband data
 
-     """
+    """
+    register = True
+    category = "scale_toa_error"
 
-     register = True
-     category = "scale_toa_error"
-
-     def __init__(self,):
-         super(ScaleDmError, self).__init__()
-         self.add_param(
+    def __init__(self,):
+        super(ScaleDmError, self).__init__()
+        self.add_param(
              maskParameter(
                  name="DMEFAC",
+                 value=1.0,
                  units="",
                  description="A multiplication factor on"
                  " the measured DM uncertainties,",
              )
-         )
+        )
 
-         self.add_param(
-             maskParameter(
+        self.add_param(
+            maskParameter(
                  name="DMEQUAD",
-                 units="us",
-                 aliases=["T2EQUAD"],
+                 value=0.0,
+                 units="pc / cm ^ 3",
                  description="An error term added in "
                  "quadrature to the scaled (by"
                  " EFAC) TOA uncertainty.",
-             )
-         )
+            )
+        )
 
-    self.covariance_matrix_funcs += [self.dm_sigma_scaled_cov_matrix]
-    self.scaled_dm_sigma_funcs += [self.scale_dm_sigma]
+        self.covariance_matrix_funcs += [self.dm_sigma_scaled_cov_matrix]
+        self.scaled_dm_sigma_funcs += [self.scale_dm_sigma]
+        self.match_param=True
 
     def setup(self):
         super(ScaleDmError, self).setup()
@@ -213,10 +215,10 @@ class ScaleDmError(NoiseComponent):
         for mask_par in self.get_params_of_type("maskParameter"):
             if mask_par.startswith("DMEFAC"):
                 par = getattr(self, mask_par)
-                self.DMEFACs[mask_par] = (par.key, par.key_value)
+                self.DMEFACs[mask_par] = (par.key, tuple(par.key_value))
             elif mask_par.startswith("DMEQUAD"):
                 par = getattr(self, mask_par)
-                self.DMEQUADs[mask_par] = (par.key, par.key_value)
+                self.DMEQUADs[mask_par] = (par.key, tuple(par.key_value))
             else:
                 continue
 
@@ -229,28 +231,61 @@ class ScaleDmError(NoiseComponent):
                 raise ValueError("'%s' have duplicated keys and key values." % el)
 
     # pairing up EFAC and EQUAD
-    def pair_DMEFAC_DMEQUAD(self):
+    def pair_DMEFAC_DMEQUAD(self, match_param=True):
+        """ Pair the DMEFAC and DMEQUAD. If
+        """
         pairs = []
-        for efac, efac_key in list(self.DMEFACs.items()):
-            for equad, equad_key in list(self.DMEQUADs.items()):
-                if efac_key == equad_key:
-                    pairs.append((getattr(self, efac), getattr(self, equad)))
-        if len(pairs) != len(list(self.DMEFACs.items())):
-            # TODO may be define an parameter error would be helpful
-            raise ValueError(
-                "Can not pair up DMEFACs and DMEQUADs, please "
-                " check the DMEFAC/DMEQUAD keys and key values."
-            )
-        return pairs
+        p_map = {0: (self.DMEFAC1, 1), 1: (self.DMEQUAD1, 0)}
+        keys_param_pairs = {}
+        for efac, efac_key in self.DMEFACs.items():
+            keys_param_pairs[efac_key] = [efac, None]
+        # TODO need to change here.
+        for equad, equad_key in self.DMEQUADs.items():
+            if equad_key in keys_param_pairs.keys():
+                keys_param_pairs[efac_key][1] = equad
+            else:
+                keys_param_pairs[efac_key] = [None, equad]
 
-    def scale_dm_sigma(self, dm_data_error):
+        for key, params in keys_param_pairs.items():
+            if None in params:
+                if match_param:
+                    # TODO move this to the param class.
+                    idx = params.index(None)
+                    exist_param = getattr(self, params[1 - idx])
+                    if exist_param.index == 1:
+                        new_param = self.DMEQUAD1
+                    else:
+                        new_param = p_map[idx][0].new_param(exist_param.index)
+                    # Little more attribute set up on the parameter
+                    new_param.value = p_map[idx][1]
+                    #new_param.units = p_map[idx][0].units
+                    new_param.key = exist_param.key
+                    new_param.key_value = exist_param.key_value
+                    new_param.description = p_map[idx][0].description
+                    if exist_param.index != 1:
+                        self.add_param(new_param)
+                    params[idx] = new_param.name
+                    self.match_param = True
+                else:
+                    raise ValueError(
+                        "Can not pair up DMEFACs and DMEQUADs, please "
+                        " check the DMEFAC/DMEQUAD keys and key values."
+                    )
+            if match_param:
+                self.setup()
+        return list(keys_param_pairs.values())
+
+    def scale_dm_sigma(self, toas):
         # We should handle the
-        sigma_old = toas.get_flag_value('pp_dme') * u.pc / u.cm ** 3
+        sigma_old = toas.get_dm_errors()
         sigma_scaled = np.zeros_like(sigma_old)
         EF_EQ_pairs = self.pair_DMEFAC_DMEQUAD()
         for pir in EF_EQ_pairs:
-            efac = pir[0]
-            equad = pir[1]
+            print(pir)
+            efac = getattr(self, pir[0])
+            equad = getattr(self, pir[1])
+            print(efac.key_value)
+            print(equad.key_value)
             mask = efac.select_toa_mask(toas)
             sigma_scaled[mask] = efac.quantity * np.sqrt(
                 sigma_old[mask] ** 2 + (equad.quantity) ** 2

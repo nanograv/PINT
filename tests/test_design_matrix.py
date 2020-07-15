@@ -6,7 +6,8 @@ from pint.models import get_model
 from pint.toa import get_TOAs
 from pint.pint_matrix import (
     DesignMatrixMaker,
-    combine_design_matrixs
+    combine_design_matrices_by_quantity,
+    combine_design_matrices_by_param,
     )
 import astropy.units as u
 from pinttestdata import datadir
@@ -28,6 +29,7 @@ class TestDesignMatrix:
                                 'DMJUMP2']
         self.phase_designmatrix_maker = DesignMatrixMaker('phase', u.Unit(""))
         self.dm_designmatrix_maker = DesignMatrixMaker('dm', u.pc / u.cm**3)
+        self.noise_designmatrix_maker = DesignMatrixMaker('toa_noise', u.s)
 
     def test_make_phase_designmatrix(self):
         phase_designmatrix = self.phase_designmatrix_maker(self.toas, self.model,
@@ -58,7 +60,7 @@ class TestDesignMatrix:
                                                      offset=True,
                                                      offset_padding=0.0)
 
-        combined = combine_design_matrixs([phase_designmatrix,
+        combined = combine_design_matrices_by_quantity([phase_designmatrix,
                                            dm_designmatrix,])
         # dim1 includes parameter lite and offset
         assert combined.shape == (2*self.toas.ntoas, len(self.test_param_lite) + 1)
@@ -67,3 +69,11 @@ class TestDesignMatrix:
         assert dim0_labels == ['phase', 'dm']
         dim1_labels = [x[0] for x in combined.get_axis_labels(1)]
         assert dim1_labels == ['Offset'] + self.test_param_lite
+
+    def test_toa_noise_designmatrix(self):
+        toas = get_TOAs("B1855+09_NANOGrav_9yv1.tim")
+        model = get_model("B1855+09_NANOGrav_9yv1.gls.par")
+        noise_designmatrix = self.noise_designmatrix_maker(toas, model)
+        assert noise_designmatrix.shape[0] == toas.ntoas
+        assert noise_designmatrix.derivative_quantity == ["phase"]
+        assert noise_designmatrix.derivative_params == ['toa_noise_params']

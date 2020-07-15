@@ -732,10 +732,15 @@ class TimingModel(object):
             result += nf(toas)
         return result
 
-    def scaled_sigma(self, toas):
-        """This a function to get the scaled data uncertainties noise models.
+    def scaled_toa_uncertainty(self, toas):
+        """This a function to get the scaled TOA data uncertainties noise models.
            If there is no noise model component provided, a vector with
            TOAs error as values will be returned.
+
+        Parameters
+        ----------
+        toas: `pint.toa.TOAs` object
+            The input data object for TOAs uncertainty.
         """
         ntoa = toas.ntoas
         tbl = toas.table
@@ -747,6 +752,28 @@ class TimingModel(object):
 
         for nf in self.scaled_toa_sigma_funcs:
             result += nf(toas)
+        return result
+
+    def scaled_dm_uncertainty(self, toas):
+        """ This a function to get the scaled DM data uncertainties noise models.
+            If there is no noise model component provided, a vector with
+            DM error as values will be returned.
+
+        Parameter
+        ---------
+        toas: `pint.toa.TOAs` object
+            The input data object for DM uncertainty.
+        """
+        dm_error, valid = toas.get_flag_value('pp_dme')
+        dm_error = np.array(dm_error[valid]) * u.pc/u.cm ** 3
+        result = np.zeros(len(dm_error)) * u.pc/u.cm ** 3
+        # When there is no noise model.
+        if len(self.scaled_dm_sigma_funcs) == 0:
+            result += dm_error
+            return result
+
+        for nf in self.scaled_dm_sigma_funcs:
+            result += nf(dm_error)
         return result
 
     def noise_model_designmatrix(self, toas):
