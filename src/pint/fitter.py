@@ -3,24 +3,24 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import collections
 import copy
 
+import astropy.constants as const
 import astropy.units as u
 import numpy as np
+import pint.utils
 import scipy.linalg as sl
 import scipy.optimize as opt
 from astropy import log
-import astropy.constants as const
-import pint.utils
-from pint.models.pulsar_binary import PulsarBinary
 from pint import Tsun
-from pint.utils import FTest
-
-from pint.residuals import Residuals
 from pint.models.parameter import (
     AngleParameter,
+    boolParameter,
+    floatParameter,
     prefixParameter,
     strParameter,
-    floatParameter,
 )
+from pint.models.pulsar_binary import PulsarBinary
+from pint.residuals import Residuals
+from pint.utils import FTest
 
 __all__ = ["Fitter", "PowellFitter", "GLSFitter", "WLSFitter"]
 
@@ -178,7 +178,7 @@ class Fitter(object):
 
     def get_summary(self, nodmx=False):
         """Return a human-readable summary of the Fitter results.
-        
+
         Parameters
         ----------
         nodmx : bool
@@ -206,10 +206,22 @@ class Fitter(object):
         )
         s += "\n"
 
+        # to handle all parameter names, determine the longest length for the first column
+        longestName = 0  # optionally specify the minimum length here instead of 0
+        for pn in list(self.get_allparams().keys()):
+            if nodmx and pn.startswith("DMX"):
+                continue
+            if len(pn) > longestName:
+                longestName = len(pn)
+        # convert to a string to insert before the format call
+        spacingName = str(longestName)
+
         # Next, print the model parameters
-        s += "{:<14s} {:^20s} {:^28s} {}\n".format("PAR", "Prefit", "Postfit", "Units")
-        s += "{:<14s} {:>20s} {:>28s} {}\n".format(
-            "=" * 14, "=" * 20, "=" * 28, "=" * 5
+        s += ("{:<" + spacingName + "s} {:^20s} {:^28s} {}\n").format(
+            "PAR", "Prefit", "Postfit", "Units"
+        )
+        s += ("{:<" + spacingName + "s} {:>20s} {:>28s} {}\n").format(
+            "=" * longestName, "=" * 20, "=" * 28, "=" * 5
         )
         for pn in list(self.get_allparams().keys()):
             if nodmx and pn.startswith("DMX"):
@@ -218,13 +230,13 @@ class Fitter(object):
             par = getattr(self.model, pn)
             if par.value is not None:
                 if isinstance(par, strParameter):
-                    s += "{:14s} {:>20s} {:28s} {}\n".format(
+                    s += ("{:" + spacingName + "s} {:>20s} {:28s} {}\n").format(
                         pn, prefitpar.value, "", par.units
                     )
                 elif isinstance(par, AngleParameter):
                     # Add special handling here to put uncertainty into arcsec
                     if par.frozen:
-                        s += "{:14s} {:>20s} {:>28s} {} \n".format(
+                        s += ("{:" + spacingName + "s} {:>20s} {:>28s} {} \n").format(
                             pn, str(prefitpar.quantity), "", par.units
                         )
                     else:
@@ -232,17 +244,22 @@ class Fitter(object):
                             uncertainty_unit = pint.hourangle_second
                         else:
                             uncertainty_unit = u.arcsec
-                        s += "{:14s} {:>20s}  {:>16s} +/- {:.2g} \n".format(
+                        s += (
+                            "{:" + spacingName + "s} {:>20s}  {:>16s} +/- {:.2g} \n"
+                        ).format(
                             pn,
                             str(prefitpar.quantity),
                             str(par.quantity),
                             par.uncertainty.to(uncertainty_unit),
                         )
-
+                elif isinstance(par, boolParameter):
+                    s += ("{:" + spacingName + "s} {:>20s} {:28s} {}\n").format(
+                        pn, prefitpar.print_quantity(prefitpar.value), "", par.units
+                    )
                 else:
                     # Assume a numerical parameter
                     if par.frozen:
-                        s += "{:14s} {:20g} {:28s} {} \n".format(
+                        s += ("{:" + spacingName + "s} {:20g} {:28s} {} \n").format(
                             pn, prefitpar.value, "", par.units
                         )
                     else:
@@ -253,7 +270,7 @@ class Fitter(object):
                         #     par.uncertainty.value,
                         #     par.units,
                         # )
-                        s += "{:14s} {:20g} {:28SP} {} \n".format(
+                        s += ("{:" + spacingName + "s} {:20g} {:28SP} {} \n").format(
                             pn,
                             prefitpar.value,
                             ufloat(par.value, par.uncertainty.value),
@@ -498,7 +515,7 @@ class Fitter(object):
             parameters from the timing model.
         full_output : Bool
             If False, just returns the result of the F-Test. If True, will also return the new
-            model's residual RMS (us), chi-squared, and number of degrees of freedom of 
+            model's residual RMS (us), chi-squared, and number of degrees of freedom of
             new model.
 
         Returns
