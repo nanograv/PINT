@@ -940,8 +940,8 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
         'fit_data_names'. In this fitter, the first fit data should be a TOAs object.
     fit_data_names: list of str
         The names of the data fit for.
-    fitting_method: str
-        Algorithm of fitting.
+    additional_args: dict, optional
+        The additional arguments for making residuals.
     """
 
     def __init__(self, model, fit_data, fit_data_names=['toa', 'dm'],  additional_args={}):
@@ -1063,11 +1063,12 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
         is not given. It will just return the original data uncertainty.
         """
         scaled_sigmas = []
+        sigma_units = []
         for ii, fd_name in enumerate(self.fit_data_names):
-            func_name = 'scaled_{}_uncertaity'.format(fd_name)
+            func_name = 'scaled_{}_uncertainty'.format(fd_name)
+            sigma_units.append(self.resids.residual_objs[ii].unit)
             if hasattr(self.model, func_name):
-                scale_func = getattr(self.model,
-                                     'scaled_{}_uncertaity'.format(fd_name))
+                scale_func = getattr(self.model, func_name)
                 if len(self.fit_data) == 1:
                     scaled_sigmas.append(scale_func(self.fit_data[0]))
                 else:
@@ -1086,9 +1087,9 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
                 scaled_sigmas.append(original_sigma)
 
         scaled_sigmas_no_unit = []
-        for scaled_sigma in scaled_sigmas:
+        for ii, scaled_sigma in enumerate(scaled_sigmas):
             if hasattr(scaled_sigma, 'unit'):
-                scaled_sigmas_no_unit.append(scaled_sigma.value)
+                scaled_sigmas_no_unit.append(scaled_sigma.to_value(sigma_units[ii]))
             else:
                 scaled_sigmas_no_unit.append(scaled_sigma)
         return np.hstack(scaled_sigmas_no_unit)

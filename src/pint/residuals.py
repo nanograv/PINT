@@ -32,7 +32,7 @@ class Residuals:
         data=None,
         model=None,
         residual_type='toa',
-        unit=u.Unit(""),
+        unit=u.s,
         subtract_mean=True,
         use_weighted_mean=True,
         track_mode="nearest",
@@ -52,8 +52,8 @@ class Residuals:
         self,
         data=None,
         model=None,
-        residual_type='phase',
-        unit=u.Unit(""),
+        residual_type='toa',
+        unit=u.s,
         subtract_mean=True,
         use_weighted_mean=True,
         track_mode="nearest",
@@ -113,9 +113,9 @@ class Residuals:
         """ Get pure value of the residuals use the given base unit.
         """
         if not self.scaled_by_F0:
-            return self.resids.to_value(self.unit)
+            return self.resids.to_value(self.unit / u.s)
         else:
-            return self.resids.to_value(self.unit * u.s)
+            return self.resids.to_value(self.unit)
 
     def rms_weighted(self):
         """Compute weighted RMS of the residals in time."""
@@ -398,11 +398,17 @@ class WidebandDMResiduals(Residuals):
         return self.calc_resids()
 
     @property
+    def resids_value(self):
+        """ Get pure value of the residuals use the given base unit.
+        """
+        return self.resids.to_value(self.unit)
+
+    @property
     def data_error(self):
         return self.dm_error
-    
+
     @property
-    def chi2(self): 
+    def chi2(self):
         """Compute chi-squared as needed and cache the result"""
         if self._chi2 is None:
             self._chi2 = self.calc_chi2()
@@ -427,7 +433,7 @@ class WidebandDMResiduals(Residuals):
                 wm = (resids * w).sum() / w.sum()
                 resids -= wm
         return resids
-    
+
     def calc_chi2(self):
         if (self.data_error.value == 0.0).any():
             return np.inf
@@ -435,7 +441,7 @@ class WidebandDMResiduals(Residuals):
             return (
                     (self.resids / self.data_error) ** 2.0
                ).sum().decompose()
-    
+
     def rms_weighted(self):
         """Compute weighted RMS of the residals in time."""
         if np.any(self.data_error.value == 0):
@@ -485,7 +491,7 @@ class WidebandDMResiduals(Residuals):
 
         self.model = new_model
         self.model_func = self.model.dm_value
-    
+
 
 residual_map = {'toa': Residuals, 'dm': WidebandDMResiduals}
 

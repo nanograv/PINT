@@ -343,8 +343,9 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
                 param_unit = u.Unit("")
             else:
                 param_unit = getattr(model, param).units
+                # Since this is the phase derivative, we know the quantity unit.
                 q = deriv_func(data, delay, param).to(
-                    self.quantity_unit / param_unit
+                    u.Unit("") / param_unit
                         )
 
 
