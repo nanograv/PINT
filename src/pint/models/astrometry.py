@@ -302,6 +302,13 @@ class AstrometryEquatorial(Astrometry):
         pos_icrs = self.get_psr_coords(epoch=epoch)
         return pos_icrs.transform_to(PulsarEcliptic(ecl=ecl))
 
+    def coords_as_GAL(self, epoch=None):
+        """Return the pulsar's galactic coordinates as an astropy coordinate object.
+        
+        """
+        pos_icrs = self.get_psr_coords(epoch=epoch)
+        return pos_icrs.transform_to(coords.Galactic)
+
     def get_params_as_ICRS(self):
         result = {
             "RAJ": self.RAJ.quantity,
@@ -545,6 +552,13 @@ class AstrometryEcliptic(Astrometry):
         """Return the pulsar's ICRS coordinates as an astropy coordinate object."""
         pos_ecl = self.get_psr_coords(epoch=epoch)
         return pos_ecl.transform_to(coords.ICRS)
+
+    def coords_as_GAL(self, epoch=None):
+        """Return the pulsar's galactic coordinates as an astropy coordinate object.
+        
+        """
+        pos_ecl = self.get_psr_coords(epoch=epoch)
+        return pos_ecl.transform_to(coords.Galactic)
 
     def coords_as_ECL(self, epoch=None, ecl=None):
         """Return the pulsar's ecliptic coordinates as an astropy coordinate object.
