@@ -44,7 +44,7 @@ class TestEcliptic(unittest.TestCase):
 
     def test_to_ecliptic(self):
         # determine residuals with base (equatorial) model
-        pint_resids_us = Residuals(
+        pint_resids = Residuals(
             self.toasJ0613, self.modelJ0613, use_weighted_mean=False
         ).time_resids.to(u.s)
 
@@ -60,19 +60,19 @@ class TestEcliptic(unittest.TestCase):
         self.log.debug("Ecliptic model created")
 
         # determine residuals with new (ecliptic) model
-        ECLpint_resids_us = Residuals(
+        ECLpint_resids = Residuals(
             self.toasJ0613, ECLmodelJ0613, use_weighted_mean=False
         ).time_resids.to(u.s)
-        self.log.debug(np.abs(pint_resids_us - ECLpint_resids_us))
+        self.log.debug(np.abs(pint_resids - ECLpint_resids))
         msg = (
             "Residual comparison to ecliptic model failed with max relative difference %e s"
-            % np.nanmax(np.abs(pint_resids_us - ECLpint_resids_us)).value
+            % np.nanmax(np.abs(pint_resids - ECLpint_resids)).value
         )
-        assert np.all(np.abs(pint_resids_us - ECLpint_resids_us) < 1e-10 * u.s), msg
+        assert np.all(np.abs(pint_resids - ECLpint_resids) < 1e-10 * u.s), msg
 
     def test_to_equatorial(self):
         # determine residuals with base (ecliptic) model
-        pint_resids_us = Residuals(
+        pint_resids = Residuals(
             self.toasB1855, self.modelB1855, use_weighted_mean=False
         ).time_resids.to(u.s)
 
@@ -88,15 +88,15 @@ class TestEcliptic(unittest.TestCase):
         self.log.debug("Equatorial model created")
 
         # determine residuals with new (equatorial) model
-        EQUpint_resids_us = Residuals(
+        EQUpint_resids = Residuals(
             self.toasB1855, EQUmodelB1855, use_weighted_mean=False
         ).time_resids.to(u.s)
-        self.log.debug(np.abs(pint_resids_us - EQUpint_resids_us))
+        self.log.debug(np.abs(pint_resids - EQUpint_resids))
         msg = (
             "Residual comparison to ecliptic model failed with max relative difference %e s"
-            % np.nanmax(np.abs(pint_resids_us - EQUpint_resids_us)).value
+            % np.nanmax(np.abs(pint_resids - EQUpint_resids)).value
         )
-        assert np.all(np.abs(pint_resids_us - EQUpint_resids_us) < 1e-10 * u.s), msg
+        assert np.all(np.abs(pint_resids - EQUpint_resids) < 1e-10 * u.s), msg
 
 
 if __name__ == "__main__":
