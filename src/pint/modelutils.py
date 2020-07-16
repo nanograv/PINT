@@ -1,12 +1,13 @@
 from pint.models.astrometry import AstrometryEquatorial, AstrometryEcliptic
 
+
 def convert_to_equatorial(model):
     """Converts pulsar's PulsarEcliptic coordinates to ICRS,
     adds the AstrometryEquatorial model component with the
     correct values, and removes AstrometryEcliptic component.
     """
 
-    if 'AstrometryEcliptic' in model.components:
+    if "AstrometryEcliptic" in model.components:
 
         c = model.coords_as_ICRS()
         a = AstrometryEquatorial()
@@ -20,7 +21,7 @@ def convert_to_equatorial(model):
         a.PMDEC.quantity = c.pm_dec
 
         model.add_component(a)
-        model.remove_component('AstrometryEcliptic')
+        model.remove_component("AstrometryEcliptic")
 
     else:
         pass
@@ -36,7 +37,7 @@ def convert_to_ecliptic(model):
 
     # Initial validation to make sure model is not in a bad state?
 
-    if 'AstrometryEquatorial' in model.components:
+    if "AstrometryEquatorial" in model.components:
 
         c = model.coords_as_ECL()
         a = AstrometryEcliptic()
@@ -50,7 +51,7 @@ def convert_to_ecliptic(model):
         a.PMELAT.quantity = c.pm_lat
 
         model.add_component(a)
-        model.remove_component('AstrometryEquatorial')
+        model.remove_component("AstrometryEquatorial")
 
     else:
         pass
