@@ -1,21 +1,21 @@
-import logger
+import logging
 from pint.models.astrometry import AstrometryEquatorial, AstrometryEcliptic
 
 
-def convert_to_equatorial(model,force=False):
-    """Converts Astrometry model component, Ecliptic to Equatorial
+def convert_to_equatorial(model, force=False):
+    r"""Converts Astrometry model component, Ecliptic to Equatorial
 
-      Parameters
-      ----------
-      model: `pint.models.TimingModel` object
-          current model with AstrometryEcliptic component
-      force: boolean, optional
-          will force conversion even if an equatorial component is already present
+    Parameters
+    ----------
+    model: `pint.models.TimingModel` object
+        current model with AstrometryEcliptic component
+    force: boolean, optional
+        will force conversion even if an equatorial component is already present
 
-      Returns
-      -------
-      model
-          new model with AstrometryEquatorial component
+    Returns
+    -------
+    model
+        new model with AstrometryEquatorial component
     """
 
     if not ("AstrometryEquatorial" in model.components) or force:
@@ -54,22 +54,21 @@ def convert_to_equatorial(model,force=False):
     return model
 
 
-def convert_to_ecliptic(model,force=False):
-      """Converts Astrometry model component, Equatorial to Ecliptic
+def convert_to_ecliptic(model, force=False):
+    """Converts Astrometry model component, Equatorial to Ecliptic
 
-      Parameters
-      ----------
-      model: `pint.models.TimingModel` object
-          current model with AstrometryEquatorial component
-      force: boolean, optional
-          will force conversion even if an ecliptic component is already present
+    Parameters
+    ----------
+    model: `pint.models.TimingModel` object
+        current model with AstrometryEquatorial component
+    force: boolean, optional
+        will force conversion even if an ecliptic component is already present
 
-      Returns
-      -------
-      model
-          new model with AstrometryEcliptic component
+    Returns
+    -------
+    model
+        new model with AstrometryEcliptic component
     """
-
 
     if not ("AstrometryEcliptic" in model.components) or force:
         if "AstrometryEcliptic" in model.components:
