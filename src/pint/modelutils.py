@@ -2,9 +2,17 @@ from pint.models.astrometry import AstrometryEquatorial, AstrometryEcliptic
 
 
 def convert_to_equatorial(model):
-    """Converts pulsar's PulsarEcliptic coordinates to ICRS,
-    adds the AstrometryEquatorial model component with the
-    correct values, and removes AstrometryEcliptic component.
+    """Converts Astrometry model component, Ecliptic to Equatorial
+
+      Parameters
+      ----------
+      model
+          current model with AstrometryEcliptic component
+
+      Returns
+      -------
+      model
+          new model with AstrometryEquatorial component
     """
 
     if "AstrometryEcliptic" in model.components:
@@ -30,9 +38,17 @@ def convert_to_equatorial(model):
 
 
 def convert_to_ecliptic(model):
-    """Converts pulsar's ICRS coordinates to PulsarEcliptic,
-    adds the AstrometryEcliptic model component with the
-    correct values, and removes AstrometryEquatorial component.
+    """Converts Astrometry model component, Equatorial to Ecliptic
+
+      Parameters
+      ----------
+      model
+          current model with AstrometryEquatorial component
+
+      Returns
+      -------
+      model
+          new model with AstrometryEcliptic component
     """
 
     # Initial validation to make sure model is not in a bad state?
