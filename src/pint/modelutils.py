@@ -1,13 +1,16 @@
+import logger
 from pint.models.astrometry import AstrometryEquatorial, AstrometryEcliptic
 
 
-def convert_to_equatorial(model):
+def convert_to_equatorial(model,force=False):
     """Converts Astrometry model component, Ecliptic to Equatorial
 
       Parameters
       ----------
-      model
+      model: `pint.models.TimingModel` object
           current model with AstrometryEcliptic component
+      force: boolean, optional
+          will force conversion even if an equatorial component is already present
 
       Returns
       -------
@@ -15,35 +18,51 @@ def convert_to_equatorial(model):
           new model with AstrometryEquatorial component
     """
 
-    if "AstrometryEcliptic" in model.components:
+    if not ("AstrometryEquatorial" in model.components) or force:
+        if "AstrometryEquatorial" in model.components:
+            logger.warning(
+                "Equatorial coordinates already present but re-calculating anyway"
+            )
 
-        c = model.coords_as_ICRS()
-        a = AstrometryEquatorial()
+        if "AstrometryEcliptic" in model.component:
 
-        a.POSEPOCH = model.POSEPOCH
-        a.PX = model.PX
+            c = model.coords_as_ICRS()
+            a = AstrometryEquatorial()
 
-        a.RAJ.quantity = c.ra
-        a.DECJ.quantity = c.dec
-        a.PMRA.quantity = c.pm_ra_cosdec
-        a.PMDEC.quantity = c.pm_dec
+            a.POSEPOCH = model.POSEPOCH
+            a.PX = model.PX
 
-        model.add_component(a)
-        model.remove_component("AstrometryEcliptic")
+            a.RAJ.quantity = c.ra
+            a.DECJ.quantity = c.dec
+            a.PMRA.quantity = c.pm_ra_cosdec
+            a.PMDEC.quantity = c.pm_dec
+
+            model.add_component(a)
+            model.remove_component("AstrometryEcliptic")
+
+            model.setup()
+            model.validate()
+
+        else:
+            raise AttributeError(
+                "Requested conversion to equatorial coordinates, but no alternate coordinates found"
+            )
 
     else:
-        pass
+        logger.debug("Equatorial coordinates already present; not re-calculating")
 
     return model
 
 
-def convert_to_ecliptic(model):
-    """Converts Astrometry model component, Equatorial to Ecliptic
+def convert_to_ecliptic(model,force=False):
+      """Converts Astrometry model component, Equatorial to Ecliptic
 
       Parameters
       ----------
-      model
+      model: `pint.models.TimingModel` object
           current model with AstrometryEquatorial component
+      force: boolean, optional
+          will force conversion even if an ecliptic component is already present
 
       Returns
       -------
@@ -51,25 +70,37 @@ def convert_to_ecliptic(model):
           new model with AstrometryEcliptic component
     """
 
-    # Initial validation to make sure model is not in a bad state?
 
-    if "AstrometryEquatorial" in model.components:
+    if not ("AstrometryEcliptic" in model.components) or force:
+        if "AstrometryEcliptic" in model.components:
+            logger.warning(
+                "Ecliptic coordinates already present but re-calculating anyway"
+            )
+        if "AstrometryEquatorial" in model.components:
 
-        c = model.coords_as_ECL()
-        a = AstrometryEcliptic()
+            c = model.coords_as_ECL()
+            a = AstrometryEcliptic()
 
-        a.POSEPOCH = model.POSEPOCH
-        a.PX = model.PX
+            a.POSEPOCH = model.POSEPOCH
+            a.PX = model.PX
 
-        a.ELONG.quantity = c.lon
-        a.ELAT.quantity = c.lat
-        a.PMELONG.quantity = c.pm_lon_coslat
-        a.PMELAT.quantity = c.pm_lat
+            a.ELONG.quantity = c.lon
+            a.ELAT.quantity = c.lat
+            a.PMELONG.quantity = c.pm_lon_coslat
+            a.PMELAT.quantity = c.pm_lat
 
-        model.add_component(a)
-        model.remove_component("AstrometryEquatorial")
+            model.add_component(a)
+            model.remove_component("AstrometryEquatorial")
+
+            model.setup()
+            model.validate()
+
+        else:
+            raise AttributeError(
+                "Requested conversion to ecliptic coordinates, but no alternate coordinates found"
+            )
 
     else:
-        pass
+        logger.debug("Ecliptic coordinates already present; not re-calculating")
 
     return model
