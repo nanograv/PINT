@@ -1,10 +1,15 @@
-"""Test basic functionality of the :module:`pint.modelutils`."""
+import logging
+import os
+import unittest
+
+import astropy.units as u
+import numpy as np
 
 import pint.models.model_builder as mb
+import pint.toa as toa
+import test_derivative_utils as tdu
+from pint.residuals import Residuals
 from pinttestdata import datadir
-from pint import fitter, toa
-from pinttestdata import datadir
-import os
 
 from pint.modelutils import (
     convert_to_ecliptic,
@@ -12,39 +17,87 @@ from pint.modelutils import (
 )
 
 
-def test_convert_to_ecliptic():
+class TestEcliptic(unittest.TestCase):
+    """Test conversion from equatorial <-> ecliptic coordinates, and compare residuals."""
 
-    os.chdir(datadir)
-    parfileNGC6440E = "NGC6440E.par"
-    timNGC6440E = "NGC6440E.tim"
-    toasNGC6440E = toa.get_TOAs(
-        timNGC6440E, ephem="DE405", planets=False, include_bipm=False
-    )
-    ICRSmodelNGC6440E = mb.get_model(parfileNGC6440E)
-    ECLmodelNGC6440E = convert_to_ecliptic(ICRSmodelNGC6440E) 
+    @classmethod
+    def setUpClass(cls):
+        # J0613 is in equatorial
+        cls.parfileJ0613 = os.path.join(
+            datadir, "J0613-0200_NANOGrav_dfg+12_TAI_FB90.par"
+        )
+        cls.timJ0613 = os.path.join(datadir, "J0613-0200_NANOGrav_dfg+12.tim")
+        cls.toasJ0613 = toa.get_TOAs(
+            cls.timJ0613, ephem="DE405", planets=False, include_bipm=False
+        )
+        cls.modelJ0613 = mb.get_model(cls.parfileJ0613)
 
-    # Ensure a working model is returned (try fitting)
-    try:
-        ECLfitNGC6440E = fitter.WLSFitter(toasNGC6440E,ECLmodelNGC6440E)
-        ECLfitNGC6440E.fit_toas()
-    except:
-        pass
-        #??
+        # B1855+09 is in ecliptic
+        cls.parfileB1855 = os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par")
+        cls.timB1855 = os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim")
+        cls.toasB1855 = toa.get_TOAs(
+            cls.timB1855, ephem="DE421", planets=False, include_bipm=False
+        )
+        cls.modelB1855 = mb.get_model(cls.parfileB1855)
 
-    # Perhaps I should compare with ICRS resids to ensure there's no substantial difference?
+        cls.log = logging.getLogger("TestEcliptic")
 
-def test_convert_to_equatorial():
+    def test_to_ecliptic(self):
+        # determine residuals with base (equatorial) model
+        pint_resids_us = Residuals(
+            self.toasJ0613, self.modelJ0613, use_weighted_mean=False
+        ).time_resids.to(u.s)
 
-    os.chdir(datadir)
-    parfileJ0613 = "J0613-0200_NANOGrav_dfg+12_TAI_FB90.par"
-    timJ0613 = "J0613-0200_NANOGrav_dfg+12.tim"
-    toasJ0613 = toa.get_TOAs(
-        timJ0613, ephem="DE405", planets=False, include_bipm=False
-    )
-    ECLmodelJ0613 = mb.get_model(parfileJ0613)
-    ICRSmodelJ0613 = convert_to_equatorial(ECLmodelJ0613)
+        # convert model to ecliptic coordinates
+        ECLmodelJ0613 = convert_to_ecliptic(self.modelJ0613)
+        assert ECLmodelJ0613 is not None, "Creation of ecliptic model failed"
+        assert (
+            "AstrometryEcliptic" in ECLmodelJ0613.components
+        ), "Creation of ecliptic model failed"
+        assert not (
+            "AstrometryEquatorial" in ECLmodelJ0613.components
+        ), "Equatorial model still present"
+        self.log.debug("Ecliptic model created")
+
+        # determine residuals with new (ecliptic) model
+        ECLpint_resids_us = Residuals(
+            self.toasJ0613, ECLmodelJ0613, use_weighted_mean=False
+        ).time_resids.to(u.s)
+        self.log.debug(np.abs(pint_resids_us - ECLpint_resids_us))
+        msg = (
+            "Residual comparison to ecliptic model failed with max relative difference %e s"
+            % np.nanmax(np.abs(pint_resids_us - ECLpint_resids_us)).value
+        )
+        assert np.all(np.abs(pint_resids_us - ECLpint_resids_us) < 1e-10 * u.s), msg
+
+    def test_to_equatorial(self):
+        # determine residuals with base (ecliptic) model
+        pint_resids_us = Residuals(
+            self.toasB1855, self.modelB1855, use_weighted_mean=False
+        ).time_resids.to(u.s)
+
+        # convert model to ecliptic coordinates
+        EQUmodelB1855 = convert_to_equatorial(self.modelB1855)
+        assert EQUmodelB1855 is not None, "Creation of equatorial model failed"
+        assert (
+            "AstrometryEquatorial" in EQUmodelB1855.components
+        ), "Creation of equatorial model failed"
+        assert not (
+            "AstrometryEcliptic" in EQUmodelB1855.components
+        ), "Ecliptic model still present"
+        self.log.debug("Equatorial model created")
+
+        # determine residuals with new (equatorial) model
+        EQUpint_resids_us = Residuals(
+            self.toasB1855, EQUmodelB1855, use_weighted_mean=False
+        ).time_resids.to(u.s)
+        self.log.debug(np.abs(pint_resids_us - EQUpint_resids_us))
+        msg = (
+            "Residual comparison to ecliptic model failed with max relative difference %e s"
+            % np.nanmax(np.abs(pint_resids_us - EQUpint_resids_us)).value
+        )
+        assert np.all(np.abs(pint_resids_us - EQUpint_resids_us) < 1e-10 * u.s), msg
 
 
 if __name__ == "__main__":
-    test_convert_to_ecliptic()
-    test_convert_to_equatorial()
+    pass
