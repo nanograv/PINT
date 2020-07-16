@@ -178,14 +178,13 @@ class ScaleDmError(NoiseComponent):
 
     """
     register = True
-    category = "scale_toa_error"
+    category = "scale_dm_error"
 
     def __init__(self,):
         super(ScaleDmError, self).__init__()
         self.add_param(
              maskParameter(
                  name="DMEFAC",
-                 value=1.0,
                  units="",
                  description="A multiplication factor on"
                  " the measured DM uncertainties,",
@@ -195,7 +194,6 @@ class ScaleDmError(NoiseComponent):
         self.add_param(
             maskParameter(
                  name="DMEQUAD",
-                 value=0.0,
                  units="pc / cm ^ 3",
                  description="An error term added in "
                  "quadrature to the scaled (by"
@@ -204,8 +202,8 @@ class ScaleDmError(NoiseComponent):
         )
 
         self.dm_covariance_matrix_funcs = [self.dm_sigma_scaled_cov_matrix]
-        self.scaled_dm_sigma_funcs += [self.scale_dm_sigma]
-        self.match_param=True
+        self.scaled_dm_sigma_funcs += [self.scale_dm_sigma,]
+        self._paired_DMEFAC_DMEQUAD = None
 
     def setup(self):
         super(ScaleDmError, self).setup()
@@ -215,12 +213,19 @@ class ScaleDmError(NoiseComponent):
         for mask_par in self.get_params_of_type("maskParameter"):
             if mask_par.startswith("DMEFAC"):
                 par = getattr(self, mask_par)
-                self.DMEFACs[mask_par] = (par.key, tuple(par.key_value))
+                if par.key is not None:
+                    self.DMEFACs[mask_par] = (par.key, tuple(par.key_value))
             elif mask_par.startswith("DMEQUAD"):
                 par = getattr(self, mask_par)
-                self.DMEQUADs[mask_par] = (par.key, tuple(par.key_value))
+                if par.key is not None:
+                    self.DMEQUADs[mask_par] = (par.key, tuple(par.key_value))
             else:
                 continue
+
+        if len(self.DMEFACs) != len(self.DMEQUADs):
+            self._match_DMEFAC_DMEQUAD()
+        else:
+            self._paired_DMEFAC_DMEQUAD = self.pair_DMEFAC_DMEQUAD()
 
     def validate(self):
         super(ScaleDmError, self).validate()
@@ -230,59 +235,79 @@ class ScaleDmError(NoiseComponent):
             if [x for x in l if l.count(x) > 1] != []:
                 raise ValueError("'%s' have duplicated keys and key values." % el)
 
-    # pairing up EFAC and EQUAD
-    def pair_DMEFAC_DMEQUAD(self, match_param=True):
-        """ Pair the DMEFAC and DMEQUAD. If
-        """
-        pairs = []
-        p_map = {0: (self.DMEFAC1, 1), 1: (self.DMEQUAD1, 0)}
-        keys_param_pairs = {}
-        # We first check efac than check equad. This pair function will be
-        # updated by the parameter update.
-        for efac, efac_key in self.DMEFACs.items():
-            keys_param_pairs[efac_key] = [efac, None]
-        #
-        for equad, equad_key in self.DMEQUADs.items():
-            if equad_key in keys_param_pairs.keys():
-                keys_param_pairs[efac_key][1] = equad
+    def _match_DMEFAC_DMEQUAD(self, add_param_to_model=False):
+        """ Match the DMEFAC and DMEQUAD parameter, if only one parameter of the
+        DMEFAC-DMEQUAD pair is given. This match is based on the parameters key
+        and key value.
 
-        for key, params in keys_param_pairs.items():
+        Parameters
+        ----------
+        add_param_to_model: bool
+            Flags to add the parameters to the timing model instead of use the
+            default value temporarily. This is useful, if one wants to fit for
+            the match up parameters.
+        """
+        keys_and_values = {}
+        p_map = {0: (self.DMEFAC1, 1), 1: (self.DMEQUAD1, 0)}
+        keys_and_values = self.pair_DMEFAC_DMEQUAD()
+        # match params.
+        for kvs, params in keys_and_values.items():
             if None in params:
-                if match_param:
-                    # TODO move this to the param class.
-                    idx = params.index(None)
-                    exist_param = getattr(self, params[1 - idx])
-                    if exist_param.index == 1:
-                        new_param = self.DMEQUAD1
-                    else:
-                        new_param = p_map[idx][0].new_param(exist_param.index)
-                    # Little more attribute set up on the parameter
-                    new_param.value = p_map[idx][1]
-                    #new_param.units = p_map[idx][0].units
-                    new_param.key = exist_param.key
-                    new_param.key_value = exist_param.key_value
-                    new_param.description = p_map[idx][0].description
-                    if exist_param.index != 1:
-                        self.add_param(new_param)
-                    params[idx] = new_param.name
-                    self.match_param = True
+                p_type = params.index(None)
+                example_add_param = p_map[p_type][0]
+                pair_param = params[1-p_type]
+                param_idx = pair_param.index
+                param_name = example_add_param.prefix + str(param_idx)
+                # search existing param but without any assigned keys
+                add_param = example_add_param.new_param(param_idx)
+                add_param.value = p_map[p_type][1]
+                add_param.key = kvs[0]
+                add_param.key_value = kvs[1]
+                params[p_type] = add_param
+                if add_param_to_model:
+                    self.add_param(add_param)
+        if add_param_to_model:
+            self.setup()
+        else:
+            self._paired_DMEFAC_DMEQUAD = keys_and_values
+
+    # pairing up EFAC and EQUAD
+    def pair_DMEFAC_DMEQUAD(self):
+        """ Pair the DMEFAC and DMEQUAD.
+        """
+        keys_and_values = {}
+        # Check the dm efac first
+        for dmefac, efac_key in self.DMEFACs.items():
+            if efac_key[0] is not None:
+                keys_and_values[efac_key] = [getattr(self, dmefac), None]
+        # Check the dm equad then
+        for dmequad, equad_key in self.DMEQUADs.items():
+            if equad_key[0] is not None:
+                # Add matches.
+                if equad_key in keys_and_values.keys():
+                    keys_and_values[equad_key][1] = getattr(self, dmequad)
                 else:
-                    raise ValueError(
-                        "Can not pair up DMEFACs and DMEQUADs, please "
-                        " check the DMEFAC/DMEQUAD keys and key values."
-                    )
-            if match_param:
-                self.setup()
-        return list(keys_param_pairs.values())
+                    keys_and_values[equad_key] = [None, getattr(self, dmequard)]
+
+        return keys_and_values
 
     def scale_dm_sigma(self, toas):
-        # We should handle the
+        """
+        Scale the DM uncertainty.
+
+        Parameters
+        ----------
+        toas: `pint.toa.TOAs` object
+            Input DM error object. We assume DM error is stored in the TOA
+            objects.
+        """
         sigma_old = toas.get_dm_errors()
         sigma_scaled = np.zeros_like(sigma_old)
-        EF_EQ_pairs = self.pair_DMEFAC_DMEQUAD()
-        for pir in EF_EQ_pairs:
-            efac = getattr(self, pir[0])
-            equad = getattr(self, pir[1])
+        if self._paired_DMEFAC_DMEQUAD is None:
+            self.setup()
+        for pir in self._paired_DMEFAC_DMEQUAD.values():
+            efac = pir[0]
+            equad = pir[1]
             mask = efac.select_toa_mask(toas)
             sigma_scaled[mask] = efac.quantity * np.sqrt(
                 sigma_old[mask] ** 2 + (equad.quantity) ** 2

@@ -325,13 +325,24 @@ class TimingModel(object):
                 cvfs += nc.dm_covariance_matrix_funcs
         return cvfs
 
+    # Change sigma to uncertainty to avoid name conflict.
     @property
-    def scaled_toa_sigma_funcs(self,):
-        """List of scaled uncertainty functions."""
+    def scaled_toa_uncertainty_funcs(self,):
+        """List of scaled toa uncertainty functions."""
         ssfs = []
         if "NoiseComponent" in self.component_types:
             for nc in self.NoiseComponent_list:
                 ssfs += nc.scaled_toa_sigma_funcs
+        return ssfs
+
+    # Change sigma to uncertainty to avoid name conflict.
+    @property
+    def scaled_dm_uncertainty_funcs(self,):
+        """List of scaled dm uncertainty functions."""
+        ssfs = []
+        if "NoiseComponent" in self.component_types:
+            for nc in self.NoiseComponent_list:
+                ssfs += nc.scaled_dm_sigma_funcs
         return ssfs
 
     @property
@@ -775,11 +786,11 @@ class TimingModel(object):
         tbl = toas.table
         result = np.zeros(ntoa) * u.us
         # When there is no noise model.
-        if len(self.scaled_toa_sigma_funcs) == 0:
+        if len(self.scaled_toa_uncertainty_funcs) == 0:
             result += tbl["error"].quantity
             return result
 
-        for nf in self.scaled_toa_sigma_funcs:
+        for nf in self.scaled_toa_uncertainty_funcs:
             result += nf(toas)
         return result
 
@@ -797,11 +808,11 @@ class TimingModel(object):
         dm_error = np.array(dm_error)[valid] * u.pc/u.cm ** 3
         result = np.zeros(len(dm_error)) * u.pc/u.cm ** 3
         # When there is no noise model.
-        if len(self.scaled_dm_sigma_funcs) == 0:
+        if len(self.scaled_dm_uncertainty_funcs) == 0:
             result += dm_error
             return result
 
-        for nf in self.scaled_dm_sigma_funcs:
+        for nf in self.scaled_dm_uncertainty_funcs:
             result += nf(toas)
         return result
 
