@@ -24,7 +24,7 @@ def convert_to_equatorial(model, force=False):
                 "Equatorial coordinates already present but re-calculating anyway"
             )
 
-        if "AstrometryEcliptic" in model.component:
+        if "AstrometryEcliptic" in model.components:
 
             c = model.coords_as_ICRS()
             a = AstrometryEquatorial()
