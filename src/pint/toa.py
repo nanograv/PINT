@@ -919,7 +919,7 @@ class TOAs(object):
     def get_dm_errors(self):
         """ Get the Wideband DM data error
         """
-        result, valid = self.get_flag_value('pp_dme')
+        result, valid = self.get_flag_value("pp_dme")
         if valid == []:
             raise AttributeError("No DM error is provided.")
         return np.array(result)[valid] * u.pc / u.cm ** 3

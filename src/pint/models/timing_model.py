@@ -365,9 +365,9 @@ class TimingModel(object):
         return self.get_deriv_funcs("DelayComponent")
 
     @property
-    def dm_derivs(self): #  TODO need to be careful about the name here.
+    def dm_derivs(self):  #  TODO need to be careful about the name here.
         """List of dm derivative functions."""
-        return self.get_deriv_funcs("DelayComponent", 'dm')
+        return self.get_deriv_funcs("DelayComponent", "dm")
 
     @property
     def d_phase_d_delay_funcs(self):
@@ -377,15 +377,15 @@ class TimingModel(object):
             Dphase_Ddelay += cp.phase_derivs_wrt_delay
         return Dphase_Ddelay
 
-    def get_deriv_funcs(self, component_type, derivative_type=''):
+    def get_deriv_funcs(self, component_type, derivative_type=""):
         """Return dictionary of derivative functions.
         """
         # TODO, this function can be a more generical function collector.
         deriv_funcs = defaultdict(list)
-        if not derivative_type == '':
-            derivative_type += '_'
+        if not derivative_type == "":
+            derivative_type += "_"
         for cp in getattr(self, component_type + "_list"):
-            for k, v in getattr(cp, derivative_type + 'deriv_funcs').items():
+            for k, v in getattr(cp, derivative_type + "deriv_funcs").items():
                 deriv_funcs[k] += v
         return dict(deriv_funcs)
 
@@ -757,8 +757,8 @@ class TimingModel(object):
            If there is no noise model component provided, a diagonal matrix with
            TOAs error as diagonal element will be returned.
         """
-        dms, valid_dm = toas.get_flag_value('pp_dm')
-        dmes, valid_dme = toas.get_flag_value('pp_dme')
+        dms, valid_dm = toas.get_flag_value("pp_dm")
+        dmes, valid_dme = toas.get_flag_value("pp_dme")
         dms = np.array(dms)[valid_dm]
         n_dms = len(dms)
         dmes = np.array(dmes)[valid_dme]
@@ -804,9 +804,9 @@ class TimingModel(object):
         toas: `pint.toa.TOAs` object
             The input data object for DM uncertainty.
         """
-        dm_error, valid = toas.get_flag_value('pp_dme')
-        dm_error = np.array(dm_error)[valid] * u.pc/u.cm ** 3
-        result = np.zeros(len(dm_error)) * u.pc/u.cm ** 3
+        dm_error, valid = toas.get_flag_value("pp_dme")
+        dm_error = np.array(dm_error)[valid] * u.pc / u.cm ** 3
+        result = np.zeros(len(dm_error)) * u.pc / u.cm ** 3
         # When there is no noise model.
         if len(self.scaled_dm_uncertainty_funcs) == 0:
             result += dm_error
@@ -1096,17 +1096,14 @@ class TimingModel(object):
         par.value = ori_value
         return d_delay * (u.second / unit)
 
-
     def d_dm_d_param(self, data, param):
         """Return the derivative of dm with respect to the parameter."""
         par = getattr(self, param)
         result = np.zeros(len(data)) << (u.pc / u.cm ** 3 / par.units)
         dm_df = self.dm_derivs.get(param, None)
         if dm_df is None:
-            if param not in self.params: # Maybe add differentitable params
-                raise AttributeError(
-                "Parametre {} does not exist".format(param)
-            )
+            if param not in self.params:  # Maybe add differentitable params
+                raise AttributeError("Parametre {} does not exist".format(param))
             else:
                 return result
 
@@ -1391,7 +1388,7 @@ class TimingModel(object):
                     "didn't find parameter {}".format(name, param)
                 )
             # Disable here for now. TODO  need to modified.
-            #log.info("Final object: {}".format(repr(self)))
+            # log.info("Final object: {}".format(repr(self)))
 
         self.setup()
         # The "validate" functions contain tests for required parameters or

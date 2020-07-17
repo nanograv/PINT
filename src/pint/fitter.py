@@ -19,7 +19,7 @@ from pint.pint_matrix import (
     combine_design_matrices_by_quantity,
     combine_design_matrices_by_param,
     combine_covariance_matrix,
-    )
+)
 
 import pint.residuals as pr
 
@@ -927,7 +927,7 @@ class GLSFitter(Fitter):
         return chi2
 
 
-class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
+class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
     """ A class to for fitting TOAs and other independent measured data.
 
     Parameters
@@ -945,20 +945,26 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
         The additional arguments for making residuals.
     """
 
-    def __init__(self, fit_data, model, fit_data_names=['toa', 'dm'],  additional_args={}):
+    def __init__(
+        self, fit_data, model, fit_data_names=["toa", "dm"], additional_args={}
+    ):
         self.model_init = model
         # Check input data and data_type
         self.fit_data_names = fit_data_names
         # convert the non tuple input to a tuple
         if not isinstance(fit_data, (tuple, list)):
-            fit_data = [fit_data,]
+            fit_data = [
+                fit_data,
+            ]
         if not isinstance(fit_data[0], TOAs):
             raise ValueError("The first data set should be a TOAs object.")
         if len(fit_data_names) == 0:
             raise ValueError("Please specify the fit data.")
         if len(fit_data) > 1 and len(fit_data_names) != len(fit_data):
-            raise ValueError("If one more data sets are provided, the fit "
-                             "data have to match the fit data names.")
+            raise ValueError(
+                "If one more data sets are provided, the fit "
+                "data have to match the fit data names."
+            )
         self.fit_data = fit_data
         self.additional_args = additional_args
         # Get the makers for fitting parts.
@@ -966,20 +972,18 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
         self.resids_init = copy.deepcopy(self.resids)
         self.designmatrix_makers = []
         for data_resids in self.resids.residual_objs:
-            self.designmatrix_makers.append(DesignMatrixMaker(
-                data_resids.residual_type,
-                data_resids.unit)
-                )
+            self.designmatrix_makers.append(
+                DesignMatrixMaker(data_resids.residual_type, data_resids.unit)
+            )
 
         # Add noise design matrix maker
-        self.noise_designmatrix_maker = DesignMatrixMaker('toa_noise', u.s)
+        self.noise_designmatrix_maker = DesignMatrixMaker("toa_noise", u.s)
         #
         self.covariancematrix_makers = []
         for data_resids in self.resids.residual_objs:
-            self.covariancematrix_makers.append(CovarianceMatrixMaker(
-                data_resids.residual_type,
-                data_resids.unit)
-                )
+            self.covariancematrix_makers.append(
+                CovarianceMatrixMaker(data_resids.residual_type, data_resids.unit)
+            )
 
         self.method = "General_Data_Fitter"
 
@@ -991,15 +995,21 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
         resid_obj = []
         if len(self.fit_data) == 1:
             for data_name in self.fit_data_names:
-                r_obj = pr.Residuals(self.fit_data[0], self.model,
-                                  residual_type=data_name,
-                                  **add_args.get(data_name, {}))
+                r_obj = pr.Residuals(
+                    self.fit_data[0],
+                    self.model,
+                    residual_type=data_name,
+                    **add_args.get(data_name, {})
+                )
                 resid_obj.append(r_obj)
         else:
             for ii, data_name in enumerate(self.fit_data_names):
-                r_obj = pr.Residuals(self.fit_data[ii], self.model,
-                                  residual_type=data_name,
-                                  **add_args.get(data_name, {}))
+                r_obj = pr.Residuals(
+                    self.fit_data[ii],
+                    self.model,
+                    residual_type=data_name,
+                    **add_args.get(data_name, {})
+                )
                 resid_obj.append(r_obj)
         # Place the residual collector
         return pr.CombinedResiduals(resid_obj)
@@ -1019,16 +1029,16 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
         fit_params = list(self.get_fitparams().keys())
         if len(self.fit_data) == 1:
             for ii, dmatrix_maker in enumerate(self.designmatrix_makers):
-                design_matrixs.append(dmatrix_maker(self.fit_data[0],
-                                                    self.model,
-                                                    fit_params,
-                                                    offset=True))
+                design_matrixs.append(
+                    dmatrix_maker(self.fit_data[0], self.model, fit_params, offset=True)
+                )
         else:
             for ii, dmatrix_maker in enumerate(self.designmatrix_makers):
-                design_matrixs.append(dmatrix_maker(self.fit_data[ii],
-                                                    self.model,
-                                                    fit_params,
-                                                    offset=True))
+                design_matrixs.append(
+                    dmatrix_maker(
+                        self.fit_data[ii], self.model, fit_params, offset=True
+                    )
+                )
         return combine_design_matrices_by_quantity(design_matrixs)
 
     def make_noise_covariancematrix(self):
@@ -1036,12 +1046,10 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
         cov_matrixs = []
         if len(self.fit_data) == 1:
             for ii, cmatrix_maker in enumerate(self.covariancematrix_makers):
-                cov_matrixs.append(cmatrix_maker(self.fit_data[0],
-                                                    self.model))
+                cov_matrixs.append(cmatrix_maker(self.fit_data[0], self.model))
         else:
             for ii, cmatrix_maker in enumerate(self.covariancematrix_makers):
-                cov_matrixs.append(cmatrix_maker(self.fit_data[ii],
-                                                    self.model))
+                cov_matrixs.append(cmatrix_maker(self.fit_data[ii], self.model))
 
         return combine_covariance_matrix(cov_matrixs)
 
@@ -1052,7 +1060,7 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
         ----
         TODO, make this more general.
         """
-        func_map = {'toa': 'get_errors', 'dm': 'get_dm_errors'}
+        func_map = {"toa": "get_errors", "dm": "get_dm_errors"}
         error_func_name = func_map[data_name]
         if hasattr(data_obj, error_func_name):
             return getattr(data_obj, error_func_name)()
@@ -1066,7 +1074,7 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
         scaled_sigmas = []
         sigma_units = []
         for ii, fd_name in enumerate(self.fit_data_names):
-            func_name = 'scaled_{}_uncertainty'.format(fd_name)
+            func_name = "scaled_{}_uncertainty".format(fd_name)
             sigma_units.append(self.resids.residual_objs[ii].unit)
             if hasattr(self.model, func_name):
                 scale_func = getattr(self.model, func_name)
@@ -1077,19 +1085,17 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
             else:
                 if len(self.fit_data) == 1:
                     original_sigma = self.get_data_uncertainty(
-                        fd_name,
-                        self.fit_data[0]
-                        )
+                        fd_name, self.fit_data[0]
+                    )
                 else:
                     original_sigma = self.get_data_uncertainty(
-                        fd_name,
-                        self.fit_data[ii]
-                        )
+                        fd_name, self.fit_data[ii]
+                    )
                 scaled_sigmas.append(original_sigma)
 
         scaled_sigmas_no_unit = []
         for ii, scaled_sigma in enumerate(scaled_sigmas):
-            if hasattr(scaled_sigma, 'unit'):
+            if hasattr(scaled_sigma, "unit"):
                 scaled_sigmas_no_unit.append(scaled_sigma.to_value(sigma_units[ii]))
             else:
                 scaled_sigmas_no_unit.append(scaled_sigma)
@@ -1098,7 +1104,7 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
     def fit_toas(self, maxiter=1, threshold=False, full_cov=False):
         # Maybe change the name to do_fit?
         # check that params of timing model have necessary components
-        #self.model.maskPar_has_toas_check(self.toas)
+        # self.model.maskPar_has_toas_check(self.toas)
         chi2 = 0
         for i in range(max(maxiter, 1)):
             fitp = self.get_fitparams()
@@ -1107,10 +1113,12 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
 
             # Define the linear system
             d_matrix = self.get_designmatrix()
-            M, params, units, scale_by_F0 = (d_matrix.matrix,
-                                             d_matrix.derivative_params,
-                                             d_matrix.param_units,
-                                             d_matrix.scaled_by_F0)
+            M, params, units, scale_by_F0 = (
+                d_matrix.matrix,
+                d_matrix.derivative_params,
+                d_matrix.param_units,
+                d_matrix.scaled_by_F0,
+            )
 
         # Get residuals and TOA uncertainties in seconds
         if i == 0:
@@ -1136,9 +1144,7 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
             norm[ntmpar:] = 1
         if np.any(norm == 0):
             # Make this a LinAlgError so it looks like other bad matrixness
-            raise sl.LinAlgError(
-                "One or more of the design-matrix columns is null."
-            )
+            raise sl.LinAlgError("One or more of the design-matrix columns is null.")
         M /= norm
 
         # compute covariance matrices
@@ -1167,9 +1173,7 @@ class WidebandTOAFitter(Fitter): # Is GLSFitter the best here?
                 U, s, Vt = sl.svd(mtcm, full_matrices=False)
 
                 if threshold:
-                    threshold_val = (
-                        np.finfo(np.longdouble).eps * max(M.shape) * s[0]
-                    )
+                    threshold_val = np.finfo(np.longdouble).eps * max(M.shape) * s[0]
                     s[s < threshold_val] = 0.0
 
                 xvar = np.dot(Vt.T / s, Vt)

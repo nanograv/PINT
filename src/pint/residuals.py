@@ -27,24 +27,28 @@ class Residuals:
         "use_pulse_numbers" uses the pulse_number column of the TOAs table to assign pulse numbers. This mode is
         selected automatically if the model has parameter TRACK == "-2".
     """
+
     def __new__(
         cls,
         toas=None,
         model=None,
-        residual_type='toa',
+        residual_type="toa",
         unit=u.s,
         subtract_mean=True,
         use_weighted_mean=True,
         track_mode="nearest",
-        scaled_by_F0=True
+        scaled_by_F0=True,
     ):
         if cls is Residuals:
             try:
                 cls = residual_map[residual_type.lower()]
             except KeyError:
-                raise ValueError("'{}' is not a PINT supported residual. Currently "
-                    "support data type are {}".format(residual_type,
-                    list(residual_map.keys())))
+                raise ValueError(
+                    "'{}' is not a PINT supported residual. Currently "
+                    "support data type are {}".format(
+                        residual_type, list(residual_map.keys())
+                    )
+                )
 
         return super().__new__(cls)
 
@@ -52,7 +56,7 @@ class Residuals:
         self,
         toas=None,
         model=None,
-        residual_type='toa',
+        residual_type="toa",
         unit=u.s,
         subtract_mean=True,
         use_weighted_mean=True,
@@ -370,16 +374,17 @@ class Residuals:
 class WidebandDMResiduals(Residuals):
     """ Residuals for independent DM measurement (i.e. Wideband TOAs).
     """
+
     def __init__(
         self,
         toas=None,
         model=None,
-        residual_type='dm',
+        residual_type="dm",
         unit=u.pc / u.cm ** 3,
         subtract_mean=True,
         use_weighted_mean=True,
         scaled_by_F0=False,
-        ):
+    ):
 
         self.toas = toas
         self.model = model
@@ -387,7 +392,7 @@ class WidebandDMResiduals(Residuals):
         self.unit = unit
         self.subtract_mean = subtract_mean
         self.use_weighted_mean = use_weighted_mean
-        self.base_unit = u.pc/u.cm**3
+        self.base_unit = u.pc / u.cm ** 3
         self.get_model_value = self.model.dm_value
         self.dm_data, self.dm_error = self.get_dm_data()
         self.scaled_by_F0 = scaled_by_F0
@@ -424,7 +429,7 @@ class WidebandDMResiduals(Residuals):
             else:
                 # Errs for weighted sum.  Units don't matter since they will
                 # cancel out in the weighted sum.
-                if (self.dm_error is None or np.any(self.dm_error == 0)):
+                if self.dm_error is None or np.any(self.dm_error == 0):
                     raise ValueError(
                         "Some DM errors are zero - cannot calculate the"
                         " weighted residuals."
@@ -438,9 +443,7 @@ class WidebandDMResiduals(Residuals):
         if (self.data_error.value == 0.0).any():
             return np.inf
         else:
-            return (
-                    (self.resids / self.data_error) ** 2.0
-               ).sum().decompose()
+            return ((self.resids / self.data_error) ** 2.0).sum().decompose()
 
     def rms_weighted(self):
         """Compute weighted RMS of the residals in time."""
@@ -468,8 +471,8 @@ class WidebandDMResiduals(Residuals):
         valide_index: list
             The TOA with DM data index.
         """
-        dm_data, valid_data = self.toas.get_flag_value('pp_dm')
-        dm_error, valid_error  = self.toas.get_flag_value('pp_dme')
+        dm_data, valid_data = self.toas.get_flag_value("pp_dm")
+        dm_error, valid_error = self.toas.get_flag_value("pp_dme")
         if valid_data == []:
             raise ValueError("Input TOA object does not have wideband DM values")
         if valid_error == []:
@@ -493,7 +496,7 @@ class WidebandDMResiduals(Residuals):
         self.model_func = self.model.dm_value
 
 
-residual_map = {'toa': Residuals, 'dm': WidebandDMResiduals}
+residual_map = {"toa": Residuals, "dm": WidebandDMResiduals}
 
 
 class CombinedResiduals(object):
@@ -510,6 +513,7 @@ class CombinedResiduals(object):
     Since different type of residuals has different of units. The overall
     residuals will have no units.
     """
+
     def __init__(self, residuals):
         self.residual_objs = residuals
 

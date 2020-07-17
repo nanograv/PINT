@@ -14,7 +14,7 @@ class NoiseComponent(Component):
     def __init__(self,):
         super(NoiseComponent, self).__init__()
         self.covariance_matrix_funcs = []
-        self.scaled_toa_sigma_funcs = [] # Need to move this to a speical place.
+        self.scaled_toa_sigma_funcs = []  # Need to move this to a speical place.
         self.scaled_dm_sigma_funcs = []
         self.basis_funcs = []
 
@@ -177,32 +177,35 @@ class ScaleDmError(NoiseComponent):
     Ref: NanoGrav 12.5 yrs wideband data
 
     """
+
     register = True
     category = "scale_dm_error"
 
     def __init__(self,):
         super(ScaleDmError, self).__init__()
         self.add_param(
-             maskParameter(
-                 name="DMEFAC",
-                 units="",
-                 description="A multiplication factor on"
-                 " the measured DM uncertainties,",
-             )
+            maskParameter(
+                name="DMEFAC",
+                units="",
+                description="A multiplication factor on"
+                " the measured DM uncertainties,",
+            )
         )
 
         self.add_param(
             maskParameter(
-                 name="DMEQUAD",
-                 units="pc / cm ^ 3",
-                 description="An error term added in "
-                 "quadrature to the scaled (by"
-                 " EFAC) TOA uncertainty.",
+                name="DMEQUAD",
+                units="pc / cm ^ 3",
+                description="An error term added in "
+                "quadrature to the scaled (by"
+                " EFAC) TOA uncertainty.",
             )
         )
 
         self.dm_covariance_matrix_funcs = [self.dm_sigma_scaled_cov_matrix]
-        self.scaled_dm_sigma_funcs += [self.scale_dm_sigma,]
+        self.scaled_dm_sigma_funcs += [
+            self.scale_dm_sigma,
+        ]
         self._paired_DMEFAC_DMEQUAD = None
 
     def setup(self):
@@ -255,7 +258,7 @@ class ScaleDmError(NoiseComponent):
             if None in params:
                 p_type = params.index(None)
                 example_add_param = p_map[p_type][0]
-                pair_param = params[1-p_type]
+                pair_param = params[1 - p_type]
                 param_idx = pair_param.index
                 param_name = example_add_param.prefix + str(param_idx)
                 # search existing param but without any assigned keys

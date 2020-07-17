@@ -297,8 +297,19 @@ def choose_model(
 
     par_dict = {}
     par_lines = []
-    multi_tags = set(["JUMP", "ECORR", "T2EFAC", "T2EQUAD", "EQUAD", "EFAC",
-                      "DMJUMP", "DMEFAC", "DMEQUAD"])
+    multi_tags = set(
+        [
+            "JUMP",
+            "ECORR",
+            "T2EFAC",
+            "T2EQUAD",
+            "EQUAD",
+            "EFAC",
+            "DMJUMP",
+            "DMEFAC",
+            "DMEQUAD",
+        ]
+    )
     multi_line = Counter()
     for l in interesting_lines(lines_of(parfile), comments=("#", "C ")):
         ll = l.split()
@@ -385,7 +396,7 @@ def choose_model(
                 par = alias_map[pre]
             except KeyError:
                 if pre in ignore_prefix:
-                    #log.warning("Ignoring unhandled prefix {}".format(pre))
+                    # log.warning("Ignoring unhandled prefix {}".format(pre))
                     continue
                 else:
                     raise ValueError(
@@ -400,7 +411,7 @@ def choose_model(
                     "Received duplicate parameter {}".format(new_parameter.name)
                 )
             tm.add_param_from_top(new_parameter, component)
-            #print("added", new_parameter)
+            # print("added", new_parameter)
         except PrefixError:
             pass
 

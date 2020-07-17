@@ -12,7 +12,7 @@ from pint.models.parameter import (
     floatParameter,
     prefixParameter,
     maskParameter,
-    )
+)
 from pint.models.timing_model import DelayComponent, MissingParameter
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
@@ -95,7 +95,7 @@ class Dispersion(DelayComponent):
             warn("Using topocentric frequency for dedispersion!")
             bfreq = tbl["freq"]
         param_unit = getattr(self, param_name).units
-        d_dm_d_dmparam = np.zeros(toas.ntoas) * u.pc / u.cm**3 / param_unit
+        d_dm_d_dmparam = np.zeros(toas.ntoas) * u.pc / u.cm ** 3 / param_unit
         for df in self.dm_deriv_funcs[param_name]:
             d_dm_d_dmparam += df(toas, param_name)
         return DMconst * d_dm_d_dmparam / bfreq ** 2.0
@@ -179,6 +179,7 @@ class DispersionDM(Dispersion):
         for dm_name in base_dms:
             self.register_deriv_funcs(self.d_delay_d_dmparam, dm_name)
             self.register_dm_deriv_funcs(self.d_dm_d_DMs, dm_name)
+
     def validate(self):
         """ Validate the DM parameters input.
         """
@@ -459,6 +460,7 @@ class DispersionDMX(Dispersion):
 class DispersionJump(Dispersion):
     """This class provides the contant offsets to the DM values.
     """
+
     register = True
     category = "dispersion_jump"
 
