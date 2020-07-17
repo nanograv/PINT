@@ -48,8 +48,6 @@ class TestGalactic(unittest.TestCase):
         # now do it for a future epoch
         J0613_icrs = self.modelJ0613.coords_as_ICRS(epoch=newepoch)
         # and use the coordinates now but use astropy's space motion
-        print(J0613_icrs)
-        print(J0613_icrs_now)
         print(
             J0613_icrs_now.apply_space_motion(
                 new_obstime=astropy.time.Time(newepoch, format="mjd")
@@ -59,6 +57,19 @@ class TestGalactic(unittest.TestCase):
             J0613_icrs_now.apply_space_motion(
                 new_obstime=astropy.time.Time(newepoch, format="mjd")
             )
+        )
+        sep = J0613_icrs.separation(J0613_icrs_now_to_then)
+        msg = (
+            "Applying proper motion for +100d failed with separation %.1e arcsec"
+            % sep.arcsec
+        )
+        assert sep < 1e-6 * u.arcsec, msg
+
+        # make sure it can support newepoch supplied as a Time object
+        newepoch = astropy.time.Time(newepoch, format="mjd")
+        J0613_icrs = self.modelJ0613.coords_as_ICRS(epoch=newepoch)
+        J0613_icrs_now_to_then = utils.remove_dummy_distance(
+            J0613_icrs_now.apply_space_motion(new_obstime=newepoch,)
         )
         sep = J0613_icrs.separation(J0613_icrs_now_to_then)
         msg = (
