@@ -272,16 +272,20 @@ class AstrometryEquatorial(Astrometry):
             dRA = 0.0 * u.hourangle
             dDEC = 0.0 * u.deg
             broadcast = 1
+            newepoch = self.POSEPOCH.quantity
         else:
             dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
             dRA = dt * self.PMRA.quantity / numpy.cos(self.DECJ.quantity.radian)
             dDEC = dt * self.PMDEC.quantity
             broadcast = numpy.ones_like(epoch)
-        return coords.ICRS(
+            newepoch = Time(epoch, format="mjd")
+        return coords.SkyCoord(
             ra=self.RAJ.quantity + dRA,
             dec=self.DECJ.quantity + dDEC,
             pm_ra_cosdec=self.PMRA.quantity * broadcast,
             pm_dec=self.PMDEC.quantity * broadcast,
+            obstime=newepoch,
+            frame=coords.ICRS,
         )
 
     def coords_as_ICRS(self, epoch=None):
@@ -533,18 +537,22 @@ class AstrometryEcliptic(Astrometry):
             dELONG = 0.0 * self.ELONG.units
             dELAT = 0.0 * self.ELAT.units
             broadcast = 1
+            newepoch = self.POSEPOCH.quantity
         else:
             dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
             dELONG = dt * self.PMELONG.quantity / numpy.cos(self.ELAT.quantity.radian)
             dELAT = dt * self.PMELAT.quantity
             broadcast = numpy.ones_like(epoch)
+            newepoch = Time(epoch, format="mjd")
 
-        pos_ecl = PulsarEcliptic(
+        pos_ecl = coords.SkyCoord(
             obliquity=obliquity,
             lon=self.ELONG.quantity + dELONG,
             lat=self.ELAT.quantity + dELAT,
             pm_lon_coslat=self.PMELONG.quantity * broadcast,
             pm_lat=self.PMELAT.quantity * broadcast,
+            frame=PulsarEcliptic,
+            obstime=newepoch,
         )
         return pos_ecl
 
