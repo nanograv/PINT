@@ -11,6 +11,7 @@ import test_derivative_utils as tdu
 from pint.residuals import Residuals
 from pinttestdata import datadir
 from pint.pulsar_ecliptic import PulsarEcliptic
+from pint import utils
 
 import astropy.coordinates
 import astropy.time
@@ -42,20 +43,22 @@ class TestGalactic(unittest.TestCase):
         # make sure it has obstime and distance supplied
         # to use it for conversions as well
         J0613_icrs = self.modelJ0613.coords_as_ICRS()
-        J0613_icrs_now = astropy.coordinates.SkyCoord(
-            ra=J0613_icrs.ra,
-            dec=J0613_icrs.dec,
-            pm_ra_cosdec=J0613_icrs.pm_ra_cosdec,
-            pm_dec=J0613_icrs.pm_dec,
-            distance=1 * u.kpc,
-            obstime=self.modelJ0613.POSEPOCH.quantity,
-        )
+        J0613_icrs_now = utils.add_dummy_distance(J0613_icrs)
         newepoch = self.modelJ0613.POSEPOCH.quantity.mjd + 100
         # now do it for a future epoch
         J0613_icrs = self.modelJ0613.coords_as_ICRS(epoch=newepoch)
         # and use the coordinates now but use astropy's space motion
-        J0613_icrs_now_to_then = J0613_icrs_now.apply_space_motion(
-            new_obstime=astropy.time.Time(newepoch, format="mjd")
+        print(J0613_icrs)
+        print(J0613_icrs_now)
+        print(
+            J0613_icrs_now.apply_space_motion(
+                new_obstime=astropy.time.Time(newepoch, format="mjd")
+            )
+        )
+        J0613_icrs_now_to_then = utils.remove_dummy_distance(
+            J0613_icrs_now.apply_space_motion(
+                new_obstime=astropy.time.Time(newepoch, format="mjd")
+            )
         )
         sep = J0613_icrs.separation(J0613_icrs_now_to_then)
         msg = (
@@ -78,25 +81,10 @@ class TestGalactic(unittest.TestCase):
         # make sure it has obstime and distance supplied
         # to use it for conversions as well
         J0613_icrs = self.modelJ0613.coords_as_ICRS()
-        J0613_icrs_now = astropy.coordinates.SkyCoord(
-            ra=J0613_icrs.ra,
-            dec=J0613_icrs.dec,
-            pm_ra_cosdec=J0613_icrs.pm_ra_cosdec,
-            pm_dec=J0613_icrs.pm_dec,
-            distance=1 * u.kpc,
-            obstime=self.modelJ0613.POSEPOCH.quantity,
-        )
+        J0613_icrs_now = utils.add_dummy_distance(J0613_icrs)
 
         J0613_galactic = self.modelJ0613.coords_as_GAL()
-        J0613_galactic_now = astropy.coordinates.SkyCoord(
-            l=J0613_galactic.l,
-            b=J0613_galactic.b,
-            pm_l_cosb=J0613_galactic.pm_l_cosb,
-            pm_b=J0613_galactic.pm_b,
-            distance=1 * u.kpc,
-            obstime=self.modelJ0613.POSEPOCH.quantity,
-            frame=astropy.coordinates.Galactic,
-        )
+        J0613_galactic_now = utils.add_dummy_distance(J0613_galactic)
 
         newepoch = self.modelJ0613.POSEPOCH.quantity.mjd + 100
 
@@ -119,8 +107,10 @@ class TestGalactic(unittest.TestCase):
         J0613_galactic_comparison = J0613_icrs.transform_to(
             astropy.coordinates.Galactic
         )
-        J0613_galactic_then = J0613_galactic_now.apply_space_motion(
-            new_obstime=astropy.time.Time(newepoch, format="mjd")
+        J0613_galactic_then = utils.remove_dummy_distance(
+            J0613_galactic_now.apply_space_motion(
+                new_obstime=astropy.time.Time(newepoch, format="mjd")
+            )
         )
         sep = J0613_galactic_then.separation(J0613_galactic_comparison)
         msg = (
@@ -143,26 +133,10 @@ class TestGalactic(unittest.TestCase):
         # make sure it has obstime and distance supplied
         # to use it for conversions as well
         B1855_ECL = self.modelB1855.coords_as_ECL()
-        B1855_ECL_now = astropy.coordinates.SkyCoord(
-            lon=B1855_ECL.lon,
-            lat=B1855_ECL.lat,
-            pm_lon_coslat=B1855_ECL.pm_lon_coslat,
-            pm_lat=B1855_ECL.pm_lat,
-            distance=1 * u.kpc,
-            obstime=self.modelB1855.POSEPOCH.quantity,
-            frame=PulsarEcliptic,
-        )
+        B1855_ECL_now = utils.add_dummy_distance(B1855_ECL)
 
         B1855_galactic = self.modelB1855.coords_as_GAL()
-        B1855_galactic_now = astropy.coordinates.SkyCoord(
-            l=B1855_galactic.l,
-            b=B1855_galactic.b,
-            pm_l_cosb=B1855_galactic.pm_l_cosb,
-            pm_b=B1855_galactic.pm_b,
-            distance=1 * u.kpc,
-            obstime=self.modelB1855.POSEPOCH.quantity,
-            frame=astropy.coordinates.Galactic,
-        )
+        B1855_galactic_now = utils.add_dummy_distance(B1855_galactic)
 
         newepoch = self.modelB1855.POSEPOCH.quantity.mjd + 100
 
@@ -180,8 +154,10 @@ class TestGalactic(unittest.TestCase):
         B1855_ECL = self.modelB1855.coords_as_ECL(epoch=newepoch)
         # what I get converting within astropy
         B1855_galactic_comparison = B1855_ECL.transform_to(astropy.coordinates.Galactic)
-        B1855_galactic_then = B1855_galactic_now.apply_space_motion(
-            new_obstime=astropy.time.Time(newepoch, format="mjd")
+        B1855_galactic_then = utils.remove_dummy_distance(
+            B1855_galactic_now.apply_space_motion(
+                new_obstime=astropy.time.Time(newepoch, format="mjd")
+            )
         )
         sep = B1855_galactic_then.separation(B1855_galactic_comparison)
         msg = (
