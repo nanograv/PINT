@@ -10,6 +10,7 @@ import pint.utils
 import scipy.linalg as sl
 import scipy.optimize as opt
 from astropy import log
+from pint.toa import TOAs
 from pint import Tsun
 from pint.utils import FTest
 from pint.pint_matrix import (
