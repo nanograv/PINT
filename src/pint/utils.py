@@ -1400,19 +1400,20 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
 
 
 def add_dummy_distance(c, distance=1 * u.kpc):
-    """Adds a dummy distance to a SkyCoord object for applying proper motion
+    """
+    Adds a dummy distance to a SkyCoord object for applying proper motion
 
     Parameters
-      ----------
-      c: `astropy.coordinates.sky_coordinate.SkyCoord` object
-          current SkyCoord object without distance but with proper motion and obstime
-      distance: `Quantity`, optional
-          distance to supply
+    ----------
+    c: `astropy.coordinates.sky_coordinate.SkyCoord` object
+        current SkyCoord object without distance but with proper motion and obstime
+    distance: `Quantity`, optional
+        distance to supply
 
-      Returns
-      -------
-      cnew
-          new SkyCoord object with a distance attached
+    Returns
+    -------
+    cnew
+        new SkyCoord object with a distance attached
     """
 
     if c.frame.data.differentials == {}:
@@ -1480,17 +1481,18 @@ def add_dummy_distance(c, distance=1 * u.kpc):
 
 
 def remove_dummy_distance(c):
-    """Removes a dummy distance from a SkyCoord object after applying proper motion
+    """
+    Removes a dummy distance from a SkyCoord object after applying proper motion
 
     Parameters
-      ----------
-      c: `astropy.coordinates.sky_coordinate.SkyCoord` object
-          current SkyCoord object with distance and with proper motion and obstime
+    ----------
+    c: `astropy.coordinates.sky_coordinate.SkyCoord` object
+        current SkyCoord object with distance and with proper motion and obstime
 
-      Returns
-      -------
-      cnew
-          new SkyCoord object with a distance removed
+    Returns
+    -------
+    cnew
+        new SkyCoord object with a distance removed
     """
 
     if c.frame.data.differentials == {}:
