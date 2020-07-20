@@ -159,7 +159,7 @@ class Glitch(PhaseComponent):
         for glepnm in glepnames:
             glep = getattr(self, glepnm)
             idx = glep.index
-            eph = glep.quantity.to_value("mjd", "long")
+            eph = glep.value
             dphs = getattr(self, "GLPH_%d" % idx).quantity
             dF0 = getattr(self, "GLF0_%d" % idx).quantity
             dF1 = getattr(self, "GLF1_%d" % idx).quantity
@@ -192,7 +192,7 @@ class Glitch(PhaseComponent):
         """Get the things we need for any of the derivative calcs"""
         tbl = toas.table
         p, ids, idv = split_prefixed_name(param)
-        eph = getattr(self, "GLEP_" + ids).quantity.to_value("mjd", "long")
+        eph = getattr(self, "GLEP_" + ids).value
         dt = (tbl["tdbld"] - eph) * u.day - delay
         dt = dt.to(u.second)
         affected = np.where(dt > 0.0)[0]
