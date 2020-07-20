@@ -2,7 +2,7 @@ import logging
 from pint.models.astrometry import AstrometryEquatorial, AstrometryEcliptic
 
 
-def convert_to_equatorial(model, force=False):
+def model_ecliptic_to_equatorial(model, force=False):
     r"""Converts Astrometry model component, Ecliptic to Equatorial
 
     Parameters
@@ -49,12 +49,12 @@ def convert_to_equatorial(model, force=False):
             )
 
     else:
-        logger.debug("Equatorial coordinates already present; not re-calculating")
+        logger.warning("Equatorial coordinates already present; not re-calculating")
 
     return model
 
 
-def convert_to_ecliptic(model, force=False):
+def model_equatorial_to_ecliptic(model, force=False):
     """Converts Astrometry model component, Equatorial to Ecliptic
 
     Parameters
@@ -100,6 +100,6 @@ def convert_to_ecliptic(model, force=False):
             )
 
     else:
-        logger.debug("Ecliptic coordinates already present; not re-calculating")
+        logger.warning("Ecliptic coordinates already present; not re-calculating")
 
     return model

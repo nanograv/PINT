@@ -7,13 +7,12 @@ import numpy as np
 
 import pint.models.model_builder as mb
 import pint.toa as toa
-import test_derivative_utils as tdu
 from pint.residuals import Residuals
 from pinttestdata import datadir
 
 from pint.modelutils import (
-    convert_to_ecliptic,
-    convert_to_equatorial,
+    model_equatorial_to_ecliptic,
+    model_ecliptic_to_equatorial,
 )
 
 
@@ -49,7 +48,7 @@ class TestEcliptic(unittest.TestCase):
         ).time_resids.to(u.s)
 
         # convert model to ecliptic coordinates
-        ECLmodelJ0613 = convert_to_ecliptic(self.modelJ0613)
+        ECLmodelJ0613 = model_equatorial_to_ecliptic(self.modelJ0613)
         assert ECLmodelJ0613 is not None, "Creation of ecliptic model failed"
         assert (
             "AstrometryEcliptic" in ECLmodelJ0613.components
@@ -77,7 +76,7 @@ class TestEcliptic(unittest.TestCase):
         ).time_resids.to(u.s)
 
         # convert model to ecliptic coordinates
-        EQUmodelB1855 = convert_to_equatorial(self.modelB1855)
+        EQUmodelB1855 = model_ecliptic_to_equatorial(self.modelB1855)
         assert EQUmodelB1855 is not None, "Creation of equatorial model failed"
         assert (
             "AstrometryEquatorial" in EQUmodelB1855.components
