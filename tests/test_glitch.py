@@ -59,7 +59,7 @@ class TestGlitch(unittest.TestCase):
                     h = 1e-8
                 else:
                     h = 1e-2
-                ndf = self.m.d_phase_d_param_num(self.t, param)
+                ndf = self.m.d_phase_d_param_num(self.t, param, h)
                 diff = adf - ndf
                 mean = (adf + ndf) / 2.0
                 r_diff = diff / mean
