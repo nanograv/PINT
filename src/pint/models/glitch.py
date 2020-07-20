@@ -91,7 +91,8 @@ class Glitch(PhaseComponent):
                 name="GLTD_1",
                 units="day",
                 value=0.0,
-                description_template=lambda x: "Decay time constant for" " glitch %d" % x,
+                description_template=lambda x: "Decay time constant for"
+                " glitch %d" % x,
                 unit_template=lambda x: "day",
                 type_match="float",
             )
@@ -101,7 +102,15 @@ class Glitch(PhaseComponent):
     def setup(self):
         super(Glitch, self).setup()
         # Check for required glitch epochs, set not specified parameters to 0
-        self.glitch_prop = ["GLEP_", "GLPH_", "GLF0_", "GLF1_", "GLF2_", "GLF0D_", "GLTD_"]
+        self.glitch_prop = [
+            "GLEP_",
+            "GLPH_",
+            "GLF0_",
+            "GLF1_",
+            "GLF2_",
+            "GLF0D_",
+            "GLTD_",
+        ]
         self.glitch_indices = [
             getattr(self, y).index
             for x in self.glitch_prop
@@ -293,9 +302,9 @@ class Glitch(PhaseComponent):
         glf0d = getattr(self, "GLF0D_" + ids).quantity
         tau = getattr(self, "GLTD_" + ids).quantity
         dpdGLEP = np.zeros(len(tbl), dtype=np.longdouble) / par_GLEP.units
-        dpdGLEP[affected] += -glf0 + \
-            -glf1 * dt[affected] + \
-            -0.5 * glf2 * dt[affected]**2
+        dpdGLEP[affected] += (
+            -glf0 + -glf1 * dt[affected] + -0.5 * glf2 * dt[affected] ** 2
+        )
         if tau.value != 0.0:
             dpdGLEP[affected] += -glf0d / np.exp(dt[affected] / tau)
         return dpdGLEP

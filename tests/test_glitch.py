@@ -23,10 +23,10 @@ class TestGlitch(unittest.TestCase):
         cls.t = pint.toa.get_TOAs(timfile, ephem="DE405", include_bipm=False)
         cls.f = pint.fitter.WLSFitter(cls.t, cls.m)
 
-    @pytest.mark.skipif(
-        "TEMPO2" not in os.environ,
-        reason="Needs TEMPO2 clock files, but TEMPO2 envariable not set",
-    )
+    # @pytest.mark.skipif(
+    #     "TEMPO2" not in os.environ,
+    #     reason="Needs TEMPO2 clock files, but TEMPO2 envariable not set",
+    # )
     def test_glitch(self):
         print("Test prefix parameter via a glitch model")
         rs = pint.residuals.Residuals(self.t, self.m).phase_resids
@@ -36,10 +36,10 @@ class TestGlitch(unittest.TestCase):
         emsg = "RMS of " + self.m.PSR.value + " is too big."
         assert self.f.resids.time_resids.std().to(u.us).value < 950.0, emsg
 
-    @pytest.mark.skipif(
-        "TEMPO2" not in os.environ,
-        reason="Needs TEMPO2 clock files, but TEMPO2 envariable not set",
-    )
+    # @pytest.mark.skipif(
+    #     "TEMPO2" not in os.environ,
+    #     reason="Needs TEMPO2 clock files, but TEMPO2 envariable not set",
+    # )
     @pytest.mark.filterwarnings("ignore:invalid value")
     def test_glitch_der(self):
         delay = self.m.delay(self.t)
@@ -54,7 +54,7 @@ class TestGlitch(unittest.TestCase):
                 param = pf + str(idx)
                 adf = self.m.d_phase_d_param(self.t, delay, param)
                 param_obj = getattr(self.m, param)
-                # Get numerical derivative steps. 
+                # Get numerical derivative steps.
                 if param_obj.units == u.day:
                     h = 1e-8
                 else:
