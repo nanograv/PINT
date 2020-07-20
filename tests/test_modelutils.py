@@ -5,8 +5,8 @@ import unittest
 import astropy.units as u
 import numpy as np
 
-import pint.models.model_builder as mb
 import pint.toa as toa
+from pint.models import get_model
 from pint.residuals import Residuals
 from pinttestdata import datadir
 
@@ -29,7 +29,7 @@ class TestEcliptic(unittest.TestCase):
         cls.toasJ0613 = toa.get_TOAs(
             cls.timJ0613, ephem="DE405", planets=False, include_bipm=False
         )
-        cls.modelJ0613 = mb.get_model(cls.parfileJ0613)
+        cls.modelJ0613 = get_model(cls.parfileJ0613)
 
         # B1855+09 is in ecliptic
         cls.parfileB1855 = os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par")
@@ -37,7 +37,7 @@ class TestEcliptic(unittest.TestCase):
         cls.toasB1855 = toa.get_TOAs(
             cls.timB1855, ephem="DE421", planets=False, include_bipm=False
         )
-        cls.modelB1855 = mb.get_model(cls.parfileB1855)
+        cls.modelB1855 = get_model(cls.parfileB1855)
 
         cls.log = logging.getLogger("TestEcliptic")
 
