@@ -53,7 +53,13 @@ class TestGlitch(unittest.TestCase):
                     getattr(self.m, "GLTD_%d" % idx).value = 0.0
                 param = pf + str(idx)
                 adf = self.m.d_phase_d_param(self.t, delay, param)
-                ndf = self.m.d_phase_d_param_num(self.t, param)
+                param_obj = getattr(self.m, param)
+                # Get numerical derivative steps.
+                if param_obj.units == u.day:
+                    h = 1e-8
+                else:
+                    h = 1e-2
+                ndf = self.m.d_phase_d_param_num(self.t, param, h)
                 diff = adf - ndf
                 mean = (adf + ndf) / 2.0
                 r_diff = diff / mean

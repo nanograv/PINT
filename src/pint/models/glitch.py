@@ -91,7 +91,8 @@ class Glitch(PhaseComponent):
                 name="GLTD_1",
                 units="day",
                 value=0.0,
-                description_template=lambda x: "Decay time constant for" " glitch %d" % x,
+                description_template=lambda x: "Decay time constant for"
+                " glitch %d" % x,
                 unit_template=lambda x: "day",
                 type_match="float",
             )
@@ -101,7 +102,15 @@ class Glitch(PhaseComponent):
     def setup(self):
         super(Glitch, self).setup()
         # Check for required glitch epochs, set not specified parameters to 0
-        self.glitch_prop = ["GLEP_", "GLPH_", "GLF0_", "GLF1_", "GLF2_", "GLF0D_", "GLTD_"]
+        self.glitch_prop = [
+            "GLEP_",
+            "GLPH_",
+            "GLF0_",
+            "GLF1_",
+            "GLF2_",
+            "GLF0D_",
+            "GLTD_",
+        ]
         self.glitch_indices = [
             getattr(self, y).index
             for x in self.glitch_prop
@@ -159,7 +168,7 @@ class Glitch(PhaseComponent):
         for glepnm in glepnames:
             glep = getattr(self, glepnm)
             idx = glep.index
-            eph = glep.quantity.to_value("mjd", "long")
+            eph = glep.value
             dphs = getattr(self, "GLPH_%d" % idx).quantity
             dF0 = getattr(self, "GLF0_%d" % idx).quantity
             dF1 = getattr(self, "GLF1_%d" % idx).quantity
@@ -192,7 +201,7 @@ class Glitch(PhaseComponent):
         """Get the things we need for any of the derivative calcs"""
         tbl = toas.table
         p, ids, idv = split_prefixed_name(param)
-        eph = getattr(self, "GLEP_" + ids).quantity.to_value("mjd", "long")
+        eph = getattr(self, "GLEP_" + ids).value
         dt = (tbl["tdbld"] - eph) * u.day - delay
         dt = dt.to(u.second)
         affected = np.where(dt > 0.0)[0]
@@ -293,9 +302,9 @@ class Glitch(PhaseComponent):
         glf0d = getattr(self, "GLF0D_" + ids).quantity
         tau = getattr(self, "GLTD_" + ids).quantity
         dpdGLEP = np.zeros(len(tbl), dtype=np.longdouble) / par_GLEP.units
-        dpdGLEP[affected] += -glf0 + \
-            -glf1 * dt[affected] + \
-            -0.5 * glf2 * dt[affected]**2
+        dpdGLEP[affected] += (
+            -glf0 + -glf1 * dt[affected] + -0.5 * glf2 * dt[affected] ** 2
+        )
         if tau.value != 0.0:
             dpdGLEP[affected] += -glf0d / np.exp(dt[affected] / tau)
         return dpdGLEP
