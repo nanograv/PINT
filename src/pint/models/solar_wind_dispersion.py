@@ -6,7 +6,6 @@ from warnings import warn
 import astropy.constants as const
 import astropy.units as u
 import numpy as np
-
 import pint.utils as ut
 from pint.models.dispersion_model import Dispersion, DMconst
 from pint.models.parameter import floatParameter
@@ -108,7 +107,7 @@ class SolarWindDispersion(Dispersion):
 
             # ret = AUdist**2.0 / const.c * np.arccos(cos_theta) * DMconst / \
             ret = (
-                AUdist ** 2.0
+                const.au ** 2.0
                 * np.arccos(cos_theta)
                 * DMconst
                 / (r * np.sqrt(1 - cos_theta ** 2.0) * bfreq ** 2.0)
