@@ -6,6 +6,7 @@ import numpy as np
 from itertools import combinations
 import astropy.units as u
 from collections import OrderedDict
+import copy
 
 
 __all__ = [
@@ -71,22 +72,6 @@ class PintMatrix:
             units.append(self.get_axis_labels(dim))
         return units
 
-    def get_label(self, label):
-        """ Get information for a label
-
-        Parameter
-        ---------
-        label: str
-            Name of the label.
-        """
-        lbs = []
-        for ii, dim in enumerate(self.axis_labels):
-            lb = dim.get(label, None)
-            if lb is not None:
-                lbs.append((ii, lb))
-        if lbs == []:
-            raise ValueError("Can not find label {} in the matrix.".format(label))
-
     def get_label_size(self, label):
         """ Get the size of the a label in each axises.
 
@@ -98,7 +83,7 @@ class PintMatrix:
         lb_sizes = []
         lbs = self.get_label(label)
         for ii, lb in enumerate(lbs):
-            size = lb[1] - lb[0]
+            size = lb[3] - lb[2]
             lb_sizes.append((ii, size))
         return lb_sizes
 
@@ -122,10 +107,26 @@ class PintMatrix:
         """ Get the label entry and its dimension. We assume the labels are
         unique in the matrix.
         """
+        all_label = []
         for ii, dim in enumerate(self.axis_labels):
             if label in dim.keys():
-                return (label, ii, dim[label])
-        raise KeyError("Label {} is not in the matrix".format(label))
+                all_label.append((label, ii) + dim[label])
+        if all_label == []:
+            raise KeyError("Label {} is not in the matrix".format(label))
+        else:
+            return all_label
+
+    def get_label_along_axis(self, axis, label_name):
+        """
+        Get the request label from on axis.
+        """
+        label_in_one_axis = self.axis_labels[axis]
+        if label_name in label_in_one_axis.keys():
+            return (label_name, axis) + label_in_one_axis[label_name]
+        else:
+            raise ValueError("Label '{}' is not in the axis {}".format(label_name,
+                                                                       axis))
+
 
     def get_label_slice(self, labels):
         """ Return the given label slices.
@@ -464,95 +465,96 @@ def combine_design_matrices_by_quantity(design_matrices):
     return result
 
 
-def combine_design_matrices_by_param(design_matrices, padding=0.0):
+def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
     """ A fast method to combine two design matrix along the param axis.
 
     Parameter
     ---------
-    design_matrices: `pint_matrix.DesignMatrix` object
+    matrix1: `pint_matrix.DesignMatrix` object
+        The input design matrices.
+    matrix2: `pint_matrix.DesignMatrix` object
         The input design matrices.
     padding: float, optional
         The padding number if the derivative quantity is independent from the
         parameters. Default is 0.0.
     """
     # init the quantity axis.
-    axis_labels = design_matrices[0].axis_labels
-    all_matrix = []
-    # Detect duplicate parameter
+    axis_labels = copy.deepcopy(matrix1.axis_labels)
 
-    offset = 0
-    base_params = design_matrices[0].derivative_params
-    base_quantity = design_matrices[0].derivative_quantity
-    base_quantity_index = {}
-    for bq in base_quantity:
-        # Since quantity can only be in the first dimension. We only take one
-        # here.
-        lb_index = design_matrices[0].get_label(bq)[0]
-        base_quantity_index[bq] = lb_index[0:2]
-    # Add metrix one by one
-    for ii, d_matrix in enumerate(design_matrices):
-        if ii == 0:
-            shape0_offset = d_matrix.shape[0]
-            new_matrix = d_matrix.M
-        # Detect duplicate parameter
-        if ii != 0:
-            new_index = {}
-            for d_param in d_matrix.derivative_params:
-                if d_param in base_params:
-                    raise ValueError(
-                        "Input design matrix {} has duplicated "
-                        " parameters with matrix {}".format(ii, 0)
-                    )
-            # check quantity and padding.
-            for d_quantity in d_matrix.derivative_quantity:
-                input_label = d_matrix.get_label(d_quantity)[0]
-                if d_quantity in base_quantity:
-                    # Check quantity size
-                    d_quantity_size = input_label[1] - input_label[0]
-                    base_size = (
+    # Get the base matrix labels and indcies.
+    base_params = matrix1.derivative_params
+    base_quantity_index = matrix1.axis_labels[0]
+
+    # Check if the parameters has overlap.
+    for d_param in matrix2.derivative_params:
+        if d_param in base_params:
+            raise ValueError(
+                "Input design matrix {} has duplicated "
+                " parameters with matrix {}".format(ii, 0)
+                )
+    # check if input design matrix has same quantity and padding.
+    new_quantity_index = {}
+    append_offset = matrix1.shape[0]
+    base_matrix = matrix1.matrix
+    for d_quantity in matrix2.derivative_quantity:
+        quantity_label = matrix2.get_label_along_axis(0, d_quantity)
+        if d_quantity in base_quantity_index.keys():
+        # Check quantity size
+            d_quantity_size = quantity_label[3] - quantity_label[2]
+            base_size = (
                         base_quantity_index[d_quantity][1]
                         - base_quantity_index[d_quantity][0]
-                    )
-                    if d_quantity_size != base_quantity_index[d_quantity]:
-                        raise ValueError(
-                            "Input design matrix {}'s label "
-                            "{} has different size with matrix"
-                            " {}".format(ii, d_quantity, 0)
                         )
-                    else:
-                        # assign new index for combined matrix
-                        new_index[d_quantity] = (
-                            base_quantity_index[d_quantity][0],
-                            base_quantity_index[d_quantity][1],
-                        )
-                else:
-                    append_size = d_matrix.label_size(d_quantity)[0][1]
-                    new_index[d_quantity] = (
-                        design_matrices[0].shape[0] + new_size,
-                        design_matrices[0].shape[0] + new_size + append_size,
-                    )
-                    shape0_offset += append_size
-                    axis_labels[0].update(
-                        {d_quantity: new_index[d_quantity] + (input_label[2],)}
-                    )
-                axis_labels[1].update({d_matrix.axis_label[1]})
 
-            new_append = np.zeros((shape0_offest, d_matrix.shape[1]))
-            new_append.fill(padding)
-            # Append new quantity on the old matrix
-            if shape0_offset > design_matrices[0].shape[0]:
-                old_append = np.zeros(
-                    (
-                        shape0_offest - design_matrices[0].shape[0],
-                        design_matrices[0].shape[1],
+            if d_quantity_size != base_size:
+                raise ValueError(
+                    "Input design matrix's label "
+                    "{} has different size with matrix"
+                    " {}".format(d_quantity, 0)
                     )
+            else:
+                # assign new index for combined matrix
+                new_quantity_index[d_quantity] = (
+                    base_quantity_index[d_quantity][0],
+                    base_quantity_index[d_quantity][1]
+                    )
+
+        else:
+            # if quantity is not in the base matrix, append to the base matrix
+            append_size = matrix2.get_label_size(d_quantity)[0][1]
+            new_quantity_index[d_quantity] = (
+                append_offset,
+                append_offset + append_size,
+                    )
+            append_offset += append_size
+            append_data = np.zeros((append_size, matrix2.shape[1]))
+            append_data.fill(padding)
+            base_matrix = np.vstack((base_matrix, append_data))
+
+        axis_labels[0].update(
+            {d_quantity: new_quantity_index[d_quantity] + (quantity_label[2],)}
                 )
-                old_append.fill(padding)
-                new_matrix = np.vstack([new_matrix, old_append])
 
-            # append the new matrix
-            new_matrix = np.hstack([new_matrix, new_append])
-    return DesignMatrix(new_matrix, axis_labels)
+    # Combine matrix
+    # make default new matrix with the rigth size
+    new_matrix = np.zeros((base_matrix.shape[0], matrix2.shape[1]))
+    new_matrix.fill(padding)
+    # Fill up the new_matrix with matrix2
+    for quantity, new_idx in new_quantity_index.items():
+        old_idx = matrix2.get_label_along_axis(0, d_quantity)[2:4]
+        new_matrix[new_idx[0] : new_idx[1], :] = matrix2.matrix[old_idx[0] : old_idx[1], :]
+
+    new_param_label = []
+    param_offset = matrix1.shape[1]
+    for lb, lb_index in matrix2.axis_labels[1].items(): # change parameter index
+        new_param_label.append((lb, (lb_index[0] + param_offset,
+                                lb_index[1] + param_offset, lb_index[2])))
+        param_offset += lb_index[1] - lb_index[0]
+
+    axis_labels[1].update(dict(new_param_label))
+    # append the new matrix
+    result = np.hstack([base_matrix, new_matrix])
+    return DesignMatrix(result, axis_labels)
 
 
 class CovarianceMatrix(PintMatrix):

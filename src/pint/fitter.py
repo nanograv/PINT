@@ -162,7 +162,6 @@ class Fitter(object):
         """
         self.set_params({k: v for k, v in zip(args, x)})
         self.update_resids()
-        print(type(self.resids))
         # Return chi^2
         return self.resids.chi2
 
@@ -1041,7 +1040,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 )
         return combine_design_matrices_by_quantity(design_matrixs)
 
-    def make_noise_covariancematrix(self):
+    def get_noise_covariancematrix(self):
         # TODO This needs to be more general
         cov_matrixs = []
         if len(self.fit_data) == 1:
@@ -1135,7 +1134,13 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             phiinv = np.zeros(M.shape[1])
             if Mn is not None and phi is not None:
                 phiinv = np.concatenate((phiinv, 1 / phi))
-                M = np.hstack((M, Mn))
+                new_d_matrix = combine_design_matrices_by_param(d_matrix, Mn)
+                M, params, units, scale_by_F0 = (
+                    new_d_matrix.matrix,
+                    new_d_matrix.derivative_params,
+                    new_d_matrix.param_units,
+                    new_d_matrix.scaled_by_F0,
+                )
 
         # normalize the design matrix
         norm = np.sqrt(np.sum(M ** 2, axis=0))
@@ -1150,7 +1155,6 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         # compute covariance matrices
         if full_cov:
             cov = self.make_noise_covariancematrix().matrix
-            print(cov.shape, M.shape)
             cf = sl.cho_factor(cov)
             cm = sl.cho_solve(cf, M)
             mtcm = np.dot(M.T, cm)

@@ -1,6 +1,7 @@
 """ Test for pint design matrix"""
 import os
 import pytest
+import numpy as np
 
 from pint.models import get_model
 from pint.toa import get_TOAs
@@ -26,6 +27,7 @@ class TestDesignMatrix:
                 self.default_test_param.append(p)
         self.test_param_lite = ["F0", "ELONG", "ELAT", "DMX_0023", "JUMP1", "DMJUMP2"]
         self.phase_designmatrix_maker = DesignMatrixMaker("phase", u.Unit(""))
+        self.toa_designmatrix_maker =  DesignMatrixMaker("toa", u.s)
         self.dm_designmatrix_maker = DesignMatrixMaker("dm", u.pc / u.cm ** 3)
         self.noise_designmatrix_maker = DesignMatrixMaker("toa_noise", u.s)
 
@@ -53,7 +55,7 @@ class TestDesignMatrix:
             self.toas, self.model, test_param
         )
 
-    def test_combine_designmatrix(self):
+    def test_combine_designmatrix_quantity(self):
         phase_designmatrix = self.phase_designmatrix_maker(
             self.toas, self.model, self.test_param_lite
         )
@@ -79,3 +81,29 @@ class TestDesignMatrix:
         assert noise_designmatrix.shape[0] == toas.ntoas
         assert noise_designmatrix.derivative_quantity == ["toa"]
         assert noise_designmatrix.derivative_params == ["toa_noise_params"]
+
+    def test_combine_designmatrix_all(self):
+        toas = get_TOAs("B1855+09_NANOGrav_12yv3.wb.tim")
+        model = get_model("B1855+09_NANOGrav_12yv3.wb.gls.par")
+        noise_designmatrix = self.noise_designmatrix_maker(toas, model)
+
+        toa_designmatrix = self.toa_designmatrix_maker(
+            toas, model, self.test_param_lite
+        )
+        dm_designmatrix = self.dm_designmatrix_maker(
+            toas, model, self.test_param_lite, offset=True, offset_padding=0.0
+        )
+        combined_quantity = combine_design_matrices_by_quantity(
+            [toa_designmatrix, dm_designmatrix,]
+        )
+        combined_param = combine_design_matrices_by_param(combined_quantity,
+            noise_designmatrix)
+
+
+        assert combined_param.shape == (toa_designmatrix.shape[0] +
+                                        dm_designmatrix.shape[0],
+                                        toa_designmatrix.shape[1] +
+                                        noise_designmatrix.shape[1])
+
+        assert np.all(combined_param.matrix[toas.ntoas : toas.ntoas * 2,
+            toa_designmatrix.shape[1]::] == 0.0)
