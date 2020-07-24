@@ -27,7 +27,7 @@ class TestDesignMatrix:
                 self.default_test_param.append(p)
         self.test_param_lite = ["F0", "ELONG", "ELAT", "DMX_0023", "JUMP1", "DMJUMP2"]
         self.phase_designmatrix_maker = DesignMatrixMaker("phase", u.Unit(""))
-        self.toa_designmatrix_maker =  DesignMatrixMaker("toa", u.s)
+        self.toa_designmatrix_maker = DesignMatrixMaker("toa", u.s)
         self.dm_designmatrix_maker = DesignMatrixMaker("dm", u.pc / u.cm ** 3)
         self.noise_designmatrix_maker = DesignMatrixMaker("toa_noise", u.s)
 
@@ -96,14 +96,18 @@ class TestDesignMatrix:
         combined_quantity = combine_design_matrices_by_quantity(
             [toa_designmatrix, dm_designmatrix,]
         )
-        combined_param = combine_design_matrices_by_param(combined_quantity,
-            noise_designmatrix)
+        combined_param = combine_design_matrices_by_param(
+            combined_quantity, noise_designmatrix
+        )
 
+        assert combined_param.shape == (
+            toa_designmatrix.shape[0] + dm_designmatrix.shape[0],
+            toa_designmatrix.shape[1] + noise_designmatrix.shape[1],
+        )
 
-        assert combined_param.shape == (toa_designmatrix.shape[0] +
-                                        dm_designmatrix.shape[0],
-                                        toa_designmatrix.shape[1] +
-                                        noise_designmatrix.shape[1])
-
-        assert np.all(combined_param.matrix[toas.ntoas : toas.ntoas * 2,
-            toa_designmatrix.shape[1]::] == 0.0)
+        assert np.all(
+            combined_param.matrix[
+                toas.ntoas : toas.ntoas * 2, toa_designmatrix.shape[1] : :
+            ]
+            == 0.0
+        )

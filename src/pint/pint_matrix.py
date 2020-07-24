@@ -124,9 +124,9 @@ class PintMatrix:
         if label_name in label_in_one_axis.keys():
             return (label_name, axis) + label_in_one_axis[label_name]
         else:
-            raise ValueError("Label '{}' is not in the axis {}".format(label_name,
-                                                                       axis))
-
+            raise ValueError(
+                "Label '{}' is not in the axis {}".format(label_name, axis)
+            )
 
     def get_label_slice(self, labels):
         """ Return the given label slices.
@@ -491,7 +491,7 @@ def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
             raise ValueError(
                 "Input design matrix {} has duplicated "
                 " parameters with matrix {}".format(ii, 0)
-                )
+            )
     # check if input design matrix has same quantity and padding.
     new_quantity_index = {}
     append_offset = matrix1.shape[0]
@@ -499,25 +499,24 @@ def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
     for d_quantity in matrix2.derivative_quantity:
         quantity_label = matrix2.get_label_along_axis(0, d_quantity)
         if d_quantity in base_quantity_index.keys():
-        # Check quantity size
+            # Check quantity size
             d_quantity_size = quantity_label[3] - quantity_label[2]
             base_size = (
-                        base_quantity_index[d_quantity][1]
-                        - base_quantity_index[d_quantity][0]
-                        )
+                base_quantity_index[d_quantity][1] - base_quantity_index[d_quantity][0]
+            )
 
             if d_quantity_size != base_size:
                 raise ValueError(
                     "Input design matrix's label "
                     "{} has different size with matrix"
                     " {}".format(d_quantity, 0)
-                    )
+                )
             else:
                 # assign new index for combined matrix
                 new_quantity_index[d_quantity] = (
                     base_quantity_index[d_quantity][0],
-                    base_quantity_index[d_quantity][1]
-                    )
+                    base_quantity_index[d_quantity][1],
+                )
 
         else:
             # if quantity is not in the base matrix, append to the base matrix
@@ -525,7 +524,7 @@ def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
             new_quantity_index[d_quantity] = (
                 append_offset,
                 append_offset + append_size,
-                    )
+            )
             append_offset += append_size
             append_data = np.zeros((append_size, matrix2.shape[1]))
             append_data.fill(padding)
@@ -533,7 +532,7 @@ def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
 
         axis_labels[0].update(
             {d_quantity: new_quantity_index[d_quantity] + (quantity_label[2],)}
-                )
+        )
 
     # Combine matrix
     # make default new matrix with the rigth size
@@ -542,13 +541,16 @@ def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
     # Fill up the new_matrix with matrix2
     for quantity, new_idx in new_quantity_index.items():
         old_idx = matrix2.get_label_along_axis(0, d_quantity)[2:4]
-        new_matrix[new_idx[0] : new_idx[1], :] = matrix2.matrix[old_idx[0] : old_idx[1], :]
+        new_matrix[new_idx[0] : new_idx[1], :] = matrix2.matrix[
+            old_idx[0] : old_idx[1], :
+        ]
 
     new_param_label = []
     param_offset = matrix1.shape[1]
-    for lb, lb_index in matrix2.axis_labels[1].items(): # change parameter index
-        new_param_label.append((lb, (lb_index[0] + param_offset,
-                                lb_index[1] + param_offset, lb_index[2])))
+    for lb, lb_index in matrix2.axis_labels[1].items():  # change parameter index
+        new_param_label.append(
+            (lb, (lb_index[0] + param_offset, lb_index[1] + param_offset, lb_index[2]))
+        )
         param_offset += lb_index[1] - lb_index[0]
 
     axis_labels[1].update(dict(new_param_label))
