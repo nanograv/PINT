@@ -135,6 +135,15 @@ class Glitch(PhaseComponent):
             if not hasattr(self, "GLEP_%d" % idx):
                 msg = "Glitch Epoch is needed for Glitch %d." % idx
                 raise MissingParameter("Glitch", "GLEP_%d" % idx, msg)
+            else:  # Check to see if both the epoch and phase are to be fit
+                if hasattr(self, "GLPH_%d" % idx):
+                    if (not getattr(self, "GLEP_%d" % idx).frozen) and (
+                        not getattr(self, "GLPH_%d" % idx).frozen
+                    ):
+                        raise ValueError(
+                            "Both the glitch epoch and phase cannot be fit for Glitch %d."
+                            % idx
+                        )
 
         # Check the Decay Term.
         glf0dparams = [x for x in self.params if x.startswith("GLF0D_")]
