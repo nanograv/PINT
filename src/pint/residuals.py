@@ -1,21 +1,21 @@
 from __future__ import absolute_import, division, print_function
 
+import abc
 import astropy.units as u
 import numpy as np
 from scipy.linalg import LinAlgError
 from astropy import log
+import collections
 
 from pint.phase import Phase
 from pint.utils import weighted_mean
 
-__all__ = ["Residuals"]
-
-# also we import from fitter, down below to avoid circular relative imports
+__all__ = ["Residuals", "WidebandDMResiduals", "residual_map"]
 
 
-class Residuals(object):
+class Residuals:
     """Class to compute residuals between TOAs and a TimingModel
-    
+
     Parameters
     ----------
     subtract_mean : bool
@@ -28,16 +28,44 @@ class Residuals(object):
         selected automatically if the model has parameter TRACK == "-2".
     """
 
+    def __new__(
+        cls,
+        toas=None,
+        model=None,
+        residual_type="toa",
+        unit=u.s,
+        subtract_mean=True,
+        use_weighted_mean=True,
+        track_mode="nearest",
+        scaled_by_F0=True,
+    ):
+        if cls is Residuals:
+            try:
+                cls = residual_map[residual_type.lower()]
+            except KeyError:
+                raise ValueError(
+                    "'{}' is not a PINT supported residual. Currently "
+                    "support data type are {}".format(
+                        residual_type, list(residual_map.keys())
+                    )
+                )
+
+        return super().__new__(cls)
+
     def __init__(
         self,
         toas=None,
         model=None,
+        residual_type="toa",
+        unit=u.s,
         subtract_mean=True,
         use_weighted_mean=True,
         track_mode="nearest",
+        scaled_by_F0=True,
     ):
         self.toas = toas
         self.model = model
+        self.residual_type = residual_type
         self.subtract_mean = subtract_mean
         self.use_weighted_mean = use_weighted_mean
         self.track_mode = track_mode
@@ -55,6 +83,22 @@ class Residuals(object):
         # only relevant if there are correlated errors
         self._chi2 = None
         self.noise_resids = {}
+        self.scaled_by_F0 = scaled_by_F0
+        # We should be carefully for the other type of residuals
+        self.unit = unit
+
+    @property
+    def resids(self):
+        if self.scaled_by_F0:
+            return self.time_resids
+        else:
+            if self.phase_resids is None:
+                self.phase_resids = self.calc_phase_resids()
+            return self.phase_resids
+
+    @property
+    def data_error(self):
+        return self.toas.get_errors()
 
     @property
     def chi2_reduced(self):
@@ -67,6 +111,15 @@ class Residuals(object):
             self._chi2 = self.calc_chi2()
         assert self._chi2 is not None
         return self._chi2
+
+    @property
+    def resids_value(self):
+        """ Get pure value of the residuals use the given base unit.
+        """
+        if not self.scaled_by_F0:
+            return self.resids.to_value(self.unit / u.s)
+        else:
+            return self.resids.to_value(self.unit)
 
     def rms_weighted(self):
         """Compute weighted RMS of the residals in time."""
@@ -257,8 +310,8 @@ class Residuals(object):
         residuals.  Requires ECORR be used in the timing model.  If
         use_noise_model is true, the noise model terms (EFAC, EQUAD, ECORR) will
         be applied to the TOA uncertainties, otherwise only the raw
-        uncertainties will be used.  
-        
+        uncertainties will be used.
+
         Returns a dictionary with the following entries:
 
           mjds           Average MJD for each segment
@@ -287,7 +340,7 @@ class Residuals(object):
         ecorr_err2 *= u.s * u.s
 
         if use_noise_model:
-            err = self.model.scaled_sigma(self.toas)
+            err = self.model.scaled_toa_uncertainty(self.toas)
         else:
             err = self.toas.get_errors()
             ecorr_err2 *= 0.0
@@ -316,3 +369,193 @@ class Residuals(object):
         avg["indices"] = [list(np.where(U[:, i])[0]) for i in range(U.shape[1])]
 
         return avg
+
+
+class WidebandDMResiduals(Residuals):
+    """ Residuals for independent DM measurement (i.e. Wideband TOAs).
+    """
+
+    def __init__(
+        self,
+        toas=None,
+        model=None,
+        residual_type="dm",
+        unit=u.pc / u.cm ** 3,
+        subtract_mean=True,
+        use_weighted_mean=True,
+        scaled_by_F0=False,
+    ):
+
+        self.toas = toas
+        self.model = model
+        self.residual_type = residual_type
+        self.unit = unit
+        self.subtract_mean = subtract_mean
+        self.use_weighted_mean = use_weighted_mean
+        self.base_unit = u.pc / u.cm ** 3
+        self.get_model_value = self.model.dm_value
+        self.dm_data, self.dm_error = self.get_dm_data()
+        self.scaled_by_F0 = scaled_by_F0
+        self._chi2 = None
+
+    @property
+    def resids(self):
+        return self.calc_resids()
+
+    @property
+    def resids_value(self):
+        """ Get pure value of the residuals use the given base unit.
+        """
+        return self.resids.to_value(self.unit)
+
+    @property
+    def data_error(self):
+        return self.dm_error
+
+    @property
+    def chi2(self):
+        """Compute chi-squared as needed and cache the result"""
+        if self._chi2 is None:
+            self._chi2 = self.calc_chi2()
+        assert self._chi2 is not None
+        return self._chi2
+
+    def calc_resids(self):
+        model_value = self.get_model_value(self.toas)
+        resids = self.dm_data - model_value
+        if self.subtract_mean:
+            if not self.use_weighted_mean:
+                resids -= resids.mean()
+            else:
+                # Errs for weighted sum.  Units don't matter since they will
+                # cancel out in the weighted sum.
+                if self.dm_error is None or np.any(self.dm_error == 0):
+                    raise ValueError(
+                        "Some DM errors are zero - cannot calculate the"
+                        " weighted residuals."
+                    )
+                w = 1.0 / (self.dm_error ** 2)
+                wm = (resids * w).sum() / w.sum()
+                resids -= wm
+        return resids
+
+    def calc_chi2(self):
+        if (self.data_error.value == 0.0).any():
+            return np.inf
+        else:
+            return ((self.resids / self.data_error) ** 2.0).sum().decompose()
+
+    def rms_weighted(self):
+        """Compute weighted RMS of the residals in time."""
+        if np.any(self.data_error.value == 0):
+            raise ValueError(
+                "Some TOA errors are zero - cannot calculate weighted RMS of residuals"
+            )
+        w = 1.0 / (self.data_error ** 2)
+
+        wmean, werr, wsdev = weighted_mean(self.resids, w, sdev=True)
+        return wsdev
+
+    def get_dm_data(self):
+        """Get the independent measured DM data from TOA flags.
+
+        Return
+        ------
+        valid_dm: `numpy.ndarray`
+            Independent measured DM data from TOA line. It only returns the DM
+            values that is present in the TOA flags.
+
+        valid_error: `numpy.ndarray`
+            The error associated with DM values in the TOAs.
+
+        valide_index: list
+            The TOA with DM data index.
+        """
+        dm_data, valid_data = self.toas.get_flag_value("pp_dm")
+        dm_error, valid_error = self.toas.get_flag_value("pp_dme")
+        if valid_data == []:
+            raise ValueError("Input TOA object does not have wideband DM values")
+        if valid_error == []:
+            raise ValueError("Input TOA object does not have wideband DM errors")
+        valid_dm = np.array(dm_data)[valid_data]
+        valid_error = np.array(dm_error)[valid_error]
+        # Check valid error, if an error is none, change it to zero
+        if len(valid_dm) != len(valid_error):
+            raise ValueError("Input TOA object' DM data and DM errors do not match.")
+        return valid_dm * self.unit, valid_error * self.unit
+
+    def update_model(self, new_model, **kwargs):
+        """ Up date DM models from a new PINT timing model
+
+        Parameter
+        ---------
+        new_model: `pint.timing_model.TimingModel`
+        """
+
+        self.model = new_model
+        self.model_func = self.model.dm_value
+
+
+residual_map = {"toa": Residuals, "dm": WidebandDMResiduals}
+
+
+class CombinedResiduals(object):
+    """ A class provides uniformed API that collects result from different type
+    of residuals.
+
+    Parameter
+    ---------
+    residuals: List of residual objects
+        A list of different typs of residual objects
+
+    Note
+    ----
+    Since different type of residuals has different of units. The overall
+    residuals will have no units.
+    """
+
+    def __init__(self, residuals):
+        self.residual_objs = residuals
+
+    @property
+    def resids(self):
+        """ Residuals from all of the residual types.
+        """
+        all_resids = []
+        for res in self.residual_objs:
+            all_resids.append(res.resids_value)
+        return np.hstack(all_resids)
+
+    @property
+    def unit(self):
+        return [res.unit for res in self.residual_objs]
+
+    @property
+    def chi2(self):
+        chi2 = 0
+        for res in self.residual_objs:
+            chi2 += res.chi2
+        return chi2
+
+    @property
+    def data_error(self):
+        # Since it is the combinde residual, the units are removed.
+        dr = self.get_data_error()
+        return np.hstack([rv.value for rv in dr.values()])
+
+    def get_data_error(self):
+        errors = []
+        for rs in self.residual_objs:
+            errors.append((rs.residual_type, rs.data_error))
+        return collections.OrderedDict(errors)
+
+    def rms_weighted(self):
+        """Compute weighted RMS of the residals in time."""
+        if np.any(self.data_error == 0):
+            raise ValueError(
+                "Some data errors are zero - cannot calculate weighted RMS of residuals"
+            )
+        w = 1.0 / (self.data_error ** 2)
+
+        wmean, werr, wsdev = weighted_mean(self.resids, w, sdev=True)
+        return wsdev

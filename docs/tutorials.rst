@@ -16,3 +16,5 @@ We don't really have any proper tutorials yet. But for the moment, we have a few
    examples/build_model_from_scratch
    examples/understanding_fitters
    examples/MCMC_walkthrough
+   examples/Wideband_TOA_walkthrough
+   examples/build_model_from_scratch
