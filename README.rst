@@ -21,6 +21,10 @@ PINT
     :target: https://github.com/nanograv/PINT/blob/master/LICENSE.md
     :alt: License:BSD
 
+.. image:: https://img.shields.io/badge/code_of_conduct-Contributor_Covenant-blue.svg
+    :target: https://github.com/nanograv/PINT/blob/master/CODE_OF_CONDUCT.md
+    :alt: Code of Conduct
+
 PINT is not TEMPO3
 ------------------
 
