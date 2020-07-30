@@ -1075,11 +1075,11 @@ class PlkWidget(tk.Frame):
                     # Left click is select
                     self.selected[ind] = not self.selected[ind]
                     self.updatePlot(keepAxes=True)
-                    self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
                     # if point is being selected (instead of unselected) or
                     # point is unselected but other points remain selected
                     if self.selected[ind] or any(self.selected):
                         # update selected_toas object w/ selected points
+                        self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
                         self.psr.selected_toas.select(self.selected)
                         self.psr.update_resids()
                         self.call_updates()
@@ -1095,14 +1095,16 @@ class PlkWidget(tk.Frame):
                 xmin, xmax = xmax, xmin
             if ymin > ymax:
                 ymin, ymax = ymax, ymin
-            self.selected = (self.xvals.value > xmin) & (self.xvals.value < xmax)
-            self.selected &= (self.yvals.value > ymin) & (self.yvals.value < ymax)
+            selected = (self.xvals.value > xmin) & (self.xvals.value < xmax)
+            selected &= (self.yvals.value > ymin) & (self.yvals.value < ymax)
+            self.selected |= selected
             self.updatePlot(keepAxes=True)
             self.plkCanvas._tkcanvas.delete(self.brect)
-            self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-            self.psr.selected_toas.select(self.selected)
-            self.psr.update_resids()
-            self.call_updates()
+            if any(self.selected):
+                self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
+                self.psr.selected_toas.select(self.selected)
+                self.psr.update_resids()
+                self.call_updates()
 
     def canvasKeyEvent(self, event):
         """
