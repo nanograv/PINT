@@ -179,7 +179,9 @@ class PlkFitBoxesWidget(tk.Frame):
                     )
                 )
                 if par in fitparams:
-                    self.compCBs[ii].select()
+                    # default DispersionDMX to off so graph not overwhelmed by parameters
+                    if comp is not "DispersionDMX":
+                        self.compCBs[ii].select()
                     self.compGrids[ii][pp].select()
             ii += 1
 
