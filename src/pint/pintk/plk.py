@@ -63,6 +63,9 @@ plotlabels = {
     "rounded MJD": r"MJD",
 }
 
+# Note to developers: the 't' key and the 'Shift' key produce the same selection number.
+# Selecting the 'Shift' key will enact any functionality intended for the 't' key.
+# Thus, it may be better to avoid designating the 't' key for any future functionality.
 helpstring = """The following interactions are currently supported by the Plk pane in the PINTkinter GUI:
 
 Left click:     Select a point
@@ -91,7 +94,7 @@ o:              Print the postfit model as of this moment (if it exists)
 
 p:              Print info about highlighted points (or all, if none are selected)
 
-t:              Print the range of MJDs with the highest density of TOAs
+m:              Print the range of MJDs with the highest density of TOAs
 
 +:              Increase pulse number for selected points
 
@@ -1121,10 +1124,12 @@ class PlkWidget(tk.Frame):
             self.psr.add_phase_wrap(self.selected, -1)
             self.updatePlot(keepAxes=True)
             self.call_updates()
+            log.info("Pulse number for selected points decreased.")
         elif ukey == ord("+"):
             self.psr.add_phase_wrap(self.selected, 1)
             self.updatePlot(keepAxes=True)
             self.call_updates()
+            log.info("Pulse number for selected points increased.")
         elif ukey == ord(">"):
             if np.sum(self.selected) > 0:
                 selected = copy.deepcopy(self.selected)
@@ -1133,6 +1138,7 @@ class PlkWidget(tk.Frame):
                 self.psr.add_phase_wrap(selected, 1)
                 self.updatePlot(keepAxes=False)
                 self.call_updates()
+                log.info("Pulse numbers to the right of selection increased.")
         elif ukey == ord("<"):
             if np.sum(self.selected) > 0:
                 selected = copy.deepcopy(self.selected)
@@ -1141,6 +1147,7 @@ class PlkWidget(tk.Frame):
                 self.psr.add_phase_wrap(selected, -1)
                 self.updatePlot(keepAxes=False)
                 self.call_updates()
+                log.info("Pulse numbers to the right of selection decreased.")
         elif ukey == ord("d"):
             # if any of the points are jumped, tell the user to delete the jump(s) first
             jumped_copy = copy.deepcopy(self.jumped)
@@ -1236,5 +1243,5 @@ class PlkWidget(tk.Frame):
             self.print_info()
         elif ukey == ord("h"):
             print(helpstring)
-        elif ukey == ord("t"):
+        elif ukey == ord("m"):
             print(self.psr.all_toas.get_highest_density_range())
