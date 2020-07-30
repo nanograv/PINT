@@ -795,12 +795,13 @@ class TimingModel(object):
         return result
 
     def scaled_dm_uncertainty(self, toas):
-        """ This a function to get the scaled DM data uncertainties noise models.
+        """ Get the scaled DM data uncertainties noise models.
+        
             If there is no noise model component provided, a vector with
             DM error as values will be returned.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         toas: `pint.toa.TOAs` object
             The input data object for DM uncertainty.
         """

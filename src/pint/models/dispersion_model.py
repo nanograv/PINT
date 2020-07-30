@@ -56,9 +56,9 @@ class Dispersion(DelayComponent):
     def dm_value(self, toas):
         """ Compute modeled DM value at given TOAs.
 
-        Parameter
-        ---------
-        toas: `TOAs` object or TOA table(TOAs.table)
+        Parameters
+        ----------
+        toas : `TOAs` object or TOA table(TOAs.table)
              If given a TOAs object, it will use the whole TOA table in the
              `TOAs` object.
 
@@ -81,11 +81,11 @@ class Dispersion(DelayComponent):
 
         Parameters
         ----------
-        toas: `pint.TOAs` object.
+        toas : `pint.TOAs` object.
             Input toas.
-        param_name: str
+        param_name : str
             Derivative parameter name
-        acc_delay: `astropy.quantity` or `numpy.ndarray`
+        acc_delay : `astropy.quantity` or `numpy.ndarray`
             Accumlated delay values. This parameter is to keep the unified API,
             but not used in this function.
         """

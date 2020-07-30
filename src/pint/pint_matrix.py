@@ -19,17 +19,18 @@ __all__ = [
 
 
 class PintMatrix:
-    """ PINT matrix is a base class for PINT fitters matrix.
+    """PINT matrix is a base class for PINT fitters matrix.
 
     Parameters
     ----------
-    data: `numpy.ndarray`
+    data : `numpy.ndarray`
         Matrix data.
-    axis_labels: list of dictionary
+
+    axis_labels : list of dictionary
         The labels of the axises. Each list element contains the names and
         indices of the labels for the dimension.
         [{dim0_label0: (start, end, unit), dim0_label1:(start, end, unit)},
-         {dim1_label0:...}]
+        {dim1_label0:...}]
         The start and end follows the python slice convention (i.e.,
         end = size + 1).
 
@@ -75,8 +76,8 @@ class PintMatrix:
     def get_label_size(self, label):
         """ Get the size of the a label in each axises.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         label: str
             Name of the label.
         """
@@ -160,11 +161,11 @@ class PintMatrix:
         pint matrix. The labels will be matched along axises, not cross the
         axises.
 
-        Parametere
+        Parameters
         ----------
-        pint_matrix: `PintMatrix` object or its sub-classes.
+        pint_matrix : `PintMatrix` object or its sub-classes.
             The input pint matrix for label matching.
-        axis: int
+        axis : int
             The matching axis.
 
         Return
@@ -198,13 +199,12 @@ class DesignMatrix(PintMatrix):
 
     Parameters
     ----------
-    matrix: `numpy.ndarray`
+    matrix : `numpy.ndarray`
         Design matrix values.
-    axis_labels: list of dictionary
+    axis_labels : list of dictionary
         The labels of the axises. Each list element contains the names and
         indices of the labels for the dimension.
-        [{dim0_label0: (start, end, unit), dim0_label1:(start, end, unit)},
-         {dim1_label0:...}]
+        [{dim0_label0: (start, end, unit), dim0_label1:(start, end, unit)},{dim1_label0:...}]
         The start and end follows the python slice convention (i.e.,
         end = size + 1).
 
@@ -241,11 +241,11 @@ class DesignMatrixMaker:
 
     Parameters
     ----------
-    derivative_quantity: str
+    derivative_quantity : str
         The differentiated quantity name. It will be used to search for the
         derivative functions. For instance, if derivative_quantity = 'phase',
         it will search for the 'd_phase_d_param' function in the model.
-    quantity_unit: `astropy.units.unit` object
+    quantity_unit : `astropy.units.unit` object
         The unit of the derivative quantity.
     """
 
@@ -269,16 +269,16 @@ class DesignMatrixMaker:
 
         Parameters
         ----------
-        data: `pint.toa.TOAs` object or other data object
+        data : `pint.toa.TOAs` object or other data object
             The data point where the derivatives are evaluated.
-        model: `pint.models.TimingModel` object
+        model : `pint.models.TimingModel` object
             The model that provides the derivatives.
-        derivative_params: list
+        derivative_params : list
             The parameter list for the derivatives 'd_quantity_d_param'.
-        offset: bool, optional
+        offset : bool, optional
             Add the an offset to the beginning of design matrix. Default is False.
             This is match the current phase offset in the design matrix.
-        offset_padding: float, optional
+        offset_padding : float, optional
             if including offset, the value for padding.
         """
         # Get derivative functions
@@ -322,17 +322,17 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
 
         Parameters
         ----------
-        data: `pint.toa.TOAs` object or other data object
+        data : `pint.toa.TOAs` object or other data object
             The data point where the derivatives are evaluated.
-        model: `pint.models.TimingModel` object
+        model : `pint.models.TimingModel` object
             The model that provides the derivatives.
-        derivative_params: list
+        derivative_params : list
             The parameter list for the derivatives 'd_quantity_d_param'.
-        scale_by_F0: bool, optional
+        scale_by_F0 : bool, optional
             Flag for scaling the matrxi by spin rate. Default is True
-        offset: bool, optional
+        offset : bool, optional
             Add the an offset to the beginning of design matrix. Default is True.
-        offset_padding: float, optional
+        offset_padding : float, optional
             if including offset, the value for padding. Default is 1.0
         """
         deriv_func = getattr(model, self.deriv_func_name)
@@ -431,8 +431,8 @@ def combine_design_matrices_by_quantity(design_matrices):
     """ A fast method to combine two design matrix along the derivative
     quantity. If requires the parameter list match to each other.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     design_matrices: `pint_matrix.DesignMatrix` object
         The input design matrix.
 
@@ -468,13 +468,13 @@ def combine_design_matrices_by_quantity(design_matrices):
 def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
     """ A fast method to combine two design matrix along the param axis.
 
-    Parameter
-    ---------
-    matrix1: `pint_matrix.DesignMatrix` object
+    Parameters
+    ----------
+    matrix1 : `pint_matrix.DesignMatrix` object
         The input design matrices.
-    matrix2: `pint_matrix.DesignMatrix` object
+    matrix2 : `pint_matrix.DesignMatrix` object
         The input design matrices.
-    padding: float, optional
+    padding : float, optional
         The padding number if the derivative quantity is independent from the
         parameters. Default is 0.0.
     """
@@ -578,11 +578,11 @@ class CovarianceMatrixMaker:
 
     Parameters
     ----------
-    covariance_quantity: str
+    covariance_quantity : str
         The covariance quantity name. It will be used to search for the
         functions. For instance, if derivative_quantity = 'phase',
         it will search for the 'd_phase_d_param' function in the model.
-    quantity_unit: `astropy.units.unit` object
+    quantity_unit : `astropy.units.unit` object
         The unit of the derivative quantity.
     """
 
@@ -597,9 +597,9 @@ class CovarianceMatrixMaker:
 
         Parameters
         ----------
-        data: `pint.toa.TOAs` object or other data object
+        data : `pint.toa.TOAs` object or other data object
             The data point where the derivatives are evaluated.
-        model: `pint.models.TimingModel` object
+        model : `pint.models.TimingModel` object
             The model that provides the derivatives.
         """
         func = getattr(model, self.cov_func_name)
@@ -615,12 +615,12 @@ def combine_covariance_matrix(covariance_matrices, crossterm={}, crossterm_paddi
 
     Parameters
     ----------
-    covariance_matrices: list of `CovarianceMatrix` object.
+    covariance_matrices : list of `CovarianceMatrix` object.
         The design matrices needs to combine.
-    crossterm: dictionary, optional
+    crossterm : dictionary, optional
         The padding matrix of the cross area of two type of covariance matrices.
         The input formate is {(label1, label2): numpy.ndarray}. Default is {}.
-    crossterm_padding: float
+    crossterm_padding : float
         If the corss term is not give, use the given padding number. Default is
         0.0.
     """

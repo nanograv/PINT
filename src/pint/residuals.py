@@ -487,9 +487,9 @@ class WidebandDMResiduals(Residuals):
     def update_model(self, new_model, **kwargs):
         """ Up date DM models from a new PINT timing model
 
-        Parameter
-        ---------
-        new_model: `pint.timing_model.TimingModel`
+        Parameters
+        ----------
+        new_model : `pint.timing_model.TimingModel`
         """
 
         self.model = new_model
@@ -503,8 +503,8 @@ class CombinedResiduals(object):
     """ A class provides uniformed API that collects result from different type
     of residuals.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     residuals: List of residual objects
         A list of different typs of residual objects
 
