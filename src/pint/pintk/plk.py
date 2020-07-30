@@ -1026,15 +1026,14 @@ class PlkWidget(tk.Frame):
         if event.inaxes == self.plkAxes and self.press:
             self.move = True
             # Draw bounding box
-            if self.plkToolbar._active is None:
-                x0, x1 = self.pressEvent.x, event.x
-                y0, y1 = self.pressEvent.y, event.y
-                height = self.plkFig.bbox.height
-                y0 = height - y0
-                y1 = height - y1
-                if hasattr(self, "brect"):
-                    self.plkCanvas._tkcanvas.delete(self.brect)
-                self.brect = self.plkCanvas._tkcanvas.create_rectangle(x0, y0, x1, y1)
+            x0, x1 = self.pressEvent.x, event.x
+            y0, y1 = self.pressEvent.y, event.y
+            height = self.plkFig.bbox.height
+            y0 = height - y0
+            y1 = height - y1
+            if hasattr(self, "brect"):
+                self.plkCanvas._tkcanvas.delete(self.brect)
+            self.brect = self.plkCanvas._tkcanvas.create_rectangle(x0, y0, x1, y1)
 
     def canvasReleaseEvent(self, event):
         """
@@ -1069,7 +1068,7 @@ class PlkWidget(tk.Frame):
                 #    self.psr.update_resids()
                 #    self.updatePlot(keepAxes=True)
                 #    self.call_updates()
-                if event.button == 1 and self.plkToolbar._active is None:
+                if event.button == 1:
                     # Left click is select
                     self.selected[ind] = not self.selected[ind]
                     self.updatePlot(keepAxes=True)
@@ -1086,7 +1085,7 @@ class PlkWidget(tk.Frame):
         """
         Call this function when the mouse is clicked and dragged
         """
-        if event.inaxes == self.plkAxes and self.plkToolbar._active is None:
+        if event.inaxes == self.plkAxes:
             xmin, xmax = self.pressEvent.xdata, event.xdata
             ymin, ymax = self.pressEvent.ydata, event.ydata
             if xmin > xmax:
