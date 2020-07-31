@@ -823,13 +823,16 @@ class PlkWidget(tk.Frame):
         """
         Write information about the current selection, or all points
         Format is:
-        TOA_index   X_val   Y_val
+        TOA_index   X_val   Y_val   flags
 
-        or, if jumps:
-        TOA_index   X_val   Y_val   jump_key
+        if jumps:
+        TOA_index   X_val   Y_val   jump_key    flags
 
-        or, if residuals:
-        TOA_index   X_val   time_resid  phase_resid
+        if residuals:
+        TOA_index   X_val   time_resid  phase_resid    flags
+
+        if both:
+        TOA_index   X_val   time_resid  phase_resid    jump_key    flags
         """
         if np.sum(self.selected) == 0:
             selected = np.ones(self.psr.selected_toas.ntoas, dtype=bool)
