@@ -23,8 +23,6 @@ class TestClockcorrection(unittest.TestCase):
         cf = ClockFile.read(
             obs.clock_fullpath, format=obs.clock_fmt, obscode=obs.tempo_code
         )
-        mjd = cf.time.mjd
-        corr = cf.clock.to(u.us).value
 
         t = Time(51211.73, format="pulsar_mjd", scale="utc")
         assert numpy.isclose(cf.evaluate(t), 1.75358956 * u.us)

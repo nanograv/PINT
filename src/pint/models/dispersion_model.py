@@ -3,10 +3,16 @@ from __future__ import absolute_import, division, print_function
 
 from warnings import warn
 
-import astropy.units as u
 import numpy as np
+import astropy.units as u
+from astropy.table import Table
 from astropy.time import Time
-from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
+from pint.models.parameter import (
+    MJDParameter,
+    floatParameter,
+    prefixParameter,
+    maskParameter,
+)
 from pint.models.timing_model import DelayComponent, MissingParameter
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
@@ -22,6 +28,7 @@ class Dispersion(DelayComponent):
     def __init__(self):
         super(Dispersion, self).__init__()
         self.dm_value_funcs = []
+        self.dm_deriv_funcs = {}
 
     def dispersion_time_delay(self, DM, freq):
         """Return the dispersion time delay for a set of frequency.
@@ -43,10 +50,82 @@ class Dispersion(DelayComponent):
             warn("Using topocentric frequency for dedispersion!")
             bfreq = tbl["freq"]
 
-        dm = np.zeros(len(tbl)) * self.DM.units
+        dm = self.dm_value(toas)
+        return self.dispersion_time_delay(dm, bfreq)
+
+    def dm_value(self, toas):
+        """ Compute modeled DM value at given TOAs.
+
+        Parameters
+        ----------
+        toas : `TOAs` object or TOA table(TOAs.table)
+             If given a TOAs object, it will use the whole TOA table in the
+             `TOAs` object.
+
+        Return
+        ------
+            DM values at given TOAs in the unit of DM.
+        """
+        if isinstance(toas, Table):
+            toas_table = toas
+        else:
+            toas_table = toas.table
+
+        dm = np.zeros(len(toas_table)) * self.DM.units
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
-        return self.dispersion_time_delay(dm, bfreq)
+        return dm
+
+    def d_delay_d_dmparam(self, toas, param_name, acc_delay=None):
+        """ Derivative of delay wrt to DM parameter.
+
+        Parameters
+        ----------
+        toas : `pint.TOAs` object.
+            Input toas.
+        param_name : str
+            Derivative parameter name
+        acc_delay : `astropy.quantity` or `numpy.ndarray`
+            Accumlated delay values. This parameter is to keep the unified API,
+            but not used in this function.
+        """
+        try:
+            bfreq = self.barycentric_radio_freq(toas)
+        except AttributeError:
+            warn("Using topocentric frequency for dedispersion!")
+            bfreq = tbl["freq"]
+        param_unit = getattr(self, param_name).units
+        d_dm_d_dmparam = np.zeros(toas.ntoas) * u.pc / u.cm ** 3 / param_unit
+        for df in self.dm_deriv_funcs[param_name]:
+            d_dm_d_dmparam += df(toas, param_name)
+        return DMconst * d_dm_d_dmparam / bfreq ** 2.0
+
+    def register_dm_deriv_funcs(self, func, param):
+        """Register the derivative function in to the deriv_func dictionaries.
+
+        Parameters
+        ----------
+        func : callable
+            Calculates the derivative
+        param : str
+            Name of parameter the derivative is with respect to
+
+        """
+        pn = self.match_param_aliases(param)
+        if pn == "":
+            raise ValueError("Parameter '%s' in not in the model." % param)
+
+        if pn not in list(self.dm_deriv_funcs.keys()):
+            self.dm_deriv_funcs[pn] = [func]
+        else:
+            # TODO:
+            # Runing setup() mulitple times can lead to adding derivative
+            # function multiple times. This prevent it from happening now. But
+            # in the future, we should think a better way to do so.
+            if func in self.dm_deriv_funcs[pn]:
+                return
+            else:
+                self.dm_deriv_funcs[pn] += [func]
 
 
 class DispersionDM(Dispersion):
@@ -98,7 +177,8 @@ class DispersionDM(Dispersion):
         base_dms += ["DM"]
 
         for dm_name in base_dms:
-            self.register_deriv_funcs(self.d_delay_d_DMs, dm_name)
+            self.register_deriv_funcs(self.d_delay_d_dmparam, dm_name)
+            self.register_dm_deriv_funcs(self.d_dm_d_DMs, dm_name)
 
     def validate(self):
         """ Validate the DM parameters input.
@@ -163,10 +243,10 @@ class DispersionDM(Dispersion):
                 result += getattr(self, pm).as_parfile_line()
         return result
 
-    def d_delay_d_DMs(
+    def d_dm_d_DMs(
         self, toas, param_name, acc_delay=None
-    ):  # NOTE we should have a better name for this.
-        """Derivatives for constant DM
+    ):  # NOTE we should have a better name for this.)
+        """ Derivatives of DM wrt the DM taylor expansion parameters.
         """
         tbl = toas.table
         try:
@@ -193,7 +273,8 @@ class DispersionDM(Dispersion):
         d_dm_d_dm_param = taylor_horner(dt_value, dm_terms) * (
             self.DM.units / par.units
         )
-        return DMconst * d_dm_d_dm_param / bfreq ** 2.0
+
+        return d_dm_d_dm_param
 
     def change_dmepoch(self, new_epoch):
         """Change DMEPOCH to a new value and update DM accordingly.
@@ -288,7 +369,8 @@ class DispersionDMX(Dispersion):
         # Register the DMX derivatives
         for prefix_par in self.get_params_of_type("prefixParameter"):
             if prefix_par.startswith("DMX_"):
-                self.register_deriv_funcs(self.d_delay_d_DMX, prefix_par)
+                self.register_deriv_funcs(self.d_delay_d_dmparam, prefix_par)
+                self.register_dm_deriv_funcs(self.d_dm_d_DMX, prefix_par)
 
     def validate(self):
         """ Validate the DMX parameters.
@@ -335,7 +417,7 @@ class DispersionDMX(Dispersion):
         """
         return self.dispersion_type_delay(toas)
 
-    def d_delay_d_DMX(self, toas, param_name, acc_delay=None):
+    def d_dm_d_DMX(self, toas, param_name, acc_delay=None):
         condition = {}
         tbl = toas.table
         if not hasattr(self, "dmx_toas_selector"):
@@ -359,7 +441,7 @@ class DispersionDMX(Dispersion):
         dmx = np.zeros(len(tbl))
         for k, v in select_idx.items():
             dmx[v] = 1.0
-        return DMconst * dmx / bfreq ** 2.0
+        return dmx * (u.pc / u.cm ** 3) / (u.pc / u.cm ** 3)
 
     def print_par(self,):
         result = ""
@@ -373,3 +455,74 @@ class DispersionDMX(Dispersion):
             result += getattr(self, DMXR1_mapping[ii]).as_parfile_line()
             result += getattr(self, DMXR2_mapping[ii]).as_parfile_line()
         return result
+
+
+class DispersionJump(Dispersion):
+    """This class provides the contant offsets to the DM values.
+    """
+
+    register = True
+    category = "dispersion_jump"
+
+    def __init__(self):
+        super(DispersionJump, self).__init__()
+        self.dm_value_funcs += [self.jump_dm]
+
+        self.add_param(
+            maskParameter(
+                name="DMJUMP",
+                units="pc cm^-3",
+                value=None,
+                description="DM value offset.",
+            )
+        )
+
+    def setup(self):
+        super(DispersionJump, self).setup()
+        self.dm_jumps = []
+        for mask_par in self.get_params_of_type("maskParameter"):
+            if mask_par.startswith("DMJUMP"):
+                self.dm_jumps.append(mask_par)
+        for j in self.dm_jumps:
+            self.register_dm_deriv_funcs(self.d_dm_d_dmjump, j)
+            self.register_deriv_funcs(self.d_delay_d_dmparam, j)
+
+    def validate(self):
+        super(DispersionJump, self).validate()
+
+    def jump_dm(self, toas):
+        """This method returns the jump delays for each toas section collected by
+        jump parameters. The delay value is determined by jump parameter value
+        in the unit of seconds.
+        """
+        tbl = toas.table
+        jdm = np.zeros(len(tbl))
+        for dm_jump in self.dm_jumps:
+            dm_jump_par = getattr(self, dm_jump)
+            mask = dm_jump_par.select_toa_mask(toas)
+            # NOTE: Currently parfile jump value has opposite sign with our
+            # delay calculation.
+            jdm[mask] += -dm_jump_par.value
+        return jdm * dm_jump_par.units
+
+    def d_dm_d_dmjump(self, toas, jump_param):
+        """ Derivative of dm values wrt dm jumps.
+        """
+        tbl = toas.table
+        d_dm_d_j = np.zeros(len(tbl))
+        jpar = getattr(self, jump_param)
+        mask = jpar.select_toa_mask(toas)
+        d_dm_d_j[mask] = 1.0
+        return d_dm_d_j * jpar.units / jpar.units
+
+    def d_delay_d_dmjump(self, toas, param_name, acc_delay=None):
+        """ Derivative for delay wrt to dm jumps.
+        """
+        try:
+            bfreq = self.barycentric_radio_freq(toas)
+        except AttributeError:
+            warn("Using topocentric frequency for dedispersion!")
+            bfreq = tbl["freq"]
+
+        d_dm_d_dmjump = self.d_dm_d_dmjump(toas, param_name)
+        return DMconst * d_dm_d_dmjump / bfreq ** 2.0

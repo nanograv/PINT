@@ -784,6 +784,9 @@ class TOAs(object):
         # We don't need this now that we have a table
         del self.toas
 
+    def __len__(self):
+        return self.ntoas
+
     @property
     def ntoas(self):
         return len(self.table) if hasattr(self, "table") else len(self.toas)
@@ -903,10 +906,23 @@ class TOAs(object):
                the flag, it will fill up with the fill_value.
         """
         result = []
-        for flags in self.table["flags"]:
-            val = flags.get(flag, fill_value)
+        valid_index = []
+        for ii, flags in enumerate(self.table["flags"]):
+            try:
+                val = flags[flag]
+                valid_index.append(ii)
+            except KeyError:
+                val = fill_value
             result.append(val)
-        return result
+        return result, valid_index
+
+    def get_dm_errors(self):
+        """ Get the Wideband DM data error
+        """
+        result, valid = self.get_flag_value("pp_dme")
+        if valid == []:
+            raise AttributeError("No DM error is provided.")
+        return np.array(result)[valid] * u.pc / u.cm ** 3
 
     def get_groups(self, gap_limit=None):
         """flag toas within gap limit (default 2h = 0.0833d) of each other as the same group
@@ -953,8 +969,8 @@ class TOAs(object):
         # TODO: implement sliding window
         nbins = int((max(self.get_mjds()) - min(self.get_mjds())) / (ndays * u.d))
         a = np.histogram(self.get_mjds(), nbins)
-        maxday = int(a[1][np.argmax(a[0])])
-        diff = int(a[1][1] - a[1][0])
+        maxday = int((a[1][np.argmax(a[0])]).value)
+        diff = int((a[1][1] - a[1][0]).value)
         print(
             "max density range (in steps of {} days -- {} bins) is from MJD {} to {} with {} toas.".format(
                 diff, nbins, maxday, maxday + diff, a[0].max()
@@ -1430,10 +1446,10 @@ class TOAs(object):
     def add_vel_ecl(self, obliquity):
         """Compute and add a column to self.table with velocities in ecliptic coordinates.
 
-        Called in barycentric_radio_freq() in AstrometryEcliptic (astrometry.py) 
+        Called in barycentric_radio_freq() in AstrometryEcliptic (astrometry.py)
         if ssb_obs_vel_ecl column does not already exist.
-        If compute_posvels() called again for a TOAs object (aka TOAs modified), 
-        deletes this column so that this function will be called again and 
+        If compute_posvels() called again for a TOAs object (aka TOAs modified),
+        deletes this column so that this function will be called again and
         velocities will be calculated with updated TOAs.
         """
 

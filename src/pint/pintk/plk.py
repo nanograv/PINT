@@ -63,6 +63,9 @@ plotlabels = {
     "rounded MJD": r"MJD",
 }
 
+# Note to developers: the 't' key and the 'Shift' key produce the same selection number.
+# Selecting the 'Shift' key will enact any functionality intended for the 't' key.
+# Thus, it may be better to avoid designating the 't' key for any future functionality.
 helpstring = """The following interactions are currently supported by the Plk pane in the PINTkinter GUI:
 
 Left click:     Select a point
@@ -91,7 +94,7 @@ o:              Print the postfit model as of this moment (if it exists)
 
 p:              Print info about highlighted points (or all, if none are selected)
 
-t:              Print the range of MJDs with the highest density of TOAs
+m:              Print the range of MJDs with the highest density of TOAs
 
 +:              Increase pulse number for selected points
 
@@ -176,7 +179,9 @@ class PlkFitBoxesWidget(tk.Frame):
                     )
                 )
                 if par in fitparams:
-                    self.compCBs[ii].select()
+                    # default DispersionDMX to off so graph not overwhelmed by parameters
+                    if comp is not "DispersionDMX":
+                        self.compCBs[ii].select()
                     self.compGrids[ii][pp].select()
             ii += 1
 
@@ -1026,15 +1031,14 @@ class PlkWidget(tk.Frame):
         if event.inaxes == self.plkAxes and self.press:
             self.move = True
             # Draw bounding box
-            if self.plkToolbar._active is None:
-                x0, x1 = self.pressEvent.x, event.x
-                y0, y1 = self.pressEvent.y, event.y
-                height = self.plkFig.bbox.height
-                y0 = height - y0
-                y1 = height - y1
-                if hasattr(self, "brect"):
-                    self.plkCanvas._tkcanvas.delete(self.brect)
-                self.brect = self.plkCanvas._tkcanvas.create_rectangle(x0, y0, x1, y1)
+            x0, x1 = self.pressEvent.x, event.x
+            y0, y1 = self.pressEvent.y, event.y
+            height = self.plkFig.bbox.height
+            y0 = height - y0
+            y1 = height - y1
+            if hasattr(self, "brect"):
+                self.plkCanvas._tkcanvas.delete(self.brect)
+            self.brect = self.plkCanvas._tkcanvas.create_rectangle(x0, y0, x1, y1)
 
     def canvasReleaseEvent(self, event):
         """
@@ -1069,15 +1073,15 @@ class PlkWidget(tk.Frame):
                 #    self.psr.update_resids()
                 #    self.updatePlot(keepAxes=True)
                 #    self.call_updates()
-                if event.button == 1 and self.plkToolbar._active is None:
+                if event.button == 1:
                     # Left click is select
                     self.selected[ind] = not self.selected[ind]
                     self.updatePlot(keepAxes=True)
-                    self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
                     # if point is being selected (instead of unselected) or
                     # point is unselected but other points remain selected
                     if self.selected[ind] or any(self.selected):
                         # update selected_toas object w/ selected points
+                        self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
                         self.psr.selected_toas.select(self.selected)
                         self.psr.update_resids()
                         self.call_updates()
@@ -1086,21 +1090,23 @@ class PlkWidget(tk.Frame):
         """
         Call this function when the mouse is clicked and dragged
         """
-        if event.inaxes == self.plkAxes and self.plkToolbar._active is None:
+        if event.inaxes == self.plkAxes:
             xmin, xmax = self.pressEvent.xdata, event.xdata
             ymin, ymax = self.pressEvent.ydata, event.ydata
             if xmin > xmax:
                 xmin, xmax = xmax, xmin
             if ymin > ymax:
                 ymin, ymax = ymax, ymin
-            self.selected = (self.xvals.value > xmin) & (self.xvals.value < xmax)
-            self.selected &= (self.yvals.value > ymin) & (self.yvals.value < ymax)
+            selected = (self.xvals.value > xmin) & (self.xvals.value < xmax)
+            selected &= (self.yvals.value > ymin) & (self.yvals.value < ymax)
+            self.selected |= selected
             self.updatePlot(keepAxes=True)
             self.plkCanvas._tkcanvas.delete(self.brect)
-            self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-            self.psr.selected_toas.select(self.selected)
-            self.psr.update_resids()
-            self.call_updates()
+            if any(self.selected):
+                self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
+                self.psr.selected_toas.select(self.selected)
+                self.psr.update_resids()
+                self.call_updates()
 
     def canvasKeyEvent(self, event):
         """
@@ -1122,10 +1128,12 @@ class PlkWidget(tk.Frame):
             self.psr.add_phase_wrap(self.selected, -1)
             self.updatePlot(keepAxes=True)
             self.call_updates()
+            log.info("Pulse number for selected points decreased.")
         elif ukey == ord("+"):
             self.psr.add_phase_wrap(self.selected, 1)
             self.updatePlot(keepAxes=True)
             self.call_updates()
+            log.info("Pulse number for selected points increased.")
         elif ukey == ord(">"):
             if np.sum(self.selected) > 0:
                 selected = copy.deepcopy(self.selected)
@@ -1134,6 +1142,7 @@ class PlkWidget(tk.Frame):
                 self.psr.add_phase_wrap(selected, 1)
                 self.updatePlot(keepAxes=False)
                 self.call_updates()
+                log.info("Pulse numbers to the right of selection increased.")
         elif ukey == ord("<"):
             if np.sum(self.selected) > 0:
                 selected = copy.deepcopy(self.selected)
@@ -1142,6 +1151,7 @@ class PlkWidget(tk.Frame):
                 self.psr.add_phase_wrap(selected, -1)
                 self.updatePlot(keepAxes=False)
                 self.call_updates()
+                log.info("Pulse numbers to the right of selection decreased.")
         elif ukey == ord("d"):
             # if any of the points are jumped, tell the user to delete the jump(s) first
             jumped_copy = copy.deepcopy(self.jumped)
@@ -1237,5 +1247,5 @@ class PlkWidget(tk.Frame):
             self.print_info()
         elif ukey == ord("h"):
             print(helpstring)
-        elif ukey == ord("t"):
+        elif ukey == ord("m"):
             print(self.psr.all_toas.get_highest_density_range())
