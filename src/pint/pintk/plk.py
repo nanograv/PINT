@@ -823,16 +823,17 @@ class PlkWidget(tk.Frame):
         """
         Write information about the current selection, or all points
         Format is:
-        TOA_index   X_val   Y_val   flags
+        TOA_index   X_val   Y_val   
+        flags
 
-        if jumps:
+        if flags:
         TOA_index   X_val   Y_val   jump_key    flags
 
         if residuals:
-        TOA_index   X_val   time_resid  phase_resid    flags
+        TOA_index   X_val   time_resid  phase_resid
 
         if both:
-        TOA_index   X_val   time_resid  phase_resid    jump_key    flags
+        TOA_index   X_val   time_resid  phase_resid    flags
         """
         if np.sum(self.selected) == 0:
             selected = np.ones(self.psr.selected_toas.ntoas, dtype=bool)
@@ -877,7 +878,7 @@ class PlkWidget(tk.Frame):
         xs = self.xvals[selected].value
         ys = self.yvals[selected].value
         inds = self.psr.all_toas.table["index"][selected]
-
+        """
         # gather jumps, if any
         jumps = {}  # layout: jumps = {'toa index':'jump_key'}
         if "PhaseJump" in self.psr.prefit_model.components:
@@ -893,6 +894,15 @@ class PlkWidget(tk.Frame):
         # if there are jumps, add header for it
         if jumps:
             header += "%12s" % "JUMPS"
+        """
+        # see if flags
+        keys = False
+        try:
+            self.psr.selected_toas.table["flags"]
+            keys = True
+            header += "%18s" % "Flags"
+        except:
+            pass
 
         print(header)
         print("-" * len(header))
@@ -905,9 +915,39 @@ class PlkWidget(tk.Frame):
             line += " %16.8g" % ys[i]
             if yf:
                 line += " %16.8g" % (ys[i] * f0y)
-            if inds[i] in jumps:
-                line += " %25s" % jumps[inds[i]]
-            print(line)
+            # if inds[i] in jumps:
+            #    line += " %20s" % jumps[inds[i]]
+            if keys:
+                n = 1
+                for key in self.psr.selected_toas.table["flags"][i].keys():
+                    if n == 1:
+                        line += " %28s" % (key + ":")
+                        try:
+                            line += (
+                                " %1s" % self.psr.selected_toas.table["flags"][i][key]
+                            )
+                        except:
+                            line += (
+                                " %16.8g"
+                                % self.psr.selected_toas.table["flags"][i][key]
+                            )
+                        print(line)
+                    else:
+                        line2 = " %85s" % (key + ":")
+                        try:
+                            line2 += (
+                                " %1s" % self.psr.selected_toas.table["flags"][i][key]
+                            )
+                        except:
+                            line2 += (
+                                " %16.8g"
+                                % self.psr.selected_toas.table["flags"][i][key]
+                            )
+                            raise
+                        print(line2)
+                    n += 1
+                # print("  **flags: " + str(self.psr.all_toas.table["flags"][i]))
+            # print()
 
     def psr_data_from_label(self, label):
         """
