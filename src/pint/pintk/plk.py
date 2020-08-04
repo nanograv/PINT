@@ -878,24 +878,8 @@ class PlkWidget(tk.Frame):
         xs = self.xvals[selected].value
         ys = self.yvals[selected].value
         inds = self.psr.all_toas.table["index"][selected]
-        """
-        # gather jumps, if any
-        jumps = {}  # layout: jumps = {'toa index':'jump_key'}
-        if "PhaseJump" in self.psr.prefit_model.components:
-            for jump in self.psr.prefit_model.components[
-                "PhaseJump"
-            ].get_jump_param_objects():
-                # find common toa indices between jumped toas and selected toas
-                common = np.intersect1d(jump.select_toa_mask(self.psr.all_toas), inds)
-                if common.size > 0:
-                    for num in common:
-                        jumps[num] = jump.key
 
-        # if there are jumps, add header for it
-        if jumps:
-            header += "%12s" % "JUMPS"
-        """
-        # see if flags
+        # see if flags to display
         keys = False
         try:
             self.psr.selected_toas.table["flags"]
@@ -915,13 +899,13 @@ class PlkWidget(tk.Frame):
             line += " %16.8g" % ys[i]
             if yf:
                 line += " %16.8g" % (ys[i] * f0y)
-            # if inds[i] in jumps:
-            #    line += " %20s" % jumps[inds[i]]
             if keys:
-                n = 1
+                n = 1  # incrementor
                 for key in self.psr.selected_toas.table["flags"][i].keys():
                     if n == 1:
+                        # for first flag, add to existing line
                         line += " %28s" % (key + ":")
+                        # try-except for determining proper string formatter - string or float value
                         try:
                             line += (
                                 " %1s" % self.psr.selected_toas.table["flags"][i][key]
@@ -934,6 +918,7 @@ class PlkWidget(tk.Frame):
                         print(line)
                     else:
                         line2 = " %85s" % (key + ":")
+                        # try-except for determining proper string formatter - string or float value
                         try:
                             line2 += (
                                 " %1s" % self.psr.selected_toas.table["flags"][i][key]
@@ -946,8 +931,6 @@ class PlkWidget(tk.Frame):
                             raise
                         print(line2)
                     n += 1
-                # print("  **flags: " + str(self.psr.all_toas.table["flags"][i]))
-            # print()
 
     def psr_data_from_label(self, label):
         """
