@@ -15,6 +15,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fixed bug in solar wind model that prevented fitting
 - Fix pintempo script so it will respect JUMPs in the TOA file.
 ### Added
+- Allow fitting for either or (not both) of a glitch epoch or its phase
 - Added support for -padd flag on TOAs to add phase turns to individual TOAs (matching TEMPO and Tempo2)
 - Added caching of TZRMJD TOA to speed up and prevent repeated INFO prints about applying clock corrections
 - Added check to ensure clock files are ordered by MJD since interpolation assumes that
