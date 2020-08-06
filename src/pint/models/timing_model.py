@@ -12,20 +12,18 @@ from collections import defaultdict
 import astropy.time as time
 import astropy.units as u
 import numpy as np
+import pint
 import six
 from astropy import log
-
-import pint
-from pint.models.parameter import strParameter, maskParameter
-from pint.phase import Phase
-from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 from pint.models.parameter import (
     AngleParameter,
+    floatParameter,
+    maskParameter,
     prefixParameter,
     strParameter,
-    floatParameter,
 )
-
+from pint.phase import Phase
+from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
 __all__ = ["DEFAULT_ORDER", "TimingModel"]
 # Parameters or lines in parfiles we don't understand but shouldn't
@@ -45,7 +43,6 @@ ignore_params = set(
         "UNITS",
         "TIMEEPH",
         "T2CMETHOD",
-        "CORRECT_TROPOSPHERE",
         "DILATEFREQ",
         "NTOA",
         "CLOCK",
@@ -69,6 +66,7 @@ ignore_prefix = set(["DMXF1_", "DMXF2_", "DMXEP_"])  # DMXEP_ for now.
 DEFAULT_ORDER = [
     "astrometry",
     "jump_delay",
+    "troposphere",
     "solar_system_shapiro",
     "solar_wind",
     "dispersion_constant",
@@ -319,12 +317,32 @@ class TimingModel(object):
         return cvfs
 
     @property
-    def scaled_sigma_funcs(self,):
-        """List of scaled uncertainty functions."""
+    def dm_covariance_matrix_funcs(self,):
+        """List of covariance matrix functions."""
+        cvfs = []
+        if "NoiseComponent" in self.component_types:
+            for nc in self.NoiseComponent_list:
+                cvfs += nc.dm_covariance_matrix_funcs
+        return cvfs
+
+    # Change sigma to uncertainty to avoid name conflict.
+    @property
+    def scaled_toa_uncertainty_funcs(self,):
+        """List of scaled toa uncertainty functions."""
         ssfs = []
         if "NoiseComponent" in self.component_types:
             for nc in self.NoiseComponent_list:
-                ssfs += nc.scaled_sigma_funcs
+                ssfs += nc.scaled_toa_sigma_funcs
+        return ssfs
+
+    # Change sigma to uncertainty to avoid name conflict.
+    @property
+    def scaled_dm_uncertainty_funcs(self,):
+        """List of scaled dm uncertainty functions."""
+        ssfs = []
+        if "NoiseComponent" in self.component_types:
+            for nc in self.NoiseComponent_list:
+                ssfs += nc.scaled_dm_sigma_funcs
         return ssfs
 
     @property
@@ -347,6 +365,11 @@ class TimingModel(object):
         return self.get_deriv_funcs("DelayComponent")
 
     @property
+    def dm_derivs(self):  #  TODO need to be careful about the name here.
+        """List of dm derivative functions."""
+        return self.get_deriv_funcs("DelayComponent", "dm")
+
+    @property
     def d_phase_d_delay_funcs(self):
         """List of d_phase_d_delay functions."""
         Dphase_Ddelay = []
@@ -354,11 +377,15 @@ class TimingModel(object):
             Dphase_Ddelay += cp.phase_derivs_wrt_delay
         return Dphase_Ddelay
 
-    def get_deriv_funcs(self, component_type):
-        """Return dictionary of derivative functions."""
+    def get_deriv_funcs(self, component_type, derivative_type=""):
+        """Return dictionary of derivative functions.
+        """
+        # TODO, this function can be a more generical function collector.
         deriv_funcs = defaultdict(list)
+        if not derivative_type == "":
+            derivative_type += "_"
         for cp in getattr(self, component_type + "_list"):
-            for k, v in cp.deriv_funcs.items():
+            for k, v in getattr(cp, derivative_type + "deriv_funcs").items():
                 deriv_funcs[k] += v
         return dict(deriv_funcs)
 
@@ -420,7 +447,7 @@ class TimingModel(object):
         ----------
         component: str or `Component` object
             Component name or component object.
-            
+
         Returns
         -------
         comp: `Component` object
@@ -504,8 +531,8 @@ class TimingModel(object):
             self.validate()
 
     def remove_component(self, component):
-        """ Remove one component from the timing model. 
-            
+        """ Remove one component from the timing model.
+
         Parameters
         ----------
         component: str or `Component` object
@@ -557,7 +584,7 @@ class TimingModel(object):
 
     def add_param_from_top(self, param, target_component, setup=False):
         """ Add a parameter to a timing model component.
-           
+
             Parameters
             ----------
             param: str
@@ -566,7 +593,7 @@ class TimingModel(object):
                 Parameter host component name. If given as "" it would add
                 parameter to the top level `TimingModel` class
             setup: bool, optional
-                Flag to run setup() function.  
+                Flag to run setup() function.
         """
         if target_component == "":
             setattr(self, param.name, param)
@@ -708,7 +735,7 @@ class TimingModel(object):
         else:
             return phase
 
-    def covariance_matrix(self, toas):
+    def toa_covariance_matrix(self, toas):
         """This a function to get the TOA covariance matrix for noise models.
            If there is no noise model component provided, a diagonal matrix with
            TOAs error as diagonal element will be returned.
@@ -725,20 +752,68 @@ class TimingModel(object):
             result += nf(toas)
         return result
 
-    def scaled_sigma(self, toas):
-        """This a function to get the scaled TOA uncertainties noise models.
+    def dm_covariance_matrix(self, toas):
+        """This a function to get the DM covariance matrix for noise models.
+           If there is no noise model component provided, a diagonal matrix with
+           TOAs error as diagonal element will be returned.
+        """
+        dms, valid_dm = toas.get_flag_value("pp_dm")
+        dmes, valid_dme = toas.get_flag_value("pp_dme")
+        dms = np.array(dms)[valid_dm]
+        n_dms = len(dms)
+        dmes = np.array(dmes)[valid_dme]
+        result = np.zeros((n_dms, n_dms))
+        # When there is no noise model.
+        if len(self.dm_covariance_matrix_funcs) == 0:
+            result += np.diag(dmes.value ** 2)
+            return result
+
+        for nf in self.dm_covariance_matrix_funcs:
+            result += nf(toas)
+        return result
+
+    def scaled_toa_uncertainty(self, toas):
+        """This a function to get the scaled TOA data uncertainties noise models.
            If there is no noise model component provided, a vector with
            TOAs error as values will be returned.
+
+        Parameters
+        ----------
+        toas: `pint.toa.TOAs` object
+            The input data object for TOAs uncertainty.
         """
         ntoa = toas.ntoas
         tbl = toas.table
         result = np.zeros(ntoa) * u.us
         # When there is no noise model.
-        if len(self.scaled_sigma_funcs) == 0:
+        if len(self.scaled_toa_uncertainty_funcs) == 0:
             result += tbl["error"].quantity
             return result
 
-        for nf in self.scaled_sigma_funcs:
+        for nf in self.scaled_toa_uncertainty_funcs:
+            result += nf(toas)
+        return result
+
+    def scaled_dm_uncertainty(self, toas):
+        """ Get the scaled DM data uncertainties noise models.
+        
+            If there is no noise model component provided, a vector with
+            DM error as values will be returned.
+
+        Parameters
+        ----------
+        toas: `pint.toa.TOAs` object
+            The input data object for DM uncertainty.
+        """
+        dm_error, valid = toas.get_flag_value("pp_dme")
+        dm_error = np.array(dm_error)[valid] * u.pc / u.cm ** 3
+        result = np.zeros(len(dm_error)) * u.pc / u.cm ** 3
+        # When there is no noise model.
+        if len(self.scaled_dm_uncertainty_funcs) == 0:
+            result += dm_error
+            return result
+
+        for nf in self.scaled_dm_uncertainty_funcs:
             result += nf(toas)
         return result
 
@@ -1022,6 +1097,23 @@ class TimingModel(object):
         par.value = ori_value
         return d_delay * (u.second / unit)
 
+    def d_dm_d_param(self, data, param):
+        """Return the derivative of dm with respect to the parameter."""
+        par = getattr(self, param)
+        result = np.zeros(len(data)) << (u.pc / u.cm ** 3 / par.units)
+        dm_df = self.dm_derivs.get(param, None)
+        if dm_df is None:
+            if param not in self.params:  # Maybe add differentitable params
+                raise AttributeError("Parametre {} does not exist".format(param))
+            else:
+                return result
+
+        for df in dm_df:
+            result += df(data, param).to(
+                result.unit, equivalencies=u.dimensionless_angles()
+            )
+        return result
+
     def designmatrix(
         self, toas, acc_delay=None, scale_by_F0=True, incfrozen=False, incoffset=True
     ):
@@ -1074,7 +1166,7 @@ class TimingModel(object):
 
     def compare(self, othermodel, nodmx=True):
         """Print comparison with another model
-        
+
         Parameters
         ----------
         othermodel
@@ -1084,7 +1176,7 @@ class TimingModel(object):
 
         Returns
         -------
-        str 
+        str
             Human readable comparison, for printing
         """
 
@@ -1296,7 +1388,8 @@ class TimingModel(object):
                     "Model component {} was rejected because we "
                     "didn't find parameter {}".format(name, param)
                 )
-            log.info("Final object: {}".format(repr(self)))
+            # Disable here for now. TODO  need to modified.
+            # log.info("Final object: {}".format(repr(self)))
 
         self.setup()
         # The "validate" functions contain tests for required parameters or

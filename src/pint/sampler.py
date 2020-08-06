@@ -169,4 +169,4 @@ class EmceeSampler(MCMCSampler):
         """
         if self.sampler is None:
             raise ValueError("MCMCSampler object has not called initialize_sampler()")
-        self.sampler.run_mcmc(pos, nsteps)
+        self.sampler.run_mcmc(pos, nsteps, progress=True)
