@@ -15,6 +15,7 @@ from astropy import log
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import pint.pintk.pulsar as pulsar
+import pint.pintk.colormodes as cm
 
 try:
     # Python2
@@ -230,7 +231,7 @@ class PlkRandomModelSelect(tk.Frame):
             master,
             text="Random Models",
             variable=self.var,
-            command=self.changedRMCheckBox(),
+            command=self.changedRMCheckBox,
         )
         checkbox.grid(row=1, column=1, sticky="N")
 
@@ -249,6 +250,63 @@ class PlkRandomModelSelect(tk.Frame):
 
     def getRandomModel(self):
         return self.var.get()
+
+
+class PlkColorModeBoxes(tk.Frame):
+    """ 
+    Allows one to select the color mode for the plot's TOAs. 
+    """
+
+    def __init__(self, master=None, **kwargs):
+        tk.Frame.__init__(self, master)
+        self.boxChecked = None
+
+    def addColorModeCheckbox(self, colorModes):
+        self.checkboxes = []
+        self.checkboxStatus = tk.StringVar()
+        index = 0
+
+        self.label = tk.Label(self, text="Color Modes")
+        for mode in colorModes:
+            self.checkboxes.append(
+                tk.Radiobutton(
+                    self,
+                    text=mode.mode_name,
+                    variable=self.checkboxStatus,
+                    value=mode.mode_name,
+                    command=lambda m=mode: self.applyChanges(m),
+                )
+            )
+
+            if mode.mode_name == "default":
+                # default mode should be selected at start-up
+                self.checkboxes[index].select()
+
+            index += 1
+
+        self.updateLayout()
+
+    def setCallbacks(self, boxChecked):
+        """
+        Set the callback functions
+        """
+        self.boxChecked = boxChecked
+
+    def applyChanges(self, mode):
+        mode.displayInfo()
+        self.boxChecked(mode.mode_name)
+
+    def clear_grid(self):
+        for widget in self.winfo_children():
+            widget.grid_forget()
+
+    def updateLayout(self):
+        self.clear_grid()
+        self.label.grid(row=0, column=0)
+        rowCount = 1
+        for ii in range(len(self.checkboxes)):
+            self.checkboxes[ii].grid(row=rowCount, column=0, sticky="W")
+            rowCount += 1
 
 
 class PlkXYChoiceWidget(tk.Frame):
@@ -418,11 +476,15 @@ class PlkWidget(tk.Frame):
 
         self.psr = None
 
+        self.color_modes = [cm.DefaultMode(self), cm.FreqMode(self), cm.ObsMode(self)]
+        self.current_mode = "default"
+
     def initPlk(self):
         self.fitboxesWidget = PlkFitBoxesWidget(master=self)
         self.xyChoiceWidget = PlkXYChoiceWidget(master=self)
         self.actionsWidget = PlkActionsWidget(master=self)
         self.randomboxWidget = PlkRandomModelSelect(master=self)
+        self.colorModeWidget = PlkColorModeBoxes(master=self)
 
         self.plkDpi = 100
         self.plkFig = mpl.figure.Figure(dpi=self.plkDpi)
@@ -470,6 +532,7 @@ class PlkWidget(tk.Frame):
             self.actionsWidget.setFitButtonText("Fit")
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
+            self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.xyChoiceWidget.setChoice()
             self.updatePlot(keepAxes=True)
             self.plkToolbar.update()
@@ -503,6 +566,7 @@ class PlkWidget(tk.Frame):
             self.state_stack.append(self.base_state)
 
         self.fitboxesWidget.setCallbacks(self.fitboxChecked)
+        self.colorModeWidget.setCallbacks(self.updateGraphColors)
         self.xyChoiceWidget.setCallbacks(self.updatePlot)
         self.actionsWidget.setCallbacks(
             self.fit, self.reset, self.writePar, self.writeTim, self.revert
@@ -511,6 +575,8 @@ class PlkWidget(tk.Frame):
         self.fitboxesWidget.grid(row=0, column=0, columnspan=2, sticky="W")
         self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
         self.randomboxWidget.addRandomCheckbox(self)
+        self.colorModeWidget.grid(row=2, column=0, columnspan=1, sticky="S")
+        self.colorModeWidget.addColorModeCheckbox(self.color_modes)
         self.xyChoiceWidget.setChoice()
         self.updatePlot(keepAxes=False)
 
@@ -518,6 +584,10 @@ class PlkWidget(tk.Frame):
         if not self.update_callbacks is None:
             for ucb in self.update_callbacks:
                 ucb()
+
+    def updateGraphColors(self, color_mode):
+        self.current_mode = color_mode
+        self.updatePlot(keepAxes=True)
 
     def fitboxChecked(self, parchanged, newstate):
         """
@@ -567,6 +637,7 @@ class PlkWidget(tk.Frame):
             self.actionsWidget.setFitButtonText("Re-fit")
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
+            self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             xid, yid = self.xyChoiceWidget.plotIDs()
             self.xyChoiceWidget.setChoice(xid=xid, yid="post-fit")
             self.jumped = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
@@ -600,6 +671,7 @@ class PlkWidget(tk.Frame):
         self.actionsWidget.setFitButtonText("Fit")
         self.fitboxesWidget.addFitCheckBoxes(self.base_state.psr.prefit_model)
         self.randomboxWidget.addRandomCheckbox(self)
+        self.colorModeWidget.addColorModeCheckbox(self.color_modes)
         self.xyChoiceWidget.setChoice()
         self.updatePlot(keepAxes=False)
         self.plkToolbar.update()
@@ -655,6 +727,7 @@ class PlkWidget(tk.Frame):
             self.selected = copy.deepcopy(c_state.selected)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
+            self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             if len(self.state_stack) == 0:
                 self.state_stack.append(self.base_state)
                 self.actionsWidget.setFitButtonText("Fit")
@@ -732,30 +805,10 @@ class PlkWidget(tk.Frame):
         self.plkAx2x.clear()
         self.plkAx2y.clear()
         self.plkAxes.grid(True)
-
-        if self.yerrs is None:
-            self.plkAxes.scatter(
-                self.xvals[~self.selected],
-                self.yvals[~self.selected],
-                marker=".",
-                color="blue",
-            )
-            self.plkAxes.scatter(
-                self.xvals[self.jumped],
-                self.yvals[self.jumped],
-                marker=".",
-                color="red",
-            )
-            self.plkAxes.scatter(
-                self.xvals[self.selected],
-                self.yvals[self.selected],
-                marker=".",
-                color="orange",
-            )
-        else:
-            self.plotErrorbar(~self.selected, color="blue")
-            self.plotErrorbar(self.jumped, color="red")
-            self.plotErrorbar(self.selected, color="orange")
+        # plot residuals in appropriate color scheme
+        for mode in self.color_modes:
+            if self.current_mode == mode.mode_name:
+                mode.plotColorMode()
         self.plkAxes.axis([xmin, xmax, ymin, ymax])
         self.plkAxes.get_xaxis().get_major_formatter().set_useOffset(False)
         self.plkAx2y.set_visible(False)
@@ -1219,6 +1272,7 @@ class PlkWidget(tk.Frame):
             self.updateJumped(jump_name)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
+            self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.updatePlot(keepAxes=True)
             self.call_updates()
         elif ukey == ord("v"):
@@ -1255,6 +1309,7 @@ class PlkWidget(tk.Frame):
                 self.psr.selected_toas.select(self.selected)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
+            self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.updatePlot(keepAxes=True)
             self.call_updates()
         elif ukey == ord("c"):
