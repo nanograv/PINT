@@ -10,6 +10,7 @@ from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
 from pint.models.frequency_dependent import FD
 from pint.models.glitch import Glitch
+from pint.models.ifunc import IFunc
 from pint.models.jump import DelayJump, PhaseJump
 from pint.models.model_builder import get_model
 from pint.models.noise_model import EcorrNoise, PLRedNoise, ScaleToaError
@@ -18,9 +19,9 @@ from pint.models.solar_wind_dispersion import SolarWindDispersion
 from pint.models.spindown import Spindown
 
 # Import the main timing model classes
-from pint.models.timing_model import TimingModel, DEFAULT_ORDER
+from pint.models.timing_model import DEFAULT_ORDER, TimingModel
+from pint.models.troposphere_delay import TroposphereDelay
 from pint.models.wave import Wave
-from pint.models.ifunc import IFunc
 
 # Define a standard basic model
 StandardTimingModel = TimingModel(

@@ -20,7 +20,7 @@ class TestToaFlag(unittest.TestCase):
         )
 
     def test_flag_value_float(self):
-        flag_value = self.toas.get_flag_value("to")
+        flag_value, valid = self.toas.get_flag_value("to")
         assert len(flag_value) == self.toas.ntoas
         for v in set(flag_value):
             assert v in {-7.89e-07, -8.39e-07, None}
@@ -41,12 +41,12 @@ class TestToaFlag(unittest.TestCase):
         assert count1 == count2
 
     def test_flag_value_fill(self):
-        flag_value = self.toas.get_flag_value("to", fill_value=-9999)
+        flag_value, valid = self.toas.get_flag_value("to", fill_value=-9999)
         for v in set(flag_value):
             assert v in {-7.89e-07, -8.39e-07, -9999}
 
     def test_flag_value_str(self):
-        flag_value = self.toas.get_flag_value("be")
+        flag_value, valid = self.toas.get_flag_value("be")
         assert len(flag_value) == self.toas.ntoas
         for v in set(flag_value):
             assert v in {"ASP", "PUPPI"}
