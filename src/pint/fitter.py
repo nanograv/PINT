@@ -163,7 +163,10 @@ class Fitter(object):
         self.set_params({k: v for k, v in zip(args, x)})
         self.update_resids()
         # Return chi^2
-        return self.resids.chi2.value
+        try:
+            return self.resids.chi2.value  # to accomodate SciPy versions >= 1.5.0
+        except:
+            return self.resids.chi2
 
     def fit_toas(self, maxiter=None):
         raise NotImplementedError
