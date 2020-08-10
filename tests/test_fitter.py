@@ -11,6 +11,7 @@ import pint.models as tm
 from pint import fitter, toa
 from pinttestdata import datadir
 import pint.models.parameter as param
+from pint import ls
 
 
 @pytest.mark.skipif(
@@ -134,3 +135,29 @@ def test_ftest():
     ft = f.ftest(FD3, "FD", remove=True)
     assert isinstance(ft["ft"], float) or isinstance(ft["ft"], bool)
     Ftest_dict = f.ftest(FD3, "FD", remove=True, full_output=True)
+    assert isinstance(Ftest_dict["ft"], float) or isinstance(Ftest_dict["ft"], bool)
+    # Test wideband Ftest
+    wb_m = tm.get_model(os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.gls.par"))
+    wb_t = toa.get_TOAs(os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.tim"))
+    wb_f = fitter.WidebandTOAFitter(wb_t, wb_m)
+    wb_f.fit_toas()
+    # Parallax
+    PX = param.floatParameter(
+        parameter_type="float", name="PX", value=0.0, units=u.mas, frozen=False
+    )
+    PX_Component = "AstrometryEcliptic"
+    # A1DOT
+    A1DOT = param.floatParameter(
+        parameter_type="float",
+        name="A1DOT",
+        value=0.0,
+        units=ls / u.second,
+        frozen=False,
+    )
+    A1DOT_Component = "BinaryELL1"
+    # Test adding A1DOT
+    Ftest_dict = wb_f.ftest(A1DOT, A1DOT_Component, remove=False, full_output=True)
+    assert isinstance(Ftest_dict["ft"], float) or isinstance(Ftest_dict["ft"], bool)
+    # Test removing parallax
+    Ftest_dict = wb_f.ftest(PX, PX_Component, remove=True, full_output=True)
+    assert isinstance(Ftest_dict["ft"], float) or isinstance(Ftest_dict["ft"], bool)

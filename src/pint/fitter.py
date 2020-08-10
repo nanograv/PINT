@@ -529,7 +529,9 @@ class Fitter(object):
         full_output : Bool
             If False, just returns the result of the F-Test. If True, will also return the new
             model's residual RMS (us), chi-squared, and number of degrees of freedom of
-            new model.
+            new model. If using a wideband fitter, will also return the new model's DM
+            residual RMS (pc/cm^3), and the separate chi-squared value for the time and 
+            DM residuals.
 
         Returns
         --------
@@ -541,18 +543,46 @@ class Fitter(object):
 
             resid_rms_test : Float (Quantity)
                 If full_output is True, returns the RMS of the residuals of the tested model
-                fit. Will be in units of microseconds as an astropy quantity.
+                fit. Will be in units of microseconds as an astropy quantity. If wideband fitter
+                this will be the time residuals.
 
             resid_wrms_test : Float (Quantity)
                 If full_output is True, returns the Weighted RMS of the residuals of the tested model
-                fit. Will be in units of microseconds as an astropy quantity.
+                fit. Will be in units of microseconds as an astropy quantity. If wideband fitter
+                this will be the time residuals.
 
             chi2_test : Float
-                If full_output is True, returns the chi-squared of the tested model.
+                If full_output is True, returns the chi-squared of the tested model. If wideband
+                fitter this will be the total chi-squared from both the time and DM residuals.
 
             dof_test : Int
                 If full_output is True, returns the degrees of freedom of the tested model.
+            
+            dm_resid_rms_test : Float (Quantity)
+                If full_output is True and a wideband timing fitter is used, returns the
+                RMS of the DM residuals of the tested model fit. Will be in units of
+                pc/cm^3 as an astropy quantity.
+
+            dm_resid_wrms_test : Float (Quantity)
+                If full_output is True and a wideband timing fitter is used, returns the
+                Weighted RMS of the DM residuals of the tested model fit. Will be in units of
+                pc/cm^3 as an astropy quantity
+
+            dm_chi2_test : Float
+                If full_output is True and a wideband timing fitter is used, returns the
+                chi-squared  of the DM residuals of the tested model.
+
+            time_chi2_test : Float
+                If full_output is True and a wideband timing fitter is used, returns the
+                chi-squared  of the time residuals of the tested model.
         """
+        # Check if Wideband or not
+        if "Wideband" in self.__class__.__name__:
+            NB = False
+            resids = self.resids.residual_objs[0]
+        else:
+            NB = True
+            resids = self.resids
         # Copy the fitter that we do not change the initial model and fitter
         fitter_copy = copy.deepcopy(self)
         # Number of times to run the fit
@@ -560,11 +590,23 @@ class Fitter(object):
         # We need the original degrees of freedome and chi-squared value
         # Because this applies to nested models, model 1 must always have fewer parameters
         if remove:
-            dof_2 = self.resids.get_dof()
-            chi2_2 = self.resids.calc_chi2()
+            dof_2 = resids.get_dof()
+            if NB:
+                chi2_2 = self.resids.calc_chi2()
+            else:
+                chi2_2 = (
+                    self.resids.residual_objs[0].calc_chi2()
+                    + self.resids.residual_objs[1].calc_chi2()
+                )
         else:
-            dof_1 = self.resids.get_dof()
-            chi2_1 = self.resids.calc_chi2()
+            dof_1 = resids.get_dof()
+            if NB:
+                chi2_1 = self.resids.calc_chi2()
+            else:
+                chi2_1 = (
+                    self.resids.residual_objs[0].calc_chi2()
+                    + self.resids.residual_objs[1].calc_chi2()
+                )
         # Single inputs are converted to lists to handle arb. number of parameteres
         if type(parameter) is not list:
             parameter = [parameter]
@@ -589,8 +631,15 @@ class Fitter(object):
             # Now refit
             fitter_copy.fit_toas(NITS)
             # Now get the new values
-            dof_1 = fitter_copy.resids.get_dof()
-            chi2_1 = fitter_copy.resids.calc_chi2()
+            if NB:
+                dof_1 = fitter_copy.resids.get_dof()
+                chi2_1 = fitter_copy.resids.calc_chi2()
+            else:
+                dof_1 = fitter_copy.resids.residual_objs[0].get_dof()
+                chi2_1 = (
+                    fitter_copy.resids.residual_objs[0].calc_chi2()
+                    + fitter_copy.resids.residual_objs[1].calc_chi2()
+                )
         else:
             # Dictionary of parameters to check to makes sure input value isn't zero
             check_params = {
@@ -630,8 +679,15 @@ class Fitter(object):
             # Now refit
             fitter_copy.fit_toas(NITS)
             # Now get the new values
-            dof_2 = fitter_copy.resids.get_dof()
-            chi2_2 = fitter_copy.resids.calc_chi2()
+            if NB:
+                dof_2 = fitter_copy.resids.get_dof()
+                chi2_2 = fitter_copy.resids.calc_chi2()
+            else:
+                dof_2 = fitter_copy.resids.residual_objs[0].get_dof()
+                chi2_2 = (
+                    fitter_copy.resids.residual_objs[0].calc_chi2()
+                    + fitter_copy.resids.residual_objs[1].calc_chi2()
+                )
         # Now run the actual F-test
         ft = FTest(chi2_1, dof_1, chi2_2, dof_2)
 
@@ -642,15 +698,39 @@ class Fitter(object):
             else:
                 dof_test = dof_2
                 chi2_test = chi2_2
-            resid_rms_test = fitter_copy.resids.time_resids.std().to(u.us)
-            resid_wrms_test = fitter_copy.resids.rms_weighted()  # units: us
-            return {
-                "ft": ft,
-                "resid_rms_test": resid_rms_test,
-                "resid_wrms_test": resid_wrms_test,
-                "chi2_test": chi2_test,
-                "dof_test": dof_test,
-            }
+            if NB:
+                resid_rms_test = fitter_copy.resids.time_resids.std().to(u.us)
+                resid_wrms_test = fitter_copy.resids.rms_weighted()  # units: us
+                return {
+                    "ft": ft,
+                    "resid_rms_test": resid_rms_test,
+                    "resid_wrms_test": resid_wrms_test,
+                    "chi2_test": chi2_test,
+                    "dof_test": dof_test,
+                }
+            else:
+                # Return the dm and time resid values separately
+                resid_rms_test = (
+                    fitter_copy.resids.residual_objs[0].time_resids.std().to(u.us)
+                )
+                resid_wrms_test = fitter_copy.resids.residual_objs[
+                    0
+                ].rms_weighted()  # units: us
+                time_chi2_test = fitter_copy.resids.residual_objs[0].calc_chi2()
+                dm_chi2_test = fitter_copy.resids.residual_objs[1].calc_chi2()
+                dm_resid_rms_test = fitter_copy.resids.residual_objs[1].resids.std()
+                dm_resid_wrms_test = fitter_copy.resids.residual_objs[1].rms_weighted()
+                return {
+                    "ft": ft,
+                    "resid_rms_test": resid_rms_test,
+                    "resid_wrms_test": resid_wrms_test,
+                    "chi2_test": chi2_test,
+                    "dof_test": dof_test,
+                    "dm_resid_rms_test": dm_resid_rms_test,
+                    "dm_resid_wrms_test": dm_resid_wrms_test,
+                    "dm_chi2_test": dm_chi2_test,
+                    "time_chi2_test": time_chi2_test,
+                }
         else:
             return {"ft": ft}
 
@@ -952,9 +1032,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         self.fit_data_names = fit_data_names
         # convert the non tuple input to a tuple
         if not isinstance(fit_data, (tuple, list)):
-            fit_data = [
-                fit_data,
-            ]
+            fit_data = [fit_data]
         if not isinstance(fit_data[0], TOAs):
             raise ValueError("The first data set should be a TOAs object.")
         if len(fit_data_names) == 0:
