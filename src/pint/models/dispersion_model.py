@@ -53,14 +53,19 @@ class Dispersion(DelayComponent):
         dm = self.dm_value(toas)
         return self.dispersion_time_delay(dm, bfreq)
 
-    def dm_value(self, toas):
+    def dm_value(self, toas, local=True):
         """ Compute modeled DM value at given TOAs.
 
         Parameters
         ----------
         toas : `TOAs` object or TOA table(TOAs.table)
-             If given a TOAs object, it will use the whole TOA table in the
+            If given a TOAs object, it will use the whole TOA table in the
              `TOAs` object.
+
+        local : bool, optional
+            Flag for computing the component dm value only. If True, it only
+            returns the current component's dm value. Otherwise, compute all the
+            DM types components' dm value in the timing model. Default is True.
 
         Return
         ------
@@ -72,7 +77,11 @@ class Dispersion(DelayComponent):
             toas_table = toas.table
 
         dm = np.zeros(len(toas_table)) * self.DM.units
-        for dm_f in self.dm_value_funcs:
+        if local:
+            dm_funcs = self.dm_value_funcs # Local dm value
+        else:
+            dm_funcs = self._parent.dm_funcs # All dm value in timing model.
+        for dm_f in dm_funcs:
             dm += dm_f(toas)
         return dm
 
@@ -476,6 +485,7 @@ class DispersionJump(Dispersion):
                 description="DM value offset.",
             )
         )
+        self.delay_funcs_component += [self.dispersion_jump_delay]
 
     def setup(self):
         super(DispersionJump, self).setup()
@@ -500,10 +510,13 @@ class DispersionJump(Dispersion):
         for dm_jump in self.dm_jumps:
             dm_jump_par = getattr(self, dm_jump)
             mask = dm_jump_par.select_toa_mask(toas)
-            # NOTE: Currently parfile jump value has opposite sign with our
-            # delay calculation.
-            jdm[mask] += -dm_jump_par.value
+            jdm[mask] += dm_jump_par.value
         return jdm * dm_jump_par.units
+
+    def dispersion_jump_delay(self, toas, acc_delay=None):
+        """ This is a wrapper function for interacting with the TimingModel class
+        """
+        return self.dispersion_type_delay(toas)
 
     def d_dm_d_dmjump(self, toas, jump_param):
         """ Derivative of dm values wrt dm jumps.
