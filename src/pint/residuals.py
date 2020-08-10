@@ -429,7 +429,7 @@ class WidebandDMResiduals(Residuals):
         return self._chi2
 
     def calc_resids(self):
-        model_value = self.get_model_value(self.toas)
+        model_value = self.get_model_value(self.toas, local=False)
         resids = self.dm_data - model_value
         if self.subtract_mean:
             if not self.use_weighted_mean:
