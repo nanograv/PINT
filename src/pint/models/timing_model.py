@@ -74,6 +74,7 @@ DEFAULT_ORDER = [
     "solar_wind",
     "dispersion_constant",
     "dispersion_dmx",
+    "dispersion_jump",
     "pulsar_system",
     "frequency_dependent",
     "absolute_phase",
@@ -427,6 +428,16 @@ class TimingModel(object):
             return scs[0]  # Return a float
         else:
             return np.asarray(scs)  # otherwise return an array
+    @property
+    def dm_funcs(self):
+        """ List of all dm value functions. """
+        dmfs = []
+        for cp in self.components.values():
+            if hasattr(cp, 'dm_value_funcs'):
+                dmfs += cp.dm_value_funcs
+            else:
+                continue
+        return dmfs
 
     @property
     def has_correlated_errors(self):
@@ -926,7 +937,11 @@ class TimingModel(object):
         return result
 
     def scaled_dm_uncertainty(self, toas):
+<<<<<<< HEAD
         """Get the scaled DM data uncertainties noise models.
+=======
+        """ Get the scaled DM data uncertainties noise models.
+>>>>>>> Add dm_func property
 
             If there is no noise model component provided, a vector with
             DM error as values will be returned.
