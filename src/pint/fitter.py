@@ -530,7 +530,7 @@ class Fitter(object):
             If False, just returns the result of the F-Test. If True, will also return the new
             model's residual RMS (us), chi-squared, and number of degrees of freedom of
             new model. If using a wideband fitter, will also return the new model's DM
-            residual RMS (pc/cm^3), and the separate chi-squared value for the time and 
+            residual RMS (pc/cm^3), and the separate chi-squared value for the time and
             DM residuals.
 
         Returns
@@ -557,7 +557,7 @@ class Fitter(object):
 
             dof_test : Int
                 If full_output is True, returns the degrees of freedom of the tested model.
-            
+
             dm_resid_rms_test : Float (Quantity)
                 If full_output is True and a wideband timing fitter is used, returns the
                 RMS of the DM residuals of the tested model fit. Will be in units of
