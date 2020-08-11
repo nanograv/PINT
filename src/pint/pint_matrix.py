@@ -249,17 +249,22 @@ class DesignMatrixMaker:
         The unit of the derivative quantity.
     """
 
-    def __new__(cls, derivative_quantity, quantity_unit):
-        target_cls = design_matrix_maker_map.get(derivative_quantity.lower(), None)
+    def __new__(cls, derivative_quantity=None, quantity_unit=None):
+        # Set argument to None to enable the deepcopy.
+        target_cls = None
+        if derivative_quantity is not None:
+            target_cls = design_matrix_maker_map.get(derivative_quantity.lower(), None)
         # If there is no matching maker, use the current one.
         if target_cls is not None:
             cls = target_cls
         return super().__new__(cls)
 
-    def __init__(self, derivative_quantity, quantity_unit):
+    def __init__(self, derivative_quantity=None, quantity_unit=None):
         self.derivative_quantity = derivative_quantity
         self.quantity_unit = quantity_unit
         # The derivative function should be a wrapper function like d_phase_d_param()
+        if derivative_quantity is None:
+            raise ValueError("Argument 'derivative_quantity' can not be None.")
         self.deriv_func_name = "d_{}_d_param".format(self.derivative_quantity)
 
     def __call__(
