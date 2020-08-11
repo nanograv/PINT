@@ -523,13 +523,7 @@ class DispersionJump(Dispersion):
         return d_dm_d_j * jpar.units / jpar.units
 
     def d_delay_d_dmjump(self, toas, param_name, acc_delay=None):
-        """ Derivative for delay wrt to dm jumps.
+        """ Derivative for delay wrt to dm jumps. Since DMJUMPS does not affect
+        delay, this would be zero.
         """
-        try:
-            bfreq = self.barycentric_radio_freq(toas)
-        except AttributeError:
-            warn("Using topocentric frequency for dedispersion!")
-            bfreq = tbl["freq"]
-
-        d_dm_d_dmjump = self.d_dm_d_dmjump(toas, param_name)
-        return DMconst * d_dm_d_dmjump / bfreq ** 2.0
+        return np.zeros(toas.ntoas) * (u.s / self.DMJUMP.units)
