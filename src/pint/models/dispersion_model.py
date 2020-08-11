@@ -485,7 +485,6 @@ class DispersionJump(Dispersion):
                 description="DM value offset.",
             )
         )
-        self.delay_funcs_component += [self.dispersion_jump_delay]
 
     def setup(self):
         super(DispersionJump, self).setup()
@@ -501,22 +500,17 @@ class DispersionJump(Dispersion):
         super(DispersionJump, self).validate()
 
     def jump_dm(self, toas):
-        """This method returns the jump delays for each toas section collected by
-        jump parameters. The delay value is determined by jump parameter value
-        in the unit of seconds.
+        """This method returns the DM jump for each dm section collected by
+        dmjump parameters. The delay value is determined by DMJUMP parameter
+        value in the unit of pc / cm ** 3.
         """
         tbl = toas.table
         jdm = np.zeros(len(tbl))
         for dm_jump in self.dm_jumps:
             dm_jump_par = getattr(self, dm_jump)
             mask = dm_jump_par.select_toa_mask(toas)
-            jdm[mask] += dm_jump_par.value
+            jdm[mask] += -dm_jump_par.value
         return jdm * dm_jump_par.units
-
-    def dispersion_jump_delay(self, toas, acc_delay=None):
-        """ This is a wrapper function for interacting with the TimingModel class
-        """
-        return self.dispersion_type_delay(toas)
 
     def d_dm_d_dmjump(self, toas, jump_param):
         """ Derivative of dm values wrt dm jumps.
@@ -525,7 +519,7 @@ class DispersionJump(Dispersion):
         d_dm_d_j = np.zeros(len(tbl))
         jpar = getattr(self, jump_param)
         mask = jpar.select_toa_mask(toas)
-        d_dm_d_j[mask] = 1.0
+        d_dm_d_j[mask] = -1.0
         return d_dm_d_j * jpar.units / jpar.units
 
     def d_delay_d_dmjump(self, toas, param_name, acc_delay=None):
