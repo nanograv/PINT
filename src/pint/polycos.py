@@ -511,7 +511,7 @@ class Polycos(object):
         Generate the polyco data.
 
         Parameters
-        ---------
+        ----------
         model : TimingModel
             TimingModel to generate the Polycos with parameters
             setup.
@@ -526,18 +526,18 @@ class Polycos(object):
             Observatory code
 
         segLength : float
-            Length of polyco segement [unit: minutes]
+            Length of polyco segement [minutes]
 
         ncoeff : int
-            number of coefficents
+            Number of coefficents
 
         obsFreq : float
-            observing frequency [unit: MHz]
+            Observing frequency [MHz]
 
         maxha : float optional. Default 12.0
             Maximum hour angle
 
-        method : string optional ['TEMPO','TEMPO2',...] Default TEMPO
+        method : string optional ["TEMPO", "TEMPO2", ...] Default TEMPO
             Method to generate polycos. Only the TEMPO method is supported for now.
 
         numNodes : int optional. Default 20
