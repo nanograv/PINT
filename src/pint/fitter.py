@@ -952,9 +952,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         self.fit_data_names = fit_data_names
         # convert the non tuple input to a tuple
         if not isinstance(fit_data, (tuple, list)):
-            fit_data = [
-                fit_data,
-            ]
+            fit_data = [fit_data]
         if not isinstance(fit_data[0], TOAs):
             raise ValueError("The first data set should be a TOAs object.")
         if len(fit_data_names) == 0:

@@ -269,9 +269,17 @@ class Residuals:
 
                 # This the fastest way, but highly depend on the assumption of time_resids and
                 # error units.
-                return (
-                    (self.time_resids / self.toas.get_errors().to(u.s)) ** 2.0
-                ).sum()
+                # insure only a pure number returned
+                try:
+                    return (
+                        ((self.time_resids / self.toas.get_errors().to(u.s)) ** 2.0)
+                        .sum()
+                        .value
+                    )
+                except:
+                    return (
+                        (self.time_resids / self.toas.get_errors().to(u.s)) ** 2.0
+                    ).sum()
 
     def get_dof(self):
         """Return number of degrees of freedom for the model."""
@@ -443,7 +451,10 @@ class WidebandDMResiduals(Residuals):
         if (self.data_error.value == 0.0).any():
             return np.inf
         else:
-            return ((self.resids / self.data_error) ** 2.0).sum().decompose()
+            try:
+                return ((self.resids / self.data_error) ** 2.0).sum().decompose().value
+            except:
+                return ((self.resids / self.data_error) ** 2.0).sum().decompose()
 
     def rms_weighted(self):
         """Compute weighted RMS of the residals in time."""

@@ -16,7 +16,9 @@ eventfile = os.path.join(
 )
 temfile = os.path.join(datadir, "templateJ0030.3gauss")
 
-
+# SMR skipped this test as event_optimize_MCMCFitter isn't used anywhere
+# How/why is it different from event_optimize?
+@unittest.skip
 class TestEventOptimizeMCMCFitter(unittest.TestCase):
     def test_result(self):
         import pint.scripts.event_optimize_MCMCFitter as event_optimize

@@ -1420,7 +1420,7 @@ class maskParameter(floatParameter):
     def name_matches(self, name):
         if super(maskParameter, self).name_matches(name):
             return True
-        else:
+        elif self.index == 1:
             name_idx = name + str(self.index)
             return super(maskParameter, self).name_matches(name_idx)
 
@@ -1514,11 +1514,7 @@ class maskParameter(floatParameter):
     def as_parfile_line_mask(self):
         if self.quantity is None:
             return ""
-        # display -gui_jump flag for jumps added thru pintk
-        if self.key == "jump":
-            line = "%-15s -gui_jump " % (self.origin_name)
-        else:
-            line = "%-15s %s " % (self.origin_name, self.key)
+        line = "%-15s %s " % (self.origin_name, self.key)
         for kv in self.key_value:
             if not isinstance(kv, time.Time):
                 line += "%s " % kv

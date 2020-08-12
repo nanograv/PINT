@@ -969,8 +969,8 @@ class TOAs(object):
         # TODO: implement sliding window
         nbins = int((max(self.get_mjds()) - min(self.get_mjds())) / (ndays * u.d))
         a = np.histogram(self.get_mjds(), nbins)
-        maxday = int(a[1][np.argmax(a[0])])
-        diff = int(a[1][1] - a[1][0])
+        maxday = int((a[1][np.argmax(a[0])]).value)
+        diff = int((a[1][1] - a[1][0]).value)
         print(
             "max density range (in steps of {} days -- {} bins) is from MJD {} to {} with {} toas.".format(
                 diff, nbins, maxday, maxday + diff, a[0].max()
