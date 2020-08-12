@@ -522,7 +522,7 @@ class Pulsar(object):
         # TODO: delta_pulse_numbers need some work. They serve both for PHASE and -padd functions from the TOAs
         # as well as for phase jumps added manually in the GUI. They really should not be zeroed out here because
         # that will wipe out preexisting values
-        self.fulltoas.table["delta_pulse_numbers"] = np.zeros(self.fulltoas.ntoas)
+        self.all_toas.table["delta_pulse_numbers"] = np.zeros(self.all_toas.ntoas)
         self.selected_toas.table["delta_pulse_number"] = np.zeros(
             self.selected_toas.ntoas
         )
