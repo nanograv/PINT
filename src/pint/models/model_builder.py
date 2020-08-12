@@ -177,7 +177,8 @@ class ModelBuilder(object):
         return prefixs
 
     def build_model(self, parfile=None, name=""):
-        """Read parfile using the model_instance attribute.
+        """Read parfile using the model_instance attribute. Throws error if 
+           mismatched coordinate systems detected.
         Parameters
         ---------
         name: str, optional
@@ -187,6 +188,25 @@ class ModelBuilder(object):
         """
         if parfile is not None:
             self.get_comp_from_parfile(parfile)
+            # ensure coordinate systems match for POS and PM
+            if "RAJ" in self.preprocess_parfile(parfile).keys():
+                if "PMELONG" in self.preprocess_parfile(parfile):
+                    raise AttributeError(
+                        "Cannot have Ecliptic PM with Equatorial POS in par file."
+                    )
+                elif "PMELAT" in self.preprocess_parfile(parfile):
+                    raise AttributeError(
+                        "Cannot have Ecliptic PM with Equatorial POS in par file."
+                    )
+            elif "ELONG" in self.preprocess_parfile(parfile).keys():
+                if "PMRA" in self.preprocess_parfile(parfile):
+                    raise AttributeError(
+                        "Cannot have Equatorial PM with Ecliptic POS in par file."
+                    )
+                elif "PMDEC" in self.preprocess_parfile(parfile):
+                    raise AttributeError(
+                        "Cannot have Equatorial PM with Ecliptic POS in par file."
+                    )
         sorted_comps = self.sort_components()
         self.timing_model = TimingModel(name, sorted_comps)
         param_inModel = self.timing_model.get_params_mapping()
