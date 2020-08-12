@@ -1420,7 +1420,7 @@ class maskParameter(floatParameter):
     def name_matches(self, name):
         if super(maskParameter, self).name_matches(name):
             return True
-        else:
+        elif self.index == 1:
             name_idx = name + str(self.index)
             return super(maskParameter, self).name_matches(name_idx)
 
