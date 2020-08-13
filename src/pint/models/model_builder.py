@@ -192,20 +192,20 @@ class ModelBuilder(object):
             if "RAJ" in self.preprocess_parfile(parfile).keys():
                 if "PMELONG" in self.preprocess_parfile(parfile):
                     raise AttributeError(
-                        "Cannot have Ecliptic PM with Equatorial POS in par file."
+                        "Cannot have Ecliptic proper motion parameters (PMELONG/PMELAT) with Equatorial position parameters (RAJ/DECJ) in par file."
                     )
                 elif "PMELAT" in self.preprocess_parfile(parfile):
                     raise AttributeError(
-                        "Cannot have Ecliptic PM with Equatorial POS in par file."
+                        "Cannot have Ecliptic proper motion parameters (PMELONG/PMELAT) with Equatorial position parameters (RAJ/DECJ) in par file."
                     )
             elif "ELONG" in self.preprocess_parfile(parfile).keys():
                 if "PMRA" in self.preprocess_parfile(parfile):
                     raise AttributeError(
-                        "Cannot have Equatorial PM with Ecliptic POS in par file."
+                        "Cannot have Equatorial proper motion parameters (PMRA/PMDEC) with Ecliptic position parameters (ELONG/ELAT) in par file."
                     )
                 elif "PMDEC" in self.preprocess_parfile(parfile):
                     raise AttributeError(
-                        "Cannot have Equatorial PM with Ecliptic POS in par file."
+                        "Cannot have Equatorial proper motion parameters (PMRA/PMDEC) with Ecliptic position parameters (ELONG/ELAT) in par file."
                     )
         sorted_comps = self.sort_components()
         self.timing_model = TimingModel(name, sorted_comps)
