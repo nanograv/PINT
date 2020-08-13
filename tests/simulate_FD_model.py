@@ -1,10 +1,14 @@
 #!/usr/bin/python
 import sys
-import pint.toa as toa
-import pint.models.model_builder as mb
-import numpy as np
-import astropy.units as u
+
 import astropy.time as time
+import astropy.units as u
+import numpy as np
+
+import pint.models.model_builder as mb
+import pint.toa as toa
+
+
 def add_FD_model(freq_range, FD, toas):
     """This function is to add a FD model delay in the toas, the frequency will
     be changed as well
@@ -20,12 +24,13 @@ def add_FD_model(freq_range, FD, toas):
     ntoas = toas.ntoas
     freq = np.linspace(freq_range[0], freq_range[1], ntoas) * u.MHz
     fdcoeff = FD + [0.0]
-    logfreq = np.log(freq/(1*u.GHz))
+    logfreq = np.log(freq / (1 * u.GHz))
     fd_delay = np.polyval(fdcoeff, logfreq) * u.second
     dt = time.TimeDelta(fd_delay)
     toas.adjust_TOAs(dt)
-    toas.table['freq'] = freq
+    toas.table["freq"] = freq
     return toas
+
 
 if __name__ == "__main__":
     timfile = sys.argv[1]
@@ -36,9 +41,10 @@ if __name__ == "__main__":
     t = toa.get_TOAs(timfile)
     m = mb.get_model(parfile)
     freqrange = np.array([freq_start, freq_end])
-    fdcoeff = [getattr(m, m.FDmapping[ii]).num_value \
-               for ii in range(m.num_FD_terms,0,-1)]
+    fdcoeff = [
+        getattr(m, m.FDmapping[ii]).num_value for ii in range(m.num_FD_terms, 0, -1)
+    ]
 
     add_FD_model(freqrange, fdcoeff, t)
     outfile = timfile + ".pint_simulate"
-    t.write_TOA_file(outfile, format='TEMPO2')
+    t.write_TOA_file(outfile, format="TEMPO2")

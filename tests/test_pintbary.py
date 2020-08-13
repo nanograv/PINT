@@ -1,26 +1,27 @@
 #!/usr/bin/env python
 from __future__ import division, print_function
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
-import pint.scripts.pintbary as pintbary
+
+import sys
 import unittest
+
 import numpy as np
+from six import StringIO
+
+import pint.scripts.pintbary as pintbary
 
 
 class TestPintBary(unittest.TestCase):
-
     def test_result(self):
-        saved_stdout, pintbary.sys.stdout = pintbary.sys.stdout, StringIO('_')
-        cmd = '56000.0 --ra 12h22m33.2s --dec 19d21m44.2s --obs gbt --ephem DE405'
+        saved_stdout, sys.stdout = sys.stdout, StringIO("_")
+        cmd = "56000.0 --ra 12h22m33.2s --dec 19d21m44.2s --obs gbt --ephem DE405"
         pintbary.main(cmd.split())
-        v = pintbary.sys.stdout.getvalue()
+        v = sys.stdout.getvalue()
         # Check that last value printed is the barycentered time
-        self.assertTrue(np.isclose(float(v.split()[-1]),56000.0061691189))
-        pintbary.sys.stdout = saved_stdout
+        self.assertTrue(np.isclose(float(v.split()[-1]), 56000.0061691189))
+        sys.stdout = saved_stdout
 
-# Below are some examples of types of tests         
+
+# Below are some examples of types of tests
 #     def test_main_returns_nonzero_on_error(self):
 #         self.assertNotEqual(plus_one.main(['test']), 0)
 
@@ -43,5 +44,5 @@ class TestPintBary(unittest.TestCase):
 #        self.assertEquals(plus_one.sys.stdout.getvalue(), 'some_text\n')
 #        plus_one.sys.stdout = saved_stdout
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
