@@ -220,7 +220,7 @@ plt.errorbar(
 )
 plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
 plt.xlabel("MJD")
-plt.ylabel("Residual (phase)")
+plt.ylabel("Residual (us)")
 plt.grid()
 ```
 
