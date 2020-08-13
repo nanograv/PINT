@@ -680,6 +680,12 @@ class PowellFitter(Fitter):
         # necessarily the one that yields the best fit
         self.minimize_func(np.atleast_1d(self.fitresult.x), *list(fitp.keys()))
 
+        # Update START/FINISH params
+        if hasattr(self.model, "START"):
+            self.model.START.value = self.toas.first_MJD
+        if hasattr(self.model, "FINISH"):
+            self.model.FINISH.value = self.toas.last_MJD
+
         return self.resids.chi2
 
 
@@ -769,8 +775,14 @@ class WLSFitter(Fitter):
                 # NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
             chi2 = self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
-            # Updata Uncertainties
+            # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
+
+        # Update START/FINISH params
+        if hasattr(self.model, "START"):
+            self.model.START.value = self.toas.first_MJD
+        if hasattr(self.model, "FINISH"):
+            self.model.FINISH.value = self.toas.last_MJD
 
         return chi2
 
@@ -922,6 +934,12 @@ class GLSFitter(Fitter):
                     p1 = p0 + noise_dims[comp][1]
                     noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
                 self.resids.noise_resids = noise_resids
+
+        # Update START/FINISH params
+        if hasattr(self.model, "START"):
+            self.model.START.value = self.toas.first_MJD
+        if hasattr(self.model, "FINISH"):
+            self.model.FINISH.value = self.toas.last_MJD
 
         return chi2
 
@@ -1225,5 +1243,11 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 p1 = p0 + noise_dims[comp][1]
                 noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
             self.resids.noise_resids = noise_resids
+
+        # Update START/FINISH params
+        if hasattr(self.model, "START"):
+            self.model.START.value = self.toas.first_MJD
+        if hasattr(self.model, "FINISH"):
+            self.model.FINISH.value = self.toas.last_MJD
 
         return chi2
