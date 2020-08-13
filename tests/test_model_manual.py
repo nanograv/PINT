@@ -163,9 +163,11 @@ def test_simple_manual():
 
     tm.RAJ.value = "19:59:48"
     tm.DECJ.value = "20:48:36"
-    tm.F0.value = 622.122030511927 * u.Hz
+    tm.F0.quantity = 622.122030511927 * u.Hz
+    tm.PEPOCH.value = 48196.0
     tm.validate()  # This should work.
 
+    assert (tm.POSEPOCH.value == tm.PEPOCH.value)
 
 def test_add_all_components():
     # models_by_category = defaultdict(list)
