@@ -106,7 +106,7 @@ def test_ecliptic(gm):
     assert "AstrometryEcliptic" in m.components
 
 
-bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par"]
+bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par", "J1744-1134.basic.ecliptic.par"]
 
 
 @pytest.mark.parametrize("parfile", glob(join(datadir, "*.par")))
