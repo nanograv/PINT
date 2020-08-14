@@ -273,9 +273,28 @@ class Fitter(object):
                 else:
                     # Assume a numerical parameter
                     if par.frozen:
-                        s += ("{:" + spacingName + "s} {:20g} {:28s} {} \n").format(
-                            pn, prefitpar.value, "", par.units
-                        )
+                        if par.name == "START":
+                            if prefitpar.value is None:
+                                s += ("{:" + spacingName + "s} {} {:28s} {} \n").format(
+                                    pn, " ", "", par.units
+                                )
+                            else:
+                                s += (
+                                    "{:" + spacingName + "s} {:20g} {:28s} {} \n"
+                                ).format(pn, prefitpar.value, "", par.units)
+                        elif par.name == "FINISH":
+                            if prefitpar.value is None:
+                                s += ("{:" + spacingName + "s} {} {:28s} {} \n").format(
+                                    pn, " ", "", par.units
+                                )
+                            else:
+                                s += (
+                                    "{:" + spacingName + "s} {:20g} {:28s} {} \n"
+                                ).format(pn, prefitpar.value, "", par.units)
+                        else:
+                            s += ("{:" + spacingName + "s} {:20g} {:28s} {} \n").format(
+                                pn, prefitpar.value, "", par.units
+                            )
                     else:
                         # s += "{:14s} {:20g} {:20g} {:20.2g} {} \n".format(
                         #     pn,
@@ -682,15 +701,7 @@ class PowellFitter(Fitter):
         self.minimize_func(np.atleast_1d(self.fitresult.x), *list(fitp.keys()))
 
         # Update START/FINISH params
-        if not hasattr(self.model, "START"):
-            self.model.add_param_from_top(
-                MJDParameter(name="START", description="Start MJD for fitting"), ""
-            )
         self.model.START.value = self.toas.first_MJD
-        if not hasattr(self.model, "FINISH"):
-            self.model.add_param_from_top(
-                MJDParameter(name="FINISH", description="End MJD for fitting"), ""
-            )
         self.model.FINISH.value = self.toas.last_MJD
 
         return self.resids.chi2
@@ -786,15 +797,7 @@ class WLSFitter(Fitter):
             self.set_param_uncertainties(fitperrs)
 
         # Update START/FINISH params
-        if not hasattr(self.model, "START"):
-            self.model.add_param_from_top(
-                MJDParameter(name="START", description="Start MJD for fitting"), ""
-            )
         self.model.START.value = self.toas.first_MJD
-        if not hasattr(self.model, "FINISH"):
-            self.model.add_param_from_top(
-                MJDParameter(name="FINISH", description="End MJD for fitting"), ""
-            )
         self.model.FINISH.value = self.toas.last_MJD
 
         return chi2
@@ -949,15 +952,7 @@ class GLSFitter(Fitter):
                 self.resids.noise_resids = noise_resids
 
         # Update START/FINISH params
-        if not hasattr(self.model, "START"):
-            self.model.add_param_from_top(
-                MJDParameter(name="START", description="Start MJD for fitting"), ""
-            )
         self.model.START.value = self.toas.first_MJD
-        if not hasattr(self.model, "FINISH"):
-            self.model.add_param_from_top(
-                MJDParameter(name="FINISH", description="End MJD for fitting"), ""
-            )
         self.model.FINISH.value = self.toas.last_MJD
 
         return chi2
@@ -1264,15 +1259,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             self.resids.noise_resids = noise_resids
 
         # Update START/FINISH params
-        if not hasattr(self.model, "START"):
-            self.model.add_param_from_top(
-                MJDParameter(name="START", description="Start MJD for fitting"), ""
-            )
         self.model.START.value = self.toas.first_MJD
-        if not hasattr(self.model, "FINISH"):
-            self.model.add_param_from_top(
-                MJDParameter(name="FINISH", description="End MJD for fitting"), ""
-            )
         self.model.FINISH.value = self.toas.last_MJD
 
         return chi2

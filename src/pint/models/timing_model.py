@@ -152,6 +152,12 @@ class TimingModel(object):
         self.add_param_from_top(
             strParameter(name="UNITS", description="Units (TDB assumed)"), ""
         )
+        self.add_param_from_top(
+            MJDParameter(name="START", description="Start MJD for fitting"), ""
+        )
+        self.add_param_from_top(
+            MJDParameter(name="FINISH", description="End MJD for fitting"), ""
+        )
 
         for cp in components:
             self.add_component(cp, validate=False)
@@ -1349,23 +1355,13 @@ class TimingModel(object):
             if name == "START":
                 if name in repeat_param:
                     raise ValueError("START is repeated in par file")
-                self.add_param_from_top(
-                    MJDParameter(
-                        name="START", value=k[1], description="Start MJD for fitting"
-                    ),
-                    "",
-                )
+                self.START.value = k[1]
                 continue
 
             if name == "FINISH":
                 if name in repeat_param:
                     raise ValueError("FINISH is repeated in par file")
-                self.add_param_from_top(
-                    MJDParameter(
-                        name="FINISH", value=k[1], description="End MJD for fitting"
-                    ),
-                    "",
-                )
+                self.FINISH.value = k[1]
                 continue
 
             repeat_param[name] += 1

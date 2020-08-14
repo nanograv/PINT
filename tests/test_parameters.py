@@ -351,8 +351,8 @@ class TestParameters(unittest.TestCase):
 
     def test_START_FINISH_not_in_par(self):
         """
-        Check that START/FINISH parameters are added and set up after fitting
-        when not in input file.
+        Check that START/FINISH parameters are added and set up when not 
+        in input file.
         """
         # check initialization after fitting for .par file without START/FINISH
         m = get_model("NGC6440E.par")
@@ -361,8 +361,8 @@ class TestParameters(unittest.TestCase):
         start_postval = 53478.2858714192  # from Tempo2
         finish_postval = 54187.5873241699  # from Tempo2
 
-        self.assertFalse(hasattr(m, "START"))
-        self.assertFalse(hasattr(m, "FINISH"))
+        self.assertTrue(hasattr(m, "START"))
+        self.assertTrue(hasattr(m, "FINISH"))
 
         # fit toas and compare with expected/Tempo2 (for WLS) values
         fitters = [
