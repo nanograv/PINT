@@ -7,8 +7,12 @@ import numpy as np
 
 from pint import pint_units
 from pint.models.model_builder import get_model
+from pint.models.parameter import MJDParameter
+from pint.toa import get_TOAs
 from pinttestdata import datadir
 
+import pint.fitter
+import copy
 
 """
 The behavior we want for numerical Parameter variables (p):
@@ -296,3 +300,92 @@ class TestParameters(unittest.TestCase):
 
     def test_prefix_value1(self):
         self.assertRaises(ValueError, self.set_prefix_value1)
+
+    def test_START_FINISH_in_par(self):
+        """ 
+        Check that START/FINISH parameters set up/operate properly when 
+        from input file.
+        """
+        m1 = self.m
+        t1 = get_TOAs("B1855+09_NANOGrav_dfg+12.tim")
+
+        start_preval = 53358.726464889485214
+        finish_preval = 55108.922917417192366
+        start_postval = 53358.7274648895  # from Tempo2
+        finish_postval = 55108.9219174172  # from Tempo2
+
+        # check parameter initialization
+        assert hasattr(m1, "START")
+        assert type(m1.START) == type(MJDParameter())
+        assert hasattr(m1, "FINISH")
+        assert type(m1.FINISH) == type(MJDParameter())
+
+        self.assertEqual(m1.START.value, start_preval)
+        self.assertEqual(m1.FINISH.value, finish_preval)
+        self.assertEqual(m1.START.frozen, True)
+        self.assertEqual(m1.FINISH.frozen, True)
+
+        # fit toas and compare with expected/Tempo2 (for WLS) values
+        fitters = [
+            pint.fitter.PowellFitter(toas=t1, model=m1),
+            pint.fitter.WLSFitter(toas=t1, model=m1),
+            pint.fitter.GLSFitter(toas=t1, model=m1),
+        ]
+        for fitter in fitters:
+            fitter.fit_toas()
+            self.assertEqual(m1.START.frozen, True)
+            self.assertEqual(m1.FINISH.frozen, True)
+            if fitter.method == "weighted_least_square":
+                self.assertAlmostEqual(
+                    fitter.model.START.value, start_postval, places=9
+                )
+                self.assertAlmostEqual(
+                    fitter.model.FINISH.value, finish_postval, places=9
+                )
+            self.assertAlmostEqual(
+                fitter.model.START.value, fitter.toas.first_MJD.value, places=9
+            )
+            self.assertAlmostEqual(
+                fitter.model.FINISH.value, fitter.toas.last_MJD.value, places=9
+            )
+
+    def test_START_FINISH_not_in_par(self):
+        """
+        Check that START/FINISH parameters are added and set up after fitting
+        when not in input file.
+        """
+        # check initialization after fitting for .par file without START/FINISH
+        m = get_model("NGC6440E.par")
+        t = get_TOAs("NGC6440E.tim")
+
+        start_postval = 53478.2858714192  # from Tempo2
+        finish_postval = 54187.5873241699  # from Tempo2
+
+        self.assertFalse(hasattr(m, "START"))
+        self.assertFalse(hasattr(m, "FINISH"))
+
+        # fit toas and compare with expected/Tempo2 (for WLS) values
+        fitters = [
+            pint.fitter.PowellFitter(toas=t, model=m),
+            pint.fitter.WLSFitter(toas=t, model=m),
+            pint.fitter.GLSFitter(toas=t, model=m),
+        ]
+        for fitter in fitters:
+            fitter.fit_toas()
+            self.assertTrue(hasattr(fitter.model, "START"))
+            self.assertTrue(hasattr(fitter.model, "FINISH"))
+            self.assertEqual(fitter.model.START.frozen, True)
+            self.assertEqual(fitter.model.FINISH.frozen, True)
+            if fitter.method == "weighted_least_square":
+                self.assertAlmostEqual(
+                    fitter.model.START.value, start_postval, places=9
+                )
+                self.assertAlmostEqual(
+                    fitter.model.FINISH.value, finish_postval, places=9
+                )
+            self.assertAlmostEqual(
+                fitter.model.START.value, fitter.toas.first_MJD.value, places=9
+            )
+            self.assertAlmostEqual(
+                fitter.model.FINISH.value, fitter.toas.last_MJD.value, places=9
+            )

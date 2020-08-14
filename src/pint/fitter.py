@@ -29,6 +29,7 @@ from pint.models.parameter import (
     floatParameter,
     prefixParameter,
     strParameter,
+    MJDParameter,
 )
 from pint.models.pulsar_binary import PulsarBinary
 from pint.residuals import Residuals
@@ -681,10 +682,16 @@ class PowellFitter(Fitter):
         self.minimize_func(np.atleast_1d(self.fitresult.x), *list(fitp.keys()))
 
         # Update START/FINISH params
-        if hasattr(self.model, "START"):
-            self.model.START.value = self.toas.first_MJD
-        if hasattr(self.model, "FINISH"):
-            self.model.FINISH.value = self.toas.last_MJD
+        if not hasattr(self.model, "START"):
+            self.model.add_param_from_top(
+                MJDParameter(name="START", description="Start MJD for fitting"), ""
+            )
+        self.model.START.value = self.toas.first_MJD
+        if not hasattr(self.model, "FINISH"):
+            self.model.add_param_from_top(
+                MJDParameter(name="FINISH", description="End MJD for fitting"), ""
+            )
+        self.model.FINISH.value = self.toas.last_MJD
 
         return self.resids.chi2
 
@@ -779,10 +786,16 @@ class WLSFitter(Fitter):
             self.set_param_uncertainties(fitperrs)
 
         # Update START/FINISH params
-        if hasattr(self.model, "START"):
-            self.model.START.value = self.toas.first_MJD
-        if hasattr(self.model, "FINISH"):
-            self.model.FINISH.value = self.toas.last_MJD
+        if not hasattr(self.model, "START"):
+            self.model.add_param_from_top(
+                MJDParameter(name="START", description="Start MJD for fitting"), ""
+            )
+        self.model.START.value = self.toas.first_MJD
+        if not hasattr(self.model, "FINISH"):
+            self.model.add_param_from_top(
+                MJDParameter(name="FINISH", description="End MJD for fitting"), ""
+            )
+        self.model.FINISH.value = self.toas.last_MJD
 
         return chi2
 
@@ -936,10 +949,16 @@ class GLSFitter(Fitter):
                 self.resids.noise_resids = noise_resids
 
         # Update START/FINISH params
-        if hasattr(self.model, "START"):
-            self.model.START.value = self.toas.first_MJD
-        if hasattr(self.model, "FINISH"):
-            self.model.FINISH.value = self.toas.last_MJD
+        if not hasattr(self.model, "START"):
+            self.model.add_param_from_top(
+                MJDParameter(name="START", description="Start MJD for fitting"), ""
+            )
+        self.model.START.value = self.toas.first_MJD
+        if not hasattr(self.model, "FINISH"):
+            self.model.add_param_from_top(
+                MJDParameter(name="FINISH", description="End MJD for fitting"), ""
+            )
+        self.model.FINISH.value = self.toas.last_MJD
 
         return chi2
 
@@ -1245,9 +1264,15 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             self.resids.noise_resids = noise_resids
 
         # Update START/FINISH params
-        if hasattr(self.model, "START"):
-            self.model.START.value = self.toas.first_MJD
-        if hasattr(self.model, "FINISH"):
-            self.model.FINISH.value = self.toas.last_MJD
+        if not hasattr(self.model, "START"):
+            self.model.add_param_from_top(
+                MJDParameter(name="START", description="Start MJD for fitting"), ""
+            )
+        self.model.START.value = self.toas.first_MJD
+        if not hasattr(self.model, "FINISH"):
+            self.model.add_param_from_top(
+                MJDParameter(name="FINISH", description="End MJD for fitting"), ""
+            )
+        self.model.FINISH.value = self.toas.last_MJD
 
         return chi2
