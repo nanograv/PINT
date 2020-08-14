@@ -233,17 +233,17 @@ class AstrometryEquatorial(Astrometry):
         for p in ("RAJ", "DECJ"):
             if getattr(self, p).value is None:
                 raise MissingParameter("Astrometry", p)
-        # If PM is included, check for POSEPOCH
-        if self.PMRA.value != 0.0 or self.PMDEC.value != 0.0:
-            if self.POSEPOCH.quantity is None:
-                if self.PEPOCH.quantity is None:
-                    raise MissingParameter(
-                        "AstrometryEquatorial",
-                        "POSEPOCH",
-                        "POSEPOCH or PEPOCH are required if PM is set.",
-                    )
-                else:
-                    self.POSEPOCH.quantity = self.PEPOCH.quantity
+        # Check for POSEPOCH
+        if self.POSEPOCH.quantity is None:
+            if self.PEPOCH.quantity is None:
+                raise MissingParameter(
+                    "AstrometryEquatorial",
+                    "POSEPOCH",
+                    "POSEPOCH or PEPOCH are required if PM is set.",
+                )
+            else:
+                log.warning("POSEPOCH not found; using PEPOCH unless set explicitly!")
+                self.POSEPOCH.quantity = self.PEPOCH.quantity
 
     def print_par(self):
         result = ""
@@ -512,17 +512,17 @@ class AstrometryEcliptic(Astrometry):
         for p in ("ELONG", "ELAT"):
             if getattr(self, p).value is None:
                 raise MissingParameter("AstrometryEcliptic", p)
-        # If PM is included, check for POSEPOCH
-        if self.PMELONG.value != 0.0 or self.PMELAT.value != 0.0:
-            if self.POSEPOCH.quantity is None:
-                if self.PEPOCH.quantity is None:
-                    raise MissingParameter(
-                        "Astrometry",
-                        "POSEPOCH",
-                        "POSEPOCH or PEPOCH are required if PM is set.",
-                    )
-                else:
-                    self.POSEPOCH.quantity = self.PEPOCH.quantity
+        # Check for POSEPOCH
+        if self.POSEPOCH.quantity is None:
+            if self.PEPOCH.quantity is None:
+                raise MissingParameter(
+                    "Astrometry",
+                    "POSEPOCH",
+                    "POSEPOCH or PEPOCH are required if PM is set.",
+                )
+            else:
+                log.warning("POSEPOCH not found; using PEPOCH unless set explicitly!")
+                self.POSEPOCH.quantity = self.PEPOCH.quantity
 
     def barycentric_radio_freq(self, toas):
         """Return radio frequencies (MHz) of the toas corrected for Earth motion"""
