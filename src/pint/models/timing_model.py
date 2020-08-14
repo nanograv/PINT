@@ -1167,6 +1167,13 @@ class TimingModel(object):
     def compare(self, othermodel, nodmx=True):
         """Print comparison with another model
 
+# TO-DO:
+# 1. add more to docstring
+#    - explain output, like what diff_sigma is 
+#    - change output table titles
+# 2. change output for uncertainties that aren't reported (inf -> N/A)
+
+
         Parameters
         ----------
         othermodel
@@ -1178,13 +1185,20 @@ class TimingModel(object):
         -------
         str
             Human readable comparison, for printing
+            
+            Formatted as a five column table with titles of             
+            PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2          
+            where Model 1/2 refer to self and othermodel Timing Model objects, 
+            and Diff_SigmaX is the difference in a given parameter as reported by the two models, 
+            normalized by the uncertainty in model X. If model X has no reported uncertainty, 
+            N/A will be printed. 
         """
 
         from uncertainties import ufloat
         import uncertainties.umath as um
 
         s = "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
-            "PARAMETER", "Self   ", "Other   ", "Diff_Sigma1", "Diff_Sigma2"
+            "PARAMETER", "Model 1", "Model 2 ", "Diff_Sigma1", "Diff_Sigma2"
         )
         s += "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
             "---------", "----------", "----------", "----------", "----------"
@@ -1240,9 +1254,15 @@ class TimingModel(object):
                     try:
                         diff = otherpar.value - par.value
                         diff_sigma = diff / par.uncertainty.value
-                        s += " {:>10.2f}".format(diff_sigma)
-                        diff_sigma2 = diff / otherpar.uncertainty.value
-                        s += " {:>10.2f}".format(diff_sigma2)
+                        if diff_sigma == np.inf:
+                            s += " {:>10.4f}".format('N/A')
+                        else:
+                            s += " {:>10.2f}".format(diff_sigma)
+                        diff_sigma2 = diff / otherpar.uncertainty.value                        
+                        if diff_sigma2 == np.inf:
+                            s += " {:>10.4f}".format('N/A')
+                        else:
+                            s += " {:>10.2f}".format(diff_sigma2)
                     except (AttributeError, TypeError):
                         pass
                     s += "\n"
@@ -1283,9 +1303,22 @@ class TimingModel(object):
                     try:
                         diff = otherpar.value - par.value
                         diff_sigma = diff / par.uncertainty.value
+                        if diff_sigma == np.inf:
+                            s += " {:>10.4f}".format('N/A')
+                        else:
+                            s += " {:>10.2f}".format(diff_sigma)
+                        diff_sigma2 = diff / otherpar.uncertainty.value                        
+                        if diff_sigma2 == np.inf:
+                            s += " {:>10.4f}".format('N/A')
+                        else:
+                            s += " {:>10.2f}".format(diff_sigma2)
+                        '''    
+                        diff = otherpar.value - par.value
+                        diff_sigma = diff / par.uncertainty.value
                         s += " {:>10.2f}".format(diff_sigma)
                         diff_sigma2 = diff / otherpar.uncertainty.value
                         s += " {:>10.2f}".format(diff_sigma2)
+                        '''
                     except (AttributeError, TypeError):
                         pass
                     s += "\n"
