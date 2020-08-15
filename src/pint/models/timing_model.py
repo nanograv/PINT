@@ -21,6 +21,7 @@ from pint.models.parameter import (
     maskParameter,
     prefixParameter,
     strParameter,
+    MJDParameter,
 )
 from pint.phase import Phase
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
@@ -150,6 +151,12 @@ class TimingModel(object):
         )
         self.add_param_from_top(
             strParameter(name="UNITS", description="Units (TDB assumed)"), ""
+        )
+        self.add_param_from_top(
+            MJDParameter(name="START", description="Start MJD for fitting"), ""
+        )
+        self.add_param_from_top(
+            MJDParameter(name="FINISH", description="End MJD for fitting"), ""
         )
 
         for cp in components:
@@ -1343,6 +1350,18 @@ class TimingModel(object):
                 log.warning("EPHVER %s does nothing in PINT" % k[1])
                 # actually people expect EPHVER 5 to work
                 # even though it's supposed to imply TCB which doesn't
+                continue
+
+            if name == "START":
+                if name in repeat_param:
+                    raise ValueError("START is repeated in par file")
+                self.START.value = k[1]
+                continue
+
+            if name == "FINISH":
+                if name in repeat_param:
+                    raise ValueError("FINISH is repeated in par file")
+                self.FINISH.value = k[1]
                 continue
 
             repeat_param[name] += 1
