@@ -275,22 +275,22 @@ class Fitter(object):
                     if par.frozen:
                         if par.name == "START":
                             if prefitpar.value is None:
-                                s += ("{:" + spacingName + "s} {} {:28s} {} \n").format(
-                                    pn, " ", "", par.units
-                                )
+                                s += (
+                                    "{:" + spacingName + "s} {:20s} {:28g} {} \n"
+                                ).format(pn, " ", par.value, par.units)
                             else:
                                 s += (
-                                    "{:" + spacingName + "s} {:20g} {:28s} {} \n"
-                                ).format(pn, prefitpar.value, "", par.units)
+                                    "{:" + spacingName + "s} {:20g} {:28g} {} \n"
+                                ).format(pn, prefitpar.value, par.value, par.units)
                         elif par.name == "FINISH":
                             if prefitpar.value is None:
-                                s += ("{:" + spacingName + "s} {} {:28s} {} \n").format(
-                                    pn, " ", "", par.units
-                                )
+                                s += (
+                                    "{:" + spacingName + "s} {:20s} {:28g} {} \n"
+                                ).format(pn, " ", par.value, par.units)
                             else:
                                 s += (
-                                    "{:" + spacingName + "s} {:20g} {:28s} {} \n"
-                                ).format(pn, prefitpar.value, "", par.units)
+                                    "{:" + spacingName + "s} {:20g} {:28g} {} \n"
+                                ).format(pn, prefitpar.value, par.value, par.units)
                         else:
                             s += ("{:" + spacingName + "s} {:20g} {:28s} {} \n").format(
                                 pn, prefitpar.value, "", par.units
