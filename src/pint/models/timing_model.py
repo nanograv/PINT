@@ -1260,7 +1260,7 @@ class TimingModel(object):
                             s += " {:>10.2f}".format(diff_sigma)
                         diff_sigma2 = diff / otherpar.uncertainty.value                        
                         if diff_sigma2 == np.inf:
-                            s += " {:>10.4s}".format('N/A')
+                            s += " {:>10s}".format('N/A')
                         else:
                             s += " {:>10f}".format(diff_sigma2)
                     except (AttributeError, TypeError):
