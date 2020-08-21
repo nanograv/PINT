@@ -53,7 +53,7 @@ class Dispersion(DelayComponent):
         dm = self.dm_value(toas)
         return self.dispersion_time_delay(dm, bfreq)
 
-    def dm_value(self, toas, local=True):
+    def dm_value(self, toas):
         """ Compute modeled DM value at given TOAs.
 
         Parameters
@@ -61,11 +61,6 @@ class Dispersion(DelayComponent):
         toas : `TOAs` object or TOA table(TOAs.table)
             If given a TOAs object, it will use the whole TOA table in the
              `TOAs` object.
-
-        local : bool, optional
-            Flag for computing the component dm value only. If True, it only
-            returns the current component's dm value. Otherwise, compute all the
-            DM types components' dm value in the timing model. Default is True.
 
         Return
         ------
@@ -77,11 +72,8 @@ class Dispersion(DelayComponent):
             toas_table = toas.table
 
         dm = np.zeros(len(toas_table)) * self.DM.units
-        if local:
-            dm_funcs = self.dm_value_funcs # Local dm value
-        else:
-            dm_funcs = self._parent.dm_funcs # All dm value in timing model.
-        for dm_f in dm_funcs:
+
+        for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
         return dm
 

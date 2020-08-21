@@ -877,6 +877,18 @@ class TimingModel(object):
         else:
             return phase
 
+    def total_dm(self, toas):
+        """ This function calculates the dispersion measures from all the dispersion
+        type of components.
+        """
+        # Here we assume the unit would be the same for all the dm value function.
+        # By doing so, we do not have to hard code an unit here. 
+        dm = self.dm_funcs[0](toas)
+
+        for dm_f in self.dm_funcs[1::]:
+            dm += dm_f(toas)
+        return dm
+
     def toa_covariance_matrix(self, toas):
         """This a function to get the TOA covariance matrix for noise models.
         If there is no noise model component provided, a diagonal matrix with
