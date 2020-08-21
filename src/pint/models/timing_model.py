@@ -1254,12 +1254,12 @@ class TimingModel(object):
                     try:
                         diff = otherpar.value - par.value
                         diff_sigma = diff / par.uncertainty.value
-                        if diff_sigma == np.inf:
+                        if abs(diff_sigma) == np.inf:
                             s += " {:>10s}".format('N/A')
                         else:
                             s += " {:>10.2f}".format(diff_sigma)
                         diff_sigma2 = diff / otherpar.uncertainty.value                        
-                        if diff_sigma2 == np.inf:
+                        if abs(diff_sigma2) == np.inf:
                             s += " {:>10s}".format('N/A')
                         else:
                             s += " {:>10f}".format(diff_sigma2)
@@ -1303,12 +1303,12 @@ class TimingModel(object):
                     try:
                         diff = otherpar.value - par.value
                         diff_sigma = diff / par.uncertainty.value
-                        if diff_sigma == np.inf:
+                        if abs(diff_sigma) == np.inf:
                             s += " {:>10s}".format('N/A')
                         else:
                             s += " {:>10.2f}".format(diff_sigma)
                         diff_sigma2 = diff / otherpar.uncertainty.value                        
-                        if diff_sigma2 == np.inf:
+                        if abs(diff_sigma2) == np.inf:
                             s += " {:>10s}".format('N/A')
                         else:
                             s += " {:>10.2f}".format(diff_sigma2)
