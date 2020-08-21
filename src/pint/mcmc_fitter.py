@@ -76,7 +76,7 @@ def lnlikelihood_basic(ftr, theta):
 
 def lnlikelihood_chi2(ftr, theta):
     ftr.set_parameters(theta)
-    return -Residuals(toas=ftr.toas, model=ftr.model).calc_chi2().value
+    return -Residuals(toas=ftr.toas, model=ftr.model).calc_chi2()
 
 
 def set_priors_basic(ftr, priorerrfact=10.0):
