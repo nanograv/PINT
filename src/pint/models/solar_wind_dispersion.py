@@ -21,8 +21,8 @@ class SolarWindDispersion(Dispersion):
 
     References
     ----------
-    Madison et al. 2019, ApJ, 872, 150; Section 3.1
     Edwards et al. 2006, MNRAS, 372, 1549; Setion 2.5.4
+    Madison et al. 2019, ApJ, 872, 150; Section 3.1.
 
     """
 
@@ -51,31 +51,41 @@ class SolarWindDispersion(Dispersion):
 
     def setup(self):
         super(SolarWindDispersion, self).setup()
+        self.register_dm_deriv_funcs(self.d_dm_d_ne_sw, "NE_SW")
         self.register_deriv_funcs(self.d_delay_d_ne_sw, "NE_SW")
 
     def validate(self):
         super(SolarWindDispersion, self).validate()
 
-    def solar_wind_dm(self, toas):
-        """Return the solar wind dispersion measure for a set of frequencies
-        Eventually different solar wind models will be supported
+    def solar_wind_geometry(self, toas):
+        """ Return the geometry of solar wind dispersion.
 
-        Implements equations 29, 30 of Edwards et al. 2006,
-        where their rho is given as theta here
+        Implements the geometry part of equations 29, 30 of Edwards et al. 2006,
+        (i.e., without the n0, the solar wind DM amplitude part.)
+        Their rho is given as theta here.
 
         rvec: radial vector from observatory to the center of the Sun
         pos: pulsar position
         """
+        tbl = toas.table
+        rvec = tbl["obs_sun_pos"].quantity
+        pos = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(np.float64))
+        r = np.sqrt(np.sum(rvec * rvec, axis=1))
+        cos_theta = (np.sum(rvec * pos, axis=1) / r).to(u.Unit(""))
+        theta = np.arccos(cos_theta).to(u.Unit(""),
+            equivalencies=u.dimensionless_angles())
+        solar_wind_geometry = (const.au ** 2.0
+            * theta
+            / (r * np.sqrt(1.0 - cos_theta ** 2.0)))
+        return solar_wind_geometry
+
+    def solar_wind_dm(self, toas):
+        """Return the solar wind dispersion measure using equations
+        29, 30 of Edwards et al. 2006.
+        """
         if self.SWM.value == 0:
-            tbl = toas.table
-            rvec = tbl["obs_sun_pos"].quantity
-            pos = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(np.float64))
-            r = np.sqrt(np.sum(rvec * rvec, axis=1))
-            cos_theta = (np.sum(rvec * pos, axis=1) / r).to(u.Unit("")).value
-            solar_wind_dm = (const.au ** 2.0
-                * np.arccos(cos_theta)
-                * self.NE_SW.quantity
-                / (r * np.sqrt(1.0 - cos_theta ** 2.0)))
+            solar_wind_geometry = self.solar_wind_geometry(toas)
+            solar_wind_dm = self.NE_SW.quantity *  solar_wind_geometry
         else:
             # TODO Introduce the You et.al. (2007) Solar Wind Model for SWM=1
             raise NotImplementedError(
@@ -88,33 +98,27 @@ class SolarWindDispersion(Dispersion):
         """
         return self.dispersion_type_delay(toas)
 
-    def d_delay_d_ne_sw(self, toas, param_name, acc_delay=None):
+    def d_dm_d_ne_sw(self, toas, param_name, acc_delay=None):
+        """ Derivative of of DM wrt the solar wind dm amplitude.
+        """
         if self.SWM.value == 0:
-            tbl = toas.table
-            try:
-                bfreq = self.barycentric_radio_freq(toas)
-            except AttributeError:
-                warn("Using topocentric frequency for solar wind dedispersion!")
-                bfreq = tbl["freq"]
-
-            rvec = tbl["obs_sun_pos"].quantity
-            pos = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(np.float64))
-            r = np.sqrt(np.sum(rvec * rvec, axis=1))
-            cos_theta = np.sum(rvec * pos, axis=1) / r
-
-            ret = (
-                const.au ** 2.0
-                * np.arccos(cos_theta)
-                * DMconst
-                / (r * np.sqrt(1 - cos_theta ** 2.0) * bfreq ** 2.0)
-            )
-            ret[bfreq < 1.0 * u.MHz] = 0.0
-            return ret
+            solar_wind_geometry = self.solar_wind_geometry(toas)
         else:
+            # TODO Introduce the You et.al. (2007) Solar Wind Model for SWM=1
             raise NotImplementedError(
-                "Solar Dispersion Delay Derivative not implemented for SWM %d"
-                % self.SWM.value
+                "Solar Dispersion Delay not implemented for SWM %d" % self.SWM.value
             )
+        return solar_wind_geometry
+
+    def d_delay_d_ne_sw(self, toas, param_name, acc_delay=None):
+        try:
+            bfreq = self.barycentric_radio_freq(toas)
+        except AttributeError:
+            warn("Using topocentric frequency for dedispersion!")
+            bfreq = tbl["freq"]
+        deriv = self.d_delay_d_dmparam(toas, "NE_SW")
+        deriv[bfreq < 1.0 * u.MHz] = 0.0
+        return deriv
 
     def print_par(self,):
         result = ""
