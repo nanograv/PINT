@@ -40,7 +40,7 @@ class Dispersion(DelayComponent):
         """
         # dm delay
         dmdelay = DM * DMconst / freq ** 2.0
-        return dmdelay
+        return dmdelay.to(u.s)
 
     def dispersion_type_delay(self, toas):
         tbl = toas.table
