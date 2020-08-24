@@ -18,5 +18,5 @@ os.chdir(datadir)
 
 class TestSolarWind:
     def test_solar_wind_dm(self):
-        self.par =
-        self.tim = 
+        self.par = ""
+        self.tim = ""
