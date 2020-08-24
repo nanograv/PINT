@@ -45,6 +45,7 @@ class SolarWindDispersion(Dispersion):
                 name="SWM", value=0.0, units="", description="Solar Wind Model"
             )
         )
+        self.dm_value_funcs += [self.solar_wind_dm]
         self.delay_funcs_component += [self.solar_wind_delay]
         self.set_special_params(["NE_SW", "SWM"])
 
@@ -55,8 +56,8 @@ class SolarWindDispersion(Dispersion):
     def validate(self):
         super(SolarWindDispersion, self).validate()
 
-    def solar_wind_delay(self, toas, acc_delay=None):
-        """Return the solar wind dispersion delay for a set of frequencies
+    def solar_wind_dm(self, toas):
+        """Return the solar wind dispersion measure for a set of frequencies
         Eventually different solar wind models will be supported
 
         Implements equations 29, 30 of Edwards et al. 2006,
@@ -67,30 +68,25 @@ class SolarWindDispersion(Dispersion):
         """
         if self.SWM.value == 0:
             tbl = toas.table
-            try:
-                bfreq = self.barycentric_radio_freq(toas)
-            except AttributeError:
-                warn("Using topocentric frequency for dedispersion!")
-                bfreq = tbl["freq"]
-
             rvec = tbl["obs_sun_pos"].quantity
             pos = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(np.float64))
             r = np.sqrt(np.sum(rvec * rvec, axis=1))
             cos_theta = (np.sum(rvec * pos, axis=1) / r).to(u.Unit("")).value
-            ret = (
-                const.au ** 2.0
+            solar_wind_dm = (const.au ** 2.0
                 * np.arccos(cos_theta)
-                * DMconst
                 * self.NE_SW.quantity
-                / (r * np.sqrt(1.0 - cos_theta ** 2.0) * bfreq ** 2.0)
-            )
-            ret[bfreq < 1.0 * u.MHz] = 0.0
-            return ret
+                / (r * np.sqrt(1.0 - cos_theta ** 2.0)))
         else:
             # TODO Introduce the You et.al. (2007) Solar Wind Model for SWM=1
             raise NotImplementedError(
                 "Solar Dispersion Delay not implemented for SWM %d" % self.SWM.value
             )
+        return solar_wind_dm.to(u.pc / u.cm **3)
+
+    def solar_wind_delay(self, toas, acc_delay=None):
+        """ This is a wrapper function to compute solar wind dispersion delay.
+        """
+        return self.dispersion_type_delay(toas)
 
     def d_delay_d_ne_sw(self, toas, param_name, acc_delay=None):
         if self.SWM.value == 0:
