@@ -27,7 +27,7 @@ class TestResidualBuilding:
 
         # Test no mean subtraction
         phase_res_nomean = Residuals(
-            toas=self.toa, model=self.model, residual_type="toa", subtract_mean=False,
+            toas=self.toa, model=self.model, residual_type="toa", subtract_mean=False
         )
         assert len(phase_res_nomean.resids) == self.toa.ntoas
         assert phase_res.resids.unit == phase_res.unit
@@ -51,7 +51,7 @@ class TestResidualBuilding:
 
         # Test no mean subtraction
         dm_res_nomean = Residuals(
-            toas=self.toa, model=self.model, residual_type="dm", subtract_mean=False,
+            toas=self.toa, model=self.model, residual_type="dm", subtract_mean=False
         )
         assert len(dm_res_nomean.resids) == self.toa.ntoas
         weight = 1.0 / (dm_res_nomean.dm_error ** 2)

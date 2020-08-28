@@ -14,7 +14,7 @@ from pint.fitter import Fitter
 
 
 class GRSFitter(Fitter):
-    """ Generalized residual fitter.
+    """Generalized residual fitter.
 
     The generalized residual fitter uses more than TOAs as data input, it also
     uses the independent measured data (e.g., Wideband's DM valus) as part of
@@ -26,8 +26,6 @@ class GRSFitter(Fitter):
     default.
     """
 
-    def __init__(
-        self, toas, model, residuals=None,
-    ):
+    def __init__(self, toas, model, residuals=None):
         super(GRSFitter, self).__init__(toas=toas, model=model, residuals=residuals)
         self.method = "g"

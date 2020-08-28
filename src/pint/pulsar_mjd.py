@@ -277,7 +277,7 @@ longdouble_mjd_eps = (70000 * u.day * np.finfo(np.longdouble).eps).to(u.ns)
 
 
 def time_to_longdouble(t):
-    """ Return an astropy Time value as MJD in longdouble
+    """Return an astropy Time value as MJD in longdouble
 
     The returned value is accurate to within a nanosecond, while the precision of long
     double MJDs (near the present) is roughly 0.7 ns.

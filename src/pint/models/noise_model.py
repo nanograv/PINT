@@ -203,9 +203,7 @@ class ScaleDmError(NoiseComponent):
         )
 
         self.dm_covariance_matrix_funcs = [self.dm_sigma_scaled_cov_matrix]
-        self.scaled_dm_sigma_funcs += [
-            self.scale_dm_sigma,
-        ]
+        self.scaled_dm_sigma_funcs += [self.scale_dm_sigma]
         self._paired_DMEFAC_DMEQUAD = None
 
     def setup(self):
@@ -239,7 +237,7 @@ class ScaleDmError(NoiseComponent):
                 raise ValueError("'%s' have duplicated keys and key values." % el)
 
     def _match_DMEFAC_DMEQUAD(self, add_param_to_model=False):
-        """ Match the DMEFAC and DMEQUAD parameter, if only one parameter of the
+        """Match the DMEFAC and DMEQUAD parameter, if only one parameter of the
         DMEFAC-DMEQUAD pair is given. This match is based on the parameters key
         and key value.
 
@@ -276,8 +274,7 @@ class ScaleDmError(NoiseComponent):
 
     # pairing up EFAC and EQUAD
     def pair_DMEFAC_DMEQUAD(self):
-        """ Pair the DMEFAC and DMEQUAD.
-        """
+        """Pair the DMEFAC and DMEQUAD."""
         keys_and_values = {}
         # Check the dm efac first
         for dmefac, efac_key in self.DMEFACs.items():

@@ -78,8 +78,7 @@ class BinaryDDK(BinaryDD):
         return par_obj
 
     def setup(self):
-        """Check out parameters setup.
-        """
+        """Check out parameters setup."""
         super(BinaryDDK, self).setup()
         log.info(
             "Using ICRS equatorial coordinate. The parameter KOM is"
@@ -87,8 +86,7 @@ class BinaryDDK(BinaryDD):
         )
 
     def validate(self):
-        """ Validate parameters
-        """
+        """Validate parameters"""
         super(BinaryDDK, self).validate()
         if "PMRA" not in self._parent.params or "PMDEC" not in self._parent.params:
             # Check ecliptic coordinates proper motion.

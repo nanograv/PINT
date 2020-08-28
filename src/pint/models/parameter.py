@@ -196,8 +196,7 @@ class Parameter(object):
     # Setup quantity property
     @property
     def quantity(self):
-        """Return the internal stored parameter value and units.
-        """
+        """Return the internal stored parameter value and units."""
         return self._quantity
 
     @quantity.setter
@@ -266,8 +265,7 @@ class Parameter(object):
 
     @property
     def uncertainty(self):
-        """Return the internal stored parameter uncertainty value and units.
-        """
+        """Return the internal stored parameter uncertainty value and units."""
         return self._uncertainty
 
     @uncertainty.setter
@@ -419,8 +417,7 @@ class Parameter(object):
         return True
 
     def name_matches(self, name):
-        """Whether or not the parameter name matches the provided name
-        """
+        """Whether or not the parameter name matches the provided name"""
         return (name == self.name.upper()) or (
             name in map(lambda x: x.upper(), self.aliases)
         )
@@ -714,8 +711,7 @@ class boolParameter(Parameter):
         self.paramType = "boolParameter"
 
     def set_quantity_bool(self, val):
-        """ This function is to get boolean value for boolParameter class
-        """
+        """This function is to get boolean value for boolParameter class"""
         # First try strings
         try:
             if val.upper() in ["Y", "YES", "T", "TRUE", "1"]:
@@ -837,10 +833,10 @@ class MJDParameter(Parameter):
 
     def set_quantity_mjd(self, val):
         """Value setter for MJD parameter,
-           Accepted format:
-           Astropy time object
-           mjd float
-           mjd string (in pulsar_mjd format)
+        Accepted format:
+        Astropy time object
+        mjd float
+        mjd string (in pulsar_mjd format)
         """
         if isinstance(val, numbers.Number):
             val = np.longdouble(val)
@@ -952,7 +948,7 @@ class AngleParameter(Parameter):
         )
 
     def set_quantity_angle(self, val):
-        """ This function is to set value to angle parameters.
+        """This function is to set value to angle parameters.
 
         Accepted format:
         1. Astropy angle object
@@ -973,8 +969,7 @@ class AngleParameter(Parameter):
         return result
 
     def set_uncertainty_angle(self, val):
-        """This function is to set the uncertainty for an angle parameter.
-        """
+        """This function is to set the uncertainty for an angle parameter."""
         if isinstance(val, numbers.Number):
             result = Angle(val * self.unit_identifier[self._str_unit.lower()][2])
         elif isinstance(val, str):
@@ -990,16 +985,14 @@ class AngleParameter(Parameter):
         return result
 
     def print_quantity_angle(self, quan):
-        """This is a function to print out the angle parameter.
-        """
+        """This is a function to print out the angle parameter."""
         if ":" in self._str_unit:
             return quan.to_string(sep=":", precision=8)
         else:
             return quan.to_string(decimal=True, precision=15)
 
     def print_uncertainty(self, unc):
-        """This is a function for printing out the uncertainty
-        """
+        """This is a function for printing out the uncertainty"""
         if ":" in self._str_unit:
             angle_arcsec = unc.to(u.arcsec)
             if self.units == u.hourangle:
@@ -1528,8 +1521,7 @@ class maskParameter(floatParameter):
         return line + "\n"
 
     def new_param(self, index, copy_all=False):
-        """Create a new but same style mask parameter
-        """
+        """Create a new but same style mask parameter"""
         if not copy_all:
             new_mask_param = maskParameter(
                 name=self.origin_name,

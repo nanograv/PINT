@@ -35,8 +35,8 @@ def shifted(m, delta=0.5):
 
 
 def weighted_light_curve(nbins, phases, weights, normed=False, phase_shift=0):
-    """ Return a set of bins, values, and errors to represent a
-        weighted light curve."""
+    """Return a set of bins, values, and errors to represent a
+    weighted light curve."""
     bins = np.linspace(0 + phase_shift, 1 + phase_shift, nbins + 1)
     counts = np.histogram(phases, bins=bins, density=False)[0]
     w1 = (np.histogram(phases, bins=bins, weights=weights, density=False)[0]).astype(
@@ -60,20 +60,20 @@ def LCFitter(
     binned_ebins=8,
     phase_shift=0,
 ):
-    """ Factory class for light curve fitters.  Based on whether weights
-        or energies are supplied in addition to photon phases, the
-        appropriate fitter class is returned.
-        Arguments:
-        template -- an instance of LCTemplate
-        phases   -- list of photon phases
+    """Factory class for light curve fitters.  Based on whether weights
+    or energies are supplied in addition to photon phases, the
+    appropriate fitter class is returned.
+    Arguments:
+    template -- an instance of LCTemplate
+    phases   -- list of photon phases
 
-        Keyword arguments:
-        weights      [None] optional photon weights
-        log10_ens    [None] optional photon energies (log10(E/MeV))
-        times        [None] optional photon arrival times
-        binned_bins  [100]  phase bins to use in binned likelihood
-        binned_ebins [8]    energy bins to use in binned likelihood
-        phase_shift  [0]    set this if a phase shift has been applied
+    Keyword arguments:
+    weights      [None] optional photon weights
+    log10_ens    [None] optional photon energies (log10(E/MeV))
+    times        [None] optional photon arrival times
+    binned_bins  [100]  phase bins to use in binned likelihood
+    binned_ebins [8]    energy bins to use in binned likelihood
+    phase_shift  [0]    set this if a phase shift has been applied
     """
     kwargs = dict(
         times=np.asarray(times), binned_bins=binned_bins, phase_shift=phase_shift
@@ -338,7 +338,7 @@ class UnweightedLCFitter(object):
         return ph1 - ph0, d2 ** -0.5
 
     def fit_background(self, unbinned=True):
-        """ Fit the background level, holding the ratios of the pulsed
+        """Fit the background level, holding the ratios of the pulsed
         components fixed but varying their total normalization."""
 
         self._set_unbinned(unbinned)
@@ -509,8 +509,8 @@ class UnweightedLCFitter(object):
         s = self.template.prof_string(outputfile=outputfile)
 
     def remove_component(self, index, steps=5, fit_kwargs={}):
-        """ Gradually remove a component from a model by refitting and
-            return new LCTemplate object."""
+        """Gradually remove a component from a model by refitting and
+        return new LCTemplate object."""
         if len(self.template) == 1:
             raise ValueError(
                 "Template only has one component -- removing it would be madness!"
@@ -612,9 +612,9 @@ class UnweightedLCFitter(object):
         pl.grid(True)
 
     def __getstate__(self):
-        """ Cannot pickle self.loglikelihood and self.gradient since
-            these are instancemethod objects.
-            See: http://mail.python.org/pipermail/python-list/2000-October/054610.html """
+        """Cannot pickle self.loglikelihood and self.gradient since
+        these are instancemethod objects.
+        See: http://mail.python.org/pipermail/python-list/2000-October/054610.html"""
         result = self.__dict__.copy()
         del result["loglikelihood"]
         del result["gradient"]
@@ -626,10 +626,10 @@ class UnweightedLCFitter(object):
         self.gradient = self.unbinned_gradient
 
     def aic(self, template=None):
-        """ Return the Akaike information criterion for the current state.
+        """Return the Akaike information criterion for the current state.
 
-            Note the sense of the statistic is such that more negative
-            implies a better fit."""
+        Note the sense of the statistic is such that more negative
+        implies a better fit."""
         if template is not None:
             template, self.template = self.template, template
         else:
@@ -640,13 +640,13 @@ class UnweightedLCFitter(object):
         return ts
 
     def bic(self, template=None):
-        """ Return the Bayesian information criterion for the current state.
+        """Return the Bayesian information criterion for the current state.
 
-            Note the sense of the statistic is such that more negative
-            implies a better fit.
+        Note the sense of the statistic is such that more negative
+        implies a better fit.
 
-            This should work for energy-dependent templates provided the
-            template and fitter match types."""
+        This should work for energy-dependent templates provided the
+        template and fitter match types."""
         if template is not None:
             template, self.template = self.template, template
         else:
@@ -921,10 +921,10 @@ def make_err_plot(template, totals=[10, 20, 50, 100, 500], n=1000):
 
 
 def approx_gradient(fitter, eps=1e-6):
-    """ Numerically approximate the gradient of an instance of one of the
-        light curve fitters.
+    """Numerically approximate the gradient of an instance of one of the
+    light curve fitters.
 
-        TODO -- potentially merge this with the code in lcprimitives"""
+    TODO -- potentially merge this with the code in lcprimitives"""
     func = fitter.template
     orig_p = func.get_parameters(free=True).copy()
     g = np.zeros([len(orig_p)])
@@ -946,17 +946,17 @@ def approx_gradient(fitter, eps=1e-6):
 
 
 def hess_from_grad(grad, par, step=1e-3, iterations=2):
-    """ Use gradient to compute hessian.  Proceed iteratively to take steps
-        roughly equal to the 1-sigma errors.
+    """Use gradient to compute hessian.  Proceed iteratively to take steps
+    roughly equal to the 1-sigma errors.
 
-        The initial step can be:
-            [scalar] use the same step for the initial iteration
-            [array] specify a step for each parameters.
-        """
+    The initial step can be:
+        [scalar] use the same step for the initial iteration
+        [array] specify a step for each parameters.
+    """
 
     def mdet(M):
-        """ Return determinant of M.
-            Use a Laplace cofactor expansion along first row."""
+        """Return determinant of M.
+        Use a Laplace cofactor expansion along first row."""
         n = M.shape[0]
         if n == 2:
             return M[0, 0] * M[1, 1] - M[0, 1] * M[1, 0]

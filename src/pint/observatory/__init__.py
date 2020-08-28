@@ -235,13 +235,13 @@ class Observatory(object):
 
     def _get_TDB_PINT(self, t, ephem, grp=None):
         """Uses astropy.Time location to add the topocentric correction term to
-            the Time object. The topocentric correction is given as (r/c).(v/c),
-            with r equal to the geocentric position of the observer, v being the
-            barycentric velocity of the earth, and c being the speed of light.
+        the Time object. The topocentric correction is given as (r/c).(v/c),
+        with r equal to the geocentric position of the observer, v being the
+        barycentric velocity of the earth, and c being the speed of light.
 
-            The geocentric observer position can be obtained from Time object.
-            The barycentric velocity can be obtained using solar_system_ephemerides
-            objPosVel_wrt_SSB
+        The geocentric observer position can be obtained from Time object.
+        The barycentric velocity can be obtained using solar_system_ephemerides
+        objPosVel_wrt_SSB
         """
 
         # Add in correction term to t.tdb equal to r.v / c^2
@@ -256,7 +256,7 @@ class Observatory(object):
 
     def _get_TDB_ephem(self, t, ephem):
         """This is a function that reads the ephem TDB-TT column. This column is
-            provided by DE4XXt version of ephemeris.
+        provided by DE4XXt version of ephemeris.
         """
         raise NotImplementedError
 

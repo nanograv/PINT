@@ -72,13 +72,11 @@ class BinaryDD(PulsarBinary):
         )
 
     def setup(self):
-        """setup.
-        """
+        """setup."""
         super(BinaryDD, self).setup()
 
     def validate(self):
-        """ Validate the input parameters.
-        """
+        """Validate the input parameters."""
         super(BinaryDD, self).validate()
         self.check_required_params(["T0", "A1"])
         # If any *DOT is set, we need T0

@@ -82,8 +82,7 @@ class BinaryELL1Base(PulsarBinary):
         super(BinaryELL1Base, self).setup()
 
     def validate(self):
-        """ Validate parameters
-        """
+        """Validate parameters"""
         super(BinaryELL1Base, self).validate()
 
         for p in ["EPS1", "EPS2"]:
@@ -262,13 +261,11 @@ class BinaryELL1H(BinaryELL1Base):
         return self.binary_instance.ds_func_list
 
     def setup(self):
-        """ Parameter setup.
-        """
+        """Parameter setup."""
         super(BinaryELL1H, self).setup()
 
     def validate(self):
-        """ Parameter validation.
-        """
+        """Parameter validation."""
         super(BinaryELL1H, self).validate()
         if self.H3.quantity is None:
             raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")

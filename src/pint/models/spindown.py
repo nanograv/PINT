@@ -92,8 +92,7 @@ class Spindown(PhaseComponent):
         return "Hz/s^%d" % n if n else "Hz"
 
     def get_spin_terms(self):
-        """Return a list of the spin term values in the model: [F0, F1, ..., FN]
-        """
+        """Return a list of the spin term values in the model: [F0, F1, ..., FN]"""
         return [getattr(self, "F%d" % ii).quantity for ii in range(self.num_spin_terms)]
 
     def get_dt(self, toas, delay):

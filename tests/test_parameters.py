@@ -302,8 +302,8 @@ class TestParameters(unittest.TestCase):
         self.assertRaises(ValueError, self.set_prefix_value1)
 
     def test_START_FINISH_in_par(self):
-        """ 
-        Check that START/FINISH parameters set up/operate properly when 
+        """
+        Check that START/FINISH parameters set up/operate properly when
         from input file.
         """
         m1 = self.m
@@ -351,7 +351,7 @@ class TestParameters(unittest.TestCase):
 
     def test_START_FINISH_not_in_par(self):
         """
-        Check that START/FINISH parameters are added and set up when not 
+        Check that START/FINISH parameters are added and set up when not
         in input file.
         """
         # check initialization after fitting for .par file without START/FINISH

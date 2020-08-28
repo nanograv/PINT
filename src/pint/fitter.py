@@ -39,7 +39,7 @@ __all__ = ["Fitter", "PowellFitter", "GLSFitter", "WLSFitter"]
 
 
 class Fitter(object):
-    """ Base class for fitter.
+    """Base class for fitter.
 
     The fitting function should be defined as the fit_toas() method.
 
@@ -677,7 +677,7 @@ class Fitter(object):
 
 class PowellFitter(Fitter):
     """A class for Scipy Powell fitting method. This method searches over
-       parameter space. It is a relative basic method.
+    parameter space. It is a relative basic method.
     """
 
     def __init__(self, toas, model):
@@ -709,8 +709,8 @@ class PowellFitter(Fitter):
 
 class WLSFitter(Fitter):
     """
-       A class for weighted least square fitting method. The design matrix is
-       required.
+    A class for weighted least square fitting method. The design matrix is
+    required.
     """
 
     def __init__(self, toas, model):
@@ -805,8 +805,8 @@ class WLSFitter(Fitter):
 
 class GLSFitter(Fitter):
     """
-       A class for weighted least square fitting method. The design matrix is
-       required.
+    A class for weighted least square fitting method. The design matrix is
+    required.
     """
 
     def __init__(self, toas=None, model=None, residuals=None):
@@ -959,7 +959,7 @@ class GLSFitter(Fitter):
 
 
 class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
-    """ A class to for fitting TOAs and other independent measured data.
+    """A class to for fitting TOAs and other independent measured data.
 
     Parameters
     ----------
@@ -1083,7 +1083,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         return combine_covariance_matrix(cov_matrixs)
 
     def get_data_uncertainty(self, data_name, data_obj):
-        """ Get the data uncertainty from the data  object.
+        """Get the data uncertainty from the data  object.
 
         Note
         ----
@@ -1097,7 +1097,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             raise ValueError("No method to access data error is provided.")
 
     def scaled_all_sigma(self,):
-        """ Scale all data's uncertainty. If the function of scaled_`data`_sigma
+        """Scale all data's uncertainty. If the function of scaled_`data`_sigma
         is not given. It will just return the original data uncertainty.
         """
         scaled_sigmas = []

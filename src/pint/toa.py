@@ -894,16 +894,16 @@ class TOAs(object):
     def get_flag_value(self, flag, fill_value=None):
         """Get the request TOA flag values.
 
-           Parameters
-           ----------
-           flag_name : str
-               The request flag name.
+        Parameters
+        ----------
+        flag_name : str
+            The request flag name.
 
-           Returns
-           -------
-           values : list
-               A list of flag values from each TOA. If the TOA does not have
-               the flag, it will fill up with the fill_value.
+        Returns
+        -------
+        values : list
+            A list of flag values from each TOA. If the TOA does not have
+            the flag, it will fill up with the fill_value.
         """
         result = []
         valid_index = []
@@ -917,8 +917,7 @@ class TOAs(object):
         return result, valid_index
 
     def get_dm_errors(self):
-        """ Get the Wideband DM data error
-        """
+        """Get the Wideband DM data error"""
         result, valid = self.get_flag_value("pp_dme")
         if valid == []:
             raise AttributeError("No DM error is provided.")

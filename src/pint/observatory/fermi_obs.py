@@ -20,21 +20,21 @@ from pint.utils import PosVel
 def load_FT2(ft2_filename):
     """Load data from a Fermi FT2 file
 
-        The contents of the FT2 file are described here:
-        https://fermi.gsfc.nasa.gov/ssc/data/analysis/documentation/Cicerone/Cicerone_Data/LAT_Data_Columns.html#SpacecraftFile
-        The coordinates are X, Y, Z in the ECI (Earth-Centered Inertial)
-        frame. I (@paulray) **believe** this is the same as astropy's GCRS
-        <http://docs.astropy.org/en/stable/api/astropy.coordinates.GCRS.html>,
-        but this should be confirmed.
+    The contents of the FT2 file are described here:
+    https://fermi.gsfc.nasa.gov/ssc/data/analysis/documentation/Cicerone/Cicerone_Data/LAT_Data_Columns.html#SpacecraftFile
+    The coordinates are X, Y, Z in the ECI (Earth-Centered Inertial)
+    frame. I (@paulray) **believe** this is the same as astropy's GCRS
+    <http://docs.astropy.org/en/stable/api/astropy.coordinates.GCRS.html>,
+    but this should be confirmed.
 
-        Parameters
-        ----------
-        ft2_filename : str
-            Name of file to load
+    Parameters
+    ----------
+    ft2_filename : str
+        Name of file to load
 
-        Returns
-        -------
-        astropy Table containing Time, x, y, z, v_x, v_y, v_z data
+    Returns
+    -------
+    astropy Table containing Time, x, y, z, v_x, v_y, v_z data
 
     """
     # Load photon times from FT1 file

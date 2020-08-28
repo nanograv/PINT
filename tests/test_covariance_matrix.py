@@ -14,8 +14,7 @@ os.chdir(datadir)
 
 
 class TestCovarianceMatrix:
-    """ Test for covariance matrix
-    """
+    """Test for covariance matrix"""
 
     def setup(self):
         self.matrix1 = np.arange(16).reshape((4, 4))

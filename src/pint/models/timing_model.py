@@ -177,10 +177,10 @@ class TimingModel(object):
             cp.setup()
 
     def validate(self):
-        """ Validate component setup.
-            The checks includes:
-            - Required parameters
-            - Parameter values
+        """Validate component setup.
+        The checks includes:
+        - Required parameters
+        - Parameter values
         """
         for cp in self.components.values():
             cp.validate()
@@ -385,8 +385,7 @@ class TimingModel(object):
         return Dphase_Ddelay
 
     def get_deriv_funcs(self, component_type, derivative_type=""):
-        """Return dictionary of derivative functions.
-        """
+        """Return dictionary of derivative functions."""
         # TODO, this function can be a more generical function collector.
         deriv_funcs = defaultdict(list)
         if not derivative_type == "":
@@ -448,7 +447,7 @@ class TimingModel(object):
         return comp_type
 
     def map_component(self, component):
-        """ Get the location of component.
+        """Get the location of component.
 
         Parameters
         ----------
@@ -538,7 +537,7 @@ class TimingModel(object):
             self.validate()
 
     def remove_component(self, component):
-        """ Remove one component from the timing model.
+        """Remove one component from the timing model.
 
         Parameters
         ----------
@@ -549,7 +548,7 @@ class TimingModel(object):
         host.remove(cp)
 
     def _locate_param_host(self, components, param):
-        """ Search for the parameter host component.
+        """Search for the parameter host component.
 
         Parameters
         ----------
@@ -590,17 +589,17 @@ class TimingModel(object):
         return dict(categorydict)
 
     def add_param_from_top(self, param, target_component, setup=False):
-        """ Add a parameter to a timing model component.
+        """Add a parameter to a timing model component.
 
-            Parameters
-            ----------
-            param: str
-                Parameter name
-            target_component: str
-                Parameter host component name. If given as "" it would add
-                parameter to the top level `TimingModel` class
-            setup: bool, optional
-                Flag to run setup() function.
+        Parameters
+        ----------
+        param: str
+            Parameter name
+        target_component: str
+            Parameter host component name. If given as "" it would add
+            parameter to the top level `TimingModel` class
+        setup: bool, optional
+            Flag to run setup() function.
         """
         if target_component == "":
             setattr(self, param.name, param)
@@ -744,8 +743,8 @@ class TimingModel(object):
 
     def toa_covariance_matrix(self, toas):
         """This a function to get the TOA covariance matrix for noise models.
-           If there is no noise model component provided, a diagonal matrix with
-           TOAs error as diagonal element will be returned.
+        If there is no noise model component provided, a diagonal matrix with
+        TOAs error as diagonal element will be returned.
         """
         ntoa = toas.ntoas
         tbl = toas.table
@@ -761,8 +760,8 @@ class TimingModel(object):
 
     def dm_covariance_matrix(self, toas):
         """This a function to get the DM covariance matrix for noise models.
-           If there is no noise model component provided, a diagonal matrix with
-           TOAs error as diagonal element will be returned.
+        If there is no noise model component provided, a diagonal matrix with
+        TOAs error as diagonal element will be returned.
         """
         dms, valid_dm = toas.get_flag_value("pp_dm")
         dmes, valid_dme = toas.get_flag_value("pp_dme")
@@ -802,8 +801,8 @@ class TimingModel(object):
         return result
 
     def scaled_dm_uncertainty(self, toas):
-        """ Get the scaled DM data uncertainties noise models.
-        
+        """Get the scaled DM data uncertainties noise models.
+
             If there is no noise model component provided, a vector with
             DM error as values will be returned.
 
@@ -930,18 +929,18 @@ class TimingModel(object):
     def get_barycentric_toas(self, toas, cutoff_component=""):
         """Conveniently calculate the barycentric TOAs.
 
-       Parameters
-       ----------
-       toas: TOAs object
-           The TOAs the barycentric corrections are applied on
-       cutoff_delay: str, optional
-           The cutoff delay component name. If it is not provided, it will
-           search for binary delay and apply all the delay before binary.
+        Parameters
+        ----------
+        toas: TOAs object
+            The TOAs the barycentric corrections are applied on
+        cutoff_delay: str, optional
+            The cutoff delay component name. If it is not provided, it will
+            search for binary delay and apply all the delay before binary.
 
-       Return
-       ------
-       astropy.quantity.
-           Barycentered TOAs.
+        Return
+        ------
+        astropy.quantity.
+            Barycentered TOAs.
 
         """
         tbl = toas.table
@@ -1560,8 +1559,7 @@ class Component(object):
         return prefixs
 
     def get_params_of_type(self, param_type):
-        """ Get all the parameters in timing model for one specific type
-        """
+        """Get all the parameters in timing model for one specific type"""
         result = []
         for p in self.params:
             par = getattr(self, p)

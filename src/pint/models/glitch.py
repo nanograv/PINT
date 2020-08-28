@@ -128,8 +128,7 @@ class Glitch(PhaseComponent):
                 )
 
     def validate(self):
-        """ Validate parameters input.
-        """
+        """Validate parameters input."""
         super(Glitch, self).validate()
         for idx in set(self.glitch_indices):
             if not hasattr(self, "GLEP_%d" % idx):

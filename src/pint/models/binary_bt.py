@@ -49,8 +49,7 @@ class BinaryBT(PulsarBinary):
         super(BinaryBT, self).setup()
 
     def validate(self):
-        """ Validate BT model parameters
-        """
+        """Validate BT model parameters"""
         super(BinaryBT, self).validate()
         for p in ("T0", "A1"):
             if getattr(self, p).value is None:

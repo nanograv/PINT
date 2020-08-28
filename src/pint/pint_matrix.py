@@ -74,7 +74,7 @@ class PintMatrix:
         return units
 
     def get_label_size(self, label):
-        """ Get the size of the a label in each axises.
+        """Get the size of the a label in each axises.
 
         Parameters
         ----------
@@ -105,7 +105,7 @@ class PintMatrix:
         return dim_label
 
     def get_label(self, label):
-        """ Get the label entry and its dimension. We assume the labels are
+        """Get the label entry and its dimension. We assume the labels are
         unique in the matrix.
         """
         all_label = []
@@ -130,8 +130,7 @@ class PintMatrix:
             )
 
     def get_label_slice(self, labels):
-        """ Return the given label slices.
-        """
+        """Return the given label slices."""
         dim_slices = dict([(d, slice(None)) for d in range(self.ndim)])
         new_labels = dict([(d, {}) for d in range(self.ndim)])
         for lb in labels:
@@ -151,13 +150,12 @@ class PintMatrix:
         return list(dim_slices.values()), list(new_labels.values())
 
     def get_label_matrix(self, labels):
-        """ Get a sub-matrix data according to the given labels.
-        """
+        """Get a sub-matrix data according to the given labels."""
         slice, new_labels = self.get_label_slice(labels)
         return PintMatrix(self.matrix[slice], new_labels)
 
     def match_labels_along_axis(self, pint_matrix, axis):
-        """ Match one axis' labels index between the current matrix and input
+        """Match one axis' labels index between the current matrix and input
         pint matrix. The labels will be matched along axises, not cross the
         axises.
 
@@ -189,13 +187,12 @@ class PintMatrix:
         raise NotImplementedError()
 
     def append_along_axis(self, pint_matrix, axis):
-        """ Append one pint matrix on a given axis.
-        """
+        """Append one pint matrix on a given axis."""
         raise NotImplementedError()
 
 
 class DesignMatrix(PintMatrix):
-    """ A generic design matrix class for least square fitting.
+    """A generic design matrix class for least square fitting.
 
     Parameters
     ----------
@@ -237,7 +234,7 @@ class DesignMatrix(PintMatrix):
 
 
 class DesignMatrixMaker:
-    """ Class for pint design matrix maker class.
+    """Class for pint design matrix maker class.
 
     Parameters
     ----------
@@ -270,7 +267,7 @@ class DesignMatrixMaker:
     def __call__(
         self, data, model, derivative_params, offset=False, offset_padding=0.0
     ):
-        """ A general method to make design matrix.
+        """A general method to make design matrix.
 
         Parameters
         ----------
@@ -311,8 +308,7 @@ class DesignMatrixMaker:
 
 
 class PhaseDesignMatrixMaker(DesignMatrixMaker):
-    """ A specific class for makeing phase design matrix.
-    """
+    """A specific class for makeing phase design matrix."""
 
     def __call__(
         self,
@@ -323,7 +319,7 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
         offset=True,
         offset_padding=1.0,
     ):
-        """ Create the phase design matrix.
+        """Create the phase design matrix.
 
         Parameters
         ----------
@@ -385,7 +381,7 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
 
 
 class TOADesignMatrixMaker(PhaseDesignMatrixMaker):
-    """ A simple design matrix maker subclassed from the PhaseDesignMatrixMaker.
+    """A simple design matrix maker subclassed from the PhaseDesignMatrixMaker.
     It changes the derivative quantity from phase to TOAs.
     """
 
@@ -403,7 +399,7 @@ class TOADesignMatrixMaker(PhaseDesignMatrixMaker):
 
 
 class NoiseDesignMatrixMaker(DesignMatrixMaker):
-    """ Specific design matrix for noise model
+    """Specific design matrix for noise model
 
     Note
     ----
@@ -433,7 +429,7 @@ design_matrix_maker_map = {
 
 
 def combine_design_matrices_by_quantity(design_matrices):
-    """ A fast method to combine two design matrix along the derivative
+    """A fast method to combine two design matrix along the derivative
     quantity. If requires the parameter list match to each other.
 
     Parameters
@@ -471,7 +467,7 @@ def combine_design_matrices_by_quantity(design_matrices):
 
 
 def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
-    """ A fast method to combine two design matrix along the param axis.
+    """A fast method to combine two design matrix along the param axis.
 
     Parameters
     ----------
@@ -565,8 +561,7 @@ def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
 
 
 class CovarianceMatrix(PintMatrix):
-    """ A class for symmetric covariance matrix.
-    """
+    """A class for symmetric covariance matrix."""
 
     def __init__(self, matrix, labels):
         # Check if the covariance matrix is symmetric.
@@ -579,7 +574,7 @@ class CovarianceMatrix(PintMatrix):
 
 
 class CovarianceMatrixMaker:
-    """ Class for pint design matrix maker class.
+    """Class for pint design matrix maker class.
 
     Parameters
     ----------
@@ -598,7 +593,7 @@ class CovarianceMatrixMaker:
         self.cov_func_name = "{}_covariance_matrix".format(self.covariance_quantity)
 
     def __call__(self, data, model):
-        """ A general method to make design matrix.
+        """A general method to make design matrix.
 
         Parameters
         ----------
@@ -616,7 +611,7 @@ class CovarianceMatrixMaker:
 
 
 def combine_covariance_matrix(covariance_matrices, crossterm={}, crossterm_padding=0.0):
-    """ A fast method to combine two covariance matrix diagonaly.
+    """A fast method to combine two covariance matrix diagonaly.
 
     Parameters
     ----------
@@ -640,7 +635,7 @@ def combine_covariance_matrix(covariance_matrices, crossterm={}, crossterm_paddi
         for cmlb in cm_labels:
             label_entry = (
                 cmlb[0],
-                (offset + cmlb[1][0], offset + cmlb[1][1], cmlb[1][2],),
+                (offset + cmlb[1][0], offset + cmlb[1][1], cmlb[1][2]),
             )
             new_label.append(label_entry)
         offset += cm.shape[0]
@@ -665,4 +660,4 @@ def combine_covariance_matrix(covariance_matrices, crossterm={}, crossterm_paddi
                         cross_m = crossterm.get((lb2, lb1), None).T
 
                     new_cm[lb1[1][0] : lb1[1][1], lb2[1][0] : lb2[1][1]] = cross_m
-    return CovarianceMatrix(new_cm, [OrderedDict(new_label),] * 2)
+    return CovarianceMatrix(new_cm, [OrderedDict(new_label)] * 2)

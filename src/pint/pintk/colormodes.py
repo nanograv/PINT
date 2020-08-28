@@ -22,7 +22,7 @@ class ColorMode:
 
 
 class DefaultMode(ColorMode):
-    """ 
+    """
     A class to manage the Default color mode, where TOAs are colored
     blue as a default and red if jumped.
     """
@@ -39,7 +39,7 @@ class DefaultMode(ColorMode):
 
     def plotColorMode(self):
         """
-        Plots application's residuals in proper color scheme. 
+        Plots application's residuals in proper color scheme.
         """
         if self.application.yerrs is None:
             self.application.plkAxes.scatter(
@@ -67,7 +67,7 @@ class DefaultMode(ColorMode):
 
 
 class FreqMode(ColorMode):
-    """ 
+    """
     A class to manage the Frequency color mode, where TOAs are colored
     according to their frequency.
     """
@@ -87,7 +87,7 @@ class FreqMode(ColorMode):
 
     def plotColorMode(self):
         """
-        Plots application's residuals in proper color scheme. 
+        Plots application's residuals in proper color scheme.
         """
 
         colorGroups = [
@@ -150,7 +150,7 @@ class FreqMode(ColorMode):
 
 
 class ObsMode(ColorMode):
-    """ 
+    """
     A class to manage the Observatory color mode, where TOAs are colored
     according to their observatory.
     """
@@ -172,7 +172,7 @@ class ObsMode(ColorMode):
 
     def plotColorMode(self):
         """
-        Plots application's residuals in proper color scheme. 
+        Plots application's residuals in proper color scheme.
         """
         import pint.observatory as obs
         import pint.observatory.topo_obs, pint.observatory.observatories

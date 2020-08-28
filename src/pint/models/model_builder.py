@@ -159,8 +159,7 @@ class ModelBuilder(object):
         return sorted_components
 
     def search_prefix_param(self, paramList, model, prefix_type):
-        """ Check if the Unrecognized parameter has prefix parameter
-        """
+        """Check if the Unrecognized parameter has prefix parameter"""
         prefixs = {}
         prefix_inModel = model.get_params_of_type_top(prefix_type)
         for pn in prefix_inModel:
@@ -177,7 +176,7 @@ class ModelBuilder(object):
         return prefixs
 
     def build_model(self, parfile=None, name=""):
-        """Read parfile using the model_instance attribute. Throws error if 
+        """Read parfile using the model_instance attribute. Throws error if
            mismatched coordinate systems detected.
         Parameters
         ---------

@@ -161,8 +161,7 @@ class Astrometry(DelayComponent):
         return dd_dpx.decompose(u.si.bases) / u.mas
 
     def d_delay_astrometry_d_POSEPOCH(self, toas, param="", acc_delay=None):
-        """Calculate the derivative wrt POSEPOCH
-        """
+        """Calculate the derivative wrt POSEPOCH"""
         pass
 
     def change_posepoch(self, new_epoch):
@@ -226,8 +225,7 @@ class AstrometryEquatorial(Astrometry):
         super(AstrometryEquatorial, self).setup()
 
     def validate(self):
-        """ Validate the input parameter.
-        """
+        """Validate the input parameter."""
         super(AstrometryEquatorial, self).validate()
         # RA/DEC are required
         for p in ("RAJ", "DECJ"):
@@ -308,7 +306,7 @@ class AstrometryEquatorial(Astrometry):
 
     def coords_as_ECL(self, epoch=None, ecl=None):
         """Return the pulsar's ecliptic coordinates as an astropy coordinate object.
-        
+
         The value used for the obliquity of the ecliptic can be controlled with the
         `ecl` keyword, which should be one of the codes listed in `ecliptic.dat`.
         If `ecl` is left unspecified, the global default IERS2010 will be used.
@@ -321,9 +319,7 @@ class AstrometryEquatorial(Astrometry):
         return pos_icrs.transform_to(PulsarEcliptic(ecl=ecl))
 
     def coords_as_GAL(self, epoch=None):
-        """Return the pulsar's galactic coordinates as an astropy coordinate object.
-        
-        """
+        """Return the pulsar's galactic coordinates as an astropy coordinate object."""
         pos_icrs = self.get_psr_coords(epoch=epoch)
         return pos_icrs.transform_to(coords.Galactic)
 
@@ -505,8 +501,7 @@ class AstrometryEcliptic(Astrometry):
         super(AstrometryEcliptic, self).setup()
 
     def validate(self):
-        """ Validate Ecliptic coordinate parameter inputs.
-        """
+        """Validate Ecliptic coordinate parameter inputs."""
         super(AstrometryEcliptic, self).validate()
         # ELONG/ELAT are required
         for p in ("ELONG", "ELAT"):
@@ -576,15 +571,13 @@ class AstrometryEcliptic(Astrometry):
         return pos_ecl.transform_to(coords.ICRS)
 
     def coords_as_GAL(self, epoch=None):
-        """Return the pulsar's galactic coordinates as an astropy coordinate object.
-        
-        """
+        """Return the pulsar's galactic coordinates as an astropy coordinate object."""
         pos_ecl = self.get_psr_coords(epoch=epoch)
         return pos_ecl.transform_to(coords.Galactic)
 
     def coords_as_ECL(self, epoch=None, ecl=None):
         """Return the pulsar's ecliptic coordinates as an astropy coordinate object.
-        
+
         The value used for the obliquity of the ecliptic can be controlled with the
         `ecl` keyword, which should be one of the codes listed in `ecliptic.dat`.
         If `ecl` is left unspecified, the model's ECL parameter will be used.

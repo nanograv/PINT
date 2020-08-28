@@ -75,8 +75,7 @@ class OrbitPB(orbits):
         super(OrbitPB, self).__init__("orbitPB", parent, orbit_params)
 
     def orbits(self,):
-        """Orbits using PB, PBDOT, XPBDOT
-        """
+        """Orbits using PB, PBDOT, XPBDOT"""
         PB = self.PB.to("second")
         PBDOT = self.PBDOT
         XPBDOT = self.XPBDOT
@@ -92,16 +91,14 @@ class OrbitPB(orbits):
         return self.PBDOT
 
     def d_orbits_d_T0(self):
-        """The derivitve of orbits respect to T0
-        """
+        """The derivitve of orbits respect to T0"""
         PB = self.PB.to("second")
         PBDOT = self.PBDOT
         XPBDOT = self.XPBDOT
         return ((PBDOT - XPBDOT) * self.tt0 / PB - 1.0) * 2 * np.pi * u.rad / PB
 
     def d_orbits_d_PB(self):
-        """dM/dPB this could be a generic function
-        """
+        """dM/dPB this could be a generic function"""
         PB = self.PB.to("second")
         PBDOT = self.PBDOT
         XPBDOT = self.XPBDOT
@@ -113,14 +110,12 @@ class OrbitPB(orbits):
         )
 
     def d_orbits_d_PBDOT(self):
-        """dM/dPBDOT this could be a generic function
-        """
+        """dM/dPBDOT this could be a generic function"""
         PB = self.PB.to("second")
         return -np.pi * u.rad * self.tt0 ** 2 / PB ** 2
 
     def d_orbits_d_XPBDOT(self):
-        """dM/dPBDOT this could be a generic function
-        """
+        """dM/dPBDOT this could be a generic function"""
         PB = self.PB.to("second")
         return -np.pi * u.rad * self.tt0 ** 2 / PB ** 2
 

@@ -235,9 +235,7 @@ def site_config_dir(appname=None, appauthor=None, version=None, multipath=False)
 
 
 def user_cache_dir(appname=None, appauthor=None, version=None, opinion=True):
-    r"""Return full path to the user-specific cache dir for this application.
-
-    """
+    r"""Return full path to the user-specific cache dir for this application."""
     if system == "win32":
         if appauthor is None:
             appauthor = appname

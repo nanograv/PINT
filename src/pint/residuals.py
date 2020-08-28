@@ -114,8 +114,7 @@ class Residuals:
 
     @property
     def resids_value(self):
-        """ Get pure value of the residuals use the given base unit.
-        """
+        """Get pure value of the residuals use the given base unit."""
         if not self.scaled_by_F0:
             return self.resids.to_value(self.unit / u.s)
         else:
@@ -380,8 +379,7 @@ class Residuals:
 
 
 class WidebandDMResiduals(Residuals):
-    """ Residuals for independent DM measurement (i.e. Wideband TOAs).
-    """
+    """Residuals for independent DM measurement (i.e. Wideband TOAs)."""
 
     def __init__(
         self,
@@ -412,8 +410,7 @@ class WidebandDMResiduals(Residuals):
 
     @property
     def resids_value(self):
-        """ Get pure value of the residuals use the given base unit.
-        """
+        """Get pure value of the residuals use the given base unit."""
         return self.resids.to_value(self.unit)
 
     @property
@@ -496,7 +493,7 @@ class WidebandDMResiduals(Residuals):
         return valid_dm * self.unit, valid_error * self.unit
 
     def update_model(self, new_model, **kwargs):
-        """ Up date DM models from a new PINT timing model
+        """Up date DM models from a new PINT timing model
 
         Parameters
         ----------
@@ -511,7 +508,7 @@ residual_map = {"toa": Residuals, "dm": WidebandDMResiduals}
 
 
 class CombinedResiduals(object):
-    """ A class provides uniformed API that collects result from different type
+    """A class provides uniformed API that collects result from different type
     of residuals.
 
     Parameters
@@ -530,8 +527,7 @@ class CombinedResiduals(object):
 
     @property
     def resids(self):
-        """ Residuals from all of the residual types.
-        """
+        """Residuals from all of the residual types."""
         all_resids = []
         for res in self.residual_objs:
             all_resids.append(res.resids_value)

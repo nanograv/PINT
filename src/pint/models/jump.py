@@ -7,11 +7,7 @@ import astropy.units as u
 import numpy
 
 from pint.models.parameter import maskParameter
-from pint.models.timing_model import (
-    DelayComponent,
-    MissingParameter,
-    PhaseComponent,
-)
+from pint.models.timing_model import DelayComponent, MissingParameter, PhaseComponent
 
 
 class DelayJump(DelayComponent):
@@ -76,8 +72,7 @@ class DelayJump(DelayComponent):
 
 
 class PhaseJump(PhaseComponent):
-    """This is a class to implement phase jumps
-    """
+    """This is a class to implement phase jumps"""
 
     register = True
     category = "phase_jump"
@@ -138,7 +133,7 @@ class PhaseJump(PhaseComponent):
 
     def get_jump_param_objects(self):
         """
-        Returns a list of the maskParameter objects representing the jumps 
+        Returns a list of the maskParameter objects representing the jumps
         in this PhaseJump object.
         """
         jump_obs = [getattr(self, jump) for jump in self.jumps]

@@ -240,8 +240,7 @@ def marginalize_over_phase(
 
 
 def get_fit_keyvals(model, phs=0.0, phserr=0.1):
-    """Read the model to determine fitted keys and their values and errors from the par file
-    """
+    """Read the model to determine fitted keys and their values and errors from the par file"""
     fitkeys = [p for p in model.params if not getattr(model, p).frozen]
     fitvals = []
     fiterrs = []

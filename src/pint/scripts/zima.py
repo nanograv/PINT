@@ -21,7 +21,7 @@ __all__ = ["main"]
 
 def get_freq_array(base_freq_values, ntoas):
     """Right now it is a very simple frequency array simulation.
-       It just simulates an alternating frequency arrays
+    It just simulates an alternating frequency arrays
     """
     freq = np.zeros(ntoas)
     num_freqs = len(base_freq_values)

@@ -75,9 +75,9 @@ class Prior(object):
 
 
 class RandomInclinationPrior(rv_continuous):
-    """ Prior returning the pdf for sin(i) given a uniform prior on cos(i).
+    """Prior returning the pdf for sin(i) given a uniform prior on cos(i).
 
-        p(sin i) == p(x) = x/(1-x**2)**0.5
+    p(sin i) == p(x) = x/(1-x**2)**0.5
     """
 
     def __init__(self, **kwargs):
@@ -93,9 +93,7 @@ class RandomInclinationPrior(rv_continuous):
 
 
 class UniformUnboundedRV(rv_continuous):
-    r"""A uniform prior distribution (equivalent to no prior)
-
-    """
+    r"""A uniform prior distribution (equivalent to no prior)"""
 
     # The astype() calls prevent unsafe cast messages
     def _pdf(self, x):

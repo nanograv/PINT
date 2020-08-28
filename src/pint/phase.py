@@ -24,7 +24,7 @@ class Phase(namedtuple("Phase", "int frac")):
     def __new__(cls, arg1, arg2=None):
         """Create new Phase object
 
-        Constructs a Phase object. 
+        Constructs a Phase object.
         Can be initialized with arrays or a scalar Quantity.
         Can take inputs as plain numerical types, or dimensionaless Quantitys
         Accepts either floating point argument (arg1) or pair of arguments with integer (arg1) and fractional (arg2) parts separate
@@ -33,7 +33,7 @@ class Phase(namedtuple("Phase", "int frac")):
         Parameters
         ----------
         arg1 : array or dimensionless Quantity
-        arg2 : array or dimensionless Quantity 
+        arg2 : array or dimensionless Quantity
 
         Returns
         -------

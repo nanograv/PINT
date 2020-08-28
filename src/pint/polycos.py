@@ -716,8 +716,7 @@ class Polycos(object):
             raise ValueError("Zero polycos found for table")
 
     def write_polyco_file(self, format, filename=None):
-        """ Write Polyco table to a file.
-        """
+        """Write Polyco table to a file."""
 
         if format not in [f["format"] for f in self.polycoFormat]:
             raise ValueError(
@@ -731,8 +730,7 @@ class Polycos(object):
             self.polycoTable.write(format=format)
 
     def find_entry(self, t):
-        """Find the right entry for the input time.
-        """
+        """Find the right entry for the input time."""
         if not isinstance(t, (np.ndarray, list)):
             t = np.array([t])
         # Check if polyco table exist

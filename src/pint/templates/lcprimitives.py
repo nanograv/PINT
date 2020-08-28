@@ -65,8 +65,8 @@ def two_comp_mc(n, w1, w2, loc, func):
 
 
 def approx_gradient(func, phases, log10_ens=None, eps=1e-6):
-    """ Return a numerical gradient.  This works for both LCPrimitive and
-        LCTemplate objects.  HOW AWESOME!
+    """Return a numerical gradient.  This works for both LCPrimitive and
+    LCTemplate objects.  HOW AWESOME!
     """
     orig_p = func.get_parameters(free=False).copy()
     g = np.zeros([len(orig_p), len(phases)])
@@ -88,8 +88,8 @@ def approx_gradient(func, phases, log10_ens=None, eps=1e-6):
 
 
 def approx_hessian(func, phases, log10_ens=None, eps=1e-4):
-    """ Return a numerical hessian.  This works for both LCPrimitive and
-        LCTemplate objects.  HOW AWESOME!
+    """Return a numerical hessian.  This works for both LCPrimitive and
+    LCTemplate objects.  HOW AWESOME!
     """
     orig_p = func.get_parameters(free=False).copy()
     g = np.zeros([len(orig_p), len(orig_p), len(phases)])
@@ -116,13 +116,13 @@ def approx_hessian(func, phases, log10_ens=None, eps=1e-4):
 
 
 def check_gradient(func, atol=1e-8, rtol=1e-5, quiet=False):
-    """ Test gradient function with a set of MC photons.
-        This works with either LCPrimitive or LCTemplate objects.
-        
-        TODO -- there is trouble with the numerical gradient when
-        a for the location-related parameters when the finite step
-        causes the peak to shift from one side of an evaluation phase
-        to the other."""
+    """Test gradient function with a set of MC photons.
+    This works with either LCPrimitive or LCTemplate objects.
+
+    TODO -- there is trouble with the numerical gradient when
+    a for the location-related parameters when the finite step
+    causes the peak to shift from one side of an evaluation phase
+    to the other."""
     en = np.random.rand(1000) * 2 + 1  # 100 MeV to 10 GeV
     ph = func.random(en)
     if hasattr(func, "closest_to_peak"):
@@ -145,8 +145,8 @@ def check_gradient(func, atol=1e-8, rtol=1e-5, quiet=False):
 
 class Fittable(object):
     # TODO
-    """ Base class for any object with fittable parameters.
-        Handle parameter names, etc. here?"""
+    """Base class for any object with fittable parameters.
+    Handle parameter names, etc. here?"""
 
     def get_parameters(self):
         pass
@@ -171,16 +171,16 @@ class Fittable(object):
 
 
 class LCPrimitive(object):
-    """ Base class for various components of a light curve.  All "analytic"
-        light curve models must inherit and must implement the three
-        'virtual' functions below."""
+    """Base class for various components of a light curve.  All "analytic"
+    light curve models must inherit and must implement the three
+    'virtual' functions below."""
 
     def is_energy_dependent(self):
         return False
 
     def is_two_sided(self):
-        """ True if primitive is asymmetric.  Default is False, two-sided
-            child classes should override."""
+        """True if primitive is asymmetric.  Default is False, two-sided
+        child classes should override."""
         return False
 
     def copy(self):
@@ -242,9 +242,9 @@ class LCPrimitive(object):
         return loc, width, enable
 
     def __init__(self, **kwargs):
-        """ Generally, class-specific setup work is performed in init.
-            Here, init is called and certain guaranteed default members
-            are established."""
+        """Generally, class-specific setup work is performed in init.
+        Here, init is called and certain guaranteed default members
+        are established."""
         self.init()
         if not hasattr(self, "bounds"):
             self.bounds = self._default_bounds()  # default
@@ -260,8 +260,8 @@ class LCPrimitive(object):
         self.shift_mode = False
 
     def _make_p(self, log10_ens=3):
-        """ Internal method to return parameters appropriate for use
-            in functional form."""
+        """Internal method to return parameters appropriate for use
+        in functional form."""
         return [None] + list(self.p)
 
     def set_parameters(self, p, free=True):
@@ -348,14 +348,13 @@ class LCPrimitive(object):
         return self.gradient(phases, log10_ens, free=True)
 
     def gradient(self, phases, log10_ens=3, free=False):
-        """ Return the gradient of the primitives wrt the parameters.
-        """
+        """Return the gradient of the primitives wrt the parameters."""
         raise NotImplementedError("No gradient function found for this object.")
 
     def gradient_derivative(self, phases, log10_ens=3, free=False):
-        """ Return d/dphi(gradient).  This is needed for computing the
-            hessian of the profile for parameters that affect the timing
-            model and hence pulse phase.
+        """Return d/dphi(gradient).  This is needed for computing the
+        hessian of the profile for parameters that affect the timing
+        model and hence pulse phase.
         """
         raise NotImplementedError(
             "No gradient_derivative function found for this object."
@@ -435,8 +434,8 @@ class LCPrimitive(object):
         return np.all([t1, t2, t3, t4, t5])
 
     def eval_string(self):
-        """ Return a string that can be evaled to instantiate a nearly-
-            identical object."""
+        """Return a string that can be evaled to instantiate a nearly-
+        identical object."""
         return "%s(p=%s,free=%s,slope=%s,slope_free=%s)" % (
             self.__class__.__name__,
             str(list(self.p)),
@@ -446,8 +445,8 @@ class LCPrimitive(object):
         )
 
     def dict_string(self):
-        """ Return a string to express the object as a dictionary that can
-            be easily instantiated using its keys."""
+        """Return a string to express the object as a dictionary that can
+        be easily instantiated using its keys."""
 
         def pretty_list(l, places=5):
             fmt = "%." + "%d" % places + "f"
@@ -467,8 +466,8 @@ class LCPrimitive(object):
         return t
 
     def closest_to_peak(self, phases):
-        """ Return the minimum distance between a member of the array of
-            phases and the position of the mode of the primitive."""
+        """Return the minimum distance between a member of the array of
+        phases and the position of the mode of the primitive."""
         return np.abs(phases - self.get_location()).min()
 
     def get_fixed_energy_version(self, log10_en=3):
@@ -476,17 +475,17 @@ class LCPrimitive(object):
 
 
 class LCWrappedFunction(LCPrimitive):
-    """ Super-class for profiles derived from wrapped functions.
-        
-        While some distributions (e.g. the wrapped normal) converge
-        quickly, others (e.g. the wrapped Lorentzian) converge very slowly
-        and must be truncated before machine precision is reached.
+    """Super-class for profiles derived from wrapped functions.
 
-        In order to preserve normalization, the pdf is slightly adjusted:
-        f(phi) = sum_(i,-N,N,g(phi+i)) + (1 - int(phi,-N,N,g(phi)) ).
+    While some distributions (e.g. the wrapped normal) converge
+    quickly, others (e.g. the wrapped Lorentzian) converge very slowly
+    and must be truncated before machine precision is reached.
 
-        This introduces an additional parameteric dependence which must
-        be accounted for by computation of the gradient.
+    In order to preserve normalization, the pdf is slightly adjusted:
+    f(phi) = sum_(i,-N,N,g(phi+i)) + (1 - int(phi,-N,N,g(phi)) ).
+
+    This introduces an additional parameteric dependence which must
+    be accounted for by computation of the gradient.
     """
 
     def _norm(self, nwraps, log10_ens=3):
@@ -495,23 +494,23 @@ class LCWrappedFunction(LCPrimitive):
         return 1 - self.base_int(-nwraps, nwraps + 1, log10_ens)
 
     def _grad_norm(self, nwraps, log10_ens=3):
-        """ Compute the gradient terms due to truncated portion.  That is,
-            since we add on a uniform component beyond nwraps, the
-            amplitude of this component depends on the CDF and hence on
-            the parameters.
+        """Compute the gradient terms due to truncated portion.  That is,
+        since we add on a uniform component beyond nwraps, the
+        amplitude of this component depends on the CDF and hence on
+        the parameters.
 
-            Default implementation is to ignore these terms, applicable
-            for rapidly-converging distributions (e.g. wrapped normal with
-            small width parameter).  On the other hand, it is not
-            negligible for long-tailed distributions, e.g. Lorentzians."""
+        Default implementation is to ignore these terms, applicable
+        for rapidly-converging distributions (e.g. wrapped normal with
+        small width parameter).  On the other hand, it is not
+        negligible for long-tailed distributions, e.g. Lorentzians."""
         return None
 
     def _grad_deriv_norm(self, nwraps, log10_ens=3):
         return None
 
     def _grad_hess(self, nwraps, log10_ens=3):
-        """ Compute the hessian terms due to truncated portion.
-            See _grad_norm.
+        """Compute the hessian terms due to truncated portion.
+        See _grad_norm.
         """
         return None
 
@@ -527,10 +526,10 @@ class LCWrappedFunction(LCPrimitive):
         return results + self._norm(i, log10_ens)
 
     def gradient(self, phases, log10_ens=3, free=False):
-        """ Return the gradient evaluated at a vector of phases.
+        """Return the gradient evaluated at a vector of phases.
 
-            output : a num_parameter x len(phases) ndarray, 
-                     the num_parameter-dim gradient at each phase
+        output : a num_parameter x len(phases) ndarray,
+                 the num_parameter-dim gradient at each phase
         """
         results = self.base_grad(phases, log10_ens)
         for i in range(1, MAXWRAPS + 1):
@@ -548,10 +547,10 @@ class LCWrappedFunction(LCPrimitive):
         return results
 
     def gradient_derivative(self, phases, log10_ens=3, free=False):
-        """ Return the gradient evaluated at a vector of phases.
+        """Return the gradient evaluated at a vector of phases.
 
-            output : a num_parameter x len(phases) ndarray, 
-                     the num_parameter-dim gradient at each phase
+        output : a num_parameter x len(phases) ndarray,
+                 the num_parameter-dim gradient at each phase
         """
         results = self.base_grad_deriv(phases, log10_ens)
         for i in range(1, MAXWRAPS + 1):
@@ -569,12 +568,12 @@ class LCWrappedFunction(LCPrimitive):
         return results
 
     def hessian(self, phases, log10_ens=3, free=False):
-        """ Return the hessian evaluated at a vector of phases.
+        """Return the hessian evaluated at a vector of phases.
 
-            NB that this is restricted to the sub-space for this primitive.
+        NB that this is restricted to the sub-space for this primitive.
 
-            output : a num_parameter x num_parameter x len(phases) ndarray,
-                     the num_parameter-dim^2 hessian at each phase
+        output : a num_parameter x num_parameter x len(phases) ndarray,
+                 the num_parameter-dim^2 hessian at each phase
         """
         results = self.base_hess(phases, log10_ens)
         for i in range(1, MAXWRAPS + 1):
@@ -593,14 +592,14 @@ class LCWrappedFunction(LCPrimitive):
         return results
 
     def derivative(self, phases, log10_ens=3, order=1):
-        """ Return the phase gradient (dprim/dphi) at a vector of phases.
+        """Return the phase gradient (dprim/dphi) at a vector of phases.
 
-            order: order of derivative (1=1st derivative, etc.)
+        order: order of derivative (1=1st derivative, etc.)
 
-            output : a len(phases) ndarray, dprim/dphi
+        output : a len(phases) ndarray, dprim/dphi
 
-            NB this will generally be opposite in sign to the gradient of
-            the location parameter.
+        NB this will generally be opposite in sign to the gradient of
+        the location parameter.
         """
         results = self.base_derivative(phases, log10_ens, order=order)
         for i in range(1, MAXWRAPS + 1):
@@ -643,11 +642,11 @@ class LCWrappedFunction(LCPrimitive):
 
 
 class LCGaussian(LCWrappedFunction):
-    """ Represent a (wrapped) Gaussian peak.
+    """Represent a (wrapped) Gaussian peak.
 
-        Parameters
-        Width     the standard deviation parameter of the norm dist.
-        Location  the mode of the Gaussian distribution
+    Parameters
+    Width     the standard deviation parameter of the norm dist.
+    Location  the mode of the Gaussian distribution
     """
 
     def init(self):
@@ -715,12 +714,12 @@ class LCGaussian(LCWrappedFunction):
 
 
 class LCGaussian2(LCWrappedFunction):
-    """ Represent a (wrapped) two-sided Gaussian peak.
+    """Represent a (wrapped) two-sided Gaussian peak.
 
-        Parameters
-        Width1    the standard deviation parameter of the norm dist.
-        Width2    the standard deviation parameter of the norm dist.
-        Location  the mode of the distribution
+    Parameters
+    Width1    the standard deviation parameter of the norm dist.
+    Width2    the standard deviation parameter of the norm dist.
+    Location  the mode of the distribution
     """
 
     def init(self):
@@ -771,8 +770,8 @@ class LCGaussian2(LCWrappedFunction):
         return 0.5 * k * (erf(z2 / ROOT2) - erf(z1 / ROOT2))
 
     def random(self, n):
-        """ Use multinomial technique to return random photons from
-            both components."""
+        """Use multinomial technique to return random photons from
+        both components."""
         if hasattr(n, "__len__"):
             n = len(n)
         return two_comp_mc(n, self.p[0], self.p[1], self.p[-1], norm.rvs)
@@ -823,14 +822,14 @@ class LCLorentzian(LCPrimitive):
         return np.asarray([g1, g2])
 
     def derivative(self, phases, log10_ens=3, index=0, order=1):
-        """ Return the phase gradient (dprim/dphi) at a vector of phases.
+        """Return the phase gradient (dprim/dphi) at a vector of phases.
 
-            order: order of derivative (1=1st derivative, etc.)
+        order: order of derivative (1=1st derivative, etc.)
 
-            output : a len(phases) ndarray, dprim/dphi
+        output : a len(phases) ndarray, dprim/dphi
 
-            NB this will generally be opposite in sign to the gradient of
-            the location parameter.
+        NB this will generally be opposite in sign to the gradient of
+        the location parameter.
         """
         e, gamma, loc = self._make_p(log10_ens)
         z = TWOPI * (phases - loc)
@@ -866,11 +865,11 @@ class LCLorentzian(LCPrimitive):
 
 
 class LCLorentzian2(LCWrappedFunction):
-    """ Represent a (wrapped) two-sided Lorentzian peak.
-        Parameters
-        Width1    the HWHM of the distribution (left)
-        Width2    the HWHM of the distribution (right)
-        Location  the mode of the distribution
+    """Represent a (wrapped) two-sided Lorentzian peak.
+    Parameters
+    Width1    the HWHM of the distribution (left)
+    Width2    the HWHM of the distribution (right)
+    Location  the mode of the distribution
     """
 
     def init(self):
@@ -949,18 +948,18 @@ class LCLorentzian2(LCWrappedFunction):
         return k * (g2 * atan(z2) - g1 * atan(z1))
 
     def random(self, n):
-        """ Use multinomial technique to return random photons from
-            both components."""
+        """Use multinomial technique to return random photons from
+        both components."""
         return two_comp_mc(n, self.p[0], self.p[1], self.p[-1], cauchy.rvs)
 
 
 class LCVonMises(LCPrimitive):
-    """ Represent a peak from the von Mises distribution.  This function is
-        used in directional statistics and is naturally wrapped.
-   
-        Parameters:
-            Width     inverse of the 'kappa' parameter in the std. def.
-            Location  the center of the peak in phase
+    """Represent a peak from the von Mises distribution.  This function is
+    used in directional statistics and is naturally wrapped.
+
+    Parameters:
+        Width     inverse of the 'kappa' parameter in the std. def.
+        Location  the center of the peak in phase
     """
 
     def init(self):
@@ -991,12 +990,12 @@ class LCVonMises(LCPrimitive):
 
 
 class LCKing(LCWrappedFunction):
-    """ Represent a (wrapped) King function peak.
+    """Represent a (wrapped) King function peak.
 
-        Parameters
-        Sigma     the width parameter
-        Gamma     the tail parameter
-        Location  the mode of the distribution
+    Parameters
+    Sigma     the width parameter
+    Gamma     the tail parameter
+    Location  the mode of the distribution
     """
 
     # NOTES -- because we don't integrate over solid angle, the norm
@@ -1048,11 +1047,11 @@ class LCKing(LCWrappedFunction):
 
 
 class LCTopHat(LCPrimitive):
-    """ Represent a top hat function.
-   
-        Parameters:
-            Width     right edge minus left edge
-            Location  center of top hat
+    """Represent a top hat function.
+
+    Parameters:
+        Width     right edge minus left edge
+        Location  center of top hat
     """
 
     def init(self):
@@ -1077,9 +1076,9 @@ class LCTopHat(LCPrimitive):
 
 class LCHarmonic(LCPrimitive):
     """Represent a sinusoidal shape corresponding to a harmonic in a Fourier expansion.
-   
-      Parameters:
-         Location  the phase of maximum
+
+    Parameters:
+       Location  the phase of maximum
 
     """
 
@@ -1101,12 +1100,12 @@ class LCHarmonic(LCPrimitive):
 
 
 class LCEmpiricalFourier(LCPrimitive):
-    """ Calculate a Fourier representation of the light curve.
-        The only parameter is an overall shift.
-        Cannot be used with other LCPrimitive objects!
-   
-        Parameters:
-           Shift     :     overall shift from original template phase
+    """Calculate a Fourier representation of the light curve.
+    The only parameter is an overall shift.
+    Cannot be used with other LCPrimitive objects!
+
+    Parameters:
+       Shift     :     overall shift from original template phase
     """
 
     def init(self):
@@ -1175,9 +1174,9 @@ class LCEmpiricalFourier(LCPrimitive):
         shift = self.p[0]
         harm = self.harmonics
         if shift != 0:
-            """ shift theorem, for real coefficients
-                It's probably a wash whether it is faster to simply 
-                subtract from the phases, but it's more fun this way! """
+            """shift theorem, for real coefficients
+            It's probably a wash whether it is faster to simply
+            subtract from the phases, but it's more fun this way!"""
             c = np.cos(harm * shift)
             s = np.sin(harm * shift)
             a = c * self.alphas - s * self.betas
@@ -1190,19 +1189,19 @@ class LCEmpiricalFourier(LCPrimitive):
         return 1 + 2 * (a * ak + b * bk).sum(axis=1)
 
     def integrate(self, x1, x2):
-        """ The Fourier expansion by definition includes the entire signal, so
+        """The Fourier expansion by definition includes the entire signal, so
         the norm is always unity."""
         return 1
 
 
 class LCKernelDensity(LCPrimitive):
-    """ Calculate a kernel density estimate of the light curve.
-        The bandwidth is empirical, determined from examining several pulsars.
-        The only parameter is an overall shift.
-        Cannot be used with other LCPrimitive objects!
+    """Calculate a kernel density estimate of the light curve.
+    The bandwidth is empirical, determined from examining several pulsars.
+    The only parameter is an overall shift.
+    Cannot be used with other LCPrimitive objects!
 
-        Parameters:
-            Shift     :     overall shift from original template phase
+    Parameters:
+        Shift     :     overall shift from original template phase
     """
 
     def init(self):
@@ -1347,8 +1346,8 @@ class LCKernelDensity(LCPrimitive):
 
 
 def convert_primitive(p1, ptype=LCLorentzian):
-    """ Attempt to set the parameters of p2 to give a comparable primitive
-        to p1."""
+    """Attempt to set the parameters of p2 to give a comparable primitive
+    to p1."""
     p2 = ptype()
     p2_scale = p2.p[0] / p2.hwhm()
     # set position
