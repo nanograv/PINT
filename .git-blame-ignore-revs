@@ -20,3 +20,6 @@
 
 # Blacken code base
 ef448d5271e7ce4a2de912dd2a76a629e7a569cb
+
+# Re-blacken source code with black 20.8b1
+268f6de6a6668981984729ecffb74461a0b37de0
