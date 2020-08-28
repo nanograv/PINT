@@ -20,6 +20,7 @@ from pint.models.parameter import (
 )
 from pint.models.timing_model import DelayComponent, MissingParameter
 from pint.pulsar_ecliptic import OBL, PulsarEcliptic
+from pint.utils import add_dummy_distance, remove_dummy_distance
 
 astropy_version = sys.modules["astropy"].__version__
 mas_yr = u.mas / u.yr
@@ -232,17 +233,17 @@ class AstrometryEquatorial(Astrometry):
         for p in ("RAJ", "DECJ"):
             if getattr(self, p).value is None:
                 raise MissingParameter("Astrometry", p)
-        # If PM is included, check for POSEPOCH
-        if self.PMRA.value != 0.0 or self.PMDEC.value != 0.0:
-            if self.POSEPOCH.quantity is None:
-                if self.PEPOCH.quantity is None:
-                    raise MissingParameter(
-                        "AstrometryEquatorial",
-                        "POSEPOCH",
-                        "POSEPOCH or PEPOCH are required if PM is set.",
-                    )
-                else:
-                    self.POSEPOCH.quantity = self.PEPOCH.quantity
+        # Check for POSEPOCH
+        if self.POSEPOCH.quantity is None:
+            if self.PEPOCH.quantity is None:
+                raise MissingParameter(
+                    "AstrometryEquatorial",
+                    "POSEPOCH",
+                    "POSEPOCH or PEPOCH are required if PM is set.",
+                )
+            else:
+                log.warning("POSEPOCH not found; using PEPOCH unless set explicitly!")
+                self.POSEPOCH.quantity = self.PEPOCH.quantity
 
     def print_par(self):
         result = ""
@@ -263,26 +264,43 @@ class AstrometryEquatorial(Astrometry):
     def get_psr_coords(self, epoch=None):
         """Returns pulsar sky coordinates as an astropy ICRS object instance.
 
+        Parameters
+        ----------
+        epoch: `astropy.time.Time` or Float, optional
+            new epoch for position.  If Float, MJD is assumed
+
+        Returns
+        -------
+        position
+        ICRS SkyCoord object optionally with proper motion applied
+
         If epoch (MJD) is specified, proper motion is included to return
         the position at the given epoch.
 
-        If the ecliptic coordinates are provided,
         """
         if epoch is None or (self.PMRA.value == 0.0 and self.PMDEC.value == 0.0):
             dRA = 0.0 * u.hourangle
             dDEC = 0.0 * u.deg
             broadcast = 1
+            newepoch = self.POSEPOCH.quantity
+            return coords.SkyCoord(
+                ra=self.RAJ.quantity + dRA,
+                dec=self.DECJ.quantity + dDEC,
+                pm_ra_cosdec=self.PMRA.quantity * broadcast,
+                pm_dec=self.PMDEC.quantity * broadcast,
+                obstime=newepoch,
+                frame=coords.ICRS,
+            )
         else:
-            dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
-            dRA = dt * self.PMRA.quantity / numpy.cos(self.DECJ.quantity.radian)
-            dDEC = dt * self.PMDEC.quantity
-            broadcast = numpy.ones_like(epoch)
-        return coords.ICRS(
-            ra=self.RAJ.quantity + dRA,
-            dec=self.DECJ.quantity + dDEC,
-            pm_ra_cosdec=self.PMRA.quantity * broadcast,
-            pm_dec=self.PMDEC.quantity * broadcast,
-        )
+            if isinstance(epoch, Time):
+                newepoch = epoch
+            else:
+                newepoch = Time(epoch, format="mjd")
+            position_now = add_dummy_distance(self.get_psr_coords())
+            position_then = remove_dummy_distance(
+                position_now.apply_space_motion(new_obstime=newepoch)
+            )
+            return position_then
 
     def coords_as_ICRS(self, epoch=None):
         """Return the pulsar's ICRS coordinates as an astropy coordinate object."""
@@ -301,6 +319,13 @@ class AstrometryEquatorial(Astrometry):
 
         pos_icrs = self.get_psr_coords(epoch=epoch)
         return pos_icrs.transform_to(PulsarEcliptic(ecl=ecl))
+
+    def coords_as_GAL(self, epoch=None):
+        """Return the pulsar's galactic coordinates as an astropy coordinate object.
+        
+        """
+        pos_icrs = self.get_psr_coords(epoch=epoch)
+        return pos_icrs.transform_to(coords.Galactic)
 
     def get_params_as_ICRS(self):
         result = {
@@ -487,17 +512,17 @@ class AstrometryEcliptic(Astrometry):
         for p in ("ELONG", "ELAT"):
             if getattr(self, p).value is None:
                 raise MissingParameter("AstrometryEcliptic", p)
-        # If PM is included, check for POSEPOCH
-        if self.PMELONG.value != 0.0 or self.PMELAT.value != 0.0:
-            if self.POSEPOCH.quantity is None:
-                if self.PEPOCH.quantity is None:
-                    raise MissingParameter(
-                        "Astrometry",
-                        "POSEPOCH",
-                        "POSEPOCH or PEPOCH are required if PM is set.",
-                    )
-                else:
-                    self.POSEPOCH.quantity = self.PEPOCH.quantity
+        # Check for POSEPOCH
+        if self.POSEPOCH.quantity is None:
+            if self.PEPOCH.quantity is None:
+                raise MissingParameter(
+                    "Astrometry",
+                    "POSEPOCH",
+                    "POSEPOCH or PEPOCH are required if PM is set.",
+                )
+            else:
+                log.warning("POSEPOCH not found; using PEPOCH unless set explicitly!")
+                self.POSEPOCH.quantity = self.PEPOCH.quantity
 
     def barycentric_radio_freq(self, toas):
         """Return radio frequencies (MHz) of the toas corrected for Earth motion"""
@@ -526,18 +551,22 @@ class AstrometryEcliptic(Astrometry):
             dELONG = 0.0 * self.ELONG.units
             dELAT = 0.0 * self.ELAT.units
             broadcast = 1
+            newepoch = self.POSEPOCH.quantity
         else:
             dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
             dELONG = dt * self.PMELONG.quantity / numpy.cos(self.ELAT.quantity.radian)
             dELAT = dt * self.PMELAT.quantity
             broadcast = numpy.ones_like(epoch)
+            newepoch = Time(epoch, format="mjd")
 
-        pos_ecl = PulsarEcliptic(
+        pos_ecl = coords.SkyCoord(
             obliquity=obliquity,
             lon=self.ELONG.quantity + dELONG,
             lat=self.ELAT.quantity + dELAT,
             pm_lon_coslat=self.PMELONG.quantity * broadcast,
             pm_lat=self.PMELAT.quantity * broadcast,
+            frame=PulsarEcliptic,
+            obstime=newepoch,
         )
         return pos_ecl
 
@@ -545,6 +574,13 @@ class AstrometryEcliptic(Astrometry):
         """Return the pulsar's ICRS coordinates as an astropy coordinate object."""
         pos_ecl = self.get_psr_coords(epoch=epoch)
         return pos_ecl.transform_to(coords.ICRS)
+
+    def coords_as_GAL(self, epoch=None):
+        """Return the pulsar's galactic coordinates as an astropy coordinate object.
+        
+        """
+        pos_ecl = self.get_psr_coords(epoch=epoch)
+        return pos_ecl.transform_to(coords.Galactic)
 
     def coords_as_ECL(self, epoch=None, ecl=None):
         """Return the pulsar's ecliptic coordinates as an astropy coordinate object.

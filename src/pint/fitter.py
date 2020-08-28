@@ -29,6 +29,7 @@ from pint.models.parameter import (
     floatParameter,
     prefixParameter,
     strParameter,
+    MJDParameter,
 )
 from pint.models.pulsar_binary import PulsarBinary
 from pint.residuals import Residuals
@@ -272,9 +273,28 @@ class Fitter(object):
                 else:
                     # Assume a numerical parameter
                     if par.frozen:
-                        s += ("{:" + spacingName + "s} {:20g} {:28s} {} \n").format(
-                            pn, prefitpar.value, "", par.units
-                        )
+                        if par.name == "START":
+                            if prefitpar.value is None:
+                                s += (
+                                    "{:" + spacingName + "s} {:20s} {:28g} {} \n"
+                                ).format(pn, " ", par.value, par.units)
+                            else:
+                                s += (
+                                    "{:" + spacingName + "s} {:20g} {:28g} {} \n"
+                                ).format(pn, prefitpar.value, par.value, par.units)
+                        elif par.name == "FINISH":
+                            if prefitpar.value is None:
+                                s += (
+                                    "{:" + spacingName + "s} {:20s} {:28g} {} \n"
+                                ).format(pn, " ", par.value, par.units)
+                            else:
+                                s += (
+                                    "{:" + spacingName + "s} {:20g} {:28g} {} \n"
+                                ).format(pn, prefitpar.value, par.value, par.units)
+                        else:
+                            s += ("{:" + spacingName + "s} {:20g} {:28s} {} \n").format(
+                                pn, prefitpar.value, "", par.units
+                            )
                     else:
                         # s += "{:14s} {:20g} {:20g} {:20.2g} {} \n".format(
                         #     pn,
@@ -680,6 +700,10 @@ class PowellFitter(Fitter):
         # necessarily the one that yields the best fit
         self.minimize_func(np.atleast_1d(self.fitresult.x), *list(fitp.keys()))
 
+        # Update START/FINISH params
+        self.model.START.value = self.toas.first_MJD
+        self.model.FINISH.value = self.toas.last_MJD
+
         return self.resids.chi2
 
 
@@ -769,8 +793,12 @@ class WLSFitter(Fitter):
                 # NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
             chi2 = self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
-            # Updata Uncertainties
+            # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
+
+        # Update START/FINISH params
+        self.model.START.value = self.toas.first_MJD
+        self.model.FINISH.value = self.toas.last_MJD
 
         return chi2
 
@@ -923,6 +951,10 @@ class GLSFitter(Fitter):
                     noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
                 self.resids.noise_resids = noise_resids
 
+        # Update START/FINISH params
+        self.model.START.value = self.toas.first_MJD
+        self.model.FINISH.value = self.toas.last_MJD
+
         return chi2
 
 
@@ -952,9 +984,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         self.fit_data_names = fit_data_names
         # convert the non tuple input to a tuple
         if not isinstance(fit_data, (tuple, list)):
-            fit_data = [
-                fit_data,
-            ]
+            fit_data = [fit_data]
         if not isinstance(fit_data[0], TOAs):
             raise ValueError("The first data set should be a TOAs object.")
         if len(fit_data_names) == 0:
@@ -1227,5 +1257,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 p1 = p0 + noise_dims[comp][1]
                 noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
             self.resids.noise_resids = noise_resids
+
+        # Update START/FINISH params
+        self.model.START.value = self.toas.first_MJD
+        self.model.FINISH.value = self.toas.last_MJD
 
         return chi2

@@ -22,6 +22,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added ability to disable subtracting mean from residuals
 - Added track_mode to Residuals to select pulse number tracking without needing the model to have TRACK -2
 - Added support for wideband-TOA fitting (Pennucchi 2019).
+- Added START and FINISH parameters as MJDParameters to timing_model. They are now 
+modified after a fit and are displayed with a model's .par file output.
 ### Changed
 - Large speed increase when using Ecliptic coordinates
 - Changed Residuals so that use_weighted_mean and subtract_mean are attributes set on initialization

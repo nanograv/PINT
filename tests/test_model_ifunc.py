@@ -31,8 +31,8 @@ class TestIFunc(unittest.TestCase):
         chi2 = rs.get_reduced_chi2()
         emsg = "RMS of " + str(rms.value) + " is too big."
         assert rms < 2700.0 * u.us, emsg
-        emsg = "reduced chi^2 of " + str(chi2.value) + " is too big."
-        assert chi2.value < 1.1, emsg
+        emsg = "reduced chi^2 of " + str(chi2) + " is too big."
+        assert chi2 < 1.1, emsg
 
         # test a fit
         f = pint.fitter.WLSFitter(self.t, self.m)
@@ -42,8 +42,8 @@ class TestIFunc(unittest.TestCase):
         chi2 = rs.get_reduced_chi2()
         emsg = "RMS of " + str(rms.value) + " is too big."
         assert rms < 2700.0 * u.us, emsg
-        emsg = "reduced chi^2 of " + str(chi2.value) + " is too big."
-        assert chi2.value < 1.1, emsg
+        emsg = "reduced chi^2 of " + str(chi2) + " is too big."
+        assert chi2 < 1.1, emsg
 
         # the residuals are actually terrible when using linear interpolation,
         # so this test just makes sure there are no access errors
