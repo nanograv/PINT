@@ -156,7 +156,7 @@ def fftfit_full(
         if compute_uncertainty:
             if std is None:
                 resid = r.scale * shift(template, r.shift) + r.offset - profile
-                std = np.mean(resid ** 2)
+                std = np.sqrt(np.mean(resid ** 2))
 
             J = np.zeros((2 * len(s_c) - 2, 2))
             J[: len(s_c) - 1, 0] = (

@@ -30,35 +30,24 @@ template = np.zeros(256)
 template[:16] = 1
 plt.plot(np.linspace(0, 1, len(template), endpoint=False), template)
 up_template = fftfit.upsample(template, 16)
-plt.plot(
-    np.linspace(0, 1, len(up_template), endpoint=False), up_template
-)
+plt.plot(np.linspace(0, 1, len(up_template), endpoint=False), up_template)
 plt.xlim(0, 1)
 ```
 
 ```python
-template = np.diff(
-    scipy.stats.vonmises(100).cdf(np.linspace(0, 2 * np.pi, 1024 + 1))
-)
+template = np.diff(scipy.stats.vonmises(100).cdf(np.linspace(0, 2 * np.pi, 1024 + 1)))
 plt.plot(np.linspace(0, 1, len(template), endpoint=False), template)
 up_template = fftfit.upsample(template, 16)
+plt.plot(np.linspace(0, 1, len(up_template), endpoint=False), up_template)
 plt.plot(
-    np.linspace(0, 1, len(up_template), endpoint=False), up_template
-)
-plt.plot(
-    np.linspace(0, 1, len(template), endpoint=False),
-    fftfit.shift(template, 0.25),
+    np.linspace(0, 1, len(template), endpoint=False), fftfit.shift(template, 0.25),
 )
 plt.xlim(0, 1)
 ```
 
 ```python
 if False:
-    template = np.diff(
-        scipy.stats.vonmises(10).cdf(
-            np.linspace(0, 2 * np.pi, 64 + 1)
-        )
-    )
+    template = np.diff(scipy.stats.vonmises(10).cdf(np.linspace(0, 2 * np.pi, 64 + 1)))
     profile = fftfit.shift(template, 0.25)
 else:
     template = np.random.randn(64)
@@ -67,8 +56,7 @@ else:
 upsample = 8
 if len(template) != len(profile):
     raise ValueError(
-        "Template is length %d but profile is length %d"
-        % (len(template), len(profile))
+        "Template is length %d but profile is length %d" % (len(template), len(profile))
     )
 t_c = np.fft.rfft(template)
 p_c = np.fft.rfft(profile)
@@ -87,11 +75,7 @@ plt.axvline(x)
 
 
 def gof(x):
-    return (
-        -(ccf_c * np.exp(2.0j * np.pi * np.arange(len(ccf_c)) * x))
-        .sum()
-        .real
-    )
+    return -(ccf_c * np.exp(2.0j * np.pi * np.arange(len(ccf_c)) * x)).sum().real
 
 
 plt.plot(xs, [-2 * gof(x) / len(xs) for x in xs])
@@ -105,18 +89,11 @@ plt.axvline(x)
 
 ```python
 template = fftfit.upsample(
-    np.diff(
-        scipy.stats.vonmises(10).cdf(
-            np.linspace(0, 2 * np.pi, 16 + 1)
-        )
-    ),
-    2,
+    np.diff(scipy.stats.vonmises(10).cdf(np.linspace(0, 2 * np.pi, 16 + 1))), 2,
 )
 for s in np.linspace(0, 1 / len(template), 33):
     profile = fftfit.shift(template, s)
-    print(
-        (s - fftfit.fftfit_basic(template, profile)) * len(template)
-    )
+    print((s - fftfit.fftfit_basic(template, profile)) * len(template))
 ```
 
 ```python
@@ -126,12 +103,7 @@ a_c[-1] = 0
 a_c[0] = 0
 xs = np.linspace(0, 1, len(a), endpoint=False)
 a_m = (
-    (
-        a_c[:, None]
-        * np.exp(
-            2.0j * np.pi * xs[None, :] * np.arange(len(a_c))[:, None]
-        )
-    )
+    (a_c[:, None] * np.exp(2.0j * np.pi * xs[None, :] * np.arange(len(a_c))[:, None]))
     .sum(axis=0)
     .real
     * 2
@@ -231,9 +203,7 @@ print(x, gof(x))
 print(r, gof(r))
 print(-s / n, gof(-s / n))
 
-res = scipy.optimize.minimize_scalar(
-    gof, bracket=(l, x, r), method="brent", tol=1e-10
-)
+res = scipy.optimize.minimize_scalar(gof, bracket=(l, x, r), method="brent", tol=1e-10)
 res
 ```
 
@@ -275,29 +245,30 @@ for i in range(10000):
     t = np.random.randn(n)
     t_c = np.fft.rfft(t)
 
-    r.append(
-        np.mean(np.abs(t_c[1:-1]) ** 2)
-        / (n * np.mean(np.abs(t) ** 2))
-    )
+    r.append(np.mean(np.abs(t_c[1:-1]) ** 2) / (n * np.mean(np.abs(t) ** 2)))
 np.mean(r)
 ```
 
 ```python
 template = fftfit.vonmises_profile(1, 256)
 plt.plot(template)
-plt.xlim(0,len(template))
+plt.xlim(0, len(template))
 std = 1
 shift = 0
 scale = 1
-r = fftfit.fftfit_full(template, scale*fftfit.shift(template, shift), std=std)
+r = fftfit.fftfit_full(template, scale * fftfit.shift(template, shift), std=std)
 r.shift, r.scale, r.offset, r.uncertainty, r.cov
+```
+
+```python
+fftfit.fftfit_full?
 ```
 
 ```python
 def gen_shift():
     return fftfit.wrap(
         fftfit.fftfit_basic(
-            template, scale*template + std * np.random.randn(len(template))
+            template, scale * template + std * np.random.randn(len(template))
         )
     )
 
@@ -312,43 +283,50 @@ np.std(shifts)
 ```
 
 ```python
-r.uncertainty/np.std(shifts)
+r.uncertainty / np.std(shifts)
 ```
 
 ```python
 snrs = {}
 
-template = fftfit.vonmises_profile(200, 1024, 1 / 3)
-plt.plot(np.linspace(0, 1, len(template), endpoint=False), template)
+scale = 1e-3
+template = fftfit.vonmises_profile(100, 1024, 1 / 3) + 0.5*fftfit.vonmises_profile(50, 1024, 1 / 2)
+plt.plot(np.linspace(0, 1, len(template), endpoint=False), scale*template)
 
 def gen_prof(std):
-    shift = np.random.uniform(0,1)
+    shift = np.random.uniform(0, 1)
     shift_template = fftfit.shift(template, shift)
-    return shift_template + std*np.random.standard_normal(len(template))/np.sqrt(len(template))
-    
+    return scale*shift_template + scale*std * np.random.standard_normal(len(template)) / np.sqrt(
+        len(template)
+    )
+
+
 plt.plot(np.linspace(0, 1, len(template), endpoint=False), gen_prof(0.01))
 plt.xlim(0, 1)
-        
+
+
 def gen_shift(std):
-    shift = np.random.uniform(0,1)
+    shift = np.random.uniform(0, 1)
     shift_template = fftfit.shift(template, shift)
-    profile = shift_template + std*np.random.standard_normal(len(template))/np.sqrt(len(template))
-    return fftfit.wrap(
-        fftfit.fftfit_basic(
-            template, profile
-        ) - shift
+    profile = scale*shift_template + scale*std * np.random.standard_normal(len(template)) / np.sqrt(
+        len(template)
     )
+    return fftfit.wrap(fftfit.fftfit_basic(template, profile) - shift)
+
 
 gen_shift(0.01)
 ```
 
 ```python
 def gen_uncert(std):
-    return fftfit.fftfit_full(template, gen_prof(std), std=std).uncertainty
+    return fftfit.fftfit_full(template, gen_prof(std), std=scale*std/np.sqrt(len(template))).uncertainty
+
+def gen_uncert_estimate(std):
+    return fftfit.fftfit_full(template, gen_prof(std)).uncertainty
 ```
 
 ```python
-for s in np.geomspace(1,1e-4,9):
+for s in np.geomspace(1, 1e-4, 9):
     if s not in snrs:
         snrs[s] = []
     for i in range(1000):
@@ -357,9 +335,26 @@ for s in np.geomspace(1,1e-4,9):
 
 ```python
 snr_list = sorted(snrs.keys())
-plt.loglog(snr_list, [np.std(snrs[s]) for s in snr_list], ".", label="measured std")
-plt.loglog(snr_list, [gen_uncert(s) for s in snr_list], ".", label="computed std")
+plt.loglog(snr_list, [np.std(snrs[s]) for s in snr_list], "o", label="measured std.")
+plt.loglog(snr_list, [gen_uncert(s) for s in snr_list], ".", label="computed uncert.")
+plt.loglog(snr_list, [gen_uncert_estimate(s) for s in snr_list], "+", label="computed uncert. w/estimate")
 plt.legend()
+plt.xlabel("SNR (some strange units)")
+plt.ylabel("Uncertainty or standard deviation (phase)")
+
+```
+
+```python
+p = 1-2*scipy.stats.norm.sf(1)
+p
+```
+
+```python
+scipy.stats.binom.isf(0.01, 100, p), scipy.stats.binom.isf(0.99, 100, p)
+```
+
+```python
+scipy.stats.binom(16, p).ppf(0.99)
 ```
 
 ```python

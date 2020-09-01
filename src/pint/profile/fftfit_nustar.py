@@ -1,5 +1,6 @@
 # by mateobachetti
 # from https://github.com/NuSTAR/nustar-clock-utils/blob/master/nuclockutils/diagnostics/fftfit.py
+from collections import namedtuple
 import numpy as np
 from scipy.optimize import minimize, brentq
 
@@ -72,6 +73,11 @@ def chi_sq_alt(b, tau, P, S, theta, phi, ngood=20):
     res = np.sum(chisq_1 + chisq_2)
 
     return res
+
+
+FFTFITResult = namedtuple(
+    "FFTFITResult", ["mean_amp", "std_amp", "mean_phase", "std_phase"]
+)
 
 
 def fftfit(prof, template):
@@ -161,7 +167,7 @@ def fftfit(prof, template):
 
     eb = sigma ** 2 / (2 * np.sum(S[good] ** 2))
 
-    return b, np.sqrt(eb), normalize_phase_0d5(shift), np.sqrt(eshift)
+    return FFTFITResult(b, np.sqrt(eb), normalize_phase_0d5(shift), np.sqrt(eshift))
 
 
 def normalize_phase_0d5(phase):
@@ -187,3 +193,15 @@ def normalize_phase_0d5(phase):
 def fftfit_basic(template, profile):
     n, seb, shift, eshift = fftfit(profile, template)
     return shift
+
+
+class FullResult:
+    pass
+
+
+def fftfit_full(template, profile):
+    r = fftfit(profile, template)
+    ro = FullResult()
+    ro.shift = r.mean_phase
+    ro.uncertainty = r.std_phase
+    return ro
