@@ -27,7 +27,7 @@ jupytext
 pdbpp
 tox
 pre-commit
-black
+black>=19.0,<20.0
 pygments
 ipython
 pathlib2
