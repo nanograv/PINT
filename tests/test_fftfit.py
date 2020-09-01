@@ -3,7 +3,7 @@ from functools import wraps
 import numpy as np
 import pytest
 import scipy.stats
-from hypothesis import assume, given
+from hypothesis import assume, given, target
 from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import (
     complex_numbers,
@@ -22,10 +22,15 @@ from pint.profile import fftfit_nustar
 
 
 def assert_rms_close(a, b, rtol=1e-8, atol=1e-8):
+    target(np.mean((a - b) ** 2), label="mean")
+    target((a - b).max(), label="max")
+    target(-(a - b).min(), label="min")
     assert np.mean((a - b) ** 2) < rtol * (np.mean(a ** 2) + np.mean(b ** 2)) + atol
 
 
 def assert_allclose_phase(a, b, atol=1e-8):
+    target(np.abs(fftfit.wrap(a - b)).max(), label="max phase")
+    target(np.abs(fftfit.wrap(a - b)).mean(), label="mean phase")
     assert np.all(np.abs(fftfit.wrap(a - b)) <= atol)
 
 
