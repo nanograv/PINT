@@ -1164,34 +1164,48 @@ class TimingModel(object):
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
 
-    def compare(self, othermodel, nodmx=True):
+    def compare(self, othermodel, nodmx=True, threshold_sigma=3., verbosity="full"):
         """Print comparison with another model
-
 # TO-DO:
 # 1. add more to docstring
-#    - explain output, like what diff_sigma is 
-#    - change output table titles
-# 2. change output for uncertainties that aren't reported (inf -> N/A)
-
+#    - explain output, like what diff_sigma is CHECK
+#    - change output table titles CHECK
+# 2. change output for diff_sigma
+#   - inf -> N/A CHECK
+#   - highlight entries when diff_sigma > threshold (default 3)
+#   - highlight entries when uncertainty grows (i.e. is unc2/unc1 > 1?)
+# 3. add verbosity flag
+#    - make the default verbosity "full," which prints output as it has in the past
+#    - medium verbosity skips DMX lines, unfit parameters
 
         Parameters
         ----------
         othermodel
             TimingModel object to compare to
         nodmx : bool
-            If True (which is the default), don't print the DMX parameters in the comparison
-
+            If True (which is the default), don't print the DMX parameters in
+            the comparison
+        threshold_sigma : float
+            Pulsar parameters for which diff_sigma > threshold will be printed
+            with an exclamation point at the end of the line
+        verbosity : string
+            Dictates amount of information returned. Options include "full",
+            "mid", and "minimal", which have the following results:
+                "full"    - print all lines from both models whether they are fit
+                            or not (note that nodmx will override this); DEFAULT
+                "mid"     - only print lines for parameters that are fit
+                "minimal" - only print lines for fit parameters for which
+                            diff_sigma > threshold
         Returns
         -------
         str
             Human readable comparison, for printing
-            
-            Formatted as a five column table with titles of             
-            PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2          
-            where Model 1/2 refer to self and othermodel Timing Model objects, 
-            and Diff_SigmaX is the difference in a given parameter as reported by the two models, 
-            normalized by the uncertainty in model X. If model X has no reported uncertainty, 
-            N/A will be printed. 
+            Formatted as a five column table with titles of
+            PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2
+            where Model 1/2 refer to self and othermodel Timing Model objects,
+            and Diff_SigmaX is the difference in a given parameter as reported by the two models,
+            normalized by the uncertainty in model X. If model X has no reported uncertainty,
+            N/A will be printed.
         """
 
         from uncertainties import ufloat
