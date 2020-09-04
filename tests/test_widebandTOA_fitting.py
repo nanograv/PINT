@@ -44,12 +44,22 @@ class TestWidebandTOAFitter:
 
     def test_fitting_no_full_cov(self):
         fitter = WidebandTOAFitter([self.toas,], self.model, additional_args={})
-        rms_pre = fitter.resids_init.rms_weighted()
+        time_rms_pre = fitter.resids_init.residual_objs[0].rms_weighted()
+        dm_rms_pre = fitter.resids_init.residual_objs[1].rms_weighted()
         fitter.fit_toas()
-        assert fitter.resids.rms_weighted() - rms_pre < 1e-9
+        time_rms_post = fitter.resids.residual_objs[0].rms_weighted()
+        dm_rms_post = fitter.resids.residual_objs[1].rms_weighted()
+        # The tolarance may need to be changed
+        assert np.abs(time_rms_pre - time_rms_post) < 2e-9
+        assert np.abs(dm_rms_pre - dm_rms_post) < 3e-8
 
     def test_fitting_full_cov(self):
         fitter = WidebandTOAFitter([self.toas,], self.model, additional_args={})
-        rms_pre = fitter.resids_init.rms_weighted()
+        time_rms_pre = fitter.resids_init.residual_objs[0].rms_weighted()
+        dm_rms_pre = fitter.resids_init.residual_objs[1].rms_weighted()
         fitter.fit_toas(full_cov=True)
-        assert fitter.resids.rms_weighted() - rms_pre < 1e-9
+        time_rms_post = fitter.resids.residual_objs[0].rms_weighted()
+        dm_rms_post = fitter.resids.residual_objs[1].rms_weighted()
+        # The tolarance may need to be changed
+        assert np.abs(time_rms_pre - time_rms_post) < 2e-9
+        assert np.abs(dm_rms_pre - dm_rms_post) < 3e-8
