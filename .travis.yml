@@ -18,7 +18,7 @@ jobs:
           after_success: []
         - script: black --check src tests examples
           install:
-            - travis_retry pip install black
+            - travis_retry pip install "black>=19.0a0,<20.0a0"
           name: "check code style is black"
           services: []
           after_success: []
