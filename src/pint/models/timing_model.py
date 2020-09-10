@@ -1164,18 +1164,16 @@ class TimingModel(object):
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
 
-    def compare(self, othermodel, nodmx=True, threshold_sigma=3., verbosity="full"):
+    def compare(self, othermodel, nodmx=True, threshold_sigma=3., verbosity="max"):
         """Print comparison with another model
 # TO-DO:
 # 1. add more to docstring
 #    - explain output, like what diff_sigma is CHECK
-#    - change output table titles CHECK
 # 2. change output for diff_sigma
-#   - inf -> N/A CHECK
-#   - highlight entries when diff_sigma > threshold (default 3)
-#   - highlight entries when uncertainty grows (i.e. is unc2/unc1 > 1?)
+#   - highlight entries when diff_sigma > threshold (default 3) CHECK
+#   - highlight entries when uncertainty grows (i.e. is unc2/unc1 > 1?) CHECK
 # 3. add verbosity flag
-#    - make the default verbosity "full," which prints output as it has in the past
+#    - make the default verbosity "max," which prints output as it has in the past CHECK
 #    - medium verbosity skips DMX lines, unfit parameters
 
         Parameters
@@ -1191,10 +1189,10 @@ class TimingModel(object):
         verbosity : string
             Dictates amount of information returned. Options include "full",
             "mid", and "minimal", which have the following results:
-                "full"    - print all lines from both models whether they are fit
+                "max"     - print all lines from both models whether they are fit
                             or not (note that nodmx will override this); DEFAULT
                 "mid"     - only print lines for parameters that are fit
-                "minimal" - only print lines for fit parameters for which
+                "min"     - only print lines for fit parameters for which
                             diff_sigma > threshold
         Returns
         -------
@@ -1205,7 +1203,9 @@ class TimingModel(object):
             where Model 1/2 refer to self and othermodel Timing Model objects,
             and Diff_SigmaX is the difference in a given parameter as reported by the two models,
             normalized by the uncertainty in model X. If model X has no reported uncertainty,
-            N/A will be printed.
+            nothing will be printed. When either Diff_Sigma value is greater than threshold_sigma, 
+            an exclamation point (!) will be appended to the line. If the uncertainty in the first model
+            if smaller than the second, an asterisk (*) will be appended to the line.
         """
 
         from uncertainties import ufloat
@@ -1218,114 +1218,120 @@ class TimingModel(object):
             "---------", "----------", "----------", "----------", "----------"
         )
         for pn in self.params_ordered:
-            par = getattr(self, pn)
+            par = getattr(model, pn)
             if par.value is None:
                 continue
+            newstr = '' 
             try:
                 otherpar = getattr(othermodel, pn)
             except AttributeError:
                 # s += "Parameter {} missing in other model\n".format(par.name)
                 otherpar = None
             if isinstance(par, strParameter):
-                s += "{:14s} {:>28s}".format(pn, par.value)
+                newstr += "{:14s} {:>28s}".format(pn, par.value)
                 if otherpar is not None:
-                    s += " {:>28s}\n".format(otherpar.value)
+                    newstr += " {:>28s}\n".format(otherpar.value)
                 else:
-                    s += " {:>28s}\n".format("Missing")
+                    newstr += " {:>28s}\n".format("Missing")
             elif isinstance(par, AngleParameter):
                 if par.frozen:
                     # If not fitted, just print both values
-                    s += "{:14s} {:>28s}".format(pn, str(par.quantity))
+                    newstr += "{:14s} {:>28s}".format(pn, str(par.quantity))
                     if otherpar is not None:
-                        s += " {:>28s}\n".format(str(otherpar.quantity))
+                        newstr += " {:>28s}\n".format(str(otherpar.quantity))
                     else:
-                        s += " {:>28s}\n".format("Missing")
+                        newstr += " {:>28s}\n".format("Missing")
                 else:
                     # If fitted, print both values with uncertainties
                     if par.units == u.hourangle:
                         uncertainty_unit = pint.hourangle_second
                     else:
                         uncertainty_unit = u.arcsec
-                    s += "{:14s} {:>16s} +/- {:7.2g}".format(
+                    newstr += "{:14s} {:>16s} +/- {:7.2g}".format(
                         pn,
                         str(par.quantity),
                         par.uncertainty.to(uncertainty_unit).value,
                     )
                     if otherpar is not None:
                         try:
-                            s += " {:>16s} +/- {:7.2g}".format(
+                            newstr += " {:>16s} +/- {:7.2g}".format(
                                 str(otherpar.quantity),
                                 otherpar.uncertainty.to(uncertainty_unit).value,
                             )
                         except AttributeError:
                             # otherpar must have no uncertainty
                             if otherpar.quantity is not None:
-                                s += " {:>28s}".format(str(otherpar.quantity))
+                                newstr += " {:>28s}".format(str(otherpar.quantity))
                             else:
-                                s += " {:>28s}".format("Missing")
+                                newstr += " {:>28s}".format("Missing")
                     else:
-                        s += " {:>28s}".format("Missing")
+                        newstr += " {:>28s}".format("Missing")
                     try:
                         diff = otherpar.value - par.value
                         diff_sigma = diff / par.uncertainty.value
-                        if abs(diff_sigma) == np.inf:
-                            s += " {:>10s}".format('N/A')
+                        if abs(diff_sigma) != np.inf:
+                            newstr += " {:>10.2f}".format(diff_sigma)
+                            if abs(diff_sigma) > threshold_sigma:
+                                newstr += " !"
+                            else: 
+                                newstr += "  "
                         else:
-                            s += " {:>10.2f}".format(diff_sigma)
+                            newstr += "           "
                         diff_sigma2 = diff / otherpar.uncertainty.value                        
-                        if abs(diff_sigma2) == np.inf:
-                            s += " {:>10s}".format('N/A')
-                        else:
-                            s += " {:>10f}".format(diff_sigma2)
+                        if abs(diff_sigma2) != np.inf:
+                            newstr += " {:>10.2f}".format(diff_sigma2)
+                            if abs(diff_sigma2) > threshold_sigma:
+                                newstr += " !"
                     except (AttributeError, TypeError):
                         pass
-                    s += "\n"
+                    newstr += "\n"
             else:
                 # Assume numerical parameter
                 if nodmx and pn.startswith("DMX"):
                     continue
                 if par.frozen:
                     # If not fitted, just print both values
-                    s += "{:14s} {:28f}".format(pn, par.value)
+                    newstr += "{:14s} {:28f}".format(pn, par.value)
                     if otherpar is not None and otherpar.value is not None:
                         try:
-                            s += " {:28SP}\n".format(
+                            newstr += " {:28SP}\n".format(
                                 ufloat(otherpar.value, otherpar.uncertainty.value)
                             )
                         except:
-                            s += " {:28f}\n".format(otherpar.value)
+                            newstr += " {:28f}\n".format(otherpar.value)
                     else:
-                        s += " {:>28s}\n".format("Missing")
+                        newstr += " {:>28s}\n".format("Missing")
                 else:
                     # If fitted, print both values with uncertainties
-                    s += "{:14s} {:28SP}".format(
+                    newstr += "{:14s} {:28SP}".format(
                         pn, ufloat(par.value, par.uncertainty.value)
                     )
                     if otherpar is not None and otherpar.value is not None:
                         try:
-                            s += " {:28SP}".format(
+                            newstr += " {:28SP}".format(
                                 ufloat(otherpar.value, otherpar.uncertainty.value)
                             )
                         except AttributeError:
                             # otherpar must have no uncertainty
                             if otherpar.value is not None:
-                                s += " {:28f}".format(otherpar.value)
+                                newstr += " {:28f}".format(otherpar.value)
                             else:
-                                s += " {:>28s}".format("Missing")
+                                newstr += " {:>28s}".format("Missing")
                     else:
-                        s += " {:>28s}".format("Missing")
+                        newstr += " {:>28s}".format("Missing")
                     try:
                         diff = otherpar.value - par.value
                         diff_sigma = diff / par.uncertainty.value
-                        if abs(diff_sigma) == np.inf:
-                            s += " {:>10s}".format('N/A')
+                        if abs(diff_sigma) != np.inf:
+                            newstr += " {:>10.2f}".format(diff_sigma)
                         else:
-                            s += " {:>10.2f}".format(diff_sigma)
+                            newstr += "           "
                         diff_sigma2 = diff / otherpar.uncertainty.value                        
-                        if abs(diff_sigma2) == np.inf:
-                            s += " {:>10s}".format('N/A')
-                        else:
-                            s += " {:>10.2f}".format(diff_sigma2)
+                        if abs(diff_sigma2) != np.inf:
+                            newstr += " {:>10.2f}".format(diff_sigma2)
+                        if abs(diff_sigma) > threshold_sigma or abs(diff_sigma2) > threshold_sigma:
+                            newstr += " !"
+                            
                         '''    
                         diff = otherpar.value - par.value
                         diff_sigma = diff / par.uncertainty.value
@@ -1335,21 +1341,35 @@ class TimingModel(object):
                         '''
                     except (AttributeError, TypeError):
                         pass
-                    s += "\n"
+                    if par.uncertainty < otherpar.uncertainty:
+                        newstr += "*"
+                    newstr += "\n"
+            if verbosity == "max":
+                s += newstr
+            elif verbosity == "mid":
+                if not par.frozen:
+                    s += newstr
+            elif verbosity == "min":
+                if '!' in newstr and not par.frozen:
+                    s += newstr
+            else:
+                raise AttributeError('Options for verbosity are "max" (default), "mid", and "min"')
+                return 1
         # Now print any parametrs in othermodel that were missing in self.
         mypn = self.params_ordered
-        for opn in othermodel.params_ordered:
-            if opn in mypn:
-                continue
-            if nodmx and opn.startswith("DMX"):
-                continue
-            try:
-                otherpar = getattr(othermodel, opn)
-            except AttributeError:
-                otherpar = None
-            s += "{:14s} {:>28s}".format(opn, "Missing")
-            s += " {:>28s}".format(str(otherpar.quantity))
-            s += "\n"
+        if verbosity == 'max':
+            for opn in othermodel.params_ordered:
+                if opn in mypn:
+                    continue
+                if nodmx and opn.startswith("DMX"):
+                    continue
+                try:
+                    otherpar = getattr(othermodel, opn)
+                except AttributeError:
+                    otherpar = None
+                s += "{:14s} {:>28s}".format(opn, "Missing")
+                s += " {:>28s}".format(str(otherpar.quantity))
+                s += "\n"
         return s
 
     def read_parfile(self, file, validate=True):
