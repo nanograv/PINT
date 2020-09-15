@@ -1164,17 +1164,22 @@ class TimingModel(object):
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
 
-    def compare(self, othermodel, nodmx=True, threshold_sigma=3., verbosity="max"):
+def compare(model, othermodel, nodmx=True, threshold_sigma=3., verbosity="max"):
         """Print comparison with another model
 # TO-DO:
-# 1. add more to docstring
+# 1. add more to docstring CHECK
 #    - explain output, like what diff_sigma is CHECK
-# 2. change output for diff_sigma
+# 2. change output for diff_sigma CHECK
 #   - highlight entries when diff_sigma > threshold (default 3) CHECK
 #   - highlight entries when uncertainty grows (i.e. is unc2/unc1 > 1?) CHECK
-# 3. add verbosity flag
+# 3. add verbosity flag CHECK
 #    - make the default verbosity "max," which prints output as it has in the past CHECK
-#    - medium verbosity skips DMX lines, unfit parameters
+#    - medium verbosity skips DMX lines, unfit parameters CHECK
+#    - minimum verbosity skips all lines that are unfit and only shows those with diff_sigma>threshold_sigma CHECK
+#    - "check" prints with logger (see #4)
+# 4. implement astropy.logger
+#    - print out significant changes with "WARNING"
+#    - tie to verbosity; "check" level does not print string, only warnings
 
         Parameters
         ----------
@@ -1191,7 +1196,7 @@ class TimingModel(object):
             "mid", and "minimal", which have the following results:
                 "max"     - print all lines from both models whether they are fit
                             or not (note that nodmx will override this); DEFAULT
-                "mid"     - only print lines for parameters that are fit
+                "med"     - only print lines for parameters that are fit
                 "min"     - only print lines for fit parameters for which
                             diff_sigma > threshold
         Returns
@@ -1217,7 +1222,8 @@ class TimingModel(object):
         s += "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
             "---------", "----------", "----------", "----------", "----------"
         )
-        for pn in self.params_ordered:
+        log.info('Comparing ephemerides for PSR %s' %model.PSR.value)
+        for pn in model.params_ordered:
             par = getattr(model, pn)
             if par.value is None:
                 continue
@@ -1324,13 +1330,15 @@ class TimingModel(object):
                         diff_sigma = diff / par.uncertainty.value
                         if abs(diff_sigma) != np.inf:
                             newstr += " {:>10.2f}".format(diff_sigma)
+                            if abs(diff_sigma) > threshold_sigma:
+                                newstr += " !"
                         else:
                             newstr += "           "
                         diff_sigma2 = diff / otherpar.uncertainty.value                        
                         if abs(diff_sigma2) != np.inf:
                             newstr += " {:>10.2f}".format(diff_sigma2)
-                        if abs(diff_sigma) > threshold_sigma or abs(diff_sigma2) > threshold_sigma:
-                            newstr += " !"
+                            if abs(diff_sigma2) > threshold_sigma:
+                                newstr += " !"
                             
                         '''    
                         diff = otherpar.value - par.value
@@ -1341,22 +1349,31 @@ class TimingModel(object):
                         '''
                     except (AttributeError, TypeError):
                         pass
-                    if par.uncertainty < otherpar.uncertainty:
-                        newstr += "*"
+                    if type(par.uncertainty) != type(None) and type(otherpar.uncertainty) != type(None):
+                        if par.uncertainty < otherpar.uncertainty:
+                            newstr += " *"
                     newstr += "\n"
             if verbosity == "max":
                 s += newstr
-            elif verbosity == "mid":
+            elif verbosity == "med":
                 if not par.frozen:
                     s += newstr
             elif verbosity == "min":
                 if '!' in newstr and not par.frozen:
                     s += newstr
+            elif verbosity == "check":
+                if '!' in newstr:
+                    try:
+                        log.warning('Parameter %s has changed significantly (%f sigma)' %(newstr.split()[0],float(newstr.split()[-2])))
+                    except: 
+                        log.warning('Parameter %s has changed significantly (%f sigma)' %(newstr.split()[0],float(newstr.split()[-3])))
+                if '*' in newstr:
+                    log.warning('Uncertainty on parameter %s has increased (unc2/unc1 = %2.2f)' %(newstr.split()[0],float(otherpar.uncertainty/par.uncertainty)))
             else:
                 raise AttributeError('Options for verbosity are "max" (default), "mid", and "min"')
                 return 1
         # Now print any parametrs in othermodel that were missing in self.
-        mypn = self.params_ordered
+        mypn = model.params_ordered
         if verbosity == 'max':
             for opn in othermodel.params_ordered:
                 if opn in mypn:
@@ -1370,8 +1387,8 @@ class TimingModel(object):
                 s += "{:14s} {:>28s}".format(opn, "Missing")
                 s += " {:>28s}".format(str(otherpar.quantity))
                 s += "\n"
-        return s
-
+        if verbosity != 'check':
+            return s.split('\n')
     def read_parfile(self, file, validate=True):
         """Read values from the specified parfile into the model parameters.
 
