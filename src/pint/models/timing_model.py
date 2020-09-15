@@ -1224,7 +1224,7 @@ class TimingModel(object):
         )
         log.info('Comparing ephemerides for PSR %s' %self.PSR.value)
         for pn in self.params_ordered:
-            par = getattr(model, pn)
+            par = getattr(self, pn)
             if par.value is None:
                 continue
             newstr = '' 
