@@ -1164,7 +1164,7 @@ class TimingModel(object):
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
 
-def compare(model, othermodel, nodmx=True, threshold_sigma=3., verbosity="max"):
+    def compare(self, othermodel, nodmx=True, threshold_sigma=3., verbosity="max"):
         """Print comparison with another model
 # TO-DO:
 # 1. add more to docstring CHECK
@@ -1222,8 +1222,8 @@ def compare(model, othermodel, nodmx=True, threshold_sigma=3., verbosity="max"):
         s += "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
             "---------", "----------", "----------", "----------", "----------"
         )
-        log.info('Comparing ephemerides for PSR %s' %model.PSR.value)
-        for pn in model.params_ordered:
+        log.info('Comparing ephemerides for PSR %s' %self.PSR.value)
+        for pn in self.params_ordered:
             par = getattr(model, pn)
             if par.value is None:
                 continue
@@ -1373,7 +1373,7 @@ def compare(model, othermodel, nodmx=True, threshold_sigma=3., verbosity="max"):
                 raise AttributeError('Options for verbosity are "max" (default), "mid", and "min"')
                 return 1
         # Now print any parametrs in othermodel that were missing in self.
-        mypn = model.params_ordered
+        mypn = self.params_ordered
         if verbosity == 'max':
             for opn in othermodel.params_ordered:
                 if opn in mypn:
