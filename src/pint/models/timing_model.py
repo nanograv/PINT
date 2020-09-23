@@ -1178,13 +1178,14 @@ class TimingModel(object):
 #    - minimum verbosity skips all lines that are unfit and only shows those with diff_sigma>threshold_sigma CHECK
 #    - "check" prints with logger (see #4)
 # 4. implement astropy.logger
-#    - print out significant changes with "WARNING"
-#    - tie to verbosity; "check" level does not print string, only warnings
+#    - print out significant changes with "WARNING" CHECK
+#    - tie to verbosity; "check" level does not print string, only warnings CHECK
+# 5. update timing epochs
 
         Parameters
         ----------
         othermodel
-            TimingModel object to compare to
+            TimingModel object to compare 
         nodmx : bool
             If True (which is the default), don't print the DMX parameters in
             the comparison
@@ -1223,6 +1224,12 @@ class TimingModel(object):
             "---------", "----------", "----------", "----------", "----------"
         )
         log.info('Comparing ephemerides for PSR %s' %self.PSR.value)
+        if 'POSEPOCH' in self.params_ordered and 'POSEPOCH' in othermodel.params_ordered:
+            othermodel.change_posepoch(self.POSEPOCH.value)
+        if 'PEPOCH' in self.params_ordered and 'PEPOCH' in othermodel.params_ordered:
+            othermodel.change_pepoch(self.PEPOCH.value)
+        if 'DMEPOCH' in self.params_ordered and 'DMEPOCH' in othermodel.params_ordered:
+            othermodel.change_posepoch(self.DMEPOCH.value)
         for pn in self.params_ordered:
             par = getattr(self, pn)
             if par.value is None:
