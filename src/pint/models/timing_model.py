@@ -1165,30 +1165,15 @@ class TimingModel(object):
         return M, params, units, scale_by_F0
 
     def compare(self, othermodel, nodmx=True, threshold_sigma=3., verbosity="max"):
-        """Print comparison with another model
-# TO-DO:
-# 1. add more to docstring CHECK
-#    - explain output, like what diff_sigma is CHECK
-# 2. change output for diff_sigma CHECK
-#   - highlight entries when diff_sigma > threshold (default 3) CHECK
-#   - highlight entries when uncertainty grows (i.e. is unc2/unc1 > 1?) CHECK
-# 3. add verbosity flag CHECK
-#    - make the default verbosity "max," which prints output as it has in the past CHECK
-#    - medium verbosity skips DMX lines, unfit parameters CHECK
-#    - minimum verbosity skips all lines that are unfit and only shows those with diff_sigma>threshold_sigma CHECK
-#    - "check" prints with logger (see #4)
-# 4. implement astropy.logger
-#    - print out significant changes with "WARNING" CHECK
-#    - tie to verbosity; "check" level does not print string, only warnings CHECK
-# 5. update timing epochs
+        """Print comparison with another model. Will update EPOCHs for period, DM, and position
+           in othermodel.
 
         Parameters
         ----------
         othermodel
-            TimingModel object to compare 
+            TimingModel object with which to compare 
         nodmx : bool
-            If True (which is the default), don't print the DMX parameters in
-            the comparison
+            If True (default), don't print the DMX parameters in the comparison
         threshold_sigma : float
             Pulsar parameters for which diff_sigma > threshold will be printed
             with an exclamation point at the end of the line
@@ -1200,18 +1185,25 @@ class TimingModel(object):
                 "med"     - only print lines for parameters that are fit
                 "min"     - only print lines for fit parameters for which
                             diff_sigma > threshold
+                "check"   - print significant changes with astropy.log.warning, not
+                            as string
         Returns
         -------
-        str
-            Human readable comparison, for printing
-            Formatted as a five column table with titles of
-            PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2
-            where Model 1/2 refer to self and othermodel Timing Model objects,
-            and Diff_SigmaX is the difference in a given parameter as reported by the two models,
-            normalized by the uncertainty in model X. If model X has no reported uncertainty,
-            nothing will be printed. When either Diff_Sigma value is greater than threshold_sigma, 
-            an exclamation point (!) will be appended to the line. If the uncertainty in the first model
-            if smaller than the second, an asterisk (*) will be appended to the line.
+        if verbosity is not "check":
+            str
+                Human readable comparison, for printing
+                Formatted as a five column table with titles of
+                PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2
+                where Model 1/2 refer to self and othermodel Timing Model objects,
+                and Diff_SigmaX is the difference in a given parameter as reported by the two models,
+                normalized by the uncertainty in model X. If model X has no reported uncertainty,
+                nothing will be printed. When either Diff_Sigma value is greater than threshold_sigma, 
+                an exclamation point (!) will be appended to the line. If the uncertainty in the first model
+                if smaller than the second, an asterisk (*) will be appended to the line.
+        else:
+            Nonetype
+                Prints astropy.log warnings for parameters that have changed significantly
+                and/or have increased in uncertainty.
         """
 
         from uncertainties import ufloat
