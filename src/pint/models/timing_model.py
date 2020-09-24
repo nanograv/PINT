@@ -1225,11 +1225,14 @@ class TimingModel(object):
         )
         log.info('Comparing ephemerides for PSR %s' %self.PSR.value)
         if 'POSEPOCH' in self.params_ordered and 'POSEPOCH' in othermodel.params_ordered:
-            othermodel.change_posepoch(self.POSEPOCH.value)
+            if self.POSEPOCH.value != None:
+                othermodel.change_posepoch(self.POSEPOCH.value)
         if 'PEPOCH' in self.params_ordered and 'PEPOCH' in othermodel.params_ordered:
-            othermodel.change_pepoch(self.PEPOCH.value)
+            if self.POSEPOCH.value != None:
+                othermodel.change_pepoch(self.PEPOCH.value)
         if 'DMEPOCH' in self.params_ordered and 'DMEPOCH' in othermodel.params_ordered:
-            othermodel.change_posepoch(self.DMEPOCH.value)
+            if self.POSEPOCH.value != None:
+                othermodel.change_posepoch(self.DMEPOCH.value)
         for pn in self.params_ordered:
             par = getattr(self, pn)
             if par.value is None:
