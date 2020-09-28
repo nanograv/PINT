@@ -1219,14 +1219,17 @@ class TimingModel(object):
         if 'POSEPOCH' in self.params_ordered and 'POSEPOCH' in othermodel.params_ordered:
             if self.POSEPOCH.value != None and self.POSEPOCH.value != othermodel.POSEPOCH.value:
                 log.info('Updating POSEPOCH in Model 2 to match Model 1')
+                om_posepoch=othermodel.POSEPOCH.value
                 othermodel.change_posepoch(self.POSEPOCH.value)
         if 'PEPOCH' in self.params_ordered and 'PEPOCH' in othermodel.params_ordered:
             if self.PEPOCH.value != None and self.PEPOCH.value != othermodel.PEPOCH.value:
                 log.info('Updating PEPOCH in Model 2 to match Model 1')
+                om_pepoch=othermodel.PEPOCH.value
                 othermodel.change_pepoch(self.PEPOCH.value)
         if 'DMEPOCH' in self.params_ordered and 'DMEPOCH' in othermodel.params_ordered:
             if self.DMEPOCH.value != None and self.DMEPOCH.value != othermodel.DMEPOCH.value:
                 log.info('Updating DMEPOCH in Model 2 to match Model 1')
+                om_dmepoch=othermodel.DMEPOCH.value
                 othermodel.change_posepoch(self.DMEPOCH.value)
         for pn in self.params_ordered:
             par = getattr(self, pn)
@@ -1376,6 +1379,9 @@ class TimingModel(object):
                     log.warning('Uncertainty on parameter %s has increased (unc2/unc1 = %2.2f)' %(newstr.split()[0],float(otherpar.uncertainty/par.uncertainty)))
             else:
                 raise AttributeError('Options for verbosity are "max" (default), "mid", and "min"')
+                othermodel.change_posepoch(om_posepoch)
+                othermodel.change_pepoch(om_pepoch)
+                othermodel.change_dmepoch(om_dmepoch)
                 return 1
         # Now print any parametrs in othermodel that were missing in self.
         mypn = self.params_ordered
@@ -1392,6 +1398,9 @@ class TimingModel(object):
                 s += "{:14s} {:>28s}".format(opn, "Missing")
                 s += " {:>28s}".format(str(otherpar.quantity))
                 s += "\n"
+        othermodel.change_posepoch(om_posepoch)
+        othermodel.change_pepoch(om_pepoch)
+        othermodel.change_dmepoch(om_dmepoch)
         if verbosity != 'check':
             return s.split('\n')
     def read_parfile(self, file, validate=True):
