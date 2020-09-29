@@ -1208,6 +1208,7 @@ class TimingModel(object):
 
         from uncertainties import ufloat
         import uncertainties.umath as um
+        from copy import deepcopy as cp
 
         s = "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
             "PARAMETER", "Model 1", "Model 2 ", "Diff_Sigma1", "Diff_Sigma2"
@@ -1216,9 +1217,8 @@ class TimingModel(object):
             "---------", "----------", "----------", "----------", "----------"
         )
         log.info('Comparing ephemerides for PSR %s' %self.PSR.value)
-        om_posepoch=othermodel.POSEPOCH.value
-        om_pepoch=othermodel.PEPOCH.value
-        om_dmepoch=othermodel.DMEPOCH.value 
+        log.info('Creating a copy of Model 2')
+        othermodel=cp(othermodel)
         if 'POSEPOCH' in self.params_ordered and 'POSEPOCH' in othermodel.params_ordered:
             if self.POSEPOCH.value != None and self.POSEPOCH.value != othermodel.POSEPOCH.value:
                 log.info('Updating POSEPOCH in Model 2 to match Model 1')
@@ -1378,12 +1378,6 @@ class TimingModel(object):
                 if '*' in newstr:
                     log.warning('Uncertainty on parameter %s has increased (unc2/unc1 = %2.2f)' %(newstr.split()[0],float(otherpar.uncertainty/par.uncertainty)))
             else:
-                if type(om_posepoch)!=type(None):
-                    othermodel.change_posepoch(om_posepoch)
-                if type(om_pepoch)!=type(None):
-                    othermodel.change_pepoch(om_pepoch)
-                if type(om_dmepoch)!=type(None):
-                    othermodel.change_dmepoch(om_dmepoch)
                 raise AttributeError('Options for verbosity are "max" (default), "mid", and "min"')
         # Now print any parametrs in othermodel that were missing in self.
         mypn = self.params_ordered
@@ -1400,12 +1394,6 @@ class TimingModel(object):
                 s += "{:14s} {:>28s}".format(opn, "Missing")
                 s += " {:>28s}".format(str(otherpar.quantity))
                 s += "\n"
-        if type(om_posepoch)!=type(None):
-            othermodel.change_posepoch(om_posepoch)
-        if type(om_pepoch)!=type(None):
-            othermodel.change_pepoch(om_pepoch)
-        if type(om_dmepoch)!=type(None):
-            othermodel.change_dmepoch(om_dmepoch)
         if verbosity != 'check':
             return s.split('\n')
     def read_parfile(self, file, validate=True):
