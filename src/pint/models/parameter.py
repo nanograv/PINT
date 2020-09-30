@@ -1709,7 +1709,7 @@ class pairParameter(floatParameter):
             return ""
         line = "%-15s " % (self.name)
         line += "%25s" % self.print_quantity(quantity[0])
-        line += "%25s" % self.print_quantity(quantity[1])
+        line += " %25s" % self.print_quantity(quantity[1])
 
         return line + "\n"
 
