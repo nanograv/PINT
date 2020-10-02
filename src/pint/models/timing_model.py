@@ -729,10 +729,11 @@ class TimingModel(object):
                 # if no absolute phase (TZRMJD), add the component to the model and calculate it
                 from pint.models import absolute_phase
 
-                self.add_component(absolute_phase.AbsPhase())
+                self.add_component(absolute_phase.AbsPhase(), validate=False)
                 self.make_TZR_toa(
                     toas
                 )  # TODO:needs timfile to get all toas, but model doesn't have access to timfile. different place for this?
+                self.validate()
             tz_toa = self.get_TZR_toa(toas)
             tz_delay = self.delay(tz_toa)
             tz_phase = Phase(np.zeros(len(toas.table)), np.zeros(len(toas.table)))
