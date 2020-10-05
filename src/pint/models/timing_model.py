@@ -1164,7 +1164,7 @@ class TimingModel(object):
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
 
-    def compare(self, othermodel, nodmx=True, threshold_sigma=3., verbosity="max"):
+    def compare(self, othermodel, nodmx=True, threshold_sigma=3.0, verbosity="max"):
         """Print comparison with another model. Will update EPOCHs for period, DM, and position
            in othermodel.
 
@@ -1216,26 +1216,38 @@ class TimingModel(object):
         s += "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
             "---------", "----------", "----------", "----------", "----------"
         )
-        log.info('Comparing ephemerides for PSR %s' %self.PSR.value)
-        log.info('Creating a copy of Model 2')
-        othermodel=cp(othermodel)
-        if 'POSEPOCH' in self.params_ordered and 'POSEPOCH' in othermodel.params_ordered:
-            if self.POSEPOCH.value != None and self.POSEPOCH.value != othermodel.POSEPOCH.value:
-                log.info('Updating POSEPOCH in Model 2 to match Model 1')
+        log.info("Comparing ephemerides for PSR %s" % self.PSR.value)
+        log.info("Creating a copy of Model 2")
+        othermodel = cp(othermodel)
+        if (
+            "POSEPOCH" in self.params_ordered
+            and "POSEPOCH" in othermodel.params_ordered
+        ):
+            if (
+                self.POSEPOCH.value != None
+                and self.POSEPOCH.value != othermodel.POSEPOCH.value
+            ):
+                log.info("Updating POSEPOCH in Model 2 to match Model 1")
                 othermodel.change_posepoch(self.POSEPOCH.value)
-        if 'PEPOCH' in self.params_ordered and 'PEPOCH' in othermodel.params_ordered:
-            if self.PEPOCH.value != None and self.PEPOCH.value != othermodel.PEPOCH.value:
-                log.info('Updating PEPOCH in Model 2 to match Model 1')
+        if "PEPOCH" in self.params_ordered and "PEPOCH" in othermodel.params_ordered:
+            if (
+                self.PEPOCH.value != None
+                and self.PEPOCH.value != othermodel.PEPOCH.value
+            ):
+                log.info("Updating PEPOCH in Model 2 to match Model 1")
                 othermodel.change_pepoch(self.PEPOCH.value)
-        if 'DMEPOCH' in self.params_ordered and 'DMEPOCH' in othermodel.params_ordered:
-            if self.DMEPOCH.value != None and self.DMEPOCH.value != othermodel.DMEPOCH.value:
-                log.info('Updating DMEPOCH in Model 2 to match Model 1')
+        if "DMEPOCH" in self.params_ordered and "DMEPOCH" in othermodel.params_ordered:
+            if (
+                self.DMEPOCH.value != None
+                and self.DMEPOCH.value != othermodel.DMEPOCH.value
+            ):
+                log.info("Updating DMEPOCH in Model 2 to match Model 1")
                 othermodel.change_posepoch(self.DMEPOCH.value)
         for pn in self.params_ordered:
             par = getattr(self, pn)
             if par.value is None:
                 continue
-            newstr = '' 
+            newstr = ""
             try:
                 otherpar = getattr(othermodel, pn)
             except AttributeError:
@@ -1287,11 +1299,11 @@ class TimingModel(object):
                             newstr += " {:>10.2f}".format(diff_sigma)
                             if abs(diff_sigma) > threshold_sigma:
                                 newstr += " !"
-                            else: 
+                            else:
                                 newstr += "  "
                         else:
                             newstr += "           "
-                        diff_sigma2 = diff / otherpar.uncertainty.value                        
+                        diff_sigma2 = diff / otherpar.uncertainty.value
                         if abs(diff_sigma2) != np.inf:
                             newstr += " {:>10.2f}".format(diff_sigma2)
                             if abs(diff_sigma2) > threshold_sigma:
@@ -1342,22 +1354,24 @@ class TimingModel(object):
                                 newstr += " !"
                         else:
                             newstr += "           "
-                        diff_sigma2 = diff / otherpar.uncertainty.value                        
+                        diff_sigma2 = diff / otherpar.uncertainty.value
                         if abs(diff_sigma2) != np.inf:
                             newstr += " {:>10.2f}".format(diff_sigma2)
                             if abs(diff_sigma2) > threshold_sigma:
                                 newstr += " !"
-                            
-                        '''    
+
+                        """    
                         diff = otherpar.value - par.value
                         diff_sigma = diff / par.uncertainty.value
                         s += " {:>10.2f}".format(diff_sigma)
                         diff_sigma2 = diff / otherpar.uncertainty.value
                         s += " {:>10.2f}".format(diff_sigma2)
-                        '''
+                        """
                     except (AttributeError, TypeError):
                         pass
-                    if type(par.uncertainty) != type(None) and type(otherpar.uncertainty) != type(None):
+                    if type(par.uncertainty) != type(None) and type(
+                        otherpar.uncertainty
+                    ) != type(None):
                         if par.uncertainty < otherpar.uncertainty:
                             newstr += " *"
                     newstr += "\n"
@@ -1367,21 +1381,35 @@ class TimingModel(object):
                 if not par.frozen:
                     s += newstr
             elif verbosity == "min":
-                if '!' in newstr and not par.frozen:
+                if "!" in newstr and not par.frozen:
                     s += newstr
             elif verbosity == "check":
-                if '!' in newstr:
+                if "!" in newstr:
                     try:
-                        log.warning('Parameter %s has changed significantly (%f sigma)' %(newstr.split()[0],float(newstr.split()[-2])))
-                    except: 
-                        log.warning('Parameter %s has changed significantly (%f sigma)' %(newstr.split()[0],float(newstr.split()[-3])))
-                if '*' in newstr:
-                    log.warning('Uncertainty on parameter %s has increased (unc2/unc1 = %2.2f)' %(newstr.split()[0],float(otherpar.uncertainty/par.uncertainty)))
+                        log.warning(
+                            "Parameter %s has changed significantly (%f sigma)"
+                            % (newstr.split()[0], float(newstr.split()[-2]))
+                        )
+                    except:
+                        log.warning(
+                            "Parameter %s has changed significantly (%f sigma)"
+                            % (newstr.split()[0], float(newstr.split()[-3]))
+                        )
+                if "*" in newstr:
+                    log.warning(
+                        "Uncertainty on parameter %s has increased (unc2/unc1 = %2.2f)"
+                        % (
+                            newstr.split()[0],
+                            float(otherpar.uncertainty / par.uncertainty),
+                        )
+                    )
             else:
-                raise AttributeError('Options for verbosity are "max" (default), "mid", and "min"')
+                raise AttributeError(
+                    'Options for verbosity are "max" (default), "mid", and "min"'
+                )
         # Now print any parametrs in othermodel that were missing in self.
         mypn = self.params_ordered
-        if verbosity == 'max':
+        if verbosity == "max":
             for opn in othermodel.params_ordered:
                 if opn in mypn:
                     continue
@@ -1394,8 +1422,9 @@ class TimingModel(object):
                 s += "{:14s} {:>28s}".format(opn, "Missing")
                 s += " {:>28s}".format(str(otherpar.quantity))
                 s += "\n"
-        if verbosity != 'check':
-            return s.split('\n')
+        if verbosity != "check":
+            return s.split("\n")
+
     def read_parfile(self, file, validate=True):
         """Read values from the specified parfile into the model parameters.
 
