@@ -158,7 +158,7 @@ class TimingModel(object):
         self.add_param_from_top(
             MJDParameter(name="FINISH", description="End MJD for fitting"), ""
         )
-        
+
         for cp in components:
             self.add_component(cp, validate=False)
 
@@ -1483,7 +1483,7 @@ class TimingModel(object):
                     raise ValueError("FINISH is repeated in par file")
                 self.FINISH.value = k[1]
                 continue
-              
+
             repeat_param[name] += 1
             if repeat_param[name] > 1:
                 k[0] = k[0] + str(repeat_param[name])
