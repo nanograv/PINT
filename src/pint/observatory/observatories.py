@@ -190,3 +190,12 @@ TopoObs(
 TopoObs(
     "acre", aliases=["acreroad", "a", "AR"], itrf_xyz=[3573741.1, -269156.74, 5258407.3]
 )
+TopoObs(
+        "ata",
+        aliases=["hcro"],
+        itrf_xyz=[-2524263.18, -4123529.78, 4147966.36 ]
+)
+TopoObs(
+        "ccera",
+        itrf_xyz=[1093406.840, -4391945.819, 4479103.550]
+)
