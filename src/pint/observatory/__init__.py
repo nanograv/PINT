@@ -275,6 +275,8 @@ def get_observatory(name, include_gps=True, include_bipm=True, bipm_version="BIP
     This function will simply call the ``Observatory.get`` method but
     will manually set options after the method is called.
 
+    If the observatory is not present in the PINT list, will fallback to astropy
+
     Parameters
     ----------
     name : str
@@ -290,7 +292,36 @@ def get_observatory(name, include_gps=True, include_bipm=True, bipm_version="BIP
         file switches/options are added at a public API level.
 
     """
-    site = Observatory.get(name)
+    try:
+        site = Observatory.get(name)
+    except KeyError:
+        log.warning(
+            "Observatory name '%s' is not present in PINT observatory list; searching astropy..."
+            % name
+        )
+        # the name was not found in the list of standard PINT observatories
+        # see if we can it from astropy
+        try:
+            from astropy.coordinates import EarthLocation, errors
+            from pint.observatory.topo_obs import TopoObs
+
+            site_astropy = EarthLocation.of_site(name)
+        except errors.UnknownSiteException:
+            # turn it into the same error type as PINT would have returned
+            raise KeyError("Observatory name '%s' is not defined" % name)
+        # we should be able to use the site.info.name
+        # to get the correct astropy name
+        # but that seems to be broken in 4.0.1 (it's fixed later in https://github.com/astropy/astropy/pull/10592)
+        # so if we can't use that use the alias we requested
+        try:
+            name_to_use = site_astropy.info.name
+        except IndexError:
+            name_to_use = name
+        site = TopoObs(
+            name,
+            itrf_xyz=[site_astropy.x.value, site_astropy.y.value, site_astropy.z.value],
+        )
+
     site.include_gps = include_gps
     site.include_bipm = include_bipm
     site.bipm_version = bipm_version
