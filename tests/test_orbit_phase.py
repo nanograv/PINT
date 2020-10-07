@@ -3,6 +3,7 @@ import logging
 import os
 import unittest
 
+import astropy.time as time
 import astropy.units as u
 import numpy as np
 
@@ -24,10 +25,28 @@ class TestOrbitPhase(unittest.TestCase):
         cls.timfile = "test1.tim"
         cls.toas = t.get_TOAs(cls.timfile)
 
+    def test_barytimes(self):
+        log = logging.getLogger("test_barytimes")
+        ts = t.Time([56789.234, 56790.765], format="mjd")
+        # Should raise ValueError since not in "tdb"
+        with self.assertRaises(ValueError):
+            self.mJ1855.orbital_phase(ts)
+        # Should raise ValueError since not correct anom
+        with self.assertRaises(ValueError):
+            self.mJ1855.orbital_phase(ts.tdb, anom="xxx")
+        # Should return
+        phs = self.mJ1855.orbital_phase(ts.tdb, anom="mean")
+        assert len(phs) == 2
+        phs = self.mJ1855.orbital_phase(self.toas)
+        assert len(phs) == self.toas.ntoas
+
     def test_J1855_nonzero_ecc(self):
-        log = logging.getLogger("TestJ1855_nonzero_ecc")
+        log = logging.getLogger("test_J1855_nonzero_ecc")
         ts = self.mJ1855.T0.value + np.linspace(0, self.mJ1855.PB.value, 101)
         self.mJ1855.ECC.value = 0.1  # set the eccentricity to zero
+        phs = self.mJ1855.orbital_phase(ts, anom="mean", radians=False)
+        assert np.all(phs >= 0), "Not all phases >= 0"
+        assert np.all(phs <= 1), "Not all phases <= 1"
         phs = self.mJ1855.orbital_phase(ts, anom="mean")
         assert np.all(phs.value >= 0), "Not all phases >= 0"
         assert np.all(phs.value <= 2 * np.pi), "Not all phases <= 2*pi"
@@ -39,7 +58,7 @@ class TestOrbitPhase(unittest.TestCase):
         assert phs3[1] != phs[49], "Eccen anom == True anom"
 
     def test_J1855_zero_ecc(self):
-        log = logging.getLogger("TestJ1855_zero_ecc")
+        log = logging.getLogger("test_J1855_zero_ecc")
         self.mJ1855.ECC.value = 0.0  # set the eccentricity to zero
         self.mJ1855.OM.value = 0.0  # set omega to zero
         phs1 = self.mJ1855.orbital_phase(self.mJ1855.T0.value, anom="mean")
@@ -51,7 +70,7 @@ class TestOrbitPhase(unittest.TestCase):
         assert phs3 == phs1, "True anom != Mean anom"
 
     def test_J0737(self):
-        log = logging.getLogger("TestJ0737")
+        log = logging.getLogger("test_J0737")
         # The following is a conjunction time as confirmed by Shapiro delay
         nu = self.mJ0737.orbital_phase(55586.296434515, anom="true").value
         omega = self.mJ0737.components["BinaryDD"].binary_instance.omega().value
