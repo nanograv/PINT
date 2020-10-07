@@ -25,6 +25,7 @@ from pint.models.parameter import (
 )
 from pint.phase import Phase
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
+from pint.toa import TOAs
 
 __all__ = ["DEFAULT_ORDER", "TimingModel"]
 # Parameters or lines in parfiles we don't understand but shouldn't
@@ -309,34 +310,66 @@ class TimingModel(object):
         """Does the model describe a binary pulsar? (True or False)"""
         return any(x.startswith("Binary") for x in self.components.keys())
 
-    def orbital_phase(self, barytimes, anom="mean"):
-        """Return orbital phase (in radians) at barycentric MJD times"""
-        if self.is_binary:
-            b = self.components[
-                [x for x in self.components.keys() if x.startswith("Binary")][0]
-            ]
-            # Make sure that the binary instance has the correct params
-            b.update_binary_object()
-            # The following updates the times in the self-contained
-            # binary models
-            try:
-                # If we pass the TOA table, then barycenter the TOAs
-                bts = self.get_barycentric_toas(barytimes)
-            except:
-                bts = np.asarray(barytimes)
-            updates = {"barycentric_toa": bts}
-            bbi = b.binary_instance
-            bbi.update_input(**updates)
-            if anom.lower() == "mean":
-                anoms = bbi.M()
-            elif anom.lower().startswith("ecc"):
-                anoms = bbi.E()
-            elif anom.lower() == "true":
-                anoms = bbi.nu()
+    def orbital_phase(self, barytimes, anom="mean", radians=True):
+        """Return orbital phase (in radians) at barycentric MJD times
+
+        Args:
+            barytimes (MJD barycentric time(s)): The times to compute the
+                orbital phases.  Needs to be a barycentric time in TDB.
+                If a TOAs instance is passed, the barycenting will happen
+                automatically.  If an astropy Time object is passed, it must
+                be in scale='tdb'.  If an array-like object is passed or
+                a simple float, the time must be in MJD format.
+            anom (str, optional): Type of phase/anomaly. Defaults to "mean".
+                Other options are "eccentric" or "true"
+            radians (bool, optional): Units to return.  Defaults to True.
+                If False, will return unitless phases in cycles (i.e. 0-1).
+
+        Raises:
+            ValueError: If anom.lower() is not "mean", "ecc*", or "true",
+                or if an astropy Time object is passed with scale!="tdb".
+
+        Returns:
+            [array]: The specified anomaly in radians (with unit), unless
+                radians=False, which return unitless cycles (0-1).
+        """
+        if not self.is_binary:  # punt if not a binary
+            return None
+        # Find the binary model
+        b = self.components[
+            [x for x in self.components.keys() if x.startswith("Binary")][0]
+        ]
+        # Make sure that the binary instance has the binary params
+        b.update_binary_object()
+        # Handle input times and update them in stand-alone binary models
+        if isinstance(barytimes, TOAs):
+            # If we pass the TOA table, then barycenter the TOAs
+            bts = self.get_barycentric_toas(barytimes)
+        elif isinstance(barytimes, time.Time):
+            if barytimes.scale == "tdb":
+                bts = np.asarray(barytimes.mjd)
             else:
-                raise ValueError("Not a proper type of anomaly")
-            return np.fmod(anoms.value, 2 * np.pi) * u.radian
-        return None
+                raise ValueError("barytimes as Time instance needs scale=='tdb'")
+        else:
+            bts = np.asarray(barytimes)
+        bbi = b.binary_instance  # shorhand
+        # Update the times in the stand-alone binary model
+        updates = {"barycentric_toa": bts}
+        bbi.update_input(**updates)
+        if anom.lower() == "mean":
+            anoms = bbi.M()
+        elif anom.lower().startswith("ecc"):
+            anoms = bbi.E()
+        elif anom.lower() == "true":
+            anoms = bbi.nu()
+        else:
+            raise ValueError("anom is not a recognized type of anomaly")
+        # Make sure all angles are between 0-2*pi
+        anoms = np.fmod(anoms.value, 2 * np.pi)
+        if radians:  # return with radian units
+            return anoms * u.rad
+        else:  # return as unitless cycles from 0-1
+            return anoms / (2 * np.pi)
 
     @property
     def has_correlated_errors(self):
