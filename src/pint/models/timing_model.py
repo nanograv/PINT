@@ -349,9 +349,7 @@ class TimingModel(object):
         return False
 
     @property
-    def covariance_matrix_funcs(
-        self,
-    ):
+    def covariance_matrix_funcs(self):
         """List of covariance matrix functions."""
         cvfs = []
         if "NoiseComponent" in self.component_types:
@@ -360,9 +358,7 @@ class TimingModel(object):
         return cvfs
 
     @property
-    def dm_covariance_matrix_funcs(
-        self,
-    ):
+    def dm_covariance_matrix_funcs(self):
         """List of covariance matrix functions."""
         cvfs = []
         if "NoiseComponent" in self.component_types:
@@ -372,9 +368,7 @@ class TimingModel(object):
 
     # Change sigma to uncertainty to avoid name conflict.
     @property
-    def scaled_toa_uncertainty_funcs(
-        self,
-    ):
+    def scaled_toa_uncertainty_funcs(self):
         """List of scaled toa uncertainty functions."""
         ssfs = []
         if "NoiseComponent" in self.component_types:
@@ -384,9 +378,7 @@ class TimingModel(object):
 
     # Change sigma to uncertainty to avoid name conflict.
     @property
-    def scaled_dm_uncertainty_funcs(
-        self,
-    ):
+    def scaled_dm_uncertainty_funcs(self):
         """List of scaled dm uncertainty functions."""
         ssfs = []
         if "NoiseComponent" in self.component_types:
@@ -395,9 +387,7 @@ class TimingModel(object):
         return ssfs
 
     @property
-    def basis_funcs(
-        self,
-    ):
+    def basis_funcs(self):
         """List of scaled uncertainty functions."""
         bfs = []
         if "NoiseComponent" in self.component_types:
@@ -1895,9 +1885,7 @@ class Component(object):
 
         return True
 
-    def print_par(
-        self,
-    ):
+    def print_par(self):
         result = ""
         for p in self.params:
             result += getattr(self, p).as_parfile_line()
@@ -1905,17 +1893,13 @@ class Component(object):
 
 
 class DelayComponent(Component):
-    def __init__(
-        self,
-    ):
+    def __init__(self):
         super(DelayComponent, self).__init__()
         self.delay_funcs_component = []
 
 
 class PhaseComponent(Component):
-    def __init__(
-        self,
-    ):
+    def __init__(self):
         super(PhaseComponent, self).__init__()
         self.phase_funcs_component = []
         self.phase_derivs_wrt_delay = []

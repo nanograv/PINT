@@ -37,9 +37,7 @@ class PulsarBinary(DelayComponent):
 
     category = "pulsar_system"
 
-    def __init__(
-        self,
-    ):
+    def __init__(self):
         super(PulsarBinary, self).__init__()
         self.binary_model_name = None
         self.barycentric_time = None
@@ -257,9 +255,7 @@ class PulsarBinary(DelayComponent):
         self.update_binary_object(toas, acc_delay)
         return self.binary_instance.d_binarydelay_d_par(param)
 
-    def print_par(
-        self,
-    ):
+    def print_par(self):
         result = "BINARY {0}\n".format(self.binary_model_name)
         for p in self.params:
             par = getattr(self, p)
