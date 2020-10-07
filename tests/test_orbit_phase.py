@@ -84,4 +84,3 @@ class TestOrbitPhase(unittest.TestCase):
         # Now verify we can get 2 results from .conjunction
         x = self.mJ0737.conjunction([55586.0, 55586.2])
         assert len(x) == 2, "conjunction is not returning an array"
-
