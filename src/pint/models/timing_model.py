@@ -15,6 +15,7 @@ import numpy as np
 import pint
 import six
 from astropy import log
+from scipy.optimize import brentq
 from pint.models.parameter import (
     AngleParameter,
     floatParameter,
@@ -352,7 +353,7 @@ class TimingModel(object):
                 raise ValueError("barytimes as Time instance needs scale=='tdb'")
         else:
             bts = np.asarray(barytimes)
-        bbi = b.binary_instance  # shorhand
+        bbi = b.binary_instance  # shorthand
         # Update the times in the stand-alone binary model
         updates = {"barycentric_toa": bts}
         bbi.update_input(**updates)
@@ -370,6 +371,62 @@ class TimingModel(object):
             return anoms * u.rad
         else:  # return as unitless cycles from 0-1
             return anoms / (2 * np.pi)
+
+    def conjunction(self, baryMJD):
+        """Return the time(s) of the first superior conjunction(s) after baryMJD
+
+        Args:
+            baryMJD (floats or Time()): barycentric (tdb) MJD(s) prior to the
+                conjunction we are looking for.  Can be an array.
+
+        Raises:
+            ValueError: If baryMJD is an astropy Time object with scale!="tdb".
+
+        Returns:
+            [float or array]: The barycentric MJD(tdb) time(s) of the next
+                superior conjunction(s) after baryMJD
+        """
+        if not self.is_binary:  # punt if not a binary
+            return None
+        # Find the binary model
+        b = self.components[
+            [x for x in self.components.keys() if x.startswith("Binary")][0]
+        ]
+        bbi = b.binary_instance  # shorthand
+        # Superior conjunction occurs when true anomaly + omega == 90 deg
+        # We will need to solve for this using a root finder (brentq)
+        # This is the function to root-find:
+        def funct(t):
+            nu = self.orbital_phase(t, anom="true")
+            return np.fmod((nu + bbi.omega()).value, 2 * np.pi) - np.pi / 2
+
+        # Handle the input time(s)
+        if isinstance(baryMJD, time.Time):
+            if baryMJD.scale == "tdb":
+                bts = np.atleast_1d(baryMJD.mjd)
+            else:
+                raise ValueError("baryMJD as Time instance needs scale=='tdb'")
+        else:
+            bts = np.atleast_1d(baryMJD)
+        # Step over the maryMJDs
+        scs = []
+        for bt in bts:
+            # Make 11 times over one orbit after bt
+            ts = np.linspace(bt, bt + self.PB.value, 11)
+            # Compute the true anomalies and omegas for those times
+            nus = self.orbital_phase(ts, anom="true")
+            omegas = bbi.omega()
+            x = np.fmod((nus + omegas).value, 2 * np.pi) - np.pi / 2
+            # find the lowest index where x is just below 0
+            for lb in range(len(x)):
+                if x[lb] < 0 and x[lb + 1] > 0:
+                    break
+            # Now use scipy to find the root
+            scs.append(brentq(funct, ts[lb], ts[lb + 1]))
+        if len(scs) == 1:
+            return scs[0]  # Return a float
+        else:
+            return np.asarray(scs)  # otherwise return an array
 
     @property
     def has_correlated_errors(self):

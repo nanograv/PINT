@@ -71,10 +71,17 @@ class TestOrbitPhase(unittest.TestCase):
 
     def test_J0737(self):
         log = logging.getLogger("test_J0737")
-        # The following is a conjunction time as confirmed by Shapiro delay
-        nu = self.mJ0737.orbital_phase(55586.296434515, anom="true").value
+        # Find a conjunction which we have confirmed by GBT data and Shapiro delay
+        x = self.mJ0737.conjunction(55586.25)
+        assert np.isclose(x, 55586.29643451057), "J0737 conjunction time is bad"
+        # And now make sure we calculate the true anomaly for it correctly
+        nu = self.mJ0737.orbital_phase(x, anom="true").value
         omega = self.mJ0737.components["BinaryDD"].binary_instance.omega().value
         # Conjunction occurs when nu + OM == 90 deg
         assert np.isclose(
             np.degrees(np.fmod(nu + omega, 2 * np.pi)), 90.0
-        ), "J0737 conjunction time is bad"
+        ), "J0737 conjunction time gives bad true anomaly"
+        # Now verify we can get 2 results from .conjunction
+        x = self.mJ0737.conjunction([55586.0, 55586.2])
+        assert len(x) == 2, "conjunction is not returning an array"
+
