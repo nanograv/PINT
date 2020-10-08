@@ -1225,6 +1225,7 @@ class TimingModel(object):
         s += "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
             "---------", "----------", "----------", "----------", "----------"
         )
+<<<<<<< HEAD
         log.info("Comparing ephemerides for PSR %s" % self.PSR.value)
         log.info("Threshold sigma = %f" % threshold_sigma)
         log.info("Creating a copy of Model 2")
@@ -1239,6 +1240,16 @@ class TimingModel(object):
                 and self.POSEPOCH.value != othermodel.POSEPOCH.value
             ):
                 log.info("Updating POSEPOCH in Model 2 to match Model 1")
+=======
+        log.info('Comparing ephemerides for PSR %s' %self.PSR.value)
+        log.info('Threshold sigma = %f' %threshold_sigma)
+        log.info('Creating a copy of Model 2')
+        othermodel=cp(othermodel)
+        
+        if 'POSEPOCH' in self.params_ordered and 'POSEPOCH' in othermodel.params_ordered:
+            if self.POSEPOCH.value != None and self.POSEPOCH.value != othermodel.POSEPOCH.value:
+                log.info('Updating POSEPOCH in Model 2 to match Model 1')
+>>>>>>> e5b550ab742d8efc2b154e38c5b4d8a1818f4ed6
                 othermodel.change_posepoch(self.POSEPOCH.value)
         if "PEPOCH" in self.params_ordered and "PEPOCH" in othermodel.params_ordered:
             if (
@@ -1337,6 +1348,7 @@ class TimingModel(object):
                             newstr += " {:28f}".format(otherpar.value)
                         if otherpar.value != par.value:
                             sys.stdout.flush()
+<<<<<<< HEAD
                             log.warning(
                                 "Parameter %s not fit, but has changed between these models"
                                 % par.name
@@ -1344,6 +1356,12 @@ class TimingModel(object):
                             log.handlers[0].flush()
                             newstr += " !"
                         newstr += "\n"
+=======
+                            log.warning('Parameter %s not fit, but has changed between these models' %par.name)
+                            log.handlers[0].flush()
+                            newstr += ' !'
+                        newstr+='\n'
+>>>>>>> e5b550ab742d8efc2b154e38c5b4d8a1818f4ed6
                     else:
                         newstr += " {:>28s}\n".format("Missing")
                 else:
@@ -1393,6 +1411,7 @@ class TimingModel(object):
             if "!" in newstr and not par.frozen:
                 try:
                     sys.stdout.flush()
+<<<<<<< HEAD
                     log.warning(
                         "Parameter %s has changed significantly (%f sigma)"
                         % (newstr.split()[0], float(newstr.split()[-2]))
@@ -1411,6 +1430,20 @@ class TimingModel(object):
                     "Uncertainty on parameter %s has increased (unc2/unc1 = %2.2f)"
                     % (newstr.split()[0], float(otherpar.uncertainty / par.uncertainty))
                 )
+=======
+                    log.warning('Parameter %s has changed significantly (%f sigma)' 
+                                %(newstr.split()[0],float(newstr.split()[-2])))
+                    log.handlers[0].flush()
+                except: 
+                    sys.stdout.flush()
+                    log.warning('Parameter %s has changed significantly (%f sigma)' 
+                                %(newstr.split()[0],float(newstr.split()[-3])))
+                    log.handlers[0].flush()
+            if '*' in newstr:
+                sys.stdout.flush()
+                log.warning('Uncertainty on parameter %s has increased (unc2/unc1 = %2.2f)' 
+                            %(newstr.split()[0],float(otherpar.uncertainty/par.uncertainty)))
+>>>>>>> e5b550ab742d8efc2b154e38c5b4d8a1818f4ed6
                 log.handlers[0].flush()
 
             if verbosity == "max":
@@ -1422,6 +1455,7 @@ class TimingModel(object):
                 if "!" in newstr and not par.frozen:
                     s += newstr
             elif verbosity != "check":
+<<<<<<< HEAD
                 raise AttributeError(
                     'Options for verbosity are "max" (default), "med", "min", and "check"'
                 )
@@ -1429,6 +1463,13 @@ class TimingModel(object):
         mypn = self.params_ordered
         for opn in othermodel.params_ordered:
             if opn in mypn and type(getattr(self, opn).value) != type(None):
+=======
+                raise AttributeError('Options for verbosity are "max" (default), "med", "min", and "check"')
+        # Now print any parameters in othermodel that were missing in self.
+        mypn = self.params_ordered
+        for opn in othermodel.params_ordered:
+            if opn in mypn and type(getattr(self,opn).value)!=type(None):
+>>>>>>> e5b550ab742d8efc2b154e38c5b4d8a1818f4ed6
                 continue
             if nodmx and opn.startswith("DMX"):
                 continue
@@ -1443,7 +1484,11 @@ class TimingModel(object):
                 s += "{:14s} {:>28s}".format(opn, "Missing")
                 s += " {:>28s}".format(str(otherpar.quantity))
                 s += "\n"
+<<<<<<< HEAD
         if verbosity != "check":
+=======
+        if verbosity != 'check':
+>>>>>>> e5b550ab742d8efc2b154e38c5b4d8a1818f4ed6
             return s
 
     def read_parfile(self, file, validate=True):
