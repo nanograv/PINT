@@ -1242,7 +1242,7 @@ class TimingModel(object):
                 log.info('Updating DMEPOCH in Model 2 to match Model 1')
                 othermodel.change_posepoch(self.DMEPOCH.value)
         for pn in self.params_ordered:
-            par = getattr(model, pn)
+            par = getattr(self, pn)
             if par.value is None:
                 continue
             newstr = '' 
