@@ -172,7 +172,7 @@ class Glitch(PhaseComponent):
         returns an array of phases in long double
         """
         tbl = toas.table
-        phs = u.Quantity(np.zeros_like(tbl, dtype=np.longdouble))
+        phs = u.Quantity(np.zeros(ts.ntoas, dtype=np.longdouble))
         glepnames = [x for x in self.params if x.startswith("GLEP_")]
         for glepnm in glepnames:
             glep = getattr(self, glepnm)
