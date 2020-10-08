@@ -1173,7 +1173,6 @@ class TimingModel(object):
 
     def compare(self, othermodel, nodmx=True, threshold_sigma=3., verbosity="max"):
         """Print comparison with another model
-
         Parameters
         ----------
         othermodel
@@ -1217,6 +1216,7 @@ class TimingModel(object):
 
         from uncertainties import ufloat
         import uncertainties.umath as um
+        import sys
         from copy import deepcopy as cp
 
         s = "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
@@ -1226,6 +1226,7 @@ class TimingModel(object):
             "---------", "----------", "----------", "----------", "----------"
         )
         log.info('Comparing ephemerides for PSR %s' %self.PSR.value)
+        log.info('Threshold sigma = %f' %threshold_sigma)
         log.info('Creating a copy of Model 2')
         othermodel=cp(othermodel)
         
@@ -1249,7 +1250,6 @@ class TimingModel(object):
             try:
                 otherpar = getattr(othermodel, pn)
             except AttributeError:
-                # s += "Parameter {} missing in other model\n".format(par.name)
                 otherpar = None
             if isinstance(par, strParameter):
                 newstr += "{:14s} {:>28s}".format(pn, par.value)
@@ -1324,7 +1324,9 @@ class TimingModel(object):
                         except:
                             newstr += " {:28f}".format(otherpar.value)
                         if otherpar.value != par.value:
+                            sys.stdout.flush()
                             log.warning('Parameter %s not fit, but has changed between these models' %par.name)
+                            log.handlers[0].flush()
                             newstr += ' !'
                         newstr+='\n'
                     else:
@@ -1345,7 +1347,6 @@ class TimingModel(object):
                                 newstr += " {:28f}".format(otherpar.value)
                             else:
                                 newstr += " {:>28s}".format("Missing")
-                                
                     else:
                         newstr += " {:>28s}".format("Missing")
                     if "Missing" in newstr:
@@ -1365,14 +1366,6 @@ class TimingModel(object):
                             newstr += " {:>10.2f}".format(diff_sigma2)
                             if abs(diff_sigma2) > threshold_sigma:
                                 newstr += " !"
-                            
-                        '''    
-                        diff = otherpar.value - par.value
-                        diff_sigma = diff / par.uncertainty.value
-                        s += " {:>10.2f}".format(diff_sigma)
-                        diff_sigma2 = diff / otherpar.uncertainty.value
-                        s += " {:>10.2f}".format(diff_sigma2)
-                        '''
                     except (AttributeError, TypeError):
                         pass
                     if type(par.uncertainty) != type(None) and type(otherpar.uncertainty) != type(None):
@@ -1382,11 +1375,20 @@ class TimingModel(object):
             
             if '!' in newstr and not par.frozen:
                 try:
-                    log.warning('Parameter %s has changed significantly (%f sigma)' %(newstr.split()[0],float(newstr.split()[-2])))
+                    sys.stdout.flush()
+                    log.warning('Parameter %s has changed significantly (%f sigma)' 
+                                %(newstr.split()[0],float(newstr.split()[-2])))
+                    log.handlers[0].flush()
                 except: 
-                    log.warning('Parameter %s has changed significantly (%f sigma)' %(newstr.split()[0],float(newstr.split()[-3])))
+                    sys.stdout.flush()
+                    log.warning('Parameter %s has changed significantly (%f sigma)' 
+                                %(newstr.split()[0],float(newstr.split()[-3])))
+                    log.handlers[0].flush()
             if '*' in newstr:
-                log.warning('Uncertainty on parameter %s has increased (unc2/unc1 = %2.2f)' %(newstr.split()[0],float(otherpar.uncertainty/par.uncertainty)))
+                sys.stdout.flush()
+                log.warning('Uncertainty on parameter %s has increased (unc2/unc1 = %2.2f)' 
+                            %(newstr.split()[0],float(otherpar.uncertainty/par.uncertainty)))
+                log.handlers[0].flush()
 
             if verbosity == "max":
                 s += newstr
@@ -1397,11 +1399,11 @@ class TimingModel(object):
                 if '!' in newstr and not par.frozen:
                     s += newstr
             elif verbosity != "check":
-                raise AttributeError('Options for verbosity are "max" (default), "med", and "min"')
-        # Now print any parametrs in othermodel that were missing in self.
+                raise AttributeError('Options for verbosity are "max" (default), "med", "min", and "check"')
+        # Now print any parameters in othermodel that were missing in self.
         mypn = self.params_ordered
         for opn in othermodel.params_ordered:
-            if opn in mypn and type(getattr(model,opn).value)!=type(None):
+            if opn in mypn and type(getattr(self,opn).value)!=type(None):
                 continue
             if nodmx and opn.startswith("DMX"):
                 continue
@@ -1417,7 +1419,7 @@ class TimingModel(object):
                 s += " {:>28s}".format(str(otherpar.quantity))
                 s += "\n"
         if verbosity != 'check':
-            return s.split('\n')
+            return s
 
     def read_parfile(self, file, validate=True):
         """Read values from the specified parfile into the model parameters.
