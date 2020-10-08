@@ -318,12 +318,15 @@ def get_observatory(name, include_gps=True, include_bipm=True, bipm_version="BIP
         except IndexError:
             name_to_use = name
 
+        origin = "astropy: '{}'".format(site_astropy.info.meta['source'])
+
         # we need to import this here rather than up-top because of circular import issues
         from pint.observatory.topo_obs import TopoObs
 
         site = TopoObs(
             name,
             itrf_xyz=[site_astropy.x.value, site_astropy.y.value, site_astropy.z.value],
+            origin=origin,
         )
 
     site.include_gps = include_gps

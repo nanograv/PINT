@@ -13,6 +13,7 @@ TopoObs(
     tempo_code="1",
     itoa_code="GB",
     itrf_xyz=[882589.65, -4924872.32, 3943729.348],
+    origin="This is a test",
 )
 TopoObs(
     "arecibo",
