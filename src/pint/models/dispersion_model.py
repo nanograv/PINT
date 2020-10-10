@@ -460,6 +460,11 @@ class DispersionDMX(Dispersion):
 
 class DispersionJump(Dispersion):
     """This class provides the contant offsets to the DM values.
+
+    Notes
+    -----
+    This DM jump is only for modeling the DM values, and will not apply to the
+    dispersion time delay. 
     """
 
     register = True
