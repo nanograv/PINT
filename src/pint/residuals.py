@@ -506,6 +506,18 @@ class WidebandDMResiduals(Residuals):
         self.model = new_model
         self.model_func = self.model.dm_value
 
+    def get_dof(self):
+        """Return number of degrees of freedom for the DM model."""
+        dof = self.dm_data
+        for p in self.model.params:
+            dof -= bool(not getattr(self.model, p).frozen)
+        # Now subtract 1 for the implicit global offset parameter
+        # Note that we should do two things eventually
+        # 1. Make the offset not be a hidden parameter
+        # 2. Have a model object return the number of free parameters instead of having to count non-frozen parameters like above
+        dof -= 1
+        return dof
+
 
 residual_map = {"toa": Residuals, "dm": WidebandDMResiduals}
 
