@@ -4,6 +4,8 @@
 import pytest
 import os
 
+import numpy as np
+import astropy.units as u
 from pint.models import get_model
 from pint.toa import get_TOAs
 from pint.fitter import WidebandTOAFitter
@@ -50,8 +52,8 @@ class TestWidebandTOAFitter:
         time_rms_post = fitter.resids.residual_objs[0].rms_weighted()
         dm_rms_post = fitter.resids.residual_objs[1].rms_weighted()
         # The tolarance may need to be changed
-        assert np.abs(time_rms_pre - time_rms_post) < 2e-9
-        assert np.abs(dm_rms_pre - dm_rms_post) < 3e-8
+        assert np.abs(time_rms_pre - time_rms_post) < 2e-9 * u.s
+        assert np.abs(dm_rms_pre - dm_rms_post) < 3e-8 * u.s
 
     def test_fitting_full_cov(self):
         fitter = WidebandTOAFitter([self.toas,], self.model, additional_args={})
@@ -61,5 +63,5 @@ class TestWidebandTOAFitter:
         time_rms_post = fitter.resids.residual_objs[0].rms_weighted()
         dm_rms_post = fitter.resids.residual_objs[1].rms_weighted()
         # The tolarance may need to be changed
-        assert np.abs(time_rms_pre - time_rms_post) < 2e-9
-        assert np.abs(dm_rms_pre - dm_rms_post) < 3e-8
+        assert np.abs(time_rms_pre - time_rms_post) < 2e-9 * u.s
+        assert np.abs(dm_rms_pre - dm_rms_post) < 3e-8 * u.s
