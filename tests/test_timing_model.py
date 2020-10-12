@@ -145,3 +145,24 @@ class TestModelBuilding:
         tm2.remove_component(remove_cp2)
         assert not "BinaryELL1" in tm2.components.keys()
         assert not remove_cp2 in tm2.DelayComponent_list
+ 
+    def test_free_params(self):
+        """ Test getting free parameters.
+        """
+        # Build the timing model
+        tm = TimingModel(
+            "TestTimingModel", [BinaryELL1(), AstrometryEquatorial(), Spindown()]
+        )
+        # Turn off the fit parameters
+        for p in tm.params:
+            par = getattr(tm, p)
+            par.frozen = True
+        # Only turn on 4 fitting parameters
+        for p in ['F0', 'T0', 'EPS1', 'RAJ']:
+            par = getattr(tm, p)
+            par.frozen = False
+        # Check free parameter
+        free_params = tm.free_params
+        assert len(free_params) == 4
+        for p in ['F0', 'T0', 'EPS1', 'RAJ']:
+            assert p in free_params

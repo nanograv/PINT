@@ -273,6 +273,15 @@ class TimingModel(object):
                 used_cats.append(cat)
 
         return pstart + pmid + pend
+    
+    @property
+    def free_params(self):
+        """ Returns all the free parameters in the timing model.
+        """
+        free_params = []
+        for cp in self.components.values():
+            free_params += cp.free_params_component
+        return free_params
 
     @property
     def components(self):
@@ -810,7 +819,7 @@ class TimingModel(object):
         return "".join(
             "{:<40}{}\n".format(cp, getattr(self, par).help_line())
             for par, cp in self.get_params_mapping().items()
-        )
+        ) 
 
     def delay(self, toas, cutoff_component="", include_last=True):
         """Total delay for the TOAs.
@@ -1838,6 +1847,22 @@ class Component(object):
                     "'%s' object has no attribute '%s'."
                     % (self.__class__.__name__, name)
                 )
+    @property
+    def free_params_component(self):
+        """ Return the free parameters in the component.
+
+        This function collects the non-frozen parameters. 
+        
+        Return
+        ------
+        A list of free parameters.
+        """
+        free_param = []
+        for p in self.params:
+            par = getattr(self, p)
+            if not par.frozen:
+                free_param.append(p) 
+        return free_param
 
     @property
     def param_prefixs(self):
