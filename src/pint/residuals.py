@@ -509,12 +509,11 @@ class WidebandDMResiduals(Residuals):
     def get_dof(self):
         """Return number of degrees of freedom for the DM model."""
         dof = self.dm_data
-        for p in self.model.params:
-            dof -= bool(not getattr(self.model, p).frozen)
-        # Now subtract 1 for the implicit global offset parameter
-        # Note that we should do two things eventually
-        # 1. Make the offset not be a hidden parameter
-        # 2. Have a model object return the number of free parameters instead of having to count non-frozen parameters like above
+        # only get dm type of model component
+        # TODO provide a function in the timing model to get one type of component
+        for cp in self.model.components.values():
+            if cp.__class__.__bases__.__name__ == 'Dispersion':
+                dof -= cp.free_params_component
         dof -= 1
         return dof
 
@@ -582,3 +581,11 @@ class CombinedResiduals(object):
 
         wmean, werr, wsdev = weighted_mean(self.resids, w, sdev=True)
         return wsdev
+
+    def get_dof(self):
+        dof = len(self.resids)
+        # It assumes that the input model are the same model, and time residual has 
+        # offset in the fitting
+        # TODO In a more general case, this assumption would not be valid.
+        dof -= len(self.residual_objs[0].free_params) - 1
+        return dof
