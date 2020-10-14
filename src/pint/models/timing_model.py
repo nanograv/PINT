@@ -364,7 +364,7 @@ class TimingModel(object):
         elif anom.lower() == "true":
             anoms = bbi.nu()
         else:
-            raise ValueError("anom is not a recognized type of anomaly")
+            raise ValueError("anom='%s' is not a recognized type of anomaly" % anom)
         # Make sure all angles are between 0-2*pi
         anoms = np.fmod(anoms.value, 2 * np.pi)
         if radians:  # return with radian units
