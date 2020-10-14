@@ -15,6 +15,7 @@ import numpy as np
 import pint
 import six
 from astropy import log
+from scipy.optimize import brentq
 from pint.models.parameter import (
     AngleParameter,
     floatParameter,
@@ -25,6 +26,7 @@ from pint.models.parameter import (
 )
 from pint.phase import Phase
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
+from pint.toa import TOAs
 
 __all__ = ["DEFAULT_ORDER", "TimingModel"]
 # Parameters or lines in parfiles we don't understand but shouldn't
@@ -177,10 +179,10 @@ class TimingModel(object):
             cp.setup()
 
     def validate(self):
-        """ Validate component setup.
-            The checks includes:
-            - Required parameters
-            - Parameter values
+        """Validate component setup.
+        The checks includes:
+        - Required parameters
+        - Parameter values
         """
         for cp in self.components.values():
             cp.validate()
@@ -305,6 +307,128 @@ class TimingModel(object):
         return pfs
 
     @property
+    def is_binary(self):
+        """Does the model describe a binary pulsar? (True or False)"""
+        return any(x.startswith("Binary") for x in self.components.keys())
+
+    def orbital_phase(self, barytimes, anom="mean", radians=True):
+        """Return orbital phase (in radians) at barycentric MJD times
+
+        Args:
+            barytimes (MJD barycentric time(s)): The times to compute the
+                orbital phases.  Needs to be a barycentric time in TDB.
+                If a TOAs instance is passed, the barycenting will happen
+                automatically.  If an astropy Time object is passed, it must
+                be in scale='tdb'.  If an array-like object is passed or
+                a simple float, the time must be in MJD format.
+            anom (str, optional): Type of phase/anomaly. Defaults to "mean".
+                Other options are "eccentric" or "true"
+            radians (bool, optional): Units to return.  Defaults to True.
+                If False, will return unitless phases in cycles (i.e. 0-1).
+
+        Raises:
+            ValueError: If anom.lower() is not "mean", "ecc*", or "true",
+                or if an astropy Time object is passed with scale!="tdb".
+
+        Returns:
+            [array]: The specified anomaly in radians (with unit), unless
+                radians=False, which return unitless cycles (0-1).
+        """
+        if not self.is_binary:  # punt if not a binary
+            return None
+        # Find the binary model
+        b = self.components[
+            [x for x in self.components.keys() if x.startswith("Binary")][0]
+        ]
+        # Make sure that the binary instance has the binary params
+        b.update_binary_object()
+        # Handle input times and update them in stand-alone binary models
+        if isinstance(barytimes, TOAs):
+            # If we pass the TOA table, then barycenter the TOAs
+            bts = self.get_barycentric_toas(barytimes)
+        elif isinstance(barytimes, time.Time):
+            if barytimes.scale == "tdb":
+                bts = np.asarray(barytimes.mjd)
+            else:
+                raise ValueError("barytimes as Time instance needs scale=='tdb'")
+        else:
+            bts = np.asarray(barytimes)
+        bbi = b.binary_instance  # shorthand
+        # Update the times in the stand-alone binary model
+        updates = {"barycentric_toa": bts}
+        bbi.update_input(**updates)
+        if anom.lower() == "mean":
+            anoms = bbi.M()
+        elif anom.lower().startswith("ecc"):
+            anoms = bbi.E()
+        elif anom.lower() == "true":
+            anoms = bbi.nu()
+        else:
+            raise ValueError("anom='%s' is not a recognized type of anomaly" % anom)
+        # Make sure all angles are between 0-2*pi
+        anoms = np.fmod(anoms.value, 2 * np.pi)
+        if radians:  # return with radian units
+            return anoms * u.rad
+        else:  # return as unitless cycles from 0-1
+            return anoms / (2 * np.pi)
+
+    def conjunction(self, baryMJD):
+        """Return the time(s) of the first superior conjunction(s) after baryMJD
+
+        Args:
+            baryMJD (floats or Time()): barycentric (tdb) MJD(s) prior to the
+                conjunction we are looking for.  Can be an array.
+
+        Raises:
+            ValueError: If baryMJD is an astropy Time object with scale!="tdb".
+
+        Returns:
+            [float or array]: The barycentric MJD(tdb) time(s) of the next
+                superior conjunction(s) after baryMJD
+        """
+        if not self.is_binary:  # punt if not a binary
+            return None
+        # Find the binary model
+        b = self.components[
+            [x for x in self.components.keys() if x.startswith("Binary")][0]
+        ]
+        bbi = b.binary_instance  # shorthand
+        # Superior conjunction occurs when true anomaly + omega == 90 deg
+        # We will need to solve for this using a root finder (brentq)
+        # This is the function to root-find:
+        def funct(t):
+            nu = self.orbital_phase(t, anom="true")
+            return np.fmod((nu + bbi.omega()).value, 2 * np.pi) - np.pi / 2
+
+        # Handle the input time(s)
+        if isinstance(baryMJD, time.Time):
+            if baryMJD.scale == "tdb":
+                bts = np.atleast_1d(baryMJD.mjd)
+            else:
+                raise ValueError("baryMJD as Time instance needs scale=='tdb'")
+        else:
+            bts = np.atleast_1d(baryMJD)
+        # Step over the maryMJDs
+        scs = []
+        for bt in bts:
+            # Make 11 times over one orbit after bt
+            ts = np.linspace(bt, bt + self.PB.value, 11)
+            # Compute the true anomalies and omegas for those times
+            nus = self.orbital_phase(ts, anom="true")
+            omegas = bbi.omega()
+            x = np.fmod((nus + omegas).value, 2 * np.pi) - np.pi / 2
+            # find the lowest index where x is just below 0
+            for lb in range(len(x)):
+                if x[lb] < 0 and x[lb + 1] > 0:
+                    break
+            # Now use scipy to find the root
+            scs.append(brentq(funct, ts[lb], ts[lb + 1]))
+        if len(scs) == 1:
+            return scs[0]  # Return a float
+        else:
+            return np.asarray(scs)  # otherwise return an array
+
+    @property
     def has_correlated_errors(self):
         """Whether or not this model has correlated errors."""
         if "NoiseComponent" in self.component_types:
@@ -315,7 +439,7 @@ class TimingModel(object):
         return False
 
     @property
-    def covariance_matrix_funcs(self,):
+    def covariance_matrix_funcs(self):
         """List of covariance matrix functions."""
         cvfs = []
         if "NoiseComponent" in self.component_types:
@@ -324,7 +448,7 @@ class TimingModel(object):
         return cvfs
 
     @property
-    def dm_covariance_matrix_funcs(self,):
+    def dm_covariance_matrix_funcs(self):
         """List of covariance matrix functions."""
         cvfs = []
         if "NoiseComponent" in self.component_types:
@@ -334,7 +458,7 @@ class TimingModel(object):
 
     # Change sigma to uncertainty to avoid name conflict.
     @property
-    def scaled_toa_uncertainty_funcs(self,):
+    def scaled_toa_uncertainty_funcs(self):
         """List of scaled toa uncertainty functions."""
         ssfs = []
         if "NoiseComponent" in self.component_types:
@@ -344,7 +468,7 @@ class TimingModel(object):
 
     # Change sigma to uncertainty to avoid name conflict.
     @property
-    def scaled_dm_uncertainty_funcs(self,):
+    def scaled_dm_uncertainty_funcs(self):
         """List of scaled dm uncertainty functions."""
         ssfs = []
         if "NoiseComponent" in self.component_types:
@@ -353,7 +477,7 @@ class TimingModel(object):
         return ssfs
 
     @property
-    def basis_funcs(self,):
+    def basis_funcs(self):
         """List of scaled uncertainty functions."""
         bfs = []
         if "NoiseComponent" in self.component_types:
@@ -385,8 +509,7 @@ class TimingModel(object):
         return Dphase_Ddelay
 
     def get_deriv_funcs(self, component_type, derivative_type=""):
-        """Return dictionary of derivative functions.
-        """
+        """Return dictionary of derivative functions."""
         # TODO, this function can be a more generical function collector.
         deriv_funcs = defaultdict(list)
         if not derivative_type == "":
@@ -448,7 +571,7 @@ class TimingModel(object):
         return comp_type
 
     def map_component(self, component):
-        """ Get the location of component.
+        """Get the location of component.
 
         Parameters
         ----------
@@ -538,7 +661,7 @@ class TimingModel(object):
             self.validate()
 
     def remove_component(self, component):
-        """ Remove one component from the timing model.
+        """Remove one component from the timing model.
 
         Parameters
         ----------
@@ -549,7 +672,7 @@ class TimingModel(object):
         host.remove(cp)
 
     def _locate_param_host(self, components, param):
-        """ Search for the parameter host component.
+        """Search for the parameter host component.
 
         Parameters
         ----------
@@ -590,17 +713,17 @@ class TimingModel(object):
         return dict(categorydict)
 
     def add_param_from_top(self, param, target_component, setup=False):
-        """ Add a parameter to a timing model component.
+        """Add a parameter to a timing model component.
 
-            Parameters
-            ----------
-            param: str
-                Parameter name
-            target_component: str
-                Parameter host component name. If given as "" it would add
-                parameter to the top level `TimingModel` class
-            setup: bool, optional
-                Flag to run setup() function.
+        Parameters
+        ----------
+        param: str
+            Parameter name
+        target_component: str
+            Parameter host component name. If given as "" it would add
+            parameter to the top level `TimingModel` class
+        setup: bool, optional
+            Flag to run setup() function.
         """
         if target_component == "":
             setattr(self, param.name, param)
@@ -745,8 +868,8 @@ class TimingModel(object):
 
     def toa_covariance_matrix(self, toas):
         """This a function to get the TOA covariance matrix for noise models.
-           If there is no noise model component provided, a diagonal matrix with
-           TOAs error as diagonal element will be returned.
+        If there is no noise model component provided, a diagonal matrix with
+        TOAs error as diagonal element will be returned.
         """
         ntoa = toas.ntoas
         tbl = toas.table
@@ -762,8 +885,8 @@ class TimingModel(object):
 
     def dm_covariance_matrix(self, toas):
         """This a function to get the DM covariance matrix for noise models.
-           If there is no noise model component provided, a diagonal matrix with
-           TOAs error as diagonal element will be returned.
+        If there is no noise model component provided, a diagonal matrix with
+        TOAs error as diagonal element will be returned.
         """
         dms, valid_dm = toas.get_flag_value("pp_dm")
         dmes, valid_dme = toas.get_flag_value("pp_dme")
@@ -803,8 +926,8 @@ class TimingModel(object):
         return result
 
     def scaled_dm_uncertainty(self, toas):
-        """ Get the scaled DM data uncertainties noise models.
-        
+        """Get the scaled DM data uncertainties noise models.
+
             If there is no noise model component provided, a vector with
             DM error as values will be returned.
 
@@ -931,18 +1054,18 @@ class TimingModel(object):
     def get_barycentric_toas(self, toas, cutoff_component=""):
         """Conveniently calculate the barycentric TOAs.
 
-       Parameters
-       ----------
-       toas: TOAs object
-           The TOAs the barycentric corrections are applied on
-       cutoff_delay: str, optional
-           The cutoff delay component name. If it is not provided, it will
-           search for binary delay and apply all the delay before binary.
+        Parameters
+        ----------
+        toas: TOAs object
+            The TOAs the barycentric corrections are applied on
+        cutoff_delay: str, optional
+            The cutoff delay component name. If it is not provided, it will
+            search for binary delay and apply all the delay before binary.
 
-       Return
-       ------
-       astropy.quantity.
-           Barycentered TOAs.
+        Return
+        ------
+        astropy.quantity.
+            Barycentered TOAs.
 
         """
         tbl = toas.table
@@ -1561,8 +1684,7 @@ class Component(object):
         return prefixs
 
     def get_params_of_type(self, param_type):
-        """ Get all the parameters in timing model for one specific type
-        """
+        """Get all the parameters in timing model for one specific type"""
         result = []
         for p in self.params:
             par = getattr(self, p)
@@ -1854,7 +1976,7 @@ class Component(object):
 
         return True
 
-    def print_par(self,):
+    def print_par(self):
         result = ""
         for p in self.params:
             result += getattr(self, p).as_parfile_line()
@@ -1862,13 +1984,13 @@ class Component(object):
 
 
 class DelayComponent(Component):
-    def __init__(self,):
+    def __init__(self):
         super(DelayComponent, self).__init__()
         self.delay_funcs_component = []
 
 
 class PhaseComponent(Component):
-    def __init__(self,):
+    def __init__(self):
         super(PhaseComponent, self).__init__()
         self.phase_funcs_component = []
         self.phase_derivs_wrt_delay = []

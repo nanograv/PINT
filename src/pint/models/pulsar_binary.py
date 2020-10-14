@@ -37,7 +37,7 @@ class PulsarBinary(DelayComponent):
 
     category = "pulsar_system"
 
-    def __init__(self,):
+    def __init__(self):
         super(PulsarBinary, self).__init__()
         self.binary_model_name = None
         self.barycentric_time = None
@@ -196,23 +196,25 @@ class PulsarBinary(DelayComponent):
                 continue
             bparObj.value = bparObj.value * u.Unit(bparObj.units)
 
-    def update_binary_object(self, toas, acc_delay=None):
+    def update_binary_object(self, toas=None, acc_delay=None):
         """Update binary object instance for this set of parameters/toas."""
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py
         # Get barycnetric toa first
         updates = {}
-        tbl = toas.table
-        if acc_delay is None:
-            # If the accumulate delay is not provided, it will try to get
-            # the barycentric correction.
-            acc_delay = self.delay(toas, self.__class__.__name__, False)
-        self.barycentric_time = tbl["tdbld"] * u.day - acc_delay
-        updates["barycentric_toa"] = self.barycentric_time
-        updates["obs_pos"] = tbl["ssb_obs_pos"].quantity
-        updates["psr_pos"] = self.ssb_to_psb_xyz_ICRS(
-            epoch=tbl["tdbld"].astype(np.float64)
-        )
+        if toas is not None:
+            tbl = toas.table
+            if acc_delay is None:
+                # If the accumulated delay is not provided, calculate and
+                # use the barycentered TOAS
+                self.barycentric_time = self.get_barycentric_toas(toas)
+            else:
+                self.barycentric_time = tbl["tdbld"] * u.day - acc_delay
+            updates["barycentric_toa"] = self.barycentric_time
+            updates["obs_pos"] = tbl["ssb_obs_pos"].quantity
+            updates["psr_pos"] = self.ssb_to_psb_xyz_ICRS(
+                epoch=tbl["tdbld"].astype(np.float64)
+            )
         for par in self.binary_instance.binary_params:
             binary_par_names = [par]
             if par in self.binary_instance.param_aliases.keys():
@@ -253,7 +255,7 @@ class PulsarBinary(DelayComponent):
         self.update_binary_object(toas, acc_delay)
         return self.binary_instance.d_binarydelay_d_par(param)
 
-    def print_par(self,):
+    def print_par(self):
         result = "BINARY {0}\n".format(self.binary_model_name)
         for p in self.params:
             par = getattr(self, p)
