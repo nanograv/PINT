@@ -1,12 +1,12 @@
 import logging
-import os
 import unittest
 import numpy as np
 import pint.observatory
 
 
 class TestAstropyObservatory(unittest.TestCase):
-    """ Test fallback from PINT observatories to astropy observatories"""
+    """
+    Test fallback from PINT observatories to astropy observatories."""
 
     @classmethod
     def setUpClass(cls):
@@ -26,7 +26,7 @@ class TestAstropyObservatory(unittest.TestCase):
 
     def test_astropy_observatory(self):
         """
-        try to instantiate the observatory in PINT from astropy and check their ITRF values
+        try to instantiate the observatory in PINT from astropy and check their ITRF values.
         """
         keck = pint.observatory.Observatory.get(self.astropy_obsname)
         keck_itrf = [
@@ -43,11 +43,11 @@ class TestAstropyObservatory(unittest.TestCase):
             self.astropy_obsname,
             separation,
         )
-        assert separation < self.itrf_tolerance
+        assert separation < self.itrf_tolerance, msg
 
     def test_pint_observatory(self):
         """
-        try to instantiate the observatory in PINT and check their ITRF values
+        try to instantiate the observatory in PINT and check their ITRF values.
         """
         gbt = pint.observatory.Observatory.get(self.pint_obsname)
         gbt_itrf = [
@@ -64,10 +64,10 @@ class TestAstropyObservatory(unittest.TestCase):
             self.pint_obsname,
             separation,
         )
-        assert separation < self.itrf_tolerance
+        assert separation < self.itrf_tolerance, msg
 
     def test_missing_observatory(self):
         """
-        try to instantiate a missing observatory
+        try to instantiate a missing observatory.
         """
         self.assertRaises(KeyError, pint.observatory.Observatory.get, self.none_obsname)

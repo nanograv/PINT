@@ -133,14 +133,6 @@ class Observatory(object):
         except astropy.coordinates.errors.UnknownSiteException:
             # turn it into the same error type as PINT would have returned
             raise KeyError("Observatory name '%s' is not defined" % name)
-        # we should be able to use the site.info.name
-        # to get the correct astropy name
-        # but that seems to be broken in 4.0.1 (it's fixed later in https://github.com/astropy/astropy/pull/10592)
-        # so if we can't use that use the alias we requested
-        try:
-            name_to_use = site_astropy.info.name
-        except IndexError:
-            name_to_use = name
 
         # we need to import this here rather than up-top because of circular import issues
         from pint.observatory.topo_obs import TopoObs
