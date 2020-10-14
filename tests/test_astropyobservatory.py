@@ -28,7 +28,7 @@ class TestAstropyObservatory(unittest.TestCase):
         """
         try to instantiate the observatory in PINT from astropy and check their ITRF values
         """
-        keck = pint.observatory.get_observatory(self.astropy_obsname)
+        keck = pint.observatory.Observatory.get(self.astropy_obsname)
         keck_itrf = [
             keck.earth_location_itrf().x.value,
             keck.earth_location_itrf().y.value,
@@ -49,7 +49,7 @@ class TestAstropyObservatory(unittest.TestCase):
         """
         try to instantiate the observatory in PINT and check their ITRF values
         """
-        gbt = pint.observatory.get_observatory(self.pint_obsname)
+        gbt = pint.observatory.Observatory.get(self.pint_obsname)
         gbt_itrf = [
             gbt.earth_location_itrf().x.value,
             gbt.earth_location_itrf().y.value,
@@ -70,4 +70,4 @@ class TestAstropyObservatory(unittest.TestCase):
         """
         try to instantiate a missing observatory
         """
-        self.assertRaises(KeyError, pint.observatory.get_observatory, self.none_obsname)
+        self.assertRaises(KeyError, pint.observatory.Observatory.get, self.none_obsname)
