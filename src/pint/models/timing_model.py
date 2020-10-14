@@ -1173,46 +1173,46 @@ class TimingModel(object):
 
     def compare(self, othermodel, nodmx=True, threshold_sigma=3.0, verbosity="max"):
         """Print comparison with another model
-        Parameters
-        ----------
-        othermodel
-            TimingModel object to compare to
-        nodmx : bool
-            If True (which is the default), don't print the DMX parameters in
-            the comparison
-        threshold_sigma : float
-            Pulsar parameters for which diff_sigma > threshold will be printed
-            with an exclamation point at the end of the line
-        verbosity : string
-            Dictates amount of information returned. Options include "max",
-            "med", and "min", which have the following results:
-                "max"     - print all lines from both models whether they are fit
-                            or not (note that nodmx will override this); DEFAULT
-                "med"     - only print lines for parameters that are fit
-                "min"     - only print lines for fit parameters for which
-                            diff_sigma > threshold
-                "check"   - only print significant changes with astropy.log.warning, not
-                            as string (note that all other modes will still print this)        
-        
-        Returns
-        -------
-        str
-            Human readable comparison, for printing
-            Formatted as a five column table with titles of
-            PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2
-            where Model 1/2 refer to self and othermodel Timing Model objects,
-            and Diff_SigmaX is the difference in a given parameter as reported by the two models,
-            normalized by the uncertainty in model X. If model X has no reported uncertainty,
-            nothing will be printed. When either Diff_Sigma value is greater than threshold_sigma, 
-            an exclamation point (!) will be appended to the line. If the uncertainty in the first model
-            if smaller than the second, an asterisk (*) will be appended to the line. Also, astropy
-            warnings and info statements will be printed.
+            Parameters
+            ----------
+            othermodel
+                TimingModel object to compare to
+            nodmx : bool
+                If True (which is the default), don't print the DMX parameters in
+                the comparison
+            threshold_sigma : float
+                Pulsar parameters for which diff_sigma > threshold will be printed
+                with an exclamation point at the end of the line
+            verbosity : string
+                Dictates amount of information returned. Options include "max",
+                "med", and "min", which have the following results:
+                    "max"     - print all lines from both models whether they are fit
+                                or not (note that nodmx will override this); DEFAULT
+                    "med"     - only print lines for parameters that are fit
+                    "min"     - only print lines for fit parameters for which
+                                diff_sigma > threshold
+                    "check"   - only print significant changes with astropy.log.warning, not
+                                as string (note that all other modes will still print this)        
             
-        else:
-            Nonetype
-                Prints astropy.log warnings for parameters that have changed significantly
-                and/or have increased in uncertainty.
-        """
+            Returns
+            -------
+            str
+                Human readable comparison, for printing
+                Formatted as a five column table with titles of
+                PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2
+                where Model 1/2 refer to self and othermodel Timing Model objects,
+                and Diff_SigmaX is the difference in a given parameter as reported by the two models,
+                normalized by the uncertainty in model X. If model X has no reported uncertainty,
+                nothing will be printed. When either Diff_Sigma value is greater than threshold_sigma, 
+                an exclamation point (!) will be appended to the line. If the uncertainty in the first model
+                if smaller than the second, an asterisk (*) will be appended to the line. Also, astropy
+                warnings and info statements will be printed.
+                
+            else:
+                Nonetype
+                    Prints astropy.log warnings for parameters that have changed significantly
+                    and/or have increased in uncertainty.
+            """
 
         from uncertainties import ufloat
         import uncertainties.umath as um
@@ -1235,21 +1235,21 @@ class TimingModel(object):
             and "POSEPOCH" in othermodel.params_ordered
         ):
             if (
-                self.POSEPOCH.value != None
+                self.POSEPOCH.value is not None
                 and self.POSEPOCH.value != othermodel.POSEPOCH.value
             ):
                 log.info("Updating POSEPOCH in Model 2 to match Model 1")
                 othermodel.change_posepoch(self.POSEPOCH.value)
         if "PEPOCH" in self.params_ordered and "PEPOCH" in othermodel.params_ordered:
             if (
-                self.PEPOCH.value != None
+                self.PEPOCH.value is not None
                 and self.PEPOCH.value != othermodel.PEPOCH.value
             ):
                 log.info("Updating PEPOCH in Model 2 to match Model 1")
                 othermodel.change_pepoch(self.PEPOCH.value)
         if "DMEPOCH" in self.params_ordered and "DMEPOCH" in othermodel.params_ordered:
             if (
-                self.DMEPOCH.value != None
+                self.DMEPOCH.value is not None
                 and self.DMEPOCH.value != othermodel.DMEPOCH.value
             ):
                 log.info("Updating DMEPOCH in Model 2 to match Model 1")
@@ -1320,6 +1320,9 @@ class TimingModel(object):
                                 newstr += " !"
                     except (AttributeError, TypeError):
                         pass
+                    if par.uncertainty is not None and otherpar.uncertainty is not None:
+                        if par.uncertainty < otherpar.uncertainty:
+                            newstr += " *"
                     newstr += "\n"
             else:
                 # Assume numerical parameter
@@ -1343,6 +1346,12 @@ class TimingModel(object):
                             )
                             log.handlers[0].flush()
                             newstr += " !"
+                        if (
+                            par.uncertainty is not None
+                            and otherpar.uncertainty is not None
+                        ):
+                            if par.uncertainty < otherpar.uncertainty:
+                                newstr += " *"
                         newstr += "\n"
                     else:
                         newstr += " {:>28s}\n".format("Missing")
@@ -1383,9 +1392,7 @@ class TimingModel(object):
                                 newstr += " !"
                     except (AttributeError, TypeError):
                         pass
-                    if type(par.uncertainty) != type(None) and type(
-                        otherpar.uncertainty
-                    ) != type(None):
+                    if par.uncertainty is not None and otherpar.uncertainty is not None:
                         if par.uncertainty < otherpar.uncertainty:
                             newstr += " *"
                     newstr += "\n"
