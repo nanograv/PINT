@@ -45,6 +45,8 @@ class Observatory(object):
         # it the registry, using name as the key.  Name must be unique,
         # a new instance with a given name will over-write the existing
         # one.
+        if name in cls.names():
+            log.warning("Observatory '%s' already exists; replacing..." % name)
         if six.PY2:
             obs = super(Observatory, cls).__new__(cls, name, *args, **kwargs)
         else:
@@ -121,6 +123,32 @@ class Observatory(object):
         # Then look for aliases
         if name in cls._alias_map.keys():
             return cls._registry[cls._alias_map[name]]
+        # Then look in astropy
+        log.warning(
+            "Observatory name '%s' is not present in PINT observatory list; searching astropy..."
+            % name
+        )
+        # the name was not found in the list of standard PINT observatories
+        # see if we can it from astropy
+        try:
+            site_astropy = astropy.coordinates.EarthLocation.of_site(name)
+        except astropy.coordinates.errors.UnknownSiteException:
+            # turn it into the same error type as PINT would have returned
+            raise KeyError("Observatory name '%s' is not defined" % name)
+
+        # we need to import this here rather than up-top because of circular import issues
+        from pint.observatory.topo_obs import TopoObs
+
+        obs = TopoObs(
+            name,
+            itrf_xyz=[site_astropy.x.value, site_astropy.y.value, site_astropy.z.value],
+            # add in metadata from astropy
+            origin="astropy: '%s'" % site_astropy.info.meta['source']
+        )
+        # add to registry
+        cls._register(obs, name)
+        return cls._registry[name]
+
         # Nothing matched, raise an error
         raise KeyError("Observatory name '%s' is not defined" % name)
 
@@ -294,41 +322,7 @@ def get_observatory(name, include_gps=True, include_bipm=True, bipm_version="BIP
         file switches/options are added at a public API level.
 
     """
-    try:
-        site = Observatory.get(name)
-    except KeyError:
-        log.warning(
-            "Observatory name '%s' is not present in PINT observatory list; searching astropy..."
-            % name
-        )
-        # the name was not found in the list of standard PINT observatories
-        # see if we can it from astropy
-        try:
-
-            site_astropy = astropy.coordinates.EarthLocation.of_site(name)
-        except astropy.coordinates.errors.UnknownSiteException:
-            # turn it into the same error type as PINT would have returned
-            raise KeyError("Observatory name '%s' is not defined" % name)
-        # we should be able to use the site.info.name
-        # to get the correct astropy name
-        # but that seems to be broken in 4.0.1 (it's fixed later in https://github.com/astropy/astropy/pull/10592)
-        # so if we can't use that use the alias we requested
-        try:
-            name_to_use = site_astropy.info.name
-        except IndexError:
-            name_to_use = name
-
-        origin = "astropy: '{}'".format(site_astropy.info.meta['source'])
-
-        # we need to import this here rather than up-top because of circular import issues
-        from pint.observatory.topo_obs import TopoObs
-
-        site = TopoObs(
-            name,
-            itrf_xyz=[site_astropy.x.value, site_astropy.y.value, site_astropy.z.value],
-            origin=origin,
-        )
-
+    site = Observatory.get(name)
     site.include_gps = include_gps
     site.include_bipm = include_bipm
     site.bipm_version = bipm_version
