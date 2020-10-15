@@ -49,6 +49,5 @@ class TestObservatoryMetadata(unittest.TestCase):
             itoa_code="GB",
             itrf_xyz=[882589.65, -4924872.32, 3943729.348],
             origin="This is a test",
-            )
+        )
         assert True
-

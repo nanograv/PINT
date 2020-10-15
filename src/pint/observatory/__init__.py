@@ -45,8 +45,6 @@ class Observatory(object):
         # it the registry, using name as the key.  Name must be unique,
         # a new instance with a given name will over-write the existing
         # one.
-        if name in cls.names():
-            log.warning("Observatory '%s' already exists; replacing..." % name)
         if six.PY2:
             obs = super(Observatory, cls).__new__(cls, name, *args, **kwargs)
         else:
@@ -143,7 +141,7 @@ class Observatory(object):
             name,
             itrf_xyz=[site_astropy.x.value, site_astropy.y.value, site_astropy.z.value],
             # add in metadata from astropy
-            origin="astropy: '%s'" % site_astropy.info.meta['source']
+            origin="astropy: '%s'" % site_astropy.info.meta["source"],
         )
         # add to registry
         cls._register(obs, name)
