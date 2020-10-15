@@ -8,6 +8,8 @@ from astropy import log
 import pint.solar_system_ephemerides as sse
 from pint.pulsar_mjd import Time
 
+import astropy.coordinates
+
 # Include any files that define observatories here.  This will start
 # with the standard distribution files, then will read any system- or
 # user-defined files.  These can override the default settings by
@@ -119,6 +121,30 @@ class Observatory(object):
         # Then look for aliases
         if name in cls._alias_map.keys():
             return cls._registry[cls._alias_map[name]]
+        # Then look in astropy
+        log.warning(
+            "Observatory name '%s' is not present in PINT observatory list; searching astropy..."
+            % name
+        )
+        # the name was not found in the list of standard PINT observatories
+        # see if we can it from astropy
+        try:
+            site_astropy = astropy.coordinates.EarthLocation.of_site(name)
+        except astropy.coordinates.errors.UnknownSiteException:
+            # turn it into the same error type as PINT would have returned
+            raise KeyError("Observatory name '%s' is not defined" % name)
+
+        # we need to import this here rather than up-top because of circular import issues
+        from pint.observatory.topo_obs import TopoObs
+
+        obs = TopoObs(
+            name,
+            itrf_xyz=[site_astropy.x.value, site_astropy.y.value, site_astropy.z.value],
+        )
+        # add to registry
+        cls._register(obs, name)
+        return cls._registry[name]
+
         # Nothing matched, raise an error
         raise KeyError("Observatory name '%s' is not defined" % name)
 
@@ -274,6 +300,8 @@ def get_observatory(name, include_gps=True, include_bipm=True, bipm_version="BIP
 
     This function will simply call the ``Observatory.get`` method but
     will manually set options after the method is called.
+
+    If the observatory is not present in the PINT list, will fallback to astropy
 
     Parameters
     ----------
