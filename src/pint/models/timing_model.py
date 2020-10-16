@@ -273,7 +273,7 @@ class TimingModel(object):
                 used_cats.append(cat)
 
         return pstart + pmid + pend
-    
+
     @property
     def free_params(self):
         """ Returns all the free parameters in the timing model.
@@ -473,7 +473,7 @@ class TimingModel(object):
         cvfs = []
         if "NoiseComponent" in self.component_types:
             for nc in self.NoiseComponent_list:
-                cvfs += nc.dm_covariance_matrix_funcs
+                cvfs += nc.dm_covariance_matrix_funcs_component
         return cvfs
 
     # Change sigma to uncertainty to avoid name conflict.
@@ -493,7 +493,8 @@ class TimingModel(object):
         ssfs = []
         if "NoiseComponent" in self.component_types:
             for nc in self.NoiseComponent_list:
-                ssfs += nc.scaled_dm_sigma_funcs
+                if hasattr(nc, 'scaled_dm_sigma_funcs'):
+                    ssfs += nc.scaled_dm_sigma_funcs
         return ssfs
 
     @property
@@ -819,7 +820,7 @@ class TimingModel(object):
         return "".join(
             "{:<40}{}\n".format(cp, getattr(self, par).help_line())
             for par, cp in self.get_params_mapping().items()
-        ) 
+        )
 
     def delay(self, toas, cutoff_component="", include_last=True):
         """Total delay for the TOAs.
@@ -891,7 +892,7 @@ class TimingModel(object):
         type of components.
         """
         # Here we assume the unit would be the same for all the dm value function.
-        # By doing so, we do not have to hard code an unit here. 
+        # By doing so, we do not have to hard code an unit here.
         dm = self.dm_funcs[0](toas)
 
         for dm_f in self.dm_funcs[1::]:
@@ -1851,8 +1852,8 @@ class Component(object):
     def free_params_component(self):
         """ Return the free parameters in the component.
 
-        This function collects the non-frozen parameters. 
-        
+        This function collects the non-frozen parameters.
+
         Return
         ------
         A list of free parameters.
@@ -1861,7 +1862,7 @@ class Component(object):
         for p in self.params:
             par = getattr(self, p)
             if not par.frozen:
-                free_param.append(p) 
+                free_param.append(p)
         return free_param
 
     @property
