@@ -959,11 +959,7 @@ class TimingModel(object):
         return result
 
     def scaled_dm_uncertainty(self, toas):
-<<<<<<< HEAD
-        """Get the scaled DM data uncertainties noise models.
-=======
         """ Get the scaled DM data uncertainties noise models.
->>>>>>> Add dm_func property
 
             If there is no noise model component provided, a vector with
             DM error as values will be returned.
