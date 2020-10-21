@@ -1000,7 +1000,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         self.reset_model()
         self.resids_init = copy.deepcopy(self.resids)
         self.designmatrix_makers = []
-        for data_resids in self.resids.residual_objs:
+        for data_resids in self.resids.residual_objs.values():
             self.designmatrix_makers.append(
                 DesignMatrixMaker(data_resids.residual_type, data_resids.unit)
             )
@@ -1009,7 +1009,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         self.noise_designmatrix_maker = DesignMatrixMaker("toa_noise", u.s)
         #
         self.covariancematrix_makers = []
-        for data_resids in self.resids.residual_objs:
+        for data_resids in self.resids.residual_objs.values():
             self.covariancematrix_makers.append(
                 CovarianceMatrixMaker(data_resids.residual_type, data_resids.unit)
             )
@@ -1104,7 +1104,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         sigma_units = []
         for ii, fd_name in enumerate(self.fit_data_names):
             func_name = "scaled_{}_uncertainty".format(fd_name)
-            sigma_units.append(self.resids.residual_objs[ii].unit)
+            sigma_units.append(self.resids.residual_objs[fd_name].unit)
             if hasattr(self.model, func_name):
                 scale_func = getattr(self.model, func_name)
                 if len(self.fit_data) == 1:

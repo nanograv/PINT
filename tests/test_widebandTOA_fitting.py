@@ -30,7 +30,8 @@ class TestWidebandTOAFitter:
         add_args = {}
         add_args["toa"] = {"subtract_mean": False}
         fitter2 = WidebandTOAFitter([self.toas,], self.model, additional_args=add_args)
-        assert fitter2.resids.residual_objs[0].subtract_mean == False
+        
+        assert fitter2.resids.residual_objs['toa'].subtract_mean == False
 
     def test_fitter_designmatrix(self):
         fitter = WidebandTOAFitter([self.toas,], self.model, additional_args={})
@@ -46,22 +47,22 @@ class TestWidebandTOAFitter:
 
     def test_fitting_no_full_cov(self):
         fitter = WidebandTOAFitter([self.toas,], self.model, additional_args={})
-        time_rms_pre = fitter.resids_init.residual_objs[0].rms_weighted()
-        dm_rms_pre = fitter.resids_init.residual_objs[1].rms_weighted()
+        time_rms_pre = fitter.resids_init.residual_objs['toa'].rms_weighted()
+        dm_rms_pre = fitter.resids_init.residual_objs['dm'].rms_weighted()
         fitter.fit_toas()
-        time_rms_post = fitter.resids.residual_objs[0].rms_weighted()
-        dm_rms_post = fitter.resids.residual_objs[1].rms_weighted()
+        time_rms_post = fitter.resids.residual_objs['toa'].rms_weighted()
+        dm_rms_post = fitter.resids.residual_objs['dm'].rms_weighted()
         # The tolarance may need to be changed
         assert np.abs(time_rms_pre - time_rms_post) < 2e-9 * u.s
         assert np.abs(dm_rms_pre - dm_rms_post) < 3e-8 * u.s
 
     def test_fitting_full_cov(self):
         fitter = WidebandTOAFitter([self.toas,], self.model, additional_args={})
-        time_rms_pre = fitter.resids_init.residual_objs[0].rms_weighted()
-        dm_rms_pre = fitter.resids_init.residual_objs[1].rms_weighted()
+        time_rms_pre = fitter.resids_init.residual_objs['toa'].rms_weighted()
+        dm_rms_pre = fitter.resids_init.residual_objs['dm'].rms_weighted()
         fitter.fit_toas(full_cov=True)
-        time_rms_post = fitter.resids.residual_objs[0].rms_weighted()
-        dm_rms_post = fitter.resids.residual_objs[1].rms_weighted()
+        time_rms_post = fitter.resids.residual_objs['toa'].rms_weighted()
+        dm_rms_post = fitter.resids.residual_objs['dm'].rms_weighted()
         # The tolarance may need to be changed
         assert np.abs(time_rms_pre - time_rms_post) < 2e-9 * u.s
         assert np.abs(dm_rms_pre - dm_rms_post) < 3e-8 * u.s

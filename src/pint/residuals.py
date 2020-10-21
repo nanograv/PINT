@@ -537,25 +537,27 @@ class CombinedResiduals(object):
     """
 
     def __init__(self, residuals):
-        self.residual_objs = residuals
+        self.residual_objs = collections.OrderedDict()
+        for res in residuals:
+             self.residual_objs[res.residual_type] = res
 
     @property
     def resids(self):
         """ Residuals from all of the residual types.
         """
         all_resids = []
-        for res in self.residual_objs:
+        for res in self.residual_objs.values():
             all_resids.append(res.resids_value)
         return np.hstack(all_resids)
 
     @property
     def unit(self):
-        return [res.unit for res in self.residual_objs]
+        return [res.unit for res in self.residual_objs.values()]
 
     @property
     def chi2(self):
         chi2 = 0
-        for res in self.residual_objs:
+        for res in self.residual_objs.values():
             chi2 += res.chi2
         return chi2
 
@@ -567,7 +569,7 @@ class CombinedResiduals(object):
 
     def get_data_error(self):
         errors = []
-        for rs in self.residual_objs:
+        for rs in self.residual_objs.values():
             errors.append((rs.residual_type, rs.data_error))
         return collections.OrderedDict(errors)
 
@@ -577,9 +579,11 @@ class CombinedResiduals(object):
             raise ValueError(
                 "Some data errors are zero - cannot calculate weighted RMS of residuals"
             )
-        w = 1.0 / (self.data_error ** 2)
-
-        wmean, werr, wsdev = weighted_mean(self.resids, w, sdev=True)
+        wrms = {}
+        for rs in self.residual_objs.values():
+            w = 1.0 / (rs.data_error ** 2)
+            wmean, werr, wsdev = weighted_mean(rs.resids, w, sdev=True)
+            wrms[rs.residual_type] = wsdev
         return wsdev
 
     def get_dof(self):
