@@ -22,14 +22,14 @@ jupyter:
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats
-import pint.profile.fftfit_aarchiba as fftfit
+import pint.profile
 ```
 
 ```python
 template = np.zeros(256)
 template[:16] = 1
 plt.plot(np.linspace(0, 1, len(template), endpoint=False), template)
-up_template = fftfit.upsample(template, 16)
+up_template = pint.profile.upsample(template, 16)
 plt.plot(np.linspace(0, 1, len(up_template), endpoint=False), up_template)
 plt.xlim(0, 1)
 ```
@@ -37,10 +37,10 @@ plt.xlim(0, 1)
 ```python
 template = np.diff(scipy.stats.vonmises(100).cdf(np.linspace(0, 2 * np.pi, 1024 + 1)))
 plt.plot(np.linspace(0, 1, len(template), endpoint=False), template)
-up_template = fftfit.upsample(template, 16)
+up_template = pint.profile.upsample(template, 16)
 plt.plot(np.linspace(0, 1, len(up_template), endpoint=False), up_template)
 plt.plot(
-    np.linspace(0, 1, len(template), endpoint=False), fftfit.shift(template, 0.25),
+    np.linspace(0, 1, len(template), endpoint=False), pint.profile.shift(template, 0.25),
 )
 plt.xlim(0, 1)
 ```
@@ -48,7 +48,7 @@ plt.xlim(0, 1)
 ```python
 if False:
     template = np.diff(scipy.stats.vonmises(10).cdf(np.linspace(0, 2 * np.pi, 64 + 1)))
-    profile = fftfit.shift(template, 0.25)
+    profile = pint.profile.shift(template, 0.25)
 else:
     template = np.random.randn(64)
     profile = np.random.randn(len(template))
@@ -88,12 +88,12 @@ plt.axvline(x)
 ```
 
 ```python
-template = fftfit.upsample(
+template = pint.profile.upsample(
     np.diff(scipy.stats.vonmises(10).cdf(np.linspace(0, 2 * np.pi, 16 + 1))), 2,
 )
 for s in np.linspace(0, 1 / len(template), 33):
-    profile = fftfit.shift(template, s)
-    print((s - fftfit.fftfit_basic(template, profile)) * len(template))
+    profile = pint.profile.shift(template, s)
+    print((s - pint.profile.fftfit_basic(template, profile)) * len(template))
 ```
 
 ```python
@@ -133,7 +133,7 @@ plt.plot(r_1[1::-1])
 n = 16
 c = np.zeros(5, dtype=complex)
 c[0] = 1
-print(fftfit.irfft_value(c, 0, n))
+print(pint.profile.irfft_value(c, 0, n))
 np.fft.irfft(c, n)
 ```
 
@@ -141,7 +141,7 @@ np.fft.irfft(c, n)
 n = 8
 c = np.zeros(5, dtype=complex)
 c[-1] = 1
-print(fftfit.irfft_value(c, 0, n))
+print(pint.profile.irfft_value(c, 0, n))
 np.fft.irfft(c, n)
 ```
 
@@ -149,21 +149,21 @@ np.fft.irfft(c, n)
 n = 16
 c = np.zeros(5, dtype=complex)
 c[-1] = 1
-print(fftfit.irfft_value(c, 0, n))
+print(pint.profile.irfft_value(c, 0, n))
 np.fft.irfft(c, n)
 ```
 
 ```python
 a = np.ones(8)
 a[::2] *= -1
-fftfit.shift(fftfit.shift(a, 1 / 16), -1 / 16)
+pint.profile.shift(pint.profile.shift(a, 1 / 16), -1 / 16)
 ```
 
 ```python
 s = 1 / 3
-t = fftfit.vonmises_profile(10, 16)
+t = pint.profile.vonmises_profile(10, 16)
 t_c = np.fft.rfft(t)
-t_s_c = np.fft.rfft(fftfit.shift(t, s))
+t_s_c = np.fft.rfft(pint.profile.shift(t, s))
 ccf_c = np.conj(t_c) * t_s_c
 ccf_c[-1] = 0
 plt.plot(np.fft.irfft(ccf_c, 256))
@@ -173,9 +173,9 @@ plt.plot(np.fft.irfft(ccf_c, 256))
 s = 1 / 8
 kappa = 1.0
 n = 4096
-template = fftfit.vonmises_profile(kappa, n)
-profile = fftfit.shift(template, s / n)
-rs = fftfit.fftfit_basic(template, profile)
+template = pint.profile.vonmises_profile(kappa, n)
+profile = pint.profile.shift(template, s / n)
+rs = pint.profile.fftfit_basic(template, profile)
 print(s, rs * n)
 upsample = 8
 
@@ -195,7 +195,7 @@ l, r = x - 1 / len(ccf), x + 1 / len(ccf)
 
 
 def gof(x):
-    return -fftfit.irfft_value(ccf_c, x, n_long)
+    return -pint.profile.irfft_value(ccf_c, x, n_long)
 
 
 print(l, gof(l))
@@ -208,16 +208,16 @@ res
 ```
 
 ```python
-t = fftfit.vonmises_profile(10, 1024, 1 / 3)
+t = pint.profile.vonmises_profile(10, 1024, 1 / 3)
 plt.plot(np.linspace(0, 1, len(t), endpoint=False), t)
 plt.xlim(0, 1)
 ```
 
 ```python
-profile1 = fftfit.vonmises_profile(1, 512, phase=0.3)
-profile2 = fftfit.vonmises_profile(10, 1024, phase=0.7)
-s = fftfit.fftfit_basic(profile1, profile2)
-fftfit.fftfit_basic(fftfit.shift(profile1, s), profile2)
+profile1 = pint.profile.vonmises_profile(1, 512, phase=0.3)
+profile2 = pint.profile.vonmises_profile(10, 1024, phase=0.7)
+s = pint.profile.fftfit_basic(profile1, profile2)
+pint.profile.fftfit_basic(pint.profile.shift(profile1, s), profile2)
 ```
 
 Okay, so let's try to work out the uncertainties on the outputs.
@@ -250,13 +250,13 @@ np.mean(r)
 ```
 
 ```python
-template = fftfit.vonmises_profile(1, 256)
+template = pint.profile.vonmises_profile(1, 256)
 plt.plot(template)
 plt.xlim(0, len(template))
 std = 1
 shift = 0
 scale = 1
-r = fftfit.fftfit_full(template, scale * fftfit.shift(template, shift), std=std)
+r = pint.profile.fftfit_aarchiba.fftfit_full(template, scale * pint.profile.shift(template, shift), std=std)
 r.shift, r.scale, r.offset, r.uncertainty, r.cov
 ```
 
@@ -266,8 +266,8 @@ fftfit.fftfit_full?
 
 ```python
 def gen_shift():
-    return fftfit.wrap(
-        fftfit.fftfit_basic(
+    return pint.profile.wrap(
+        pint.profile.fftfit_basic(
             template, scale * template + std * np.random.randn(len(template))
         )
     )
@@ -290,12 +290,12 @@ r.uncertainty / np.std(shifts)
 snrs = {}
 
 scale = 1e-3
-template = fftfit.vonmises_profile(100, 1024, 1 / 3) + 0.5*fftfit.vonmises_profile(50, 1024, 1 / 2)
+template = pint.profile.vonmises_profile(100, 1024, 1 / 3) + 0.5*pint.profile.vonmises_profile(50, 1024, 1 / 2)
 plt.plot(np.linspace(0, 1, len(template), endpoint=False), scale*template)
 
 def gen_prof(std):
     shift = np.random.uniform(0, 1)
-    shift_template = fftfit.shift(template, shift)
+    shift_template = pint.profile.shift(template, shift)
     return scale*shift_template + scale*std * np.random.standard_normal(len(template)) / np.sqrt(
         len(template)
     )
@@ -307,11 +307,11 @@ plt.xlim(0, 1)
 
 def gen_shift(std):
     shift = np.random.uniform(0, 1)
-    shift_template = fftfit.shift(template, shift)
+    shift_template = pint.profile.shift(template, shift)
     profile = scale*shift_template + scale*std * np.random.standard_normal(len(template)) / np.sqrt(
         len(template)
     )
-    return fftfit.wrap(fftfit.fftfit_basic(template, profile) - shift)
+    return pint.profile.wrap(pint.profile.fftfit_basic(template, profile) - shift)
 
 
 gen_shift(0.01)
@@ -319,10 +319,10 @@ gen_shift(0.01)
 
 ```python
 def gen_uncert(std):
-    return fftfit.fftfit_full(template, gen_prof(std), std=scale*std/np.sqrt(len(template))).uncertainty
+    return pint.profile.fftfit_aarchiba.fftfit_full(template, gen_prof(std), std=scale*std/np.sqrt(len(template))).uncertainty
 
 def gen_uncert_estimate(std):
-    return fftfit.fftfit_full(template, gen_prof(std)).uncertainty
+    return pint.profile.fftfit_full(template, gen_prof(std)).uncertainty
 ```
 
 ```python
