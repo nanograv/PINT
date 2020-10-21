@@ -62,5 +62,3 @@ class TestObservatoryMetadata(unittest.TestCase):
             % (self.pint_obsname, gbt.origin,)
         )
         assert "replacement" in gbt.origin, msg
-
-        assert True
