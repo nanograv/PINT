@@ -27,7 +27,7 @@ class TestObservatoryMetadata(unittest.TestCase):
             "Checking PINT metadata for '%s' failed: 'astropy' not present in '%s'"
             % (self.astropy_obsname, keck.origin,)
         )
-        assert "astropy" in keck.origin
+        assert "astropy" in keck.origin, msg
 
     def test_pint_observatory(self):
         """
@@ -38,16 +38,29 @@ class TestObservatoryMetadata(unittest.TestCase):
             self.pint_obsname,
             gbt.origin,
         )
-        assert (gbt.origin is not None) and (len(gbt.origin) > 0)
+        assert (gbt.origin is not None) and (len(gbt.origin) > 0), msg
 
     def test_observatory_replacement(self):
         from pint.observatory.topo_obs import TopoObs
 
+        gbt = pint.observatory.get_observatory(self.pint_obsname)
+        msg = "Checking that 'test' is in the metadata for '%s': metadata is '%s'" % (
+            self.pint_obsname,
+            gbt.origin,
+        )
+        assert "test" in gbt.origin, msg
         TopoObs(
             "gbt",
             tempo_code="1",
             itoa_code="GB",
             itrf_xyz=[882589.65, -4924872.32, 3943729.348],
-            origin="This is a test",
+            origin="This is a test - replacement",
         )
+        gbt = pint.observatory.get_observatory(self.pint_obsname)
+        msg = (
+            "Checking that 'replacement' is now in the metadata for '%s': metadata is '%s'"
+            % (self.pint_obsname, gbt.origin,)
+        )
+        assert "replacement" in gbt.origin, msg
+
         assert True
