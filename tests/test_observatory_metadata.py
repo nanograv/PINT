@@ -58,6 +58,20 @@ class TestObservatoryMetadata(unittest.TestCase):
         )
         gbt = pint.observatory.get_observatory(self.pint_obsname)
         msg = (
+            "Checking that 'replacement' is not now in the metadata for '%s': metadata is '%s'"
+            % (self.pint_obsname, gbt.origin,)
+        )
+        assert not ("replacement" in gbt.origin), msg
+        TopoObs(
+            "gbt",
+            tempo_code="1",
+            itoa_code="GB",
+            itrf_xyz=[882589.65, -4924872.32, 3943729.348],
+            origin="This is a test - replacement",
+            overwrite=True,
+        )
+        gbt = pint.observatory.get_observatory(self.pint_obsname)
+        msg = (
             "Checking that 'replacement' is now in the metadata for '%s': metadata is '%s'"
             % (self.pint_obsname, gbt.origin,)
         )

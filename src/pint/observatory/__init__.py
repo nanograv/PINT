@@ -44,16 +44,25 @@ class Observatory(object):
         # Generates a new Observtory object instance, and adds it
         # it the registry, using name as the key.  Name must be unique,
         # a new instance with a given name will over-write the existing
-        # one.
+        # one only if overwrite=True
         if six.PY2:
             obs = super(Observatory, cls).__new__(cls, name, *args, **kwargs)
         else:
             obs = super().__new__(cls)
         if name.lower() in cls._registry:
-            log.warning(
-                "Observatory '%s' already present; overwriting..." % name.lower()
-            )
+            if "overwrite" in kwargs and kwargs["overwrite"]:
+                log.warning(
+                    "Observatory '%s' already present; overwriting..." % name.lower()
+                )
 
+                cls._register(obs, name)
+                return obs
+            else:
+                log.warning(
+                    "Observatory '%s' already present and overwrite=False; discarding..."
+                    % name.lower()
+                )
+                return None
         cls._register(obs, name)
         return obs
 

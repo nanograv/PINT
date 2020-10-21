@@ -73,6 +73,8 @@ class TopoObs(Observatory):
         like 'BIPM2015'
     origin : str, optional
         Documentation of the origin/author/date for the information
+    overwrite : bool, optional
+        set True to force overwriting of previous observatory definition
     """
 
     def __init__(
@@ -89,6 +91,7 @@ class TopoObs(Observatory):
         include_bipm=True,
         bipm_version="BIPM2015",
         origin=None,
+        overwrite=False,
     ):
         # ITRF coordinates are required
         if itrf_xyz is None:
@@ -140,7 +143,6 @@ class TopoObs(Observatory):
                 aliases.append(code)
 
         self.origin = origin
-
         super(TopoObs, self).__init__(name, aliases=aliases, tt2tdb_mode="astropy")
 
     @property
