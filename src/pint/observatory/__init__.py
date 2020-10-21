@@ -58,11 +58,10 @@ class Observatory(object):
                 cls._register(obs, name)
                 return obs
             else:
-                log.warning(
-                    "Observatory '%s' already present and overwrite=False; discarding..."
+                raise ValueError(
+                    "Observatory '%s' already present and overwrite=False"
                     % name.lower()
                 )
-                return None
         cls._register(obs, name)
         return obs
 
