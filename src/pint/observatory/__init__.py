@@ -49,6 +49,11 @@ class Observatory(object):
             obs = super(Observatory, cls).__new__(cls, name, *args, **kwargs)
         else:
             obs = super().__new__(cls)
+        if name.lower() in cls._registry:
+            log.warning(
+                "Observatory '%s' already present; overwriting..." % name.lower()
+            )
+
         cls._register(obs, name)
         return obs
 
