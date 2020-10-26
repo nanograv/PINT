@@ -9,6 +9,7 @@ import collections
 
 from pint.phase import Phase
 from pint.utils import weighted_mean
+from pint.models.dispersion_model import Dispersion
 
 __all__ = ["Residuals", "WidebandDMResiduals", "residual_map"]
 
@@ -97,10 +98,6 @@ class Residuals:
             return self.phase_resids
 
     @property
-    def data_error(self):
-        return self.toas.get_errors()
-
-    @property
     def chi2_reduced(self):
         return self.chi2 / self.dof
 
@@ -121,13 +118,28 @@ class Residuals:
         else:
             return self.resids.to_value(self.unit)
 
+    def get_data_error(self, scaled=True):
+        """ Get data errors.
+        Parameter
+        ---------
+        scaled: bool, optional
+            If errors get scaled by the noise model.
+        """
+        if not scaled:
+            return self.toas.get_errors()
+        else:
+            return self.model.scaled_toa_uncertainty(self.toas)
+
     def rms_weighted(self):
         """Compute weighted RMS of the residals in time."""
-        if np.any(self.toas.get_errors() == 0):
+        # Use scaled errors, if the noise model is not presented, it will
+        # return the raw errors
+        scaled_errors = self.get_data_error()
+        if np.any(scaled_errors.value == 0):
             raise ValueError(
                 "Some TOA errors are zero - cannot calculate weighted RMS of residuals"
             )
-        w = 1.0 / (self.toas.get_errors().to(u.s) ** 2)
+        w = 1.0 / (scaled_errors.to(u.s) ** 2)
 
         wmean, werr, wsdev = weighted_mean(self.time_resids, w, sdev=True)
         return wsdev.to(u.us)
@@ -417,16 +429,24 @@ class WidebandDMResiduals(Residuals):
         return self.resids.to_value(self.unit)
 
     @property
-    def data_error(self):
-        return self.dm_error
-
-    @property
     def chi2(self):
         """Compute chi-squared as needed and cache the result"""
         if self._chi2 is None:
             self._chi2 = self.calc_chi2()
         assert self._chi2 is not None
         return self._chi2
+
+    def get_data_error(self, scaled=True):
+        """ Get data errors.
+        Parameter
+        ---------
+        scaled: bool, optional
+            If errors get scaled by the noise model.
+        """
+        if not scaled:
+            return self.dm_error
+        else:
+            return self.model.scaled_dm_uncertainty(self.toas)
 
     def calc_resids(self):
         model_value = self.get_model_value(self.toas)
@@ -458,11 +478,12 @@ class WidebandDMResiduals(Residuals):
 
     def rms_weighted(self):
         """Compute weighted RMS of the residals in time."""
-        if np.any(self.data_error.value == 0):
+        scaled_errors = self.get_data_error()
+        if np.any(scaled_errors.value == 0):
             raise ValueError(
-                "Some TOA errors are zero - cannot calculate weighted RMS of residuals"
+                "Some DM errors are zero - cannot calculate weighted RMS of residuals"
             )
-        w = 1.0 / (self.data_error ** 2)
+        w = 1.0 / (scaled_errors ** 2)
 
         wmean, werr, wsdev = weighted_mean(self.resids, w, sdev=True)
         return wsdev
@@ -508,11 +529,11 @@ class WidebandDMResiduals(Residuals):
 
     def get_dof(self):
         """Return number of degrees of freedom for the DM model."""
-        dof = self.dm_data
+        dof = len(self.dm_data)
         # only get dm type of model component
         # TODO provide a function in the timing model to get one type of component
         for cp in self.model.components.values():
-            if cp.__class__.__bases__.__name__ == 'Dispersion':
+            if 'Dispersion' in cp.__class__.__bases__:
                 dof -= cp.free_params_component
         dof -= 1
         return dof
@@ -588,8 +609,8 @@ class CombinedResiduals(object):
 
     def get_dof(self):
         dof = len(self.resids)
-        # It assumes that the input model are the same model, and time residual has 
+        # It assumes that the input model are the same model, and time residual has
         # offset in the fitting
         # TODO In a more general case, this assumption would not be valid.
-        dof -= len(self.residual_objs[0].free_params) - 1
+        dof -= len(self.residual_objs['toa'].free_params) - 1
         return dof
