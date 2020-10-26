@@ -24,9 +24,10 @@ class Residuals:
     use_weighted_mean : bool
         Controls whether mean compution is weighted (by errors) or not.
     track_mode : "nearest", "use_pulse_numbers"
-        Controls how pulse numbers are assigned. The default "nearest" assigns each TOA to the nearest integer pulse.
-        "use_pulse_numbers" uses the pulse_number column of the TOAs table to assign pulse numbers. This mode is
-        selected automatically if the model has parameter TRACK == "-2".
+        Controls how pulse numbers are assigned. The default "nearest" assigns
+        each TOA to the nearest integer pulse. "use_pulse_numbers" uses the
+        pulse_number column of the TOAs table to assign pulse numbers. This mode
+        is selected automatically if the model has parameter TRACK == "-2".
     """
 
     def __new__(
@@ -533,7 +534,7 @@ class WidebandDMResiduals(Residuals):
         # only get dm type of model component
         # TODO provide a function in the timing model to get one type of component
         for cp in self.model.components.values():
-            if 'Dispersion' in cp.__class__.__bases__:
+            if "Dispersion" in cp.__class__.__bases__:
                 dof -= cp.free_params_component
         dof -= 1
         return dof
@@ -560,7 +561,7 @@ class CombinedResiduals(object):
     def __init__(self, residuals):
         self.residual_objs = collections.OrderedDict()
         for res in residuals:
-             self.residual_objs[res.residual_type] = res
+            self.residual_objs[res.residual_type] = res
 
     @property
     def resids(self):
@@ -612,5 +613,5 @@ class CombinedResiduals(object):
         # It assumes that the input model are the same model, and time residual has
         # offset in the fitting
         # TODO In a more general case, this assumption would not be valid.
-        dof -= len(self.residual_objs['toa'].free_params) - 1
+        dof -= len(self.residual_objs["toa"].free_params) - 1
         return dof

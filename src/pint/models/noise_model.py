@@ -16,11 +16,11 @@ class NoiseComponent(Component):
         self.covariance_matrix_funcs = []
         self.scaled_toa_sigma_funcs = []  # Need to move this to a speical place.
         self.scaled_dm_sigma_funcs = []
-        # TODO This works right now. But if we want to expend noise model, we 
-        # need to think about the design now. If we do not define the list 
-        # here and calling the same name from other component, it will get 
-        # it from the component that hosts it. It has the risk to dulicate 
-        # the list elements.   
+        # TODO This works right now. But if we want to expend noise model, we
+        # need to think about the design now. If we do not define the list
+        # here and calling the same name from other component, it will get
+        # it from the component that hosts it. It has the risk to dulicate
+        # the list elements.
         self.dm_covariance_matrix_funcs_component = []
         self.basis_funcs = []
 

@@ -1179,7 +1179,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 norm[ntmpar:] = 1
             if np.any(norm == 0):
                 # Make this a LinAlgError so it looks like other bad matrixness
-                raise sl.LinAlgError("One or more of the design-matrix columns is null.")
+                raise sl.LinAlgError(
+                    "One or more of the design-matrix columns is null."
+                )
             M /= norm
 
             # compute covariance matrices
@@ -1207,7 +1209,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                     U, s, Vt = sl.svd(mtcm, full_matrices=False)
 
                     if threshold:
-                        threshold_val = np.finfo(np.longdouble).eps * max(M.shape) * s[0]
+                        threshold_val = (
+                            np.finfo(np.longdouble).eps * max(M.shape) * s[0]
+                        )
                         s[s < threshold_val] = 0.0
 
                     xvar = np.dot(Vt.T / s, Vt)

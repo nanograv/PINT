@@ -72,11 +72,12 @@ class SolarWindDispersion(Dispersion):
         pos = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(np.float64))
         r = np.sqrt(np.sum(rvec * rvec, axis=1))
         cos_theta = (np.sum(rvec * pos, axis=1) / r).to(u.Unit(""))
-        theta = np.arccos(cos_theta).to(u.Unit(""),
-            equivalencies=u.dimensionless_angles())
-        solar_wind_geometry = (const.au ** 2.0
-            * theta
-            / (r * np.sqrt(1.0 - cos_theta ** 2.0)))
+        theta = np.arccos(cos_theta).to(
+            u.Unit(""), equivalencies=u.dimensionless_angles()
+        )
+        solar_wind_geometry = (
+            const.au ** 2.0 * theta / (r * np.sqrt(1.0 - cos_theta ** 2.0))
+        )
         return solar_wind_geometry
 
     def solar_wind_dm(self, toas):
@@ -85,13 +86,13 @@ class SolarWindDispersion(Dispersion):
         """
         if self.SWM.value == 0:
             solar_wind_geometry = self.solar_wind_geometry(toas)
-            solar_wind_dm = self.NE_SW.quantity *  solar_wind_geometry
+            solar_wind_dm = self.NE_SW.quantity * solar_wind_geometry
         else:
             # TODO Introduce the You et.al. (2007) Solar Wind Model for SWM=1
             raise NotImplementedError(
                 "Solar Dispersion Delay not implemented for SWM %d" % self.SWM.value
             )
-        return solar_wind_dm.to(u.pc / u.cm **3)
+        return solar_wind_dm.to(u.pc / u.cm ** 3)
 
     def solar_wind_delay(self, toas, acc_delay=None):
         """ This is a wrapper function to compute solar wind dispersion delay.

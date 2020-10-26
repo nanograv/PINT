@@ -437,12 +437,13 @@ class TimingModel(object):
             return scs[0]  # Return a float
         else:
             return np.asarray(scs)  # otherwise return an array
+
     @property
     def dm_funcs(self):
         """ List of all dm value functions. """
         dmfs = []
         for cp in self.components.values():
-            if hasattr(cp, 'dm_value_funcs'):
+            if hasattr(cp, "dm_value_funcs"):
                 dmfs += cp.dm_value_funcs
             else:
                 continue
@@ -493,7 +494,7 @@ class TimingModel(object):
         ssfs = []
         if "NoiseComponent" in self.component_types:
             for nc in self.NoiseComponent_list:
-                if hasattr(nc, 'scaled_dm_sigma_funcs'):
+                if hasattr(nc, "scaled_dm_sigma_funcs"):
                     ssfs += nc.scaled_dm_sigma_funcs
         return ssfs
 
@@ -1844,6 +1845,7 @@ class Component(object):
                     "'%s' object has no attribute '%s'."
                     % (self.__class__.__name__, name)
                 )
+
     @property
     def free_params_component(self):
         """ Return the free parameters in the component.
