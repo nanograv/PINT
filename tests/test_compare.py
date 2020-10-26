@@ -4,7 +4,7 @@ import astropy
 import astropy.units as u
 import pint
 import pint.models as mod
-import os  
+import os
 from copy import deepcopy as cp
 from pinttestdata import datadir
 
