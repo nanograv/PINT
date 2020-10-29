@@ -270,7 +270,8 @@ class Residuals:
                 return np.inf
         else:
             # Residual units are in seconds. Error units are in microseconds.
-            if (self.toas.get_errors() == 0.0).any():
+            toa_errors = self.get_data_error()
+            if (toa_errors == 0.0).any():
                 return np.inf
             else:
                 # The self.time_resids is in the unit of "s", the error "us".
@@ -285,13 +286,13 @@ class Residuals:
                 # insure only a pure number returned
                 try:
                     return (
-                        ((self.time_resids / self.toas.get_errors().to(u.s)) ** 2.0)
+                        ((self.time_resids / toa_errors.to(u.s)) ** 2.0)
                         .sum()
                         .value
                     )
                 except:
                     return (
-                        (self.time_resids / self.toas.get_errors().to(u.s)) ** 2.0
+                        (self.time_resids / toa_errors.to(u.s)) ** 2.0
                     ).sum()
 
     def get_dof(self):
@@ -469,13 +470,14 @@ class WidebandDMResiduals(Residuals):
         return resids
 
     def calc_chi2(self):
-        if (self.data_error.value == 0.0).any():
+        data_errors = self.get_data_error()
+        if (data_errors == 0.0).any():
             return np.inf
         else:
             try:
-                return ((self.resids / self.data_error) ** 2.0).sum().decompose().value
+                return ((self.resids / data_errors) ** 2.0).sum().decompose().value
             except:
-                return ((self.resids / self.data_error) ** 2.0).sum().decompose()
+                return ((self.resids / data_errors) ** 2.0).sum().decompose()
 
     def rms_weighted(self):
         """Compute weighted RMS of the residals in time."""
