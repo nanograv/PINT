@@ -21,6 +21,7 @@ __all__ = ["Observatory", "get_observatory"]
 # The default BIPM to use if not explicitly specified
 bipm_default = "BIPM2015"
 
+
 class Observatory(object):
     """Observatory locations and related site-dependent properties
 

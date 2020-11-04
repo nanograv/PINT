@@ -259,7 +259,8 @@ class TopoObs(Observatory):
                 except Exception as e:
                     raise_from(
                         ValueError(
-                            "Can not find TT BIPM file for version '%s'. " % self.bipm_version
+                            "Can not find TT BIPM file for version '%s'. "
+                            % self.bipm_version
                         ),
                         e,
                     )
