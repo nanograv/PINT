@@ -20,6 +20,7 @@ from pint.observatory.clock_file import ClockFile
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
 from pint.utils import has_astropy_unit
+from pint.toa import bipm_default
 
 
 class TopoObs(Observatory):
@@ -69,9 +70,9 @@ class TopoObs(Observatory):
         http://www.bipm.org/en/bipm-services/timescales/time-ftp/ttbipm.html
     bipm_version : str, optionial
         Set the version of TT BIPM clock correction file to
-        use, the default is BIPM2015.  It has to be in the format
+        use, the default is %s.  It has to be in the format
         like 'BIPM2015'
-    """
+    """ % bipm_default
 
     def __init__(
         self,
@@ -85,7 +86,7 @@ class TopoObs(Observatory):
         clock_fmt="tempo",
         include_gps=True,
         include_bipm=True,
-        bipm_version="BIPM2015",
+        bipm_version=bipm_default,
     ):
         # ITRF coordinates are required
         if itrf_xyz is None:

@@ -7,6 +7,7 @@ from astropy import log
 
 import pint.solar_system_ephemerides as sse
 from pint.pulsar_mjd import Time
+from pint.toa import bipm_default
 
 import astropy.coordinates
 
@@ -295,7 +296,9 @@ class Observatory(object):
         raise NotImplementedError
 
 
-def get_observatory(name, include_gps=True, include_bipm=True, bipm_version="BIPM2015"):
+def get_observatory(
+    name, include_gps=True, include_bipm=True, bipm_version=bipm_default
+):
     """Convenience function to get observatory object with options.
 
     This function will simply call the ``Observatory.get`` method but
