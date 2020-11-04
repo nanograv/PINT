@@ -23,7 +23,7 @@ from astropy.coordinates import ICRS, CartesianDifferential, CartesianRepresenta
 from six.moves import cPickle as pickle
 
 import pint
-from pint.observatory import Observatory, get_observatory
+from pint.observatory import Observatory, get_observatory, bipm_default
 from pint.observatory.special_locations import SpacecraftObs
 from pint.observatory.topo_obs import TopoObs
 from pint.pulsar_mjd import Time
@@ -71,7 +71,6 @@ toa_commands = (
 iers_a_file = None
 iers_a = None
 JD_MJD = 2400000.5
-bipm_default = "BIPM2015"
 
 
 def get_TOAs(

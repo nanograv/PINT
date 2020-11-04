@@ -15,12 +15,11 @@ from six import raise_from
 from pint import JD_MJD
 from pint.config import datapath
 from pint.erfautils import gcrs_posvel_from_itrf
-from pint.observatory import Observatory
+from pint.observatory import Observatory, bipm_default
 from pint.observatory.clock_file import ClockFile
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
 from pint.utils import has_astropy_unit
-from pint.toa import bipm_default
 
 
 class TopoObs(Observatory):
@@ -260,7 +259,7 @@ class TopoObs(Observatory):
                 except Exception as e:
                     raise_from(
                         ValueError(
-                            "Can not find TT BIPM file '%s'. " % self.bipm_version
+                            "Can not find TT BIPM file for version '%s'. " % self.bipm_version
                         ),
                         e,
                     )

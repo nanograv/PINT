@@ -11,10 +11,10 @@ from astropy import log
 from astropy.coordinates import EarthLocation
 
 from pint.config import datapath
+from pint.observatory import bipm_default
 from pint.observatory.clock_file import ClockFile
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.utils import PosVel
-from pint.toa import bipm_default
 
 from . import Observatory
 
