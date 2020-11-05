@@ -15,6 +15,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fixed bug in solar wind model that prevented fitting
 - Fix pintempo script so it will respect JUMPs in the TOA file.
 ### Added
+- Added ability to find observatories in [astropy](https://github.com/astropy/astropy-data/blob/gh-pages/coordinates/sites.json) if not present in PINT
 - Added is_binary property, and orbital_phase() and conjunction() methods to the timing model 
 - Allow fitting for either or (not both) of a glitch epoch or its phase
 - Added support for -padd flag on TOAs to add phase turns to individual TOAs (matching TEMPO and Tempo2)
