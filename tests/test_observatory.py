@@ -82,6 +82,7 @@ class TestObservatory(unittest.TestCase):
             clock_file="fake2gps.clk",
             clock_dir="TEMPO2",
             itrf_xyz=[0.00, 0.0, 0.0],
+            overwrite=True,
         )
         site = get_observatory(
             "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
@@ -104,6 +105,7 @@ class TestObservatory(unittest.TestCase):
             clock_file="fake2gps.clk",
             clock_dir="TEMPO2",
             itrf_xyz=[0.00, 0.0, 0.0],
+            overwrite=True,
         )
         site = get_observatory(
             "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
@@ -123,6 +125,7 @@ class TestObservatory(unittest.TestCase):
             clock_file="fake2gps.clk",
             clock_dir="TEMPO",
             itrf_xyz=[0.00, 0.0, 0.0],
+            overwrite=True,
         )
         site = get_observatory(
             "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
