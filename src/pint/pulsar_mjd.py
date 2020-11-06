@@ -42,13 +42,6 @@ except AttributeError:
     # fallback for Python 2
     from string import maketrans
 
-# FIXME: can we make this exception raise on install as well as on use?
-if np.finfo(np.longdouble).eps > 2e-19:
-    raise ValueError(
-        "This platform does not support extended precision "
-        "floating-point, and PINT cannot run without this."
-    )
-
 
 __all__ = [
     "Time",
