@@ -47,11 +47,24 @@ class Observatory(object):
         # Generates a new Observtory object instance, and adds it
         # it the registry, using name as the key.  Name must be unique,
         # a new instance with a given name will over-write the existing
-        # one.
+        # one only if overwrite=True
         if six.PY2:
             obs = super(Observatory, cls).__new__(cls, name, *args, **kwargs)
         else:
             obs = super().__new__(cls)
+        if name.lower() in cls._registry:
+            if "overwrite" in kwargs and kwargs["overwrite"]:
+                log.warning(
+                    "Observatory '%s' already present; overwriting..." % name.lower()
+                )
+
+                cls._register(obs, name)
+                return obs
+            else:
+                raise ValueError(
+                    "Observatory '%s' already present and overwrite=False"
+                    % name.lower()
+                )
         cls._register(obs, name)
         return obs
 
@@ -143,6 +156,8 @@ class Observatory(object):
         obs = TopoObs(
             name,
             itrf_xyz=[site_astropy.x.value, site_astropy.y.value, site_astropy.z.value],
+            # add in metadata from astropy
+            origin="astropy: '%s'" % site_astropy.info.meta["source"],
         )
         # add to registry
         cls._register(obs, name)
