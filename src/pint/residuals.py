@@ -285,15 +285,9 @@ class Residuals:
                 # error units.
                 # insure only a pure number returned
                 try:
-                    return (
-                        ((self.time_resids / toa_errors.to(u.s)) ** 2.0)
-                        .sum()
-                        .value
-                    )
+                    return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum().value
                 except:
-                    return (
-                        (self.time_resids / toa_errors.to(u.s)) ** 2.0
-                    ).sum()
+                    return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum()
 
     def get_dof(self):
         """Return number of degrees of freedom for the model."""
@@ -573,7 +567,7 @@ class CombinedResiduals(object):
         for res in self.residual_objs.values():
             all_resids.append(res.resids_value)
         return np.hstack(all_resids)
- 
+
     @property
     def _combined_data_error(self):
         # Since it is the combinde residual, the units are removed.
@@ -593,7 +587,7 @@ class CombinedResiduals(object):
         for res in self.residual_objs.values():
             chi2 += res.chi2
         return chi2
-    
+
     @property
     def data_error(self):
         errors = []
@@ -603,7 +597,7 @@ class CombinedResiduals(object):
 
     def rms_weighted(self):
         """Compute weighted RMS of the residals in time."""
-        
+
         if np.any(self._combined_data_error == 0):
             raise ValueError(
                 "Some data errors are zero - cannot calculate weighted RMS of residuals"
