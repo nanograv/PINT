@@ -20,12 +20,13 @@ class TestWidebandTOAFitter:
         self.toas = get_TOAs("J1614-2230_NANOGrav_12yv3.wb.tim")
         self.fit_data_name = ["toa", "dm"]
         self.fit_params_lite = ["F0", "F1", "ELONG", "ELAT", "DMJUMP1", "DMX_0022"]
+        self.tempo_res = np.genfromtxt('J1614-2230_NANOGrav_12yv3.wb.tempo_test', comments='#')        
 
     def test_fitter_init(self):
         fitter = WidebandTOAFitter([self.toas,], self.model, additional_args={})
 
         # test making residuals
-        assert len(fitter.resids.resids) == 2 * self.toas.ntoas
+        assert len(fitter.resids._combined_resids) == 2 * self.toas.ntoas
         # test additional args
         add_args = {}
         add_args["toa"] = {"subtract_mean": False}
