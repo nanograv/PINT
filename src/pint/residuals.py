@@ -566,17 +566,26 @@ class CombinedResiduals(object):
             self.residual_objs[res.residual_type] = res
 
     @property
-    def resids(self):
+    def _combined_resids(self):
         """ Residuals from all of the residual types.
         """
         all_resids = []
         for res in self.residual_objs.values():
             all_resids.append(res.resids_value)
         return np.hstack(all_resids)
+ 
+    @property
+    def _combined_data_error(self):
+        # Since it is the combinde residual, the units are removed.
+        dr = self.data_error
+        return np.hstack([rv.value for rv in dr.values()])
 
     @property
     def unit(self):
-        return [res.unit for res in self.residual_objs.values()]
+        units = {}
+        for k, v in self.residual_objs.items():
+            units[k] = v.unit
+        return units
 
     @property
     def chi2(self):
@@ -584,31 +593,27 @@ class CombinedResiduals(object):
         for res in self.residual_objs.values():
             chi2 += res.chi2
         return chi2
-
+    
     @property
     def data_error(self):
-        # Since it is the combinde residual, the units are removed.
-        dr = self.get_data_error()
-        return np.hstack([rv.value for rv in dr.values()])
-
-    def get_data_error(self):
         errors = []
         for rs in self.residual_objs.values():
-            errors.append((rs.residual_type, rs.data_error))
+            errors.append((rs.residual_type, rs.get_data_error()))
         return collections.OrderedDict(errors)
 
     def rms_weighted(self):
         """Compute weighted RMS of the residals in time."""
-        if np.any(self.data_error == 0):
+        
+        if np.any(self._combined_data_error == 0):
             raise ValueError(
                 "Some data errors are zero - cannot calculate weighted RMS of residuals"
             )
         wrms = {}
         for rs in self.residual_objs.values():
-            w = 1.0 / (rs.data_error ** 2)
+            w = 1.0 / (rs.get_data_error() ** 2)
             wmean, werr, wsdev = weighted_mean(rs.resids, w, sdev=True)
             wrms[rs.residual_type] = wsdev
-        return wsdev
+        return wrms
 
     def get_dof(self):
         dof = len(self.resids)
