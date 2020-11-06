@@ -33,12 +33,15 @@ class TestDMData:
 
     def test_dm_jumps(self):
         # First get the toas for jump
-        toa_backends, valid_flags = self.toas.get_flag_value('fe')
+        toa_backends, valid_flags = self.toas.get_flag_value("fe")
         toa_backends = np.array(toa_backends)
         all_backends = list(set(toa_backends))
         dm_jump_value = self.model.jump_dm(self.toas)
-        dm_jump_params = [getattr(self.model, x) for x in self.model.params if
-                         (x.startswith('DMJUMP'))]
+        dm_jump_params = [
+            getattr(self.model, x)
+            for x in self.model.params
+            if (x.startswith("DMJUMP"))
+        ]
         dm_jump_map = {}
         for dmj in dm_jump_params:
             dm_jump_map[dmj.key_value[0]] = dmj

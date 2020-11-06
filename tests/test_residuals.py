@@ -75,6 +75,6 @@ class TestResidualBuilding:
         cb_chi2 = cb_residuals.chi2
 
         assert len(cb_residuals._combined_resids) == 2 * self.toa.ntoas
-        assert cb_residuals.unit['toa'] == u.s
-        assert cb_residuals.unit['dm'] == u.pc / u.cm ** 3
+        assert cb_residuals.unit["toa"] == u.s
+        assert cb_residuals.unit["dm"] == u.pc / u.cm ** 3
         assert cb_chi2 == phase_res.chi2 + dm_res.chi2
