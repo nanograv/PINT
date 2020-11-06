@@ -23,7 +23,7 @@ from astropy.coordinates import ICRS, CartesianDifferential, CartesianRepresenta
 from six.moves import cPickle as pickle
 
 import pint
-from pint.observatory import Observatory, get_observatory
+from pint.observatory import Observatory, get_observatory, bipm_default
 from pint.observatory.special_locations import SpacecraftObs
 from pint.observatory.topo_obs import TopoObs
 from pint.pulsar_mjd import Time
@@ -77,7 +77,7 @@ def get_TOAs(
     timfile,
     ephem=None,
     include_bipm=True,
-    bipm_version="BIPM2015",
+    bipm_version=bipm_default,
     include_gps=True,
     planets=False,
     usepickle=False,
@@ -156,7 +156,7 @@ def get_TOAs_list(
     toa_list,
     ephem=None,
     include_bipm=True,
-    bipm_version="BIPM2015",
+    bipm_version=bipm_default,
     include_gps=True,
     planets=False,
     tdb_method="default",
@@ -479,7 +479,7 @@ def make_fake_toas(startMJD, endMJD, ntoas, model, freq=1400, obs="GBT"):
     ts.compute_TDBs()
     ts.compute_posvels()
     ts.clock_corr_info.update(
-        {"include_bipm": False, "bipm_version": "BIPM2015", "include_gps": False}
+        {"include_bipm": False, "bipm_version": bipm_default, "include_gps": False}
     )
     return ts
 
@@ -1175,7 +1175,7 @@ class TOAs(object):
             outf.close()
 
     def apply_clock_corrections(
-        self, include_bipm=True, bipm_version="BIPM2015", include_gps=True
+        self, include_bipm=True, bipm_version=bipm_default, include_gps=True
     ):
         """Apply observatory clock corrections and TIME statments.
 

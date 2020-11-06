@@ -18,6 +18,9 @@ import astropy.coordinates
 
 __all__ = ["Observatory", "get_observatory"]
 
+# The default BIPM to use if not explicitly specified
+bipm_default = "BIPM2015"
+
 
 class Observatory(object):
     """Observatory locations and related site-dependent properties
@@ -310,7 +313,9 @@ class Observatory(object):
         raise NotImplementedError
 
 
-def get_observatory(name, include_gps=True, include_bipm=True, bipm_version="BIPM2015"):
+def get_observatory(
+    name, include_gps=True, include_bipm=True, bipm_version=bipm_default
+):
     """Convenience function to get observatory object with options.
 
     This function will simply call the ``Observatory.get`` method but
