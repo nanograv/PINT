@@ -15,6 +15,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fixed bug in solar wind model that prevented fitting
 - Fix pintempo script so it will respect JUMPs in the TOA file.
 ### Added
+- Added metadata to observatory definition, to keep track of the data origin
 - Added other bipm???? files from TEMPO2
 - Added ability to find observatories in [astropy](https://github.com/astropy/astropy-data/blob/gh-pages/coordinates/sites.json) if not present in PINT
 - Added is_binary property, and orbital_phase() and conjunction() methods to the timing model 
@@ -28,6 +29,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added START and FINISH parameters as MJDParameters to timing_model. They are now 
 modified after a fit and are displayed with a model's .par file output.
 ### Changed
+- New observatories will no longer overwrite existing ones silently.  Will either raise ValueError or require overwrite=True
 - Large speed increase when using Ecliptic coordinates
 - Changed Residuals so that use_weighted_mean and subtract_mean are attributes set on initialization
 
