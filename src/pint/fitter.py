@@ -1154,7 +1154,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 self.update_resids()
             # Since the residuals may not have the same unit. Thus the residual here
             # has no unit.
-            residuals = self.resids.resids
+            residuals = self.resids._combined_resids
 
             # get any noise design matrices and weight vectors
             if not full_cov:
