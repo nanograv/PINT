@@ -86,7 +86,7 @@ print(fitter.resids.residual_objs['toa'].chi2)
 
 ```python execution={"iopub.execute_input": "2020-09-10T16:29:28.556722Z", "iopub.status.busy": "2020-09-10T16:29:28.535404Z", "iopub.status.idle": "2020-09-10T16:29:28.698341Z", "shell.execute_reply": "2020-09-10T16:29:28.697831Z"}
 dm_resids = fitter.resids.residual_objs['dm'].resids
-dm_error = fitter.resids.residual_objs['dm'].data_error
+dm_error = fitter.resids.residual_objs['dm'].get_data_error()
 plt.errorbar(toas.get_mjds().value, dm_resids.value, yerr=dm_error.value, fmt="x")
 plt.ylabel("pc/cm^3")
 plt.xlabel("MJD")
@@ -121,7 +121,7 @@ plt.xlabel("MJD")
 
 ```python execution={"iopub.execute_input": "2020-09-10T16:29:28.957488Z", "iopub.status.busy": "2020-09-10T16:29:28.956731Z", "iopub.status.idle": "2020-09-10T16:29:29.107675Z", "shell.execute_reply": "2020-09-10T16:29:29.107097Z"}
 dm_resids = fitter.resids_init.residual_objs['dm'].resids
-dm_error = fitter.resids_init.residual_objs['dm'].data_error
+dm_error = fitter.resids_init.residual_objs['dm'].get_data_error()
 plt.errorbar(toas.get_mjds().value, dm_resids.value, yerr=dm_error.value, fmt="x")
 plt.ylabel("pc/cm^3")
 plt.xlabel("MJD")
