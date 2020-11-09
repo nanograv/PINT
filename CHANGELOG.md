@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+### Fixed 
+- Fixed an indentation bug in Wideband TOA fitting. 
+- The CombinedResidual class has API change on the get_data_error(), child residueal class in save as dictionary.  
 ### Removed
 - Removed Python 2.7 support from travis and tox testing suites and from requirements files
 - Removed "landscape" code checker since that package is no longer supported by its author
