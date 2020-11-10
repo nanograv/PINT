@@ -1228,6 +1228,16 @@ class TimingModel(object):
         log.info("Comparing ephemerides for PSR %s" % self.PSR.value)
         log.info("Threshold sigma = %f" % threshold_sigma)
         log.info("Creating a copy of Model 2")
+        if verbosity == "max":
+            log.info("Maximum verbosity - printing all parameters")
+        elif verbosity == "med":
+            log.info("Medium verbosity - printing parameters that are fit")
+        elif verbosity == "min":
+            log.info(
+                "Minimum verbosity - printing parameters that are fit and significantly changed"
+            )
+        elif verbosity == "check":
+            log.info("Check verbosity - only warnings/info with be displayed")
         othermodel = cp(othermodel)
 
         if (
@@ -1320,9 +1330,13 @@ class TimingModel(object):
                                 newstr += " !"
                     except (AttributeError, TypeError):
                         pass
-                    if par.uncertainty is not None and otherpar.uncertainty is not None:
-                        if par.uncertainty < otherpar.uncertainty:
-                            newstr += " *"
+                    if otherpar is not None:
+                        if (
+                            par.uncertainty is not None
+                            and otherpar.uncertainty is not None
+                        ):
+                            if par.uncertainty < otherpar.uncertainty:
+                                newstr += " *"
                     newstr += "\n"
             else:
                 # Assume numerical parameter
@@ -1392,9 +1406,13 @@ class TimingModel(object):
                                 newstr += " !"
                     except (AttributeError, TypeError):
                         pass
-                    if par.uncertainty is not None and otherpar.uncertainty is not None:
-                        if par.uncertainty < otherpar.uncertainty:
-                            newstr += " *"
+                    if otherpar is not None:
+                        if (
+                            par.uncertainty is not None
+                            and otherpar.uncertainty is not None
+                        ):
+                            if par.uncertainty < otherpar.uncertainty:
+                                newstr += " *"
                     newstr += "\n"
 
             if "!" in newstr and not par.frozen:
@@ -1451,7 +1469,7 @@ class TimingModel(object):
                 s += " {:>28s}".format(str(otherpar.quantity))
                 s += "\n"
         if verbosity != "check":
-            return s
+            return s.split("\n")
 
     def read_parfile(self, file, validate=True):
         """Read values from the specified parfile into the model parameters.
