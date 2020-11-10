@@ -6,7 +6,9 @@ compiler: gcc
 
 os: linux
 
-matrix:
+dist: bionic
+
+jobs:
     fast_finish: true
     include:
         - script: wget https://data.nanograv.org/static/data/ephem/de405.bsp
@@ -14,11 +16,9 @@ matrix:
           install: []
           services: []
           after_success: []
-          git:
-              clone: false
         - script: black --check src tests examples
           install:
-            - travis_retry pip install black
+            - travis_retry pip install "black>=19.0a0,<20.0a0"
           name: "check code style is black"
           services: []
           after_success: []
@@ -32,7 +32,6 @@ matrix:
           before_script: git fetch --unshallow
         - name: "Test oldest Python3 dependencies"
           python: "3.7"
-          sudo: false
           language: python
           install: travis_retry pip install tox-travis
           script: 
@@ -41,7 +40,6 @@ matrix:
         - python: "3.7"
         - python: "3.8"
         - name: "tox"
-          sudo: false
           language: python
           python:
             - "3.7"
@@ -73,7 +71,6 @@ matrix:
           after_success: []
     allow_failures:
         - script: flake8-diff
-sudo: required
 
 # https://docs.travis-ci.com/user/gui-and-headless-browsers/#Using-xvfb-to-Run-Tests-That-Require-a-GUI
 #before_script:

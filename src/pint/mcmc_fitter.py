@@ -76,7 +76,7 @@ def lnlikelihood_basic(ftr, theta):
 
 def lnlikelihood_chi2(ftr, theta):
     ftr.set_parameters(theta)
-    return -Residuals(toas=ftr.toas, model=ftr.model).calc_chi2().value
+    return -Residuals(toas=ftr.toas, model=ftr.model).calc_chi2()
 
 
 def set_priors_basic(ftr, priorerrfact=10.0):
@@ -300,9 +300,7 @@ class MCMCFitter(Fitter):
     def minimize_func(self, theta):
         """Override superclass minimize_func to make compatible with scipy.optimize"""
         # Scale params based on errors
-        ntheta = (
-            self.get_model_parameters(theta) * self.fiterrs
-        ) + self.fitvals
+        ntheta = (self.get_model_parameters(theta) * self.fiterrs) + self.fitvals
         self.set_params(dict(zip(self.fitkeys, ntheta)))
         if not np.isfinite(self.lnprior(self, ntheta)):
             return np.inf
@@ -520,9 +518,7 @@ class MCMCFitterAnalyticTemplate(MCMCFitter):
         return np.append(self.fitvals, self.tfitvals)
 
     def set_parameters(self, theta):
-        self.set_params(
-            dict(zip(self.fitkeys, self.get_model_parameters(theta)))
-        )
+        self.set_params(dict(zip(self.fitkeys, self.get_model_parameters(theta))))
         self.template.set_parameters(self.get_template_parameters(theta))
 
     def get_errors(self):

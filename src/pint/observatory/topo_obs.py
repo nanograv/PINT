@@ -15,7 +15,7 @@ from six import raise_from
 from pint import JD_MJD
 from pint.config import datapath
 from pint.erfautils import gcrs_posvel_from_itrf
-from pint.observatory import Observatory
+from pint.observatory import Observatory, bipm_default
 from pint.observatory.clock_file import ClockFile
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
@@ -67,11 +67,15 @@ class TopoObs(Observatory):
         parfile. If True, it will apply the correction from
         BIPM TT=TT(BIPMYYYY). See the link:
         http://www.bipm.org/en/bipm-services/timescales/time-ftp/ttbipm.html
-    bipm_version : str, optionial
+    bipm_version : str, optional
         Set the version of TT BIPM clock correction file to
-        use, the default is BIPM2015.  It has to be in the format
+        use, the default is %s.  It has to be in the format
         like 'BIPM2015'
-    """
+    origin : str, optional
+        Documentation of the origin/author/date for the information
+    overwrite : bool, optional
+        set True to force overwriting of previous observatory definition
+    """ % bipm_default
 
     def __init__(
         self,
@@ -85,7 +89,9 @@ class TopoObs(Observatory):
         clock_fmt="tempo",
         include_gps=True,
         include_bipm=True,
-        bipm_version="BIPM2015",
+        bipm_version=bipm_default,
+        origin=None,
+        overwrite=False,
     ):
         # ITRF coordinates are required
         if itrf_xyz is None:
@@ -136,6 +142,7 @@ class TopoObs(Observatory):
             if code is not None:
                 aliases.append(code)
 
+        self.origin = origin
         super(TopoObs, self).__init__(name, aliases=aliases, tt2tdb_mode="astropy")
 
     @property
@@ -259,7 +266,8 @@ class TopoObs(Observatory):
                 except Exception as e:
                     raise_from(
                         ValueError(
-                            "Can not find TT BIPM file '%s'. " % self.bipm_version
+                            "Can not find TT BIPM file for version '%s'. "
+                            % self.bipm_version
                         ),
                         e,
                     )

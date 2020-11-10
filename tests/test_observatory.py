@@ -27,7 +27,14 @@ class TestObservatory(unittest.TestCase):
             site = get_observatory(
                 tobs, include_gps=False, include_bipm=True, bipm_version="BIPM2015"
             )
-            assert site, "Observatory {} did not initilized correctly".format(tobs)
+            assert site, "Observatory {} did not initialize correctly".format(tobs)
+
+    def test_different_bipm(self):
+        for tobs in self.test_obs:
+            site = get_observatory(
+                tobs, include_gps=False, include_bipm=True, bipm_version="BIPM2019"
+            )
+            assert site, "BIPM2019 is not a valid BIPM choice"
 
     def test_clock_corr(self):
         for tobs in self.test_obs:
@@ -72,7 +79,7 @@ class TestObservatory(unittest.TestCase):
 
     def test_clock_correction_file_not_available(self):
         if os.getenv("TEMPO2") is None:
-            pytest.skip("TEMPO2 evnironment variable is not set, can't run this test")
+            pytest.skip("TEMPO2 environment variable is not set, can't run this test")
         # observatory clock correction path expections.
         fake_obs = TopoObs(
             "Fake1",
@@ -82,6 +89,7 @@ class TestObservatory(unittest.TestCase):
             clock_file="fake2gps.clk",
             clock_dir="TEMPO2",
             itrf_xyz=[0.00, 0.0, 0.0],
+            overwrite=True,
         )
         site = get_observatory(
             "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
@@ -94,7 +102,7 @@ class TestObservatory(unittest.TestCase):
 
     def test_no_tempo2_but_tempo2_clock_requested(self):
         if os.getenv("TEMPO2") is not None:
-            pytest.skip("TEMPO2 evnironment variable is set, can't run this test")
+            pytest.skip("TEMPO2 environment variable is set, can't run this test")
         # observatory clock correction path expections.
         fake_obs = TopoObs(
             "Fake1",
@@ -104,6 +112,7 @@ class TestObservatory(unittest.TestCase):
             clock_file="fake2gps.clk",
             clock_dir="TEMPO2",
             itrf_xyz=[0.00, 0.0, 0.0],
+            overwrite=True,
         )
         site = get_observatory(
             "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
@@ -113,7 +122,7 @@ class TestObservatory(unittest.TestCase):
 
     def test_no_tempo_but_tempo_clock_requested(self):
         if os.getenv("TEMPO") is not None:
-            pytest.skip("TEMPO evnironment variable is set, can't run this test")
+            pytest.skip("TEMPO environment variable is set, can't run this test")
         # observatory clock correction path expections.
         fake_obs = TopoObs(
             "Fake1",
@@ -123,6 +132,7 @@ class TestObservatory(unittest.TestCase):
             clock_file="fake2gps.clk",
             clock_dir="TEMPO",
             itrf_xyz=[0.00, 0.0, 0.0],
+            overwrite=True,
         )
         site = get_observatory(
             "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"

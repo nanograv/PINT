@@ -29,6 +29,7 @@ from pint.models.parameter import (
     floatParameter,
     prefixParameter,
     strParameter,
+    MJDParameter,
 )
 from pint.models.pulsar_binary import PulsarBinary
 from pint.residuals import Residuals
@@ -272,9 +273,28 @@ class Fitter(object):
                 else:
                     # Assume a numerical parameter
                     if par.frozen:
-                        s += ("{:" + spacingName + "s} {:20g} {:28s} {} \n").format(
-                            pn, prefitpar.value, "", par.units
-                        )
+                        if par.name == "START":
+                            if prefitpar.value is None:
+                                s += (
+                                    "{:" + spacingName + "s} {:20s} {:28g} {} \n"
+                                ).format(pn, " ", par.value, par.units)
+                            else:
+                                s += (
+                                    "{:" + spacingName + "s} {:20g} {:28g} {} \n"
+                                ).format(pn, prefitpar.value, par.value, par.units)
+                        elif par.name == "FINISH":
+                            if prefitpar.value is None:
+                                s += (
+                                    "{:" + spacingName + "s} {:20s} {:28g} {} \n"
+                                ).format(pn, " ", par.value, par.units)
+                            else:
+                                s += (
+                                    "{:" + spacingName + "s} {:20g} {:28g} {} \n"
+                                ).format(pn, prefitpar.value, par.value, par.units)
+                        else:
+                            s += ("{:" + spacingName + "s} {:20g} {:28s} {} \n").format(
+                                pn, prefitpar.value, "", par.units
+                            )
                     else:
                         # s += "{:14s} {:20g} {:20g} {:20.2g} {} \n".format(
                         #     pn,
@@ -760,6 +780,10 @@ class PowellFitter(Fitter):
         # necessarily the one that yields the best fit
         self.minimize_func(np.atleast_1d(self.fitresult.x), *list(fitp.keys()))
 
+        # Update START/FINISH params
+        self.model.START.value = self.toas.first_MJD
+        self.model.FINISH.value = self.toas.last_MJD
+
         return self.resids.chi2
 
 
@@ -849,8 +873,12 @@ class WLSFitter(Fitter):
                 # NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
             chi2 = self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
-            # Updata Uncertainties
+            # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
+
+        # Update START/FINISH params
+        self.model.START.value = self.toas.first_MJD
+        self.model.FINISH.value = self.toas.last_MJD
 
         return chi2
 
@@ -1003,6 +1031,10 @@ class GLSFitter(Fitter):
                     noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
                 self.resids.noise_resids = noise_resids
 
+        # Update START/FINISH params
+        self.model.START.value = self.toas.first_MJD
+        self.model.FINISH.value = self.toas.last_MJD
+
         return chi2
 
 
@@ -1048,7 +1080,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         self.reset_model()
         self.resids_init = copy.deepcopy(self.resids)
         self.designmatrix_makers = []
-        for data_resids in self.resids.residual_objs:
+        for data_resids in self.resids.residual_objs.values():
             self.designmatrix_makers.append(
                 DesignMatrixMaker(data_resids.residual_type, data_resids.unit)
             )
@@ -1057,7 +1089,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         self.noise_designmatrix_maker = DesignMatrixMaker("toa_noise", u.s)
         #
         self.covariancematrix_makers = []
-        for data_resids in self.resids.residual_objs:
+        for data_resids in self.resids.residual_objs.values():
             self.covariancematrix_makers.append(
                 CovarianceMatrixMaker(data_resids.residual_type, data_resids.unit)
             )
@@ -1152,7 +1184,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         sigma_units = []
         for ii, fd_name in enumerate(self.fit_data_names):
             func_name = "scaled_{}_uncertainty".format(fd_name)
-            sigma_units.append(self.resids.residual_objs[ii].unit)
+            sigma_units.append(self.resids.residual_objs[fd_name].unit)
             if hasattr(self.model, func_name):
                 scale_func = getattr(self.model, func_name)
                 if len(self.fit_data) == 1:
@@ -1197,113 +1229,121 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 d_matrix.scaled_by_F0,
             )
 
-        # Get residuals and TOA uncertainties in seconds
-        if i == 0:
-            self.update_resids()
-        # Since the residuals may not have the same unit. Thus the residual here
-        # has no unit.
-        residuals = self.resids.resids
+            # Get residuals and TOA uncertainties in seconds
+            if i == 0:
+                self.update_resids()
+            # Since the residuals may not have the same unit. Thus the residual here
+            # has no unit.
+            residuals = self.resids._combined_resids
 
-        # get any noise design matrices and weight vectors
-        if not full_cov:
-            # We assume the fit date type is toa
-            Mn = self.noise_designmatrix_maker(self.toas, self.model)
-            phi = self.model.noise_model_basis_weight(self.toas)
-            phiinv = np.zeros(M.shape[1])
-            if Mn is not None and phi is not None:
-                phiinv = np.concatenate((phiinv, 1 / phi))
-                new_d_matrix = combine_design_matrices_by_param(d_matrix, Mn)
-                M, params, units, scale_by_F0 = (
-                    new_d_matrix.matrix,
-                    new_d_matrix.derivative_params,
-                    new_d_matrix.param_units,
-                    new_d_matrix.scaled_by_F0,
+            # get any noise design matrices and weight vectors
+            if not full_cov:
+                # We assume the fit date type is toa
+                Mn = self.noise_designmatrix_maker(self.toas, self.model)
+                phi = self.model.noise_model_basis_weight(self.toas)
+                phiinv = np.zeros(M.shape[1])
+                if Mn is not None and phi is not None:
+                    phiinv = np.concatenate((phiinv, 1 / phi))
+                    new_d_matrix = combine_design_matrices_by_param(d_matrix, Mn)
+                    M, params, units, scale_by_F0 = (
+                        new_d_matrix.matrix,
+                        new_d_matrix.derivative_params,
+                        new_d_matrix.param_units,
+                        new_d_matrix.scaled_by_F0,
+                    )
+
+            # normalize the design matrix
+            norm = np.sqrt(np.sum(M ** 2, axis=0))
+            ntmpar = len(fitp)
+            if M.shape[1] > ntmpar:
+                norm[ntmpar:] = 1
+            if np.any(norm == 0):
+                # Make this a LinAlgError so it looks like other bad matrixness
+                raise sl.LinAlgError(
+                    "One or more of the design-matrix columns is null."
                 )
+            M /= norm
 
-        # normalize the design matrix
-        norm = np.sqrt(np.sum(M ** 2, axis=0))
-        ntmpar = len(fitp)
-        if M.shape[1] > ntmpar:
-            norm[ntmpar:] = 1
-        if np.any(norm == 0):
-            # Make this a LinAlgError so it looks like other bad matrixness
-            raise sl.LinAlgError("One or more of the design-matrix columns is null.")
-        M /= norm
-
-        # compute covariance matrices
-        if full_cov:
-            cov = self.get_noise_covariancematrix().matrix
-            cf = sl.cho_factor(cov)
-            cm = sl.cho_solve(cf, M)
-            mtcm = np.dot(M.T, cm)
-            mtcy = np.dot(cm.T, residuals)
-
-        else:
-            Nvec = self.scaled_all_sigma() ** 2
-
-            cinv = 1 / Nvec
-            mtcm = np.dot(M.T, cinv[:, None] * M)
-            mtcm += np.diag(phiinv)
-            mtcy = np.dot(M.T, cinv * residuals)
-
-        if maxiter > 0:
-            try:
-                c = sl.cho_factor(mtcm)
-                xhat = sl.cho_solve(c, mtcy)
-                xvar = sl.cho_solve(c, np.eye(len(mtcy)))
-            except sl.LinAlgError:
-                U, s, Vt = sl.svd(mtcm, full_matrices=False)
-
-                if threshold:
-                    threshold_val = np.finfo(np.longdouble).eps * max(M.shape) * s[0]
-                    s[s < threshold_val] = 0.0
-
-                xvar = np.dot(Vt.T / s, Vt)
-                xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
-            newres = residuals - np.dot(M, xhat)
-            # compute linearized chisq
+            # compute covariance matrices
             if full_cov:
-                chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+                cov = self.get_noise_covariancematrix().matrix
+                cf = sl.cho_factor(cov)
+                cm = sl.cho_solve(cf, M)
+                mtcm = np.dot(M.T, cm)
+                mtcy = np.dot(cm.T, residuals)
+
             else:
-                chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
-        else:
-            newres = residuals
-            if full_cov:
-                chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+                Nvec = self.scaled_all_sigma() ** 2
+
+                cinv = 1 / Nvec
+                mtcm = np.dot(M.T, cinv[:, None] * M)
+                mtcm += np.diag(phiinv)
+                mtcy = np.dot(M.T, cinv * residuals)
+
+            if maxiter > 0:
+                try:
+                    c = sl.cho_factor(mtcm)
+                    xhat = sl.cho_solve(c, mtcy)
+                    xvar = sl.cho_solve(c, np.eye(len(mtcy)))
+                except sl.LinAlgError:
+                    U, s, Vt = sl.svd(mtcm, full_matrices=False)
+
+                    if threshold:
+                        threshold_val = (
+                            np.finfo(np.longdouble).eps * max(M.shape) * s[0]
+                        )
+                        s[s < threshold_val] = 0.0
+
+                    xvar = np.dot(Vt.T / s, Vt)
+                    xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+                newres = residuals - np.dot(M, xhat)
+                # compute linearized chisq
+                if full_cov:
+                    chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+                else:
+                    chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
             else:
-                chi2 = np.dot(newres, cinv * newres)
-            return chi2
+                newres = residuals
+                if full_cov:
+                    chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+                else:
+                    chi2 = np.dot(newres, cinv * newres)
+                return chi2
 
-        # compute absolute estimates, normalized errors, covariance matrix
-        dpars = xhat / norm
-        errs = np.sqrt(np.diag(xvar)) / norm
-        covmat = (xvar / norm).T / norm
-        self.covariance_matrix = covmat
-        self.correlation_matrix = (covmat / errs).T / errs
+            # compute absolute estimates, normalized errors, covariance matrix
+            dpars = xhat / norm
+            errs = np.sqrt(np.diag(xvar)) / norm
+            covmat = (xvar / norm).T / norm
+            self.covariance_matrix = covmat
+            self.correlation_matrix = (covmat / errs).T / errs
 
-        for ii, pn in enumerate(fitp.keys()):
-            uind = params.index(pn)  # Index of designmatrix
-            # Here we use design matrix's label, so the unit goes to normal.
-            # instead of un = 1 / (units[uind])
-            un = units[uind]
-            if scale_by_F0:
-                un *= u.s
-            pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
-            fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
-            # NOTE We need some way to use the parameter limits.
-            fitperrs[pn] = errs[uind]
-        self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
-        # Update Uncertainties
-        self.set_param_uncertainties(fitperrs)
+            for ii, pn in enumerate(fitp.keys()):
+                uind = params.index(pn)  # Index of designmatrix
+                # Here we use design matrix's label, so the unit goes to normal.
+                # instead of un = 1 / (units[uind])
+                un = units[uind]
+                if scale_by_F0:
+                    un *= u.s
+                pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
+                fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
+                # NOTE We need some way to use the parameter limits.
+                fitperrs[pn] = errs[uind]
+            self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
+            # Update Uncertainties
+            self.set_param_uncertainties(fitperrs)
 
-        # Compute the noise realizations if possible
-        if not full_cov:
-            noise_dims = self.model.noise_model_dimensions(self.toas)
-            noise_resids = {}
-            for comp in noise_dims.keys():
-                p0 = noise_dims[comp][0] + ntmpar
-                p1 = p0 + noise_dims[comp][1]
-                noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
-            self.resids.noise_resids = noise_resids
+            # Compute the noise realizations if possible
+            if not full_cov:
+                noise_dims = self.model.noise_model_dimensions(self.toas)
+                noise_resids = {}
+                for comp in noise_dims.keys():
+                    p0 = noise_dims[comp][0] + ntmpar
+                    p1 = p0 + noise_dims[comp][1]
+                    noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
+                self.resids.noise_resids = noise_resids
+
+        # Update START/FINISH params
+        self.model.START.value = self.toas.first_MJD
+        self.model.FINISH.value = self.toas.last_MJD
 
         return chi2

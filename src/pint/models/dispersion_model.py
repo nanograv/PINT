@@ -40,7 +40,7 @@ class Dispersion(DelayComponent):
         """
         # dm delay
         dmdelay = DM * DMconst / freq ** 2.0
-        return dmdelay
+        return dmdelay.to(u.s)
 
     def dispersion_type_delay(self, toas):
         tbl = toas.table
@@ -59,7 +59,7 @@ class Dispersion(DelayComponent):
         Parameters
         ----------
         toas : `TOAs` object or TOA table(TOAs.table)
-             If given a TOAs object, it will use the whole TOA table in the
+            If given a TOAs object, it will use the whole TOA table in the
              `TOAs` object.
 
         Return
@@ -72,6 +72,7 @@ class Dispersion(DelayComponent):
             toas_table = toas.table
 
         dm = np.zeros(len(toas_table)) * self.DM.units
+
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
         return dm
@@ -459,6 +460,11 @@ class DispersionDMX(Dispersion):
 
 class DispersionJump(Dispersion):
     """This class provides the contant offsets to the DM values.
+
+    Notes
+    -----
+    This DM jump is only for modeling the DM values, and will not apply to the
+    dispersion time delay. 
     """
 
     register = True
@@ -491,17 +497,15 @@ class DispersionJump(Dispersion):
         super(DispersionJump, self).validate()
 
     def jump_dm(self, toas):
-        """This method returns the jump delays for each toas section collected by
-        jump parameters. The delay value is determined by jump parameter value
-        in the unit of seconds.
+        """This method returns the DM jump for each dm section collected by
+        dmjump parameters. The delay value is determined by DMJUMP parameter
+        value in the unit of pc / cm ** 3.
         """
         tbl = toas.table
         jdm = np.zeros(len(tbl))
         for dm_jump in self.dm_jumps:
             dm_jump_par = getattr(self, dm_jump)
             mask = dm_jump_par.select_toa_mask(toas)
-            # NOTE: Currently parfile jump value has opposite sign with our
-            # delay calculation.
             jdm[mask] += -dm_jump_par.value
         return jdm * dm_jump_par.units
 
@@ -512,17 +516,11 @@ class DispersionJump(Dispersion):
         d_dm_d_j = np.zeros(len(tbl))
         jpar = getattr(self, jump_param)
         mask = jpar.select_toa_mask(toas)
-        d_dm_d_j[mask] = 1.0
+        d_dm_d_j[mask] = -1.0
         return d_dm_d_j * jpar.units / jpar.units
 
     def d_delay_d_dmjump(self, toas, param_name, acc_delay=None):
-        """ Derivative for delay wrt to dm jumps.
+        """ Derivative for delay wrt to dm jumps. Since DMJUMPS does not affect
+        delay, this would be zero.
         """
-        try:
-            bfreq = self.barycentric_radio_freq(toas)
-        except AttributeError:
-            warn("Using topocentric frequency for dedispersion!")
-            bfreq = tbl["freq"]
-
-        d_dm_d_dmjump = self.d_dm_d_dmjump(toas, param_name)
-        return DMconst * d_dm_d_dmjump / bfreq ** 2.0
+        return np.zeros(toas.ntoas) * (u.s / self.DMJUMP.units)

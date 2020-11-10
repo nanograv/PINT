@@ -152,23 +152,16 @@ class Pulsar(object):
         For a binary pulsar, calculate the orbital phase. Otherwise, return
         an array of unitless quantities of zeros
         """
-        if "PB" not in self:
+        if not self.prefit_model.is_binary:
             log.warn("This is not a binary pulsar")
             return u.Quantity(np.zeros(self.selected_toas.ntoas))
 
-        toas = self.selected_toas.get_mjds()
-
-        if "T0" in self and not self["T0"].quantity is None:
-            tpb = (toas.value - self["T0"].value) / self["PB"].value
-        elif "TASC" in self and not self["TASC"].quantity is None:
-            tpb = (toas.value - self["TASC"].value) / self["PB"].value
+        toas = self.selected_toas
+        if self.fitted:
+            phase = self.postfit_model.orbital_phase(toas, anom="mean")
         else:
-            log.error("Neither T0 nor TASC set")
-            return np.zeros(len(toas))
-
-        phase = np.modf(tpb)[0]
-        phase[phase < 0] += 1
-        return phase
+            phase = self.prefit_model.orbital_phase(toas, anom="mean")
+        return phase / (2 * np.pi * u.rad)
 
     def dayofyear(self):
         """
@@ -522,7 +515,7 @@ class Pulsar(object):
         # TODO: delta_pulse_numbers need some work. They serve both for PHASE and -padd functions from the TOAs
         # as well as for phase jumps added manually in the GUI. They really should not be zeroed out here because
         # that will wipe out preexisting values
-        self.fulltoas.table["delta_pulse_numbers"] = np.zeros(self.fulltoas.ntoas)
+        self.all_toas.table["delta_pulse_numbers"] = np.zeros(self.all_toas.ntoas)
         self.selected_toas.table["delta_pulse_number"] = np.zeros(
             self.selected_toas.ntoas
         )

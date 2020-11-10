@@ -60,7 +60,6 @@ from our :ref:`Tutorials` section::
 
       basic-installation
       examples/PINT_walkthrough
-      examples/MCMC_walkthrough
       examples/Example of parameter usage
       examples/TimingModel_composition
       examples/Timing_model_update_example

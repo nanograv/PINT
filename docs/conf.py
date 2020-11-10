@@ -81,7 +81,7 @@ master_doc = "index"
 
 # General information about the project.
 project = u"pint"
-copyright = u"2017-2019 PINT Developers"
+copyright = u"2017-2020 PINT Developers"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -198,7 +198,7 @@ def _process_module_docstring(app, what, name, obj, options, lines):
 
 
 def setup(app):
-    app.add_stylesheet("custom.css")
+    app.add_css_file("custom.css")
     app.connect("builder-inited", run_apidoc)
     app.connect("autodoc-process-docstring", _process_module_docstring)
 

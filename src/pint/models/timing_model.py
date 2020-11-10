@@ -15,15 +15,18 @@ import numpy as np
 import pint
 import six
 from astropy import log
+from scipy.optimize import brentq
 from pint.models.parameter import (
     AngleParameter,
     floatParameter,
     maskParameter,
     prefixParameter,
     strParameter,
+    MJDParameter,
 )
 from pint.phase import Phase
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
+from pint.toa import TOAs
 
 __all__ = ["DEFAULT_ORDER", "TimingModel"]
 # Parameters or lines in parfiles we don't understand but shouldn't
@@ -71,6 +74,7 @@ DEFAULT_ORDER = [
     "solar_wind",
     "dispersion_constant",
     "dispersion_dmx",
+    "dispersion_jump",
     "pulsar_system",
     "frequency_dependent",
     "absolute_phase",
@@ -151,6 +155,12 @@ class TimingModel(object):
         self.add_param_from_top(
             strParameter(name="UNITS", description="Units (TDB assumed)"), ""
         )
+        self.add_param_from_top(
+            MJDParameter(name="START", description="Start MJD for fitting"), ""
+        )
+        self.add_param_from_top(
+            MJDParameter(name="FINISH", description="End MJD for fitting"), ""
+        )
 
         for cp in components:
             self.add_component(cp, validate=False)
@@ -170,10 +180,10 @@ class TimingModel(object):
             cp.setup()
 
     def validate(self):
-        """ Validate component setup.
-            The checks includes:
-            - Required parameters
-            - Parameter values
+        """Validate component setup.
+        The checks includes:
+        - Required parameters
+        - Parameter values
         """
         for cp in self.components.values():
             cp.validate()
@@ -265,6 +275,15 @@ class TimingModel(object):
         return pstart + pmid + pend
 
     @property
+    def free_params(self):
+        """ Returns all the free parameters in the timing model.
+        """
+        free_params = []
+        for cp in self.components.values():
+            free_params += cp.free_params_component
+        return free_params
+
+    @property
     def components(self):
         """All the components indexed by name."""
         comps = {}
@@ -298,6 +317,139 @@ class TimingModel(object):
         return pfs
 
     @property
+    def is_binary(self):
+        """Does the model describe a binary pulsar? (True or False)"""
+        return any(x.startswith("Binary") for x in self.components.keys())
+
+    def orbital_phase(self, barytimes, anom="mean", radians=True):
+        """Return orbital phase (in radians) at barycentric MJD times
+
+        Args:
+            barytimes (MJD barycentric time(s)): The times to compute the
+                orbital phases.  Needs to be a barycentric time in TDB.
+                If a TOAs instance is passed, the barycenting will happen
+                automatically.  If an astropy Time object is passed, it must
+                be in scale='tdb'.  If an array-like object is passed or
+                a simple float, the time must be in MJD format.
+            anom (str, optional): Type of phase/anomaly. Defaults to "mean".
+                Other options are "eccentric" or "true"
+            radians (bool, optional): Units to return.  Defaults to True.
+                If False, will return unitless phases in cycles (i.e. 0-1).
+
+        Raises:
+            ValueError: If anom.lower() is not "mean", "ecc*", or "true",
+                or if an astropy Time object is passed with scale!="tdb".
+
+        Returns:
+            [array]: The specified anomaly in radians (with unit), unless
+                radians=False, which return unitless cycles (0-1).
+        """
+        if not self.is_binary:  # punt if not a binary
+            return None
+        # Find the binary model
+        b = self.components[
+            [x for x in self.components.keys() if x.startswith("Binary")][0]
+        ]
+        # Make sure that the binary instance has the binary params
+        b.update_binary_object()
+        # Handle input times and update them in stand-alone binary models
+        if isinstance(barytimes, TOAs):
+            # If we pass the TOA table, then barycenter the TOAs
+            bts = self.get_barycentric_toas(barytimes)
+        elif isinstance(barytimes, time.Time):
+            if barytimes.scale == "tdb":
+                bts = np.asarray(barytimes.mjd)
+            else:
+                raise ValueError("barytimes as Time instance needs scale=='tdb'")
+        else:
+            bts = np.asarray(barytimes)
+        bbi = b.binary_instance  # shorthand
+        # Update the times in the stand-alone binary model
+        updates = {"barycentric_toa": bts}
+        bbi.update_input(**updates)
+        if anom.lower() == "mean":
+            anoms = bbi.M()
+        elif anom.lower().startswith("ecc"):
+            anoms = bbi.E()
+        elif anom.lower() == "true":
+            anoms = bbi.nu()
+        else:
+            raise ValueError("anom='%s' is not a recognized type of anomaly" % anom)
+        # Make sure all angles are between 0-2*pi
+        anoms = np.fmod(anoms.value, 2 * np.pi)
+        if radians:  # return with radian units
+            return anoms * u.rad
+        else:  # return as unitless cycles from 0-1
+            return anoms / (2 * np.pi)
+
+    def conjunction(self, baryMJD):
+        """Return the time(s) of the first superior conjunction(s) after baryMJD
+
+        Args:
+            baryMJD (floats or Time()): barycentric (tdb) MJD(s) prior to the
+                conjunction we are looking for.  Can be an array.
+
+        Raises:
+            ValueError: If baryMJD is an astropy Time object with scale!="tdb".
+
+        Returns:
+            [float or array]: The barycentric MJD(tdb) time(s) of the next
+                superior conjunction(s) after baryMJD
+        """
+        if not self.is_binary:  # punt if not a binary
+            return None
+        # Find the binary model
+        b = self.components[
+            [x for x in self.components.keys() if x.startswith("Binary")][0]
+        ]
+        bbi = b.binary_instance  # shorthand
+        # Superior conjunction occurs when true anomaly + omega == 90 deg
+        # We will need to solve for this using a root finder (brentq)
+        # This is the function to root-find:
+        def funct(t):
+            nu = self.orbital_phase(t, anom="true")
+            return np.fmod((nu + bbi.omega()).value, 2 * np.pi) - np.pi / 2
+
+        # Handle the input time(s)
+        if isinstance(baryMJD, time.Time):
+            if baryMJD.scale == "tdb":
+                bts = np.atleast_1d(baryMJD.mjd)
+            else:
+                raise ValueError("baryMJD as Time instance needs scale=='tdb'")
+        else:
+            bts = np.atleast_1d(baryMJD)
+        # Step over the maryMJDs
+        scs = []
+        for bt in bts:
+            # Make 11 times over one orbit after bt
+            ts = np.linspace(bt, bt + self.PB.value, 11)
+            # Compute the true anomalies and omegas for those times
+            nus = self.orbital_phase(ts, anom="true")
+            omegas = bbi.omega()
+            x = np.fmod((nus + omegas).value, 2 * np.pi) - np.pi / 2
+            # find the lowest index where x is just below 0
+            for lb in range(len(x)):
+                if x[lb] < 0 and x[lb + 1] > 0:
+                    break
+            # Now use scipy to find the root
+            scs.append(brentq(funct, ts[lb], ts[lb + 1]))
+        if len(scs) == 1:
+            return scs[0]  # Return a float
+        else:
+            return np.asarray(scs)  # otherwise return an array
+
+    @property
+    def dm_funcs(self):
+        """ List of all dm value functions. """
+        dmfs = []
+        for cp in self.components.values():
+            if hasattr(cp, "dm_value_funcs"):
+                dmfs += cp.dm_value_funcs
+            else:
+                continue
+        return dmfs
+
+    @property
     def has_correlated_errors(self):
         """Whether or not this model has correlated errors."""
         if "NoiseComponent" in self.component_types:
@@ -308,7 +460,7 @@ class TimingModel(object):
         return False
 
     @property
-    def covariance_matrix_funcs(self,):
+    def covariance_matrix_funcs(self):
         """List of covariance matrix functions."""
         cvfs = []
         if "NoiseComponent" in self.component_types:
@@ -317,17 +469,17 @@ class TimingModel(object):
         return cvfs
 
     @property
-    def dm_covariance_matrix_funcs(self,):
+    def dm_covariance_matrix_funcs(self):
         """List of covariance matrix functions."""
         cvfs = []
         if "NoiseComponent" in self.component_types:
             for nc in self.NoiseComponent_list:
-                cvfs += nc.dm_covariance_matrix_funcs
+                cvfs += nc.dm_covariance_matrix_funcs_component
         return cvfs
 
     # Change sigma to uncertainty to avoid name conflict.
     @property
-    def scaled_toa_uncertainty_funcs(self,):
+    def scaled_toa_uncertainty_funcs(self):
         """List of scaled toa uncertainty functions."""
         ssfs = []
         if "NoiseComponent" in self.component_types:
@@ -337,16 +489,17 @@ class TimingModel(object):
 
     # Change sigma to uncertainty to avoid name conflict.
     @property
-    def scaled_dm_uncertainty_funcs(self,):
+    def scaled_dm_uncertainty_funcs(self):
         """List of scaled dm uncertainty functions."""
         ssfs = []
         if "NoiseComponent" in self.component_types:
             for nc in self.NoiseComponent_list:
-                ssfs += nc.scaled_dm_sigma_funcs
+                if hasattr(nc, "scaled_dm_sigma_funcs"):
+                    ssfs += nc.scaled_dm_sigma_funcs
         return ssfs
 
     @property
-    def basis_funcs(self,):
+    def basis_funcs(self):
         """List of scaled uncertainty functions."""
         bfs = []
         if "NoiseComponent" in self.component_types:
@@ -378,8 +531,7 @@ class TimingModel(object):
         return Dphase_Ddelay
 
     def get_deriv_funcs(self, component_type, derivative_type=""):
-        """Return dictionary of derivative functions.
-        """
+        """Return dictionary of derivative functions."""
         # TODO, this function can be a more generical function collector.
         deriv_funcs = defaultdict(list)
         if not derivative_type == "":
@@ -441,7 +593,7 @@ class TimingModel(object):
         return comp_type
 
     def map_component(self, component):
-        """ Get the location of component.
+        """Get the location of component.
 
         Parameters
         ----------
@@ -531,7 +683,7 @@ class TimingModel(object):
             self.validate()
 
     def remove_component(self, component):
-        """ Remove one component from the timing model.
+        """Remove one component from the timing model.
 
         Parameters
         ----------
@@ -542,7 +694,7 @@ class TimingModel(object):
         host.remove(cp)
 
     def _locate_param_host(self, components, param):
-        """ Search for the parameter host component.
+        """Search for the parameter host component.
 
         Parameters
         ----------
@@ -583,17 +735,17 @@ class TimingModel(object):
         return dict(categorydict)
 
     def add_param_from_top(self, param, target_component, setup=False):
-        """ Add a parameter to a timing model component.
+        """Add a parameter to a timing model component.
 
-            Parameters
-            ----------
-            param: str
-                Parameter name
-            target_component: str
-                Parameter host component name. If given as "" it would add
-                parameter to the top level `TimingModel` class
-            setup: bool, optional
-                Flag to run setup() function.
+        Parameters
+        ----------
+        param: str
+            Parameter name
+        target_component: str
+            Parameter host component name. If given as "" it would add
+            parameter to the top level `TimingModel` class
+        setup: bool, optional
+            Flag to run setup() function.
         """
         if target_component == "":
             setattr(self, param.name, param)
@@ -722,10 +874,11 @@ class TimingModel(object):
                 # if no absolute phase (TZRMJD), add the component to the model and calculate it
                 from pint.models import absolute_phase
 
-                self.add_component(absolute_phase.AbsPhase())
+                self.add_component(absolute_phase.AbsPhase(), validate=False)
                 self.make_TZR_toa(
                     toas
                 )  # TODO:needs timfile to get all toas, but model doesn't have access to timfile. different place for this?
+                self.validate()
             tz_toa = self.get_TZR_toa(toas)
             tz_delay = self.delay(tz_toa)
             tz_phase = Phase(np.zeros(len(toas.table)), np.zeros(len(toas.table)))
@@ -735,10 +888,22 @@ class TimingModel(object):
         else:
             return phase
 
+    def total_dm(self, toas):
+        """ This function calculates the dispersion measures from all the dispersion
+        type of components.
+        """
+        # Here we assume the unit would be the same for all the dm value function.
+        # By doing so, we do not have to hard code an unit here.
+        dm = self.dm_funcs[0](toas)
+
+        for dm_f in self.dm_funcs[1::]:
+            dm += dm_f(toas)
+        return dm
+
     def toa_covariance_matrix(self, toas):
         """This a function to get the TOA covariance matrix for noise models.
-           If there is no noise model component provided, a diagonal matrix with
-           TOAs error as diagonal element will be returned.
+        If there is no noise model component provided, a diagonal matrix with
+        TOAs error as diagonal element will be returned.
         """
         ntoa = toas.ntoas
         tbl = toas.table
@@ -754,8 +919,8 @@ class TimingModel(object):
 
     def dm_covariance_matrix(self, toas):
         """This a function to get the DM covariance matrix for noise models.
-           If there is no noise model component provided, a diagonal matrix with
-           TOAs error as diagonal element will be returned.
+        If there is no noise model component provided, a diagonal matrix with
+        TOAs error as diagonal element will be returned.
         """
         dms, valid_dm = toas.get_flag_value("pp_dm")
         dmes, valid_dme = toas.get_flag_value("pp_dme")
@@ -796,7 +961,7 @@ class TimingModel(object):
 
     def scaled_dm_uncertainty(self, toas):
         """ Get the scaled DM data uncertainties noise models.
-        
+
             If there is no noise model component provided, a vector with
             DM error as values will be returned.
 
@@ -923,18 +1088,18 @@ class TimingModel(object):
     def get_barycentric_toas(self, toas, cutoff_component=""):
         """Conveniently calculate the barycentric TOAs.
 
-       Parameters
-       ----------
-       toas: TOAs object
-           The TOAs the barycentric corrections are applied on
-       cutoff_delay: str, optional
-           The cutoff delay component name. If it is not provided, it will
-           search for binary delay and apply all the delay before binary.
+        Parameters
+        ----------
+        toas: TOAs object
+            The TOAs the barycentric corrections are applied on
+        cutoff_delay: str, optional
+            The cutoff delay component name. If it is not provided, it will
+            search for binary delay and apply all the delay before binary.
 
-       Return
-       ------
-       astropy.quantity.
-           Barycentered TOAs.
+        Return
+        ------
+        astropy.quantity.
+            Barycentered TOAs.
 
         """
         tbl = toas.table
@@ -1164,135 +1329,289 @@ class TimingModel(object):
             M[:, mask] /= F0.value
         return M, params, units, scale_by_F0
 
-    def compare(self, othermodel, nodmx=True):
+    def compare(self, othermodel, nodmx=True, threshold_sigma=3.0, verbosity="max"):
         """Print comparison with another model
-
-        Parameters
-        ----------
-        othermodel
-            TimingModel object to compare to
-        nodmx : bool
-            If True (which is the default), don't print the DMX parameters in the comparison
-
-        Returns
-        -------
-        str
-            Human readable comparison, for printing
-        """
+            Parameters
+            ----------
+            othermodel
+                TimingModel object to compare to
+            nodmx : bool
+                If True (which is the default), don't print the DMX parameters in
+                the comparison
+            threshold_sigma : float
+                Pulsar parameters for which diff_sigma > threshold will be printed
+                with an exclamation point at the end of the line
+            verbosity : string
+                Dictates amount of information returned. Options include "max",
+                "med", and "min", which have the following results:
+                    "max"     - print all lines from both models whether they are fit
+                                or not (note that nodmx will override this); DEFAULT
+                    "med"     - only print lines for parameters that are fit
+                    "min"     - only print lines for fit parameters for which
+                                diff_sigma > threshold
+                    "check"   - only print significant changes with astropy.log.warning, not
+                                as string (note that all other modes will still print this)        
+            
+            Returns
+            -------
+            str
+                Human readable comparison, for printing
+                Formatted as a five column table with titles of
+                PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2
+                where Model 1/2 refer to self and othermodel Timing Model objects,
+                and Diff_SigmaX is the difference in a given parameter as reported by the two models,
+                normalized by the uncertainty in model X. If model X has no reported uncertainty,
+                nothing will be printed. When either Diff_Sigma value is greater than threshold_sigma, 
+                an exclamation point (!) will be appended to the line. If the uncertainty in the first model
+                if smaller than the second, an asterisk (*) will be appended to the line. Also, astropy
+                warnings and info statements will be printed.
+                
+            else:
+                Nonetype
+                    Prints astropy.log warnings for parameters that have changed significantly
+                    and/or have increased in uncertainty.
+            """
 
         from uncertainties import ufloat
         import uncertainties.umath as um
+        import sys
+        from copy import deepcopy as cp
 
         s = "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
-            "PARAMETER", "Self   ", "Other   ", "Diff_Sigma1", "Diff_Sigma2"
+            "PARAMETER", "Model 1", "Model 2 ", "Diff_Sigma1", "Diff_Sigma2"
         )
         s += "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
             "---------", "----------", "----------", "----------", "----------"
         )
+        log.info("Comparing ephemerides for PSR %s" % self.PSR.value)
+        log.info("Threshold sigma = %f" % threshold_sigma)
+        log.info("Creating a copy of Model 2")
+        if verbosity == "max":
+            log.info("Maximum verbosity - printing all parameters")
+        elif verbosity == "med":
+            log.info("Medium verbosity - printing parameters that are fit")
+        elif verbosity == "min":
+            log.info(
+                "Minimum verbosity - printing parameters that are fit and significantly changed"
+            )
+        elif verbosity == "check":
+            log.info("Check verbosity - only warnings/info with be displayed")
+        othermodel = cp(othermodel)
+
+        if (
+            "POSEPOCH" in self.params_ordered
+            and "POSEPOCH" in othermodel.params_ordered
+        ):
+            if (
+                self.POSEPOCH.value is not None
+                and self.POSEPOCH.value != othermodel.POSEPOCH.value
+            ):
+                log.info("Updating POSEPOCH in Model 2 to match Model 1")
+                othermodel.change_posepoch(self.POSEPOCH.value)
+        if "PEPOCH" in self.params_ordered and "PEPOCH" in othermodel.params_ordered:
+            if (
+                self.PEPOCH.value is not None
+                and self.PEPOCH.value != othermodel.PEPOCH.value
+            ):
+                log.info("Updating PEPOCH in Model 2 to match Model 1")
+                othermodel.change_pepoch(self.PEPOCH.value)
+        if "DMEPOCH" in self.params_ordered and "DMEPOCH" in othermodel.params_ordered:
+            if (
+                self.DMEPOCH.value is not None
+                and self.DMEPOCH.value != othermodel.DMEPOCH.value
+            ):
+                log.info("Updating DMEPOCH in Model 2 to match Model 1")
+                othermodel.change_posepoch(self.DMEPOCH.value)
         for pn in self.params_ordered:
             par = getattr(self, pn)
             if par.value is None:
                 continue
+            newstr = ""
             try:
                 otherpar = getattr(othermodel, pn)
             except AttributeError:
-                # s += "Parameter {} missing in other model\n".format(par.name)
                 otherpar = None
             if isinstance(par, strParameter):
-                s += "{:14s} {:>28s}".format(pn, par.value)
+                newstr += "{:14s} {:>28s}".format(pn, par.value)
                 if otherpar is not None:
-                    s += " {:>28s}\n".format(otherpar.value)
+                    newstr += " {:>28s}\n".format(otherpar.value)
                 else:
-                    s += " {:>28s}\n".format("Missing")
+                    newstr += " {:>28s}\n".format("Missing")
             elif isinstance(par, AngleParameter):
                 if par.frozen:
                     # If not fitted, just print both values
-                    s += "{:14s} {:>28s}".format(pn, str(par.quantity))
+                    newstr += "{:14s} {:>28s}".format(pn, str(par.quantity))
                     if otherpar is not None:
-                        s += " {:>28s}\n".format(str(otherpar.quantity))
+                        newstr += " {:>28s}\n".format(str(otherpar.quantity))
                     else:
-                        s += " {:>28s}\n".format("Missing")
+                        newstr += " {:>28s}\n".format("Missing")
                 else:
                     # If fitted, print both values with uncertainties
                     if par.units == u.hourangle:
                         uncertainty_unit = pint.hourangle_second
                     else:
                         uncertainty_unit = u.arcsec
-                    s += "{:14s} {:>16s} +/- {:7.2g}".format(
+                    newstr += "{:14s} {:>16s} +/- {:7.2g}".format(
                         pn,
                         str(par.quantity),
                         par.uncertainty.to(uncertainty_unit).value,
                     )
                     if otherpar is not None:
                         try:
-                            s += " {:>16s} +/- {:7.2g}".format(
+                            newstr += " {:>16s} +/- {:7.2g}".format(
                                 str(otherpar.quantity),
                                 otherpar.uncertainty.to(uncertainty_unit).value,
                             )
                         except AttributeError:
                             # otherpar must have no uncertainty
                             if otherpar.quantity is not None:
-                                s += " {:>28s}".format(str(otherpar.quantity))
+                                newstr += " {:>28s}".format(str(otherpar.quantity))
                             else:
-                                s += " {:>28s}".format("Missing")
+                                newstr += " {:>28s}".format("Missing")
                     else:
-                        s += " {:>28s}".format("Missing")
+                        newstr += " {:>28s}".format("Missing")
                     try:
                         diff = otherpar.value - par.value
                         diff_sigma = diff / par.uncertainty.value
-                        s += " {:>10.2f}".format(diff_sigma)
+                        if abs(diff_sigma) != np.inf:
+                            newstr += " {:>10.2f}".format(diff_sigma)
+                            if abs(diff_sigma) > threshold_sigma:
+                                newstr += " !"
+                            else:
+                                newstr += "  "
+                        else:
+                            newstr += "           "
                         diff_sigma2 = diff / otherpar.uncertainty.value
-                        s += " {:>10.2f}".format(diff_sigma2)
+                        if abs(diff_sigma2) != np.inf:
+                            newstr += " {:>10.2f}".format(diff_sigma2)
+                            if abs(diff_sigma2) > threshold_sigma:
+                                newstr += " !"
                     except (AttributeError, TypeError):
                         pass
-                    s += "\n"
+                    if otherpar is not None:
+                        if (
+                            par.uncertainty is not None
+                            and otherpar.uncertainty is not None
+                        ):
+                            if par.uncertainty < otherpar.uncertainty:
+                                newstr += " *"
+                    newstr += "\n"
             else:
                 # Assume numerical parameter
                 if nodmx and pn.startswith("DMX"):
                     continue
                 if par.frozen:
                     # If not fitted, just print both values
-                    s += "{:14s} {:28f}".format(pn, par.value)
+                    newstr += "{:14s} {:28f}".format(pn, par.value)
                     if otherpar is not None and otherpar.value is not None:
                         try:
-                            s += " {:28SP}\n".format(
+                            newstr += " {:28SP}".format(
                                 ufloat(otherpar.value, otherpar.uncertainty.value)
                             )
                         except:
-                            s += " {:28f}\n".format(otherpar.value)
+                            newstr += " {:28f}".format(otherpar.value)
+                        if otherpar.value != par.value:
+                            sys.stdout.flush()
+                            log.warning(
+                                "Parameter %s not fit, but has changed between these models"
+                                % par.name
+                            )
+                            log.handlers[0].flush()
+                            newstr += " !"
+                        if (
+                            par.uncertainty is not None
+                            and otherpar.uncertainty is not None
+                        ):
+                            if par.uncertainty < otherpar.uncertainty:
+                                newstr += " *"
+                        newstr += "\n"
                     else:
-                        s += " {:>28s}\n".format("Missing")
+                        newstr += " {:>28s}\n".format("Missing")
                 else:
                     # If fitted, print both values with uncertainties
-                    s += "{:14s} {:28SP}".format(
+                    newstr += "{:14s} {:28SP}".format(
                         pn, ufloat(par.value, par.uncertainty.value)
                     )
                     if otherpar is not None and otherpar.value is not None:
                         try:
-                            s += " {:28SP}".format(
+                            newstr += " {:28SP}".format(
                                 ufloat(otherpar.value, otherpar.uncertainty.value)
                             )
                         except AttributeError:
                             # otherpar must have no uncertainty
                             if otherpar.value is not None:
-                                s += " {:28f}".format(otherpar.value)
+                                newstr += " {:28f}".format(otherpar.value)
                             else:
-                                s += " {:>28s}".format("Missing")
+                                newstr += " {:>28s}".format("Missing")
                     else:
-                        s += " {:>28s}".format("Missing")
+                        newstr += " {:>28s}".format("Missing")
+                    if "Missing" in newstr:
+                        ind = np.where(np.array(newstr.split()) == "Missing")[0][0]
+                        log.info("Parameter %s missing from model %i" % (par.name, ind))
                     try:
                         diff = otherpar.value - par.value
                         diff_sigma = diff / par.uncertainty.value
-                        s += " {:>10.2f}".format(diff_sigma)
+                        if abs(diff_sigma) != np.inf:
+                            newstr += " {:>10.2f}".format(diff_sigma)
+                            if abs(diff_sigma) > threshold_sigma:
+                                newstr += " !"
+                        else:
+                            newstr += "           "
                         diff_sigma2 = diff / otherpar.uncertainty.value
-                        s += " {:>10.2f}".format(diff_sigma2)
+                        if abs(diff_sigma2) != np.inf:
+                            newstr += " {:>10.2f}".format(diff_sigma2)
+                            if abs(diff_sigma2) > threshold_sigma:
+                                newstr += " !"
                     except (AttributeError, TypeError):
                         pass
-                    s += "\n"
-        # Now print any parametrs in othermodel that were missing in self.
+                    if otherpar is not None:
+                        if (
+                            par.uncertainty is not None
+                            and otherpar.uncertainty is not None
+                        ):
+                            if par.uncertainty < otherpar.uncertainty:
+                                newstr += " *"
+                    newstr += "\n"
+
+            if "!" in newstr and not par.frozen:
+                try:
+                    sys.stdout.flush()
+                    log.warning(
+                        "Parameter %s has changed significantly (%f sigma)"
+                        % (newstr.split()[0], float(newstr.split()[-2]))
+                    )
+                    log.handlers[0].flush()
+                except:
+                    sys.stdout.flush()
+                    log.warning(
+                        "Parameter %s has changed significantly (%f sigma)"
+                        % (newstr.split()[0], float(newstr.split()[-3]))
+                    )
+                    log.handlers[0].flush()
+            if "*" in newstr:
+                sys.stdout.flush()
+                log.warning(
+                    "Uncertainty on parameter %s has increased (unc2/unc1 = %2.2f)"
+                    % (newstr.split()[0], float(otherpar.uncertainty / par.uncertainty))
+                )
+                log.handlers[0].flush()
+
+            if verbosity == "max":
+                s += newstr
+            elif verbosity == "med":
+                if not par.frozen:
+                    s += newstr
+            elif verbosity == "min":
+                if "!" in newstr and not par.frozen:
+                    s += newstr
+            elif verbosity != "check":
+                raise AttributeError(
+                    'Options for verbosity are "max" (default), "med", "min", and "check"'
+                )
+        # Now print any parameters in othermodel that were missing in self.
         mypn = self.params_ordered
         for opn in othermodel.params_ordered:
-            if opn in mypn:
+            if opn in mypn and type(getattr(self, opn).value) != type(None):
                 continue
             if nodmx and opn.startswith("DMX"):
                 continue
@@ -1300,10 +1619,15 @@ class TimingModel(object):
                 otherpar = getattr(othermodel, opn)
             except AttributeError:
                 otherpar = None
-            s += "{:14s} {:>28s}".format(opn, "Missing")
-            s += " {:>28s}".format(str(otherpar.quantity))
-            s += "\n"
-        return s
+            if type(otherpar.value) == type(None):
+                continue
+            log.info("Parameter %s missing from model 1" % opn)
+            if verbosity == "max":
+                s += "{:14s} {:>28s}".format(opn, "Missing")
+                s += " {:>28s}".format(str(otherpar.quantity))
+                s += "\n"
+        if verbosity != "check":
+            return s.split("\n")
 
     def read_parfile(self, file, validate=True):
         """Read values from the specified parfile into the model parameters.
@@ -1343,6 +1667,18 @@ class TimingModel(object):
                 log.warning("EPHVER %s does nothing in PINT" % k[1])
                 # actually people expect EPHVER 5 to work
                 # even though it's supposed to imply TCB which doesn't
+                continue
+
+            if name == "START":
+                if name in repeat_param:
+                    raise ValueError("START is repeated in par file")
+                self.START.value = k[1]
+                continue
+
+            if name == "FINISH":
+                if name in repeat_param:
+                    raise ValueError("FINISH is repeated in par file")
+                self.FINISH.value = k[1]
                 continue
 
             repeat_param[name] += 1
@@ -1529,6 +1865,23 @@ class Component(object):
                 )
 
     @property
+    def free_params_component(self):
+        """ Return the free parameters in the component.
+
+        This function collects the non-frozen parameters.
+
+        Return
+        ------
+        A list of free parameters.
+        """
+        free_param = []
+        for p in self.params:
+            par = getattr(self, p)
+            if not par.frozen:
+                free_param.append(p)
+        return free_param
+
+    @property
     def param_prefixs(self):
         prefixs = {}
         for p in self.params:
@@ -1541,8 +1894,7 @@ class Component(object):
         return prefixs
 
     def get_params_of_type(self, param_type):
-        """ Get all the parameters in timing model for one specific type
-        """
+        """Get all the parameters in timing model for one specific type"""
         result = []
         for p in self.params:
             par = getattr(self, p)
@@ -1834,7 +2186,7 @@ class Component(object):
 
         return True
 
-    def print_par(self,):
+    def print_par(self):
         result = ""
         for p in self.params:
             result += getattr(self, p).as_parfile_line()
@@ -1842,13 +2194,13 @@ class Component(object):
 
 
 class DelayComponent(Component):
-    def __init__(self,):
+    def __init__(self):
         super(DelayComponent, self).__init__()
         self.delay_funcs_component = []
 
 
 class PhaseComponent(Component):
-    def __init__(self,):
+    def __init__(self):
         super(PhaseComponent, self).__init__()
         self.phase_funcs_component = []
         self.phase_derivs_wrt_delay = []

@@ -13,6 +13,7 @@ TopoObs(
     tempo_code="1",
     itoa_code="GB",
     itrf_xyz=[882589.65, -4924872.32, 3943729.348],
+    origin="This is a test",
 )
 TopoObs(
     "arecibo",
@@ -92,7 +93,7 @@ TopoObs(
     itrf_xyz=[3828445.659, 445223.600, 5064921.5677],
 )
 TopoObs(
-    "fast", tempo_code="k", itoa_code="FA", itrf_xyz=[-1668557.0, 5506838.0, 2744934.0]
+    "fast", tempo_code="k", itoa_code="FA", itrf_xyz=[-1668557.0, 5506838.0, 2744934.0],
 )
 TopoObs(
     "mwa",
@@ -107,7 +108,7 @@ TopoObs(
     itrf_xyz=[-1602196.60, -5042313.47, 3553971.51],
 )
 TopoObs(
-    "ps1", tempo_code="p", itoa_code="PS", itrf_xyz=[-5461997.8, -2412559.0, 2243024.0]
+    "ps1", tempo_code="p", itoa_code="PS", itrf_xyz=[-5461997.8, -2412559.0, 2243024.0],
 )
 TopoObs(
     "hobart",
@@ -188,5 +189,9 @@ TopoObs(
     itrf_xyz=[-2058897.5725006417, -3621371.264826613, 4814353.577678314],
 )
 TopoObs(
-    "acre", aliases=["acreroad", "a", "AR"], itrf_xyz=[3573741.1, -269156.74, 5258407.3]
+    "acre",
+    aliases=["acreroad", "a", "AR"],
+    itrf_xyz=[3573741.1, -269156.74, 5258407.3],
 )
+TopoObs("ata", aliases=["hcro"], itrf_xyz=[-2524263.18, -4123529.78, 4147966.36])
+TopoObs("ccera", itrf_xyz=[1093406.840, -4391945.819, 4479103.550])

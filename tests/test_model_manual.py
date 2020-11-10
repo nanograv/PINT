@@ -106,7 +106,7 @@ def test_ecliptic(gm):
     assert "AstrometryEcliptic" in m.components
 
 
-bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par"]
+bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par", "J1744-1134.basic.ecliptic.par"]
 
 
 @pytest.mark.parametrize("parfile", glob(join(datadir, "*.par")))
@@ -163,8 +163,12 @@ def test_simple_manual():
 
     tm.RAJ.value = "19:59:48"
     tm.DECJ.value = "20:48:36"
-    tm.F0.value = 622.122030511927 * u.Hz
+    tm.F0.quantity = 622.122030511927 * u.Hz
+    tm.PEPOCH.value = 48196.0
     tm.validate()  # This should work.
+
+    # When there is no POSEPOCH set, it should inherit the value from PEPOCH as a default.  Check that this is true.
+    assert tm.POSEPOCH.value == tm.PEPOCH.value
 
 
 def test_add_all_components():

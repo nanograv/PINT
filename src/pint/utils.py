@@ -7,6 +7,7 @@ from copy import deepcopy
 import astropy.units as u
 from astropy import log
 import astropy.constants as const
+import astropy.coordinates as coords
 import numpy as np
 import six
 import scipy.optimize.zeros as zeros
@@ -14,6 +15,9 @@ from scipy.special import fdtrc
 
 
 from io import StringIO
+
+import pint.pulsar_ecliptic
+
 
 __all__ = [
     "PosVel",
@@ -46,6 +50,8 @@ __all__ = [
     "pulsar_B",
     "pulsar_B_lightcyl",
     "FTest",
+    "add_dummy_distance",
+    "remove_dummy_distance",
 ]
 
 
@@ -1391,3 +1397,159 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
             log.warning("Models have equal degrees of freedom, cannot preform F-test.")
         ft = False
     return ft
+
+
+def add_dummy_distance(c, distance=1 * u.kpc):
+    """
+    Adds a dummy distance to a SkyCoord object for applying proper motion
+
+    Parameters
+    ----------
+    c: `astropy.coordinates.sky_coordinate.SkyCoord` object
+        current SkyCoord object without distance but with proper motion and obstime
+    distance: `Quantity`, optional
+        distance to supply
+
+    Returns
+    -------
+    cnew
+        new SkyCoord object with a distance attached
+    """
+
+    if c.frame.data.differentials == {}:
+        log.warning(
+            "No proper motions available for %r: returning coordinates unchanged" % c
+        )
+        return c
+    if c.obstime is None:
+        log.warning("No obstime available for %r: returning coordinates unchanged" % c)
+        return c
+
+    if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
+        if hasattr(c, "pm_ra_cosdec"):
+            cnew = coords.SkyCoord(
+                ra=c.ra,
+                dec=c.dec,
+                pm_ra_cosdec=c.pm_ra_cosdec,
+                pm_dec=c.pm_dec,
+                obstime=c.obstime,
+                distance=distance,
+                frame=coords.ICRS,
+            )
+        else:
+            # it seems that after applying proper motions
+            # it changes the RA pm to pm_ra instead of pm_ra_cosdec
+            # although the value seems the same
+            cnew = coords.SkyCoord(
+                ra=c.ra,
+                dec=c.dec,
+                pm_ra_cosdec=c.pm_ra,
+                pm_dec=c.pm_dec,
+                obstime=c.obstime,
+                distance=distance,
+                frame=coords.ICRS,
+            )
+
+        return cnew
+    elif isinstance(c.frame, coords.builtin_frames.galactic.Galactic):
+        cnew = coords.SkyCoord(
+            l=c.l,
+            b=c.b,
+            pm_l_cosb=c.pm_l_cosb,
+            pm_b=c.pm_b,
+            obstime=c.obstime,
+            distance=distance,
+            frame=coords.Galactic,
+        )
+        return cnew
+    elif isinstance(c.frame, pint.pulsar_ecliptic.PulsarEcliptic):
+        cnew = coords.SkyCoord(
+            lon=c.lon,
+            lat=c.lat,
+            pm_lon_coslat=c.pm_lon_coslat,
+            pm_lat=c.pm_lat,
+            obstime=c.obstime,
+            distance=distance,
+            frame=pint.pulsar_ecliptic.PulsarEcliptic,
+        )
+        return cnew
+    else:
+        log.warning(
+            "Do not know coordinate frame for %r: returning coordinates unchanged" % c
+        )
+        return c
+
+
+def remove_dummy_distance(c):
+    """
+    Removes a dummy distance from a SkyCoord object after applying proper motion
+
+    Parameters
+    ----------
+    c: `astropy.coordinates.sky_coordinate.SkyCoord` object
+        current SkyCoord object with distance and with proper motion and obstime
+
+    Returns
+    -------
+    cnew
+        new SkyCoord object with a distance removed
+    """
+
+    if c.frame.data.differentials == {}:
+        log.warning(
+            "No proper motions available for %r: returning coordinates unchanged" % c
+        )
+        return c
+    if c.obstime is None:
+        log.warning("No obstime available for %r: returning coordinates unchanged" % c)
+        return c
+
+    if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
+        if hasattr(c, "pm_ra_cosdec"):
+
+            cnew = coords.SkyCoord(
+                ra=c.ra,
+                dec=c.dec,
+                pm_ra_cosdec=c.pm_ra_cosdec,
+                pm_dec=c.pm_dec,
+                obstime=c.obstime,
+                frame=coords.ICRS,
+            )
+        else:
+            # it seems that after applying proper motions
+            # it changes the RA pm to pm_ra instead of pm_ra_cosdec
+            # although the value seems the same
+            cnew = coords.SkyCoord(
+                ra=c.ra,
+                dec=c.dec,
+                pm_ra_cosdec=c.pm_ra,
+                pm_dec=c.pm_dec,
+                obstime=c.obstime,
+                frame=coords.ICRS,
+            )
+        return cnew
+    elif isinstance(c.frame, coords.builtin_frames.galactic.Galactic):
+        cnew = coords.SkyCoord(
+            l=c.l,
+            b=c.b,
+            pm_l_cosb=c.pm_l_cosb,
+            pm_b=c.pm_b,
+            obstime=c.obstime,
+            frame=coords.Galactic,
+        )
+        return cnew
+    elif isinstance(c.frame, pint.pulsar_ecliptic.PulsarEcliptic):
+        cnew = coords.SkyCoord(
+            lon=c.lon,
+            lat=c.lat,
+            pm_lon_coslat=c.pm_lon_coslat,
+            pm_lat=c.pm_lat,
+            obstime=c.obstime,
+            frame=pint.pulsar_ecliptic.PulsarEcliptic,
+        )
+        return cnew
+    else:
+        log.warning(
+            "Do not know coordinate frame for %r: returning coordinates unchanged" % c
+        )
+        return c
