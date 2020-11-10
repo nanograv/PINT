@@ -74,6 +74,7 @@ DEFAULT_ORDER = [
     "solar_wind",
     "dispersion_constant",
     "dispersion_dmx",
+    "dispersion_jump",
     "pulsar_system",
     "frequency_dependent",
     "absolute_phase",
@@ -274,6 +275,15 @@ class TimingModel(object):
         return pstart + pmid + pend
 
     @property
+    def free_params(self):
+        """ Returns all the free parameters in the timing model.
+        """
+        free_params = []
+        for cp in self.components.values():
+            free_params += cp.free_params_component
+        return free_params
+
+    @property
     def components(self):
         """All the components indexed by name."""
         comps = {}
@@ -429,6 +439,17 @@ class TimingModel(object):
             return np.asarray(scs)  # otherwise return an array
 
     @property
+    def dm_funcs(self):
+        """ List of all dm value functions. """
+        dmfs = []
+        for cp in self.components.values():
+            if hasattr(cp, "dm_value_funcs"):
+                dmfs += cp.dm_value_funcs
+            else:
+                continue
+        return dmfs
+
+    @property
     def has_correlated_errors(self):
         """Whether or not this model has correlated errors."""
         if "NoiseComponent" in self.component_types:
@@ -453,7 +474,7 @@ class TimingModel(object):
         cvfs = []
         if "NoiseComponent" in self.component_types:
             for nc in self.NoiseComponent_list:
-                cvfs += nc.dm_covariance_matrix_funcs
+                cvfs += nc.dm_covariance_matrix_funcs_component
         return cvfs
 
     # Change sigma to uncertainty to avoid name conflict.
@@ -473,7 +494,8 @@ class TimingModel(object):
         ssfs = []
         if "NoiseComponent" in self.component_types:
             for nc in self.NoiseComponent_list:
-                ssfs += nc.scaled_dm_sigma_funcs
+                if hasattr(nc, "scaled_dm_sigma_funcs"):
+                    ssfs += nc.scaled_dm_sigma_funcs
         return ssfs
 
     @property
@@ -866,6 +888,18 @@ class TimingModel(object):
         else:
             return phase
 
+    def total_dm(self, toas):
+        """ This function calculates the dispersion measures from all the dispersion
+        type of components.
+        """
+        # Here we assume the unit would be the same for all the dm value function.
+        # By doing so, we do not have to hard code an unit here.
+        dm = self.dm_funcs[0](toas)
+
+        for dm_f in self.dm_funcs[1::]:
+            dm += dm_f(toas)
+        return dm
+
     def toa_covariance_matrix(self, toas):
         """This a function to get the TOA covariance matrix for noise models.
         If there is no noise model component provided, a diagonal matrix with
@@ -926,7 +960,7 @@ class TimingModel(object):
         return result
 
     def scaled_dm_uncertainty(self, toas):
-        """Get the scaled DM data uncertainties noise models.
+        """ Get the scaled DM data uncertainties noise models.
 
             If there is no noise model component provided, a vector with
             DM error as values will be returned.
@@ -1811,6 +1845,23 @@ class Component(object):
                     "'%s' object has no attribute '%s'."
                     % (self.__class__.__name__, name)
                 )
+
+    @property
+    def free_params_component(self):
+        """ Return the free parameters in the component.
+
+        This function collects the non-frozen parameters.
+
+        Return
+        ------
+        A list of free parameters.
+        """
+        free_param = []
+        for p in self.params:
+            par = getattr(self, p)
+            if not par.frozen:
+                free_param.append(p)
+        return free_param
 
     @property
     def param_prefixs(self):
