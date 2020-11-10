@@ -42,12 +42,20 @@ except AttributeError:
     # fallback for Python 2
     from string import maketrans
 
-# FIXME: can we make this exception raise on install as well as on use?
+
 if np.finfo(np.longdouble).eps > 2e-19:
-    raise ValueError(
+    import warnings
+
+    def readable_warning(message, category, filename, lineno, line=None):
+        return "%s: %s\n" % (category.__name__, message)
+
+    warnings.formatwarning = readable_warning
+
+    msg = (
         "This platform does not support extended precision "
-        "floating-point, and PINT cannot run without this."
+        "floating-point, and PINT will run at reduced precision."
     )
+    warnings.warn(msg, RuntimeWarning)
 
 
 __all__ = [
