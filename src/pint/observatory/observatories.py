@@ -13,6 +13,7 @@ TopoObs(
     tempo_code="1",
     itoa_code="GB",
     itrf_xyz=[882589.65, -4924872.32, 3943729.348],
+    origin="This is a test",
 )
 TopoObs(
     "arecibo",
@@ -33,6 +34,9 @@ TopoObs(
     tempo_code="7",
     itoa_code="PK",
     aliases=["pks"],
+    clock_fmt="tempo2",
+    clock_dir="TEMPO2",
+    clock_file="pks2gps.clk",
     itrf_xyz=[-4554231.5, 2816759.1, -3454036.3],
 )
 TopoObs(
@@ -47,6 +51,9 @@ TopoObs(
     tempo_code="f",
     itoa_code="NC",
     aliases=["ncy"],
+    clock_fmt="tempo2",
+    clock_dir="TEMPO2",
+    clock_file="ncy2gps.clk",
     itrf_xyz=[4324165.81, 165927.11, 4670132.83],
 )
 TopoObs(
@@ -62,6 +69,9 @@ TopoObs(
     tempo_code="g",
     itoa_code="EF",
     aliases=["eff"],
+    clock_fmt="tempo2",
+    clock_dir="TEMPO2",
+    clock_file="eff2gps.clk",
     itrf_xyz=[4033949.5, 486989.4, 4900430.8],
 )
 TopoObs(
@@ -83,7 +93,7 @@ TopoObs(
     itrf_xyz=[3828445.659, 445223.600, 5064921.5677],
 )
 TopoObs(
-    "fast", tempo_code="k", itoa_code="FA", itrf_xyz=[-1668557.0, 5506838.0, 2744934.0]
+    "fast", tempo_code="k", itoa_code="FA", itrf_xyz=[-1668557.0, 5506838.0, 2744934.0],
 )
 TopoObs(
     "mwa",
@@ -98,7 +108,7 @@ TopoObs(
     itrf_xyz=[-1602196.60, -5042313.47, 3553971.51],
 )
 TopoObs(
-    "ps1", tempo_code="p", itoa_code="PS", itrf_xyz=[-5461997.8, -2412559.0, 2243024.0]
+    "ps1", tempo_code="p", itoa_code="PS", itrf_xyz=[-5461997.8, -2412559.0, 2243024.0],
 )
 TopoObs(
     "hobart",
@@ -120,6 +130,19 @@ TopoObs(
     tempo_code="y",
     itoa_code="CH",
     itrf_xyz=[-2058795.0, -3621559.0, 4814280.0],
+)
+TopoObs(
+    "magic",
+    aliases=["magic"],
+    include_bipm=False,
+    itrf_xyz=[5326878.7967, -1719509.5201, 3051884.5175],
+)
+
+TopoObs(
+    "lst",
+    aliases=["lst"],
+    include_bipm=False,
+    itrf_xyz=[5326832.7629, -1719636.1588, 3051795.1913],
 )
 
 # ground-based gravitational-wave observatories
@@ -170,3 +193,5 @@ TopoObs(
     aliases=["acreroad", "a", "AR"],
     itrf_xyz=[3573741.1, -269156.74, 5258407.3],
 )
+TopoObs("ata", aliases=["hcro"], itrf_xyz=[-2524263.18, -4123529.78, 4147966.36])
+TopoObs("ccera", itrf_xyz=[1093406.840, -4391945.819, 4479103.550])

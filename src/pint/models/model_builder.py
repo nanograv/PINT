@@ -148,6 +148,7 @@ class ModelBuilder(object):
         """
         sorted_components = []
         for cat in self.get_all_categories():
+            # FIXME, I am not sure adding orders here is a good idea.
             if cat not in category_order:
                 category_order.append(cat)
         for co in category_order:
@@ -176,7 +177,8 @@ class ModelBuilder(object):
         return prefixs
 
     def build_model(self, parfile=None, name=""):
-        """Read parfile using the model_instance attribute.
+        """Read parfile using the model_instance attribute. Throws error if 
+           mismatched coordinate systems detected.
         Parameters
         ---------
         name: str, optional
@@ -186,6 +188,25 @@ class ModelBuilder(object):
         """
         if parfile is not None:
             self.get_comp_from_parfile(parfile)
+            # ensure coordinate systems match for POS and PM
+            if "RAJ" in self.preprocess_parfile(parfile).keys():
+                if "PMELONG" in self.preprocess_parfile(parfile):
+                    raise AttributeError(
+                        "Cannot have Ecliptic proper motion parameters (PMELONG/PMELAT) with Equatorial position parameters (RAJ/DECJ) in par file."
+                    )
+                elif "PMELAT" in self.preprocess_parfile(parfile):
+                    raise AttributeError(
+                        "Cannot have Ecliptic proper motion parameters (PMELONG/PMELAT) with Equatorial position parameters (RAJ/DECJ) in par file."
+                    )
+            elif "ELONG" in self.preprocess_parfile(parfile).keys():
+                if "PMRA" in self.preprocess_parfile(parfile):
+                    raise AttributeError(
+                        "Cannot have Equatorial proper motion parameters (PMRA/PMDEC) with Ecliptic position parameters (ELONG/ELAT) in par file."
+                    )
+                elif "PMDEC" in self.preprocess_parfile(parfile):
+                    raise AttributeError(
+                        "Cannot have Equatorial proper motion parameters (PMRA/PMDEC) with Ecliptic position parameters (ELONG/ELAT) in par file."
+                    )
         sorted_comps = self.sort_components()
         self.timing_model = TimingModel(name, sorted_comps)
         param_inModel = self.timing_model.get_params_mapping()
@@ -296,7 +317,19 @@ def choose_model(
 
     par_dict = {}
     par_lines = []
-    multi_tags = set(["JUMP", "ECORR", "T2EFAC", "T2EQUAD", "EQUAD", "EFAC"])
+    multi_tags = set(
+        [
+            "JUMP",
+            "ECORR",
+            "T2EFAC",
+            "T2EQUAD",
+            "EQUAD",
+            "EFAC",
+            "DMJUMP",
+            "DMEFAC",
+            "DMEQUAD",
+        ]
+    )
     multi_line = Counter()
     for l in interesting_lines(lines_of(parfile), comments=("#", "C ")):
         ll = l.split()
@@ -354,7 +387,6 @@ def choose_model(
         except KeyError:
             pass
     models_in_order.extend(v for k, v in sorted(models_to_use.items()))
-
     tm = TimingModel(name, models_in_order)
 
     # FIXME: this should go in TimingModel for when you try to
@@ -384,7 +416,7 @@ def choose_model(
                 par = alias_map[pre]
             except KeyError:
                 if pre in ignore_prefix:
-                    log.warning("Ignoring unhandled prefix {}".format(pre))
+                    # log.warning("Ignoring unhandled prefix {}".format(pre))
                     continue
                 else:
                     raise ValueError(
@@ -399,7 +431,7 @@ def choose_model(
                     "Received duplicate parameter {}".format(new_parameter.name)
                 )
             tm.add_param_from_top(new_parameter, component)
-            print("added", new_parameter)
+            # print("added", new_parameter)
         except PrefixError:
             pass
 

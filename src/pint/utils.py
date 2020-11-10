@@ -7,11 +7,17 @@ from copy import deepcopy
 import astropy.units as u
 from astropy import log
 import astropy.constants as const
+import astropy.coordinates as coords
 import numpy as np
 import six
 import scipy.optimize.zeros as zeros
+from scipy.special import fdtrc
+
 
 from io import StringIO
+
+import pint.pulsar_ecliptic
+
 
 __all__ = [
     "PosVel",
@@ -29,6 +35,7 @@ __all__ = [
     "show_param_cov_matrix",
     "dmxparse",
     "dmxstats",
+    "dmx_ranges_old",
     "dmx_ranges",
     "p_to_f",
     "pferrs",
@@ -42,6 +49,9 @@ __all__ = [
     "pulsar_edot",
     "pulsar_B",
     "pulsar_B_lightcyl",
+    "FTest",
+    "add_dummy_distance",
+    "remove_dummy_distance",
 ]
 
 
@@ -508,7 +518,7 @@ class dmxrange:
         )
 
 
-def dmx_ranges(
+def dmx_ranges_old(
     toas,
     divide_freq=1000.0 * u.MHz,
     offset=0.01 * u.d,
@@ -683,7 +693,7 @@ def dmx_ranges(
     return mask, dmx_comp
 
 
-def dmx_ranges2(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=False):
+def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=False):
     """Compute initial DMX ranges for a set of TOAs
     
     This is an alternative algorithm for computing DMX ranges
@@ -710,7 +720,7 @@ def dmx_ranges2(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=F
     import pint.models.parameter
 
     MJDs = toas.get_mjds()
-    freqs = toas.table["freq"]
+    freqs = toas.table["freq"].quantity
 
     DMXs = []
 
@@ -1335,3 +1345,211 @@ def shklovskii_factor(pmtot, D):
     with u.set_enabled_equivalencies(u.dimensionless_angles()):
         a_s = (D * pmtot ** 2 / const.c).to(u.s ** -1)
     return a_s
+
+
+def FTest(chi2_1, dof_1, chi2_2, dof_2):
+    """
+    Run F-test.
+
+    Compute an F-test to see if a model with extra parameters is
+    significant compared to a simpler model.  The input values are the
+    (non-reduced) chi^2 values and the numbers of DOF for '1' the
+    original model and '2' for the new model (with more fit params).
+    The probability is computed exactly like Sherpa's F-test routine
+    (in Ciao) and is also described in the Wikipedia article on the
+    F-test:  http://en.wikipedia.org/wiki/F-test
+    The returned value is the probability that the improvement in
+    chi2 is due to chance (i.e. a low probability means that the
+    new fit is quantitatively better, while a value near 1 means
+    that the new model should likely be rejected).
+
+    Parameters
+    -----------
+    chi2_1 : Float
+        Chi-squared value of model with fewer parameters
+    dof_1 : Int
+        Degrees of freedom of model with fewer parameters
+    chi2_2 : Float
+        Chi-squared value of model with more parameters
+    dof_2 : Int
+        Degrees of freedom of model with more parameters
+
+    Returns
+    --------
+    ft : Float
+        F-test significance value for the model with the larger number of
+        components over the other.
+    """
+    delta_chi2 = chi2_1 - chi2_2
+    if delta_chi2 > 0 and dof_1 != dof_2:
+        delta_dof = dof_1 - dof_2
+        new_redchi2 = chi2_2 / dof_2
+        F = np.float64(
+            (delta_chi2 / delta_dof) / new_redchi2
+        )  # fdtr doesn't like float128
+        ft = fdtrc(delta_dof, dof_2, F)
+    else:
+        if delta_chi2 <= 0:
+            log.warning(
+                "Chi^2 for Model 2 is larger than Chi^2 for Model 1, cannot preform F-test."
+            )
+        elif dof_1 == dof_2:
+            log.warning("Models have equal degrees of freedom, cannot preform F-test.")
+        ft = False
+    return ft
+
+
+def add_dummy_distance(c, distance=1 * u.kpc):
+    """
+    Adds a dummy distance to a SkyCoord object for applying proper motion
+
+    Parameters
+    ----------
+    c: `astropy.coordinates.sky_coordinate.SkyCoord` object
+        current SkyCoord object without distance but with proper motion and obstime
+    distance: `Quantity`, optional
+        distance to supply
+
+    Returns
+    -------
+    cnew
+        new SkyCoord object with a distance attached
+    """
+
+    if c.frame.data.differentials == {}:
+        log.warning(
+            "No proper motions available for %r: returning coordinates unchanged" % c
+        )
+        return c
+    if c.obstime is None:
+        log.warning("No obstime available for %r: returning coordinates unchanged" % c)
+        return c
+
+    if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
+        if hasattr(c, "pm_ra_cosdec"):
+            cnew = coords.SkyCoord(
+                ra=c.ra,
+                dec=c.dec,
+                pm_ra_cosdec=c.pm_ra_cosdec,
+                pm_dec=c.pm_dec,
+                obstime=c.obstime,
+                distance=distance,
+                frame=coords.ICRS,
+            )
+        else:
+            # it seems that after applying proper motions
+            # it changes the RA pm to pm_ra instead of pm_ra_cosdec
+            # although the value seems the same
+            cnew = coords.SkyCoord(
+                ra=c.ra,
+                dec=c.dec,
+                pm_ra_cosdec=c.pm_ra,
+                pm_dec=c.pm_dec,
+                obstime=c.obstime,
+                distance=distance,
+                frame=coords.ICRS,
+            )
+
+        return cnew
+    elif isinstance(c.frame, coords.builtin_frames.galactic.Galactic):
+        cnew = coords.SkyCoord(
+            l=c.l,
+            b=c.b,
+            pm_l_cosb=c.pm_l_cosb,
+            pm_b=c.pm_b,
+            obstime=c.obstime,
+            distance=distance,
+            frame=coords.Galactic,
+        )
+        return cnew
+    elif isinstance(c.frame, pint.pulsar_ecliptic.PulsarEcliptic):
+        cnew = coords.SkyCoord(
+            lon=c.lon,
+            lat=c.lat,
+            pm_lon_coslat=c.pm_lon_coslat,
+            pm_lat=c.pm_lat,
+            obstime=c.obstime,
+            distance=distance,
+            frame=pint.pulsar_ecliptic.PulsarEcliptic,
+        )
+        return cnew
+    else:
+        log.warning(
+            "Do not know coordinate frame for %r: returning coordinates unchanged" % c
+        )
+        return c
+
+
+def remove_dummy_distance(c):
+    """
+    Removes a dummy distance from a SkyCoord object after applying proper motion
+
+    Parameters
+    ----------
+    c: `astropy.coordinates.sky_coordinate.SkyCoord` object
+        current SkyCoord object with distance and with proper motion and obstime
+
+    Returns
+    -------
+    cnew
+        new SkyCoord object with a distance removed
+    """
+
+    if c.frame.data.differentials == {}:
+        log.warning(
+            "No proper motions available for %r: returning coordinates unchanged" % c
+        )
+        return c
+    if c.obstime is None:
+        log.warning("No obstime available for %r: returning coordinates unchanged" % c)
+        return c
+
+    if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
+        if hasattr(c, "pm_ra_cosdec"):
+
+            cnew = coords.SkyCoord(
+                ra=c.ra,
+                dec=c.dec,
+                pm_ra_cosdec=c.pm_ra_cosdec,
+                pm_dec=c.pm_dec,
+                obstime=c.obstime,
+                frame=coords.ICRS,
+            )
+        else:
+            # it seems that after applying proper motions
+            # it changes the RA pm to pm_ra instead of pm_ra_cosdec
+            # although the value seems the same
+            cnew = coords.SkyCoord(
+                ra=c.ra,
+                dec=c.dec,
+                pm_ra_cosdec=c.pm_ra,
+                pm_dec=c.pm_dec,
+                obstime=c.obstime,
+                frame=coords.ICRS,
+            )
+        return cnew
+    elif isinstance(c.frame, coords.builtin_frames.galactic.Galactic):
+        cnew = coords.SkyCoord(
+            l=c.l,
+            b=c.b,
+            pm_l_cosb=c.pm_l_cosb,
+            pm_b=c.pm_b,
+            obstime=c.obstime,
+            frame=coords.Galactic,
+        )
+        return cnew
+    elif isinstance(c.frame, pint.pulsar_ecliptic.PulsarEcliptic):
+        cnew = coords.SkyCoord(
+            lon=c.lon,
+            lat=c.lat,
+            pm_lon_coslat=c.pm_lon_coslat,
+            pm_lat=c.pm_lat,
+            obstime=c.obstime,
+            frame=pint.pulsar_ecliptic.PulsarEcliptic,
+        )
+        return cnew
+    else:
+        log.warning(
+            "Do not know coordinate frame for %r: returning coordinates unchanged" % c
+        )
+        return c

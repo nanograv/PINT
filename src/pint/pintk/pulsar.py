@@ -64,7 +64,7 @@ class Pulsar(object):
     def __init__(self, parfile=None, timfile=None, ephem=None):
         super(Pulsar, self).__init__()
 
-        print("STARTING LOADING OF PULSAR %s" % str(parfile))
+        log.info("STARTING LOADING OF PULSAR %s" % str(parfile))
 
         if parfile is not None and timfile is not None:
             self.parfile = parfile
@@ -150,25 +150,18 @@ class Pulsar(object):
     def orbitalphase(self):
         """
         For a binary pulsar, calculate the orbital phase. Otherwise, return
-        an array of zeros
+        an array of unitless quantities of zeros
         """
-        if "PB" not in self:
+        if not self.prefit_model.is_binary:
             log.warn("This is not a binary pulsar")
-            return np.zeros(len(self.selected_toas))
+            return u.Quantity(np.zeros(self.selected_toas.ntoas))
 
-        toas = self.selected_toas.get_mjds()
-
-        if "T0" in self and not self["T0"].quantity is None:
-            tpb = (toas.value - self["T0"].value) / self["PB"].value
-        elif "TASC" in self and not self["TASC"].quantity is None:
-            tpb = (toas.value - self["TASC"].value) / self["PB"].value
+        toas = self.selected_toas
+        if self.fitted:
+            phase = self.postfit_model.orbital_phase(toas, anom="mean")
         else:
-            log.error("Neither T0 nor TASC set")
-            return np.zeros(len(toas))
-
-        phase = np.modf(tpb)[0]
-        phase[phase < 0] += 1
-        return phase
+            phase = self.prefit_model.orbital_phase(toas, anom="mean")
+        return phase / (2 * np.pi * u.rad)
 
     def dayofyear(self):
         """
@@ -279,10 +272,15 @@ class Pulsar(object):
             log.info("PhaseJump component added")
             a = pint.models.jump.PhaseJump()
             a.setup()
-            self.prefit_model.add_component(a, order=-1)
+            self.prefit_model.add_component(a)
             self.prefit_model.remove_param("JUMP1")
             param = pint.models.parameter.maskParameter(
-                name="JUMP", index=1, key="jump", key_value=1, value=0.0, units="second"
+                name="JUMP",
+                index=1,
+                key="-gui_jump",
+                key_value=1,
+                value=0.0,
+                units="second",
             )
             self.prefit_model.add_param_from_top(param, "PhaseJump")
             getattr(self.prefit_model, param.name).frozen = False
@@ -293,7 +291,9 @@ class Pulsar(object):
                 self.all_toas.table["flags"][selected],
                 self.selected_toas.table["flags"],
             ):
+                dict1["gui_jump"] = 1
                 dict1["jump"] = 1
+                dict2["gui_jump"] = 1
                 dict2["jump"] = 1
             return param.name
         # if gets here, has at least one jump param already
@@ -302,7 +302,28 @@ class Pulsar(object):
             int(dict["jump"]) if "jump" in dict.keys() else np.nan
             for dict in self.all_toas.table["flags"]
         ]
-        for num in range(1, int(np.nanmax(jump_nums) + 1)):
+        numjumps = self.prefit_model.components["PhaseJump"].get_number_of_jumps()
+        if numjumps == 0:
+            log.warn(
+                "There are no jumps (maskParameter objects) in PhaseJump. Please delete the PhaseJump object and try again. "
+            )
+            return None
+        # if only par file jumps in PhaseJump object
+        if np.isnan(np.nanmax(jump_nums)):
+            # for every jump, set appropriate flag for TOAs it jumps
+            for jump_par in self.prefit_model.components[
+                "PhaseJump"
+            ].get_jump_param_objects():
+                # find TOAs jump applies to
+                mask = jump_par.select_toa_mask(self.all_toas)
+                # apply to dictionaries for future use
+                for dict in self.all_toas.table["flags"][mask]:
+                    dict["jump"] = jump_par.index
+            jump_nums = [
+                int(dict["jump"]) if "jump" in dict.keys() else np.nan
+                for dict in self.all_toas.table["flags"]
+            ]
+        for num in range(1, numjumps + 1):
             num = int(num)
             jump_select = [num == jump_num for jump_num in jump_nums]
             if np.array_equal(jump_select, selected):
@@ -315,43 +336,40 @@ class Pulsar(object):
                     self.selected_toas.table["flags"],
                 ):
                     if "jump" in dict1.keys() and dict1["jump"] == num:
-                        del dict1["jump"]  # somehow deletes from both
-                nums_subset = range(num + 1, int(np.nanmax(jump_nums) + 1))
+                        del dict1["jump"]
+                        if "gui_jump" in dict1.keys():
+                            del dict1["gui_jump"]
+                    if "jump" in dict2.keys() and dict2["jump"] == num:
+                        del dict2["jump"]
+                        if "gui_jump" in dict2.keys():
+                            del dict2["gui_jump"]
+                nums_subset = range(num + 1, numjumps + 1)
                 for n in nums_subset:
                     # iterate through jump params and rename them so that they are always in numerical order starting with JUMP1
                     n = int(n)
+                    param = getattr(
+                        self.prefit_model.components["PhaseJump"], "JUMP" + str(n)
+                    )
                     for dict in self.all_toas.table["flags"]:
                         if "jump" in dict.keys() and dict["jump"] == n:
                             dict["jump"] = n - 1
-                    param = pint.models.parameter.maskParameter(
-                        name="JUMP",
-                        index=int(n - 1),
-                        key="jump",
-                        key_value=int(n - 1),
-                        value=getattr(self.prefit_model, "JUMP" + str(n)).value,
-                        units="second",
-                    )
-                    self.prefit_model.add_param_from_top(param, "PhaseJump")
-                    getattr(self.prefit_model, param.name).frozen = getattr(
-                        self.prefit_model, "JUMP" + str(n)
-                    ).frozen
-                    self.prefit_model.remove_param("JUMP" + str(n))
+                            if "gui_jump" in dict.keys():
+                                dict["gui_jump"] = n - 1
+                                param.key_value = n - 1
+                    newpar = param.new_param(index=(n - 1), copy_all=True)
+                    self.prefit_model.add_param_from_top(newpar, "PhaseJump")
+                    self.prefit_model.remove_param(param.name)
                     if self.fitted:
-                        self.postfit_model.add_param_from_top(param, "PhaseJump")
-                        getattr(self.postfit_model, param.name).frozen = getattr(
-                            self.postfit_model, "JUMP" + str(n)
-                        ).frozen
-                        self.postfit_model.remove_param("JUMP" + str(n))
+                        self.postfit_model.add_param_from_top(newpar, "PhaseJump")
+                        self.postfit_model.remove_param(param.name)
                 if "JUMP1" not in self.prefit_model.params:
                     # remove PhaseJump component if no jump params
                     comp_list = getattr(self.prefit_model, "PhaseComponent_list")
                     for item in comp_list:
                         if isinstance(item, pint.models.jump.PhaseJump):
-                            comp_list.remove(item)
-                            break
-                    self.prefit_model.setup_components(comp_list)
-                    if self.fitted:
-                        self.postfit_model.setup_components(comp_list)
+                            self.prefit_model.remove_component(item)
+                            if self.fitted:
+                                self.postfit_model.remove_component(item)
                 else:
                     self.prefit_model.components["PhaseJump"].setup()
                     if self.fitted:
@@ -368,13 +386,15 @@ class Pulsar(object):
         for dict1, dict2 in zip(
             self.all_toas.table["flags"][selected], self.selected_toas.table["flags"]
         ):
-            dict1["jump"] = int(np.nanmax(jump_nums)) + 1
-            dict2["jump"] = int(np.nanmax(jump_nums)) + 1
+            dict1["jump"] = numjumps + 1
+            dict1["gui_jump"] = numjumps + 1
+            dict2["jump"] = numjumps + 1
+            dict2["gui_jump"] = numjumps + 1
         param = pint.models.parameter.maskParameter(
             name="JUMP",
-            index=int(np.nanmax(jump_nums)) + 1,
-            key="jump",
-            key_value=int(np.nanmax(jump_nums)) + 1,
+            index=numjumps + 1,
+            key="-gui_jump",
+            key_value=numjumps + 1,
             value=0.0,
             units="second",
             aliases=["JUMP"],
@@ -412,24 +432,51 @@ class Pulsar(object):
                     self.prefit_model, param
                 ).frozen == False and param.startswith("JUMP"):
                     fit_jumps.append(int(param[4:]))
+
+            numjumps = self.prefit_model.components["PhaseJump"].get_number_of_jumps()
+            if numjumps == 0:
+                log.warn(
+                    "There are no jumps (maskParameter objects) in PhaseJump. Please delete the PhaseJump object and try again. "
+                )
+                return None
+            # boolean array to determine if all selected toas are jumped
             jumps = [
                 True if "jump" in dict.keys() and dict["jump"] in fit_jumps else False
-                for dict in self.selected_toas.table["flags"]
+                for dict in self.all_toas.table["flags"][selected]
             ]
+            # check if par file jumps in PhaseJump object
+            if not any(jumps):
+                # for every jump, set appropriate flag for TOAs it jumps
+                for jump_par in self.prefit_model.components[
+                    "PhaseJump"
+                ].get_jump_param_objects():
+                    # find TOAs jump applies to
+                    mask = jump_par.select_toa_mask(self.all_toas)
+                    # apply to dictionaries for future use
+                    for dict in self.all_toas.table["flags"][mask]:
+                        dict["jump"] = jump_par.index
+                jumps = [
+                    True
+                    if "jump" in dict.keys() and dict["jump"] in fit_jumps
+                    else False
+                    for dict in self.all_toas.table["flags"][selected]
+                ]
             if all(jumps):
                 log.warn(
                     "toas being fit must not all be jumped. Remove or uncheck at least one jump in the selected toas before fitting."
                 )
                 return None
+            # numerical array of selected jump flags
             sel_jump_nums = [
                 dict["jump"] if "jump" in dict.keys() else np.nan
-                for dict in self.selected_toas.table["flags"]
+                for dict in self.all_toas.table["flags"][selected]
             ]
+            # numerical array of all jump flags
             full_jump_nums = [
                 dict["jump"] if "jump" in dict.keys() else np.nan
                 for dict in self.all_toas.table["flags"]
             ]
-            for num in range(1, int(np.nanmax(full_jump_nums) + 1)):
+            for num in range(1, numjumps + 1):
                 num = int(num)
                 if num not in sel_jump_nums:
                     getattr(self.prefit_model, "JUMP" + str(num)).frozen = True
@@ -461,14 +508,14 @@ class Pulsar(object):
 
         fitter.fit_toas(maxiter=1)
         self.postfit_model = fitter.model
-        self.postfit_resids = Residuals(
-            self.all_toas, self.postfit_model, set_pulse_nums=True
-        )
+        self.postfit_resids = Residuals(self.all_toas, self.postfit_model)
         self.fitted = True
         self.write_fit_summary()
 
-        # TODO: set pulse nums above not working to reset delta pulse nums, have to force it here
-        # self.fulltoas.table['delta_pulse_numbers'] = np.zeros(self.fulltoas.ntoas)
+        # TODO: delta_pulse_numbers need some work. They serve both for PHASE and -padd functions from the TOAs
+        # as well as for phase jumps added manually in the GUI. They really should not be zeroed out here because
+        # that will wipe out preexisting values
+        self.all_toas.table["delta_pulse_numbers"] = np.zeros(self.all_toas.ntoas)
         self.selected_toas.table["delta_pulse_number"] = np.zeros(
             self.selected_toas.ntoas
         )
@@ -479,9 +526,7 @@ class Pulsar(object):
             if param.startswith("JUMP"):
                 getattr(pm_no_jumps, param).value = 0.0
                 getattr(pm_no_jumps, param).frozen = True
-        self.prefit_resids_no_jumps = Residuals(
-            self.all_toas, pm_no_jumps, set_pulse_nums=True
-        )
+        self.prefit_resids_no_jumps = Residuals(self.selected_toas, pm_no_jumps)
 
         f = copy.deepcopy(fitter)
         no_jumps = [
@@ -496,7 +541,7 @@ class Pulsar(object):
                 [i for i in self.all_toas.get_mjds() if i > selectedMJDs.min()][0]
             )
             rs_mean = (
-                Residuals(self.all_toas, f.model, set_pulse_nums=True)
+                Residuals(self.all_toas, f.model)
                 .phase_resids[index : index + len(selectedMJDs)]
                 .mean()
             )
@@ -539,3 +584,11 @@ class Pulsar(object):
         )
         self.random_resids = rs
         self.fake_toas = f_toas
+
+    def fake_year(self):
+        """
+        Function to support plotting of random models on multiple x-axes.
+        Return the decimal year for all the TOAs of this pulsar
+        """
+        t = Time(self.fake_toas.get_mjds(), format="mjd")
+        return (t.decimalyear) * u.year

@@ -40,16 +40,13 @@ def lnprior_basic(ftr, theta):
 
     This will work for both analytic and
     binned templates, including when the template parameters are part of the
-    search space.  Assumes that phase is the last parameter in the parameter list
+    search space.
     """
     theta_model = ftr.get_model_parameters(theta)
     theta_templ = ftr.get_template_parameters(theta)
     lnsum = 0.0
-    for val, key in zip(theta_model[:-1], ftr.fitkeys[:-1]):
+    for val, key in zip(theta_model, ftr.fitkeys):
         lnsum += getattr(ftr.model, key).prior_pdf(val, logpdf=True)
-    # Add phase term
-    if theta_model[-1] > 1.0 or theta_model[-1] < 0.0:
-        return np.inf
     # Loop over template parameters here: hard coded uniform for now
     if theta_templ is not None:
         for val, bounds in zip(theta_templ, ftr.tbounds):
@@ -65,7 +62,7 @@ def lnlikelihood_basic(ftr, theta):
     """
     ftr.set_parameters(theta)
     phases = ftr.get_event_phases()
-    phss = phases.astype(np.float64) + theta[-1]
+    phss = phases.astype(np.float64)
 
     phss[phss < 0] += 1.0
     phss[phss >= 1] -= 1.0
@@ -79,7 +76,7 @@ def lnlikelihood_basic(ftr, theta):
 
 def lnlikelihood_chi2(ftr, theta):
     ftr.set_parameters(theta)
-    return -Residuals(toas=ftr.toas, model=ftr.model).calc_chi2().value
+    return -Residuals(toas=ftr.toas, model=ftr.model).calc_chi2()
 
 
 def set_priors_basic(ftr, priorerrfact=10.0):
@@ -89,7 +86,7 @@ def set_priors_basic(ftr, priorerrfact=10.0):
     the par file uncertainty * priorerrfact and then puts in some special cases
     """
     fkeys, fvals, ferrs = ftr.fitkeys, ftr.fitvals, ftr.fiterrs
-    for key, val, err in zip(fkeys[:-1], fvals[:-1], ferrs[:-1]):
+    for key, val, err in zip(fkeys, fvals, ferrs):
         if key == "SINI" or key == "E" or key == "ECC":
             getattr(ftr.model, key).prior = Prior(uniform(0.0, 1.0))
         elif key == "PX":
@@ -131,10 +128,6 @@ class MCMCFitter(Fitter):
         The function for setting the priors on model parameters
     weights : optional
         Weights for likelihood calculations
-    phs : optional
-        Pulse phase - to be added to the model (remove when phs is part of par files)
-    phserr : optional
-        Error associated with pulse phase
     minMJD : optional
         Minimium MJD in dataset (used sometimes for get_initial_pos)
     maxMJD : optional
@@ -162,14 +155,10 @@ class MCMCFitter(Fitter):
 
         # Default values for these arguments were taken from event_optimize.py
         self.weights = kwargs.get("weights", None)
-        phs = kwargs.get("phs", 0.0)
-        phserr = kwargs.get("phserr", 0.01)
         self.minMJD = kwargs.get("minMJD", 40000)
         self.maxMJD = kwargs.get("maxMJD", 60000)
 
-        self.fitkeys, self.fitvals, self.fiterrs = self.generate_fit_keyvals(
-            phs, phserr
-        )
+        self.fitkeys, self.fitvals, self.fiterrs = self.generate_fit_keyvals()
         self.n_fit_params = len(self.fitvals)
 
         template = kwargs.get("template", None)
@@ -247,7 +236,7 @@ class MCMCFitter(Fitter):
         Set timing and template parameters as necessary
         """
         if self.template is None:
-            self.set_params(dict(zip(self.fitkeys[:-1], theta[:-1])))
+            self.set_params(dict(zip(self.fitkeys, theta)))
         else:
             raise NotImplementedError
 
@@ -265,7 +254,7 @@ class MCMCFitter(Fitter):
         """
         return self.fitkeys, self.fitvals, self.fiterrs
 
-    def generate_fit_keyvals(self, phs, phserr):
+    def generate_fit_keyvals(self):
         """Read the model to determine fitted keys and their values and errors
             from the par file
         """
@@ -275,11 +264,6 @@ class MCMCFitter(Fitter):
         for p in fitkeys:
             fitvals.append(getattr(self.model, p).value)
             fiterrs.append(getattr(self.model, p).uncertainty_value)
-        # Last entry in the fit lists is the absolute PHASE term
-        # Should be removed if PHASE is made a model param
-        fitkeys.append("PHASE")
-        fitvals.append(phs)
-        fiterrs.append(phserr)
         return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
     def get_weights(self):
@@ -316,10 +300,8 @@ class MCMCFitter(Fitter):
     def minimize_func(self, theta):
         """Override superclass minimize_func to make compatible with scipy.optimize"""
         # Scale params based on errors
-        ntheta = (
-            self.get_model_parameters(theta)[:-1] * self.fiterrs[:-1]
-        ) + self.fitvals[:-1]
-        self.set_params(dict(zip(self.fitkeys[:-1], ntheta)))
+        ntheta = (self.get_model_parameters(theta) * self.fiterrs) + self.fitvals
+        self.set_params(dict(zip(self.fitkeys, ntheta)))
         if not np.isfinite(self.lnprior(self, ntheta)):
             return np.inf
         lnlikelihood = self.lnlikelihood(self, theta)
@@ -366,7 +348,7 @@ class MCMCFitter(Fitter):
         self.sampler.run_mcmc(pos, maxiter)
 
         # Process results and get chi2 for new parameters
-        self.set_params(dict(zip(self.fitkeys[:-1], self.maxpost_fitvals[:-1])))
+        self.set_params(dict(zip(self.fitkeys, self.maxpost_fitvals)))
         if self.use_resids:
             self.resids.update()
         return self.lnposterior(self.maxpost_fitvals)
@@ -485,7 +467,7 @@ class MCMCFitterBinnedTemplate(MCMCFitter):
         return self.fitkeys
 
     def set_parameters(self, theta):
-        self.set_params(dict(zip(self.fitkeys[:-1], theta[:-1])))
+        self.set_params(dict(zip(self.fitkeys, theta)))
 
     def get_errors(self):
         return self.fiterrs
@@ -536,9 +518,7 @@ class MCMCFitterAnalyticTemplate(MCMCFitter):
         return np.append(self.fitvals, self.tfitvals)
 
     def set_parameters(self, theta):
-        self.set_params(
-            dict(zip(self.fitkeys[:-1], self.get_model_parameters(theta)[:-1]))
-        )
+        self.set_params(dict(zip(self.fitkeys, self.get_model_parameters(theta))))
         self.template.set_parameters(self.get_template_parameters(theta))
 
     def get_errors(self):
@@ -626,7 +606,7 @@ class CompositeMCMCFitter(MCMCFitter):
         return self.fitkeys
 
     def set_parameters(self, theta):
-        self.set_params(dict(zip(self.fitkeys[:-1], theta[:-1])))
+        self.set_params(dict(zip(self.fitkeys, theta)))
 
     def get_errors(self):
         return self.fiterrs

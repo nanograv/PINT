@@ -37,7 +37,7 @@ class TestELL1H(unittest.TestCase):
 
     def test_J1853(self):
         pint_resids_us = Residuals(
-            self.toasJ1853, self.modelJ1853, False
+            self.toasJ1853, self.modelJ1853, use_weighted_mean=False
         ).time_resids.to(u.s)
         # Due to PINT has higher order of ELL1 model, Tempo2 gives a difference around 3e-8
         # Changed to 4e-8 since modification to get_PSR_freq() makes this 3.1e-8

@@ -125,29 +125,29 @@ def grid_chisq(ftr, par1_name, par1_grid, par2_name, par2_grid):
     """
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
-    savemod = self.model
-    gridmod = copy.deepcopy(self.model)
-    self.model = gridmod
+    savemod = ftr.model
+    gridmod = copy.deepcopy(ftr.model)
+    ftr.model = gridmod
 
     # Freeze the two params we are going to grid over
-    getattr(self.model, par1_name).frozen = True
-    getattr(self.model, par2_name).frozen = True
+    getattr(ftr.model, par1_name).frozen = True
+    getattr(ftr.model, par2_name).frozen = True
 
     # All other unfrozen parameters will be fitted for at each grid point
 
     chi2 = np.zeros((len(par1_grid), len(par2_grid)))
     # Want par1 on X-axis and par2 on y-axis
     for ii, par1 in enumerate(par1_grid):
-        getattr(self.model, par1_name).quantity = par1
+        getattr(ftr.model, par1_name).quantity = par1
         for jj, par2 in enumerate(par2_grid):
-            getattr(self.model, par2_name).quantity = par2
+            getattr(ftr.model, par2_name).quantity = par2
             # Array index here is rownum, colnum so translates to y, x
-            chi2[jj, ii] = self.fit_toas()
+            chi2[jj, ii] = ftr.fit_toas()
             print(".", end="")
         print("")
 
     # Restore saved model
-    self.model = savemod
+    ftr.model = savemod
     return chi2
 
 

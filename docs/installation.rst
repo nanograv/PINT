@@ -39,6 +39,12 @@ correction files in ``$TEMPO/clock``
 `Tempo2`_ is not required, but if you have it installed PINT can find clock
 correction files in ``$TEMPO2/clock``
 
+IMPORTANT Note!
+---------------
+
+PINT has a naming conflict with the `pint <https://pypi.org/project/Pint/>`_ units package available from PyPI (i.e. using pip) and conda.  
+Do **NOT** ``pip install pint`` or ``conda install pint``!  See below!
+
 Basic Install via pip
 ---------------------
 
@@ -54,6 +60,13 @@ to install it for just yourself (e.g. if you don't have permission to write in t
 virtualenv to work on PINT (using a virtualenv is highly recommended by the PINT developers).  In that case, you just activate your 
 virtualenv before running the ``pip`` command above.
 
+Install with Anaconda
+---------------------
+
+If you use `Anaconda <https://www.anaconda.com/products/individual>`_ environments to manage your python packages, 
+PINT is also available for Anaconda python under the `conda-forge <https://conda-forge.org>` channel:
+
+    $ conda install -c conda-forge pint-pulsar
 
 Install from Source
 -------------------

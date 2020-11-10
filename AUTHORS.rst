@@ -24,8 +24,10 @@ As listed in the PINT paper:
 * Ross Jennings
 * Matteo Bachetti
 * Rutger van Haasteren
+* Chloe Champagne
 * Jonathan Colen
 * Camryn Phillips
+* Josef Zimmerman
 * Kevin Stovall
 * Michael Lam
 * Rick Jenet

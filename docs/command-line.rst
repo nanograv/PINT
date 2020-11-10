@@ -12,6 +12,16 @@ the “examples” subdirectory of the PINT distro.
 All of the tools accept ``-h`` or ``--help`` to provide a description of
 the options.
 
+pintk
+-----
+
+``pintk`` is a GUI for PINT (based on the Tk GUI toolbox). It has many of the same functions as the plk plugin for Tempo2.
+
+::
+
+   pintk NGC6440E.par NGC6440E.tim
+
+
 pintbary
 --------
 
@@ -101,10 +111,3 @@ the examples subdirectory of the PINT distro.
 
    event_optimize J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_GEO_wt.gt.0.4.fits PSRJ0030+0451_psrcat.par templateJ0030.3gauss --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=100 --nsteps=500
 
-htest_optimize
---------------
-
-This is an unsupported script that uses the emcee framework to optimize
-a timing model based on the H-test, rather than a full likelihood like
-event_optimize uses. This code is not installed by setup.py and is not
-tests. Use or adapt at your own risk…

@@ -15,6 +15,7 @@ from astropy import log
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import pint.pintk.pulsar as pulsar
+import pint.pintk.colormodes as cm
 
 try:
     # Python2
@@ -28,7 +29,7 @@ except ImportError:
     import tkinter.messagebox as tkMessageBox
 
 log.setLevel("INFO")
-log.info("This should show up")
+log.debug("This should show up")
 
 try:
     from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
@@ -38,7 +39,7 @@ except ImportError:
     )
 
 
-log.info(
+log.debug(
     "This should also show up. test click revert, turn params on and off, and prefit model"
 )
 
@@ -63,6 +64,9 @@ plotlabels = {
     "rounded MJD": r"MJD",
 }
 
+# Note to developers: the 't' key and the 'Shift' key produce the same selection number.
+# Selecting the 'Shift' key will enact any functionality intended for the 't' key.
+# Thus, it may be better to avoid designating the 't' key for any future functionality.
 helpstring = """The following interactions are currently supported by the Plk pane in the PINTkinter GUI:
 
 Left click:     Select a point
@@ -91,7 +95,7 @@ o:              Print the postfit model as of this moment (if it exists)
 
 p:              Print info about highlighted points (or all, if none are selected)
 
-t:              Print the range of MJDs with the highest density of TOAs
+m:              Print the range of MJDs with the highest density of TOAs
 
 +:              Increase pulse number for selected points
 
@@ -176,7 +180,9 @@ class PlkFitBoxesWidget(tk.Frame):
                     )
                 )
                 if par in fitparams:
-                    self.compCBs[ii].select()
+                    # default DispersionDMX to off so graph not overwhelmed by parameters
+                    if comp is not "DispersionDMX":
+                        self.compCBs[ii].select()
                     self.compGrids[ii][pp].select()
             ii += 1
 
@@ -207,6 +213,100 @@ class PlkFitBoxesWidget(tk.Frame):
         if self.boxChecked is not None:
             self.boxChecked(par, bool(self.parVars[par].get()))
         log.info("%s set to %d" % (par, self.parVars[par].get()))
+
+
+class PlkRandomModelSelect(tk.Frame):
+    """
+    Allows one to select whether to fit with random models or not
+    """
+
+    def __init__(self, master=None, **kwargs):
+        tk.Frame.__init__(self, master)
+        self.boxChecked = None
+        self.var = tk.IntVar()
+
+    def addRandomCheckbox(self, master):
+        self.clear_grid()
+        checkbox = tk.Checkbutton(
+            master,
+            text="Random Models",
+            variable=self.var,
+            command=self.changedRMCheckBox,
+        )
+        checkbox.grid(row=1, column=1, sticky="N")
+
+    def setCallbacks(self, boxChecked):
+        """
+        Set the callback functions
+        """
+        self.boxChecked = boxChecked
+
+    def clear_grid(self):
+        for widget in self.winfo_children():
+            widget.grid_forget()
+
+    def changedRMCheckBox(self):
+        log.info("Random Models set to %d" % (self.var.get()))
+
+    def getRandomModel(self):
+        return self.var.get()
+
+
+class PlkColorModeBoxes(tk.Frame):
+    """ 
+    Allows one to select the color mode for the plot's TOAs. 
+    """
+
+    def __init__(self, master=None, **kwargs):
+        tk.Frame.__init__(self, master)
+        self.boxChecked = None
+
+    def addColorModeCheckbox(self, colorModes):
+        self.checkboxes = []
+        self.checkboxStatus = tk.StringVar()
+        index = 0
+
+        self.label = tk.Label(self, text="Color Modes")
+        for mode in colorModes:
+            self.checkboxes.append(
+                tk.Radiobutton(
+                    self,
+                    text=mode.mode_name,
+                    variable=self.checkboxStatus,
+                    value=mode.mode_name,
+                    command=lambda m=mode: self.applyChanges(m),
+                )
+            )
+
+            if mode.mode_name == "default":
+                # default mode should be selected at start-up
+                self.checkboxes[index].select()
+
+            index += 1
+
+        self.updateLayout()
+
+    def setCallbacks(self, boxChecked):
+        """
+        Set the callback functions
+        """
+        self.boxChecked = boxChecked
+
+    def applyChanges(self, mode):
+        mode.displayInfo()
+        self.boxChecked(mode.mode_name)
+
+    def clear_grid(self):
+        for widget in self.winfo_children():
+            widget.grid_forget()
+
+    def updateLayout(self):
+        self.clear_grid()
+        self.label.grid(row=0, column=0)
+        rowCount = 1
+        for ii in range(len(self.checkboxes)):
+            self.checkboxes[ii].grid(row=rowCount, column=0, sticky="W")
+            rowCount += 1
 
 
 class PlkXYChoiceWidget(tk.Frame):
@@ -376,10 +476,15 @@ class PlkWidget(tk.Frame):
 
         self.psr = None
 
+        self.color_modes = [cm.DefaultMode(self), cm.FreqMode(self), cm.ObsMode(self)]
+        self.current_mode = "default"
+
     def initPlk(self):
         self.fitboxesWidget = PlkFitBoxesWidget(master=self)
         self.xyChoiceWidget = PlkXYChoiceWidget(master=self)
         self.actionsWidget = PlkActionsWidget(master=self)
+        self.randomboxWidget = PlkRandomModelSelect(master=self)
+        self.colorModeWidget = PlkColorModeBoxes(master=self)
 
         self.plkDpi = 100
         self.plkFig = mpl.figure.Figure(dpi=self.plkDpi)
@@ -426,6 +531,8 @@ class PlkWidget(tk.Frame):
             self.jumped = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
             self.actionsWidget.setFitButtonText("Fit")
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+            self.randomboxWidget.addRandomCheckbox(self)
+            self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.xyChoiceWidget.setChoice()
             self.updatePlot(keepAxes=True)
             self.plkToolbar.update()
@@ -459,6 +566,7 @@ class PlkWidget(tk.Frame):
             self.state_stack.append(self.base_state)
 
         self.fitboxesWidget.setCallbacks(self.fitboxChecked)
+        self.colorModeWidget.setCallbacks(self.updateGraphColors)
         self.xyChoiceWidget.setCallbacks(self.updatePlot)
         self.actionsWidget.setCallbacks(
             self.fit, self.reset, self.writePar, self.writeTim, self.revert
@@ -466,6 +574,9 @@ class PlkWidget(tk.Frame):
 
         self.fitboxesWidget.grid(row=0, column=0, columnspan=2, sticky="W")
         self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+        self.randomboxWidget.addRandomCheckbox(self)
+        self.colorModeWidget.grid(row=2, column=0, columnspan=1, sticky="S")
+        self.colorModeWidget.addColorModeCheckbox(self.color_modes)
         self.xyChoiceWidget.setChoice()
         self.updatePlot(keepAxes=False)
 
@@ -473,6 +584,10 @@ class PlkWidget(tk.Frame):
         if not self.update_callbacks is None:
             for ucb in self.update_callbacks:
                 ucb()
+
+    def updateGraphColors(self, color_mode):
+        self.current_mode = color_mode
+        self.updatePlot(keepAxes=True)
 
     def fitboxChecked(self, parchanged, newstate):
         """
@@ -521,6 +636,8 @@ class PlkWidget(tk.Frame):
             self.current_state.selected = copy.deepcopy(self.selected)
             self.actionsWidget.setFitButtonText("Re-fit")
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+            self.randomboxWidget.addRandomCheckbox(self)
+            self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             xid, yid = self.xyChoiceWidget.plotIDs()
             self.xyChoiceWidget.setChoice(xid=xid, yid="post-fit")
             self.jumped = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
@@ -553,6 +670,8 @@ class PlkWidget(tk.Frame):
                 self.updateJumped(param)
         self.actionsWidget.setFitButtonText("Fit")
         self.fitboxesWidget.addFitCheckBoxes(self.base_state.psr.prefit_model)
+        self.randomboxWidget.addRandomCheckbox(self)
+        self.colorModeWidget.addColorModeCheckbox(self.color_modes)
         self.xyChoiceWidget.setChoice()
         self.updatePlot(keepAxes=False)
         self.plkToolbar.update()
@@ -584,6 +703,10 @@ class PlkWidget(tk.Frame):
         """
         Write the current timfile to a file
         """
+        # remove jump flags from toas (don't want model-specific jumps being saved)
+        for dict in self.psr.all_toas.table["flags"]:
+            if "jump" in dict.keys():
+                del dict["jump"]
         filename = tkFileDialog.asksaveasfilename(title="Choose output tim file")
         try:
             log.info("Choose output file %s" % filename)
@@ -603,6 +726,8 @@ class PlkWidget(tk.Frame):
             self.jumped = copy.deepcopy(c_state.jumped)
             self.selected = copy.deepcopy(c_state.selected)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+            self.randomboxWidget.addRandomCheckbox(self)
+            self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             if len(self.state_stack) == 0:
                 self.state_stack.append(self.base_state)
                 self.actionsWidget.setFitButtonText("Fit")
@@ -639,33 +764,18 @@ class PlkWidget(tk.Frame):
         self.plkCanvas.draw()
 
     def plotErrorbar(self, selected, color):
+        """ 
+        For some reason, xvals will not plot unless unitless. 
+        Tried using quantity_support and time_support, which plots x & yvals,
+        but then yerrs fails - cannot find work-around in this case.
         """
-        For some reason, errorbar breaks completely when the plotting array is
-        of length 2. So this workaround is needed
-        """
-        if selected.sum() != 2:
-            self.plkAxes.errorbar(
-                self.xvals[selected].reshape([-1, 1]),
-                self.yvals[selected].reshape([-1, 1]),
-                yerr=self.yerrs[selected].reshape([-1, 1]),
-                fmt=".",
-                color=color,
-            )
-        else:
-            self.plkAxes.errorbar(
-                self.xvals[selected][0].reshape([-1, 1]),
-                self.yvals[selected][0].reshape([-1, 1]),
-                yerr=self.yerrs[selected][0].reshape([-1, 1]),
-                fmt=".",
-                color=color,
-            )
-            self.plkAxes.errorbar(
-                self.xvals[selected][1].reshape([-1, 1]),
-                self.yvals[selected][1].reshape([-1, 1]),
-                yerr=self.yerrs[selected][1].reshape([-1, 1]),
-                fmt=".",
-                color=color,
-            )
+        self.plkAxes.errorbar(
+            self.xvals[selected].value,
+            self.yvals[selected],
+            yerr=self.yerrs[selected],
+            fmt=".",
+            color=color,
+        )
 
     def plotResiduals(self, keepAxes=False):
         """
@@ -695,30 +805,10 @@ class PlkWidget(tk.Frame):
         self.plkAx2x.clear()
         self.plkAx2y.clear()
         self.plkAxes.grid(True)
-
-        if self.yerrs is None:
-            self.plkAxes.scatter(
-                self.xvals[~self.selected],
-                self.yvals[~self.selected],
-                marker=".",
-                color="blue",
-            )
-            self.plkAxes.scatter(
-                self.xvals[self.jumped],
-                self.yvals[self.jumped],
-                marker=".",
-                color="red",
-            )
-            self.plkAxes.scatter(
-                self.xvals[self.selected],
-                self.yvals[self.selected],
-                marker=".",
-                color="orange",
-            )
-        else:
-            self.plotErrorbar(~self.selected, color="blue")
-            self.plotErrorbar(self.jumped, color="red")
-            self.plotErrorbar(self.selected, color="orange")
+        # plot residuals in appropriate color scheme
+        for mode in self.color_modes:
+            if self.current_mode == mode.mode_name:
+                mode.plotColorMode()
         self.plkAxes.axis([xmin, xmax, ymin, ymax])
         self.plkAxes.get_xaxis().get_major_formatter().set_useOffset(False)
         self.plkAx2y.set_visible(False)
@@ -768,23 +858,35 @@ class PlkWidget(tk.Frame):
         self.plkAxes.set_title(self.psr.name, y=1.1)
 
         # plot random models
-        if self.psr.fitted == True:
-            # TODO: add random models on/off button
+        if self.psr.fitted == True and self.randomboxWidget.getRandomModel() == 1:
             log.info("plotting random models")
             f_toas = self.psr.fake_toas
             print("Computing random models based on parameter covariance matrix...")
             rs = self.psr.random_resids
+            # look at axes, allow random models to plot on x-axes other than MJD
+            xid, yid = self.xyChoiceWidget.plotIDs()
+            if xid == "year":
+                f_toas_plot = self.psr.fake_year()  # uses f_toas inside pulsar.py
+            else:
+                f_toas_plot = f_toas.get_mjds()  # old implementation only used this
             for i in range(len(rs)):
-                self.plkAxes.plot(f_toas, rs[i], "-k", alpha=0.3)
+                self.plkAxes.plot(f_toas_plot, rs[i], "-k", alpha=0.3)
 
     def print_info(self):
         """
         Write information about the current selection, or all points
         Format is:
-        TOA_index   X_val   Y_val
+        TOA_index   X_val   Y_val   
+        flags
 
-        or, if residuals:
+        if flags:
+        TOA_index   X_val   Y_val   jump_key    flags
+
+        if residuals:
         TOA_index   X_val   time_resid  phase_resid
+
+        if both:
+        TOA_index   X_val   time_resid  phase_resid    flags
         """
         if np.sum(self.selected) == 0:
             selected = np.ones(self.psr.selected_toas.ntoas, dtype=bool)
@@ -826,12 +928,21 @@ class PlkWidget(tk.Frame):
         else:
             header += "%12s" % plotlabels[self.yid]
 
-        print(header)
-        print("-" * len(header))
-
         xs = self.xvals[selected].value
         ys = self.yvals[selected].value
-        inds = self.psr.selected_toas.table["index"][selected]
+        inds = self.psr.all_toas.table["index"][selected]
+
+        # see if flags to display
+        keys = False
+        try:
+            self.psr.selected_toas.table["flags"]
+            keys = True
+            header += "%18s" % "Flags"
+        except:
+            pass
+
+        print(header)
+        print("-" * len(header))
 
         for i in range(len(xs)):
             line = "%6d" % inds[i]
@@ -841,7 +952,38 @@ class PlkWidget(tk.Frame):
             line += " %16.8g" % ys[i]
             if yf:
                 line += " %16.8g" % (ys[i] * f0y)
-            print(line)
+            if keys:
+                n = 1  # incrementor
+                for key in self.psr.selected_toas.table["flags"][i].keys():
+                    if n == 1:
+                        # for first flag, add to existing line
+                        line += " %28s" % (key + ":")
+                        # try-except for determining proper string formatter - string or float value
+                        try:
+                            line += (
+                                " %1s" % self.psr.selected_toas.table["flags"][i][key]
+                            )
+                        except:
+                            line += (
+                                " %16.8g"
+                                % self.psr.selected_toas.table["flags"][i][key]
+                            )
+                        print(line)
+                    else:
+                        line2 = " %85s" % (key + ":")
+                        # try-except for determining proper string formatter - string or float value
+                        try:
+                            line2 += (
+                                " %1s" % self.psr.selected_toas.table["flags"][i][key]
+                            )
+                        except:
+                            line2 += (
+                                " %16.8g"
+                                % self.psr.selected_toas.table["flags"][i][key]
+                            )
+                            raise
+                        print(line2)
+                    n += 1
 
     def psr_data_from_label(self, label):
         """
@@ -968,15 +1110,14 @@ class PlkWidget(tk.Frame):
         if event.inaxes == self.plkAxes and self.press:
             self.move = True
             # Draw bounding box
-            if self.plkToolbar._active is None:
-                x0, x1 = self.pressEvent.x, event.x
-                y0, y1 = self.pressEvent.y, event.y
-                height = self.plkFig.bbox.height
-                y0 = height - y0
-                y1 = height - y1
-                if hasattr(self, "brect"):
-                    self.plkCanvas._tkcanvas.delete(self.brect)
-                self.brect = self.plkCanvas._tkcanvas.create_rectangle(x0, y0, x1, y1)
+            x0, x1 = self.pressEvent.x, event.x
+            y0, y1 = self.pressEvent.y, event.y
+            height = self.plkFig.bbox.height
+            y0 = height - y0
+            y1 = height - y1
+            if hasattr(self, "brect"):
+                self.plkCanvas._tkcanvas.delete(self.brect)
+            self.brect = self.plkCanvas._tkcanvas.create_rectangle(x0, y0, x1, y1)
 
     def canvasReleaseEvent(self, event):
         """
@@ -1011,30 +1152,40 @@ class PlkWidget(tk.Frame):
                 #    self.psr.update_resids()
                 #    self.updatePlot(keepAxes=True)
                 #    self.call_updates()
-                if event.button == 1 and self.plkToolbar._active is None:
+                if event.button == 1:
                     # Left click is select
                     self.selected[ind] = not self.selected[ind]
                     self.updatePlot(keepAxes=True)
+                    # if point is being selected (instead of unselected) or
+                    # point is unselected but other points remain selected
+                    if self.selected[ind] or any(self.selected):
+                        # update selected_toas object w/ selected points
+                        self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
+                        self.psr.selected_toas.select(self.selected)
+                        self.psr.update_resids()
+                        self.call_updates()
 
     def clickAndDrag(self, event):
         """
         Call this function when the mouse is clicked and dragged
         """
-        if event.inaxes == self.plkAxes and self.plkToolbar._active is None:
+        if event.inaxes == self.plkAxes:
             xmin, xmax = self.pressEvent.xdata, event.xdata
             ymin, ymax = self.pressEvent.ydata, event.ydata
             if xmin > xmax:
                 xmin, xmax = xmax, xmin
             if ymin > ymax:
                 ymin, ymax = ymax, ymin
-            self.selected = (self.xvals.value > xmin) & (self.xvals.value < xmax)
-            self.selected &= (self.yvals.value > ymin) & (self.yvals.value < ymax)
+            selected = (self.xvals.value > xmin) & (self.xvals.value < xmax)
+            selected &= (self.yvals.value > ymin) & (self.yvals.value < ymax)
+            self.selected |= selected
             self.updatePlot(keepAxes=True)
             self.plkCanvas._tkcanvas.delete(self.brect)
-            self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-            self.psr.selected_toas.select(self.selected)
-            self.psr.update_resids()
-            self.call_updates()
+            if any(self.selected):
+                self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
+                self.psr.selected_toas.select(self.selected)
+                self.psr.update_resids()
+                self.call_updates()
 
     def canvasKeyEvent(self, event):
         """
@@ -1056,10 +1207,12 @@ class PlkWidget(tk.Frame):
             self.psr.add_phase_wrap(self.selected, -1)
             self.updatePlot(keepAxes=True)
             self.call_updates()
+            log.info("Pulse number for selected points decreased.")
         elif ukey == ord("+"):
             self.psr.add_phase_wrap(self.selected, 1)
             self.updatePlot(keepAxes=True)
             self.call_updates()
+            log.info("Pulse number for selected points increased.")
         elif ukey == ord(">"):
             if np.sum(self.selected) > 0:
                 selected = copy.deepcopy(self.selected)
@@ -1068,6 +1221,7 @@ class PlkWidget(tk.Frame):
                 self.psr.add_phase_wrap(selected, 1)
                 self.updatePlot(keepAxes=False)
                 self.call_updates()
+                log.info("Pulse numbers to the right of selection increased.")
         elif ukey == ord("<"):
             if np.sum(self.selected) > 0:
                 selected = copy.deepcopy(self.selected)
@@ -1076,6 +1230,7 @@ class PlkWidget(tk.Frame):
                 self.psr.add_phase_wrap(selected, -1)
                 self.updatePlot(keepAxes=False)
                 self.call_updates()
+                log.info("Pulse numbers to the right of selection decreased.")
         elif ukey == ord("d"):
             # if any of the points are jumped, tell the user to delete the jump(s) first
             jumped_copy = copy.deepcopy(self.jumped)
@@ -1116,6 +1271,8 @@ class PlkWidget(tk.Frame):
             jump_name = self.psr.add_jump(self.selected)
             self.updateJumped(jump_name)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+            self.randomboxWidget.addRandomCheckbox(self)
+            self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.updatePlot(keepAxes=True)
             self.call_updates()
         elif ukey == ord("v"):
@@ -1151,6 +1308,8 @@ class PlkWidget(tk.Frame):
             ):
                 self.psr.selected_toas.select(self.selected)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
+            self.randomboxWidget.addRandomCheckbox(self)
+            self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.updatePlot(keepAxes=True)
             self.call_updates()
         elif ukey == ord("c"):
@@ -1169,5 +1328,5 @@ class PlkWidget(tk.Frame):
             self.print_info()
         elif ukey == ord("h"):
             print(helpstring)
-        elif ukey == ord("t"):
+        elif ukey == ord("m"):
             print(self.psr.all_toas.get_highest_density_range())

@@ -11,6 +11,7 @@ from astropy import log
 from astropy.coordinates import EarthLocation
 
 from pint.config import datapath
+from pint.observatory import bipm_default
 from pint.observatory.clock_file import ClockFile
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.utils import PosVel
@@ -43,9 +44,9 @@ class SpecialLocation(Observatory):
         https://www.bipm.org/en/bipm-services/timescales/time-ftp/ttbipm.html
     bipm_version : str, optional
         Set the version of TT BIPM clock correction file to
-        use, the default is BIPM2015.  It has to be in the format
+        use, the default is %s.  It has to be in the format
         like 'BIPM2015'
-    """
+    """ % bipm_default
 
     # def clock_corrections(self, t):
     #    log.info('Special observatory location. No clock corrections applied.')
@@ -57,7 +58,7 @@ class SpecialLocation(Observatory):
         aliases=None,
         include_gps=True,
         include_bipm=True,
-        bipm_version="BIPM2015",
+        bipm_version=bipm_default,
         tt2tdb_mode="pint",
     ):
         # GPS corrections not implemented yet

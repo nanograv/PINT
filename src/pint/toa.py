@@ -19,13 +19,17 @@ import astropy.units as u
 import numpy as np
 from astropy import log
 from astropy.coordinates import EarthLocation
+from astropy.coordinates import ICRS, CartesianDifferential, CartesianRepresentation
 from six.moves import cPickle as pickle
 
-from pint.observatory import Observatory, get_observatory
+import pint
+from pint.observatory import Observatory, get_observatory, bipm_default
 from pint.observatory.special_locations import SpacecraftObs
 from pint.observatory.topo_obs import TopoObs
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
+from pint.phase import Phase
+from pint.pulsar_ecliptic import PulsarEcliptic
 
 __all__ = [
     "get_TOAs",
@@ -73,7 +77,7 @@ def get_TOAs(
     timfile,
     ephem=None,
     include_bipm=True,
-    bipm_version="BIPM2015",
+    bipm_version=bipm_default,
     include_gps=True,
     planets=False,
     usepickle=False,
@@ -152,7 +156,7 @@ def get_TOAs_list(
     toa_list,
     ephem=None,
     include_bipm=True,
-    bipm_version="BIPM2015",
+    bipm_version=bipm_default,
     include_gps=True,
     planets=False,
     tdb_method="default",
@@ -188,13 +192,18 @@ def _toa_format(line, fmt="Unknown"):
     """
     if re.match(r"[0-9a-z@] ", line):
         return "Princeton"
-    elif line.startswith("C ") or line.startswith("c ") or line[0] == "#":
+    elif (
+        line.startswith("C ")
+        or line.startswith("c ")
+        or line[0] == "#"
+        or line.startswith("CC ")
+    ):
         return "Comment"
     elif line.upper().startswith(toa_commands):
         return "Command"
     elif re.match(r"^\s+$", line):
         return "Blank"
-    elif re.match(r"  ", line) and len(line) > 41 and line[41] == ".":
+    elif re.match(r"^ ", line) and len(line) > 41 and line[41] == ".":
         return "Parkes"
     elif len(line) > 80 or fmt == "Tempo2":
         return "Tempo2"
@@ -470,7 +479,7 @@ def make_fake_toas(startMJD, endMJD, ntoas, model, freq=1400, obs="GBT"):
     ts.compute_TDBs()
     ts.compute_posvels()
     ts.clock_corr_info.update(
-        {"include_bipm": False, "bipm_version": "BIPM2015", "include_gps": False}
+        {"include_bipm": False, "bipm_version": bipm_default, "include_gps": False}
     )
     return ts
 
@@ -717,6 +726,7 @@ class TOAs(object):
         self.planets = False
         self.ephem = None
         self.clock_corr_info = {}
+        self.obliquity = None
 
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
@@ -773,6 +783,9 @@ class TOAs(object):
 
         # We don't need this now that we have a table
         del self.toas
+
+    def __len__(self):
+        return self.ntoas
 
     @property
     def ntoas(self):
@@ -893,10 +906,23 @@ class TOAs(object):
                the flag, it will fill up with the fill_value.
         """
         result = []
-        for flags in self.table["flags"]:
-            val = flags.get(flag, fill_value)
+        valid_index = []
+        for ii, flags in enumerate(self.table["flags"]):
+            try:
+                val = flags[flag]
+                valid_index.append(ii)
+            except KeyError:
+                val = fill_value
             result.append(val)
-        return result
+        return result, valid_index
+
+    def get_dm_errors(self):
+        """ Get the Wideband DM data error
+        """
+        result, valid = self.get_flag_value("pp_dme")
+        if valid == []:
+            raise AttributeError("No DM error is provided.")
+        return np.array(result)[valid] * u.pc / u.cm ** 3
 
     def get_groups(self, gap_limit=None):
         """flag toas within gap limit (default 2h = 0.0833d) of each other as the same group
@@ -943,8 +969,8 @@ class TOAs(object):
         # TODO: implement sliding window
         nbins = int((max(self.get_mjds()) - min(self.get_mjds())) / (ndays * u.d))
         a = np.histogram(self.get_mjds(), nbins)
-        maxday = int(a[1][np.argmax(a[0])])
-        diff = int(a[1][1] - a[1][0])
+        maxday = int((a[1][np.argmax(a[0])]).value)
+        diff = int((a[1][1] - a[1][0]).value)
         print(
             "max density range (in steps of {} days -- {} bins) is from MJD {} to {} with {} toas.".format(
                 diff, nbins, maxday, maxday + diff, a[0].max()
@@ -978,6 +1004,8 @@ class TOAs(object):
 
     def pickle(self, filename=None):
         """Write the TOAs to a .pickle file with optional filename."""
+        # Save the PINT version used to create this pickle file
+        self.pintversion = pint.__version__
         if filename is not None:
             pickle.dump(self, open(filename, "wb"))
         elif self.filename is not None:
@@ -1016,7 +1044,20 @@ class TOAs(object):
         Modifes the delta_pulse_number column, if required.
         Removes the pulse numbers from the flags.
         """
-        # Add pulse_number as a table column if possible
+        # First get any PHASE commands
+        dphs = np.asarray(
+            [
+                flags["phase"] if "phase" in flags else 0.0
+                for flags in self.table["flags"]
+            ]
+        )
+        # Then add any -padd flag values
+        dphs += np.asarray(
+            [flags["padd"] if "padd" in flags else 0.0 for flags in self.table["flags"]]
+        )
+        self.table["delta_pulse_number"] += dphs
+
+        # Then, add pulse_number as a table column if possible
         try:
             pns = [flags["pn"] for flags in self.table["flags"]]
             self.table["pulse_number"] = pns
@@ -1027,14 +1068,6 @@ class TOAs(object):
                 del flags["pn"]
         except KeyError:
             raise ValueError("Not all TOAs have pn flags")
-        # modify the delta_pulse_number column if required
-        dphs = np.asarray(
-            [
-                flags["phase"] if "phase" in flags else 0.0
-                for flags in self.table["flags"]
-            ]
-        )
-        self.table["delta_pulse_number"] += dphs
 
     def compute_pulse_numbers(self, model):
         """Set pulse numbers (in TOA table column pulse_numbers) based on model
@@ -1044,7 +1077,8 @@ class TOAs(object):
         which the nearest integer since Phase objects ensure that.
         """
         # paulr: I think pulse numbers should be computed with abs_phase=True!
-        phases = model.phase(self, abs_phase=True)
+        delta_pulse_numbers = Phase(self.table["delta_pulse_number"])
+        phases = model.phase(self, abs_phase=True) + delta_pulse_numbers
         self.table["pulse_number"] = phases.int
         self.table["pulse_number"].unit = u.dimensionless_unscaled
 
@@ -1141,7 +1175,7 @@ class TOAs(object):
             outf.close()
 
     def apply_clock_corrections(
-        self, include_bipm=True, bipm_version="BIPM2015", include_gps=True
+        self, include_bipm=True, bipm_version=bipm_default, include_gps=True
     ):
         """Apply observatory clock corrections and TIME statments.
 
@@ -1333,7 +1367,12 @@ class TOAs(object):
                 "Computing PosVels of observatories and Earth, using {}".format(ephem)
             )
         # Remove any existing columns
-        cols_to_remove = ["ssb_obs_pos", "ssb_obs_vel", "obs_sun_pos"]
+        cols_to_remove = [
+            "ssb_obs_pos",
+            "ssb_obs_vel",
+            "ssb_obs_vel_ecl",
+            "obs_sun_pos",
+        ]
         for c in cols_to_remove:
             if c in self.table.colnames:
                 log.info("Column {0} already exists. Removing...".format(c))
@@ -1404,6 +1443,61 @@ class TOAs(object):
         log.debug("Adding columns " + " ".join([cc.name for cc in cols_to_add]))
         self.table.add_columns(cols_to_add)
 
+    def add_vel_ecl(self, obliquity):
+        """Compute and add a column to self.table with velocities in ecliptic coordinates.
+
+        Called in barycentric_radio_freq() in AstrometryEcliptic (astrometry.py)
+        if ssb_obs_vel_ecl column does not already exist.
+        If compute_posvels() called again for a TOAs object (aka TOAs modified),
+        deletes this column so that this function will be called again and
+        velocities will be calculated with updated TOAs.
+        """
+
+        # Remove any existing columns
+        col_to_remove = "ssb_obs_vel_ecl"
+        if col_to_remove in self.table.colnames:
+            self.table.remove_column(col_to_remove)
+
+        ssb_obs_vel_ecl = table.Column(
+            name="ssb_obs_vel_ecl",
+            data=np.zeros((self.ntoas, 3), dtype=np.float64),
+            unit=u.km / u.s,
+            meta={"origin": "SSB", "obj": "OBS"},
+        )
+
+        self.obliquity = obliquity
+        ephem = self.ephem
+        # Now step through in observatory groups
+        for ii, key in enumerate(self.table.groups.keys):
+            grp = self.table.groups[ii]
+            obs = self.table.groups.keys[ii]["obs"]
+            loind, hiind = self.table.groups.indices[ii : ii + 2]
+            site = get_observatory(obs)
+            tdb = time.Time(grp["tdb"], precision=9)
+
+            if isinstance(site, SpacecraftObs):
+                ssb_obs = site.posvel(tdb, ephem, grp)
+            else:
+                ssb_obs = site.posvel(tdb, ephem)
+
+            # convert ssb_obs pos and vel to ecliptic coordinates
+            coord = ICRS(
+                x=ssb_obs.pos[0],
+                y=ssb_obs.pos[1],
+                z=ssb_obs.pos[2],
+                v_x=ssb_obs.vel[0],
+                v_y=ssb_obs.vel[1],
+                v_z=ssb_obs.vel[2],
+                representation_type=CartesianRepresentation,
+                differential_type=CartesianDifferential,
+            )
+            coord = coord.transform_to(PulsarEcliptic(obliquity=obliquity))
+            # get velocity vector from coordinate frame
+            ssb_obs_vel_ecl[loind:hiind, :] = coord.velocity.d_xyz.T.to(u.km / u.s)
+        col = ssb_obs_vel_ecl
+        log.debug("Adding columns " + " ".join(col.name))
+        self.table.add_column(col)
+
     def read_pickle_file(self, filename):
         """Read the TOAs from the pickle file specified in filename.
 
@@ -1420,12 +1514,21 @@ class TOAs(object):
         else:
             infile = open(filename, "rb")
         tmp = pickle.load(infile)
+        if not hasattr(tmp, "pintversion") or tmp.pintversion != pint.__version__:
+            log.error(
+                "PINT version in pickle file is different than current version!\n*** Suggest deleting {}".format(
+                    filename
+                )
+            )
         self.filename = tmp.filename
         if hasattr(tmp, "toas"):
             self.toas = tmp.toas
         if hasattr(tmp, "table"):
             self.table = tmp.table.group_by("obs")
         self.commands = tmp.commands
+        self.clock_corr_info = tmp.clock_corr_info
+        self.ephem = tmp.ephem
+        self.planets = tmp.planets
 
     def read_toa_file(self, filename, process_includes=True, top=True):
         """Read TOAs from the given filename.
