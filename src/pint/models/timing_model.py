@@ -2299,14 +2299,14 @@ class Component(object):
 class DelayComponent(Component):
     def __init__(self):
         super(DelayComponent, self).__init__()
-        self.modeled_quantity = ['delay']
+        self.modeled_quantity = ["delay"]
         self.delay_funcs_component = []
 
 
 class PhaseComponent(Component):
     def __init__(self):
         super(PhaseComponent, self).__init__()
-        self.modeled_quantity = ['phase']
+        self.modeled_quantity = ["phase"]
         self.phase_funcs_component = []
         self.phase_derivs_wrt_delay = []
 

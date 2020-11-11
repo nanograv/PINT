@@ -127,7 +127,7 @@ class Residuals:
         """Return number of degrees of freedom for the model."""
         dof = self.toas.ntoas
         for cp in self.model.components.values():
-            if 'delay' in cp.modeled_quantity or 'phase' in cp.modeled_quantity:
+            if "delay" in cp.modeled_quantity or "phase" in cp.modeled_quantity:
                 dof -= len(cp.free_params_component)
         # Now subtract 1 for the implicit global offset parameter
         # Note that we should do two things eventually
@@ -540,7 +540,6 @@ class WidebandDMResiduals(Residuals):
 
         self.model = new_model
         self.model_func = self.model.dm_value
-
 
 
 residual_map = {"toa": Residuals, "dm": WidebandDMResiduals}
