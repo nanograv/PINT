@@ -561,18 +561,54 @@ class Fitter(object):
 
             resid_rms_test : Float (Quantity)
                 If full_output is True, returns the RMS of the residuals of the tested model
-                fit. Will be in units of microseconds as an astropy quantity.
+                fit. Will be in units of microseconds as an astropy quantity. If wideband fitter
+                this will be the time residuals.
 
             resid_wrms_test : Float (Quantity)
                 If full_output is True, returns the Weighted RMS of the residuals of the tested model
-                fit. Will be in units of microseconds as an astropy quantity.
+                fit. Will be in units of microseconds as an astropy quantity. If wideband fitter
+                this will be the time residuals.
 
             chi2_test : Float
-                If full_output is True, returns the chi-squared of the tested model.
+                If full_output is True, returns the chi-squared of the tested model. If wideband
+                fitter this will be the total chi-squared from both the time and DM residuals.
 
             dof_test : Int
                 If full_output is True, returns the degrees of freedom of the tested model.
+
+            dm_resid_rms_test : Float (Quantity)
+                If full_output is True and a wideband timing fitter is used, returns the
+                RMS of the DM residuals of the tested model fit. Will be in units of
+                pc/cm^3 as an astropy quantity.
+
+            dm_resid_wrms_test : Float (Quantity)
+                If full_output is True and a wideband timing fitter is used, returns the
+                Weighted RMS of the DM residuals of the tested model fit. Will be in units of
+                pc/cm^3 as an astropy quantity
+
+            dm_chi2_test : Float
+                If full_output is True and a wideband timing fitter is used, returns the
+                chi-squared  of the DM residuals of the tested model.
+
+            dm_dof_test : Int
+                If full_output is True and a wideband timing fitter is used,
+                returns the DM degrees of freedom of the tested model.
+
+            time_chi2_test : Float
+                If full_output is True and a wideband timing fitter is used, returns the
+                chi-squared  of the time residuals of the tested model.
+
+            time_dof_test : Int
+                If full_output is True and a wideband timing fitter is used,
+                returns the time degrees of freedom of the tested model.
         """
+        # Check if Wideband or not
+        if "Wideband" in self.__class__.__name__:
+            NB = False
+            resids = self.resids.residual_objs["toa"]
+        else:
+            NB = True
+            resids = self.resids
         # Copy the fitter that we do not change the initial model and fitter
         fitter_copy = copy.deepcopy(self)
         # Number of times to run the fit
@@ -580,11 +616,29 @@ class Fitter(object):
         # We need the original degrees of freedome and chi-squared value
         # Because this applies to nested models, model 1 must always have fewer parameters
         if remove:
-            dof_2 = self.resids.get_dof()
-            chi2_2 = self.resids.calc_chi2()
+            # dof_2 = resids.get_dof()
+            if NB:
+                dof_2 = resids.get_dof()
+                chi2_2 = resids.calc_chi2()
+            else:
+                dof_2 = (
+                    self.resids.residual_objs["toa"].get_dof()
+                    + self.resids.residual_objs["dm"].get_dof()
+                    + 1
+                )  # +1 for double counting of the absolute phase correction
+                chi2_2 = self.resids.chi2
         else:
-            dof_1 = self.resids.get_dof()
-            chi2_1 = self.resids.calc_chi2()
+            # dof_1 = resids.get_dof()
+            if NB:
+                dof_1 = resids.get_dof()
+                chi2_1 = resids.calc_chi2()
+            else:
+                dof_1 = (
+                    self.resids.residual_objs["toa"].get_dof()
+                    + self.resids.residual_objs["dm"].get_dof()
+                    + 1
+                )  # +1 for double counting of the absolute phase correction
+                chi2_1 = self.resids.chi2
         # Single inputs are converted to lists to handle arb. number of parameteres
         if type(parameter) is not list:
             parameter = [parameter]
@@ -609,8 +663,16 @@ class Fitter(object):
             # Now refit
             fitter_copy.fit_toas(NITS)
             # Now get the new values
-            dof_1 = fitter_copy.resids.get_dof()
-            chi2_1 = fitter_copy.resids.calc_chi2()
+            if NB:
+                dof_1 = fitter_copy.resids.get_dof()
+                chi2_1 = fitter_copy.resids.calc_chi2()
+            else:
+                dof_1 = (
+                    fitter_copy.resids.residual_objs["toa"].get_dof()
+                    + fitter_copy.resids.residual_objs["dm"].get_dof()
+                    + 1
+                )  # +1 for double counting of the absolute phase correction
+                chi2_1 = fitter_copy.resids.chi2
         else:
             # Dictionary of parameters to check to makes sure input value isn't zero
             check_params = {
@@ -650,8 +712,17 @@ class Fitter(object):
             # Now refit
             fitter_copy.fit_toas(NITS)
             # Now get the new values
-            dof_2 = fitter_copy.resids.get_dof()
-            chi2_2 = fitter_copy.resids.calc_chi2()
+            if NB:
+                dof_2 = fitter_copy.resids.get_dof()
+                chi2_2 = fitter_copy.resids.calc_chi2()
+            else:
+                dof_2 = (
+                    fitter_copy.resids.residual_objs["toa"].get_dof()
+                    + fitter_copy.resids.residual_objs["dm"].get_dof()
+                    + 1
+                )  # +1 for double counting of the absolute phase correction
+                chi2_2 = fitter_copy.resids.chi2
+
         # Now run the actual F-test
         ft = FTest(chi2_1, dof_1, chi2_2, dof_2)
 
@@ -662,15 +733,45 @@ class Fitter(object):
             else:
                 dof_test = dof_2
                 chi2_test = chi2_2
-            resid_rms_test = fitter_copy.resids.time_resids.std().to(u.us)
-            resid_wrms_test = fitter_copy.resids.rms_weighted()  # units: us
-            return {
-                "ft": ft,
-                "resid_rms_test": resid_rms_test,
-                "resid_wrms_test": resid_wrms_test,
-                "chi2_test": chi2_test,
-                "dof_test": dof_test,
-            }
+            if NB:
+                resid_rms_test = fitter_copy.resids.time_resids.std().to(u.us)
+                resid_wrms_test = fitter_copy.resids.rms_weighted()  # units: us
+                return {
+                    "ft": ft,
+                    "resid_rms_test": resid_rms_test,
+                    "resid_wrms_test": resid_wrms_test,
+                    "chi2_test": chi2_test,
+                    "dof_test": dof_test,
+                }
+            else:
+                # Return the dm and time resid values separately
+                resid_rms_test = (
+                    fitter_copy.resids.residual_objs["toa"].time_resids.std().to(u.us)
+                )
+                resid_wrms_test = fitter_copy.resids.residual_objs[
+                    "toa"
+                ].rms_weighted()  # units: us
+                time_chi2_test = fitter_copy.resids.residual_objs["toa"].calc_chi2()
+                time_dof_test = fitter_copy.resids.residual_objs["toa"].get_dof()
+                dm_chi2_test = fitter_copy.resids.residual_objs["dm"].calc_chi2()
+                dm_dof_test = fitter_copy.resids.residual_objs["dm"].get_dof()
+                dm_resid_rms_test = fitter_copy.resids.residual_objs["dm"].resids.std()
+                dm_resid_wrms_test = fitter_copy.resids.residual_objs[
+                    "dm"
+                ].rms_weighted()
+                return {
+                    "ft": ft,
+                    "resid_rms_test": resid_rms_test,
+                    "resid_wrms_test": resid_wrms_test,
+                    "chi2_test": chi2_test,
+                    "dof_test": dof_test,
+                    "dm_resid_rms_test": dm_resid_rms_test,
+                    "dm_resid_wrms_test": dm_resid_wrms_test,
+                    "dm_chi2_test": dm_chi2_test,
+                    "dm_dof_test": dm_dof_test,
+                    "time_chi2_test": time_chi2_test,
+                    "time_dof_test": time_dof_test,
+                }
         else:
             return {"ft": ft}
 
