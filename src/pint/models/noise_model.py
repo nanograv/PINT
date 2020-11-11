@@ -42,6 +42,7 @@ class ScaleToaError(NoiseComponent):
 
     def __init__(self,):
         super(ScaleToaError, self).__init__()
+        self.modeled_quantity = ['toa_error']
         self.add_param(
             maskParameter(
                 name="EFAC",
@@ -189,6 +190,7 @@ class ScaleDmError(NoiseComponent):
 
     def __init__(self,):
         super(ScaleDmError, self).__init__()
+        self.modeled_quantity = ['dm_error']
         self.add_param(
             maskParameter(
                 name="DMEFAC",
@@ -348,6 +350,7 @@ class EcorrNoise(NoiseComponent):
     def __init__(self,):
         super(EcorrNoise, self).__init__()
         self.introduces_correlated_errors = True
+        self.modeled_quantity = ['ecorr_noise']
         self.add_param(
             maskParameter(
                 name="ECORR",
@@ -442,6 +445,7 @@ class PLRedNoise(NoiseComponent):
     def __init__(self,):
         super(PLRedNoise, self).__init__()
         self.introduces_correlated_errors = True
+        self.modeled_quantity = ['red_noise']
         self.add_param(
             floatParameter(
                 name="RNAMP",
