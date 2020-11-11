@@ -81,7 +81,6 @@ class Residuals:
         if toas is not None and model is not None:
             self.phase_resids = self.calc_phase_resids()
             self.time_resids = self.calc_time_resids()
-            self.dof = self.get_dof()
         else:
             self.phase_resids = None
             self.time_resids = None
@@ -122,6 +121,20 @@ class Residuals:
             return self.resids.to_value(self.unit / u.s)
         else:
             return self.resids.to_value(self.unit)
+
+    @property
+    def dof(self):
+        """Return number of degrees of freedom for the model."""
+        dof = self.toas.ntoas
+        for cp in self.model.components.values():
+            if 'delay' in cp.modeled_quantity or 'phase' in cp.modeled_quantity:
+                dof -= len(cp.free_params_component)
+        # Now subtract 1 for the implicit global offset parameter
+        # Note that we should do two things eventually
+        # 1. Make the offset not be a hidden parameter
+        # 2. Have a model object return the number of free parameters instead of having to count non-frozen parameters like above
+        dof -= 1
+        return dof
 
     def get_data_error(self, scaled=True):
         """Get data errors.
@@ -295,21 +308,9 @@ class Residuals:
                 except:
                     return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum()
 
-    def get_dof(self):
-        """Return number of degrees of freedom for the model."""
-        dof = self.toas.ntoas
-        for p in self.model.params:
-            dof -= bool(not getattr(self.model, p).frozen)
-        # Now subtract 1 for the implicit global offset parameter
-        # Note that we should do two things eventually
-        # 1. Make the offset not be a hidden parameter
-        # 2. Have a model object return the number of free parameters instead of having to count non-frozen parameters like above
-        dof -= 1
-        return dof
-
     def get_reduced_chi2(self):
         """Return the weighted reduced chi-squared for the model and toas."""
-        return self.calc_chi2() / self.get_dof()
+        return self.calc_chi2() / self.dof
 
     def update(self):
         """Recalculate everything in residuals class after changing model or TOAs"""
@@ -324,7 +325,7 @@ class Residuals:
         self.phase_resids = self.calc_phase_resids()
         self.time_resids = self.calc_time_resids()
         self._chi2 = None  # trigger chi2 recalculation when needed
-        self.dof = self.get_dof()
+        self.dof = self.dof
 
     def ecorr_average(self, use_noise_model=True):
         """
@@ -436,6 +437,18 @@ class WidebandDMResiduals(Residuals):
         assert self._chi2 is not None
         return self._chi2
 
+    @property
+    def dof(self):
+        """Return number of degrees of freedom for the DM model."""
+        dof = len(self.dm_data)
+        # only get dm type of model component
+        # TODO provide a function in the timing model to get one type of component
+        for cp in self.model.components.values():
+            if Dispersion in cp.__class__.__bases__:
+                dof -= len(cp.free_params_component)
+        dof -= 1
+        return dof
+
     def get_data_error(self, scaled=True):
         """Get data errors.
         Parameter
@@ -528,16 +541,6 @@ class WidebandDMResiduals(Residuals):
         self.model = new_model
         self.model_func = self.model.dm_value
 
-    def get_dof(self):
-        """Return number of degrees of freedom for the DM model."""
-        dof = len(self.dm_data)
-        # only get dm type of model component
-        # TODO provide a function in the timing model to get one type of component
-        for cp in self.model.components.values():
-            if "Dispersion" in cp.__class__.__bases__:
-                dof -= cp.free_params_component
-        dof -= 1
-        return dof
 
 
 residual_map = {"toa": Residuals, "dm": WidebandDMResiduals}
@@ -592,6 +595,15 @@ class CombinedResiduals(object):
         return chi2
 
     @property
+    def dof(self):
+        dof = len(self._combined_resids)
+        # It assumes that the input model are the same model, and time residual has
+        # offset in the fitting
+        # TODO In a more general case, this assumption would not be valid.
+        dof -= len(self.residual_objs["toa"].model.free_params) + 1
+        return dof
+
+    @property
     def data_error(self):
         errors = []
         for rs in self.residual_objs.values():
@@ -611,11 +623,3 @@ class CombinedResiduals(object):
             wmean, werr, wsdev = weighted_mean(rs.resids, w, sdev=True)
             wrms[rs.residual_type] = wsdev
         return wrms
-
-    def get_dof(self):
-        dof = len(self.resids)
-        # It assumes that the input model are the same model, and time residual has
-        # offset in the fitting
-        # TODO In a more general case, this assumption would not be valid.
-        dof -= len(self.residual_objs["toa"].free_params) - 1
-        return dof
