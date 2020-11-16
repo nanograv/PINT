@@ -62,7 +62,7 @@ class Residuals:
         unit=u.s,
         subtract_mean=True,
         use_weighted_mean=True,
-        track_mode="nearest",
+        track_mode=None,
         scaled_by_F0=True,
     ):
         self.toas = toas
@@ -70,7 +70,10 @@ class Residuals:
         self.residual_type = residual_type
         self.subtract_mean = subtract_mean
         self.use_weighted_mean = use_weighted_mean
-        self.track_mode = track_mode
+        if track_mode is None:
+            self.track_mode = "nearest"
+        else:
+            self.track_mode = track_mode
         if getattr(self.model, "TRACK").value == "-2":
             self.track_mode = "use_pulse_numbers"
         if toas is not None and model is not None:
@@ -112,15 +115,14 @@ class Residuals:
 
     @property
     def resids_value(self):
-        """ Get pure value of the residuals use the given base unit.
-        """
+        """Get pure value of the residuals use the given base unit."""
         if not self.scaled_by_F0:
             return self.resids.to_value(self.unit / u.s)
         else:
             return self.resids.to_value(self.unit)
 
     def get_data_error(self, scaled=True):
-        """ Get data errors.
+        """Get data errors.
         Parameter
         ---------
         scaled: bool, optional
@@ -388,8 +390,7 @@ class Residuals:
 
 
 class WidebandDMResiduals(Residuals):
-    """ Residuals for independent DM measurement (i.e. Wideband TOAs).
-    """
+    """Residuals for independent DM measurement (i.e. Wideband TOAs)."""
 
     def __init__(
         self,
@@ -420,8 +421,7 @@ class WidebandDMResiduals(Residuals):
 
     @property
     def resids_value(self):
-        """ Get pure value of the residuals use the given base unit.
-        """
+        """Get pure value of the residuals use the given base unit."""
         return self.resids.to_value(self.unit)
 
     @property
@@ -433,7 +433,7 @@ class WidebandDMResiduals(Residuals):
         return self._chi2
 
     def get_data_error(self, scaled=True):
-        """ Get data errors.
+        """Get data errors.
         Parameter
         ---------
         scaled: bool, optional
@@ -514,7 +514,7 @@ class WidebandDMResiduals(Residuals):
         return valid_dm * self.unit, valid_error * self.unit
 
     def update_model(self, new_model, **kwargs):
-        """ Up date DM models from a new PINT timing model
+        """Up date DM models from a new PINT timing model
 
         Parameters
         ----------
@@ -540,7 +540,7 @@ residual_map = {"toa": Residuals, "dm": WidebandDMResiduals}
 
 
 class CombinedResiduals(object):
-    """ A class provides uniformed API that collects result from different type
+    """A class provides uniformed API that collects result from different type
     of residuals.
 
     Parameters
@@ -561,8 +561,7 @@ class CombinedResiduals(object):
 
     @property
     def _combined_resids(self):
-        """ Residuals from all of the residual types.
-        """
+        """Residuals from all of the residual types."""
         all_resids = []
         for res in self.residual_objs.values():
             all_resids.append(res.resids_value)
