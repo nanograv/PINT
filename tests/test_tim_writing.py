@@ -35,15 +35,17 @@ def do_roundtrip(toas, format="tempo2"):
     toas_2 = get_TOAs(StringIO(f.getvalue()))
     assert toas.commands == toas_2.commands
     assert toas.ntoas == toas_2.ntoas
-    assert np.all(
-        abs(toas.get_mjds(high_precision=True) - toas_2.get_mjds(high_precision=True))
-        < 1 * u.ns
+    assert all(
+        abs(x) < 1 * u.ns
+        for x in (
+            toas.get_mjds(high_precision=True) - toas_2.get_mjds(high_precision=True)
+        )
     )
     assert np.all(toas.get_freqs() == toas_2.get_freqs())
     assert np.all(toas.get_errors() == toas_2.get_errors())
     assert np.all(toas.get_obss() == toas_2.get_obss())
     assert np.all(toas.get_pulse_numbers() == toas_2.get_pulse_numbers())
-    assert toas.get_flags() == toas_2.get_flags()
+    assert np.all(toas.get_flags() == toas_2.get_flags())
 
 
 def test_basic():
