@@ -36,7 +36,8 @@ def do_roundtrip(toas, format="tempo2"):
     assert toas.commands == toas_2.commands
     assert toas.ntoas == toas_2.ntoas
     assert np.all(
-        toas.get_mjds(high_precision=True) == toas_2.get_mjds(high_precision=True)
+        abs(toas.get_mjds(high_precision=True) - toas_2.get_mjds(high_precision=True))
+        < 1 * u.ns
     )
     assert np.all(toas.get_freqs() == toas_2.get_freqs())
     assert np.all(toas.get_errors() == toas_2.get_errors())
