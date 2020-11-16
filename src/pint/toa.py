@@ -1559,7 +1559,7 @@ class TOAs(object):
         if top:
             self.toas = []
             self.commands = []
-            cdict = {
+            self.cdict = {
                 "EFAC": 1.0,
                 "EQUAD": 0.0 * u.us,
                 "EMIN": 0.0 * u.us,
@@ -1578,80 +1578,80 @@ class TOAs(object):
                 "END": False,
             }
         for l in f.readlines():
-            MJD, d = _parse_TOA_line(l, fmt=cdict["FORMAT"])
+            MJD, d = _parse_TOA_line(l, fmt=self.cdict["FORMAT"])
             if d["format"] == "Command":
                 cmd = d["Command"][0].upper()
                 self.commands.append((d["Command"], ntoas))
                 if cmd == "SKIP":
-                    cdict[cmd] = True
+                    self.cdict[cmd] = True
                     continue
                 elif cmd == "NOSKIP":
-                    cdict["SKIP"] = False
+                    self.cdict["SKIP"] = False
                     continue
                 elif cmd == "END":
-                    cdict[cmd] = True
+                    self.cdict[cmd] = True
                     break
                 elif cmd in ("TIME", "PHASE"):
-                    cdict[cmd] += float(d["Command"][1])
+                    self.cdict[cmd] += float(d["Command"][1])
                 elif cmd in ("EMIN", "EMAX", "EQUAD"):
-                    cdict[cmd] = float(d["Command"][1]) * u.us
+                    self.cdict[cmd] = float(d["Command"][1]) * u.us
                 elif cmd in ("FMIN", "FMAX", "EQUAD"):
-                    cdict[cmd] = float(d["Command"][1]) * u.MHz
+                    self.cdict[cmd] = float(d["Command"][1]) * u.MHz
                 elif cmd in ("EFAC", "PHA1", "PHA2"):
-                    cdict[cmd] = float(d["Command"][1])
+                    self.cdict[cmd] = float(d["Command"][1])
                     if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
                         d[cmd] = d["Command"][1]
                 elif cmd == "INFO":
-                    cdict[cmd] = d["Command"][1]
+                    self.cdict[cmd] = d["Command"][1]
                     d[cmd] = d["Command"][1]
                 elif cmd == "FORMAT":
                     if d["Command"][1] == "1":
-                        cdict[cmd] = "Tempo2"
+                        self.cdict[cmd] = "Tempo2"
                 elif cmd == "JUMP":
-                    if cdict[cmd][0]:
-                        cdict[cmd][0] = False
-                        cdict[cmd][1] += 1
+                    if self.cdict[cmd][0]:
+                        self.cdict[cmd][0] = False
+                        self.cdict[cmd][1] += 1
                     else:
-                        cdict[cmd][0] = True
+                        self.cdict[cmd][0] = True
                 elif cmd == "INCLUDE" and process_includes:
                     # Save FORMAT in a tmp
-                    fmt = cdict["FORMAT"]
-                    cdict["FORMAT"] = "Unknown"
+                    fmt = self.cdict["FORMAT"]
+                    self.cdict["FORMAT"] = "Unknown"
                     log.info("Processing included TOA file {0}".format(d["Command"][1]))
                     self.read_toa_file(d["Command"][1], top=False)
                     # re-set FORMAT
-                    cdict["FORMAT"] = fmt
+                    self.cdict["FORMAT"] = fmt
                 else:
                     continue
-            if cdict["SKIP"] or d["format"] in (
+            if self.cdict["SKIP"] or d["format"] in (
                 "Blank",
                 "Unknown",
                 "Comment",
                 "Command",
             ):
                 continue
-            elif cdict["END"]:
+            elif self.cdict["END"]:
                 if top:
                     break
             else:
                 newtoa = TOA(MJD, **d)
                 if (
-                    (cdict["EMIN"] > newtoa.error)
-                    or (cdict["EMAX"] < newtoa.error)
-                    or (cdict["FMIN"] > newtoa.freq)
-                    or (cdict["FMAX"] < newtoa.freq)
+                    (self.cdict["EMIN"] > newtoa.error)
+                    or (self.cdict["EMAX"] < newtoa.error)
+                    or (self.cdict["FMIN"] > newtoa.freq)
+                    or (self.cdict["FMAX"] < newtoa.freq)
                 ):
                     continue
                 else:
-                    newtoa.error *= cdict["EFAC"]
-                    newtoa.error = np.hypot(newtoa.error, cdict["EQUAD"])
-                    if cdict["INFO"]:
-                        newtoa.flags["info"] = cdict["INFO"]
-                    if cdict["JUMP"][0]:
-                        newtoa.flags["jump"] = cdict["JUMP"][1]
-                    if cdict["PHASE"] != 0:
-                        newtoa.flags["phase"] = cdict["PHASE"]
-                    if cdict["TIME"] != 0.0:
-                        newtoa.flags["to"] = cdict["TIME"]
+                    newtoa.error *= self.cdict["EFAC"]
+                    newtoa.error = np.hypot(newtoa.error, self.cdict["EQUAD"])
+                    if self.cdict["INFO"]:
+                        newtoa.flags["info"] = self.cdict["INFO"]
+                    if self.cdict["JUMP"][0]:
+                        newtoa.flags["jump"] = self.cdict["JUMP"][1]
+                    if self.cdict["PHASE"] != 0:
+                        newtoa.flags["phase"] = self.cdict["PHASE"]
+                    if self.cdict["TIME"] != 0.0:
+                        newtoa.flags["to"] = self.cdict["TIME"]
                     self.toas.append(newtoa)
                     ntoas += 1
