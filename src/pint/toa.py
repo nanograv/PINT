@@ -733,8 +733,8 @@ class TOAs(object):
     The contents are stored in an `astropy.table.Table`; this can be used to
     access the contained information but the data may not be in the order you
     expect. Not all columns of the table are computed automatically, as their
-    computation can be expensive. Methods of this class will populate columns
-    as necessary.
+    computation can be expensive. Methods of this class are available to
+    populate these additional columns.
 
     .. list-table:: Columns in ``.table``
        :widths: 15 85
@@ -771,7 +771,8 @@ class TOAs(object):
        * - ``ssb_obs_vel_ecl``
          - velocity of the observatory in ecliptic coordinates at the time of the TOA; computed
            by :func:`pint.toa.TOAs.add_vel_ecl`
-       * - ``obs_sun_pos``, ``obs_jupiter_pos``, ``obs_saturn_pos``, ``obs_venus_pos``, ``obs_uranus_pos``
+       * - ``obs_sun_pos``, ``obs_jupiter_pos``, ``obs_saturn_pos``, ``obs_venus_pos``,
+           ``obs_uranus_pos``
          - position of various celestial objects at the time of the TOA; computed
            by :func:`pint.toa.TOAs.compute_posvels`
        * - ``pulse_number``
@@ -1264,7 +1265,7 @@ class TOAs(object):
                 toatime_out,
                 toaerr,
                 freq,
-                pulse_number,
+                obs_obj,
                 name=name,
                 flags=flags,
                 format=format,
