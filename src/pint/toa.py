@@ -736,6 +736,44 @@ class TOAs(object):
     computation can be expensive. Methods of this class will populate columns
     as necessary.
 
+    .. list-table:: Columns in ``.table``
+       :widths: 15 85
+       :header-rows: 1
+
+       * - Name
+         - Contents
+       * - ``index``
+         - location of the TOA in the original input
+       * - ``mjd``
+         - the exact time of arrival (an :class:`astropy.time.Time` object)
+       * - ``mjd_float``
+         - the time of arrival in floating-point (may be microseconds off)
+       * - ``error``
+         - the standard error (an :class:`astropy.units.Quantity` describing
+           the claimed uncertainty on the pulse arrival time)
+       * - ``freq``
+         - the observing frequency (an :class:`astropy.units.Quantity`)
+       * - ``obs``
+         - the observatory at which the TOA was acquired (a
+           :class:`pint.observatory.Observatory` object)
+       * - ``flags``
+         - free-form flags associated with the TOA (a dictionary mapping flag
+           to value)
+       * - ``pulse_number``
+         - integer number of turns since a fiducial moment;
+           optional; can be computed from a model with
+           :func:`pint.toa.TOAs.compute_pulse_numbers` or extracted from the
+           ``pn`` entry in ``flags`` with
+           :func:`pint.toa.TOAs.phase_columns_from_flags`.
+       * - ``delta_pulse_number``
+         - number of turns to adjust pulse number by, compared to the model;
+           ``PHASE`` statements in the ``.tim`` file or the ``padd`` entry in
+           ``flags`` carry this information, and :func:`pint.toa.TOAs.phase_columns_from_flags`
+           creates the column.
+       * - ``groups``
+         - if the TOAs have been placed into groups by :func:`pint.toa.TOAs.get_groups`
+           this will contain the group identifier of each TOA.
+
     Parameters
     ----------
     toafile : str, optional
@@ -747,17 +785,7 @@ class TOAs(object):
     Attributes
     ----------
     table : astropy.table.Table
-        The data for all the TOAs is stored in here. It has the columns
-        ``index`` (the location of the TOA in the original input),
-        ``mjd`` (an :class:`astropy.time.Time` object), ``mjd_float`` (a
-        floating-point version of the time), ``error`` (an
-        :class:`astropy.units.Quantity` describing the claimed uncertainty
-        on the pulse arrival time), ``freq`` (an :class:`astropy.units.Quantity`
-        describing the observing frequency), ``obs`` (a
-        :class:`pint.observatory.Observatory` object),
-        and ``flags`` (a dictionary of flags and their values). The table may
-        also contain a column ``pn`` (integers) that is the pulse numbers
-        of the TOAs.  The table is grouped by ``obs``, that is, it is
+        The data for all the TOAs. It is grouped by ``obs``, that is, it is
         not in the same order as the original TOAs.
     commands : list of str
         "Commands" that were written in the file; these will have affected
@@ -1197,11 +1225,12 @@ class TOAs(object):
             outf.write("FORMAT 1\n")
 
         # Add pulse numbers to flags temporarily if there is a pulse number column
+        # FIXME: everywhere else the pulse number column is called pulse_number not pn
         pnChange = False
-        if "pn" in self.table.colnames:
+        if "pulse_number" in self.table.colnames:
             pnChange = True
             for i in range(len(self.table["flags"])):
-                self.table["flags"][i]["pn"] = self.table["pn"][i]
+                self.table["flags"][i]["pn"] = self.table["pulse_number"][i]
 
         for (toatime, toaerr, freq, obs, flags) in zip(
             self.table["mjd"],
@@ -1220,7 +1249,7 @@ class TOAs(object):
                 toatime_out,
                 toaerr,
                 freq,
-                obs_obj,
+                pulse_number,
                 name=name,
                 flags=flags,
                 format=format,

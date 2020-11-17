@@ -5,8 +5,8 @@ import astropy.units as u
 import numpy as np
 import pytest
 from hypothesis import given, settings
-from hypothesis.strategies import lists, tuples, one_of, from_regex
-from pint.toa import TOAs, get_TOAs
+from hypothesis.strategies import lists, tuples, one_of, from_regex, just
+from pint.toa import get_TOAs
 
 basic_tim_header = "FORMAT 1\n"
 
@@ -69,6 +69,9 @@ def test_time(c):
 @pytest.mark.parametrize(
     "k",
     [
+        dict(ephem="DE430"),
+        # dict(tdb_method="ephemeris"),
+        dict(planets=True),
         dict(include_gps=False),
         dict(include_bipm=False),
         dict(bipm_version="BIPM2019"),
@@ -84,7 +87,7 @@ def test_options(k):
     "k",
     [
         dict(ephem="DE430"),
-        dict(tdb_method="tempo2"),
+        # dict(tdb_method="ephemeris"),
         dict(planets=True),
         dict(include_gps=False),
         dict(include_bipm=False),
@@ -106,20 +109,26 @@ some_barycentered 999999.999 56403.000000000000000   1.000  @  -some argument -a
     do_roundtrip(get_TOAs(f, **k), **k)
 
 
-@settings(deadline=None)
+@settings(deadline=None, max_examples=10)
 @given(
     lists(
         tuples(
             from_regex(re.compile(r"[ \t]+", re.ASCII), fullmatch=True),
-            from_regex(re.compile(r"-\w*", re.ASCII), fullmatch=True),
+            from_regex(re.compile(r"-\w*", re.ASCII), fullmatch=True).filter(
+                lambda t: t
+                not in {
+                    "-error",
+                    "-freq",
+                    "-scale",
+                    "-MJD",
+                    "-flags",
+                    "-obs",
+                    "-clkcorr",
+                }
+            ),
             from_regex(re.compile(r"[ \t]+", re.ASCII), fullmatch=True),
             from_regex(re.compile(r"\w+", re.ASCII), fullmatch=True),
-        )
-        .filter(
-            lambda t: t[1]
-            not in {"-error", "-freq", "-scale", "-MJD", "-flags", "-obs"}
-        )
-        .map(lambda t: "".join(t))
+        ).map(lambda t: "".join(t))
     ).map(lambda t: "".join(t))
 )
 def test_flags(s):
@@ -133,3 +142,10 @@ some_barycentered 999999.999 56400.000000000000000   1.000  @{}
         + basic_tim
     )
     do_roundtrip(get_TOAs(f))
+
+
+def test_pulse_number():
+    f = StringIO(basic_tim_header + basic_tim)
+    t = get_TOAs(f)
+    t.table["pulse_number"] = np.random.randint(10 ** 9, size=t.ntoas)
+    do_roundtrip(t)
