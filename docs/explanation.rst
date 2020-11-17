@@ -11,7 +11,7 @@ for. You can find an excellent introduction in the Handbook of Pulsar
 Astronomy, by Lorimer and Kramer. This document is aimed at using PINT
 specifically, and may also be more understandable if you have used
 other pulsar timing software, TEMPO_ or TEMPO2_, though we hope that
-you will fint PINT sufficient for all your needs!
+you will find PINT sufficient for all your needs!
 
 .. _TEMPO: http://tempo.sourceforge.net/
 .. _TEMPO2: https://www.atnf.csiro.au/research/pulsar/tempo2/
@@ -24,7 +24,7 @@ intervals and an absolute time scale - to stupendous accuracy. Pulsar
 timing is a powerful tool in large part because it takes advantage of
 that accuracy. Getting time measurements and calculations right to this
 level of accuracy does require a certain amount of care, in general and
-while using (and writing PINT).
+while using (and writing) PINT.
 
 Precision
 '''''''''
@@ -210,7 +210,6 @@ obtained from the observatory through various means (often talking to a
 support scientist). We intend that PINT should notify you when this is
 necessary, but be aware that you may obtain reduced accuracy if you
 have old clock correction files.
-
 
 Structure of Pulsar Timing Data Formats
 ---------------------------------------

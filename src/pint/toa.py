@@ -68,6 +68,7 @@ toa_commands = (
     "END",
 )
 
+# FIXME: why are these here?
 iers_a_file = None
 iers_a = None
 JD_MJD = 2400000.5
@@ -83,15 +84,61 @@ def get_TOAs(
     usepickle=False,
     tdb_method="default",
 ):
-    """Convenience function to load and prepare TOAs for PINT use.
+    """Load and prepare TOAs for PINT use.
 
-    Loads TOAs from a '.tim' file, applies clock corrections, computes
+    This is the primary function for loading TOAs from a file.
+
+    Loads TOAs from a ``.tim`` file, applies clock corrections, computes
     key values (like TDB), computes the observatory position and velocity
     vectors, and pickles the file for later use (if requested).
 
-    Includes options to specify solar system ephemeris
-    gps clock corrections [default=True], and BIPM clock corrections
-    [default=True].
+    Although ``.tim`` files are intended to be quite specific measurements,
+    selecting one of the optional arguments to this function while loading the
+    ``.tim`` file changes the interpretation; the ``.tim`` file represents different
+    times if different settings are chosen. For nanosecond-level
+    reproducibility it is necessary to specify the options with which each ``.tim``
+    file was loaded. Observatory clock corrections are also applied, and thus
+    the exact result also depends on the precise values in observatory clock
+    correction files; normally these do not change.
+
+    Note also that if usepickle is set, the pickled file will have clock
+    corrections and other values set from when it was loaded and these may not
+    correspond to the values you set here.
+
+    See :func:`pint.toa.TOAs.apply_clock_corrections` for further information on the meaning of
+    the clock correction flags.
+
+    If commands like ``TIME`` or ``EQUAD`` are present in the ``.tim`` file,
+    they are applied to the TOAs upon reading and retained in the ``.commands``
+    attribute. Modern usage is to place ``EQUAD`` and ``EFAC`` in the ``.par``
+    file instead, where they can be fit; these are supported here for
+    historical reasons.
+
+    Parameters
+    ----------
+    timfile : string or file-like
+        Filename or file-like object containing the TOA data.
+    ephem : string
+        The name of the solar system ephemeris to use; defaults to "DE421".
+    include_bipm : bool
+        Whether to apply the BIPM clock correction.
+    bipm_version : string
+        Which version of the BIPM tables to use for the clock correction.
+    include_gps : bool
+        Whether to include the GPS clock correction.
+    planets : bool
+        Whether to apply Shapiro delays based on planet positions. Note that a
+        long-standing TEMPO2 bug in this feature went unnoticed for years.
+    usepickle : bool
+        Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
+    tdb_method : string
+        Which method to use for the clock correction to TDB.
+
+    Returns
+    -------
+    TOAs
+        Completed TOAs object representing the data.
+
     """
     updatepickle = False
     if usepickle:
@@ -120,7 +167,8 @@ def get_TOAs(
 
 
 def _check_pickle(toafilename, picklefilename=None):
-    """Checks if pickle file for the given toafilename needs to be updated.
+    """Check if pickle file for the given toafilename needs to be updated.
+
     Currently only file modification times are compared, note this will
     give misleading results under some circumstances.
 
@@ -163,12 +211,7 @@ def get_TOAs_list(
 ):
     """Load TOAs from a list of TOA objects.
 
-    Compute the TDB time and observatory positions and velocity
-    vectors.
-
-    Includes options to specify solar system ephemeris [default DE421],
-    gps clock corrections [default=True], and BIPM clock corrections
-    [default=True].
+    See :func:`pint.toa.get_TOAs` for details of what this function does.
     """
     t = TOAs(toalist=toa_list)
     if not any(["clkcorr" in f for f in t.table["flags"]]):
@@ -334,8 +377,8 @@ def format_toa_line(
 
     Note
     ----
-    This implementation is currently incomplete in that it will not
-    undo things like TIME statements and probably other things.
+    This implementation does not undo things like ``TIME`` statements; when used
+    by :func:`pint.toa.TOAs.write_TOA_file` these commands are not emitted either.
 
     Princeton format::
 
@@ -682,7 +725,16 @@ class TOA(object):
 class TOAs(object):
     """A class of multiple TOAs, loaded from zero or more files.
 
-    The contents are stored in an `astropy.table.Table`
+    Normally these objects should be read from a file with `pint.toa.get_TOAs`.
+    Constructing them with the constructor here does not apply the clock
+    corrections and the resulting TOAs object may not be set up the way one
+    would normally expect.
+
+    The contents are stored in an `astropy.table.Table`; this can be used to
+    access the contained information but the data may not be in the order you
+    expect. Not all columns of the table are computed automatically, as their
+    computation can be expensive. Methods of this class will populate columns
+    as necessary.
 
     Parameters
     ----------
@@ -708,14 +760,16 @@ class TOAs(object):
         of the TOAs.  The table is grouped by ``obs``, that is, it is
         not in the same order as the original TOAs.
     commands : list of str
-        "Commands" that were written in the file; these can affect
-        how some or all TOAs are interpreted.
+        "Commands" that were written in the file; these will have affected
+        how some or all TOAs were interpreted during loading.
     filename : str, optional
         The filename (if any) that the TOAs were loaded from.
     planets : bool
+        Whether planetary Shapiro delay should be considered.
     ephem : object
+        The Solar System ephemeris in use.
     clock_corr_info : dict
-
+        Information about the clock correction chains in use.
     """
 
     def __init__(self, toafile=None, toalist=None):
@@ -928,10 +982,10 @@ class TOAs(object):
     def get_groups(self, gap_limit=None):
         """flag toas within gap limit (default 2h = 0.0833d) of each other as the same group
 
-        groups can be larger than the gap limit - if toas are seperated by a gap larger than
+        groups can be larger than the gap limit - if toas are separated by a gap larger than
         the gap limit, a new group starts and continues until another such gap is found"""
         # TODO: make all values Quantity objects for consistency
-        if gap_limit == None:
+        if gap_limit is None:
             gap_limit = 0.0833
         if hasattr(self, "toas") or gap_limit != 0.0833:
             gap_limit *= u.d
@@ -1115,14 +1169,20 @@ class TOAs(object):
         self.compute_posvels(self.ephem, self.planets)
 
     def write_TOA_file(self, filename, name="pint", format="Princeton"):
-        """Dump current TOA table out as a TOA file
+        """Write this object to a ``.tim`` file.
+
+        This function writes the contents of this object to a (single) ``.tim``
+        file. If ``TEMPO2`` format is used, this file is able to represent the
+        contents of this object to nanosecond level. No ``TIME`` or ``EFAC``
+        commands are emitted.
 
         Parameters
         ----------
         filename : str or file-like
             File name to write to; can be an open file object
         format : str
-            Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1')
+            Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1');
+            note that not all features may be supported in 'TEMPO' mode.
 
         """
         try:
@@ -1192,9 +1252,7 @@ class TOAs(object):
 
         A description of how PINT handles clock corrections and timescales is here:
         https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
-
         """
-
         # First make sure that we haven't already applied clock corrections
         flags = self.table["flags"]
         if any(["clkcorr" in f for f in flags]):
@@ -1255,7 +1313,6 @@ class TOAs(object):
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
         for TDB times, using the Observatory locations and IERS A Earth
         rotation corrections for UT1.
-
         """
         log.info("Computing TDB columns.")
         if "tdb" in self.table.colnames:
@@ -1332,9 +1389,7 @@ class TOAs(object):
         SSB) for each TOA.  The JPL solar system ephemeris can be set
         using the 'ephem' parameter.  The positions and velocities are
         set with PosVel class instances which have astropy units.
-
         """
-
         if ephem is None:
             if self.ephem is not None:
                 ephem = self.ephem
@@ -1453,7 +1508,6 @@ class TOAs(object):
         deletes this column so that this function will be called again and
         velocities will be calculated with updated TOAs.
         """
-
         # Remove any existing columns
         col_to_remove = "ssb_obs_vel_ecl"
         if col_to_remove in self.table.colnames:
@@ -1508,7 +1562,6 @@ class TOAs(object):
         If the file ends with ".gz" it will be uncompressed before extracting
         the pickle.
         """
-
         log.info("Reading pickled TOAs from '%s'..." % filename)
         if os.path.splitext(filename)[1] == ".gz":
             infile = gzip.open(filename, "rb")
@@ -1533,6 +1586,8 @@ class TOAs(object):
 
     def read_toa_file(self, filename, process_includes=True, top=True):
         """Read TOAs from the given filename.
+
+        Deprecated; intended for internal use only.
 
         Will process INCLUDEd files unless process_includes is False.
 

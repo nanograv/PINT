@@ -83,6 +83,9 @@ def test_options(k):
 @pytest.mark.parametrize(
     "k",
     [
+        dict(ephem="DE430"),
+        dict(tdb_method="tempo2"),
+        dict(planets=True),
         dict(include_gps=False),
         dict(include_bipm=False),
         dict(bipm_version="BIPM2019"),
