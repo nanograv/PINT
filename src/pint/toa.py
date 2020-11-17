@@ -759,6 +759,21 @@ class TOAs(object):
        * - ``flags``
          - free-form flags associated with the TOA (a dictionary mapping flag
            to value)
+       * - ``tdb``
+         - the pulse arrival time converted to TDB (but not barycentered, that is,
+           not corrected for light travel time; an :class:`astropy.time.Time` object);
+           computed by :func:`pint.toa.TOAs.compute_TDBs`
+       * - ``tdbld``
+         - a ``longdouble`` version of ``tdb`` for computational convenience
+       * - ``ssb_obs_pos``, ``ssb_obs_vel``
+         - position and velocity of the observatory at the time of the TOA; computed
+           by :func:`pint.toa.TOAs.compute_posvels`
+       * - ``ssb_obs_vel_ecl``
+         - velocity of the observatory in ecliptic coordinates at the time of the TOA; computed
+           by :func:`pint.toa.TOAs.add_vel_ecl`
+       * - ``obs_sun_pos``, ``obs_jupiter_pos``, ``obs_saturn_pos``, ``obs_venus_pos``, ``obs_uranus_pos``
+         - position of various celestial objects at the time of the TOA; computed
+           by :func:`pint.toa.TOAs.compute_posvels`
        * - ``pulse_number``
          - integer number of turns since a fiducial moment;
            optional; can be computed from a model with
@@ -1452,12 +1467,7 @@ class TOAs(object):
                 "Computing PosVels of observatories and Earth, using {}".format(ephem)
             )
         # Remove any existing columns
-        cols_to_remove = [
-            "ssb_obs_pos",
-            "ssb_obs_vel",
-            "ssb_obs_vel_ecl",
-            "obs_sun_pos",
-        ]
+        cols_to_remove = ["ssb_obs_pos", "ssb_obs_vel", "obs_sun_pos"]
         for c in cols_to_remove:
             if c in self.table.colnames:
                 log.info("Column {0} already exists. Removing...".format(c))
