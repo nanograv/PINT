@@ -98,6 +98,13 @@ class Fitter(object):
                 rn = self.model.match_param_aliases(pn)
                 if rn != "":
                     fit_params_name.append(rn)
+                else:
+                    # it doesn't match one of the default names
+                    # and it doesn't match any of the aliases
+                    raise AttributeError(
+                        "Parameter '%s' not present in model; cannot fit it (try to use component.add_param())"
+                        % pn
+                    )
 
         for p in self.model.params:
             getattr(self.model, p).frozen = p not in fit_params_name
