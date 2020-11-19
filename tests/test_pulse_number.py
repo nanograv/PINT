@@ -83,7 +83,9 @@ def test_parameter_overrides_model():
     assert np.amax(r.phase_resids) - np.amin(r.phase_resids) > 1
 
 
-@pytest.mark.parametrize("fitter", [pint.fitter.WLSFitter, pint.fitter.PowellFitter])
+@pytest.mark.parametrize(
+    "fitter", [pint.fitter.WLSFitter, pint.fitter.PowellFitter, pint.fitter.GLSFitter]
+)
 def test_fitter_respects_pulse_numbers(fitter):
     m = get_model(parfile)
     t = make_fake_toas(56000, 59000, 10, m, obs="@")

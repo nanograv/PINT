@@ -474,9 +474,7 @@ def make_fake_toas(
 ):
     """Make evenly spaced toas with residuals = 0 and  without errors
 
-    FIXME: ignores model and produces random residuals
-
-    might be able to do different frequencies if fed an array of frequencies,
+    Might be able to do different frequencies if fed an array of frequencies,
     only works with one observatory at a time
 
     Parameters
@@ -523,14 +521,16 @@ def make_fake_toas(
         for t, f in zip(times, freq_array)
     ]
     ts = TOAs(toalist=t1)
+    ts.clock_corr_info.update(
+        # FIXME: why turn off BIPM et cetera?
+        {"include_bipm": False, "bipm_version": bipm_default, "include_gps": False}
+    )
     ts.table["error"] = error
     ts.compute_TDBs()
     ts.compute_posvels()
-    ts.clock_corr_info.update(
-        {"include_bipm": False, "bipm_version": bipm_default, "include_gps": False}
-    )
+    ts.compute_pulse_numbers(model)
     for i in range(10):
-        r = pint.residuals.Residuals(ts, model, track_mode="nearest")
+        r = pint.residuals.Residuals(ts, model, track_mode="use_pulse_numbers")
         if abs(r.time_resids).max() < 1 * u.ns:
             break
         ts.adjust_TOAs(time.TimeDelta(-r.time_resids))

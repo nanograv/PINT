@@ -4,7 +4,6 @@ import collections
 import copy
 from warnings import warn
 
-import astropy.constants as const
 import astropy.units as u
 import numpy as np
 import pint.utils
@@ -12,7 +11,6 @@ import scipy.linalg as sl
 import scipy.optimize as opt
 from astropy import log
 from pint.toa import TOAs
-from pint import Tsun
 from pint.utils import FTest
 from pint.pint_matrix import (
     DesignMatrixMaker,
@@ -24,17 +22,7 @@ from pint.pint_matrix import (
 
 import pint.residuals as pr
 
-from pint.models.parameter import (
-    AngleParameter,
-    boolParameter,
-    floatParameter,
-    prefixParameter,
-    strParameter,
-    MJDParameter,
-)
-from pint.models.pulsar_binary import PulsarBinary
-from pint.residuals import Residuals
-from pint.utils import FTest
+from pint.models.parameter import AngleParameter, boolParameter, strParameter
 
 __all__ = ["Fitter", "PowellFitter", "GLSFitter", "WLSFitter"]
 
@@ -693,8 +681,10 @@ class PowellFitter(Fitter):
     parameter space. It is a relative basic method.
     """
 
-    def __init__(self, toas, model, track_mode=None):
-        super(PowellFitter, self).__init__(toas, model, track_mode=track_mode)
+    def __init__(self, toas, model, track_mode=None, residuals=None):
+        super(PowellFitter, self).__init__(
+            toas, model, residuals=residuals, track_mode=track_mode
+        )
         self.method = "Powell"
 
     def fit_toas(self, maxiter=20):
@@ -726,8 +716,10 @@ class WLSFitter(Fitter):
     required.
     """
 
-    def __init__(self, toas, model, track_mode=None):
-        super(WLSFitter, self).__init__(toas=toas, model=model, track_mode=track_mode)
+    def __init__(self, toas, model, track_mode=None, residuals=None):
+        super(WLSFitter, self).__init__(
+            toas=toas, model=model, residuals=residuals, track_mode=track_mode
+        )
         self.method = "weighted_least_square"
 
     def fit_toas(self, maxiter=1, threshold=False):
@@ -822,7 +814,7 @@ class GLSFitter(Fitter):
     required.
     """
 
-    def __init__(self, toas=None, model=None, residuals=None, track_mode=None):
+    def __init__(self, toas=None, model=None, track_mode=None, residuals=None):
         super(GLSFitter, self).__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
