@@ -23,11 +23,12 @@ class Residuals:
         Controls whether mean will be subtracted from the residuals
     use_weighted_mean : bool
         Controls whether mean compution is weighted (by errors) or not.
-    track_mode : "nearest", "use_pulse_numbers"
-        Controls how pulse numbers are assigned. The default "nearest" assigns
-        each TOA to the nearest integer pulse. "use_pulse_numbers" uses the
-        pulse_number column of the TOAs table to assign pulse numbers. This mode
-        is selected automatically if the model has parameter TRACK == "-2".
+    track_mode : None, "nearest", "use_pulse_numbers"
+        Controls how pulse numbers are assigned. ``"nearest"`` assigns
+        each TOA to the nearest integer pulse. ``"use_pulse_numbers"`` uses the
+        ``pulse_number`` column of the TOAs table to assign pulse numbers. If the
+        default, None, is passed, use the pulse numbers if and only if the model has
+        parameter TRACK == "-2".
     """
 
     def __new__(
@@ -38,7 +39,7 @@ class Residuals:
         unit=u.s,
         subtract_mean=True,
         use_weighted_mean=True,
-        track_mode="nearest",
+        track_mode=None,
         scaled_by_F0=True,
     ):
         if cls is Residuals:
@@ -71,11 +72,12 @@ class Residuals:
         self.subtract_mean = subtract_mean
         self.use_weighted_mean = use_weighted_mean
         if track_mode is None:
-            self.track_mode = "nearest"
+            if getattr(self.model, "TRACK").value == "-2":
+                self.track_mode = "use_pulse_numbers"
+            else:
+                self.track_mode = "nearest"
         else:
             self.track_mode = track_mode
-        if getattr(self.model, "TRACK").value == "-2":
-            self.track_mode = "use_pulse_numbers"
         if toas is not None and model is not None:
             self.phase_resids = self.calc_phase_resids()
             self.time_resids = self.calc_time_resids()
@@ -155,7 +157,7 @@ class Residuals:
         # Check for the column, and if not there then create it as zeros
         try:
             delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
-        except:
+        except IndexError:
             self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
             delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
 
@@ -178,7 +180,7 @@ class Residuals:
             # This converts from a Phase object to a np.float128
             full = residualphase.int + residualphase.frac
         # If not tracking then do the usual nearest pulse number calculation
-        else:
+        elif self.track_mode == "nearest":
             # Compute model phase
             modelphase = self.model.phase(self.toas) + delta_pulse_numbers
             # Here it subtracts the first phase, so making the first TOA be the
@@ -191,6 +193,8 @@ class Residuals:
             residualphase = Phase(np.zeros_like(modelphase.frac), modelphase.frac)
             # This converts from a Phase object to a np.float128
             full = residualphase.int + residualphase.frac
+        else:
+            raise ValueError("Invalid track_mode '{}'".format(self.track_mode))
         # If we are using pulse numbers, do we really want to subtract any kind of mean?
         if not self.subtract_mean:
             return full

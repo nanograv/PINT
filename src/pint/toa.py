@@ -30,6 +30,7 @@ from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.phase import Phase
 from pint.pulsar_ecliptic import PulsarEcliptic
+import pint.residuals
 
 __all__ = [
     "get_TOAs",
@@ -469,8 +470,12 @@ def format_toa_line(
     return out
 
 
-def make_fake_toas(startMJD, endMJD, ntoas, model, freq=1400, obs="GBT"):
+def make_fake_toas(
+    startMJD, endMJD, ntoas, model, freq=999999, obs="@", error=1 * u.us
+):
     """Make evenly spaced toas with residuals = 0 and  without errors
+
+    FIXME: ignores model and produces random residuals
 
     might be able to do different frequencies if fed an array of frequencies,
     only works with one observatory at a time
@@ -515,11 +520,23 @@ def make_fake_toas(startMJD, endMJD, ntoas, model, freq=1400, obs="GBT"):
         for t, f in zip(times, freq_array)
     ]
     ts = TOAs(toalist=t1)
+    ts.table["error"] = error
     ts.compute_TDBs()
     ts.compute_posvels()
     ts.clock_corr_info.update(
         {"include_bipm": False, "bipm_version": bipm_default, "include_gps": False}
     )
+    for i in range(10):
+        r = pint.residuals.Residuals(ts, model, track_mode="nearest")
+        if abs(r.time_resids).max() < 1 * u.ns:
+            break
+        ts.adjust_TOAs(time.TimeDelta(-r.time_resids))
+    else:
+        raise ValueError(
+            "Unable to make fake residuals - left over errors are {}".format(
+                abs(r.time_resids).max()
+            )
+        )
     return ts
 
 
