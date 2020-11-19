@@ -30,7 +30,6 @@ from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.phase import Phase
 from pint.pulsar_ecliptic import PulsarEcliptic
-import pint.residuals
 
 __all__ = [
     "get_TOAs",
@@ -501,6 +500,10 @@ def make_fake_toas(
         object with evenly spaced toas spanning given start and end MJD with
         ntoas toas, without errors
     """
+    # FIXME: this is a sign this is not where this function belongs
+    # residuals depends on models and TOAs so this adds a circular dependency
+    import pint.residuals
+
     # TODO:make all variables Quantity objects
     # TODO: freq default to inf
     def get_freq_array(bfv, ntoas):
