@@ -174,11 +174,6 @@ class TimingModel(object):
     def __str__(self):
         return self.as_parfile()
 
-    def setup(self):
-        """Run setup methods on all components."""
-        for cp in self.components.values():
-            cp.setup()
-
     def validate(self):
         """Validate component setup.
         The checks includes:
@@ -276,16 +271,21 @@ class TimingModel(object):
 
     @property
     def free_params(self):
-        """ Returns all the free parameters in the timing model.
-        """
-        free_params = []
-        for cp in self.components.values():
-            free_params += cp.free_params_component
-        return free_params
+        """All the free parameters in the timing model. Can be set to change which are free."""
+        return [p for p in self.params if not getattr(self, p).frozen]
+
+    @free_params.setter
+    def free_params(self, params):
+        params = set(params).copy()
+        for p in self.params:
+            getattr(self, p).frozen = p not in params
+            params.discard(p)
+        if params:
+            raise ValueError("Unrecognized parameter(s): {}".format(params))
 
     @property
     def components(self):
-        """All the components indexed by name."""
+        """All the components in a dictionary indexed by name."""
         comps = {}
         if six.PY2:
             type_list = super(TimingModel, self).__getattribute__("component_types")
@@ -889,7 +889,7 @@ class TimingModel(object):
             return phase
 
     def total_dm(self, toas):
-        """ This function calculates the dispersion measures from all the dispersion
+        """This function calculates the dispersion measures from all the dispersion
         type of components.
         """
         # Here we assume the unit would be the same for all the dm value function.
@@ -960,7 +960,7 @@ class TimingModel(object):
         return result
 
     def scaled_dm_uncertainty(self, toas):
-        """ Get the scaled DM data uncertainties noise models.
+        """Get the scaled DM data uncertainties noise models.
 
             If there is no noise model component provided, a vector with
             DM error as values will be returned.
@@ -1331,46 +1331,46 @@ class TimingModel(object):
 
     def compare(self, othermodel, nodmx=True, threshold_sigma=3.0, verbosity="max"):
         """Print comparison with another model
-            Parameters
-            ----------
-            othermodel
-                TimingModel object to compare to
-            nodmx : bool
-                If True (which is the default), don't print the DMX parameters in
-                the comparison
-            threshold_sigma : float
-                Pulsar parameters for which diff_sigma > threshold will be printed
-                with an exclamation point at the end of the line
-            verbosity : string
-                Dictates amount of information returned. Options include "max",
-                "med", and "min", which have the following results:
-                    "max"     - print all lines from both models whether they are fit
-                                or not (note that nodmx will override this); DEFAULT
-                    "med"     - only print lines for parameters that are fit
-                    "min"     - only print lines for fit parameters for which
-                                diff_sigma > threshold
-                    "check"   - only print significant changes with astropy.log.warning, not
-                                as string (note that all other modes will still print this)        
-            
-            Returns
-            -------
-            str
-                Human readable comparison, for printing
-                Formatted as a five column table with titles of
-                PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2
-                where Model 1/2 refer to self and othermodel Timing Model objects,
-                and Diff_SigmaX is the difference in a given parameter as reported by the two models,
-                normalized by the uncertainty in model X. If model X has no reported uncertainty,
-                nothing will be printed. When either Diff_Sigma value is greater than threshold_sigma, 
-                an exclamation point (!) will be appended to the line. If the uncertainty in the first model
-                if smaller than the second, an asterisk (*) will be appended to the line. Also, astropy
-                warnings and info statements will be printed.
-                
-            else:
-                Nonetype
-                    Prints astropy.log warnings for parameters that have changed significantly
-                    and/or have increased in uncertainty.
-            """
+        Parameters
+        ----------
+        othermodel
+            TimingModel object to compare to
+        nodmx : bool
+            If True (which is the default), don't print the DMX parameters in
+            the comparison
+        threshold_sigma : float
+            Pulsar parameters for which diff_sigma > threshold will be printed
+            with an exclamation point at the end of the line
+        verbosity : string
+            Dictates amount of information returned. Options include "max",
+            "med", and "min", which have the following results:
+                "max"     - print all lines from both models whether they are fit
+                            or not (note that nodmx will override this); DEFAULT
+                "med"     - only print lines for parameters that are fit
+                "min"     - only print lines for fit parameters for which
+                            diff_sigma > threshold
+                "check"   - only print significant changes with astropy.log.warning, not
+                            as string (note that all other modes will still print this)
+
+        Returns
+        -------
+        str
+            Human readable comparison, for printing
+            Formatted as a five column table with titles of
+            PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2
+            where Model 1/2 refer to self and othermodel Timing Model objects,
+            and Diff_SigmaX is the difference in a given parameter as reported by the two models,
+            normalized by the uncertainty in model X. If model X has no reported uncertainty,
+            nothing will be printed. When either Diff_Sigma value is greater than threshold_sigma,
+            an exclamation point (!) will be appended to the line. If the uncertainty in the first model
+            if smaller than the second, an asterisk (*) will be appended to the line. Also, astropy
+            warnings and info statements will be printed.
+
+        else:
+            Nonetype
+                Prints astropy.log warnings for parameters that have changed significantly
+                and/or have increased in uncertainty.
+        """
 
         from uncertainties import ufloat
         import uncertainties.umath as um
@@ -1788,6 +1788,11 @@ class TimingModel(object):
                     % (maskpar, par.key, par.key_value)
                 )
 
+    def setup(self):
+        """Run setup methods on all components."""
+        for cp in self.components.values():
+            cp.setup()
+
 
 class ModelMeta(abc.ABCMeta):
     """Ensure timing model registration.
@@ -1866,7 +1871,7 @@ class Component(object):
 
     @property
     def free_params_component(self):
-        """ Return the free parameters in the component.
+        """Return the free parameters in the component.
 
         This function collects the non-frozen parameters.
 

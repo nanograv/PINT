@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import collections
 import copy
+from warnings import warn
 
 import astropy.constants as const
 import astropy.units as u
@@ -39,7 +40,7 @@ __all__ = ["Fitter", "PowellFitter", "GLSFitter", "WLSFitter"]
 
 
 class Fitter(object):
-    """ Base class for fitter.
+    """Base class for fitter.
 
     The fitting function should be defined as the fit_toas() method.
 
@@ -79,14 +80,18 @@ class Fitter(object):
         self.fitresult = []
 
     def update_resids(self):
-        """Update the residuals. Run after updating a model parameter."""
+        """Update the residuals.
+
+        Run after updating a model parameter.
+        """
         self.resids = pr.Residuals(toas=self.toas, model=self.model)
 
     def set_fitparams(self, *params):
-        """Update the "frozen" attribute of model parameters.
-
-        Ex. fitter.set_fitparams('F0','F1')
-        """
+        """Update the "frozen" attribute of model parameters. Deprecated."""
+        warn(
+            "This function is confusing and deprecated. Set self.model.free_parameters instead.",
+            category=DeprecationWarning,
+        )
         # TODO, maybe reconsider for the input?
         fit_params_name = []
         if isinstance(params[0], (list, tuple)):
@@ -102,34 +107,66 @@ class Fitter(object):
         for p in self.model.params:
             getattr(self.model, p).frozen = p not in fit_params_name
 
-    def get_allparams(self):
+    def get_all_params(self):
         """Return a dict of all param names and values."""
         return collections.OrderedDict(
             (k, getattr(self.model, k).quantity) for k in self.model.params_ordered
         )
 
-    def get_fitparams(self):
-        """Return a dict of fittable param names and quantity."""
+    def get_allparams(self):
+        """Return a dict of all param names and values. Deprecated."""
+        warn(
+            "This function is confusing and deprecated. Use get_all_params.",
+            category=DeprecationWarning,
+        )
+        return self.get_all_params()
+
+    def get_free_params(self):
+        """Return a dict of free parameter names and values in Quantity form.
+
+        See also self.model.free_params.
+        """
         return collections.OrderedDict(
-            (k, getattr(self.model, k))
-            for k in self.model.params
-            if not getattr(self.model, k).frozen
+            (k, getattr(self.model, k)) for k in self.model.free_params
+        )
+
+    def get_fitparams(self):
+        """Return a dict of fittable param names and quantity. Deprecated."""
+        warn(
+            "This function is confusing and deprecated. Use get_free_params.",
+            category=DeprecationWarning,
+        )
+        return self.get_free_params()
+
+    def get_free_params_num(self):
+        """Return a dict of free param names and numeric values."""
+        return collections.OrderedDict(
+            (k, getattr(self.model, k).value) for k in self.model.free_params
         )
 
     def get_fitparams_num(self):
-        """Return a dict of fittable param names and numeric values."""
-        return collections.OrderedDict(
-            (k, getattr(self.model, k).value)
-            for k in self.model.params
-            if not getattr(self.model, k).frozen
+        """Return a dict of fittable param names and numeric values. Deprecated."""
+        warn(
+            "This function is confusing and deprecated. Use get_free_params_num.",
+            category=DeprecationWarning,
         )
+        return self.get_free_params_num()
 
-    def get_fitparams_uncertainty(self):
+    def get_free_params_uncertainty(self):
+        """Return a dict of free param names and numeric values."""
         return collections.OrderedDict(
             (k, getattr(self.model, k).uncertainty_value)
             for k in self.model.params
             if not getattr(self.model, k).frozen
         )
+
+    def get_fitparams_uncertainty(self):
+        """Return a dict of fittable param names and numeric values."""
+        warn(
+            "This function is confusing and deprecated. Use get_free_params_uncertainty.",
+            category=DeprecationWarning,
+        )
+        return self.get_free_params_uncertainty()
 
     def set_params(self, fitp):
         """Set the model parameters to the value contained in the input dict.
@@ -677,7 +714,7 @@ class Fitter(object):
 
 class PowellFitter(Fitter):
     """A class for Scipy Powell fitting method. This method searches over
-       parameter space. It is a relative basic method.
+    parameter space. It is a relative basic method.
     """
 
     def __init__(self, toas, model):
@@ -709,8 +746,8 @@ class PowellFitter(Fitter):
 
 class WLSFitter(Fitter):
     """
-       A class for weighted least square fitting method. The design matrix is
-       required.
+    A class for weighted least square fitting method. The design matrix is
+    required.
     """
 
     def __init__(self, toas, model):
@@ -805,8 +842,8 @@ class WLSFitter(Fitter):
 
 class GLSFitter(Fitter):
     """
-       A class for weighted least square fitting method. The design matrix is
-       required.
+    A class for weighted least square fitting method. The design matrix is
+    required.
     """
 
     def __init__(self, toas=None, model=None, residuals=None):
@@ -959,7 +996,7 @@ class GLSFitter(Fitter):
 
 
 class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
-    """ A class to for fitting TOAs and other independent measured data.
+    """A class to for fitting TOAs and other independent measured data.
 
     Parameters
     ----------
@@ -1083,7 +1120,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         return combine_covariance_matrix(cov_matrixs)
 
     def get_data_uncertainty(self, data_name, data_obj):
-        """ Get the data uncertainty from the data  object.
+        """Get the data uncertainty from the data  object.
 
         Note
         ----
@@ -1097,7 +1134,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             raise ValueError("No method to access data error is provided.")
 
     def scaled_all_sigma(self,):
-        """ Scale all data's uncertainty. If the function of scaled_`data`_sigma
+        """Scale all data's uncertainty. If the function of scaled_`data`_sigma
         is not given. It will just return the original data uncertainty.
         """
         scaled_sigmas = []
