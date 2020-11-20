@@ -247,7 +247,7 @@ class Fitter(object):
 
         # First, print fit quality metrics
         s = "Fitted model using {} method with {} free parameters to {} TOAs\n".format(
-            self.method, len(self.get_fitparams()), self.toas.ntoas
+            self.method, len(self.get_free_params()), self.toas.ntoas
         )
         s += "Prefit residuals Wrms = {}, Postfit residuals Wrms = {}\n".format(
             self.resids_init.rms_weighted(), self.resids.rms_weighted()
@@ -507,7 +507,7 @@ class Fitter(object):
         prec is the precision of the floating point results.
         """
         if hasattr(self, "covariance_matrix"):
-            fps = list(self.get_fitparams().keys())
+            fps = list(self.get_free_params().keys())
             cm = self.covariance_matrix
             if with_phase:
                 fps = ["PHASE"] + fps
@@ -541,7 +541,7 @@ class Fitter(object):
         prec is the precision of the floating point results.
         """
         if hasattr(self, "correlation_matrix"):
-            fps = list(self.get_fitparams().keys())
+            fps = list(self.get_free_params().keys())
             cm = self.correlation_matrix
             if with_phase:
                 fps = ["PHASE"] + fps
@@ -725,7 +725,7 @@ class PowellFitter(Fitter):
         # check that params of timing model have necessary components
         self.model.maskPar_has_toas_check(self.toas)
         # Initial guesses are model params
-        fitp = self.get_fitparams_num()
+        fitp = self.get_free_params_num()
         self.fitresult = opt.minimize(
             self.minimize_func,
             list(fitp.values()),
@@ -760,9 +760,9 @@ class WLSFitter(Fitter):
         self.model.maskPar_has_toas_check(self.toas)
         chi2 = 0
         for i in range(maxiter):
-            fitp = self.get_fitparams()
-            fitpv = self.get_fitparams_num()
-            fitperrs = self.get_fitparams_uncertainty()
+            fitp = self.get_free_params()
+            fitpv = self.get_free_params_num()
+            fitperrs = self.get_free_params_uncertainty()
             # Define the linear system
             M, params, units, scale_by_F0 = self.get_designmatrix()
             # Get residuals and TOA uncertainties in seconds
@@ -880,9 +880,9 @@ class GLSFitter(Fitter):
         self.model.maskPar_has_toas_check(self.toas)
         chi2 = 0
         for i in range(max(maxiter, 1)):
-            fitp = self.get_fitparams()
-            fitpv = self.get_fitparams_num()
-            fitperrs = self.get_fitparams_uncertainty()
+            fitp = self.get_free_params()
+            fitpv = self.get_free_params_num()
+            fitperrs = self.get_free_params_uncertainty()
 
             # Define the linear system
             M, params, units, scale_by_F0 = self.get_designmatrix()
@@ -1092,7 +1092,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
 
     def get_designmatrix(self):
         design_matrixs = []
-        fit_params = list(self.get_fitparams().keys())
+        fit_params = list(self.get_free_params().keys())
         if len(self.fit_data) == 1:
             for ii, dmatrix_maker in enumerate(self.designmatrix_makers):
                 design_matrixs.append(
@@ -1173,9 +1173,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         # self.model.maskPar_has_toas_check(self.toas)
         chi2 = 0
         for i in range(max(maxiter, 1)):
-            fitp = self.get_fitparams()
-            fitpv = self.get_fitparams_num()
-            fitperrs = self.get_fitparams_uncertainty()
+            fitp = self.get_free_params()
+            fitpv = self.get_free_params_num()
+            fitperrs = self.get_free_params_uncertainty()
 
             # Define the linear system
             d_matrix = self.get_designmatrix()

@@ -6,7 +6,7 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.2'
-      jupytext_version: 1.4.0
+      jupytext_version: 1.5.2
   kernelspec:
     display_name: Python 3
     language: python
@@ -136,7 +136,7 @@ d_matrix = fitter.get_designmatrix()
 ```python execution={"iopub.execute_input": "2020-09-10T16:29:32.318273Z", "iopub.status.busy": "2020-09-10T16:29:32.311723Z", "iopub.status.idle": "2020-09-10T16:29:32.327689Z", "shell.execute_reply": "2020-09-10T16:29:32.327089Z"}
 print("Number of TOAs:", toas.ntoas)
 print("Number of DM measurments:", len(fitter.resids.residual_objs['dm'].dm_data))
-print("Number of fit params:", len(fitter.get_fitparams()))
+print("Number of fit params:", len(fitter.get_free_params()))
 print("Shape of design matrix:", d_matrix.shape)
 ```
 

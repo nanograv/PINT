@@ -73,7 +73,7 @@ def test_fitter():
     )
 
     # Do a 4-parameter fit
-    f.set_fitparams("F0", "F1", "RA", "DEC")
+    f.model.free_params = ("F0", "F1", "RAJ", "DECJ")
     f.fit_toas()
 
     # Check the number of degrees of freedom in the fit.
@@ -96,7 +96,7 @@ def test_fitter():
     print("chi^2 is %0.2f after perturbing F1" % f.resids.chi2)
     p3 = plt.errorbar(xt, f.resids.time_resids.value, yerr.value, fmt="ms")
 
-    f.set_fitparams("F1")
+    f.model.free_params = ["F1"]
     f.fit_toas()
     print(
         'chi^2 is %0.2f after fitting just F1 with default method="Powell"'

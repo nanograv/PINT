@@ -277,6 +277,7 @@ class TimingModel(object):
     @free_params.setter
     def free_params(self, params):
         params = set(params).copy()
+        # FIXME: handle parameter aliases?
         for p in self.params:
             getattr(self, p).frozen = p not in params
             params.discard(p)
@@ -324,25 +325,33 @@ class TimingModel(object):
     def orbital_phase(self, barytimes, anom="mean", radians=True):
         """Return orbital phase (in radians) at barycentric MJD times
 
-        Args:
-            barytimes (MJD barycentric time(s)): The times to compute the
-                orbital phases.  Needs to be a barycentric time in TDB.
-                If a TOAs instance is passed, the barycenting will happen
-                automatically.  If an astropy Time object is passed, it must
-                be in scale='tdb'.  If an array-like object is passed or
-                a simple float, the time must be in MJD format.
-            anom (str, optional): Type of phase/anomaly. Defaults to "mean".
-                Other options are "eccentric" or "true"
-            radians (bool, optional): Units to return.  Defaults to True.
-                If False, will return unitless phases in cycles (i.e. 0-1).
+        Parameters
+        ----------
+        barytimes: Time, TOAs, array-like, or float
+            MJD barycentric time(s). The times to compute the
+            orbital phases.  Needs to be a barycentric time in TDB.
+            If a TOAs instance is passed, the barycenting will happen
+            automatically.  If an astropy Time object is passed, it must
+            be in scale='tdb'.  If an array-like object is passed or
+            a simple float, the time must be in MJD format.
+        anom: str, optional
+            Type of phase/anomaly. Defaults to "mean".
+            Other options are "eccentric" or "true"
+        radians: bool, optional
+            Units to return.  Defaults to True.
+            If False, will return unitless phases in cycles (i.e. 0-1).
 
-        Raises:
-            ValueError: If anom.lower() is not "mean", "ecc*", or "true",
-                or if an astropy Time object is passed with scale!="tdb".
+        Raises
+        ------
+        ValueError
+            If anom.lower() is not "mean", "ecc*", or "true",
+            or if an astropy Time object is passed with scale!="tdb".
 
-        Returns:
-            [array]: The specified anomaly in radians (with unit), unless
-                radians=False, which return unitless cycles (0-1).
+        Returns
+        -------
+        array
+            The specified anomaly in radians (with unit), unless
+            radians=False, which return unitless cycles (0-1).
         """
         if not self.is_binary:  # punt if not a binary
             return None
@@ -385,16 +394,21 @@ class TimingModel(object):
     def conjunction(self, baryMJD):
         """Return the time(s) of the first superior conjunction(s) after baryMJD
 
-        Args:
-            baryMJD (floats or Time()): barycentric (tdb) MJD(s) prior to the
-                conjunction we are looking for.  Can be an array.
+        Args
+        ----
+        baryMJD: floats or Time
+            barycentric (tdb) MJD(s) prior to the
+            conjunction we are looking for.  Can be an array.
 
-        Raises:
-            ValueError: If baryMJD is an astropy Time object with scale!="tdb".
+        Raises
+        ------
+        ValueError
+            If baryMJD is an astropy Time object with scale!="tdb".
 
-        Returns:
-            [float or array]: The barycentric MJD(tdb) time(s) of the next
-                superior conjunction(s) after baryMJD
+        Returns
+        -------
+        float or array
+            The barycentric MJD(tdb) time(s) of the next superior conjunction(s) after baryMJD
         """
         if not self.is_binary:  # punt if not a binary
             return None
@@ -406,6 +420,7 @@ class TimingModel(object):
         # Superior conjunction occurs when true anomaly + omega == 90 deg
         # We will need to solve for this using a root finder (brentq)
         # This is the function to root-find:
+
         def funct(t):
             nu = self.orbital_phase(t, anom="true")
             return np.fmod((nu + bbi.omega()).value, 2 * np.pi) - np.pi / 2
