@@ -103,9 +103,9 @@ class Fitter(object):
                 rn = self.model.match_param_aliases(pn)
                 if rn != "":
                     fit_params_name.append(rn)
-
-        for p in self.model.params:
-            getattr(self.model, p).frozen = p not in fit_params_name
+                else:
+                    raise ValueError("Unrecognized parameter {}".format(pn))
+        self.model.fit_params = fit_params_name
 
     def get_all_params(self):
         """Return a dict of all param names and values."""
