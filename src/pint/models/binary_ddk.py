@@ -53,7 +53,7 @@ class BinaryDDK(BinaryDD):
                 " correction",
             )
         )
-        self.interal_params += ["PMRA_DDK", "PMDEC_DDK"]
+        self.internal_params += ["PMRA_DDK", "PMDEC_DDK"]
 
     @property
     def PMRA_DDK(self):

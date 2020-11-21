@@ -276,13 +276,14 @@ class TimingModel(object):
 
     @free_params.setter
     def free_params(self, params):
-        params = set(params).copy()
-        # FIXME: handle parameter aliases?
+        params = {self.match_param_aliases(p) for p in params}
         for p in self.params:
             getattr(self, p).frozen = p not in params
             params.discard(p)
         if params:
-            raise ValueError("Unrecognized parameter(s): {}".format(params))
+            raise ValueError(
+                "Parameter(s) are familiar but not in the model: {}".format(params)
+            )
 
     @property
     def components(self):
@@ -2112,8 +2113,7 @@ class Component(object):
         for pa, pav in zip(p_aliases.keys(), p_aliases.values()):
             if alias in pav:
                 return pa
-        # if not found any thing.
-        return ""
+        raise ValueError("{} is not recognized as a parameter or alias".format(p))
 
     def register_deriv_funcs(self, func, param):
         """Register the derivative function in to the deriv_func dictionaries.
@@ -2127,8 +2127,6 @@ class Component(object):
 
         """
         pn = self.match_param_aliases(param)
-        if pn == "":
-            raise ValueError("Parameter '%s' in not in the model." % param)
 
         if pn not in list(self.deriv_funcs.keys()):
             self.deriv_funcs[pn] = [func]

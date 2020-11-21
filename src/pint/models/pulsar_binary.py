@@ -136,7 +136,7 @@ class PulsarBinary(DelayComponent):
                 long_double=True,
             )
         )
-        self.interal_params = []
+        self.internal_params = []
         self.warn_default_params = ["ECC", "OM"]
         # Set up delay function
         self.delay_funcs_component += [self.binarymodel_delay]
@@ -223,9 +223,11 @@ class PulsarBinary(DelayComponent):
                 aliase = []
 
             if hasattr(self, par) or list(set(aliase).intersection(self.params)) != []:
-                pint_bin_name = self.match_param_aliases(par)
-                if pint_bin_name == "" and par in self.interal_params:
-                    pint_bin_name = par
+                try:
+                    pint_bin_name = self.match_param_aliases(par)
+                except ValueError:
+                    if par in self.internal_params:
+                        pint_bin_name = par
                 binObjpar = getattr(self, pint_bin_name)
                 instance_par = getattr(self.binary_instance, par)
                 if hasattr(instance_par, "value"):
