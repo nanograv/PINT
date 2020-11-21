@@ -204,18 +204,13 @@ class TimingModel(object):
             # AttributeError it looks like it's missing entirely
             errmsg = "'TimingModel' object and its component has no attribute"
             errmsg += " '%s'." % name
-            try:
-                if six.PY2:
-                    cp = super(TimingModel, self).__getattribute__("search_cmp_attr")(
-                        name
-                    )
-                else:
-                    cp = super().__getattribute__("search_cmp_attr")(name)
-                if cp is not None:
-                    return super(cp.__class__, cp).__getattribute__(name)
-                else:
-                    raise AttributeError(errmsg)
-            except:
+            if six.PY2:
+                cp = super(TimingModel, self).__getattribute__("search_cmp_attr")(name)
+            else:
+                cp = super().__getattribute__("search_cmp_attr")(name)
+            if cp is not None:
+                return super(cp.__class__, cp).__getattribute__(name)
+            else:
                 raise AttributeError(errmsg)
 
     @property
@@ -271,7 +266,11 @@ class TimingModel(object):
 
     @property
     def free_params(self):
-        """All the free parameters in the timing model. Can be set to change which are free."""
+        """All the free parameters in the timing model. Can be set to change which are free.
+
+        On setting, parameter aliases are converted with
+        :func:`pint.models.timing_model.TimingModel.match_param_aliases`.
+        """
         return [p for p in self.params if not getattr(self, p).frozen]
 
     @free_params.setter
