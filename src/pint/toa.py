@@ -354,11 +354,7 @@ def format_toa_line(
 
     """
     if format.upper() in ("TEMPO2", "1"):
-        # This should probably use obs.timescale instaed of this hack
-        if obs.tempo_code == "@":
-            toa_str = Time(toatime, format="pulsar_mjd_string", scale="tdb")
-        else:
-            toa_str = Time(toatime, format="pulsar_mjd_string", scale="utc")
+        toa_str = Time(toatime, format="pulsar_mjd_string", scale=obs.timescale)
         # In Tempo2 format, freq=0.0 means infinite frequency
         if freq == np.inf * u.MHz:
             freq = 0.0 * u.MHz
