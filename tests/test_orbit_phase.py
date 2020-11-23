@@ -20,10 +20,6 @@ class TestOrbitPhase(unittest.TestCase):
         os.chdir(datadir)
         cls.pJ1855 = "B1855+09_NANOGrav_dfg+12_modified_DD.par"
         cls.mJ1855 = m.get_model(cls.pJ1855)
-        cls.pJ1855ell1 = "B1855+09_NANOGrav_12yv3.wb.gls.par"
-        cls.mJ1855ell1 = m.get_model(cls.pJ1855ell1)
-        cls.pJ0737 = "0737A_latest.par"
-        cls.mJ0737 = m.get_model(cls.pJ0737)
 
     def test_barytimes(self):
         log = logging.getLogger("test_barytimes")
@@ -72,26 +68,28 @@ class TestOrbitPhase(unittest.TestCase):
 
     def test_J1855_ell1(self):
         log = logging.getLogger("test_J1855_ell1")
-        phs1 = self.mJ1855ell1.orbital_phase(self.mJ1855ell1.TASC.value, anom="mean")
+        mJ1855ell1 = m.get_model("B1855+09_NANOGrav_12yv3.wb.gls.par")
+        phs1 = mJ1855ell1.orbital_phase(mJ1855ell1.TASC.value, anom="mean")
         assert phs1.value == 0.0, "Mean anom != 0.0 at TASC as value"
-        phs1 = self.mJ1855ell1.orbital_phase(self.mJ1855ell1.TASC, anom="mean")
+        phs1 = mJ1855ell1.orbital_phase(mJ1855ell1.TASC, anom="mean")
         assert phs1.value == 0.0, "Mean anom != 0.0 at TASC as MJDParam"
-        phs1 = self.mJ1855.orbital_phase(self.mJ1855ell1.TASC.value + 0.1, anom="mean")
-        phs2 = self.mJ1855.orbital_phase(self.mJ1855ell1.TASC.value + 0.1, anom="ecc")
+        phs1 = self.mJ1855.orbital_phase(mJ1855ell1.TASC.value + 0.1, anom="mean")
+        phs2 = self.mJ1855.orbital_phase(mJ1855ell1.TASC.value + 0.1, anom="ecc")
         assert phs2 != phs1, "Eccen anom == Mean anom"
 
     def test_J0737(self):
         log = logging.getLogger("test_J0737")
         # Find a conjunction which we have confirmed by GBT data and Shapiro delay
-        x = self.mJ0737.conjunction(55586.25)
+        mJ0737 = m.get_model("0737A_latest.par")
+        x = mJ0737.conjunction(55586.25)
         assert np.isclose(x, 55586.29643451057), "J0737 conjunction time is bad"
         # And now make sure we calculate the true anomaly for it correctly
-        nu = self.mJ0737.orbital_phase(x, anom="true").value
-        omega = self.mJ0737.components["BinaryDD"].binary_instance.omega().value
+        nu = mJ0737.orbital_phase(x, anom="true").value
+        omega = mJ0737.components["BinaryDD"].binary_instance.omega().value
         # Conjunction occurs when nu + OM == 90 deg
         assert np.isclose(
             np.degrees(np.fmod(nu + omega, 2 * np.pi)), 90.0
         ), "J0737 conjunction time gives bad true anomaly"
         # Now verify we can get 2 results from .conjunction
-        x = self.mJ0737.conjunction([55586.0, 55586.2])
+        x = mJ0737.conjunction([55586.0, 55586.2])
         assert len(x) == 2, "conjunction is not returning an array"
