@@ -20,6 +20,8 @@ class TestOrbitPhase(unittest.TestCase):
         os.chdir(datadir)
         cls.pJ1855 = "B1855+09_NANOGrav_dfg+12_modified_DD.par"
         cls.mJ1855 = m.get_model(cls.pJ1855)
+        cls.pJ1855ell1 = "B1855+09_NANOGrav_12yv3.wb.gls.par"
+        cls.mJ1855ell1 = m.get_model(cls.pJ1855ell1)
         cls.pJ0737 = "0737A_latest.par"
         cls.mJ0737 = m.get_model(cls.pJ0737)
         cls.timfile = "test1.tim"
@@ -68,6 +70,16 @@ class TestOrbitPhase(unittest.TestCase):
         assert phs2 == phs1, "Eccen anom != Mean anom"
         phs3 = self.mJ1855.orbital_phase(self.mJ1855.T0.value + 0.1, anom="true")
         assert phs3 == phs1, "True anom != Mean anom"
+
+    def test_J1855_ell1(self):
+        log = logging.getLogger("test_J1855_ell1")
+        phs1 = self.mJ1855ell1.orbital_phase(self.mJ1855ell1.TASC.value, anom="mean")
+        assert phs1.value == 0.0, "Mean anom != 0.0 at TASC as value"
+        phs1 = self.mJ1855ell1.orbital_phase(self.mJ1855ell1.TASC, anom="mean")
+        assert phs1.value == 0.0, "Mean anom != 0.0 at TASC as MJDParam"
+        phs1 = self.mJ1855.orbital_phase(self.mJ1855ell1.TASC.value + 0.1, anom="mean")
+        phs2 = self.mJ1855.orbital_phase(self.mJ1855ell1.TASC.value + 0.1, anom="ecc")
+        assert phs2 != phs1, "Eccen anom == Mean anom"
 
     def test_J0737(self):
         log = logging.getLogger("test_J0737")

@@ -361,6 +361,8 @@ class TimingModel(object):
                 bts = np.asarray(barytimes.mjd)
             else:
                 raise ValueError("barytimes as Time instance needs scale=='tdb'")
+        elif isinstance(barytimes, MJDParameter):
+            bts = np.asarray(barytimes.value)
         else:
             bts = np.asarray(barytimes)
         bbi = b.binary_instance  # shorthand
