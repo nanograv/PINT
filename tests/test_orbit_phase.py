@@ -24,8 +24,6 @@ class TestOrbitPhase(unittest.TestCase):
         cls.mJ1855ell1 = m.get_model(cls.pJ1855ell1)
         cls.pJ0737 = "0737A_latest.par"
         cls.mJ0737 = m.get_model(cls.pJ0737)
-        cls.timfile = "test1.tim"
-        cls.toas = t.get_TOAs(cls.timfile)
 
     def test_barytimes(self):
         log = logging.getLogger("test_barytimes")
@@ -39,8 +37,9 @@ class TestOrbitPhase(unittest.TestCase):
         # Should return
         phs = self.mJ1855.orbital_phase(ts.tdb, anom="mean")
         assert len(phs) == 2
-        phs = self.mJ1855.orbital_phase(self.toas)
-        assert len(phs) == self.toas.ntoas
+        toas = t.get_TOAs("test1.tim")
+        phs = self.mJ1855.orbital_phase(toas)
+        assert len(phs) == toas.ntoas
 
     def test_J1855_nonzero_ecc(self):
         log = logging.getLogger("test_J1855_nonzero_ecc")
