@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function
 import abc
 import copy
 import inspect
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 import astropy.time as time
 import astropy.units as u
@@ -271,7 +271,7 @@ class TimingModel(object):
         On setting, parameter aliases are converted with
         :func:`pint.models.timing_model.TimingModel.match_param_aliases`.
         """
-        return [p for p in self.params if not getattr(self, p).frozen]
+        return [p for p in self.params_ordered if not getattr(self, p).frozen]
 
     @free_params.setter
     def free_params(self, params):
@@ -283,6 +283,63 @@ class TimingModel(object):
             raise ValueError(
                 "Parameter(s) are familiar but not in the model: {}".format(params)
             )
+
+    def get_params_dict(self, which="free", kind="quantity"):
+        """Return a dict mapping parameter names to values.
+
+        This can return only the free parameters or all; and it can return the
+        parameter objects, the floating-point values, or the uncertainties.
+
+        Parameters
+        ----------
+        which : "free", "all"
+        kind : "quantity", "value", "uncertainty"
+
+        Returns
+        -------
+        OrderedDict
+        """
+        if which == "free":
+            ps = self.free_params
+        elif which == "all":
+            ps = self.params_ordered
+        else:
+            raise ValueError("get_params_dict expects which to be 'all' or 'free'")
+        c = OrderedDict()
+        for p in ps:
+            q = getattr(self, p)
+            if kind == "quantity":
+                c[p] = q
+            elif kind in ("value", "num"):
+                c[p] = q.value
+            elif kind == "uncertainty":
+                c[p] = q.uncertainty_value
+            else:
+                raise ValueError("Unknown kind '{}'".format(kind))
+        return c
+
+    def set_param_values(self, fitp):
+        """Set the model parameters to the value contained in the input dict.
+
+        Ex. model.set_param_values({'F0':60.1,'F1':-1.3e-15})
+        """
+        # In Powell fitter this sometimes fails because after some iterations the values change from
+        # plain float to Quantities. No idea why.
+        for k, v in fitp.items():
+            p = getattr(self, k)
+            if isinstance(v, u.Quantity):
+                p.value = v.to_value(p.units)
+            else:
+                p.value = v
+
+    def set_param_uncertainties(self, fitp):
+        """Set the model parameters to the value contained in the input dict."""
+        for k, v in fitp.items():
+            p = getattr(self, k)
+            if isinstance(v, u.Quantity):
+                p.uncertainty = v
+            else:
+                p.uncertainty = v * p.units
 
     @property
     def components(self):
@@ -565,6 +622,8 @@ class TimingModel(object):
         component.
 
         """
+        if name == "components":
+            raise ValueError("Tried to search for {}".format(name))
         for cp in list(self.components.values()):
             try:
                 super(cp.__class__, cp).__getattribute__(name)
@@ -768,8 +827,7 @@ class TimingModel(object):
         else:
             if target_component not in list(self.components.keys()):
                 raise AttributeError(
-                    "Can not find component '%s' in "
-                    "timging model." % target_component
+                    "Can not find component '%s' in " "timing model." % target_component
                 )
             self.components[target_component].add_param(param, setup=setup)
 
@@ -1523,7 +1581,7 @@ class TimingModel(object):
                             newstr += " {:28SP}".format(
                                 ufloat(otherpar.value, otherpar.uncertainty.value)
                             )
-                        except:
+                        except ValueError:
                             newstr += " {:28f}".format(otherpar.value)
                         if otherpar.value != par.value:
                             sys.stdout.flush()
@@ -1596,7 +1654,7 @@ class TimingModel(object):
                         % (newstr.split()[0], float(newstr.split()[-2]))
                     )
                     log.handlers[0].flush()
-                except:
+                except ValueError:
                     sys.stdout.flush()
                     log.warning(
                         "Parameter %s has changed significantly (%f sigma)"

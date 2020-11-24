@@ -86,6 +86,13 @@ class Fitter(object):
         """
         self.resids = pr.Residuals(toas=self.toas, model=self.model)
 
+    def get_params_dict(self, which="free", kind="quantity"):
+        """Return a dict mapping parameter names to values.
+
+        See :func:`pint.models.timing_model.TimingModel.get_params_dict`.
+        """
+        return self.model.get_params_dict(which=which, kind=kind)
+
     def set_fitparams(self, *params):
         """Update the "frozen" attribute of model parameters. Deprecated."""
         warn(
@@ -107,87 +114,51 @@ class Fitter(object):
                     raise ValueError("Unrecognized parameter {}".format(pn))
         self.model.fit_params = fit_params_name
 
-    def get_all_params(self):
-        """Return a dict of all param names and values."""
-        return collections.OrderedDict(
-            (k, getattr(self.model, k).quantity) for k in self.model.params_ordered
-        )
-
     def get_allparams(self):
         """Return a dict of all param names and values. Deprecated."""
         warn(
-            "This function is confusing and deprecated. Use get_all_params.",
+            "This function is confusing and deprecated. Use self.model.get_params_dict.",
             category=DeprecationWarning,
         )
-        return self.get_all_params()
-
-    def get_free_params(self):
-        """Return a dict of free parameter names and values in Quantity form.
-
-        See also self.model.free_params.
-        """
-        return collections.OrderedDict(
-            (k, getattr(self.model, k)) for k in self.model.free_params
-        )
+        return self.model.get_params_dict("all", "quantity")
 
     def get_fitparams(self):
         """Return a dict of fittable param names and quantity. Deprecated."""
         warn(
-            "This function is confusing and deprecated. Use get_free_params.",
+            "This function is confusing and deprecated. Use self.model.get_params_dict.",
             category=DeprecationWarning,
         )
-        return self.get_free_params()
-
-    def get_free_params_num(self):
-        """Return a dict of free param names and numeric values."""
-        return collections.OrderedDict(
-            (k, getattr(self.model, k).value) for k in self.model.free_params
-        )
+        return self.model.get_params_dict("free", "quantity")
 
     def get_fitparams_num(self):
         """Return a dict of fittable param names and numeric values. Deprecated."""
         warn(
-            "This function is confusing and deprecated. Use get_free_params_num.",
+            "This function is confusing and deprecated. Use self.model.get_params_dict.",
             category=DeprecationWarning,
         )
-        return self.get_free_params_num()
-
-    def get_free_params_uncertainty(self):
-        """Return a dict of free param names and numeric values."""
-        return collections.OrderedDict(
-            (k, getattr(self.model, k).uncertainty_value)
-            for k in self.model.params
-            if not getattr(self.model, k).frozen
-        )
+        return self.model.get_params_dict("free", "num")
 
     def get_fitparams_uncertainty(self):
         """Return a dict of fittable param names and numeric values."""
         warn(
-            "This function is confusing and deprecated. Use get_free_params_uncertainty.",
+            "This function is confusing and deprecated. Use self.model.get_params_dict.",
             category=DeprecationWarning,
         )
-        return self.get_free_params_uncertainty()
+        return self.model.get_params_dict("free", "uncertainty")
 
     def set_params(self, fitp):
         """Set the model parameters to the value contained in the input dict.
 
-        Ex. fitter.set_params({'F0':60.1,'F1':-1.3e-15})
+        See :func:`pint.models.timing_model.TimingModel.set_param_values`.
         """
-        # In Powell fitter this sometimes fails because after some iterations the values change from
-        # plain float to Quantities. No idea why.
-        if len(fitp.values()) < 1:
-            return
-        if isinstance(list(fitp.values())[0], u.Quantity):
-            for k, v in fitp.items():
-                getattr(self.model, k).value = v.value
-        else:
-            for k, v in fitp.items():
-                getattr(self.model, k).value = v
+        self.model.set_param_values(fitp)
 
     def set_param_uncertainties(self, fitp):
-        for k, v in fitp.items():
-            parunit = getattr(self.model, k).units
-            getattr(self.model, k).uncertainty = v * parunit
+        """Set the model parameters to the value contained in the input dict.
+
+        See :func:`pint.models.timing_model.TimingModel.set_param_uncertainties`.
+        """
+        self.model.set_param_uncertainties(fitp)
 
     def get_designmatrix(self):
         return self.model.designmatrix(toas=self.toas, incfrozen=False, incoffset=True)
@@ -247,7 +218,7 @@ class Fitter(object):
 
         # First, print fit quality metrics
         s = "Fitted model using {} method with {} free parameters to {} TOAs\n".format(
-            self.method, len(self.get_free_params()), self.toas.ntoas
+            self.method, len(self.model.free_params), self.toas.ntoas
         )
         s += "Prefit residuals Wrms = {}, Postfit residuals Wrms = {}\n".format(
             self.resids_init.rms_weighted(), self.resids.rms_weighted()
@@ -259,7 +230,7 @@ class Fitter(object):
 
         # to handle all parameter names, determine the longest length for the first column
         longestName = 0  # optionally specify the minimum length here instead of 0
-        for pn in list(self.get_allparams().keys()):
+        for pn in self.model.params_ordered:
             if nodmx and pn.startswith("DMX"):
                 continue
             if len(pn) > longestName:
@@ -274,7 +245,7 @@ class Fitter(object):
         s += ("{:<" + spacingName + "s} {:>20s} {:>28s} {}\n").format(
             "=" * longestName, "=" * 20, "=" * 28, "=" * 5
         )
-        for pn in list(self.get_allparams().keys()):
+        for pn in self.model.params_ordered:
             if nodmx and pn.startswith("DMX"):
                 continue
             prefitpar = getattr(self.model_init, pn)
@@ -507,7 +478,7 @@ class Fitter(object):
         prec is the precision of the floating point results.
         """
         if hasattr(self, "covariance_matrix"):
-            fps = list(self.get_free_params().keys())
+            fps = list(self.model.free_parameters)
             cm = self.covariance_matrix
             if with_phase:
                 fps = ["PHASE"] + fps
@@ -541,7 +512,7 @@ class Fitter(object):
         prec is the precision of the floating point results.
         """
         if hasattr(self, "correlation_matrix"):
-            fps = list(self.get_free_params().keys())
+            fps = list(self.model.free_params)
             cm = self.correlation_matrix
             if with_phase:
                 fps = ["PHASE"] + fps
@@ -725,7 +696,7 @@ class PowellFitter(Fitter):
         # check that params of timing model have necessary components
         self.model.maskPar_has_toas_check(self.toas)
         # Initial guesses are model params
-        fitp = self.get_free_params_num()
+        fitp = self.model.get_params_dict("free", "num")
         self.fitresult = opt.minimize(
             self.minimize_func,
             list(fitp.values()),
@@ -760,9 +731,9 @@ class WLSFitter(Fitter):
         self.model.maskPar_has_toas_check(self.toas)
         chi2 = 0
         for i in range(maxiter):
-            fitp = self.get_free_params()
-            fitpv = self.get_free_params_num()
-            fitperrs = self.get_free_params_uncertainty()
+            fitp = self.model.get_params_dict("free", "quantity")
+            fitpv = self.model.get_params_dict("free", "num")
+            fitperrs = self.model.get_params_dict("free", "uncertainty")
             # Define the linear system
             M, params, units, scale_by_F0 = self.get_designmatrix()
             # Get residuals and TOA uncertainties in seconds
@@ -880,9 +851,9 @@ class GLSFitter(Fitter):
         self.model.maskPar_has_toas_check(self.toas)
         chi2 = 0
         for i in range(max(maxiter, 1)):
-            fitp = self.get_free_params()
-            fitpv = self.get_free_params_num()
-            fitperrs = self.get_free_params_uncertainty()
+            fitp = self.model.get_params_dict("free", "quantity")
+            fitpv = self.model.get_params_dict("free", "num")
+            fitperrs = self.model.get_params_dict("free", "uncertainty")
 
             # Define the linear system
             M, params, units, scale_by_F0 = self.get_designmatrix()
@@ -1092,7 +1063,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
 
     def get_designmatrix(self):
         design_matrixs = []
-        fit_params = list(self.get_free_params().keys())
+        fit_params = self.model.free_params
         if len(self.fit_data) == 1:
             for ii, dmatrix_maker in enumerate(self.designmatrix_makers):
                 design_matrixs.append(
@@ -1173,9 +1144,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         # self.model.maskPar_has_toas_check(self.toas)
         chi2 = 0
         for i in range(max(maxiter, 1)):
-            fitp = self.get_free_params()
-            fitpv = self.get_free_params_num()
-            fitperrs = self.get_free_params_uncertainty()
+            fitp = self.model.get_params_dict("free", "quantity")
+            fitpv = self.model.get_params_dict("free", "num")
+            fitperrs = self.model.get_params_dict("free", "uncertainty")
 
             # Define the linear system
             d_matrix = self.get_designmatrix()
