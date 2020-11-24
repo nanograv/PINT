@@ -8,6 +8,7 @@ import abc
 import copy
 import inspect
 from collections import defaultdict, OrderedDict
+import warnings
 
 import astropy.time as time
 import astropy.units as u
@@ -215,8 +216,18 @@ class TimingModel(object):
                     return super(cp.__class__, cp).__getattribute__(name)
                 else:
                     raise AttributeError(errmsg)
-            except:
+            except AttributeError:
+                raise
+            except RecursionError as e:
+                warnings.warn(
+                    "Exception {} {} was raised in __getattr__({})".format(
+                        type(e), e, name
+                    )
+                )
                 raise AttributeError(errmsg)
+            # except Exception as e:
+            #    warnings.warn("Exception {} {} was raised in __getattr__({})".format(type(e), e, name))
+            #    raise AttributeError(errmsg)
 
     @property
     def params(self):
@@ -627,8 +638,8 @@ class TimingModel(object):
         component.
 
         """
-        if name == "components":
-            raise ValueError("Tried to search for {}".format(name))
+        # if name == "components":
+        #    raise ValueError("Tried to search for {}".format(name))
         for cp in list(self.components.values()):
             try:
                 super(cp.__class__, cp).__getattribute__(name)
@@ -1586,7 +1597,7 @@ class TimingModel(object):
                             newstr += " {:28SP}".format(
                                 ufloat(otherpar.value, otherpar.uncertainty.value)
                             )
-                        except ValueError:
+                        except (ValueError, AttributeError):
                             newstr += " {:28f}".format(otherpar.value)
                         if otherpar.value != par.value:
                             sys.stdout.flush()

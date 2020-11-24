@@ -94,7 +94,7 @@ class TestELL1H(unittest.TestCase):
         f = ff.GLSFitter(self.toasJ0613, self.modelJ0613)
         f.fit_toas()
         f.model.free_params = ("H3", "H4")
-        for pn, p in (f.get_free_params()).items():
+        for pn, p in f.model.get_params_dict("free", "quantity").items():
             op = getattr(f.model_init, pn)
             diff = np.abs(p.value - op.value)
             sigma = diff / op.uncertainty_value
@@ -108,7 +108,7 @@ class TestELL1H(unittest.TestCase):
         f = ff.GLSFitter(self.toasJ0613, self.modelJ0613_STIG)
         f.fit_toas()
         f.model.free_params = ("H3", "STIGMA")
-        for pn, p in (f.get_free_params()).items():
+        for pn, p in f.get_params_dict("free", "quantity").items():
             op = getattr(f.model_init, pn)
             diff = np.abs(p.value - op.value)
             sigma = diff / op.uncertainty_value
