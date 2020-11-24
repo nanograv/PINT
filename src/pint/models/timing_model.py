@@ -204,13 +204,18 @@ class TimingModel(object):
             # AttributeError it looks like it's missing entirely
             errmsg = "'TimingModel' object and its component has no attribute"
             errmsg += " '%s'." % name
-            if six.PY2:
-                cp = super(TimingModel, self).__getattribute__("search_cmp_attr")(name)
-            else:
-                cp = super().__getattribute__("search_cmp_attr")(name)
-            if cp is not None:
-                return super(cp.__class__, cp).__getattribute__(name)
-            else:
+            try:
+                if six.PY2:
+                    cp = super(TimingModel, self).__getattribute__("search_cmp_attr")(
+                        name
+                    )
+                else:
+                    cp = super().__getattribute__("search_cmp_attr")(name)
+                if cp is not None:
+                    return super(cp.__class__, cp).__getattribute__(name)
+                else:
+                    raise AttributeError(errmsg)
+            except:
                 raise AttributeError(errmsg)
 
     @property
