@@ -65,7 +65,7 @@ fitter.resids.residual_objs
 * Time residual
 
 ```python execution={"iopub.execute_input": "2020-09-10T16:29:28.342821Z", "iopub.status.busy": "2020-09-10T16:29:28.330288Z", "iopub.status.idle": "2020-09-10T16:29:28.520180Z", "shell.execute_reply": "2020-09-10T16:29:28.519607Z"}
-time_resids = fitter.resids.residual_objs['toa'].time_resids
+time_resids = fitter.resids.residual_objs["toa"].time_resids
 plt.errorbar(
     toas.get_mjds().value,
     time_resids.to_value(u.us),
@@ -78,15 +78,15 @@ plt.xlabel("MJD")
 
 ```python execution={"iopub.execute_input": "2020-09-10T16:29:28.525251Z", "iopub.status.busy": "2020-09-10T16:29:28.524698Z", "iopub.status.idle": "2020-09-10T16:29:28.527648Z", "shell.execute_reply": "2020-09-10T16:29:28.527083Z"}
 # Time RMS
-print(fitter.resids.residual_objs['toa'].rms_weighted())
-print(fitter.resids.residual_objs['toa'].chi2)
+print(fitter.resids.residual_objs["toa"].rms_weighted())
+print(fitter.resids.residual_objs["toa"].chi2)
 ```
 
 * DM residual
 
 ```python execution={"iopub.execute_input": "2020-09-10T16:29:28.556722Z", "iopub.status.busy": "2020-09-10T16:29:28.535404Z", "iopub.status.idle": "2020-09-10T16:29:28.698341Z", "shell.execute_reply": "2020-09-10T16:29:28.697831Z"}
-dm_resids = fitter.resids.residual_objs['dm'].resids
-dm_error = fitter.resids.residual_objs['dm'].get_data_error()
+dm_resids = fitter.resids.residual_objs["dm"].resids
+dm_error = fitter.resids.residual_objs["dm"].get_data_error()
 plt.errorbar(toas.get_mjds().value, dm_resids.value, yerr=dm_error.value, fmt="x")
 plt.ylabel("pc/cm^3")
 plt.xlabel("MJD")
@@ -94,8 +94,8 @@ plt.xlabel("MJD")
 
 ```python execution={"iopub.execute_input": "2020-09-10T16:29:28.703699Z", "iopub.status.busy": "2020-09-10T16:29:28.703155Z", "iopub.status.idle": "2020-09-10T16:29:28.705717Z", "shell.execute_reply": "2020-09-10T16:29:28.706203Z"}
 # DM RMS
-print(fitter.resids.residual_objs['dm'].rms_weighted())
-print(fitter.resids.residual_objs['dm'].chi2)
+print(fitter.resids.residual_objs["dm"].rms_weighted())
+print(fitter.resids.residual_objs["dm"].chi2)
 ```
 
 #### However, in the combined residuals, one can access rms and chi2 as well
@@ -108,7 +108,7 @@ print(fitter.resids.chi2)
 #### The initial residuals is also a combined residual object
 
 ```python execution={"iopub.execute_input": "2020-09-10T16:29:28.792714Z", "iopub.status.busy": "2020-09-10T16:29:28.779022Z", "iopub.status.idle": "2020-09-10T16:29:28.937303Z", "shell.execute_reply": "2020-09-10T16:29:28.936720Z"}
-time_resids = fitter.resids_init.residual_objs['toa'].time_resids
+time_resids = fitter.resids_init.residual_objs["toa"].time_resids
 plt.errorbar(
     toas.get_mjds().value,
     time_resids.to_value(u.us),
@@ -120,8 +120,8 @@ plt.xlabel("MJD")
 ```
 
 ```python execution={"iopub.execute_input": "2020-09-10T16:29:28.957488Z", "iopub.status.busy": "2020-09-10T16:29:28.956731Z", "iopub.status.idle": "2020-09-10T16:29:29.107675Z", "shell.execute_reply": "2020-09-10T16:29:29.107097Z"}
-dm_resids = fitter.resids_init.residual_objs['dm'].resids
-dm_error = fitter.resids_init.residual_objs['dm'].get_data_error()
+dm_resids = fitter.resids_init.residual_objs["dm"].resids
+dm_error = fitter.resids_init.residual_objs["dm"].get_data_error()
 plt.errorbar(toas.get_mjds().value, dm_resids.value, yerr=dm_error.value, fmt="x")
 plt.ylabel("pc/cm^3")
 plt.xlabel("MJD")
@@ -135,8 +135,8 @@ d_matrix = fitter.get_designmatrix()
 
 ```python execution={"iopub.execute_input": "2020-09-10T16:29:32.318273Z", "iopub.status.busy": "2020-09-10T16:29:32.311723Z", "iopub.status.idle": "2020-09-10T16:29:32.327689Z", "shell.execute_reply": "2020-09-10T16:29:32.327089Z"}
 print("Number of TOAs:", toas.ntoas)
-print("Number of DM measurments:", len(fitter.resids.residual_objs['dm'].dm_data))
-print("Number of fit params:", len(fitter.get_free_params()))
+print("Number of DM measurments:", len(fitter.resids.residual_objs["dm"].dm_data))
+print("Number of fit params:", len(fitter.model.free_params))
 print("Shape of design matrix:", d_matrix.shape)
 ```
 
