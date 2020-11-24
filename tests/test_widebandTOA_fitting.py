@@ -44,9 +44,7 @@ class TestWidebandTOAFitter:
         d_matrix = fitter.get_designmatrix()
         assert d_matrix.shape == (2 * self.toas.ntoas, len(self.fit_params_lite) + 1)
         assert [lb[0] for lb in d_matrix.labels[0]] == ["toa", "dm"]
-        assert d_matrix.derivative_params == (
-            ["Offset"] + fitter.model.free_params.keys()
-        )
+        assert d_matrix.derivative_params == (["Offset"] + fitter.model.free_params)
 
     def test_fitting_no_full_cov(self):
         fitter = WidebandTOAFitter([self.toas], self.model, additional_args={})
