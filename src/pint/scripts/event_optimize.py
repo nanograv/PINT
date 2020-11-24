@@ -27,6 +27,7 @@ from pint.models.priors import (
     UniformUnboundedRV,
 )
 from pint.observatory.satellite_obs import get_satellite_observatory
+from pint.profile import fftfit_cprof, fftfit_classic
 
 __all__ = ["read_gaussfitfile", "marginalize_over_phase", "main"]
 # log.setLevel('DEBUG')
@@ -141,13 +142,11 @@ def measure_phase(profile, template, rotate_prof=True):
             (returned as a tuple).  These are defined as in Taylor's
             talk at the Royal Society.
     """
-    import fftfit
-
-    c, amp, pha = fftfit.cprof(template)
+    c, amp, pha = fftfit_cprof(template)
     pha1 = pha[0]
     if rotate_prof:
         pha = np.fmod(pha - np.arange(1, len(pha) + 1) * pha1, 2.0 * np.pi)
-    shift, eshift, snr, esnr, b, errb, ngood = fftfit.fftfit(profile, amp, pha)
+    shift, eshift, snr, esnr, b, errb, ngood = fftfit_classic(profile, amp, pha)
     return shift, eshift, snr, esnr, b, errb, ngood
 
 
@@ -238,8 +237,7 @@ def marginalize_over_phase(
 
 
 def get_fit_keyvals(model, phs=0.0, phserr=0.1):
-    """Read the model to determine fitted keys and their values and errors from the par file
-    """
+    """Read the model to determine fitted keys and their values and errors from the par file"""
     fitkeys = [p for p in model.params if not getattr(model, p).frozen]
     fitvals = []
     fiterrs = []

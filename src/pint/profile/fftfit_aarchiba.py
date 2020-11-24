@@ -13,10 +13,6 @@ import scipy.stats
 import pint.profile
 
 
-class FFTFITResult:
-    pass
-
-
 def fftfit_full(
     template, profile, compute_scale=True, compute_uncertainty=True, std=None
 ):
@@ -54,8 +50,8 @@ def fftfit_full(
     if not res.success:
         raise ValueError("FFTFIT failed: %s" % res.message)
     # assert gof(res.x) <= gof(x)
-    r = FFTFITResult()
-    r.shift = res.x % 1
+    r = pint.profile.FFTFITResult()
+    r.shift = pint.profile.wrap(res.x)
 
     if compute_scale or compute_uncertainty:
         # shifted template corefficients

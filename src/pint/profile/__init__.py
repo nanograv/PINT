@@ -1,24 +1,55 @@
 """Tools for working with pulse profiles.
 
-The key tool here is `fftfit`, which allows one to find the phase shift that
-optimally aligns a template with a profile, but there are also tools here for
-doing those shifts and generating useful profiles.
+The key tool here is FFTFIT (:func:`pint.profile.fftfit_full`), which allows
+one to find the phase shift that optimally aligns a template with a profile,
+but there are also tools here for doing those shifts and generating useful
+profiles.
 """
+
 import numpy as np
 import scipy.stats
+from numpy.fft import rfft, irfft
+
 import pint.profile.fftfit_aarchiba
 import pint.profile.fftfit_nustar
 import pint.profile.fftfit_presto
 
-
 __all__ = [
+    "fftfit_full",
+    "fftfit_basic",
+    "FFTFITResult",
+    "fftfit_cprof",
+    "fftfit_classic",
     "wrap",
     "vonmises_profile",
     "upsample",
     "shift",
-    "fftfit_full",
-    "fftfit_basic",
 ]
+
+
+class FFTFITResult:
+    """Summary of the results of an FFTFit operation.
+
+    Not all of these attributes may be present in every object; which are
+    returned depends on the algorithm used and the options it is passed.
+
+    If these quantities are available, then
+    r.scale*shift(template, r.shift) + r.offset
+    should be as close as possible to the profile used in the fitting.
+
+    Attributes
+    ----------
+    shift : float
+        The shift required to make the template match the profile. Between 0 and 1.
+    scale : float
+        The amount the template must be scaled by to match the profile.
+    offset : float
+        The amount to add to the scaled template to match the profile.
+    uncertainty : float
+        The estimated one-sigma uncertainty in the shift attribute.
+    """
+
+    pass
 
 
 def wrap(a):
@@ -112,10 +143,27 @@ def irfft_value(c, phase, n=None):
 def fftfit_full(template, profile, code="aarchiba"):
     """Match template to profile and return match properties.
 
-    The returned object has a `.shift` attribute indicating the optimal shift,
+    The returned object, a :class:`pint.profile.FFTFITResult`, has a
+    `.shift` attribute indicating the optimal shift,
     a `.uncertainty` attribute containting an estimate of the uncertainty, and
     possibly certain other attributes depending on which version of the code is
     run.
+
+    The ``.shift`` attribute is computed so that ``shift(template, r.shift)`` is
+    as closely aligned with ``profile`` as possible.
+
+    Parameters
+    ----------
+    template : array
+        The template representing the ideal pulse profile.
+    profile : array
+        The observed profile the template should be aligned with.
+    code : "aarchiba", "nustar", "presto"
+        Which underlying algorithm and code should be used to carry out the
+        operation. Generally the "aarchiba" code base is the best tested
+        under idealized circumstances, and "presto" is the compiled FORTRAN
+        code FFTFIT that has been in use for a very long time (but is not
+        available unless PINT has access to the compiled code base of PRESTO).
     """
     if code == "aarchiba":
         return pint.profile.fftfit_aarchiba.fftfit_full(template, profile)
@@ -130,8 +178,104 @@ def fftfit_full(template, profile, code="aarchiba"):
 
 
 def fftfit_basic(template, profile, code="aarchiba"):
-    """Return the optimal phase shift to match template to profile."""
+    """Return the optimal phase shift to match template to profile.
+
+    This calls :func:`pint.profile.fftfit_full` and extracts the ``.shift`` attribute.
+
+    Parameters
+    ----------
+    template : array
+        The template representing the ideal pulse profile.
+    profile : array
+        The observed profile the template should be aligned with.
+    code : "aarchiba", "nustar", "presto"
+        Which code to use. See :func:`pint.profile.fftfit_full` for details.
+    """
     if code == "aarchiba":
         return pint.profile.fftfit_aarchiba.fftfit_basic(template, profile)
     else:
         return fftfit_full(template, profile, code=code).shift
+
+
+def fftfit_cprof(template):
+    """Transform a template for use with fftfit_classic.
+
+    Emulate the version of fftfit.cprof in PRESTO.
+    Returns results suitable for :func:`pint.profile.fftfit_classic`.
+
+    Parameter
+    ---------
+    template : array
+
+    Returns
+    -------
+    c : float
+        The constant term? This may not agree with PRESTO.
+    amp : array
+        Real values representing the Fourier amplitudes of the template, not
+        including the constant term.
+    pha : array
+        Real values indicating the angles of the Fourier coefficients of the
+        template, not including the constant term; the sign is the negative
+        of that returned by ``np.fft.rfft``.
+    """
+    tc = rfft(template)
+    return tc[0], np.abs(tc)[1:], -np.angle(tc)[1:]
+
+
+def fftfit_classic(profile, template_amplitudes, template_angles, code="aarchiba"):
+    """Emulate the version of fftfit in PRESTO.
+
+    This has a different calling and return convention.
+    The template can be transformed appropriately with
+    :func:`pint.profile.fftfit_cprof`.
+
+    Parameters
+    ----------
+    profile : array
+        The observed profile.
+    template_amplitudes : array
+        Real values representing the Fourier amplitudes of the template, not
+        including the constant term.
+    template_angles : array
+        Real values indicating the angles of the Fourier coefficients of the
+        template, not including the constant term; the sign is the negative
+        of that returned by ``np.fft.rfft``.
+
+    Returns
+    -------
+    shift : float
+        The shift, in bins, plus one.
+    eshift : float
+        The uncertainty in the shift, in bins.
+    snr : float
+        Some kind of signal-to-noise ratio; not implemented.
+    esnr : float
+        Uncertainty in the above; not implemented.
+    b : float
+        Unknown; not implemented.
+    errb : float
+        Uncertainty in the above; not implemented.
+    ngood
+        Unknown, maybe the number of harmonics used? Not implemented.
+    """
+    if code == "presto":
+        import presto.fftfit
+
+        return presto.fftfit.fftfit(profile, template_amplitudes, template_angles)
+    if len(profile) % 2:
+        raise ValueError("fftfit_classic only works on even-length profiles")
+    template_f = np.zeros(len(template_amplitudes) + 1, dtype=complex)
+    template_f[1:] = template_amplitudes * np.exp(-1.0j * template_angles)
+    template = irfft(template_f)
+    r = fftfit_full(template, profile, code=code)
+
+    shift = (r.shift % 1) * len(profile) + 1
+    eshift = r.uncertainty * len(profile)
+    snr = np.nan
+    esnr = np.nan
+    b = np.nan
+    errb = np.nan
+    ngood = np.nan
+
+    return shift, eshift, snr, esnr, b, errb, ngood

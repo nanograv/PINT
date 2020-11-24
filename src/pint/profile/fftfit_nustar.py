@@ -1,8 +1,11 @@
 # by mateobachetti
 # from https://github.com/NuSTAR/nustar-clock-utils/blob/master/nuclockutils/diagnostics/fftfit.py
 from collections import namedtuple
+
 import numpy as np
-from scipy.optimize import minimize, brentq
+from scipy.optimize import brentq, minimize
+
+import pint.profile
 
 
 def find_delay_with_ccf(amp, pha):
@@ -195,13 +198,9 @@ def fftfit_basic(template, profile):
     return shift
 
 
-class FullResult:
-    pass
-
-
 def fftfit_full(template, profile):
     r = fftfit(profile, template)
-    ro = FullResult()
+    ro = pint.profile.FFTFITResult()
     ro.shift = r.mean_phase
     ro.uncertainty = r.std_phase
     return ro
