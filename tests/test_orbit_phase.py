@@ -37,7 +37,7 @@ class TestOrbitPhase(unittest.TestCase):
 
     def test_J1855_nonzero_ecc(self):
         ts = self.mJ1855.T0.value + np.linspace(0, self.mJ1855.PB.value, 101)
-        self.mJ1855.ECC.value = 0.1  # set the eccentricity to zero
+        self.mJ1855.ECC.value = 0.1  # set the eccentricity to nonzero
         phs = self.mJ1855.orbital_phase(ts, anom="mean", radians=False)
         assert np.all(phs >= 0), "Not all phases >= 0"
         assert np.all(phs <= 1), "Not all phases <= 1"
