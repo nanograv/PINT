@@ -1,5 +1,4 @@
 #! /usr/bin/env python
-import logging
 import os
 import unittest
 
@@ -22,7 +21,6 @@ class TestOrbitPhase(unittest.TestCase):
         cls.mJ1855 = m.get_model(cls.pJ1855)
 
     def test_barytimes(self):
-        log = logging.getLogger("test_barytimes")
         ts = t.Time([56789.234, 56790.765], format="mjd")
         # Should raise ValueError since not in "tdb"
         with self.assertRaises(ValueError):
@@ -38,7 +36,6 @@ class TestOrbitPhase(unittest.TestCase):
         assert len(phs) == toas.ntoas
 
     def test_J1855_nonzero_ecc(self):
-        log = logging.getLogger("test_J1855_nonzero_ecc")
         ts = self.mJ1855.T0.value + np.linspace(0, self.mJ1855.PB.value, 101)
         self.mJ1855.ECC.value = 0.1  # set the eccentricity to zero
         phs = self.mJ1855.orbital_phase(ts, anom="mean", radians=False)
@@ -55,7 +52,6 @@ class TestOrbitPhase(unittest.TestCase):
         assert phs3[1] != phs[49], "Eccen anom == True anom"
 
     def test_J1855_zero_ecc(self):
-        log = logging.getLogger("test_J1855_zero_ecc")
         self.mJ1855.ECC.value = 0.0  # set the eccentricity to zero
         self.mJ1855.OM.value = 0.0  # set omega to zero
         phs1 = self.mJ1855.orbital_phase(self.mJ1855.T0.value, anom="mean")
@@ -67,7 +63,6 @@ class TestOrbitPhase(unittest.TestCase):
         assert phs3 == phs1, "True anom != Mean anom"
 
     def test_J1855_ell1(self):
-        log = logging.getLogger("test_J1855_ell1")
         mJ1855ell1 = m.get_model("B1855+09_NANOGrav_12yv3.wb.gls.par")
         phs1 = mJ1855ell1.orbital_phase(mJ1855ell1.TASC.value, anom="mean")
         assert phs1.value == 0.0, "Mean anom != 0.0 at TASC as value"
@@ -78,7 +73,6 @@ class TestOrbitPhase(unittest.TestCase):
         assert phs2 != phs1, "Eccen anom == Mean anom"
 
     def test_J0737(self):
-        log = logging.getLogger("test_J0737")
         # Find a conjunction which we have confirmed by GBT data and Shapiro delay
         mJ0737 = m.get_model("0737A_latest.par")
         x = mJ0737.conjunction(55586.25)
