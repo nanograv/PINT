@@ -1432,6 +1432,7 @@ class TimingModel(object):
 
     def compare(self, othermodel, nodmx=True, threshold_sigma=3.0, verbosity="max"):
         """Print comparison with another model
+
         Parameters
         ----------
         othermodel
