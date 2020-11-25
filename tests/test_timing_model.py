@@ -147,8 +147,7 @@ class TestModelBuilding:
         assert remove_cp2 not in tm2.DelayComponent_list
 
     def test_free_params(self):
-        """ Test getting free parameters.
-        """
+        """Test getting free parameters."""
         # Build the timing model
         tm = TimingModel(
             "TestTimingModel", [BinaryELL1(), AstrometryEquatorial(), Spindown()]
@@ -161,8 +160,7 @@ class TestModelBuilding:
         assert set(tm.free_params) == tfp
 
     def test_change_free_params(self):
-        """ Test setting free parameters.
-        """
+        """Test setting free parameters."""
         # Build the timing model
         tm = TimingModel(
             "TestTimingModel", [BinaryELL1(), AstrometryEquatorial(), Spindown()]
@@ -174,3 +172,21 @@ class TestModelBuilding:
         tfp = {"F0", "T0", "EPS1", "RAJ"}
         tm.free_params = tfp
         assert set(tm.free_params) == tfp
+
+    def test_params_dict_round_trip_quantity(self):
+        tm = get_model(self.parfile)
+        tfp = {"F0", "T0", "RAJ"}
+        tm.free_params = tfp
+        tm.set_param_values(tm.get_params_dict("free", "quantity"))
+
+    def test_params_dict_round_trip_num(self):
+        tm = get_model(self.parfile)
+        tfp = {"F0", "T0", "RAJ"}
+        tm.free_params = tfp
+        tm.set_param_values(tm.get_params_dict("free", "num"))
+
+    def test_params_dict_round_trip_uncertainty(self):
+        tm = get_model(self.parfile)
+        tfp = {"F0", "T0", "RAJ"}
+        tm.free_params = tfp
+        tm.set_param_uncertainties(tm.get_params_dict("free", "uncertainty"))

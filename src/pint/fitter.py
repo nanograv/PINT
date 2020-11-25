@@ -139,7 +139,7 @@ class Fitter(object):
         return self.model.get_params_dict("free", "num")
 
     def get_fitparams_uncertainty(self):
-        """Return a dict of fittable param names and numeric values."""
+        """Return a dict of fittable param names and numeric values. Deprecated."""
         warn(
             "This function is confusing and deprecated. Use self.model.get_params_dict.",
             category=DeprecationWarning,

@@ -18,6 +18,7 @@ import six
 from astropy import log
 from scipy.optimize import brentq
 from pint.models.parameter import (
+    Parameter,
     AngleParameter,
     floatParameter,
     maskParameter,
@@ -282,7 +283,12 @@ class TimingModel(object):
 
     @property
     def free_params(self):
-        """All the free parameters in the timing model. Can be set to change which are free.
+        """List of all the free parameters in the timing model. Can be set to change which are free.
+
+        These are ordered as self.params_ordered does.
+
+        Upon setting, order does not matter, and aliases are accepted.
+        ValueError is raised if a parameter is not recognized.
 
         On setting, parameter aliases are converted with
         :func:`pint.models.timing_model.TimingModel.match_param_aliases`.
@@ -343,7 +349,11 @@ class TimingModel(object):
         # plain float to Quantities. No idea why.
         for k, v in fitp.items():
             p = getattr(self, k)
-            if isinstance(v, u.Quantity):
+            if isinstance(v, Parameter):
+                if v.value is None:
+                    raise ValueError("Parameter {} is unset".format(v))
+                p.value = v.value
+            elif isinstance(v, u.Quantity):
                 p.value = v.to_value(p.units)
             else:
                 p.value = v
