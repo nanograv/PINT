@@ -267,7 +267,7 @@ class AstrometryEquatorial(Astrometry):
         Parameters
         ----------
         epoch: `astropy.time.Time` or Float, optional
-            new epoch for position.  If Float, MJD is assumed
+            new epoch for position.  If Float, MJD(TDB) is assumed
 
         Returns
         -------
@@ -279,23 +279,18 @@ class AstrometryEquatorial(Astrometry):
 
         """
         if epoch is None or (self.PMRA.value == 0.0 and self.PMDEC.value == 0.0):
-            dRA = 0.0 * u.hourangle
-            dDEC = 0.0 * u.deg
-            broadcast = 1
-            newepoch = self.POSEPOCH.quantity
             return coords.SkyCoord(
-                ra=self.RAJ.quantity + dRA,
-                dec=self.DECJ.quantity + dDEC,
-                pm_ra_cosdec=self.PMRA.quantity * broadcast,
-                pm_dec=self.PMDEC.quantity * broadcast,
-                obstime=newepoch,
-                frame=coords.ICRS,
-            )
+                ra=self.RAJ.quantity,
+                dec=self.DECJ.quantity,
+                pm_ra_cosdec=self.PMRA.quantity,
+                pm_dec=self.PMDEC.quantity,
+                obstime=self.POSEPOCH.quantity,
+                frame=coords.ICRS)
         else:
             if isinstance(epoch, Time):
                 newepoch = epoch
             else:
-                newepoch = Time(epoch, format="mjd")
+                newepoch = Time(epoch, scale="tdb", format="mjd")
             position_now = add_dummy_distance(self.get_psr_coords())
             position_then = remove_dummy_distance(
                 position_now.apply_space_motion(new_obstime=newepoch)
