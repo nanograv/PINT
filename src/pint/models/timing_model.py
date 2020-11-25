@@ -450,9 +450,11 @@ class TimingModel(object):
             bts = self.get_barycentric_toas(barytimes)
         elif isinstance(barytimes, time.Time):
             if barytimes.scale == "tdb":
-                bts = np.asarray(barytimes.mjd)
+                bts = np.asarray(barytimes.mjd_long)
             else:
                 raise ValueError("barytimes as Time instance needs scale=='tdb'")
+        elif isinstance(barytimes, MJDParameter):
+            bts = np.asarray(barytimes.value)  # .value is always a MJD long double
         else:
             bts = np.asarray(barytimes)
         bbi = b.binary_instance  # shorthand
