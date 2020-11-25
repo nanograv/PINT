@@ -469,10 +469,12 @@ def format_toa_line(
     return out
 
 
-def make_fake_toas(startMJD, endMJD, ntoas, model, freq=1400, obs="GBT"):
+def make_fake_toas(
+    startMJD, endMJD, ntoas, model, freq=999999, obs="@", error=1 * u.us
+):
     """Make evenly spaced toas with residuals = 0 and  without errors
 
-    might be able to do different frequencies if fed an array of frequencies,
+    Might be able to do different frequencies if fed an array of frequencies,
     only works with one observatory at a time
 
     Parameters
@@ -496,6 +498,10 @@ def make_fake_toas(startMJD, endMJD, ntoas, model, freq=1400, obs="GBT"):
         object with evenly spaced toas spanning given start and end MJD with
         ntoas toas, without errors
     """
+    # FIXME: this is a sign this is not where this function belongs
+    # residuals depends on models and TOAs so this adds a circular dependency
+    import pint.residuals
+
     # TODO:make all variables Quantity objects
     # TODO: freq default to inf
     def get_freq_array(bfv, ntoas):
@@ -515,11 +521,25 @@ def make_fake_toas(startMJD, endMJD, ntoas, model, freq=1400, obs="GBT"):
         for t, f in zip(times, freq_array)
     ]
     ts = TOAs(toalist=t1)
-    ts.compute_TDBs()
-    ts.compute_posvels()
     ts.clock_corr_info.update(
+        # FIXME: why turn off BIPM et cetera?
         {"include_bipm": False, "bipm_version": bipm_default, "include_gps": False}
     )
+    ts.table["error"] = error
+    ts.compute_TDBs()
+    ts.compute_posvels()
+    ts.compute_pulse_numbers(model)
+    for i in range(10):
+        r = pint.residuals.Residuals(ts, model, track_mode="use_pulse_numbers")
+        if abs(r.time_resids).max() < 1 * u.ns:
+            break
+        ts.adjust_TOAs(time.TimeDelta(-r.time_resids))
+    else:
+        raise ValueError(
+            "Unable to make fake residuals - left over errors are {}".format(
+                abs(r.time_resids).max()
+            )
+        )
     return ts
 
 

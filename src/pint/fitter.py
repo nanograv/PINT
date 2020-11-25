@@ -4,7 +4,6 @@ import collections
 import copy
 from warnings import warn
 
-import astropy.constants as const
 import astropy.units as u
 import numpy as np
 import pint.utils
@@ -12,7 +11,6 @@ import scipy.linalg as sl
 import scipy.optimize as opt
 from astropy import log
 from pint.toa import TOAs
-from pint import Tsun
 from pint.utils import FTest
 from pint.pint_matrix import (
     DesignMatrixMaker,
@@ -24,17 +22,7 @@ from pint.pint_matrix import (
 
 import pint.residuals as pr
 
-from pint.models.parameter import (
-    AngleParameter,
-    boolParameter,
-    floatParameter,
-    prefixParameter,
-    strParameter,
-    MJDParameter,
-)
-from pint.models.pulsar_binary import PulsarBinary
-from pint.residuals import Residuals
-from pint.utils import FTest
+from pint.models.parameter import AngleParameter, boolParameter, strParameter
 
 __all__ = ["Fitter", "PowellFitter", "GLSFitter", "WLSFitter"]
 
@@ -59,11 +47,14 @@ class Fitter(object):
         The initial timing model for fitting.
     """
 
-    def __init__(self, toas, model, residuals=None):
+    def __init__(self, toas, model, track_mode=None, residuals=None):
         self.toas = toas
         self.model_init = model
+        self.track_mode = track_mode
         if residuals is None:
-            self.resids_init = pr.Residuals(toas=toas, model=model)
+            self.resids_init = pr.Residuals(
+                toas=toas, model=model, track_mode=self.track_mode
+            )
             self.reset_model()
         else:
             # residuals were provided, we're just going to use them
@@ -84,7 +75,9 @@ class Fitter(object):
 
         Run after updating a model parameter.
         """
-        self.resids = pr.Residuals(toas=self.toas, model=self.model)
+        self.resids = pr.Residuals(
+            toas=self.toas, model=self.model, track_mode=self.track_mode
+        )
 
     def get_params_dict(self, which="free", kind="quantity"):
         """Return a dict mapping parameter names to values.
@@ -688,8 +681,10 @@ class PowellFitter(Fitter):
     parameter space. It is a relative basic method.
     """
 
-    def __init__(self, toas, model):
-        super(PowellFitter, self).__init__(toas, model)
+    def __init__(self, toas, model, track_mode=None, residuals=None):
+        super(PowellFitter, self).__init__(
+            toas, model, residuals=residuals, track_mode=track_mode
+        )
         self.method = "Powell"
 
     def fit_toas(self, maxiter=20):
@@ -721,8 +716,10 @@ class WLSFitter(Fitter):
     required.
     """
 
-    def __init__(self, toas, model):
-        super(WLSFitter, self).__init__(toas=toas, model=model)
+    def __init__(self, toas, model, track_mode=None, residuals=None):
+        super(WLSFitter, self).__init__(
+            toas=toas, model=model, residuals=residuals, track_mode=track_mode
+        )
         self.method = "weighted_least_square"
 
     def fit_toas(self, maxiter=1, threshold=False):
@@ -817,8 +814,10 @@ class GLSFitter(Fitter):
     required.
     """
 
-    def __init__(self, toas=None, model=None, residuals=None):
-        super(GLSFitter, self).__init__(toas=toas, model=model, residuals=residuals)
+    def __init__(self, toas=None, model=None, track_mode=None, residuals=None):
+        super(GLSFitter, self).__init__(
+            toas=toas, model=model, residuals=residuals, track_mode=track_mode
+        )
         self.method = "generalized_least_square"
 
     def fit_toas(self, maxiter=1, threshold=False, full_cov=False):
@@ -987,6 +986,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
     def __init__(
         self, fit_data, model, fit_data_names=["toa", "dm"], additional_args={}
     ):
+
         self.model_init = model
         # Check input data and data_type
         self.fit_data_names = fit_data_names
