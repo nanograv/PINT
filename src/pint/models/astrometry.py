@@ -530,10 +530,21 @@ class AstrometryEcliptic(Astrometry):
         return tbl["freq"] * (1.0 - v_dot_L_array / const.c)
 
     def get_psr_coords(self, epoch=None):
-        """Returns pulsar sky coordinates as an astropy ecliptic coordinates
-        object. Pulsar coordinates will be computed at current coordinates.
+        """Returns pulsar sky coordinates as an astropy ecliptic coordinate instance.
+
+        Parameters
+        ----------
+        epoch: `astropy.time.Time` or Float, optional
+            new epoch for position.  If Float, MJD(TDB) is assumed
+
+        Returns
+        -------
+        position
+        PulsarEcliptic SkyCoord object optionally with proper motion applied
+
         If epoch (MJD) is specified, proper motion is included to return
         the position at the given epoch.
+
         """
         try:
             obliquity = OBL[self.ECL.value]
@@ -543,27 +554,24 @@ class AstrometryEcliptic(Astrometry):
                 "Check your pint/datafile/ecliptic.dat file."
             )
         if epoch is None or (self.PMELONG.value == 0.0 and self.PMELAT.value == 0.0):
-            dELONG = 0.0 * self.ELONG.units
-            dELAT = 0.0 * self.ELAT.units
-            broadcast = 1
-            newepoch = self.POSEPOCH.quantity
+            return coords.SkyCoord(
+                obliquity=obliquity,
+                lon=self.ELONG.quantity,
+                lat=self.ELAT.quantity,
+                pm_lon_coslat=self.PMELONG.quantity,
+                pm_lat=self.PMELAT.quantity,
+                frame=PulsarEcliptic,
+                obstime=self.POSEPOCH.quantity,
         else:
-            dt = (epoch - self.POSEPOCH.quantity.mjd) * u.d
-            dELONG = dt * self.PMELONG.quantity / numpy.cos(self.ELAT.quantity.radian)
-            dELAT = dt * self.PMELAT.quantity
-            broadcast = numpy.ones_like(epoch)
-            newepoch = Time(epoch, format="mjd")
-
-        pos_ecl = coords.SkyCoord(
-            obliquity=obliquity,
-            lon=self.ELONG.quantity + dELONG,
-            lat=self.ELAT.quantity + dELAT,
-            pm_lon_coslat=self.PMELONG.quantity * broadcast,
-            pm_lat=self.PMELAT.quantity * broadcast,
-            frame=PulsarEcliptic,
-            obstime=newepoch,
-        )
-        return pos_ecl
+            if isinstance(epoch, Time):
+                newepoch = epoch
+            else:
+                newepoch = Time(epoch, scale="tdb", format="mjd")
+            position_now = add_dummy_distance(self.get_psr_coords())
+            position_then = remove_dummy_distance(
+                position_now.apply_space_motion(new_obstime=newepoch)
+            )
+            return position_then
 
     def coords_as_ICRS(self, epoch=None):
         """Return the pulsar's ICRS coordinates as an astropy coordinate object."""
