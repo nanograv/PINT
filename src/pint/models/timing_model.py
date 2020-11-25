@@ -7,8 +7,9 @@ from __future__ import absolute_import, division, print_function
 import abc
 import copy
 import inspect
-from collections import defaultdict, OrderedDict
 import warnings
+from collections import defaultdict, OrderedDict
+from functools import wraps
 
 import astropy.time as time
 import astropy.units as u
@@ -84,6 +85,31 @@ DEFAULT_ORDER = [
     "phase_jump",
     "wave",
 ]
+
+
+class PropertyAttributeError(ValueError):
+    pass
+
+
+def property_exists(f):
+    """Mark a function as a property but handle AttributeErrors.
+
+    Normal @property has the unfortunate feature that if the called function
+    should accidentally emit an AttributeError, if __getattr__ is in use, this
+    will be reported as if the attribute does not exist.
+    """
+
+    @property
+    @wraps(f)
+    def wrapper(self):
+        try:
+            return f(self)
+        except AttributeError as e:
+            raise PropertyAttributeError(
+                f"Property {f} raised AttributeError internally"
+            ) from e
+
+    return wrapper
 
 
 class TimingModel(object):
@@ -195,6 +221,19 @@ class TimingModel(object):
     #    return result
 
     def __getattr__(self, name):
+        if name in ["components", "component_types", "search_cmp_attr"]:
+            raise AttributeError
+        if not hasattr(self, "component_types"):
+            raise AttributeError
+        for cp in list(self.components.values()):
+            try:
+                return getattr(cp, name)
+            except AttributeError:
+                continue
+        raise AttributeError(
+            "Attribute {} not found in TimingModel or any Component".format(name)
+        )
+
         try:
             if six.PY2:
                 return super(TimingModel, self).__getattribute__(name)
@@ -221,7 +260,7 @@ class TimingModel(object):
                 raise
             except RecursionError as e:
                 warnings.warn(
-                    "Exception {} {} was raised in __getattr__({})".format(
+                    "RecursionError hit in TimingModel.__getattr__: {} {} for {}".format(
                         type(e), e, name
                     )
                 )
@@ -230,7 +269,7 @@ class TimingModel(object):
             #    warnings.warn("Exception {} {} was raised in __getattr__({})".format(type(e), e, name))
             #    raise AttributeError(errmsg)
 
-    @property
+    @property_exists
     def params(self):
         """List of all parameter names in this model and all its components (order is arbitrary)."""
         p = self.top_level_params
@@ -238,7 +277,7 @@ class TimingModel(object):
             p = p + cp.params
         return p
 
-    @property
+    @property_exists
     def params_ordered(self):
         """List of all parameter names in this model and all its components, in a sensible order."""
 
@@ -281,7 +320,7 @@ class TimingModel(object):
 
         return pstart + pmid + pend
 
-    @property
+    @property_exists
     def free_params(self):
         """List of all the free parameters in the timing model. Can be set to change which are free.
 
@@ -367,7 +406,7 @@ class TimingModel(object):
             else:
                 p.uncertainty = v * p.units
 
-    @property
+    @property_exists
     def components(self):
         """All the components in a dictionary indexed by name."""
         comps = {}
@@ -384,7 +423,7 @@ class TimingModel(object):
                 comps[cp.__class__.__name__] = cp
         return comps
 
-    @property
+    @property_exists
     def delay_funcs(self):
         """List of all delay functions."""
         dfs = []
@@ -392,7 +431,7 @@ class TimingModel(object):
             dfs += d.delay_funcs_component
         return dfs
 
-    @property
+    @property_exists
     def phase_funcs(self):
         """List of all phase functions."""
         pfs = []
@@ -400,7 +439,7 @@ class TimingModel(object):
             pfs += p.phase_funcs_component
         return pfs
 
-    @property
+    @property_exists
     def is_binary(self):
         """Does the model describe a binary pulsar? (True or False)"""
         return any(x.startswith("Binary") for x in self.components.keys())
@@ -538,7 +577,7 @@ class TimingModel(object):
         else:
             return np.asarray(scs)  # otherwise return an array
 
-    @property
+    @property_exists
     def dm_funcs(self):
         """ List of all dm value functions. """
         dmfs = []
@@ -549,7 +588,7 @@ class TimingModel(object):
                 continue
         return dmfs
 
-    @property
+    @property_exists
     def has_correlated_errors(self):
         """Whether or not this model has correlated errors."""
         if "NoiseComponent" in self.component_types:
@@ -559,7 +598,7 @@ class TimingModel(object):
                     return True
         return False
 
-    @property
+    @property_exists
     def covariance_matrix_funcs(self):
         """List of covariance matrix functions."""
         cvfs = []
@@ -568,7 +607,7 @@ class TimingModel(object):
                 cvfs += nc.covariance_matrix_funcs
         return cvfs
 
-    @property
+    @property_exists
     def dm_covariance_matrix_funcs(self):
         """List of covariance matrix functions."""
         cvfs = []
@@ -578,7 +617,7 @@ class TimingModel(object):
         return cvfs
 
     # Change sigma to uncertainty to avoid name conflict.
-    @property
+    @property_exists
     def scaled_toa_uncertainty_funcs(self):
         """List of scaled toa uncertainty functions."""
         ssfs = []
@@ -588,7 +627,7 @@ class TimingModel(object):
         return ssfs
 
     # Change sigma to uncertainty to avoid name conflict.
-    @property
+    @property_exists
     def scaled_dm_uncertainty_funcs(self):
         """List of scaled dm uncertainty functions."""
         ssfs = []
@@ -598,7 +637,7 @@ class TimingModel(object):
                     ssfs += nc.scaled_dm_sigma_funcs
         return ssfs
 
-    @property
+    @property_exists
     def basis_funcs(self):
         """List of scaled uncertainty functions."""
         bfs = []
@@ -607,22 +646,22 @@ class TimingModel(object):
                 bfs += nc.basis_funcs
         return bfs
 
-    @property
+    @property_exists
     def phase_deriv_funcs(self):
         """List of derivative functions for phase components."""
         return self.get_deriv_funcs("PhaseComponent")
 
-    @property
+    @property_exists
     def delay_deriv_funcs(self):
         """List of derivative functions for delay components."""
         return self.get_deriv_funcs("DelayComponent")
 
-    @property
+    @property_exists
     def dm_derivs(self):  #  TODO need to be careful about the name here.
         """List of dm derivative functions."""
         return self.get_deriv_funcs("DelayComponent", "dm")
 
-    @property
+    @property_exists
     def d_phase_d_delay_funcs(self):
         """List of d_phase_d_delay functions."""
         Dphase_Ddelay = []
@@ -637,7 +676,11 @@ class TimingModel(object):
         if not derivative_type == "":
             derivative_type += "_"
         for cp in getattr(self, component_type + "_list"):
-            for k, v in getattr(cp, derivative_type + "deriv_funcs").items():
+            try:
+                df = getattr(cp, derivative_type + "deriv_funcs")
+            except AttributeError:
+                continue
+            for k, v in df.items():
                 deriv_funcs[k] += v
         return dict(deriv_funcs)
 
@@ -1946,12 +1989,12 @@ class Component(object):
         """ Validate loaded values."""
         pass
 
-    @property
+    @property_exists
     def category(self):
         """Category is a feature the class, so delegate."""
         return self.__class__.category
 
-    def __getattr__(self, name):
+    def no__getattr__(self, name):
         try:
             return super(Component, self).__getattribute__(name)
         except AttributeError:
@@ -1964,13 +2007,10 @@ class Component(object):
                     )
                 else:
                     return self._parent.__getattr__(name)
-            except:
-                raise AttributeError(
-                    "'%s' object has no attribute '%s'."
-                    % (self.__class__.__name__, name)
-                )
+            except AttributeError:
+                raise
 
-    @property
+    @property_exists
     def free_params_component(self):
         """Return the free parameters in the component.
 
@@ -1987,7 +2027,7 @@ class Component(object):
                 free_param.append(p)
         return free_param
 
-    @property
+    @property_exists
     def param_prefixs(self):
         prefixs = {}
         for p in self.params:
@@ -2187,11 +2227,11 @@ class Component(object):
             search_target = self._parent
         else:
             search_target = self
-        if alias in search_target.params:
-            return alias
         # get all the aliases
-        for p in self._parent.params:
-            par = getattr(self, p)
+        for p in search_target.params:
+            if p == alias:
+                return p
+            par = getattr(search_target, p)
             if par.aliases != []:
                 p_aliases[p] = par.aliases
         # match alias
