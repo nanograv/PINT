@@ -25,31 +25,29 @@ class TestWidebandTOAFitter:
         )
 
     def test_fitter_init(self):
-        fitter = WidebandTOAFitter([self.toas,], self.model, additional_args={})
+        fitter = WidebandTOAFitter([self.toas], self.model, additional_args={})
 
         # test making residuals
         assert len(fitter.resids._combined_resids) == 2 * self.toas.ntoas
         # test additional args
         add_args = {}
         add_args["toa"] = {"subtract_mean": False}
-        fitter2 = WidebandTOAFitter([self.toas,], self.model, additional_args=add_args)
+        fitter2 = WidebandTOAFitter([self.toas], self.model, additional_args=add_args)
 
         assert fitter2.resids.residual_objs["toa"].subtract_mean == False
 
     def test_fitter_designmatrix(self):
-        fitter = WidebandTOAFitter([self.toas,], self.model, additional_args={})
-        fitter.set_fitparams(self.fit_params_lite)
-        assert set(fitter.get_fitparams()) == set(self.fit_params_lite)
+        fitter = WidebandTOAFitter([self.toas], self.model, additional_args={})
+        fitter.model.free_params = self.fit_params_lite
+        assert set(fitter.model.free_params) == set(self.fit_params_lite)
         # test making design matrix
         d_matrix = fitter.get_designmatrix()
         assert d_matrix.shape == (2 * self.toas.ntoas, len(self.fit_params_lite) + 1)
         assert [lb[0] for lb in d_matrix.labels[0]] == ["toa", "dm"]
-        assert d_matrix.derivative_params == (
-            ["Offset"] + list(fitter.get_fitparams().keys())
-        )
+        assert d_matrix.derivative_params == (["Offset"] + fitter.model.free_params)
 
     def test_fitting_no_full_cov(self):
-        fitter = WidebandTOAFitter([self.toas,], self.model, additional_args={})
+        fitter = WidebandTOAFitter([self.toas], self.model, additional_args={})
         time_rms_pre = fitter.resids_init.residual_objs["toa"].rms_weighted()
         dm_rms_pre = fitter.resids_init.residual_objs["dm"].rms_weighted()
         fitter.fit_toas()
@@ -67,7 +65,7 @@ class TestWidebandTOAFitter:
         assert np.abs(dm_rms_pre - dm_rms_post) < 3e-8 * dm_rms_pre.unit
 
     def test_fitting_full_cov(self):
-        fitter2 = WidebandTOAFitter([self.toas,], self.model, additional_args={})
+        fitter2 = WidebandTOAFitter([self.toas], self.model, additional_args={})
         time_rms_pre = fitter2.resids_init.residual_objs["toa"].rms_weighted()
         dm_rms_pre = fitter2.resids_init.residual_objs["dm"].rms_weighted()
         fitter2.fit_toas(full_cov=True)

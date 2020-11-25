@@ -45,7 +45,7 @@ class Testwls(unittest.TestCase):
         orv = par.value
         par.value = (1 + h) * orv
         self.f.update_resids()
-        self.f.set_fitparams(param)
+        self.f.model.free_params = [param]
 
     def test_wlf_fitter(self):
         for ii, p in enumerate(self.per_param.keys()):

@@ -550,7 +550,7 @@ class PINTPulsar(object):
         for ii in range(iters + 1):
             f.call_minimize()
 
-        fitp = f.get_fitparams()
+        fitp = f.model.get_params_dict("free", "quantity")
         # TODO: handle these units correctly
         for p, val in zip(fitp.keys(), fitp.values()):
             modval = getattr(f.model, p).value

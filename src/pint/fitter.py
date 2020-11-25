@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import collections
 import copy
+from warnings import warn
 
 import astropy.constants as const
 import astropy.units as u
@@ -39,7 +40,7 @@ __all__ = ["Fitter", "PowellFitter", "GLSFitter", "WLSFitter"]
 
 
 class Fitter(object):
-    """ Base class for fitter.
+    """Base class for fitter.
 
     The fitting function should be defined as the fit_toas() method.
 
@@ -79,14 +80,25 @@ class Fitter(object):
         self.fitresult = []
 
     def update_resids(self):
-        """Update the residuals. Run after updating a model parameter."""
+        """Update the residuals.
+
+        Run after updating a model parameter.
+        """
         self.resids = pr.Residuals(toas=self.toas, model=self.model)
 
-    def set_fitparams(self, *params):
-        """Update the "frozen" attribute of model parameters.
+    def get_params_dict(self, which="free", kind="quantity"):
+        """Return a dict mapping parameter names to values.
 
-        Ex. fitter.set_fitparams('F0','F1')
+        See :func:`pint.models.timing_model.TimingModel.get_params_dict`.
         """
+        return self.model.get_params_dict(which=which, kind=kind)
+
+    def set_fitparams(self, *params):
+        """Update the "frozen" attribute of model parameters. Deprecated."""
+        warn(
+            "This function is confusing and deprecated. Set self.model.free_params instead.",
+            category=DeprecationWarning,
+        )
         # TODO, maybe reconsider for the input?
         fit_params_name = []
         if isinstance(params[0], (list, tuple)):
@@ -98,59 +110,55 @@ class Fitter(object):
                 rn = self.model.match_param_aliases(pn)
                 if rn != "":
                     fit_params_name.append(rn)
-
-        for p in self.model.params:
-            getattr(self.model, p).frozen = p not in fit_params_name
+                else:
+                    raise ValueError("Unrecognized parameter {}".format(pn))
+        self.model.fit_params = fit_params_name
 
     def get_allparams(self):
-        """Return a dict of all param names and values."""
-        return collections.OrderedDict(
-            (k, getattr(self.model, k).quantity) for k in self.model.params_ordered
+        """Return a dict of all param names and values. Deprecated."""
+        warn(
+            "This function is confusing and deprecated. Use self.model.get_params_dict.",
+            category=DeprecationWarning,
         )
+        return self.model.get_params_dict("all", "quantity")
 
     def get_fitparams(self):
-        """Return a dict of fittable param names and quantity."""
-        return collections.OrderedDict(
-            (k, getattr(self.model, k))
-            for k in self.model.params
-            if not getattr(self.model, k).frozen
+        """Return a dict of fittable param names and quantity. Deprecated."""
+        warn(
+            "This function is confusing and deprecated. Use self.model.get_params_dict.",
+            category=DeprecationWarning,
         )
+        return self.model.get_params_dict("free", "quantity")
 
     def get_fitparams_num(self):
-        """Return a dict of fittable param names and numeric values."""
-        return collections.OrderedDict(
-            (k, getattr(self.model, k).value)
-            for k in self.model.params
-            if not getattr(self.model, k).frozen
+        """Return a dict of fittable param names and numeric values. Deprecated."""
+        warn(
+            "This function is confusing and deprecated. Use self.model.get_params_dict.",
+            category=DeprecationWarning,
         )
+        return self.model.get_params_dict("free", "num")
 
     def get_fitparams_uncertainty(self):
-        return collections.OrderedDict(
-            (k, getattr(self.model, k).uncertainty_value)
-            for k in self.model.params
-            if not getattr(self.model, k).frozen
+        """Return a dict of fittable param names and numeric values. Deprecated."""
+        warn(
+            "This function is confusing and deprecated. Use self.model.get_params_dict.",
+            category=DeprecationWarning,
         )
+        return self.model.get_params_dict("free", "uncertainty")
 
     def set_params(self, fitp):
         """Set the model parameters to the value contained in the input dict.
 
-        Ex. fitter.set_params({'F0':60.1,'F1':-1.3e-15})
+        See :func:`pint.models.timing_model.TimingModel.set_param_values`.
         """
-        # In Powell fitter this sometimes fails because after some iterations the values change from
-        # plain float to Quantities. No idea why.
-        if len(fitp.values()) < 1:
-            return
-        if isinstance(list(fitp.values())[0], u.Quantity):
-            for k, v in fitp.items():
-                getattr(self.model, k).value = v.value
-        else:
-            for k, v in fitp.items():
-                getattr(self.model, k).value = v
+        self.model.set_param_values(fitp)
 
     def set_param_uncertainties(self, fitp):
-        for k, v in fitp.items():
-            parunit = getattr(self.model, k).units
-            getattr(self.model, k).uncertainty = v * parunit
+        """Set the model parameters to the value contained in the input dict.
+
+        See :func:`pint.models.timing_model.TimingModel.set_param_uncertainties`.
+        """
+        self.model.set_param_uncertainties(fitp)
 
     def get_designmatrix(self):
         return self.model.designmatrix(toas=self.toas, incfrozen=False, incoffset=True)
@@ -210,7 +218,7 @@ class Fitter(object):
 
         # First, print fit quality metrics
         s = "Fitted model using {} method with {} free parameters to {} TOAs\n".format(
-            self.method, len(self.get_fitparams()), self.toas.ntoas
+            self.method, len(self.model.free_params), self.toas.ntoas
         )
         s += "Prefit residuals Wrms = {}, Postfit residuals Wrms = {}\n".format(
             self.resids_init.rms_weighted(), self.resids.rms_weighted()
@@ -222,7 +230,7 @@ class Fitter(object):
 
         # to handle all parameter names, determine the longest length for the first column
         longestName = 0  # optionally specify the minimum length here instead of 0
-        for pn in list(self.get_allparams().keys()):
+        for pn in self.model.params_ordered:
             if nodmx and pn.startswith("DMX"):
                 continue
             if len(pn) > longestName:
@@ -237,7 +245,7 @@ class Fitter(object):
         s += ("{:<" + spacingName + "s} {:>20s} {:>28s} {}\n").format(
             "=" * longestName, "=" * 20, "=" * 28, "=" * 5
         )
-        for pn in list(self.get_allparams().keys()):
+        for pn in self.model.params_ordered:
             if nodmx and pn.startswith("DMX"):
                 continue
             prefitpar = getattr(self.model_init, pn)
@@ -470,7 +478,7 @@ class Fitter(object):
         prec is the precision of the floating point results.
         """
         if hasattr(self, "covariance_matrix"):
-            fps = list(self.get_fitparams().keys())
+            fps = list(self.model.free_params)
             cm = self.covariance_matrix
             if with_phase:
                 fps = ["PHASE"] + fps
@@ -504,7 +512,7 @@ class Fitter(object):
         prec is the precision of the floating point results.
         """
         if hasattr(self, "correlation_matrix"):
-            fps = list(self.get_fitparams().keys())
+            fps = list(self.model.free_params)
             cm = self.correlation_matrix
             if with_phase:
                 fps = ["PHASE"] + fps
@@ -677,7 +685,7 @@ class Fitter(object):
 
 class PowellFitter(Fitter):
     """A class for Scipy Powell fitting method. This method searches over
-       parameter space. It is a relative basic method.
+    parameter space. It is a relative basic method.
     """
 
     def __init__(self, toas, model):
@@ -688,7 +696,7 @@ class PowellFitter(Fitter):
         # check that params of timing model have necessary components
         self.model.maskPar_has_toas_check(self.toas)
         # Initial guesses are model params
-        fitp = self.get_fitparams_num()
+        fitp = self.model.get_params_dict("free", "num")
         self.fitresult = opt.minimize(
             self.minimize_func,
             list(fitp.values()),
@@ -709,8 +717,8 @@ class PowellFitter(Fitter):
 
 class WLSFitter(Fitter):
     """
-       A class for weighted least square fitting method. The design matrix is
-       required.
+    A class for weighted least square fitting method. The design matrix is
+    required.
     """
 
     def __init__(self, toas, model):
@@ -723,9 +731,9 @@ class WLSFitter(Fitter):
         self.model.maskPar_has_toas_check(self.toas)
         chi2 = 0
         for i in range(maxiter):
-            fitp = self.get_fitparams()
-            fitpv = self.get_fitparams_num()
-            fitperrs = self.get_fitparams_uncertainty()
+            fitp = self.model.get_params_dict("free", "quantity")
+            fitpv = self.model.get_params_dict("free", "num")
+            fitperrs = self.model.get_params_dict("free", "uncertainty")
             # Define the linear system
             M, params, units, scale_by_F0 = self.get_designmatrix()
             # Get residuals and TOA uncertainties in seconds
@@ -805,8 +813,8 @@ class WLSFitter(Fitter):
 
 class GLSFitter(Fitter):
     """
-       A class for weighted least square fitting method. The design matrix is
-       required.
+    A class for weighted least square fitting method. The design matrix is
+    required.
     """
 
     def __init__(self, toas=None, model=None, residuals=None):
@@ -843,9 +851,9 @@ class GLSFitter(Fitter):
         self.model.maskPar_has_toas_check(self.toas)
         chi2 = 0
         for i in range(max(maxiter, 1)):
-            fitp = self.get_fitparams()
-            fitpv = self.get_fitparams_num()
-            fitperrs = self.get_fitparams_uncertainty()
+            fitp = self.model.get_params_dict("free", "quantity")
+            fitpv = self.model.get_params_dict("free", "num")
+            fitperrs = self.model.get_params_dict("free", "uncertainty")
 
             # Define the linear system
             M, params, units, scale_by_F0 = self.get_designmatrix()
@@ -959,7 +967,7 @@ class GLSFitter(Fitter):
 
 
 class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
-    """ A class to for fitting TOAs and other independent measured data.
+    """A class to for fitting TOAs and other independent measured data.
 
     Parameters
     ----------
@@ -1055,7 +1063,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
 
     def get_designmatrix(self):
         design_matrixs = []
-        fit_params = list(self.get_fitparams().keys())
+        fit_params = self.model.free_params
         if len(self.fit_data) == 1:
             for ii, dmatrix_maker in enumerate(self.designmatrix_makers):
                 design_matrixs.append(
@@ -1083,7 +1091,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         return combine_covariance_matrix(cov_matrixs)
 
     def get_data_uncertainty(self, data_name, data_obj):
-        """ Get the data uncertainty from the data  object.
+        """Get the data uncertainty from the data  object.
 
         Note
         ----
@@ -1097,7 +1105,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             raise ValueError("No method to access data error is provided.")
 
     def scaled_all_sigma(self,):
-        """ Scale all data's uncertainty. If the function of scaled_`data`_sigma
+        """Scale all data's uncertainty. If the function of scaled_`data`_sigma
         is not given. It will just return the original data uncertainty.
         """
         scaled_sigmas = []
@@ -1136,9 +1144,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         # self.model.maskPar_has_toas_check(self.toas)
         chi2 = 0
         for i in range(max(maxiter, 1)):
-            fitp = self.get_fitparams()
-            fitpv = self.get_fitparams_num()
-            fitperrs = self.get_fitparams_uncertainty()
+            fitp = self.model.get_params_dict("free", "quantity")
+            fitpv = self.model.get_params_dict("free", "num")
+            fitperrs = self.model.get_params_dict("free", "uncertainty")
 
             # Define the linear system
             d_matrix = self.get_designmatrix()
