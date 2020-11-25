@@ -285,7 +285,8 @@ class AstrometryEquatorial(Astrometry):
                 pm_ra_cosdec=self.PMRA.quantity,
                 pm_dec=self.PMDEC.quantity,
                 obstime=self.POSEPOCH.quantity,
-                frame=coords.ICRS)
+                frame=coords.ICRS,
+            )
         else:
             if isinstance(epoch, Time):
                 newepoch = epoch
@@ -560,8 +561,9 @@ class AstrometryEcliptic(Astrometry):
                 lat=self.ELAT.quantity,
                 pm_lon_coslat=self.PMELONG.quantity,
                 pm_lat=self.PMELAT.quantity,
-                frame=PulsarEcliptic,
                 obstime=self.POSEPOCH.quantity,
+                frame=PulsarEcliptic,
+            )
         else:
             if isinstance(epoch, Time):
                 newepoch = epoch
