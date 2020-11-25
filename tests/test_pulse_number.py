@@ -18,9 +18,27 @@ parfile = os.path.join(datadir, "withpn.par")
 timfile = os.path.join(datadir, "withpn.tim")
 
 
-def test_pulse_number():
-    model = get_model(parfile)
-    toas = get_TOAs(timfile)
+@pytest.fixture
+def model():
+    return get_model(parfile)
+
+
+@pytest.fixture
+def toas():
+    # The scope="module" setting ensures the TOAs object will be created
+    # only once for the whole module, which will save time but might
+    # allow accidental modifications done in one test to affect other tests.
+    return get_TOAs(timfile)
+
+
+@pytest.fixture
+def fake_toas(model):
+    t = make_fake_toas(56000, 59000, 10, model, obs="@")
+    t.table["error"] = 1 * u.us
+    return t
+
+
+def test_pulse_number(model, toas):
     # Make sure pn table column was added
     assert "pulse_number" in toas.table.colnames
 
@@ -46,22 +64,19 @@ def test_pulse_number():
 
 
 @pytest.mark.parametrize("obs", ["GBT", "AO", "@", "coe"])
-def test_make_fake_toas(obs):
-    m = get_model(parfile)
-    t = make_fake_toas(56000, 59000, 10, m, obs=obs)
+def test_make_fake_toas(obs, model):
+    t = make_fake_toas(56000, 59000, 10, model, obs=obs)
     t.table["error"] = 1 * u.us
-    r = Residuals(t, m, track_mode="nearest")
+    r = Residuals(t, model, track_mode="nearest")
     assert np.amax(np.abs(r.phase_resids)) < 1e-6
 
 
-def test_parameter_overrides_model():
-    m = get_model(parfile)
-    t = make_fake_toas(56000, 59000, 10, m, obs="@")
+def test_parameter_overrides_model(model):
+    t = make_fake_toas(56000, 59000, 10, model, obs="@")
     t.table["error"] = 1 * u.us
-    t.compute_pulse_numbers(m)
     delta_f = (1 / (t.last_MJD - t.first_MJD)).to(u.Hz)
 
-    m_2 = deepcopy(m)
+    m_2 = deepcopy(model)
     m_2.F0.quantity += 2 * delta_f
 
     m_2.TRACK.value = "-2"
@@ -83,26 +98,11 @@ def test_parameter_overrides_model():
     assert np.amax(r.phase_resids) - np.amin(r.phase_resids) > 1
 
 
-@pytest.mark.parametrize(
-    "fitter", [pint.fitter.WLSFitter, pint.fitter.PowellFitter, pint.fitter.GLSFitter]
-)
-def test_fitter_respects_pulse_numbers(fitter):
-    m = get_model(parfile)
-    t = make_fake_toas(56000, 59000, 10, m, obs="@")
-    t.table["error"] = 1 * u.us
-    t.compute_pulse_numbers(m)
+def test_residual_respects_pulse_numbers(model, fake_toas):
+    t = fake_toas
     delta_f = (1 / (t.last_MJD - t.first_MJD)).to(u.Hz)
-
-    # Unchanged model, fitting should be trivial
-    f_0 = fitter(t, m, track_mode="use_pulse_numbers")
-    f_0.fit_toas()
-    assert abs(f_0.model.F0.quantity - m.F0.quantity) < 0.01 * delta_f
-
-    m_2 = deepcopy(m)
+    m_2 = deepcopy(model)
     m_2.F0.quantity += 2 * delta_f
-    for p in m_2.params:
-        getattr(m_2, p).frozen = True
-    m_2.F0.frozen = False
 
     # Check tracking does the right thing for residuals
     # and that we're wrapping as much as we think we are
@@ -113,14 +113,31 @@ def test_fitter_respects_pulse_numbers(fitter):
     r = Residuals(t, m_2, track_mode="use_pulse_numbers")
     assert np.amax(r.phase_resids) - np.amin(r.phase_resids) > 1.9
 
+
+@pytest.mark.parametrize(
+    "fitter", [pint.fitter.WLSFitter, pint.fitter.PowellFitter, pint.fitter.GLSFitter]
+)
+def test_fitter_respects_pulse_numbers(fitter, model, fake_toas):
+    t = fake_toas
+    delta_f = (1 / (t.last_MJD - t.first_MJD)).to(u.Hz)
+
+    # Unchanged model, fitting should be trivial
+    f_0 = fitter(t, model, track_mode="use_pulse_numbers")
+    f_0.fit_toas()
+    assert abs(f_0.model.F0.quantity - model.F0.quantity) < 0.01 * delta_f
+
+    m_2 = deepcopy(model)
+    m_2.F0.quantity += 2 * delta_f
+    m_2.free_params = ["F0"]
+
     # Check fitter with and without tracking
     with pytest.raises(ValueError):
         fitter(t, m_2, track_mode="capybara")
 
     f_1 = fitter(t, m_2, track_mode="nearest")
     f_1.fit_toas()
-    assert abs(f_1.model.F0.quantity - m.F0.quantity) > 0.1 * delta_f
+    assert abs(f_1.model.F0.quantity - model.F0.quantity) > 0.1 * delta_f
 
     f_2 = fitter(t, m_2, track_mode="use_pulse_numbers")
     f_2.fit_toas()
-    assert abs(f_2.model.F0.quantity - m.F0.quantity) < 0.01 * delta_f
+    assert abs(f_2.model.F0.quantity - model.F0.quantity) < 0.01 * delta_f
