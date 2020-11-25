@@ -96,7 +96,7 @@ class Fitter(object):
     def set_fitparams(self, *params):
         """Update the "frozen" attribute of model parameters. Deprecated."""
         warn(
-            "This function is confusing and deprecated. Set self.model.free_parameters instead.",
+            "This function is confusing and deprecated. Set self.model.free_params instead.",
             category=DeprecationWarning,
         )
         # TODO, maybe reconsider for the input?
@@ -478,7 +478,7 @@ class Fitter(object):
         prec is the precision of the floating point results.
         """
         if hasattr(self, "covariance_matrix"):
-            fps = list(self.model.free_parameters)
+            fps = list(self.model.free_params)
             cm = self.covariance_matrix
             if with_phase:
                 fps = ["PHASE"] + fps
