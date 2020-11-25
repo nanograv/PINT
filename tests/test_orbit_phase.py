@@ -45,32 +45,36 @@ class TestOrbitPhase(unittest.TestCase):
         assert np.all(phs.value >= 0), "Not all phases >= 0"
         assert np.all(phs.value <= 2 * np.pi), "Not all phases <= 2*pi"
         phs2 = self.mJ1855.orbital_phase([ts[0], ts[49]], anom="ecc")
-        assert phs2[0] == phs[0], "Eccen anom != Mean anom"
+        assert np.isclose(phs2[0], phs[0]), "Eccen anom != Mean anom"
         assert phs2[1] != phs[49], "Eccen anom == Mean anom"
         phs3 = self.mJ1855.orbital_phase([ts[0], ts[49]], anom="true")
-        assert phs3[0] == phs[0], "Eccen anom != True anom"
+        assert np.isclose(phs3[0], phs[0]), "Eccen anom != True anom"
         assert phs3[1] != phs[49], "Eccen anom == True anom"
 
     def test_J1855_zero_ecc(self):
         self.mJ1855.ECC.value = 0.0  # set the eccentricity to zero
         self.mJ1855.OM.value = 0.0  # set omega to zero
         phs1 = self.mJ1855.orbital_phase(self.mJ1855.T0.value, anom="mean")
-        assert phs1.value == 0.0, "Mean anom != 0.0 at T0"
+        assert np.isclose(phs1.value, 0.0), "Mean anom != 0.0 at T0"
+        # All anomalies are equivalent when ECC = OM = 0
         phs1 = self.mJ1855.orbital_phase(self.mJ1855.T0.value + 0.1, anom="mean")
         phs2 = self.mJ1855.orbital_phase(self.mJ1855.T0.value + 0.1, anom="ecc")
-        assert phs2 == phs1, "Eccen anom != Mean anom"
+        assert np.isclose(phs2, phs1), "Eccen anom != Mean anom"
         phs3 = self.mJ1855.orbital_phase(self.mJ1855.T0.value + 0.1, anom="true")
-        assert phs3 == phs1, "True anom != Mean anom"
+        assert np.isclose(phs3, phs1), "True anom != Mean anom"
 
     def test_J1855_ell1(self):
         mJ1855ell1 = m.get_model("B1855+09_NANOGrav_12yv3.wb.gls.par")
         phs1 = mJ1855ell1.orbital_phase(mJ1855ell1.TASC.value, anom="mean")
-        assert phs1.value == 0.0, "Mean anom != 0.0 at TASC as value"
+        assert np.isclose(phs1.value, 0.0), "Mean anom != 0.0 at TASC as value"
         phs1 = mJ1855ell1.orbital_phase(mJ1855ell1.TASC, anom="mean")
-        assert phs1.value == 0.0, "Mean anom != 0.0 at TASC as MJDParam"
-        phs1 = self.mJ1855.orbital_phase(mJ1855ell1.TASC.value + 0.1, anom="mean")
-        phs2 = self.mJ1855.orbital_phase(mJ1855ell1.TASC.value + 0.1, anom="ecc")
-        assert phs2 != phs1, "Eccen anom == Mean anom"
+        assert np.isclose(phs1.value, 0.0), "Mean anom != 0.0 at TASC as MJDParam"
+        # All anomalies are equivalent in ELL1
+        phs1 = mJ1855ell1.orbital_phase(mJ1855ell1.TASC.value + 0.1, anom="mean")
+        phs2 = mJ1855ell1.orbital_phase(mJ1855ell1.TASC.value + 0.1, anom="ecc")
+        assert np.isclose(phs2, phs1), "Eccen anom != Mean anom"
+        phs3 = mJ1855ell1.orbital_phase(mJ1855ell1.TASC.value + 0.1, anom="true")
+        assert np.isclose(phs3, phs1), "True anom != Mean anom"
 
     def test_J0737(self):
         # Find a conjunction which we have confirmed by GBT data and Shapiro delay
