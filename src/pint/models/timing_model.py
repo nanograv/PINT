@@ -113,12 +113,37 @@ def property_exists(f):
 
 
 class TimingModel(object):
-    """Base class for timing models and components.
+    """Timing model object built from Components.
 
-    Base-level object provides an interface for implementing pulsar timing
-    models. A timing model contains different model components, for example
-    astrometry delays and spindown phase. All the components will be stored in
-    a dictionary by category. Each category is kept as an ordered list.
+    This object is the primary object to represent a timing model in PINT.  It
+    is normally constructed with :func:`pint.models.model_builder.get_model`,
+    and it contains a variety of Component objects, each representing a
+    physical process that either introduces delays in the pulse arrival time or
+    introduces shifts in the pulse arrival phase.  These components have
+    parameters, described by :class:`pint.models.parameter.Parameter` objects,
+    and methods. Both the parameters and the methods are accessible through
+    this object using attribute access, for example as ``model.F0`` or
+    ``model.coords_as_GAL()``.
+
+    Components in a TimingModel objects are accessible through the
+    ``model.components`` property, and they can also be accessed by using their
+    class name to index the TimingModel, as ``model["Spindown"]``. They can be
+    added and removed with methods on this object, and for many of them
+    additional parameters in families (``DMXEP_1234``) can be added.
+
+    Parameters in a TimingModel object are listed in the ``model.params`` and
+    ``model.params_ordered`` objects. Each Parameter can be set as free or
+    frozen using its ``.frozen`` attribute, and a list of the free parameters
+    is available through the ``model.free_params`` property; this can also
+    be used to set which parameters are free. Several methods are available
+    to get and set some or all parameters in the forms of dictionaries.
+
+    TimingModel objects also support a number of functions for computing
+    various things like orbital phase, and barycentric versions of TOAs,
+    as well as the various derivatives and matrices needed to support fitting.
+
+    TimingModel objects can be written out to ``.par`` files using
+    :func:`pint.models.timing_model.TimingModel.as_parfile`.
 
     Parameters
     ----------
@@ -135,7 +160,6 @@ class TimingModel(object):
     'time delay'. In pulsar timing different astrophysics phenomenons are separated to
     time model components for handling a specific emission or propagation effect.
 
-    All timing model component classes should subclass this timing model base class.
     Each timing model component generally requires the following parts:
 
         - Timing Parameters
@@ -156,7 +180,6 @@ class TimingModel(object):
     top_level_params : list
         Names of parameters belonging to the TimingModel as a whole
         rather than to any particular component.
-
     """
 
     def __init__(self, name="", components=[]):
@@ -165,7 +188,6 @@ class TimingModel(object):
                 "First parameter should be the model name, was {!r}".format(name)
             )
         self.name = name
-        self.introduces_correlated_errors = False
         self.component_types = []
         self.top_level_params = []
         self.add_param_from_top(

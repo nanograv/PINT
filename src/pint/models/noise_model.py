@@ -182,7 +182,6 @@ class ScaleDmError(NoiseComponent):
     Note
     ----
     Ref: NanoGrav 12.5 yrs wideband data
-
     """
 
     register = True
@@ -190,7 +189,7 @@ class ScaleDmError(NoiseComponent):
 
     def __init__(self,):
         super(ScaleDmError, self).__init__()
-        self.introduces_correlated_errors = True
+        self.introduces_correlated_errors = False
         self.add_param(
             maskParameter(
                 name="DMEFAC",

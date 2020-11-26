@@ -179,16 +179,6 @@ class PulsarBinary(DelayComponent):
                     )
                 par_method()
 
-                # try:
-                #     par_method()
-                # except Exception as e:
-                #     raise MissingParameter(
-                #         self.binary_model_name,
-                #         p
-                #         + " is present but somehow broken for '%s'."
-                #         % self.binary_model_name,
-                #     ) from e
-
     # With new parameter class set up, do we need this?
     def apply_units(self):
         """Apply units to parameter value."""
@@ -285,7 +275,9 @@ class PulsarBinary(DelayComponent):
         (FB2, FB3, etc.) are ignored in computing the new T0, even if present in
         the model. If high-precision results are necessary, especially for models
         containing higher derivatives of orbital frequency, consider re-fitting
-        the model to a set of TOAs.
+        the model to a set of TOAs. The use of :func:`pint.toa.make_fake_toas`
+        and the :class:`pint.fitter.Fitter` option ``track_mode="use_pulse_number"``
+        can make this extremely simple.
 
         Parameters
         ----------
