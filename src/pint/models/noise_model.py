@@ -190,6 +190,7 @@ class ScaleDmError(NoiseComponent):
 
     def __init__(self,):
         super(ScaleDmError, self).__init__()
+        self.introduces_correlated_errors = True
         self.add_param(
             maskParameter(
                 name="DMEFAC",

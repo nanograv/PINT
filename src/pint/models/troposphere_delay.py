@@ -144,12 +144,13 @@ class TroposphereDelay(DelayComponent):
         """
         try:
             radec = SkyCoord(
-                self.RAJ.value * self.RAJ.units, self.DECJ.value * self.DECJ.units
+                self._parent.RAJ.value * self._parent.RAJ.units,
+                self._parent.DECJ.value * self._parent.DECJ.units,
             )  # just do this once instead of adjusting over time
         except AttributeError:
             radec = SkyCoord(
-                self.ELONG.value * self.ELONG.units,
-                self.ELAT.value * self.ELAT.units,
+                self._parent.ELONG.value * self._parent.ELONG.units,
+                self._parent.ELAT.value * self._parent.ELAT.units,
                 frame="barycentricmeanecliptic",
             )
         return radec

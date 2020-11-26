@@ -7,29 +7,27 @@ from __future__ import absolute_import, division, print_function
 import abc
 import copy
 import inspect
-import warnings
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict, defaultdict
 from functools import wraps
 
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-import pint
 import six
 from astropy import log
 from scipy.optimize import brentq
+
+import pint
 from pint.models.parameter import (
-    Parameter,
     AngleParameter,
-    floatParameter,
-    maskParameter,
-    prefixParameter,
-    strParameter,
     MJDParameter,
+    Parameter,
+    maskParameter,
+    strParameter,
 )
 from pint.phase import Phase
-from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 from pint.toa import TOAs
+from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
 __all__ = ["DEFAULT_ORDER", "TimingModel"]
 # Parameters or lines in parfiles we don't understand but shouldn't
@@ -96,7 +94,9 @@ def property_exists(f):
 
     Normal @property has the unfortunate feature that if the called function
     should accidentally emit an AttributeError, if __getattr__ is in use, this
-    will be reported as if the attribute does not exist.
+    will be reported as if the attribute does not exist. With this decorator
+    instead, the AttributeError will be caught and re-raised as a specific kind
+    of ValueError, so it will be treated like an error and the backtrace printed.
     """
 
     @property
@@ -204,9 +204,8 @@ class TimingModel(object):
 
     def validate(self):
         """Validate component setup.
-        The checks includes:
-        - Required parameters
-        - Parameter values
+
+        The checks include required parameters and parameter values.
         """
         for cp in self.components.values():
             cp.validate()
@@ -233,41 +232,6 @@ class TimingModel(object):
         raise AttributeError(
             "Attribute {} not found in TimingModel or any Component".format(name)
         )
-
-        try:
-            if six.PY2:
-                return super(TimingModel, self).__getattribute__(name)
-            else:
-                return super().__getattribute__(name)
-        except AttributeError:
-            # Note that there is a complex series of fallbacks that can wind up
-            # here - for example if a property inadvertently raises an
-            # AttributeError it looks like it's missing entirely
-            errmsg = "'TimingModel' object and its component has no attribute"
-            errmsg += " '%s'." % name
-            try:
-                if six.PY2:
-                    cp = super(TimingModel, self).__getattribute__("search_cmp_attr")(
-                        name
-                    )
-                else:
-                    cp = super().__getattribute__("search_cmp_attr")(name)
-                if cp is not None:
-                    return super(cp.__class__, cp).__getattribute__(name)
-                else:
-                    raise AttributeError(errmsg)
-            except AttributeError:
-                raise
-            except RecursionError as e:
-                warnings.warn(
-                    "RecursionError hit in TimingModel.__getattr__: {} {} for {}".format(
-                        type(e), e, name
-                    )
-                )
-                raise AttributeError(errmsg)
-            # except Exception as e:
-            #    warnings.warn("Exception {} {} was raised in __getattr__({})".format(type(e), e, name))
-            #    raise AttributeError(errmsg)
 
     @property_exists
     def params(self):
@@ -324,7 +288,7 @@ class TimingModel(object):
     def free_params(self):
         """List of all the free parameters in the timing model. Can be set to change which are free.
 
-        These are ordered as self.params_ordered does.
+        These are ordered as ``self.params_ordered`` does.
 
         Upon setting, order does not matter, and aliases are accepted.
         ValueError is raised if a parameter is not recognized.
@@ -344,6 +308,15 @@ class TimingModel(object):
             raise ValueError(
                 "Parameter(s) are familiar but not in the model: {}".format(params)
             )
+
+    def match_param_aliases(self, alias):
+        """Return the parameter corresponding to this alias."""
+        for p in self.params:
+            if p == alias:
+                return p
+            if alias in getattr(self, p).aliases:
+                return p
+        raise ValueError("{} is not recognized as a parameter or alias".format(p))
 
     def get_params_dict(self, which="free", kind="quantity"):
         """Return a dict mapping parameter names to values.
@@ -410,16 +383,8 @@ class TimingModel(object):
     def components(self):
         """All the components in a dictionary indexed by name."""
         comps = {}
-        if six.PY2:
-            type_list = super(TimingModel, self).__getattribute__("component_types")
-        else:
-            type_list = super().__getattribute__("component_types")
-        for ct in type_list:
-            if six.PY2:
-                cps_list = super(TimingModel, self).__getattribute__(ct + "_list")
-            else:
-                cps_list = super().__getattribute__(ct + "_list")
-            for cp in cps_list:
+        for ct in self.component_types:
+            for cp in getattr(self, ct + "_list"):
                 comps[cp.__class__.__name__] = cp
         return comps
 
@@ -441,11 +406,11 @@ class TimingModel(object):
 
     @property_exists
     def is_binary(self):
-        """Does the model describe a binary pulsar? (True or False)"""
+        """Does the model describe a binary pulsar?"""
         return any(x.startswith("Binary") for x in self.components.keys())
 
     def orbital_phase(self, barytimes, anom="mean", radians=True):
-        """Return orbital phase (in radians) at barycentric MJD times
+        """Return orbital phase (in radians) at barycentric MJD times.
 
         Parameters
         ----------
@@ -516,7 +481,7 @@ class TimingModel(object):
             return anoms / (2 * np.pi)
 
     def conjunction(self, baryMJD):
-        """Return the time(s) of the first superior conjunction(s) after baryMJD
+        """Return the time(s) of the first superior conjunction(s) after baryMJD.
 
         Args
         ----
@@ -579,7 +544,7 @@ class TimingModel(object):
 
     @property_exists
     def dm_funcs(self):
-        """ List of all dm value functions. """
+        """List of all dm value functions."""
         dmfs = []
         for cp in self.components.values():
             if hasattr(cp, "dm_value_funcs"):
@@ -691,19 +656,14 @@ class TimingModel(object):
 
         If multiple components have same attribute, it will return the first
         component.
-
         """
-        # if name == "components":
-        #    raise ValueError("Tried to search for {}".format(name))
         for cp in list(self.components.values()):
-            try:
-                super(cp.__class__, cp).__getattribute__(name)
+            if hasattr(cp, name):
                 return cp
-            except AttributeError:
-                continue
+        raise AttributeError("{} not found in any component".format(name))
 
     def get_component_type(self, component):
-        """A function to identify the component object's type.
+        """Identify the component object's type.
 
         Parameters
         ----------
@@ -784,7 +744,6 @@ class TimingModel(object):
             The component category order list. Default is the DEFAULT_ORDER.
         force : bool, optional
             If true, add a duplicate component. Default is False.
-
         """
         comp_type = self.get_component_type(component)
         if comp_type in self.component_types:
@@ -872,7 +831,7 @@ class TimingModel(object):
         return result_comp
 
     def get_components_by_category(self):
-        """Return a dict of this model's component objects keyed by the category name"""
+        """Return a dict of this model's component objects keyed by the category name."""
         categorydict = defaultdict(list)
         for cp in self.components.values():
             categorydict[cp.category].append(cp)
@@ -909,7 +868,6 @@ class TimingModel(object):
         ----------
         param: str
             The name of parameter to be removed.
-
         """
         param_map = self.get_params_mapping()
         if param not in list(param_map.keys()):
@@ -950,13 +908,12 @@ class TimingModel(object):
         dict
            A dictionary with prefix pararameter real index as key and parameter
            name as value.
-
         """
         parnames = [x for x in self.params if x.startswith(prefix)]
         mapping = dict()
         for parname in parnames:
             par = getattr(self, parname)
-            if par.is_prefix == True and par.prefix == prefix:
+            if par.is_prefix and par.prefix == prefix:
                 mapping[par.index] = parname
         return mapping
 
@@ -982,7 +939,6 @@ class TimingModel(object):
 
         Return the total delay which will be subtracted from the given
         TOA to get time of emission at the pulsar.
-
         """
         delay = np.zeros(toas.ntoas) * u.second
         if cutoff_component == "":
@@ -1033,9 +989,7 @@ class TimingModel(object):
             return phase
 
     def total_dm(self, toas):
-        """This function calculates the dispersion measures from all the dispersion
-        type of components.
-        """
+        """Calculate dispersion measure from all the dispersion type of components."""
         # Here we assume the unit would be the same for all the dm value function.
         # By doing so, we do not have to hard code an unit here.
         dm = self.dm_funcs[0](toas)
@@ -1045,7 +999,8 @@ class TimingModel(object):
         return dm
 
     def toa_covariance_matrix(self, toas):
-        """This a function to get the TOA covariance matrix for noise models.
+        """Get the TOA covariance matrix for noise models.
+
         If there is no noise model component provided, a diagonal matrix with
         TOAs error as diagonal element will be returned.
         """
@@ -1062,7 +1017,8 @@ class TimingModel(object):
         return result
 
     def dm_covariance_matrix(self, toas):
-        """This a function to get the DM covariance matrix for noise models.
+        """Get the DM covariance matrix for noise models.
+
         If there is no noise model component provided, a diagonal matrix with
         TOAs error as diagonal element will be returned.
         """
@@ -1082,9 +1038,10 @@ class TimingModel(object):
         return result
 
     def scaled_toa_uncertainty(self, toas):
-        """This a function to get the scaled TOA data uncertainties noise models.
-           If there is no noise model component provided, a vector with
-           TOAs error as values will be returned.
+        """Get the scaled TOA data uncertainties noise models.
+
+        If there is no noise model component provided, a vector with
+        TOAs error as values will be returned.
 
         Parameters
         ----------
@@ -1106,8 +1063,8 @@ class TimingModel(object):
     def scaled_dm_uncertainty(self, toas):
         """Get the scaled DM data uncertainties noise models.
 
-            If there is no noise model component provided, a vector with
-            DM error as values will be returned.
+        If there is no noise model component provided, a vector with
+        DM error as values will be returned.
 
         Parameters
         ----------
@@ -1145,10 +1102,13 @@ class TimingModel(object):
         return np.hstack([r for r in result])
 
     def noise_model_dimensions(self, toas):
-        """Returns a dictionary of correlated-noise components in the noise
+        """Number of basis functions for each noise model component.
+
+        Returns a dictionary of correlated-noise components in the noise
         model.  Each entry contains a tuple (offset, size) where size is the
         number of basis funtions for the component, and offset is their
-        starting location in the design matrix and weights vector."""
+        starting location in the design matrix and weights vector.
+        """
         result = {}
 
         # Correct results rely on this ordering being the
@@ -1169,7 +1129,10 @@ class TimingModel(object):
         return result
 
     def jump_flags_to_params(self, toas):
-        """convert jump flags in toas.table["flags"] to jump parameters in the model"""
+        """Convert jump flags in toas.table["flags"] to jump parameters in the model.
+
+        The flags processed are ``jump`` and ``gui_jump``.
+        """
         from . import jump
 
         for flag_dict in toas.table["flags"]:
@@ -1242,9 +1205,8 @@ class TimingModel(object):
 
         Return
         ------
-        astropy.quantity.
+        astropy.Quantity
             Barycentered TOAs.
-
         """
         tbl = toas.table
         if cutoff_component == "":
@@ -1302,9 +1264,7 @@ class TimingModel(object):
         # phase indirectly (and vice-versa)??
         par = getattr(self, param)
         result = np.longdouble(np.zeros(toas.ntoas)) / par.units
-        param_phase_derivs = []
         phase_derivs = self.phase_deriv_funcs
-        delay_derivs = self.delay_deriv_funcs
         if param in list(phase_derivs.keys()):
             for df in phase_derivs[param]:
                 result += df(toas, param, delay).to(
@@ -1345,7 +1305,6 @@ class TimingModel(object):
         """Return the derivative of phase with respect to the parameter.
 
         Compute the value numerically, using a symmetric finite difference.
-
         """
         # TODO : We need to know the range of parameter.
         par = getattr(self, param)
@@ -1379,7 +1338,6 @@ class TimingModel(object):
         """Return the derivative of delay with respect to the parameter.
 
         Compute the value numerically, using a symmetric finite difference.
-
         """
         # TODO : We need to know the range of parameter.
         par = getattr(self, param)
@@ -1413,7 +1371,7 @@ class TimingModel(object):
         dm_df = self.dm_derivs.get(param, None)
         if dm_df is None:
             if param not in self.params:  # Maybe add differentitable params
-                raise AttributeError("Parametre {} does not exist".format(param))
+                raise AttributeError("Parameter {} does not exist".format(param))
             else:
                 return result
 
@@ -1516,10 +1474,11 @@ class TimingModel(object):
                 Prints astropy.log warnings for parameters that have changed significantly
                 and/or have increased in uncertainty.
         """
-        from uncertainties import ufloat
-        import uncertainties.umath as um
         import sys
         from copy import deepcopy as cp
+
+        import uncertainties.umath as um
+        from uncertainties import ufloat
 
         s = "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
             "PARAMETER", "Model 1", "Model 2 ", "Diff_Sigma1", "Diff_Sigma2"
@@ -1755,7 +1714,7 @@ class TimingModel(object):
         # Now print any parameters in othermodel that were missing in self.
         mypn = self.params_ordered
         for opn in othermodel.params_ordered:
-            if opn in mypn and type(getattr(self, opn).value) != type(None):
+            if opn in mypn and getattr(self, opn).value is not None:
                 continue
             if nodmx and opn.startswith("DMX"):
                 continue
@@ -1763,7 +1722,7 @@ class TimingModel(object):
                 otherpar = getattr(othermodel, opn)
             except AttributeError:
                 otherpar = None
-            if type(otherpar.value) == type(None):
+            if otherpar.value is None:
                 continue
             log.info("Parameter %s missing from model 1" % opn)
             if verbosity == "max":
@@ -1781,7 +1740,6 @@ class TimingModel(object):
         file : str or list or file-like
             The parfile to read from. May be specified as a filename,
             a list of lines, or a readable file-like object.
-
         """
         repeat_param = defaultdict(int)
         param_map = self.get_params_mapping()
@@ -1986,29 +1944,13 @@ class Component(object):
         pass
 
     def validate(self):
-        """ Validate loaded values."""
+        """Validate loaded values."""
         pass
 
     @property_exists
     def category(self):
         """Category is a feature the class, so delegate."""
         return self.__class__.category
-
-    def no__getattr__(self, name):
-        try:
-            return super(Component, self).__getattribute__(name)
-        except AttributeError:
-            try:
-                p = super(Component, self).__getattribute__("_parent")
-                if p is None:
-                    raise AttributeError(
-                        "'%s' object has no attribute '%s'."
-                        % (self.__class__.__name__, name)
-                    )
-                else:
-                    return self._parent.__getattr__(name)
-            except AttributeError:
-                raise
 
     @property_exists
     def free_params_component(self):
@@ -2039,20 +1981,6 @@ class Component(object):
                     prefixs[par.prefix].append(p)
         return prefixs
 
-    def get_params_of_type(self, param_type):
-        """Get all the parameters in timing model for one specific type"""
-        result = []
-        for p in self.params:
-            par = getattr(self, p)
-            par_type = type(par).__name__
-            par_prefix = par_type[:-9]
-            if (
-                param_type.upper() == par_type.upper()
-                or param_type.upper() == par_prefix.upper()
-            ):
-                result.append(par.name)
-        return result
-
     def get_prefix_mapping(self, prefix):
         """Get the index mapping for the prefix parameters.
 
@@ -2066,13 +1994,12 @@ class Component(object):
         dict
            A dictionary with prefix pararameter real index as key and parameter
            name as value.
-
         """
         parnames = [x for x in self.params if x.startswith(prefix)]
         mapping = dict()
         for parname in parnames:
             par = getattr(self, parname)
-            if par.is_prefix == True and par.prefix == prefix:
+            if par.is_prefix and par.prefix == prefix:
                 mapping[par.index] = parname
         return mapping
 
@@ -2137,7 +2064,7 @@ class Component(object):
         if setup:
             self.setup()
         if deriv_func is not None:
-            self.register_deriv_funcs(func, param.name)
+            self.register_deriv_funcs(deriv_func, param.name)
 
     def remove_param(self, param):
         """Remove a parameter from the Component.
@@ -2146,7 +2073,6 @@ class Component(object):
         ----------
         param : str or pint.models.Parameter
             The parameter to remove.
-
         """
         if isinstance(param, str):
             param_name = param
@@ -2215,29 +2141,17 @@ class Component(object):
         mapping = dict()
         for parname in parnames:
             par = getattr(self, parname)
-            if par.is_prefix == True and par.prefix == prefix:
+            if par.is_prefix and par.prefix == prefix:
                 mapping[par.index] = parname
         return mapping
 
     def match_param_aliases(self, alias):
-        # TODO need to search the parent class as well
-        p_aliases = {}
-        # if alias is a parameter name, return itself
-        if self._parent is not None:
-            search_target = self._parent
-        else:
-            search_target = self
-        # get all the aliases
-        for p in search_target.params:
+        """Return the parameter corresponding to this alias."""
+        for p in self.params:
             if p == alias:
                 return p
-            par = getattr(search_target, p)
-            if par.aliases != []:
-                p_aliases[p] = par.aliases
-        # match alias
-        for pa, pav in zip(p_aliases.keys(), p_aliases.values()):
-            if alias in pav:
-                return pa
+            if alias in getattr(self, p).aliases:
+                return p
         raise ValueError("{} is not recognized as a parameter or alias".format(p))
 
     def register_deriv_funcs(self, func, param):
