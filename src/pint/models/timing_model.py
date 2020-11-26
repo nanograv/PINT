@@ -126,10 +126,10 @@ class TimingModel(object):
     ``model.coords_as_GAL()``.
 
     Components in a TimingModel objects are accessible through the
-    ``model.components`` property, and they can also be accessed by using their
-    class name to index the TimingModel, as ``model["Spindown"]``. They can be
-    added and removed with methods on this object, and for many of them
-    additional parameters in families (``DMXEP_1234``) can be added.
+    ``model.components`` property, using their class name to index the
+    TimingModel, as ``model.components["Spindown"]``. They can be added and
+    removed with methods on this object, and for many of them additional
+    parameters in families (``DMXEP_1234``) can be added.
 
     Parameters in a TimingModel object are listed in the ``model.params`` and
     ``model.params_ordered`` objects. Each Parameter can be set as free or
