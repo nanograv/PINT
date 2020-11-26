@@ -1,13 +1,12 @@
 # Validation Example for PINT paper
 
-## A comparison between PINT result and Tempo/Tempo2 result
-### This example is presented in the PINT paper. But it can be used for other datasets. 
+A comparison between PINT result and Tempo/Tempo2 result. This example is presented in the PINT paper. But it can be used for other datasets. 
 
-### Requirement
-* Data set: NANOGrav 11-year data J1600-3053
-* TEMPO and its python utils tempo_utils. Download from https://github.com/demorest/tempo_utils
-* TEMPO2 and its python utils tempo2_utils. Download from https://github.com/demorest/tempo_utils
-* TEMPO2 general2 plugins. 
+* Requirement
+  * Data set: NANOGrav 11-year data J1600-3053
+  * TEMPO and its python utils tempo_utils. Download from https://github.com/demorest/tempo_utils
+  * TEMPO2 and its python utils tempo2_utils. Download from https://github.com/demorest/tempo_utils
+  * TEMPO2 general2 plugins. 
 
 
 
@@ -95,8 +94,8 @@ def newpar2(parfile,timfile):
 
 ### Get the data file for PSR J1600-3053. 
 
-#### Note
-* For other data set, one can change the cell below. 
+* Note
+  * For other data set, one can change the cell below. 
 
 
 ```python
@@ -247,9 +246,9 @@ for line in tempo_par:
 tempo_parfile.close()
 ```
 
-## Plot the PINT - TEMPO residual difference.
+### Plot the PINT - TEMPO residual difference.
 
-### Get the TEMPO residuals
+#### Get the TEMPO residuals
 
 
 ```python
@@ -289,9 +288,9 @@ plt.savefig("J1600_PINT_tempo.eps")
 ![png](paper_validation_example_files/paper_validation_example_29_0.png)
 
 
-## Compare the parameter between TEMPO and PINT
+### Compare the parameter between TEMPO and PINT
 
-###  Reported quantities
+####  Reported quantities
 * TEMPO value
 * TEMPO uncertainty 
 * Parameter units
@@ -352,7 +351,7 @@ compare_table.write('parameter_compare.t.html', format='html', overwrite=True)
     INFO: Parameter A1DOT's value will be scaled by 1e-12 [pint.models.parameter]
 
 
-## Print the parameter difference in a table.
+### Print the parameter difference in a table.
 
 
 ```python
@@ -622,11 +621,11 @@ compare_table[paper_param_index]
 
 ## TEMPO2 run
 
-### Before TEMPO2 run, the .par file has to be modified for a more accurate TEMPO2 vs PINT comparison.
-### We save the modified .par file in a file named "[PSR name]_tempo2.par". In this case, "J1600-3053_tempo2.par"
-### Modified parameters 
-* ECL IERS2010   ----> ECL IERS 2003   (TEMPO2 use IERS 2003 Obliquity angle as default)
-* T2CMETHOD TEMPO  ----> # T2CMETHOD TEMPO (Make TEMPO2 ues the new precession and nutation model IAU 2000)
+Before TEMPO2 run, the .par file has to be modified for a more accurate TEMPO2 vs PINT comparison.
+We save the modified .par file in a file named "[PSR name]_tempo2.par". In this case, "J1600-3053_tempo2.par"
+* Modified parameters 
+  * ECL IERS2010   ----> ECL IERS 2003   (TEMPO2 use IERS 2003 Obliquity angle as default)
+  * T2CMETHOD TEMPO  ----> # T2CMETHOD TEMPO (Make TEMPO2 ues the new precession and nutation model IAU 2000)
 
 
 ```python
@@ -712,7 +711,7 @@ plt.savefig("J1600_PINT_tempo2")
 
 ### Write out the TEMPO2 postfit parameter to a new file
 
-#### Note, since the ECL parameter is hard coded in tempo2, we will have to add it manually 
+Note, since the ECL parameter is hard coded in tempo2, we will have to add it manually 
 
 
 ```python
@@ -726,14 +725,14 @@ tempo2_parfile.close()
 
 ## Compare the parameter between TEMPO2 and PINT
 
-###  Reported quantities
-* TEMPO2 value
-* TEMPO2 uncertainty 
-* Parameter units
-* TEMPO2 parameter value - PINT parameter value
-* TEMPO2/PINT parameter absolute difference divided by TEMPO2 uncertainty 
-* PINT uncertainty divided by TEMPO2 uncertainty
-* If TEMPO2 provides the uncertainty value
+* Reported quantities
+  * TEMPO2 value
+  * TEMPO2 uncertainty 
+  * Parameter units
+  * TEMPO2 parameter value - PINT parameter value
+  * TEMPO2/PINT parameter absolute difference divided by TEMPO2 uncertainty 
+  * PINT uncertainty divided by TEMPO2 uncertainty
+  * If TEMPO2 provides the uncertainty value
 
 
 ```python
@@ -1059,8 +1058,8 @@ compare_table2[paper_param_index]
 
 ### The residual difference between PINT and TEMPO2 is at the level of ~1ns. Let us exam the remaining residual difference more.
 
-#### We believe the discrepancy is mainly from the solar system geometric delay. 
-We will use the tempo2 postfit parameters, which are wrote out to `J1600-3053_new_tempo2.2.par`
+* We believe the discrepancy is mainly from the solar system geometric delay. 
+* We will use the tempo2 postfit parameters, which are wrote out to `J1600-3053_new_tempo2.2.par`
 
 
 ```python
