@@ -246,10 +246,7 @@ for line in tempo_par:
 tempo_parfile.close()
 ```
 
-### Plot the PINT - TEMPO residual difference.
-
-#### Get the TEMPO residuals
-
+### Get the TEMPO residuals
 
 ```python
 tempo_prefit = tempo_toa.get_prefit()
@@ -259,6 +256,8 @@ freqs = tempo_toa.get_freq()
 errs = tempo_toa.get_resid_err()
 ```
 
+
+### Plot the PINT - TEMPO residual difference.
 
 ```python
 tp_diff_pre = (pint_prefit - tempo_prefit) * u.us 
@@ -290,14 +289,14 @@ plt.savefig("J1600_PINT_tempo.eps")
 
 ### Compare the parameter between TEMPO and PINT
 
-####  Reported quantities
-* TEMPO value
-* TEMPO uncertainty 
-* Parameter units
-* TEMPO parameter value - PINT parameter value
-* TEMPO/PINT parameter absolute difference divided by TEMPO uncertainty 
-* PINT uncertainty divided by TEMPO uncertainty
-* If TEMPO provides the uncertainty value
+* Reported quantities
+  * TEMPO value
+  * TEMPO uncertainty 
+  * Parameter units
+  * TEMPO parameter value - PINT parameter value
+  * TEMPO/PINT parameter absolute difference divided by TEMPO uncertainty 
+  * PINT uncertainty divided by TEMPO uncertainty
+  * If TEMPO provides the uncertainty value
 
 
 ```python
@@ -355,7 +354,7 @@ compare_table.write('parameter_compare.t.html', format='html', overwrite=True)
 
 
 ```python
-compare_table.show_in_notebook()
+compare_table.show_in_notebook(display_length=30)
 ```
 
 
@@ -793,7 +792,7 @@ compare_table2.write('parameter_compare.t2.html', format='html', overwrite=True)
 
 
 ```python
-compare_table2.show_in_notebook()
+compare_table2.show_in_notebook(display_length=30)
 ```
 
 
