@@ -3,8 +3,8 @@ from io import StringIO
 import numpy as np
 import pytest
 from hypothesis import given, assume
-from hypothesis.strategies import slices
-from hypothesis.extra.numpy import arrays
+from hypothesis.strategies import slices, integers, booleans, one_of, lists
+from hypothesis.extra.numpy import arrays, array_shapes
 
 from pint.toa import get_TOAs
 
@@ -55,6 +55,22 @@ def test_getitem_boolean(c):
     s = toas[c]
     assert len(s) == np.sum(c)
     assert np.all(s.get_mjds() == m[c])
+    if len(s) > 0:
+        assert np.all(s.table["mjd_float"] == s.table.group_by("obs")["mjd_float"])
+
+
+@given(
+    one_of(
+        arrays(int, array_shapes(max_dims=1), elements=integers(0, n_tim - 1)),
+        lists(integers(0, n_tim - 1)),
+    )
+)
+def test_getitem_where(a):
+    toas = get_TOAs(StringIO(tim), ephem="de421")
+    m = toas.get_mjds()
+    s = toas[a]
+    assert len(s) == len(a)
+    assert set(s.get_mjds()) == set(m[a])
     if len(s) > 0:
         assert np.all(s.table["mjd_float"] == s.table.group_by("obs")["mjd_float"])
 
