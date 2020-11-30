@@ -1470,6 +1470,7 @@ def add_dummy_distance(c, distance=1 * u.kpc):
             pm_lat=c.pm_lat,
             obstime=c.obstime,
             distance=distance,
+            obliquity=c.obliquity,
             frame=pint.pulsar_ecliptic.PulsarEcliptic,
         )
         return cnew
@@ -1545,6 +1546,7 @@ def remove_dummy_distance(c):
             pm_lon_coslat=c.pm_lon_coslat,
             pm_lat=c.pm_lat,
             obstime=c.obstime,
+            obliquity=c.obliquity,
             frame=pint.pulsar_ecliptic.PulsarEcliptic,
         )
         return cnew
