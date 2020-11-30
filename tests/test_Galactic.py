@@ -16,7 +16,6 @@ from pint import utils
 import astropy.coordinates
 import astropy.time
 
-
 class TestGalactic(unittest.TestCase):
     """Test conversion from equatorial/ecliptic -> Galactic coordinates as astropy objects"""
 
@@ -50,12 +49,12 @@ class TestGalactic(unittest.TestCase):
         # and use the coordinates now but use astropy's space motion
         print(
             J0613_icrs_now.apply_space_motion(
-                new_obstime=astropy.time.Time(newepoch, format="mjd")
+                new_obstime=astropy.time.Time(newepoch, scale="tdb", format="mjd")
             )
         )
         J0613_icrs_now_to_then = utils.remove_dummy_distance(
             J0613_icrs_now.apply_space_motion(
-                new_obstime=astropy.time.Time(newepoch, format="mjd")
+                new_obstime=astropy.time.Time(newepoch, scale="tdb", format="mjd")
             )
         )
         sep = J0613_icrs.separation(J0613_icrs_now_to_then)
@@ -63,7 +62,7 @@ class TestGalactic(unittest.TestCase):
             "Applying proper motion for +100d failed with separation %.1e arcsec"
             % sep.arcsec
         )
-        assert sep < 1e-6 * u.arcsec, msg
+        assert sep < 1e-9 * u.arcsec, msg
 
         # make sure it can support newepoch supplied as a Time object
         newepoch = astropy.time.Time(newepoch, format="mjd")
@@ -76,7 +75,16 @@ class TestGalactic(unittest.TestCase):
             "Applying proper motion for +100d failed with separation %.1e arcsec"
             % sep.arcsec
         )
-        assert sep < 1e-6 * u.arcsec, msg
+        assert sep < 1e-9 * u.arcsec, msg
+
+        # sanity check that evaluation at POSEPOCH returns something very close to 0
+        J0613_icrs = self.modelJ0613.coords_as_ICRS()
+        J0613_icrs_alt = self.modelJ0613.coords_as_ICRS(epoch=self.modelJ0613.POSEPOCH.quantity.mjd)
+        sep = J0613_icrs_alt.separation(J0613_icrs)
+        msg = (
+            "Sanity check evaluating application of proper motion at POSEPOCH failed with separation %.1e arcsec" % sep.arcsec
+        )
+        assert sep < 1e-11 * u.arcsec, msg
 
     def test_equatorial_to_galactic(self):
         """
@@ -108,10 +116,7 @@ class TestGalactic(unittest.TestCase):
             "Equatorial to Galactic conversion for now failed with separation %.1e arcsec"
             % sep.arcsec
         )
-        assert sep < 1e-5 * u.arcsec, msg
-
-        print(J0613_icrs_now)
-        print(J0613_galactic_now)
+        assert sep < 1e-9 * u.arcsec, msg
 
         J0613_icrs = self.modelJ0613.coords_as_ICRS(epoch=newepoch)
         # what I get converting within astropy
@@ -120,7 +125,7 @@ class TestGalactic(unittest.TestCase):
         )
         J0613_galactic_then = utils.remove_dummy_distance(
             J0613_galactic_now.apply_space_motion(
-                new_obstime=astropy.time.Time(newepoch, format="mjd")
+                new_obstime=astropy.time.Time(newepoch, scale="tdb", format="mjd")
             )
         )
         sep = J0613_galactic_then.separation(J0613_galactic_comparison)
@@ -128,7 +133,7 @@ class TestGalactic(unittest.TestCase):
             "Equatorial to Galactic conversion for +100d failed with separation %.1e arcsec"
             % sep.arcsec
         )
-        assert sep < 1e-6 * u.arcsec, msg
+        assert sep < 1e-9 * u.arcsec, msg
 
     def test_ecliptic_to_galactic(self):
         """
@@ -160,14 +165,14 @@ class TestGalactic(unittest.TestCase):
             "Ecliptic to Galactic conversion for now failed with separation %.1e arcsec"
             % sep.arcsec
         )
-        assert sep < 1e-4 * u.arcsec, msg
+        assert sep < 1e-9 * u.arcsec, msg
 
         B1855_ECL = self.modelB1855.coords_as_ECL(epoch=newepoch)
         # what I get converting within astropy
         B1855_galactic_comparison = B1855_ECL.transform_to(astropy.coordinates.Galactic)
         B1855_galactic_then = utils.remove_dummy_distance(
             B1855_galactic_now.apply_space_motion(
-                new_obstime=astropy.time.Time(newepoch, format="mjd")
+                new_obstime=astropy.time.Time(newepoch, scale="tdb", format="mjd")
             )
         )
         sep = B1855_galactic_then.separation(B1855_galactic_comparison)
@@ -175,4 +180,7 @@ class TestGalactic(unittest.TestCase):
             "Ecliptic to Galactic conversion for +100d failed with separation %.1e arcsec"
             % sep.arcsec
         )
-        assert sep < 1e-6 * u.arcsec, msg
+        assert sep < 1e-9 * u.arcsec, msg
+
+if __name__ == '__main__':
+    unittest.main()
