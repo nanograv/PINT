@@ -336,8 +336,11 @@ def _parse_TOA_line(line, fmt="Unknown"):
         fields = line.split()
         d["name"] = fields[0]
         d["freq"] = float(fields[1])
-        ii, ff = fields[2].split(".")
-        MJD = (int(ii), float("0." + ff))
+        if "." in fields[2]:
+            ii, ff = fields[2].split(".")
+            MJD = (int(ii), float("0." + ff))
+        else:
+            MJD = (int(fields[2]), 0.0)
         d["error"] = float(fields[3])
         d["obs"] = get_observatory(fields[4].upper()).name
         # All the rest should be flags
@@ -947,6 +950,22 @@ class TOAs(object):
     def __len__(self):
         return self.ntoas
 
+    def __getitem__(self, index):
+        if not hasattr(self, "table"):
+            raise ValueError("This TOAs object is incomplete and does not have a table")
+        if isinstance(index, np.ndarray) and index.dtype == np.bool:
+            r = copy.deepcopy(self)
+            r.table = r.table[index]
+            return r
+        elif isinstance(index, slice):
+            r = copy.deepcopy(self)
+            r.table = r.table[index]
+            if len(r.table) > 0:
+                r.table = r.table.group_by("obs")
+            return r
+        else:
+            raise ValueError("Unable to index TOAs with {}".format(index))
+
     @property
     def ntoas(self):
         return len(self.table) if hasattr(self, "table") else len(self.toas)
@@ -1000,7 +1019,7 @@ class TOAs(object):
             if hasattr(self, "toas"):
                 return np.array([t.mjd for t in self.toas])
             else:
-                return np.array([t for t in self.table["mjd"]])
+                return np.array(self.table["mjd"])
         else:
             if hasattr(self, "toas"):
                 return np.array([t.mjd.mjd for t in self.toas]) * u.day
@@ -1150,7 +1169,9 @@ class TOAs(object):
                 self.table_selects = []
             self.table_selects.append(copy.deepcopy(self.table))
             # Our TOA table must be grouped by observatory for phase calcs
-            self.table = self.table[selectarray].group_by("obs")
+            self.table = self.table[selectarray]
+            if len(self.table) > 0:
+                self.table = self.table.group_by("obs")
         else:
             raise ValueError("TOA selection not implemented for TOA lists.")
 
