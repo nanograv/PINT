@@ -66,20 +66,25 @@ def test_pickle_used(temp_tim, monkeypatch):
 def test_pickle_used_settings(temp_tim, monkeypatch):
     tt, tp = temp_tim
     toa.get_TOAs(tt, usepickle=True, ephem="de436")
+    assert toa.get_TOAs(tt, usepickle=True).ephem == "de436"
 
-    def no(*args, **kwargs):
-        raise ValueError
 
-    monkeypatch.setattr(toa.TOAs, "read_pickle_file", no)
-    with pytest.raises(ValueError):
-        toa.get_TOAs(tt, usepickle=True)
+def test_pickle_changed_ephem(temp_tim, monkeypatch):
+    tt, tp = temp_tim
+    toa.get_TOAs(tt, usepickle=True, ephem="de436")
+    assert toa.get_TOAs(tt, usepickle=True, ephem="de421").ephem == "de421"
+
+
+def test_pickle_changed_planets(temp_tim, monkeypatch):
+    tt, tp = temp_tim
+    toa.get_TOAs(tt, usepickle=True, planets=True)
+    assert not toa.get_TOAs(tt, usepickle=True, planets=False).planets
 
 
 @pytest.mark.parametrize(
     "k,v,wv",
     [
-        ("ephem", "de436", "de421"),
-        ("planets", True, False),
+        ("bipm_version", "BIPM2019", "BIPM2018"),
         ("include_bipm", True, False),
         ("include_gps", True, False),
     ],
@@ -91,16 +96,7 @@ def test_pickle_invalidated_settings(temp_tim, monkeypatch, k, v, wv):
     wd = {}
     wd[k] = wv
     toa.get_TOAs(tt, usepickle=True, **d)
-
-    rpf = toa.TOAs.read_pickle_file
-
-    def change(self, *args, **kwargs):
-        rpf(self, *args, **kwargs)
-        self.was_pickled = True
-
-    monkeypatch.setattr(toa.TOAs, "read_pickle_file", change)
-    assert toa.get_TOAs(tt, usepickle=True, **d).was_pickled
-    assert not hasattr(toa.get_TOAs(tt, usepickle=True, **wd), "was_pickled")
+    assert toa.get_TOAs(tt, usepickle=True, **wd).clock_corr_info[k] == wv
 
 
 def test_pickle_invalidated_time(temp_tim, monkeypatch):

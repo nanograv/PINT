@@ -142,6 +142,7 @@ def get_TOAs(
 
     """
     updatepickle = False
+    recalc = False
     if usepickle:
         picklefile = _check_pickle(timfile)
         if picklefile:
@@ -164,17 +165,13 @@ def get_TOAs(
             ):
                 log.info("Pickle contains wrong bipm_version")
                 updatepickle = True
-            if ephem is not None and t.ephem != ephem:
-                log.info("Pickle contains wrong ephem")
-                updatepickle = True
-            if planets is not None and t.planets != planets:
-                log.info("Pickle contains wrong planets")
-                updatepickle = True
         else:
             # Pickle either did not exist or is out of date
             updatepickle = True
     if not usepickle or updatepickle:
         t = TOAs(timfile)
+        recalc = True
+
     if not any(["clkcorr" in f for f in t.table["flags"]]):
         if include_gps is None:
             include_gps = True
@@ -182,16 +179,31 @@ def get_TOAs(
             bipm_version = bipm_default
         if include_bipm is None:
             include_bipm = True
+        # FIXME: should we permit existing clkcorr flags?
         t.apply_clock_corrections(
             include_gps=include_gps,
             include_bipm=include_bipm,
             bipm_version=bipm_version,
         )
-    if "tdb" not in t.table.colnames:
+
+    if ephem is None:
+        ephem = t.ephem
+    elif ephem != t.ephem:
+        log.info("ephem changed, recalculation needed")
+        recalc = True
+        updatepickle = True
+    if recalc or "tdb" not in t.table.colnames:
         t.compute_TDBs(method=tdb_method, ephem=ephem)
-    if "ssb_obs_pos" not in t.table.colnames:
+
+    if planets is None:
+        planets = t.planets
+    elif planets != t.planets:
+        log.info("planets changed, recalculation needed")
+        recalc = True
+        updatepickle = True
+    if recalc or "ssb_obs_pos" not in t.table.colnames:
         t.compute_posvels(ephem, planets)
-    # Update pickle if needed:
+
     if usepickle and updatepickle:
         log.info("Pickling TOAs.")
         t.pickle()
