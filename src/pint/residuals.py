@@ -129,9 +129,11 @@ class Residuals:
     def dof(self):
         """Return number of degrees of freedom for the model."""
         if self._combined:
-            raise RuntimeError("Please use the `.dof` in the CombinedResidual"
-                               " class. The individual residual's dof is not "
-                               "calculated correctly in the combined residuals.")
+            raise RuntimeError(
+                "Please use the `.dof` in the CombinedResidual"
+                " class. The individual residual's dof is not "
+                "calculated correctly in the combined residuals."
+            )
         dof = self.toas.ntoas
         for cp in self.model.components.values():
             if "delay" in cp.modeled_quantity or "phase" in cp.modeled_quantity:
@@ -449,9 +451,11 @@ class WidebandDMResiduals(Residuals):
     def dof(self):
         """Return number of degrees of freedom for the DM model."""
         if self._combined:
-            raise RuntimeError("Please use the `.dof` in the CombinedResidual"
-                               " class. The individual residual's dof is not "
-                               "calculated correctly in the combined residuals.")
+            raise RuntimeError(
+                "Please use the `.dof` in the CombinedResidual"
+                " class. The individual residual's dof is not "
+                "calculated correctly in the combined residuals."
+            )
         dof = len(self.dm_data)
         # only get dm type of model component
         # TODO provide a function in the timing model to get one type of component
@@ -578,7 +582,6 @@ class CombinedResiduals(object):
             res._combined = True
             self.residual_objs[res.residual_type] = res
         # Disable the individual residual's dof
-
 
     @property
     def _combined_resids(self):

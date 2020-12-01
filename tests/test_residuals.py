@@ -81,5 +81,5 @@ class TestResidualBuilding:
         assert cb_chi2 == phase_res.chi2 + dm_res.chi2
         assert cb_residuals.dof == 419
         with pytest.raises(RuntimeError):
-            cb_residuals.residual_objs['toa'].dof
-            cb_residuals.residual_objs['dm'].dof
+            cb_residuals.residual_objs["toa"].dof
+            cb_residuals.residual_objs["dm"].dof
