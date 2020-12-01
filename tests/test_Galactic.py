@@ -78,17 +78,15 @@ class TestGalactic(unittest.TestCase):
         )
         assert sep < 1e-9 * u.arcsec, msg
 
+    def test_proper_motion_identity(self):
+
         # sanity check that evaluation at POSEPOCH returns something very close to 0
         J0613_icrs = self.modelJ0613.coords_as_ICRS()
         J0613_icrs_alt = self.modelJ0613.coords_as_ICRS(
             epoch=self.modelJ0613.POSEPOCH.quantity.mjd
         )
         sep = J0613_icrs_alt.separation(J0613_icrs)
-        msg = (
-            "Sanity check evaluating application of proper motion at POSEPOCH failed with separation %.1e arcsec"
-            % sep.arcsec
-        )
-        assert sep < 1e-11 * u.arcsec, msg
+        assert sep < 1e-11 * u.arcsec
 
     def test_equatorial_to_galactic(self):
         """

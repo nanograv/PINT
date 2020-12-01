@@ -541,7 +541,7 @@ class AstrometryEcliptic(Astrometry):
         Returns
         -------
         position
-        PulsarEcliptic SkyCoord object optionally with proper motion applied
+            PulsarEcliptic SkyCoord object optionally with proper motion applied
 
         If epoch (MJD) is specified, proper motion is included to return
         the position at the given epoch.
