@@ -16,7 +16,7 @@ if __name__ == "__main__":
                         help="Quarried parameter names.")
     parser.add_argument('-c', '--component', nargs='*', default=['all'],
                         help="Quarried model component name.")
-    parser.add_argument('-o', '--output', type=str, default='stdout,
+    parser.add_argument('-o', '--output', type=str, default="stdout",
                         help="Output format:\n"
                              "'rst': Sphinx .rst file.\n"
                              "'json': JSON dictionary file.\n "
@@ -50,12 +50,22 @@ if __name__ == "__main__":
         all_param = True
     else:
         all_param = False
+
+    # Get parameter mapping.
+    aliases = {} 
+    for cp_name, cp in all_components.items():
+        for param in cp.params:
+            par = getattr(param)
+            for ali in par.aliases:
+                aliases[ali] = (param, cp)
+
     # Start quarrying the parameter information.
+    parameters = {}
     for cp_name in result.keys():
         cp_obj = all_components[cp_name]()
         if all_param:
             quarry_params = cp_obj.params
-            
+        
 
         for ri in required_info:
 
