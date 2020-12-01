@@ -967,6 +967,8 @@ class TOAs(object):
         if isinstance(index, np.ndarray) and index.dtype == np.bool:
             r = copy.deepcopy(self)
             r.table = r.table[index]
+            if len(r.table) > 0:
+                r.table = r.table.group_by("obs")
             return r
         elif (
             isinstance(index, np.ndarray)

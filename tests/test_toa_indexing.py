@@ -45,6 +45,7 @@ def test_select(c):
         assert np.all(
             toas.table["mjd_float"] == toas.table.group_by("obs")["mjd_float"]
         )
+        toas.get_summary()
 
 
 @given(arrays(bool, n_tim))
@@ -57,6 +58,7 @@ def test_getitem_boolean(c):
     assert np.all(s.get_mjds() == m[c])
     if len(s) > 0:
         assert np.all(s.table["mjd_float"] == s.table.group_by("obs")["mjd_float"])
+        toas.get_summary()
 
 
 @given(
@@ -73,6 +75,7 @@ def test_getitem_where(a):
     assert set(s.get_mjds()) == set(m[a])
     if len(s) > 0:
         assert np.all(s.table["mjd_float"] == s.table.group_by("obs")["mjd_float"])
+        toas.get_summary()
 
 
 @given(slices(n_tim))
@@ -83,3 +86,4 @@ def test_getitem_slice(c):
     assert set(s.get_mjds()) == set(m[c])
     if len(s) > 0:
         assert np.all(s.table["mjd_float"] == s.table.group_by("obs")["mjd_float"])
+        toas.get_summary()

@@ -1,0 +1,138 @@
+---
+jupyter:
+  jupytext:
+    formats: ipynb,md
+    text_representation:
+      extension: .md
+      format_name: markdown
+      format_version: '1.2'
+      jupytext_version: 1.7.1
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+# Time a pulsar
+
+This notebook walks through a simple pulsar timing session, as one might do with TEMPO/TEMPO2: load a `.par` file, load a `.tim` file, do a fit, plot the residuals before and after. This one also displays various additional information you might find useful, and also ignores but then plots TOAs with large uncertainties.
+
+```python
+import astropy.units as u
+import matplotlib.pyplot as plt
+
+import pint.fitter
+import pint.models
+from pint.models import get_model
+from pint.residuals import Residuals
+from pint.toa import get_TOAs
+```
+
+```python
+parfile = "NGC6440E.par"
+timfile = "NGC6440E.tim"
+```
+
+```python
+m = get_model(parfile)
+m
+```
+
+```python
+t_all = pint.toa.get_TOAs(timfile, ephem="de436")
+t_all.print_summary()
+```
+
+There are many messages here. As a rule messages marked `INFO` can safely be ignored, they are simply informational; take a look at them if something unexpected happens. Messages marked `WARNING` or `ERROR` are more serious. (These messages are emitted by the python `logger` module and can be suppressed or written to a log file if they are annoying.)
+
+
+Let's discard the data points with uncertainties $>30\,\mu\text{s}$ - uncertainty estimation is not always reliable when the signal-to-noise is low.
+
+```python
+error_ok = t_all.table["error"] <= 30 * u.us
+t = t_all[error_ok]
+t.print_summary()
+```
+
+```python
+# These are pre-fit residuals
+rs = Residuals(t, m).phase_resids
+xt = t.get_mjds()
+plt.figure()
+plt.plot(xt, rs, "x")
+plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
+plt.xlabel("MJD")
+plt.ylabel("Residual (phase)")
+plt.grid()
+```
+
+```python
+f = pint.fitter.WLSFitter(t, m)
+# f = pint.fitter.PowellFitter(t, m)
+f.fit_toas()
+# f = pint.fitter.GLSFitter(t, m)
+# f.fit_toas(full_cov=True)
+```
+
+```python
+# Print some basic params
+print("Best fit has reduced chi^2 of", f.resids.chi2_reduced)
+print("RMS in phase is", f.resids.phase_resids.std())
+print("RMS in time is", f.resids.time_resids.std().to(u.us))
+```
+
+```python
+# Show the parameter correlation matrix
+corm = f.get_correlation_matrix(pretty_print=True)
+```
+
+```python
+f.print_summary()
+```
+
+```python
+plt.figure()
+plt.errorbar(
+    xt.value,
+    f.resids.time_resids.to(u.us).value,
+    t.get_errors().to(u.us).value,
+    fmt="x",
+)
+plt.title("%s Post-Fit Timing Residuals" % m.PSR.value)
+plt.xlabel("MJD")
+plt.ylabel("Residual (us)")
+plt.grid()
+```
+
+```python
+t_bad = t_all[~error_ok]
+r_bad = Residuals(t_bad, f.model)
+plt.figure()
+plt.errorbar(
+    xt.value,
+    f.resids.time_resids.to(u.us).value,
+    t.get_errors().to(u.us).value,
+    fmt="x",
+    label="used in fit",
+)
+plt.errorbar(
+    t_bad.get_mjds().value,
+    r_bad.time_resids.to(u.us).value,
+    t_bad.get_errors().to(u.us).value,
+    fmt="x",
+    label="bad data",
+)
+plt.title("%s Post-Fit Timing Residuals" % m.PSR.value)
+plt.xlabel("MJD")
+plt.ylabel("Residual (us)")
+plt.grid()
+plt.legend(loc="upper left")
+```
+
+```python
+plt.show()
+```
+
+```python
+
+```
