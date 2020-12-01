@@ -129,7 +129,7 @@ class Residuals:
     def dof(self):
         """Return number of degrees of freedom for the model."""
         if self._is_combined:
-            raise RuntimeError(
+            raise AttributeError(
                 "Please use the `.dof` in the CombinedResidual"
                 " class. The individual residual's dof is not "
                 "calculated correctly in the combined residuals."
@@ -317,9 +317,10 @@ class Residuals:
                 except:
                     return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum()
 
-    def get_reduced_chi2(self):
+    @property
+    def reduced_chi2(self):
         """Return the weighted reduced chi-squared for the model and toas."""
-        return self.calc_chi2() / self.dof
+        return self.chi2 / self.dof
 
     def update(self):
         """Recalculate everything in residuals class after changing model or TOAs"""
@@ -451,7 +452,7 @@ class WidebandDMResiduals(Residuals):
     def dof(self):
         """Return number of degrees of freedom for the DM model."""
         if self._is_combined:
-            raise RuntimeError(
+            raise AttributeError(
                 "Please use the `.dof` in the CombinedResidual"
                 " class. The individual residual's dof is not "
                 "calculated correctly in the combined residuals."
@@ -464,6 +465,11 @@ class WidebandDMResiduals(Residuals):
                 dof -= len(cp.free_params_component)
         dof -= 1
         return dof
+
+    @property
+    def reduced_chi2(self):
+        """Return the weighted reduced chi-squared for the model and DMs."""
+        return self.chi2 / self.dof
 
     def get_data_error(self, scaled=True):
         """Get data errors.
@@ -619,6 +625,11 @@ class CombinedResiduals(object):
         # TODO In a more general case, this assumption would not be valid.
         dof -= len(self.residual_objs["toa"].model.free_params) + 1
         return dof
+
+    @property
+    def reduced_chi2(self):
+        """Return the weighted reduced chi-squared."""
+        return self.chi2 / self.dof
 
     @property
     def data_error(self):
