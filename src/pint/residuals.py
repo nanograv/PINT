@@ -94,7 +94,7 @@ class Residuals:
         self.unit = unit
         # A flag to indentify if this residual object is combined with residual
         # class.
-        self._combined = False
+        self._is_combined = False
 
     @property
     def resids(self):
@@ -128,7 +128,7 @@ class Residuals:
     @property
     def dof(self):
         """Return number of degrees of freedom for the model."""
-        if self._combined:
+        if self._is_combined:
             raise RuntimeError(
                 "Please use the `.dof` in the CombinedResidual"
                 " class. The individual residual's dof is not "
@@ -428,7 +428,7 @@ class WidebandDMResiduals(Residuals):
         self.dm_data, self.dm_error = self.get_dm_data()
         self.scaled_by_F0 = scaled_by_F0
         self._chi2 = None
-        self._combined = False
+        self._is_combined = False
 
     @property
     def resids(self):
@@ -450,7 +450,7 @@ class WidebandDMResiduals(Residuals):
     @property
     def dof(self):
         """Return number of degrees of freedom for the DM model."""
-        if self._combined:
+        if self._is_combined:
             raise RuntimeError(
                 "Please use the `.dof` in the CombinedResidual"
                 " class. The individual residual's dof is not "
@@ -579,7 +579,7 @@ class CombinedResiduals(object):
     def __init__(self, residuals):
         self.residual_objs = collections.OrderedDict()
         for res in residuals:
-            res._combined = True
+            res._is_combined = True
             self.residual_objs[res.residual_type] = res
         # Disable the individual residual's dof
 
