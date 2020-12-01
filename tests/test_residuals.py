@@ -79,8 +79,7 @@ class TestResidualBuilding:
         assert cb_residuals.unit["toa"] == u.s
         assert cb_residuals.unit["dm"] == u.pc / u.cm ** 3
         assert cb_chi2 == phase_res.chi2 + dm_res.chi2
-        dm_free_param = 0
-        for cp in self.model.components.values():
-            if "delay" in cp.modeled_quantity and "dm" in cp.modeled_quantity:
-                dm_free_param += len(cp.free_params_component)
-        assert cb_residuals.dof == phase_res.dof + dm_res.dof + dm_free_param + 1
+        assert cb_residuals.dof == 419
+        with pytest.raises(RuntimeError):
+            cb_residuals.residual_objs['toa'].dof
+            cb_residuals.residual_objs['dm'].dof
