@@ -29,7 +29,6 @@ class Dispersion(DelayComponent):
         super(Dispersion, self).__init__()
         self.dm_value_funcs = []
         self.dm_deriv_funcs = {}
-        self.modeled_quantity += ["dm"]
 
     def dispersion_time_delay(self, DM, freq):
         """Return the dispersion time delay for a set of frequency.
@@ -473,7 +472,6 @@ class DispersionJump(Dispersion):
         super(DispersionJump, self).__init__()
         self.dm_value_funcs += [self.jump_dm]
         # Dispersion jump only model the dm values.
-        self.modeled_quantity = ["dm"]
 
         self.add_param(
             maskParameter(

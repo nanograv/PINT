@@ -135,14 +135,11 @@ class Residuals:
                 "calculated correctly in the combined residuals."
             )
         dof = self.toas.ntoas
-        for cp in self.model.components.values():
-            if "delay" in cp.modeled_quantity or "phase" in cp.modeled_quantity:
-                dof -= len(cp.free_params_component)
+
         # Now subtract 1 for the implicit global offset parameter
         # Note that we should do two things eventually
         # 1. Make the offset not be a hidden parameter
-        # 2. Have a model object return the number of free parameters instead of having to count non-frozen parameters like above
-        dof -= 1
+        dof -= len(self.model.free_params) + 1
         return dof
 
     def get_data_error(self, scaled=True):
