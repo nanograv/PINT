@@ -26,6 +26,8 @@ from pint.profile import (
     fftfit_full,
     fftfit_nustar,
     fftfit_presto,
+    fftfit_cprof,
+    fftfit_classic,
 )
 
 NO_PRESTO = fftfit_presto.presto is None
@@ -860,3 +862,40 @@ def test_fftfit_wrong_profile(kappa1, kappa2, n, std, code, state):
 
     # Must be pessimistic
     assert_happens_with_probability(value_within_one_sigma, ONE_SIGMA, p_upper=1)
+
+
+@pytest.mark.parametrize("n", [32,128,1024])
+def test_fftfit_cprof_compare(n):
+    template = vonmises_profile(100, n)
+    import presto.fftfit
+    c, amp, pha = fftfit_cprof(template)
+    cp, ampp, phap = presto.fftfit.cprof(template)
+
+    assert_allclose(c, cp, atol=5e-6)
+    assert_allclose(amp, ampp, atol=5e-6)
+    assert_allclose(cp[1:], ampp*np.exp(1.j*phap), atol=5e-6)
+
+
+def test_fftfit_classic_runs():
+    template = vonmises_profile(100, 1024)
+    _, amp, pha = fftfit_cprof(template)
+    shift, eshift, snr, esnr, b, errb, ngood = fftfit_classic(template, amp, pha, code="presto")
+
+
+@pytest.mark.parametrize("n,s", [(32, 0.1),(128,0.3),(1024,0.05)])
+def test_fftfit_classic_compare(n, s):
+    template = vonmises_profile(100, n)
+    _, amp, pha = fftfit_cprof(template)
+
+    profile = pint.profile.shift(template, s) + 1e-3*np.random.randn(len(template))
+
+    shift, eshift, snr, esnr, b, errb, ngood = fftfit_classic(profile, amp, pha, code="aarchiba")
+    shift_p, eshift_p, snr_p, esnr_p, b_p, errb_p, ngood_p = fftfit_classic(profile, amp, pha, code="presto")
+
+    assert_allclose_phase(shift, shift_p, atol=1e-2)
+    #assert_allclose(eshift, eshift_p)
+    #assert_allclose(snr, snr_p)
+    #assert_allclose(esnr, esnr_p)
+    #assert_allclose(b, b_p)
+    #assert_allclose(errb, errb_p)
+    #assert_allclose(ngood, ngood_p)
