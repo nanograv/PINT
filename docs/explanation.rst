@@ -204,12 +204,24 @@ your data. This can be an issue for simulation and forecasting; there should
 always be a mechanism to allow out-of-date data if you can accept lower
 accuracy.
 
+Clock corrections
+'''''''''''''''''
+
 Not all the data that PINT uses is easily accessible for programs to
 download. Observatory clock corrections, for example, may need to be
 obtained from the observatory through various means (often talking to a
 support scientist). We intend that PINT should notify you when this is
 necessary, but be aware that you may obtain reduced accuracy if you
 have old clock correction files.
+
+The PINT distribution includes some clock files, but these are not necessarily
+up-to-date enough. They normally live in the ``src/datafiles/`` directory with
+names like ``time_gbt.dat``. There is a ``README.md`` in there describing some
+ways to update your clock files. PINT is also capable of using clock files from
+a TEMPO or TEMPO2 installation, if you have the ``TEMPO`` or ``TEMPO2``
+environment variables set. You can see what clock file your corrections are
+coming from with a command like
+``pint.observatory.get_observatory("GBT").clock_fullpath``.
 
 Structure of Pulsar Timing Data Formats
 ---------------------------------------
