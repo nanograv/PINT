@@ -438,14 +438,6 @@ class WidebandDMResiduals(Residuals):
         return self.resids.to_value(self.unit)
 
     @property
-    def chi2(self):
-        """Compute chi-squared as needed and cache the result"""
-        if self._chi2 is None:
-            self._chi2 = self.calc_chi2()
-        assert self._chi2 is not None
-        return self._chi2
-
-    @property
     def dof(self):
         """Return number of degrees of freedom for the DM model."""
         if self._is_combined:
@@ -462,11 +454,6 @@ class WidebandDMResiduals(Residuals):
                 dof -= len(cp.free_params_component)
         dof -= 1
         return dof
-
-    @property
-    def reduced_chi2(self):
-        """Return the weighted reduced chi-squared for the model and DMs."""
-        return self.chi2 / self.dof
 
     def get_data_error(self, scaled=True):
         """Get data errors.
