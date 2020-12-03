@@ -9,7 +9,7 @@ import astropy.units as u
 
 from pint.models import get_model
 from pint.toa import get_TOAs
-from pint.residuals import Residuals, CombinedResiduals
+from pint.residuals import Residuals, CombinedResiduals, WidebandTOAResiduals
 from pint.utils import weighted_mean
 from pinttestdata import datadir
 from pint.models.dispersion_model import Dispersion
@@ -79,8 +79,16 @@ class TestResidualBuilding:
         assert cb_residuals.unit["toa"] == u.s
         assert cb_residuals.unit["dm"] == u.pc / u.cm ** 3
         assert cb_chi2 == phase_res.chi2 + dm_res.chi2
-        assert cb_residuals.dof == 419
+        with pytest.raises(NotImplementedError):
+            cb_residuals.dof
         with pytest.raises(AttributeError):
             cb_residuals.residual_objs["toa"].dof
         with pytest.raises(AttributeError):
             cb_residuals.residual_objs["dm"].dof
+
+    def test_wideband_residuals(self):
+        wb_res = WidebandTOAResiduals(toas=self.toa, model=self.model)
+        assert wb_res.dof == 419
+        # Make sure the model object are shared by all individual residual class
+        assert id(wb_res.model) == id(wb_res.residual_objs['toa'].model)
+        assert id(wb_res.model) == id(wb_res.residual_objs['dm'].model)
