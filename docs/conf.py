@@ -145,6 +145,10 @@ napoleon_use_ivar = True  # How to format Attributes sections
 napoleon_use_param = True
 
 nbsphinx_custom_formats = {".md": lambda s: jupytext.reads(s, ".md")}
+nbsphinx_prolog = """
+This Jupyter notebook can be downloaded from `{{ env.docname.split("/")[-1] }}.ipynb <{{ env.docname.split("/")[-1] }}.ipynb#http://>`_
+
+"""
 
 # -- apidoc ----------------------------------------------------------
 
@@ -286,7 +290,6 @@ html_static_path = ["_static"]
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = "pintdoc"
-
 
 # -- Options for LaTeX output ------------------------------------------
 
