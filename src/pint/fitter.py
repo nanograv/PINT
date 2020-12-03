@@ -1029,27 +1029,11 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         return self.fit_data[0]
 
     def make_combined_residuals(self, add_args={}):
-        resid_obj = []
-        if len(self.fit_data) == 1:
-            for data_name in self.fit_data_names:
-                r_obj = pr.Residuals(
-                    self.fit_data[0],
-                    self.model,
-                    residual_type=data_name,
-                    **add_args.get(data_name, {})
-                )
-                resid_obj.append(r_obj)
-        else:
-            for ii, data_name in enumerate(self.fit_data_names):
-                r_obj = pr.Residuals(
-                    self.fit_data[ii],
-                    self.model,
-                    residual_type=data_name,
-                    **add_args.get(data_name, {})
-                )
-                resid_obj.append(r_obj)
-        # Place the residual collector
-        return pr.CombinedResiduals(resid_obj)
+        """ Make the combined residuals between TOA residual and DM residusl
+        """
+        return pr.WidebandTOAResiduals(self.toas, self.model,
+                                      toa_resid_args = add_args.get('toa', {}),
+                                      dm_resid_args = add_args.get('dm', {}))
 
     def reset_model(self):
         """Reset the current model to the initial model."""
