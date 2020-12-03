@@ -11,7 +11,8 @@ from pint.phase import Phase
 from pint.utils import weighted_mean
 from pint.models.dispersion_model import Dispersion
 
-__all__ = ["Residuals", "WidebandDMResiduals", "residual_map"]
+__all__ = ["Residuals", "WidebandDMResiduals", "residual_map",
+           "CombinedResiduals", "WidebandTOAResiduals"]
 
 
 class Residuals:
@@ -19,6 +20,14 @@ class Residuals:
 
     Parameters
     ----------
+    toas: `pint.toa.TOAs` object, optional
+        The input TOAs object. Default: None
+    model: `pint.models.TimingModel` object, optinonal
+        Input model object. Default: None
+    residual_type: str, optional
+        The type of the resiudals. Default: 'toa'
+    unit: `astropy.units.Unit` object, optional
+        The defualt unit of the residuals. Default: u.s
     subtract_mean : bool
         Controls whether mean will be subtracted from the residuals
     use_weighted_mean : bool
@@ -29,6 +38,8 @@ class Residuals:
         ``pulse_number`` column of the TOAs table to assign pulse numbers. If the
         default, None, is passed, use the pulse numbers if and only if the model has
         parameter TRACK == "-2".
+    scaled_by_FO: bool, optional
+        Controls for rescaling the final residual.
     """
 
     def __new__(
@@ -571,7 +582,15 @@ class CombinedResiduals(object):
         for res in residuals:
             res._is_combined = True
             self.residual_objs[res.residual_type] = res
-        # Disable the individual residual's dof
+
+    @property
+    def model(self):
+        """ The input model from each residual.
+        """
+        model = {}
+        for res_name, res in self.residual_objs.items():
+            model[res_name] = res.model
+        return model
 
     @property
     def _combined_resids(self):
@@ -603,12 +622,9 @@ class CombinedResiduals(object):
 
     @property
     def dof(self):
-        dof = len(self._combined_resids)
-        # It assumes that the input model are the same model, and time residual has
-        # offset in the fitting
-        # TODO In a more general case, this assumption would not be valid.
-        dof -= len(self.residual_objs["toa"].model.free_params) + 1
-        return dof
+        raise NotImplementedError("The combined degree of freedom is ambigous "
+                                  "for two individual residuals. Please define"
+                                  "this property in your subclass.")
 
     @property
     def reduced_chi2(self):
@@ -635,3 +651,57 @@ class CombinedResiduals(object):
             wmean, werr, wsdev = weighted_mean(rs.resids, w, sdev=True)
             wrms[rs.residual_type] = wsdev
         return wrms
+
+
+class WidebandTOAResiduals(CombinedResiduals):
+    """ A class for handling the wideband toa residuals.
+
+    Wideband TOAs have independent measurement of DM values. The residuals for
+    wideband TOAs have two parts, the TOA residuals and DM residuals. Both
+    residuals will be used for fitting one timing model. Currently, the DM
+    values are stored at the TOA object.
+
+    Parameter
+    ---------
+    toas: `pint.toa.TOAs` object, optional
+        The input TOAs object. Defualt: None
+    model: `pint.models.TimingModel` object, optional
+        The input timing model. Default: None
+    toa_resid_args: dict, optional
+        The additional arguments(not including toas and model) for TOA residuals.
+        Default: {}
+    dm_resid_args: dict, optional
+        The additional arguments(not including toas and model) for DM residuals.
+        Default: {}
+    """
+
+    def __init__(self, toas, model, toa_resid_args={}, dm_resid_args={}):
+        self.toas = toas
+        self._model = model
+        toa_resid = Residuals(
+                    self.toas,
+                    self.model,
+                    residual_type='toa',
+                    **toa_resid_args
+                )
+        dm_resid = Residuals(
+                    self.toas,
+                    self.model,
+                    residual_type='dm',
+                    **dm_resid_args
+                )
+
+        super().__init__([toa_resid, dm_resid])
+
+    @property
+    def model(self):
+        return self._model
+
+    @property
+    def dof(self):
+        dof = len(self._combined_resids)
+        # It assumes that the input model are the same model, and time residual has
+        # offset in the fitting
+        # TODO In a more general case, this assumption would not be valid.
+        dof -= len(self.model.free_params) + 1
+        return dof
