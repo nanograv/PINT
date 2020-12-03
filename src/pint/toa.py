@@ -77,10 +77,10 @@ JD_MJD = 2400000.5
 def get_TOAs(
     timfile,
     ephem=None,
-    include_bipm=True,
-    bipm_version=bipm_default,
-    include_gps=True,
-    planets=False,
+    include_bipm=None,
+    bipm_version=None,
+    include_gps=None,
+    planets=None,
     usepickle=False,
     tdb_method="default",
 ):
@@ -120,15 +120,16 @@ def get_TOAs(
         Filename or file-like object containing the TOA data.
     ephem : string
         The name of the solar system ephemeris to use; defaults to "DE421".
-    include_bipm : bool
-        Whether to apply the BIPM clock correction.
-    bipm_version : string
+    include_bipm : bool or None
+        Whether to apply the BIPM clock correction. Defaults to True.
+    bipm_version : string or None
         Which version of the BIPM tables to use for the clock correction.
-    include_gps : bool
-        Whether to include the GPS clock correction.
-    planets : bool
+    include_gps : bool or None
+        Whether to include the GPS clock correction. Defaults to True.
+    planets : bool or None
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
+        Defaults to False.
     usepickle : bool
         Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
     tdb_method : string
@@ -141,25 +142,68 @@ def get_TOAs(
 
     """
     updatepickle = False
+    recalc = False
     if usepickle:
         picklefile = _check_pickle(timfile)
         if picklefile:
-            timfile = picklefile
+            t = TOAs(picklefile)
+            if (
+                include_gps is not None
+                and t.clock_corr_info.get("include_gps", None) != include_gps
+            ):
+                log.info("Pickle contains wrong include_gps")
+                updatepickle = True
+            if (
+                include_bipm is not None
+                and t.clock_corr_info.get("include_bipm", None) != include_bipm
+            ):
+                log.info("Pickle contains wrong include_bipm")
+                updatepickle = True
+            if (
+                bipm_version is not None
+                and t.clock_corr_info.get("bipm_version", None) != bipm_version
+            ):
+                log.info("Pickle contains wrong bipm_version")
+                updatepickle = True
         else:
             # Pickle either did not exist or is out of date
             updatepickle = True
-    t = TOAs(timfile)
+    if not usepickle or updatepickle:
+        t = TOAs(timfile)
+        recalc = True
+
     if not any(["clkcorr" in f for f in t.table["flags"]]):
+        if include_gps is None:
+            include_gps = True
+        if bipm_version is None:
+            bipm_version = bipm_default
+        if include_bipm is None:
+            include_bipm = True
+        # FIXME: should we permit existing clkcorr flags?
         t.apply_clock_corrections(
             include_gps=include_gps,
             include_bipm=include_bipm,
             bipm_version=bipm_version,
         )
-    if "tdb" not in t.table.colnames:
+
+    if ephem is None:
+        ephem = t.ephem
+    elif ephem != t.ephem:
+        log.info("ephem changed, recalculation needed")
+        recalc = True
+        updatepickle = True
+    if recalc or "tdb" not in t.table.colnames:
         t.compute_TDBs(method=tdb_method, ephem=ephem)
-    if "ssb_obs_pos" not in t.table.colnames:
+
+    if planets is None:
+        planets = t.planets
+    elif planets != t.planets:
+        log.info("planets changed, recalculation needed")
+        recalc = True
+        updatepickle = True
+    if recalc or "ssb_obs_pos" not in t.table.colnames:
         t.compute_posvels(ephem, planets)
-    # Update pickle if needed:
+
     if usepickle and updatepickle:
         log.info("Pickling TOAs.")
         t.pickle()
