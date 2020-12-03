@@ -11,8 +11,13 @@ from pint.phase import Phase
 from pint.utils import weighted_mean
 from pint.models.dispersion_model import Dispersion
 
-__all__ = ["Residuals", "WidebandDMResiduals", "residual_map",
-           "CombinedResiduals", "WidebandTOAResiduals"]
+__all__ = [
+    "Residuals",
+    "WidebandDMResiduals",
+    "residual_map",
+    "CombinedResiduals",
+    "WidebandTOAResiduals",
+]
 
 
 class Residuals:
@@ -587,9 +592,11 @@ class CombinedResiduals(object):
     def model(self):
         """ Return the single timing model object.
         """
-        raise AttributeError("Combined redisuals object does not provide a "
-                             "single timing model object. Pleaes use the "
-                             "dedicated subclass.")
+        raise AttributeError(
+            "Combined redisuals object does not provide a "
+            "single timing model object. Pleaes use the "
+            "dedicated subclass."
+        )
 
     @property
     def _combined_resids(self):
@@ -621,9 +628,11 @@ class CombinedResiduals(object):
 
     @property
     def dof(self):
-        raise NotImplementedError("The combined degree of freedom is ambigous "
-                                  "for two individual residuals. Please define"
-                                  "this property in your subclass.")
+        raise NotImplementedError(
+            "The combined degree of freedom is ambigous "
+            "for two individual residuals. Please define"
+            "this property in your subclass."
+        )
 
     @property
     def reduced_chi2(self):
@@ -678,17 +687,9 @@ class WidebandTOAResiduals(CombinedResiduals):
         self.toas = toas
         self._model = model
         toa_resid = Residuals(
-                    self.toas,
-                    self.model,
-                    residual_type='toa',
-                    **toa_resid_args
-                )
-        dm_resid = Residuals(
-                    self.toas,
-                    self.model,
-                    residual_type='dm',
-                    **dm_resid_args
-                )
+            self.toas, self.model, residual_type="toa", **toa_resid_args
+        )
+        dm_resid = Residuals(self.toas, self.model, residual_type="dm", **dm_resid_args)
 
         super().__init__([toa_resid, dm_resid])
 

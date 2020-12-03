@@ -1031,9 +1031,12 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
     def make_combined_residuals(self, add_args={}):
         """ Make the combined residuals between TOA residual and DM residusl
         """
-        return pr.WidebandTOAResiduals(self.toas, self.model,
-                                      toa_resid_args = add_args.get('toa', {}),
-                                      dm_resid_args = add_args.get('dm', {}))
+        return pr.WidebandTOAResiduals(
+            self.toas,
+            self.model,
+            toa_resid_args=add_args.get("toa", {}),
+            dm_resid_args=add_args.get("dm", {}),
+        )
 
     def reset_model(self):
         """Reset the current model to the initial model."""
