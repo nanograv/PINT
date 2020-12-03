@@ -85,6 +85,8 @@ class TestResidualBuilding:
             cb_residuals.residual_objs["toa"].dof
         with pytest.raises(AttributeError):
             cb_residuals.residual_objs["dm"].dof
+        with pytest.raises(AttributeError):
+            cb_residuals.model
 
     def test_wideband_residuals(self):
         wb_res = WidebandTOAResiduals(toas=self.toa, model=self.model)

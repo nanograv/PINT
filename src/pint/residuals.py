@@ -585,12 +585,11 @@ class CombinedResiduals(object):
 
     @property
     def model(self):
-        """ The input model from each residual.
+        """ Return the single timing model object.
         """
-        model = {}
-        for res_name, res in self.residual_objs.items():
-            model[res_name] = res.model
-        return model
+        raise AttributeError("Combined redisuals object does not provide a "
+                             "single timing model object. Pleaes use the "
+                             "dedicated subclass.")
 
     @property
     def _combined_resids(self):
@@ -699,9 +698,8 @@ class WidebandTOAResiduals(CombinedResiduals):
 
     @property
     def dof(self):
+        """ The degree of freedom for the wideband residuals.-am
+        """
         dof = len(self._combined_resids)
-        # It assumes that the input model are the same model, and time residual has
-        # offset in the fitting
-        # TODO In a more general case, this assumption would not be valid.
         dof -= len(self.model.free_params) + 1
         return dof
