@@ -9,7 +9,12 @@ import warnings
 import astropy.units as u
 import numpy as np
 from astropy import log
-from astropy._erfa import ErfaWarning
+
+try:
+    from erfa import ErfaWarning
+except ImportError:
+    from astropy._erfa import ErfaWarning
+
 from six import add_metaclass
 
 from pint.pulsar_mjd import Time
