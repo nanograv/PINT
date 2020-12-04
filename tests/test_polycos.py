@@ -74,9 +74,9 @@ def test_generate_polycos(tmpdir, par_file):
     ph2 = q.eval_abs_phase(mjds)
     ph3 = model.phase(t)
 
-    assert all(int(ph1.int.value[0]) == int(ph3.int.value[0]))
+    assert np.allclose(ph1.int.value[0], ph3.int.value[0])
     assert np.allclose(ph1.frac.value[0], ph3.frac.value[0])
 
     # Loss of precision expected from writing to Polyco from par file.
-    assert all(int(ph2.int.value[0]) == int(ph3.int.value[0]))
+    assert np.allclose(ph2.int.value[0], ph3.int.value[0])
     assert np.allclose(ph2.frac.value[0], ph3.frac.value[0], rtol=1e-3)
