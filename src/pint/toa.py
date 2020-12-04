@@ -68,6 +68,7 @@ toa_commands = (
     "END",
 )
 
+# FIXME: why are these here?
 iers_a_file = None
 iers_a = None
 JD_MJD = 2400000.5
@@ -76,43 +77,133 @@ JD_MJD = 2400000.5
 def get_TOAs(
     timfile,
     ephem=None,
-    include_bipm=True,
-    bipm_version=bipm_default,
-    include_gps=True,
-    planets=False,
+    include_bipm=None,
+    bipm_version=None,
+    include_gps=None,
+    planets=None,
     usepickle=False,
     tdb_method="default",
 ):
-    """Convenience function to load and prepare TOAs for PINT use.
+    """Load and prepare TOAs for PINT use.
 
-    Loads TOAs from a '.tim' file, applies clock corrections, computes
+    This is the primary function for loading TOAs from a file.
+
+    Loads TOAs from a ``.tim`` file, applies clock corrections, computes
     key values (like TDB), computes the observatory position and velocity
     vectors, and pickles the file for later use (if requested).
 
-    Includes options to specify solar system ephemeris
-    gps clock corrections [default=True], and BIPM clock corrections
-    [default=True].
+    Although ``.tim`` files are intended to be quite specific measurements,
+    selecting one of the optional arguments to this function while loading the
+    ``.tim`` file changes the interpretation; the ``.tim`` file represents different
+    times if different settings are chosen. For nanosecond-level
+    reproducibility it is necessary to specify the options with which each ``.tim``
+    file was loaded. Observatory clock corrections are also applied, and thus
+    the exact result also depends on the precise values in observatory clock
+    correction files; normally these do not change.
+
+    Note also that if usepickle is set, the pickled file will have clock
+    corrections and other values set from when it was loaded and these may not
+    correspond to the values you set here.
+
+    See :func:`pint.toa.TOAs.apply_clock_corrections` for further information on the meaning of
+    the clock correction flags.
+
+    If commands like ``TIME`` or ``EQUAD`` are present in the ``.tim`` file,
+    they are applied to the TOAs upon reading and retained in the ``.commands``
+    attribute. Modern usage is to place ``EQUAD`` and ``EFAC`` in the ``.par``
+    file instead, where they can be fit; these are supported here for
+    historical reasons.
+
+    Parameters
+    ----------
+    timfile : string or file-like
+        Filename or file-like object containing the TOA data.
+    ephem : string
+        The name of the solar system ephemeris to use; defaults to "DE421".
+    include_bipm : bool or None
+        Whether to apply the BIPM clock correction. Defaults to True.
+    bipm_version : string or None
+        Which version of the BIPM tables to use for the clock correction.
+    include_gps : bool or None
+        Whether to include the GPS clock correction. Defaults to True.
+    planets : bool or None
+        Whether to apply Shapiro delays based on planet positions. Note that a
+        long-standing TEMPO2 bug in this feature went unnoticed for years.
+        Defaults to False.
+    usepickle : bool
+        Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
+    tdb_method : string
+        Which method to use for the clock correction to TDB.
+
+    Returns
+    -------
+    TOAs
+        Completed TOAs object representing the data.
+
     """
     updatepickle = False
+    recalc = False
     if usepickle:
         picklefile = _check_pickle(timfile)
         if picklefile:
-            timfile = picklefile
+            t = TOAs(picklefile)
+            if (
+                include_gps is not None
+                and t.clock_corr_info.get("include_gps", None) != include_gps
+            ):
+                log.info("Pickle contains wrong include_gps")
+                updatepickle = True
+            if (
+                include_bipm is not None
+                and t.clock_corr_info.get("include_bipm", None) != include_bipm
+            ):
+                log.info("Pickle contains wrong include_bipm")
+                updatepickle = True
+            if (
+                bipm_version is not None
+                and t.clock_corr_info.get("bipm_version", None) != bipm_version
+            ):
+                log.info("Pickle contains wrong bipm_version")
+                updatepickle = True
         else:
             # Pickle either did not exist or is out of date
             updatepickle = True
-    t = TOAs(timfile)
+    if not usepickle or updatepickle:
+        t = TOAs(timfile)
+        recalc = True
+
     if not any(["clkcorr" in f for f in t.table["flags"]]):
+        if include_gps is None:
+            include_gps = True
+        if bipm_version is None:
+            bipm_version = bipm_default
+        if include_bipm is None:
+            include_bipm = True
+        # FIXME: should we permit existing clkcorr flags?
         t.apply_clock_corrections(
             include_gps=include_gps,
             include_bipm=include_bipm,
             bipm_version=bipm_version,
         )
-    if "tdb" not in t.table.colnames:
+
+    if ephem is None:
+        ephem = t.ephem
+    elif ephem != t.ephem:
+        log.info("ephem changed, recalculation needed")
+        recalc = True
+        updatepickle = True
+    if recalc or "tdb" not in t.table.colnames:
         t.compute_TDBs(method=tdb_method, ephem=ephem)
-    if "ssb_obs_pos" not in t.table.colnames:
+
+    if planets is None:
+        planets = t.planets
+    elif planets != t.planets:
+        log.info("planets changed, recalculation needed")
+        recalc = True
+        updatepickle = True
+    if recalc or "ssb_obs_pos" not in t.table.colnames:
         t.compute_posvels(ephem, planets)
-    # Update pickle if needed:
+
     if usepickle and updatepickle:
         log.info("Pickling TOAs.")
         t.pickle()
@@ -120,7 +211,8 @@ def get_TOAs(
 
 
 def _check_pickle(toafilename, picklefilename=None):
-    """Checks if pickle file for the given toafilename needs to be updated.
+    """Check if pickle file for the given toafilename needs to be updated.
+
     Currently only file modification times are compared, note this will
     give misleading results under some circumstances.
 
@@ -163,12 +255,7 @@ def get_TOAs_list(
 ):
     """Load TOAs from a list of TOA objects.
 
-    Compute the TDB time and observatory positions and velocity
-    vectors.
-
-    Includes options to specify solar system ephemeris [default DE421],
-    gps clock corrections [default=True], and BIPM clock corrections
-    [default=True].
+    See :func:`pint.toa.get_TOAs` for details of what this function does.
     """
     t = TOAs(toalist=toa_list)
     if not any(["clkcorr" in f for f in t.table["flags"]]):
@@ -334,8 +421,8 @@ def format_toa_line(
 
     Note
     ----
-    This implementation is currently incomplete in that it will not
-    undo things like TIME statements and probably other things.
+    This implementation does not undo things like ``TIME`` statements; when used
+    by :func:`pint.toa.TOAs.write_TOA_file` these commands are not emitted either.
 
     Princeton format::
 
@@ -354,11 +441,7 @@ def format_toa_line(
 
     """
     if format.upper() in ("TEMPO2", "1"):
-        # This should probably use obs.timescale instaed of this hack
-        if obs.tempo_code == "@":
-            toa_str = Time(toatime, format="pulsar_mjd_string", scale="tdb")
-        else:
-            toa_str = Time(toatime, format="pulsar_mjd_string", scale="utc")
+        toa_str = Time(toatime, format="pulsar_mjd_string", scale=obs.timescale)
         # In Tempo2 format, freq=0.0 means infinite frequency
         if freq == np.inf * u.MHz:
             freq = 0.0 * u.MHz
@@ -430,10 +513,12 @@ def format_toa_line(
     return out
 
 
-def make_fake_toas(startMJD, endMJD, ntoas, model, freq=1400, obs="GBT"):
+def make_fake_toas(
+    startMJD, endMJD, ntoas, model, freq=999999, obs="@", error=1 * u.us
+):
     """Make evenly spaced toas with residuals = 0 and  without errors
 
-    might be able to do different frequencies if fed an array of frequencies,
+    Might be able to do different frequencies if fed an array of frequencies,
     only works with one observatory at a time
 
     Parameters
@@ -457,6 +542,10 @@ def make_fake_toas(startMJD, endMJD, ntoas, model, freq=1400, obs="GBT"):
         object with evenly spaced toas spanning given start and end MJD with
         ntoas toas, without errors
     """
+    # FIXME: this is a sign this is not where this function belongs
+    # residuals depends on models and TOAs so this adds a circular dependency
+    import pint.residuals
+
     # TODO:make all variables Quantity objects
     # TODO: freq default to inf
     def get_freq_array(bfv, ntoas):
@@ -476,11 +565,25 @@ def make_fake_toas(startMJD, endMJD, ntoas, model, freq=1400, obs="GBT"):
         for t, f in zip(times, freq_array)
     ]
     ts = TOAs(toalist=t1)
-    ts.compute_TDBs()
-    ts.compute_posvels()
     ts.clock_corr_info.update(
+        # FIXME: why turn off BIPM et cetera?
         {"include_bipm": False, "bipm_version": bipm_default, "include_gps": False}
     )
+    ts.table["error"] = error
+    ts.compute_TDBs()
+    ts.compute_posvels()
+    ts.compute_pulse_numbers(model)
+    for i in range(10):
+        r = pint.residuals.Residuals(ts, model, track_mode="use_pulse_numbers")
+        if abs(r.time_resids).max() < 1 * u.ns:
+            break
+        ts.adjust_TOAs(time.TimeDelta(-r.time_resids))
+    else:
+        raise ValueError(
+            "Unable to make fake residuals - left over errors are {}".format(
+                abs(r.time_resids).max()
+            )
+        )
     return ts
 
 
@@ -682,7 +785,70 @@ class TOA(object):
 class TOAs(object):
     """A class of multiple TOAs, loaded from zero or more files.
 
-    The contents are stored in an `astropy.table.Table`
+    Normally these objects should be read from a file with `pint.toa.get_TOAs`.
+    Constructing them with the constructor here does not apply the clock
+    corrections and the resulting TOAs object may not be set up the way one
+    would normally expect.
+
+    The contents are stored in an `astropy.table.Table`; this can be used to
+    access the contained information but the data may not be in the order you
+    expect. Not all columns of the table are computed automatically, as their
+    computation can be expensive. Methods of this class are available to
+    populate these additional columns.
+
+    .. list-table:: Columns in ``.table``
+       :widths: 15 85
+       :header-rows: 1
+
+       * - Name
+         - Contents
+       * - ``index``
+         - location of the TOA in the original input
+       * - ``mjd``
+         - the exact time of arrival (an :class:`astropy.time.Time` object)
+       * - ``mjd_float``
+         - the time of arrival in floating-point (may be microseconds off)
+       * - ``error``
+         - the standard error (an :class:`astropy.units.Quantity` describing
+           the claimed uncertainty on the pulse arrival time)
+       * - ``freq``
+         - the observing frequency (an :class:`astropy.units.Quantity`)
+       * - ``obs``
+         - the observatory at which the TOA was acquired (a
+           :class:`pint.observatory.Observatory` object)
+       * - ``flags``
+         - free-form flags associated with the TOA (a dictionary mapping flag
+           to value)
+       * - ``tdb``
+         - the pulse arrival time converted to TDB (but not barycentered, that is,
+           not corrected for light travel time; an :class:`astropy.time.Time` object);
+           computed by :func:`pint.toa.TOAs.compute_TDBs`
+       * - ``tdbld``
+         - a ``longdouble`` version of ``tdb`` for computational convenience
+       * - ``ssb_obs_pos``, ``ssb_obs_vel``
+         - position and velocity of the observatory at the time of the TOA; computed
+           by :func:`pint.toa.TOAs.compute_posvels`
+       * - ``ssb_obs_vel_ecl``
+         - velocity of the observatory in ecliptic coordinates at the time of the TOA; computed
+           by :func:`pint.toa.TOAs.add_vel_ecl`
+       * - ``obs_sun_pos``, ``obs_jupiter_pos``, ``obs_saturn_pos``, ``obs_venus_pos``,
+           ``obs_uranus_pos``
+         - position of various celestial objects at the time of the TOA; computed
+           by :func:`pint.toa.TOAs.compute_posvels`
+       * - ``pulse_number``
+         - integer number of turns since a fiducial moment;
+           optional; can be computed from a model with
+           :func:`pint.toa.TOAs.compute_pulse_numbers` or extracted from the
+           ``pn`` entry in ``flags`` with
+           :func:`pint.toa.TOAs.phase_columns_from_flags`.
+       * - ``delta_pulse_number``
+         - number of turns to adjust pulse number by, compared to the model;
+           ``PHASE`` statements in the ``.tim`` file or the ``padd`` entry in
+           ``flags`` carry this information, and :func:`pint.toa.TOAs.phase_columns_from_flags`
+           creates the column.
+       * - ``groups``
+         - if the TOAs have been placed into groups by :func:`pint.toa.TOAs.get_groups`
+           this will contain the group identifier of each TOA.
 
     Parameters
     ----------
@@ -695,27 +861,19 @@ class TOAs(object):
     Attributes
     ----------
     table : astropy.table.Table
-        The data for all the TOAs is stored in here. It has the columns
-        ``index`` (the location of the TOA in the original input),
-        ``mjd`` (an :class:`astropy.time.Time` object), ``mjd_float`` (a
-        floating-point version of the time), ``error`` (an
-        :class:`astropy.units.Quantity` describing the claimed uncertainty
-        on the pulse arrival time), ``freq`` (an :class:`astropy.units.Quantity`
-        describing the observing frequency), ``obs`` (a
-        :class:`pint.observatory.Observatory` object),
-        and ``flags`` (a dictionary of flags and their values). The table may
-        also contain a column ``pn`` (integers) that is the pulse numbers
-        of the TOAs.  The table is grouped by ``obs``, that is, it is
+        The data for all the TOAs. It is grouped by ``obs``, that is, it is
         not in the same order as the original TOAs.
     commands : list of str
-        "Commands" that were written in the file; these can affect
-        how some or all TOAs are interpreted.
+        "Commands" that were written in the file; these will have affected
+        how some or all TOAs were interpreted during loading.
     filename : str, optional
         The filename (if any) that the TOAs were loaded from.
     planets : bool
+        Whether planetary Shapiro delay should be considered.
     ephem : object
+        The Solar System ephemeris in use.
     clock_corr_info : dict
-
+        Information about the clock correction chains in use.
     """
 
     def __init__(self, toafile=None, toalist=None):
@@ -731,8 +889,7 @@ class TOAs(object):
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
 
-        if toafile is not None:
-            # FIXME: work with file-like objects as well
+        if isinstance(toafile, str):
             # Check for a pickle-like filename.  Alternative approach would
             # be to just try opening it as a pickle and see what happens.
             if toafile.endswith(".pickle") or toafile.endswith("pickle.gz"):
@@ -741,6 +898,9 @@ class TOAs(object):
             else:
                 self.read_toa_file(toafile)
                 self.filename = toafile
+        elif toafile is not None:
+            self.read_toa_file(toafile)
+            self.filename = ""
 
         if toalist is not None:
             if not isinstance(toalist, (list, tuple)):
@@ -894,16 +1054,16 @@ class TOAs(object):
     def get_flag_value(self, flag, fill_value=None):
         """Get the request TOA flag values.
 
-           Parameters
-           ----------
-           flag_name : str
-               The request flag name.
+        Parameters
+        ----------
+        flag_name : str
+            The request flag name.
 
-           Returns
-           -------
-           values : list
-               A list of flag values from each TOA. If the TOA does not have
-               the flag, it will fill up with the fill_value.
+        Returns
+        -------
+        values : list
+            A list of flag values from each TOA. If the TOA does not have
+            the flag, it will fill up with the fill_value.
         """
         result = []
         valid_index = []
@@ -917,8 +1077,7 @@ class TOAs(object):
         return result, valid_index
 
     def get_dm_errors(self):
-        """ Get the Wideband DM data error
-        """
+        """Get the Wideband DM data error"""
         result, valid = self.get_flag_value("pp_dme")
         if valid == []:
             raise AttributeError("No DM error is provided.")
@@ -927,10 +1086,10 @@ class TOAs(object):
     def get_groups(self, gap_limit=None):
         """flag toas within gap limit (default 2h = 0.0833d) of each other as the same group
 
-        groups can be larger than the gap limit - if toas are seperated by a gap larger than
+        groups can be larger than the gap limit - if toas are separated by a gap larger than
         the gap limit, a new group starts and continues until another such gap is found"""
         # TODO: make all values Quantity objects for consistency
-        if gap_limit == None:
+        if gap_limit is None:
             gap_limit = 0.0833
         if hasattr(self, "toas") or gap_limit != 0.0833:
             gap_limit *= u.d
@@ -1114,14 +1273,20 @@ class TOAs(object):
         self.compute_posvels(self.ephem, self.planets)
 
     def write_TOA_file(self, filename, name="pint", format="Princeton"):
-        """Dump current TOA table out as a TOA file
+        """Write this object to a ``.tim`` file.
+
+        This function writes the contents of this object to a (single) ``.tim``
+        file. If ``TEMPO2`` format is used, this file is able to represent the
+        contents of this object to nanosecond level. No ``TIME`` or ``EFAC``
+        commands are emitted.
 
         Parameters
         ----------
         filename : str or file-like
             File name to write to; can be an open file object
         format : str
-            Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1')
+            Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1');
+            note that not all features may be supported in 'TEMPO' mode.
 
         """
         try:
@@ -1136,11 +1301,12 @@ class TOAs(object):
             outf.write("FORMAT 1\n")
 
         # Add pulse numbers to flags temporarily if there is a pulse number column
+        # FIXME: everywhere else the pulse number column is called pulse_number not pn
         pnChange = False
-        if "pn" in self.table.colnames:
+        if "pulse_number" in self.table.colnames:
             pnChange = True
             for i in range(len(self.table["flags"])):
-                self.table["flags"][i]["pn"] = self.table["pn"][i]
+                self.table["flags"][i]["pn"] = self.table["pulse_number"][i]
 
         for (toatime, toaerr, freq, obs, flags) in zip(
             self.table["mjd"],
@@ -1191,9 +1357,7 @@ class TOAs(object):
 
         A description of how PINT handles clock corrections and timescales is here:
         https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
-
         """
-
         # First make sure that we haven't already applied clock corrections
         flags = self.table["flags"]
         if any(["clkcorr" in f for f in flags]):
@@ -1254,7 +1418,6 @@ class TOAs(object):
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
         for TDB times, using the Observatory locations and IERS A Earth
         rotation corrections for UT1.
-
         """
         log.info("Computing TDB columns.")
         if "tdb" in self.table.colnames:
@@ -1331,9 +1494,7 @@ class TOAs(object):
         SSB) for each TOA.  The JPL solar system ephemeris can be set
         using the 'ephem' parameter.  The positions and velocities are
         set with PosVel class instances which have astropy units.
-
         """
-
         if ephem is None:
             if self.ephem is not None:
                 ephem = self.ephem
@@ -1367,12 +1528,7 @@ class TOAs(object):
                 "Computing PosVels of observatories and Earth, using {}".format(ephem)
             )
         # Remove any existing columns
-        cols_to_remove = [
-            "ssb_obs_pos",
-            "ssb_obs_vel",
-            "ssb_obs_vel_ecl",
-            "obs_sun_pos",
-        ]
+        cols_to_remove = ["ssb_obs_pos", "ssb_obs_vel", "obs_sun_pos"]
         for c in cols_to_remove:
             if c in self.table.colnames:
                 log.info("Column {0} already exists. Removing...".format(c))
@@ -1452,7 +1608,6 @@ class TOAs(object):
         deletes this column so that this function will be called again and
         velocities will be calculated with updated TOAs.
         """
-
         # Remove any existing columns
         col_to_remove = "ssb_obs_vel_ecl"
         if col_to_remove in self.table.colnames:
@@ -1507,7 +1662,6 @@ class TOAs(object):
         If the file ends with ".gz" it will be uncompressed before extracting
         the pickle.
         """
-
         log.info("Reading pickled TOAs from '%s'..." % filename)
         if os.path.splitext(filename)[1] == ".gz":
             infile = gzip.open(filename, "rb")
@@ -1533,6 +1687,8 @@ class TOAs(object):
     def read_toa_file(self, filename, process_includes=True, top=True):
         """Read TOAs from the given filename.
 
+        Deprecated; intended for internal use only.
+
         Will process INCLUDEd files unless process_includes is False.
 
         Parameters
@@ -1548,6 +1704,12 @@ class TOAs(object):
             if this function is called on an already existing and
             processed TOAs object.
         """
+        if isinstance(filename, str):
+            with open(filename, "r") as f:
+                return self.read_toa_file(f, process_includes=process_includes, top=top)
+        else:
+            f = filename
+
         ntoas = 0
         if top:
             self.toas = []
@@ -1570,89 +1732,81 @@ class TOAs(object):
                 "FORMAT": "Unknown",
                 "END": False,
             }
-        with open(filename, "r") as f:
-            for l in f.readlines():
-                MJD, d = _parse_TOA_line(l, fmt=self.cdict["FORMAT"])
-                if d["format"] == "Command":
-                    cmd = d["Command"][0].upper()
-                    self.commands.append((d["Command"], ntoas))
-                    if cmd == "SKIP":
-                        self.cdict[cmd] = True
-                        continue
-                    elif cmd == "NOSKIP":
-                        self.cdict["SKIP"] = False
-                        continue
-                    elif cmd == "END":
-                        self.cdict[cmd] = True
-                        break
-                    elif cmd in ("TIME", "PHASE"):
-                        self.cdict[cmd] += float(d["Command"][1])
-                    elif cmd in ("EMIN", "EMAX", "EQUAD"):
-                        self.cdict[cmd] = float(d["Command"][1]) * u.us
-                    elif cmd in ("FMIN", "FMAX", "EQUAD"):
-                        self.cdict[cmd] = float(d["Command"][1]) * u.MHz
-                    elif cmd in ("EFAC", "PHA1", "PHA2"):
-                        self.cdict[cmd] = float(d["Command"][1])
-                        if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
-                            d[cmd] = d["Command"][1]
-                    elif cmd == "INFO":
-                        self.cdict[cmd] = d["Command"][1]
+        for l in f.readlines():
+            MJD, d = _parse_TOA_line(l, fmt=self.cdict["FORMAT"])
+            if d["format"] == "Command":
+                cmd = d["Command"][0].upper()
+                self.commands.append((d["Command"], ntoas))
+                if cmd == "SKIP":
+                    self.cdict[cmd] = True
+                    continue
+                elif cmd == "NOSKIP":
+                    self.cdict["SKIP"] = False
+                    continue
+                elif cmd == "END":
+                    self.cdict[cmd] = True
+                    break
+                elif cmd in ("TIME", "PHASE"):
+                    self.cdict[cmd] += float(d["Command"][1])
+                elif cmd in ("EMIN", "EMAX", "EQUAD"):
+                    self.cdict[cmd] = float(d["Command"][1]) * u.us
+                elif cmd in ("FMIN", "FMAX", "EQUAD"):
+                    self.cdict[cmd] = float(d["Command"][1]) * u.MHz
+                elif cmd in ("EFAC", "PHA1", "PHA2"):
+                    self.cdict[cmd] = float(d["Command"][1])
+                    if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
                         d[cmd] = d["Command"][1]
-                    elif cmd == "FORMAT":
-                        if d["Command"][1] == "1":
-                            self.cdict[cmd] = "Tempo2"
-                    elif cmd == "JUMP":
-                        if self.cdict[cmd][0]:
-                            self.cdict[cmd][0] = False
-                            self.cdict[cmd][1] += 1
-                        else:
-                            self.cdict[cmd][0] = True
-                    elif cmd == "INCLUDE" and process_includes:
-                        # Save FORMAT in a tmp
-                        fmt = self.cdict["FORMAT"]
-                        self.cdict["FORMAT"] = "Unknown"
-                        log.info(
-                            "Processing included TOA file {0}".format(d["Command"][1])
-                        )
-                        self.read_toa_file(d["Command"][1], top=False)
-                        # re-set FORMAT
-                        self.cdict["FORMAT"] = fmt
+                elif cmd == "INFO":
+                    self.cdict[cmd] = d["Command"][1]
+                    d[cmd] = d["Command"][1]
+                elif cmd == "FORMAT":
+                    if d["Command"][1] == "1":
+                        self.cdict[cmd] = "Tempo2"
+                elif cmd == "JUMP":
+                    if self.cdict[cmd][0]:
+                        self.cdict[cmd][0] = False
+                        self.cdict[cmd][1] += 1
                     else:
-                        continue
-                if self.cdict["SKIP"] or d["format"] in (
-                    "Blank",
-                    "Unknown",
-                    "Comment",
-                    "Command",
+                        self.cdict[cmd][0] = True
+                elif cmd == "INCLUDE" and process_includes:
+                    # Save FORMAT in a tmp
+                    fmt = self.cdict["FORMAT"]
+                    self.cdict["FORMAT"] = "Unknown"
+                    log.info("Processing included TOA file {0}".format(d["Command"][1]))
+                    self.read_toa_file(d["Command"][1], top=False)
+                    # re-set FORMAT
+                    self.cdict["FORMAT"] = fmt
+                else:
+                    continue
+            if self.cdict["SKIP"] or d["format"] in (
+                "Blank",
+                "Unknown",
+                "Comment",
+                "Command",
+            ):
+                continue
+            elif self.cdict["END"]:
+                if top:
+                    break
+            else:
+                newtoa = TOA(MJD, **d)
+                if (
+                    (self.cdict["EMIN"] > newtoa.error)
+                    or (self.cdict["EMAX"] < newtoa.error)
+                    or (self.cdict["FMIN"] > newtoa.freq)
+                    or (self.cdict["FMAX"] < newtoa.freq)
                 ):
                     continue
-                elif self.cdict["END"]:
-                    if top:
-                        # Clean up our temporaries used when reading TOAs
-                        del self.cdict
-                    return
                 else:
-                    newtoa = TOA(MJD, **d)
-                    if (
-                        (self.cdict["EMIN"] > newtoa.error)
-                        or (self.cdict["EMAX"] < newtoa.error)
-                        or (self.cdict["FMIN"] > newtoa.freq)
-                        or (self.cdict["FMAX"] < newtoa.freq)
-                    ):
-                        continue
-                    else:
-                        newtoa.error *= self.cdict["EFAC"]
-                        newtoa.error = np.hypot(newtoa.error, self.cdict["EQUAD"])
-                        if self.cdict["INFO"]:
-                            newtoa.flags["info"] = self.cdict["INFO"]
-                        if self.cdict["JUMP"][0]:
-                            newtoa.flags["jump"] = self.cdict["JUMP"][1]
-                        if self.cdict["PHASE"] != 0:
-                            newtoa.flags["phase"] = self.cdict["PHASE"]
-                        if self.cdict["TIME"] != 0.0:
-                            newtoa.flags["to"] = self.cdict["TIME"]
-                        self.toas.append(newtoa)
-                        ntoas += 1
-            if top:
-                # Clean up our temporaries used when reading TOAs
-                del self.cdict
+                    newtoa.error *= self.cdict["EFAC"]
+                    newtoa.error = np.hypot(newtoa.error, self.cdict["EQUAD"])
+                    if self.cdict["INFO"]:
+                        newtoa.flags["info"] = self.cdict["INFO"]
+                    if self.cdict["JUMP"][0]:
+                        newtoa.flags["jump"] = self.cdict["JUMP"][1]
+                    if self.cdict["PHASE"] != 0:
+                        newtoa.flags["phase"] = self.cdict["PHASE"]
+                    if self.cdict["TIME"] != 0.0:
+                        newtoa.flags["to"] = self.cdict["TIME"]
+                    self.toas.append(newtoa)
+                    ntoas += 1

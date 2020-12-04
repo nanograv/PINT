@@ -150,12 +150,6 @@ def test_IERS_B_agree_with_IERS_Auto():
         )
 
 
-def test_astropy_IERS_B_vs_downloaded():
-    P = IERS_B.open(IERS_B_FILE)
-    B = IERS_B.open(download_file(IERS_B_URL, cache=True))
-    assert B["MJD"][-1] >= P["MJD"][-1]
-
-
 @pytest.mark.xfail(reason="disagreement in current astropy")
 def test_IERS_B_builtin_agree_with_IERS_Auto_dX():
     A = IERS_Auto.open()

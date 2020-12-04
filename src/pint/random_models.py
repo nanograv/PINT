@@ -42,7 +42,7 @@ def random_models(
         TOAs object containing the evenly spaced fake toas to plot the random lines with
         list of residual objects for the random models (one residual object each)
     """
-    params = fitter.get_fitparams_num()
+    params = fitter.model.get_params_dict("free", "num")
     mean_vector = params.values()
     # remove the first column and row (absolute phase)
     cov_matrix = (((fitter.covariance_matrix[1:]).T)[1:]).T

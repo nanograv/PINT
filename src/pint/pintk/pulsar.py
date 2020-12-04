@@ -566,8 +566,8 @@ class Pulsar(object):
             redge = ledge = 0.5
             npoints = 200
         else:
-            redge = ledge = 0.2
-            npoints = 150
+            redge = ledge = 1.0
+            npoints = 250
         # Check to see if too recent
         nowish = (Time.now().mjd - 40) * u.d
         if maxMJD + spanMJDs * redge > nowish:

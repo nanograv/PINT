@@ -133,8 +133,8 @@ class TestModelBuilding:
 
         # test remove by name
         tm.remove_component("BinaryELL1")
-        assert not "BinaryELL1" in tm.components.keys()
-        assert not remove_cp in tm.DelayComponent_list
+        assert "BinaryELL1" not in tm.components.keys()
+        assert remove_cp not in tm.DelayComponent_list
 
         # test remove by component
         tm2 = TimingModel(
@@ -143,26 +143,50 @@ class TestModelBuilding:
 
         remove_cp2 = tm2.components["BinaryELL1"]
         tm2.remove_component(remove_cp2)
-        assert not "BinaryELL1" in tm2.components.keys()
-        assert not remove_cp2 in tm2.DelayComponent_list
+        assert "BinaryELL1" not in tm2.components.keys()
+        assert remove_cp2 not in tm2.DelayComponent_list
 
     def test_free_params(self):
-        """ Test getting free parameters.
-        """
+        """Test getting free parameters."""
         # Build the timing model
         tm = TimingModel(
             "TestTimingModel", [BinaryELL1(), AstrometryEquatorial(), Spindown()]
         )
+        tfp = {"F0", "T0", "EPS1", "RAJ"}
         # Turn off the fit parameters
         for p in tm.params:
             par = getattr(tm, p)
-            par.frozen = True
-        # Only turn on 4 fitting parameters
-        for p in ["F0", "T0", "EPS1", "RAJ"]:
-            par = getattr(tm, p)
-            par.frozen = False
-        # Check free parameter
-        free_params = tm.free_params
-        assert len(free_params) == 4
-        for p in ["F0", "T0", "EPS1", "RAJ"]:
-            assert p in free_params
+            par.frozen = p not in tfp
+        assert set(tm.free_params) == tfp
+
+    def test_change_free_params(self):
+        """Test setting free parameters."""
+        # Build the timing model
+        tm = TimingModel(
+            "TestTimingModel", [BinaryELL1(), AstrometryEquatorial(), Spindown()]
+        )
+
+        with pytest.raises(ValueError):
+            tm.free_params = ["F0", "T0", "EPS1", "RAJ", "CAPYBARA"]
+
+        tfp = {"F0", "T0", "EPS1", "RAJ"}
+        tm.free_params = tfp
+        assert set(tm.free_params) == tfp
+
+    def test_params_dict_round_trip_quantity(self):
+        tm = get_model(self.parfile)
+        tfp = {"F0", "T0", "RAJ"}
+        tm.free_params = tfp
+        tm.set_param_values(tm.get_params_dict("free", "quantity"))
+
+    def test_params_dict_round_trip_num(self):
+        tm = get_model(self.parfile)
+        tfp = {"F0", "T0", "RAJ"}
+        tm.free_params = tfp
+        tm.set_param_values(tm.get_params_dict("free", "num"))
+
+    def test_params_dict_round_trip_uncertainty(self):
+        tm = get_model(self.parfile)
+        tfp = {"F0", "T0", "RAJ"}
+        tm.free_params = tfp
+        tm.set_param_uncertainties(tm.get_params_dict("free", "uncertainty"))

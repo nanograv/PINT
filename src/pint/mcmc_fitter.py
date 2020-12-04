@@ -136,7 +136,9 @@ class MCMCFitter(Fitter):
     """
 
     def __init__(self, toas, model, sampler, **kwargs):
-        # super(MCMCFitter, self).__init__(toas, model)
+        super(MCMCFitter, self).__init__(
+            toas, model, track_mode=kwargs.get("track_mode", None)
+        )
         self.toas = toas
         self.model_init = model
         self.use_resids = kwargs.get("resids", True)
@@ -256,7 +258,7 @@ class MCMCFitter(Fitter):
 
     def generate_fit_keyvals(self):
         """Read the model to determine fitted keys and their values and errors
-            from the par file
+        from the par file
         """
         fitkeys = [p for p in self.model.params if not getattr(self.model, p).frozen]
         fitvals = []
@@ -431,7 +433,7 @@ class MCMCFitter(Fitter):
 
 class MCMCFitterBinnedTemplate(MCMCFitter):
     """A subclass of MCMCFitter, designed to use a binned template with
-        interpolation instead of an analytic function
+    interpolation instead of an analytic function
     """
 
     def __init__(self, toas, model, sampler, **kwargs):
@@ -475,7 +477,7 @@ class MCMCFitterBinnedTemplate(MCMCFitter):
 
 class MCMCFitterAnalyticTemplate(MCMCFitter):
     """A subclass of MCMCFitter, designed to use an analytic template rather
-        than a binned one that uses interpolation.
+    than a binned one that uses interpolation.
     """
 
     def __init__(self, toas, model, sampler, template, **kwargs):

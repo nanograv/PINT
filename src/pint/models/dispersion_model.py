@@ -113,8 +113,6 @@ class Dispersion(DelayComponent):
 
         """
         pn = self.match_param_aliases(param)
-        if pn == "":
-            raise ValueError("Parameter '%s' in not in the model." % param)
 
         if pn not in list(self.dm_deriv_funcs.keys()):
             self.dm_deriv_funcs[pn] = [func]
@@ -464,7 +462,7 @@ class DispersionJump(Dispersion):
     Notes
     -----
     This DM jump is only for modeling the DM values, and will not apply to the
-    dispersion time delay. 
+    dispersion time delay.
     """
 
     register = True
@@ -473,6 +471,7 @@ class DispersionJump(Dispersion):
     def __init__(self):
         super(DispersionJump, self).__init__()
         self.dm_value_funcs += [self.jump_dm]
+        # Dispersion jump only model the dm values.
 
         self.add_param(
             maskParameter(
