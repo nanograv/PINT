@@ -146,7 +146,7 @@ napoleon_use_param = True
 
 nbsphinx_custom_formats = {".md": lambda s: jupytext.reads(s, ".md")}
 nbsphinx_prolog = """
-This Jupyter notebook can be downloaded from `{{ env.docname.split("/")[-1] }}.ipynb <{{ env.docname.split("/")[-1] }}.ipynb#http://>`_
+This Jupyter notebook can be downloaded from `{{ env.docname.split("/")[-1] }}.ipynb <{{ env.docname.split("/")[-1] }}.ipynb#http://>`_, or viewed as a python script at `{{ env.docname.split("/")[-1] }}.py <https://github.com/nanograv/PINT/blob/master/docs/{{ env.docname }}.py>`_
 
 """
 
