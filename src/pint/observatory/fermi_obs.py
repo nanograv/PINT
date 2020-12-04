@@ -69,18 +69,11 @@ def load_FT2(ft2_filename):
         # This is not the best way. Should fit an orbit and determine velocity from that.
         dt = mjds_TT[1] - mjds_TT[0]
         log.info("FT2 spacing is " + str(dt.to(u.s)))
-        # Trim off last point because array.diff() is one shorter
-        # Vx = np.gradient(X)[:-1]/(mjds_TT.diff().to(u.s))
-        # Vy = np.gradient(Y)[:-1]/(mjds_TT.diff().to(u.s))
-        # Hack to fix gradient failing on example data file for reasons I don't understand. -- paulr
-        # Vz = np.gradient(Z)[:-1]/(mjds_TT.diff().to(u.s))
-        Vx = (np.gradient(X.value)[:-1]) * u.m / (mjds_TT.diff().to(u.s))
-        Vy = (np.gradient(Y.value)[:-1]) * u.m / (mjds_TT.diff().to(u.s))
-        Vz = (np.gradient(Z.value)[:-1]) * u.m / (mjds_TT.diff().to(u.s))
-        X = X[:-1]
-        Y = Y[:-1]
-        Z = Z[:-1]
-        mjds_TT = mjds_TT[:-1]
+        # Use "spacing" argument for gradient to handle nonuniform entries
+        tt = mjds_TT.to(u.s).value
+        Vx = np.gradient(X.value, tt) * u.m / u.s
+        Vy = np.gradient(Y.value, tt) * u.m / u.s
+        Vz = np.gradient(Z.value, tt) * u.m / u.s
     log.info(
         "Building FT2 table covering MJDs {0} to {1}".format(
             mjds_TT.min(), mjds_TT.max()
@@ -117,12 +110,13 @@ class FermiObs(SpecialLocation):
     def __init__(self, name, ft2name, tt2tdb_mode="pint"):
         self.FT2 = load_FT2(ft2name)
         # Now build the interpolator here:
-        self.X = InterpolatedUnivariateSpline(self.FT2["MJD_TT"], self.FT2["X"])
-        self.Y = InterpolatedUnivariateSpline(self.FT2["MJD_TT"], self.FT2["Y"])
-        self.Z = InterpolatedUnivariateSpline(self.FT2["MJD_TT"], self.FT2["Z"])
-        self.Vx = InterpolatedUnivariateSpline(self.FT2["MJD_TT"], self.FT2["Vx"])
-        self.Vy = InterpolatedUnivariateSpline(self.FT2["MJD_TT"], self.FT2["Vy"])
-        self.Vz = InterpolatedUnivariateSpline(self.FT2["MJD_TT"], self.FT2["Vz"])
+        tt = self.FT2["MJD_TT"]
+        self.X = InterpolatedUnivariateSpline(tt, self.FT2["X"])
+        self.Y = InterpolatedUnivariateSpline(tt, self.FT2["Y"])
+        self.Z = InterpolatedUnivariateSpline(tt, self.FT2["Z"])
+        self.Vx = InterpolatedUnivariateSpline(tt, self.FT2["Vx"])
+        self.Vy = InterpolatedUnivariateSpline(tt, self.FT2["Vy"])
+        self.Vz = InterpolatedUnivariateSpline(tt, self.FT2["Vz"])
         super(FermiObs, self).__init__(name=name, tt2tdb_mode=tt2tdb_mode)
         # Print this warning once, mainly for @paulray
         if self.tt2tdb_mode.lower().startswith("pint"):
