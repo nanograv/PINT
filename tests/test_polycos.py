@@ -37,6 +37,9 @@ def test_polycos_basic(polyco_file):
     p.eval_phase(mjd)
     p.find_entry(mjd)
 
+    with pytest.raises(ValueError):
+        p.find_entry(200000.)
+
 
 def test_read_write_round_trip(tmpdir, polyco_file):
     with open(polyco_file, "r") as f:
