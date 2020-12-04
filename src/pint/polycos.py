@@ -87,10 +87,6 @@ class PolycoEntry:
             + repr(self.coeffs)
         )
 
-    def valid(self, t):
-        """Return True if this polyco entry is valid for the time given (MJD)"""
-        return t >= self.tstart and t < self.tstop
-
     def evalabsphase(self, t):
         """Return the phase at time t, computed with this polyco entry"""
         dt = (data2longdouble(t) - self.tmid.value) * data2longdouble(1440.0)
