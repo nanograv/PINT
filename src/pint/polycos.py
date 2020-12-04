@@ -329,6 +329,8 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
         entry = table_entry["entry"]
         ph = entry.rphase
         rphase = np.longdouble(ph.int.value[0]) + np.longdouble(ph.frac.value[0])
+        rphstr_frac = "{:.6f}".format(rphase - int(rphase))[1:]
+        rphstr_int = "{:13d}".format(int(rphase))
 
         try:
             bin_phase = "{:7.4f}{:9.4f}".format(table_entry["binary_phase"],
@@ -336,8 +338,8 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
         except KeyError:
             bin_phase = ""
 
-        spec2 = "{:20.6f} {:17.12f}{:>5s}{:5d}{:5d}{:10.3f}{:16s}\n"
-        line2 = spec2.format(rphase,
+        spec2 = "{:20s} {:17.12f}{:>5s}{:5d}{:5d}{:10.3f}{:16s}\n"
+        line2 = spec2.format(rphstr_int + rphstr_frac,
                              entry.f0,
                              table_entry["obs"],
                              table_entry["mjd_span"], entry.ncoeff,
