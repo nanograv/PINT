@@ -114,7 +114,7 @@ class AbsPhase(PhaseComponent):
         """ Calculate the TZRMJD if one not given.
         TZRMJD = first toa after PEPOCH.
         """
-        PEPOCH = self.PEPOCH.quantity.mjd
+        PEPOCH = self._parent.PEPOCH.quantity.mjd
         # TODO: add warning for PEPOCH far away from center of data?
         TZRMJD = min([i for i in toas.get_mjds() if i > PEPOCH * u.d])
         self.TZRMJD.quantity = TZRMJD.value
