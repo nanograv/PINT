@@ -24,7 +24,7 @@ from six.moves import cPickle as pickle
 
 import pint
 from pint.observatory import Observatory, get_observatory, bipm_default
-from pint.observatory.special_locations import SpacecraftObs
+from pint.observatory.special_locations import T2SpacecraftObs
 from pint.observatory.topo_obs import TopoObs
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
@@ -1475,10 +1475,7 @@ class TOAs(object):
                     )
                     grpmjds = time.Time(grp["mjd"], location=locs)
 
-            if isinstance(site, SpacecraftObs):
-                grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem, grp=grp)
-            else:
-                grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
+            grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem, grp=grp)
             tdbs[loind:hiind] = np.asarray([t for t in grptdbs])
 
         # Now add the new columns to the table
@@ -1577,7 +1574,7 @@ class TOAs(object):
             site = get_observatory(obs)
             tdb = time.Time(grp["tdb"], precision=9)
 
-            if isinstance(site, SpacecraftObs):
+            if isinstance(site, T2SpacecraftObs):
                 ssb_obs = site.posvel(tdb, ephem, grp)
             else:
                 ssb_obs = site.posvel(tdb, ephem)
@@ -1630,7 +1627,7 @@ class TOAs(object):
             site = get_observatory(obs)
             tdb = time.Time(grp["tdb"], precision=9)
 
-            if isinstance(site, SpacecraftObs):
+            if isinstance(site, T2SpacecraftObs):
                 ssb_obs = site.posvel(tdb, ephem, grp)
             else:
                 ssb_obs = site.posvel(tdb, ephem)

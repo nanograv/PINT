@@ -170,18 +170,20 @@ def load_Fermi_TOAs(
         obs = "Barycenter"
         scale = "tdb"
         msg = "barycentric"
-    elif (timemsys == "TT") and (timeref == "LOCAL"):
+    elif (timesys == "TT") and (timeref == "LOCAL"):
         assert timesys == "TT"
         try:
-            obs = get_observatory(fermiobs)
+            get_observatory(fermiobs)
         except KeyError:
             log.error(
                 "%s observatory not defined. Make sure you have specified an FT2 file!"
                 % fermiobs
             )
+            raise
+        obs = fermiobs
         scale = "tt"
         msg = "spacecraft local"
-    elif (timemsys == "TT") and (timeref == "GEOCENTRIC"):
+    elif (timesys == "TT") and (timeref == "GEOCENTRIC"):
         obs = "Geocenter"
         scale = "tt"
         msg = "geocentric"

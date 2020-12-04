@@ -122,7 +122,7 @@ def main(argv=None):
         # Instantiate NICERObs once so it gets added to the observatory registry
         if args.orbfile is not None:
             log.info("Setting up NICER observatory")
-            NICERObs(name="NICER", FPorbname=args.orbfile, tt2tdb_mode="pint")
+            NICERObs(name="NICER", FPorbname=args.orbfile)
         # Read event file and return list of TOA objects
         try:
             tl = load_NICER_TOAs(args.eventfile)
@@ -137,7 +137,7 @@ def main(argv=None):
         if args.orbfile is not None:
             # Determine what observatory type is.
             log.info("Setting up RXTE observatory")
-            RXTEObs(name="RXTE", FPorbname=args.orbfile, tt2tdb_mode="pint")
+            RXTEObs(name="RXTE", FPorbname=args.orbfile)
         # Read event file and return list of TOA objects
         tl = load_RXTE_TOAs(args.eventfile)
     elif hdr["TELESCOP"].startswith("XMM"):
@@ -146,7 +146,7 @@ def main(argv=None):
     elif hdr["TELESCOP"].lower().startswith("nustar"):
         if args.orbfile is not None:
             log.info("Setting up NuSTAR observatory")
-            NuSTARObs(name="NuSTAR", FPorbname=args.orbfile, tt2tdb_mode="pint")
+            NuSTARObs(name="NuSTAR", FPorbname=args.orbfile)
         tl = load_NuSTAR_TOAs(args.eventfile)
     else:
         log.error(

@@ -10,7 +10,7 @@ from astropy.table import Table, vstack
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 from pint.fits_utils import read_fits_event_mjds
-from pint.observatory.special_locations import SpecialLocation
+from pint.observatory.special_locations import SpacecraftObs
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.utils import PosVel
 
@@ -88,7 +88,7 @@ def load_FPorbit(orbit_filename):
     return FPorbit_table
 
 
-class NICERObs(SpecialLocation):
+class NICERObs(SpacecraftObs):
     """Observatory-derived class for the NICER photon data.
 
     Note that this must be instantiated once to be put into the Observatory registry.
@@ -100,18 +100,9 @@ class NICERObs(SpecialLocation):
         Observatory name
     FPorbname: str
         File name to read spacecraft position information from
-    tt2tdb_mode: str
-        Selection for mode to use for TT to TDB conversion.
-
-        none
-            Give no position to astropy.Time()
-        pint
-            Give no position to astropy.Time() but apply topocentric part of TT->TDB in PINT
-        geo
-            Give geocenter position to astropy.Time()
     """
 
-    def __init__(self, name, FPorbname, tt2tdb_mode="pint"):
+    def __init__(self, name, FPorbname):
 
         if FPorbname.startswith("@"):
             # Read multiple orbit files names
@@ -131,49 +122,7 @@ class NICERObs(SpecialLocation):
         self.Vx = InterpolatedUnivariateSpline(self.FPorb["MJD_TT"], self.FPorb["Vx"])
         self.Vy = InterpolatedUnivariateSpline(self.FPorb["MJD_TT"], self.FPorb["Vy"])
         self.Vz = InterpolatedUnivariateSpline(self.FPorb["MJD_TT"], self.FPorb["Vz"])
-        super(NICERObs, self).__init__(name=name, tt2tdb_mode=tt2tdb_mode)
-        # Print this warning once, mainly for @paulray
-        if self.tt2tdb_mode.lower().startswith("pint"):
-            log.debug("Using location=None for TT to TDB conversion (pint mode)")
-        elif self.tt2tdb_mode.lower().startswith("geo"):
-            log.warning("Using location geocenter for TT to TDB conversion")
-
-    @property
-    def timescale(self):
-        return "tt"
-
-    def earth_location_itrf(self, time=None):
-        """Return NICER spacecraft location in ITRF coordinates"""
-
-        if self.tt2tdb_mode.lower().startswith("pint"):
-            return None
-        elif self.tt2tdb_mode.lower().startswith("geo"):
-            return EarthLocation.from_geocentric(0.0 * u.m, 0.0 * u.m, 0.0 * u.m)
-        elif self.tt2tdb_mode.lower().startswith("astropy"):
-            # First, interpolate ECI geocentric location from orbit file.
-            # These are inertial coorinates aligned with ICRF
-            pos_gcrs = GCRS(
-                CartesianRepresentation(
-                    self.X(time.tt.mjd) * u.m,
-                    self.Y(time.tt.mjd) * u.m,
-                    self.Z(time.tt.mjd) * u.m,
-                ),
-                obstime=time,
-            )
-
-            # Now transform ECI (GCRS) to ECEF (ITRS)
-            # By default, this uses the WGS84 ellipsoid
-            pos_ITRS = pos_gcrs.transform_to(ITRS(obstime=time))
-
-            # Return geocentric ITRS coordinates as an EarthLocation object
-            return pos_ITRS.earth_location
-        else:
-            log.error("Unknown tt2tdb_mode %s, using None" % self.tt2tdb_mode)
-            return None
-
-    @property
-    def tempo_code(self):
-        return None
+        super(NICERObs, self).__init__(name=name)
 
     def get_gcrs(self, t, ephem=None, grp=None, maxextrap=2):
         """Return position vector of NICER in GCRS
