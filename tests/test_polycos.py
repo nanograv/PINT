@@ -35,16 +35,25 @@ def test_read_write_round_trip(tmpdir, polyco_file):
 
 
 def test_generate_polycos(tmpdir, par_file):
+    output_polyco = tmpdir / "B1855_polyco_round_trip_from_par.dat"
+
     model = get_model(str(par_file))
 
     p = Polycos()
     p.generate_polycos(model, 55000, 55002, 'ao', 300, 12, 1400.0)
+    p.write_polyco_file(output_polyco)
+    q = Polycos()
+    q.read_polyco_file(output_polyco)
 
-    for mjd in [55000.5, 55001, 55001.5]:
+    for mjd in [55000., 55000.5, 55001, 55001.5, 55002.]:
         t = toa.get_TOAs_list([toa.TOA(mjd, obs='ao', freq=1400.)])
         ph1 = p.eval_abs_phase(mjd)
-        ph2 = model.phase(t)
+        ph2 = q.eval_abs_phase(mjd)
+        ph3 = model.phase(t)
 
-        assert int(ph1.int.value[0]) == int(ph2.int.value[0])
-        assert ph1.frac.value[0]
-        assert np.isclose(ph1.frac.value[0], ph2.frac.value[0])
+        assert int(ph1.int.value[0]) == int(ph3.int.value[0])
+        assert np.isclose(ph1.frac.value[0], ph3.frac.value[0])
+
+        # Loss of precision expected from writing to Polyco from par file.
+        assert int(ph2.int.value[0]) == int(ph3.int.value[0])
+        assert np.isclose(ph2.frac.value[0], ph3.frac.value[0], rtol=1E-3)
