@@ -63,7 +63,6 @@ notebooks:
 	jupytext --pipe black --pipe-fmt py:percent examples/*.ipynb
 	jupyter nbconvert --execute --inplace examples/*.ipynb
 	jupytext --sync examples/*.ipynb
-	# jupytext --to script examples/*.md
 
 docs-clean:
 	mkdir -p docs/api
