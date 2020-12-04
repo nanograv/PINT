@@ -363,16 +363,8 @@ class Polycos(object):
     """
 
     def __init__(self):
-        self.mjdMid = None
-        self.mjdSpan = None
-        self.tStart = None
-        self.tStop = None
-        self.ncoeff = None
-        self.coeffs = None
-        self.obs = None
         self.fileName = None
         self.fileFormat = None
-        self.newFileName = None
         self.polycoTable = None
         self.polycoFormat = [
             {
