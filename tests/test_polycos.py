@@ -27,18 +27,18 @@ def test_polycos_basic(polyco_file):
     p = Polycos()
     p.read_polyco_file(polyco_file)
     table = p.polycoTable
-    entry = table['entry'][0]
+    entry = table["entry"][0]
     print(entry)
 
     # Test single float - arrays are tested later.
-    mjd = 55000.
+    mjd = 55000.0
     p.eval_spin_freq(mjd)
     p.eval_abs_phase(mjd)
     p.eval_phase(mjd)
     p.find_entry(mjd)
 
     with pytest.raises(ValueError):
-        p.find_entry(200000.)
+        p.find_entry(200000.0)
 
 
 def test_read_write_round_trip(tmpdir, polyco_file):
@@ -62,14 +62,14 @@ def test_generate_polycos(tmpdir, par_file):
     model = get_model(str(par_file))
 
     p = Polycos()
-    p.generate_polycos(model, 55000, 55002, 'ao', 300, 12, 1400.0)
+    p.generate_polycos(model, 55000, 55002, "ao", 300, 12, 1400.0)
     p.write_polyco_file(output_polyco)
     q = Polycos()
     q.read_polyco_file(output_polyco)
 
-    mjds = np.linspace(55000., 55002., 11)
+    mjds = np.linspace(55000.0, 55002.0, 11)
 
-    t = toa.get_TOAs_list([toa.TOA(mjds, obs='ao', freq=1400.)])
+    t = toa.get_TOAs_list([toa.TOA(mjds, obs="ao", freq=1400.0)])
     ph1 = p.eval_abs_phase(mjds)
     ph2 = q.eval_abs_phase(mjds)
     ph3 = model.phase(t)
@@ -79,4 +79,4 @@ def test_generate_polycos(tmpdir, par_file):
 
     # Loss of precision expected from writing to Polyco from par file.
     assert all(int(ph2.int.value[0]) == int(ph3.int.value[0]))
-    assert np.allclose(ph2.frac.value[0], ph3.frac.value[0], rtol=1E-3)
+    assert np.allclose(ph2.frac.value[0], ph3.frac.value[0], rtol=1e-3)
