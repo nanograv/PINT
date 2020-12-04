@@ -69,7 +69,7 @@ def test_generate_polycos(tmpdir, par_file):
 
     mjds = np.linspace(55000.0, 55002.0, 11)
 
-    t = toa.get_TOAs_list([toa.TOA(mjds, obs="ao", freq=1400.0)])
+    t = toa.get_TOAs_list([toa.TOA(mjd, obs="ao", freq=1400.0) for mjd in mjds])
     ph1 = p.eval_abs_phase(mjds)
     ph2 = q.eval_abs_phase(mjds)
     ph3 = model.phase(t)
