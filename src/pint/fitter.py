@@ -581,11 +581,11 @@ class Fitter(object):
         # We need the original degrees of freedome and chi-squared value
         # Because this applies to nested models, model 1 must always have fewer parameters
         if remove:
-            dof_2 = self.resids.get_dof()
-            chi2_2 = self.resids.calc_chi2()
+            dof_2 = self.resids.dof
+            chi2_2 = self.resids.chi2
         else:
-            dof_1 = self.resids.get_dof()
-            chi2_1 = self.resids.calc_chi2()
+            dof_1 = self.resids.dof
+            chi2_1 = self.resids.chi2
         # Single inputs are converted to lists to handle arb. number of parameteres
         if type(parameter) is not list:
             parameter = [parameter]
@@ -610,8 +610,8 @@ class Fitter(object):
             # Now refit
             fitter_copy.fit_toas(NITS)
             # Now get the new values
-            dof_1 = fitter_copy.resids.get_dof()
-            chi2_1 = fitter_copy.resids.calc_chi2()
+            dof_1 = fitter_copy.resids.dof
+            chi2_1 = fitter_copy.resids.chi2
         else:
             # Dictionary of parameters to check to makes sure input value isn't zero
             check_params = {
@@ -651,8 +651,8 @@ class Fitter(object):
             # Now refit
             fitter_copy.fit_toas(NITS)
             # Now get the new values
-            dof_2 = fitter_copy.resids.get_dof()
-            chi2_2 = fitter_copy.resids.calc_chi2()
+            dof_2 = fitter_copy.resids.dof
+            chi2_2 = fitter_copy.resids.chi2
         # Now run the actual F-test
         ft = FTest(chi2_1, dof_1, chi2_2, dof_2)
 
@@ -1029,27 +1029,14 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         return self.fit_data[0]
 
     def make_combined_residuals(self, add_args={}):
-        resid_obj = []
-        if len(self.fit_data) == 1:
-            for data_name in self.fit_data_names:
-                r_obj = pr.Residuals(
-                    self.fit_data[0],
-                    self.model,
-                    residual_type=data_name,
-                    **add_args.get(data_name, {})
-                )
-                resid_obj.append(r_obj)
-        else:
-            for ii, data_name in enumerate(self.fit_data_names):
-                r_obj = pr.Residuals(
-                    self.fit_data[ii],
-                    self.model,
-                    residual_type=data_name,
-                    **add_args.get(data_name, {})
-                )
-                resid_obj.append(r_obj)
-        # Place the residual collector
-        return pr.CombinedResiduals(resid_obj)
+        """ Make the combined residuals between TOA residual and DM residusl
+        """
+        return pr.WidebandTOAResiduals(
+            self.toas,
+            self.model,
+            toa_resid_args=add_args.get("toa", {}),
+            dm_resid_args=add_args.get("dm", {}),
+        )
 
     def reset_model(self):
         """Reset the current model to the initial model."""

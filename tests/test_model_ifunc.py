@@ -28,7 +28,7 @@ class TestIFunc(unittest.TestCase):
         self.m.SIFUNC.quantity = 2
         rs = pint.residuals.Residuals(self.t, self.m)
         rms = rs.time_resids.to(u.us).std()
-        chi2 = rs.get_reduced_chi2()
+        chi2 = rs.reduced_chi2
         emsg = "RMS of " + str(rms.value) + " is too big."
         assert rms < 2700.0 * u.us, emsg
         emsg = "reduced chi^2 of " + str(chi2) + " is too big."
@@ -39,7 +39,7 @@ class TestIFunc(unittest.TestCase):
         f.fit_toas()
         rs = f.resids
         rms = rs.time_resids.to(u.us).std()
-        chi2 = rs.get_reduced_chi2()
+        chi2 = rs.reduced_chi2
         emsg = "RMS of " + str(rms.value) + " is too big."
         assert rms < 2700.0 * u.us, emsg
         emsg = "reduced chi^2 of " + str(chi2) + " is too big."

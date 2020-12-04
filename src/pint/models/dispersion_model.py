@@ -471,6 +471,7 @@ class DispersionJump(Dispersion):
     def __init__(self):
         super(DispersionJump, self).__init__()
         self.dm_value_funcs += [self.jump_dm]
+        # Dispersion jump only model the dm values.
 
         self.add_param(
             maskParameter(

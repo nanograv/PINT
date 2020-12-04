@@ -1472,7 +1472,6 @@ class TimingModel(object):
                 Prints astropy.log warnings for parameters that have changed significantly
                 and/or have increased in uncertainty.
         """
-
         from uncertainties import ufloat
         import uncertainties.umath as um
         import sys
