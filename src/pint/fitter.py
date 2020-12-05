@@ -562,18 +562,37 @@ class Fitter(object):
 
             resid_rms_test : Float (Quantity)
                 If full_output is True, returns the RMS of the residuals of the tested model
-                fit. Will be in units of microseconds as an astropy quantity.
+                fit. Will be in units of microseconds as an astropy quantity. If wideband fitter
+                this will be the time residuals.
 
             resid_wrms_test : Float (Quantity)
                 If full_output is True, returns the Weighted RMS of the residuals of the tested model
-                fit. Will be in units of microseconds as an astropy quantity.
+                fit. Will be in units of microseconds as an astropy quantity. If wideband fitter
+                this will be the time residuals.
 
             chi2_test : Float
-                If full_output is True, returns the chi-squared of the tested model.
+                If full_output is True, returns the chi-squared of the tested model. If wideband
+                fitter this will be the total chi-squared of the combined residual.
 
             dof_test : Int
                 If full_output is True, returns the degrees of freedom of the tested model.
+                If wideband fitter this will be the total chi-squared of the combined residual.
+
+            dm_resid_rms_test : Float (Quantity)
+                If full_output is True and a wideband timing fitter is used, returns the
+                RMS of the DM residuals of the tested model fit. Will be in units of
+                pc/cm^3 as an astropy quantity.
+
+            dm_resid_wrms_test : Float (Quantity)
+                If full_output is True and a wideband timing fitter is used, returns the
+                Weighted RMS of the DM residuals of the tested model fit. Will be in units of
+                pc/cm^3 as an astropy quantity.
         """
+        # Check if Wideband or not
+        if "Wideband" in self.__class__.__name__:
+            NB = False
+        else:
+            NB = True
         # Copy the fitter that we do not change the initial model and fitter
         fitter_copy = copy.deepcopy(self)
         # Number of times to run the fit
@@ -663,15 +682,37 @@ class Fitter(object):
             else:
                 dof_test = dof_2
                 chi2_test = chi2_2
-            resid_rms_test = fitter_copy.resids.time_resids.std().to(u.us)
-            resid_wrms_test = fitter_copy.resids.rms_weighted()  # units: us
-            return {
-                "ft": ft,
-                "resid_rms_test": resid_rms_test,
-                "resid_wrms_test": resid_wrms_test,
-                "chi2_test": chi2_test,
-                "dof_test": dof_test,
-            }
+            if NB:
+                resid_rms_test = fitter_copy.resids.time_resids.std().to(u.us)
+                resid_wrms_test = fitter_copy.resids.rms_weighted()  # units: us
+                return {
+                    "ft": ft,
+                    "resid_rms_test": resid_rms_test,
+                    "resid_wrms_test": resid_wrms_test,
+                    "chi2_test": chi2_test,
+                    "dof_test": dof_test,
+                }
+            else:
+                # Return the dm and time resid values separately
+                resid_rms_test = (
+                    fitter_copy.resids.residual_objs["toa"].time_resids.std().to(u.us)
+                )
+                resid_wrms_test = fitter_copy.resids.residual_objs[
+                    "toa"
+                ].rms_weighted()  # units: us
+                dm_resid_rms_test = fitter_copy.resids.residual_objs["dm"].resids.std()
+                dm_resid_wrms_test = fitter_copy.resids.residual_objs[
+                    "dm"
+                ].rms_weighted()
+                return {
+                    "ft": ft,
+                    "resid_rms_test": resid_rms_test,
+                    "resid_wrms_test": resid_wrms_test,
+                    "chi2_test": chi2_test,
+                    "dof_test": dof_test,
+                    "dm_resid_rms_test": dm_resid_rms_test,
+                    "dm_resid_wrms_test": dm_resid_wrms_test,
+                }
         else:
             return {"ft": ft}
 
