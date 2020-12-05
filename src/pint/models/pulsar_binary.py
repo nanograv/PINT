@@ -177,15 +177,7 @@ class PulsarBinary(DelayComponent):
                         self.binary_model_name,
                         p + " is required for '%s'." % self.binary_model_name,
                     )
-                try:
-                    par_method()
-                except:
-                    raise MissingParameter(
-                        self.binary_model_name,
-                        p
-                        + " is present but somehow broken for '%s'."
-                        % self.binary_model_name,
-                    )
+                par_method()
 
     # With new parameter class set up, do we need this?
     def apply_units(self):
@@ -207,12 +199,12 @@ class PulsarBinary(DelayComponent):
             if acc_delay is None:
                 # If the accumulated delay is not provided, calculate and
                 # use the barycentered TOAS
-                self.barycentric_time = self.get_barycentric_toas(toas)
+                self.barycentric_time = self._parent.get_barycentric_toas(toas)
             else:
                 self.barycentric_time = tbl["tdbld"] * u.day - acc_delay
             updates["barycentric_toa"] = self.barycentric_time
             updates["obs_pos"] = tbl["ssb_obs_pos"].quantity
-            updates["psr_pos"] = self.ssb_to_psb_xyz_ICRS(
+            updates["psr_pos"] = self._parent.ssb_to_psb_xyz_ICRS(
                 epoch=tbl["tdbld"].astype(np.float64)
             )
         for par in self.binary_instance.binary_params:
@@ -283,7 +275,9 @@ class PulsarBinary(DelayComponent):
         (FB2, FB3, etc.) are ignored in computing the new T0, even if present in
         the model. If high-precision results are necessary, especially for models
         containing higher derivatives of orbital frequency, consider re-fitting
-        the model to a set of TOAs.
+        the model to a set of TOAs. The use of :func:`pint.toa.make_fake_toas`
+        and the :class:`pint.fitter.Fitter` option ``track_mode="use_pulse_number"``
+        can make this extremely simple.
 
         Parameters
         ----------
@@ -296,7 +290,7 @@ class PulsarBinary(DelayComponent):
             new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
 
         try:
-            FB2 = self.FB2.quantity
+            self.FB2.quantity
             log.warning(
                 "Ignoring orbital frequency derivatives higher than FB1"
                 "in computing new T0"

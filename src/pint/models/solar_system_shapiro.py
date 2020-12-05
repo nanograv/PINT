@@ -99,12 +99,14 @@ class SolarSystemShapiro(DelayComponent):
         delay = numpy.zeros(len(tbl))
         for ii, key in enumerate(tbl.groups.keys):
             grp = tbl.groups[ii]
-            obs = tbl.groups.keys[ii]["obs"]
+            # obs = tbl.groups.keys[ii]["obs"]
             loind, hiind = tbl.groups.indices[ii : ii + 2]
             if key["obs"].lower() == "barycenter":
                 log.debug("Skipping Shapiro delay for Barycentric TOAs")
                 continue
-            psr_dir = self.ssb_to_psb_xyz_ICRS(epoch=grp["tdbld"].astype(numpy.float64))
+            psr_dir = self._parent.ssb_to_psb_xyz_ICRS(
+                epoch=grp["tdbld"].astype(numpy.float64)
+            )
             delay[loind:hiind] += self.ss_obj_shapiro_delay(
                 grp["obs_sun_pos"], psr_dir, self._ss_mass_sec["sun"]
             )

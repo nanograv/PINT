@@ -69,7 +69,7 @@ class SolarWindDispersion(Dispersion):
         """
         tbl = toas.table
         rvec = tbl["obs_sun_pos"].quantity
-        pos = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(np.float64))
+        pos = self._parent.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(np.float64))
         r = np.sqrt(np.sum(rvec * rvec, axis=1))
         cos_theta = (np.sum(rvec * pos, axis=1) / r).to(u.Unit(""))
         theta = np.arccos(cos_theta).to(

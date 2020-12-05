@@ -2,22 +2,32 @@
 """
 from __future__ import absolute_import, division, print_function
 
-import pytest
 import os
-import numpy as np
+import warnings
+from copy import deepcopy
+
 import astropy.units as u
-from pint.models import TimingModel, DEFAULT_ORDER
-from pint.models import get_model
+import numpy as np
+import pytest
+from pinttestdata import datadir
+
 from pint.models import (
+    DEFAULT_ORDER,
     AstrometryEquatorial,
-    Spindown,
+    BinaryELL1,
     DelayJump,
     DispersionDM,
-    BinaryELL1,
+    Spindown,
+    TimingModel,
     Wave,
+    get_model,
+    parameter as p,
 )
-from pint.models import parameter as p
-from pinttestdata import datadir
+
+
+@pytest.fixture
+def model_0437():
+    return get_model(os.path.join(datadir, "J0437-4715.par"))
 
 
 class TestModelBuilding:
@@ -190,3 +200,21 @@ class TestModelBuilding:
         tfp = {"F0", "T0", "RAJ"}
         tm.free_params = tfp
         tm.set_param_uncertainties(tm.get_params_dict("free", "uncertainty"))
+
+
+def test_parameter_access(model_0437):
+    model_0437.F0
+
+
+def test_component_parameter_access(model_0437):
+    model_0437.components["Spindown"].F0
+
+
+def test_component_methods(model_0437):
+    model_0437.coords_as_GAL
+
+
+def test_copying(model_0437):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        deepcopy(model_0437)
