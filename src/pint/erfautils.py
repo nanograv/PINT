@@ -1,12 +1,11 @@
 """Observatory position and velocity calculation."""
 from __future__ import absolute_import, division, print_function
 
-import erfa
+try:
+    import erfa
+except ImportError:
+    import astropy._erfa as erfa
 
-# try:
-#     import erfa
-# except ImportError:
-#     import astropy._erfa as erfa
 import astropy.units as u
 from astropy import log
 import numpy as np
