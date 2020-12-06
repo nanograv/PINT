@@ -4,10 +4,12 @@
 import os
 import numpy as np
 import pytest
+from copy import deepcopy
 
 from pint.models import get_model
 from pint.toa import get_TOAs
 from pinttestdata import datadir
+from pint.residuals import WidebandTOAResiduals
 
 
 os.chdir(datadir)
@@ -46,8 +48,23 @@ class TestDMData:
         for dmj in dm_jump_params:
             dm_jump_map[dmj.key_value[0]] = dmj
         for be in all_backends:
-            be_index = np.where(toa_backends == be)[0]
-            assert all(dm_jump_value[be_index] == -dm_jump_map[be].quantity)
+            assert all(dm_jump_value[toa_backends == be] == -dm_jump_map[be].quantity)
+
+        r = WidebandTOAResiduals(self.toas, self.model)
+
+        model2 = deepcopy(self.model)
+        for i, be in enumerate(all_backends):
+            dm_jump_map[be].value += i + 1
+
+        r2 = WidebandTOAResiduals(self.toas, model2)
+
+        delta_dm = (
+            r2.residual_objs["dm"].resids_value - r.residual_objs["dm"].resids_value
+        )
+        delta_dm_intended = np.zeros_like(delta_dm)
+        for i, be in enumerate(all_backends):
+            delta_dm_intended[toa_backends == be] = i + 1
+        assert np.allclose(delta_dm, delta_dm_intended)
 
     def test_dm_noise(self):
         pass

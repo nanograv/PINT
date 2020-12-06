@@ -17,6 +17,7 @@ import astropy.table as table
 import astropy.time as time
 import astropy.units as u
 import numpy as np
+import numpy.ma
 from astropy import log
 from astropy.coordinates import EarthLocation
 from astropy.coordinates import ICRS, CartesianDifferential, CartesianRepresentation
@@ -203,6 +204,9 @@ def get_TOAs(
         updatepickle = True
     if recalc or "ssb_obs_pos" not in t.table.colnames:
         t.compute_posvels(ephem, planets)
+
+    if "dm" not in t.table.colnames:
+        t.dm_columns_from_flags()
 
     if usepickle and updatepickle:
         log.info("Pickling TOAs.")
@@ -1195,6 +1199,26 @@ class TOAs(object):
     def print_summary(self):
         """Write a summary of the TOAs to stdout."""
         print(self.get_summary())
+
+    def dm_columns_from_flags(self, dm_names=("pp_dm", "pp_dme")):
+        dm_name, dme_name = dm_names
+        self.dm_names = dm_names
+        dms = np.ma.masked_equal(np.zeros(len(self)), 0)
+        dmes = np.ma.masked_equal(np.zeros(len(self)), 0)
+        for i, f in enumerate(self.table["flags"]):
+            if dm_name in f:
+                dms[i] = float(f[dm_name])
+            if dme_name in f:
+                dmes[i] = float(f[dme_name])
+        if not np.all(dms.mask == dmes.mask):
+            raise ValueError(
+                "Some TOAs contain dm values but not uncertainties, or vice versa"
+            )
+        if np.all(dms.mask):
+            # no DM column, do nothing
+            return
+        self.table["dm"] = dms * u.pc / u.cm ** 3
+        self.table["dme"] = dmes * u.pc / u.cm ** 3
 
     def phase_columns_from_flags(self):
         """Creates and/or modifies pulse_number and delta_pulse_number columns
