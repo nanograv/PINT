@@ -150,8 +150,7 @@ class TimingModel(object):
     name: str, optional
         The name of the timing model.
     components: list of Component, optional
-        The model components for timing model. The order of the components in
-        timing model will follow the order of input.
+        The model components for timing model.
 
     Notes
     -----
@@ -246,7 +245,7 @@ class TimingModel(object):
             raise AttributeError
         if not hasattr(self, "component_types"):
             raise AttributeError
-        for cp in list(self.components.values()):
+        for cp in self.components.values():
             try:
                 return getattr(cp, name)
             except AttributeError:
@@ -258,6 +257,7 @@ class TimingModel(object):
     @property_exists
     def params(self):
         """List of all parameter names in this model and all its components (order is arbitrary)."""
+        # FIXME: any reason not to just use params_ordered here?
         p = self.top_level_params
         for cp in self.components.values():
             p = p + cp.params
@@ -266,43 +266,43 @@ class TimingModel(object):
     @property_exists
     def params_ordered(self):
         """List of all parameter names in this model and all its components, in a sensible order."""
-
         # Define the order of components in the list
         # Any not included will be printed between the first and last set.
+        # FIXME: make order completely canonical (sort components by name?)
         start_order = ["astrometry", "spindown", "dispersion"]
         last_order = ["jump_delay"]
         compdict = self.get_components_by_category()
-        used_cats = []
+        used_cats = set()
         pstart = copy.copy(self.top_level_params)
         for cat in start_order:
-            if cat in list(compdict.keys()):
+            if cat in compdict:
                 cp = compdict[cat]
                 for cpp in cp:
                     pstart += cpp.params
-                used_cats.append(cat)
+                used_cats.add(cat)
             else:
                 continue
 
         pend = []
         for cat in last_order:
-            if cat in list(compdict.keys()):
+            if cat in compdict:
                 cp = compdict[cat]
                 for cpp in cp:
                     pend += cpp.parms
-                used_cats.append(cat)
+                used_cats.add(cat)
             else:
                 continue
 
         # Now collect any components that haven't already been included in the list
         pmid = []
-        for cat in list(compdict.keys()):
+        for cat in compdict:
             if cat in used_cats:
                 continue
             else:
                 cp = compdict[cat]
                 for cpp in cp:
                     pmid += cpp.params
-                used_cats.append(cat)
+                used_cats.add(cat)
 
         return pstart + pmid + pend
 
@@ -1916,6 +1916,34 @@ class TimingModel(object):
         """Run setup methods on all components."""
         for cp in self.components.values():
             cp.setup()
+
+    def __contains__(self, name):
+        return name in self.params
+
+    def __getitem__(self, name):
+        if name in self.top_level_params:
+            return getattr(self, name)
+        for cp in self.components.values():
+            if name in cp.params:
+                return getattr(cp, name)
+        raise KeyError("TimingModel does not have parameter {}".format(name))
+
+    def __setitem__(self, name):
+        # FIXME: This could be the right way to add Parameters?
+        raise NotImplementedError
+
+    def keys(self):
+        return self.params
+
+    def items(self):
+        return [(p, self[p]) for p in self.params]
+
+    def __len__(self):
+        return len(self.params)
+
+    def __iter__(self):
+        for p in self.params:
+            yield p
 
 
 class ModelMeta(abc.ABCMeta):
