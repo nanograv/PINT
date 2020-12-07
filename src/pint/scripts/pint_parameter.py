@@ -1,4 +1,5 @@
-""" A script that quarry the PINT built-in parameters.
+""" A script that quarry the PINT built-in parameters. Currently this script
+only has a limited functionality (Print all parameters in .rst format).
 """
 
 import argparse
@@ -19,38 +20,57 @@ def get_request_info(par, info):
         The request list of information. They should be the parametre attribute
         name.
     """
-    result = {'name': par.name, 'type': type(par).__name__}
+    result = {"name": par.name, "type": type(par).__name__}
     for key in request_info:
         result[key] = getattr(par, key)
     return result
 
+
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Output the all parameters in"
-                                                 "the built-in models."
-                                                 "The current output is"
-                                                 "['name', 'description',"
-                                                 " 'unit', 'value', 'aliases']")
-    parser.add_argument('-p', '--parameter', nargs='*', default=['all'],
-                        help="Quarried parameter names.")
-    parser.add_argument('-c', '--component', nargs='*', default=None,
-                        help="Print parameters from components.")
-    parser.add_argument('-i', '--info', nargs='*', default=['value',
-                                                            'description',
-                                                            'units',
-                                                            'aliases'],
-                        help="The requested information from parameter.")
-    parser.add_argument('-f', '--format', type=str, default="stdout",
-                        help="Output format:\n"
-                             "'rst': Sphinx .rst file.\n"
-                             "'json': JSON dictionary file.\n "
-                             "'stdout': Stand out.")
-    parser.add_argument('-o', '--output', type=str, default=None,
-                        help="Output file path.")
-
+    parser = argparse.ArgumentParser(
+        description="Output the all parameters in"
+        "the built-in models."
+        "The current output is"
+        "['name', 'description',"
+        " 'unit', 'value', 'aliases']"
+    )
+    parser.add_argument(
+        "-p",
+        "--parameter",
+        nargs="*",
+        default=["all"],
+        help="Quarried parameter names.",
+    )
+    parser.add_argument(
+        "-c",
+        "--component",
+        nargs="*",
+        default=None,
+        help="Print parameters from components.",
+    )
+    parser.add_argument(
+        "-i",
+        "--info",
+        nargs="*",
+        default=["value", "description", "units", "aliases"],
+        help="The requested information from parameter.",
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        type=str,
+        default="stdout",
+        help="Output format:\n"
+        "'rst': Sphinx .rst file.\n"
+        "'json': JSON dictionary file.\n "
+        "'stdout': Stand out.",
+    )
+    parser.add_argument(
+        "-o", "--output", type=str, default=None, help="Output file path."
+    )
 
     args = parser.parse_args()
-
 
     # Get the all the components map from all lower case name
     #  to real component name.
@@ -63,7 +83,7 @@ if __name__ == "__main__":
     param_name_map, all_params, prefixed_param = get_param_name_map(all_components)
 
     # Check the parameter input.
-    if 'all' in args.parameter:
+    if "all" in args.parameter:
         is_all_param = True
     else:
         is_all_param = False
@@ -73,16 +93,16 @@ if __name__ == "__main__":
         parse_comp = False
     else:
         if not is_all_param:
-            raise ValueError("Currently only support getting all parameters"
-                             " from requested components.")
+            raise ValueError(
+                "Currently only support getting all parameters"
+                " from requested components."
+            )
         else:
             parse_comp = True
-            if 'all' in args.component:
+            if "all" in args.component:
                 quarry_components = list(all_components.keys())
             else:
                 quarry_components = args.component
-
-
 
     # Get information for all buiting parameters. The result will be a subset
     # of the this result.
@@ -97,8 +117,9 @@ if __name__ == "__main__":
         quarry_params = []
         for qc in quarry_components:
             if qc.lower() not in component_name_map.keys():
-                raise ValueError("Component `{}` is not recognised by"
-                                 " PINT.".format(qc))
+                raise ValueError(
+                    "Component `{}` is not recognised by" " PINT.".format(qc)
+                )
             else:
                 cp = component_name_map[qc]
                 cp_obj = all_components[cp]()
@@ -113,7 +134,7 @@ if __name__ == "__main__":
             # PINT parameter name space
             q_param = q_param.upper()
             p_builtin = False
-            if q_param in param_name_map.keys(): # The alises should be included
+            if q_param in param_name_map.keys():  # The alises should be included
                 param_entry = param_name_map[q_param]
                 pint_param = param_entry[0]
                 host_cp = param_entry[1]
@@ -145,60 +166,56 @@ if __name__ == "__main__":
 
             if p_builtin:
                 out_entry = get_request_info(request_par, request_info)
-                out_entry.update({'host': host_cp, 'status': True})
+                out_entry.update({"host": host_cp, "status": True})
             else:
-                out_entry = {'status': False}
+                out_entry = {"status": False}
             result[q_param] = out_entry
     else:
         pass
 
-
     # Out put the result
-    if args.format == 'rst':
+    if args.format == "rst":
         title_map = OrderedDict()
-        title_map['Name'] = 'name'
-        title_map['Type'] = 'type'
-        title_map['Unit'] = 'units'
-        title_map['Description'] = 'description'
-        title_map['Default Value'] = 'value'
-        title_map['Aliases'] = 'aliases'
-        title_map['Host Components'] = 'host'
+        title_map["Name"] = "name"
+        title_map["Type"] = "type"
+        title_map["Unit"] = "units"
+        title_map["Description"] = "description"
+        title_map["Default Value"] = "value"
+        title_map["Aliases"] = "aliases"
+        title_map["Host Components"] = "host"
         # title entry
-        title_entry = '   * '
+        title_entry = "   * "
         for ii, title in enumerate(title_map.keys()):
             if ii == 0:
-                pad = '- '
+                pad = "- "
             else:
-                pad = '     - '
-            title_entry += pad + title + '\n'
+                pad = "     - "
+            title_entry += pad + title + "\n"
         # parameter entries
-        param_entries = ''
+        param_entries = ""
         result_list = list(result.items())
         result_list.sort()
         for pp in result_list:
-            entries = '   * '
+            entries = "   * "
             for ii, info in enumerate(title_map.values()):
                 if ii == 0:
-                    pad = '- '
+                    pad = "- "
                 else:
-                    pad = '     - '
+                    pad = "     - "
                 if isinstance(pp[1][info], list):
-                    out_info = ', '.join(pp[1][info])
+                    out_info = ", ".join(pp[1][info])
                 else:
                     out_info = str(pp[1][info])
-                entries += pad + out_info + '\n'
+                entries += pad + out_info + "\n"
             param_entries += entries
         table = title_entry + param_entries
 
-        header = (".. list-table::\n"
-                  "   :widths: 20 80\n"
-                  "   :header-rows: 1\n\n\n")
-        out_str = header+ table
-
+        header = ".. list-table::\n" "   :header-rows: 1\n\n\n"
+        out_str = header + table
 
     if args.output is None:
         print(out_str)
     else:
-        f = open(args.output, 'w')
+        f = open(args.output, "w")
         f.write(out_str)
         f.close()
