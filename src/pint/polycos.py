@@ -678,25 +678,22 @@ class Polycos(object):
         self.polycoTable.write(filename, format=format)
 
     def find_entry(self, t):
-        """Find the right entry for the input time.
-        """
+        """Find the right entry for the input time."""
         if not isinstance(t, (np.ndarray, list)):
             t = np.array([t])
-        # Check if polyco table exist
+
+        # Check if polyco table exists
         if self.polycoTable is None:
             raise ValueError("polycoTable not set!")
+        t_start = self.polycoTable["t_start"]
+        t_stop = self.polycoTable["t_stop"]
 
-        startIndex = np.searchsorted(self.polycoTable["t_start"], t)
-        entryIndex = startIndex - 1
-        overFlow = np.where(t > self.polycoTable["t_stop"][entryIndex])[0]
-        if overFlow.size != 0:
-            errorMssg = "Input time "
-            for i in overFlow:
-                errorMssg += str(t[i]) + " "
-            errorMssg += "may be not coverd by entries."
-            raise ValueError(errorMssg)
+        start_idx = np.searchsorted(t_start, t) - 1
+        stop_idx = np.searchsorted(t_stop, t)
 
-        return entryIndex
+        if not np.allclose(start_idx, stop_idx):
+            raise ValueError("Some input times not covered by Polyco entries.")
+        return start_idx
 
     def eval_phase(self, t):
         if not isinstance(t, np.ndarray) and not isinstance(t, list):
