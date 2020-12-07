@@ -122,3 +122,23 @@ def test_wideband_residuals(wb_model, wb_toas):
     r = WidebandTOAResiduals(wb_toas, wb_model, dm_resid_args=dict(subtract_mean=False))
     assert len(r.residual_objs["toa"].time_resids) == len(wb_toas)
     assert len(r.residual_objs["dm"].dm_data) < len(wb_toas)
+
+
+def test_wideband_residuals_dmjump(wb_model, wb_toas):
+    r = WidebandTOAResiduals(wb_toas, wb_model, dm_resid_args=dict(subtract_mean=False))
+    model = deepcopy(wb_model)
+    assert wb_model.DMJUMP1.value == 0
+    model.DMJUMP1.value = 10
+    assert model.DMJUMP1.value == 10
+    with pytest.raises(AttributeError):
+        model.DMJUMP0
+    with pytest.raises(AttributeError):
+        model.DMJUMP2
+    r2 = WidebandTOAResiduals(wb_toas, model, dm_resid_args=dict(subtract_mean=False))
+    assert (
+        0
+        < np.sum(
+            r.residual_objs["dm"].resids_value != r2.residual_objs["dm"].resids_value
+        )
+        < len(r.residual_objs["dm"].resids_value)
+    )

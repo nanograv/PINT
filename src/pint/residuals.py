@@ -429,7 +429,7 @@ class WidebandDMResiduals(Residuals):
         model=None,
         residual_type="dm",
         unit=u.pc / u.cm ** 3,
-        subtract_mean=True,
+        subtract_mean=False,
         use_weighted_mean=True,
         scaled_by_F0=False,
     ):
@@ -442,7 +442,7 @@ class WidebandDMResiduals(Residuals):
         self.use_weighted_mean = use_weighted_mean
         self.base_unit = u.pc / u.cm ** 3
         self.get_model_value = self.model.total_dm
-        self.dm_data, self.dm_error = self.get_dm_data()
+        self.dm_data, self.dm_error, self.relevant_toas = self.get_dm_data()
         self.scaled_by_F0 = scaled_by_F0
         self._chi2 = None
         self._is_combined = False
@@ -476,6 +476,7 @@ class WidebandDMResiduals(Residuals):
 
     def get_data_error(self, scaled=True):
         """Get data errors.
+
         Parameter
         ---------
         scaled: bool, optional
@@ -487,7 +488,7 @@ class WidebandDMResiduals(Residuals):
             return self.model.scaled_dm_uncertainty(self.toas)
 
     def calc_resids(self):
-        model_value = self.get_model_value(self.toas)
+        model_value = self.get_model_value(self.toas)[self.relevant_toas]
         resids = self.dm_data - model_value
         if self.subtract_mean:
             if not self.use_weighted_mean:
@@ -497,11 +498,10 @@ class WidebandDMResiduals(Residuals):
                 # cancel out in the weighted sum.
                 if self.dm_error is None or np.any(self.dm_error == 0):
                     raise ValueError(
-                        "Some DM errors are zero - cannot calculate the"
-                        " weighted residuals."
+                        "Some DM errors are zero - cannot calculate the "
+                        "weighted residuals."
                     )
-                w = 1.0 / (self.dm_error ** 2)
-                wm = (resids * w).sum() / w.sum()
+                wm = np.average(resids, weights=1.0 / (self.dm_error ** 2))
                 resids -= wm
         return resids
 
@@ -512,7 +512,7 @@ class WidebandDMResiduals(Residuals):
         else:
             try:
                 return ((self.resids / data_errors) ** 2.0).sum().decompose().value
-            except:
+            except ValueError:
                 return ((self.resids / data_errors) ** 2.0).sum().decompose()
 
     def rms_weighted(self):
@@ -530,8 +530,8 @@ class WidebandDMResiduals(Residuals):
     def get_dm_data(self):
         """Get the independent measured DM data from TOA flags.
 
-        Return
-        ------
+        Returns
+        -------
         valid_dm: `numpy.ndarray`
             Independent measured DM data from TOA line. It only returns the DM
             values that is present in the TOA flags.
@@ -539,21 +539,19 @@ class WidebandDMResiduals(Residuals):
         valid_error: `numpy.ndarray`
             The error associated with DM values in the TOAs.
 
-        valide_index: list
+        valid_index: list
             The TOA with DM data index.
         """
         dm_data, valid_data = self.toas.get_flag_value("pp_dm")
         dm_error, valid_error = self.toas.get_flag_value("pp_dme")
         if valid_data == []:
             raise ValueError("Input TOA object does not have wideband DM values")
-        if valid_error == []:
-            raise ValueError("Input TOA object does not have wideband DM errors")
+        # Check valid error, if an error is none, change it to zero
+        if valid_data != valid_error:
+            raise ValueError("Input TOA object' DM data and DM errors do not match.")
         valid_dm = np.array(dm_data)[valid_data]
         valid_error = np.array(dm_error)[valid_error]
-        # Check valid error, if an error is none, change it to zero
-        if len(valid_dm) != len(valid_error):
-            raise ValueError("Input TOA object' DM data and DM errors do not match.")
-        return valid_dm * self.unit, valid_error * self.unit
+        return valid_dm * self.unit, valid_error * self.unit, valid_data
 
     def update_model(self, new_model, **kwargs):
         """Up date DM models from a new PINT timing model

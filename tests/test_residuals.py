@@ -2,17 +2,17 @@
 """
 
 import os
-import pytest
-import numpy as np
 
 import astropy.units as u
+import numpy as np
+import pytest
+from pinttestdata import datadir
 
 from pint.models import get_model
-from pint.toa import get_TOAs
-from pint.residuals import Residuals, CombinedResiduals, WidebandTOAResiduals
-from pint.utils import weighted_mean
-from pinttestdata import datadir
 from pint.models.dispersion_model import Dispersion
+from pint.residuals import CombinedResiduals, Residuals, WidebandTOAResiduals
+from pint.toa import get_TOAs
+from pint.utils import weighted_mean
 
 os.chdir(datadir)
 
@@ -28,7 +28,7 @@ class TestResidualBuilding:
 
         # Test no mean subtraction
         phase_res_nomean = Residuals(
-            toas=self.toa, model=self.model, residual_type="toa", subtract_mean=False,
+            toas=self.toa, model=self.model, residual_type="toa", subtract_mean=False
         )
         assert len(phase_res_nomean.resids) == self.toa.ntoas
         assert phase_res.resids.unit == phase_res.unit
@@ -52,12 +52,12 @@ class TestResidualBuilding:
 
         # Test no mean subtraction
         dm_res_nomean = Residuals(
-            toas=self.toa, model=self.model, residual_type="dm", subtract_mean=False,
+            toas=self.toa, model=self.model, residual_type="dm", subtract_mean=True
         )
         assert len(dm_res_nomean.resids) == self.toa.ntoas
-        weight = 1.0 / (dm_res_nomean.dm_error ** 2)
-        wm = (dm_res_nomean.resids * weight).sum() / weight.sum()
-        assert np.all(dm_res_nomean.resids - wm == dm_res.resids)
+        weight = 1.0 / (dm_res.dm_error ** 2)
+        wm = np.average(dm_res.resids, weights=weight)
+        assert np.all(dm_res.resids - wm == dm_res_nomean.resids)
         dm_res_noweight = Residuals(
             toas=self.toa,
             model=self.model,
@@ -65,9 +65,7 @@ class TestResidualBuilding:
             subtract_mean=True,
             use_weighted_mean=False,
         )
-        assert np.all(
-            dm_res_nomean.resids - dm_res_nomean.resids.mean() == dm_res_noweight.resids
-        )
+        assert np.all(dm_res.resids - dm_res.resids.mean() == dm_res_noweight.resids)
 
     def test_combined_residuals(self):
         phase_res = Residuals(toas=self.toa, model=self.model)
