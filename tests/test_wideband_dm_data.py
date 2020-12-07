@@ -50,21 +50,22 @@ class TestDMData:
         for be in all_backends:
             assert all(dm_jump_value[toa_backends == be] == -dm_jump_map[be].quantity)
 
-        r = WidebandTOAResiduals(self.toas, self.model)
+        r = WidebandTOAResiduals(
+            self.toas, self.model, dm_resid_args=dict(subtract_mean=False)
+        )
 
         model2 = deepcopy(self.model)
         for i, be in enumerate(all_backends):
             dm_jump_map[be].value += i + 1
 
-        r2 = WidebandTOAResiduals(self.toas, model2)
+        r2 = WidebandTOAResiduals(
+            self.toas, model2, dm_resid_args=dict(subtract_mean=False)
+        )
 
         delta_dm = (
             r2.residual_objs["dm"].resids_value - r.residual_objs["dm"].resids_value
         )
         delta_dm_intended = np.zeros_like(delta_dm)
         for i, be in enumerate(all_backends):
-            delta_dm_intended[toa_backends == be] = i + 1
+            delta_dm_intended[toa_backends == be] = -(i + 1)
         assert np.allclose(delta_dm, delta_dm_intended)
-
-    def test_dm_noise(self):
-        pass
