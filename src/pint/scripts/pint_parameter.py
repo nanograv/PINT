@@ -3,9 +3,26 @@
 
 import argparse
 import copy
+from collections import OrderedDict
 from pint.models.timing_model import TimingModel, Component
 from pint.utils import get_param_name_map, split_prefixed_name, PrefixError
 
+
+def get_request_info(par, info):
+    """ Get the requested infor from the parameter object.
+
+    Parameter
+    ---------
+    par: `pint.models.Parameter` object
+        The parameter to get information from
+    info: list of strings
+        The request list of information. They should be the parametre attribute
+        name.
+    """
+    result = {'name': par.name, 'type': type(par).__name__}
+    for key in request_info:
+        result[key] = getattr(par, key)
+    return result
 
 if __name__ == "__main__":
 
@@ -18,11 +35,19 @@ if __name__ == "__main__":
                         help="Quarried parameter names.")
     parser.add_argument('-c', '--component', nargs='*', default=None,
                         help="Print parameters from components.")
-    parser.add_argument('-o', '--output', type=str, default="stdout",
+    parser.add_argument('-i', '--info', nargs='*', default=['value',
+                                                            'description',
+                                                            'units',
+                                                            'aliases'],
+                        help="The requested information from parameter.")
+    parser.add_argument('-f', '--format', type=str, default="stdout",
                         help="Output format:\n"
                              "'rst': Sphinx .rst file.\n"
                              "'json': JSON dictionary file.\n "
                              "'stdout': Stand out.")
+    parser.add_argument('-o', '--output', type=str, default=None,
+                        help="Output file path.")
+
 
     args = parser.parse_args()
 
@@ -57,9 +82,7 @@ if __name__ == "__main__":
             else:
                 quarry_components = args.component
 
-    # set up the required info.
-    result = {}
-    info_from_par = ['name', 'description', 'units', 'value', 'aliases']
+
 
     # Get information for all buiting parameters. The result will be a subset
     # of the this result.
@@ -81,83 +104,101 @@ if __name__ == "__main__":
                 cp_obj = all_components[cp]()
                 quarry_params += cp_obj.params
 
-    print(quarry_params)
-
-    # for param in all_params:
-    #     param_entry = param_name_map[param]
-    #     pint_param = param_entry[0]
-    #     # The parameter should be uniquly defined in the
-    #     host_cp = param_entry[1]
-    #     info_entry = {'type': type(param_entry[2]).__name__}
-    #     for ri in required_info:
-    #         info_entry[ri] = getattr(param_entry[2], ri)
-    #     if host_cp in all_info.keys():
-    #         all_info[host_cp].update({pint_param: info_entry})
-    #     else:
-    #         all_info[host_cp] = {pint_param: info_entry}
-
-    # print(param_name_map.keys())
-    #print(prefixed_param)
-
-
-
-
-
-    # Construct the output dictionary
-    out_put = {}
-
+    request_info = args.info
+    result = {}
     # check quarry parameters.
-    for q_param in quarry_params:
-        # First check if the quarry parameter is in the
-        # PINT parameter name space
-        p_builtin = False
-        if q_param in param_name_map.keys(): # The alises should be included
-            param_entry = param_name_map[q_param]
-            pint_param = param_entry[0]
-            cp_name = param_entry[1]
-            # Use copy to aviod over write the original.
-            out_entry = copy.deepcopy(all_info[cp_name][pint_param])
-            p_builtin = True
-        else:
-            # check prefix
-            # First check if the quarried parameter a prefix already
-            if q_param in prefixed_param.keys():
-                example_param = prefixed_param[q_param]
-                index = 1
+    if not parse_comp:
+        for q_param in quarry_params:
+            # First check if the quarry parameter is in the
+            # PINT parameter name space
+            q_param = q_param.upper()
+            p_builtin = False
+            if q_param in param_name_map.keys(): # The alises should be included
+                param_entry = param_name_map[q_param]
+                pint_param = param_entry[0]
+                host_cp = param_entry[1]
+                request_par = param_entry[2]
+                p_builtin = True
             else:
-                try:
-                    prefix, index_str, index = split_prefixed_name(q_param)
-                    example_param = prefixed_param[prefix]
+                # check prefix
+                # First check if the quarried parameter a prefix already
+                if q_param in prefixed_param.keys():
+                    example_param = prefixed_param[q_param]
+                    index = 1
                     p_builtin = True
-                except PrefixError:
-                    continue
+                else:
+                    try:
+                        prefix, index_str, index = split_prefixed_name(q_param)
+                        example_param = prefixed_param[prefix]
+                        p_builtin = True
+                    except PrefixError:
+                        continue
                 # Get the data from the example parameter
                 param_entry = param_name_map[example_param]
-                cp_name = param_entry[1]
+
+                host_cp = param_entry[1]
                 # First get the example param info entry
-                out_entry = copy.deepcopy(all_info[cp_name][example_param])
                 if index > 1:
-                    prefix_par = param_entry[2].new_param(index)
-                    # rewrite the info entry using the new prefix data.
-                    for ri in required_info:
-                        out_entry[ri] = getattr(prefix_par, ri)
+                    request_par = param_entry[2].new_param(index)
+                else:
+                    request_par = param_entry[2]
+
+            if p_builtin:
+                out_entry = get_request_info(request_par, request_info)
+                out_entry.update({'host': host_cp, 'status': True})
+            else:
+                out_entry = {'status': False}
+            result[q_param] = out_entry
+    else:
+        pass
 
 
-        if p_builtin:
-            out_put[q_param] = out_entry
-        else:
-            out_put[q_param] = {}
+    # Out put the result
+    if args.format == 'rst':
+        title_map = OrderedDict()
+        title_map['Name'] = 'name'
+        title_map['Type'] = 'type'
+        title_map['Unit'] = 'units'
+        title_map['Description'] = 'description'
+        title_map['Default Value'] = 'value'
+        title_map['Aliases'] = 'aliases'
+        title_map['Host Components'] = 'host'
+        # title entry
+        title_entry = '   * '
+        for ii, title in enumerate(title_map.keys()):
+            if ii == 0:
+                pad = '- '
+            else:
+                pad = '     - '
+            title_entry += pad + title + '\n'
+        # parameter entries
+        param_entries = ''
+        result_list = list(result.items())
+        result_list.sort()
+        for pp in result_list:
+            entries = '   * '
+            for ii, info in enumerate(title_map.values()):
+                if ii == 0:
+                    pad = '- '
+                else:
+                    pad = '     - '
+                if isinstance(pp[1][info], list):
+                    out_info = ', '.join(pp[1][info])
+                else:
+                    out_info = str(pp[1][info])
+                entries += pad + out_info + '\n'
+            param_entries += entries
+        table = title_entry + param_entries
+
+        header = (".. list-table::\n"
+                  "   :widths: 20 80\n"
+                  "   :header-rows: 1\n\n\n")
+        out_str = header+ table
 
 
-
-
-    #print(out_put['F0']['units'])
-
-    # TODO Fix the out put of prefix and mask parameter.
-    # TODO Fix the parameter input and componenet input conflict
-    # parameter has 'all', component do not have it.
-    # If the parameter is give, component will not display
-    # If the compoent is give, it will display all the parameters from that comp
-    # Identify thi e format
-    # if args.format == 'rst':
-    #    pass
+    if args.output is None:
+        print(out_str)
+    else:
+        f = open(args.output, 'w')
+        f.write(out_str)
+        f.close()
