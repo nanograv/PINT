@@ -1,18 +1,64 @@
 """ Various of tests on the wideband DM data
 """
 
+import io
 import os
-import numpy as np
-import pytest
 from copy import deepcopy
 
-from pint.models import get_model
-from pint.toa import get_TOAs
+import astropy.units as u
+import numpy as np
+import pytest
+from astropy.time import TimeDelta
 from pinttestdata import datadir
-from pint.residuals import WidebandTOAResiduals
 
+from pint.models import get_model
+from pint.residuals import Residuals, WidebandTOAResiduals
+from pint.toa import get_TOAs
 
 os.chdir(datadir)
+
+
+par = """
+PSR J1234+5678
+ELAT 0
+ELONG 0
+F0 1
+DM 10
+PEPOCH 57000
+"""
+
+tim = """
+FORMAT 1
+fake 999999 57000 1 @
+fake 999999 57001 1 @
+fake 1400 57002 1 ao
+fake 1400 57003 1 ao
+fake 1400 57004 1 ao -fe L-wide -pp_dm 20 -pp_dme 1
+fake 1400 57005 1 ao -fe L-wide -pp_dm 20 -pp_dme 1
+fake 1400 57006 1 ao -fe RCVR1_2 -pp_dm 30 -pp_dme 1
+fake 1400 57007 1 ao -fe RCVR1_2 -pp_dm 30 -pp_dme 1
+"""
+
+
+@pytest.fixture
+def wb_model(tmpdir):
+    parfile = tmpdir / "file.par"
+    with open(parfile, "wt") as f:
+        f.write(par)
+    return get_model(str(parfile))
+
+
+@pytest.fixture
+def wb_toas(wb_model):
+    toas = get_TOAs(io.StringIO(tim))
+    for i in range(9):
+        r = Residuals(toas, wb_model)
+        if np.all(r.time_resids < 1 * u.ns):
+            break
+        toas.adjust_TOAs(TimeDelta(-r.time_resids))
+    else:
+        raise ValueError
+    return toas
 
 
 class TestDMData:
@@ -69,3 +115,9 @@ class TestDMData:
         for i, be in enumerate(all_backends):
             delta_dm_intended[toa_backends == be] = -(i + 1)
         assert np.allclose(delta_dm, delta_dm_intended)
+
+
+def test_wideband_residuals(wb_model, wb_toas):
+    r = WidebandTOAResiduals(wb_toas, wb_model, dm_resid_args=dict(subtract_mean=False))
+    assert len(r.residual_objs["toa"].time_resids) == len(wb_toas)
+    assert len(r.residual_objs["dm"].dm_data) < len(wb_toas)

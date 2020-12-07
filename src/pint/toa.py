@@ -340,8 +340,11 @@ def _parse_TOA_line(line, fmt="Unknown"):
         fields = line.split()
         d["name"] = fields[0]
         d["freq"] = float(fields[1])
-        ii, ff = fields[2].split(".")
-        MJD = (int(ii), float("0." + ff))
+        if "." in fields[2]:
+            ii, ff = fields[2].split(".")
+            MJD = (int(ii), float("0." + ff))
+        else:
+            MJD = (int(fields[2]), 0.0)
         d["error"] = float(fields[3])
         d["obs"] = get_observatory(fields[4].upper()).name
         # All the rest should be flags
@@ -912,6 +915,8 @@ class TOAs(object):
             self.toas = toalist
 
         if not hasattr(self, "table"):
+            if not self.toas:
+                raise ValueError("No TOAs found!")
             mjds = self.get_mjds(high_precision=True)
             # The table is grouped by observatory
             self.table = table.Table(
@@ -1717,8 +1722,8 @@ class TOAs(object):
 
         Parameters
         ----------
-        filename : str
-            The name of the file to open.
+        filename : str or file-like object
+            The name of the file to open, or an open file to read from.
         process_includes : bool, optional
             If true, obey INCLUDE directives in the file and read other
             files.
