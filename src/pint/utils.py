@@ -27,6 +27,7 @@ __all__ = [
     "has_astropy_unit",
     "PrefixError",
     "split_prefixed_name",
+    "get_param_name_map",
     "taylor_horner",
     "taylor_horner_deriv",
     "open_or_use",
@@ -297,6 +298,52 @@ def split_prefixed_name(name):
     else:
         raise PrefixError("Unrecognized prefix name pattern '%s'." % name)
     return prefix_part, index_part, int(index_part)
+
+
+def get_param_name_map(components):
+    """ Get the builting parameter name mapping, including the aliases and the
+    prefix mapping.
+
+    Parameter
+    ---------
+    components: dict
+        The host components of the mapping parameters.
+        {component name: component class}
+
+    Return
+    ------
+    param_name_map: dict
+        The parameter name map including the aliase --> parameter defined name
+        mapping.
+    defined_params: list
+        The PINT defined name/internal parameter name
+    prefixed_param: dict
+        The prefix mapping for the prefixed parmeters.
+    """
+    defined_params = []
+    param_name_map = {}
+    prefixed_param = {}
+    for cp_name, cp_cls in components.items():
+        cp = cp_cls()
+        for param in cp.params:
+            # Many model components are inherited from other components,
+            # We will have to avoid calling the same parameter mulitple times.
+            if param not in defined_params:
+                defined_params.append(param)
+                par = getattr(cp, param)
+                if par.is_prefix:
+                    prefixed_param[par.prefix] = param
+                # If one parameter does not have aliases,
+                # Take the parameter name as key. If has aliases, also take
+                # each aliase as the key.
+                param_name_map[param] = (param, [cp_name,], par)
+                for ali in par.aliases:
+                    param_name_map[ali] = (param, [cp_name,], par)
+            else:
+                param_name_map[param][1].append(cp_name)
+                for ali in param_name_map[param][2].aliases:
+                    param_name_map[ali][1].append(cp_name)
+    return param_name_map, defined_params, prefixed_param
 
 
 def taylor_horner(x, coeffs):
