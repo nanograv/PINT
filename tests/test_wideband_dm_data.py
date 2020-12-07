@@ -25,6 +25,7 @@ ELONG 0
 F0 1
 DM 10
 PEPOCH 57000
+DMJUMP -fe L-wide 0
 """
 
 tim = """
@@ -35,8 +36,8 @@ fake 1400 57002 1 ao
 fake 1400 57003 1 ao
 fake 1400 57004 1 ao -fe L-wide -pp_dm 20 -pp_dme 1
 fake 1400 57005 1 ao -fe L-wide -pp_dm 20 -pp_dme 1
-fake 1400 57006 1 ao -fe RCVR1_2 -pp_dm 30 -pp_dme 1
-fake 1400 57007 1 ao -fe RCVR1_2 -pp_dm 30 -pp_dme 1
+fake 1400 57006 1 ao -fe Rcvr1_2 -pp_dm 30 -pp_dme 1
+fake 1400 57007 1 ao -fe Rcvr1_2 -pp_dm 30 -pp_dme 1
 """
 
 
