@@ -37,8 +37,21 @@ def test_polycos_basic(polyco_file):
     p.eval_phase(mjd)
     p.find_entry(mjd)
 
-    with pytest.raises(ValueError):
-        p.find_entry(200000.0)
+
+def test_find_entry(polyco_file):
+    """Check polycos find the correct entry and out of bounds throws an error."""
+    p = Polycos()
+    p.read_polyco_file(polyco_file)
+
+    assert np.all(p.find_entry(55000) == 0)
+    assert np.all(p.find_entry(55001) == 4)
+
+    ts_2 = np.linspace(55000.3125, 55000.52, 1000)
+    assert np.all(p.find_entry(ts_2) == 2)
+
+    for t in [54999.8, 55000.8, 55001.8, np.linspace(54999, 55002, 1000)]:
+        with pytest.raises(ValueError):
+            _ = p.find_entry(t)
 
 
 def test_read_write_round_trip(tmpdir, polyco_file):

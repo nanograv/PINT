@@ -761,9 +761,7 @@ class Polycos(object):
         entryIndex = self.find_entry(t)
         poly_result = data2longdouble(np.zeros(len(t)))
 
-        dt = (
-            data2longdouble(t) - self.polycoTable[entryIndex]["tmid"]
-        ) * MIN_PER_DAY
+        dt = (data2longdouble(t) - self.polycoTable[entryIndex]["tmid"]) * MIN_PER_DAY
 
         for ii, (tt, eidx) in enumerate(zip(dt, entryIndex)):
             coeffs = self.polycoTable["entry"][eidx].coeffs
