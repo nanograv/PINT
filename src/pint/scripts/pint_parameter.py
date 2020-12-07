@@ -4,7 +4,7 @@
 import argparse
 import copy
 from pint.models.timing_model import TimingModel, Component
-from pint.utils import split_prefixed_name, PrefixError
+from pint.utils import get_param_name_map, split_prefixed_name, PrefixError
 
 
 if __name__ == "__main__":
@@ -16,8 +16,8 @@ if __name__ == "__main__":
                                                  " 'unit', 'value', 'aliases']")
     parser.add_argument('-p', '--parameter', nargs='*', default=['all'],
                         help="Quarried parameter names.")
-    parser.add_argument('-c', '--component', nargs='*', default=['all'],
-                        help="Quarried model component name.")
+    parser.add_argument('-c', '--component', nargs='*', default=None,
+                        help="Print parameters from components.")
     parser.add_argument('-o', '--output', type=str, default="stdout",
                         help="Output format:\n"
                              "'rst': Sphinx .rst file.\n"
@@ -25,6 +25,8 @@ if __name__ == "__main__":
                              "'stdout': Stand out.")
 
     args = parser.parse_args()
+
+
     # Get the all the components map from all lower case name
     #  to real component name.
     all_components = Component.component_types
@@ -33,55 +35,73 @@ if __name__ == "__main__":
         component_name_map[c.lower()] = c
 
     # Set up the parameter name space including the aliases
-    all_params = []
-    param_name_map = {}
-    prefixed_param = {}
-    for cp_name, cp_cls in all_components.items():
-        cp = cp_cls()
-        for param in cp.params:
-            all_params.append(param)
-            par = getattr(cp, param)
-            if par.is_prefix:
-                prefixed_param[par.prefix] = param
-            # If one parameter does not have aliases,
-            # Take the parameter name as key.
-            param_name_map[param] = (param, cp_name, par)
-            for ali in par.aliases:
-                param_name_map[ali] = (param, cp_name, par)
+    param_name_map, all_params, prefixed_param = get_param_name_map(all_components)
+
+    # Check the parameter input.
+    if 'all' in args.parameter:
+        is_all_param = True
+    else:
+        is_all_param = False
+
+    # Check the component input.
+    if args.component is None:
+        parse_comp = False
+    else:
+        if not is_all_param:
+            raise ValueError("Currently only support getting all parameters"
+                             " from requested components.")
+        else:
+            parse_comp = True
+            if 'all' in args.component:
+                quarry_components = list(all_components.keys())
+            else:
+                quarry_components = args.component
 
     # set up the required info.
-    all_info = {}
-    required_info = ['name', 'description', 'units', 'value', 'aliases']
+    result = {}
+    info_from_par = ['name', 'description', 'units', 'value', 'aliases']
 
     # Get information for all buiting parameters. The result will be a subset
     # of the this result.
 
-    for param in all_params:
-        param_entry = param_name_map[param]
-        pint_param = param_entry[0]
-        host_cp = param_entry[1]
-        info_entry = {'type': str(type(param_entry[2]))}
-        for ri in required_info:
-            info_entry[ri] = getattr(param_entry[2], ri)
-        if host_cp in all_info.keys():
-            all_info[host_cp].update({pint_param: info_entry})
+    # When only parse the parameters.
+    if not parse_comp:
+        if is_all_param:
+            quarry_params = all_params
         else:
-            all_info[host_cp] = {pint_param: info_entry}
-
-    print(all_info)
-    print(prefixed_param)
-
-    # Check the component input.
-    if 'all' in args.component:
-        quarry_components = list(all_components.keys())
+            quarry_params = args.parameter
     else:
-        quarry_components = args.component
+        quarry_params = []
+        for qc in quarry_components:
+            if qc.lower() not in component_name_map.keys():
+                raise ValueError("Component `{}` is not recognised by"
+                                 " PINT.".format(qc))
+            else:
+                cp = component_name_map[qc]
+                cp_obj = all_components[cp]()
+                quarry_params += cp_obj.params
 
-    # Check the parameter input.
-    if 'all' in args.parameter:
-        quarry_params = all_params
-    else:
-        quarry_params = args.parameter
+    print(quarry_params)
+
+    # for param in all_params:
+    #     param_entry = param_name_map[param]
+    #     pint_param = param_entry[0]
+    #     # The parameter should be uniquly defined in the
+    #     host_cp = param_entry[1]
+    #     info_entry = {'type': type(param_entry[2]).__name__}
+    #     for ri in required_info:
+    #         info_entry[ri] = getattr(param_entry[2], ri)
+    #     if host_cp in all_info.keys():
+    #         all_info[host_cp].update({pint_param: info_entry})
+    #     else:
+    #         all_info[host_cp] = {pint_param: info_entry}
+
+    # print(param_name_map.keys())
+    #print(prefixed_param)
+
+
+
+
 
     # Construct the output dictionary
     out_put = {}
@@ -131,8 +151,7 @@ if __name__ == "__main__":
 
 
 
-
-    print(out_put)
+    #print(out_put['F0']['units'])
 
     # TODO Fix the out put of prefix and mask parameter.
     # TODO Fix the parameter input and componenet input conflict
@@ -140,5 +159,5 @@ if __name__ == "__main__":
     # If the parameter is give, component will not display
     # If the compoent is give, it will display all the parameters from that comp
     # Identify thi e format
-    if args.format == 'rst':
-        pass
+    # if args.format == 'rst':
+    #    pass
