@@ -99,7 +99,7 @@ class Astrometry(DelayComponent):
         rd = dict()
 
         # TODO: Should delay not have units of u.second?
-        delay = self.delay(toas)
+        delay = self._parent.delay(toas)
 
         # TODO: tbl['tdbld'].quantity should have units of u.day
         # NOTE: Do we need to include the delay here?
@@ -235,7 +235,7 @@ class AstrometryEquatorial(Astrometry):
                 raise MissingParameter("Astrometry", p)
         # Check for POSEPOCH
         if self.POSEPOCH.quantity is None:
-            if self.PEPOCH.quantity is None:
+            if self._parent.PEPOCH.quantity is None:
                 raise MissingParameter(
                     "AstrometryEquatorial",
                     "POSEPOCH",
@@ -243,7 +243,7 @@ class AstrometryEquatorial(Astrometry):
                 )
             else:
                 log.warning("POSEPOCH not found; using PEPOCH unless set explicitly!")
-                self.POSEPOCH.quantity = self.PEPOCH.quantity
+                self.POSEPOCH.quantity = self._parent.PEPOCH.quantity
 
     def print_par(self):
         result = ""
@@ -304,7 +304,7 @@ class AstrometryEquatorial(Astrometry):
 
     def coords_as_ECL(self, epoch=None, ecl=None):
         """Return the pulsar's ecliptic coordinates as an astropy coordinate object.
-        
+
         The value used for the obliquity of the ecliptic can be controlled with the
         `ecl` keyword, which should be one of the codes listed in `ecliptic.dat`.
         If `ecl` is left unspecified, the global default IERS2010 will be used.
@@ -318,7 +318,7 @@ class AstrometryEquatorial(Astrometry):
 
     def coords_as_GAL(self, epoch=None):
         """Return the pulsar's galactic coordinates as an astropy coordinate object.
-        
+
         """
         pos_icrs = self.get_psr_coords(epoch=epoch)
         return pos_icrs.transform_to(coords.Galactic)
@@ -510,7 +510,7 @@ class AstrometryEcliptic(Astrometry):
                 raise MissingParameter("AstrometryEcliptic", p)
         # Check for POSEPOCH
         if self.POSEPOCH.quantity is None:
-            if self.PEPOCH.quantity is None:
+            if self._parent.PEPOCH.quantity is None:
                 raise MissingParameter(
                     "Astrometry",
                     "POSEPOCH",
@@ -518,7 +518,7 @@ class AstrometryEcliptic(Astrometry):
                 )
             else:
                 log.warning("POSEPOCH not found; using PEPOCH unless set explicitly!")
-                self.POSEPOCH.quantity = self.PEPOCH.quantity
+                self.POSEPOCH.quantity = self._parent.PEPOCH.quantity
 
     def barycentric_radio_freq(self, toas):
         """Return radio frequencies (MHz) of the toas corrected for Earth motion"""
@@ -582,14 +582,14 @@ class AstrometryEcliptic(Astrometry):
 
     def coords_as_GAL(self, epoch=None):
         """Return the pulsar's galactic coordinates as an astropy coordinate object.
-        
+
         """
         pos_ecl = self.get_psr_coords(epoch=epoch)
         return pos_ecl.transform_to(coords.Galactic)
 
     def coords_as_ECL(self, epoch=None, ecl=None):
         """Return the pulsar's ecliptic coordinates as an astropy coordinate object.
-        
+
         The value used for the obliquity of the ecliptic can be controlled with the
         `ecl` keyword, which should be one of the codes listed in `ecliptic.dat`.
         If `ecl` is left unspecified, the model's ECL parameter will be used.

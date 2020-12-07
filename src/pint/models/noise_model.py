@@ -42,6 +42,7 @@ class ScaleToaError(NoiseComponent):
 
     def __init__(self,):
         super(ScaleToaError, self).__init__()
+        self.introduces_correlated_errors = False
         self.add_param(
             maskParameter(
                 name="EFAC",
@@ -181,7 +182,6 @@ class ScaleDmError(NoiseComponent):
     Note
     ----
     Ref: NanoGrav 12.5 yrs wideband data
-
     """
 
     register = True
@@ -189,6 +189,7 @@ class ScaleDmError(NoiseComponent):
 
     def __init__(self,):
         super(ScaleDmError, self).__init__()
+        self.introduces_correlated_errors = False
         self.add_param(
             maskParameter(
                 name="DMEFAC",
@@ -209,9 +210,7 @@ class ScaleDmError(NoiseComponent):
         )
 
         self.dm_covariance_matrix_funcs_component = [self.dm_sigma_scaled_cov_matrix]
-        self.scaled_dm_sigma_funcs += [
-            self.scale_dm_sigma,
-        ]
+        self.scaled_dm_sigma_funcs += [self.scale_dm_sigma]
         self._paired_DMEFAC_DMEQUAD = None
 
     def setup(self):

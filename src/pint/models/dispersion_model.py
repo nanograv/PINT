@@ -39,16 +39,15 @@ class Dispersion(DelayComponent):
         frequency is much larger than plasma frequency.
         """
         # dm delay
-        dmdelay = DM * DMconst / freq ** 2.0
+        dmdelay = DM * DMconst / freq.to(u.MHz) ** 2.0
         return dmdelay.to(u.s)
 
     def dispersion_type_delay(self, toas):
-        tbl = toas.table
         try:
-            bfreq = self.barycentric_radio_freq(toas)
+            bfreq = self._parent.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
-            bfreq = tbl["freq"]
+            bfreq = toas.table["freq"]
 
         dm = self.dm_value(toas)
         return self.dispersion_time_delay(dm, bfreq)
@@ -71,7 +70,7 @@ class Dispersion(DelayComponent):
         else:
             toas_table = toas.table
 
-        dm = np.zeros(len(toas_table)) * self.DM.units
+        dm = np.zeros(len(toas_table)) * self._parent.DM.units
 
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
@@ -91,10 +90,10 @@ class Dispersion(DelayComponent):
             but not used in this function.
         """
         try:
-            bfreq = self.barycentric_radio_freq(toas)
+            bfreq = self._parent.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
-            bfreq = tbl["freq"]
+            bfreq = toas.table["freq"]
         param_unit = getattr(self, param_name).units
         d_dm_d_dmparam = np.zeros(toas.ntoas) * u.pc / u.cm ** 3 / param_unit
         for df in self.dm_deriv_funcs[param_name]:
@@ -249,7 +248,7 @@ class DispersionDM(Dispersion):
         """
         tbl = toas.table
         try:
-            bfreq = self.barycentric_radio_freq(toas)
+            bfreq = self._parent.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
             bfreq = tbl["freq"]
@@ -406,7 +405,7 @@ class DispersionDMX(Dispersion):
             condition, tbl["mjd_float"]
         )
         # Get DMX delays
-        dm = np.zeros(len(tbl)) * self.DM.units
+        dm = np.zeros(len(tbl)) * self._parent.DM.units
         for k, v in select_idx.items():
             dm[v] = getattr(self, k).quantity
         return dm
@@ -433,7 +432,7 @@ class DispersionDMX(Dispersion):
         )
 
         try:
-            bfreq = self.barycentric_radio_freq(toas)
+            bfreq = self._parent.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
             bfreq = tbl["freq"]

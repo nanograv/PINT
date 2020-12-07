@@ -7,11 +7,7 @@ import astropy.units as u
 import numpy
 
 from pint.models.parameter import maskParameter
-from pint.models.timing_model import (
-    DelayComponent,
-    MissingParameter,
-    PhaseComponent,
-)
+from pint.models.timing_model import DelayComponent, MissingParameter, PhaseComponent
 
 
 class DelayJump(DelayComponent):
@@ -108,13 +104,13 @@ class PhaseJump(PhaseComponent):
         F0.
         """
         tbl = toas.table
-        jphase = numpy.zeros(len(tbl)) * (self.JUMP1.units * self.F0.units)
+        jphase = numpy.zeros(len(tbl)) * (self.JUMP1.units * self._parent.F0.units)
         for jump in self.jumps:
             jump_par = getattr(self, jump)
             mask = jump_par.select_toa_mask(toas)
             # NOTE: Currently parfile jump value has opposite sign with our
             # phase calculation.
-            jphase[mask] += jump_par.quantity * self.F0.quantity
+            jphase[mask] += jump_par.quantity * self._parent.F0.quantity
         return jphase
 
     def d_phase_d_jump(self, toas, jump_param, delay):
@@ -122,8 +118,8 @@ class PhaseJump(PhaseComponent):
         jpar = getattr(self, jump_param)
         d_phase_d_j = numpy.zeros(len(tbl))
         mask = jpar.select_toa_mask(toas)
-        d_phase_d_j[mask] = self.F0.value
-        return (d_phase_d_j * self.F0.units).to(1 / u.second)
+        d_phase_d_j[mask] = self._parent.F0.value
+        return (d_phase_d_j * self._parent.F0.units).to(1 / u.second)
 
     def print_par(self):
         result = ""
@@ -138,7 +134,7 @@ class PhaseJump(PhaseComponent):
 
     def get_jump_param_objects(self):
         """
-        Returns a list of the maskParameter objects representing the jumps 
+        Returns a list of the maskParameter objects representing the jumps
         in this PhaseJump object.
         """
         jump_obs = [getattr(self, jump) for jump in self.jumps]
