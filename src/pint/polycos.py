@@ -38,6 +38,8 @@ __all__ = [
     "Polycos",
 ]
 
+MIN_PER_DAY = (1 * u.day).to_value(u.min)
+
 
 class PolycoEntry:
     """One Polyco entry.
@@ -64,7 +66,7 @@ class PolycoEntry:
 
     def __init__(self, tmid, mjdspan, rph_int, rph_frac, f0, ncoeff, coeffs):
         self.tmid = data2longdouble(tmid) * u.day
-        self.mjdspan = data2longdouble(mjdspan / 1440.0) * u.day
+        self.mjdspan = data2longdouble(mjdspan / MIN_PER_DAY) * u.day
         self.tstart = self.tmid - (self.mjdspan / 2)
         self.tstop = self.tmid + (self.mjdspan / 2)
         self.rphase = Phase(rph_int, rph_frac)
@@ -101,7 +103,7 @@ class PolycoEntry:
 
     def evalabsphase(self, t):
         """Return the phase at time t, computed with this polyco entry"""
-        dt = (data2longdouble(t) - self.tmid.value) * data2longdouble(1440.0)
+        dt = (data2longdouble(t) - self.tmid.value) * MIN_PER_DAY
         # Compute polynomial by factoring out the dt's
         phase = Phase(
             self.coeffs[self.ncoeff - 1]
@@ -122,7 +124,7 @@ class PolycoEntry:
 
     def evalfreq(self, t):
         """Return the freq at time t, computed with this polyco entry"""
-        dt = (data2longdouble(t) - self.tmid.value) * data2longdouble(1440.0)
+        dt = (data2longdouble(t) - self.tmid.value) * MIN_PER_DAY
         s = data2longdouble(0.0)
         for i in range(1, self.ncoeff):
             s += data2longdouble(i) * self.coeffs[i] * dt ** (i - 1)
@@ -131,7 +133,7 @@ class PolycoEntry:
 
     def evalfreqderiv(self, t):
         """ Return the frequency derivative at time t."""
-        dt = (data2longdouble(t) - self.tmid.value) * data2longdouble(1440.0)
+        dt = (data2longdouble(t) - self.tmid.value) * MIN_PER_DAY
         s = data2longdouble(0.0)
         for i in range(2, self.ncoeff):
             # Change to long double
@@ -533,12 +535,12 @@ class Polycos(object):
         if numNodes < ncoeff:
             numNodes = ncoeff + 1
 
-        mjdSpan = data2longdouble(segLength / 1440.0)
+        mjdSpan = data2longdouble(segLength / MIN_PER_DAY)
         # Generate "nice" MJDs for consistency with what tempo2 does
         tmids = np.arange(
             int(mjdStart * 24) * 60, int(mjdEnd * 24) * 60 + segLength, segLength
         )
-        tmids = data2longdouble(tmids) / 1440.0
+        tmids = data2longdouble(tmids) / MIN_PER_DAY
 
         # generate the ploynomial coefficents
         if method == "TEMPO":
@@ -571,7 +573,7 @@ class Polycos(object):
                 toas = toa.get_TOAs_list(toaList)
 
                 ph = model.phase(toas)
-                dt = (nodes - tmid) * 1440.0
+                dt = (nodes - tmid) * MIN_PER_DAY
                 rdcPhase = ph - refPhase
                 rdcPhase = rdcPhase.int - (dt * model.F0.value * 60.0) + rdcPhase.frac
                 dtd = dt.astype(float)  # Truncate to double
@@ -581,7 +583,7 @@ class Polycos(object):
                 date, hms = Time(tmid, format="mjd", scale="utc").iso.split()
                 yy, mm, dd = date.split("-")
                 date = dd + "-" + MONTHS[int(mm) - 1] + "-" + yy[-2:]
-                hms = data2longdouble(hms.replace(":", ""))
+                hms = float(hms.replace(":", ""))
 
                 entry = PolycoEntry(
                     tmid,
@@ -764,7 +766,7 @@ class Polycos(object):
 
         dt = (
             data2longdouble(t) - self.polycoTable[entryIndex]["tmid"]
-        ) * data2longdouble(1440.0)
+        ) * MIN_PER_DAY
 
         for ii, (tt, eidx) in enumerate(zip(dt, entryIndex)):
             coeffs = self.polycoTable["entry"][eidx].coeffs
