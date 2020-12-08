@@ -58,7 +58,7 @@ class SpecialLocation(Observatory):
         aliases=None,
         include_gps=True,
         include_bipm=True,
-        bipm_version=bipm_default
+        bipm_version=bipm_default,
     ):
         # GPS corrections not implemented yet
         self.include_gps = include_gps
@@ -198,36 +198,6 @@ class GeocenterObs(SpecialLocation):
     def posvel(self, t, ephem):
         return objPosVel_wrt_SSB("earth", t, ephem)
 
-
-class SpacecraftObs(SpecialLocation):
-    """ An observatory on a spacecraft with position tabulated via external resources.
-    """
-
-    def __init__(self,name):
-        self._geocenter = EarthLocation.from_geocentric(0.0 * u.m, 0.0 * u.m, 0.0 * u.m)
-        super(SpacecraftObs, self).__init__(name=name)
-
-    @property
-    def timescale(self):
-        return "tt"
-
-    @property
-    def tempo_code(self):
-        return None
-
-    def earth_location_itrf(self, time=None):
-        return self._geocenter
-
-    def _get_TDB_default(self, t, ephem=None, grp=None):
-        # Add in correction term to t.tdb equal to r.v / c^2
-        vel = objPosVel_wrt_SSB("earth", t, ephem).vel
-        pos = self.get_gcrs(t, ephem=ephem, grp=grp)
-        dnom = const.c * const.c
-
-        corr = ((pos[0] * vel[0] + pos[1] * vel[1] + pos[2] * vel[2]) / dnom).to(u.s)
-        log.debug("\tTopocentric Correction:\t%s" % corr)
-
-        return t.tdb + corr
 
 class T2SpacecraftObs(SpecialLocation):
     """An observatory with position tabulated following Tempo2 convention.
