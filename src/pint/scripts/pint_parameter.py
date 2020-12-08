@@ -148,7 +148,7 @@ if __name__ == "__main__":
                 else:
                     try:
                         prefix, index_str, index = split_prefixed_name(q_param)
-                        example_param = prefixed_param[prefix]
+                        example_param = prefixed_param[prefix][0]
                         p_builtin = True
                     except PrefixError:
                         continue
