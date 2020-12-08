@@ -36,20 +36,20 @@ fake 999999 57000 1 @
 fake 999999 57001 1 @
 fake 1400 57002 1 ao
 fake 1400 57003 1 ao
-fake 1400 57004 1 ao -fe L-wide -pp_dm 20 -pp_dme 1
-fake 1400 57005 1 ao -fe L-wide -pp_dm 20 -pp_dme 1
-fake 1400 57006 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1
-fake 1400 57007 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1
+fake 1400 57004 1 ao -fe L-wide -pp_dm 20 -pp_dme 1e-6
+fake 1400 57005 1 ao -fe L-wide -pp_dm 20 -pp_dme 1e-6
+fake 1400 57006 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1e-6
+fake 1400 57007 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1e-6
 """
 
 tim_all = """
 FORMAT 1
-fake 1400 57002 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1
-fake 1400 57003 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1
-fake 1400 57004 1 ao -fe L-wide -pp_dm 20 -pp_dme 1
-fake 1400 57005 1 ao -fe L-wide -pp_dm 20 -pp_dme 1
-fake 1400 57006 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1
-fake 1400 57007 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1
+fake 1400 57002 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1e-6
+fake 1400 57003 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1e-6
+fake 1400 57004 1 ao -fe L-wide -pp_dm 20 -pp_dme 1e-6
+fake 1400 57005 1 ao -fe L-wide -pp_dm 20 -pp_dme 1e-6
+fake 1400 57006 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1e-6
+fake 1400 57007 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1e-6
 """
 
 
@@ -169,6 +169,16 @@ def test_wideband_residuals_dmjump(wb_model, wb_toas):
     )
 
 
+def test_wideband_residuals_dof(wb_model, wb_toas_all):
+    wb_model.free_params = ["DMJUMP"]
+    r = WidebandTOAResiduals(
+        wb_toas_all, wb_model, dm_resid_args=dict(subtract_mean=False)
+    )
+    assert r.dof == 12 - 2
+    assert_allclose(r.chi2, 2e14)
+    assert_allclose(r.reduced_chi2, r.chi2 / r.dof)
+
+
 @pytest.mark.xfail(reason="All TOAs must have DMs, currently")
 def test_wideband_fit_dmjump(wb_model, wb_toas):
     wb_model.free_params = ["DMJUMP1"]
@@ -181,4 +191,5 @@ def test_wideband_fit_dmjump_all(wb_model, wb_toas_all):
     wb_model.free_params = ["DMJUMP1"]
     fitter = WidebandTOAFitter(wb_toas_all, wb_model)
     fitter.fit_toas()
-    assert_allclose(fitter.model.DMJUMP1.value, 10)
+    print(fitter.print_summary())
+    assert_allclose(fitter.model.DMJUMP1.value, -10, atol=1e-3)
