@@ -14,7 +14,7 @@ import pint.fermi_toas as fermi
 import pint.models
 import pint.toa as toa
 from pint.mcmc_fitter import CompositeMCMCFitter
-from pint.observatory.fermi_obs import FermiObs
+from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.sampler import EmceeSampler
 from pint.scripts.event_optimize import read_gaussfitfile
 
@@ -229,8 +229,8 @@ def main(argv=None):
     parfile = args.parfile
 
     if args.ft2 is not None:
-        # Instantiate FermiObs once so it gets added to the observatory registry
-        FermiObs(name="Fermi", ft2name=args.ft2)
+        # Instantiate Fermi observatory once so it gets added to the observatory registry
+        get_satellite_observatory("Fermi", args.ft2)
 
     nwalkers = args.nwalkers
     burnin = args.burnin

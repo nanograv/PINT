@@ -15,7 +15,7 @@ import pint.toa as toa
 from pint.eventstats import h2sig, hmw
 from pint.fermi_toas import load_Fermi_TOAs
 from pint.fits_utils import read_fits_event_mjds_tuples
-from pint.observatory.fermi_obs import FermiObs
+from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.plot_utils import phaseogram
 from pint.pulsar_mjd import Time
 
@@ -85,8 +85,8 @@ def main(argv=None):
         tc = SkyCoord(modelin.RAJ.quantity, modelin.DECJ.quantity, frame="icrs")
 
     if args.ft2 is not None:
-        # Instantiate FermiObs once so it gets added to the observatory registry
-        FermiObs(name="Fermi", ft2name=args.ft2)
+        # Instantiate Fermi observatory once so it gets added to the observatory registry
+        get_satellite_observatory("Fermi", args.ft2)
 
     # Read event file and return list of TOA objects
     maxmjd = np.inf if (args.maxMJD is None) else float(args.maxMJD)

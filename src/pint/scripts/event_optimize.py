@@ -26,7 +26,7 @@ from pint.models.priors import (
     UniformBoundedRV,
     UniformUnboundedRV,
 )
-from pint.observatory.fermi_obs import FermiObs
+from pint.observatory.satellite_obs import get_satellite_observatory
 
 __all__ = ["read_gaussfitfile", "marginalize_over_phase", "main"]
 # log.setLevel('DEBUG')
@@ -512,8 +512,8 @@ def main(argv=None):
     weightcol = args.weightcol
 
     if args.ft2 is not None:
-        # Instantiate FermiObs once so it gets added to the observatory registry
-        FermiObs(name="Fermi", ft2name=args.ft2)
+        # Instantiate Fermi observatory once so it gets added to the observatory registry
+        get_satellite_observatory("Fermi", args.ft2)
 
     nwalkers = args.nwalkers
     burnin = args.burnin
