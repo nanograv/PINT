@@ -301,8 +301,9 @@ def split_prefixed_name(name):
 
 
 def get_param_name_map(components):
-    """ Get the builting parameter name mapping, including the aliases and the
-    prefix mapping.
+    """Get the builting parameter name mapping between the parameter aliases/
+    prefix and the parameter defined name. 
+    aliases and prefixes.  
 
     Parameter
     ---------
@@ -313,10 +314,9 @@ def get_param_name_map(components):
     Return
     ------
     param_name_map: dict
-        The parameter name map including the aliase --> parameter defined name
-        mapping.
+        The parameter's aliase --> parameter's PINT defined name mapping.
     defined_params: list
-        The PINT defined name/internal parameter name
+        The PINT defined name/internal parameter name.
     prefixed_param: dict
         The prefix mapping for the prefixed parmeters.
     """
@@ -332,7 +332,10 @@ def get_param_name_map(components):
                 defined_params.append(param)
                 par = getattr(cp, param)
                 if par.is_prefix:
-                    prefixed_param[par.prefix] = param
+                    if par.prefix not in prefixed_param.keys():
+                        prefixed_param[par.prefix] = [param,]
+                    else:
+                        prefixed_param[par.prefix] += [param,]
                 # If one parameter does not have aliases,
                 # Take the parameter name as key. If has aliases, also take
                 # each aliase as the key.

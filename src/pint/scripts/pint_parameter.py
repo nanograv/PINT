@@ -1,4 +1,4 @@
-""" A script that quarry the PINT built-in parameters. Currently this script
+""" A script that queries the PINT built-in parameters. Currently this script
 only has a limited functionality (Print all parameters in .rst format).
 """
 
@@ -10,14 +10,14 @@ from pint.utils import get_param_name_map, split_prefixed_name, PrefixError
 
 
 def get_request_info(par, info):
-    """ Get the requested infor from the parameter object.
+    """ Get the requested information from the parameter object.
 
     Parameter
     ---------
     par: `pint.models.Parameter` object
         The parameter to get information from
     info: list of strings
-        The request list of information. They should be the parametre attribute
+        The request list of information. They should be the parameter attribute
         name.
     """
     result = {"name": par.name, "type": type(par).__name__}
@@ -29,11 +29,11 @@ def get_request_info(par, info):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description="Output the all parameters in"
+        description="Output all the parameters in"
         "the built-in models."
         "The current output is"
         "['name', 'description',"
-        " 'unit', 'value', 'aliases']"
+        " 'unit', 'value', 'aliases', 'host components']"
     )
     parser.add_argument(
         "-p",
@@ -60,11 +60,9 @@ if __name__ == "__main__":
         "-f",
         "--format",
         type=str,
-        default="stdout",
+        default='rst',
         help="Output format:\n"
         "'rst': Sphinx .rst file.\n"
-        "'json': JSON dictionary file.\n "
-        "'stdout': Stand out.",
     )
     parser.add_argument(
         "-o", "--output", type=str, default=None, help="Output file path."
@@ -100,9 +98,9 @@ if __name__ == "__main__":
         else:
             parse_comp = True
             if "all" in args.component:
-                quarry_components = list(all_components.keys())
+                query_components = list(all_components.keys())
             else:
-                quarry_components = args.component
+                query_components = args.component
 
     # Get information for all buiting parameters. The result will be a subset
     # of the this result.
@@ -110,12 +108,12 @@ if __name__ == "__main__":
     # When only parse the parameters.
     if not parse_comp:
         if is_all_param:
-            quarry_params = all_params
+            query_params = all_params
         else:
-            quarry_params = args.parameter
+            query_params = args.parameter
     else:
-        quarry_params = []
-        for qc in quarry_components:
+        query_params = []
+        for qc in query_components:
             if qc.lower() not in component_name_map.keys():
                 raise ValueError(
                     "Component `{}` is not recognised by" " PINT.".format(qc)
@@ -123,14 +121,14 @@ if __name__ == "__main__":
             else:
                 cp = component_name_map[qc]
                 cp_obj = all_components[cp]()
-                quarry_params += cp_obj.params
+                query_params += cp_obj.params
 
     request_info = args.info
     result = {}
-    # check quarry parameters.
+    # check query parameters.
     if not parse_comp:
-        for q_param in quarry_params:
-            # First check if the quarry parameter is in the
+        for q_param in query_params:
+            # First check if the query parameter is in the
             # PINT parameter name space
             q_param = q_param.upper()
             p_builtin = False
@@ -142,9 +140,9 @@ if __name__ == "__main__":
                 p_builtin = True
             else:
                 # check prefix
-                # First check if the quarried parameter a prefix already
+                # First check if the queried parameter a prefix already
                 if q_param in prefixed_param.keys():
-                    example_param = prefixed_param[q_param]
+                    example_param = prefixed_param[q_param][0]
                     index = 1
                     p_builtin = True
                 else:

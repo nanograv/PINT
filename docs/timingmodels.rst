@@ -11,7 +11,7 @@ of timing model, and the parent ``TimingModel`` object for overall model compone
 storage and managing.
 
 .. _PINT/src/pint/models: https://github.com/nanograv/PINT/tree/master/src/pint/models
-
+:class:`pint.models.timing_model.TimingModel
 
 Supported Parameters
 --------------------
