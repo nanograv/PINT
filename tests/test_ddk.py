@@ -2,6 +2,7 @@
 import logging
 import os
 import unittest
+import pytest
 
 import astropy.units as u
 import numpy as np
@@ -96,6 +97,11 @@ class TestDDK(unittest.TestCase):
         testp = tdu.get_derivative_params(self.modelJ1713)
         for p in testp.keys():
             adf = self.modelJ1713.d_phase_d_param(self.toasJ1713, delay, p)
+    
+    def test_SINI_input(self):
+        self.modelJ1713.SINI.value = 0.9
+        with pytest.raises(AttributeError):
+            self.modelJ1713.validate()
 
 
 if __name__ == "__main__":
