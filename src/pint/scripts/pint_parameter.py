@@ -60,9 +60,8 @@ if __name__ == "__main__":
         "-f",
         "--format",
         type=str,
-        default='rst',
-        help="Output format:\n"
-        "'rst': Sphinx .rst file.\n"
+        default="rst",
+        help="Output format:\n" "'rst': Sphinx .rst file.\n",
     )
     parser.add_argument(
         "-o", "--output", type=str, default=None, help="Output file path."

@@ -333,9 +333,13 @@ def get_param_name_map(components):
                 par = getattr(cp, param)
                 if par.is_prefix:
                     if par.prefix not in prefixed_param.keys():
-                        prefixed_param[par.prefix] = [param,]
+                        prefixed_param[par.prefix] = [
+                            param,
+                        ]
                     else:
-                        prefixed_param[par.prefix] += [param,]
+                        prefixed_param[par.prefix] += [
+                            param,
+                        ]
                 # If one parameter does not have aliases,
                 # Take the parameter name as key. If has aliases, also take
                 # each aliase as the key.
