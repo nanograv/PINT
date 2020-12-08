@@ -168,7 +168,7 @@ if __name__ == "__main__":
                 out_entry = {"status": False}
             result[q_param] = out_entry
     else:
-        pass
+        raise ValueError(" The parameter for components is not supported yet.")
 
     # Out put the result
     if args.format == "rst":
