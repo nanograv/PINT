@@ -102,6 +102,8 @@ class TestDDK(unittest.TestCase):
         self.modelJ1713.SINI.value = 0.9
         with pytest.raises(AttributeError):
             self.modelJ1713.validate()
+        with pytest.raises(AttributeError):
+            _ = mb.get_model("ddk_sini.par")
 
 
 if __name__ == "__main__":
