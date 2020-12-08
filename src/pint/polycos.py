@@ -69,9 +69,9 @@ class PolycoEntry:
         self.mjdspan = data2longdouble(mjdspan / MIN_PER_DAY) * u.day
         self.tstart = self.tmid - (self.mjdspan / 2)
         self.tstop = self.tmid + (self.mjdspan / 2)
-        self.rphase = Phase(rph_int, rph_frac)
         self.f0 = data2longdouble(f0)
         self.ncoeff = ncoeff
+        self.rphase = Phase(rph_int, rph_frac)
         self.coeffs = data2longdouble(coeffs)
 
     def __str__(self):
@@ -341,9 +341,11 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
 
         entry = table_entry["entry"]
         ph = entry.rphase
-        rphase = np.longdouble(ph.int.value[0]) + np.longdouble(ph.frac.value[0])
-        rphstr_frac = "{:.6f}".format(rphase - int(rphase))[1:]
-        rphstr_int = "{:13d}".format(int(rphase))
+        ph_frac = ph.frac[0].value + (ph.frac[0] < 0)
+        excess = ph_frac - np.round(ph_frac, 6)
+
+        rphstr_frac = "{:.6f}".format(np.round(ph_frac, 6))[1:]
+        rphstr_int = "{:13d}".format(int(ph.int[0]) - (ph.frac[0] < 0))
 
         try:
             bin_phase = "{:7.4f}{:9.4f}".format(
@@ -363,8 +365,11 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
             bin_phase,
         )
 
+        coeffs = entry.coeffs
+        coeffs[0] += excess
+
         coeff_block = ""
-        for i, coeff in enumerate(entry.coeffs):
+        for i, coeff in enumerate(coeffs):
             coeff_block += "{:25.17e}".format(coeff)
             if (i + 1) % 3 == 0:
                 coeff_block += "\n"
@@ -513,7 +518,7 @@ class Polycos(object):
             Observing frequency [MHz]
 
         maxha : float optional. Default 12.0
-            Maximum hour angle
+            Maximum hour angle. Only 12.0 is supported for now.
 
         method : string optional ["TEMPO", "TEMPO2", ...] Default TEMPO
             Method to generate polycos. Only the TEMPO method is supported for now.
@@ -530,6 +535,9 @@ class Polycos(object):
         mjdEnd = data2longdouble(mjdEnd)
         segLength = int(segLength)
         obsFreq = float(obsFreq)
+
+        if maxha != 12.0:
+            raise ValueError("Maximum hour angle != 12.0 is not supported.")
 
         # Make sure the number of nodes is bigger than number of coeffs.
         if numNodes < ncoeff:
@@ -560,6 +568,7 @@ class Polycos(object):
                 )
 
                 refPhase = model.phase(toaMid)
+
                 # Create node toas(Time sample using TOA class)
                 toaList = [
                     toa.TOA(

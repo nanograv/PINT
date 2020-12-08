@@ -30,12 +30,11 @@ def test_polycos_basic(polyco_file):
     entry = table["entry"][0]
     print(entry)
 
-    # Test single float - arrays are tested later.
-    mjd = 55000.0
-    p.eval_spin_freq(mjd)
-    p.eval_abs_phase(mjd)
-    p.eval_phase(mjd)
-    p.find_entry(mjd)
+    for mjd in [55000.0, np.array([55000.0, 55001.0])]:
+        p.eval_spin_freq(mjd)
+        p.eval_abs_phase(mjd)
+        p.eval_phase(mjd)
+        p.find_entry(mjd)
 
 
 def test_find_entry(polyco_file):
@@ -69,27 +68,36 @@ def test_read_write_round_trip(tmpdir, polyco_file):
     assert p1 == p2
 
 
-def test_generate_polycos(tmpdir, par_file):
+def test_generate_polycos_maxha_error(par_file):
+    model = get_model(str(par_file))
+    p = Polycos()
+    with pytest.raises(ValueError):
+        p.generate_polycos(model, 55000, 55002, "ao", 144, 12, 400.0, maxha=8)
+
+
+@pytest.mark.parametrize("obs", ["ao", "gbt", "@", "coe"])
+@pytest.mark.parametrize("obsfreq", [1400.0, 400.0])
+@pytest.mark.parametrize("nspan, ncoeff", [(144, 12), (72, 9)])
+def test_generate_polycos(tmpdir, par_file, obs, obsfreq, nspan, ncoeff):
     output_polyco = tmpdir / "B1855_polyco_round_trip_from_par.dat"
+    mjd_start, mjd_end = 55000.0, 55001.0
 
     model = get_model(str(par_file))
 
     p = Polycos()
-    p.generate_polycos(model, 55000, 55002, "ao", 300, 12, 1400.0)
+    p.generate_polycos(model, mjd_start, mjd_end, obs, nspan, ncoeff, obsfreq)
     p.write_polyco_file(output_polyco)
     q = Polycos()
     q.read_polyco_file(output_polyco)
 
-    mjds = np.linspace(55000.0, 55002.0, 11)
+    mjds = np.linspace(mjd_start, mjd_end, 51)
 
-    t = toa.get_TOAs_list([toa.TOA(mjd, obs="ao", freq=1400.0) for mjd in mjds])
+    t = toa.get_TOAs_list([toa.TOA(mjd, obs=obs, freq=obsfreq) for mjd in mjds])
     ph1 = p.eval_abs_phase(mjds)
     ph2 = q.eval_abs_phase(mjds)
     ph3 = model.phase(t)
 
     assert np.allclose(ph1.int.value[0], ph3.int.value[0])
     assert np.allclose(ph1.frac.value[0], ph3.frac.value[0])
-
-    # Loss of precision expected from writing to Polyco from par file.
     assert np.allclose(ph2.int.value[0], ph3.int.value[0])
-    assert np.allclose(ph2.frac.value[0], ph3.frac.value[0], rtol=1e-3)
+    assert np.allclose(ph2.frac.value[0], ph3.frac.value[0])
