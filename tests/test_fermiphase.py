@@ -14,7 +14,7 @@ import pint.models
 import pint.scripts.fermiphase as fermiphase
 import pint.toa as toa
 from pint.fermi_toas import load_Fermi_TOAs
-from pint.observatory.fermi_obs import FermiObs
+from pint.observatory.satellite_obs import get_satellite_observatory
 from pinttestdata import datadir
 
 parfile = os.path.join(datadir, "PSRJ0030+0451_psrcat.par")
@@ -51,13 +51,13 @@ class TestFermiPhase(unittest.TestCase):
         # level by comparison with stored Tempo2 "Fermi plugin" results.
 
         modelin = pint.models.get_model(parfile)
-        FermiObs(name="Fermi", ft2name=ft2file)
+        get_satellite_observatory("Fermi", ft2file)
         tl = load_Fermi_TOAs(eventfileraw, weightcolumn="PSRJ0030+0451")
         # ts = toa.TOAs(toalist=tl)
         ts = toa.get_TOAs_list(
             tl, include_gps=False, include_bipm=False, planets=False, ephem="DE405"
         )
-        iphss, phss = modelin.phase(ts)
+        iphss, phss = modelin.phase(ts, abs_phase=True)
         ph_pint = phss % 1
 
         with fits.open(eventfileraw) as f:
@@ -69,5 +69,8 @@ class TestFermiPhase(unittest.TestCase):
         resids_mus = dphi / modelin.F0.value * 1e6
         # if the "2 mus" problem exists, the scatter in these values will
         # be 4-5 mus, whereas if everything is OK it should be few 100 ns
-        prec = resids_mus.max() - resids_mus.min()
-        self.assertTrue(prec < 0.5)
+        # require range in TOAs to be less than 200ns
+        self.assertTrue((resids_mus.max() - resids_mus.min()) < 0.2)
+        # require absolute phase to be within 500 ns; NB this relies on
+        # GBT clock corrections since the TZR is referenced there
+        self.assertTrue(max(abs(resids_mus)) < 0.5)
