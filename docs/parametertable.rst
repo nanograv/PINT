@@ -39,7 +39,7 @@
    * - CORRECT_TROPOSPHERE
      - boolParameter
      - None
-     - None
+     - Enable Troposphere Delay Model
      - True
      -
      - TroposphereDelay
@@ -333,7 +333,7 @@
    * - K96
      - boolParameter
      - None
-     - None
+     - Flag for Kopeikin binary model proper motion
      - None
      -
      - BinaryDDK
