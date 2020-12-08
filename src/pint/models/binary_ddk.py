@@ -99,7 +99,7 @@ class BinaryDDK(BinaryDD):
                 raise MissingParameter(
                     "DDK", "DDK model needs proper motion parameters."
                 )
-        if self.SINI.quantity is not None: 
-            raise AttributeError("DDK model do not accept `SINI` as input. Please"
-                                 " use `KIN` instead.")
-                 
+        if self.SINI.quantity is not None:
+            raise AttributeError(
+                "DDK model do not accept `SINI` as input. Please" " use `KIN` instead."
+            )
