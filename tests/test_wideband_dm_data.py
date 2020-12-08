@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 from astropy.time import TimeDelta
 from pinttestdata import datadir
+from numpy.testing import assert_allclose
 
 from pint.models import get_model
 from pint.residuals import Residuals, WidebandTOAResiduals
@@ -41,6 +42,16 @@ fake 1400 57006 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1
 fake 1400 57007 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1
 """
 
+tim_all = """
+FORMAT 1
+fake 1400 57002 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1
+fake 1400 57003 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1
+fake 1400 57004 1 ao -fe L-wide -pp_dm 20 -pp_dme 1
+fake 1400 57005 1 ao -fe L-wide -pp_dm 20 -pp_dme 1
+fake 1400 57006 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1
+fake 1400 57007 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1
+"""
+
 
 @pytest.fixture
 def wb_model(tmpdir):
@@ -53,6 +64,19 @@ def wb_model(tmpdir):
 @pytest.fixture
 def wb_toas(wb_model):
     toas = get_TOAs(io.StringIO(tim))
+    for i in range(9):
+        r = Residuals(toas, wb_model)
+        if np.all(r.time_resids < 1 * u.ns):
+            break
+        toas.adjust_TOAs(TimeDelta(-r.time_resids))
+    else:
+        raise ValueError
+    return toas
+
+
+@pytest.fixture
+def wb_toas_all(wb_model):
+    toas = get_TOAs(io.StringIO(tim_all))
     for i in range(9):
         r = Residuals(toas, wb_model)
         if np.all(r.time_resids < 1 * u.ns):
@@ -145,8 +169,16 @@ def test_wideband_residuals_dmjump(wb_model, wb_toas):
     )
 
 
+@pytest.mark.xfail(reason="All TOAs must have DMs, currently")
 def test_wideband_fit_dmjump(wb_model, wb_toas):
     wb_model.free_params = ["DMJUMP1"]
     fitter = WidebandTOAFitter(wb_toas, wb_model)
+    fitter.fit_toas()
+    assert_allclose(fitter.model.DMJUMP1.value, 10)
+
+
+def test_wideband_fit_dmjump_all(wb_model, wb_toas_all):
+    wb_model.free_params = ["DMJUMP1"]
+    fitter = WidebandTOAFitter(wb_toas_all, wb_model)
     fitter.fit_toas()
     assert_allclose(fitter.model.DMJUMP1.value, 10)
