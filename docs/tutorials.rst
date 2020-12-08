@@ -17,3 +17,5 @@ We don't really have any proper tutorials yet. But for the moment, we have a few
    examples/understanding_fitters.ipynb
    examples/Wideband_TOA_walkthrough.ipynb
    examples/build_model_from_scratch.ipynb
+   examples-rendered/paper_validation_example.ipynb
+
