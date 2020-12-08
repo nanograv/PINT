@@ -105,7 +105,7 @@ class TestDDK(unittest.TestCase):
 
     def test_sini_from_par(self):
         with pytest.raises(AttributeError):
-            _ = mb.get_model("ddk_sini.par")
+            mb.get_model("ddk_sini.par")
 
 
 if __name__ == "__main__":
