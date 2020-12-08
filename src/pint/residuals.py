@@ -6,8 +6,8 @@ import warnings
 
 import astropy.units as u
 import numpy as np
-from astropy import log
 from scipy.linalg import LinAlgError
+from astropy import log
 
 from pint.models.dispersion_model import Dispersion
 from pint.phase import Phase
@@ -672,7 +672,7 @@ class WidebandTOAResiduals(CombinedResiduals):
     Parameter
     ---------
     toas: `pint.toa.TOAs` object, optional
-        The input TOAs object. Defualt: None
+        The input TOAs object. Default: None
     model: `pint.models.TimingModel` object, optional
         The input timing model. Default: None
     toa_resid_args: dict, optional
@@ -692,6 +692,14 @@ class WidebandTOAResiduals(CombinedResiduals):
         dm_resid = Residuals(self.toas, self.model, residual_type="dm", **dm_resid_args)
 
         super().__init__([toa_resid, dm_resid])
+
+    @property
+    def toa(self):
+        return self.residual_objs["toa"]
+
+    @property
+    def dm(self):
+        return self.residual_objs["dm"]
 
     @property
     def model(self):

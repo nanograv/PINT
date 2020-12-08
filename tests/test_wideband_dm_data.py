@@ -134,9 +134,7 @@ class TestDMData:
             self.toas, model2, dm_resid_args=dict(subtract_mean=False)
         )
 
-        delta_dm = (
-            r2.residual_objs["dm"].resids_value - r.residual_objs["dm"].resids_value
-        )
+        delta_dm = r2.dm.resids_value - r.dm.resids_value
         delta_dm_intended = np.zeros_like(delta_dm)
         for i, be in enumerate(all_backends):
             delta_dm_intended[toa_backends == be] = -(i + 1)
@@ -145,8 +143,8 @@ class TestDMData:
 
 def test_wideband_residuals(wb_model, wb_toas):
     r = WidebandTOAResiduals(wb_toas, wb_model, dm_resid_args=dict(subtract_mean=False))
-    assert len(r.residual_objs["toa"].time_resids) == len(wb_toas)
-    assert len(r.residual_objs["dm"].dm_data) < len(wb_toas)
+    assert len(r.toa.time_resids) == len(wb_toas)
+    assert len(r.dm.dm_data) < len(wb_toas)
 
 
 def test_wideband_residuals_dmjump(wb_model, wb_toas):
@@ -160,13 +158,7 @@ def test_wideband_residuals_dmjump(wb_model, wb_toas):
     with pytest.raises(AttributeError):
         model.DMJUMP2
     r2 = WidebandTOAResiduals(wb_toas, model, dm_resid_args=dict(subtract_mean=False))
-    assert (
-        0
-        < np.sum(
-            r.residual_objs["dm"].resids_value != r2.residual_objs["dm"].resids_value
-        )
-        < len(r.residual_objs["dm"].resids_value)
-    )
+    assert 0 < np.sum(r.dm.resids_value != r2.dm.resids_value) < len(r.dm.resids_value)
 
 
 def test_wideband_residuals_dof(wb_model, wb_toas_all):

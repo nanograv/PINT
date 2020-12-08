@@ -90,5 +90,5 @@ class TestResidualBuilding:
         wb_res = WidebandTOAResiduals(toas=self.toa, model=self.model)
         assert wb_res.dof == 419
         # Make sure the model object are shared by all individual residual class
-        assert id(wb_res.model) == id(wb_res.residual_objs["toa"].model)
-        assert id(wb_res.model) == id(wb_res.residual_objs["dm"].model)
+        assert wb_res.model is wb_res.toa.model
+        assert wb_res.model is wb_res.dm.model

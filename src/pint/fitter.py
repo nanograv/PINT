@@ -692,16 +692,10 @@ class Fitter(object):
                 }
             else:
                 # Return the dm and time resid values separately
-                resid_rms_test = (
-                    fitter_copy.resids.residual_objs["toa"].time_resids.std().to(u.us)
-                )
-                resid_wrms_test = fitter_copy.resids.residual_objs[
-                    "toa"
-                ].rms_weighted()  # units: us
-                dm_resid_rms_test = fitter_copy.resids.residual_objs["dm"].resids.std()
-                dm_resid_wrms_test = fitter_copy.resids.residual_objs[
-                    "dm"
-                ].rms_weighted()
+                resid_rms_test = fitter_copy.resids.toa.time_resids.std().to(u.us)
+                resid_wrms_test = fitter_copy.resids.toa.rms_weighted()  # units: us
+                dm_resid_rms_test = fitter_copy.resids.dm.resids.std()
+                dm_resid_wrms_test = fitter_copy.resids.dm.rms_weighted()
                 return {
                     "ft": ft,
                     "resid_rms_test": resid_rms_test,
