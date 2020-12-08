@@ -98,10 +98,12 @@ class TestDDK(unittest.TestCase):
         for p in testp.keys():
             adf = self.modelJ1713.d_phase_d_param(self.toasJ1713, delay, p)
 
-    def test_SINI_input(self):
+    def test_sini_from_value(self):
         self.modelJ1713.SINI.value = 0.9
         with pytest.raises(AttributeError):
             self.modelJ1713.validate()
+
+    def test_sini_from_par(self):
         with pytest.raises(AttributeError):
             _ = mb.get_model("ddk_sini.par")
 
