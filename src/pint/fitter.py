@@ -37,8 +37,6 @@ class Fitter(object):
 
     The Fitter also caches a copy of the original model so it can be restored with reset_model()
 
-
-
     Parameters
     ----------
     toas : a pint TOAs instance
@@ -1070,8 +1068,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         return self.fit_data[0]
 
     def make_combined_residuals(self, add_args={}):
-        """ Make the combined residuals between TOA residual and DM residusl
-        """
+        """Make the combined residuals between TOA residual and DM residusl."""
         return pr.WidebandTOAResiduals(
             self.toas,
             self.model,
@@ -1133,8 +1130,10 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             raise ValueError("No method to access data error is provided.")
 
     def scaled_all_sigma(self,):
-        """Scale all data's uncertainty. If the function of scaled_`data`_sigma
-        is not given. It will just return the original data uncertainty.
+        """Scale all data's uncertainty.
+
+        If the function of scaled_`data`_sigma is not given, it will just
+        return the original data uncertainty.
         """
         scaled_sigmas = []
         sigma_units = []

@@ -14,6 +14,7 @@ from pinttestdata import datadir
 from pint.models import get_model
 from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import get_TOAs
+from pint.fitter import WidebandTOAFitter
 
 os.chdir(datadir)
 
@@ -36,8 +37,8 @@ fake 1400 57002 1 ao
 fake 1400 57003 1 ao
 fake 1400 57004 1 ao -fe L-wide -pp_dm 20 -pp_dme 1
 fake 1400 57005 1 ao -fe L-wide -pp_dm 20 -pp_dme 1
-fake 1400 57006 1 ao -fe Rcvr1_2 -pp_dm 30 -pp_dme 1
-fake 1400 57007 1 ao -fe Rcvr1_2 -pp_dm 30 -pp_dme 1
+fake 1400 57006 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1
+fake 1400 57007 1 ao -fe Rcvr1_2 -pp_dm 10 -pp_dme 1
 """
 
 
@@ -142,3 +143,10 @@ def test_wideband_residuals_dmjump(wb_model, wb_toas):
         )
         < len(r.residual_objs["dm"].resids_value)
     )
+
+
+def test_wideband_fit_dmjump(wb_model, wb_toas):
+    wb_model.free_params = ["DMJUMP1"]
+    fitter = WidebandTOAFitter(wb_toas, wb_model)
+    fitter.fit_toas()
+    assert_allclose(fitter.model.DMJUMP1.value, 10)
