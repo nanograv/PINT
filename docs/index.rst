@@ -47,9 +47,6 @@ We try to keep the PINT documentation divided into four categories:
    Descriptions of how PINT works, why certain design choices were made, what
    the underlying concepts are and so forth. This is for users who know more
    or less what to do but want to understand what is going on.
-:ref:`Timing Models`
-   Brief introducion of current built-in timing models. It includes the
-   descriptions of parameters, and references to papers defining each model.
 :ref:`Reference`
    Specific details of how particular things work. This is for users who are
    trying to use PINT and know what function or object or method they need but
