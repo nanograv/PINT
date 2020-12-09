@@ -8,14 +8,13 @@ dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
 """
 from __future__ import absolute_import, division, print_function
 
-import abc
 import collections
 import warnings
 
 import astropy.units as u
 import numpy as np
-from scipy.linalg import LinAlgError
 from astropy import log
+from scipy.linalg import LinAlgError
 
 from pint.models.dispersion_model import Dispersion
 from pint.phase import Phase
@@ -54,13 +53,13 @@ class Residuals:
 
     Parameters
     ----------
-    toas: :class:`pint.toa.TOAs` object, optional
+    toas: :class:`pint.toa.TOAs`, optional
         The input TOAs object. Default: None
-    model: :class:`pint.models.timing_model.TimingModel` object, optinonal
+    model: :class:`pint.models.timing_model.TimingModel`, optinonal
         Input model object. Default: None
     residual_type: str, optional
         The type of the resiudals. Default: 'toa'
-    unit: :class:`astropy.units.Unit` object, optional
+    unit: :class:`astropy.units.Unit`, optional
         The defualt unit of the residuals. Default: u.s
     subtract_mean : bool
         Controls whether mean will be subtracted from the residuals
@@ -638,7 +637,7 @@ class WidebandDMResiduals(Residuals):
 residual_map = {"toa": Residuals, "dm": WidebandDMResiduals}
 
 
-class CombinedResiduals(object):
+class CombinedResiduals:
     """Collect results from different type of residuals.
 
     Parameters
@@ -732,9 +731,9 @@ class WidebandTOAResiduals(CombinedResiduals):
 
     Parameter
     ---------
-    toas: :class:`pint.toa.TOAs` object, optional
+    toas: :class:`pint.toa.TOAs`, optional
         The input TOAs object. Default: None
-    model: :class:`pint.models.timing_model.TimingModel` object, optional
+    model: :class:`pint.models.timing_model.TimingModel`, optional
         The input timing model. Default: None
     toa_resid_args: dict, optional
         The additional arguments(not including toas and model) for TOA residuals.

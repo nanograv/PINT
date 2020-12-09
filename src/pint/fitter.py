@@ -61,23 +61,22 @@ from warnings import warn
 
 import astropy.units as u
 import numpy as np
-import pint.utils
 import scipy.linalg as sl
 import scipy.optimize as opt
 from astropy import log
-from pint.toa import TOAs
-from pint.utils import FTest
-from pint.pint_matrix import (
-    DesignMatrixMaker,
-    CovarianceMatrixMaker,
-    combine_design_matrices_by_quantity,
-    combine_design_matrices_by_param,
-    combine_covariance_matrix,
-)
 
 import pint.residuals as pr
-
+import pint.utils
 from pint.models.parameter import AngleParameter, boolParameter, strParameter
+from pint.pint_matrix import (
+    CovarianceMatrixMaker,
+    DesignMatrixMaker,
+    combine_covariance_matrix,
+    combine_design_matrices_by_param,
+    combine_design_matrices_by_quantity,
+)
+from pint.toa import TOAs
+from pint.utils import FTest
 
 __all__ = ["Fitter", "WLSFitter", "GLSFitter", "WidebandTOAFitter", "PowellFitter"]
 
@@ -158,8 +157,8 @@ class Fitter(object):
                 "fit_toas() has not been run, so pre-fit and post-fit will be the same!"
             )
 
-        from uncertainties import ufloat
         import uncertainties.umath as um
+        from uncertainties import ufloat
 
         # First, print fit quality metrics
         s = "Fitted model using {} method with {} free parameters to {} TOAs\n".format(
