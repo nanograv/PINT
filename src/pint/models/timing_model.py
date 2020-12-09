@@ -1469,18 +1469,15 @@ class TimingModel(object):
         verbosity : string
             Dictates amount of information returned. Options include "max",
             "med", and "min", which have the following results:
-                "max"     - print all lines from both models whether they are fit
-                            or not (note that nodmx will override this); DEFAULT
+                "max"     - print all lines from both models whether they are fit or not (note that nodmx will override this); DEFAULT
                 "med"     - only print lines for parameters that are fit
-                "min"     - only print lines for fit parameters for which
-                            diff_sigma > threshold
-                "check"   - only print significant changes with astropy.log.warning, not
-                            as string (note that all other modes will still print this)
+                "min"     - only print lines for fit parameters for which diff_sigma > threshold
+                "check"   - only print significant changes with astropy.log.warning, not as string (note that all other modes will still print this)
 
         Returns
         -------
         str
-            Human readable comparison, for printing
+            Human readable comparison, for printing.
             Formatted as a five column table with titles of
             PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2
             where Model 1/2 refer to self and othermodel Timing Model objects,
@@ -1491,10 +1488,10 @@ class TimingModel(object):
             if smaller than the second, an asterisk (*) will be appended to the line. Also, astropy
             warnings and info statements will be printed.
 
-        else:
-            Nonetype
-                Prints astropy.log warnings for parameters that have changed significantly
-                and/or have increased in uncertainty.
+        Note
+        ----
+            Prints astropy.log warnings for parameters that have changed significantly
+            and/or have increased in uncertainty.
         """
         import sys
         from copy import deepcopy as cp

@@ -1,4 +1,16 @@
-"""PINT Is Not TEMPO3!"""
+"""PINT Is Not TEMPO3!
+
+This package has many submodules, but useful starting places may be
+:class:`pint.toa.TOAs`, :class:`pint.models.timing_model.TimingModel`, and
+:class:`pint.residuals.Residuals`.
+
+Below you will find only a few objects exported directly from the ``pint``
+module, but also a tree of submodules. The online documentation should also
+provide a usable table of contents.
+
+These docstrings contain reference documentation; for tutorials, explanations,
+or how-to documentation, please see other sections of the online documentation.
+"""
 
 import numpy as np
 import astropy
