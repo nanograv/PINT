@@ -15,25 +15,44 @@ from pint.utils import weighted_mean
 
 __all__ = [
     "Residuals",
-    "WidebandDMResiduals",
-    "residual_map",
-    "CombinedResiduals",
     "WidebandTOAResiduals",
+    "WidebandDMResiduals",
+    "CombinedResiduals",
 ]
 
 
 class Residuals:
-    """Class to compute residuals between TOAs and a TimingModel
+    """Class to compute residuals between TOAs and a TimingModel.
+
+    This class serves to store the results of a comparison between TOAs and a
+    model. It also implements certain basic statistical calculations. This
+    class also serves as a base class providing some infrastructure to support
+    residuals from other kinds of data/model comparison.
+
+    This class provides access to the residuals in both phase (turns) and time
+    (seconds) form through the ``.phase_resids`` and the ``.time_resids``
+    attributes; the ``.resids`` attributes provides either depending on the
+    value of the ``scaled_by_F0`` parameter.
+
+    Uncertainties on these residuals are available in time units using
+    ``.get_data_error()``.
+
+    Attributes
+    ----------
+    phase_resids : :class:`astropy.units.Quantity`
+        Residuals in phase units
+    time_resids : :class:`astropy.units.Quantity`
+        Residuals in time units
 
     Parameters
     ----------
-    toas: `pint.toa.TOAs` object, optional
+    toas: :class:`pint.toa.TOAs` object, optional
         The input TOAs object. Default: None
-    model: `pint.models.TimingModel` object, optinonal
+    model: :class:`pint.models.timing_model.TimingModel` object, optinonal
         Input model object. Default: None
     residual_type: str, optional
         The type of the resiudals. Default: 'toa'
-    unit: `astropy.units.Unit` object, optional
+    unit: :class:`astropy.units.Unit` object, optional
         The defualt unit of the residuals. Default: u.s
     subtract_mean : bool
         Controls whether mean will be subtracted from the residuals
@@ -45,8 +64,8 @@ class Residuals:
         ``pulse_number`` column of the TOAs table to assign pulse numbers. If the
         default, None, is passed, use the pulse numbers if and only if the model has
         parameter TRACK == "-2".
-    scaled_by_FO: bool, optional
-        Controls for rescaling the final residual.
+    scaled_by_F0: bool, optional
+        Controls whether the ``.resids`` attribute is in time (True) or phase (False).
     """
 
     def __new__(
@@ -66,7 +85,7 @@ class Residuals:
             except KeyError:
                 raise ValueError(
                     "'{}' is not a PINT supported residual. Currently "
-                    "support data type are {}".format(
+                    "supported data types are {}".format(
                         residual_type, list(residual_map.keys())
                     )
                 )
@@ -116,7 +135,10 @@ class Residuals:
 
     @property
     def resids(self):
+        """Residuals in time or phase depending on scaled_by_F0."""
         if self.scaled_by_F0:
+            if self.time_resids is None:
+                self.time_resids = self.calc_time_resids()
             return self.time_resids
         else:
             if self.phase_resids is None:
@@ -124,25 +146,35 @@ class Residuals:
             return self.phase_resids
 
     @property
-    def chi2_reduced(self):
-        warnings.warn("Please use reduced_chi2 instead.", DeprecationWarning)
-        return self.reduced_chi2
-
-    @property
-    def chi2(self):
-        """Compute chi-squared as needed and cache the result"""
-        if self._chi2 is None:
-            self._chi2 = self.calc_chi2()
-        assert self._chi2 is not None
-        return self._chi2
-
-    @property
     def resids_value(self):
-        """Get pure value of the residuals use the given base unit."""
+        """Get pure value of the residuals in default unit."""
         if not self.scaled_by_F0:
             return self.resids.to_value(self.unit / u.s)
         else:
             return self.resids.to_value(self.unit)
+
+    def update(self):
+        """Recalculate everything in residuals class after changing model or TOAs"""
+        if self.toas is None or self.model is None:
+            self.phase_resids = None
+            self.time_resids = None
+        if self.toas is None:
+            raise ValueError("No TOAs provided for residuals update")
+        if self.model is None:
+            raise ValueError("No model provided for residuals update")
+
+        self.phase_resids = self.calc_phase_resids()
+        self.time_resids = self.calc_time_resids()
+        self._chi2 = None  # trigger chi2 recalculation when needed
+        self.dof = self.dof
+
+    @property
+    def chi2(self):
+        """Compute chi-squared as needed and cache the result."""
+        if self._chi2 is None:
+            self._chi2 = self.calc_chi2()
+        assert self._chi2 is not None
+        return self._chi2
 
     @property
     def dof(self):
@@ -154,15 +186,29 @@ class Residuals:
                 "calculated correctly in the combined residuals."
             )
         dof = self.toas.ntoas
-
         # Now subtract 1 for the implicit global offset parameter
         # Note that we should do two things eventually
         # 1. Make the offset not be a hidden parameter
         dof -= len(self.model.free_params) + 1
         return dof
 
+    @property
+    def reduced_chi2(self):
+        """Return the weighted reduced chi-squared for the model and toas."""
+        return self.chi2 / self.dof
+
+    @property
+    def chi2_reduced(self):
+        """Reduced chi-squared."""
+        warnings.warn("Please use reduced_chi2 instead.", DeprecationWarning)
+        return self.chi2 / self.dof
+
     def get_data_error(self, scaled=True):
-        """Get data errors.
+        """Get errors on time residuals.
+
+        This returns the uncertainties on the time residuals, optionally scaled
+        by the noise model.
+
         Parameter
         ---------
         scaled: bool, optional
@@ -187,8 +233,46 @@ class Residuals:
         wmean, werr, wsdev = weighted_mean(self.time_resids, w, sdev=True)
         return wsdev.to(u.us)
 
+    def get_PSR_freq(self, modelF0=True):
+        """Return pulsar rotational frequency in Hz.
+
+        Parameters
+        ----------
+        modelF0 : bool, optional
+            If True, simply read the ``F0`` parameter from the model. If False,
+            query the model for the spin period at the time of each TOA.
+
+        Returns
+        -------
+        freq : Quantity
+            Either the single ``F0`` in the model or the spin frequency at the moment of each TOA.
+        """
+        if modelF0:
+            if self.model.F0.units != "Hz":
+                ValueError("F0 units must be Hz")
+            # All residuals require the model pulsar frequency to be defined
+            F0names = ["F0", "nu"]  # recognized parameter names, needs to be changed
+            nF0 = 0
+            for n in F0names:
+                if n in self.model.params:
+                    F0 = getattr(self.model, n).value
+                    nF0 += 1
+            if nF0 == 0:
+                raise ValueError(
+                    "no PSR frequency parameter found; "
+                    + "valid names are %s" % F0names
+                )
+            if nF0 > 1:
+                raise ValueError(
+                    "more than one PSR frequency parameter found; "
+                    + "should be only one from %s" % F0names
+                )
+            return F0 * u.Hz
+        else:
+            return self.model.d_phase_d_toa(self.toas)
+
     def calc_phase_resids(self):
-        """Return timing model residuals in pulse phase."""
+        """Compute timing model residuals in pulse phase."""
 
         # Read any delta_pulse_numbers that are in the TOAs table.
         # These are for PHASE statements, -padd flags, as well as user-inserted phase jumps
@@ -250,35 +334,10 @@ class Residuals:
         return full - mean
 
     def calc_time_resids(self):
-        """Return timing model residuals in time (seconds)."""
+        """Compute timing model residuals in time (seconds)."""
         if self.phase_resids is None:
             self.phase_resids = self.calc_phase_resids()
         return (self.phase_resids / self.get_PSR_freq()).to(u.s)
-
-    def get_PSR_freq(self, modelF0=True):
-        if modelF0:
-            """Return pulsar rotational frequency in Hz. model.F0 must be defined."""
-            if self.model.F0.units != "Hz":
-                ValueError("F0 units must be Hz")
-            # All residuals require the model pulsar frequency to be defined
-            F0names = ["F0", "nu"]  # recognized parameter names, needs to be changed
-            nF0 = 0
-            for n in F0names:
-                if n in self.model.params:
-                    F0 = getattr(self.model, n).value
-                    nF0 += 1
-            if nF0 == 0:
-                raise ValueError(
-                    "no PSR frequency parameter found; "
-                    + "valid names are %s" % F0names
-                )
-            if nF0 > 1:
-                raise ValueError(
-                    "more than one PSR frequency parameter found; "
-                    + "should be only one from %s" % F0names
-                )
-            return F0 * u.Hz
-        return self.model.d_phase_d_toa(self.toas)
 
     def calc_chi2(self, full_cov=False):
         """Return the weighted chi-squared for the model and toas.
@@ -330,34 +389,14 @@ class Residuals:
                 # insure only a pure number returned
                 try:
                     return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum().value
-                except:
+                except ValueError:
                     return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum()
 
-    @property
-    def reduced_chi2(self):
-        """Return the weighted reduced chi-squared for the model and toas."""
-        return self.chi2 / self.dof
-
-    def update(self):
-        """Recalculate everything in residuals class after changing model or TOAs"""
-        if self.toas is None or self.model is None:
-            self.phase_resids = None
-            self.time_resids = None
-        if self.toas is None:
-            raise ValueError("No TOAs provided for residuals update")
-        if self.model is None:
-            raise ValueError("No model provided for residuals update")
-
-        self.phase_resids = self.calc_phase_resids()
-        self.time_resids = self.calc_time_resids()
-        self._chi2 = None  # trigger chi2 recalculation when needed
-        self.dof = self.dof
-
     def ecorr_average(self, use_noise_model=True):
-        """
-        Uses the ECORR noise model time-binning to compute "epoch-averaged"
-        residuals.  Requires ECORR be used in the timing model.  If
-        use_noise_model is true, the noise model terms (EFAC, EQUAD, ECORR) will
+        """Uses the ECORR noise model time-binning to compute "epoch-averaged" residuals.
+
+        Requires ECORR be used in the timing model.  If
+        ``use_noise_model`` is true, the noise model terms (EFAC, EQUAD, ECORR) will
         be applied to the TOA uncertainties, otherwise only the raw
         uncertainties will be used.
 
@@ -373,8 +412,7 @@ class Residuals:
 
           errors         Uncertainty on averaged residuals
 
-          indices        List of lists giving the indices of TOAs in the original
-                         TOA table for each segment
+          indices        List of lists giving the indices of TOAs in the original TOA table for each segment
         """
 
         # ECORR is required
@@ -421,7 +459,30 @@ class Residuals:
 
 
 class WidebandDMResiduals(Residuals):
-    """Residuals for independent DM measurement (i.e. Wideband TOAs)."""
+    """Residuals for independent DM measurement (i.e. Wideband TOAs).
+
+    This class manages the DM residuals from data that includes direct DM
+    measurements associated with the TOAs.
+    :class:`pint.residuals.WidebandTOAResiduals` combines one of these objects
+    with a :class:`pint.residuals.Residuals` object.
+
+    The values of interest are probably best accessed using the ``.resids``
+    property, and the uncertainty using the ``.get_data_error()``.
+
+    Attributes
+    ----------
+    dm_data : :class:`astropy.units.Quantity`
+        The DM data extracted from the TOAs.
+    dm_error : :class:`astropy.units.Quantity`
+        The DM uncertainties extracted from the TOAs.
+
+    Parameters
+    ----------
+    toas : :class:`pint.toa.TOAs`
+        TOAs. They should include DM measurement data.
+    model : :class:`pint.models.timing_model.TimingModel`
+        The timing model.
+    """
 
     def __init__(
         self,
@@ -431,7 +492,6 @@ class WidebandDMResiduals(Residuals):
         unit=u.pc / u.cm ** 3,
         subtract_mean=False,
         use_weighted_mean=True,
-        scaled_by_F0=False,
     ):
 
         self.toas = toas
@@ -443,7 +503,6 @@ class WidebandDMResiduals(Residuals):
         self.base_unit = u.pc / u.cm ** 3
         self.get_model_value = self.model.total_dm
         self.dm_data, self.dm_error, self.relevant_toas = self.get_dm_data()
-        self.scaled_by_F0 = scaled_by_F0
         self._chi2 = None
         self._is_combined = False
 
@@ -530,15 +589,18 @@ class WidebandDMResiduals(Residuals):
     def get_dm_data(self):
         """Get the independent measured DM data from TOA flags.
 
+        This is to extract DM and uncertainty data from its representation in
+        the flags on TOAs.
+
+        FIXME: there should be a ``set_dm_data``  function.
+
         Returns
         -------
         valid_dm: `numpy.ndarray`
             Independent measured DM data from TOA line. It only returns the DM
             values that is present in the TOA flags.
-
         valid_error: `numpy.ndarray`
             The error associated with DM values in the TOAs.
-
         valid_index: list
             The TOA with DM data index.
         """
@@ -569,8 +631,7 @@ residual_map = {"toa": Residuals, "dm": WidebandDMResiduals}
 
 
 class CombinedResiduals(object):
-    """A class provides uniformed API that collects result from different type
-    of residuals.
+    """Collect results from different type of residuals.
 
     Parameters
     ----------
@@ -579,7 +640,7 @@ class CombinedResiduals(object):
 
     Note
     ----
-    Since different type of residuals has different of units. The overall
+    Since different type of residuals has different units, the overall
     residuals will have no units.
     """
 
@@ -627,19 +688,6 @@ class CombinedResiduals(object):
         return chi2
 
     @property
-    def dof(self):
-        raise NotImplementedError(
-            "The combined degree of freedom is ambigous "
-            "for two individual residuals. Please define"
-            "this property in your subclass."
-        )
-
-    @property
-    def reduced_chi2(self):
-        """Return the weighted reduced chi-squared."""
-        return self.chi2 / self.dof
-
-    @property
     def data_error(self):
         errors = []
         for rs in self.residual_objs.values():
@@ -669,11 +717,16 @@ class WidebandTOAResiduals(CombinedResiduals):
     residuals will be used for fitting one timing model. Currently, the DM
     values are stored at the TOA object.
 
+    The TOA and DM residuals are probably best accessed using the ``.toa`` and
+    ``.dm`` properties.
+
+    This class inherits the ``.chi2`` property from :class:`pint.residuals.CombinedResiduals`.
+
     Parameter
     ---------
-    toas: `pint.toa.TOAs` object, optional
+    toas: :class:`pint.toa.TOAs` object, optional
         The input TOAs object. Default: None
-    model: `pint.models.TimingModel` object, optional
+    model: :class:`pint.models.timing_model.TimingModel` object, optional
         The input timing model. Default: None
     toa_resid_args: dict, optional
         The additional arguments(not including toas and model) for TOA residuals.
@@ -695,19 +748,32 @@ class WidebandTOAResiduals(CombinedResiduals):
 
     @property
     def toa(self):
+        """Residuals object containing the TOA residuals."""
         return self.residual_objs["toa"]
 
     @property
     def dm(self):
+        """WidebandDMResiduals object containing the DM residuals."""
         return self.residual_objs["dm"]
 
     @property
     def model(self):
+        """The model used to construct the residuals.
+
+        Modifying this model, even changing its parameters, may have confusing
+        effects. It is probably best to use :func:`copy.deepcopy` to duplicate
+        it before making any changes.
+        """
         return self._model
 
     @property
     def dof(self):
-        """The degree of freedom for the wideband residuals.-am"""
+        """The number of degrees of freedom for the wideband residuals."""
         dof = len(self._combined_resids)
         dof -= len(self.model.free_params) + 1
         return dof
+
+    @property
+    def reduced_chi2(self):
+        """Return the weighted reduced chi-squared."""
+        return self.chi2 / self.dof

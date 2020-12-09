@@ -77,7 +77,7 @@ class TestResidualBuilding:
         assert cb_residuals.unit["toa"] == u.s
         assert cb_residuals.unit["dm"] == u.pc / u.cm ** 3
         assert cb_chi2 == phase_res.chi2 + dm_res.chi2
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(AttributeError):
             cb_residuals.dof
         with pytest.raises(AttributeError):
             cb_residuals.residual_objs["toa"].dof

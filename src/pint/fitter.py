@@ -1,3 +1,58 @@
+"""Objects for managing the procedure of fitting models to TOAs.
+
+The objects defined here can be used to set up a fitting problem and carry out
+the fit, adjust the model, and repeat the fit as necessary.
+
+The primary objects of interest will be :class:`pint.fitter.WLSFitter` for
+basic fitting, :class:`pint.fitter.GLSFitter` for fitting with noise models
+that imply correlated errors, and :class:`pint.fitter.WidebandTOAFitter` for
+TOAs that contain DM information.
+
+Fitters in use::
+
+    >>> fitter = WLSFitter(toas, model)
+    >>> fitter.fit_toas()
+    59.57431562376629118
+    >>> fitter.print_summary()
+    Fitted model using weighted_least_square method with 5 free parameters to 62 TOAs
+    Prefit residuals Wrms = 1090.5802622239905 us, Postfit residuals Wrms = 21.182038012901092 us
+    Chisq = 59.574 for 56 d.o.f. for reduced Chisq of 1.064
+
+    PAR                        Prefit                  Postfit            Units
+    =================== ==================== ============================ =====
+    PSR                           1748-2021E                              None
+    EPHEM                              DE421                              None
+    UNITS                                TDB                              None
+    START                                                         53478.3 d
+    FINISH                                                        54187.6 d
+    POSEPOCH                           53750                              d
+    PX                                     0                              mas
+    RAJ                         17h48m52.75s    17h48m52.8003s +/- 0.00014 hourangle_second
+    DECJ                          -20d21m29s   -20d21m29.3833s +/- 0.033 arcsec
+    PMRA                                   0                              mas / yr
+    PMDEC                                  0                              mas / yr
+    F0                               61.4855          61.485476554373(18) Hz
+    F1                            -1.181e-15            -1.1813(14)×10⁻¹⁵ Hz / s
+    PEPOCH                             53750                              d
+    CORRECT_TROPOSPHERE                    N                              None
+    PLANET_SHAPIRO                         N                              None
+    NE_SW                                  0                              1 / cm3
+    SWM                                    0
+    DM                                 223.9                  224.114(35) pc / cm3
+    DM1                                    0                              pc / (cm3 yr)
+    TZRMJD                           53801.4                              d
+    TZRSITE                                1                              None
+    TZRFRQ                           1949.61                              MHz
+
+    Derived Parameters:
+    Period = 0.01626400340437608 s +/- 4.784091376048965e-15 s
+    Pdot = 3.1248325489308735e-19 +/- 3.8139606793005067e-22
+    Characteristic age = 8.246e+08 yr (braking index = 3)
+    Surface magnetic field = 2.28e+09 G
+    Magnetic field at light cylinder = 4806 G
+    Spindown Edot = 2.868e+33 erg / s (I=1e+45 cm2 g)
+
+"""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import collections
@@ -24,18 +79,31 @@ import pint.residuals as pr
 
 from pint.models.parameter import AngleParameter, boolParameter, strParameter
 
-__all__ = ["Fitter", "PowellFitter", "GLSFitter", "WLSFitter"]
+__all__ = ["Fitter", "WLSFitter", "GLSFitter", "WidebandTOAFitter", "PowellFitter"]
 
 
 class Fitter(object):
-    """Base class for fitter.
+    """Base class for objects encapsulating fitting problems.
 
     The fitting function should be defined as the fit_toas() method.
 
-    Note that the Fitter object makes a deepcopy of the model, so changes to the model
-    will not be noticed after the Fitter has been instantiated!  Use Fitter.model instead.
+    The Fitter object makes a :func:`copy.deepcopy` of the model and stores it
+    in the `.model` attribute. This is the model used for fitting, and it can
+    be modified, for example by freezing or thawing parameters
+    (``fitter.model.F0.frozen = False``). When
+    ``.fit_toas()`` is executed this model will be updated to reflect the
+    results of the fitting process.
 
-    The Fitter also caches a copy of the original model so it can be restored with reset_model()
+    The Fitter also caches a copy of the original model so it can be restored
+    with ``reset_model()``.
+
+    Attributes
+    ----------
+    model : :class:`pint.models.timing_model.TimingModel`
+        The model the fitter is working on. Once ``fit_toas()`` has been run,
+        this model will be modified to reflect the results.
+    model_init : :class:`pint.models.timing_model.TimingModel`
+        The initial, prefit model.
 
     Parameters
     ----------
@@ -43,6 +111,12 @@ class Fitter(object):
         The input toas.
     model : a pint timing model instance
         The initial timing model for fitting.
+    track_mode : str, optional
+        How to handle phase wrapping. This is used when creating
+        :class:`pint.residuals.Residuals` objects, and its meaning is defined there.
+    residuals : :class:`pint.residuals.Residuals`
+        Initial residuals. This argument exists to support an optimization, where
+        ``GLSFitter`` is used to compute ``chi2`` for appropriate Residuals objects.
     """
 
     def __init__(self, toas, model, track_mode=None, residuals=None):
@@ -62,132 +136,12 @@ class Fitter(object):
             self.fitresult = []
         self.method = None
 
-    def reset_model(self):
-        """Reset the current model to the initial model."""
-        self.model = copy.deepcopy(self.model_init)
-        self.update_resids()
-        self.fitresult = []
-
-    def update_resids(self):
-        """Update the residuals.
-
-        Run after updating a model parameter.
-        """
-        self.resids = pr.Residuals(
-            toas=self.toas, model=self.model, track_mode=self.track_mode
-        )
-
-    def get_params_dict(self, which="free", kind="quantity"):
-        """Return a dict mapping parameter names to values.
-
-        See :func:`pint.models.timing_model.TimingModel.get_params_dict`.
-        """
-        return self.model.get_params_dict(which=which, kind=kind)
-
-    def set_fitparams(self, *params):
-        """Update the "frozen" attribute of model parameters. Deprecated."""
-        warn(
-            "This function is confusing and deprecated. Set self.model.free_params instead.",
-            category=DeprecationWarning,
-        )
-        # TODO, maybe reconsider for the input?
-        fit_params_name = []
-        if isinstance(params[0], (list, tuple)):
-            params = params[0]
-        for pn in params:
-            if pn in self.model.params:
-                fit_params_name.append(pn)
-            else:
-                rn = self.model.match_param_aliases(pn)
-                if rn != "":
-                    fit_params_name.append(rn)
-                else:
-                    raise ValueError("Unrecognized parameter {}".format(pn))
-        self.model.fit_params = fit_params_name
-
-    def get_allparams(self):
-        """Return a dict of all param names and values. Deprecated."""
-        warn(
-            "This function is confusing and deprecated. Use self.model.get_params_dict.",
-            category=DeprecationWarning,
-        )
-        return self.model.get_params_dict("all", "quantity")
-
-    def get_fitparams(self):
-        """Return a dict of fittable param names and quantity. Deprecated."""
-        warn(
-            "This function is confusing and deprecated. Use self.model.get_params_dict.",
-            category=DeprecationWarning,
-        )
-        return self.model.get_params_dict("free", "quantity")
-
-    def get_fitparams_num(self):
-        """Return a dict of fittable param names and numeric values. Deprecated."""
-        warn(
-            "This function is confusing and deprecated. Use self.model.get_params_dict.",
-            category=DeprecationWarning,
-        )
-        return self.model.get_params_dict("free", "num")
-
-    def get_fitparams_uncertainty(self):
-        """Return a dict of fittable param names and numeric values. Deprecated."""
-        warn(
-            "This function is confusing and deprecated. Use self.model.get_params_dict.",
-            category=DeprecationWarning,
-        )
-        return self.model.get_params_dict("free", "uncertainty")
-
-    def set_params(self, fitp):
-        """Set the model parameters to the value contained in the input dict.
-
-        See :func:`pint.models.timing_model.TimingModel.set_param_values`.
-        """
-        self.model.set_param_values(fitp)
-
-    def set_param_uncertainties(self, fitp):
-        """Set the model parameters to the value contained in the input dict.
-
-        See :func:`pint.models.timing_model.TimingModel.set_param_uncertainties`.
-        """
-        self.model.set_param_uncertainties(fitp)
-
-    def get_designmatrix(self):
-        return self.model.designmatrix(toas=self.toas, incfrozen=False, incoffset=True)
-
-    def minimize_func(self, x, *args):
-        """Wrapper function for the residual class, meant to be passed to
-        scipy.optimize.minimize. The function must take a single list of input
-        values, x, and a second optional tuple of input arguments.  It returns
-        a quantity to be minimized (in this case chi^2).
-        """
-        self.set_params({k: v for k, v in zip(args, x)})
-        self.update_resids()
-        # Return chi^2
-        return self.resids.chi2
-
     def fit_toas(self, maxiter=None):
+        """Run fitting operation.
+
+        This method needs to be implemented by subclasses.
+        """
         raise NotImplementedError
-
-    def plot(self):
-        """Make residuals plot"""
-        import matplotlib.pyplot as plt
-        from astropy.visualization import quantity_support
-
-        quantity_support()
-        fig, ax = plt.subplots(figsize=(16, 9))
-        mjds = self.toas.get_mjds()
-        ax.errorbar(mjds, self.resids.time_resids, yerr=self.toas.get_errors(), fmt="+")
-        ax.set_xlabel("MJD")
-        ax.set_ylabel("Residuals")
-        try:
-            psr = self.model.PSR
-        except:
-            psr = self.model.PSRJ
-        else:
-            psr = "Residuals"
-        ax.set_title(psr)
-        ax.grid(True)
-        plt.show()
 
     def get_summary(self, nodmx=False):
         """Return a human-readable summary of the Fitter results.
@@ -453,7 +407,7 @@ class Fitter(object):
                             np.arcsin(self.model.SINI.quantity),
                         )
                         s += "Pulsar mass (Shapiro Delay) = {}".format(psrmass)
-                    except:
+                    except ValueError:
                         pass
 
         return s
@@ -462,8 +416,52 @@ class Fitter(object):
         """Write a summary of the TOAs to stdout."""
         print(self.get_summary())
 
+    def plot(self):
+        """Make residuals plot.
+
+        This produces a time residual plot.
+        """
+        import matplotlib.pyplot as plt
+        from astropy.visualization import quantity_support
+
+        quantity_support()
+        fig, ax = plt.subplots(figsize=(16, 9))
+        mjds = self.toas.get_mjds()
+        ax.errorbar(mjds, self.resids.time_resids, yerr=self.toas.get_errors(), fmt="+")
+        ax.set_xlabel("MJD")
+        ax.set_ylabel("Residuals")
+        try:
+            psr = self.model.PSR
+        except AttributeError:
+            psr = self.model.PSRJ
+        else:
+            psr = "Residuals"
+        ax.set_title(psr)
+        ax.grid(True)
+        plt.show()
+
+    def reset_model(self):
+        """Reset the current model to the initial model."""
+        self.model = copy.deepcopy(self.model_init)
+        self.update_resids()
+        self.fitresult = []
+
+    def update_resids(self):
+        """Update the residuals.
+
+        Run after updating a model parameter.
+        """
+        self.resids = pr.Residuals(
+            toas=self.toas, model=self.model, track_mode=self.track_mode
+        )
+
+    def get_designmatrix(self):
+        """Return the model's design matrix for these TOAs."""
+        return self.model.designmatrix(toas=self.toas, incfrozen=False, incoffset=True)
+
     def get_covariance_matrix(self, with_phase=False, pretty_print=False, prec=3):
         """Show the parameter covariance matrix post-fit.
+
         If with_phase, then show and return the phase column as well.
         If pretty_print, then also pretty-print on stdout the matrix.
         prec is the precision of the floating point results.
@@ -498,6 +496,7 @@ class Fitter(object):
 
     def get_correlation_matrix(self, with_phase=False, pretty_print=False, prec=3):
         """Show the parameter correlation matrix post-fit.
+
         If with_phase, then show and return the phase column as well.
         If pretty_print, then also pretty-print on stdout the matrix.
         prec is the precision of the floating point results.
@@ -708,6 +707,93 @@ class Fitter(object):
         else:
             return {"ft": ft}
 
+    def minimize_func(self, x, *args):
+        """Wrapper function for the residual class.
+
+        This is meant to be passed to
+        ``scipy.optimize.minimize``. The function must take a single list of input
+        values, x, and a second optional tuple of input arguments.  It returns
+        a quantity to be minimized (in this case chi^2).
+        """
+        self.set_params({k: v for k, v in zip(args, x)})
+        self.update_resids()
+        # Return chi^2
+        return self.resids.chi2
+
+    def get_params_dict(self, which="free", kind="quantity"):
+        """Return a dict mapping parameter names to values.
+
+        See :func:`pint.models.timing_model.TimingModel.get_params_dict`.
+        """
+        return self.model.get_params_dict(which=which, kind=kind)
+
+    def set_fitparams(self, *params):
+        """Update the "frozen" attribute of model parameters. Deprecated."""
+        warn(
+            "This function is confusing and deprecated. Set self.model.free_params instead.",
+            category=DeprecationWarning,
+        )
+        # TODO, maybe reconsider for the input?
+        fit_params_name = []
+        if isinstance(params[0], (list, tuple)):
+            params = params[0]
+        for pn in params:
+            if pn in self.model.params:
+                fit_params_name.append(pn)
+            else:
+                rn = self.model.match_param_aliases(pn)
+                if rn != "":
+                    fit_params_name.append(rn)
+                else:
+                    raise ValueError("Unrecognized parameter {}".format(pn))
+        self.model.fit_params = fit_params_name
+
+    def get_allparams(self):
+        """Return a dict of all param names and values. Deprecated."""
+        warn(
+            "This function is confusing and deprecated. Use self.model.get_params_dict.",
+            category=DeprecationWarning,
+        )
+        return self.model.get_params_dict("all", "quantity")
+
+    def get_fitparams(self):
+        """Return a dict of fittable param names and quantity. Deprecated."""
+        warn(
+            "This function is confusing and deprecated. Use self.model.get_params_dict.",
+            category=DeprecationWarning,
+        )
+        return self.model.get_params_dict("free", "quantity")
+
+    def get_fitparams_num(self):
+        """Return a dict of fittable param names and numeric values. Deprecated."""
+        warn(
+            "This function is confusing and deprecated. Use self.model.get_params_dict.",
+            category=DeprecationWarning,
+        )
+        return self.model.get_params_dict("free", "num")
+
+    def get_fitparams_uncertainty(self):
+        """Return a dict of fittable param names and numeric values. Deprecated."""
+        warn(
+            "This function is confusing and deprecated. Use self.model.get_params_dict.",
+            category=DeprecationWarning,
+        )
+        return self.model.get_params_dict("free", "uncertainty")
+
+    def set_params(self, fitp):
+        """Set the model parameters to the value contained in the input dict.
+
+        See :func:`pint.models.timing_model.TimingModel.set_param_values`.
+        """
+        self.model.set_param_values(fitp)
+
+    def set_param_uncertainties(self, fitp):
+        """Set the model parameters to the value contained in the input dict.
+
+        See :func:`pint.models.timing_model.TimingModel.set_param_uncertainties`.
+        """
+        self.model.set_param_uncertainties(fitp)
+
 
 class PowellFitter(Fitter):
     """A class for Scipy Powell fitting method. This method searches over
@@ -744,9 +830,22 @@ class PowellFitter(Fitter):
 
 
 class WLSFitter(Fitter):
-    """
-    A class for weighted least square fitting method. The design matrix is
-    required.
+    """Weighted Least Squares fitter.
+
+    This is the primary fitting algorithm in TEMPO and TEMPO2 as well as PINT.
+    It requires derivatives and it cannot handle correlated errors (ECORR, for
+    example).
+
+    This fitter implements a rudimentary form of the Gauss-Newton algorithm: it
+    computes an initial set of residuals from the fit, it computes the design
+    matrix, and it treats the problem as a weighted linear least squares
+    problem, jumping immediately to the assumed solution. If the initial guess
+    is sufficiently close that the objective function is well-approximated by
+    its derivatives, this lands very close to the correct answer. This Fitter
+    can be told to repeat the process a number of times. The
+    Levenburg-Marquardt algorithm and its descendants (trust region algorithms)
+    generalize this process to handle situations where the initial guess is not
+    close enough that the derivatives are a good approximation.
     """
 
     def __init__(self, toas, model, track_mode=None, residuals=None):
@@ -756,7 +855,7 @@ class WLSFitter(Fitter):
         self.method = "weighted_least_square"
 
     def fit_toas(self, maxiter=1, threshold=False):
-        """Run a linear weighted least-squared fitting method"""
+        """Run a linear weighted least-squared fitting method."""
         # check that params of timing model have necessary components
         self.model.maskPar_has_toas_check(self.toas)
         chi2 = 0
@@ -842,9 +941,11 @@ class WLSFitter(Fitter):
 
 
 class GLSFitter(Fitter):
-    """
-    A class for weighted least square fitting method. The design matrix is
-    required.
+    """Generalized least-squares fitting.
+
+    This fitter extends the :class:`pint.fitter.WLSFitter` to permit the errors
+    on the data points to be correlated. The fitting proceeds by decomposing
+    the data covariance matrix.
     """
 
     def __init__(self, toas=None, model=None, track_mode=None, residuals=None):
@@ -1001,13 +1102,17 @@ class GLSFitter(Fitter):
 class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
     """A class to for fitting TOAs and other independent measured data.
 
+    Currently this fitter is only capable of fitting sets of TOAs in which every
+    TOA has a DM measurement, and it should be constructed as
+    ``WidebandTOAFitter(toas, model)``.
+
     Parameters
     ----------
     fit_data: data object or a tuple of data objects.
-        The data to fit for. If one data are give, it will assume all the fit
-        data set are packed in this one data object. If more than one data
-        objects are provided, the size of 'fit_data' has to match the
-        'fit_data_names'. In this fitter, the first fit data should be a TOAs object.
+        The data to fit for. Generally this should be a single TOAs object containing
+        DM information for every TOA.  If more than one data
+        objects are provided, the size of ``fit_data`` has to match the
+        ``fit_data_names``. In this fitter, the first fit data should be a TOAs object.
     model: a pint timing model instance
         The initial timing model for fitting.
     fit_data_names: list of str
@@ -1160,6 +1265,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         return np.hstack(scaled_sigmas_no_unit)
 
     def fit_toas(self, maxiter=1, threshold=False, full_cov=False):
+        """Carry out fitting procedure."""
         # Maybe change the name to do_fit?
         # check that params of timing model have necessary components
         # self.model.maskPar_has_toas_check(self.toas)
