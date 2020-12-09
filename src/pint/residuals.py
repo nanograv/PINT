@@ -1,3 +1,11 @@
+"""Objects for comparing models to data.
+
+These objects can be constructed directly, as ``Residuals(toas, model)``, or
+they are contructed during fitting operations with :class:`pint.fitter.Fitter`
+objects, as ``fitter.residual``. Variants exist for arrival-time-only data
+(:class:`pint.residuals.Residuals`) and for arrival times that come paired with
+dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
+"""
 from __future__ import absolute_import, division, print_function
 
 import abc
