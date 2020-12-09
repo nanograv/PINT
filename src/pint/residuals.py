@@ -38,11 +38,11 @@ class Residuals:
 
     This class provides access to the residuals in both phase (turns) and time
     (seconds) form through the ``.phase_resids`` and the ``.time_resids``
-    attributes; the ``.resids`` attributes provides either depending on the
-    value of the ``scaled_by_F0`` parameter.
+    attributes.
 
     Uncertainties on these residuals are available in time units using
-    ``.get_data_error()``.
+    ``.get_data_error()``; this can include or not include any rescaling
+    of the uncertainties implied by the model's EFAC or EQUAD.
 
     Attributes
     ----------
@@ -71,8 +71,6 @@ class Residuals:
         ``pulse_number`` column of the TOAs table to assign pulse numbers. If the
         default, None, is passed, use the pulse numbers if and only if the model has
         parameter TRACK == "-2".
-    scaled_by_F0: bool, optional
-        Controls whether the ``.resids`` attribute is in time (True) or phase (False).
     """
 
     def __new__(
@@ -84,7 +82,6 @@ class Residuals:
         subtract_mean=True,
         use_weighted_mean=True,
         track_mode=None,
-        scaled_by_F0=True,
     ):
         if cls is Residuals:
             try:
@@ -108,7 +105,6 @@ class Residuals:
         subtract_mean=True,
         use_weighted_mean=True,
         track_mode=None,
-        scaled_by_F0=True,
     ):
         self.toas = toas
         self.model = model
@@ -133,7 +129,6 @@ class Residuals:
         # only relevant if there are correlated errors
         self._chi2 = None
         self.noise_resids = {}
-        self.scaled_by_F0 = scaled_by_F0
         # We should be carefully for the other type of residuals
         self.unit = unit
         # A flag to indentify if this residual object is combined with residual
@@ -142,23 +137,15 @@ class Residuals:
 
     @property
     def resids(self):
-        """Residuals in time or phase depending on scaled_by_F0."""
-        if self.scaled_by_F0:
-            if self.time_resids is None:
-                self.time_resids = self.calc_time_resids()
-            return self.time_resids
-        else:
-            if self.phase_resids is None:
-                self.phase_resids = self.calc_phase_resids()
-            return self.phase_resids
+        """Residuals in time units."""
+        if self.time_resids is None:
+            self.update()
+        return self.time_resids
 
     @property
     def resids_value(self):
-        """Get pure value of the residuals in default unit."""
-        if not self.scaled_by_F0:
-            return self.resids.to_value(self.unit / u.s)
-        else:
-            return self.resids.to_value(self.unit)
+        """Residuals in seconds, with the units stripped."""
+        return self.resids.to_value(self.unit)
 
     def update(self):
         """Recalculate everything in residuals class after changing model or TOAs"""

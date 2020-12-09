@@ -212,7 +212,6 @@ class DesignMatrix(PintMatrix):
 
     def __init__(self, matrix, labels):
         super(DesignMatrix, self).__init__(matrix, labels)
-        self.scaled_by_F0 = False
 
     @property
     def param_units(self):
@@ -307,15 +306,7 @@ class DesignMatrixMaker:
 class PhaseDesignMatrixMaker(DesignMatrixMaker):
     """A specific class for makeing phase design matrix."""
 
-    def __call__(
-        self,
-        data,
-        model,
-        derivative_params,
-        scaled_by_F0=True,
-        offset=True,
-        offset_padding=1.0,
-    ):
+    def __call__(self, data, model, derivative_params, offset=True, offset_padding=1.0):
         """Create the phase design matrix.
 
         Parameters
@@ -326,8 +317,6 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
             The model that provides the derivatives.
         derivative_params : list
             The parameter list for the derivatives 'd_quantity_d_param'.
-        scale_by_F0 : bool, optional
-            Flag for scaling the matrxi by spin rate. Default is True
         offset : bool, optional
             Add the an offset to the beginning of design matrix. Default is True.
         offset_padding : float, optional
@@ -360,20 +349,18 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
             labels_dim2[param] = (ii, ii + 1, param_unit)
 
         labels.append(labels_dim2)
+        mask = []
+        for ii, param in enumerate(params):
+            if param == "Offset":
+                continue
+            mask.append(ii)
+        M[:, mask] /= model.F0.value
+        # TODO maybe use defined label is better
+        labels[0] = {
+            self.derivative_quantity: (0, M.shape[0], self.quantity_unit * u.s)
+        }
 
-        if scaled_by_F0:
-            mask = []
-            for ii, param in enumerate(params):
-                if param == "Offset":
-                    continue
-                mask.append(ii)
-            M[:, mask] /= model.F0.value
-            # TODO maybe use defined label is better
-            labels[0] = {
-                self.derivative_quantity: (0, M.shape[0], self.quantity_unit * u.s)
-            }
         d_matrix = DesignMatrix(M, labels)
-        d_matrix.scaled_by_F0 = scaled_by_F0
         return d_matrix
 
 

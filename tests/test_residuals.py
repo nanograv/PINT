@@ -39,10 +39,6 @@ class TestResidualBuilding:
             subtract_mean=True,
             use_weighted_mean=False,
         )
-        phase_res_no_f0_scale = Residuals(
-            toas=self.toa, model=self.model, residual_type="toa", scaled_by_F0=False
-        )
-        assert phase_res_no_f0_scale.resids.unit == u.Unit("")
         # assert np.all(phase_res_nomean.resids -
         #         phase_res_nomean.resids.mean() == phase_res_noweight.resids)
 

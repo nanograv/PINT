@@ -1403,9 +1403,7 @@ class TimingModel(object):
             )
         return result
 
-    def designmatrix(
-        self, toas, acc_delay=None, scale_by_F0=True, incfrozen=False, incoffset=True
-    ):
+    def designmatrix(self, toas, acc_delay=None, incfrozen=False, incoffset=True):
         """Return the design matrix.
 
         The design matrix is the matrix with columns of d_phase_d_param/F0
@@ -1442,16 +1440,14 @@ class TimingModel(object):
                 q = -self.d_phase_d_param(toas, delay, param)
                 M[:, ii] = q
                 units.append(u.Unit("") / getattr(self, param).units)
-
-        if scale_by_F0:
-            mask = []
-            for ii, un in enumerate(units):
-                if params[ii] == "Offset":
-                    continue
-                units[ii] = un * u.second
-                mask.append(ii)
-            M[:, mask] /= F0.value
-        return M, params, units, scale_by_F0
+        mask = []
+        for ii, un in enumerate(units):
+            if params[ii] == "Offset":
+                continue
+            units[ii] = un * u.second
+            mask.append(ii)
+        M[:, mask] /= F0.value
+        return M, params, units
 
     def compare(self, othermodel, nodmx=True, threshold_sigma=3.0, verbosity="max"):
         """Print comparison with another model

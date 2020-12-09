@@ -863,7 +863,7 @@ class WLSFitter(Fitter):
             fitpv = self.model.get_params_dict("free", "num")
             fitperrs = self.model.get_params_dict("free", "uncertainty")
             # Define the linear system
-            M, params, units, scale_by_F0 = self.get_designmatrix()
+            M, params, units = self.get_designmatrix()
             # Get residuals and TOA uncertainties in seconds
             self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value
@@ -922,8 +922,7 @@ class WLSFitter(Fitter):
             for ii, pn in enumerate(fitp.keys()):
                 uind = params.index(pn)  # Index of designmatrix
                 un = 1.0 / (units[uind])  # Unit in designmatrix
-                if scale_by_F0:
-                    un *= u.s
+                un *= u.s
                 pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
                 fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
                 # NOTE We need some way to use the parameter limits.
@@ -988,7 +987,7 @@ class GLSFitter(Fitter):
             fitperrs = self.model.get_params_dict("free", "uncertainty")
 
             # Define the linear system
-            M, params, units, scale_by_F0 = self.get_designmatrix()
+            M, params, units = self.get_designmatrix()
 
             # Get residuals and TOA uncertainties in seconds
             if i == 0:
@@ -1071,8 +1070,7 @@ class GLSFitter(Fitter):
             for ii, pn in enumerate(fitp.keys()):
                 uind = params.index(pn)  # Index of designmatrix
                 un = 1.0 / (units[uind])  # Unit in designmatrix
-                if scale_by_F0:
-                    un *= u.s
+                un *= u.s
                 pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
                 fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
                 # NOTE We need some way to use the parameter limits.
@@ -1276,11 +1274,10 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
 
             # Define the linear system
             d_matrix = self.get_designmatrix()
-            M, params, units, scale_by_F0 = (
+            M, params, units = (
                 d_matrix.matrix,
                 d_matrix.derivative_params,
                 d_matrix.param_units,
-                d_matrix.scaled_by_F0,
             )
 
             # Get residuals and TOA uncertainties in seconds
@@ -1299,11 +1296,10 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 if Mn is not None and phi is not None:
                     phiinv = np.concatenate((phiinv, 1 / phi))
                     new_d_matrix = combine_design_matrices_by_param(d_matrix, Mn)
-                    M, params, units, scale_by_F0 = (
+                    M, params, units = (
                         new_d_matrix.matrix,
                         new_d_matrix.derivative_params,
                         new_d_matrix.param_units,
-                        new_d_matrix.scaled_by_F0,
                     )
 
             # normalize the design matrix
@@ -1376,8 +1372,6 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 # Here we use design matrix's label, so the unit goes to normal.
                 # instead of un = 1 / (units[uind])
                 un = units[uind]
-                if scale_by_F0:
-                    un *= u.s
                 pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
                 fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
                 # NOTE We need some way to use the parameter limits.
