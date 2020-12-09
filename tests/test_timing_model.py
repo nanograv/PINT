@@ -218,3 +218,38 @@ def test_copying(model_0437):
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         deepcopy(model_0437)
+
+
+def test_in(model_0437):
+    assert "F0" in model_0437
+    assert "CAPYBARA" not in model_0437
+
+
+def test_getitem(model_0437):
+    assert model_0437["F0"] is model_0437.F0
+    with pytest.raises(KeyError):
+        model_0437["CAPYBARA"]
+
+
+def test_listify(model_0437):
+    assert list(model_0437) == model_0437.params
+
+
+def test_len(model_0437):
+    assert len(model_0437) == len(model_0437.params)
+
+
+def test_keys(model_0437):
+    assert model_0437.keys() == model_0437.params
+
+
+def test_items(model_0437):
+    its = model_0437.items()
+    assert len(its) == len(model_0437)
+    for po, (pi, v) in zip(model_0437.params, its):
+        assert po == pi
+        assert model_0437[po] == v
+
+
+def test_iterator(model_0437):
+    assert [k for k in model_0437] == model_0437.params
