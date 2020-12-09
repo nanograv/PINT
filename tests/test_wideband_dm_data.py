@@ -162,7 +162,7 @@ def test_wideband_residuals_dmjump(wb_model, wb_toas):
 
 
 def test_wideband_residuals_dof(wb_model, wb_toas_all):
-    wb_model.free_params = ["DMJUMP"]
+    wb_model.free_params = ["DMJUMP1"]
     r = WidebandTOAResiduals(
         wb_toas_all, wb_model, dm_resid_args=dict(subtract_mean=False)
     )
@@ -176,7 +176,7 @@ def test_wideband_fit_dmjump(wb_model, wb_toas):
     wb_model.free_params = ["DMJUMP1"]
     fitter = WidebandTOAFitter(wb_toas, wb_model)
     fitter.fit_toas()
-    assert_allclose(fitter.model.DMJUMP1.value, 10)
+    assert_allclose(fitter.model.DMJUMP1.value, -10, atol=1e-3)
 
 
 def test_wideband_fit_dmjump_all(wb_model, wb_toas_all):
