@@ -58,7 +58,7 @@ f.fit_toas()
 # f.fit_toas(full_cov=True)
 
 # Print some basic params
-print("Best fit has reduced chi^2 of", f.resids.chi2_reduced)
+print("Best fit has reduced chi^2 of", f.resids.reduced_chi2)
 print("RMS in phase is", f.resids.phase_resids.std())
 print("RMS in time is", f.resids.time_resids.std().to(u.us))
 

@@ -1,15 +1,17 @@
 from __future__ import absolute_import, division, print_function
 
 import abc
+import collections
+import warnings
+
 import astropy.units as u
 import numpy as np
-from scipy.linalg import LinAlgError
 from astropy import log
-import collections
+from scipy.linalg import LinAlgError
 
+from pint.models.dispersion_model import Dispersion
 from pint.phase import Phase
 from pint.utils import weighted_mean
-from pint.models.dispersion_model import Dispersion
 
 __all__ = [
     "Residuals",
@@ -123,7 +125,8 @@ class Residuals:
 
     @property
     def chi2_reduced(self):
-        return self.chi2 / self.dof
+        warnings.warn("Please use reduced_chi2 instead.", DeprecationWarning)
+        return self.reduced_chi2
 
     @property
     def chi2(self):
@@ -590,8 +593,7 @@ class CombinedResiduals(object):
 
     @property
     def model(self):
-        """ Return the single timing model object.
-        """
+        """Return the single timing model object."""
         raise AttributeError(
             "Combined redisuals object does not provide a "
             "single timing model object. Pleaes use the "
@@ -662,7 +664,7 @@ class CombinedResiduals(object):
 
 
 class WidebandTOAResiduals(CombinedResiduals):
-    """ A class for handling the wideband toa residuals.
+    """A class for handling the wideband toa residuals.
 
     Wideband TOAs have independent measurement of DM values. The residuals for
     wideband TOAs have two parts, the TOA residuals and DM residuals. Both
@@ -699,8 +701,7 @@ class WidebandTOAResiduals(CombinedResiduals):
 
     @property
     def dof(self):
-        """ The degree of freedom for the wideband residuals.-am
-        """
+        """The degree of freedom for the wideband residuals.-am"""
         dof = len(self._combined_resids)
         dof -= len(self.model.free_params) + 1
         return dof
