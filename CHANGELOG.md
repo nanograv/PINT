@@ -35,6 +35,8 @@ modified after a fit and are displayed with a model's .par file output.
 - New observatories will no longer overwrite existing ones silently.  Will either raise ValueError or require overwrite=True
 - Large speed increase when using Ecliptic coordinates
 - Changed Residuals so that use_weighted_mean and subtract_mean are attributes set on initialization
+- Refactored code for orbiting observatories, most now share a single class, see observatory/satellite_obs.py
+- Fixed 2mus amplitude bug in TT to TDB conversion for orbiting observatories.
 
 ## [0.7.0] - 2020-05-27
 ### Changed
