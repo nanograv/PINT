@@ -263,7 +263,27 @@ DM 10
 """
 
 
-@pytest.mark.parametrize("lines,param,value", [([], "DMJUMP", 1)])
-def test_free_params(lines, param, value):
+@pytest.mark.parametrize(
+    "lines,param,value",
+    [([], "DMJUMP", 1), (["DMJUMP -fe L_band 10"], "DMJUMP", 1), ([], "H0", 1)],
+)
+def test_set_params(lines, param, value):
     model = get_model(io.StringIO("\n".join([par_base] + lines)))
-    model[param] = value
+    with pytest.raises(KeyError):
+        model[param].value = value
+    with pytest.raises(AttributeError):
+        getattr(model, param).value = value
+
+
+@pytest.mark.parametrize(
+    "lines,param,exception",
+    [
+        ([], "garbage_parameter", ValueError),
+        ([], "H4", ValueError),
+        (["DMJUMP -fe L_band 10", "DMJUMP -fe S_band 20"], "DMJUMP", ValueError),
+    ],
+)
+def test_free_params(lines, param, exception):
+    model = get_model(io.StringIO("\n".join([par_base] + lines)))
+    with pytest.raises(exception):
+        model.free_params = [param]

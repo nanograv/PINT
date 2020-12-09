@@ -1928,7 +1928,7 @@ class TimingModel(object):
                 return getattr(cp, name)
         raise KeyError("TimingModel does not have parameter {}".format(name))
 
-    def __setitem__(self, name):
+    def __setitem__(self, name, value):
         # FIXME: This could be the right way to add Parameters?
         raise NotImplementedError
 

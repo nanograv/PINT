@@ -14,6 +14,7 @@ from pint.models.timing_model import (
     ignore_prefix,
     DEFAULT_ORDER,
 )
+from pint.models.parameter import maskParameter
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
 __all__ = ["get_model"]
@@ -168,7 +169,7 @@ class ModelBuilder(object):
                     pre, idxstr, idxV = split_prefixed_name(p)
                     if pre in [par.prefix] + par.prefix_aliases:
                         prefixs[par.prefix].append(p)
-                except:  # FIXME: is this meant to catch KeyErrors?
+                except ValueError:  # FIXME: is this meant to catch KeyErrors?
                     continue
 
         return prefixs
@@ -257,7 +258,16 @@ class ModelBuilder(object):
                         "Unknown binary model requested in par file: {}".format(bm)
                     )
                 # FIXME: consistency check - the componens actually chosen should know the name bm
-
+        for p in self.timing_model.params:
+            if isinstance(self.timing_model[p], maskParameter):
+                # maskParameters need a bogus alias for parfile parsing
+                # remove this bogus alias
+                try:
+                    ix = self.timing_model[p].aliases.index(self.timing_model[p].prefix)
+                except ValueError:
+                    pass
+                else:
+                    del self.timing_model[p].aliases[ix]
         if parfile is not None:
             self.timing_model.read_parfile(parfile)
 
