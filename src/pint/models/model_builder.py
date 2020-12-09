@@ -2,23 +2,21 @@
 # Defines the automatic timing model generator interface
 from __future__ import absolute_import, division, print_function
 
-import glob
 import os
-import sys
+import tempfile
 from collections import Counter, defaultdict
 
 from astropy import log
 
 from pint.models.timing_model import (
     Component,
-    MissingParameter,
     TimingModel,
     ignore_prefix,
     DEFAULT_ORDER,
 )
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
-__all__ = ["get_model", "get_model_new"]
+__all__ = ["get_model"]
 
 default_models = ["StandardTimingModel"]
 
@@ -31,7 +29,7 @@ class ModelBuilder(object):
     """A class for model construction interface.
 
     Parameters
-    ---------
+    ----------
     name : str
         Name for the model.
     parfile : str optional
@@ -159,8 +157,7 @@ class ModelBuilder(object):
         return sorted_components
 
     def search_prefix_param(self, paramList, model, prefix_type):
-        """ Check if the Unrecognized parameter has prefix parameter
-        """
+        """Check if the Unrecognized parameter has prefix parameter"""
         prefixs = {}
         prefix_inModel = model.get_params_of_type_top(prefix_type)
         for pn in prefix_inModel:
@@ -177,7 +174,7 @@ class ModelBuilder(object):
         return prefixs
 
     def build_model(self, parfile=None, name=""):
-        """Read parfile using the model_instance attribute. Throws error if 
+        """Read parfile using the model_instance attribute. Throws error if
            mismatched coordinate systems detected.
         Parameters
         ---------
@@ -283,8 +280,6 @@ def get_model(parfile):
 
     Parameters
     ----------
-    name : str
-        Name for the model.
     parfile : str
         The parfile name
 
@@ -293,10 +288,18 @@ def get_model(parfile):
     Model instance get from parfile.
 
     """
-    name = os.path.basename(os.path.splitext(parfile)[0])
-
-    mb = ModelBuilder(parfile)
-    return mb.timing_model
+    try:
+        contents = parfile.read()
+    except AttributeError:
+        contents = None
+    if contents is None:
+        return ModelBuilder(parfile).timing_model
+    else:
+        with tempfile.TemporaryDirectory() as td:
+            fn = os.path.join(td, "temp.par")
+            with open(fn, "wt") as f:
+                f.write(contents)
+            return ModelBuilder(fn).timing_model
 
 
 def choose_model(
