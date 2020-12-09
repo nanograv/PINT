@@ -50,7 +50,7 @@ lint: ## check style with flake8
 	flake8 --ignore=E265,E226 pint tests
 
 test: ## run tests quickly with the default Python
-		cd tests && pytest --ff
+		cd tests && pytest --ff --durations=20
 
 coverage: ## check code coverage quickly with the default Python
 		pytest tests --cov=pint
@@ -59,10 +59,11 @@ coverage: ## check code coverage quickly with the default Python
 		$(BROWSER) htmlcov/index.html
 
 notebooks:
-	jupytext --sync examples/*.md
+	jupytext --sync examples/*.py
 	jupytext --pipe black --pipe-fmt py:percent examples/*.ipynb
 	jupyter nbconvert --execute --inplace examples/*.ipynb
 	jupytext --sync examples/*.ipynb
+	jupytext --to py:percent docs/examples-rendered/*.ipynb
 
 docs-clean:
 	mkdir -p docs/api

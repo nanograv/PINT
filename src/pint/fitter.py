@@ -217,7 +217,7 @@ class Fitter(object):
             self.resids_init.rms_weighted(), self.resids.rms_weighted()
         )
         s += "Chisq = {:.3f} for {} d.o.f. for reduced Chisq of {:.3f}\n".format(
-            self.resids.chi2, self.resids.dof, self.resids.chi2_reduced
+            self.resids.chi2, self.resids.dof, self.resids.reduced_chi2
         )
         s += "\n"
 

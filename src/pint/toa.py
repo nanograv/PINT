@@ -11,6 +11,7 @@ import copy
 import gzip
 import os
 import re
+import warnings
 from collections import OrderedDict
 
 import astropy.table as table
@@ -32,12 +33,12 @@ from pint.phase import Phase
 from pint.pulsar_ecliptic import PulsarEcliptic
 
 __all__ = [
+    "TOAs",
     "get_TOAs",
     "get_TOAs_list",
-    "format_toa_line",
     "make_fake_toas",
+    "format_toa_line",
     "TOA",
-    "TOAs",
 ]
 
 toa_commands = (
@@ -336,8 +337,11 @@ def _parse_TOA_line(line, fmt="Unknown"):
         fields = line.split()
         d["name"] = fields[0]
         d["freq"] = float(fields[1])
-        ii, ff = fields[2].split(".")
-        MJD = (int(ii), float("0." + ff))
+        if "." in fields[2]:
+            ii, ff = fields[2].split(".")
+            MJD = (int(ii), float("0." + ff))
+        else:
+            MJD = (int(fields[2]), 0.0)
         d["error"] = float(fields[3])
         d["obs"] = get_observatory(fields[4].upper()).name
         # All the rest should be flags
@@ -792,9 +796,19 @@ class TOAs(object):
 
     The contents are stored in an `astropy.table.Table`; this can be used to
     access the contained information but the data may not be in the order you
-    expect. Not all columns of the table are computed automatically, as their
+    expect: internally it is grouped by observatory (sorted by the observatory
+    object). Not all columns of the table are computed automatically, as their
     computation can be expensive. Methods of this class are available to
-    populate these additional columns.
+    populate these additional columns. Methods that return data from the columns
+    do so in the internal order.
+
+    TOAs objects can accept indices that are boolean, list-of-integer, or
+    slice, to produce a new TOAs object containing a subset of the TOAs in the
+    original.  Note that the result is still grouped by the ``obs`` column, so
+    slices cannot reverse the order. For example, to obtain a new TOAs object
+    containing the entries above 1 GHz:
+
+    >>> t[t.table['freq'] > 1*u.GHz]
 
     .. list-table:: Columns in ``.table``
        :widths: 15 85
@@ -947,6 +961,36 @@ class TOAs(object):
     def __len__(self):
         return self.ntoas
 
+    def __getitem__(self, index):
+        if not hasattr(self, "table"):
+            raise ValueError("This TOAs object is incomplete and does not have a table")
+        if isinstance(index, np.ndarray) and index.dtype == np.bool:
+            r = copy.deepcopy(self)
+            r.table = r.table[index]
+            if len(r.table) > 0:
+                r.table = r.table.group_by("obs")
+            return r
+        elif (
+            isinstance(index, np.ndarray)
+            and index.dtype == np.int
+            or isinstance(index, list)
+        ):
+            r = copy.deepcopy(self)
+            r.table = r.table[index]
+            if len(r.table) > 0:
+                r.table = r.table.group_by("obs")
+            return r
+        elif isinstance(index, slice):
+            r = copy.deepcopy(self)
+            r.table = r.table[index]
+            if len(r.table) > 0:
+                r.table = r.table.group_by("obs")
+            return r
+        elif isinstance(index, int):
+            raise ValueError("TOAs do not support extraction of TOA objects (yet?)")
+        else:
+            raise ValueError("Unable to index TOAs with {}".format(index))
+
     @property
     def ntoas(self):
         return len(self.table) if hasattr(self, "table") else len(self.toas)
@@ -1000,7 +1044,7 @@ class TOAs(object):
             if hasattr(self, "toas"):
                 return np.array([t.mjd for t in self.toas])
             else:
-                return np.array([t for t in self.table["mjd"]])
+                return np.array(self.table["mjd"])
         else:
             if hasattr(self, "toas"):
                 return np.array([t.mjd.mjd for t in self.toas]) * u.day
@@ -1140,22 +1184,37 @@ class TOAs(object):
     def select(self, selectarray):
         """Apply a boolean selection or mask array to the TOA table.
 
+        Deprecated. Use ``toas[selectarray]`` to get a new object instead.
+
         This operation modifies the TOAs object in place, shrinking its
         table down to just those TOAs where selectarray is True. This
         function also stores the old table in a stack.
         """
+        warnings.warn(
+            "Please use boolean indexing on the object instead: toas[selectarray].",
+            DeprecationWarning,
+        )
         if hasattr(self, "table"):
             # Allow for selection undos
             if not hasattr(self, "table_selects"):
                 self.table_selects = []
             self.table_selects.append(copy.deepcopy(self.table))
             # Our TOA table must be grouped by observatory for phase calcs
-            self.table = self.table[selectarray].group_by("obs")
+            self.table = self.table[selectarray]
+            if len(self.table) > 0:
+                self.table = self.table.group_by("obs")
         else:
             raise ValueError("TOA selection not implemented for TOA lists.")
 
     def unselect(self):
-        """Return to previous selected version of the TOA table (stored in stack)."""
+        """Return to previous selected version of the TOA table (stored in stack).
+
+        Deprecated. Use ``toas[selectarray]`` to get a new object instead.
+        """
+        warnings.warn(
+            "Please use boolean indexing on the object instead: toas[selectarray].",
+            DeprecationWarning,
+        )
         try:
             self.table = self.table_selects.pop()
         except (AttributeError, IndexError) as e:
