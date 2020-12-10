@@ -81,6 +81,10 @@ from pint.utils import FTest
 __all__ = ["Fitter", "WLSFitter", "GLSFitter", "WidebandTOAFitter", "PowellFitter"]
 
 
+class DegeneracyWarning(UserWarning):
+    pass
+
+
 class Fitter(object):
     """Base class for objects encapsulating fitting problems.
 
@@ -895,6 +899,7 @@ class WLSFitter(Fitter):
             # M[:,1:] -= M[:,1:].mean(axis=0)
             fac = M.std(axis=0)
             fac[0] = 1.0
+            fac[fac == 0] = 1.0
             M /= fac
             # Singular value decomp of design matrix:
             #   M = U s V^T
@@ -910,7 +915,22 @@ class WLSFitter(Fitter):
             # np Curve fit.
             if threshold:
                 threshold_val = np.finfo(np.longdouble).eps * max(M.shape) * s[0]
-                s[s < threshold_val] = 0.0
+                bad = np.where(s < threshold_val)[0]
+                s[bad] = np.inf
+                for c in bad:
+                    bad_col = U[:, c]
+                    bad_combination = " + ".join(
+                        [
+                            "{}*{}".format(co, p)
+                            for (co, p) in sorted(zip(bad_col, params))
+                            if co != 0
+                        ]
+                    )
+                    warn(
+                        f"Parameter degeneracy; the following linear combination yields "
+                        f"almost no change: {bad_combination}",
+                        DegeneracyWarning,
+                    )
             # Sigma = np.dot(Vt.T / s, U.T)
             # The post-fit parameter covariance matrix
             #   Sigma = V s^-2 V^T
@@ -1177,7 +1197,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         return self.fit_data[0]
 
     def make_combined_residuals(self, add_args={}):
-        """Make the combined residuals between TOA residual and DM residusl."""
+        """Make the combined residuals between TOA residual and DM residual."""
         return pr.WidebandTOAResiduals(
             self.toas,
             self.model,

@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 import io
 
+import numpy as np
 import astropy.units as u
 import pytest
 
@@ -18,7 +19,7 @@ DM 10 0
 """
 
 
-@pytest.mark.xfail("DMX range checking not implemented")
+@pytest.mark.xfail(reason="DMX range checking not implemented")
 def test_dmx_no_toas():
     model = get_model(
         io.StringIO(
@@ -52,3 +53,12 @@ def test_jump_no_toas():
     fitter = pint.fitter.WLSFitter(toas, model)
     with pytest.raises(ValueError):
         fitter.fit_toas()
+
+
+def test_dm_barycentered():
+    model = get_model(io.StringIO(par_base))
+    toas = make_fake_toas(57000, 57900, 10, model, obs="@", freq=np.inf)
+    model.free_params = ["F0", "DM"]
+    fitter = pint.fitter.WLSFitter(toas, model)
+    with pytest.warns(pint.fitter.DegeneracyWarning, match=".*degeneracy.*DM.*"):
+        fitter.fit_toas(threshold=True)
