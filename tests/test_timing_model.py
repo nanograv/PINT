@@ -265,7 +265,12 @@ DM 10
 
 @pytest.mark.parametrize(
     "lines,param,value",
-    [([], "DMJUMP", 1), (["DMJUMP -fe L_band 10"], "DMJUMP", 1), ([], "H0", 1)],
+    [
+        ([], "DMJUMP", 1),
+        (["DMJUMP -fe L_band 10"], "DMJUMP", 1),
+        ([], "H0", 1),
+        ([], "F2", 1),
+    ],
 )
 def test_set_params(lines, param, value):
     model = get_model(io.StringIO("\n".join([par_base] + lines)))
