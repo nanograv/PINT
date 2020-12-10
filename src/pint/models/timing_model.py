@@ -322,11 +322,11 @@ class TimingModel(object):
 
     @free_params.setter
     def free_params(self, params):
-        params = {self.match_param_aliases(p) for p in params}
+        params_true = {self.match_param_aliases(p) for p in params}
         for p in self.params:
-            getattr(self, p).frozen = p not in params
-            params.discard(p)
-        if params:
+            getattr(self, p).frozen = p not in params_true
+            params_true.discard(p)
+        if params_true:
             raise ValueError(
                 "Parameter(s) are familiar but not in the model: {}".format(params)
             )
@@ -338,7 +338,7 @@ class TimingModel(object):
                 return p
             if alias in getattr(self, p).aliases:
                 return p
-        raise ValueError("{} is not recognized as a parameter or alias".format(p))
+        raise ValueError("{} is not recognized as a parameter or alias".format(alias))
 
     def get_params_dict(self, which="free", kind="quantity"):
         """Return a dict mapping parameter names to values.

@@ -269,10 +269,12 @@ DM 10
 )
 def test_set_params(lines, param, value):
     model = get_model(io.StringIO("\n".join([par_base] + lines)))
-    with pytest.raises(KeyError):
+    with pytest.raises(KeyError) as e:
         model[param].value = value
-    with pytest.raises(AttributeError):
+    str(e.value).index(param)  # raise exception if not found
+    with pytest.raises(AttributeError) as e:
         getattr(model, param).value = value
+    str(e.value).index(param)  # raise exception if not found
 
 
 @pytest.mark.parametrize(
