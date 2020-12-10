@@ -291,7 +291,7 @@ def get_model(parfile):
     Parameters
     ----------
     parfile : str
-        The parfile name
+        The parfile name, or a file-like object to read the parfile contents from
 
     Returns
     -------
