@@ -11,6 +11,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Removed
 - Removed Python 2.7 support from travis and tox testing suites and from requirements files
 - Removed "landscape" code checker since that package is no longer supported by its author
+- Removed scale_by_F0 and scaled_by_F0 as they did not do what they were intended to (PR #861)
 ### Fixed
 - Fixed bug in processing of PHASE commands in .tim file. They are now applied even if pulse numbers are not being used
 - Substantial speed increase in Residuals calculation due to removal of redundant phase calculation
@@ -35,6 +36,7 @@ modified after a fit and are displayed with a model's .par file output.
 - New observatories will no longer overwrite existing ones silently.  Will either raise ValueError or require overwrite=True
 - Large speed increase when using Ecliptic coordinates
 - Changed Residuals so that use_weighted_mean and subtract_mean are attributes set on initialization
+- WidebandDMResiduals now support access to their parts through .toa and .dm attributes (PR #861)
 
 ## [0.7.0] - 2020-05-27
 ### Changed
