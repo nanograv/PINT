@@ -101,5 +101,6 @@ class BinaryDDK(BinaryDD):
                 )
         if self.SINI.quantity is not None:
             raise AttributeError(
-                "DDK model does not accept `SINI` as input. Please" " use `KIN` instead."
+                "DDK model does not accept `SINI` as input. Please"
+                " use `KIN` instead."
             )

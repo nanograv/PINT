@@ -102,29 +102,31 @@ class TestDDK(unittest.TestCase):
         self.modelJ1713.SINI.value = 0.9
         with pytest.raises(AttributeError):
             self.modelJ1713.validate()
-    
+
     def test_sini_from_par(self):
-        temp_par_str = ("PSR  J1713+0747\n"
-                        "LAMBDA 256.66  1 0.001\n"
-                        "BETA 30.70036  1 0.001\n"
-                        "PMLAMBDA 5.2671  1  0.0021\n"
-                        "PMBETA  -3.4428  1  0.0043\n"
-                        "PX  0.8211  1  0.0258\n"
-                        "F0  218.81  1  0.01\n"
-                        "PEPOCH  55391.0\n"
-                        "BINARY  DDK\n"
-                        "A1 32.34  1  0.001\n"
-                        "E  0.074  1  0.001\n"
-                        "T0 55388.836  1  0.0002\n"
-                        "PB 67.825129  1  0.0001\n"
-                        "OM 176.19845  1  0.0013\n"
-                        "M2  0.283395  1  0.0104\n"
-                        "KOM   83.100  1  1.800\n"
-                        "SINI  0.8     1  0.562\n"
-                        "K96  1")
-        par_name = os.path.join(datadir, 'test_ddk_sini.par')
-        temp_par = open(par_name, 'w')
-        temp_par.write(temp_par_str)   
+        temp_par_str = (
+            "PSR  J1713+0747\n"
+            "LAMBDA 256.66  1 0.001\n"
+            "BETA 30.70036  1 0.001\n"
+            "PMLAMBDA 5.2671  1  0.0021\n"
+            "PMBETA  -3.4428  1  0.0043\n"
+            "PX  0.8211  1  0.0258\n"
+            "F0  218.81  1  0.01\n"
+            "PEPOCH  55391.0\n"
+            "BINARY  DDK\n"
+            "A1 32.34  1  0.001\n"
+            "E  0.074  1  0.001\n"
+            "T0 55388.836  1  0.0002\n"
+            "PB 67.825129  1  0.0001\n"
+            "OM 176.19845  1  0.0013\n"
+            "M2  0.283395  1  0.0104\n"
+            "KOM   83.100  1  1.800\n"
+            "SINI  0.8     1  0.562\n"
+            "K96  1"
+        )
+        par_name = os.path.join(datadir, "test_ddk_sini.par")
+        temp_par = open(par_name, "w")
+        temp_par.write(temp_par_str)
         temp_par.close()
         with pytest.raises(AttributeError):
             mb.get_model(par_name)
