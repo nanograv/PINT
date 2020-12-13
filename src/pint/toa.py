@@ -519,7 +519,7 @@ def format_toa_line(
 
 
 def make_fake_toas(
-    startMJD, endMJD, ntoas, model, freq=999999, obs="@", error=1 * u.us
+    startMJD, endMJD, ntoas, model, freq=999999, obs="GBT", error=1 * u.us
 ):
     """Make evenly spaced toas with residuals = 0 and  without errors
 
