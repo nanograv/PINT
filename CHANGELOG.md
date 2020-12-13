@@ -37,6 +37,7 @@ modified after a fit and are displayed with a model's .par file output.
 - Large speed increase when using Ecliptic coordinates
 - Changed Residuals so that use_weighted_mean and subtract_mean are attributes set on initialization
 - Changed requirements to astropy>=4.0
+- get_model can now read from file-like, including StringIO, objects (handy for testing) (PR #871)
 - WidebandDMResiduals now support access to their parts through .toa and .dm attributes (PR #861)
 
 ## [0.7.0] - 2020-05-27
