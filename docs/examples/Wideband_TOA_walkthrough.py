@@ -76,7 +76,7 @@ type(fitter.resids)
 # #### If we look into the resids attribute, it has two independent Residual objects.
 
 # %%
-fitter.resids.residual_objs
+fitter.resids.toa, fitter.resids.dm
 
 # %% [markdown]
 # #### Each of them can be used independently
@@ -84,7 +84,7 @@ fitter.resids.residual_objs
 # * Time residual
 
 # %%
-time_resids = fitter.resids.residual_objs["toa"].time_resids
+time_resids = fitter.resids.toa.time_resids
 plt.errorbar(
     toas.get_mjds().value,
     time_resids.to_value(u.us),
@@ -96,23 +96,23 @@ plt.xlabel("MJD")
 
 # %%
 # Time RMS
-print(fitter.resids.residual_objs["toa"].rms_weighted())
-print(fitter.resids.residual_objs["toa"].chi2)
+print(fitter.resids.toa.rms_weighted())
+print(fitter.resids.toa.chi2)
 
 # %% [markdown]
 # * DM residual
 
 # %%
-dm_resids = fitter.resids.residual_objs["dm"].resids
-dm_error = fitter.resids.residual_objs["dm"].get_data_error()
+dm_resids = fitter.resids.dm.resids
+dm_error = fitter.resids.dm.get_data_error()
 plt.errorbar(toas.get_mjds().value, dm_resids.value, yerr=dm_error.value, fmt="x")
 plt.ylabel("pc/cm^3")
 plt.xlabel("MJD")
 
 # %%
 # DM RMS
-print(fitter.resids.residual_objs["dm"].rms_weighted())
-print(fitter.resids.residual_objs["dm"].chi2)
+print(fitter.resids.dm.rms_weighted())
+print(fitter.resids.dm.chi2)
 
 # %% [markdown]
 # #### However, in the combined residuals, one can access rms and chi2 as well
@@ -125,7 +125,7 @@ print(fitter.resids.chi2)
 # #### The initial residuals is also a combined residual object
 
 # %%
-time_resids = fitter.resids_init.residual_objs["toa"].time_resids
+time_resids = fitter.resids_init.toa.time_resids
 plt.errorbar(
     toas.get_mjds().value,
     time_resids.to_value(u.us),
@@ -136,8 +136,8 @@ plt.ylabel("us")
 plt.xlabel("MJD")
 
 # %%
-dm_resids = fitter.resids_init.residual_objs["dm"].resids
-dm_error = fitter.resids_init.residual_objs["dm"].get_data_error()
+dm_resids = fitter.resids_init.dm.resids
+dm_error = fitter.resids_init.dm.get_data_error()
 plt.errorbar(toas.get_mjds().value, dm_resids.value, yerr=dm_error.value, fmt="x")
 plt.ylabel("pc/cm^3")
 plt.xlabel("MJD")
@@ -155,7 +155,7 @@ d_matrix = fitter.get_designmatrix()
 
 # %%
 print("Number of TOAs:", toas.ntoas)
-print("Number of DM measurments:", len(fitter.resids.residual_objs["dm"].dm_data))
+print("Number of DM measurments:", len(fitter.resids.dm.dm_data))
 print("Number of fit params:", len(fitter.model.free_params))
 print("Shape of design matrix:", d_matrix.shape)
 
