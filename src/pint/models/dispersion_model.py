@@ -53,7 +53,7 @@ class Dispersion(DelayComponent):
         return self.dispersion_time_delay(dm, bfreq)
 
     def dm_value(self, toas):
-        """ Compute modeled DM value at given TOAs.
+        """Compute modeled DM value at given TOAs.
 
         Parameters
         ----------
@@ -77,7 +77,7 @@ class Dispersion(DelayComponent):
         return dm
 
     def d_delay_d_dmparam(self, toas, param_name, acc_delay=None):
-        """ Derivative of delay wrt to DM parameter.
+        """Derivative of delay wrt to DM parameter.
 
         Parameters
         ----------
@@ -179,8 +179,7 @@ class DispersionDM(Dispersion):
             self.register_dm_deriv_funcs(self.d_dm_d_DMs, dm_name)
 
     def validate(self):
-        """ Validate the DM parameters input.
-        """
+        """Validate the DM parameters input."""
         super(Dispersion, self).validate()
         # If DM1 is set, we need DMEPOCH
         if self.DM1.value != 0.0:
@@ -198,8 +197,7 @@ class DispersionDM(Dispersion):
         return "%d'th time derivative of the dispersion measure" % n
 
     def get_DM_terms(self):
-        """Return a list of the DM term values in the model: [DM, DM1, ..., DMn]
-        """
+        """Return a list of the DM term values in the model: [DM, DM1, ..., DMn]"""
         prefix_dm = list(self.get_prefix_mapping_component("DM").values())
         dm_terms = [self.DM.quantity]
         dm_terms += [getattr(self, x).quantity for x in prefix_dm]
@@ -220,8 +218,7 @@ class DispersionDM(Dispersion):
         return dm * self.DM.units
 
     def constant_dispersion_delay(self, toas, acc_delay=None):
-        """ This is a wrapper function for interacting with the TimingModel class
-        """
+        """This is a wrapper function for interacting with the TimingModel class"""
         return self.dispersion_type_delay(toas)
 
     def print_par(self,):
@@ -244,8 +241,7 @@ class DispersionDM(Dispersion):
     def d_dm_d_DMs(
         self, toas, param_name, acc_delay=None
     ):  # NOTE we should have a better name for this.)
-        """ Derivatives of DM wrt the DM taylor expansion parameters.
-        """
+        """Derivatives of DM wrt the DM taylor expansion parameters."""
         tbl = toas.table
         try:
             bfreq = self._parent.barycentric_radio_freq(toas)
@@ -371,8 +367,7 @@ class DispersionDMX(Dispersion):
                 self.register_dm_deriv_funcs(self.d_dm_d_DMX, prefix_par)
 
     def validate(self):
-        """ Validate the DMX parameters.
-        """
+        """Validate the DMX parameters."""
         super(DispersionDMX, self).validate()
         DMX_mapping = self.get_prefix_mapping_component("DMX_")
         DMXR1_mapping = self.get_prefix_mapping_component("DMXR1_")
@@ -411,8 +406,7 @@ class DispersionDMX(Dispersion):
         return dm
 
     def DMX_dispersion_delay(self, toas, acc_delay=None):
-        """ This is a wrapper function for interacting with the TimingModel class
-        """
+        """This is a wrapper function for interacting with the TimingModel class"""
         return self.dispersion_type_delay(toas)
 
     def d_dm_d_DMX(self, toas, param_name, acc_delay=None):
@@ -495,8 +489,9 @@ class DispersionJump(Dispersion):
         super(DispersionJump, self).validate()
 
     def jump_dm(self, toas):
-        """This method returns the DM jump for each dm section collected by
-        dmjump parameters. The delay value is determined by DMJUMP parameter
+        """Return the DM jump for each dm section collected by dmjump parameters.
+
+        The delay value is determined by DMJUMP parameter
         value in the unit of pc / cm ** 3.
         """
         tbl = toas.table
@@ -508,8 +503,7 @@ class DispersionJump(Dispersion):
         return jdm * dm_jump_par.units
 
     def d_dm_d_dmjump(self, toas, jump_param):
-        """ Derivative of dm values wrt dm jumps.
-        """
+        """Derivative of dm values wrt dm jumps."""
         tbl = toas.table
         d_dm_d_j = np.zeros(len(tbl))
         jpar = getattr(self, jump_param)
@@ -518,7 +512,8 @@ class DispersionJump(Dispersion):
         return d_dm_d_j * jpar.units / jpar.units
 
     def d_delay_d_dmjump(self, toas, param_name, acc_delay=None):
-        """ Derivative for delay wrt to dm jumps. Since DMJUMPS does not affect
-        delay, this would be zero.
+        """Derivative for delay wrt to dm jumps.
+
+        Since DMJUMPS does not affect delay, this would be zero.
         """
         return np.zeros(toas.ntoas) * (u.s / self.DMJUMP.units)
