@@ -28,6 +28,12 @@ def main(argv=None):
     parser.add_argument("parfile", help="par file to read model from")
     parser.add_argument("timfile", help="TOA file name")
     parser.add_argument(
+        "--usepickle",
+        help="Enable pickling of TOAs",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
         "--outfile", help="Output par file name (default=None)", default=None
     )
     parser.add_argument(
@@ -48,7 +54,9 @@ def main(argv=None):
     model_ephem = "DE421"
     if m.EPHEM is not None:
         model_ephem = m.EPHEM.value
-    t = pint.toa.get_TOAs(args.timfile, planets=use_planets, ephem=model_ephem)
+    t = pint.toa.get_TOAs(
+        args.timfile, planets=use_planets, ephem=model_ephem, usepickle=args.usepickle
+    )
 
     # turns pre-existing jump flags in t.table['flags'] into parameters in parfile
     m.jump_flags_to_params(t)
