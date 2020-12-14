@@ -172,15 +172,15 @@ class Fitter(object):
         )
         if is_wideband:
             s += "Prefit TOA residuals Wrms = {}, Postfit TOA residuals Wrms = {}\n".format(
-                    self.resids_init.toa.rms_weighted(), self.resids.toa.rms_weighted()
-    )
+                self.resids_init.toa.rms_weighted(), self.resids.toa.rms_weighted()
+            )
             s += "Prefit DM residuals Wrms = {}, Postfit DM residuals Wrms = {}\n".format(
-                    self.resids_init.dm.rms_weighted(), self.resids.dm.rms_weighted()
-    )
+                self.resids_init.dm.rms_weighted(), self.resids.dm.rms_weighted()
+            )
         else:
             s += "Prefit residuals Wrms = {}, Postfit residuals Wrms = {}\n".format(
-                    self.resids_init.rms_weighted(), self.resids.rms_weighted()
-        )
+                self.resids_init.rms_weighted(), self.resids.rms_weighted()
+            )
         s += "Chisq = {:.3f} for {} d.o.f. for reduced Chisq of {:.3f}\n".format(
             self.resids.chi2, self.resids.dof, self.resids.reduced_chi2
         )
