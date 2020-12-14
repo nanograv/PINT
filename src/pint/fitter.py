@@ -160,12 +160,26 @@ class Fitter(object):
         import uncertainties.umath as um
         from uncertainties import ufloat
 
+        # Check if Wideband or not
+        if self.resids.__class__.__name__ == "WidebandTOAResiduals":
+            is_wideband = True
+        else:
+            is_wideband = False
+
         # First, print fit quality metrics
         s = "Fitted model using {} method with {} free parameters to {} TOAs\n".format(
             self.method, len(self.model.free_params), self.toas.ntoas
         )
-        s += "Prefit residuals Wrms = {}, Postfit residuals Wrms = {}\n".format(
-            self.resids_init.rms_weighted(), self.resids.rms_weighted()
+        if is_wideband:
+            s += "Prefit TOA residuals Wrms = {}, Postfit TOA residuals Wrms = {}\n".format(
+                    self.resids_init.toa.rms_weighted(), self.resids.toa.rms_weighted()
+    )
+            s += "Prefit DM residuals Wrms = {}, Postfit DM residuals Wrms = {}\n".format(
+                    self.resids_init.dm.rms_weighted(), self.resids.dm.rms_weighted()
+    )
+        else:
+            s += "Prefit residuals Wrms = {}, Postfit residuals Wrms = {}\n".format(
+                    self.resids_init.rms_weighted(), self.resids.rms_weighted()
         )
         s += "Chisq = {:.3f} for {} d.o.f. for reduced Chisq of {:.3f}\n".format(
             self.resids.chi2, self.resids.dof, self.resids.reduced_chi2
@@ -348,13 +362,22 @@ class Fitter(object):
                     t0 = tasc + pb * om / 360.0
                     s += "T0  = {:SP}\n".format(t0)
 
-                    s += pint.utils.ELL1_check(
-                        self.model.A1.quantity,
-                        ecc.nominal_value,
-                        self.resids.rms_weighted(),
-                        self.toas.ntoas,
-                        outstring=True,
-                    )
+                    if is_wideband:
+                        s += pint.utils.ELL1_check(
+                            self.model.A1.quantity,
+                            ecc.nominal_value,
+                            self.resids.toa.rms_weighted(),
+                            self.toas.ntoas,
+                            outstring=True,
+                        )
+                    else:
+                        s += pint.utils.ELL1_check(
+                            self.model.A1.quantity,
+                            ecc.nominal_value,
+                            self.resids.rms_weighted(),
+                            self.toas.ntoas,
+                            outstring=True,
+                        )
                     s += "\n"
 
                 # Masses and inclination
