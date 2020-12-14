@@ -142,7 +142,9 @@ class Fitter(object):
     def fit_toas(self, maxiter=None):
         """Run fitting operation.
 
-        This method needs to be implemented by subclasses.
+        This method needs to be implemented by subclasses. All implemenations
+        should call ``self.model.validate()`` and
+        ``self.model.validate_toas()`` before doing the fitting.
         """
         raise NotImplementedError
 
@@ -871,8 +873,18 @@ class WLSFitter(Fitter):
         )
         self.method = "weighted_least_square"
 
-    def fit_toas(self, maxiter=1, threshold=False):
-        """Run a linear weighted least-squared fitting method."""
+    def fit_toas(self, maxiter=1, threshold=None):
+        """Run a linear weighted least-squared fitting method.
+
+        Parameters
+        ----------
+        maxiter: int
+            Repeat the least-squares fitting up to this many times if necessary.
+        threshold : float or None
+            Discard singular values smaller than ``threshold`` times the largest
+            singular value. If None, use a value based on floating-point epsilon
+            and the matrix sizes.
+        """
         # check that params of timing model have necessary components
         self.model.validate()
         self.model.validate_toas(self.toas)
@@ -915,24 +927,25 @@ class WLSFitter(Fitter):
             # print 'log_10 cond=', np.log10(s.max()/s.min())
             # Note, Check the threshold from data precision level.Borrowed from
             # np Curve fit.
-            if threshold:
-                threshold_val = np.finfo(np.longdouble).eps * max(M.shape) * s[0]
-                bad = np.where(s < threshold_val)[0]
-                s[bad] = np.inf
-                for c in bad:
-                    bad_col = U[:, c]
-                    bad_combination = " + ".join(
-                        [
-                            "{}*{}".format(co, p)
-                            for (co, p) in sorted(zip(bad_col, params))
-                            if co != 0
-                        ]
-                    )
-                    warn(
-                        f"Parameter degeneracy; the following linear combination yields "
-                        f"almost no change: {bad_combination}",
-                        DegeneracyWarning,
-                    )
+            if threshold is None:
+                threshold_val = np.finfo(np.longdouble).eps * max(M.shape)
+
+            bad = np.where(s <= threshold_val * s[0])[0]
+            s[bad] = np.inf
+            for c in bad:
+                bad_col = Vt[c, :]
+                bad_combination = " + ".join(
+                    [
+                        "{}*{}".format(co, p)
+                        for (co, p) in sorted(zip(bad_col, params))
+                        if co != 0
+                    ]
+                )
+                warn(
+                    f"Parameter degeneracy; the following linear combination yields "
+                    f"almost no change: {bad_combination}",
+                    DegeneracyWarning,
+                )
             # Sigma = np.dot(Vt.T / s, U.T)
             # The post-fit parameter covariance matrix
             #   Sigma = V s^-2 V^T

@@ -64,4 +64,27 @@ def test_dm_barycentered():
     model.free_params = ["F0", "DM"]
     fitter = pint.fitter.WLSFitter(toas, model)
     with pytest.warns(pint.fitter.DegeneracyWarning, match=".*degeneracy.*DM.*"):
-        fitter.fit_toas(threshold=True)
+        fitter.fit_toas()
+
+
+def test_dmx_barycentered():
+    model = get_model(
+        io.StringIO(
+            "\n".join(
+                [
+                    par_base,
+                    "DMX 15",
+                    "DMX_0001 16",
+                    "DMXR1_0001 58000",
+                    "DMXR2_0001 59000",
+                ]
+            )
+        )
+    )
+    toas = make_fake_toas(58000, 58900, 10, model, obs="@", freq=np.inf)
+    model.free_params = ["F0", "DM", "DMX_0001"]
+    fitter = pint.fitter.WLSFitter(toas, model)
+    with pytest.warns(pint.fitter.DegeneracyWarning, match=r".*degeneracy.*DM\b"):
+        fitter.fit_toas()
+    with pytest.warns(pint.fitter.DegeneracyWarning, match=r".*degeneracy.*DMX_0001\b"):
+        fitter.fit_toas()
