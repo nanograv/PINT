@@ -1,6 +1,7 @@
 """Various tests to assess the performance of the DD model."""
 import logging
 import os
+from io import StringIO
 import unittest
 import pytest
 
@@ -100,7 +101,7 @@ class TestDDK(unittest.TestCase):
 
     def test_sini_from_value(self):
         self.modelJ1713.SINI.value = 0.9
-        with pytest.raises(AttributeError):
+        with pytest.raises(ValueError):
             self.modelJ1713.validate()
 
     def test_sini_from_par(self):
@@ -124,13 +125,8 @@ class TestDDK(unittest.TestCase):
             "SINI  0.8     1  0.562\n"
             "K96  1"
         )
-        par_name = os.path.join(datadir, "test_ddk_sini.par")
-        temp_par = open(par_name, "w")
-        temp_par.write(temp_par_str)
-        temp_par.close()
-        with pytest.raises(AttributeError):
-            mb.get_model(par_name)
-        os.remove(par_name)
+        with pytest.raises(ValueError):
+            mb.get_model(StringIO(temp_par_str))
 
 
 if __name__ == "__main__":
