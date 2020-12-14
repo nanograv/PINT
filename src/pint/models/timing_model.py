@@ -85,6 +85,22 @@ DEFAULT_ORDER = [
 ]
 
 
+class MissingTOAs(ValueError):
+    def __init__(self, parameter_names):
+        if isinstance(parameter_names, str):
+            parameter_names = [parameter_names]
+        if len(parameter_names) == 1:
+            msg = f"Parameter {parameter_names[0]} does not correspond to any TOAs"
+        elif len(parameter_names) > 1:
+            msg = (
+                f"Parameters {' '.join(parameter_names)} do not correspond to any TOAs"
+            )
+        else:
+            raise ValueError("Incorrect attempt to construct MissingTOAs")
+        super().__init__(msg)
+        self.parameter_names = parameter_names
+
+
 class PropertyAttributeError(ValueError):
     pass
 
@@ -1893,17 +1909,36 @@ class TimingModel(object):
 
         return result_begin + result_middle + result_end
 
-    def maskPar_has_toas_check(self, toas):
-        """Sanity check to ensure all maskParameters select at least one TOA."""
+    def validate_toas(self, toas):
+        """Sanity check to verify that this model is compatible with these toas.
+
+        This checks that where this model needs TOAs to constrain parameters,
+        that there is at least one TOA. This includes checking that every DMX
+        range for with the DMX is free has at least one TOA, and it verifies
+        that each "mask parameter" (for example JUMP) corresponds to at least one
+        TOA.
+
+        Individual components can implement a ``validate_toas`` method; this
+        method will automatically call such a method on each component that has
+        one.
+
+        If some TOAs are missing, this method will raise a MissingTOAError that
+        lists some (at least one) of the problem parameters.
+        """
+        bad_parameters = []
         for maskpar in self.get_params_of_type_top("maskParameter"):
             par = getattr(self, maskpar)
             if "TNEQ" in str(par.name) or par.frozen:
                 continue
             if len(par.select_toa_mask(toas)) == 0:
-                raise ValueError(
-                    "The maskParameter '%s %s %s' has no TOAs selected. "
-                    % (maskpar, par.key, par.key_value)
-                )
+                bad_parameters.append(f"'{maskpar}, {par.key}, {par.key_value}'")
+        for c in self.components.values():
+            try:
+                c.validate_toas(toas)
+            except MissingTOAs as e:
+                bad_parameters += e.parameter_names
+        if bad_parameters:
+            raise MissingTOAs(bad_parameters)
 
     def setup(self):
         """Run setup methods on all components."""
@@ -1988,6 +2023,10 @@ class Component(object):
 
     def validate(self):
         """Validate loaded values."""
+        pass
+
+    def validate_toas(self, toas):
+        """Check that this model component has TOAs where needed."""
         pass
 
     @property_exists
