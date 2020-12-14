@@ -502,7 +502,7 @@ class Pulsar(object):
         elif self.fitter == Fitters.GLS:
             fitter = pint.fitter.GLSFitter(self.selected_toas, self.prefit_model)
         chi2 = self.prefit_resids.chi2
-        wrms = self.prefit_resids. rms_weighted()
+        wrms = self.prefit_resids.rms_weighted()
         print("Pre-Fit Chi2:\t\t%.8g us^2" % chi2)
         print("Pre-Fit Weighted RMS:\t%.8g us" % wrms)
 
