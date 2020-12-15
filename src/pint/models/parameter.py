@@ -1340,7 +1340,7 @@ class maskParameter(floatParameter):
         name,
         index=1,
         key=None,
-        key_value=None,
+        key_value=[],
         value=None,
         long_double=False,
         units=None,
@@ -1350,27 +1350,33 @@ class maskParameter(floatParameter):
         continuous=False,
         aliases=[],
     ):
+        self.is_mask = True
+        # {key_name: (keyvalue parse function, keyvalue length)}
         self.key_identifier = {
             "mjd": (lambda x: time.Time(x, format="mjd").mjd, 2),
             "freq": (float, 2),
             "name": (str, 1),
             "tel": (str, 1),
         }
-        self.is_mask = True
-        if key_value is None:
-            key_value = []
-        elif not isinstance(key_value, list):
+
+        if not isinstance(key_value, (list, tuple)):
             key_value = [key_value]
 
         # Check key and key value
-        if key is not None and key.lower() in self.key_identifier.keys():
-            key_info = self.key_identifier[key.lower()]
-            if len(key_value) != key_info[1]:
-                errmsg = "key " + key + " takes " + key_info[1] + " element."
-                raise ValueError(errmsg)
-
+        key_value_parser = str
+        if key is not None:
+            if key.lower() in self.key_identifier.keys():
+                key_info = self.key_identifier[key.lower()]
+                if len(key_value) != key_info[1]:
+                    errmsg = "key " + key + " takes " + key_info[1] + " element(s)."
+                    raise ValueError(errmsg)
+                key_value_parser = key_info[0]
+            else:
+                if not key.startswith('-'):
+                    raise ValueError("A key/flag(excpet for 'mjd', 'freq', "
+                                     "'name', 'tel') needs a leading '-'.")
         self.key = key
-        self.key_value = key_value
+        self.key_value = [key_value_parser(k) for k in key_value]
         self.index = index
         name_param = name + str(index)
         self.origin_name = name
