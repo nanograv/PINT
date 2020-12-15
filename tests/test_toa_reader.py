@@ -14,6 +14,26 @@ from astropy.utils.iers import conf
 
 conf.auto_max_age = None
 
+simplepar = """
+PSR              1748-2021E
+RAJ       17:48:52.75  1
+DECJ      -20:21:29.0  1
+F0       61.485476554  1
+F1         -1.181D-15  1
+PEPOCH        53750.000000
+POSEPOCH      53750.000000
+DM              223.9  1
+SOLARN0               0.00
+EPHEM               DE436
+CLK              TT(BIPM2017)
+UNITS               TDB
+TIMEEPH             FB90
+T2CMETHOD           TEMPO
+CORRECT_TROPOSPHERE N
+PLANET_SHAPIRO      Y
+DILATEFREQ          N
+"""
+
 
 class TestTOAReader(unittest.TestCase):
     def setUp(self):
@@ -68,27 +88,7 @@ class TestTOAReader(unittest.TestCase):
         assert self.x.clock_corr_info["bipm_version"] == bipm_default
 
     def test_model_override1(self):
-        parstr = StringIO(
-            """
-PSR              1748-2021E
-RAJ       17:48:52.75  1
-DECJ      -20:21:29.0  1
-F0       61.485476554  1
-F1         -1.181D-15  1
-PEPOCH        53750.000000
-POSEPOCH      53750.000000
-DM              223.9  1
-SOLARN0               0.00
-EPHEM               DE436
-CLK              TT(BIPM2017)
-UNITS               TDB
-TIMEEPH             FB90
-T2CMETHOD           TEMPO
-CORRECT_TROPOSPHERE N
-PLANET_SHAPIRO      Y
-DILATEFREQ          N
-"""
-        )
+        parstr = StringIO(simplepar)
         m = get_model(parstr)
         y = toa.get_TOAs("test1.tim", model=m)
         assert y.ephem == "DE436"
@@ -96,27 +96,7 @@ DILATEFREQ          N
         assert y.clock_corr_info["bipm_version"] == "BIPM2017"
 
     def test_model_override2(self):
-        parstr = StringIO(
-            """
-PSR              1748-2021E
-RAJ       17:48:52.75  1
-DECJ      -20:21:29.0  1
-F0       61.485476554  1
-F1         -1.181D-15  1
-PEPOCH        53750.000000
-POSEPOCH      53750.000000
-DM              223.9  1
-SOLARN0               0.00
-EPHEM               DE436
-CLK              TT(BIPM2017)
-UNITS               TDB
-TIMEEPH             FB90
-T2CMETHOD           TEMPO
-CORRECT_TROPOSPHERE N
-PLANET_SHAPIRO      Y
-DILATEFREQ          N
-"""
-        )
+        parstr = StringIO(simplepar)
         m, y = get_model_and_toas(parstr, "test1.tim")
         assert y.ephem == "DE436"
         assert y.planets is True
