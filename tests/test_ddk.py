@@ -105,26 +105,24 @@ class TestDDK(unittest.TestCase):
             self.modelJ1713.validate()
 
     def test_sini_from_par(self):
-        temp_par_str = (
-            "PSR  J1713+0747\n"
-            "LAMBDA 256.66  1 0.001\n"
-            "BETA 30.70036  1 0.001\n"
-            "PMLAMBDA 5.2671  1  0.0021\n"
-            "PMBETA  -3.4428  1  0.0043\n"
-            "PX  0.8211  1  0.0258\n"
-            "F0  218.81  1  0.01\n"
-            "PEPOCH  55391.0\n"
-            "BINARY  DDK\n"
-            "A1 32.34  1  0.001\n"
-            "E  0.074  1  0.001\n"
-            "T0 55388.836  1  0.0002\n"
-            "PB 67.825129  1  0.0001\n"
-            "OM 176.19845  1  0.0013\n"
-            "M2  0.283395  1  0.0104\n"
-            "KOM   83.100  1  1.800\n"
-            "SINI  0.8     1  0.562\n"
-            "K96  1"
-        )
+        temp_par_str = """PSR  J1713+0747
+               LAMBDA 256.66  1 0.001
+               BETA 30.70036  1 0.001
+               PMLAMBDA 5.2671  1  0.0021
+               PMBETA  -3.4428  1  0.0043
+               PX  0.8211  1  0.0258
+               F0  218.81  1  0.01
+               PEPOCH  55391.0
+               BINARY  DDK
+               A1 32.34  1  0.001
+               E  0.074  1  0.001
+               T0 55388.836  1  0.0002
+               PB 67.825129  1  0.0001
+               OM 176.19845  1  0.0013
+               M2  0.283395  1  0.0104
+               KOM   83.100  1  1.800
+               SINI  0.8     1  0.562
+               K96  1"""
         with pytest.raises(ValueError):
             mb.get_model(StringIO(temp_par_str))
 
