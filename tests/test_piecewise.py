@@ -12,6 +12,7 @@ import pint.residuals
 import pint.toa
 from pinttestdata import datadir
 from pint.models.timing_model import MissingParameter
+from pint import fitter, toa
 
 parfile = os.path.join(datadir, "piecewise.par")
 parfile2 = os.path.join(datadir, "piecewise_twocomps.par")
@@ -54,6 +55,12 @@ class TestPiecewise(unittest.TestCase):
 
             assert comp in str(excinfo.value)
 
-    def test_derivatives(self):
-        print("Need to test the derivatives!")
-        pass
+    def test_fitting(self):
+        f_1 = fitter.WLSFitter(toas=self.t, model=self.m)
+
+        f_1.fit_toas()
+
+    def test_fitting_2comp(self):
+        f_1 = fitter.WLSFitter(toas=self.t, model=self.m2)
+
+        f_1.fit_toas()
