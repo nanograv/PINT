@@ -169,7 +169,7 @@ def get_TOAs(
                             )
         if planets is None and model["PLANET_SHAPIRO"].value:
             planets = True
-            log.info(f"Using PLANET_SHAPIRO = True from the given model")
+            log.info("Using PLANET_SHAPIRO = True from the given model")
 
     updatepickle = False
     recalc = False
@@ -222,7 +222,7 @@ def get_TOAs(
         if t.ephem is not None:
             # If you read a .tim file using TOAs(), the ephem is None
             # and so no recalculation is needed, just calculation!
-            log.info(f"Ephem changed, recalculation needed")
+            log.info("Ephem changed, recalculation needed")
         recalc = True
         updatepickle = True
     if recalc or "tdb" not in t.table.colnames:
