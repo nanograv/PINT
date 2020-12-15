@@ -1136,6 +1136,7 @@ class prefixParameter(object):
             scale_threshold=scale_threshold,
         )
         self.is_prefix = True
+        self.time_scale = time_scale
 
     # Define prpoerties for access the parameter composition
     @property
