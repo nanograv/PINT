@@ -57,7 +57,7 @@ class BinaryDDK(BinaryDD):
 
     @property
     def PMRA_DDK(self):
-        params = self.get_params_as_ICRS()
+        params = self._parent.get_params_as_ICRS()
         par_obj = floatParameter(
             name="PMRA",
             units="mas/year",
@@ -68,7 +68,7 @@ class BinaryDDK(BinaryDD):
 
     @property
     def PMDEC_DDK(self):
-        params = self.get_params_as_ICRS()
+        params = self._parent.get_params_as_ICRS()
         par_obj = floatParameter(
             name="PMDEC",
             units="mas/year",

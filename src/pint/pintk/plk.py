@@ -181,7 +181,7 @@ class PlkFitBoxesWidget(tk.Frame):
                 )
                 if par in fitparams:
                     # default DispersionDMX to off so graph not overwhelmed by parameters
-                    if comp is not "DispersionDMX":
+                    if comp != "DispersionDMX":
                         self.compCBs[ii].select()
                     self.compGrids[ii][pp].select()
             ii += 1
@@ -253,8 +253,8 @@ class PlkRandomModelSelect(tk.Frame):
 
 
 class PlkColorModeBoxes(tk.Frame):
-    """ 
-    Allows one to select the color mode for the plot's TOAs. 
+    """
+    Allows one to select the color mode for the plot's TOAs.
     """
 
     def __init__(self, master=None, **kwargs):
@@ -764,8 +764,8 @@ class PlkWidget(tk.Frame):
         self.plkCanvas.draw()
 
     def plotErrorbar(self, selected, color):
-        """ 
-        For some reason, xvals will not plot unless unitless. 
+        """
+        For some reason, xvals will not plot unless unitless.
         Tried using quantity_support and time_support, which plots x & yvals,
         but then yerrs fails - cannot find work-around in this case.
         """
@@ -876,7 +876,7 @@ class PlkWidget(tk.Frame):
         """
         Write information about the current selection, or all points
         Format is:
-        TOA_index   X_val   Y_val   
+        TOA_index   X_val   Y_val
         flags
 
         if flags:

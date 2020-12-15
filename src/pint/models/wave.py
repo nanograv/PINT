@@ -69,7 +69,7 @@ class Wave(PhaseComponent):
             else:
                 self.WAVEEPOCH = self.PEPOCH
 
-        if (not hasattr(self, "F0")) or (self.F0.quantity is None):
+        if (not hasattr(self._parent, "F0")) or (self._parent.F0.quantity is None):
             raise MissingParameter(
                 "Wave", "F0", "F0 is required if WAVE entries are present."
             )
@@ -111,5 +111,5 @@ class Wave(PhaseComponent):
             times += wave_a * np.sin(wave_phase)
             times += wave_b * np.cos(wave_phase)
 
-        phase = ((times) * self.F0.quantity).to(u.dimensionless_unscaled)
+        phase = ((times) * self._parent.F0.quantity).to(u.dimensionless_unscaled)
         return phase

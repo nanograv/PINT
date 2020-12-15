@@ -2,6 +2,7 @@
 import os
 import unittest
 import shutil
+import time
 
 import pytest
 
@@ -112,6 +113,7 @@ def test_pickle_invalidated_time(temp_tim, monkeypatch):
     monkeypatch.setattr(toa.TOAs, "read_pickle_file", change)
     assert toa.get_TOAs(tt, usepickle=True).was_pickled
 
+    time.sleep(1)
     with open(tt, "at") as f:
         f.write("\n")
     assert not hasattr(toa.get_TOAs(tt, usepickle=True), "was_pickled")
