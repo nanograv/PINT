@@ -18,6 +18,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fixed bug that prevented reading Parkes-format TOAs
 - Fixed bug in solar wind model that prevented fitting
 - Fix pintempo script so it will respect JUMPs in the TOA file.
+- Uncertainties are no longer set to zero if some TOAs lack EFACs. (PR #890)
 ### Added
 - Added metadata to observatory definition, to keep track of the data origin
 - Added other bipm???? files from TEMPO2
@@ -39,6 +40,7 @@ modified after a fit and are displayed with a model's .par file output.
 - Changed requirements to astropy>=4.0
 - get_model can now read from file-like, including StringIO, objects (handy for testing) (PR #871)
 - WidebandDMResiduals now support access to their parts through .toa and .dm attributes (PR #861)
+- EFACs and EQUADs can be set independently from each other now. (PR #890)
 
 ## [0.7.0] - 2020-05-27
 ### Changed
