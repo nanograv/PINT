@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 from astropy.visualization import quantity_support
 
 from pint.fitter import WidebandTOAFitter
-from pint.models import get_model
+from pint.models import get_model_and_toas
 from pint.toa import get_TOAs
 
 quantity_support()
@@ -35,8 +35,9 @@ quantity_support()
 # ## Set up your inputs
 
 # %%
-model = get_model("J1614-2230_NANOGrav_12yv3.wb.gls.par")
-toas = get_TOAs("J1614-2230_NANOGrav_12yv3.wb.tim", ephem="de436")
+model, toas = get_model_and_toas(
+    "J1614-2230_NANOGrav_12yv3.wb.gls.par", "J1614-2230_NANOGrav_12yv3.wb.tim"
+)
 
 # %% [markdown]
 # The DM and its uncertainty are recorded as flags, `pp_dm` and `pp_dme` on the TOAs that have them, They are not currently available as Columns in the Astropy object. On the other hand, it is not necessary that every observation have a measured DM.

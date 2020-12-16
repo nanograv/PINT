@@ -23,8 +23,7 @@ import astropy.units as u
 import matplotlib.pyplot as plt
 
 import pint.fitter
-import pint.models
-from pint.models import get_model
+from pint.models import get_model_and_toas
 from pint.residuals import Residuals
 from pint.toa import get_TOAs
 
@@ -33,11 +32,10 @@ parfile = "NGC6440E.par"
 timfile = "NGC6440E.tim"
 
 # %%
-m = get_model(parfile)
+m, t_all = get_model_and_toas(parfile, timfile)
 m
 
 # %%
-t_all = pint.toa.get_TOAs(timfile, ephem="de436")
 t_all.print_summary()
 
 # %% [markdown]

@@ -5,8 +5,7 @@ from io import StringIO
 
 from pint import toa
 from pint.observatory import bipm_default
-from pint.models import get_model
-from pint.models.model_builder import get_model_and_toas
+from pint.models import get_model, get_model_and_toas
 from pinttestdata import datadir
 
 # For this test, turn off the check for the age of the IERS A table
@@ -87,17 +86,35 @@ class TestTOAReader(unittest.TestCase):
     def test_clock(self):
         assert self.x.clock_corr_info["bipm_version"] == bipm_default
 
-    def test_model_override1(self):
-        parstr = StringIO(simplepar)
-        m = get_model(parstr)
-        y = toa.get_TOAs("test1.tim", model=m)
-        assert y.ephem == "DE436"
-        assert y.planets is True
-        assert y.clock_corr_info["bipm_version"] == "BIPM2017"
 
-    def test_model_override2(self):
-        parstr = StringIO(simplepar)
-        m, y = get_model_and_toas(parstr, "test1.tim")
-        assert y.ephem == "DE436"
-        assert y.planets is True
-        assert y.clock_corr_info["bipm_version"] == "BIPM2017"
+def test_model_override1():
+    parstr = StringIO(simplepar)
+    m = get_model(parstr)
+    y = toa.get_TOAs("test1.tim", model=m)
+    assert y.ephem == "DE436"
+    assert y.planets is True
+    assert y.clock_corr_info["bipm_version"] == "BIPM2017"
+
+
+def test_model_override_override():
+    parstr = StringIO(simplepar)
+    m = get_model(parstr)
+    y = toa.get_TOAs(
+        "test1.tim",
+        model=m,
+        ephem="DE405",
+        planets=False,
+        include_bipm=True,
+        bipm_version="BIPM2012",
+    )
+    assert y.ephem == "DE405"
+    assert y.planets is False
+    assert y.clock_corr_info["bipm_version"] == "BIPM2012"
+
+
+def test_model_override2():
+    parstr = StringIO(simplepar)
+    m, y = get_model_and_toas(parstr, "test1.tim")
+    assert y.ephem == "DE436"
+    assert y.planets is True
+    assert y.clock_corr_info["bipm_version"] == "BIPM2017"
