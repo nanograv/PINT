@@ -1600,7 +1600,7 @@ class maskParameter(floatParameter):
         # get the table columns
         # TODO Right now it is only supports mjd, freq, tel, and flagkeys,
         # We need to consider some more complicated situation
-        # THis will have a problem if the key has '-' in it.
+        # THis will have a problem if the key has '-' in the middle of the key.
         key = self.key.replace("-", "")
         tbl = toas.table
         if (
