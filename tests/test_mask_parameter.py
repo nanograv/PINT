@@ -58,8 +58,8 @@ class TestParameters(unittest.TestCase):
         mp_ao = maskParameter("test2", key="tel", key_value="ao")
         assert mp_ao.key_value == ["arecibo"]
         select_toas = mp_ao.select_toa_mask(self.toas)
-        print(self.toas.table["obs"][select_toas])
-        assert np.all(self.toas.table["obs"][select_toas] == "arecibo")
+        raw_selection = np.where(self.toas.table["obs"] == "arecibo")
+        assert select_toas == raw_selection[0]
         mp_gbt = maskParameter("test2", key="tel", key_value=["gbt"])
         assert mp_gbt.key_value == ["gbt"]
         select_toas = mp_gbt.select_toa_mask(self.toas)
