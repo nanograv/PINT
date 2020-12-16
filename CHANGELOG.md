@@ -19,8 +19,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fixed bug in solar wind model that prevented fitting
 - Fix pintempo script so it will respect JUMPs in the TOA file.
 ### Added
-- Added a get_model_and_toas() function in model_builder to read both, including model-based commands affecting the TOAs
-- Added ability to load TOAs including relevant commands (e.g. EPHEM, CLOCK, PLANET_SHAPIRO) from a timing model in get_TOAs()
+- Added a get_model_and_toas() function in model_builder to read both, including model-based commands affecting the TOAs (PR #889)
+- Added ability to load TOAs including relevant commands (e.g. EPHEM, CLOCK, PLANET_SHAPIRO) from a timing model in get_TOAs() (PR #889)
 - Added metadata to observatory definition, to keep track of the data origin
 - Added other bipm???? files from TEMPO2
 - Added ability to find observatories in [astropy](https://github.com/astropy/astropy-data/blob/gh-pages/coordinates/sites.json) if not present in PINT
