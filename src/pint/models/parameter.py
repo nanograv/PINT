@@ -42,6 +42,7 @@ from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name
 from pint.observatory import get_observatory
 
+
 class Parameter(object):
     """A base PINT class describing a single timing model parameter.
 
@@ -1357,7 +1358,7 @@ class maskParameter(floatParameter):
             "mjd": (lambda x: time.Time(x, format="mjd").mjd, 2),
             "freq": (lambda x: u.Quantity(x, u.MHz, copy=False), 2),
             "name": (str, 1),
-            "tel": (lambda x: get_observatory(x).name, 1),
+            "tel": (lambda x: get_observatory(str(x)).name, 1),
         }
 
         if not isinstance(key_value, (list, tuple)):

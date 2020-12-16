@@ -64,7 +64,10 @@ class TestParameters(unittest.TestCase):
         assert mp_gbt.key_value == ["gbt"]
         select_toas = mp_gbt.select_toa_mask(self.toas)
         assert np.all(self.toas.table["obs"][select_toas] == "gbt")
-
+        mp_special_obs1 = maskParameter("test2", key="tel", key_value="@")
+        assert mp_special_obs1.key_value == ["barycenter"]
+        mp_special_obs2 = maskParameter("test2", key="tel", key_value=0)
+        assert mp_special_obs2.key_value == ["geocenter"]
         with pytest.raises(ValueError):
             mp_wrong_keyvalue = maskParameter(
                 "test2", key="tel", key_value=["gbt", "ao"]
