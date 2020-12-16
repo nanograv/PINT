@@ -64,7 +64,7 @@ class Astrometry(DelayComponent):
         return self.coords_as_ECL(epoch=epoch).cartesian.xyz.transpose()
 
     def sun_angle(self, toas):
-        """Compute the pulsar-Earth-Sun angle.
+        """Compute the pulsar-observatory-Sun angle.
 
         This angle takes into account the motion of the Sun around the solar system barycenter.
         """
@@ -73,7 +73,7 @@ class Astrometry(DelayComponent):
         obs_vec = tbl["ssb_obs_pos"].quantity
         # FIXME: sun pos may not have been computed
         sun_vec = tbl["obs_sun_pos"].quantity
-        psr_vec = self._parent.ssb_to_psb_xyz_ICRS(epoch=tbl["tdb"])
+        psr_vec = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdb"])
         osv = sun_vec - obs_vec
         osv /= ((osv ** 2).sum(axis=1) ** 0.5)[:, None]
         cos = (osv * psr_vec).sum(axis=1)

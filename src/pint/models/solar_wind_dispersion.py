@@ -44,7 +44,7 @@ class SolarWindDispersion(Dispersion):
                 name="SWM",
                 value=0.0,
                 units="",
-                description="Solar Wind Model (0 is the only option)",
+                description="Solar Wind Model (0 is from Edwards+ 2006, others to come)",
             )
         )
         self.dm_value_funcs += [self.solar_wind_dm]
