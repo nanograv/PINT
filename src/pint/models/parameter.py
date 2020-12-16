@@ -477,7 +477,7 @@ class floatParameter(Parameter):
         unit_scale=False,
         scale_factor=None,
         scale_threshold=None,
-        **kwargs
+        **kwargs,
     ):
         self.long_double = long_double
         self.scale_factor = scale_factor
@@ -690,7 +690,7 @@ class boolParameter(Parameter):
         description=None,
         frozen=True,
         aliases=None,
-        **kwargs
+        **kwargs,
     ):
         print_quantity = lambda x: "Y" if x else "N"
         set_quantity = self.set_quantity_bool
@@ -768,7 +768,7 @@ class MJDParameter(Parameter):
         continuous=True,
         aliases=None,
         time_scale="tdb",
-        **kwargs
+        **kwargs,
     ):
         self._time_scale = time_scale
         set_quantity = self.set_quantity_mjd
@@ -910,7 +910,7 @@ class AngleParameter(Parameter):
         frozen=True,
         continuous=True,
         aliases=None,
-        **kwargs
+        **kwargs,
     ):
         self._str_unit = units
         self.unit_identifier = {
@@ -1071,7 +1071,7 @@ class prefixParameter(object):
         scale_factor=None,
         scale_threshold=None,
         time_scale="utc",
-        **kwargs
+        **kwargs,
     ):
         # Split prefixed name, if the name is not in the prefixed format, error
         # will be raised
@@ -1352,9 +1352,10 @@ class maskParameter(floatParameter):
     ):
         self.is_mask = True
         # {key_name: (keyvalue parse function, keyvalue length)}
+        # Move this to some other places.
         self.key_identifier = {
             "mjd": (lambda x: time.Time(x, format="mjd").mjd, 2),
-            "freq": (float, 2),
+            "freq": (lambda x: u.Quantity(x, u.MHz, copy=False), 2),
             "name": (str, 1),
             "tel": (str, 1),
         }
@@ -1368,15 +1369,18 @@ class maskParameter(floatParameter):
             if key.lower() in self.key_identifier.keys():
                 key_info = self.key_identifier[key.lower()]
                 if len(key_value) != key_info[1]:
-                    errmsg = "key " + key + " takes " + key_info[1] + " element(s)."
+                    errmsg = f"key {key} takes {key_info[1]} element(s)."
                     raise ValueError(errmsg)
                 key_value_parser = key_info[0]
             else:
-                if not key.startswith('-'):
-                    raise ValueError("A key/flag(excpet for 'mjd', 'freq', "
-                                     "'name', 'tel') needs a leading '-'.")
+                if not key.startswith("-"):
+                    raise ValueError(
+                        "A key/flag(excpet for 'mjd', 'freq', "
+                        "'name', 'tel') needs a leading '-'."
+                    )
         self.key = key
         self.key_value = [key_value_parser(k) for k in key_value]
+        self.key_value.sort()
         self.index = index
         name_param = name + str(index)
         self.origin_name = name
@@ -1593,19 +1597,20 @@ class maskParameter(floatParameter):
         # get the table columns
         # TODO Right now it is only supports mjd, freq, tel, and flagkeys,
         # We need to consider some more complicated situation
+        # THis will have a problem if the key has '-' in it.
         key = self.key.replace("-", "")
         tbl = toas.table
         if (
-            key.lower() not in column_match.keys()
+            self.key.lower() not in column_match.keys()
         ):  # This only works for the one with flags.
-            section_name = key + "_section"
+            # section_name = key + "_section"
             # if section_name not in tbl.keys():
             # if statement removed so that flags recompute every time. If don't
             # recompute, flags can only be added to the toa table once and then never update,
             # making it impossible to add additional jump parameters after the par file is read in (pintk)
             flag_col = [x.get(key, None) for x in tbl["flags"]]
-            tbl[section_name] = flag_col
-            col = tbl[section_name]
+            tbl[key] = flag_col
+            col = tbl[key]
         else:
             col = tbl[column_match[key.lower()]]
         select_idx = self.toa_selector.get_select_index(condition, col)
@@ -1650,7 +1655,7 @@ class pairParameter(floatParameter):
         frozen=True,
         continuous=False,
         aliases=[],
-        **kwargs
+        **kwargs,
     ):
 
         self.index = index
@@ -1672,7 +1677,7 @@ class pairParameter(floatParameter):
             long_double=long_double,
             set_quantity=self.set_quantity_pair,
             set_uncertainty=self.set_quantity_pair,
-            **kwargs
+            **kwargs,
         )
 
         self.set_quantity = self.set_quantity_pair

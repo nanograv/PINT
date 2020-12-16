@@ -26,8 +26,6 @@ class GRSFitter(Fitter):
     default.
     """
 
-    def __init__(
-        self, toas, model, residuals=None,
-    ):
+    def __init__(self, toas, model, residuals=None):
         super(GRSFitter, self).__init__(toas=toas, model=model, residuals=residuals)
         self.method = "g"

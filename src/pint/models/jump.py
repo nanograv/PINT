@@ -24,7 +24,6 @@ class DelayJump(DelayComponent):
 
     def __init__(self):
         super(DelayJump, self).__init__()
-        # TODO: In the future we should have phase jump as well.
         self.add_param(maskParameter(name="JUMP", units="second"))
         self.delay_funcs_component += [self.jump_delay]
 

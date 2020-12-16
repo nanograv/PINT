@@ -69,7 +69,7 @@ class TestGalactic(unittest.TestCase):
         newepoch = astropy.time.Time(newepoch, format="mjd")
         J0613_icrs = self.modelJ0613.coords_as_ICRS(epoch=newepoch)
         J0613_icrs_now_to_then = utils.remove_dummy_distance(
-            J0613_icrs_now.apply_space_motion(new_obstime=newepoch,)
+            J0613_icrs_now.apply_space_motion(new_obstime=newepoch)
         )
         sep = J0613_icrs.separation(J0613_icrs_now_to_then)
         msg = (

@@ -33,7 +33,7 @@ class TestDesignMatrix:
 
     def test_make_phase_designmatrix(self):
         phase_designmatrix = self.phase_designmatrix_maker(
-            self.toas, self.model, self.test_param_lite,
+            self.toas, self.model, self.test_param_lite
         )
 
         assert phase_designmatrix.ndim == 2
@@ -64,7 +64,7 @@ class TestDesignMatrix:
         )
 
         combined = combine_design_matrices_by_quantity(
-            [phase_designmatrix, dm_designmatrix,]
+            [phase_designmatrix, dm_designmatrix]
         )
         # dim1 includes parameter lite and offset
         assert combined.shape == (2 * self.toas.ntoas, len(self.test_param_lite) + 1)
@@ -94,7 +94,7 @@ class TestDesignMatrix:
             toas, model, self.test_param_lite, offset=True, offset_padding=0.0
         )
         combined_quantity = combine_design_matrices_by_quantity(
-            [toa_designmatrix, dm_designmatrix,]
+            [toa_designmatrix, dm_designmatrix]
         )
         combined_param = combine_design_matrices_by_param(
             combined_quantity, noise_designmatrix
