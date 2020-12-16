@@ -96,7 +96,7 @@ class Pulsar(object):
         self.prefit_resids = Residuals(self.selected_toas, self.prefit_model)
         print(
             "RMS PINT residuals are %.3f us\n"
-            % self.prefit_resids.time_resids.rms_weighted().to(u.us).value
+            % self.prefit_resids.rms_weighted().to(u.us).value
         )
         self.fitter = Fitters.WLS
         self.fitted = False
