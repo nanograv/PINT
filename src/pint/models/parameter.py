@@ -1529,10 +1529,12 @@ class maskParameter(floatParameter):
             return ""
         line = "%-15s %s " % (self.origin_name, self.key)
         for kv in self.key_value:
-            if not isinstance(kv, time.Time):
-                line += "%s " % kv
+            if isinstance(kv, time.Time):
+                line += f"{time_to_mjd_string(kv)} "
+            elif isinstance(kv, u.Quantity):
+                line += f"{kv.value} "
             else:
-                line += "%s " % time_to_mjd_string(kv)
+                line += f"{kv} "
         line += "%25s" % self.print_quantity(self.quantity)
         if self.uncertainty is not None:
             line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty_value))
