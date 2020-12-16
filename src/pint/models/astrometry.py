@@ -66,6 +66,9 @@ class Astrometry(DelayComponent):
     def sun_angle(self, toas):
         """Compute the pulsar-observatory-Sun angle.
 
+        This is the angle between the center of the Sun and the direction to
+        the pulsar, as seen from the observatory (for each TOA).
+
         This angle takes into account the motion of the Sun around the solar system barycenter.
         """
         tbl = toas.table
