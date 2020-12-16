@@ -84,11 +84,16 @@ def test_tel_mask(toas):
 
 def test_name_mask(toas):
     # Not sure about the use case for name mask
-    mp_name = maskParameter("test2", key="name", key_value=10)
-    assert mp_name.key_value == ["10"]
-    print(toas[0])
-    assert 0
-
+    mp_name = maskParameter("test2", key="name",
+                            key_value='53393.000009.3.000.000.9y.x.ff')
+    assert mp_name.key_value == ['']
+    select_toas = mp_name.select_toa_mask(toas)
+    assert len(select_toas) > 0
+    raw_selection = np.where(toas.table["name"] == "53393.000009.3.000.000.9y.x.ff")
+    assert np.all(select_toas == raw_selection[0])
+    with pytest.raises(ValueError):
+        mp_wrong_keyvalue = maskParameter("test2", key="name",
+                                          key_value=["name1", "name2"])
 
 def test_flag_mask(toas):
     mp_flag = maskParameter("test2", key="-fe", key_value=430)
