@@ -54,6 +54,16 @@ class PiecewiseSpindown(PhaseComponent):
         )
         self.add_param(
             prefixParameter(
+                name="PWPH_1",
+                units="",
+                value=0.0,
+                description_template=lambda x: "Starting phase of solution piece %d" % x,
+                unit_template=lambda x: "",
+                type_match="float",
+            )
+        )
+        self.add_param(
+            prefixParameter(
                 name="PWF0_1",
                 units="Hz",
                 value=0.0,
@@ -85,7 +95,7 @@ class PiecewiseSpindown(PhaseComponent):
         )
 
         self.phase_funcs_component += [self.piecewise_phase]
-        self.phase_derivs_wrt_delay += [self.d_piecewise_phase_d_delay]
+        # self.phase_derivs_wrt_delay += [self.d_piecewise_phase_d_delay]
 
     def setup(self):
         super(PiecewiseSpindown, self).setup()
@@ -93,6 +103,7 @@ class PiecewiseSpindown(PhaseComponent):
             "PWEP_",
             "PWSTART_",
             "PWSTOP_",
+            "PWPH_",
             "PWF0_",
             "PWF1_",
             "PWF2_",
@@ -114,7 +125,7 @@ class PiecewiseSpindown(PhaseComponent):
         #         )
         for idx in set(self.pwsol_indices):
             for param in self.pwsol_prop:
-                if param.startswith("PWF"):
+                if param.startswith("PWF") or param.startswith("PWPH"):
                     self.register_deriv_funcs(self.d_phase_d_F, f"{param}{idx}")
 
     def validate(self):
@@ -156,50 +167,54 @@ class PiecewiseSpindown(PhaseComponent):
         at the pulsar, in seconds.
         returns an array of phases in long double
         """
-        tbl = toas.table
         phs = u.Quantity(np.zeros(toas.ntoas, dtype=np.longdouble))
         glepnames = [x for x in self.params if x.startswith("PWEP_")]
         for glepnm in glepnames:
             glep = getattr(self, glepnm)
             idx = glep.index
-            dF0 = getattr(self, "PWF0_%d" % idx).quantity
-            dF1 = getattr(self, "PWF1_%d" % idx).quantity
-            dF2 = getattr(self, "PWF2_%d" % idx).quantity
+            # dPH = getattr(self, "PWPH_%d" % idx).quantity
+            # dF0 = getattr(self, "PWF0_%d" % idx).quantity
+            # dF1 = getattr(self, "PWF1_%d" % idx).quantity
+            # dF2 = getattr(self, "PWF2_%d" % idx).quantity
             dt, affected = self.get_dt_and_affected(toas, delay, glepnm)
-            fterms = [0.0 * u.Unit("")] + [dF0, dF1, dF2]
+            # fterms = [dPH, dF0, dF1, dF2]
+            fterms = self.get_spin_terms(idx)
             phs[affected] += taylor_horner(dt.to(u.second), fterms)
         return phs.to(u.dimensionless_unscaled)
 
-    def d_piecewise_phase_d_delay(self, toas, param, delay):
-        par = getattr(self, param)
-        unit = par.units
-        tbl = toas.table
-        ders = u.Quantity(np.zeros(toas.ntoas, dtype=np.longdouble) * (1 / u.second))
-        glepnames = [x for x in self.params if x.startswith("PWEP_")]
-        for glepnm in glepnames:
-            glep = getattr(self, glepnm)
-            idx = glep.index
-            dF0 = getattr(self, "PWF0_%d" % idx).quantity
-            dF1 = getattr(self, "PWF1_%d" % idx).quantity
-            dF2 = getattr(self, "PWF2_%d" % idx).quantity
-            dt, affected = self.get_dt_and_affected(toas, delay, glepnm)
-            fterms = [0.0 * u.Unit("")] + [dF0, dF1, dF2]
-            d_pphs_d_delay = taylor_horner_deriv(dt.to(u.second), fterms)
-            ders[affected] = -d_pphs_d_delay.to(1 / u.second)
-
-        return ders.to(1 / unit)
+    # def d_piecewise_phase_d_delay(self, toas, param, delay):
+    #     par = getattr(self, param)
+    #     unit = par.units
+    #     tbl = toas.table
+    #     ders = u.Quantity(np.zeros(toas.ntoas, dtype=np.longdouble) * (1 / u.second))
+    #     glepnames = [x for x in self.params if x.startswith("PWEP_")]
+    #     for glepnm in glepnames:
+    #         glep = getattr(self, glepnm)
+    #         idx = glep.index
+    #         dF0 = getattr(self, "PWF0_%d" % idx).quantity
+    #         dF1 = getattr(self, "PWF1_%d" % idx).quantity
+    #         dF2 = getattr(self, "PWF2_%d" % idx).quantity
+    #         dt, affected = self.get_dt_and_affected(toas, delay, glepnm)
+    #         fterms = [0.0 * u.Unit("")] + [dF0, dF1, dF2]
+    #         d_pphs_d_delay = taylor_horner_deriv(dt.to(u.second), fterms)
+    #         ders[affected] = -d_pphs_d_delay.to(1 / u.second)
+    #
+    #     return ders.to(1 / unit)
 
     def get_spin_terms(self, order):
-        return [getattr(self, f"PWF{ii}_{order}").quantity for ii in range(3)]
+        return [getattr(self, f"PWPH_{order}").quantity] + [getattr(self, f"PWF{ii}_{order}").quantity for ii in range(3)]
 
     def d_phase_d_F(self, toas, param, delay):
         """Calculate the derivative wrt to an spin term."""
         par = getattr(self, param)
         unit = par.units
         pn, idxf, idxv = split_prefixed_name(param)
-        order = split_prefixed_name(param[:4])[2] + 1
+        if param.startswith("PWF"):
+            order = split_prefixed_name(param[:4])[2] + 1
+        else:
+            order = 0
         # order = idxv + 1
-        fterms = [0.0 * u.Unit("")] + self.get_spin_terms(idxv)
+        fterms = self.get_spin_terms(idxv)
         # make the choosen fterms 1 others 0
         fterms = [ft * np.longdouble(0.0) / unit for ft in fterms]
         fterms[order] += np.longdouble(1.0)
