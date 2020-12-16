@@ -82,10 +82,12 @@ def test_tel_mask(toas):
         )
 
 
-def test_name_mask():
+def test_name_mask(toas):
     # Not sure about the use case for name mask
     mp_name = maskParameter("test2", key="name", key_value=10)
     assert mp_name.key_value == ["10"]
+    print(toas[0])
+    assert 0
 
 
 def test_flag_mask(toas):
@@ -101,7 +103,7 @@ def test_flag_mask(toas):
     assert len(select_toas) > 0
     raw_selection = np.where(toas.table["fe"] == "L-wide")
     assert np.all(select_toas == raw_selection[0])
-    
+
 
 def test_read_from_par(toas):
     temp_par = """
