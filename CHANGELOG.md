@@ -18,6 +18,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fixed bug that prevented reading Parkes-format TOAs
 - Fixed bug in solar wind model that prevented fitting
 - Fix pintempo script so it will respect JUMPs in the TOA file.
+- Fixed solar wind calculation (PR #894)
 ### Added
 - Added metadata to observatory definition, to keep track of the data origin
 - Added other bipm???? files from TEMPO2
@@ -31,6 +32,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added track_mode to Residuals to select pulse number tracking without needing the model to have TRACK -2
 - Added support for wideband-TOA fitting (Pennucci 2019).
 - Added START and FINISH parameters as MJDParameters to timing_model. They are now 
+- Added solar_angle calculation (PR #892)
 modified after a fit and are displayed with a model's .par file output.
 ### Changed
 - New observatories will no longer overwrite existing ones silently.  Will either raise ValueError or require overwrite=True

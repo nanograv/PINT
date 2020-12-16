@@ -71,7 +71,7 @@ class SolarWindDispersion(Dispersion):
         obs_vec = tbl["ssb_obs_pos"].quantity
         # FIXME: sun pos may not have been computed
         sun_vec = tbl["obs_sun_pos"].quantity
-        psr_vec = self._parent.ssb_to_psb_xyz_ICRS(epoch=tbl["tdb"])
+        psr_vec = self._parent.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"])
 
         sov = obs_vec - sun_vec
         r = (sov ** 2).sum(axis=1) ** 0.5

@@ -76,7 +76,7 @@ class Astrometry(DelayComponent):
         obs_vec = tbl["ssb_obs_pos"].quantity
         # FIXME: sun pos may not have been computed
         sun_vec = tbl["obs_sun_pos"].quantity
-        psr_vec = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdb"])
+        psr_vec = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"])
         osv = sun_vec - obs_vec
         osv /= ((osv ** 2).sum(axis=1) ** 0.5)[:, None]
         cos = (osv * psr_vec).sum(axis=1)
