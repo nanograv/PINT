@@ -60,6 +60,7 @@ class PiecewiseSpindown(PhaseComponent):
                 description_template=lambda x: "Starting phase of solution piece %d" % x,
                 unit_template=lambda x: "",
                 type_match="float",
+                uncertainty=1,
             )
         )
         self.add_param(
