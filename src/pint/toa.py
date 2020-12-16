@@ -138,7 +138,6 @@ def get_TOAs(
         If a valid timing model is passed, model commands (such as BIPM version,
         planet shapiro delay, and solar system ephemeris) that affect TOA loading
         are applied.
-        Defaults to False.
     usepickle : bool
         Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
     tdb_method : string
