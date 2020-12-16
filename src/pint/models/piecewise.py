@@ -57,7 +57,8 @@ class PiecewiseSpindown(PhaseComponent):
                 name="PWPH_1",
                 units="",
                 value=0.0,
-                description_template=lambda x: "Starting phase of solution piece %d" % x,
+                description_template=lambda x: "Starting phase of solution piece %d"
+                % x,
                 unit_template=lambda x: "",
                 type_match="float",
                 uncertainty=1,
@@ -203,7 +204,9 @@ class PiecewiseSpindown(PhaseComponent):
     #     return ders.to(1 / unit)
 
     def get_spin_terms(self, order):
-        return [getattr(self, f"PWPH_{order}").quantity] + [getattr(self, f"PWF{ii}_{order}").quantity for ii in range(3)]
+        return [getattr(self, f"PWPH_{order}").quantity] + [
+            getattr(self, f"PWF{ii}_{order}").quantity for ii in range(3)
+        ]
 
     def d_phase_d_F(self, toas, param, delay):
         """Calculate the derivative wrt to an spin term."""
