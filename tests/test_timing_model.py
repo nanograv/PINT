@@ -128,8 +128,8 @@ class TestModelBuilding:
         assert jump3.value == 0.3
         # Check jump key value
         assert jump1.key_value == [55000, 56000]
-        assert jump2.key_value == [1440, 2000]
-        assert jump3.key_value == ["ao"]
+        assert jump2.key_value == [1440 * u.MHz, 2000 * u.MHz]
+        assert jump3.key_value == ["arecibo"]
         assert tm.jumps == ["JUMP1", "JUMP2", "JUMP3"]
 
     def test_remove_component(self):
