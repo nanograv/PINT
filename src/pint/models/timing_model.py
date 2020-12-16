@@ -322,11 +322,11 @@ class TimingModel(object):
 
     @free_params.setter
     def free_params(self, params):
-        params = {self.match_param_aliases(p) for p in params}
+        params_true = {self.match_param_aliases(p) for p in params}
         for p in self.params:
-            getattr(self, p).frozen = p not in params
-            params.discard(p)
-        if params:
+            getattr(self, p).frozen = p not in params_true
+            params_true.discard(p)
+        if params_true:
             raise ValueError(
                 "Parameter(s) are familiar but not in the model: {}".format(params)
             )
@@ -338,7 +338,7 @@ class TimingModel(object):
                 return p
             if alias in getattr(self, p).aliases:
                 return p
-        raise ValueError("{} is not recognized as a parameter or alias".format(p))
+        raise ValueError("{} is not recognized as a parameter or alias".format(alias))
 
     def get_params_dict(self, which="free", kind="quantity"):
         """Return a dict mapping parameter names to values.
@@ -1403,9 +1403,7 @@ class TimingModel(object):
             )
         return result
 
-    def designmatrix(
-        self, toas, acc_delay=None, scale_by_F0=True, incfrozen=False, incoffset=True
-    ):
+    def designmatrix(self, toas, acc_delay=None, incfrozen=False, incoffset=True):
         """Return the design matrix.
 
         The design matrix is the matrix with columns of d_phase_d_param/F0
@@ -1442,16 +1440,14 @@ class TimingModel(object):
                 q = -self.d_phase_d_param(toas, delay, param)
                 M[:, ii] = q
                 units.append(u.Unit("") / getattr(self, param).units)
-
-        if scale_by_F0:
-            mask = []
-            for ii, un in enumerate(units):
-                if params[ii] == "Offset":
-                    continue
-                units[ii] = un * u.second
-                mask.append(ii)
-            M[:, mask] /= F0.value
-        return M, params, units, scale_by_F0
+        mask = []
+        for ii, un in enumerate(units):
+            if params[ii] == "Offset":
+                continue
+            units[ii] = un * u.second
+            mask.append(ii)
+        M[:, mask] /= F0.value
+        return M, params, units
 
     def compare(self, othermodel, nodmx=True, threshold_sigma=3.0, verbosity="max"):
         """Print comparison with another model
@@ -1469,18 +1465,15 @@ class TimingModel(object):
         verbosity : string
             Dictates amount of information returned. Options include "max",
             "med", and "min", which have the following results:
-                "max"     - print all lines from both models whether they are fit
-                            or not (note that nodmx will override this); DEFAULT
+                "max"     - print all lines from both models whether they are fit or not (note that nodmx will override this); DEFAULT
                 "med"     - only print lines for parameters that are fit
-                "min"     - only print lines for fit parameters for which
-                            diff_sigma > threshold
-                "check"   - only print significant changes with astropy.log.warning, not
-                            as string (note that all other modes will still print this)
+                "min"     - only print lines for fit parameters for which diff_sigma > threshold
+                "check"   - only print significant changes with astropy.log.warning, not as string (note that all other modes will still print this)
 
         Returns
         -------
         str
-            Human readable comparison, for printing
+            Human readable comparison, for printing.
             Formatted as a five column table with titles of
             PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2
             where Model 1/2 refer to self and othermodel Timing Model objects,
@@ -1491,10 +1484,10 @@ class TimingModel(object):
             if smaller than the second, an asterisk (*) will be appended to the line. Also, astropy
             warnings and info statements will be printed.
 
-        else:
-            Nonetype
-                Prints astropy.log warnings for parameters that have changed significantly
-                and/or have increased in uncertainty.
+        Note
+        ----
+            Prints astropy.log warnings for parameters that have changed significantly
+            and/or have increased in uncertainty.
         """
         import sys
         from copy import deepcopy as cp
@@ -1934,7 +1927,7 @@ class TimingModel(object):
                 return getattr(cp, name)
         raise KeyError("TimingModel does not have parameter {}".format(name))
 
-    def __setitem__(self, name):
+    def __setitem__(self, name, value):
         # FIXME: This could be the right way to add Parameters?
         raise NotImplementedError
 

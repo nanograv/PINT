@@ -1,7 +1,6 @@
-"""
-"""
 from __future__ import absolute_import, division, print_function
 
+import io
 import os
 import warnings
 from copy import deepcopy
@@ -16,7 +15,6 @@ from pint.models import (
     AstrometryEquatorial,
     BinaryELL1,
     DelayJump,
-    DispersionDM,
     Spindown,
     TimingModel,
     Wave,
@@ -253,3 +251,46 @@ def test_items(model_0437):
 
 def test_iterator(model_0437):
     assert [k for k in model_0437] == model_0437.params
+
+
+par_base = """
+PSR J1234+5678
+ELAT 0
+ELONG 0
+PEPOCH 58000
+F0 1
+DM 10
+"""
+
+
+@pytest.mark.parametrize(
+    "lines,param,value",
+    [
+        ([], "DMJUMP", 1),
+        (["DMJUMP -fe L_band 10"], "DMJUMP", 1),
+        ([], "H0", 1),
+        ([], "F2", 1),
+    ],
+)
+def test_set_params(lines, param, value):
+    model = get_model(io.StringIO("\n".join([par_base] + lines)))
+    with pytest.raises(KeyError) as e:
+        model[param].value = value
+    str(e.value).index(param)  # raise exception if not found
+    with pytest.raises(AttributeError) as e:
+        getattr(model, param).value = value
+    str(e.value).index(param)  # raise exception if not found
+
+
+@pytest.mark.parametrize(
+    "lines,param,exception",
+    [
+        ([], "garbage_parameter", ValueError),
+        ([], "H4", ValueError),
+        (["DMJUMP -fe L_band 10", "DMJUMP -fe S_band 20"], "DMJUMP", ValueError),
+    ],
+)
+def test_free_params(lines, param, exception):
+    model = get_model(io.StringIO("\n".join([par_base] + lines)))
+    with pytest.raises(exception):
+        model.free_params = [param]

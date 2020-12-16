@@ -5,7 +5,11 @@ import astropy.constants as c
 import astropy.units as u
 import numpy as np
 from astropy import log
-from astropy._erfa import DAYSEC as SECS_PER_DAY
+
+try:
+    from erfa import DAYSEC as SECS_PER_DAY
+except ImportError:
+    from astropy._erfa import DAYSEC as SECS_PER_DAY
 
 from pint import Tsun, ls
 from pint.models.stand_alone_psr_binaries.binary_orbits import OrbitPB

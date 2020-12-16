@@ -18,6 +18,7 @@ import astropy.table as table
 import astropy.time as time
 import astropy.units as u
 import numpy as np
+import numpy.ma
 from astropy import log
 from astropy.coordinates import EarthLocation
 from astropy.coordinates import ICRS, CartesianDifferential, CartesianRepresentation
@@ -518,7 +519,7 @@ def format_toa_line(
 
 
 def make_fake_toas(
-    startMJD, endMJD, ntoas, model, freq=999999, obs="@", error=1 * u.us
+    startMJD, endMJD, ntoas, model, freq=999999, obs="GBT", error=1 * u.us
 ):
     """Make evenly spaced toas with residuals = 0 and  without errors
 
@@ -922,6 +923,8 @@ class TOAs(object):
             self.toas = toalist
 
         if not hasattr(self, "table"):
+            if not self.toas:
+                raise ValueError("No TOAs found!")
             mjds = self.get_mjds(high_precision=True)
             # The table is grouped by observatory
             self.table = table.Table(
@@ -1752,8 +1755,8 @@ class TOAs(object):
 
         Parameters
         ----------
-        filename : str
-            The name of the file to open.
+        filename : str or file-like object
+            The name of the file to open, or an open file to read from.
         process_includes : bool, optional
             If true, obey INCLUDE directives in the file and read other
             files.

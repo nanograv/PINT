@@ -1,7 +1,11 @@
 """Observatory position and velocity calculation."""
 from __future__ import absolute_import, division, print_function
 
-import astropy._erfa as erfa
+try:
+    import erfa
+except ImportError:
+    import astropy._erfa as erfa
+
 import astropy.units as u
 from astropy import log
 import numpy as np
@@ -10,6 +14,7 @@ from astropy.utils.data import clear_download_cache, download_file, is_url_in_ca
 from astropy.utils.iers import IERS_B, IERS_B_URL, IERS_Auto
 import astropy.version
 import astropy
+import astropy.time
 
 if astropy.version.major < 4:
     log.warning(
@@ -73,9 +78,13 @@ def get_iers_b_up_to_date(mjd):
     return iers_b
 
 
-# On import, make sure the IERS table is updated.
-log.debug("Running get_iers_up_to_date() to update IERS B table")
+# On import, make sure the IERS and leap seconds tables are updated.
+log.debug(
+    "Running get_iers_up_to_date() to update IERS B table, and checking for updated leap seconds."
+)
 get_iers_up_to_date()
+astropy.time.update_leap_seconds()
+
 
 SECS_PER_DAY = erfa.DAYSEC
 # Earth rotation rate in radians per UT1 second
