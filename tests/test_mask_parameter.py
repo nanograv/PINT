@@ -54,13 +54,12 @@ class TestParameters(unittest.TestCase):
         with pytest.raises(ValueError):
             mp_wrong_keyvalue = maskParameter("test2", key="freq", key_value=[1400])
 
-    @pytest.mark.skip(reason="Needs telescope aliases working")
     def test_tel_mask(self):
         mp_ao = maskParameter("test2", key="tel", key_value="ao")
-        assert mp_ao.key_value == ["ao"]
+        assert mp_ao.key_value == ["arecibo"]
         select_toas = mp_ao.select_toa_mask(self.toas)
         print(self.toas.table["obs"][select_toas])
-        assert np.all(self.toas.table["obs"][select_toas] == "ao")
+        assert np.all(self.toas.table["obs"][select_toas] == "arecibo")
         mp_gbt = maskParameter("test2", key="tel", key_value=["gbt"])
         assert mp_gbt.key_value == ["gbt"]
         select_toas = mp_gbt.select_toa_mask(self.toas)
@@ -95,11 +94,14 @@ class TestParameters(unittest.TestCase):
                 JUMP -fe S-wide 0.02 1 0.001
                 JUMP mjd 55000 56000 0.03 1 0.001
                 JUMP freq 1400 1440 0.04 1 0.001
+                JUMP tel ao 0.07 1 0.001
                    """
         model = get_model(StringIO(temp_par))
-        assert len(model.jumps) == 4
+        assert len(model.jumps) == 5
         assert len(model.jump_phase(self.toas, 0.0)) == self.toas.ntoas
-        jump_phase0 = model.F0.quantity * (model.JUMP1.quantity + model.JUMP4.quantity)
+        jump_phase0 = model.F0.quantity * (
+            model.JUMP1.quantity + model.JUMP4.quantity + model.JUMP5.quantity
+        )
 
         assert (
             model.jump_phase(self.toas, 0.0)[0] - jump_phase0
