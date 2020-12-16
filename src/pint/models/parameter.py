@@ -1376,8 +1376,9 @@ class maskParameter(floatParameter):
             else:
                 if not key.startswith("-"):
                     raise ValueError(
-                        "A key/flag(excpet for 'mjd', 'freq', "
-                        "'name', 'tel') needs a leading '-'."
+                        "A key to a TOA flag requires a leading '-'."
+                        " Legal keywords that don't require a leading '-' "
+                        "are MJD, FREQ, NAME, TEL."
                     )
         self.key = key
         self.key_value = [key_value_parser(k) for k in key_value]
