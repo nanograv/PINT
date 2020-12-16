@@ -96,6 +96,14 @@ def test_model_override1():
     assert y.clock_corr_info["bipm_version"] == "BIPM2017"
 
 
+def test_model_override2():
+    parstr = StringIO(simplepar)
+    m, y = get_model_and_toas(parstr, "test1.tim")
+    assert y.ephem == "DE436"
+    assert y.planets is True
+    assert y.clock_corr_info["bipm_version"] == "BIPM2017"
+
+
 def test_model_override_override():
     parstr = StringIO(simplepar)
     m = get_model(parstr)
@@ -112,9 +120,9 @@ def test_model_override_override():
     assert y.clock_corr_info["bipm_version"] == "BIPM2012"
 
 
-def test_model_override2():
-    parstr = StringIO(simplepar)
-    m, y = get_model_and_toas(parstr, "test1.tim")
-    assert y.ephem == "DE436"
-    assert y.planets is True
-    assert y.clock_corr_info["bipm_version"] == "BIPM2017"
+def test_tttai():
+    # This checks to make sure that CLOCK TT(TAI) is handled correctly
+    parstr = StringIO(simplepar.replace("BIPM2017", "TAI"))
+    m = get_model(parstr)
+    y = toa.get_TOAs("test1.tim", model=m)
+    assert y.clock_corr_info["include_bipm"] == False

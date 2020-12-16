@@ -155,7 +155,10 @@ def get_TOAs(
             ephem = model["EPHEM"].value
             log.info(f"Using EPHEM = {ephem} from the given model")
         if include_bipm is None and model["CLOCK"].value is not None:
-            if "BIPM" in model["CLOCK"].value:
+            if model["CLOCK"].value == "TT(TAI)":
+                include_bipm = False
+                log.info("Using CLOCK = TT(TAI), so setting include_bipm = False")
+            elif "BIPM" in model["CLOCK"].value:
                 clk = model["CLOCK"].value.strip(")").split("(")
                 if len(clk) == 2:
                     ctype, cvers = clk
@@ -1470,7 +1473,7 @@ class TOAs(object):
                 raise ValueError("Some TOAs have 'clkcorr' flag and some do not!")
         # An array of all the time corrections, one for each TOA
         log.info(
-            "Applying clock corrections (include_GPS = {0}, include_BIPM = {1})".format(
+            "Applying clock corrections (include_gps = {0}, include_bipm = {1})".format(
                 include_gps, include_bipm
             )
         )
