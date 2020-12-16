@@ -67,16 +67,18 @@ class SolarWindDispersion(Dispersion):
         pos: pulsar position
         """
         tbl = toas.table
-        rvec = tbl["obs_sun_pos"].quantity
-        pos = self._parent.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(np.float64))
-        r = np.sqrt(np.sum(rvec * rvec, axis=1))
-        cos_theta = (np.sum(rvec * pos, axis=1) / r).to(u.Unit(""))
-        theta = np.arccos(cos_theta).to(
-            u.Unit(""), equivalencies=u.dimensionless_angles()
-        )
-        solar_wind_geometry = (
-            const.au ** 2.0 * theta / (r * np.sqrt(1.0 - cos_theta ** 2.0))
-        )
+
+        obs_vec = tbl["ssb_obs_pos"].quantity
+        # FIXME: sun pos may not have been computed
+        sun_vec = tbl["obs_sun_pos"].quantity
+        psr_vec = self._parent.ssb_to_psb_xyz_ICRS(epoch=tbl["tdb"])
+
+        sov = obs_vec - sun_vec
+        r = (sov ** 2).sum(axis=1) ** 0.5
+        sov /= r[:, None]
+        cos = (sov * psr_vec).sum(axis=1)
+        rho = np.arccos(cos)
+        solar_wind_geometry = const.au ** 2.0 * rho / (r * np.sin(rho))
         return solar_wind_geometry
 
     def solar_wind_dm(self, toas):
