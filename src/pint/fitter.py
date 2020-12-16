@@ -419,7 +419,7 @@ class Fitter(object):
                             np.arcsin(self.model.SINI.quantity),
                         )
                         s += "Pulsar mass (Shapiro Delay) = {}".format(psrmass)
-                    except ValueError:
+                    except (TypeError, ValueError):
                         pass
 
         return s
