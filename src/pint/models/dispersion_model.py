@@ -357,6 +357,55 @@ class DispersionDMX(Dispersion):
         self.set_special_params(["DMX_0001", "DMXR1_0001", "DMXR2_0001"])
         self.delay_funcs_component += [self.DMX_dispersion_delay]
 
+    def add_DMX_range(self,mjd_start,mjd_end,dmx=0,frozen=False,index=0):
+        if type(index) is int:
+            i="%04i" %index
+        else:
+            i='%s" %index
+   #### Check this syntax
+   #### if nm in self.DMX_list.name:
+   ####     raise ValueError("Index '%s' is already in use in this model. Please choose another." %index)
+        self.add_param(
+            prefixParameter(
+                name="DMX_"+i,
+                units="pc cm^-3",
+                value=dmx,
+                unit_template=lambda x: "pc cm^-3",
+                description="Dispersion measure variation",
+                description_template=lambda x: "Dispersion measure",
+                paramter_type="float",
+            )
+        )
+        self.add_param(
+            prefixParameter(
+                name="DMXR1_"+i,
+                units="MJD",
+                unit_template=lambda x: "MJD",
+                description="Beginning of DMX interval",
+                description_template=lambda x: "Beginning of DMX interval",
+                parameter_type="MJD",
+                time_scale="utc",
+                value=mjd_start
+            )
+        )
+        self.add_param(
+            prefixParameter(
+                name="DMXR2_"+i,
+                units="MJD",
+                unit_template=lambda x: "MJD",
+                description="End of DMX interval",
+                description_template=lambda x: "End of DMX interval",
+                parameter_type="MJD",
+                time_scale="utc",
+                value=mjd_end
+            )
+        )
+        self.dm_value_funcs += [self.dmx_dm]
+        self.set_special_params(["DMX_%s" %i, "DMXR1_%s" %i, "DMXR2_%s" %i])
+        self.delay_funcs_component += [self.DMX_dispersion_delay]
+
+
+
     def setup(self):
         super(DispersionDMX, self).setup()
         # Get DMX mapping.
