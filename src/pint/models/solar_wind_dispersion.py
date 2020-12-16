@@ -77,7 +77,7 @@ class SolarWindDispersion(Dispersion):
         r = (sov ** 2).sum(axis=1) ** 0.5
         sov /= r[:, None]
         cos = (sov * psr_vec).sum(axis=1)
-        rho = np.arccos(cos)
+        rho = np.arccos(cos).value
         solar_wind_geometry = const.au ** 2.0 * rho / (r * np.sin(rho))
         return solar_wind_geometry
 

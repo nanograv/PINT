@@ -49,3 +49,9 @@ def test_sun_angle_ecliptic(frac):
     sun_longitude = (sun_longitude + 180) % 360 - 180
     angles = np.rad2deg(model.sun_angle(toas).value)
     assert_allclose(angles, np.abs(sun_longitude), atol=1)
+
+
+def test_solar_wind_delays_positive():
+    model = get_model(StringIO("\n".join([par, "NE_SW 1"])))
+    toas = make_fake_toas(54000, 54000 + year, 13, model=model, obs="gbt")
+    assert np.all(model.components["SolarWindDispersion"].solar_wind_dm(toas) > 0)
