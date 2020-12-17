@@ -18,6 +18,7 @@ ELAT 0 0
 ELONG 0 0
 PEPOCH 57000
 DM 10 0
+SOLARN0 0
 """
 
 
@@ -136,12 +137,18 @@ def test_jump_everything_wideband():
 @pytest.mark.parametrize("Fitter", [pint.fitter.WLSFitter, pint.fitter.GLSFitter])
 def test_update_model(Fitter):
     model = get_model(io.StringIO("\n".join([par_base, "JUMP TEL barycenter 0"])))
+    model.INFO.value = "-f"
+    model.ECL.value = "IERS2010"
     toas = make_fake_toas(58000, 59000, 10, model, obs="barycenter", freq=np.inf)
     fitter = Fitter(toas, model)
     fitter.fit_toas()
     par_out = fitter.model.as_parfile()
     assert re.search(r"CLOCK *TT\(TAI\)", par_out)
     assert re.search(r"TIMEEPH *FB90", par_out)
+    assert re.search(r"NE_SW *0.0", par_out)
+    assert re.search(r"ECL *IERS2010", par_out)
+    assert re.search(r"DILATEFREQ *N", par_out)
+    assert re.search(r"INFO *-f", par_out)
     assert re.search(r"NTOA *10.0", par_out)
     assert re.search(r"CHI2 *\d+.\d+", par_out)
     assert re.search(r"EPHEM *DE421", par_out)
