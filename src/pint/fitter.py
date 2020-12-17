@@ -814,9 +814,14 @@ class Fitter(object):
 
 
 class PowellFitter(Fitter):
-    """A class for Scipy Powell fitting method.
+    """A fitter that demonstrates how to work with a generic fitting function.
 
-    This method searches over parameter space. It is a relative basic method.
+    This class wraps ``scipy.optimize.minimize`` with ``method="Powell"``; this
+    uses Powell's method, a simplex optimizer that makes no use of derivatives
+    (and is thus rather slow by comparison).
+
+    It is unlikely that this will be useful for timing an actual pulsar, but it
+    may serve as an example of how to write your own fitting procedure.
     """
 
     def __init__(self, toas, model, track_mode=None, residuals=None):
@@ -826,6 +831,7 @@ class PowellFitter(Fitter):
         self.method = "Powell"
 
     def fit_toas(self, maxiter=20):
+        """Carry out the fitting procedure."""
         # check that params of timing model have necessary components
         self.model.validate()
         self.model.validate_toas(self.toas)
