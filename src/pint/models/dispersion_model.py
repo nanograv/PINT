@@ -330,7 +330,7 @@ class DispersionDMX(Dispersion):
         #### Setting up the DMX title convention. If index is None, want to increment the current max DMX index by 1.
         if index is None:
             index = self.get_prefix_mapping_component("DMX_").max() + 1
-        i = "DMX_" + f"{int(index):04d}"
+        i = f"{int(index):04d}"
 
         #### Check to see if the user-input index is already assigned to a different DMX component. Throw error if it is.
         if int(index) in self.get_prefix_mapping_component("DMX_"):
