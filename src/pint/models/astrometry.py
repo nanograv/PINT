@@ -89,13 +89,10 @@ class Astrometry(DelayComponent):
         """
         tbl = toas.table
 
-        obs_vec = tbl["ssb_obs_pos"].quantity
         if heliocenter:
-            # FIXME: sun pos may not have been computed?
-            sun_vec = tbl["obs_sun_pos"].quantity
-            osv = sun_vec - obs_vec
+            osv = tbl["obs_sun_pos"].quantity
         else:
-            osv = -obs_vec
+            osv = -tbl["ssb_obs_pos"].quantity
         psr_vec = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"])
         r = (osv ** 2).sum(axis=1) ** 0.5
         osv /= r[:, None]
