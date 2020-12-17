@@ -42,14 +42,12 @@ ignore_params = set(
     [
         "START",
         "FINISH",
-        "CLK",
         "EPHVER",
         "UNITS",
         "TIMEEPH",
         "T2CMETHOD",
         "DILATEFREQ",
         "NTOA",
-        "CLOCK",
         "TRES",
         "TZRMJD",
         "TZRFRQ",
@@ -200,6 +198,10 @@ class TimingModel(object):
         )
         self.add_param_from_top(
             strParameter(name="EPHEM", description="Ephemeris to use"), ""
+        )
+        self.add_param_from_top(
+            strParameter(name="CLOCK", description="Timescale to use", aliases=["CLK"]),
+            "",
         )
         self.add_param_from_top(
             strParameter(name="UNITS", description="Units (TDB assumed)"), ""

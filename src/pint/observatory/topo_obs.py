@@ -251,7 +251,9 @@ class TopoObs(Observatory):
             corr += self._gps_clock.evaluate(t)
 
         if self.include_bipm:
-            log.info("Applying TT(TAI) to TT(BIPM) clock correction (~27 us)")
+            log.info(
+                f"Applying TT(TAI) to TT({self.bipm_version}) clock correction (~27 us)"
+            )
             tt2tai = 32.184 * 1e6 * u.us
             if self._bipm_clock is None:
                 try:
