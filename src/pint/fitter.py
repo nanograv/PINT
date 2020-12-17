@@ -207,7 +207,10 @@ class Fitter(object):
             if par.value is not None:
                 if isinstance(par, strParameter):
                     s += ("{:" + spacingName + "s} {:>20s} {:28s} {}\n").format(
-                        pn, prefitpar.value, "", par.units
+                        pn,
+                        prefitpar.value if prefitpar.value is not None else "",
+                        par.value,
+                        par.units,
                     )
                 elif isinstance(par, AngleParameter):
                     # Add special handling here to put uncertainty into arcsec
