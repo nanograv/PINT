@@ -385,7 +385,7 @@ class DispersionDMX(Dispersion):
         self.setup()
         self.validate()
 
-    def remove_dmx_range(self,index):
+    def remove_DMX_range(self,index):
         """Takes in index for DMX event and removes the 3 components
              from the timing model
          """
