@@ -42,14 +42,6 @@ __all__ = ["DEFAULT_ORDER", "TimingModel"]
 # Comparisons with keywords in par file lines is done in a case insensitive way.
 ignore_params = set(
     [
-        "START",
-        "FINISH",
-        "EPHVER",
-        "UNITS",
-        "TIMEEPH",
-        "T2CMETHOD",
-        "DILATEFREQ",
-        "NTOA",
         "TRES",
         "TZRMJD",
         "TZRFRQ",
@@ -59,7 +51,6 @@ ignore_params = set(
         "BINARY",
         "CHI2R",
         "MODE",
-        "INFO",
         "PLANET_SHAPIRO2",
         #    'NE_SW', 'NE_SW2',
     ]
@@ -232,6 +223,13 @@ class TimingModel(object):
         )
         self.add_param_from_top(
             strParameter(
+                name="INFO",
+                description="Tells TEMPO to write some extra information about frontend/backend combinations; -f is recommended",
+            ),
+            "",
+        )
+        self.add_param_from_top(
+            strParameter(
                 name="TIMEEPH",
                 description="Time ephemeris to use for TDB conversion; for PINT, always FB90",
             ),
@@ -246,8 +244,17 @@ class TimingModel(object):
         )
         self.add_param_from_top(
             boolParameter(
+                name="DILATEFREQ",
+                value=False,
+                description="Tells TEMPO2 o do something with frequencies; PINT always acts like it is N",
+            ),
+            "",
+        )
+        self.add_param_from_top(
+            floatParameter(
                 name="DMDATA",
-                value="0",
+                value=0.0,
+                units="",
                 description="Was the fit done using per-TOA DM information?",
             ),
             "",

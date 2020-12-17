@@ -145,6 +145,6 @@ def test_update_model(Fitter):
     assert re.search(r"NTOA *10.0", par_out)
     assert re.search(r"CHI2 *\d+.\d+", par_out)
     assert re.search(r"EPHEM *DE421", par_out)
-    assert re.search(r"DMDATA *(N|0)", par_out)
+    assert re.search(r"DMDATA *0.0", par_out)
     assert re.search(r"START *58000.0", par_out)
     assert re.search(r"FINISH *59000.0", par_out)

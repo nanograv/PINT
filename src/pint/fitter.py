@@ -473,7 +473,7 @@ class Fitter(object):
         if not self.toas.clock_corr_info["include_bipm"]:
             self.model.CLOCK.value = "TT(TAI)"
         else:
-            self.model.CLOCK.value = f"TT({self.toas.clock_corr_info('bipm_version')})"
+            self.model.CLOCK.value = f"TT({self.toas.clock_corr_info['bipm_version']})"
         self.model.TIMEEPH.value = "FB90"  # FIXME: is this true?
         self.model.T2CMETHOD.value = "TEMPO"
         if chi2 is not None:
