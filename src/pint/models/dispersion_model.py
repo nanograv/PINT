@@ -332,13 +332,13 @@ class DispersionDMX(Dispersion):
             index = self.get_prefix_mapping_component("DMX_").max() + 1
         i = f"{int(index):04d}"
 
-        #### Making sure start<end, flipping if not
-        if mjd_end < mjd_start:
-            tmp = str(mjd_end)
-            mjd_end = mjd_start
-            mjd_start = float(tmp)
+        if mjd_end is not None and mjd_start is not None:
+            if mjd_end < mjd_start:
+                raise ValueError("Starting MJD is greater than ending MJD.")
+        elif mjd_start != mjd_end:
+            raise ValueError("Only one MJD bound is set.")
 
-        #### Check to see if the user-input index is already assigned to a different DMX component. Throw error if it is.
+        #### Check to see if the user-input index is already assigned to a different DMX component.
         if int(index) in self.get_prefix_mapping_component("DMX_"):
             raise ValueError(
                 "Index '%s' is already in use in this model. Please choose another."
@@ -391,8 +391,8 @@ class DispersionDMX(Dispersion):
          """
         index = "{:04d}".format(index)
         for prefix in ["DMX_", "DMXR1_", "DMXR2_"]:
-            self.remove_parameter(prefix + index)
-        self.validation()
+            self.remove_param(prefix + index)
+        self.validate()
 
     def setup(self):
         super(DispersionDMX, self).setup()
