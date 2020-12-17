@@ -66,18 +66,8 @@ class SolarWindDispersion(Dispersion):
         rvec: radial vector from observatory to the center of the Sun
         pos: pulsar position
         """
-        tbl = toas.table
-
-        obs_vec = tbl["ssb_obs_pos"].quantity
-        # FIXME: sun pos may not have been computed
-        sun_vec = tbl["obs_sun_pos"].quantity
-        psr_vec = self._parent.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"])
-
-        sov = obs_vec - sun_vec
-        r = (sov ** 2).sum(axis=1) ** 0.5
-        sov /= r[:, None]
-        cos = (sov * psr_vec).sum(axis=1)
-        rho = np.arccos(cos).value
+        angle, r = self._parent.sun_angle(toas, also_distance=True)
+        rho = np.pi - angle.value
         solar_wind_geometry = const.au ** 2.0 * rho / (r * np.sin(rho))
         return solar_wind_geometry
 
