@@ -1602,7 +1602,7 @@ class maskParameter(floatParameter):
         # TODO Right now it is only supports mjd, freq, tel, and flagkeys,
         # We need to consider some more complicated situation
         # THis will have a problem if the key has '-' in the middle of the key.
-        if self.key.startswith('-'):
+        if self.key.startswith("-"):
             key = self.key[1::]
         else:
             key = self.key
