@@ -1601,7 +1601,6 @@ class maskParameter(floatParameter):
         # get the table columns
         # TODO Right now it is only supports mjd, freq, tel, and flagkeys,
         # We need to consider some more complicated situation
-        # THis will have a problem if the key has '-' in the middle of the key.
         if self.key.startswith("-"):
             key = self.key[1::]
         else:
@@ -1611,9 +1610,7 @@ class maskParameter(floatParameter):
         if (
             self.key.lower() not in column_match
         ):  # This only works for the one with flags.
-            # section_name = key + "_section"
-            # if section_name not in tbl.keys():
-            # if statement removed so that flags recompute every time. If don't
+            # The flags are recomputed every time. If don't
             # recompute, flags can only be added to the toa table once and then never update,
             # making it impossible to add additional jump parameters after the par file is read in (pintk)
             flag_col = [x.get(key, None) for x in tbl["flags"]]
