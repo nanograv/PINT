@@ -327,10 +327,16 @@ class DispersionDMX(Dispersion):
         self.delay_funcs_component += [self.DMX_dispersion_delay]
 
     def add_DMX_range(self,mjd_start,mjd_end,index,dmx=0,frozen=False):
-        i=f"{index:04d}"
-   #### Check this syntax
-   #### if nm in self.DMX_list.name:
-   ####     raise ValueError("Index '%s' is already in use in this model. Please choose another." %index)
+   #### Setting up the DMX title convention. If index is None, want to increment the current max DMX index by 1. 
+        if index is None:
+            index=self.get_prefix_mapping_component('DMX_').max()+1
+        i="DMX_"+f"{int(index):04d}"
+
+   #### Check to see if the user-input index is already assigned to a different DMX component. Throw error if it is.
+        if int(index) in self.get_prefix_mapping_component('DMX_'): 
+            raise ValueError("Index '%s' is already in use in this model. Please choose another." %index)
+
+   #### Add three DMX parameters (start MJD, end MJD, DMX value)
         self.add_param(
             prefixParameter(
                 name="DMX_"+i,
@@ -339,7 +345,8 @@ class DispersionDMX(Dispersion):
                 unit_template=lambda x: "pc cm^-3",
                 description="Dispersion measure variation",
                 description_template=lambda x: "Dispersion measure",
-                paramter_type="float",
+                parameter_type="float",
+                frozen=frozen
             )
         )
         self.add_param(
@@ -367,6 +374,7 @@ class DispersionDMX(Dispersion):
             )
         )
         self.setup() 
+        self.validate()
 
 
     def setup(self):
