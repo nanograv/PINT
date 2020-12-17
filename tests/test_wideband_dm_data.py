@@ -14,21 +14,26 @@ from numpy.testing import assert_allclose
 
 from pint.models import get_model
 from pint.residuals import Residuals, WidebandTOAResiduals
-from pint.toa import get_TOAs
+from pint.toa import get_TOAs, make_fake_toas
 from pint.fitter import WidebandTOAFitter
 
 os.chdir(datadir)
 
 
-par = """
+par_base = """
 PSR J1234+5678
 ELAT 0
 ELONG 0
 F0 1
 DM 10
 PEPOCH 57000
+"""
+par = (
+    par_base
+    + """
 DMJUMP -fe L-wide 0
 """
+)
 
 tim = """
 FORMAT 1
@@ -185,3 +190,36 @@ def test_wideband_fit_dmjump_all(wb_model, wb_toas_all):
     fitter.fit_toas()
     print(fitter.print_summary())
     assert_allclose(fitter.model.DMJUMP1.value, -10, atol=1e-3)
+
+
+def test_dmjump_uncertainty():
+    model = get_model(io.StringIO("\n".join([par_base, "DMJUMP mjd 56000 58000 0"])))
+    toas = make_fake_toas(57000, 59000, 32, model=model, obs="ao", error=0.1 * u.s)
+    for f in toas.table["flags"]:
+        f["pp_dm"] = 10.0
+        f["pp_dme"] = 4e-5
+
+    model.free_params = ["DM"]
+    fitter = WidebandTOAFitter(toas, model)
+    fitter.fit_toas()
+    cov = fitter.get_covariance_matrix()
+    dm_std = np.sqrt(cov[0, 0])
+
+    model.free_params = ["DMJUMP1"]
+    fitter = WidebandTOAFitter(toas, model)
+    fitter.fit_toas()
+    cov = fitter.get_covariance_matrix()
+    assert_allclose(np.sqrt(cov[0, 0]), np.sqrt(2) * dm_std)
+
+    model.free_params = ["DM", "DMJUMP1"]
+    fitter = WidebandTOAFitter(toas, model)
+    fitter.fit_toas()
+    cov = fitter.get_covariance_matrix()
+    assert_allclose(np.sqrt(cov[0, 0]), np.sqrt(2) * dm_std)
+    assert_allclose(np.sqrt(cov[1, 1]), 2 * dm_std)
+
+    model.free_params = ["F0", "DMJUMP1"]
+    fitter = WidebandTOAFitter(toas, model)
+    fitter.fit_toas()
+    cov = fitter.get_covariance_matrix()
+    assert_allclose(np.sqrt(cov[1, 1]), np.sqrt(2) * dm_std)
