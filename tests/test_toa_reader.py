@@ -104,6 +104,12 @@ def test_model_override2():
     assert y.clock_corr_info["bipm_version"] == "BIPM2017"
 
 
+def test_model_override_override2():
+    parstr = StringIO(simplepar)
+    m, y = get_model_and_toas(parstr, "test1.tim", ephem="DE405")
+    assert y.ephem == "DE405"
+
+
 def test_model_override_override():
     parstr = StringIO(simplepar)
     m = get_model(parstr)
