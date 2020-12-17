@@ -33,9 +33,9 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added ability to disable subtracting mean from residuals
 - Added track_mode to Residuals to select pulse number tracking without needing the model to have TRACK -2
 - Added support for wideband-TOA fitting (Pennucci 2019).
-- Added START and FINISH parameters as MJDParameters to timing_model. They are now 
+- Added START and FINISH parameters as MJDParameters to timing_model. They are now modified after a fit and are displayed with a model's .par file output.
 - Added solar_angle calculation (PR #892)
-modified after a fit and are displayed with a model's .par file output.
+- Added parameters to TimingModel to support TEMPO/TEMPO2 compatible par files. (PR #900)
 ### Changed
 - New observatories will no longer overwrite existing ones silently.  Will either raise ValueError or require overwrite=True
 - Large speed increase when using Ecliptic coordinates
@@ -43,6 +43,7 @@ modified after a fit and are displayed with a model's .par file output.
 - Changed requirements to astropy>=4.0
 - get_model can now read from file-like, including StringIO, objects (handy for testing) (PR #871)
 - WidebandDMResiduals now support access to their parts through .toa and .dm attributes (PR #861)
+- Fitters now update the fitted model to record things like EPHEM used for the TOAs (PR #900)
 
 ## [0.7.0] - 2020-05-27
 ### Changed
