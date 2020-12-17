@@ -326,11 +326,17 @@ class DispersionDMX(Dispersion):
         self.set_special_params(["DMX_0001", "DMXR1_0001", "DMXR2_0001"])
         self.delay_funcs_component += [self.DMX_dispersion_delay]
 
-    def add_DMX_range(self, mjd_start, mjd_end, index, dmx=0, frozen=False):
+    def add_DMX_range(self, mjd_start, mjd_end, index=None, dmx=0, frozen=True):
         #### Setting up the DMX title convention. If index is None, want to increment the current max DMX index by 1.
         if index is None:
             index = self.get_prefix_mapping_component("DMX_").max() + 1
         i = f"{int(index):04d}"
+
+        #### Making sure start<end, flipping if not 
+        if mjd_end < mjd_start:
+            tmp=str(mjd_end)
+            mjd_end=mjd_start
+            mjd_start=float(tmp)
 
         #### Check to see if the user-input index is already assigned to a different DMX component. Throw error if it is.
         if int(index) in self.get_prefix_mapping_component("DMX_"):
@@ -378,6 +384,15 @@ class DispersionDMX(Dispersion):
         )
         self.setup()
         self.validate()
+
+    def remove_dmx_range(self,index):
+        """Takes in index for DMX event and removes the 3 components
+             from the timing model
+         """
+        index = "{:04d}".format(index)
+        for prefix in ['DMX_','DMXR1_','DMXR2_']:
+            self.remove_parameter(prefix+index)
+        self.validation()
 
     def setup(self):
         super(DispersionDMX, self).setup()
