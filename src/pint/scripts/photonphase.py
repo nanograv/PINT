@@ -206,8 +206,7 @@ def main(argv=None):
 
     # Compute model phase for each TOA
     iphss, phss = modelin.phase(ts, abs_phase=True)
-    phases = phss.value
-    phases[phases < 0.0] += 1
+    phases = phss.value % 1
     h = float(hm(phases))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
     if args.plot:

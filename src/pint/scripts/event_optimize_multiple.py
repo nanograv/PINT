@@ -136,9 +136,7 @@ def load_eventfiles(infile, tcoords=None, minweight=0, minMJD=0, maxMJD=100000):
 
 def lnlikelihood_prob(ftr, theta, index):
     phases = ftr.get_event_phases(index)
-    phss = phases.astype(np.float64) + theta[-1]
-    phss[phss < 0] += 1.0
-    phss[phss >= 1] -= 1.0
+    phss = (phases.astype(np.float64) + theta[-1]) % 1
 
     probs = ftr.get_template_vals(phss, index)
     if ftr.weights[index] is None:
@@ -321,8 +319,7 @@ def main(argv=None):
             try:
                 gtemplate = cPickle.load(file(tname))
             except:
-                phases = (modelin.phase(ts)[1]).astype(np.float64)
-                phases[phases < 0] += 1 * u.dimensionless_unscaled
+                phases = (modelin.phase(ts)[1].value).astype(np.float64) % 1
                 gtemplate = lctemplate.get_gauss2()
                 lcf = lcfitters.LCFitter(gtemplate, phases, weights=wlist[i])
                 lcf.fit(unbinned=False)
@@ -331,10 +328,9 @@ def main(argv=None):
                     file("%s_template%d.pickle" % (jname, i), "wb"),
                     protocol=2,
                 )
-            phases = (modelin.phase(ts)[1]).astype(np.float64)
-            phases[phases < 0] += 1 * u.dimensionless_unscaled
+            phases = (modelin.phase(ts)[1].value).astype(np.float64) % 1
             lcf = lcfitters.LCFitter(
-                gtemplate, phases.value, weights=wlist[i], binned_bins=200
+                gtemplate, phases, weights=wlist[i], binned_bins=200
             )
             lcf.fit_position(unbinned=False)
             lcf.fit(overall_position_first=True, estimate_errors=False, unbinned=False)

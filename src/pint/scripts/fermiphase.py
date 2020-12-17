@@ -116,8 +116,8 @@ def main(argv=None):
 
     # Compute model phase for each TOA
     iphss, phss = modelin.phase(ts, abs_phase=True)
-    # ensure all postive
-    phases = np.where(phss < 0.0, phss + 1.0, phss)
+    phss %= 1
+    phases = phss.value
     mjds = ts.get_mjds()
     weights = np.array([w["weight"] for w in ts.table["flags"]])
     h = float(hmw(phases, weights))

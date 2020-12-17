@@ -73,7 +73,7 @@ def load_Fermi_TOAs(
     logeref=4.1,
     logesig=0.5,
     minweight=0.0,
-    minmjd=0.0,
+    minmjd=-np.inf,
     maxmjd=np.inf,
     fermiobs="Fermi",
 ):
@@ -159,7 +159,7 @@ def load_Fermi_TOAs(
 
     # limit the TOAs to ones in selected MJD range
     mjds_float = np.asarray([r[0] + r[1] for r in mjds])
-    idx = np.logical_and((mjds_float > minmjd), (mjds_float < maxmjd))
+    idx = (minmjd < mjds_float) & (mjds_float < maxmjd)
     mjds = mjds[idx]
     energies = energies[idx]
     if weightcolumn is not None:

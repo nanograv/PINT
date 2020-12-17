@@ -128,14 +128,17 @@ def load_fits_TOAs(
     extension=None,
     timesys=None,
     timeref=None,
-    minmjd=0,
+    minmjd=-np.inf,
     maxmjd=np.inf,
 ):
     """
     Read photon event times out of a FITS file as PINT TOA objects.
 
     Correctly handles raw event files, or ones processed with axBary to have
-    barycentered  TOAs. Different conditions may apply to different missions.
+    barycentered TOAs. Different conditions may apply to different missions.
+
+    The minmjd/maxmjd parameters can be used to avoid instantiation of TOAs
+    we don't want, which can otherwise be very slow.
 
     Parameters
     ----------
@@ -152,7 +155,7 @@ def load_fits_TOAs(
         Force this time system
     timeref : str, default None
         Forse this time reference
-    minmjd : float, default 0
+    minmjd : float, default "-infinity"
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
@@ -196,7 +199,7 @@ def load_fits_TOAs(
 
     # mask out times/columns outside of mjd range
     mjds_float = np.asarray([r[0] + r[1] for r in mjds])
-    idx = np.logical_and((mjds_float > minmjd), (mjds_float < maxmjd))
+    idx = (minmjd < mjds_float) & (mjds_float < maxmjd)
     mjds = mjds[idx]
     for key in new_kwargs.keys():
         new_kwargs[key] = new_kwargs[key][idx]
@@ -212,12 +215,15 @@ def load_fits_TOAs(
     return toalist
 
 
-def load_event_TOAs(eventname, mission, weights=None, minmjd=0, maxmjd=np.inf):
+def load_event_TOAs(eventname, mission, weights=None, minmjd=-np.inf, maxmjd=np.inf):
     """
     Read photon event times out of a FITS file as PINT TOA objects.
 
     Correctly handles raw event files, or ones processed with axBary to have
-    barycentered  TOAs. Different conditions may apply to different missions.
+    barycentered TOAs. Different conditions may apply to different missions.
+
+    The minmjd/maxmjd parameters can be used to avoid instantiation of TOAs
+    we don't want, which can otherwise be very slow.
 
     Parameters
     ----------
@@ -228,7 +234,7 @@ def load_event_TOAs(eventname, mission, weights=None, minmjd=0, maxmjd=np.inf):
     weights : array or None
         The array has to be of the same size as the event list. Overwrites
         possible weight lists from mission-specific FITS files
-    minmjd : float, default 0
+    minmjd : float, default "-infinity"
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
@@ -250,17 +256,17 @@ def load_event_TOAs(eventname, mission, weights=None, minmjd=0, maxmjd=np.inf):
     )
 
 
-def load_RXTE_TOAs(eventname, minmjd=0, maxmjd=np.inf):
+def load_RXTE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
     return load_event_TOAs(eventname, "rxte", minmjd=minmjd, maxmjd=maxmjd)
 
 
-def load_NICER_TOAs(eventname, minmjd=0, maxmjd=np.inf):
+def load_NICER_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
     return load_event_TOAs(eventname, "nicer", minmjd=minmjd, maxmjd=maxmjd)
 
 
-def load_XMM_TOAs(eventname, minmjd=0, maxmjd=np.inf):
+def load_XMM_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
     return load_event_TOAs(eventname, "xmm", minmjd=minmjd, maxmjd=maxmjd)
 
 
-def load_NuSTAR_TOAs(eventname, minmjd=0, maxmjd=np.inf):
+def load_NuSTAR_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
     return load_event_TOAs(eventname, "nustar", minmjd=minmjd, maxmjd=maxmjd)

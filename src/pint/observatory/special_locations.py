@@ -202,7 +202,10 @@ class GeocenterObs(SpecialLocation):
 class T2SpacecraftObs(SpecialLocation):
     """An observatory with position tabulated following Tempo2 convention.
 
-    In tempo2, it is possible to specify the GCRS position of the observatory via the -telx, -tely, and -telz flags in a TOA file.  This class is able to obtain its position in this way, i.e. by exaiming the flags in a TOA table.
+    In tempo2, it is possible to specify the GCRS position of the 
+    observatory via the -telx, -tely, and -telz flags in a TOA file.  This
+    class is able to obtain its position in this way, i.e. by examining the
+    flags in a TOA table.
     """
 
     @property

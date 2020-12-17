@@ -267,11 +267,7 @@ def main(argv=None):
     log.info("Starting pulse likelihood: %f" % like_start)
 
     if args.phs is None:
-        fitvals[-1] = 1.0 - maxbin[0] / float(len(gtemplate))
-        if fitvals[-1] > 1.0:
-            fitvals[-1] -= 1.0
-        if fitvals[-1] < 0.0:
-            fitvals[-1] += 1.0
+        fitvals[-1] = (1.0 - maxbin[0] / float(len(gtemplate))) % 1
         log.info("Starting pulse phase: %f" % fitvals[-1])
     else:
         log.info(
