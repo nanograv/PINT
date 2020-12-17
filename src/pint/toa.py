@@ -70,6 +70,8 @@ toa_commands = (
     "END",
 )
 
+all_planets = ("jupiter", "saturn", "venus", "uranus", "neptune")
+
 # FIXME: why are these here?
 iers_a_file = None
 iers_a = None
@@ -889,7 +891,7 @@ class TOAs(object):
          - velocity of the observatory in ecliptic coordinates at the time of the TOA; computed
            by :func:`pint.toa.TOAs.add_vel_ecl`
        * - ``obs_sun_pos``, ``obs_jupiter_pos``, ``obs_saturn_pos``, ``obs_venus_pos``,
-           ``obs_uranus_pos``
+           ``obs_uranus_pos``, ``obs_neptune_pos``
          - position of various celestial objects at the time of the TOA; computed
            by :func:`pint.toa.TOAs.compute_posvels`
        * - ``pulse_number``
@@ -1638,7 +1640,7 @@ class TOAs(object):
             if c in self.table.colnames:
                 log.info("Column {0} already exists. Removing...".format(c))
                 self.table.remove_column(c)
-        for p in ("jupiter", "saturn", "venus", "uranus"):
+        for p in all_planets:
             name = "obs_" + p + "_pos"
             if name in self.table.colnames:
                 log.info("Column {0} already exists. Removing...".format(name))
@@ -1665,7 +1667,7 @@ class TOAs(object):
         )
         if planets:
             plan_poss = {}
-            for p in ("jupiter", "saturn", "venus", "uranus"):
+            for p in all_planets:
                 name = "obs_" + p + "_pos"
                 plan_poss[name] = table.Column(
                     name=name,
@@ -1693,7 +1695,7 @@ class TOAs(object):
             sun_obs = objPosVel_wrt_SSB("sun", tdb, ephem) - ssb_obs
             obs_sun_pos[loind:hiind, :] = sun_obs.pos.T.to(u.km)
             if planets:
-                for p in ("jupiter", "saturn", "venus", "uranus"):
+                for p in all_planets:
                     name = "obs_" + p + "_pos"
                     dest = p
                     pv = objPosVel_wrt_SSB(dest, tdb, ephem) - ssb_obs
