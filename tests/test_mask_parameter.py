@@ -30,7 +30,9 @@ def test_mjd_mask(toas):
     assert mp.value == None
     select_toas = mp.select_toa_mask(toas)
     assert len(select_toas) > 0
-    raw_selection = np.where((toas.table["mjd_float"] <= 54100) * (toas.table["mjd_float"] >= 54000))
+    raw_selection = np.where(
+        (toas.table["mjd_float"] <= 54100) * (toas.table["mjd_float"] >= 54000)
+    )
     assert np.all(select_toas == raw_selection[0])
     assert np.all(toas.table["mjd_float"][select_toas] <= 54100)
     assert np.all(toas.table["mjd_float"][select_toas] >= 54000)
@@ -47,7 +49,9 @@ def test_freq_mask(toas):
     assert mp.key_value == [1400 * u.MHz, 1430 * u.MHz]
     select_toas = mp.select_toa_mask(toas)
     assert len(select_toas) > 0
-    raw_selection = np.where((toas.table["freq"] <= 1430 * u.MHz) * (toas.table["freq"] >= 1400 * u.MHz))
+    raw_selection = np.where(
+        (toas.table["freq"] <= 1430 * u.MHz) * (toas.table["freq"] >= 1400 * u.MHz)
+    )
     assert np.all(select_toas == raw_selection[0])
     mp_str = maskParameter("test2", key="freq", key_value=["1400", "2000"])
     assert mp_str.key_value == [1400 * u.MHz, 2000 * u.MHz]
@@ -77,23 +81,24 @@ def test_tel_mask(toas):
     mp_special_obs2 = maskParameter("test2", key="tel", key_value=0)
     assert mp_special_obs2.key_value == ["geocenter"]
     with pytest.raises(ValueError):
-        mp_wrong_keyvalue = maskParameter(
-            "test2", key="tel", key_value=["gbt", "ao"]
-        )
+        mp_wrong_keyvalue = maskParameter("test2", key="tel", key_value=["gbt", "ao"])
 
 
 def test_name_mask(toas):
     # Not sure about the use case for name mask
-    mp_name = maskParameter("test2", key="name",
-                            key_value='53393.000009.3.000.000.9y.x.ff')
-    assert mp_name.key_value == ['']
+    mp_name = maskParameter(
+        "test2", key="name", key_value="53393.000009.3.000.000.9y.x.ff"
+    )
+    assert mp_name.key_value == [""]
     select_toas = mp_name.select_toa_mask(toas)
     assert len(select_toas) > 0
     raw_selection = np.where(toas.table["name"] == "53393.000009.3.000.000.9y.x.ff")
     assert np.all(select_toas == raw_selection[0])
     with pytest.raises(ValueError):
-        mp_wrong_keyvalue = maskParameter("test2", key="name",
-                                          key_value=["name1", "name2"])
+        mp_wrong_keyvalue = maskParameter(
+            "test2", key="name", key_value=["name1", "name2"]
+        )
+
 
 def test_flag_mask(toas):
     mp_flag = maskParameter("test2", key="-fe", key_value=430)
@@ -126,6 +131,4 @@ def test_read_from_par(toas):
         model.JUMP1.quantity + model.JUMP4.quantity + model.JUMP5.quantity
     )
 
-    assert (
-        model.jump_phase(toas, 0.0)[0] - jump_phase0
-    ) < 1e-16 * jump_phase0.unit
+    assert (model.jump_phase(toas, 0.0)[0] - jump_phase0) < 1e-16 * jump_phase0.unit
