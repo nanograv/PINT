@@ -343,10 +343,6 @@ def get_model_and_toas(
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
         Defaults to False.
-    model : A valid PINT timing model or None
-        If a valid timing model is passed, model commands (such as BIPM version,
-        planet shapiro delay, and solar system ephemeris) that affect TOA loading
-        are applied.
     usepickle : bool
         Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
     tdb_method : string
