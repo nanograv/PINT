@@ -63,21 +63,33 @@ class Astrometry(DelayComponent):
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
         return self.coords_as_ECL(epoch=epoch).cartesian.xyz.transpose()
 
-    def sun_angle(self, toas):
+    def sun_angle(self, toas, heliocenter=True):
         """Compute the pulsar-observatory-Sun angle.
 
         This is the angle between the center of the Sun and the direction to
         the pulsar, as seen from the observatory (for each TOA).
 
         This angle takes into account the motion of the Sun around the solar system barycenter.
+
+        Parameters
+        ----------
+        toas: :class:`pint.toas.TOAs`
+            The pulse arrival times at which to evaluate the sun angle.
+        heliocenter: bool
+            Whether to use the Sun's actual position (the heliocenter) or
+            the solar system barycenter. The latter may be useful for
+            comparison with other software.
         """
         tbl = toas.table
 
         obs_vec = tbl["ssb_obs_pos"].quantity
-        # FIXME: sun pos may not have been computed
-        sun_vec = tbl["obs_sun_pos"].quantity
+        if heliocenter:
+            # FIXME: sun pos may not have been computed
+            sun_vec = tbl["obs_sun_pos"].quantity
+            osv = sun_vec - obs_vec
+        else:
+            osv = -obs_vec
         psr_vec = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"])
-        osv = sun_vec - obs_vec
         osv /= ((osv ** 2).sum(axis=1) ** 0.5)[:, None]
         cos = (osv * psr_vec).sum(axis=1)
         return np.arccos(cos)
