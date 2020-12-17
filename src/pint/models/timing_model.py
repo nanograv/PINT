@@ -21,6 +21,8 @@ import pint
 from pint.models.parameter import (
     AngleParameter,
     MJDParameter,
+    boolParameter,
+    floatParameter,
     Parameter,
     maskParameter,
     strParameter,
@@ -227,6 +229,46 @@ class TimingModel(object):
         )
         self.add_param_from_top(
             MJDParameter(name="FINISH", description="End MJD for fitting"), ""
+        )
+        self.add_param_from_top(
+            strParameter(
+                name="TIMEEPH",
+                description="Time ephemeris to use for TDB conversion; for PINT, always FB90",
+            ),
+            "",
+        )
+        self.add_param_from_top(
+            strParameter(
+                name="T2CMETHOD",
+                description="Something to do with time conversion; for PINT, always TEMPO",
+            ),
+            "",
+        )
+        self.add_param_from_top(
+            boolParameter(
+                name="DMDATA",
+                value="0",
+                description="Was the fit done using per-TOA DM information?",
+            ),
+            "",
+        )
+        self.add_param_from_top(
+            floatParameter(
+                name="NTOA",
+                value=0.0,
+                units="",
+                description="Number of TOAs used in the fitting",
+            ),
+            "",
+        )
+        self.add_param_from_top(
+            floatParameter(
+                name="CHI2",
+                value=0.0,
+                units="",
+                description="Chi-squared value obtained during fitting",
+            ),
+            "",
         )
 
         for cp in components:

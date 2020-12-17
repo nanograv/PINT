@@ -458,6 +458,27 @@ class Fitter(object):
         ax.grid(True)
         plt.show()
 
+    def update_model(self, chi2=None):
+        """Update the model to reflect fit results and TOA properties.
+
+        This is called by ``fit_toas`` to ensure that parameters like
+        ``START``, ``FINISH``, ``EPHEM``, and ``DMDATA`` are set in the model
+        to reflect the TOAs in actual use.
+        """
+        self.model.START.value = self.toas.first_MJD
+        self.model.FINISH.value = self.toas.last_MJD
+        self.model.NTOA.value = len(self.toas)
+        self.model.EPHEM.value = self.toas.ephem
+        self.model.DMDATA.value = hasattr(self.resids, "dm")
+        if not self.toas.clock_corr_info["include_bipm"]:
+            self.model.CLOCK.value = "TT(TAI)"
+        else:
+            self.model.CLOCK.value = f"TT({self.toas.clock_corr_info('bipm_version')})"
+        self.model.TIMEEPH.value = "FB90"  # FIXME: is this true?
+        self.model.T2CMETHOD.value = "TEMPO"
+        if chi2 is not None:
+            self.model.CHI2.value = chi2
+
     def reset_model(self):
         """Reset the current model to the initial model."""
         self.model = copy.deepcopy(self.model_init)
@@ -848,9 +869,7 @@ class PowellFitter(Fitter):
         # necessarily the one that yields the best fit
         self.minimize_func(np.atleast_1d(self.fitresult.x), *list(fitp.keys()))
 
-        # Update START/FINISH params
-        self.model.START.value = self.toas.first_MJD
-        self.model.FINISH.value = self.toas.last_MJD
+        self.update_model(self.resids.chi2)
 
         return self.resids.chi2
 
@@ -989,9 +1008,7 @@ class WLSFitter(Fitter):
             # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
 
-        # Update START/FINISH params
-        self.model.START.value = self.toas.first_MJD
-        self.model.FINISH.value = self.toas.last_MJD
+        self.update_model(chi2)
 
         return chi2
 
@@ -1177,9 +1194,7 @@ class GLSFitter(Fitter):
                     noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
                 self.resids.noise_resids = noise_resids
 
-        # Update START/FINISH params
-        self.model.START.value = self.toas.first_MJD
-        self.model.FINISH.value = self.toas.last_MJD
+        self.update_model(chi2)
 
         return chi2
 
@@ -1510,8 +1525,6 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                     noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
                 self.resids.noise_resids = noise_resids
 
-        # Update START/FINISH params
-        self.model.START.value = self.toas.first_MJD
-        self.model.FINISH.value = self.toas.last_MJD
+        self.update_model(chi2)
 
         return chi2
