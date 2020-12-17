@@ -391,6 +391,8 @@ class DispersionDMX(Dispersion):
         DMXR2_mapping = self.get_prefix_mapping_component("DMXR2_")
         bad_parameters = []
         for k in DMXR1_mapping.keys():
+            if self._parent[DMX_mapping[k]].frozen:
+                continue
             b = self._parent[DMXR1_mapping[k]].quantity.mjd * u.d
             e = self._parent[DMXR2_mapping[k]].quantity.mjd * u.d
             mjds = toas.get_mjds()
