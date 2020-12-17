@@ -332,11 +332,11 @@ class DispersionDMX(Dispersion):
             index = self.get_prefix_mapping_component("DMX_").max() + 1
         i = f"{int(index):04d}"
 
-        #### Making sure start<end, flipping if not 
+        #### Making sure start<end, flipping if not
         if mjd_end < mjd_start:
-            tmp=str(mjd_end)
-            mjd_end=mjd_start
-            mjd_start=float(tmp)
+            tmp = str(mjd_end)
+            mjd_end = mjd_start
+            mjd_start = float(tmp)
 
         #### Check to see if the user-input index is already assigned to a different DMX component. Throw error if it is.
         if int(index) in self.get_prefix_mapping_component("DMX_"):
@@ -385,13 +385,13 @@ class DispersionDMX(Dispersion):
         self.setup()
         self.validate()
 
-    def remove_DMX_range(self,index):
+    def remove_DMX_range(self, index):
         """Takes in index for DMX event and removes the 3 components
              from the timing model
          """
         index = "{:04d}".format(index)
-        for prefix in ['DMX_','DMXR1_','DMXR2_']:
-            self.remove_parameter(prefix+index)
+        for prefix in ["DMX_", "DMXR1_", "DMXR2_"]:
+            self.remove_parameter(prefix + index)
         self.validation()
 
     def setup(self):
