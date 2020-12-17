@@ -63,7 +63,7 @@ class Astrometry(DelayComponent):
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
         return self.coords_as_ECL(epoch=epoch).cartesian.xyz.transpose()
 
-    def sun_angle(self, toas, heliocenter=True):
+    def sun_angle(self, toas, heliocenter=True, also_distance=False):
         """Compute the pulsar-observatory-Sun angle.
 
         This is the angle between the center of the Sun and the direction to
@@ -79,20 +79,31 @@ class Astrometry(DelayComponent):
             Whether to use the Sun's actual position (the heliocenter) or
             the solar system barycenter. The latter may be useful for
             comparison with other software.
+        also_distance: bool
+            If True, also return the observatory-Sun distance as a Quantity
+
+        Returns
+        -------
+        array
+            The angle in radians
         """
         tbl = toas.table
 
         obs_vec = tbl["ssb_obs_pos"].quantity
         if heliocenter:
-            # FIXME: sun pos may not have been computed
+            # FIXME: sun pos may not have been computed?
             sun_vec = tbl["obs_sun_pos"].quantity
             osv = sun_vec - obs_vec
         else:
             osv = -obs_vec
         psr_vec = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"])
-        osv /= ((osv ** 2).sum(axis=1) ** 0.5)[:, None]
+        r = (osv ** 2).sum(axis=1) ** 0.5
+        osv /= r[:, None]
         cos = (osv * psr_vec).sum(axis=1)
-        return np.arccos(cos)
+        if also_distance:
+            return np.arccos(cos), r
+        else:
+            return np.arccos(cos)
 
     def barycentric_radio_freq(self, toas):
         raise NotImplementedError
