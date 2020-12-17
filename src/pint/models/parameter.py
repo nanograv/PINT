@@ -1609,7 +1609,7 @@ class maskParameter(floatParameter):
 
         tbl = toas.table
         if (
-            self.key.lower() not in column_match.keys()
+            self.key.lower() not in column_match
         ):  # This only works for the one with flags.
             # section_name = key + "_section"
             # if section_name not in tbl.keys():

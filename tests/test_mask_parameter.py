@@ -89,7 +89,7 @@ def test_name_mask(toas):
     mp_name = maskParameter(
         "test2", key="name", key_value="53393.000009.3.000.000.9y.x.ff"
     )
-    assert mp_name.key_value == [""]
+    assert mp_name.key_value == ["53393.000009.3.000.000.9y.x.ff"]
     select_toas = mp_name.select_toa_mask(toas)
     assert len(select_toas) > 0
     raw_selection = np.where(toas.table["name"] == "53393.000009.3.000.000.9y.x.ff")
