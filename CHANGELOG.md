@@ -19,7 +19,10 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fixed bug in solar wind model that prevented fitting
 - Fix pintempo script so it will respect JUMPs in the TOA file.
 - Uncertainties are no longer set to zero if some TOAs lack EFACs. (PR #890)
+- Fixed solar wind calculation (PR #894)
 ### Added
+- Added a get_model_and_toas() function in model_builder to read both, including model-based commands affecting the TOAs (PR #889)
+- Added ability to load TOAs including relevant commands (e.g. EPHEM, CLOCK, PLANET_SHAPIRO) from a timing model in get_TOAs() (PR #889)
 - Added metadata to observatory definition, to keep track of the data origin
 - Added other bipm???? files from TEMPO2
 - Added ability to find observatories in [astropy](https://github.com/astropy/astropy-data/blob/gh-pages/coordinates/sites.json) if not present in PINT
@@ -32,6 +35,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added track_mode to Residuals to select pulse number tracking without needing the model to have TRACK -2
 - Added support for wideband-TOA fitting (Pennucci 2019).
 - Added START and FINISH parameters as MJDParameters to timing_model. They are now 
+- Added solar_angle calculation (PR #892)
 modified after a fit and are displayed with a model's .par file output.
 ### Changed
 - New observatories will no longer overwrite existing ones silently.  Will either raise ValueError or require overwrite=True
