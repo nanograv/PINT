@@ -70,6 +70,8 @@ toa_commands = (
     "END",
 )
 
+all_planets = ("jupiter", "saturn", "venus", "uranus", "neptune")
+
 # FIXME: why are these here?
 iers_a_file = None
 iers_a = None
@@ -1638,7 +1640,7 @@ class TOAs(object):
             if c in self.table.colnames:
                 log.info("Column {0} already exists. Removing...".format(c))
                 self.table.remove_column(c)
-        for p in ("jupiter", "saturn", "venus", "uranus", "neptune"):
+        for p in all_planets:
             name = "obs_" + p + "_pos"
             if name in self.table.colnames:
                 log.info("Column {0} already exists. Removing...".format(name))
@@ -1665,7 +1667,7 @@ class TOAs(object):
         )
         if planets:
             plan_poss = {}
-            for p in ("jupiter", "saturn", "venus", "uranus", "neptune"):
+            for p in all_planets:
                 name = "obs_" + p + "_pos"
                 plan_poss[name] = table.Column(
                     name=name,
@@ -1693,7 +1695,7 @@ class TOAs(object):
             sun_obs = objPosVel_wrt_SSB("sun", tdb, ephem) - ssb_obs
             obs_sun_pos[loind:hiind, :] = sun_obs.pos.T.to(u.km)
             if planets:
-                for p in ("jupiter", "saturn", "venus", "uranus", "neptune"):
+                for p in all_planets:
                     name = "obs_" + p + "_pos"
                     dest = p
                     pv = objPosVel_wrt_SSB(dest, tdb, ephem) - ssb_obs
