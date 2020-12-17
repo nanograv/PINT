@@ -9,6 +9,7 @@ import copy
 import inspect
 from collections import OrderedDict, defaultdict
 from functools import wraps
+from warnings import warn
 
 import astropy.time as time
 import astropy.units as u
@@ -238,7 +239,7 @@ class TimingModel(object):
         self.add_param_from_top(
             strParameter(
                 name="T2CMETHOD",
-                description="Something to do with time conversion; for PINT, always TEMPO",
+                description="Method for transforming from terrestrial to celestial frame (IAU2000B/TEMPO; PINT only supports ????)",
             ),
             "",
         )
@@ -246,7 +247,7 @@ class TimingModel(object):
             boolParameter(
                 name="DILATEFREQ",
                 value=False,
-                description="Tells TEMPO2 o do something with frequencies; PINT always acts like it is N",
+                description="Whether or not TEMPO2 should apply gravitational redshift and time dilation to obseerving frequency (Y/N; PINT only supports N)",
             ),
             "",
         )
@@ -295,6 +296,14 @@ class TimingModel(object):
 
         The checks include required parameters and parameter values.
         """
+        if self.DILATEFREQ.value:
+            warn("PINT does not support 'DILATEFREQ Y'")
+        if self.TIMEEPH.value not in [None, "FB90"]:
+            warn("PINT only supports 'TIMEEPH FB90'")
+        if self.T2CMETHOD.value not in [None, "IAU2000B"]:  # FIXME: really?
+            warn("PINT only supports 'T2CMETHOD IAU2000B'")
+        if self.UNITS.value not in [None, "TDB"]:
+            raise ValueError("PINT only supports 'UNITS TDB'")
         for cp in self.components.values():
             cp.validate()
 
@@ -1924,6 +1933,7 @@ class TimingModel(object):
         last_order=["jump_delay"],
     ):
         """Represent the entire model as a parfile string."""
+        self.validate()
         result_begin = ""
         result_end = ""
         result_middle = ""
