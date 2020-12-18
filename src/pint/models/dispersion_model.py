@@ -13,7 +13,7 @@ from pint.models.parameter import (
     prefixParameter,
     maskParameter,
 )
-from pint.models.timing_model import DelayComponent, MissingParameter
+from pint.models.timing_model import DelayComponent, MissingParameter, MissingTOAs
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
@@ -303,7 +303,6 @@ class DispersionDMX(Dispersion):
 
     This model lets the user specify time ranges and fit for a different
     DM value in each time range.
-
     """
 
     register = True
@@ -372,17 +371,36 @@ class DispersionDMX(Dispersion):
         DMX_mapping = self.get_prefix_mapping_component("DMX_")
         DMXR1_mapping = self.get_prefix_mapping_component("DMXR1_")
         DMXR2_mapping = self.get_prefix_mapping_component("DMXR2_")
-        if len(DMX_mapping) != len(DMXR1_mapping):
-            errorMsg = "Number of DMX_ parameters is not"
-            errorMsg += "equals to Number of DMXR1_ parameters. "
-            errorMsg += "Please check your prefixed parameters."
-            raise AttributeError(errorMsg)
+        if DMX_mapping.keys() != DMXR1_mapping.keys():
+            # FIXME: report mismatch
+            raise ValueError(
+                "DMX_ parameters do not "
+                "match DMXR1_ parameters. "
+                "Please check your prefixed parameters."
+            )
+        if DMX_mapping.keys() != DMXR2_mapping.keys():
+            raise ValueError(
+                "DMX_ parameters do not "
+                "match DMXR2_ parameters. "
+                "Please check your prefixed parameters."
+            )
 
-        if len(DMX_mapping) != len(DMXR2_mapping):
-            errorMsg = "Number of DMX_ parameters is not"
-            errorMsg += "equals to Number of DMXR2_ parameters. "
-            errorMsg += "Please check your prefixed parameters."
-            raise AttributeError(errorMsg)
+    def validate_toas(self, toas):
+        DMX_mapping = self.get_prefix_mapping_component("DMX_")
+        DMXR1_mapping = self.get_prefix_mapping_component("DMXR1_")
+        DMXR2_mapping = self.get_prefix_mapping_component("DMXR2_")
+        bad_parameters = []
+        for k in DMXR1_mapping.keys():
+            if self._parent[DMX_mapping[k]].frozen:
+                continue
+            b = self._parent[DMXR1_mapping[k]].quantity.mjd * u.d
+            e = self._parent[DMXR2_mapping[k]].quantity.mjd * u.d
+            mjds = toas.get_mjds()
+            n = np.sum((b <= mjds) & (mjds < e))
+            if n == 0:
+                bad_parameters.append(DMX_mapping[k])
+        if bad_parameters:
+            raise MissingTOAs(bad_parameters)
 
     def dmx_dm(self, toas):
         condition = {}

@@ -18,7 +18,11 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fixed bug that prevented reading Parkes-format TOAs
 - Fixed bug in solar wind model that prevented fitting
 - Fix pintempo script so it will respect JUMPs in the TOA file.
+- Uncertainties are no longer set to zero if some TOAs lack EFACs. (PR #890)
+- Fixed solar wind calculation (PR #894)
 ### Added
+- Added a get_model_and_toas() function in model_builder to read both, including model-based commands affecting the TOAs (PR #889)
+- Added ability to load TOAs including relevant commands (e.g. EPHEM, CLOCK, PLANET_SHAPIRO) from a timing model in get_TOAs() (PR #889)
 - Added metadata to observatory definition, to keep track of the data origin
 - Added other bipm???? files from TEMPO2
 - Added ability to find observatories in [astropy](https://github.com/astropy/astropy-data/blob/gh-pages/coordinates/sites.json) if not present in PINT
@@ -30,8 +34,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added ability to disable subtracting mean from residuals
 - Added track_mode to Residuals to select pulse number tracking without needing the model to have TRACK -2
 - Added support for wideband-TOA fitting (Pennucci 2019).
-- Added START and FINISH parameters as MJDParameters to timing_model. They are now
-modified after a fit and are displayed with a model's .par file output.
+- Added START and FINISH parameters as MJDParameters to timing_model. They are now modified after a fit and are displayed with a model's .par file output.
+- Added solar_angle calculation (PR #892)
 - Added PiecewiseSpindown model, for spindown correction lasting for a given MJD range
 ### Changed
 - New observatories will no longer overwrite existing ones silently.  Will either raise ValueError or require overwrite=True
@@ -40,6 +44,7 @@ modified after a fit and are displayed with a model's .par file output.
 - Changed requirements to astropy>=4.0
 - get_model can now read from file-like, including StringIO, objects (handy for testing) (PR #871)
 - WidebandDMResiduals now support access to their parts through .toa and .dm attributes (PR #861)
+- EFACs and EQUADs can be set independently from each other now. (PR #890)
 
 ## [0.7.0] - 2020-05-27
 ### Changed

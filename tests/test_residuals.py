@@ -2,6 +2,7 @@
 """
 
 import os
+from io import StringIO
 
 import astropy.units as u
 import numpy as np
@@ -11,7 +12,7 @@ from pinttestdata import datadir
 from pint.models import get_model
 from pint.models.dispersion_model import Dispersion
 from pint.residuals import CombinedResiduals, Residuals, WidebandTOAResiduals
-from pint.toa import get_TOAs
+from pint.toa import get_TOAs, make_fake_toas
 from pint.utils import weighted_mean
 
 os.chdir(datadir)
@@ -20,6 +21,7 @@ os.chdir(datadir)
 class TestResidualBuilding:
     def setup(self):
         self.model = get_model("J1614-2230_NANOGrav_12yv3.wb.gls.par")
+        # self.toa = make_fake_toas(57000,59000,20,model=self.model)
         self.toa = get_TOAs("J1614-2230_NANOGrav_12yv3.wb.tim")
 
     def test_build_phase_residual(self):
@@ -88,3 +90,26 @@ class TestResidualBuilding:
         # Make sure the model object are shared by all individual residual class
         assert wb_res.model is wb_res.toa.model
         assert wb_res.model is wb_res.dm.model
+
+
+def test_residuals_scaled_uncertainties():
+    model = get_model(
+        StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            EFAC mjd 57000 58000 2
+            """
+        )
+    )
+    toas = make_fake_toas(57000, 59000, 20, model=model, error=1 * u.us)
+    r = Residuals(toas, model)
+    e = r.get_data_error(scaled=True)
+    assert np.all(e != 0)
+    assert 0 < np.sum(e > 1.5 * u.us) < len(toas)
+    with pytest.raises(ValueError):
+        model.as_parfile().index("EQUAD")

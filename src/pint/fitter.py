@@ -81,6 +81,10 @@ from pint.utils import FTest
 __all__ = ["Fitter", "WLSFitter", "GLSFitter", "WidebandTOAFitter", "PowellFitter"]
 
 
+class DegeneracyWarning(UserWarning):
+    pass
+
+
 class Fitter(object):
     """Base class for objects encapsulating fitting problems.
 
@@ -138,7 +142,9 @@ class Fitter(object):
     def fit_toas(self, maxiter=None):
         """Run fitting operation.
 
-        This method needs to be implemented by subclasses.
+        This method needs to be implemented by subclasses. All implemenations
+        should call ``self.model.validate()`` and
+        ``self.model.validate_toas()`` before doing the fitting.
         """
         raise NotImplementedError
 
@@ -419,7 +425,7 @@ class Fitter(object):
                             np.arcsin(self.model.SINI.quantity),
                         )
                         s += "Pulsar mass (Shapiro Delay) = {}".format(psrmass)
-                    except ValueError:
+                    except (TypeError, ValueError):
                         pass
 
         return s
@@ -808,8 +814,14 @@ class Fitter(object):
 
 
 class PowellFitter(Fitter):
-    """A class for Scipy Powell fitting method. This method searches over
-    parameter space. It is a relative basic method.
+    """A fitter that demonstrates how to work with a generic fitting function.
+
+    This class wraps ``scipy.optimize.minimize`` with ``method="Powell"``; this
+    uses Powell's method, a simplex optimizer that makes no use of derivatives
+    (and is thus rather slow by comparison).
+
+    It is unlikely that this will be useful for timing an actual pulsar, but it
+    may serve as an example of how to write your own fitting procedure.
     """
 
     def __init__(self, toas, model, track_mode=None, residuals=None):
@@ -819,8 +831,10 @@ class PowellFitter(Fitter):
         self.method = "Powell"
 
     def fit_toas(self, maxiter=20):
+        """Carry out the fitting procedure."""
         # check that params of timing model have necessary components
-        self.model.maskPar_has_toas_check(self.toas)
+        self.model.validate()
+        self.model.validate_toas(self.toas)
         # Initial guesses are model params
         fitp = self.model.get_params_dict("free", "num")
         self.fitresult = opt.minimize(
@@ -866,10 +880,21 @@ class WLSFitter(Fitter):
         )
         self.method = "weighted_least_square"
 
-    def fit_toas(self, maxiter=1, threshold=False):
-        """Run a linear weighted least-squared fitting method."""
+    def fit_toas(self, maxiter=1, threshold=None):
+        """Run a linear weighted least-squared fitting method.
+
+        Parameters
+        ----------
+        maxiter: int
+            Repeat the least-squares fitting up to this many times if necessary.
+        threshold : float or None
+            Discard singular values smaller than ``threshold`` times the largest
+            singular value. If None, use a value based on floating-point epsilon
+            and the matrix sizes.
+        """
         # check that params of timing model have necessary components
-        self.model.maskPar_has_toas_check(self.toas)
+        self.model.validate()
+        self.model.validate_toas(self.toas)
         chi2 = 0
         for i in range(maxiter):
             fitp = self.model.get_params_dict("free", "quantity")
@@ -893,8 +918,9 @@ class WLSFitter(Fitter):
             # NOTE, We remove subtract mean value here, since it did not give us a
             # fast converge fitting.
             # M[:,1:] -= M[:,1:].mean(axis=0)
-            fac = M.std(axis=0)
-            fac[0] = 1.0
+            fac = np.sqrt((M ** 2).mean(axis=0))
+            # fac[0] = 1.0
+            fac[fac == 0] = 1.0
             M /= fac
             # Singular value decomp of design matrix:
             #   M = U s V^T
@@ -908,9 +934,28 @@ class WLSFitter(Fitter):
             # print 'log_10 cond=', np.log10(s.max()/s.min())
             # Note, Check the threshold from data precision level.Borrowed from
             # np Curve fit.
-            if threshold:
-                threshold_val = np.finfo(np.longdouble).eps * max(M.shape) * s[0]
-                s[s < threshold_val] = 0.0
+            if threshold is None:
+                # M is float, not longdouble
+                # threshold = np.finfo(float).eps * max(M.shape)
+                threshold = 1e-14 * max(M.shape)
+
+            bad = np.where(s <= threshold * s[0])[0]
+            s[bad] = np.inf
+            for c in bad:
+                bad_col = Vt[c, :]
+                bad_col /= abs(bad_col).max()
+                bad_combination = " + ".join(
+                    [
+                        f"{co}*{p}"
+                        for (co, p) in sorted(zip(bad_col, params))
+                        if abs(co) > threshold
+                    ]
+                )
+                warn(
+                    f"Parameter degeneracy; the following linear combination yields "
+                    f"almost no change: {bad_combination}",
+                    DegeneracyWarning,
+                )
             # Sigma = np.dot(Vt.T / s, U.T)
             # The post-fit parameter covariance matrix
             #   Sigma = V s^-2 V^T
@@ -965,34 +1010,46 @@ class GLSFitter(Fitter):
         )
         self.method = "generalized_least_square"
 
-    def fit_toas(self, maxiter=1, threshold=False, full_cov=False):
-        """Run a Generalized least-squared fitting method
-
-        If maxiter is less than one, no fitting is done, just the
-        chi-squared computation. In this case, you must provide the residuals
-        argument.
-
-        If maxiter is one or more, so fitting is actually done, the
-        chi-squared value returned is only approximately the chi-squared
-        of the improved(?) model. In fact it is the chi-squared of the
-        solution to the linear fitting problem, and the full non-linear
-        model should be evaluated and new residuals produced if an accurate
-        chi-squared is desired.
+    def fit_toas(self, maxiter=1, threshold=0, full_cov=False):
+        """Run a generalized least-squares fitting method.
 
         A first attempt is made to solve the fitting problem by Cholesky
         decomposition, but if this fails singular value decomposition is
         used instead. In this case singular values below threshold are removed.
 
-        full_cov determines which calculation is used. If true, the full
-        covariance matrix is constructed and the calculation is relatively
-        straightforward but the full covariance matrix may be enormous.
-        If false, an algorithm is used that takes advantage of the structure
-        of the covariance matrix, based on information provided by the noise
-        model. The two algorithms should give the same result to numerical
-        accuracy where they both can be applied.
+        Parameters
+        ----------
+        maxiter: int
+            How many times to run the linear least-squares fit, re-evaluating
+            the derivatives at each step.
+            If maxiter is less than one, no fitting is done, just the
+            chi-squared computation. In this case, you must provide the residuals
+            argument when constructing the class.
+            If maxiter is one or more, so fitting is actually done, the
+            chi-squared value returned is only approximately the chi-squared
+            of the improved(?) model. In fact it is the chi-squared of the
+            solution to the linear fitting problem, and the full non-linear
+            model should be evaluated and new residuals produced if an accurate
+            chi-squared is desired.
+        threshold: float
+            When to start discarding singular values. Typical values are about
+            1e-14 - a singular value smaller than this indicates parameters that
+            are so degenerate the numerical precision cannot distinguish them.
+            Such highly degenerate parameter sets are reported to the user with
+            a DegeneracyWarning.  Negative values force a faster but less stable
+            Cholesky decomposition method.
+        full_cov: bool
+            full_cov determines which calculation is used. If true, the full
+            covariance matrix is constructed and the calculation is relatively
+            straightforward but the full covariance matrix may be enormous.
+            If false, an algorithm is used that takes advantage of the structure
+            of the covariance matrix, based on information provided by the noise
+            model. The two algorithms should give the same result to numerical
+            accuracy where they both can be applied.
         """
         # check that params of timing model have necessary components
-        self.model.maskPar_has_toas_check(self.toas)
+        self.model.validate()
+        self.model.validate_toas(self.toas)
         chi2 = 0
         for i in range(max(maxiter, 1)):
             fitp = self.model.get_params_dict("free", "quantity")
@@ -1021,11 +1078,13 @@ class GLSFitter(Fitter):
             ntmpar = len(fitp)
             if M.shape[1] > ntmpar:
                 norm[ntmpar:] = 1
-            if np.any(norm == 0):
-                # Make this a LinAlgError so it looks like other bad matrixness
-                raise sl.LinAlgError(
-                    "One or more of the design-matrix columns is null."
+            for c in np.where(norm == 0)[0]:
+                warn(
+                    f"Parameter degeneracy; the following parameter yields "
+                    f"almost no change: {params[c]}",
+                    DegeneracyWarning,
                 )
+            norm[norm == 0] = 1
             M /= norm
 
             # compute covariance matrices
@@ -1044,18 +1103,34 @@ class GLSFitter(Fitter):
                 mtcy = np.dot(M.T, cinv * residuals)
 
             if maxiter > 0:
-                try:
-                    c = sl.cho_factor(mtcm)
-                    xhat = sl.cho_solve(c, mtcy)
-                    xvar = sl.cho_solve(c, np.eye(len(mtcy)))
-                except sl.LinAlgError:
+                xhat, xvar = None, None
+                if threshold <= 0:
+                    try:
+                        c = sl.cho_factor(mtcm)
+                        xhat = sl.cho_solve(c, mtcy)
+                        xvar = sl.cho_solve(c, np.eye(len(mtcy)))
+                    except sl.LinAlgError:
+                        xhat, xvar = None, None
+                if xhat is None:
                     U, s, Vt = sl.svd(mtcm, full_matrices=False)
 
-                    if threshold:
-                        threshold_val = (
-                            np.finfo(np.longdouble).eps * max(M.shape) * s[0]
+                    bad = np.where(s <= threshold * s[0])[0]
+                    s[bad] = np.inf
+                    for c in bad:
+                        bad_col = Vt[c, :]
+                        bad_col /= abs(bad_col).max()
+                        bad_combination = " ".join(
+                            [
+                                f"{p}"
+                                for (co, p) in sorted(zip(bad_col, params))
+                                if abs(co) > threshold
+                            ]
                         )
-                        s[s < threshold_val] = 0.0
+                        warn(
+                            f"Parameter degeneracy; the following combination of parameters yields "
+                            f"almost no change: {bad_combination}",
+                            DegeneracyWarning,
+                        )
 
                     xvar = np.dot(Vt.T / s, Vt)
                     xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
@@ -1177,7 +1252,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         return self.fit_data[0]
 
     def make_combined_residuals(self, add_args={}):
-        """Make the combined residuals between TOA residual and DM residusl."""
+        """Make the combined residuals between TOA residual and DM residual."""
         return pr.WidebandTOAResiduals(
             self.toas,
             self.model,
@@ -1274,11 +1349,27 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 scaled_sigmas_no_unit.append(scaled_sigma)
         return np.hstack(scaled_sigmas_no_unit)
 
-    def fit_toas(self, maxiter=1, threshold=False, full_cov=False):
-        """Carry out fitting procedure."""
+    def fit_toas(self, maxiter=1, threshold=0, full_cov=False):
+        """Carry out a generalized least-squares fitting procedure.
+
+        The algorithm here is essentially the same as used in
+        :func:`pint.fitter.GLSFitter.fit_toas`. See that function
+        for details.
+
+        Parameters
+        ----------
+        maxiter: int
+            How many times to run the linear least-squares fit, re-evaluating
+            the derivatives at each step.
+        threshold: float
+            When to start discarding singular values. Default is 1-e14*max(M.shape).
+        full_cov: bool
+            full_cov determines which calculation is used.
+        """
         # Maybe change the name to do_fit?
         # check that params of timing model have necessary components
-        # self.model.maskPar_has_toas_check(self.toas)
+        self.model.validate()
+        self.model.validate_toas(self.toas)
         chi2 = 0
         for i in range(max(maxiter, 1)):
             fitp = self.model.get_params_dict("free", "quantity")
@@ -1344,18 +1435,34 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 mtcy = np.dot(M.T, cinv * residuals)
 
             if maxiter > 0:
-                try:
-                    c = sl.cho_factor(mtcm)
-                    xhat = sl.cho_solve(c, mtcy)
-                    xvar = sl.cho_solve(c, np.eye(len(mtcy)))
-                except sl.LinAlgError:
+                xhat, xvar = None, None
+                if threshold <= 0:
+                    try:
+                        c = sl.cho_factor(mtcm)
+                        xhat = sl.cho_solve(c, mtcy)
+                        xvar = sl.cho_solve(c, np.eye(len(mtcy)))
+                    except sl.LinAlgError:
+                        xhat, xvar = None, None
+                if xhat is None:
                     U, s, Vt = sl.svd(mtcm, full_matrices=False)
 
-                    if threshold:
-                        threshold_val = (
-                            np.finfo(np.longdouble).eps * max(M.shape) * s[0]
+                    bad = np.where(s <= threshold * s[0])[0]
+                    s[bad] = np.inf
+                    for c in bad:
+                        bad_col = Vt[c, :]
+                        bad_col /= abs(bad_col).max()
+                        bad_combination = " ".join(
+                            [
+                                f"{p}"
+                                for (co, p) in sorted(zip(bad_col, params))
+                                if abs(co) > threshold
+                            ]
                         )
-                        s[s < threshold_val] = 0.0
+                        warn(
+                            f"Parameter degeneracy; the following combination of parameters yields "
+                            f"almost no change: {bad_combination}",
+                            DegeneracyWarning,
+                        )
 
                     xvar = np.dot(Vt.T / s, Vt)
                     xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)

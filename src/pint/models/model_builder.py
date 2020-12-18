@@ -16,6 +16,7 @@ from pint.models.timing_model import (
 )
 from pint.models.parameter import maskParameter
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
+from pint.toa import get_TOAs
 
 __all__ = ["get_model"]
 
@@ -310,6 +311,60 @@ def get_model(parfile):
             with open(fn, "wt") as f:
                 f.write(contents)
             return ModelBuilder(fn).timing_model
+
+
+def get_model_and_toas(
+    parfile,
+    timfile,
+    ephem=None,
+    include_bipm=None,
+    bipm_version=None,
+    include_gps=None,
+    planets=None,
+    usepickle=False,
+    tdb_method="default",
+):
+    """Load a timing model and a related TOAs, using model commands as needed
+
+    Parameters
+    ----------
+    parfile : str
+        The parfile name, or a file-like object to read the parfile contents from
+    timfile : str
+        The timfile name, or a file-like object to read the timfile contents from
+    include_bipm : bool or None
+        Whether to apply the BIPM clock correction. Defaults to True.
+    bipm_version : string or None
+        Which version of the BIPM tables to use for the clock correction.
+        The format must be 'BIPMXXXX' where XXXX is a year.
+    include_gps : bool or None
+        Whether to include the GPS clock correction. Defaults to True.
+    planets : bool or None
+        Whether to apply Shapiro delays based on planet positions. Note that a
+        long-standing TEMPO2 bug in this feature went unnoticed for years.
+        Defaults to False.
+    usepickle : bool
+        Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
+    tdb_method : string
+        Which method to use for the clock correction to TDB.
+
+    Returns
+    -------
+    A tuple with (model instance, TOAs instance)
+
+    """
+    mm = get_model(parfile)
+    tt = get_TOAs(
+        timfile,
+        model=mm,
+        ephem=ephem,
+        include_bipm=include_bipm,
+        bipm_version=bipm_version,
+        include_gps=include_gps,
+        planets=planets,
+        usepickle=usepickle,
+    )
+    return mm, tt
 
 
 def choose_model(

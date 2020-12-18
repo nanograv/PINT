@@ -70,6 +70,8 @@ toa_commands = (
     "END",
 )
 
+all_planets = ("jupiter", "saturn", "venus", "uranus", "neptune")
+
 # FIXME: why are these here?
 iers_a_file = None
 iers_a = None
@@ -83,6 +85,7 @@ def get_TOAs(
     bipm_version=None,
     include_gps=None,
     planets=None,
+    model=None,
     usepickle=False,
     tdb_method="default",
 ):
@@ -126,12 +129,17 @@ def get_TOAs(
         Whether to apply the BIPM clock correction. Defaults to True.
     bipm_version : string or None
         Which version of the BIPM tables to use for the clock correction.
+        The format must be 'BIPMXXXX' where XXXX is a year.
     include_gps : bool or None
         Whether to include the GPS clock correction. Defaults to True.
     planets : bool or None
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
         Defaults to False.
+    model : A valid PINT timing model or None
+        If a valid timing model is passed, model commands (such as BIPM version,
+        planet shapiro delay, and solar system ephemeris) that affect TOA loading
+        are applied.
     usepickle : bool
         Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
     tdb_method : string
@@ -143,6 +151,39 @@ def get_TOAs(
         Completed TOAs object representing the data.
 
     """
+    if model:
+        # If the keyword args are set, override what is in the model
+        if ephem is None and model["EPHEM"].value is not None:
+            ephem = model["EPHEM"].value
+            log.info(f"Using EPHEM = {ephem} from the given model")
+        if include_bipm is None and model["CLOCK"].value is not None:
+            if model["CLOCK"].value == "TT(TAI)":
+                include_bipm = False
+                log.info("Using CLOCK = TT(TAI), so setting include_bipm = False")
+            elif "BIPM" in model["CLOCK"].value:
+                clk = model["CLOCK"].value.strip(")").split("(")
+                if len(clk) == 2:
+                    ctype, cvers = clk
+                    if ctype == "TT" and cvers.startswith("BIPM"):
+                        include_bipm = True
+                        if bipm_version is None:
+                            bipm_version = cvers
+                            log.info(
+                                f"Using CLOCK = {bipm_version} from the given model"
+                            )
+                    else:
+                        log.warning(
+                            f'CLOCK = {model["CLOCK"].value} is not implemented.  Using TT({bipm_default}) instead.'
+                        )
+            else:
+                log.warning(
+                    f'CLOCK = {model["CLOCK"].value} is not implemented.  Using TT({bipm_default}) instead.'
+                )
+
+        if planets is None and model["PLANET_SHAPIRO"].value:
+            planets = True
+            log.info("Using PLANET_SHAPIRO = True from the given model")
+
     updatepickle = False
     recalc = False
     if usepickle:
@@ -191,7 +232,10 @@ def get_TOAs(
     if ephem is None:
         ephem = t.ephem
     elif ephem != t.ephem:
-        log.info("ephem changed, recalculation needed")
+        if t.ephem is not None:
+            # If you read a .tim file using TOAs(), the ephem is None
+            # and so no recalculation is needed, just calculation!
+            log.info("Ephem changed, recalculation needed")
         recalc = True
         updatepickle = True
     if recalc or "tdb" not in t.table.colnames:
@@ -200,7 +244,7 @@ def get_TOAs(
     if planets is None:
         planets = t.planets
     elif planets != t.planets:
-        log.info("planets changed, recalculation needed")
+        log.info("Planet PosVels will be calculated.")
         recalc = True
         updatepickle = True
     if recalc or "ssb_obs_pos" not in t.table.colnames:
@@ -688,7 +732,7 @@ class TOA(object):
         freq=float("inf"),
         scale=None,
         flags=None,
-        **kwargs
+        **kwargs,
     ):
         site = get_observatory(obs)
         # If MJD is already a Time, just use it. Note that this will ignore
@@ -847,7 +891,7 @@ class TOAs(object):
          - velocity of the observatory in ecliptic coordinates at the time of the TOA; computed
            by :func:`pint.toa.TOAs.add_vel_ecl`
        * - ``obs_sun_pos``, ``obs_jupiter_pos``, ``obs_saturn_pos``, ``obs_venus_pos``,
-           ``obs_uranus_pos``
+           ``obs_uranus_pos``, ``obs_neptune_pos``
          - position of various celestial objects at the time of the TOA; computed
            by :func:`pint.toa.TOAs.compute_posvels`
        * - ``pulse_number``
@@ -1431,7 +1475,7 @@ class TOAs(object):
                 raise ValueError("Some TOAs have 'clkcorr' flag and some do not!")
         # An array of all the time corrections, one for each TOA
         log.info(
-            "Applying clock corrections (include_GPS = {0}, include_BIPM = {1})".format(
+            "Applying clock corrections (include_gps = {0}, include_bipm = {1})".format(
                 include_gps, include_bipm
             )
         )
@@ -1506,6 +1550,7 @@ class TOAs(object):
                     "ephemeris {1}! Using TDB ephemeris.".format(ephem, self.ephem)
                 )
         self.ephem = ephem
+        log.info(f"Using EPHEM = {self.ephem} for TDB calculation.")
 
         # Compute in observatory groups
         tdbs = np.zeros_like(self.table["mjd"])
@@ -1595,7 +1640,7 @@ class TOAs(object):
             if c in self.table.colnames:
                 log.info("Column {0} already exists. Removing...".format(c))
                 self.table.remove_column(c)
-        for p in ("jupiter", "saturn", "venus", "uranus"):
+        for p in all_planets:
             name = "obs_" + p + "_pos"
             if name in self.table.colnames:
                 log.info("Column {0} already exists. Removing...".format(name))
@@ -1622,7 +1667,7 @@ class TOAs(object):
         )
         if planets:
             plan_poss = {}
-            for p in ("jupiter", "saturn", "venus", "uranus"):
+            for p in all_planets:
                 name = "obs_" + p + "_pos"
                 plan_poss[name] = table.Column(
                     name=name,
@@ -1650,7 +1695,7 @@ class TOAs(object):
             sun_obs = objPosVel_wrt_SSB("sun", tdb, ephem) - ssb_obs
             obs_sun_pos[loind:hiind, :] = sun_obs.pos.T.to(u.km)
             if planets:
-                for p in ("jupiter", "saturn", "venus", "uranus"):
+                for p in all_planets:
                     name = "obs_" + p + "_pos"
                     dest = p
                     pv = objPosVel_wrt_SSB(dest, tdb, ephem) - ssb_obs

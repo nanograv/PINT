@@ -196,8 +196,7 @@ class Parameter(object):
     # Setup quantity property
     @property
     def quantity(self):
-        """Return the internal stored parameter value and units.
-        """
+        """Return the internal stored parameter value and units."""
         return self._quantity
 
     @quantity.setter
@@ -266,8 +265,7 @@ class Parameter(object):
 
     @property
     def uncertainty(self):
-        """Return the internal stored parameter uncertainty value and units.
-        """
+        """Return the internal stored parameter uncertainty value and units."""
         return self._uncertainty
 
     @uncertainty.setter
@@ -419,8 +417,7 @@ class Parameter(object):
         return True
 
     def name_matches(self, name):
-        """Whether or not the parameter name matches the provided name
-        """
+        """Whether or not the parameter name matches the provided name"""
         return (name == self.name.upper()) or (
             name in map(lambda x: x.upper(), self.aliases)
         )
@@ -714,8 +711,7 @@ class boolParameter(Parameter):
         self.paramType = "boolParameter"
 
     def set_quantity_bool(self, val):
-        """ This function is to get boolean value for boolParameter class
-        """
+        """This function is to get boolean value for boolParameter class"""
         # First try strings
         try:
             if val.upper() in ["Y", "YES", "T", "TRUE", "1"]:
@@ -837,10 +833,10 @@ class MJDParameter(Parameter):
 
     def set_quantity_mjd(self, val):
         """Value setter for MJD parameter,
-           Accepted format:
-           Astropy time object
-           mjd float
-           mjd string (in pulsar_mjd format)
+        Accepted format:
+        Astropy time object
+        mjd float
+        mjd string (in pulsar_mjd format)
         """
         if isinstance(val, numbers.Number):
             val = np.longdouble(val)
@@ -952,7 +948,7 @@ class AngleParameter(Parameter):
         )
 
     def set_quantity_angle(self, val):
-        """ This function is to set value to angle parameters.
+        """This function is to set value to angle parameters.
 
         Accepted format:
         1. Astropy angle object
@@ -973,8 +969,7 @@ class AngleParameter(Parameter):
         return result
 
     def set_uncertainty_angle(self, val):
-        """This function is to set the uncertainty for an angle parameter.
-        """
+        """This function is to set the uncertainty for an angle parameter."""
         if isinstance(val, numbers.Number):
             result = Angle(val * self.unit_identifier[self._str_unit.lower()][2])
         elif isinstance(val, str):
@@ -990,16 +985,14 @@ class AngleParameter(Parameter):
         return result
 
     def print_quantity_angle(self, quan):
-        """This is a function to print out the angle parameter.
-        """
+        """This is a function to print out the angle parameter."""
         if ":" in self._str_unit:
             return quan.to_string(sep=":", precision=8)
         else:
             return quan.to_string(decimal=True, precision=15)
 
     def print_uncertainty(self, unc):
-        """This is a function for printing out the uncertainty
-        """
+        """This is a function for printing out the uncertainty"""
         if ":" in self._str_unit:
             angle_arcsec = unc.to(u.arcsec)
             if self.units == u.hourangle:
@@ -1286,21 +1279,32 @@ class prefixParameter(object):
 
 
 class maskParameter(floatParameter):
-    """Mask parameters are ones that apply to a subset of TOAs.
+    """Parameter that applies to a subset of TOAs.
 
-    This is a Parameter type for mask parameters which is to select a
-    certain subset of TOAs and apply changes on the subset of TOAs, for example
-    JUMP. This type of parameter does not require index input. But eventrully
-    an index part will be added, for the purpose of parsing the right value
-    from the parfile. For example::
+    A maskParameter applies to a subset of the TOAs, for example JUMP specifies
+    that their arrival times should be adjusted by the value associated with
+    this JUMP. The criterion is based on either one of the standard fields
+    (telescope, frequency, et cetera) or a flag; and the selection can be on an
+    exact match or on a range.
 
-        >>> p = maskParameter(name='JUMP', index=2)
+    Upon creation of a maskParameter, an index part will be added, so that the
+    parameters can be distinguished within the
+    :class:`pint.models.timing_model.TimingModel` object. For example::
+
+        >>> p = maskParameter(name='JUMP', index=2, key="-fe", key_value="G430")
         >>> p.name
         'JUMP2'
 
+    The selection criterion can be one of the parameters ``mjd``, ``freq``,
+    ``name``, ``tel`` representing the required columns of a ``.tim`` file, or
+    the name of a flag, starting with ``-``. If the selection criterion is
+    based on ``mjd`` or ``freq`` it is expected to be accompanied by a pair of
+    values that define a range; other criteria are expected to be accompanied
+    by a string that is matched exactly.
+
     Parameters
     ----------
-    name : str, optional
+    name : str
         The name of the parameter.
     index : int, optional
         The index number for the prefixed parameter.
@@ -1327,15 +1331,13 @@ class maskParameter(floatParameter):
         Whether derivatives with respect to this parameter make sense.
     aliases : list, optional
         List of aliases for parameter name.
-
-    TODO: Is mask parameter provide some other type of parameters other then
-    floatParameter?
-
     """
+
+    # TODO: Is mask parameter provide some other type of parameters other then floatParameter?
 
     def __init__(
         self,
-        name=None,
+        name,
         index=1,
         key=None,
         key_value=None,
@@ -1348,13 +1350,13 @@ class maskParameter(floatParameter):
         continuous=False,
         aliases=[],
     ):
-        self.is_mask = True
         self.key_identifier = {
             "mjd": (lambda x: time.Time(x, format="mjd").mjd, 2),
             "freq": (float, 2),
             "name": (str, 1),
             "tel": (str, 1),
         }
+        self.is_mask = True
         if key_value is None:
             key_value = []
         elif not isinstance(key_value, list):
@@ -1447,7 +1449,6 @@ class maskParameter(floatParameter):
             NAME key key_value1 key_value2 parameter_value uncertainty
 
         where NAME is the name for this class as reported by ``self.name_matches``.
-
         """
         k = line.split()
         if not k:
@@ -1529,8 +1530,7 @@ class maskParameter(floatParameter):
         return line + "\n"
 
     def new_param(self, index, copy_all=False):
-        """Create a new but same style mask parameter
-        """
+        """Create a new but same style mask parameter"""
         if not copy_all:
             new_mask_param = maskParameter(
                 name=self.origin_name,
@@ -1557,13 +1557,16 @@ class maskParameter(floatParameter):
         return new_mask_param
 
     def select_toa_mask(self, toas):
-        """Select the toas.
+        """Select the toas that match the mask.
+
         Parameter
         ---------
-        toas : TOAs class
-        Return
-        ------
-        A array of returned index.
+        toas: :class:`pint.toas.TOAs`
+
+        Returns
+        -------
+        array
+            An array of TOA indices selected by the mask.
         """
         column_match = {"mjd": "mjd_float", "freq": "freq", "tel": "obs"}
         if len(self.key_value) == 1:
@@ -1574,6 +1577,8 @@ class maskParameter(floatParameter):
             if not hasattr(self, "toa_selector"):
                 self.toa_selector = TOASelect(is_range=True, use_hash=True)
             condition = {self.name: tuple(self.key_value)}
+        elif len(self.key_value) == 0:
+            return np.array([], dtype=int)
         else:
             raise ValueError(
                 "Parameter %s has more key values than "
