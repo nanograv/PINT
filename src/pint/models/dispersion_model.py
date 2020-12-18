@@ -319,42 +319,78 @@ class DispersionDMX(Dispersion):
                 description="Dispersion measure",
             )
         )
+
+        self.add_DMX_range(None, None, dmx=0, frozen=False, index=1)
+
+        self.dm_value_funcs += [self.dmx_dm]
+        self.set_special_params(["DMX_0001", "DMXR1_0001", "DMXR2_0001"])
+        self.delay_funcs_component += [self.DMX_dispersion_delay]
+
+    def add_DMX_range(self, mjd_start, mjd_end, index=None, dmx=0, frozen=True):
+        #### Setting up the DMX title convention. If index is None, want to increment the current max DMX index by 1.
+        if index is None:
+            index = self.get_prefix_mapping_component("DMX_").max() + 1
+        i = f"{int(index):04d}"
+
+        if mjd_end is not None and mjd_start is not None:
+            if mjd_end < mjd_start:
+                raise ValueError("Starting MJD is greater than ending MJD.")
+        elif mjd_start != mjd_end:
+            raise ValueError("Only one MJD bound is set.")
+
+        #### Check to see if the user-input index is already assigned to a different DMX component.
+        if int(index) in self.get_prefix_mapping_component("DMX_"):
+            raise ValueError(
+                "Index '%s' is already in use in this model. Please choose another."
+                % index
+            )
+
+        #### Add three DMX parameters (start MJD, end MJD, DMX value)
         self.add_param(
             prefixParameter(
-                name="DMX_0001",
+                name="DMX_" + i,
                 units="pc cm^-3",
-                value=0.0,
+                value=dmx,
                 unit_template=lambda x: "pc cm^-3",
                 description="Dispersion measure variation",
                 description_template=lambda x: "Dispersion measure",
-                paramter_type="float",
+                parameter_type="float",
+                frozen=frozen,
             )
         )
         self.add_param(
             prefixParameter(
-                name="DMXR1_0001",
+                name="DMXR1_" + i,
                 units="MJD",
                 unit_template=lambda x: "MJD",
                 description="Beginning of DMX interval",
                 description_template=lambda x: "Beginning of DMX interval",
                 parameter_type="MJD",
                 time_scale="utc",
+                value=mjd_start,
             )
         )
         self.add_param(
             prefixParameter(
-                name="DMXR2_0001",
+                name="DMXR2_" + i,
                 units="MJD",
                 unit_template=lambda x: "MJD",
                 description="End of DMX interval",
                 description_template=lambda x: "End of DMX interval",
                 parameter_type="MJD",
                 time_scale="utc",
+                value=mjd_end,
             )
         )
-        self.dm_value_funcs += [self.dmx_dm]
-        self.set_special_params(["DMX_0001", "DMXR1_0001", "DMXR2_0001"])
-        self.delay_funcs_component += [self.DMX_dispersion_delay]
+        self.setup()
+        self.validate()
+
+    def remove_DMX_range(self, index):
+        """Removes all three DMX parameters associated with a given index."""
+        index = "{:04d}".format(index)
+        for prefix in ["DMX_", "DMXR1_", "DMXR2_"]:
+            self.remove_param(prefix + index)
+        self.validate()
 
     def setup(self):
         super(DispersionDMX, self).setup()
