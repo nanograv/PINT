@@ -20,6 +20,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fix pintempo script so it will respect JUMPs in the TOA file.
 - Uncertainties are no longer set to zero if some TOAs lack EFACs. (PR #890)
 - Fixed solar wind calculation (PR #894)
+- RMS functions in pintk code are now correct (PR #876)
+- Fixed orbital phase calculations on ELL1 (PR #795)
 ### Added
 - Added a get_model_and_toas() function in model_builder to read both, including model-based commands affecting the TOAs (PR #889)
 - Added ability to load TOAs including relevant commands (e.g. EPHEM, CLOCK, PLANET_SHAPIRO) from a timing model in get_TOAs() (PR #889)
@@ -34,9 +36,10 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added ability to disable subtracting mean from residuals
 - Added track_mode to Residuals to select pulse number tracking without needing the model to have TRACK -2
 - Added support for wideband-TOA fitting (Pennucci 2019).
-- Added START and FINISH parameters as MJDParameters to timing_model. They are now 
+- Added START and FINISH parameters as MJDParameters to timing_model. They are now modified after a fit and are displayed with a model's .par file output.
 - Added solar_angle calculation (PR #892)
-modified after a fit and are displayed with a model's .par file output.
+- Added position vectors to Neptune (PR #901)
+- Added checking for TOAs in DMX bins and other similar parameters, if free (PR #874)
 ### Changed
 - New observatories will no longer overwrite existing ones silently.  Will either raise ValueError or require overwrite=True
 - Large speed increase when using Ecliptic coordinates
@@ -45,7 +48,16 @@ modified after a fit and are displayed with a model's .par file output.
 - get_model can now read from file-like, including StringIO, objects (handy for testing) (PR #871)
 - WidebandDMResiduals now support access to their parts through .toa and .dm attributes (PR #861)
 - EFACs and EQUADs can be set independently from each other now. (PR #890)
-
+- WLSFitter and GLSFitter and WidebandTOAFitter can now report degenerate parameter combinations (PR #874)
+- Raise an exception if the DDK model is provided with SINI (PR #864)
+- Free parameters on models can now be set by assigning to model.free_params (PR #871)
+- Deprecated chi2_reduced in favor of reduced_ch2 (which we already had) (PR #859)
+- TimingModel objects now act like dictionaries of their parameters (PR #855)
+- Notebooks are stored in a more convenient format and are now downloadable from the PINT documentation (PR #849)
+- TOAs objects now support fancy indexing to select subsets (PR #844)
+- Fitters can now respect pulse numbers (PR #814)
+- Updated clock files (PR #835)
+- Pickles are now (partially) recomputed if the ephemeris or other settings change (PR #838)
 ## [0.7.0] - 2020-05-27
 ### Changed
 - Changed units of Phase to be u.dimensionless_unscaled instead of u.cycle, which was confusing
