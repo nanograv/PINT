@@ -40,6 +40,7 @@ from pint.pulsar_mjd import (
 )
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name
+from pint.observatory import get_observatory
 
 
 class Parameter(object):
@@ -477,7 +478,7 @@ class floatParameter(Parameter):
         unit_scale=False,
         scale_factor=None,
         scale_threshold=None,
-        **kwargs
+        **kwargs,
     ):
         self.long_double = long_double
         self.scale_factor = scale_factor
@@ -690,7 +691,7 @@ class boolParameter(Parameter):
         description=None,
         frozen=True,
         aliases=None,
-        **kwargs
+        **kwargs,
     ):
         print_quantity = lambda x: "Y" if x else "N"
         set_quantity = self.set_quantity_bool
@@ -768,7 +769,7 @@ class MJDParameter(Parameter):
         continuous=True,
         aliases=None,
         time_scale="tdb",
-        **kwargs
+        **kwargs,
     ):
         self._time_scale = time_scale
         set_quantity = self.set_quantity_mjd
@@ -910,7 +911,7 @@ class AngleParameter(Parameter):
         frozen=True,
         continuous=True,
         aliases=None,
-        **kwargs
+        **kwargs,
     ):
         self._str_unit = units
         self.unit_identifier = {
@@ -1071,7 +1072,7 @@ class prefixParameter(object):
         scale_factor=None,
         scale_threshold=None,
         time_scale="utc",
-        **kwargs
+        **kwargs,
     ):
         # Split prefixed name, if the name is not in the prefixed format, error
         # will be raised
@@ -1340,7 +1341,7 @@ class maskParameter(floatParameter):
         name,
         index=1,
         key=None,
-        key_value=None,
+        key_value=[],
         value=None,
         long_double=False,
         units=None,
@@ -1350,27 +1351,38 @@ class maskParameter(floatParameter):
         continuous=False,
         aliases=[],
     ):
+        self.is_mask = True
+        # {key_name: (keyvalue parse function, keyvalue length)}
+        # Move this to some other places.
         self.key_identifier = {
             "mjd": (lambda x: time.Time(x, format="mjd").mjd, 2),
-            "freq": (float, 2),
+            "freq": (lambda x: u.Quantity(x, u.MHz, copy=False), 2),
             "name": (str, 1),
-            "tel": (str, 1),
+            "tel": (lambda x: get_observatory(str(x)).name, 1),
         }
-        self.is_mask = True
-        if key_value is None:
-            key_value = []
-        elif not isinstance(key_value, list):
+
+        if not isinstance(key_value, (list, tuple)):
             key_value = [key_value]
 
         # Check key and key value
-        if key is not None and key.lower() in self.key_identifier.keys():
-            key_info = self.key_identifier[key.lower()]
-            if len(key_value) != key_info[1]:
-                errmsg = "key " + key + " takes " + key_info[1] + " element."
-                raise ValueError(errmsg)
-
+        key_value_parser = str
+        if key is not None:
+            if key.lower() in self.key_identifier.keys():
+                key_info = self.key_identifier[key.lower()]
+                if len(key_value) != key_info[1]:
+                    errmsg = f"key {key} takes {key_info[1]} element(s)."
+                    raise ValueError(errmsg)
+                key_value_parser = key_info[0]
+            else:
+                if not key.startswith("-"):
+                    raise ValueError(
+                        "A key to a TOA flag requires a leading '-'."
+                        " Legal keywords that don't require a leading '-' "
+                        "are MJD, FREQ, NAME, TEL."
+                    )
         self.key = key
-        self.key_value = key_value
+        self.key_value = [key_value_parser(k) for k in key_value]
+        self.key_value.sort()
         self.index = index
         name_param = name + str(index)
         self.origin_name = name
@@ -1518,10 +1530,12 @@ class maskParameter(floatParameter):
             return ""
         line = "%-15s %s " % (self.origin_name, self.key)
         for kv in self.key_value:
-            if not isinstance(kv, time.Time):
-                line += "%s " % kv
+            if isinstance(kv, time.Time):
+                line += f"{time_to_mjd_string(kv)} "
+            elif isinstance(kv, u.Quantity):
+                line += f"{kv.value} "
             else:
-                line += "%s " % time_to_mjd_string(kv)
+                line += f"{kv} "
         line += "%25s" % self.print_quantity(self.quantity)
         if self.uncertainty is not None:
             line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty_value))
@@ -1587,19 +1601,21 @@ class maskParameter(floatParameter):
         # get the table columns
         # TODO Right now it is only supports mjd, freq, tel, and flagkeys,
         # We need to consider some more complicated situation
-        key = self.key.replace("-", "")
+        if self.key.startswith("-"):
+            key = self.key[1::]
+        else:
+            key = self.key
+
         tbl = toas.table
         if (
-            key.lower() not in column_match.keys()
+            self.key.lower() not in column_match
         ):  # This only works for the one with flags.
-            section_name = key + "_section"
-            # if section_name not in tbl.keys():
-            # if statement removed so that flags recompute every time. If don't
+            # The flags are recomputed every time. If don't
             # recompute, flags can only be added to the toa table once and then never update,
             # making it impossible to add additional jump parameters after the par file is read in (pintk)
             flag_col = [x.get(key, None) for x in tbl["flags"]]
-            tbl[section_name] = flag_col
-            col = tbl[section_name]
+            tbl[key] = flag_col
+            col = tbl[key]
         else:
             col = tbl[column_match[key.lower()]]
         select_idx = self.toa_selector.get_select_index(condition, col)
@@ -1644,7 +1660,7 @@ class pairParameter(floatParameter):
         frozen=True,
         continuous=False,
         aliases=[],
-        **kwargs
+        **kwargs,
     ):
 
         self.index = index
@@ -1666,7 +1682,7 @@ class pairParameter(floatParameter):
             long_double=long_double,
             set_quantity=self.set_quantity_pair,
             set_uncertainty=self.set_quantity_pair,
-            **kwargs
+            **kwargs,
         )
 
         self.set_quantity = self.set_quantity_pair
