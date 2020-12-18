@@ -1273,15 +1273,18 @@ class TOAs(object):
         self.pintversion = pint.__version__
         if filename is not None:
             pickle.dump(self, open(filename, "wb"))
-        elif self.filename is not None:
+        elif (self.filename is not None) and (type(self.filename) is not list):
             pickle.dump(self, gzip.open(self.filename + ".pickle.gz", "wb"))
         else:
-            raise ValueError("TOA pickle method needs a filename.")
+            raise ValueError("TOA pickle method needs a (single) filename.")
 
     def get_summary(self):
         """Return a short ASCII summary of the TOAs."""
         s = "Number of TOAs:  %d\n" % self.ntoas
-        s += "Number of commands:  %d\n" % len(self.commands)
+        if len(self.commands) and type(self.commands[0]) is list:
+            s += "Number of commands:  %s\n" % str([len(x) for x in self.commands])
+        else:
+            s += "Number of commands:  %d\n" % len(self.commands)
         s += "Number of observatories:  %d %s\n" % (
             len(self.observatories),
             list(self.observatories),
@@ -1917,3 +1920,73 @@ class TOAs(object):
                         newtoa.flags["to"] = self.cdict["TIME"]
                     self.toas.append(newtoa)
                     ntoas += 1
+
+
+def merge_TOAs(TOAs_list):
+    """Merge a list of TOAs instances and return a new combined TOAs instance
+
+    In order for a merge to work, each TOAs instance needs to have
+    been created using the same Solar System Ephemeris (EPHEM),  
+    the same reference timescale (i.e. CLOCK), and the same value of
+    .planets (i.e. whether planetary PosVel columns are in the tables
+    or not).
+
+    Parameters
+    ----------
+    TOAs_list : list of TOAs instances
+
+    Returns
+    -------
+    A new TOAs instance with all the combined and grouped TOAs
+    """
+    # Check each TOA object for consistency
+    ephems = [tt.ephem for tt in TOAs_list]
+    if len(set(ephems)) > 1:
+        log.warning(f"EPHEMs are inconsistent in merge_TOAs(): {ephems}\nNot merging.")
+        return None
+    inc_BIPM = [tt.clock_corr_info["include_bipm"] for tt in TOAs_list]
+    if len(set(inc_BIPM)) > 1:
+        log.warning(
+            f"include_bipms are inconsistent in merge_TOAs(): {inc_BIPM}\nNot merging."
+        )
+        return None
+    BIPM_vers = [tt.clock_corr_info["bipm_version"] for tt in TOAs_list]
+    if len(set(BIPM_vers)) > 1:
+        log.warning(
+            f"bipm_versions are inconsistent in merge_TOAs(): {BIPM_vers}\nNot merging."
+        )
+        return None
+    inc_GPS = [tt.clock_corr_info["include_gps"] for tt in TOAs_list]
+    if len(set(inc_GPS)) > 1:
+        log.warning(
+            f"include_gpss are inconsistent in merge_TOAs(): {inc_GPS}\nNot merging."
+        )
+        return None
+    planets = [tt.planets for tt in TOAs_list]
+    if len(set(planets)) > 1:
+        log.warning(
+            f"planets are inconsistent in merge_TOAs(): {planets}\nNot merging."
+        )
+        return None
+    num_cols = [len(tt.table.columns) for tt in TOAs_list]
+    if len(set(num_cols)) > 1:
+        log.warning(
+            f"Numbers of table columns are inconsistent in merge_TOAs(): {num_cols}\nNot merging."
+        )
+        return None
+    # Use a copy of the first TOAs instance as the base for the joined object
+    nt = copy.deepcopy(TOAs_list[0])
+    nt.filename = [tt.filename for tt in TOAs_list]
+    nt.commands = [tt.commands for tt in TOAs_list]
+    # Now do the actual table stacking
+    nt.table = table.vstack(
+        [tt.table for tt in TOAs_list], join_type="exact", metadata_conflicts="silent"
+    )
+    # Fix the table meta data about filenames
+    nt.table.meta["filename"] = nt.filename
+    # This sets a flag that indicates that we have merged TOAs instances
+    nt.merged = True
+    # Now we need to re-arrange and group the tables
+    nt.table = nt.table.group_by("obs")
+    return nt
+

@@ -44,7 +44,7 @@ class TestTOAReader(unittest.TestCase):
 
     def test_read_parkes(self):
         ts = toa.get_TOAs("parkes.toa")
-        assert "arecibo" in ts.observatories
+        assert "parkes" in ts.observatories
         assert ts.ntoas == 8
 
     def test_commands(self):
@@ -132,3 +132,17 @@ def test_tttai():
     m = get_model(parstr)
     y = toa.get_TOAs("test1.tim", model=m)
     assert y.clock_corr_info["include_bipm"] == False
+
+
+def test_toa_merge():
+    filenames = ["NGC6440E.tim", "testtimes.tim", "parkes.toa"]
+    toas = [toa.get_TOAs(ff) for ff in filenames]
+    nt = toa.merge_TOAs(toas)
+    assert len(nt.observatories) == 3
+    assert nt.table.meta["filename"] == filenames
+    assert nt.ntoas == 78
+    # now test a failure if ephems are different
+    toas[0].ephem = "DE436"
+    nt = toa.merge_TOAs(toas)
+    assert nt is None
+
