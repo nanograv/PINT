@@ -2,8 +2,8 @@ name: CI Tests
 
 on:
   push:
-    branches:
-    - master
+#    branches:
+#    - master
   pull_request:
   schedule:
     # run every Monday at 6am UTC
