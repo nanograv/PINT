@@ -327,6 +327,10 @@ class DispersionDMX(Dispersion):
         self.delay_funcs_component += [self.DMX_dispersion_delay]
 
     def add_DMX_range(self, mjd_start, mjd_end, index=None, dmx=0, frozen=True):
+        """ Add DMX range to a dispersion model with specified start/end MJDs and DMX. 
+            returns: index [int]
+        """
+
         #### Setting up the DMX title convention. If index is None, want to increment the current max DMX index by 1.
         if index is None:
             index = self.get_prefix_mapping_component("DMX_").max() + 1
@@ -384,6 +388,7 @@ class DispersionDMX(Dispersion):
         )
         self.setup()
         self.validate()
+        return index
 
     def remove_DMX_range(self, index):
         """Removes all three DMX parameters associated with a given index."""
