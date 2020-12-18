@@ -2170,7 +2170,7 @@ class Component(object):
             param_name = param.name
         if param_name not in self.params:
             raise ValueError(
-                "Tried to remove parameter {} but it is not listed: {}".formmat(
+                "Tried to remove parameter {} but it is not listed: {}".format(
                     param_name, self.params
                 )
             )
