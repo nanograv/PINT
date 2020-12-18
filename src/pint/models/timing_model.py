@@ -1687,7 +1687,7 @@ class TimingModel(object):
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if par.uncertainty < otherpar.uncertainty:
+                            if 1.01*par.uncertainty < otherpar.uncertainty:
                                 newstr += " *"
                     newstr += "\n"
             else:
@@ -1706,17 +1706,23 @@ class TimingModel(object):
                             newstr += " {:28f}".format(otherpar.value)
                         if otherpar.value != par.value:
                             sys.stdout.flush()
-                            log.warning(
+                            if par.name == 'START' of par.name == 'FINISH':
+                                log.info(
                                 "Parameter %s not fit, but has changed between these models"
                                 % par.name
-                            )
+                                )
+                            else:
+                                log.warning(
+                                "Parameter %s not fit, but has changed between these models"
+                                % par.name
+                                )
                             log.handlers[0].flush()
                             newstr += " !"
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if par.uncertainty < otherpar.uncertainty:
+                            if 1.01*par.uncertainty < otherpar.uncertainty:
                                 newstr += " *"
                         newstr += "\n"
                     else:
