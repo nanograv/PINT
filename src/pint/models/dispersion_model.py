@@ -386,7 +386,13 @@ class DispersionDMX(Dispersion):
         self.validate()
 
     def remove_DMX_range(self, index):
+<<<<<<< HEAD
         """Removes all three DMX parameters associated with a given index."""
+=======
+        """Takes in index for DMX event and removes the 3 components
+             from the timing model
+         """
+>>>>>>> 6d6f10b33eb89330dde2f04717a84752f417f830
         index = "{:04d}".format(index)
         for prefix in ["DMX_", "DMXR1_", "DMXR2_"]:
             self.remove_param(prefix + index)
