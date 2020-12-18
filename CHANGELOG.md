@@ -5,9 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
-### Fixed 
-- Fixed an indentation bug in Wideband TOA fitting. 
-- The CombinedResidual class has API change on the get_data_error(), child residueal class in save as dictionary.  
+### Fixed
+- Fixed an indentation bug in Wideband TOA fitting.
+- The CombinedResidual class has API change on the get_data_error(), child residueal class in save as dictionary.
 ### Removed
 - Removed Python 2.7 support from travis and tox testing suites and from requirements files
 - Removed "landscape" code checker since that package is no longer supported by its author
@@ -26,7 +26,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added metadata to observatory definition, to keep track of the data origin
 - Added other bipm???? files from TEMPO2
 - Added ability to find observatories in [astropy](https://github.com/astropy/astropy-data/blob/gh-pages/coordinates/sites.json) if not present in PINT
-- Added is_binary property, and orbital_phase() and conjunction() methods to the timing model 
+- Added is_binary property, and orbital_phase() and conjunction() methods to the timing model
 - Allow fitting for either or (not both) of a glitch epoch or its phase
 - Added support for -padd flag on TOAs to add phase turns to individual TOAs (matching TEMPO and Tempo2)
 - Added caching of TZRMJD TOA to speed up and prevent repeated INFO prints about applying clock corrections
@@ -34,9 +34,9 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added ability to disable subtracting mean from residuals
 - Added track_mode to Residuals to select pulse number tracking without needing the model to have TRACK -2
 - Added support for wideband-TOA fitting (Pennucci 2019).
-- Added START and FINISH parameters as MJDParameters to timing_model. They are now 
+- Added START and FINISH parameters as MJDParameters to timing_model. They are now modified after a fit and are displayed with a model's .par file output.
 - Added solar_angle calculation (PR #892)
-modified after a fit and are displayed with a model's .par file output.
+- Added PiecewiseSpindown model, for spindown correction lasting for a given MJD range
 ### Changed
 - New observatories will no longer overwrite existing ones silently.  Will either raise ValueError or require overwrite=True
 - Large speed increase when using Ecliptic coordinates
