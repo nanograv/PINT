@@ -956,7 +956,11 @@ class TOAs(object):
                 self.read_pickle_file(toafile)
             else:
                 self.read_toa_file(toafile)
-                self.filename = toafile
+                # Check to see if there were any INCLUDEs:
+                inc_fns = [
+                    x[0][1] for x in self.commands if x[0][0].upper() == "INCLUDE"
+                ]
+                self.filename = [toafile] + inc_fns if inc_fns else toafile 
         elif toafile is not None:
             self.read_toa_file(toafile)
             self.filename = ""
@@ -1942,41 +1946,41 @@ def merge_TOAs(TOAs_list):
     # Check each TOA object for consistency
     ephems = [tt.ephem for tt in TOAs_list]
     if len(set(ephems)) > 1:
-        log.warning(f"EPHEMs are inconsistent in merge_TOAs(): {ephems}\nNot merging.")
-        return None
+        raise TypeError(f"merge_TOAs() cannot merge. Inconsistent ephem: {ephems}")
     inc_BIPM = [tt.clock_corr_info["include_bipm"] for tt in TOAs_list]
     if len(set(inc_BIPM)) > 1:
-        log.warning(
-            f"include_bipms are inconsistent in merge_TOAs(): {inc_BIPM}\nNot merging."
+        raise TypeError(
+            f"merge_TOAs() cannot merge. Inconsistent include_bipm: {inc_BIPM}"
         )
-        return None
     BIPM_vers = [tt.clock_corr_info["bipm_version"] for tt in TOAs_list]
     if len(set(BIPM_vers)) > 1:
-        log.warning(
-            f"bipm_versions are inconsistent in merge_TOAs(): {BIPM_vers}\nNot merging."
+        raise TypeError(
+            f"merge_TOAs() cannot merge. Inconsistent bipm_version: {BIPM_vers}"
         )
-        return None
     inc_GPS = [tt.clock_corr_info["include_gps"] for tt in TOAs_list]
     if len(set(inc_GPS)) > 1:
-        log.warning(
-            f"include_gpss are inconsistent in merge_TOAs(): {inc_GPS}\nNot merging."
+        raise TypeError(
+            f"merge_TOAs() cannot merge. Inconsistent include_gps: {inc_GPS}"
         )
-        return None
     planets = [tt.planets for tt in TOAs_list]
     if len(set(planets)) > 1:
-        log.warning(
-            f"planets are inconsistent in merge_TOAs(): {planets}\nNot merging."
-        )
-        return None
+        raise TypeError(f"merge_TOAs() cannot merge. Inconsistent planets: {planets}")
     num_cols = [len(tt.table.columns) for tt in TOAs_list]
     if len(set(num_cols)) > 1:
-        log.warning(
-            f"Numbers of table columns are inconsistent in merge_TOAs(): {num_cols}\nNot merging."
+        raise TypeError(
+            f"merge_TOAs() cannot merge. Inconsistent numbers of table columns: {num_cols}"
         )
-        return None
     # Use a copy of the first TOAs instance as the base for the joined object
     nt = copy.deepcopy(TOAs_list[0])
-    nt.filename = [tt.filename for tt in TOAs_list]
+    # The following ensures that the filename list is flat
+    nt.filename = []
+    for xx in [tt.filename for tt in TOAs_list]:
+        if type(xx) is list:
+            for yy in xx:
+                nt.filename.append(yy)
+        else:
+            nt.filename.append(xx)
+    # We do not ensure that the command list is flat
     nt.commands = [tt.commands for tt in TOAs_list]
     # Now do the actual table stacking
     nt.table = table.vstack(

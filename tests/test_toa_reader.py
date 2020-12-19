@@ -1,5 +1,6 @@
 import os
 import unittest
+import pytest
 
 from io import StringIO
 
@@ -137,12 +138,17 @@ def test_tttai():
 def test_toa_merge():
     filenames = ["NGC6440E.tim", "testtimes.tim", "parkes.toa"]
     toas = [toa.get_TOAs(ff) for ff in filenames]
+    ntoas = sum([tt.ntoas for tt in toas])
     nt = toa.merge_TOAs(toas)
     assert len(nt.observatories) == 3
     assert nt.table.meta["filename"] == filenames
-    assert nt.ntoas == 78
+    assert nt.ntoas == ntoas
+    other = toa.get_TOAs("test1.tim")
+    nt2 = toa.merge_TOAs([nt, other])
+    assert len(nt2.filename) == 5
+    assert nt2.ntoas == ntoas + 9
     # now test a failure if ephems are different
     toas[0].ephem = "DE436"
-    nt = toa.merge_TOAs(toas)
-    assert nt is None
+    with pytest.raises(TypeError):
+        nt = toa.merge_TOAs(toas)
 
