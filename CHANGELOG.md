@@ -21,6 +21,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Uncertainties are no longer set to zero if some TOAs lack EFACs. (PR #890)
 - Fixed solar wind calculation (PR #894)
 ### Added
+- Added merge_TOAs() function in pint.toa to merge compatible TOAs instances (PR #908)
 - Added a get_model_and_toas() function in model_builder to read both, including model-based commands affecting the TOAs (PR #889)
 - Added ability to load TOAs including relevant commands (e.g. EPHEM, CLOCK, PLANET_SHAPIRO) from a timing model in get_TOAs() (PR #889)
 - Added metadata to observatory definition, to keep track of the data origin
