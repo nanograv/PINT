@@ -143,10 +143,17 @@ def test_toa_merge():
     assert len(nt.observatories) == 3
     assert nt.table.meta["filename"] == filenames
     assert nt.ntoas == ntoas
+    # The following tests merging with and already merged TOAs
     other = toa.get_TOAs("test1.tim")
     nt2 = toa.merge_TOAs([nt, other])
     assert len(nt2.filename) == 5
     assert nt2.ntoas == ntoas + 9
+    # check consecutive merging
+    nt = toa.merge_TOAs(toas[:2])
+    nt = toa.merge_TOAs([nt, toas[2]])
+    nt = toa.merge_TOAs([nt, other])
+    assert len(nt.filename) == 5
+    assert nt.ntoas == ntoas + 9
     # now test a failure if ephems are different
     toas[0].ephem = "DE436"
     with pytest.raises(TypeError):
