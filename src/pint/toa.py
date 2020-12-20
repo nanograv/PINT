@@ -3,12 +3,12 @@
 In particular, single TOAs are represented by :class:`pint.toa.TOA` objects, and if you
 want to manage a collection of these we recommend you use a :class:`pint.toa.TOAs` object
 as this makes certain operations much more convenient.
-
 """
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import copy
 import gzip
+import hashlib
 import os
 import re
 import warnings
@@ -76,6 +76,12 @@ all_planets = ("jupiter", "saturn", "venus", "uranus", "neptune")
 iers_a_file = None
 iers_a = None
 JD_MJD = 2400000.5
+
+
+def _compute_hash(filename):
+    h = hashlib.sha256()
+    h.update(open(filename, "rb").read())
+    return h.digest()
 
 
 def get_TOAs(
@@ -149,7 +155,6 @@ def get_TOAs(
     -------
     TOAs
         Completed TOAs object representing the data.
-
     """
     if model:
         # If the keyword args are set, override what is in the model
@@ -173,11 +178,13 @@ def get_TOAs(
                             )
                     else:
                         log.warning(
-                            f'CLOCK = {model["CLOCK"].value} is not implemented.  Using TT({bipm_default}) instead.'
+                            f'CLOCK = {model["CLOCK"].value} is not implemented. '
+                            f"Using TT({bipm_default}) instead."
                         )
             else:
                 log.warning(
-                    f'CLOCK = {model["CLOCK"].value} is not implemented.  Using TT({bipm_default}) instead.'
+                    f'CLOCK = {model["CLOCK"].value} is not implemented. '
+                    f"Using TT({bipm_default}) instead."
                 )
 
         if planets is None and model["PLANET_SHAPIRO"].value:
@@ -190,6 +197,14 @@ def get_TOAs(
         picklefile = _check_pickle(timfile)
         if picklefile:
             t = TOAs(picklefile)
+            if hasattr(t, "hashes"):
+                for f, v in t.hashes.items():
+                    if _compute_hash(f) != v:
+                        updatepickle = True
+                        log.info("Pickle based on files that have changed")
+                        break
+            else:
+                updatepickle = True
             if (
                 include_gps is not None
                 and t.clock_corr_info.get("include_gps", None) != include_gps
@@ -252,6 +267,11 @@ def get_TOAs(
 
     if usepickle and updatepickle:
         log.info("Pickling TOAs.")
+        if isinstance(t.filename, str):
+            files = [t.filename]
+        else:
+            files = t.filename
+        t.hashes = {f: _compute_hash(f) for f in files}
         t.pickle()
     return t
 
@@ -279,8 +299,8 @@ def _check_pickle(toafilename, picklefilename=None):
             return ""
 
     # Check if TOA is newer than pickle
-    if os.path.getmtime(picklefilename) < os.path.getmtime(toafilename):
-        return ""
+    # if os.path.getmtime(picklefilename) < os.path.getmtime(toafilename):
+    #    return ""
 
     # TODO add more tests.  Some things to consider:
     #   1. Check file contents via md5sum (will require storing this in pickle).
@@ -353,7 +373,6 @@ def _parse_TOA_line(line, fmt="Unknown"):
     Return an MJD tuple and a dictionary of other TOA information.
     The format can be one of: Comment, Command, Blank, Tempo2,
     Princeton, ITOA, Parkes, or Unknown.
-
     """
     MJD = None
     fmt = _toa_format(line, fmt)
@@ -565,7 +584,7 @@ def format_toa_line(
 def make_fake_toas(
     startMJD, endMJD, ntoas, model, freq=999999, obs="GBT", error=1 * u.us
 ):
-    """Make evenly spaced toas with residuals = 0 and  without errors
+    """Make evenly spaced toas with residuals = 0 and without errors.
 
     Might be able to do different frequencies if fed an array of frequencies,
     only works with one observatory at a time
@@ -960,7 +979,7 @@ class TOAs(object):
                 inc_fns = [
                     x[0][1] for x in self.commands if x[0][0].upper() == "INCLUDE"
                 ]
-                self.filename = [toafile] + inc_fns if inc_fns else toafile 
+                self.filename = [toafile] + inc_fns if inc_fns else toafile
         elif toafile is not None:
             self.read_toa_file(toafile)
             self.filename = ""
@@ -1268,7 +1287,7 @@ class TOAs(object):
         )
         try:
             self.table = self.table_selects.pop()
-        except (AttributeError, IndexError) as e:
+        except (AttributeError, IndexError):
             log.error("No previous TOA table found.  No changes made.")
 
     def pickle(self, filename=None):
@@ -1277,8 +1296,12 @@ class TOAs(object):
         self.pintversion = pint.__version__
         if filename is not None:
             pickle.dump(self, open(filename, "wb"))
-        elif (self.filename is not None) and (type(self.filename) is not list):
-            pickle.dump(self, gzip.open(self.filename + ".pickle.gz", "wb"))
+        elif self.filename is not None:
+            if isinstance(self.filename, str):
+                filename = self.filename
+            else:
+                filename = self.filename[0]
+            pickle.dump(self, gzip.open(filename + ".pickle.gz", "wb"))
         else:
             raise ValueError("TOA pickle method needs a (single) filename.")
 
@@ -1781,9 +1804,8 @@ class TOAs(object):
         tmp = pickle.load(infile)
         if not hasattr(tmp, "pintversion") or tmp.pintversion != pint.__version__:
             log.error(
-                "PINT version in pickle file is different than current version!\n*** Suggest deleting {}".format(
-                    filename
-                )
+                f"PINT version in pickle file is different than current version! "
+                f"*** Suggest deleting {filename}"
             )
         self.filename = tmp.filename
         if hasattr(tmp, "toas"):
@@ -1794,6 +1816,7 @@ class TOAs(object):
         self.clock_corr_info = tmp.clock_corr_info
         self.ephem = tmp.ephem
         self.planets = tmp.planets
+        self.hashes = tmp.hashes
 
     def read_toa_file(self, filename, process_includes=True, top=True):
         """Read TOAs from the given filename.
@@ -1927,7 +1950,7 @@ def merge_TOAs(TOAs_list):
     """Merge a list of TOAs instances and return a new combined TOAs instance
 
     In order for a merge to work, each TOAs instance needs to have
-    been created using the same Solar System Ephemeris (EPHEM),  
+    been created using the same Solar System Ephemeris (EPHEM),
     the same reference timescale (i.e. CLOCK), and the same value of
     .planets (i.e. whether planetary PosVel columns are in the tables
     or not).
@@ -1990,4 +2013,3 @@ def merge_TOAs(TOAs_list):
     # Now we need to re-arrange and group the tables
     nt.table = nt.table.group_by("obs")
     return nt
-
