@@ -45,7 +45,7 @@ class TestTOAReader(unittest.TestCase):
 
     def test_read_parkes(self):
         ts = toa.get_TOAs("parkes.toa")
-        assert "parkes" in ts.observatories
+        assert "barycenter" in ts.observatories
         assert ts.ntoas == 8
 
     def test_commands(self):
@@ -158,4 +158,3 @@ def test_toa_merge():
     toas[0].ephem = "DE436"
     with pytest.raises(TypeError):
         nt = toa.merge_TOAs(toas)
-
