@@ -44,7 +44,7 @@ class NoiseComponent(Component):
                 )
             if not suppress_warning:
                 log.warning(msg)
-            return no_toa_param
+        return no_toa_param
 
 
 class ScaleToaError(NoiseComponent):
