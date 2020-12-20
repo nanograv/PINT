@@ -1,0 +1,28 @@
+PSRJ	3EGJ1835+5918
+RAJ	18:36:13.680
+DECJ	+59:25:30.000
+F0                 5.
+F1                 0
+PWPH_1                  0 1       1
+PWF0_1                  0.771552110 1       1
+PWF1_1                 -5.0000E-14  1
+PWF2_1                  0   1
+PWEP_1                  54658.2722693052565
+PWSTART_1               54657
+PWSTOP_1                54720.
+PWPH_2                  0 1       1
+PWF0_2                  0.771552110 1       1
+PWF1_2                 -5.0000E-14  1
+PWF2_2                  0   1
+PWEP_2                  54658.2722693052565
+PWSTART_2               54720.
+PWSTOP_2                54763
+PEPOCH	54658.2722693052565
+DM 	0.0
+TZRMJD 54660.0
+TZRSITE 1
+TZRFRQ 1400.0
+EPHVER	2
+MODE	1
+UNITS	TDB
+EPHEM	DE405

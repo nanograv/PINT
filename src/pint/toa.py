@@ -26,7 +26,7 @@ from six.moves import cPickle as pickle
 
 import pint
 from pint.observatory import Observatory, get_observatory, bipm_default
-from pint.observatory.special_locations import SpacecraftObs
+from pint.observatory.special_locations import T2SpacecraftObs
 from pint.observatory.topo_obs import TopoObs
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
@@ -69,6 +69,8 @@ toa_commands = (
     "FORMAT",
     "END",
 )
+
+all_planets = ("jupiter", "saturn", "venus", "uranus", "neptune")
 
 # FIXME: why are these here?
 iers_a_file = None
@@ -889,7 +891,7 @@ class TOAs(object):
          - velocity of the observatory in ecliptic coordinates at the time of the TOA; computed
            by :func:`pint.toa.TOAs.add_vel_ecl`
        * - ``obs_sun_pos``, ``obs_jupiter_pos``, ``obs_saturn_pos``, ``obs_venus_pos``,
-           ``obs_uranus_pos``
+           ``obs_uranus_pos``, ``obs_neptune_pos``
          - position of various celestial objects at the time of the TOA; computed
            by :func:`pint.toa.TOAs.compute_posvels`
        * - ``pulse_number``
@@ -954,7 +956,11 @@ class TOAs(object):
                 self.read_pickle_file(toafile)
             else:
                 self.read_toa_file(toafile)
-                self.filename = toafile
+                # Check to see if there were any INCLUDEs:
+                inc_fns = [
+                    x[0][1] for x in self.commands if x[0][0].upper() == "INCLUDE"
+                ]
+                self.filename = [toafile] + inc_fns if inc_fns else toafile 
         elif toafile is not None:
             self.read_toa_file(toafile)
             self.filename = ""
@@ -1271,15 +1277,18 @@ class TOAs(object):
         self.pintversion = pint.__version__
         if filename is not None:
             pickle.dump(self, open(filename, "wb"))
-        elif self.filename is not None:
+        elif (self.filename is not None) and (type(self.filename) is not list):
             pickle.dump(self, gzip.open(self.filename + ".pickle.gz", "wb"))
         else:
-            raise ValueError("TOA pickle method needs a filename.")
+            raise ValueError("TOA pickle method needs a (single) filename.")
 
     def get_summary(self):
         """Return a short ASCII summary of the TOAs."""
         s = "Number of TOAs:  %d\n" % self.ntoas
-        s += "Number of commands:  %d\n" % len(self.commands)
+        if len(self.commands) and type(self.commands[0]) is list:
+            s += "Number of commands:  %s\n" % str([len(x) for x in self.commands])
+        else:
+            s += "Number of commands:  %d\n" % len(self.commands)
         s += "Number of observatories:  %d %s\n" % (
             len(self.observatories),
             list(self.observatories),
@@ -1580,10 +1589,7 @@ class TOAs(object):
                     )
                     grpmjds = time.Time(grp["mjd"], location=locs)
 
-            if isinstance(site, SpacecraftObs):
-                grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem, grp=grp)
-            else:
-                grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
+            grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem, grp=grp)
             tdbs[loind:hiind] = np.asarray([t for t in grptdbs])
 
         # Now add the new columns to the table
@@ -1638,7 +1644,7 @@ class TOAs(object):
             if c in self.table.colnames:
                 log.info("Column {0} already exists. Removing...".format(c))
                 self.table.remove_column(c)
-        for p in ("jupiter", "saturn", "venus", "uranus"):
+        for p in all_planets:
             name = "obs_" + p + "_pos"
             if name in self.table.colnames:
                 log.info("Column {0} already exists. Removing...".format(name))
@@ -1665,7 +1671,7 @@ class TOAs(object):
         )
         if planets:
             plan_poss = {}
-            for p in ("jupiter", "saturn", "venus", "uranus"):
+            for p in all_planets:
                 name = "obs_" + p + "_pos"
                 plan_poss[name] = table.Column(
                     name=name,
@@ -1682,7 +1688,7 @@ class TOAs(object):
             site = get_observatory(obs)
             tdb = time.Time(grp["tdb"], precision=9)
 
-            if isinstance(site, SpacecraftObs):
+            if isinstance(site, T2SpacecraftObs):
                 ssb_obs = site.posvel(tdb, ephem, grp)
             else:
                 ssb_obs = site.posvel(tdb, ephem)
@@ -1693,7 +1699,7 @@ class TOAs(object):
             sun_obs = objPosVel_wrt_SSB("sun", tdb, ephem) - ssb_obs
             obs_sun_pos[loind:hiind, :] = sun_obs.pos.T.to(u.km)
             if planets:
-                for p in ("jupiter", "saturn", "venus", "uranus"):
+                for p in all_planets:
                     name = "obs_" + p + "_pos"
                     dest = p
                     pv = objPosVel_wrt_SSB(dest, tdb, ephem) - ssb_obs
@@ -1735,7 +1741,7 @@ class TOAs(object):
             site = get_observatory(obs)
             tdb = time.Time(grp["tdb"], precision=9)
 
-            if isinstance(site, SpacecraftObs):
+            if isinstance(site, T2SpacecraftObs):
                 ssb_obs = site.posvel(tdb, ephem, grp)
             else:
                 ssb_obs = site.posvel(tdb, ephem)
@@ -1915,3 +1921,73 @@ class TOAs(object):
                         newtoa.flags["to"] = self.cdict["TIME"]
                     self.toas.append(newtoa)
                     ntoas += 1
+
+
+def merge_TOAs(TOAs_list):
+    """Merge a list of TOAs instances and return a new combined TOAs instance
+
+    In order for a merge to work, each TOAs instance needs to have
+    been created using the same Solar System Ephemeris (EPHEM),  
+    the same reference timescale (i.e. CLOCK), and the same value of
+    .planets (i.e. whether planetary PosVel columns are in the tables
+    or not).
+
+    Parameters
+    ----------
+    TOAs_list : list of TOAs instances
+
+    Returns
+    -------
+    A new TOAs instance with all the combined and grouped TOAs
+    """
+    # Check each TOA object for consistency
+    ephems = [tt.ephem for tt in TOAs_list]
+    if len(set(ephems)) > 1:
+        raise TypeError(f"merge_TOAs() cannot merge. Inconsistent ephem: {ephems}")
+    inc_BIPM = [tt.clock_corr_info["include_bipm"] for tt in TOAs_list]
+    if len(set(inc_BIPM)) > 1:
+        raise TypeError(
+            f"merge_TOAs() cannot merge. Inconsistent include_bipm: {inc_BIPM}"
+        )
+    BIPM_vers = [tt.clock_corr_info["bipm_version"] for tt in TOAs_list]
+    if len(set(BIPM_vers)) > 1:
+        raise TypeError(
+            f"merge_TOAs() cannot merge. Inconsistent bipm_version: {BIPM_vers}"
+        )
+    inc_GPS = [tt.clock_corr_info["include_gps"] for tt in TOAs_list]
+    if len(set(inc_GPS)) > 1:
+        raise TypeError(
+            f"merge_TOAs() cannot merge. Inconsistent include_gps: {inc_GPS}"
+        )
+    planets = [tt.planets for tt in TOAs_list]
+    if len(set(planets)) > 1:
+        raise TypeError(f"merge_TOAs() cannot merge. Inconsistent planets: {planets}")
+    num_cols = [len(tt.table.columns) for tt in TOAs_list]
+    if len(set(num_cols)) > 1:
+        raise TypeError(
+            f"merge_TOAs() cannot merge. Inconsistent numbers of table columns: {num_cols}"
+        )
+    # Use a copy of the first TOAs instance as the base for the joined object
+    nt = copy.deepcopy(TOAs_list[0])
+    # The following ensures that the filename list is flat
+    nt.filename = []
+    for xx in [tt.filename for tt in TOAs_list]:
+        if type(xx) is list:
+            for yy in xx:
+                nt.filename.append(yy)
+        else:
+            nt.filename.append(xx)
+    # We do not ensure that the command list is flat
+    nt.commands = [tt.commands for tt in TOAs_list]
+    # Now do the actual table stacking
+    nt.table = table.vstack(
+        [tt.table for tt in TOAs_list], join_type="exact", metadata_conflicts="silent"
+    )
+    # Fix the table meta data about filenames
+    nt.table.meta["filename"] = nt.filename
+    # This sets a flag that indicates that we have merged TOAs instances
+    nt.merged = True
+    # Now we need to re-arrange and group the tables
+    nt.table = nt.table.group_by("obs")
+    return nt
+

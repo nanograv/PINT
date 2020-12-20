@@ -18,9 +18,8 @@ from pint.event_toas import (
     load_XMM_TOAs,
 )
 from pint.eventstats import h2sig, hm
-from pint.observatory.nicer_obs import NICERObs
-from pint.observatory.nustar_obs import NuSTARObs
-from pint.observatory.rxte_obs import RXTEObs
+from pint.fits_utils import read_fits_event_mjds
+from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.plot_utils import phaseogram_binned
 from pint.pulsar_mjd import Time
 
@@ -41,6 +40,9 @@ def main(argv=None):
     parser.add_argument("--orbfile", help="Name of orbit file", default=None)
     parser.add_argument(
         "--maxMJD", help="Maximum MJD to include in analysis", default=None
+    )
+    parser.add_argument(
+        "--minMJD", help="Minimum MJD to include in analysis", default=None
     )
     parser.add_argument(
         "--plotfile", help="Output figure file name (default=None)", default=None
@@ -108,6 +110,10 @@ def main(argv=None):
     if args.plotfile is not None:
         args.plot = True
 
+    # set MJD ranges
+    maxmjd = np.inf if (args.maxMJD is None) else float(args.maxMJD)
+    minmjd = 0.0 if (args.minMJD is None) else float(args.minMJD)
+
     # Read event file header to figure out what instrument is is from
     hdr = pyfits.getheader(args.eventfile, ext=1)
 
@@ -119,13 +125,13 @@ def main(argv=None):
 
     if hdr["TELESCOP"] == "NICER":
 
-        # Instantiate NICERObs once so it gets added to the observatory registry
+        # Instantiate NICER observatory once so it gets added to the observatory registry
         if args.orbfile is not None:
             log.info("Setting up NICER observatory")
-            NICERObs(name="NICER", FPorbname=args.orbfile, tt2tdb_mode="pint")
+            get_satellite_observatory("NICER", args.orbfile)
         # Read event file and return list of TOA objects
         try:
-            tl = load_NICER_TOAs(args.eventfile)
+            tl = load_NICER_TOAs(args.eventfile, minmjd=minmjd, maxmjd=maxmjd)
         except KeyError:
             log.error(
                 "Observatory not recognized.  This probably means you need to provide an orbit file or barycenter the event file."
@@ -133,21 +139,21 @@ def main(argv=None):
             sys.exit(1)
     elif hdr["TELESCOP"] == "XTE":
 
-        # Instantiate RXTEObs once so it gets added to the observatory registry
+        # Instantiate RXTE observatory once so it gets added to the observatory registry
         if args.orbfile is not None:
             # Determine what observatory type is.
             log.info("Setting up RXTE observatory")
-            RXTEObs(name="RXTE", FPorbname=args.orbfile, tt2tdb_mode="pint")
+            get_satellite_observatory("RXTE", args.orbfile)
         # Read event file and return list of TOA objects
-        tl = load_RXTE_TOAs(args.eventfile)
+        tl = load_RXTE_TOAs(args.eventfile, minmjd=minmjd, maxmjd=maxmjd)
     elif hdr["TELESCOP"].startswith("XMM"):
         # Not loading orbit file here, since that is not yet supported.
-        tl = load_XMM_TOAs(args.eventfile)
+        tl = load_XMM_TOAs(args.eventfile, minmjd=minmjd, maxmjd=maxmjd)
     elif hdr["TELESCOP"].lower().startswith("nustar"):
         if args.orbfile is not None:
             log.info("Setting up NuSTAR observatory")
-            NuSTARObs(name="NuSTAR", FPorbname=args.orbfile, tt2tdb_mode="pint")
-        tl = load_NuSTAR_TOAs(args.eventfile)
+            get_satellite_observatory("NuSTAR", args.orbfile)
+        tl = load_NuSTAR_TOAs(args.eventfile, minmjd=minmjd, maxmjd=maxmjd)
     else:
         log.error(
             "FITS file not recognized, TELESCOPE = {0}, INSTRUMENT = {1}".format(
@@ -182,18 +188,6 @@ def main(argv=None):
         )
         raise ValueError("Model missing BINARY component.")
 
-    # Discard events outside of MJD range
-    if args.maxMJD is not None:
-        tlnew = []
-        print("pre len : ", len(tl))
-        maxT = Time(float(args.maxMJD), format="mjd")
-        print("maxT : ", maxT)
-        for tt in tl:
-            if tt.mjd < maxT:
-                tlnew.append(tt)
-        tl = tlnew
-        print("post len : ", len(tlnew))
-
     ts = toa.get_TOAs_list(
         tl,
         ephem=args.ephem,
@@ -212,9 +206,7 @@ def main(argv=None):
 
     # Compute model phase for each TOA
     iphss, phss = modelin.phase(ts, abs_phase=True)
-    # ensure all postive
-    negmask = phss < 0.0
-    phases = np.where(negmask, phss + 1.0, phss)
+    phases = phss.value % 1
     h = float(hm(phases))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
     if args.plot:
@@ -240,11 +232,15 @@ def main(argv=None):
         datacol = []
         data_to_add = {}
 
+        # Handle case where minMJD/maxMJD do not exceed length of events
+        mjds_float = read_fits_event_mjds(hdulist[1])
+        time_mask = np.logical_and((mjds_float > minmjd), (mjds_float < maxmjd))
+
         if args.addphase:
-            if len(hdulist[1].data) != len(phases):
+            if time_mask.sum() != len(phases):
                 raise RuntimeError(
-                    "Mismatch between length of FITS table ({0}) and length of phase array ({1})!".format(
-                        len(hdulist[1].data), len(phases)
+                    "Mismatch between data selection {0} and length of phase array ({1})!".format(
+                        time_mask.sum(), len(phases)
                     )
                 )
             data_to_add["PULSE_PHASE"] = [phases, "D"]
@@ -257,10 +253,10 @@ def main(argv=None):
             data_to_add["BARY_TIME"] = [bats, "D"]
 
         if args.addorbphase:
-            if len(hdulist[1].data) != len(orbphases):
+            if time_mask.sum() != len(orbphases):
                 raise RuntimeError(
-                    "Mismatch between length of FITS table ({0}) and length of orbital phase array ({1})!".format(
-                        len(hdulist[1].data), len(orbphases)
+                    "Mismatch between data selection ({0}) and length of orbital phase array ({1})!".format(
+                        time_mask.sum(), len(orbphases)
                     )
                 )
             data_to_add["ORBIT_PHASE"] = [orbphases, "D"]
@@ -270,17 +266,17 @@ def main(argv=None):
             if key in hdulist[1].columns.names:
                 log.info("Found existing %s column, overwriting..." % key)
                 # Overwrite values in existing Column
-                hdulist[1].data[key] = data_to_add[key][0]
+                hdulist[1].data[key][time_mask] = data_to_add[key][0]
             else:
                 # Construct and append new column, preserving HDU header and name
                 log.info("Adding new %s column." % key)
+                new_dat = np.full(time_mask.shape, -1, dtype=data_to_add[key][0].dtype)
+                new_dat[time_mask] = data_to_add[key][0]
                 datacol.append(
                     pyfits.ColDefs(
                         [
                             pyfits.Column(
-                                name=key,
-                                format=data_to_add[key][1],
-                                array=data_to_add[key][0],
+                                name=key, format=data_to_add[key][1], array=new_dat
                             )
                         ]
                     )

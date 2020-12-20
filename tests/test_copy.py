@@ -38,7 +38,7 @@ class TestObjectCopy:
     def test_copy_wideband_fitter_object(self):
         model = get_model("J1614-2230_NANOGrav_12yv3.wb.gls.par")
         toas = get_TOAs("J1614-2230_NANOGrav_12yv3.wb.tim")
-        fitter = WidebandTOAFitter([toas,], model, additional_args={})
+        fitter = WidebandTOAFitter([toas], model, additional_args={})
         fitter_copy = copy.deepcopy(fitter)
 
         assert sys.getsizeof(fitter) == sys.getsizeof(fitter_copy)

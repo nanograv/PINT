@@ -40,6 +40,7 @@ from pint.pulsar_mjd import (
 )
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name
+from pint.observatory import get_observatory
 
 
 class Parameter(object):
@@ -196,8 +197,7 @@ class Parameter(object):
     # Setup quantity property
     @property
     def quantity(self):
-        """Return the internal stored parameter value and units.
-        """
+        """Return the internal stored parameter value and units."""
         return self._quantity
 
     @quantity.setter
@@ -266,8 +266,7 @@ class Parameter(object):
 
     @property
     def uncertainty(self):
-        """Return the internal stored parameter uncertainty value and units.
-        """
+        """Return the internal stored parameter uncertainty value and units."""
         return self._uncertainty
 
     @uncertainty.setter
@@ -419,8 +418,7 @@ class Parameter(object):
         return True
 
     def name_matches(self, name):
-        """Whether or not the parameter name matches the provided name
-        """
+        """Whether or not the parameter name matches the provided name"""
         return (name == self.name.upper()) or (
             name in map(lambda x: x.upper(), self.aliases)
         )
@@ -480,7 +478,7 @@ class floatParameter(Parameter):
         unit_scale=False,
         scale_factor=None,
         scale_threshold=None,
-        **kwargs
+        **kwargs,
     ):
         self.long_double = long_double
         self.scale_factor = scale_factor
@@ -693,7 +691,7 @@ class boolParameter(Parameter):
         description=None,
         frozen=True,
         aliases=None,
-        **kwargs
+        **kwargs,
     ):
         print_quantity = lambda x: "Y" if x else "N"
         set_quantity = self.set_quantity_bool
@@ -714,8 +712,7 @@ class boolParameter(Parameter):
         self.paramType = "boolParameter"
 
     def set_quantity_bool(self, val):
-        """ This function is to get boolean value for boolParameter class
-        """
+        """This function is to get boolean value for boolParameter class"""
         # First try strings
         try:
             if val.upper() in ["Y", "YES", "T", "TRUE", "1"]:
@@ -772,7 +769,7 @@ class MJDParameter(Parameter):
         continuous=True,
         aliases=None,
         time_scale="tdb",
-        **kwargs
+        **kwargs,
     ):
         self._time_scale = time_scale
         set_quantity = self.set_quantity_mjd
@@ -837,10 +834,10 @@ class MJDParameter(Parameter):
 
     def set_quantity_mjd(self, val):
         """Value setter for MJD parameter,
-           Accepted format:
-           Astropy time object
-           mjd float
-           mjd string (in pulsar_mjd format)
+        Accepted format:
+        Astropy time object
+        mjd float
+        mjd string (in pulsar_mjd format)
         """
         if isinstance(val, numbers.Number):
             val = np.longdouble(val)
@@ -914,7 +911,7 @@ class AngleParameter(Parameter):
         frozen=True,
         continuous=True,
         aliases=None,
-        **kwargs
+        **kwargs,
     ):
         self._str_unit = units
         self.unit_identifier = {
@@ -952,7 +949,7 @@ class AngleParameter(Parameter):
         )
 
     def set_quantity_angle(self, val):
-        """ This function is to set value to angle parameters.
+        """This function is to set value to angle parameters.
 
         Accepted format:
         1. Astropy angle object
@@ -973,8 +970,7 @@ class AngleParameter(Parameter):
         return result
 
     def set_uncertainty_angle(self, val):
-        """This function is to set the uncertainty for an angle parameter.
-        """
+        """This function is to set the uncertainty for an angle parameter."""
         if isinstance(val, numbers.Number):
             result = Angle(val * self.unit_identifier[self._str_unit.lower()][2])
         elif isinstance(val, str):
@@ -990,16 +986,14 @@ class AngleParameter(Parameter):
         return result
 
     def print_quantity_angle(self, quan):
-        """This is a function to print out the angle parameter.
-        """
+        """This is a function to print out the angle parameter."""
         if ":" in self._str_unit:
             return quan.to_string(sep=":", precision=8)
         else:
             return quan.to_string(decimal=True, precision=15)
 
     def print_uncertainty(self, unc):
-        """This is a function for printing out the uncertainty
-        """
+        """This is a function for printing out the uncertainty"""
         if ":" in self._str_unit:
             angle_arcsec = unc.to(u.arcsec)
             if self.units == u.hourangle:
@@ -1078,7 +1072,7 @@ class prefixParameter(object):
         scale_factor=None,
         scale_threshold=None,
         time_scale="utc",
-        **kwargs
+        **kwargs,
     ):
         # Split prefixed name, if the name is not in the prefixed format, error
         # will be raised
@@ -1136,6 +1130,7 @@ class prefixParameter(object):
             scale_threshold=scale_threshold,
         )
         self.is_prefix = True
+        self.time_scale = time_scale
 
     # Define prpoerties for access the parameter composition
     @property
@@ -1285,21 +1280,32 @@ class prefixParameter(object):
 
 
 class maskParameter(floatParameter):
-    """Mask parameters are ones that apply to a subset of TOAs.
+    """Parameter that applies to a subset of TOAs.
 
-    This is a Parameter type for mask parameters which is to select a
-    certain subset of TOAs and apply changes on the subset of TOAs, for example
-    JUMP. This type of parameter does not require index input. But eventrully
-    an index part will be added, for the purpose of parsing the right value
-    from the parfile. For example::
+    A maskParameter applies to a subset of the TOAs, for example JUMP specifies
+    that their arrival times should be adjusted by the value associated with
+    this JUMP. The criterion is based on either one of the standard fields
+    (telescope, frequency, et cetera) or a flag; and the selection can be on an
+    exact match or on a range.
 
-        >>> p = maskParameter(name='JUMP', index=2)
+    Upon creation of a maskParameter, an index part will be added, so that the
+    parameters can be distinguished within the
+    :class:`pint.models.timing_model.TimingModel` object. For example::
+
+        >>> p = maskParameter(name='JUMP', index=2, key="-fe", key_value="G430")
         >>> p.name
         'JUMP2'
 
+    The selection criterion can be one of the parameters ``mjd``, ``freq``,
+    ``name``, ``tel`` representing the required columns of a ``.tim`` file, or
+    the name of a flag, starting with ``-``. If the selection criterion is
+    based on ``mjd`` or ``freq`` it is expected to be accompanied by a pair of
+    values that define a range; other criteria are expected to be accompanied
+    by a string that is matched exactly.
+
     Parameters
     ----------
-    name : str, optional
+    name : str
         The name of the parameter.
     index : int, optional
         The index number for the prefixed parameter.
@@ -1326,18 +1332,16 @@ class maskParameter(floatParameter):
         Whether derivatives with respect to this parameter make sense.
     aliases : list, optional
         List of aliases for parameter name.
-
-    TODO: Is mask parameter provide some other type of parameters other then
-    floatParameter?
-
     """
+
+    # TODO: Is mask parameter provide some other type of parameters other then floatParameter?
 
     def __init__(
         self,
-        name=None,
+        name,
         index=1,
         key=None,
-        key_value=None,
+        key_value=[],
         value=None,
         long_double=False,
         units=None,
@@ -1348,26 +1352,37 @@ class maskParameter(floatParameter):
         aliases=[],
     ):
         self.is_mask = True
+        # {key_name: (keyvalue parse function, keyvalue length)}
+        # Move this to some other places.
         self.key_identifier = {
             "mjd": (lambda x: time.Time(x, format="mjd").mjd, 2),
-            "freq": (float, 2),
+            "freq": (lambda x: u.Quantity(x, u.MHz, copy=False), 2),
             "name": (str, 1),
-            "tel": (str, 1),
+            "tel": (lambda x: get_observatory(str(x)).name, 1),
         }
-        if key_value is None:
-            key_value = []
-        elif not isinstance(key_value, list):
+
+        if not isinstance(key_value, (list, tuple)):
             key_value = [key_value]
 
         # Check key and key value
-        if key is not None and key.lower() in self.key_identifier.keys():
-            key_info = self.key_identifier[key.lower()]
-            if len(key_value) != key_info[1]:
-                errmsg = "key " + key + " takes " + key_info[1] + " element."
-                raise ValueError(errmsg)
-
+        key_value_parser = str
+        if key is not None:
+            if key.lower() in self.key_identifier.keys():
+                key_info = self.key_identifier[key.lower()]
+                if len(key_value) != key_info[1]:
+                    errmsg = f"key {key} takes {key_info[1]} element(s)."
+                    raise ValueError(errmsg)
+                key_value_parser = key_info[0]
+            else:
+                if not key.startswith("-"):
+                    raise ValueError(
+                        "A key to a TOA flag requires a leading '-'."
+                        " Legal keywords that don't require a leading '-' "
+                        "are MJD, FREQ, NAME, TEL."
+                    )
         self.key = key
-        self.key_value = key_value
+        self.key_value = [key_value_parser(k) for k in key_value]
+        self.key_value.sort()
         self.index = index
         name_param = name + str(index)
         self.origin_name = name
@@ -1446,7 +1461,6 @@ class maskParameter(floatParameter):
             NAME key key_value1 key_value2 parameter_value uncertainty
 
         where NAME is the name for this class as reported by ``self.name_matches``.
-
         """
         k = line.split()
         if not k:
@@ -1516,10 +1530,12 @@ class maskParameter(floatParameter):
             return ""
         line = "%-15s %s " % (self.origin_name, self.key)
         for kv in self.key_value:
-            if not isinstance(kv, time.Time):
-                line += "%s " % kv
+            if isinstance(kv, time.Time):
+                line += f"{time_to_mjd_string(kv)} "
+            elif isinstance(kv, u.Quantity):
+                line += f"{kv.value} "
             else:
-                line += "%s " % time_to_mjd_string(kv)
+                line += f"{kv} "
         line += "%25s" % self.print_quantity(self.quantity)
         if self.uncertainty is not None:
             line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty_value))
@@ -1528,8 +1544,7 @@ class maskParameter(floatParameter):
         return line + "\n"
 
     def new_param(self, index, copy_all=False):
-        """Create a new but same style mask parameter
-        """
+        """Create a new but same style mask parameter"""
         if not copy_all:
             new_mask_param = maskParameter(
                 name=self.origin_name,
@@ -1556,13 +1571,16 @@ class maskParameter(floatParameter):
         return new_mask_param
 
     def select_toa_mask(self, toas):
-        """Select the toas.
+        """Select the toas that match the mask.
+
         Parameter
         ---------
-        toas : TOAs class
-        Return
-        ------
-        A array of returned index.
+        toas: :class:`pint.toas.TOAs`
+
+        Returns
+        -------
+        array
+            An array of TOA indices selected by the mask.
         """
         column_match = {"mjd": "mjd_float", "freq": "freq", "tel": "obs"}
         if len(self.key_value) == 1:
@@ -1573,6 +1591,8 @@ class maskParameter(floatParameter):
             if not hasattr(self, "toa_selector"):
                 self.toa_selector = TOASelect(is_range=True, use_hash=True)
             condition = {self.name: tuple(self.key_value)}
+        elif len(self.key_value) == 0:
+            return np.array([], dtype=int)
         else:
             raise ValueError(
                 "Parameter %s has more key values than "
@@ -1581,19 +1601,21 @@ class maskParameter(floatParameter):
         # get the table columns
         # TODO Right now it is only supports mjd, freq, tel, and flagkeys,
         # We need to consider some more complicated situation
-        key = self.key.replace("-", "")
+        if self.key.startswith("-"):
+            key = self.key[1::]
+        else:
+            key = self.key
+
         tbl = toas.table
         if (
-            key.lower() not in column_match.keys()
+            self.key.lower() not in column_match
         ):  # This only works for the one with flags.
-            section_name = key + "_section"
-            # if section_name not in tbl.keys():
-            # if statement removed so that flags recompute every time. If don't
+            # The flags are recomputed every time. If don't
             # recompute, flags can only be added to the toa table once and then never update,
             # making it impossible to add additional jump parameters after the par file is read in (pintk)
             flag_col = [x.get(key, None) for x in tbl["flags"]]
-            tbl[section_name] = flag_col
-            col = tbl[section_name]
+            tbl[key] = flag_col
+            col = tbl[key]
         else:
             col = tbl[column_match[key.lower()]]
         select_idx = self.toa_selector.get_select_index(condition, col)
@@ -1638,7 +1660,7 @@ class pairParameter(floatParameter):
         frozen=True,
         continuous=False,
         aliases=[],
-        **kwargs
+        **kwargs,
     ):
 
         self.index = index
@@ -1660,7 +1682,7 @@ class pairParameter(floatParameter):
             long_double=long_double,
             set_quantity=self.set_quantity_pair,
             set_uncertainty=self.set_quantity_pair,
-            **kwargs
+            **kwargs,
         )
 
         self.set_quantity = self.set_quantity_pair
