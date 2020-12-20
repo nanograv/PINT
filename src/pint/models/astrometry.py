@@ -90,9 +90,9 @@ class Astrometry(DelayComponent):
         tbl = toas.table
 
         if heliocenter:
-            osv = tbl["obs_sun_pos"].quantity
+            osv = tbl["obs_sun_pos"].quantity.copy()
         else:
-            osv = -tbl["ssb_obs_pos"].quantity
+            osv = -tbl["ssb_obs_pos"].quantity.copy()
         psr_vec = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"])
         r = (osv ** 2).sum(axis=1) ** 0.5
         osv /= r[:, None]

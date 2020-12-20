@@ -562,7 +562,7 @@ class Polycos(object):
                 toaMid = toa.get_TOAs_list(
                     [
                         toa.TOA(
-                            (np.modf(tmid)[1], np.modf(tmid)[0]), obs=obs, freq=obsFreq,
+                            (np.modf(tmid)[1], np.modf(tmid)[0]), obs=obs, freq=obsFreq
                         )
                     ]
                 )

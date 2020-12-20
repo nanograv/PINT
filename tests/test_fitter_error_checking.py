@@ -27,7 +27,7 @@ def test_dmx_no_toas():
                 [
                     par_base,
                     "DMX 15",
-                    "DMX_0001 16",
+                    "DMX_0001 16 1",
                     "DMXR1_0001 58000",
                     "DMXR2_0001 59000",
                 ]

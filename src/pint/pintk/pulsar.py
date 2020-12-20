@@ -96,7 +96,7 @@ class Pulsar(object):
         self.prefit_resids = Residuals(self.selected_toas, self.prefit_model)
         print(
             "RMS PINT residuals are %.3f us\n"
-            % self.prefit_resids.time_resids.rms_weighted().to(u.us).value
+            % self.prefit_resids.rms_weighted().to(u.us).value
         )
         self.fitter = Fitters.WLS
         self.fitted = False
@@ -186,7 +186,7 @@ class Pulsar(object):
             chi2 = self.postfit_resids.chi2
             wrms = self.postfit_resids.rms_weighted()
             print("Post-Fit Chi2:\t\t%.8g us^2" % chi2)
-            print("Post-Fit Weighted RMS:\t%.8g us" % wrms)
+            print("Post-Fit Weighted RMS:\t%.8g us" % wrms.to(u.us).value)
             print(
                 "%19s  %24s\t%24s\t%16s  %16s  %16s"
                 % (
@@ -504,7 +504,7 @@ class Pulsar(object):
         chi2 = self.prefit_resids.chi2
         wrms = self.prefit_resids.rms_weighted()
         print("Pre-Fit Chi2:\t\t%.8g us^2" % chi2)
-        print("Pre-Fit Weighted RMS:\t%.8g us" % wrms)
+        print("Pre-Fit Weighted RMS:\t%.8g us" % wrms.to(u.us).value)
 
         fitter.fit_toas(maxiter=1)
         self.postfit_model = fitter.model
