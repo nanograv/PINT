@@ -955,6 +955,8 @@ class TOAs(object):
         self.ephem = None
         self.clock_corr_info = {}
         self.obliquity = None
+        self.merged = False
+        self.hashes = {}
 
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
@@ -1288,6 +1290,8 @@ class TOAs(object):
         self.pintversion = pint.__version__
         if filename is not None:
             pickle.dump(self, open(filename, "wb"))
+        elif self.merged:
+            raise ValueError("Merged TOAs need specified file names")
         elif self.filename is not None:
             if isinstance(self.filename, str):
                 filename = self.filename
@@ -1809,6 +1813,7 @@ class TOAs(object):
         self.ephem = tmp.ephem
         self.planets = tmp.planets
         self.hashes = tmp.hashes
+        self.merged = tmp.merged
 
     def read_toa_file(self, filename, process_includes=True, top=True):
         """Read TOAs from the given filename.
