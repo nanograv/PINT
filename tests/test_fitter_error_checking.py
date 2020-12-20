@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 import io
+import os
 
 import numpy as np
 import astropy.units as u
@@ -9,7 +10,11 @@ import re
 import pint.fitter
 from pint.models import get_model
 from pint.models.timing_model import MissingTOAs
-from pint.toa import make_fake_toas
+from pint.models.parameter import maskParameter
+from pint.toa import make_fake_toas, get_TOAs
+from pint.fitter import GLSFitter
+from pinttestdata import datadir
+
 
 par_base = """
 PSR J1234+5678
@@ -58,6 +63,32 @@ def test_jump_no_toas():
     fitter = pint.fitter.WLSFitter(toas, model)
     with pytest.raises(ValueError):
         fitter.fit_toas()
+
+
+def test_noise_no_toa():
+    model = get_model(io.StringIO("\n".join([par_base, "EFAC -fe L_wide 0",
+                                                       "EQUAD -fe L_wide 0",
+                                                       "ECORR -fe L_wide 0"])))
+    toas = make_fake_toas(57000, 57900, 10, model)
+    assert len(model.EFAC1.select_toa_mask(toas)) == 0
+    assert len(model.EQUAD1.select_toa_mask(toas)) == 0
+    assert len(model.ECORR1.select_toa_mask(toas)) == 0
+    fitter = pint.fitter.WLSFitter(toas, model)
+    # Should be only warning 
+    fitter.fit_toas()
+
+
+def test_GLS_fit_no_toa():
+    os.chdir(datadir)
+    m = get_model("B1855+09_NANOGrav_9yv1.gls.par")
+    t = get_TOAs("B1855+09_NANOGrav_9yv1.tim")
+    # add the mask parameter with no TOAs
+    mcorr1 = maskParameter(name='ECORR', key='-f', key_value='fake_backend', value=1, units=u.us)
+    m.add_param_from_top(mcorr1, 'EcorrNoise', setup=True)
+    print(m.params)
+    assert 'ECORR5' in m.params
+    fitter = GLSFitter(t, m)
+    chi2 = fitter.fit_toas()
 
 
 def test_dm_barycentered():
