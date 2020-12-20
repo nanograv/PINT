@@ -4,6 +4,7 @@ import io
 import numpy as np
 import astropy.units as u
 import pytest
+import re
 
 import pint.fitter
 from pint.models import get_model
@@ -17,6 +18,7 @@ ELAT 0 0
 ELONG 0 0
 PEPOCH 57000
 DM 10 0
+SOLARN0 0
 """
 
 
@@ -130,3 +132,29 @@ def test_jump_everything_wideband():
         fitter.fit_toas(threshold=1e-14)
     for p in fitter.model.free_params:
         assert not np.isnan(fitter.model[p].value)
+
+
+@pytest.mark.parametrize("Fitter", [pint.fitter.WLSFitter, pint.fitter.GLSFitter])
+def test_update_model(Fitter):
+    model = get_model(io.StringIO("\n".join([par_base, "JUMP TEL barycenter 0"])))
+    model.INFO.value = "-f"
+    model.ECL.value = "IERS2010"
+    model.TIMEEPH.value = "FB90"
+    model.T2CMETHOD.value = "IERS2000B"
+    toas = make_fake_toas(58000, 59000, 10, model, obs="barycenter", freq=np.inf)
+    fitter = Fitter(toas, model)
+    fitter.fit_toas()
+    par_out = fitter.model.as_parfile()
+    assert re.search(r"CLOCK *TT\(TAI\)", par_out)
+    assert re.search(r"TIMEEPH *FB90", par_out)
+    assert re.search(r"T2CMETHOD *IERS2000B", par_out)
+    assert re.search(r"NE_SW *0.0", par_out)
+    assert re.search(r"ECL *IERS2010", par_out)
+    assert re.search(r"DILATEFREQ *N", par_out)
+    assert re.search(r"INFO *-f", par_out)
+    assert re.search(r"NTOA *10.0", par_out)
+    assert re.search(r"CHI2 *\d+.\d+", par_out)
+    assert re.search(r"EPHEM *DE421", par_out)
+    assert re.search(r"DMDATA *0.0", par_out)
+    assert re.search(r"START *58000.0", par_out)
+    assert re.search(r"FINISH *59000.0", par_out)

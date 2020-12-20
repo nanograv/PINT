@@ -39,6 +39,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added support for wideband-TOA fitting (Pennucci 2019).
 - Added START and FINISH parameters as MJDParameters to timing_model. They are now modified after a fit and are displayed with a model's .par file output.
 - Added solar_angle calculation (PR #892)
+- Added parameters to TimingModel to support TEMPO/TEMPO2 compatible par files. (PR #900)
 - Added position vectors to Neptune (PR #901)
 - Added checking for TOAs in DMX bins and other similar parameters, if free (PR #874)
 - Added PiecewiseSpindown model, for spindown correction lasting for a given MJD range
@@ -51,6 +52,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Changed requirements to astropy>=4.0
 - get_model can now read from file-like, including StringIO, objects (handy for testing) (PR #871)
 - WidebandDMResiduals now support access to their parts through .toa and .dm attributes (PR #861)
+- Fitters now update the fitted model to record things like EPHEM used for the TOAs (PR #900)
 - EFACs and EQUADs can be set independently from each other now. (PR #890)
 - WLSFitter and GLSFitter and WidebandTOAFitter can now report degenerate parameter combinations (PR #874)
 - Raise an exception if the DDK model is provided with SINI (PR #864)
