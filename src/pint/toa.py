@@ -298,14 +298,6 @@ def _check_pickle(toafilename, picklefilename=None):
         if picklefilename is None:
             return ""
 
-    # Check if TOA is newer than pickle
-    # if os.path.getmtime(picklefilename) < os.path.getmtime(toafilename):
-    #    return ""
-
-    # TODO add more tests.  Some things to consider:
-    #   1. Check file contents via md5sum (will require storing this in pickle).
-    #   2. Check INCLUDEd TOA files (will require some TOA file parsing).
-
     # All checks passed, return name of pickle.
     return picklefilename
 
