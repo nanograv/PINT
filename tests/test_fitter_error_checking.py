@@ -78,19 +78,6 @@ def test_noise_no_toa():
     fitter.fit_toas()
 
 
-def test_GLS_fit_no_toa():
-    os.chdir(datadir)
-    m = get_model("B1855+09_NANOGrav_9yv1.gls.par")
-    t = get_TOAs("B1855+09_NANOGrav_9yv1.tim")
-    # add the mask parameter with no TOAs
-    mcorr1 = maskParameter(name='ECORR', key='-f', key_value='fake_backend', value=1, units=u.us)
-    m.add_param_from_top(mcorr1, 'EcorrNoise', setup=True)
-    print(m.params)
-    assert 'ECORR5' in m.params
-    fitter = GLSFitter(t, m)
-    chi2 = fitter.fit_toas()
-
-
 def test_dm_barycentered():
     model = get_model(io.StringIO(par_base))
     toas = make_fake_toas(57000, 57900, 10, model, obs="@", freq=np.inf)
