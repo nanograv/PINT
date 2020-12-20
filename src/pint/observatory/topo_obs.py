@@ -143,7 +143,7 @@ class TopoObs(Observatory):
                 aliases.append(code)
 
         self.origin = origin
-        super(TopoObs, self).__init__(name, aliases=aliases, tt2tdb_mode="astropy")
+        super(TopoObs, self).__init__(name, aliases=aliases)
 
     @property
     def clock_fullpath(self):

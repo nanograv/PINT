@@ -14,7 +14,8 @@ import pint.residuals
 import pint.toa as toa
 from pint.eventstats import h2sig, hmw
 from pint.fermi_toas import load_Fermi_TOAs
-from pint.observatory.fermi_obs import FermiObs
+from pint.fits_utils import read_fits_event_mjds_tuples
+from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.plot_utils import phaseogram
 from pint.pulsar_mjd import Time
 
@@ -50,6 +51,9 @@ def main(argv=None):
         "--maxMJD", help="Maximum MJD to include in analysis", default=None
     )
     parser.add_argument(
+        "--minMJD", help="Minimum MJD to include in analysis", default=None
+    )
+    parser.add_argument(
         "--outfile",
         help="Output figure file name (default is to overwrite input file)",
         default=None,
@@ -81,23 +85,19 @@ def main(argv=None):
         tc = SkyCoord(modelin.RAJ.quantity, modelin.DECJ.quantity, frame="icrs")
 
     if args.ft2 is not None:
-        # Instantiate FermiObs once so it gets added to the observatory registry
-        FermiObs(name="Fermi", ft2name=args.ft2)
+        # Instantiate Fermi observatory once so it gets added to the observatory registry
+        get_satellite_observatory("Fermi", args.ft2)
 
     # Read event file and return list of TOA objects
-    tl = load_Fermi_TOAs(args.eventfile, weightcolumn=args.weightcol, targetcoord=tc)
-
-    # Discard events outside of MJD range
-    if args.maxMJD is not None:
-        tlnew = []
-        print("pre len : ", len(tl))
-        maxT = Time(float(args.maxMJD), format="mjd")
-        print("maxT : ", maxT)
-        for tt in tl:
-            if tt.mjd < maxT:
-                tlnew.append(tt)
-        tl = tlnew
-        print("post len : ", len(tlnew))
+    maxmjd = np.inf if (args.maxMJD is None) else float(args.maxMJD)
+    minmjd = 0.0 if (args.minMJD is None) else float(args.minMJD)
+    tl = load_Fermi_TOAs(
+        args.eventfile,
+        maxmjd=maxmjd,
+        minmjd=minmjd,
+        weightcolumn=args.weightcol,
+        targetcoord=tc,
+    )
 
     # Now convert to TOAs object and compute TDBs and posvels
     # For Fermi, we are not including GPS or TT(BIPM) corrections
@@ -116,8 +116,8 @@ def main(argv=None):
 
     # Compute model phase for each TOA
     iphss, phss = modelin.phase(ts, abs_phase=True)
-    # ensure all postive
-    phases = np.where(phss < 0.0, phss + 1.0, phss)
+    phss %= 1
+    phases = phss.value
     mjds = ts.get_mjds()
     weights = np.array([w["weight"] for w in ts.table["flags"]])
     h = float(hmw(phases, weights))
@@ -136,21 +136,21 @@ def main(argv=None):
         event_hdu = hdulist[1]
         event_hdr = event_hdu.header
         event_dat = event_hdu.data
-        if len(event_dat) != len(phases):
-            raise RuntimeError(
-                "Mismatch between length of FITS table ({0}) and length of phase array ({1})!".format(
-                    len(event_dat), len(phases)
-                )
-            )
+        event_mjds = read_fits_event_mjds_tuples(event_hdu)
+        mjds_float = np.asarray([r[0] + r[1] for r in event_mjds])
+        time_mask = np.logical_and((mjds_float > minmjd), (mjds_float < maxmjd))
+        new_phases = np.full(len(event_dat), -1, dtype=float)
+        new_phases[time_mask] = phases
+
         if "PULSE_PHASE" in event_hdu.columns.names:
             log.info("Found existing PULSE_PHASE column, overwriting...")
             # Overwrite values in existing Column
-            event_dat["PULSE_PHASE"] = phases
+            event_dat["PULSE_PHASE"] = new_phases
         else:
             # Construct and append new column, preserving HDU header and name
             log.info("Adding new PULSE_PHASE column.")
             phasecol = pyfits.ColDefs(
-                [pyfits.Column(name="PULSE_PHASE", format="D", array=phases)]
+                [pyfits.Column(name="PULSE_PHASE", format="D", array=new_phases)]
             )
             bt = pyfits.BinTableHDU.from_columns(
                 event_hdu.columns + phasecol, header=event_hdr, name=event_hdu.name

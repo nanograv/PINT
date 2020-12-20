@@ -46,6 +46,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - New observatories will no longer overwrite existing ones silently.  Will either raise ValueError or require overwrite=True
 - Large speed increase when using Ecliptic coordinates
 - Changed Residuals so that use_weighted_mean and subtract_mean are attributes set on initialization
+- Refactored code for orbiting observatories, most now share a single class, see observatory/satellite_obs.py
+- Fixed 2mus amplitude bug in TT to TDB conversion for orbiting observatories.
 - Changed requirements to astropy>=4.0
 - get_model can now read from file-like, including StringIO, objects (handy for testing) (PR #871)
 - WidebandDMResiduals now support access to their parts through .toa and .dm attributes (PR #861)
