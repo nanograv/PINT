@@ -10,6 +10,7 @@ from pint.models.parameter import floatParameter, maskParameter
 from pint.models.timing_model import Component
 from collections import OrderedDict
 
+
 class NoiseComponent(Component):
     def __init__(self,):
         super(NoiseComponent, self).__init__()

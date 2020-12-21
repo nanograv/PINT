@@ -84,9 +84,7 @@ def missingTOAs_msg(parameter_names):
     if len(parameter_names) == 1:
         msg = f"Parameter {parameter_names[0]} does not correspond to any TOAs"
     elif len(parameter_names) > 1:
-        msg = (
-            f"Parameters {' '.join(parameter_names)} do not correspond to any TOAs"
-        )
+        msg = f"Parameters {' '.join(parameter_names)} do not correspond to any TOAs"
     else:
         raise ValueError("Incorrect attempt to construct MissingTOAs")
     return msg
@@ -2006,7 +2004,7 @@ class TimingModel(object):
                     warning_parameters.append(msg)
 
         # The component level of validate_toas only accepts the bad_parameters,
-        # not warning parameters. 
+        # not warning parameters.
         for c in self.components.values():
             try:
                 c.validate_toas(toas)
@@ -2018,7 +2016,6 @@ class TimingModel(object):
             log.warning(missingTOAs_msg(warning_parameters))
         if bad_parameters:
             raise MissingTOAs(bad_parameters)
-
 
     def setup(self):
         """Run setup methods on all components."""

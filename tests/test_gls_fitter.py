@@ -79,15 +79,18 @@ class TestGLS(unittest.TestCase):
     def test_has_correlated_errors(self):
         assert self.f.resids.model.has_correlated_errors
 
-
     def test_GLS_fit_no_toa(self):
         # add the mask parameter with no TOAs
-        mcorr1 = maskParameter(name='ECORR', key='-f', key_value='fake_backend', value=1, units=u.us)
-        mcorr2 = maskParameter(name='ECORR', key='-f', key_value='fake_backend2', value=1, units=u.us)
-        self.m.add_param_from_top(mcorr1, 'EcorrNoise', setup=True)
-        self.m.add_param_from_top(mcorr2, 'EcorrNoise', setup=True)
-        assert 'ECORR5' in self.m.params
-        assert 'ECORR6' in self.m.params
+        mcorr1 = maskParameter(
+            name="ECORR", key="-f", key_value="fake_backend", value=1, units=u.us
+        )
+        mcorr2 = maskParameter(
+            name="ECORR", key="-f", key_value="fake_backend2", value=1, units=u.us
+        )
+        self.m.add_param_from_top(mcorr1, "EcorrNoise", setup=True)
+        self.m.add_param_from_top(mcorr2, "EcorrNoise", setup=True)
+        assert "ECORR5" in self.m.params
+        assert "ECORR6" in self.m.params
         fitter = GLSFitter(self.t, self.m)
         chi2 = fitter.fit_toas()
         assert fitter.resids.dof == 3914

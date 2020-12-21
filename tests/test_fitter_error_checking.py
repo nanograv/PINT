@@ -66,15 +66,24 @@ def test_jump_no_toas():
 
 
 def test_noise_no_toa():
-    model = get_model(io.StringIO("\n".join([par_base, "EFAC -fe L_wide 0",
-                                                       "EQUAD -fe L_wide 0",
-                                                       "ECORR -fe L_wide 0"])))
+    model = get_model(
+        io.StringIO(
+            "\n".join(
+                [
+                    par_base,
+                    "EFAC -fe L_wide 0",
+                    "EQUAD -fe L_wide 0",
+                    "ECORR -fe L_wide 0",
+                ]
+            )
+        )
+    )
     toas = make_fake_toas(57000, 57900, 10, model)
     assert len(model.EFAC1.select_toa_mask(toas)) == 0
     assert len(model.EQUAD1.select_toa_mask(toas)) == 0
     assert len(model.ECORR1.select_toa_mask(toas)) == 0
     fitter = pint.fitter.WLSFitter(toas, model)
-    # Should be only warning 
+    # Should be only warning
     fitter.fit_toas()
 
 
