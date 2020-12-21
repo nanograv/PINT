@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.8] - 2020-12-21
 ### Fixed
 - Fixed an indentation bug in Wideband TOA fitting.
 - The CombinedResidual class has API change on the get_data_error(), child residueal class in save as dictionary.
@@ -64,6 +64,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fitters can now respect pulse numbers (PR #814)
 - Updated clock files (PR #835)
 - Pickles are now (partially) recomputed if the ephemeris or other settings change (PR #838)
+- Default BIPM version is BIPM2019 (was BIPM2015)
 ## [0.7.0] - 2020-05-27
 ### Changed
 - Changed units of Phase to be u.dimensionless_unscaled instead of u.cycle, which was confusing
