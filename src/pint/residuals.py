@@ -242,26 +242,15 @@ class Residuals:
             Either the single ``F0`` in the model or the spin frequency at the moment of each TOA.
         """
         if modelF0:
-            if self.model.F0.units != "Hz":
-                ValueError("F0 units must be Hz")
-            # All residuals require the model pulsar frequency to be defined
-            F0names = ["F0", "nu"]  # recognized parameter names, needs to be changed
-            nF0 = 0
-            for n in F0names:
-                if n in self.model.params:
-                    F0 = getattr(self.model, n).value
-                    nF0 += 1
-            if nF0 == 0:
-                raise ValueError(
-                    "no PSR frequency parameter found; "
-                    + "valid names are %s" % F0names
-                )
-            if nF0 > 1:
-                raise ValueError(
-                    "more than one PSR frequency parameter found; "
-                    + "should be only one from %s" % F0names
-                )
-            return F0 * u.Hz
+            # TODO this function will be re-write and move to timing model soon.
+            # The following is a temproary patch.
+            if 'Spindown' in self.model.components:
+                return self.model.F0.quantity
+            elif 'P0' in self.model.params:
+                return 1.0/self.model.P0.quantity
+            else:
+                raise AttributeError("No pulsar spin parameter(e.g., 'F0',"
+                                     " 'P0') found.")
         else:
             return self.model.d_phase_d_toa(self.toas)
 
