@@ -22,7 +22,7 @@ import numpy.ma
 from astropy import log
 from astropy.coordinates import EarthLocation
 from astropy.coordinates import ICRS, CartesianDifferential, CartesianRepresentation
-from six.moves import cPickle as pickle
+import pickle
 
 import pint
 from pint.observatory import Observatory, get_observatory, bipm_default
@@ -37,6 +37,8 @@ __all__ = [
     "TOAs",
     "get_TOAs",
     "get_TOAs_list",
+    "load_pickle",
+    "save_pickle",
     "make_fake_toas",
     "format_toa_line",
     "TOA",
@@ -194,9 +196,13 @@ def get_TOAs(
     updatepickle = False
     recalc = False
     if usepickle:
-        picklefile = _check_pickle(timfile)
-        if picklefile:
-            t = TOAs(picklefile)
+        try:
+            t = load_pickle(timfile)
+        except IOError:
+            # Pickle either did not exist or is out of date
+            updatepickle = True
+        else:
+            t.was_pickled = True
             if hasattr(t, "hashes"):
                 for f, v in t.hashes.items():
                     if _compute_hash(f) != v:
@@ -223,9 +229,6 @@ def get_TOAs(
             ):
                 log.info("Pickle contains wrong bipm_version")
                 updatepickle = True
-        else:
-            # Pickle either did not exist or is out of date
-            updatepickle = True
     if not usepickle or updatepickle:
         t = TOAs(timfile)
         recalc = True
@@ -253,6 +256,7 @@ def get_TOAs(
             log.info("Ephem changed, recalculation needed")
         recalc = True
         updatepickle = True
+    t.table = t.table.group_by("obs")
     if recalc or "tdb" not in t.table.colnames:
         t.compute_TDBs(method=tdb_method, ephem=ephem)
 
@@ -272,34 +276,75 @@ def get_TOAs(
         else:
             files = t.filename
         t.hashes = {f: _compute_hash(f) for f in files}
-        t.pickle()
+        save_pickle(t)
     return t
 
 
-def _check_pickle(toafilename, picklefilename=None):
-    """Check if pickle file for the given toafilename needs to be updated.
+def load_pickle(toafilename, picklefilename=None):
+    """Load a pickle file, un-gzipping if necessary.
 
-    Currently only file modification times are compared, note this will
-    give misleading results under some circumstances.
+    Parameters
+    ----------
+    toafilename : str
+        Base filename of the TOAs; pickles will be searched for with
+        ".pickle.gz", ".pickle", or just this filename.
+    picklefilename : str, optional
+        Explicit filename to use.
 
-    If picklefilename is not specified, will look for (toafilename).pickle.gz
-    then (toafilename).pickle.
-
-    If the pickle exists and is up to date, returns the pickle file name.
-    Otherwise returns empty string.
+    Returns
+    -------
+    toas : :class:`pint.toa.TOAs`
     """
-    if picklefilename is None:
-        for ext in (".pickle.gz", ".pickle"):
-            testfilename = toafilename + ext
-            if os.path.isfile(testfilename):
-                picklefilename = testfilename
-                break
-        # It it's still None, no pickles were found
-        if picklefilename is None:
-            return ""
+    picklefilenames = (
+        [toafilename + ext for ext in (".pickle.gz", ".pickle", "")]
+        if picklefilename is None
+        else picklefilename
+    )
 
-    # All checks passed, return name of pickle.
-    return picklefilename
+    for fn in picklefilenames:
+        try:
+            with gzip.open(fn, "rb") as f:
+                return pickle.load(f)
+        except (IOError, pickle.UnpicklingError):
+            pass
+        try:
+            with open(fn, "rb") as f:
+                return pickle.load(f)
+        except (IOError, pickle.UnpicklingError):
+            pass
+    raise IOError("No readable pickle found")
+
+
+def save_pickle(toas, filename=None):
+    """Write the TOAs to a .pickle file.
+
+    Parameters
+    ----------
+    toas : :class:`pint.toa.TOAs`
+        The TOAs to pickle.
+    filename : str, optional
+        The filename to use for the pickle file; if not specified,
+        construct a filename based on the file the toas object was
+        originally loaded from.
+    """
+    # Save the PINT version used to create this pickle file
+    toas.pintversion = pint.__version__
+    if filename is not None:
+        with open(filename, "wb") as f:
+            pickle.dump(toas, f)
+    elif toas.merged:
+        raise ValueError(
+            "TOAs object was merged from multiple files, please provide a filename."
+        )
+    elif toas.filename is not None:
+        if isinstance(toas.filename, str):
+            filename = toas.filename
+        else:
+            filename = toas.filename[0]
+        with gzip.open(filename + ".pickle.gz", "wb") as f:
+            pickle.dump(toas, f)
+    else:
+        raise ValueError("TOA pickle method needs a (single) filename.")
 
 
 def get_TOAs_list(
@@ -498,7 +543,6 @@ def format_toa_line(
 
         - First line of file should be "``FORMAT 1``"
         - TOA format is ``file freq sat satErr siteID <flags>``
-
     """
     if format.upper() in ("TEMPO2", "1"):
         toa_str = Time(toatime, format="pulsar_mjd_string", scale=obs.timescale)
@@ -980,18 +1024,10 @@ class TOAs(object):
             raise ValueError("Cannot initialize TOAs from both file and list.")
 
         if isinstance(toafile, str):
-            # Check for a pickle-like filename.  Alternative approach would
-            # be to just try opening it as a pickle and see what happens.
-            if toafile.endswith(".pickle") or toafile.endswith("pickle.gz"):
-                log.info("Reading TOAs from pickle file")
-                self.read_pickle_file(toafile)
-            else:
-                self.read_toa_file(toafile)
-                # Check to see if there were any INCLUDEs:
-                inc_fns = [
-                    x[0][1] for x in self.commands if x[0][0].upper() == "INCLUDE"
-                ]
-                self.filename = [toafile] + inc_fns if inc_fns else toafile
+            self.read_toa_file(toafile)
+            # Check to see if there were any INCLUDEs:
+            inc_fns = [x[0][1] for x in self.commands if x[0][0].upper() == "INCLUDE"]
+            self.filename = [toafile] + inc_fns if inc_fns else toafile
         elif toafile is not None:
             self.read_toa_file(toafile)
             self.filename = ""
@@ -1301,23 +1337,6 @@ class TOAs(object):
             self.table = self.table_selects.pop()
         except (AttributeError, IndexError):
             log.error("No previous TOA table found.  No changes made.")
-
-    def pickle(self, filename=None):
-        """Write the TOAs to a .pickle file with optional filename."""
-        # Save the PINT version used to create this pickle file
-        self.pintversion = pint.__version__
-        if filename is not None:
-            pickle.dump(self, open(filename, "wb"))
-        elif self.merged:
-            raise ValueError("Merged TOAs need specified file names")
-        elif self.filename is not None:
-            if isinstance(self.filename, str):
-                filename = self.filename
-            else:
-                filename = self.filename[0]
-            pickle.dump(self, gzip.open(filename + ".pickle.gz", "wb"))
-        else:
-            raise ValueError("TOA pickle method needs a (single) filename.")
 
     def get_summary(self):
         """Return a short ASCII summary of the TOAs."""
@@ -1800,38 +1819,6 @@ class TOAs(object):
         col = ssb_obs_vel_ecl
         log.debug("Adding columns " + " ".join(col.name))
         self.table.add_column(col)
-
-    def read_pickle_file(self, filename):
-        """Read the TOAs from the pickle file specified in filename.
-
-        Note the filename should include any pickle-specific extensions (ie
-        ".pickle.gz" or similar), these will not be added automatically.
-
-        If the file ends with ".gz" it will be uncompressed before extracting
-        the pickle.
-        """
-        log.info("Reading pickled TOAs from '%s'..." % filename)
-        if os.path.splitext(filename)[1] == ".gz":
-            infile = gzip.open(filename, "rb")
-        else:
-            infile = open(filename, "rb")
-        tmp = pickle.load(infile)
-        if not hasattr(tmp, "pintversion") or tmp.pintversion != pint.__version__:
-            log.error(
-                f"PINT version in pickle file is different than current version! "
-                f"*** Suggest deleting {filename}"
-            )
-        self.filename = tmp.filename
-        if hasattr(tmp, "toas"):
-            self.toas = tmp.toas
-        if hasattr(tmp, "table"):
-            self.table = tmp.table.group_by("obs")
-        self.commands = tmp.commands
-        self.clock_corr_info = tmp.clock_corr_info
-        self.ephem = tmp.ephem
-        self.planets = tmp.planets
-        self.hashes = tmp.hashes
-        self.merged = tmp.merged
 
     def read_toa_file(self, filename, process_includes=True, top=True):
         """Read TOAs from the given filename.
