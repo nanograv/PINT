@@ -77,18 +77,24 @@ DEFAULT_ORDER = [
 ]
 
 
+def missingTOAs_msg(parameter_names):
+    """Helper function for print out missing TOAs message."""
+    if isinstance(parameter_names, str):
+        parameter_names = [parameter_names]
+    if len(parameter_names) == 1:
+        msg = f"Parameter {parameter_names[0]} does not correspond to any TOAs"
+    elif len(parameter_names) > 1:
+        msg = (
+            f"Parameters {' '.join(parameter_names)} do not correspond to any TOAs"
+        )
+    else:
+        raise ValueError("Incorrect attempt to construct MissingTOAs")
+    return msg
+
+
 class MissingTOAs(ValueError):
     def __init__(self, parameter_names):
-        if isinstance(parameter_names, str):
-            parameter_names = [parameter_names]
-        if len(parameter_names) == 1:
-            msg = f"Parameter {parameter_names[0]} does not correspond to any TOAs"
-        elif len(parameter_names) > 1:
-            msg = (
-                f"Parameters {' '.join(parameter_names)} do not correspond to any TOAs"
-            )
-        else:
-            raise ValueError("Incorrect attempt to construct MissingTOAs")
+        msg = missingTOAs_msg(parameter_names)
         super().__init__(msg)
         self.parameter_names = parameter_names
 
@@ -1987,19 +1993,32 @@ class TimingModel(object):
         lists some (at least one) of the problem parameters.
         """
         bad_parameters = []
+        warning_parameters = []
         for maskpar in self.get_params_of_type_top("maskParameter"):
             par = getattr(self, maskpar)
-            if "TNEQ" in str(par.name) or par.frozen:
+            if "TNEQ" in str(par.name):
                 continue
             if len(par.select_toa_mask(toas)) == 0:
-                bad_parameters.append(f"'{maskpar}, {par.key}, {par.key_value}'")
+                msg = f"'{maskpar}, {par.key}, {par.key_value}'"
+                if not par.frozen:
+                    bad_parameters.append(msg)
+                else:
+                    warning_parameters.append(msg)
+
+        # The component level of validate_toas only accepts the bad_parameters,
+        # not warning parameters. 
         for c in self.components.values():
             try:
                 c.validate_toas(toas)
             except MissingTOAs as e:
                 bad_parameters += e.parameter_names
+
+        # first print out the warnings
+        if warning_parameters:
+            log.warning(missingTOAs_msg(warning_parameters))
         if bad_parameters:
             raise MissingTOAs(bad_parameters)
+
 
     def setup(self):
         """Run setup methods on all components."""

@@ -8,7 +8,7 @@ from astropy import log
 
 from pint.models.parameter import floatParameter, maskParameter
 from pint.models.timing_model import Component
-
+from collections import OrderedDict
 
 class NoiseComponent(Component):
     def __init__(self,):
@@ -26,25 +26,6 @@ class NoiseComponent(Component):
 
     def validate(self,):
         super(NoiseComponent, self).validate()
-
-    def validate_toas(self, toas, suppress_warning=False):
-        no_toa_param = []
-        for par_name in self.get_params_of_type('maskParameter'):
-            par = getattr(self, par_name)
-            mask = par.select_toa_mask(toas)
-            if len(mask) == 0:
-                no_toa_param.append(par_name)
-
-        if no_toa_param != []:
-            if len(no_toa_param) == 1:
-                msg = f"Noise Parameter {no_toa_param[0]} does not correspond to any TOAs"
-            elif len(no_toa_param) > 1:
-                msg = (
-                    f"Parameters {' '.join(no_toa_param)} do not correspond to any TOAs"
-                )
-            if not suppress_warning:
-                log.warning(msg)
-        return no_toa_param
 
 
 class ScaleToaError(NoiseComponent):
@@ -397,27 +378,23 @@ class EcorrNoise(NoiseComponent):
         The weights used are the square of the ECORR values.
 
         """
-        no_toa_params = self.validate_toas(toas, suppress_warning=True)
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         ecorrs = self.get_ecorrs()
-        umats = []
+        umats = OrderedDict()
         for ec in ecorrs:
-            if ec.name in no_toa_params:
-                continue
             mask = ec.select_toa_mask(toas)
-            umats.append(create_quantization_matrix(t[mask]))
-        nc = sum(u.shape[1] for u in umats)
+            if mask != []:
+                umats[ec.name] = (mask, create_quantization_matrix(t[mask]))
+        nc = sum(u[1].shape[1] for u in umats.values())
         umat = np.zeros((len(t), nc))
         weight = np.zeros(nc)
         nctot = 0
-        for ct, ec in enumerate(ecorrs):
-            if ec.name in no_toa_params:
-                continue
-            mask = ec.select_toa_mask(toas)
-            nn = umats[ct].shape[1]
-            umat[mask, nctot : nn + nctot] = umats[ct]
-            weight[nctot : nn + nctot] = ec.quantity.to(u.s).value ** 2
+        for ec, umt in umats.items():
+            nn = umt[1].shape[1]
+            mask = umt[0]
+            umat[mask, nctot : nn + nctot] = umt[1]
+            weight[nctot : nn + nctot] = getattr(self, ec).quantity.to(u.s).value ** 2
             nctot += nn
         return (umat, weight)
 
