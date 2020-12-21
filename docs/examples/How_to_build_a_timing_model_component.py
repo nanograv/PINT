@@ -1,82 +1,78 @@
----
-jupyter:
-  jupytext:
-    text_representation:
-      extension: .md
-      format_name: markdown
-      format_version: '1.2'
-      jupytext_version: 1.7.1
-  kernelspec:
-    display_name: Python 3
-    language: python
-    name: python3
----
+# ---
+# jupyter:
+#   jupytext:
+#     text_representation:
+#       extension: .py
+#       format_name: light
+#       format_version: '1.5'
+#       jupytext_version: 1.7.1
+#   kernelspec:
+#     display_name: Python 3
+#     language: python
+#     name: python3
+# ---
 
-# How to compose a timing model component
+# # How to compose a timing model component
+#
+# ## Building the timing model component from scratch
+#
+# This example notebook includes the following contents
+# * Defining a timing model component class
+#   * Necessary parts
+#   * Conventions
+# * Use it with the `TimingModel` class
+#   * Add the new component to the `TimingModel` class
+#   * Use the functions in the `TimingModel` class to interact with the new component.
+#   
+# We will build a simple model component, pulsar spindow model with spin period as parameters, instead of spin frequency. 
 
-## Building the timing model component from scratch
+# ## Import the necessary modules
 
-This example notebook includes the following contents
-* Defining a timing model component class
-  * Necessary parts
-  * Conventions
-* Use it with the `TimingModel` class
-  * Add the new component to the `TimingModel` class
-  * Use the functions in the `TimingModel` class to interact with the new component.
-  
-We will build a simple model component, pulsar spindow model with spin period as parameters, instead of spin frequency. 
-
-
-## Import the necessary modules
-
-```python
 import numpy as np   # Numpy is a widely used package
 # PINT uses astropy units in the internal cacluation and is highly recommended for a new component
 import astropy.units as u  
 # Import the component classes. 
 from pint.models.timing_model import TimingModel, Component, PhaseComponent
 import pint.models.parameter as p 
-```
-
-## Define the timing model class
-
-A timing model component should be an inheritance/subclass of `pint.models.timing_model.Component`. PINT also pre-defines three component subclasses for the most used type of components and they have different attribute and functions (see: https://nanograv-pint.readthedocs.io/en/latest/api/pint.models.timing_model.html):
-* DelayComponent for delay type of models. 
-* PhaseComponent for phase type of models.
-* NoiseComponent for noise type of models.
-
-Here since we are making a spin-down model, we will use the `PhaseComponent`.
 
 
-### Required parts
-* Model parameters, generally defined as `PINT.models.parameter.Parameter` class or its subclasses. (see https://nanograv-pint.readthedocs.io/en/latest/api/pint.models.parameter.html)
-* Model functions, defined as methods in the component, including:
-    * .setup(), for setting up the component(e.g., registering the derivatives). 
-    * .validate(), for checking if the parameters have the correct inputs. 
-    * Modeled quantity functions.
-    * The derivative of modeled quantities.
-    * Other support functions. 
+# ## Define the timing model class
+#
+# A timing model component should be an inheritance/subclass of `pint.models.timing_model.Component`. PINT also pre-defines three component subclasses for the most used type of components and they have different attribute and functions (see: https://nanograv-pint.readthedocs.io/en/latest/api/pint.models.timing_model.html):
+# * DelayComponent for delay type of models. 
+# * PhaseComponent for phase type of models.
+# * NoiseComponent for noise type of models.
+#
+# Here since we are making a spin-down model, we will use the `PhaseComponent`.
 
+# ### Required parts
+# * Model parameters, generally defined as `PINT.models.parameter.Parameter` class or its subclasses. (see https://nanograv-pint.readthedocs.io/en/latest/api/pint.models.parameter.html)
+# * Model functions, defined as methods in the component, including:
+#     * .setup(), for setting up the component(e.g., registering the derivatives). 
+#     * .validate(), for checking if the parameters have the correct inputs. 
+#     * Modeled quantity functions.
+#     * The derivative of modeled quantities.
+#     * Other support functions. 
 
-### Conventions
+# ### Conventions
+#
+# To make a component work as a part of a timing model, it has to follow the following rules to interface the `TimingModel` class. Using the analog of a circuit board, the `TimingModel` object is the mother board, and the `Component` objects are the electronic components(e.g., resistors and transistors); and the following rules are the pins of a component. 
+#
+# * Set the class attribute `.register` to be True so that the component is in the searching space of model builder 
+# * Add the method of final result in the designated list, so the `TimingModel`'s collecting function(e.g., total delay or total phase) can collect the result. Here are the designated list for the most common component type:
+#   * DelayComponent: .delay_funcs_component
+#   * PhaseComponent: .phase_funcs_component
+#   * NoiseComponent: .
+#     * `.basis_funcs`
+#     * `.covariance_matrix_funcs` 
+#     * `.scaled_toa_sigma_funcs` 
+#     * `.scaled_dm_sigma_funcs`
+#     * `.dm_covariance_matrix_funcs_component`
+#
+# * Register the analytical derivative functions using the `.register_deriv_funcs(derivative function, parameter name)` if any. 
+# * If one wants to access the attribute in the parent `TimingModel` class or from other components, please use `._parent` attribute which is a linker to the `TimingModel` class and other components. 
 
-To make a component work as a part of a timing model, it has to follow the following rules to interface the `TimingModel` class. Using the analog of a circuit board, the `TimingModel` object is the mother board, and the `Component` objects are the electronic components(e.g., resistors and transistors); and the following rules are the pins of a component. 
-
-* Set the class attribute `.register` to be True so that the component is in the searching space of model builder 
-* Add the method of final result in the designated list, so the `TimingModel`'s collecting function(e.g., total delay or total phase) can collect the result. Here are the designated list for the most common component type:
-  * DelayComponent: .delay_funcs_component
-  * PhaseComponent: .phase_funcs_component
-  * NoiseComponent: .
-    * `.basis_funcs`
-    * `.covariance_matrix_funcs` 
-    * `.scaled_toa_sigma_funcs` 
-    * `.scaled_dm_sigma_funcs`
-    * `.dm_covariance_matrix_funcs_component`
-
-* Register the analytical derivative functions using the `.register_deriv_funcs(derivative function, parameter name)` if any. 
-* If one wants to access the attribute in the parent `TimingModel` class or from other components, please use `._parent` attribute which is a linker to the `TimingModel` class and other components. 
-
-```python
+# +
 class PeriodSpindown(PhaseComponent):
     """This is an example model component of pular spindown but parametrized as period. 
     """
@@ -177,13 +173,12 @@ class PeriodSpindown(PhaseComponent):
     
     
     
-```
+# -
 
-## Apply the new component to the `TimingModel`
+# ## Apply the new component to the `TimingModel`
+#
+# Let us use this new model component in our example pulsar "NGC6440E", which has `F0` and `F1`. Instead, we will use the model component above. The following `.par` file string if converted from the `NGC6440E.par` with `P0` and `P1` instead of `F0`, `F1`.
 
-Let us use this new model component in our example pulsar "NGC6440E", which has `F0` and `F1`. Instead, we will use the model component above. The following `.par` file string if converted from the `NGC6440E.par` with `P0` and `P1` instead of `F0`, `F1`.
-
-```python
 par_string = """
              PSR              1748-2021E
              RAJ       17:48:52.75  1 0.05
@@ -204,51 +199,37 @@ par_string = """
              TZRFRQ            1949.609
              TZRSITE                  1
              """
-```
 
-```python
 from pint.models import get_model
 import io
-```
 
-### Load the timing model with new parameterization. 
+# ### Load the timing model with new parameterization. 
 
-```python
 model = get_model(io.StringIO(par_string)) # PINT can take a string IO for inputing the par file
-```
 
-#### Check if the component is loaded into the timing model and make sure there is no built-in spindown model.
+# #### Check if the component is loaded into the timing model and make sure there is no built-in spindown model.
 
-```python
 print(model.components['PeriodSpindown'])
 print("Is the built-in spin-down model in the timing model: ", 'Spindown' in model.components.keys())
 print("Is 'P0' in the timing model: ", 'P0' in model.params)
 print("Is 'P1' in the timing model: ", 'P1' in model.params)
 print("Is 'F0' in the timing model: ", 'F0' in model.params)
 print("Is 'F1' in the timing model: ", 'F1' in model.params)
-```
 
-### Load TOAs and prepare for fitting
+# ### Load TOAs and prepare for fitting
 
-```python
 from pint.fitter import WLSFitter
 from pint.toa import get_TOAs
-```
 
-```python
 toas = get_TOAs("NGC6440E.tim", ephem='DE421')
 f = WLSFitter(toas, model)
-```
 
-### Plot the residuals
+# ### Plot the residuals
 
-```python
 import matplotlib.pyplot as plt
-```
 
-### Plot the prefit residuals.
+# ### Plot the prefit residuals.
 
-```python
 plt.errorbar(
     toas.get_mjds().value,
     f.resids_init.time_resids.to_value(u.us),
@@ -259,17 +240,13 @@ plt.title("%s Pre-Fit Timing Residuals" % model.PSR.value)
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()
-```
 
-### Fit the TOAs using `P0` and `P1`
+# ### Fit the TOAs using `P0` and `P1`
 
-```python
 f.fit_toas()
-```
 
-### Plot the post-fit residuals
+# ### Plot the post-fit residuals
 
-```python
 plt.errorbar(
     toas.get_mjds().value,
     f.resids.time_resids.to_value(u.us),
@@ -280,10 +257,7 @@ plt.title("%s Pre-Fit Timing Residuals" % model.PSR.value)
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()
-```
 
-### Print out the summary
+# ### Print out the summary
 
-```python
 f.print_summary()
-```
