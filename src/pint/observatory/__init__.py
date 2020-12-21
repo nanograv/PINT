@@ -19,7 +19,8 @@ import astropy.coordinates
 __all__ = ["Observatory", "get_observatory"]
 
 # The default BIPM to use if not explicitly specified
-bipm_default = "BIPM2015"
+# This should be the most recent BPIM file in the datafiles directory
+bipm_default = "BIPM2019"
 
 
 class Observatory(object):
