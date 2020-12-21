@@ -1,10 +1,11 @@
 # ---
 # jupyter:
 #   jupytext:
+#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
-#       format_name: light
-#       format_version: '1.5'
+#       format_name: percent
+#       format_version: '1.3'
 #       jupytext_version: 1.7.1
 #   kernelspec:
 #     display_name: Python 3
@@ -12,7 +13,10 @@
 #     name: python3
 # ---
 
+# %% [markdown]
 # # How to compose a timing model component
+#
+# PINT's design makes it easy to add a new, custom timing model component to meet specific needs. This notebook demonstrates how to write your own timing model component with the minimal requirements so that PINT can recognize and use it in fits. Here, we implement a new spindown class, `PeriodSpindown`, that is parameterized by `P0`, `P1`, instead of the built-in `Spindown` model component, which uses `F0`, `F1`.
 #
 # ## Building the timing model component from scratch
 #
@@ -26,8 +30,10 @@
 #   
 # We will build a simple model component, pulsar spindow model with spin period as parameters, instead of spin frequency. 
 
+# %% [markdown]
 # ## Import the necessary modules
 
+# %%
 import numpy as np   # Numpy is a widely used package
 # PINT uses astropy units in the internal cacluation and is highly recommended for a new component
 import astropy.units as u  
@@ -36,6 +42,7 @@ from pint.models.timing_model import TimingModel, Component, PhaseComponent
 import pint.models.parameter as p 
 
 
+# %% [markdown]
 # ## Define the timing model class
 #
 # A timing model component should be an inheritance/subclass of `pint.models.timing_model.Component`. PINT also pre-defines three component subclasses for the most used type of components and they have different attribute and functions (see: https://nanograv-pint.readthedocs.io/en/latest/api/pint.models.timing_model.html):
@@ -45,6 +52,7 @@ import pint.models.parameter as p
 #
 # Here since we are making a spin-down model, we will use the `PhaseComponent`.
 
+# %% [markdown]
 # ### Required parts
 # * Model parameters, generally defined as `PINT.models.parameter.Parameter` class or its subclasses. (see https://nanograv-pint.readthedocs.io/en/latest/api/pint.models.parameter.html)
 # * Model functions, defined as methods in the component, including:
@@ -54,6 +62,7 @@ import pint.models.parameter as p
 #     * The derivative of modeled quantities.
 #     * Other support functions. 
 
+# %% [markdown]
 # ### Conventions
 #
 # To make a component work as a part of a timing model, it has to follow the following rules to interface the `TimingModel` class. Using the analog of a circuit board, the `TimingModel` object is the mother board, and the `Component` objects are the electronic components(e.g., resistors and transistors); and the following rules are the pins of a component. 
@@ -72,7 +81,7 @@ import pint.models.parameter as p
 # * Register the analytical derivative functions using the `.register_deriv_funcs(derivative function, parameter name)` if any. 
 # * If one wants to access the attribute in the parent `TimingModel` class or from other components, please use `._parent` attribute which is a linker to the `TimingModel` class and other components. 
 
-# +
+# %%
 class PeriodSpindown(PhaseComponent):
     """This is an example model component of pular spindown but parametrized as period. 
     """
@@ -173,12 +182,13 @@ class PeriodSpindown(PhaseComponent):
     
     
     
-# -
 
+# %% [markdown]
 # ## Apply the new component to the `TimingModel`
 #
 # Let us use this new model component in our example pulsar "NGC6440E", which has `F0` and `F1`. Instead, we will use the model component above. The following `.par` file string if converted from the `NGC6440E.par` with `P0` and `P1` instead of `F0`, `F1`.
 
+# %%
 par_string = """
              PSR              1748-2021E
              RAJ       17:48:52.75  1 0.05
@@ -200,15 +210,20 @@ par_string = """
              TZRSITE                  1
              """
 
+# %%
 from pint.models import get_model
 import io
 
+# %% [markdown]
 # ### Load the timing model with new parameterization. 
 
+# %%
 model = get_model(io.StringIO(par_string)) # PINT can take a string IO for inputing the par file
 
+# %% [markdown]
 # #### Check if the component is loaded into the timing model and make sure there is no built-in spindown model.
 
+# %%
 print(model.components['PeriodSpindown'])
 print("Is the built-in spin-down model in the timing model: ", 'Spindown' in model.components.keys())
 print("Is 'P0' in the timing model: ", 'P0' in model.params)
@@ -216,20 +231,27 @@ print("Is 'P1' in the timing model: ", 'P1' in model.params)
 print("Is 'F0' in the timing model: ", 'F0' in model.params)
 print("Is 'F1' in the timing model: ", 'F1' in model.params)
 
+# %% [markdown]
 # ### Load TOAs and prepare for fitting
 
+# %%
 from pint.fitter import WLSFitter
 from pint.toa import get_TOAs
 
+# %%
 toas = get_TOAs("NGC6440E.tim", ephem='DE421')
 f = WLSFitter(toas, model)
 
+# %% [markdown]
 # ### Plot the residuals
 
+# %%
 import matplotlib.pyplot as plt
 
+# %% [markdown]
 # ### Plot the prefit residuals.
 
+# %%
 plt.errorbar(
     toas.get_mjds().value,
     f.resids_init.time_resids.to_value(u.us),
@@ -241,12 +263,16 @@ plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()
 
+# %% [markdown]
 # ### Fit the TOAs using `P0` and `P1`
 
+# %%
 f.fit_toas()
 
+# %% [markdown]
 # ### Plot the post-fit residuals
 
+# %%
 plt.errorbar(
     toas.get_mjds().value,
     f.resids.time_resids.to_value(u.us),
@@ -258,6 +284,8 @@ plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()
 
+# %% [markdown]
 # ### Print out the summary
 
+# %%
 f.print_summary()
