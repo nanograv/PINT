@@ -1706,7 +1706,7 @@ class TimingModel(object):
                             newstr += " {:28f}".format(otherpar.value)
                         if otherpar.value != par.value:
                             sys.stdout.flush()
-                            if par.name == 'START' of par.name == 'FINISH':
+                            if par.name == 'START' or par.name == 'FINISH':
                                 log.info(
                                 "Parameter %s not fit, but has changed between these models"
                                 % par.name
