@@ -17,7 +17,9 @@ os.chdir(datadir)
 class TestWidebandTOAFitter:
     def setup(self):
         self.model = get_model("J1614-2230_NANOGrav_12yv3.wb.gls.par")
-        self.toas = get_TOAs("J1614-2230_NANOGrav_12yv3.wb.tim", ephem="DE436")
+        self.toas = get_TOAs(
+            "J1614-2230_NANOGrav_12yv3.wb.tim", ephem="DE436", bipm_version="BIPM2015"
+        )
         self.fit_data_name = ["toa", "dm"]
         self.fit_params_lite = ["F0", "F1", "ELONG", "ELAT", "DMJUMP1", "DMX_0022"]
         self.tempo_res = np.genfromtxt(
