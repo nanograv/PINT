@@ -245,12 +245,13 @@ class Residuals:
             # TODO this function will be re-write and move to timing model soon.
             # The following is a temproary patch.
             if 'Spindown' in self.model.components:
-                return self.model.F0.quantity
+                F0 = self.model.F0.quantity
             elif 'P0' in self.model.params:
-                return 1.0/self.model.P0.quantity
+                F0 = 1.0/self.model.P0.quantity
             else:
                 raise AttributeError("No pulsar spin parameter(e.g., 'F0',"
                                      " 'P0') found.")
+            return F0.to(u.Hz)
         else:
             return self.model.d_phase_d_toa(self.toas)
 
