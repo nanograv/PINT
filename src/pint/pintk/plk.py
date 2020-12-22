@@ -71,7 +71,7 @@ helpstring = """The following interactions are currently supported by the Plk pa
 
 Left click:     Select a point
 
-Right click:    (NON-OP) Delete a point
+Right click:    Delete a point
 
 r:              Reset the pane - undo all deletions, selections, etc.
 
@@ -1142,7 +1142,9 @@ class PlkWidget(tk.Frame):
                     # Right click is delete
                     # if the point is jumped, tell the user to delete the jump first
                     jumped_copy = copy.deepcopy(self.jumped)
-                    for param in self.psr.prefit_model.params:
+                    for (
+                        param
+                    ) in self.psr.prefit_model.params:  # check for jumps in file
                         if (
                             param.startswith("JUMP")
                             and getattr(self.psr.prefit_model, param).frozen == True
@@ -1175,6 +1177,7 @@ class PlkWidget(tk.Frame):
                             )
                     # update jumps and rest of graph
                     self.jumped = self.jumped[~toas_to_delete]
+                    print(self.jumped)
                     self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
                     self.psr.update_resids()
                     self.updatePlot(keepAxes=True)
