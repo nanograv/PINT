@@ -1,10 +1,11 @@
 """Work with Fermi TOAs."""
 from __future__ import absolute_import, division, print_function
 
-import astropy.units as u
-import numpy as np
 from astropy import log
 from astropy.coordinates import SkyCoord
+from astropy.io import fits
+import astropy.units as u
+import numpy as np
 
 import pint.toa as toa
 from pint.fits_utils import read_fits_event_mjds_tuples
@@ -72,28 +73,48 @@ def load_Fermi_TOAs(
     logeref=4.1,
     logesig=0.5,
     minweight=0.0,
-    minmjd=0.0,
+    minmjd=-np.inf,
     maxmjd=np.inf,
+    fermiobs="Fermi",
 ):
     """
-    TOAlist = load_Fermi_TOAs(ft1name)
+    toalist = load_Fermi_TOAs(ft1name)
       Read photon event times out of a Fermi FT1 file and return
       a list of PINT TOA objects.
       Correctly handles raw FT1 files, or ones processed with gtbary
       to have barycentered or geocentered TOAs.
 
-      weightcolumn specifies the FITS column name to read the photon weights
-      from.  The special value 'CALC' causes the weights to be computed empirically
-      as in Philippe Bruel's SearchPulsation code.
-      logeref and logesig are parameters for the weight computation and are only
-      used when weightcolumn='CALC'.
 
-      When weights are loaded, or computed, events are filtered by weight >= minweight
+    Parameters
+    ----------
+    weightcolumn : str
+        Specifies the FITS column name to read the photon weights from.
+        The special value 'CALC' causes the weights to be computed 
+        empirically as in Philippe Bruel's SearchPulsation code.
+    targetcoord : astropy.SkyCoord
+        Source coordinate for weight computation if weightcolumn=='CALC'
+    logeref : float
+        Parameter for the weight computation if weightcolumn=='CALC'
+    logesig : float
+        Parameter for the weight computation if weightcolumn=='CALC'
+    minweight : float
+        If weights are loaded or computed, exclude events with smaller weights.
+    minmjd : float
+        Events with earlier MJDs are excluded.
+    maxmjd : float
+        Events with later MJDs are excluded.
+    fermiobs: str
+      The default observatory name is Fermi, and must have already been
+      registered.  The user can specify another name 
+
+    Returns
+    -------
+    toalist : list
+        A list of TOA objects corresponding to the Fermi events.
     """
-    import astropy.io.fits as pyfits
 
     # Load photon times from FT1 file
-    hdulist = pyfits.open(ft1name)
+    hdulist = fits.open(ft1name)
     ft1hdr = hdulist[1].header
     ft1dat = hdulist[1].data
 
@@ -137,8 +158,8 @@ def load_Fermi_TOAs(
             weights = weights[idx]
 
     # limit the TOAs to ones in selected MJD range
-    mjds_float = np.array([r[0] + r[1] for r in mjds])
-    idx = np.logical_and((mjds_float > minmjd), (mjds_float < maxmjd))
+    mjds_float = np.asarray([r[0] + r[1] for r in mjds])
+    idx = (minmjd < mjds_float) & (mjds_float < maxmjd)
     mjds = mjds[idx]
     energies = energies[idx]
     if weightcolumn is not None:
@@ -146,80 +167,43 @@ def load_Fermi_TOAs(
 
     if timesys == "TDB":
         log.info("Building barycentered TOAs")
-        if weightcolumn is None:
-            toalist = [
-                toa.TOA(m, obs="Barycenter", scale="tdb", energy=e, error=1.0 * u.us)
-                for m, e in zip(mjds, energies)
-            ]
-        else:
-            toalist = [
-                toa.TOA(
-                    m,
-                    obs="Barycenter",
-                    scale="tdb",
-                    energy=e,
-                    weight=w,
-                    error=1.0 * u.us,
-                )
-                for m, e, w in zip(mjds, energies, weights)
-            ]
-    else:
-        if timeref == "LOCAL":
-            log.info(
-                "Building spacecraft local TOAs, with MJDs in range {0} to {1}".format(
-                    mjds[0], mjds[-1]
-                )
+        obs = "Barycenter"
+        scale = "tdb"
+        msg = "barycentric"
+    elif (timesys == "TT") and (timeref == "LOCAL"):
+        assert timesys == "TT"
+        try:
+            get_observatory(fermiobs)
+        except KeyError:
+            log.error(
+                "%s observatory not defined. Make sure you have specified an FT2 file!"
+                % fermiobs
             )
-            assert timesys == "TT"
-            try:
-                fermiobs = get_observatory("Fermi")
-            except KeyError:
-                log.error(
-                    "Fermi observatory not defined. Make sure you have specified an FT2 file!"
-                )
-                raise
+            raise
+        obs = fermiobs
+        scale = "tt"
+        msg = "spacecraft local"
+    elif (timesys == "TT") and (timeref == "GEOCENTRIC"):
+        obs = "Geocenter"
+        scale = "tt"
+        msg = "geocentric"
+    else:
+        raise ValueError("Unrecognized TIMEREF/TIMESYS.")
 
-            try:
-                if weightcolumn is None:
-                    toalist = [
-                        toa.TOA(m, obs="Fermi", scale="tt", energy=e, error=1.0 * u.us)
-                        for m, e in zip(mjds, energies)
-                    ]
-                else:
-                    toalist = [
-                        toa.TOA(
-                            m,
-                            obs="Fermi",
-                            scale="tt",
-                            energy=e,
-                            weight=w,
-                            error=1.0 * u.us,
-                        )
-                        for m, e, w in zip(mjds, energies, weights)
-                    ]
-            except KeyError:
-                log.error(
-                    "Error processing Fermi TOAs. You may have forgotten to specify an FT2 file with --ft2"
-                )
-                raise
-        else:
-            log.info("Building geocentered TOAs")
-            if weightcolumn is None:
-                toalist = [
-                    toa.TOA(m, obs="Geocenter", scale="tt", energy=e, error=1.0 * u.us)
-                    for m, e in zip(mjds, energies)
-                ]
-            else:
-                toalist = [
-                    toa.TOA(
-                        m,
-                        obs="Geocenter",
-                        scale="tt",
-                        energy=e,
-                        weight=w,
-                        error=1.0 * u.us,
-                    )
-                    for m, e, w in zip(mjds, energies, weights)
-                ]
+    log.info(
+        "Building {0} TOAs, with MJDs in range {1} to {2}".format(
+            msg, mjds[0, 0] + mjds[0, 1], mjds[-1, 0] + mjds[-1, 1]
+        )
+    )
+    if weightcolumn is None:
+        toalist = [
+            toa.TOA(m, obs=obs, scale=scale, energy=e, error=1.0 * u.us)
+            for m, e in zip(mjds, energies)
+        ]
+    else:
+        toalist = [
+            toa.TOA(m, obs=obs, scale=scale, energy=e, weight=w, error=1.0 * u.us,)
+            for m, e, w in zip(mjds, energies, weights)
+        ]
 
     return toalist

@@ -19,7 +19,8 @@ import astropy.coordinates
 __all__ = ["Observatory", "get_observatory"]
 
 # The default BIPM to use if not explicitly specified
-bipm_default = "BIPM2015"
+# This should be the most recent BPIM file in the datafiles directory
+bipm_default = "BIPM2019"
 
 
 class Observatory(object):
@@ -68,10 +69,9 @@ class Observatory(object):
         cls._register(obs, name)
         return obs
 
-    def __init__(self, name, aliases=None, tt2tdb_mode="pint"):
+    def __init__(self, name, aliases=None):
         if aliases is not None:
             Observatory._add_aliases(self, aliases)
-        self.tt2tdb_mode = tt2tdb_mode
 
     @classmethod
     def _register(cls, obs, name):
@@ -227,9 +227,8 @@ class Observatory(object):
             Method of computing TDB
 
             default
-                Astropy time.Time object built-in converter, use FB90.
-                Also uses topocentric correction term if self.tt2tdbmethod is
-                pint.
+                Astropy time.Time object built-in converter, uses FB90.
+                SpacecraftObs will include a topocentric correction term.
             ephemeris
                 JPL ephemeris included TDB-TT correction.
 
@@ -253,17 +252,7 @@ class Observatory(object):
             options = dict(options)
             return method(t, **options)
         if meth == "default":
-            if self.tt2tdb_mode.lower().startswith("astropy"):
-                log.info("Doing astropy mode TDB conversion")
-                return self._get_TDB_astropy(t)
-            elif self.tt2tdb_mode.lower().startswith("pint"):
-                log.info("Doing PINT mode TDB conversion")
-                if ephem is None:
-                    raise ValueError(
-                        "A ephemeris file should be provided to get"
-                        " the TDB-TT corrections, or use tt2tdb_mode=astropy"
-                    )
-                return self._get_TDB_PINT(t, ephem, grp)
+            return self._get_TDB_default(t, ephem, grp)
         elif meth == "ephemeris":
             if ephem is None:
                 raise ValueError(
@@ -274,29 +263,8 @@ class Observatory(object):
         else:
             raise ValueError("Unknown method '%s'." % method)
 
-    def _get_TDB_astropy(self, t):
+    def _get_TDB_default(self, t, ephem=None, grp=None):
         return t.tdb
-
-    def _get_TDB_PINT(self, t, ephem, grp=None):
-        """Uses astropy.Time location to add the topocentric correction term to
-            the Time object. The topocentric correction is given as (r/c).(v/c),
-            with r equal to the geocentric position of the observer, v being the
-            barycentric velocity of the earth, and c being the speed of light.
-
-            The geocentric observer position can be obtained from Time object.
-            The barycentric velocity can be obtained using solar_system_ephemerides
-            objPosVel_wrt_SSB
-        """
-
-        # Add in correction term to t.tdb equal to r.v / c^2
-        vel = sse.objPosVel_wrt_SSB("earth", t, ephem).vel
-        pos = self.get_gcrs(t, ephem=ephem, grp=grp)
-        dnom = const.c * const.c
-
-        corr = ((pos[0] * vel[0] + pos[1] * vel[1] + pos[2] * vel[2]) / dnom).to(u.s)
-        log.debug("\tTopocentric Correction:\t%s" % corr)
-
-        return t.tdb + corr
 
     def _get_TDB_ephem(self, t, ephem):
         """This is a function that reads the ephem TDB-TT column. This column is

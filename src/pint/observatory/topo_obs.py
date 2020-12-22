@@ -143,7 +143,7 @@ class TopoObs(Observatory):
                 aliases.append(code)
 
         self.origin = origin
-        super(TopoObs, self).__init__(name, aliases=aliases, tt2tdb_mode="astropy")
+        super(TopoObs, self).__init__(name, aliases=aliases)
 
     @property
     def clock_fullpath(self):
@@ -251,7 +251,9 @@ class TopoObs(Observatory):
             corr += self._gps_clock.evaluate(t)
 
         if self.include_bipm:
-            log.info("Applying TT(TAI) to TT(BIPM) clock correction (~27 us)")
+            log.info(
+                f"Applying TT(TAI) to TT({self.bipm_version}) clock correction (~27 us)"
+            )
             tt2tai = 32.184 * 1e6 * u.us
             if self._bipm_clock is None:
                 try:

@@ -26,7 +26,7 @@ from pint.models.priors import (
     UniformBoundedRV,
     UniformUnboundedRV,
 )
-from pint.observatory.fermi_obs import FermiObs
+from pint.observatory.satellite_obs import get_satellite_observatory
 
 __all__ = ["read_gaussfitfile", "marginalize_over_phase", "main"]
 # log.setLevel('DEBUG')
@@ -88,7 +88,7 @@ def read_gaussfitfile(gaussfitfile, proflen):
     fwhms = np.take(fwhms, new_order)
     # Now put the biggest gaussian at phase = 0.0
     phass = phass - phass[0]
-    phass = np.where(phass < 0.0, phass + 1.0, phass)
+    phass %= 1
     template = np.zeros(proflen, dtype="d")
     for ii in range(len(ampls)):
         template += ampls[ii] * gaussian_profile(proflen, phass[ii], fwhms[ii])
@@ -116,9 +116,9 @@ def gaussian_profile(N, phase, fwhm):
     mean = phase % 1.0
     phsval = np.arange(N, dtype="d") / float(N)
     if mean < 0.5:
-        phsval = np.where(np.greater(phsval, mean + 0.5), phsval - 1.0, phsval)
+        phsval = np.where(phsval > (mean + 0.5), phsval - 1.0, phsval)
     else:
-        phsval = np.where(np.less(phsval, mean - 0.5), phsval + 1.0, phsval)
+        phsval = np.where(phsval < (mean - 0.5), phsval + 1.0, phsval)
     try:
         zs = (phsval - mean) / sigma
         okzinds = np.compress(np.fabs(zs) < 20.0, np.arange(N))
@@ -158,9 +158,7 @@ def profile_likelihood(phs, *otherargs):
     """
     xvals, phases, template, weights = otherargs
     phss = phases.astype(np.float64) + phs
-    # ensure that all the phases are within 0-1
-    phss[phss > 1.0] -= 1.0
-    phss[phss < 0.0] += 1.0
+    phss %= 1
     probs = np.interp(phss, xvals, template, right=template[0])
     if weights is None:
         return np.log(probs).sum()
@@ -278,8 +276,7 @@ class emcee_fitter(Fitter):
         Return pulse phases based on the current model
         """
         phss = self.model.phase(self.toas)[1]
-        # ensure all postive
-        return np.where(phss < 0.0, phss + 1.0, phss)
+        return phss.value % 1
 
     def lnprior(self, theta):
         """
@@ -512,8 +509,8 @@ def main(argv=None):
     weightcol = args.weightcol
 
     if args.ft2 is not None:
-        # Instantiate FermiObs once so it gets added to the observatory registry
-        FermiObs(name="Fermi", ft2name=args.ft2)
+        # Instantiate Fermi observatory once so it gets added to the observatory registry
+        get_satellite_observatory("Fermi", args.ft2)
 
     nwalkers = args.nwalkers
     burnin = args.burnin

@@ -1,4 +1,4 @@
-import logging
+from astropy import log
 from pint.models.astrometry import AstrometryEquatorial, AstrometryEcliptic
 
 
@@ -20,7 +20,7 @@ def model_ecliptic_to_equatorial(model, force=False):
 
     if not ("AstrometryEquatorial" in model.components) or force:
         if "AstrometryEquatorial" in model.components:
-            logger.warning(
+            log.warning(
                 "Equatorial coordinates already present but re-calculating anyway"
             )
 
@@ -49,7 +49,7 @@ def model_ecliptic_to_equatorial(model, force=False):
             )
 
     else:
-        logger.warning("Equatorial coordinates already present; not re-calculating")
+        log.warning("Equatorial coordinates already present; not re-calculating")
 
     return model
 
@@ -72,7 +72,7 @@ def model_equatorial_to_ecliptic(model, force=False):
 
     if not ("AstrometryEcliptic" in model.components) or force:
         if "AstrometryEcliptic" in model.components:
-            logger.warning(
+            log.warning(
                 "Ecliptic coordinates already present but re-calculating anyway"
             )
         if "AstrometryEquatorial" in model.components:
@@ -100,6 +100,6 @@ def model_equatorial_to_ecliptic(model, force=False):
             )
 
     else:
-        logger.warning("Ecliptic coordinates already present; not re-calculating")
+        log.warning("Ecliptic coordinates already present; not re-calculating")
 
     return model

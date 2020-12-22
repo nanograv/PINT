@@ -74,11 +74,14 @@ class SolarSystemShapiro(DelayComponent):
         # TODO: numpy.sum currently loses units in some cases...
         r = (numpy.sqrt(numpy.sum(obj_pos ** 2, axis=1))) * obj_pos.unit
         rcostheta = numpy.sum(obj_pos * psr_dir, axis=1)
-        # This formula copied from tempo2 code.  The sign of the
-        # cos(theta) term has been changed since we are using the
-        # opposite convention for object position vector (from
-        # observatory to object in this code).
-        # Tempo2 uses the postion vector sign differently between the sun and planets
+        # This is the 2nd to last term from Eqn 4.6 in Backer &
+        # Hellings, ARAA, 1986 with gamma = 1 (as defined by GR).  We
+        # have the opposite sign of the cos(theta) term, since our
+        # object position vector is defined from the observatory to
+        # the solar system object, rather than from the object to the
+        # pulsar (as described after Eqn 4.3 in the paper).
+        # See also https://en.wikipedia.org/wiki/Shapiro_time_delay
+        # where \Delta t = \frac{2GM}{c^3}\log(1-\vec{R}\cdot\vec{x})
         return -2.0 * T_obj * numpy.log((r - rcostheta) / const.au).value
 
     def solar_system_shapiro_delay(self, toas, acc_delay=None):
@@ -99,17 +102,19 @@ class SolarSystemShapiro(DelayComponent):
         delay = numpy.zeros(len(tbl))
         for ii, key in enumerate(tbl.groups.keys):
             grp = tbl.groups[ii]
-            obs = tbl.groups.keys[ii]["obs"]
+            # obs = tbl.groups.keys[ii]["obs"]
             loind, hiind = tbl.groups.indices[ii : ii + 2]
             if key["obs"].lower() == "barycenter":
                 log.debug("Skipping Shapiro delay for Barycentric TOAs")
                 continue
-            psr_dir = self.ssb_to_psb_xyz_ICRS(epoch=grp["tdbld"].astype(numpy.float64))
+            psr_dir = self._parent.ssb_to_psb_xyz_ICRS(
+                epoch=grp["tdbld"].astype(numpy.float64)
+            )
             delay[loind:hiind] += self.ss_obj_shapiro_delay(
                 grp["obs_sun_pos"], psr_dir, self._ss_mass_sec["sun"]
             )
             if self.PLANET_SHAPIRO.value:
-                for pl in ("jupiter", "saturn", "venus", "uranus"):
+                for pl in ("jupiter", "saturn", "venus", "uranus", "neptune"):
                     delay[loind:hiind] += self.ss_obj_shapiro_delay(
                         grp["obs_" + pl + "_pos"], psr_dir, self._ss_mass_sec[pl]
                     )

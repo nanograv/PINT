@@ -7,7 +7,6 @@ import pint.models
 import pint.mcmc_fitter
 import pint.sampler
 import pint.residuals
-import pint.models.model_builder as mb
 import matplotlib.pyplot as plt
 import astropy.units as u
 from scipy.stats import norm, uniform
@@ -37,11 +36,8 @@ print(timfile)
 nwalkers = 50
 nsteps = 2000
 
-# Define the timing model
-m = mb.get_model(parfile)
-
-# Read in the TOAs
-t = pint.toa.get_TOAs(timfile)
+# Load the timing model and the TOAs
+m, t = pint.models.get_model_and_toas(parfile, timfile)
 
 # Print a summary of the TOAs that we have
 t.print_summary()
@@ -99,7 +95,7 @@ except ImportError:
     pass
 
 # Print some basic params
-print("Best fit has reduced chi^2 of", f.resids.chi2_reduced)
+print("Best fit has reduced chi^2 of", f.resids.reduced_chi2)
 print("RMS in phase is", f.resids.phase_resids.std())
 print("RMS in time is", f.resids.time_resids.std().to(u.us))
 print("\n Best model is:")

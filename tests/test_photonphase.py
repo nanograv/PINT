@@ -19,9 +19,9 @@ orbfile = os.path.join(datadir, "FPorbit_Day6223")
 @pytest.mark.skipif(
     "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
 )
-def test_result(capsys):
+def test_rxte_result(capsys):
     "Test that processing RXTE data with orbit file gives correct result"
-    cmd = "--plot --plotfile photontest.png --outfile photontest.fits {0} {1} --orbfile={2} ".format(
+    cmd = "--minMJD 55576.640 --maxMJD 55576.645 --plot --plotfile photontest.png --outfile photontest.fits {0} {1} --orbfile={2} ".format(
         eventfile, parfile, orbfile
     )
     photonphase.main(cmd.split())
@@ -30,8 +30,8 @@ def test_result(capsys):
     for l in out.split("\n"):
         if l.startswith("Htest"):
             v = float(l.split()[2])
-    # Check that H-test is greater than 725
-    assert v > 725
+    # H-test should be 87.5
+    assert abs(v - 87.5) < 1
 
 
 parfile_nicer = os.path.join(datadir, "ngc300nicer.par")
@@ -42,7 +42,7 @@ eventfile_nicer = os.path.join(datadir, "ngc300nicer_bary.evt")
 @pytest.mark.skipif(
     "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
 )
-def test_nicer_result(capsys):
+def test_nicer_result_bary(capsys):
     "Check that barycentered NICER data is processed correctly."
     cmd = "{0} {1}".format(eventfile_nicer, parfile_nicer)
     photonphase.main(cmd.split())
@@ -51,8 +51,28 @@ def test_nicer_result(capsys):
     for l in out.split("\n"):
         if l.startswith("Htest"):
             v = float(l.split()[2])
-    # Check that H-test is greater than 725
-    assert v > 200.0
+    # Check that H-test is 216.67
+    assert abs(v - 216.67) < 1
+
+
+parfile_nicer_topo = os.path.join(datadir, "sgr1830.par")
+orbfile_nicer_topo = os.path.join(datadir, "sgr1830.orb")
+eventfile_nicer_topo = os.path.join(datadir, "sgr1830kgfilt.evt")
+
+# TODO -- should add explicit check for absolute phase
+def test_nicer_result_topo(capsys):
+    "Check that topocentric NICER data and orbit files are processed correctly."
+    cmd = "--minMJD 59132.780 --maxMJD 59132.782 --orbfile {0} {1} {2}".format(
+        orbfile_nicer_topo, eventfile_nicer_topo, parfile_nicer_topo
+    )
+    photonphase.main(cmd.split())
+    out, err = capsys.readouterr()
+    v = 0.0
+    for l in out.split("\n"):
+        if l.startswith("Htest"):
+            v = float(l.split()[2])
+    # H should be 183.21
+    assert abs(v - 183.21) < 1
 
 
 @pytest.mark.skipif(

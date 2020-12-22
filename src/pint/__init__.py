@@ -1,4 +1,15 @@
-"""PINT Is Not TEMPO3!"""
+"""PINT Is Not TEMPO3!
+
+This package has many submodules, but useful starting places may be
+:class:`pint.toa.TOAs`, :class:`pint.models.timing_model.TimingModel`, and
+:class:`pint.residuals.Residuals`.
+
+Below you will find a tree of submodules. The online documentation should also
+provide a usable table of contents.
+
+These docstrings contain reference documentation; for tutorials, explanations,
+or how-to documentation, please see other sections of the online documentation.
+"""
 
 import numpy as np
 import astropy
@@ -8,8 +19,8 @@ import astropy.units as u
 from astropy import log
 from astropy.units import si
 from pint.extern._version import get_versions
-from pint.pulsar_ecliptic import PulsarEcliptic
-from pint.pulsar_mjd import PulsarMJD
+from pint.pulsar_ecliptic import PulsarEcliptic  # ensure always loaded
+from pint.pulsar_mjd import PulsarMJD  # ensure always loaded
 import pint.pulsar_mjd
 
 __all__ = [
@@ -33,8 +44,8 @@ __all__ = [
     "J2000ld",
     "JD_MJD",
     "pint_units",
-    "PulsarEcliptic",
-    "PulsarMJD",
+    # "PulsarEcliptic",
+    # "PulsarMJD",
 ]
 
 __version__ = get_versions()["version"]

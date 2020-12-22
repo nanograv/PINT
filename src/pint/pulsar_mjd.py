@@ -27,12 +27,14 @@ was observing the sky at the moment a leap second was introduced.
 .. _leap_smear: https://developers.google.com/time/smear
 """
 
-import astropy._erfa as erfa
+try:
+    import erfa
+except ImportError:
+    import astropy._erfa as erfa
 import astropy.time
 import astropy.units as u
 import numpy as np
 import six
-from astropy._erfa import DJM0
 from astropy.time import Time
 from astropy.time.formats import TimeFormat
 
@@ -374,11 +376,11 @@ _new_ihmsfs_dtype = np.dtype([(str(c), np.intc) for c in "hmsf"])
 
 
 def jds_to_mjds(jd1, jd2):
-    return day_frac(jd1 - DJM0, jd2)
+    return day_frac(jd1 - erfa.DJM0, jd2)
 
 
 def mjds_to_jds(mjd1, mjd2):
-    return day_frac(mjd1 + DJM0, mjd2)
+    return day_frac(mjd1 + erfa.DJM0, mjd2)
 
 
 _digits = 9

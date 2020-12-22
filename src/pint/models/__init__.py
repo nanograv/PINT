@@ -27,9 +27,10 @@ from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
 from pint.models.frequency_dependent import FD
 from pint.models.glitch import Glitch
+from pint.models.piecewise import PiecewiseSpindown
 from pint.models.ifunc import IFunc
 from pint.models.jump import DelayJump, PhaseJump
-from pint.models.model_builder import get_model
+from pint.models.model_builder import get_model, get_model_and_toas
 from pint.models.noise_model import EcorrNoise, PLRedNoise, ScaleToaError
 from pint.models.solar_system_shapiro import SolarSystemShapiro
 from pint.models.solar_wind_dispersion import SolarWindDispersion

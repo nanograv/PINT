@@ -4,7 +4,11 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import six
 from astropy import log
-from astropy._erfa import DAYSEC as SECS_PER_DAY
+
+try:
+    from erfa import DAYSEC as SECS_PER_DAY
+except ImportError:
+    from astropy._erfa import DAYSEC as SECS_PER_DAY
 
 from pint.pulsar_mjd import fortran_float
 

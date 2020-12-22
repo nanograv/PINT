@@ -2,7 +2,11 @@ import os
 import unittest
 
 import numpy as np
-from astropy._erfa import DJM0
+
+try:
+    from erfa import DJM0
+except ImportError:
+    from astropy._erfa import DJM0
 
 import pint.toa as toa
 from pint.models import model_builder as mb

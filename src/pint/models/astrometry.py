@@ -7,7 +7,7 @@ import sys
 import astropy.constants as const
 import astropy.coordinates as coords
 import astropy.units as u
-import numpy
+import numpy as np
 from astropy import log
 from astropy.time import Time
 
@@ -47,12 +47,6 @@ class Astrometry(DelayComponent):
         self.delay_funcs_component += [self.solar_system_geometric_delay]
         self.register_deriv_funcs(self.d_delay_astrometry_d_PX, "PX")
 
-    def setup(self):
-        super(Astrometry, self).setup()
-
-    def validate(self):
-        super(Astrometry, self).validate()
-
     def ssb_to_psb_xyz_ICRS(self, epoch=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
 
@@ -69,6 +63,45 @@ class Astrometry(DelayComponent):
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
         return self.coords_as_ECL(epoch=epoch).cartesian.xyz.transpose()
 
+    def sun_angle(self, toas, heliocenter=True, also_distance=False):
+        """Compute the pulsar-observatory-Sun angle.
+
+        This is the angle between the center of the Sun and the direction to
+        the pulsar, as seen from the observatory (for each TOA).
+
+        This angle takes into account the motion of the Sun around the solar system barycenter.
+
+        Parameters
+        ----------
+        toas: :class:`pint.toas.TOAs`
+            The pulse arrival times at which to evaluate the sun angle.
+        heliocenter: bool
+            Whether to use the Sun's actual position (the heliocenter) or
+            the solar system barycenter. The latter may be useful for
+            comparison with other software.
+        also_distance: bool
+            If True, also return the observatory-Sun distance as a Quantity
+
+        Returns
+        -------
+        array
+            The angle in radians
+        """
+        tbl = toas.table
+
+        if heliocenter:
+            osv = tbl["obs_sun_pos"].quantity.copy()
+        else:
+            osv = -tbl["ssb_obs_pos"].quantity.copy()
+        psr_vec = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"])
+        r = (osv ** 2).sum(axis=1) ** 0.5
+        osv /= r[:, None]
+        cos = (osv * psr_vec).sum(axis=1)
+        if also_distance:
+            return np.arccos(cos), r
+        else:
+            return np.arccos(cos)
+
     def barycentric_radio_freq(self, toas):
         raise NotImplementedError
 
@@ -80,15 +113,14 @@ class Astrometry(DelayComponent):
         available as 3-vector toa.xyz, in units of light-seconds.
         """
         tbl = toas.table
-        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(numpy.float64))
-        re_dot_L = numpy.sum(tbl["ssb_obs_pos"] * L_hat, axis=1)
+        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(np.float64))
+        re_dot_L = np.sum(tbl["ssb_obs_pos"] * L_hat, axis=1)
         delay = -re_dot_L.to(ls).value
-        if self.PX.value != 0.0 and numpy.count_nonzero(tbl["ssb_obs_pos"]) > 0:
+        if self.PX.value != 0.0 and np.count_nonzero(tbl["ssb_obs_pos"]) > 0:
             L = (1.0 / self.PX.value) * u.kpc
-            # TODO: numpy.sum currently loses units in some cases...
+            # TODO: np.sum currently loses units in some cases...
             re_sqr = (
-                numpy.sum(tbl["ssb_obs_pos"] ** 2, axis=1)
-                * tbl["ssb_obs_pos"].unit ** 2
+                np.sum(tbl["ssb_obs_pos"] ** 2, axis=1) * tbl["ssb_obs_pos"].unit ** 2
             )
             delay += (0.5 * (re_sqr / L) * (1.0 - re_dot_L ** 2 / re_sqr)).to(ls).value
         return delay * u.second
@@ -99,7 +131,7 @@ class Astrometry(DelayComponent):
         rd = dict()
 
         # TODO: Should delay not have units of u.second?
-        delay = self.delay(toas)
+        delay = self._parent.delay(toas)
 
         # TODO: tbl['tdbld'].quantity should have units of u.day
         # NOTE: Do we need to include the delay here?
@@ -108,19 +140,19 @@ class Astrometry(DelayComponent):
 
         # Distance from SSB to observatory, and from SSB to psr
         ssb_obs = tbl["ssb_obs_pos"].quantity
-        ssb_psr = self.ssb_to_psb_xyz_ICRS(epoch=numpy.array(rd["epoch"]))
+        ssb_psr = self.ssb_to_psb_xyz_ICRS(epoch=np.array(rd["epoch"]))
 
         # Cartesian coordinates, and derived quantities
-        rd["ssb_obs_r"] = numpy.sqrt(numpy.sum(ssb_obs ** 2, axis=1))
+        rd["ssb_obs_r"] = np.sqrt(np.sum(ssb_obs ** 2, axis=1))
         rd["ssb_obs_z"] = ssb_obs[:, 2]
-        rd["ssb_obs_xy"] = numpy.sqrt(ssb_obs[:, 0] ** 2 + ssb_obs[:, 1] ** 2)
+        rd["ssb_obs_xy"] = np.sqrt(ssb_obs[:, 0] ** 2 + ssb_obs[:, 1] ** 2)
         rd["ssb_obs_x"] = ssb_obs[:, 0]
         rd["ssb_obs_y"] = ssb_obs[:, 1]
-        rd["in_psr_obs"] = numpy.sum(ssb_obs * ssb_psr, axis=1)
+        rd["in_psr_obs"] = np.sum(ssb_obs * ssb_psr, axis=1)
 
         # Earth right ascension and declination
-        rd["earth_dec"] = numpy.arctan2(rd["ssb_obs_z"], rd["ssb_obs_xy"])
-        rd["earth_ra"] = numpy.arctan2(rd["ssb_obs_y"], rd["ssb_obs_x"])
+        rd["earth_dec"] = np.arctan2(rd["ssb_obs_z"], rd["ssb_obs_xy"])
+        rd["earth_ra"] = np.arctan2(rd["ssb_obs_y"], rd["ssb_obs_x"])
 
         return rd
 
@@ -154,7 +186,7 @@ class Astrometry(DelayComponent):
         """
         rd = self.get_d_delay_quantities(toas)
 
-        px_r = numpy.sqrt(rd["ssb_obs_r"] ** 2 - rd["in_psr_obs"] ** 2)
+        px_r = np.sqrt(rd["ssb_obs_r"] ** 2 - rd["in_psr_obs"] ** 2)
         dd_dpx = 0.5 * (px_r ** 2 / (u.AU * const.c)) * (u.mas / u.radian)
 
         # We want to return sec / mas
@@ -235,7 +267,7 @@ class AstrometryEquatorial(Astrometry):
                 raise MissingParameter("Astrometry", p)
         # Check for POSEPOCH
         if self.POSEPOCH.quantity is None:
-            if self.PEPOCH.quantity is None:
+            if self._parent.PEPOCH.quantity is None:
                 raise MissingParameter(
                     "AstrometryEquatorial",
                     "POSEPOCH",
@@ -243,7 +275,7 @@ class AstrometryEquatorial(Astrometry):
                 )
             else:
                 log.warning("POSEPOCH not found; using PEPOCH unless set explicitly!")
-                self.POSEPOCH.quantity = self.PEPOCH.quantity
+                self.POSEPOCH.quantity = self._parent.PEPOCH.quantity
 
     def print_par(self):
         result = ""
@@ -257,8 +289,8 @@ class AstrometryEquatorial(Astrometry):
     def barycentric_radio_freq(self, toas):
         """Return radio frequencies (MHz) of the toas corrected for Earth motion"""
         tbl = toas.table
-        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(numpy.float64))
-        v_dot_L_array = numpy.sum(tbl["ssb_obs_vel"] * L_hat, axis=1)
+        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(np.float64))
+        v_dot_L_array = np.sum(tbl["ssb_obs_vel"] * L_hat, axis=1)
         return tbl["freq"] * (1.0 - v_dot_L_array / const.c)
 
     def get_psr_coords(self, epoch=None):
@@ -304,7 +336,7 @@ class AstrometryEquatorial(Astrometry):
 
     def coords_as_ECL(self, epoch=None, ecl=None):
         """Return the pulsar's ecliptic coordinates as an astropy coordinate object.
-        
+
         The value used for the obliquity of the ecliptic can be controlled with the
         `ecl` keyword, which should be one of the codes listed in `ecliptic.dat`.
         If `ecl` is left unspecified, the global default IERS2010 will be used.
@@ -318,7 +350,7 @@ class AstrometryEquatorial(Astrometry):
 
     def coords_as_GAL(self, epoch=None):
         """Return the pulsar's galactic coordinates as an astropy coordinate object.
-        
+
         """
         pos_icrs = self.get_psr_coords(epoch=epoch)
         return pos_icrs.transform_to(coords.Galactic)
@@ -353,9 +385,7 @@ class AstrometryEquatorial(Astrometry):
         psr_dec = self.DECJ.quantity
 
         geom = (
-            numpy.cos(rd["earth_dec"])
-            * numpy.cos(psr_dec)
-            * numpy.sin(psr_ra - rd["earth_ra"])
+            np.cos(rd["earth_dec"]) * np.cos(psr_dec) * np.sin(psr_ra - rd["earth_ra"])
         )
         dd_draj = rd["ssb_obs_r"] * geom / (const.c * u.radian)
 
@@ -371,9 +401,9 @@ class AstrometryEquatorial(Astrometry):
         psr_ra = self.RAJ.quantity
         psr_dec = self.DECJ.quantity
 
-        geom = numpy.cos(rd["earth_dec"]) * numpy.sin(psr_dec) * numpy.cos(
+        geom = np.cos(rd["earth_dec"]) * np.sin(psr_dec) * np.cos(
             psr_ra - rd["earth_ra"]
-        ) - numpy.sin(rd["earth_dec"]) * numpy.cos(psr_dec)
+        ) - np.sin(rd["earth_dec"]) * np.cos(psr_dec)
         dd_ddecj = rd["ssb_obs_r"] * geom / (const.c * u.radian)
 
         return dd_ddecj.decompose(u.si.bases)
@@ -389,7 +419,7 @@ class AstrometryEquatorial(Astrometry):
         psr_ra = self.RAJ.quantity
 
         te = rd["epoch"] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
-        geom = numpy.cos(rd["earth_dec"]) * numpy.sin(psr_ra - rd["earth_ra"])
+        geom = np.cos(rd["earth_dec"]) * np.sin(psr_ra - rd["earth_ra"])
 
         deriv = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
         dd_dpmra = deriv * u.mas / u.year
@@ -409,9 +439,9 @@ class AstrometryEquatorial(Astrometry):
         psr_dec = self.DECJ.quantity
 
         te = rd["epoch"] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
-        geom = numpy.cos(rd["earth_dec"]) * numpy.sin(psr_dec) * numpy.cos(
+        geom = np.cos(rd["earth_dec"]) * np.sin(psr_dec) * np.cos(
             psr_ra - rd["earth_ra"]
-        ) - numpy.cos(psr_dec) * numpy.sin(rd["earth_dec"])
+        ) - np.cos(psr_dec) * np.sin(rd["earth_dec"])
 
         deriv = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
         dd_dpmdec = deriv * u.mas / u.year
@@ -510,7 +540,7 @@ class AstrometryEcliptic(Astrometry):
                 raise MissingParameter("AstrometryEcliptic", p)
         # Check for POSEPOCH
         if self.POSEPOCH.quantity is None:
-            if self.PEPOCH.quantity is None:
+            if self._parent.PEPOCH.quantity is None:
                 raise MissingParameter(
                     "Astrometry",
                     "POSEPOCH",
@@ -518,7 +548,7 @@ class AstrometryEcliptic(Astrometry):
                 )
             else:
                 log.warning("POSEPOCH not found; using PEPOCH unless set explicitly!")
-                self.POSEPOCH.quantity = self.PEPOCH.quantity
+                self.POSEPOCH.quantity = self._parent.PEPOCH.quantity
 
     def barycentric_radio_freq(self, toas):
         """Return radio frequencies (MHz) of the toas corrected for Earth motion"""
@@ -526,8 +556,8 @@ class AstrometryEcliptic(Astrometry):
             obliquity = OBL[self.ECL.value]
             toas.add_vel_ecl(obliquity)
         tbl = toas.table
-        L_hat = self.ssb_to_psb_xyz_ECL(epoch=tbl["tdbld"].astype(numpy.float64))
-        v_dot_L_array = numpy.sum(tbl["ssb_obs_vel_ecl"] * L_hat, axis=1)
+        L_hat = self.ssb_to_psb_xyz_ECL(epoch=tbl["tdbld"].astype(np.float64))
+        v_dot_L_array = np.sum(tbl["ssb_obs_vel_ecl"] * L_hat, axis=1)
         return tbl["freq"] * (1.0 - v_dot_L_array / const.c)
 
     def get_psr_coords(self, epoch=None):
@@ -582,14 +612,14 @@ class AstrometryEcliptic(Astrometry):
 
     def coords_as_GAL(self, epoch=None):
         """Return the pulsar's galactic coordinates as an astropy coordinate object.
-        
+
         """
         pos_ecl = self.get_psr_coords(epoch=epoch)
         return pos_ecl.transform_to(coords.Galactic)
 
     def coords_as_ECL(self, epoch=None, ecl=None):
         """Return the pulsar's ecliptic coordinates as an astropy coordinate object.
-        
+
         The value used for the obliquity of the ecliptic can be controlled with the
         `ecl` keyword, which should be one of the codes listed in `ecliptic.dat`.
         If `ecl` is left unspecified, the model's ECL parameter will be used.
@@ -660,9 +690,9 @@ class AstrometryEcliptic(Astrometry):
         psr_elat = self.ELAT.quantity
 
         geom = (
-            numpy.cos(rd["earth_elat"])
-            * numpy.cos(psr_elat)
-            * numpy.sin(psr_elong - rd["earth_elong"])
+            np.cos(rd["earth_elat"])
+            * np.cos(psr_elat)
+            * np.sin(psr_elong - rd["earth_elong"])
         )
         dd_delong = rd["ssb_obs_r"] * geom / (const.c * u.radian)
 
@@ -678,9 +708,9 @@ class AstrometryEcliptic(Astrometry):
         psr_elong = self.ELONG.quantity
         psr_elat = self.ELAT.quantity
 
-        geom = numpy.cos(rd["earth_elat"]) * numpy.sin(psr_elat) * numpy.cos(
+        geom = np.cos(rd["earth_elat"]) * np.sin(psr_elat) * np.cos(
             psr_elong - rd["earth_elong"]
-        ) - numpy.sin(rd["earth_elat"]) * numpy.cos(psr_elat)
+        ) - np.sin(rd["earth_elat"]) * np.cos(psr_elat)
         dd_delat = rd["ssb_obs_r"] * geom / (const.c * u.radian)
 
         return dd_delat.decompose(u.si.bases)
@@ -697,7 +727,7 @@ class AstrometryEcliptic(Astrometry):
         psr_elat = self.ELAT.quantity
 
         te = rd["epoch"] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
-        geom = numpy.cos(rd["earth_elat"]) * numpy.sin(psr_elong - rd["earth_elong"])
+        geom = np.cos(rd["earth_elat"]) * np.sin(psr_elong - rd["earth_elong"])
 
         deriv = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
         dd_dpmelong = deriv * u.mas / u.year
@@ -717,9 +747,9 @@ class AstrometryEcliptic(Astrometry):
         psr_elat = self.ELAT.quantity
 
         te = rd["epoch"] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
-        geom = numpy.cos(rd["earth_elat"]) * numpy.sin(psr_elat) * numpy.cos(
+        geom = np.cos(rd["earth_elat"]) * np.sin(psr_elat) * np.cos(
             psr_elong - rd["earth_elong"]
-        ) - numpy.cos(psr_elat) * numpy.sin(rd["earth_elat"])
+        ) - np.cos(psr_elat) * np.sin(rd["earth_elat"])
 
         deriv = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
         dd_dpmelat = deriv * u.mas / u.year

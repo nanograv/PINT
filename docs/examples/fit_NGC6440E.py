@@ -2,10 +2,9 @@
 """Demonstrate use of pint in a script."""
 from __future__ import print_function, division
 import pint.toa
-import pint.models
 import pint.fitter
 import pint.residuals
-import pint.models.model_builder as mb
+import pint.models as mm
 
 # import matplotlib
 # matplotlib.use('TKAgg')
@@ -18,11 +17,14 @@ datadir = os.path.dirname(os.path.abspath(str(__file__)))
 parfile = os.path.join(datadir, "NGC6440E.par")
 timfile = os.path.join(datadir, "NGC6440E.tim")
 
-# Define the timing model
-m = mb.get_model(parfile)
+# Read the timing model and the TOAs
+m, t = mm.get_model_and_toas(parfile, timfile)
 
-# Read in the TOAs
-t = pint.toa.get_TOAs(timfile)
+# If we wanted to do things separately we could do
+# Define the timing model
+# m = mm.get_model(parfile)
+# Read in the TOAs, overriding some things from the model
+# t = pint.toa.get_TOAs(timfile, model=m)
 
 # Examples of how to select some subsets of TOAs
 # These can be un-done using t.unselect()
@@ -58,7 +60,7 @@ f.fit_toas()
 # f.fit_toas(full_cov=True)
 
 # Print some basic params
-print("Best fit has reduced chi^2 of", f.resids.chi2_reduced)
+print("Best fit has reduced chi^2 of", f.resids.reduced_chi2)
 print("RMS in phase is", f.resids.phase_resids.std())
 print("RMS in time is", f.resids.time_resids.std().to(u.us))
 

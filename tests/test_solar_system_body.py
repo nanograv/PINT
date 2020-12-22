@@ -32,7 +32,7 @@ class TestSolarSystemDynamic(unittest.TestCase):
         mjd = J2000_MJD + ets / SECPERJULDAY
         cls.tdb_time = time.Time(mjd, scale="tdb", format="mjd")
         cls.ephem = ["de405", "de421", "de434", "de430", "de436"]
-        cls.planets = ["jupiter", "saturn", "venus", "uranus"]
+        cls.planets = ["jupiter", "saturn", "venus", "uranus", "neptune"]
 
     def test_datapath(self):
         # Check that datapath of a non-existent file raises FileNotFoundError exception.
