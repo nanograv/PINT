@@ -1,9 +1,12 @@
 import os
 import unittest
 import pytest
-
+import numpy as np
 from io import StringIO
 
+from hypothesis import given
+from hypothesis.strategies import integers, floats
+from hypothesis.extra.numpy import arrays
 from pint import toa
 from pint.observatory import bipm_default
 from pint.models import get_model, get_model_and_toas
@@ -191,3 +194,16 @@ def test_toas_read_list():
     toas, commands = toa.read_toa_file("test1.tim")
     y = toa.get_TOAs_list(toas, commands=commands, filename=x.filename)
     assert x == y
+
+
+@given(arrays(float, integers(1, 100), elements=floats(50000, 70000)))
+def test_numpy_groups(t):
+    gap = 1
+    groups = toa._group_by_gaps(t, gap)
+    for i in range(np.amax(groups) + 1):
+        c = groups == i
+        in_group = np.sort(t[c])
+        assert np.all(np.diff(in_group) < gap)
+
+        for e in [in_group[0], in_group[-1]]:
+            assert np.all(np.abs(t[~c] - e) >= gap)

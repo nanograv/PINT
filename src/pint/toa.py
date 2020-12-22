@@ -880,6 +880,18 @@ def make_fake_toas(
     return ts
 
 
+def _group_by_gaps(t, gap):
+    ix = np.argsort(t)
+    t_sorted = t[ix]
+    gaps = np.diff(t_sorted)
+    gap_starts = np.where(gaps >= gap)[0]
+    gsi = np.concatenate(([0], gap_starts + 1, [len(t)]))
+    groups_sorted = np.repeat(np.arange(len(gap_starts) + 1), np.diff(gsi))
+    groups = np.zeros(len(t), dtype=int)
+    groups[ix] = groups_sorted
+    return groups
+
+
 class TOA(object):
     """A time of arrival (TOA) class.
 
@@ -1181,7 +1193,6 @@ class TOAs(object):
 
     def __init__(self, toafile=None, toalist=None):
         # First, just make an empty container
-        self.toas = []
         self.commands = []
         self.filename = None
         self.planets = False
@@ -1195,37 +1206,32 @@ class TOAs(object):
             raise ValueError("Cannot initialize TOAs from both file and list.")
 
         if isinstance(toafile, str):
-            self.read_toa_file(toafile)
-            del self.cdict
+            toalist, self.commands = read_toa_file(toafile)
             # Check to see if there were any INCLUDEs:
             inc_fns = [x[0][1] for x in self.commands if x[0][0].upper() == "INCLUDE"]
             self.filename = [toafile] + inc_fns if inc_fns else toafile
         elif toafile is not None:
-            self.read_toa_file(toafile)
+            toalist, self.commands = read_toa_file(toafile)
             self.filename = ""
 
-        if toalist is not None:
+        if toalist is None:
+            raise ValueError("No TOAs found!")
+        else:
             if not isinstance(toalist, (list, tuple)):
                 raise ValueError("Trying to initialize TOAs from a non-list class")
-            self.toas = toalist
-
-        if not hasattr(self, "table"):
-            if not self.toas:
-                raise ValueError("No TOAs found!")
-            self.table = build_table(self.toas, filename=self.filename)
-            groups = self.get_groups()
-            self.table.add_column(groups, name="groups")
-            # Add pulse number column (if needed) or make PHASE adjustments
-            try:
-                self.phase_columns_from_flags()
-            except ValueError:
-                log.debug("No pulse numbers found in the TOAs")
+        self.table = build_table(toalist, filename=self.filename)
+        groups = self.get_groups()
+        self.table.add_column(groups, name="groups")
+        # Add pulse number column (if needed) or make PHASE adjustments
+        try:
+            self.phase_columns_from_flags()
+        except ValueError:
+            log.debug("No pulse numbers found in the TOAs")
 
         # We don't need this now that we have a table
-        del self.toas
 
     def __len__(self):
-        return self.ntoas
+        return len(self.table)
 
     def __getitem__(self, index):
         if not hasattr(self, "table"):
@@ -1265,7 +1271,7 @@ class TOAs(object):
 
     @property
     def ntoas(self):
-        return len(self.table) if hasattr(self, "table") else len(self.toas)
+        return len(self.table)
 
     @property
     def observatories(self):
@@ -1284,19 +1290,18 @@ class TOAs(object):
             if not x:
                 # Adding zero. Do nothing
                 return self
+        raise NotImplementedError
 
     def __sub__(self, x):
         if type(x) in [int, float]:
             if not x:
                 # Subtracting zero. Do nothing
                 return self
+        raise NotImplementedError
 
     def get_freqs(self):
         """Return a numpy array of the observing frequencies in MHz for the TOAs"""
-        if hasattr(self, "toas"):
-            return np.array([t.freq.to(u.MHz).value for t in self.toas]) * u.MHz
-        else:
-            return self.table["freq"].quantity
+        return self.table["freq"].quantity
 
     def get_mjds(self, high_precision=False):
         """Array of MJDs in the TOAs object
@@ -1313,62 +1318,37 @@ class TOAs(object):
         perfectly valid situation when fitting both Fermi and radio TOAs)
         """
         if high_precision:
-            if hasattr(self, "toas"):
-                return np.array([t.mjd for t in self.toas])
-            else:
-                return np.array(self.table["mjd"])
+            return np.array(self.table["mjd"])
         else:
-            if hasattr(self, "toas"):
-                return np.array([t.mjd.mjd for t in self.toas]) * u.day
-            else:
-                return self.table["mjd_float"].quantity
+            return self.table["mjd_float"].quantity
 
     def get_errors(self):
-        """Return a numpy array of the TOA errors in us"""
-        # FIXME temporarily disable reading errors from toas
-        if hasattr(self, "toas"):
-            return np.array([t.error.to(u.us).value for t in self.toas]) * u.us
-        else:
-            return self.table["error"].quantity
+        """Return a numpy array of the TOA errors in us."""
+        return self.table["error"].quantity
 
     def get_obss(self):
-        """Return a numpy array of the observatories for each TOA"""
-        if hasattr(self, "toas"):
-            return np.array([t.obs for t in self.toas])
-        else:
-            return self.table["obs"]
+        """Return a numpy array of the observatories for each TOA."""
+        return self.table["obs"]
 
     def get_pulse_numbers(self):
-        """Return a numpy array of the pulse numbers for each TOA if they exist"""
+        """Return a numpy array of the pulse numbers for each TOA if they exist."""
         # TODO: use a masked array?  Only some pulse numbers may be known
-        if hasattr(self, "toas"):
-            try:
-                return np.array([t.flags["pn"] for t in self.toas])
-            except KeyError:
-                log.warning("Not all TOAs have pulse numbers, using none")
-                return None
+        if "pn" in self.table["flags"][0]:
+            if "pulse_number" in self.table.colnames:
+                raise ValueError("Pulse number cannot be both a column and a TOA flag")
+            return np.array(flags["pn"] for flags in self.table["flags"])
+        elif "pulse_number" in self.table.colnames:
+            return self.table["pulse_number"]
         else:
-            if "pn" in self.table["flags"][0]:
-                if "pulse_number" in self.table.colnames:
-                    raise ValueError(
-                        "Pulse number cannot be both a column and a TOA flag"
-                    )
-                return np.array(flags["pn"] for flags in self.table["flags"])
-            elif "pulse_number" in self.table.colnames:
-                return self.table["pulse_number"]
-            else:
-                log.warning("No pulse numbers for TOAs")
-                return None
+            log.warning("No pulse numbers for TOAs")
+            return None
 
     def get_flags(self):
-        """Return a numpy array of the TOA flags"""
-        if hasattr(self, "toas"):
-            return np.array([t.flags for t in self.toas])
-        else:
-            return self.table["flags"]
+        """Return a numpy array of the TOA flags."""
+        return self.table["flags"]
 
     def get_flag_value(self, flag, fill_value=None):
-        """Get the request TOA flag values.
+        """Get the requested TOA flag values.
 
         Parameters
         ----------
@@ -1380,6 +1360,8 @@ class TOAs(object):
         values : list
             A list of flag values from each TOA. If the TOA does not have
             the flag, it will fill up with the fill_value.
+        valid_index : list
+            The indices, in ``self.table``, of the places where the flag values occur.
         """
         result = []
         valid_index = []
@@ -1392,65 +1374,58 @@ class TOAs(object):
             result.append(val)
         return result, valid_index
 
+    def get_dms(self):
+        """Get the wideband DM data."""
+        # FIXME: doesn't do something sensible if only some DMs are given.
+        result, valid = self.get_flag_value("pp_dm")
+        if valid == []:
+            raise AttributeError("No DM is provided.")
+        return np.array(result) * u.pc / u.cm ** 3
+
     def get_dm_errors(self):
-        """Get the Wideband DM data error"""
+        """Get the wideband DM data error."""
         result, valid = self.get_flag_value("pp_dme")
         if valid == []:
             raise AttributeError("No DM error is provided.")
-        return np.array(result)[valid] * u.pc / u.cm ** 3
+        return np.array(result) * u.pc / u.cm ** 3
 
     def get_groups(self, gap_limit=None):
-        """flag toas within gap limit (default 2h = 0.0833d) of each other as the same group
+        """Flag toas within gap limit (default 2h = 0.0833d) of each other as the same group.
 
-        groups can be larger than the gap limit - if toas are separated by a gap larger than
-        the gap limit, a new group starts and continues until another such gap is found"""
+        Groups can be larger than the gap limit - if toas are separated by a gap larger than
+        the gap limit, a new group starts and continues until another such gap is found.
+
+        Groups with a two-hour spacing are pre-computed when the TOAs object is constructed,
+        and these can rapidly be retrieved from ``self.table`` (which this function will do).
+
+        Parameters
+        ----------
+        gap_limit : :class:`astropy.units.Quantity`, optional
+            The minimum size of gap to create a new group. Defaults to two hours.
+
+        Returns
+        -------
+        groups : array
+            The group number associated to each TOA. Groups are numbered chronologically
+            from zero.
+        """
         # TODO: make all values Quantity objects for consistency
         if gap_limit is None:
             gap_limit = 2 * u.h
         if "groups" not in self.table or gap_limit != 2 * u.h:
-            mjd_dict = OrderedDict()
-            mjd_values = self.get_mjds().value
-            for i in np.arange(len(mjd_values)):
-                mjd_dict[i] = mjd_values[i]
-            sorted_mjd_list = sorted(mjd_dict.items(), key=lambda kv: (kv[1], kv[0]))
-            indexes = [a[0] for a in sorted_mjd_list]
-            mjds = [a[1] for a in sorted_mjd_list]
-            gaps = np.diff(mjds)
-            lengths = []
-            count = 0
-            for i in range(len(gaps)):
-                if gaps[i] * u.d < gap_limit:
-                    count += 1
-                else:
-                    lengths += [count + 1]
-                    count = 0
-            lengths += [count + 1]
-            sorted_groups = []
-            groupnum = 0
-            for length in lengths:
-                sorted_groups += [groupnum] * length
-                groupnum += 1
-            group_dict = OrderedDict()
-            for i in np.arange(len(indexes)):
-                group_dict[indexes[i]] = sorted_groups[i]
-            groups = [group_dict[key] for key in sorted(group_dict)]
-            return groups
+            return _group_by_gaps(self.get_mjds().value, gap_limit.to_value(u.d))
         else:
             return self.table["groups"]
 
     def get_highest_density_range(self, ndays=7):
-        """print the range of mjds (default 7 days) with the most toas"""
-        # TODO: implement sliding window
-        nbins = int((max(self.get_mjds()) - min(self.get_mjds())) / (ndays * u.d))
-        a = np.histogram(self.get_mjds(), nbins)
-        maxday = int((a[1][np.argmax(a[0])]).value)
-        diff = int((a[1][1] - a[1][0]).value)
+        """Print the range of mjds (default 7 days) with the most toas"""
+        sorted_mjds = np.sort(self.get_mjds())
+        s = np.searchsorted(sorted_mjds, sorted_mjds + ndays)
+        i = np.argmax(s - np.arange(len(sorted_mjds)))
         print(
-            "max density range (in steps of {} days -- {} bins) is from MJD {} to {} with {} toas.".format(
-                diff, nbins, maxday, maxday + diff, a[0].max()
-            )
+            f"max density range is from MJD {sorted_mjds[i]} to {sorted_mjds[s[i]]} with {s[i]-i} TOAs."
         )
-        return (maxday, maxday + diff)
+        return sorted_mjds[i], sorted_mjds[s[i]]
 
     def select(self, selectarray):
         """Apply a boolean selection or mask array to the TOA table.
@@ -1972,133 +1947,6 @@ class TOAs(object):
         col = ssb_obs_vel_ecl
         log.debug("Adding columns " + " ".join(col.name))
         self.table.add_column(col)
-
-    def read_toa_file(self, filename, process_includes=True, top=True):
-        """Read TOAs from the given filename.
-
-        Deprecated; intended for internal use only.
-
-        Will process INCLUDEd files unless process_includes is False.
-
-        Parameters
-        ----------
-        filename : str or file-like object
-            The name of the file to open, or an open file to read from.
-        process_includes : bool, optional
-            If true, obey INCLUDE directives in the file and read other
-            files.
-        top : bool, optional
-            If true, wipe this instance's contents, otherwise append
-            new TOAs. Used recursively; note that surprises may ensue
-            if this function is called on an already existing and
-            processed TOAs object.
-        """
-        if isinstance(filename, str):
-            with open(filename, "r") as f:
-                return self.read_toa_file(f, process_includes=process_includes, top=top)
-        else:
-            f = filename
-
-        ntoas = 0
-        if top:
-            self.toas = []
-            self.commands = []
-            self.cdict = {
-                "EFAC": 1.0,
-                "EQUAD": 0.0 * u.us,
-                "EMIN": 0.0 * u.us,
-                "EMAX": np.inf * u.us,
-                "FMIN": 0.0 * u.MHz,
-                "FMAX": np.inf * u.MHz,
-                "INFO": None,
-                "SKIP": False,
-                "TIME": 0.0,
-                "PHASE": 0,
-                "PHA1": None,
-                "PHA2": None,
-                "MODE": 1,
-                "JUMP": [False, 0],
-                "FORMAT": "Unknown",
-                "END": False,
-            }
-        for l in f.readlines():
-            MJD, d = _parse_TOA_line(l, fmt=self.cdict["FORMAT"])
-            if d["format"] == "Command":
-                cmd = d["Command"][0].upper()
-                self.commands.append((d["Command"], ntoas))
-                if cmd == "SKIP":
-                    self.cdict[cmd] = True
-                    continue
-                elif cmd == "NOSKIP":
-                    self.cdict["SKIP"] = False
-                    continue
-                elif cmd == "END":
-                    self.cdict[cmd] = True
-                    break
-                elif cmd in ("TIME", "PHASE"):
-                    self.cdict[cmd] += float(d["Command"][1])
-                elif cmd in ("EMIN", "EMAX", "EQUAD"):
-                    self.cdict[cmd] = float(d["Command"][1]) * u.us
-                elif cmd in ("FMIN", "FMAX", "EQUAD"):
-                    self.cdict[cmd] = float(d["Command"][1]) * u.MHz
-                elif cmd in ("EFAC", "PHA1", "PHA2"):
-                    self.cdict[cmd] = float(d["Command"][1])
-                    if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
-                        d[cmd] = d["Command"][1]
-                elif cmd == "INFO":
-                    self.cdict[cmd] = d["Command"][1]
-                    d[cmd] = d["Command"][1]
-                elif cmd == "FORMAT":
-                    if d["Command"][1] == "1":
-                        self.cdict[cmd] = "Tempo2"
-                elif cmd == "JUMP":
-                    if self.cdict[cmd][0]:
-                        self.cdict[cmd][0] = False
-                        self.cdict[cmd][1] += 1
-                    else:
-                        self.cdict[cmd][0] = True
-                elif cmd == "INCLUDE" and process_includes:
-                    # Save FORMAT in a tmp
-                    fmt = self.cdict["FORMAT"]
-                    self.cdict["FORMAT"] = "Unknown"
-                    log.info("Processing included TOA file {0}".format(d["Command"][1]))
-                    self.read_toa_file(d["Command"][1], top=False)
-                    # re-set FORMAT
-                    self.cdict["FORMAT"] = fmt
-                else:
-                    continue
-            if self.cdict["SKIP"] or d["format"] in (
-                "Blank",
-                "Unknown",
-                "Comment",
-                "Command",
-            ):
-                continue
-            elif self.cdict["END"]:
-                if top:
-                    break
-            else:
-                newtoa = TOA(MJD, **d)
-                if (
-                    (self.cdict["EMIN"] > newtoa.error)
-                    or (self.cdict["EMAX"] < newtoa.error)
-                    or (self.cdict["FMIN"] > newtoa.freq)
-                    or (self.cdict["FMAX"] < newtoa.freq)
-                ):
-                    continue
-                else:
-                    newtoa.error *= self.cdict["EFAC"]
-                    newtoa.error = np.hypot(newtoa.error, self.cdict["EQUAD"])
-                    if self.cdict["INFO"]:
-                        newtoa.flags["info"] = self.cdict["INFO"]
-                    if self.cdict["JUMP"][0]:
-                        newtoa.flags["jump"] = self.cdict["JUMP"][1]
-                    if self.cdict["PHASE"] != 0:
-                        newtoa.flags["phase"] = self.cdict["PHASE"]
-                    if self.cdict["TIME"] != 0.0:
-                        newtoa.flags["to"] = self.cdict["TIME"]
-                    self.toas.append(newtoa)
-                    ntoas += 1
 
 
 def merge_TOAs(TOAs_list):
