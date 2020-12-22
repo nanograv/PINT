@@ -355,12 +355,16 @@ def get_TOAs_list(
     include_gps=True,
     planets=False,
     tdb_method="default",
+    commands=None,
+    filename=None,
 ):
     """Load TOAs from a list of TOA objects.
 
     See :func:`pint.toa.get_TOAs` for details of what this function does.
     """
     t = TOAs(toalist=toa_list)
+    t.commands = [] if commands is None else commands
+    t.filename = filename
     if not any(["clkcorr" in f for f in t.table["flags"]]):
         t.apply_clock_corrections(
             include_gps=include_gps,
@@ -615,6 +619,173 @@ def format_toa_line(
         raise ValueError("Unknown TOA format ({0})".format(format))
 
     return out
+
+
+def read_toa_file(filename, process_includes=True, cdict=None):
+    """Read TOAs from the given filename into a list.
+
+    Will process INCLUDEd files unless process_includes is False.
+
+    Parameters
+    ----------
+    filename : str or file-like object
+        The name of the file to open, or an open file to read from.
+    process_includes : bool, optional
+        If true, obey INCLUDE directives in the file and read other
+        files.
+    top : bool, optional
+        If true, wipe this instance's contents, otherwise append
+        new TOAs. Used recursively; note that surprises may ensue
+        if this function is called on an already existing and
+        processed TOAs object.
+    """
+    if isinstance(filename, str):
+        with open(filename, "r") as f:
+            return read_toa_file(f, process_includes=process_includes, cdict=cdict)
+    else:
+        f = filename
+
+    ntoas = 0
+    toas = []
+    commands = []
+    if cdict is None:
+        cdict = {
+            "EFAC": 1.0,
+            "EQUAD": 0.0 * u.us,
+            "EMIN": 0.0 * u.us,
+            "EMAX": np.inf * u.us,
+            "FMIN": 0.0 * u.MHz,
+            "FMAX": np.inf * u.MHz,
+            "INFO": None,
+            "SKIP": False,
+            "TIME": 0.0,
+            "PHASE": 0,
+            "PHA1": None,
+            "PHA2": None,
+            "MODE": 1,
+            "JUMP": [False, 0],
+            "FORMAT": "Unknown",
+            "END": False,
+        }
+        top = True
+    else:
+        top = False
+    for line in f.readlines():
+        MJD, d = _parse_TOA_line(line, fmt=cdict["FORMAT"])
+        if d["format"] == "Command":
+            cmd = d["Command"][0].upper()
+            commands.append((d["Command"], ntoas))
+            if cmd == "SKIP":
+                cdict[cmd] = True
+                continue
+            elif cmd == "NOSKIP":
+                cdict["SKIP"] = False
+                continue
+            elif cmd == "END":
+                cdict[cmd] = True
+                break
+            elif cmd in ("TIME", "PHASE"):
+                cdict[cmd] += float(d["Command"][1])
+            elif cmd in ("EMIN", "EMAX", "EQUAD"):
+                cdict[cmd] = float(d["Command"][1]) * u.us
+            elif cmd in ("FMIN", "FMAX", "EQUAD"):
+                cdict[cmd] = float(d["Command"][1]) * u.MHz
+            elif cmd in ("EFAC", "PHA1", "PHA2"):
+                cdict[cmd] = float(d["Command"][1])
+                if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
+                    d[cmd] = d["Command"][1]
+            elif cmd == "INFO":
+                cdict[cmd] = d["Command"][1]
+                d[cmd] = d["Command"][1]
+            elif cmd == "FORMAT":
+                if d["Command"][1] == "1":
+                    cdict[cmd] = "Tempo2"
+            elif cmd == "JUMP":
+                if cdict[cmd][0]:
+                    cdict[cmd][0] = False
+                    cdict[cmd][1] += 1
+                else:
+                    cdict[cmd][0] = True
+            elif cmd == "INCLUDE" and process_includes:
+                # Save FORMAT in a tmp
+                fmt = cdict["FORMAT"]
+                cdict["FORMAT"] = "Unknown"
+                log.info("Processing included TOA file {0}".format(d["Command"][1]))
+                new_toas, new_commands = read_toa_file(d["Command"][1], cdict=cdict)
+                toas.extend(new_toas)
+                commands.extend(new_commands)
+                # re-set FORMAT
+                cdict["FORMAT"] = fmt
+            else:
+                continue
+        if cdict["SKIP"] or d["format"] in ("Blank", "Unknown", "Comment", "Command"):
+            continue
+        elif cdict["END"]:
+            if top:
+                break
+        else:
+            newtoa = TOA(MJD, **d)
+            if (
+                (cdict["EMIN"] > newtoa.error)
+                or (cdict["EMAX"] < newtoa.error)
+                or (cdict["FMIN"] > newtoa.freq)
+                or (cdict["FMAX"] < newtoa.freq)
+            ):
+                continue
+            else:
+                newtoa.error *= cdict["EFAC"]
+                newtoa.error = np.hypot(newtoa.error, cdict["EQUAD"])
+                if cdict["INFO"]:
+                    newtoa.flags["info"] = cdict["INFO"]
+                if cdict["JUMP"][0]:
+                    newtoa.flags["jump"] = cdict["JUMP"][1]
+                if cdict["PHASE"] != 0:
+                    newtoa.flags["phase"] = cdict["PHASE"]
+                if cdict["TIME"] != 0.0:
+                    newtoa.flags["to"] = cdict["TIME"]
+                toas.append(newtoa)
+                ntoas += 1
+
+    return toas, commands
+
+
+def build_table(toas, filename=None):
+    mjds, mjd_floats, errors, freqs, obss, flags = zip(
+        *[
+            (
+                t.mjd,
+                t.mjd.mjd,
+                t.error.to_value(u.us),
+                t.freq.to_value(u.MHz),
+                t.obs,
+                t.flags,
+            )
+            for t in toas
+        ]
+    )
+    return table.Table(
+        [
+            np.arange(len(mjds)),
+            table.Column(mjds),
+            np.array(mjd_floats) * u.d,
+            np.array(errors) * u.us,
+            np.array(freqs) * u.MHz,
+            np.array(obss),
+            np.array(flags),
+            np.zeros(len(mjds)),
+        ],
+        names=(
+            "index",
+            "mjd",
+            "mjd_float",
+            "error",
+            "freq",
+            "obs",
+            "flags",
+            "delta_pulse_number",
+        ),
+        meta={"filename": filename},
+    ).group_by("obs")
 
 
 def make_fake_toas(
@@ -979,8 +1150,8 @@ class TOAs(object):
            ``flags`` carry this information, and :func:`pint.toa.TOAs.phase_columns_from_flags`
            creates the column.
        * - ``groups``
-         - if the TOAs have been placed into groups by :func:`pint.toa.TOAs.get_groups`
-           this will contain the group identifier of each TOA.
+         - the TOAs have been placed into groups, separated by gaps of at least two houes,
+           by :func:`pint.toa.TOAs.get_groups`; this will contain the group number of each TOA.
 
     Parameters
     ----------
@@ -1025,6 +1196,7 @@ class TOAs(object):
 
         if isinstance(toafile, str):
             self.read_toa_file(toafile)
+            del self.cdict
             # Check to see if there were any INCLUDEs:
             inc_fns = [x[0][1] for x in self.commands if x[0][0].upper() == "INCLUDE"]
             self.filename = [toafile] + inc_fns if inc_fns else toafile
@@ -1040,33 +1212,9 @@ class TOAs(object):
         if not hasattr(self, "table"):
             if not self.toas:
                 raise ValueError("No TOAs found!")
-            mjds = self.get_mjds(high_precision=True)
-            # The table is grouped by observatory
-            self.table = table.Table(
-                [
-                    np.arange(len(mjds)),
-                    table.Column(mjds),
-                    self.get_mjds(),
-                    self.get_errors(),
-                    self.get_freqs(),
-                    self.get_obss(),
-                    self.get_flags(),
-                    np.zeros(len(mjds)),
-                    self.get_groups(),
-                ],
-                names=(
-                    "index",
-                    "mjd",
-                    "mjd_float",
-                    "error",
-                    "freq",
-                    "obs",
-                    "flags",
-                    "delta_pulse_number",
-                    "groups",
-                ),
-                meta={"filename": self.filename},
-            ).group_by("obs")
+            self.table = build_table(self.toas, filename=self.filename)
+            groups = self.get_groups()
+            self.table.add_column(groups, name="groups")
             # Add pulse number column (if needed) or make PHASE adjustments
             try:
                 self.phase_columns_from_flags()
@@ -1108,6 +1256,12 @@ class TOAs(object):
             raise ValueError("TOAs do not support extraction of TOA objects (yet?)")
         else:
             raise ValueError("Unable to index TOAs with {}".format(index))
+
+    def __eq__(self, other):
+        sd, od = self.__dict__.copy(), other.__dict__.copy()
+        st = sd.pop("table")
+        ot = od.pop("table")
+        return sd == od and np.all(st == ot)
 
     @property
     def ntoas(self):
@@ -1252,9 +1406,8 @@ class TOAs(object):
         the gap limit, a new group starts and continues until another such gap is found"""
         # TODO: make all values Quantity objects for consistency
         if gap_limit is None:
-            gap_limit = 0.0833
-        if hasattr(self, "toas") or gap_limit != 0.0833:
-            gap_limit *= u.d
+            gap_limit = 2 * u.h
+        if "groups" not in self.table or gap_limit != 2 * u.h:
             mjd_dict = OrderedDict()
             mjd_values = self.get_mjds().value
             for i in np.arange(len(mjd_values)):

@@ -14,6 +14,8 @@ from astropy.utils.iers import conf
 
 conf.auto_max_age = None
 
+os.chdir(datadir)
+
 simplepar = """
 PSR              1748-2021E
 RAJ       17:48:52.75  1
@@ -166,3 +168,26 @@ def test_bipm_default():
         StringIO(simplepar.replace("BIPM2017", "BIPM")), "test1.tim"
     )
     assert t.clock_corr_info["bipm_version"] == "BIPM"
+
+
+def test_toas_comparison():
+    parstr = StringIO(simplepar)
+    m = get_model(parstr)
+    x = toa.get_TOAs("test1.tim", model=m)
+    y = toa.get_TOAs("test1.tim", model=m)
+    assert x == y
+
+
+def test_toas_comparison_unequal():
+    parstr = StringIO(simplepar)
+    m = get_model(parstr)
+    x = toa.get_TOAs("test1.tim", model=m, ephem="de436")
+    y = toa.get_TOAs("test1.tim", model=m)
+    assert x != y
+
+
+def test_toas_read_list():
+    x = toa.get_TOAs("test1.tim")
+    toas, commands = toa.read_toa_file("test1.tim")
+    y = toa.get_TOAs_list(toas, commands=commands, filename=x.filename)
+    assert x == y
