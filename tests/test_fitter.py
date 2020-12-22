@@ -140,33 +140,40 @@ def test_fitter():
 
 def test_ftest_nb():
     """Test for narrowband fitter class F-test."""
-    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
-    t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
+    m = tm.get_model(os.path.join(datadir, "J0023+0923_ell1_simple.par"))
+    t = toa.make_fake_toas(56000.0, 56001.0, 10, m, freq=1400.0, obs="AO")
     f = fitter.WLSFitter(toas=t, model=m)
     f.fit_toas()
     # Test adding parameters
-    FD4 = param.prefixParameter(
-        parameter_type="float", name="FD4", value=0.0, units=u.s, frozen=False
+    F2 = param.prefixParameter(
+        parameter_type="float",
+        name="F2",
+        value=0.0,
+        units=u.Hz / u.s / u.s,
+        frozen=False,
     )
-    ft = f.ftest(FD4, "FD", remove=False)
+    ft = f.ftest(F2, "Spindown", remove=False)
     assert isinstance(ft["ft"], float) or isinstance(ft["ft"], bool)
     # Test return the full output
-    Ftest_dict = f.ftest(FD4, "FD", remove=False, full_output=True)
+    Ftest_dict = f.ftest(F2, "Spindown", remove=False, full_output=True)
     assert isinstance(Ftest_dict["ft"], float) or isinstance(Ftest_dict["ft"], bool)
     # Test removing parameter
-    FD3 = param.prefixParameter(
-        parameter_type="float", name="FD3", value=0.0, units=u.s, frozen=False
+    F1 = param.prefixParameter(
+        parameter_type="float", name="F1", value=0.0, units=u.Hz / u.s, frozen=False
     )
-    ft = f.ftest(FD3, "FD", remove=True)
+    ft = f.ftest(F1, "Spindown", remove=True)
     assert isinstance(ft["ft"], float) or isinstance(ft["ft"], bool)
-    Ftest_dict = f.ftest(FD3, "FD", remove=True, full_output=True)
+    Ftest_dict = f.ftest(F1, "Spindown", remove=True, full_output=True)
     assert isinstance(Ftest_dict["ft"], float) or isinstance(Ftest_dict["ft"], bool)
 
 
 def test_ftest_wb():
     """Test for wideband fitter class F-test."""
     wb_m = tm.get_model(os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.gls.par"))
-    wb_t = toa.get_TOAs(os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.tim"))
+    wb_t = toa.get_TOAs(
+        os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.tim"), usepickle=True
+    )
+    # wb_t = toa.make_fake_toas(56000.0, 56001.0, 10, wb_m, freq=1400.0, obs="GB")
     wb_f = fitter.WidebandTOAFitter(wb_t, wb_m)
     wb_f.fit_toas()
     # Parallax
