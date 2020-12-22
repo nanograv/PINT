@@ -9,6 +9,7 @@ import astropy.units as u
 import numpy as np
 import pytest
 from pinttestdata import datadir
+from pint.toa import make_fake_toas
 
 from pint.models import (
     DEFAULT_ORDER,
@@ -294,3 +295,8 @@ def test_free_params(lines, param, exception):
     model = get_model(io.StringIO("\n".join([par_base] + lines)))
     with pytest.raises(exception):
         model.free_params = [param]
+
+
+def test_pepoch_late():
+    model = get_model(io.StringIO(par_base))
+    t = make_fake_toas(56000, 57000, 10, model=model)

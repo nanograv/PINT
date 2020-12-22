@@ -34,10 +34,11 @@ PLANET_SHAPIRO      Y
 DILATEFREQ          N
 """
 
+os.chdir(datadir)
+
 
 class TestTOAReader(unittest.TestCase):
     def setUp(self):
-        os.chdir(datadir)
         self.x = toa.TOAs("test1.tim")
         self.x.apply_clock_corrections()
         self.x.compute_TDBs()
@@ -158,3 +159,10 @@ def test_toa_merge():
     toas[0].ephem = "DE436"
     with pytest.raises(TypeError):
         nt = toa.merge_TOAs(toas)
+
+
+def test_bipm_default():
+    m, t = get_model_and_toas(
+        StringIO(simplepar.replace("BIPM2017", "BIPM")), "test1.tim"
+    )
+    assert t.clock_corr_info["bipm_version"] == "BIPM"

@@ -4,6 +4,7 @@ from __future__ import division, print_function
 
 from astropy import log
 import numpy as np
+import matplotlib
 
 log.setLevel("INFO")
 
@@ -22,7 +23,7 @@ class ColorMode:
 
 
 class DefaultMode(ColorMode):
-    """ 
+    """
     A class to manage the Default color mode, where TOAs are colored
     blue as a default and red if jumped.
     """
@@ -39,7 +40,7 @@ class DefaultMode(ColorMode):
 
     def plotColorMode(self):
         """
-        Plots application's residuals in proper color scheme. 
+        Plots application's residuals in proper color scheme.
         """
         if self.application.yerrs is None:
             self.application.plkAxes.scatter(
@@ -67,7 +68,7 @@ class DefaultMode(ColorMode):
 
 
 class FreqMode(ColorMode):
-    """ 
+    """
     A class to manage the Frequency color mode, where TOAs are colored
     according to their frequency.
     """
@@ -87,7 +88,7 @@ class FreqMode(ColorMode):
 
     def plotColorMode(self):
         """
-        Plots application's residuals in proper color scheme. 
+        Plots application's residuals in proper color scheme.
         """
 
         colorGroups = [
@@ -149,8 +150,68 @@ class FreqMode(ColorMode):
             )
 
 
+class NameMode(ColorMode):
+    """
+    A class to manage the Frequency color mode, where TOAs are colored
+    according to their frequency.
+    """
+
+    def __init__(self, application):
+        super(NameMode, self).__init__(application)
+        self.mode_name = "name"
+
+    def displayInfo(self):
+        log.info('"Name" mode selected\nOrange = selected TOAs')
+
+    def plotColorMode(self):
+        """
+        Plots application's residuals in proper color scheme.
+        """
+
+        all_names = np.array(
+            [f["name"] for f in self.application.psr.all_toas.get_flags()]
+        )
+        single_names = list(set(all_names))
+        N = len(single_names)
+        cmap = matplotlib.cm.get_cmap("brg")
+        colorGroups = [matplotlib.colors.rgb2hex(cmap(v)) for v in np.linspace(0, 1, N)]
+        colorGroups += ["orange"]
+
+        freqGroups = []
+        index = 0
+        for name in single_names:
+            index += 1
+            freqGroups.append(np.where(all_names == name))
+            index += 1
+
+        for index in range(N):
+            if self.application.yerrs is None:
+                self.application.plkAxes.scatter(
+                    self.application.xvals[freqGroups[index]],
+                    self.application.yvals[freqGroups[index]],
+                    marker=".",
+                    color=colorGroups[index],
+                )
+            else:
+                self.application.plotErrorbar(
+                    freqGroups[index], color=colorGroups[index]
+                )
+
+        if self.application.yerrs is None:
+            self.application.plkAxes.scatter(
+                self.application.xvals[self.application.selected],
+                self.application.yvals[self.application.selected],
+                marker=".",
+                color=colorGroups[N],
+            )
+        else:
+            self.application.plotErrorbar(
+                self.application.selected, color=colorGroups[N]
+            )
+
+
 class ObsMode(ColorMode):
-    """ 
+    """
     A class to manage the Observatory color mode, where TOAs are colored
     according to their observatory.
     """
@@ -172,7 +233,7 @@ class ObsMode(ColorMode):
 
     def plotColorMode(self):
         """
-        Plots application's residuals in proper color scheme. 
+        Plots application's residuals in proper color scheme.
         """
         import pint.observatory as obs
         import pint.observatory.topo_obs, pint.observatory.observatories

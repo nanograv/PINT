@@ -476,7 +476,12 @@ class PlkWidget(tk.Frame):
 
         self.psr = None
 
-        self.color_modes = [cm.DefaultMode(self), cm.FreqMode(self), cm.ObsMode(self)]
+        self.color_modes = [
+            cm.DefaultMode(self),
+            cm.FreqMode(self),
+            cm.ObsMode(self),
+            cm.NameMode(self),
+        ]
         self.current_mode = "default"
 
     def initPlk(self):
