@@ -2,7 +2,8 @@
 
 In particular, single TOAs are represented by :class:`pint.toa.TOA` objects, and if you
 want to manage a collection of these we recommend you use a :class:`pint.toa.TOAs` object
-as this makes certain operations much more convenient.
+as this makes certain operations much more convenient. You probably want to load one with
+:func:`pint.toa.get_TOAs`.
 """
 from __future__ import absolute_import, division, print_function, unicode_literals
 
@@ -73,11 +74,6 @@ toa_commands = (
 )
 
 all_planets = ("jupiter", "saturn", "venus", "uranus", "neptune")
-
-# FIXME: why are these here?
-iers_a_file = None
-iers_a = None
-JD_MJD = 2400000.5
 
 
 def _compute_hash(filename):
@@ -294,6 +290,11 @@ def load_pickle(toafilename, picklefilename=None):
     Returns
     -------
     toas : :class:`pint.toa.TOAs`
+
+    Raises
+    ------
+    IOError
+        If no pickle is found.
     """
     picklefilenames = (
         [toafilename + ext for ext in (".pickle.gz", ".pickle", "")]
@@ -1374,21 +1375,6 @@ class TOAs(object):
             result.append(val)
         return result, valid_index
 
-    def get_dms(self):
-        """Get the wideband DM data."""
-        # FIXME: doesn't do something sensible if only some DMs are given.
-        result, valid = self.get_flag_value("pp_dm")
-        if valid == []:
-            raise AttributeError("No DM is provided.")
-        return np.array(result) * u.pc / u.cm ** 3
-
-    def get_dm_errors(self):
-        """Get the wideband DM data error."""
-        result, valid = self.get_flag_value("pp_dme")
-        if valid == []:
-            raise AttributeError("No DM error is provided.")
-        return np.array(result) * u.pc / u.cm ** 3
-
     def get_groups(self, gap_limit=None):
         """Flag toas within gap limit (default 2h = 0.0833d) of each other as the same group.
 
@@ -1494,7 +1480,7 @@ class TOAs(object):
         print(self.get_summary())
 
     def phase_columns_from_flags(self):
-        """Creates and/or modifies pulse_number and delta_pulse_number columns
+        """Create and/or modify pulse_number and delta_pulse_number columns.
 
         Scans pulse numbers from the table flags and creates a new table column.
         Modifes the delta_pulse_number column, if required.
@@ -1526,7 +1512,7 @@ class TOAs(object):
             raise ValueError("Not all TOAs have pn flags")
 
     def compute_pulse_numbers(self, model):
-        """Set pulse numbers (in TOA table column pulse_numbers) based on model
+        """Set pulse numbers (in TOA table column pulse_numbers) based on model.
 
         Replace any existing pulse numbers by computing phases according to
         model and then setting the pulse number of each to their integer part,
@@ -1539,7 +1525,7 @@ class TOAs(object):
         self.table["pulse_number"].unit = u.dimensionless_unscaled
 
     def adjust_TOAs(self, delta):
-        """Apply a time delta to TOAs
+        """Apply a time delta to TOAs.
 
         Adjusts the time (MJD) of the TOAs by applying delta, which should
         have the same shape as ``self.table['mjd']``.  This function does not change
@@ -1550,7 +1536,6 @@ class TOAs(object):
         ----------
         delta : astropy.time.TimeDelta
             The time difference to add to the MJD of each TOA
-
         """
         col = self.table["mjd"]
         if not isinstance(delta, time.TimeDelta):
@@ -1584,7 +1569,6 @@ class TOAs(object):
         format : str
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1');
             note that not all features may be supported in 'TEMPO' mode.
-
         """
         try:
             # FIXME: file must be closed even if an exception occurs!
@@ -1767,9 +1751,9 @@ class TOAs(object):
                     grpmjds = time.Time(grp["mjd"], location=None)
                 else:
                     locs = EarthLocation(
-                        np.array([l.x.value for l in loclist]) * u.m,
-                        np.array([l.y.value for l in loclist]) * u.m,
-                        np.array([l.z.value for l in loclist]) * u.m,
+                        np.array([loc.x.value for loc in loclist]) * u.m,
+                        np.array([loc.y.value for loc in loclist]) * u.m,
+                        np.array([loc.z.value for loc in loclist]) * u.m,
                     )
                     grpmjds = time.Time(grp["mjd"], location=locs)
 
@@ -1964,7 +1948,8 @@ def merge_TOAs(TOAs_list):
 
     Returns
     -------
-    A new TOAs instance with all the combined and grouped TOAs
+    :class:`pint.toa.TOAs`
+        A new TOAs instance with all the combined and grouped TOAs
     """
     # Check each TOA object for consistency
     ephems = [tt.ephem for tt in TOAs_list]
