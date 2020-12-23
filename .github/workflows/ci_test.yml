@@ -35,9 +35,9 @@ jobs:
           - os: macos-latest
             python: '3.7'
             tox_env: 'py37-test'
-          - os: windows-latest
-            python: '3.8'
-            tox_env: 'py38-test'
+#          - os: windows-latest
+#            python: '3.8'
+#            tox_env: 'py38-test'
           - os: ubuntu-latest
             python: '3.7'
             tox_env: 'oldestdeps'
