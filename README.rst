@@ -1,6 +1,8 @@
 PINT
 ====
 
+[![Actions Status](https://github.com/RobDWaller/csp-generator/workflows/Build%20and%20Test/badge.svg)](https://github.com/RobDWaller/csp-generator/actions)
+
 .. [![Actions Status](https://github.com/nanograv/pint/workflows/CI%20Tests/badge.svg)](https://github.com/nanograv/pint/actions)
 
 .. image:: https://readthedocs.org/projects/nanograv-pint/badge/?version=latest
