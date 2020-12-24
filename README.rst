@@ -1,17 +1,13 @@
 PINT
 ====
 
-[![Actions Status](https://github.com/RobDWaller/csp-generator/workflows/Build%20and%20Test/badge.svg)](https://github.com/RobDWaller/csp-generator/actions)
+[![Actions Status](https://github.com/nanograv/pint/workflows/CI%20Tests/badge.svg)](https://github.com/nanograv/pint/actions)
 
-.. [![Actions Status](https://github.com/nanograv/pint/workflows/CI%20Tests/badge.svg)](https://github.com/nanograv/pint/actions)
+[![codecov](https://codecov.io/gh/nanograv/csp-generator/branch/master/graph/badge.svg)]
 
 .. image:: https://readthedocs.org/projects/nanograv-pint/badge/?version=latest
     :target: https://nanograv-pint.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
-
-.. image:: https://coveralls.io/repos/github/nanograv/PINT/badge.svg?branch=master
-    :target: https://coveralls.io/github/nanograv/PINT?branch=master
-    :alt: Code Coverage
 
 .. image:: https://badges.gitter.im/nanograv-PINT/community.svg
     :target: https://gitter.im/nanograv-PINT/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
