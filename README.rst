@@ -1,9 +1,7 @@
 PINT
 ====
 
-.. image:: https://travis-ci.org/nanograv/PINT.svg?branch=master
-    :target: https://travis-ci.org/nanograv/PINT
-    :alt: Build Status
+.. [![Actions Status](https://github.com/nanograv/pint/workflows/CI%20Tests/badge.svg)](https://github.com/nanograv/pint/actions)
 
 .. image:: https://readthedocs.org/projects/nanograv-pint/badge/?version=latest
     :target: https://nanograv-pint.readthedocs.io/en/latest/?badge=latest
