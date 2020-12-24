@@ -113,3 +113,26 @@ def test_residuals_scaled_uncertainties():
     assert 0 < np.sum(e > 1.5 * u.us) < len(toas)
     with pytest.raises(ValueError):
         model.as_parfile().index("EQUAD")
+
+
+def test_residuals_fake_wideband():
+    model = get_model(
+        StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            EFAC mjd 57000 58000 2
+            """
+        )
+    )
+    toas = make_fake_toas(57000, 59000, 20, model=model, error=1 * u.us, dm=10)
+    r = WidebandTOAResiduals(toas, model)
+    e = r.toa.get_data_error(scaled=True)
+    assert np.all(e != 0)
+    assert 0 < np.sum(e > 1.5 * u.us) < len(toas)
+    with pytest.raises(ValueError):
+        model.as_parfile().index("EQUAD")
