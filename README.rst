@@ -1,15 +1,19 @@
-[![Actions Status](https://github.com/nanograv/pint/workflows/CI%20Tests/badge.svg)](https://github.com/nanograv/pint/actions) [![codecov](https://codecov.io/gh/nanograv/csp-generator/branch/master/graph/badge.svg)]
+
 
 PINT
 ====
 
+.. image:: https://github.com/nanograv/pint/workflows/CI%20Tests/badge.svg
+   :target: https://github.com/nanograv/pint/actions
+   :alt: Actions Status
+
+.. image:: https://codecov.io/gh/nanograv/csp-generator/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/nanograv/csp-generator/
+   :alt: Coverage
+   
 .. image:: https://readthedocs.org/projects/nanograv-pint/badge/?version=latest
     :target: https://nanograv-pint.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
-
-.. image:: https://badges.gitter.im/nanograv-PINT/community.svg
-    :target: https://gitter.im/nanograv-PINT/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
-    :alt: Gitter chat
 
 .. image:: https://img.shields.io/pypi/l/pint-pulsar
     :target: https://github.com/nanograv/PINT/blob/master/LICENSE.md
