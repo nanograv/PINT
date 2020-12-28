@@ -574,7 +574,15 @@ def format_toa_line(
 
 
 def make_fake_toas(
-    startMJD, endMJD, ntoas, model, freq=999999, obs="GBT", error=1 * u.us
+    startMJD,
+    endMJD,
+    ntoas,
+    model,
+    freq=999999,
+    obs="GBT",
+    error=1 * u.us,
+    dm=None,
+    dm_error=1e-4 * u.pc / u.cm ** 3,
 ):
     """Make evenly spaced toas with residuals = 0 and without errors.
 
@@ -595,6 +603,12 @@ def make_fake_toas(
         frequency of the fake toas, default 1400
     obs : str, optional
         observatory for fake toas, default GBT
+    error : :class:`astropy.units.Quantity`
+        uncertainty to attach to each TOA
+    dm : float, optional
+        DM value to include with each TOA; default is not to include any DM information
+    dm_error : :class:`astropy.units.Quantity`
+        uncertainty to attach to each DM measurement
 
     Returns
     -------
@@ -630,6 +644,10 @@ def make_fake_toas(
         {"include_bipm": False, "bipm_version": bipm_default, "include_gps": False}
     )
     ts.table["error"] = error
+    if dm is not None:
+        for f in ts.table["flags"]:
+            f["pp_dm"] = dm
+            f["pp_dme"] = dm_error.to_value(u.pc / u.cm ** 3)
     ts.compute_TDBs()
     ts.compute_posvels()
     ts.compute_pulse_numbers(model)
@@ -955,6 +973,8 @@ class TOAs(object):
         self.ephem = None
         self.clock_corr_info = {}
         self.obliquity = None
+        self.merged = False
+        self.hashes = {}
 
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
@@ -1288,6 +1308,8 @@ class TOAs(object):
         self.pintversion = pint.__version__
         if filename is not None:
             pickle.dump(self, open(filename, "wb"))
+        elif self.merged:
+            raise ValueError("Merged TOAs need specified file names")
         elif self.filename is not None:
             if isinstance(self.filename, str):
                 filename = self.filename
@@ -1809,6 +1831,7 @@ class TOAs(object):
         self.ephem = tmp.ephem
         self.planets = tmp.planets
         self.hashes = tmp.hashes
+        self.merged = tmp.merged
 
     def read_toa_file(self, filename, process_includes=True, top=True):
         """Read TOAs from the given filename.
