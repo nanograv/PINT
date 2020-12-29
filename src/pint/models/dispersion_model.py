@@ -504,7 +504,7 @@ class DispersionJump(Dispersion):
             # Note we can not use the derivative function 'd_delay_d_dmparam',
             # Since dmjump does not effect delay.
             # The function 'd_delay_d_dmparam' applies d_dm_d_dmparam first and
-            # than applys the time delay part.  
+            # than applys the time delay part.
             self.register_deriv_funcs(self.d_delay_d_dmjump, j)
 
     def validate(self):
