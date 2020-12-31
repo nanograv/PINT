@@ -92,6 +92,7 @@ def tempo2run(parfile, timfile, t2time_arr):
 
 
 if __name__ == "__main__":
+
     # Generate simple, fake TOAs for the timing runs
     print("Making fake TOAs...")
     for num in ntoas_simple:
@@ -168,7 +169,8 @@ if __name__ == "__main__":
         )
         end = timeit.default_timer()
         total = total + (end - start)
-    importtimes.append(total / MAXIT)
+    for i in range(len(ntoas_simple)):
+        importtimes.append(total / MAXIT)
 
     # setup
     m = models.get_model("NGC6440E.par")
