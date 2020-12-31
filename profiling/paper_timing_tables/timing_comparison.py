@@ -17,15 +17,15 @@ import datetime
 from astropy.table import Table
 from astropy.io import ascii
 
-MAXIT = 5  # number of iterations to time and average
+MAXIT = 1  # number of iterations to time and average
 # number of TOAs run for each test
 ntoas_simple = [100, 1000, 10000, 100000]
 ntoas_complex = [5012, 10024, 25060]
 timfiles = [
     "NGC6440E_fake100.tim",
-    "NGC6440E_fake1k.tim",
-    "NGC6440E_fake10k.tim",
-    "NGC6440E_fake100k.tim",
+    "NGC6440E_fake1000.tim",
+    "NGC6440E_fake10000.tim",
+    "NGC6440E_fake100000.tim",
 ]  # timfiles for simple model and individual functions
 timfiles2 = [
     "J1910+1256_NANOGrav_12yv4.tim",
