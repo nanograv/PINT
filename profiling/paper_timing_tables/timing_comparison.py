@@ -28,43 +28,18 @@ def pintrun(parfile, timfile, ptime_arr, pickle, fitter):
     usepickle = ""
     if pickle:
         usepickle = " --usepickle"
+    total = 0
     for i in range(MAXIT):
+        start = timeit.default_timer()
         subprocess.call(
-            "time -o pinttimes.txt -a pintempo"
-            + usepickle
-            + gls
-            + " "
-            + parfile
-            + " "
-            + timfile,
+            "pintempo" + usepickle + gls + " " + parfile + " " + timfile,
             shell=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-    pinttime = datetime.timedelta()  # defaults to 0
-    with open("pinttimes.txt") as f:
-        for line in f:
-            if "user" in line:
-                vals = line.split()
-                timestr = vals[2][
-                    :-7
-                ]  # based on default format of time function output
-                try:
-                    t = datetime.datetime.strptime(
-                        timestr, "%M:%S.%f"
-                    ).time()  # format string into time obj
-                except ValueError:
-                    t = datetime.datetime.strptime(
-                        timestr, "%H:%M:%S"
-                    ).time()  # format string into time obj
-                pinttime = pinttime + datetime.timedelta(
-                    hours=t.hour,
-                    minutes=t.minute,
-                    seconds=t.second,
-                    microseconds=t.microsecond,
-                )  # running sum
-    os.remove("pinttimes.txt")  # remove temporary storage file
-    ptime_arr.append(pinttime.total_seconds() / MAXIT)  # averages time
+        end = timeit.default_timer()
+        total = total + (end - start)
+    ptime_arr.append(total / MAXIT)  # averages time
 
 
 def temporun(parfile, timfile, ttime_arr, fitter):
@@ -72,78 +47,34 @@ def temporun(parfile, timfile, ttime_arr, fitter):
     fit = ""
     if fitter == "gls":
         fit = " -G"
+    total = 0
     for i in range(MAXIT):
+        start = timeit.default_timer()
         subprocess.call(
-            "time -o tempotimes.txt -a tempo"
-            + fit
-            + " -f "
-            + parfile
-            + " "
-            + timfile
-            + "",
+            "tempo" + fit + " -f " + parfile + " " + timfile + "",
             shell=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-    tempotime = datetime.timedelta()  # defaults to 0
-    with open("tempotimes.txt") as f:
-        for line in f:
-            if "user" in line:
-                vals = line.split()
-                timestr = vals[2][:-7]  # based on default format of time function
-                try:
-                    t = datetime.datetime.strptime(
-                        timestr, "%M:%S.%f"
-                    ).time()  # format string into time obj
-                except ValueError:
-                    t = datetime.datetime.strptime(
-                        timestr, "%H:%M:%S"
-                    ).time()  # format string into time obj
-                tempotime = tempotime + datetime.timedelta(
-                    hours=t.hour,
-                    minutes=t.minute,
-                    seconds=t.second,
-                    microseconds=t.microsecond,
-                )  # running sum
-    os.remove("tempotimes.txt")  # remove temporary storage file
-    ttime_arr.append(tempotime.total_seconds() / MAXIT)  # average time
+        end = timeit.default_timer()
+        total = total + (end - start)
+    ttime_arr.append(total / MAXIT)  # average time
 
 
 def tempo2run(parfile, timfile, t2time_arr):
     """ Runs and times Tempo2 5 times and averages times, appending to a list. """
+    total = 0
     for i in range(MAXIT):
+        start = timeit.default_timer()
         subprocess.call(
-            "time -o tempo2times.txt -a tempo2 -nobs 100003 -f "
-            + parfile
-            + " "
-            + timfile
-            + "",
+            "tempo2 -nobs 100003 -f " + parfile + " " + timfile + "",
             shell=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-    tempo2time = datetime.timedelta()  # defaults to 0
-    with open("tempo2times.txt") as f:
-        for line in f:
-            if "user" in line:
-                vals = line.split()
-                timestr = vals[2][:-7]  # based on default format of time function
-                try:
-                    t = datetime.datetime.strptime(
-                        timestr, "%M:%S.%f"
-                    ).time()  # format string into time obj
-                except ValueError:
-                    t = datetime.datetime.strptime(
-                        timestr, "%H:%M:%S"
-                    ).time()  # format string into time obj
-                tempo2time = tempo2time + datetime.timedelta(
-                    hours=t.hour,
-                    minutes=t.minute,
-                    seconds=t.second,
-                    microseconds=t.microsecond,
-                )  # running sum
-    os.remove("tempo2times.txt")  # remove temporary storage file
-    t2time_arr.append(tempo2time.total_seconds() / MAXIT)  # average time
+        end = timeit.default_timer()
+        total = total + (end - start)
+    t2time_arr.append(total / MAXIT)  # average time
 
 
 def getTimes(file, arr):
@@ -232,6 +163,20 @@ if __name__ == "__main__":
     getTOAs_pickle = []
     fittimes = []
 
+    # time import statements
+    total = 0
+    for i in range(MAXIT):
+        start = timeit.default_timer()
+        subprocess.call(
+            "python3 import_statements.py",
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        end = timeit.default_timer()
+        total = total + (end - start)
+    importtimes.append(total / MAXIT)
+
     # setup
     m = models.get_model("NGC6440E.par")
     use_planets = False
@@ -240,26 +185,6 @@ if __name__ == "__main__":
     model_ephem = "DE421"
     if m.EPHEM is not None:
         model_ephem = m.EPHEM.value
-
-    # time import statements in pintempo script
-    print("timing imports...")
-    total = 0
-    for i in range(MAXIT):
-        start = timeit.default_timer()
-        import argparse
-        import sys
-        import astropy.units as u
-        from astropy import log
-        import pint.fitter
-        import pint.models
-        import pint.residuals
-
-        end = timeit.default_timer()
-        total = total + (end - start)
-    importtimes.append(total / MAXIT)  # duplicate to match column size in table
-    importtimes.append(total / MAXIT)
-    importtimes.append(total / MAXIT)
-    importtimes.append(total / MAXIT)
 
     for tim in timfiles:
         # no pickle time of get_TOAs
