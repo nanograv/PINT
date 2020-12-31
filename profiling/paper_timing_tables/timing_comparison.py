@@ -58,7 +58,7 @@ def pintrun(parfile, timfile, ptime_arr, pickle, fitter):
                         timestr, "%H:%M:%S"
                     ).time()  # format string into time obj
                 pinttime = pinttime + datetime.timedelta(
-                    hour=t.hour,
+                    hours=t.hour,
                     minutes=t.minute,
                     seconds=t.second,
                     microseconds=t.microsecond,
@@ -100,7 +100,7 @@ def temporun(parfile, timfile, ttime_arr, fitter):
                         timestr, "%H:%M:%S"
                     ).time()  # format string into time obj
                 tempotime = tempotime + datetime.timedelta(
-                    hour=t.hour,
+                    hours=t.hour,
                     minutes=t.minute,
                     seconds=t.second,
                     microseconds=t.microsecond,
@@ -137,7 +137,7 @@ def tempo2run(parfile, timfile, t2time_arr):
                         timestr, "%H:%M:%S"
                     ).time()  # format string into time obj
                 tempo2time = tempo2time + datetime.timedelta(
-                    hour=t.hour,
+                    hours=t.hour,
                     minutes=t.minute,
                     seconds=t.second,
                     microseconds=t.microsecond,
@@ -325,19 +325,19 @@ if __name__ == "__main__":
 
     # add needed params for GLS fitting
     subprocess.call(
-        'echo "TNRedAmp -14.227505410948254" >> J1910+1256_NANOGrav_12yv4.tim',
+        'echo "TNRedAmp -14.227505410948254" >> J1910+1256_NANOGrav_12yv4.gls.par',
         shell=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
     subprocess.call(
-        'echo "TNRedGam 4.91353" >> J1910+1256_NANOGrav_12yv4.tim',
+        'echo "TNRedGam 4.91353" >> J1910+1256_NANOGrav_12yv4.gls.par',
         shell=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
     subprocess.call(
-        'echo "TNRedC 45" >> J1910+1256_NANOGrav_12yv4.tim',
+        'echo "TNRedC 45" >> J1910+1256_NANOGrav_12yv4.gls.par',
         shell=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
