@@ -18,6 +18,20 @@ from astropy.table import Table
 from astropy.io import ascii
 
 MAXIT = 5  # number of iterations to time and average
+# number of TOAs run for each test
+ntoas_simple = [100, 1000, 10000, 100000]
+ntoas_complex = [5012, 10024, 25060]
+timfiles = [
+    "NGC6440E_fake100.tim",
+    "NGC6440E_fake1k.tim",
+    "NGC6440E_fake10k.tim",
+    "NGC6440E_fake100k.tim",
+]  # timfiles for simple model and individual functions
+timfiles2 = [
+    "J1910+1256_NANOGrav_12yv4.tim",
+    "J1910+1256_NANOGrav_12yv4_10k.tim",
+    "J1910+1256_NANOGrav_12yv4_25k.tim",
+]  # timfiles for complex model
 
 
 def pintrun(parfile, timfile, ptime_arr, pickle, fitter):
@@ -77,41 +91,21 @@ def tempo2run(parfile, timfile, t2time_arr):
     t2time_arr.append(total / MAXIT)  # average time
 
 
-def getTimes(file, arr):
-    """ Takes time output from a file and appends it to a list. """
-    with open(file) as f:
-        for line in f:
-            arr.append(float(line) / MAXIT)  # average time
-    os.remove(file)
-
-
 if __name__ == "__main__":
-    timfiles = [
-        "NGC6440E_fake100.tim",
-        "NGC6440E_fake1k.tim",
-        "NGC6440E_fake10k.tim",
-        "NGC6440E_fake100k.tim",
-    ]
-
     # Generate simple, fake TOAs for the timing runs
-    make_fake_TOA1 = "zima --startMJD 53478 --duration 700 --freq 1400 2000 --ntoa 100 NGC6440E.par NGC6440E_fake100.tim"
-    make_fake_TOA2 = "zima --startMJD 53478 --duration 700 --freq 1400 2000 --ntoa 1000 NGC6440E.par NGC6440E_fake1k.tim"
-    make_fake_TOA3 = "zima --startMJD 53478 --duration 700 --freq 1400 2000 --ntoa 10000 NGC6440E.par NGC6440E_fake10k.tim"
-    make_fake_TOA4 = "zima --startMJD 53478 --duration 700 --freq 1400 2000 --ntoa 100000 NGC6440E.par NGC6440E_fake100k.tim"
-    # call operations on command line
     print("Making fake TOAs...")
-    subprocess.call(
-        make_fake_TOA1, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-    )
-    subprocess.call(
-        make_fake_TOA2, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-    )
-    subprocess.call(
-        make_fake_TOA3, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-    )
-    subprocess.call(
-        make_fake_TOA4, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-    )
+    for num in ntoas_simple:
+        call = (
+            "zima --startMJD 53478 --duration 700 --freq 1400 2000 --ntoa "
+            + str(num)
+            + " NGC6440E.par NGC6440E_fake"
+            + str(num)
+            + ".tim"
+        )
+        if not os.path.exists("NGC6440E_fake" + str(num) + ".tim"):
+            subprocess.call(
+                call, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
 
     ptimes_nopickle = []
     ptimes_pickle = []
@@ -138,9 +132,8 @@ if __name__ == "__main__":
         tempo2run("NGC6440E.par", tim, t2times)
 
     # create table 7 in PINT paper
-    ntoas = [100, 1000, 10000, 100000]
     simple_comparison = Table(
-        (ntoas, ttimes, t2times, ptimes_nopickle, ptimes_pickle),
+        (ntoas_simple, ttimes, t2times, ptimes_nopickle, ptimes_pickle),
         names=(
             "Number of TOAs",
             "TEMPO (sec)",
@@ -223,9 +216,8 @@ if __name__ == "__main__":
         getTOAs_pickle.append(total / MAXIT)
 
     # create table 8 in PINT paper
-    ntoas = [100, 1000, 10000, 100000]
     function_comparison = Table(
-        (ntoas, importtimes, getTOAs_nopickle, getTOAs_pickle, fittimes),
+        (ntoas_simple, importtimes, getTOAs_nopickle, getTOAs_pickle, fittimes),
         names=(
             "Number of TOAs",
             "Import Statements (sec)",
@@ -269,39 +261,36 @@ if __name__ == "__main__":
     )
 
     # copy TOAs to create 2x the number of TOAs
-    subprocess.call(
-        "cat J1910+1256_NANOGrav_12yv4.tim > J1910+1256_NANOGrav_12yv4_10k.tim",
-        shell=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    subprocess.call(
-        "sed -n '6,6761p' J1910+1256_NANOGrav_12yv4.tim >> J1910+1256_NANOGrav_12yv4_10k.tim",
-        shell=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
-    # copy TOAs to create 5x the number of TOAs
-    subprocess.call(
-        "cat J1910+1256_NANOGrav_12yv4.tim > J1910+1256_NANOGrav_12yv4_25k.tim",
-        shell=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    for i in range(4):
+    if "J1910+1256_NANOGrav_12yv4_10k.tim" in timfiles2:
         subprocess.call(
-            "sed -n '6,6761p' J1910+1256_NANOGrav_12yv4.tim >> J1910+1256_NANOGrav_12yv4_25k.tim",
+            "cat J1910+1256_NANOGrav_12yv4.tim > J1910+1256_NANOGrav_12yv4_10k.tim",
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        subprocess.call(
+            "sed -n '6,6761p' J1910+1256_NANOGrav_12yv4.tim >> J1910+1256_NANOGrav_12yv4_10k.tim",
             shell=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
 
-    timfiles2 = [
-        "J1910+1256_NANOGrav_12yv4.tim",
-        "J1910+1256_NANOGrav_12yv4_10k.tim",
-        "J1910+1256_NANOGrav_12yv4_25k.tim",
-    ]
+    # copy TOAs to create 5x the number of TOAs
+    if "J1910+1256_NANOGrav_12yv4_25k.tim" in timfiles2:
+        subprocess.call(
+            "cat J1910+1256_NANOGrav_12yv4.tim > J1910+1256_NANOGrav_12yv4_25k.tim",
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        for i in range(4):
+            subprocess.call(
+                "sed -n '6,6761p' J1910+1256_NANOGrav_12yv4.tim >> J1910+1256_NANOGrav_12yv4_25k.tim",
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
     ptimes_nopickle2 = []
     ptimes_pickle2 = []
     ttimes2 = []
@@ -341,10 +330,8 @@ if __name__ == "__main__":
         tempo2run("J1910+1256_NANOGrav_12yv4.gls.par", tim, t2times2)
 
     # create table 9 in PINT paper
-    ntoas = [5012, 10024, 25060]
-
     complex_comparison = Table(
-        (ntoas, ttimes2, t2times2, ptimes_nopickle2, ptimes_pickle2),
+        (ntoas_complex, ttimes2, t2times2, ptimes_nopickle2, ptimes_pickle2),
         names=(
             "Number of TOAs",
             "TEMPO (sec)",
