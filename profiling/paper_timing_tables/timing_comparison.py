@@ -92,7 +92,7 @@ def tempo2run(parfile, timfile, t2time_arr):
 
 
 if __name__ == "__main__":
-
+    """
     # Generate simple, fake TOAs for the timing runs
     print("Making fake TOAs...")
     for num in ntoas_simple:
@@ -235,7 +235,7 @@ if __name__ == "__main__":
         latexdict={"tabletype": "table*"},
         overwrite=True,
     )
-
+    """
     # explore more complex model
     # use J1910+1256 with the following parameter additions to the par file (to ensure GLS fit with Tempo2):
     # - TNRedAmp -14.227505410948254
@@ -349,3 +349,10 @@ if __name__ == "__main__":
         latexdict={"tabletype": "table*"},
         overwrite=True,
     )
+
+    # remove added params from par file for future use
+    subprocess.call("sed -i '$d' J1910+1256_NANOGrav_12yv4.gls.par", shell=True)
+    subprocess.call("sed -i '$d' J1910+1256_NANOGrav_12yv4.gls.par", shell=True)
+    subprocess.call("sed -i '$d' J1910+1256_NANOGrav_12yv4.gls.par", shell=True)
+    os.remove("J1910+1256_NANOGrav_12yv4_10k.tim")
+    os.remove("J1910+1256_NANOGrav_12yv4_25k.tim")
