@@ -2,6 +2,7 @@
 
 import pytest
 import io
+import numpy as np
 from pint.models import get_model
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
 
@@ -35,25 +36,30 @@ def test_remove_nonexistent_index():
     dm_mod = DispersionDMX()
     with pytest.raises(ValueError):
         dm_mod.remove_DMX_range(3)
+
+def test_nonetype_MJD():
+    dm_mod = DispersionDMX()
     with pytest.raises(ValueError):
         dm_mod.add_DMX_range(None, 58000, 3, 1, frozen=False)
     with pytest.raises(ValueError):
         dm_mod.add_DMX_range(58000, None, 3, 1, frozen=False)
 
-
-def test_duplicate_index():
-    """ Check for error when a duplicate DMX index is used. """
+def test_dynamic_index():
     dm_mod = DispersionDMX()
-    dm_mod.add_DMX_range(58000, 58100, 3, 1, frozen=False)
-    with pytest.raises(ValueError):
-        dm_mod.add_DMX_range(58200, 58300, 3, 1, frozen=False)
-
-
-def test_remove_nonexistent_index():
-    """ Check for error when a unused DMX index is removed. """
-    dm_mod = DispersionDMX()
-    with pytest.raises(ValueError):
-        dm_mod.remove_DMX_range(3)
+    index1 = 3
+    dmx1 = 1.0
+    mjd_start1 = 58000.0
+    mjd_end1 = 58100.0
+    index2=None
+    dmx2 = 1.0
+    mjd_start2 = 58200.0
+    mjd_end2 = 58300.0
+    dm_mod.add_DMX_range(mjd_start1, mjd_end1, index1, dmx1, frozen=False)
+    dct=dm_mod.get_prefix_mapping_component('DMX_')
+    ind=np.max(list(dct.keys()))+1
+    dm_mod.add_DMX_range(mjd_start2, mjd_end2, index2, dmx2, frozen=False)
+    dct=dm_mod.get_prefix_mapping_component('DMX_')
+    assert np.max(list(dct.keys())) == ind
 
 
 def test_add_DMX():
@@ -88,14 +94,6 @@ def test_remove_DMX():
     for pn in zip(["DMX_", "DMXR1_", "DMXR2_"]):
         nm = str(pn) + str("{:04d}".format(index))
         assert nm not in dm_mod.params
-
-
-def test_remove_DMX():
-    """Check the different ways of grouping components."""
-    dm_mod = DispersionDMX()
-    dm_mod.add_DMX_range(58000, 58100, 3, 1, frozen=False)
-    dm_mod.remove_DMX_range(3)
-    assert len(dm_mod.params) == 4
 
 
 def test_model_usage():
