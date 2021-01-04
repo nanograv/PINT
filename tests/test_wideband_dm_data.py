@@ -125,11 +125,13 @@ class TestDMData:
             # test derivative function in the dmjump component
             d_dm_d_dmjump = self.model.d_dm_d_dmjump(self.toas, dmj_param.name)
             be = dmj_param.key_value
-            assert all(d_dm_d_dmjump[toa_backends == be] == -1.0 * u.Unit(''))
+            assert all(d_dm_d_dmjump[toa_backends == be] == -1.0 * u.Unit(""))
             d_delay_d_dmjump = self.model.d_delay_d_dmjump(self.toas, dmj_param.name)
             assert all(d_delay_d_dmjump == 0.0 * (u.s / dmj_param.units))
             # Test the registered functions
-            assert self.model.delay_deriv_funcs[dmj_param.name] == [self.model.d_delay_d_dmjump]
+            assert self.model.delay_deriv_funcs[dmj_param.name] == [
+                self.model.d_delay_d_dmjump
+            ]
             assert self.model.dm_derivs[dmj_param.name] == [self.model.d_dm_d_dmjump]
 
         r = WidebandTOAResiduals(
