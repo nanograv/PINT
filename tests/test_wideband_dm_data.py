@@ -121,18 +121,6 @@ class TestDMData:
             dm_jump_map[dmj.key_value[0]] = dmj
         for be in all_backends:
             assert all(dm_jump_value[toa_backends == be] == -dm_jump_map[be].quantity)
-        for dmj_param in dm_jump_params:
-            # test derivative function in the dmjump component
-            d_dm_d_dmjump = self.model.d_dm_d_dmjump(self.toas, dmj_param.name)
-            be = dmj_param.key_value
-            assert all(d_dm_d_dmjump[toa_backends == be] == -1.0 * u.Unit(""))
-            d_delay_d_dmjump = self.model.d_delay_d_dmjump(self.toas, dmj_param.name)
-            assert all(d_delay_d_dmjump == 0.0 * (u.s / dmj_param.units))
-            # Test the registered functions
-            assert self.model.delay_deriv_funcs[dmj_param.name] == [
-                self.model.d_delay_d_dmjump
-            ]
-            assert self.model.dm_derivs[dmj_param.name] == [self.model.d_dm_d_dmjump]
 
         r = WidebandTOAResiduals(
             self.toas, self.model, dm_resid_args=dict(subtract_mean=False)
@@ -151,6 +139,38 @@ class TestDMData:
         for i, be in enumerate(all_backends):
             delta_dm_intended[toa_backends == be] = -(i + 1)
         assert np.allclose(delta_dm, delta_dm_intended)
+
+    def test_dmjump_derivative(self):
+        # This test is designe to test the dm jump derivatives.
+        # First get the toas for jump
+        toa_backends, valid_flags = self.toas.get_flag_value("fe")
+        toa_backends = np.array(toa_backends)
+        all_backends = list(set(toa_backends))
+        dm_jump_value = self.model.jump_dm(self.toas)
+        dm_jump_params = [
+            getattr(self.model, x)
+            for x in self.model.params
+            if (x.startswith("DMJUMP"))
+        ]
+
+        for dmj_param in dm_jump_params:
+            # test derivative function in the dmjump component
+            d_dm_d_dmjump = self.model.d_dm_d_dmjump(self.toas, dmj_param.name)
+            be = dmj_param.key_value
+            # The derivative of dm with respect to dm jump is -1 for the jumped
+            # TOAs/DM data, the others are zero
+            assert all(d_dm_d_dmjump[toa_backends == be] == -1.0 * u.Unit(""))
+            assert all(d_dm_d_dmjump[toa_backends != be] == 0.0 * u.Unit(""))
+            d_delay_d_dmjump = self.model.d_delay_d_dmjump(self.toas, dmj_param.name)
+            # The derivative of delay with respect to dm jump is 0.
+            assert all(d_delay_d_dmjump == 0.0 * (u.s / dmj_param.units))
+            # Test the registered functions in the timing model.
+            # When constructing the design matrixes, the registered function
+            # will be called.
+            assert self.model.delay_deriv_funcs[dmj_param.name] == [
+                self.model.d_delay_d_dmjump
+            ]
+            assert self.model.dm_derivs[dmj_param.name] == [self.model.d_dm_d_dmjump]
 
 
 def test_wideband_residuals(wb_model, wb_toas):
