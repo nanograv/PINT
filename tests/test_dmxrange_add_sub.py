@@ -71,9 +71,9 @@ def test_add_DMX():
     dmx = 1.0
     mjd_start = 58000.0
     mjd_end = 58100.0
-    init_len=len(dm_mod.params)
+    init_len = len(dm_mod.params)
     dm_mod.add_DMX_range(mjd_start, mjd_end, index, dmx, frozen=False)
-    assert len(dm_mod.params) == init_len+3
+    assert len(dm_mod.params) == init_len + 3
     nm = "DMX_" + "{:04d}".format(index)
     comp = getattr(dm_mod, nm)
     assert comp.value == dmx
@@ -117,13 +117,8 @@ def test_model_usage():
     mjd_start = 58000.0
     mjd_end = 58100.0
 
-    model = get_model(
-            io.StringIO(
-                par_base
-                )
-            )
-        
-    
+    model = get_model(io.StringIO(par_base))
+
     dm_mod = model.components["DispersionDMX"]
     dm_mod.add_DMX_range(mjd_start, mjd_end, index, dmx, frozen=False)
     nm = "DMX_" + "{:04d}".format(index)
@@ -139,9 +134,7 @@ def test_model_usage():
     for pn in ["DMX_", "DMXR1_", "DMXR2_"]:
         nm = str(pn) + str("{:04d}".format(index))
         assert nm not in dm_mod.params
-    init_len=str(len(model.params))
+    init_len = str(len(model.params))
     with pytest.raises(ValueError):
         dm_mod.remove_DMX_range(3)
-    assert init_len==str(len(model.params))
-
-    
+    assert init_len == str(len(model.params))
