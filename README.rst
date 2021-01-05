@@ -50,7 +50,7 @@ Do **NOT** ``pip install pint`` or ``conda install pint``!  See below!
 Installing
 ----------
 
-.. image:: https://img.shields.io/conda/vn/conda-forge/pint-pulsar.svg
+.. image:: https://anaconda.org/conda-forge/pint-pulsar/badges/version.svg
    :target: https://anaconda.org/conda-forge/pint-pulsar
    :alt: Conda Version
 
