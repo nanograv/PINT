@@ -2230,8 +2230,8 @@ class Component(object):
         if param_name not in self.params:
             raise ValueError(
                 f"Tried to remove parameter {param_name} but it is not listed: {self.params}"
-                )
             )
+
         self.params.remove(param_name)
         par = getattr(self, param_name)
         all_names = [param] + par.aliases
