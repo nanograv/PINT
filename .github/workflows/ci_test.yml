@@ -68,6 +68,9 @@ jobs:
     - name: Install graphviz dependency
       if: "endsWith(matrix.tox_env, 'build_docs')"
       run: sudo apt-get -y install graphviz
+    - name: Install pandoc dependency
+      if: "endsWith(matrix.tox_env, 'docs')"
+      run: sudo apt-get -y install pandoc
     - name: Print Python, pip, setuptools, and tox versions
       run: |
         python -c "import sys; print(f'Python {sys.version}')"
