@@ -7,8 +7,8 @@ PINT
    :target: https://github.com/nanograv/pint/actions
    :alt: Actions Status
 
-.. image:: https://codecov.io/gh/nanograv/csp-generator/branch/master/graph/badge.svg
-   :target: https://codecov.io/gh/nanograv/csp-generator/
+.. image:: https://codecov.io/gh/nanograv/PINT/branch/master/graph/badge.svg?token=xIOFqcKKrP
+   :target: https://codecov.io/gh/nanograv/PINT
    :alt: Coverage
    
 .. image:: https://readthedocs.org/projects/nanograv-pint/badge/?version=latest
