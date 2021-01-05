@@ -82,3 +82,9 @@ jobs:
       uses: codecov/codecov-action@v1.0.13
       with:
         file: ./coverage.xml
+    - name: Publish docs as an artifact
+      if: "endsWith(matrix.tox_env, 'docs')"
+      uses: actions/upload-artifact@v2
+      with:
+          name: documentation
+          path: docs/_build/html/
