@@ -45,9 +45,6 @@ jobs:
             python: '3.7'
             tox_env: 'oldestdeps'
           - os: ubuntu-latest
-            python: '3.7'
-            tox_env: 'notebooks'
-          - os: ubuntu-latest
             python: '3.8'
             tox_env: 'black'
 #          - os: ubuntu-latest
