@@ -26,7 +26,7 @@ jobs:
             python: '3.8'
             tox_env: 'py38-test-cov'
           - os: ubuntu-latest
-            python: '3.7'
+            python: '3.8'
             tox_env: 'docs'
           - os: ubuntu-latest
             python: '3.8'
