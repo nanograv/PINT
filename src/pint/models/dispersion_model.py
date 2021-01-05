@@ -333,8 +333,8 @@ class DispersionDMX(Dispersion):
 
         #### Setting up the DMX title convention. If index is None, want to increment the current max DMX index by 1.
         if index is None:
-            dct = self.get_prefix_mapping_component('DMX_') 
-            index = np.max(list(dct.keys()))+1 
+            dct = self.get_prefix_mapping_component("DMX_")
+            index = np.max(list(dct.keys())) + 1
         i = f"{int(index):04d}"
 
         if mjd_end is not None and mjd_start is not None:
@@ -343,14 +343,12 @@ class DispersionDMX(Dispersion):
         elif mjd_start != mjd_end:
             raise ValueError("Only one MJD bound is set.")
 
-        #### Check to see if the user-input index is already assigned to a different DMX component.
         if int(index) in self.get_prefix_mapping_component("DMX_"):
             raise ValueError(
                 "Index '%s' is already in use in this model. Please choose another."
                 % index
             )
 
-        #### Add three DMX parameters (start MJD, end MJD, DMX value)
         self.add_param(
             prefixParameter(
                 name="DMX_" + i,
@@ -393,7 +391,7 @@ class DispersionDMX(Dispersion):
 
     def remove_DMX_range(self, index):
         """Removes all three DMX parameters associated with a given index."""
-        index = "{:04d}".format(index)
+        index = f"{int(index):04d}"
         for prefix in ["DMX_", "DMXR1_", "DMXR2_"]:
             self.remove_param(prefix + index)
         self.validate()
