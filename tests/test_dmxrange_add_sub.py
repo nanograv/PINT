@@ -39,6 +39,7 @@ def test_remove_nonexistent_index():
     with pytest.raises(ValueError):
         dm_mod.remove_DMX_range(index)
 
+
 def test_unusual_index():
     """ Check for appropriate results for negative and floating point indices. """
     dm_mod = DispersionDMX()
@@ -62,19 +63,21 @@ def test_unusual_index():
     comp = getattr(dm_mod, nm)
     assert comp.value == mjd_end
 
+
 def test_print_inds():
     dm_mod = DispersionDMX()
     dmx = 1.0
     mjd_start = 58000.0
     mjd_end = 58100.0
-    inds_init=5
+    inds_init = 5
     dm_mod.remove_DMX_range(1)
     for i in range(inds_init):
         dm_mod.add_DMX_range(mjd_start, mjd_end, i, dmx, frozen=False)
-    inds=dm_mod.get_indices()
+    inds = dm_mod.get_indices()
     assert len(inds) == inds_init
     for i in range(inds_init):
         assert i in inds
+
 
 def test_nonetype_MJD():
     dm_mod = DispersionDMX()
@@ -97,7 +100,7 @@ def test_dynamic_index():
     dm_mod.add_DMX_range(mjd_start1, mjd_end1, index1, dmx1, frozen=False)
     dct = dm_mod.get_prefix_mapping_component("DMX_")
     ind = np.max(list(dct.keys())) + 1
-    newind=dm_mod.add_DMX_range(mjd_start2, mjd_end2, index2, dmx2, frozen=False)
+    newind = dm_mod.add_DMX_range(mjd_start2, mjd_end2, index2, dmx2, frozen=False)
     assert newind == ind
 
 
@@ -171,8 +174,8 @@ def test_model_usage():
     for pn in ["DMX_", "DMXR1_", "DMXR2_"]:
         nm = pn + str(f"{int(index):04d}")
         assert nm not in dm_mod.params
-    init_params = np.array(model.params) 
+    init_params = np.array(model.params)
     with pytest.raises(ValueError):
         dm_mod.remove_DMX_range(index)
     for p in init_params:
-        assert p in model.params 
+        assert p in model.params

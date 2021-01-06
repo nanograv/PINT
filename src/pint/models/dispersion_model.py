@@ -418,17 +418,19 @@ class DispersionDMX(Dispersion):
         index : float, int, list, np.ndarray
             Number or list/array of numbers corresponding to DMX indices to be removed from model. 
         """
-        
-        if isinstance(index,int) or isinstance(index,float):
-            indices=[index]
-        elif not isinstance(index,list) or not isinstance(index,np.ndarray):
-            raise TypeError(f"index must be a float, int, list, or array - not {type(index)}")
+
+        if isinstance(index, int) or isinstance(index, float):
+            indices = [index]
+        elif not isinstance(index, list) or not isinstance(index, np.ndarray):
+            raise TypeError(
+                f"index must be a float, int, list, or array - not {type(index)}"
+            )
         for index in indices:
             index_rf = f"{int(index):04d}"
             for prefix in ["DMX_", "DMXR1_", "DMXR2_"]:
                 self.remove_param(prefix + index_rf)
         self.validate()
-    
+
     def get_indices(self):
         """Returns an array of integers corresponding to DMX parameters. 
 
@@ -437,10 +439,10 @@ class DispersionDMX(Dispersion):
         inds : np.ndarray
         Array of DMX indices in model.
         """
-        inds=[]
+        inds = []
         for p in self.params:
-            if 'DMX_' in p:
-                inds.append(int(p.split('_')[-1]))
+            if "DMX_" in p:
+                inds.append(int(p.split("_")[-1]))
         return np.array(inds)
 
     def setup(self):
