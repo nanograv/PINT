@@ -328,7 +328,27 @@ class DispersionDMX(Dispersion):
 
     def add_DMX_range(self, mjd_start, mjd_end, index=None, dmx=0, frozen=True):
         """ Add DMX range to a dispersion model with specified start/end MJDs and DMX. 
-            returns: index [int]
+
+        Parameters
+        ----------
+
+        mjd_start : float
+            MJD for beginning of DMX event.
+        mjd_end : float
+            MJD for end of DMX event.
+        index : int, None
+            Integer label for DMX event. If None, will increment largest used index by 1. 
+        dmx : float
+            Change in DM during DMX event.
+        frozen : bool
+            Indicates whether DMX will be fit.
+
+        Returns 
+        -------
+
+        index : int
+            Index that has been assigned to new DMX event.
+            
         """
 
         #### Setting up the DMX title convention. If index is None, want to increment the current max DMX index by 1.
@@ -390,10 +410,23 @@ class DispersionDMX(Dispersion):
         return index
 
     def remove_DMX_range(self, index):
-        """Removes all three DMX parameters associated with a given index."""
-        index = f"{int(index):04d}"
-        for prefix in ["DMX_", "DMXR1_", "DMXR2_"]:
-            self.remove_param(prefix + index)
+        """Removes all DMX parameters associated with a given index/list of indices."""
+
+        Parameters
+        ----------
+
+        index : float, int, list, np.ndarray
+            Number or list/array of numbers corresponding to DMX indices to be removed from model. 
+        """
+        
+        if isinstance(index,int) or isinstance(index,float):
+            indices=[index]
+        elif not isinstance(index,list) or not isinstance(index,np.ndarray):
+            raise TypeError(f"index must be a float, int, list, or array - not {type(index)}")
+        for index in indices:
+            index_rf = f"{int(index):04d}"
+            for prefix in ["DMX_", "DMXR1_", "DMXR2_"]:
+                self.remove_param(prefix + index_rf)
         self.validate()
 
     def setup(self):
