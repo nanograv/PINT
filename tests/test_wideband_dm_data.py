@@ -120,7 +120,9 @@ class TestDMData:
         for dmj in self.dm_jump_params:
             dm_jump_map[dmj.key_value[0]] = dmj
         for be in all_backends:
-            assert all(dm_jump_value[self.toa_backends == be] == -dm_jump_map[be].quantity)
+            assert all(
+                dm_jump_value[self.toa_backends == be] == -dm_jump_map[be].quantity
+            )
 
         r = WidebandTOAResiduals(
             self.toas, self.model, dm_resid_args=dict(subtract_mean=False)
