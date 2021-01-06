@@ -2,6 +2,7 @@ import os
 import unittest
 import pytest
 import numpy as np
+import shutil
 from io import StringIO
 
 from hypothesis import given
@@ -141,6 +142,16 @@ def test_tttai():
     assert y.clock_corr_info["include_bipm"] == False
 
 
+def test_toa_check_hashes(tmpdir):
+    tf = os.path.join(tmpdir, "file.tim")
+    shutil.copy("NGC6440E.tim", tf)
+    t = toa.get_TOAs(tf)
+    assert t.check_hashes()
+    with open(tf, "at") as f:
+        f.write("\n")
+    assert not t.check_hashes()
+
+
 def test_toa_merge():
     filenames = ["NGC6440E.tim", "testtimes.tim", "parkes.toa"]
     toas = [toa.get_TOAs(ff) for ff in filenames]
@@ -164,6 +175,7 @@ def test_toa_merge():
     toas[0].ephem = "DE436"
     with pytest.raises(TypeError):
         nt = toa.merge_TOAs(toas)
+    assert nt.check_hashes()
 
 
 def test_bipm_default():
@@ -192,7 +204,7 @@ def test_toas_comparison_unequal():
 def test_toas_read_list():
     x = toa.get_TOAs("test1.tim")
     toas, commands = toa.read_toa_file("test1.tim")
-    y = toa.get_TOAs_list(toas, commands=commands, filename=x.filename)
+    y = toa.get_TOAs_list(toas, commands=commands, filename=x.filename, hashes=x.hashes)
     assert x == y
 
 

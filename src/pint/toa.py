@@ -200,13 +200,13 @@ def get_TOAs(
         else:
             t.was_pickled = True
             if hasattr(t, "hashes"):
-                for f, v in t.hashes.items():
-                    if _compute_hash(f) != v:
-                        updatepickle = True
-                        log.info("Pickle based on files that have changed")
-                        break
+                if not t.check_hashes():
+                    updatepickle = True
+                    log.info("Pickle based on files that have changed")
             else:
+                # Only pre-v0.8 pickles lack hashes.
                 updatepickle = True
+                log.info("Pickle is very old")
             if (
                 include_gps is not None
                 and t.clock_corr_info.get("include_gps", None) != include_gps
@@ -227,6 +227,11 @@ def get_TOAs(
                 updatepickle = True
     if not usepickle or updatepickle:
         t = TOAs(timfile)
+        if isinstance(t.filename, str):
+            files = [t.filename]
+        else:
+            files = t.filename
+        t.hashes = {f: _compute_hash(f) for f in files}
         recalc = True
 
     if not any(["clkcorr" in f for f in t.table["flags"]]):
@@ -267,11 +272,6 @@ def get_TOAs(
 
     if usepickle and updatepickle:
         log.info("Pickling TOAs.")
-        if isinstance(t.filename, str):
-            files = [t.filename]
-        else:
-            files = t.filename
-        t.hashes = {f: _compute_hash(f) for f in files}
         save_pickle(t)
     return t
 
@@ -358,6 +358,7 @@ def get_TOAs_list(
     tdb_method="default",
     commands=None,
     filename=None,
+    hashes=None,
 ):
     """Load TOAs from a list of TOA objects.
 
@@ -366,6 +367,10 @@ def get_TOAs_list(
     t = TOAs(toalist=toa_list)
     t.commands = [] if commands is None else commands
     t.filename = filename
+    if hashes is None:
+        t.hashes = {}
+    else:
+        t.hashes = hashes
     if not any(["clkcorr" in f for f in t.table["flags"]]):
         t.apply_clock_corrections(
             include_gps=include_gps,
@@ -1375,6 +1380,32 @@ class TOAs(object):
             result.append(val)
         return result, valid_index
 
+    def get_dms(self):
+        """Get the Wideband DM data.
+
+        Note
+        ----
+        This does not handle situations where some but not all TOAs have
+        DM information.
+        """
+        result, valid = self.get_flag_value("pp_dm")
+        if valid == []:
+            raise AttributeError("No DM is provided.")
+        return np.array(result)[valid] * u.pc / u.cm ** 3
+
+    def get_dm_errors(self):
+        """Get the Wideband DM data error.
+
+        Note
+        ----
+        This does not handle situations where some but not all TOAs have
+        DM information.
+        """
+        result, valid = self.get_flag_value("pp_dme")
+        if valid == []:
+            raise AttributeError("No DM error is provided.")
+        return np.array(result)[valid] * u.pc / u.cm ** 3
+
     def get_groups(self, gap_limit=None):
         """Flag toas within gap limit (default 2h = 0.0833d) of each other as the same group.
 
@@ -1412,6 +1443,13 @@ class TOAs(object):
             f"max density range is from MJD {sorted_mjds[i]} to {sorted_mjds[s[i]]} with {s[i]-i} TOAs."
         )
         return sorted_mjds[i], sorted_mjds[s[i]]
+
+    def check_hashes(self):
+        """Determine whether the input files are the same as when loaded."""
+        for f, v in self.hashes.items():
+            if _compute_hash(f) != v:
+                return False
+        return True
 
     def select(self, selectarray):
         """Apply a boolean selection or mask array to the TOA table.
@@ -1996,6 +2034,9 @@ def merge_TOAs(TOAs_list):
     )
     # Fix the table meta data about filenames
     nt.table.meta["filename"] = nt.filename
+    nt.hashes = {}
+    for tt in TOAs_list:
+        nt.hashes.update(tt.hashes)
     # This sets a flag that indicates that we have merged TOAs instances
     nt.merged = True
     # Now we need to re-arrange and group the tables
