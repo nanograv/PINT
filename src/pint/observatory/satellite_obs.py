@@ -285,12 +285,12 @@ class SatelliteObs(SpecialLocation):
 
         # Now build the interpolator here:
         tt = self.FT2["MJD_TT"]
-        self.X = InterpolatedUnivariateSpline(tt, self.FT2["X"])
-        self.Y = InterpolatedUnivariateSpline(tt, self.FT2["Y"])
-        self.Z = InterpolatedUnivariateSpline(tt, self.FT2["Z"])
-        self.Vx = InterpolatedUnivariateSpline(tt, self.FT2["Vx"])
-        self.Vy = InterpolatedUnivariateSpline(tt, self.FT2["Vy"])
-        self.Vz = InterpolatedUnivariateSpline(tt, self.FT2["Vz"])
+        self.X = InterpolatedUnivariateSpline(tt, self.FT2["X"], ext="raise")
+        self.Y = InterpolatedUnivariateSpline(tt, self.FT2["Y"], ext="raise")
+        self.Z = InterpolatedUnivariateSpline(tt, self.FT2["Z"], ext="raise")
+        self.Vx = InterpolatedUnivariateSpline(tt, self.FT2["Vx"], ext="raise")
+        self.Vy = InterpolatedUnivariateSpline(tt, self.FT2["Vy"], ext="raise")
+        self.Vz = InterpolatedUnivariateSpline(tt, self.FT2["Vz"], ext="raise")
         self._geocenter = EarthLocation.from_geocentric(0.0 * u.m, 0.0 * u.m, 0.0 * u.m)
         super(SatelliteObs, self).__init__(name=name)
 
