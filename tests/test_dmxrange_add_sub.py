@@ -37,6 +37,31 @@ def test_remove_nonexistent_index():
     with pytest.raises(ValueError):
         dm_mod.remove_DMX_range(3)
 
+def test_unusual_index():
+    """ Check for appropriate results for negative and floating point indices. """
+    dm_mod = DispersionDMX()
+    dmx = 1.0
+    mjd_start = 58000.0
+    mjd_end = 58100.0
+    index = -1
+    with pytest.raises(PrefixError):
+        dm_mod.add_DMX_range(mjd_start, mjd_end, index, dmx, frozen=False)
+    index = 2.0
+    init_len = len(dm_mod.params)
+    dm_mod.add_DMX_range(mjd_start, mjd_end, index, dmx, frozen=False)
+    assert len(dm_mod.params) == init_len + 3
+    nm = "DMX_" + f"{int(index):04d}"
+    comp = getattr(dm_mod, nm)
+    assert comp.value == dmx
+    nm = "DMXR1_" + f"{int(index):04d}"
+    comp = getattr(dm_mod, nm)
+    assert comp.value == mjd_start
+    nm = "DMXR2_" + f"{int(index):04d}"
+    comp = getattr(dm_mod, nm)
+    assert comp.value == mjd_end
+
+
+    
 
 def test_nonetype_MJD():
     dm_mod = DispersionDMX()
@@ -59,9 +84,8 @@ def test_dynamic_index():
     dm_mod.add_DMX_range(mjd_start1, mjd_end1, index1, dmx1, frozen=False)
     dct = dm_mod.get_prefix_mapping_component("DMX_")
     ind = np.max(list(dct.keys())) + 1
-    dm_mod.add_DMX_range(mjd_start2, mjd_end2, index2, dmx2, frozen=False)
-    dct = dm_mod.get_prefix_mapping_component("DMX_")
-    assert np.max(list(dct.keys())) == ind
+    newind=dm_mod.add_DMX_range(mjd_start2, mjd_end2, index2, dmx2, frozen=False)
+    assert newind == ind
 
 
 def test_add_DMX():
@@ -74,13 +98,13 @@ def test_add_DMX():
     init_len = len(dm_mod.params)
     dm_mod.add_DMX_range(mjd_start, mjd_end, index, dmx, frozen=False)
     assert len(dm_mod.params) == init_len + 3
-    nm = "DMX_" + "{:04d}".format(index)
+    nm = "DMX_" + f"{int(index):04d}"
     comp = getattr(dm_mod, nm)
     assert comp.value == dmx
-    nm = "DMXR1_" + "{:04d}".format(index)
+    nm = "DMXR1_" + f"{int(index):04d}"
     comp = getattr(dm_mod, nm)
     assert comp.value == mjd_start
-    nm = "DMXR2_" + "{:04d}".format(index)
+    nm = "DMXR2_" + f"{int(index):04d}"
     comp = getattr(dm_mod, nm)
     assert comp.value == mjd_end
 
@@ -94,8 +118,8 @@ def test_remove_DMX():
     mjd_end = 58100.0
     dm_mod.add_DMX_range(mjd_start, mjd_end, index, dmx, frozen=False)
     dm_mod.remove_DMX_range(index)
-    for pn in zip(["DMX_", "DMXR1_", "DMXR2_"]):
-        nm = str(pn) + str("{:04d}".format(index))
+    for pn in ["DMX_", "DMXR1_", "DMXR2_"]:
+        nm = str(pn) + str(f"{int(index):04d}")
         assert nm not in dm_mod.params
 
 
@@ -121,18 +145,18 @@ def test_model_usage():
 
     dm_mod = model.components["DispersionDMX"]
     dm_mod.add_DMX_range(mjd_start, mjd_end, index, dmx, frozen=False)
-    nm = "DMX_" + "{:04d}".format(index)
+    nm = "DMX_" + f"{int(index):04d}"
     comp = getattr(dm_mod, nm)
     assert comp.value == dmx
-    nm = "DMXR1_" + "{:04d}".format(index)
+    nm = "DMXR1_" + f"{int(index):04d}"
     comp = getattr(dm_mod, nm)
     assert comp.value == mjd_start
-    nm = "DMXR2_" + "{:04d}".format(index)
+    nm = "DMXR2_" + f"{int(index):04d}"
     comp = getattr(dm_mod, nm)
     assert comp.value == mjd_end
     dm_mod.remove_DMX_range(index)
     for pn in ["DMX_", "DMXR1_", "DMXR2_"]:
-        nm = str(pn) + str("{:04d}".format(index))
+        nm = str(pn) + str(f"{int(index):04d}")
         assert nm not in dm_mod.params
     init_len = str(len(model.params))
     with pytest.raises(ValueError):
