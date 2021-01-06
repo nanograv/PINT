@@ -35,8 +35,9 @@ def test_duplicate_index():
 def test_remove_nonexistent_index():
     """ Check for error when a unused DMX index is removed. """
     dm_mod = DispersionDMX()
+    index = 3
     with pytest.raises(ValueError):
-        dm_mod.remove_DMX_range(3)
+        dm_mod.remove_DMX_range(index)
 
 def test_unusual_index():
     """ Check for appropriate results for negative and floating point indices. """
@@ -157,10 +158,10 @@ def test_model_usage():
     assert comp.value == mjd_end
     dm_mod.remove_DMX_range(index)
     for pn in ["DMX_", "DMXR1_", "DMXR2_"]:
-        nm = str(pn) + str(f"{int(index):04d}")
+        nm = pn + str(f"{int(index):04d}")
         assert nm not in dm_mod.params
     init_params = np.array(model.params) 
     with pytest.raises(ValueError):
-        dm_mod.remove_DMX_range(3)
+        dm_mod.remove_DMX_range(index)
     for p in init_params:
         assert p in model.params 
