@@ -202,7 +202,7 @@ def load_Fermi_TOAs(
         ]
     else:
         toalist = [
-            toa.TOA(m, obs=obs, scale=scale, energy=e, weight=w, error=1.0 * u.us,)
+            toa.TOA(m, obs=obs, scale=scale, energy=e, weight=w, error=1.0 * u.us)
             for m, e, w in zip(mjds, energies, weights)
         ]
 

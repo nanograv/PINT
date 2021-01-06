@@ -501,7 +501,11 @@ class DispersionJump(Dispersion):
                 self.dm_jumps.append(mask_par)
         for j in self.dm_jumps:
             self.register_dm_deriv_funcs(self.d_dm_d_dmjump, j)
-            self.register_deriv_funcs(self.d_delay_d_dmparam, j)
+            # Note we can not use the derivative function 'd_delay_d_dmparam',
+            # Since dmjump does not effect delay.
+            # The function 'd_delay_d_dmparam' applies d_dm_d_dmparam first and
+            # than applys the time delay part.
+            self.register_deriv_funcs(self.d_delay_d_dmjump, j)
 
     def validate(self):
         super(DispersionJump, self).validate()
@@ -534,4 +538,5 @@ class DispersionJump(Dispersion):
 
         Since DMJUMPS does not affect delay, this would be zero.
         """
-        return np.zeros(toas.ntoas) * (u.s / self.DMJUMP.units)
+        dmjump = getattr(self, param_name)
+        return np.zeros(toas.ntoas) * (u.s / dmjump.units)
