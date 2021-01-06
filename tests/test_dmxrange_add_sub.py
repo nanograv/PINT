@@ -62,8 +62,19 @@ def test_unusual_index():
     comp = getattr(dm_mod, nm)
     assert comp.value == mjd_end
 
-
-    
+def test_print_inds():
+    dm_mod = DispersionDMX()
+    dmx = 1.0
+    mjd_start = 58000.0
+    mjd_end = 58100.0
+    inds_init=5
+    dm_mod.remove_DMX_range(1)
+    for i in range(inds_init):
+        dm_mod.add_DMX_range(mjd_start, mjd_end, i, dmx, frozen=False)
+    inds=dm_mod.get_indices()
+    assert len(inds) == inds_init
+    for i in range(inds_init):
+        assert i in inds
 
 def test_nonetype_MJD():
     dm_mod = DispersionDMX()
