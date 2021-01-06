@@ -428,6 +428,20 @@ class DispersionDMX(Dispersion):
             for prefix in ["DMX_", "DMXR1_", "DMXR2_"]:
                 self.remove_param(prefix + index_rf)
         self.validate()
+    
+    def get_indices(self):
+        """Returns an array of integers corresponding to DMX parameters. 
+
+        Returns
+        -------
+        inds : np.ndarray
+        Array of DMX indices in model.
+        """
+        inds=[]
+        for p in self.params:
+            if 'DMX_' in p:
+                inds.append(int(p.split('_')[-1]))
+        return np.array(inds)
 
     def setup(self):
         super(DispersionDMX, self).setup()
