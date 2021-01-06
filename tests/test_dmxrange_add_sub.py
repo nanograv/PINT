@@ -5,6 +5,7 @@ import io
 import numpy as np
 from pint.models import get_model
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
+from pint.utils import PrefixError
 
 
 def test_startMJD_greaterThan_endMJD():
