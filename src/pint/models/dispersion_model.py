@@ -419,7 +419,11 @@ class DispersionDMX(Dispersion):
             Number or list/array of numbers corresponding to DMX indices to be removed from model. 
         """
 
-        if isinstance(index, int) or isinstance(index, float) or isinstance(index,np.int64):
+        if (
+            isinstance(index, int)
+            or isinstance(index, float)
+            or isinstance(index, np.int64)
+        ):
             indices = [index]
         elif not isinstance(index, list) or not isinstance(index, np.ndarray):
             raise TypeError(
