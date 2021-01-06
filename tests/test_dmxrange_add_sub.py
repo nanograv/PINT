@@ -158,7 +158,8 @@ def test_model_usage():
     for pn in ["DMX_", "DMXR1_", "DMXR2_"]:
         nm = str(pn) + str(f"{int(index):04d}")
         assert nm not in dm_mod.params
-    init_len = str(len(model.params))
+    init_params = np.array(model.params) 
     with pytest.raises(ValueError):
         dm_mod.remove_DMX_range(3)
-    assert init_len == str(len(model.params))
+    for p in init_params:
+        assert p in model.params 
