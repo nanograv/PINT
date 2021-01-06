@@ -410,7 +410,7 @@ class DispersionDMX(Dispersion):
         return index
 
     def remove_DMX_range(self, index):
-        """Removes all DMX parameters associated with a given index/list of indices."""
+        """Removes all DMX parameters associated with a given index/list of indices.
 
         Parameters
         ----------
