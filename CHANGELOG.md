@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2021-01-07
+## Fixed
+- Right click to delete TOAs in pintk now works
+- Added exception if orbit extrapolates for satellite observatories
+- Fixed Actions to compute and upload coverage
+- Doc building fixes
+- Fixed badges in README
+- Added GitHub Actions for CI testing
+- Fix setup.cfg to disable Py2.7 support
+- Fixed bug in 
+## Removed
+- Removed two unused files
+- Removed use of Travis-CI
+## Changed
+- Sped up some tests
+## Added
+- Added Python 3.9 support
+- Added DMX support functions add_DMX_range() and remove_DMX_range()
+- Improvements to make_fake_toas() to support wideband TOAs
+
 ## [0.8] - 2020-12-21
 ### Fixed
 - Fixed an indentation bug in Wideband TOA fitting.
