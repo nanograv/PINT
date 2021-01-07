@@ -531,7 +531,15 @@ class UnweightedLCFitter(object):
         self.template.set_parameters(old_p)
         return t
 
-    def plot(self, nbins=50, fignum=2, axes=None, plot_components=False, template=None,line_color='blue'):
+    def plot(
+        self,
+        nbins=50,
+        fignum=2,
+        axes=None,
+        plot_components=False,
+        template=None,
+        line_color="blue",
+    ):
         import pylab as pl
 
         weights = self.weights
@@ -554,7 +562,7 @@ class UnweightedLCFitter(object):
         )
         if weights is not None:
             bg_level = 1 - (weights ** 2).sum() / weights.sum()
-            axes.axhline(bg_level, color='k')
+            axes.axhline(bg_level, color="k")
             # cod = template(dom)*(1-bg_level)+bg_level
             # axes.plot(dom,cod,color='blue')
             x, w1, errors = weighted_light_curve(

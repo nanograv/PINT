@@ -59,7 +59,7 @@ class LCTemplate(object):
     def __getstate__(self):
         # transform _cache_dirty into a normal dict, necessary to pickle it
         state = self.__dict__.copy()
-        state['_cache_dirty'] = dict(state['_cache_dirty'])
+        state["_cache_dirty"] = dict(state["_cache_dirty"])
         return state
 
     def _sanity_checks(self):
