@@ -364,7 +364,7 @@ class LCPrimitive(object):
             fstring = "" if self.free[i] else " [FIXED]"
             n = self.pnames[i][:m]
             t_n = n + (m - len(n)) * " "
-            l += [t_n + ": %.4f +\- %.4f%s" % (self.p[i], errors[i], fstring)]
+            l += [t_n + ": %.4f +\\- %.4f%s" % (self.p[i], errors[i], fstring)]
         l = [self.name + "\n------------------"] + l
         return "\n".join(l)
 

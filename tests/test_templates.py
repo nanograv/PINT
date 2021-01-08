@@ -57,9 +57,9 @@ class TestTemplates(unittest.TestCase):
         """ Make sure objects adequately implement mathematical intent."""
 
         # a template should *always* have total normalization set to 1
-        g2 = lcprimitives.LCGaussian(p=[0.01, 0.50])
-        g1 = lcprimitives.LCGaussian(p=[0.01, 0.48])
-        lct = lctemplate.LCTemplate([g1, g2], [0.25, 0.35])
+        lct = lctemplate.get_gauss2(
+            pulse_frac=0.6, x1=0.5, x2=0.48, ratio=0.25 / 0.35, width1=0.01, width2=0.01
+        )
 
         assert abs(lct.norm() - (0.25 + 0.35)) < 1e-10
 
@@ -69,3 +69,10 @@ class TestTemplates(unittest.TestCase):
             + (1 - 0.25 - 0.35)
         )
         assert abs(lct(0.49) - expected_val) < 1e-6
+
+    def test_output(self):
+        """ Exercise print functions."""
+        lct = lctemplate.get_gauss2(
+            pulse_frac=0.6, x1=0.5, x2=0.48, ratio=0.25 / 0.35, width1=0.01, width2=0.01
+        )
+        print(lct)
