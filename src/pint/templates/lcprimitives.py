@@ -32,6 +32,7 @@ MAXWRAPS = 15
 MINWRAPS = 3
 WRAPEPS = 1e-8
 
+
 def two_comp_mc(n, w1, w2, loc, func):
     """Generate MC photons from a two-sided distribution.
 
