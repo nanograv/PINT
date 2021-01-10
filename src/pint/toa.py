@@ -92,6 +92,7 @@ def get_TOAs(
     model=None,
     usepickle=False,
     tdb_method="default",
+    picklefilename=None,
 ):
     """Load and prepare TOAs for PINT use.
 
@@ -125,8 +126,8 @@ def get_TOAs(
 
     Parameters
     ----------
-    timfile : string or file-like
-        Filename or file-like object containing the TOA data.
+    timfile : string or list of strings or file-like
+        Filename, list of filenames, or file-like object containing the TOA data.
     ephem : string
         The name of the solar system ephemeris to use; defaults to "DE421".
     include_bipm : bool or None
@@ -148,6 +149,10 @@ def get_TOAs(
         Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
     tdb_method : string
         Which method to use for the clock correction to TDB.
+    picklefilename : string or None
+        Filename to use for caching loaded file. Defaults to adding ``.pickle.gz`` to the
+        filename of the timfile, if there is one and only one. If no filename is available,
+        or multiple filenames are provided, a specific filename must be provided.
 
     Returns
     -------
@@ -184,7 +189,6 @@ def get_TOAs(
                     f'CLOCK = {model["CLOCK"].value} is not implemented. '
                     f"Using TT({bipm_default}) instead."
                 )
-
         if planets is None and model["PLANET_SHAPIRO"].value:
             planets = True
             log.info("Using PLANET_SHAPIRO = True from the given model")
@@ -193,12 +197,11 @@ def get_TOAs(
     recalc = False
     if usepickle:
         try:
-            t = load_pickle(timfile)
+            t = load_pickle(timfile, picklefilename=picklefilename)
         except IOError:
             # Pickle either did not exist or is out of date
             updatepickle = True
         else:
-            t.was_pickled = True
             if hasattr(t, "hashes"):
                 if not t.check_hashes():
                     updatepickle = True
@@ -226,12 +229,17 @@ def get_TOAs(
                 log.info("Pickle contains wrong bipm_version")
                 updatepickle = True
     if not usepickle or updatepickle:
-        t = TOAs(timfile)
+        # FIXME: handle lists
+        if isinstance(timfile, str) or hasattr(timfile, "readlines"):
+            t = TOAs(timfile)
+        else:
+            t = merge_TOAs([TOAs(t) for t in timfile])
         if isinstance(t.filename, str):
             files = [t.filename]
         else:
             files = t.filename
-        t.hashes = {f: _compute_hash(f) for f in files}
+        if files is not None:
+            t.hashes = {f: _compute_hash(f) for f in files}
         recalc = True
 
     if not any(["clkcorr" in f for f in t.table["flags"]]):
@@ -272,7 +280,7 @@ def get_TOAs(
 
     if usepickle and updatepickle:
         log.info("Pickling TOAs.")
-        save_pickle(t)
+        save_pickle(t, picklefilename=picklefilename)
     return t
 
 
@@ -299,24 +307,28 @@ def load_pickle(toafilename, picklefilename=None):
     picklefilenames = (
         [toafilename + ext for ext in (".pickle.gz", ".pickle", "")]
         if picklefilename is None
-        else picklefilename
+        else [picklefilename]
     )
 
+    lf = None
     for fn in picklefilenames:
         try:
             with gzip.open(fn, "rb") as f:
-                return pickle.load(f)
+                lf = pickle.load(f)
         except (IOError, pickle.UnpicklingError):
             pass
         try:
             with open(fn, "rb") as f:
-                return pickle.load(f)
+                lf = pickle.load(f)
         except (IOError, pickle.UnpicklingError):
             pass
+    if lf is not None:
+        lf.was_pickled = True
+        return lf
     raise IOError("No readable pickle found")
 
 
-def save_pickle(toas, filename=None):
+def save_pickle(toas, picklefilename=None):
     """Write the TOAs to a .pickle file.
 
     Parameters
@@ -330,22 +342,21 @@ def save_pickle(toas, filename=None):
     """
     # Save the PINT version used to create this pickle file
     toas.pintversion = pint.__version__
-    if filename is not None:
-        with open(filename, "wb") as f:
-            pickle.dump(toas, f)
+    if picklefilename is not None:
+        pass
     elif toas.merged:
         raise ValueError(
             "TOAs object was merged from multiple files, please provide a filename."
         )
     elif toas.filename is not None:
         if isinstance(toas.filename, str):
-            filename = toas.filename
+            picklefilename = toas.filename + ".pickle.gz"
         else:
-            filename = toas.filename[0]
-        with gzip.open(filename + ".pickle.gz", "wb") as f:
-            pickle.dump(toas, f)
+            picklefilename = toas.filename[0] + ".pickle.gz"
     else:
         raise ValueError("TOA pickle method needs a (single) filename.")
+    with gzip.open(picklefilename, "wb") as f:
+        pickle.dump(toas, f)
 
 
 def get_TOAs_list(
@@ -860,9 +871,41 @@ def make_fake_toas(
         for t, f in zip(times, freq_array)
     ]
     ts = TOAs(toalist=t1)
+    ts.planets = model["PLANET_SHAPIRO"].value
+    ts.ephem = model["EPHEM"].value
+    include_bipm = False
+    bipm_version = bipm_default
+    include_gps = True
+    if model["CLOCK"].value is not None:
+        if model["CLOCK"].value == "TT(TAI)":
+            include_bipm = False
+            log.info("Using CLOCK = TT(TAI), so setting include_bipm = False")
+        elif "BIPM" in model["CLOCK"].value:
+            clk = model["CLOCK"].value.strip(")").split("(")
+            if len(clk) == 2:
+                ctype, cvers = clk
+                if ctype == "TT" and cvers.startswith("BIPM"):
+                    include_bipm = True
+                    if bipm_version is None:
+                        bipm_version = cvers
+                        log.info(f"Using CLOCK = {bipm_version} from the given model")
+                else:
+                    log.warning(
+                        f'CLOCK = {model["CLOCK"].value} is not implemented. '
+                        f"Using TT({bipm_default}) instead."
+                    )
+        else:
+            log.warning(
+                f'CLOCK = {model["CLOCK"].value} is not implemented. '
+                f"Using TT({bipm_default}) instead."
+            )
+
     ts.clock_corr_info.update(
-        # FIXME: why turn off BIPM et cetera?
-        {"include_bipm": False, "bipm_version": bipm_default, "include_gps": False}
+        {
+            "include_bipm": include_bipm,
+            "bipm_version": bipm_version,
+            "include_gps": include_gps,
+        }
     )
     ts.table["error"] = error
     if dm is not None:
@@ -1207,6 +1250,7 @@ class TOAs(object):
         self.obliquity = None
         self.merged = False
         self.hashes = {}
+        self.was_pickled = False
 
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
@@ -1218,7 +1262,7 @@ class TOAs(object):
             self.filename = [toafile] + inc_fns if inc_fns else toafile
         elif toafile is not None:
             toalist, self.commands = read_toa_file(toafile)
-            self.filename = ""
+            self.filename = None
 
         if toalist is None:
             raise ValueError("No TOAs found!")
@@ -1803,7 +1847,7 @@ class TOAs(object):
         col_tdbld = table.Column(name="tdbld", data=[t.tdb.mjd_long for t in tdbs])
         self.table.add_columns([col_tdb, col_tdbld])
 
-    def compute_posvels(self, ephem=None, planets=False):
+    def compute_posvels(self, ephem=None, planets=None):
         """Compute positions and velocities of the observatories and Earth.
 
         Compute the positions and velocities of the observatory (wrt
@@ -1830,6 +1874,8 @@ class TOAs(object):
                         ephem, self.ephem
                     )
                 )
+        if planets is None:
+            planets = self.planets
         # Record the choice of ephemeris and planets
         self.ephem = ephem
         self.planets = planets
@@ -1993,17 +2039,17 @@ def merge_TOAs(TOAs_list):
     ephems = [tt.ephem for tt in TOAs_list]
     if len(set(ephems)) > 1:
         raise TypeError(f"merge_TOAs() cannot merge. Inconsistent ephem: {ephems}")
-    inc_BIPM = [tt.clock_corr_info["include_bipm"] for tt in TOAs_list]
+    inc_BIPM = [tt.clock_corr_info.get("include_bipm", None) for tt in TOAs_list]
     if len(set(inc_BIPM)) > 1:
         raise TypeError(
             f"merge_TOAs() cannot merge. Inconsistent include_bipm: {inc_BIPM}"
         )
-    BIPM_vers = [tt.clock_corr_info["bipm_version"] for tt in TOAs_list]
+    BIPM_vers = [tt.clock_corr_info.get("bipm_version", None) for tt in TOAs_list]
     if len(set(BIPM_vers)) > 1:
         raise TypeError(
             f"merge_TOAs() cannot merge. Inconsistent bipm_version: {BIPM_vers}"
         )
-    inc_GPS = [tt.clock_corr_info["include_gps"] for tt in TOAs_list]
+    inc_GPS = [tt.clock_corr_info.get("include_gps", None) for tt in TOAs_list]
     if len(set(inc_GPS)) > 1:
         raise TypeError(
             f"merge_TOAs() cannot merge. Inconsistent include_gps: {inc_GPS}"

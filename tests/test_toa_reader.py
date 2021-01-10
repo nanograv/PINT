@@ -219,3 +219,49 @@ def test_numpy_groups(t):
 
         for e in [in_group[0], in_group[-1]]:
             assert np.all(np.abs(t[~c] - e) >= gap)
+
+
+def test_load_multiple(tmpdir):
+    m = get_model(StringIO(simplepar))
+
+    fakes = [
+        toa.make_fake_toas(55000, 55500, 10, model=m, obs="ao"),
+        toa.make_fake_toas(56000, 56500, 10, model=m, obs="gbt"),
+        toa.make_fake_toas(57000, 57500, 10, model=m, obs="@"),
+    ]
+
+    filenames = [os.path.join(tmpdir, f"t{i+1}.tim") for i in range(len(fakes))]
+
+    for t, f in zip(fakes, filenames):
+        t.write_TOA_file(f, format="tempo2")
+
+    merged = toa.merge_TOAs([toa.get_TOAs(f, model=m) for f in filenames])
+
+    assert merged == toa.get_TOAs(filenames, model=m)
+
+
+def test_pickle_multiple(tmpdir):
+    m = get_model(StringIO(simplepar))
+
+    fakes = [
+        toa.make_fake_toas(55000, 55500, 10, model=m, obs="ao"),
+        toa.make_fake_toas(56000, 56500, 10, model=m, obs="gbt"),
+        toa.make_fake_toas(57000, 57500, 10, model=m, obs="@"),
+    ]
+
+    filenames = [os.path.join(tmpdir, f"t{i+1}.tim") for i in range(len(fakes))]
+    picklefilename = os.path.join(tmpdir, "t.pickle.gz")
+
+    for t, f in zip(fakes, filenames):
+        t.write_TOA_file(f, format="tempo2")
+
+    toa.get_TOAs(filenames, model=m, usepickle=True, picklefilename=picklefilename)
+    assert os.path.exists(picklefilename)
+    assert toa.get_TOAs(
+        filenames, model=m, usepickle=True, picklefilename=picklefilename
+    ).was_pickled
+    with open(filenames[-1], "at") as f:
+        f.write("\n")
+    assert not toa.get_TOAs(
+        filenames, model=m, usepickle=True, picklefilename=picklefilename
+    ).was_pickled
