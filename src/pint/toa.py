@@ -126,13 +126,13 @@ def get_TOAs(
 
     Parameters
     ----------
-    timfile : string or list of strings or file-like
+    timfile : str or list of strings or file-like
         Filename, list of filenames, or file-like object containing the TOA data.
-    ephem : string
+    ephem : str
         The name of the solar system ephemeris to use; defaults to "DE421".
     include_bipm : bool or None
         Whether to apply the BIPM clock correction. Defaults to True.
-    bipm_version : string or None
+    bipm_version : str or None
         Which version of the BIPM tables to use for the clock correction.
         The format must be 'BIPMXXXX' where XXXX is a year.
     include_gps : bool or None
@@ -141,15 +141,15 @@ def get_TOAs(
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
         Defaults to False.
-    model : A valid PINT timing model or None
+    model : pint.models.timing_model.TimingModel or None
         If a valid timing model is passed, model commands (such as BIPM version,
         planet shapiro delay, and solar system ephemeris) that affect TOA loading
         are applied.
     usepickle : bool
         Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
-    tdb_method : string
+    tdb_method : str
         Which method to use for the clock correction to TDB.
-    picklefilename : string or None
+    picklefilename : str or None
         Filename to use for caching loaded file. Defaults to adding ``.pickle.gz`` to the
         filename of the timfile, if there is one and only one. If no filename is available,
         or multiple filenames are provided, a specific filename must be provided.
@@ -328,13 +328,13 @@ def load_pickle(toafilename, picklefilename=None):
 
 
 def save_pickle(toas, picklefilename=None):
-    """Write the TOAs to a .pickle file.
+    """Write the TOAs to a ``.pickle.gz`` file.
 
     Parameters
     ----------
     toas : :class:`pint.toa.TOAs`
         The TOAs to pickle.
-    filename : str, optional
+    picklefilename : str, optional
         The filename to use for the pickle file; if not specified,
         construct a filename based on the file the toas object was
         originally loaded from.
@@ -540,7 +540,7 @@ def format_toa_line(
 
     Returns
     -------
-    out : string
+    out : str
         Formatted TOA line
 
     Note
@@ -561,7 +561,7 @@ def format_toa_line(
     Tempo2 format:
 
         - First line of file should be "``FORMAT 1``"
-        - TOA format is ``file freq sat satErr siteID <flags>``
+        - TOA format is ``name freq sat satErr siteID <flags>``
     """
     if format.upper() in ("TEMPO2", "1"):
         toa_str = Time(toatime, format="pulsar_mjd_string", scale=obs.timescale)
@@ -1116,6 +1116,7 @@ class TOA:
         return s
 
     def as_line(self, format="Tempo2", name=None, dm=0 * u.pc / u.cm ** 3):
+        """Format TOA as a line for a ``.tim`` file."""
         if name is None:
             name = self.name
         return format_toa_line(
@@ -1130,15 +1131,15 @@ class TOA:
         )
 
 
-class TOAs(object):
+class TOAs:
     """A class of multiple TOAs, loaded from zero or more files.
 
-    Normally these objects should be read from a file with `pint.toa.get_TOAs`.
+    Normally these objects should be read from a file with :func:`pint.toa.get_TOAs`.
     Constructing them with the constructor here does not apply the clock
     corrections and the resulting TOAs object may not be set up the way one
     would normally expect.
 
-    The contents are stored in an `astropy.table.Table`; this can be used to
+    The contents are stored in an :class:`astropy.table.Table`; this can be used to
     access the contained information but the data may not be in the order you
     expect: internally it is grouped by observatory (sorted by the observatory
     object). Not all columns of the table are computed automatically, as their
@@ -1232,6 +1233,15 @@ class TOAs(object):
         The Solar System ephemeris in use.
     clock_corr_info : dict
         Information about the clock correction chains in use.
+    merged : bool
+        If this object was merged from several files (and thus the filename of
+        the first is not useful for referring to the whole object).
+    hashes : dict
+        A dictionary of hashes of the files this data was read from (if any).
+        This is used by ``check_hashes()`` to verify whether the data on disk
+        has changed so that the file can be re-read if necessary.
+    was_pickled : bool
+        Whether this file was loaded from a pickle.
     """
 
     def __init__(self, toafile=None, toalist=None):
@@ -1559,7 +1569,7 @@ class TOAs(object):
         """Create and/or modify pulse_number and delta_pulse_number columns.
 
         Scans pulse numbers from the table flags and creates a new table column.
-        Modifes the delta_pulse_number column, if required.
+        Modifes the ``delta_pulse_number`` column, if required.
         Removes the pulse numbers from the flags.
         """
         # First get any PHASE commands
@@ -1593,6 +1603,12 @@ class TOAs(object):
         Replace any existing pulse numbers by computing phases according to
         model and then setting the pulse number of each to their integer part,
         which the nearest integer since Phase objects ensure that.
+
+        Parameters
+        ----------
+        model : pint.models.timing_model.TimingModel
+            The model defining times of arrival; the pulse numbers assigned will
+            be the nearest integer number of turns to that predicted by the model.
         """
         # paulr: I think pulse numbers should be computed with abs_phase=True!
         delta_pulse_numbers = Phase(self.table["delta_pulse_number"])
@@ -1710,8 +1726,12 @@ class TOAs(object):
         available.  This routine actually changes the value of the TOA,
         although the correction is also listed as a new flag for the TOA
         called 'clkcorr' so that it can be reversed if necessary.  This
-        routine also applies all 'TIME' commands and treats them exactly
-        as if they were a part of the observatory clock corrections.
+        routine also applies all 'TIME' commands (``-to`` flags) and
+        treats them exactly as if they were a part of the observatory
+        clock corrections.
+
+        If the clock corrections have already been applied they will not
+        be re-applied.
 
         Options to include GPS or BIPM clock corrections are set to True
         by default in order to give the most accurate clock corrections.
@@ -1779,6 +1799,17 @@ class TOAs(object):
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
         for TDB times, using the Observatory locations and IERS A Earth
         rotation corrections for UT1.
+
+        If these columns are already present, delete and replace them.
+
+        Parameters
+        ----------
+        method : str
+            Which method to use. See :func:`pint.observatory.Observatory.get_TDBs`
+            for details.
+        ephem : str or None
+            Solar System ephemeris to use for the computation. If not specified
+            use the value in ``self.ephem``; if specified, replace ``self.ephem``.
         """
         log.info("Computing TDB columns.")
         if "tdb" in self.table.colnames:
@@ -1853,6 +1884,20 @@ class TOAs(object):
         SSB) for each TOA.  The JPL solar system ephemeris can be set
         using the 'ephem' parameter.  The positions and velocities are
         set with PosVel class instances which have astropy units.
+
+        If the required columns already exist, they will be replaced.
+
+        Parameters
+        ----------
+        ephem : str
+            The Solar System ephemeris to use; if not specified, use the
+            default ephemeris for the TOAs object. If specified, replace
+            the TOAs object's ``ephem`` attribute with this value and do
+            the computation.
+        planets : bool
+            Whether to compute positions for the Solar System planets. If
+            not specified, use the value stored in ``self.planets``; if
+            specified, set ``self.planets`` to this value.
         """
         if ephem is None:
             if self.ephem is not None:
