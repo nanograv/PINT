@@ -18,16 +18,16 @@ from numpy.testing import assert_allclose
 
 import pint.profile
 from pint.profile import (
-    wrap,
-    vonmises_profile,
-    irfft_value,
     fftfit_aarchiba,
     fftfit_basic,
+    fftfit_classic,
+    fftfit_cprof,
     fftfit_full,
     fftfit_nustar,
     fftfit_presto,
-    fftfit_cprof,
-    fftfit_classic,
+    irfft_value,
+    vonmises_profile,
+    wrap,
 )
 
 NO_PRESTO = fftfit_presto.presto is None
@@ -35,10 +35,10 @@ NO_PRESTO = fftfit_presto.presto is None
 
 def assert_rms_close(a, b, rtol=1e-8, atol=1e-8, name=None):
     __tracebackhide__ = True
-    target(np.mean((a - b) ** 2), label="mean")
     if name is not None:
-        target((a - b).max(), label="{} max".format(name))
-        target(-(a - b).min(), label="{} min".format(name))
+        target(np.mean((a - b) ** 2), label=f"{name} mean")
+        target((a - b).max(), label=f"{name} max")
+        target(-(a - b).min(), label=f"{name} min")
     assert np.mean((a - b) ** 2) < rtol * (np.mean(a ** 2) + np.mean(b ** 2)) + atol
 
 
@@ -412,6 +412,7 @@ def test_fftfit_compute_scale(template, s, a, b):
         profile,
         r.scale * pint.profile.shift(template, r.shift) + r.offset,
         atol=1e-7,
+        rtol=1e-8,
         name="profile",
     )
 

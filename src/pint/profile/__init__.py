@@ -8,7 +8,7 @@ profiles.
 
 import numpy as np
 import scipy.stats
-from numpy.fft import rfft, irfft
+from numpy.fft import irfft, rfft
 
 import pint.profile.fftfit_aarchiba
 import pint.profile.fftfit_nustar
