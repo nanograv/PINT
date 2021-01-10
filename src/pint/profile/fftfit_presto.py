@@ -20,11 +20,9 @@ def fftfit_full(template, profile):
         raise ValueError(
             "template has length {} which is too long".format(len(template))
         )
-    #_, amp, pha = pint.profile.fftfit_cprof(template)
+    # _, amp, pha = pint.profile.fftfit_cprof(template)
     _, amp, pha = presto.fftfit.cprof(template)
-    shift, eshift, snr, esnr, b, errb, ngood = presto.fftfit.fftfit(
-        profile, amp, pha
-    )
+    shift, eshift, snr, esnr, b, errb, ngood = presto.fftfit.fftfit(profile, amp, pha)
     r = pint.profile.FFTFITResult()
     # Need to add 1 to the shift for some reason
     r.shift = pint.profile.wrap(shift / len(template))

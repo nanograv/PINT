@@ -220,8 +220,8 @@ def fftfit_cprof(template):
         of that returned by ``np.fft.rfft``.
     """
     tc = rfft(template)
-    tc *= np.exp(-2.j*np.pi*np.arange(len(tc))/len(template))
-    return 2*tc, 2*np.abs(tc)[1:], -np.angle(tc)[1:]
+    tc *= np.exp(-2.0j * np.pi * np.arange(len(tc)) / len(template))
+    return 2 * tc, 2 * np.abs(tc)[1:], -np.angle(tc)[1:]
 
 
 def fftfit_classic(profile, template_amplitudes, template_angles, code="aarchiba"):
@@ -271,7 +271,7 @@ def fftfit_classic(profile, template_amplitudes, template_angles, code="aarchiba
     template = irfft(template_f)
     r = fftfit_full(template, profile, code=code)
 
-    shift = (r.shift % 1) * len(profile) 
+    shift = (r.shift % 1) * len(profile)
     eshift = r.uncertainty * len(profile)
     snr = np.nan
     esnr = np.nan
