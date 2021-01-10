@@ -60,6 +60,7 @@ a = toa.TOA(
     freq=1400.0 * u.MHz,
     obs="GBT",
     backend="GUPPI",
+    name="guppi_56789.fits",
 )
 print(a)
 

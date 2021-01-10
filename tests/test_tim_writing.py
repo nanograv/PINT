@@ -42,6 +42,7 @@ def do_roundtrip(toas, format="tempo2", **kwargs):
     assert np.all(toas.get_obss() == toas_2.get_obss())
     assert np.all(toas.get_pulse_numbers() == toas_2.get_pulse_numbers())
     assert np.all(toas.get_flags() == toas_2.get_flags())
+    return toas_2
 
 
 def test_basic():
@@ -145,7 +146,20 @@ some_barycentered 999999.999 56400.000000000000000   1.000  @{}
 
 
 def test_pulse_number():
-    f = StringIO(basic_tim_header + basic_tim)
-    t = get_TOAs(f)
+    t = get_TOAs(StringIO(basic_tim_header + basic_tim))
     t.table["pulse_number"] = np.random.randint(10 ** 9, size=t.ntoas)
     do_roundtrip(t)
+
+
+def test_name_preservation():
+    f = StringIO(basic_tim_header + basic_tim)
+    t = get_TOAs(f)
+    v, _ = t.get_flag_value("name")
+    v = set(v)
+    assert "53453.000000.3.000.000.9y.x.ff" in v
+    assert "puppi_56577_B1855+09_0547.9y.x.ff" in v
+    t2 = do_roundtrip(t)
+    v, _ = t2.get_flag_value("name")
+    v = set(v)
+    assert "53453.000000.3.000.000.9y.x.ff" in v
+    assert "puppi_56577_B1855+09_0547.9y.x.ff" in v

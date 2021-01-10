@@ -470,9 +470,8 @@ def _parse_TOA_line(line, fmt="Unknown"):
         flags = fields[5:]
         for i in range(0, len(flags), 2):
             k, v = flags[i].lstrip("-"), flags[i + 1]
-            if k in ["error", "freq", "scale", "MJD", "flags", "obs"]:
-                log.error("TOA flag ({0}) will overwrite TOA parameter!".format(k))
-                raise (ValueError)
+            if k in ["error", "freq", "scale", "MJD", "flags", "obs", "name"]:
+                raise ValueError(f"TOA flag ({k}) will overwrite TOA parameter!")
             try:  # Convert what we can to floats and ints
                 d[k] = int(v)
             except ValueError:
@@ -941,7 +940,7 @@ def _group_by_gaps(t, gap):
     return groups
 
 
-class TOA(object):
+class TOA:
     """A time of arrival (TOA) class.
 
     This is a class for representing a single pulse arrival
@@ -1026,7 +1025,6 @@ class TOA(object):
         Traceback (most recent call last):
           omitted
         IndexError: (some) times are outside of range covered by IERS table.
-
     """
 
     def __init__(
@@ -1106,24 +1104,21 @@ class TOA(object):
             self.flags = flags
             if kwargs:
                 raise TypeError(
-                    "TOA constructor does not accept keyword arguments {}".format(
-                        kwargs
-                    )
+                    f"TOA constructor does not accept keyword arguments {kwargs} when flags are specified."
                 )
 
     def __str__(self):
-        s = self.mjd.mjd_string + ": %6.3f %s error from '%s' at %.4f %s " % (
-            self.error.value,
-            self.error.unit,
-            self.obs,
-            self.freq.value,
-            self.freq.unit,
+        s = (
+            self.mjd.mjd_string
+            + f": {self.error.value:6.3f} {self.error.unit} error at '{self.obs}' at {self.freq.value:.4f} {self.freq.unit}"
         )
         if self.flags:
-            s += str(self.flags)
+            s += " " + str(self.flags)
         return s
 
-    def as_line(self, format="Tempo2", name="_", dm=0 * u.pc / u.cm ** 3):
+    def as_line(self, format="Tempo2", name=None, dm=0 * u.pc / u.cm ** 3):
+        if name is None:
+            name = self.name
         return format_toa_line(
             mjd=self.mjd,
             error=self.error,
@@ -1636,7 +1631,7 @@ class TOAs(object):
         self.compute_TDBs()
         self.compute_posvels(self.ephem, self.planets)
 
-    def write_TOA_file(self, filename, name="pint", format="Princeton"):
+    def write_TOA_file(self, filename, name="unk", format="tempo2"):
         """Write this object to a ``.tim`` file.
 
         This function writes the contents of this object to a (single) ``.tim``
@@ -1648,6 +1643,9 @@ class TOAs(object):
         ----------
         filename : str or file-like
             File name to write to; can be an open file object
+        name : str
+            Value to put in the "name" field of tempo2 files, if a "-name" flag is
+            not available.
         format : str
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1');
             note that not all features may be supported in 'TEMPO' mode.
@@ -1680,6 +1678,7 @@ class TOAs(object):
         ):
             obs_obj = Observatory.get(obs)
 
+            flags = flags.copy()
             if "clkcorr" in flags.keys():
                 toatime_out = toatime - time.TimeDelta(flags["clkcorr"])
             else:
@@ -1689,7 +1688,7 @@ class TOAs(object):
                 toaerr,
                 freq,
                 obs_obj,
-                name=name,
+                name=flags.pop("name", name),
                 flags=flags,
                 format=format,
             )
