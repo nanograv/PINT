@@ -229,7 +229,6 @@ def get_TOAs(
                 log.info("Pickle contains wrong bipm_version")
                 updatepickle = True
     if not usepickle or updatepickle:
-        # FIXME: handle lists
         if isinstance(timfile, str) or hasattr(timfile, "readlines"):
             t = TOAs(timfile)
         else:
