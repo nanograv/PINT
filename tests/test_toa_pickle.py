@@ -54,7 +54,7 @@ def test_pickle_works(temp_tim):
 
 def test_pickle_used(temp_tim):
     tt, tp = temp_tim
-    assert not hasattr(toa.get_TOAs(tt, usepickle=True), "was_pickled")
+    assert not toa.get_TOAs(tt, usepickle=True).was_pickled
     assert toa.get_TOAs(tt, usepickle=True).was_pickled
 
 
@@ -102,4 +102,4 @@ def test_pickle_invalidated_time(temp_tim):
     time.sleep(1)
     with open(tt, "at") as f:
         f.write("\n")
-    assert not hasattr(toa.get_TOAs(tt, usepickle=True), "was_pickled")
+    assert not toa.get_TOAs(tt, usepickle=True).was_pickled
