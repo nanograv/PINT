@@ -903,7 +903,7 @@ def test_fftfit_classic_compare(n, s):
     )
 
     assert_allclose_phase(shift, shift_p, atol=1e-2)
-    # assert_allclose(eshift, eshift_p)
+    assert_allclose(eshift, eshift_p, rtol=1e-2, atol=1e-2)
     # assert_allclose(snr, snr_p)
     # assert_allclose(esnr, esnr_p)
     # assert_allclose(b, b_p)

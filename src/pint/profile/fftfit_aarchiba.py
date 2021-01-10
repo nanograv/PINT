@@ -80,6 +80,7 @@ def fftfit_full(
                     r.scale * pint.profile.shift(template, r.shift) + r.offset - profile
                 )
                 std = np.sqrt(np.mean(resid ** 2))
+            r.std = std
 
             J = np.zeros((2 * len(s_c) - 2, 2))
             J[: len(s_c) - 1, 0] = (
