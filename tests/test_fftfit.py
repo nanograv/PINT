@@ -54,12 +54,7 @@ ONE_SIGMA = 1 - 2 * scipy.stats.norm().sf(1)
 
 
 def assert_happens_with_probability(
-    func,
-    p=ONE_SIGMA,
-    n=100,
-    p_lower=None,
-    p_upper=None,
-    fpp=0.05,
+    func, p=ONE_SIGMA, n=100, p_lower=None, p_upper=None, fpp=0.05,
 ):
     __tracebackhide__ = True
     if p_lower is None:
@@ -191,10 +186,7 @@ def test_shift_invertible(s, template):
     [
         "aarchiba",
         pytest.param(
-            "nustar",
-            marks=[
-                pytest.mark.xfail(reason="profile too symmetric"),
-            ],
+            "nustar", marks=[pytest.mark.xfail(reason="profile too symmetric"),],
         ),
         pytest.param(
             "presto",
@@ -224,10 +216,7 @@ def test_fftfit_basic_integer_vonmises(code, i, kappa, profile_length, phase):
     [
         "aarchiba",
         pytest.param(
-            "nustar",
-            marks=[
-                pytest.mark.xfail(reason="profile too symmetric"),
-            ],
+            "nustar", marks=[pytest.mark.xfail(reason="profile too symmetric"),],
         ),
         pytest.param(
             "presto",
@@ -252,10 +241,7 @@ def test_fftfit_basic_integer(code, i, template):
     [
         "aarchiba",
         pytest.param(
-            "nustar",
-            marks=[
-                pytest.mark.xfail(reason="profile too symmetric"),
-            ],
+            "nustar", marks=[pytest.mark.xfail(reason="profile too symmetric"),],
         ),
         pytest.param(
             "presto",
@@ -278,10 +264,7 @@ def test_fftfit_basic_integer_fraction(code, i, template):
     [
         "aarchiba",
         pytest.param(
-            "nustar",
-            marks=[
-                pytest.mark.xfail(reason="profile too symmetric"),
-            ],
+            "nustar", marks=[pytest.mark.xfail(reason="profile too symmetric"),],
         ),
         pytest.param(
             "presto",
@@ -311,10 +294,7 @@ def test_fftfit_basic_subbin(code, s, kappa, n):
     [
         "aarchiba",
         pytest.param(
-            "nustar",
-            marks=[
-                pytest.mark.xfail(reason="profile too symmetric"),
-            ],
+            "nustar", marks=[pytest.mark.xfail(reason="profile too symmetric"),],
         ),
         pytest.param(
             "presto",
@@ -341,10 +321,7 @@ def test_fftfit_basic_template(code, s, template):
     [
         "aarchiba",
         pytest.param(
-            "nustar",
-            marks=[
-                pytest.mark.xfail(reason="profiles different lengths"),
-            ],
+            "nustar", marks=[pytest.mark.xfail(reason="profiles different lengths"),],
         ),
         pytest.param(
             "presto",
@@ -370,10 +347,7 @@ def test_fftfit_basic_different_profiles(code, profile1, profile2):
     [
         "aarchiba",
         pytest.param(
-            "nustar",
-            marks=[
-                pytest.mark.xfail(reason="profiles different lengths"),
-            ],
+            "nustar", marks=[pytest.mark.xfail(reason="profiles different lengths"),],
         ),
         pytest.param(
             "presto",
@@ -505,51 +479,11 @@ def test_fftfit_uncertainty_estimate(
         (100, 1024, 0.002, 0.2, 1e4, 0, "aarchiba"),
         (100, 1024, 0.02, 0.2, 1e4, 0, "aarchiba"),
         (1000, 4096, 0.01, 0.7, 1e4, 0, "aarchiba"),
-        pytest.param(
-            1,
-            256,
-            0.01,
-            0,
-            1,
-            0,
-            "nustar",
-        ),
-        pytest.param(
-            10,
-            64,
-            0.01,
-            1 / 3,
-            1e-6,
-            0,
-            "nustar",
-        ),
-        pytest.param(
-            100,
-            1024,
-            0.002,
-            0.2,
-            1e4,
-            0,
-            "nustar",
-        ),
-        pytest.param(
-            100,
-            1024,
-            0.02,
-            0.2,
-            1e4,
-            0,
-            "nustar",
-        ),
-        pytest.param(
-            1000,
-            4096,
-            0.01,
-            0.7,
-            1e4,
-            0,
-            "nustar",
-        ),
+        pytest.param(1, 256, 0.01, 0, 1, 0, "nustar",),
+        pytest.param(10, 64, 0.01, 1 / 3, 1e-6, 0, "nustar",),
+        pytest.param(100, 1024, 0.002, 0.2, 1e4, 0, "nustar",),
+        pytest.param(100, 1024, 0.02, 0.2, 1e4, 0, "nustar",),
+        pytest.param(1000, 4096, 0.01, 0.7, 1e4, 0, "nustar",),
         pytest.param(
             1,
             256,
@@ -558,9 +492,7 @@ def test_fftfit_uncertainty_estimate(
             1,
             0,
             "presto",
-            marks=[
-                pytest.mark.skipif(NO_PRESTO, reason="PRESTO is not available"),
-            ],
+            marks=[pytest.mark.skipif(NO_PRESTO, reason="PRESTO is not available"),],
         ),
         pytest.param(
             10,
