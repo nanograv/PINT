@@ -34,7 +34,7 @@ class FFTFITResult:
     returned depends on the algorithm used and the options it is passed.
 
     If these quantities are available, then
-    r.scale*shift(template, r.shift) + r.offset
+    ``r.scale*shift(template, r.shift) + r.offset``
     should be as close as possible to the profile used in the fitting.
 
     Attributes
@@ -70,7 +70,8 @@ def vonmises_profile(kappa, n, phase=0):
     """Generate a profile based on a von Mises distribution.
 
     The von Mises distribution is a cyclic analogue of a Gaussian distribution. The width is
-    specified by the parameter kappa, which for large kappa is approximately 1/(2*pi*sigma**2).
+    specified by the parameter ``kappa``, which for large ``kappa`` is approximately
+    ``1/(2*pi*sigma**2)``.
     """
     return np.diff(
         scipy.stats.vonmises(kappa).cdf(
@@ -114,7 +115,7 @@ def irfft_value(c, phase, n=None):
     """Evaluate the inverse real FFT at a particular position.
 
     If the phase is one of the usual grid points the result will agree with
-    the results of `np.fft.irfft` there.
+    the results of :func:`numpy.fft.irfft` there.
 
     No promises if n is small enough to imply truncation.
     """
@@ -144,8 +145,8 @@ def fftfit_full(template, profile, code="aarchiba"):
     """Match template to profile and return match properties.
 
     The returned object, a :class:`pint.profile.FFTFITResult`, has a
-    `.shift` attribute indicating the optimal shift,
-    a `.uncertainty` attribute containting an estimate of the uncertainty, and
+    ``.shift`` attribute indicating the optimal shift,
+    a ``.uncertainty`` attribute containting an estimate of the uncertainty, and
     possibly certain other attributes depending on which version of the code is
     run.
 

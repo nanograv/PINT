@@ -864,6 +864,7 @@ def test_fftfit_wrong_profile(kappa1, kappa2, n, std, code, state):
     assert_happens_with_probability(value_within_one_sigma, ONE_SIGMA, p_upper=1)
 
 
+@pytest.mark.skipif(NO_PRESTO, reason="PRESTO is not available")
 @pytest.mark.parametrize("n", [32, 128, 1024])
 def test_fftfit_cprof_compare(n):
     template = vonmises_profile(100, n)
@@ -877,6 +878,7 @@ def test_fftfit_cprof_compare(n):
     assert_allclose(cp[1:], ampp * np.exp(1.0j * phap), atol=5e-6)
 
 
+@pytest.mark.skipif(NO_PRESTO, reason="PRESTO is not available")
 def test_fftfit_classic_runs():
     template = vonmises_profile(100, 1024)
     _, amp, pha = fftfit_cprof(template)
@@ -885,6 +887,7 @@ def test_fftfit_classic_runs():
     )
 
 
+@pytest.mark.skipif(NO_PRESTO, reason="PRESTO is not available")
 @pytest.mark.parametrize("n,s", [(32, 0.1), (128, 0.3), (1024, 0.05)])
 def test_fftfit_classic_compare(n, s):
     template = vonmises_profile(100, n)
