@@ -148,7 +148,8 @@ def get_TOAs(
     usepickle : bool
         Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
     tdb_method : str
-        Which method to use for the clock correction to TDB.
+        Which method to use for the clock correction to TDB. See
+        :func:`pint.observatory.Observatory.get_TDBs` for details.
     picklefilename : str or None
         Filename to use for caching loaded file. Defaults to adding ``.pickle.gz`` to the
         filename of the timfile, if there is one and only one. If no filename is available,
