@@ -552,12 +552,13 @@ def main(argv=None):
     target = tc if weightcol == "CALC" else None
 
     # TODO: make this properly handle long double
-    if not args.usepickle or (
-        not (
-            os.path.isfile(eventfile + ".pickle")
-            or os.path.isfile(eventfile + ".pickle.gz")
-        )
-    ):
+    ts = None
+    if args.usepickle:
+        try:
+            ts = toa.load_pickle(eventfile)
+        except IOError:
+            pass
+    if ts is None:
         # Read event file and return list of TOA objects
         tl = fermi.load_Fermi_TOAs(
             eventfile, weightcolumn=weightcol, targetcoord=target, minweight=minWeight
@@ -578,12 +579,7 @@ def main(argv=None):
         ts.filename = eventfile
         ts.compute_TDBs()
         ts.compute_posvels(ephem="DE421", planets=False)
-        ts.pickle()
-    else:  # read the events in as a pickle file
-        picklefile = toa._check_pickle(eventfile)
-        if not picklefile:
-            picklefile = eventfile
-        ts = toa.TOAs(picklefile)
+        toa.save_pickle(ts)
 
     if weightcol is not None:
         if weightcol == "CALC":

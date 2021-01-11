@@ -323,6 +323,7 @@ def get_model_and_toas(
     planets=None,
     usepickle=False,
     tdb_method="default",
+    picklefilename=None,
 ):
     """Load a timing model and a related TOAs, using model commands as needed
 
@@ -345,13 +346,17 @@ def get_model_and_toas(
         Defaults to False.
     usepickle : bool
         Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
-    tdb_method : string
-        Which method to use for the clock correction to TDB.
+    tdb_method : str
+        Which method to use for the clock correction to TDB. See
+        :func:`pint.observatory.Observatory.get_TDBs` for details.
+    picklefilename : str or None
+        Filename to use for caching loaded file. Defaults to adding ``.pickle.gz`` to the
+        filename of the timfile, if there is one and only one. If no filename is available,
+        or multiple filenames are provided, a specific filename must be provided.
 
     Returns
     -------
     A tuple with (model instance, TOAs instance)
-
     """
     mm = get_model(parfile)
     tt = get_TOAs(
@@ -363,6 +368,8 @@ def get_model_and_toas(
         include_gps=include_gps,
         planets=planets,
         usepickle=usepickle,
+        tdb_method=tdb_method,
+        picklefilename=picklefilename,
     )
     return mm, tt
 
