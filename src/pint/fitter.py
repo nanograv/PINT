@@ -1427,11 +1427,13 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             ntmpar = len(fitp)
             if M.shape[1] > ntmpar:
                 norm[ntmpar:] = 1
-            if np.any(norm == 0):
-                # Make this a LinAlgError so it looks like other bad matrixness
-                raise sl.LinAlgError(
-                    "One or more of the design-matrix columns is null."
+            for c in np.where(norm == 0)[0]:
+                warn(
+                    f"Parameter degeneracy; the following parameter yields "
+                    f"almost no change: {params[c]}",
+                    DegeneracyWarning,
                 )
+            norm[norm == 0] = 1
             M /= norm
 
             # compute covariance matrices
