@@ -117,7 +117,7 @@ def property_exists(f):
     return wrapper
 
 
-class TimingModel(object):
+class TimingModel:
     """Timing model object built from Components.
 
     This object is the primary object to represent a timing model in PINT.  It

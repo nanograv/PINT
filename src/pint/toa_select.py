@@ -4,7 +4,7 @@ import numpy as np
 __all__ = ["TOASelect"]
 
 
-class TOASelect(object):
+class TOASelect:
     """Select toas from toa table based on a given condition.
 
     The selection result will be saved in the `select_result`

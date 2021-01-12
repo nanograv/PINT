@@ -14,7 +14,7 @@ import numpy as np
 # TODO -- error propagation to norms
 
 
-class NormAngles(object):
+class NormAngles:
     """Keep track of N angles (0 to pi/2) representing the coordinates inside a unit radius N-ball.
 
     Generally, the apportionment of the amplitudes of components is

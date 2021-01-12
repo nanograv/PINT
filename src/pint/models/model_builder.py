@@ -25,7 +25,7 @@ class UnknownBinaryModel(ValueError):
     """Signal that the par file requested a binary model no in PINT."""
 
 
-class ModelBuilder(object):
+class ModelBuilder:
     """A class for model construction interface.
 
     Parameters

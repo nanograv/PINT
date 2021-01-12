@@ -77,7 +77,7 @@ map_units = {
 }
 
 
-class PINTPar(object):
+class PINTPar:
     """
     Similar to the parameter class defined in libstempo, this class gives a nice
     interface to the timing model parameters
@@ -139,7 +139,7 @@ class PINTPar(object):
         self._set = value
 
 
-class PINTPulsar(object):
+class PINTPulsar:
     """
     Pulsar object class with an interface similar to tempopulsar of libstempo
     """

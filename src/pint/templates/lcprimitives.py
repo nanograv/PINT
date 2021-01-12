@@ -141,7 +141,7 @@ def check_gradient(func, atol=1e-8, rtol=1e-5, quiet=False):
     return not anyfail
 
 
-class Fittable(object):
+class Fittable:
     # TODO
     """ Base class for any object with fittable parameters.
         Handle parameter names, etc. here?"""
@@ -168,7 +168,7 @@ class Fittable(object):
         raise NotImplementedError("Child class instantiates.")
 
 
-class LCPrimitive(object):
+class LCPrimitive:
     """ Base class for various components of a light curve.  All "analytic"
         light curve models must inherit and must implement the three
         'virtual' functions below."""

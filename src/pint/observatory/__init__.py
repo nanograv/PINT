@@ -20,7 +20,7 @@ __all__ = ["Observatory", "get_observatory"]
 bipm_default = "BIPM2019"
 
 
-class Observatory(object):
+class Observatory:
     """Observatory locations and related site-dependent properties
 
     For example, TOA time scales, clock corrections.

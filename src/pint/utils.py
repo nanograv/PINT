@@ -55,7 +55,7 @@ __all__ = [
 # Actual exported tools
 
 
-class PosVel(object):
+class PosVel:
     """Position/Velocity class.
 
     The class is used to represent the 6 values describing position

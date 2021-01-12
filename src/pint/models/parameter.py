@@ -39,7 +39,7 @@ from pint.utils import split_prefixed_name
 from pint.observatory import get_observatory
 
 
-class Parameter(object):
+class Parameter:
     """A base PINT class describing a single timing model parameter.
 
     A ``Parameter`` object can be created with one of the subclasses provided by
@@ -1000,7 +1000,7 @@ class AngleParameter(Parameter):
             return unc.to_string(decimal=True, precision=20)
 
 
-class prefixParameter(object):
+class prefixParameter:
     """Prefix parameters, for example DMX_*.
 
     Create a prefix parameter, is like create a normal parameter. But the

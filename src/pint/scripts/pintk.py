@@ -22,10 +22,8 @@ __all__ = ["main"]
 # log.setLevel("WARNING")
 
 
-class PINTk(object):
-    """
-    Main PINTk window
-    """
+class PINTk:
+    """Main PINTk window."""
 
     def __init__(self, master, parfile=None, timfile=None, ephem=None, **kwargs):
         self.master = master

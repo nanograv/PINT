@@ -54,9 +54,10 @@ class Fitters(Enum):
     GLS = 2
 
 
-class Pulsar(object):
-    """
-    Wrapper class for a pulsar. Contains the toas, model, residuals, and fitter
+class Pulsar:
+    """Wrapper class for a pulsar.
+
+    Contains the toas, model, residuals, and fitter
     """
 
     def __init__(self, parfile=None, timfile=None, ephem=None):

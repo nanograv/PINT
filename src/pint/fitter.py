@@ -83,7 +83,7 @@ class DegeneracyWarning(UserWarning):
     pass
 
 
-class Fitter(object):
+class Fitter:
     """Base class for objects encapsulating fitting problems.
 
     The fitting function should be defined as the fit_toas() method.

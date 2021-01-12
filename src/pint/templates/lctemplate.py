@@ -15,7 +15,7 @@ from .lcnorm import NormAngles
 from .lcprimitives import *
 
 
-class LCTemplate(object):
+class LCTemplate:
     """Manage a lightcurve template (collection of LCPrimitive objects).
 
     IMPORTANT: a constant background is assumed in the overall model,
@@ -934,7 +934,7 @@ def make_twoside_gaussian(one_side_gaussian):
     return g2
 
 
-class GaussianPrior(object):
+class GaussianPrior:
     def __init__(self, locations, widths, mod, mask=None):
         self.x0 = np.where(mod, np.mod(locations, 1), locations)
         self.s0 = np.asarray(widths) * 2 ** 0.5
