@@ -186,7 +186,7 @@ class Observatory(object):
         """
         return None
 
-    def get_gcrs(self, t, ephem=None, grp=None):
+    def get_gcrs(self, t, ephem=None):
         """Return position vector of observatory in GCRS
         t is an astropy.Time or array of astropy.Time objects
         ephem is a link to an ephemeris file. Needed for SSB observatory
@@ -259,7 +259,7 @@ class Observatory(object):
             options = dict(options)
             return method(t, **options)
         if meth == "default":
-            return self._get_TDB_default(t)
+            return self._get_TDB_default(t, ephem)
         elif meth == "ephemeris":
             if ephem is None:
                 raise ValueError(
@@ -270,7 +270,7 @@ class Observatory(object):
         else:
             raise ValueError("Unknown method '%s'." % method)
 
-    def _get_TDB_default(self, t):
+    def _get_TDB_default(self, t, ephem):
         return t.tdb
 
     def _get_TDB_ephem(self, t, ephem):
