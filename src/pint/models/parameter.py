@@ -15,16 +15,12 @@ can have one parameter for each group of TOAs in the input, allowing
 potentially very many. These are handled in two separate ways, as "prefix
 parameters" and "mask parameters" depending on how they occur in the
 ``.par`` and ``.tim`` files.
-
 """
-from __future__ import absolute_import, division, print_function
-
 import numbers
 
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-import six
 from astropy import log
 from astropy.coordinates.angles import Angle
 from pint import pint_units
@@ -842,7 +838,7 @@ class MJDParameter(Parameter):
         if isinstance(val, numbers.Number):
             val = np.longdouble(val)
             result = time_from_longdouble(val, self.time_scale)
-        elif isinstance(val, six.string_types):
+        elif isinstance(val, (str, bytes)):
             result = Time(val, scale=self.time_scale, format="pulsar_mjd_string")
         elif isinstance(val, time.Time):
             result = val

@@ -1,7 +1,4 @@
 """Tool for selecting a subset of TOAs."""
-
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 
 __all__ = ["TOASelect"]

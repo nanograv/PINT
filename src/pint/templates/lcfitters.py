@@ -14,8 +14,6 @@ $Header: /nfs/slac/g/glast/ground/cvs/pointlike/python/uw/pulsar/lcfitters.py,v 
 author: M. Kerr <matthew.kerr@gmail.com>
 
 """
-from __future__ import absolute_import, division, print_function
-
 from copy import deepcopy
 
 import numpy as np

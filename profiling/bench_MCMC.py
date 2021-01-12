@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 """Demonstrate fitting from a script."""
-from __future__ import print_function, division
 import os
 import pint.toa
 import pint.models

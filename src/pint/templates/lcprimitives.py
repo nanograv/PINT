@@ -13,8 +13,6 @@ author: M. Kerr <matthew.kerr@gmail.com>
 # Monte Carlo variables because they don't account for the uniform approx.
 # perhaps this isn't a big deal
 
-from __future__ import absolute_import, division, print_function
-
 from math import atan, cos, cosh, sin, sinh, tan
 
 import numpy as np
@@ -118,7 +116,7 @@ def approx_hessian(func, phases, log10_ens=None, eps=1e-4):
 def check_gradient(func, atol=1e-8, rtol=1e-5, quiet=False):
     """ Test gradient function with a set of MC photons.
         This works with either LCPrimitive or LCTemplate objects.
-        
+
         TODO -- there is trouble with the numerical gradient when
         a for the location-related parameters when the finite step
         causes the peak to shift from one side of an evaluation phase
@@ -477,7 +475,7 @@ class LCPrimitive(object):
 
 class LCWrappedFunction(LCPrimitive):
     """ Super-class for profiles derived from wrapped functions.
-        
+
         While some distributions (e.g. the wrapped normal) converge
         quickly, others (e.g. the wrapped Lorentzian) converge very slowly
         and must be truncated before machine precision is reached.
@@ -529,7 +527,7 @@ class LCWrappedFunction(LCPrimitive):
     def gradient(self, phases, log10_ens=3, free=False):
         """ Return the gradient evaluated at a vector of phases.
 
-            output : a num_parameter x len(phases) ndarray, 
+            output : a num_parameter x len(phases) ndarray,
                      the num_parameter-dim gradient at each phase
         """
         results = self.base_grad(phases, log10_ens)
@@ -550,7 +548,7 @@ class LCWrappedFunction(LCPrimitive):
     def gradient_derivative(self, phases, log10_ens=3, free=False):
         """ Return the gradient evaluated at a vector of phases.
 
-            output : a num_parameter x len(phases) ndarray, 
+            output : a num_parameter x len(phases) ndarray,
                      the num_parameter-dim gradient at each phase
         """
         results = self.base_grad_deriv(phases, log10_ens)
@@ -957,7 +955,7 @@ class LCLorentzian2(LCWrappedFunction):
 class LCVonMises(LCPrimitive):
     """ Represent a peak from the von Mises distribution.  This function is
         used in directional statistics and is naturally wrapped.
-   
+
         Parameters:
             Width     inverse of the 'kappa' parameter in the std. def.
             Location  the center of the peak in phase
@@ -1049,7 +1047,7 @@ class LCKing(LCWrappedFunction):
 
 class LCTopHat(LCPrimitive):
     """ Represent a top hat function.
-   
+
         Parameters:
             Width     right edge minus left edge
             Location  center of top hat
@@ -1077,7 +1075,7 @@ class LCTopHat(LCPrimitive):
 
 class LCHarmonic(LCPrimitive):
     """Represent a sinusoidal shape corresponding to a harmonic in a Fourier expansion.
-   
+
       Parameters:
          Location  the phase of maximum
 
@@ -1104,7 +1102,7 @@ class LCEmpiricalFourier(LCPrimitive):
     """ Calculate a Fourier representation of the light curve.
         The only parameter is an overall shift.
         Cannot be used with other LCPrimitive objects!
-   
+
         Parameters:
            Shift     :     overall shift from original template phase
     """
@@ -1176,7 +1174,7 @@ class LCEmpiricalFourier(LCPrimitive):
         harm = self.harmonics
         if shift != 0:
             """ shift theorem, for real coefficients
-                It's probably a wash whether it is faster to simply 
+                It's probably a wash whether it is faster to simply
                 subtract from the phases, but it's more fun this way! """
             c = np.cos(harm * shift)
             s = np.sin(harm * shift)

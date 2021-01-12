@@ -1,8 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
 import astropy.constants as const
 import astropy.units as u
-import six
 from astropy import log
 
 import pint.solar_system_ephemerides as sse
@@ -49,10 +46,7 @@ class Observatory(object):
         # it the registry, using name as the key.  Name must be unique,
         # a new instance with a given name will over-write the existing
         # one only if overwrite=True
-        if six.PY2:
-            obs = super(Observatory, cls).__new__(cls, name, *args, **kwargs)
-        else:
-            obs = super().__new__(cls)
+        obs = super().__new__(cls)
         if name.lower() in cls._registry:
             if "overwrite" in kwargs and kwargs["overwrite"]:
                 log.warning(

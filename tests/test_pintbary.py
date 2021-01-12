@@ -1,11 +1,9 @@
 #!/usr/bin/env python
-from __future__ import division, print_function
-
 import sys
 import unittest
 
 import numpy as np
-from six import StringIO
+from io import StringIO
 
 import pint.scripts.pintbary as pintbary
 

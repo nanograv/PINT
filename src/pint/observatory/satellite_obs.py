@@ -1,6 +1,4 @@
 # special_locations.py
-from __future__ import absolute_import, division, print_function
-
 import astropy.io.fits as pyfits
 import astropy.units as u
 import astropy.constants as const
@@ -238,7 +236,7 @@ def load_orbit(obs_name, orb_filename):
 
     Returns
     -------
-    orb_table: astropy.table.Table 
+    orb_table: astropy.table.Table
         A table containing entries MJD_TT, X, Y, Z, Vx, Vy, Vz
     """
 

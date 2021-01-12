@@ -2,8 +2,6 @@
 
 Defines the basic timing model interface classes.
 """
-from __future__ import absolute_import, division, print_function
-
 import abc
 import copy
 import inspect
@@ -14,7 +12,6 @@ from warnings import warn
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-import six
 from astropy import log
 from scipy.optimize import brentq
 
@@ -2059,8 +2056,7 @@ class ModelMeta(abc.ABCMeta):
         super(ModelMeta, cls).__init__(name, bases, dct)
 
 
-@six.add_metaclass(ModelMeta)
-class Component(object):
+class Component(object, metaclass=ModelMeta):
     """A base class for timing model components."""
 
     component_types = {}

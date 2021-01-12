@@ -6,8 +6,6 @@ in the model class, that implements priors on combinations of parameters,
 such as total proper motion, 2-d sky location, etc.
 
 """
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 import scipy.stats
 from astropy import log

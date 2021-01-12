@@ -3,8 +3,6 @@
 Special "site" locations (eg, barycenter) which do not need clock
 corrections or much else done.
 """
-from __future__ import absolute_import, division, print_function
-
 import astropy.constants as const
 import astropy.units as u
 from astropy import log
@@ -202,7 +200,7 @@ class GeocenterObs(SpecialLocation):
 class T2SpacecraftObs(SpecialLocation):
     """An observatory with position tabulated following Tempo2 convention.
 
-    In tempo2, it is possible to specify the GCRS position of the 
+    In tempo2, it is possible to specify the GCRS position of the
     observatory via the -telx, -tely, and -telz flags in a TOA file.  This
     class is able to obtain its position in this way, i.e. by examining the
     flags in a TOA table.

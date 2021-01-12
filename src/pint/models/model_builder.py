@@ -1,7 +1,5 @@
 # model_builder.py
 # Defines the automatic timing model generator interface
-from __future__ import absolute_import, division, print_function
-
 import os
 import tempfile
 from collections import Counter, defaultdict

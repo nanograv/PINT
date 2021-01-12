@@ -1,12 +1,10 @@
 #!/usr/bin/env python
-from __future__ import division, print_function
-
 import os
 import unittest
 
 import numpy as np
 import pytest
-from six import StringIO
+from io import StringIO
 
 import pint.scripts.pintk as pintk
 from pinttestdata import datadir

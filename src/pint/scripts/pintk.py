@@ -1,8 +1,5 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore:DeprecationWarning
 """Tkinter interactive interface for PINT pulsar timing tool"""
-
-from __future__ import absolute_import, division, print_function
-
 import argparse
 import code
 import os
@@ -10,12 +7,9 @@ import sys
 
 import numpy as np
 
-try:
-    from six.moves import Tkinter as tk
-except ImportError:
-    from six.moves import tkinter as tk
-import six.moves.tkinter_filedialog as tkFileDialog
-import six.moves.tkinter_messagebox as tkMessageBox
+import tkinter as tk
+import tkinter.filedialog as tkFileDialog
+import tkinter.messagebox as tkMessageBox
 from astropy import log
 
 from pint.pintk.paredit import ParWidget

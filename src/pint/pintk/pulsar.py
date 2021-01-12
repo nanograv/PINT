@@ -5,8 +5,6 @@ and will contain the pre/post fit model, toas,
 pre/post fit residuals, and other useful information.
 self.selected_toas = selected toas, self.all_toas = all toas in tim file
 """
-from __future__ import division, print_function
-
 import copy
 from enum import Enum
 

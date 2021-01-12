@@ -1,8 +1,4 @@
-"""
-An interface for pint compatible to the interface of libstempo
-"""
-from __future__ import absolute_import, division, print_function
-
+"""An interface for pint compatible to the interface of libstempo."""
 import collections
 import time
 from collections import OrderedDict

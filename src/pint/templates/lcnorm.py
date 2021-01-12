@@ -6,8 +6,6 @@ n-dimensional ball of unit radius.
 
 author: M. Kerr <matthew.kerr@gmail.com>
 """
-from __future__ import absolute_import, division, print_function
-
 from math import acos, asin, cos, pi, sin
 
 import numpy as np
