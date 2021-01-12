@@ -213,11 +213,11 @@ class Observatory(object):
         # TOA metadata which may be necessary in some cases.
         raise NotImplementedError
 
-    def get_TDBs(self, t, method="default", ephem=None, options=None, grp=None):
+    def get_TDBs(self, t, method="default", ephem=None, options=None):
         """This is a high level function for converting TOAs to TDB time scale.
 
         Different method can be applied to obtain the result. Current supported
-        methods are ['astropy', 'ephemeris']
+        methods are ['default', 'ephemeris']
 
         Parameters
         ----------
@@ -226,15 +226,22 @@ class Observatory(object):
         method: str or callable, optional
             Method of computing TDB
 
-            default
+            "default"
                 Astropy time.Time object built-in converter, uses FB90.
                 SpacecraftObs will include a topocentric correction term.
-            ephemeris
-                JPL ephemeris included TDB-TT correction.
+            "ephemeris"
+                JPL ephemeris included TDB-TT correction. Not currently
+                implemented.
+            callable
+                This callable is called with the parameter t as its first
+                parameter; additional keyword arguments can be supplied
+                in the options argument
 
         ephem: str, optional
             The ephemeris to get he TDB-TT correction. Required for the
             'ephemeris' method.
+        options: dict or None
+            Options to pass to a custom callable.
         """
 
         if t.isscalar:
@@ -252,7 +259,7 @@ class Observatory(object):
             options = dict(options)
             return method(t, **options)
         if meth == "default":
-            return self._get_TDB_default(t, ephem, grp)
+            return self._get_TDB_default(t)
         elif meth == "ephemeris":
             if ephem is None:
                 raise ValueError(
@@ -263,18 +270,22 @@ class Observatory(object):
         else:
             raise ValueError("Unknown method '%s'." % method)
 
-    def _get_TDB_default(self, t, ephem=None, grp=None):
+    def _get_TDB_default(self, t):
         return t.tdb
 
     def _get_TDB_ephem(self, t, ephem):
-        """This is a function that reads the ephem TDB-TT column. This column is
-            provided by DE4XXt version of ephemeris.
+        """Read the ephem TDB-TT column.
+
+        This column is provided by DE4XXt version of ephemeris.
         """
         raise NotImplementedError
 
     def posvel(self, t, ephem):
-        """Returns observatory position and velocity relative to solar system
-        barycenter for the given times (astropy array-valued Time objects)."""
+        """Return observatory position and velocity for the given times.
+
+        Postion is relative to solar system barycenter; times are
+        (astropy array-valued Time objects).
+        """
         # TODO this and derived methods should be changed to accept a TOA
         # table in addition to Time objects.  This will allow access to extra
         # TOA metadata which may be necessary in some cases.
