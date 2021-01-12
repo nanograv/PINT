@@ -1869,7 +1869,7 @@ class TOAs:
                     )
                     grpmjds = time.Time(grp["mjd"], location=locs)
 
-            grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem, grp=grp)
+            grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
             tdbs[loind:hiind] = np.asarray([t for t in grptdbs])
 
         # Now add the new columns to the table
