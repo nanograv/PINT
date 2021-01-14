@@ -204,9 +204,7 @@ def test_residuals_wideband_chi2():
 
 
 # @pytest.mark.xfail()
-@pytest.mark.parametrize(
-    "full_cov", [pytest.param(True, marks=pytest.mark.xfail), False]
-)
+@pytest.mark.parametrize("full_cov", [True, False])
 def test_gls_chi2_real_data(full_cov):
     model = get_model(
         StringIO(
@@ -223,7 +221,6 @@ def test_gls_chi2_real_data(full_cov):
             """
         )
     )
-    # model.free_params = ["ELAT", "ELONG"]
     toas = make_fake_toas(57000, 59000, 40, model=model, error=1 * u.us)
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     f = GLSFitter(toas, model)
@@ -231,7 +228,7 @@ def test_gls_chi2_real_data(full_cov):
     assert_allclose(fit_chi2, f.resids.calc_chi2(full_cov=full_cov))
 
 
-@pytest.mark.xfail()
+@pytest.mark.xfail(reason="numerical instability maybe?")
 def test_gls_chi2_full_cov():
     model = get_model(
         StringIO(
@@ -248,6 +245,7 @@ def test_gls_chi2_full_cov():
             """
         )
     )
+    model.free_params = ["ELAT", "ELONG"]
     toas = make_fake_toas(57000, 59000, 1000, model=model, error=1 * u.us)
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     r = Residuals(toas, model)
