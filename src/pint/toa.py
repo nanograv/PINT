@@ -71,7 +71,7 @@ toa_commands = (
     "END",
 )
 
-all_planets = ("jupiter", "saturn", "venus", "uranus", "neptune")
+all_planets = ("jupiter", "saturn", "venus", "uranus", "neptune", "earth")
 
 
 def _compute_hash(filename):
@@ -1190,7 +1190,7 @@ class TOAs:
          - velocity of the observatory in ecliptic coordinates at the time of the TOA; computed
            by :func:`pint.toa.TOAs.add_vel_ecl`
        * - ``obs_sun_pos``, ``obs_jupiter_pos``, ``obs_saturn_pos``, ``obs_venus_pos``,
-           ``obs_uranus_pos``, ``obs_neptune_pos``
+           ``obs_uranus_pos``, ``obs_neptune_pos``, ``obs_earth_pos``
          - position of various celestial objects at the time of the TOA; computed
            by :func:`pint.toa.TOAs.compute_posvels`
        * - ``pulse_number``
