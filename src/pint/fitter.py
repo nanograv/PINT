@@ -1181,7 +1181,9 @@ class GLSFitter(Fitter):
                 fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
                 # NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
-            self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
+            newparams = dict(zip(list(fitp.keys()), list(fitpv.values())))
+            self.set_params(newparams)
+            self.update_resids()
             # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
 
@@ -1196,6 +1198,7 @@ class GLSFitter(Fitter):
                 self.resids.noise_resids = noise_resids
 
         self.update_model(chi2)
+        self.resids.chi2 = chi2
 
         return chi2
 
@@ -1512,7 +1515,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
                 # NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
-            self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
+            newparams = dict(zip(list(fitp.keys()), list(fitpv.values())))
+            self.set_params(newparams)
+            self.update_resids()
             # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
 
@@ -1527,5 +1532,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 self.resids.noise_resids = noise_resids
 
         self.update_model(chi2)
+        self.resids.chi2 = chi2
+
+        # A cheat for now:
+        self.resids.toa.chi2 = self.resids.chi2 - self.resids.dm.chi2
 
         return chi2
