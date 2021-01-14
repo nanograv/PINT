@@ -138,6 +138,7 @@ def check_gradient(func, atol=1e-8, rtol=1e-5, quiet=False):
         anyfail = anyfail or fail
     return not anyfail
 
+
 class LCPrimitive:
     """ Base class for various components of a light curve.  All "analytic"
         light curve models must inherit and must implement the three
