@@ -32,8 +32,6 @@ MAXWRAPS = 15
 MINWRAPS = 3
 WRAPEPS = 1e-8
 
-# TODO -- possible "LCBase" class with certain method common to LCPrimitive and LCTemplate
-
 
 def two_comp_mc(n, w1, w2, loc, func):
     """Generate MC photons from a two-sided distribution.
@@ -141,33 +139,6 @@ def check_gradient(func, atol=1e-8, rtol=1e-5, quiet=False):
             print("%02d (%s) %.3g (abs)" % (i, pass_string, d1.max()))
         anyfail = anyfail or fail
     return not anyfail
-
-
-class Fittable(object):
-    # TODO
-    """ Base class for any object with fittable parameters.
-        Handle parameter names, etc. here?"""
-
-    def get_parameters(self):
-        pass
-
-    def set_parameters(self):
-        pass
-
-    def get_bounds(self):
-        pass
-
-    def __call__(self, *args):
-        return self._call(*args)[self.free]
-
-    def _call(self, *args):
-        raise NotImplementedError("Child class instantiates.")
-
-    def grad(self, *args):
-        return self._grad(*args)[self.free]
-
-    def _grad(self, *args):
-        raise NotImplementedError("Child class instantiates.")
 
 
 class LCPrimitive(object):
@@ -393,7 +364,7 @@ class LCPrimitive(object):
             fstring = "" if self.free[i] else " [FIXED]"
             n = self.pnames[i][:m]
             t_n = n + (m - len(n)) * " "
-            l += [t_n + ": %.4f +\- %.4f%s" % (self.p[i], errors[i], fstring)]
+            l += [t_n + ": %.4f +\\- %.4f%s" % (self.p[i], errors[i], fstring)]
         l = [self.name + "\n------------------"] + l
         return "\n".join(l)
 

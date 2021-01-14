@@ -58,8 +58,9 @@ class LCTemplate(object):
 
     def __getstate__(self):
         # transform _cache_dirty into a normal dict, necessary to pickle it
-        self._cache_dirty = dict(self._cache_dirty)
-        return self.__dict__
+        state = self.__dict__.copy()
+        state["_cache_dirty"] = dict(state["_cache_dirty"])
+        return state
 
     def _sanity_checks(self):
         if len(self.primitives) != len(self.norms):
