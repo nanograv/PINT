@@ -7,13 +7,16 @@ from io import StringIO
 import astropy.units as u
 import numpy as np
 import pytest
+from astropy.time import TimeDelta
 from pinttestdata import datadir
+from numpy.testing import assert_allclose
 
 from pint.models import get_model
 from pint.models.dispersion_model import Dispersion
 from pint.residuals import CombinedResiduals, Residuals, WidebandTOAResiduals
 from pint.toa import get_TOAs, make_fake_toas
 from pint.utils import weighted_mean
+from pint.fitter import WLSFitter, GLSFitter, WidebandTOAFitter
 
 os.chdir(datadir)
 
@@ -136,3 +139,89 @@ def test_residuals_fake_wideband():
     assert 0 < np.sum(e > 1.5 * u.us) < len(toas)
     with pytest.raises(ValueError):
         model.as_parfile().index("EQUAD")
+
+
+def test_residuals_wls_chi2():
+    model = get_model(
+        StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            """
+        )
+    )
+    toas = make_fake_toas(57000, 59000, 20, model=model, error=1 * u.us)
+    toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
+    r = Residuals(toas, model)
+    f = WLSFitter(toas, model)
+    assert f.fit_toas() == r.chi2
+
+
+def test_residuals_gls_chi2():
+    model = get_model(
+        StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            ECORR mjd 57000 58000 2
+            """
+        )
+    )
+    toas = make_fake_toas(57000, 59000, 20, model=model, error=1 * u.us)
+    toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
+    r = Residuals(toas, model)
+    f = GLSFitter(toas, model)
+    assert f.fit_toas() == r.chi2
+
+
+def test_residuals_wideband_chi2():
+    model = get_model(
+        StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            ECORR mjd 57000 58000 2
+            """
+        )
+    )
+    toas = make_fake_toas(57000, 59000, 20, model=model, error=1 * u.us, dm=10)
+    toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
+    r = Residuals(toas, model)
+    f = WidebandTOAFitter(toas, model)
+    assert f.fit_toas() == r.chi2
+
+
+@pytest.mark.parametrize("full_cov", [True, False])
+def test_gls_chi2_real_data(full_cov):
+    model = get_model(
+        StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            TNRedAmp -14.227505410948254
+            TNRedGam 4.91353
+            TNRedC 45
+            """
+        )
+    )
+    toas = make_fake_toas(57000, 59000, 40, model=model, error=1 * u.us)
+    toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
+    f = GLSFitter(toas, model)
+    fit_chi2 = f.fit_toas(maxiter=10, full_cov=full_cov)
+    assert_allclose(fit_chi2, f.resids.calc_chi2(full_cov=full_cov))
