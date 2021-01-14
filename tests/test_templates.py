@@ -1,10 +1,9 @@
 import logging
-import os
 
 import numpy as np
 
-from pint.templates import lcprimitives
-from pint.templates import lctemplate
+from pinttestdata import datadir
+from pint.templates import lcfitters, lcprimitives, lctemplate
 
 
 def gauss(x, x0, s):
@@ -69,25 +68,90 @@ def test_template_string_representation():
     )
     # add in an error manually
     lct.primitives[0].errors[0] = 0.01
-    expected_val = """
+    expected_val = r"""
 Mixture Amplitudes
 ------------------
-P1 : 0.2500 +\\- 0.0000
-P2 : 0.3500 +\\- 0.0000
-DC : 0.4000 +\\- 0.0000
+P1 : 0.2500 +\- 0.0000
+P2 : 0.3500 +\- 0.0000
+DC : 0.4000 +\- 0.0000
 
 P1 -- Gaussian
 ------------------
-Width   : 0.0100 +\\- 0.0100
-Location: 0.5000 +\\- 0.0000
+Width   : 0.0100 +\- 0.0100
+Location: 0.5000 +\- 0.0000
 
 P2 -- Gaussian
 ------------------
-Width   : 0.0100 +\\- 0.0000
-Location: 0.4800 +\\- 0.0000
+Width   : 0.0100 +\- 0.0000
+Location: 0.4800 +\- 0.0000
 
-delta   : 0.4800 +\\- 0.0000
-Delta   : 0.0200 +\\- 0.0000
+delta   : 0.4800 +\- 0.0000
+Delta   : 0.0200 +\- 0.0000
 """
 
     assert str(lct).strip() == expected_val.strip()
+
+
+def test_template_simulation():
+    lct = lctemplate.get_gauss2()
+    lct.random(100)
+
+
+def test_simple_fit():
+    """ Make sure objects adequately implement mathematical intent."""
+
+    lct = lctemplate.get_gauss2()
+
+    # load in simulated phases
+    ph = np.loadtxt(datadir + "/template_phases.asc")
+    lcf = lcfitters.LCFitter(lct, ph)
+    lcf.fit(unbinned=True, estimate_errors=True)
+    expected_val = r"""
+Log Likelihood for fit: 1091.04
+
+Mixture Amplitudes
+------------------
+P1 : 0.5840 +\- 0.0220
+P2 : 0.4160 +\- 0.0220
+DC : 0.0000 +\- 0.0000
+
+P1 -- Gaussian
+------------------
+Width   : 0.0103 +\- 0.0004
+Location: 0.1007 +\- 0.0006
+
+P2 -- Gaussian
+------------------
+Width   : 0.0211 +\- 0.0010
+Location: 0.5493 +\- 0.0015
+
+delta   : 0.1007 +\- 0.0006
+Delta   : 0.4486 +\- 0.0016
+"""
+    assert expected_val.strip() == str(lcf).strip()
+
+    lcf.fit(unbinned=False, estimate_errors=True)
+    expected_val = r"""
+Log Likelihood for fit: 1080.31
+
+Mixture Amplitudes
+------------------
+P1 : 0.5840 +\- 0.0220
+P2 : 0.4160 +\- 0.0220
+DC : 0.0000 +\- 0.0000
+
+P1 -- Gaussian
+------------------
+Width   : 0.0106 +\- 0.0004
+Location: 0.1007 +\- 0.0006
+
+P2 -- Gaussian
+------------------
+Width   : 0.0213 +\- 0.0010
+Location: 0.5493 +\- 0.0015
+
+delta   : 0.1007 +\- 0.0006
+Delta   : 0.4486 +\- 0.0016
+"""
+
+    assert expected_val.strip() == str(lcf).strip()
