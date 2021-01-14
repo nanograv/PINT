@@ -8,15 +8,15 @@ import astropy.units as u
 import numpy as np
 import pytest
 from astropy.time import TimeDelta
-from pinttestdata import datadir
 from numpy.testing import assert_allclose
+from pinttestdata import datadir
 
+from pint.fitter import GLSFitter, WidebandTOAFitter, WLSFitter
 from pint.models import get_model
 from pint.models.dispersion_model import Dispersion
 from pint.residuals import CombinedResiduals, Residuals, WidebandTOAResiduals
 from pint.toa import get_TOAs, make_fake_toas
 from pint.utils import weighted_mean
-from pint.fitter import WLSFitter, GLSFitter, WidebandTOAFitter
 
 os.chdir(datadir)
 
@@ -155,6 +155,7 @@ def test_residuals_wls_chi2():
         )
     )
     toas = make_fake_toas(57000, 59000, 20, model=model, error=1 * u.us)
+    np.random.seed(0)
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     r = Residuals(toas, model)
     f = WLSFitter(toas, model)
@@ -176,6 +177,7 @@ def test_residuals_gls_chi2():
         )
     )
     toas = make_fake_toas(57000, 59000, 20, model=model, error=1 * u.us)
+    np.random.seed(0)
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     r = Residuals(toas, model)
     f = GLSFitter(toas, model)
@@ -197,6 +199,7 @@ def test_residuals_wideband_chi2():
         )
     )
     toas = make_fake_toas(57000, 59000, 20, model=model, error=1 * u.us, dm=10)
+    np.random.seed(0)
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     r = Residuals(toas, model)
     f = WidebandTOAFitter(toas, model)
@@ -204,7 +207,9 @@ def test_residuals_wideband_chi2():
 
 
 # @pytest.mark.xfail()
-@pytest.mark.parametrize("full_cov", [True, False])
+@pytest.mark.parametrize(
+    "full_cov", [pytest.param(True, marks=pytest.mark.xfail), False]
+)
 def test_gls_chi2_real_data(full_cov):
     model = get_model(
         StringIO(
@@ -222,6 +227,7 @@ def test_gls_chi2_real_data(full_cov):
         )
     )
     toas = make_fake_toas(57000, 59000, 40, model=model, error=1 * u.us)
+    np.random.seed(0)
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     f = GLSFitter(toas, model)
     fit_chi2 = f.fit_toas(full_cov=full_cov)
@@ -247,6 +253,7 @@ def test_gls_chi2_full_cov():
     )
     model.free_params = ["ELAT", "ELONG"]
     toas = make_fake_toas(57000, 59000, 1000, model=model, error=1 * u.us)
+    np.random.seed(0)
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     r = Residuals(toas, model)
     assert_allclose(r.calc_chi2(full_cov=True), r.calc_chi2(full_cov=False))
