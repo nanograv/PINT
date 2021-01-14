@@ -635,7 +635,6 @@ class CombinedResiduals:
     """
 
     def __init__(self, residuals):
-        self._chi2 = None
         self.residual_objs = collections.OrderedDict()
         for res in residuals:
             res._is_combined = True
@@ -673,16 +672,11 @@ class CombinedResiduals:
 
     @property
     def chi2(self):
-        """Compute chi-squared as needed and cache the result."""
-        if self._chi2 is None:
-            self._chi2 = self.calc_chi2()
-        assert self._chi2 is not None
-        return self._chi2
-
-    @chi2.setter
-    def chi2(self, chi2):
-        """Set chi-squared as needed."""
-        self._chi2 = chi2
+        """Compute chi-squared from constituent residual components."""
+        chi2 = 0
+        for res in self.residual_objs.values():
+            chi2 += res.chi2
+        return chi2
 
     @property
     def data_error(self):
@@ -690,13 +684,6 @@ class CombinedResiduals:
         for rs in self.residual_objs.values():
             errors.append((rs.residual_type, rs.get_data_error()))
         return collections.OrderedDict(errors)
-
-    def calc_chi2(self):
-        """Calculate chi-squared from constituent residual components."""
-        chi2 = 0
-        for res in self.residual_objs.values():
-            chi2 += res.chi2
-        return chi2
 
     def rms_weighted(self):
         """Compute weighted RMS of the residals in time."""

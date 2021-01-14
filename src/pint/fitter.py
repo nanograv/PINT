@@ -1532,9 +1532,8 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 self.resids.noise_resids = noise_resids
 
         self.update_model(chi2)
-        self.resids.chi2 = chi2
 
         # A cheat for now:
-        self.resids.toa.chi2 = self.resids.chi2 - self.resids.dm.chi2
+        self.resids.toa.chi2 = chi2 - self.resids.dm.chi2
 
         return chi2
