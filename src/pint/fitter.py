@@ -1181,7 +1181,10 @@ class GLSFitter(Fitter):
                 fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
                 # NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
-            self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
+            newparams = dict(zip(list(fitp.keys()), list(fitpv.values())))
+            self.set_params(newparams)
+            self.update_resids()
+            # self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
             # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
 
@@ -1512,7 +1515,10 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
                 # NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
-            self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
+            newparams = dict(zip(list(fitp.keys()), list(fitpv.values())))
+            self.set_params(newparams)
+            self.update_resids()
+            # self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
             # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
 

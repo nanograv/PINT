@@ -9,6 +9,7 @@ dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
 from __future__ import absolute_import, division, print_function
 
 import collections
+import copy
 import warnings
 
 import astropy.units as u
@@ -347,9 +348,11 @@ class Residuals:
             # Use GLS but don't actually fit
             from pint.fitter import GLSFitter
 
-            f = GLSFitter(self.toas, self.model, residuals=self)
+            m = copy.deepcopy(self.model)
+            m.free_parameters = []
+            f = GLSFitter(self.toas, m, residuals=self)
             try:
-                return f.fit_toas(maxiter=0, full_cov=full_cov)
+                return f.fit_toas(maxiter=1, full_cov=full_cov)
             except LinAlgError as e:
                 log.warning(
                     "Degenerate conditions encountered when "
