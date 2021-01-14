@@ -94,10 +94,11 @@ Delta   : 0.0200 +\- 0.0000
 
 def test_template_simulation():
     lct = lctemplate.get_gauss2()
-    lct.random(100)
+    x = lct.random(100)
+    assert (len(x) == 100) and (np.min(x) >= 0) and (np.max(x) < 1)
 
 
-def test_simple_fit():
+def test_simple_fit_unbinned():
     """ Make sure objects adequately implement mathematical intent."""
 
     lct = lctemplate.get_gauss2()
@@ -130,6 +131,15 @@ Delta   : 0.4486 +\- 0.0016
 """
     assert expected_val.strip() == str(lcf).strip()
 
+
+def test_simple_fit_binned():
+    """ Make sure objects adequately implement mathematical intent."""
+
+    lct = lctemplate.get_gauss2()
+
+    # load in simulated phases
+    ph = np.loadtxt(datadir + "/template_phases.asc")
+    lcf = lcfitters.LCFitter(lct, ph)
     lcf.fit(unbinned=False, estimate_errors=True)
     expected_val = r"""
 Log Likelihood for fit: 1080.31
