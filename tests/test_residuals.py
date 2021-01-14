@@ -203,6 +203,7 @@ def test_residuals_wideband_chi2():
     assert f.fit_toas() == r.chi2
 
 
+@pytest.mark.xfail()
 @pytest.mark.parametrize("full_cov", [True, False])
 def test_gls_chi2_real_data(full_cov):
     model = get_model(
@@ -225,3 +226,26 @@ def test_gls_chi2_real_data(full_cov):
     f = GLSFitter(toas, model)
     fit_chi2 = f.fit_toas(maxiter=10, full_cov=full_cov)
     assert_allclose(fit_chi2, f.resids.calc_chi2(full_cov=full_cov))
+
+
+@pytest.mark.xfail()
+def test_gls_chi2_full_cov():
+    model = get_model(
+        StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            TNRedAmp -14.227505410948254
+            TNRedGam 4.91353
+            TNRedC 45
+            """
+        )
+    )
+    toas = make_fake_toas(57000, 59000, 1000, model=model, error=1 * u.us)
+    toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
+    r = Residuals(toas, model)
+    assert_allclose(r.calc_chi2(full_cov=True), r.calc_chi2(full_cov=False))
