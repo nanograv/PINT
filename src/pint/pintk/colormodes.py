@@ -1,12 +1,7 @@
 """ Color modes for graphed pintk TOAs. """
-
-from __future__ import division, print_function
-
 from astropy import log
 import numpy as np
 import matplotlib
-
-log.setLevel("INFO")
 
 
 class ColorMode:

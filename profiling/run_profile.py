@@ -9,7 +9,6 @@ selected output sort key.
 A .pdf file with the name <script_name> + <git_branch_name>.pdf will be
 generated for listing all the calls.
 """
-from __future__ import print_function
 import cProfile
 import argparse
 import subprocess

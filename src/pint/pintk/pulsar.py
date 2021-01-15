@@ -5,8 +5,6 @@ and will contain the pre/post fit model, toas,
 pre/post fit residuals, and other useful information.
 self.selected_toas = selected toas, self.all_toas = all toas in tim file
 """
-from __future__ import division, print_function
-
 import copy
 from enum import Enum
 
@@ -56,9 +54,10 @@ class Fitters(Enum):
     GLS = 2
 
 
-class Pulsar(object):
-    """
-    Wrapper class for a pulsar. Contains the toas, model, residuals, and fitter
+class Pulsar:
+    """Wrapper class for a pulsar.
+
+    Contains the toas, model, residuals, and fitter
     """
 
     def __init__(self, parfile=None, timfile=None, ephem=None):

@@ -1,8 +1,6 @@
 """Pulsar timing piecewise solution."""
 # piecewise.py
 # Defines piecewise spindown timing model class
-from __future__ import absolute_import, division, print_function
-
 import astropy.units as u
 import numpy as np
 from astropy import log

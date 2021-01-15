@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import astropy.constants as c
 import astropy.units as u
 import numpy as np

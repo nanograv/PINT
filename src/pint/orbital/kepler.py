@@ -2,8 +2,6 @@
 
 All times are in days, distances in light-seconds, and masses in solar masses.
 """
-from __future__ import absolute_import, division, print_function
-
 import collections
 
 import numpy as np

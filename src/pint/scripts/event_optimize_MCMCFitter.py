@@ -1,6 +1,4 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
-from __future__ import absolute_import, division, print_function
-
 import argparse
 import os
 import sys
@@ -394,6 +392,6 @@ def main(argv=None):
     f.write(ftr.model.as_parfile())
     f.close()
 
-    from six.moves import cPickle as pickle
+    import pickle
 
     pickle.dump(samples, open(ftr.model.PSR.value + "_samples.pickle", "wb"))

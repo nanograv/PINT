@@ -1,8 +1,4 @@
 """Pulsar timing glitches."""
-# glitch.py
-# Defines glitch timing model class
-from __future__ import absolute_import, division, print_function
-
 import astropy.units as u
 import numpy as np
 from astropy import log

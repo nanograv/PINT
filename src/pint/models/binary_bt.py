@@ -1,10 +1,7 @@
 """The BT (Blandford & Teukolsky) model.
 
 See Blandford & Teukolsky 1976, ApJ, 205, 580.
-
 """
-from __future__ import absolute_import, division, print_function
-
 import astropy.units as u
 
 from pint import GMsun, Tsun, ls

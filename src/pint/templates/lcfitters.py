@@ -14,8 +14,6 @@ $Header: /nfs/slac/g/glast/ground/cvs/pointlike/python/uw/pulsar/lcfitters.py,v 
 author: M. Kerr <matthew.kerr@gmail.com>
 
 """
-from __future__ import absolute_import, division, print_function
-
 from copy import deepcopy
 
 import numpy as np
@@ -85,7 +83,7 @@ def LCFitter(
     return WeightedLCFitter(template, phases, **kwargs)
 
 
-class UnweightedLCFitter(object):
+class UnweightedLCFitter:
     def __init__(self, template, phases, **kwargs):
         self.template = template
         self.phases = np.asarray(phases)
@@ -767,7 +765,7 @@ class WeightedLCFitter(UnweightedLCFitter):
         return -(numer / denom).sum(axis=1)
 
 
-class ChiSqLCFitter(object):
+class ChiSqLCFitter:
     """ Fit binned data with a gaussian likelihood."""
 
     def __init__(self, template, x, y, yerr, log10_ens=3, **kwargs):

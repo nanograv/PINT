@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 from pint.models.parameter import floatParameter
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries.DD_model import DDmodel

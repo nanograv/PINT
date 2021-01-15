@@ -1,9 +1,5 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
-"""PINT-based tool for making simulated TOAs
-
-"""
-from __future__ import absolute_import, division, print_function
-
+"""PINT-based tool for making simulated TOAs."""
 import astropy.units as u
 import numpy as np
 from astropy import log

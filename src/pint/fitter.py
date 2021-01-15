@@ -53,8 +53,6 @@ Fitters in use::
     Spindown Edot = 2.868e+33 erg / s (I=1e+45 cm2 g)
 
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import collections
 import copy
 from warnings import warn
@@ -85,7 +83,7 @@ class DegeneracyWarning(UserWarning):
     pass
 
 
-class Fitter(object):
+class Fitter:
     """Base class for objects encapsulating fitting problems.
 
     The fitting function should be defined as the fit_toas() method.

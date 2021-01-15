@@ -4,8 +4,6 @@ These observatories are registered when this file is imported. As a result it
 cannot be imported until TopoObs has successfully been imported.
 
 """
-from __future__ import absolute_import, division, print_function
-
 from pint.observatory.topo_obs import TopoObs
 
 TopoObs(

@@ -5,8 +5,6 @@ want to manage a collection of these we recommend you use a :class:`pint.toa.TOA
 as this makes certain operations much more convenient. You probably want to load one with
 :func:`pint.toa.get_TOAs`.
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import copy
 import gzip
 import hashlib

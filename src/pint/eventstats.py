@@ -2,8 +2,6 @@
 
 author: M. Kerr <matthew.kerr@gmail.com>
 """
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 from numpy import exp, arange, log
 from scipy.special import erfc, gamma
@@ -56,7 +54,7 @@ def sig2sigma(sig, two_tailed=True, logprob=False):
     """Convert tail probability to "sigma" units.
 
     Find the value of the argument for the normal distribution beyond which the
-    integrated tail probability is sig.  Note that the default is to interpret 
+    integrated tail probability is sig.  Note that the default is to interpret
     this number as the two-tailed value, as this is the quantity that goes to 0
     when sig goes to 1 and is also what most people mean by "sigma", i.e. a
     chance probability of 0.32 will return a value of 1 sigma.

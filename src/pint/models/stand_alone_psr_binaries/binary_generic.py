@@ -1,6 +1,4 @@
 # This file is a prototype of independent psr binary model class
-from __future__ import absolute_import, division, print_function
-
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
@@ -17,7 +15,7 @@ from pint.models.stand_alone_psr_binaries.binary_orbits import OrbitPB
 SECS_PER_JUL_YEAR = SECS_PER_DAY * 365.25
 
 
-class PSR_BINARY(object):
+class PSR_BINARY:
     """A base (generic) object for psr binary models.
 
     In this class, a set of generally used binary paramters and several commonly used
