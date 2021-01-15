@@ -1,4 +1,3 @@
-from __future__ import print_function, division
 import pint.models.model_builder as mb
 import pint.toa as toa
 import pint.fitter as fitter

@@ -1,6 +1,4 @@
 """A simple model of a base dispersion delay and DMX dispersion."""
-from __future__ import absolute_import, division, print_function
-
 from warnings import warn
 
 import numpy as np
@@ -327,7 +325,7 @@ class DispersionDMX(Dispersion):
         self.delay_funcs_component += [self.DMX_dispersion_delay]
 
     def add_DMX_range(self, mjd_start, mjd_end, index=None, dmx=0, frozen=True):
-        """ Add DMX range to a dispersion model with specified start/end MJDs and DMX. 
+        """ Add DMX range to a dispersion model with specified start/end MJDs and DMX.
 
         Parameters
         ----------
@@ -337,18 +335,18 @@ class DispersionDMX(Dispersion):
         mjd_end : float
             MJD for end of DMX event.
         index : int, None
-            Integer label for DMX event. If None, will increment largest used index by 1. 
+            Integer label for DMX event. If None, will increment largest used index by 1.
         dmx : float
             Change in DM during DMX event.
         frozen : bool
             Indicates whether DMX will be fit.
 
-        Returns 
+        Returns
         -------
 
         index : int
             Index that has been assigned to new DMX event.
-            
+
         """
 
         #### Setting up the DMX title convention. If index is None, want to increment the current max DMX index by 1.
@@ -416,7 +414,7 @@ class DispersionDMX(Dispersion):
         ----------
 
         index : float, int, list, np.ndarray
-            Number or list/array of numbers corresponding to DMX indices to be removed from model. 
+            Number or list/array of numbers corresponding to DMX indices to be removed from model.
         """
 
         if (
@@ -436,7 +434,7 @@ class DispersionDMX(Dispersion):
         self.validate()
 
     def get_indices(self):
-        """Returns an array of integers corresponding to DMX parameters. 
+        """Returns an array of integers corresponding to DMX parameters.
 
         Returns
         -------

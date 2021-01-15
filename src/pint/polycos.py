@@ -379,10 +379,10 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
     f.close()
 
 
-class Polycos(object):
-    """
-    A class for polycos model. Polyco is a fast phase calculator. It fits a set
-    of data using polynomials.
+class Polycos:
+    """A class for polycos model.
+
+    Polyco is a fast phase calculator. It fits a set of data using polynomials.
     """
 
     def __init__(self):

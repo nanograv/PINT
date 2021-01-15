@@ -1,12 +1,10 @@
 #!/usr/bin/env python
-from __future__ import division, print_function
-
 import os
 import sys
 import unittest
 
 import numpy as np
-from six import StringIO
+from io import StringIO
 
 import pint.scripts.zima as zima
 from pinttestdata import datadir, testdir

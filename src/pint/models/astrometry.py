@@ -1,7 +1,5 @@
 # astrometry.py
 # Defines Astrometry timing model class
-from __future__ import absolute_import, division, print_function
-
 import sys
 
 import astropy.constants as const
