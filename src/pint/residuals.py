@@ -6,8 +6,6 @@ objects, as ``fitter.residual``. Variants exist for arrival-time-only data
 (:class:`pint.residuals.Residuals`) and for arrival times that come paired with
 dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
 """
-from __future__ import absolute_import, division, print_function
-
 import collections
 import warnings
 

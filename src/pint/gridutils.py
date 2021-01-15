@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import os
 import copy
 import multiprocessing
@@ -32,8 +30,8 @@ def _grid_docol(ftr, par1_name, par1, par2_name, par2_grid, ii, q):
 
 def grid_chisq_mp(ftr, par1_name, par1_grid, par2_name, par2_grid, ncpu=None):
     """Compute chisq over a grid of two parameters, multiprocessing version
-    
-    Use Python's multiprocessing package to do a parallel computation of 
+
+    Use Python's multiprocessing package to do a parallel computation of
     chisq over 2-D grid of parameters.
 
     Parameters
@@ -102,7 +100,7 @@ def grid_chisq_mp(ftr, par1_name, par1_grid, par2_name, par2_grid, ncpu=None):
 
 def grid_chisq(ftr, par1_name, par1_grid, par2_name, par2_grid):
     """Compute chisq over a grid of two parameters, serial version
-    
+
     Single-threaded computation of chisq over 2-D grid of parameters.
 
     Parameters
@@ -121,7 +119,7 @@ def grid_chisq(ftr, par1_name, par1_grid, par2_name, par2_grid):
     Returns
     -------
     array : 2-D array of chisq values with par1 varying in columns and par2 varying in rows
-    
+
     """
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
@@ -155,7 +153,7 @@ def plot_grid_chisq(
     par1_name, par1_grid, par2_name, par2_grid, chi2, title="Chisq Heatmap"
 ):
     """Plot results of chi2 grid
-    
+
     Parameters
     ----------
     ftr
@@ -169,7 +167,7 @@ def plot_grid_chisq(
     par2_grid : array, Quantity
         Array of par2 values for column of the output matrix
     title : str, optional
-        Title for plot    
+        Title for plot
     """
 
     import matplotlib.pyplot as plt

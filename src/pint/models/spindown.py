@@ -1,8 +1,6 @@
 """Polynomial pulsar spindown."""
 # spindown.py
 # Defines Spindown timing model class
-from __future__ import absolute_import, division, print_function
-
 import astropy.units as u
 import numpy
 

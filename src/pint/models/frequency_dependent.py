@@ -1,6 +1,4 @@
 """A frequency evolution of pulsar profiles model"""
-from __future__ import absolute_import, division, print_function
-
 from warnings import warn
 
 import astropy.units as u

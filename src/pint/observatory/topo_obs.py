@@ -1,8 +1,6 @@
 """Ground-based fixed observatories."""
 # topo_obs.py
 # Code for dealing with "standard" ground-based observatories.
-from __future__ import absolute_import, division, print_function
-
 import os
 
 import astropy.constants as c
@@ -10,7 +8,6 @@ import astropy.units as u
 import numpy
 from astropy import log
 from astropy.coordinates import EarthLocation
-from six import raise_from
 
 from pint import JD_MJD
 from pint.config import datapath
@@ -266,13 +263,9 @@ class TopoObs(Observatory):
                         self.bipm_fullpath, format="tempo2"
                     )
                 except Exception as e:
-                    raise_from(
-                        ValueError(
-                            "Can not find TT BIPM file for version '%s'. "
-                            % self.bipm_version
-                        ),
-                        e,
-                    )
+                    raise ValueError(
+                        f"Can not find TT BIPM file for version '{self.bipm_version}'."
+                    ) from e
             corr += self._bipm_clock.evaluate(t) - tt2tai
         return corr
 

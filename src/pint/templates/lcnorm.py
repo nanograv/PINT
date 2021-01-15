@@ -6,8 +6,6 @@ n-dimensional ball of unit radius.
 
 author: M. Kerr <matthew.kerr@gmail.com>
 """
-from __future__ import absolute_import, division, print_function
-
 from math import acos, asin, cos, pi, sin
 
 import numpy as np
@@ -16,7 +14,7 @@ import numpy as np
 # TODO -- error propagation to norms
 
 
-class NormAngles(object):
+class NormAngles:
     """Keep track of N angles (0 to pi/2) representing the coordinates inside a unit radius N-ball.
 
     Generally, the apportionment of the amplitudes of components is

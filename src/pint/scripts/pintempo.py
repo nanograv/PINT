@@ -6,10 +6,7 @@ command line syntax for either TEMPO or Tempo2. (I never understood why I had to
 specify '-f parfile' to those codes -- I mean, who runs TEMPO without a timing model?)
 
 This is currently just a stub and should be added to and expanded, as desired.
-
 """
-from __future__ import absolute_import, division, print_function
-
 import argparse
 import sys
 

@@ -34,7 +34,6 @@ except ImportError:
 import astropy.time
 import astropy.units as u
 import numpy as np
-import six
 from astropy.time import Time
 from astropy.time.formats import TimeFormat
 
@@ -348,9 +347,8 @@ def str2longdouble(str_data):
     """Return a long double from the input string.
 
     Accepts Fortran-style exponent notation (1.0d2).
-
     """
-    if not isinstance(str_data, six.string_types):
+    if not isinstance(str_data, (str, bytes)):
         raise TypeError("Need a string: {!r}".format(str_data))
     return np.longdouble(str_data.translate(maketrans("Dd", "ee")))
 
@@ -475,7 +473,7 @@ def _str_to_mjds(s):
 
 
 def str_to_mjds(s):
-    if isinstance(s, six.string_types):
+    if isinstance(s, (str, bytes)):
         return _str_to_mjds(s)
     else:
         imjd = np.empty_like(s, dtype=int)
@@ -487,7 +485,7 @@ def str_to_mjds(s):
         ) as it:
             for si, i, f in it:
                 si = si[()]
-                if not isinstance(si, six.string_types):
+                if not isinstance(si, (str, bytes)):
                     raise TypeError("Requires an array of strings")
                 i[...], f[...] = _str_to_mjds(si)
             return it.operands[1], it.operands[2]
