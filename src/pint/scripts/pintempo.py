@@ -51,15 +51,7 @@ def main(argv=None):
     log.warning(m.params)
 
     log.info("Reading TOAs")
-    use_planets = False
-    if m.PLANET_SHAPIRO.value:
-        use_planets = True
-    model_ephem = "DE421"
-    if m.EPHEM is not None:
-        model_ephem = m.EPHEM.value
-    t = pint.toa.get_TOAs(
-        args.timfile, planets=use_planets, ephem=model_ephem, usepickle=args.usepickle
-    )
+    t = pint.toa.get_TOAs(args.timfile, model=m, usepickle=args.usepickle)
 
     # turns pre-existing jump flags in t.table['flags'] into parameters in parfile
     m.jump_flags_to_params(t)
