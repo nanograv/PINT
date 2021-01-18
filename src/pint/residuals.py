@@ -776,7 +776,7 @@ class WidebandTOAResiduals(CombinedResiduals):
         m = copy.deepcopy(self.model)
         m.free_params = []
         f = WidebandTOAFitter(
-            self.toas, m, additional_args=dict(toa=dict(track_mode="use_pulse_numbers"))
+            self.toas, m, additional_args=dict(toa=dict(track_mode=self.toa.track_mode))
         )
         try:
             return f.fit_toas(maxiter=1, full_cov=full_cov)
