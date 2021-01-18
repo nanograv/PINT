@@ -1389,7 +1389,7 @@ class TOAs:
         if "pn" in self.table["flags"][0]:
             if "pulse_number" in self.table.colnames:
                 raise ValueError("Pulse number cannot be both a column and a TOA flag")
-            return np.array(flags["pn"] for flags in self.table["flags"])
+            return np.array(flags.get("pn", np.nan) for flags in self.table["flags"])
         elif "pulse_number" in self.table.colnames:
             return self.table["pulse_number"]
         else:
@@ -1619,7 +1619,7 @@ class TOAs:
 
         # Then, add pulse_number as a table column if possible
         try:
-            pns = [flags["pn"] for flags in self.table["flags"]]
+            pns = [float(flags.get("pn", np.nan)) for flags in self.table["flags"]]
             self.table["pulse_number"] = pns
             self.table["pulse_number"].unit = u.dimensionless_unscaled
 
@@ -1714,7 +1714,9 @@ class TOAs:
         if "pulse_number" in self.table.colnames:
             pnChange = True
             for i in range(len(self.table["flags"])):
-                self.table["flags"][i]["pn"] = self.table["pulse_number"][i]
+                pn = self.table["pulse_number"][i]
+                if not np.isnan(pn):
+                    self.table["flags"][i]["pn"] = pn
 
         for (toatime, toaerr, freq, obs, flags) in zip(
             self.table["mjd"],
