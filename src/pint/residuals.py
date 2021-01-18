@@ -68,8 +68,10 @@ class Residuals:
         Controls how pulse numbers are assigned. ``"nearest"`` assigns
         each TOA to the nearest integer pulse. ``"use_pulse_numbers"`` uses the
         ``pulse_number`` column of the TOAs table to assign pulse numbers. If the
-        default, None, is passed, use the pulse numbers if and only if the model has
-        parameter TRACK == "-2".
+        default, None, is passed, use the pulse numbers if the model has the
+        parameter TRACK == "-2" and not if it has TRACK == "0". If neither of the
+        above is set, use pulse numbers if there are pulse numbers present and not
+        if there aren't.
     """
 
     def __new__(
@@ -116,7 +118,13 @@ class Residuals:
             elif getattr(self.model, "TRACK").value == "0":
                 self.track_mode = "nearest"
             elif "pulse_number" in self.toas.table.columns:
-                self.track_mode = "use_pulse_numbers"
+                if not np.any(np.isnan(toas.table["pulse_number"])):
+                    log.warn(
+                        "Some TOAs are missing pulse numbers, they will not be used."
+                    )
+                    self.track_mode = "nearest"
+                else:
+                    self.track_mode = "use_pulse_numbers"
             else:
                 self.track_mode = "nearest"
         else:
