@@ -1,6 +1,4 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
-from __future__ import absolute_import, division, print_function
-
 import argparse
 import sys
 

@@ -1,6 +1,4 @@
 """Delay due to Earth's troposphere"""
-from __future__ import absolute_import, division, print_function
-
 from warnings import warn
 
 import astropy.constants as const

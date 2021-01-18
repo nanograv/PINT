@@ -1,6 +1,4 @@
 """Miscellaneous potentially-helpful functions."""
-from __future__ import absolute_import, division, print_function
-
 import re
 from contextlib import contextmanager
 from copy import deepcopy
@@ -9,7 +7,6 @@ from astropy import log
 import astropy.constants as const
 import astropy.coordinates as coords
 import numpy as np
-import six
 import scipy.optimize.zeros as zeros
 from scipy.special import fdtrc
 
@@ -58,7 +55,7 @@ __all__ = [
 # Actual exported tools
 
 
-class PosVel(object):
+class PosVel:
     """Position/Velocity class.
 
     The class is used to represent the 6 values describing position
@@ -353,7 +350,7 @@ def open_or_use(f, mode="r"):
     a subclass of ``str`` will be passed through untouched.
 
     """
-    if isinstance(f, six.string_types):
+    if isinstance(f, (str, bytes)):
         with open(f, mode) as fl:
             yield fl
     else:
@@ -384,7 +381,7 @@ def interesting_lines(lines, comments=None):
     """
     if comments is None:
         cc = ()
-    elif isinstance(comments, six.string_types):
+    elif isinstance(comments, (str, bytes)):
         cc = (comments,)
     else:
         cc = tuple(comments)

@@ -1,10 +1,8 @@
 #!/usr/bin/env python
-from __future__ import division, print_function
-
 import os
 import sys
 
-from six import StringIO
+from io import StringIO
 
 from pint.scripts import pintempo
 from pinttestdata import datadir

@@ -1,7 +1,4 @@
 """Test basic functionality of the :module:`pint.utils`."""
-
-from __future__ import absolute_import, division, print_function
-
 from itertools import product
 from tempfile import NamedTemporaryFile
 
@@ -9,7 +6,6 @@ import pint
 import astropy.units as u
 import numpy as np
 import pytest
-import six
 from astropy.time import Time
 from hypothesis import assume, example, given
 from hypothesis.extra.numpy import array_shapes, arrays, scalar_dtypes
@@ -386,7 +382,7 @@ def test_mjds_to_str_array_roundtrip_close(sif):
 
 
 def test_mjds_to_str_singleton():
-    assert isinstance(mjds_to_str(40000, 0.0), six.string_types)
+    assert isinstance(mjds_to_str(40000, 0.0), (str, bytes))
 
 
 def test_str_to_mjds_singleton():
@@ -538,8 +534,8 @@ def test_jds_to_mjds_pulsar_array(s12):
         ("pulsar_mjd", float),
         ("mjd_long", np.longdouble),
         ("pulsar_mjd_long", np.longdouble),
-        ("mjd_string", six.string_types),
-        ("pulsar_mjd_string", six.string_types),
+        ("mjd_string", (str, bytes)),
+        ("pulsar_mjd_string", (str, bytes)),
     ],
 )
 def test_singleton_type(format_, type_):

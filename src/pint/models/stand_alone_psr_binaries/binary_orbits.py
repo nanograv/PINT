@@ -7,10 +7,8 @@ import pint.utils as ut
 from pint.utils import taylor_horner, taylor_horner_deriv
 
 
-class orbits(object):
-    """This is a base class for implementing different parameterization
-    of pulsar binary orbits
-    """
+class orbits:
+    """This is a base class for implementing different parameterization of pulsar binary orbits."""
 
     def __init__(self, orbit_name, parent, orbit_params=[]):
         self.name = orbit_name

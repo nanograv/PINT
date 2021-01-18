@@ -53,8 +53,6 @@ Fitters in use::
     Spindown Edot = 2.868e+33 erg / s (I=1e+45 cm2 g)
 
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import collections
 import copy
 from warnings import warn
@@ -85,7 +83,7 @@ class DegeneracyWarning(UserWarning):
     pass
 
 
-class Fitter(object):
+class Fitter:
     """Base class for objects encapsulating fitting problems.
 
     The fitting function should be defined as the fit_toas() method.
@@ -1069,7 +1067,7 @@ class GLSFitter(Fitter):
         self.model.validate()
         self.model.validate_toas(self.toas)
         chi2 = 0
-        for i in range(max(maxiter, 1)):
+        for i in range(maxiter):
             fitp = self.model.get_params_dict("free", "quantity")
             fitpv = self.model.get_params_dict("free", "num")
             fitperrs = self.model.get_params_dict("free", "uncertainty")
@@ -1120,51 +1118,43 @@ class GLSFitter(Fitter):
                 mtcm += np.diag(phiinv)
                 mtcy = np.dot(M.T, cinv * residuals)
 
-            if maxiter > 0:
-                xhat, xvar = None, None
-                if threshold <= 0:
-                    try:
-                        c = sl.cho_factor(mtcm)
-                        xhat = sl.cho_solve(c, mtcy)
-                        xvar = sl.cho_solve(c, np.eye(len(mtcy)))
-                    except sl.LinAlgError:
-                        xhat, xvar = None, None
-                if xhat is None:
-                    U, s, Vt = sl.svd(mtcm, full_matrices=False)
+            xhat, xvar = None, None
+            if threshold <= 0:
+                try:
+                    c = sl.cho_factor(mtcm)
+                    xhat = sl.cho_solve(c, mtcy)
+                    xvar = sl.cho_solve(c, np.eye(len(mtcy)))
+                except sl.LinAlgError:
+                    xhat, xvar = None, None
+            if xhat is None:
+                U, s, Vt = sl.svd(mtcm, full_matrices=False)
 
-                    bad = np.where(s <= threshold * s[0])[0]
-                    s[bad] = np.inf
-                    for c in bad:
-                        bad_col = Vt[c, :]
-                        bad_col /= abs(bad_col).max()
-                        bad_combination = " ".join(
-                            [
-                                f"{p}"
-                                for (co, p) in sorted(zip(bad_col, params))
-                                if abs(co) > threshold
-                            ]
-                        )
-                        warn(
-                            f"Parameter degeneracy; the following combination of parameters yields "
-                            f"almost no change: {bad_combination}",
-                            DegeneracyWarning,
-                        )
+                bad = np.where(s <= threshold * s[0])[0]
+                s[bad] = np.inf
+                for c in bad:
+                    bad_col = Vt[c, :]
+                    bad_col /= abs(bad_col).max()
+                    bad_combination = " ".join(
+                        [
+                            f"{p}"
+                            for (co, p) in sorted(zip(bad_col, params))
+                            if abs(co) > threshold
+                        ]
+                    )
+                    warn(
+                        f"Parameter degeneracy; the following combination of parameters yields "
+                        f"almost no change: {bad_combination}",
+                        DegeneracyWarning,
+                    )
 
-                    xvar = np.dot(Vt.T / s, Vt)
-                    xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
-                newres = residuals - np.dot(M, xhat)
-                # compute linearized chisq
-                if full_cov:
-                    chi2 = np.dot(newres, sl.cho_solve(cf, newres))
-                else:
-                    chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+                xvar = np.dot(Vt.T / s, Vt)
+                xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+            newres = residuals - np.dot(M, xhat)
+            # compute linearized chisq
+            if full_cov:
+                chi2 = np.dot(newres, sl.cho_solve(cf, newres))
             else:
-                newres = residuals
-                if full_cov:
-                    chi2 = np.dot(newres, sl.cho_solve(cf, newres))
-                else:
-                    chi2 = np.dot(newres, cinv * newres)
-                return chi2
+                chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
 
             # compute absolute estimates, normalized errors, covariance matrix
             dpars = xhat / norm
@@ -1181,7 +1171,10 @@ class GLSFitter(Fitter):
                 fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
                 # NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
-            self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
+            newparams = dict(zip(list(fitp.keys()), list(fitpv.values())))
+            self.set_params(newparams)
+            self.update_resids()
+            # self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
             # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
 
@@ -1387,7 +1380,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         self.model.validate()
         self.model.validate_toas(self.toas)
         chi2 = 0
-        for i in range(max(maxiter, 1)):
+        for i in range(maxiter):
             fitp = self.model.get_params_dict("free", "quantity")
             fitpv = self.model.get_params_dict("free", "num")
             fitperrs = self.model.get_params_dict("free", "uncertainty")
@@ -1450,51 +1443,43 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 mtcm += np.diag(phiinv)
                 mtcy = np.dot(M.T, cinv * residuals)
 
-            if maxiter > 0:
-                xhat, xvar = None, None
-                if threshold <= 0:
-                    try:
-                        c = sl.cho_factor(mtcm)
-                        xhat = sl.cho_solve(c, mtcy)
-                        xvar = sl.cho_solve(c, np.eye(len(mtcy)))
-                    except sl.LinAlgError:
-                        xhat, xvar = None, None
-                if xhat is None:
-                    U, s, Vt = sl.svd(mtcm, full_matrices=False)
+            xhat, xvar = None, None
+            if threshold <= 0:
+                try:
+                    c = sl.cho_factor(mtcm)
+                    xhat = sl.cho_solve(c, mtcy)
+                    xvar = sl.cho_solve(c, np.eye(len(mtcy)))
+                except sl.LinAlgError:
+                    xhat, xvar = None, None
+            if xhat is None:
+                U, s, Vt = sl.svd(mtcm, full_matrices=False)
 
-                    bad = np.where(s <= threshold * s[0])[0]
-                    s[bad] = np.inf
-                    for c in bad:
-                        bad_col = Vt[c, :]
-                        bad_col /= abs(bad_col).max()
-                        bad_combination = " ".join(
-                            [
-                                f"{p}"
-                                for (co, p) in sorted(zip(bad_col, params))
-                                if abs(co) > threshold
-                            ]
-                        )
-                        warn(
-                            f"Parameter degeneracy; the following combination of parameters yields "
-                            f"almost no change: {bad_combination}",
-                            DegeneracyWarning,
-                        )
+                bad = np.where(s <= threshold * s[0])[0]
+                s[bad] = np.inf
+                for c in bad:
+                    bad_col = Vt[c, :]
+                    bad_col /= abs(bad_col).max()
+                    bad_combination = " ".join(
+                        [
+                            f"{p}"
+                            for (co, p) in sorted(zip(bad_col, params))
+                            if abs(co) > threshold
+                        ]
+                    )
+                    warn(
+                        f"Parameter degeneracy; the following combination of parameters yields "
+                        f"almost no change: {bad_combination}",
+                        DegeneracyWarning,
+                    )
 
-                    xvar = np.dot(Vt.T / s, Vt)
-                    xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
-                newres = residuals - np.dot(M, xhat)
-                # compute linearized chisq
-                if full_cov:
-                    chi2 = np.dot(newres, sl.cho_solve(cf, newres))
-                else:
-                    chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+                xvar = np.dot(Vt.T / s, Vt)
+                xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+            newres = residuals - np.dot(M, xhat)
+            # compute linearized chisq
+            if full_cov:
+                chi2 = np.dot(newres, sl.cho_solve(cf, newres))
             else:
-                newres = residuals
-                if full_cov:
-                    chi2 = np.dot(newres, sl.cho_solve(cf, newres))
-                else:
-                    chi2 = np.dot(newres, cinv * newres)
-                return chi2
+                chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
 
             # compute absolute estimates, normalized errors, covariance matrix
             dpars = xhat / norm
@@ -1512,7 +1497,10 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
                 # NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
-            self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
+            newparams = dict(zip(list(fitp.keys()), list(fitpv.values())))
+            self.set_params(newparams)
+            self.update_resids()
+            # self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
             # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
 

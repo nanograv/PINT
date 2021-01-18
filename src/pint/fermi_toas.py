@@ -1,6 +1,4 @@
 """Work with Fermi TOAs."""
-from __future__ import absolute_import, division, print_function
-
 from astropy import log
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
@@ -89,7 +87,7 @@ def load_Fermi_TOAs(
     ----------
     weightcolumn : str
         Specifies the FITS column name to read the photon weights from.
-        The special value 'CALC' causes the weights to be computed 
+        The special value 'CALC' causes the weights to be computed
         empirically as in Philippe Bruel's SearchPulsation code.
     targetcoord : astropy.SkyCoord
         Source coordinate for weight computation if weightcolumn=='CALC'
@@ -105,7 +103,7 @@ def load_Fermi_TOAs(
         Events with later MJDs are excluded.
     fermiobs: str
       The default observatory name is Fermi, and must have already been
-      registered.  The user can specify another name 
+      registered.  The user can specify another name
 
     Returns
     -------

@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import os
 
 import astropy.coordinates as coor
@@ -7,8 +5,7 @@ import astropy.units as u
 import numpy as np
 from astropy import log
 from astropy.utils.data import download_file
-from six import raise_from
-from six.moves.urllib.parse import urljoin
+from urllib.parse import urljoin
 
 from pint.config import datapath
 from pint.utils import PosVel
@@ -105,14 +102,11 @@ def _load_kernel_link(ephem, link=None):
             _ephemeris_failures.add(ephem_link)
             errors.append((ephem_link, e, "retry"))
     if errors:
-        raise_from(
-            IOError(
-                "Unable to retrieve ephemeris {} in spite of multiple tries: {}".format(
-                    ephem, errors
-                )
-            ),
-            errors[0][1],
-        )
+        raise IOError(
+            "Unable to retrieve ephemeris {} in spite of multiple tries: {}".format(
+                ephem, errors
+            )
+        ) from errors[0][1]
     else:
         raise ValueError(
             "All urls we might download {} from have previously experienced errors."

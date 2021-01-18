@@ -1,7 +1,5 @@
 # model_builder.py
 # Defines the automatic timing model generator interface
-from __future__ import absolute_import, division, print_function
-
 import os
 import tempfile
 from collections import Counter, defaultdict
@@ -27,7 +25,7 @@ class UnknownBinaryModel(ValueError):
     """Signal that the par file requested a binary model no in PINT."""
 
 
-class ModelBuilder(object):
+class ModelBuilder:
     """A class for model construction interface.
 
     Parameters

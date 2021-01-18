@@ -103,3 +103,14 @@ def test_pickle_invalidated_time(temp_tim):
     with open(tt, "at") as f:
         f.write("\n")
     assert not toa.get_TOAs(tt, usepickle=True).was_pickled
+
+
+def test_pickle_moved(temp_tim):
+    tt, tp = temp_tim
+    tt2 = tt + ".also.tim"
+    shutil.copy(tt, tt2)
+    toa.get_TOAs(tt, usepickle=True, picklefilename=tp)
+    assert toa.get_TOAs(tt2, usepickle=True, picklefilename=tp).was_pickled
+    with open(tt2, "at") as f:
+        f.write("\n")
+    assert not toa.get_TOAs(tt2, usepickle=True, picklefilename=tp).was_pickled

@@ -6,15 +6,13 @@ in the model class, that implements priors on combinations of parameters,
 such as total proper motion, 2-d sky location, etc.
 
 """
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 import scipy.stats
 from astropy import log
 from scipy.stats import norm, rv_continuous, rv_discrete, uniform
 
 
-class Prior(object):
+class Prior:
     r"""Class for evaluation of prior probability densities
 
     Any Prior object returns the probability density using

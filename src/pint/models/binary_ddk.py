@@ -1,6 +1,4 @@
 """The DDK model - DD with kinematics."""
-from __future__ import absolute_import, division, print_function
-
 from astropy import log
 
 from pint.models.binary_dd import BinaryDD
