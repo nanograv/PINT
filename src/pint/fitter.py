@@ -407,7 +407,7 @@ class Fitter(object):
                         mcmin, mcmed
                     )
 
-                if hasattr(self.model, "SINI"):
+                if hasattr(self.model, "SINI") and self.model.SINI.quantity is not None:
                     try:
                         # Put this in a try in case SINI is UNSET or an illegal value
                         if not self.model.SINI.frozen:
