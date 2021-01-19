@@ -1240,10 +1240,10 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 "data have to match the fit data names."
             )
         self.fit_data = fit_data
-        if self.track_mode is not None:
+        if track_mode is not None:
             if "toa" not in additional_args:
                 additional_args["toa"] = {}
-            additional_args["toa"]["track_mode"] = self.track_mode
+            additional_args["toa"]["track_mode"] = track_mode
         self.additional_args = additional_args
         # Get the makers for fitting parts.
         self.reset_model()

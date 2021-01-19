@@ -1618,16 +1618,15 @@ class TOAs:
         self.table["delta_pulse_number"] += dphs
 
         # Then, add pulse_number as a table column if possible
-        try:
-            pns = [float(flags.get("pn", np.nan)) for flags in self.table["flags"]]
-            self.table["pulse_number"] = pns
-            self.table["pulse_number"].unit = u.dimensionless_unscaled
+        pns = [float(flags.get("pn", np.nan)) for flags in self.table["flags"]]
+        if np.all(np.isnan(pns)):
+            raise ValueError("No pulse numbers found")
+        self.table["pulse_number"] = pns
+        self.table["pulse_number"].unit = u.dimensionless_unscaled
 
-            # Remove pn from dictionary to prevent redundancies
-            for flags in self.table["flags"]:
-                del flags["pn"]
-        except KeyError:
-            raise ValueError("Not all TOAs have pn flags")
+        # Remove pn from dictionary to prevent redundancies
+        for flags in self.table["flags"]:
+            del flags["pn"]
 
     def compute_pulse_numbers(self, model):
         """Set pulse numbers (in TOA table column pulse_numbers) based on model.
@@ -1746,7 +1745,10 @@ class TOAs:
         # If pulse numbers were added to flags, remove them again
         if pnChange:
             for flags in self.table["flags"]:
-                del flags["pn"]
+                try:
+                    del flags["pn"]
+                except KeyError:
+                    pass
 
         if not handle:
             outf.close()
