@@ -121,7 +121,14 @@ class TOASelect(object):
         """
         result = {}
         for k, v in condition.items():
+            try:
+                v = int(
+                    v
+                )  # if v is a number in string format, needs to be int in order to match with column value
+            except ValueError:
+                pass
             index = np.where(column == v)[0]
+            print("index is: " + str(index))
             result[k] = index
         return result
 
