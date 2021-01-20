@@ -1,6 +1,4 @@
 """Kopeikin corrected DD model."""
-from __future__ import absolute_import, division, print_function
-
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
@@ -105,7 +103,8 @@ class DDKmodel(DDmodel):
     @SINI.setter
     def SINI(self, val):
         log.warning(
-            "DDK model uses KIN as inclination angle. SINI will not be" " used."
+            "DDK model uses KIN as inclination angle. SINI will not be "
+            "used. This happens every time a DDK model is constructed."
         )
 
     # @property

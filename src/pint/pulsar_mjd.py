@@ -27,12 +27,13 @@ was observing the sky at the moment a leap second was introduced.
 .. _leap_smear: https://developers.google.com/time/smear
 """
 
-import astropy._erfa as erfa
+try:
+    import erfa
+except ImportError:
+    import astropy._erfa as erfa
 import astropy.time
 import astropy.units as u
 import numpy as np
-import six
-from astropy._erfa import DJM0
 from astropy.time import Time
 from astropy.time.formats import TimeFormat
 
@@ -42,12 +43,20 @@ except AttributeError:
     # fallback for Python 2
     from string import maketrans
 
-# FIXME: can we make this exception raise on install as well as on use?
+
 if np.finfo(np.longdouble).eps > 2e-19:
-    raise ValueError(
+    import warnings
+
+    def readable_warning(message, category, filename, lineno, line=None):
+        return "%s: %s\n" % (category.__name__, message)
+
+    warnings.formatwarning = readable_warning
+
+    msg = (
         "This platform does not support extended precision "
-        "floating-point, and PINT cannot run without this."
+        "floating-point, and PINT will run at reduced precision."
     )
+    warnings.warn(msg, RuntimeWarning)
 
 
 __all__ = [
@@ -338,9 +347,8 @@ def str2longdouble(str_data):
     """Return a long double from the input string.
 
     Accepts Fortran-style exponent notation (1.0d2).
-
     """
-    if not isinstance(str_data, six.string_types):
+    if not isinstance(str_data, (str, bytes)):
         raise TypeError("Need a string: {!r}".format(str_data))
     return np.longdouble(str_data.translate(maketrans("Dd", "ee")))
 
@@ -366,11 +374,11 @@ _new_ihmsfs_dtype = np.dtype([(str(c), np.intc) for c in "hmsf"])
 
 
 def jds_to_mjds(jd1, jd2):
-    return day_frac(jd1 - DJM0, jd2)
+    return day_frac(jd1 - erfa.DJM0, jd2)
 
 
 def mjds_to_jds(mjd1, mjd2):
-    return day_frac(mjd1 + DJM0, mjd2)
+    return day_frac(mjd1 + erfa.DJM0, mjd2)
 
 
 _digits = 9
@@ -465,7 +473,7 @@ def _str_to_mjds(s):
 
 
 def str_to_mjds(s):
-    if isinstance(s, six.string_types):
+    if isinstance(s, (str, bytes)):
         return _str_to_mjds(s)
     else:
         imjd = np.empty_like(s, dtype=int)
@@ -477,7 +485,7 @@ def str_to_mjds(s):
         ) as it:
             for si, i, f in it:
                 si = si[()]
-                if not isinstance(si, six.string_types):
+                if not isinstance(si, (str, bytes)):
                     raise TypeError("Requires an array of strings")
                 i[...], f[...] = _str_to_mjds(si)
             return it.operands[1], it.operands[2]

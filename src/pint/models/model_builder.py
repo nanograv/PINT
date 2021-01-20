@@ -1,24 +1,22 @@
 # model_builder.py
 # Defines the automatic timing model generator interface
-from __future__ import absolute_import, division, print_function
-
-import glob
 import os
-import sys
+import tempfile
 from collections import Counter, defaultdict
 
 from astropy import log
 
 from pint.models.timing_model import (
     Component,
-    MissingParameter,
     TimingModel,
     ignore_prefix,
     DEFAULT_ORDER,
 )
+from pint.models.parameter import maskParameter
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
+from pint.toa import get_TOAs
 
-__all__ = ["get_model", "get_model_new"]
+__all__ = ["get_model"]
 
 default_models = ["StandardTimingModel"]
 
@@ -27,11 +25,11 @@ class UnknownBinaryModel(ValueError):
     """Signal that the par file requested a binary model no in PINT."""
 
 
-class ModelBuilder(object):
+class ModelBuilder:
     """A class for model construction interface.
 
     Parameters
-    ---------
+    ----------
     name : str
         Name for the model.
     parfile : str optional
@@ -159,8 +157,7 @@ class ModelBuilder(object):
         return sorted_components
 
     def search_prefix_param(self, paramList, model, prefix_type):
-        """ Check if the Unrecognized parameter has prefix parameter
-        """
+        """Check if the Unrecognized parameter has prefix parameter"""
         prefixs = {}
         prefix_inModel = model.get_params_of_type_top(prefix_type)
         for pn in prefix_inModel:
@@ -171,13 +168,14 @@ class ModelBuilder(object):
                     pre, idxstr, idxV = split_prefixed_name(p)
                     if pre in [par.prefix] + par.prefix_aliases:
                         prefixs[par.prefix].append(p)
-                except:  # FIXME: is this meant to catch KeyErrors?
+                except ValueError:  # FIXME: is this meant to catch KeyErrors?
                     continue
 
         return prefixs
 
     def build_model(self, parfile=None, name=""):
-        """Read parfile using the model_instance attribute.
+        """Read parfile using the model_instance attribute. Throws error if
+           mismatched coordinate systems detected.
         Parameters
         ---------
         name: str, optional
@@ -187,6 +185,25 @@ class ModelBuilder(object):
         """
         if parfile is not None:
             self.get_comp_from_parfile(parfile)
+            # ensure coordinate systems match for POS and PM
+            if "RAJ" in self.preprocess_parfile(parfile).keys():
+                if "PMELONG" in self.preprocess_parfile(parfile):
+                    raise AttributeError(
+                        "Cannot have Ecliptic proper motion parameters (PMELONG/PMELAT) with Equatorial position parameters (RAJ/DECJ) in par file."
+                    )
+                elif "PMELAT" in self.preprocess_parfile(parfile):
+                    raise AttributeError(
+                        "Cannot have Ecliptic proper motion parameters (PMELONG/PMELAT) with Equatorial position parameters (RAJ/DECJ) in par file."
+                    )
+            elif "ELONG" in self.preprocess_parfile(parfile).keys():
+                if "PMRA" in self.preprocess_parfile(parfile):
+                    raise AttributeError(
+                        "Cannot have Equatorial proper motion parameters (PMRA/PMDEC) with Ecliptic position parameters (ELONG/ELAT) in par file."
+                    )
+                elif "PMDEC" in self.preprocess_parfile(parfile):
+                    raise AttributeError(
+                        "Cannot have Equatorial proper motion parameters (PMRA/PMDEC) with Ecliptic position parameters (ELONG/ELAT) in par file."
+                    )
         sorted_comps = self.sort_components()
         self.timing_model = TimingModel(name, sorted_comps)
         param_inModel = self.timing_model.get_params_mapping()
@@ -240,7 +257,16 @@ class ModelBuilder(object):
                         "Unknown binary model requested in par file: {}".format(bm)
                     )
                 # FIXME: consistency check - the componens actually chosen should know the name bm
-
+        for p in self.timing_model.params:
+            if isinstance(self.timing_model[p], maskParameter):
+                # maskParameters need a bogus alias for parfile parsing
+                # remove this bogus alias
+                try:
+                    ix = self.timing_model[p].aliases.index(self.timing_model[p].prefix)
+                except ValueError:
+                    pass
+                else:
+                    del self.timing_model[p].aliases[ix]
         if parfile is not None:
             self.timing_model.read_parfile(parfile)
 
@@ -263,20 +289,87 @@ def get_model(parfile):
 
     Parameters
     ----------
-    name : str
-        Name for the model.
     parfile : str
-        The parfile name
+        The parfile name, or a file-like object to read the parfile contents from
 
     Returns
     -------
     Model instance get from parfile.
 
     """
-    name = os.path.basename(os.path.splitext(parfile)[0])
+    try:
+        contents = parfile.read()
+    except AttributeError:
+        contents = None
+    if contents is None:
+        return ModelBuilder(parfile).timing_model
+    else:
+        with tempfile.TemporaryDirectory() as td:
+            fn = os.path.join(td, "temp.par")
+            with open(fn, "wt") as f:
+                f.write(contents)
+            return ModelBuilder(fn).timing_model
 
-    mb = ModelBuilder(parfile)
-    return mb.timing_model
+
+def get_model_and_toas(
+    parfile,
+    timfile,
+    ephem=None,
+    include_bipm=None,
+    bipm_version=None,
+    include_gps=None,
+    planets=None,
+    usepickle=False,
+    tdb_method="default",
+    picklefilename=None,
+):
+    """Load a timing model and a related TOAs, using model commands as needed
+
+    Parameters
+    ----------
+    parfile : str
+        The parfile name, or a file-like object to read the parfile contents from
+    timfile : str
+        The timfile name, or a file-like object to read the timfile contents from
+    include_bipm : bool or None
+        Whether to apply the BIPM clock correction. Defaults to True.
+    bipm_version : string or None
+        Which version of the BIPM tables to use for the clock correction.
+        The format must be 'BIPMXXXX' where XXXX is a year.
+    include_gps : bool or None
+        Whether to include the GPS clock correction. Defaults to True.
+    planets : bool or None
+        Whether to apply Shapiro delays based on planet positions. Note that a
+        long-standing TEMPO2 bug in this feature went unnoticed for years.
+        Defaults to False.
+    usepickle : bool
+        Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
+    tdb_method : str
+        Which method to use for the clock correction to TDB. See
+        :func:`pint.observatory.Observatory.get_TDBs` for details.
+    picklefilename : str or None
+        Filename to use for caching loaded file. Defaults to adding ``.pickle.gz`` to the
+        filename of the timfile, if there is one and only one. If no filename is available,
+        or multiple filenames are provided, a specific filename must be provided.
+
+    Returns
+    -------
+    A tuple with (model instance, TOAs instance)
+    """
+    mm = get_model(parfile)
+    tt = get_TOAs(
+        timfile,
+        model=mm,
+        ephem=ephem,
+        include_bipm=include_bipm,
+        bipm_version=bipm_version,
+        include_gps=include_gps,
+        planets=planets,
+        usepickle=usepickle,
+        tdb_method=tdb_method,
+        picklefilename=picklefilename,
+    )
+    return mm, tt
 
 
 def choose_model(

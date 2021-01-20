@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
@@ -75,7 +73,7 @@ class BTmodel(PSR_BINARY):
     @param ECC:         Eccentricity
     @param A1:          Projected semi-major axis (lt-sec)
     @param A1DOT:       Time-derivative of A1 (lt-sec/sec)
-    @param T0:          Time of ascending node (TASC)
+    @param T0:          Time of periastron passage (barycentric MJD)
     @param OM:          Omega (longitude of periastron) [deg]
     @param EDOT:        Time-derivative of ECC [0.0]
     @param PBDOT:       Time-derivative of PB [0.0]

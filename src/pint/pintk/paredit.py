@@ -2,9 +2,9 @@ import copy
 import os
 import tempfile
 
-import six.moves.tkinter as tk
-import six.moves.tkinter_filedialog as tkFileDialog
-import six.moves.tkinter_messagebox as tkMessageBox
+import tkinter as tk
+import tkinter.filedialog as tkFileDialog
+import tkinter.messagebox as tkMessageBox
 
 import pint.models
 

@@ -1,6 +1,4 @@
 """Miscellaneous potentially-helpful functions."""
-from __future__ import absolute_import, division, print_function
-
 import re
 from contextlib import contextmanager
 from copy import deepcopy
@@ -9,7 +7,6 @@ from astropy import log
 import astropy.constants as const
 import astropy.coordinates as coords
 import numpy as np
-import six
 import scipy.optimize.zeros as zeros
 from scipy.special import fdtrc
 
@@ -58,7 +55,7 @@ __all__ = [
 # Actual exported tools
 
 
-class PosVel(object):
+class PosVel:
     """Position/Velocity class.
 
     The class is used to represent the 6 values describing position
@@ -353,7 +350,7 @@ def open_or_use(f, mode="r"):
     a subclass of ``str`` will be passed through untouched.
 
     """
-    if isinstance(f, six.string_types):
+    if isinstance(f, (str, bytes)):
         with open(f, mode) as fl:
             yield fl
     else:
@@ -384,7 +381,7 @@ def interesting_lines(lines, comments=None):
     """
     if comments is None:
         cc = ()
-    elif isinstance(comments, six.string_types):
+    elif isinstance(comments, (str, bytes)):
         cc = (comments,)
     else:
         cc = tuple(comments)
@@ -466,10 +463,10 @@ def show_param_cov_matrix(matrix, params, name="Covariance Matrix", switchRD=Fal
 
 def pmtot(model):
     """Compute and return the total proper motion from a model object
-    
+
     Calculates total proper motion from the parameters of the model, in either
     equatorial or ecliptic coordinates.  Note that in both cases, pulsar timing
-    codes define the proper motion in the longitude coordinate to be the 
+    codes define the proper motion in the longitude coordinate to be the
     the actual angular rate of change of position on the sky rather than the change in coordinate value,
     so PMRA = (d(RAJ)/dt)*cos(DECJ). This is different from the astrometry community where mu_alpha = d(alpha)/dt.
     Thus, we don't need to include cos(DECJ) or cos(ELAT) in our calculation.
@@ -526,7 +523,7 @@ def dmx_ranges_old(
     verbose=False,
 ):
     """Compute initial DMX ranges for a set of TOAs
-    
+
     This is a rudimentary translation of $TEMPO/utils/dmx_ranges/DMX_ranges2.py
 
     Parameters
@@ -695,7 +692,7 @@ def dmx_ranges_old(
 
 def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=False):
     """Compute initial DMX ranges for a set of TOAs
-    
+
     This is an alternative algorithm for computing DMX ranges
 
     Parameters
@@ -932,7 +929,7 @@ def dmxparse(fitter, save=False):
         # now get the full parameter covariance matrix from pint
         # NOTE: we will need to increase all indices by 1 to account for the 'Offset' parameter
         # that is the first index of the designmatrix
-        params = np.array(list(fitter.get_fitparams().keys()))
+        params = np.array(fitter.model.free_params)
         p_cov_mat = fitter.covariance_matrix
         # Now we get the indices that correspond to the DMX values
         DMX_p_idxs = np.zeros(len(dmx_epochs), dtype=int)
@@ -1037,15 +1034,15 @@ def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
     Parameters
     ----------
     arrin : array
-    Array containing the numbers whose weighted mean is desired.      
+    Array containing the numbers whose weighted mean is desired.
     weights: array
-    A set of weights for each element in array. For measurements with 
+    A set of weights for each element in array. For measurements with
     uncertainties, these should be 1/sigma^2.
     inputmean: float, optional
         An input mean value, around which the mean is calculated.
     calcerr : bool, optional
         Calculate the weighted error.  By default the error is calculated as
-        1/sqrt( weights.sum() ).  If calcerr=True it is calculated as 
+        1/sqrt( weights.sum() ).  If calcerr=True it is calculated as
         sqrt((w**2 * (arr-mean)**2).sum() )/weights.sum().
     sdev : bool, optional
         If True, also return the weighted standard deviation as a third
@@ -1146,7 +1143,7 @@ def pulsar_edot(f, fdot, I=1.0e45 * u.g * u.cm ** 2):
 
 def pulsar_B(f, fdot):
     """Compute pulsar surface magnetic field
-    
+
     Return the estimated pulsar surface magnetic field strength
     given the spin frequency and frequency derivative.
     """
@@ -1157,7 +1154,7 @@ def pulsar_B(f, fdot):
 
 def pulsar_B_lightcyl(f, fdot):
     """Compute pulsar magnetic field at the light cylinder
-    
+
     Return the estimated pulsar magnetic field strength at the
     light cylinder given the spin frequency and
     frequency derivative.
@@ -1217,7 +1214,7 @@ def pulsar_mass(pb, x, mc, inc):
 
     Return the pulsar mass (in solar mass units) for a binary.
     Finds the value using a bisection technique.
- 
+
     Parameters
     ----------
     pb : Quantity
@@ -1275,7 +1272,7 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
 def ELL1_check(A1, E, TRES, NTOA, outstring=True):
     """Check for validity of assumptions in ELL1 binary model
 
-    Checks whether the assumptions that allow ELL1 to be safely used are 
+    Checks whether the assumptions that allow ELL1 to be safely used are
     satisfied. To work properly, we should have:
     asini/c * ecc**2 << timing precision / sqrt(# TOAs)
     or A1 * E**2 << TRES / sqrt(NTOA)
@@ -1324,7 +1321,7 @@ def ELL1_check(A1, E, TRES, NTOA, outstring=True):
 
 
 def shklovskii_factor(pmtot, D):
-    """ 
+    """
     Return magnitude of Shklovskii correction factor
 
     Computes the Shklovskii correction factor, as defined in Eq 8.12 of Lorimer & Kramer (2005)
@@ -1470,6 +1467,7 @@ def add_dummy_distance(c, distance=1 * u.kpc):
             pm_lat=c.pm_lat,
             obstime=c.obstime,
             distance=distance,
+            obliquity=c.obliquity,
             frame=pint.pulsar_ecliptic.PulsarEcliptic,
         )
         return cnew
@@ -1545,6 +1543,7 @@ def remove_dummy_distance(c):
             pm_lon_coslat=c.pm_lon_coslat,
             pm_lat=c.pm_lat,
             obstime=c.obstime,
+            obliquity=c.obliquity,
             frame=pint.pulsar_ecliptic.PulsarEcliptic,
         )
         return cnew

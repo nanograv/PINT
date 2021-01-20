@@ -2,11 +2,7 @@
 
 This module if for wrapping standalone binary models so that they work
 as PINT timing models.
-
 """
-
-from __future__ import absolute_import, division, print_function
-
 import astropy.units as u
 import numpy as np
 from astropy import log
@@ -37,7 +33,7 @@ class PulsarBinary(DelayComponent):
 
     category = "pulsar_system"
 
-    def __init__(self,):
+    def __init__(self):
         super(PulsarBinary, self).__init__()
         self.binary_model_name = None
         self.barycentric_time = None
@@ -136,7 +132,7 @@ class PulsarBinary(DelayComponent):
                 long_double=True,
             )
         )
-        self.interal_params = []
+        self.internal_params = []
         self.warn_default_params = ["ECC", "OM"]
         # Set up delay function
         self.delay_funcs_component += [self.binarymodel_delay]
@@ -177,15 +173,7 @@ class PulsarBinary(DelayComponent):
                         self.binary_model_name,
                         p + " is required for '%s'." % self.binary_model_name,
                     )
-                try:
-                    par_method()
-                except:
-                    raise MissingParameter(
-                        self.binary_model_name,
-                        p
-                        + " is present but somehow broken for '%s'."
-                        % self.binary_model_name,
-                    )
+                par_method()
 
     # With new parameter class set up, do we need this?
     def apply_units(self):
@@ -196,23 +184,25 @@ class PulsarBinary(DelayComponent):
                 continue
             bparObj.value = bparObj.value * u.Unit(bparObj.units)
 
-    def update_binary_object(self, toas, acc_delay=None):
+    def update_binary_object(self, toas=None, acc_delay=None):
         """Update binary object instance for this set of parameters/toas."""
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py
         # Get barycnetric toa first
         updates = {}
-        tbl = toas.table
-        if acc_delay is None:
-            # If the accumulate delay is not provided, it will try to get
-            # the barycentric correction.
-            acc_delay = self.delay(toas, self.__class__.__name__, False)
-        self.barycentric_time = tbl["tdbld"] * u.day - acc_delay
-        updates["barycentric_toa"] = self.barycentric_time
-        updates["obs_pos"] = tbl["ssb_obs_pos"].quantity
-        updates["psr_pos"] = self.ssb_to_psb_xyz_ICRS(
-            epoch=tbl["tdbld"].astype(np.float64)
-        )
+        if toas is not None:
+            tbl = toas.table
+            if acc_delay is None:
+                # If the accumulated delay is not provided, calculate and
+                # use the barycentered TOAS
+                self.barycentric_time = self._parent.get_barycentric_toas(toas)
+            else:
+                self.barycentric_time = tbl["tdbld"] * u.day - acc_delay
+            updates["barycentric_toa"] = self.barycentric_time
+            updates["obs_pos"] = tbl["ssb_obs_pos"].quantity
+            updates["psr_pos"] = self._parent.ssb_to_psb_xyz_ICRS(
+                epoch=tbl["tdbld"].astype(np.float64)
+            )
         for par in self.binary_instance.binary_params:
             binary_par_names = [par]
             if par in self.binary_instance.param_aliases.keys():
@@ -221,9 +211,11 @@ class PulsarBinary(DelayComponent):
                 aliase = []
 
             if hasattr(self, par) or list(set(aliase).intersection(self.params)) != []:
-                pint_bin_name = self.match_param_aliases(par)
-                if pint_bin_name == "" and par in self.interal_params:
-                    pint_bin_name = par
+                try:
+                    pint_bin_name = self.match_param_aliases(par)
+                except ValueError:
+                    if par in self.internal_params:
+                        pint_bin_name = par
                 binObjpar = getattr(self, pint_bin_name)
                 instance_par = getattr(self.binary_instance, par)
                 if hasattr(instance_par, "value"):
@@ -253,7 +245,7 @@ class PulsarBinary(DelayComponent):
         self.update_binary_object(toas, acc_delay)
         return self.binary_instance.d_binarydelay_d_par(param)
 
-    def print_par(self,):
+    def print_par(self):
         result = "BINARY {0}\n".format(self.binary_model_name)
         for p in self.params:
             par = getattr(self, p)
@@ -279,7 +271,9 @@ class PulsarBinary(DelayComponent):
         (FB2, FB3, etc.) are ignored in computing the new T0, even if present in
         the model. If high-precision results are necessary, especially for models
         containing higher derivatives of orbital frequency, consider re-fitting
-        the model to a set of TOAs.
+        the model to a set of TOAs. The use of :func:`pint.toa.make_fake_toas`
+        and the :class:`pint.fitter.Fitter` option ``track_mode="use_pulse_number"``
+        can make this extremely simple.
 
         Parameters
         ----------
@@ -292,7 +286,7 @@ class PulsarBinary(DelayComponent):
             new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
 
         try:
-            FB2 = self.FB2.quantity
+            self.FB2.quantity
             log.warning(
                 "Ignoring orbital frequency derivatives higher than FB1"
                 "in computing new T0"

@@ -1,6 +1,4 @@
 """The DDK model - DD with kinematics."""
-from __future__ import absolute_import, division, print_function
-
 from astropy import log
 
 from pint.models.binary_dd import BinaryDD
@@ -53,11 +51,11 @@ class BinaryDDK(BinaryDD):
                 " correction",
             )
         )
-        self.interal_params += ["PMRA_DDK", "PMDEC_DDK"]
+        self.internal_params += ["PMRA_DDK", "PMDEC_DDK"]
 
     @property
     def PMRA_DDK(self):
-        params = self.get_params_as_ICRS()
+        params = self._parent.get_params_as_ICRS()
         par_obj = floatParameter(
             name="PMRA",
             units="mas/year",
@@ -68,7 +66,7 @@ class BinaryDDK(BinaryDD):
 
     @property
     def PMDEC_DDK(self):
-        params = self.get_params_as_ICRS()
+        params = self._parent.get_params_as_ICRS()
         par_obj = floatParameter(
             name="PMDEC",
             units="mas/year",
@@ -99,3 +97,8 @@ class BinaryDDK(BinaryDD):
                 raise MissingParameter(
                     "DDK", "DDK model needs proper motion parameters."
                 )
+        if self.SINI.quantity is not None:
+            raise ValueError(
+                "DDK model does not accept `SINI` as input. Please"
+                " use `KIN` instead."
+            )

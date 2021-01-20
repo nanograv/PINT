@@ -1,8 +1,4 @@
-"""
-An interface for pint compatible to the interface of libstempo
-"""
-from __future__ import absolute_import, division, print_function
-
+"""An interface for pint compatible to the interface of libstempo."""
 import collections
 import time
 from collections import OrderedDict
@@ -81,7 +77,7 @@ map_units = {
 }
 
 
-class PINTPar(object):
+class PINTPar:
     """
     Similar to the parameter class defined in libstempo, this class gives a nice
     interface to the timing model parameters
@@ -143,7 +139,7 @@ class PINTPar(object):
         self._set = value
 
 
-class PINTPulsar(object):
+class PINTPulsar:
     """
     Pulsar object class with an interface similar to tempopulsar of libstempo
     """
@@ -550,7 +546,7 @@ class PINTPulsar(object):
         for ii in range(iters + 1):
             f.call_minimize()
 
-        fitp = f.get_fitparams()
+        fitp = f.model.get_params_dict("free", "quantity")
         # TODO: handle these units correctly
         for p, val in zip(fitp.keys(), fitp.values()):
             modval = getattr(f.model, p).value

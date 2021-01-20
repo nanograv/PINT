@@ -1,8 +1,6 @@
 """Ground-based fixed observatories."""
 # topo_obs.py
 # Code for dealing with "standard" ground-based observatories.
-from __future__ import absolute_import, division, print_function
-
 import os
 
 import astropy.constants as c
@@ -10,12 +8,11 @@ import astropy.units as u
 import numpy
 from astropy import log
 from astropy.coordinates import EarthLocation
-from six import raise_from
 
 from pint import JD_MJD
 from pint.config import datapath
 from pint.erfautils import gcrs_posvel_from_itrf
-from pint.observatory import Observatory
+from pint.observatory import Observatory, bipm_default
 from pint.observatory.clock_file import ClockFile
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
@@ -67,11 +64,15 @@ class TopoObs(Observatory):
         parfile. If True, it will apply the correction from
         BIPM TT=TT(BIPMYYYY). See the link:
         http://www.bipm.org/en/bipm-services/timescales/time-ftp/ttbipm.html
-    bipm_version : str, optionial
+    bipm_version : str, optional
         Set the version of TT BIPM clock correction file to
-        use, the default is BIPM2015.  It has to be in the format
+        use, the default is %s.  It has to be in the format
         like 'BIPM2015'
-    """
+    origin : str, optional
+        Documentation of the origin/author/date for the information
+    overwrite : bool, optional
+        set True to force overwriting of previous observatory definition
+    """ % bipm_default
 
     def __init__(
         self,
@@ -85,7 +86,9 @@ class TopoObs(Observatory):
         clock_fmt="tempo",
         include_gps=True,
         include_bipm=True,
-        bipm_version="BIPM2015",
+        bipm_version=bipm_default,
+        origin=None,
+        overwrite=False,
     ):
         # ITRF coordinates are required
         if itrf_xyz is None:
@@ -136,7 +139,8 @@ class TopoObs(Observatory):
             if code is not None:
                 aliases.append(code)
 
-        super(TopoObs, self).__init__(name, aliases=aliases, tt2tdb_mode="astropy")
+        self.origin = origin
+        super(TopoObs, self).__init__(name, aliases=aliases)
 
     @property
     def clock_fullpath(self):
@@ -244,7 +248,9 @@ class TopoObs(Observatory):
             corr += self._gps_clock.evaluate(t)
 
         if self.include_bipm:
-            log.info("Applying TT(TAI) to TT(BIPM) clock correction (~27 us)")
+            log.info(
+                f"Applying TT(TAI) to TT({self.bipm_version}) clock correction (~27 us)"
+            )
             tt2tai = 32.184 * 1e6 * u.us
             if self._bipm_clock is None:
                 try:
@@ -257,12 +263,9 @@ class TopoObs(Observatory):
                         self.bipm_fullpath, format="tempo2"
                     )
                 except Exception as e:
-                    raise_from(
-                        ValueError(
-                            "Can not find TT BIPM file '%s'. " % self.bipm_version
-                        ),
-                        e,
-                    )
+                    raise ValueError(
+                        f"Can not find TT BIPM file for version '{self.bipm_version}'."
+                    ) from e
             corr += self._bipm_clock.evaluate(t) - tt2tai
         return corr
 

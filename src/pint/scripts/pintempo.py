@@ -6,10 +6,7 @@ command line syntax for either TEMPO or Tempo2. (I never understood why I had to
 specify '-f parfile' to those codes -- I mean, who runs TEMPO without a timing model?)
 
 This is currently just a stub and should be added to and expanded, as desired.
-
 """
-from __future__ import absolute_import, division, print_function
-
 import argparse
 import sys
 
@@ -27,6 +24,12 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Command line interfact to PINT")
     parser.add_argument("parfile", help="par file to read model from")
     parser.add_argument("timfile", help="TOA file name")
+    parser.add_argument(
+        "--usepickle",
+        help="Enable pickling of TOAs",
+        action="store_true",
+        default=False,
+    )
     parser.add_argument(
         "--outfile", help="Output par file name (default=None)", default=None
     )
@@ -48,7 +51,9 @@ def main(argv=None):
     model_ephem = "DE421"
     if m.EPHEM is not None:
         model_ephem = m.EPHEM.value
-    t = pint.toa.get_TOAs(args.timfile, planets=use_planets, ephem=model_ephem)
+    t = pint.toa.get_TOAs(
+        args.timfile, planets=use_planets, ephem=model_ephem, usepickle=args.usepickle
+    )
 
     # turns pre-existing jump flags in t.table['flags'] into parameters in parfile
     m.jump_flags_to_params(t)

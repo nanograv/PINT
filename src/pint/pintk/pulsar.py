@@ -5,8 +5,6 @@ and will contain the pre/post fit model, toas,
 pre/post fit residuals, and other useful information.
 self.selected_toas = selected toas, self.all_toas = all toas in tim file
 """
-from __future__ import division, print_function
-
 import copy
 from enum import Enum
 
@@ -56,9 +54,10 @@ class Fitters(Enum):
     GLS = 2
 
 
-class Pulsar(object):
-    """
-    Wrapper class for a pulsar. Contains the toas, model, residuals, and fitter
+class Pulsar:
+    """Wrapper class for a pulsar.
+
+    Contains the toas, model, residuals, and fitter
     """
 
     def __init__(self, parfile=None, timfile=None, ephem=None):
@@ -96,7 +95,7 @@ class Pulsar(object):
         self.prefit_resids = Residuals(self.selected_toas, self.prefit_model)
         print(
             "RMS PINT residuals are %.3f us\n"
-            % self.prefit_resids.time_resids.std().to(u.us).value
+            % self.prefit_resids.rms_weighted().to(u.us).value
         )
         self.fitter = Fitters.WLS
         self.fitted = False
@@ -152,23 +151,16 @@ class Pulsar(object):
         For a binary pulsar, calculate the orbital phase. Otherwise, return
         an array of unitless quantities of zeros
         """
-        if "PB" not in self:
+        if not self.prefit_model.is_binary:
             log.warn("This is not a binary pulsar")
             return u.Quantity(np.zeros(self.selected_toas.ntoas))
 
-        toas = self.selected_toas.get_mjds()
-
-        if "T0" in self and not self["T0"].quantity is None:
-            tpb = (toas.value - self["T0"].value) / self["PB"].value
-        elif "TASC" in self and not self["TASC"].quantity is None:
-            tpb = (toas.value - self["TASC"].value) / self["PB"].value
+        toas = self.selected_toas
+        if self.fitted:
+            phase = self.postfit_model.orbital_phase(toas, anom="mean")
         else:
-            log.error("Neither T0 nor TASC set")
-            return np.zeros(len(toas))
-
-        phase = np.modf(tpb)[0]
-        phase[phase < 0] += 1
-        return phase
+            phase = self.prefit_model.orbital_phase(toas, anom="mean")
+        return phase / (2 * np.pi * u.rad)
 
     def dayofyear(self):
         """
@@ -191,9 +183,9 @@ class Pulsar(object):
         """
         if self.fitted:
             chi2 = self.postfit_resids.chi2
-            wrms = np.sqrt(chi2 / self.selected_toas.ntoas)
+            wrms = self.postfit_resids.rms_weighted()
             print("Post-Fit Chi2:\t\t%.8g us^2" % chi2)
-            print("Post-Fit Weighted RMS:\t%.8g us" % wrms)
+            print("Post-Fit Weighted RMS:\t%.8g us" % wrms.to(u.us).value)
             print(
                 "%19s  %24s\t%24s\t%16s  %16s  %16s"
                 % (
@@ -509,9 +501,9 @@ class Pulsar(object):
         elif self.fitter == Fitters.GLS:
             fitter = pint.fitter.GLSFitter(self.selected_toas, self.prefit_model)
         chi2 = self.prefit_resids.chi2
-        wrms = np.sqrt(chi2 / self.selected_toas.ntoas)
+        wrms = self.prefit_resids.rms_weighted()
         print("Pre-Fit Chi2:\t\t%.8g us^2" % chi2)
-        print("Pre-Fit Weighted RMS:\t%.8g us" % wrms)
+        print("Pre-Fit Weighted RMS:\t%.8g us" % wrms.to(u.us).value)
 
         fitter.fit_toas(maxiter=1)
         self.postfit_model = fitter.model
@@ -573,8 +565,8 @@ class Pulsar(object):
             redge = ledge = 0.5
             npoints = 200
         else:
-            redge = ledge = 0.2
-            npoints = 150
+            redge = ledge = 1.0
+            npoints = 250
         # Check to see if too recent
         nowish = (Time.now().mjd - 40) * u.d
         if maxMJD + spanMJDs * redge > nowish:

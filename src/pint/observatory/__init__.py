@@ -1,12 +1,11 @@
-from __future__ import absolute_import, division, print_function
-
 import astropy.constants as const
 import astropy.units as u
-import six
 from astropy import log
 
 import pint.solar_system_ephemerides as sse
 from pint.pulsar_mjd import Time
+
+import astropy.coordinates
 
 # Include any files that define observatories here.  This will start
 # with the standard distribution files, then will read any system- or
@@ -16,8 +15,12 @@ from pint.pulsar_mjd import Time
 
 __all__ = ["Observatory", "get_observatory"]
 
+# The default BIPM to use if not explicitly specified
+# This should be the most recent BPIM file in the datafiles directory
+bipm_default = "BIPM2019"
 
-class Observatory(object):
+
+class Observatory:
     """Observatory locations and related site-dependent properties
 
     For example, TOA time scales, clock corrections.
@@ -42,18 +45,27 @@ class Observatory(object):
         # Generates a new Observtory object instance, and adds it
         # it the registry, using name as the key.  Name must be unique,
         # a new instance with a given name will over-write the existing
-        # one.
-        if six.PY2:
-            obs = super(Observatory, cls).__new__(cls, name, *args, **kwargs)
-        else:
-            obs = super().__new__(cls)
+        # one only if overwrite=True
+        obs = super().__new__(cls)
+        if name.lower() in cls._registry:
+            if "overwrite" in kwargs and kwargs["overwrite"]:
+                log.warning(
+                    "Observatory '%s' already present; overwriting..." % name.lower()
+                )
+
+                cls._register(obs, name)
+                return obs
+            else:
+                raise ValueError(
+                    "Observatory '%s' already present and overwrite=False"
+                    % name.lower()
+                )
         cls._register(obs, name)
         return obs
 
-    def __init__(self, name, aliases=None, tt2tdb_mode="pint"):
+    def __init__(self, name, aliases=None):
         if aliases is not None:
             Observatory._add_aliases(self, aliases)
-        self.tt2tdb_mode = tt2tdb_mode
 
     @classmethod
     def _register(cls, obs, name):
@@ -119,6 +131,32 @@ class Observatory(object):
         # Then look for aliases
         if name in cls._alias_map.keys():
             return cls._registry[cls._alias_map[name]]
+        # Then look in astropy
+        log.warning(
+            "Observatory name '%s' is not present in PINT observatory list; searching astropy..."
+            % name
+        )
+        # the name was not found in the list of standard PINT observatories
+        # see if we can it from astropy
+        try:
+            site_astropy = astropy.coordinates.EarthLocation.of_site(name)
+        except astropy.coordinates.errors.UnknownSiteException:
+            # turn it into the same error type as PINT would have returned
+            raise KeyError("Observatory name '%s' is not defined" % name)
+
+        # we need to import this here rather than up-top because of circular import issues
+        from pint.observatory.topo_obs import TopoObs
+
+        obs = TopoObs(
+            name,
+            itrf_xyz=[site_astropy.x.value, site_astropy.y.value, site_astropy.z.value],
+            # add in metadata from astropy
+            origin="astropy: '%s'" % site_astropy.info.meta["source"],
+        )
+        # add to registry
+        cls._register(obs, name)
+        return cls._registry[name]
+
         # Nothing matched, raise an error
         raise KeyError("Observatory name '%s' is not defined" % name)
 
@@ -183,9 +221,8 @@ class Observatory(object):
             Method of computing TDB
 
             default
-                Astropy time.Time object built-in converter, use FB90.
-                Also uses topocentric correction term if self.tt2tdbmethod is
-                pint.
+                Astropy time.Time object built-in converter, uses FB90.
+                SpacecraftObs will include a topocentric correction term.
             ephemeris
                 JPL ephemeris included TDB-TT correction.
 
@@ -209,17 +246,7 @@ class Observatory(object):
             options = dict(options)
             return method(t, **options)
         if meth == "default":
-            if self.tt2tdb_mode.lower().startswith("astropy"):
-                log.info("Doing astropy mode TDB conversion")
-                return self._get_TDB_astropy(t)
-            elif self.tt2tdb_mode.lower().startswith("pint"):
-                log.info("Doing PINT mode TDB conversion")
-                if ephem is None:
-                    raise ValueError(
-                        "A ephemeris file should be provided to get"
-                        " the TDB-TT corrections, or use tt2tdb_mode=astropy"
-                    )
-                return self._get_TDB_PINT(t, ephem, grp)
+            return self._get_TDB_default(t, ephem, grp)
         elif meth == "ephemeris":
             if ephem is None:
                 raise ValueError(
@@ -230,29 +257,8 @@ class Observatory(object):
         else:
             raise ValueError("Unknown method '%s'." % method)
 
-    def _get_TDB_astropy(self, t):
+    def _get_TDB_default(self, t, ephem=None, grp=None):
         return t.tdb
-
-    def _get_TDB_PINT(self, t, ephem, grp=None):
-        """Uses astropy.Time location to add the topocentric correction term to
-            the Time object. The topocentric correction is given as (r/c).(v/c),
-            with r equal to the geocentric position of the observer, v being the
-            barycentric velocity of the earth, and c being the speed of light.
-
-            The geocentric observer position can be obtained from Time object.
-            The barycentric velocity can be obtained using solar_system_ephemerides
-            objPosVel_wrt_SSB
-        """
-
-        # Add in correction term to t.tdb equal to r.v / c^2
-        vel = sse.objPosVel_wrt_SSB("earth", t, ephem).vel
-        pos = self.get_gcrs(t, ephem=ephem, grp=grp)
-        dnom = const.c * const.c
-
-        corr = ((pos[0] * vel[0] + pos[1] * vel[1] + pos[2] * vel[2]) / dnom).to(u.s)
-        log.debug("\tTopocentric Correction:\t%s" % corr)
-
-        return t.tdb + corr
 
     def _get_TDB_ephem(self, t, ephem):
         """This is a function that reads the ephem TDB-TT column. This column is
@@ -269,11 +275,15 @@ class Observatory(object):
         raise NotImplementedError
 
 
-def get_observatory(name, include_gps=True, include_bipm=True, bipm_version="BIPM2015"):
+def get_observatory(
+    name, include_gps=True, include_bipm=True, bipm_version=bipm_default
+):
     """Convenience function to get observatory object with options.
 
     This function will simply call the ``Observatory.get`` method but
     will manually set options after the method is called.
+
+    If the observatory is not present in the PINT list, will fallback to astropy
 
     Parameters
     ----------

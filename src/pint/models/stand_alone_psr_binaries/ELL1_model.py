@@ -1,6 +1,4 @@
 """The ELL1 model for approximately handling near-circular orbits."""
-from __future__ import absolute_import, division, print_function
-
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
@@ -46,10 +44,10 @@ class ELL1BaseModel(PSR_BINARY):
         """
         ttasc = t - TASC
         """
+        t = self.t
         if not hasattr(self.t, "unit") or self.t.unit == None:
             t = self.t * u.day
-        t = self.t
-        ttasc = (t - self.TASC).to("second")
+        ttasc = (t - self.TASC.value * u.day).to("second")
         return ttasc
 
     def a1(self):

@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import astropy.units as u
 import numpy as np
 
@@ -75,7 +73,7 @@ class IFunc(PhaseComponent):
             raise MissingParameter(
                 "IFunc", "SIFUNC", "SIFUNC is required if IFUNC entries are present."
             )
-        if (not hasattr(self, "F0")) or (self.F0.quantity is None):
+        if (not hasattr(self._parent, "F0")) or (self._parent.F0.quantity is None):
             raise MissingParameter(
                 "IFunc", "F0", "F0 is required if IFUNC entries are present."
             )
@@ -132,5 +130,5 @@ class IFunc(PhaseComponent):
         else:
             raise ValueError("Interpolation type %d not supported.".format(itype))
 
-        phase = ((times * u.s) * self.F0.quantity).to(u.dimensionless_unscaled)
+        phase = ((times * u.s) * self._parent.F0.quantity).to(u.dimensionless_unscaled)
         return phase

@@ -1,8 +1,4 @@
 """Pulsar timing glitches."""
-# glitch.py
-# Defines glitch timing model class
-from __future__ import absolute_import, division, print_function
-
 import astropy.units as u
 import numpy as np
 from astropy import log
@@ -172,7 +168,7 @@ class Glitch(PhaseComponent):
         returns an array of phases in long double
         """
         tbl = toas.table
-        phs = u.Quantity(np.zeros_like(tbl, dtype=np.longdouble))
+        phs = u.Quantity(np.zeros(toas.ntoas, dtype=np.longdouble))
         glepnames = [x for x in self.params if x.startswith("GLEP_")]
         for glepnm in glepnames:
             glep = getattr(self, glepnm)

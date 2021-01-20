@@ -4,8 +4,6 @@ These observatories are registered when this file is imported. As a result it
 cannot be imported until TopoObs has successfully been imported.
 
 """
-from __future__ import absolute_import, division, print_function
-
 from pint.observatory.topo_obs import TopoObs
 
 TopoObs(
@@ -13,6 +11,7 @@ TopoObs(
     tempo_code="1",
     itoa_code="GB",
     itrf_xyz=[882589.65, -4924872.32, 3943729.348],
+    origin="This is a test",
 )
 TopoObs(
     "arecibo",
@@ -190,3 +189,5 @@ TopoObs(
 TopoObs(
     "acre", aliases=["acreroad", "a", "AR"], itrf_xyz=[3573741.1, -269156.74, 5258407.3]
 )
+TopoObs("ata", aliases=["hcro"], itrf_xyz=[-2524263.18, -4123529.78, 4147966.36])
+TopoObs("ccera", itrf_xyz=[1093406.840, -4391945.819, 4479103.550])

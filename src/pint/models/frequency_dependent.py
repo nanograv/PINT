@@ -1,6 +1,4 @@
 """A frequency evolution of pulsar profiles model"""
-from __future__ import absolute_import, division, print_function
-
 from warnings import warn
 
 import astropy.units as u
@@ -62,12 +60,12 @@ class FD(DelayComponent):
         """
         tbl = toas.table
         try:
-            bfreq = self.barycentric_radio_freq(toas)
+            bfreq = self._parent.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for frequency dependent delay!")
             bfreq = tbl["freq"]
         FD_mapping = self.get_prefix_mapping_component("FD")
-        log_freq = np.log(bfreq.to_value(u.GHz))
+        log_freq = np.log(bfreq.to(u.GHz).value)
         non_finite = np.invert(np.isfinite(log_freq))
         log_freq[non_finite] = 0.0
         FD_coeff = [
@@ -85,7 +83,7 @@ class FD(DelayComponent):
         """
         tbl = toas.table
         try:
-            bfreq = self.barycentric_radio_freq(toas)
+            bfreq = self._parent.barycentric_radio_freq(toas)
         except AttributeError:
             warn(
                 "Using topocentric frequency for frequency dependent delay derivative!"

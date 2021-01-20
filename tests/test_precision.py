@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import decimal
 import re
 import sys
@@ -7,7 +5,10 @@ from datetime import datetime
 from decimal import Decimal
 from itertools import product
 
-import astropy._erfa as erfa
+try:
+    import erfa
+except ImportError:
+    import astropy._erfa as erfa
 import astropy.units as u
 import numpy as np
 import pytest

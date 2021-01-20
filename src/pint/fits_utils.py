@@ -1,10 +1,11 @@
 """FITS handling functions"""
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
-import six
 from astropy import log
-from astropy._erfa import DAYSEC as SECS_PER_DAY
+
+try:
+    from erfa import DAYSEC as SECS_PER_DAY
+except ImportError:
+    from astropy._erfa import DAYSEC as SECS_PER_DAY
 
 from pint.pulsar_mjd import fortran_float
 
@@ -48,7 +49,7 @@ def read_fits_event_mjds_tuples(event_hdu, timecolumn="TIME"):
         # Here I have to work around an issue where the MJDREFF key is stored
         # as a string in the header and uses the "1.234D-5" syntax for floats, which
         # is not supported by Python
-        if isinstance(event_hdr["MJDREFF"], six.string_types):
+        if isinstance(event_hdr["MJDREFF"], (str, bytes)):
             MJDREF = np.longdouble(event_hdr["MJDREFI"]) + fortran_float(
                 event_hdr["MJDREFF"]
             )
@@ -98,7 +99,7 @@ def read_fits_event_mjds(event_hdu, timecolumn="TIME"):
         # Here I have to work around an issue where the MJDREFF key is stored
         # as a string in the header and uses the "1.234D-5" syntax for floats, which
         # is not supported by Python
-        if isinstance(event_hdr["MJDREFF"], six.string_types):
+        if isinstance(event_hdr["MJDREFF"], (str, bytes)):
             MJDREF = np.float(event_hdr["MJDREFI"]) + fortran_float(
                 event_hdr["MJDREFF"]
             )

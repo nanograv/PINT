@@ -10,10 +10,7 @@ from pint.models import get_model
 from pint.residuals import Residuals
 from pinttestdata import datadir
 
-from pint.modelutils import (
-    model_equatorial_to_ecliptic,
-    model_ecliptic_to_equatorial,
-)
+from pint.modelutils import model_equatorial_to_ecliptic, model_ecliptic_to_equatorial
 
 
 class TestEcliptic(unittest.TestCase):

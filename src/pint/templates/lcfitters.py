@@ -14,8 +14,6 @@ $Header: /nfs/slac/g/glast/ground/cvs/pointlike/python/uw/pulsar/lcfitters.py,v 
 author: M. Kerr <matthew.kerr@gmail.com>
 
 """
-from __future__ import absolute_import, division, print_function
-
 from copy import deepcopy
 
 import numpy as np
@@ -85,7 +83,7 @@ def LCFitter(
     return WeightedLCFitter(template, phases, **kwargs)
 
 
-class UnweightedLCFitter(object):
+class UnweightedLCFitter:
     def __init__(self, template, phases, **kwargs):
         self.template = template
         self.phases = np.asarray(phases)
@@ -531,7 +529,15 @@ class UnweightedLCFitter(object):
         self.template.set_parameters(old_p)
         return t
 
-    def plot(self, nbins=50, fignum=2, axes=None, plot_components=False, template=None):
+    def plot(
+        self,
+        nbins=50,
+        fignum=2,
+        axes=None,
+        plot_components=False,
+        template=None,
+        line_color="blue",
+    ):
         import pylab as pl
 
         weights = self.weights
@@ -554,7 +560,7 @@ class UnweightedLCFitter(object):
         )
         if weights is not None:
             bg_level = 1 - (weights ** 2).sum() / weights.sum()
-            axes.axhline(bg_level, color="blue")
+            axes.axhline(bg_level, color="k")
             # cod = template(dom)*(1-bg_level)+bg_level
             # axes.plot(dom,cod,color='blue')
             x, w1, errors = weighted_light_curve(
@@ -578,11 +584,11 @@ class UnweightedLCFitter(object):
                 color="red",
             )
         cod = template(dom) * (1 - bg_level) + bg_level
-        axes.plot(dom, cod, color="blue", lw=1)
+        axes.plot(dom, cod, color=line_color, lw=1)
         if plot_components:
             for i in range(len(template.primitives)):
                 cod = template.single_component(i, dom) * (1 - bg_level) + bg_level
-                axes.plot(dom, cod, color="blue", lw=1, ls="--")
+                axes.plot(dom, cod, color=line_color, lw=1, ls="--")
         pl.axis([0, 1, pl.axis()[2], max(pl.axis()[3], cod.max() * 1.05)])
         axes.set_ylabel("Normalized Profile")
         axes.set_xlabel("Phase")
@@ -759,7 +765,7 @@ class WeightedLCFitter(UnweightedLCFitter):
         return -(numer / denom).sum(axis=1)
 
 
-class ChiSqLCFitter(object):
+class ChiSqLCFitter:
     """ Fit binned data with a gaussian likelihood."""
 
     def __init__(self, template, x, y, yerr, log10_ens=3, **kwargs):

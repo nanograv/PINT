@@ -1,7 +1,5 @@
 """Pulsar timing noise models."""
 
-from __future__ import absolute_import, division, print_function
-
 import astropy.units as u
 import numpy as np
 from astropy import log
@@ -16,6 +14,12 @@ class NoiseComponent(Component):
         self.covariance_matrix_funcs = []
         self.scaled_toa_sigma_funcs = []  # Need to move this to a speical place.
         self.scaled_dm_sigma_funcs = []
+        # TODO This works right now. But if we want to expend noise model, we
+        # need to think about the design now. If we do not define the list
+        # here and calling the same name from other component, it will get
+        # it from the component that hosts it. It has the risk to dulicate
+        # the list elements.
+        self.dm_covariance_matrix_funcs_component = []
         self.basis_funcs = []
 
     def validate(self,):
@@ -36,6 +40,7 @@ class ScaleToaError(NoiseComponent):
 
     def __init__(self,):
         super(ScaleToaError, self).__init__()
+        self.introduces_correlated_errors = False
         self.add_param(
             maskParameter(
                 name="EFAC",
@@ -90,7 +95,7 @@ class ScaleToaError(NoiseComponent):
                 continue
         # convert all the TNEQ to EQUAD
 
-        for tneq in list(self.TNEQs.keys()):
+        for tneq in self.TNEQs:
             tneq_par = getattr(self, tneq)
             if tneq_par.key is None:
                 continue
@@ -135,33 +140,17 @@ class ScaleToaError(NoiseComponent):
             if [x for x in l if l.count(x) > 1] != []:
                 raise ValueError("'%s' have duplicated keys and key values." % el)
 
-    # pairing up EFAC and EQUAD
-    def pair_EFAC_EQUAD(self):
-        pairs = []
-        for efac, efac_key in list(self.EFACs.items()):
-            for equad, equad_key in list(self.EQUADs.items()):
-                if efac_key == equad_key:
-                    pairs.append((getattr(self, efac), getattr(self, equad)))
-        if len(pairs) != len(list(self.EFACs.items())):
-            # TODO may be define an parameter error would be helpful
-            raise ValueError(
-                "Can not pair up EFACs and EQUADs, please "
-                " check the EFAC/EQUAD keys and key values."
-            )
-        return pairs
-
     def scale_toa_sigma(self, toas):
-        tbl = toas.table
-        sigma_old = tbl["error"].quantity
-        sigma_scaled = np.zeros_like(sigma_old)
-        EF_EQ_pairs = self.pair_EFAC_EQUAD()
-        for pir in EF_EQ_pairs:
-            efac = pir[0]
-            equad = pir[1]
-            mask = efac.select_toa_mask(toas)
-            sigma_scaled[mask] = efac.quantity * np.sqrt(
-                sigma_old[mask] ** 2 + (equad.quantity) ** 2
-            )
+        sigma_scaled = toas.table["error"].quantity.copy()
+        for equad_name in self.EQUADs:
+            equad = getattr(self, equad_name)
+            if equad.quantity is None:
+                continue
+            mask = equad.select_toa_mask(toas)
+            sigma_scaled[mask] = np.hypot(sigma_scaled[mask], equad.quantity)
+        for efac_name in self.EFACs:
+            efac = getattr(self, efac_name)
+            sigma_scaled[efac.select_toa_mask(toas)] *= efac.quantity
         return sigma_scaled
 
     def sigma_scaled_cov_matrix(self, toas):
@@ -175,7 +164,6 @@ class ScaleDmError(NoiseComponent):
     Note
     ----
     Ref: NanoGrav 12.5 yrs wideband data
-
     """
 
     register = True
@@ -183,6 +171,7 @@ class ScaleDmError(NoiseComponent):
 
     def __init__(self,):
         super(ScaleDmError, self).__init__()
+        self.introduces_correlated_errors = False
         self.add_param(
             maskParameter(
                 name="DMEFAC",
@@ -202,10 +191,8 @@ class ScaleDmError(NoiseComponent):
             )
         )
 
-        self.dm_covariance_matrix_funcs = [self.dm_sigma_scaled_cov_matrix]
-        self.scaled_dm_sigma_funcs += [
-            self.scale_dm_sigma,
-        ]
+        self.dm_covariance_matrix_funcs_component = [self.dm_sigma_scaled_cov_matrix]
+        self.scaled_dm_sigma_funcs += [self.scale_dm_sigma]
         self._paired_DMEFAC_DMEQUAD = None
 
     def setup(self):

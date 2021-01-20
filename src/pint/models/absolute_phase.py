@@ -1,6 +1,4 @@
 """Timing model absolute phase (TZRMJD, TZRSITE ...)"""
-from __future__ import absolute_import, division, print_function
-
 import astropy.units as u
 from astropy import log
 
@@ -112,10 +110,13 @@ class AbsPhase(PhaseComponent):
 
     def make_TZR_toa(self, toas):
         """ Calculate the TZRMJD if one not given.
+
         TZRMJD = first toa after PEPOCH.
         """
-        PEPOCH = self.PEPOCH.quantity.value
+        PEPOCH = self._parent.PEPOCH.quantity.mjd
         # TODO: add warning for PEPOCH far away from center of data?
-        TZRMJD = min([i for i in toas.get_mjds() if i > PEPOCH * u.d])
+        later = [i for i in toas.get_mjds() if i > PEPOCH * u.d]
+        earlier = [i for i in toas.get_mjds() if i <= PEPOCH * u.d]
+        TZRMJD = min(later) if later else max(earlier)
         self.TZRMJD.quantity = TZRMJD.value
         self.setup()

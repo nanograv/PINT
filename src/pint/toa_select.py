@@ -1,13 +1,10 @@
 """Tool for selecting a subset of TOAs."""
-
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 
 __all__ = ["TOASelect"]
 
 
-class TOASelect(object):
+class TOASelect:
     """Select toas from toa table based on a given condition.
 
     The selection result will be saved in the `select_result`
@@ -85,14 +82,14 @@ class TOASelect(object):
         """
         if self.use_hash:
             if new_column.name not in self.hash_dict.keys():
-                self.hash_dict[new_column.name] = hash(new_column.tostring())
+                self.hash_dict[new_column.name] = hash(new_column.tobytes())
                 return False
             else:
-                if self.hash_dict[new_column.name] == hash(new_column.tostring()):
+                if self.hash_dict[new_column.name] == hash(new_column.tobytes()):
                     return True
                 else:
                     # update hash value to new column
-                    self.hash_dict[new_column.name] = hash(new_column.tostring())
+                    self.hash_dict[new_column.name] = hash(new_column.tobytes())
                     return False
         else:
             if new_column.name not in self.columns_info.keys():

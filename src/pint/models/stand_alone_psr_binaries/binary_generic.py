@@ -1,11 +1,13 @@
 # This file is a prototype of independent psr binary model class
-from __future__ import absolute_import, division, print_function
-
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
 from astropy import log
-from astropy._erfa import DAYSEC as SECS_PER_DAY
+
+try:
+    from erfa import DAYSEC as SECS_PER_DAY
+except ImportError:
+    from astropy._erfa import DAYSEC as SECS_PER_DAY
 
 from pint import Tsun, ls
 from pint.models.stand_alone_psr_binaries.binary_orbits import OrbitPB
@@ -13,7 +15,7 @@ from pint.models.stand_alone_psr_binaries.binary_orbits import OrbitPB
 SECS_PER_JUL_YEAR = SECS_PER_DAY * 365.25
 
 
-class PSR_BINARY(object):
+class PSR_BINARY:
     """A base (generic) object for psr binary models.
 
     In this class, a set of generally used binary paramters and several commonly used
@@ -69,7 +71,7 @@ class PSR_BINARY(object):
     @param ECC:         Eccentricity
     @param A1:          Projected semi-major axis (lt-sec)
     @param A1DOT:       Time-derivative of A1 (lt-sec/sec)
-    @param T0:          Time of ascending node (TASC)
+    @param T0:          Time of periastron passage (barycentric MJD)
     @param OM:          Omega (longitude of periastron) [deg]
     @param EDOT:        Time-derivative of ECC [0.0]
     @param PBDOT:       Time-derivative of PB [0.0]

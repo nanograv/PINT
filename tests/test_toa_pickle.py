@@ -1,9 +1,21 @@
 #!/usr/bin/env python
 import os
 import unittest
+import shutil
+import time
+
+import pytest
 
 from pint import toa
 from pinttestdata import datadir
+
+
+@pytest.fixture
+def temp_tim(tmpdir):
+    tt = os.path.join(tmpdir, "test.tim")
+    shutil.copy(os.path.join(datadir, "test2.tim"), tt)
+    tp = os.path.join(tmpdir, "test.tim.pickle.gz")
+    return tt, tp
 
 
 class TestTOAReader(unittest.TestCase):
@@ -26,3 +38,79 @@ class TestTOAReader(unittest.TestCase):
         # Initially this just checks that the same number
         # of TOAs came out of the pickle as went in.
         assert self.t.ntoas == self.numtoas
+
+
+def test_pickle_created(temp_tim):
+    tt, tp = temp_tim
+    toa.get_TOAs(tt, usepickle=True)
+    assert os.path.exists(tp)
+
+
+def test_pickle_works(temp_tim):
+    tt, tp = temp_tim
+    toa.get_TOAs(tt, usepickle=True)
+    toa.get_TOAs(tt, usepickle=True)
+
+
+def test_pickle_used(temp_tim):
+    tt, tp = temp_tim
+    assert not toa.get_TOAs(tt, usepickle=True).was_pickled
+    assert toa.get_TOAs(tt, usepickle=True).was_pickled
+
+
+def test_pickle_used_settings(temp_tim):
+    tt, tp = temp_tim
+    toa.get_TOAs(tt, usepickle=True, ephem="de436")
+    assert toa.get_TOAs(tt, usepickle=True).ephem == "de436"
+
+
+def test_pickle_changed_ephem(temp_tim):
+    tt, tp = temp_tim
+    toa.get_TOAs(tt, usepickle=True, ephem="de436")
+    assert toa.get_TOAs(tt, usepickle=True, ephem="de421").ephem == "de421"
+
+
+def test_pickle_changed_planets(temp_tim):
+    tt, tp = temp_tim
+    toa.get_TOAs(tt, usepickle=True, planets=True)
+    assert not toa.get_TOAs(tt, usepickle=True, planets=False).planets
+
+
+@pytest.mark.parametrize(
+    "k,v,wv",
+    [
+        ("bipm_version", "BIPM2019", "BIPM2018"),
+        ("include_bipm", True, False),
+        ("include_gps", True, False),
+    ],
+)
+def test_pickle_invalidated_settings(temp_tim, k, v, wv):
+    tt, tp = temp_tim
+    d = {}
+    d[k] = v
+    wd = {}
+    wd[k] = wv
+    toa.get_TOAs(tt, usepickle=True, **d)
+    assert toa.get_TOAs(tt, usepickle=True, **wd).clock_corr_info[k] == wv
+
+
+def test_pickle_invalidated_time(temp_tim):
+    tt, tp = temp_tim
+    toa.get_TOAs(tt, usepickle=True)
+    assert toa.get_TOAs(tt, usepickle=True).was_pickled
+
+    time.sleep(1)
+    with open(tt, "at") as f:
+        f.write("\n")
+    assert not toa.get_TOAs(tt, usepickle=True).was_pickled
+
+
+def test_pickle_moved(temp_tim):
+    tt, tp = temp_tim
+    tt2 = tt + ".also.tim"
+    shutil.copy(tt, tt2)
+    toa.get_TOAs(tt, usepickle=True, picklefilename=tp)
+    assert toa.get_TOAs(tt2, usepickle=True, picklefilename=tp).was_pickled
+    with open(tt2, "at") as f:
+        f.write("\n")
+    assert not toa.get_TOAs(tt2, usepickle=True, picklefilename=tp).was_pickled

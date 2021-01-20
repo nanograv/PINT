@@ -1,4 +1,21 @@
-"""Implementations of pulsar timing models."""
+"""Implementations of pulsar timing models.
+
+The primary object for representing a timing model is
+:class:`pint.models.timing_model.TimingModel`. This contains a collection of
+components (subclasses of ``pint.models.timing_model.Component``), each of
+which should have a collection of parameters (subclasses of
+:class:`pint.models.parameter.Parameter`). These parameters carry values
+uncertainties and units and can be "frozen" or "free" to indicate whether
+fitters (subclasses of :class:`pint.fitter.Fitter`) should be allowed to modify
+them. Normally timing models are created using
+:func:`pint.models.model_builder.get_model` but it is possible to construct and
+modify them as python objects.
+
+Binary models are implemented as Components, but they have somewhat special
+handling; they are implemented by deriving from
+:class:`pint.models.stand_alone_psr_binaries.binary_generic.PSR_BINARY`, which
+provides some of the infrastructure needed to implement them conveniently.
+"""
 from pint.models.absolute_phase import AbsPhase
 
 # Import all standard model components here
@@ -10,9 +27,10 @@ from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
 from pint.models.frequency_dependent import FD
 from pint.models.glitch import Glitch
+from pint.models.piecewise import PiecewiseSpindown
 from pint.models.ifunc import IFunc
 from pint.models.jump import DelayJump, PhaseJump
-from pint.models.model_builder import get_model
+from pint.models.model_builder import get_model, get_model_and_toas
 from pint.models.noise_model import EcorrNoise, PLRedNoise, ScaleToaError
 from pint.models.solar_system_shapiro import SolarSystemShapiro
 from pint.models.solar_wind_dispersion import SolarWindDispersion

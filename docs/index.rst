@@ -1,9 +1,9 @@
 PINT Is Not TEMPO3
 ==================
 
-.. image:: https://api.travis-ci.org/nanograv/PINT.svg?branch=master
-    :target: https://travis-ci.org/nanograv/PINT
-    :alt: Build Status
+.. image:: https://github.com/nanograv/pint/workflows/CI%20Tests/badge.svg
+   :target: https://github.com/nanograv/pint/actions
+   :alt: Actions Status
 
 .. image:: https://readthedocs.org/projects/nanograv-pint/badge/?version=latest
     :target: https://nanograv-pint.readthedocs.io/en/latest/?badge=latest

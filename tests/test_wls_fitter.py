@@ -45,16 +45,16 @@ class Testwls(unittest.TestCase):
         orv = par.value
         par.value = (1 + h) * orv
         self.f.update_resids()
-        self.f.set_fitparams(param)
+        self.f.model.free_params = [param]
 
     def test_wlf_fitter(self):
         for ii, p in enumerate(self.per_param.keys()):
             self.perturb_param(p, self.per_param[p])
             self.f.fit_toas()
-            chi2_red = self.f.resids.chi2_reduced
+            red_chi2 = self.f.resids.reduced_chi2
             tol = 2.6
-            msg = "Fitting parameter " + p + " failed. with chi2_red " + str(chi2_red)
-            assert chi2_red < tol, msg
+            msg = "Fitting parameter " + p + " failed. with red_chi2 " + str(red_chi2)
+            assert red_chi2 < tol, msg
 
     def test_has_correlated_errors(self):
         assert not self.f.resids.model.has_correlated_errors
