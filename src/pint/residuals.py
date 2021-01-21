@@ -7,6 +7,7 @@ objects, as ``fitter.residual``. Variants exist for arrival-time-only data
 dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
 """
 import collections
+import copy
 import warnings
 
 import astropy.units as u
@@ -345,9 +346,11 @@ class Residuals:
             # Use GLS but don't actually fit
             from pint.fitter import GLSFitter
 
-            f = GLSFitter(self.toas, self.model, residuals=self)
+            m = copy.deepcopy(self.model)
+            m.free_params = []
+            f = GLSFitter(self.toas, m, residuals=self)
             try:
-                return f.fit_toas(maxiter=0, full_cov=full_cov)
+                return f.fit_toas(maxiter=1, full_cov=full_cov)
             except LinAlgError as e:
                 log.warning(
                     "Degenerate conditions encountered when "
@@ -726,6 +729,7 @@ class WidebandTOAResiduals(CombinedResiduals):
             self.toas, self.model, residual_type="toa", **toa_resid_args
         )
         dm_resid = Residuals(self.toas, self.model, residual_type="dm", **dm_resid_args)
+        self._chi2 = None
 
         super().__init__([toa_resid, dm_resid])
 
@@ -738,6 +742,50 @@ class WidebandTOAResiduals(CombinedResiduals):
     def dm(self):
         """WidebandDMResiduals object containing the DM residuals."""
         return self.residual_objs["dm"]
+
+    @property
+    def chi2(self):
+        """Compute chi-squared as needed and cache the result."""
+        if self._chi2 is None:
+            self._chi2 = self.calc_chi2()
+        assert self._chi2 is not None
+        return self._chi2
+
+    def calc_chi2(self, full_cov=False):
+        """Return the weighted chi-squared for the model and toas.
+
+        If the errors on the TOAs are independent this is a straightforward
+        calculation, but if the noise model introduces correlated errors then
+        obtaining a meaningful chi-squared value requires a Cholesky
+        decomposition. This is carried out, here, by constructing a GLSFitter
+        and asking it to do the chi-squared computation but not a fit.
+
+        The return value here is available as self.chi2, which will not
+        redo the computation unless necessary.
+
+        The chi-squared value calculated here is suitable for use in downhill
+        minimization algorithms and Bayesian approaches.
+
+        Handling of problematic results - degenerate conditions explored by
+        a minimizer for example - may need to be checked to confirm that they
+        correctly return infinity.
+        """
+        # Use GLS but don't actually fit
+        from pint.fitter import WidebandTOAFitter
+
+        m = copy.deepcopy(self.model)
+        m.free_params = []
+        f = WidebandTOAFitter(
+            self.toas, m, additional_args=dict(toa=dict(track_mode=self.toa.track_mode))
+        )
+        try:
+            return f.fit_toas(maxiter=1, full_cov=full_cov)
+        except LinAlgError as e:
+            log.warning(
+                "Degenerate conditions encountered when "
+                "computing chi-squared: %s" % (e,)
+            )
+            return np.inf
 
     @property
     def model(self):
