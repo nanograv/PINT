@@ -128,7 +128,6 @@ class TOASelect(object):
             except ValueError:
                 pass
             index = np.where(column == v)[0]
-            print("index is: " + str(index))
             result[k] = index
         return result
 

@@ -368,7 +368,10 @@ class Pulsar(object):
                     for item in comp_list:
                         if isinstance(item, pint.models.jump.PhaseJump):
                             self.prefit_model.remove_component(item)
-                            if self.fitted:
+                    if self.fitted:
+                        comp_list = getattr(self.postfit_model, "PhaseComponent_list")
+                        for item in comp_list:
+                            if isinstance(item, pint.models.jump.PhaseJump):
                                 self.postfit_model.remove_component(item)
                 else:
                     self.prefit_model.components["PhaseJump"].setup()
@@ -422,7 +425,7 @@ class Pulsar(object):
 
         """JUMP check, TODO: put in fitter?"""
         if "PhaseJump" in self.prefit_model.components:
-            # if attempted fit (selected)
+            # Modifies jump flags. If attempted fit (selected)
             # A) contains only jumps, don't do the fit and return an error
             # B) excludes a jump, turn that jump off
             # C) partially contains a jump, redefine that jump only with the overlap
