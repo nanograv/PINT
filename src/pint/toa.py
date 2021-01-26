@@ -1389,7 +1389,7 @@ class TOAs:
         if "pn" in self.table["flags"][0]:
             if "pulse_number" in self.table.colnames:
                 raise ValueError("Pulse number cannot be both a column and a TOA flag")
-            return np.array(flags["pn"] for flags in self.table["flags"])
+            return np.array(flags.get("pn", np.nan) for flags in self.table["flags"])
         elif "pulse_number" in self.table.colnames:
             return self.table["pulse_number"]
         else:
@@ -1618,16 +1618,15 @@ class TOAs:
         self.table["delta_pulse_number"] += dphs
 
         # Then, add pulse_number as a table column if possible
-        try:
-            pns = [flags["pn"] for flags in self.table["flags"]]
-            self.table["pulse_number"] = pns
-            self.table["pulse_number"].unit = u.dimensionless_unscaled
+        pns = [float(flags.get("pn", np.nan)) for flags in self.table["flags"]]
+        if np.all(np.isnan(pns)):
+            raise ValueError("No pulse numbers found")
+        self.table["pulse_number"] = pns
+        self.table["pulse_number"].unit = u.dimensionless_unscaled
 
-            # Remove pn from dictionary to prevent redundancies
-            for flags in self.table["flags"]:
-                del flags["pn"]
-        except KeyError:
-            raise ValueError("Not all TOAs have pn flags")
+        # Remove pn from dictionary to prevent redundancies
+        for flags in self.table["flags"]:
+            del flags["pn"]
 
     def compute_pulse_numbers(self, model):
         """Set pulse numbers (in TOA table column pulse_numbers) based on model.
@@ -1714,7 +1713,9 @@ class TOAs:
         if "pulse_number" in self.table.colnames:
             pnChange = True
             for i in range(len(self.table["flags"])):
-                self.table["flags"][i]["pn"] = self.table["pulse_number"][i]
+                pn = self.table["pulse_number"][i]
+                if not np.isnan(pn):
+                    self.table["flags"][i]["pn"] = pn
 
         for (toatime, toaerr, freq, obs, flags) in zip(
             self.table["mjd"],
@@ -1744,7 +1745,10 @@ class TOAs:
         # If pulse numbers were added to flags, remove them again
         if pnChange:
             for flags in self.table["flags"]:
-                del flags["pn"]
+                try:
+                    del flags["pn"]
+                except KeyError:
+                    pass
 
         if not handle:
             outf.close()

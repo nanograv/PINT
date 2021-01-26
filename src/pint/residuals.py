@@ -68,8 +68,10 @@ class Residuals:
         Controls how pulse numbers are assigned. ``"nearest"`` assigns
         each TOA to the nearest integer pulse. ``"use_pulse_numbers"`` uses the
         ``pulse_number`` column of the TOAs table to assign pulse numbers. If the
-        default, None, is passed, use the pulse numbers if and only if the model has
-        parameter TRACK == "-2".
+        default, None, is passed, use the pulse numbers if the model has the
+        parameter TRACK == "-2" and not if it has TRACK == "0". If neither of the
+        above is set, use pulse numbers if there are pulse numbers present and not
+        if there aren't.
     """
 
     def __new__(
@@ -113,6 +115,16 @@ class Residuals:
         if track_mode is None:
             if getattr(self.model, "TRACK").value == "-2":
                 self.track_mode = "use_pulse_numbers"
+            elif getattr(self.model, "TRACK").value == "0":
+                self.track_mode = "nearest"
+            elif "pulse_number" in self.toas.table.columns:
+                if not np.any(np.isnan(toas.table["pulse_number"])):
+                    log.warn(
+                        "Some TOAs are missing pulse numbers, they will not be used."
+                    )
+                    self.track_mode = "nearest"
+                else:
+                    self.track_mode = "use_pulse_numbers"
             else:
                 self.track_mode = "nearest"
         else:
@@ -282,9 +294,17 @@ class Residuals:
             )
             # First assign each TOA to the correct relative pulse number, including
             # and delta_pulse_numbers (from PHASE lines or adding phase jumps in GUI)
-            residualphase = modelphase - Phase(pulse_num, np.zeros_like(pulse_num))
+            i = pulse_num.copy()
+            f = np.zeros_like(pulse_num)
+            c = np.isnan(pulse_num)
+            if np.any(c):
+                raise ValueError("Pulse numbers are missing on some TOAs")
+                i[c] = 0
+            residualphase = modelphase - Phase(i, f)
             # This converts from a Phase object to a np.float128
             full = residualphase.int + residualphase.frac
+            if np.any(c):
+                full[c] -= np.round(full[c])
         # If not tracking then do the usual nearest pulse number calculation
         elif self.track_mode == "nearest":
             # Compute model phase

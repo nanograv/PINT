@@ -1216,7 +1216,12 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
     """
 
     def __init__(
-        self, fit_data, model, fit_data_names=["toa", "dm"], additional_args={}
+        self,
+        fit_data,
+        model,
+        fit_data_names=["toa", "dm"],
+        track_mode=None,
+        additional_args={},
     ):
 
         self.model_init = model
@@ -1235,6 +1240,10 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 "data have to match the fit data names."
             )
         self.fit_data = fit_data
+        if track_mode is not None:
+            if "toa" not in additional_args:
+                additional_args["toa"] = {}
+            additional_args["toa"]["track_mode"] = track_mode
         self.additional_args = additional_args
         # Get the makers for fitting parts.
         self.reset_model()
