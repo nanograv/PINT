@@ -303,10 +303,10 @@ class SatelliteObs(SpecialLocation):
     def earth_location_itrf(self, time=None):
         return self._geocenter
 
-    def _get_TDB_default(self, t, ephem=None, grp=None):
+    def _get_TDB_default(self, t, ephem):
         # Add in correction term to t.tdb equal to r.v / c^2
         vel = objPosVel_wrt_SSB("earth", t, ephem).vel
-        pos = self.get_gcrs(t, ephem=ephem, grp=grp)
+        pos = self.get_gcrs(t, ephem=ephem)
         dnom = const.c * const.c
 
         corr = ((pos[0] * vel[0] + pos[1] * vel[1] + pos[2] * vel[2]) / dnom).to(u.s)
@@ -314,7 +314,7 @@ class SatelliteObs(SpecialLocation):
 
         return t.tdb + corr
 
-    def get_gcrs(self, t, ephem=None, grp=None):
+    def get_gcrs(self, t, ephem=None):
         """Return position vector of Fermi in GCRS
         t is an astropy.Time or array of astropy.Time objects
         Returns a 3-vector of Quantities representing the position
@@ -353,7 +353,7 @@ class SatelliteObs(SpecialLocation):
 class NICERObs(SatelliteObs):
     """ Special implementation for NICER to control extrapolation."""
 
-    def get_gcrs(self, t, ephem=None, grp=None, maxextrap=2):
+    def get_gcrs(self, t, ephem=None, maxextrap=2):
         """Return position vector of NICER in GCRS
 
         t is an astropy.Time or array of `astropy.time.Time` objects
