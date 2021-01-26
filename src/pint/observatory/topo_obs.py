@@ -318,7 +318,7 @@ class TopoObs(Observatory):
         )
         return obs_geocenter_pv.pos
 
-    def posvel(self, t, ephem):
+    def posvel(self, t, ephem, group=None):
         if t.isscalar:
             t = Time([t])
         earth_pv = objPosVel_wrt_SSB("earth", t, ephem)

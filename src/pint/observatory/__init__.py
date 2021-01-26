@@ -274,7 +274,7 @@ class Observatory:
         """
         raise NotImplementedError
 
-    def posvel(self, t, ephem):
+    def posvel(self, t, ephem, group=None):
         """Return observatory position and velocity for the given times.
 
         Postion is relative to solar system barycenter; times are
