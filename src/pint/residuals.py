@@ -171,7 +171,6 @@ class Residuals:
         self.phase_resids = self.calc_phase_resids()
         self.time_resids = self.calc_time_resids()
         self._chi2 = None  # trigger chi2 recalculation when needed
-        self.dof = self.dof
 
     @property
     def chi2(self):
