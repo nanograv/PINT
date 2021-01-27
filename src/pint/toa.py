@@ -2020,7 +2020,7 @@ class TOAs:
             tdb = time.Time(grp["tdb"], precision=9)
 
             if isinstance(site, T2SpacecraftObs):
-                ssb_obs = site.posvel(tdb, ephem, grp)
+                ssb_obs = site.posvel(tdb, ephem, group=grp)
             else:
                 ssb_obs = site.posvel(tdb, ephem)
 

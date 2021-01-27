@@ -276,9 +276,13 @@ class SatelliteObs(SpecialLocation):
         Observatory name [Fermi, NICER, RXTE, NuSTAR]
     ft2name: str
         File name to read spacecraft position information from
+    maxextrap: float
+        Maximum minutes between a time and the closest S/C measurement.
+    overwrite: bool
+        Replace the entry in the observatory table.
     """
 
-    def __init__(self, name, ft2name):
+    def __init__(self, name, ft2name, maxextrap=2, overwrite=False):
         self.FT2 = load_orbit(name, ft2name)
 
         # Now build the interpolator here:
@@ -290,7 +294,8 @@ class SatelliteObs(SpecialLocation):
         self.Vy = InterpolatedUnivariateSpline(tt, self.FT2["Vy"], ext="raise")
         self.Vz = InterpolatedUnivariateSpline(tt, self.FT2["Vz"], ext="raise")
         self._geocenter = EarthLocation.from_geocentric(0.0 * u.m, 0.0 * u.m, 0.0 * u.m)
-        super(SatelliteObs, self).__init__(name=name)
+        self._maxextrap = maxextrap
+        super(SatelliteObs, self).__init__(name=name, overwrite=overwrite)
 
     @property
     def timescale(self):
@@ -302,6 +307,33 @@ class SatelliteObs(SpecialLocation):
 
     def earth_location_itrf(self, time=None):
         return self._geocenter
+
+    def _check_bounds(self, t):
+        """ Ensure t is within maxextrap of the closest S/C measurement.
+        
+        The purpose is to catch cases where there is missing S/C orbital
+        information.  A common case would be providing an "FT2" file that
+        is shorter than the photon data, or building an FT2 file that is
+        missing a chunk.
+
+        Parameters
+        ----------
+        t: an astropy.Time or array of astropy.Times
+            Times to ensure are valid relative to S/C information.
+        """
+        ft2_tt = self.FT2["MJD_TT"]
+        in_tt = np.atleast_1d(t.tt.mjd)
+        i0 = np.searchsorted(ft2_tt, in_tt)
+        i0[i0 == 0] = 1
+        i0[i0 == len(ft2_tt)] = len(i0) - 1
+        dright = np.abs(ft2_tt[i0] - in_tt)
+        dleft = np.abs(ft2_tt[i0 - 1] - in_tt)
+        min_duration = np.minimum(dright, dleft)
+        if np.any(min_duration > self._maxextrap / (60 * 24)):
+            log.error(
+                "Extrapolating S/C position by more than %d minutes!" % self._maxextrap
+            )
+            raise ValueError("Bad extrapolation of S/C file.")
 
     def _get_TDB_default(self, t, ephem):
         # Add in correction term to t.tdb equal to r.v / c^2
@@ -315,17 +347,23 @@ class SatelliteObs(SpecialLocation):
         return t.tdb + corr
 
     def get_gcrs(self, t, ephem=None):
-        """Return position vector of Fermi in GCRS
-        t is an astropy.Time or array of astropy.Time objects
+        """Return position vector of S/C in GCRS.
+
         Returns a 3-vector of Quantities representing the position
         in GCRS coordinates.
+
+        Parameters
+        ----------
+        t: an astropy.Time or array of astropy.Times
+
         """
+        self._check_bounds(t)
         return (
             np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])
             * self.FT2["X"].unit
         )
 
-    def posvel(self, t, ephem):
+    def posvel(self, t, ephem, group=None):
         """Return position and velocity vectors of satellite, wrt SSB.
 
         These positions and velocites are in inertial coordinates
@@ -336,6 +374,16 @@ class SatelliteObs(SpecialLocation):
         # Compute vector from SSB to Earth
         geo_posvel = objPosVel_wrt_SSB("earth", t, ephem)
         # Now add vector from Earth to satellite
+        sat_posvel = self.posvel_gcrs(t, ephem)
+        return geo_posvel + sat_posvel
+
+    def posvel_gcrs(self, t, ephem=None):
+        """Return GCRS position and velocity vectors of S/C.
+
+        t is an astropy.Time or array of astropy.Times
+        """
+        self._check_bounds(t)
+        # Compute vector from Earth to satellite
         sat_pos_geo = (
             np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])
             * self.FT2["X"].unit
@@ -346,113 +394,10 @@ class SatelliteObs(SpecialLocation):
             * self.FT2["Vx"].unit
         )
         sat_posvel = PosVel(sat_pos_geo, sat_vel_geo, origin="earth", obj=self.name)
-        # Vector add to geo_posvel to get full posvel vector.
-        return geo_posvel + sat_posvel
+        return sat_posvel
 
 
-class NICERObs(SatelliteObs):
-    """ Special implementation for NICER to control extrapolation."""
-
-    def get_gcrs(self, t, ephem=None, maxextrap=2):
-        """Return position vector of NICER in GCRS
-
-        t is an astropy.Time or array of `astropy.time.Time` objects
-        Returns a 3-vector of Quantities representing the position
-        in GCRS coordinates.
-        """
-
-        tmin = np.min(self.FT2["MJD_TT"])
-        tmax = np.max(self.FT2["MJD_TT"])
-        if tmin - np.min(t.tt.mjd) > float(maxextrap) / (60 * 24) or np.max(
-            t.tt.mjd
-        ) - tmax > float(maxextrap) / (60 * 24):
-            log.error(
-                "Extrapolating NICER position by more than %d minutes!" % maxextrap
-            )
-            raise ValueError("Bad extrapolation of S/C file.")
-        return (
-            np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])
-            * self.FT2["X"].unit
-        )
-
-    def posvel(self, t, ephem, maxextrap=2):
-        """Return position and velocity vectors of NICER.
-
-        t is an astropy.Time or array of astropy.Times
-        maxextrap is the longest (in minutes) it is acceptable to
-        extrapolate the S/C position
-        """
-
-        # this is a simple edge check mainly to prevent use of the wrong
-        # orbit file or a single orbit file with a merged event file; if
-        # needed, can check to make sure there is a spline anchor point
-        # sufficiently close to all event times
-        tmin = np.min(self.FT2["MJD_TT"])
-        tmax = np.max(self.FT2["MJD_TT"])
-        if tmin - np.min(t.tt.mjd) > float(maxextrap) / (60 * 24) or np.max(
-            t.tt.mjd
-        ) - tmax > float(maxextrap) / (60 * 24):
-            log.error(
-                "Extrapolating NICER position by more than %d minutes!" % maxextrap
-            )
-            log.error(
-                "Orbit file goes {0} to {1}, Events go {2} to {3}".format(
-                    tmin, tmax, np.min(t.tt.mjd), np.max(t.tt.mjd)
-                )
-            )
-            raise ValueError("Bad extrapolation of S/C file.")
-        # Compute vector from SSB to Earth
-        geo_posvel = objPosVel_wrt_SSB("earth", t, ephem)
-        # Now add vector from Earth to NICER
-        nicer_pos_geo = (
-            np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])
-            * self.FT2["X"].unit
-        )
-        nicer_vel_geo = (
-            np.array([self.Vx(t.tt.mjd), self.Vy(t.tt.mjd), self.Vz(t.tt.mjd)])
-            * self.FT2["Vx"].unit
-        )
-        nicer_posvel = PosVel(nicer_pos_geo, nicer_vel_geo, origin="earth", obj="nicer")
-        # Vector add to geo_posvel to get full posvel vector.
-        return geo_posvel + nicer_posvel
-
-    def posvel_gcrs(self, t, maxextrap=2):
-        """Return GCRS position and velocity vectors of NICER.
-
-        t is an astropy.Time or array of astropy.Times
-        maxextrap is the longest (in minutes) it is acceptable to
-        extrapolate the S/C position
-        """
-
-        # this is a simple edge check mainly to prevent use of the wrong
-        # orbit file or a single orbit file with a merged event file; if
-        # needed, can check to make sure there is a spline anchor point
-        # sufficiently close to all event times
-        tmin = np.min(self.FT2["MJD_TT"])
-        tmax = np.max(self.FT2["MJD_TT"])
-        if tmin - np.min(t.tt.mjd) > float(maxextrap) / (60 * 24) or np.max(
-            t.tt.mjd
-        ) - tmax > float(maxextrap) / (60 * 24):
-            log.error(
-                "Extrapolating NICER position by more than %d minutes!" % maxextrap
-            )
-            raise ValueError("Bad extrapolation of S/C file.")
-
-        # Now add vector from Earth to NICER
-        nicer_pos_geo = (
-            np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])
-            * self.FT2["X"].unit
-        )
-        nicer_vel_geo = (
-            np.array([self.Vx(t.tt.mjd), self.Vy(t.tt.mjd), self.Vz(t.tt.mjd)])
-            * self.FT2["Vx"].unit
-        )
-        nicer_posvel = PosVel(nicer_pos_geo, nicer_vel_geo, origin="earth", obj="nicer")
-        # Vector add to geo_posvel to get full posvel vector.
-        return nicer_posvel
-
-
-def get_satellite_observatory(name, ft2name):
+def get_satellite_observatory(name, ft2name, **kwargs):
     """ Factory to get/instantiate a SatelliteObs.""
 
     Parameters
@@ -462,6 +407,9 @@ def get_satellite_observatory(name, ft2name):
     ft2name: str
         File name to read spacecraft position information from.
     """
-    if "nicer" in name.lower():
-        return NICERObs(name, ft2name)
-    return SatelliteObs(name, ft2name)
+    # Default maximum extrapolation is 2 minutes, which is suitable for
+    # recognized observatories.  This factory can be used to set appropriate
+    # values as new observatories are added.
+    if "maxextrap" not in kwargs:
+        kwargs["maxextrap"] = 2
+    return SatelliteObs(name, ft2name, **kwargs)
