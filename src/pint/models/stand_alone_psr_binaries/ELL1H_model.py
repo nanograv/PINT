@@ -54,7 +54,10 @@ class ELL1Hmodel(ELL1BaseModel):
 
     def delayS(self):
         if set(self.fit_params) == set(["H3", "H4"]):
-            stigma = self.H4 / self.H3
+            if self.H3 == 0.0:
+                stigma = 0.0
+            else:
+                stigma = self.H4 / self.H3
         elif set(self.fit_params) == set(["H3", "STIGMA"]):
             stigma = self.STIGMA
         elif set(self.fit_params) == set(["H3"]):
@@ -167,11 +170,16 @@ class ELL1Hmodel(ELL1BaseModel):
             return 0, basis_func
 
     def d_STIGMA_d_H4(self):
+        if self.H3 == 0.0:
+            raise ValueError("To fit for H4, H3 should be significant(not 0.0).")
         return 1.0 / self.H3
 
     def d_STIGMA_d_H3(self):
         if set(self.fit_params) == set(["H3", "H4"]):
-            d_stigma_d_H3 = -self.H4 / self.H3 / self.H3
+            if self.H3 == 0.0:
+                d_stigma_d_H3 = 0.0
+            else:
+                d_stigma_d_H3 = -self.H4 / self.H3 / self.H3
         elif set(self.fit_params) == set(["H3", "STIGMA"]):
             d_stigma_d_H3 = 0.0
         elif set(self.fit_params) == set(["H3"]):
@@ -388,7 +396,10 @@ class ELL1Hmodel(ELL1BaseModel):
 
     def d_delayS_d_par(self, par):
         if set(self.fit_params) == set(["H3", "H4"]):
-            stigma = self.H4 / self.H3
+            if self.H3 == 0:
+                stigma = 0.0
+            else:
+                stigma = self.H4 / self.H3
         elif set(self.fit_params) == set(["H3", "STIGMA"]):
             stigma = self.STIGMA
         elif set(self.fit_params) == set(["H3"]):

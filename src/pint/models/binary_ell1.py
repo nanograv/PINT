@@ -265,8 +265,8 @@ class BinaryELL1H(BinaryELL1Base):
     def validate(self):
         """Parameter validation."""
         super(BinaryELL1H, self).validate()
-        if self.H3.quantity is None:
-            raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")
+        # if self.H3.quantity is None:
+        #     raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")
         if self.SINI.quantity is not None:
             warn("'SINI' will not be used in ELL1H model. ")
         if self.M2.quantity is not None:
