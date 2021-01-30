@@ -1227,7 +1227,7 @@ class TimingModel(object):
         return result
 
     def jump_flags_to_params(self, toas):
-        """Convert jump flags in toas.table["flags"] to jump parameters in the model.
+        """Convert jump flags in toas.table["flags"] (loaded in .tim file) to jump parameters in the model.
 
         The flags processed are ``jump`` and ``gui_jump``.
         """
@@ -1238,9 +1238,9 @@ class TimingModel(object):
                 break
             elif "gui_jump" in flag_dict.keys():
                 break
-        else:
-            log.info("No jump flags to process")
-            return None
+            else:
+                log.info("No jump flags to process from .tim file")
+                return None
         for flag_dict in toas.table["flags"]:
             if "jump" in flag_dict.keys():
                 jump_nums = [
