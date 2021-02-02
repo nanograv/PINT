@@ -4,15 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.8.2] - 2021-01-27
 ### Fixed
 - Now preserves the name column in tempo2 files (PR #926)
-- make_fake_toas now uses ephemeris and other settings from the model (PR #926)
+- Make_fake_toas now uses ephemeris and other settings from the model (PR #926)
+- Fix dof bug when updating TOAs (PR #955)
 ### Added
 - get_TOAs can read and cache multiple .tim files (PR #926)
 - pickling can be done manually with load_pickle and save_pickle (PR #926)
 - TOAs can be checked against the files they were loaded from with check_hashes() (PR #926)
 - TOAs can now be checked for equality with == (PR #926)
+- Add bounds checking for spacecraft obs and other changes (PR #961)
+- Added script/notebook to reproduce profiling tables from PINT paper (PR #934)
+### Changed
+- Improvements to pulse numbering and track mode
+- Removed all __future__ stuff that supported Python 2 (PR #946)
 
 ## [0.8.1] - 2021-01-07
 ### Fixed
@@ -23,7 +29,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fixed badges in README
 - Added GitHub Actions for CI testing
 - Fix setup.cfg to disable Py2.7 support
-- Fixed bug in 
+- Fixed bug in
 ### Removed
 - Removed two unused files
 - Removed use of Travis-CI

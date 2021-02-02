@@ -37,6 +37,9 @@ def main(argv=None):
         "--plot", help="Plot residuals", action="store_true", default=False
     )
     parser.add_argument("--plotfile", help="Plot file name", default=None)
+    parser.add_argument(
+        "--gls", help="Fit using GLS fitter", action="store_true", default=False
+    )
     args = parser.parse_args(argv)
 
     log.info("Reading model from {0}".format(args.parfile))
@@ -45,15 +48,7 @@ def main(argv=None):
     log.warning(m.params)
 
     log.info("Reading TOAs")
-    use_planets = False
-    if m.PLANET_SHAPIRO.value:
-        use_planets = True
-    model_ephem = "DE421"
-    if m.EPHEM is not None:
-        model_ephem = m.EPHEM.value
-    t = pint.toa.get_TOAs(
-        args.timfile, planets=use_planets, ephem=model_ephem, usepickle=args.usepickle
-    )
+    t = pint.toa.get_TOAs(args.timfile, model=m, usepickle=args.usepickle)
 
     # turns pre-existing jump flags in t.table['flags'] into parameters in parfile
     m.jump_flags_to_params(t)
@@ -68,7 +63,10 @@ def main(argv=None):
     prefit_resids = pint.residuals.Residuals(t, m).time_resids
 
     log.info("Fitting...")
-    f = pint.fitter.WLSFitter(t, m)
+    if args.gls:
+        f = pint.fitter.GLSFitter(t, m)
+    else:
+        f = pint.fitter.WLSFitter(t, m)
     f.fit_toas()
 
     # Print fit summary

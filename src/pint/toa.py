@@ -202,7 +202,7 @@ def get_TOAs(
             updatepickle = True
         else:
             if hasattr(t, "hashes"):
-                if not t.check_hashes():
+                if not t.check_hashes(timfile):
                     updatepickle = True
                     log.info("Pickle based on files that have changed")
             else:
@@ -1389,7 +1389,7 @@ class TOAs:
         if "pn" in self.table["flags"][0]:
             if "pulse_number" in self.table.colnames:
                 raise ValueError("Pulse number cannot be both a column and a TOA flag")
-            return np.array(flags["pn"] for flags in self.table["flags"])
+            return np.array(flags.get("pn", np.nan) for flags in self.table["flags"])
         elif "pulse_number" in self.table.colnames:
             return self.table["pulse_number"]
         else:
@@ -1491,10 +1491,43 @@ class TOAs:
         )
         return sorted_mjds[i], sorted_mjds[s[i]]
 
-    def check_hashes(self):
-        """Determine whether the input files are the same as when loaded."""
-        for f, v in self.hashes.items():
-            if _compute_hash(f) != v:
+    def check_hashes(self, timfile=None):
+        """Determine whether the input files are the same as when loaded.
+
+        Parameters
+        ----------
+        timfile : str or list of str or file-like or None
+            If provided this should match the list of files the TOAs object was loaded from.
+            If this is a string or list of strings, and the number matches the number of
+            files this TOAs object was loaded from, it is assumed that these are supposed to
+            be the same files, re-named or moved; their contents are then checked. If the
+            contents or the number doesn't match, this function returns False.
+
+        Returns
+        -------
+        bool
+            True if the contents of the TOAs object matches the content of the files.
+        """
+        if self.filename is None:
+            return True
+        elif isinstance(self.filename, str):
+            filenames = [self.filename]
+        else:
+            filenames = self.filename
+
+        if timfile is None:
+            timfiles = filenames
+        elif hasattr(timfile, "readlines"):
+            return True
+        elif isinstance(timfile, str):
+            timfiles = [timfile]
+        else:
+            timfiles = list(timfile)
+        if len(timfiles) != len(filenames):
+            return False
+
+        for t, f in zip(timfiles, filenames):
+            if _compute_hash(t) != self.hashes[f]:
                 return False
         return True
 
@@ -1585,16 +1618,15 @@ class TOAs:
         self.table["delta_pulse_number"] += dphs
 
         # Then, add pulse_number as a table column if possible
-        try:
-            pns = [flags["pn"] for flags in self.table["flags"]]
-            self.table["pulse_number"] = pns
-            self.table["pulse_number"].unit = u.dimensionless_unscaled
+        pns = [float(flags.get("pn", np.nan)) for flags in self.table["flags"]]
+        if np.all(np.isnan(pns)):
+            raise ValueError("No pulse numbers found")
+        self.table["pulse_number"] = pns
+        self.table["pulse_number"].unit = u.dimensionless_unscaled
 
-            # Remove pn from dictionary to prevent redundancies
-            for flags in self.table["flags"]:
-                del flags["pn"]
-        except KeyError:
-            raise ValueError("Not all TOAs have pn flags")
+        # Remove pn from dictionary to prevent redundancies
+        for flags in self.table["flags"]:
+            del flags["pn"]
 
     def compute_pulse_numbers(self, model):
         """Set pulse numbers (in TOA table column pulse_numbers) based on model.
@@ -1681,7 +1713,9 @@ class TOAs:
         if "pulse_number" in self.table.colnames:
             pnChange = True
             for i in range(len(self.table["flags"])):
-                self.table["flags"][i]["pn"] = self.table["pulse_number"][i]
+                pn = self.table["pulse_number"][i]
+                if not np.isnan(pn):
+                    self.table["flags"][i]["pn"] = pn
 
         for (toatime, toaerr, freq, obs, flags) in zip(
             self.table["mjd"],
@@ -1711,7 +1745,10 @@ class TOAs:
         # If pulse numbers were added to flags, remove them again
         if pnChange:
             for flags in self.table["flags"]:
-                del flags["pn"]
+                try:
+                    del flags["pn"]
+                except KeyError:
+                    pass
 
         if not handle:
             outf.close()
@@ -1867,7 +1904,7 @@ class TOAs:
                     )
                     grpmjds = time.Time(grp["mjd"], location=locs)
 
-            grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem, grp=grp)
+            grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
             tdbs[loind:hiind] = np.asarray([t for t in grptdbs])
 
         # Now add the new columns to the table
@@ -1983,7 +2020,7 @@ class TOAs:
             tdb = time.Time(grp["tdb"], precision=9)
 
             if isinstance(site, T2SpacecraftObs):
-                ssb_obs = site.posvel(tdb, ephem, grp)
+                ssb_obs = site.posvel(tdb, ephem, group=grp)
             else:
                 ssb_obs = site.posvel(tdb, ephem)
 
