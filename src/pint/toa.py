@@ -313,12 +313,12 @@ def load_pickle(toafilename, picklefilename=None):
         try:
             with gzip.open(fn, "rb") as f:
                 lf = pickle.load(f)
-        except (IOError, pickle.UnpicklingError):
+        except (IOError, pickle.UnpicklingError, ValueError):
             pass
         try:
             with open(fn, "rb") as f:
                 lf = pickle.load(f)
-        except (IOError, pickle.UnpicklingError):
+        except (IOError, pickle.UnpicklingError, ValueError):
             pass
     if lf is not None:
         lf.was_pickled = True
