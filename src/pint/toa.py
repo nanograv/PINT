@@ -1289,7 +1289,7 @@ class TOAs:
     def __getitem__(self, index):
         if not hasattr(self, "table"):
             raise ValueError("This TOAs object is incomplete and does not have a table")
-        if isinstance(index, np.ndarray) and index.dtype == np.bool:
+        if isinstance(index, np.ndarray) and index.dtype == bool:
             r = copy.deepcopy(self)
             r.table = r.table[index]
             if len(r.table) > 0:
@@ -1297,7 +1297,7 @@ class TOAs:
             return r
         elif (
             isinstance(index, np.ndarray)
-            and index.dtype == np.int
+            and index.dtype == np.int64
             or isinstance(index, list)
         ):
             r = copy.deepcopy(self)
