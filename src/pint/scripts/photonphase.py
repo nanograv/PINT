@@ -216,7 +216,7 @@ def main(argv=None):
         orbits = modelin.binary_instance.orbits()
         # These lines are already in orbits.orbit_phase() in binary_orbits.py.
         # What is the correct syntax is to call this function here?
-        norbits = np.array(np.floor(orbits), dtype=np.long)
+        norbits = np.array(np.floor(orbits), dtype=int)
         orbphases = orbits - norbits  # fractional phase
 
     if args.addphase or args.addorbphase:

@@ -641,7 +641,7 @@ def dmx_ranges_old(
                 print("Ack!  This shouldn't be happening!")
             oldmax = DMX.max
     # Init mask to all False
-    mask = np.zeros_like(MJDs.value, dtype=np.bool)
+    mask = np.zeros_like(MJDs.value, dtype=bool)
     # Mark TOAs as True if they are in any DMX bin
     for DMX in DMXs:
         mask[np.logical_and(MJDs > DMX.min - offset, MJDs < DMX.max + offset)] = True
@@ -752,7 +752,7 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=Fa
             DMX.sum_print()
 
     # Init mask to all False
-    mask = np.zeros_like(MJDs.value, dtype=np.bool)
+    mask = np.zeros_like(MJDs.value, dtype=bool)
     # Mark TOAs as True if they are in any DMX bin
     for DMX in DMXs:
         mask[np.logical_and(MJDs >= DMX.min, MJDs <= DMX.max)] = True
@@ -1059,7 +1059,7 @@ def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
     Converted from IDL: 2006-10-23. Erin Sheldon, NYU
     Copied from PRESTO to PINT : 2020-04-18
 
-   """
+    """
     arr = arrin
     weights = weights_in
     wtot = weights.sum()

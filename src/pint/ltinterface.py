@@ -237,7 +237,7 @@ class PINTPulsar:
         if log.level < 25:
             self.t.print_summary()
 
-        self.deleted = np.zeros(self.t.ntoas, dtype=np.bool)
+        self.deleted = np.zeros(self.t.ntoas, dtype=bool)
         self._readflags()
 
     def _readflags(self):

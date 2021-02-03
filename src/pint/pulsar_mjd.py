@@ -266,8 +266,8 @@ def time_from_mjd_string(s, scale="utc", format="pulsar_mjd"):
 
 def time_from_longdouble(t, scale="utc", format="pulsar_mjd"):
     t = np.longdouble(t)
-    i = np.float(np.floor(t))
-    f = np.float(t - i)
+    i = float(np.floor(t))
+    f = float(t - i)
     return astropy.time.Time(val=i, val2=f, format=format, scale=scale)
 
 
@@ -286,7 +286,7 @@ longdouble_mjd_eps = (70000 * u.day * np.finfo(np.longdouble).eps).to(u.ns)
 
 
 def time_to_longdouble(t):
-    """ Return an astropy Time value as MJD in longdouble
+    """Return an astropy Time value as MJD in longdouble
 
     The returned value is accurate to within a nanosecond, while the precision of long
     double MJDs (near the present) is roughly 0.7 ns.

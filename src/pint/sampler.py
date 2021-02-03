@@ -144,7 +144,7 @@ class EmceeSampler(MCMCSampler):
                 for ii in range(self.nwalkers):
                     pos[ii][idx] = svals[ii]
         pos[0] = fitvals
-        return [pos_i.astype(np.float) for pos_i in pos]
+        return [pos_i.astype(float) for pos_i in pos]
 
     def get_chain(self):
         """
