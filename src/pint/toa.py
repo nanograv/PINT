@@ -303,7 +303,7 @@ def load_pickle(toafilename, picklefilename=None):
         If no pickle is found.
     """
     picklefilenames = (
-        [toafilename + ext for ext in (".pickle.gz", ".pickle", "")]
+        [toafilename + ext for ext in (".pickle.gz", ".pickle")]
         if picklefilename is None
         else [picklefilename]
     )
