@@ -86,6 +86,8 @@ class Pulsar:
 
         # turns pre-existing jump flags in toas.table['flags'] into parameters in parfile
         self.prefit_model.jump_flags_to_params(self.all_toas)
+        # adds flags to toas.table for existing jump parameters from .par file
+        self.prefit_model.jump_params_to_flags(self.all_toas)
         self.selected_toas = copy.deepcopy(self.all_toas)
         print("prefit_model.as_parfile():")
         print(self.prefit_model.as_parfile())
@@ -286,6 +288,7 @@ class Pulsar:
             self.prefit_model.components["PhaseJump"]._parent = self.prefit_model
             if self.fitted:
                 self.postfit_model.add_component(a)
+            # go through toa tables for all TOAs and selected TOAs (since selected table separate from regular TOA table) and add jump flags
             for dict1, dict2 in zip(
                 self.all_toas.table["flags"][selected],
                 self.selected_toas.table["flags"],
@@ -307,29 +310,16 @@ class Pulsar:
                 "There are no jumps (maskParameter objects) in PhaseJump. Please delete the PhaseJump object and try again. "
             )
             return None
-        # if only par file jumps in PhaseJump object
-        if np.isnan(np.nanmax(jump_nums)):
-            # for every jump, set appropriate flag for TOAs it jumps
-            for jump_par in self.prefit_model.components[
-                "PhaseJump"
-            ].get_jump_param_objects():
-                # find TOAs jump applies to
-                mask = jump_par.select_toa_mask(self.all_toas)
-                # apply to dictionaries for future use
-                for dict in self.all_toas.table["flags"][mask]:
-                    dict["jump"] = jump_par.index
-            jump_nums = [
-                int(dict["jump"]) if "jump" in dict.keys() else np.nan
-                for dict in self.all_toas.table["flags"]
-            ]
+
         for num in range(1, numjumps + 1):
-            num = int(num)
+            # create boolean array corresponding to TOAs to be jumped
             jump_select = [num == jump_num for jump_num in jump_nums]
             if np.array_equal(jump_select, selected):
                 # if current jump exactly matches selected, remove it
                 self.prefit_model.remove_param("JUMP" + str(num))
                 if self.fitted:
                     self.postfit_model.remove_param("JUMP" + str(num))
+                # remove jump flags from original and selected TOA tables
                 for dict1, dict2 in zip(
                     self.all_toas.table["flags"][selected],
                     self.selected_toas.table["flags"],
@@ -349,6 +339,7 @@ class Pulsar:
                     param = getattr(
                         self.prefit_model.components["PhaseJump"], "JUMP" + str(n)
                     )
+                    # renumber jumps
                     for dict in self.all_toas.table["flags"]:
                         if "jump" in dict.keys() and dict["jump"] == n:
                             dict["jump"] = n - 1
@@ -382,6 +373,7 @@ class Pulsar:
                 )
                 return None
         # if here, then doesn't overlap or match anything
+        # add jump flags to selected TOAs at their perspective indices in the TOA tables
         for dict1, dict2 in zip(
             self.all_toas.table["flags"][selected], self.selected_toas.table["flags"]
         ):
@@ -443,23 +435,6 @@ class Pulsar:
                 True if "jump" in dict.keys() and dict["jump"] in fit_jumps else False
                 for dict in self.all_toas.table["flags"][selected]
             ]
-            # check if par file jumps in PhaseJump object
-            if not any(jumps):
-                # for every jump, set appropriate flag for TOAs it jumps
-                for jump_par in self.prefit_model.components[
-                    "PhaseJump"
-                ].get_jump_param_objects():
-                    # find TOAs jump applies to
-                    mask = jump_par.select_toa_mask(self.all_toas)
-                    # apply to dictionaries for future use
-                    for dict in self.all_toas.table["flags"][mask]:
-                        dict["jump"] = jump_par.index
-                jumps = [
-                    True
-                    if "jump" in dict.keys() and dict["jump"] in fit_jumps
-                    else False
-                    for dict in self.all_toas.table["flags"][selected]
-                ]
             if all(jumps):
                 log.warn(
                     "toas being fit must not all be jumped. Remove or uncheck at least one jump in the selected toas before fitting."
