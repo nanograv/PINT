@@ -134,13 +134,27 @@ def test_jump_everything_wideband():
         assert not np.isnan(fitter.model[p].value)
 
 
-@pytest.mark.parametrize("Fitter", [pint.fitter.GLSFitter, pint.fitter.WidebandTOAFitter])
+@pytest.mark.parametrize(
+    "Fitter", [pint.fitter.GLSFitter, pint.fitter.WidebandTOAFitter]
+)
 def test_null_vector(Fitter):
     model = get_model(io.StringIO("\n".join([par_base])))
     model.free_params = ["ELONG", "ELAT"]
-    toas = make_fake_toas(58000, 58900, 10, model, obs="barycenter", freq=1400.0, dm=15.0, dm_error=1e-4*u.pc*u.cm**-3)
+    toas = make_fake_toas(
+        58000,
+        58900,
+        10,
+        model,
+        obs="barycenter",
+        freq=1400.0,
+        dm=15.0,
+        dm_error=1e-4 * u.pc * u.cm ** -3,
+    )
     fitter = Fitter(toas, model)
-    with pytest.warns(pint.fitter.DegeneracyWarning, match=r".*degeneracy.*following parameter.*ELONG\b"):
+    with pytest.warns(
+        pint.fitter.DegeneracyWarning,
+        match=r".*degeneracy.*following parameter.*ELONG\b",
+    ):
         fitter.fit_toas(threshold=1e-14)
     for p in fitter.model.free_params:
         assert not np.isnan(fitter.model[p].value)
