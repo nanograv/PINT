@@ -2,6 +2,7 @@
 import logging
 import os
 import unittest
+import pytest
 
 import astropy.units as u
 import numpy as np
@@ -12,28 +13,48 @@ import pint.toa as toa
 import test_derivative_utils as tdu
 from pint.residuals import Residuals
 from pinttestdata import datadir
+from io import StringIO
 
+simple_par = """
+PSR    J0613-0200
+LAMBDA 93.7990065496191  1 0.0000000158550
+BETA   -25.4071326875232  1 0.0000000369013
+PMLAMBDA 2.1192  1 0.0174
+PMBETA -10.3422  1              0.0433
+PX 0.9074  1              0.1509
+F0 326.6005670972169810  1  0.0000000000066373
+F1 -1.022985317101D-15  1  6.219122230955D-20
+PEPOCH        54890.000000
+DM         38.778683
+BINARY ELL1H
+A1 1.091442190  1  0.000000598
+PB 1.19851255667964  1 0.00000000001332
+TASC 54889.991808565  1 0.000000012
+EPS1 0.0000025554  1 0.0000002783
+EPS2 0.0000036160  1 0.0000000847
+H3 2.7507208E-7  1       1.5114416E-7
+H4 2.0262048E-7  1       1.1276173E-7
+"""
 
-class TestELL1H(unittest.TestCase):
+os.chdir(datadir)
+
+class TestELL1H:
     """Compare delays from the ELL1 model with tempo and PINT"""
-
-    @classmethod
-    def setUpClass(cls):
-        os.chdir(datadir)
-        cls.parfileJ1853 = "J1853+1303_NANOGrav_11yv0.gls.par"
-        cls.timfileJ1853 = "J1853+1303_NANOGrav_11yv0.tim"
-        cls.toasJ1853 = toa.get_TOAs(cls.timfileJ1853, ephem="DE421", planets=False)
-        cls.modelJ1853 = model.get_model(cls.parfileJ1853)
-        cls.ltres, cls.ltbindelay = np.genfromtxt(
-            cls.parfileJ1853 + ".tempo2_test", skip_header=1, unpack=True
+    def setup(self):
+        self.parfileJ1853 = "J1853+1303_NANOGrav_11yv0.gls.par"
+        self.timfileJ1853 = "J1853+1303_NANOGrav_11yv0.tim"
+        self.toasJ1853 = toa.get_TOAs(self.timfileJ1853, ephem="DE421", planets=False)
+        self.modelJ1853 = model.get_model(self.parfileJ1853)
+        self.ltres, self.ltbindelay = np.genfromtxt(
+            self.parfileJ1853 + ".tempo2_test", skip_header=1, unpack=True
         )
 
-        cls.parfileJ0613 = "J0613-0200_NANOGrav_9yv1_ELL1H.gls.par"
-        cls.timfileJ0613 = "J0613-0200_NANOGrav_9yv1.tim"
-        cls.modelJ0613 = model.get_model(cls.parfileJ0613)
-        cls.toasJ0613 = toa.get_TOAs(cls.timfileJ0613, ephem="DE421", planets=False)
-        cls.parfileJ0613_STIG = "J0613-0200_NANOGrav_9yv1_ELL1H_STIG.gls.par"
-        cls.modelJ0613_STIG = model.get_model(cls.parfileJ0613_STIG)
+        self.parfileJ0613 = "J0613-0200_NANOGrav_9yv1_ELL1H.gls.par"
+        self.timfileJ0613 = "J0613-0200_NANOGrav_9yv1.tim"
+        self.modelJ0613 = model.get_model(self.parfileJ0613)
+        self.toasJ0613 = toa.get_TOAs(self.timfileJ0613, ephem="DE421", planets=False)
+        self.parfileJ0613_STIG = "J0613-0200_NANOGrav_9yv1_ELL1H_STIG.gls.par"
+        self.modelJ0613_STIG = model.get_model(self.parfileJ0613_STIG)
 
     def test_J1853(self):
         pint_resids_us = Residuals(
@@ -116,6 +137,74 @@ class TestELL1H(unittest.TestCase):
             assert (
                 sigma < 0.7
             ), "refit %s is %lf sigma different from original value" % (pn, sigma)
+
+    def test_no_H3_H4(self):
+        """ Test no H3 and H4 in model.
+        """
+        no_H3_H4 = simple_par.replace("H4 2.0262048E-7  1       1.1276173E-7",
+                                      "")
+        no_H3_H4 = no_H3_H4.replace("H3 2.7507208E-7  1       1.5114416E-7",
+                                    "")
+        print(no_H3_H4)
+        no_H3_H4_model = model.get_model(StringIO(no_H3_H4))
+        assert no_H3_H4_model.H3.value == None
+        assert no_H3_H4_model.H4.value == None
+        test_toas = self.toasJ0613[::20]
+        f = ff.WLSFitter(test_toas, no_H3_H4_model)
+        f.fit_toas()
+
+    def test_H3_H4_pairs(self):
+        """ Testing if the different H3, H4 combination breaks the fitting. the
+        fitting result will not be checked here.
+        """
+        simple_model = model.get_model(StringIO(simple_par))
+
+        test_toas = self.toasJ0613[::20]
+        f = ff.WLSFitter(test_toas, simple_model)
+        f.fit_toas()
+
+        # Zero H4
+        H4_zero = simple_par.replace("H4 2.0262048E-7  1       1.1276173E-7",
+                                     "H4 0  1  0")
+        H4_zero_model = model.get_model(StringIO(H4_zero))
+        assert H4_zero_model.H4.value == 0.0
+        assert H4_zero_model.H3.value != 0.0
+        f = ff.WLSFitter(test_toas, H4_zero_model)
+        f.fit_toas()
+
+        # Zero H3
+        H3_zero = simple_par.replace("H3 2.7507208E-7  1       1.5114416E-7",
+                                     "H3 0  1  0")
+        H3_zero_model = model.get_model(StringIO(H3_zero))
+        assert H3_zero_model.H3.value == 0.0
+        assert H3_zero_model.H4.value != 0.0
+        f = ff.WLSFitter(test_toas, H3_zero_model)
+        with pytest.raises(ValueError):
+            f.fit_toas()
+
+        #Zero H3 and H4 and fit for H3 and H4
+        H3H4_zero = H4_zero.replace("H3 2.7507208E-7  1       1.5114416E-7",
+                                    "H3 0  1  0")
+        H3H4_zero_model = model.get_model(StringIO(H3H4_zero))
+        assert H3H4_zero_model.H3.value == 0.0
+        assert 'H3' in H3H4_zero_model.free_params
+        assert H3H4_zero_model.H4.value == 0.0
+        assert 'H4' in H3H4_zero_model.free_params
+        f = ff.WLSFitter(test_toas, H3H4_zero_model)
+        # Fitting H4 with H3 == 0, will give a ValueError
+        with pytest.raises(ValueError):
+            f.fit_toas()
+        # Not fitting H4
+        H3H4_zero2 = H3H4_zero.replace("H4 0  1  0",
+                                       "H4 0  0  0")
+        H3H4_zero2_model = model.get_model(StringIO(H3H4_zero2))
+        assert H3H4_zero2_model.H3.value == 0.0
+        assert 'H3' in H3H4_zero2_model.free_params
+        assert H3H4_zero2_model.H4.value == 0.0
+        assert 'H4' not in H3H4_zero2_model.free_params
+        f = ff.WLSFitter(test_toas, H3H4_zero2_model)
+        # This should work
+        f.fit_toas()
 
 
 if __name__ == "__main__":
