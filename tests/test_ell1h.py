@@ -38,8 +38,10 @@ H4 2.0262048E-7  1       1.1276173E-7
 
 os.chdir(datadir)
 
+
 class TestELL1H:
     """Compare delays from the ELL1 model with tempo and PINT"""
+
     def setup(self):
         self.parfileJ1853 = "J1853+1303_NANOGrav_11yv0.gls.par"
         self.timfileJ1853 = "J1853+1303_NANOGrav_11yv0.tim"
@@ -141,10 +143,8 @@ class TestELL1H:
     def test_no_H3_H4(self):
         """ Test no H3 and H4 in model.
         """
-        no_H3_H4 = simple_par.replace("H4 2.0262048E-7  1       1.1276173E-7",
-                                      "")
-        no_H3_H4 = no_H3_H4.replace("H3 2.7507208E-7  1       1.5114416E-7",
-                                    "")
+        no_H3_H4 = simple_par.replace("H4 2.0262048E-7  1       1.1276173E-7", "")
+        no_H3_H4 = no_H3_H4.replace("H3 2.7507208E-7  1       1.5114416E-7", "")
         print(no_H3_H4)
         no_H3_H4_model = model.get_model(StringIO(no_H3_H4))
         assert no_H3_H4_model.H3.value == None
@@ -164,8 +164,9 @@ class TestELL1H:
         f.fit_toas()
 
         # Zero H4
-        H4_zero = simple_par.replace("H4 2.0262048E-7  1       1.1276173E-7",
-                                     "H4 0  1  0")
+        H4_zero = simple_par.replace(
+            "H4 2.0262048E-7  1       1.1276173E-7", "H4 0  1  0"
+        )
         H4_zero_model = model.get_model(StringIO(H4_zero))
         assert H4_zero_model.H4.value == 0.0
         assert H4_zero_model.H3.value != 0.0
@@ -173,8 +174,9 @@ class TestELL1H:
         f.fit_toas()
 
         # Zero H3
-        H3_zero = simple_par.replace("H3 2.7507208E-7  1       1.5114416E-7",
-                                     "H3 0  1  0")
+        H3_zero = simple_par.replace(
+            "H3 2.7507208E-7  1       1.5114416E-7", "H3 0  1  0"
+        )
         H3_zero_model = model.get_model(StringIO(H3_zero))
         assert H3_zero_model.H3.value == 0.0
         assert H3_zero_model.H4.value != 0.0
@@ -182,26 +184,26 @@ class TestELL1H:
         with pytest.raises(ValueError):
             f.fit_toas()
 
-        #Zero H3 and H4 and fit for H3 and H4
-        H3H4_zero = H4_zero.replace("H3 2.7507208E-7  1       1.5114416E-7",
-                                    "H3 0  1  0")
+        # Zero H3 and H4 and fit for H3 and H4
+        H3H4_zero = H4_zero.replace(
+            "H3 2.7507208E-7  1       1.5114416E-7", "H3 0  1  0"
+        )
         H3H4_zero_model = model.get_model(StringIO(H3H4_zero))
         assert H3H4_zero_model.H3.value == 0.0
-        assert 'H3' in H3H4_zero_model.free_params
+        assert "H3" in H3H4_zero_model.free_params
         assert H3H4_zero_model.H4.value == 0.0
-        assert 'H4' in H3H4_zero_model.free_params
+        assert "H4" in H3H4_zero_model.free_params
         f = ff.WLSFitter(test_toas, H3H4_zero_model)
         # Fitting H4 with H3 == 0, will give a ValueError
         with pytest.raises(ValueError):
             f.fit_toas()
         # Not fitting H4
-        H3H4_zero2 = H3H4_zero.replace("H4 0  1  0",
-                                       "H4 0  0  0")
+        H3H4_zero2 = H3H4_zero.replace("H4 0  1  0", "H4 0  0  0")
         H3H4_zero2_model = model.get_model(StringIO(H3H4_zero2))
         assert H3H4_zero2_model.H3.value == 0.0
-        assert 'H3' in H3H4_zero2_model.free_params
+        assert "H3" in H3H4_zero2_model.free_params
         assert H3H4_zero2_model.H4.value == 0.0
-        assert 'H4' not in H3H4_zero2_model.free_params
+        assert "H4" not in H3H4_zero2_model.free_params
         f = ff.WLSFitter(test_toas, H3H4_zero2_model)
         # This should work
         f.fit_toas()
