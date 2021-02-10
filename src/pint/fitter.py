@@ -569,7 +569,7 @@ class Fitter:
             )
             raise AttributeError
 
-    def ftest(self, parameter, component, remove=False, full_output=False):
+    def ftest(self, parameter, component, remove=False, full_output=False, NITS=1):
         """Compare the significance of adding/removing parameters to a timing model.
 
         Parameters
@@ -586,6 +586,9 @@ class Fitter:
             If False, just returns the result of the F-Test. If True, will also return the new
             model's residual RMS (us), chi-squared, and number of degrees of freedom of
             new model.
+        NITS : int
+            Number of fit iterations to run on the new model for the F-test. 
+            Default is 1. 
 
         Returns
         --------
@@ -630,8 +633,6 @@ class Fitter:
             NB = True
         # Copy the fitter that we do not change the initial model and fitter
         fitter_copy = copy.deepcopy(self)
-        # Number of times to run the fit
-        NITS = 1
         # We need the original degrees of freedome and chi-squared value
         # Because this applies to nested models, model 1 must always have fewer parameters
         if remove:
