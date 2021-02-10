@@ -69,8 +69,7 @@ class DelayJump(DelayComponent):
 
 
 class PhaseJump(PhaseComponent):
-    """This is a class to implement phase jumps
-    """
+    """This is a class to implement phase jumps"""
 
     register = True
     category = "phase_jump"
@@ -136,3 +135,22 @@ class PhaseJump(PhaseComponent):
         """
         jump_obs = [getattr(self, jump) for jump in self.jumps]
         return jump_obs
+
+    def jump_params_to_flags(self, toas):
+        """Take jumps created from .par file and add appropriate flags to toa table.
+        This function was made specifically with pintk in mind for a way to properly
+        load jump flags at the same time a .par file with jumps is loaded (like how
+        jump_flags_to_params loads jumps from .tim files).
+
+        Parameters
+        ----------
+        toas: TOAs object
+            The TOAs which contain the TOA table to be modified
+        """
+        # for every jump, set appropriate flag for TOAs it jumps
+        for jump_par in self.get_jump_param_objects():
+            # find TOAs jump applies to
+            mask = jump_par.select_toa_mask(toas)
+            # apply to dictionaries
+            for dict in toas.table["flags"][mask]:
+                dict["jump"] = jump_par.index

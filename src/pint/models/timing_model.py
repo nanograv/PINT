@@ -1287,27 +1287,6 @@ class TimingModel:
                 jump.key_value = list(map(int, jump.key_value))
         self.components["PhaseJump"].setup()
 
-    def jump_params_to_flags(self, toas):
-        """Take jumps created from .par file and add appropriate flags to toa table.
-        This function was made specifically with pintk in mind for a way to properly
-        load jump flags at the same time a .par file with jumps is loaded (like how
-        the above function jump_flags_to_params loads jumps from .tim files).
-
-        Parameters
-        ----------
-        toas: TOAs object
-            The TOAs which contain the TOA table to be modified
-        """
-        # check if there are any PhaseJump objects in the model...
-        if "PhaseJump" in self.components:
-            # for every jump, set appropriate flag for TOAs it jumps
-            for jump_par in self.components["PhaseJump"].get_jump_param_objects():
-                # find TOAs jump applies to
-                mask = jump_par.select_toa_mask(toas)
-                # apply to dictionaries
-                for dict in toas.table["flags"][mask]:
-                    dict["jump"] = jump_par.index
-
     def get_barycentric_toas(self, toas, cutoff_component=""):
         """Conveniently calculate the barycentric TOAs.
 
