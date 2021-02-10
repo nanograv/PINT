@@ -2,10 +2,9 @@
 
 In particular, single TOAs are represented by :class:`pint.toa.TOA` objects, and if you
 want to manage a collection of these we recommend you use a :class:`pint.toa.TOAs` object
-as this makes certain operations much more convenient.
+as this makes certain operations much more convenient. You probably want to load one with
+:func:`pint.toa.get_TOAs`.
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import copy
 import gzip
 import hashlib
@@ -22,7 +21,7 @@ import numpy.ma
 from astropy import log
 from astropy.coordinates import EarthLocation
 from astropy.coordinates import ICRS, CartesianDifferential, CartesianRepresentation
-from six.moves import cPickle as pickle
+import pickle
 
 import pint
 from pint.observatory import Observatory, get_observatory, bipm_default
@@ -37,6 +36,8 @@ __all__ = [
     "TOAs",
     "get_TOAs",
     "get_TOAs_list",
+    "load_pickle",
+    "save_pickle",
     "make_fake_toas",
     "format_toa_line",
     "TOA",
@@ -70,12 +71,7 @@ toa_commands = (
     "END",
 )
 
-all_planets = ("jupiter", "saturn", "venus", "uranus", "neptune")
-
-# FIXME: why are these here?
-iers_a_file = None
-iers_a = None
-JD_MJD = 2400000.5
+all_planets = ("jupiter", "saturn", "venus", "uranus", "neptune", "earth")
 
 
 def _compute_hash(filename):
@@ -94,6 +90,7 @@ def get_TOAs(
     model=None,
     usepickle=False,
     tdb_method="default",
+    picklefilename=None,
 ):
     """Load and prepare TOAs for PINT use.
 
@@ -127,13 +124,13 @@ def get_TOAs(
 
     Parameters
     ----------
-    timfile : string or file-like
-        Filename or file-like object containing the TOA data.
-    ephem : string
+    timfile : str or list of strings or file-like
+        Filename, list of filenames, or file-like object containing the TOA data.
+    ephem : str
         The name of the solar system ephemeris to use; defaults to "DE421".
     include_bipm : bool or None
         Whether to apply the BIPM clock correction. Defaults to True.
-    bipm_version : string or None
+    bipm_version : str or None
         Which version of the BIPM tables to use for the clock correction.
         The format must be 'BIPMXXXX' where XXXX is a year.
     include_gps : bool or None
@@ -142,14 +139,19 @@ def get_TOAs(
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
         Defaults to False.
-    model : A valid PINT timing model or None
+    model : pint.models.timing_model.TimingModel or None
         If a valid timing model is passed, model commands (such as BIPM version,
         planet shapiro delay, and solar system ephemeris) that affect TOA loading
         are applied.
     usepickle : bool
         Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
-    tdb_method : string
-        Which method to use for the clock correction to TDB.
+    tdb_method : str
+        Which method to use for the clock correction to TDB. See
+        :func:`pint.observatory.Observatory.get_TDBs` for details.
+    picklefilename : str or None
+        Filename to use for caching loaded file. Defaults to adding ``.pickle.gz`` to the
+        filename of the timfile, if there is one and only one. If no filename is available,
+        or multiple filenames are provided, a specific filename must be provided.
 
     Returns
     -------
@@ -186,7 +188,6 @@ def get_TOAs(
                     f'CLOCK = {model["CLOCK"].value} is not implemented. '
                     f"Using TT({bipm_default}) instead."
                 )
-
         if planets is None and model["PLANET_SHAPIRO"].value:
             planets = True
             log.info("Using PLANET_SHAPIRO = True from the given model")
@@ -194,17 +195,20 @@ def get_TOAs(
     updatepickle = False
     recalc = False
     if usepickle:
-        picklefile = _check_pickle(timfile)
-        if picklefile:
-            t = TOAs(picklefile)
+        try:
+            t = load_pickle(timfile, picklefilename=picklefilename)
+        except IOError:
+            # Pickle either did not exist or is out of date
+            updatepickle = True
+        else:
             if hasattr(t, "hashes"):
-                for f, v in t.hashes.items():
-                    if _compute_hash(f) != v:
-                        updatepickle = True
-                        log.info("Pickle based on files that have changed")
-                        break
+                if not t.check_hashes(timfile):
+                    updatepickle = True
+                    log.info("Pickle based on files that have changed")
             else:
+                # Only pre-v0.8 pickles lack hashes.
                 updatepickle = True
+                log.info("Pickle is very old")
             if (
                 include_gps is not None
                 and t.clock_corr_info.get("include_gps", None) != include_gps
@@ -223,11 +227,17 @@ def get_TOAs(
             ):
                 log.info("Pickle contains wrong bipm_version")
                 updatepickle = True
-        else:
-            # Pickle either did not exist or is out of date
-            updatepickle = True
     if not usepickle or updatepickle:
-        t = TOAs(timfile)
+        if isinstance(timfile, str) or hasattr(timfile, "readlines"):
+            t = TOAs(timfile)
+        else:
+            t = merge_TOAs([TOAs(t) for t in timfile])
+        if isinstance(t.filename, str):
+            files = [t.filename]
+        else:
+            files = t.filename
+        if files is not None:
+            t.hashes = {f: _compute_hash(f) for f in files}
         recalc = True
 
     if not any(["clkcorr" in f for f in t.table["flags"]]):
@@ -253,6 +263,7 @@ def get_TOAs(
             log.info("Ephem changed, recalculation needed")
         recalc = True
         updatepickle = True
+    t.table = t.table.group_by("obs")
     if recalc or "tdb" not in t.table.colnames:
         t.compute_TDBs(method=tdb_method, ephem=ephem)
 
@@ -267,39 +278,83 @@ def get_TOAs(
 
     if usepickle and updatepickle:
         log.info("Pickling TOAs.")
-        if isinstance(t.filename, str):
-            files = [t.filename]
-        else:
-            files = t.filename
-        t.hashes = {f: _compute_hash(f) for f in files}
-        t.pickle()
+        save_pickle(t, picklefilename=picklefilename)
     return t
 
 
-def _check_pickle(toafilename, picklefilename=None):
-    """Check if pickle file for the given toafilename needs to be updated.
+def load_pickle(toafilename, picklefilename=None):
+    """Load a pickle file, un-gzipping if necessary.
 
-    Currently only file modification times are compared, note this will
-    give misleading results under some circumstances.
+    Parameters
+    ----------
+    toafilename : str
+        Base filename of the TOAs; pickles will be searched for with
+        ".pickle.gz", ".pickle", or just this filename.
+    picklefilename : str, optional
+        Explicit filename to use.
 
-    If picklefilename is not specified, will look for (toafilename).pickle.gz
-    then (toafilename).pickle.
+    Returns
+    -------
+    toas : :class:`pint.toa.TOAs`
 
-    If the pickle exists and is up to date, returns the pickle file name.
-    Otherwise returns empty string.
+    Raises
+    ------
+    IOError
+        If no pickle is found.
     """
-    if picklefilename is None:
-        for ext in (".pickle.gz", ".pickle"):
-            testfilename = toafilename + ext
-            if os.path.isfile(testfilename):
-                picklefilename = testfilename
-                break
-        # It it's still None, no pickles were found
-        if picklefilename is None:
-            return ""
+    picklefilenames = (
+        [toafilename + ext for ext in (".pickle.gz", ".pickle", "")]
+        if picklefilename is None
+        else [picklefilename]
+    )
 
-    # All checks passed, return name of pickle.
-    return picklefilename
+    lf = None
+    for fn in picklefilenames:
+        try:
+            with gzip.open(fn, "rb") as f:
+                lf = pickle.load(f)
+        except (IOError, pickle.UnpicklingError, ValueError):
+            pass
+        try:
+            with open(fn, "rb") as f:
+                lf = pickle.load(f)
+        except (IOError, pickle.UnpicklingError, ValueError):
+            pass
+    if lf is not None:
+        lf.was_pickled = True
+        return lf
+    raise IOError("No readable pickle found")
+
+
+def save_pickle(toas, picklefilename=None):
+    """Write the TOAs to a ``.pickle.gz`` file.
+
+    Parameters
+    ----------
+    toas : :class:`pint.toa.TOAs`
+        The TOAs to pickle.
+    picklefilename : str, optional
+        The filename to use for the pickle file; if not specified,
+        construct a filename based on the file the toas object was
+        originally loaded from.
+    """
+    # Save the PINT version used to create this pickle file
+    toas.pintversion = pint.__version__
+    if picklefilename is not None:
+        pass
+    elif toas.merged:
+        raise ValueError(
+            "TOAs object was merged from multiple files, please provide a filename."
+        )
+    elif toas.filename is not None:
+        if isinstance(toas.filename, str):
+            picklefilename = toas.filename + ".pickle.gz"
+        else:
+            picklefilename = toas.filename[0] + ".pickle.gz"
+    else:
+        raise ValueError("TOA pickle method needs a (single) filename.")
+    with gzip.open(picklefilename, "wb") as f:
+        pickle.dump(toas, f)
 
 
 def get_TOAs_list(
@@ -310,12 +365,21 @@ def get_TOAs_list(
     include_gps=True,
     planets=False,
     tdb_method="default",
+    commands=None,
+    filename=None,
+    hashes=None,
 ):
     """Load TOAs from a list of TOA objects.
 
     See :func:`pint.toa.get_TOAs` for details of what this function does.
     """
     t = TOAs(toalist=toa_list)
+    t.commands = [] if commands is None else commands
+    t.filename = filename
+    if hashes is None:
+        t.hashes = {}
+    else:
+        t.hashes = hashes
     if not any(["clkcorr" in f for f in t.table["flags"]]):
         t.apply_clock_corrections(
             include_gps=include_gps,
@@ -404,9 +468,8 @@ def _parse_TOA_line(line, fmt="Unknown"):
         flags = fields[5:]
         for i in range(0, len(flags), 2):
             k, v = flags[i].lstrip("-"), flags[i + 1]
-            if k in ["error", "freq", "scale", "MJD", "flags", "obs"]:
-                log.error("TOA flag ({0}) will overwrite TOA parameter!".format(k))
-                raise (ValueError)
+            if k in ["error", "freq", "scale", "MJD", "flags", "obs", "name"]:
+                raise ValueError(f"TOA flag ({k}) will overwrite TOA parameter!")
             try:  # Convert what we can to floats and ints
                 d[k] = int(v)
             except ValueError:
@@ -476,7 +539,7 @@ def format_toa_line(
 
     Returns
     -------
-    out : string
+    out : str
         Formatted TOA line
 
     Note
@@ -497,8 +560,7 @@ def format_toa_line(
     Tempo2 format:
 
         - First line of file should be "``FORMAT 1``"
-        - TOA format is ``file freq sat satErr siteID <flags>``
-
+        - TOA format is ``name freq sat satErr siteID <flags>``
     """
     if format.upper() in ("TEMPO2", "1"):
         toa_str = Time(toatime, format="pulsar_mjd_string", scale=obs.timescale)
@@ -573,8 +635,183 @@ def format_toa_line(
     return out
 
 
+def read_toa_file(filename, process_includes=True, cdict=None):
+    """Read TOAs from the given filename into a list.
+
+    Will process INCLUDEd files unless process_includes is False.
+
+    Parameters
+    ----------
+    filename : str or file-like object
+        The name of the file to open, or an open file to read from.
+    process_includes : bool, optional
+        If true, obey INCLUDE directives in the file and read other
+        files.
+    top : bool, optional
+        If true, wipe this instance's contents, otherwise append
+        new TOAs. Used recursively; note that surprises may ensue
+        if this function is called on an already existing and
+        processed TOAs object.
+    """
+    if isinstance(filename, str):
+        with open(filename, "r") as f:
+            return read_toa_file(f, process_includes=process_includes, cdict=cdict)
+    else:
+        f = filename
+
+    ntoas = 0
+    toas = []
+    commands = []
+    if cdict is None:
+        cdict = {
+            "EFAC": 1.0,
+            "EQUAD": 0.0 * u.us,
+            "EMIN": 0.0 * u.us,
+            "EMAX": np.inf * u.us,
+            "FMIN": 0.0 * u.MHz,
+            "FMAX": np.inf * u.MHz,
+            "INFO": None,
+            "SKIP": False,
+            "TIME": 0.0,
+            "PHASE": 0,
+            "PHA1": None,
+            "PHA2": None,
+            "MODE": 1,
+            "JUMP": [False, 0],
+            "FORMAT": "Unknown",
+            "END": False,
+        }
+        top = True
+    else:
+        top = False
+    for line in f.readlines():
+        MJD, d = _parse_TOA_line(line, fmt=cdict["FORMAT"])
+        if d["format"] == "Command":
+            cmd = d["Command"][0].upper()
+            commands.append((d["Command"], ntoas))
+            if cmd == "SKIP":
+                cdict[cmd] = True
+                continue
+            elif cmd == "NOSKIP":
+                cdict["SKIP"] = False
+                continue
+            elif cmd == "END":
+                cdict[cmd] = True
+                break
+            elif cmd in ("TIME", "PHASE"):
+                cdict[cmd] += float(d["Command"][1])
+            elif cmd in ("EMIN", "EMAX", "EQUAD"):
+                cdict[cmd] = float(d["Command"][1]) * u.us
+            elif cmd in ("FMIN", "FMAX", "EQUAD"):
+                cdict[cmd] = float(d["Command"][1]) * u.MHz
+            elif cmd in ("EFAC", "PHA1", "PHA2"):
+                cdict[cmd] = float(d["Command"][1])
+                if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
+                    d[cmd] = d["Command"][1]
+            elif cmd == "INFO":
+                cdict[cmd] = d["Command"][1]
+                d[cmd] = d["Command"][1]
+            elif cmd == "FORMAT":
+                if d["Command"][1] == "1":
+                    cdict[cmd] = "Tempo2"
+            elif cmd == "JUMP":
+                if cdict[cmd][0]:
+                    cdict[cmd][0] = False
+                    cdict[cmd][1] += 1
+                else:
+                    cdict[cmd][0] = True
+            elif cmd == "INCLUDE" and process_includes:
+                # Save FORMAT in a tmp
+                fmt = cdict["FORMAT"]
+                cdict["FORMAT"] = "Unknown"
+                log.info("Processing included TOA file {0}".format(d["Command"][1]))
+                new_toas, new_commands = read_toa_file(d["Command"][1], cdict=cdict)
+                toas.extend(new_toas)
+                commands.extend(new_commands)
+                # re-set FORMAT
+                cdict["FORMAT"] = fmt
+            else:
+                continue
+        if cdict["SKIP"] or d["format"] in ("Blank", "Unknown", "Comment", "Command"):
+            continue
+        elif cdict["END"]:
+            if top:
+                break
+        else:
+            newtoa = TOA(MJD, **d)
+            if (
+                (cdict["EMIN"] > newtoa.error)
+                or (cdict["EMAX"] < newtoa.error)
+                or (cdict["FMIN"] > newtoa.freq)
+                or (cdict["FMAX"] < newtoa.freq)
+            ):
+                continue
+            else:
+                newtoa.error *= cdict["EFAC"]
+                newtoa.error = np.hypot(newtoa.error, cdict["EQUAD"])
+                if cdict["INFO"]:
+                    newtoa.flags["info"] = cdict["INFO"]
+                if cdict["JUMP"][0]:
+                    newtoa.flags["jump"] = cdict["JUMP"][1]
+                if cdict["PHASE"] != 0:
+                    newtoa.flags["phase"] = cdict["PHASE"]
+                if cdict["TIME"] != 0.0:
+                    newtoa.flags["to"] = cdict["TIME"]
+                toas.append(newtoa)
+                ntoas += 1
+
+    return toas, commands
+
+
+def build_table(toas, filename=None):
+    mjds, mjd_floats, errors, freqs, obss, flags = zip(
+        *[
+            (
+                t.mjd,
+                t.mjd.mjd,
+                t.error.to_value(u.us),
+                t.freq.to_value(u.MHz),
+                t.obs,
+                t.flags,
+            )
+            for t in toas
+        ]
+    )
+    return table.Table(
+        [
+            np.arange(len(mjds)),
+            table.Column(mjds),
+            np.array(mjd_floats) * u.d,
+            np.array(errors) * u.us,
+            np.array(freqs) * u.MHz,
+            np.array(obss),
+            np.array(flags),
+            np.zeros(len(mjds)),
+        ],
+        names=(
+            "index",
+            "mjd",
+            "mjd_float",
+            "error",
+            "freq",
+            "obs",
+            "flags",
+            "delta_pulse_number",
+        ),
+        meta={"filename": filename},
+    ).group_by("obs")
+
+
 def make_fake_toas(
-    startMJD, endMJD, ntoas, model, freq=999999, obs="GBT", error=1 * u.us
+    startMJD,
+    endMJD,
+    ntoas,
+    model,
+    freq=999999,
+    obs="GBT",
+    error=1 * u.us,
+    dm=None,
+    dm_error=1e-4 * u.pc / u.cm ** 3,
 ):
     """Make evenly spaced toas with residuals = 0 and without errors.
 
@@ -595,6 +832,12 @@ def make_fake_toas(
         frequency of the fake toas, default 1400
     obs : str, optional
         observatory for fake toas, default GBT
+    error : :class:`astropy.units.Quantity`
+        uncertainty to attach to each TOA
+    dm : float, optional
+        DM value to include with each TOA; default is not to include any DM information
+    dm_error : :class:`astropy.units.Quantity`
+        uncertainty to attach to each DM measurement
 
     Returns
     -------
@@ -625,11 +868,47 @@ def make_fake_toas(
         for t, f in zip(times, freq_array)
     ]
     ts = TOAs(toalist=t1)
+    ts.planets = model["PLANET_SHAPIRO"].value
+    ts.ephem = model["EPHEM"].value
+    include_bipm = False
+    bipm_version = bipm_default
+    include_gps = True
+    if model["CLOCK"].value is not None:
+        if model["CLOCK"].value == "TT(TAI)":
+            include_bipm = False
+            log.info("Using CLOCK = TT(TAI), so setting include_bipm = False")
+        elif "BIPM" in model["CLOCK"].value:
+            clk = model["CLOCK"].value.strip(")").split("(")
+            if len(clk) == 2:
+                ctype, cvers = clk
+                if ctype == "TT" and cvers.startswith("BIPM"):
+                    include_bipm = True
+                    if bipm_version is None:
+                        bipm_version = cvers
+                        log.info(f"Using CLOCK = {bipm_version} from the given model")
+                else:
+                    log.warning(
+                        f'CLOCK = {model["CLOCK"].value} is not implemented. '
+                        f"Using TT({bipm_default}) instead."
+                    )
+        else:
+            log.warning(
+                f'CLOCK = {model["CLOCK"].value} is not implemented. '
+                f"Using TT({bipm_default}) instead."
+            )
+
     ts.clock_corr_info.update(
-        # FIXME: why turn off BIPM et cetera?
-        {"include_bipm": False, "bipm_version": bipm_default, "include_gps": False}
+        {
+            "include_bipm": include_bipm,
+            "bipm_version": bipm_version,
+            "include_gps": include_gps,
+        }
     )
     ts.table["error"] = error
+    if dm is not None:
+        for f in ts.table["flags"]:
+            f["pp_dm"] = dm
+            f["pp_dme"] = dm_error.to_value(u.pc / u.cm ** 3)
     ts.compute_TDBs()
     ts.compute_posvels()
     ts.compute_pulse_numbers(model)
@@ -647,7 +926,19 @@ def make_fake_toas(
     return ts
 
 
-class TOA(object):
+def _group_by_gaps(t, gap):
+    ix = np.argsort(t)
+    t_sorted = t[ix]
+    gaps = np.diff(t_sorted)
+    gap_starts = np.where(gaps >= gap)[0]
+    gsi = np.concatenate(([0], gap_starts + 1, [len(t)]))
+    groups_sorted = np.repeat(np.arange(len(gap_starts) + 1), np.diff(gsi))
+    groups = np.zeros(len(t), dtype=int)
+    groups[ix] = groups_sorted
+    return groups
+
+
+class TOA:
     """A time of arrival (TOA) class.
 
     This is a class for representing a single pulse arrival
@@ -732,7 +1023,6 @@ class TOA(object):
         Traceback (most recent call last):
           omitted
         IndexError: (some) times are outside of range covered by IERS table.
-
     """
 
     def __init__(
@@ -812,24 +1102,22 @@ class TOA(object):
             self.flags = flags
             if kwargs:
                 raise TypeError(
-                    "TOA constructor does not accept keyword arguments {}".format(
-                        kwargs
-                    )
+                    f"TOA constructor does not accept keyword arguments {kwargs} when flags are specified."
                 )
 
     def __str__(self):
-        s = self.mjd.mjd_string + ": %6.3f %s error from '%s' at %.4f %s " % (
-            self.error.value,
-            self.error.unit,
-            self.obs,
-            self.freq.value,
-            self.freq.unit,
+        s = (
+            self.mjd.mjd_string
+            + f": {self.error.value:6.3f} {self.error.unit} error at '{self.obs}' at {self.freq.value:.4f} {self.freq.unit}"
         )
         if self.flags:
-            s += str(self.flags)
+            s += " " + str(self.flags)
         return s
 
-    def as_line(self, format="Tempo2", name="_", dm=0 * u.pc / u.cm ** 3):
+    def as_line(self, format="Tempo2", name=None, dm=0 * u.pc / u.cm ** 3):
+        """Format TOA as a line for a ``.tim`` file."""
+        if name is None:
+            name = self.name
         return format_toa_line(
             mjd=self.mjd,
             error=self.error,
@@ -842,15 +1130,15 @@ class TOA(object):
         )
 
 
-class TOAs(object):
+class TOAs:
     """A class of multiple TOAs, loaded from zero or more files.
 
-    Normally these objects should be read from a file with `pint.toa.get_TOAs`.
+    Normally these objects should be read from a file with :func:`pint.toa.get_TOAs`.
     Constructing them with the constructor here does not apply the clock
     corrections and the resulting TOAs object may not be set up the way one
     would normally expect.
 
-    The contents are stored in an `astropy.table.Table`; this can be used to
+    The contents are stored in an :class:`astropy.table.Table`; this can be used to
     access the contained information but the data may not be in the order you
     expect: internally it is grouped by observatory (sorted by the observatory
     object). Not all columns of the table are computed automatically, as their
@@ -902,7 +1190,7 @@ class TOAs(object):
          - velocity of the observatory in ecliptic coordinates at the time of the TOA; computed
            by :func:`pint.toa.TOAs.add_vel_ecl`
        * - ``obs_sun_pos``, ``obs_jupiter_pos``, ``obs_saturn_pos``, ``obs_venus_pos``,
-           ``obs_uranus_pos``, ``obs_neptune_pos``
+           ``obs_uranus_pos``, ``obs_neptune_pos``, ``obs_earth_pos``
          - position of various celestial objects at the time of the TOA; computed
            by :func:`pint.toa.TOAs.compute_posvels`
        * - ``pulse_number``
@@ -917,8 +1205,8 @@ class TOAs(object):
            ``flags`` carry this information, and :func:`pint.toa.TOAs.phase_columns_from_flags`
            creates the column.
        * - ``groups``
-         - if the TOAs have been placed into groups by :func:`pint.toa.TOAs.get_groups`
-           this will contain the group identifier of each TOA.
+         - the TOAs have been placed into groups, separated by gaps of at least two houes,
+           by :func:`pint.toa.TOAs.get_groups`; this will contain the group number of each TOA.
 
     Parameters
     ----------
@@ -944,89 +1232,64 @@ class TOAs(object):
         The Solar System ephemeris in use.
     clock_corr_info : dict
         Information about the clock correction chains in use.
+    merged : bool
+        If this object was merged from several files (and thus the filename of
+        the first is not useful for referring to the whole object).
+    hashes : dict
+        A dictionary of hashes of the files this data was read from (if any).
+        This is used by ``check_hashes()`` to verify whether the data on disk
+        has changed so that the file can be re-read if necessary.
+    was_pickled : bool
+        Whether this file was loaded from a pickle.
     """
 
     def __init__(self, toafile=None, toalist=None):
         # First, just make an empty container
-        self.toas = []
         self.commands = []
         self.filename = None
         self.planets = False
         self.ephem = None
         self.clock_corr_info = {}
         self.obliquity = None
+        self.merged = False
+        self.hashes = {}
+        self.was_pickled = False
 
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
 
         if isinstance(toafile, str):
-            # Check for a pickle-like filename.  Alternative approach would
-            # be to just try opening it as a pickle and see what happens.
-            if toafile.endswith(".pickle") or toafile.endswith("pickle.gz"):
-                log.info("Reading TOAs from pickle file")
-                self.read_pickle_file(toafile)
-            else:
-                self.read_toa_file(toafile)
-                # Check to see if there were any INCLUDEs:
-                inc_fns = [
-                    x[0][1] for x in self.commands if x[0][0].upper() == "INCLUDE"
-                ]
-                self.filename = [toafile] + inc_fns if inc_fns else toafile
+            toalist, self.commands = read_toa_file(toafile)
+            # Check to see if there were any INCLUDEs:
+            inc_fns = [x[0][1] for x in self.commands if x[0][0].upper() == "INCLUDE"]
+            self.filename = [toafile] + inc_fns if inc_fns else toafile
         elif toafile is not None:
-            self.read_toa_file(toafile)
-            self.filename = ""
+            toalist, self.commands = read_toa_file(toafile)
+            self.filename = None
 
-        if toalist is not None:
+        if toalist is None:
+            raise ValueError("No TOAs found!")
+        else:
             if not isinstance(toalist, (list, tuple)):
                 raise ValueError("Trying to initialize TOAs from a non-list class")
-            self.toas = toalist
-
-        if not hasattr(self, "table"):
-            if not self.toas:
-                raise ValueError("No TOAs found!")
-            mjds = self.get_mjds(high_precision=True)
-            # The table is grouped by observatory
-            self.table = table.Table(
-                [
-                    np.arange(len(mjds)),
-                    table.Column(mjds),
-                    self.get_mjds(),
-                    self.get_errors(),
-                    self.get_freqs(),
-                    self.get_obss(),
-                    self.get_flags(),
-                    np.zeros(len(mjds)),
-                    self.get_groups(),
-                ],
-                names=(
-                    "index",
-                    "mjd",
-                    "mjd_float",
-                    "error",
-                    "freq",
-                    "obs",
-                    "flags",
-                    "delta_pulse_number",
-                    "groups",
-                ),
-                meta={"filename": self.filename},
-            ).group_by("obs")
-            # Add pulse number column (if needed) or make PHASE adjustments
-            try:
-                self.phase_columns_from_flags()
-            except ValueError:
-                log.debug("No pulse numbers found in the TOAs")
+        self.table = build_table(toalist, filename=self.filename)
+        groups = self.get_groups()
+        self.table.add_column(groups, name="groups")
+        # Add pulse number column (if needed) or make PHASE adjustments
+        try:
+            self.phase_columns_from_flags()
+        except ValueError:
+            log.debug("No pulse numbers found in the TOAs")
 
         # We don't need this now that we have a table
-        del self.toas
 
     def __len__(self):
-        return self.ntoas
+        return len(self.table)
 
     def __getitem__(self, index):
         if not hasattr(self, "table"):
             raise ValueError("This TOAs object is incomplete and does not have a table")
-        if isinstance(index, np.ndarray) and index.dtype == np.bool:
+        if isinstance(index, np.ndarray) and index.dtype == bool:
             r = copy.deepcopy(self)
             r.table = r.table[index]
             if len(r.table) > 0:
@@ -1034,7 +1297,7 @@ class TOAs(object):
             return r
         elif (
             isinstance(index, np.ndarray)
-            and index.dtype == np.int
+            and index.dtype == np.int64
             or isinstance(index, list)
         ):
             r = copy.deepcopy(self)
@@ -1053,9 +1316,15 @@ class TOAs(object):
         else:
             raise ValueError("Unable to index TOAs with {}".format(index))
 
+    def __eq__(self, other):
+        sd, od = self.__dict__.copy(), other.__dict__.copy()
+        st = sd.pop("table")
+        ot = od.pop("table")
+        return sd == od and np.all(st == ot)
+
     @property
     def ntoas(self):
-        return len(self.table) if hasattr(self, "table") else len(self.toas)
+        return len(self.table)
 
     @property
     def observatories(self):
@@ -1074,19 +1343,18 @@ class TOAs(object):
             if not x:
                 # Adding zero. Do nothing
                 return self
+        raise NotImplementedError
 
     def __sub__(self, x):
         if type(x) in [int, float]:
             if not x:
                 # Subtracting zero. Do nothing
                 return self
+        raise NotImplementedError
 
     def get_freqs(self):
         """Return a numpy array of the observing frequencies in MHz for the TOAs"""
-        if hasattr(self, "toas"):
-            return np.array([t.freq.to(u.MHz).value for t in self.toas]) * u.MHz
-        else:
-            return self.table["freq"].quantity
+        return self.table["freq"].quantity
 
     def get_mjds(self, high_precision=False):
         """Array of MJDs in the TOAs object
@@ -1103,62 +1371,37 @@ class TOAs(object):
         perfectly valid situation when fitting both Fermi and radio TOAs)
         """
         if high_precision:
-            if hasattr(self, "toas"):
-                return np.array([t.mjd for t in self.toas])
-            else:
-                return np.array(self.table["mjd"])
+            return np.array(self.table["mjd"])
         else:
-            if hasattr(self, "toas"):
-                return np.array([t.mjd.mjd for t in self.toas]) * u.day
-            else:
-                return self.table["mjd_float"].quantity
+            return self.table["mjd_float"].quantity
 
     def get_errors(self):
-        """Return a numpy array of the TOA errors in us"""
-        # FIXME temporarily disable reading errors from toas
-        if hasattr(self, "toas"):
-            return np.array([t.error.to(u.us).value for t in self.toas]) * u.us
-        else:
-            return self.table["error"].quantity
+        """Return a numpy array of the TOA errors in us."""
+        return self.table["error"].quantity
 
     def get_obss(self):
-        """Return a numpy array of the observatories for each TOA"""
-        if hasattr(self, "toas"):
-            return np.array([t.obs for t in self.toas])
-        else:
-            return self.table["obs"]
+        """Return a numpy array of the observatories for each TOA."""
+        return self.table["obs"]
 
     def get_pulse_numbers(self):
-        """Return a numpy array of the pulse numbers for each TOA if they exist"""
+        """Return a numpy array of the pulse numbers for each TOA if they exist."""
         # TODO: use a masked array?  Only some pulse numbers may be known
-        if hasattr(self, "toas"):
-            try:
-                return np.array([t.flags["pn"] for t in self.toas])
-            except KeyError:
-                log.warning("Not all TOAs have pulse numbers, using none")
-                return None
+        if "pn" in self.table["flags"][0]:
+            if "pulse_number" in self.table.colnames:
+                raise ValueError("Pulse number cannot be both a column and a TOA flag")
+            return np.array(flags.get("pn", np.nan) for flags in self.table["flags"])
+        elif "pulse_number" in self.table.colnames:
+            return self.table["pulse_number"]
         else:
-            if "pn" in self.table["flags"][0]:
-                if "pulse_number" in self.table.colnames:
-                    raise ValueError(
-                        "Pulse number cannot be both a column and a TOA flag"
-                    )
-                return np.array(flags["pn"] for flags in self.table["flags"])
-            elif "pulse_number" in self.table.colnames:
-                return self.table["pulse_number"]
-            else:
-                log.warning("No pulse numbers for TOAs")
-                return None
+            log.warning("No pulse numbers for TOAs")
+            return None
 
     def get_flags(self):
-        """Return a numpy array of the TOA flags"""
-        if hasattr(self, "toas"):
-            return np.array([t.flags for t in self.toas])
-        else:
-            return self.table["flags"]
+        """Return a numpy array of the TOA flags."""
+        return self.table["flags"]
 
     def get_flag_value(self, flag, fill_value=None):
-        """Get the request TOA flag values.
+        """Get the requested TOA flag values.
 
         Parameters
         ----------
@@ -1170,6 +1413,8 @@ class TOAs(object):
         values : list
             A list of flag values from each TOA. If the TOA does not have
             the flag, it will fill up with the fill_value.
+        valid_index : list
+            The indices, in ``self.table``, of the places where the flag values occur.
         """
         result = []
         valid_index = []
@@ -1182,66 +1427,109 @@ class TOAs(object):
             result.append(val)
         return result, valid_index
 
+    def get_dms(self):
+        """Get the Wideband DM data.
+
+        Note
+        ----
+        This does not handle situations where some but not all TOAs have
+        DM information.
+        """
+        result, valid = self.get_flag_value("pp_dm")
+        if valid == []:
+            raise AttributeError("No DM is provided.")
+        return np.array(result)[valid] * u.pc / u.cm ** 3
+
     def get_dm_errors(self):
-        """Get the Wideband DM data error"""
+        """Get the Wideband DM data error.
+
+        Note
+        ----
+        This does not handle situations where some but not all TOAs have
+        DM information.
+        """
         result, valid = self.get_flag_value("pp_dme")
         if valid == []:
             raise AttributeError("No DM error is provided.")
         return np.array(result)[valid] * u.pc / u.cm ** 3
 
     def get_groups(self, gap_limit=None):
-        """flag toas within gap limit (default 2h = 0.0833d) of each other as the same group
+        """Flag toas within gap limit (default 2h = 0.0833d) of each other as the same group.
 
-        groups can be larger than the gap limit - if toas are separated by a gap larger than
-        the gap limit, a new group starts and continues until another such gap is found"""
+        Groups can be larger than the gap limit - if toas are separated by a gap larger than
+        the gap limit, a new group starts and continues until another such gap is found.
+
+        Groups with a two-hour spacing are pre-computed when the TOAs object is constructed,
+        and these can rapidly be retrieved from ``self.table`` (which this function will do).
+
+        Parameters
+        ----------
+        gap_limit : :class:`astropy.units.Quantity`, optional
+            The minimum size of gap to create a new group. Defaults to two hours.
+
+        Returns
+        -------
+        groups : array
+            The group number associated to each TOA. Groups are numbered chronologically
+            from zero.
+        """
         # TODO: make all values Quantity objects for consistency
         if gap_limit is None:
-            gap_limit = 0.0833
-        if hasattr(self, "toas") or gap_limit != 0.0833:
-            gap_limit *= u.d
-            mjd_dict = OrderedDict()
-            mjd_values = self.get_mjds().value
-            for i in np.arange(len(mjd_values)):
-                mjd_dict[i] = mjd_values[i]
-            sorted_mjd_list = sorted(mjd_dict.items(), key=lambda kv: (kv[1], kv[0]))
-            indexes = [a[0] for a in sorted_mjd_list]
-            mjds = [a[1] for a in sorted_mjd_list]
-            gaps = np.diff(mjds)
-            lengths = []
-            count = 0
-            for i in range(len(gaps)):
-                if gaps[i] * u.d < gap_limit:
-                    count += 1
-                else:
-                    lengths += [count + 1]
-                    count = 0
-            lengths += [count + 1]
-            sorted_groups = []
-            groupnum = 0
-            for length in lengths:
-                sorted_groups += [groupnum] * length
-                groupnum += 1
-            group_dict = OrderedDict()
-            for i in np.arange(len(indexes)):
-                group_dict[indexes[i]] = sorted_groups[i]
-            groups = [group_dict[key] for key in sorted(group_dict)]
-            return groups
+            gap_limit = 2 * u.h
+        if "groups" not in self.table or gap_limit != 2 * u.h:
+            return _group_by_gaps(self.get_mjds().value, gap_limit.to_value(u.d))
         else:
             return self.table["groups"]
 
     def get_highest_density_range(self, ndays=7):
-        """print the range of mjds (default 7 days) with the most toas"""
-        # TODO: implement sliding window
-        nbins = int((max(self.get_mjds()) - min(self.get_mjds())) / (ndays * u.d))
-        a = np.histogram(self.get_mjds(), nbins)
-        maxday = int((a[1][np.argmax(a[0])]).value)
-        diff = int((a[1][1] - a[1][0]).value)
+        """Print the range of mjds (default 7 days) with the most toas"""
+        sorted_mjds = np.sort(self.get_mjds())
+        s = np.searchsorted(sorted_mjds, sorted_mjds + ndays)
+        i = np.argmax(s - np.arange(len(sorted_mjds)))
         print(
-            "max density range (in steps of {} days -- {} bins) is from MJD {} to {} with {} toas.".format(
-                diff, nbins, maxday, maxday + diff, a[0].max()
-            )
+            f"max density range is from MJD {sorted_mjds[i]} to {sorted_mjds[s[i]]} with {s[i]-i} TOAs."
         )
-        return (maxday, maxday + diff)
+        return sorted_mjds[i], sorted_mjds[s[i]]
+
+    def check_hashes(self, timfile=None):
+        """Determine whether the input files are the same as when loaded.
+
+        Parameters
+        ----------
+        timfile : str or list of str or file-like or None
+            If provided this should match the list of files the TOAs object was loaded from.
+            If this is a string or list of strings, and the number matches the number of
+            files this TOAs object was loaded from, it is assumed that these are supposed to
+            be the same files, re-named or moved; their contents are then checked. If the
+            contents or the number doesn't match, this function returns False.
+
+        Returns
+        -------
+        bool
+            True if the contents of the TOAs object matches the content of the files.
+        """
+        if self.filename is None:
+            return True
+        elif isinstance(self.filename, str):
+            filenames = [self.filename]
+        else:
+            filenames = self.filename
+
+        if timfile is None:
+            timfiles = filenames
+        elif hasattr(timfile, "readlines"):
+            return True
+        elif isinstance(timfile, str):
+            timfiles = [timfile]
+        else:
+            timfiles = list(timfile)
+        if len(timfiles) != len(filenames):
+            return False
+
+        for t, f in zip(timfiles, filenames):
+            if _compute_hash(t) != self.hashes[f]:
+                return False
+        return True
 
     def select(self, selectarray):
         """Apply a boolean selection or mask array to the TOA table.
@@ -1282,21 +1570,6 @@ class TOAs(object):
         except (AttributeError, IndexError):
             log.error("No previous TOA table found.  No changes made.")
 
-    def pickle(self, filename=None):
-        """Write the TOAs to a .pickle file with optional filename."""
-        # Save the PINT version used to create this pickle file
-        self.pintversion = pint.__version__
-        if filename is not None:
-            pickle.dump(self, open(filename, "wb"))
-        elif self.filename is not None:
-            if isinstance(self.filename, str):
-                filename = self.filename
-            else:
-                filename = self.filename[0]
-            pickle.dump(self, gzip.open(filename + ".pickle.gz", "wb"))
-        else:
-            raise ValueError("TOA pickle method needs a (single) filename.")
-
     def get_summary(self):
         """Return a short ASCII summary of the TOAs."""
         s = "Number of TOAs:  %d\n" % self.ntoas
@@ -1325,10 +1598,10 @@ class TOAs(object):
         print(self.get_summary())
 
     def phase_columns_from_flags(self):
-        """Creates and/or modifies pulse_number and delta_pulse_number columns
+        """Create and/or modify pulse_number and delta_pulse_number columns.
 
         Scans pulse numbers from the table flags and creates a new table column.
-        Modifes the delta_pulse_number column, if required.
+        Modifes the ``delta_pulse_number`` column, if required.
         Removes the pulse numbers from the flags.
         """
         # First get any PHASE commands
@@ -1345,23 +1618,28 @@ class TOAs(object):
         self.table["delta_pulse_number"] += dphs
 
         # Then, add pulse_number as a table column if possible
-        try:
-            pns = [flags["pn"] for flags in self.table["flags"]]
-            self.table["pulse_number"] = pns
-            self.table["pulse_number"].unit = u.dimensionless_unscaled
+        pns = [float(flags.get("pn", np.nan)) for flags in self.table["flags"]]
+        if np.all(np.isnan(pns)):
+            raise ValueError("No pulse numbers found")
+        self.table["pulse_number"] = pns
+        self.table["pulse_number"].unit = u.dimensionless_unscaled
 
-            # Remove pn from dictionary to prevent redundancies
-            for flags in self.table["flags"]:
-                del flags["pn"]
-        except KeyError:
-            raise ValueError("Not all TOAs have pn flags")
+        # Remove pn from dictionary to prevent redundancies
+        for flags in self.table["flags"]:
+            del flags["pn"]
 
     def compute_pulse_numbers(self, model):
-        """Set pulse numbers (in TOA table column pulse_numbers) based on model
+        """Set pulse numbers (in TOA table column pulse_numbers) based on model.
 
         Replace any existing pulse numbers by computing phases according to
         model and then setting the pulse number of each to their integer part,
         which the nearest integer since Phase objects ensure that.
+
+        Parameters
+        ----------
+        model : pint.models.timing_model.TimingModel
+            The model defining times of arrival; the pulse numbers assigned will
+            be the nearest integer number of turns to that predicted by the model.
         """
         # paulr: I think pulse numbers should be computed with abs_phase=True!
         delta_pulse_numbers = Phase(self.table["delta_pulse_number"])
@@ -1370,7 +1648,7 @@ class TOAs(object):
         self.table["pulse_number"].unit = u.dimensionless_unscaled
 
     def adjust_TOAs(self, delta):
-        """Apply a time delta to TOAs
+        """Apply a time delta to TOAs.
 
         Adjusts the time (MJD) of the TOAs by applying delta, which should
         have the same shape as ``self.table['mjd']``.  This function does not change
@@ -1381,7 +1659,6 @@ class TOAs(object):
         ----------
         delta : astropy.time.TimeDelta
             The time difference to add to the MJD of each TOA
-
         """
         col = self.table["mjd"]
         if not isinstance(delta, time.TimeDelta):
@@ -1400,7 +1677,7 @@ class TOAs(object):
         self.compute_TDBs()
         self.compute_posvels(self.ephem, self.planets)
 
-    def write_TOA_file(self, filename, name="pint", format="Princeton"):
+    def write_TOA_file(self, filename, name="unk", format="tempo2"):
         """Write this object to a ``.tim`` file.
 
         This function writes the contents of this object to a (single) ``.tim``
@@ -1412,10 +1689,12 @@ class TOAs(object):
         ----------
         filename : str or file-like
             File name to write to; can be an open file object
+        name : str
+            Value to put in the "name" field of tempo2 files, if a "-name" flag is
+            not available.
         format : str
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1');
             note that not all features may be supported in 'TEMPO' mode.
-
         """
         try:
             # FIXME: file must be closed even if an exception occurs!
@@ -1434,7 +1713,9 @@ class TOAs(object):
         if "pulse_number" in self.table.colnames:
             pnChange = True
             for i in range(len(self.table["flags"])):
-                self.table["flags"][i]["pn"] = self.table["pulse_number"][i]
+                pn = self.table["pulse_number"][i]
+                if not np.isnan(pn):
+                    self.table["flags"][i]["pn"] = pn
 
         for (toatime, toaerr, freq, obs, flags) in zip(
             self.table["mjd"],
@@ -1445,6 +1726,7 @@ class TOAs(object):
         ):
             obs_obj = Observatory.get(obs)
 
+            flags = flags.copy()
             if "clkcorr" in flags.keys():
                 toatime_out = toatime - time.TimeDelta(flags["clkcorr"])
             else:
@@ -1454,7 +1736,7 @@ class TOAs(object):
                 toaerr,
                 freq,
                 obs_obj,
-                name=name,
+                name=flags.pop("name", name),
                 flags=flags,
                 format=format,
             )
@@ -1463,7 +1745,10 @@ class TOAs(object):
         # If pulse numbers were added to flags, remove them again
         if pnChange:
             for flags in self.table["flags"]:
-                del flags["pn"]
+                try:
+                    del flags["pn"]
+                except KeyError:
+                    pass
 
         if not handle:
             outf.close()
@@ -1477,8 +1762,12 @@ class TOAs(object):
         available.  This routine actually changes the value of the TOA,
         although the correction is also listed as a new flag for the TOA
         called 'clkcorr' so that it can be reversed if necessary.  This
-        routine also applies all 'TIME' commands and treats them exactly
-        as if they were a part of the observatory clock corrections.
+        routine also applies all 'TIME' commands (``-to`` flags) and
+        treats them exactly as if they were a part of the observatory
+        clock corrections.
+
+        If the clock corrections have already been applied they will not
+        be re-applied.
 
         Options to include GPS or BIPM clock corrections are set to True
         by default in order to give the most accurate clock corrections.
@@ -1546,6 +1835,17 @@ class TOAs(object):
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
         for TDB times, using the Observatory locations and IERS A Earth
         rotation corrections for UT1.
+
+        If these columns are already present, delete and replace them.
+
+        Parameters
+        ----------
+        method : str
+            Which method to use. See :func:`pint.observatory.Observatory.get_TDBs`
+            for details.
+        ephem : str or None
+            Solar System ephemeris to use for the computation. If not specified
+            use the value in ``self.ephem``; if specified, replace ``self.ephem``.
         """
         log.info("Computing TDB columns.")
         if "tdb" in self.table.colnames:
@@ -1598,13 +1898,13 @@ class TOAs(object):
                     grpmjds = time.Time(grp["mjd"], location=None)
                 else:
                     locs = EarthLocation(
-                        np.array([l.x.value for l in loclist]) * u.m,
-                        np.array([l.y.value for l in loclist]) * u.m,
-                        np.array([l.z.value for l in loclist]) * u.m,
+                        np.array([loc.x.value for loc in loclist]) * u.m,
+                        np.array([loc.y.value for loc in loclist]) * u.m,
+                        np.array([loc.z.value for loc in loclist]) * u.m,
                     )
                     grpmjds = time.Time(grp["mjd"], location=locs)
 
-            grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem, grp=grp)
+            grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
             tdbs[loind:hiind] = np.asarray([t for t in grptdbs])
 
         # Now add the new columns to the table
@@ -1612,7 +1912,7 @@ class TOAs(object):
         col_tdbld = table.Column(name="tdbld", data=[t.tdb.mjd_long for t in tdbs])
         self.table.add_columns([col_tdb, col_tdbld])
 
-    def compute_posvels(self, ephem=None, planets=False):
+    def compute_posvels(self, ephem=None, planets=None):
         """Compute positions and velocities of the observatories and Earth.
 
         Compute the positions and velocities of the observatory (wrt
@@ -1620,6 +1920,20 @@ class TOAs(object):
         SSB) for each TOA.  The JPL solar system ephemeris can be set
         using the 'ephem' parameter.  The positions and velocities are
         set with PosVel class instances which have astropy units.
+
+        If the required columns already exist, they will be replaced.
+
+        Parameters
+        ----------
+        ephem : str
+            The Solar System ephemeris to use; if not specified, use the
+            default ephemeris for the TOAs object. If specified, replace
+            the TOAs object's ``ephem`` attribute with this value and do
+            the computation.
+        planets : bool
+            Whether to compute positions for the Solar System planets. If
+            not specified, use the value stored in ``self.planets``; if
+            specified, set ``self.planets`` to this value.
         """
         if ephem is None:
             if self.ephem is not None:
@@ -1639,6 +1953,8 @@ class TOAs(object):
                         ephem, self.ephem
                     )
                 )
+        if planets is None:
+            planets = self.planets
         # Record the choice of ephemeris and planets
         self.ephem = ephem
         self.planets = planets
@@ -1704,7 +2020,7 @@ class TOAs(object):
             tdb = time.Time(grp["tdb"], precision=9)
 
             if isinstance(site, T2SpacecraftObs):
-                ssb_obs = site.posvel(tdb, ephem, grp)
+                ssb_obs = site.posvel(tdb, ephem, group=grp)
             else:
                 ssb_obs = site.posvel(tdb, ephem)
 
@@ -1779,164 +2095,6 @@ class TOAs(object):
         log.debug("Adding columns " + " ".join(col.name))
         self.table.add_column(col)
 
-    def read_pickle_file(self, filename):
-        """Read the TOAs from the pickle file specified in filename.
-
-        Note the filename should include any pickle-specific extensions (ie
-        ".pickle.gz" or similar), these will not be added automatically.
-
-        If the file ends with ".gz" it will be uncompressed before extracting
-        the pickle.
-        """
-        log.info("Reading pickled TOAs from '%s'..." % filename)
-        if os.path.splitext(filename)[1] == ".gz":
-            infile = gzip.open(filename, "rb")
-        else:
-            infile = open(filename, "rb")
-        tmp = pickle.load(infile)
-        if not hasattr(tmp, "pintversion") or tmp.pintversion != pint.__version__:
-            log.error(
-                f"PINT version in pickle file is different than current version! "
-                f"*** Suggest deleting {filename}"
-            )
-        self.filename = tmp.filename
-        if hasattr(tmp, "toas"):
-            self.toas = tmp.toas
-        if hasattr(tmp, "table"):
-            self.table = tmp.table.group_by("obs")
-        self.commands = tmp.commands
-        self.clock_corr_info = tmp.clock_corr_info
-        self.ephem = tmp.ephem
-        self.planets = tmp.planets
-        self.hashes = tmp.hashes
-
-    def read_toa_file(self, filename, process_includes=True, top=True):
-        """Read TOAs from the given filename.
-
-        Deprecated; intended for internal use only.
-
-        Will process INCLUDEd files unless process_includes is False.
-
-        Parameters
-        ----------
-        filename : str or file-like object
-            The name of the file to open, or an open file to read from.
-        process_includes : bool, optional
-            If true, obey INCLUDE directives in the file and read other
-            files.
-        top : bool, optional
-            If true, wipe this instance's contents, otherwise append
-            new TOAs. Used recursively; note that surprises may ensue
-            if this function is called on an already existing and
-            processed TOAs object.
-        """
-        if isinstance(filename, str):
-            with open(filename, "r") as f:
-                return self.read_toa_file(f, process_includes=process_includes, top=top)
-        else:
-            f = filename
-
-        ntoas = 0
-        if top:
-            self.toas = []
-            self.commands = []
-            self.cdict = {
-                "EFAC": 1.0,
-                "EQUAD": 0.0 * u.us,
-                "EMIN": 0.0 * u.us,
-                "EMAX": np.inf * u.us,
-                "FMIN": 0.0 * u.MHz,
-                "FMAX": np.inf * u.MHz,
-                "INFO": None,
-                "SKIP": False,
-                "TIME": 0.0,
-                "PHASE": 0,
-                "PHA1": None,
-                "PHA2": None,
-                "MODE": 1,
-                "JUMP": [False, 0],
-                "FORMAT": "Unknown",
-                "END": False,
-            }
-        for l in f.readlines():
-            MJD, d = _parse_TOA_line(l, fmt=self.cdict["FORMAT"])
-            if d["format"] == "Command":
-                cmd = d["Command"][0].upper()
-                self.commands.append((d["Command"], ntoas))
-                if cmd == "SKIP":
-                    self.cdict[cmd] = True
-                    continue
-                elif cmd == "NOSKIP":
-                    self.cdict["SKIP"] = False
-                    continue
-                elif cmd == "END":
-                    self.cdict[cmd] = True
-                    break
-                elif cmd in ("TIME", "PHASE"):
-                    self.cdict[cmd] += float(d["Command"][1])
-                elif cmd in ("EMIN", "EMAX", "EQUAD"):
-                    self.cdict[cmd] = float(d["Command"][1]) * u.us
-                elif cmd in ("FMIN", "FMAX", "EQUAD"):
-                    self.cdict[cmd] = float(d["Command"][1]) * u.MHz
-                elif cmd in ("EFAC", "PHA1", "PHA2"):
-                    self.cdict[cmd] = float(d["Command"][1])
-                    if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
-                        d[cmd] = d["Command"][1]
-                elif cmd == "INFO":
-                    self.cdict[cmd] = d["Command"][1]
-                    d[cmd] = d["Command"][1]
-                elif cmd == "FORMAT":
-                    if d["Command"][1] == "1":
-                        self.cdict[cmd] = "Tempo2"
-                elif cmd == "JUMP":
-                    if self.cdict[cmd][0]:
-                        self.cdict[cmd][0] = False
-                        self.cdict[cmd][1] += 1
-                    else:
-                        self.cdict[cmd][0] = True
-                elif cmd == "INCLUDE" and process_includes:
-                    # Save FORMAT in a tmp
-                    fmt = self.cdict["FORMAT"]
-                    self.cdict["FORMAT"] = "Unknown"
-                    log.info("Processing included TOA file {0}".format(d["Command"][1]))
-                    self.read_toa_file(d["Command"][1], top=False)
-                    # re-set FORMAT
-                    self.cdict["FORMAT"] = fmt
-                else:
-                    continue
-            if self.cdict["SKIP"] or d["format"] in (
-                "Blank",
-                "Unknown",
-                "Comment",
-                "Command",
-            ):
-                continue
-            elif self.cdict["END"]:
-                if top:
-                    break
-            else:
-                newtoa = TOA(MJD, **d)
-                if (
-                    (self.cdict["EMIN"] > newtoa.error)
-                    or (self.cdict["EMAX"] < newtoa.error)
-                    or (self.cdict["FMIN"] > newtoa.freq)
-                    or (self.cdict["FMAX"] < newtoa.freq)
-                ):
-                    continue
-                else:
-                    newtoa.error *= self.cdict["EFAC"]
-                    newtoa.error = np.hypot(newtoa.error, self.cdict["EQUAD"])
-                    if self.cdict["INFO"]:
-                        newtoa.flags["info"] = self.cdict["INFO"]
-                    if self.cdict["JUMP"][0]:
-                        newtoa.flags["jump"] = self.cdict["JUMP"][1]
-                    if self.cdict["PHASE"] != 0:
-                        newtoa.flags["phase"] = self.cdict["PHASE"]
-                    if self.cdict["TIME"] != 0.0:
-                        newtoa.flags["to"] = self.cdict["TIME"]
-                    self.toas.append(newtoa)
-                    ntoas += 1
-
 
 def merge_TOAs(TOAs_list):
     """Merge a list of TOAs instances and return a new combined TOAs instance
@@ -1953,23 +2111,24 @@ def merge_TOAs(TOAs_list):
 
     Returns
     -------
-    A new TOAs instance with all the combined and grouped TOAs
+    :class:`pint.toa.TOAs`
+        A new TOAs instance with all the combined and grouped TOAs
     """
     # Check each TOA object for consistency
     ephems = [tt.ephem for tt in TOAs_list]
     if len(set(ephems)) > 1:
         raise TypeError(f"merge_TOAs() cannot merge. Inconsistent ephem: {ephems}")
-    inc_BIPM = [tt.clock_corr_info["include_bipm"] for tt in TOAs_list]
+    inc_BIPM = [tt.clock_corr_info.get("include_bipm", None) for tt in TOAs_list]
     if len(set(inc_BIPM)) > 1:
         raise TypeError(
             f"merge_TOAs() cannot merge. Inconsistent include_bipm: {inc_BIPM}"
         )
-    BIPM_vers = [tt.clock_corr_info["bipm_version"] for tt in TOAs_list]
+    BIPM_vers = [tt.clock_corr_info.get("bipm_version", None) for tt in TOAs_list]
     if len(set(BIPM_vers)) > 1:
         raise TypeError(
             f"merge_TOAs() cannot merge. Inconsistent bipm_version: {BIPM_vers}"
         )
-    inc_GPS = [tt.clock_corr_info["include_gps"] for tt in TOAs_list]
+    inc_GPS = [tt.clock_corr_info.get("include_gps", None) for tt in TOAs_list]
     if len(set(inc_GPS)) > 1:
         raise TypeError(
             f"merge_TOAs() cannot merge. Inconsistent include_gps: {inc_GPS}"
@@ -2000,6 +2159,9 @@ def merge_TOAs(TOAs_list):
     )
     # Fix the table meta data about filenames
     nt.table.meta["filename"] = nt.filename
+    nt.hashes = {}
+    for tt in TOAs_list:
+        nt.hashes.update(tt.hashes)
     # This sets a flag that indicates that we have merged TOAs instances
     nt.merged = True
     # Now we need to re-arrange and group the tables

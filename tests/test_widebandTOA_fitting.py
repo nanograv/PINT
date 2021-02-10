@@ -64,7 +64,7 @@ class TestWidebandTOAFitter:
         postfit_tempo = self.tempo_res[:, 1] * u.us
         diff_postfit = (postfit_pint - postfit_tempo).to(u.ns)
         assert np.abs(diff_postfit - diff_postfit.mean()).max() < 50 * u.ns
-        assert np.abs(dm_rms_pre - dm_rms_post) < 3e-8 * dm_rms_pre.unit
+        assert np.abs(dm_rms_pre - dm_rms_post) < 5e-8 * dm_rms_pre.unit
 
     def test_fitting_full_cov(self):
         fitter2 = WidebandTOAFitter([self.toas], self.model, additional_args={})
@@ -83,4 +83,4 @@ class TestWidebandTOAFitter:
         postfit_tempo = self.tempo_res[:, 1] * u.us
         diff_postfit = (postfit_pint - postfit_tempo).to(u.ns)
         assert np.abs(diff_postfit - diff_postfit.mean()).max() < 50 * u.ns
-        assert np.abs(dm_rms_pre - dm_rms_post) < 3e-8 * dm_rms_pre.unit
+        assert np.abs(dm_rms_pre - dm_rms_post) < 5e-8 * dm_rms_pre.unit

@@ -1,6 +1,4 @@
 """A simple model of a base dispersion delay and DMX dispersion."""
-from __future__ import absolute_import, division, print_function
-
 from warnings import warn
 
 import numpy as np
@@ -319,42 +317,135 @@ class DispersionDMX(Dispersion):
                 description="Dispersion measure",
             )
         )
+
+        self.add_DMX_range(None, None, dmx=0, frozen=False, index=1)
+
+        self.dm_value_funcs += [self.dmx_dm]
+        self.set_special_params(["DMX_0001", "DMXR1_0001", "DMXR2_0001"])
+        self.delay_funcs_component += [self.DMX_dispersion_delay]
+
+    def add_DMX_range(self, mjd_start, mjd_end, index=None, dmx=0, frozen=True):
+        """ Add DMX range to a dispersion model with specified start/end MJDs and DMX.
+
+        Parameters
+        ----------
+
+        mjd_start : float
+            MJD for beginning of DMX event.
+        mjd_end : float
+            MJD for end of DMX event.
+        index : int, None
+            Integer label for DMX event. If None, will increment largest used index by 1.
+        dmx : float
+            Change in DM during DMX event.
+        frozen : bool
+            Indicates whether DMX will be fit.
+
+        Returns
+        -------
+
+        index : int
+            Index that has been assigned to new DMX event.
+
+        """
+
+        #### Setting up the DMX title convention. If index is None, want to increment the current max DMX index by 1.
+        if index is None:
+            dct = self.get_prefix_mapping_component("DMX_")
+            index = np.max(list(dct.keys())) + 1
+        i = f"{int(index):04d}"
+
+        if mjd_end is not None and mjd_start is not None:
+            if mjd_end < mjd_start:
+                raise ValueError("Starting MJD is greater than ending MJD.")
+        elif mjd_start != mjd_end:
+            raise ValueError("Only one MJD bound is set.")
+
+        if int(index) in self.get_prefix_mapping_component("DMX_"):
+            raise ValueError(
+                "Index '%s' is already in use in this model. Please choose another."
+                % index
+            )
+
         self.add_param(
             prefixParameter(
-                name="DMX_0001",
+                name="DMX_" + i,
                 units="pc cm^-3",
-                value=0.0,
+                value=dmx,
                 unit_template=lambda x: "pc cm^-3",
                 description="Dispersion measure variation",
                 description_template=lambda x: "Dispersion measure",
-                paramter_type="float",
+                parameter_type="float",
+                frozen=frozen,
             )
         )
         self.add_param(
             prefixParameter(
-                name="DMXR1_0001",
+                name="DMXR1_" + i,
                 units="MJD",
                 unit_template=lambda x: "MJD",
                 description="Beginning of DMX interval",
                 description_template=lambda x: "Beginning of DMX interval",
                 parameter_type="MJD",
                 time_scale="utc",
+                value=mjd_start,
             )
         )
         self.add_param(
             prefixParameter(
-                name="DMXR2_0001",
+                name="DMXR2_" + i,
                 units="MJD",
                 unit_template=lambda x: "MJD",
                 description="End of DMX interval",
                 description_template=lambda x: "End of DMX interval",
                 parameter_type="MJD",
                 time_scale="utc",
+                value=mjd_end,
             )
         )
-        self.dm_value_funcs += [self.dmx_dm]
-        self.set_special_params(["DMX_0001", "DMXR1_0001", "DMXR2_0001"])
-        self.delay_funcs_component += [self.DMX_dispersion_delay]
+        self.setup()
+        self.validate()
+        return index
+
+    def remove_DMX_range(self, index):
+        """Removes all DMX parameters associated with a given index/list of indices.
+
+        Parameters
+        ----------
+
+        index : float, int, list, np.ndarray
+            Number or list/array of numbers corresponding to DMX indices to be removed from model.
+        """
+
+        if (
+            isinstance(index, int)
+            or isinstance(index, float)
+            or isinstance(index, np.int64)
+        ):
+            indices = [index]
+        elif not isinstance(index, list) or not isinstance(index, np.ndarray):
+            raise TypeError(
+                f"index must be a float, int, list, or array - not {type(index)}"
+            )
+        for index in indices:
+            index_rf = f"{int(index):04d}"
+            for prefix in ["DMX_", "DMXR1_", "DMXR2_"]:
+                self.remove_param(prefix + index_rf)
+        self.validate()
+
+    def get_indices(self):
+        """Returns an array of integers corresponding to DMX parameters.
+
+        Returns
+        -------
+        inds : np.ndarray
+        Array of DMX indices in model.
+        """
+        inds = []
+        for p in self.params:
+            if "DMX_" in p:
+                inds.append(int(p.split("_")[-1]))
+        return np.array(inds)
 
     def setup(self):
         super(DispersionDMX, self).setup()
@@ -501,7 +592,11 @@ class DispersionJump(Dispersion):
                 self.dm_jumps.append(mask_par)
         for j in self.dm_jumps:
             self.register_dm_deriv_funcs(self.d_dm_d_dmjump, j)
-            self.register_deriv_funcs(self.d_delay_d_dmparam, j)
+            # Note we can not use the derivative function 'd_delay_d_dmparam',
+            # Since dmjump does not effect delay.
+            # The function 'd_delay_d_dmparam' applies d_dm_d_dmparam first and
+            # than applys the time delay part.
+            self.register_deriv_funcs(self.d_delay_d_dmjump, j)
 
     def validate(self):
         super(DispersionJump, self).validate()
@@ -534,4 +629,5 @@ class DispersionJump(Dispersion):
 
         Since DMJUMPS does not affect delay, this would be zero.
         """
-        return np.zeros(toas.ntoas) * (u.s / self.DMJUMP.units)
+        dmjump = getattr(self, param_name)
+        return np.zeros(toas.ntoas) * (u.s / dmjump.units)

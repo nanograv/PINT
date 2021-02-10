@@ -5,8 +5,6 @@ Implements a mixture model of LCPrimitives to form a normalized template represe
 author: M. Kerr <matthew.kerr@gmail.com>
 
 """
-from __future__ import absolute_import, division, print_function
-
 from collections import defaultdict
 from copy import deepcopy
 
@@ -17,7 +15,7 @@ from .lcnorm import NormAngles
 from .lcprimitives import *
 
 
-class LCTemplate(object):
+class LCTemplate:
     """Manage a lightcurve template (collection of LCPrimitive objects).
 
     IMPORTANT: a constant background is assumed in the overall model,
@@ -58,8 +56,9 @@ class LCTemplate(object):
 
     def __getstate__(self):
         # transform _cache_dirty into a normal dict, necessary to pickle it
-        self._cache_dirty = dict(self._cache_dirty)
-        return self.__dict__
+        state = self.__dict__.copy()
+        state["_cache_dirty"] = dict(state["_cache_dirty"])
+        return state
 
     def _sanity_checks(self):
         if len(self.primitives) != len(self.norms):
@@ -386,7 +385,7 @@ class LCTemplate(object):
         general form of the terms is
 
         (1) block diagonal hessian terms from primitive
-        (2 ) for the unmixed derivative of the norms, the sum of the 
+        (2 ) for the unmixed derivative of the norms, the sum of the
         hessian of the hyper angles over the primitive terms
         (3) for mixed derivatives, the product gradient of the norm
 
@@ -446,7 +445,7 @@ class LCTemplate(object):
     def Delta(self, delta=False):
         """ Report peak separation -- reckoned by default as the distance
             between the first and final component locations.
-            
+
             delta [False] -- if True, return the first peak position"""
         if len(self.primitives) == 1:
             return -1, 0
@@ -513,7 +512,7 @@ class LCTemplate(object):
         return "\n".join(rstring)
 
     def random(self, n, weights=None, return_partition=False, randomize_partition=True):
-        """ Return n pseudo-random variables drawn from the distribution 
+        """ Return n pseudo-random variables drawn from the distribution
             given by this light curve template.
 
             Uses a mulitinomial to divvy the n phases up amongs the various
@@ -621,8 +620,8 @@ class LCTemplate(object):
     def order_primitives(self, indices, zeropt=0, order_by_amplitude=False):
         """ Order the primitives specified by the indices by position.
             x0 specifies an alternative zeropt.
-            
-            If specified, the peaks will instead be ordered by descending 
+
+            If specified, the peaks will instead be ordered by descending
             maximum amplitude."""
 
         def dist(index):
@@ -675,7 +674,7 @@ class LCTemplate(object):
         return min((p.closest_to_peak(phases) for p in self.primitives))
 
     def mean_value(self, phases, log10_ens=None, weights=None, bins=20):
-        """ Compute the mean value of the profile over the codomain of 
+        """ Compute the mean value of the profile over the codomain of
             phases.  Mean is taken over energy and is unweighted unless
             a set of weights are provided."""
         if (log10_ens is None) or (not self.is_energy_dependent()):
@@ -936,7 +935,7 @@ def make_twoside_gaussian(one_side_gaussian):
     return g2
 
 
-class GaussianPrior(object):
+class GaussianPrior:
     def __init__(self, locations, widths, mod, mask=None):
         self.x0 = np.where(mod, np.mod(locations, 1), locations)
         self.s0 = np.asarray(widths) * 2 ** 0.5

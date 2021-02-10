@@ -15,16 +15,12 @@ can have one parameter for each group of TOAs in the input, allowing
 potentially very many. These are handled in two separate ways, as "prefix
 parameters" and "mask parameters" depending on how they occur in the
 ``.par`` and ``.tim`` files.
-
 """
-from __future__ import absolute_import, division, print_function
-
 import numbers
 
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-import six
 from astropy import log
 from astropy.coordinates.angles import Angle
 from pint import pint_units
@@ -43,7 +39,7 @@ from pint.utils import split_prefixed_name
 from pint.observatory import get_observatory
 
 
-class Parameter(object):
+class Parameter:
     """A base PINT class describing a single timing model parameter.
 
     A ``Parameter`` object can be created with one of the subclasses provided by
@@ -842,7 +838,7 @@ class MJDParameter(Parameter):
         if isinstance(val, numbers.Number):
             val = np.longdouble(val)
             result = time_from_longdouble(val, self.time_scale)
-        elif isinstance(val, six.string_types):
+        elif isinstance(val, (str, bytes)):
             result = Time(val, scale=self.time_scale, format="pulsar_mjd_string")
         elif isinstance(val, time.Time):
             result = val
@@ -1004,7 +1000,7 @@ class AngleParameter(Parameter):
             return unc.to_string(decimal=True, precision=20)
 
 
-class prefixParameter(object):
+class prefixParameter:
     """Prefix parameters, for example DMX_*.
 
     Create a prefix parameter, is like create a normal parameter. But the
@@ -1381,7 +1377,12 @@ class maskParameter(floatParameter):
                         "are MJD, FREQ, NAME, TEL."
                     )
         self.key = key
-        self.key_value = [key_value_parser(k) for k in key_value]
+        if key == "-gui_jump":
+            self.key_value = key_value
+        else:
+            self.key_value = [
+                key_value_parser(k) for k in key_value
+            ]  # retains string format from .par file to ensure correct data type for comparison
         self.key_value.sort()
         self.index = index
         name_param = name + str(index)

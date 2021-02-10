@@ -1,12 +1,10 @@
 #!/usr/bin/env python
-from __future__ import division, print_function
-
 import os
 import sys
 import unittest
 
 import pytest
-from six import StringIO
+from io import StringIO
 
 from astropy.io import fits
 

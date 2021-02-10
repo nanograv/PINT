@@ -2,8 +2,6 @@
 
 Defines the basic timing model interface classes.
 """
-from __future__ import absolute_import, division, print_function
-
 import abc
 import copy
 import inspect
@@ -14,7 +12,6 @@ from warnings import warn
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-import six
 from astropy import log
 from scipy.optimize import brentq
 
@@ -120,7 +117,7 @@ def property_exists(f):
     return wrapper
 
 
-class TimingModel(object):
+class TimingModel:
     """Timing model object built from Components.
 
     This object is the primary object to represent a timing model in PINT.  It
@@ -1227,7 +1224,7 @@ class TimingModel(object):
         return result
 
     def jump_flags_to_params(self, toas):
-        """Convert jump flags in toas.table["flags"] to jump parameters in the model.
+        """Convert jump flags in toas.table["flags"] (loaded in .tim file) to jump parameters in the model.
 
         The flags processed are ``jump`` and ``gui_jump``.
         """
@@ -1238,9 +1235,9 @@ class TimingModel(object):
                 break
             elif "gui_jump" in flag_dict.keys():
                 break
-        else:
-            log.info("No jump flags to process")
-            return None
+            else:
+                log.info("No jump flags to process from .tim file")
+                return None
         for flag_dict in toas.table["flags"]:
             if "jump" in flag_dict.keys():
                 jump_nums = [
@@ -1687,7 +1684,7 @@ class TimingModel(object):
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if par.uncertainty < otherpar.uncertainty:
+                            if 1.01 * par.uncertainty < otherpar.uncertainty:
                                 newstr += " *"
                     newstr += "\n"
             else:
@@ -1706,17 +1703,23 @@ class TimingModel(object):
                             newstr += " {:28f}".format(otherpar.value)
                         if otherpar.value != par.value:
                             sys.stdout.flush()
-                            log.warning(
-                                "Parameter %s not fit, but has changed between these models"
-                                % par.name
-                            )
+                            if par.name == "START" or par.name == "FINISH":
+                                log.info(
+                                    "Parameter %s not fit, but has changed between these models"
+                                    % par.name
+                                )
+                            else:
+                                log.warning(
+                                    "Parameter %s not fit, but has changed between these models"
+                                    % par.name
+                                )
                             log.handlers[0].flush()
                             newstr += " !"
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if par.uncertainty < otherpar.uncertainty:
+                            if 1.01 * par.uncertainty < otherpar.uncertainty:
                                 newstr += " *"
                         newstr += "\n"
                     else:
@@ -2053,8 +2056,7 @@ class ModelMeta(abc.ABCMeta):
         super(ModelMeta, cls).__init__(name, bases, dct)
 
 
-@six.add_metaclass(ModelMeta)
-class Component(object):
+class Component(object, metaclass=ModelMeta):
     """A base class for timing model components."""
 
     component_types = {}
@@ -2223,10 +2225,9 @@ class Component(object):
             param_name = param.name
         if param_name not in self.params:
             raise ValueError(
-                "Tried to remove parameter {} but it is not listed: {}".formmat(
-                    param_name, self.params
-                )
+                f"Tried to remove parameter {param_name} but it is not listed: {self.params}"
             )
+
         self.params.remove(param_name)
         par = getattr(self, param_name)
         all_names = [param] + par.aliases

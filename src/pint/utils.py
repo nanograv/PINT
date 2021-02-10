@@ -1,6 +1,4 @@
 """Miscellaneous potentially-helpful functions."""
-from __future__ import absolute_import, division, print_function
-
 import re
 from contextlib import contextmanager
 from copy import deepcopy
@@ -9,7 +7,6 @@ from astropy import log
 import astropy.constants as const
 import astropy.coordinates as coords
 import numpy as np
-import six
 import scipy.optimize.zeros as zeros
 from scipy.special import fdtrc
 
@@ -58,7 +55,7 @@ __all__ = [
 # Actual exported tools
 
 
-class PosVel(object):
+class PosVel:
     """Position/Velocity class.
 
     The class is used to represent the 6 values describing position
@@ -353,7 +350,7 @@ def open_or_use(f, mode="r"):
     a subclass of ``str`` will be passed through untouched.
 
     """
-    if isinstance(f, six.string_types):
+    if isinstance(f, (str, bytes)):
         with open(f, mode) as fl:
             yield fl
     else:
@@ -384,7 +381,7 @@ def interesting_lines(lines, comments=None):
     """
     if comments is None:
         cc = ()
-    elif isinstance(comments, six.string_types):
+    elif isinstance(comments, (str, bytes)):
         cc = (comments,)
     else:
         cc = tuple(comments)
@@ -644,7 +641,7 @@ def dmx_ranges_old(
                 print("Ack!  This shouldn't be happening!")
             oldmax = DMX.max
     # Init mask to all False
-    mask = np.zeros_like(MJDs.value, dtype=np.bool)
+    mask = np.zeros_like(MJDs.value, dtype=bool)
     # Mark TOAs as True if they are in any DMX bin
     for DMX in DMXs:
         mask[np.logical_and(MJDs > DMX.min - offset, MJDs < DMX.max + offset)] = True
@@ -755,7 +752,7 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=Fa
             DMX.sum_print()
 
     # Init mask to all False
-    mask = np.zeros_like(MJDs.value, dtype=np.bool)
+    mask = np.zeros_like(MJDs.value, dtype=bool)
     # Mark TOAs as True if they are in any DMX bin
     for DMX in DMXs:
         mask[np.logical_and(MJDs >= DMX.min, MJDs <= DMX.max)] = True
@@ -1062,7 +1059,7 @@ def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
     Converted from IDL: 2006-10-23. Erin Sheldon, NYU
     Copied from PRESTO to PINT : 2020-04-18
 
-   """
+    """
     arr = arrin
     weights = weights_in
     wtot = weights.sum()

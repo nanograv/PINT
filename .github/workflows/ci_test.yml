@@ -27,6 +27,9 @@ jobs:
             tox_env: 'py38-test-cov'
           - os: ubuntu-latest
             python: '3.8'
+            tox_env: 'notebooks'
+          - os: ubuntu-latest
+            python: '3.8'
             tox_env: 'docs'
           - os: ubuntu-latest
             python: '3.8'
@@ -35,15 +38,12 @@ jobs:
           - os: macos-latest
             python: '3.7'
             tox_env: 'py37-test'
-          - os: windows-latest
-            python: '3.8'
-            tox_env: 'py38-test'
+#          - os: windows-latest
+#            python: '3.8'
+#            tox_env: 'py38-test'
           - os: ubuntu-latest
             python: '3.7'
             tox_env: 'oldestdeps'
-          - os: ubuntu-latest
-            python: '3.7'
-            tox_env: 'notebooks'
           - os: ubuntu-latest
             python: '3.8'
             tox_env: 'black'
@@ -65,6 +65,9 @@ jobs:
     - name: Install graphviz dependency
       if: "endsWith(matrix.tox_env, 'build_docs')"
       run: sudo apt-get -y install graphviz
+    - name: Install pandoc dependency
+      if: "endsWith(matrix.tox_env, 'docs')"
+      run: sudo apt-get -y install pandoc
     - name: Print Python, pip, setuptools, and tox versions
       run: |
         python -c "import sys; print(f'Python {sys.version}')"
@@ -82,3 +85,9 @@ jobs:
       uses: codecov/codecov-action@v1.0.13
       with:
         file: ./coverage.xml
+    - name: Publish docs as an artifact
+      if: "endsWith(matrix.tox_env, 'docs')"
+      uses: actions/upload-artifact@v2
+      with:
+          name: documentation
+          path: .tox/docs_out/

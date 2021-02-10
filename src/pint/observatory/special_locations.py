@@ -3,8 +3,6 @@
 Special "site" locations (eg, barycenter) which do not need clock
 corrections or much else done.
 """
-from __future__ import absolute_import, division, print_function
-
 import astropy.constants as const
 import astropy.units as u
 from astropy import log
@@ -48,10 +46,6 @@ class SpecialLocation(Observatory):
         like 'BIPM2015'
     """ % bipm_default
 
-    # def clock_corrections(self, t):
-    #    log.info('Special observatory location. No clock corrections applied.')
-    #    return numpy.zeros(t.shape)*u.s
-
     def __init__(
         self,
         name,
@@ -59,6 +53,7 @@ class SpecialLocation(Observatory):
         include_gps=True,
         include_bipm=True,
         bipm_version=bipm_default,
+        overwrite=False,
     ):
         # GPS corrections not implemented yet
         self.include_gps = include_gps
@@ -153,13 +148,13 @@ class BarycenterObs(SpecialLocation):
     def tempo2_code(self):
         return "bat"
 
-    def get_gcrs(self, t, ephem=None, grp=None):
+    def get_gcrs(self, t, ephem=None):
         if ephem is None:
             raise ValueError("Ephemeris needed for BarycenterObs get_gcrs")
         ssb_pv = objPosVel_wrt_SSB("earth", t, ephem)
         return -1 * ssb_pv.pos
 
-    def posvel(self, t, ephem):
+    def posvel(self, t, ephem, group=None):
         vdim = (3,) + t.shape
         return PosVel(
             np.zeros(vdim) * u.m,
@@ -191,18 +186,18 @@ class GeocenterObs(SpecialLocation):
     def tempo2_code(self):
         return "coe"
 
-    def get_gcrs(self, t, ephem=None, grp=None):
+    def get_gcrs(self, t, ephem=None):
         vdim = (3,) + t.shape
         return np.zeros(vdim) * u.m
 
-    def posvel(self, t, ephem):
+    def posvel(self, t, ephem, group=None):
         return objPosVel_wrt_SSB("earth", t, ephem)
 
 
 class T2SpacecraftObs(SpecialLocation):
     """An observatory with position tabulated following Tempo2 convention.
 
-    In tempo2, it is possible to specify the GCRS position of the 
+    In tempo2, it is possible to specify the GCRS position of the
     observatory via the -telx, -tely, and -telz flags in a TOA file.  This
     class is able to obtain its position in this way, i.e. by examining the
     flags in a TOA table.
@@ -216,17 +211,16 @@ class T2SpacecraftObs(SpecialLocation):
     def tempo_code(self):
         return None
 
-    def get_gcrs(self, t, ephem=None, grp=None):
+    def get_gcrs(self, t, group, ephem=None):
         """Return spacecraft GCRS position; this assumes position flags in tim file are in km"""
 
-        if grp is None:
+        if group is None:
             raise ValueError("TOA group table needed for SpacecraftObs get_gcrs")
 
         try:
-            # Is there a better way to do this?
-            x = np.array([flags["telx"] for flags in grp["flags"]])
-            y = np.array([flags["tely"] for flags in grp["flags"]])
-            z = np.array([flags["telz"] for flags in grp["flags"]])
+            x = np.array([flags["telx"] for flags in group["flags"]])
+            y = np.array([flags["tely"] for flags in group["flags"]])
+            z = np.array([flags["telz"] for flags in group["flags"]])
         except:
             log.error(
                 "Missing flag. TOA line should have telx,tely,telz flags for GCRS position in km."
@@ -247,17 +241,16 @@ class T2SpacecraftObs(SpecialLocation):
 
         return pos * u.km
 
-    def posvel_gcrs(self, t, grp):
+    def posvel_gcrs(self, t, group, ephem=None):
         """Return spacecraft GCRS position and velocity; this assumes position flags in tim file are in km and velocity flags are in km/s"""
 
-        if grp is None:
+        if group is None:
             raise ValueError("TOA group table needed for SpacecraftObs posvel_gcrs")
 
         try:
-            # Is there a better way to do this?
-            vx = np.array([flags["vx"] for flags in grp["flags"]])
-            vy = np.array([flags["vy"] for flags in grp["flags"]])
-            vz = np.array([flags["vz"] for flags in grp["flags"]])
+            vx = np.array([flags["vx"] for flags in group["flags"]])
+            vy = np.array([flags["vy"] for flags in group["flags"]])
+            vz = np.array([flags["vz"] for flags in group["flags"]])
         except:
             log.error(
                 "Missing flag. TOA line should have vx,vy,vz flags for GCRS velocity in km/s."
@@ -276,18 +269,21 @@ class T2SpacecraftObs(SpecialLocation):
                 vdim.shape,
             )
 
-        pos_geo = self.get_gcrs(t, ephem=None, grp=grp)
+        pos_geo = self.get_gcrs(t, group, ephem=None)
 
         stl_posvel = PosVel(pos_geo, vel_geo, origin="earth", obj="spacecraft")
         return stl_posvel
 
-    def posvel(self, t, ephem, grp):
+    def posvel(self, t, ephem, group=None):
+
+        if group is None:
+            raise ValueError("TOA group table needed for SpacecraftObs posvel")
 
         # Compute vector from SSB to Earth
         geo_posvel = objPosVel_wrt_SSB("earth", t, ephem)
 
         # Spacecraft posvel w.r.t. Earth
-        stl_posvel = self.posvel_gcrs(t, grp)
+        stl_posvel = self.posvel_gcrs(t, group)
 
         # Vector add to geo_posvel to get full posvel vector w.r.t. SSB.
         return geo_posvel + stl_posvel
@@ -297,5 +293,4 @@ class T2SpacecraftObs(SpecialLocation):
 BarycenterObs("barycenter", aliases=["@", "ssb", "bary", "bat"])
 GeocenterObs("geocenter", aliases=["0", "o", "coe", "geo"])
 T2SpacecraftObs("stl_geo", aliases=["STL_GEO"])
-# TODO -- change name/docstring for SpacecraftObs
 # TODO -- BIPM issue

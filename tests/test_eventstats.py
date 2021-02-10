@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-from __future__ import absolute_import, division, print_function
-
 from numpy.testing import assert_allclose, assert_equal
 
 import pint.eventstats as es

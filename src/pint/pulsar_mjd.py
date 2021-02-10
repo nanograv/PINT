@@ -34,7 +34,6 @@ except ImportError:
 import astropy.time
 import astropy.units as u
 import numpy as np
-import six
 from astropy.time import Time
 from astropy.time.formats import TimeFormat
 
@@ -267,8 +266,8 @@ def time_from_mjd_string(s, scale="utc", format="pulsar_mjd"):
 
 def time_from_longdouble(t, scale="utc", format="pulsar_mjd"):
     t = np.longdouble(t)
-    i = np.float(np.floor(t))
-    f = np.float(t - i)
+    i = float(np.floor(t))
+    f = float(t - i)
     return astropy.time.Time(val=i, val2=f, format=format, scale=scale)
 
 
@@ -287,7 +286,7 @@ longdouble_mjd_eps = (70000 * u.day * np.finfo(np.longdouble).eps).to(u.ns)
 
 
 def time_to_longdouble(t):
-    """ Return an astropy Time value as MJD in longdouble
+    """Return an astropy Time value as MJD in longdouble
 
     The returned value is accurate to within a nanosecond, while the precision of long
     double MJDs (near the present) is roughly 0.7 ns.
@@ -348,9 +347,8 @@ def str2longdouble(str_data):
     """Return a long double from the input string.
 
     Accepts Fortran-style exponent notation (1.0d2).
-
     """
-    if not isinstance(str_data, six.string_types):
+    if not isinstance(str_data, (str, bytes)):
         raise TypeError("Need a string: {!r}".format(str_data))
     return np.longdouble(str_data.translate(maketrans("Dd", "ee")))
 
@@ -475,7 +473,7 @@ def _str_to_mjds(s):
 
 
 def str_to_mjds(s):
-    if isinstance(s, six.string_types):
+    if isinstance(s, (str, bytes)):
         return _str_to_mjds(s)
     else:
         imjd = np.empty_like(s, dtype=int)
@@ -487,7 +485,7 @@ def str_to_mjds(s):
         ) as it:
             for si, i, f in it:
                 si = si[()]
-                if not isinstance(si, six.string_types):
+                if not isinstance(si, (str, bytes)):
                     raise TypeError("Requires an array of strings")
                 i[...], f[...] = _str_to_mjds(si)
             return it.operands[1], it.operands[2]

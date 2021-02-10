@@ -1,8 +1,5 @@
 """FITS handling functions"""
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
-import six
 from astropy import log
 
 try:
@@ -52,7 +49,7 @@ def read_fits_event_mjds_tuples(event_hdu, timecolumn="TIME"):
         # Here I have to work around an issue where the MJDREFF key is stored
         # as a string in the header and uses the "1.234D-5" syntax for floats, which
         # is not supported by Python
-        if isinstance(event_hdr["MJDREFF"], six.string_types):
+        if isinstance(event_hdr["MJDREFF"], (str, bytes)):
             MJDREF = np.longdouble(event_hdr["MJDREFI"]) + fortran_float(
                 event_hdr["MJDREFF"]
             )
@@ -90,31 +87,29 @@ def read_fits_event_mjds(event_hdu, timecolumn="TIME"):
         TIMEZERO = 0
     else:
         try:
-            TIMEZERO = np.float(event_hdr["TIMEZERO"])
+            TIMEZERO = float(event_hdr["TIMEZERO"])
         except KeyError:
-            TIMEZERO = np.float(event_hdr["TIMEZERI"]) + np.float(event_hdr["TIMEZERF"])
+            TIMEZERO = float(event_hdr["TIMEZERI"]) + float(event_hdr["TIMEZERF"])
     log.debug("TIMEZERO = {0}".format(TIMEZERO))
 
     # Collect MJDREF
     try:
-        MJDREF = np.float(event_hdr["MJDREF"])
+        MJDREF = float(event_hdr["MJDREF"])
     except KeyError:
         # Here I have to work around an issue where the MJDREFF key is stored
         # as a string in the header and uses the "1.234D-5" syntax for floats, which
         # is not supported by Python
-        if isinstance(event_hdr["MJDREFF"], six.string_types):
-            MJDREF = np.float(event_hdr["MJDREFI"]) + fortran_float(
-                event_hdr["MJDREFF"]
-            )
+        if isinstance(event_hdr["MJDREFF"], (str, bytes)):
+            MJDREF = float(event_hdr["MJDREFI"]) + fortran_float(event_hdr["MJDREFF"])
         else:
-            MJDREF = np.float(event_hdr["MJDREFI"]) + np.float(event_hdr["MJDREFF"])
+            MJDREF = float(event_hdr["MJDREFI"]) + float(event_hdr["MJDREFF"])
     log.debug("MJDREF = {0}".format(MJDREF))
 
     # Should check timecolumn units to be sure they are seconds!
 
     # MJD = (TIMECOLUMN + TIMEZERO)/SECS_PER_DAY + MJDREF
     mjds = (
-        np.array(event_dat.field(timecolumn), dtype=np.float) + TIMEZERO
+        np.array(event_dat.field(timecolumn), dtype=float) + TIMEZERO
     ) / SECS_PER_DAY + MJDREF
 
     return mjds

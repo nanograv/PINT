@@ -1,8 +1,6 @@
 # clock_file.py
 
 # Routines for reading various formats of clock file.
-from __future__ import absolute_import, division, print_function
-
 import os
 import warnings
 
@@ -14,8 +12,6 @@ try:
     from erfa import ErfaWarning
 except ImportError:
     from astropy._erfa import ErfaWarning
-
-from six import add_metaclass
 
 from pint.pulsar_mjd import Time
 
@@ -34,8 +30,7 @@ class ClockFileMeta(type):
         super(ClockFileMeta, cls).__init__(name, bases, members)
 
 
-@add_metaclass(ClockFileMeta)
-class ClockFile(object):
+class ClockFile(object, metaclass=ClockFileMeta):
     """The ClockFile class provides a way to read various formats of clock
     files.  It will provide the clock information from the file as arrays
     of times and clock correction values via the ClockFile.time and

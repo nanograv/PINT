@@ -1,21 +1,19 @@
+
+
 PINT
 ====
 
-.. image:: https://travis-ci.org/nanograv/PINT.svg?branch=master
-    :target: https://travis-ci.org/nanograv/PINT
-    :alt: Build Status
+.. image:: https://github.com/nanograv/pint/workflows/CI%20Tests/badge.svg
+   :target: https://github.com/nanograv/pint/actions
+   :alt: Actions Status
 
+.. image:: https://codecov.io/gh/nanograv/PINT/branch/master/graph/badge.svg?token=xIOFqcKKrP
+   :target: https://codecov.io/gh/nanograv/PINT
+   :alt: Coverage
+   
 .. image:: https://readthedocs.org/projects/nanograv-pint/badge/?version=latest
     :target: https://nanograv-pint.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
-
-.. image:: https://coveralls.io/repos/github/nanograv/PINT/badge.svg?branch=master
-    :target: https://coveralls.io/github/nanograv/PINT?branch=master
-    :alt: Code Coverage
-
-.. image:: https://badges.gitter.im/nanograv-PINT/community.svg
-    :target: https://gitter.im/nanograv-PINT/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
-    :alt: Gitter chat
 
 .. image:: https://img.shields.io/pypi/l/pint-pulsar
     :target: https://github.com/nanograv/PINT/blob/master/LICENSE.md
@@ -52,7 +50,7 @@ Do **NOT** ``pip install pint`` or ``conda install pint``!  See below!
 Installing
 ----------
 
-.. image:: https://img.shields.io/conda/vn/conda-forge/pint-pulsar.svg
+.. image:: https://anaconda.org/conda-forge/pint-pulsar/badges/version.svg
    :target: https://anaconda.org/conda-forge/pint-pulsar
    :alt: Conda Version
 

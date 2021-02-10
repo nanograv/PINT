@@ -4,8 +4,8 @@ import numpy as np
 __all__ = ["MCMCSampler", "EmceeSampler"]
 
 
-class MCMCSampler(object):
-    """Base class for samplers used in MCMC fitting
+class MCMCSampler:
+    """Base class for samplers used in MCMC fitting.
 
     The sampling method should be implemented in the run_mcmc() method.
 
@@ -144,7 +144,7 @@ class EmceeSampler(MCMCSampler):
                 for ii in range(self.nwalkers):
                     pos[ii][idx] = svals[ii]
         pos[0] = fitvals
-        return [pos_i.astype(np.float) for pos_i in pos]
+        return [pos_i.astype(float) for pos_i in pos]
 
     def get_chain(self):
         """

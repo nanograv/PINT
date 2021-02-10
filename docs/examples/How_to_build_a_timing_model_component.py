@@ -85,8 +85,7 @@ import pint.models.parameter as p
 
 # %%
 class PeriodSpindown(PhaseComponent):
-    """This is an example model component of pular spindown but parametrized as period. 
-    """
+    """This is an example model component of pular spindown but parametrized as period."""
 
     register = True  # Flags for the model builder to find this component.
     # define the init function.
@@ -193,8 +192,7 @@ class PeriodSpindown(PhaseComponent):
         return self.F0.quantity * dt + 0.5 * self.F1.quantity * dt ** 2
 
     def d_spindown_phase_period_d_delay(self, toas, delay):
-        """This is part of the derivative chain for the parameters in the delay term.
-        """
+        """This is part of the derivative chain for the parameters in the delay term."""
         dt = self.get_dt(toas, delay)
         return -(self.F0.quantity + dt * self.F1.quantity)
 

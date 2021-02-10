@@ -1,8 +1,4 @@
-"""
-An interface for pint compatible to the interface of libstempo
-"""
-from __future__ import absolute_import, division, print_function
-
+"""An interface for pint compatible to the interface of libstempo."""
 import collections
 import time
 from collections import OrderedDict
@@ -81,7 +77,7 @@ map_units = {
 }
 
 
-class PINTPar(object):
+class PINTPar:
     """
     Similar to the parameter class defined in libstempo, this class gives a nice
     interface to the timing model parameters
@@ -143,7 +139,7 @@ class PINTPar(object):
         self._set = value
 
 
-class PINTPulsar(object):
+class PINTPulsar:
     """
     Pulsar object class with an interface similar to tempopulsar of libstempo
     """
@@ -241,7 +237,7 @@ class PINTPulsar(object):
         if log.level < 25:
             self.t.print_summary()
 
-        self.deleted = np.zeros(self.t.ntoas, dtype=np.bool)
+        self.deleted = np.zeros(self.t.ntoas, dtype=bool)
         self._readflags()
 
     def _readflags(self):

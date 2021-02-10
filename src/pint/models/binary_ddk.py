@@ -1,6 +1,4 @@
 """The DDK model - DD with kinematics."""
-from __future__ import absolute_import, division, print_function
-
 from astropy import log
 
 from pint.models.binary_dd import BinaryDD
@@ -99,7 +97,6 @@ class BinaryDDK(BinaryDD):
                 raise MissingParameter(
                     "DDK", "DDK model needs proper motion parameters."
                 )
-        print(self.SINI.quantity)
         if self.SINI.quantity is not None:
             raise ValueError(
                 "DDK model does not accept `SINI` as input. Please"

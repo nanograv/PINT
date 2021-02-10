@@ -6,15 +6,13 @@ in the model class, that implements priors on combinations of parameters,
 such as total proper motion, 2-d sky location, etc.
 
 """
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 import scipy.stats
 from astropy import log
 from scipy.stats import norm, rv_continuous, rv_discrete, uniform
 
 
-class Prior(object):
+class Prior:
     r"""Class for evaluation of prior probability densities
 
     Any Prior object returns the probability density using
@@ -63,21 +61,21 @@ class Prior(object):
         if type(value) == np.ndarray:
             v = value.astype(np.float64, casting="same_kind")
         else:
-            v = np.float(value)
+            v = float(value)
         return self._rv.pdf(v)
 
     def logpdf(self, value):
         if type(value) == np.ndarray:
             v = value.astype(np.float64, casting="same_kind")
         else:
-            v = np.float(value)
+            v = float(value)
         return self._rv.logpdf(v)
 
 
 class RandomInclinationPrior(rv_continuous):
-    """ Prior returning the pdf for sin(i) given a uniform prior on cos(i).
+    """Prior returning the pdf for sin(i) given a uniform prior on cos(i).
 
-        p(sin i) == p(x) = x/(1-x**2)**0.5
+    p(sin i) == p(x) = x/(1-x**2)**0.5
     """
 
     def __init__(self, **kwargs):
@@ -93,9 +91,7 @@ class RandomInclinationPrior(rv_continuous):
 
 
 class UniformUnboundedRV(rv_continuous):
-    r"""A uniform prior distribution (equivalent to no prior)
-
-    """
+    r"""A uniform prior distribution (equivalent to no prior)"""
 
     # The astype() calls prevent unsafe cast messages
     def _pdf(self, x):
