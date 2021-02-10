@@ -569,7 +569,7 @@ class Fitter:
             )
             raise AttributeError
 
-    def ftest(self, parameter, component, remove=False, full_output=False, NITS=1):
+    def ftest(self, parameter, component, remove=False, full_output=False, maxiter=1):
         """Compare the significance of adding/removing parameters to a timing model.
 
         Parameters
@@ -586,9 +586,9 @@ class Fitter:
             If False, just returns the result of the F-Test. If True, will also return the new
             model's residual RMS (us), chi-squared, and number of degrees of freedom of
             new model.
-        NITS : int
-            Number of fit iterations to run on the new model for the F-test. 
-            Default is 1. 
+        maxiter : int
+            How many times to run the linear least-squares fit, re-evaluating
+            the derivatives at each step for the F-tested model. Default is one.
 
         Returns
         --------
@@ -663,7 +663,7 @@ class Fitter:
             fitter_copy.model.validate()
             fitter_copy.model.setup()
             # Now refit
-            fitter_copy.fit_toas(NITS)
+            fitter_copy.fit_toas(maxiter=maxiter)
             # Now get the new values
             dof_1 = fitter_copy.resids.dof
             chi2_1 = fitter_copy.resids.chi2
@@ -704,7 +704,7 @@ class Fitter:
             fitter_copy.model.validate()
             fitter_copy.model.setup()
             # Now refit
-            fitter_copy.fit_toas(NITS)
+            fitter_copy.fit_toas(maxiter=maxiter)
             # Now get the new values
             dof_2 = fitter_copy.resids.dof
             chi2_2 = fitter_copy.resids.chi2
