@@ -1729,9 +1729,14 @@ class TimingModel:
                         newstr += " {:>28s}\n".format("Missing")
                 else:
                     # If fitted, print both values with uncertainties
-                    newstr += "{:14s} {:28SP}".format(
-                        pn, ufloat(par.value, par.uncertainty.value)
-                    )
+                    if par.uncertainty is not None:
+                        newstr += "{:14s} {:28SP}".format(
+                            pn, ufloat(par.value, par.uncertainty.value)
+                        )
+                    else:
+                        newstr += "{:14s} {:28SP}".format(
+                            pn, ufloat(par.value)
+                        )
                     if otherpar is not None and otherpar.value is not None:
                         try:
                             newstr += " {:28SP}".format(
