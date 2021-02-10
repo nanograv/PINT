@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+### Fixed
+- Now ensures T2CMETHOD is IAU2000B if it is set at all
+
 ## [0.8.2] - 2021-01-27
 ### Fixed
 - Now preserves the name column in tempo2 files (PR #926)

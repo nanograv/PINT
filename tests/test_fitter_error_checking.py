@@ -161,7 +161,7 @@ def test_null_vector(Fitter):
 
 
 @pytest.mark.parametrize("Fitter", [pint.fitter.WLSFitter, pint.fitter.GLSFitter])
-def test_update_model(Fitter):
+def test_update_model_sets_things(Fitter):
     model = get_model(io.StringIO("\n".join([par_base, "JUMP TEL barycenter 0"])))
     model.INFO.value = "-f"
     model.ECL.value = "IERS2010"
