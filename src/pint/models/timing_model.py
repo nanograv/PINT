@@ -1734,9 +1734,7 @@ class TimingModel:
                             pn, ufloat(par.value, par.uncertainty.value)
                         )
                     else:
-                        newstr += "{:14s} {:28f}".format(
-                            pn, float(par.value)
-                        )
+                        newstr += "{:14s} {:28f}".format(pn, float(par.value))
                     if otherpar is not None and otherpar.value is not None:
                         try:
                             newstr += " {:28SP}".format(
