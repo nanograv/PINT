@@ -165,7 +165,8 @@ def test_update_model_sets_things(Fitter):
     model = get_model(io.StringIO("\n".join([par_base, "JUMP TEL barycenter 0"])))
     model.INFO.value = "-f"
     model.ECL.value = "IERS2010"
-    model.TIMEEPH.value = "FB90"
+    model.TIMEEPH.value = "IF99"
+    model.DILATEFREQ.value = True
     model.T2CMETHOD.value = "IAU2000B"
     toas = make_fake_toas(58000, 59000, 10, model, obs="barycenter", freq=np.inf)
     fitter = Fitter(toas, model)
