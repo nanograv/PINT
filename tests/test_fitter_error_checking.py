@@ -166,14 +166,14 @@ def test_update_model_sets_things(Fitter):
     model.INFO.value = "-f"
     model.ECL.value = "IERS2010"
     model.TIMEEPH.value = "FB90"
-    model.T2CMETHOD.value = "IERS2000B"
+    model.T2CMETHOD.value = "IAU2000B"
     toas = make_fake_toas(58000, 59000, 10, model, obs="barycenter", freq=np.inf)
     fitter = Fitter(toas, model)
     fitter.fit_toas()
     par_out = fitter.model.as_parfile()
     assert re.search(r"CLOCK *TT\(TAI\)", par_out)
     assert re.search(r"TIMEEPH *FB90", par_out)
-    assert re.search(r"T2CMETHOD *IERS2000B", par_out)
+    assert re.search(r"T2CMETHOD *IAU2000B", par_out)
     assert re.search(r"NE_SW *0.0", par_out)
     assert re.search(r"ECL *IERS2010", par_out)
     assert re.search(r"DILATEFREQ *N", par_out)
