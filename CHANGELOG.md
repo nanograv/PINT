@@ -6,7 +6,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 
 ## Unreleased
 ### Fixed
-- Now ensures T2CMETHOD is IAU2000B if it is set at all
+- Now ensures T2CMETHOD is IAU2000B if it is set at all (PR #970)
 
 ## [0.8.2] - 2021-01-27
 ### Fixed
