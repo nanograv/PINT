@@ -2092,7 +2092,7 @@ class TOAs:
             # get velocity vector from coordinate frame
             ssb_obs_vel_ecl[loind:hiind, :] = coord.velocity.d_xyz.T.to(u.km / u.s)
         col = ssb_obs_vel_ecl
-        log.debug("Adding columns " + " ".join(col.name))
+        log.debug("Adding column " + col.name)
         self.table.add_column(col)
 
 

@@ -55,6 +55,7 @@ Fitters in use::
 """
 import collections
 import copy
+from functools import cached_property
 from warnings import warn
 
 import astropy.units as u
@@ -63,7 +64,6 @@ import scipy.linalg as sl
 import scipy.optimize as opt
 from astropy import log
 
-import pint.residuals as pr
 import pint.utils
 from pint.models.parameter import AngleParameter, boolParameter, strParameter
 from pint.pint_matrix import (
@@ -73,6 +73,7 @@ from pint.pint_matrix import (
     combine_design_matrices_by_param,
     combine_design_matrices_by_quantity,
 )
+from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import TOAs
 from pint.utils import FTest
 
@@ -125,7 +126,7 @@ class Fitter:
         self.model_init = model
         self.track_mode = track_mode
         if residuals is None:
-            self.resids_init = pr.Residuals(
+            self.resids_init = Residuals(
                 toas=toas, model=model, track_mode=self.track_mode
             )
             self.reset_model()
@@ -489,7 +490,7 @@ class Fitter:
 
         Run after updating a model parameter.
         """
-        self.resids = pr.Residuals(
+        self.resids = Residuals(
             toas=self.toas, model=self.model, track_mode=self.track_mode
         )
 
@@ -832,6 +833,400 @@ class Fitter:
         See :func:`pint.models.timing_model.TimingModel.set_param_uncertainties`.
         """
         self.model.set_param_uncertainties(fitp)
+
+
+class InvalidModelParameters(ValueError):
+    pass
+
+
+class CorrelatedErrors(ValueError):
+    def __init__(self, model):
+        trouble_components = [
+            c.__class__.__name__
+            for c in model.NoiseComponent_list
+            if c.introduces_correlated_errors
+        ]
+        super().__init__(
+            f"Model has correlated errors and requires a GLS-based fitter; "
+            f"remove {trouble_components} if you want to use WLS"
+        )
+        self.trouble_components = trouble_components
+
+
+class ModelState:
+    """Record a model state and cache calculations
+
+    This class keeps track of a particular model state and all the associated
+    matrices - design matrices, singular value decompositions, what have you -
+    that are needed to compute a step and evaluate the quality of the fit.
+
+    These objects should be regarded as immutable but lazily evaluated.
+    """
+
+    def __init__(self, fitter, model):
+        self.fitter = fitter
+        self.model = model
+
+    @cached_property
+    def resids(self):
+        try:
+            return Residuals(
+                toas=self.fitter.toas,
+                model=self.model,
+                track_mode=self.fitter.track_mode,
+            )
+        except ValueError as e:
+            raise InvalidModelParameters("Step landed at invalid point") from e
+
+    @cached_property
+    def chi2(self):
+        # there may be some shareable computation here
+        return self.resids.chi2
+
+    @cached_property
+    def step(self):
+        raise NotImplementedError
+
+    @cached_property
+    def covariance_matrix(self):
+        raise NotImplementedError
+
+    def predicted_chi2(self, step, lambda_):
+        """Predict the chi2 after taking a step based on the linear approximation"""
+        raise NotImplementedError
+
+    def take_step_model(self, step, lambda_=1):
+        """Make a new model reflecting the new parameters."""
+        log.debug(f"Taking step {lambda_} * {list(zip(self.params, step))}")
+        new_model = copy.deepcopy(self.model)
+        for p, s in zip(self.params, step * lambda_):
+            try:
+                log.debug(f"Adjusting {getattr(self.model, p)} by {s}")
+                getattr(new_model, p).value += s
+                # getattr(new_model, p).value = getattr(self.model, p).value + s
+                # getattr(self.model, p) + s
+                # getattr(new_model, p).value = s
+            except AttributeError:
+                if p != "Offset":
+                    log.debug(f"Unexpected parameter {p}")
+        return new_model
+
+    def take_step(self, step, lambda_):
+        """Return a new state moved by lambda_*step."""
+        raise NotImplementedError
+
+
+class DownhillFitter(Fitter):
+    def __init__(self, toas, model, track_mode=None, residuals=None):
+        super().__init__(
+            toas=toas, model=model, residuals=residuals, track_mode=track_mode
+        )
+        self.method = "downhill_checked"
+
+    def create_toas(self):
+        raise NotImplementedError
+
+    def fit_toas(
+        self,
+        maxiter=1,
+        required_chi2_decrease=1e-2,
+        max_chi2_increase=1e-2,
+        min_lambda=1e-3,
+    ):
+        # setup
+        self.model.validate()
+        self.model.validate_toas(self.toas)
+        current_state = self.create_state()
+        self.converged = False
+        # algorithm
+        for i in range(maxiter):
+            step = current_state.step
+            lambda_ = 1
+            while True:
+                try:
+                    new_state = current_state.take_step(step, lambda_)
+                    chi2_decrease = current_state.chi2 - new_state.chi2
+                    if chi2_decrease < -max_chi2_increase:
+                        raise InvalidModelParameters(
+                            f"chi2 increased from {current_state.chi2} to {new_state.chi2} "
+                            f"when trying to take a step with lambda {lambda_}"
+                        )
+                    else:
+                        log.debug(
+                            f"Updating state, chi2 goes down by {chi2_decrease} "
+                            f"from {current_state.chi2} "
+                            f"to {new_state.chi2}"
+                        )
+                        current_state = new_state
+                        break
+                except InvalidModelParameters as e:
+                    # This could be an exception evaluating new_state.chi2 or an increase in value
+                    # If bad parameter values escape, look in ModelState.resids for the except
+                    # that should catch them
+                    lambda_ /= 2
+                    log.debug(f"Shortening step to {lambda_}: {e}")
+                    if lambda_ < min_lambda:
+                        raise ValueError(
+                            "Unable to improve chi2 even with very small steps"
+                        ) from e
+            if 0 <= chi2_decrease < required_chi2_decrease:
+                log.debug(
+                    f"chi2 does not improve, stopping; " f"decrease: {chi2_decrease}"
+                )
+                self.converged = True
+                break
+        else:
+            log.debug(
+                f"Stopping because maxmum number of iterations ({maxiter}) reached"
+            )
+        current_state.step  # ensure SVD is available for covariance data
+        # collect results
+        self.covariance_matrix = current_state.covariance_matrix
+        # FIXME: compute correlation matrix and uncertainties and whatnot
+        self.model = current_state.model
+        self.resids = current_state.resids
+        # FIXME: update self.model and set its uncertainties from the state
+        self.update_model(current_state.chi2)
+        return i
+
+
+class WLSState(ModelState):
+    def __init__(self, fitter, model, threshold=None):
+        super().__init__(fitter, model)
+        self.threshold = threshold
+
+    @cached_property
+    def step(self):
+        # Define the linear system
+        M, params, units = self.model.designmatrix(
+            toas=self.fitter.toas, incfrozen=False, incoffset=True
+        )
+        # Get residuals and TOA uncertainties in seconds
+        Nvec = self.fitter.toas.get_errors().to(u.s).value
+        scaled_resids = self.resids.time_resids.to(u.s).value / Nvec
+
+        # "Whiten" design matrix and residuals by dividing by uncertainties
+        M = M / Nvec.reshape((-1, 1))
+
+        # For each column in design matrix except for col 0 (const. pulse
+        # phase), subtract the mean value, and scale by the column RMS.
+        # This helps avoid numerical problems later.  The scaling factors need
+        # to be saved to recover correct parameter units.
+        # NOTE, We remove subtract mean value here, since it did not give us a
+        # fast converge fitting.
+        # M[:,1:] -= M[:,1:].mean(axis=0)
+        fac = np.sqrt((M ** 2).mean(axis=0))
+        # fac[0] = 1.0
+        fac[fac == 0] = 1.0
+        M /= fac
+        # Singular value decomp of design matrix:
+        #   M = U s V^T
+        # Dimensions:
+        #   M, U are Ntoa x Nparam
+        #   s is Nparam x Nparam diagonal matrix encoded as 1-D vector
+        #   V^T is Nparam x Nparam
+        U, s, Vt = sl.svd(M, full_matrices=False)
+        # Note, here we could do various checks like report
+        # matrix condition number or zero out low singular values.
+        # print 'log_10 cond=', np.log10(s.max()/s.min())
+        # Note, Check the threshold from data precision level.Borrowed from
+        # np Curve fit.
+        threshold = self.threshold
+        if threshold is None:
+            # M is float, not longdouble
+            # threshold = np.finfo(float).eps * max(M.shape)
+            threshold = 1e-14 * max(M.shape)
+
+        bad = np.where(s <= threshold * s[0])[0]
+        s[bad] = np.inf
+        for c in bad:
+            bad_col = Vt[c, :]
+            bad_col /= abs(bad_col).max()
+            bad_combination = " + ".join(
+                [
+                    f"{co}*{p}"
+                    for (co, p) in sorted(zip(bad_col, params))
+                    if abs(co) > threshold
+                ]
+            )
+            warn(
+                f"Parameter degeneracy; the following linear combination yields "
+                f"almost no change: {bad_combination}",
+                DegeneracyWarning,
+            )
+
+        self.M = M
+        self.U = U
+        self.Vt = Vt
+        self.s = s
+        self.fac = fac
+        self.params = params
+        self.units = units
+        self.scaled_resids = scaled_resids
+        # The delta-parameter values
+        #   dpars = V s^-1 U^T r
+        # Scaling by fac recovers original units
+        return (Vt.T @ ((U.T @ scaled_resids) / s)) / fac
+
+    def take_step(self, step, lambda_=1):
+        return WLSState(
+            self.fitter, self.take_step_model(step, lambda_), threshold=self.threshold
+        )
+
+    @cached_property
+    def covariance_matrix(self):
+        # FIXME: make sure we compute the SVD
+        # Sigma = np.dot(Vt.T / s, U.T)
+        # The post-fit parameter covariance matrix
+        #   Sigma = V s^-2 V^T
+        Sigma = np.dot(self.Vt.T / (self.s ** 2), self.Vt)
+        return (Sigma / self.fac).T / self.fac
+
+
+class DownhillWLSFitter(DownhillFitter):
+    """Fitter that uses the shortening-step procedure for WLS fits.
+
+    Most of the machinery here is in :class:`pint.fitter.WLSState`
+    or :class:`pint.fitter.DownhillFitter`.
+    """
+
+    def __init__(self, toas, model, track_mode=None, residuals=None):
+        if model.has_correlated_errors:
+            raise CorrelatedErrors(model)
+        super().__init__(
+            toas=toas, model=model, residuals=residuals, track_mode=track_mode
+        )
+        self.method = "downhill_wls"
+
+    def create_state(self):
+        return WLSState(self, self.model)
+
+
+class GLSState(ModelState):
+    def __init__(self, fitter, model, full_cov=False, threshold=None):
+        super().__init__(fitter, model)
+        self.threshold = threshold
+        self.full_cov = full_cov
+
+    @cached_property
+    def step(self):
+        # Define the linear system
+        M, params, units = self.model.designmatrix(
+            toas=self.fitter.toas, incfrozen=False, incoffset=True
+        )
+        self.params = params
+        self.units = units
+
+        residuals = self.resids.time_resids.to(u.s).value
+
+        # get any noise design matrices and weight vectors
+        if not self.full_cov:
+            Mn = self.model.noise_model_designmatrix(self.fitter.toas)
+            phi = self.model.noise_model_basis_weight(self.fitter.toas)
+            phiinv = np.zeros(M.shape[1])
+            if Mn is not None and phi is not None:
+                phiinv = np.concatenate((phiinv, 1 / phi))
+                M = np.hstack((M, Mn))
+
+        # normalize the design matrix
+        norm = np.sqrt(np.sum(M ** 2, axis=0))
+        ntmpar = len(self.model.free_params)
+        if M.shape[1] > ntmpar:
+            # Why do this?
+            # This avoids rescaling the column corresponding to the Offset
+            norm[ntmpar:] = 1
+        for c in np.where(norm == 0)[0]:
+            warn(
+                f"Parameter degeneracy; the following parameter yields "
+                f"almost no change: {params[c]}",
+                DegeneracyWarning,
+            )
+        norm[norm == 0] = 1
+        M /= norm
+
+        # compute covariance matrices
+        if self.full_cov:
+            cov = self.model.toa_covariance_matrix(self.fitter.toas)
+            cf = sl.cho_factor(cov)
+            cm = sl.cho_solve(cf, M)
+            mtcm = np.dot(M.T, cm)
+            mtcy = np.dot(cm.T, residuals)
+
+        else:
+            Nvec = (
+                self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value ** 2
+            )
+            cinv = 1 / Nvec
+            mtcm = np.dot(M.T, cinv[:, None] * M)
+            mtcm += np.diag(phiinv)
+            mtcy = np.dot(M.T, cinv * residuals)
+
+        U, s, Vt = sl.svd(mtcm, full_matrices=False)
+
+        bad = np.where(s <= self.threshold * s[0])[0]
+        s[bad] = np.inf
+        for c in bad:
+            bad_col = Vt[c, :]
+            bad_col /= abs(bad_col).max()
+            bad_combination = " ".join(
+                [
+                    f"{p}"
+                    for (co, p) in sorted(zip(bad_col, params))
+                    if abs(co) > self.threshold
+                ]
+            )
+            warn(
+                f"Parameter degeneracy; the following combination of parameters yields "
+                f"almost no change: {bad_combination}",
+                DegeneracyWarning,
+            )
+
+        self.norm = norm
+        self.s, self.Vt = s, Vt
+        xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+        # newres = residuals - np.dot(M, xhat)
+
+        # compute absolute estimates, normalized errors, covariance matrix
+        return xhat / norm
+
+    def take_step(self, step, lambda_=1):
+        return GLSState(
+            self.fitter, self.take_step_model(step, lambda_), threshold=self.threshold
+        )
+
+    @cached_property
+    def covariance_matrix(self):
+        xvar = np.dot(self.Vt.T / self.s, self.Vt)
+        return (xvar / self.norm).T / self.norm
+
+
+class DownhillGLSFitter(DownhillFitter):
+    """Fitter that uses the shortening-step procedure for WLS fits.
+
+    Most of the machinery here is in :class:`pint.fitter.WLSState`
+    or :class:`pint.fitter.DownhillFitter`.
+    """
+
+    # FIXME: do something clever to efficiently compute chi-squared
+
+    def __init__(self, toas, model, track_mode=None, residuals=None):
+        super().__init__(
+            toas=toas, model=model, residuals=residuals, track_mode=track_mode
+        )
+        self.method = "downhill_gls"
+        self.full_cov = False
+        self.threshold = 0
+
+    def create_state(self):
+        return GLSState(
+            self, self.model, full_cov=self.full_cov, threshold=self.threshold
+        )
+
+    def fit_toas(self, maxiter=10, threshold=0, full_cov=False):
+        self.threshold = threshold
+        self.full_cov = full_cov
+        # FIXME: set up noise residuals et cetera
+        return super().fit_toas(maxiter=maxiter)
 
 
 class PowellFitter(Fitter):
@@ -1272,7 +1667,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
 
     def make_combined_residuals(self, add_args={}):
         """Make the combined residuals between TOA residual and DM residual."""
-        return pr.WidebandTOAResiduals(
+        return WidebandTOAResiduals(
             self.toas,
             self.model,
             toa_resid_args=add_args.get("toa", {}),
