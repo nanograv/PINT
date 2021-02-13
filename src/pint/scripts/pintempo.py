@@ -58,7 +58,8 @@ def main(argv=None):
     # turns pre-existing jump flags in t.table['flags'] into parameters in parfile
     m.jump_flags_to_params(t)
     # adds jump flags to t.table['flags'] for jump parameters already in parfile
-    m.jump_params_to_flags(t)
+    if "PhaseJump" in m.components:
+        m.jump_params_to_flags(t)
 
     if m.TRACK.value == "-2":
         if "pn" in t.table.colnames:
