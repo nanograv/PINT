@@ -75,7 +75,7 @@ class SolarWindDispersion(Dispersion):
         Uses equations 29, 30 of Edwards et al. 2006.
         """
         if self.NE_SW.value == 0:
-            return 0 * u.pc / u.cm ** 3
+            return np.zeros(len(toas)) * u.pc / u.cm ** 3
         if self.SWM.value == 0:
             solar_wind_geometry = self.solar_wind_geometry(toas)
             solar_wind_dm = self.NE_SW.quantity * solar_wind_geometry
