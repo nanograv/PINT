@@ -1191,7 +1191,10 @@ class GLSState(ModelState):
 
     def take_step(self, step, lambda_=1):
         return GLSState(
-            self.fitter, self.take_step_model(step, lambda_), threshold=self.threshold
+            self.fitter,
+            self.take_step_model(step, lambda_),
+            threshold=self.threshold,
+            full_cov=self.full_cov,
         )
 
     @cached_property
@@ -1210,6 +1213,11 @@ class DownhillGLSFitter(DownhillFitter):
     # FIXME: do something clever to efficiently compute chi-squared
 
     def __init__(self, toas, model, track_mode=None, residuals=None):
+        if not model.has_correlated_errors:
+            log.info(
+                "Model does not appear to have correlated errors so the GLS fitter "
+                "is unnecessary; DownhillWLSFitter may be faster and more stable."
+            )
         super().__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
@@ -1227,6 +1235,34 @@ class DownhillGLSFitter(DownhillFitter):
         self.full_cov = full_cov
         # FIXME: set up noise residuals et cetera
         return super().fit_toas(maxiter=maxiter)
+
+
+class WidebandState(ModelState):
+    def __init__(self, fitter, model, full_cov=False, threshold=None):
+        super().__init__(fitter, model)
+        self.threshold = threshold
+        self.full_cov = full_cov
+
+    @cached_property
+    def step(self):
+        # Define the linear system
+        M, params, units = self.model.designmatrix(
+            toas=self.fitter.toas, incfrozen=False, incoffset=True
+        )
+        self.params = params
+        self.units = units
+
+        residuals = self.resids.time_resids.to(u.s).value
+
+    def take_step(self, step, lambda_=1):
+        return GLSState(
+            self.fitter, self.take_step_model(step, lambda_), threshold=self.threshold
+        )
+
+    @cached_property
+    def covariance_matrix(self):
+        xvar = np.dot(self.Vt.T / self.s, self.Vt)
+        return (xvar / self.norm).T / self.norm
 
 
 class PowellFitter(Fitter):

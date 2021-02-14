@@ -1102,13 +1102,7 @@ class TimingModel:
         If there is no noise model component provided, a diagonal matrix with
         TOAs error as diagonal element will be returned.
         """
-        ntoa = toas.ntoas
-        tbl = toas.table
-        result = np.zeros((ntoa, ntoa))
-        # When there is no noise model.
-        if len(self.covariance_matrix_funcs) == 0:
-            result += np.diag(tbl["error"].quantity.to(u.s).value ** 2)
-            return result
+        result = np.diag(toas.table["error"].quantity.to(u.s).value ** 2)
 
         for nf in self.covariance_matrix_funcs:
             result += nf(toas)

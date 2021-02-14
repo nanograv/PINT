@@ -75,7 +75,8 @@ def test_wls_full_procedure(model_eccentric_toas):
     assert abs(f.model.ECC.value - model_eccentric.ECC.value) < 1e-4
 
 
-def test_gls_full_procedure(model_eccentric_toas_ecorr):
+@pytest.mark.parametrize("full_cov", [False, True])
+def test_gls_full_procedure(model_eccentric_toas_ecorr, full_cov):
     model_eccentric, toas = model_eccentric_toas_ecorr
     model_wrong = deepcopy(model_eccentric)
     model_wrong.ECC.value = 0.5
@@ -83,7 +84,7 @@ def test_gls_full_procedure(model_eccentric_toas_ecorr):
     f = pint.fitter.DownhillGLSFitter(toas, model_wrong)
     f.model.free_params = ["ECC"]
 
-    f.fit_toas(maxiter=10)
+    f.fit_toas(maxiter=10, full_cov=full_cov)
 
     assert abs(f.model.ECC.value - model_eccentric.ECC.value) < 1e-4
 
@@ -103,18 +104,19 @@ def test_wls_two_step(model_eccentric_toas):
     assert np.abs(f.model.ECC.value - f2.model.ECC.value) < 1e-12
 
 
-def test_gls_two_step(model_eccentric_toas_ecorr):
+@pytest.mark.parametrize("full_cov", [False, True])
+def test_gls_two_step(model_eccentric_toas_ecorr, full_cov):
     model_eccentric, toas = model_eccentric_toas_ecorr
     model_wrong = deepcopy(model_eccentric)
     model_wrong.ECC.value = 0.5
 
     f = pint.fitter.DownhillGLSFitter(toas, model_wrong)
     f.model.free_params = ["ECC"]
-    f.fit_toas(maxiter=2)
+    f.fit_toas(maxiter=2, full_cov=full_cov)
     f2 = pint.fitter.DownhillGLSFitter(toas, model_wrong)
     f2.model.free_params = ["ECC"]
-    f2.fit_toas(maxiter=1)
-    f2.fit_toas(maxiter=1)
+    f2.fit_toas(maxiter=1, full_cov=full_cov)
+    f2.fit_toas(maxiter=1, full_cov=full_cov)
     assert np.abs(f.model.ECC.value - f2.model.ECC.value) < 1e-12
 
 
