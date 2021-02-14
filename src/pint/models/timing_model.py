@@ -1102,7 +1102,9 @@ class TimingModel:
         If there is no noise model component provided, a diagonal matrix with
         TOAs error as diagonal element will be returned.
         """
-        result = np.diag(toas.table["error"].quantity.to(u.s).value ** 2)
+        result = np.zeros((len(toas), len(toas)))
+        if "ScaleToaError" not in self.components:
+            result += np.diag(toas.table["error"].quantity.to(u.s).value ** 2)
 
         for nf in self.covariance_matrix_funcs:
             result += nf(toas)
@@ -1121,6 +1123,7 @@ class TimingModel:
         dmes = np.array(dmes)[valid_dme]
         result = np.zeros((n_dms, n_dms))
         # When there is no noise model.
+        # FIXME: specifically when there is no DMEFAC
         if len(self.dm_covariance_matrix_funcs) == 0:
             result += np.diag(dmes.value ** 2)
             return result
