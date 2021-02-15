@@ -1085,7 +1085,8 @@ class PlkWidget(tk.Frame):
             return None
         elif type(jump_name) != str:
             log.error(
-                "Return value for the jump name is not a string, jumps not updated"
+                jump_name,
+                "Return value for the jump name is not a string, jumps not updated",
             )
             return None
         num = int(jump_name[4:])
