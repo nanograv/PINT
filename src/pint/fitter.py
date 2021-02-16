@@ -979,15 +979,24 @@ class DownhillFitter(Fitter):
             log.debug(
                 f"Stopping because maxmum number of iterations ({maxiter}) reached"
             )
-        current_state.step  # ensure SVD is available for covariance data
+        self.current_state = current_state
         # collect results
-        self.covariance_matrix = current_state.covariance_matrix
-        # FIXME: compute correlation matrix and uncertainties and whatnot
         self.model = current_state.model
         self.resids = current_state.resids
-        # FIXME: update self.model and set its uncertainties from the state
+        self.covariance_matrix = current_state.covariance_matrix
+        self.errors = np.sqrt(np.diag(self.covariance_matrix))
+        for p, e in zip(self.current_state.params, self.errors):
+            try:
+                log.debug(f"Setting {getattr(self.model, p)} uncertainty to {e}")
+                pm = getattr(self.model, p)
+            except AttributeError:
+                if p != "Offset":
+                    log.debug(f"Unexpected parameter {p}")
+            else:
+                pm.uncertainty = e * pm.units
+        self.correlation_matrix = (self.covariance_matrix / self.errors).T / self.errors
         self.update_model(current_state.chi2)
-        return i
+        return self.converged
 
 
 class WLSState(ModelState):
@@ -1075,7 +1084,8 @@ class WLSState(ModelState):
 
     @cached_property
     def covariance_matrix(self):
-        # FIXME: make sure we compute the SVD
+        # make sure we compute the SVD
+        self.step
         # Sigma = np.dot(Vt.T / s, U.T)
         # The post-fit parameter covariance matrix
         #   Sigma = V s^-2 V^T
@@ -1097,6 +1107,10 @@ class DownhillWLSFitter(DownhillFitter):
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
         self.method = "downhill_wls"
+
+    def fit_toas(self, maxiter=10, threshold=None):
+        self.threshold = threshold
+        super().fit_toas(maxiter=maxiter)
 
     def create_state(self):
         return WLSState(self, self.model)
@@ -1143,6 +1157,7 @@ class GLSState(ModelState):
             )
         norm[norm == 0] = 1
         M /= norm
+        self.M = M
 
         # compute covariance matrices
         if self.full_cov:
@@ -1184,6 +1199,7 @@ class GLSState(ModelState):
         self.norm = norm
         self.s, self.Vt = s, Vt
         xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+        self.xhat = xhat
         # newres = residuals - np.dot(M, xhat)
 
         # compute absolute estimates, normalized errors, covariance matrix
@@ -1199,6 +1215,8 @@ class GLSState(ModelState):
 
     @cached_property
     def covariance_matrix(self):
+        # make sure we compute the SVD
+        self.step
         xvar = np.dot(self.Vt.T / self.s, self.Vt)
         return (xvar / self.norm).T / self.norm
 
@@ -1233,8 +1251,25 @@ class DownhillGLSFitter(DownhillFitter):
     def fit_toas(self, maxiter=10, threshold=0, full_cov=False):
         self.threshold = threshold
         self.full_cov = full_cov
+        r = super().fit_toas(maxiter=maxiter)
         # FIXME: set up noise residuals et cetera
-        return super().fit_toas(maxiter=maxiter)
+        # Compute the noise realizations if possible
+        ntmpar = len(self.model.free_params)
+        if not self.full_cov:
+            noise_dims = self.model.noise_model_dimensions(self.toas)
+            noise_resids = {}
+            for comp in noise_dims.keys():
+                p0 = noise_dims[comp][0] + ntmpar
+                p1 = p0 + noise_dims[comp][1]
+                noise_resids[comp] = (
+                    np.dot(
+                        self.current_state.M[:, p0:p1], self.current_state.xhat[p0:p1]
+                    )
+                    * u.s
+                )
+            self.resids.noise_resids = noise_resids
+
+        return r
 
 
 class WidebandState(ModelState):
@@ -1242,27 +1277,195 @@ class WidebandState(ModelState):
         super().__init__(fitter, model)
         self.threshold = threshold
         self.full_cov = full_cov
+        self.add_args = {}  # for adding arguments to residual creation
+
+    @cached_property
+    def resids(self):
+        try:
+            return WidebandTOAResiduals(
+                self.fitter.toas,
+                self.model,
+                toa_resid_args=self.add_args.get("toa", {}),
+                dm_resid_args=self.add_args.get("dm", {}),
+            )
+        except ValueError as e:
+            raise InvalidModelParameters("Step landed at invalid point") from e
 
     @cached_property
     def step(self):
         # Define the linear system
-        M, params, units = self.model.designmatrix(
-            toas=self.fitter.toas, incfrozen=False, incoffset=True
+        d_matrix = combine_design_matrices_by_quantity(
+            [
+                DesignMatrixMaker("toa", u.us)(
+                    self.fitter.toas, self.model, self.model.free_params, offset=True
+                ),
+                DesignMatrixMaker("dm", u.pc / u.cm ** 3)(
+                    self.fitter.toas, self.model, self.model.free_params, offset=True
+                ),
+            ]
+        )
+        M, params, units = (
+            d_matrix.matrix,
+            d_matrix.derivative_params,
+            d_matrix.param_units,
         )
         self.params = params
         self.units = units
 
-        residuals = self.resids.time_resids.to(u.s).value
+        # FIXME: ensure that TOAs are before DM
+        residuals = self.resids._combined_resids
+
+        # get any noise design matrices and weight vectors
+        if not self.full_cov:
+            # We assume the fit date type is toa
+            Mn = DesignMatrixMaker("toa_noise", u.s)(self.fitter.toas, self.model)
+            phi = self.model.noise_model_basis_weight(self.fitter.toas)
+            phiinv = np.zeros(M.shape[1])
+            if Mn is not None and phi is not None:
+                phiinv = np.concatenate((phiinv, 1 / phi))
+                new_d_matrix = combine_design_matrices_by_param(d_matrix, Mn)
+                M, params, units = (
+                    new_d_matrix.matrix,
+                    new_d_matrix.derivative_params,
+                    new_d_matrix.param_units,
+                )
+
+        # normalize the design matrix
+        norm = np.sqrt(np.sum(M ** 2, axis=0))
+        ntmpar = len(self.model.free_params)
+        if M.shape[1] > ntmpar:
+            norm[ntmpar:] = 1
+        for c in np.where(norm == 0)[0]:
+            warn(
+                f"Parameter degeneracy; the following parameter yields "
+                f"almost no change: {params[c]}",
+                DegeneracyWarning,
+            )
+        norm[norm == 0] = 1
+        M /= norm
+        self.M = M
+
+        # compute covariance matrices
+        if self.full_cov:
+            cov = combine_covariance_matrix(
+                [
+                    CovarianceMatrixMaker("toa", u.us)(self.fitter.toas, self.model),
+                    CovarianceMatrixMaker("dm", u.pc / u.cm ** 3)(
+                        self.fitter.toas, self.model
+                    ),
+                ]
+            ).matrix
+            cf = sl.cho_factor(cov)
+            cm = sl.cho_solve(cf, M)
+            mtcm = np.dot(M.T, cm)
+            mtcy = np.dot(cm.T, residuals)
+        else:
+            Nvec = (
+                np.hstack(
+                    [
+                        self.model.scaled_toa_uncertainty(self.fitter.toas).to_value(
+                            u.us
+                        )
+                        if hasattr(self.model, "scaled_toa_uncertainty")
+                        else self.resids.toa.get_errors().to_value(u.us),
+                        self.model.scaled_dm_uncertainty(self.fitter.toas).to_value(
+                            u.pc / u.cm ** 3
+                        )
+                        if hasattr(self.model, "scaled_dm_uncertainty")
+                        else self.resids.dm.get_dm_errors().to_value(u.pc / u.cm ** 3),
+                    ]
+                )
+                ** 2
+            )
+            cinv = 1 / Nvec
+            mtcm = np.dot(M.T, cinv[:, None] * M)
+            mtcm += np.diag(phiinv)
+            mtcy = np.dot(M.T, cinv * residuals)
+        U, s, Vt = sl.svd(mtcm, full_matrices=False)
+
+        bad = np.where(s <= self.threshold * s[0])[0]
+        s[bad] = np.inf
+        for c in bad:
+            bad_col = Vt[c, :]
+            bad_col /= abs(bad_col).max()
+            bad_combination = " ".join(
+                [
+                    f"{p}"
+                    for (co, p) in sorted(zip(bad_col, params))
+                    if abs(co) > self.threshold
+                ]
+            )
+            warn(
+                f"Parameter degeneracy; the following combination of parameters yields "
+                f"almost no change: {bad_combination}",
+                DegeneracyWarning,
+            )
+
+        xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+        self.Vt = Vt
+        self.s = s
+        self.norm = norm
+        self.xhat = xhat
+
+        # compute absolute estimates, normalized errors, covariance matrix
+        return xhat / norm
 
     def take_step(self, step, lambda_=1):
-        return GLSState(
+        return WidebandState(
             self.fitter, self.take_step_model(step, lambda_), threshold=self.threshold
         )
 
     @cached_property
     def covariance_matrix(self):
+        # make sure we compute the SVD
+        self.step
         xvar = np.dot(self.Vt.T / self.s, self.Vt)
         return (xvar / self.norm).T / self.norm
+
+
+class WidebandDownhillFitter(DownhillFitter):
+    """Fitter that uses the shortening-step procedure for WLS fits.
+
+    Most of the machinery here is in :class:`pint.fitter.WLSState`
+    or :class:`pint.fitter.DownhillFitter`.
+    """
+
+    # FIXME: do something clever to efficiently compute chi-squared
+
+    def __init__(self, toas, model, track_mode=None, residuals=None):
+        super().__init__(
+            toas=toas, model=model, residuals=residuals, track_mode=track_mode
+        )
+        self.method = "downhill_wideband"
+        self.full_cov = False
+        self.threshold = 0
+
+    def create_state(self):
+        return WidebandState(
+            self, self.model, full_cov=self.full_cov, threshold=self.threshold
+        )
+
+    def fit_toas(self, maxiter=10, threshold=0, full_cov=False):
+        self.threshold = threshold
+        self.full_cov = full_cov
+        # FIXME: set up noise residuals et cetera
+        r = super().fit_toas(maxiter=maxiter)
+        # Compute the noise realizations if possible
+        ntmpar = len(self.model.free_params)
+        if not self.full_cov:
+            noise_dims = self.model.noise_model_dimensions(self.toas)
+            noise_resids = {}
+            for comp in noise_dims.keys():
+                p0 = noise_dims[comp][0] + ntmpar
+                p1 = p0 + noise_dims[comp][1]
+                noise_resids[comp] = (
+                    np.dot(
+                        self.current_state.M[:, p0:p1], self.current_state.xhat[p0:p1]
+                    )
+                    * u.s
+                )
+            self.resids.noise_resids = noise_resids
+        return r
 
 
 class PowellFitter(Fitter):
@@ -1663,7 +1866,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         if not isinstance(fit_data, (tuple, list)):
             fit_data = [fit_data]
         if not isinstance(fit_data[0], TOAs):
-            raise ValueError("The first data set should be a TOAs object.")
+            raise ValueError(
+                f"The first data set should be a TOAs object but is {fit_data[0]}."
+            )
         if len(fit_data_names) == 0:
             raise ValueError("Please specify the fit data.")
         if len(fit_data) > 1 and len(fit_data_names) != len(fit_data):

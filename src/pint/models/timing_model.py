@@ -1125,7 +1125,7 @@ class TimingModel:
         # When there is no noise model.
         # FIXME: specifically when there is no DMEFAC
         if len(self.dm_covariance_matrix_funcs) == 0:
-            result += np.diag(dmes.value ** 2)
+            result += np.diag(dmes ** 2)
             return result
 
         for nf in self.dm_covariance_matrix_funcs:

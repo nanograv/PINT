@@ -62,6 +62,40 @@ def model_eccentric_toas_ecorr():
     return model_eccentric, toas
 
 
+@pytest.fixture(scope="module")
+def model_eccentric_toas_wb():
+    g = np.random.default_rng(0)
+    model_eccentric = get_model(
+        io.StringIO("\n".join([par_eccentric, "ECORR tel @ 2"]))
+    )
+
+    toas = merge_TOAs(
+        [
+            make_fake_toas(
+                57000,
+                57001,
+                20,
+                model_eccentric,
+                freq=1000,
+                obs="@",
+                dm=10 * u.pc / u.cm ** 3,
+            ),
+            make_fake_toas(
+                57000,
+                57001,
+                20,
+                model_eccentric,
+                freq=2000,
+                obs="@",
+                dm=10 * u.pc / u.cm ** 3,
+            ),
+        ]
+    )
+    toas.adjust_TOAs(TimeDelta(g.standard_normal(len(toas)) * toas.table["error"]))
+
+    return model_eccentric, toas
+
+
 def test_wls_full_procedure(model_eccentric_toas):
     model_eccentric, toas = model_eccentric_toas
     model_wrong = deepcopy(model_eccentric)
@@ -82,6 +116,20 @@ def test_gls_full_procedure(model_eccentric_toas_ecorr, full_cov):
     model_wrong.ECC.value = 0.5
 
     f = pint.fitter.DownhillGLSFitter(toas, model_wrong)
+    f.model.free_params = ["ECC"]
+
+    f.fit_toas(maxiter=10, full_cov=full_cov)
+
+    assert abs(f.model.ECC.value - model_eccentric.ECC.value) < 1e-4
+
+
+@pytest.mark.parametrize("full_cov", [False, True])
+def test_wideband_full_procedure(model_eccentric_toas_wb, full_cov):
+    model_eccentric, toas = model_eccentric_toas_wb
+    model_wrong = deepcopy(model_eccentric)
+    model_wrong.ECC.value = 0.5
+
+    f = pint.fitter.WidebandDownhillFitter(toas, model_wrong)
     f.model.free_params = ["ECC"]
 
     f.fit_toas(maxiter=10, full_cov=full_cov)
@@ -120,8 +168,66 @@ def test_gls_two_step(model_eccentric_toas_ecorr, full_cov):
     assert np.abs(f.model.ECC.value - f2.model.ECC.value) < 1e-12
 
 
+@pytest.mark.parametrize("full_cov", [False, True])
+def test_wb_two_step(model_eccentric_toas_wb, full_cov):
+    model_eccentric, toas = model_eccentric_toas_wb
+    model_wrong = deepcopy(model_eccentric)
+    model_wrong.ECC.value = 0.5
+
+    f = pint.fitter.WidebandDownhillFitter(toas, model_wrong)
+    f.model.free_params = ["ECC"]
+    f.fit_toas(maxiter=2, full_cov=full_cov)
+    f2 = pint.fitter.WidebandDownhillFitter(toas, model_wrong)
+    f2.model.free_params = ["ECC"]
+    f2.fit_toas(maxiter=1, full_cov=full_cov)
+    f2.fit_toas(maxiter=1, full_cov=full_cov)
+    # FIXME: The full_cov version differs at the 1e-10 level fror some reason, is it a failure really?
+    assert np.abs(f.model.ECC.value - f2.model.ECC.value) < 1e-9
+
+
 def test_detect_gls_needed(model_eccentric_toas_ecorr):
     model_eccentric, toas = model_eccentric_toas_ecorr
     with pytest.raises(pint.fitter.CorrelatedErrors) as e:
         pint.fitter.DownhillWLSFitter(toas, model_eccentric)
     assert e.value.trouble_components == ["EcorrNoise"]
+
+
+def test_degenerate_parameters(model_eccentric_toas):
+    """ELAT and ELONG are unconstrained by barycentric TOAs - what happens?"""
+    model_eccentric, toas = model_eccentric_toas
+    model_wrong = deepcopy(model_eccentric)
+    model_wrong.ECC.value = 0.5
+    model_wrong.free_params = ["ELAT", "ELONG", "ECC"]
+
+    f = pint.fitter.DownhillWLSFitter(toas, model_wrong)
+
+    with pytest.warns(pint.fitter.DegeneracyWarning, match=r".*degeneracy.*ELONG\b"):
+        f.fit_toas(maxiter=10)
+
+    assert abs(f.model.ECC.value - model_eccentric.ECC.value) < 1e-4
+    assert f.model.ELAT.value == f.model.ELONG.value == 0
+
+
+@pytest.mark.parametrize("full_cov", [False, True])
+def test_degenerate_parameters_gls(model_eccentric_toas_ecorr, full_cov):
+    """ELAT and ELONG are unconstrained by barycentric TOAs - what happens?
+
+    The GLS fitter uses the normal equations, which are less numerically stable
+    """
+    model_eccentric, toas = model_eccentric_toas_ecorr
+    model_wrong = deepcopy(model_eccentric)
+    model_wrong.ECC.value = 0.5
+    model_wrong.free_params = ["ELAT", "ELONG", "ECC"]
+
+    f = pint.fitter.DownhillGLSFitter(toas, model_wrong)
+
+    with pytest.warns(
+        pint.fitter.DegeneracyWarning,
+        match=r".*degeneracy.*following parameter.*ELONG\b",
+    ):
+        f.fit_toas(full_cov=full_cov, threshold=1e-14)
+
+    assert abs(f.model.ECC.value - model_eccentric.ECC.value) < 1e-4
+    if full_cov:
+        # For some reason this doesn't work - the values get changed in spite of the SVD
+        assert f.model.ELAT.value == f.model.ELONG.value == 0

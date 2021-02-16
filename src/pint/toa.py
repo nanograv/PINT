@@ -907,7 +907,7 @@ def make_fake_toas(
     ts.table["error"] = error
     if dm is not None:
         for f in ts.table["flags"]:
-            f["pp_dm"] = dm
+            f["pp_dm"] = dm.to_value(u.pc / u.cm ** 3)
             f["pp_dme"] = dm_error.to_value(u.pc / u.cm ** 3)
     ts.compute_TDBs()
     ts.compute_posvels()

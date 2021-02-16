@@ -69,7 +69,15 @@ def test_dm_barycentered():
         fitter.fit_toas()
 
 
-@pytest.mark.parametrize("Fitter", [pint.fitter.WLSFitter, pint.fitter.GLSFitter])
+@pytest.mark.parametrize(
+    "Fitter",
+    [
+        pint.fitter.WLSFitter,
+        pint.fitter.GLSFitter,
+        pint.fitter.DownhillWLSFitter,
+        pint.fitter.DownhillGLSFitter,
+    ],
+)
 def test_dmx_barycentered(Fitter):
     model = get_model(
         io.StringIO(
@@ -98,7 +106,15 @@ def test_dmx_barycentered(Fitter):
         assert not np.isnan(fitter.model[p].value)
 
 
-@pytest.mark.parametrize("Fitter", [pint.fitter.WLSFitter, pint.fitter.GLSFitter])
+@pytest.mark.parametrize(
+    "Fitter",
+    [
+        pint.fitter.WLSFitter,
+        pint.fitter.GLSFitter,
+        pint.fitter.DownhillWLSFitter,
+        pint.fitter.DownhillGLSFitter,
+    ],
+)
 def test_jump_everything(Fitter):
     model = get_model(io.StringIO("\n".join([par_base, "JUMP TEL barycenter 0"])))
     toas = make_fake_toas(58000, 58900, 10, model, obs="barycenter", freq=np.inf)
@@ -135,7 +151,13 @@ def test_jump_everything_wideband():
 
 
 @pytest.mark.parametrize(
-    "Fitter", [pint.fitter.GLSFitter, pint.fitter.WidebandTOAFitter]
+    "Fitter",
+    [
+        pint.fitter.GLSFitter,
+        pint.fitter.WidebandTOAFitter,
+        pint.fitter.DownhillGLSFitter,
+        pint.fitter.WidebandDownhillFitter,
+    ],
 )
 def test_null_vector(Fitter):
     model = get_model(io.StringIO("\n".join([par_base])))
@@ -147,7 +169,7 @@ def test_null_vector(Fitter):
         model,
         obs="barycenter",
         freq=1400.0,
-        dm=15.0,
+        dm=15.0 * u.pc / u.cm ** 3,
         dm_error=1e-4 * u.pc * u.cm ** -3,
     )
     fitter = Fitter(toas, model)
@@ -160,7 +182,15 @@ def test_null_vector(Fitter):
         assert not np.isnan(fitter.model[p].value)
 
 
-@pytest.mark.parametrize("Fitter", [pint.fitter.WLSFitter, pint.fitter.GLSFitter])
+@pytest.mark.parametrize(
+    "Fitter",
+    [
+        pint.fitter.WLSFitter,
+        pint.fitter.GLSFitter,
+        pint.fitter.DownhillGLSFitter,
+        pint.fitter.DownhillWLSFitter,
+    ],
+)
 def test_update_model_sets_things(Fitter):
     model = get_model(io.StringIO("\n".join([par_base, "JUMP TEL barycenter 0"])))
     model.INFO.value = "-f"
