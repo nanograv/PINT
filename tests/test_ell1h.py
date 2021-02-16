@@ -48,19 +48,17 @@ def simple_par_str():
 
 @pytest.fixture
 def toasJ0613():
-    toas = toa.get_TOAs("J0613-0200_NANOGrav_9yv1.tim",
-                        ephem="DE421", planets=False)
+    toas = toa.get_TOAs("J0613-0200_NANOGrav_9yv1.tim", ephem="DE421", planets=False)
     return toas
 
 
 @pytest.fixture
 def toasJ1853():
-    toas = toa.get_TOAs("J1853+1303_NANOGrav_11yv0.tim",
-                        ephem="DE421", planets=False)
+    toas = toa.get_TOAs("J1853+1303_NANOGrav_11yv0.tim", ephem="DE421", planets=False)
     return toas
 
 
-@pytest.fixture"H3 2.7507208E-7  1       1.5114416E-7", "H3 0  1  0"
+@pytest.fixture
 def modelJ0613():
     return model.get_model("J0613-0200_NANOGrav_9yv1_ELL1H.gls.par")
 
@@ -78,8 +76,7 @@ def modelJ0613_STIG():
 @pytest.fixture()
 def tempo2_res():
     parfileJ1853 = "J1853+1303_NANOGrav_11yv0.gls.par"
-    return np.genfromtxt(parfileJ1853 + ".tempo2_test", skip_header=1,
-                         unpack=True)
+    return np.genfromtxt(parfileJ1853 + ".tempo2_test", skip_header=1, unpack=True)
 
 
 def test_J1853(toasJ1853, modelJ1853, tempo2_res):
@@ -100,7 +97,7 @@ def test_J1853_binary_delay(toasJ1853, modelJ1853, tempo2_res):
     pint_binary_delay = modelJ1853.binarymodel_delay(toasJ1853, None)
     assert np.all(
         np.abs(pint_binary_delay.value + tempo2_res[1]) < 3e-8
-        ), "J1853 binary delay test failed."
+    ), "J1853 binary delay test failed."
 
 
 # TODO need a better derivative test
@@ -151,9 +148,10 @@ def test_J0613_H4(toasJ0613, modelJ0613):
         diff = np.abs(p.value - op.value)
         sigma = diff / op.uncertainty_value
         # Fit th
-        assert (
-            sigma < 0.7
-        ), "refit %s is %lf sigma different from original value" % (pn, sigma)
+        assert sigma < 0.7, "refit %s is %lf sigma different from original value" % (
+            pn,
+            sigma,
+        )
 
 
 def test_J0613_STIG(toasJ0613, modelJ0613_STIG):
@@ -166,9 +164,10 @@ def test_J0613_STIG(toasJ0613, modelJ0613_STIG):
         diff = np.abs(p.value - op.value)
         sigma = diff / op.uncertainty_value
         # Fit th
-        assert (
-            sigma < 0.7
-        ), "refit %s is %lf sigma different from original value" % (pn, sigma)
+        assert sigma < 0.7, "refit %s is %lf sigma different from original value" % (
+            pn,
+            sigma,
+        )
 
 
 def test_no_H3_H4(toasJ0613, simple_par_str):
@@ -182,7 +181,7 @@ def test_no_H3_H4(toasJ0613, simple_par_str):
     assert no_H3_H4_model.H4.value == None
     test_toas = toasJ0613[::20]
     f = ff.WLSFitter(test_toas, no_H3_H4_model)
-    f.fit_toas()"H3 2.7507208E-7  1       1.5114416E-7", "H3 0  1  0"
+    f.fit_toas()
 
 
 def test_H3_H4_pairs(toasJ0613, simple_par_str):
@@ -223,9 +222,7 @@ def zero_H3_H4_fit_H3_H4(toasJ0613, simple_par_str):
     H4_zero = simple_par_str.replace(
         "H4 2.0262048E-7  1       1.1276173E-7", "H4 0  1  0"
     )
-    H3H4_zero = H4_zero.replace(
-        "H3 2.7507208E-7  1       1.5114416E-7", "H3 0  1  0"
-    )
+    H3H4_zero = H4_zero.replace("H3 2.7507208E-7  1       1.5114416E-7", "H3 0  1  0")
     H3H4_zero_model = model.get_model(StringIO(H3H4_zero))
     assert H3H4_zero_model.H3.value == 0.0
     assert "H3" in H3H4_zero_model.free_params
@@ -237,11 +234,13 @@ def zero_H3_H4_fit_H3_H4(toasJ0613, simple_par_str):
         f.fit_toas()
 
 
-def zero_H3_H4_fit_H3_H4(toasJ0613, simple_par_str):
-    H3H4_zero2 =simple_par_str.replace("H4 2.0262048E-7  1       1.1276173E-7",
-                                       "H4 0  0  0")
-    H3H4_zero2 = H3H4_zero2.replace("H3 2.7507208E-7  1       1.5114416E-7",
-                                    "H3 0  1  0")
+def zero_H3_H4_fit_H3(toasJ0613, simple_par_str):
+    H3H4_zero2 = simple_par_str.replace(
+        "H4 2.0262048E-7  1       1.1276173E-7", "H4 0  0  0"
+    )
+    H3H4_zero2 = H3H4_zero2.replace(
+        "H3 2.7507208E-7  1       1.5114416E-7", "H3 0  1  0"
+    )
     H3H4_zero2_model = model.get_model(StringIO(H3H4_zero2))
     assert H3H4_zero2_model.H3.value == 0.0
     assert "H3" in H3H4_zero2_model.free_params
