@@ -161,19 +161,20 @@ def test_null_vector(Fitter):
 
 
 @pytest.mark.parametrize("Fitter", [pint.fitter.WLSFitter, pint.fitter.GLSFitter])
-def test_update_model(Fitter):
+def test_update_model_sets_things(Fitter):
     model = get_model(io.StringIO("\n".join([par_base, "JUMP TEL barycenter 0"])))
     model.INFO.value = "-f"
     model.ECL.value = "IERS2010"
-    model.TIMEEPH.value = "FB90"
-    model.T2CMETHOD.value = "IERS2000B"
+    model.TIMEEPH.value = "IF99"
+    model.DILATEFREQ.value = True
+    model.T2CMETHOD.value = "TEMPO"
     toas = make_fake_toas(58000, 59000, 10, model, obs="barycenter", freq=np.inf)
     fitter = Fitter(toas, model)
     fitter.fit_toas()
     par_out = fitter.model.as_parfile()
     assert re.search(r"CLOCK *TT\(TAI\)", par_out)
     assert re.search(r"TIMEEPH *FB90", par_out)
-    assert re.search(r"T2CMETHOD *IERS2000B", par_out)
+    assert re.search(r"T2CMETHOD *IAU2000B", par_out)
     assert re.search(r"NE_SW *0.0", par_out)
     assert re.search(r"ECL *IERS2010", par_out)
     assert re.search(r"DILATEFREQ *N", par_out)

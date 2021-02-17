@@ -295,10 +295,13 @@ class TimingModel:
         """
         if self.DILATEFREQ.value:
             warn("PINT does not support 'DILATEFREQ Y'")
+            self.DILATEFREQ.value = False
         if self.TIMEEPH.value not in [None, "FB90"]:
             warn("PINT only supports 'TIMEEPH FB90'")
+            self.TIMEEPH.value = "FB90"
         if self.T2CMETHOD.value not in [None, "IAU2000B"]:  # FIXME: really?
             warn("PINT only supports 'T2CMETHOD IAU2000B'")
+            self.T2CMETHOD.value = "IAU2000B"
         if self.UNITS.value not in [None, "TDB"]:
             raise ValueError("PINT only supports 'UNITS TDB'")
         for cp in self.components.values():
