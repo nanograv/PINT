@@ -1481,7 +1481,7 @@ class TOAs:
         else:
             return self.table["groups"]
 
-    def get_highest_density_range(self, ndays=7):
+    def get_highest_density_range(self, ndays=7*u.d):
         """Print the range of mjds (default 7 days) with the most toas"""
         sorted_mjds = np.sort(self.get_mjds())
         s = np.searchsorted(sorted_mjds, sorted_mjds + ndays)
