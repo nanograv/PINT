@@ -2,6 +2,7 @@
 import logging
 import os
 import unittest
+import pytest
 
 import astropy.units as u
 import numpy as np
@@ -12,6 +13,55 @@ from pint.residuals import Residuals
 from pinttestdata import datadir
 from pint.models import parameter as p
 from pint.models import PhaseJump
+
+
+class SimpleSetup:
+    def __init__(self, par, tim):
+        self.par = par
+        self.tim = tim
+        self.m = mb.get_model(self.par)
+        self.t = toa.get_TOAs(
+            self.tim, ephem="DE405", planets=False, include_bipm=False
+        )
+
+
+@pytest.fixture
+def setup_NGC6440E():
+    os.chdir(datadir)
+    return SimpleSetup("NGC6440E.par", "NGC6440E.tim")
+
+
+def test_jump_params_to_flags(setup_NGC6440E):
+    """ Check jump_params_to_flags function. """
+    setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
+    cp = setup_NGC6440E.m.components["PhaseJump"]
+
+    par = p.maskParameter(
+        name="JUMP", key="freq", value=0.2, key_value=[1440, 1700], units=u.s
+    )  # TOAs indexed 48, 49, 54 in NGC6440E are within this frequency range
+    cp.add_param(par, setup=True)
+
+    # sanity check - ensure no jump flags from initialization
+    for i in range(setup_NGC6440E.t.ntoas):
+        assert "jump" not in setup_NGC6440E.t.table["flags"][i]
+
+    # add flags based off jumps added to model
+    setup_NGC6440E.m.jump_params_to_flags(setup_NGC6440E.t)
+
+    # index to affected TOAs and ensure appropriate flags set
+    toa_indeces = [48, 49, 54]
+    for i in toa_indeces:
+        assert "jump" in setup_NGC6440E.t.table["flags"][i]
+        assert setup_NGC6440E.t.table["flags"][i]["jump"] == 1
+    # ensure no extraneous flags added to unaffected TOAs
+    for i in range(setup_NGC6440E.t.ntoas):
+        if i not in toa_indeces:
+            assert "jump" not in setup_NGC6440E.t.table["flags"][i]
+
+    # check case where multiple calls are performed (no-ops)
+    old_table = setup_NGC6440E.t.table
+    setup_NGC6440E.m.jump_params_to_flags(setup_NGC6440E.t)
+    assert all(old_table) == all(setup_NGC6440E.t.table)
 
 
 class TestJUMP(unittest.TestCase):
@@ -27,12 +77,6 @@ class TestJUMP(unittest.TestCase):
         # libstempo calculation
         cls.ltres = np.genfromtxt(
             cls.parf + ".tempo_test", unpack=True, names=True, dtype=np.longdouble
-        )
-        cls.par_nojump = "NGC6440E.par"
-        cls.tim_nojump = "NGC6440E.tim"
-        cls.noJUMPm = mb.get_model(cls.par_nojump)
-        cls.toas_nojump = toa.get_TOAs(
-            cls.tim_nojump, ephem="DE405", planets=False, include_bipm=False
         )
 
     def test_jump(self):
@@ -59,38 +103,6 @@ class TestJUMP(unittest.TestCase):
                 % (p, np.nanmax(relative_diff).value)
             )
             assert np.nanmax(relative_diff) < 0.001, msg
-
-    def test_jump_params_to_flags(self):
-        """ Check jump_params_to_flags function. """
-        self.noJUMPm.add_component(PhaseJump(), validate=False)
-        cp = self.noJUMPm.components["PhaseJump"]
-
-        par = p.maskParameter(
-            name="JUMP", key="freq", value=0.2, key_value=[1440, 1700], units=u.s
-        )  # TOAs indexed 48, 49, 54 in NGC6440E are within this frequency range
-        cp.add_param(par, setup=True)
-
-        # sanity check - ensure no jump flags from initialization
-        for i in range(self.toas_nojump.ntoas):
-            assert "jump" not in self.toas_nojump.table["flags"][i]
-
-        # add flags based off jumps added to model
-        self.noJUMPm.jump_params_to_flags(self.toas_nojump)
-
-        # index to affected TOAs and ensure appropriate flags set
-        toa_indeces = [48, 49, 54]
-        for i in toa_indeces:
-            assert "jump" in self.toas_nojump.table["flags"][i]
-            assert self.toas_nojump.table["flags"][i]["jump"] == 1
-        # ensure no extraneous flags added to unaffected TOAs
-        for i in range(self.toas_nojump.ntoas):
-            if i not in toa_indeces:
-                assert "jump" not in self.toas_nojump.table["flags"][i]
-
-        # check case where multiple calls are performed (no-ops)
-        old_table = self.toas_nojump.table
-        self.noJUMPm.jump_params_to_flags(self.toas_nojump)
-        assert all(old_table) == all(self.toas_nojump.table)
 
 
 if __name__ == "__main__":
