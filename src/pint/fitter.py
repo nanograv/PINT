@@ -182,17 +182,16 @@ class Fitter:
         self.model_init = model
         self.track_mode = track_mode
         if residuals is None:
-            self.resids_init = Residuals(
-                toas=toas, model=model, track_mode=self.track_mode
-            )
-            self.reset_model()
+            self.resids_init = self.make_resids(self.model_init)
         else:
             # residuals were provided, we're just going to use them
+            self.resids_init = residuals
             # probably using GLSFitter to compute a chi-squared
-            self.model = copy.deepcopy(self.model_init)
-            self.resids = residuals
-            self.fitresult = []
+        self.model = copy.deepcopy(self.model_init)
+        self.resids = copy.deepcopy(self.resids_init)
+        self.fitresult = []
         self.method = None
+        self.is_wideband = False
 
     def fit_toas(self, maxiter=None):
         """Run fitting operation.
@@ -222,10 +221,7 @@ class Fitter:
         from uncertainties import ufloat
 
         # Check if Wideband or not
-        if self.resids.__class__.__name__ == "WidebandTOAResiduals":
-            is_wideband = True
-        else:
-            is_wideband = False
+        is_wideband = self.is_wideband
 
         # First, print fit quality metrics
         s = f"Fitted model using {self.method} method with {len(self.model.free_params)} free parameters to {self.toas.ntoas} TOAs\n"
@@ -546,9 +542,10 @@ class Fitter:
 
         Run after updating a model parameter.
         """
-        self.resids = Residuals(
-            toas=self.toas, model=self.model, track_mode=self.track_mode
-        )
+        self.resids = self.make_resids(self.model)
+
+    def make_resids(self, model):
+        return Residuals(toas=self.toas, model=model, track_mode=self.track_mode)
 
     def get_designmatrix(self):
         """Return the model's design matrix for these TOAs."""
@@ -684,10 +681,7 @@ class Fitter:
                 pc/cm^3 as an astropy quantity.
         """
         # Check if Wideband or not
-        if "Wideband" in self.__class__.__name__:
-            NB = False
-        else:
-            NB = True
+        NB = not self.is_wideband
         # Copy the fitter that we do not change the initial model and fitter
         fitter_copy = copy.deepcopy(self)
         # We need the original degrees of freedome and chi-squared value
@@ -926,11 +920,7 @@ class ModelState:
     @cached_property
     def resids(self):
         try:
-            return Residuals(
-                toas=self.fitter.toas,
-                model=self.model,
-                track_mode=self.fitter.track_mode,
-            )
+            return self.fitter.make_resids(self.model)
         except ValueError as e:
             raise InvalidModelParameters("Step landed at invalid point") from e
 
@@ -979,9 +969,6 @@ class DownhillFitter(Fitter):
         )
         self.method = "downhill_checked"
 
-    def create_toas(self):
-        raise NotImplementedError
-
     def fit_toas(
         self,
         maxiter=1,
@@ -993,8 +980,10 @@ class DownhillFitter(Fitter):
         self.model.validate()
         self.model.validate_toas(self.toas)
         current_state = self.create_state()
+        best_state = current_state
         self.converged = False
         # algorithm
+        exception = None
         for i in range(maxiter):
             step = current_state.step
             lambda_ = 1
@@ -1002,6 +991,8 @@ class DownhillFitter(Fitter):
                 try:
                     new_state = current_state.take_step(step, lambda_)
                     chi2_decrease = current_state.chi2 - new_state.chi2
+                    if new_state.chi2 < best_state.chi2:
+                        best_state = new_state
                     if chi2_decrease < -max_chi2_increase:
                         raise InvalidModelParameters(
                             f"chi2 increased from {current_state.chi2} to {new_state.chi2} "
@@ -1013,6 +1004,7 @@ class DownhillFitter(Fitter):
                             f"from {current_state.chi2} "
                             f"to {new_state.chi2}"
                         )
+                        exception = None
                         current_state = new_state
                         break
                 except InvalidModelParameters as e:
@@ -1022,24 +1014,32 @@ class DownhillFitter(Fitter):
                     lambda_ /= 2
                     log.debug(f"Shortening step to {lambda_}: {e}")
                     if lambda_ < min_lambda:
-                        raise ValueError(
-                            "Unable to improve chi2 even with very small steps"
-                        ) from e
+                        # FIXME: if best_state was an improvement, keep it anyway
+                        # This is tricky because we need to do all the finalization stuff,
+                        # but only if we've got anywhere, then re-raise the exception.
+                        log.warning(
+                            f"Unable to improve chi2 even with very small steps, stopping "
+                            f"but keeping best state, message was: {e}"
+                        )
+                        exception = e
+                        break
             if 0 <= chi2_decrease < required_chi2_decrease:
                 log.debug(
                     f"chi2 does not improve, stopping; " f"decrease: {chi2_decrease}"
                 )
                 self.converged = True
                 break
+            if exception is not None:
+                break
         else:
-            log.debug(
+            log.info(
                 f"Stopping because maxmum number of iterations ({maxiter}) reached"
             )
-        self.current_state = current_state
+        self.current_state = best_state
         # collect results
-        self.model = current_state.model
-        self.resids = current_state.resids
-        self.covariance_matrix = current_state.covariance_matrix
+        self.model = self.current_state.model
+        self.resids = self.current_state.resids
+        self.covariance_matrix = self.current_state.covariance_matrix
         self.errors = np.sqrt(np.diag(self.covariance_matrix))
         for p, e in zip(self.current_state.params, self.errors):
             try:
@@ -1051,7 +1051,11 @@ class DownhillFitter(Fitter):
             else:
                 pm.uncertainty = e * pm.units
         self.correlation_matrix = (self.covariance_matrix / self.errors).T / self.errors
-        self.update_model(current_state.chi2)
+        self.update_model(self.current_state.chi2)
+        if exception is not None:
+            raise ValueError(
+                "Unable to improve chi2 even with very small steps"
+            ) from exception
         return self.converged
 
 
@@ -1336,18 +1340,6 @@ class WidebandState(ModelState):
         self.add_args = {}  # for adding arguments to residual creation
 
     @cached_property
-    def resids(self):
-        try:
-            return WidebandTOAResiduals(
-                self.fitter.toas,
-                self.model,
-                toa_resid_args=self.add_args.get("toa", {}),
-                dm_resid_args=self.add_args.get("dm", {}),
-            )
-        except ValueError as e:
-            raise InvalidModelParameters("Step landed at invalid point") from e
-
-    @cached_property
     def step(self):
         # Define the linear system
         d_matrix = combine_design_matrices_by_quantity(
@@ -1488,20 +1480,30 @@ class WidebandDownhillFitter(DownhillFitter):
 
     # FIXME: do something clever to efficiently compute chi-squared
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
-        super().__init__(
-            toas=toas, model=model, residuals=residuals, track_mode=track_mode
-        )
+    def __init__(self, toas, model, track_mode=None, residuals=None, add_args=None):
         self.method = "downhill_wideband"
         self.full_cov = False
         self.threshold = 0
+        self.add_args = {} if add_args is None else add_args
+        super().__init__(
+            toas=toas, model=model, residuals=residuals, track_mode=track_mode
+        )
+        self.is_wideband = True
+
+    def make_resids(self, model):
+        return WidebandTOAResiduals(
+            self.toas,
+            model,
+            toa_resid_args=self.add_args.get("toa", {}),
+            dm_resid_args=self.add_args.get("dm", {}),
+        )
 
     def create_state(self):
         return WidebandState(
             self, self.model, full_cov=self.full_cov, threshold=self.threshold
         )
 
-    def fit_toas(self, maxiter=10, threshold=0, full_cov=False):
+    def fit_toas(self, maxiter=10, threshold=1e-14, full_cov=False):
         self.threshold = threshold
         self.full_cov = full_cov
         # FIXME: set up noise residuals et cetera
@@ -1956,17 +1958,18 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 CovarianceMatrixMaker(data_resids.residual_type, data_resids.unit)
             )
 
+        self.is_wideband = True
         self.method = "General_Data_Fitter"
 
     @property
     def toas(self):
         return self.fit_data[0]
 
-    def make_combined_residuals(self, add_args={}):
+    def make_combined_residuals(self, add_args={}, model=None):
         """Make the combined residuals between TOA residual and DM residual."""
         return WidebandTOAResiduals(
             self.toas,
-            self.model,
+            self.model if model is None else model,
             toa_resid_args=add_args.get("toa", {}),
             dm_resid_args=add_args.get("dm", {}),
         )
@@ -1977,9 +1980,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         self.update_resids()
         self.fitresult = []
 
-    def update_resids(self):
+    def make_resids(self, model):
         """Update the residuals. Run after updating a model parameter."""
-        self.resids = self.make_combined_residuals(self.additional_args)
+        return self.make_combined_residuals(add_args=self.additional_args, model=model)
 
     def get_designmatrix(self):
         design_matrixs = []

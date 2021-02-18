@@ -88,6 +88,8 @@ class SolarWindDispersion(Dispersion):
 
     def solar_wind_delay(self, toas, acc_delay=None):
         """This is a wrapper function to compute solar wind dispersion delay."""
+        if self.NE_SW.value == 0:
+            return np.zeros(len(toas)) * u.s
         return self.dispersion_type_delay(toas)
 
     def d_dm_d_ne_sw(self, toas, param_name, acc_delay=None):
