@@ -41,21 +41,14 @@ simple_par = """
       """
 
 
-@pytest.fixture
-def simple_par_str():
-    return simple_par
-
-
-@pytest.fixture
+@pytest.fixture(scope="module")
 def toasJ0613():
-    toas = toa.get_TOAs("J0613-0200_NANOGrav_9yv1.tim", ephem="DE421", planets=False)
-    return toas
+    return toa.get_TOAs("J0613-0200_NANOGrav_9yv1.tim", ephem="DE421", planets=False)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def toasJ1853():
-    toas = toa.get_TOAs("J1853+1303_NANOGrav_11yv0.tim", ephem="DE421", planets=False)
-    return toas
+    return toa.get_TOAs("J1853+1303_NANOGrav_11yv0.tim", ephem="DE421", planets=False)
 
 
 @pytest.fixture
@@ -170,7 +163,7 @@ def test_J0613_STIG(toasJ0613, modelJ0613_STIG):
         )
 
 
-def test_no_H3_H4(toasJ0613, simple_par_str):
+def test_no_H3_H4(toasJ0613):
     """ Test no H3 and H4 in model.
     """
     no_H3_H4 = simple_par.replace("H4 2.0262048E-7  1       1.1276173E-7", "")
@@ -184,21 +177,19 @@ def test_no_H3_H4(toasJ0613, simple_par_str):
     f.fit_toas()
 
 
-def test_H3_H4_pairs(toasJ0613, simple_par_str):
+def test_H3_H4_pairs(toasJ0613):
     """ Testing if the different H3, H4 combination breaks the fitting. the
         fitting result will not be checked here.
     """
-    simple_model = model.get_model(StringIO(simple_par_str))
+    simple_model = model.get_model(StringIO(simple_par))
 
     test_toas = toasJ0613[::20]
     f = ff.WLSFitter(test_toas, simple_model)
     f.fit_toas()
 
 
-def zero_H4(toasJ0613, simple_par_str):
-    H4_zero = simple_par_str.replace(
-        "H4 2.0262048E-7  1       1.1276173E-7", "H4 0  1  0"
-    )
+def zero_H4(toasJ0613):
+    H4_zero = simple_par.replace("H4 2.0262048E-7  1       1.1276173E-7", "H4 0  1  0")
     H4_zero_model = model.get_model(StringIO(H4_zero))
     assert H4_zero_model.H4.value == 0.0
     assert H4_zero_model.H3.value != 0.0
@@ -206,22 +197,17 @@ def zero_H4(toasJ0613, simple_par_str):
     f.fit_toas()
 
 
-def zero_H3(toasJ0613, simple_par_str):
-    H3_zero = simple_par_str.replace(
-        "H3 2.7507208E-7  1       1.5114416E-7", "H3 0  1  0"
-    )
+def zero_H3(toasJ0613):
+    H3_zero = simple_par.replace("H3 2.7507208E-7  1       1.5114416E-7", "H3 0  1  0")
     H3_zero_model = model.get_model(StringIO(H3_zero))
     assert H3_zero_model.H3.value == 0.0
     assert H3_zero_model.H4.value != 0.0
     f = ff.WLSFitter(test_toas, H3_zero_model)
-    with pytest.raises(ValueError):
-        f.fit_toas()
+    f.fit_toas()
 
 
-def zero_H3_H4_fit_H3_H4(toasJ0613, simple_par_str):
-    H4_zero = simple_par_str.replace(
-        "H4 2.0262048E-7  1       1.1276173E-7", "H4 0  1  0"
-    )
+def zero_H3_H4_fit_H3_H4(toasJ0613):
+    H4_zero = simple_par.replace("H4 2.0262048E-7  1       1.1276173E-7", "H4 0  1  0")
     H3H4_zero = H4_zero.replace("H3 2.7507208E-7  1       1.5114416E-7", "H3 0  1  0")
     H3H4_zero_model = model.get_model(StringIO(H3H4_zero))
     assert H3H4_zero_model.H3.value == 0.0
@@ -229,13 +215,11 @@ def zero_H3_H4_fit_H3_H4(toasJ0613, simple_par_str):
     assert H3H4_zero_model.H4.value == 0.0
     assert "H4" in H3H4_zero_model.free_params
     f = ff.WLSFitter(test_toas, H3H4_zero_model)
-    # Fitting H4 with H3 == 0, will give a ValueError
-    with pytest.raises(ValueError):
-        f.fit_toas()
+    f.fit_toas()
 
 
-def zero_H3_H4_fit_H3(toasJ0613, simple_par_str):
-    H3H4_zero2 = simple_par_str.replace(
+def zero_H3_H4_fit_H3(toasJ0613):
+    H3H4_zero2 = simple_par.replace(
         "H4 2.0262048E-7  1       1.1276173E-7", "H4 0  0  0"
     )
     H3H4_zero2 = H3H4_zero2.replace(

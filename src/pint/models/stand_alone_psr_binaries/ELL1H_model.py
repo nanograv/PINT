@@ -171,7 +171,7 @@ class ELL1Hmodel(ELL1BaseModel):
 
     def d_STIGMA_d_H4(self):
         if self.H3 == 0.0:
-            raise ValueError("To fit for H4, H3 should be significant(not 0.0).")
+            return 0.0
         return 1.0 / self.H3
 
     def d_STIGMA_d_H3(self):
