@@ -6,6 +6,7 @@ import numpy
 
 from pint.models.parameter import maskParameter
 from pint.models.timing_model import DelayComponent, MissingParameter, PhaseComponent
+from astropy import log
 
 
 class DelayJump(DelayComponent):
@@ -153,5 +154,30 @@ class PhaseJump(PhaseComponent):
             # find TOAs jump applies to
             mask = jump_par.select_toa_mask(toas)
             # apply to dictionaries
-            for dict in toas.table["flags"][mask]:
-                dict["jump"] = jump_par.index
+            self.add_jump_flags(jump_par, toas.table["flags"][mask], in_gui=False)
+
+    def add_jump_flags(self, jump, selected_toas_table, in_gui):
+        """Add flags to inputted TOA table."""
+        if in_gui:
+            # search for TOAs already jumped - pintk does not allow jumps added through GUI to overlap with existing jumps
+            for dict in selected_toas_table:
+                if "jump" in dict.keys():
+                    log.warning(
+                        "The selected toa(s) overlap an existing jump. Remove all interfering jumps before attempting to jump these toas."
+                    )
+                    return
+            for dict in selected_toas_table:
+                dict["jump"] = [jump.index]
+                dict["gui_jump"] = [jump.index]
+        else:
+            for dict in selected_toas_table:
+                if "jump" in dict.keys():
+                    # check if jump flag already added - don't add flag twice
+                    if jump.index in dict["jump"]:
+                        continue
+                    dict["jump"].append(jump.index)  # otherwise, add jump flag
+                else:
+                    dict["jump"] = [jump.index]
+
+    # def remove_jump_flags(self, toas):
+    #    """Remove flags to designated TOAs in TOA table."""

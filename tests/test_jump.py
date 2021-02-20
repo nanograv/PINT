@@ -31,6 +31,69 @@ def setup_NGC6440E():
     return SimpleSetup("NGC6440E.par", "NGC6440E.tim")
 
 
+def test_add_jump_flags(setup_NGC6440E):
+    setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
+    cp = setup_NGC6440E.m.components["PhaseJump"]
+
+    par = p.maskParameter(
+        name="JUMP", key="freq", value=0.2, key_value=[1440, 1700], units=u.s
+    )
+    cp.add_param(par, setup=True)
+
+    # sanity check - ensure no jump flags from initialization
+    for i in range(setup_NGC6440E.t.ntoas):
+        assert "jump" not in setup_NGC6440E.t.table["flags"][i]
+
+    selected = [48, 49, 54]
+    setup_NGC6440E.m.add_jump_flags(
+        par, setup_NGC6440E.t.table["flags"][selected], in_gui=False
+    )
+    for dict in setup_NGC6440E.t.table["flags"][selected]:
+        assert "jump" in dict
+        assert dict["jump"] == [1]
+
+    # ensure subsequent calls with same jump & TOAs don't add additional flags
+    selected.append(50)  # to ensure TOAs w/o jump flags still get flag
+    setup_NGC6440E.m.add_jump_flags(
+        par, setup_NGC6440E.t.table["flags"][selected], in_gui=False
+    )
+    for dict in setup_NGC6440E.t.table["flags"][selected]:
+        assert dict["jump"] == [1]
+
+    # ensure jumps can't overlap when in_gui true
+    par2 = p.maskParameter(
+        name="JUMP", key="freq", value=0.2, key_value=[1710, 1800], units=u.s
+    )
+    cp.add_param(par2, setup=True)
+    # complete overlap
+    setup_NGC6440E.m.add_jump_flags(
+        par2, setup_NGC6440E.t.table["flags"][selected], in_gui=True
+    )
+    for dict in setup_NGC6440E.t.table["flags"][selected]:
+        assert dict["jump"] == [1]
+
+    selected2 = [46, 47, 48, 49]  # partial overlap
+    setup_NGC6440E.m.add_jump_flags(
+        par2, setup_NGC6440E.t.table["flags"][selected2], in_gui=True
+    )
+    for dict in setup_NGC6440E.t.table["flags"][selected]:
+        assert dict["jump"] == [1]
+    for dict in setup_NGC6440E.t.table["flags"][[46, 47]]:
+        assert "jump" not in dict.keys()
+
+    # allow overlaps when in_gui false
+    setup_NGC6440E.m.add_jump_flags(
+        par2, setup_NGC6440E.t.table["flags"][selected2], in_gui=False
+    )
+    intersect = np.intersect1d(selected, selected2)
+    for dict in setup_NGC6440E.t.table["flags"][[46, 47]]:
+        assert dict["jump"] == [2]
+    for dict in setup_NGC6440E.t.table["flags"][[48, 49]]:
+        assert dict["jump"] == [1, 2]
+    for dict in setup_NGC6440E.t.table["flags"][[50, 54]]:
+        assert dict["jump"] == [1]
+
+
 def test_jump_params_to_flags(setup_NGC6440E):
     """ Check jump_params_to_flags function. """
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
@@ -52,7 +115,7 @@ def test_jump_params_to_flags(setup_NGC6440E):
     toa_indeces = [48, 49, 54]
     for i in toa_indeces:
         assert "jump" in setup_NGC6440E.t.table["flags"][i]
-        assert setup_NGC6440E.t.table["flags"][i]["jump"] == 1
+        assert setup_NGC6440E.t.table["flags"][i]["jump"][0] == 1
     # ensure no extraneous flags added to unaffected TOAs
     for i in range(setup_NGC6440E.t.ntoas):
         if i not in toa_indeces:
