@@ -140,6 +140,21 @@ def test_wideband_full_procedure(model_eccentric_toas_wb, full_cov):
     assert abs(f.model.ECC.value - model_eccentric.ECC.value) < 1e-4
 
 
+@pytest.mark.parametrize("full_cov", [False, True])
+def test_wideband_lm_full_procedure(model_eccentric_toas_wb, full_cov):
+    model_eccentric, toas = model_eccentric_toas_wb
+    model_wrong = deepcopy(model_eccentric)
+    model_wrong.ECC.value = 0.5
+
+    f = pint.fitter.WidebandLMFitter(toas, model_wrong)
+    f.model.free_params = ["ECC"]
+
+    f.fit_toas(full_cov=full_cov)
+
+    assert f.converged
+    assert abs(f.model.ECC.value - model_eccentric.ECC.value) < 1e-4
+
+
 def test_wls_two_step(model_eccentric_toas):
     model_eccentric, toas = model_eccentric_toas
     model_wrong = deepcopy(model_eccentric)
@@ -237,3 +252,21 @@ def test_degenerate_parameters_gls(model_eccentric_toas_ecorr, full_cov):
     # For some reason this doesn't work - the values get changed in spite of the SVD
     # for the reduced-rank version it has something to do with
     # assert f.model.ELAT.value == f.model.ELONG.value == 0
+
+
+def test_same_step_bogus(model_eccentric_toas_wb):
+    model_eccentric, toas = model_eccentric_toas_wb
+    model_wrong = deepcopy(model_eccentric)
+    model_wrong.ECC.value = 0.5
+    model_wrong.free_params = ["F0", "ECC"]
+
+    f = pint.fitter.WidebandLMFitter(toas, model_wrong)
+    state = f.create_state()
+    new_state = state.take_step(state.step)
+    f2 = pint.fitter.WidebandTOAFitter(toas, model_wrong)
+    f2.fit_toas(maxiter=1)
+    assert abs(f2.model.ECC.value - new_state.model.ECC.value) < 1e-4
+
+
+def test_same_step_real():
+    pass

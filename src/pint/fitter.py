@@ -59,7 +59,7 @@ from warnings import warn
 
 import astropy.units as u
 import numpy as np
-import scipy.linalg as sl
+import scipy.linalg
 import scipy.optimize as opt
 from astropy import log
 
@@ -927,7 +927,10 @@ class ModelState:
     @cached_property
     def chi2(self):
         # there may be some shareable computation here
-        return self.resids.chi2
+        try:
+            return self.resids.chi2
+        except ValueError as e:
+            raise InvalidModelParameters("Cannot compute chi2") from e
 
     @cached_property
     def step(self):
@@ -943,7 +946,7 @@ class ModelState:
 
     def take_step_model(self, step, lambda_=1):
         """Make a new model reflecting the new parameters."""
-        log.debug(f"Taking step {lambda_} * {list(zip(self.params, step))}")
+        # log.debug(f"Taking step {lambda_} * {list(zip(self.params, step))}")
         new_model = copy.deepcopy(self.model)
         for p, s in zip(self.params, step * lambda_):
             try:
@@ -999,7 +1002,8 @@ class DownhillFitter(Fitter):
                             f"when trying to take a step with lambda {lambda_}"
                         )
                     else:
-                        log.debug(
+                        log.info(
+                            f"Iteration {i}: "
                             f"Updating state, chi2 goes down by {chi2_decrease} "
                             f"from {current_state.chi2} "
                             f"to {new_state.chi2}"
@@ -1012,7 +1016,7 @@ class DownhillFitter(Fitter):
                     # If bad parameter values escape, look in ModelState.resids for the except
                     # that should catch them
                     lambda_ /= 2
-                    log.debug(f"Shortening step to {lambda_}: {e}")
+                    log.info(f"Iteration {i}: Shortening step to {lambda_}: {e}")
                     if lambda_ < min_lambda:
                         # FIXME: if best_state was an improvement, keep it anyway
                         # This is tricky because we need to do all the finalization stuff,
@@ -1024,8 +1028,9 @@ class DownhillFitter(Fitter):
                         exception = e
                         break
             if 0 <= chi2_decrease < required_chi2_decrease:
-                log.debug(
-                    f"chi2 does not improve, stopping; " f"decrease: {chi2_decrease}"
+                log.info(
+                    f"Iteration {i}: chi2 does not improve, stopping; "
+                    f"decrease: {chi2_decrease}"
                 )
                 self.converged = True
                 break
@@ -1094,7 +1099,7 @@ class WLSState(ModelState):
         #   M, U are Ntoa x Nparam
         #   s is Nparam x Nparam diagonal matrix encoded as 1-D vector
         #   V^T is Nparam x Nparam
-        U, s, Vt = sl.svd(M, full_matrices=False)
+        U, s, Vt = scipy.linalg.svd(M, full_matrices=False)
         # Note, here we could do various checks like report
         # matrix condition number or zero out low singular values.
         # print 'log_10 cond=', np.log10(s.max()/s.min())
@@ -1222,8 +1227,8 @@ class GLSState(ModelState):
         # compute covariance matrices
         if self.full_cov:
             cov = self.model.toa_covariance_matrix(self.fitter.toas)
-            cf = sl.cho_factor(cov)
-            cm = sl.cho_solve(cf, M)
+            cf = scipy.linalg.cho_factor(cov)
+            cm = scipy.linalg.cho_solve(cf, M)
             mtcm = np.dot(M.T, cm)
             mtcy = np.dot(cm.T, residuals)
 
@@ -1236,7 +1241,7 @@ class GLSState(ModelState):
             mtcm += np.diag(phiinv)
             mtcy = np.dot(M.T, cinv * residuals)
 
-        U, s, Vt = sl.svd(mtcm, full_matrices=False)
+        U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
 
         bad = np.where(s <= self.threshold * s[0])[0]
         s[bad] = np.inf
@@ -1340,11 +1345,11 @@ class WidebandState(ModelState):
         self.add_args = {}  # for adding arguments to residual creation
 
     @cached_property
-    def step(self):
+    def M_params_units_norm(self):
         # Define the linear system
         d_matrix = combine_design_matrices_by_quantity(
             [
-                DesignMatrixMaker("toa", u.us)(
+                DesignMatrixMaker("toa", u.s)(
                     self.fitter.toas, self.model, self.model.free_params, offset=True
                 ),
                 DesignMatrixMaker("dm", u.pc / u.cm ** 3)(
@@ -1357,12 +1362,6 @@ class WidebandState(ModelState):
             d_matrix.derivative_params,
             d_matrix.param_units,
         )
-        self.params = params
-        self.units = units
-
-        # FIXME: ensure that TOAs are before DM
-        residuals = self.resids._combined_resids
-
         # get any noise design matrices and weight vectors
         if not self.full_cov:
             # We assume the fit date type is toa
@@ -1377,6 +1376,7 @@ class WidebandState(ModelState):
                     new_d_matrix.derivative_params,
                     new_d_matrix.param_units,
                 )
+            self.phiinv = phiinv
 
         # normalize the design matrix
         norm = np.sqrt(np.sum(M ** 2, axis=0))
@@ -1391,31 +1391,55 @@ class WidebandState(ModelState):
             )
         norm[norm == 0] = 1
         M /= norm
-        self.M = M
+
+        return M, params, units, norm
+
+    @cached_property
+    def M(self):
+        return self.M_params_units_norm[0]
+
+    @cached_property
+    def params(self):
+        return self.M_params_units_norm[1]
+
+    @cached_property
+    def units(self):
+        return self.M_params_units_norm[2]
+
+    @cached_property
+    def norm(self):
+        return self.M_params_units_norm[3]
+
+    @cached_property
+    def mtcm_mtcy(self):
+        # FIXME: ensure that TOAs are before DM
+        residuals = np.hstack(
+            (self.resids.toa.time_resids.to_value(u.s), self.resids.dm.resids_value)
+        )
 
         # compute covariance matrices
         if self.full_cov:
             cov = combine_covariance_matrix(
                 [
-                    CovarianceMatrixMaker("toa", u.us)(self.fitter.toas, self.model),
+                    CovarianceMatrixMaker("toa", u.s)(self.fitter.toas, self.model),
                     CovarianceMatrixMaker("dm", u.pc / u.cm ** 3)(
                         self.fitter.toas, self.model
                     ),
                 ]
             ).matrix
-            cf = sl.cho_factor(cov)
-            cm = sl.cho_solve(cf, M)
-            mtcm = np.dot(M.T, cm)
+            cf = scipy.linalg.cho_factor(cov)
+            cm = scipy.linalg.cho_solve(cf, self.M)
+            mtcm = np.dot(self.M.T, cm)
             mtcy = np.dot(cm.T, residuals)
         else:
             Nvec = (
                 np.hstack(
                     [
                         self.model.scaled_toa_uncertainty(self.fitter.toas).to_value(
-                            u.us
+                            u.s
                         )
                         if hasattr(self.model, "scaled_toa_uncertainty")
-                        else self.resids.toa.get_errors().to_value(u.us),
+                        else self.resids.toa.get_errors().to_value(u.s),
                         self.model.scaled_dm_uncertainty(self.fitter.toas).to_value(
                             u.pc / u.cm ** 3
                         )
@@ -1426,10 +1450,22 @@ class WidebandState(ModelState):
                 ** 2
             )
             cinv = 1 / Nvec
-            mtcm = np.dot(M.T, cinv[:, None] * M)
-            mtcm += np.diag(phiinv)
-            mtcy = np.dot(M.T, cinv * residuals)
-        U, s, Vt = sl.svd(mtcm, full_matrices=False)
+            mtcm = np.dot(self.M.T, cinv[:, None] * self.M)
+            mtcm += np.diag(self.phiinv)
+            mtcy = np.dot(self.M.T, cinv * residuals)
+        return mtcm, mtcy
+
+    @cached_property
+    def mtcm(self):
+        return self.mtcm_mtcy[0]
+
+    @cached_property
+    def mtcy(self):
+        return self.mtcm_mtcy[1]
+
+    @cached_property
+    def U_s_Vt_xhat(self):
+        U, s, Vt = scipy.linalg.svd(self.mtcm, full_matrices=False)
 
         bad = np.where(s <= self.threshold * s[0])[0]
         s[bad] = np.inf
@@ -1438,8 +1474,8 @@ class WidebandState(ModelState):
             bad_col /= abs(bad_col).max()
             bad_combination = " ".join(
                 [
-                    f"{p}"
-                    for (co, p) in sorted(zip(bad_col, params))
+                    f"{co}*{p}"
+                    for (co, p) in reversed(sorted(zip(bad_col, self.params)))
                     if abs(co) > self.threshold
                 ]
             )
@@ -1449,14 +1485,29 @@ class WidebandState(ModelState):
                 DegeneracyWarning,
             )
 
-        xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
-        self.Vt = Vt
-        self.s = s
-        self.norm = norm
-        self.xhat = xhat
+        xhat = np.dot(Vt.T, np.dot(U.T, self.mtcy) / s)
+        return U, s, Vt, xhat
 
+    @cached_property
+    def U(self):
+        return self.U_s_Vt_xhat[0]
+
+    @cached_property
+    def s(self):
+        return self.U_s_Vt_xhat[1]
+
+    @cached_property
+    def Vt(self):
+        return self.U_s_Vt_xhat[2]
+
+    @cached_property
+    def xhat(self):
+        return self.U_s_Vt_xhat[3]
+
+    @cached_property
+    def step(self):
         # compute absolute estimates, normalized errors, covariance matrix
-        return xhat / norm
+        return self.xhat / self.norm
 
     def take_step(self, step, lambda_=1):
         return WidebandState(
@@ -1466,7 +1517,6 @@ class WidebandState(ModelState):
     @cached_property
     def covariance_matrix(self):
         # make sure we compute the SVD
-        self.step
         xvar = np.dot(self.Vt.T / self.s, self.Vt)
         return (xvar / self.norm).T / self.norm
 
@@ -1639,7 +1689,7 @@ class WLSFitter(Fitter):
             #   M, U are Ntoa x Nparam
             #   s is Nparam x Nparam diagonal matrix encoded as 1-D vector
             #   V^T is Nparam x Nparam
-            U, s, Vt = sl.svd(M, full_matrices=False)
+            U, s, Vt = scipy.linalg.svd(M, full_matrices=False)
             # Note, here we could do various checks like report
             # matrix condition number or zero out low singular values.
             # print 'log_10 cond=', np.log10(s.max()/s.min())
@@ -1658,7 +1708,7 @@ class WLSFitter(Fitter):
                 bad_combination = " + ".join(
                     [
                         f"{co}*{p}"
-                        for (co, p) in sorted(zip(bad_col, params))
+                        for (co, p) in reversed(sorted(zip(bad_col, params)))
                         if abs(co) > threshold
                     ]
                 )
@@ -1799,8 +1849,8 @@ class GLSFitter(Fitter):
             # compute covariance matrices
             if full_cov:
                 cov = self.model.toa_covariance_matrix(self.toas)
-                cf = sl.cho_factor(cov)
-                cm = sl.cho_solve(cf, M)
+                cf = scipy.linalg.cho_factor(cov)
+                cm = scipy.linalg.cho_solve(cf, M)
                 mtcm = np.dot(M.T, cm)
                 mtcy = np.dot(cm.T, residuals)
 
@@ -1814,13 +1864,13 @@ class GLSFitter(Fitter):
             xhat, xvar = None, None
             if threshold <= 0:
                 try:
-                    c = sl.cho_factor(mtcm)
-                    xhat = sl.cho_solve(c, mtcy)
-                    xvar = sl.cho_solve(c, np.eye(len(mtcy)))
-                except sl.LinAlgError:
+                    c = scipy.linalg.cho_factor(mtcm)
+                    xhat = scipy.linalg.cho_solve(c, mtcy)
+                    xvar = scipy.linalg.cho_solve(c, np.eye(len(mtcy)))
+                except scipy.linalg.LinAlgError:
                     xhat, xvar = None, None
             if xhat is None:
-                U, s, Vt = sl.svd(mtcm, full_matrices=False)
+                U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
 
                 bad = np.where(s <= threshold * s[0])[0]
                 s[bad] = np.inf
@@ -1829,8 +1879,8 @@ class GLSFitter(Fitter):
                     bad_col /= abs(bad_col).max()
                     bad_combination = " ".join(
                         [
-                            f"{p}"
-                            for (co, p) in sorted(zip(bad_col, params))
+                            f"{co}*{p}"
+                            for (co, p) in reversed(sorted(zip(bad_col, params)))
                             if abs(co) > threshold
                         ]
                     )
@@ -1845,7 +1895,7 @@ class GLSFitter(Fitter):
             newres = residuals - np.dot(M, xhat)
             # compute linearized chisq
             if full_cov:
-                chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+                chi2 = np.dot(newres, scipy.linalg.cho_solve(cf, newres))
             else:
                 chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
 
@@ -2137,8 +2187,8 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             # compute covariance matrices
             if full_cov:
                 cov = self.get_noise_covariancematrix().matrix
-                cf = sl.cho_factor(cov)
-                cm = sl.cho_solve(cf, M)
+                cf = scipy.linalg.cho_factor(cov)
+                cm = scipy.linalg.cho_solve(cf, M)
                 mtcm = np.dot(M.T, cm)
                 mtcy = np.dot(cm.T, residuals)
 
@@ -2153,13 +2203,13 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             xhat, xvar = None, None
             if threshold <= 0:
                 try:
-                    c = sl.cho_factor(mtcm)
-                    xhat = sl.cho_solve(c, mtcy)
-                    xvar = sl.cho_solve(c, np.eye(len(mtcy)))
-                except sl.LinAlgError:
+                    c = scipy.linalg.cho_factor(mtcm)
+                    xhat = scipy.linalg.cho_solve(c, mtcy)
+                    xvar = scipy.linalg.cho_solve(c, np.eye(len(mtcy)))
+                except scipy.linalg.LinAlgError:
                     xhat, xvar = None, None
             if xhat is None:
-                U, s, Vt = sl.svd(mtcm, full_matrices=False)
+                U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
 
                 bad = np.where(s <= threshold * s[0])[0]
                 s[bad] = np.inf
@@ -2168,8 +2218,8 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                     bad_col /= abs(bad_col).max()
                     bad_combination = " ".join(
                         [
-                            f"{p}"
-                            for (co, p) in sorted(zip(bad_col, params))
+                            f"{co}*{p}"
+                            for (co, p) in reversed(sorted(zip(bad_col, params)))
                             if abs(co) > threshold
                         ]
                     )
@@ -2184,7 +2234,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             newres = residuals - np.dot(M, xhat)
             # compute linearized chisq
             if full_cov:
-                chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+                chi2 = np.dot(newres, scipy.linalg.cho_solve(cf, newres))
             else:
                 chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
 
@@ -2224,3 +2274,183 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         self.update_model(chi2)
 
         return chi2
+
+
+class LMFitter(Fitter):
+    def fit_toas(
+        self,
+        maxiter=50,
+        *,
+        min_chi2_decrease=1e-3,
+        lambda_factor_decrease=2,
+        lambda_factor_increase=3,
+        lambda_factor_invalid=10,
+        threshold=1e-14,
+        min_lambda=0.5,
+    ):
+        current_state = self.create_state()
+        try:
+            try:
+                current_state.chi2
+            except ValueError as e:
+                raise ValueError("Initial configuration is invalid") from e
+            self.converged = False
+            lambda_ = min_lambda
+            for i in range(maxiter):
+                lf = lambda_ if lambda_ > min_lambda else 0
+                A = current_state.mtcm + lf * np.diag(np.diag(current_state.mtcm))
+                b = current_state.mtcy
+                ill_conditioned = False
+                if threshold is None:
+                    dx = scipy.linalg.solve(A, b, assume_a="pos")
+                else:
+                    U, s, Vt = scipy.linalg.svd(A, full_matrices=False)
+                    log.debug(
+                        f"Iteration {i}: Condition number for lambda_ = {lambda_} is {s[0]/s[-1]}"
+                    )
+
+                    bad = np.where(s <= threshold * s[0])[0]
+                    s[bad] = np.inf
+                    for c in bad:
+                        ill_conditioned = True
+                        bad_col = Vt[c, :]
+                        bad_col /= abs(bad_col).max()
+                        bad_combination = " ".join(
+                            [
+                                f"{co}*{p}"
+                                for (co, p) in reversed(
+                                    sorted(zip(bad_col, current_state.params))
+                                )
+                                if abs(co) > threshold
+                            ]
+                        )
+                        warn(
+                            f"Parameter degeneracy; the following combination of parameters yields "
+                            f"almost no change: {bad_combination}",
+                            DegeneracyWarning,
+                        )
+
+                    dx = np.dot(Vt.T, np.dot(U.T, b) / s)
+
+                step = dx / current_state.norm
+
+                # FIXME: catch problems due to non-invertibility?
+                # FIXME: predicted (linear) chi-squared decrease can check how well the
+                # derivative matches the function and guide changes in lambda_
+                # predicted_chi2 = current_state.predicted_chi2(dx)
+                log.debug(f"Iteration {i}: Trying step with lambda_ = {lambda_}")
+                new_state = current_state.take_step(step)
+                try:
+                    chi2_decrease = current_state.chi2 - new_state.chi2
+                    if chi2_decrease < -min_chi2_decrease:
+                        lambda_ *= (
+                            lambda_factor_increase
+                            if not ill_conditioned
+                            else lambda_factor_invalid
+                        )
+                        log.info(
+                            f"Iteration {i}: chi2 increased from {current_state.chi2} "
+                            f"to {new_state.chi2} increasing lambda to {lambda_}"
+                        )
+                    elif chi2_decrease < 0:
+                        log.info(
+                            f"Iteration {i}: chi2 increased but only by {-chi2_decrease}, stopping."
+                        )
+                        self.converged = True
+                        break
+                    elif chi2_decrease < min_chi2_decrease:
+                        log.info(
+                            f"Iteration {i}: chi2 decreased only by {chi2_decrease}, updating "
+                            f"state and stopping."
+                        )
+                        current_state = new_state
+                        self.converged = True
+                        break
+                    else:
+                        lambda_ = max(lambda_ / lambda_factor_decrease, min_lambda)
+                        log.info(
+                            f"Iteration {i}: Updating state, chi2 goes down by {chi2_decrease} "
+                            f"from {current_state.chi2} "
+                            f"to {new_state.chi2}; decreasing lambda to "
+                            f"{lambda_ if lambda_ > min_lambda else 0}"
+                        )
+                        current_state = new_state
+                except InvalidModelParameters as e:
+                    lambda_ *= lambda_factor_invalid
+                    log.info(
+                        f"Iteration {i}: Step too aggressive, increasing lambda_ "
+                        f"to {lambda_}: {e}"
+                    )
+            else:
+                log.warning(
+                    f"Maximum number of iterations ({maxiter}) reached, stopping "
+                    f"without convergence."
+                )
+            self.iterations = i
+        except KeyboardInterrupt:
+            # could be a finally I suppose? but I'm not sure we want to update if something
+            # seriou went wrong.
+            log.info("KeyboardInterrupt detected, updating Fitter")
+            self.update_from_state(current_state)
+            raise
+        self.update_from_state(current_state)
+        return self.converged
+
+
+class WidebandLMFitter(LMFitter):
+    def __init__(self, toas, model, track_mode=None, residuals=None, add_args=None):
+        self.method = "downhill_wideband"
+        self.full_cov = False
+        self.threshold = 0
+        self.add_args = {} if add_args is None else add_args
+        super().__init__(
+            toas=toas, model=model, residuals=residuals, track_mode=track_mode
+        )
+        self.is_wideband = True
+
+    def make_resids(self, model):
+        return WidebandTOAResiduals(
+            self.toas,
+            model,
+            toa_resid_args=self.add_args.get("toa", {}),
+            dm_resid_args=self.add_args.get("dm", {}),
+        )
+
+    def create_state(self):
+        return WidebandState(
+            self, self.model, full_cov=self.full_cov, threshold=self.threshold
+        )
+
+    def fit_toas(self, maxiter=50, full_cov=False, **kwargs):
+        self.full_cov = full_cov
+        # FIXME: set up noise residuals et cetera
+        return super().fit_toas(maxiter=maxiter, **kwargs)
+
+    def update_from_state(self, state):
+        # Nicer not to keep this if we have a choice, it introduces reference cycles
+        self.current_state = state
+        self.model = state.model
+        self.resids = state.resids
+        self.covariance_matrix = state.covariance_matrix
+        self.errors = np.sqrt(np.diag(self.covariance_matrix))
+        for p, e in zip(state.params, self.errors):
+            try:
+                log.debug(f"Setting {getattr(self.model, p)} uncertainty to {e}")
+                pm = getattr(self.model, p)
+            except AttributeError:
+                if p != "Offset":
+                    log.debug(f"Unexpected parameter {p}")
+            else:
+                pm.uncertainty = e * pm.units
+        self.correlation_matrix = (self.covariance_matrix / self.errors).T / self.errors
+        self.update_model(state.chi2)
+        # Compute the noise realizations if possible
+        ntmpar = len(self.model.free_params)
+        if not self.full_cov:
+            noise_dims = self.model.noise_model_dimensions(self.toas)
+            noise_resids = {}
+            for comp in noise_dims.keys():
+                p0 = noise_dims[comp][0] + ntmpar
+                p1 = p0 + noise_dims[comp][1]
+                noise_resids[comp] = np.dot(state.M[:, p0:p1], state.xhat[p0:p1]) * u.s
+            self.resids.noise_resids = noise_resids

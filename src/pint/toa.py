@@ -1279,7 +1279,7 @@ class TOAs:
         try:
             self.phase_columns_from_flags()
         except ValueError:
-            log.debug("No pulse numbers found in the TOAs")
+            log.debug("No pulse number flags found in the TOAs")
 
         # We don't need this now that we have a table
 
