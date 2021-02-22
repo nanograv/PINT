@@ -1639,6 +1639,11 @@ class TimingModel:
                         newstr += " {:>28s}\n".format(str(otherpar.quantity))
                     else:
                         newstr += " {:>28s}\n".format("Missing")
+                    if otherpar.quantity != par.quantity:
+                        log.info(
+                                    "Parameter %s not fit, but has changed between these models"
+                                    % par.name
+                                )
                 else:
                     # If fitted, print both values with uncertainties
                     if par.units == u.hourangle:
@@ -1664,9 +1669,9 @@ class TimingModel:
                                 newstr += " {:>28s}".format("Missing")
                     else:
                         newstr += " {:>28s}".format("Missing")
-                    try:
-                        diff = otherpar.value - par.value
-                        diff_sigma = diff / par.uncertainty.value
+                    if otherpar.value is not None:
+                        diff = otherpar.quantity - par.quantity
+                        diff_sigma = (diff / par.uncertainty).decompose()
                         if abs(diff_sigma) != np.inf:
                             newstr += " {:>10.2f}".format(diff_sigma)
                             if abs(diff_sigma) > threshold_sigma:
@@ -1675,13 +1680,13 @@ class TimingModel:
                                 newstr += "  "
                         else:
                             newstr += "           "
-                        diff_sigma2 = diff / otherpar.uncertainty.value
+                        diff_sigma2 = (diff / otherpar.uncertainty).decompose()
                         if abs(diff_sigma2) != np.inf:
                             newstr += " {:>10.2f}".format(diff_sigma2)
                             if abs(diff_sigma2) > threshold_sigma:
                                 newstr += " !"
-                    except (AttributeError, TypeError):
-                        pass
+                    #except (AttributeError, TypeError):
+                    #    pass
                     if otherpar is not None:
                         if (
                             par.uncertainty is not None
