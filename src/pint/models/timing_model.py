@@ -1641,9 +1641,9 @@ class TimingModel:
                         newstr += " {:>28s}\n".format("Missing")
                     if otherpar.quantity != par.quantity:
                         log.info(
-                                    "Parameter %s not fit, but has changed between these models"
-                                    % par.name
-                                )
+                            "Parameter %s not fit, but has changed between these models"
+                            % par.name
+                        )
                 else:
                     # If fitted, print both values with uncertainties
                     if par.units == u.hourangle:
@@ -1685,7 +1685,7 @@ class TimingModel:
                             newstr += " {:>10.2f}".format(diff_sigma2)
                             if abs(diff_sigma2) > threshold_sigma:
                                 newstr += " !"
-                    #except (AttributeError, TypeError):
+                    # except (AttributeError, TypeError):
                     #    pass
                     if otherpar is not None:
                         if (
