@@ -1476,7 +1476,7 @@ class TOAs:
         # TODO: make all values Quantity objects for consistency
         if gap_limit is None:
             gap_limit = 2 * u.h
-        if "groups" not in self.table or gap_limit != 2 * u.h:
+        if "groups" not in self.table.columns or gap_limit != 2 * u.h:
             return _group_by_gaps(self.get_mjds().value, gap_limit.to_value(u.d))
         else:
             return self.table["groups"]
