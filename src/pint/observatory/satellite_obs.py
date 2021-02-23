@@ -285,14 +285,15 @@ class SatelliteObs(SpecialLocation):
     def __init__(self, name, ft2name, maxextrap=2, overwrite=False):
         self.FT2 = load_orbit(name, ft2name)
 
-        # Now build the interpolator here:
+        # Now build the interpolator.  This extrapolation will fail quickly,
+        # which is where maxextrap comes in.
         tt = self.FT2["MJD_TT"]
-        self.X = InterpolatedUnivariateSpline(tt, self.FT2["X"], ext="raise")
-        self.Y = InterpolatedUnivariateSpline(tt, self.FT2["Y"], ext="raise")
-        self.Z = InterpolatedUnivariateSpline(tt, self.FT2["Z"], ext="raise")
-        self.Vx = InterpolatedUnivariateSpline(tt, self.FT2["Vx"], ext="raise")
-        self.Vy = InterpolatedUnivariateSpline(tt, self.FT2["Vy"], ext="raise")
-        self.Vz = InterpolatedUnivariateSpline(tt, self.FT2["Vz"], ext="raise")
+        self.X = InterpolatedUnivariateSpline(tt, self.FT2["X"], ext="extrapolate")
+        self.Y = InterpolatedUnivariateSpline(tt, self.FT2["Y"], ext="extrapolate")
+        self.Z = InterpolatedUnivariateSpline(tt, self.FT2["Z"], ext="extrapolate")
+        self.Vx = InterpolatedUnivariateSpline(tt, self.FT2["Vx"], ext="extrapolate")
+        self.Vy = InterpolatedUnivariateSpline(tt, self.FT2["Vy"], ext="extrapolate")
+        self.Vz = InterpolatedUnivariateSpline(tt, self.FT2["Vz"], ext="extrapolate")
         self._geocenter = EarthLocation.from_geocentric(0.0 * u.m, 0.0 * u.m, 0.0 * u.m)
         self._maxextrap = maxextrap
         super(SatelliteObs, self).__init__(name=name, overwrite=overwrite)
@@ -324,12 +325,11 @@ class SatelliteObs(SpecialLocation):
         ft2_tt = self.FT2["MJD_TT"]
         in_tt = np.atleast_1d(t.tt.mjd)
         i0 = np.searchsorted(ft2_tt, in_tt)
-        i0[i0 == 0] = 1
-        i0[i0 == len(ft2_tt)] = len(i0) - 1
+        i0 = np.clip(i0, 1, len(ft2_tt) - 1, out=i0)
         dright = np.abs(ft2_tt[i0] - in_tt)
         dleft = np.abs(ft2_tt[i0 - 1] - in_tt)
         min_duration = np.minimum(dright, dleft)
-        if np.any(min_duration > self._maxextrap / (60 * 24)):
+        if np.any(min_duration > (self._maxextrap / (60 * 24))):
             log.error(
                 "Extrapolating S/C position by more than %d minutes!" % self._maxextrap
             )
