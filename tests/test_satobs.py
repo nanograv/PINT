@@ -17,7 +17,7 @@ def test_good_calls():
     # add an explicit entry 20s after the last FT2 point; should pass with
     # default settings
     test_mjds = np.append(test_mjds, tt_mjd[-1] + 20.0 / 86400)
-    assert(test_mjds[-1] > tt_mjd[-1])
+    assert test_mjds[-1] > tt_mjd[-1]
     good_times = Time(test_mjds, format="mjd", scale="tt")
     # NB this also tests calls with a vector Time
     fermi_obs._check_bounds(good_times)
