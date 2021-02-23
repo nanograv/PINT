@@ -362,6 +362,7 @@ class Residuals:
         correctly return infinity.
         """
         if self.model.has_correlated_errors:
+            log.debug("Using GLS fitter to compute residual chi2")
             # Use GLS but don't actually fit
             from pint.fitter import GLSFitter
 
@@ -789,6 +790,7 @@ class WidebandTOAResiduals(CombinedResiduals):
         a minimizer for example - may need to be checked to confirm that they
         correctly return infinity.
         """
+        log.debug("Using wideband GLS fitter to compute residual chi2")
         # Use GLS but don't actually fit
         from pint.fitter import WidebandTOAFitter
 

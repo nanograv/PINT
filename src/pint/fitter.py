@@ -76,7 +76,17 @@ from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import TOAs
 from pint.utils import FTest
 
-__all__ = ["Fitter", "WLSFitter", "GLSFitter", "WidebandTOAFitter", "PowellFitter"]
+__all__ = [
+    "Fitter",
+    "WLSFitter",
+    "GLSFitter",
+    "WidebandTOAFitter",
+    "PowellFitter",
+    "DownhillWLSFitter",
+    "DownhillGLSFitter",
+    "WidebandDownhillFitter",
+    "WidebandLMFitter",
+]
 
 try:
     from functools import cached_property
@@ -1287,9 +1297,9 @@ class GLSState(ModelState):
 
 
 class DownhillGLSFitter(DownhillFitter):
-    """Fitter that uses the shortening-step procedure for WLS fits.
+    """Fitter that uses the shortening-step procedure for GLS fits.
 
-    Most of the machinery here is in :class:`pint.fitter.WLSState`
+    Most of the machinery here is in :class:`pint.fitter.GLSState`
     or :class:`pint.fitter.DownhillFitter`.
     """
 
@@ -1522,9 +1532,9 @@ class WidebandState(ModelState):
 
 
 class WidebandDownhillFitter(DownhillFitter):
-    """Fitter that uses the shortening-step procedure for WLS fits.
+    """Fitter that uses the shortening-step procedure for wideband GLS fits.
 
-    Most of the machinery here is in :class:`pint.fitter.WLSState`
+    Most of the machinery here is in :class:`pint.fitter.WidebandState`
     or :class:`pint.fitter.DownhillFitter`.
     """
 
@@ -1820,6 +1830,7 @@ class GLSFitter(Fitter):
 
             # Get residuals and TOA uncertainties in seconds
             if i == 0:
+                # Why is this here?
                 self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value
 
@@ -2398,6 +2409,12 @@ class LMFitter(Fitter):
 
 
 class WidebandLMFitter(LMFitter):
+    """Fitter for wideband data based on Levenberg-Marquardt.
+
+    This should carry out a more reliable fitting process than the plain
+    WidebandTOAFitter, and a more efficient one than WidebandDownhillFitter.
+    """
+
     def __init__(self, toas, model, track_mode=None, residuals=None, add_args=None):
         self.method = "downhill_wideband"
         self.full_cov = False
