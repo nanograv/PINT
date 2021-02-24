@@ -131,11 +131,14 @@ def test_derivative(toasJ1853, modelJ1853):
             continue
 
 
-def test_J0613_H4(toasJ0613, modelJ0613):
+def test_J0613_fit_with_H3_H4(toasJ0613, modelJ0613):
     log = logging.getLogger("TestJ0613.fit_tests")
     f = ff.GLSFitter(toasJ0613, modelJ0613)
+    fit_params = f.model.free_params
+    #fit_params.remove('H3')
+    #fit_params.remove('H4')
+    f.model.free_params = fit_params
     f.fit_toas()
-    f.model.free_params = ("H3", "H4")
     for pn, p in f.model.get_params_dict("free", "quantity").items():
         op = getattr(f.model_init, pn)
         diff = np.abs(p.value - op.value)
@@ -151,7 +154,6 @@ def test_J0613_STIG(toasJ0613, modelJ0613_STIG):
     log = logging.getLogger("TestJ0613.fit_tests_stig")
     f = ff.GLSFitter(toasJ0613, modelJ0613_STIG)
     f.fit_toas()
-    f.model.free_params = ("H3", "STIGMA")
     for pn, p in f.get_params_dict("free", "quantity").items():
         op = getattr(f.model_init, pn)
         diff = np.abs(p.value - op.value)
@@ -177,7 +179,7 @@ def test_no_H3_H4(toasJ0613):
     f.fit_toas()
 
 
-def test_H3_H4_pairs(toasJ0613):
+def test_H3_and_H4_non_zero(toasJ0613):
     """ Testing if the different H3, H4 combination breaks the fitting. the
         fitting result will not be checked here.
     """
@@ -203,7 +205,8 @@ def zero_H3(toasJ0613):
     assert H3_zero_model.H3.value == 0.0
     assert H3_zero_model.H4.value != 0.0
     f = ff.WLSFitter(test_toas, H3_zero_model)
-    f.fit_toas()
+    with pytest.raises(ValueError):
+        f.fit_toas()
 
 
 def zero_H3_H4_fit_H3_H4(toasJ0613):
