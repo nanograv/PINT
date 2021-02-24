@@ -1525,7 +1525,7 @@ class TimingModel:
         M[:, mask] /= F0.value
         return M, params, units
 
-    def compare(self, othermodel, nodmx=True, threshold_sigma=3.0, verbosity="max"):
+    def compare(self, othermodel, nodmx=True, threshold_sigma=3.0, unc_rat_threshold=1.05, verbosity="max"):
         """Print comparison with another model
 
         Parameters
@@ -1538,6 +1538,10 @@ class TimingModel:
         threshold_sigma : float
             Pulsar parameters for which diff_sigma > threshold will be printed
             with an exclamation point at the end of the line
+        unc_rat_threshold : float
+            Pulsar parameters for which the uncertainty has increased by a 
+            factor of unc_rat_threshold will be printed with an asterisk at 
+            the end of the line
         verbosity : string
             Dictates amount of information returned. Options include "max",
             "med", and "min", which have the following results:
@@ -1692,7 +1696,7 @@ class TimingModel:
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if 1.01 * par.uncertainty < otherpar.uncertainty:
+                            if unc_rat_threshold * par.uncertainty < otherpar.uncertainty:
                                 newstr += " *"
                     newstr += "\n"
             else:
@@ -1727,7 +1731,7 @@ class TimingModel:
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if 1.01 * par.uncertainty < otherpar.uncertainty:
+                            if  par.uncertainty*unc_rat_threshold < otherpar.uncertainty:
                                 newstr += " *"
                         newstr += "\n"
                     else:
@@ -1777,7 +1781,7 @@ class TimingModel:
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if par.uncertainty < otherpar.uncertainty:
+                            if par.uncertainty*unc_rat_threshold < otherpar.uncertainty:
                                 newstr += " *"
                     newstr += "\n"
 
