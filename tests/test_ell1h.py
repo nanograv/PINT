@@ -148,7 +148,6 @@ def test_no_H3_H4(toasJ0613):
     """
     no_H3_H4 = simple_par.replace("H4 2.0262048E-7  1       1.1276173E-7", "")
     no_H3_H4 = no_H3_H4.replace("H3 2.7507208E-7  1       1.5114416E-7", "")
-    print(no_H3_H4)
     no_H3_H4_model = model.get_model(StringIO(no_H3_H4))
     assert no_H3_H4_model.H3.value == None
     assert no_H3_H4_model.H4.value == None
@@ -169,20 +168,22 @@ def test_H3_and_H4_non_zero(toasJ0613):
 
 
 def test_zero_H4(toasJ0613):
-    H4_zero = simple_par.replace("H4 2.0262048E-7  1       1.1276173E-7", "H4 0  1  0")
-    H4_zero_model = model.get_model(StringIO(H4_zero))
-    assert H4_zero_model.H4.value == 0.0
+    H4_zero_model = model.get_model(StringIO(simple_par))
+    H4_zero_model.H4.value = 0.0
+    H4_zero_model.H4.frozen = False
     assert H4_zero_model.H3.value != 0.0
+    H4_zero_model.H3.frozen = False
     test_toas = toasJ0613[::20]
     f = ff.WLSFitter(test_toas, H4_zero_model)
     f.fit_toas()
 
 
 def test_zero_H3(toasJ0613):
-    H3_zero = simple_par.replace("H3 2.7507208E-7  1       1.5114416E-7", "H3 0  1  0")
-    H3_zero_model = model.get_model(StringIO(H3_zero))
-    assert H3_zero_model.H3.value == 0.0
+    H3_zero_model = model.get_model(StringIO(simple_par))
+    H3_zero_model.H3.value = 0.0
+    H3_zero_model.H3.frozen = False
     assert H3_zero_model.H4.value != 0.0
+    H3_zero_model.H4.frozen = False
     test_toas = toasJ0613[::20]
     with pytest.raises(ValueError):
         f = ff.WLSFitter(test_toas, H3_zero_model)
@@ -191,28 +192,22 @@ def test_zero_H3(toasJ0613):
 def test_zero_H3_H4_fit_H3_H4(toasJ0613):
     H4_zero = simple_par.replace("H4 2.0262048E-7  1       1.1276173E-7", "H4 0  1  0")
     H3H4_zero = H4_zero.replace("H3 2.7507208E-7  1       1.5114416E-7", "H3 0  1  0")
-    H3H4_zero_model = model.get_model(StringIO(H3H4_zero))
-    assert H3H4_zero_model.H3.value == 0.0
-    assert "H3" in H3H4_zero_model.free_params
-    assert H3H4_zero_model.H4.value == 0.0
-    assert "H4" in H3H4_zero_model.free_params
+    H3H4_zero_model = model.get_model(StringIO(simple_par))
+    H3H4_zero_model.H3.value = 0.0
+    H3H4_zero_model.H4.value = 0.0
+    H3H4_zero_model.H3.frozen = False
+    H3H4_zero_model.H4.frozen = False
     test_toas = toasJ0613[::20]
     f = ff.WLSFitter(test_toas, H3H4_zero_model)
     f.fit_toas()
 
 
 def test_zero_H3_H4_fit_H3(toasJ0613):
-    H3H4_zero2 = simple_par.replace(
-        "H4 2.0262048E-7  1       1.1276173E-7", "H4 0  0  0"
-    )
-    H3H4_zero2 = H3H4_zero2.replace(
-        "H3 2.7507208E-7  1       1.5114416E-7", "H3 0  1  0"
-    )
-    H3H4_zero2_model = model.get_model(StringIO(H3H4_zero2))
-    assert H3H4_zero2_model.H3.value == 0.0
-    assert "H3" in H3H4_zero2_model.free_params
-    assert H3H4_zero2_model.H4.value == 0.0
-    assert "H4" not in H3H4_zero2_model.free_params
+    H3H4_zero2_model = model.get_model(StringIO(simple_par))
+    H3H4_zero2_model.H3.value = 0.0
+    H3H4_zero2_model.H3.frozen = False
+    H3H4_zero2_model.H4.value = 0.0
+    H3H4_zero2_model.H4.frozen = True
     test_toas = toasJ0613[::20]
     f = ff.WLSFitter(test_toas, H3H4_zero2_model)
     # This should work
