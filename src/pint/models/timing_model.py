@@ -1525,7 +1525,14 @@ class TimingModel:
         M[:, mask] /= F0.value
         return M, params, units
 
-    def compare(self, othermodel, nodmx=True, threshold_sigma=3.0, unc_rat_threshold=1.05, verbosity="max"):
+    def compare(
+        self,
+        othermodel,
+        nodmx=True,
+        threshold_sigma=3.0,
+        unc_rat_threshold=1.05,
+        verbosity="max",
+    ):
         """Print comparison with another model
 
         Parameters
@@ -1696,7 +1703,10 @@ class TimingModel:
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if unc_rat_threshold * par.uncertainty < otherpar.uncertainty:
+                            if (
+                                unc_rat_threshold * par.uncertainty
+                                < otherpar.uncertainty
+                            ):
                                 newstr += " *"
                     newstr += "\n"
             else:
@@ -1731,7 +1741,10 @@ class TimingModel:
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if  par.uncertainty*unc_rat_threshold < otherpar.uncertainty:
+                            if (
+                                par.uncertainty * unc_rat_threshold
+                                < otherpar.uncertainty
+                            ):
                                 newstr += " *"
                         newstr += "\n"
                     else:
@@ -1781,7 +1794,10 @@ class TimingModel:
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if par.uncertainty*unc_rat_threshold < otherpar.uncertainty:
+                            if (
+                                par.uncertainty * unc_rat_threshold
+                                < otherpar.uncertainty
+                            ):
                                 newstr += " *"
                     newstr += "\n"
 
