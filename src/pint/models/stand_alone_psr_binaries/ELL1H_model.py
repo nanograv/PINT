@@ -58,7 +58,7 @@ class ELL1Hmodel(ELL1BaseModel):
                 if self.H4 == 0.0:
                     stigma = 0.0
                 else:
-                    ValueError("To use H4, H3 needs to be significant(H3 >= H4).")
+                    raise ValueError("To use H4, H3 needs to be significant(H3 >= H4).")
             else:
                 stigma = self.H4 / self.H3
         elif set(self.fit_params) == set(["H3", "STIGMA"]):
