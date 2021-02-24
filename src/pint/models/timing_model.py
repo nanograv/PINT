@@ -1589,7 +1589,8 @@ class TimingModel:
             "---------", "----------", "----------", "----------", "----------"
         )
         log.info("Comparing ephemerides for PSR %s" % self.PSR.value)
-        log.info("Threshold sigma = %f" % threshold_sigma)
+        log.info("Threshold sigma = %2.2f" % threshold_sigma)
+        log.info("Threshold uncertainty ratio = %2.2f" % unc_rat_threshold)
         log.info("Creating a copy of Model 2")
         if verbosity == "max":
             log.info("Maximum verbosity - printing all parameters")
@@ -1725,18 +1726,28 @@ class TimingModel:
                             newstr += " {:28f}".format(otherpar.value)
                         if otherpar.value != par.value:
                             sys.stdout.flush()
-                            if par.name == "START" or par.name == "FINISH":
+                            if par.name in ["START","FINISH","CHI2","NTOA"]:
+                                if verbosity == 'max':
+                                    log.info(
+                                        "Parameter %s has changed between these models"
+                                        % par.name
+                                    )
+                            elif isinstance(par,boolParameter):
+                                if otherpar.value is True:
+                                    status='ON'
+                                else:
+                                    status='OFF'
                                 log.info(
-                                    "Parameter %s not fit, but has changed between these models"
-                                    % par.name
-                                )
+                                        "Parameter %s has changed between these models (turned %s in model 2)"
+                                        % (par.name, status)
+                                    )
                             else:
                                 log.warning(
                                     "Parameter %s not fit, but has changed between these models"
                                     % par.name
                                 )
+                                newstr += " !"
                             log.handlers[0].flush()
-                            newstr += " !"
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
