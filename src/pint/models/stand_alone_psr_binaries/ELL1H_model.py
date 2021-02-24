@@ -232,10 +232,7 @@ class ELL1Hmodel(ELL1BaseModel):
 
     def d_ELL1H_fourier_harms_d_par(
         self, selected_harms, phi, stigma, par, factor_out_power=0
-    ):if self.H4 == 0.0:
-                    stigma = 0.0
-                else:
-                    ValueError("To use H4, H3 needs to be significant(H3 >= H4).")
+    ):
         """This is a overall derivative  function.  """
         # Find the right derivative  function for fourier components
         df_name = "d_fourier_component_d_" + par.lower()
