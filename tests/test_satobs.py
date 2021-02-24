@@ -13,11 +13,12 @@ def test_good_calls():
     ft2file = os.path.join(datadir, "lat_spacecraft_weekly_w323_p202_v001.fits")
     fermi_obs = get_satellite_observatory("Fermi", ft2file, overwrite=True)
     tt_mjd = fermi_obs.FT2["MJD_TT"]
-    good_times = Time(
-        tt_mjd[:: len(tt_mjd) // 10] + (np.random.rand(1) * 4 - 2) / (60 * 24),
-        format="mjd",
-        scale="tt",
-    )
+    test_mjds = tt_mjd[:: len(tt_mjd) // 10] + (np.random.rand(1) * 4 - 2) / (60 * 24)
+    # add an explicit entry 20s after the last FT2 point; should pass with
+    # default settings
+    test_mjds = np.append(test_mjds, tt_mjd[-1] + 20.0 / 86400)
+    assert test_mjds[-1] > tt_mjd[-1]
+    good_times = Time(test_mjds, format="mjd", scale="tt")
     # NB this also tests calls with a vector Time
     fermi_obs._check_bounds(good_times)
 
