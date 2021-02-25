@@ -1726,21 +1726,21 @@ class TimingModel:
                             newstr += " {:28f}".format(otherpar.value)
                         if otherpar.value != par.value:
                             sys.stdout.flush()
-                            if par.name in ["START","FINISH","CHI2","NTOA"]:
-                                if verbosity == 'max':
+                            if par.name in ["START", "FINISH", "CHI2", "NTOA"]:
+                                if verbosity == "max":
                                     log.info(
                                         "Parameter %s has changed between these models"
                                         % par.name
                                     )
-                            elif isinstance(par,boolParameter):
+                            elif isinstance(par, boolParameter):
                                 if otherpar.value is True:
-                                    status='ON'
+                                    status = "ON"
                                 else:
-                                    status='OFF'
+                                    status = "OFF"
                                 log.info(
-                                        "Parameter %s has changed between these models (turned %s in model 2)"
-                                        % (par.name, status)
-                                    )
+                                    "Parameter %s has changed between these models (turned %s in model 2)"
+                                    % (par.name, status)
+                                )
                             else:
                                 log.warning(
                                     "Parameter %s not fit, but has changed between these models"
