@@ -305,8 +305,7 @@ def get_model(parfile):
         # parfile is a filename and can be handled by ModelBuilder
         mbmodel = ModelBuilder(parfile)
         model = mbmodel.timing_model
-        if model.name=='':
-            model.name = parfile
+        model.name = parfile
         return model
     else:
         with tempfile.TemporaryDirectory() as td:
