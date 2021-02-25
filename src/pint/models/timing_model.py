@@ -1601,7 +1601,7 @@ class TimingModel:
                 "Minimum verbosity - printing parameters that are fit and significantly changed"
             )
         elif verbosity == "check":
-		    log.info("Check verbosity - only warnings/info will be displayed")
+            log.info("Check verbosity - only warnings/info will be displayed")
         othermodel = cp(othermodel)
 
         if (
