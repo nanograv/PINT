@@ -9,9 +9,6 @@ from copy import deepcopy
 import io
 
 
-
-
-
 def test_get_highest_density_range(ndays=7 * u.d):
     par_base = """
     PSR J1234+5678
@@ -38,4 +35,3 @@ def test_get_highest_density_range(ndays=7 * u.d):
     assert x2.value >= 57507 - 1e-5
     assert x4.value >= x2.value - 1e-5
     assert x4.value <= x2.value + 1e-5
-
