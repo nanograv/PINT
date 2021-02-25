@@ -1525,7 +1525,14 @@ class TimingModel:
         M[:, mask] /= F0.value
         return M, params, units
 
-    def compare(self, othermodel, nodmx=True, threshold_sigma=3.0, verbosity="max"):
+    def compare(
+        self,
+        othermodel,
+        nodmx=True,
+        threshold_sigma=3.0,
+        unc_rat_threshold=1.05,
+        verbosity="max",
+    ):
         """Print comparison with another model
 
         Parameters
@@ -1538,6 +1545,10 @@ class TimingModel:
         threshold_sigma : float
             Pulsar parameters for which diff_sigma > threshold will be printed
             with an exclamation point at the end of the line
+        unc_rat_threshold : float
+            Pulsar parameters for which the uncertainty has increased by a 
+            factor of unc_rat_threshold will be printed with an asterisk at 
+            the end of the line
         verbosity : string
             Dictates amount of information returned. Options include "max",
             "med", and "min", which have the following results:
@@ -1639,6 +1650,11 @@ class TimingModel:
                         newstr += " {:>28s}\n".format(str(otherpar.quantity))
                     else:
                         newstr += " {:>28s}\n".format("Missing")
+                    if otherpar.quantity != par.quantity:
+                        log.info(
+                            "Parameter %s not fit, but has changed between these models"
+                            % par.name
+                        )
                 else:
                     # If fitted, print both values with uncertainties
                     if par.units == u.hourangle:
@@ -1664,9 +1680,9 @@ class TimingModel:
                                 newstr += " {:>28s}".format("Missing")
                     else:
                         newstr += " {:>28s}".format("Missing")
-                    try:
-                        diff = otherpar.value - par.value
-                        diff_sigma = diff / par.uncertainty.value
+                    if otherpar.value is not None:
+                        diff = otherpar.quantity - par.quantity
+                        diff_sigma = (diff / par.uncertainty).decompose()
                         if abs(diff_sigma) != np.inf:
                             newstr += " {:>10.2f}".format(diff_sigma)
                             if abs(diff_sigma) > threshold_sigma:
@@ -1675,19 +1691,22 @@ class TimingModel:
                                 newstr += "  "
                         else:
                             newstr += "           "
-                        diff_sigma2 = diff / otherpar.uncertainty.value
+                        diff_sigma2 = (diff / otherpar.uncertainty).decompose()
                         if abs(diff_sigma2) != np.inf:
                             newstr += " {:>10.2f}".format(diff_sigma2)
                             if abs(diff_sigma2) > threshold_sigma:
                                 newstr += " !"
-                    except (AttributeError, TypeError):
-                        pass
+                    # except (AttributeError, TypeError):
+                    #    pass
                     if otherpar is not None:
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if 1.01 * par.uncertainty < otherpar.uncertainty:
+                            if (
+                                unc_rat_threshold * par.uncertainty
+                                < otherpar.uncertainty
+                            ):
                                 newstr += " *"
                     newstr += "\n"
             else:
@@ -1722,16 +1741,22 @@ class TimingModel:
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if 1.01 * par.uncertainty < otherpar.uncertainty:
+                            if (
+                                par.uncertainty * unc_rat_threshold
+                                < otherpar.uncertainty
+                            ):
                                 newstr += " *"
                         newstr += "\n"
                     else:
                         newstr += " {:>28s}\n".format("Missing")
                 else:
                     # If fitted, print both values with uncertainties
-                    newstr += "{:14s} {:28SP}".format(
-                        pn, ufloat(par.value, par.uncertainty.value)
-                    )
+                    if par.uncertainty is not None:
+                        newstr += "{:14s} {:28SP}".format(
+                            pn, ufloat(par.value, par.uncertainty.value)
+                        )
+                    else:
+                        newstr += "{:14s} {:28f}".format(pn, float(par.value))
                     if otherpar is not None and otherpar.value is not None:
                         try:
                             newstr += " {:28SP}".format(
@@ -1769,7 +1794,10 @@ class TimingModel:
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if par.uncertainty < otherpar.uncertainty:
+                            if (
+                                par.uncertainty * unc_rat_threshold
+                                < otherpar.uncertainty
+                            ):
                                 newstr += " *"
                     newstr += "\n"
 
