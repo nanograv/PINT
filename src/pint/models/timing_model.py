@@ -1600,7 +1600,7 @@ class TimingModel:
         log.info("Comparing ephemerides for PSR %s" % self.PSR.value)
         log.info("Threshold sigma = %2.2f" % threshold_sigma)
         log.info("Threshold uncertainty ratio = %2.2f" % unc_rat_threshold)
-        log.info("Creating a copy of Model 2")
+        log.info("Creating a copy of model from %s" %other_model_name)
         if verbosity == "max":
             log.info("Maximum verbosity - printing all parameters")
         elif verbosity == "med":
@@ -1621,22 +1621,22 @@ class TimingModel:
                 self.POSEPOCH.value is not None
                 and self.POSEPOCH.value != othermodel.POSEPOCH.value
             ):
-                log.info("Updating POSEPOCH in Model 2 to match Model 1")
+                log.info("Updating POSEPOCH in %s to match %s" %(other_model_name, model_name))
                 othermodel.change_posepoch(self.POSEPOCH.value)
         if "PEPOCH" in self.params_ordered and "PEPOCH" in othermodel.params_ordered:
             if (
                 self.PEPOCH.value is not None
                 and self.PEPOCH.value != othermodel.PEPOCH.value
             ):
-                log.info("Updating PEPOCH in Model 2 to match Model 1")
+                log.info("Updating PEPOCH in %s to match %s" %(other_model_name, model_name))
                 othermodel.change_pepoch(self.PEPOCH.value)
         if "DMEPOCH" in self.params_ordered and "DMEPOCH" in othermodel.params_ordered:
             if (
                 self.DMEPOCH.value is not None
                 and self.DMEPOCH.value != othermodel.DMEPOCH.value
             ):
-                log.info("Updating DMEPOCH in Model 2 to match Model 1")
-                othermodel.change_posepoch(self.DMEPOCH.value)
+                log.info("Updating DMEPOCH in %s to match %s" %(other_model_name, model_name))
+                othermodel.change_dmepoch(self.DMEPOCH.value)
         for pn in self.params_ordered:
             par = getattr(self, pn)
             if par.value is None:
@@ -1747,8 +1747,8 @@ class TimingModel:
                                 else:
                                     status = "OFF"
                                 log.info(
-                                    "Parameter %s has changed between these models (turned %s in model 2)"
-                                    % (par.name, status)
+                                    "Parameter %s has changed between these models (turned %s in %s)"
+                                    % (par.name, status,other_model_name)
                                 )
                             else:
                                 log.warning(
@@ -1791,8 +1791,9 @@ class TimingModel:
                     else:
                         newstr += " {:>28s}".format("Missing")
                     if "Missing" in newstr:
-                        ind = np.where(np.array(newstr.split()) == "Missing")[0][0]
-                        log.info("Parameter %s missing from model %i" % (par.name, ind))
+                        ind = np.where(np.array(newstr.split()) == "Missing")[0][0]-1
+                        models=[model_name,other_model_name]
+                        log.info("Parameter %s missing from %s" % (par.name, models[ind]))
                     try:
                         diff = otherpar.value - par.value
                         diff_sigma = diff / par.uncertainty.value
@@ -1869,7 +1870,7 @@ class TimingModel:
                 otherpar = None
             if otherpar.value is None:
                 continue
-            log.info("Parameter %s missing from model 1" % opn)
+            log.info("Parameter %s missing from %s" % (opn,model_name))
             if verbosity == "max":
                 s += "{:14s} {:>28s}".format(opn, "Missing")
                 s += " {:>28s}".format(str(otherpar.quantity))
