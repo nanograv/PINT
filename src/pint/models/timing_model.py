@@ -1582,15 +1582,15 @@ class TimingModel:
         import uncertainties.umath as um
         from uncertainties import ufloat
 
-        if self.name != '':
-            model_name=self.name.split('/')[-1]
+        if self.name != "":
+            model_name = self.name.split("/")[-1]
         else:
-            model_name='Model 1'
-        if othermodel.name != '':
-            other_model_name=othermodel.name.split('/')[-1]
+            model_name = "Model 1"
+        if othermodel.name != "":
+            other_model_name = othermodel.name.split("/")[-1]
         else:
-            other_model_name='Model 2'
-        
+            other_model_name = "Model 2"
+
         s = "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
             "PARAMETER", model_name, other_model_name, "Diff_Sigma1", "Diff_Sigma2"
         )
@@ -1600,7 +1600,7 @@ class TimingModel:
         log.info("Comparing ephemerides for PSR %s" % self.PSR.value)
         log.info("Threshold sigma = %2.2f" % threshold_sigma)
         log.info("Threshold uncertainty ratio = %2.2f" % unc_rat_threshold)
-        log.info("Creating a copy of model from %s" %other_model_name)
+        log.info("Creating a copy of model from %s" % other_model_name)
         if verbosity == "max":
             log.info("Maximum verbosity - printing all parameters")
         elif verbosity == "med":
@@ -1621,21 +1621,29 @@ class TimingModel:
                 self.POSEPOCH.value is not None
                 and self.POSEPOCH.value != othermodel.POSEPOCH.value
             ):
-                log.info("Updating POSEPOCH in %s to match %s" %(other_model_name, model_name))
+                log.info(
+                    "Updating POSEPOCH in %s to match %s"
+                    % (other_model_name, model_name)
+                )
                 othermodel.change_posepoch(self.POSEPOCH.value)
         if "PEPOCH" in self.params_ordered and "PEPOCH" in othermodel.params_ordered:
             if (
                 self.PEPOCH.value is not None
                 and self.PEPOCH.value != othermodel.PEPOCH.value
             ):
-                log.info("Updating PEPOCH in %s to match %s" %(other_model_name, model_name))
+                log.info(
+                    "Updating PEPOCH in %s to match %s" % (other_model_name, model_name)
+                )
                 othermodel.change_pepoch(self.PEPOCH.value)
         if "DMEPOCH" in self.params_ordered and "DMEPOCH" in othermodel.params_ordered:
             if (
                 self.DMEPOCH.value is not None
                 and self.DMEPOCH.value != othermodel.DMEPOCH.value
             ):
-                log.info("Updating DMEPOCH in %s to match %s" %(other_model_name, model_name))
+                log.info(
+                    "Updating DMEPOCH in %s to match %s"
+                    % (other_model_name, model_name)
+                )
                 othermodel.change_dmepoch(self.DMEPOCH.value)
         for pn in self.params_ordered:
             par = getattr(self, pn)
@@ -1748,7 +1756,7 @@ class TimingModel:
                                     status = "OFF"
                                 log.info(
                                     "Parameter %s has changed between these models (turned %s in %s)"
-                                    % (par.name, status,other_model_name)
+                                    % (par.name, status, other_model_name)
                                 )
                             else:
                                 log.warning(
@@ -1791,9 +1799,11 @@ class TimingModel:
                     else:
                         newstr += " {:>28s}".format("Missing")
                     if "Missing" in newstr:
-                        ind = np.where(np.array(newstr.split()) == "Missing")[0][0]-1
-                        models=[model_name,other_model_name]
-                        log.info("Parameter %s missing from %s" % (par.name, models[ind]))
+                        ind = np.where(np.array(newstr.split()) == "Missing")[0][0] - 1
+                        models = [model_name, other_model_name]
+                        log.info(
+                            "Parameter %s missing from %s" % (par.name, models[ind])
+                        )
                     try:
                         diff = otherpar.value - par.value
                         diff_sigma = diff / par.uncertainty.value
@@ -1870,7 +1880,7 @@ class TimingModel:
                 otherpar = None
             if otherpar.value is None:
                 continue
-            log.info("Parameter %s missing from %s" % (opn,model_name))
+            log.info("Parameter %s missing from %s" % (opn, model_name))
             if verbosity == "max":
                 s += "{:14s} {:>28s}".format(opn, "Missing")
                 s += " {:>28s}".format(str(otherpar.quantity))
