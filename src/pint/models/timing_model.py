@@ -1582,8 +1582,17 @@ class TimingModel:
         import uncertainties.umath as um
         from uncertainties import ufloat
 
+        if self.name != '':
+            model_name=self.name.split('/')[-1]
+        else:
+            model_name='Model 1'
+        if othermodel.name != '':
+            other_model_name=othermodel.name.split('/')[-1]
+        else:
+            other_model_name='Model 2'
+        
         s = "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
-            "PARAMETER", "Model 1", "Model 2 ", "Diff_Sigma1", "Diff_Sigma2"
+            "PARAMETER", model_name, other_model_name, "Diff_Sigma1", "Diff_Sigma2"
         )
         s += "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
             "---------", "----------", "----------", "----------", "----------"
@@ -1639,7 +1648,7 @@ class TimingModel:
                 otherpar = None
             if isinstance(par, strParameter):
                 newstr += "{:14s} {:>28s}".format(pn, par.value)
-                if otherpar is not None:
+                if otherpar is not None and otherpar.value is not None:
                     newstr += " {:>28s}\n".format(otherpar.value)
                 else:
                     newstr += " {:>28s}\n".format("Missing")
@@ -1647,7 +1656,7 @@ class TimingModel:
                 if par.frozen:
                     # If not fitted, just print both values
                     newstr += "{:14s} {:>28s}".format(pn, str(par.quantity))
-                    if otherpar is not None:
+                    if otherpar is not None and otherpar.quantity is not None:
                         newstr += " {:>28s}\n".format(str(otherpar.quantity))
                     else:
                         newstr += " {:>28s}\n".format("Missing")
@@ -1681,7 +1690,7 @@ class TimingModel:
                                 newstr += " {:>28s}".format("Missing")
                     else:
                         newstr += " {:>28s}".format("Missing")
-                    if otherpar.value is not None:
+                    if otherpar is not None and otherpar.quantity is not None:
                         diff = otherpar.quantity - par.quantity
                         diff_sigma = (diff / par.uncertainty).decompose()
                         if abs(diff_sigma) != np.inf:
