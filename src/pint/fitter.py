@@ -1028,9 +1028,6 @@ class DownhillFitter(Fitter):
                     lambda_ /= 2
                     log.info(f"Iteration {i}: Shortening step to {lambda_}: {e}")
                     if lambda_ < min_lambda:
-                        # FIXME: if best_state was an improvement, keep it anyway
-                        # This is tricky because we need to do all the finalization stuff,
-                        # but only if we've got anywhere, then re-raise the exception.
                         log.warning(
                             f"Unable to improve chi2 even with very small steps, stopping "
                             f"but keeping best state, message was: {e}"
@@ -1421,7 +1418,7 @@ class WidebandState(ModelState):
         return self.M_params_units_norm[3]
 
     @cached_property
-    def mtcm_mtcy(self):
+    def mtcm_mtcy_mtcmplain(self):
         # FIXME: ensure that TOAs are before DM
         residuals = np.hstack(
             (self.resids.toa.time_resids.to_value(u.s), self.resids.dm.resids_value)
@@ -1441,6 +1438,7 @@ class WidebandState(ModelState):
             cm = scipy.linalg.cho_solve(cf, self.M)
             mtcm = np.dot(self.M.T, cm)
             mtcy = np.dot(cm.T, residuals)
+            mtcmplain = mtcm
         else:
             Nvec = (
                 np.hstack(
@@ -1461,17 +1459,22 @@ class WidebandState(ModelState):
             )
             cinv = 1 / Nvec
             mtcm = np.dot(self.M.T, cinv[:, None] * self.M)
+            mtcmplain = mtcm
             mtcm += np.diag(self.phiinv)
             mtcy = np.dot(self.M.T, cinv * residuals)
-        return mtcm, mtcy
+        return mtcm, mtcy, mtcmplain
 
     @cached_property
     def mtcm(self):
-        return self.mtcm_mtcy[0]
+        return self.mtcm_mtcy_mtcmplain[0]
 
     @cached_property
     def mtcy(self):
-        return self.mtcm_mtcy[1]
+        return self.mtcm_mtcy_mtcmplain[1]
+
+    @cached_property
+    def mtcmplain(self):
+        return self.mtcm_mtcy_mtcmplain[2]
 
     @cached_property
     def U_s_Vt_xhat(self):
@@ -2309,7 +2312,8 @@ class LMFitter(Fitter):
             lambda_ = min_lambda
             for i in range(maxiter):
                 lf = lambda_ if lambda_ > min_lambda else 0
-                A = current_state.mtcm + lf * np.diag(np.diag(current_state.mtcm))
+                # Attempt: do not scale the phiinv penalty factor by lambda
+                A = current_state.mtcm + lf * np.diag(np.diag(current_state.mtcmplain))
                 b = current_state.mtcy
                 ill_conditioned = False
                 if threshold is None:
@@ -2324,6 +2328,7 @@ class LMFitter(Fitter):
                     s[bad] = np.inf
                     for c in bad:
                         ill_conditioned = True
+                        # FIXME: maybe don't stop while ill-conditioned? Always try increasing lambda?
                         bad_col = Vt[c, :]
                         bad_col /= abs(bad_col).max()
                         bad_combination = " ".join(
