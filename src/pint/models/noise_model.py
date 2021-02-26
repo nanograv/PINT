@@ -1,5 +1,6 @@
 """Pulsar timing noise models."""
 
+import copy
 import astropy.units as u
 import numpy as np
 from astropy import log
@@ -212,10 +213,10 @@ class ScaleDmError(NoiseComponent):
             else:
                 continue
 
-        if len(self.DMEFACs) != len(self.DMEQUADs):
-            self._match_DMEFAC_DMEQUAD()
-        else:
-            self._paired_DMEFAC_DMEQUAD = self.pair_DMEFAC_DMEQUAD()
+        # if len(self.DMEFACs) != len(self.DMEQUADs):
+        #     self._match_DMEFAC_DMEQUAD()
+        # else:
+        #     self._paired_DMEFAC_DMEQUAD = self.pair_DMEFAC_DMEQUAD()
 
     def validate(self):
         super(ScaleDmError, self).validate()
@@ -225,61 +226,61 @@ class ScaleDmError(NoiseComponent):
             if [x for x in l if l.count(x) > 1] != []:
                 raise ValueError("'%s' have duplicated keys and key values." % el)
 
-    def _match_DMEFAC_DMEQUAD(self, add_param_to_model=False):
-        """ Match the DMEFAC and DMEQUAD parameter, if only one parameter of the
-        DMEFAC-DMEQUAD pair is given. This match is based on the parameters key
-        and key value.
-
-        Parameters
-        ----------
-        add_param_to_model: bool
-            Flags to add the parameters to the timing model instead of use the
-            default value temporarily. This is useful, if one wants to fit for
-            the match up parameters.
-        """
-        keys_and_values = {}
-        p_map = {0: (self.DMEFAC1, 1), 1: (self.DMEQUAD1, 0)}
-        keys_and_values = self.pair_DMEFAC_DMEQUAD()
-        # match params.
-        for kvs, params in keys_and_values.items():
-            if None in params:
-                p_type = params.index(None)
-                example_add_param = p_map[p_type][0]
-                pair_param = params[1 - p_type]
-                param_idx = pair_param.index
-                param_name = example_add_param.prefix + str(param_idx)
-                # search existing param but without any assigned keys
-                add_param = example_add_param.new_param(param_idx)
-                add_param.value = p_map[p_type][1]
-                add_param.key = kvs[0]
-                add_param.key_value = kvs[1]
-                params[p_type] = add_param
-                if add_param_to_model:
-                    self.add_param(add_param)
-        if add_param_to_model:
-            self.setup()
-        else:
-            self._paired_DMEFAC_DMEQUAD = keys_and_values
+    # def _match_DMEFAC_DMEQUAD(self, add_param_to_model=False):
+    #     """ Match the DMEFAC and DMEQUAD parameter, if only one parameter of the
+    #     DMEFAC-DMEQUAD pair is given. This match is based on the parameters key
+    #     and key value.
+    #
+    #     Parameters
+    #     ----------
+    #     add_param_to_model: bool
+    #         Flags to add the parameters to the timing model instead of use the
+    #         default value temporarily. This is useful, if one wants to fit for
+    #         the match up parameters.
+    #     """
+    #     keys_and_values = {}
+    #     p_map = {0: (self.DMEFAC1, 1), 1: (self.DMEQUAD1, 0)}
+    #     keys_and_values = self.pair_DMEFAC_DMEQUAD()
+    #     # match params.
+    #     for kvs, params in keys_and_values.items():
+    #         if None in params:
+    #             p_type = params.index(None)
+    #             example_add_param = p_map[p_type][0]
+    #             pair_param = params[1 - p_type]
+    #             param_idx = pair_param.index
+    #             param_name = example_add_param.prefix + str(param_idx)
+    #             # search existing param but without any assigned keys
+    #             add_param = example_add_param.new_param(param_idx)
+    #             add_param.value = p_map[p_type][1]
+    #             add_param.key = kvs[0]
+    #             add_param.key_value = kvs[1]
+    #             params[p_type] = add_param
+    #             if add_param_to_model:
+    #                 self.add_param(add_param)
+    #     if add_param_to_model:
+    #         self.setup()
+    #     else:
+    #         self._paired_DMEFAC_DMEQUAD = keys_and_values
 
     # pairing up EFAC and EQUAD
-    def pair_DMEFAC_DMEQUAD(self):
-        """ Pair the DMEFAC and DMEQUAD.
-        """
-        keys_and_values = {}
-        # Check the dm efac first
-        for dmefac, efac_key in self.DMEFACs.items():
-            if efac_key[0] is not None:
-                keys_and_values[efac_key] = [getattr(self, dmefac), None]
-        # Check the dm equad then
-        for dmequad, equad_key in self.DMEQUADs.items():
-            if equad_key[0] is not None:
-                # Add matches.
-                if equad_key in keys_and_values.keys():
-                    keys_and_values[equad_key][1] = getattr(self, dmequad)
-                else:
-                    keys_and_values[equad_key] = [None, getattr(self, dmequard)]
-
-        return keys_and_values
+    # def pair_DMEFAC_DMEQUAD(self):
+    #     """ Pair the DMEFAC and DMEQUAD.
+    #     """
+    #     keys_and_values = {}
+    #     # Check the dm efac first
+    #     for dmefac, efac_key in self.DMEFACs.items():
+    #         if efac_key[0] is not None:
+    #             keys_and_values[efac_key] = [getattr(self, dmefac), None]
+    #     # Check the dm equad then
+    #     for dmequad, equad_key in self.DMEQUADs.items():
+    #         if equad_key[0] is not None:
+    #             # Add matches.
+    #             if equad_key in keys_and_values.keys():
+    #                 keys_and_values[equad_key][1] = getattr(self, dmequad)
+    #             else:
+    #                 keys_and_values[equad_key] = [None, getattr(self, dmequad)]
+    #
+    #     return keys_and_values
 
     def scale_dm_sigma(self, toas):
         """
@@ -291,17 +292,18 @@ class ScaleDmError(NoiseComponent):
             Input DM error object. We assume DM error is stored in the TOA
             objects.
         """
-        sigma_old = toas.get_dm_errors()
-        sigma_scaled = np.zeros_like(sigma_old)
-        if self._paired_DMEFAC_DMEQUAD is None:
-            self.setup()
-        for pir in self._paired_DMEFAC_DMEQUAD.values():
-            efac = pir[0]
-            equad = pir[1]
-            mask = efac.select_toa_mask(toas)
-            sigma_scaled[mask] = efac.quantity * np.sqrt(
-                sigma_old[mask] ** 2 + (equad.quantity) ** 2
-            )
+        sigma_scaled = copy.deepcopy(toas.get_dm_errors())
+        # Apply DMEQUAD first
+        for dmequad_name in self.DMEQUADs:
+            dmequad = getattr(self, dmequad_name)
+            if dmequad.quantity is None:
+                continue
+            mask = dmequad.select_toa_mask(toas)
+            sigma_scaled[mask] = np.hypot(sigma_scaled[mask], dmequad.quantity)
+        # Then apply the DMEFAC
+        for dmefac_name in self.DMEFACs:
+            dmefac = getattr(self, dmefac_name)
+            sigma_scaled[dmefac.select_toa_mask(toas)] *= dmefac.quantity
         return sigma_scaled
 
     def dm_sigma_scaled_cov_matrix(self, toas):
