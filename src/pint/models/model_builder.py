@@ -302,7 +302,11 @@ def get_model(parfile):
     except AttributeError:
         contents = None
     if contents is None:
-        return ModelBuilder(parfile).timing_model
+        # parfile is a filename and can be handled by ModelBuilder
+        mbmodel = ModelBuilder(parfile)
+        model = mbmodel.timing_model
+        model.name = parfile
+        return model
     else:
         with tempfile.TemporaryDirectory() as td:
             fn = os.path.join(td, "temp.par")
