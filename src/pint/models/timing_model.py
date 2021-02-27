@@ -1223,6 +1223,7 @@ class TimingModel:
 
         return result
 
+    '''
     def jump_flags_to_params(self, toas):
         """Convert jump flags in toas.table["flags"] to jump parameters in the model.
 
@@ -1241,7 +1242,7 @@ class TimingModel:
         for flag_dict in toas.table["flags"]:
             if "jump" in flag_dict.keys():
                 jump_nums = [
-                    flag_dict["jump"] if "jump" in flag_dict.keys() else np.nan
+                    jump_num for jump_num in flag_dict["jump"] if "jump" in flag_dict.keys() else np.nan
                     for flag_dict in toas.table["flags"]
                 ]
                 if "PhaseJump" not in self.components:
@@ -1265,8 +1266,8 @@ class TimingModel:
                         getattr(self, param.name).frozen = False
                 if 0 in jump_nums:
                     for flag_dict in toas.table["flags"]:
-                        if "jump" in flag_dict.keys() and flag_dict["jump"] == 0:
-                            flag_dict["jump"] = int(np.nanmax(jump_nums) + 1)
+                        if "jump" in flag_dict.keys() and 0 in flag_dict["jump"]:
+                            flag_dict["jump"] = [x if x != 0 else int(np.nanmax(jump_nums) + 1)]
                     param = maskParameter(
                         name="JUMP",
                         index=int(np.nanmax(jump_nums) + 1),
@@ -1285,6 +1286,70 @@ class TimingModel:
                 num = flag_dict["gui_jump"]
                 jump = getattr(self.components["PhaseJump"], "JUMP" + str(num))
                 jump.key_value = list(map(int, jump.key_value))
+        self.components["PhaseJump"].setup()
+    '''
+
+    def delete_jump_and_flags(self, toa_tables, toa_indeces, jump_num):
+        """Delete jump object from PhaseJump and remove its flags from TOA tables
+        (helper function for pintk).
+
+        Parameters
+        ----------
+        toa_tables: list object
+            The TOA tables which must be modified. In pintk (pulsar.py), this will
+            be a list of TOA tables:
+            [all_toas.table["flags"], selected_toas.table["flags"]]
+        toa_indeces: list object
+            A list of ints corresponding to the indeces of the selected TOAs (in the GUI).
+        jump_num: int
+            Specifies the index of the jump to be deleted.
+        """
+        # remove jump of specified index
+        self.remove_param("JUMP" + str(jump_num))
+
+        # remove jump flags from selected TOA tables
+        for dict1, dict2 in zip(toa_tables[0][toa_indeces], toa_tables[1]):
+            if "jump" in dict1.keys() and jump_num in dict1["jump"]:
+                if len(dict1["jump"]) == 1:
+                    del dict1["jump"]
+                else:
+                    dict1["jump"].remove(jump_num)
+            if "jump" in dict2.keys() and jump_num in dict2["jump"]:
+                if len(dict2["jump"]) == 1:
+                    del dict2["jump"]
+                else:
+                    dict2["jump"].remove(jump_num)
+            if "gui_jump" in dict1.keys() and dict1["gui_jump"] == jump_num:
+                del dict1["gui_jump"]
+            if "gui_jump" in dict2.keys() and dict2["gui_jump"] == jump_num:
+                del dict2["gui_jump"]
+            print(dict2)
+
+        for dict1 in toa_tables[0]:
+            # renumber jump flags at higher jump indeces in whole TOA table
+            if "jump" in dict1.keys():
+                dict1["jump"] = [
+                    num - 1 if num > jump_num else num for num in dict1["jump"]
+                ]
+            if "gui_jump" in dict1.keys() and dict1["gui_jump"] > jump_num:
+                cur_val = dict1["gui_jump"]
+                dict1["gui_jump"] = cur_val - 1
+
+        # if last jump deleted, remove PhaseJump object from model
+        if (
+            self.components["PhaseJump"].get_number_of_jumps() == 1
+        ):  # means last jump just deleted
+            comp_list = getattr(self, "PhaseComponent_list")
+            for item in comp_list:
+                if isinstance(item, pint.models.jump.PhaseJump):
+                    self.remove_component(item)
+            return
+        # if not, reindex higher index jump objects
+        for i in range(jump_num + 1, len(self.jumps) + 1):
+            cur_jump = getattr(self, "JUMP" + str(i))
+            new_jump = cur_jump.new_param(index=(i - 1), copy_all=True)
+            self.add_param_from_top(new_jump, "PhaseJump")
+            self.remove_param(cur_jump.name)
         self.components["PhaseJump"].setup()
 
     def get_barycentric_toas(self, toas, cutoff_component=""):

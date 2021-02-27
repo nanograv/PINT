@@ -154,30 +154,134 @@ class PhaseJump(PhaseComponent):
             # find TOAs jump applies to
             mask = jump_par.select_toa_mask(toas)
             # apply to dictionaries
-            self.add_jump_flags(jump_par, toas.table["flags"][mask], in_gui=False)
+            for dict in toas.table["flags"][mask]:
+                if "jump" in dict.keys():
+                    # check if jump flag already added - don't add flag twice
+                    if jump_par.index in dict["jump"]:
+                        continue
+                    dict["jump"].append(jump_par.index)  # otherwise, add jump flag
+                else:
+                    dict["jump"] = [jump_par.index]
 
-    def add_jump_flags(self, jump, selected_toas_table, in_gui):
-        """Add flags to inputted TOA table."""
-        if in_gui:
-            # search for TOAs already jumped - pintk does not allow jumps added through GUI to overlap with existing jumps
-            for dict in selected_toas_table:
+    def add_jump_and_flags(self, toa_tables):
+        """Add jump object to PhaseJump and appropriate flags to TOA tables (helper
+        function for pintk).
+
+        Primarily to be used when applying a jump through pintk to TOAs - since these
+        jumps don't have keys that match to preexisting flags in the TOA tables,
+        we must add the flags when adding the jump.
+
+        Parameters
+        ----------
+        toa_tables: list object
+            The TOA tables which must be modified. In pintk (pulsar.py), this will
+            be a list of TOA tables:
+            [all_toas.table["flags"][selected], selected_toas.table["flags"]]
+        """
+        ind = None  # index of jump
+        # check if this is first jump added
+        if len(self.jumps) == 0 or (
+            len(self.jumps) == 1 and getattr(self, "JUMP1").key == None
+        ):
+            param = maskParameter(
+                name="JUMP",
+                index=1,
+                key="-gui_jump",
+                key_value=1,
+                value=0.0,
+                units="second",
+                frozen=False,
+                aliases=["JUMP"],
+            )
+            self.add_param(param)
+            ind = 1
+        # otherwise add on jump with next index
+        else:
+            # first, search for TOAs already jumped in inputted selection - pintk does not allow jumps added through GUI to overlap with existing jumps
+            for dict in toa_tables[0]:  # just need to check overall toa table
                 if "jump" in dict.keys():
                     log.warning(
                         "The selected toa(s) overlap an existing jump. Remove all interfering jumps before attempting to jump these toas."
                     )
                     return
-            for dict in selected_toas_table:
-                dict["jump"] = [jump.index]
-                dict["gui_jump"] = [jump.index]
-        else:
-            for dict in selected_toas_table:
-                if "jump" in dict.keys():
-                    # check if jump flag already added - don't add flag twice
-                    if jump.index in dict["jump"]:
-                        continue
-                    dict["jump"].append(jump.index)  # otherwise, add jump flag
-                else:
-                    dict["jump"] = [jump.index]
+            param = maskParameter(
+                name="JUMP",
+                index=len(self.jumps) + 1,
+                key="-gui_jump",
+                key_value=1,
+                value=0.0,
+                units="second",
+                frozen=False,
+                aliases=["JUMP"],
+            )
+            self.add_param(param)
+            ind = param.index
+        self.setup()
+        # add appropriate flags to TOA table(s) to link jump with appropriate TOA
+        for dict1, dict2 in zip(toa_tables[0], toa_tables[1]):
+            if "jump" in dict1.keys():
+                dict1["jump"].append(ind)  # toa can have multiple jumps
+            else:
+                dict1["jump"] = [ind]
+            dict1["gui_jump"] = ind  # toa can only have one gui_jump
+            if "jump" in dict2.keys():
+                dict2["jump"].append(ind)
+            else:
+                dict2["jump"] = [ind]
+            dict2["gui_jump"] = ind
 
-    # def remove_jump_flags(self, toas):
-    #    """Remove flags to designated TOAs in TOA table."""
+    '''
+    def delete_jump_and_flags(self, toa_tables, toa_indeces, jump_num):
+        """Delete jump object from PhaseJump and remove its flags from TOA tables
+        (helper function for pintk).
+
+        Parameters
+        ----------
+        toa_tables: list object
+            The TOA tables which must be modified. In pintk (pulsar.py), this will
+            be a list of TOA tables:
+            [all_toas.table["flags"], selected_toas.table["flags"]]
+        toa_indeces: list object
+            A list of ints corresponding to the indeces of the selected TOAs (in the GUI).
+        jump_num: int
+            Specifies the index of the jump to be deleted.
+        """
+        # remove jump of specified index
+        self.remove_param("JUMP" + str(jump_num))
+
+        # remove jump flags from selected TOA tables
+        for dict1, dict2 in zip(toa_tables[0][toa_indeces], toa_tables[1]):
+            if "jump" in dict1.keys() and jump_num in dict1["jump"]:
+                if len(dict1["jump"]) == 1:
+                    del dict1["jump"]
+                else:
+                    dict1["jump"].remove(jump_num)
+            if "jump" in dict2.keys() and jump_num in dict2["jump"]:
+                if len(dict2["jump"]) == 1:
+                    del dict2["jump"]
+                else:
+                    dict2["jump"].remove(jump_num)
+            if "gui_jump" in dict1.keys() and dict1["gui_jump"] == jump_num:
+                del dict1["gui_jump"]
+            if "gui_jump" in dict2.keys() and dict2["gui_jump"] == jump_num:
+                del dict2["gui_jump"]
+
+        for dict1 in toa_tables[0]:
+            # renumber jump flags at higher jump indeces in whole TOA table
+            if "jump" in dict1.keys():
+                dict1["jump"] = [
+                    num - 1 if num > jump_num else num for num in dict1["jump"]
+                ]
+            if "gui_jump" in dict1.keys() and dict1["gui_jump"] > jump_num:
+                cur_val = dict1["gui_jump"]
+                dict1["gui_jump"] = cur_val - 1
+
+        # reindex jump objects
+        if len(self.jumps) == 0:
+
+        for i in range(jump_num + 1, len(self.jumps) + 2):
+            cur_jump = getattr(self, "JUMP" + str(i))
+            new_jump = cur_jump.new_param(index=(i - 1), copy_all=True)
+            self.add_param(new_jump)
+            self.remove_param(cur_jump.name)
+    '''
