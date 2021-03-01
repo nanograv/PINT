@@ -1,6 +1,9 @@
 import os
 import hypothesis
 
+# This setup is drawn from Astropy and might not be entirely relevant to us;
+# in particular we don't have a cron run for slow tests.
+
 # Tell Hypothesis that we might be running slow tests, to print the seed blob
 # so we can easily reproduce failures from CI, and derive a fuzzing profile
 # to try many more inputs when we detect a scheduled build or when specifically
