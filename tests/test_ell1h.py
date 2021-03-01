@@ -197,7 +197,7 @@ def test_zero_H3_H4_fit_H3_H4(toasJ0613):
     H3H4_zero_model.H4.frozen = False
     # Make sure H3's derivative does not return zero.
     test_toas = toasJ0613[::20]
-    d_h3 = H3H4_zero_model.d_delay_d_param(test_toas, 'H3')
+    d_h3 = H3H4_zero_model.d_delay_d_param(test_toas, "H3")
     assert d_h3.mean() > 0.0 * d_h3.unit
     f = ff.WLSFitter(test_toas, H3H4_zero_model)
     f.fit_toas()
