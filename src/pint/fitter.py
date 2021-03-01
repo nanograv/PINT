@@ -1034,7 +1034,7 @@ class DownhillFitter(Fitter):
                         )
                         exception = e
                         break
-            if 0 <= chi2_decrease < required_chi2_decrease:
+            if 0 <= chi2_decrease < required_chi2_decrease and lambda_ == 1:
                 log.info(
                     f"Iteration {i}: chi2 does not improve, stopping; "
                     f"decrease: {chi2_decrease}"
