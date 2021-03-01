@@ -190,13 +190,14 @@ def test_zero_H3(toasJ0613):
 
 
 def test_zero_H3_H4_fit_H3_H4(toasJ0613):
-    H4_zero = simple_par.replace("H4 2.0262048E-7  1       1.1276173E-7", "H4 0  1  0")
-    H3H4_zero = H4_zero.replace("H3 2.7507208E-7  1       1.5114416E-7", "H3 0  1  0")
     H3H4_zero_model = model.get_model(StringIO(simple_par))
     H3H4_zero_model.H3.value = 0.0
     H3H4_zero_model.H4.value = 0.0
     H3H4_zero_model.H3.frozen = False
     H3H4_zero_model.H4.frozen = False
+    # Make sure H3's derivative does not return zero.
+    d_h3 = H3H4_zero_model.d_delay_d_param(toasJ0613, 'H3')
+    assert d_h3.mean != 0.0 * d_h3.unit
     test_toas = toasJ0613[::20]
     f = ff.WLSFitter(test_toas, H3H4_zero_model)
     f.fit_toas()
