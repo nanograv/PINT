@@ -150,10 +150,17 @@ class ScaleToaError(NoiseComponent):
             if equad.quantity is None:
                 continue
             mask = equad.select_toa_mask(toas)
-            sigma_scaled[mask] = np.hypot(sigma_scaled[mask], equad.quantity)
+            if np.any(mask):
+                sigma_scaled[mask] = np.hypot(sigma_scaled[mask], equad.quantity)
+            else:
+                warnings.warn(f"EQUAD {equad} has no TOAs")
         for efac_name in self.EFACs:
             efac = getattr(self, efac_name)
-            sigma_scaled[efac.select_toa_mask(toas)] *= efac.quantity
+            mask = efac.select_toa_mask(toas)
+            if np.any(mask):
+                sigma_scaled[mask] *= efac.quantity
+            else:
+                warnings.warn(f"EFAC {efac} has no TOAs")
         return sigma_scaled
 
     def sigma_scaled_cov_matrix(self, toas):
