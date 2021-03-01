@@ -328,7 +328,10 @@ class EcorrNoise(NoiseComponent):
         umats = []
         for ec in ecorrs:
             mask = ec.select_toa_mask(toas)
-            umats.append(create_quantization_matrix(t[mask]))
+            if np.any(mask):
+                umats.append(create_quantization_matrix(t[mask]))
+            else:
+                umats.append(np.zeros((0, 0)))
         nc = sum(u.shape[1] for u in umats)
         umat = np.zeros((len(t), nc))
         weight = np.zeros(nc)

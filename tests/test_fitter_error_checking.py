@@ -134,6 +134,14 @@ def test_jump_everything_wideband():
         assert not np.isnan(fitter.model[p].value)
 
 
+def test_unused_ecorr():
+    model = get_model(io.StringIO("\n".join([par_base, "ECORR TEL ao 0"])))
+    toas = make_fake_toas(58000, 58900, 10, model, obs="barycenter", freq=np.inf)
+    model.free_params = ["F0"]
+    fitter = pint.fitter.GLSFitter(toas, model)
+    fitter.fit_toas()
+
+
 @pytest.mark.parametrize(
     "Fitter", [pint.fitter.GLSFitter, pint.fitter.WidebandTOAFitter]
 )
