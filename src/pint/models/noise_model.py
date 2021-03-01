@@ -1,6 +1,8 @@
 """Pulsar timing noise models."""
 
 import copy
+import warnings
+
 import astropy.units as u
 import numpy as np
 from astropy import log
@@ -331,6 +333,7 @@ class EcorrNoise(NoiseComponent):
             if np.any(mask):
                 umats.append(create_quantization_matrix(t[mask]))
             else:
+                warnings.warn(f"ECORR {ec} has no TOAs")
                 umats.append(np.zeros((0, 0)))
         nc = sum(u.shape[1] for u in umats)
         umat = np.zeros((len(t), nc))

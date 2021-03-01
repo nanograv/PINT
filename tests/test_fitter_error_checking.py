@@ -139,7 +139,8 @@ def test_unused_ecorr():
     toas = make_fake_toas(58000, 58900, 10, model, obs="barycenter", freq=np.inf)
     model.free_params = ["F0"]
     fitter = pint.fitter.GLSFitter(toas, model)
-    fitter.fit_toas()
+    with pytest.warns(UserWarning, match="ECORR"):
+        fitter.fit_toas()
 
 
 @pytest.mark.parametrize(
