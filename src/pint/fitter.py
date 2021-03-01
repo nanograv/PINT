@@ -1180,9 +1180,9 @@ class DownhillWLSFitter(DownhillFitter):
         )
         self.method = "downhill_wls"
 
-    def fit_toas(self, maxiter=10, threshold=None):
+    def fit_toas(self, maxiter=10, threshold=None, **kwargs):
         self.threshold = threshold
-        super().fit_toas(maxiter=maxiter)
+        super().fit_toas(maxiter=maxiter, **kwargs)
 
     def create_state(self):
         return WLSState(self, self.model)
@@ -1320,10 +1320,10 @@ class DownhillGLSFitter(DownhillFitter):
             self, self.model, full_cov=self.full_cov, threshold=self.threshold
         )
 
-    def fit_toas(self, maxiter=10, threshold=0, full_cov=False):
+    def fit_toas(self, maxiter=10, threshold=0, full_cov=False, **kwargs):
         self.threshold = threshold
         self.full_cov = full_cov
-        r = super().fit_toas(maxiter=maxiter)
+        r = super().fit_toas(maxiter=maxiter, **kwargs)
         # FIXME: set up noise residuals et cetera
         # Compute the noise realizations if possible
         ntmpar = len(self.model.free_params)
@@ -1566,11 +1566,11 @@ class WidebandDownhillFitter(DownhillFitter):
             self, self.model, full_cov=self.full_cov, threshold=self.threshold
         )
 
-    def fit_toas(self, maxiter=10, threshold=1e-14, full_cov=False):
+    def fit_toas(self, maxiter=10, threshold=1e-14, full_cov=False, **kwargs):
         self.threshold = threshold
         self.full_cov = full_cov
         # FIXME: set up noise residuals et cetera
-        r = super().fit_toas(maxiter=maxiter)
+        r = super().fit_toas(maxiter=maxiter, **kwargs)
         # Compute the noise realizations if possible
         ntmpar = len(self.model.free_params)
         if not self.full_cov:
