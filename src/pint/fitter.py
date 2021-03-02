@@ -82,6 +82,7 @@ __all__ = [
     "GLSFitter",
     "WidebandTOAFitter",
     "PowellFitter",
+    "DownhillFitter",
     "DownhillWLSFitter",
     "DownhillGLSFitter",
     "WidebandDownhillFitter",
@@ -976,6 +977,17 @@ class ModelState:
 
 
 class DownhillFitter(Fitter):
+    """Abstract base class for downhill fitters.
+
+    These fitters use the algorithm implemented here, in
+    :func:`pint.fitter.DownhillFitter.fit_toas` to work their way towards a
+    solution, keeping track of convergence. The linear algebra required by
+    various kinds of fitting is abstracted away into
+    :class:`pint.fitter.ModelState` objects so that this same code can be used
+    for correlated or uncorrelated TOA errors and narrowband or wideband TOAs.
+
+    """
+
     def __init__(self, toas, model, track_mode=None, residuals=None):
         super().__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
@@ -984,11 +996,42 @@ class DownhillFitter(Fitter):
 
     def fit_toas(
         self,
-        maxiter=1,
+        maxiter=20,
         required_chi2_decrease=1e-2,
-        max_chi2_increase=1e-2,
+        max_chi2_increase=1e-6,
         min_lambda=1e-3,
     ):
+        """Carry out a cautious downhill fit.
+
+        This tries to take the same steps as
+        :func:`pint.fitter.WLSFitter.fit_toas` or
+        :func:`pint.fitter.GLSFitter.fit_toas` or
+        :func:`pint.fitter.WidebandTOAFitter.fit_toas`.  At each step, it
+        checks whether the new model has a better ``chi2`` than the current
+        one; if the new model is invalid or worse than the current one, it
+        tries taking a shorter step in the same direction. This can exit if it
+        exceeds the maximum number of iterations or if improvement is not
+        possible even with very short steps, or it can exit successully if a
+        full-size step is taken and it does not decrease the ``chi2`` by much.
+
+        The attribute ``self.converged`` is set to True or False depending on
+        whether the process actually converged.
+
+        Parameters
+        ==========
+
+        maxiter : int
+            Abandon the process if this many successful steps have been taken.
+        required_chi2_decrease : float
+            A full-size step that makes less than this much improvement is taken
+            to indicate that the fitter has converged.
+        max_chi2_increase : float
+            If this is positive, consider taking steps that slightly worsen the chi2 in hopes
+            of eventually finding our way downhill.
+        min_lambda : float
+            If steps are shrunk by this factor and still don't result in improvement, abandon hope
+            of convergence and stop.
+        """
         # setup
         self.model.validate()
         self.model.validate_toas(self.toas)
@@ -1034,7 +1077,10 @@ class DownhillFitter(Fitter):
                         )
                         exception = e
                         break
-            if 0 <= chi2_decrease < required_chi2_decrease and lambda_ == 1:
+            if (
+                -max_chi2_increase <= chi2_decrease < required_chi2_decrease
+                and lambda_ == 1
+            ):
                 log.info(
                     f"Iteration {i}: chi2 does not improve, stopping; "
                     f"decrease: {chi2_decrease}"
@@ -1181,6 +1227,22 @@ class DownhillWLSFitter(DownhillFitter):
         self.method = "downhill_wls"
 
     def fit_toas(self, maxiter=10, threshold=None, **kwargs):
+        """Fit TOAs.
+
+        This is mostly implemented in
+        :func:`pint.fitter.DownhillFitter.fit_toas`.
+
+        Parameters
+        ==========
+        maxiter : int
+            Abandon hope if convergence hasn't occurred after this many steps (successful or not).
+        threshold : float
+            Discard singular values less than this times the largest; this makes the linear algebra
+            a little more stable, but the Levenberg-Marquardt algorithm is supposed to do that anyway.
+        kwargs : dict
+            Any additional arguments are passed down to
+            :func:`pint.fitter.DownhillFitter.fit_toas`
+        """
         self.threshold = threshold
         super().fit_toas(maxiter=maxiter, **kwargs)
 
@@ -1321,6 +1383,25 @@ class DownhillGLSFitter(DownhillFitter):
         )
 
     def fit_toas(self, maxiter=10, threshold=0, full_cov=False, **kwargs):
+        """Fit TOAs.
+
+        This is mostly implemented in
+        :func:`pint.fitter.DownhillFitter.fit_toas`.
+
+        Parameters
+        ==========
+        maxiter : int
+            Abandon hope if convergence hasn't occurred after this many steps (successful or not).
+        threshold : float
+            Discard singular values less than this times the largest; this makes the linear algebra
+            a little more stable, but the Levenberg-Marquardt algorithm is supposed to do that anyway.
+        full_cov : bool
+            If True, use the full TOA covariance matrix, which can be huge; if False, use the
+            rank-reduced approach (for which Levenberg-Marquardt may not make sense).
+        kwargs : dict
+            Any additional arguments are passed down to
+            :func:`pint.fitter.DownhillFitter.fit_toas`
+        """
         self.threshold = threshold
         self.full_cov = full_cov
         r = super().fit_toas(maxiter=maxiter, **kwargs)
@@ -1567,6 +1648,25 @@ class WidebandDownhillFitter(DownhillFitter):
         )
 
     def fit_toas(self, maxiter=10, threshold=1e-14, full_cov=False, **kwargs):
+        """Fit TOAs.
+
+        This is mostly implemented in
+        :func:`pint.fitter.DownhillFitter.fit_toas`.
+
+        Parameters
+        ==========
+        maxiter : int
+            Abandon hope if convergence hasn't occurred after this many steps (successful or not).
+        threshold : float
+            Discard singular values less than this times the largest; this makes the linear algebra
+            a little more stable, but the Levenberg-Marquardt algorithm is supposed to do that anyway.
+        full_cov : bool
+            If True, use the full TOA covariance matrix, which can be huge; if False, use the
+            rank-reduced approach (for which Levenberg-Marquardt may not make sense).
+        kwargs : dict
+            Any additional arguments are passed down to
+            :func:`pint.fitter.DownhillFitter.fit_toas`
+        """
         self.threshold = threshold
         self.full_cov = full_cov
         # FIXME: set up noise residuals et cetera
@@ -2418,6 +2518,7 @@ class WidebandLMFitter(LMFitter):
 
     This should carry out a more reliable fitting process than the plain
     WidebandTOAFitter, and a more efficient one than WidebandDownhillFitter.
+    Unfortunately it doesn't.
     """
 
     def __init__(self, toas, model, track_mode=None, residuals=None, add_args=None):
