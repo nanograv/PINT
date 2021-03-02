@@ -998,7 +998,7 @@ class DownhillFitter(Fitter):
         self,
         maxiter=20,
         required_chi2_decrease=1e-2,
-        max_chi2_increase=1e-6,
+        max_chi2_increase=1e-5,
         min_lambda=1e-3,
     ):
         """Carry out a cautious downhill fit.
