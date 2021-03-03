@@ -112,6 +112,7 @@ class Astrometry(DelayComponent):
         """
         tbl = toas.table
         delay = np.zeros(len(toas))
+        # c selects the non-barycentric TOAs that need actual calculation
         c = np.logical_and.reduce(tbl["ssb_obs_pos"] != 0, axis=1)
         if np.any(c):
             L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"][c].astype(np.float64))
