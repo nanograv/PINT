@@ -203,6 +203,7 @@ class Fitter:
         self.fitresult = []
         self.method = None
         self.is_wideband = False
+        self.converged = False
 
     def fit_toas(self, maxiter=None):
         """Run fitting operation.
@@ -726,6 +727,7 @@ class Fitter:
             fitter_copy.model.setup()
             # Now refit
             fitter_copy.fit_toas(maxiter=maxiter)
+            # FIXME: check convergence
             # Now get the new values
             dof_1 = fitter_copy.resids.dof
             chi2_1 = fitter_copy.resids.chi2
@@ -767,6 +769,7 @@ class Fitter:
             fitter_copy.model.setup()
             # Now refit
             fitter_copy.fit_toas(maxiter=maxiter)
+            # FIXME: check convergence
             # Now get the new values
             dof_2 = fitter_copy.resids.dof
             chi2_2 = fitter_copy.resids.chi2
@@ -985,7 +988,6 @@ class DownhillFitter(Fitter):
     various kinds of fitting is abstracted away into
     :class:`pint.fitter.ModelState` objects so that this same code can be used
     for correlated or uncorrelated TOA errors and narrowband or wideband TOAs.
-
     """
 
     def __init__(self, toas, model, track_mode=None, residuals=None):
