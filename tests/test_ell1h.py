@@ -203,6 +203,7 @@ def test_zero_H3_H4_fit_H3_H4(toasJ0613):
     f.fit_toas()
     assert f.model.H3.value > 0.0
 
+
 def test_zero_H3_H4_fit_H3(toasJ0613):
     H3H4_zero2_model = model.get_model(StringIO(simple_par))
     H3H4_zero2_model.H3.value = 0.0
