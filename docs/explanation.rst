@@ -490,8 +490,8 @@ PINT contains a slightly more sophisticated algorithm, implemented in
 1. Evaluate the model and its derivatives at the starting point :math:`x`, producing a set of residuals :math:`\delta y` and a Jacobian `M`.
 2. Compute :math:`\delta x` to minimize :math:`\left| M\delta x - \delta y \right|_C`, where :math:`\left| \cdot \right|_C` is the squared amplitude of a vector with respect to the data uncertainties/covariance :math:`C`.
 3. Set :math:`\lambda` to 1.
-3. Evaluate the model at the starting point plus :math:`\lambda \delta x`. If this is invalid or worse than the starting point, divide :math:`\lambda` by two and repeat this step. If :math:`\lambda` is too small, accept the best point seen to date and exit without convergence.
-4. If the model improved but only slightly with :math:`\lambda=1`, exit with convergence. If the maximum number of iterations was reached, exit without convergence. Otherwise update the starting point and return to step 1.
+4. Evaluate the model at the starting point plus :math:`\lambda \delta x`. If this is invalid or worse than the starting point, divide :math:`\lambda` by two and repeat this step. If :math:`\lambda` is too small, accept the best point seen to date and exit without convergence.
+5. If the model improved but only slightly with :math:`\lambda=1`, exit with convergence. If the maximum number of iterations was reached, exit without convergence. Otherwise update the starting point and return to step 1.
 
 This ensures that PINT tries taking smaller steps if problems arise, and claims convergence only if a normal step worked. It does not solve the problems that arise if some parameters are nearly degenerate, enough to cause problems with the numerical linear algebra.
 
