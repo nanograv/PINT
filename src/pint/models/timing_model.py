@@ -1223,6 +1223,7 @@ class TimingModel:
 
         return result
 
+    # TODO: fix jump_flags_to_params
     '''
     def jump_flags_to_params(self, toas):
         """Convert jump flags in toas.table["flags"] to jump parameters in the model.
@@ -1289,18 +1290,17 @@ class TimingModel:
         self.components["PhaseJump"].setup()
     '''
 
-    def delete_jump_and_flags(self, toa_tables, toa_indeces, jump_num):
-        """Delete jump object from PhaseJump and remove its flags from TOA tables
+    def delete_jump_and_flags(self, toa_table, jump_num):
+        """Delete jump object from PhaseJump and remove its flags from TOA table
         (helper function for pintk).
 
         Parameters
         ----------
-        toa_tables: list object
-            The TOA tables which must be modified. In pintk (pulsar.py), this will
-            be a list of TOA tables:
-            [all_toas.table["flags"], selected_toas.table["flags"]]
-        toa_indeces: list object
-            A list of ints corresponding to the indeces of the selected TOAs (in the GUI).
+        toa_table: list or None
+            The TOA table which must be modified. In pintk (pulsar.py), for the
+            prefit model, this will be all_toas.table["flags"].
+            For the postfit model, it will be None (one set of TOA tables for both
+            models).
         jump_num: int
             Specifies the index of the jump to be deleted.
         """
@@ -1308,32 +1308,23 @@ class TimingModel:
         self.remove_param("JUMP" + str(jump_num))
 
         # remove jump flags from selected TOA tables
-        for dict1, dict2 in zip(toa_tables[0][toa_indeces], toa_tables[1]):
-            if "jump" in dict1.keys() and jump_num in dict1["jump"]:
-                if len(dict1["jump"]) == 1:
-                    del dict1["jump"]
-                else:
-                    dict1["jump"].remove(jump_num)
-            if "jump" in dict2.keys() and jump_num in dict2["jump"]:
-                if len(dict2["jump"]) == 1:
-                    del dict2["jump"]
-                else:
-                    dict2["jump"].remove(jump_num)
-            if "gui_jump" in dict1.keys() and dict1["gui_jump"] == jump_num:
-                del dict1["gui_jump"]
-            if "gui_jump" in dict2.keys() and dict2["gui_jump"] == jump_num:
-                del dict2["gui_jump"]
-            print(dict2)
-
-        for dict1 in toa_tables[0]:
-            # renumber jump flags at higher jump indeces in whole TOA table
-            if "jump" in dict1.keys():
-                dict1["jump"] = [
-                    num - 1 if num > jump_num else num for num in dict1["jump"]
-                ]
-            if "gui_jump" in dict1.keys() and dict1["gui_jump"] > jump_num:
-                cur_val = dict1["gui_jump"]
-                dict1["gui_jump"] = cur_val - 1
+        if toa_table is not None:
+            for dict in toa_table:
+                if "jump" in dict.keys() and jump_num in dict["jump"]:
+                    if len(dict["jump"]) == 1:
+                        del dict["jump"]
+                    else:
+                        dict["jump"].remove(jump_num)
+                if "gui_jump" in dict.keys() and dict["gui_jump"] == jump_num:
+                    del dict["gui_jump"]
+                # renumber jump flags at higher jump indeces in whole TOA table
+                if "jump" in dict.keys():
+                    dict["jump"] = [
+                        num - 1 if num > jump_num else num for num in dict["jump"]
+                    ]
+                if "gui_jump" in dict.keys() and dict["gui_jump"] > jump_num:
+                    cur_val = dict["gui_jump"]
+                    dict["gui_jump"] = cur_val - 1
 
         # if last jump deleted, remove PhaseJump object from model
         if (
@@ -1347,6 +1338,7 @@ class TimingModel:
         # if not, reindex higher index jump objects
         for i in range(jump_num + 1, len(self.jumps) + 1):
             cur_jump = getattr(self, "JUMP" + str(i))
+            cur_jump.key_value = i - 1
             new_jump = cur_jump.new_param(index=(i - 1), copy_all=True)
             self.add_param_from_top(new_jump, "PhaseJump")
             self.remove_param(cur_jump.name)

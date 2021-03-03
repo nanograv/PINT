@@ -56,7 +56,8 @@ def main(argv=None):
     )
 
     # turns pre-existing jump flags in t.table['flags'] into parameters in parfile
-    m.jump_flags_to_params(t)
+    # TODO: fix jump_flags_to_params
+    # m.jump_flags_to_params(t)
     # adds jump flags to t.table['flags'] for jump parameters already in parfile
     if "PhaseJump" in m.components:
         m.jump_params_to_flags(t)
