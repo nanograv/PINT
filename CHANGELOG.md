@@ -7,6 +7,10 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Fixed
 - Now ensures T2CMETHOD is IAU2000B if it is set at all; likewise DILATEFREQ and TIMEEPH (PR #970)
+### Added
+- DownhillWLSFitter, DownhillGLSFitter, WidebandDownhillFitter are new Fitters that are more careful about convergence than the existing ones (PR #975)
+- Fitters have a .is_wideband boolean attribute (PR #975)
+
 
 ## [0.8.2] - 2021-01-27
 ### Fixed

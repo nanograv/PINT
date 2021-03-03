@@ -111,16 +111,23 @@ class Astrometry(DelayComponent):
         available as 3-vector toa.xyz, in units of light-seconds.
         """
         tbl = toas.table
-        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(np.float64))
-        re_dot_L = np.sum(tbl["ssb_obs_pos"] * L_hat, axis=1)
-        delay = -re_dot_L.to(ls).value
-        if self.PX.value != 0.0 and np.count_nonzero(tbl["ssb_obs_pos"]) > 0:
-            L = (1.0 / self.PX.value) * u.kpc
-            # TODO: np.sum currently loses units in some cases...
-            re_sqr = (
-                np.sum(tbl["ssb_obs_pos"] ** 2, axis=1) * tbl["ssb_obs_pos"].unit ** 2
-            )
-            delay += (0.5 * (re_sqr / L) * (1.0 - re_dot_L ** 2 / re_sqr)).to(ls).value
+        delay = np.zeros(len(toas))
+        # c selects the non-barycentric TOAs that need actual calculation
+        c = np.logical_and.reduce(tbl["ssb_obs_pos"] != 0, axis=1)
+        if np.any(c):
+            L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"][c].astype(np.float64))
+            re_dot_L = np.sum(tbl["ssb_obs_pos"][c] * L_hat, axis=1)
+            delay[c] = -re_dot_L.to(ls).value
+            if self.PX.value != 0.0:
+                L = (1.0 / self.PX.value) * u.kpc
+                # TODO: np.sum currently loses units in some cases...
+                re_sqr = (
+                    np.sum(tbl["ssb_obs_pos"][c] ** 2, axis=1)
+                    * tbl["ssb_obs_pos"].unit ** 2
+                )
+                delay[c] += (
+                    (0.5 * (re_sqr / L) * (1.0 - re_dot_L ** 2 / re_sqr)).to(ls).value
+                )
         return delay * u.second
 
     def get_d_delay_quantities(self, toas):

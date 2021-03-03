@@ -511,7 +511,7 @@ def format_toa_line(
     toaerr,
     freq,
     obs,
-    dm=0.0 * u.pc / u.cm ** 3,
+    dm=0.0 * pint.dmu,
     name="unk",
     flags={},
     format="Princeton",
@@ -568,8 +568,8 @@ def format_toa_line(
         if freq == np.inf * u.MHz:
             freq = 0.0 * u.MHz
         flagstring = ""
-        if dm != 0.0 * u.pc / u.cm ** 3:
-            flagstring += "-dm {0:%.5f}".format(dm.to(u.pc / u.cm ** 3).value)
+        if dm != 0.0 * pint.dmu:
+            flagstring += "-dm {0:%.5f}".format(dm.to(pint.dmu).value)
         # Here I need to append any actual flags
         for flag in flags.keys():
             v = flags[flag]
@@ -614,13 +614,13 @@ def format_toa_line(
             raise ValueError(
                 "Observatory {} does not have 1-character tempo_code!".format(obs.name)
             )
-        if dm != 0.0 * u.pc / u.cm ** 3:
+        if dm != 0.0 * pint.dmu:
             out = obs.tempo_code + " %13s%9.3f%20s%9.2f                %9.4f\n" % (
                 name,
                 freq.to(u.MHz).value,
                 toa_str,
                 toaerr.to(u.us).value,
-                dm.to(u.pc / u.cm ** 3).value,
+                dm.to(pint.dmu).value,
             )
         else:
             out = obs.tempo_code + " %13s%9.3f%20s%9.2f\n" % (
@@ -811,7 +811,7 @@ def make_fake_toas(
     obs="GBT",
     error=1 * u.us,
     dm=None,
-    dm_error=1e-4 * u.pc / u.cm ** 3,
+    dm_error=1e-4 * pint.dmu,
 ):
     """Make evenly spaced toas with residuals = 0 and without errors.
 
@@ -907,8 +907,8 @@ def make_fake_toas(
     ts.table["error"] = error
     if dm is not None:
         for f in ts.table["flags"]:
-            f["pp_dm"] = dm
-            f["pp_dme"] = dm_error.to_value(u.pc / u.cm ** 3)
+            f["pp_dm"] = dm.to_value(pint.dmu)
+            f["pp_dme"] = dm_error.to_value(pint.dmu)
     ts.compute_TDBs()
     ts.compute_posvels()
     ts.compute_pulse_numbers(model)
@@ -1114,7 +1114,7 @@ class TOA:
             s += " " + str(self.flags)
         return s
 
-    def as_line(self, format="Tempo2", name=None, dm=0 * u.pc / u.cm ** 3):
+    def as_line(self, format="Tempo2", name=None, dm=0 * pint.dmu):
         """Format TOA as a line for a ``.tim`` file."""
         if name is None:
             name = self.name
@@ -1279,7 +1279,7 @@ class TOAs:
         try:
             self.phase_columns_from_flags()
         except ValueError:
-            log.debug("No pulse numbers found in the TOAs")
+            log.debug("No pulse number flags found in the TOAs")
 
         # We don't need this now that we have a table
 
@@ -1438,7 +1438,7 @@ class TOAs:
         result, valid = self.get_flag_value("pp_dm")
         if valid == []:
             raise AttributeError("No DM is provided.")
-        return np.array(result)[valid] * u.pc / u.cm ** 3
+        return np.array(result)[valid] * pint.dmu
 
     def get_dm_errors(self):
         """Get the Wideband DM data error.
@@ -1451,7 +1451,7 @@ class TOAs:
         result, valid = self.get_flag_value("pp_dme")
         if valid == []:
             raise AttributeError("No DM error is provided.")
-        return np.array(result)[valid] * u.pc / u.cm ** 3
+        return np.array(result)[valid] * pint.dmu
 
     def get_groups(self, gap_limit=None):
         """Flag toas within gap limit (default 2h = 0.0833d) of each other as the same group.
@@ -2092,7 +2092,7 @@ class TOAs:
             # get velocity vector from coordinate frame
             ssb_obs_vel_ecl[loind:hiind, :] = coord.velocity.d_xyz.T.to(u.km / u.s)
         col = ssb_obs_vel_ecl
-        log.debug("Adding columns " + " ".join(col.name))
+        log.debug("Adding column " + col.name)
         self.table.add_column(col)
 
 

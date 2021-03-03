@@ -1,31 +1,45 @@
 #! /usr/bin/env python
 import os
 import unittest
+from os.path import join
 
-from pint.models.model_builder import get_model
-from pint import toa
-from pint.fitter import WLSFitter, GLSFitter
+import pytest
 from pinttestdata import datadir
 
+from pint.toa import get_TOAs
+from pint.fitter import GLSFitter, WLSFitter, DownhillWLSFitter, DownhillGLSFitter
+from pint.models.model_builder import get_model
 
-class TestFitterCompare(unittest.TestCase):
-    """Compare results from WLS and GLS fitters."""
 
-    @classmethod
-    def setUpClass(cls):
-        os.chdir(datadir)
-        cls.par = "NGC6440E.par"
-        cls.tim = "NGC6440E.tim"
-        cls.m = get_model(cls.par)
-        cls.t = toa.get_TOAs(cls.tim, ephem="DE421")
-        cls.wls = WLSFitter(cls.t, cls.m)
-        cls.gls = GLSFitter(cls.t, cls.m)
-        cls.gls_full = GLSFitter(cls.t, cls.m)
+@pytest.fixture
+def wls():
+    m = get_model(join(datadir, "NGC6440E.par"))
+    t = get_TOAs(join(datadir, "NGC6440E.tim"), ephem="DE421")
 
-    def test_compare(self):
-        self.wls_chi2 = self.wls.fit_toas()
-        self.gls_chi2 = self.gls.fit_toas()
-        self.gls_full_chi2 = self.gls.fit_toas(full_cov=True)
-        assert abs((self.wls_chi2 - self.gls_chi2) < 0.01)
-        assert abs((self.wls_chi2 - self.gls_full_chi2) < 0.01)
-        assert abs((self.gls_chi2 - self.gls_full_chi2) < 0.01)
+    wls = WLSFitter(t, m)
+    wls.fit_toas()
+
+    return wls
+
+
+@pytest.mark.parametrize("full_cov", [False, True])
+def test_compare_gls(full_cov, wls):
+    gls = GLSFitter(wls.toas, wls.model_init)
+    gls.fit_toas(full_cov=full_cov)
+
+    assert abs(wls.resids.chi2 - gls.resids.chi2) < 0.01
+
+
+def test_compare_downhill_gls(wls):
+    dwls = DownhillWLSFitter(wls.toas, wls.model_init)
+    dwls.fit_toas()
+
+    assert abs(wls.resids.chi2 - dwls.resids.chi2) < 0.01
+
+
+@pytest.mark.parametrize("full_cov", [False, True])
+def test_compare_downhill_gls(full_cov, wls):
+    gls = DownhillGLSFitter(wls.toas, wls.model_init)
+    gls.fit_toas(full_cov=full_cov)
+
+    assert abs(wls.resids.chi2 - gls.resids.chi2) < 0.01
