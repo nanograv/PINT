@@ -201,7 +201,7 @@ def test_zero_H3_H4_fit_H3_H4(toasJ0613):
     assert d_h3.mean() > 0.0 * d_h3.unit
     f = ff.WLSFitter(test_toas, H3H4_zero_model)
     f.fit_toas()
-
+    assert f.model.H3.value > 0.0
 
 def test_zero_H3_H4_fit_H3(toasJ0613):
     H3H4_zero2_model = model.get_model(StringIO(simple_par))
@@ -213,3 +213,4 @@ def test_zero_H3_H4_fit_H3(toasJ0613):
     f = ff.WLSFitter(test_toas, H3H4_zero2_model)
     # This should work
     f.fit_toas()
+    assert f.model.H3.value > 0.0
