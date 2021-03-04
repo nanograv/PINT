@@ -308,7 +308,8 @@ class Pulsar:
                 if "PhaseJump" not in self.prefit_model.components and self.fitted:
                     comp_list = getattr(self.postfit_model, "PhaseComponent_list")
                     for item in comp_list:
-                        self.postfit_model.remove_component(item)
+                        if isinstance(item, pint.models.jump.PhaseJump):
+                            self.postfit_model.remove_component(item)
                 log.info("removed param", "JUMP" + str(num))
                 return toas_jumped
         # if here, then doesn't match anything
