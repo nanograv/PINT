@@ -169,11 +169,10 @@ def test_ftest_nb():
 
 def test_ftest_wb():
     """Test for wideband fitter class F-test."""
-    wb_m = tm.get_model(os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.gls.par"))
-    wb_t = toa.get_TOAs(
-        os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.tim"), usepickle=True
+    wb_m = tm.get_model(os.path.join(datadir, "J0023+0923_ell1_simple.par"))
+    wb_t = toa.make_fake_toas(
+        56000.0, 56001.0, 10, wb_m, freq=1400.0, obs="GBT", dm=wb_m.DM.quantity
     )
-    # wb_t = toa.make_fake_toas(56000.0, 56001.0, 10, wb_m, freq=1400.0, obs="GB")
     wb_f = fitter.WidebandTOAFitter(wb_t, wb_m)
     wb_f.fit_toas()
     # Parallax

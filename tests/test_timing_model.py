@@ -297,4 +297,10 @@ def test_free_params(lines, param, exception):
 
 def test_pepoch_late():
     model = get_model(io.StringIO(par_base))
-    t = make_fake_toas(56000, 57000, 10, model=model)
+    make_fake_toas(56000, 57000, 10, model=model)
+
+
+def test_t2cmethod_corrected():
+    with pytest.warns(UserWarning, match=".*T2CMETHOD.*"):
+        model = get_model(io.StringIO("\n".join([par_base, "T2CMETHOD TEMPO"])))
+    assert model.T2CMETHOD.value == "IAU2000B"

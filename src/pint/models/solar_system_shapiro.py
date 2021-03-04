@@ -96,13 +96,14 @@ class SolarSystemShapiro(DelayComponent):
         # Start out with 0 delay with units of seconds
         tbl = toas.table
         delay = numpy.zeros(len(tbl))
+        # FIXME: is there any reason to use groups here? it's slow
         for ii, key in enumerate(tbl.groups.keys):
-            grp = tbl.groups[ii]
-            # obs = tbl.groups.keys[ii]["obs"]
-            loind, hiind = tbl.groups.indices[ii : ii + 2]
             if key["obs"].lower() == "barycenter":
                 log.debug("Skipping Shapiro delay for Barycentric TOAs")
                 continue
+            grp = tbl.groups[ii]
+            # obs = tbl.groups.keys[ii]["obs"]
+            loind, hiind = tbl.groups.indices[ii : ii + 2]
             psr_dir = self._parent.ssb_to_psb_xyz_ICRS(
                 epoch=grp["tdbld"].astype(numpy.float64)
             )

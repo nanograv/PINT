@@ -313,12 +313,12 @@ def load_pickle(toafilename, picklefilename=None):
         try:
             with gzip.open(fn, "rb") as f:
                 lf = pickle.load(f)
-        except (IOError, pickle.UnpicklingError):
+        except (IOError, pickle.UnpicklingError, ValueError):
             pass
         try:
             with open(fn, "rb") as f:
                 lf = pickle.load(f)
-        except (IOError, pickle.UnpicklingError):
+        except (IOError, pickle.UnpicklingError, ValueError):
             pass
     if lf is not None:
         lf.was_pickled = True
@@ -511,7 +511,7 @@ def format_toa_line(
     toaerr,
     freq,
     obs,
-    dm=0.0 * u.pc / u.cm ** 3,
+    dm=0.0 * pint.dmu,
     name="unk",
     flags={},
     format="Princeton",
@@ -568,8 +568,8 @@ def format_toa_line(
         if freq == np.inf * u.MHz:
             freq = 0.0 * u.MHz
         flagstring = ""
-        if dm != 0.0 * u.pc / u.cm ** 3:
-            flagstring += "-dm {0:%.5f}".format(dm.to(u.pc / u.cm ** 3).value)
+        if dm != 0.0 * pint.dmu:
+            flagstring += "-dm {0:%.5f}".format(dm.to(pint.dmu).value)
         # Here I need to append any actual flags
         for flag in flags.keys():
             v = flags[flag]
@@ -614,13 +614,13 @@ def format_toa_line(
             raise ValueError(
                 "Observatory {} does not have 1-character tempo_code!".format(obs.name)
             )
-        if dm != 0.0 * u.pc / u.cm ** 3:
+        if dm != 0.0 * pint.dmu:
             out = obs.tempo_code + " %13s%9.3f%20s%9.2f                %9.4f\n" % (
                 name,
                 freq.to(u.MHz).value,
                 toa_str,
                 toaerr.to(u.us).value,
-                dm.to(u.pc / u.cm ** 3).value,
+                dm.to(pint.dmu).value,
             )
         else:
             out = obs.tempo_code + " %13s%9.3f%20s%9.2f\n" % (
@@ -811,7 +811,7 @@ def make_fake_toas(
     obs="GBT",
     error=1 * u.us,
     dm=None,
-    dm_error=1e-4 * u.pc / u.cm ** 3,
+    dm_error=1e-4 * pint.dmu,
 ):
     """Make evenly spaced toas with residuals = 0 and without errors.
 
@@ -907,8 +907,8 @@ def make_fake_toas(
     ts.table["error"] = error
     if dm is not None:
         for f in ts.table["flags"]:
-            f["pp_dm"] = dm
-            f["pp_dme"] = dm_error.to_value(u.pc / u.cm ** 3)
+            f["pp_dm"] = dm.to_value(pint.dmu)
+            f["pp_dme"] = dm_error.to_value(pint.dmu)
     ts.compute_TDBs()
     ts.compute_posvels()
     ts.compute_pulse_numbers(model)
@@ -1114,7 +1114,7 @@ class TOA:
             s += " " + str(self.flags)
         return s
 
-    def as_line(self, format="Tempo2", name=None, dm=0 * u.pc / u.cm ** 3):
+    def as_line(self, format="Tempo2", name=None, dm=0 * pint.dmu):
         """Format TOA as a line for a ``.tim`` file."""
         if name is None:
             name = self.name
@@ -1279,7 +1279,7 @@ class TOAs:
         try:
             self.phase_columns_from_flags()
         except ValueError:
-            log.debug("No pulse numbers found in the TOAs")
+            log.debug("No pulse number flags found in the TOAs")
 
         # We don't need this now that we have a table
 
@@ -1289,7 +1289,7 @@ class TOAs:
     def __getitem__(self, index):
         if not hasattr(self, "table"):
             raise ValueError("This TOAs object is incomplete and does not have a table")
-        if isinstance(index, np.ndarray) and index.dtype == np.bool:
+        if isinstance(index, np.ndarray) and index.dtype == bool:
             r = copy.deepcopy(self)
             r.table = r.table[index]
             if len(r.table) > 0:
@@ -1297,7 +1297,7 @@ class TOAs:
             return r
         elif (
             isinstance(index, np.ndarray)
-            and index.dtype == np.int
+            and index.dtype == np.int64
             or isinstance(index, list)
         ):
             r = copy.deepcopy(self)
@@ -1389,7 +1389,7 @@ class TOAs:
         if "pn" in self.table["flags"][0]:
             if "pulse_number" in self.table.colnames:
                 raise ValueError("Pulse number cannot be both a column and a TOA flag")
-            return np.array(flags["pn"] for flags in self.table["flags"])
+            return np.array(flags.get("pn", np.nan) for flags in self.table["flags"])
         elif "pulse_number" in self.table.colnames:
             return self.table["pulse_number"]
         else:
@@ -1438,7 +1438,7 @@ class TOAs:
         result, valid = self.get_flag_value("pp_dm")
         if valid == []:
             raise AttributeError("No DM is provided.")
-        return np.array(result)[valid] * u.pc / u.cm ** 3
+        return np.array(result)[valid] * pint.dmu
 
     def get_dm_errors(self):
         """Get the Wideband DM data error.
@@ -1451,7 +1451,7 @@ class TOAs:
         result, valid = self.get_flag_value("pp_dme")
         if valid == []:
             raise AttributeError("No DM error is provided.")
-        return np.array(result)[valid] * u.pc / u.cm ** 3
+        return np.array(result)[valid] * pint.dmu
 
     def get_groups(self, gap_limit=None):
         """Flag toas within gap limit (default 2h = 0.0833d) of each other as the same group.
@@ -1481,7 +1481,7 @@ class TOAs:
         else:
             return self.table["groups"]
 
-    def get_highest_density_range(self, ndays=7):
+    def get_highest_density_range(self, ndays=7 * u.d):
         """Print the range of mjds (default 7 days) with the most toas"""
         sorted_mjds = np.sort(self.get_mjds())
         s = np.searchsorted(sorted_mjds, sorted_mjds + ndays)
@@ -1618,16 +1618,15 @@ class TOAs:
         self.table["delta_pulse_number"] += dphs
 
         # Then, add pulse_number as a table column if possible
-        try:
-            pns = [flags["pn"] for flags in self.table["flags"]]
-            self.table["pulse_number"] = pns
-            self.table["pulse_number"].unit = u.dimensionless_unscaled
+        pns = [float(flags.get("pn", np.nan)) for flags in self.table["flags"]]
+        if np.all(np.isnan(pns)):
+            raise ValueError("No pulse numbers found")
+        self.table["pulse_number"] = pns
+        self.table["pulse_number"].unit = u.dimensionless_unscaled
 
-            # Remove pn from dictionary to prevent redundancies
-            for flags in self.table["flags"]:
-                del flags["pn"]
-        except KeyError:
-            raise ValueError("Not all TOAs have pn flags")
+        # Remove pn from dictionary to prevent redundancies
+        for flags in self.table["flags"]:
+            del flags["pn"]
 
     def compute_pulse_numbers(self, model):
         """Set pulse numbers (in TOA table column pulse_numbers) based on model.
@@ -1714,7 +1713,9 @@ class TOAs:
         if "pulse_number" in self.table.colnames:
             pnChange = True
             for i in range(len(self.table["flags"])):
-                self.table["flags"][i]["pn"] = self.table["pulse_number"][i]
+                pn = self.table["pulse_number"][i]
+                if not np.isnan(pn):
+                    self.table["flags"][i]["pn"] = pn
 
         for (toatime, toaerr, freq, obs, flags) in zip(
             self.table["mjd"],
@@ -1744,7 +1745,10 @@ class TOAs:
         # If pulse numbers were added to flags, remove them again
         if pnChange:
             for flags in self.table["flags"]:
-                del flags["pn"]
+                try:
+                    del flags["pn"]
+                except KeyError:
+                    pass
 
         if not handle:
             outf.close()
@@ -1900,7 +1904,7 @@ class TOAs:
                     )
                     grpmjds = time.Time(grp["mjd"], location=locs)
 
-            grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem, grp=grp)
+            grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
             tdbs[loind:hiind] = np.asarray([t for t in grptdbs])
 
         # Now add the new columns to the table
@@ -2016,7 +2020,7 @@ class TOAs:
             tdb = time.Time(grp["tdb"], precision=9)
 
             if isinstance(site, T2SpacecraftObs):
-                ssb_obs = site.posvel(tdb, ephem, grp)
+                ssb_obs = site.posvel(tdb, ephem, group=grp)
             else:
                 ssb_obs = site.posvel(tdb, ephem)
 
@@ -2088,7 +2092,7 @@ class TOAs:
             # get velocity vector from coordinate frame
             ssb_obs_vel_ecl[loind:hiind, :] = coord.velocity.d_xyz.T.to(u.km / u.s)
         col = ssb_obs_vel_ecl
-        log.debug("Adding columns " + " ".join(col.name))
+        log.debug("Adding column " + col.name)
         self.table.add_column(col)
 
 

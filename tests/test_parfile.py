@@ -51,6 +51,7 @@ def roundtrip():
 def test_roundtrip(roundtrip):
     """Check that the round trip preserves general structure."""
     m, m2 = roundtrip
+    assert m.name == parfile
     assert set(m.components.keys()) == set(m2.components.keys())
     assert set(m.params) == set(m2.params)
 

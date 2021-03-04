@@ -336,7 +336,7 @@ class Pulsar:
 
         """JUMP check, TODO: put in fitter?"""
         if "PhaseJump" in self.prefit_model.components:
-            # if attempted fit (selected)
+            # Modifies jump flags. If attempted fit (selected)
             # A) contains only jumps, don't do the fit and return an error
             # B) excludes a jump, turn that jump off
             # C) partially contains a jump, redefine that jump only with the overlap

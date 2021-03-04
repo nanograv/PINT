@@ -149,7 +149,7 @@ class TestJUMP(unittest.TestCase):
         )
         # libstempo calculation
         cls.ltres = np.genfromtxt(
-            cls.parf + ".tempo_test", unpack=True, names=True, dtype=np.longdouble
+            cls.parf + ".tempo_test", unpack=False, names=True, dtype=np.longdouble
         )
 
     def test_jump(self):

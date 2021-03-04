@@ -69,7 +69,15 @@ def test_dm_barycentered():
         fitter.fit_toas()
 
 
-@pytest.mark.parametrize("Fitter", [pint.fitter.WLSFitter, pint.fitter.GLSFitter])
+@pytest.mark.parametrize(
+    "Fitter",
+    [
+        pint.fitter.WLSFitter,
+        pint.fitter.GLSFitter,
+        pint.fitter.DownhillWLSFitter,
+        pint.fitter.DownhillGLSFitter,
+    ],
+)
 def test_dmx_barycentered(Fitter):
     model = get_model(
         io.StringIO(
@@ -98,7 +106,15 @@ def test_dmx_barycentered(Fitter):
         assert not np.isnan(fitter.model[p].value)
 
 
-@pytest.mark.parametrize("Fitter", [pint.fitter.WLSFitter, pint.fitter.GLSFitter])
+@pytest.mark.parametrize(
+    "Fitter",
+    [
+        pint.fitter.WLSFitter,
+        pint.fitter.GLSFitter,
+        pint.fitter.DownhillWLSFitter,
+        pint.fitter.DownhillGLSFitter,
+    ],
+)
 def test_jump_everything(Fitter):
     model = get_model(io.StringIO("\n".join([par_base, "JUMP TEL barycenter 0"])))
     toas = make_fake_toas(58000, 58900, 10, model, obs="barycenter", freq=np.inf)
@@ -134,20 +150,71 @@ def test_jump_everything_wideband():
         assert not np.isnan(fitter.model[p].value)
 
 
-@pytest.mark.parametrize("Fitter", [pint.fitter.WLSFitter, pint.fitter.GLSFitter])
-def test_update_model(Fitter):
+@pytest.mark.parametrize("param, value", [("ECORR", 0), ("EQUAD", 0), ("EFAC", 1)])
+def test_unused_noise_model_parameter(param, value):
+    model = get_model(io.StringIO("\n".join([par_base, f"{param} TEL ao {value}"])))
+    toas = make_fake_toas(58000, 58900, 10, model, obs="barycenter", freq=np.inf)
+    model.free_params = ["F0"]
+    fitter = pint.fitter.GLSFitter(toas, model)
+    with pytest.warns(UserWarning, match=param):
+        fitter.fit_toas()
+
+
+@pytest.mark.parametrize(
+    "Fitter",
+    [
+        pint.fitter.GLSFitter,
+        pint.fitter.WidebandTOAFitter,
+        pint.fitter.DownhillGLSFitter,
+        pint.fitter.WidebandDownhillFitter,
+    ],
+)
+def test_null_vector(Fitter):
+    model = get_model(io.StringIO("\n".join([par_base])))
+    model.free_params = ["ELONG", "ELAT"]
+    toas = make_fake_toas(
+        58000,
+        58900,
+        10,
+        model,
+        obs="barycenter",
+        freq=1400.0,
+        dm=15.0 * u.pc / u.cm ** 3,
+        dm_error=1e-4 * u.pc * u.cm ** -3,
+    )
+    fitter = Fitter(toas, model)
+    with pytest.warns(
+        pint.fitter.DegeneracyWarning,
+        match=r".*degeneracy.*following parameter.*ELONG\b",
+    ):
+        fitter.fit_toas(threshold=1e-14)
+    for p in fitter.model.free_params:
+        assert not np.isnan(fitter.model[p].value)
+
+
+@pytest.mark.parametrize(
+    "Fitter",
+    [
+        pint.fitter.WLSFitter,
+        pint.fitter.GLSFitter,
+        pint.fitter.DownhillGLSFitter,
+        pint.fitter.DownhillWLSFitter,
+    ],
+)
+def test_update_model_sets_things(Fitter):
     model = get_model(io.StringIO("\n".join([par_base, "JUMP TEL barycenter 0"])))
     model.INFO.value = "-f"
     model.ECL.value = "IERS2010"
-    model.TIMEEPH.value = "FB90"
-    model.T2CMETHOD.value = "IERS2000B"
+    model.TIMEEPH.value = "IF99"
+    model.DILATEFREQ.value = True
+    model.T2CMETHOD.value = "TEMPO"
     toas = make_fake_toas(58000, 59000, 10, model, obs="barycenter", freq=np.inf)
     fitter = Fitter(toas, model)
     fitter.fit_toas()
     par_out = fitter.model.as_parfile()
     assert re.search(r"CLOCK *TT\(TAI\)", par_out)
     assert re.search(r"TIMEEPH *FB90", par_out)
-    assert re.search(r"T2CMETHOD *IERS2000B", par_out)
+    assert re.search(r"T2CMETHOD *IAU2000B", par_out)
     assert re.search(r"NE_SW *0.0", par_out)
     assert re.search(r"ECL *IERS2010", par_out)
     assert re.search(r"DILATEFREQ *N", par_out)

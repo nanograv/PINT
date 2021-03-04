@@ -309,15 +309,15 @@ def mjd_strs(draw):
 @given(
     one_of(
         array_pair(
-            np.int,
+            np.int64,
             integers(min_value=40000, max_value=60000),
-            np.float,
+            float,
             floats(0, 1, allow_nan=False),
         ),
         array_pair_broadcast(
-            np.int,
+            np.int64,
             integers(min_value=40000, max_value=60000),
-            np.float,
+            float,
             floats(0, 1, allow_nan=False),
         ),
     )
@@ -334,15 +334,15 @@ def test_mjds_to_str_array(sif):
 @given(
     one_of(
         array_pair(
-            np.int,
+            np.int64,
             integers(min_value=40000, max_value=60000),
-            np.float,
+            float,
             floats(0, 1, allow_nan=False),
         ),
         array_pair_broadcast(
-            np.int,
+            np.int64,
             integers(min_value=40000, max_value=60000),
-            np.float,
+            float,
             floats(0, 1, allow_nan=False),
         ),
     )
@@ -356,15 +356,15 @@ def test_mjds_to_str_array_roundtrip_doesnt_crash(sif):
 @given(
     one_of(
         array_pair(
-            np.int,
+            np.int64,
             integers(min_value=40000, max_value=60000),
-            np.float,
+            float,
             floats(0, 1, allow_nan=False),
         ),
         array_pair_broadcast(
-            np.int,
+            np.int64,
             integers(min_value=40000, max_value=60000),
-            np.float,
+            float,
             floats(0, 1, allow_nan=False),
         ),
     )
@@ -417,7 +417,7 @@ def test_mjds_to_jds_singleton():
     assert isinstance(jd2, float)
 
 
-@given(arrays(np.object, array_shapes(), elements=mjd_strs()))
+@given(arrays(object, array_shapes(), elements=mjd_strs()))
 def test_str_to_mjds_array(s):
     i, f = str_to_mjds(s)
     assert np.shape(i) == np.shape(f) == np.shape(s)
@@ -428,15 +428,15 @@ def test_str_to_mjds_array(s):
 @given(
     one_of(
         array_pair(
-            np.int,
+            np.int64,
             integers(min_value=40000, max_value=60000),
-            np.float,
+            float,
             floats(0, 1, allow_nan=False),
         ),
         array_pair_broadcast(
-            np.int,
+            np.int64,
             integers(min_value=40000, max_value=60000),
-            np.float,
+            float,
             floats(0, 1, allow_nan=False),
         ),
     )
@@ -452,15 +452,15 @@ def test_mjds_to_jds_array(sif):
 @given(
     one_of(
         array_pair(
-            np.int,
+            np.int64,
             integers(min_value=40000, max_value=60000),
-            np.float,
+            float,
             floats(0, 1, allow_nan=False),
         ),
         array_pair_broadcast(
-            np.int,
+            np.int64,
             integers(min_value=40000, max_value=60000),
-            np.float,
+            float,
             floats(0, 1, allow_nan=False),
         ),
     )
@@ -476,15 +476,15 @@ def test_mjds_to_jds_pulsar_array(sif):
 @given(
     one_of(
         array_pair(
-            np.int,
+            np.int64,
             integers(min_value=2440000, max_value=2460000),
-            np.float,
+            float,
             floats(0, 1, allow_nan=False),
         ),
         array_pair_broadcast(
-            np.int,
+            np.int64,
             integers(min_value=2440000, max_value=2460000),
-            np.float,
+            float,
             floats(0, 1, allow_nan=False),
         ),
     )
@@ -502,15 +502,15 @@ def test_jds_to_mjds_array(s12):
 @given(
     one_of(
         array_pair(
-            np.int,
+            np.int64,
             integers(min_value=2440000, max_value=2460000),
-            np.float,
+            float,
             floats(0, 1, allow_nan=False),
         ),
         array_pair_broadcast(
-            np.int,
+            np.int64,
             integers(min_value=2440000, max_value=2460000),
-            np.float,
+            float,
             floats(0, 1, allow_nan=False),
         ),
     )
