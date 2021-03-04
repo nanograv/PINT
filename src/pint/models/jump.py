@@ -223,9 +223,7 @@ class PhaseJump(PhaseComponent):
         for dict1 in toa_table:
             if "jump" in dict1.keys():
                 dict1["jump"].append(ind)  # toa can have multiple jumps
-                print("1: " + str(dict1["jump"]))
             else:
                 dict1["jump"] = [ind]
-                print("2: " + str(dict1["jump"]))
             dict1["gui_jump"] = ind  # toa can only have one gui_jump
         return name
