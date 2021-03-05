@@ -965,7 +965,10 @@ class ModelState:
         for p, s in zip(self.params, step * lambda_):
             try:
                 log.debug(f"Adjusting {getattr(self.model, p)} by {s}")
-                getattr(new_model, p).value += s
+                pm = getattr(new_model, p)
+                if pm.value is None:
+                    pm.value = 0
+                pm.value += s
                 # getattr(new_model, p).value = getattr(self.model, p).value + s
                 # getattr(self.model, p) + s
                 # getattr(new_model, p).value = s
