@@ -1,5 +1,8 @@
+import sys
 import os
 import hypothesis
+
+raise ValueError("conftest.py actually run")
 
 # This setup is drawn from Astropy and might not be entirely relevant to us;
 # in particular we don't have a cron run for slow tests.
