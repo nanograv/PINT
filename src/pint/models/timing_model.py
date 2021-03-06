@@ -1543,8 +1543,8 @@ class TimingModel:
             Pulsar parameters for which diff_sigma > threshold will be printed
             with an exclamation point at the end of the line
         unc_rat_threshold : float
-            Pulsar parameters for which the uncertainty has increased by a 
-            factor of unc_rat_threshold will be printed with an asterisk at 
+            Pulsar parameters for which the uncertainty has increased by a
+            factor of unc_rat_threshold will be printed with an asterisk at
             the end of the line
         verbosity : string
             Dictates amount of information returned. Options include "max",
@@ -1801,23 +1801,23 @@ class TimingModel:
                         log.info(
                             "Parameter %s missing from %s" % (par.name, models[ind])
                         )
-                    try:
-                        diff = otherpar.value - par.value
-                        diff_sigma = diff / par.uncertainty.value
-                        if abs(diff_sigma) != np.inf:
-                            newstr += " {:>10.2f}".format(diff_sigma)
-                            if abs(diff_sigma) > threshold_sigma:
-                                newstr += " !"
-                        else:
-                            newstr += "           "
-                        diff_sigma2 = diff / otherpar.uncertainty.value
-                        if abs(diff_sigma2) != np.inf:
-                            newstr += " {:>10.2f}".format(diff_sigma2)
-                            if abs(diff_sigma2) > threshold_sigma:
-                                newstr += " !"
-                    except (AttributeError, TypeError):
-                        pass
-                    if otherpar is not None:
+                    if otherpar is not None and otherpar.value is not None:
+                        try:
+                            diff = otherpar.value - par.value
+                            diff_sigma = diff / par.uncertainty.value
+                            if abs(diff_sigma) != np.inf:
+                                newstr += " {:>10.2f}".format(diff_sigma)
+                                if abs(diff_sigma) > threshold_sigma:
+                                    newstr += " !"
+                            else:
+                                newstr += "           "
+                            diff_sigma2 = diff / otherpar.uncertainty.value
+                            if abs(diff_sigma2) != np.inf:
+                                newstr += " {:>10.2f}".format(diff_sigma2)
+                                if abs(diff_sigma2) > threshold_sigma:
+                                    newstr += " !"
+                        except (AttributeError, TypeError):
+                            pass
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
