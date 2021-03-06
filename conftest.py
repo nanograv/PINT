@@ -26,7 +26,7 @@ default = (
     )
     else "ci"
 )  # noqa: E501
-raise ValueError(
-    f"hypothesis profile {default}; HYPOTHESIS_PROFILE={os.environ.get('HYPOTHESIS_PROFILE', 'unset')}"
-)
+# raise ValueError(
+#    f"hypothesis profile {default}; HYPOTHESIS_PROFILE={os.environ.get('HYPOTHESIS_PROFILE', 'unset')}"
+# )
 hypothesis.settings.load_profile(os.environ.get("HYPOTHESIS_PROFILE", default))
