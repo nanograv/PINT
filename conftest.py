@@ -2,7 +2,6 @@ import sys
 import os
 import hypothesis
 
-raise ValueError("conftest.py actually run")
 
 # This setup is drawn from Astropy and might not be entirely relevant to us;
 # in particular we don't have a cron run for slow tests.
@@ -14,7 +13,7 @@ raise ValueError("conftest.py actually run")
 # `pytest --hypothesis-profile=fuzz ...` argument.
 
 hypothesis.settings.register_profile(
-    "ci", deadline=None, print_blob=True, derandomize=True
+    "ci", deadline=None, print_blob=True, derandomize=True, max_examples=10
 )
 hypothesis.settings.register_profile(
     "fuzzing", deadline=None, print_blob=True, max_examples=1000
@@ -27,4 +26,7 @@ default = (
     )
     else "ci"
 )  # noqa: E501
+raise ValueError(
+    f"hypothesis profile {default}; HYPOTHESIS_PROFILE={os.environ.get('HYPOTHESIS_PROFILE', 'unset')}"
+)
 hypothesis.settings.load_profile(os.environ.get("HYPOTHESIS_PROFILE", default))
