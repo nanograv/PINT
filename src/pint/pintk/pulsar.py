@@ -523,7 +523,7 @@ class Pulsar:
         )
 
         # plot the prefit without jumps
-        pm_no_jumps = copy.deepcopy(self.postfit_model)
+        pm_no_jumps = copy.deepcopy(self.prefit_model)
         for param in pm_no_jumps.params:
             if param.startswith("JUMP"):
                 getattr(pm_no_jumps, param).value = 0.0
