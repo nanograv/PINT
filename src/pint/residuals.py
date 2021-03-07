@@ -15,9 +15,12 @@ import numpy as np
 from astropy import log
 from scipy.linalg import LinAlgError, svd
 
+import pint
 from pint.models.dispersion_model import Dispersion
 from pint.phase import Phase
 from pint.utils import weighted_mean
+from pint.pint_matrix import DesignMatrixMaker
+
 
 __all__ = [
     "Residuals",
@@ -74,16 +77,7 @@ class Residuals:
         if there aren't.
     """
 
-    def __new__(
-        cls,
-        toas=None,
-        model=None,
-        residual_type="toa",
-        unit=u.s,
-        subtract_mean=True,
-        use_weighted_mean=True,
-        track_mode=None,
-    ):
+    def __new__(cls, toas=None, model=None, residual_type="toa", **kwargs):
         if cls is Residuals:
             try:
                 cls = residual_map[residual_type.lower()]
@@ -194,15 +188,17 @@ class Residuals:
     @property
     def noise_resids(self):
         """Dictionary mapping noise component names to their impact on the residuals."""
-        if self._whitened_residuals is None:
+        if self._noise_resids is None:
             self._update_statistics()
-        assert self._whitened_residuals is not None
-        return self._whitened_residuals
+        assert self._noise_resids is not None
+        return self._noise_resids
 
     def _update_statistics(self):
-        self._chi2, self._whitened_resids, self._noise_resids = (
-            self.calc_chi2_etc_reduced_rank()
-        )
+        (
+            self._chi2,
+            self._whitened_resids,
+            self._noise_resids,
+        ) = self.calc_chi2_etc_reduced_rank()
 
     @property
     def dof(self):
@@ -776,6 +772,32 @@ class CombinedResiduals:
         return wrms
 
 
+class TOAPart(Residuals):
+    def __init__(self, toas, model, update_statistics=None, **kwargs):
+        self._update_statistics = update_statistics
+        super().__init__(toas, model, **kwargs)
+
+    @property
+    def dof(self):
+        raise AttributeError(
+            "Does not have a well-defined number of degrees of freedom"
+        )
+
+
+class DMPart(WidebandDMResiduals):
+    def __init__(self, toas, model, update_statistics=None, **kwargs):
+        self._update_statistics = update_statistics
+        self._noise_resids = None
+        self._whitened_resids = None
+        super().__init__(toas, model, **kwargs)
+
+    @property
+    def dof(self):
+        raise AttributeError(
+            "Does not have a well-defined number of degrees of freedom"
+        )
+
+
 class WidebandTOAResiduals(CombinedResiduals):
     """A class for handling the wideband toa residuals.
 
@@ -806,10 +828,20 @@ class WidebandTOAResiduals(CombinedResiduals):
     def __init__(self, toas, model, toa_resid_args={}, dm_resid_args={}):
         self.toas = toas
         self._model = model
-        toa_resid = Residuals(
-            self.toas, self.model, residual_type="toa", **toa_resid_args
+        toa_resid = TOAPart(
+            self.toas,
+            self.model,
+            update_statistics=self._update_statistics,
+            residual_type="toa",
+            **toa_resid_args,
         )
-        dm_resid = Residuals(self.toas, self.model, residual_type="dm", **dm_resid_args)
+        dm_resid = DMPart(
+            self.toas,
+            self.model,
+            update_statistics=self._update_statistics,
+            residual_type="dm",
+            **dm_resid_args,
+        )
         self._chi2 = None
 
         super().__init__([toa_resid, dm_resid])
@@ -832,26 +864,15 @@ class WidebandTOAResiduals(CombinedResiduals):
         assert self._chi2 is not None
         return self._chi2
 
-    @property
-    def whitened_resids(self):
-        """Compute whitened residuals as needed and cache the result."""
-        if self._whitened_resids is None:
-            self._update_statistics()
-        assert self._whitened_resids is not None
-        return self._whitened_resids
-
-    @property
-    def noise_resids(self):
-        """Compute whitened residuals as needed and cache the result."""
-        if self._whitened_residuals is None:
-            self._update_statistics()
-        assert self._whitened_residuals is not None
-        return self._whitened_residuals
-
     def _update_statistics(self):
-        self._chi2, self._whitened_resids, self._noise_resids = (
-            self.calc_chi2_etc_reduced_rank()
-        )
+        (
+            self._chi2,
+            (self.toa._whitened_resids, self.dm._whitened_resids),
+            (self.toa._noise_resids, self.dm._noise_resids),
+        ) = self.calc_chi2_etc_reduced_rank()
+        # FIXME; how to count chi-squared values separately? Where does the penalty factor go?
+        self.toa._chi2 = np.nan
+        self.dm._chi2 = np.nan
 
     def calc_chi2(self, full_cov=False):
         """Return the weighted chi-squared for the model and toas.
@@ -872,23 +893,104 @@ class WidebandTOAResiduals(CombinedResiduals):
         a minimizer for example - may need to be checked to confirm that they
         correctly return infinity.
         """
-        log.debug("Using wideband GLS fitter to compute residual chi2")
-        # Use GLS but don't actually fit
-        from pint.fitter import WidebandTOAFitter
+        if full_cov:
+            log.debug("Using wideband GLS fitter to compute residual chi2")
+            # Use GLS but don't actually fit
+            from pint.fitter import WidebandTOAFitter
 
-        m = copy.deepcopy(self.model)
-        m.free_params = []
-        f = WidebandTOAFitter(
-            self.toas, m, additional_args=dict(toa=dict(track_mode=self.toa.track_mode))
-        )
-        try:
-            return f.fit_toas(maxiter=1, full_cov=full_cov)
-        except LinAlgError as e:
-            log.warning(
-                "Degenerate conditions encountered when "
-                "computing chi-squared: %s" % (e,)
+            m = copy.deepcopy(self.model)
+            m.free_params = []
+            f = WidebandTOAFitter(
+                self.toas,
+                m,
+                additional_args=dict(toa=dict(track_mode=self.toa.track_mode)),
             )
-            return np.inf
+            try:
+                return f.fit_toas(maxiter=1, full_cov=full_cov)
+            except LinAlgError as e:
+                log.warning(
+                    "Degenerate conditions encountered when "
+                    "computing chi-squared: %s" % (e,)
+                )
+                return np.inf
+        else:
+            return self.calc_chi2_etc_reduced_rank()[0]
+
+    def calc_chi2_etc_reduced_rank(self, threshold=0):
+        """Calculate fit statistics in the reduced-rank case.
+
+        This computes and returns the chi-squared value, the whitened
+        residuals (toa and dm), and a pair of dictionaries (toa and dm)
+        mapping the name of a noise component to its impact on the residuals.
+
+        Actually I don't think we support correlated DM errors yet.
+        """
+        # FIXME: this is all more horrible for wideband
+        residuals = np.hstack(
+            (self.toa.time_resids.to_value(u.s), self.dm.resids_value)
+        )
+        Nvec = np.hstack(
+            (
+                self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2,
+                self.model.scaled_dm_uncertainty(self.toas).to(pint.dmu).value ** 2,
+            )
+        )
+        if not self.model.has_correlated_errors:
+            log.debug("No correlated errors, returning simple chi-squared")
+            newres = residuals - np.average(residuals, weights=Nvec ** (0.5))
+            chi2 = np.sum(newres ** 2 / Nvec)
+            # FIXME: explicitly return np.inf if any uncertainty is zero?
+            return (
+                chi2,
+                (newres[: len(self.toas)] * u.s, newres[len(self.toas) :] * pint.dmu),
+                ({}, {}),
+            )
+
+        offset = np.zeros((2 * len(self.toas), 1), dtype=np.longdouble)
+        offset[: len(self.toas), :] = 1
+        noise_design_toa = DesignMatrixMaker("toa_noise", u.s)(
+            self.toas, self.model
+        ).matrix
+        log.debug(f"noise design matrix for TOAs has shape {noise_design_toa.shape}")
+        noise_design_dm = np.zeros_like(noise_design_toa)
+        noise_design = np.vstack((noise_design_toa, noise_design_dm))
+        M = np.hstack([offset, noise_design])
+        norm = np.sqrt(np.sum(M ** 2, axis=0))
+        norm[norm == 0] = 1
+        M /= norm
+
+        phiinv = np.zeros(M.shape[1], dtype=np.longdouble)
+        phiinv[1:] = 1 / self.model.noise_model_basis_weight(self.toas)
+        phiinv /= norm ** 2
+
+        cinv = 1 / Nvec
+        mtcm = np.dot(M.T, cinv[:, None] * M)
+        mtcm += np.diag(phiinv)
+        mtcy = np.dot(M.T, cinv * residuals)
+
+        U, s, Vt = svd(mtcm, full_matrices=False)
+
+        # If this happens you have a very bad noise basis
+        bad = np.where(s <= threshold * s[0])[0]
+        s[bad] = np.inf
+
+        xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+
+        noise_dims = self.model.noise_model_dimensions(self.toas)
+        log.debug(f"noise_dims is {noise_dims}")
+        noise_resids = {}
+        for comp in noise_dims.keys():
+            p0 = noise_dims[comp][0]
+            p1 = p0 + noise_dims[comp][1]
+            noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
+
+        newres = residuals - np.dot(M, xhat)
+        chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+        return (
+            chi2,
+            (newres[: len(self.toas)] * u.s, newres[len(self.toas) :] * pint.dmu),
+            (noise_resids, {}),
+        )
 
     @property
     def model(self):

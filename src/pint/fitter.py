@@ -1410,25 +1410,7 @@ class DownhillGLSFitter(DownhillFitter):
         """
         self.threshold = threshold
         self.full_cov = full_cov
-        r = super().fit_toas(maxiter=maxiter, **kwargs)
-        # FIXME: set up noise residuals et cetera
-        # Compute the noise realizations if possible
-        ntmpar = len(self.model.free_params)
-        if not self.full_cov:
-            noise_dims = self.model.noise_model_dimensions(self.toas)
-            noise_resids = {}
-            for comp in noise_dims.keys():
-                p0 = noise_dims[comp][0] + ntmpar
-                p1 = p0 + noise_dims[comp][1]
-                noise_resids[comp] = (
-                    np.dot(
-                        self.current_state.M[:, p0:p1], self.current_state.xhat[p0:p1]
-                    )
-                    * u.s
-                )
-            self.resids.noise_resids = noise_resids
-
-        return r
+        return super().fit_toas(maxiter=maxiter, **kwargs)
 
 
 class WidebandState(ModelState):
@@ -1678,23 +1660,7 @@ class WidebandDownhillFitter(DownhillFitter):
         self.threshold = threshold
         self.full_cov = full_cov
         # FIXME: set up noise residuals et cetera
-        r = super().fit_toas(maxiter=maxiter, **kwargs)
-        # Compute the noise realizations if possible
-        ntmpar = len(self.model.free_params)
-        if not self.full_cov:
-            noise_dims = self.model.noise_model_dimensions(self.toas)
-            noise_resids = {}
-            for comp in noise_dims.keys():
-                p0 = noise_dims[comp][0] + ntmpar
-                p1 = p0 + noise_dims[comp][1]
-                noise_resids[comp] = (
-                    np.dot(
-                        self.current_state.M[:, p0:p1], self.current_state.xhat[p0:p1]
-                    )
-                    * u.s
-                )
-            self.resids.noise_resids = noise_resids
-        return r
+        return super().fit_toas(maxiter=maxiter, **kwargs)
 
 
 class PowellFitter(Fitter):
@@ -2044,16 +2010,6 @@ class GLSFitter(Fitter):
             # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
 
-            # Compute the noise realizations if possible
-            if not full_cov:
-                noise_dims = self.model.noise_model_dimensions(self.toas)
-                noise_resids = {}
-                for comp in noise_dims.keys():
-                    p0 = noise_dims[comp][0] + ntmpar
-                    p1 = p0 + noise_dims[comp][1]
-                    noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
-                self.resids.noise_resids = noise_resids
-
         self.update_model(chi2)
 
         return chi2
@@ -2385,16 +2341,6 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
 
-            # Compute the noise realizations if possible
-            if not full_cov:
-                noise_dims = self.model.noise_model_dimensions(self.toas)
-                noise_resids = {}
-                for comp in noise_dims.keys():
-                    p0 = noise_dims[comp][0] + ntmpar
-                    p1 = p0 + noise_dims[comp][1]
-                    noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
-                self.resids.noise_resids = noise_resids
-
         self.update_model(chi2)
 
         return chi2
@@ -2577,13 +2523,3 @@ class WidebandLMFitter(LMFitter):
                 pm.uncertainty = e * pm.units
         self.correlation_matrix = (self.covariance_matrix / self.errors).T / self.errors
         self.update_model(state.chi2)
-        # Compute the noise realizations if possible
-        ntmpar = len(self.model.free_params)
-        if not self.full_cov:
-            noise_dims = self.model.noise_model_dimensions(self.toas)
-            noise_resids = {}
-            for comp in noise_dims.keys():
-                p0 = noise_dims[comp][0] + ntmpar
-                p1 = p0 + noise_dims[comp][1]
-                noise_resids[comp] = np.dot(state.M[:, p0:p1], state.xhat[p0:p1]) * u.s
-            self.resids.noise_resids = noise_resids
