@@ -1,17 +1,12 @@
-import concurrent.futures
-from copy import deepcopy
 from io import StringIO
 
 import astropy.time
 import astropy.units as u
 import numpy as np
 import scipy.stats
-from astropy import log
 
 import pint.models
 import pint.toa
-
-import pytest
 
 
 def test_ecorr_chi2_probabilistic():
