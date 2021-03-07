@@ -13,7 +13,7 @@ import warnings
 import astropy.units as u
 import numpy as np
 from astropy import log
-from scipy.linalg import LinAlgError
+from scipy.linalg import LinAlgError, svd
 
 from pint.models.dispersion_model import Dispersion
 from pint.phase import Phase
@@ -28,7 +28,7 @@ __all__ = [
 
 
 class Residuals:
-    """Class to compute residuals between TOAs and a TimingModel.
+    """Residuals obtained when comparing a TimingModel to a TOAs object.
 
     This class serves to store the results of a comparison between TOAs and a
     model. It also implements certain basic statistical calculations. This
@@ -139,7 +139,8 @@ class Residuals:
         # also it's expensive
         # only relevant if there are correlated errors
         self._chi2 = None
-        self.noise_resids = {}
+        self._noise_resids = None
+        self._whitened_resids = None
         # We should be carefully for the other type of residuals
         self.unit = unit
         # A flag to indentify if this residual object is combined with residual
@@ -171,14 +172,37 @@ class Residuals:
         self.phase_resids = self.calc_phase_resids()
         self.time_resids = self.calc_time_resids()
         self._chi2 = None  # trigger chi2 recalculation when needed
+        self._whitened_resids = None
+        self._noise_resids = None
 
     @property
     def chi2(self):
         """Compute chi-squared as needed and cache the result."""
         if self._chi2 is None:
-            self._chi2 = self.calc_chi2()
+            self._update_statistics()
         assert self._chi2 is not None
         return self._chi2
+
+    @property
+    def whitened_resids(self):
+        """Residuals with correlated noise subtracted."""
+        if self._whitened_resids is None:
+            self._update_statistics()
+        assert self._whitened_resids is not None
+        return self._whitened_resids
+
+    @property
+    def noise_resids(self):
+        """Dictionary mapping noise component names to their impact on the residuals."""
+        if self._whitened_residuals is None:
+            self._update_statistics()
+        assert self._whitened_residuals is not None
+        return self._whitened_residuals
+
+    def _update_statistics(self):
+        self._chi2, self._whitened_resids, self._noise_resids = (
+            self.calc_chi2_etc_reduced_rank()
+        )
 
     @property
     def dof(self):
@@ -328,11 +352,13 @@ class Residuals:
         else:
             # Errs for weighted sum.  Units don't matter since they will
             # cancel out in the weighted sum.
-            if np.any(self.toas.get_errors() == 0):
+            # get_data_error uses scaled TOA uncertainties by default
+            uncertainties = self.get_data_error()
+            if np.any(uncertainties == 0):
                 raise ValueError(
                     "Some TOA errors are zero - cannot calculate residuals"
                 )
-            w = 1.0 / (self.toas.get_errors().value ** 2)
+            w = 1.0 / (uncertainties.value ** 2)
             mean, err = weighted_mean(full, w)
         return full - mean
 
@@ -361,7 +387,7 @@ class Residuals:
         a minimizer for example - may need to be checked to confirm that they
         correctly return infinity.
         """
-        if self.model.has_correlated_errors:
+        if self.model.has_correlated_errors and full_cov:
             log.debug("Using GLS fitter to compute residual chi2")
             # Use GLS but don't actually fit
             from pint.fitter import GLSFitter
@@ -378,25 +404,60 @@ class Residuals:
                 )
                 return np.inf
         else:
-            # Residual units are in seconds. Error units are in microseconds.
-            toa_errors = self.get_data_error()
-            if (toa_errors == 0.0).any():
-                return np.inf
-            else:
-                # The self.time_resids is in the unit of "s", the error "us".
-                # This is more correct way, but it is the slowest.
-                # return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
+            return calc_chi2_etc_reduced_rank()[0]
 
-                # This method is faster then the method above but not the most correct way
-                # return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
+    def calc_chi2_etc_reduced_rank(self, threshold=0):
+        """Calculate fit statistics in the reduced-rank case.
 
-                # This the fastest way, but highly depend on the assumption of time_resids and
-                # error units.
-                # insure only a pure number returned
-                try:
-                    return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum().value
-                except ValueError:
-                    return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum()
+        This computes and returns the chi-squared value, the whitened
+        residuals, and a dictionary mapping the name of a noise component to
+        its impact on the residuals.
+        """
+        residuals = self.time_resids.to(u.s).value
+        Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
+        if not self.model.has_correlated_errors:
+            newres = residuals - np.average(residuals, weights=Nvec ** (0.5))
+            chi2 = np.sum(newres ** 2 / Nvec)
+            # FIXME: explicitly return np.inf if any uncertainty is zero?
+            return chi2, newres * u.s, {}
+
+        M = np.hstack(
+            [
+                np.ones((len(self.toas), 1), dtype=np.longdouble),
+                self.model.noise_model_designmatrix(self.toas),
+            ]
+        )
+        norm = np.sqrt(np.sum(M ** 2, axis=0))
+        norm[norm == 0] = 1
+        M /= norm
+
+        phiinv = np.zeros(M.shape[1], dtype=np.longdouble)
+        phiinv[1:] = 1 / self.model.noise_model_basis_weight(self.toas)
+        phiinv /= norm ** 2
+
+        cinv = 1 / Nvec
+        mtcm = np.dot(M.T, cinv[:, None] * M)
+        mtcm += np.diag(phiinv)
+        mtcy = np.dot(M.T, cinv * residuals)
+
+        U, s, Vt = svd(mtcm, full_matrices=False)
+
+        # If this happens you have a very bad noise basis
+        bad = np.where(s <= threshold * s[0])[0]
+        s[bad] = np.inf
+
+        xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+
+        noise_dims = self.model.noise_model_dimensions(self.toas)
+        noise_resids = {}
+        for comp in noise_dims.keys():
+            p0 = noise_dims[comp][0]
+            p1 = p0 + noise_dims[comp][1]
+            noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
+
+        newres = residuals - np.dot(M, xhat)
+        chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+        return chi2, newres * u.s, noise_resids
 
     def ecorr_average(self, use_noise_model=True):
         """Uses the ECORR noise model time-binning to compute "epoch-averaged" residuals.
@@ -767,9 +828,30 @@ class WidebandTOAResiduals(CombinedResiduals):
     def chi2(self):
         """Compute chi-squared as needed and cache the result."""
         if self._chi2 is None:
-            self._chi2 = self.calc_chi2()
+            self._update_statistics()
         assert self._chi2 is not None
         return self._chi2
+
+    @property
+    def whitened_resids(self):
+        """Compute whitened residuals as needed and cache the result."""
+        if self._whitened_resids is None:
+            self._update_statistics()
+        assert self._whitened_resids is not None
+        return self._whitened_resids
+
+    @property
+    def noise_resids(self):
+        """Compute whitened residuals as needed and cache the result."""
+        if self._whitened_residuals is None:
+            self._update_statistics()
+        assert self._whitened_residuals is not None
+        return self._whitened_residuals
+
+    def _update_statistics(self):
+        self._chi2, self._whitened_resids, self._noise_resids = (
+            self.calc_chi2_etc_reduced_rank()
+        )
 
     def calc_chi2(self, full_cov=False):
         """Return the weighted chi-squared for the model and toas.

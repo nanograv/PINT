@@ -1307,6 +1307,7 @@ class GLSState(ModelState):
             mtcy = np.dot(cm.T, residuals)
 
         else:
+            phiinv /= norm ** 2
             Nvec = (
                 self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value ** 2
             )
@@ -1469,7 +1470,6 @@ class WidebandState(ModelState):
                     new_d_matrix.derivative_params,
                     new_d_matrix.param_units,
                 )
-            self.phiinv = phiinv
 
         # normalize the design matrix
         norm = np.sqrt(np.sum(M ** 2, axis=0))
@@ -1484,6 +1484,9 @@ class WidebandState(ModelState):
             )
         norm[norm == 0] = 1
         M /= norm
+        if not self.full_cov:
+            phiinv /= norm ** 2
+            self.phiinv = phiinv
 
         return M, params, units, norm
 
@@ -1974,6 +1977,7 @@ class GLSFitter(Fitter):
                 mtcy = np.dot(cm.T, residuals)
 
             else:
+                phiinv /= norm ** 2
                 Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
                 cinv = 1 / Nvec
                 mtcm = np.dot(M.T, cinv[:, None] * M)
@@ -2312,6 +2316,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 mtcy = np.dot(cm.T, residuals)
 
             else:
+                phiinv /= norm ** 2
                 Nvec = self.scaled_all_sigma() ** 2
 
                 cinv = 1 / Nvec
