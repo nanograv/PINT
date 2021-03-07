@@ -328,11 +328,11 @@ class Residuals:
         else:
             # Errs for weighted sum.  Units don't matter since they will
             # cancel out in the weighted sum.
-            if np.any(self.toas.get_errors() == 0):
+            if np.any(self.get_data_error() == 0):
                 raise ValueError(
                     "Some TOA errors are zero - cannot calculate residuals"
                 )
-            w = 1.0 / (self.toas.get_errors().value ** 2)
+            w = 1.0 / (self.get_data_error().value ** 2)
             mean, err = weighted_mean(full, w)
         return full - mean
 
