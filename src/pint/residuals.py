@@ -400,7 +400,7 @@ class Residuals:
                 )
                 return np.inf
         else:
-            return calc_chi2_etc_reduced_rank()[0]
+            return self.calc_chi2_etc_reduced_rank()[0]
 
     def calc_chi2_etc_reduced_rank(self, threshold=0):
         """Calculate fit statistics in the reduced-rank case.
