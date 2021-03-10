@@ -28,6 +28,12 @@ TopoObs(
     itrf_xyz=[-1601192.0, -5041981.4, 3554871.4],
 )
 TopoObs(
+    "meerkat",
+    tempo_code="m",
+    itoa_code="MK",
+    itrf_xyz=[5109360.133, 2006852.586, -3238948.127],
+)
+TopoObs(
     "parkes",
     tempo_code="7",
     itoa_code="PK",
