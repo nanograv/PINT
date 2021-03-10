@@ -31,6 +31,9 @@ TopoObs(
     "meerkat",
     tempo_code="m",
     itoa_code="MK",
+    clock_fmt="tempo2",
+    clock_dir="TEMPO2",
+    clock_file="mk2utc.clk",
     itrf_xyz=[5109360.133, 2006852.586, -3238948.127],
 )
 TopoObs(
