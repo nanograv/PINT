@@ -13,10 +13,6 @@ PINT Is Not TEMPO3
     :target: https://coveralls.io/github/nanograv/PINT?branch=master
     :alt: Code Coverage
 
-.. image:: https://badges.gitter.im/nanograv-PINT/community.svg
-    :target: https://gitter.im/nanograv-PINT/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
-    :alt: Gitter chat
-
 PINT is a project to develop a new pulsar timing solution based on
 python and modern libraries. It is still in active development,
 but it can already produce residuals from most "normal"
