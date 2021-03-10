@@ -199,7 +199,7 @@ class PhaseJump(PhaseComponent):
         else:
             # first, search for TOAs already jumped in inputted selection - pintk does not allow jumps added through GUI to overlap with existing jumps
             for dict in toa_table:
-                if "jump" in dict.keys():
+                if "gui_jump" in dict.keys():
                     log.warning(
                         "The selected toa(s) overlap an existing jump. Remove all interfering jumps before attempting to jump these toas."
                     )

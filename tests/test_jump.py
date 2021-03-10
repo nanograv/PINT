@@ -153,6 +153,32 @@ def test_jump_params_to_flags(setup_NGC6440E):
         assert 1 in setup_NGC6440E.t.table["flags"][i]["jump"]
 
 
+def test_multijump_toa(setup_NGC6440E):
+    setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
+    cp = setup_NGC6440E.m.components["PhaseJump"]
+    par = p.maskParameter(
+        name="JUMP", key="freq", value=0.2, key_value=[1440, 1700], units=u.s
+    )  # TOAs indexed 48, 49, 54 in NGC6440E are within this frequency range
+    selected_toa_ind = [48, 49, 54]
+    cp.add_param(par, setup=True)
+    # add flags based off jumps added to model
+    setup_NGC6440E.m.jump_params_to_flags(setup_NGC6440E.t)
+
+    # check that one can still add "gui jumps" to model-jumped TOAs
+    cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind])
+    for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
+        assert dict["jump"] == [1, 2]
+        assert dict["gui_jump"] == 2
+    assert len(cp.jumps) == 2
+
+    setup_NGC6440E.m.delete_jump_and_flags(setup_NGC6440E.t.table["flags"], 2)
+    for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
+        assert "jump" in dict
+        assert "gui_jump" not in dict
+    assert len(cp.jumps) == 1
+    assert "JUMP1" in cp.jumps
+
+
 class TestJUMP(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
