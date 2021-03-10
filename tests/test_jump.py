@@ -32,7 +32,7 @@ def setup_NGC6440E():
     return SimpleSetup("NGC6440E.par", "NGC6440E.tim")
 
 
-def test_add_remove_jump_and_flags(setup_NGC6440E):
+def test_add_jumps_and_flags(setup_NGC6440E):
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     cp = setup_NGC6440E.m.components["PhaseJump"]
 
@@ -55,6 +55,14 @@ def test_add_remove_jump_and_flags(setup_NGC6440E):
         assert dict["jump"] == [2]
         assert dict["gui_jump"] == 2
 
+
+def test_add_overlapping_jump(setup_NGC6440E):
+    setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
+    cp = setup_NGC6440E.m.components["PhaseJump"]
+    selected_toa_ind = [1, 2, 3]
+    selected_toa_ind2 = [10, 11, 12]
+    cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind])
+    cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind2])
     # attempt to add overlapping jump - should not add jump
     selected_toa_ind3 = [9, 10, 11]
     cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind3])
@@ -69,6 +77,14 @@ def test_add_remove_jump_and_flags(setup_NGC6440E):
     assert "jump" not in setup_NGC6440E.t.table[9].colnames
     assert "gui_jump" not in setup_NGC6440E.t.table[9].colnames
 
+
+def test_remove_jump_and_flags(setup_NGC6440E):
+    setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
+    cp = setup_NGC6440E.m.components["PhaseJump"]
+    selected_toa_ind = [1, 2, 3]
+    selected_toa_ind2 = [10, 11, 12]
+    cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind])
+    cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind2])
     # test delete_jump_and_flags
     setup_NGC6440E.m.delete_jump_and_flags(setup_NGC6440E.t.table["flags"], 1)
     for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind]:

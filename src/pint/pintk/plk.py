@@ -1068,9 +1068,7 @@ class PlkWidget(tk.Frame):
             ).frozen == False and param.startswith("JUMP"):
                 fit_jumps.append(int(param[4:]))
         jumps = [
-            True
-            if "jump" in dict.keys() and any(np.in1d(dict["jump"], fit_jumps))
-            else False
+            "jump" in dict.keys() and any(np.in1d(dict["jump"], fit_jumps))
             for dict in self.psr.selected_toas.table["flags"]
         ]
         if all(jumps):

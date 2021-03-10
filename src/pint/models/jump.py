@@ -164,12 +164,11 @@ class PhaseJump(PhaseComponent):
                     dict["jump"] = [jump_par.index]
 
     def add_jump_and_flags(self, toa_table):
-        """Add jump object to PhaseJump and appropriate flags to TOA tables (helper
-        function for pintk).
+        """Add jump object to PhaseJump and appropriate flags to TOA tables.
 
-        Primarily to be used when applying a jump through pintk to TOAs - since these
-        jumps don't have keys that match to preexisting flags in the TOA tables,
-        we must add the flags when adding the jump.
+        Helper function for pintk. Primarily to be used when applying a jump through
+        pintk to TOAs - since these jumps don't have keys that match to preexisting
+        flags in the TOA tables, we must add the flags when adding the jump.
 
         Parameters
         ----------
