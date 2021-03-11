@@ -1226,65 +1226,73 @@ class TimingModel:
     def jump_flags_to_params(self, toas):
         """Convert jump flags in toas.table["flags"] (loaded in .tim file) to jump parameters in the model.
 
-        The flags processed are ``jump`` and ``gui_jump``.
+        The flag processed is ``jump``.
         """
         from . import jump
 
+        # check if any TOAs are jumped
+        jumped = ["jump" in flag_dict.keys() for flag_dict in toas.table["flags"]]
+        """
+        is_jump = False
         for flag_dict in toas.table["flags"]:
             if "jump" in flag_dict.keys():
+                is_jump = True
                 break
             elif "gui_jump" in flag_dict.keys():
+                is_jump = True
                 break
-            else:
-                log.info("No jump flags to process from .tim file")
-                return None
-        for flag_dict in toas.table["flags"]:
-            if "jump" in flag_dict.keys():
-                jump_nums = [
-                    flag_dict["jump"] if "jump" in flag_dict.keys() else np.nan
-                    for flag_dict in toas.table["flags"]
-                ]
-                if "PhaseJump" not in self.components:
-                    log.info("PhaseJump component added")
-                    a = jump.PhaseJump()
-                    a.setup()
-                    self.add_component(a)
-                    self.remove_param("JUMP1")
-                for num in np.arange(1, np.nanmax(jump_nums) + 1):
-                    if "JUMP" + str(int(num)) not in self.params:
-                        param = maskParameter(
-                            name="JUMP",
-                            index=int(num),
-                            key="jump",
-                            key_value=int(num),
-                            value=0.0,
-                            units="second",
-                            uncertainty=0.0,
-                        )
-                        self.add_param_from_top(param, "PhaseJump")
-                        getattr(self, param.name).frozen = False
-                if 0 in jump_nums:
-                    for flag_dict in toas.table["flags"]:
-                        if "jump" in flag_dict.keys() and flag_dict["jump"] == 0:
-                            flag_dict["jump"] = int(np.nanmax(jump_nums) + 1)
+        """
+        if not any(jumped):
+            log.info("No jump flags to process from .tim file")
+            return None
+        for flag_dict in toas.table["flags"][jumped]:
+            # add PhaseJump object if model does not have one already
+            if "PhaseJump" not in self.components:
+                log.info("PhaseJump component added")
+                a = jump.PhaseJump()
+                a.setup()
+                self.add_component(a)
+                self.remove_param("JUMP1")
+            # take jumps in TOA table and add them as parameters to the model
+            for num in flag_dict["jump"]:
+                if "JUMP" + str(num) not in self.params:
                     param = maskParameter(
                         name="JUMP",
-                        index=int(np.nanmax(jump_nums) + 1),
-                        key="jump",
-                        key_value=int(np.nanmax(jump_nums) + 1),
+                        index=num,
+                        key="-jump",
+                        key_value=num,
                         value=0.0,
                         units="second",
                         uncertainty=0.0,
                     )
                     self.add_param_from_top(param, "PhaseJump")
                     getattr(self, param.name).frozen = False
+            """
+            if 0 in jump_nums:
+                for flag_dict in toas.table["flags"]:
+                    if "jump" in flag_dict.keys() and flag_dict["jump"] == 0:
+                        flag_dict["jump"] = int(np.nanmax(jump_nums) + 1)
+                param = maskParameter(
+                    name="JUMP",
+                    index=int(np.nanmax(jump_nums) + 1),
+                    key="jump",
+                    key_value=int(np.nanmax(jump_nums) + 1),
+                    value=0.0,
+                    units="second",
+                    uncertainty=0.0,
+                )
+                self.add_param_from_top(param, "PhaseJump")
+                getattr(self, param.name).frozen = False
+            """
         # convert string list key_value from file into int list for jumps
         # previously added thru pintk
+        """
         for flag_dict in toas.table["flags"]:
             if "gui_jump" in flag_dict.keys():
                 num = flag_dict["gui_jump"]
                 jump = getattr(self.components["PhaseJump"], "JUMP" + str(num))
                 jump.key_value = list(map(int, jump.key_value))
+        """
         self.components["PhaseJump"].setup()
 
     def get_barycentric_toas(self, toas, cutoff_component=""):
@@ -1543,8 +1551,8 @@ class TimingModel:
             Pulsar parameters for which diff_sigma > threshold will be printed
             with an exclamation point at the end of the line
         unc_rat_threshold : float
-            Pulsar parameters for which the uncertainty has increased by a 
-            factor of unc_rat_threshold will be printed with an asterisk at 
+            Pulsar parameters for which the uncertainty has increased by a
+            factor of unc_rat_threshold will be printed with an asterisk at
             the end of the line
         verbosity : string
             Dictates amount of information returned. Options include "max",
