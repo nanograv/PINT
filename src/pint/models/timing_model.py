@@ -1232,16 +1232,6 @@ class TimingModel:
 
         # check if any TOAs are jumped
         jumped = ["jump" in flag_dict.keys() for flag_dict in toas.table["flags"]]
-        """
-        is_jump = False
-        for flag_dict in toas.table["flags"]:
-            if "jump" in flag_dict.keys():
-                is_jump = True
-                break
-            elif "gui_jump" in flag_dict.keys():
-                is_jump = True
-                break
-        """
         if not any(jumped):
             log.info("No jump flags to process from .tim file")
             return None
@@ -1267,32 +1257,6 @@ class TimingModel:
                     )
                     self.add_param_from_top(param, "PhaseJump")
                     getattr(self, param.name).frozen = False
-            """
-            if 0 in jump_nums:
-                for flag_dict in toas.table["flags"]:
-                    if "jump" in flag_dict.keys() and flag_dict["jump"] == 0:
-                        flag_dict["jump"] = int(np.nanmax(jump_nums) + 1)
-                param = maskParameter(
-                    name="JUMP",
-                    index=int(np.nanmax(jump_nums) + 1),
-                    key="jump",
-                    key_value=int(np.nanmax(jump_nums) + 1),
-                    value=0.0,
-                    units="second",
-                    uncertainty=0.0,
-                )
-                self.add_param_from_top(param, "PhaseJump")
-                getattr(self, param.name).frozen = False
-            """
-        # convert string list key_value from file into int list for jumps
-        # previously added thru pintk
-        """
-        for flag_dict in toas.table["flags"]:
-            if "gui_jump" in flag_dict.keys():
-                num = flag_dict["gui_jump"]
-                jump = getattr(self.components["PhaseJump"], "JUMP" + str(num))
-                jump.key_value = list(map(int, jump.key_value))
-        """
         self.components["PhaseJump"].setup()
 
     def get_barycentric_toas(self, toas, cutoff_component=""):
