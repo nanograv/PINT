@@ -319,9 +319,8 @@ def test_t2cmethod_corrected():
 
 
 def test_jump_flags_to_params(timfile_jumps, timfile_nojumps, model_0437):
-    t = (
-        timfile_jumps
-    )  # TOAs 9, 10, 11, and 12 have jump flags (JUMP2 on 9, JUMP1 on rest)
+    # TOAs 9, 10, 11, and 12 have jump flags (JUMP2 on 9, JUMP1 on rest)
+    t = timfile_jumps
     m = model_0437  # model with no jumps
     t_nojump = timfile_nojumps
     # sanity check
