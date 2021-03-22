@@ -87,6 +87,7 @@ __all__ = [
     "DownhillGLSFitter",
     "WidebandDownhillFitter",
     "WidebandLMFitter",
+    "ConvergenceFailure",
 ]
 
 try:
@@ -148,6 +149,10 @@ except ImportError:
 
 
 class DegeneracyWarning(UserWarning):
+    pass
+
+
+class ConvergenceFailure(ValueError):
     pass
 
 
@@ -540,8 +545,6 @@ class Fitter:
             self.model.CLOCK.value = "TT(TAI)"
         else:
             self.model.CLOCK.value = f"TT({self.toas.clock_corr_info['bipm_version']})"
-        if chi2 is not None:
-            self.model.CHI2.value = chi2
 
     def reset_model(self):
         """Reset the current model to the initial model."""
@@ -1116,9 +1119,11 @@ class DownhillFitter(Fitter):
         self.correlation_matrix = (self.covariance_matrix / self.errors).T / self.errors
         self.update_model(self.current_state.chi2)
         if exception is not None:
-            raise ValueError(
+            raise ConvergenceFailure(
                 "Unable to improve chi2 even with very small steps"
             ) from exception
+        if not self.converged:
+            raise ConvergenceFailure(f"Convergence not detected after {maxiter} steps.")
         return self.converged
 
 
