@@ -88,6 +88,8 @@ __all__ = [
     "WidebandDownhillFitter",
     "WidebandLMFitter",
     "ConvergenceFailure",
+    "StepProblem",
+    "MaxiterReached",
 ]
 
 try:
@@ -153,6 +155,14 @@ class DegeneracyWarning(UserWarning):
 
 
 class ConvergenceFailure(ValueError):
+    pass
+
+
+class MaxiterReached(ConvergenceFailure):
+    pass
+
+
+class StepProblem(ConvergenceFailure):
     pass
 
 
@@ -1119,11 +1129,11 @@ class DownhillFitter(Fitter):
         self.correlation_matrix = (self.covariance_matrix / self.errors).T / self.errors
         self.update_model(self.current_state.chi2)
         if exception is not None:
-            raise ConvergenceFailure(
+            raise StepProblem(
                 "Unable to improve chi2 even with very small steps"
             ) from exception
         if not self.converged:
-            raise ConvergenceFailure(f"Convergence not detected after {maxiter} steps.")
+            raise MaxiterReached(f"Convergence not detected after {maxiter} steps.")
         return self.converged
 
 

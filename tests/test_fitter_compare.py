@@ -10,6 +10,7 @@ from pinttestdata import datadir
 import pint
 from pint.fitter import (
     ConvergenceFailure,
+    MaxiterReached,
     DownhillGLSFitter,
     DownhillWLSFitter,
     GLSFitter,
@@ -55,7 +56,7 @@ def test_compare_downhill_wls(wls):
     dwls = DownhillWLSFitter(wls.toas, wls.model_init)
     try:
         dwls.fit_toas(maxiter=1)
-    except ConvergenceFailure:
+    except MaxiterReached:
         pass
 
     assert abs(wls.resids.chi2 - dwls.resids.chi2) < 0.01
@@ -66,7 +67,7 @@ def test_compare_downhill_gls(full_cov, wls):
     gls = DownhillGLSFitter(wls.toas, wls.model_init)
     try:
         gls.fit_toas(maxiter=1, full_cov=full_cov)
-    except ConvergenceFailure:
+    except MaxiterReached:
         pass
 
     # Why is this taking a different step from the plain GLS fitter?
@@ -79,7 +80,7 @@ def test_compare_downhill_wb(full_cov, wb):
     dwb = WidebandDownhillFitter(wb.toas, wb.model_init)
     try:
         dwb.fit_toas(maxiter=1, full_cov=full_cov)
-    except ConvergenceFailure:
+    except MaxiterReached:
         pass
 
     assert abs(wb.resids.chi2 - dwb.resids.chi2) < 0.01
