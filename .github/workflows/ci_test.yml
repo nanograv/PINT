@@ -12,6 +12,7 @@ on:
 env:
   SETUP_XVFB: True  # avoid issues if mpl tries to open a GUI window
   TOXARGS: '-v'
+  HYPOTHESIS_PROFILE: 'ci'
 
 jobs:
   ci-tests:
