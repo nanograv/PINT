@@ -321,6 +321,7 @@ def load_pickle(toafilename, picklefilename=None):
         except (IOError, pickle.UnpicklingError, ValueError):
             pass
     if lf is not None:
+        lf.table = lf.table.group_by("obs")
         lf.was_pickled = True
         return lf
     raise IOError("No readable pickle found")
