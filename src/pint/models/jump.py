@@ -6,6 +6,7 @@ import numpy
 
 from pint.models.parameter import maskParameter
 from pint.models.timing_model import DelayComponent, MissingParameter, PhaseComponent
+from astropy import log
 
 
 class DelayJump(DelayComponent):
@@ -69,8 +70,7 @@ class DelayJump(DelayComponent):
 
 
 class PhaseJump(PhaseComponent):
-    """This is a class to implement phase jumps
-    """
+    """A class to implement phase jumps."""
 
     register = True
     category = "phase_jump"
@@ -136,3 +136,93 @@ class PhaseJump(PhaseComponent):
         """
         jump_obs = [getattr(self, jump) for jump in self.jumps]
         return jump_obs
+
+    def jump_params_to_flags(self, toas):
+        """Take jumps created from .par file and add appropriate flags to toa table.
+
+        This function was made specifically with pintk in mind for a way to properly
+        load jump flags at the same time a .par file with jumps is loaded (like how
+        jump_flags_to_params loads jumps from .tim files).
+
+        Parameters
+        ----------
+        toas: TOAs object
+            The TOAs which contain the TOA table to be modified
+        """
+        # for every jump, set appropriate flag for TOAs it jumps
+        for jump_par in self.get_jump_param_objects():
+            # find TOAs jump applies to
+            mask = jump_par.select_toa_mask(toas)
+            # apply to dictionaries
+            for dict in toas.table["flags"][mask]:
+                if "jump" in dict.keys():
+                    # check if jump flag already added - don't add flag twice
+                    if jump_par.index in dict["jump"]:
+                        continue
+                    dict["jump"].append(jump_par.index)  # otherwise, add jump flag
+                else:
+                    dict["jump"] = [jump_par.index]
+
+    def add_jump_and_flags(self, toa_table):
+        """Add jump object to PhaseJump and appropriate flags to TOA tables.
+
+        Helper function for pintk. Primarily to be used when applying a jump through
+        pintk to TOAs - since these jumps don't have keys that match to preexisting
+        flags in the TOA tables, we must add the flags when adding the jump.
+
+        Parameters
+        ----------
+        toa_table: list object
+            The TOA table which must be modified. In pintk (pulsar.py), this will
+            be all_toas.table["flags"][selected]
+        """
+        ind = None  # index of jump
+        name = None  # name of jump
+        # check if this is first jump added
+        if len(self.jumps) == 0 or (
+            len(self.jumps) == 1 and getattr(self, "JUMP1").key == None
+        ):
+            param = maskParameter(
+                name="JUMP",
+                index=1,
+                key="-gui_jump",
+                key_value=1,
+                value=0.0,
+                units="second",
+                frozen=False,
+                aliases=["JUMP"],
+            )
+            self.add_param(param)
+            ind = 1
+            name = param.name
+        # otherwise add on jump with next index
+        else:
+            # first, search for TOAs already jumped in inputted selection - pintk does not allow jumps added through GUI to overlap with existing jumps
+            for dict in toa_table:
+                if "gui_jump" in dict.keys():
+                    log.warning(
+                        "The selected toa(s) overlap an existing jump. Remove all interfering jumps before attempting to jump these toas."
+                    )
+                    return None
+            param = maskParameter(
+                name="JUMP",
+                index=len(self.jumps) + 1,
+                key="-gui_jump",
+                key_value=len(self.jumps) + 1,
+                value=0.0,
+                units="second",
+                frozen=False,
+                aliases=["JUMP"],
+            )
+            self.add_param(param)
+            ind = param.index
+            name = param.name
+        self.setup()
+        # add appropriate flags to TOA table to link jump with appropriate TOA
+        for dict1 in toa_table:
+            if "jump" in dict1.keys():
+                dict1["jump"].append(ind)  # toa can have multiple jumps
+            else:
+                dict1["jump"] = [ind]
+            dict1["gui_jump"] = ind  # toa can only have one gui_jump
+        return name
