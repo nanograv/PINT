@@ -99,6 +99,7 @@ class Pulsar:
         )
         self.fitter = Fitters.WLS
         self.fitted = False
+        self.use_pulse_numbers = False
 
     @property
     def name(self):
@@ -138,13 +139,23 @@ class Pulsar:
         self.postfit_model = None
         self.postfit_resids = None
         self.fitted = False
+        self.use_pulse_numbers = False
         self.reset_TOAs()
 
     def update_resids(self):
         # update the pre and post fit residuals using all_toas
-        self.prefit_resids = Residuals(self.all_toas, self.prefit_model)
-        if self.fitted:
-            self.postfit_resids = Residuals(self.all_toas, self.postfit_model)
+        if self.use_pulse_numbers:
+            self.prefit_resids = Residuals(
+                self.all_toas, self.prefit_model, track_mode="use_pulse_numbers"
+            )
+            if self.fitted:
+                self.postfit_resids = Residuals(
+                    self.all_toas, self.postfit_model, track_mode="use_pulse_numbers"
+                )
+        else:
+            self.prefit_resids = Residuals(self.all_toas, self.prefit_model)
+            if self.fitted:
+                self.postfit_resids = Residuals(self.all_toas, self.postfit_model)
 
     def orbitalphase(self):
         """
@@ -237,11 +248,15 @@ class Pulsar:
         """
         # Check if pulse numbers are in table already, if not, make the column
         if (
-            "pn" not in self.all_toas.table.colnames
-            or "pn" not in self.selected_toas.table.colnames
+            "pulse_number" not in self.all_toas.table.colnames
+            or "pulse_number" not in self.selected_toas.table.colnames
         ):
-            self.all_toas.compute_pulse_numbers(self.prefit_model)
-            self.selected_toas.compute_pulse_numbers(self.prefit_model)
+            if self.fitted:
+                self.all_toas.compute_pulse_numbers(self.postfit_model)
+                self.selected_toas.compute_pulse_numbers(self.postfit_model)
+            else:
+                self.all_toas.compute_pulse_numbers(self.prefit_model)
+                self.selected_toas.compute_pulse_numbers(self.prefit_model)
         if (
             "delta_pulse_number" not in self.all_toas.table.colnames
             or "delta_pulse_number" not in self.selected_toas.table.colnames
@@ -256,6 +271,8 @@ class Pulsar:
         # add phase wrap
         self.all_toas.table["delta_pulse_number"][selected] += phase
         self.selected_toas.table["delta_pulse_number"] += phase
+
+        self.use_pulse_numbers = True
 
         self.update_resids()
 

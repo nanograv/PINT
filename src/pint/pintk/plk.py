@@ -656,6 +656,7 @@ class PlkWidget(tk.Frame):
         """
         Reset all plot changes for this pulsar
         """
+        self.psr.use_pulse_numbers = False
         self.psr.reset_TOAs()
         self.psr.fitted = False
         self.psr = copy.deepcopy(self.base_state.psr)
