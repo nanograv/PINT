@@ -321,6 +321,7 @@ def load_pickle(toafilename, picklefilename=None):
         except (IOError, pickle.UnpicklingError, ValueError):
             pass
     if lf is not None:
+        lf.table = lf.table.group_by("obs")
         lf.was_pickled = True
         return lf
     raise IOError("No readable pickle found")
@@ -1477,7 +1478,7 @@ class TOAs:
         # TODO: make all values Quantity objects for consistency
         if gap_limit is None:
             gap_limit = 2 * u.h
-        if "groups" not in self.table.columns or gap_limit != 2 * u.h:
+        if "groups" not in self.table.colnames or gap_limit != 2 * u.h:
             return _group_by_gaps(self.get_mjds().value, gap_limit.to_value(u.d))
         else:
             return self.table["groups"]

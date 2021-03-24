@@ -1223,6 +1223,7 @@ class TimingModel:
 
         return result
 
+    
     def jump_flags_to_params(self, toas):
         """Convert jump flags in toas.table["flags"] (loaded in .tim file) to jump parameters in the model.
 
@@ -1257,6 +1258,61 @@ class TimingModel:
                     )
                     self.add_param_from_top(param, "PhaseJump")
                     getattr(self, param.name).frozen = False
+        self.components["PhaseJump"].setup()
+    
+
+    def delete_jump_and_flags(self, toa_table, jump_num):
+        """Delete jump object from PhaseJump and remove its flags from TOA table
+        (helper function for pintk).
+
+        Parameters
+        ----------
+        toa_table: list or None
+            The TOA table which must be modified. In pintk (pulsar.py), for the
+            prefit model, this will be all_toas.table["flags"].
+            For the postfit model, it will be None (one set of TOA tables for both
+            models).
+        jump_num: int
+            Specifies the index of the jump to be deleted.
+        """
+        # remove jump of specified index
+        self.remove_param("JUMP" + str(jump_num))
+
+        # remove jump flags from selected TOA tables
+        if toa_table is not None:
+            for dict in toa_table:
+                if "jump" in dict.keys() and jump_num in dict["jump"]:
+                    if len(dict["jump"]) == 1:
+                        del dict["jump"]
+                    else:
+                        dict["jump"].remove(jump_num)
+                if "gui_jump" in dict.keys() and dict["gui_jump"] == jump_num:
+                    del dict["gui_jump"]
+                # renumber jump flags at higher jump indeces in whole TOA table
+                if "jump" in dict.keys():
+                    dict["jump"] = [
+                        num - 1 if num > jump_num else num for num in dict["jump"]
+                    ]
+                if "gui_jump" in dict.keys() and dict["gui_jump"] > jump_num:
+                    cur_val = dict["gui_jump"]
+                    dict["gui_jump"] = cur_val - 1
+
+        # if last jump deleted, remove PhaseJump object from model
+        if (
+            self.components["PhaseJump"].get_number_of_jumps() == 1
+        ):  # means last jump just deleted
+            comp_list = getattr(self, "PhaseComponent_list")
+            for item in comp_list:
+                if isinstance(item, pint.models.jump.PhaseJump):
+                    self.remove_component(item)
+            return
+        # if not, reindex higher index jump objects
+        for i in range(jump_num + 1, len(self.jumps) + 1):
+            cur_jump = getattr(self, "JUMP" + str(i))
+            cur_jump.key_value = i - 1
+            new_jump = cur_jump.new_param(index=(i - 1), copy_all=True)
+            self.add_param_from_top(new_jump, "PhaseJump")
+            self.remove_param(cur_jump.name)
         self.components["PhaseJump"].setup()
 
     def get_barycentric_toas(self, toas, cutoff_component=""):
@@ -1773,23 +1829,23 @@ class TimingModel:
                         log.info(
                             "Parameter %s missing from %s" % (par.name, models[ind])
                         )
-                    try:
-                        diff = otherpar.value - par.value
-                        diff_sigma = diff / par.uncertainty.value
-                        if abs(diff_sigma) != np.inf:
-                            newstr += " {:>10.2f}".format(diff_sigma)
-                            if abs(diff_sigma) > threshold_sigma:
-                                newstr += " !"
-                        else:
-                            newstr += "           "
-                        diff_sigma2 = diff / otherpar.uncertainty.value
-                        if abs(diff_sigma2) != np.inf:
-                            newstr += " {:>10.2f}".format(diff_sigma2)
-                            if abs(diff_sigma2) > threshold_sigma:
-                                newstr += " !"
-                    except (AttributeError, TypeError):
-                        pass
-                    if otherpar is not None:
+                    if otherpar is not None and otherpar.value is not None:
+                        try:
+                            diff = otherpar.value - par.value
+                            diff_sigma = diff / par.uncertainty.value
+                            if abs(diff_sigma) != np.inf:
+                                newstr += " {:>10.2f}".format(diff_sigma)
+                                if abs(diff_sigma) > threshold_sigma:
+                                    newstr += " !"
+                            else:
+                                newstr += "           "
+                            diff_sigma2 = diff / otherpar.uncertainty.value
+                            if abs(diff_sigma2) != np.inf:
+                                newstr += " {:>10.2f}".format(diff_sigma2)
+                                if abs(diff_sigma2) > threshold_sigma:
+                                    newstr += " !"
+                        except (AttributeError, TypeError):
+                            pass
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None

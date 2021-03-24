@@ -1068,7 +1068,7 @@ class PlkWidget(tk.Frame):
             ).frozen == False and param.startswith("JUMP"):
                 fit_jumps.append(int(param[4:]))
         jumps = [
-            True if "jump" in dict.keys() and dict["jump"] in fit_jumps else False
+            "jump" in dict.keys() and any(np.in1d(dict["jump"], fit_jumps))
             for dict in self.psr.selected_toas.table["flags"]
         ]
         if all(jumps):
@@ -1084,15 +1084,15 @@ class PlkWidget(tk.Frame):
             self.jumped[jump_name] = False
             return None
         elif type(jump_name) != str:
-            log.error(jump_name, "is not a string")
+            log.error(
+                jump_name,
+                "Return value for the jump name is not a string, jumps not updated",
+            )
             return None
         num = int(jump_name[4:])
         jump_select = [
-            num == jump_num
-            for jump_num in [
-                int(dict["jump"]) if "jump" in dict.keys() else np.nan
-                for dict in self.psr.all_toas.table["flags"]
-            ]
+            True if ("jump" in dict.keys() and num in dict["jump"]) else False
+            for dict in self.psr.all_toas.table["flags"]
         ]
         self.jumped[jump_select] = ~self.jumped[jump_select]
 
