@@ -10,6 +10,7 @@ import hypothesis
 # requested using the HYPOTHESIS_PROFILE=fuzz environment variable or
 # `pytest --hypothesis-profile=fuzz ...` argument.
 
+hypothesis.settings.register_profile("interactive", deadline=None)
 hypothesis.settings.register_profile(
     "ci", deadline=None, print_blob=True, derandomize=True
 )
@@ -22,6 +23,6 @@ default = (
         os.environ.get("IS_CRON") == "true"
         and os.environ.get("ARCH_ON_CI") not in ("aarch64", "ppc64le")
     )
-    else "ci"
+    else "interactive"
 )  # noqa: E501
 hypothesis.settings.load_profile(os.environ.get("HYPOTHESIS_PROFILE", default))

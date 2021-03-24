@@ -110,7 +110,6 @@ some_barycentered 999999.999 56403.000000000000000   1.000  @  -some argument -a
     do_roundtrip(get_TOAs(f, **k), **k)
 
 
-@settings(deadline=None, max_examples=10)
 @given(
     lists(
         tuples(
