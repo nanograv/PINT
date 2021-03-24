@@ -1249,8 +1249,7 @@ class PlkWidget(tk.Frame):
         elif ukey == ord(">"):
             if np.sum(self.selected) > 0:
                 selected = copy.deepcopy(self.selected)
-                ind = np.nonzero(selected)[0][0]
-                selected[ind:] = True
+                selected = ~selected
                 self.psr.add_phase_wrap(selected, 1)
                 self.updatePlot(keepAxes=False)
                 self.call_updates()
@@ -1258,8 +1257,7 @@ class PlkWidget(tk.Frame):
         elif ukey == ord("<"):
             if np.sum(self.selected) > 0:
                 selected = copy.deepcopy(self.selected)
-                ind = np.nonzero(selected)[0][0]
-                selected[ind:] = True
+                selected = ~selected
                 self.psr.add_phase_wrap(selected, -1)
                 self.updatePlot(keepAxes=False)
                 self.call_updates()
