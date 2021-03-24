@@ -167,19 +167,21 @@ class Spindown(PhaseComponent):
             )
         self.PEPOCH.value = new_epoch
 
-    def print_par(self,):
+    def print_par(self, alias_translation=None):
         result = ""
         f_terms = ["F%d" % ii for ii in range(self.num_spin_terms)]
         for ft in f_terms:
             par = getattr(self, ft)
-            result += par.as_parfile_line()
+            result += par.as_parfile_line(alias_translation=alias_translation)
         if hasattr(self, "components"):
             p_default = self.components["Spindown"].params
         else:
             p_default = self.params
         for param in p_default:
             if param not in f_terms:
-                result += getattr(self, param).as_parfile_line()
+                result += getattr(self, param).as_parfile_line(
+                    alias_translation=alias_translation
+                )
         return result
 
     def d_phase_d_F(self, toas, param, delay):

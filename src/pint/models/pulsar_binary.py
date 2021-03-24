@@ -245,12 +245,12 @@ class PulsarBinary(DelayComponent):
         self.update_binary_object(toas, acc_delay)
         return self.binary_instance.d_binarydelay_d_par(param)
 
-    def print_par(self):
+    def print_par(self, alias_translation=None):
         result = "BINARY {0}\n".format(self.binary_model_name)
         for p in self.params:
             par = getattr(self, p)
             if par.quantity is not None:
-                result += par.as_parfile_line()
+                result += par.as_parfile_line(alias_translation=alias_translation)
         return result
 
     def FBX_unit(self, n):

@@ -153,12 +153,12 @@ class Glitch(PhaseComponent):
                 )
                 raise MissingParameter("Glitch", "GLTD_%d" % idx, msg)
 
-    def print_par(self):
+    def print_par(self, alias_translation=None):
         result = ""
         for idx in set(self.glitch_indices):
             for param in self.glitch_prop:
                 par = getattr(self, param + "%d" % idx)
-                result += par.as_parfile_line()
+                result += par.as_parfile_line(alias_translation=alias_translation)
         return result
 
     def glitch_phase(self, toas, delay):

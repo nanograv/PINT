@@ -2019,8 +2019,21 @@ class TimingModel:
         self,
         start_order=["astrometry", "spindown", "dispersion"],
         last_order=["jump_delay"],
+        alias_translation=None,
     ):
-        """Represent the entire model as a parfile string."""
+        """Represent the entire model as a parfile string.
+
+        Parameters
+        ----------
+        start_order : list
+            Categories to include at the beginning
+        last_order : list
+            Categories to include at the end
+        alias_translation : dict or None
+            If not None, look up parameter names in this dictionary to translate
+            them upon writing for compatibility with TEMPO/TEMPO2. The dictionary
+            ``pint.toa.tempo_aliases`` should provide a reasonable selection.
+        """
         self.validate()
         result_begin = ""
         result_end = ""
@@ -2028,12 +2041,14 @@ class TimingModel:
         cates_comp = self.get_components_by_category()
         printed_cate = []
         for p in self.top_level_params:
-            result_begin += getattr(self, p).as_parfile_line()
+            result_begin += getattr(self, p).as_parfile_line(
+                alias_translation=alias_translation
+            )
         for cat in start_order:
             if cat in list(cates_comp.keys()):
                 cp = cates_comp[cat]
                 for cpp in cp:
-                    result_begin += cpp.print_par()
+                    result_begin += cpp.print_par(alias_translation=alias_translation)
                 printed_cate.append(cat)
             else:
                 continue
@@ -2042,7 +2057,7 @@ class TimingModel:
             if cat in list(cates_comp.keys()):
                 cp = cates_comp[cat]
                 for cpp in cp:
-                    result_end += cpp.print_par()
+                    result_end += cpp.print_par(alias_translation=alias_translation)
                 printed_cate.append(cat)
             else:
                 continue
@@ -2053,7 +2068,7 @@ class TimingModel:
             else:
                 cp = cates_comp[cat]
                 for cpp in cp:
-                    result_middle += cpp.print_par()
+                    result_middle += cpp.print_par(alias_translation=alias_translation)
                 printed_cate.append(cat)
 
         return result_begin + result_middle + result_end
@@ -2472,10 +2487,12 @@ class Component(object, metaclass=ModelMeta):
 
         return True
 
-    def print_par(self):
+    def print_par(self, alias_translation=None):
         result = ""
         for p in self.params:
-            result += getattr(self, p).as_parfile_line()
+            result += getattr(self, p).as_parfile_line(
+                alias_translation=alias_translation
+            )
         return result
 
 

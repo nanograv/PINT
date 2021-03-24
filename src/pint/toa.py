@@ -73,6 +73,16 @@ toa_commands = (
 
 all_planets = ("jupiter", "saturn", "venus", "uranus", "neptune", "earth")
 
+tempo_aliases = {
+    "arecibo": "AO",
+    "jodrell": "JB",
+    "A1DOT": "XDOT",
+    "STIGMA": "VARSIGMA",
+    "EFAC": "T2EFAC",
+    "EQUAD": "T2EQUAD",
+    "ECORR": "TNECORR",
+}
+
 
 def _compute_hash(filename):
     h = hashlib.sha256()
@@ -515,27 +525,35 @@ def format_toa_line(
     name="unk",
     flags={},
     format="Princeton",
+    alias_translation=None,
 ):
     """Format TOA line for writing
 
     Parameters
     ----------
-    toatime
+    toatime : astropy.time.Time
         Time object containing TOA arrival time
-    toaerr
+    toaerr : astropy.units.Quantity
         TOA error as a Quantity with units
-    freq
+    freq : astropy.units.Quantity
         Frequency as a Quantity with units (NB: value of np.inf is allowed)
-    obs
+    obs : pint.observatory.Observatory
         Observatory object
-    dm
+    dm : astropy.units.Quantity
         DM for the TOA as a Quantity with units (not printed if 0.0 pc/cm^3)
-    name
+    name : str
         Name to embed in TOA line (conventionally the data file name)
-    format
+    format : str
         (Princeton | Tempo2)
-    flags
+    flags : dict
         Any Tempo2 flags to append to the TOA line
+    alias_translation : dict or None
+        Translate observatory names by looking them up in this dictionary;
+        this may be necessary to convert observatory names into something
+        TEMPO can understand, or to cope with different setups using
+        different names for the same observatory or the same name
+        for different observatories. There is a dictionary ``tempo_aliases``
+        available to use names as compatible with TEMPO as possible.
 
     Returns
     -------
@@ -562,6 +580,8 @@ def format_toa_line(
         - First line of file should be "``FORMAT 1``"
         - TOA format is ``name freq sat satErr siteID <flags>``
     """
+    if alias_translation is None:
+        alias_translation = {}
     if format.upper() in ("TEMPO2", "1"):
         toa_str = Time(toatime, format="pulsar_mjd_string", scale=obs.timescale)
         # In Tempo2 format, freq=0.0 means infinite frequency
@@ -594,7 +614,7 @@ def format_toa_line(
             freq.to(u.MHz).value,
             toa_str,
             toaerr.to(u.us).value,
-            obscode,
+            alias_translation.get(obscode, obscode),
             flagstring,
         )
     elif format.upper() in ("PRINCETON", "TEMPO"):
@@ -1712,7 +1732,9 @@ class TOAs:
             self.table["index"] = np.arange(len(self))
         return self
 
-    def write_TOA_file(self, filename, name="unk", format="tempo2", commentflag=None):
+    def write_TOA_file(self, filename, name="unk", format="tempo2", commentflag=None,
+        alias_translation=None
+    ):
         """Write this object to a ``.tim`` file.
 
         This function writes the contents of this object to a (single) ``.tim``
@@ -1733,6 +1755,13 @@ class TOAs:
         commentflag : str or None
             If a string, and that string is a TOA flag, that TOA will be commented
             in the output file.  If None (or non-string), no TOAs will be commented.
+        alias_translation : dict or None
+            Translate observatory names by looking them up in this dictionary;
+            this may be necessary to convert observatory names into something
+            TEMPO can understand, or to cope with different setups using
+            different names for the same observatory or the same name
+            for different observatories. There is a dictionary ``tempo_aliases``
+            available to use names as compatible with TEMPO as possible.
         """
         try:
             # FIXME: file must be closed even if an exception occurs!
@@ -1779,6 +1808,7 @@ class TOAs:
                 name=flags.pop("name", name),
                 flags=flags,
                 format=format,
+                alias_translation=alias_translation,
             )
             outf.write(out_str)
 

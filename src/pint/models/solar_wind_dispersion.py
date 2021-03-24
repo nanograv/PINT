@@ -113,8 +113,12 @@ class SolarWindDispersion(Dispersion):
         deriv[bfreq < 1.0 * u.MHz] = 0.0
         return deriv
 
-    def print_par(self):
+    def print_par(self, alias_translation=None):
         result = ""
-        result += getattr(self, "NE_SW").as_parfile_line()
-        result += getattr(self, "SWM").as_parfile_line()
+        result += getattr(self, "NE_SW").as_parfile_line(
+            alias_translation=alias_translation
+        )
+        result += getattr(self, "SWM").as_parfile_line(
+            alias_translation=alias_translation
+        )
         return result

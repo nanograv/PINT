@@ -61,11 +61,11 @@ class DelayJump(DelayComponent):
         d_delay_d_j[mask] = -1.0
         return d_delay_d_j * u.second / jpar.units
 
-    def print_par(self):
+    def print_par(self, alias_translation=None):
         result = ""
         for jump in self.jumps:
             jump_par = getattr(self, jump)
-            result += jump_par.as_parfile_line()
+            result += jump_par.as_parfile_line(alias_translation=alias_translation)
         return result
 
 
@@ -118,11 +118,11 @@ class PhaseJump(PhaseComponent):
         d_phase_d_j[mask] = self._parent.F0.value
         return (d_phase_d_j * self._parent.F0.units).to(1 / u.second)
 
-    def print_par(self):
+    def print_par(self, alias_translation=None):
         result = ""
         for jump in self.jumps:
             jump_par = getattr(self, jump)
-            result += jump_par.as_parfile_line()
+            result += jump_par.as_parfile_line(alias_translation=alias_translation)
         return result
 
     def get_number_of_jumps(self):
