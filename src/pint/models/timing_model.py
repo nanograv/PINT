@@ -1223,7 +1223,6 @@ class TimingModel:
 
         return result
 
-    
     def jump_flags_to_params(self, toas):
         """Convert jump flags in toas.table["flags"] (loaded in .tim file) to jump parameters in the model.
 
@@ -1259,7 +1258,6 @@ class TimingModel:
                     self.add_param_from_top(param, "PhaseJump")
                     getattr(self, param.name).frozen = False
         self.components["PhaseJump"].setup()
-    
 
     def delete_jump_and_flags(self, toa_table, jump_num):
         """Delete jump object from PhaseJump and remove its flags from TOA table
