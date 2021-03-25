@@ -83,5 +83,5 @@ class TestEcorrAverage(unittest.TestCase):
         self.res_diff = self.avg["time_resids"][ii] - self.resavg_res
         self.err_ratio = self.avg["errors"][ii] / self.resavg_err
         assert np.abs(self.mjd_diff).max() < 1e-9 * u.d
-        assert np.abs(self.res_diff).max() < 5 * u.ns
+        assert np.abs(self.res_diff).max() < 7 * u.ns
         assert np.abs(self.err_ratio - 1.0).max() < 5e-4
