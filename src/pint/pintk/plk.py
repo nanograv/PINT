@@ -581,6 +581,7 @@ class PlkWidget(tk.Frame):
         self.colorModeWidget.addColorModeCheckbox(self.color_modes)
         self.xyChoiceWidget.setChoice()
         self.updatePlot(keepAxes=False)
+        self.plkToolbar.update()
 
     def call_updates(self):
         if not self.update_callbacks is None:
