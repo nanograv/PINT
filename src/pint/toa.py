@@ -1728,11 +1728,12 @@ class TOAs:
             obs_obj = Observatory.get(obs)
 
             flags = flags.copy()
-            if "clkcorr" in flags.keys():
+            if "clkcorr" in flags:
                 toatime_out = toatime - time.TimeDelta(flags["clkcorr"])
             else:
                 toatime_out = toatime
-            out_str = format_toa_line(
+            out_str = "C " if ("ignore" in flags or "cut" in flags) else ""
+            out_str += format_toa_line(
                 toatime_out,
                 toaerr,
                 freq,
