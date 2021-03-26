@@ -649,7 +649,7 @@ class PlkWidget(tk.Frame):
                     and getattr(self.psr.prefit_model, param).frozen == False
                 ):
                     self.updateJumped(getattr(self.psr.prefit_model, param).name)
-            self.updatePlot(keepAxes=True)
+            self.updatePlot(keepAxes=False)
         self.call_updates()
 
     def reset(self):
