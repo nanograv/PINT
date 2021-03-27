@@ -61,6 +61,7 @@ class ParActionsWidget(tk.Frame):
         self.remove_callback = None
         self.apply_callback = None
         self.write_callback = None
+        self.center_callback = None
 
         self.initLayout()
 
@@ -77,11 +78,17 @@ class ParActionsWidget(tk.Frame):
         button = tk.Button(self, text="Write Par", command=self.writePar)
         button.grid(row=0, column=3)
 
-    def setCallbacks(self, resetParfile, removeChanges, applyChanges, writePar):
+        button = tk.Button(self, text="Center PEPOCH", command=self.centerPEPOCH)
+        button.grid(row=0, column=4)
+
+    def setCallbacks(
+        self, resetParfile, removeChanges, applyChanges, writePar, centerPEPOCH
+    ):
         self.reset_callback = resetParfile
         self.remove_callback = removeChanges
         self.apply_callback = applyChanges
         self.write_callback = writePar
+        self.center_callback = centerPEPOCH
 
     def resetParfile(self):
         if self.reset_callback is not None:
@@ -102,6 +109,11 @@ class ParActionsWidget(tk.Frame):
         if self.write_callback is not None:
             self.write_callback()
         print("Write clicked")
+
+    def centerPEPOCH(self):
+        if self.center_callback is not None:
+            self.center_callback()
+        print("Center PEPOCH clicked")
 
 
 class ParWidget(tk.Frame):
@@ -139,7 +151,11 @@ class ParWidget(tk.Frame):
 
         self.choiceWidget.setCallbacks(self.set_model)
         self.actionsWidget.setCallbacks(
-            self.reset, self.set_model, self.applyChanges, self.writePar
+            self.reset,
+            self.set_model,
+            self.applyChanges,
+            self.writePar,
+            self.centerPEPOCH,
         )
         self.set_model()
         self.update_callbacks = updates
@@ -186,3 +202,16 @@ class ParWidget(tk.Frame):
             print("Saved parfile to %s" % filename)
         except:
             print("Could not save parfile to filename:\t%s" % filename)
+
+    def centerPEPOCH(self):
+        mintime, maxtime = (
+            self.psr.all_toas.get_mjds().min(),
+            self.psr.all_toas.get_mjds().max(),
+        )
+        midpoint = (mintime + maxtime) / 2
+        print(midpoint)
+        if self.psr.fitted:
+            self.psr.postfit_model.change_pepoch(midpoint)
+        self.psr.prefit_model.change_pepoch(midpoint)
+        self.set_model()
+        self.applyChanges()
