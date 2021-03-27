@@ -61,7 +61,9 @@ class ParActionsWidget(tk.Frame):
         self.remove_callback = None
         self.apply_callback = None
         self.write_callback = None
-        self.center_callback = None
+        self.centerPE_callback = None
+        self.centerPO_callback = None
+        self.centerT0_callback = None
 
         self.initLayout()
 
@@ -81,14 +83,29 @@ class ParActionsWidget(tk.Frame):
         button = tk.Button(self, text="Center PEPOCH", command=self.centerPEPOCH)
         button.grid(row=0, column=4)
 
+        button = tk.Button(self, text="Center POSEPOCH", command=self.centerPOSEPOCH)
+        button.grid(row=1, column=1)
+
+        button = tk.Button(self, text="Center T0", command=self.centerT0)
+        button.grid(row=1, column=2)
+
     def setCallbacks(
-        self, resetParfile, removeChanges, applyChanges, writePar, centerPEPOCH
+        self,
+        resetParfile,
+        removeChanges,
+        applyChanges,
+        writePar,
+        centerPEPOCH,
+        centerPOSEPOCH,
+        centerT0,
     ):
         self.reset_callback = resetParfile
         self.remove_callback = removeChanges
         self.apply_callback = applyChanges
         self.write_callback = writePar
-        self.center_callback = centerPEPOCH
+        self.centerPE_callback = centerPEPOCH
+        self.centerPO_callback = centerPOSEPOCH
+        self.centerT0_callback = centerT0
 
     def resetParfile(self):
         if self.reset_callback is not None:
@@ -111,9 +128,19 @@ class ParActionsWidget(tk.Frame):
         print("Write clicked")
 
     def centerPEPOCH(self):
-        if self.center_callback is not None:
-            self.center_callback()
+        if self.centerPE_callback is not None:
+            self.centerPE_callback()
         print("Center PEPOCH clicked")
+
+    def centerPOSEPOCH(self):
+        if self.centerPO_callback is not None:
+            self.centerPO_callback()
+        print("Center POSEPOCH clicked")
+
+    def centerT0(self):
+        if self.centerT0_callback is not None:
+            self.centerT0_callback()
+        print("Center T0 clicked")
 
 
 class ParWidget(tk.Frame):
@@ -156,6 +183,8 @@ class ParWidget(tk.Frame):
             self.applyChanges,
             self.writePar,
             self.centerPEPOCH,
+            self.centerPOSEPOCH,
+            self.centerT0,
         )
         self.set_model()
         self.update_callbacks = updates
@@ -209,9 +238,32 @@ class ParWidget(tk.Frame):
             self.psr.all_toas.get_mjds().max(),
         )
         midpoint = (mintime + maxtime) / 2
-        print(midpoint)
         if self.psr.fitted:
             self.psr.postfit_model.change_pepoch(midpoint)
         self.psr.prefit_model.change_pepoch(midpoint)
+        self.set_model()
+        self.applyChanges()
+
+    def centerPOSEPOCH(self):
+        mintime, maxtime = (
+            self.psr.all_toas.get_mjds().min(),
+            self.psr.all_toas.get_mjds().max(),
+        )
+        midpoint = (mintime + maxtime) / 2
+        if self.psr.fitted:
+            self.psr.postfit_model.change_posepoch(midpoint)
+        self.psr.prefit_model.change_posepoch(midpoint)
+        self.set_model()
+        self.applyChanges()
+
+    def centerT0(self):
+        mintime, maxtime = (
+            self.psr.all_toas.get_mjds().min(),
+            self.psr.all_toas.get_mjds().max(),
+        )
+        midpoint = (mintime + maxtime) / 2
+        if self.psr.fitted:
+            self.psr.postfit_model.change_binary_epoch(midpoint)
+        self.psr.prefit_model.change_binary_epoch(midpoint)
         self.set_model()
         self.applyChanges()
