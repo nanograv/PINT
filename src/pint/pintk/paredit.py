@@ -233,6 +233,9 @@ class ParWidget(tk.Frame):
             print("Could not save parfile to filename:\t%s" % filename)
 
     def centerPEPOCH(self):
+        if not hasattr(self.psr.prefit_model, "PEPOCH"):
+            print("No PEPOCH to center.")
+            return
         mintime, maxtime = (
             self.psr.all_toas.get_mjds().min(),
             self.psr.all_toas.get_mjds().max(),
@@ -245,6 +248,9 @@ class ParWidget(tk.Frame):
         self.applyChanges()
 
     def centerPOSEPOCH(self):
+        if not hasattr(self.psr.prefit_model, "POSEPOCH"):
+            print("No POSEPOCH to center.")
+            return
         mintime, maxtime = (
             self.psr.all_toas.get_mjds().min(),
             self.psr.all_toas.get_mjds().max(),
@@ -257,6 +263,9 @@ class ParWidget(tk.Frame):
         self.applyChanges()
 
     def centerT0(self):
+        if not hasattr(self.psr.prefit_model, "T0"):
+            print("No T0 to center.")
+            return
         mintime, maxtime = (
             self.psr.all_toas.get_mjds().min(),
             self.psr.all_toas.get_mjds().max(),
