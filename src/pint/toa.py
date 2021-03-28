@@ -321,7 +321,6 @@ def load_pickle(toafilename, picklefilename=None):
         except (IOError, pickle.UnpicklingError, ValueError):
             pass
     if lf is not None:
-        lf.table = lf.table.group_by("obs")
         lf.was_pickled = True
         return lf
     raise IOError("No readable pickle found")
@@ -1322,6 +1321,12 @@ class TOAs:
         st = sd.pop("table")
         ot = od.pop("table")
         return sd == od and np.all(st == ot)
+
+    def __setstate__(self, state):
+        # Normal unpickling behaviour
+        self.__dict__.update(state)
+        # Astropy tables lose their group_by
+        self.table = self.table.group_by("obs")
 
     @property
     def ntoas(self):
