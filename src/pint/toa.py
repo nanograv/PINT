@@ -1678,7 +1678,7 @@ class TOAs:
         self.compute_TDBs()
         self.compute_posvels(self.ephem, self.planets)
 
-    def write_TOA_file(self, filename, name="unk", format="tempo2"):
+    def write_TOA_file(self, filename, name="unk", format="tempo2", comments=True):
         """Write this object to a ``.tim`` file.
 
         This function writes the contents of this object to a (single) ``.tim``
@@ -1696,6 +1696,9 @@ class TOAs:
         format : str
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1');
             note that not all features may be supported in 'TEMPO' mode.
+        comments : boolean
+            If True, and there are "-ignore" or "-cut" flags, the TOAs will be
+            commented in the output file.  If False, all TOAs are uncommented.
         """
         try:
             # FIXME: file must be closed even if an exception occurs!
@@ -1737,7 +1740,9 @@ class TOAs:
                 toatime_out = toatime - time.TimeDelta(flags["clkcorr"])
             else:
                 toatime_out = toatime
-            out_str = "C " if ("ignore" in flags or "cut" in flags) else ""
+            out_str = (
+                "C " if (comments and ("ignore" in flags or "cut" in flags)) else ""
+            )
             out_str += format_toa_line(
                 toatime_out,
                 toaerr,

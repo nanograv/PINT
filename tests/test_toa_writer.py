@@ -59,8 +59,11 @@ class TestRoundtripToFiles(unittest.TestCase):
         ts.table[1]["flags"]["ignore"] = True  # comment TOA
         ts.write_TOA_file("testtopo.tim", format="Tempo2")
         ts2 = toa.get_TOAs("testtopo.tim")
-        print(ts.table, ts2.table)
         assert ts2.ntoas == 1  # one should be commented
+        ts.write_TOA_file("testtopo.tim", format="Tempo2", comments=False)
+        ts3 = toa.get_TOAs("testtopo.tim")
+        print(ts.table, ts2.table, ts3.table)
+        assert ts3.ntoas == 2  # neither should be commented
 
     def test_roundtrip_topo_toa_TEMPOformat(self):
         # Create a barycentric TOA
