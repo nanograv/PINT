@@ -1326,7 +1326,8 @@ class TOAs:
         # Normal unpickling behaviour
         self.__dict__.update(state)
         # Astropy tables lose their group_by
-        self.table = self.table.group_by("obs")
+        if self.table.groups.keys is None:
+            self.table = self.table.group_by("obs")
 
     @property
     def ntoas(self):
