@@ -230,7 +230,10 @@ class ParWidget(tk.Frame):
             fout.close()
             print("Saved parfile to %s" % filename)
         except:
-            print("Could not save parfile to filename:\t%s" % filename)
+            if filename == ():
+                print("Write Par cancelled.")
+            else:
+                print("Could not save parfile to filename:\t%s" % filename)
 
     def centerPEPOCH(self):
         if not hasattr(self.psr.prefit_model, "PEPOCH"):
