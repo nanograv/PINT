@@ -230,7 +230,7 @@ class ParWidget(tk.Frame):
             fout.close()
             print("Saved parfile to %s" % filename)
         except:
-            if filename == ():
+            if filename == () or filename == "":
                 print("Write Par cancelled.")
             else:
                 print("Could not save parfile to filename:\t%s" % filename)

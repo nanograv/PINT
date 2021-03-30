@@ -700,7 +700,10 @@ class PlkWidget(tk.Frame):
                 )
             fout.close()
         except:
-            log.error("Could not save parfile to filename:\t%s" % filename)
+            if filename == () or filename == "":
+                print("Write Par cancelled.")
+            else:
+                log.error("Could not save parfile to filename:\t%s" % filename)
 
     def writeTim(self):
         """
@@ -715,7 +718,10 @@ class PlkWidget(tk.Frame):
             log.info("Choose output file %s" % filename)
             self.psr.all_toas.write_TOA_file(filename, format="TEMPO2")
         except:
-            log.error("Count not save file to filename:\t%s" % filename)
+            if filename == () or filename == "":
+                print("Write Tim cancelled.")
+            else:
+                log.error("Could not save file to filename:\t%s" % filename)
 
     def revert(self):
         """
