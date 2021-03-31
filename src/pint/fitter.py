@@ -87,6 +87,9 @@ __all__ = [
     "DownhillGLSFitter",
     "WidebandDownhillFitter",
     "WidebandLMFitter",
+    "ConvergenceFailure",
+    "StepProblem",
+    "MaxiterReached",
 ]
 
 try:
@@ -148,6 +151,18 @@ except ImportError:
 
 
 class DegeneracyWarning(UserWarning):
+    pass
+
+
+class ConvergenceFailure(ValueError):
+    pass
+
+
+class MaxiterReached(ConvergenceFailure):
+    pass
+
+
+class StepProblem(ConvergenceFailure):
     pass
 
 
@@ -540,8 +555,6 @@ class Fitter:
             self.model.CLOCK.value = "TT(TAI)"
         else:
             self.model.CLOCK.value = f"TT({self.toas.clock_corr_info['bipm_version']})"
-        if chi2 is not None:
-            self.model.CHI2.value = chi2
 
     def reset_model(self):
         """Reset the current model to the initial model."""
@@ -1116,9 +1129,11 @@ class DownhillFitter(Fitter):
         self.correlation_matrix = (self.covariance_matrix / self.errors).T / self.errors
         self.update_model(self.current_state.chi2)
         if exception is not None:
-            raise ValueError(
+            raise StepProblem(
                 "Unable to improve chi2 even with very small steps"
             ) from exception
+        if not self.converged:
+            raise MaxiterReached(f"Convergence not detected after {maxiter} steps.")
         return self.converged
 
 
@@ -1283,11 +1298,6 @@ class GLSState(ModelState):
 
         # normalize the design matrix
         norm = np.sqrt(np.sum(M ** 2, axis=0))
-        ntmpar = len(self.model.free_params)
-        if M.shape[1] > ntmpar:
-            # Why do this?
-            # This avoids rescaling the column corresponding to the Offset
-            norm[ntmpar:] = 1
         for c in np.where(norm == 0)[0]:
             warn(
                 f"Parameter degeneracy; the following parameter yields "
@@ -1307,6 +1317,7 @@ class GLSState(ModelState):
             mtcy = np.dot(cm.T, residuals)
 
         else:
+            phiinv /= norm ** 2
             Nvec = (
                 self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value ** 2
             )
@@ -1314,8 +1325,10 @@ class GLSState(ModelState):
             mtcm = np.dot(M.T, cinv[:, None] * M)
             mtcm += np.diag(phiinv)
             mtcy = np.dot(M.T, cinv * residuals)
+        log.debug(f"mtcm: {mtcm}")
 
         U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
+        log.debug(f"s: {s}")
 
         bad = np.where(s <= self.threshold * s[0])[0]
         s[bad] = np.inf
@@ -1338,6 +1351,8 @@ class GLSState(ModelState):
         self.norm = norm
         self.s, self.Vt = s, Vt
         xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+        log.debug(f"norm: {norm}")
+        log.debug(f"xhat: {xhat}")
         self.xhat = xhat
         # newres = residuals - np.dot(M, xhat)
 
@@ -1469,7 +1484,6 @@ class WidebandState(ModelState):
                     new_d_matrix.derivative_params,
                     new_d_matrix.param_units,
                 )
-            self.phiinv = phiinv
 
         # normalize the design matrix
         norm = np.sqrt(np.sum(M ** 2, axis=0))
@@ -1484,6 +1498,9 @@ class WidebandState(ModelState):
             )
         norm[norm == 0] = 1
         M /= norm
+        if not self.full_cov:
+            phiinv /= norm ** 2
+            self.phiinv = phiinv
 
         return M, params, units, norm
 
@@ -1706,9 +1723,7 @@ class PowellFitter(Fitter):
     """
 
     def __init__(self, toas, model, track_mode=None, residuals=None):
-        super(PowellFitter, self).__init__(
-            toas, model, residuals=residuals, track_mode=track_mode
-        )
+        super().__init__(toas, model, residuals=residuals, track_mode=track_mode)
         self.method = "Powell"
 
     def fit_toas(self, maxiter=20):
@@ -1754,7 +1769,7 @@ class WLSFitter(Fitter):
     """
 
     def __init__(self, toas, model, track_mode=None, residuals=None):
-        super(WLSFitter, self).__init__(
+        super().__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
         self.method = "weighted_least_square"
@@ -1882,7 +1897,7 @@ class GLSFitter(Fitter):
     """
 
     def __init__(self, toas=None, model=None, track_mode=None, residuals=None):
-        super(GLSFitter, self).__init__(
+        super().__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
         self.method = "generalized_least_square"
@@ -1954,8 +1969,6 @@ class GLSFitter(Fitter):
             # normalize the design matrix
             norm = np.sqrt(np.sum(M ** 2, axis=0))
             ntmpar = len(fitp)
-            if M.shape[1] > ntmpar:
-                norm[ntmpar:] = 1
             for c in np.where(norm == 0)[0]:
                 warn(
                     f"Parameter degeneracy; the following parameter yields "
@@ -1974,12 +1987,14 @@ class GLSFitter(Fitter):
                 mtcy = np.dot(cm.T, residuals)
 
             else:
+                phiinv /= norm ** 2
                 Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
                 cinv = 1 / Nvec
                 mtcm = np.dot(M.T, cinv[:, None] * M)
                 mtcm += np.diag(phiinv)
                 mtcy = np.dot(M.T, cinv * residuals)
 
+            log.debug(f"mtcm: {mtcm}")
             xhat, xvar = None, None
             if threshold <= 0:
                 try:
@@ -1990,6 +2005,7 @@ class GLSFitter(Fitter):
                     xhat, xvar = None, None
             if xhat is None:
                 U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
+                log.debug(f"s: {s}")
 
                 bad = np.where(s <= threshold * s[0])[0]
                 s[bad] = np.inf
@@ -2011,6 +2027,8 @@ class GLSFitter(Fitter):
 
                 xvar = np.dot(Vt.T / s, Vt)
                 xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+            log.debug(f"norm: {norm}")
+            log.debug(f"xhat: {xhat}")
             newres = residuals - np.dot(M, xhat)
             # compute linearized chisq
             if full_cov:
@@ -2292,8 +2310,6 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             # normalize the design matrix
             norm = np.sqrt(np.sum(M ** 2, axis=0))
             ntmpar = len(fitp)
-            if M.shape[1] > ntmpar:
-                norm[ntmpar:] = 1
             for c in np.where(norm == 0)[0]:
                 warn(
                     f"Parameter degeneracy; the following parameter yields "
@@ -2312,6 +2328,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 mtcy = np.dot(cm.T, residuals)
 
             else:
+                phiinv /= norm ** 2
                 Nvec = self.scaled_all_sigma() ** 2
 
                 cinv = 1 / Nvec
