@@ -56,14 +56,17 @@ class TestRoundtripToFiles(unittest.TestCase):
         t2 = toa.TOA(t1time, obs="gbt", freq=0.0)
         ts = toa.get_TOAs_list([t1, t2], ephem="DE421")
         assert ts.ntoas == 2
-        ts.table[1]["flags"]["ignore"] = True  # comment TOA
+        ts.table[1]["flags"]["ignore"] = True  # flag one TOA
         ts.write_TOA_file("testtopo.tim", format="Tempo2")
         ts2 = toa.get_TOAs("testtopo.tim")
-        assert ts2.ntoas == 1  # one should be commented
-        ts.write_TOA_file("testtopo.tim", format="Tempo2", comments=False)
+        assert ts2.ntoas == 2  # none should be commented
+        ts.write_TOA_file("testtopo.tim", format="Tempo2", commentflag=None)
         ts3 = toa.get_TOAs("testtopo.tim")
-        print(ts.table, ts2.table, ts3.table)
-        assert ts3.ntoas == 2  # neither should be commented
+        assert ts3.ntoas == 2  # none should be commented
+        ts.write_TOA_file("testtopo.tim", format="Tempo2", commentflag="ignore")
+        ts4 = toa.get_TOAs("testtopo.tim")
+        assert ts4.ntoas == 1  # one should be commented
+        print(ts.table, ts2.table, ts3.table, ts4.table)
 
     def test_roundtrip_topo_toa_TEMPOformat(self):
         # Create a barycentric TOA

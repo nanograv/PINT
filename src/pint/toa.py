@@ -1678,7 +1678,7 @@ class TOAs:
         self.compute_TDBs()
         self.compute_posvels(self.ephem, self.planets)
 
-    def write_TOA_file(self, filename, name="unk", format="tempo2", comments=True):
+    def write_TOA_file(self, filename, name="unk", format="tempo2", commentflag="cut"):
         """Write this object to a ``.tim`` file.
 
         This function writes the contents of this object to a (single) ``.tim``
@@ -1696,9 +1696,9 @@ class TOAs:
         format : str
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1');
             note that not all features may be supported in 'TEMPO' mode.
-        comments : boolean
-            If True, and there are "-ignore" or "-cut" flags, the TOAs will be
-            commented in the output file.  If False, all TOAs are uncommented.
+        commentflag : str or None
+            If a string, and that string is a TOA flag, that TOA will be commented
+            in the output file.  If None (or non-string), no TOAs will be commented.
         """
         try:
             # FIXME: file must be closed even if an exception occurs!
@@ -1713,8 +1713,8 @@ class TOAs:
 
         # Warn the user if any of the TOAs have -ignore or -cut flags that
         # they will be commented in the output file
-        if len(self.get_flag_value("ignore")[1]) or len(self.get_flag_value("cut")[1]):
-            log.warning("TOAs with '-cut' or '-ignore' flags will be commented")
+        if isinstance(commentflag, str) and len(self.get_flag_value(commentflag)[1]):
+            log.warning(f"TOAs with '-{commentflag}' flags will be commented")
 
         # Add pulse numbers to flags temporarily if there is a pulse number column
         # FIXME: everywhere else the pulse number column is called pulse_number not pn
@@ -1741,7 +1741,7 @@ class TOAs:
             else:
                 toatime_out = toatime
             out_str = (
-                "C " if (comments and ("ignore" in flags or "cut" in flags)) else ""
+                "C " if isinstance(commentflag, str) and (commentflag in flags) else ""
             )
             out_str += format_toa_line(
                 toatime_out,
