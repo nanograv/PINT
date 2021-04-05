@@ -3,7 +3,8 @@ from warnings import warn
 import numpy as np
 from astropy import log, units as u
 from astropy.time import Time
-from pint.models.parameter import MJDParameter, floatParameter
+
+from pint.models.parameter import MJDParameter, floatParameter, intParameter
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
@@ -246,7 +247,7 @@ class BinaryELL1H(BinaryELL1Base):
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="NHARMS",
                 units="",
                 value=3,

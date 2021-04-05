@@ -13,6 +13,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - DownhillWLSFitter, DownhillGLSFitter, WidebandDownhillFitter are new Fitters that are more careful about convergence than the existing ones (PR #975)
 - Fitters have a .is_wideband boolean attribute (PR #975)
 - TOAs now have a .renumber() method to simplify their index column (PR #1029)
+- write_tim_file and par writers can accept a translation dictionary to write TEMPO-compatible files (PR #1017)
 
 ## [0.8.2] - 2021-01-27
 ### Fixed

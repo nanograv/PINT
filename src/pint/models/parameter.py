@@ -7,14 +7,15 @@ string, angles, times.
 
 These classes also contain code to allow them to read and write values
 in both exact and human-readable forms, as well as detecting when they
-have occurred in ``.aor`` files.
+have occurred in ``.par`` files.
 
 One major complication is that timing models can often have variable
 numbers of parameters: for example the ``DMX`` family of parameters
 can have one parameter for each group of TOAs in the input, allowing
 potentially very many. These are handled in two separate ways, as "prefix
-parameters" and "mask parameters" depending on how they occur in the
-``.par`` and ``.tim`` files.
+parameters" (:class:`pint.models.parameter.prefixParameter`) and
+"mask parameters" (:class:`pint.models.parameter.maskParameter`)
+depending on how they occur in the ``.par`` and ``.tim`` files.
 """
 import numbers
 
@@ -371,13 +372,16 @@ class Parameter:
 
         Returns True if line was successfully parsed, False otherwise.
 
+        This function appears as ``from_parfile_line``; subclasses may override it.
+
         Note
         ----
-        The accepted format:
-            NAME value
-            NAME value fit_flag
-            NAME value fit_flag uncertainty
-            NAME value uncertainty
+        The accepted formats:
+
+        * NAME value
+        * NAME value fit_flag
+        * NAME value fit_flag uncertainty
+        * NAME value uncertainty
         """
         try:
             k = line.split()
@@ -488,7 +492,9 @@ class floatParameter(Parameter):
         get_value = self.get_value_float
         set_uncertainty = self.set_quantity_float
         self._unit_scale = False
-        super(floatParameter, self).__init__(
+        if units is None:
+            units = ""
+        super().__init__(
             name=name,
             value=value,
             units=units,
@@ -616,7 +622,7 @@ class strParameter(Parameter):
 
     `.quantity` stores current parameter information in a string. `.value`
     returns the same with `.quantity`. `.units` is not applicable.
-    `strParameter` is not fitable.
+    `strParameter` is not fittable.
 
     Parameters
     ----------
@@ -643,7 +649,7 @@ class strParameter(Parameter):
         set_quantity = lambda x: str(x)
         set_uncertainty = lambda x: None
 
-        super(strParameter, self).__init__(
+        super().__init__(
             name=name,
             value=value,
             description=None,
@@ -663,7 +669,7 @@ class boolParameter(Parameter):
     """This is a Parameter type that is specific to boolean values.
     `.quantity` stores current parameter information in boolean type. `.value`
     returns the same with `.quantity`. `.units` is not applicable.
-    `boolParameter` is not fitable.
+    `boolParameter` is not fittable.
 
     Parameters
     ----------
@@ -693,11 +699,18 @@ class boolParameter(Parameter):
         aliases=None,
         **kwargs,
     ):
-        print_quantity = lambda x: "Y" if x else "N"
+        def print_quantity(x):
+            return "Y" if x else "N"
+
         set_quantity = self.set_quantity_bool
-        get_value = lambda x: x
-        set_uncertainty = lambda x: None
-        super(boolParameter, self).__init__(
+
+        def get_value(x):
+            return x
+
+        def set_uncertainty(x):
+            return None
+
+        super().__init__(
             name=name,
             value=value,
             description=None,
@@ -712,16 +725,103 @@ class boolParameter(Parameter):
         self.paramType = "boolParameter"
 
     def set_quantity_bool(self, val):
-        """This function is to get boolean value for boolParameter class"""
+        """Get boolean value for boolParameter class"""
         # First try strings
         try:
-            if val.upper() in ["Y", "YES", "T", "TRUE", "1"]:
+            if val.upper() in ["Y", "YES", "T", "TRUE"]:
                 return True
-            else:
+            elif val.upper() in ["N", "NO", "F", "FALSE"]:
                 return False
         except AttributeError:
             # Will get here on non-string types
-            return bool(val)
+            pass
+        else:
+            # String not in the list
+            return bool(float(val))
+        return bool(val)
+
+
+class intParameter(Parameter):
+    """Integer parameter values.
+
+    `.quantity` stores current parameter information in integer type. `.value`
+    returns the same as `.quantity`. `.units` is not applicable.
+    `intParameter` is not fittable.
+
+    Parameters
+    ----------
+    name : str
+        The name of the parameter.
+    value : str, bool, [0,1]
+        The input parameter boolean value.
+    description : str, optional
+        A short description of what this parameter means.
+    aliases : list, optional
+        An optional list of strings specifying alternate names that can also
+        be accepted for this parameter.
+
+    Example::
+        >>> from parameter import intParameter
+        >>> test = intParameter(name='test1', value='N')
+        >>> print test
+        test1 N
+    """
+
+    def __init__(
+        self,
+        name=None,
+        value=None,
+        description=None,
+        frozen=True,
+        aliases=None,
+        **kwargs,
+    ):
+        print_quantity = str
+        set_quantity = self.set_quantity_int
+
+        def get_value(x):
+            return x
+
+        def set_uncertainty(x):
+            return None
+
+        super().__init__(
+            name=name,
+            value=value,
+            description=None,
+            frozen=True,
+            aliases=aliases,
+            print_quantity=print_quantity,
+            set_quantity=set_quantity,
+            get_value=get_value,
+            set_uncertainty=set_uncertainty,
+        )
+        self.value_type = int
+        self.paramType = "intParameter"
+
+    def set_quantity_int(self, val):
+        """Convert a string or other value to an integer."""
+        if isinstance(val, str):
+            try:
+                ival = int(val)
+            except ValueError:
+                fval = float(val)
+                ival = int(fval)
+                if ival != fval and abs(fval) < 2 ** 52:
+                    raise ValueError(
+                        f"Value {val} does not appear to be an integer "
+                        f"but parameter {self.name} stores only integers."
+                    )
+            return ival
+        else:
+            ival = int(val)
+            fval = float(val)
+            if ival != fval and abs(fval) < 2 ** 52:
+                raise ValueError(
+                    f"Value {val} does not appear to be an integer "
+                    f"but parameter {self.name} stores only integers."
+                )
+            return ival
 
 
 class MJDParameter(Parameter):
@@ -776,7 +876,7 @@ class MJDParameter(Parameter):
         print_quantity = time_to_mjd_string
         get_value = time_to_longdouble
         set_uncertainty = self.set_uncertainty_mjd
-        super(MJDParameter, self).__init__(
+        super().__init__(
             name=name,
             value=value,
             units="MJD",
@@ -933,7 +1033,7 @@ class AngleParameter(Parameter):
         self.value_type = Angle
         self.paramType = "AngleParameter"
 
-        super(AngleParameter, self).__init__(
+        super().__init__(
             name=name,
             value=value,
             units=units,
@@ -1397,7 +1497,7 @@ class maskParameter(floatParameter):
         for al in aliases:
             idx_aliases.append(al + str(self.index))
         self.prefix_aliases = aliases
-        super(maskParameter, self).__init__(
+        super().__init__(
             name=name_param,
             value=value,
             units=units,
@@ -1438,11 +1538,11 @@ class maskParameter(floatParameter):
         return out
 
     def name_matches(self, name):
-        if super(maskParameter, self).name_matches(name):
+        if super().name_matches(name):
             return True
         elif self.index == 1:
             name_idx = name + str(self.index)
-            return super(maskParameter, self).name_matches(name_idx)
+            return super().name_matches(name_idx)
 
     def from_parfile_line_mask(self, line):
         """Read mask parameter line (e.g. JUMP).
@@ -1679,7 +1779,7 @@ class pairParameter(floatParameter):
 
         self.prefix_aliases = aliases
 
-        super(pairParameter, self).__init__(
+        super().__init__(
             name=name_param,
             value=value,
             units=units,
@@ -1703,11 +1803,11 @@ class pairParameter(floatParameter):
         self.is_prefix = True
 
     def name_matches(self, name):
-        if super(pairParameter, self).name_matches(name):
+        if super().name_matches(name):
             return True
         else:
             name_idx = name + str(self.index)
-            return super(pairParameter, self).name_matches(name_idx)
+            return super().name_matches(name_idx)
 
     def from_parfile_line_pair(self, line):
         """Read mask parameter line (e.g. JUMP).

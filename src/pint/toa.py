@@ -1732,8 +1732,13 @@ class TOAs:
             self.table["index"] = np.arange(len(self))
         return self
 
-    def write_TOA_file(self, filename, name="unk", format="tempo2", commentflag=None,
-        alias_translation=None
+    def write_TOA_file(
+        self,
+        filename,
+        name="unk",
+        format="tempo2",
+        commentflag=None,
+        alias_translation=None,
     ):
         """Write this object to a ``.tim`` file.
 

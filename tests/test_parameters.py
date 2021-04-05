@@ -1,18 +1,24 @@
+import copy
 import os
 import unittest
 
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-
-from pint import pint_units
-from pint.models.model_builder import get_model
-from pint.models.parameter import MJDParameter
-from pint.toa import get_TOAs
+import pytest
 from pinttestdata import datadir
 
 import pint.fitter
-import copy
+from pint import pint_units
+from pint.models.model_builder import get_model
+from pint.models.parameter import (
+    MJDParameter,
+    boolParameter,
+    floatParameter,
+    intParameter,
+    strParameter,
+)
+from pint.toa import get_TOAs
 
 """
 The behavior we want for numerical Parameter variables (p):
@@ -302,8 +308,8 @@ class TestParameters(unittest.TestCase):
         self.assertRaises(ValueError, self.set_prefix_value1)
 
     def test_START_FINISH_in_par(self):
-        """ 
-        Check that START/FINISH parameters set up/operate properly when 
+        """
+        Check that START/FINISH parameters set up/operate properly when
         from input file.
         """
         m1 = self.m
@@ -316,9 +322,9 @@ class TestParameters(unittest.TestCase):
 
         # check parameter initialization
         assert hasattr(m1, "START")
-        assert type(m1.START) == type(MJDParameter())
+        assert isinstance(m1.START, MJDParameter)
         assert hasattr(m1, "FINISH")
-        assert type(m1.FINISH) == type(MJDParameter())
+        assert isinstance(m1.FINISH, MJDParameter)
 
         self.assertEqual(m1.START.value, start_preval)
         self.assertEqual(m1.FINISH.value, finish_preval)
@@ -327,7 +333,6 @@ class TestParameters(unittest.TestCase):
 
         # fit toas and compare with expected/Tempo2 (for WLS) values
         fitters = [
-            pint.fitter.PowellFitter(toas=t1, model=m1),
             pint.fitter.WLSFitter(toas=t1, model=m1),
             pint.fitter.GLSFitter(toas=t1, model=m1),
         ]
@@ -351,7 +356,7 @@ class TestParameters(unittest.TestCase):
 
     def test_START_FINISH_not_in_par(self):
         """
-        Check that START/FINISH parameters are added and set up when not 
+        Check that START/FINISH parameters are added and set up when not
         in input file.
         """
         # check initialization after fitting for .par file without START/FINISH
@@ -366,7 +371,6 @@ class TestParameters(unittest.TestCase):
 
         # fit toas and compare with expected/Tempo2 (for WLS) values
         fitters = [
-            pint.fitter.PowellFitter(toas=t, model=m),
             pint.fitter.WLSFitter(toas=t, model=m),
             pint.fitter.GLSFitter(toas=t, model=m),
         ]
@@ -389,3 +393,81 @@ class TestParameters(unittest.TestCase):
             self.assertAlmostEqual(
                 fitter.model.FINISH.value, fitter.toas.last_MJD.value, places=9
             )
+
+
+@pytest.mark.parametrize(
+    "type_,str_value,value",
+    [
+        (floatParameter, "TEST 1.234", 1.234),
+        (floatParameter, "TEST 1.234e8", 1.234e8),
+        (floatParameter, "TEST 1.234d8", 1.234e8),
+        (boolParameter, "TEST Y", True),
+        (boolParameter, "TEST N", False),
+        (boolParameter, "TEST 1", True),
+        (boolParameter, "TEST 0", False),
+        (boolParameter, "TEST 1.0", True),
+        (boolParameter, "TEST 0.0", False),
+        (boolParameter, "TEST 3.14", True),
+        (boolParameter, "TEST nan", True),
+        (boolParameter, "TEST True", True),
+        (boolParameter, "TEST False", False),
+        (boolParameter, "TEST y", True),
+        (boolParameter, "TEST n", False),
+        (intParameter, "TEST 17", 17),
+        (intParameter, "TEST 17.0", 17),
+        (intParameter, "TEST -17", -17),
+        (
+            intParameter,
+            "TEST -17_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000",
+            -17_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000,
+        ),
+        (strParameter, "TEST FISH", "FISH"),
+        (strParameter, "TEST Fish", "Fish"),
+    ],
+)
+def test_parameter_parsing(type_, str_value, value):
+    p = type_(name="TEST")
+    assert p.from_parfile_line(str_value)
+    assert p.value == value
+
+
+@pytest.mark.parametrize(
+    "type_,par_line",
+    [
+        (floatParameter, "TEST fish"),
+        (floatParameter, "TEST 1.234h500"),
+        (floatParameter, "TEST 0x1234"),
+        (intParameter, "TEST 1.5"),
+        (intParameter, "TEST fish"),
+        (intParameter, "TEST 5fish"),
+        (boolParameter, "TEST FRUE"),
+    ],
+)
+def test_parameter_parsing_fail(type_, par_line):
+    p = type_(name="TEST")
+    with pytest.raises(ValueError):
+        p.from_parfile_line(par_line)
+
+
+@pytest.mark.parametrize(
+    "type_,set_value,value",
+    [
+        (floatParameter, 1.234, 1.234),
+        (floatParameter, 1, 1.0),
+        (floatParameter, "1.234", 1.234),
+        (floatParameter, "1.234q8", ValueError),
+        (floatParameter, [1, 2], TypeError),
+        (intParameter, 2, 2),
+        (intParameter, "2", 2),
+        (intParameter, 2.0, 2),
+        (intParameter, 1.5, ValueError),
+    ],
+)
+def test_parameter_setting(type_, set_value, value):
+    p = type_(name="TEST")
+    if isinstance(value, type(Exception)) and issubclass(value, Exception):
+        with pytest.raises(value):
+            p.value = set_value
+    else:
+        p.value = set_value
+        assert p.value == value

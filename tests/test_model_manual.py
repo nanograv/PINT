@@ -115,7 +115,7 @@ def test_compare_get_model_new_and_old_all_parfiles(parfile):
         pytest.skip("This parfile is unclear")
     try:
         m_old = get_model(parfile)
-    except (IOError, MissingParameter) as e:
+    except (ValueError, IOError, MissingParameter) as e:
         pytest.skip("Existing code raised an exception {}".format(e))
     m_new = get_model_new(parfile)
 
@@ -132,7 +132,7 @@ def test_get_model_roundtrip(tmp_dir, parfile):
         pytest.skip("This parfile is unclear")
     try:
         m_old = get_model(parfile)
-    except (IOError, MissingParameter) as e:
+    except (ValueError, IOError, MissingParameter) as e:
         pytest.skip("Existing code raised an exception {}".format(e))
 
     fn = join(tmp_dir, "file.par")

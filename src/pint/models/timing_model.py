@@ -19,9 +19,10 @@ import pint
 from pint.models.parameter import (
     AngleParameter,
     MJDParameter,
+    Parameter,
     boolParameter,
     floatParameter,
-    Parameter,
+    intParameter,
     maskParameter,
     strParameter,
 )
@@ -249,20 +250,16 @@ class TimingModel:
             "",
         )
         self.add_param_from_top(
-            floatParameter(
+            boolParameter(
                 name="DMDATA",
-                value=0.0,
-                units="",
+                value=False,
                 description="Was the fit done using per-TOA DM information?",
             ),
             "",
         )
         self.add_param_from_top(
-            floatParameter(
-                name="NTOA",
-                value=0.0,
-                units="",
-                description="Number of TOAs used in the fitting",
+            intParameter(
+                name="NTOA", value=0, description="Number of TOAs used in the fitting"
             ),
             "",
         )
