@@ -1321,8 +1321,7 @@ def ELL1_check(A1, E, TRES, NTOA, outstring=True):
 
 
 def shklovskii_factor(pmtot, D):
-    """
-    Return magnitude of Shklovskii correction factor
+    """Compute magnitude of Shklovskii correction factor.
 
     Computes the Shklovskii correction factor, as defined in Eq 8.12 of Lorimer & Kramer (2005)
     This is the factor by which Pdot/P is increased due to the transverse velocity.
@@ -1345,8 +1344,7 @@ def shklovskii_factor(pmtot, D):
 
 
 def FTest(chi2_1, dof_1, chi2_2, dof_2):
-    """
-    Run F-test.
+    """Run F-test.
 
     Compute an F-test to see if a model with extra parameters is
     significant compared to a simpler model.  The input values are the
@@ -1388,11 +1386,12 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
     else:
         if delta_chi2 <= 0:
             log.warning(
-                "Chi^2 for Model 2 is larger than Chi^2 for Model 1, cannot preform F-test."
+                "Chi^2 for Model 2 is larger than Chi^2 for Model 1, cannot perform F-test."
             )
+            ft = 1.0
         elif dof_1 == dof_2:
-            log.warning("Models have equal degrees of freedom, cannot preform F-test.")
-        ft = False
+            log.warning("Models have equal degrees of freedom, cannot perform F-test.")
+            ft = np.nan
     return ft
 
 
