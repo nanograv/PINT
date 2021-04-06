@@ -1711,11 +1711,6 @@ class TOAs:
         if format.upper() in ("TEMPO2", "1"):
             outf.write("FORMAT 1\n")
 
-        # Warn the user if any of the TOAs have -ignore or -cut flags that
-        # they will be commented in the output file
-        if isinstance(commentflag, str) and len(self.get_flag_value(commentflag)[1]):
-            log.warning(f"TOAs with '-{commentflag}' flags will be commented")
-
         # Add pulse numbers to flags temporarily if there is a pulse number column
         # FIXME: everywhere else the pulse number column is called pulse_number not pn
         pnChange = False
