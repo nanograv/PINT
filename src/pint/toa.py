@@ -1731,10 +1731,9 @@ class TOAs:
             obs_obj = Observatory.get(obs)
 
             flags = flags.copy()
+            toatime_out = toatime
             if "clkcorr" in flags:
-                toatime_out = toatime - time.TimeDelta(flags["clkcorr"])
-            else:
-                toatime_out = toatime
+                toatime_out -= time.TimeDelta(flags["clkcorr"])
             out_str = (
                 "C " if isinstance(commentflag, str) and (commentflag in flags) else ""
             )
