@@ -284,11 +284,6 @@ class DispersionDM(Dispersion):
         dmterms = [0.0 * u.Unit("")] + self.get_DM_terms()
         if self.DMEPOCH.value is None:
             self.DMEPOCH.value = new_epoch
-            if len(dmterms) > 2:
-                raise ValueError(
-                    f"DMEPOCH is not currently set but there are "
-                    f"{len(dmterms)-2} derivatives."
-                )
 
         dmepoch_ld = self.DMEPOCH.quantity.tdb.mjd_long
         dt = (new_epoch.tdb.mjd_long - dmepoch_ld) * u.day
