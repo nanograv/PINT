@@ -24,7 +24,7 @@ class Dispersion(DelayComponent):
     """A base dispersion timing model."""
 
     def __init__(self):
-        super(Dispersion, self).__init__()
+        super().__init__()
         self.dm_value_funcs = []
         self.dm_deriv_funcs = {}
 
@@ -136,7 +136,7 @@ class DispersionDM(Dispersion):
     category = "dispersion_constant"
 
     def __init__(self):
-        super(DispersionDM, self).__init__()
+        super().__init__()
         self.add_param(
             floatParameter(
                 name="DM",
@@ -168,7 +168,7 @@ class DispersionDM(Dispersion):
         self.delay_funcs_component += [self.constant_dispersion_delay]
 
     def setup(self):
-        super(Dispersion, self).setup()
+        super().setup()
         base_dms = list(self.get_prefix_mapping_component("DM").values())
         base_dms += ["DM"]
 
@@ -178,7 +178,7 @@ class DispersionDM(Dispersion):
 
     def validate(self):
         """Validate the DM parameters input."""
-        super(Dispersion, self).validate()
+        super().validate()
         # If DM1 is set, we need DMEPOCH
         if self.DM1.value != 0.0:
             if self.DMEPOCH.value is None:
@@ -312,7 +312,7 @@ class DispersionDMX(Dispersion):
     category = "dispersion_dmx"
 
     def __init__(self):
-        super(DispersionDMX, self).__init__()
+        super().__init__()
         # DMX is for info output right now
         self.add_param(
             floatParameter(
@@ -453,7 +453,7 @@ class DispersionDMX(Dispersion):
         return np.array(inds)
 
     def setup(self):
-        super(DispersionDMX, self).setup()
+        super().setup()
         # Get DMX mapping.
         # Register the DMX derivatives
         for prefix_par in self.get_params_of_type("prefixParameter"):
@@ -463,7 +463,7 @@ class DispersionDMX(Dispersion):
 
     def validate(self):
         """Validate the DMX parameters."""
-        super(DispersionDMX, self).validate()
+        super().validate()
         DMX_mapping = self.get_prefix_mapping_component("DMX_")
         DMXR1_mapping = self.get_prefix_mapping_component("DMXR1_")
         DMXR2_mapping = self.get_prefix_mapping_component("DMXR2_")
@@ -576,7 +576,7 @@ class DispersionJump(Dispersion):
     category = "dispersion_jump"
 
     def __init__(self):
-        super(DispersionJump, self).__init__()
+        super().__init__()
         self.dm_value_funcs += [self.jump_dm]
         # Dispersion jump only model the dm values.
 
@@ -590,7 +590,7 @@ class DispersionJump(Dispersion):
         )
 
     def setup(self):
-        super(DispersionJump, self).setup()
+        super().setup()
         self.dm_jumps = []
         for mask_par in self.get_params_of_type("maskParameter"):
             if mask_par.startswith("DMJUMP"):
@@ -604,7 +604,7 @@ class DispersionJump(Dispersion):
             self.register_deriv_funcs(self.d_delay_d_dmjump, j)
 
     def validate(self):
-        super(DispersionJump, self).validate()
+        super().validate()
 
     def jump_dm(self, toas):
         """Return the DM jump for each dm section collected by dmjump parameters.
