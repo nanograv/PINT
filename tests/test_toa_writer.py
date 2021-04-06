@@ -23,7 +23,6 @@ class TestRoundtripToFiles(unittest.TestCase):
         ts = toa.get_TOAs_list([t1], ephem="DE421")
         ts.write_TOA_file("testbary.tim", format="Tempo2")
         ts2 = toa.get_TOAs("testbary.tim")
-        print(ts.table, ts2.table)
         assert np.abs(ts.table["mjd"][0] - ts2.table["mjd"][0]) < 1.0e-15 * u.d
         assert np.abs(ts.table["tdb"][0] - ts2.table["tdb"][0]) < 1.0e-15 * u.d
 
@@ -34,7 +33,6 @@ class TestRoundtripToFiles(unittest.TestCase):
         ts = toa.get_TOAs_list([t1], ephem="DE421")
         ts.write_TOA_file("testbary.tim", format="TEMPO")
         ts2 = toa.get_TOAs("testbary.tim")
-        print(ts.table, ts2.table)
         assert np.abs(ts.table["mjd"][0] - ts2.table["mjd"][0]) < 1.0e-15 * u.d
         assert np.abs(ts.table["tdb"][0] - ts2.table["tdb"][0]) < 1.0e-15 * u.d
 
@@ -45,7 +43,6 @@ class TestRoundtripToFiles(unittest.TestCase):
         ts = toa.get_TOAs_list([t1], ephem="DE421")
         ts.write_TOA_file("testtopo.tim", format="Tempo2")
         ts2 = toa.get_TOAs("testtopo.tim")
-        print(ts.table, ts2.table)
         assert np.abs(ts.table["mjd"][0] - ts2.table["mjd"][0]) < 1.0e-15 * u.d
         assert np.abs(ts.table["tdb"][0] - ts2.table["tdb"][0]) < 1.0e-15 * u.d
 
@@ -56,17 +53,20 @@ class TestRoundtripToFiles(unittest.TestCase):
         t2 = toa.TOA(t1time, obs="gbt", freq=0.0)
         ts = toa.get_TOAs_list([t1, t2], ephem="DE421")
         assert ts.ntoas == 2
-        ts.table[1]["flags"]["ignore"] = True  # flag one TOA
         ts.write_TOA_file("testtopo.tim", format="Tempo2")
         ts2 = toa.get_TOAs("testtopo.tim")
         assert ts2.ntoas == 2  # none should be commented
-        ts.write_TOA_file("testtopo.tim", format="Tempo2", commentflag=None)
+        ts.table[0]["flags"]["cut"] = "do not like"  # default comment flag
+        ts.table[1]["flags"]["ignore"] = True  # flag with different flag
+        ts.write_TOA_file("testtopo.tim", format="Tempo2")
         ts3 = toa.get_TOAs("testtopo.tim")
-        assert ts3.ntoas == 2  # none should be commented
-        ts.write_TOA_file("testtopo.tim", format="Tempo2", commentflag="ignore")
+        assert ts3.ntoas == 1  # one should be commented
+        ts.write_TOA_file("testtopo.tim", format="Tempo2", commentflag=None)
         ts4 = toa.get_TOAs("testtopo.tim")
-        assert ts4.ntoas == 1  # one should be commented
-        print(ts.table, ts2.table, ts3.table, ts4.table)
+        assert ts4.ntoas == 2  # none should be commented
+        ts.write_TOA_file("testtopo.tim", format="Tempo2", commentflag="ignore")
+        ts5 = toa.get_TOAs("testtopo.tim")
+        assert ts5.ntoas == 1  # one should be commented
 
     def test_roundtrip_topo_toa_TEMPOformat(self):
         # Create a barycentric TOA
@@ -75,23 +75,22 @@ class TestRoundtripToFiles(unittest.TestCase):
         ts = toa.get_TOAs_list([t1], ephem="DE421")
         ts.write_TOA_file("testtopot1.tim", format="TEMPO")
         ts2 = toa.get_TOAs("testtopot1.tim")
-        print(ts.table, ts2.table)
         assert np.abs(ts.table["mjd"][0] - ts2.table["mjd"][0]) < 1.0e-15 * u.d
         assert np.abs(ts.table["tdb"][0] - ts2.table["tdb"][0]) < 1.0e-15 * u.d
 
-        # Comment out because TEMPO2 distro doesn't include gmrt2gps.clk so far
-        # def test_roundtrip_gmrt_toa_Tempo2format(self):
-        #     if os.getenv("TEMPO2") is None:
-        #         pytest.skip("TEMPO2 evnironment variable is not set, can't run this test")
-        #     # Create a barycentric TOA
-        #     t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
-        #     t1 = toa.TOA(t1time, obs="gmrt", freq=0.0)
-        #     ts = toa.get_TOAs_list([t1], ephem="DE421")
-        #     ts.write_TOA_file("testgmrt.tim", format="Tempo2")
-        #     ts2 = toa.get_TOAs("testgmrt.tim")
-        #     print(ts.table, ts2.table)
-        assert np.abs(ts.table["mjd"][0] - ts2.table["mjd"][0]) < 1.0e-15 * u.d
-        assert np.abs(ts.table["tdb"][0] - ts2.table["tdb"][0]) < 1.0e-15 * u.d
+    # Comment out because TEMPO2 distro doesn't include gmrt2gps.clk so far
+    # def test_roundtrip_gmrt_toa_Tempo2format(self):
+    #     if os.getenv("TEMPO2") is None:
+    #         pytest.skip("TEMPO2 evnironment variable is not set, can't run this test")
+    #     # Create a barycentric TOA
+    #     t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
+    #     t1 = toa.TOA(t1time, obs="gmrt", freq=0.0)
+    #     ts = toa.get_TOAs_list([t1], ephem="DE421")
+    #     ts.write_TOA_file("testgmrt.tim", format="Tempo2")
+    #     ts2 = toa.get_TOAs("testgmrt.tim")
+    #     print(ts.table, ts2.table)
+    #     assert np.abs(ts.table["mjd"][0] - ts2.table["mjd"][0]) < 1.0e-15 * u.d
+    #     assert np.abs(ts.table["tdb"][0] - ts2.table["tdb"][0]) < 1.0e-15 * u.d
 
     # def test_roundtrip_ncyobs_toa_Tempo2format(self):
     #     if os.getenv("TEMPO2") is None:
