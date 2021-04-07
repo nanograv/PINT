@@ -1678,7 +1678,7 @@ class TOAs:
         self.compute_TDBs()
         self.compute_posvels(self.ephem, self.planets)
 
-    def write_TOA_file(self, filename, name="unk", format="tempo2", commentflag="cut"):
+    def write_TOA_file(self, filename, name="unk", format="tempo2", commentflag=None):
         """Write this object to a ``.tim`` file.
 
         This function writes the contents of this object to a (single) ``.tim``
