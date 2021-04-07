@@ -205,14 +205,19 @@ class DispersionDM(Dispersion):
         tbl = toas.table
         dm = np.zeros(len(tbl))
         dm_terms = self.get_DM_terms()
-        if self.DMEPOCH.value is None:
-            DMEPOCH = tbl["tdbld"][0]
-        else:
+        if any(t.value != 0 for t in dm_terms[1:]):
             DMEPOCH = self.DMEPOCH.value
-        dt = (tbl["tdbld"] - DMEPOCH) * u.day
-        dt_value = (dt.to(u.yr)).value
-        dm_terms_value = [d.value for d in dm_terms]
-        dm = taylor_horner(dt_value, dm_terms_value)
+            try:
+                dt = (tbl["tdbld"] - DMEPOCH) * u.day
+            except TypeError as e:
+                raise ValueError(
+                    "DMEPOCH not set but some derivatives are not zero: {dm_terms}"
+                ) from e
+            dt_value = (dt.to(u.yr)).value
+            dm_terms_value = [d.value for d in dm_terms]
+            dm = taylor_horner(dt_value, dm_terms_value)
+        else:
+            dm = dm_terms_value[0]
         return dm * self.DM.units
 
     def constant_dispersion_delay(self, toas, acc_delay=None):
@@ -257,6 +262,9 @@ class DispersionDM(Dispersion):
         dm_terms = np.longdouble(np.zeros(len(dms)))
         dm_terms[order] = np.longdouble(1.0)
         if self.DMEPOCH.value is None:
+            v = dms[order].value
+            if v is not None and v != 0:
+                raise ValueError(f"DMEPOCH is not set but {param_name} is not zero")
             DMEPOCH = tbl["tdbld"][0]
         else:
             DMEPOCH = self.DMEPOCH.value
@@ -283,6 +291,10 @@ class DispersionDM(Dispersion):
 
         dmterms = [0.0 * u.Unit("")] + self.get_DM_terms()
         if self.DMEPOCH.value is None:
+            if any(d.value != 0 for d in dmterms[2:]):
+                raise ValueError(
+                    f"DMEPOCH not set but some DM derivatives are not zero: {dmterms}"
+                )
             self.DMEPOCH.value = new_epoch
 
         dmepoch_ld = self.DMEPOCH.quantity.tdb.mjd_long

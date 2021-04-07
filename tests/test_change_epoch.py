@@ -92,7 +92,7 @@ def test_change_dmepoch_unset(times):
 
 def test_change_dmepoch_unset_exception(times):
     with pytest.raises(ValueError):
-        model = models.get_model(
+        models.get_model(
             io.StringIO(
                 """
                 PSR J1234+5678
@@ -105,6 +105,44 @@ def test_change_dmepoch_unset_exception(times):
                 """
             )
         )
+
+
+def test_change_dmepoch_unset_python_exception(times):
+    model = models.get_model(
+        io.StringIO(
+            """
+            PSR J1234+5678
+            F0 1
+            PEPOCH 56000
+            ELAT 0
+            ELONG 0
+            DM 10
+            """
+        )
+    )
+    model.DM1.value = 7
+    with pytest.raises(ValueError):
+        model.change_dmepoch(56000)
+
+
+def test_unset_dmepoch_raises(times):
+    model = models.get_model(
+        io.StringIO(
+            """
+            PSR J1234+5678
+            F0 1
+            PEPOCH 56000
+            ELAT 0
+            ELONG 0
+            DM 10
+            """
+        )
+    )
+    model.DM1.value = 7
+    with pytest.raises(ValueError):
+        model.base_dm(times)
+    with pytest.raises(ValueError):
+        model.d_dm_d_DMs(times, "DM")
 
 
 @pytest.fixture(
