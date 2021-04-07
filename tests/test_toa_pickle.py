@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 import os
 import pickle
-import unittest
 import shutil
 import time
+import unittest
 
 import astropy.time
 import astropy.units as u
 import numpy as np
 import pytest
+from pinttestdata import datadir
 
 import pint.models
 import pint.toa
 from pint import toa
-from pinttestdata import datadir
 
 
 @pytest.fixture
@@ -151,3 +151,13 @@ def test_astropy_group_survives_pickle(tmpdir):
 
     assert len(test_toas.table.groups.keys) == 1
     assert len(new_table.groups.keys) == 1
+
+
+def test_group_survives_plain_pickle(tmpdir):
+    test_model = pint.models.get_model(os.path.join(datadir, "NGC6440E.par"))
+    test_toas = pint.toa.make_fake_toas(58000, 59000, 5, model=test_model)
+
+    new_toas = pickle.loads(pickle.dumps(test_toas))
+
+    assert len(test_toas.table.groups.keys) == 1
+    assert len(new_toas.table.groups.keys) == 1
