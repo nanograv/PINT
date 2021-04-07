@@ -1684,7 +1684,7 @@ class TOAs:
         self.compute_TDBs()
         self.compute_posvels(self.ephem, self.planets)
 
-    def write_TOA_file(self, filename, name="unk", format="tempo2"):
+    def write_TOA_file(self, filename, name="unk", format="tempo2", commentflag=None):
         """Write this object to a ``.tim`` file.
 
         This function writes the contents of this object to a (single) ``.tim``
@@ -1702,6 +1702,9 @@ class TOAs:
         format : str
             Format specifier for file ('TEMPO' or 'Princeton') or ('Tempo2' or '1');
             note that not all features may be supported in 'TEMPO' mode.
+        commentflag : str or None
+            If a string, and that string is a TOA flag, that TOA will be commented
+            in the output file.  If None (or non-string), no TOAs will be commented.
         """
         try:
             # FIXME: file must be closed even if an exception occurs!
@@ -1734,11 +1737,13 @@ class TOAs:
             obs_obj = Observatory.get(obs)
 
             flags = flags.copy()
-            if "clkcorr" in flags.keys():
-                toatime_out = toatime - time.TimeDelta(flags["clkcorr"])
-            else:
-                toatime_out = toatime
-            out_str = format_toa_line(
+            toatime_out = toatime
+            if "clkcorr" in flags:
+                toatime_out -= time.TimeDelta(flags["clkcorr"])
+            out_str = (
+                "C " if isinstance(commentflag, str) and (commentflag in flags) else ""
+            )
+            out_str += format_toa_line(
                 toatime_out,
                 toaerr,
                 freq,
