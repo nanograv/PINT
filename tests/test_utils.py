@@ -1,11 +1,12 @@
 """Test basic functionality of the :module:`pint.utils`."""
+import os
 from itertools import product
 from tempfile import NamedTemporaryFile
 
-import pint
 import astropy.units as u
 import numpy as np
 import pytest
+import scipy.stats
 from astropy.time import Time
 from hypothesis import assume, example, given
 from hypothesis.extra.numpy import array_shapes, arrays, scalar_dtypes
@@ -19,7 +20,11 @@ from hypothesis.strategies import (
     slices,
 )
 from numpy.testing import assert_array_equal
+from pinttestdata import datadir
 
+import pint
+import pint.models as tm
+from pint import fitter, toa
 from pint.pulsar_mjd import (
     jds_to_mjds,
     jds_to_mjds_pulsar,
@@ -31,19 +36,14 @@ from pint.pulsar_mjd import (
     time_to_longdouble,
 )
 from pint.utils import (
+    FTest,
     PosVel,
+    dmxparse,
     interesting_lines,
     lines_of,
     open_or_use,
     taylor_horner,
-    dmxparse,
-    FTest,
 )
-
-import pint.models as tm
-from pint import fitter, toa
-from pinttestdata import datadir
-import os
 
 
 def test_taylor_horner_basic():
@@ -550,30 +550,10 @@ def test_singleton_type(format_, type_):
     [
         ("mjd", 40000, 1e-10),
         ("pulsar_mjd", 40000, 1e-10),
-        pytest.param(
-            "mjd_long",
-            np.longdouble(40000) + np.longdouble(1e-10),
-            None,
-            marks=pytest.mark.xfail(reason="astropy limitations"),
-        ),
-        pytest.param(
-            "mjd_long",
-            np.longdouble(40000),
-            np.longdouble(1e-10),
-            marks=pytest.mark.xfail(reason="astropy limitations"),
-        ),
-        pytest.param(
-            "pulsar_mjd_long",
-            np.longdouble(40000) + np.longdouble(1e-10),
-            None,
-            marks=pytest.mark.xfail(reason="astropy limitations"),
-        ),
-        pytest.param(
-            "pulsar_mjd_long",
-            np.longdouble(40000),
-            np.longdouble(1e-10),
-            marks=pytest.mark.xfail(reason="astropy limitations"),
-        ),
+        ("mjd_long", np.longdouble(40000) + np.longdouble(1e-10), None),
+        ("mjd_long", np.longdouble(40000), np.longdouble(1e-10)),
+        ("pulsar_mjd_long", np.longdouble(40000) + np.longdouble(1e-10), None),
+        ("pulsar_mjd_long", np.longdouble(40000), np.longdouble(1e-10)),
         ("mjd_string", "40000.0000000001", None),
         ("pulsar_mjd_string", "40000.0000000001", None),
     ],
@@ -650,21 +630,17 @@ def test_pmtot():
         pmtot(m2)
 
 
-# Remove this xfail once our minimum numpy can bump up to 1.17, but this requires excluding Python 2
-@pytest.mark.xfail(
-    reason="numpy 1.16.* does not support isclose with units, fixed in 1.17"
-)
 def test_psr_utils():
 
     from pint.utils import (
+        companion_mass,
         mass_funct,
         mass_funct2,
-        pulsar_mass,
-        companion_mass,
         pulsar_age,
-        pulsar_edot,
         pulsar_B,
         pulsar_B_lightcyl,
+        pulsar_edot,
+        pulsar_mass,
     )
 
     pb = 1.0 * u.d
@@ -711,3 +687,36 @@ def test_ftest():
     ft = FTest(chi2_1, dof_1, chi2_2, dof_2)
     # Test against scipy F-CDF, hardcoded test value
     assert np.isclose(0.020000171879625623, ft)
+
+
+@pytest.mark.parametrize("dof_1,dof_2,seed", [(12, 9, 0), (101, 100, 0), (405, 400, 0)])
+def test_Ftest_statistical(dof_1, dof_2, seed):
+    """Verify that the F test reports about the right number of false positives.
+
+    The F test reports the probability that the chi-squared would decrease by the
+    observed amount even if the model is not actually a better fit. So this test
+    generates some fake data where the model isn't any better a fit, and asks
+    how often the F test probability is less than some threshold (say 0.01). This
+    should occur in about threshold fraction of trials. We check this against a
+    binomial distribution; by construction this test should fail for 2% of seeds,
+    so just retry with a different seed if it fails.
+    """
+    random = np.random.default_rng(0)
+    Fs = []
+    for i in range(10000):
+        x = random.standard_normal(dof_1)
+        Fs.append(FTest((x ** 2).sum(), dof_1, (x[:dof_2] ** 2).sum(), dof_2))
+    threshold = 0.01
+    assert (
+        scipy.stats.binom(len(Fs), threshold).ppf(0.01)
+        < sum(1 for F in Fs if F < threshold)
+        < scipy.stats.binom(len(Fs), threshold).ppf(0.99)
+    )
+
+
+def test_Ftest_chi2_increase():
+    assert FTest(100, 100, 101, 99) == 1
+
+
+def test_Ftest_dof_same():
+    assert np.isnan(FTest(100, 100, 100, 100))

@@ -2,19 +2,17 @@
 import re
 from contextlib import contextmanager
 from copy import deepcopy
-import astropy.units as u
-from astropy import log
-import astropy.constants as const
-import astropy.coordinates as coords
-import numpy as np
-import scipy.optimize.zeros as zeros
-from scipy.special import fdtrc
-
-
 from io import StringIO
 
-import pint.pulsar_ecliptic
+import astropy.constants as const
+import astropy.coordinates as coords
+import astropy.units as u
+import numpy as np
+import scipy.optimize.zeros as zeros
+from astropy import log
+from scipy.special import fdtrc
 
+import pint.pulsar_ecliptic
 
 __all__ = [
     "PosVel",
@@ -544,8 +542,8 @@ def dmx_ranges_old(
     component : TimingModel.Component object
         A DMX Component class with the DMX ranges included
     """
-    from pint.models.timing_model import Component
     import pint.models.parameter
+    from pint.models.timing_model import Component
 
     MJDs = toas.get_mjds()
     freqs = toas.table["freq"]
@@ -713,8 +711,8 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=Fa
     component : TimingModel.Component object
         A DMX Component class with the DMX ranges included
     """
-    from pint.models.timing_model import Component
     import pint.models.parameter
+    from pint.models.timing_model import Component
 
     MJDs = toas.get_mjds()
     freqs = toas.table["freq"].quantity
@@ -1321,8 +1319,7 @@ def ELL1_check(A1, E, TRES, NTOA, outstring=True):
 
 
 def shklovskii_factor(pmtot, D):
-    """
-    Return magnitude of Shklovskii correction factor
+    """Compute magnitude of Shklovskii correction factor.
 
     Computes the Shklovskii correction factor, as defined in Eq 8.12 of Lorimer & Kramer (2005)
     This is the factor by which Pdot/P is increased due to the transverse velocity.
@@ -1345,8 +1342,7 @@ def shklovskii_factor(pmtot, D):
 
 
 def FTest(chi2_1, dof_1, chi2_2, dof_2):
-    """
-    Run F-test.
+    """Run F-test.
 
     Compute an F-test to see if a model with extra parameters is
     significant compared to a simpler model.  The input values are the
@@ -1385,14 +1381,18 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
             (delta_chi2 / delta_dof) / new_redchi2
         )  # fdtr doesn't like float128
         ft = fdtrc(delta_dof, dof_2, F)
+    elif dof_1 == dof_2:
+        log.warning("Models have equal degrees of freedom, cannot perform F-test.")
+        ft = np.nan
+    elif delta_chi2 <= 0:
+        log.warning(
+            "Chi^2 for Model 2 is larger than Chi^2 for Model 1, cannot perform F-test."
+        )
+        ft = 1.0
     else:
-        if delta_chi2 <= 0:
-            log.warning(
-                "Chi^2 for Model 2 is larger than Chi^2 for Model 1, cannot preform F-test."
-            )
-        elif dof_1 == dof_2:
-            log.warning("Models have equal degrees of freedom, cannot preform F-test.")
-        ft = False
+        raise ValueError(
+            f"Mystery problem in Ftest - maybe NaN? {chi2_1} {dof_1} {chi2_2} {dof_2}"
+        )
     return ft
 
 
