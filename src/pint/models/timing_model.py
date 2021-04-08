@@ -568,11 +568,11 @@ class TimingModel:
         elif anom.lower().startswith("ecc"):
             anoms = bbi.E()
         elif anom.lower() == "true":
-            anoms = bbi.nu()
+            anoms = bbi.nu()  # can be negative
         else:
             raise ValueError("anom='%s' is not a recognized type of anomaly" % anom)
         # Make sure all angles are between 0-2*pi
-        anoms = np.fmod(anoms.value, 2 * np.pi)
+        anoms = np.remainder(anoms.value, 2 * np.pi)
         if radians:  # return with radian units
             return anoms * u.rad
         else:  # return as unitless cycles from 0-1
@@ -610,7 +610,7 @@ class TimingModel:
 
         def funct(t):
             nu = self.orbital_phase(t, anom="true")
-            return np.fmod((nu + bbi.omega()).value, 2 * np.pi) - np.pi / 2
+            return np.remainder((nu + bbi.omega()).value, 2 * np.pi) - np.pi / 2
 
         # Handle the input time(s)
         if isinstance(baryMJD, time.Time):
@@ -628,7 +628,7 @@ class TimingModel:
             # Compute the true anomalies and omegas for those times
             nus = self.orbital_phase(ts, anom="true")
             omegas = bbi.omega()
-            x = np.fmod((nus + omegas).value, 2 * np.pi) - np.pi / 2
+            x = np.remainder((nus + omegas).value, 2 * np.pi) - np.pi / 2
             # find the lowest index where x is just below 0
             for lb in range(len(x)):
                 if x[lb] < 0 and x[lb + 1] > 0:
