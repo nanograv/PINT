@@ -217,7 +217,7 @@ class DispersionDM(Dispersion):
             dm_terms_value = [d.value for d in dm_terms]
             dm = taylor_horner(dt_value, dm_terms_value)
         else:
-            dm = dm_terms_value[0]
+            dm = dm_terms[0].value
         return dm * self.DM.units
 
     def constant_dispersion_delay(self, toas, acc_delay=None):
