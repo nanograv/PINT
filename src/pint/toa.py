@@ -1687,6 +1687,30 @@ class TOAs:
         self.compute_TDBs()
         self.compute_posvels(self.ephem, self.planets)
 
+    def renumber(self, index_order=True):
+        """Recreate the index column so the values go from 0 to len(self)-1.
+
+        This modifies the TOAs object and also returns it, for calling
+        convenience.
+
+        Parameters
+        ==========
+        index_order : bool
+            If True, preserve the order of the index column, but renumber so
+            there are no gaps. If False, number according to the order TOAs
+            occur in the object (they will be grouped by observatory).
+
+        Returns
+        =======
+        self
+        """
+        if index_order:
+            ix = np.argsort(self.table["index"])
+            self.table["index"][ix] = np.arange(len(self))
+        else:
+            self.table["index"] = np.arange(len(self))
+        return self
+
     def write_TOA_file(self, filename, name="unk", format="tempo2", commentflag=None):
         """Write this object to a ``.tim`` file.
 

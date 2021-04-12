@@ -7,10 +7,11 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Fixed
 - Now ensures T2CMETHOD is IAU2000B if it is set at all; likewise DILATEFREQ and TIMEEPH (PR #970)
+- Merging TOAs objects now ensures that their index columns don't overlap (PR #1029)
 ### Added
 - DownhillWLSFitter, DownhillGLSFitter, WidebandDownhillFitter are new Fitters that are more careful about convergence than the existing ones (PR #975)
 - Fitters have a .is_wideband boolean attribute (PR #975)
-
+- TOAs now have a .renumber() method to simplify their index column (PR #1029)
 
 ## [0.8.2] - 2021-01-27
 ### Fixed

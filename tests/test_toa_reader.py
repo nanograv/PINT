@@ -293,3 +293,48 @@ def test_merge_indices():
         match = toas.table[toas.table["index"] == ix]
         assert len(match) == 1
         assert match[0]["tdbld"] == toas_excised.table["tdbld"][i]
+
+
+def test_renumber_subset():
+    m = get_model(StringIO(simplepar))
+    toas = toa.make_fake_toas(55000, 55500, 10, model=m, obs="ao")
+
+    sub = toas[1:-1]
+    assert 0 not in sub.table["index"]
+
+    sub.renumber()
+    assert np.all(sub.table["index"] == np.arange(len(sub)))
+
+
+def test_renumber_order():
+    m = get_model(StringIO(simplepar))
+    toas = toa.make_fake_toas(55000, 55500, 10, model=m, obs="ao")
+    rev = toas[::-1]
+    assert np.all(rev.table["index"] == np.arange(len(rev))[::-1])
+    rev.renumber()
+    assert np.all(rev.table["index"] == np.arange(len(rev))[::-1])
+    rev.renumber(index_order=False)
+    assert np.all(rev.table["index"] == np.arange(len(rev)))
+
+    rev = toas[::-1]
+    rev.renumber(index_order=True)
+    assert np.all(rev.table["index"] == np.arange(len(rev))[::-1])
+
+
+def test_renumber_subset():
+    m = get_model(StringIO(simplepar))
+    fakes = [
+        toa.make_fake_toas(55000, 55500, 5, model=m, obs="ao"),
+        toa.make_fake_toas(56000, 56500, 10, model=m, obs="gbt"),
+        toa.make_fake_toas(57000, 57500, 15, model=m, obs="@"),
+    ]
+    fakes_excised = [f[1:-1] for f in fakes]
+    toas_excised = toa.merge_TOAs(fakes_excised)
+
+    assert 0 not in toas_excised.table["index"]
+
+    toas_excised.renumber()
+    assert set(toas_excised.table["index"]) == set(range(len(toas_excised)))
+
+    toas_excised.renumber(index_order=False)
+    assert np.all(toas_excised.table["index"] == np.arange(len(toas_excised)))
