@@ -262,8 +262,7 @@ class DispersionDM(Dispersion):
         dm_terms = np.longdouble(np.zeros(len(dms)))
         dm_terms[order] = np.longdouble(1.0)
         if self.DMEPOCH.value is None:
-            v = dms[order].value
-            if order > 0 and v is not None and v != 0:
+            if any(t.value != 0 for t in dms[1:]):
                 raise ValueError(f"DMEPOCH is not set but {param_name} is not zero")
             DMEPOCH = tbl["tdbld"][0]
         else:
