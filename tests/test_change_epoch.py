@@ -142,7 +142,7 @@ def test_unset_dmepoch_raises(times):
     with pytest.raises(ValueError):
         model.base_dm(times)
     with pytest.raises(ValueError):
-        model.d_dm_d_DMs(times, "DM")
+        model.d_dm_d_DMs(times, "DM1")
 
 
 @pytest.fixture(
