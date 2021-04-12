@@ -1273,6 +1273,7 @@ class TOAs:
             if not isinstance(toalist, (list, tuple)):
                 raise ValueError("Trying to initialize TOAs from a non-list class")
         self.table = build_table(toalist, filename=self.filename)
+        self.max_index = len(self.table) - 1
         groups = self.get_groups()
         self.table.add_column(groups, name="groups")
         # Add pulse number column (if needed) or make PHASE adjustments
@@ -1328,6 +1329,8 @@ class TOAs:
         # Astropy tables lose their group_by
         if self.table.groups.keys is None:
             self.table = self.table.group_by("obs")
+        if not hasattr(self, "max_index"):
+            self.max_index = np.maximum.reduce(self.table["index"])
 
     @property
     def ntoas(self):
@@ -1683,6 +1686,30 @@ class TOAs:
         ] * u.day
         self.compute_TDBs()
         self.compute_posvels(self.ephem, self.planets)
+
+    def renumber(self, index_order=True):
+        """Recreate the index column so the values go from 0 to len(self)-1.
+
+        This modifies the TOAs object and also returns it, for calling
+        convenience.
+
+        Parameters
+        ==========
+        index_order : bool
+            If True, preserve the order of the index column, but renumber so
+            there are no gaps. If False, number according to the order TOAs
+            occur in the object (they will be grouped by observatory).
+
+        Returns
+        =======
+        self
+        """
+        if index_order:
+            ix = np.argsort(self.table["index"])
+            self.table["index"][ix] = np.arange(len(self))
+        else:
+            self.table["index"] = np.arange(len(self))
+        return self
 
     def write_TOA_file(self, filename, name="unk", format="tempo2", commentflag=None):
         """Write this object to a ``.tim`` file.
@@ -2166,11 +2193,17 @@ def merge_TOAs(TOAs_list):
     # We do not ensure that the command list is flat
     nt.commands = [tt.commands for tt in TOAs_list]
     # Now do the actual table stacking
-    nt.table = table.vstack(
-        [tt.table for tt in TOAs_list], join_type="exact", metadata_conflicts="silent"
-    )
+    start_index = nt.max_index + 1
+    tables = []
+    for tt in TOAs_list:
+        t = copy.deepcopy(tt.table)
+        t["index"] += start_index
+        start_index += tt.max_index + 1
+        tables.append(t)
+    nt.table = table.vstack(tables, join_type="exact", metadata_conflicts="silent")
     # Fix the table meta data about filenames
     nt.table.meta["filename"] = nt.filename
+    nt.max_index = start_index - 1
     nt.hashes = {}
     for tt in TOAs_list:
         nt.hashes.update(tt.hashes)
