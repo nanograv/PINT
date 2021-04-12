@@ -2166,9 +2166,14 @@ def merge_TOAs(TOAs_list):
     # We do not ensure that the command list is flat
     nt.commands = [tt.commands for tt in TOAs_list]
     # Now do the actual table stacking
-    nt.table = table.vstack(
-        [tt.table for tt in TOAs_list], join_type="exact", metadata_conflicts="silent"
-    )
+    start_index = np.maximum.reduce(nt.table["index"]) + 1
+    tables = []
+    for tt in TOAs_list:
+        t = copy.deepcopy(tt.table)
+        t["index"] += start_index
+        start_index += np.maximum.reduce(tt.table["index"]) + 1
+        tables.append(t)
+    nt.table = table.vstack(tables, join_type="exact", metadata_conflicts="silent")
     # Fix the table meta data about filenames
     nt.table.meta["filename"] = nt.filename
     nt.hashes = {}

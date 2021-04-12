@@ -265,3 +265,14 @@ def test_pickle_multiple(tmpdir):
     assert not toa.get_TOAs(
         filenames, model=m, usepickle=True, picklefilename=picklefilename
     ).was_pickled
+
+
+def test_merge_indices():
+    m = get_model(StringIO(simplepar))
+    fakes = [
+        toa.make_fake_toas(55000, 55500, 5, model=m, obs="ao"),
+        toa.make_fake_toas(56000, 56500, 10, model=m, obs="gbt"),
+        toa.make_fake_toas(57000, 57500, 15, model=m, obs="@"),
+    ]
+    toas = toa.merge_TOAs(fakes)
+    assert len(set(toas.table["index"])) == len(toas)
