@@ -276,3 +276,20 @@ def test_merge_indices():
     ]
     toas = toa.merge_TOAs(fakes)
     assert len(set(toas.table["index"])) == len(toas)
+
+
+def test_merge_indices():
+    m = get_model(StringIO(simplepar))
+    fakes = [
+        toa.make_fake_toas(55000, 55500, 5, model=m, obs="ao"),
+        toa.make_fake_toas(56000, 56500, 10, model=m, obs="gbt"),
+        toa.make_fake_toas(57000, 57500, 15, model=m, obs="@"),
+    ]
+    fakes_excised = [f[1:-1] for f in fakes]
+    toas = toa.merge_TOAs(fakes)
+    toas_excised = toa.merge_TOAs(fakes_excised)
+    for i in range(len(toas_excised)):
+        ix = toas_excised.table["index"][i]
+        match = toas.table[toas.table["index"] == ix]
+        assert len(match) == 1
+        assert match[0]["tdbld"] == toas_excised.table["tdbld"][i]
