@@ -172,9 +172,11 @@ class Parameter:
         continuous=True,
         prior=priors.Prior(priors.UniformUnboundedRV()),
         use_alias=None,
+        repeatable=False
     ):
 
         self.name = name  # name of the parameter
+        self._parfile_name = name
         self.units = units  # Default unit
         self.quantity = value  # The value of parameter, internal storage
         self.prior = prior
@@ -188,6 +190,7 @@ class Parameter:
         self.paramType = "Not specified"  # Type of parameter. Here is general type
         self.valueType = None
         self.special_arg = []
+        self.repeatable=repeatable
 
         self.use_alias = use_alias
 
@@ -572,6 +575,7 @@ class floatParameter(Parameter):
         unit_scale=False,
         scale_factor=None,
         scale_threshold=None,
+        repeatable=False,
         **kwargs,
     ):
         self.long_double = long_double
@@ -786,6 +790,7 @@ class boolParameter(Parameter):
         description=None,
         frozen=True,
         aliases=None,
+        repeatable=False,
         **kwargs,
     ):
 
@@ -939,6 +944,7 @@ class MJDParameter(Parameter):
         continuous=True,
         aliases=None,
         time_scale="tdb",
+        repeatable=False,
         **kwargs,
     ):
         self._time_scale = time_scale
@@ -1080,6 +1086,7 @@ class AngleParameter(Parameter):
         frozen=True,
         continuous=True,
         aliases=None,
+        repeatable=False,
         **kwargs,
     ):
         self._str_unit = units
@@ -1216,7 +1223,7 @@ class prefixParameter:
         Example parameter class template for quantity and value setter
     long_double : bool, optional
         Set float type quantity and value in numpy long doubles.
-    time_scale : str, optional
+    time_scale : str, optionalParameter(
         Time scale for MJDParameter class.
     """
 
@@ -1238,7 +1245,8 @@ class prefixParameter:
         scale_factor=None,
         scale_threshold=None,
         time_scale="utc",
-        **kwargs,  # FIXME: why is this here?
+        repeatable=False,
+        **kwargs,
     ):
         # Split prefixed name, if the name is not in the prefixed format, error
         # will be raised
@@ -1281,6 +1289,7 @@ class prefixParameter:
         for pa in self.prefix_aliases:
             aliases.append(pa + self.idxfmt)
         self.long_double = long_double
+        self.repeatable = repeatable
         # initiate parameter class
         self.param_comp = self.param_class(
             name=self.name,
@@ -1296,6 +1305,7 @@ class prefixParameter:
             unit_scale=unit_scale,
             scale_factor=scale_factor,
             scale_threshold=scale_threshold,
+            repeatable=repeatable
         )
         self.is_prefix = True
         self.time_scale = time_scale
@@ -1516,6 +1526,7 @@ class maskParameter(floatParameter):
         frozen=True,
         continuous=False,
         aliases=[],
+        repeatable=True,
     ):
         self.is_mask = True
         # {key_name: (keyvalue parse function, keyvalue length)}
@@ -1568,8 +1579,9 @@ class maskParameter(floatParameter):
             uncertainty=uncertainty,
             frozen=frozen,
             continuous=continuous,
-            aliases=idx_aliases,
+            aliases=idx_aliases + aliases,
             long_double=long_double,
+            repeatable=repeatable
         )
 
         # For the first mask parameter, add name to aliases for the reading
@@ -1577,6 +1589,7 @@ class maskParameter(floatParameter):
         if index == 1:
             self.aliases.append(name)
         self.is_prefix = True
+        self._parfile_name = self.origin_name
 
     def __repr__(self):
         out = self.__class__.__name__ + "(" + self.name
@@ -1834,6 +1847,7 @@ class pairParameter(floatParameter):
         frozen=True,
         continuous=False,
         aliases=[],
+        repeatable=False,
         **kwargs,
     ):
 
