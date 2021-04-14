@@ -35,10 +35,13 @@ class ModelBuilder:
         self.components = {}
         for k, v in Component.component_types.items():
             self.components[k] = v()
+        # The components that always get added.
+        self.default_components = ['SolarSystemShapiro']
 
     def __call__(self, parfile):
         param_inpar, repeat_par = self.parse_parfile(parfile)
         seleted, conflict, unrec_param = self.choose_model(param_inpar)
+        seleted.update(set(self.default_components))
         # Report conflict
         if len(conflict) != 0:
             self._report_conflict(conflict)
