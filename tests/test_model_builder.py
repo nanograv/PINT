@@ -68,7 +68,7 @@ M2                0.233837  1            0.011278
 RNAMP         0.17173D-01
 RNIDX            -4.91353
 TNRedAmp -14.227505410948254
-TNRedGam 4.91353param_component_map
+TNRedGam 4.91353
 TNRedC 45
 T2EFAC -f L-wide_PUPPI   1.507
 T2EFAC -f 430_ASP   1.147
@@ -87,16 +87,23 @@ def test_model_builder_class():
     categore = mb.category_component_map
     assert len(mb.param_component_map['PX']) == len(categore['astrometry'])
     assert len(mb.component_category_map) == len(mb.components)
+    assert len(mb.param_alias_map) == len(mb.param_component_map)
+    print(mb.repeatable_param)
+    assert len(mb.repeatable_param) == 24
     #assert len(mb.param_component_map) == 10
 
 def test_model_par():
     mb = ModelBuilder()
-    param_inpar = mb.parse_parfile(io.StringIO(test_par1))
-    assert len(param_inpar) == 63
-    comps, conflict, unknown_param = mb.choose_model(io.StringIO(test_par1))
-    print(comps)
-    print(conflict)
-    print(unknown_param)
-    assert len(comps) == 2
+    param_inpar, repeat = mb.parse_parfile(io.StringIO(test_par1))
+    assert len(param_inpar) == 60
+    assert len(repeat) == 4
+    comps, conflict, unknown_param = mb.choose_model(param_inpar)
+    # print(comps)
+    tm, unknown = mb(io.StringIO(test_par1))
+    # print(conflict)
+    print(unknown)
+    # print(repeat)
+    assert len(comps) == 14
+
 
     #tm = mb(test_par1)
