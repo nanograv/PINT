@@ -124,6 +124,7 @@ some_barycentered 999999.999 56403.000000000000000   1.000  @  -some argument -a
                     "-flags",
                     "-obs",
                     "-clkcorr",
+                    "-to",  # FIXME: used in clock corrections? What does this do?
                 }
             ),
             from_regex(re.compile(r"[ \t]+", re.ASCII), fullmatch=True),
@@ -133,15 +134,16 @@ some_barycentered 999999.999 56403.000000000000000   1.000  @  -some argument -a
 )
 def test_flags(s):
     f = StringIO(
-        basic_tim_header
-        + """
-some_barycentered 999999.999 56400.000000000000000   1.000  @{}
-""".format(
-            s
+        "\n".join(
+            [
+                basic_tim_header,
+                f"""some_barycentered 999999.999 56400.000000000000000   1.000  @{s}""",
+                basic_tim,
+            ]
         )
-        + basic_tim
     )
-    do_roundtrip(get_TOAs(f))
+    toas = get_TOAs(f)
+    do_roundtrip(toas)
 
 
 def test_pulse_number():

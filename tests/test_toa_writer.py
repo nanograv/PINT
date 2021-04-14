@@ -1,7 +1,9 @@
+from io import StringIO
 import os
 import os.path
 import pytest
 
+from pint.models import get_model
 from pint import toa
 from pinttestdata import datadir
 from astropy.time import Time
@@ -117,3 +119,45 @@ def test_roundtrip_topo_toa_TEMPOformat(tmpdir):
 #     # so it should raise an exception
 #     with pytest.raises(ValueError):
 #         ts.write_TOA_file("testncyobs.tim", format="TEMPO")
+
+simplepar = """
+PSR              1748-2021E
+RAJ       17:48:52.75  1
+DECJ      -20:21:29.0  1
+F0       61.485476554  1
+F1         -1.181D-15  1
+PEPOCH        53750.000000
+POSEPOCH      53750.000000
+DM              223.9  1
+SOLARN0               0.00
+EPHEM               DE436
+CLK              TT(BIPM2017)
+UNITS               TDB
+TIMEEPH             FB90
+T2CMETHOD           TEMPO
+CORRECT_TROPOSPHERE N
+PLANET_SHAPIRO      Y
+DILATEFREQ          N
+"""
+
+
+def test_tim_writing_order():
+    m = get_model(StringIO(simplepar))
+    fakes = [
+        toa.make_fake_toas(55000, 56000, 5, model=m, obs="ao"),
+        toa.make_fake_toas(55000, 56000, 5, model=m, obs="gbt"),
+        toa.make_fake_toas(55000, 56000, 5, model=m, obs="@"),
+    ]
+    toas = toa.merge_TOAs(fakes)
+    toas.table["index"][np.argsort(toas.table["tdbld"])] = np.arange(len(toas))
+
+    o = StringIO()
+    toas.write_TOA_file(o, order_by_index=False)
+    obs = [ln.split()[4] for ln in o.getvalue().split("\n")[1:] if ln]
+    assert obs[0] == obs[1] == obs[2] == obs[3]
+
+    o = StringIO()
+    toas.write_TOA_file(o, order_by_index=True)
+    obs = [ln.split()[4] for ln in o.getvalue().split("\n")[1:] if ln]
+    assert obs[0] == obs[3] == obs[6] == obs[9]
+    assert obs[0] != obs[1]
