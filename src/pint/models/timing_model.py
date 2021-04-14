@@ -907,7 +907,9 @@ class TimingModel:
             comp_list = getattr(self, comp_type + "_list")
             cur_cps = []
             for cp in comp_list:
-                cur_cps.append((order.index(cp.category), cp))
+                # If component order is not defined.
+                cp_order = order.index(cp.category) if cp.category in order else len(order) + 1
+                cur_cps.append((cp_order, cp))
             # Check if the component has been added already.
             if component.__class__ in (x.__class__ for x in comp_list):
                 log.warning(
@@ -955,8 +957,8 @@ class TimingModel:
         cp, co_order, host, cp_type = self.map_component(component)
         host.remove(cp)
 
-    def _locate_param_host(self, components, param):
-        """Search for the parameter host component.
+    def _locate_param_host(self, param):
+        """Search for the parameter host component in the timing model.
 
         Parameters
         ----------
@@ -972,9 +974,9 @@ class TimingModel:
         prefix-style parameter, it will return one example of such parameter.
         """
         result_comp = []
-        for cp in components:
+        for cp_name, cp in self.components.items():
             if param in cp.params:
-                result_comp.append((cp, getattr(cp, param)))
+                result_comp.append((cp_name, cp, getattr(cp, param)))
             else:
                 # search for prefixed parameter
                 prefixs = cp.param_prefixs
@@ -984,7 +986,7 @@ class TimingModel:
                     prefix = param
 
                 if prefix in prefixs.keys():
-                    result_comp.append(cp, getattr(cp, prefixs[param][0]))
+                    result_comp.append(cp_name, cp, getattr(cp, prefixs[param][0]))
 
         return result_comp
 
