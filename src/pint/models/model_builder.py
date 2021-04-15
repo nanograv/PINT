@@ -183,8 +183,8 @@ class ModelBuilder:
                 else:
                     continue
         if result is None:
-            raise ValueError("Pulsar system/Binary model component {}"
-                             " is not provided.".format(system_name))
+            raise UnknownBinaryModel("Pulsar system/Binary model component {}"
+                                     " is not provided.".format(system_name))
         else:
             return result
 
@@ -203,9 +203,13 @@ class ModelBuilder:
                     fmt = len(idx_str)
                 else:
                     fmt = 0
-                example_name = prefix + '{1:0{0}}'.format(fmt, 1)
-                pint_par = self.param_alias_map.get(example_name, None)
-                if pint_par: # Prefixed parameter matched
+                # Handle the case of start index from 0 and 1
+                for start_idx in [0, 1]:
+                    example_name = prefix + '{1:0{0}}'.format(fmt, start_idx)
+                    pint_par = self.param_alias_map.get(example_name, None)
+                    if pint_par:
+                        break
+                if pint_par: # Find the start parameter index
                     pint_par = split_prefixed_name(pint_par)[0] + idx_str
             except PrefixError:
                 pint_par = None
@@ -370,11 +374,12 @@ class ModelBuilder:
             if prefix_map == {}: # Can not find any prefix mapping
                 unknown_param.append(pp)
                 continue
-            # We assume the parameter with index 1 is in the param component map.
-            example = getattr(timing_model, prefix_map[1])
+            # Get the parameter in the prefix map.
+            prefix_param0 = list(prefix_map.items())[0]
+            example = getattr(timing_model, prefix_param0[1])
             if not idx: # Input name has index, init from an example param and add it to timing model.
                 idx = max(list(prefix_map.keys())) + 1
-            host_component = timing_model._locate_param_host(prefix_map[1])[0][0]
+            host_component = timing_model._locate_param_host(prefix_param0[1])[0][0]
             timing_model.add_param_from_top(example.new_param(idx), host_component)
         return timing_model, unknown_param
 
