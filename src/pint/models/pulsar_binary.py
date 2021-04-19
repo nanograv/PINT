@@ -203,6 +203,7 @@ class PulsarBinary(DelayComponent):
             updates["psr_pos"] = self._parent.ssb_to_psb_xyz_ICRS(
                 epoch=tbl["tdbld"].astype(np.float64)
             )
+        #print(f"from pint facing pulsar binary {self.binary_instance.binary_params}\n _________________________________")
         for par in self.binary_instance.binary_params:
             binary_par_names = [par]
             if par in self.binary_instance.param_aliases.keys():
@@ -217,13 +218,13 @@ class PulsarBinary(DelayComponent):
                     if par in self.internal_params:
                         pint_bin_name = par
                 binObjpar = getattr(self, pint_bin_name)
-                instance_par = getattr(self.binary_instance, par)
-                if hasattr(instance_par, "value"):
-                    instance_par_val = instance_par.value
-                else:
-                    instance_par_val = instance_par
                 if binObjpar.value is None:
                     if binObjpar.name in self.warn_default_params:
+                        instance_par = getattr(self.binary_instance, par)
+                        if hasattr(instance_par, "value"):
+                            instance_par_val = instance_par.value
+                        else:
+                            instance_par_val = instance_par
                         log.warning(
                             "'%s' is not set, using the default value %f "
                             "instead." % (binObjpar.name, instance_par_val)
@@ -233,6 +234,7 @@ class PulsarBinary(DelayComponent):
                     updates[par] = binObjpar.value * binObjpar.units
                 else:
                     updates[par] = binObjpar.value
+        #print(updates)
         self.binary_instance.update_input(**updates)
 
     def binarymodel_delay(self, toas, acc_delay=None):
