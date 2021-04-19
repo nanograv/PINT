@@ -2,6 +2,8 @@
 import numbers
 import os
 import unittest
+from io import StringIO
+import pytest
 
 import astropy.units as u
 import numpy as np
@@ -62,3 +64,59 @@ class TestParfileWriting(unittest.TestCase):
                     + "uncertainty does not keep the precision. at"
                     + str(np.abs(unc_diff))
                 )
+
+
+@pytest.mark.parametrize(
+    "name,alias", [("ECORR1", "TNECORR"), ("A1DOT", "XDOT"), ("PSR", "PSRJ")]
+)
+def test_write_custom_aliases(name, alias):
+    p = mb.get_model(
+        StringIO(
+            """
+        PSR J1234+5678
+        PEPOCH 57000
+        F0 1
+        BINARY BT
+        A1 1
+        PB 1
+        T0 57000
+        OM 0
+        A1DOT 1e-10
+        ECORR tel arecibo 1
+        """
+        )
+    )
+    getattr(p, name).use_alias = alias
+    assert alias in p.as_parfile()
+
+
+@pytest.mark.parametrize(
+    "name,alias",
+    [
+        pytest.param(
+            "ECORR", "TNECORR", marks=pytest.mark.xfail(reason="Alias not recognized")
+        ),
+        ("A1DOT", "XDOT"),
+        ("PSR", "PSRJ"),
+    ],
+)
+def test_retain_aliases(name, alias):
+    p = mb.get_model(
+        StringIO(
+            """
+        PSR J1234+5678
+        PEPOCH 57000
+        F0 1
+        BINARY BT
+        A1 1
+        PB 1
+        T0 57000
+        OM 0
+        A1DOT 1e-10
+        ECORR tel arecibo 1
+        """.replace(
+                name, alias
+            )
+        )
+    )
+    assert alias in p.as_parfile()

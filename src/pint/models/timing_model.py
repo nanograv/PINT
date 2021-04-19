@@ -2012,6 +2012,27 @@ class TimingModel:
         if validate:
             self.validate()
 
+    def use_aliases(self, reset_to_default=True, alias_translation=None):
+        """Set the parameters to use aliases as specified upon writing.
+
+        Parameters
+        ----------
+        reset_to_default : bool
+            If True, forget what name was used for each parameter in the input par file.
+        alias_translation : dict or None
+            If not None, use this to map PINT parameter names to output names. This overrides
+            input names even if they are not otherwise being reset to default.
+        """
+        for p in self.params:
+            po = getattr(self, p)
+            if reset_to_default:
+                po.use_alias = None
+            if alias_translation is not None:
+                try:
+                    po.use_alias = alias_translation[p]
+                except KeyError:
+                    pass
+
     def as_parfile(
         self,
         start_order=["astrometry", "spindown", "dispersion"],

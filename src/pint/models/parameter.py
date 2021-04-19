@@ -88,6 +88,9 @@ class Parameter:
         A function that sets the quantity property
     get_value:
         A function that get purely value from quantity attribute
+    use_alias : str or None
+        Alias to use on write; normally whatever alias was in the par
+        file it was read from
 
     Attributes
     ----------
@@ -110,6 +113,7 @@ class Parameter:
         get_value=lambda x: x,
         prior=priors.Prior(priors.UniformUnboundedRV()),
         set_uncertainty=fortran_float,
+        use_alias=None,
     ):
 
         self.name = name  # name of the parameter
@@ -134,6 +138,8 @@ class Parameter:
         self.paramType = "Not specified"  # Type of parameter. Here is general type
         self.valueType = None
         self.special_arg = []
+
+        self.use_alias = use_alias
 
     @property
     def prior(self):
@@ -199,7 +205,9 @@ class Parameter:
 
     @quantity.setter
     def quantity(self, val):
-        """General wrapper method to set .quantity. For different type of
+        """General wrapper method to set .quantity.
+
+        For different type of
         parameters, the setter method is stored at .set_quantity attribute.
         """
         if val is None:
@@ -211,8 +219,9 @@ class Parameter:
         self._quantity = self.set_quantity(val)
 
     def prior_pdf(self, value=None, logpdf=False):
-        """Return the prior probability, evaluated at the current value of
-        the parameter, or at a proposed value.
+        """Return the prior probability.
+
+        Evaluated at the current value of the parameter, or at a proposed value.
 
         Parameters
         ----------
@@ -234,8 +243,9 @@ class Parameter:
     # Setting .value property will change ._quantity.
     @property
     def value(self):
-        """Return the pure value of a parameter. This value will associate with
-        parameter default value, which is .units attribute.
+        """Return the pure value of a parameter.
+
+        This value will associate with parameter default value, which is .units attribute.
         """
         if self._quantity is None:
             return None
@@ -244,8 +254,9 @@ class Parameter:
 
     @value.setter
     def value(self, val):
-        """Method to set .value. Setting .value attribute will change the
-        .quantity attribute other than .value attribute.
+        """Set .value.
+
+        Setting .value attribute will change the .quantity attribute other than .value attribute.
         """
         if val is None:
             if (
@@ -268,8 +279,9 @@ class Parameter:
 
     @uncertainty.setter
     def uncertainty(self, val):
-        """General wrapper setter for uncertainty. The setting method is stored
-        at .set_uncertainty attribute
+        """General wrapper setter for uncertainty.
+
+        The setting method is stored at .set_uncertainty attribute
         """
         if val is None:
             if hasattr(self, "uncertainty") and self.uncertainty is not None:
@@ -288,8 +300,9 @@ class Parameter:
 
     @property
     def uncertainty_value(self):
-        """Return a pure value from .uncertainty. The unit will associate
-        with .units
+        """Return a pure value from .uncertainty.
+
+        The unit will associate with .units
         """
         if self._uncertainty is None:
             return None
@@ -298,8 +311,9 @@ class Parameter:
 
     @uncertainty_value.setter
     def uncertainty_value(self, val):
-        """Setter for uncertainty_value. Setting .uncertainty_value will only change
-        the .uncertainty attribute.
+        """Setter for uncertainty_value.
+
+        Setting .uncertainty_value will only change the .uncertainty attribute.
         """
         if val is None:
             if (
@@ -332,8 +346,7 @@ class Parameter:
         return out
 
     def set(self, value):
-        """Parses a string 'value' into the appropriate internal representation
-        of the parameter.
+        """Parses a string 'value' into the appropriate internal representation of the parameter.
         """
         self.value = value
 
@@ -354,7 +367,10 @@ class Parameter:
         if self.quantity is None:
             return ""
         if alias_translation is None:
-            name = self.name
+            if self.use_alias is None:
+                name = self.name
+            else:
+                name = self.use_alias
         else:
             name = alias_translation.get(self.name, self.name)
         line = "%-15s %25s" % (name, self.print_quantity(self.quantity))
@@ -385,16 +401,18 @@ class Parameter:
         """
         try:
             k = line.split()
-            name = k[0].upper()
+            name = k[0]
         except IndexError:
             return False
         # Test that name matches
-        if not self.name_matches(name):
+        if not self.name_matches(name.upper()):
             return False
         if len(k) < 2:
             return False
-        if len(k) >= 2:
-            self.set(k[1])
+        self.set(k[1])
+        if name != self.name:
+            # FIXME: what about prefix/mask parameters?
+            self.use_alias = name
         if len(k) >= 3:
             try:
                 # FIXME! this is not right
@@ -649,6 +667,7 @@ class strParameter(Parameter):
         set_quantity = lambda x: str(x)
         set_uncertainty = lambda x: None
 
+        # FIXME: where did kwargs go?
         super().__init__(
             name=name,
             value=value,
@@ -710,6 +729,7 @@ class boolParameter(Parameter):
         def set_uncertainty(x):
             return None
 
+        # FIXME: where did kwargs go?
         super().__init__(
             name=name,
             value=value,
@@ -785,6 +805,7 @@ class intParameter(Parameter):
         def set_uncertainty(x):
             return None
 
+        # FIXME: where did kwargs go?
         super().__init__(
             name=name,
             value=value,
@@ -876,6 +897,7 @@ class MJDParameter(Parameter):
         print_quantity = time_to_mjd_string
         get_value = time_to_longdouble
         set_uncertainty = self.set_uncertainty_mjd
+        # FIXME: where did kwargs go?
         super().__init__(
             name=name,
             value=value,
@@ -1033,6 +1055,7 @@ class AngleParameter(Parameter):
         self.value_type = Angle
         self.paramType = "AngleParameter"
 
+        # FIXME: where did kwargs go?
         super().__init__(
             name=name,
             value=value,
@@ -1172,7 +1195,7 @@ class prefixParameter:
         scale_factor=None,
         scale_threshold=None,
         time_scale="utc",
-        **kwargs,
+        **kwargs,  # FIXME: why is this here?
     ):
         # Split prefixed name, if the name is not in the prefixed format, error
         # will be raised
@@ -1232,7 +1255,6 @@ class prefixParameter:
         self.is_prefix = True
         self.time_scale = time_scale
 
-    # Define prpoerties for access the parameter composition
     @property
     def units(self):
         return self.param_comp.units
@@ -1317,7 +1339,6 @@ class prefixParameter:
     def special_arg(self):
         return self.param_comp.special_arg
 
-    # Define the function to call functions inside of parameter composition.
     def __repr__(self):
         return self.param_comp.__repr__()
 
@@ -1343,7 +1364,7 @@ class prefixParameter:
         return self.param_comp.help_line()
 
     def prefix_matches(self, prefix):
-        return (prefix == self.perfix) or (prefix in self.prefix_aliases)
+        return (prefix == self.prefix) or (prefix in self.prefix_aliases)
 
     def new_param(self, index):
         """Get one prefix parameter with the same type.
@@ -1634,7 +1655,10 @@ class maskParameter(floatParameter):
         if self.quantity is None:
             return ""
         if alias_translation is None:
-            name = self.origin_name
+            if self.use_alias is None:
+                name = self.origin_name
+            else:
+                name = self.use_alias
         else:
             name = alias_translation.get(self.origin_name, self.origin_name)
         line = "%-15s %s " % (name, self.key)
@@ -1826,11 +1850,13 @@ class pairParameter(floatParameter):
         # Test that name matches
         if not self.name_matches(name):
             return False
-
         try:
             self.set((k[1], k[2]))
         except IndexError:
             return False
+        if name != self.name:
+            # FIXME: what about prefix/mask parameters?
+            self.use_alias = name
 
         return True
 
@@ -1839,9 +1865,12 @@ class pairParameter(floatParameter):
         if self.quantity is None:
             return ""
         if alias_translation is None:
-            name = self.origin_name
+            if self.use_alias is None:
+                name = self.name
+            else:
+                name = self.use_alias
         else:
-            name = alias_translation.get(self.origin_name, self.origin_name)
+            name = alias_translation.get(self.name, self.name)
         line = "%-15s " % name
         line += "%25s" % self.print_quantity(quantity[0])
         line += " %25s" % self.print_quantity(quantity[1])
@@ -1868,7 +1897,6 @@ class pairParameter(floatParameter):
         """Return the pure value of a parameter.
 
         This value will associate with parameter default value, which is .units attribute.
-
         """
         if self._quantity is None:
             return None
@@ -1877,8 +1905,9 @@ class pairParameter(floatParameter):
 
     @value.setter
     def value(self, val):
-        """Method to set .value. Setting .value attribute will change the
-        .quantity attribute other than .value attribute.
+        """Method to set .value.
+
+        Setting .value attribute will change the .quantity attribute other than .value attribute.
         """
         if val is None:
             if (

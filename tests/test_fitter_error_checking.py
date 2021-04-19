@@ -208,6 +208,7 @@ def test_update_model_sets_things(Fitter):
     model.TIMEEPH.value = "IF99"
     model.DILATEFREQ.value = True
     model.T2CMETHOD.value = "TEMPO"
+    model.use_aliases(reset_to_default=True)
     toas = make_fake_toas(58000, 59000, 10, model, obs="barycenter", freq=np.inf)
     fitter = Fitter(toas, model)
     fitter.fit_toas()
