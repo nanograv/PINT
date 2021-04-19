@@ -1709,6 +1709,7 @@ class TOAs:
             self.table["index"][ix] = np.arange(len(self))
         else:
             self.table["index"] = np.arange(len(self))
+        self.max_index = len(self) - 1
         return self
 
     def write_TOA_file(self, filename, name="unk", format="tempo2", commentflag=None):
