@@ -657,6 +657,7 @@ class PlkWidget(tk.Frame):
         """
         Reset all plot changes for this pulsar
         """
+        self.psr.use_pulse_numbers = False
         self.psr.reset_TOAs()
         self.psr.fitted = False
         self.psr = copy.deepcopy(self.base_state.psr)
@@ -1255,8 +1256,7 @@ class PlkWidget(tk.Frame):
         elif ukey == ord(">"):
             if np.sum(self.selected) > 0:
                 selected = copy.deepcopy(self.selected)
-                ind = np.nonzero(selected)[0][0]
-                selected[ind:] = True
+                selected = ~selected
                 self.psr.add_phase_wrap(selected, 1)
                 self.updatePlot(keepAxes=False)
                 self.call_updates()
@@ -1264,8 +1264,7 @@ class PlkWidget(tk.Frame):
         elif ukey == ord("<"):
             if np.sum(self.selected) > 0:
                 selected = copy.deepcopy(self.selected)
-                ind = np.nonzero(selected)[0][0]
-                selected[ind:] = True
+                selected = ~selected
                 self.psr.add_phase_wrap(selected, -1)
                 self.updatePlot(keepAxes=False)
                 self.call_updates()
