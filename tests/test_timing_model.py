@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 from pinttestdata import datadir
 from pint.toa import make_fake_toas
+from pint.toa import get_TOAs
 
 from pint.models import (
     DEFAULT_ORDER,
@@ -25,6 +26,17 @@ from pint.models import (
 @pytest.fixture
 def model_0437():
     return get_model(os.path.join(datadir, "J0437-4715.par"))
+
+
+@pytest.fixture
+def timfile_jumps():
+    os.chdir(datadir)
+    return get_TOAs("test1.tim")
+
+
+@pytest.fixture
+def timfile_nojumps():
+    return get_TOAs(os.path.join(datadir, "NGC6440E.tim"))
 
 
 class TestModelBuilding:
@@ -304,3 +316,21 @@ def test_t2cmethod_corrected():
     with pytest.warns(UserWarning, match=".*T2CMETHOD.*"):
         model = get_model(io.StringIO("\n".join([par_base, "T2CMETHOD TEMPO"])))
     assert model.T2CMETHOD.value == "IAU2000B"
+
+
+def test_jump_flags_to_params(timfile_jumps, timfile_nojumps, model_0437):
+    # TOAs 9, 10, 11, and 12 have jump flags (JUMP2 on 9, JUMP1 on rest)
+    t = timfile_jumps
+    m = model_0437  # model with no jumps
+    t_nojump = timfile_nojumps
+    # sanity check
+    assert "PhaseJump" not in m.components
+    # check nothing changed when .tim file has no jumps
+    m.jump_flags_to_params(t_nojump)
+    assert "PhaseJump" not in m.components
+    # add jump parameters to model based off flags in TOA table
+    m.jump_flags_to_params(t)
+    assert "PhaseJump" in m.components
+    assert len(m.components["PhaseJump"].jumps) == 2
+    assert "JUMP1" in m.components["PhaseJump"].jumps
+    assert "JUMP2" in m.components["PhaseJump"].jumps

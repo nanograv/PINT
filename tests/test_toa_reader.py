@@ -65,7 +65,7 @@ class TestTOAReader(unittest.TestCase):
         assert self.x.table[0]["flags"]["info"] == "test1"
 
     def test_jump(self):
-        assert self.x.table[0]["flags"]["jump"] == 0
+        assert self.x.table[0]["flags"]["jump"] == [1]
 
     def test_info_2(self):
         assert self.x.table[3]["flags"]["info"] == "test2"
@@ -80,7 +80,7 @@ class TestTOAReader(unittest.TestCase):
         assert "time" not in self.x.table[4]["flags"]
 
     def test_jump_3(self):
-        assert self.x.table[-1]["flags"]["jump"] == 1
+        assert self.x.table[-1]["flags"]["jump"] == [2]
 
     def test_obs(self):
         assert self.x.table[1]["obs"] == "gbt"

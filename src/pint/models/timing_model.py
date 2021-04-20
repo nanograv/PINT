@@ -1223,72 +1223,41 @@ class TimingModel:
 
         return result
 
-    # TODO: fix jump_flags_to_params
-    '''
     def jump_flags_to_params(self, toas):
         """Convert jump flags in toas.table["flags"] (loaded in .tim file) to jump parameters in the model.
 
-        The flags processed are ``jump`` and ``gui_jump``.
+        The flag processed is ``jump``.
         """
         from . import jump
 
-        for flag_dict in toas.table["flags"]:
-            if "jump" in flag_dict.keys():
-                break
-            elif "gui_jump" in flag_dict.keys():
-                break
-            else:
-                log.info("No jump flags to process from .tim file")
-                return None
-        for flag_dict in toas.table["flags"]:
-            if "jump" in flag_dict.keys():
-                jump_nums = [
-                    jump_num for jump_num in flag_dict["jump"] if "jump" in flag_dict.keys() else np.nan
-                    for flag_dict in toas.table["flags"]
-                ]
-                if "PhaseJump" not in self.components:
-                    log.info("PhaseJump component added")
-                    a = jump.PhaseJump()
-                    a.setup()
-                    self.add_component(a)
-                    self.remove_param("JUMP1")
-                for num in np.arange(1, np.nanmax(jump_nums) + 1):
-                    if "JUMP" + str(int(num)) not in self.params:
-                        param = maskParameter(
-                            name="JUMP",
-                            index=int(num),
-                            key="jump",
-                            key_value=int(num),
-                            value=0.0,
-                            units="second",
-                            uncertainty=0.0,
-                        )
-                        self.add_param_from_top(param, "PhaseJump")
-                        getattr(self, param.name).frozen = False
-                if 0 in jump_nums:
-                    for flag_dict in toas.table["flags"]:
-                        if "jump" in flag_dict.keys() and 0 in flag_dict["jump"]:
-                            flag_dict["jump"] = [x if x != 0 else int(np.nanmax(jump_nums) + 1)]
+        # check if any TOAs are jumped
+        jumped = ["jump" in flag_dict.keys() for flag_dict in toas.table["flags"]]
+        if not any(jumped):
+            log.info("No jump flags to process from .tim file")
+            return None
+        for flag_dict in toas.table["flags"][jumped]:
+            # add PhaseJump object if model does not have one already
+            if "PhaseJump" not in self.components:
+                log.info("PhaseJump component added")
+                a = jump.PhaseJump()
+                a.setup()
+                self.add_component(a)
+                self.remove_param("JUMP1")
+            # take jumps in TOA table and add them as parameters to the model
+            for num in flag_dict["jump"]:
+                if "JUMP" + str(num) not in self.params:
                     param = maskParameter(
                         name="JUMP",
-                        index=int(np.nanmax(jump_nums) + 1),
-                        key="jump",
-                        key_value=int(np.nanmax(jump_nums) + 1),
+                        index=num,
+                        key="-jump",
+                        key_value=num,
                         value=0.0,
                         units="second",
                         uncertainty=0.0,
                     )
                     self.add_param_from_top(param, "PhaseJump")
                     getattr(self, param.name).frozen = False
-        # convert string list key_value from file into int list for jumps
-        # previously added thru pintk
-        for flag_dict in toas.table["flags"]:
-            if "gui_jump" in flag_dict.keys():
-                num = flag_dict["gui_jump"]
-                jump = getattr(self.components["PhaseJump"], "JUMP" + str(num))
-                jump.key_value = list(map(int, jump.key_value))
         self.components["PhaseJump"].setup()
-    '''
 
     def delete_jump_and_flags(self, toa_table, jump_num):
         """Delete jump object from PhaseJump and remove its flags from TOA table
