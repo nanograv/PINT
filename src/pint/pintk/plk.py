@@ -581,6 +581,7 @@ class PlkWidget(tk.Frame):
         self.colorModeWidget.addColorModeCheckbox(self.color_modes)
         self.xyChoiceWidget.setChoice()
         self.updatePlot(keepAxes=False)
+        self.plkToolbar.update()
 
     def call_updates(self):
         if not self.update_callbacks is None:
@@ -649,7 +650,7 @@ class PlkWidget(tk.Frame):
                     and getattr(self.psr.prefit_model, param).frozen == False
                 ):
                     self.updateJumped(getattr(self.psr.prefit_model, param).name)
-            self.updatePlot(keepAxes=True)
+            self.updatePlot(keepAxes=False)
         self.call_updates()
 
     def reset(self):
@@ -699,7 +700,10 @@ class PlkWidget(tk.Frame):
                 )
             fout.close()
         except:
-            log.error("Could not save parfile to filename:\t%s" % filename)
+            if filename == () or filename == "":
+                print("Write Par cancelled.")
+            else:
+                log.error("Could not save parfile to filename:\t%s" % filename)
 
     def writeTim(self):
         """
@@ -714,7 +718,10 @@ class PlkWidget(tk.Frame):
             log.info("Choose output file %s" % filename)
             self.psr.all_toas.write_TOA_file(filename, format="TEMPO2")
         except:
-            log.error("Count not save file to filename:\t%s" % filename)
+            if filename == () or filename == "":
+                print("Write Tim cancelled.")
+            else:
+                log.error("Could not save file to filename:\t%s" % filename)
 
     def revert(self):
         """

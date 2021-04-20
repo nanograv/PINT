@@ -159,4 +159,7 @@ class TimWidget(tk.Frame):
             fout.close()
             print("Saved timfile to %s" % filename)
         except:
-            print("Could not save timfile to filename:\t%s" % filename)
+            if filename == () or filename == "":
+                print("Write Tim cancelled.")
+            else:
+                print("Could not save timfile to filename:\t%s" % filename)
