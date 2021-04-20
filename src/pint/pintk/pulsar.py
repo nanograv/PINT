@@ -86,7 +86,7 @@ class Pulsar:
 
         # turns pre-existing jump flags in toas.table['flags'] into parameters in parfile
         # TODO: fix jump_flags_to_params
-        # self.prefit_model.jump_flags_to_params(self.all_toas)
+        self.prefit_model.jump_flags_to_params(self.all_toas)
         # adds flags to toas.table for existing jump parameters from .par file
         if "PhaseJump" in self.prefit_model.components:
             self.prefit_model.jump_params_to_flags(self.all_toas)

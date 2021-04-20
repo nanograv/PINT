@@ -1377,7 +1377,7 @@ class maskParameter(floatParameter):
                         "are MJD, FREQ, NAME, TEL."
                     )
         self.key = key
-        if key == "-gui_jump":
+        if key == "-gui_jump" or key == "-tim_jump":
             self.key_value = key_value
         else:
             self.key_value = [
