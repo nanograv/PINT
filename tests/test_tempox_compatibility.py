@@ -51,7 +51,8 @@ def test_tim_aliases():
     raw = f.getvalue()
 
     f = StringIO()
-    t.write_TOA_file(f, alias_translation=pint.toa.tempo_aliases)
+    t.alias_translation = pint.toa.tempo_aliases
+    t.write_TOA_file(f)
     translated = f.getvalue()
 
     assert "arecibo" in raw
@@ -64,6 +65,7 @@ def test_tim_aliases():
 )
 def test_par_aliases(p):
     m = get_model(StringIO(par_basic))
-    pf = m.as_parfile(alias_translation={p: "CAPYBARA"})
+    m.use_aliases(alias_translation={p: "CAPYBARA"})
+    pf = m.as_parfile()
     assert not any(ln.startswith(p) for ln in pf.split("\n"))
     assert any(ln.startswith("CAPYBARA") for ln in pf.split("\n"))

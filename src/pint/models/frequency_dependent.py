@@ -103,10 +103,10 @@ class FD(DelayComponent):
         d_delay_d_FD = np.polyval(FD_coeff, log_freq)
         return d_delay_d_FD * u.second / FD_par.units
 
-    def print_par(self, alias_translation=None):
+    def print_par(self):
         result = ""
         FD_mapping = self.get_prefix_mapping_component("FD")
         for FD in FD_mapping.values():
             FD_par = getattr(self, FD)
-            result += FD_par.as_parfile_line(alias_translation=alias_translation)
+            result += FD_par.as_parfile_line()
         return result

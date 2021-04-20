@@ -282,13 +282,13 @@ class AstrometryEquatorial(Astrometry):
                 log.warning("POSEPOCH not found; using PEPOCH unless set explicitly!")
                 self.POSEPOCH.quantity = self._parent.PEPOCH.quantity
 
-    def print_par(self, alias_translation=None):
+    def print_par(self):
         result = ""
         print_order = ["RAJ", "DECJ", "PMRA", "PMDEC", "PX", "POSEPOCH"]
         for p in print_order:
             par = getattr(self, p)
             if par.quantity is not None:
-                result += getattr(self, p).as_parfile_line(alias_translation)
+                result += getattr(self, p).as_parfile_line()
         return result
 
     def barycentric_radio_freq(self, toas):
@@ -762,15 +762,13 @@ class AstrometryEcliptic(Astrometry):
         # We want to return sec / (mas / yr)
         return dd_dpmelat.decompose(u.si.bases) / (u.mas / u.year)
 
-    def print_par(self, alias_translation=None):
+    def print_par(self):
         result = ""
         print_order = ["ELONG", "ELAT", "PMELONG", "PMELAT", "PX", "ECL", "POSEPOCH"]
         for p in print_order:
             par = getattr(self, p)
             if par.quantity is not None:
-                result += getattr(self, p).as_parfile_line(
-                    alias_translation=alias_translation
-                )
+                result += getattr(self, p).as_parfile_line()
         return result
 
     def change_posepoch(self, new_epoch):

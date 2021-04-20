@@ -2022,22 +2022,29 @@ class TimingModel:
         alias_translation : dict or None
             If not None, use this to map PINT parameter names to output names. This overrides
             input names even if they are not otherwise being reset to default.
+            This is to allow compatibility with TEMPO/TEMPO2. The dictionary
+            ``pint.toa.tempo_aliases`` should provide a reasonable selection.
         """
         for p in self.params:
             po = getattr(self, p)
             if reset_to_default:
                 po.use_alias = None
             if alias_translation is not None:
-                try:
-                    po.use_alias = alias_translation[p]
-                except KeyError:
-                    pass
+                if hasattr(po, "origin_name"):
+                    try:
+                        po.use_alias = alias_translation[po.origin_name]
+                    except KeyError:
+                        pass
+                else:
+                    try:
+                        po.use_alias = alias_translation[p]
+                    except KeyError:
+                        pass
 
     def as_parfile(
         self,
         start_order=["astrometry", "spindown", "dispersion"],
         last_order=["jump_delay"],
-        alias_translation=None,
     ):
         """Represent the entire model as a parfile string.
 
@@ -2047,10 +2054,6 @@ class TimingModel:
             Categories to include at the beginning
         last_order : list
             Categories to include at the end
-        alias_translation : dict or None
-            If not None, look up parameter names in this dictionary to translate
-            them upon writing for compatibility with TEMPO/TEMPO2. The dictionary
-            ``pint.toa.tempo_aliases`` should provide a reasonable selection.
         """
         self.validate()
         result_begin = ""
@@ -2059,14 +2062,12 @@ class TimingModel:
         cates_comp = self.get_components_by_category()
         printed_cate = []
         for p in self.top_level_params:
-            result_begin += getattr(self, p).as_parfile_line(
-                alias_translation=alias_translation
-            )
+            result_begin += getattr(self, p).as_parfile_line()
         for cat in start_order:
             if cat in list(cates_comp.keys()):
                 cp = cates_comp[cat]
                 for cpp in cp:
-                    result_begin += cpp.print_par(alias_translation=alias_translation)
+                    result_begin += cpp.print_par()
                 printed_cate.append(cat)
             else:
                 continue
@@ -2075,7 +2076,7 @@ class TimingModel:
             if cat in list(cates_comp.keys()):
                 cp = cates_comp[cat]
                 for cpp in cp:
-                    result_end += cpp.print_par(alias_translation=alias_translation)
+                    result_end += cpp.print_par()
                 printed_cate.append(cat)
             else:
                 continue
@@ -2086,7 +2087,7 @@ class TimingModel:
             else:
                 cp = cates_comp[cat]
                 for cpp in cp:
-                    result_middle += cpp.print_par(alias_translation=alias_translation)
+                    result_middle += cpp.print_par()
                 printed_cate.append(cat)
 
         return result_begin + result_middle + result_end
@@ -2505,12 +2506,10 @@ class Component(object, metaclass=ModelMeta):
 
         return True
 
-    def print_par(self, alias_translation=None):
+    def print_par(self):
         result = ""
         for p in self.params:
-            result += getattr(self, p).as_parfile_line(
-                alias_translation=alias_translation
-            )
+            result += getattr(self, p).as_parfile_line()
         return result
 
 

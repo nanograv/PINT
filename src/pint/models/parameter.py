@@ -361,18 +361,15 @@ class Parameter:
             out += " (" + str(self.units) + ")"
         return out
 
-    def as_parfile_line(self, alias_translation=None):
+    def as_parfile_line(self):
         """Return a parfile line giving the current state of the parameter."""
         # Don't print unset parameters
         if self.quantity is None:
             return ""
-        if alias_translation is None:
-            if self.use_alias is None:
-                name = self.name
-            else:
-                name = self.use_alias
+        if self.use_alias is None:
+            name = self.name
         else:
-            name = alias_translation.get(self.name, self.name)
+            name = self.use_alias
         line = "%-15s %25s" % (name, self.print_quantity(self.quantity))
         if self.uncertainty is not None:
             line += " %d %s" % (
@@ -1357,8 +1354,8 @@ class prefixParameter:
     def name_matches(self, name):
         return self.param_comp.name_matches(name)
 
-    def as_parfile_line(self, alias_translation=None):
-        return self.param_comp.as_parfile_line(alias_translation=alias_translation)
+    def as_parfile_line(self):
+        return self.param_comp.as_parfile_line()
 
     def help_line(self):
         return self.param_comp.help_line()
@@ -1651,16 +1648,13 @@ class maskParameter(floatParameter):
             self.uncertainty = self.set_uncertainty(ucty)
         return True
 
-    def as_parfile_line_mask(self, alias_translation=None):
+    def as_parfile_line_mask(self):
         if self.quantity is None:
             return ""
-        if alias_translation is None:
-            if self.use_alias is None:
-                name = self.origin_name
-            else:
-                name = self.use_alias
+        if self.use_alias is None:
+            name = self.origin_name
         else:
-            name = alias_translation.get(self.origin_name, self.origin_name)
+            name = self.use_alias
         line = "%-15s %s " % (name, self.key)
         for kv in self.key_value:
             if isinstance(kv, time.Time):
@@ -1860,17 +1854,14 @@ class pairParameter(floatParameter):
 
         return True
 
-    def as_parfile_line_pair(self, alias_translation=None):
+    def as_parfile_line_pair(self):
         quantity = self.quantity
         if self.quantity is None:
             return ""
-        if alias_translation is None:
-            if self.use_alias is None:
-                name = self.name
-            else:
-                name = self.use_alias
+        if self.use_alias is None:
+            name = self.name
         else:
-            name = alias_translation.get(self.name, self.name)
+            name = self.use_alias
         line = "%-15s " % name
         line += "%25s" % self.print_quantity(quantity[0])
         line += " %25s" % self.print_quantity(quantity[1])

@@ -1262,6 +1262,13 @@ class TOAs:
         has changed so that the file can be re-read if necessary.
     was_pickled : bool
         Whether this file was loaded from a pickle.
+    alias_translation : dict or None
+        Translate observatory names by looking them up in this dictionary;
+        this may be necessary to convert observatory names into something
+        TEMPO can understand, or to cope with different setups using
+        different names for the same observatory or the same name
+        for different observatories. There is a dictionary ``tempo_aliases``
+        available to use names as compatible with TEMPO as possible.
     """
 
     def __init__(self, toafile=None, toalist=None):
@@ -1275,6 +1282,7 @@ class TOAs:
         self.merged = False
         self.hashes = {}
         self.was_pickled = False
+        self.alias_translation = None
 
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
@@ -1732,14 +1740,7 @@ class TOAs:
             self.table["index"] = np.arange(len(self))
         return self
 
-    def write_TOA_file(
-        self,
-        filename,
-        name="unk",
-        format="tempo2",
-        commentflag=None,
-        alias_translation=None,
-    ):
+    def write_TOA_file(self, filename, name="unk", format="tempo2", commentflag=None):
         """Write this object to a ``.tim`` file.
 
         This function writes the contents of this object to a (single) ``.tim``
@@ -1760,13 +1761,6 @@ class TOAs:
         commentflag : str or None
             If a string, and that string is a TOA flag, that TOA will be commented
             in the output file.  If None (or non-string), no TOAs will be commented.
-        alias_translation : dict or None
-            Translate observatory names by looking them up in this dictionary;
-            this may be necessary to convert observatory names into something
-            TEMPO can understand, or to cope with different setups using
-            different names for the same observatory or the same name
-            for different observatories. There is a dictionary ``tempo_aliases``
-            available to use names as compatible with TEMPO as possible.
         """
         try:
             # FIXME: file must be closed even if an exception occurs!
@@ -1813,7 +1807,7 @@ class TOAs:
                 name=flags.pop("name", name),
                 flags=flags,
                 format=format,
-                alias_translation=alias_translation,
+                alias_translation=self.alias_translation,
             )
             outf.write(out_str)
 
