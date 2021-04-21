@@ -19,9 +19,10 @@ import pint
 from pint.models.parameter import (
     AngleParameter,
     MJDParameter,
+    Parameter,
     boolParameter,
     floatParameter,
-    Parameter,
+    intParameter,
     maskParameter,
     strParameter,
 )
@@ -249,20 +250,16 @@ class TimingModel:
             "",
         )
         self.add_param_from_top(
-            floatParameter(
+            boolParameter(
                 name="DMDATA",
-                value=0.0,
-                units="",
+                value=False,
                 description="Was the fit done using per-TOA DM information?",
             ),
             "",
         )
         self.add_param_from_top(
-            floatParameter(
-                name="NTOA",
-                value=0.0,
-                units="",
-                description="Number of TOAs used in the fitting",
+            intParameter(
+                name="NTOA", value=0, description="Number of TOAs used in the fitting"
             ),
             "",
         )
@@ -2015,12 +2012,49 @@ class TimingModel:
         if validate:
             self.validate()
 
+    def use_aliases(self, reset_to_default=True, alias_translation=None):
+        """Set the parameters to use aliases as specified upon writing.
+
+        Parameters
+        ----------
+        reset_to_default : bool
+            If True, forget what name was used for each parameter in the input par file.
+        alias_translation : dict or None
+            If not None, use this to map PINT parameter names to output names. This overrides
+            input names even if they are not otherwise being reset to default.
+            This is to allow compatibility with TEMPO/TEMPO2. The dictionary
+            ``pint.toa.tempo_aliases`` should provide a reasonable selection.
+        """
+        for p in self.params:
+            po = getattr(self, p)
+            if reset_to_default:
+                po.use_alias = None
+            if alias_translation is not None:
+                if hasattr(po, "origin_name"):
+                    try:
+                        po.use_alias = alias_translation[po.origin_name]
+                    except KeyError:
+                        pass
+                else:
+                    try:
+                        po.use_alias = alias_translation[p]
+                    except KeyError:
+                        pass
+
     def as_parfile(
         self,
         start_order=["astrometry", "spindown", "dispersion"],
         last_order=["jump_delay"],
     ):
-        """Represent the entire model as a parfile string."""
+        """Represent the entire model as a parfile string.
+
+        Parameters
+        ----------
+        start_order : list
+            Categories to include at the beginning
+        last_order : list
+            Categories to include at the end
+        """
         self.validate()
         result_begin = ""
         result_end = ""

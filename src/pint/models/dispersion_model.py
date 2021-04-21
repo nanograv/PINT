@@ -224,7 +224,7 @@ class DispersionDM(Dispersion):
         """This is a wrapper function for interacting with the TimingModel class"""
         return self.dispersion_type_delay(toas)
 
-    def print_par(self,):
+    def print_par(self):
         # TODO we need to have a better design for print out the parameters in
         # an inhertance class.
         result = ""
@@ -555,7 +555,7 @@ class DispersionDMX(Dispersion):
             dmx[v] = 1.0
         return dmx * (u.pc / u.cm ** 3) / (u.pc / u.cm ** 3)
 
-    def print_par(self,):
+    def print_par(self):
         result = ""
         DMX_mapping = self.get_prefix_mapping_component("DMX_")
         DMXR1_mapping = self.get_prefix_mapping_component("DMXR1_")

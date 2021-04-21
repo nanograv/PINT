@@ -13,6 +13,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - DownhillWLSFitter, DownhillGLSFitter, WidebandDownhillFitter are new Fitters that are more careful about convergence than the existing ones (PR #975)
 - Fitters have a .is_wideband boolean attribute (PR #975)
 - TOAs now have a .renumber() method to simplify their index column (PR #1029)
+- TOAs objects have a .alias_translation attribute to allow them to output TEMPO-compatible observatory names (PR #1017)
+- TimingModel objects now remember which alias their parameters were called when read in and write those out by default; this can be overridden with the .use_aliases() method to ensure PINT-default or TEMPO-compatible names. (PR #1017)
 
 ## [0.8.2] - 2021-01-27
 ### Fixed

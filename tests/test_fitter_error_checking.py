@@ -208,6 +208,7 @@ def test_update_model_sets_things(Fitter):
     model.TIMEEPH.value = "IF99"
     model.DILATEFREQ.value = True
     model.T2CMETHOD.value = "TEMPO"
+    model.use_aliases(reset_to_default=True)
     toas = make_fake_toas(58000, 59000, 10, model, obs="barycenter", freq=np.inf)
     fitter = Fitter(toas, model)
     fitter.fit_toas()
@@ -219,9 +220,8 @@ def test_update_model_sets_things(Fitter):
     assert re.search(r"ECL *IERS2010", par_out)
     assert re.search(r"DILATEFREQ *N", par_out)
     assert re.search(r"INFO *-f", par_out)
-    assert re.search(r"NTOA *10.0", par_out)
-    assert re.search(r"CHI2 *\d+.\d+", par_out)
+    assert re.search(r"NTOA *10", par_out)
     assert re.search(r"EPHEM *DE421", par_out)
-    assert re.search(r"DMDATA *0.0", par_out)
+    assert re.search(r"DMDATA *N", par_out)
     assert re.search(r"START *58000.0", par_out)
     assert re.search(r"FINISH *59000.0", par_out)

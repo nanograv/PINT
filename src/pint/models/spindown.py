@@ -167,7 +167,7 @@ class Spindown(PhaseComponent):
             )
         self.PEPOCH.value = new_epoch
 
-    def print_par(self,):
+    def print_par(self):
         result = ""
         f_terms = ["F%d" % ii for ii in range(self.num_spin_terms)]
         for ft in f_terms:

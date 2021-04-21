@@ -40,7 +40,7 @@ class TestCompare(unittest.TestCase):
                 param = getattr(model, pn)
                 param_cp = getattr(modelcp, pn)
                 if (
-                    type(param_cp.quantity) in [str, astropy.time.core.Time]
+                    isinstance(param_cp.quantity, (str, astropy.time.core.Time))
                     or param_cp.quantity is None
                 ):
                     continue
@@ -49,8 +49,10 @@ class TestCompare(unittest.TestCase):
                         param_cp.quantity + factor * param_cp.uncertainty
                     )
                 else:
-                    if type(param) == pint.models.parameter.boolParameter:
+                    if isinstance(param, pint.models.parameter.boolParameter):
                         param.value = not param.value
+                    elif isinstance(param, pint.models.parameter.intParameter):
+                        param.value += 1
                     elif param_cp.quantity != 0:
                         param_cp.quantity = 1.1 * param_cp.quantity
                     else:
@@ -88,15 +90,17 @@ class TestCompare(unittest.TestCase):
                 param = getattr(model, pn)
                 param_cp = getattr(modelcp, pn)
                 if (
-                    type(param_cp.quantity) in [str, astropy.time.core.Time]
+                    isinstance(param_cp.quantity, (str, astropy.time.core.Time))
                     or param_cp.quantity is None
                 ):
                     continue
                 if param_cp.uncertainty != None:
                     param_cp.uncertainty = factor * param_cp.uncertainty
                 else:
-                    if type(param) == pint.models.parameter.boolParameter:
+                    if isinstance(param, pint.models.parameter.boolParameter):
                         param.value = not param.value
+                    elif isinstance(param, pint.models.parameter.intParameter):
+                        param.value += 1
                     else:
                         param.uncertainty = 0 * param.units
                         param_cp.uncertainty = 3.0 * param_cp.units
@@ -110,30 +114,30 @@ class TestCompare(unittest.TestCase):
 
         par_base1 = """
             PSR J1234+5612
-            RAJ 14:34:01.00 
+            RAJ 14:34:01.00
             DECJ 56:14:00.00
-            F0 1 
+            F0 1
             PEPOCH 57000
-            DM 10 
+            DM 10
             DMEPOCH 57000
             DM1 2
             DMX     0.0
-            DMX_0001   1.0 
+            DMX_0001   1.0
             DMXR1_0001     58000.0
             DMXR2_0001     58000.0
             """
 
         par_base2 = """
             PSR J1234+5612
-            RAJ 14:34:01.00 
+            RAJ 14:34:01.00
             DECJ 56:14:00.00
-            F0 1  
-            PEPOCH 58000 
+            F0 1
+            PEPOCH 58000
             DM 10
             DMEPOCH 57000
-            DM1 2 
+            DM1 2
             DMX     0.0
-            DMX_0001   1.0 
+            DMX_0001   1.0
             DMXR1_0001     58000.0
             DMXR2_0001     58000.0
             """

@@ -86,7 +86,7 @@ class IFunc(PhaseComponent):
             if (i + 1) != term:
                 raise MissingParameter("IFunc", "IFUNC%d" % (i + 1))
 
-    def print_par(self,):
+    def print_par(self):
         result = self.SIFUNC.as_parfile_line()
         terms = ["IFUNC%d" % ii for ii in range(1, self.num_terms + 1)]
         for ft in terms:

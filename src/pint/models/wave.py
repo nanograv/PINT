@@ -77,7 +77,7 @@ class Wave(PhaseComponent):
             diff = list(set(wave_in_order) - set(self.wave_terms))
             raise MissingParameter("Wave", "WAVE%d" % diff[0])
 
-    def print_par(self,):
+    def print_par(self):
         result = ""
         wave_terms = ["WAVE%d" % ii for ii in range(1, self.num_wave_terms + 1)]
 
