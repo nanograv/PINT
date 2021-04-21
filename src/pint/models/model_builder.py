@@ -178,23 +178,17 @@ class ModelBuilder:
         """ Search the component for the pulsar system, mostly binaries.
         """
         all_systems = self.category_component_map['pulsar_system']
-        result = None
         # Search the system name first
         if system_name in all_systems:
-            result = self.components[system_name]
+            return self.components[system_name]
         else: # search for the pulsar system aliases
             for cp_name in all_systems:
                 if system_name == self.components[cp_name].binary_model_name:
-                    result = self.components[cp_name]
-                else:
-                    continue
-        if result is None:
+                    return self.components[cp_name]
             raise UnknownBinaryModel("Pulsar system/Binary model component {}"
                                      " is not provided.".format(system_name))
-        else:
-            return result
 
-    def alias_2_pint_param(self, alias):
+    def alias_to_pint_param(self, alias):
         """ Translate the alias to a PINT parameter name.
         """
         pint_par = self.param_alias_map.get(alias, None)
@@ -290,7 +284,7 @@ class ModelBuilder:
         unrec_param = [] # For Unrecognized parameters.
         param_components_inpar = {}
         for pp in param_inpar.keys():
-            p_name = self.alias_2_pint_param(pp)
+            p_name = self.alias_to_pint_param(pp)
             if p_name is not None:
                 p_cp = self.param_component_map.get(p_name, None)
                 if p_cp:
@@ -356,7 +350,7 @@ class ModelBuilder:
         # go over the input parameter list
         unknown_param = []
         for pp in indexed_params:
-            pint_p = self.alias_2_pint_param(pp)
+            pint_p = self.alias_to_pint_param(pp)
             # A true unrecognized name
             if pint_p is None:
                 unknown_param.append(pp)
@@ -424,8 +418,8 @@ def get_model(parfile):
             fn = os.path.join(td, "temp.par")
             with open(fn, "wt") as f:
                 f.write(contents)
-            mb = ModelBuilder()
-            tm = mb(fn)[0]
+            mbmodel = ModelBuilder()
+            tm = mbmodel(fn)[0]
             tm.read_parfile(fn)
             return tm
 
