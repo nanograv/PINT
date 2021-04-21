@@ -1,3 +1,5 @@
+import io
+import copy
 import os.path
 
 import astropy.units as u
@@ -6,6 +8,7 @@ import pint
 import pytest
 from astropy.time import Time
 from pint import models
+import pint.toa
 
 from pinttestdata import datadir
 
@@ -14,6 +17,13 @@ from pinttestdata import datadir
 def model(request):
     parfile = os.path.join(datadir, request.param)
     return models.get_model(parfile)
+
+
+@pytest.fixture
+def times():
+    return pint.toa.get_TOAs_list(
+        [pint.toa.TOA(t) for t in np.linspace(56000, 57000, 5)]
+    )
 
 
 def test_change_pepoch(model):
@@ -52,6 +62,87 @@ def test_change_dmepoch():
     DM_at_t0 = model.DM.quantity + model.DM1.quantity * epoch_diff.to(u.s)
     model.change_dmepoch(t0)
     assert np.abs(model.DM.quantity - DM_at_t0) < 1e-8 * u.pc / u.cm ** 3
+
+
+def test_change_dmepoch_times(times):
+    parfile = os.path.join(datadir, "J2229+2643_dm1.par")
+    model = models.get_model(parfile)
+    dms = model.base_dm(times)
+    model.change_dmepoch(Time(56000, scale="tdb", format="mjd"))
+    assert np.all(np.abs(model.base_dm(times) - dms) < 1e-8 * u.pc / u.cm ** 3)
+
+
+def test_change_dmepoch_unset(times):
+    model = models.get_model(
+        io.StringIO(
+            """
+            PSR J1234+5678
+            F0 1
+            PEPOCH 56000
+            ELAT 0
+            ELONG 0
+            DM 10
+            """
+        )
+    )
+    dms = model.base_dm(times)
+    model.change_dmepoch(Time(56000, scale="tdb", format="mjd"))
+    assert np.all(np.abs(model.base_dm(times) - dms) < 1e-8 * u.pc / u.cm ** 3)
+
+
+def test_change_dmepoch_unset_exception(times):
+    with pytest.raises(ValueError):
+        models.get_model(
+            io.StringIO(
+                """
+                PSR J1234+5678
+                F0 1
+                PEPOCH 56000
+                ELAT 0
+                ELONG 0
+                DM 10
+                DM1 1e-10
+                """
+            )
+        )
+
+
+def test_change_dmepoch_unset_python_exception(times):
+    model = models.get_model(
+        io.StringIO(
+            """
+            PSR J1234+5678
+            F0 1
+            PEPOCH 56000
+            ELAT 0
+            ELONG 0
+            DM 10
+            """
+        )
+    )
+    model.DM1.value = 7
+    with pytest.raises(ValueError):
+        model.change_dmepoch(56000)
+
+
+def test_unset_dmepoch_raises(times):
+    model = models.get_model(
+        io.StringIO(
+            """
+            PSR J1234+5678
+            F0 1
+            PEPOCH 56000
+            ELAT 0
+            ELONG 0
+            DM 10
+            """
+        )
+    )
+    model.DM1.value = 7
+    with pytest.raises(ValueError):
+        model.base_dm(times)
+    with pytest.raises(ValueError):
+        model.d_dm_d_DMs(times, "DM")
 
 
 @pytest.fixture(
