@@ -1257,9 +1257,7 @@ class TimingModel:
                     )
                     self.add_param_from_top(param, "PhaseJump")
                     getattr(self, param.name).frozen = False
-                    flag_dict[
-                        "tim_jump"
-                    ] = num  # this is the value select_toa_mask uses
+                flag_dict["tim_jump"] = num  # this is the value select_toa_mask uses
         self.components["PhaseJump"].setup()
 
     def delete_jump_and_flags(self, toa_table, jump_num):
