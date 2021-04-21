@@ -29,6 +29,9 @@ class UnknownBinaryModel(ValueError):
 class ComponentConflict(ValueError):
     """Error for mulitple components can be select but no other indications."""
 
+class ConflictAliasError(ValueError):
+    """If the same alias is used for different parameters."""
+
 
 class ModelBuilder:
     def __init__(self):
@@ -40,13 +43,13 @@ class ModelBuilder:
 
     def __call__(self, parfile):
         param_inpar, repeat_par = self.parse_parfile(parfile)
-        seleted, conflict, unrec_param = self.choose_model(param_inpar)
-        seleted.update(set(self.default_components))
+        selected, conflict, unrec_param = self.choose_model(param_inpar)
+        selected.update(set(self.default_components))
         # Report conflict
         if len(conflict) != 0:
             self._report_conflict(conflict)
         # Make timing model
-        cps = [self.components[c] for c in seleted]
+        cps = [self.components[c] for c in selected]
         tm = TimingModel(components=cps)
         # Add indexed parameters
         leftover_params = set(unrec_param)
@@ -59,7 +62,7 @@ class ModelBuilder:
 
     @lazyproperty
     def param_component_map(self):
-        """ Return the parameter to component map.
+        """Return the parameter to component map.
         """
         p2c_map = defaultdict(list)
         for k, cp in self.components.items():
@@ -129,11 +132,15 @@ class ModelBuilder:
 
     @lazyproperty
     def component_unique_params(self):
-        """ Return the unique parameter names in each componens. Note this only
-        retself.timing_model = TimingModel()urns the pint defined parameter name, not including the aliases
+        """Return the unique parameter names in each componens.
+
+        Note
+        ----
+        This function only returns the pint defined parameter name, not
+        including the aliases.
         """
         component_special_params = defaultdict(list)
-        for param, cps in param_component_map.items():
+        for param, cps in self.param_component_map.items():
             if len(cps) == 1:
                 component_special_params[cps[0]].append(param)
         return component_special_params
@@ -142,8 +149,8 @@ class ModelBuilder:
         """Preprocess the par file.
         Parameter
         ---------
-        parfile: str
-            Input parfile.
+        parfile: str or file-like object
+            Input .par file name or string contents
         Return
         ------
         A dictionary of the unique parameters in .par file with the key is the
@@ -154,7 +161,7 @@ class ModelBuilder:
         param_inpar = {}
         # Parse all the useful lines
         multi_line = Counter()
-        for ii, l in enumerate(interesting_lines(lines_of(parfile), comments=("#", "C "))):
+        for l in interesting_lines(lines_of(parfile), comments=("#", "C ")):
             k = l.split()
             param_inpar[k[0]] = k[1:]
             # Handle the Mulit-tag lines
@@ -173,7 +180,6 @@ class ModelBuilder:
         all_systems = self.category_component_map['pulsar_system']
         result = None
         # Search the system name first
-        print(system_name)
         if system_name in all_systems:
             result = self.components[system_name]
         else: # search for the pulsar system aliases

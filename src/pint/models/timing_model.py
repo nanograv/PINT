@@ -466,12 +466,19 @@ class TimingModel:
 
     def match_param_aliases(self, alias):
         """Return the parameter corresponding to this alias."""
-        for p in self.params:
+        # Search the top level first.
+        for p in self.top_level_params:
             if p == alias:
                 return p
             if alias in getattr(self, p).aliases:
                 return p
-        raise ValueError("{} is not recognized as a parameter or alias".format(alias))
+        # if not in the top level, check parameters.
+        for cp in self.components.values():
+            pint_par = cp.match_param_aliases(alias)
+            if pint_par:
+                return pint_par
+        if not pint_par:
+            raise ValueError("{} is not recognized as a parameter or alias".format(alias))
 
     def get_params_dict(self, which="free", kind="quantity"):
         """Return a dict mapping parameter names to values.
@@ -1069,13 +1076,11 @@ class TimingModel:
            A dictionary with prefix pararameter real index as key and parameter
            name as value.
         """
-        parnames = [x for x in self.params if x.startswith(prefix)]
-        mapping = dict()
-        for parname in parnames:
-            par = getattr(self, parname)
-            if par.is_prefix and par.prefix == prefix:
-                mapping[par.index] = parname
-        return mapping
+        for cp in self.components.values():
+            mapping = cp.get_prefix_mapping(prefix)
+            if len(mapping) != 0:
+                return mapping
+        raise ValueError("Can not find prefix `{}`".format(prefix))
 
     def get_prefix_list(self, prefix, start_index=0):
         """Return the Quantities associated with a sequence of prefix parameters.
@@ -2432,7 +2437,7 @@ class Component(object, metaclass=ModelMeta):
             par = getattr(self, parname)
             if par.is_prefix and par.prefix == prefix:
                 mapping[par.index] = parname
-        return mapping
+        return OrderedDict(sorted(mapping.items()))
 
     def add_param(self, param, deriv_func=None, setup=False):
         """Add a parameter to the Component.
@@ -2576,13 +2581,33 @@ class Component(object, metaclass=ModelMeta):
         return mapping
 
     def match_param_aliases(self, alias):
-        """Return the parameter corresponding to this alias."""
+        """Return the parameter corresponding to this alias.
+
+        Parameter
+        ---------
+        alias: str
+            Alias name.
+
+        Note
+        ----
+        This function only searches the alias in the component level.
+        """
         for p in self.params:
             if p == alias:
                 return p
-            if alias in getattr(self, p).aliases:
+            par = getattr(self, p)
+            if alias in par.aliases:
+                # For prefixable parameters, if the alias only has prefix, it
+                # is ambigous, raise an error.
+                print("match", alias, par.is_prefix)
+                if par.is_prefix:
+                    try:
+                        prefix, idx_str, idx = split_prefixed_name(alias)
+                    except PrefixError:
+                        raise ValueError("Prefix {} maps to mulitple parameters"
+                            ". Please specify the index as well.".format(alias))
                 return p
-        raise ValueError("{} is not recognized as a parameter or alias".format(p))
+        return None
 
     def register_deriv_funcs(self, func, param):
         """Register the derivative function in to the deriv_func dictionaries.
