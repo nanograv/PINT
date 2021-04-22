@@ -10,6 +10,7 @@ import pint.models.model_builder as mb
 from pint import toa
 from pint.fitter import GLSFitter
 from pinttestdata import datadir
+import matplotlib.pyplot as plt
 
 
 class TestGLS(unittest.TestCase):
@@ -82,8 +83,20 @@ class TestGLS(unittest.TestCase):
         wres = self.f.resids.time_resids - self.f.resids.noise_resids["pl_red_noise"]
         wres_diff = wres - self.twres
         wres_diff -= wres_diff.mean()
+        print(wres_diff.std(), wres[0], self.f.resids.time_resids[0],
+            self.f.resids.noise_resids["pl_red_noise"][0], self.twres[0])
+        fig = plt.figure()
+        ax1 = plt.subplot(2, 1, 1)
+        plt.plot(wres_diff, '+')
+        ax1 = plt.subplot(2, 1, 2)
+        plt.plot(self.f.resids.noise_resids["pl_red_noise"], 'x')
+        fig.savefig(os.path.join("/home/jingluo/Desktop", str(wres_diff.std())[0:13] + '.png'))
+        np.savetxt(os.path.join("/home/jingluo/Desktop", str(wres_diff.std())[0:13] + '.out'), self.f.resids.noise_resids["pl_red_noise"].value)
+        for p in ['RNAMP', 'RNIDX', 'TNRedAmp', 'TNRedGam', 'TNRedC']:
+            print(p, getattr(self.f.model, p).value)
         assert wres_diff.std() < 10.0 * u.ns
         assert np.abs(wres_diff).max() < 50.0 * u.ns
+        assert False
 
     def test_gls_compare(self):
         self.fit(full_cov=False)
