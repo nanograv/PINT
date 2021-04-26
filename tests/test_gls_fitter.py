@@ -60,20 +60,19 @@ class TestGLS(unittest.TestCase):
                     assert np.abs(v - val[0]) <= e, msg
                     assert np.abs(1 - val[1] / e) < 0.1, msg
 
-    def test_red_noise_residual(self):
+    def test_noise_design_matrix_index(self):
         self.fit(full_cov=False)
         ntmpar = len(self.f.model.free_params)
         Mn = self.f.model.noise_model_designmatrix(self.f.toas)
         M, params, units = self.f.get_designmatrix()
         M_stack = np.hstack((M, Mn))
         noise_dims = self.f.model.noise_model_dimensions(self.f.toas)
-        noise_len = 0
+        # This is how the gls fitter get the noise design matrix. I don't know
+        # if there is some other way to test the index.
         for comp in noise_dims.keys():
             p0 = noise_dims[comp][0] + ntmpar + 1
             p1 = p0 + noise_dims[comp][1]
-            noise_len += M_stack[:, p0:p1].shape[1]
-            print(p0, p1, M_stack[:, p0:p1].shape, M_stack[:, p0:p1].mean())
-            assert  M_stack[:, p0:p1].mean() == Mn[:, p0 - ntmpar-1: p1-ntmpar-1].mean()
+            assert np.all(M_stack[:, p0:p1] == Mn[:, p0 - ntmpar - 1 : p1 - ntmpar - 1])
 
     def test_whitening(self):
         self.fit(full_cov=False)
