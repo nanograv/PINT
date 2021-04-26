@@ -60,6 +60,21 @@ class TestGLS(unittest.TestCase):
                     assert np.abs(v - val[0]) <= e, msg
                     assert np.abs(1 - val[1] / e) < 0.1, msg
 
+    def test_red_noise_residual(self):
+        self.fit(full_cov=False)
+        ntmpar = len(self.f.model.free_params)
+        Mn = self.f.model.noise_model_designmatrix(self.f.toas)
+        M, params, units = self.f.get_designmatrix()
+        M_stack = np.hstack((M, Mn))
+        noise_dims = self.f.model.noise_model_dimensions(self.f.toas)
+        noise_len = 0
+        for comp in noise_dims.keys():
+            p0 = noise_dims[comp][0] + ntmpar + 1
+            p1 = p0 + noise_dims[comp][1]
+            noise_len += M_stack[:, p0:p1].shape[1]
+            print(p0, p1, M_stack[:, p0:p1].shape, M_stack[:, p0:p1].mean())
+            assert  M_stack[:, p0:p1].mean() == Mn[:, p0 - ntmpar-1: p1-ntmpar-1].mean()
+
     def test_whitening(self):
         self.fit(full_cov=False)
         wres = self.f.resids.time_resids - self.f.resids.noise_resids["pl_red_noise"]
