@@ -1741,7 +1741,14 @@ class TOAs:
         self.max_index = len(self) - 1
         return self
 
-    def write_TOA_file(self, filename, name="unk", format="tempo2", commentflag=None):
+    def write_TOA_file(
+        self,
+        filename,
+        name="unk",
+        format="tempo2",
+        commentflag=None,
+        order_by_index=True,
+    ):
         """Write this object to a ``.tim`` file.
 
         This function writes the contents of this object to a (single) ``.tim``
@@ -1762,6 +1769,12 @@ class TOAs:
         commentflag : str or None
             If a string, and that string is a TOA flag, that TOA will be commented
             in the output file.  If None (or non-string), no TOAs will be commented.
+        order_by_index : bool
+            If True, write the TOAs in the order specified in the "index" column
+            (which is usually the same as the original file);
+            if False, write them in the order they occur in the TOAs object
+            (which is usually the same as the original file except that all the
+            TOAs associated with each observatory have been grouped).
         """
         try:
             # FIXME: file must be closed even if an exception occurs!
@@ -1784,12 +1797,16 @@ class TOAs:
                 if not np.isnan(pn):
                     self.table["flags"][i]["pn"] = pn
 
+        if order_by_index:
+            ix = np.argsort(self.table["index"])
+        else:
+            ix = np.arange(len(self))
         for (toatime, toaerr, freq, obs, flags) in zip(
-            self.table["mjd"],
-            self.table["error"].quantity,
-            self.table["freq"].quantity,
-            self.table["obs"],
-            self.table["flags"],
+            self.table["mjd"][ix],
+            self.table["error"][ix].quantity,
+            self.table["freq"][ix].quantity,
+            self.table["obs"][ix],
+            self.table["flags"][ix],
         ):
             obs_obj = Observatory.get(obs)
 
