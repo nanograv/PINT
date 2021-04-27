@@ -4,6 +4,7 @@ import pytest
 import numpy as np
 import shutil
 from io import StringIO
+from glob import glob
 
 from hypothesis import given
 from hypothesis.strategies import integers, floats
@@ -41,6 +42,20 @@ DILATEFREQ          N
 """
 
 os.chdir(datadir)
+
+
+def check_indices_unique(toas):
+    ix = toas.table["index"].copy()
+    ix.sort()
+    assert not np.any(np.diff(ix) == 0)
+    assert toas.max_index >= ix[-1]
+
+
+def check_indices_contiguous(toas):
+    ix = toas.table["index"].copy()
+    ix.sort()
+    assert np.all(np.diff(ix) == 1)
+    assert toas.max_index == ix[-1]
 
 
 class TestTOAReader(unittest.TestCase):
@@ -160,22 +175,44 @@ def test_toa_merge():
     assert len(nt.observatories) == 3
     assert nt.table.meta["filename"] == filenames
     assert nt.ntoas == ntoas
+    check_indices_contiguous(nt)
+    assert nt.check_hashes()
+
+
+def test_toa_merge_again():
+    filenames = ["NGC6440E.tim", "testtimes.tim", "parkes.toa"]
+    toas = [toa.get_TOAs(ff) for ff in filenames]
+    ntoas = sum([tt.ntoas for tt in toas])
+    nt = toa.merge_TOAs(toas)
     # The following tests merging with and already merged TOAs
     other = toa.get_TOAs("test1.tim")
     nt2 = toa.merge_TOAs([nt, other])
     assert len(nt2.filename) == 5
     assert nt2.ntoas == ntoas + 9
+    check_indices_contiguous(nt2)
+
+
+def test_toa_merge_again():
+    filenames = ["NGC6440E.tim", "testtimes.tim", "parkes.toa"]
+    toas = [toa.get_TOAs(ff) for ff in filenames]
+    ntoas = sum([tt.ntoas for tt in toas])
+    other = toa.get_TOAs("test1.tim")
     # check consecutive merging
     nt = toa.merge_TOAs(toas[:2])
     nt = toa.merge_TOAs([nt, toas[2]])
     nt = toa.merge_TOAs([nt, other])
     assert len(nt.filename) == 5
     assert nt.ntoas == ntoas + 9
-    # now test a failure if ephems are different
+    check_indices_contiguous(nt)
+    assert nt.check_hashes()
+
+
+def test_toa_merge_different_ephem():
+    filenames = ["NGC6440E.tim", "testtimes.tim", "parkes.toa"]
+    toas = [toa.get_TOAs(ff) for ff in filenames]
     toas[0].ephem = "DE436"
     with pytest.raises(TypeError):
         nt = toa.merge_TOAs(toas)
-    assert nt.check_hashes()
 
 
 def test_bipm_default():
@@ -275,10 +312,10 @@ def test_merge_indices():
         toa.make_fake_toas(57000, 57500, 15, model=m, obs="@"),
     ]
     toas = toa.merge_TOAs(fakes)
-    assert len(set(toas.table["index"])) == len(toas)
+    check_indices_contiguous(toas)
 
 
-def test_merge_indices():
+def test_merge_indices_excised():
     m = get_model(StringIO(simplepar))
     fakes = [
         toa.make_fake_toas(55000, 55500, 5, model=m, obs="ao"),
@@ -288,6 +325,7 @@ def test_merge_indices():
     fakes_excised = [f[1:-1] for f in fakes]
     toas = toa.merge_TOAs(fakes)
     toas_excised = toa.merge_TOAs(fakes_excised)
+    check_indices_unique(toas_excised)
     for i in range(len(toas_excised)):
         ix = toas_excised.table["index"][i]
         match = toas.table[toas.table["index"] == ix]
@@ -321,7 +359,7 @@ def test_renumber_order():
     assert np.all(rev.table["index"] == np.arange(len(rev))[::-1])
 
 
-def test_renumber_subset():
+def test_renumber_subset_reordered():
     m = get_model(StringIO(simplepar))
     fakes = [
         toa.make_fake_toas(55000, 55500, 5, model=m, obs="ao"),
@@ -338,3 +376,11 @@ def test_renumber_subset():
 
     toas_excised.renumber(index_order=False)
     assert np.all(toas_excised.table["index"] == np.arange(len(toas_excised)))
+
+
+# FIXME: this is slow but thorough
+@pytest.mark.parametrize("tim", glob("*.tim"))
+def test_contiguous_on_load(tim):
+    if tim in {"prefixtest.tim", "vela_wave.tim"}:
+        pytest.skip("TEMPO2 clock files needed")
+    check_indices_contiguous(toa.get_TOAs(tim))
