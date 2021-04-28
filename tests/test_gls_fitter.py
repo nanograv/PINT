@@ -61,7 +61,6 @@ class TestGLS(unittest.TestCase):
                     assert np.abs(1 - val[1] / e) < 0.1, msg
 
     def test_noise_design_matrix_index(self):
-        self.fit(full_cov=False)
         ntmpar = len(self.f.model.free_params)
         Mn = self.f.model.noise_model_designmatrix(self.f.toas)
         M, params, units = self.f.get_designmatrix()
