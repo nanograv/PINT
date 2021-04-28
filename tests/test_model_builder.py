@@ -6,7 +6,12 @@ from collections import defaultdict
 import pytest
 import io
 import astropy.units as u
-from pint.models.model_builder import ModelBuilder
+from pint.models.model_builder import (
+    ModelBuilder,
+    ConflictAliasError,
+    UnknownBinaryModel,
+    ComponentConflict
+)
 
 test_par1 ="""
 PSR              B1855+09
@@ -88,9 +93,29 @@ def test_model_builder_class():
     assert len(mb.param_component_map['PX']) == len(categore['astrometry'])
     assert len(mb.component_category_map) == len(mb.components)
     assert len(mb.param_alias_map) == len(mb.param_component_map)
-    print(mb.repeatable_param)
     assert len(mb.repeatable_param) == 24
     #assert len(mb.param_component_map) == 10
+
+def test_aliases_mapping():
+    mb = ModelBuilder()
+    assert len(mb.param_alias_map) == len(mb.param_component_map)
+    
+    # Test if the param_alias_map is passed by pointer
+    _ = mb._add_alias_to_map("TESTAX", "TESTAXX", mb.param_alias_map)
+    assert "TESTAX" in mb.param_alias_map
+    # Test existing entry
+    _ = mb._add_alias_to_map("F0", "F0", mb.param_alias_map)
+    assert mb.param_alias_map['F0'] == 'F0'
+    with pytest.raises(ConflictAliasError):
+        _ = mb._add_alias_to_map("F0", "F1", mb.param_alias_map)
+
+# def test_new_component(component):
+#     mb = ModelBuilder()
+#     # Test overlap
+#     overlap = mb._get_component_param_overlap(component)
+#     # Test subset
+#     subset = mb._is_subset_component(component)
+
 
 def test_model_par():
     mb = ModelBuilder()
