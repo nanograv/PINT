@@ -7,7 +7,7 @@ from io import StringIO
 from glob import glob
 
 from hypothesis import given
-from hypothesis.strategies import integers, floats
+from hypothesis.strategies import integers, floats, sampled_from
 from hypothesis.extra.numpy import arrays
 from pint import toa
 from pint.observatory import bipm_default
@@ -56,6 +56,7 @@ def check_indices_contiguous(toas):
     ix.sort()
     assert np.all(np.diff(ix) == 1)
     assert toas.max_index == ix[-1]
+    assert ix[0] == 0
 
 
 class TestTOAReader(unittest.TestCase):
@@ -378,9 +379,11 @@ def test_renumber_subset_reordered():
     assert np.all(toas_excised.table["index"] == np.arange(len(toas_excised)))
 
 
-# FIXME: this is slow but thorough
-@pytest.mark.parametrize("tim", glob("*.tim"))
+loadable_tims = [
+    tim for tim in glob("*.tim") if tim not in {"prefixtest.tim", "vela_wave.tim"}
+]
+
+
+@given(sampled_from(loadable_tims))
 def test_contiguous_on_load(tim):
-    if tim in {"prefixtest.tim", "vela_wave.tim"}:
-        pytest.skip("TEMPO2 clock files needed")
     check_indices_contiguous(toa.get_TOAs(tim))

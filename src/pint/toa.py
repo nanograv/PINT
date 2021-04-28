@@ -2241,7 +2241,7 @@ def merge_TOAs(TOAs_list):
     # We do not ensure that the command list is flat
     nt.commands = [tt.commands for tt in TOAs_list]
     # Now do the actual table stacking
-    start_index = nt.max_index + 1
+    start_index = 0
     tables = []
     for tt in TOAs_list:
         t = copy.deepcopy(tt.table)
