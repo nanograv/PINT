@@ -160,10 +160,11 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     root = tk.Tk()
+    root.minsize(800, 600)
     if not args.test:
         app = PINTk(root, parfile=args.parfile, timfile=args.timfile, ephem=args.ephem)
         root.protocol("WM_DELETE_WINDOW", root.destroy)
-        root.mainloop()
+        tk.mainloop()
 
 
 if __name__ == "__main__":
