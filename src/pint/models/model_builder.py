@@ -63,14 +63,18 @@ class ModelBuilder:
 
     def _validate_components(self):
         for k, v in self.components.items():
-            superset = self._is_subset_component(v):
+            superset = self._is_subset_component(v)
             if superset is not None:
                 m = (f"Component {k}'s parameter is a subset of component"
                      f" {superset}. Module builder will have trouble to "
                      f" select the component. If component {k} is a base"
                      f" class, please set register to 'False' in the class"
                      f" of component {k}.")
-                raise ComponentConflict(m)
+                if v.category == 'pulsar_system':
+                    # The pulsar system will be selected by parameter BINARY
+                    continue
+                else:
+                    raise ComponentConflict(m)
 
     @lazyproperty
     def param_component_map(self):
@@ -100,15 +104,17 @@ class ModelBuilder:
         for k, cp in self.components.items():
             for p in cp.params:
                 par = getattr(cp, p)
-                alias[p] = p
+                # Check if an existing record
+                alias = self._add_alias_to_map(p, p, alias)
                 for als in par.aliases:
-                    alias[als] = p
+                    alias = self._add_alias_to_map(als, p, alias)
         tm = TimingModel()
         for tp in tm.params:
             par =  getattr(tm, tp)
+            alias = self._add_alias_to_map(tp, tp, alias)
             alias[tp] = tp
             for als in par.aliases:
-                alias[als] = tp
+                alias = self._add_alias_to_map(als, tp, alias)
         return alias
 
     @lazyproperty
@@ -166,7 +172,7 @@ class ModelBuilder:
         components: component object
             The component to be checked.
         """
-        overlap = {}
+        overlap_entries = {}
         for k, cp in self.components.items():
             # Check name is a safer way to avoid the component compares to itself
             if component.__class__.__name__ == k:
@@ -178,8 +184,8 @@ class ModelBuilder:
             # The degree of overlapping for input component and compared component
             overlap_deg_in = len(in_param) - len(overlap)
             overlap_deg_cpm = len(cpm_param) - len(overlap)
-            overlap[k] = (overlap, overlap_deg_in, overlap_deg_cpm)
-        return overlap
+            overlap_entries[k] = (overlap, overlap_deg_in, overlap_deg_cpm)
+        return overlap_entries
 
     def _is_subset_component(self, component):
         """Is the component's parameters a subset of another component's parameters.
@@ -194,6 +200,17 @@ class ModelBuilder:
             if v[1] == 0:
                 return k
         return None
+
+    def _add_alias_to_map(self, alias, param_name, alias_map):
+        if alias in alias_map.keys():
+            if param_name == alias_map[alias]:
+                return alias_map
+            else:
+                raise ConflictAliasError(f"Alias {alias} has been used by"
+                                         f" parameter {param_name}.")
+        else:
+            alias_map[alias] = param_name
+        return alias_map
 
     def parse_parfile(self, parfile):
         """Preprocess the par file.
