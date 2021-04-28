@@ -1223,7 +1223,7 @@ class prefixParameter:
         Example parameter class template for quantity and value setter
     long_double : bool, optional
         Set float type quantity and value in numpy long doubles.
-    time_scale : str, optionalParameter(
+    time_scale : str, optional
         Time scale for MJDParameter class.
     """
 
