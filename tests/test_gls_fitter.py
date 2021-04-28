@@ -85,7 +85,6 @@ class TestGLS(unittest.TestCase):
         wres_diff -= wres_diff.mean()
         assert wres_diff.std() < 10.0 * u.ns
         assert np.abs(wres_diff).max() < 50.0 * u.ns
-        assert False
 
     def test_gls_compare(self):
         self.fit(full_cov=False)
