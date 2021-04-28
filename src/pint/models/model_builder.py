@@ -18,7 +18,7 @@ from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_
 log = logging.getLogger(__name__)
 
 
-__all__ = ["get_model"]
+__all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
 
 default_models = ["StandardTimingModel"]
 
@@ -39,6 +39,7 @@ class ModelBuilder:
         for k, v in Component.component_types.items():
             self.components[k] = v()
         # The components that always get added.
+        self._validate_components()
         self.default_components = ['SolarSystemShapiro']
 
     def __call__(self, parfile):
@@ -59,6 +60,17 @@ class ModelBuilder:
                 leftover_params.add(k + str(ii + 1))
         tm, unknown_param = self._add_indexed_params(tm, leftover_params)
         return tm, unknown_param
+
+    def _validate_components(self):
+        for k, v in self.components.items():
+            superset = self._is_subset_component(v):
+            if superset is not None:
+                m = (f"Component {k}'s parameter is a subset of component"
+                     f" {superset}. Module builder will have trouble to "
+                     f" select the component. If component {k} is a base"
+                     f" class, please set register to 'False' in the class"
+                     f" of component {k}.")
+                raise ComponentConflict(m)
 
     @lazyproperty
     def param_component_map(self):
@@ -145,6 +157,44 @@ class ModelBuilder:
                 component_special_params[cps[0]].append(param)
         return component_special_params
 
+    def _get_component_param_overlap(self, component):
+        """Check if one component's parameters are overlaped with another
+        component.
+
+        Parameter
+        ---------
+        components: component object
+            The component to be checked.
+        """
+        overlap = {}
+        for k, cp in self.components.items():
+            # Check name is a safer way to avoid the component compares to itself
+            if component.__class__.__name__ == k:
+                continue
+            # We assume parameters are unique in one component
+            in_param = set(component.params)
+            cpm_param = set(cp.params)
+            overlap = in_param & cpm_param
+            # The degree of overlapping for input component and compared component
+            overlap_deg_in = len(in_param) - len(overlap)
+            overlap_deg_cpm = len(cpm_param) - len(overlap)
+            overlap[k] = (overlap, overlap_deg_in, overlap_deg_cpm)
+        return overlap
+
+    def _is_subset_component(self, component):
+        """Is the component's parameters a subset of another component's parameters.
+
+        Parameter
+        ---------
+        component: component object
+            The component to be checked.
+        """
+        overlap = self._get_component_param_overlap(component)
+        for k, v in overlap.items():
+            if v[1] == 0:
+                return k
+        return None
+
     def parse_parfile(self, parfile):
         """Preprocess the par file.
         Parameter
@@ -214,32 +264,6 @@ class ModelBuilder:
             except PrefixError:
                 pint_par = None
         return pint_par
-
-    def _get_param_overlap_rank(self, components, params, primary_key):
-        """ Get the rank of how components match a given set of paramters
-
-        Parameters
-        ----------
-        components: list
-            A list of the component names.
-        params: list
-            A list of matching parameter names.
-        primary_key: str
-            The primary compare key(e.g., `params` or `component_special_params`)
-
-        Return
-        ------
-        A sorted tuple list based on how many overlap parameters.
-        """
-        param_match = {}
-        for cp in components:
-            check_param = getattr(self.components[cp], primary_key)
-            overlap = list(set(params) & set(check_param))
-            param_match[cp] = len(overlap)
-        # Selected the best overlap
-        # Get the max overlap
-        rank = sorted(list(param_match.items()), key=lambda tup: tup[1])
-        return rank
 
     def choose_model(self, param_inpar):
         """ Choose the model components based on the parfile.
