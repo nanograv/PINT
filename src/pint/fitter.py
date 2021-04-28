@@ -1431,10 +1431,10 @@ class DownhillGLSFitter(DownhillFitter):
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_resids = {}
-            for comp in noise_dims.keys():
+            for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
-                p0 = noise_dims[comp][0] + ntmpar
+                p0 = noise_dims[comp][0] + ntmpar + 1
                 p1 = p0 + noise_dims[comp][1]
                 noise_resids[comp] = (
                     np.dot(
@@ -1700,7 +1700,7 @@ class WidebandDownhillFitter(DownhillFitter):
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_resids = {}
-            for comp in noise_dims.keys():
+            for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
                 p0 = noise_dims[comp][0] + ntmpar + 1
@@ -2066,7 +2066,7 @@ class GLSFitter(Fitter):
             if not full_cov:
                 noise_dims = self.model.noise_model_dimensions(self.toas)
                 noise_resids = {}
-                for comp in noise_dims.keys():
+                for comp in noise_dims:
                     # The first column of designmatrix is "offset", add 1 to match
                     # the indices of noise designmatrix
                     p0 = noise_dims[comp][0] + ntmpar + 1
@@ -2407,7 +2407,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             if not full_cov:
                 noise_dims = self.model.noise_model_dimensions(self.toas)
                 noise_resids = {}
-                for comp in noise_dims.keys():
+                for comp in noise_dims:
                     # The first column of designmatrix is "offset", add 1 to match
                     # the indices of noise designmatrix
                     p0 = noise_dims[comp][0] + ntmpar + 1
@@ -2602,7 +2602,7 @@ class WidebandLMFitter(LMFitter):
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_resids = {}
-            for comp in noise_dims.keys():
+            for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
                 p0 = noise_dims[comp][0] + ntmpar + 1
