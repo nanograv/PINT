@@ -12,6 +12,8 @@ from pint.models.model_builder import (
     UnknownBinaryModel,
     ComponentConflict
 )
+from pint.utils import split_prefixed_name, PrefixError
+
 
 test_par1 ="""
 PSR              B1855+09
@@ -99,7 +101,7 @@ def test_model_builder_class():
 def test_aliases_mapping():
     mb = ModelBuilder()
     assert len(mb.param_alias_map) == len(mb.param_component_map)
-    
+
     # Test if the param_alias_map is passed by pointer
     _ = mb._add_alias_to_map("TESTAX", "TESTAXX", mb.param_alias_map)
     assert "TESTAX" in mb.param_alias_map
@@ -108,7 +110,28 @@ def test_aliases_mapping():
     assert mb.param_alias_map['F0'] == 'F0'
     with pytest.raises(ConflictAliasError):
         _ = mb._add_alias_to_map("F0", "F1", mb.param_alias_map)
+    for rp in mb.repeatable_param:
+        pint_par = mb.alias_to_pint_param(rp)
+        cp = mb.param_component_map[pint_par][0]
+        pint_par_obj = getattr(mb.components[cp], pint_par)
+        try:
+            prefix, id, ids = split_prefixed_name(rp)
+        except PrefixError:
+            prefix = rp
 
+        new_idx_par = prefix + '2'
+        assert mb.alias_to_pint_param(new_idx_par) == pint_par_obj.prefix + '2'
+        new_idx_par = prefix + '55'
+        assert mb.alias_to_pint_param(new_idx_par) == pint_par_obj.prefix + '55'
+        # Test aliases
+        for als in pint_par_obj.aliases:
+            assert mb.alias_to_pint_param(als) == pint_par_obj.name
+            try:
+                als_prefix, id, ids = split_prefixed_name(als)
+            except PrefixError:
+                als_prefix = als
+        assert mb.alias_to_pint_param(als_prefix + '2') == pint_par_obj.prefix + '2'
+        assert mb.alias_to_pint_param(als_prefix + '55') == pint_par_obj.prefix + '55'
 # def test_new_component(component):
 #     mb = ModelBuilder()
 #     # Test overlap
@@ -123,11 +146,7 @@ def test_model_par():
     assert len(param_inpar) == 60
     assert len(repeat) == 4
     comps, conflict, unknown_param = mb.choose_model(param_inpar)
-    # print(comps)
-    tm, unknown = mb(io.StringIO(test_par1))
-    # print(conflict)
-    print(unknown)
-    # print(repeat)
+    tm = mb(io.StringIO(test_par1))
     assert len(comps) == 14
 
 
