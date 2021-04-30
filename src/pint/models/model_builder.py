@@ -59,9 +59,11 @@ class ModelBuilder:
             for ii in range(len(v)):
                 leftover_params.add(k + str(ii + 1))
         tm, unknown_param = self._add_indexed_params(tm, leftover_params)
-        return tm, unknown_param
+        return tm
 
     def _validate_components(self):
+        """Validate the built-in component.
+        """
         for k, v in self.components.items():
             superset = self._is_subset_component(v)
             if superset is not None:
@@ -98,7 +100,7 @@ class ModelBuilder:
 
     @lazyproperty
     def param_alias_map(self):
-        """ Return the aliases map of all parameters
+        """Return the aliases map of all parameters
         """
         alias = {}
         for k, cp in self.components.items():
@@ -119,7 +121,7 @@ class ModelBuilder:
 
     @lazyproperty
     def repeatable_param(self):
-        """ Return the repeatable parameter map.
+        """Return the repeatable parameter map.
         """
         repeatable = []
         for k, cp in self.components.items():
@@ -135,6 +137,8 @@ class ModelBuilder:
 
     @lazyproperty
     def category_component_map(self):
+        """Return the mapping from category to component.
+        """
         category = defaultdict(list)
         for k, cp in self.components.items():
             cat = cp.category
@@ -143,6 +147,8 @@ class ModelBuilder:
 
     @lazyproperty
     def component_category_map(self):
+        """Return the mapping from component to category.
+        """
         cp_ca = {}
         for k, cp in self.components.items():
             cp_ca[k] = cp.category
@@ -167,10 +173,14 @@ class ModelBuilder:
         """Check if one component's parameters are overlaped with another
         component.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         components: component object
             The component to be checked.
+        Returns
+        -------
+        overlap: dict
+            The component has overlap parameters and the overlaping parameters.
         """
         overlap_entries = {}
         for k, cp in self.components.items():
@@ -190,10 +200,14 @@ class ModelBuilder:
     def _is_subset_component(self, component):
         """Is the component's parameters a subset of another component's parameters.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         component: component object
             The component to be checked.
+        Returns
+        -------
+        str
+            The superset component name, or None
         """
         overlap = self._get_component_param_overlap(component)
         for k, v in overlap.items():
@@ -202,6 +216,8 @@ class ModelBuilder:
         return None
 
     def _add_alias_to_map(self, alias, param_name, alias_map):
+        """Add one alias to the alias-parameter map.
+        """
         if alias in alias_map.keys():
             if param_name == alias_map[alias]:
                 return alias_map
@@ -220,8 +236,10 @@ class ModelBuilder:
             Input .par file name or string contents
         Return
         ------
-        A dictionary of the unique parameters in .par file with the key is the
-        parfile line, and a dictionary of repeating parameters.
+        dict
+            The unique parameters in .par file with the key is the parfile line.
+        dict
+            The repeating parameters.
 
         """
         repeat_par = defaultdict(list)
@@ -242,7 +260,7 @@ class ModelBuilder:
         return param_inpar, repeat_par
 
     def search_pulsar_system_components(self, system_name):
-        """ Search the component for the pulsar system, mostly binaries.
+        """Search the component for the pulsar binary.
         """
         all_systems = self.category_component_map['pulsar_system']
         # Search the system name first
@@ -252,11 +270,11 @@ class ModelBuilder:
             for cp_name in all_systems:
                 if system_name == self.components[cp_name].binary_model_name:
                     return self.components[cp_name]
-            raise UnknownBinaryModel("Pulsar system/Binary model component {}"
-                                     " is not provided.".format(system_name))
+            raise UnknownBinaryModel(f"Pulsar system/Binary model component"
+                                     f" {system_name} is not provided.")
 
     def alias_to_pint_param(self, alias):
-        """ Translate the alias to a PINT parameter name.
+        """Translate the alias to a PINT parameter name.
         """
         pint_par = self.param_alias_map.get(alias, None)
         # If it is not in the map, double check if it is a repeatable par.
@@ -283,7 +301,7 @@ class ModelBuilder:
         return pint_par
 
     def choose_model(self, param_inpar):
-        """ Choose the model components based on the parfile.
+        """Choose the model components based on the parfile.
 
         Parameter
         ---------
@@ -293,7 +311,8 @@ class ModelBuilder:
 
         Return
         ------
-        List of selected components and a dictionary of conflict components.
+        list
+            List of selected components and a dictionary of conflict components.
 
         Note
         ----
@@ -425,7 +444,7 @@ class ModelBuilder:
         return timing_model, unknown_param
 
     def _report_conflict(self, conflict_graph):
-        """ Report conflict components
+        """Report conflict components
         """
         for k, v in conflict_graph.items():
             # Put all the conflict components together from the graph
@@ -449,8 +468,9 @@ def get_model(parfile):
         contents = None
     if contents is None:
         # parfile is a filename and can be handled by ModelBuilder
-        mbmodel = ModelBuilder()
-        model = mbmodel(parfile)[0]
+        if _model_builder is None:
+            _model_builder = ModelBuilder()
+        model = _model_builder(parfile)
         model.name = parfile
         model.read_parfile(parfile)
         return model
@@ -459,8 +479,7 @@ def get_model(parfile):
             fn = os.path.join(td, "temp.par")
             with open(fn, "wt") as f:
                 f.write(contents)
-            mbmodel = ModelBuilder()
-            tm = mbmodel(fn)[0]
+            tm = _model_builder(fn)
             tm.read_parfile(fn)
             return tm
 
