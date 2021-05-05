@@ -14,6 +14,7 @@ from pint.event_toas import (
     load_NuSTAR_TOAs,
     load_RXTE_TOAs,
     load_XMM_TOAs,
+    load_fits_TOAs
 )
 from pint.eventstats import h2sig, hm
 from pint.fits_utils import read_fits_event_mjds
@@ -153,12 +154,8 @@ def main(argv=None):
             get_satellite_observatory("NuSTAR", args.orbfile)
         tl = load_NuSTAR_TOAs(args.eventfile, minmjd=minmjd, maxmjd=maxmjd)
     else:
-        log.error(
-            "FITS file not recognized, TELESCOPE = {0}, INSTRUMENT = {1}".format(
-                hdr["TELESCOP"], hdr["INSTRUME"]
-            )
-        )
-        sys.exit(1)
+        log.info("Using generic satellite information")
+        tl = load_fits_TOAs(args.eventfile, mission="generic", minmjd=minmjd, maxmjd=maxmjd)
 
     # Now convert to TOAs object and compute TDBs and posvels
     if len(tl) == 0:

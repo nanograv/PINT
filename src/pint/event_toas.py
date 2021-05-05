@@ -1,4 +1,5 @@
 """Generic function to load TOAs from events files."""
+import os
 import astropy.io.fits as pyfits
 import numpy as np
 from astropy import log
@@ -15,32 +16,71 @@ __all__ = [
     "load_XMM_TOAs",
 ]
 
+def read_mission_info_from_heasoft():
+    """Read all the relevant information about missions in xselect.mdb."""
+
+    if not os.getenv("HEADAS"):
+        return {}
+
+    fname = os.path.join(os.getenv("HEADAS"), "bin", "xselect.mdb")
+    if not os.path.exists(fname):
+        return {}
+
+    db = {}
+    with open(fname) as fobj:
+        for line in fobj.readlines():
+            line = line.strip()
+
+            if line.startswith("!") or line == "":
+                continue
+            allvals = line.split()
+            string = allvals[0]
+            value = allvals[1:]
+            if len(value) == 1:
+                value = value[0]
+
+            data = string.split(":")[:]
+            mission = data[0].lower()
+            if mission not in db:
+                db[mission] = {}
+            previous_db_step = db[mission]
+
+            data = data[1:]
+            for key in data[:-1]:
+                if key not in previous_db_step:
+                    previous_db_step[key] = {}
+                previous_db_step = previous_db_step[key]
+            previous_db_step[data[-1]] = value
+    return db
+
 # fits_extension can be a single name or a comma-separated list of allowed
 # extension names.
 # For weight we use the same conventions used for Fermi: None, a valid FITS
 # extension name or CALC.
 mission_config = {
-    "rxte": {
-        "fits_extension": "XTE_SE",
-        "allow_local": True,
-        "fits_columns": {"pha": "PHA"},
-    },
-    "nicer": {
-        "fits_extension": "EVENTS",
-        "allow_local": True,
-        "fits_columns": {"pha": "PHA"},
-    },
-    "nustar": {
-        "fits_extension": "EVENTS",
-        "allow_local": True,
-        "fits_columns": {"pi": "PI"},
-    },
-    "xmm": {
-        "fits_extension": "EVENTS",
+    "generic": {
+        "fits_extension": 1,
         "allow_local": False,
         "fits_columns": {"pi": "PI"},
     },
 }
+
+
+# Read the relevant information from $HEADAS/bin/xselect.mdb, if present
+for mission, data in read_mission_info_from_heasoft().items():
+    mission_config[mission] = {'allow_local': False}
+    mission_config[mission]["fits_extension"] = data["events"]
+    mission_config[mission]["fits_columns"] = {'ecol': data["ecol"]}
+
+# Allow local TOAs for those missions that have a load_<MISSION>_TOAs method
+for mission in ['nustar', 'nicer', 'xte']:
+    mission_config[mission]['allow_local'] = True
+
+# Fix xte
+mission_config['xte']['fits_columns'] = {'ecol': 'PHA'}
+# The event extension is called in different ways for different data modes, but
+# it is always the same
+mission_config['xte']['fits_extension'] = 1
 
 
 def _default_obs_and_scale(mission, timesys, timeref):
@@ -255,7 +295,7 @@ def load_event_TOAs(eventname, mission, weights=None, minmjd=-np.inf, maxmjd=np.
 
 
 def load_RXTE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
-    return load_event_TOAs(eventname, "rxte", minmjd=minmjd, maxmjd=maxmjd)
+    return load_event_TOAs(eventname, "xte", minmjd=minmjd, maxmjd=maxmjd)
 
 
 def load_NICER_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):

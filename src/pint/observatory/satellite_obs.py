@@ -256,7 +256,7 @@ def load_orbit(obs_name, orb_filename):
         return load_Fermi_FT2(orb_filename)
     elif "nicer" in lower_name:
         return load_FPorbit(orb_filename)
-    elif "rxte" in lower_name:
+    elif "xte" in lower_name:
         return load_FPorbit(orb_filename)
     elif "nustar" in lower_name:
         return load_nustar_orbit(orb_filename)
@@ -311,7 +311,7 @@ class SatelliteObs(SpecialLocation):
 
     def _check_bounds(self, t):
         """ Ensure t is within maxextrap of the closest S/C measurement.
-        
+
         The purpose is to catch cases where there is missing S/C orbital
         information.  A common case would be providing an "FT2" file that
         is shorter than the photon data, or building an FT2 file that is
