@@ -10,8 +10,10 @@ from pint.models.model_builder import (
     ModelBuilder,
     ConflictAliasError,
     UnknownBinaryModel,
-    ComponentConflict
+    ComponentConflict,
 )
+from pint.models.timing_model import PhaseComponent
+from pint.models.parameter import floatParameter
 from pint.utils import split_prefixed_name, PrefixError
 
 
@@ -86,6 +88,14 @@ ECORR -f L-wide_PUPPI   0.31843
 JUMP -fe L-wide      -0.000009449  1       0.000009439
 """
 
+
+class SimpleModel(PhaseComponent):
+    register = True
+    categore = "simple_test"
+    def __init__(self):
+        super(SimpleModel, self).__init__()
+        self.add_param(floatParameter(name='TESTPARAM', value=0.0, unit='s'))
+
 # @pytest.fixture
 # def tmp_dir(tmpdir):
 #     yield str(tmpdir)
@@ -95,8 +105,12 @@ def test_model_builder_class():
     assert len(mb.param_component_map['PX']) == len(categore['astrometry'])
     assert len(mb.component_category_map) == len(mb.components)
     assert len(mb.param_alias_map) == len(mb.param_component_map)
-    assert len(mb.repeatable_param) == 24
-    #assert len(mb.param_component_map) == 10
+    # test for new components
+    assert 'SimpleModel' in mb.components
+    simple_comp = mb.components['SimpleModel']
+    simple_comp.add_param(floatParameter(name='TESTPARAM2', aliases=['F0'],
+        value=0.0, unit='s'))
+    mb.param_alias_map
 
 def test_aliases_mapping():
     mb = ModelBuilder()
