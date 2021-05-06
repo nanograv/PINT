@@ -208,10 +208,14 @@ def load_fits_TOAs(
     # Load photon times from event file
     hdulist = pyfits.open(eventname)
 
-    if extension is not None and hdulist[1].name not in extension.split(","):
+    if extension is not None and isinstance(extension, str) and hdulist[1].name not in extension.split(","):
         raise RuntimeError(
             "First table in FITS file"
             + "must be {}. Found {}".format(extension, hdulist[1].name)
+        )
+    if isinstance(extension, int) and extension != 1:
+        raise ValueError(
+            "At the moment, only data in the first FITS extension is supported"
         )
 
     if timesys is None:
