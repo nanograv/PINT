@@ -207,8 +207,15 @@ def load_fits_TOAs(
     """
     # Load photon times from event file
     hdulist = pyfits.open(eventname)
+    if mission not in mission_config:
+        log.warning("Mission not recognized. Using generic")
+        mission = "generic"
 
-    if extension is not None and isinstance(extension, str) and hdulist[1].name not in extension.split(","):
+    if (
+        extension is not None
+        and isinstance(extension, str)
+        and hdulist[1].name not in extension.split(",")
+    ):
         raise RuntimeError(
             "First table in FITS file"
             + "must be {}. Found {}".format(extension, hdulist[1].name)
