@@ -59,31 +59,43 @@ def read_mission_info_from_heasoft():
 # extension names.
 # For weight we use the same conventions used for Fermi: None, a valid FITS
 # extension name or CALC.
-mission_config = {
-    "generic": {
-        "fits_extension": 1,
-        "allow_local": False,
-        "fits_columns": {"pi": "PI"},
-    },
-}
+def create_mission_config():
+    mission_config = {
+        "generic": {
+            "fits_extension": 1,
+            "allow_local": False,
+            "fits_columns": {"pi": "PI"},
+        },
+    }
 
-# Allow local TOAs for those missions that have a load_<MISSION>_TOAs method
-for mission in ["nustar", "nicer", "xte"]:
-    mission_config[mission] = {}
-    mission_config[mission].update(mission_config["generic"])
-    mission_config["allow_local"] = True
+    # Allow local TOAs for those missions that have a load_<MISSION>_TOAs method
+    for mission in ["nustar", "nicer", "xte"]:
+        mission_config[mission] = {}
+        mission_config[mission].update(mission_config["generic"])
+        mission_config["allow_local"] = True
 
-# Read the relevant information from $HEADAS/bin/xselect.mdb, if present
-for mission, data in read_mission_info_from_heasoft().items():
-    mission_config[mission] = {"allow_local": False}
-    mission_config[mission]["fits_extension"] = data["events"]
-    mission_config[mission]["fits_columns"] = {"ecol": data["ecol"]}
+    # Read the relevant information from $HEADAS/bin/xselect.mdb, if present
+    for mission, data in read_mission_info_from_heasoft().items():
+        mission_config[mission] = {"allow_local": False}
+        ext = 1
+        if "events" in data:
+            ext = data["events"]
+        cols = {}
+        if "ecol" in data:
+            ecol = data["ecol"]
+            cols = {"ecol": ecol}
+        mission_config[mission]["fits_extension"] = ext
+        mission_config[mission]["fits_columns"] = cols
 
-# Fix xte
-mission_config["xte"]["fits_columns"] = {"ecol": "PHA"}
-# The event extension is called in different ways for different data modes, but
-# it is always no. 1.
-mission_config["xte"]["fits_extension"] = 1
+    # Fix xte
+    mission_config["xte"]["fits_columns"] = {"ecol": "PHA"}
+    # The event extension is called in different ways for different data modes, but
+    # it is always no. 1.
+    mission_config["xte"]["fits_extension"] = 1
+    return mission_config
+
+
+mission_config = create_mission_config()
 
 
 def _default_obs_and_scale(mission, timesys, timeref):
