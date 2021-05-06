@@ -16,6 +16,7 @@ __all__ = [
     "load_XMM_TOAs",
 ]
 
+
 def read_mission_info_from_heasoft():
     """Read all the relevant information about missions in xselect.mdb."""
 
@@ -53,6 +54,7 @@ def read_mission_info_from_heasoft():
             previous_db_step[data[-1]] = value
     return db
 
+
 # fits_extension can be a single name or a comma-separated list of allowed
 # extension names.
 # For weight we use the same conventions used for Fermi: None, a valid FITS
@@ -65,22 +67,23 @@ mission_config = {
     },
 }
 
+# Allow local TOAs for those missions that have a load_<MISSION>_TOAs method
+for mission in ["nustar", "nicer", "xte"]:
+    mission_config[mission] = {}
+    mission_config[mission].update(mission_config["generic"])
+    mission_config["allow_local"] = True
 
 # Read the relevant information from $HEADAS/bin/xselect.mdb, if present
 for mission, data in read_mission_info_from_heasoft().items():
-    mission_config[mission] = {'allow_local': False}
+    mission_config[mission] = {"allow_local": False}
     mission_config[mission]["fits_extension"] = data["events"]
-    mission_config[mission]["fits_columns"] = {'ecol': data["ecol"]}
-
-# Allow local TOAs for those missions that have a load_<MISSION>_TOAs method
-for mission in ['nustar', 'nicer', 'xte']:
-    mission_config[mission]['allow_local'] = True
+    mission_config[mission]["fits_columns"] = {"ecol": data["ecol"]}
 
 # Fix xte
-mission_config['xte']['fits_columns'] = {'ecol': 'PHA'}
+mission_config["xte"]["fits_columns"] = {"ecol": "PHA"}
 # The event extension is called in different ways for different data modes, but
-# it is always the same
-mission_config['xte']['fits_extension'] = 1
+# it is always no. 1.
+mission_config["xte"]["fits_extension"] = 1
 
 
 def _default_obs_and_scale(mission, timesys, timeref):
