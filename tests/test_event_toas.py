@@ -8,9 +8,9 @@ from pinttestdata import datadir
 
 def test_xselect_mdb_is_found_headas(monkeypatch, tmp_path):
     """Test event file reading."""
-    path = tmp_path / 'bin'
+    path = tmp_path / "bin"
     path.mkdir()
-    f = path / 'xselect.mdb'
+    f = path / "xselect.mdb"
     f.write_text("MAXI:submkey       NONE\nMAXI:instkey       INSTRUME")
 
     monkeypatch.setenv("HEADAS", tmp_path)
@@ -21,16 +21,16 @@ def test_xselect_mdb_is_found_headas(monkeypatch, tmp_path):
 
 def test_create_mission_config_headas(monkeypatch, tmp_path):
     """Test event file reading."""
-    path = tmp_path / 'bin'
+    path = tmp_path / "bin"
     path.mkdir()
-    f = path / 'xselect.mdb'
+    f = path / "xselect.mdb"
     f.write_text("MAXI:submkey       NONE\nMAXI:instkey       INSTRUME")
 
     monkeypatch.setenv("HEADAS", tmp_path)
 
     info = create_mission_config()
     assert "xte" in info
-    assert info['xte']['fits_extension'] == 1
+    assert info["xte"]["fits_extension"] == 1
 
 
 def test_load_events_wrongext_raises():
