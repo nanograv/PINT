@@ -24,10 +24,19 @@ def test_create_mission_config_headas(monkeypatch, tmp_path):
     path = tmp_path / "bin"
     path.mkdir()
     f = path / "xselect.mdb"
-    f.write_text("MAXI:submkey       NONE\nMAXI:instkey       INSTRUME")
+    f.write_text("!\nINTEGRAL:events       EVENTS\nINTEGRAL:ecol     PHA")
+    f.write_text("!\nINTEGRAL:SPI:ecol     PHA")
 
     monkeypatch.setenv("HEADAS", tmp_path)
 
+    info = create_mission_config()
+    assert "xte" in info
+    assert info["xte"]["fits_extension"] == 1
+
+
+def test_create_mission_config_headas_missing_file_no_fail(monkeypatch, tmp_path):
+    """Test event file reading."""
+    monkeypatch.setenv("HEADAS", tmp_path)
     info = create_mission_config()
     assert "xte" in info
     assert info["xte"]["fits_extension"] == 1

@@ -221,7 +221,7 @@ def main(argv=None):
             data_to_add["PULSE_PHASE"] = [phases, "D"]
 
         if args.absphase:
-            data_to_add["ABS_PHASE"] = [iphss - negmask, "K"]
+            data_to_add["ABS_PHASE"] = [iphss, "K"]
 
         if args.barytime:
             bats = modelin.get_barycentric_toas(ts)
