@@ -140,6 +140,8 @@ class Residuals:
         # only relevant if there are correlated errors
         self._chi2 = None
         self.noise_resids = {}
+        # For residual debugging
+        self.debug_info = {}
         # We should be carefully for the other type of residuals
         self.unit = unit
         # A flag to indentify if this residual object is combined with residual
@@ -511,6 +513,8 @@ class WidebandDMResiduals(Residuals):
         self.dm_data, self.dm_error, self.relevant_toas = self.get_dm_data()
         self._chi2 = None
         self._is_combined = False
+        # For residual debugging
+        self.debug_info = {}
 
     @property
     def resids(self):
@@ -655,6 +659,8 @@ class CombinedResiduals:
         for res in residuals:
             res._is_combined = True
             self.residual_objs[res.residual_type] = res
+        # For residual debugging
+        self.debug_info = {}
 
     @property
     def model(self):
