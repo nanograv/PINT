@@ -12,6 +12,7 @@ import numpy as np
 import pint.models.model_builder as mb
 import pint.toa as toa
 import test_derivative_utils as tdu
+from pint.models.timing_model import TimingModelError
 from pint.residuals import Residuals
 from pinttestdata import datadir
 
@@ -31,6 +32,23 @@ class TestDDK(unittest.TestCase):
         cls.ltres, cls.ltbindelay = np.genfromtxt(
             cls.parfileJ1713 + ".tempo_test", unpack=True
         )
+        cls.temp_par_str = """PSR  J1713+0747
+               LAMBDA 256.66  1 0.001
+               BETA 30.70036  1 0.001
+               PMLAMBDA 5.2671  1  0.0021
+               PMBETA  -3.4428  1  0.0043
+               PX  0.8211  1  0.0258
+               F0  218.81  1  0.01
+               PEPOCH  55391.0
+               BINARY  DDK
+               A1 32.34  1  0.001
+               E  0.074  1  0.001
+               T0 55388.836  1  0.0002
+               PB 67.825129  1  0.0001
+               OM 176.19845  1  0.0013
+               M2  0.283395  1  0.0104
+               KOM   83.100  1  1.800
+               K96  1"""
 
     def test_J1713_binary_delay(self):
         # Calculate delays with PINT
@@ -61,7 +79,7 @@ class TestDDK(unittest.TestCase):
             if p in ["PX", "PMRA", "PMDEC"]:
                 continue
             par = getattr(self.modelJ1713, p)
-            if type(par).__name__ is "boolParameter":
+            if type(par).__name__ == "boolParameter":
                 continue
             log.debug("Runing derivative for %s", "d_phase_d_" + p)
             ndf = self.modelJ1713.d_phase_d_param_num(self.toasJ1713, p, testp[p])
@@ -108,26 +126,31 @@ class TestDDK(unittest.TestCase):
             modelJ1713.validate()
 
     def test_sini_from_par(self):
-        temp_par_str = """PSR  J1713+0747
-               LAMBDA 256.66  1 0.001
-               BETA 30.70036  1 0.001
-               PMLAMBDA 5.2671  1  0.0021
-               PMBETA  -3.4428  1  0.0043
-               PX  0.8211  1  0.0258
-               F0  218.81  1  0.01
-               PEPOCH  55391.0
-               BINARY  DDK
-               A1 32.34  1  0.001
-               E  0.074  1  0.001
-               T0 55388.836  1  0.0002
-               PB 67.825129  1  0.0001
-               OM 176.19845  1  0.0013
-               M2  0.283395  1  0.0104
-               KOM   83.100  1  1.800
-               SINI  0.8     1  0.562
-               K96  1"""
+        test_par_str = self.temp_par_str + "\n SINI  0.8     1  0.562"
         with pytest.raises(ValueError):
-            mb.get_model(StringIO(temp_par_str))
+            mb.get_model(StringIO(test_par_str))
+
+    def test_stand_alone_model_params(self):
+        test_par_str = self.temp_par_str + "\n KIN  71.969  1  0.562"
+        m = mb.get_model(StringIO(test_par_str))
+        for binary_par in m.binary_instance.binary_params:
+            standalone_par = getattr(m.binary_instance, binary_par)
+            try:
+                pint_par_name = m.match_param_aliases(binary_par)
+            except ValueError:
+                if binary_par in m.internal_params:
+                    pint_par_name = binary_par
+                else:
+                    pint_par_name = None
+            if pint_par_name is None:
+                continue
+            pint_par = getattr(m, pint_par_name)
+            if pint_par.value is not None:
+                if hasattr(standalone_par, 'value'):
+                    assert pint_par.value == standalone_par.value
+                else:
+                    assert pint_par.value == standalone_par
+        #assert False
 
 
 if __name__ == "__main__":

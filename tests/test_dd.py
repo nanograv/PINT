@@ -44,6 +44,26 @@ class TestDD(unittest.TestCase):
             np.abs(pint_resids_us.value - self.ltres) < 1e-7
         ), "DD B1855 TEST FAILED"
 
+    def test_stand_alone_model_params(self):
+        m = self.modelB1855
+        for binary_par in m.binary_instance.binary_params:
+            standalone_par = getattr(m.binary_instance, binary_par)
+            try:
+                pint_par_name = m.match_param_aliases(binary_par)
+            except ValueError:
+                if binary_par in m.internal_params:
+                    pint_par_name = binary_par
+                else:
+                    pint_par_name = None
+            if pint_par_name is None:
+                continue
+            pint_par = getattr(m, pint_par_name)
+            if pint_par.value is not None:
+                if hasattr(standalone_par, 'value'):
+                    assert pint_par.value == standalone_par.value
+                else:
+                    assert pint_par.value == standalone_par
+
 
 if __name__ == "__main__":
     pass

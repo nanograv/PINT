@@ -273,9 +273,7 @@ class BinaryELL1H(BinaryELL1Base):
             self.binary_instance.ds_func = self.binary_instance.delayS_H3_STIGMA_exact
             if self.STIGMA.quantity <= 0:
                 raise ValueError("STIGMA must be greater than zero.")
-
         self.update_binary_object()
-
 
     def validate(self):
         """Parameter validation."""
