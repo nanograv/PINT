@@ -262,16 +262,6 @@ class BinaryELL1H(BinaryELL1Base):
     def setup(self):
         """Parameter setup."""
         super(BinaryELL1H, self).setup()
-
-    def validate(self):
-        """Parameter validation."""
-        super(BinaryELL1H, self).validate()
-        # if self.H3.quantity is None:
-        #     raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")
-        if self.SINI.quantity is not None:
-            warn("'SINI' will not be used in ELL1H model. ")
-        if self.M2.quantity is not None:
-            warn("'M2' will not be used in ELL1H model. ")
         if self.H4.quantity is not None:
             self.binary_instance.fit_params = ["H3", "H4"]
             # If have H4 or STIGMA, choose 7th order harmonics
@@ -283,3 +273,16 @@ class BinaryELL1H(BinaryELL1Base):
             self.binary_instance.ds_func = self.binary_instance.delayS_H3_STIGMA_exact
             if self.STIGMA.quantity <= 0:
                 raise ValueError("STIGMA must be greater than zero.")
+
+        self.update_binary_object()
+
+
+    def validate(self):
+        """Parameter validation."""
+        super(BinaryELL1H, self).validate()
+        # if self.H3.quantity is None:
+        #     raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")
+        if self.SINI.quantity is not None:
+            warn("'SINI' will not be used in ELL1H model. ")
+        if self.M2.quantity is not None:
+            warn("'M2' will not be used in ELL1H model. ")

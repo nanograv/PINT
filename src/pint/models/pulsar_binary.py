@@ -155,7 +155,9 @@ class PulsarBinary(DelayComponent):
             self.binary_instance.orbits_cls = bo.OrbitFBX(
                 self.binary_instance, list(FBXs.keys())
             )
-
+        # Update the parameters in the stand alone binary
+        self.update_binary_object()
+        
     def validate(self):
         super(PulsarBinary, self).validate()
 
@@ -210,13 +212,14 @@ class PulsarBinary(DelayComponent):
             else:
                 aliase = []
 
-            if hasattr(self, par) or list(set(aliase).intersection(self.params)) != []:
+            # the _parent attribute should give access to all the components
+            if hasattr(self._parent, par) or list(set(aliase).intersection(self._parent.params)) != []:
                 try:
-                    pint_bin_name = self.match_param_aliases(par)
+                    pint_bin_name = self._parent.match_param_aliases(par)
                 except ValueError:
                     if par in self.internal_params:
                         pint_bin_name = par
-                binObjpar = getattr(self, pint_bin_name)
+                binObjpar = getattr(self._parent, pint_bin_name)
                 instance_par = getattr(self.binary_instance, par)
                 if hasattr(instance_par, "value"):
                     instance_par_val = instance_par.value
