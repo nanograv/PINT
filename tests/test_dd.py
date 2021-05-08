@@ -59,7 +59,7 @@ class TestDD(unittest.TestCase):
                 continue
             pint_par = getattr(m, pint_par_name)
             if pint_par.value is not None:
-                if hasattr(standalone_par, 'value'):
+                if hasattr(standalone_par, "value"):
                     assert pint_par.value == standalone_par.value
                 else:
                     assert pint_par.value == standalone_par

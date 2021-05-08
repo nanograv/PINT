@@ -855,7 +855,9 @@ class TimingModel:
         order = host_list.index(comp)
         return comp, order, host_list, comp_type
 
-    def add_component(self, component, order=DEFAULT_ORDER, force=False, setup=True, validate=True):
+    def add_component(
+        self, component, order=DEFAULT_ORDER, force=False, setup=True, validate=True
+    ):
         """Add a component into TimingModel.
 
         Parameters

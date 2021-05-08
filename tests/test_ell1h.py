@@ -218,10 +218,7 @@ def test_zero_H3_H4_fit_H3(toasJ0613):
     assert f.model.H3.value > 0.0
 
 
-@pytest.mark.parametrize(
-    "model",
-    ["modelJ1853", "modelJ0613"]
-    )
+@pytest.mark.parametrize("model", ["modelJ1853", "modelJ0613"])
 def test_stand_alone_model_params(model, request):
     m = request.getfixturevalue(model)
     for binary_par in m.binary_instance.binary_params:
@@ -237,7 +234,7 @@ def test_stand_alone_model_params(model, request):
             continue
         pint_par = getattr(m, pint_par_name)
         if pint_par.value is not None:
-            if hasattr(standalone_par, 'value'):
+            if hasattr(standalone_par, "value"):
                 assert pint_par.value == standalone_par.value
             else:
                 assert pint_par.value == standalone_par
