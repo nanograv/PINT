@@ -301,7 +301,7 @@ class TimingModel:
         )
 
         for cp in components:
-            self.add_component(cp, validate=False)
+            self.add_component(cp, setup=False, validate=False)
 
     def __repr__(self):
         return "{}(\n  {}\n)".format(
@@ -855,7 +855,7 @@ class TimingModel:
         order = host_list.index(comp)
         return comp, order, host_list, comp_type
 
-    def add_component(self, component, order=DEFAULT_ORDER, force=False, validate=True):
+    def add_component(self, component, order=DEFAULT_ORDER, force=False, setup=True, validate=True):
         """Add a component into TimingModel.
 
         Parameters
@@ -903,7 +903,8 @@ class TimingModel:
         new_comp_list = [c[1] for c in cur_cps]
         setattr(self, comp_type + "_list", new_comp_list)
         # Set up components
-        self.setup()
+        if setup:
+            self.setup()
         # Validate inputs
         if validate:
             self.validate()
