@@ -103,9 +103,10 @@ class BinaryDDK(BinaryDD):
                 " use `KIN` instead."
             )
 
-        if hasattr(self._parent, 'PX'):
+        if hasattr(self._parent, "PX"):
             if self._parent.PX.value == 0.0 or self._parent.PX.value is None:
                 raise ValueError("DDK model needs a valid `PX`. ")
         else:
-            raise MissingParameter('Binary_DDK', 'PX', 'DDK model needs PX from'
-                                   'Astrometry.')
+            raise MissingParameter(
+                "Binary_DDK", "PX", "DDK model needs PX from" "Astrometry."
+            )
