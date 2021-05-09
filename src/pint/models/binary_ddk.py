@@ -102,3 +102,5 @@ class BinaryDDK(BinaryDD):
                 "DDK model does not accept `SINI` as input. Please"
                 " use `KIN` instead."
             )
+        if self.PX.value == 0.0 or self.PX.value is None:
+            raise ValueError("DDK model needs a valid `PX`. ")
