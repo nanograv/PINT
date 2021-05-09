@@ -3,6 +3,7 @@ import logging
 import os
 import unittest
 import pytest
+from warnings import warn
 
 import astropy.units as u
 import numpy as np
@@ -141,6 +142,17 @@ def test_J0613_STIG(toasJ0613, modelJ0613_STIG):
     log = logging.getLogger("TestJ0613.fit_tests_stig")
     f = ff.GLSFitter(toasJ0613, modelJ0613_STIG)
     f.fit_toas()
+
+
+def test_SINI_M2():
+    """Test SINI and M2 error.
+    """
+    SINI_par = simple_par.replace("H3 2.7507208E-7", "SINI 0.8")
+    with pytest.warns(None):
+        _ = model.get_model(StringIO(SINI_par))
+    M2_par = simple_par + "\nM2 1.0 1 0.1"
+    with pytest.warns(None):
+        _ = model.get_model(StringIO(M2_par))
 
 
 def test_no_H3_H4(toasJ0613):

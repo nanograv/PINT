@@ -12,7 +12,7 @@ import numpy as np
 import pint.models.model_builder as mb
 import pint.toa as toa
 import test_derivative_utils as tdu
-from pint.models.timing_model import TimingModelError
+from pint.models.timing_model import TimingModelError, MissingParameter
 from pint.residuals import Residuals
 from pinttestdata import datadir
 
@@ -150,7 +150,16 @@ class TestDDK(unittest.TestCase):
                     assert pint_par.value == standalone_par.value
                 else:
                     assert pint_par.value == standalone_par
-        # assert False
+
+    def test_zero_PX(self):
+        zero_px_str = self.temp_par_str.replace("PX  0.8211", "PX  0.0")
+        with pytest.raises(ValueError):
+            m = mb.get_model(StringIO(zero_px_str))
+        test_par_str = self.temp_par_str + "\n KIN  71.969  1  0.562"
+        m = mb.get_model(StringIO(test_par_str))
+        m.remove_param("PX")
+        with pytest.raises(MissingParameter):
+            m.validate()
 
 
 if __name__ == "__main__":
