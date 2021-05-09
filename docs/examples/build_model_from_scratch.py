@@ -166,8 +166,8 @@ for name, info in params.items():
 # %% [markdown]
 # ### Set up and Validating the model
 #
-# Setting up the model builds the necessary model attributes, and validating model checks if there is any 
-# important parameter values missing, and if the parameters are assigned correctly. If there is anything 
+# Setting up the model builds the necessary model attributes, and validating model checks if there is any
+# important parameter values missing, and if the parameters are assigned correctly. If there is anything
 # not assigned correctly, it will raise an exception.
 # %%
 tm.setup()
