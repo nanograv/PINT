@@ -7,6 +7,7 @@ from io import StringIO
 import astropy.constants as const
 import astropy.coordinates as coords
 import astropy.units as u
+import astropy.coordinates.angles as angles
 import numpy as np
 import scipy.optimize.zeros as zeros
 from astropy import log
@@ -1208,10 +1209,9 @@ def mass_funct2(mp, mc, i):
 
 
 def pulsar_mass(pb, x, mc, inc):
-    """Compute pulsar mass from orbit and Shapiro delay parameters
+    """Compute pulsar mass from orbital parameters
 
     Return the pulsar mass (in solar mass units) for a binary.
-    Finds the value using a bisection technique.
 
     Parameters
     ----------
@@ -1228,13 +1228,26 @@ def pulsar_mass(pb, x, mc, inc):
     -------
     mass : Quantity in u.solMass
     """
+    if not (isinstance(inc, angles.Angle) or isinstance(inc, u.quantity.Quantity)):
+        raise ValueError(f"The inclination should be an Angle but is {inc}.")
+    if not isinstance(x, u.quantity.Quantity):
+        raise ValueError(
+            f"The projected semi-major axis x should be a Quantity but is {x}."
+        )
+    if not isinstance(pb, u.quantity.Quantity):
+        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
+    if not isinstance(mc, u.quantity.Quantity):
+        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
+
     massfunct = mass_funct(pb, x)
 
-    # Do some unit manipulation here so that scipy bisect doesn't see the units
-    def localmf(mp, mc=mc, mf=massfunct, i=inc):
-        return (mass_funct2(mp * u.solMass, mc, i) - mf).value
-
-    return zeros.bisect(localmf, 0.0, 1000.0) * u.solMass
+    # This then forms a quadratic equation of the form:
+    # ca*Mp**2 + cb*Mp + cc = 0
+    ca = massfunct
+    cb = 2 * massfunct * mc
+    cc = massfunct * mc ** 2 - (mc * np.sin(inc)) ** 3
+    # solve it directly
+    return ((-cb + np.sqrt(cb ** 2 - 4 * ca * cc)) / (2 * ca)).to(u.Msun)
 
 
 def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
@@ -1258,13 +1271,36 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     -------
     mass : Quantity in u.solMass
     """
+    if not (isinstance(inc, angles.Angle) or isinstance(inc, u.quantity.Quantity)):
+        raise ValueError(f"The inclination should be an Angle but is {inc}.")
+    if not isinstance(x, u.quantity.Quantity):
+        raise ValueError(
+            f"The projected semi-major axis x should be a Quantity but is {x}."
+        )
+    if not isinstance(pb, u.quantity.Quantity):
+        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
+    if not isinstance(mpsr, u.quantity.Quantity):
+        raise ValueError(f"The pulsar mass should be a Quantity but is {mpsr}.")
+
     massfunct = mass_funct(pb, x)
 
-    # Do some unit manipulation here so that scipy bisect doesn't see the units
-    def localmf(mc, mp=mpsr, mf=massfunct, i=inc):
-        return (mass_funct2(mp, mc * u.solMass, i) - mf).value
-
-    return zeros.bisect(localmf, 0.001, 1000.1) * u.solMass
+    # This then forms a cubic equation of the form:
+    # ca*Mc**3 + cb*Mc**2 + cc*Mc + cd = 0
+    ca = np.sin(inc) ** 3
+    cb = -massfunct
+    cc = -2 * mpsr * massfunct
+    cd = -massfunct * mpsr ** 2
+    # solution
+    # https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
+    delta0 = cb ** 2 - 3 * ca * cc
+    delta1 = 2 * cb ** 3 - 9 * ca * cb * cc + 27 * ca ** 2 * cd
+    Q = np.sqrt(delta1 ** 2 - 4 * delta0 ** 3)
+    # this could be + or - Q
+    Ccubed = 0.5 * (delta1 + Q)
+    # try to get the real root
+    C = np.sign(Ccubed) * np.fabs(Ccubed) ** (1.0 / 3)
+    x1 = -cb / 3.0 / ca - C / 3.0 / ca - (cb ** 2 - 3.0 * ca * cc) / 3.0 / ca / C
+    return x1.to(u.Msun)
 
 
 def ELL1_check(A1, E, TRES, NTOA, outstring=True):

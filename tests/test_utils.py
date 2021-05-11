@@ -677,6 +677,17 @@ def test_psr_utils():
         0.07774704753236616 * u.G,
     )
 
+    # companion mass
+    assert np.isclose(
+        companion_mass(pb, x, inc=90 * u.deg, mpsr=1.4 * u.Msun),
+        0.2906422269961084 * u.Msun,
+    )
+
+    # pulsar mass
+    assert np.isclose(
+        pulsar_mass(pb, x, 0.4 * u.Msun, inc=90 * u.deg), 2.329629042176839 * u.Msun
+    )
+
 
 def test_ftest():
     """Test for FTest. Numbers from example test."""
