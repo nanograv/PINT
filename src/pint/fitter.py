@@ -1018,7 +1018,7 @@ class DownhillFitter(Fitter):
         required_chi2_decrease=1e-2,
         max_chi2_increase=1e-2,
         min_lambda=1e-3,
-        debug=False
+        debug=False,
     ):
         """Carry out a cautious downhill fit.
 
@@ -1444,11 +1444,18 @@ class DownhillGLSFitter(DownhillFitter):
                     * u.s
                 )
                 if debug:
-                    setattr(self.resids, comp+'_M', (self.current_state.M[:, p0:p1], self.current_state.xhat[p0:p1]))
-                    setattr(self.resids, comp+'_M_index', (p0, p1))
+                    setattr(
+                        self.resids,
+                        comp + "_M",
+                        (
+                            self.current_state.M[:, p0:p1],
+                            self.current_state.xhat[p0:p1],
+                        ),
+                    )
+                    setattr(self.resids, comp + "_M_index", (p0, p1))
             self.resids.noise_resids = noise_resids
             if debug:
-                setattr(self.resids, 'norm', self.current_state.norm)
+                setattr(self.resids, "norm", self.current_state.norm)
 
         return r
 
@@ -1677,7 +1684,9 @@ class WidebandDownhillFitter(DownhillFitter):
             self, self.model, full_cov=self.full_cov, threshold=self.threshold
         )
 
-    def fit_toas(self, maxiter=10, threshold=1e-14, full_cov=False, debug=False, **kwargs):
+    def fit_toas(
+        self, maxiter=10, threshold=1e-14, full_cov=False, debug=False, **kwargs
+    ):
         """Fit TOAs.
 
         This is mostly implemented in
@@ -1709,7 +1718,7 @@ class WidebandDownhillFitter(DownhillFitter):
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
-                p0 = noise_dims[comp][0] + ntmpar + 1 
+                p0 = noise_dims[comp][0] + ntmpar + 1
                 p1 = p0 + noise_dims[comp][1]
                 noise_resids[comp] = (
                     np.dot(
@@ -1718,12 +1727,18 @@ class WidebandDownhillFitter(DownhillFitter):
                     * u.s
                 )
                 if debug:
-                    setattr(self.resids, comp+'_M', (self.current_state.M[:, p0:p1],
-                        self.current_state.xhat[p0:p1]))
-                    setattr(self.resids, comp+'_M_index', (p0, p1))
+                    setattr(
+                        self.resids,
+                        comp + "_M",
+                        (
+                            self.current_state.M[:, p0:p1],
+                            self.current_state.xhat[p0:p1],
+                        ),
+                    )
+                    setattr(self.resids, comp + "_M_index", (p0, p1))
             self.resids.noise_resids = noise_resids
             if debug:
-                setattr(self.resids, 'norm', self.current_state.norm)
+                setattr(self.resids, "norm", self.current_state.norm)
         return r
 
 
@@ -2085,11 +2100,11 @@ class GLSFitter(Fitter):
                     p1 = p0 + noise_dims[comp][1]
                     noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
                     if debug:
-                        setattr(self.resids, comp+'_M', (M[:, p0:p1], xhat[p0:p1]))
-                        setattr(self.resids, comp+'_M_index', (p0, p1))
+                        setattr(self.resids, comp + "_M", (M[:, p0:p1], xhat[p0:p1]))
+                        setattr(self.resids, comp + "_M_index", (p0, p1))
                 self.resids.noise_resids = noise_resids
                 if debug:
-                    setattr(self.resids, 'norm', norm)
+                    setattr(self.resids, "norm", norm)
 
         self.update_model(chi2)
 
@@ -2431,11 +2446,11 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                     p1 = p0 + noise_dims[comp][1]
                     noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
                     if debug:
-                        setattr(self.resids, comp+'_M', (M[:, p0:p1], xhat[p0:p1]))
-                        setattr(self.resids, comp+'_M_index', (p0, p1))
+                        setattr(self.resids, comp + "_M", (M[:, p0:p1], xhat[p0:p1]))
+                        setattr(self.resids, comp + "_M_index", (p0, p1))
                 self.resids.noise_resids = noise_resids
                 if debug:
-                    setattr(self.resids, 'norm', norm)
+                    setattr(self.resids, "norm", norm)
 
         self.update_model(chi2)
 
@@ -2453,7 +2468,7 @@ class LMFitter(Fitter):
         lambda_factor_invalid=10,
         threshold=1e-14,
         min_lambda=0.5,
-        debug=False
+        debug=False,
     ):
         current_state = self.create_state()
         try:
@@ -2632,8 +2647,10 @@ class WidebandLMFitter(LMFitter):
                 p1 = p0 + noise_dims[comp][1]
                 noise_resids[comp] = np.dot(state.M[:, p0:p1], state.xhat[p0:p1]) * u.s
                 if debug:
-                    setattr(self.resids, comp+'_M', (state.M[:, p0:p1], state.xhat[p0:p1]))
-                    setattr(self.resids, comp+'_M_index', (p0, p1))
+                    setattr(
+                        self.resids, comp + "_M", (state.M[:, p0:p1], state.xhat[p0:p1])
+                    )
+                    setattr(self.resids, comp + "_M_index", (p0, p1))
             self.resids.noise_resids = noise_resids
             if debug:
-                setattr(self.resids, 'norm', state.norm)
+                setattr(self.resids, "norm", state.norm)

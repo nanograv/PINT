@@ -61,16 +61,20 @@ class TestGLS(unittest.TestCase):
                     assert np.abs(1 - val[1] / e) < 0.1, msg
 
     def test_noise_design_matrix_index(self):
-        self.fit(False, True) # get the debug infor
+        self.fit(False, True)  # get the debug infor
         # Test red noise basis
         pl_rd = self.f.model.pl_rn_basis_weight_pair(self.f.toas)[0]
         p0, p1 = self.f.resids.pl_red_noise_M_index
-        pl_rd_backwards = self.f.resids.pl_red_noise_M[0] * self.f.resids.norm[p0:p1][np.newaxis, :]
+        pl_rd_backwards = (
+            self.f.resids.pl_red_noise_M[0] * self.f.resids.norm[p0:p1][np.newaxis, :]
+        )
         assert np.all(np.isclose(pl_rd, pl_rd_backwards))
         # Test ecorr basis
         ec = self.f.model.ecorr_basis_weight_pair(self.f.toas)[0]
         p0, p1 = self.f.resids.ecorr_noise_M_index
-        ec_backwards = self.f.resids.ecorr_noise_M[0] *  self.f.resids.norm[p0:p1][np.newaxis, :]
+        ec_backwards = (
+            self.f.resids.ecorr_noise_M[0] * self.f.resids.norm[p0:p1][np.newaxis, :]
+        )
         assert np.all(np.isclose(ec, ec_backwards))
 
     def test_whitening(self):
