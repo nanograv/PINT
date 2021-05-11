@@ -97,8 +97,3 @@ class TestWidebandTOAFitter:
         p0, p1 = fitter.resids.pl_red_noise_M_index
         pl_rd_backwards = fitter.resids.pl_red_noise_M[0] * fitter.resids.norm[p0:p1][np.newaxis, :]
         assert np.all(np.isclose(pl_rd, pl_rd_backwards[0:313, :]))
-        # Test ecorr basis
-        ec = fitter.model.ecorr_basis_weight_pair(fitter.toas)[0]
-        p0, p1 = fitter.resids.ecorr_noise_M_index
-        ec_backwards = fitter.resids.ecorr_noise_M[0] * fitter.resids.norm[p0:p1][np.newaxis, :]
-        assert np.all(np.isclose(ec, ec_backwards[0:313, :]))

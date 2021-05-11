@@ -1709,7 +1709,7 @@ class WidebandDownhillFitter(DownhillFitter):
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
-                p0 = noise_dims[comp][0] + ntmpar + 1
+                p0 = noise_dims[comp][0] + ntmpar + 1 
                 p1 = p0 + noise_dims[comp][1]
                 noise_resids[comp] = (
                     np.dot(

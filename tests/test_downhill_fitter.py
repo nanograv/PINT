@@ -119,10 +119,17 @@ def test_gls_full_procedure(model_eccentric_toas_ecorr, full_cov):
     f = pint.fitter.DownhillGLSFitter(toas, model_wrong)
     f.model.free_params = ["ECC"]
 
-    f.fit_toas(maxiter=10, full_cov=full_cov)
+    f.fit_toas(maxiter=10, full_cov=full_cov, debug=True)
 
     assert f.converged
     assert abs(f.model.ECC.value - model_eccentric.ECC.value) < 1e-4
+
+    if not full_cov:
+        # Test ecorr basis
+        ec = f.model.ecorr_basis_weight_pair(f.toas)[0]
+        p0, p1 = f.resids.ecorr_noise_M_index
+        ec_backwards = f.resids.ecorr_noise_M[0] * f.resids.norm[p0:p1][np.newaxis, :]
+        assert np.all(np.isclose(ec, ec_backwards))
 
 
 @pytest.mark.parametrize("full_cov", [False, True])
@@ -134,10 +141,16 @@ def test_wideband_full_procedure(model_eccentric_toas_wb, full_cov):
     f = pint.fitter.WidebandDownhillFitter(toas, model_wrong)
     f.model.free_params = ["ECC"]
 
-    f.fit_toas(maxiter=10, full_cov=full_cov)
+    f.fit_toas(maxiter=10, full_cov=full_cov, debug=True)
 
     assert f.converged
     assert abs(f.model.ECC.value - model_eccentric.ECC.value) < 1e-4
+    if not full_cov:
+        # Test ecorr basis
+        ec = f.model.ecorr_basis_weight_pair(f.toas)[0]
+        p0, p1 = f.resids.ecorr_noise_M_index
+        ec_backwards = f.resids.ecorr_noise_M[0] * f.resids.norm[p0:p1][np.newaxis, :]
+        assert np.all(np.isclose(ec, ec_backwards[0:40, :]))
 
 
 @pytest.mark.parametrize("full_cov", [False, True])
