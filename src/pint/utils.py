@@ -1184,6 +1184,12 @@ def mass_funct(pb, x):
     f_m : Quantity
         Mass function in solar masses
     """
+    if not isinstance(x, u.quantity.Quantity):
+        raise ValueError(
+            f"The projected semi-major axis x should be a Quantity but is {x}."
+        )
+    if not isinstance(pb, u.quantity.Quantity):
+        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
     fm = 4.0 * np.pi ** 2 * x ** 3 / (const.G * pb ** 2)
     return fm.to(u.solMass)
 
@@ -1205,6 +1211,13 @@ def mass_funct2(mp, mc, i):
     Inclination is such that edge on is `i = 90*u.deg`
     An 'average' orbit has cos(i) = 0.5, or `i = 60*u.deg`
     """
+    if not (isinstance(i, angles.Angle) or isinstance(i, u.quantity.Quantity)):
+        raise ValueError(f"The inclination should be an Angle but is {i}.")
+    if not isinstance(mc, u.quantity.Quantity):
+        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
+    if not isinstance(mp, u.quantity.Quantity):
+        raise ValueError(f"The pulsar mass should be a Quantity but is {mp}.")
+
     return (mc * np.sin(i)) ** 3.0 / (mc + mp) ** 2.0
 
 
