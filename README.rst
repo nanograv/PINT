@@ -1,6 +1,6 @@
 .. image:: https://github.com/nanograv/PINT/blob/master/docs/logo/PINT_LOGO.png
-   :height: 200px
-   :width: 200px
+   :height: 80px
+   :width: 80px
    :alt: PINT Logo
    :align: right
 
