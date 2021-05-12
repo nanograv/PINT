@@ -1260,6 +1260,8 @@ def pulsar_mass(pb, x, mc, inc):
     cb = 2 * massfunct * mc
     cc = massfunct * mc ** 2 - (mc * np.sin(inc)) ** 3
     # solve it directly
+    # this has to be the positive branch of the quadratic
+    # because the vertex is at -mc, so the negative branch will always be < 0
     return ((-cb + np.sqrt(cb ** 2 - 4 * ca * cc)) / (2 * ca)).to(u.Msun)
 
 
