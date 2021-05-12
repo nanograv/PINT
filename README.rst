@@ -19,12 +19,12 @@ PINT
    :target: https://nanograv-pint.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
 
-.. image:: https://img.shields.io/badge/arXiv-2012.00074-red)
+.. image:: https://img.shields.io/badge/arXiv-2012.00074)
    :target: https://arxiv.org/abs/2012.00074
    :alt: PINT Paper on arXiv
 
 .. image:: https://img.shields.io/badge/ascl-1902.007-blue.svg?colorB=262255
-   :target: ascl.net/1902.007
+   :target: https://www.ascl.net/1902.007
    :alt: PINT on ASCL
 
 .. image:: https://img.shields.io/pypi/l/pint-pulsar
