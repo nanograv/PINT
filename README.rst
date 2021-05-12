@@ -1,8 +1,8 @@
-.. image:: docs/logo/PINT_LOGO.png
+.. image:: https://github.com/nanograv/PINT/blob/master/docs/logo/PINT_LOGO.png
    :height: 200px
    :width: 200px
    :alt: PINT Logo
-   :align: righthttps://arxiv.org/abs/2012.00074
+   :align: right
 
 PINT
 ====
@@ -19,7 +19,7 @@ PINT
    :target: https://nanograv-pint.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
 
-.. image:: https://img.shields.io/badge/arXiv-2012.00074)
+.. image:: https://img.shields.io/badge/arXiv-2012.00074-red
    :target: https://arxiv.org/abs/2012.00074
    :alt: PINT Paper on arXiv
 
