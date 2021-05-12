@@ -1305,16 +1305,54 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     cb = -massfunct
     cc = -2 * mpsr * massfunct
     cd = -massfunct * mpsr ** 2
+
+    """
+    discriminant
+    https://en.wikipedia.org/wiki/Discriminant#Degree_3
+    delta = (
+        cb ** 2 * cc ** 2
+        - 4 * ca * cc ** 3
+        - 4 * cb ** 3 * cd
+        - 27 * ca ** 2 * cd ** 2
+        + 18 * ca * cb * cc * cd
+    )
+    if delta is < 0 then there is only 1 real root, and I think we do it correctly below
+    and this should be < 0
+    since this reduces to -27 * sin(i)**6 * massfunct**2 * mp**4 -4 * sin(i)**3 * massfunct**3 * mp**3
+    so there is just 1 real root and we compute it below
+    """
+
     # solution
     # https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
-    delta0 = cb ** 2 - 3 * ca * cc
-    delta1 = 2 * cb ** 3 - 9 * ca * cb * cc + 27 * ca ** 2 * cd
-    Q = np.sqrt(delta1 ** 2 - 4 * delta0 ** 3)
+    # delta0 is always > 0
+    sini = np.sin(inc)
+    # delta0 = cb ** 2 - 3 * ca * cc
+    delta0 = massfunct ** 2 + 6 * mp * massfunct * sini ** 3
+    # delta1 is always <0
+    # delta1 = 2 * cb ** 3 - 9 * ca * cb * cc + 27 * ca ** 2 * cd
+    delta1 = (
+        -2 * massfunct ** 3
+        - 18 * sini ** 3 * mp * massfunct ** 2
+        - 27 * sini ** 6 * massfunct * mp ** 2
+    )
+    # Q**2 is always > 0, so this is never a problem
+    # in terms of complex numbers
+    # Q = np.sqrt(delta1**2 - 4*delta0**3)
+    Q = np.sqrt(
+        108 * sini ** 9 * mp ** 3 * massfunct ** 3
+        + 729 * sini ** 12 * mp ** 4 * massfunct ** 2
+    )
     # this could be + or - Q
+    # pick the - branch since delta1 is <0 so that delta1 - Q is never near 0
     Ccubed = 0.5 * (delta1 + Q)
     # try to get the real root
     C = np.sign(Ccubed) * np.fabs(Ccubed) ** (1.0 / 3)
-    x1 = -cb / 3.0 / ca - C / 3.0 / ca - (cb ** 2 - 3.0 * ca * cc) / 3.0 / ca / C
+    # note that the difference cb**2 - 3*ca*cc should be strictly positive
+    # so those shouldn't cancel
+    # and then all three terms should have the same signs
+    # since ca>0, cb<0, C<0, and delta0>0
+    # the denominator will be near 0 only when sin(i) is ~0, but that's already a known problem
+    x1 = -cb / 3.0 / ca - C / 3.0 / ca - delta0 / 3.0 / ca / C
     return x1.to(u.Msun)
 
 
