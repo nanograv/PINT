@@ -1297,16 +1297,15 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     if not isinstance(mpsr, u.quantity.Quantity):
         raise ValueError(f"The pulsar mass should be a Quantity but is {mpsr}.")
 
-    massfunct = mass_funct(pb, x)
-
-    # This then forms a cubic equation of the form:
-    # ca*Mc**3 + cb*Mc**2 + cc*Mc + cd = 0
-    ca = np.sin(inc) ** 3
-    cb = -massfunct
-    cc = -2 * mpsr * massfunct
-    cd = -massfunct * mpsr ** 2
-
     """
+    This then forms a cubic equation of the form:
+    a*Mc**3 + b*Mc**2 + c*Mc + d = 0
+
+    a = np.sin(inc) ** 3
+    b = -massfunct
+    c = -2 * mpsr * massfunct
+    d = -massfunct * mpsr ** 2
+
     discriminant
     https://en.wikipedia.org/wiki/Discriminant#Degree_3
     delta = (
@@ -1322,37 +1321,40 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     so there is just 1 real root and we compute it below
     """
 
+    massfunct = mass_funct(pb, x)
+
     # solution
     # https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
-    # delta0 is always > 0
     sini = np.sin(inc)
-    # delta0 = cb ** 2 - 3 * ca * cc
-    delta0 = massfunct ** 2 + 6 * mp * massfunct * sini ** 3
+    a = sini ** 3
+    # delta0 = b ** 2 - 3 * a * c
+    # delta0 is always > 0
+    delta0 = massfunct ** 2 + 6 * mpsr * massfunct * a
     # delta1 is always <0
-    # delta1 = 2 * cb ** 3 - 9 * ca * cb * cc + 27 * ca ** 2 * cd
+    # delta1 = 2 * b ** 3 - 9 * a * b * c + 27 * a ** 2 * d
     delta1 = (
         -2 * massfunct ** 3
-        - 18 * sini ** 3 * mp * massfunct ** 2
-        - 27 * sini ** 6 * massfunct * mp ** 2
+        - 18 * a * mpsr * massfunct ** 2
+        - 27 * a ** 2 * massfunct * mpsr ** 2
     )
     # Q**2 is always > 0, so this is never a problem
     # in terms of complex numbers
     # Q = np.sqrt(delta1**2 - 4*delta0**3)
     Q = np.sqrt(
-        108 * sini ** 9 * mp ** 3 * massfunct ** 3
-        + 729 * sini ** 12 * mp ** 4 * massfunct ** 2
+        108 * a ** 3 * mpsr ** 3 * massfunct ** 3
+        + 729 * a ** 4 * mpsr ** 4 * massfunct ** 2
     )
     # this could be + or - Q
     # pick the - branch since delta1 is <0 so that delta1 - Q is never near 0
     Ccubed = 0.5 * (delta1 + Q)
     # try to get the real root
     C = np.sign(Ccubed) * np.fabs(Ccubed) ** (1.0 / 3)
-    # note that the difference cb**2 - 3*ca*cc should be strictly positive
+    # note that the difference b**2 - 3*a*c should be strictly positive
     # so those shouldn't cancel
     # and then all three terms should have the same signs
-    # since ca>0, cb<0, C<0, and delta0>0
+    # since a>0, b<0, C<0, and delta0>0
     # the denominator will be near 0 only when sin(i) is ~0, but that's already a known problem
-    x1 = -cb / 3.0 / ca - C / 3.0 / ca - delta0 / 3.0 / ca / C
+    x1 = massfunct / 3.0 / a - C / 3.0 / a - delta0 / 3.0 / a / C
     return x1.to(u.Msun)
 
 
