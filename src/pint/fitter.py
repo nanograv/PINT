@@ -220,7 +220,7 @@ class Fitter:
         self.is_wideband = False
         self.converged = False
 
-    def fit_toas(self, maxiter=None):
+    def fit_toas(self, maxiter=None, debug=False):
         """Run fitting operation.
 
         This method needs to be implemented by subclasses. All implemenations
@@ -1018,6 +1018,7 @@ class DownhillFitter(Fitter):
         required_chi2_decrease=1e-2,
         max_chi2_increase=1e-2,
         min_lambda=1e-3,
+        debug=False,
     ):
         """Carry out a cautious downhill fit.
 
@@ -1246,7 +1247,7 @@ class DownhillWLSFitter(DownhillFitter):
         )
         self.method = "downhill_wls"
 
-    def fit_toas(self, maxiter=10, threshold=None, **kwargs):
+    def fit_toas(self, maxiter=10, threshold=None, debug=False, **kwargs):
         """Fit TOAs.
 
         This is mostly implemented in
@@ -1264,7 +1265,7 @@ class DownhillWLSFitter(DownhillFitter):
             :func:`pint.fitter.DownhillFitter.fit_toas`
         """
         self.threshold = threshold
-        super().fit_toas(maxiter=maxiter, **kwargs)
+        super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
 
     def create_state(self):
         return WLSState(self, self.model)
@@ -1402,7 +1403,7 @@ class DownhillGLSFitter(DownhillFitter):
             self, self.model, full_cov=self.full_cov, threshold=self.threshold
         )
 
-    def fit_toas(self, maxiter=10, threshold=0, full_cov=False, **kwargs):
+    def fit_toas(self, maxiter=10, threshold=0, full_cov=False, debug=False, **kwargs):
         """Fit TOAs.
 
         This is mostly implemented in
@@ -1424,15 +1425,17 @@ class DownhillGLSFitter(DownhillFitter):
         """
         self.threshold = threshold
         self.full_cov = full_cov
-        r = super().fit_toas(maxiter=maxiter, **kwargs)
+        r = super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
         # FIXME: set up noise residuals et cetera
         # Compute the noise realizations if possible
         ntmpar = len(self.model.free_params)
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_resids = {}
-            for comp in noise_dims.keys():
-                p0 = noise_dims[comp][0] + ntmpar
+            for comp in noise_dims:
+                # The first column of designmatrix is "offset", add 1 to match
+                # the indices of noise designmatrix
+                p0 = noise_dims[comp][0] + ntmpar + 1
                 p1 = p0 + noise_dims[comp][1]
                 noise_resids[comp] = (
                     np.dot(
@@ -1440,7 +1443,19 @@ class DownhillGLSFitter(DownhillFitter):
                     )
                     * u.s
                 )
+                if debug:
+                    setattr(
+                        self.resids,
+                        comp + "_M",
+                        (
+                            self.current_state.M[:, p0:p1],
+                            self.current_state.xhat[p0:p1],
+                        ),
+                    )
+                    setattr(self.resids, comp + "_M_index", (p0, p1))
             self.resids.noise_resids = noise_resids
+            if debug:
+                setattr(self.resids, "norm", self.current_state.norm)
 
         return r
 
@@ -1669,7 +1684,9 @@ class WidebandDownhillFitter(DownhillFitter):
             self, self.model, full_cov=self.full_cov, threshold=self.threshold
         )
 
-    def fit_toas(self, maxiter=10, threshold=1e-14, full_cov=False, **kwargs):
+    def fit_toas(
+        self, maxiter=10, threshold=1e-14, full_cov=False, debug=False, **kwargs
+    ):
         """Fit TOAs.
 
         This is mostly implemented in
@@ -1692,14 +1709,16 @@ class WidebandDownhillFitter(DownhillFitter):
         self.threshold = threshold
         self.full_cov = full_cov
         # FIXME: set up noise residuals et cetera
-        r = super().fit_toas(maxiter=maxiter, **kwargs)
+        r = super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
         # Compute the noise realizations if possible
         ntmpar = len(self.model.free_params)
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_resids = {}
-            for comp in noise_dims.keys():
-                p0 = noise_dims[comp][0] + ntmpar
+            for comp in noise_dims:
+                # The first column of designmatrix is "offset", add 1 to match
+                # the indices of noise designmatrix
+                p0 = noise_dims[comp][0] + ntmpar + 1
                 p1 = p0 + noise_dims[comp][1]
                 noise_resids[comp] = (
                     np.dot(
@@ -1707,7 +1726,19 @@ class WidebandDownhillFitter(DownhillFitter):
                     )
                     * u.s
                 )
+                if debug:
+                    setattr(
+                        self.resids,
+                        comp + "_M",
+                        (
+                            self.current_state.M[:, p0:p1],
+                            self.current_state.xhat[p0:p1],
+                        ),
+                    )
+                    setattr(self.resids, comp + "_M_index", (p0, p1))
             self.resids.noise_resids = noise_resids
+            if debug:
+                setattr(self.resids, "norm", self.current_state.norm)
         return r
 
 
@@ -1726,7 +1757,7 @@ class PowellFitter(Fitter):
         super().__init__(toas, model, residuals=residuals, track_mode=track_mode)
         self.method = "Powell"
 
-    def fit_toas(self, maxiter=20):
+    def fit_toas(self, maxiter=20, debug=False):
         """Carry out the fitting procedure."""
         # check that params of timing model have necessary components
         self.model.validate()
@@ -1774,7 +1805,7 @@ class WLSFitter(Fitter):
         )
         self.method = "weighted_least_square"
 
-    def fit_toas(self, maxiter=1, threshold=None):
+    def fit_toas(self, maxiter=1, threshold=None, debug=False):
         """Run a linear weighted least-squared fitting method.
 
         Parameters
@@ -1902,7 +1933,7 @@ class GLSFitter(Fitter):
         )
         self.method = "generalized_least_square"
 
-    def fit_toas(self, maxiter=1, threshold=0, full_cov=False):
+    def fit_toas(self, maxiter=1, threshold=0, full_cov=False, debug=False):
         """Run a generalized least-squares fitting method.
 
         A first attempt is made to solve the fitting problem by Cholesky
@@ -2062,11 +2093,18 @@ class GLSFitter(Fitter):
             if not full_cov:
                 noise_dims = self.model.noise_model_dimensions(self.toas)
                 noise_resids = {}
-                for comp in noise_dims.keys():
-                    p0 = noise_dims[comp][0] + ntmpar
+                for comp in noise_dims:
+                    # The first column of designmatrix is "offset", add 1 to match
+                    # the indices of noise designmatrix
+                    p0 = noise_dims[comp][0] + ntmpar + 1
                     p1 = p0 + noise_dims[comp][1]
                     noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
+                    if debug:
+                        setattr(self.resids, comp + "_M", (M[:, p0:p1], xhat[p0:p1]))
+                        setattr(self.resids, comp + "_M_index", (p0, p1))
                 self.resids.noise_resids = noise_resids
+                if debug:
+                    setattr(self.resids, "norm", norm)
 
         self.update_model(chi2)
 
@@ -2250,7 +2288,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 scaled_sigmas_no_unit.append(scaled_sigma)
         return np.hstack(scaled_sigmas_no_unit)
 
-    def fit_toas(self, maxiter=1, threshold=0, full_cov=False):
+    def fit_toas(self, maxiter=1, threshold=0, full_cov=False, debug=False):
         """Carry out a generalized least-squares fitting procedure.
 
         The algorithm here is essentially the same as used in
@@ -2401,11 +2439,18 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             if not full_cov:
                 noise_dims = self.model.noise_model_dimensions(self.toas)
                 noise_resids = {}
-                for comp in noise_dims.keys():
-                    p0 = noise_dims[comp][0] + ntmpar
+                for comp in noise_dims:
+                    # The first column of designmatrix is "offset", add 1 to match
+                    # the indices of noise designmatrix
+                    p0 = noise_dims[comp][0] + ntmpar + 1
                     p1 = p0 + noise_dims[comp][1]
                     noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
+                    if debug:
+                        setattr(self.resids, comp + "_M", (M[:, p0:p1], xhat[p0:p1]))
+                        setattr(self.resids, comp + "_M_index", (p0, p1))
                 self.resids.noise_resids = noise_resids
+                if debug:
+                    setattr(self.resids, "norm", norm)
 
         self.update_model(chi2)
 
@@ -2423,6 +2468,7 @@ class LMFitter(Fitter):
         lambda_factor_invalid=10,
         threshold=1e-14,
         min_lambda=0.5,
+        debug=False,
     ):
         current_state = self.create_state()
         try:
@@ -2529,9 +2575,9 @@ class LMFitter(Fitter):
             # could be a finally I suppose? but I'm not sure we want to update if something
             # seriou went wrong.
             log.info("KeyboardInterrupt detected, updating Fitter")
-            self.update_from_state(current_state)
+            self.update_from_state(current_state, debug=debug)
             raise
-        self.update_from_state(current_state)
+        self.update_from_state(current_state, debug=debug)
         return self.converged
 
 
@@ -2566,12 +2612,12 @@ class WidebandLMFitter(LMFitter):
             self, self.model, full_cov=self.full_cov, threshold=self.threshold
         )
 
-    def fit_toas(self, maxiter=50, full_cov=False, **kwargs):
+    def fit_toas(self, maxiter=50, full_cov=False, debug=False, **kwargs):
         self.full_cov = full_cov
         # FIXME: set up noise residuals et cetera
-        return super().fit_toas(maxiter=maxiter, **kwargs)
+        return super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
 
-    def update_from_state(self, state):
+    def update_from_state(self, state, debug=False):
         # Nicer not to keep this if we have a choice, it introduces reference cycles
         self.current_state = state
         self.model = state.model
@@ -2594,8 +2640,17 @@ class WidebandLMFitter(LMFitter):
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_resids = {}
-            for comp in noise_dims.keys():
-                p0 = noise_dims[comp][0] + ntmpar
+            for comp in noise_dims:
+                # The first column of designmatrix is "offset", add 1 to match
+                # the indices of noise designmatrix
+                p0 = noise_dims[comp][0] + ntmpar + 1
                 p1 = p0 + noise_dims[comp][1]
                 noise_resids[comp] = np.dot(state.M[:, p0:p1], state.xhat[p0:p1]) * u.s
+                if debug:
+                    setattr(
+                        self.resids, comp + "_M", (state.M[:, p0:p1], state.xhat[p0:p1])
+                    )
+                    setattr(self.resids, comp + "_M_index", (p0, p1))
             self.resids.noise_resids = noise_resids
+            if debug:
+                setattr(self.resids, "norm", state.norm)

@@ -84,3 +84,18 @@ class TestWidebandTOAFitter:
         diff_postfit = (postfit_pint - postfit_tempo).to(u.ns)
         assert np.abs(diff_postfit - diff_postfit.mean()).max() < 50 * u.ns
         assert np.abs(dm_rms_pre - dm_rms_post) < 5e-8 * dm_rms_pre.unit
+
+    def test_noise_design_matrix_index(self):
+        model = get_model("B1855+09_NANOGrav_12yv3.wb.gls.par")
+        toas = get_TOAs(
+            "B1855+09_NANOGrav_12yv3.wb.tim", ephem="DE436", bipm_version="BIPM2015"
+        )
+        fitter = WidebandTOAFitter(toas, model, additional_args={})
+        fitter.fit_toas(full_cov=False, debug=True)
+        # Test red noise basis
+        pl_rd = fitter.model.pl_rn_basis_weight_pair(fitter.toas)[0]
+        p0, p1 = fitter.resids.pl_red_noise_M_index
+        pl_rd_backwards = (
+            fitter.resids.pl_red_noise_M[0] * fitter.resids.norm[p0:p1][np.newaxis, :]
+        )
+        assert np.all(np.isclose(pl_rd, pl_rd_backwards[0:313, :]))

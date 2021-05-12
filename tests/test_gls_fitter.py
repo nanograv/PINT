@@ -32,14 +32,14 @@ class TestGLS(unittest.TestCase):
             * u.us
         )
 
-    def fit(self, full_cov):
+    def fit(self, full_cov, debug=False):
         self.f.reset_model()
         self.f.update_resids()
-        self.f.fit_toas(full_cov=full_cov)
+        self.f.fit_toas(full_cov=full_cov, debug=debug)
 
     def test_gls_fitter(self):
         for full_cov in [True, False]:
-            self.fit(full_cov)
+            self.fit(full_cov, True)
             for par, val in sorted(self.t2d.items()):
                 if par not in ["F0"]:
                     v = (
@@ -59,6 +59,23 @@ class TestGLS(unittest.TestCase):
                     assert np.abs(v - val[0]) <= val[1], msg
                     assert np.abs(v - val[0]) <= e, msg
                     assert np.abs(1 - val[1] / e) < 0.1, msg
+
+    def test_noise_design_matrix_index(self):
+        self.fit(False, True)  # get the debug infor
+        # Test red noise basis
+        pl_rd = self.f.model.pl_rn_basis_weight_pair(self.f.toas)[0]
+        p0, p1 = self.f.resids.pl_red_noise_M_index
+        pl_rd_backwards = (
+            self.f.resids.pl_red_noise_M[0] * self.f.resids.norm[p0:p1][np.newaxis, :]
+        )
+        assert np.all(np.isclose(pl_rd, pl_rd_backwards))
+        # Test ecorr basis
+        ec = self.f.model.ecorr_basis_weight_pair(self.f.toas)[0]
+        p0, p1 = self.f.resids.ecorr_noise_M_index
+        ec_backwards = (
+            self.f.resids.ecorr_noise_M[0] * self.f.resids.norm[p0:p1][np.newaxis, :]
+        )
+        assert np.all(np.isclose(ec, ec_backwards))
 
     def test_whitening(self):
         self.fit(full_cov=False)
