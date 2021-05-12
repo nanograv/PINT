@@ -1256,13 +1256,15 @@ def pulsar_mass(pb, x, mc, inc):
 
     # This then forms a quadratic equation of the form:
     # ca*Mp**2 + cb*Mp + cc = 0
+    sini = np.sin(inc)
     ca = massfunct
     cb = 2 * massfunct * mc
-    cc = massfunct * mc ** 2 - (mc * np.sin(inc)) ** 3
+    # cc = massfunct * mc ** 2 - (mc * sini) ** 3
     # solve it directly
     # this has to be the positive branch of the quadratic
     # because the vertex is at -mc, so the negative branch will always be < 0
-    return ((-cb + np.sqrt(cb ** 2 - 4 * ca * cc)) / (2 * ca)).to(u.Msun)
+    # return ((-cb + np.sqrt(cb ** 2 - 4 * ca * cc)) / (2 * ca)).to(u.Msun)
+    return ((-cb + np.sqrt(4 * massfunct * mc ** 3 * sini ** 3)) / (2 * ca)).to(u.Msun)
 
 
 def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
