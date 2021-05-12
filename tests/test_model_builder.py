@@ -17,7 +17,7 @@ from pint.models.parameter import floatParameter
 from pint.utils import split_prefixed_name, PrefixError
 
 
-test_par1 ="""
+test_par1 = """
 PSR              B1855+09
 #RAJ             18:57:36.3932884         1  0.00002602730280675029
 #DECJ           +09:43:17.29196           1  0.00078789485676919773
@@ -92,25 +92,73 @@ JUMP -fe L-wide      -0.000009449  1       0.000009439
 class SimpleModel(PhaseComponent):
     register = True
     categore = "simple_test"
+
     def __init__(self):
         super(SimpleModel, self).__init__()
-        self.add_param(floatParameter(name='TESTPARAM', value=0.0, unit='s'))
+        self.add_param(floatParameter(name="TESTPARAM", value=0.0, unit="s"))
 
-# @pytest.fixture
-# def tmp_dir(tmpdir):
-#     yield str(tmpdir)
+
+class SubsetModel(PhaseComponent):
+    register = False
+    categore = "simple_test"
+
+    def __init__(self):
+        super(SubsetModel, self).__init__()
+        self.add_param(floatParameter(name="F0", value=0.0, unit="1/s"))
+        self.add_param(floatParameter(name="F1", value=0.0, unit="1/s^2"))
+
+
+@pytest.fixture
+def sub_set_model():
+    return SubsetModel()
+
+
+@pytest.fixture
+def simple_model():
+    return SimpleModel()
+
+
+@pytest.fixture
+def simple_model_overlap(simple_model):
+    simple_model.add_param(floatParameter(name="F0", aliases=[], value=0.0, unit="1/s"))
+    return simple_model
+
+
+@pytest.fixture
+def simple_model_alias_overlap():
+    simple_model = SimpleModel()
+    simple_model.add_param(
+        floatParameter(name="TESTPARAM2", aliases=["F0"], value=0.0, unit="1/s")
+    )
+    return simple_model
+
+
+@pytest.fixture
+def simple_model_alias_overlap():
+    simple_model = SimpleModel()
+    simple_model.add_param(
+        floatParameter(name="TESTPARAM2", aliases=["F0"], value=0.0, unit="1/s")
+    )
+    simple_model.add_param(
+        floatParameter(name="TESTPARAM3", aliases=["LAMBDA"], value=0.0, unit="deg")
+    )
+    return simple_model
+
+
 def test_model_builder_class():
     mb = ModelBuilder()
     categore = mb.category_component_map
-    assert len(mb.param_component_map['PX']) == len(categore['astrometry'])
+    assert len(mb.param_component_map["PX"]) == len(categore["astrometry"])
     assert len(mb.component_category_map) == len(mb.components)
     assert len(mb.param_alias_map) == len(mb.param_component_map)
     # test for new components
-    assert 'SimpleModel' in mb.components
-    simple_comp = mb.components['SimpleModel']
-    simple_comp.add_param(floatParameter(name='TESTPARAM2', aliases=['F0'],
-        value=0.0, unit='s'))
+    assert "SimpleModel" in mb.components
+    simple_comp = mb.components["SimpleModel"]
+    simple_comp.add_param(
+        floatParameter(name="TESTPARAM2", aliases=["F0"], value=0.0, unit="s")
+    )
     mb.param_alias_map
+
 
 def test_aliases_mapping():
     mb = ModelBuilder()
@@ -121,7 +169,7 @@ def test_aliases_mapping():
     assert "TESTAX" in mb.param_alias_map
     # Test existing entry
     _ = mb._add_alias_to_map("F0", "F0", mb.param_alias_map)
-    assert mb.param_alias_map['F0'] == 'F0'
+    assert mb.param_alias_map["F0"] == "F0"
     with pytest.raises(ConflictAliasError):
         _ = mb._add_alias_to_map("F0", "F1", mb.param_alias_map)
     for rp in mb.repeatable_param:
@@ -133,10 +181,10 @@ def test_aliases_mapping():
         except PrefixError:
             prefix = rp
 
-        new_idx_par = prefix + '2'
-        assert mb.alias_to_pint_param(new_idx_par) == pint_par_obj.prefix + '2'
-        new_idx_par = prefix + '55'
-        assert mb.alias_to_pint_param(new_idx_par) == pint_par_obj.prefix + '55'
+        new_idx_par = prefix + "2"
+        assert mb.alias_to_pint_param(new_idx_par) == pint_par_obj.prefix + "2"
+        new_idx_par = prefix + "55"
+        assert mb.alias_to_pint_param(new_idx_par) == pint_par_obj.prefix + "55"
         # Test aliases
         for als in pint_par_obj.aliases:
             assert mb.alias_to_pint_param(als) == pint_par_obj.name
@@ -144,14 +192,38 @@ def test_aliases_mapping():
                 als_prefix, id, ids = split_prefixed_name(als)
             except PrefixError:
                 als_prefix = als
-        assert mb.alias_to_pint_param(als_prefix + '2') == pint_par_obj.prefix + '2'
-        assert mb.alias_to_pint_param(als_prefix + '55') == pint_par_obj.prefix + '55'
-# def test_new_component(component):
-#     mb = ModelBuilder()
-#     # Test overlap
-#     overlap = mb._get_component_param_overlap(component)
-#     # Test subset
-#     subset = mb._is_subset_component(component)
+        assert mb.alias_to_pint_param(als_prefix + "2") == pint_par_obj.prefix + "2"
+        assert mb.alias_to_pint_param(als_prefix + "55") == pint_par_obj.prefix + "55"
+
+
+def test_overlap_component(simple_model_overlap, simple_model_alias_overlap):
+    mb = ModelBuilder()
+    # Test overlap
+    overlap = mb._get_component_param_overlap(simple_model_overlap)
+    assert "Spindown" in overlap.keys()
+    assert overlap["Spindown"][0] == set(["F0"])
+    assert overlap["Spindown"][1] == len(simple_model_overlap.params) - 1
+    assert overlap["Spindown"][2] == len(mb.components["Spindown"].params) - 1
+
+    a_overlap = mb._get_component_param_overlap(simple_model_alias_overlap)
+    assert a_overlap["Spindown"][0] == set(["F0"])
+    assert a_overlap["Spindown"][1] == len(simple_model_alias_overlap.params) - 1
+    assert a_overlap["Spindown"][2] == len(mb.components["Spindown"].params) - 1
+    assert a_overlap["AstrometryEcliptic"][0] == set(["ELONG"])
+    assert (
+        a_overlap["AstrometryEcliptic"][1] == len(simple_model_alias_overlap.params) - 1
+    )
+    assert (
+        a_overlap["AstrometryEcliptic"][2]
+        == len(mb.components["AstrometryEcliptic"].params) - 1
+    )
+
+
+def test_subset_component(sub_set_model):
+    mb = ModelBuilder()
+    # Test subset
+    subset = mb._is_subset_component(sub_set_model)
+    assert subset == "Spindown"
 
 
 def test_model_par():
@@ -162,6 +234,3 @@ def test_model_par():
     comps, conflict, unknown_param = mb.choose_model(param_inpar)
     tm = mb(io.StringIO(test_par1))
     assert len(comps) == 14
-
-
-    #tm = mb(test_par1)

@@ -297,7 +297,7 @@ class TimingModel:
             strParameter(
                 name="BINARY",
                 description="The Pulsar System/Binary model to use.",
-                value=None
+                value=None,
             ),
             "",
         )
@@ -478,7 +478,9 @@ class TimingModel:
             if pint_par:
                 return pint_par
         if not pint_par:
-            raise ValueError("{} is not recognized as a parameter or alias".format(alias))
+            raise ValueError(
+                "{} is not recognized as a parameter or alias".format(alias)
+            )
 
     def get_params_dict(self, which="free", kind="quantity"):
         """Return a dict mapping parameter names to values.
@@ -915,7 +917,9 @@ class TimingModel:
             cur_cps = []
             for cp in comp_list:
                 # If component order is not defined.
-                cp_order = order.index(cp.category) if cp.category in order else len(order) + 1
+                cp_order = (
+                    order.index(cp.category) if cp.category in order else len(order) + 1
+                )
                 cur_cps.append((cp_order, cp))
             # Check if the component has been added already.
             if component.__class__ in (x.__class__ for x in comp_list):
@@ -2417,6 +2421,18 @@ class Component(object, metaclass=ModelMeta):
                     prefixs[par.prefix].append(p)
         return prefixs
 
+    @property_exists
+    def aliases_map(self):
+        """Return all the aliases and map to the PINT parameter name.
+        """
+        ali_map = {}
+        for p in self.params:
+            par = getattr(self, p)
+            ali_map[p] = p
+            for ali in par.aliases:
+                ali_map[ali] = p
+        return ali_map
+
     def get_prefix_mapping(self, prefix):
         """Get the index mapping for the prefix parameters.
 
@@ -2592,22 +2608,55 @@ class Component(object, metaclass=ModelMeta):
         ----
         This function only searches the alias in the component level.
         """
-        for p in self.params:
-            if p == alias:
-                return p
-            par = getattr(self, p)
-            if alias in par.aliases:
-                # For prefixable parameters, if the alias only has prefix, it
-                # is ambigous, raise an error.
-                print("match", alias, par.is_prefix)
+        pname = self.aliases_map.get(alias, None)
+        # Split the alias prefix, see if it is a perfix alias
+        try:
+            prefix, idx_str, idx = split_prefixed_name(alias)
+        except PrefixError:
+            if pname is not None:
+                par = getattr(self, pname)
                 if par.is_prefix:
-                    try:
-                        prefix, idx_str, idx = split_prefixed_name(alias)
-                    except PrefixError:
-                        raise ValueError("Prefix {} maps to mulitple parameters"
-                            ". Please specify the index as well.".format(alias))
-                return p
-        return None
+                    raise ValueError(
+                        "Prefix {} maps to mulitple parameters"
+                        ". Please specify the index as well.".format(alias)
+                    )
+            else:
+                # Not a prefix, not an alias
+                return None
+        # When the alias is a prefixed name but not in the parameter list yet
+        if pname is None:
+            prefix_pname = self.aliases_map.get(prefix, None)
+            if prefix_pname:
+                par = getattr(self, prefix_pname)
+                if par.is_prefix:
+                    raise ValueError(
+                        f"Found a similar prefixed parameter '{prefix_pname}'"
+                        f" But parameter {par.prefix}{idx} need to be added"
+                        f" to the model."
+                    )
+        return pname
+
+        # if pname is None: # Try the prefix parameter
+        #     try:
+        #         prefix, idx_str, idx = split_prefixed_name(alias)
+        #     except PrefixError:
+        #         return None
+        #     pname = self.alias_map.get(prefix, None)
+        # # for p in self.params:
+        # #     if p == alias:
+        # #         return p
+        # #     par = getattr(self, p)
+        # #     if alias in par.aliases:
+        # #         # For prefixable parameters, if the alias only has prefix, it
+        # #         # is ambigous, raise an error.
+        # #         if par.is_prefix:
+        # #             try:
+        # #                 prefix, idx_str, idx = split_prefixed_name(alias)
+        # #             except PrefixError:
+        # #                 raise ValueError("Prefix {} maps to mulitple parameters"
+        # #                     ". Please specify the index as well.".format(alias))
+        # #         return p
+        # return None
 
     def register_deriv_funcs(self, func, param):
         """Register the derivative function in to the deriv_func dictionaries.

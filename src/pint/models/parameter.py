@@ -172,7 +172,7 @@ class Parameter:
         continuous=True,
         prior=priors.Prior(priors.UniformUnboundedRV()),
         use_alias=None,
-        repeatable=False
+        repeatable=False,
     ):
 
         self.name = name  # name of the parameter
@@ -190,7 +190,7 @@ class Parameter:
         self.paramType = "Not specified"  # Type of parameter. Here is general type
         self.valueType = None
         self.special_arg = []
-        self.repeatable=repeatable
+        self.repeatable = repeatable
 
         self.use_alias = use_alias
 
@@ -1305,7 +1305,7 @@ class prefixParameter:
             unit_scale=unit_scale,
             scale_factor=scale_factor,
             scale_threshold=scale_threshold,
-            repeatable=repeatable
+            repeatable=repeatable,
         )
         self.is_prefix = True
         self.time_scale = time_scale
@@ -1581,7 +1581,7 @@ class maskParameter(floatParameter):
             continuous=continuous,
             aliases=idx_aliases + aliases,
             long_double=long_double,
-            repeatable=repeatable
+            repeatable=repeatable,
         )
 
         # For the first mask parameter, add name to aliases for the reading

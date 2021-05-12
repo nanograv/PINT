@@ -26,8 +26,10 @@ default_models = ["StandardTimingModel"]
 class UnknownBinaryModel(ValueError):
     """Signal that the par file requested a binary model no in PINT."""
 
+
 class ComponentConflict(ValueError):
     """Error for mulitple components can be select but no other indications."""
+
 
 class ConflictAliasError(ValueError):
     """If the same alias is used for different parameters."""
@@ -40,7 +42,7 @@ class ModelBuilder:
             self.components[k] = v()
         # The components that always get added.
         self._validate_components()
-        self.default_components = ['SolarSystemShapiro']
+        self.default_components = ["SolarSystemShapiro"]
 
     def __call__(self, parfile):
         param_inpar, repeat_par = self.parse_parfile(parfile)
@@ -67,12 +69,14 @@ class ModelBuilder:
         for k, v in self.components.items():
             superset = self._is_subset_component(v)
             if superset is not None:
-                m = (f"Component {k}'s parameter is a subset of component"
-                     f" {superset}. Module builder will have trouble to "
-                     f" select the component. If component {k} is a base"
-                     f" class, please set register to 'False' in the class"
-                     f" of component {k}.")
-                if v.category == 'pulsar_system':
+                m = (
+                    f"Component {k}'s parameter is a subset of component"
+                    f" {superset}. Module builder will have trouble to "
+                    f" select the component. If component {k} is a base"
+                    f" class, please set register to 'False' in the class"
+                    f" of component {k}."
+                )
+                if v.category == "pulsar_system":
                     # The pulsar system will be selected by parameter BINARY
                     continue
                 else:
@@ -92,10 +96,10 @@ class ModelBuilder:
                     p2c_map[ap].append(k)
         tm = TimingModel()
         for tp in tm.params:
-            p2c_map[tp].append('timing_model')
+            p2c_map[tp].append("timing_model")
             par = getattr(tm, tp)
             for ap in par.aliases:
-                p2c_map[ap].append('timing_model')
+                p2c_map[ap].append("timing_model")
         return p2c_map
 
     @lazyproperty
@@ -112,7 +116,7 @@ class ModelBuilder:
                     alias = self._add_alias_to_map(als, p, alias)
         tm = TimingModel()
         for tp in tm.params:
-            par =  getattr(tm, tp)
+            par = getattr(tm, tp)
             alias = self._add_alias_to_map(tp, tp, alias)
             alias[tp] = tp
             for als in par.aliases:
@@ -180,7 +184,10 @@ class ModelBuilder:
         Returns
         -------
         overlap: dict
-            The component has overlap parameters and the overlaping parameters.
+            The component has overlap parameters and the overlaping parameters
+            in the format of {overlap compnent name: (overlap parameter,
+            number of non-overlap param in test component,
+            number of non-overlap param in overlap component) }
         """
         overlap_entries = {}
         for k, cp in self.components.items():
@@ -188,13 +195,16 @@ class ModelBuilder:
             if component.__class__.__name__ == k:
                 continue
             # We assume parameters are unique in one component
-            in_param = set(component.params)
-            cpm_param = set(cp.params)
+            in_param = set(component.aliases_map)
+            cpm_param = set(cp.aliases_map)
+            # Add aliases compare
             overlap = in_param & cpm_param
+            # translate to PINT parameter
+            overlap_pint_par = set([self.alias_to_pint_param(ovlp) for ovlp in overlap])
             # The degree of overlapping for input component and compared component
-            overlap_deg_in = len(in_param) - len(overlap)
-            overlap_deg_cpm = len(cpm_param) - len(overlap)
-            overlap_entries[k] = (overlap, overlap_deg_in, overlap_deg_cpm)
+            overlap_deg_in = len(component.params) - len(overlap_pint_par)
+            overlap_deg_cpm = len(cp.params) - len(overlap_pint_par)
+            overlap_entries[k] = (overlap_pint_par, overlap_deg_in, overlap_deg_cpm)
         return overlap_entries
 
     def _is_subset_component(self, component):
@@ -222,8 +232,9 @@ class ModelBuilder:
             if param_name == alias_map[alias]:
                 return alias_map
             else:
-                raise ConflictAliasError(f"Alias {alias} has been used by"
-                                         f" parameter {param_name}.")
+                raise ConflictAliasError(
+                    f"Alias {alias} has been used by" f" parameter {param_name}."
+                )
         else:
             alias_map[alias] = param_name
         return alias_map
@@ -255,23 +266,27 @@ class ModelBuilder:
                 repeat_par[k[0]].append(k[1:])
             else:
                 if multi_line[k[0]] > 1:
-                    log.info("Lines with duplicate keys in par file:"
-                                 " {} and {}".format(k[0], k[1:]))
+                    log.info(
+                        "Lines with duplicate keys in par file:"
+                        " {} and {}".format(k[0], k[1:])
+                    )
         return param_inpar, repeat_par
 
     def search_pulsar_system_components(self, system_name):
         """Search the component for the pulsar binary.
         """
-        all_systems = self.category_component_map['pulsar_system']
+        all_systems = self.category_component_map["pulsar_system"]
         # Search the system name first
         if system_name in all_systems:
             return self.components[system_name]
-        else: # search for the pulsar system aliases
+        else:  # search for the pulsar system aliases
             for cp_name in all_systems:
                 if system_name == self.components[cp_name].binary_model_name:
                     return self.components[cp_name]
-            raise UnknownBinaryModel(f"Pulsar system/Binary model component"
-                                     f" {system_name} is not provided.")
+            raise UnknownBinaryModel(
+                f"Pulsar system/Binary model component"
+                f" {system_name} is not provided."
+            )
 
     def alias_to_pint_param(self, alias):
         """Translate the alias to a PINT parameter name.
@@ -284,17 +299,17 @@ class ModelBuilder:
                 # assume the index 1 parameter is in the alias map
                 # count length of idx_str and dectect leading zeros
                 num_lzero = len(idx_str) - len(str(idx))
-                if num_lzero > 0: # Has leading zero
+                if num_lzero > 0:  # Has leading zero
                     fmt = len(idx_str)
                 else:
                     fmt = 0
                 # Handle the case of start index from 0 and 1
                 for start_idx in [0, 1]:
-                    example_name = prefix + '{1:0{0}}'.format(fmt, start_idx)
+                    example_name = prefix + "{1:0{0}}".format(fmt, start_idx)
                     pint_par = self.param_alias_map.get(example_name, None)
                     if pint_par:
                         break
-                if pint_par: # Find the start parameter index
+                if pint_par:  # Find the start parameter index
                     pint_par = split_prefixed_name(pint_par)[0] + idx_str
             except PrefixError:
                 pint_par = None
@@ -332,7 +347,7 @@ class ModelBuilder:
         # 1. iteration read parfile with a no component timing_model to get
         # the overall control parameters. This will get us the binary model name
         # build the base fo the timing model
-        binary = param_inpar.get('BINARY', None)
+        binary = param_inpar.get("BINARY", None)
         if binary is not None:
             binary = binary[0]
             binary_cp = self.search_pulsar_system_components(binary)
@@ -341,7 +356,7 @@ class ModelBuilder:
         # 2.1 Check the aliases of input parameters.
         # This does not include the repeating parameters, but it should not
         # matter in the component selection.
-        unrec_param = [] # For Unrecognized parameters.
+        unrec_param = []  # For Unrecognized parameters.
         param_components_inpar = {}
         for pp in param_inpar.keys():
             p_name = self.alias_to_pint_param(pp)
@@ -355,18 +370,18 @@ class ModelBuilder:
                 unrec_param.append(pp)
         # Back map the possible_components and the parameters in the parfile
         # This will remove the duplicate components.
-        conflict_components = defaultdict(set) # graph for confilict
+        conflict_components = defaultdict(set)  # graph for confilict
         for k, cps in param_components_inpar.items():
             # If `timing_model` in param --> component mapping skip
             # Timing model is the base.
-            if 'timing_model' in cps:
+            if "timing_model" in cps:
                 continue
             # Check if it is a binary component, if yes, skip. It is controlled
             # by the BINARY tag
-            if len(cps) == 1: # No conflict, parameter only shows in one component.
+            if len(cps) == 1:  # No conflict, parameter only shows in one component.
                 # Check if it is a binary component, if yes, skip. It is
                 # controlled by the BINARY tag
-                if self.components[cps[0]].category == 'pulsar_system':
+                if self.components[cps[0]].category == "pulsar_system":
                     continue
                 selected_components.add(cps[0])
                 continue
@@ -384,8 +399,8 @@ class ModelBuilder:
         # Check if the selected component in the confilict graph. If it is
         # remove the selected componens with its conflict components.
         for ps_cp in selected_components:
-            cf_cps  = conflict_components.get(ps_cp, None)
-            if cf_cps is not None: # Had conflict, but resolved.
+            cf_cps = conflict_components.get(ps_cp, None)
+            if cf_cps is not None:  # Had conflict, but resolved.
                 for cf_cp in cf_cps:
                     del conflict_components[cf_cp]
                 del conflict_components[ps_cp]
@@ -424,20 +439,22 @@ class ModelBuilder:
             except PrefixError:
                 prefix = None
                 idx = None
-            if prefix: #
+            if prefix:  #
                 search_name = prefix
             else:
                 search_name = pint_p
             # TODO, when the prefix parameter structure changed, this will have
             # to change.
             prefix_map = timing_model.get_prefix_mapping(search_name)
-            if prefix_map == {}: # Can not find any prefix mapping
+            if prefix_map == {}:  # Can not find any prefix mapping
                 unknown_param.append(pp)
                 continue
             # Get the parameter in the prefix map.
             prefix_param0 = list(prefix_map.items())[0]
             example = getattr(timing_model, prefix_param0[1])
-            if not idx: # Input name has index, init from an example param and add it to timing model.
+            if (
+                not idx
+            ):  # Input name has index, init from an example param and add it to timing model.
                 idx = max(list(prefix_map.keys())) + 1
             host_component = timing_model._locate_param_host(prefix_param0[1])[0][0]
             timing_model.add_param_from_top(example.new_param(idx), host_component)
@@ -449,8 +466,10 @@ class ModelBuilder:
         for k, v in conflict_graph.items():
             # Put all the conflict components together from the graph
             cf_cps = v.append(k)
-            raise ComponentConflict("Can not decide the one component from:"
-                                    " {}".format(cf_cps))
+            raise ComponentConflict(
+                "Can not decide the one component from:" " {}".format(cf_cps)
+            )
+
 
 def get_model(parfile):
     """A one step function to build model from a parfile
@@ -462,15 +481,16 @@ def get_model(parfile):
     -------
     Model instance get from parfile.
     """
+    model_builder = ModelBuilder()
     try:
         contents = parfile.read()
     except AttributeError:
         contents = None
     if contents is None:
-        # parfile is a filename and can be handled by ModelBuilder
-        if _model_builder is None:
-            _model_builder = ModelBuilder()
-        model = _model_builder(parfile)
+        # # parfile is a filename and can be handled by ModelBuilder
+        # if _model_builder is None:
+        #     _model_builder = ModelBuilder()
+        model = model_builder(parfile)
         model.name = parfile
         model.read_parfile(parfile)
         return model
@@ -479,7 +499,7 @@ def get_model(parfile):
             fn = os.path.join(td, "temp.par")
             with open(fn, "wt") as f:
                 f.write(contents)
-            tm = _model_builder(fn)
+            tm = model_builder(fn)
             tm.read_parfile(fn)
             return tm
 
