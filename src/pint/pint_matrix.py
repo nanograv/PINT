@@ -155,7 +155,7 @@ class PintMatrix:
     def match_labels_along_axis(self, pint_matrix, axis):
         """Match one axis' labels index between the current matrix and input pint matrix.
 
-        The labels will be matched along axises, not cross the axises.
+        The labels will be matched along axes, not cross the axes.
 
         Parameters
         ----------
@@ -197,7 +197,7 @@ class DesignMatrix(PintMatrix):
     matrix : `numpy.ndarray`
         Design matrix values.
     axis_labels : list of dictionary
-        The labels of the axises. Each list element contains the names and
+        The labels of the axes. Each list element contains the names and
         indices of the labels for the dimension.
         [{dim0_label0: (start, end, unit), dim0_label1:(start, end, unit)},{dim1_label0:...}]
         The start and end follows the python slice convention (i.e.,
