@@ -26,7 +26,7 @@ class PintMatrix:
         Matrix data.
 
     axis_labels : list of dictionary
-        The labels of the axises. Each list element contains the names and
+        The labels of the axes. Each list element contains the names and
         indices of the labels for the dimension.
         [{dim0_label0: (start, end, unit), dim0_label1:(start, end, unit)},
         {dim1_label0:...}]
@@ -72,6 +72,30 @@ class PintMatrix:
             units.append(self.get_axis_labels(dim))
         return units
 
+    def get_label_names(self, axis=None):
+        """return only the names of the labels
+        along the specified axis if requested"""
+        labels = []
+        if axis is None:
+            r = range(len(self.axis_labels))
+        else:
+            if isinstance(axis, int):
+                return [x[0] for x in self.get_axis_labels(axis)]
+            else:
+                # assume it's an iterable (how to check?)
+                r = axis
+        for dim in r:
+            labels.append([x[0] for x in self.get_axis_labels(dim)])
+        return labels
+
+    def get_all_label_names(self):
+        """return all possible unique label names"""
+        labels = self.get_label_names()
+        unique_labels = []
+        for l in labels:
+            unique_labels += l
+        return set(unique_labels)
+
     def get_label_size(self, label):
         """Get the size of the a label in each axis.
 
@@ -103,22 +127,32 @@ class PintMatrix:
         dim_label.sort(key=self._get_label_start)
         return dim_label
 
-    def get_label(self, label):
+    def get_label(self, label, axis=None):
         """Get the label entry and its dimension.
+        If axis is specified, will only be along that axis
 
         We assume the labels are unique in the matrix.
         """
         all_label = []
         for ii, dim in enumerate(self.axis_labels):
             if label in dim.keys():
-                all_label.append((label, ii) + dim[label])
+                if axis is None or axis == ii:
+                    all_label.append((label, ii) + dim[label])
         if all_label == []:
-            raise KeyError("Label {} is not in the matrix".format(label))
+            if axis is None:
+                raise KeyError("Label {} is not in the matrix".format(label))
+            else:
+                raise KeyError(
+                    "Label {} is not in the matrix in axis {}".format(label, axis)
+                )
         else:
             return all_label
 
     def get_label_along_axis(self, axis, label_name):
-        """Get the request label from on axis."""
+        """Get the request label from on axis.
+
+        DEPRECATED - use get_label(..., axis=axis)
+        """
         label_in_one_axis = self.axis_labels[axis]
         if label_name in label_in_one_axis.keys():
             return (label_name, axis) + label_in_one_axis[label_name]
@@ -133,19 +167,18 @@ class PintMatrix:
         new_labels = dict([(d, {}) for d in range(self.ndim)])
         for lb in labels:
             label_info = self.get_label(lb)
-            label_size = label_info[2][1] - label_info[2][0]
-            # if slice is a list, there is a label already added.
-            if isinstance(dim_slices[label_info[0]], list):
-                # The start of the new matrix.
-                start = len(dim_slices[label_info[0]]) + 1
-                dim_slices[label_info[0]] += range(label_info[2][0], label_info[2][1])
-
-            else:
-                start = 0
-                dim_slices[label_info[0]] = range(label_info[2][0], label_info[2][1])
-
-            new_labels[label_info[0]].update({lb: (start, start + label_size)})
-        return list(dim_slices.values()), list(new_labels.values())
+            label_size = self.get_label_size(lb)
+            for d in range(self.ndim):
+                if isinstance(dim_slices[d], list):
+                    # an entry already exists.  Add to it
+                    start = len(dim_slices[d]) + 1
+                    dim_slices[d] += list(range(label_info[d][2], label_info[d][3]))
+                else:
+                    # start a new one
+                    start = 0
+                    dim_slices[d] = list(range(label_info[d][2], label_info[d][3]))
+                new_labels[d].update({lb: (start, start + label_size[d][1])})
+        return np.ix_(*list(dim_slices.values())), list(new_labels.values())
 
     def get_label_matrix(self, labels):
         """Get a sub-matrix data according to the given labels."""
@@ -554,8 +587,29 @@ class CovarianceMatrix(PintMatrix):
             raise ValueError("The input matrix is not symmetric.")
         # Check if the labels are symmetric
         if len(labels[0]) != len(labels[1]):
-            raise ValueError("The input labels are not sysmmetric.")
+            raise ValueError("The input labels are not symmetric.")
         super(CovarianceMatrix, self).__init__(matrix, labels)
+
+    def prettyprint(self, prec=3):
+        fps = self.get_label_names(axis=0)
+        cm = self.matrix
+        lens = [max(len(fp) + 2, prec + 8) for fp in fps]
+        maxlen = max(lens)
+        sout = "\nParameter covariance matrix:"
+        line = "{0:^{width}}".format("", width=maxlen)
+        for fp, ln in zip(fps, lens):
+            line += "{0:^{width}}".format(fp, width=ln)
+        sout += line + "\n"
+        for ii, fp1 in enumerate(fps):
+            line = "{0:^{width}}".format(fp1, width=maxlen)
+            for jj, (fp2, ln) in enumerate(zip(fps[: ii + 1], lens[: ii + 1])):
+                line += "{0: {width}.{prec}e}".format(cm[ii, jj], width=ln, prec=prec)
+            sout += line + "\n"
+        sout += "\n"
+        return sout
+
+    def __repr__(self):
+        return self.prettyprint()
 
 
 class CovarianceMatrixMaker:

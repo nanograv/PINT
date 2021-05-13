@@ -66,6 +66,7 @@ from astropy import log
 import pint.utils
 from pint.models.parameter import AngleParameter, boolParameter, strParameter
 from pint.pint_matrix import (
+    CovarianceMatrix,
     CovarianceMatrixMaker,
     DesignMatrixMaker,
     combine_covariance_matrix,
@@ -584,12 +585,25 @@ class Fitter:
         prec is the precision of the floating point results.
         """
         if hasattr(self, "covariance_matrix"):
-            fps = list(self.model.free_params)
-            cm = self.covariance_matrix
-            if with_phase:
-                fps = ["PHASE"] + fps
-            else:
-                cm = cm[1:, 1:]
+            if isinstance(self.covariance_matrix, np.ndarray):
+                # it's just a raw ndarray
+                fps = list(self.model.free_params)
+                cm = self.covariance_matrix
+                if with_phase:
+                    fps = ["PHASE"] + fps
+                else:
+                    cm = cm[1:, 1:]
+            elif isinstance(self.covariance_matrix, CovarianceMatrix):
+                if with_phase:
+                    return self.covariance_matrix.prettyprint(prec=prec)
+                    fps = self.covariance_matrix.get_label_names(axis=0)
+                    cm = self.covariance_matrix.matrix
+                else:
+                    # exclude that
+                    # todo: restore original order?
+                    fps = self.covariance_matrix.get_all_label_names() - set(['Offset'])
+                    new_matrix = self.covariance_matrix.get_label_matrix(fps)
+                    return new_matrix.prettyprint(prec=prec)
             if pretty_print:
                 lens = [max(len(fp) + 2, prec + 8) for fp in fps]
                 maxlen = max(lens)
@@ -619,12 +633,25 @@ class Fitter:
         prec is the precision of the floating point results.
         """
         if hasattr(self, "correlation_matrix"):
-            fps = list(self.model.free_params)
-            cm = self.correlation_matrix
-            if with_phase:
-                fps = ["PHASE"] + fps
-            else:
-                cm = cm[1:, 1:]
+            if isinstance(self.covariance_matrix, np.ndarray):
+                # it's just a raw ndarray
+                fps = list(self.model.free_params)
+                cm = self.covariance_matrix
+                if with_phase:
+                    fps = ["PHASE"] + fps
+                else:
+                    cm = cm[1:, 1:]
+            elif isinstance(self.covariance_matrix, CovarianceMatrix):
+                if with_phase:
+                    return self.covariance_matrix.prettyprint(prec=prec)
+                    fps = self.covariance_matrix.get_label_names(axis=0)
+                    cm = self.covariance_matrix.matrix
+                else:
+                    # exclude that
+                    # todo: restore original order?
+                    fps = self.covariance_matrix.get_all_label_names() - set(['Offset'])
+                    new_matrix = self.covariance_matrix.get_label_matrix(fps)
+                    return new_matrix.prettyprint(prec=prec)
             if pretty_print:
                 lens = [max(len(fp) + 2, prec + 4) for fp in fps]
                 maxlen = max(lens)
@@ -1861,9 +1888,16 @@ class WLSFitter(Fitter):
             errors = np.sqrt(np.diag(sigma_var))
             sigma_cov = (sigma_var / errors).T / errors
             # covariance matrix = variances in diagonal, used for gaussian random models
-            self.covariance_matrix = sigma_var
+            covariance_matrix = sigma_var
+            covariance_matrix_labels = {}
+            for i,(param,unit) in enumerate(zip(params,units)):
+                covariance_matrix_labels[param]= (i, i+1, unit)
+            # covariance matrix is 2D and symmetric
+            covariance_matrix_labels = [covariance_matrix_labels]*covariance_matrix.ndim
+            self.covariance_matrix = CovarianceMatrix(covariance_matrix, covariance_matrix_labels)
+            
             # correlation matrix = 1s in diagonal, use for comparison to tempo/tempo2 cov matrix
-            self.correlation_matrix = sigma_cov
+            self.correlation_matrix = CovarianceMatrix(sigma_cov, covariance_matrix_labels)
             self.fac = fac
             self.errors = errors
 
