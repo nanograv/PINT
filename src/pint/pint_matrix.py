@@ -12,6 +12,7 @@ __all__ = [
     "PintMatrix",
     "DesignMatrix",
     "CovarianceMatrix",
+    "CorrelationMatrix",
     "combine_design_matrices_by_quantity",
     "combine_design_matrices_by_param",
 ]
@@ -581,6 +582,8 @@ def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
 class CovarianceMatrix(PintMatrix):
     """A class for symmetric covariance matrix."""
 
+    matrix_type = "covariance"
+
     def __init__(self, matrix, labels):
         # Check if the covariance matrix is symmetric.
         if matrix.shape[0] != matrix.shape[1]:
@@ -595,7 +598,7 @@ class CovarianceMatrix(PintMatrix):
         cm = self.matrix
         lens = [max(len(fp) + 2, prec + 8) for fp in fps]
         maxlen = max(lens)
-        sout = "\nParameter covariance matrix:"
+        sout = "\nParameter {} matrix:\n".format(self.matrix_type)
         line = "{0:^{width}}".format("", width=maxlen)
         for fp, ln in zip(fps, lens):
             line += "{0:^{width}}".format(fp, width=ln)
@@ -610,6 +613,12 @@ class CovarianceMatrix(PintMatrix):
 
     def __repr__(self):
         return self.prettyprint()
+
+
+class CorrelationMatrix(CovarianceMatrix):
+    """A class for symmetric correlation matrix."""
+
+    matrix_type = "correlation"
 
 
 class CovarianceMatrixMaker:

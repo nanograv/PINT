@@ -67,6 +67,7 @@ import pint.utils
 from pint.models.parameter import AngleParameter, boolParameter, strParameter
 from pint.pint_matrix import (
     CovarianceMatrix,
+    CorrelationMatrix,
     CovarianceMatrixMaker,
     DesignMatrixMaker,
     combine_covariance_matrix,
@@ -1897,7 +1898,7 @@ class WLSFitter(Fitter):
             self.covariance_matrix = CovarianceMatrix(covariance_matrix, covariance_matrix_labels)
             
             # correlation matrix = 1s in diagonal, use for comparison to tempo/tempo2 cov matrix
-            self.correlation_matrix = CovarianceMatrix(sigma_cov, covariance_matrix_labels)
+            self.correlation_matrix = CorrelationMatrix(sigma_cov, covariance_matrix_labels)
             self.fac = fac
             self.errors = errors
 
