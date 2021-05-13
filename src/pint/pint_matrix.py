@@ -75,7 +75,14 @@ class PintMatrix:
 
     def get_label_names(self, axis=None):
         """return only the names of the labels
-        along the specified axis if requested"""
+        along the specified axis if requested
+
+        Parameters
+        ----------
+        axis: int (optional)
+            axis for the label lookup
+
+        """
         labels = []
         if axis is None:
             r = range(len(self.axis_labels))
@@ -90,23 +97,28 @@ class PintMatrix:
         return labels
 
     def get_all_label_names(self):
-        """return all possible unique label names"""
+        """return all possible unique label names
+
+        TODO: preserve order?
+        """
         labels = self.get_label_names()
         unique_labels = []
         for l in labels:
             unique_labels += l
         return set(unique_labels)
 
-    def get_label_size(self, label):
-        """Get the size of the a label in each axis.
+    def get_label_size(self, label, axis=None):
+        """Get the size of the a label for all axes, or just the specified
 
         Parameters
         ----------
         label: str
             Name of the label.
+        axis: int (optional)
+            axis for the label lookup
         """
         lb_sizes = []
-        lbs = self.get_label(label)
+        lbs = self.get_label(label, axis=axis)
         for ii, lb in enumerate(lbs):
             size = lb[3] - lb[2]
             lb_sizes.append((ii, size))
