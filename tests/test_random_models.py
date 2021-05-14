@@ -61,7 +61,7 @@ def test_random_models():
     # make a plot (if we can)
     plt.close()
     p1 = plt.plot(tnew.get_mjds(), dphase.std(axis=0), label="All Free")
-    p2 = plt.plot(tnew.get_mjds(), dphase_F.std(axis=0), label="F0/F1 free")
+    p2 = plt.plot(tnew.get_mjds(), dphase_F.std(axis=0), label="F0 free")
     dt = tnew.get_mjds() - f.model.PEPOCH.value * u.d
     p3 = plt.plot(
         tnew.get_mjds(),
