@@ -88,6 +88,10 @@ class PintMatrix:
         axis: int (optional)
             axis for the label lookup
 
+        Returns
+        -------
+        labels : list of label names for each dimension
+
         """
         labels = []
         if axis is None:
@@ -104,6 +108,10 @@ class PintMatrix:
 
     def get_all_label_names(self):
         """return all possible unique label names
+
+        Returns
+        -------
+        labels : set of unique label names across all dimensions
 
         TODO: preserve order?
         """
@@ -122,6 +130,11 @@ class PintMatrix:
             Name of the label.
         axis: int (optional)
             axis for the label lookup
+
+        Returns
+        -------
+        sizes : list of (start,stop) indices for the given label across each dimension
+
         """
         lb_sizes = []
         lbs = self.get_label(label, axis=axis)
@@ -142,6 +155,20 @@ class PintMatrix:
         return label_entry[1][0]
 
     def get_axis_labels(self, axis):
+        """Get the axis labels for the specified axis
+
+        Parameters
+        ----------
+        axis: int 
+            axis for the label lookup
+
+        Returns
+        -------
+        labels : list of (name, (start,stop,unit) for the given axis
+
+
+        TODO: does this just replicate self.axis_labels[axis]?  Is the sort meaningful?
+        """
         dim_label = list(self.axis_labels[axis].items())
         dim_label.sort(key=self._get_label_start)
         return dim_label
@@ -150,8 +177,19 @@ class PintMatrix:
         """Get the label entry and its dimension.
         If axis is specified, will only be along that axis
 
-        We assume the labels are unique in the matrix.
+        Parameters
+        ----------
+        label: str
+            label to lookup
+        axis: int, optional
+            axis for the label lookup
+
+        Returns
+        -------
+        labels : list of (name, axis, start,stop,unit) for the given label
         """
+
+        # We assume the labels are unique in the matrix.
         all_label = []
         for ii, dim in enumerate(self.axis_labels):
             if label in dim.keys():
@@ -181,7 +219,18 @@ class PintMatrix:
             )
 
     def get_label_slice(self, labels):
-        """Return the given label slices."""
+        """Return the given label slices.
+
+        Parameters
+        ----------
+        labels: list of str
+            labels to lookup
+
+        Returns
+        -------
+        slice, labels : slice into original matrix and labels of new (sliced) matrix
+
+        """
         dim_slices = dict([(d, slice(None)) for d in range(self.ndim)])
         new_labels = dict([(d, {}) for d in range(self.ndim)])
         for lb in labels:
@@ -200,7 +249,18 @@ class PintMatrix:
         return np.ix_(*list(dim_slices.values())), list(new_labels.values())
 
     def get_label_matrix(self, labels):
-        """Get a sub-matrix data according to the given labels."""
+        """Get a sub-matrix data according to the given labels.
+
+        Parameters
+        ----------
+        labels: list of str
+            labels to lookup
+
+        Returns
+        -------
+        PintMatrix : new matrix with only the specified labels
+
+        """
         slice, new_labels = self.get_label_slice(labels)
         return PintMatrix(self.matrix[slice], new_labels)
 

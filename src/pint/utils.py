@@ -1199,6 +1199,11 @@ def mass_funct2(mp, mc, i):
     i : Angle
         Inclination angle, in u.deg or u.rad
 
+    Returns
+    -------
+    f_m : Quantity
+        Mass function in solar masses
+
     Notes
     -----
     Inclination is such that edge on is `i = 90*u.deg`
