@@ -1560,9 +1560,7 @@ def remove_dummy_distance(c):
         return c
 
 
-def calculate_phase_uncertainties(
-    fitter, toas, Nmodels=100, keep_models=True, params="all"
-):
+def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params="all"):
     """
     calculates random models based on the covariance matrix of the `fitter` object
     
