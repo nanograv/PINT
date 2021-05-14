@@ -1560,7 +1560,9 @@ def remove_dummy_distance(c):
         return c
 
 
-def calculate_phase_uncertainties(fitter, toas, Nmodels=100, keep_models=True):
+def calculate_phase_uncertainties(
+    fitter, toas, Nmodels=100, keep_models=True, params="all"
+):
     """
     calculates random models based on the covariance matrix of the `fitter` object
     
@@ -1577,6 +1579,8 @@ def calculate_phase_uncertainties(fitter, toas, Nmodels=100, keep_models=True):
         number of random models to calculate
     keep_models: bool (optional)
         whether to keep and return the individual random models (slower)
+    params: list (optional)
+        if specified, selects only those parameters to vary.  Default ('all') is to use all parameters other than Offset
 
     Returns
     -------
@@ -1599,15 +1603,30 @@ def calculate_phase_uncertainties(fitter, toas, Nmodels=100, keep_models=True):
     param_names = cov_matrix.get_label_names(axis=0)
     # this is a dictionary with the parameter values, but it might not be in the same order
     # and it leaves out the Offset parameter
-    params = fitter.model.get_params_dict("free", "value")
-    mean_vector = np.array([params[x] for x in param_names if not x == "Offset"])
-    # remove the first column and row (absolute phase)
-    if param_names[0] == "Offset":
-        cov_matrix = cov_matrix.get_label_matrix(param_names[1:])
-        fac = fitter.fac[1:]
-        param_names = param_names[1:]
+    param_values = fitter.model.get_params_dict("free", "value")
+    mean_vector = np.array([param_values[x] for x in param_names if not x == "Offset"])
+    if params == "all":
+        # remove the first column and row (absolute phase)
+        if param_names[0] == "Offset":
+            cov_matrix = cov_matrix.get_label_matrix(param_names[1:])
+            fac = fitter.fac[1:]
+            param_names = param_names[1:]
+        else:
+            fac = fitter.fac
     else:
-        fac = fitter.fac
+        # only select some parameters
+        # need to also select from the fac array and the mean_vector array
+        idx, labels = cov_matrix.get_label_slice(params)
+        cov_matrix = cov_matrix.get_label_matrix(params)
+        index = idx[0].flatten()
+        fac = fitter.fac[index]
+        # except mean_vector does not have the 'Offset' entry
+        # so may need to subtract 1
+        if param_names[0] == "Offset":
+            mean_vector = mean_vector[index - 1]
+        else:
+            mean_vector = mean_vector[index]
+        param_names = cov_matrix.get_label_names(axis=0)
 
     f_rand = deepcopy(fitter)
 
