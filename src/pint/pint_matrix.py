@@ -700,6 +700,8 @@ class CovarianceMatrix(PintMatrix):
                 offsetfirst = False
             if ("RAJ" in fps) and ("DECJ" in fps):
                 coordinates = ["RAJ", "DECJ"]
+            elif ("ELONG" in fps) and ("ELAT" in fps):
+                coordinates = ["ELONG", "ELAT"]
                 # TODO: allow for other coordinates
             if not (
                 (fps.index(coordinates[0]) == (0 + int(offsetfirst)))
