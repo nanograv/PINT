@@ -601,7 +601,11 @@ class Fitter:
                     cm = self.covariance_matrix.matrix
                 else:
                     # exclude that
-                    fps = [x for x in  self.covariance_matrix.get_label_names(axis=0) if not x=='Offset']
+                    fps = [
+                        x
+                        for x in self.covariance_matrix.get_label_names(axis=0)
+                        if not x == "Offset"
+                    ]
                     new_matrix = self.covariance_matrix.get_label_matrix(fps)
                     return new_matrix.prettyprint(prec=prec)
             if pretty_print:
@@ -649,7 +653,7 @@ class Fitter:
                 else:
                     # exclude that
                     # todo: restore original order?
-                    fps = self.covariance_matrix.get_all_label_names() - set(['Offset'])
+                    fps = self.covariance_matrix.get_all_label_names() - set(["Offset"])
                     new_matrix = self.covariance_matrix.get_label_matrix(fps)
                     return new_matrix.prettyprint(prec=prec)
             if pretty_print:
@@ -1142,8 +1146,18 @@ class DownhillFitter(Fitter):
         # collect results
         self.model = self.current_state.model
         self.resids = self.current_state.resids
+        # TODO: make this CovarianceMatrix
         self.covariance_matrix = self.current_state.covariance_matrix
-        self.errors = np.sqrt(np.diag(self.covariance_matrix))
+        if isinstance(self.covariance_matrix, np.ndarray):
+            self.errors = np.sqrt(np.diag(self.covariance_matrix))
+            self.correlation_matrix = (
+                self.covariance_matrix / self.errors
+            ).T / self.errors
+        elif isinstance(self.covariance_matrix, CovarianceMatrix):
+            self.errors = np.sqrt(np.diag(self.covariance_matrix.matrix))
+            self.correlation_matrix = (
+                self.covariance_matrix.matrix / self.errors
+            ).T / self.errors
         for p, e in zip(self.current_state.params, self.errors):
             try:
                 log.debug(f"Setting {getattr(self.model, p)} uncertainty to {e}")
@@ -1153,7 +1167,6 @@ class DownhillFitter(Fitter):
                     log.debug(f"Unexpected parameter {p}")
             else:
                 pm.uncertainty = e * pm.units
-        self.correlation_matrix = (self.covariance_matrix / self.errors).T / self.errors
         self.update_model(self.current_state.chi2)
         if exception is not None:
             raise StepProblem(
@@ -1891,14 +1904,20 @@ class WLSFitter(Fitter):
             covariance_matrix = sigma_var
             # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
             covariance_matrix_labels = {}
-            for i,(param,unit) in enumerate(zip(params,units)):
-                covariance_matrix_labels[param]= (i, i+1, unit)
+            for i, (param, unit) in enumerate(zip(params, units)):
+                covariance_matrix_labels[param] = (i, i + 1, unit)
             # covariance matrix is 2D and symmetric
-            covariance_matrix_labels = [covariance_matrix_labels]*covariance_matrix.ndim
-            self.covariance_matrix = CovarianceMatrix(covariance_matrix, covariance_matrix_labels)
-            
+            covariance_matrix_labels = [
+                covariance_matrix_labels
+            ] * covariance_matrix.ndim
+            self.covariance_matrix = CovarianceMatrix(
+                covariance_matrix, covariance_matrix_labels
+            )
+
             # correlation matrix = 1s in diagonal, use for comparison to tempo/tempo2 cov matrix
-            self.correlation_matrix = CorrelationMatrix(sigma_cov, covariance_matrix_labels)
+            self.correlation_matrix = CorrelationMatrix(
+                sigma_cov, covariance_matrix_labels
+            )
             self.fac = fac
             self.errors = errors
 
@@ -2075,18 +2094,21 @@ class GLSFitter(Fitter):
             dpars = xhat / norm
             errs = np.sqrt(np.diag(xvar)) / norm
             covmat = (xvar / norm).T / norm
-            #self.covariance_matrix = covmat
-            #self.correlation_matrix = (covmat / errs).T / errs
+            # self.covariance_matrix = covmat
+            # self.correlation_matrix = (covmat / errs).T / errs
             # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
             covariance_matrix_labels = {}
-            for i,(param,unit) in enumerate(zip(params,units)):
-                covariance_matrix_labels[param]= (i, i+1, unit)
+            for i, (param, unit) in enumerate(zip(params, units)):
+                covariance_matrix_labels[param] = (i, i + 1, unit)
             # covariance matrix is 2D and symmetric
-            covariance_matrix_labels = [covariance_matrix_labels]*covariance_matrix.ndim
+            covariance_matrix_labels = [
+                covariance_matrix_labels
+            ] * covariance_matrix.ndim
             self.covariance_matrix = CovarianceMatrix(covmat, covariance_matrix_labels)
-            self.correlation_matrix = CorrelationMatrix((covmat / errs).T / errs,
-                                                        covariance_matrix_labels)
-            
+            self.correlation_matrix = CorrelationMatrix(
+                (covmat / errs).T / errs, covariance_matrix_labels
+            )
+
             for ii, pn in enumerate(fitp.keys()):
                 uind = params.index(pn)  # Index of designmatrix
                 un = 1.0 / (units[uind])  # Unit in designmatrix
@@ -2424,15 +2446,19 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             covmat = (xvar / norm).T / norm
             # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
             covariance_matrix_labels = {}
-            for i,(param,unit) in enumerate(zip(params,units)):
-                covariance_matrix_labels[param]= (i, i+1, unit)
+            for i, (param, unit) in enumerate(zip(params, units)):
+                covariance_matrix_labels[param] = (i, i + 1, unit)
             # covariance matrix is 2D and symmetric
-            covariance_matrix_labels = [covariance_matrix_labels]*covariance_matrix.ndim
+            covariance_matrix_labels = [
+                covariance_matrix_labels
+            ] * covariance_matrix.ndim
             self.covariance_matrix = CovarianceMatrix(covmat, covariance_matrix_labels)
-            self.correlation_matrix = CorrelationMatrix((covmat / errs).T / errs, covariance_matrix_labels)
+            self.correlation_matrix = CorrelationMatrix(
+                (covmat / errs).T / errs, covariance_matrix_labels
+            )
 
-            #self.covariance_matrix = covmat
-            #self.correlation_matrix = (covmat / errs).T / errs
+            # self.covariance_matrix = covmat
+            # self.correlation_matrix = (covmat / errs).T / errs
 
             for ii, pn in enumerate(fitp.keys()):
                 uind = params.index(pn)  # Index of designmatrix
@@ -2629,6 +2655,7 @@ class WidebandLMFitter(LMFitter):
         self.current_state = state
         self.model = state.model
         self.resids = state.resids
+        # TODO: make this a covariance matrix
         self.covariance_matrix = state.covariance_matrix
         self.errors = np.sqrt(np.diag(self.covariance_matrix))
         for p, e in zip(state.params, self.errors):
