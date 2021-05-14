@@ -51,6 +51,12 @@ class PintMatrix:
         # Check label index overlap TODO: should we allow overlap?
         self._check_index_overlap()
 
+    def __getitem__(self, key):
+        return self.matrix[key]
+
+    def __setitem__(self, key, value):
+        self.matrix[key] = value
+
     @property
     def ndim(self):
         return self.matrix.ndim
