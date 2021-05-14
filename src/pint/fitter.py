@@ -647,14 +647,14 @@ class Fitter:
                     cm = cm[1:, 1:]
             elif isinstance(self.parameter_correlation_matrix, CorrelationMatrix):
                 if with_phase:
-                    return self.correlation_matrix.prettyprint(prec=prec)
-                    fps = self.correlation_matrix.get_label_names(axis=0)
-                    cm = self.correlation_matrix.matrix
+                    return self.parameter_correlation_matrix.prettyprint(prec=prec)
+                    fps = self.parameter_correlation_matrix.get_label_names(axis=0)
+                    cm = self.parameter_correlation_matrix.matrix
                 else:
                     # exclude that
                     # todo: restore original order?
-                    fps = self.correlation_matrix.get_all_label_names() - set(["Offset"])
-                    new_matrix = self.correlation_matrix.get_label_matrix(fps)
+                    fps = self.parameter_correlation_matrix.get_all_label_names() - set(["Offset"])
+                    new_matrix = self.parameter_correlation_matrix.get_label_matrix(fps)
                     return new_matrix.prettyprint(prec=prec)
             if pretty_print:
                 lens = [max(len(fp) + 2, prec + 4) for fp in fps]

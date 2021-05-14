@@ -923,12 +923,12 @@ def dmxparse(fitter, save=False):
         DMX_keys_ma = None
 
     # Make sure that the fitter has a covariance matrix, otherwise return the initial values
-    if hasattr(fitter, "covariance_matrix"):
+    if hasattr(fitter, "parameter_covariance_matrix"):
         # now get the full parameter covariance matrix from pint
         # NOTE: we will need to increase all indices by 1 to account for the 'Offset' parameter
         # that is the first index of the designmatrix
         params = np.array(fitter.model.free_params)
-        p_cov_mat = fitter.covariance_matrix
+        p_cov_mat = fitter.parameter_covariance_matrix
         # Now we get the indices that correspond to the DMX values
         DMX_p_idxs = np.zeros(len(dmx_epochs), dtype=int)
         for ii in range(len(dmx_epochs)):
