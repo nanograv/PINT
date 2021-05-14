@@ -241,7 +241,7 @@ class Fitter:
         """
 
         # Need to check that fit has been done first!
-        if not hasattr(self, "covariance_matrix"):
+        if not hasattr(self, "parameter_covariance_matrix"):
             log.warning(
                 "fit_toas() has not been run, so pre-fit and post-fit will be the same!"
             )
@@ -578,35 +578,35 @@ class Fitter:
         """Return the model's design matrix for these TOAs."""
         return self.model.designmatrix(toas=self.toas, incfrozen=False, incoffset=True)
 
-    def get_covariance_matrix(self, with_phase=False, pretty_print=False, prec=3):
+    def get_parameter_covariance_matrix(self, with_phase=False, pretty_print=False, prec=3):
         """Show the parameter covariance matrix post-fit.
 
         If with_phase, then show and return the phase column as well.
         If pretty_print, then also pretty-print on stdout the matrix.
         prec is the precision of the floating point results.
         """
-        if hasattr(self, "covariance_matrix"):
-            if isinstance(self.covariance_matrix, np.ndarray):
+        if hasattr(self, "parameter_covariance_matrix"):
+            if isinstance(self.parameter_covariance_matrix, np.ndarray):
                 # it's just a raw ndarray
                 fps = list(self.model.free_params)
-                cm = self.covariance_matrix
+                cm = self.parameter_covariance_matrix
                 if with_phase:
                     fps = ["PHASE"] + fps
                 else:
                     cm = cm[1:, 1:]
-            elif isinstance(self.covariance_matrix, CovarianceMatrix):
+            elif isinstance(self.parameter_covariance_matrix, CovarianceMatrix):
                 if with_phase:
-                    return self.covariance_matrix.prettyprint(prec=prec)
-                    fps = self.covariance_matrix.get_label_names(axis=0)
-                    cm = self.covariance_matrix.matrix
+                    return self.parameter_covariance_matrix.prettyprint(prec=prec)
+                    fps = self.parameter_covariance_matrix.get_label_names(axis=0)
+                    cm = self.parameter_covariance_matrix.matrix
                 else:
                     # exclude that
                     fps = [
                         x
-                        for x in self.covariance_matrix.get_label_names(axis=0)
+                        for x in self.parameter_covariance_matrix.get_label_names(axis=0)
                         if not x == "Offset"
                     ]
-                    new_matrix = self.covariance_matrix.get_label_matrix(fps)
+                    new_matrix = self.parameter_covariance_matrix.get_label_matrix(fps)
                     return new_matrix.prettyprint(prec=prec)
             if pretty_print:
                 lens = [max(len(fp) + 2, prec + 8) for fp in fps]
@@ -629,32 +629,32 @@ class Fitter:
             log.error("You must run .fit_toas() before accessing the covariance matrix")
             raise AttributeError
 
-    def get_correlation_matrix(self, with_phase=False, pretty_print=False, prec=3):
+    def get_parameter_correlation_matrix(self, with_phase=False, pretty_print=False, prec=3):
         """Show the parameter correlation matrix post-fit.
 
         If with_phase, then show and return the phase column as well.
         If pretty_print, then also pretty-print on stdout the matrix.
         prec is the precision of the floating point results.
         """
-        if hasattr(self, "correlation_matrix"):
-            if isinstance(self.covariance_matrix, np.ndarray):
+        if hasattr(self, "parameter_correlation_matrix"):
+            if isinstance(self.parameter_correlation_matrix, np.ndarray):
                 # it's just a raw ndarray
                 fps = list(self.model.free_params)
-                cm = self.covariance_matrix
+                cm = self.parameter_correlation_matrix
                 if with_phase:
                     fps = ["PHASE"] + fps
                 else:
                     cm = cm[1:, 1:]
-            elif isinstance(self.covariance_matrix, CovarianceMatrix):
+            elif isinstance(self.parameter_correlation_matrix, CorrelationMatrix):
                 if with_phase:
-                    return self.covariance_matrix.prettyprint(prec=prec)
-                    fps = self.covariance_matrix.get_label_names(axis=0)
-                    cm = self.covariance_matrix.matrix
+                    return self.correlation_matrix.prettyprint(prec=prec)
+                    fps = self.correlation_matrix.get_label_names(axis=0)
+                    cm = self.correlation_matrix.matrix
                 else:
                     # exclude that
                     # todo: restore original order?
-                    fps = self.covariance_matrix.get_all_label_names() - set(["Offset"])
-                    new_matrix = self.covariance_matrix.get_label_matrix(fps)
+                    fps = self.correlation_matrix.get_all_label_names() - set(["Offset"])
+                    new_matrix = self.correlation_matrix.get_label_matrix(fps)
                     return new_matrix.prettyprint(prec=prec)
             if pretty_print:
                 lens = [max(len(fp) + 2, prec + 4) for fp in fps]
@@ -995,7 +995,7 @@ class ModelState:
         raise NotImplementedError
 
     @cached_property
-    def covariance_matrix(self):
+    def parameter_covariance_matrix(self):
         raise NotImplementedError
 
     def predicted_chi2(self, step, lambda_):
@@ -1147,16 +1147,16 @@ class DownhillFitter(Fitter):
         self.model = self.current_state.model
         self.resids = self.current_state.resids
         # TODO: make this CovarianceMatrix
-        self.covariance_matrix = self.current_state.covariance_matrix
-        if isinstance(self.covariance_matrix, np.ndarray):
-            self.errors = np.sqrt(np.diag(self.covariance_matrix))
-            self.correlation_matrix = (
-                self.covariance_matrix / self.errors
+        self.parameter_covariance_matrix = self.current_state.covariance_matrix
+        if isinstance(self.parameter_covariance_matrix, np.ndarray):
+            self.errors = np.sqrt(np.diag(self.parameter_covariance_matrix))
+            self.parameter_correlation_matrix = (
+                self.parameter_covariance_matrix / self.errors
             ).T / self.errors
-        elif isinstance(self.covariance_matrix, CovarianceMatrix):
-            self.errors = np.sqrt(np.diag(self.covariance_matrix.matrix))
-            self.correlation_matrix = (
-                self.covariance_matrix.matrix / self.errors
+        elif isinstance(self.parameter_covariance_matrix, CovarianceMatrix):
+            self.errors = np.sqrt(np.diag(self.parameter_covariance_matrix.matrix))
+            self.parameter_correlation_matrix = (
+                self.parameter_covariance_matrix.matrix / self.errors
             ).T / self.errors
         for p, e in zip(self.current_state.params, self.errors):
             try:
@@ -1250,6 +1250,12 @@ class WLSState(ModelState):
         self.params = params
         self.units = units
         self.scaled_resids = scaled_resids
+        # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
+        covariance_matrix_labels = {}
+        for i, (param, unit) in enumerate(zip(params, units)):
+            covariance_matrix_labels[param] = (i, i + 1, unit)
+        self.parameter_covariance_matrix_labels = covariance_matrix_labels
+
         # The delta-parameter values
         #   dpars = V s^-1 U^T r
         # Scaling by fac recovers original units
@@ -1261,14 +1267,15 @@ class WLSState(ModelState):
         )
 
     @cached_property
-    def covariance_matrix(self):
+    def parameter_covariance_matrix(self):
         # make sure we compute the SVD
         self.step
         # Sigma = np.dot(Vt.T / s, U.T)
         # The post-fit parameter covariance matrix
         #   Sigma = V s^-2 V^T
         Sigma = np.dot(self.Vt.T / (self.s ** 2), self.Vt)
-        return (Sigma / self.fac).T / self.fac
+        return CovarianceMatrix((Sigma / self.fac).T / self.fac,
+                                self.parameter_covariance_matrix_labels)
 
 
 class DownhillWLSFitter(DownhillFitter):
@@ -1324,6 +1331,11 @@ class GLSState(ModelState):
         )
         self.params = params
         self.units = units
+        # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
+        covariance_matrix_labels = {}
+        for i, (param, unit) in enumerate(zip(params, units)):
+            covariance_matrix_labels[param] = (i, i + 1, unit)
+        self.parameter_covariance_matrix_labels = covariance_matrix_labels
 
         residuals = self.resids.time_resids.to(u.s).value
 
@@ -1408,11 +1420,12 @@ class GLSState(ModelState):
         )
 
     @cached_property
-    def covariance_matrix(self):
+    def parameter_covariance_matrix(self):
         # make sure we compute the SVD
         self.step
         xvar = np.dot(self.Vt.T / self.s, self.Vt)
-        return (xvar / self.norm).T / self.norm
+        return CovarianceMatrix((xvar / self.norm).T / self.norm,
+                                self.parameter_covariance_labels)
 
 
 class DownhillGLSFitter(DownhillFitter):
@@ -1671,9 +1684,10 @@ class WidebandState(ModelState):
         )
 
     @cached_property
-    def covariance_matrix(self):
+    def parameter_covariance_matrix(self):
         # make sure we compute the SVD
         xvar = np.dot(self.Vt.T / self.s, self.Vt)
+        # TODO: make this CovarianceMatrix?
         return (xvar / self.norm).T / self.norm
 
 
@@ -1910,12 +1924,12 @@ class WLSFitter(Fitter):
             covariance_matrix_labels = [
                 covariance_matrix_labels
             ] * covariance_matrix.ndim
-            self.covariance_matrix = CovarianceMatrix(
+            self.parameter_covariance_matrix = CovarianceMatrix(
                 covariance_matrix, covariance_matrix_labels
             )
 
             # correlation matrix = 1s in diagonal, use for comparison to tempo/tempo2 cov matrix
-            self.correlation_matrix = CorrelationMatrix(
+            self.parameter_correlation_matrix = CorrelationMatrix(
                 sigma_cov, covariance_matrix_labels
             )
             self.fac = fac
@@ -2104,8 +2118,8 @@ class GLSFitter(Fitter):
             covariance_matrix_labels = [
                 covariance_matrix_labels
             ] * covariance_matrix.ndim
-            self.covariance_matrix = CovarianceMatrix(covmat, covariance_matrix_labels)
-            self.correlation_matrix = CorrelationMatrix(
+            self.parameter_covariance_matrix = CovarianceMatrix(covmat, covariance_matrix_labels)
+            self.parameter_correlation_matrix = CorrelationMatrix(
                 (covmat / errs).T / errs, covariance_matrix_labels
             )
 
@@ -2452,8 +2466,8 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             covariance_matrix_labels = [
                 covariance_matrix_labels
             ] * covariance_matrix.ndim
-            self.covariance_matrix = CovarianceMatrix(covmat, covariance_matrix_labels)
-            self.correlation_matrix = CorrelationMatrix(
+            self.parameter_covariance_matrix = CovarianceMatrix(covmat, covariance_matrix_labels)
+            self.parameter_correlation_matrix = CorrelationMatrix(
                 (covmat / errs).T / errs, covariance_matrix_labels
             )
 
@@ -2656,8 +2670,8 @@ class WidebandLMFitter(LMFitter):
         self.model = state.model
         self.resids = state.resids
         # TODO: make this a covariance matrix
-        self.covariance_matrix = state.covariance_matrix
-        self.errors = np.sqrt(np.diag(self.covariance_matrix))
+        self.parameter_covariance_matrix = state.parameter_covariance_matrix
+        self.errors = np.sqrt(np.diag(self.parameter_covariance_matrix))
         for p, e in zip(state.params, self.errors):
             try:
                 log.debug(f"Setting {getattr(self.model, p)} uncertainty to {e}")
@@ -2667,7 +2681,7 @@ class WidebandLMFitter(LMFitter):
                     log.debug(f"Unexpected parameter {p}")
             else:
                 pm.uncertainty = e * pm.units
-        self.correlation_matrix = (self.covariance_matrix / self.errors).T / self.errors
+        self.parameter_correlation_matrix = (self.parameter_covariance_matrix / self.errors).T / self.errors
         self.update_model(state.chi2)
         # Compute the noise realizations if possible
         ntmpar = len(self.model.free_params)
