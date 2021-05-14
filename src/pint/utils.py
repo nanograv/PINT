@@ -3,6 +3,7 @@ import re
 from contextlib import contextmanager
 from copy import deepcopy
 from io import StringIO
+from collections import OrderedDict
 
 import astropy.constants as const
 import astropy.coordinates as coords
@@ -1557,3 +1558,81 @@ def remove_dummy_distance(c):
             "Do not know coordinate frame for %r: returning coordinates unchanged" % c
         )
         return c
+
+
+def calculate_phase_uncertainties(fitter, toas, Nmodels=100, keep_models=True):
+    """
+    calculates random models based on the covariance matrix of the `fitter` object
+    
+    returns the new phase differences compared to the original model
+    optionally returns all of the random models
+
+    Parameters
+    ----------
+    fitter: `pint.fitter` object
+        current fitter object containing a model and parameter covariance matrix
+    toas: `pint.toa.TOAs` object
+        TOAs to calculate models
+    Nmodels: int (optional)
+        number of random models to calculate
+    keep_models: bool (optional)
+        whether to keep and return the individual random models (slower)
+
+    Returns
+    -------
+    dphase : np.ndarray
+        phase difference with respect to input model, size is [Nmodels, len(toas)]
+    random_models : list (optional)
+        list of random models (each is a `pint.models.timing_model.TimingModel`)
+
+
+    Note: to calculate new TOAs, you can do:
+        tnew = pint.toa.make_fake_toas(MJDmin, MJDmax, Ntoa, model=fitter.model)
+    or similar
+    """
+    Nmjd = len(toas)
+    phases_i = np.zeros((Nmodels, Nmjd))
+    phases_f = np.zeros((Nmodels, Nmjd))
+
+    cov_matrix = fitter.parameter_covariance_matrix
+    # this is a list of the parameter names in the order they appear in the coviarance matrix
+    param_names = cov_matrix.get_label_names(axis=0)
+    # this is a dictionary with the parameter values, but it might not be in the same order
+    # and it leaves out the Offset parameter
+    params = fitter.model.get_params_dict("free", "value")
+    mean_vector = np.array([params[x] for x in param_names if not x == "Offset"])
+    # remove the first column and row (absolute phase)
+    if param_names[0] == "Offset":
+        cov_matrix = cov_matrix.get_label_matrix(param_names[1:])
+        fac = fitter.fac[1:]
+        param_names = param_names[1:]
+    else:
+        fac = fitter.fac
+
+    f_rand = deepcopy(fitter)
+
+    # scale by fac
+    mean_vector = mean_vector * fac
+    scaled_cov_matrix = ((cov_matrix.matrix * fac).T * fac).T
+    random_models = []
+    for imodel in range(Nmodels):
+        # create a set of randomized parameters based on mean vector and covariance matrix
+        rparams_num = np.random.multivariate_normal(mean_vector, scaled_cov_matrix)
+        # scale params back to real units
+        for j in range(len(mean_vector)):
+            rparams_num[j] /= fac[j]
+        rparams = OrderedDict(zip(param_names, rparams_num))
+        f_rand.set_params(rparams)
+        phase = f_rand.model.phase(toas, abs_phase=True)
+        phases_i[imodel] = phase.int
+        phases_f[imodel] = phase.frac
+        if keep_models:
+            random_models.append(f_rand.model)
+            f_rand = deepcopy(fitter)
+    phases = phases_i + phases_f
+    phases0 = fitter.model.phase(toas, abs_phase=True)
+    dphase = phases - (phases0.int + phases0.frac)
+    if keep_models:
+        return dphase, random_models
+    else:
+        return dphase
