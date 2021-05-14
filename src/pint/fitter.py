@@ -2422,8 +2422,17 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             dpars = xhat / norm
             errs = np.sqrt(np.diag(xvar)) / norm
             covmat = (xvar / norm).T / norm
-            self.covariance_matrix = covmat
-            self.correlation_matrix = (covmat / errs).T / errs
+            # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
+            covariance_matrix_labels = {}
+            for i,(param,unit) in enumerate(zip(params,units)):
+                covariance_matrix_labels[param]= (i, i+1, unit)
+            # covariance matrix is 2D and symmetric
+            covariance_matrix_labels = [covariance_matrix_labels]*covariance_matrix.ndim
+            self.covariance_matrix = CovarianceMatrix(covmat, covariance_matrix_labels)
+            self.correlation_matrix = CorrelationMatrix((covmat / errs).T / errs, covariance_matrix_labels)
+
+            #self.covariance_matrix = covmat
+            #self.correlation_matrix = (covmat / errs).T / errs
 
             for ii, pn in enumerate(fitp.keys()):
                 uind = params.index(pn)  # Index of designmatrix
