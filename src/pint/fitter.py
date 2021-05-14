@@ -611,7 +611,8 @@ class Fitter:
                         if not x == "Offset"
                     ]
                     new_matrix = self.parameter_covariance_matrix.get_label_matrix(fps)
-                    return new_matrix.prettyprint(prec=prec)
+                    print(new_matrix.prettyprint(prec=prec))
+                    return new_matrix
             if pretty_print:
                 lens = [max(len(fp) + 2, prec + 8) for fp in fps]
                 maxlen = max(lens)
