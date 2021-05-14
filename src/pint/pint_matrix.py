@@ -671,9 +671,62 @@ class CovarianceMatrix(PintMatrix):
             raise ValueError("The input labels are not symmetric.")
         super(CovarianceMatrix, self).__init__(matrix, labels)
 
-    def prettyprint(self, prec=3):
+    def prettyprint(self, prec=3, coordinatefirst=False):
+        """
+        prettyprint(self, prec=3, coordinatefirst=False)
+
+        return a version of the array formatted for printing (with labels etc)
+
+        Parameters
+        ----------
+        prec : int, optional
+            precision of floating-point output
+        coordinatefirst : bool, optional
+            whether or not the output should be re-ordered to put the coordinates first (after the Offset, if present)
+
+        Return
+        ------
+            str : matrix formatted for printing
+        
+        """
+
         fps = self.get_label_names(axis=0)
-        cm = self.matrix
+        if coordinatefirst:
+            # reorder so that RAJ/DECJ (or other coordinate pairs?) are first in the output
+            # but actually include the phase zero-point first if it's there
+            if "Offset" in fps:
+                offsetfirst = True
+            else:
+                offsetfirst = False
+            if ("RAJ" in fps) and ("DECJ" in fps):
+                coordinates = ["RAJ", "DECJ"]
+                # TODO: allow for other coordinates
+            if not (
+                (fps.index(coordinates[0]) == (0 + int(offsetfirst)))
+                and (fps.index(coordinates[1]) == (1 + int(offsetfirst)))
+            ):
+                if offsetfirst:
+                    neworder = [fps.index("Offset")]
+                    start = 1
+                else:
+                    neworder = []
+                    start = 0
+                for i in range(start, len(fps)):
+                    if fps[i] == coordinates[0]:
+                        neworder.append(0 + int(offsetfirst))
+                    elif fps[i] == coordinates[1]:
+                        neworder.append(1 + int(offsetfirst))
+                    else:
+                        neworder.append(i + 1 + int(offsetfirst))
+                # reorder the indices
+                fps = [fps[i] for i in neworder]
+                newmatrix = self.get_label_matrix(fps)
+                cm = newmatrix.matrix
+            else:
+                # no reordering is needed
+                cm = self.matrix
+        else:
+            cm = self.matrix
         lens = [max(len(fp) + 2, prec + 8) for fp in fps]
         maxlen = max(lens)
         sout = "\nParameter {} matrix:\n".format(self.matrix_type)
@@ -696,6 +749,7 @@ class CovarianceMatrix(PintMatrix):
 class CorrelationMatrix(CovarianceMatrix):
     """A class for symmetric correlation matrix."""
 
+    # identical to covariance matrix, but give it a different name for printing
     matrix_type = "correlation"
 
 
