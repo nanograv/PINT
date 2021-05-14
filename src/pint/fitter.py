@@ -1009,6 +1009,13 @@ class ModelState:
     def parameter_covariance_matrix(self):
         raise NotImplementedError
 
+    def covariance_matrix(self):
+        warnings.warn(
+            "Use 'parameter_covariance_matrix' instead of 'covariance_matrix'",
+            DeprecationWarning,
+        )
+        return self.parameter_covariance_matrix
+
     def predicted_chi2(self, step, lambda_):
         """Predict the chi2 after taking a step based on the linear approximation"""
         raise NotImplementedError
