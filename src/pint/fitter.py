@@ -601,8 +601,7 @@ class Fitter:
                     cm = self.covariance_matrix.matrix
                 else:
                     # exclude that
-                    # todo: restore original order?
-                    fps = self.covariance_matrix.get_all_label_names() - set(['Offset'])
+                    fps = [x for x in  self.covariance_matrix.get_label_names(axis=0) if not x=='Offset']
                     new_matrix = self.covariance_matrix.get_label_matrix(fps)
                     return new_matrix.prettyprint(prec=prec)
             if pretty_print:
@@ -1890,6 +1889,7 @@ class WLSFitter(Fitter):
             sigma_cov = (sigma_var / errors).T / errors
             # covariance matrix = variances in diagonal, used for gaussian random models
             covariance_matrix = sigma_var
+            # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
             covariance_matrix_labels = {}
             for i,(param,unit) in enumerate(zip(params,units)):
                 covariance_matrix_labels[param]= (i, i+1, unit)
@@ -2075,9 +2075,18 @@ class GLSFitter(Fitter):
             dpars = xhat / norm
             errs = np.sqrt(np.diag(xvar)) / norm
             covmat = (xvar / norm).T / norm
-            self.covariance_matrix = covmat
-            self.correlation_matrix = (covmat / errs).T / errs
-
+            #self.covariance_matrix = covmat
+            #self.correlation_matrix = (covmat / errs).T / errs
+            # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
+            covariance_matrix_labels = {}
+            for i,(param,unit) in enumerate(zip(params,units)):
+                covariance_matrix_labels[param]= (i, i+1, unit)
+            # covariance matrix is 2D and symmetric
+            covariance_matrix_labels = [covariance_matrix_labels]*covariance_matrix.ndim
+            self.covariance_matrix = CovarianceMatrix(covmat, covariance_matrix_labels)
+            self.correlation_matrix = CorrelationMatrix((covmat / errs).T / errs,
+                                                        covariance_matrix_labels)
+            
             for ii, pn in enumerate(fitp.keys()):
                 uind = params.index(pn)  # Index of designmatrix
                 un = 1.0 / (units[uind])  # Unit in designmatrix
