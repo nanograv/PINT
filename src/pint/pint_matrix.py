@@ -258,11 +258,11 @@ class PintMatrix:
 
         Returns
         -------
-        PintMatrix : new matrix with only the specified labels
+        PintMatrix : new matrix with only the specified labels (or relevant subclass)
 
         """
         slice, new_labels = self.get_label_slice(labels)
-        return PintMatrix(self.matrix[slice], new_labels)
+        return self.__class__(self.matrix[slice], new_labels)
 
     def match_labels_along_axis(self, pint_matrix, axis):
         """Match one axis' labels index between the current matrix and input pint matrix.

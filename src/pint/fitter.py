@@ -658,10 +658,13 @@ class Fitter:
                     cm = self.parameter_correlation_matrix.matrix
                 else:
                     # exclude that
-                    # todo: restore original order?
-                    fps = self.parameter_correlation_matrix.get_all_label_names() - set(
-                        ["Offset"]
-                    )
+                    fps = [
+                        x
+                        for x in self.parameter_correlation_matrix.get_label_names(
+                            axis=0
+                        )
+                        if not x == "Offset"
+                    ]
                     new_matrix = self.parameter_correlation_matrix.get_label_matrix(fps)
                     return new_matrix.prettyprint(prec=prec)
             if pretty_print:
