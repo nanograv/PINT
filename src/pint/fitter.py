@@ -32,7 +32,7 @@ Fitters in use::
     PMRA                                   0                              mas / yr
     PMDEC                                  0                              mas / yr
     F0                               61.4855          61.485476554373(18) Hz
-    F1                            -1.181e-15            -1.1813(14)×10⁻¹⁵ Hz / s
+    F1                            -1.181e-15            -1.1813(14) x 10^{-15} Hz / s
     PEPOCH                             53750                              d
     CORRECT_TROPOSPHERE                    N                              None
     PLANET_SHAPIRO                         N                              None
