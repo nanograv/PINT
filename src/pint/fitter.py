@@ -1147,7 +1147,7 @@ class DownhillFitter(Fitter):
         self.model = self.current_state.model
         self.resids = self.current_state.resids
         # TODO: make this CovarianceMatrix
-        self.parameter_covariance_matrix = self.current_state.covariance_matrix
+        self.parameter_covariance_matrix = self.current_state.parameter_covariance_matrix
         if isinstance(self.parameter_covariance_matrix, np.ndarray):
             self.errors = np.sqrt(np.diag(self.parameter_covariance_matrix))
             self.parameter_correlation_matrix = (
@@ -1254,6 +1254,10 @@ class WLSState(ModelState):
         covariance_matrix_labels = {}
         for i, (param, unit) in enumerate(zip(params, units)):
             covariance_matrix_labels[param] = (i, i + 1, unit)
+        # covariance matrix is 2D and symmetric
+        covariance_matrix_labels = [
+            covariance_matrix_labels
+            ] * 2
         self.parameter_covariance_matrix_labels = covariance_matrix_labels
 
         # The delta-parameter values
@@ -1335,6 +1339,10 @@ class GLSState(ModelState):
         covariance_matrix_labels = {}
         for i, (param, unit) in enumerate(zip(params, units)):
             covariance_matrix_labels[param] = (i, i + 1, unit)
+        # covariance matrix is 2D and symmetric
+        covariance_matrix_labels = [
+            covariance_matrix_labels
+            ] * 2
         self.parameter_covariance_matrix_labels = covariance_matrix_labels
 
         residuals = self.resids.time_resids.to(u.s).value
@@ -1425,7 +1433,7 @@ class GLSState(ModelState):
         self.step
         xvar = np.dot(self.Vt.T / self.s, self.Vt)
         return CovarianceMatrix((xvar / self.norm).T / self.norm,
-                                self.parameter_covariance_labels)
+                                self.parameter_covariance_matrix_labels)
 
 
 class DownhillGLSFitter(DownhillFitter):
@@ -2117,7 +2125,7 @@ class GLSFitter(Fitter):
             # covariance matrix is 2D and symmetric
             covariance_matrix_labels = [
                 covariance_matrix_labels
-            ] * covariance_matrix.ndim
+            ] * covmat.ndim
             self.parameter_covariance_matrix = CovarianceMatrix(covmat, covariance_matrix_labels)
             self.parameter_correlation_matrix = CorrelationMatrix(
                 (covmat / errs).T / errs, covariance_matrix_labels
@@ -2465,7 +2473,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             # covariance matrix is 2D and symmetric
             covariance_matrix_labels = [
                 covariance_matrix_labels
-            ] * covariance_matrix.ndim
+            ] * covmat.ndim
             self.parameter_covariance_matrix = CovarianceMatrix(covmat, covariance_matrix_labels)
             self.parameter_correlation_matrix = CorrelationMatrix(
                 (covmat / errs).T / errs, covariance_matrix_labels
