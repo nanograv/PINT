@@ -159,7 +159,7 @@ class PintMatrix:
 
         Parameters
         ----------
-        axis: int 
+        axis: int
             axis for the label lookup
 
         Returns
