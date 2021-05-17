@@ -954,6 +954,14 @@ class Fitter:
         """
         self.model.set_param_uncertainties(fitp)
 
+    @property
+    def covariance_matrix(self):
+        warn(
+            "This parameter is deprecated. Use `parameter_covariance_matrix` instead of `covariance_matrix`",
+            category=DeprecationWarning,
+        )
+        return self.parameter_covariance_matrix
+
 
 class InvalidModelParameters(ValueError):
     pass
@@ -1010,10 +1018,11 @@ class ModelState:
     def parameter_covariance_matrix(self):
         raise NotImplementedError
 
+    @property
     def covariance_matrix(self):
-        warnings.warn(
-            "Use 'parameter_covariance_matrix' instead of 'covariance_matrix'",
-            DeprecationWarning,
+        warn(
+            "This parameter is deprecated.  Use `parameter_covariance_matrix` instead of `covariance_matrix`",
+            category=DeprecationWarning,
         )
         return self.parameter_covariance_matrix
 
