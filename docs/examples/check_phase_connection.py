@@ -8,9 +8,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.5.1
 #   kernelspec:
-#     display_name: Python [conda env:pintdev]
+#     display_name: Python 3
 #     language: python
-#     name: conda-env-pintdev-py
+#     name: python3
 # ---
 
 # %% [markdown]
