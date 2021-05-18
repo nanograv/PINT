@@ -1097,7 +1097,7 @@ class PlkWidget(tk.Frame):
                 "Return value for the jump name is not a string, jumps not updated",
             )
             return None
-        num = int(jump_name[4:])
+        num = jump_name[4:]  # string value
         jump_select = [
             True if ("jump" in dict.keys() and num in dict["jump"]) else False
             for dict in self.psr.all_toas.table["flags"]

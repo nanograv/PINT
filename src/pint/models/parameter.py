@@ -1377,12 +1377,9 @@ class maskParameter(floatParameter):
                         "are MJD, FREQ, NAME, TEL."
                     )
         self.key = key
-        if key == "-gui_jump" or key == "-tim_jump":
-            self.key_value = key_value
-        else:
-            self.key_value = [
-                key_value_parser(k) for k in key_value
-            ]  # retains string format from .par file to ensure correct data type for comparison
+        self.key_value = [
+            key_value_parser(k) for k in key_value
+        ]  # retains string format from .par file to ensure correct data type for comparison
         self.key_value.sort()
         self.index = index
         name_param = name + str(index)

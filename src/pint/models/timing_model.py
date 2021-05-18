@@ -1257,7 +1257,9 @@ class TimingModel:
                     )
                     self.add_param_from_top(param, "PhaseJump")
                     getattr(self, param.name).frozen = False
-                flag_dict["tim_jump"] = num  # this is the value select_toa_mask uses
+                flag_dict["tim_jump"] = str(
+                    num
+                )  # this is the value select_toa_mask uses
         self.components["PhaseJump"].setup()
 
     def delete_jump_and_flags(self, toa_table, jump_num):
@@ -1280,21 +1282,24 @@ class TimingModel:
         # remove jump flags from selected TOA tables
         if toa_table is not None:
             for dict in toa_table:
-                if "jump" in dict.keys() and jump_num in dict["jump"]:
-                    if len(dict["jump"]) == 1:
+                if "jump" in dict.keys() and str(jump_num) in dict["jump"]:
+                    if (
+                        type(dict["jump"]) is str
+                    ):  # if only one jump will just hold a str of the index number, otherwise will hold a list of str indeces
                         del dict["jump"]
                     else:
-                        dict["jump"].remove(jump_num)
+                        dict["jump"].remove(str(jump_num))
                 if "gui_jump" in dict.keys() and dict["gui_jump"] == jump_num:
                     del dict["gui_jump"]
-                # renumber jump flags at higher jump indeces in whole TOA table
+                # renumber jump flags at higher jump indeces in whole TOA table (held as str values, must convert to ints for subtraction and then back to str)
                 if "jump" in dict.keys():
                     dict["jump"] = [
-                        num - 1 if num > jump_num else num for num in dict["jump"]
+                        str(int(num) - 1) if int(num) > jump_num else num
+                        for num in dict["jump"]
                     ]
-                if "gui_jump" in dict.keys() and dict["gui_jump"] > jump_num:
-                    cur_val = dict["gui_jump"]
-                    dict["gui_jump"] = cur_val - 1
+                if "gui_jump" in dict.keys() and int(dict["gui_jump"]) > jump_num:
+                    cur_val = int(dict["gui_jump"])
+                    dict["gui_jump"] = str(cur_val - 1)
 
         # if last jump deleted, remove PhaseJump object from model
         if (
@@ -1308,7 +1313,7 @@ class TimingModel:
         # if not, reindex higher index jump objects
         for i in range(jump_num + 1, len(self.jumps) + 1):
             cur_jump = getattr(self, "JUMP" + str(i))
-            cur_jump.key_value = i - 1
+            cur_jump.key_value = str(i - 1)
             new_jump = cur_jump.new_param(index=(i - 1), copy_all=True)
             self.add_param_from_top(new_jump, "PhaseJump")
             self.remove_param(cur_jump.name)
