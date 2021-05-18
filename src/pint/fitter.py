@@ -2330,9 +2330,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         else:
             raise ValueError("No method to access data error is provided.")
 
-    def scaled_all_sigma(
-        self,
-    ):
+    def scaled_all_sigma(self):
         """Scale all data's uncertainty.
 
         If the function of scaled_`data`_sigma is not given, it will just
