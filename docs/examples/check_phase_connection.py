@@ -41,7 +41,7 @@ f = pint.fitter.WLSFitter(t, m)
 f.fit_toas()
 
 # %%
-print("Current free parameters: ",f.model.free_params)
+print("Current free parameters: ", f.model.free_params)
 
 # %%
 print("Current last TOA: MJD {}".format(f.model.FINISH.quantity))
@@ -53,7 +53,7 @@ print("Current last TOA: MJD {}".format(f.model.FINISH.quantity))
 MJDmax = 59000
 # the number of TOAs is arbitrary since it's mostly for visualization
 tnew = pint.toa.make_fake_toas(f.model.FINISH.value, MJDmax, 50, f.model)
-    
+
 
 # %%
 # make fake models crossing from the last existing TOA to the start of new observations
@@ -70,14 +70,17 @@ dt = tnew.get_mjds() - f.model.PEPOCH.value * u.d
 
 # %%
 analytic = np.sqrt(
-            (f.model.F0.uncertainty * dt) ** 2
-            + (0.5 * f.model.F1.uncertainty * dt ** 2) ** 2
-        ).decompose()
+    (f.model.F0.uncertainty * dt) ** 2 + (0.5 * f.model.F1.uncertainty * dt ** 2) ** 2
+).decompose()
 
 # %%
 plt.plot(tnew.get_mjds(), dphase.std(axis=0), label="All Free")
 tnew.get_mjds() - f.model.PEPOCH.value * u.d
-plt.plot(tnew.get_mjds(),analytic,label="Analytic",)
+plt.plot(
+    tnew.get_mjds(),
+    analytic,
+    label="Analytic",
+)
 plt.xlabel("MJD")
 plt.ylabel("Phase Uncertainty (cycles)")
 plt.legend()
