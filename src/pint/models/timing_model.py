@@ -1287,9 +1287,11 @@ class TimingModel:
                         type(dict["jump"]) is str
                     ):  # if only one jump will just hold a str of the index number, otherwise will hold a list of str indeces
                         del dict["jump"]
+                    elif len(dict["jump"]) == 1:
+                        del dict["jump"]
                     else:
                         dict["jump"].remove(str(jump_num))
-                if "gui_jump" in dict.keys() and dict["gui_jump"] == jump_num:
+                if "gui_jump" in dict.keys() and dict["gui_jump"] == str(jump_num):
                     del dict["gui_jump"]
                 # renumber jump flags at higher jump indeces in whole TOA table (held as str values, must convert to ints for subtraction and then back to str)
                 if "jump" in dict.keys():
