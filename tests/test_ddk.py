@@ -155,6 +155,8 @@ class TestDDK(unittest.TestCase):
         zero_px_str = self.temp_par_str.replace("PX  0.8211", "PX  0.0")
         with pytest.raises(ValueError):
             m = mb.get_model(StringIO(zero_px_str))
+
+    def test_remove_PX(self):
         test_par_str = self.temp_par_str + "\n KIN  71.969  1  0.562"
         m = mb.get_model(StringIO(test_par_str))
         m.remove_param("PX")

@@ -45,6 +45,11 @@ class TestDD(unittest.TestCase):
         ), "DD B1855 TEST FAILED"
 
     def test_stand_alone_model_params(self):
+        """Test if the standalone binary model gets updated by PINT TimingModel.
+
+        The binary parameters in the stand alone binary model should have the
+        same value as the PINT TimingModel.
+        """
         m = self.modelB1855
         for binary_par in m.binary_instance.binary_params:
             standalone_par = getattr(m.binary_instance, binary_par)
