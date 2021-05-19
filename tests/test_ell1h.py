@@ -12,6 +12,7 @@ import pint.fitter as ff
 import pint.models as model
 import pint.toa as toa
 import test_derivative_utils as tdu
+from utils import verify_stand_alone_binary_parameter_updates
 from pint.residuals import Residuals
 from pinttestdata import datadir
 from io import StringIO
@@ -144,12 +145,14 @@ def test_J0613_STIG(toasJ0613, modelJ0613_STIG):
     f.fit_toas()
 
 
-def test_SINI_M2():
+def test_SINI_error():
     """Test SINI and M2 error.
     """
     SINI_par = simple_par.replace("H3 2.7507208E-7", "SINI 0.8")
     with pytest.warns(None):
         model.get_model(StringIO(SINI_par))
+
+def test_M2_error():
     M2_par = simple_par + "\nM2 1.0 1 0.1"
     with pytest.warns(None):
         model.get_model(StringIO(M2_par))
@@ -233,20 +236,4 @@ def test_zero_H3_H4_fit_H3(toasJ0613):
 @pytest.mark.parametrize("model", ["modelJ1853", "modelJ0613"])
 def test_stand_alone_model_params(model, request):
     m = request.getfixturevalue(model)
-    for binary_par in m.binary_instance.binary_params:
-        standalone_par = getattr(m.binary_instance, binary_par)
-        try:
-            pint_par_name = m.match_param_aliases(binary_par)
-        except ValueError:
-            if binary_par in m.internal_params:
-                pint_par_name = binary_par
-            else:
-                pint_par_name = None
-        if pint_par_name is None:
-            continue
-        pint_par = getattr(m, pint_par_name)
-        if pint_par.value is not None:
-            if hasattr(standalone_par, "value"):
-                assert pint_par.value == standalone_par.value
-            else:
-                assert pint_par.value == standalone_par
+    verify_stand_alone_binary_parameter_updates(m)

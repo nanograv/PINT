@@ -7,6 +7,7 @@ import numpy as np
 
 import pint.models.model_builder as mb
 import pint.toa as toa
+from utils import verify_stand_alone_binary_parameter_updates
 from pint.residuals import Residuals
 from pinttestdata import datadir
 
@@ -51,23 +52,7 @@ class TestDD(unittest.TestCase):
         same value as the PINT TimingModel.
         """
         m = self.modelB1855
-        for binary_par in m.binary_instance.binary_params:
-            standalone_par = getattr(m.binary_instance, binary_par)
-            try:
-                pint_par_name = m.match_param_aliases(binary_par)
-            except ValueError:
-                if binary_par in m.internal_params:
-                    pint_par_name = binary_par
-                else:
-                    pint_par_name = None
-            if pint_par_name is None:
-                continue
-            pint_par = getattr(m, pint_par_name)
-            if pint_par.value is not None:
-                if hasattr(standalone_par, "value"):
-                    assert pint_par.value == standalone_par.value
-                else:
-                    assert pint_par.value == standalone_par
+        verify_stand_alone_binary_parameter_updates(m)
 
 
 if __name__ == "__main__":
