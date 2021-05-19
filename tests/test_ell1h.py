@@ -152,6 +152,7 @@ def test_SINI_error():
     with pytest.warns(None):
         model.get_model(StringIO(SINI_par))
 
+
 def test_M2_error():
     M2_par = simple_par + "\nM2 1.0 1 0.1"
     with pytest.warns(None):

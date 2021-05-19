@@ -213,9 +213,8 @@ class PulsarBinary(DelayComponent):
                 aliase = []
 
             # the _parent attribute should give access to all the components
-            if (
-                hasattr(self._parent, par)
-                or set(aliase).intersection(self._parent.params)
+            if hasattr(self._parent, par) or set(aliase).intersection(
+                self._parent.params
             ):
                 try:
                     pint_bin_name = self._parent.match_param_aliases(par)
