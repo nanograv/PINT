@@ -45,7 +45,7 @@ class TestDD(unittest.TestCase):
             np.abs(pint_resids_us.value - self.ltres) < 1e-7
         ), "DD B1855 TEST FAILED"
 
-    def test_stand_alone_model_params(self):
+    def test_stand_alone_model_params_updates(self):
         """Test if the standalone binary model gets updated by PINT TimingModel.
 
         The binary parameters in the stand alone binary model should have the

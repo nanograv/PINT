@@ -235,6 +235,6 @@ def test_zero_H3_H4_fit_H3(toasJ0613):
 
 
 @pytest.mark.parametrize("model", ["modelJ1853", "modelJ0613"])
-def test_stand_alone_model_params(model, request):
+def test_stand_alone_model_params_update(model, request):
     m = request.getfixturevalue(model)
     verify_stand_alone_binary_parameter_updates(m)

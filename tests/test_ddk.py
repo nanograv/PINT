@@ -131,7 +131,7 @@ class TestDDK(unittest.TestCase):
         with pytest.raises(ValueError):
             mb.get_model(StringIO(test_par_str))
 
-    def test_stand_alone_model_params(self):
+    def test_stand_alone_model_params_updates(self):
         test_par_str = self.temp_par_str + "\n KIN  71.969  1  0.562"
         m = mb.get_model(StringIO(test_par_str))
         verify_stand_alone_binary_parameter_updates(m)
