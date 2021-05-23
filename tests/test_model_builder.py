@@ -91,7 +91,7 @@ JUMP -fe L-wide      -0.000009449  1       0.000009439
 
 class SimpleModel(PhaseComponent):
     register = True
-    categore = "simple_test"
+    category = "simple_test"
 
     def __init__(self):
         super(SimpleModel, self).__init__()
@@ -100,7 +100,7 @@ class SimpleModel(PhaseComponent):
 
 class SubsetModel(PhaseComponent):
     register = False
-    categore = "simple_test"
+    category = "simple_test"
 
     def __init__(self):
         super(SubsetModel, self).__init__()
@@ -147,8 +147,8 @@ def simple_model_alias_overlap():
 
 def test_model_builder_class():
     mb = ModelBuilder()
-    categore = mb.category_component_map
-    assert len(mb.param_component_map["PX"]) == len(categore["astrometry"])
+    category = mb.category_component_map
+    assert len(mb.param_component_map["PX"]) == len(category["astrometry"])
     assert len(mb.component_category_map) == len(mb.components)
     assert len(mb.param_alias_map) == len(mb.param_component_map)
     # test for new components
