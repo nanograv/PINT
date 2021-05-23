@@ -338,10 +338,8 @@ class ModelBuilder:
            on the parameters in parfile.
            3.1 Select the components that have its unique parameters in the parfile.
                In other words, select the components that have one parameter to
-               on component mapping, not one parameter to mulitple components.
+               on component mapping.
            3.2 Log the conflict components, one parameter to mulitple components mapping.
-        4. Double check the conflict componens log remove the conflict entries if
-           the one component is in the selected list.
         """
         selected_components = set()
         # 1. iteration read parfile with a no component timing_model to get
