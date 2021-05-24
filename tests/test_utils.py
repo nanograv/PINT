@@ -4,6 +4,7 @@ from itertools import product
 from tempfile import NamedTemporaryFile
 
 import astropy.units as u
+import astropy.constants as c
 import numpy as np
 import pytest
 import scipy.stats
@@ -686,6 +687,45 @@ def test_psr_utils():
     # pulsar mass
     assert np.isclose(
         pulsar_mass(pb, x, 0.4 * u.Msun, inc=90 * u.deg), 2.329629042176839 * u.Msun
+    )
+
+
+@given(
+    floats(min_value=0.5, max_value=3),
+    floats(min_value=0.01, max_value=10),
+    floats(min_value=0.04, max_value=1000),
+    floats(min_value=0.1, max_value=90),
+)
+def test_masses(Mpsr, Mc, Pb, incl):
+    """
+    test pulsar and companion mass calculations for a range of values
+    """
+    assume(incl > 0)
+    assume(incl <= 90)
+    assume(Mpsr > 0)
+    assume(Mc > 0)
+    assume(Pb > 0)
+
+    from pint.utils import (
+        companion_mass,
+        pulsar_mass,
+    )
+
+    Mtot = (Mc + Mpsr) * u.Msun
+    # full semi-major axis
+    a = (c.G * Mtot * (Pb * u.day / (2 * np.pi)) ** 2) ** (1.0 / 3)
+    # pulsar semi-major axis
+    apsr = (Mc * u.Msun / Mtot) * a
+    # projected
+    x = (apsr * np.sin(incl * u.deg)).to(pint.ls)
+
+    # computed pulsar mass
+    assert np.isclose(
+        pulsar_mass(Pb * u.day, x, Mc * u.Msun, inc=incl * u.deg), Mpsr * u.Msun
+    )
+    # computed companion mass
+    assert np.isclose(
+        companion_mass(Pb * u.day, x, mpsr=Mpsr * u.Msun, inc=incl * u.deg), Mc * u.Msun
     )
 
 
