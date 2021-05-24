@@ -12,7 +12,7 @@ from pint.models.model_builder import (
     UnknownBinaryModel,
     ComponentConflict,
 )
-from pint.models.timing_model import PhaseComponent
+from pint.models.timing_model import PhaseComponent, Component
 from pint.models.parameter import floatParameter
 from pint.utils import split_prefixed_name, PrefixError
 
@@ -90,6 +90,8 @@ JUMP -fe L-wide      -0.000009449  1       0.000009439
 
 
 class SimpleModel(PhaseComponent):
+    """Very simple test model component
+    """
     register = True
     category = "simple_test"
 
@@ -99,7 +101,9 @@ class SimpleModel(PhaseComponent):
 
 
 class SubsetModel(PhaseComponent):
-    register = False
+    """Test model component hosting the parameters which are a subset of spindown.
+    """
+    register = False # This has to be false, otherwrise all test will fail.
     category = "simple_test"
 
     def __init__(self):
@@ -130,15 +134,6 @@ def simple_model_alias_overlap():
     simple_model.add_param(
         floatParameter(name="TESTPARAM2", aliases=["F0"], value=0.0, unit="1/s")
     )
-    return simple_model
-
-
-@pytest.fixture
-def simple_model_alias_overlap():
-    simple_model = SimpleModel()
-    simple_model.add_param(
-        floatParameter(name="TESTPARAM2", aliases=["F0"], value=0.0, unit="1/s")
-    )
     simple_model.add_param(
         floatParameter(name="TESTPARAM3", aliases=["LAMBDA"], value=0.0, unit="deg")
     )
@@ -146,6 +141,8 @@ def simple_model_alias_overlap():
 
 
 def test_model_builder_class():
+    """Test if model builder collected components information correctly
+    """
     mb = ModelBuilder()
     category = mb.category_component_map
     assert len(mb.param_component_map["PX"]) == len(category["astrometry"])
@@ -157,11 +154,13 @@ def test_model_builder_class():
     simple_comp.add_param(
         floatParameter(name="TESTPARAM2", aliases=["F0"], value=0.0, unit="s")
     )
-    mb.param_alias_map
 
 
 def test_aliases_mapping():
+    """Test if aliases gets mapped correclty
+    """
     mb = ModelBuilder()
+    # all alases should be mapped to the components
     assert len(mb.param_alias_map) == len(mb.param_component_map)
 
     # Test if the param_alias_map is passed by pointer
@@ -170,8 +169,7 @@ def test_aliases_mapping():
     # Test existing entry
     _ = mb._add_alias_to_map("F0", "F0", mb.param_alias_map)
     assert mb.param_alias_map["F0"] == "F0"
-    with pytest.raises(ConflictAliasError):
-        _ = mb._add_alias_to_map("F0", "F1", mb.param_alias_map)
+    # Test repeatable_params with differnt indices.
     for rp in mb.repeatable_param:
         pint_par = mb.alias_to_pint_param(rp)
         cp = mb.param_component_map[pint_par][0]
@@ -185,7 +183,7 @@ def test_aliases_mapping():
         assert mb.alias_to_pint_param(new_idx_par) == pint_par_obj.prefix + "2"
         new_idx_par = prefix + "55"
         assert mb.alias_to_pint_param(new_idx_par) == pint_par_obj.prefix + "55"
-        # Test aliases
+        # Test all aliases
         for als in pint_par_obj.aliases:
             assert mb.alias_to_pint_param(als) == pint_par_obj.name
             try:
@@ -196,12 +194,39 @@ def test_aliases_mapping():
         assert mb.alias_to_pint_param(als_prefix + "55") == pint_par_obj.prefix + "55"
 
 
+def test_conflict_alias():
+    """Test if model builder detects the alais conflict.
+    """
+    mb = ModelBuilder()
+    # Test conflict parameter alias name
+    with pytest.raises(ConflictAliasError):
+        _ = mb._add_alias_to_map("F0", "F1", mb.param_alias_map)
+    # Define conflict alais from component class
+    class SimpleModel2(PhaseComponent):
+        """Very simple test model component
+        """
+        register = True
+        category = "simple_test"
+
+        def __init__(self):
+            super(SimpleModel2, self).__init__()
+            self.add_param(floatParameter(name="TESTPARAMF0", aliases=['F0'], value=0.0, unit="s"))
+    with pytest.raises(ConflictAliasError):
+        mb2 = ModelBuilder()
+    del Component.component_types['SimpleModel2']
+
+
 def test_overlap_component(simple_model_overlap, simple_model_alias_overlap):
+    """Test if model builder detects the overlap component correctly.
+    """
     mb = ModelBuilder()
     # Test overlap
     overlap = mb._get_component_param_overlap(simple_model_overlap)
     assert "Spindown" in overlap.keys()
     assert overlap["Spindown"][0] == set(["F0"])
+    # Only one over lap parameter F0
+    # Since the _get_component_param_overlap returns non-overlap part,
+    # we test if the non-overlap number makes sense.
     assert overlap["Spindown"][1] == len(simple_model_overlap.params) - 1
     assert overlap["Spindown"][2] == len(mb.components["Spindown"].params) - 1
 
@@ -220,13 +245,17 @@ def test_overlap_component(simple_model_overlap, simple_model_alias_overlap):
 
 
 def test_subset_component(sub_set_model):
+    """Test if model builder detects the subset component.
+    """
     mb = ModelBuilder()
     # Test subset
-    subset = mb._is_subset_component(sub_set_model)
-    assert subset == "Spindown"
+    superset = mb._is_subset_component(sub_set_model)
+    assert superset == "Spindown"
 
 
-def test_model_par():
+def test_model_from_par():
+    """Test Get model from test par file.
+    """
     mb = ModelBuilder()
     param_inpar, repeat = mb.parse_parfile(io.StringIO(test_par1))
     assert len(param_inpar) == 60
@@ -234,3 +263,23 @@ def test_model_par():
     comps, conflict, unknown_param = mb.choose_model(param_inpar)
     tm = mb(io.StringIO(test_par1))
     assert len(comps) == 14
+
+def test_model_from_par_hassubset():
+    """Test Get model from test par file with a subset component.
+    """
+    # Define a subset parameter model that is registered. So the metaclass can
+    # catch it.
+    class SubsetModel2(PhaseComponent):
+        """Test model component hosting the parameters which are a subset of spindown.
+        """
+        register = True
+        category = "simple_test"
+
+        def __init__(self):
+            super(SubsetModel2, self).__init__()
+            self.add_param(floatParameter(name="F0", value=0.0, unit="1/s"))
+            self.add_param(floatParameter(name="F1", value=0.0, unit="1/s^2"))
+    with pytest.raises(ComponentConflict):
+        mb = ModelBuilder()
+    # Have to remove the SubsetModel2, since it will fail other tests.
+    del Component.component_types['SubsetModel2']
