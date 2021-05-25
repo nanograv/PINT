@@ -92,6 +92,7 @@ JUMP -fe L-wide      -0.000009449  1       0.000009439
 class SimpleModel(PhaseComponent):
     """Very simple test model component
     """
+
     register = True
     category = "simple_test"
 
@@ -103,7 +104,8 @@ class SimpleModel(PhaseComponent):
 class SubsetModel(PhaseComponent):
     """Test model component hosting the parameters which are a subset of spindown.
     """
-    register = False # This has to be false, otherwrise all test will fail.
+
+    register = False  # This has to be false, otherwrise all test will fail.
     category = "simple_test"
 
     def __init__(self):
@@ -205,15 +207,19 @@ def test_conflict_alias():
     class SimpleModel2(PhaseComponent):
         """Very simple test model component
         """
+
         register = True
         category = "simple_test"
 
         def __init__(self):
             super(SimpleModel2, self).__init__()
-            self.add_param(floatParameter(name="TESTPARAMF0", aliases=['F0'], value=0.0, unit="s"))
+            self.add_param(
+                floatParameter(name="TESTPARAMF0", aliases=["F0"], value=0.0, unit="s")
+            )
+
     with pytest.raises(ConflictAliasError):
         mb2 = ModelBuilder()
-    del Component.component_types['SimpleModel2']
+    del Component.component_types["SimpleModel2"]
 
 
 def test_overlap_component(simple_model_overlap, simple_model_alias_overlap):
@@ -264,6 +270,7 @@ def test_model_from_par():
     tm = mb(io.StringIO(test_par1))
     assert len(comps) == 14
 
+
 def test_model_from_par_hassubset():
     """Test Get model from test par file with a subset component.
     """
@@ -272,6 +279,7 @@ def test_model_from_par_hassubset():
     class SubsetModel2(PhaseComponent):
         """Test model component hosting the parameters which are a subset of spindown.
         """
+
         register = True
         category = "simple_test"
 
@@ -279,7 +287,8 @@ def test_model_from_par_hassubset():
             super(SubsetModel2, self).__init__()
             self.add_param(floatParameter(name="F0", value=0.0, unit="1/s"))
             self.add_param(floatParameter(name="F1", value=0.0, unit="1/s^2"))
+
     with pytest.raises(ComponentConflict):
         mb = ModelBuilder()
     # Have to remove the SubsetModel2, since it will fail other tests.
-    del Component.component_types['SubsetModel2']
+    del Component.component_types["SubsetModel2"]
