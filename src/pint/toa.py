@@ -772,8 +772,7 @@ def read_toa_file(filename, process_includes=True, cdict=None):
                 if cdict["INFO"]:
                     newtoa.flags["info"] = cdict["INFO"]
                 if cdict["JUMP"][0]:
-                    # in list to allow jump overlap (multiple jumps/toa) and +1 since jumps start indexing at 1 rather than 0
-                    newtoa.flags["jump"] = [cdict["JUMP"][1] + 1]
+                    newtoa.flags["jump"] = str(cdict["JUMP"][1] + 1)
                 if cdict["PHASE"] != 0:
                     newtoa.flags["phase"] = cdict["PHASE"]
                 if cdict["TIME"] != 0.0:

@@ -86,7 +86,7 @@ class Pulsar:
 
         # turns pre-existing jump flags in toas.table['flags'] into parameters in parfile
         # TODO: fix jump_flags_to_params
-        # self.prefit_model.jump_flags_to_params(self.all_toas)
+        self.prefit_model.jump_flags_to_params(self.all_toas)
         # adds flags to toas.table for existing jump parameters from .par file
         if "PhaseJump" in self.prefit_model.components:
             self.prefit_model.jump_params_to_flags(self.all_toas)
@@ -311,7 +311,7 @@ class Pulsar:
         for num in range(1, numjumps + 1):
             # create boolean array corresponding to TOAs to be jumped
             toas_jumped = [
-                True if ("jump" in dict.keys() and num in dict["jump"]) else False
+                "jump" in dict.keys() and str(num) in dict["jump"]
                 for dict in self.all_toas.table["flags"]
             ]
             if np.array_equal(toas_jumped, selected):
@@ -362,7 +362,7 @@ class Pulsar:
                 if getattr(
                     self.prefit_model, param
                 ).frozen == False and param.startswith("JUMP"):
-                    fit_jumps.append(int(param[4:]))
+                    fit_jumps.append(param[4:])
             numjumps = self.prefit_model.components["PhaseJump"].get_number_of_jumps()
             if numjumps == 0:
                 log.warn(
@@ -371,10 +371,14 @@ class Pulsar:
                 return None
             # boolean array to determine if all selected toas are jumped
             jumps = [
-                True
-                if "jump" in dict.keys()
-                and any(num in fit_jumps for num in dict["jump"])
-                else False
+                "jump" in dict.keys()
+                and (
+                    (
+                        type(dict["jump"]) is list
+                        and any(num in fit_jumps for num in dict["jump"])
+                    )
+                    or (type(dict["jump"]) is str and dict["jump"] in fit_jumps)
+                )
                 for dict in self.all_toas.table["flags"][selected]
             ]
             if all(jumps):
@@ -393,31 +397,28 @@ class Pulsar:
                 for dict in self.all_toas.table["flags"]
             ]
             for num in range(1, numjumps + 1):
-                num = int(num)
                 # check that jump of the specified number in the range of fitted TOAs, otherwise don't include in fit
                 check_jump_in_range = [
-                    True if num in jump_num else False for jump_num in sel_jump_nums
+                    str(num) in jump_num for jump_num in sel_jump_nums
                 ]
                 if not any(check_jump_in_range):
                     getattr(self.prefit_model, "JUMP" + str(num)).frozen = True
                     continue
-                jump_select = [
-                    True if num in jump_num else False for jump_num in full_jump_nums
-                ]
+                jump_select = [str(num) in jump_num for jump_num in full_jump_nums]
                 overlap = [a and b for a, b in zip(jump_select, selected)]
                 # remove the jump flags for that num
                 for dict in self.all_toas.table["flags"]:
-                    if "jump" in dict.keys() and num in dict["jump"]:
-                        if len(dict["jump"]) == 1:
+                    if "jump" in dict.keys() and str(num) in dict["jump"]:
+                        if type(dict["jump"]) is str:
                             del dict["jump"]
                         else:
-                            dict["jump"].remove(num)
+                            dict["jump"].remove(str(num))
                 # re-add the jump using overlap as 'selected'
                 for dict in self.all_toas.table["flags"][overlap]:
                     if "jump" in dict.keys():
-                        dict["jump"].append(num)
+                        dict["jump"].append(str(num))
                     else:
-                        dict["jump"] = [num]
+                        dict["jump"] = [str(num)]
 
         if self.fitted:
             self.prefit_model = self.postfit_model

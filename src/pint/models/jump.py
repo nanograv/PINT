@@ -155,13 +155,17 @@ class PhaseJump(PhaseComponent):
             mask = jump_par.select_toa_mask(toas)
             # apply to dictionaries
             for dict in toas.table["flags"][mask]:
-                if "jump" in dict.keys():
+                if "jump" in dict.keys() and type(dict["jump"]) is list:
                     # check if jump flag already added - don't add flag twice
-                    if jump_par.index in dict["jump"]:
+                    if str(jump_par.index) in dict["jump"]:
                         continue
-                    dict["jump"].append(jump_par.index)  # otherwise, add jump flag
+                    dict["jump"].append(str(jump_par.index))  # otherwise, add jump flag
+                elif "jump" in dict.keys() and type(dict["jump"]) is str:
+                    if dict["jump"] == str(jump_par.index):
+                        continue
+                    dict["jump"] = [dict["jump"], str(jump_par.index)]
                 else:
-                    dict["jump"] = [jump_par.index]
+                    dict["jump"] = [str(jump_par.index)]
 
     def add_jump_and_flags(self, toa_table):
         """Add jump object to PhaseJump and appropriate flags to TOA tables.
@@ -221,8 +225,8 @@ class PhaseJump(PhaseComponent):
         # add appropriate flags to TOA table to link jump with appropriate TOA
         for dict1 in toa_table:
             if "jump" in dict1.keys():
-                dict1["jump"].append(ind)  # toa can have multiple jumps
+                dict1["jump"].append(str(ind))  # toa can have multiple jumps
             else:
-                dict1["jump"] = [ind]
-            dict1["gui_jump"] = ind  # toa can only have one gui_jump
+                dict1["jump"] = [str(ind)]
+            dict1["gui_jump"] = str(ind)  # toa can only have one gui_jump
         return name
