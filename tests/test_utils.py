@@ -649,12 +649,22 @@ def test_psr_utils():
 
     # Mass function
     assert np.isclose(mass_funct(pb, x), 0.008589595519643776 * u.solMass)
+    with pytest.raises(ValueError):
+        mass_funct(pb.value, x)
+    with pytest.raises(ValueError):
+        mass_funct(pb, x.value)
 
     # Mass function, second form
     assert np.isclose(
         mass_funct2(1.4 * u.solMass, 0.2 * u.solMass, 60.0 * u.deg),
         0.0020297470401197783 * u.solMass,
     )
+    with pytest.raises(ValueError):
+        mass_funct2(1.4, 0.2 * u.solMass, 60.0 * u.deg)
+    with pytest.raises(ValueError):
+        mass_funct2(1.4 * u.solMass, 0.2, 60.0 * u.deg)
+    with pytest.raises(ValueError):
+        mass_funct2(1.4 * u.solMass, 0.2 * u.solMass, 60.0)
 
     # Characteristic age
     assert np.isclose(
@@ -727,6 +737,23 @@ def test_masses(Mpsr, Mc, Pb, incl):
     assert np.isclose(
         companion_mass(Pb * u.day, x, mpsr=Mpsr * u.Msun, inc=incl * u.deg), Mc * u.Msun
     )
+    # and test exceptions
+    with pytest.raises(ValueError):
+        companion_mass(Pb * u.day, x, mpsr=Mpsr * u.Msun, inc=incl)
+    with pytest.raises(ValueError):
+        companion_mass(Pb * u.day, x.value, mpsr=Mpsr * u.Msun, inc=incl * u.deg)
+    with pytest.raises(ValueError):
+        companion_mass(Pb, x, mpsr=Mpsr * u.Msun, inc=incl * u.deg)
+    with pytest.raises(ValueError):
+        companion_mass(Pb * u.day, x, mpsr=Mpsr, inc=incl * u.deg)
+    with pytest.raises(ValueError):
+        pulsar_mass(Pb, x, Mc * u.Msun, inc=incl * u.deg)
+    with pytest.raises(ValueError):
+        pulsar_mass(Pb * u.day, x.value, Mc * u.Msun, inc=incl * u.deg)
+    with pytest.raises(ValueError):
+        pulsar_mass(Pb * u.day, x, Mc, inc=incl * u.deg)
+    with pytest.raises(ValueError):
+        pulsar_mass(Pb * u.day, x, Mc * u.Msun, inc=incl)
 
 
 def test_ftest():
