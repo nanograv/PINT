@@ -52,31 +52,10 @@ class BinaryBTPiecewise(PulsarBinary):
         self.remove_param("SINI")
         self.T0.value=1
         self.A1.value=1
-        #self.add_param(
-        #    MJDParameter(
-        #        name="T0X",
-        #        units=u.d,
-        #        value=50.0,
-        #        description="Time of periastron",
-        #    )
-        #)
-        #self.add_param(
-        #    Parameter(
-        #        name="A1X",
-        #        units="ls",
-        #        value=50.0,
-        #        description="Orbital Amplitude",
-        #    )
-        #)
-
-
         self.add_group_range(None, None, frozen=False, j=0)
         self.add_piecewise_param("T0","d",None,0)
         self.add_piecewise_param("A1","ls",None,0)
-        #self.A1_value_funcs += [self.dmx_dm(param="A1")]
-        #self.T0_value_funcs += [self.dmx_dm(param="T0")]
-        #self.set_special_params(["DMX_0001", "DMXR1_0001", "DMXR2_0001"])
-        #self.delay_funcs_component += [self.DMX_dispersion_delay]
+
 
     def add_group_range(self,group_start_mjd,group_end_mjd,frozen=True,j=None):
         #print("hello from add group range")
@@ -88,7 +67,7 @@ class BinaryBTPiecewise(PulsarBinary):
         i = f"{int(j):04d}"  
         self.add_param(
         prefixParameter(
-            name="XR1_{0}".format(i),
+            name="PieceLowerBound_{0}".format(i),
             units="MJD",
             unit_template=lambda x: "MJD",
             description="Beginning of paramX interval",
@@ -100,7 +79,7 @@ class BinaryBTPiecewise(PulsarBinary):
         )
         self.add_param(
         prefixParameter(
-            name= "XR2_{0}".format(i),
+            name= "PieceUpperBound_{0}".format(i),
             units="MJD",
             unit_template=lambda x: "MJD",
             description="End of paramX interval",
@@ -115,12 +94,17 @@ class BinaryBTPiecewise(PulsarBinary):
         self.validate()
         
     def update_binary_object(self, toas=None, acc_delay=None):
-        #self.binary_instance.binary_params.extend(["T0X","A1X"])
         super().update_binary_object(toas=toas,acc_delay=acc_delay)
-        #if no param 1 set
-        #elif 2 ranges + 5
-        #
-
+    
+    
+    def d_binary_delay_d_xxxx(self, toas, param, acc_delay):
+        """Return the binary model delay derivtives."""
+        #print(f"hello from binary piecewise parameter derivative, using toas: {toas}")
+        delay = super().d_binary_delay_d_xxxx(toas=toas, param=param, acc_delay=acc_delay)
+        return delay
+        
+    
+    
         
     def remove_range(self, index):
         """Removes all DMX parameters associated with a given index/list of indices.
@@ -144,7 +128,7 @@ class BinaryBTPiecewise(PulsarBinary):
             )
         for index in indices:
             index_rf = f"{int(index):04d}"
-            for prefix in ["T0X_","A1X_", "XR1_", "XR2_"]:
+            for prefix in ["T0X_","A1X_", "PieceLowerBound_", "PieceUpperBound_"]:
                 self.remove_param(prefix + index_rf)
         self.setup()
         self.validate()
@@ -188,7 +172,6 @@ class BinaryBTPiecewise(PulsarBinary):
         self.setup()
     
     def setup(self):
-        #print("hello from binary_piecewise setup")
         super(BinaryBTPiecewise, self).setup()
         for bpar in self.params:
             self.register_deriv_funcs(self.d_binary_delay_d_xxxx, bpar)
@@ -200,9 +183,9 @@ class BinaryBTPiecewise(PulsarBinary):
         T0Xs = {}
         A1X_mapping = self.get_prefix_mapping_component("A1X_")
         A1Xs = {}
-        XR1_mapping = self.get_prefix_mapping_component("XR1_")
+        XR1_mapping = self.get_prefix_mapping_component("PieceLowerBound_")
         XR1s = {}
-        XR2_mapping = self.get_prefix_mapping_component("XR2_")
+        XR2_mapping = self.get_prefix_mapping_component("PieceUpperBound_")
         XR2s = {}
         
         for t0n in T0X_mapping.values():
@@ -230,6 +213,7 @@ class BinaryBTPiecewise(PulsarBinary):
                 self.binary_instance.add_binary_params(a1_name, a1_value)
         #
         for XR1n in XR1_mapping.values():
+            #lower bound mapping
             #print("hello from A1 mapping")
             XR1s[XR1n] = getattr(self, XR1n).quantity
         
@@ -254,7 +238,7 @@ class BinaryBTPiecewise(PulsarBinary):
             #print(len(A1Xs.items()))
             for xr2_name, xr2_value in XR2s.items():
                 self.binary_instance.add_binary_params(xr2_name, xr2_value)
-                
+        self.update_binary_object()      
 
 
     def validate(self):
@@ -277,24 +261,5 @@ class BinaryBTPiecewise(PulsarBinary):
 
         if self.GAMMA.value is None:
             self.GAMMA.set("0")
-            self.GAMMA.frozen = True
-        #A1X_mapping = self.get_prefix_mapping("A1X_")
-        #T0X_mapping = self.get_prefix_mapping("T0X_")
-        #XR1_mapping = self.get_prefix_mapping("XR1_")
-        #XR2_mapping = self.get_prefix_mapping("XR2_")
-        #if DMX_mapping.keys() != DMXR1_mapping.keys():
-            # FIXME: report mismatch
-        #    raise ValueError(
-        #        "DMX_ parameters do not "
-        #        "match DMXR1_ parameters. "
-        #        "Please check your prefixed parameters."
-        #    )
-        #if DMX_mapping.keys() != DMXR2_mapping.keys():
-        #    raise ValueError(
-        #        "DMX_ parameters do not "
-        #        "match DMXR2_ parameters. "
-        #        "Please check your prefixed parameters."
-        #    )
-
-             
-    
+            self.GAMMA.frozen = True             
+        

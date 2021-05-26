@@ -13,6 +13,7 @@ class BTpiecewise(BTmodel):
         super(BTpiecewise, self).__init__()
         self.axis_store_initial=[]
         self.extended_group_range=[]
+        self.d_binarydelay_d_par_funcs = [self.d_BTdelay_d_par]
         if t is not None:
             self._t = t
         if input_params is not None:
@@ -21,104 +22,365 @@ class BTpiecewise(BTmodel):
             elif self.T0X is not None:
                 self.update_input()
         self.binary_params = list(self.param_default_value.keys())
-        self.param_aliases.update({"T0X": ["T0X"], "A1X": ["A1X"]})
-
+        #self.param_aliases.update({"T0X": ["T0X"], "A1X": ["A1X"]})
+        #print("goes via BT_piecewise")
         
     def set_param_values(self, valDict=None):
         super().set_param_values(valDict=valDict)
         self.piecewise_parameter_loader(valDict=valDict)
     
     def piecewise_parameter_loader(self, valDict=None):
-        self.T0X_arr = []
+        #print(f"Contents of valDict: {valDict}")
+        self.T0X_arr = []   #initialise arrays to store T0X/A1X values per toa 
         self.A1X_arr = []
-        self.lower_group_edge = []
+        self.lower_group_edge = []    #initialise arrays to store piecewise group boundaries
         self.upper_group_edge = []
-        if valDict is None:
-            self.T0X_arr = self.T0
+        piecewise_parameter_information = []   #initialise array that will be 5 x n in shape. Where n is the number of pieces required by the model
+        print(f"valDict:{valDict}")
+        if valDict is None:   #If there are no updates passed by binary_instance, sets default value (usually overwritten when reading from parfile)
+            self.T0X_arr = self.T0   
             self.A1X_arr = self.A1
             self.lower_group_edge=[0]
             self.upper_group_edge=[1e9]
+            self.piecewise_parameter_information = [0,self.T0,self.A1,0*u.d,1e9*u.d]
         else:
-            for key, value in valDict.items():
-                #print(key)
-                if key[0:4] == "T0X_":
-                    self.T0X_arr.append(value)
-                elif key[0:4] == "A1X_":
-                    self.A1X_arr.append(value)
-                elif key[0:4] == "XR1_":
-                    self.lower_group_edge.append(value)
-                elif key[0:4] == "XR2_":
-                    self.upper_group_edge.append(value)
-        print(f"from piecewise_param_loader: T0X_arr = {self.T0X_arr}")
+            piece_index = []   #iniialise array used to count the number of pieces. Operates by seaching for "A1X_i/T0X_i" and appending i to the array. Can operate if pieces are given out of order. 
             
-        
-        
+            for key, value in valDict.items():   #Searches through updates for keys prefixes matching T0X/A1X, can be allowed to be more flexible with param+"X_" provided param is defined earlier. Arbitrary piecewise parameter model
+                if key[0:4]=="T0X_" or key[0:4] == "A1X_":
+                    piece_index.append((key[4:8]))   #appends index to array
+            piece_index= np.unique(piece_index)   #makes sure only one instance of each index is present returns order indeces
+            for index in piece_index:   #looping through each index in order they are given (0 -> n)
+                param_pieces = []    #array to store specific piece i's information in the order [index,T0X,A1X,Group's lower edge, Group's upper edge,]
+                piece_number = int(index)
+                param_pieces.append(piece_number)
+                string = ["T0X_"+index,"A1X_"+index,"PieceLowerBound_"+index,"PieceUpperBound_"+index]            
+                for i in range(0,len(string)):
+                    if string[i] in valDict:
+                        param_pieces.append(valDict[string[i]])
+                    elif string[i] not in valDict:
+                        attr = string[i][0:2]
+                        param_pieces.append(getattr(self, attr))
+                        #Raises error if range not defined as there is no Piece upper/lower bound in the model.
+                #print(param_pieces)
+                piecewise_parameter_information.append(param_pieces)
+            self.valDict=valDict
+            self.piecewise_parameter_information = sorted(piecewise_parameter_information,key=lambda x: x[3])  #sorts the array chronologically by lower edge of each group,correctly works for unordered pieces (i.e. index 0 can correspond to an arbitrary group of data at any time)
+            #print(f"Filled information array: {self.piecewise_parameter_information}")
+            if len(self.piecewise_parameter_information)>0:
+                #check = hasattr(self,"t")
+                #print(f"Piecewise parameter loader can see t: {check}")
+                if hasattr(self,"t") is True:
+                    self.print_toas_in_group()   #Defines object's index for each toa as an array of length = len(self._t)
+                    self.piecewise_parameter_from_information_array()   #Uses the index for each toa array to create arrays where elements are the A1X/T0X to use with that toa
+                    #print(self.T0X_per_toa)
 
+            
+            
+    def piecewise_parameter_from_information_array(self):
+        self.A1X_per_toa = []  #arrays to store parameters to use when using toas. i.e. [toa_0,toa_1,toa_2] -> [A1X_0000,A1X_0001,A1X_0002] for one toa per group
+        self.T0X_per_toa = []
+        group_index = self.group_index()
+        for i in group_index: #for each toa
+            if i is not None:
+                for j in range(len(self.piecewise_parameter_information)):
+                    if self.piecewise_parameter_information[j][0] == i: #searches the 5 x n array to find the index matching the toa_index
+                        self.T0X_per_toa.append(self.piecewise_parameter_information[j][1].value)
+                        self.A1X_per_toa.append(self.piecewise_parameter_information[j][2].value)
+                    
+
+            else: #if a toa lies between 2 groups, use default T0/A1 values (i.e. toa lies after previous upper bound but before next lower bound)
+                #print(f'index mis-match, applying default values for T0/A1: from toa {i}')
+                self.T0X_per_toa.append(self.T0.value)
+                self.A1X_per_toa.append(self.A1.value)
+        #print(f"Unique T0X's used: {np.unique(self.T0X_per_toa,return_counts=True)[0]}")
+        #print(f"Number of toas in each group: {np.unique(self.T0X_per_toa,return_counts=True)[1]}")
+        #print(f"Total toas: {np.sum(np.unique(self.A1X_per_toa,return_counts=True)[1])}")
+        self.T0X_per_toa = self.T0X_per_toa * u.d
+        #print(self.T0X_per_toa)
+        #print(f"Unique A1X's used: {np.unique(self.A1X_per_toa,return_counts=True)[0]}")
+        #print(f"Number of toas in each group: {np.unique(self.A1X_per_toa,return_counts=True)[1]}")
+        #print(f"Total toas: {np.sum(np.unique(self.A1X_per_toa,return_counts=True)[1])}")
+        self.A1X_per_toa = self.A1X_per_toa * ls
+        
+    def group_index(self):
+        index = []
+        for i in range(len(self._t)):
+            index1 = self.lower_index[i]
+            index2 = self.upper_index[i]
+            if (index1==index2):
+                index.append(index1)
+            else:
+                index.append(None)
+        #print(index)
+        return index
+                
+            
+    def print_toas_in_group(self):   #takes array sorted by lower group edge (requires groups to be chronologically ordered). Called from piece_parameter_loader, ordering operation occurs there
+        lower_bound = []   #seperates lower/upper bounds from 5 x n array of piece information
+        upper_bound = []
+        lower_index_temp = []
+        upper_index_temp = []
+        #print("hello from indexers")
+        #print(f"Length of information storage: {len(self.piecewise_parameter_information)}")
+        for i in range(0,len(self.piecewise_parameter_information)):   #loops through the array (len(...) = n)
+            if i == 0:  #for the first group, makes the lower bound slightly earlier than defined such that ambiguity of where first toa is, is accomodated
+                if len(self.piecewise_parameter_information)==1:
+                    lower_bound.append(self.piecewise_parameter_information[i][3].value-1) #modified bounds for singular group
+                    upper_bound.append(self.piecewise_parameter_information[i][4].value+1)  
+                else:
+                    lower_bound.append(self.piecewise_parameter_information[i][3].value-1) #modified sorted lower bound to encompass the first toa
+                    upper_bound.append(self.piecewise_parameter_information[i][4].value) 
+            
+            elif i==len(self.piecewise_parameter_information)-1:  #for the last group, makes the upper bound slightly later than defined such that ambiguity of where last toa is, is accomodated
+                lower_bound.append(self.piecewise_parameter_information[i][3].value)
+                upper_bound.append(self.piecewise_parameter_information[i][4].value+1) #modified sorted upper bound to encompass the last toa
+            else:
+                lower_bound.append(self.piecewise_parameter_information[i][3].value) #append all other lower/upper bounds 
+                upper_bound.append(self.piecewise_parameter_information[i][4].value)
+        if hasattr(self._t, "value") is True:
+            lower_index = np.searchsorted(lower_bound,self._t.value)-1  #Assigns group index to each toa. toa will always be on the right/left of the lower/upper bound, hence the "-1" factor
+            upper_index = np.searchsorted(upper_bound,self._t.value) #For toas between groups i.e lower bound:(55000,55100), upper bound: (55050,55150) lower/upperindex of 55075 should be (0,1)
+        else:
+            lower_index = np.searchsorted(lower_bound,self._t)-1  #Assigns group index to each toa. toa will always be on the right/left of the lower/upper bound, hence the "-1" factor
+            upper_index = np.searchsorted(upper_bound,self._t) #For toas between groups i.e lower bound:(55000,55100), upper bound: (55050,55150) lower/upperindex of 55075 should be (0
+        #print(len(upper_bound))
+        for i in lower_index: #this loop is to accomodate out of order groups
+            #print(i)
+            lower_index_temp.append(self.piecewise_parameter_information[i][0])
+        for i in upper_index:
+            if i > len(upper_bound)-1:
+                upper_index_temp.append(999)
+            else:
+                upper_index_temp.append(self.piecewise_parameter_information[i][0])
+        self.lower_index = lower_index_temp
+        self.upper_index = upper_index_temp
+    
     
     def a1(self):
-        #if self.A1X_arr is not None:
-        #    print(self.A1X_arr)
         self.A1_val = self.A1X_arr*ls
-        self.T0_val = self.T0X_arr*u.d
-        self.tt0_piecewise = self._t-self.T0_piecewise_getter()
-        ret = self.A1_piecewise_getter() + self.tt0_piecewise * self.A1DOT
-        #print(ret)
+        if hasattr(self, "A1X_per_toa") is True:
+            #print(np.unique(self.A1X_per_toa))
+            ret = self.A1X_per_toa + self.tt0 * self.A1DOT
+        else:
+            ret = self.A1 + self.tt0 * self.A1DOT
         return ret
     
-    def A1_piecewise_getter(self):
-        """Toa: array of toas_mjds. Index: finds the group toa belongs to."""
-        A1_val_arr=[]
-        toa=self._t.value
-        index_upper_edge=np.searchsorted(self.upper_group_edge,toa)
-        #print(np.unique(index_upper_edge))
-        for i in range(len(toa)):
-            j = index_upper_edge[i]
-            if j>=len(self.A1_val):
-                A1_val_arr.append(self.A1.value)
-            else:
-                A1_val_arr.append(self.A1_val[j].value)
-        #print(np.unique(A1_val_arr,return_counts=True))
-        return A1_val_arr*ls
     
-    def T0_piecewise_getter(self):
-        """Toa: array of toas_mjds. Index: finds the group toa belongs to."""
-        T0_val_arr=[]
-        print(f"from T0_piecewise_setter: T0X arr = {self.T0X_arr}")
-        toa=self._t.value
-        if len(self.upper_group_edge)<=1:
-            self.upper_group_edge=[0,1e9]
-            #print(np.unique(self.upper_group_edge))
-        index_upper_edge=np.searchsorted(self.upper_group_edge,toa)
-        print(np.unique(index_upper_edge))
-        
-        for i in range(len(toa)):
-            j = index_upper_edge[i]
-            if j==0 | j==len(toa):
-                T0_val_arr.append(self._T0)
-                print("toa out of boundaries")
-            else:
-                #print("toa in boundary")
-                if self.T0X_arr is list:
-                    print("list of T0_vals given")
-                    T0_val_arr.append(self.T0_val[j].value)
+    def get_tt0(self, barycentricTOA):
+        """ tt0 = barycentricTOA - T0 """
+        if barycentricTOA is None or self.T0 is None:
+            tt0 = None
+            return tt0
+        if len(barycentricTOA)>1:
+            if len(self.piecewise_parameter_information)>0:
+                self.print_toas_in_group()   #Defines object's index for each toa as an array of length = len(self._t)
+                self.piecewise_parameter_from_information_array()   #Uses the index for each toa array to create arrays where elements are the A1X/T0X to use with that toa
+        if len(barycentricTOA)>1:
+            check = hasattr(self, "T0X_per_toa")
+            if hasattr(self, "T0X_per_toa") is True:
+                if len(self.T0X_per_toa)==1:
+                    T0 = self.T0X_per_toa
                 else:
-                    #print("singular T0_val")
-                    T0_val_arr.append(self.T0_val[j].value)
-        #print(np.unique(T0_val_arr,return_counts=True))
-        #print(T0_val_arr)
-        return T0_val_arr*u.d
+                    T0 = self.T0X_per_toa
+            else:
+                T0 = self.T0
+        else:
+            T0 = self.T0
+        if not hasattr(barycentricTOA, "unit") or barycentricTOA.unit == None:
+            barycentricTOA = barycentricTOA * u.day
+        #print(f"Unique T0s being used in tt0 calculation: {np.unique(T0)}\n")
+        tt0 = (barycentricTOA - T0).to("second")
+        return tt0
+   
+    
+    def d_delayL1_d_par(self, par):
+        if par not in self.binary_params:
+            errorMesg = par + " is not in binary parameter list."
+            raise ValueError(errorMesg)
+        par_obj = getattr(self, par)
+        index,par_temp = self.in_piece(par)
+        #print(index)
+        if par_temp is None: # to circumvent the need for list of d_pars = [T0X_0,...,T0X_i] use par_temp
+            if hasattr(self, "d_delayL1_d_" + par):
+                func = getattr(self, "d_delayL1_d_" + par)
+                return func() * index
+            else:
+                if par in self.orbits_cls.orbit_params:
+                    return self.d_delayL1_d_E() * self.d_E_d_par(par)
+                else:
+                    return np.zeros(len(self.t)) * u.second / par_obj.unit            
+        else:
+            if hasattr(self, "d_delayL1_d_" + par_temp):
+                func = getattr(self, "d_delayL1_d_" + par_temp)
+                return func() * index
+            else:
+                if par in self.orbits_cls.orbit_params:
+                    return self.d_delayL1_d_E() * self.d_E_d_par()
+                else:
+                    return np.zeros(len(self.t)) * u.second / par_obj.unit            
+            
+    
+
+    def d_delayL2_d_par(self, par):
+        if par not in self.binary_params:
+            errorMesg = par + " is not in binary parameter list."
+            raise ValueError(errorMesg)
+        #print(par)
+        par_obj = getattr(self, par)
+        index,par_temp = self.in_piece(par)
+        #print(index)
+        if par_temp is None: # to circumvent the need for list of d_pars = [T0X_0,...,T0X_i] use par_temp
+            if hasattr(self, "d_delayL2_d_" + par):
+                func = getattr(self, "d_delayL2_d_" + par)
+                return func() * index
+            else:
+                if par in self.orbits_cls.orbit_params:
+                    return self.d_delayL2_d_E() * self.d_E_d_par(par)
+                else:
+                    return np.zeros(len(self.t)) * u.second / par_obj.unit            
+        else:
+            if hasattr(self, "d_delayL2_d_" + par_temp):
+                func = getattr(self, "d_delayL2_d_" + par_temp)
+                return func() * index
+            else:
+                if par in self.orbits_cls.orbit_params:
+                    return self.d_delayL2_d_E() * self.d_E_d_par()
+                else:
+                    return np.zeros(len(self.t)) * u.second / par_obj.unit            
+    
+    def in_piece(self,par):
+        #print(par)
+        a = getattr(self,par)
+        text = par.split("_")
+        param = text[0]
+        toa_index = int(text[1])
+        group_index = np.array(self.group_index())
+        if param == "T0X":
+            ret = (group_index == toa_index)
+            return [ret,"T0X"]
+        elif param == "A1X":
+            ret = (group_index == toa_index)
+            return [ret,"A1X"]
+        else:
+            return [np.zeros(len(self.tt0))+1,None]
     
     
-    def create_group_boundary(self, axis_store_lower, axis_store_upper):
-        self.extended_group_range = []
-        for i in range(0,len(self.axis_store_lower)):
-            if i==0:
-                self.extended_group_range.append(self.axis_store_lower[i]-100)
-            elif i<len(self.axis_store_lower):
-                self.extended_group_range.append(self.axis_store_lower[i+1]-(self.axis_store_lower[i+1]-self.axis_store_upper[i])/2)
-            elif i==len(self.axis_store_lower):
-                self.extended_group_range.append(self.axis_store_upper[i]+100)
-        self.axis_store=self.extended_group_range 
+    
+    def d_BTdelay_d_par(self, par):
+        return self.delayR() * (self.d_delayL2_d_par(par) + self.d_delayL1_d_par(par))
+    
+    def d_delayL1_d_A1X(self):
+        return np.sin(self.omega()) * (np.cos(self.E()) - self.ecc()) / c.c
+    
+    def d_delayL2_d_A1X(self):
+        return (np.cos(self.omega()) * np.sqrt(1 - self.ecc() ** 2) * np.sin(self.E()) / c.c)
+    
+    def d_delayL1_d_T0X(self):
+        return self.d_delayL1_d_E() * self.d_E_d_T0X()
+
+    
+    def d_delayL2_d_T0X(self):
+        return self.d_delayL2_d_E() * self.d_E_d_T0X()
+    
+    def d_E_d_T0X(self):
+        """Analytic derivative
+
+        d(E-e*sinE)/dT0 = dM/dT0
+        dE/dT0(1-cosE*e)-de/dT0*sinE = dM/dT0
+        dE/dT0(1-cosE*e)+eDot*sinE = dM/dT0
+        """
+        RHS = self.prtl_der("M", "T0")
+        E = self.E()
+        EDOT = self.EDOT
+        ecc = self.ecc()
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            return (RHS - EDOT * np.sin(E)) / (1.0 - np.cos(E) * ecc)
+        
+    
+    def prtl_der(self, y, x):
+        """Find the partial derivatives in binary model pdy/pdx
+
+        Parameters
+        ----------
+        y : str
+           Name of variable to be differentiated
+        x : str
+           Name of variable the derivative respect to
+
+        Returns
+        -------
+        np.array
+           The derivatives pdy/pdx
+        """
+        if y not in self.binary_params + self.inter_vars:
+            errorMesg = y + " is not in binary parameter and variables list."
+            raise ValueError(errorMesg)
+
+        if x not in self.inter_vars + self.binary_params:
+            errorMesg = x + " is not in binary parameters and variables list."
+            raise ValueError(errorMesg)
+        #derivative to itself
+        if x == y:
+            return np.longdouble(np.ones(len(self.tt0))) * u.Unit("")
+        # Get the unit right
+        yAttr = getattr(self, y)
+        xAttr = getattr(self, x)
+        U = [None, None]
+        for i, attr in enumerate([yAttr, xAttr]):
+            if hasattr(attr, "units"):  # If attr is a PINT Parameter class type
+                U[i] = attr.units
+            elif hasattr(attr, "unit"):  # If attr is a Quantity type
+                U[i] = attr.unit
+            elif hasattr(attr, "__call__"):  # If attr is a method
+                U[i] = attr().unit
+            else:
+                raise TypeError(type(attr) + "can not get unit")
+        yU = U[0]
+        xU = U[1]
+        # Call derivtive functions
+        derU = yU / xU
+        if hasattr(self, "d_" + y + "_d_" + x):
+            dername = "d_" + y + "_d_" + x
+            result = getattr(self, dername)()
+
+        elif hasattr(self, "d_" + y + "_d_par"):
+            dername = "d_" + y + "_d_par"
+            result = getattr(self, dername)(x)
+            
+        else:
+            result = np.longdouble(np.zeros(len(self.tt0)))
+
+        if hasattr(result, "unit"):
+            return result.to(derU, equivalencies=u.dimensionless_angles())
+        else:
+            return result * derU
+
+        
+        
+    def d_M_d_par(self, par):
+        """derivative for M respect to bianry parameter.
+
+        Parameters
+        ----------
+        par : string
+             parameter name
+
+        Returns
+        -------
+        Derivitve of M respect to par
+        """
+        
+        if par not in self.binary_params:
+            errorMesg = par + " is not in binary parameter list."
+            raise ValueError(errorMesg)
+        par_obj = getattr(self, par)
+        
+        result = self.orbits_cls.d_orbits_d_par(par)
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            result = result.to(u.Unit("") / par_obj.unit)
+        return result
+        
 #____________________________________________________________________________________________________________________________________
         
    
