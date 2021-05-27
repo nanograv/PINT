@@ -1723,8 +1723,16 @@ class WidebandState(ModelState):
     def parameter_covariance_matrix(self):
         # make sure we compute the SVD
         xvar = np.dot(self.Vt.T / self.s, self.Vt)
-        # TODO: make this CovarianceMatrix?
-        return (xvar / self.norm).T / self.norm
+        # is this the best place to do this?
+        covariance_matrix_labels = {}
+        for i, (param, unit) in enumerate(zip(self.params, self.units)):
+            covariance_matrix_labels[param] = (i, i + 1, unit)
+        # covariance matrix is 2D and symmetric
+        covariance_matrix_labels = [covariance_matrix_labels] * 2
+
+        return CovarianceMatrix(
+            (xvar / self.norm).T / self.norm, covariance_matrix_labels
+        )
 
 
 class WidebandDownhillFitter(DownhillFitter):
