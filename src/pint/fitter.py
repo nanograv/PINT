@@ -2713,9 +2713,8 @@ class WidebandLMFitter(LMFitter):
         self.current_state = state
         self.model = state.model
         self.resids = state.resids
-        # TODO: make this a covariance matrix
         self.parameter_covariance_matrix = state.parameter_covariance_matrix
-        self.errors = np.sqrt(np.diag(self.parameter_covariance_matrix))
+        self.errors = np.sqrt(np.diag(self.parameter_covariance_matrix.matrix))
         for p, e in zip(state.params, self.errors):
             try:
                 log.debug(f"Setting {getattr(self.model, p)} uncertainty to {e}")
@@ -2725,9 +2724,14 @@ class WidebandLMFitter(LMFitter):
                     log.debug(f"Unexpected parameter {p}")
             else:
                 pm.uncertainty = e * pm.units
-        self.parameter_correlation_matrix = (
-            self.parameter_covariance_matrix / self.errors
-        ).T / self.errors
+        # self.parameter_correlation_matrix = (
+        #    self.parameter_covariance_matrix / self.errors
+        # ).T / self.errors
+        self.parameter_correlation_matrix = CorrelationMatrix(
+            (self.parameter_covariance_matrix.matrix / self.errors).T / self.errors,
+            self.parameter_covariance_matrix.axis_labels,
+        )
+
         self.update_model(state.chi2)
         # Compute the noise realizations if possible
         ntmpar = len(self.model.free_params)
