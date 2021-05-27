@@ -5,6 +5,7 @@ import numpy as np
 from itertools import combinations
 import astropy.units as u
 from collections import OrderedDict
+from warnings import warn
 import copy
 
 
@@ -236,6 +237,10 @@ class PintMatrix:
 
         DEPRECATED - use get_label(..., axis=axis)
         """
+        warn(
+            "This method is deprecated. Use `parameter_covariance_matrix.get_label(..., axis=axis)[0]` instead of `parameter_covariance_matrix.get_label_along_axis(...)",
+            category=DeprecationWarning,
+        )
         label_in_one_axis = self.axis_labels[axis]
         if label_name in label_in_one_axis.keys():
             return (label_name, axis) + label_in_one_axis[label_name]
