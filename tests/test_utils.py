@@ -44,6 +44,14 @@ from pint.utils import (
     lines_of,
     open_or_use,
     taylor_horner,
+    companion_mass,
+    mass_funct,
+    mass_funct2,
+    pulsar_age,
+    pulsar_B,
+    pulsar_B_lightcyl,
+    pulsar_edot,
+    pulsar_mass,
 )
 
 
@@ -631,72 +639,97 @@ def test_pmtot():
         pmtot(m2)
 
 
-def test_psr_utils():
-
-    from pint.utils import (
-        companion_mass,
-        mass_funct,
-        mass_funct2,
-        pulsar_age,
-        pulsar_B,
-        pulsar_B_lightcyl,
-        pulsar_edot,
-        pulsar_mass,
-    )
-
+def test_mass_function():
     pb = 1.0 * u.d
     x = 2.0 * pint.ls
 
     # Mass function
     assert np.isclose(mass_funct(pb, x), 0.008589595519643776 * u.solMass)
-    with pytest.raises(ValueError):
-        mass_funct(pb.value, x)
+
+
+def test_mass_function_error_without_quantity_x():
+    pb = 1.0 * u.d
+    x = 2.0 * pint.ls
+
+    # Mass function
     with pytest.raises(ValueError):
         mass_funct(pb, x.value)
+
+
+def test_mass_function_error_without_quantity_pb():
+    pb = 1.0 * u.d
+    x = 2.0 * pint.ls
+
+    # Mass function
+    with pytest.raises(ValueError):
+        mass_funct(pb.value, x)
+
+
+def test_other_mass_function():
+    pb = 1.0 * u.d
+    x = 2.0 * pint.ls
 
     # Mass function, second form
     assert np.isclose(
         mass_funct2(1.4 * u.solMass, 0.2 * u.solMass, 60.0 * u.deg),
         0.0020297470401197783 * u.solMass,
     )
+
+
+def test_other_mass_function_error_without_quantity_mp():
+    pb = 1.0 * u.d
+    x = 2.0 * pint.ls
+
+    # Mass function, second form
     with pytest.raises(ValueError):
         mass_funct2(1.4, 0.2 * u.solMass, 60.0 * u.deg)
+
+
+def test_other_mass_function_error_without_quantity_mc():
+    pb = 1.0 * u.d
+    x = 2.0 * pint.ls
+
+    # Mass function, second form
     with pytest.raises(ValueError):
         mass_funct2(1.4 * u.solMass, 0.2, 60.0 * u.deg)
+
+
+def test_other_mass_function_error_without_quantity_inc():
+    pb = 1.0 * u.d
+    x = 2.0 * pint.ls
+
+    # Mass function, second form
     with pytest.raises(ValueError):
         mass_funct2(1.4 * u.solMass, 0.2 * u.solMass, 60.0)
 
+
+def test_characteristic_age():
     # Characteristic age
     assert np.isclose(
         pulsar_age(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s), 261426.72446573884 * u.yr
     )
 
+
+def test_Edot():
     # Edot
     assert np.isclose(
         pulsar_edot(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s),
         2.6055755618875905e30 * u.erg / u.s,
     )
 
+
+def test_Bfield():
     # B
     assert np.isclose(
         pulsar_B(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s), 238722891596281.66 * u.G
     )
 
+
+def test_Blc():
     # B_lc
     assert np.isclose(
         pulsar_B_lightcyl(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s),
         0.07774704753236616 * u.G,
-    )
-
-    # companion mass
-    assert np.isclose(
-        companion_mass(pb, x, inc=90 * u.deg, mpsr=1.4 * u.Msun),
-        0.2906422269961084 * u.Msun,
-    )
-
-    # pulsar mass
-    assert np.isclose(
-        pulsar_mass(pb, x, 0.4 * u.Msun, inc=90 * u.deg), 2.329629042176839 * u.Msun
     )
 
 
@@ -706,21 +739,10 @@ def test_psr_utils():
     floats(min_value=0.04, max_value=1000),
     floats(min_value=0.1, max_value=90),
 )
-def test_masses(Mpsr, Mc, Pb, incl):
+def test_companion_mass(Mpsr, Mc, Pb, incl):
     """
-    test pulsar and companion mass calculations for a range of values
+    test companion mass calculations for a range of values
     """
-    assume(incl > 0)
-    assume(incl <= 90)
-    assume(Mpsr > 0)
-    assume(Mc > 0)
-    assume(Pb > 0)
-
-    from pint.utils import (
-        companion_mass,
-        pulsar_mass,
-    )
-
     Mtot = (Mc + Mpsr) * u.Msun
     # full semi-major axis
     a = (c.G * Mtot * (Pb * u.day / (2 * np.pi)) ** 2) ** (1.0 / 3)
@@ -728,32 +750,105 @@ def test_masses(Mpsr, Mc, Pb, incl):
     apsr = (Mc * u.Msun / Mtot) * a
     # projected
     x = (apsr * np.sin(incl * u.deg)).to(pint.ls)
-
-    # computed pulsar mass
-    assert np.isclose(
-        pulsar_mass(Pb * u.day, x, Mc * u.Msun, inc=incl * u.deg), Mpsr * u.Msun
-    )
     # computed companion mass
     assert np.isclose(
         companion_mass(Pb * u.day, x, mpsr=Mpsr * u.Msun, inc=incl * u.deg), Mc * u.Msun
     )
-    # and test exceptions
+
+
+@given(
+    floats(min_value=0.5, max_value=3),
+    floats(min_value=0.01, max_value=10),
+    floats(min_value=0.04, max_value=1000),
+    floats(min_value=0.1, max_value=90),
+)
+def test_pulsar_mass(Mpsr, Mc, Pb, incl):
+    """
+    test pulsar mass calculations for a range of values
+    """
+    Mtot = (Mc + Mpsr) * u.Msun
+    # full semi-major axis
+    a = (c.G * Mtot * (Pb * u.day / (2 * np.pi)) ** 2) ** (1.0 / 3)
+    # pulsar semi-major axis
+    apsr = (Mc * u.Msun / Mtot) * a
+    # projected
+    x = (apsr * np.sin(incl * u.deg)).to(pint.ls)
+    # computed pulsar mass
+    assert np.isclose(
+        pulsar_mass(Pb * u.day, x, Mc * u.Msun, inc=incl * u.deg), Mpsr * u.Msun
+    )
+
+
+def test_pulsar_mass_error_noquantity_inc():
+    Pb = 1.0 * u.d
+    x = 2.0 * pint.ls
+    inc = 60 * u.deg
+    Mc = 0.5 * u.solMass
     with pytest.raises(ValueError):
-        companion_mass(Pb * u.day, x, mpsr=Mpsr * u.Msun, inc=incl)
+        pulsar_mass(Pb, x, Mc, inc=inc.value)
+
+
+def test_pulsar_mass_error_noquantity_Mc():
+    Pb = 1.0 * u.d
+    x = 2.0 * pint.ls
+    inc = 60 * u.deg
+    Mc = 0.5 * u.solMass
     with pytest.raises(ValueError):
-        companion_mass(Pb * u.day, x.value, mpsr=Mpsr * u.Msun, inc=incl * u.deg)
+        pulsar_mass(Pb, x, Mc.value, inc=inc)
+
+
+def test_pulsar_mass_error_noquantity_x():
+    Pb = 1.0 * u.d
+    x = 2.0 * pint.ls
+    inc = 60 * u.deg
+    Mc = 0.5 * u.solMass
     with pytest.raises(ValueError):
-        companion_mass(Pb, x, mpsr=Mpsr * u.Msun, inc=incl * u.deg)
+        pulsar_mass(Pb, x.value, Mc, inc=inc)
+
+
+def test_pulsar_mass_error_noquantity_Pb():
+    Pb = 1.0 * u.d
+    x = 2.0 * pint.ls
+    inc = 60 * u.deg
+    Mc = 0.5 * u.solMass
     with pytest.raises(ValueError):
-        companion_mass(Pb * u.day, x, mpsr=Mpsr, inc=incl * u.deg)
+        pulsar_mass(Pb.value, x, Mc, inc=inc)
+
+
+def test_companion_mass_error_noquantity_inc():
+    Pb = 1.0 * u.d
+    x = 2.0 * pint.ls
+    inc = 60 * u.deg
+    Mpsr = 1.4 * u.solMass
     with pytest.raises(ValueError):
-        pulsar_mass(Pb, x, Mc * u.Msun, inc=incl * u.deg)
+        pulsar_mass(Pb, x, Mpsr, inc=inc.value)
+
+
+def test_companion_mass_error_noquantity_Mpsr():
+    Pb = 1.0 * u.d
+    x = 2.0 * pint.ls
+    inc = 60 * u.deg
+    Mpsr = 1.4 * u.solMass
     with pytest.raises(ValueError):
-        pulsar_mass(Pb * u.day, x.value, Mc * u.Msun, inc=incl * u.deg)
+        pulsar_mass(Pb, x, Mpsr.value, inc=inc)
+
+
+def test_companion_mass_error_noquantity_x():
+    Pb = 1.0 * u.d
+    x = 2.0 * pint.ls
+    inc = 60 * u.deg
+    Mpsr = 1.4 * u.solMass
     with pytest.raises(ValueError):
-        pulsar_mass(Pb * u.day, x, Mc, inc=incl * u.deg)
+        pulsar_mass(Pb, x.value, Mpsr, inc=inc)
+
+
+def test_companion_mass_error_noquantity_Pb():
+    Pb = 1.0 * u.d
+    x = 2.0 * pint.ls
+    inc = 60 * u.deg
+    Mpsr = 1.4 * u.solMass
     with pytest.raises(ValueError):
-        pulsar_mass(Pb * u.day, x, Mc * u.Msun, inc=incl)
+        pulsar_mass(Pb.value, x, Mpsr, inc=inc)
 
 
 def test_ftest():
