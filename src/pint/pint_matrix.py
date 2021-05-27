@@ -52,10 +52,19 @@ class PintMatrix:
         self._check_index_overlap()
 
     def __getitem__(self, key):
-        return self.matrix[key]
+        """
+        Allow normal array indexing of covariance matrices.
 
-    def __setitem__(self, key, value):
-        self.matrix[key] = value
+        Parameters
+        ----------
+        key : any index into an array (int, slice, etc)
+
+
+        Returns
+        -------
+        values : covariance matrix values
+        """
+        return self.matrix[key]
 
     @property
     def ndim(self):
@@ -80,8 +89,8 @@ class PintMatrix:
         return units
 
     def get_label_names(self, axis=None):
-        """return only the names of the labels
-        along the specified axis if requested
+        """Return only the names of the labels
+        along the specified axis if requested.
 
         Parameters
         ----------
@@ -90,7 +99,7 @@ class PintMatrix:
 
         Returns
         -------
-        labels : list of label names for each dimension
+        labels : list of label names for all dimensions, or just along the specified axis
 
         """
         labels = []
@@ -106,8 +115,8 @@ class PintMatrix:
             labels.append([x[0] for x in self.get_axis_labels(dim)])
         return labels
 
-    def get_all_label_names(self):
-        """return all possible unique label names
+    def get_unique_label_names(self):
+        """Return all unique label names (there may be duplications between axes).
 
         Returns
         -------
@@ -122,7 +131,7 @@ class PintMatrix:
         return set(unique_labels)
 
     def get_label_size(self, label, axis=None):
-        """Get the size of the a label for all axes, or just the specified
+        """Get the size of the a label for all axes, or just the specified axis.
 
         Parameters
         ----------
@@ -673,9 +682,7 @@ class CovarianceMatrix(PintMatrix):
 
     def prettyprint(self, prec=3, coordinatefirst=False):
         """
-        prettyprint(self, prec=3, coordinatefirst=False)
-
-        return a version of the array formatted for printing (with labels etc)
+        Return a version of the array formatted for printing (with labels etc).
 
         Parameters
         ----------
@@ -687,7 +694,7 @@ class CovarianceMatrix(PintMatrix):
         Return
         ------
             str : matrix formatted for printing
-        
+
         """
 
         fps = self.get_label_names(axis=0)
