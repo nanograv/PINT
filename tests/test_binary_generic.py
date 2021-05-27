@@ -15,6 +15,7 @@ from pinttestdata import datadir
 
 bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par", "J1744-1134.basic.ecliptic.par"]
 
+
 @pytest.mark.parametrize("parfile", glob(join(datadir, "*.par")))
 def test_if_stand_alone_binary_model_get_updated_from_PINT_model(parfile):
     if basename(parfile) in bad_trouble:

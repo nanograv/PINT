@@ -166,6 +166,7 @@ def test_M2_warning():
     # check that the message matches
     assert record[0].message.args[0] == "'M2' will not be used in ELL1H model. "
 
+
 def test_no_H3_H4(toasJ0613):
     """ Test no H3 and H4 in model.
     """
