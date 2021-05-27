@@ -145,19 +145,26 @@ def test_J0613_STIG(toasJ0613, modelJ0613_STIG):
     f.fit_toas()
 
 
-def test_SINI_error():
+def test_SINI_warning():
     """Test SINI and M2 error.
     """
     SINI_par = simple_par.replace("H3 2.7507208E-7", "SINI 0.8")
-    with pytest.warns(None):
+    with pytest.warns(None) as record:
         model.get_model(StringIO(SINI_par))
+    # check that only one warning was raised
+    assert len(record) == 1
+    # check that the message matches
+    assert record[0].message.args[0] == "'SINI' will not be used in ELL1H model. "
 
 
-def test_M2_error():
+def test_M2_warning():
     M2_par = simple_par + "\nM2 1.0 1 0.1"
-    with pytest.warns(None):
+    with pytest.warns(None) as record:
         model.get_model(StringIO(M2_par))
-
+    # check that only one warning was raised
+    assert len(record) == 1
+    # check that the message matches
+    assert record[0].message.args[0] == "'M2' will not be used in ELL1H model. "
 
 def test_no_H3_H4(toasJ0613):
     """ Test no H3 and H4 in model.

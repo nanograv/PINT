@@ -8,10 +8,19 @@ import warnings
 
 
 def verify_stand_alone_binary_parameter_updates(m):
-    """Verify if the stand alone binary parameters get updated.
+    """Verify if the stand alone binary parameter values gets updated by the
+    PINT binary model objects.
 
+    Parameter
+    ---------
     m: `~PINT.TimingModel` object.
         The timing model with binary
+
+    Note
+    ----
+    This test fails when the PINT object's set parameter values do not match the
+    stand alone model parameter values. The stand alone model parameters should
+    be updated when the TimingModel runs .setup(), .delay() and .d_delay_d_param().
     """
     if not hasattr(m, "binary_instance"):
         warnings.warn(
@@ -21,6 +30,7 @@ def verify_stand_alone_binary_parameter_updates(m):
                 " update"
             )
         )
+        return
     for binary_par in m.binary_instance.binary_params:
         standalone_par = getattr(m.binary_instance, binary_par)
         try:
@@ -38,3 +48,4 @@ def verify_stand_alone_binary_parameter_updates(m):
                 assert pint_par.value == standalone_par.value
             else:
                 assert pint_par.value == standalone_par
+    return
