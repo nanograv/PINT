@@ -88,6 +88,23 @@ class PintMatrix:
             units.append(self.get_axis_labels(dim))
         return units
 
+    def diag(self, k=0):
+        """
+        Extract a diagonal.
+
+        Parameters
+        ----------
+        k: int (optional)
+            Diagonal in question. The default is 0. Use k>0 for diagonals above the main diagonal, and k<0 for diagonals below the main diagonal.            
+
+        Returns
+        -------
+        out : ndarray
+            The extracted diagonal.
+
+        """
+        return np.diag(self.matrix, k=k)
+
     def get_label_names(self, axis=None):
         """Return only the names of the labels
         along the specified axis if requested.
@@ -753,6 +770,23 @@ class CovarianceMatrix(PintMatrix):
 
     def __repr__(self):
         return self.prettyprint()
+
+    def to_correlation_matrix(self):
+        """
+        Convert a covariance matrix to a correlation matrix.  Extract the diagonal elements to use as the uncertainties, and divide through by those values.
+
+        Return
+        ------
+            correlation : `CorrelationMatrix`
+
+        """
+        errors = np.sqrt((self.diag()))
+
+        return CorrelationMatrix(
+            (self.matrix / errors).T / errors,
+            self.axis_labels,
+            )
+
 
 
 class CorrelationMatrix(CovarianceMatrix):
