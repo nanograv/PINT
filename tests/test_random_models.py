@@ -17,9 +17,6 @@ from pint import ls
 from pint import utils
 
 
-@pytest.mark.skipif(
-    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
-)
 def test_random_models():
     # taken from test_fitter.py/test_fitter()
     # Get model
@@ -57,21 +54,3 @@ def test_random_models():
 
     # this should be less than the fully free version
     assert dphase_F.std(axis=0).max() < dphase.std(axis=0).max()
-
-    # make a plot (if we can)
-    dt = tnew.get_mjds() - f.model.PEPOCH.value * u.d
-    plt.close()
-    p1 = plt.plot(tnew.get_mjds(), dphase.std(axis=0), label="All Free")
-    p2 = plt.plot(tnew.get_mjds(), dphase_F.std(axis=0), label="F0 free")
-    dt = tnew.get_mjds() - f.model.PEPOCH.value * u.d
-    p3 = plt.plot(
-        tnew.get_mjds(),
-        np.sqrt(
-            (f.model.F0.uncertainty * dt) ** 2
-            + (0.5 * f.model.F1.uncertainty * dt ** 2) ** 2
-        ).decompose(),
-        label="Analytic",
-    )
-    plt.xlabel("MJD")
-    plt.ylabel("Phase Uncertainty (cycles)")
-    plt.legend()
