@@ -782,11 +782,7 @@ class CovarianceMatrix(PintMatrix):
         """
         errors = np.sqrt((self.diag()))
 
-        return CorrelationMatrix(
-            (self.matrix / errors).T / errors,
-            self.axis_labels,
-            )
-
+        return CorrelationMatrix((self.matrix / errors).T / errors, self.axis_labels)
 
 
 class CorrelationMatrix(CovarianceMatrix):
