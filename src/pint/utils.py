@@ -1562,8 +1562,8 @@ def remove_dummy_distance(c):
 
 def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params="all"):
     """
-    calculates random models based on the covariance matrix of the `fitter` object
-    
+    Calculates random models based on the covariance matrix of the `fitter` object.
+
     returns the new phase differences compared to the original model
     optionally returns all of the random models
 
@@ -1588,8 +1588,10 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
         list of random models (each is a `pint.models.timing_model.TimingModel`)
 
 
-    Note: to calculate new TOAs, you can do:
-        tnew = pint.toa.make_fake_toas(MJDmin, MJDmax, Ntoa, model=fitter.model)
+    Note
+    ----
+    To calculate new TOAs, you can do:
+        `tnew = pint.toa.make_fake_toas(MJDmin, MJDmax, Ntoa, model=fitter.model)`
     or similar
     """
     Nmjd = len(toas)
