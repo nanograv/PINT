@@ -644,6 +644,9 @@ def test_mass_function():
     x = 2.0 * pint.ls
 
     # Mass function
+    # RHS of Eqn. 8.34 in Lorimer & Kramer (2008)
+    # this should be 4* pi**2 * x**3 / (G * Pb**2)
+    # in appropriate units
     assert np.isclose(mass_funct(pb, x), 0.008589595519643776 * u.solMass)
 
 
@@ -666,10 +669,10 @@ def test_mass_function_error_without_quantity_pb():
 
 
 def test_other_mass_function():
-    pb = 1.0 * u.d
-    x = 2.0 * pint.ls
 
     # Mass function, second form
+    # LHS of Eqn. 8.34 in Lorimer & Kramer (2008)
+    # this should be (Mc * sin(inc))**3 / (Mp + Mc)**2
     assert np.isclose(
         mass_funct2(1.4 * u.solMass, 0.2 * u.solMass, 60.0 * u.deg),
         0.0020297470401197783 * u.solMass,
