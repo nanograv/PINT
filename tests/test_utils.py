@@ -760,6 +760,32 @@ def test_companion_mass(Mpsr, Mc, Pb, incl):
 
 
 @given(
+    arrays(np.float, 10, elements=floats(0.5, 3)),
+    arrays(np.float, 10, elements=floats(0.01, 10)),
+    arrays(np.float, 10, elements=floats(0.04, 1000)),
+    arrays(np.float, 10, elements=floats(0.1, 90)),
+)
+def test_companion_mass_array(Mpsr, Mc, Pb, incl):
+    """
+    test companion mass calculations for a range of values given np.ndarray inputs
+    """
+    Mtot = (Mc + Mpsr) * u.Msun
+    # full semi-major axis
+    a = (c.G * Mtot * (Pb * u.day / (2 * np.pi)) ** 2) ** (1.0 / 3)
+    # pulsar semi-major axis
+    apsr = (Mc * u.Msun / Mtot) * a
+    # projected
+    x = (apsr * np.sin(incl * u.deg)).to(pint.ls)
+    # computed companion mass
+    assert (
+        np.isclose(
+            companion_mass(Pb * u.day, x, mpsr=Mpsr * u.Msun, inc=incl * u.deg),
+            Mc * u.Msun,
+        )
+    ).all()
+
+
+@given(
     floats(min_value=0.5, max_value=3),
     floats(min_value=0.01, max_value=10),
     floats(min_value=0.04, max_value=1000),
@@ -780,6 +806,31 @@ def test_pulsar_mass(Mpsr, Mc, Pb, incl):
     assert np.isclose(
         pulsar_mass(Pb * u.day, x, Mc * u.Msun, inc=incl * u.deg), Mpsr * u.Msun
     )
+
+
+@given(
+    arrays(np.float, 10, elements=floats(0.5, 3)),
+    arrays(np.float, 10, elements=floats(0.01, 10)),
+    arrays(np.float, 10, elements=floats(0.04, 1000)),
+    arrays(np.float, 10, elements=floats(0.1, 90)),
+)
+def test_pulsar_mass_array(Mpsr, Mc, Pb, incl):
+    """
+    test pulsar mass calculations for a range of values given np.ndarray inputs
+    """
+    Mtot = (Mc + Mpsr) * u.Msun
+    # full semi-major axis
+    a = (c.G * Mtot * (Pb * u.day / (2 * np.pi)) ** 2) ** (1.0 / 3)
+    # pulsar semi-major axis
+    apsr = (Mc * u.Msun / Mtot) * a
+    # projected
+    x = (apsr * np.sin(incl * u.deg)).to(pint.ls)
+    # computed pulsar mass
+    assert (
+        np.isclose(
+            pulsar_mass(Pb * u.day, x, Mc * u.Msun, inc=incl * u.deg), Mpsr * u.Msun
+        )
+    ).all()
 
 
 def test_pulsar_mass_error_noquantity_inc():
