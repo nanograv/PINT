@@ -1,9 +1,15 @@
+import os
+import textwrap
+from collections import defaultdict
+
 import astropy.constants as const
 import astropy.units as u
 from astropy import log
+from astropy.coordinates import EarthLocation
 
 import pint.solar_system_ephemerides as sse
 from pint.pulsar_mjd import Time
+from pint.utils import interesting_lines
 
 import astropy.coordinates
 
@@ -13,7 +19,7 @@ import astropy.coordinates
 # redefining an Observatory with the same name.
 # TODO read the files from the other locations, if they exist
 
-__all__ = ["Observatory", "get_observatory"]
+__all__ = ["Observatory", "get_observatory", "parse_t2_observatories_dat"]
 
 # The default BIPM to use if not explicitly specified
 # This should be the most recent BPIM file in the datafiles directory
@@ -316,3 +322,63 @@ def get_observatory(
     site.include_bipm = include_bipm
     site.bipm_version = bipm_version
     return site
+
+
+def parse_t2_observatories_dat(filename=None):
+    """Read a tempo2 observatories.dat file and compare with PINT
+
+    Produces a report including lines that can be added to PINT's
+    observatories.py to add any observatories unknown to PINT.
+    """
+    if filename is None:
+        t2dir = os.getenv("TEMPO2")
+        if t2dir is None:
+            raise ValueError(
+                "filename not provided and TEMPO2 environment variable not set"
+            )
+        filename = os.path.join(t2dir, "observatory", "obervatories.dat")
+
+    report = defaultdict(list)
+    with open(filename) as f:
+        for line in interesting_lines(f, comments="#"):
+            try:
+                x, y, z, full_name, short_name = line.split()
+            except ValueError:
+                raise ValueError(f"unrecognized line '{line}'")
+            x, y, z = float(x), float(y), float(z)
+            full_name, short_name = full_name.lower(), short_name.lower()
+            topo_obs_entry = textwrap.dedent(
+                f"""
+                TopoObs(
+                    name='{full_name}',
+                    aliases=['{short_name}'],
+                    itrf_xyz=[{x}, {y}, {z}],
+                )
+                """
+            )
+            try:
+                obs = get_observatory(full_name)
+            except KeyError:
+                try:
+                    obs = get_observatory(short_name)
+                except KeyError:
+                    report["missing"].append(
+                        dict(name=full_name, topo_obs_entry=topo_obs_entry)
+                    )
+                    continue
+
+            loc = EarthLocation.from_geocentric(x * u.m, y * u.m, z * u.m)
+            if obs.earth_location_itrf() != loc:
+                report["different"].append(
+                    dict(
+                        name=full_name,
+                        t2=loc.to_geodetic(),
+                        pint=obs.earth_location_itrf().to_geodetic(),
+                        topo_obs_entry=topo_obs_entry,
+                    )
+                )
+
+            # Check whether TEMPO alias - first two letters - works and is distinct from others?
+            # Check all t2 aliases also work for PINT?
+            # Check ITOA code?
+    return report

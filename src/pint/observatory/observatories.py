@@ -50,7 +50,7 @@ TopoObs(
     "jodrell",
     tempo_code="8",
     itoa_code="JB",
-    aliases=["jbdfb", "jbroach", "jbafb"],
+    aliases=["jbdfb", "jbroach", "jbafb", "jbodfb", "jboafb", "jboroach"],
     itrf_xyz=[3822626.04, -154105.65, 5086486.04],
 )
 TopoObs(
@@ -65,7 +65,7 @@ TopoObs(
 )
 TopoObs(
     "ncyobs",
-    aliases=["ncyobs"],
+    aliases=["nuppi"],
     itrf_xyz=[4324165.81, 165927.11, 4670132.83],
     clock_fmt="tempo2",
     clock_file=["ncyobs2obspm.clk", "obspm2gps.clk"],
@@ -183,6 +183,8 @@ TopoObs(
     include_bipm=False,
     itrf_xyz=[-3777336.0240, 3484898.411, 3765313.6970],
 )
+
+
 TopoObs(
     "algonquin",
     itoa_code="AR",
@@ -200,3 +202,403 @@ TopoObs(
 )
 TopoObs("ata", aliases=["hcro"], itrf_xyz=[-2524263.18, -4123529.78, 4147966.36])
 TopoObs("ccera", itrf_xyz=[1093406.840, -4391945.819, 4479103.550])
+
+# Fake telescope for IPTA data challenge
+TopoObs("AXIS", aliases=["axi"], itrf_xyz=[6378138.00, 0.0, 0.0])
+
+# imported from tempo2 2021 June 7
+TopoObs(
+    name='narrabri',
+    aliases=['atca'],
+    itrf_xyz=[-4752329.7, 2790505.934, -3200483.747],
+)
+TopoObs(
+    name='nanshan',
+    aliases=['ns'],
+    itrf_xyz=[228310.702, 4631922.905, 4367064.059],
+)
+TopoObs(
+    name='uao',
+    aliases=['ns'],
+    itrf_xyz=[228310.702, 4631922.905, 4367064.059],
+)
+TopoObs(
+    name='dss_43',
+    aliases=['tid43'],
+    itrf_xyz=[-4460892.6, 2682358.9, -3674756.0],
+)
+TopoObs(
+    name='op',
+    aliases=['obspm'],
+    itrf_xyz=[4324165.81, 165927.11, 4670132.83],
+)
+TopoObs(
+    name='effelsberg_asterix',
+    aliases=['effix'],
+    itrf_xyz=[4033949.5, 486989.4, 4900430.8],
+)
+TopoObs(
+    name='leap',
+    aliases=['leap'],
+    itrf_xyz=[4033949.5, 486989.4, 4900430.8],
+)
+TopoObs(
+    name='jodrellm4',
+    aliases=['jbm4'],
+    itrf_xyz=[3822252.643, -153995.683, 5086051.443],
+)
+TopoObs(
+    name='gb300',
+    aliases=['gb300'],
+    itrf_xyz=[881856.58, -4925311.86, 3943459.7],
+)
+TopoObs(
+    name='gb140',
+    aliases=['gb140'],
+    itrf_xyz=[882872.57, -4924552.73, 3944154.92],
+)
+TopoObs(
+    name='gb853',
+    aliases=['gb853'],
+    itrf_xyz=[882315.33, -4925191.41, 3943414.05],
+)
+TopoObs(
+    name='la_palma',
+    aliases=['lap'],
+    itrf_xyz=[5327021.651, -1719555.576, 3051967.932],
+)
+TopoObs(
+    name='hartebeesthoek',
+    aliases=['hart'],
+    itrf_xyz=[5085442.78, 2668263.483, -2768697.034],
+)
+TopoObs(
+    name='warkworth_30m',
+    aliases=['wark30m'],
+    itrf_xyz=[-5115425.6, 477880.31, -3767042.81],
+)
+TopoObs(
+    name='warkworth_12m',
+    aliases=['wark12m'],
+    itrf_xyz=[-5115324.399, 477843.305, -3767192.886],
+)
+TopoObs(
+    name='lofar',
+    aliases=['lofar'],
+    itrf_xyz=[3826577.462, 461022.624, 5064892.526],
+)
+TopoObs(
+    name='de601lba',
+    aliases=['eflfrlba'],
+    itrf_xyz=[4034038.635, 487026.223, 4900280.057],
+)
+TopoObs(
+    name='de601lbh',
+    aliases=['eflfrlbh'],
+    itrf_xyz=[4034038.635, 487026.223, 4900280.057],
+)
+TopoObs(
+    name='de601hba',
+    aliases=['eflfrhba'],
+    itrf_xyz=[4034101.901, 487012.401, 4900230.21],
+)
+TopoObs(
+    name='de601',
+    aliases=['eflfr'],
+    itrf_xyz=[4034101.901, 487012.401, 4900230.21],
+)
+TopoObs(
+    name='de602lba',
+    aliases=['uwlfrlba'],
+    itrf_xyz=[4152561.068, 828868.725, 4754356.878],
+)
+TopoObs(
+    name='de602lbh',
+    aliases=['uwlfrlbh'],
+    itrf_xyz=[4152561.068, 828868.725, 4754356.878],
+)
+TopoObs(
+    name='de602hba',
+    aliases=['uwlfrhba'],
+    itrf_xyz=[4152568.416, 828788.802, 4754361.926],
+)
+TopoObs(
+    name='de602',
+    aliases=['uwlfr'],
+    itrf_xyz=[4152568.416, 828788.802, 4754361.926],
+)
+TopoObs(
+    name='de603lba',
+    aliases=['tblfrlba'],
+    itrf_xyz=[3940285.328, 816802.001, 4932392.757],
+)
+TopoObs(
+    name='de603lbh',
+    aliases=['tblfrlbh'],
+    itrf_xyz=[3940285.328, 816802.001, 4932392.757],
+)
+TopoObs(
+    name='de603hba',
+    aliases=['tblfrhba'],
+    itrf_xyz=[3940296.126, 816722.532, 4932394.152],
+)
+TopoObs(
+    name='de603',
+    aliases=['tblfr'],
+    itrf_xyz=[3940296.126, 816722.532, 4932394.152],
+)
+TopoObs(
+    name='de604lba',
+    aliases=['polfrlba'],
+    itrf_xyz=[3796327.609, 877591.315, 5032757.252],
+)
+TopoObs(
+    name='de604lbh',
+    aliases=['polfrlbh'],
+    itrf_xyz=[3796327.609, 877591.315, 5032757.252],
+)
+TopoObs(
+    name='de604hba',
+    aliases=['polfrhba'],
+    itrf_xyz=[3796380.254, 877613.809, 5032712.272],
+)
+TopoObs(
+    name='de604',
+    aliases=['polfr'],
+    itrf_xyz=[3796380.254, 877613.809, 5032712.272],
+)
+TopoObs(
+    name='de605lba',
+    aliases=['julfrlba'],
+    itrf_xyz=[4005681.742, 450968.282, 4926457.67],
+)
+TopoObs(
+    name='de605lbh',
+    aliases=['julfrlbh'],
+    itrf_xyz=[4005681.742, 450968.282, 4926457.67],
+)
+TopoObs(
+    name='de605hba',
+    aliases=['julfrhba'],
+    itrf_xyz=[4005681.407, 450968.304, 4926457.94],
+)
+TopoObs(
+    name='de605',
+    aliases=['julfr'],
+    itrf_xyz=[4005681.407, 450968.304, 4926457.94],
+)
+TopoObs(
+    name='fr606lba',
+    aliases=['frlfrlba'],
+    itrf_xyz=[4323980.155, 165608.408, 4670302.803],
+)
+TopoObs(
+    name='fr606lbh',
+    aliases=['frlfrlbh'],
+    itrf_xyz=[4323980.155, 165608.408, 4670302.803],
+)
+TopoObs(
+    name='fr606hba',
+    aliases=['frlfrhba'],
+    itrf_xyz=[4324017.054, 165545.16, 4670271.072],
+)
+TopoObs(
+    name='fr606',
+    aliases=['frlfr'],
+    itrf_xyz=[4324017.054, 165545.16, 4670271.072],
+)
+TopoObs(
+    name='se607lba',
+    aliases=['onlfrlba'],
+    itrf_xyz=[3370287.366, 712053.586, 5349991.228],
+)
+TopoObs(
+    name='se607lbh',
+    aliases=['onlfrlbh'],
+    itrf_xyz=[3370287.366, 712053.586, 5349991.228],
+)
+TopoObs(
+    name='se607hba',
+    aliases=['onlfrhba'],
+    itrf_xyz=[3370272.092, 712125.596, 5349990.934],
+)
+TopoObs(
+    name='se607',
+    aliases=['onlfr'],
+    itrf_xyz=[3370272.092, 712125.596, 5349990.934],
+)
+TopoObs(
+    name='uk608lba',
+    aliases=['uklfrlba'],
+    itrf_xyz=[4008438.796, -100310.064, 4943735.554],
+)
+TopoObs(
+    name='uk608lbh',
+    aliases=['uklfrlbh'],
+    itrf_xyz=[4008438.796, -100310.064, 4943735.554],
+)
+TopoObs(
+    name='uk608hba',
+    aliases=['uklfrhba'],
+    itrf_xyz=[4008462.28, -100376.948, 4943716.6],
+)
+TopoObs(
+    name='uk608',
+    aliases=['uklfr'],
+    itrf_xyz=[4008462.28, -100376.948, 4943716.6],
+)
+TopoObs(
+    name='de609lba',
+    aliases=['ndlfrlba'],
+    itrf_xyz=[3727207.778, 655184.9, 5117000.625],
+)
+TopoObs(
+    name='de609lbh',
+    aliases=['ndlfrlbh'],
+    itrf_xyz=[3727207.778, 655184.9, 5117000.625],
+)
+TopoObs(
+    name='de609hba',
+    aliases=['ndlfrhba'],
+    itrf_xyz=[3727218.128, 655108.821, 5117002.847],
+)
+TopoObs(
+    name='de609',
+    aliases=['ndlfr'],
+    itrf_xyz=[3727218.128, 655108.821, 5117002.847],
+)
+TopoObs(
+    name='fi609lba',
+    aliases=['filfrlba'],
+    itrf_xyz=[2136833.225, 810088.74, 5935285.279],
+)
+TopoObs(
+    name='fi609lbh',
+    aliases=['filfrlbh'],
+    itrf_xyz=[2136833.225, 810088.74, 5935285.279],
+)
+TopoObs(
+    name='fi609hba',
+    aliases=['filfrhba'],
+    itrf_xyz=[2136819.194, 810039.5757, 5935299.0536],
+)
+TopoObs(
+    name='fi609',
+    aliases=['filfr'],
+    itrf_xyz=[2136819.194, 810039.5757, 5935299.0536],
+)
+TopoObs(
+    name='utr-2',
+    aliases=['utr2'],
+    itrf_xyz=[3307865.236, 2487350.541, 4836939.784],
+)
+TopoObs(
+    name='goldstone',
+    aliases=['gs'],
+    itrf_xyz=[-2353621.22, -4641341.52, 3677052.352],
+)
+TopoObs(
+    name='shao',
+    aliases=['shao'],
+    itrf_xyz=[-2826711.951, 4679231.627, 3274665.675],
+)
+TopoObs(
+    name='pico_veleta',
+    aliases=['pv'],
+    itrf_xyz=[5088964.0, 301689.8, 3825017.0],
+)
+TopoObs(
+    name='iar1',
+    aliases=['iar1'],
+    itrf_xyz=[2765357.08, -4449628.98, -3625726.47],
+)
+TopoObs(
+    name='iar2',
+    aliases=['iar2'],
+    itrf_xyz=[2765322.49, -4449569.52, -3625825.14],
+)
+TopoObs(
+    name='kat-7',
+    aliases=['k7'],
+    itrf_xyz=[5109943.105, 2003650.7359, -3239908.3195],
+)
+TopoObs(
+    name='mkiii',
+    aliases=['jbmk3'],
+    itrf_xyz=[383395.727, -173759.585, 5077751.313],
+)
+TopoObs(
+    name='tabley',
+    aliases=['tabley'],
+    itrf_xyz=[3817176.557, -162921.17, 5089462.046],
+)
+TopoObs(
+    name='darnhall',
+    aliases=['darnhall'],
+    itrf_xyz=[3828714.504, -169458.987, 5080647.749],
+)
+TopoObs(
+    name='knockin',
+    aliases=['knockin'],
+    itrf_xyz=[3859711.492, -201995.082, 5056134.285],
+)
+TopoObs(
+    name='defford',
+    aliases=['defford'],
+    itrf_xyz=[3923069.135, -146804.404, 5009320.57],
+)
+TopoObs(
+    name='cambridge',
+    aliases=['cam'],
+    itrf_xyz=[3919982.752, 2651.982, 5013849.826],
+)
+TopoObs(
+    name='coe',
+    aliases=['coe'],
+    itrf_xyz=[0.0, 1.0, 0.0],
+)
+TopoObs(
+    name='princeton',
+    aliases=['princeton'],
+    itrf_xyz=[1288748.38, -4694221.77, 4107418.8],
+)
+TopoObs(
+    name='hamburg',
+    aliases=['hamburg'],
+    itrf_xyz=[3788815.62, 1131748.336, 5035101.19],
+)
+TopoObs(
+    name='jb_42ft',
+    aliases=['jb42'],
+    itrf_xyz=[3822294.825, -153862.275, 5085987.071],
+)
+TopoObs(
+    name='jb_mkii',
+    aliases=['jbmk2'],
+    itrf_xyz=[3822846.76, -153802.28, 5086285.9],
+)
+TopoObs(
+    name='jb_mkii_rch',
+    aliases=['jbmk2roach'],
+    itrf_xyz=[3822846.76, -153802.28, 5086285.9],
+)
+TopoObs(
+    name='jb_mkii_dfb',
+    aliases=['jbmk2dfb'],
+    itrf_xyz=[3822846.76, -153802.28, 5086285.9],
+)
+TopoObs(
+    name='lwa_sv',
+    aliases=['lwasv'],
+    itrf_xyz=[-1531155.54418, -5045324.30517, 3579583.8945],
+)
+TopoObs(
+    name='grao',
+    aliases=['grao'],
+    itrf_xyz=[6346273.531, -33779.7127, 634844.9454],
+)
+TopoObs(
+    name='srt',
+    aliases=['srt'],
+    itrf_xyz=[4865182.766, 791922.689, 4035137.174],
+)
