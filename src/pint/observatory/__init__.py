@@ -347,6 +347,21 @@ def compare_t2_observatories_dat(t2dir=None):
 
     Produces a report including lines that can be added to PINT's
     observatories.py to add any observatories unknown to PINT.
+
+    Parameters
+    ==========
+    t2dir : str, optional
+        Path to the TEMPO2 runtime dir; if not provided, look in the
+        TEMPO2 environment variable.
+
+    Returns
+    =======
+    dict
+        The dictionary has two entries, under the keys "different" and "missing"; each is
+        a list of observatories found in the TEMPO2 files that disagree with what PINT
+        expects. Each entry in these lists is again a dict, with various properties of the
+        observatory, including a line that might be suitable for starting an entry in the
+        PINT observatory list.
     """
     if t2dir is None:
         t2dir = os.getenv("TEMPO2")
@@ -402,6 +417,7 @@ def compare_t2_observatories_dat(t2dir=None):
                         else "",
                         pint_aliases=obs.aliases,
                         position_difference=d,
+                        pint_origin=obs.origin,
                     )
                 )
 
@@ -413,6 +429,26 @@ def compare_t2_observatories_dat(t2dir=None):
 
 
 def compare_tempo_obsys_dat(tempodir=None):
+    """Read a tempo obsys.dat file and compare with PINT
+
+    Produces a report including lines that can be added to PINT's
+    observatories.py to add any observatories unknown to PINT.
+
+    Parameters
+    ==========
+    tempodir : str, optional
+        Path to the TEMPO runtime dir; if not provided, look in the
+        TEMPO environment variable.
+
+    Returns
+    =======
+    dict
+        The dictionary has two entries, under the keys "different" and "missing"; each is
+        a list of observatories found in the TEMPO files that disagree with what PINT
+        expects. Each entry in these lists is again a dict, with various properties of the
+        observatory, including a line that might be suitable for starting an entry in the
+        PINT observatory list.
+    """
     if tempodir is None:
         tempodir = os.getenv("TEMPO")
         if tempodir is None:
@@ -501,6 +537,7 @@ def compare_tempo_obsys_dat(tempodir=None):
                         tempo=loc.to_geodetic(),
                         pint=oloc.to_geodetic(),
                         position_difference=d,
+                        pint_origin=obs.origin,
                     )
                 )
 
