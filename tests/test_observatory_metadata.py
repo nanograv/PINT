@@ -43,41 +43,37 @@ class TestObservatoryMetadata(unittest.TestCase):
     def test_observatory_replacement(self):
         from pint.observatory.topo_obs import TopoObs
 
-        gbt = pint.observatory.get_observatory(self.pint_obsname)
-        msg = "Checking that 'test' is in the metadata for '%s': metadata is '%s'" % (
-            self.pint_obsname,
-            gbt.origin,
+        obsname = "nonexistent"
+
+        TopoObs(
+            obsname,
+            itrf_xyz=[882589.65, -4924872.32, 3943729.348],
+            overwrite=True,
+            origin="Inserted for testing purposes",
         )
-        assert "test" in gbt.origin, msg
-        msg = (
-            "This should raise an exception because we are making a replacement observatory for '%s' but overwrite=False"
-            % self.pint_obsname
-        )
+        obs = pint.observatory.get_observatory(obsname)
         self.assertRaises(
             ValueError,
             TopoObs,
-            self.pint_obsname,
-            tempo_code="1",
-            itoa_code="GB",
+            obsname,
             itrf_xyz=[882589.65, -4924872.32, 3943729.348],
             origin="This is a test - replacement",
         )
+        obs = pint.observatory.get_observatory(obsname)
         msg = (
             "Checking that 'replacement' is not in the metadata for '%s': metadata is '%s'"
-            % (self.pint_obsname, gbt.origin)
+            % (obsname, obs.origin)
         )
-        assert not ("replacement" in gbt.origin), msg
+        assert not ("replacement" in obs.origin), msg
         TopoObs(
-            self.pint_obsname,
-            tempo_code="1",
-            itoa_code="GB",
+            obsname,
             itrf_xyz=[882589.65, -4924872.32, 3943729.348],
             origin="This is a test - replacement",
             overwrite=True,
         )
-        gbt = pint.observatory.get_observatory(self.pint_obsname)
+        obs = pint.observatory.get_observatory(obsname)
         msg = (
             "Checking that 'replacement' is now in the metadata for '%s': metadata is '%s'"
-            % (self.pint_obsname, gbt.origin)
+            % (obsname, obs.origin)
         )
-        assert "replacement" in gbt.origin, msg
+        assert "replacement" in obs.origin, msg
