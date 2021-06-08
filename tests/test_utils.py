@@ -746,17 +746,20 @@ def test_companion_mass(Mpsr, Mc, Pb, incl):
     """
     test companion mass calculations for a range of values
     """
-    Mtot = (Mc + Mpsr) * u.Msun
+    Mc = Mc * u.Msun
+    Mpsr = Mpsr * u.Msun
+    Pb = Pb * u.day
+    incl = incl * u.deg
+
+    Mtot = Mc + Mpsr
     # full semi-major axis
-    a = (c.G * Mtot * (Pb * u.day / (2 * np.pi)) ** 2) ** (1.0 / 3)
+    a = (c.G * Mtot * (Pb / (2 * np.pi)) ** 2) ** (1.0 / 3)
     # pulsar semi-major axis
-    apsr = (Mc * u.Msun / Mtot) * a
+    apsr = (Mc / Mtot) * a
     # projected
-    x = (apsr * np.sin(incl * u.deg)).to(pint.ls)
+    x = (apsr * np.sin(incl)).to(pint.ls)
     # computed companion mass
-    assert np.isclose(
-        companion_mass(Pb * u.day, x, mpsr=Mpsr * u.Msun, inc=incl * u.deg), Mc * u.Msun
-    )
+    assert np.isclose(companion_mass(Pb, x, mpsr=Mpsr, inc=incl), Mc)
 
 
 @given(
@@ -769,20 +772,20 @@ def test_companion_mass_array(Mpsr, Mc, Pb, incl):
     """
     test companion mass calculations for a range of values given np.ndarray inputs
     """
-    Mtot = (Mc + Mpsr) * u.Msun
+    Mc = Mc * u.Msun
+    Mpsr = Mpsr * u.Msun
+    Pb = Pb * u.day
+    incl = incl * u.deg
+
+    Mtot = Mc + Mpsr
     # full semi-major axis
-    a = (c.G * Mtot * (Pb * u.day / (2 * np.pi)) ** 2) ** (1.0 / 3)
+    a = (c.G * Mtot * (Pb / (2 * np.pi)) ** 2) ** (1.0 / 3)
     # pulsar semi-major axis
-    apsr = (Mc * u.Msun / Mtot) * a
+    apsr = (Mc / Mtot) * a
     # projected
-    x = (apsr * np.sin(incl * u.deg)).to(pint.ls)
+    x = (apsr * np.sin(incl)).to(pint.ls)
     # computed companion mass
-    assert (
-        np.isclose(
-            companion_mass(Pb * u.day, x, mpsr=Mpsr * u.Msun, inc=incl * u.deg),
-            Mc * u.Msun,
-        )
-    ).all()
+    assert (np.isclose(companion_mass(Pb, x, mpsr=Mpsr, inc=incl), Mc,)).all()
 
 
 @given(
@@ -795,17 +798,20 @@ def test_pulsar_mass(Mpsr, Mc, Pb, incl):
     """
     test pulsar mass calculations for a range of values
     """
-    Mtot = (Mc + Mpsr) * u.Msun
+    Mc = Mc * u.Msun
+    Mpsr = Mpsr * u.Msun
+    Pb = Pb * u.day
+    incl = incl * u.deg
+
+    Mtot = Mc + Mpsr
     # full semi-major axis
-    a = (c.G * Mtot * (Pb * u.day / (2 * np.pi)) ** 2) ** (1.0 / 3)
+    a = (c.G * Mtot * (Pb / (2 * np.pi)) ** 2) ** (1.0 / 3)
     # pulsar semi-major axis
-    apsr = (Mc * u.Msun / Mtot) * a
+    apsr = (Mc / Mtot) * a
     # projected
-    x = (apsr * np.sin(incl * u.deg)).to(pint.ls)
+    x = (apsr * np.sin(incl)).to(pint.ls)
     # computed pulsar mass
-    assert np.isclose(
-        pulsar_mass(Pb * u.day, x, Mc * u.Msun, inc=incl * u.deg), Mpsr * u.Msun
-    )
+    assert np.isclose(pulsar_mass(Pb, x, Mc, inc=incl), Mpsr)
 
 
 @given(
@@ -818,19 +824,20 @@ def test_pulsar_mass_array(Mpsr, Mc, Pb, incl):
     """
     test pulsar mass calculations for a range of values given np.ndarray inputs
     """
-    Mtot = (Mc + Mpsr) * u.Msun
+    Mc = Mc * u.Msun
+    Mpsr = Mpsr * u.Msun
+    Pb = Pb * u.day
+    incl = incl * u.deg
+
+    Mtot = Mc + Mpsr
     # full semi-major axis
-    a = (c.G * Mtot * (Pb * u.day / (2 * np.pi)) ** 2) ** (1.0 / 3)
+    a = (c.G * Mtot * (Pb / (2 * np.pi)) ** 2) ** (1.0 / 3)
     # pulsar semi-major axis
-    apsr = (Mc * u.Msun / Mtot) * a
+    apsr = (Mc / Mtot) * a
     # projected
-    x = (apsr * np.sin(incl * u.deg)).to(pint.ls)
+    x = (apsr * np.sin(incl)).to(pint.ls)
     # computed pulsar mass
-    assert (
-        np.isclose(
-            pulsar_mass(Pb * u.day, x, Mc * u.Msun, inc=incl * u.deg), Mpsr * u.Msun
-        )
-    ).all()
+    assert (np.isclose(pulsar_mass(Pb, x, Mc, inc=incl), Mpsr)).all()
 
 
 def test_pulsar_mass_error_noquantity_inc():
