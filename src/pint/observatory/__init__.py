@@ -136,6 +136,7 @@ class Observatory:
         # We can't do this in the import section above because this class
         # needs to exist before that file is imported.
         import pint.observatory.observatories  # noqa
+        import pint.observatory.special_locations  # noqa
 
         if name == "":
             raise KeyError("No observatory name or code provided")

@@ -511,9 +511,6 @@ TopoObs(
     name="cambridge", aliases=["cam"], itrf_xyz=[3919982.752, 2651.982, 5013849.826],
 )
 TopoObs(
-    name="coe", aliases=["coe"], itrf_xyz=[0.0, 1.0, 0.0],
-)
-TopoObs(
     name="princeton",
     aliases=["princeton"],
     tempo_code="5",
