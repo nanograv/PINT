@@ -190,7 +190,14 @@ TopoObs(
     """,
 )
 TopoObs(
-    "ps1", tempo_code="p", itoa_code="PS", itrf_xyz=[-5461997.8, -2412559.0, 2243024.0]
+    "ps1",
+    tempo_code="p",
+    itoa_code="PS",
+    itrf_xyz=[-5461997.8, -2412559.0, 2243024.0],
+    origin="""Pan-STARRS.
+
+    Origin of this data is unknown.
+    """,
 )
 TopoObs(
     "hobart",
