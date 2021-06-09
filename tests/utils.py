@@ -8,8 +8,10 @@ import warnings
 
 
 def verify_stand_alone_binary_parameter_updates(m):
-    """Verify if the stand alone binary parameter values gets updated by the
-    PINT binary model objects.
+    """Generic test function for binary model tests.
+
+    Verify if the stand alone binary parameter values gets updated by the PINT
+    binary model objects.
 
     Parameter
     ---------

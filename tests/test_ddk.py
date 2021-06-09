@@ -128,7 +128,7 @@ class TestDDK(unittest.TestCase):
 
     def test_sini_from_par(self):
         test_par_str = self.temp_par_str + "\n SINI  0.8     1  0.562"
-        with pytest.raises(ValueError):
+        with pytest.raises(TimingModelError):
             mb.get_model(StringIO(test_par_str))
 
     def test_stand_alone_model_params_updates(self):
@@ -139,7 +139,7 @@ class TestDDK(unittest.TestCase):
     def test_zero_PX(self):
         zero_px_str = self.temp_par_str.replace("PX  0.8211", "PX  0.0")
         with pytest.raises(ValueError):
-            m = mb.get_model(StringIO(zero_px_str))
+            mb.get_model(StringIO(zero_px_str))
 
     def test_remove_PX(self):
         test_par_str = self.temp_par_str + "\n KIN  71.969  1  0.562"
