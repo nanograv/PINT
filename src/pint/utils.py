@@ -1182,7 +1182,7 @@ def mass_funct(pb, x):
     Returns
     -------
     f_m : Quantity
-        Mass function in solar masses
+        Mass function in `u.solMass`
     """
     if not isinstance(x, u.quantity.Quantity):
         raise ValueError(
@@ -1200,11 +1200,16 @@ def mass_funct2(mp, mc, i):
     Parameters
     ----------
     mp : Quantity
-        Pulsar mass, typically in u.solMass
+        Pulsar mass, typically in `u.solMass`
     mc : Quantity
-        Companion mass, typically in u.solMass
+        Companion mass, typically in `u.solMass`
     i : Angle
-        Inclination angle, in u.deg or u.rad
+        Inclination angle, in `u.deg` or `u.rad`
+
+    Returns
+    -------
+    f_m : Quantity
+        Mass function in `u.solMass`
 
     Notes
     -----
@@ -1233,13 +1238,31 @@ def pulsar_mass(pb, x, mc, inc):
     x : Quantity
         Projected semi-major axis (aka ASINI) in `pint.ls`
     mc : Quantity
-        Companion mass in u.solMass
+        Companion mass in `u.solMass`
     inc : Angle
-        Inclination angle, in u.deg or u.rad
+        Inclination angle, in `u.deg` or `u.rad`
 
     Returns
     -------
-    mass : Quantity in u.solMass
+    mass : Quantity in `u.solMass`
+
+    Notes
+    -------    
+    This forms a quadratic equation of the form:
+    ca*Mp**2 + cb*Mp + cc = 0
+    
+    with:
+    ca = massfunct
+    cb = 2 * massfunct * mc
+    cc = massfunct * mc ** 2 - (mc * sini) ** 3
+
+    except the discriminant simplifies to:
+    4 * massfunct * mc**3 * sini**3
+    
+    solve it directly
+    this has to be the positive branch of the quadratic
+    because the vertex is at -mc, so the negative branch will always be < 0
+
     """
     if not (isinstance(inc, angles.Angle) or isinstance(inc, u.quantity.Quantity)):
         raise ValueError(f"The inclination should be an Angle but is {inc}.")
@@ -1254,16 +1277,10 @@ def pulsar_mass(pb, x, mc, inc):
 
     massfunct = mass_funct(pb, x)
 
-    # This then forms a quadratic equation of the form:
-    # ca*Mp**2 + cb*Mp + cc = 0
     sini = np.sin(inc)
     ca = massfunct
     cb = 2 * massfunct * mc
-    # cc = massfunct * mc ** 2 - (mc * sini) ** 3
-    # solve it directly
-    # this has to be the positive branch of the quadratic
-    # because the vertex is at -mc, so the negative branch will always be < 0
-    # return ((-cb + np.sqrt(cb ** 2 - 4 * ca * cc)) / (2 * ca)).to(u.Msun)
+
     return ((-cb + np.sqrt(4 * massfunct * mc ** 3 * sini ** 3)) / (2 * ca)).to(u.Msun)
 
 
@@ -1280,27 +1297,17 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     x : Quantity
         Projected semi-major axis (aka ASINI) in `pint.ls`
     inc : Angle, optional
-        Inclination angle, in u.deg or u.rad. Default is 60 deg.
+        Inclination angle, in `u.deg` or `u.rad.` Default is 60 deg.
     mpsr : Quantity, optional
-        Pulsar mass in u.solMass. Default is 1.4 Msun
+        Pulsar mass in `u.solMass`. Default is 1.4 Msun
 
     Returns
     -------
-    mass : Quantity in u.solMass
-    """
-    if not (isinstance(inc, angles.Angle) or isinstance(inc, u.quantity.Quantity)):
-        raise ValueError(f"The inclination should be an Angle but is {inc}.")
-    if not isinstance(x, u.quantity.Quantity):
-        raise ValueError(
-            f"The projected semi-major axis x should be a Quantity but is {x}."
-        )
-    if not isinstance(pb, u.quantity.Quantity):
-        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
-    if not isinstance(mpsr, u.quantity.Quantity):
-        raise ValueError(f"The pulsar mass should be a Quantity but is {mpsr}.")
+    mass : Quantity in `u.solMass`
 
-    """
-    This then forms a cubic equation of the form:
+    Notes
+    -----
+    This ends up as a a cubic equation of the form:
     a*Mc**3 + b*Mc**2 + c*Mc + d = 0
 
     a = np.sin(inc) ** 3
@@ -1308,7 +1315,12 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     c = -2 * mpsr * massfunct
     d = -massfunct * mpsr ** 2
 
-    discriminant
+    To solve it we can use a direct calculation of the cubic roots:
+    https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
+
+    It's useful to look at the discriminant to understand the nature of the roots
+    and make sure we get the right one
+    
     https://en.wikipedia.org/wiki/Discriminant#Degree_3
     delta = (
         cb ** 2 * cc ** 2
@@ -1321,12 +1333,22 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     and this should be < 0
     since this reduces to -27 * sin(i)**6 * massfunct**2 * mp**4 -4 * sin(i)**3 * massfunct**3 * mp**3
     so there is just 1 real root and we compute it below
+    
     """
+    if not (isinstance(inc, angles.Angle) or isinstance(inc, u.quantity.Quantity)):
+        raise ValueError(f"The inclination should be an Angle but is {inc}.")
+    if not isinstance(x, u.quantity.Quantity):
+        raise ValueError(
+            f"The projected semi-major axis x should be a Quantity but is {x}."
+        )
+    if not isinstance(pb, u.quantity.Quantity):
+        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
+    if not isinstance(mpsr, u.quantity.Quantity):
+        raise ValueError(f"The pulsar mass should be a Quantity but is {mpsr}.")
 
     massfunct = mass_funct(pb, x)
 
     # solution
-    # https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
     sini = np.sin(inc)
     a = sini ** 3
     # delta0 = b ** 2 - 3 * a * c
