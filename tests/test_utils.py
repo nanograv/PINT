@@ -640,32 +640,27 @@ def test_pmtot():
 
 
 def test_mass_function():
-    pb = 1.0 * u.d
-    x = 2.0 * pint.ls
 
     # Mass function
     # RHS of Eqn. 8.34 in Lorimer & Kramer (2008)
     # this should be 4* pi**2 * x**3 / (G * Pb**2)
     # in appropriate units
-    assert np.isclose(mass_funct(pb, x), 0.008589595519643776 * u.solMass)
+    assert np.isclose(
+        mass_funct(1.0 * u.d, 2.0 * pint.ls), 0.008589595519643776 * u.solMass
+    )
 
 
 def test_mass_function_error_without_quantity_x():
-    pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-
     # Mass function
     with pytest.raises(ValueError):
-        mass_funct(pb, x.value)
+        mass_funct(1.0 * u.d, 2.0)
 
 
 def test_mass_function_error_without_quantity_pb():
-    pb = 1.0 * u.d
-    x = 2.0 * pint.ls
 
     # Mass function
     with pytest.raises(ValueError):
-        mass_funct(pb.value, x)
+        mass_funct(1.0, 2.0 * pint.ls)
 
 
 def test_other_mass_function():
@@ -680,8 +675,6 @@ def test_other_mass_function():
 
 
 def test_other_mass_function_error_without_quantity_mp():
-    pb = 1.0 * u.d
-    x = 2.0 * pint.ls
 
     # Mass function, second form
     with pytest.raises(ValueError):
@@ -689,8 +682,6 @@ def test_other_mass_function_error_without_quantity_mp():
 
 
 def test_other_mass_function_error_without_quantity_mc():
-    pb = 1.0 * u.d
-    x = 2.0 * pint.ls
 
     # Mass function, second form
     with pytest.raises(ValueError):
@@ -698,8 +689,6 @@ def test_other_mass_function_error_without_quantity_mc():
 
 
 def test_other_mass_function_error_without_quantity_inc():
-    pb = 1.0 * u.d
-    x = 2.0 * pint.ls
 
     # Mass function, second form
     with pytest.raises(ValueError):
