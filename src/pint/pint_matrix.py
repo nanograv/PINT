@@ -54,7 +54,7 @@ class PintMatrix:
 
     def __getitem__(self, key):
         raise NotImplementedError(
-            f"Cannot access elements of {self.__class__} directly.  Use `get_label_matrix()` method to access via parameter name, or `matrix` property."
+            f"Cannot access elements of '{self.__class__}' directly.  Use `get_label_matrix()` method to access via parameter name, or `matrix` property."
         )
 
     @property
