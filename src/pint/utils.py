@@ -414,7 +414,7 @@ def show_param_cov_matrix(matrix, params, name="Covariance Matrix", switchRD=Fal
     """
 
     warn(
-        "This method is deprecated. Use `parameter_covariance_matrix.prettyprint()` instead of `show_param_cov_matrix()`"
+        "This method is deprecated. Use `parameter_covariance_matrix.prettyprint()` instead of `show_param_cov_matrix()`",
         category=DeprecationWarning,
     )
 
