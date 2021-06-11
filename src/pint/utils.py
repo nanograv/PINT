@@ -408,7 +408,16 @@ def show_param_cov_matrix(matrix, params, name="Covariance Matrix", switchRD=Fal
     :param name: title to be printed above, default Covariance Matrix
     :param switchRD: if True, switch the positions of RA and DEC to match setup of TEMPO cov. matrices
 
-    :return string to be printed"""
+    :return string to be printed
+
+    DEPRECATED
+    """
+
+    warn(
+        "This method is deprecated. Use `parameter_covariance_matrix.prettyprint()` instead of `show_param_cov_matrix()`"
+        category=DeprecationWarning,
+    )
+
     output = StringIO()
     matrix = deepcopy(matrix)
     try:
@@ -926,36 +935,18 @@ def dmxparse(fitter, save=False):
     # Make sure that the fitter has a covariance matrix, otherwise return the initial values
     if hasattr(fitter, "parameter_covariance_matrix"):
         # now get the full parameter covariance matrix from pint
-        # NOTE: we will need to increase all indices by 1 to account for the 'Offset' parameter
-        # that is the first index of the designmatrix
-        params = np.array(fitter.model.free_params)
-        p_cov_mat = fitter.parameter_covariance_matrix
-        # Now we get the indices that correspond to the DMX values
-        DMX_p_idxs = np.zeros(len(dmx_epochs), dtype=int)
-        for ii in range(len(dmx_epochs)):
-            if DMX_keys_ma is None:
-                key = DMX_keys[ii]
-            else:
-                key = DMX_keys_ma[ii]
-            if "DMX" not in key:
-                pass
-            else:
-                DMX_p_idxs[ii] = (
-                    int(np.where(params == key)[0]) + 1
-                )  # extra 1 is for offset parameters
-        # Sort the array in numerical order for 2.7. 3.5
-        DMX_p_idxs = np.trim_zeros(np.sort(DMX_p_idxs))
-        # Define a matrix that is just the DMX covariances
-        cc = p_cov_mat[
-            DMX_p_idxs[0] : DMX_p_idxs[-1] + 1, DMX_p_idxs[0] : DMX_p_idxs[-1] + 1
-        ]
+        # access by label name to make sure we get the right values
+        # make sure they are sorted in ascending order
+        cc = fitter.parameter_covariance_matrix.get_label_matrix(
+            sorted(["DMX_" + x for x in dmx_epochs])
+        )
         n = len(DMX_Errs) - np.sum(mask_idxs)
         # Find error in mean DM
         DMX_mean = np.mean(DMXs)
-        DMX_mean_err = np.sqrt(cc.sum()) / float(n)
+        DMX_mean_err = np.sqrt(cc.matrix.sum()) / float(n)
         # Do the correction for varying DM
         m = np.identity(n) - np.ones((n, n)) / float(n)
-        cc = np.dot(np.dot(m, cc), m)
+        cc = np.dot(np.dot(m, cc.matrix), m)
         DMX_vErrs = np.zeros(n)
         # We also need to correct for the units here
         for i in range(n):
