@@ -53,7 +53,9 @@ class PintMatrix:
         self._check_index_overlap()
 
     def __getitem__(self, key):
-        raise NotImplementedError
+        raise NotImplementedError(
+            f"Cannot access elements of {self.__class__} directly.  Use `get_label_matrix()` method to access via parameter name, or `matrix` property."
+        )
 
     @property
     def ndim(self):
