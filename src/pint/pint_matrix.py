@@ -53,19 +53,7 @@ class PintMatrix:
         self._check_index_overlap()
 
     def __getitem__(self, key):
-        """
-        Allow normal array indexing of covariance matrices.
-
-        Parameters
-        ----------
-        key : any index into an array (int, slice, etc)
-
-
-        Returns
-        -------
-        values : covariance matrix values
-        """
-        return self.matrix[key]
+        raise NotImplementedError
 
     @property
     def ndim(self):
