@@ -87,7 +87,6 @@ class TestDDK(unittest.TestCase):
         diff = bdelay0 - bdelay1
         assert np.all(diff != 0)
 
-
     def test_J1713_deriv(self):
         log = logging.getLogger("TestJ1713.derivative_test")
         testp = tdu.get_derivative_params(self.modelJ1713)
