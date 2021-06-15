@@ -7,6 +7,7 @@ import unittest
 import pytest
 
 import astropy.units as u
+from astropy.time import Time
 import numpy as np
 
 import pint.models.model_builder as mb
@@ -68,6 +69,24 @@ class TestDDK(unittest.TestCase):
         diff = pint_resids_us.value - self.ltres
         log.debug("Max diff %lf" % np.abs(diff - diff.mean()).max())
         assert np.all(np.abs(diff - diff.mean()) < 5e-7), "DDK J1713 TEST FAILED"
+
+    def test_change_px(self):
+        self.modelJ1713.update_binary_object(toas=self.toasJ1713)
+        assert self.modelJ1713.binary_instance.PX.value == self.modelJ1713.PX.value
+        bdelay0 = self.modelJ1713.binary_instance.binary_delay()
+        b_time0 = self.modelJ1713.binary_instance.t
+        # Change PX value
+        self.modelJ1713.PX.value = 0.1
+        self.modelJ1713.update_binary_object()
+        b_time1 = self.modelJ1713.binary_instance.t
+        assert self.modelJ1713.binary_instance.PX.value == 0.1
+        # The stand alone binary model's input time should not change
+        assert np.all(b_time0 == b_time1)
+        # Check if the time residual changed
+        bdelay1 = self.modelJ1713.binary_instance.binary_delay()
+        diff = bdelay0 - bdelay1
+        assert np.all(diff != 0)
+
 
     def test_J1713_deriv(self):
         log = logging.getLogger("TestJ1713.derivative_test")
