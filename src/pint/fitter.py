@@ -1174,20 +1174,11 @@ class DownhillFitter(Fitter):
         # collect results
         self.model = self.current_state.model
         self.resids = self.current_state.resids
-        # TODO: make this CovarianceMatrix
         self.parameter_covariance_matrix = (
             self.current_state.parameter_covariance_matrix
         )
-        if isinstance(self.parameter_covariance_matrix, np.ndarray):
-            self.errors = np.sqrt(np.diag(self.parameter_covariance_matrix))
-            self.parameter_correlation_matrix = (
-                self.parameter_covariance_matrix / self.errors
-            ).T / self.errors
-        elif isinstance(self.parameter_covariance_matrix, CovarianceMatrix):
-            self.errors = np.sqrt(np.diag(self.parameter_covariance_matrix.matrix))
-            self.parameter_correlation_matrix = (
-                self.parameter_covariance_matrix.matrix / self.errors
-            ).T / self.errors
+        self.errors = np.sqrt(np.diag(self.parameter_covariance_matrix.matrix))
+        self.parameter_correlation_matrix = self.parameter_covariance_matrix.to_correlation_matrix()
         for p, e in zip(self.current_state.params, self.errors):
             try:
                 log.debug(f"Setting {getattr(self.model, p)} uncertainty to {e}")
