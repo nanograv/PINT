@@ -7,6 +7,7 @@ from io import StringIO
 import astropy.constants as const
 import astropy.coordinates as coords
 import astropy.units as u
+import astropy.coordinates.angles as angles
 import numpy as np
 import scipy.optimize.zeros as zeros
 from astropy import log
@@ -1181,8 +1182,14 @@ def mass_funct(pb, x):
     Returns
     -------
     f_m : Quantity
-        Mass function in solar masses
+        Mass function in `u.solMass`
     """
+    if not isinstance(x, u.quantity.Quantity):
+        raise ValueError(
+            f"The projected semi-major axis x should be a Quantity but is {x}."
+        )
+    if not isinstance(pb, u.quantity.Quantity):
+        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
     fm = 4.0 * np.pi ** 2 * x ** 3 / (const.G * pb ** 2)
     return fm.to(u.solMass)
 
@@ -1193,25 +1200,36 @@ def mass_funct2(mp, mc, i):
     Parameters
     ----------
     mp : Quantity
-        Pulsar mass, typically in u.solMass
+        Pulsar mass, typically in `u.solMass`
     mc : Quantity
-        Companion mass, typically in u.solMass
+        Companion mass, typically in `u.solMass`
     i : Angle
-        Inclination angle, in u.deg or u.rad
+        Inclination angle, in `u.deg` or `u.rad`
+
+    Returns
+    -------
+    f_m : Quantity
+        Mass function in `u.solMass`
 
     Notes
     -----
     Inclination is such that edge on is `i = 90*u.deg`
     An 'average' orbit has cos(i) = 0.5, or `i = 60*u.deg`
     """
+    if not (isinstance(i, angles.Angle) or isinstance(i, u.quantity.Quantity)):
+        raise ValueError(f"The inclination should be an Angle but is {i}.")
+    if not isinstance(mc, u.quantity.Quantity):
+        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
+    if not isinstance(mp, u.quantity.Quantity):
+        raise ValueError(f"The pulsar mass should be a Quantity but is {mp}.")
+
     return (mc * np.sin(i)) ** 3.0 / (mc + mp) ** 2.0
 
 
 def pulsar_mass(pb, x, mc, inc):
-    """Compute pulsar mass from orbit and Shapiro delay parameters
+    """Compute pulsar mass from orbital parameters
 
     Return the pulsar mass (in solar mass units) for a binary.
-    Finds the value using a bisection technique.
 
     Parameters
     ----------
@@ -1220,21 +1238,50 @@ def pulsar_mass(pb, x, mc, inc):
     x : Quantity
         Projected semi-major axis (aka ASINI) in `pint.ls`
     mc : Quantity
-        Companion mass in u.solMass
+        Companion mass in `u.solMass`
     inc : Angle
-        Inclination angle, in u.deg or u.rad
+        Inclination angle, in `u.deg` or `u.rad`
 
     Returns
     -------
-    mass : Quantity in u.solMass
+    mass : Quantity in `u.solMass`
+
+    Notes
+    -------    
+    This forms a quadratic equation of the form:
+    ca*Mp**2 + cb*Mp + cc = 0
+    
+    with:
+    ca = massfunct
+    cb = 2 * massfunct * mc
+    cc = massfunct * mc ** 2 - (mc * sini) ** 3
+
+    except the discriminant simplifies to:
+    4 * massfunct * mc**3 * sini**3
+    
+    solve it directly
+    this has to be the positive branch of the quadratic
+    because the vertex is at -mc, so the negative branch will always be < 0
+
     """
+    if not (isinstance(inc, angles.Angle) or isinstance(inc, u.quantity.Quantity)):
+        raise ValueError(f"The inclination should be an Angle but is {inc}.")
+    if not isinstance(x, u.quantity.Quantity):
+        raise ValueError(
+            f"The projected semi-major axis x should be a Quantity but is {x}."
+        )
+    if not isinstance(pb, u.quantity.Quantity):
+        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
+    if not isinstance(mc, u.quantity.Quantity):
+        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
+
     massfunct = mass_funct(pb, x)
 
-    # Do some unit manipulation here so that scipy bisect doesn't see the units
-    def localmf(mp, mc=mc, mf=massfunct, i=inc):
-        return (mass_funct2(mp * u.solMass, mc, i) - mf).value
+    sini = np.sin(inc)
+    ca = massfunct
+    cb = 2 * massfunct * mc
 
-    return zeros.bisect(localmf, 0.0, 1000.0) * u.solMass
+    return ((-cb + np.sqrt(4 * massfunct * mc ** 3 * sini ** 3)) / (2 * ca)).to(u.Msun)
 
 
 def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
@@ -1250,21 +1297,89 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     x : Quantity
         Projected semi-major axis (aka ASINI) in `pint.ls`
     inc : Angle, optional
-        Inclination angle, in u.deg or u.rad. Default is 60 deg.
+        Inclination angle, in `u.deg` or `u.rad.` Default is 60 deg.
     mpsr : Quantity, optional
-        Pulsar mass in u.solMass. Default is 1.4 Msun
+        Pulsar mass in `u.solMass`. Default is 1.4 Msun
 
     Returns
     -------
-    mass : Quantity in u.solMass
+    mass : Quantity in `u.solMass`
+
+    Notes
+    -----
+    This ends up as a a cubic equation of the form:
+    a*Mc**3 + b*Mc**2 + c*Mc + d = 0
+
+    a = np.sin(inc) ** 3
+    b = -massfunct
+    c = -2 * mpsr * massfunct
+    d = -massfunct * mpsr ** 2
+
+    To solve it we can use a direct calculation of the cubic roots:
+    https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
+
+    It's useful to look at the discriminant to understand the nature of the roots
+    and make sure we get the right one
+    
+    https://en.wikipedia.org/wiki/Discriminant#Degree_3
+    delta = (
+        cb ** 2 * cc ** 2
+        - 4 * ca * cc ** 3
+        - 4 * cb ** 3 * cd
+        - 27 * ca ** 2 * cd ** 2
+        + 18 * ca * cb * cc * cd
+    )
+    if delta is < 0 then there is only 1 real root, and I think we do it correctly below
+    and this should be < 0
+    since this reduces to -27 * sin(i)**6 * massfunct**2 * mp**4 -4 * sin(i)**3 * massfunct**3 * mp**3
+    so there is just 1 real root and we compute it below
+    
     """
+    if not (isinstance(inc, angles.Angle) or isinstance(inc, u.quantity.Quantity)):
+        raise ValueError(f"The inclination should be an Angle but is {inc}.")
+    if not isinstance(x, u.quantity.Quantity):
+        raise ValueError(
+            f"The projected semi-major axis x should be a Quantity but is {x}."
+        )
+    if not isinstance(pb, u.quantity.Quantity):
+        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
+    if not isinstance(mpsr, u.quantity.Quantity):
+        raise ValueError(f"The pulsar mass should be a Quantity but is {mpsr}.")
+
     massfunct = mass_funct(pb, x)
 
-    # Do some unit manipulation here so that scipy bisect doesn't see the units
-    def localmf(mc, mp=mpsr, mf=massfunct, i=inc):
-        return (mass_funct2(mp, mc * u.solMass, i) - mf).value
-
-    return zeros.bisect(localmf, 0.001, 1000.1) * u.solMass
+    # solution
+    sini = np.sin(inc)
+    a = sini ** 3
+    # delta0 = b ** 2 - 3 * a * c
+    # delta0 is always > 0
+    delta0 = massfunct ** 2 + 6 * mpsr * massfunct * a
+    # delta1 is always <0
+    # delta1 = 2 * b ** 3 - 9 * a * b * c + 27 * a ** 2 * d
+    delta1 = (
+        -2 * massfunct ** 3
+        - 18 * a * mpsr * massfunct ** 2
+        - 27 * a ** 2 * massfunct * mpsr ** 2
+    )
+    # Q**2 is always > 0, so this is never a problem
+    # in terms of complex numbers
+    # Q = np.sqrt(delta1**2 - 4*delta0**3)
+    Q = np.sqrt(
+        108 * a ** 3 * mpsr ** 3 * massfunct ** 3
+        + 729 * a ** 4 * mpsr ** 4 * massfunct ** 2
+    )
+    # this could be + or - Q
+    # pick the - branch since delta1 is <0 so that delta1 - Q is never near 0
+    Ccubed = 0.5 * (delta1 + Q)
+    # try to get the real root
+    C = np.sign(Ccubed) * np.fabs(Ccubed) ** (1.0 / 3)
+    # note that the difference b**2 - 3*a*c should be strictly positive
+    # so those shouldn't cancel
+    # and then all three terms should have the same signs
+    # since a>0, b<0, C<0, and delta0>0
+    # the denominator will be near 0 only when sin(i) is ~0, but that's already a known problem
+    x1 = massfunct / 3.0 / a - C / 3.0 / a - delta0 / 3.0 / a / C
+    return x1.to(u.Msun)
 
 
 def ELL1_check(A1, E, TRES, NTOA, outstring=True):
