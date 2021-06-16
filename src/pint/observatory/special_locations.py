@@ -3,6 +3,8 @@
 Special "site" locations (eg, barycenter) which do not need clock
 corrections or much else done.
 """
+import os
+
 import astropy.constants as const
 import astropy.units as u
 from astropy import log
@@ -64,7 +66,9 @@ class SpecialLocation(Observatory):
         self.bipm_version = bipm_version
         self._bipm_clock = None
 
-        super(SpecialLocation, self).__init__(name, aliases=aliases)
+        self.origin = "Built-in special location."
+
+        super().__init__(name, aliases=aliases)
 
     @property
     def gps_fullpath(self):
