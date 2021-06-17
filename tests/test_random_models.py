@@ -9,7 +9,7 @@ import pytest
 import numpy as np
 import astropy.units as u
 
-import pint.models as tm
+from pint.models import get_model, get_model_and_toas
 from pint import fitter, toa
 from pinttestdata import datadir
 import pint.models.parameter as param
@@ -18,20 +18,10 @@ from pint import utils
 
 
 def test_random_models():
-    # taken from test_fitter.py/test_fitter()
-    # Get model
 
-    m = tm.get_model(os.path.join(datadir, "NGC6440E.par"))
-
-    # Get TOAs
-    t = toa.TOAs(os.path.join(datadir, "NGC6440E.tim"))
-    t.apply_clock_corrections(include_bipm=False)
-    t.compute_TDBs()
-    try:
-        planet_ephems = m.PLANET_SHAPIRO.value
-    except AttributeError:
-        planet_ephems = False
-    t.compute_posvels(planets=planet_ephems)
+    # Get model and TOAs
+    m, t = get_model_and_toas(os.path.join(datadir, "NGC6440E.par"),
+                              os.path.join(datadir, "NGC6440E.tim"))
 
     f = fitter.WLSFitter(toas=t, model=m)
     # Do a 4-parameter fit
