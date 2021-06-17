@@ -18,10 +18,10 @@ from pint import utils
 
 
 def test_random_models():
-
     # Get model and TOAs
-    m, t = get_model_and_toas(os.path.join(datadir, "NGC6440E.par"),
-                              os.path.join(datadir, "NGC6440E.tim"))
+    m, t = get_model_and_toas(
+        os.path.join(datadir, "NGC6440E.par"), os.path.join(datadir, "NGC6440E.tim")
+    )
 
     f = fitter.WLSFitter(toas=t, model=m)
     # Do a 4-parameter fit
