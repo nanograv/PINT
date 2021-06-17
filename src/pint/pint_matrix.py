@@ -183,8 +183,6 @@ class PintMatrix:
         -------
         labels : list of (name, (start,stop,unit) for the given axis
 
-
-        TODO: does this just replicate self.axis_labels[axis]?  Is the sort meaningful?
         """
         dim_label = list(self.axis_labels[axis].items())
         dim_label.sort(key=self._get_label_start)
