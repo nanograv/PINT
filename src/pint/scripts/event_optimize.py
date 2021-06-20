@@ -411,6 +411,85 @@ class emcee_fitter(Fitter):
             plt.savefig(ftr.model.PSR.value + "_htest_v_wgtcut_unweighted.png")
         plt.close()
 
+    def plot_priors(self, samples, weights=None, bins=100, scale=False, file=False):
+        priors = []
+        initials = []
+        x_range = []
+        counts = []
+        for i in range(0, len(self.fitkeys[:-1])):
+            x_range.append(
+                np.linspace(samples[:, i].min(), samples[:, i].max(), num=bins)
+            )
+            priors.append(getattr(self.model, self.fitkeys[i]).prior.pdf(x_range[i]))
+            initials.append(
+                GaussianBoundedRV(
+                    loc=float(self.fitvals[i]), scale=float(self.fiterrs[i])
+                ).pdf(x_range[i])
+            )
+            a, x = np.histogram(samples[:, i], bins=bins)
+            counts.append(a)
+
+        fig, axs = plt.subplots(
+            len(self.fitkeys[:-1]), figsize=(8, 11), constrained_layout=True
+        )
+        for i in range(0, len(self.fitkeys[:-1])):
+            axs[i].set_xlabel("Change in " + self.fitkeys[i])
+            axs[i].axvline(
+                self.fitvals[i] - samples[:, i].mean(),
+                color="m",
+                linestyle="--",
+                label="Original Fit Value",
+            )
+            axs[i].axvline(
+                self.maxpost_fitvals[i] - samples[:, i].mean(),
+                color="c",
+                linestyle="--",
+                label="Maximum Likelihood Value",
+            )
+            axs[i].axvline(
+                -2 * samples[:, i].std(), color="b", linestyle="--", label="2 sigma"
+            )
+            axs[i].axvline(
+                2 * samples[:, i].std(), color="b", linestyle="--", label="2 sigma"
+            )
+            axs[i].hist(
+                samples[:, i] - samples[:, i].mean(),
+                bins=bins,
+                label=self.fitkeys[i] + " chains",
+            )
+            if scale:
+                axs[i].plot(
+                    x_range[i] - samples[:, i].mean(),
+                    initials[i] * counts[i].max() / initials[i].max(),
+                    label="Initial",
+                    color="r",
+                )
+                axs[i].plot(
+                    x_range[i] - samples[:, i].mean(),
+                    priors[i] * counts[i].max() / priors[i].max(),
+                    label="Priors",
+                    color="g",
+                )
+            else:
+                axs[i].plot(
+                    x_range[i] - samples[:, i].mean(),
+                    initials[i],
+                    label="Initial",
+                    color="r",
+                )
+                axs[i].plot(
+                    x_range[i] - samples[:, i].mean(),
+                    priors[i],
+                    label="Priors",
+                    color="g",
+                )
+        if file:
+            fig.savefig(file)
+            plt.close()
+        else:
+            plt.show()
+            plt.close()
+
 
 def main(argv=None):
 
@@ -796,6 +875,11 @@ def main(argv=None):
     for x, v in zip(xs, vs):
         f.write("%.5f  %12.5f\n" % (x, v))
     f.close()
+
+    # Write out the scaled prior probability compared with the histogrammed samples
+    ftr.plot_priors(
+        samples, scale=True, file=ftr.model.PSR.value + "_priors_scaled.png"
+    )
 
     # Write out the par file for the best MCMC parameter est
     f = open(ftr.model.PSR.value + "_post.par", "w")
