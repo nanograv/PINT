@@ -455,32 +455,32 @@ class emcee_fitter(Fitter):
             axs[i].hist(
                 samples[:, i] - samples[:, i].mean(),
                 bins=bins,
-                label=self.fitkeys[i] + " chains",
+                label=self.fitkeys[i] + " samples",
             )
             if scale:
                 axs[i].plot(
                     x_range[i] - samples[:, i].mean(),
                     initials[i] * counts[i].max() / initials[i].max(),
-                    label="Initial",
+                    label="Initial Gaussian Probability",
                     color="r",
                 )
                 axs[i].plot(
                     x_range[i] - samples[:, i].mean(),
                     priors[i] * counts[i].max() / priors[i].max(),
-                    label="Priors",
+                    label="Prior Probability",
                     color="g",
                 )
             else:
                 axs[i].plot(
                     x_range[i] - samples[:, i].mean(),
                     initials[i],
-                    label="Initial",
+                    label="Initial Gaussian Probability",
                     color="r",
                 )
                 axs[i].plot(
                     x_range[i] - samples[:, i].mean(),
                     priors[i],
-                    label="Priors",
+                    label="Prior Probability",
                     color="g",
                 )
         if file:
@@ -876,7 +876,7 @@ def main(argv=None):
         f.write("%.5f  %12.5f\n" % (x, v))
     f.close()
 
-    # Write out the scaled prior probability compared with the histogrammed samples
+    # Plot the scaled prior probability alongside the initial gaussian probability distribution and the histogrammed samples
     ftr.plot_priors(
         samples, scale=True, file=ftr.model.PSR.value + "_priors_scaled.png"
     )
