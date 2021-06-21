@@ -85,7 +85,7 @@ wlsfit.resids.model.has_correlated_errors
 
 # %%
 # You can request a pretty-printed covariance matrix
-cov = wlsfit.get_covariance_matrix(pretty_print=True)
+cov = wlsfit.get_parameter_covariance_matrix(pretty_print=True)
 
 # %%
 # plot() will make a plot of the post-fit residuals

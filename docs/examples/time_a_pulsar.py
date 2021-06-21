@@ -75,7 +75,7 @@ print("RMS in time is", f.resids.time_resids.std().to(u.us))
 
 # %%
 # Show the parameter correlation matrix
-corm = f.get_correlation_matrix(pretty_print=True)
+corm = f.get_parameter_correlation_matrix(pretty_print=True)
 
 # %%
 f.print_summary()
