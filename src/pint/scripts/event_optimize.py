@@ -412,6 +412,11 @@ class emcee_fitter(Fitter):
         plt.close()
 
     def plot_priors(self, samples, weights=None, bins=100, scale=False, file=False):
+        """
+        Show binned samples, prior probability distribution and an initial gaussian
+        probability distribution plotted with 2 sigma, maximum posterior and original
+        fit values marked.
+        """
         priors = []
         initials = []
         x_range = []
