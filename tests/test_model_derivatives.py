@@ -109,8 +109,8 @@ def get_model_and_toas(parfile):
         for param in ["H3", "STIGMA",]
     ]
     + [
-        ("J1713+0747_NANOGrav_11yv0.gls.par", param)  # DDK
-        for param in ["PB", "A1", "ECC", "T0", "M2", "KIN", "KOM", "PX",]
+        ("J1713+0747_NANOGrav_11yv0.gls.par", param)  # DDK; also A1DOT doesn't need rescaling
+        for param in ["PB", "A1", "ECC", "T0", "M2", "KIN", "KOM", "PX", "A1DOT",]
     ],
 )
 def test_derivative_equals_numerical(parfile, param):
@@ -121,7 +121,11 @@ def test_derivative_equals_numerical(parfile, param):
 
     def f(value):
         m = copy.deepcopy(model)
-        getattr(m, param).value = value
+        p = getattr(m, param)
+        if isinstance(p, pint.models.parameter.MJDParameter):
+            p.value = value
+        else:
+            p.value = value * p.units
         with quiet():
             warnings.simplefilter("ignore")
             try:
@@ -132,7 +136,10 @@ def test_derivative_equals_numerical(parfile, param):
 
     if param == 'ECC':
         e = model.ECC.value
-        stepgen = numdifftools.MaxStepGenerator(min(e, 1-e))
+        stepgen = numdifftools.MaxStepGenerator(min(e, 1-e)/2)
+    elif param == 'H3':
+        h3 = model.H3.value
+        stepgen = numdifftools.MaxStepGenerator(abs(h3)/2)
     else:
         stepgen = None
     df = numdifftools.Derivative(f, step=stepgen)
