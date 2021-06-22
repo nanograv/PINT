@@ -1054,7 +1054,11 @@ class TimingModel:
         return delay
 
     def phase(self, toas, abs_phase=False):
-        """Return the model-predicted pulse phase for the given TOAs."""
+        """Return the model-predicted pulse phase for the given TOAs.
+
+        This is the phase as observed at the observatory at the exact moment
+        specified in each TOA. The result is a `~pint.phase.Phase` object.
+        """
         # First compute the delays to "pulsar time"
         delay = self.delay(toas)
         phase = Phase(np.zeros(toas.ntoas), np.zeros(toas.ntoas))
@@ -1344,14 +1348,14 @@ class TimingModel:
         return tbl["tdbld"] * u.day - corr
 
     def d_phase_d_toa(self, toas, sample_step=None):
-        """Return the derivative of phase wrt TOA.
+        """Return the finite-difference derivative of phase wrt TOA.
 
         Parameters
         ----------
         toas : PINT TOAs class
             The toas when the derivative of phase will be evaluated at.
         sample_step : float optional
-            Finite difference steps. If not specified, it will take 1/10 of the
+            Finite difference steps. If not specified, it will take 1000 times the
             spin period.
 
         """
@@ -1359,7 +1363,7 @@ class TimingModel:
         if sample_step is None:
             pulse_period = 1.0 / (self.F0.quantity)
             sample_step = pulse_period * 1000
-        sample_dt = [-sample_step, 2 * sample_step]
+        sample_dt = [-sample_step, sample_step]
 
         sample_phase = []
         for dt in sample_dt:
@@ -1381,13 +1385,42 @@ class TimingModel:
 
         NOT implemented yet.
         """
-        pass
+        raise NotImplementedError
 
     def d_phase_d_param(self, toas, delay, param):
-        """Return the derivative of phase with respect to the parameter."""
+        """Return the derivative of phase with respect to the parameter.
+
+        This is the derivative of the phase observed at each TOA with
+        respect to each parameter. This is closely related to the derivative
+        of residuals with respect to each parameter, differing only by a
+        factor of the spin frequency and possibly a minus sign. See
+        `~pint.models.timing_model.TimingModel.designmatrix` for a way
+        of evaluating many derivatives at once.
+
+        The calculation is done by combining the analytical derivatives
+        reported by all the components in the model.
+
+        Parameters
+        ----------
+        toas : pint.toas.TOAs
+            The TOAs at which the derivative should be evaluated.
+        delay : astropy.units.Quantity or None
+            The delay at the TOAs where the derivatives should be evaluated.
+            This permits certain optimizations in the derivative calculations;
+            the value should be ``self.delay(toas)``.
+        param : str
+            The name of the parameter to differentiate with respect to.
+
+        Returns
+        -------
+        astropy.units.Quantity
+            The derivative of observed phase with respect to the model parameter.
+        """
         # TODO need to do correct chain rule stuff wrt delay derivs, etc
         # Is it safe to assume that any param affecting delay only affects
         # phase indirectly (and vice-versa)??
+        if delay is None:
+            delay = self.delay(toas)
         par = getattr(self, param)
         result = np.longdouble(np.zeros(toas.ntoas)) / par.units
         phase_derivs = self.phase_deriv_funcs
@@ -1514,6 +1547,38 @@ class TimingModel:
         or d_toa_d_param; it is used in fitting and calculating parameter
         covariances.
 
+        The value of F0 used here is the parameter value in the model.
+
+        The order of parameters that are included is that returned by
+        self.params.
+
+        Parameters
+        ----------
+        toas : pint.toas.TOAs
+            The TOAs at which to compute the design matrix.
+        acc_delay
+            ???
+        incfrozen : bool
+            Whether to include frozen parameters in the design matrix
+        incoffset : bool
+            Whether to include the constant offset in the design matrix
+
+        Returns
+        -------
+        M : array
+            The design matrix, with shape (len(toas), len(self.free_params)+1)
+        names : list of str
+            The names of parameters in the corresponding parts of the design matrix
+        units : astropy.units.Unit
+            The units of the corresponding parts of the design matrix
+
+        Note
+        ----
+        Here we have negative sign here. Since in pulsar timing
+        the residuals are calculated as (Phase - int(Phase)), which is different
+        from the conventional definition of least square definition (Data - model)
+        We decide to add minus sign here in the design matrix, so the fitter
+        keeps the conventional way.
         """
         params = ["Offset"] if incoffset else []
         params += [
@@ -1521,7 +1586,7 @@ class TimingModel:
         ]
 
         F0 = self.F0.quantity  # 1/sec
-        ntoas = toas.ntoas
+        ntoas = len(toas)
         nparams = len(params)
         delay = self.delay(toas)
         units = []
@@ -1533,24 +1598,13 @@ class TimingModel:
         M = np.zeros((ntoas, nparams))
         for ii, param in enumerate(params):
             if param == "Offset":
-                M[:, ii] = 1.0
+                M[:, ii] = 1.0/F0.value
                 units.append(u.s / u.s)
             else:
-                # NOTE Here we have negative sign here. Since in pulsar timing
-                # the residuals are calculated as (Phase - int(Phase)), which is different
-                # from the conventional definition of least square definition (Data - model)
-                # We decide to add minus sign here in the design matrix, so the fitter
-                # keeps the conventional way.
                 q = -self.d_phase_d_param(toas, delay, param)
-                M[:, ii] = q
-                units.append(u.Unit("") / getattr(self, param).units)
-        mask = []
-        for ii, un in enumerate(units):
-            if params[ii] == "Offset":
-                continue
-            units[ii] = un * u.second
-            mask.append(ii)
-        M[:, mask] /= F0.value
+                the_unit = u.Unit("") / getattr(self, param).units
+                M[:, ii] = q.to_value(the_unit)/F0.value
+                units.append(the_unit/F0.unit)
         return M, params, units
 
     def compare(
