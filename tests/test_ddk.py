@@ -1,4 +1,5 @@
 """Various tests to assess the performance of the DD model."""
+import copy
 import logging
 import os
 from io import StringIO
@@ -89,20 +90,22 @@ class TestDDK(unittest.TestCase):
                 continue
 
     def test_K96(self):
+        modelJ1713 = copy.deepcopy(self.modelJ1713)
         log = logging.getLogger("TestJ1713 Switch of K96")
-        self.modelJ1713.K96.value = False
+        modelJ1713.K96.value = False
         res = Residuals(
-            self.toasJ1713, self.modelJ1713, use_weighted_mean=False
+            self.toasJ1713, modelJ1713, use_weighted_mean=False
         ).time_resids.to(u.s)
         delay = self.modelJ1713.delay(self.toasJ1713)
-        testp = tdu.get_derivative_params(self.modelJ1713)
+        testp = tdu.get_derivative_params(modelJ1713)
         for p in testp.keys():
-            adf = self.modelJ1713.d_phase_d_param(self.toasJ1713, delay, p)
+            self.modelJ1713.d_phase_d_param(self.toasJ1713, delay, p)
 
     def test_sini_from_value(self):
-        self.modelJ1713.SINI.value = 0.9
+        modelJ1713 = copy.deepcopy(self.modelJ1713)
+        modelJ1713.SINI.value = 0.9
         with pytest.raises(ValueError):
-            self.modelJ1713.validate()
+            modelJ1713.validate()
 
     def test_sini_from_par(self):
         temp_par_str = """PSR  J1713+0747
