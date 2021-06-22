@@ -1022,18 +1022,18 @@ class TimingModel:
     def delay(self, toas, cutoff_component="", include_last=True):
         """Total delay for the TOAs.
 
+        Return the total delay which will be subtracted from the given
+        TOA to get time of emission at the pulsar.
+
         Parameters
         ----------
-        toas: toa.table
+        toas: pint.toa.TOAs
             The toas for analysis delays.
         cutoff_component: str
             The delay component name that a user wants the calculation to stop
             at.
         include_last: bool
             If the cutoff delay component is included.
-
-        Return the total delay which will be subtracted from the given
-        TOA to get time of emission at the pulsar.
         """
         delay = np.zeros(toas.ntoas) * u.second
         if cutoff_component == "":
@@ -1057,7 +1057,7 @@ class TimingModel:
         """Return the model-predicted pulse phase for the given TOAs.
 
         This is the phase as observed at the observatory at the exact moment
-        specified in each TOA. The result is a `~pint.phase.Phase` object.
+        specified in each TOA. The result is a :class:`pint.phase.Phase` object.
         """
         # First compute the delays to "pulsar time"
         delay = self.delay(toas)
@@ -1141,7 +1141,7 @@ class TimingModel:
 
         Parameters
         ----------
-        toas: `pint.toa.TOAs` object
+        toas: pint.toa.TOAs
             The input data object for TOAs uncertainty.
         """
         ntoa = toas.ntoas
@@ -1164,7 +1164,7 @@ class TimingModel:
 
         Parameters
         ----------
-        toas: `pint.toa.TOAs` object
+        toas: pint.toa.TOAs
             The input data object for DM uncertainty.
         """
         dm_error, valid = toas.get_flag_value("pp_dme")
@@ -1335,7 +1335,7 @@ class TimingModel:
 
         Return
         ------
-        astropy.Quantity
+        astropy.units.Quantity
             Barycentered TOAs.
         """
         tbl = toas.table
@@ -1352,12 +1352,11 @@ class TimingModel:
 
         Parameters
         ----------
-        toas : PINT TOAs class
+        toas : pint.toa.TOAs
             The toas when the derivative of phase will be evaluated at.
-        sample_step : float optional
+        sample_step : float, optional
             Finite difference steps. If not specified, it will take 1000 times the
             spin period.
-
         """
         copy_toas = copy.deepcopy(toas)
         if sample_step is None:
@@ -1394,7 +1393,7 @@ class TimingModel:
         respect to each parameter. This is closely related to the derivative
         of residuals with respect to each parameter, differing only by a
         factor of the spin frequency and possibly a minus sign. See
-        `~pint.models.timing_model.TimingModel.designmatrix` for a way
+        :meth:`pint.models.timing_model.TimingModel.designmatrix` for a way
         of evaluating many derivatives at once.
 
         The calculation is done by combining the analytical derivatives
@@ -1402,7 +1401,7 @@ class TimingModel:
 
         Parameters
         ----------
-        toas : pint.toas.TOAs
+        toas : pint.toa.TOAs
             The TOAs at which the derivative should be evaluated.
         delay : astropy.units.Quantity or None
             The delay at the TOAs where the derivatives should be evaluated.
@@ -1543,18 +1542,18 @@ class TimingModel:
     def designmatrix(self, toas, acc_delay=None, incfrozen=False, incoffset=True):
         """Return the design matrix.
 
-        The design matrix is the matrix with columns of d_phase_d_param/F0
-        or d_toa_d_param; it is used in fitting and calculating parameter
+        The design matrix is the matrix with columns of ``d_phase_d_param/F0``
+        or ``d_toa_d_param``; it is used in fitting and calculating parameter
         covariances.
 
-        The value of F0 used here is the parameter value in the model.
+        The value of ``F0`` used here is the parameter value in the model.
 
         The order of parameters that are included is that returned by
-        self.params.
+        ``self.params``.
 
         Parameters
         ----------
-        toas : pint.toas.TOAs
+        toas : pint.toa.TOAs
             The TOAs at which to compute the design matrix.
         acc_delay
             ???
