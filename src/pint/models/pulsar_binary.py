@@ -187,7 +187,31 @@ class PulsarBinary(DelayComponent):
             bparObj.value = bparObj.value * u.Unit(bparObj.units)
 
     def update_binary_object(self, toas=None, acc_delay=None):
-        """Update binary object instance for this set of parameters/toas."""
+        """Update stand alone binary's parameters and toas from PINT-facing object.
+
+        This function passes the PINT-facing object's parameter values and TOAs
+        to the stand-alone binary object. If the TOAs are not provided, it only
+        updates the parameters not the TOAs.
+
+        Parameters
+        ----------
+        toas : `toa.TOAs` object, optional
+            The TOAs that need to pass to the stand alone model.Default value is
+            None. If toas is None, this function only updates the parameter value.
+            If 'acc_delay' is not provided, the stand alone binary receives the
+            standard barycentered TOAs.
+
+        acc_delay: `Numpy.ndarray`
+            If provided, TOAs will be corrected by provided acc_delay instead of
+            the standard barycentering. The stand alone binary receives the
+            input TOAs - acc_delay.
+
+        Note
+        ----
+        If the 'toas' are not provided, the stand alone binary model will use
+        the TOAs were passed to it from last interation or no TOAs for stand
+        alone binary model at all.   
+        """
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py
         # Get barycnetric toa first

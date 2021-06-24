@@ -149,13 +149,13 @@ def test_SINI_warning():
     """Test SINI and M2 error.
     """
     SINI_par = simple_par.replace("H3 2.7507208E-7", "SINI 0.8")
-    with pytest.warns(None, match="'SINI' will not be used in ELL1H model. "):
+    with pytest.raises(ValueError, match="'SINI' will not be used in ELL1H model. "):
         model.get_model(StringIO(SINI_par))
 
 
 def test_M2_warning():
     M2_par = simple_par + "\nM2 1.0 1 0.1"
-    with pytest.warns(None, match="'M2' will not be used in ELL1H model. "):
+    with pytest.raises(ValueError, match="'M2' will not be used in ELL1H model. "):
         model.get_model(StringIO(M2_par))
 
 

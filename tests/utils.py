@@ -11,7 +11,9 @@ def verify_stand_alone_binary_parameter_updates(m):
     """Generic test function for binary model tests.
 
     Verify if the stand alone binary parameter values gets updated by the PINT
-    binary model objects.
+    binary model objects. This test goes through the stand-alone binary model's
+    parameters and checks if the value is the same as corresponding PINT-face
+    object's parameter. If the PINT-face object is unset, it will skip the test.
 
     Parameter
     ---------
@@ -22,7 +24,8 @@ def verify_stand_alone_binary_parameter_updates(m):
     ----
     This test fails when the PINT object's set parameter values do not match the
     stand alone model parameter values. The stand alone model parameters should
-    be updated when the TimingModel runs .setup(), .delay() and .d_delay_d_param().
+    be updated by the .update_binary_object() when the TimingModel runs
+    .setup(), .delay() and .d_delay_d_param().
     """
     if not hasattr(m, "binary_instance"):
         warnings.warn(
@@ -47,7 +50,9 @@ def verify_stand_alone_binary_parameter_updates(m):
         pint_par = getattr(m, pint_par_name)
         if pint_par.value is not None:
             if hasattr(standalone_par, "value"):
+                # Test for astropy quantity
                 assert pint_par.value == standalone_par.value
             else:
+                # Test for non-astropy quantity parameters.
                 assert pint_par.value == standalone_par
     return

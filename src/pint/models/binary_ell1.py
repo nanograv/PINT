@@ -281,6 +281,6 @@ class BinaryELL1H(BinaryELL1Base):
         # if self.H3.quantity is None:
         #     raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")
         if self.SINI.quantity is not None:
-            warn("'SINI' will not be used in ELL1H model. ")
+            raise ValueError("'SINI' will not be used in ELL1H model. ")
         if self.M2.quantity is not None:
-            warn("'M2' will not be used in ELL1H model. ")
+            raise ValueError("'M2' will not be used in ELL1H model. ")
