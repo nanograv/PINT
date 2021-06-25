@@ -9,8 +9,13 @@ import astropy.units as u
 from pint.models.astrometry import AstrometryEquatorial
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
 from pint.models.spindown import Spindown
-from pint.models.model_builder import UnknownBinaryModel, get_model, get_model_new
-from pint.models.timing_model import MissingParameter, TimingModel, Component
+from pint.models.model_builder import get_model, get_model_new
+from pint.models.timing_model import (
+    MissingParameter,
+    TimingModel,
+    Component,
+    UnknownBinaryModel,
+)
 from pinttestdata import datadir
 
 

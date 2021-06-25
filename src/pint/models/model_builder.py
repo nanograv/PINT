@@ -9,8 +9,11 @@ from astropy.utils.decorators import lazyproperty
 from pint.models.timing_model import (
     DEFAULT_ORDER,
     Component,
+    AllComponents,
     TimingModel,
     ignore_prefix,
+    ConflictAliasError,
+    UnknownBinaryModel,
 )
 from pint.toa import get_TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
@@ -23,24 +26,26 @@ __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
 default_models = ["StandardTimingModel"]
 
 
-class UnknownBinaryModel(ValueError):
-    """Signal that the par file requested a binary model no in PINT."""
-
-
 class ComponentConflict(ValueError):
     """Error for mulitple components can be select but no other indications."""
 
 
-class ConflictAliasError(ValueError):
-    """If the same alias is used for different parameters."""
+class ModelBuilder(AllComponents):
+    """Class for building a `TimingModel` object from a parameter file.
 
+    The `ModelBuilder` class helps building a `TimingModel` from a list of
+    parameters or a parameter file (i.e., pulsar ephemerise or '.par' file).
+    It first maps the provided parameter names to the PINT defined parameter
+    names, if they are in the PINT parameter aliases list. Then, the
+    'ModelBuilder' selects model components based on the following rules:
+    1. The components in the .default_components list will be selected.
+    2. When a component get mapped uniquely by the given parameters.
+    3. The pulsar binary component will be selected by the 'BINARY' parameter.
+    """
 
-class ModelBuilder:
     def __init__(self):
-        self.components = {}
-        for k, v in Component.component_types.items():
-            self.components[k] = v()
-        # The components that always get added.
+        super().__init__()
+        # Validate the components
         self._validate_components()
         self.default_components = ["SolarSystemShapiro"]
 
@@ -65,6 +70,12 @@ class ModelBuilder:
 
     def _validate_components(self):
         """Validate the built-in component.
+
+        This function validates if there is a subset parameter conflict in the
+        Components. Normally, one component's parameter should not be a subset
+        of another component's parameter list. Otherwise, the model builder does
+        not have an unique choice of component. Currently, Pulsar binary does
+        not follow the same rule. They are specified by the `BINARY` parameter.
         """
         for k, v in self.components.items():
             superset = self._is_subset_component(v)
@@ -81,97 +92,6 @@ class ModelBuilder:
                     continue
                 else:
                     raise ComponentConflict(m)
-
-    @lazyproperty
-    def param_component_map(self):
-        """Return the parameter to component map.
-        """
-        p2c_map = defaultdict(list)
-        for k, cp in self.components.items():
-            for p in cp.params:
-                p2c_map[p].append(k)
-                # Add alias
-                par = getattr(cp, p)
-                for ap in par.aliases:
-                    p2c_map[ap].append(k)
-        tm = TimingModel()
-        for tp in tm.params:
-            p2c_map[tp].append("timing_model")
-            par = getattr(tm, tp)
-            for ap in par.aliases:
-                p2c_map[ap].append("timing_model")
-        return p2c_map
-
-    @lazyproperty
-    def param_alias_map(self):
-        """Return the aliases map of all parameters
-        """
-        alias = {}
-        for k, cp in self.components.items():
-            for p in cp.params:
-                par = getattr(cp, p)
-                # Check if an existing record
-                alias = self._add_alias_to_map(p, p, alias)
-                for als in par.aliases:
-                    alias = self._add_alias_to_map(als, p, alias)
-        tm = TimingModel()
-        for tp in tm.params:
-            par = getattr(tm, tp)
-            alias = self._add_alias_to_map(tp, tp, alias)
-            alias[tp] = tp
-            for als in par.aliases:
-                alias = self._add_alias_to_map(als, tp, alias)
-        return alias
-
-    @lazyproperty
-    def repeatable_param(self):
-        """Return the repeatable parameter map.
-        """
-        repeatable = []
-        for k, cp in self.components.items():
-            for p in cp.params:
-                par = getattr(cp, p)
-                if par.repeatable:
-                    repeatable.append(p)
-                    repeatable.append(par._parfile_name)
-                    # also add the aliases to the repeatable param
-                    for als in par.aliases:
-                        repeatable.append(als)
-        return list(set(repeatable))
-
-    @lazyproperty
-    def category_component_map(self):
-        """Return the mapping from category to component.
-        """
-        category = defaultdict(list)
-        for k, cp in self.components.items():
-            cat = cp.category
-            category[cat].append(k)
-        return category
-
-    @lazyproperty
-    def component_category_map(self):
-        """Return the mapping from component to category.
-        """
-        cp_ca = {}
-        for k, cp in self.components.items():
-            cp_ca[k] = cp.category
-        return cp_ca
-
-    @lazyproperty
-    def component_unique_params(self):
-        """Return the unique parameter names in each componens.
-
-        Note
-        ----
-        This function only returns the pint defined parameter name, not
-        including the aliases.
-        """
-        component_special_params = defaultdict(list)
-        for param, cps in self.param_component_map.items():
-            if len(cps) == 1:
-                component_special_params[cps[0]].append(param)
-        return component_special_params
 
     def _get_component_param_overlap(self, component):
         """Check if one component's parameters are overlaped with another
@@ -225,20 +145,6 @@ class ModelBuilder:
                 return k
         return None
 
-    def _add_alias_to_map(self, alias, param_name, alias_map):
-        """Add one alias to the alias-parameter map.
-        """
-        if alias in alias_map.keys():
-            if param_name == alias_map[alias]:
-                return alias_map
-            else:
-                raise ConflictAliasError(
-                    f"Alias {alias} has been used by" f" parameter {param_name}."
-                )
-        else:
-            alias_map[alias] = param_name
-        return alias_map
-
     def parse_parfile(self, parfile):
         """Preprocess the par file.
         Parameter
@@ -271,49 +177,6 @@ class ModelBuilder:
                         " {} and {}".format(k[0], k[1:])
                     )
         return param_inpar, repeat_par
-
-    def search_pulsar_system_components(self, system_name):
-        """Search the component for the pulsar binary.
-        """
-        all_systems = self.category_component_map["pulsar_system"]
-        # Search the system name first
-        if system_name in all_systems:
-            return self.components[system_name]
-        else:  # search for the pulsar system aliases
-            for cp_name in all_systems:
-                if system_name == self.components[cp_name].binary_model_name:
-                    return self.components[cp_name]
-            raise UnknownBinaryModel(
-                f"Pulsar system/Binary model component"
-                f" {system_name} is not provided."
-            )
-
-    def alias_to_pint_param(self, alias):
-        """Translate the alias to a PINT parameter name.
-        """
-        pint_par = self.param_alias_map.get(alias, None)
-        # If it is not in the map, double check if it is a repeatable par.
-        if pint_par is None:
-            try:
-                prefix, idx_str, idx = split_prefixed_name(alias)
-                # assume the index 1 parameter is in the alias map
-                # count length of idx_str and dectect leading zeros
-                num_lzero = len(idx_str) - len(str(idx))
-                if num_lzero > 0:  # Has leading zero
-                    fmt = len(idx_str)
-                else:
-                    fmt = 0
-                # Handle the case of start index from 0 and 1
-                for start_idx in [0, 1]:
-                    example_name = prefix + "{1:0{0}}".format(fmt, start_idx)
-                    pint_par = self.param_alias_map.get(example_name, None)
-                    if pint_par:
-                        break
-                if pint_par:  # Find the start parameter index
-                    pint_par = split_prefixed_name(pint_par)[0] + idx_str
-            except PrefixError:
-                pint_par = None
-        return pint_par
 
     def choose_model(self, param_inpar):
         """Choose the model components based on the parfile.
