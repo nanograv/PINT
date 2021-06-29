@@ -195,7 +195,7 @@ class PulsarBinary(DelayComponent):
 
         Parameters
         ----------
-        toas : `toa.TOAs` object, optional
+        toas : `pint.toa.TOAs` object, optional
             The TOAs that need to pass to the stand alone model.Default value is
             None. If toas is None, this function only updates the parameter value.
             If 'acc_delay' is not provided, the stand alone binary receives the
@@ -210,7 +210,7 @@ class PulsarBinary(DelayComponent):
         ----
         If the 'toas' are not provided, the stand alone binary model will use
         the TOAs were passed to it from last interation or no TOAs for stand
-        alone binary model at all.   
+        alone binary model at all.
         """
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py
