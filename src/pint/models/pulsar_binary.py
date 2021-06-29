@@ -195,13 +195,13 @@ class PulsarBinary(DelayComponent):
 
         Parameters
         ----------
-        toas : `pint.toa.TOAs` object, optional
+        toas: `pint.toa.TOAs` object, optional
             The TOAs that need to pass to the stand alone model.Default value is
             None. If toas is None, this function only updates the parameter value.
             If 'acc_delay' is not provided, the stand alone binary receives the
             standard barycentered TOAs.
 
-        acc_delay: `Numpy.ndarray`
+        acc_delay: `numpy.ndarray`
             If provided, TOAs will be corrected by provided acc_delay instead of
             the standard barycentering. The stand alone binary receives the
             input TOAs - acc_delay.
