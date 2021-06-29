@@ -146,7 +146,7 @@ class TestDDK(unittest.TestCase):
 
     def test_sini_from_par(self):
         test_par_str = self.temp_par_str + "\n SINI  0.8     1  0.562"
-        with pytest.raises(TimingModelError):
+        with pytest.raises(TimingModelError, match="DDK model does not accept `SINI` as input. Please use `KIN` instead."):
             mb.get_model(StringIO(test_par_str))
 
     def test_stand_alone_model_params_updates(self):
