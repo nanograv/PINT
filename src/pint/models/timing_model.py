@@ -2770,13 +2770,19 @@ class PhaseComponent(Component):
 
 
 class AllComponents:
-    """ A class for managing all the components.
+    """ A class for the components pool.
 
     This object stores and manages the instances of component classes with class
     attribute .register = True. This includes the PINT built-in components and
     user defined components. It is designed for helping model building and
     parameter seraching, not for directly data analysis. Thus, the instances do
     not have any valid parameter values. Runing `.validate()` function will fail.
+
+    Note
+    ----
+    This is a low level class for managing all the components. To build a timing
+    model, we recommend to use the subclass `models.model_builder.ModelBuilder`,
+    where higher level interface are provided. 
     """
 
     def __init__(self):
