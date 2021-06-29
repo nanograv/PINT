@@ -94,7 +94,9 @@ class ModelBuilder(AllComponents):
                     raise ComponentConflict(m)
 
     def _get_component_param_overlap(self, component):
-        """Check if one component's parameters are overlaped with another
+        """Check the parameter overlaping between two components.
+
+        Check if one component's parameters are overlaped with another
         component.
 
         Parameters
@@ -146,7 +148,8 @@ class ModelBuilder(AllComponents):
         return None
 
     def parse_parfile(self, parfile):
-        """Preprocess the par file.
+        """Parse the par file for model buinding.
+
         Parameter
         ---------
         parfile: str or file-like object
@@ -268,8 +271,7 @@ class ModelBuilder(AllComponents):
         return selected_components, conflict_components, unrec_param
 
     def _add_indexed_params(self, timing_model, indexed_params):
-        """Add the parameters with unknown number/indexed in parfile (maskParameter/
-        prefixParameter) to timing model.
+        """Add the parameters with unknown number/indexed in parfile (maskParameter/prefixParameter) to timing model.
 
         Parameter
         ---------
@@ -333,7 +335,8 @@ class ModelBuilder(AllComponents):
 
 
 def get_model(parfile):
-    """A one step function to build model from a parfile
+    """A one step function to build model from a parfile.
+
     Parameters
     ----------
     parfile : str

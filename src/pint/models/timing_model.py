@@ -2774,15 +2774,18 @@ class AllComponents:
 
     This object stores and manages the instances of component classes with class
     attribute .register = True. This includes the PINT built-in components and
-    user defined components. It is designed for helping model building and
-    parameter seraching, not for directly data analysis. Thus, the instances do
-    not have any valid parameter values. Runing `.validate()` function will fail.
+    user defined components instances without any valid parameter values (
+    parameters are initialized when a component instance gets constructed,
+    however, the parameter values are unknown to the components at the moment).
+    Thus, runing `.validate()` function will fail. This class is designed for
+    helping model building and parameter seraching, not for direct data
+    analysis.
 
     Note
     ----
     This is a low level class for managing all the components. To build a timing
     model, we recommend to use the subclass `models.model_builder.ModelBuilder`,
-    where higher level interface are provided. 
+    where higher level interface are provided.
     """
 
     def __init__(self):
@@ -2972,13 +2975,13 @@ class MissingParameter(TimingModelError):
         return result
 
 
-class ConflictAliasError(ValueError):
+class ConflictAliasError(TimingModelError):
     """If the same alias is used for different parameters."""
 
     pass
 
 
-class UnknownBinaryModel(ValueError):
+class UnknownBinaryModel(TimingModelError):
     """Signal that the par file requested a binary model no in PINT."""
 
     pass
