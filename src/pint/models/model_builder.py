@@ -14,6 +14,7 @@ from pint.models.timing_model import (
     ignore_prefix,
     ConflictAliasError,
     UnknownBinaryModel,
+    UnknownParameter
 )
 from pint.toa import get_TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
@@ -51,7 +52,7 @@ class ModelBuilder(AllComponents):
 
     def __call__(self, parfile):
         param_inpar, repeat_par = self.parse_parfile(parfile)
-        selected, conflict, unrec_param = self.choose_model(param_inpar)
+        selected, conflict, param_not_in_pint = self.choose_model(param_inpar)
         selected.update(set(self.default_components))
         # Report conflict
         if len(conflict) != 0:
@@ -60,7 +61,7 @@ class ModelBuilder(AllComponents):
         cps = [self.components[c] for c in selected]
         tm = TimingModel(components=cps)
         # Add indexed parameters
-        leftover_params = set(unrec_param)
+        leftover_params = set(param_not_in_pint)
         # Give repeatable parameters an index.
         for k, v in repeat_par.items():
             for ii in range(len(v)):
@@ -105,7 +106,7 @@ class ModelBuilder(AllComponents):
             The component to be checked.
         Returns
         -------
-        overlap: dict
+        overlap : dict
             The component has overlap parameters and the overlaping parameters
             in the format of {overlap compnent name: (overlap parameter,
             number of non-overlap param in test component,
@@ -122,7 +123,7 @@ class ModelBuilder(AllComponents):
             # Add aliases compare
             overlap = in_param & cpm_param
             # translate to PINT parameter
-            overlap_pint_par = set([self.alias_to_pint_param(ovlp) for ovlp in overlap])
+            overlap_pint_par = set([self.alias_to_pint_param(ovlp)[0] for ovlp in overlap])
             # The degree of overlapping for input component and compared component
             overlap_deg_in = len(component.params) - len(overlap_pint_par)
             overlap_deg_cpm = len(cp.params) - len(overlap_pint_par)
@@ -220,18 +221,23 @@ class ModelBuilder(AllComponents):
         # 2.1 Check the aliases of input parameters.
         # This does not include the repeating parameters, but it should not
         # matter in the component selection.
-        unrec_param = []  # For Unrecognized parameters.
+        param_not_in_pint = []  # For parameters not initialized in PINT yet.
         param_components_inpar = {}
         for pp in param_inpar.keys():
-            p_name = self.alias_to_pint_param(pp)
-            if p_name is not None:
-                p_cp = self.param_component_map.get(p_name, None)
-                if p_cp:
-                    param_components_inpar[p_name] = p_cp
-                else:
-                    unrec_param.append(pp)
-            else:
-                unrec_param.append(pp)
+            try:
+                p_name, first_init = self.alias_to_pint_param(pp)
+            except UnknownParameter:
+                param_not_in_pint.append(pp)
+                continue
+
+            # For the case that the indexed parameter maps to a component, but
+            # the parameter with the provided index is not initialized yet.
+            if p_name != first_init:
+                param_not_in_pint.append(pp)
+
+            p_cp = self.param_component_map.get(first_init, None)
+            if p_cp:
+                param_components_inpar[p_name] = p_cp
         # Back map the possible_components and the parameters in the parfile
         # This will remove the duplicate components.
         conflict_components = defaultdict(set)  # graph for confilict
@@ -268,7 +274,7 @@ class ModelBuilder(AllComponents):
                 for cf_cp in cf_cps:
                     del conflict_components[cf_cp]
                 del conflict_components[ps_cp]
-        return selected_components, conflict_components, unrec_param
+        return selected_components, conflict_components, param_not_in_pint
 
     def _add_indexed_params(self, timing_model, indexed_params):
         """Add the parameters with unknown number/indexed in parfile (maskParameter/prefixParameter) to timing model.
@@ -288,9 +294,9 @@ class ModelBuilder(AllComponents):
         # go over the input parameter list
         unknown_param = []
         for pp in indexed_params:
-            pint_p = self.alias_to_pint_param(pp)
-            # A true unrecognized name
-            if pint_p is None:
+            try:
+                pint_p, first_init_par = self.alias_to_pint_param(pp)
+            except UnknownParameter:
                 unknown_param.append(pp)
                 continue
             # Check if parameter in the timing model already
@@ -560,7 +566,6 @@ def choose_model(
                     "Received duplicate parameter {}".format(new_parameter.name)
                 )
             tm.add_param_from_top(new_parameter, component)
-            # print("added", new_parameter)
         except PrefixError:
             pass
 

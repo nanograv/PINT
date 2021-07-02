@@ -2801,7 +2801,7 @@ class AllComponents:
         components. The parameter aliases are not included in this map. If
         searching the host component for a parameter alias, pleaase use
         `alias_to_pint_param` method to translate the alias to PINT parameter
-        name first.  
+        name first.
         """
         p2c_map = defaultdict(list)
         for k, cp in self.components.items():
@@ -2955,10 +2955,16 @@ class AllComponents:
         alias : str
             Alias name to be translated
 
-        Return
-        ------
-        PINT parameter name the given alias maps to. If there is no matching PINT
-        parameters, it will raise a `UnknownParameter` error.
+        Returns
+        -------
+        pint_par : str
+            PINT parameter name the given alias maps to. If there is no matching
+            PINT parameters, it will raise a `UnknownParameter` error.
+        first_init_par : str
+            The parameter name that is first initialized in a component. If the
+            paramere is non-indexable, it is the same as ``pint_par``, otherwrise
+            it returns the parameter with the first index. For example, the
+            ``first_init_par`` for 'T2EQUAD25' is 'EQUAD1'
 
         Notes
         -----
@@ -3006,19 +3012,23 @@ class AllComponents:
                     fmt = len(idx_str)
                 else:
                     fmt = 0
+                first_init_par = None
                 # Handle the case of start index from 0 and 1
                 for start_idx in [0, 1]:
-                    example_name = prefix + "{1:0{0}}".format(fmt, start_idx)
-                    pint_par = self.param_alias_map.get(example_name, None)
-                    if pint_par:
+                    first_init_par_alias = prefix + "{1:0{0}}".format(fmt, start_idx)
+                    first_init_par = self.param_alias_map.get(first_init_par_alias, None)
+                    if first_init_par:
+                        # Find the first init par move to the next step
+                        pint_par = split_prefixed_name(first_init_par)[0] + idx_str
                         break
-                if pint_par:  # Find the start parameter index
-                    pint_par = split_prefixed_name(pint_par)[0] + idx_str
             except PrefixError:
                 pint_par = None
+
+        else:
+            first_init_par = pint_par
         if pint_par is None:
             raise UnknownParameter("Can not find matching PINT parameter for '{}'".format(alias))
-        return pint_par
+        return pint_par, first_init_par
 
 
 class TimingModelError(ValueError):
