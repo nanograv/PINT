@@ -2796,6 +2796,12 @@ class AllComponents:
     @lazyproperty
     def param_component_map(self):
         """Return the parameter to component map.
+
+        This property returns the all PINT defined parameters to their host
+        components. The parameter aliases are not included in this map. If
+        searching the host component for a parameter alias, pleaase use
+        `alias_to_pint_param` method to translate the alias to PINT parameter
+        name first.  
         """
         p2c_map = defaultdict(list)
         for k, cp in self.components.items():
@@ -2816,6 +2822,13 @@ class AllComponents:
     @lazyproperty
     def param_alias_map(self):
         """Return the aliases map of all parameters
+
+        The returned map includes: 1. alias to PINT parameter name. 2. PINT
+        parameter name to pint parameter name. 3.prefix to PINT parameter name.
+
+        Notes
+        -----
+        Please use `alias_to_pint_param` method to map an alias to a PINT parameter.
         """
         alias = {}
         for k, cp in self.components.items():
@@ -2899,7 +2912,22 @@ class AllComponents:
         return alias_map
 
     def search_pulsar_system_components(self, system_name):
-        """Search the component for the pulsar binary.
+        """Search the pulsar binary component based on given name.
+
+        Parameters
+        ----------
+        system_name : str
+            Searching name for the pulsar binary/system
+
+        Return
+        ------
+        The matching binary model component instance.
+
+        Raises
+        ------
+        UnknownBinaryModel
+            If the input binary model name does not match any PINT defined binary
+            model.
         """
         all_systems = self.category_component_map["pulsar_system"]
         # Search the system name first
@@ -2915,7 +2943,55 @@ class AllComponents:
             )
 
     def alias_to_pint_param(self, alias):
-        """Translate the alias to a PINT parameter name.
+        """Translate a alias to a PINT parameter name.
+
+        This is a wrapper function over the property ``param_alias_map``. It
+        also handles the indexed parameters (e.g., `pint.models.parameter.prefixParameter`
+        and `pint.models.parameter.maskParameter`) with and index beyond currently
+        initialized.
+
+        Parameters
+        ----------
+        alias : str
+            Alias name to be translated
+
+        Return
+        ------
+        PINT parameter name the given alias maps to. If there is no matching PINT
+        parameters, it will raise a `UnknownParameter` error.
+
+        Notes
+        -----
+        Providing a indexable parameter without the index attached, it returns
+        the PINT parameter with first index (i.e. ``0`` or ``1``). If with index,
+        the function returns the matched parameter with the index provided.
+        The index format has to match the PINT defined index format. For instance,
+        if PINT defines a parameter using leading-zero indexing, the provided
+        index has to use the same leading-zeros, otherwrise, returns a `UnknownParameter`
+        error.
+
+        Examples
+        --------
+        >>> from pint.models.timing_model import AllComponents
+        >>> ac = AllComponents()
+        >>> ac.alias_to_pint_param('RA')
+        'RAJ'
+
+        >>> ac.alias_to_pint_param('T2EQUAD')
+        'EQUAD1'
+
+        >>> ac.alias_to_pint_param('T2EQUAD')
+        'EQUAD1'
+
+        >>> ac.alias_to_pint_param('T2EQUAD25')
+        'EQUAD25'
+
+        >>> ac.alias_to_pint_param('DMX_0020')
+        'DMX_0020'
+
+        >>> ac.alias_to_pint_param('DMX20')
+        UnknownParameter: Can not find matching PINT parameter for 'DMX020'
+
         """
         pint_par = self.param_alias_map.get(alias, None)
         # If it is not in the map, double check if it is a repeatable par.
@@ -2924,6 +3000,7 @@ class AllComponents:
                 prefix, idx_str, idx = split_prefixed_name(alias)
                 # assume the index 1 parameter is in the alias map
                 # count length of idx_str and dectect leading zeros
+                # TODO fix the case for searching `DMX`
                 num_lzero = len(idx_str) - len(str(idx))
                 if num_lzero > 0:  # Has leading zero
                     fmt = len(idx_str)
@@ -2939,6 +3016,8 @@ class AllComponents:
                     pint_par = split_prefixed_name(pint_par)[0] + idx_str
             except PrefixError:
                 pint_par = None
+        if pint_par is None:
+            raise UnknownParameter("Can not find matching PINT parameter for '{}'".format(alias))
         return pint_par
 
 
@@ -2980,6 +3059,11 @@ class ConflictAliasError(TimingModelError):
 
     pass
 
+
+class UnknownParameter(TimingModelError):
+    """ Signal that a parameter name does not match any PINT parameters and their aliases. """
+
+    pass
 
 class UnknownBinaryModel(TimingModelError):
     """Signal that the par file requested a binary model no in PINT."""
