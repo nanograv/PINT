@@ -2981,19 +2981,16 @@ class AllComponents:
         >>> from pint.models.timing_model import AllComponents
         >>> ac = AllComponents()
         >>> ac.alias_to_pint_param('RA')
-        'RAJ'
+        ('RAJ', 'RAJ')
 
         >>> ac.alias_to_pint_param('T2EQUAD')
-        'EQUAD1'
-
-        >>> ac.alias_to_pint_param('T2EQUAD')
-        'EQUAD1'
+        ('EQUAD1', 'EQUAD1')
 
         >>> ac.alias_to_pint_param('T2EQUAD25')
-        'EQUAD25'
+        ('EQUAD25', 'EQUAD1')
 
         >>> ac.alias_to_pint_param('DMX_0020')
-        'DMX_0020'
+        ('DMX_0020', 'DMX_0001')
 
         >>> ac.alias_to_pint_param('DMX20')
         UnknownParameter: Can not find matching PINT parameter for 'DMX020'
