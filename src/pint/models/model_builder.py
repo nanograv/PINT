@@ -14,7 +14,7 @@ from pint.models.timing_model import (
     ignore_prefix,
     ConflictAliasError,
     UnknownBinaryModel,
-    UnknownParameter
+    UnknownParameter,
 )
 from pint.toa import get_TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
@@ -123,7 +123,9 @@ class ModelBuilder(AllComponents):
             # Add aliases compare
             overlap = in_param & cpm_param
             # translate to PINT parameter
-            overlap_pint_par = set([self.alias_to_pint_param(ovlp)[0] for ovlp in overlap])
+            overlap_pint_par = set(
+                [self.alias_to_pint_param(ovlp)[0] for ovlp in overlap]
+            )
             # The degree of overlapping for input component and compared component
             overlap_deg_in = len(component.params) - len(overlap_pint_par)
             overlap_deg_cpm = len(cp.params) - len(overlap_pint_par)

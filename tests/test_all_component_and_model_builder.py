@@ -123,7 +123,9 @@ def test_aliases_mapping():
             except PrefixError:
                 als_prefix = als
         assert mb.alias_to_pint_param(als_prefix + "2")[0] == pint_par_obj.prefix + "2"
-        assert mb.alias_to_pint_param(als_prefix + "55")[0] == pint_par_obj.prefix + "55"
+        assert (
+            mb.alias_to_pint_param(als_prefix + "55")[0] == pint_par_obj.prefix + "55"
+        )
 
 
 def test_conflict_alias():

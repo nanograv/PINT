@@ -3013,7 +3013,9 @@ class AllComponents:
                 # Handle the case of start index from 0 and 1
                 for start_idx in [0, 1]:
                     first_init_par_alias = prefix + "{1:0{0}}".format(fmt, start_idx)
-                    first_init_par = self.param_alias_map.get(first_init_par_alias, None)
+                    first_init_par = self.param_alias_map.get(
+                        first_init_par_alias, None
+                    )
                     if first_init_par:
                         # Find the first init par move to the next step
                         pint_par = split_prefixed_name(first_init_par)[0] + idx_str
@@ -3024,7 +3026,9 @@ class AllComponents:
         else:
             first_init_par = pint_par
         if pint_par is None:
-            raise UnknownParameter("Can not find matching PINT parameter for '{}'".format(alias))
+            raise UnknownParameter(
+                "Can not find matching PINT parameter for '{}'".format(alias)
+            )
         return pint_par, first_init_par
 
 
@@ -3071,6 +3075,7 @@ class UnknownParameter(TimingModelError):
     """ Signal that a parameter name does not match any PINT parameters and their aliases. """
 
     pass
+
 
 class UnknownBinaryModel(TimingModelError):
     """Signal that the par file requested a binary model no in PINT."""

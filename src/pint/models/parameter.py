@@ -1295,10 +1295,11 @@ class prefixParameter:
             time_scale=time_scale,
             unit_scale=unit_scale,
             scale_factor=scale_factor,
-            scale_threshold=scale_threshold
+            scale_threshold=scale_threshold,
         )
         self.is_prefix = True
         self.time_scale = time_scale
+
     @property
     def repeatable(self):
         return self.param_comp.repeatable
