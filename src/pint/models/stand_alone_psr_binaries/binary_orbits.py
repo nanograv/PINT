@@ -44,7 +44,7 @@ class Orbit:
         Note
         ----
         This gives the derivative of ``orbit_phase``, that is, it is scaled by 2 pi
-        with respect to the derivative with respect to the derivative of ``orbits``.
+        with respect to the derivative of ``orbits``.
         """
         par_obj = getattr(self, par)
         try:
@@ -88,7 +88,7 @@ class OrbitPB(Orbit):
     XPBDOT is something else, not completely clear what. It is added to PBDOT
     when computing ``orbits`` and its derivative with respect to PB, but it is
     subtracted from PBDOT when computing the derivative of orbits with respect
-    to T0. It is also not included when computing ``ppbdot_orbit``.
+    to T0. It is also not included when computing ``pbdot_orbit``.
     """
     def __init__(self, parent, orbit_params=["PB", "PBDOT", "XPBDOT", "T0"]):
         super().__init__("orbitPB", parent, orbit_params)

@@ -49,12 +49,30 @@ _cached_toas = {}
 def get_model_and_toas(parfile):
     if parfile not in _cached_toas:
         model = get_model_cached(parfile)
+        if hasattr(model, "T0") and model.T0.value is not None:
+            start = model.T0.value
+        elif hasattr(model, "TASC") and model.TASC.value is not None:
+            start = model.TASC.value
+        elif hasattr(model, "PEPOCH") and model.PEPOCH.value is not None:
+            start = model.PEPOCH.value
+        else:
+            start = 57000
         with quiet():
             toas1 = pint.toa.make_fake_toas(
-                model=model, startMJD=57000, endMJD=58000, ntoas=5, freq=1400, obs='gbt'
+                model=model,
+                startMJD=start,
+                endMJD=start + 100,
+                ntoas=5,
+                freq=1400,
+                obs="gbt",
             )
             toas2 = pint.toa.make_fake_toas(
-                model=model, startMJD=57100, endMJD=58000, ntoas=5, freq=2000, obs='ao'
+                model=model,
+                startMJD=start + 1,
+                endMJD=start + 102,
+                ntoas=5,
+                freq=2000,
+                obs="ao",
             )
             toas = pint.toa.merge_TOAs([toas1, toas2])
             phase = model.phase(toas)
@@ -109,11 +127,16 @@ def get_model_and_toas(parfile):
         for param in ["H3", "STIGMA",]
     ]
     + [
-        ("J1713+0747_NANOGrav_11yv0.gls.par", param)  # DDK; also A1DOT doesn't need rescaling
+        (
+            "J1713+0747_NANOGrav_11yv0.gls.par",
+            param,
+        )  # DDK; also A1DOT doesn't need rescaling
         for param in ["PB", "A1", "ECC", "T0", "M2", "KIN", "KOM", "PX", "A1DOT",]
     ],
 )
 def test_derivative_equals_numerical(parfile, param):
+    if param == "H3":
+        pytest.xfail("PINT's H3 code is known to use inconsistent approximations")
     model, toas, phase = get_model_and_toas(
         os.path.join(os.path.dirname(__file__), "datafile", parfile)
     )
@@ -134,19 +157,27 @@ def test_derivative_equals_numerical(parfile, param):
                 return np.nan * np.zeros_like(phase.frac)
         return dphase.int + dphase.frac
 
-    if param == 'ECC':
+    if param == "ECC":
         e = model.ECC.value
-        stepgen = numdifftools.MaxStepGenerator(min(e, 1-e)/2)
-    elif param == 'H3':
+        stepgen = numdifftools.MaxStepGenerator(min(e, 1 - e) / 2)
+    elif param == "H3":
         h3 = model.H3.value
-        stepgen = numdifftools.MaxStepGenerator(abs(h3)/2)
+        stepgen = numdifftools.MaxStepGenerator(abs(h3) / 2)
+    elif param == "FB0":
+        stepgen = numdifftools.MaxStepGenerator(np.abs(model.FB0.value) * 1e-2)
+    elif param == "FB1":
+        stepgen = numdifftools.MaxStepGenerator(np.abs(model.FB1.value) * 1e3)
+    elif param == "FB2":
+        stepgen = numdifftools.MaxStepGenerator(np.abs(model.FB2.value) * 1e5)
+    elif param == "FB3":
+        stepgen = numdifftools.MaxStepGenerator(np.abs(model.FB3.value) * 1e7)
     else:
         stepgen = None
     df = numdifftools.Derivative(f, step=stepgen)
 
-    assert_allclose(
-        model.d_phase_d_param(toas, delay=None, param=param).to_value(1 / units),
-        df(getattr(model, param).value),
-        atol=1e-3,
-        rtol=1e-3,
-    )
+    a = model.d_phase_d_param(toas, delay=None, param=param).to_value(1 / units)
+    b = df(getattr(model, param).value)
+    if param.startswith("FB"):
+        assert np.amax(np.abs(a - b)) / np.amax(np.abs(a) + np.abs(b)) < 1e-6
+    else:
+        assert_allclose(a, b, atol=1e-4, rtol=1e-4)
