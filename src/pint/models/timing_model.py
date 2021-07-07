@@ -1,6 +1,28 @@
 """Timing model objects.
 
 Defines the basic timing model interface classes.
+
+A PINT timing model will be an instance of
+:class:`pint.models.timing_model.TimingModel`. It will have a number of
+"components", each an instance of a subclass of
+:class:`pint.models.timing_model.Component`. These components each
+implement some part of the timing model, whether astrometry (for
+example :class:`pint.models.astrometry.AstrometryEcliptic`), noise
+modelling (for example :class:`pint.models.noise_model.ScaleToaError`),
+interstellar dispersion (for example
+:class:`pint.models.dispersion_model.DispersionDM`), or pulsar binary orbits.
+This last category is somewhat unusual in that the code for each model is
+divided into a PINT-facing side (for example
+:class:`pint.models.binary_bt.BinaryBT`) and an internal model that does the
+actual computation (for example
+:class:`pint.models.stand_alone_psr_binaries.BT_model.BTmodel`); the management of
+data passing between these two parts is carried out by
+:class:`pint.models.pulsar_binary.PulsarBinary` and
+:class:`pint.models.stand_alone_psr_binaries.binary_generic.PSR_BINARY`.
+
+To actually create a timing model, you almost certainly want to use
+:func:`pint.models.model_builder.get_model`.
+
 """
 import abc
 import copy
@@ -147,6 +169,11 @@ class TimingModel:
     TimingModel objects also support a number of functions for computing
     various things like orbital phase, and barycentric versions of TOAs,
     as well as the various derivatives and matrices needed to support fitting.
+
+    TimingModel objects forward attribute lookups to their components, so
+    that you can access any method or attribute (in particular Parameters)
+    of any Component directly on the TimingModel object, for example as
+    ``model.F0``.
 
     TimingModel objects can be written out to ``.par`` files using
     :func:`pint.models.timing_model.TimingModel.as_parfile`.
