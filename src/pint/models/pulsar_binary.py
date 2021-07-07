@@ -206,11 +206,13 @@ class PulsarBinary(DelayComponent):
             the standard barycentering. The stand alone binary receives the
             input TOAs - acc_delay.
 
-        Note
-        ----
+        Warns
+        -----
         If the 'toas' are not provided, the stand alone binary model will use
-        the TOAs were passed to it from last interation or no TOAs for stand
-        alone binary model at all.
+        the TOAs were passed to it from last interation (i.e. last barycnetered
+        TOAs) or no TOAs for stand alone binary model at all. This behavior will
+        cause incorrect answers. Allowing optional 'toas' input is for some
+        lower level tests. We do not recommend PINT user to use it.
         """
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py

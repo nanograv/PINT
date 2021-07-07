@@ -145,6 +145,7 @@ class TestDDK(unittest.TestCase):
             modelJ1713.validate()
 
     def test_sini_from_par(self):
+        #
         test_par_str = self.temp_par_str + "\n SINI  0.8     1  0.562"
         with pytest.raises(
             TimingModelError,

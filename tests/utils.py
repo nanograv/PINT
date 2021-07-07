@@ -13,12 +13,14 @@ def verify_stand_alone_binary_parameter_updates(m):
     Verify if the stand alone binary parameter values gets updated by the PINT
     binary model objects. This test goes through the stand-alone binary model's
     parameters and checks if the value is the same as corresponding PINT-face
-    object's parameter. If the PINT-face object is unset, it will skip the test.
+    object's parameter. If the PINT-face object is unset or doesn't exist, it
+    will skip the test, since some parameters in the standalone model are not
+    implemented in the PINT-face object.
 
     Parameter
     ---------
     m: `~PINT.TimingModel` object.
-        The timing model with binary
+        The timing model with binary.
 
     Note
     ----
@@ -41,6 +43,8 @@ def verify_stand_alone_binary_parameter_updates(m):
         try:
             pint_par_name = m.match_param_aliases(binary_par)
         except ValueError:
+            # The internal parameters are not in the parameter list. Thus, we
+            # need to have a seperate check.
             if binary_par in m.internal_params:
                 pint_par_name = binary_par
             else:

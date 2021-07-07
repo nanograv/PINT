@@ -145,7 +145,7 @@ def test_J0613_STIG(toasJ0613, modelJ0613_STIG):
     f.fit_toas()
 
 
-def test_SINI_warning():
+def test_SINI_error():
     """Test SINI and M2 error.
     """
     SINI_par = simple_par.replace("H3 2.7507208E-7", "SINI 0.8")
