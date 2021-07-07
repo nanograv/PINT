@@ -109,7 +109,11 @@ class TimWidget(tk.Frame):
         self.set_toas()
         self.call_updates()
 
-    def set_toas(self):
+    def set_toas(self, newpsr=None):
+        # if pulsar updated in pintk, update here
+        if newpsr != None:
+            self.psr = newpsr
+
         self.editor.delete("1.0", tk.END)
 
         # Pretty much copying TOAs.write_TOA_file here but without creating an

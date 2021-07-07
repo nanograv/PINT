@@ -583,10 +583,13 @@ class PlkWidget(tk.Frame):
         self.updatePlot(keepAxes=False)
         self.plkToolbar.update()
 
-    def call_updates(self):
+    def call_updates(self, psr_update=False):
         if not self.update_callbacks is None:
             for ucb in self.update_callbacks:
-                ucb()
+                if psr_update:
+                    ucb(self.psr)
+                else:
+                    ucb()
 
     def updateGraphColors(self, color_mode):
         self.current_mode = color_mode
@@ -681,7 +684,7 @@ class PlkWidget(tk.Frame):
         self.plkToolbar.update()
         self.current_state = State()
         self.state_stack = [self.base_state]
-        self.call_updates()
+        self.call_updates(psr_update=True)
 
     def writePar(self):
         """

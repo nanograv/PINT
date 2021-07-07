@@ -200,7 +200,10 @@ class ParWidget(tk.Frame):
         self.set_model()
         self.call_updates()
 
-    def set_model(self):
+    def set_model(self, newpsr=None):
+        # if the pulsar was updated in pintk, update here
+        if newpsr != None:
+            self.psr = newpsr
         choice = self.choiceWidget.choice.get()
         if choice == "postfit":
             if self.psr.fitted:
@@ -218,6 +221,9 @@ class ParWidget(tk.Frame):
         pfile = open(pfilename, "w")
         pfile.write(self.editor.get("1.0", "end-1c"))
         pfile.close()
+        if self.psr.fitted:
+            # if pulsar already fitted, add changes to postfit model as well
+            self.psr.postfit_model = pint.models.get_model(pfilename)
         self.psr.prefit_model = pint.models.get_model(pfilename)
         os.remove(pfilename)
         self.call_updates()
