@@ -294,3 +294,7 @@ def test_model_from_par_hassubset():
         mb = ModelBuilder()
     # Have to remove the SubsetModel2, since it will fail other tests.
     del Component.component_types["SubsetModel2"]
+
+@pytest.mark.parametrize("parfile", glob(join(datadir, "*.par")))
+def test_all_parfiles(parfile):
+    model = get_model(parfile)

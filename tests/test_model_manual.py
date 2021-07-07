@@ -66,13 +66,8 @@ binary_models = [
     (get_model, "BT", pytest.raises(MissingParameter)),
     (get_model, "ELL1", pytest.raises(MissingParameter)),
     (get_model, "ELL1H", pytest.raises(MissingParameter)),
-    (get_model_new, "BT", pytest.raises(MissingParameter)),
-    (get_model_new, "ELL1", pytest.raises(MissingParameter)),
-    (get_model_new, "ELL1H", pytest.raises(MissingParameter)),
     (get_model, "T2", pytest.raises(UnknownBinaryModel)),
     (get_model, "ELLL1", pytest.raises(UnknownBinaryModel)),
-    (get_model_new, "T2", pytest.raises(UnknownBinaryModel)),
-    (get_model_new, "ELLL1", pytest.raises(UnknownBinaryModel)),
 ]
 
 
@@ -103,7 +98,7 @@ def test_compare_get_model_new_and_old():
 @pytest.mark.xfail(
     reason="This parfile includes both ecliptic and equatorial coordinates"
 )
-@pytest.mark.parametrize("gm", [get_model, get_model_new])
+@pytest.mark.parametrize("gm", [get_model])
 def test_ecliptic(gm):
     parfile = join(datadir, "J1744-1134.basic.ecliptic.par")
     m = gm(parfile)
