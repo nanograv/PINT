@@ -1514,9 +1514,7 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
     if delta_chi2 > 0 and dof_1 != dof_2:
         delta_dof = dof_1 - dof_2
         new_redchi2 = chi2_2 / dof_2
-        F = float(
-            (delta_chi2 / delta_dof) / new_redchi2
-        )  # fdtr doesn't like float128
+        F = float((delta_chi2 / delta_dof) / new_redchi2)  # fdtr doesn't like float128
         ft = fdtrc(delta_dof, dof_2, F)
     elif dof_1 == dof_2:
         log.warning("Models have equal degrees of freedom, cannot perform F-test.")

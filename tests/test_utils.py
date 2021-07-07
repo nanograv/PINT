@@ -968,6 +968,7 @@ def test_taylor_horner_deriv(x, coeffs, order):
     df = Derivative(f, n=order)
     assert_allclose(df(x), taylor_horner_deriv(x, coeffs, order), atol=1e-11)
 
+
 @pytest.mark.parametrize(
     "x, coeffs",
     [
@@ -981,16 +982,13 @@ def test_taylor_horner_deriv(x, coeffs, order):
     ],
 )
 def test_taylor_horner_equals_deriv(x, coeffs):
-    assert_allclose(taylor_horner(x, coeffs),
-                    taylor_horner_deriv(x, coeffs, 0))
+    assert_allclose(taylor_horner(x, coeffs), taylor_horner_deriv(x, coeffs, 0))
+
 
 @pytest.mark.parametrize(
     "x, result, n",
-    [
-        (1*u.s, 1*u.m, 5),
-        (1*u.s, 1*u.m, 1),
-        (1*u.km**2, 1*u.m, 3),
-    ])
+    [(1 * u.s, 1 * u.m, 5), (1 * u.s, 1 * u.m, 1), (1 * u.km ** 2, 1 * u.m, 3),],
+)
 def test_taylor_horner_units_ok(x, result, n):
-    coeffs = [result/x**i for i in range(n+1)]
+    coeffs = [result / x ** i for i in range(n + 1)]
     taylor_horner(x, coeffs) + result
