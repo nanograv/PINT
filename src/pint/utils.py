@@ -319,16 +319,7 @@ def taylor_horner(x, coeffs):
     astropy.units.Quantity
         Output value; same shape as input. Units as inferred from inputs.
     """
-    result = 0.0
-    if hasattr(coeffs[-1], "unit"):
-        if not hasattr(x, "unit"):
-            x = x * u.Unit("")
-        result *= coeffs[-1].unit / x.unit
-    fact = len(coeffs)
-    for coeff in coeffs[::-1]:
-        result = result * x / fact + coeff
-        fact -= 1
-    return result
+    return taylor_horner_deriv(x, coeffs, deriv_order=0)
 
 
 def taylor_horner_deriv(x, coeffs, deriv_order=1):
@@ -351,6 +342,7 @@ def taylor_horner_deriv(x, coeffs, deriv_order=1):
         multiplied by an appropriate power of x.
     deriv_order: int
         The order of the derivative to take (that is, how many times to differentiate).
+        Must be non-negative.
 
     Returns
     -------
