@@ -158,8 +158,8 @@ class TestDDK(unittest.TestCase):
         m = mb.get_model(StringIO(test_par_str))
         # Check if KIN exists in the pint facing object and stand alone binary
         # models.
-        assert hasattr(m.binary_instance, 'KIN')
-        assert hasattr(m, 'KIN')
+        assert hasattr(m.binary_instance, "KIN")
+        assert hasattr(m, "KIN")
         verify_stand_alone_binary_parameter_updates(m)
 
     def test_zero_PX(self):

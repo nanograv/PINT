@@ -9,7 +9,8 @@ import astropy.units as u
 import numpy as np
 
 import pint.fitter as ff
-import pint.models as model
+from pint.models import get_model
+from pint.models.timing_model import TimingModelError
 import pint.toa as toa
 import test_derivative_utils as tdu
 from utils import verify_stand_alone_binary_parameter_updates
@@ -55,17 +56,17 @@ def toasJ1853():
 
 @pytest.fixture
 def modelJ0613():
-    return model.get_model("J0613-0200_NANOGrav_9yv1_ELL1H.gls.par")
+    return get_model("J0613-0200_NANOGrav_9yv1_ELL1H.gls.par")
 
 
 @pytest.fixture
 def modelJ1853():
-    return model.get_model("J1853+1303_NANOGrav_11yv0.gls.par")
+    return get_model("J1853+1303_NANOGrav_11yv0.gls.par")
 
 
 @pytest.fixture()
 def modelJ0613_STIG():
-    return model.get_model("J0613-0200_NANOGrav_9yv1_ELL1H_STIG.gls.par")
+    return get_model("J0613-0200_NANOGrav_9yv1_ELL1H_STIG.gls.par")
 
 
 @pytest.fixture()
@@ -149,14 +150,14 @@ def test_SINI_error():
     """Test SINI and M2 error.
     """
     SINI_par = simple_par.replace("H3 2.7507208E-7", "SINI 0.8")
-    with pytest.raises(ValueError, match="'SINI' will not be used in ELL1H model. "):
-        model.get_model(StringIO(SINI_par))
+    with pytest.raises(TimingModelError, match="'SINI' will not be used in ELL1H model. "):
+        get_model(StringIO(SINI_par))
 
 
 def test_M2_error():
     M2_par = simple_par + "\nM2 1.0 1 0.1"
-    with pytest.raises(ValueError, match="'M2' will not be used in ELL1H model. "):
-        model.get_model(StringIO(M2_par))
+    with pytest.raises(TimingModelError, match="'M2' will not be used in ELL1H model. "):
+        get_model(StringIO(M2_par))
 
 
 def test_no_H3_H4(toasJ0613):
@@ -164,7 +165,7 @@ def test_no_H3_H4(toasJ0613):
     """
     no_H3_H4 = simple_par.replace("H4 2.0262048E-7  1       1.1276173E-7", "")
     no_H3_H4 = no_H3_H4.replace("H3 2.7507208E-7  1       1.5114416E-7", "")
-    no_H3_H4_model = model.get_model(StringIO(no_H3_H4))
+    no_H3_H4_model = get_model(StringIO(no_H3_H4))
     assert no_H3_H4_model.H3.value == None
     assert no_H3_H4_model.H4.value == None
     test_toas = toasJ0613[::20]
@@ -176,7 +177,7 @@ def test_H3_and_H4_non_zero(toasJ0613):
     """ Testing if the different H3, H4 combination breaks the fitting. the
         fitting result will not be checked here.
     """
-    simple_model = model.get_model(StringIO(simple_par))
+    simple_model = get_model(StringIO(simple_par))
 
     test_toas = toasJ0613[::20]
     f = ff.WLSFitter(test_toas, simple_model)
@@ -184,7 +185,7 @@ def test_H3_and_H4_non_zero(toasJ0613):
 
 
 def test_zero_H4(toasJ0613):
-    H4_zero_model = model.get_model(StringIO(simple_par))
+    H4_zero_model = get_model(StringIO(simple_par))
     H4_zero_model.H4.value = 0.0
     H4_zero_model.H4.frozen = False
     assert H4_zero_model.H3.value != 0.0
@@ -195,7 +196,7 @@ def test_zero_H4(toasJ0613):
 
 
 def test_zero_H3(toasJ0613):
-    H3_zero_model = model.get_model(StringIO(simple_par))
+    H3_zero_model = get_model(StringIO(simple_par))
     H3_zero_model.H3.value = 0.0
     H3_zero_model.H3.frozen = False
     assert H3_zero_model.H4.value != 0.0
@@ -206,7 +207,7 @@ def test_zero_H3(toasJ0613):
 
 
 def test_zero_H3_H4_fit_H3_H4(toasJ0613):
-    H3H4_zero_model = model.get_model(StringIO(simple_par))
+    H3H4_zero_model = get_model(StringIO(simple_par))
     H3H4_zero_model.H3.value = 0.0
     H3H4_zero_model.H4.value = 0.0
     H3H4_zero_model.H3.frozen = False
@@ -222,7 +223,7 @@ def test_zero_H3_H4_fit_H3_H4(toasJ0613):
 
 
 def test_zero_H3_H4_fit_H3(toasJ0613):
-    H3H4_zero2_model = model.get_model(StringIO(simple_par))
+    H3H4_zero2_model = get_model(StringIO(simple_par))
     H3H4_zero2_model.H3.value = 0.0
     H3H4_zero2_model.H3.frozen = False
     H3H4_zero2_model.H4.value = 0.0

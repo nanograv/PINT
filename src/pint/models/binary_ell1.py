@@ -9,7 +9,7 @@ from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
 from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
-from pint.models.timing_model import MissingParameter
+from pint.models.timing_model import MissingParameter, TimingModelError
 from pint.utils import taylor_horner_deriv
 
 
@@ -32,7 +32,7 @@ class BinaryELL1Base(PulsarBinary):
     """
 
     def __init__(self):
-        super(BinaryELL1Base, self).__init__()
+        super().__init__()
         self.add_param(
             MJDParameter(
                 name="TASC", description="Epoch of ascending node", time_scale="tdb"
@@ -78,11 +78,11 @@ class BinaryELL1Base(PulsarBinary):
         self.warn_default_params = []
 
     def setup(self):
-        super(BinaryELL1Base, self).setup()
+        super().setup()
 
     def validate(self):
         """Validate parameters"""
-        super(BinaryELL1Base, self).validate()
+        super().validate()
 
         for p in ["EPS1", "EPS2"]:
             if getattr(self, p).value is None:
@@ -190,7 +190,7 @@ class BinaryELL1(BinaryELL1Base):
     register = True
 
     def __init__(self):
-        super(BinaryELL1, self).__init__()
+        super().__init__()
         self.binary_model_name = "ELL1"
         self.binary_model_class = ELL1model
 
@@ -261,7 +261,7 @@ class BinaryELL1H(BinaryELL1Base):
 
     def setup(self):
         """Parameter setup."""
-        super(BinaryELL1H, self).setup()
+        super().setup()
         if self.H4.quantity is not None:
             self.binary_instance.fit_params = ["H3", "H4"]
             # If have H4 or STIGMA, choose 7th order harmonics
@@ -277,10 +277,10 @@ class BinaryELL1H(BinaryELL1Base):
 
     def validate(self):
         """Parameter validation."""
-        super(BinaryELL1H, self).validate()
+        super().validate()
         # if self.H3.quantity is None:
         #     raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")
         if self.SINI.quantity is not None:
-            raise ValueError("'SINI' will not be used in ELL1H model. ")
+            raise TimingModelError("'SINI' will not be used in ELL1H model. ")
         if self.M2.quantity is not None:
-            raise ValueError("'M2' will not be used in ELL1H model. ")
+            raise TimingModelError("'M2' will not be used in ELL1H model. ")
