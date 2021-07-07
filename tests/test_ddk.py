@@ -77,7 +77,7 @@ class TestDDK(unittest.TestCase):
         b_time0 = self.modelJ1713.binary_instance.t
         # Change PX value
         self.modelJ1713.PX.value = 0.1
-        self.modelJ1713.update_binary_object()
+        self.modelJ1713.update_binary_object(None)
         b_time1 = self.modelJ1713.binary_instance.t
         assert self.modelJ1713.binary_instance.PX.value == 0.1
         # The stand alone binary model's input time should not change
@@ -145,7 +145,6 @@ class TestDDK(unittest.TestCase):
             modelJ1713.validate()
 
     def test_sini_from_par(self):
-        #
         test_par_str = self.temp_par_str + "\n SINI  0.8     1  0.562"
         with pytest.raises(
             TimingModelError,

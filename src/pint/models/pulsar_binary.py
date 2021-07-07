@@ -156,7 +156,7 @@ class PulsarBinary(DelayComponent):
                 self.binary_instance, list(FBXs.keys())
             )
         # Update the parameters in the stand alone binary
-        self.update_binary_object()
+        self.update_binary_object(None)
 
     def validate(self):
         super(PulsarBinary, self).validate()
@@ -186,7 +186,7 @@ class PulsarBinary(DelayComponent):
                 continue
             bparObj.value = bparObj.value * u.Unit(bparObj.units)
 
-    def update_binary_object(self, toas=None, acc_delay=None):
+    def update_binary_object(self, toas, acc_delay=None):
         """Update stand alone binary's parameters and toas from PINT-facing object.
 
         This function passes the PINT-facing object's parameter values and TOAs
@@ -195,24 +195,25 @@ class PulsarBinary(DelayComponent):
 
         Parameters
         ----------
-        toas: `~pint.toa.TOAs` object, optional
+        toas: pint.toa.TOAs object
             The TOAs that need to pass to the stand alone model.Default value is
             None. If toas is None, this function only updates the parameter value.
             If 'acc_delay' is not provided, the stand alone binary receives the
             standard barycentered TOAs.
 
-        acc_delay: `~numpy.ndarray`
+        acc_delay: numpy.ndarray
             If provided, TOAs will be corrected by provided acc_delay instead of
             the standard barycentering. The stand alone binary receives the
             input TOAs - acc_delay.
 
         Warns
         -----
-        If the 'toas' are not provided, the stand alone binary model will use
+        If passing 'None' to 'toa' argument, the stand alone binary model will use
         the TOAs were passed to it from last interation (i.e. last barycnetered
         TOAs) or no TOAs for stand alone binary model at all. This behavior will
-        cause incorrect answers. Allowing optional 'toas' input is for some
-        lower level tests. We do not recommend PINT user to use it.
+        cause incorrect answers. Allowing the passing None to 'toa' argument is
+        for some lower level functions and tests. We do not recommend PINT
+        user to use it.
         """
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py

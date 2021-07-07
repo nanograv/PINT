@@ -569,7 +569,7 @@ class TimingModel:
             [x for x in self.components.keys() if x.startswith("Binary")][0]
         ]
         # Make sure that the binary instance has the binary params
-        b.update_binary_object()
+        b.update_binary_object(None)
         # Handle input times and update them in stand-alone binary models
         if isinstance(barytimes, TOAs):
             # If we pass the TOA table, then barycenter the TOAs

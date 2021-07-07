@@ -153,7 +153,7 @@ def test_SINI_error():
         model.get_model(StringIO(SINI_par))
 
 
-def test_M2_warning():
+def test_M2_error():
     M2_par = simple_par + "\nM2 1.0 1 0.1"
     with pytest.raises(ValueError, match="'M2' will not be used in ELL1H model. "):
         model.get_model(StringIO(M2_par))
