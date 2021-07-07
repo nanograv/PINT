@@ -50,8 +50,10 @@ class Orbit:
         try:
             func = getattr(self, "d_orbits_d_" + par)
         except AttributeError:
+
             def func():
                 return np.zeros(len(self.tt0)) * u.Unit("") / par_obj.unit
+
         result = func()
         return result
 
@@ -61,8 +63,10 @@ class Orbit:
         try:
             func = getattr(self, "d_pbprime_d_" + par)
         except AttributeError:
+
             def func():
                 return np.zeros(len(self.tt0)) * u.day / par_obj.unit
+
         result = func()
         return result
 
@@ -90,6 +94,7 @@ class OrbitPB(Orbit):
     subtracted from PBDOT when computing the derivative of orbits with respect
     to T0. It is also not included when computing ``pbdot_orbit``.
     """
+
     def __init__(self, parent, orbit_params=["PB", "PBDOT", "XPBDOT", "T0"]):
         super().__init__("orbitPB", parent, orbit_params)
 
@@ -154,6 +159,7 @@ class OrbitPB(Orbit):
 
 class OrbitFBX(Orbit):
     """Orbits expressed in terms of orbital frequency and its derivatives FB0, FB1, FB2..."""
+
     def __init__(self, parent, orbit_params=["FB0"]):
         super().__init__("orbitFBX", parent, orbit_params)
         # add the rest of FBX parameters.
@@ -164,8 +170,10 @@ class OrbitFBX(Orbit):
                     self.orbit_params += [k]
                     indices.add(int(k[2:]))
         if indices != set(range(len(indices))):
-            raise ValueError(f"Indices must be 0 up to some number k without gaps "
-                             f"but are {indices}.")
+            raise ValueError(
+                f"Indices must be 0 up to some number k without gaps "
+                f"but are {indices}."
+            )
 
     def _FBXs(self):
         FBXs = [0 * u.Unit("")]

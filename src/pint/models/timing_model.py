@@ -1597,13 +1597,13 @@ class TimingModel:
         M = np.zeros((ntoas, nparams))
         for ii, param in enumerate(params):
             if param == "Offset":
-                M[:, ii] = 1.0/F0.value
+                M[:, ii] = 1.0 / F0.value
                 units.append(u.s / u.s)
             else:
                 q = -self.d_phase_d_param(toas, delay, param)
                 the_unit = u.Unit("") / getattr(self, param).units
-                M[:, ii] = q.to_value(the_unit)/F0.value
-                units.append(the_unit/F0.unit)
+                M[:, ii] = q.to_value(the_unit) / F0.value
+                units.append(the_unit / F0.unit)
         return M, params, units
 
     def compare(
