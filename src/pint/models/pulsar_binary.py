@@ -15,12 +15,32 @@ from pint.utils import taylor_horner_deriv
 
 
 class PulsarBinary(DelayComponent):
-    """Wrapper class for independent pulsar binary model.
+    """Base class for binary models in PINT.
 
+    This class provides a wrapper for internal classes that do the actual calculations.
     The calculations are done by the classes located in
     :mod:`pint.models.stand_alone_psr_binary`.
 
-    Binary variables naming:
+    Binary models generally support the below parameters, although some may support
+    additional parameters and/or remove/ignore some of these.
+
+    Model parameters:
+
+        - T0 - time of (any) periastron (MJD)
+        - PB - binary period (days, non-negative)
+        - PBDOT - time derivative of binary period (s/s)
+        - A1 - projected orbital amplitude, $a \sin i$ (ls, non-negative)
+        - A1DOT - time derivative of projected orbital amplitude (ls/s)
+        - ECC (or E) - eccentricity (no units, 0<=ECC<1)
+        - EDOT - time derivative of eccentricity (1/s)
+        - OM - longitude of periastron (deg)
+        - OMDOT - time derivative of longitude of periastron (deg/s)
+        - M2 - companion mass for Shapiro delay (solMass, non-negative)
+        - SINI - system inclination (0<=SINI<=1)
+        - FB0 - orbital frequency (1/s, alternative to PB, non-negative)
+        - FBn - time derivatives of orbital frequency (1/s**(n+1))
+
+    Internal binary variables naming:
 
         - Eccentric Anomaly:               E (not parameter ECC)
         - Mean Anomaly:                    M
@@ -153,7 +173,9 @@ class PulsarBinary(DelayComponent):
         FBXs = {}
         for fbn in FBX_mapping.values():
             FBXs[fbn] = getattr(self, fbn).quantity
-        if None not in FBXs.values():
+        if any([v is not None for v in FBXs.values()]):
+            if self.FB0.value is None:
+                raise ValueError("Some FBn parameters are set but FB0 is not.")
             for fb_name, fb_value in FBXs.items():
                 self.binary_instance.add_binary_params(fb_name, fb_value)
             self.binary_instance.orbits_cls = bo.OrbitFBX(
@@ -184,17 +206,20 @@ class PulsarBinary(DelayComponent):
             raise ValueError(
                 f"Eccentricity ECC must be between zero and one ({self.ECC.quantity})"
             )
-        if self.PB.value is not None and self.PB.value <= 0:
-            raise ValueError(
-                f"Binary period PB must be non-negative ({self.PB.quantity})"
-            )
-        if self.FB0.value is not None and self.FB0.value <= 0:
-            raise ValueError(
-                f"Binary frequency FB0 must be non-negative ({self.FB0.quantity})"
-            )
         if self.A1.value is not None and self.A1.value < 0:
             raise ValueError(
                 f"Projected semi-major axis A1 cannot be negative ({self.A1.quantity})"
+            )
+        if self.PB.value is not None:
+            if self.PB.value <= 0:
+                raise ValueError(
+                    f"Binary period PB must be non-negative ({self.PB.quantity})"
+                )
+            if self.FB0.value is not None:
+                raise ValueError("Model cannot have values for both FB0 and PB")
+        if self.FB0.value is not None and self.FB0.value <= 0:
+            raise ValueError(
+                f"Binary frequency FB0 must be non-negative ({self.FB0.quantity})"
             )
 
     def check_required_params(self, required_params):
