@@ -195,7 +195,7 @@ class PulsarBinary(DelayComponent):
 
         Parameters
         ----------
-        toas: pint.toa.TOAs object
+        toas: pint.toa.TOAs
             The TOAs that need to pass to the stand alone model.Default value is
             None. If toas is None, this function only updates the parameter value.
             If 'acc_delay' is not provided, the stand alone binary receives the
