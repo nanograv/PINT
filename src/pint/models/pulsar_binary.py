@@ -38,7 +38,7 @@ class PulsarBinary(DelayComponent):
     category = "pulsar_system"
 
     def __init__(self):
-        super(PulsarBinary, self).__init__()
+        super().__init__()
         self.binary_model_name = None
         self.barycentric_time = None
         self.binary_model_class = None
@@ -142,7 +142,7 @@ class PulsarBinary(DelayComponent):
         self.delay_funcs_component += [self.binarymodel_delay]
 
     def setup(self):
-        super(PulsarBinary, self).setup()
+        super().setup()
         for bpar in self.params:
             self.register_deriv_funcs(self.d_binary_delay_d_xxxx, bpar)
         # Setup the model isinstance
@@ -163,7 +163,31 @@ class PulsarBinary(DelayComponent):
         self.update_binary_object(None)
 
     def validate(self):
-        super(PulsarBinary, self).validate()
+        super().validate()
+        if hasattr(self, "SINI") and self.SINI.value is not None and not 0 <= self.SINI.value <= 1:
+            raise ValueError(
+                f"Sine of inclination angle must be between zero and one ({self.SINI.quantity})"
+            )
+        if hasattr(self, "M2") and self.M2.value is not None and self.M2.value < 0:
+            raise ValueError(
+                f"Companion mass M2 cannot be negative ({self.M2.quantity})"
+            )
+        if hasattr(self, "ECC") and self.ECC.value is not None and not 0 <= self.ECC.value <= 1:
+            raise ValueError(
+                f"Eccentricity ECC must be between zero and one ({self.ECC.quantity})"
+            )
+        if self.PB.value is not None and self.PB.value <= 0:
+            raise ValueError(
+                f"Binary period PB must be non-negative ({self.PB.quantity})"
+            )
+        if self.FB0.value is not None and self.FB0.value <= 0:
+            raise ValueError(
+                f"Binary frequency FB0 must be non-negative ({self.FB0.quantity})"
+            )
+        if self.A1.value is not None and self.A1.value < 0:
+            raise ValueError(
+                f"Projected semi-major axis A1 cannot be negative ({self.A1.quantity})"
+            )
 
     def check_required_params(self, required_params):
         # seach for all the possible to get the parameters.
@@ -237,16 +261,13 @@ class PulsarBinary(DelayComponent):
                 epoch=tbl["tdbld"].astype(np.float64)
             )
         for par in self.binary_instance.binary_params:
-            binary_par_names = [par]
             if par in self.binary_instance.param_aliases.keys():
-                aliase = self.binary_instance.param_aliases[par]
+                alias = self.binary_instance.param_aliases[par]
             else:
-                aliase = []
+                alias = []
 
             # the _parent attribute should give access to all the components
-            if hasattr(self._parent, par) or set(aliase).intersection(
-                self._parent.params
-            ):
+            if hasattr(self._parent, par) or set(alias).intersection(self.params):
                 try:
                     pint_bin_name = self._parent.match_param_aliases(par)
                 except ValueError:
