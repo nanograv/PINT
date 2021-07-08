@@ -40,7 +40,7 @@ class PulsarBinary(DelayComponent):
         - FB0 - orbital frequency (1/s, alternative to PB, non-negative)
         - FBn - time derivatives of orbital frequency (1/s**(n+1))
 
-    Internal binary variables naming:
+    The internal calculation code uses different names for some parameters:
 
         - Eccentric Anomaly:               E (not parameter ECC)
         - Mean Anomaly:                    M
