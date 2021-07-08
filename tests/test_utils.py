@@ -3,8 +3,8 @@ import os
 from itertools import product
 from tempfile import NamedTemporaryFile
 
-import astropy.units as u
 import astropy.constants as c
+import astropy.units as u
 import numpy as np
 import pytest
 import scipy.stats
@@ -20,7 +20,8 @@ from hypothesis.strategies import (
     sampled_from,
     slices,
 )
-from numpy.testing import assert_array_equal
+from numdifftools import Derivative
+from numpy.testing import assert_allclose, assert_array_equal
 from pinttestdata import datadir
 
 import pint
@@ -39,19 +40,20 @@ from pint.pulsar_mjd import (
 from pint.utils import (
     FTest,
     PosVel,
+    companion_mass,
     dmxparse,
     interesting_lines,
     lines_of,
-    open_or_use,
-    taylor_horner,
-    companion_mass,
     mass_funct,
     mass_funct2,
+    open_or_use,
     pulsar_age,
     pulsar_B,
     pulsar_B_lightcyl,
     pulsar_edot,
     pulsar_mass,
+    taylor_horner,
+    taylor_horner_deriv,
 )
 
 
@@ -752,10 +754,10 @@ def test_companion_mass(Mpsr, Mc, Pb, incl):
 
 
 @given(
-    arrays(np.float, 10, elements=floats(0.5, 3)),
-    arrays(np.float, 10, elements=floats(0.01, 10)),
-    arrays(np.float, 10, elements=floats(0.04, 1000)),
-    arrays(np.float, 10, elements=floats(0.1, 90)),
+    arrays(float, 10, elements=floats(0.5, 3)),
+    arrays(float, 10, elements=floats(0.01, 10)),
+    arrays(float, 10, elements=floats(0.04, 1000)),
+    arrays(float, 10, elements=floats(0.1, 90)),
 )
 def test_companion_mass_array(Mpsr, Mc, Pb, incl):
     """
@@ -804,10 +806,10 @@ def test_pulsar_mass(Mpsr, Mc, Pb, incl):
 
 
 @given(
-    arrays(np.float, 10, elements=floats(0.5, 3)),
-    arrays(np.float, 10, elements=floats(0.01, 10)),
-    arrays(np.float, 10, elements=floats(0.04, 1000)),
-    arrays(np.float, 10, elements=floats(0.1, 90)),
+    arrays(float, 10, elements=floats(0.5, 3)),
+    arrays(float, 10, elements=floats(0.01, 10)),
+    arrays(float, 10, elements=floats(0.04, 1000)),
+    arrays(float, 10, elements=floats(0.1, 90)),
 )
 def test_pulsar_mass_array(Mpsr, Mc, Pb, incl):
     """
@@ -943,3 +945,50 @@ def test_Ftest_chi2_increase():
 
 def test_Ftest_dof_same():
     assert np.isnan(FTest(100, 100, 100, 100))
+
+
+@pytest.mark.parametrize(
+    "x, coeffs, order",
+    [
+        (1.2, [2], 1),
+        (0.1, [2, 3], 1),
+        (-1, [2, 3, 5], 1),
+        (1.1, [2], 2),
+        (1.3, [2, 3, 4, 5], 2),
+        (1.3, [2, 3, 4, 5], 4),
+        (1.3, [2, 3, 4, 5, 6], 4),
+        (1.5, [2], 10),
+        (1.7, [2, 3, 4], 0),
+    ],
+)
+def test_taylor_horner_deriv(x, coeffs, order):
+    def f(x):
+        return taylor_horner(x, coeffs)
+
+    df = Derivative(f, n=order)
+    assert_allclose(df(x), taylor_horner_deriv(x, coeffs, order), atol=1e-11)
+
+
+@pytest.mark.parametrize(
+    "x, coeffs",
+    [
+        (1.2, [2]),
+        (0.1, [2, 3]),
+        (-1, [2, 3, 5]),
+        (1.1, [2]),
+        (1.3, [2, 3, 4, 5]),
+        (1.5, [2]),
+        (1.7, [2, 3, 4]),
+    ],
+)
+def test_taylor_horner_equals_deriv(x, coeffs):
+    assert_allclose(taylor_horner(x, coeffs), taylor_horner_deriv(x, coeffs, 0))
+
+
+@pytest.mark.parametrize(
+    "x, result, n",
+    [(1 * u.s, 1 * u.m, 5), (1 * u.s, 1 * u.m, 1), (1 * u.km ** 2, 1 * u.m, 3),],
+)
+def test_taylor_horner_units_ok(x, result, n):
+    coeffs = [result / x ** i for i in range(n + 1)]
+    taylor_horner(x, coeffs) + result

@@ -45,7 +45,7 @@ def random_models(
     params = fitter.model.get_params_dict("free", "num")
     mean_vector = params.values()
     # remove the first column and row (absolute phase)
-    cov_matrix = (((fitter.covariance_matrix[1:]).T)[1:]).T
+    cov_matrix = (((fitter.covariance_matrix.matrix[1:]).T)[1:]).T
     fac = fitter.fac[1:]
     f_rand = deepcopy(fitter)
     mrand = f_rand.model

@@ -305,17 +305,22 @@ def taylor_horner(x, coeffs):
         In [1]: taylor_horner(2.0, [10, 3, 4, 12])
         Out[1]: 40.0
 
+    Parameters
+    ----------
+    x: astropy.units.Quantity
+        Input value; may be an array.
+    coeffs: list of astropy.units.Quantity
+        Coefficient array; must have length at least one. The coefficient in
+        position ``i`` is multiplied by ``x**i``. Each coefficient should
+        just be a number, not an array. The units should be compatible once
+        multiplied by an appropriate power of x.
+
+    Returns
+    -------
+    astropy.units.Quantity
+        Output value; same shape as input. Units as inferred from inputs.
     """
-    result = 0.0
-    if hasattr(coeffs[-1], "unit"):
-        if not hasattr(x, "unit"):
-            x = x * u.Unit("")
-        result *= coeffs[-1].unit / x.unit
-    fact = float(len(coeffs))
-    for coeff in coeffs[::-1]:
-        result = result * x / fact + coeff
-        fact -= 1.0
-    return result
+    return taylor_horner_deriv(x, coeffs, deriv_order=0)
 
 
 def taylor_horner_deriv(x, coeffs, deriv_order=1):
@@ -327,6 +332,23 @@ def taylor_horner_deriv(x, coeffs, deriv_order=1):
         In [1]: taylor_horner_deriv(2.0, [10, 3, 4, 12], 1)
         Out[1]: 15.0
 
+    Parameters
+    ----------
+    x: astropy.units.Quantity
+        Input value; may be an array.
+    coeffs: list of astropy.units.Quantity
+        Coefficient array; must have length at least one. The coefficient in
+        position ``i`` is multiplied by ``x**i``. Each coefficient should
+        just be a number, not an array. The units should be compatible once
+        multiplied by an appropriate power of x.
+    deriv_order: int
+        The order of the derivative to take (that is, how many times to differentiate).
+        Must be non-negative.
+
+    Returns
+    -------
+    astropy.units.Quantity
+        Output value; same shape as input. Units as inferred from inputs.
     """
     result = 0.0
     if hasattr(coeffs[-1], "unit"):
@@ -334,7 +356,7 @@ def taylor_horner_deriv(x, coeffs, deriv_order=1):
             x = x * u.Unit("")
         result *= coeffs[-1].unit / x.unit
     der_coeffs = coeffs[deriv_order::]
-    fact = float(len(der_coeffs))
+    fact = len(der_coeffs)
     for coeff in der_coeffs[::-1]:
         result = result * x / fact + coeff
         fact -= 1.0
@@ -1244,10 +1266,10 @@ def pulsar_mass(pb, x, mc, inc):
     mass : Quantity in `u.solMass`
 
     Notes
-    -------    
+    -------
     This forms a quadratic equation of the form:
     ca*Mp**2 + cb*Mp + cc = 0
-    
+
     with:
     ca = massfunct
     cb = 2 * massfunct * mc
@@ -1255,7 +1277,7 @@ def pulsar_mass(pb, x, mc, inc):
 
     except the discriminant simplifies to:
     4 * massfunct * mc**3 * sini**3
-    
+
     solve it directly
     this has to be the positive branch of the quadratic
     because the vertex is at -mc, so the negative branch will always be < 0
@@ -1317,7 +1339,7 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
 
     It's useful to look at the discriminant to understand the nature of the roots
     and make sure we get the right one
-    
+
     https://en.wikipedia.org/wiki/Discriminant#Degree_3
     delta = (
         cb ** 2 * cc ** 2
@@ -1330,7 +1352,7 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     and this should be < 0
     since this reduces to -27 * sin(i)**6 * massfunct**2 * mp**4 -4 * sin(i)**3 * massfunct**3 * mp**3
     so there is just 1 real root and we compute it below
-    
+
     """
     if not (isinstance(inc, angles.Angle) or isinstance(inc, u.quantity.Quantity)):
         raise ValueError(f"The inclination should be an Angle but is {inc}.")
@@ -1489,9 +1511,7 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
     if delta_chi2 > 0 and dof_1 != dof_2:
         delta_dof = dof_1 - dof_2
         new_redchi2 = chi2_2 / dof_2
-        F = np.float64(
-            (delta_chi2 / delta_dof) / new_redchi2
-        )  # fdtr doesn't like float128
+        F = float((delta_chi2 / delta_dof) / new_redchi2)  # fdtr doesn't like float128
         ft = fdtrc(delta_dof, dof_2, F)
     elif dof_1 == dof_2:
         log.warning("Models have equal degrees of freedom, cannot perform F-test.")
