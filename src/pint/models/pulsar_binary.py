@@ -164,7 +164,11 @@ class PulsarBinary(DelayComponent):
 
     def validate(self):
         super().validate()
-        if hasattr(self, "SINI") and self.SINI.value is not None and not 0 <= self.SINI.value <= 1:
+        if (
+            hasattr(self, "SINI")
+            and self.SINI.value is not None
+            and not 0 <= self.SINI.value <= 1
+        ):
             raise ValueError(
                 f"Sine of inclination angle must be between zero and one ({self.SINI.quantity})"
             )
@@ -172,7 +176,11 @@ class PulsarBinary(DelayComponent):
             raise ValueError(
                 f"Companion mass M2 cannot be negative ({self.M2.quantity})"
             )
-        if hasattr(self, "ECC") and self.ECC.value is not None and not 0 <= self.ECC.value <= 1:
+        if (
+            hasattr(self, "ECC")
+            and self.ECC.value is not None
+            and not 0 <= self.ECC.value <= 1
+        ):
             raise ValueError(
                 f"Eccentricity ECC must be between zero and one ({self.ECC.quantity})"
             )
