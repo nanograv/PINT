@@ -1121,6 +1121,7 @@ class DownhillFitter(Fitter):
         for i in range(maxiter):
             step = current_state.step
             lambda_ = 1
+            chi2_decrease = 0
             while True:
                 try:
                     new_state = current_state.take_step(step, lambda_)
