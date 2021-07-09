@@ -49,7 +49,9 @@ class ParamTable(Table):
                     para = nodes.paragraph()
                     for cl in d[c]:
                         self.state.nested_parse(
-                            ViewList([f":class:`~{cl}` "], "bogus.rst"), self.content_offset, para
+                            ViewList([f":class:`~{cl}` "], "bogus.rst"),
+                            self.content_offset,
+                            para,
                         )
                     entry += para
                 elif isinstance(d[c], str):

@@ -88,7 +88,13 @@ class PhaseJump(PhaseComponent):
 
     def __init__(self):
         super().__init__()
-        self.add_param(maskParameter(name="JUMP", units="second", description="Amount to jump the selected TOAs by."))
+        self.add_param(
+            maskParameter(
+                name="JUMP",
+                units="second",
+                description="Amount to jump the selected TOAs by.",
+            )
+        )
         self.phase_funcs_component += [self.jump_phase]
 
     def setup(self):

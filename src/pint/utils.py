@@ -1838,7 +1838,9 @@ def list_parameters(class_=None):
         import pint.models.timing_model
 
         results = {}
-        for k, v in pint.models.timing_model.Component.component_types.items():
+        ct = pint.models.timing_model.Component.component_types.copy()
+        ct["TimingModel"] = pint.models.timing_model.TimingModel
+        for v in ct.values():
             for d in list_parameters(v):
                 n = d["name"]
                 class_ = d.pop("class_")

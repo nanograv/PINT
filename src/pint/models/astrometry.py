@@ -221,6 +221,7 @@ class AstrometryEquatorial(Astrometry):
     .. paramtable::
         :class: pint.models.astrometry.AstrometryEquatorial
     """
+
     register = True
 
     def __init__(self):
@@ -484,6 +485,7 @@ class AstrometryEcliptic(Astrometry):
     .. paramtable::
         :class: pint.models.astrometry.AstrometryEcliptic
     """
+
     register = True
 
     def __init__(self):

@@ -144,11 +144,12 @@ class TimingModel:
     """Timing model object built from Components.
 
     This object is the primary object to represent a timing model in PINT.  It
-    is normally constructed with :func:`pint.models.model_builder.get_model`,
-    and it contains a variety of Component objects, each representing a
+    is normally constructed with :func:`~pint.models.model_builder.get_model`,
+    and it contains a variety of :class:`~pint.models.timing_model.Component`
+    objects, each representing a
     physical process that either introduces delays in the pulse arrival time or
     introduces shifts in the pulse arrival phase.  These components have
-    parameters, described by :class:`pint.models.parameter.Parameter` objects,
+    parameters, described by :class:`~pint.models.parameter.Parameter` objects,
     and methods. Both the parameters and the methods are accessible through
     this object using attribute access, for example as ``model.F0`` or
     ``model.coords_as_GAL()``.
@@ -177,6 +178,11 @@ class TimingModel:
 
     TimingModel objects can be written out to ``.par`` files using
     :func:`pint.models.timing_model.TimingModel.as_parfile`.
+
+    PINT Parameters supported (here, rather than in any Component):
+
+    .. paramtable::
+        :class: pint.models.timing_model.TimingModel
 
     Parameters
     ----------
