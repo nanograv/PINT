@@ -1817,7 +1817,7 @@ def list_parameters(class_=None):
                 description=pm.description,
             )
             if pm.aliases:
-                d["aliases"] = pm.aliases
+                d["aliases"] = [a for a in pm.aliases if a != pm.name]
             if pm.units:
                 d["kind"] = pm.units.to_string()
                 if not d["kind"]:
@@ -1830,8 +1830,12 @@ def list_parameters(class_=None):
                 d["kind"] = "integer"
             if isinstance(pm, prefixParameter):
                 d["name"] = pm.prefix + "{number}"
+                d["aliases"] = [a + "{number}" for a in pm.prefix_aliases]
             if isinstance(pm, maskParameter):
                 d["name"] = pm.origin_name + " {flag} {value}"
+                d["aliases"] = [a + " {flag} {value}" for a in pm.prefix_aliases]
+            if "aliases" in d and not d["aliases"]:
+                del d["aliases"]
             result.append(d)
         return result
     else:

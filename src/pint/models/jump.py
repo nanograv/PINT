@@ -208,7 +208,6 @@ class PhaseJump(PhaseComponent):
                 value=0.0,
                 units="second",
                 frozen=False,
-                aliases=["JUMP"],
             )
             self.add_param(param)
             ind = 1
@@ -230,7 +229,6 @@ class PhaseJump(PhaseComponent):
                 value=0.0,
                 units="second",
                 frozen=False,
-                aliases=["JUMP"],
             )
             self.add_param(param)
             ind = param.index

@@ -15,7 +15,6 @@ class ParamTable(Table):
             ("Name", "name", 10),
             ("Description", "description", 30),
             ("Kind", "kind", 10),
-            ("Aliases", "aliases", 20),
         ]
         if "class" in self.options:
             class_ = eval(self.options["class"])
@@ -54,6 +53,12 @@ class ParamTable(Table):
                             para,
                         )
                     entry += para
+                elif c == "name":
+                    text = d[c]
+                    alias_list = d.get("aliases", [])
+                    if alias_list:
+                        text += " / " + ", ".join(d["aliases"])
+                    entry += nodes.paragraph(text=text)
                 elif isinstance(d[c], str):
                     entry += nodes.paragraph(text=d[c])
                 elif isinstance(d[c], list):
