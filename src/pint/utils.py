@@ -1829,9 +1829,9 @@ def list_parameters(class_=None):
             elif isinstance(pm, intParameter):
                 d["kind"] = "integer"
             if isinstance(pm, prefixParameter):
-                d["name"] += " [and other numbers]"
+                d["name"] = pm.prefix + "{number}"
             if isinstance(pm, maskParameter):
-                d["name"] += " [flag] [value]"
+                d["name"] = pm.origin_name + " {flag} {value}"
             result.append(d)
         return result
     else:
