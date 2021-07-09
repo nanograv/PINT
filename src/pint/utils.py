@@ -1667,3 +1667,17 @@ def remove_dummy_distance(c):
             "Do not know coordinate frame for %r: returning coordinates unchanged" % c
         )
         return c
+
+
+def info_string(prefix_string="# ", comment=None):
+    import pint
+    import getpass
+    import platform
+    import datetime
+
+    s = f"Created at: {datetime.datetime.now().isoformat()}\nPINT version: {pint.__version__}\nUser: {getpass.getuser()}\nHost: {platform.node()}\nOS: {platform.platform()}"
+    if comment is not None:
+        s += f"\n{comment}"
+    if (prefix_string is not None) and (len(prefix_string) > 0):
+        s = "\n".join([prefix_string + x for x in s.split("\n")])
+    return s
