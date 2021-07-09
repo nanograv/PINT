@@ -1776,6 +1776,8 @@ class TOAs:
             if False, write them in the order they occur in the TOAs object
             (which is usually the same as the original file except that all the
             TOAs associated with each observatory have been grouped).
+        comment : str, optional
+            Additional string to include in TOA file
         """
         try:
             # FIXME: file must be closed even if an exception occurs!
