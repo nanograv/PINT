@@ -1,4 +1,4 @@
-"""A frequency evolution of pulsar profiles model"""
+"""Frequency-dependent delays to model profile evolution."""
 from warnings import warn
 
 import astropy.units as u
@@ -10,6 +10,11 @@ from pint.models.timing_model import DelayComponent, MissingParameter
 
 class FD(DelayComponent):
     """A timing model for frequency evolution of pulsar profiles.
+
+    This model expresses the delay as a polynomial function of the
+    logarithm of observing frequency. This is intended to compensate
+    for the delays introduced by frequency-dependent profile structure
+    when a frequency-independent template profile is used.
 
     Parameters supported:
 

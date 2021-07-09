@@ -1,3 +1,4 @@
+"""Approximate binary model for small eccentricity."""
 from warnings import warn
 
 import numpy as np

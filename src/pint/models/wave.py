@@ -1,3 +1,4 @@
+"""Delays expressed as a sum of sinusoids."""
 import astropy.units as u
 import numpy as np
 
@@ -6,7 +7,7 @@ from pint.models.timing_model import PhaseComponent, MissingParameter
 
 
 class Wave(PhaseComponent):
-    """This class provides harmonic signals.
+    """Delays expressed as a sum of sinusoids.
 
     Historically, used for decomposition of timing noise into a series of
     sine/cosine components.

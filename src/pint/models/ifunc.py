@@ -1,3 +1,4 @@
+"""Tabulated extra delays."""
 import astropy.units as u
 import numpy as np
 
@@ -16,7 +17,7 @@ class IFunc(PhaseComponent):
     they are converted to phase simply by multiplication with F0, therefore
     changing PEPOCH should be done with care.
 
-    The format of IFuncs in an ephemeris is:
+    The format of IFuncs in an ephemeris is::
 
         SIFUNC X 0
         IFUNC1 MJD1 DT1 0.0
@@ -26,7 +27,7 @@ class IFunc(PhaseComponent):
 
     X indicates the type of interpolation:
 
-        - 0 == piecewise (no interpolation)
+        - 0 == piecewise constant (no interpolation)
         - 1 == sinc (not supported)
         - 2 == linear
 
@@ -61,7 +62,7 @@ class IFunc(PhaseComponent):
             prefixParameter(
                 name="IFUNC1",
                 units="s",
-                description="Interpolation Components (MJD+delay)",
+                description="Interpolation control point pair (MJD, delay)",
                 type_match="pair",
                 long_double=True,
                 parameter_type="pair",

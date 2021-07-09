@@ -1,3 +1,4 @@
+"""Astrometric models for describing pulsar sky positions."""
 # astrometry.py
 # Defines Astrometry timing model class
 import sys
@@ -23,8 +24,12 @@ from pint.utils import add_dummy_distance, remove_dummy_distance
 astropy_version = sys.modules["astropy"].__version__
 mas_yr = u.mas / u.yr
 
+__all__ = ["AstrometryEquatorial", "AstrometryEcliptic", "Astrometry"]
+
 
 class Astrometry(DelayComponent):
+    """Common tools for astrometric calculations."""
+
     register = False
     category = "astrometry"
 
