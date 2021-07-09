@@ -160,7 +160,6 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     log.setLevel("WARNING")  # only display warnings and higher in the terminal
-
     root = tk.Tk()
     root.minsize(800, 600)
     if not args.test:
