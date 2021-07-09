@@ -668,7 +668,7 @@ class strParameter(Parameter):
         super().__init__(
             name=name,
             value=value,
-            description=None,
+            description=description,
             frozen=True,
             aliases=aliases,
             print_quantity=print_quantity,
@@ -730,7 +730,7 @@ class boolParameter(Parameter):
         super().__init__(
             name=name,
             value=value,
-            description=None,
+            description=description,
             frozen=True,
             aliases=aliases,
             print_quantity=print_quantity,
@@ -806,7 +806,7 @@ class intParameter(Parameter):
         super().__init__(
             name=name,
             value=value,
-            description=None,
+            description=description,
             frozen=True,
             aliases=aliases,
             print_quantity=print_quantity,

@@ -36,6 +36,7 @@ project_root = os.path.join(cwd, "../src")  # parent directory of wherever this 
 # This lets us ensure that the source package is imported, and that its
 # version is used.
 sys.path.insert(0, project_root)
+sys.path.append(os.path.join(os.path.dirname(__file__), "_ext"))
 import pint
 
 # -- General configuration ---------------------------------------------
@@ -53,6 +54,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",  # get docstring formatting
     "nbsphinx",
+    "paramtable",
 ]
 #                            'astropy_helpers.sphinx.ext.numpydoc',
 #                            'astropy_helpers.sphinx.ext.automodapi',

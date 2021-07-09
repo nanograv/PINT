@@ -15,6 +15,11 @@ class Wave(PhaseComponent):
     as a time series, but trivially converted into phase by multiplication by
     F0, which could makes changes to PEPOCH fragile if there is strong spin
     frequency evolution.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.wave.Wave
     """
 
     register = True

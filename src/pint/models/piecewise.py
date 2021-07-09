@@ -1,4 +1,4 @@
-"""Pulsar timing piecewise solution."""
+"""Pulsar timing piecewise spin-down solution."""
 # piecewise.py
 # Defines piecewise spindown timing model class
 import astropy.units as u
@@ -11,13 +11,19 @@ from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
 
 class PiecewiseSpindown(PhaseComponent):
-    """Pulsar spin-down piecewise solution."""
+    """Pulsar spin-down piecewise solution.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.piecewise.PiecewiseSpindown
+    """
 
     register = True
     category = "piecewise"
 
     def __init__(self):
-        super(PiecewiseSpindown, self).__init__()
+        super().__init__()
 
         self.add_param(
             prefixParameter(
@@ -98,7 +104,7 @@ class PiecewiseSpindown(PhaseComponent):
         # self.phase_derivs_wrt_delay += [self.d_piecewise_phase_d_delay]
 
     def setup(self):
-        super(PiecewiseSpindown, self).setup()
+        super().setup()
         self.pwsol_prop = [
             "PWEP_",
             "PWSTART_",
@@ -130,7 +136,7 @@ class PiecewiseSpindown(PhaseComponent):
 
     def validate(self):
         """Validate parameters input."""
-        super(PiecewiseSpindown, self).validate()
+        super().validate()
         for idx in set(self.pwsol_indices):
             if not hasattr(self, "PWEP_%d" % idx):
                 msg = "Piecewise solution Epoch is needed for Piece %d." % idx

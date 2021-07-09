@@ -9,18 +9,25 @@ from pint.models.timing_model import DelayComponent, MissingParameter
 
 
 class FD(DelayComponent):
-    """A timing model for frequency evolution of pulsar profiles."""
+    """A timing model for frequency evolution of pulsar profiles.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.frequency_dependent.FD
+    """
 
     register = True
     category = "frequency_dependent"
 
     def __init__(self):
-        super(FD, self).__init__()
+        super().__init__()
         self.add_param(
             prefixParameter(
                 name="FD1",
                 units="second",
                 value=0.0,
+                description="Coefficient of delay as a polynomial function of log-frequency",
                 descriptionTplt=lambda x: (
                     "%d term of frequency" " dependent  coefficients" % x
                 ),
@@ -32,7 +39,7 @@ class FD(DelayComponent):
         self.delay_funcs_component += [self.FD_delay]
 
     def setup(self):
-        super(FD, self).setup()
+        super().setup()
         # Check if FD terms are in order.
         FD_mapping = self.get_prefix_mapping_component("FD")
         self.num_FD_terms = len(FD_mapping)
@@ -41,7 +48,7 @@ class FD(DelayComponent):
             self.register_deriv_funcs(self.d_delay_FD_d_FDX, val)
 
     def validate(self):
-        super(FD, self).validate()
+        super().validate()
         FD_terms = list(self.get_prefix_mapping_component("FD").keys())
         FD_terms.sort()
         FD_in_order = list(range(1, max(FD_terms) + 1))

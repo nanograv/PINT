@@ -15,4 +15,7 @@ storage and managing.
 Supported Parameters
 --------------------
 
-.. include:: parametertable.rst
+.. paramtable::
+
+.. paramtable::
+    :class: pint.models.spindown.Spindown
