@@ -41,20 +41,24 @@ from pint.observatory import get_observatory
 
 
 class Parameter:
-    """A base PINT class describing a single timing model parameter.
+    """A single timing model parameter.
 
-    A ``Parameter`` object can be created with one of the subclasses provided by
-    ``PINT`` depending on the parameter usage.
+    Subclasses of this class can represent parameters of various types. They
+    can record units, a description of the parameter's meaning, a default value
+    in some cases, whether the parameter has ever been set, and they can
+    keep track of whether a parameter is to be fit or not.
 
-    Current Parameter types:
-    [``floatParameter``, ``strParameter``, ``boolParameter``, ``MDJParameter``,
-    ``AngleParameter``, ``prefixParameter``, ``maskParameter``]
+    Parameters can also come in families, either in the form of numbered
+    :class:`~pint.models.parameter.prefixParameter` or with associated
+    selection criteria in the form of
+    :class:`~pint.models.parameter.maskParameter`.
 
     Parameter current value information will be stored at ``.quantity`` property
-    which can be a flexible format, for example `astropy.quantity.Quantity` in
-    ``floatParameter`` and string in ``strParameter``, (For more detail see Parameter
+    which can be a flexible format, for example :class:`astropy.quantity.Quantity` in
+    :class:`~pint.models.parameter.floatParameter` and string in
+    :class:`~pint.models.parameter.strParameter`, (for more detail see Parameter
     subclasses docstrings). If applicable, Parameter default unit is
-    stored at ``.units`` property which is an ``astropy.units.Unit``. Property
+    stored at ``.units`` property which is an :class:`astropy.units.Unit`. Property
     ``.value`` always returns a pure value associated with ``.units`` from
     ``.quantity``. ``.uncertainty`` provides the storage for parameter uncertainty
     and ``.uncertainty_value`` for pure uncertainty value. Like ``.value``,
@@ -64,14 +68,14 @@ class Parameter:
     ----------
     name : str, optional
         The name of the parameter.
-    value : number, str, `astropy.units.Quantity` object, or other data type or object
+    value : number, str, astropy.units.Quantity, or other data type or object
         The input parameter value.
     units : str or astropy.units.Unit, optional
         Parameter default unit. Parameter .value and .uncertainty_value attribute
         will associate with the default units.
     description : str, optional
         A short description of what this parameter means.
-    uncertainty : number
+    uncertainty : float
         Current uncertainty of the value.
     frozen : bool, optional
         A flag specifying whether "fitters" should adjust the value of this
