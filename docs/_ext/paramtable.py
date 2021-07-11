@@ -12,7 +12,7 @@ class ParamTable(Table):
 
     def run(self):
         columns = [
-            ("Name", "name", 10),
+            ("Name / Aliases", "name", 10),
             ("Description", "description", 30),
             ("Kind", "kind", 10),
         ]
@@ -20,7 +20,7 @@ class ParamTable(Table):
             class_ = eval(self.options["class"])
         else:
             class_ = None
-            columns.append(("Classes", "classes", 30))
+            columns.append(("Components", "classes", 30))
 
         table = nodes.table()
         tgroup = nodes.tgroup(len(columns))
