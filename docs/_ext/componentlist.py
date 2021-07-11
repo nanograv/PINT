@@ -24,7 +24,11 @@ class ComponentList(Directive):
                 doc = class_.__doc__.split("\n")[0].strip()
             else:
                 doc = ""
-            content.append(f"* :class:`~{full_name}` - {doc}", source)
+            msg = f"* :class:`~{full_name}` - {doc}"
+            inst = class_()
+            if hasattr(inst, "binary_model_name"):
+                msg += f" (``BINARY {inst.binary_model_name}``)"
+            content.append(msg, source)
         para = nodes.paragraph()
         self.state.nested_parse(
             content,
