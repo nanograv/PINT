@@ -55,6 +55,7 @@ extensions = [
     "sphinx.ext.napoleon",  # get docstring formatting
     "nbsphinx",
     "paramtable",
+    "componentlist",
 ]
 #                            'astropy_helpers.sphinx.ext.numpydoc',
 #                            'astropy_helpers.sphinx.ext.automodapi',

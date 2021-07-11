@@ -16,6 +16,8 @@ if ``ELAT`` is present, :class:`~pint.models.astrometry.AstrometryEcliptic` is
 selected). Ambiguous or contradictory parameter files are possible, and for
 these PINT raises an exception.
 
+.. componentlist::
+
 Supported Parameters
 --------------------
 
