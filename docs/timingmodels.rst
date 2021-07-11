@@ -23,3 +23,4 @@ The following table lists all the parameters that PINT can understand (along wit
 
 .. paramtable::
 
+For comparison, there is a `table of parameters that TEMPO supports <http://tempo.sourceforge.net/ref_man_sections/binary.txt>`_.
