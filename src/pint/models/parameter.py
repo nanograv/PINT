@@ -16,6 +16,10 @@ potentially very many. These are handled in two separate ways, as "prefix
 parameters" (:class:`pint.models.parameter.prefixParameter`) and
 "mask parameters" (:class:`pint.models.parameter.maskParameter`)
 depending on how they occur in the ``.par`` and ``.tim`` files.
+
+See :ref:`Supported Parameters` for an overview, including a table of all the
+parameters PINT understands.
+
 """
 import numbers
 
@@ -53,23 +57,27 @@ class Parameter:
     selection criteria in the form of
     :class:`~pint.models.parameter.maskParameter`.
 
-    Parameter current value information will be stored at ``.quantity`` property
-    which can be a flexible format, for example :class:`astropy.quantity.Quantity` in
-    :class:`~pint.models.parameter.floatParameter` and string in
-    :class:`~pint.models.parameter.strParameter`, (for more detail see Parameter
-    subclasses docstrings). If applicable, Parameter default unit is
-    stored at ``.units`` property which is an :class:`astropy.units.Unit`. Property
-    ``.value`` always returns a pure value associated with ``.units`` from
-    ``.quantity``. ``.uncertainty`` provides the storage for parameter uncertainty
-    and ``.uncertainty_value`` for pure uncertainty value. Like ``.value``,
-    ``.uncertainty_value`` always associate with default unit.
+    A parameter's current value will be stored at ``.quantity``, which will
+    have associated units (:class:`astropy.quantity.Quantity`) or other special
+    type machinery, or can also be accessed through ``.value``, which provides
+    the raw value (stripped of units if applicable). Both of these can be
+    assigned to to change the parameter's value. If the parameter has units,
+    they will be accessible through the ``.units`` property (an
+    :class:`astropy.units.Unit`). A parameter that has not been set will have
+    the value None.
+
+    Parameters also support uncertainties; these are available including units
+    through the ``.uncertainty`` attribute. Parameters can also be set as
+    ``.frozen=True`` to indicate that they should not be modified as part of a
+    fit.
 
     Parameters
     ----------
     name : str, optional
         The name of the parameter.
     value : number, str, astropy.units.Quantity, or other data type or object
-        The input parameter value.
+        The input parameter value. Quantities are accepted here, but when the
+        corresponding property is read the value will never have units.
     units : str or astropy.units.Unit, optional
         Parameter default unit. Parameter .value and .uncertainty_value attribute
         will associate with the default units.
@@ -78,13 +86,13 @@ class Parameter:
     uncertainty : float
         Current uncertainty of the value.
     frozen : bool, optional
-        A flag specifying whether "fitters" should adjust the value of this
-        parameter or leave it fixed.
+        A flag specifying whether :class:`~pint.fitter.Fitter` objects should
+        adjust the value of this parameter or leave it fixed.
     aliases : list, optional
         An optional list of strings specifying alternate names that can also
         be accepted for this parameter.
     continuous : bool, optional
-        A flag specifying whether phase derivatives with respect to this
+        A flag specifying whether derivatives with respect to this
         parameter exist.
     print_quantity : method, optional
         A function that converts the internal value to a string for output.
@@ -98,8 +106,8 @@ class Parameter:
 
     Attributes
     ----------
-    quantity: Type depends on the parameter s60class, it can be anything
-        An internal storage for parameter value and units
+    quantity : astropy.units.Quantity or astropy.time.Time or bool or int
+        The parameter's value
     """
 
     def __init__(
@@ -112,7 +120,6 @@ class Parameter:
         frozen=True,
         aliases=None,
         continuous=True,
-        print_quantity=str,
         set_quantity=lambda x: x,
         get_value=lambda x: x,
         prior=priors.Prior(priors.UniformUnboundedRV()),
@@ -125,8 +132,6 @@ class Parameter:
         self.set_quantity = set_quantity
         # Method to get value
         self.get_value = get_value
-        # method to convert quantity to a string.
-        self.print_quantity = print_quantity
         # Method to get uncertainty from input
         self.set_uncertainty = set_uncertainty
         self.from_parfile_line = self.from_parfile_line_regular
@@ -147,6 +152,11 @@ class Parameter:
 
     @property
     def prior(self):
+        """prior distribution for this parameter.
+
+        This should be a :class:`~pint.models.priors.Prior` object describing the prior
+        distribution of the quantity, for use in Bayesian fitting.
+        """
         return self._prior
 
     @prior.setter
@@ -158,6 +168,10 @@ class Parameter:
     # Setup units property
     @property
     def units(self):
+        """Units associated with this parameter.
+
+        Should be a :class:`astropy.units.Unit` object, or None if never set.
+        """
         return self._units
 
     @units.setter
@@ -204,7 +218,7 @@ class Parameter:
     # Setup quantity property
     @property
     def quantity(self):
-        """Return the internal stored parameter value and units."""
+        """Value including units (if appropriate)."""
         return self._quantity
 
     @quantity.setter
@@ -216,40 +230,40 @@ class Parameter:
         """
         if val is None:
             if hasattr(self, "quantity") and self.quantity is not None:
-                raise ValueError("Setting an exist value to None is not" " allowed.")
+                raise ValueError("Setting an existing value to None is not allowed.")
             else:
                 self._quantity = val
                 return
         self._quantity = self.set_quantity(val)
 
     def prior_pdf(self, value=None, logpdf=False):
-        """Return the prior probability.
+        """Return the prior probability density.
 
         Evaluated at the current value of the parameter, or at a proposed value.
 
         Parameters
         ----------
-        value : array_like or float_like
-
-        Probabilities are evaluated using the value attribute
+        value : array-like or float, optional
+            Where to evaluate the priors; should be a unitless number.
+            If not provided the prior is evaluated at ``self.value``.
+        logpdf : bool
+            If True, return the logarithm of the PDF instead of the PDF;
+            this can help with densities too small to represent in floating-point.
         """
         if value is None:
-            return (
-                self.prior.pdf(self.value)
-                if not logpdf
-                else self.prior.logpdf(self.value)
-            )
-        else:
-            return self.prior.pdf(value) if not logpdf else self.prior.logpdf(value)
+            value = self.value
+        return self.prior.logpdf(value) if logpdf else self.prior.pdf(value)
 
     # Setup .value property
     # .value will get pure number from ._quantity.
     # Setting .value property will change ._quantity.
     @property
     def value(self):
-        """Return the pure value of a parameter.
+        """Return the value (without units) of a parameter.
 
-        This value will associate with parameter default value, which is .units attribute.
+        This value is assumed to be in units of ``self.units``. Upon setting, a
+        a :class:`~astropy.units.Quantity` can be provided, which will be converted
+        to ``self.units``.
         """
         if self._quantity is None:
             return None
@@ -258,10 +272,6 @@ class Parameter:
 
     @value.setter
     def value(self, val):
-        """Set .value.
-
-        Setting .value attribute will change the .quantity attribute other than .value attribute.
-        """
         if val is None:
             if (
                 not isinstance(self.quantity, (str, bool))
@@ -306,8 +316,9 @@ class Parameter:
     def uncertainty_value(self):
         """Return a pure value from .uncertainty.
 
-        The unit will associate with .units
+        This will be interpreted as having units ``self.units``.
         """
+        # FIXME: is this worth having when p.uncertainty.value does the same thing?
         if self._uncertainty is None:
             return None
         else:
@@ -315,10 +326,6 @@ class Parameter:
 
     @uncertainty_value.setter
     def uncertainty_value(self, val):
-        """Setter for uncertainty_value.
-
-        Setting .uncertainty_value will only change the .uncertainty attribute.
-        """
         if val is None:
             if (
                 not isinstance(self.uncertainty, (str, bool))
@@ -332,7 +339,16 @@ class Parameter:
                 self.uncertainty_value = val
         self._uncertainty = self.set_uncertainty(val)
 
+    def print_quantity(self, quan):
+        """Format the argument in an appropriate way as a string."""
+        return str(quan)
+
     def print_uncertainty(self, uncertainty):
+        """Represent uncertainty in the form of a string.
+
+        This converts the :class:`~astropy.units.Quantity` provided to the
+        appropriate units, extracts the value, and converts that to a string.
+        """
         return str(uncertainty.to(self.units).value)
 
     def __repr__(self):
@@ -450,17 +466,17 @@ class Parameter:
 class floatParameter(Parameter):
     """Parameter with float or long double value.
 
-    `.quantity` stores current parameter value and its unit in an
-    `astropy.units.quantity` class. The unit of `.quantity` can be any unit
-    that convertible to default unit.
+    ``.quantity`` stores current parameter value and its unit in an
+    :class:`~astropy.units.Quantity`. Upon storage in ``.quantity``
+    the input is converted to ``self.units``.
 
     Parameters
     ----------
     name : str
         The name of the parameter.
-    value : number, str, `Astropy.units.Quantity` object,
+    value : number, str, or astropy.units.Quantity
         The input parameter float value.
-    units : str or Astropy.units
+    units : str or astropy.units.Quantity
         Parameter default unit. Parameter .value and .uncertainty_value attribute
         will associate with the default units. If unit is dimensionless, use
         "''" as its unit.
@@ -480,11 +496,12 @@ class floatParameter(Parameter):
     long_double : bool, optional, default False
         A flag specifying whether value is float or long double.
 
-    Example::
-        >>> from parameter import floatParameter
-        >>> test = floatParameter(name='test1', value=100.0, units='second')
-        >>> print test
-        test1 (s) 100.0
+    Example
+    -------
+    >>> from parameter import floatParameter
+    >>> test = floatParameter(name='test1', value=100.0, units='second')
+    >>> print test
+    test1 (s) 100.0
     """
 
     def __init__(
@@ -507,7 +524,6 @@ class floatParameter(Parameter):
         self.scale_factor = scale_factor
         self.scale_threshold = scale_threshold
         set_quantity = self.set_quantity_float
-        print_quantity = self.print_quantity_float
         get_value = self.get_value_float
         set_uncertainty = self.set_quantity_float
         self._unit_scale = False
@@ -522,7 +538,6 @@ class floatParameter(Parameter):
             continuous=continuous,
             description=description,
             uncertainty=uncertainty,
-            print_quantity=print_quantity,
             set_quantity=set_quantity,
             get_value=get_value,
             set_uncertainty=set_uncertainty,
@@ -538,6 +553,7 @@ class floatParameter(Parameter):
 
     @property
     def long_double(self):
+        """Whether the parameter has long double precision."""
         return self._long_double
 
     @long_double.setter
@@ -563,6 +579,7 @@ class floatParameter(Parameter):
 
     @property
     def unit_scale(self):
+        """If True, the parameter can automatically scale some values upon assignment."""
         return self._unit_scale
 
     @unit_scale.setter
@@ -619,7 +636,7 @@ class floatParameter(Parameter):
 
         return result
 
-    def print_quantity_float(self, quan):
+    def print_quantity(self, quan):
         """Quantity as a string (for floating-point values)."""
         v = quan.to(self.units).value
         if self._long_double:
@@ -637,11 +654,9 @@ class floatParameter(Parameter):
 
 
 class strParameter(Parameter):
-    """This is a Parameter type that is specific to string values.
+    """String-valued parameter.
 
-    `.quantity` stores current parameter information in a string. `.value`
-    returns the same with `.quantity`. `.units` is not applicable.
-    `strParameter` is not fittable.
+    ``strParameter`` is not fittable.
 
     Parameters
     ----------
@@ -655,15 +670,15 @@ class strParameter(Parameter):
         An optional list of strings specifying alternate names that can also
         be accepted for this parameter.
 
-    Example::
-        >>> from parameter import strParameter
-        >>> test = strParameter(name='test1', value='This is a test',)
-        >>> print test
-        test1 This is a test
+    Example
+    -------
+    >>> from parameter import strParameter
+    >>> test = strParameter(name='test1', value='This is a test',)
+    >>> print(test)
+    test1 This is a test
     """
 
     def __init__(self, name=None, value=None, description=None, aliases=None, **kwargs):
-        print_quantity = str
         get_value = lambda x: x
         set_quantity = lambda x: str(x)
         set_uncertainty = lambda x: None
@@ -675,7 +690,6 @@ class strParameter(Parameter):
             description=description,
             frozen=True,
             aliases=aliases,
-            print_quantity=print_quantity,
             set_quantity=set_quantity,
             get_value=get_value,
             set_uncertainty=set_uncertainty,
@@ -686,10 +700,11 @@ class strParameter(Parameter):
 
 
 class boolParameter(Parameter):
-    """This is a Parameter type that is specific to boolean values.
-    `.quantity` stores current parameter information in boolean type. `.value`
-    returns the same with `.quantity`. `.units` is not applicable.
-    `boolParameter` is not fittable.
+    """Boolean-valued parameter.
+
+    Boolean parameters support ``1``/``0``, ``T``/``F``, ``Y``/``N``,
+    ``True``/``False``, or ``Yes``/``No`` in any combination of upper and lower
+    case. They always output ``Y`` or ``N`` in a par file.
 
     Parameters
     ----------
@@ -703,11 +718,12 @@ class boolParameter(Parameter):
         An optional list of strings specifying alternate names that can also
         be accepted for this parameter.
 
-    Example::
-        >>> from parameter import boolParameter
-        >>> test = boolParameter(name='test1', value='N')
-        >>> print test
-        test1 N
+    Example
+    -------
+    >>> from parameter import boolParameter
+    >>> test = boolParameter(name='test1', value='N')
+    >>> print(test)
+    test1 N
     """
 
     def __init__(
@@ -719,8 +735,6 @@ class boolParameter(Parameter):
         aliases=None,
         **kwargs,
     ):
-        def print_quantity(x):
-            return "Y" if x else "N"
 
         set_quantity = self.set_quantity_bool
 
@@ -737,13 +751,15 @@ class boolParameter(Parameter):
             description=description,
             frozen=True,
             aliases=aliases,
-            print_quantity=print_quantity,
             set_quantity=set_quantity,
             get_value=get_value,
             set_uncertainty=set_uncertainty,
         )
         self.value_type = bool
         self.paramType = "boolParameter"
+
+    def print_quantity(self, quan):
+        return "Y" if quan else "N"
 
     def set_quantity_bool(self, val):
         """Get boolean value for boolParameter class"""
@@ -765,10 +781,6 @@ class boolParameter(Parameter):
 class intParameter(Parameter):
     """Integer parameter values.
 
-    `.quantity` stores current parameter information in integer type. `.value`
-    returns the same as `.quantity`. `.units` is not applicable.
-    `intParameter` is not fittable.
-
     Parameters
     ----------
     name : str
@@ -781,11 +793,12 @@ class intParameter(Parameter):
         An optional list of strings specifying alternate names that can also
         be accepted for this parameter.
 
-    Example::
-        >>> from parameter import intParameter
-        >>> test = intParameter(name='test1', value='N')
-        >>> print test
-        test1 N
+    Example
+    -------
+    >>> from parameter import intParameter
+    >>> test = intParameter(name='test1', value=7)
+    >>> print(test)
+    test1 7
     """
 
     def __init__(
@@ -797,7 +810,6 @@ class intParameter(Parameter):
         aliases=None,
         **kwargs,
     ):
-        print_quantity = str
         set_quantity = self.set_quantity_int
 
         def get_value(x):
@@ -813,7 +825,6 @@ class intParameter(Parameter):
             description=description,
             frozen=True,
             aliases=aliases,
-            print_quantity=print_quantity,
             set_quantity=set_quantity,
             get_value=get_value,
             set_uncertainty=set_uncertainty,
@@ -847,10 +858,14 @@ class intParameter(Parameter):
 
 
 class MJDParameter(Parameter):
-    """This is a Parameter type that is specific to MJD values.
-    `.quantity` stores current parameter information in an `astropy.Time` type
-    in the format of MJD. `.value` returns the pure MJD value. `.units` is in
-    day as default unit.
+    """Parameters for MJD quantities.
+
+    ``.quantity`` stores current parameter information in an
+    :class:`astropy.time.Time` type in the format of MJD. ``.value`` returns
+    the pure long double MJD value. ``.units`` is in day as default unit. Note
+    that you can't make an :class:`astropy.time.Time` object just by
+    multiplying a number by ``u.day``; there are complexities in constructing
+    times.
 
     Parameters
     ----------
@@ -874,11 +889,12 @@ class MJDParameter(Parameter):
     time_scale : str, optional, default 'tdb'
         MJD parameter time scale.
 
-    Example::
-        >>> from parameter import MJDParameter
-        >>> test = MJDParameter(name='test1', value='54000', time_scale='utc')
-        >>> print test
-        test1 (d) 54000.000000000000000
+    Example
+    -------
+    >>> from parameter import MJDParameter
+    >>> test = MJDParameter(name='test1', value='54000', time_scale='utc')
+    >>> print(test)
+    test1 (d) 54000.000000000000000
     """
 
     def __init__(
@@ -895,7 +911,6 @@ class MJDParameter(Parameter):
     ):
         self._time_scale = time_scale
         set_quantity = self.set_quantity_mjd
-        print_quantity = time_to_mjd_string
         get_value = time_to_longdouble
         set_uncertainty = self.set_uncertainty_mjd
         # FIXME: where did kwargs go?
@@ -908,7 +923,6 @@ class MJDParameter(Parameter):
             frozen=frozen,
             continuous=continuous,
             aliases=aliases,
-            print_quantity=print_quantity,
             set_quantity=set_quantity,
             get_value=get_value,
             set_uncertainty=set_uncertainty,
@@ -916,6 +930,9 @@ class MJDParameter(Parameter):
         self.value_type = time.Time
         self.paramType = "MJDParameter"
         self.special_arg += ["time_scale"]
+
+    def print_quantity(self, quan):
+        return time_to_mjd_string(quan)
 
     @property
     def time_scale(self):
@@ -991,11 +1008,11 @@ class MJDParameter(Parameter):
 
 
 class AngleParameter(Parameter):
-    """This is a Parameter type that is specific to Angle values.
-    `.quantity` stores current parameter information in an `astropy Angle` type.
-    `.value` returns the pure angle value associate with default unit.
-    `.units` currently can accept angle format  {'h:m:s': u.hourangle,
-    'd:m:s': u.deg, 'rad': u.rad, 'deg': u.deg}
+    """Parameter in angle units.
+
+    ``.quantity`` stores current parameter information in an :class:`astropy.units.Angle` type.
+    ``AngleParameter`` can accept angle format  ``{'h:m:s': u.hourangle,
+    'd:m:s': u.deg, 'rad': u.rad, 'deg': u.deg}``
 
     Parameters
     ----------
@@ -1017,11 +1034,12 @@ class AngleParameter(Parameter):
         An optional list of strings specifying alternate names that can also
         be accepted for this parameter.
 
-    Example::
-        >>> from parameter import AngleParameter
-        >>> test = AngleParameter(name='test1', value='12:20:10', units='H:M:S')
-        >>> print test
-        test1 (hourangle) 12:20:10.00000000
+    Example
+    -------
+    >>> from parameter import AngleParameter
+    >>> test = AngleParameter(name='test1', value='12:20:10', units='H:M:S')
+    >>> print(test)
+    test1 (hourangle) 12:20:10.00000000
     """
 
     def __init__(
@@ -1049,7 +1067,6 @@ class AngleParameter(Parameter):
 
         self.unitsuffix = self.unit_identifier[units.lower()][1]
         set_quantity = self.set_quantity_angle
-        print_quantity = self.print_quantity_angle
         # get_value = lambda x: Angle(x * self.unit_identifier[units.lower()][0])
         get_value = lambda x: x.value
         set_uncertainty = self.set_uncertainty_angle
@@ -1066,7 +1083,6 @@ class AngleParameter(Parameter):
             frozen=frozen,
             continuous=continuous,
             aliases=aliases,
-            print_quantity=print_quantity,
             set_quantity=set_quantity,
             get_value=get_value,
             set_uncertainty=set_uncertainty,
@@ -1109,7 +1125,7 @@ class AngleParameter(Parameter):
             )
         return result
 
-    def print_quantity_angle(self, quan):
+    def print_quantity(self, quan):
         """This is a function to print out the angle parameter."""
         if ":" in self._str_unit:
             return quan.to_string(sep=":", precision=8)
@@ -1129,11 +1145,11 @@ class AngleParameter(Parameter):
 
 
 class prefixParameter:
-    """Prefix parameters, for example DMX_*.
+    """Families of parameters identified by a prefix like ``DMX_0123``.
 
     Create a prefix parameter, is like create a normal parameter. But the
     name should be in the format of prefix and index. For example DMX_0001 or
-    F22.
+    F22. Appropriate units will be inferred,
 
     To create a prefix parameter with the same prefix but different index, just
     use the ``.new_param`` method. It will return a new prefix parameter with the
@@ -1349,8 +1365,8 @@ class prefixParameter:
     def prior_pdf(self, value=None, logpdf=False):
         return self.param_comp.prior_pdf(value, logpdf)
 
-    def print_quantity(self, quantity):
-        return self.param_comp.print_quantity(quantity)
+    def print_quantity(self, quan):
+        return self.param_comp.print_quantity(quan)
 
     def print_uncertainty(self, uncertainty):
         return str(uncertainty.to(self.units).value)
@@ -1815,7 +1831,6 @@ class pairParameter(floatParameter):
 
         self.set_quantity = self.set_quantity_pair
         self.set_uncertainty = self.set_quantity_pair
-        self.print_quantity = self.print_quantity_pair
 
         self.from_parfile_line = self.from_parfile_line_pair
         self.as_parfile_line = self.as_parfile_line_pair
@@ -1915,11 +1930,11 @@ class pairParameter(floatParameter):
                 self.value = val
         self._quantity = self.set_quantity_pair(val)
 
-    def print_quantity_pair(self, quan):
+    def print_quantity(self, quan):
         """Return quantity as a string."""
         try:
             # Maybe it's a singleton quantity
-            return self.print_quantity_float(quan)
+            return floatParameter.print_quantity(self, quan)
         except AttributeError:
             # Not a quantity, let's hope it's a list of length two?
             if len(quan) != 2:

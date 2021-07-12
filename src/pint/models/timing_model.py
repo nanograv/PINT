@@ -23,6 +23,8 @@ data passing between these two parts is carried out by
 To actually create a timing model, you almost certainly want to use
 :func:`~pint.models.model_builder.get_model`.
 
+See :ref:`Timing Models` for more details on how PINT's timing models work.
+
 """
 import abc
 import copy
