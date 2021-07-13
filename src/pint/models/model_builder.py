@@ -31,7 +31,7 @@ class ComponentConflict(ValueError):
     """Error for mulitple components can be select but no other indications."""
 
 
-class ModelBuilder(AllComponents):
+class ModelBuilder:
     """Class for building a `TimingModel` object from a parameter file.
 
     The `ModelBuilder` class helps building a `TimingModel` from a list of
@@ -47,8 +47,10 @@ class ModelBuilder(AllComponents):
     def __init__(self):
         super().__init__()
         # Validate the components
+        self.all_components = AllComponents()
         self._validate_components()
         self.default_components = ["SolarSystemShapiro"]
+
 
     def __call__(self, parfile):
         param_inpar, repeat_par = self.parse_parfile(parfile)
@@ -58,7 +60,7 @@ class ModelBuilder(AllComponents):
         if len(conflict) != 0:
             self._report_conflict(conflict)
         # Make timing model
-        cps = [self.components[c] for c in selected]
+        cps = [self.all_components.components[c] for c in selected]
         tm = TimingModel(components=cps)
         # Add indexed parameters
         leftover_params = set(param_not_in_pint)
@@ -78,7 +80,7 @@ class ModelBuilder(AllComponents):
         not have an unique choice of component. Currently, Pulsar binary does
         not follow the same rule. They are specified by the `BINARY` parameter.
         """
-        for k, v in self.components.items():
+        for k, v in self.all_components.components.items():
             superset = self._is_subset_component(v)
             if superset is not None:
                 m = (
@@ -113,7 +115,7 @@ class ModelBuilder(AllComponents):
             number of non-overlap param in overlap component) }
         """
         overlap_entries = {}
-        for k, cp in self.components.items():
+        for k, cp in self.all_components.components.items():
             # Check name is a safer way to avoid the component compares to itself
             if component.__class__.__name__ == k:
                 continue
@@ -124,7 +126,7 @@ class ModelBuilder(AllComponents):
             overlap = in_param & cpm_param
             # translate to PINT parameter
             overlap_pint_par = set(
-                [self.alias_to_pint_param(ovlp)[0] for ovlp in overlap]
+                [self.all_components.alias_to_pint_param(ovlp)[0] for ovlp in overlap]
             )
             # The degree of overlapping for input component and compared component
             overlap_deg_in = len(component.params) - len(overlap_pint_par)
@@ -174,7 +176,7 @@ class ModelBuilder(AllComponents):
             param_inpar[k[0]] = k[1:]
             # Handle the Mulit-tag lines
             multi_line[k[0]] += 1
-            if k[0] in self.repeatable_param:
+            if k[0] in self.all_components.repeatable_param:
                 repeat_par[k[0]].append(k[1:])
             else:
                 if multi_line[k[0]] > 1:
@@ -217,7 +219,7 @@ class ModelBuilder(AllComponents):
         binary = param_inpar.get("BINARY", None)
         if binary is not None:
             binary = binary[0]
-            binary_cp = self.search_pulsar_system_components(binary)
+            binary_cp = self.all_components.search_pulsar_system_components(binary)
             selected_components.add(binary_cp.__class__.__name__)
         # 2. Get the component list from the parameters in the parfile.
         # 2.1 Check the aliases of input parameters.
@@ -227,7 +229,7 @@ class ModelBuilder(AllComponents):
         param_components_inpar = {}
         for pp in param_inpar.keys():
             try:
-                p_name, first_init = self.alias_to_pint_param(pp)
+                p_name, first_init = self.all_components.alias_to_pint_param(pp)
             except UnknownParameter:
                 param_not_in_pint.append(pp)
                 continue
@@ -237,7 +239,7 @@ class ModelBuilder(AllComponents):
             if p_name != first_init:
                 param_not_in_pint.append(pp)
 
-            p_cp = self.param_component_map.get(first_init, None)
+            p_cp = self.all_components.param_component_map.get(first_init, None)
             if p_cp:
                 param_components_inpar[p_name] = p_cp
         # Back map the possible_components and the parameters in the parfile
@@ -253,7 +255,7 @@ class ModelBuilder(AllComponents):
             if len(cps) == 1:  # No conflict, parameter only shows in one component.
                 # Check if it is a binary component, if yes, skip. It is
                 # controlled by the BINARY tag
-                if self.components[cps[0]].category == "pulsar_system":
+                if self.all_components.components[cps[0]].category == "pulsar_system":
                     continue
                 selected_components.add(cps[0])
                 continue
@@ -297,7 +299,7 @@ class ModelBuilder(AllComponents):
         unknown_param = []
         for pp in indexed_params:
             try:
-                pint_p, first_init_par = self.alias_to_pint_param(pp)
+                pint_p, first_init_par = self.all_components.alias_to_pint_param(pp)
             except UnknownParameter:
                 unknown_param.append(pp)
                 continue

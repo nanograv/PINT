@@ -467,7 +467,12 @@ class TimingModel:
             )
 
     def match_param_aliases(self, alias):
-        """Return the parameter corresponding to this alias."""
+        """Return the parameter corresponding to this alias.
+
+        Parameters
+        ----------
+        alias: str
+        """
         # Search the top level first.
         for p in self.top_level_params:
             if p == alias:
@@ -2820,7 +2825,7 @@ class AllComponents:
         return p2c_map
 
     @lazyproperty
-    def param_alias_map(self):
+    def _param_alias_map(self):
         """Return the aliases map of all parameters
 
         The returned map includes: 1. alias to PINT parameter name. 2. PINT
@@ -2945,7 +2950,7 @@ class AllComponents:
     def alias_to_pint_param(self, alias):
         """Translate a alias to a PINT parameter name.
 
-        This is a wrapper function over the property ``param_alias_map``. It
+        This is a wrapper function over the property ``_param_alias_map``. It
         also handles the indexed parameters (e.g., `pint.models.parameter.prefixParameter`
         and `pint.models.parameter.maskParameter`) with and index beyond currently
         initialized.
@@ -2996,7 +3001,7 @@ class AllComponents:
         UnknownParameter: Can not find matching PINT parameter for 'DMX020'
 
         """
-        pint_par = self.param_alias_map.get(alias, None)
+        pint_par = self._param_alias_map.get(alias, None)
         # If it is not in the map, double check if it is a repeatable par.
         if pint_par is None:
             try:
@@ -3013,7 +3018,7 @@ class AllComponents:
                 # Handle the case of start index from 0 and 1
                 for start_idx in [0, 1]:
                     first_init_par_alias = prefix + "{1:0{0}}".format(fmt, start_idx)
-                    first_init_par = self.param_alias_map.get(
+                    first_init_par = self._param_alias_map.get(
                         first_init_par_alias, None
                     )
                     if first_init_par:
