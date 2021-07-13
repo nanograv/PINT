@@ -108,7 +108,7 @@ def set_priors_basic(ftr, priorerrfact=10.0):
 class MCMCFitter(Fitter):
     """A class for Markov-Chain Monte Carlo optimization style-fitting
 
-    This Fitting Is Similar to that implemented in event_optimize.py
+    This fitting is similar to that implemented in event_optimize.py
 
     Parameters
     ----------
@@ -254,7 +254,7 @@ class MCMCFitter(Fitter):
         """
         Basic getter, useful in event_optimize script
         """
-        return self.fitkeys, self.fitvals, self.fiterrs
+        return self.fitkeys, self.fitvals, self.fiterrs, self.fitunits
 
     def generate_fit_keyvals(self):
         """Read the model to determine fitted keys and their values and errors
