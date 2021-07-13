@@ -9,7 +9,7 @@ import astropy.units as u
 from pint.models.astrometry import AstrometryEquatorial
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
 from pint.models.spindown import Spindown
-from pint.models.model_builder import get_model, get_model_new
+from pint.models.model_builder import get_model
 from pint.models.timing_model import (
     MissingParameter,
     TimingModel,
@@ -86,15 +86,6 @@ def test_valid_model(tmp_dir, func, name, expectation):
         func(f.name)
 
 
-def test_compare_get_model_new_and_old():
-    m_new = get_model_new(parfile)
-    m_old = get_model(parfile)
-    assert set(m_new.get_params_mapping().keys()) == set(
-        m_old.get_params_mapping().keys()
-    )
-    assert set(m_new.components.keys()) == set(m_old.components.keys())
-
-
 @pytest.mark.xfail(
     reason="This parfile includes both ecliptic and equatorial coordinates"
 )
@@ -106,22 +97,6 @@ def test_ecliptic(gm):
 
 
 bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par", "J1744-1134.basic.ecliptic.par"]
-
-
-@pytest.mark.parametrize("parfile", glob(join(datadir, "*.par")))
-def test_compare_get_model_new_and_old_all_parfiles(parfile):
-    if basename(parfile) in bad_trouble:
-        pytest.skip("This parfile is unclear")
-    try:
-        m_old = get_model(parfile)
-    except (ValueError, IOError, MissingParameter) as e:
-        pytest.skip("Existing code raised an exception {}".format(e))
-    m_new = get_model_new(parfile)
-
-    assert set(m_new.components.keys()) == set(m_old.components.keys())
-    assert set(m_new.get_params_mapping().keys()) == set(
-        m_old.get_params_mapping().keys()
-    )
 
 
 # @pytest.mark.xfail(reason="inexact conversions")
