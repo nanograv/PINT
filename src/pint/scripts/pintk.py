@@ -100,6 +100,11 @@ class PINTk:
             command=lambda: self.changeLogLevel("ERROR"),
             variable=self.log_levels["ERROR"],
         )
+        self.logMenu.add_checkbutton(
+            label="NOTSET",
+            command=lambda: self.changeLogLevel("NOTSET"),
+            variable=self.log_levels["NOTSET"],
+        )
         self.menuBar.add_cascade(label="Log Levels", menu=self.logMenu)
 
         # Key bindings
@@ -123,6 +128,7 @@ class PINTk:
             "INFO": tk.IntVar(),
             "WARNING": tk.IntVar(),
             "ERROR": tk.IntVar(),
+            "NOTSET": tk.IntVar(),
         }
         self.log_levels["WARNING"].set(1)
 
