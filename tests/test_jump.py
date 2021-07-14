@@ -179,6 +179,39 @@ def test_multijump_toa(setup_NGC6440E):
     assert "JUMP1" in cp.jumps
 
 
+def test_jump_by_group(setup_NGC6440E):
+    """
+    Compare selection by MJD with selection by group (which by default selects TOAs by 2h gaps
+    """
+    m_copy = copy.deepcopy(setup_NGC6440E.m)
+
+    setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
+    cp = setup_NGC6440E.m.components["PhaseJump"]
+    par = p.maskParameter(
+        name="JUMP", key="mjd", value=0.2, key_value=[54099, 54100], units=u.s
+    )
+    # this should be the last group of any TOAs
+    cp.add_param(par, setup=True)
+
+    m_copy.add_component(PhaseJump(), validate=False)
+    cp_copy = m_copy.components["PhaseJump"]
+    par_copy = p.maskParameter(
+        name="JUMP", key="group", value=0.2, key_value=41, units=u.s
+    )
+    # this should be identical to the group above
+    cp_copy.add_param(par_copy, setup=True)
+    assert (
+        np.array(cp.JUMP1.select_toa_mask(setup_NGC6440E.t))
+        == np.array(cp_copy.JUMP1.select_toa_mask(setup_NGC6440E.t))
+    ).all(), (
+        "%s vs. %s"
+        % (
+            cp.JUMP1.select_toa_mask(setup_NGC6440E.t),
+            cp_copy.JUMP1.select_toa_mask(setup_NGC6440E.t),
+        )
+    )
+
+
 class TestJUMP(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
