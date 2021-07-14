@@ -326,6 +326,7 @@ def get_model_and_toas(
     usepickle=False,
     tdb_method="default",
     picklefilename=None,
+    gap_limit=None,
 ):
     """Load a timing model and a related TOAs, using model commands as needed
 
@@ -355,6 +356,8 @@ def get_model_and_toas(
         Filename to use for caching loaded file. Defaults to adding ``.pickle.gz`` to the
         filename of the timfile, if there is one and only one. If no filename is available,
         or multiple filenames are provided, a specific filename must be provided.
+    gap_limit : :class:`astropy.units.Quantity`, optional
+            The minimum size of gap to create a new group. Defaults to two hours.
 
     Returns
     -------
@@ -372,6 +375,7 @@ def get_model_and_toas(
         usepickle=usepickle,
         tdb_method=tdb_method,
         picklefilename=picklefilename,
+        gap_limit=gap_limit,
     )
     return mm, tt
 

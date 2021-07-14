@@ -101,6 +101,7 @@ def get_TOAs(
     usepickle=False,
     tdb_method="default",
     picklefilename=None,
+    gap_limit=None,
 ):
     """Load and prepare TOAs for PINT use.
 
@@ -162,6 +163,8 @@ def get_TOAs(
         Filename to use for caching loaded file. Defaults to adding ``.pickle.gz`` to the
         filename of the timfile, if there is one and only one. If no filename is available,
         or multiple filenames are provided, a specific filename must be provided.
+    gap_limit : :class:`astropy.units.Quantity`, optional
+            The minimum size of gap to create a new group. Defaults to two hours.
 
     Returns
     -------
@@ -239,9 +242,11 @@ def get_TOAs(
                 updatepickle = True
     if not usepickle or updatepickle:
         if isinstance(timfile, str) or hasattr(timfile, "readlines"):
-            t = TOAs(timfile)
+            t = TOAs(timfile, gap_limit=gap_limit)
         else:
             t = merge_TOAs([TOAs(t) for t in timfile])
+            t.get_groups(gap_limit=gap_limit)
+
         if isinstance(t.filename, str):
             files = [t.filename]
         else:
@@ -1235,6 +1240,8 @@ class TOAs:
     toalist : list of TOA objects, optional
         The TOA objects this TOAs should contain.  Exactly one of
         these two parameters must be provided.
+    gap_limit : :class:`astropy.units.Quantity`, optional
+        the gap in TOAs to define groups
 
     Attributes
     ----------
@@ -1270,7 +1277,7 @@ class TOAs:
         available to use names as compatible with TEMPO as possible.
     """
 
-    def __init__(self, toafile=None, toalist=None):
+    def __init__(self, toafile=None, toalist=None, gap_limit=2 * u.h):
         # First, just make an empty container
         self.commands = []
         self.filename = None
@@ -1302,7 +1309,7 @@ class TOAs:
                 raise ValueError("Trying to initialize TOAs from a non-list class")
         self.table = build_table(toalist, filename=self.filename)
         self.max_index = len(self.table) - 1
-        groups = self.get_groups()
+        groups = self.get_groups(gap_limit=gap_limit)
         self.table.add_column(groups, name="groups")
         # Add pulse number column (if needed) or make PHASE adjustments
         try:
