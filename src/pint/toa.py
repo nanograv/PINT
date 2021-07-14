@@ -1225,7 +1225,7 @@ class TOAs:
            ``flags`` carry this information, and :func:`pint.toa.TOAs.phase_columns_from_flags`
            creates the column.
        * - ``groups``
-         - the TOAs have been placed into groups, separated by gaps of at least two houes,
+         - the TOAs have been placed into groups, separated by gaps of at least two hours,
            by :func:`pint.toa.TOAs.get_groups`; this will contain the group number of each TOA.
 
     Parameters
