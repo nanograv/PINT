@@ -411,12 +411,23 @@ class emcee_fitter(Fitter):
             plt.savefig(ftr.model.PSR.value + "_htest_v_wgtcut_unweighted.png")
         plt.close()
 
-    def plot_priors(self, samples, weights=None, bins=100, scale=False, file=False):
+    def plot_priors(self, samples, bins=100, scale=False, file=False):
         """
         Show binned samples, prior probability distribution and an initial gaussian
         probability distribution plotted with 2 sigma, maximum posterior and original
         fit values marked.
+        
+        Parameters
+        ----------
+        samples 
+            Post MCMC integration samples that are input into a histogram and compared with the priors.     
+        
+        With scale is True
+            The priors and initial probability distributions are scaled to the peak of the histogram.
+        With scale is False
+            The priors and initial probability distributions are plotted without the scaling.
         """
+
         priors = []
         initials = []
         x_range = []
@@ -435,59 +446,68 @@ class emcee_fitter(Fitter):
             counts.append(a)
 
         fig, axs = plt.subplots(
-            len(self.fitkeys[:-1]), figsize=(8, 11), constrained_layout=True
+            len(self.fitkeys), figsize=(8, 11), constrained_layout=True
         )
-        for i in range(0, len(self.fitkeys[:-1])):
-            axs[i].set_xlabel("Change in " + self.fitkeys[i])
-            axs[i].axvline(
-                self.fitvals[i] - samples[:, i].mean(),
-                color="m",
-                linestyle="--",
-                label="Original Fit Value",
-            )
-            axs[i].axvline(
-                self.maxpost_fitvals[i] - samples[:, i].mean(),
-                color="c",
-                linestyle="--",
-                label="Maximum Likelihood Value",
-            )
-            axs[i].axvline(
-                -2 * samples[:, i].std(), color="b", linestyle="--", label="2 sigma"
-            )
-            axs[i].axvline(
-                2 * samples[:, i].std(), color="b", linestyle="--", label="2 sigma"
-            )
-            axs[i].hist(
-                samples[:, i] - samples[:, i].mean(),
-                bins=bins,
-                label=self.fitkeys[i] + " samples",
-            )
-            if scale:
-                axs[i].plot(
-                    x_range[i] - samples[:, i].mean(),
-                    initials[i] * counts[i].max() / initials[i].max(),
-                    label="Initial Gaussian Probability",
-                    color="r",
+
+        for i, p in enumerate(self.fitkeys):
+            if i != len(self.fitkeys[:-1]):
+                axs[i].set_xlabel(
+                    str(p)
+                    + ": Max Post Value - "
+                    + str("{:.9e}".format(self.maxpost_fitvals[i]))
+                    + " ("
+                    + str(getattr(self.model, p).units)
+                    + ")"
                 )
-                axs[i].plot(
-                    x_range[i] - samples[:, i].mean(),
-                    priors[i] * counts[i].max() / priors[i].max(),
-                    label="Prior Probability",
-                    color="g",
+                axs[i].axvline(
+                    self.fitvals[i] - self.maxpost_fitvals[i],
+                    color="m",
+                    linestyle="--",
+                    label="Original Fit Value",
                 )
+                axs[i].axvline(
+                    self.maxpost_fitvals[i] - self.maxpost_fitvals[i],
+                    color="c",
+                    linestyle="--",
+                    label="Maximum Likelihood Value",
+                )
+                axs[i].axvline(
+                    -2 * samples[:, i].std(), color="b", linestyle="--", label="2 sigma"
+                )
+                axs[i].axvline(2 * samples[:, i].std(), color="b", linestyle="--")
+                axs[i].hist(
+                    samples[:, i] - self.maxpost_fitvals[i], bins=bins, label="Samples",
+                )
+                if scale:
+                    axs[i].plot(
+                        x_range[i] - self.maxpost_fitvals[i],
+                        initials[i] * counts[i].max() / initials[i].max(),
+                        label="Initial Gaussian Probability",
+                        color="r",
+                    )
+                    axs[i].plot(
+                        x_range[i] - self.maxpost_fitvals[i],
+                        priors[i] * counts[i].max() / priors[i].max(),
+                        label="Prior Probability",
+                        color="g",
+                    )
+                else:
+                    axs[i].plot(
+                        x_range[i] - self.maxpost_fitvals[i],
+                        initials[i],
+                        label="Initial Gaussian Probability",
+                        color="r",
+                    )
+                    axs[i].plot(
+                        x_range[i] - self.maxpost_fitvals[i],
+                        priors[i],
+                        label="Prior Probability",
+                        color="g",
+                    )
             else:
-                axs[i].plot(
-                    x_range[i] - samples[:, i].mean(),
-                    initials[i],
-                    label="Initial Gaussian Probability",
-                    color="r",
-                )
-                axs[i].plot(
-                    x_range[i] - samples[:, i].mean(),
-                    priors[i],
-                    label="Prior Probability",
-                    color="g",
-                )
+                handles, labels = axs[0].get_legend_handles_labels()
+                axs[i].set_axis_off()
+                axs[i].legend(handles, labels)
         if file:
             fig.savefig(file)
             plt.close()
