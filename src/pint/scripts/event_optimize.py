@@ -241,18 +241,17 @@ def get_fit_keyvals(model, phs=0.0, phserr=0.1):
     fitkeys = [p for p in model.params if not getattr(model, p).frozen]
     fitvals = []
     fiterrs = []
-    fitunits = []
-    for i, p in enumerate(fitkeys):
+    for p in fitkeys:
         fitvals.append(getattr(model, p).value)
-        fitunits.append(getattr(model, p).units)
-        fiterrs.append(float(((getattr(model, p).uncertainty).to(fitunits[i])).value))
+        fiterrs.append(
+            ((getattr(model, p).uncertainty).to(getattr(model, p).units)).value
+        )
     # The last entry in each of the fit lists is our absolute PHASE term
     # Hopefully this will become a full PINT model param soon.
     fitkeys.append("PHASE")
     fitvals.append(phs)
     fiterrs.append(phserr)
-    fitunits.append("pulse phase")
-    return fitkeys, np.asarray(fitvals), np.asarray(fiterrs), np.asarray(fitunits)
+    return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
 
 class emcee_fitter(Fitter):
@@ -618,9 +617,7 @@ def main(argv=None):
     # *** This should be replaced/supplemented with a way to specify
     # more general priors on parameters that need certain bounds
     phs = 0.0 if args.phs is None else args.phs
-    fitkeys, fitvals, fiterrs, fitunits = get_fit_keyvals(
-        modelin, phs=phs, phserr=args.phserr
-    )
+    fitkeys, fitvals, fiterrs = get_fit_keyvals(modelin, phs=phs, phserr=args.phserr)
 
     for key, v, e in zip(fitkeys[:-1], fitvals[:-1], fiterrs[:-1]):
         if key == "SINI" or key == "E" or key == "ECC":

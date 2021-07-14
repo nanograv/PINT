@@ -160,7 +160,7 @@ class MCMCFitter(Fitter):
         self.minMJD = kwargs.get("minMJD", 40000)
         self.maxMJD = kwargs.get("maxMJD", 60000)
 
-        self.fitkeys, self.fitvals, self.fiterrs, self.fitunits = self.generate_fit_keyvals()
+        (self.fitkeys, self.fitvals, self.fiterrs,) = self.generate_fit_keyvals()
         self.n_fit_params = len(self.fitvals)
 
         template = kwargs.get("template", None)
@@ -254,21 +254,21 @@ class MCMCFitter(Fitter):
         """
         Basic getter, useful in event_optimize script
         """
-        return self.fitkeys, self.fitvals, self.fiterrs, self.fitunits
+        return self.fitkeys, self.fitvals, self.fiterrs
 
     def generate_fit_keyvals(self):
         """Read the model to determine fitted keys and their values and errors
         from the par file
         """
-	fitkeys = [p for p in model.params if not getattr(model, p).frozen]
-	fitvals = []
-	fiterrs = []
-	fitunits = []
-	for i, p in enumerate(fitkeys):
-	    fitvals.append(getattr(model, p).value)
-	    fitunits.append(getattr(model, p).units)
-	    fiterrs.append(float(((getattr(model, p).uncertainty).to(fitunits[i])).value))
-	return fitkeys, np.asarray(fitvals), np.asarray(fiterrs), np.asarray(fitunits)
+        fitkeys = [p for p in self.model.params if not getattr(model, p).frozen]
+        fitvals = []
+        fiterrs = []
+        for p in fitkeys:
+            fitvals.append(getattr(model, p).value)
+            fiterrs.append(
+                ((getattr(model, p).uncertainty).to(getattr(model, p).units)).value
+            )
+        return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
     def get_weights(self):
         return self.weights
@@ -583,7 +583,7 @@ class CompositeMCMCFitter(MCMCFitter):
         self.minMJD = kwargs.get("minMJD", 0)
         self.maxMJD = kwargs.get("maxMJD", 100000)
 
-        self.fitkeys, self.fitvals, self.fiterrs, self.fitunits = self.generate_fit_keyvals(
+        (self.fitkeys, self.fitvals, self.fiterrs,) = self.generate_fit_keyvals(
             phs, phserr
         )
         self.n_fit_params = len(self.fitvals)
