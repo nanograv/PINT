@@ -3,13 +3,14 @@ import logging
 import os
 import unittest
 import pytest
-import copy
+from io import StringIO
 
 import astropy.units as u
 import numpy as np
+from numpy.testing import assert_allclose
 
 import pint.models.model_builder as mb
-import pint.toa as toa
+import pint.toa
 from pint.residuals import Residuals
 from pinttestdata import datadir
 from pint.models import parameter as p
@@ -21,7 +22,7 @@ class SimpleSetup:
         self.par = par
         self.tim = tim
         self.m = mb.get_model(self.par)
-        self.t = toa.get_TOAs(
+        self.t = pint.toa.get_TOAs(
             self.tim, ephem="DE405", planets=False, include_bipm=False
         )
 
@@ -171,7 +172,7 @@ class TestJUMP(unittest.TestCase):
         cls.parf = "B1855+09_NANOGrav_dfg+12_TAI.par"
         cls.timf = "B1855+09_NANOGrav_dfg+12.tim"
         cls.JUMPm = mb.get_model(cls.parf)
-        cls.toas = toa.get_TOAs(
+        cls.toas = pint.toa.get_TOAs(
             cls.timf, ephem="DE405", planets=False, include_bipm=False
         )
         # libstempo calculation
@@ -204,6 +205,105 @@ class TestJUMP(unittest.TestCase):
             )
             assert np.nanmax(relative_diff) < 0.001, msg
 
+@pytest.mark.parametrize("tim, flag_ranges", [
+("""
+FORMAT 1
+unk 999999.000000 57000.0000000078830324 1.000 gbt  -pn -2273593021.0
+unk 999999.000000 57052.6315789538116088 1.000 gbt  -pn -124285.0
+JUMP
+unk 999999.000000 57105.2631578955917593 1.000 gbt  -pn 2273470219.0
+unk 999999.000000 57157.8947368420341204 1.000 gbt  -pn 4547256435.0
+unk 999999.000000 57210.5263157897339815 1.000 gbt  -pn 6821152750.0
+JUMP
+JUMP
+unk 999999.000000 57263.1578947318551852 1.000 gbt  -pn 9095000767.0
+unk 999999.000000 57315.7894736865498264 1.000 gbt  -pn 11368677703.0
+unk 999999.000000 57368.4210526391189699 1.000 gbt  -pn 13642183645.0
+JUMP
+unk 999999.000000 57421.0526315687085764 1.000 gbt  -pn 15915655534.0
+unk 999999.000000 57473.6842105144226621 1.000 gbt  -pn 18189261252.0
+unk 999999.000000 57526.3157894708454977 1.000 gbt  -pn 20463057581.0
+unk 999999.000000 57578.9473684237653588 1.000 gbt  -pn 22736955090.0
+JUMP
+unk 999999.000000 57631.5789473769360416 1.000 gbt  -pn 25010795383.0
+unk 999999.000000 57684.2105263208505671 1.000 gbt  -pn 27284460486.0
+unk 999999.000000 57736.8421052672976158 1.000 gbt  -pn 29557959408.0
+unk 999999.000000 57789.4736842041808449 1.000 gbt  -pn 31831435551.0
+unk 999999.000000 57842.1052631637698032 1.000 gbt  -pn 34105052652.0
+unk 999999.000000 57894.7368420936182176 1.000 gbt  -pn 36378858766.0
+unk 999999.000000 57947.3684210606924768 1.000 gbt  -pn 38652757406.0
+unk 999999.000000 57999.9999999883338542 1.000 gbt  -pn 40926589498.0
+JUMP
+""", [(57100, 57250, 1), (57250, 57400, 2), (57600, 59000, 3)]),
+("""
+FORMAT 1
+unk 999999.000000 57000.0000000078830324 1.000 gbt  -pn -2273593021.0
+unk 999999.000000 57052.6315789538116088 1.000 gbt  -pn -124285.0
+JUMP
+unk 999999.000000 57105.2631578955917593 1.000 gbt  -pn 2273470219.0
+unk 999999.000000 57157.8947368420341204 1.000 gbt  -pn 4547256435.0
+unk 999999.000000 57210.5263157897339815 1.000 gbt  -pn 6821152750.0
+JUMP
+unk 999999.000000 57263.1578947318551852 1.000 gbt  -pn 9095000767.0
+unk 999999.000000 57315.7894736865498264 1.000 gbt  -pn 11368677703.0
+unk 999999.000000 57368.4210526391189699 1.000 gbt  -pn 13642183645.0
+JUMP
+JUMP
+unk 999999.000000 57421.0526315687085764 1.000 gbt  -pn 15915655534.0
+unk 999999.000000 57473.6842105144226621 1.000 gbt  -pn 18189261252.0
+unk 999999.000000 57526.3157894708454977 1.000 gbt  -pn 20463057581.0
+unk 999999.000000 57578.9473684237653588 1.000 gbt  -pn 22736955090.0
+JUMP
+unk 999999.000000 57631.5789473769360416 1.000 gbt  -pn 25010795383.0
+unk 999999.000000 57684.2105263208505671 1.000 gbt  -pn 27284460486.0
+unk 999999.000000 57736.8421052672976158 1.000 gbt  -pn 29557959408.0
+unk 999999.000000 57789.4736842041808449 1.000 gbt  -pn 31831435551.0
+unk 999999.000000 57842.1052631637698032 1.000 gbt  -pn 34105052652.0
+unk 999999.000000 57894.7368420936182176 1.000 gbt  -pn 36378858766.0
+unk 999999.000000 57947.3684210606924768 1.000 gbt  -pn 38652757406.0
+unk 999999.000000 57999.9999999883338542 1.000 gbt  -pn 40926589498.0
+JUMP
+""", [(57100, 57250, 1), (57600, 59000, 3)]),
+])
+def test_tim_file_gets_jump_flags(tim, flag_ranges):
+    toas = pint.toa.get_TOAs(StringIO(tim))
+    for start, end, n in flag_ranges:
+        for i in range(len(toas)):
+            f = toas.table["flags"][i]
+            m = int(f.get("jump", -1))
+            assert (start < toas.table["tdbld"][i] < end) == (n == m)
 
-if __name__ == "__main__":
-    pass
+def test_multiple_jumps_add():
+    m = mb.get_model(StringIO("""
+    PSR J1234+5678
+    ELAT 0
+    ELONG 0
+    PEPOCH 57000
+    POSEPOCH 57000
+    F0 500
+    JUMP mjd 58000 60000 0
+    JUMP mjd 59000 60000 0
+    """))
+    for j in m.jumps:
+        jmp = getattr(m, j)
+        if jmp.key == 'mjd':
+            start, end = jmp.key_value
+            if start < 58500:
+                first_jump = jmp
+            else:
+                second_jump = jmp
+    toas = pint.toa.make_fake_toas(57000, 60000-1, 10, m)
+
+    first_jump.quantity = 100*u.us
+    second_jump.quantity = 0*u.us
+    r_first = pint.residuals.Residuals(toas, m)
+
+    first_jump.quantity = 0*u.us
+    second_jump.quantity = 75*u.us
+    r_second = pint.residuals.Residuals(toas, m)
+
+    first_jump.quantity = 100*u.us
+    second_jump.quantity = 75*u.us
+    r_sum = pint.residuals.Residuals(toas, m)
+
+    assert_allclose(r_first.resids + r_second.resids, r_sum.resids, atol=1e-3*u.us)
