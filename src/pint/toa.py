@@ -1311,6 +1311,7 @@ class TOAs:
         self.max_index = len(self.table) - 1
         groups = self.get_groups(gap_limit=gap_limit)
         self.table.add_column(groups, name="groups")
+        self.table.meta["group_gap"] = gap_limit
         # Add pulse number column (if needed) or make PHASE adjustments
         try:
             self.phase_columns_from_flags()
@@ -1504,7 +1505,7 @@ class TOAs:
         Groups can be larger than the gap limit - if toas are separated by a gap larger than
         the gap limit, a new group starts and continues until another such gap is found.
 
-        Groups with a two-hour spacing are pre-computed when the TOAs object is constructed,
+        Groups with a two-hour spacing (default) are pre-computed when the TOAs object is constructed,
         and these can rapidly be retrieved from ``self.table`` (which this function will do).
 
         Parameters
@@ -1521,7 +1522,11 @@ class TOAs:
         # TODO: make all values Quantity objects for consistency
         if gap_limit is None:
             gap_limit = 2 * u.h
-        if "groups" not in self.table.colnames or gap_limit != 2 * u.h:
+        if (
+            ("groups" not in self.table.colnames)
+            or ("group_gap" not in self.table.meta)
+            or (gap_limit != self.table.meta["group_gap"])
+        ):
             return _group_by_gaps(self.get_mjds().value, gap_limit.to_value(u.d))
         else:
             return self.table["groups"]
