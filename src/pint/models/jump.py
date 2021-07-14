@@ -202,7 +202,7 @@ class PhaseJump(PhaseComponent):
         Returns
         -------
         astropy.units.Quantity
-            The phase shift for each TOA.
+            The derivative of phase shift with respect to the parameter for each TOA.
         """
         tbl = toas.table
         jpar = getattr(self, jump_param)
