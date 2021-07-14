@@ -403,9 +403,6 @@ class PlkActionsWidget(tk.Frame):
         self.writeTim_callback = None
         self.saveFig_callback = None
         self.revert_callback = None
-        self.INFO_callback = None
-
-        self.infoShowing = False  # state of INFO logs
 
         self.initPlkActions()
 
@@ -425,11 +422,6 @@ class PlkActionsWidget(tk.Frame):
         button = tk.Button(self, text="Revert", command=self.revert)
         button.grid(row=0, column=4)
 
-        self.infobutton = tk.Button(
-            self, text="Show INFO", command=self.changeInfoStatus
-        )
-        self.infobutton.grid(row=0, column=5)
-
     def setCallbacks(self, fit, reset, writePar, writeTim, revert):
         """
         Callback functions
@@ -442,9 +434,6 @@ class PlkActionsWidget(tk.Frame):
 
     def setFitButtonText(self, text):
         self.fitbutton.config(text=text)
-
-    def setInfoButtonText(self, text):
-        self.infobutton.config(text=text)
 
     def fit(self):
         if self.fit_callback is not None:
@@ -469,21 +458,6 @@ class PlkActionsWidget(tk.Frame):
         if self.revert_callback is not None:
             self.revert_callback()
         log.info("Revert clicked")
-
-    def changeInfoStatus(self):
-        """
-        Change whether the INFO log statements display in the terminal
-        """
-        self.infoShowing = ~self.infoShowing
-        if self.infoShowing:
-            # INFO statements turned on
-            log.setLevel("INFO")
-            log.info("INFO statements turned on")
-            self.setInfoButtonText("Hide INFO")
-        else:
-            # INFO statements turned off
-            log.setLevel("WARNING")
-            self.setInfoButtonText("Show INFO")
 
 
 class PlkWidget(tk.Frame):
