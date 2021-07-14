@@ -9,9 +9,16 @@ from pint.models.timing_model import DelayComponent, MissingParameter, PhaseComp
 
 log = logging.getLogger(__name__)
 
+__all__ = ["PhaseJump"]
+
 
 class DelayJump(DelayComponent):
-    """Phase jumps
+    """Delay jumps
+
+    This is a different kind of JUMP, conceptually affecting the TOAs directly,
+    so that a 60s jump would advance the pulsar around its orbit by 60 extra
+    seconds. The conventional JUMP affects only the observed phase, as you
+    would expect if they are due to a redefinition of phase zero in a template.
 
     Parameters supported:
 
@@ -75,13 +82,53 @@ class DelayJump(DelayComponent):
 class PhaseJump(PhaseComponent):
     """Arbitrary jumps in pulse phase.
 
-    In spite of the name, the amounts here are specified in seconds and
-    converted to phase using F0.
+    A JUMP adds a constant amount to the observed phase of all the TOAs it
+    applies to. JUMPs are specified using TOA flags::
+
+        JUMP -fish carp 0.1
+
+    will select all TOAs that have the flag ``-fish`` with the value ``carp``
+    and add 0.1 seconds times ``F0`` to the phase observed at each of them.
+    This would frequently be used with a flag specifying the receiver or front
+    end to JUMP all TOAs coming from a particular combination of telescope and
+    frequency band. Users can of course add their own flags to allow the
+    selection of appropriate subsets of TOAs.
+
+    Jumps are specified by :class:`~pint.models.parameter.maskParameter`
+    objects, so there is further documentation there on how these parameters
+    and their selection criteria work. In brief, in addition to matching
+    specific flags, these can also match MJD ranges (``JUMP mjd 57000 58000
+    0.1``), telescopes (``JUMP tel ao 0.1``), or frequency ranges
+    (``JUMP freq 1000 2000 0.1``).
+
+    The set of TOAs matched by a particular jump, say ``JUMP1``, can be retrieved
+    by :func:`~pint.models.parameter.maskParameter.select_toa_mask` as in
+    ``model.JUMP1.select_toa_mask(toas)``.
+
+    The original TEMPO supported JUMPs encoded in ``.tim`` files - a line
+    containing the command JUMP indicates the beginning of a block of TOAs, and
+    the next occurrence indicates the end of the block. The block of TOAs so
+    defined would then have an unnamed JUMP parameter associated with it and
+    fit for. When PINT encounters such a command, the affected TOAs get a flag
+    ``-jump N``, where N increases by 1 for each group encountered. A par file
+    can take advantage of this by including a line ``JUMP -jump 1 0.1``.
 
     Parameters supported:
 
     .. paramtable::
         :class: pint.models.jump.PhaseJump
+
+    Note
+    ----
+
+    In spite of the name, the amounts here are specified in seconds and
+    converted to phase using F0. They are treated as applying to the observed
+    phase, so these JUMPs do not affect where the pulsar is in its orbit when
+    the TOA was observed. This is more appropriate for things like a
+    redefinition in the zero of phase due to a change in pulse profile template
+    than for actual time delays. Unfortunately no standard way of specifying
+    that other kind of JUMPs exists, so although PINT contains code to
+    implement them they cannot be used in par files.
     """
 
     register = True
@@ -99,6 +146,7 @@ class PhaseJump(PhaseComponent):
         self.phase_funcs_component += [self.jump_phase]
 
     def setup(self):
+        """Set up support data structures to reflect parameters as set."""
         super().setup()
         self.jumps = []
         for mask_par in self.get_params_of_type("maskParameter"):
@@ -111,9 +159,23 @@ class PhaseJump(PhaseComponent):
             self.register_deriv_funcs(self.d_phase_d_jump, j)
 
     def jump_phase(self, toas, delay):
-        """This method returns the jump phase for each toas section collected by
+        """The extra phase contributed by the JUMP.
+
+        This method returns the jump phase for each toas section collected by
         jump parameters. The phase value is determined by jump parameter times
         F0.
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+            The TOAs for which the JUMP is to be computed.
+        delay : array-like
+            Ignored.
+
+        Returns
+        -------
+        astropy.units.Quantity
+            The phase shift for each TOA.
         """
         tbl = toas.table
         jphase = numpy.zeros(len(tbl)) * (self.JUMP1.units * self._parent.F0.units)
@@ -126,6 +188,22 @@ class PhaseJump(PhaseComponent):
         return jphase
 
     def d_phase_d_jump(self, toas, jump_param, delay):
+        """Derivative of phase with respect to the JUMP argument.
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+            The TOAs for which the JUMP is to be computed.
+        jump_param : pint.models.parameter.maskParameter
+            The jump parameter to differentiate with respect to.
+        delay : array-like
+            Ignored.
+
+        Returns
+        -------
+        astropy.units.Quantity
+            The phase shift for each TOA.
+        """
         tbl = toas.table
         jpar = getattr(self, jump_param)
         d_phase_d_j = numpy.zeros(len(tbl))
@@ -134,6 +212,7 @@ class PhaseJump(PhaseComponent):
         return (d_phase_d_j * self._parent.F0.units).to(1 / u.second)
 
     def print_par(self):
+        """Return a string representation of all JUMP parameters appropriate for a par file."""
         result = ""
         for jump in self.jumps:
             jump_par = getattr(self, jump)
@@ -145,10 +224,7 @@ class PhaseJump(PhaseComponent):
         return len(self.jumps)
 
     def get_jump_param_objects(self):
-        """
-        Returns a list of the maskParameter objects representing the jumps
-        in this PhaseJump object.
-        """
+        """Returns a list of the maskParameter objects for all JUMPs."""
         jump_obs = [getattr(self, jump) for jump in self.jumps]
         return jump_obs
 
@@ -158,6 +234,17 @@ class PhaseJump(PhaseComponent):
         This function was made specifically with pintk in mind for a way to properly
         load jump flags at the same time a .par file with jumps is loaded (like how
         jump_flags_to_params loads jumps from .tim files).
+
+        This function steps through all the defined JUMP parameters, and for each it
+        chooses all the TOAs affected by that JUMP and ensures that they have a flag
+        ``-jump`` whose argument contains the index of that JUMP.
+
+        At the end of the process, every TOA that is affected by any JUMP has a
+        flag ``-jump`` whose argument is either the index of the jump
+        parameter, or a list containing the index of the jump parameter. This
+        flag cannot be used in a JUMP as these only select on exact matches, so
+        that ``JUMP -jump 17 0.1`` would fail to match a TOA with the flag
+        ``-jump [17, 18]``.
 
         Parameters
         ----------
@@ -186,6 +273,14 @@ class PhaseJump(PhaseComponent):
         pintk to TOAs - since these jumps don't have keys that match to preexisting
         flags in the TOA tables, we must add the flags when adding the jump.
 
+        This will add a parameter to the model corresponding to::
+
+            JUMP -gui_jump N 0 1
+
+        where ``N`` is one more than the number of jumps that currently exist. This
+        function will also add the flag ``-gui_jump N`` to all the TOAs in the segment
+        of the table that is passed to this function.
+
         Parameters
         ----------
         toa_table: list object
@@ -211,10 +306,18 @@ class PhaseJump(PhaseComponent):
         # otherwise add on jump with next index
         else:
             # first, search for TOAs already jumped in inputted selection - pintk does not allow jumps added through GUI to overlap with existing jumps
+<<<<<<< HEAD
             for d in toa_table:
                 if "gui_jump" in d.keys():
                     log.warning(
                         "The selected toa(s) overlap an existing jump. Remove all interfering jumps before attempting to jump these toas."
+=======
+            for dict in toa_table:
+                if "gui_jump" in dict.keys():
+                    log.error(
+                        "The selected toa(s) overlap an existing jump. Remove all "
+                        "interfering jumps before attempting to jump these toas."
+>>>>>>> Document JUMP objects
                     )
                     return None
             param = maskParameter(
