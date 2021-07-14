@@ -242,10 +242,9 @@ def get_fit_keyvals(model, phs=0.0, phserr=0.1):
     fitvals = []
     fiterrs = []
     for p in fitkeys:
-        fitvals.append(getattr(model, p).value)
-        fiterrs.append(
-            ((getattr(model, p).uncertainty).to(getattr(model, p).units)).value
-        )
+        param = getattr(model, p)
+        fitvals.append(param.value)
+        fiterrs.append(((param.uncertainty).to(param.units)).value)
     # The last entry in each of the fit lists is our absolute PHASE term
     # Hopefully this will become a full PINT model param soon.
     fitkeys.append("PHASE")
