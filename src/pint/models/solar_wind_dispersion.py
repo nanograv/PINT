@@ -14,8 +14,13 @@ from pint.toa_select import TOASelect
 class SolarWindDispersion(Dispersion):
     """Dispersion due to the solar wind (basic model).
 
-    The model is a simple spherically-symmetric model that varies
-    only in its amplitude.
+    The model is a simple spherically-symmetric model that is fit
+    only in its constant amplitude.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.solar_wind_dispersion.SolarWindDispersion
 
     References
     ----------

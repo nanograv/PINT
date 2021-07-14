@@ -1,3 +1,4 @@
+"""Delays expressed as a sum of sinusoids."""
 import astropy.units as u
 import numpy as np
 
@@ -6,7 +7,7 @@ from pint.models.timing_model import PhaseComponent, MissingParameter
 
 
 class Wave(PhaseComponent):
-    """This class provides harmonic signals.
+    """Delays expressed as a sum of sinusoids.
 
     Historically, used for decomposition of timing noise into a series of
     sine/cosine components.
@@ -15,6 +16,11 @@ class Wave(PhaseComponent):
     as a time series, but trivially converted into phase by multiplication by
     F0, which could makes changes to PEPOCH fragile if there is strong spin
     frequency evolution.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.wave.Wave
     """
 
     register = True

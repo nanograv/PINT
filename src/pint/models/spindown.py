@@ -12,13 +12,26 @@ from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
 
 class Spindown(PhaseComponent):
-    """A simple timing model for an isolated pulsar."""
+    """A simple timing model for an isolated pulsar.
+
+    This represents the pulsar's spin as a Taylor series,
+    given its derivatives at time PEPOCH. Using more than
+    about twelve derivatives leads to hopeless numerical
+    instability, and probably has no physical significance.
+    It is probably worth investigating timing noise models
+    if this many derivatives are needed.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.spindown.Spindown
+    """
 
     register = True
     category = "spindown"
 
     def __init__(self):
-        super(Spindown, self).__init__()
+        super().__init__()
         self.add_param(
             floatParameter(
                 name="F0",
@@ -52,14 +65,14 @@ class Spindown(PhaseComponent):
         self.phase_derivs_wrt_delay += [self.d_spindown_phase_d_delay]
 
     def setup(self):
-        super(Spindown, self).setup()
+        super().setup()
         self.num_spin_terms = len(self.F_terms) + 1
         # Add derivative functions
         for fp in list(self.get_prefix_mapping_component("F").values()) + ["F0"]:
             self.register_deriv_funcs(self.d_phase_d_F, fp)
 
     def validate(self):
-        super(Spindown, self).validate()
+        super().validate()
         # Check for required params
         for p in ("F0",):
             if getattr(self, p).value is None:

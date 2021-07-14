@@ -3,25 +3,25 @@
 Defines the basic timing model interface classes.
 
 A PINT timing model will be an instance of
-:class:`pint.models.timing_model.TimingModel`. It will have a number of
+:class:`~pint.models.timing_model.TimingModel`. It will have a number of
 "components", each an instance of a subclass of
-:class:`pint.models.timing_model.Component`. These components each
+:class:`~pint.models.timing_model.Component`. These components each
 implement some part of the timing model, whether astrometry (for
-example :class:`pint.models.astrometry.AstrometryEcliptic`), noise
-modelling (for example :class:`pint.models.noise_model.ScaleToaError`),
+example :class:`~pint.models.astrometry.AstrometryEcliptic`), noise
+modelling (for example :class:`~pint.models.noise_model.ScaleToaError`),
 interstellar dispersion (for example
-:class:`pint.models.dispersion_model.DispersionDM`), or pulsar binary orbits.
+:class:`~pint.models.dispersion_model.DispersionDM`), or pulsar binary orbits.
 This last category is somewhat unusual in that the code for each model is
 divided into a PINT-facing side (for example
-:class:`pint.models.binary_bt.BinaryBT`) and an internal model that does the
+:class:`~pint.models.binary_bt.BinaryBT`) and an internal model that does the
 actual computation (for example
-:class:`pint.models.stand_alone_psr_binaries.BT_model.BTmodel`); the management of
+:class:`~pint.models.stand_alone_psr_binaries.BT_model.BTmodel`); the management of
 data passing between these two parts is carried out by
-:class:`pint.models.pulsar_binary.PulsarBinary` and
-:class:`pint.models.stand_alone_psr_binaries.binary_generic.PSR_BINARY`.
+:class:`~pint.models.pulsar_binary.PulsarBinary` and
+:class:`~pint.models.stand_alone_psr_binaries.binary_generic.PSR_BINARY`.
 
 To actually create a timing model, you almost certainly want to use
-:func:`pint.models.model_builder.get_model`.
+:func:`~pint.models.model_builder.get_model`.
 
 """
 import abc
@@ -52,7 +52,14 @@ from pint.phase import Phase
 from pint.toa import TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
-__all__ = ["DEFAULT_ORDER", "TimingModel"]
+__all__ = [
+    "DEFAULT_ORDER",
+    "TimingModel",
+    "Component",
+    "TimingModelError",
+    "MissingParameter",
+    "MissingTOAs",
+]
 # Parameters or lines in parfiles we don't understand but shouldn't
 # complain about. These are still passed to components so that they
 # can use them if they want to.
@@ -98,6 +105,8 @@ DEFAULT_ORDER = [
 
 
 class MissingTOAs(ValueError):
+    """Some parameter does not describe any TOAs."""
+
     def __init__(self, parameter_names):
         if isinstance(parameter_names, str):
             parameter_names = [parameter_names]
@@ -144,11 +153,12 @@ class TimingModel:
     """Timing model object built from Components.
 
     This object is the primary object to represent a timing model in PINT.  It
-    is normally constructed with :func:`pint.models.model_builder.get_model`,
-    and it contains a variety of Component objects, each representing a
+    is normally constructed with :func:`~pint.models.model_builder.get_model`,
+    and it contains a variety of :class:`~pint.models.timing_model.Component`
+    objects, each representing a
     physical process that either introduces delays in the pulse arrival time or
     introduces shifts in the pulse arrival phase.  These components have
-    parameters, described by :class:`pint.models.parameter.Parameter` objects,
+    parameters, described by :class:`~pint.models.parameter.Parameter` objects,
     and methods. Both the parameters and the methods are accessible through
     this object using attribute access, for example as ``model.F0`` or
     ``model.coords_as_GAL()``.
@@ -178,6 +188,11 @@ class TimingModel:
     TimingModel objects can be written out to ``.par`` files using
     :func:`pint.models.timing_model.TimingModel.as_parfile`.
 
+    PINT Parameters supported (here, rather than in any Component):
+
+    .. paramtable::
+        :class: pint.models.timing_model.TimingModel
+
     Parameters
     ----------
     name: str, optional
@@ -199,7 +214,7 @@ class TimingModel:
         - Derivatives of delay and phase respect to parameter for fitting toas.
 
     Each timing parameters are stored as TimingModel attribute in the type of
-    :class:`pint.models.parameter.Parameter` delay or phase and its derivatives are implemented
+    :class:`~pint.models.parameter.Parameter` delay or phase and its derivatives are implemented
     as TimingModel Methods.
 
     Attributes
@@ -2267,16 +2282,23 @@ class ModelMeta(abc.ABCMeta):
 
 
 class Component(object, metaclass=ModelMeta):
-    """A base class for timing model components."""
+    """Timing model components.
 
-    component_types = {}
-    """An index of all registered subtypes.
-
+    When such a class is defined, it registers itself in
+    ``Component.component_types`` so that it can be found and used
+    when parsing par files.
     Note that classes are registered when their modules are imported,
     so ensure all classes of interest are imported before this list
     is checked.
 
+    These objects can be constructed with no particular values, but
+    their `.setup()` and `.validate()` methods should be called
+    before using them to compute anything. These should check
+    parameter values for validity, raising an exception if
+    invalid parameter values are chosen.
     """
+
+    component_types = {}
 
     def __init__(self):
         self.params = []

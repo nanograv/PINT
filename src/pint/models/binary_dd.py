@@ -16,6 +16,11 @@ class BinaryDD(PulsarBinary):
     GAMMA Binary Einsten delay coeeficient
     DR Relativistic deformation of the orbit
     DTH Relativistic deformation of the orbit
+
+   Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.binary_dd.BinaryDD
     """
 
     register = True
