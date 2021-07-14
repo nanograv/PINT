@@ -264,10 +264,9 @@ class MCMCFitter(Fitter):
         fitvals = []
         fiterrs = []
         for p in fitkeys:
-            fitvals.append(getattr(model, p).value)
-            fiterrs.append(
-                ((getattr(model, p).uncertainty).to(getattr(model, p).units)).value
-            )
+            param = getattr(self.model, p)
+            fitvals.append(param.value)
+            fiterrs.append(((param.uncertainty).to(param.units)).value)
         return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
     def get_weights(self):
