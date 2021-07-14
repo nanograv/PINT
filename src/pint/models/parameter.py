@@ -22,14 +22,17 @@ parameters PINT understands.
 
 """
 import numbers
+from warnings import warn
 
 import astropy.time as time
 import astropy.units as u
 import numpy as np
 from astropy import log
 from astropy.coordinates.angles import Angle
+
 from pint import pint_units
 from pint.models import priors
+from pint.observatory import get_observatory
 from pint.pulsar_mjd import (
     Time,
     data2longdouble,
@@ -41,7 +44,6 @@ from pint.pulsar_mjd import (
 )
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name
-from pint.observatory import get_observatory
 
 
 class Parameter:
@@ -94,12 +96,6 @@ class Parameter:
     continuous : bool, optional
         A flag specifying whether derivatives with respect to this
         parameter exist.
-    print_quantity : method, optional
-        A function that converts the internal value to a string for output.
-    set_quantity : method, optional
-        A function that sets the quantity property
-    get_value:
-        A function that get purely value from quantity attribute
     use_alias : str or None
         Alias to use on write; normally whatever alias was in the par
         file it was read from
@@ -120,21 +116,12 @@ class Parameter:
         frozen=True,
         aliases=None,
         continuous=True,
-        set_quantity=lambda x: x,
-        get_value=lambda x: x,
         prior=priors.Prior(priors.UniformUnboundedRV()),
-        set_uncertainty=fortran_float,
         use_alias=None,
     ):
 
         self.name = name  # name of the parameter
         self.units = units  # Default unit
-        self.set_quantity = set_quantity
-        # Method to get value
-        self.get_value = get_value
-        # Method to get uncertainty from input
-        self.set_uncertainty = set_uncertainty
-        self.from_parfile_line = self.from_parfile_line_regular
         self.quantity = value  # The value of parameter, internal storage
         self.prior = prior
 
@@ -151,21 +138,54 @@ class Parameter:
         self.use_alias = use_alias
 
     @property
-    def prior(self):
-        """prior distribution for this parameter.
+    def quantity(self):
+        """Value including units (if appropriate)."""
+        return self._quantity
 
-        This should be a :class:`~pint.models.priors.Prior` object describing the prior
-        distribution of the quantity, for use in Bayesian fitting.
+    @quantity.setter
+    def quantity(self, val):
+        """General wrapper method to set .quantity.
+
+        For different type of
+        parameters, the setter method is stored at ._set_quantity attribute.
         """
-        return self._prior
+        if val is None:
+            if hasattr(self, "quantity") and self.quantity is not None:
+                raise ValueError("Setting an existing value to None is not allowed.")
+            else:
+                self._quantity = val
+                return
+        self._quantity = self._set_quantity(val)
 
-    @prior.setter
-    def prior(self, p):
-        if not isinstance(p, priors.Prior):
-            raise ValueError("prior must be an instance of Prior()")
-        self._prior = p
+    @property
+    def value(self):
+        """Return the value (without units) of a parameter.
 
-    # Setup units property
+        This value is assumed to be in units of ``self.units``. Upon setting, a
+        a :class:`~astropy.units.Quantity` can be provided, which will be converted
+        to ``self.units``.
+        """
+        if self._quantity is None:
+            return None
+        else:
+            return self._get_value(self._quantity)
+
+    @value.setter
+    def value(self, val):
+        if val is None:
+            if (
+                not isinstance(self.quantity, (str, bool))
+                and self._quantity is not None
+            ):
+                raise ValueError(
+                    "This parameter value is number convertible. "
+                    "Setting .value to None will lost the "
+                    "parameter value."
+                )
+            else:
+                self.value = val
+        self._quantity = self._set_quantity(val)
+
     @property
     def units(self):
         """Units associated with this parameter.
@@ -215,26 +235,90 @@ class Parameter:
             # Change uncertainty unit to new unit
             self.uncertainty = self.uncertainty.to(self._units)
 
-    # Setup quantity property
     @property
-    def quantity(self):
-        """Value including units (if appropriate)."""
-        return self._quantity
+    def uncertainty(self):
+        """Parameter uncertainty value with units."""
+        return self._uncertainty
 
-    @quantity.setter
-    def quantity(self, val):
-        """General wrapper method to set .quantity.
-
-        For different type of
-        parameters, the setter method is stored at .set_quantity attribute.
-        """
+    @uncertainty.setter
+    def uncertainty(self, val):
         if val is None:
-            if hasattr(self, "quantity") and self.quantity is not None:
-                raise ValueError("Setting an existing value to None is not allowed.")
+            if hasattr(self, "uncertainty") and self.uncertainty is not None:
+                raise ValueError("Setting an exist uncertainty to None is not allowed.")
             else:
-                self._quantity = val
+                self._uncertainty = self._uncertainty_value = None
                 return
-        self._quantity = self.set_quantity(val)
+        val = self._set_uncertainty(val)
+
+        if not val >= 0:
+            raise ValueError(f"Uncertainty cannot be set to negative {val}")
+            # self.uncertainty_value = np.abs(self.uncertainty_value)
+
+        self._uncertainty = val.to(self.units)
+
+    @property
+    def uncertainty_value(self):
+        """Return a pure value from .uncertainty.
+
+        This will be interpreted as having units ``self.units``.
+        """
+        # FIXME: is this worth having when p.uncertainty.value does the same thing?
+        if self._uncertainty is None:
+            return None
+        else:
+            return self._get_value(self._uncertainty)
+
+    @uncertainty_value.setter
+    def uncertainty_value(self, val):
+        if val is None:
+            if (
+                not isinstance(self.uncertainty, (str, bool))
+                and self._uncertainty_value is not None
+            ):
+                log.warning(
+                    "This parameter has uncertainty value. "
+                    "Change it to None will lost information."
+                )
+            else:
+                self.uncertainty_value = val
+        self._uncertainty = self._set_uncertainty(val)
+
+    def _get_value(self, quan):
+        """Extract a raw value from internal representation.
+
+        Generally just returns the internal representation, but some subclasses
+        may override this to, say, convert to the correct units and then discard
+        them.
+        """
+        return quan
+
+    def _set_quantity(self, val):
+        """Convert value to internal representation.
+
+        Subclasses may override this to, for example, parse Fortran-format strings into
+        long doubles.
+        """
+        return val
+
+    def _set_uncertainty(self, val):
+        """Convert value to internal representation for use in uncertainty."""
+        if val != 0:
+            raise NotImplementedError()
+
+    @property
+    def prior(self):
+        """prior distribution for this parameter.
+
+        This should be a :class:`~pint.models.priors.Prior` object describing the prior
+        distribution of the quantity, for use in Bayesian fitting.
+        """
+        return self._prior
+
+    @prior.setter
+    def prior(self, p):
+        if not isinstance(p, priors.Prior):
+            raise ValueError("prior must be an instance of Prior()")
+        self._prior = p
 
     def prior_pdf(self, value=None, logpdf=False):
         """Return the prior probability density.
@@ -254,96 +338,11 @@ class Parameter:
             value = self.value
         return self.prior.logpdf(value) if logpdf else self.prior.pdf(value)
 
-    # Setup .value property
-    # .value will get pure number from ._quantity.
-    # Setting .value property will change ._quantity.
-    @property
-    def value(self):
-        """Return the value (without units) of a parameter.
-
-        This value is assumed to be in units of ``self.units``. Upon setting, a
-        a :class:`~astropy.units.Quantity` can be provided, which will be converted
-        to ``self.units``.
-        """
-        if self._quantity is None:
-            return None
-        else:
-            return self.get_value(self._quantity)
-
-    @value.setter
-    def value(self, val):
-        if val is None:
-            if (
-                not isinstance(self.quantity, (str, bool))
-                and self._quantity is not None
-            ):
-                raise ValueError(
-                    "This parameter value is number convertible. "
-                    "Setting .value to None will lost the "
-                    "parameter value."
-                )
-            else:
-                self.value = val
-        self._quantity = self.set_quantity(val)
-
-    @property
-    def uncertainty(self):
-        """Return the internal stored parameter uncertainty value and units."""
-        return self._uncertainty
-
-    @uncertainty.setter
-    def uncertainty(self, val):
-        """General wrapper setter for uncertainty.
-
-        The setting method is stored at .set_uncertainty attribute
-        """
-        if val is None:
-            if hasattr(self, "uncertainty") and self.uncertainty is not None:
-                raise ValueError(
-                    "Setting an exist uncertainty to None is not" " allowed."
-                )
-            else:
-                self._uncertainty = val
-                self._uncertainty_value = self._uncertainty
-                return
-        self._uncertainty = self.set_uncertainty(val)
-
-        # This is avoiding negtive unvertainty input.
-        if self._uncertainty is not None and self.uncertainty_value < 0:
-            self.uncertainty_value = np.abs(self.uncertainty_value)
-
-    @property
-    def uncertainty_value(self):
-        """Return a pure value from .uncertainty.
-
-        This will be interpreted as having units ``self.units``.
-        """
-        # FIXME: is this worth having when p.uncertainty.value does the same thing?
-        if self._uncertainty is None:
-            return None
-        else:
-            return self.get_value(self._uncertainty)
-
-    @uncertainty_value.setter
-    def uncertainty_value(self, val):
-        if val is None:
-            if (
-                not isinstance(self.uncertainty, (str, bool))
-                and self._uncertainty_value is not None
-            ):
-                log.warning(
-                    "This parameter has uncertainty value. "
-                    "Change it to None will lost information."
-                )
-            else:
-                self.uncertainty_value = val
-        self._uncertainty = self.set_uncertainty(val)
-
-    def print_quantity(self, quan):
+    def _print_quantity(self, quan):
         """Format the argument in an appropriate way as a string."""
         return str(quan)
 
-    def print_uncertainty(self, uncertainty):
+    def _print_uncertainty(self, uncertainty):
         """Represent uncertainty in the form of a string.
 
         This converts the :class:`~astropy.units.Quantity` provided to the
@@ -356,7 +355,7 @@ class Parameter:
         if self.quantity is None:
             out += "UNSET"
             return out
-        out += "{:17s}".format(self.print_quantity(self.quantity))
+        out += "{:17s}".format(self._print_quantity(self.quantity))
         if self.units is not None:
             out += " (" + str(self.units) + ")"
         if self.uncertainty is not None and isinstance(self.value, numbers.Number):
@@ -364,15 +363,6 @@ class Parameter:
         out += " frozen={}".format(self.frozen)
         out += ")"
         return out
-
-    def set(self, value):
-        """Parses a string 'value' into the appropriate internal representation of the parameter.
-        """
-        self.value = value
-
-    def add_alias(self, alias):
-        """Add a name to the list of aliases for this parameter."""
-        self.aliases.append(alias)
 
     def help_line(self):
         """Return a help line containing parameter name, description and units."""
@@ -390,22 +380,20 @@ class Parameter:
             name = self.name
         else:
             name = self.use_alias
-        line = "%-15s %25s" % (name, self.print_quantity(self.quantity))
+        line = "%-15s %25s" % (name, self._print_quantity(self.quantity))
         if self.uncertainty is not None:
             line += " %d %s" % (
                 0 if self.frozen else 1,
-                self.print_uncertainty(self.uncertainty),
+                self._print_uncertainty(self.uncertainty),
             )
         elif not self.frozen:
             line += " 1"
         return line + "\n"
 
-    def from_parfile_line_regular(self, line):
+    def from_parfile_line(self, line):
         """Parse a parfile line into the current state of the parameter.
 
         Returns True if line was successfully parsed, False otherwise.
-
-        This function appears as ``from_parfile_line``; subclasses may override it.
 
         Note
         ----
@@ -426,7 +414,7 @@ class Parameter:
             return False
         if len(k) < 2:
             return False
-        self.set(k[1])
+        self.value = k[1]
         if name != self.name:
             # FIXME: what about prefix/mask parameters?
             self.use_alias = name
@@ -453,14 +441,26 @@ class Parameter:
 
             if len(k) >= 4:
                 ucty = k[3]
-            self.uncertainty = self.set_uncertainty(ucty)
+            self.uncertainty = self._set_uncertainty(ucty)
         return True
+
+    def add_alias(self, alias):
+        """Add a name to the list of aliases for this parameter."""
+        self.aliases.append(alias)
 
     def name_matches(self, name):
         """Whether or not the parameter name matches the provided name"""
         return (name == self.name.upper()) or (
             name in map(lambda x: x.upper(), self.aliases)
         )
+
+    def set(self, value):
+        """Deprecated - just assign to .value."""
+        warn(
+            "The .set() function is deprecated. Set self.value directly instead.",
+            category=DeprecationWarning,
+        )
+        self.value = value
 
 
 class floatParameter(Parameter):
@@ -523,9 +523,6 @@ class floatParameter(Parameter):
         self.long_double = long_double
         self.scale_factor = scale_factor
         self.scale_threshold = scale_threshold
-        set_quantity = self.set_quantity_float
-        get_value = self.get_value_float
-        set_uncertainty = self.set_quantity_float
         self._unit_scale = False
         if units is None:
             units = ""
@@ -538,9 +535,6 @@ class floatParameter(Parameter):
             continuous=continuous,
             description=description,
             uncertainty=uncertainty,
-            set_quantity=set_quantity,
-            get_value=get_value,
-            set_uncertainty=set_uncertainty,
         )
         self.paramType = "floatParameter"
         self.special_arg += [
@@ -554,6 +548,7 @@ class floatParameter(Parameter):
     @property
     def long_double(self):
         """Whether the parameter has long double precision."""
+        # FIXME: why not just always keep long double precision?
         return self._long_double
 
     @long_double.setter
@@ -597,8 +592,8 @@ class floatParameter(Parameter):
                     " is set to be True."
                 )
 
-    def set_quantity_float(self, val):
-        """Set value method specific for float parameter
+    def _set_quantity(self, val):
+        """Convert input to floating-point format.
 
         accept format
 
@@ -636,7 +631,10 @@ class floatParameter(Parameter):
 
         return result
 
-    def print_quantity(self, quan):
+    def _set_uncertainty(self, val):
+        return self._set_quantity(val)
+
+    def _print_quantity(self, quan):
         """Quantity as a string (for floating-point values)."""
         v = quan.to(self.units).value
         if self._long_double:
@@ -646,9 +644,12 @@ class floatParameter(Parameter):
                 )
         return str(v)
 
-    def get_value_float(self, quan):
+    def _get_value(self, quan):
+        """Convert to appropriate units and extract value."""
         if quan is None:
             return None
+        elif isinstance(quan, float) or isinstance(quan, np.longdouble):
+            return quan
         else:
             return quan.to(self.units).value
 
@@ -679,9 +680,6 @@ class strParameter(Parameter):
     """
 
     def __init__(self, name=None, value=None, description=None, aliases=None, **kwargs):
-        get_value = lambda x: x
-        set_quantity = lambda x: str(x)
-        set_uncertainty = lambda x: None
 
         # FIXME: where did kwargs go?
         super().__init__(
@@ -690,14 +688,14 @@ class strParameter(Parameter):
             description=description,
             frozen=True,
             aliases=aliases,
-            set_quantity=set_quantity,
-            get_value=get_value,
-            set_uncertainty=set_uncertainty,
         )
 
         self.paramType = "strParameter"
         self.value_type = str
 
+    def _set_quantity(self, val):
+        """Convert to string."""
+        return str(val)
 
 class boolParameter(Parameter):
     """Boolean-valued parameter.
@@ -736,14 +734,6 @@ class boolParameter(Parameter):
         **kwargs,
     ):
 
-        set_quantity = self.set_quantity_bool
-
-        def get_value(x):
-            return x
-
-        def set_uncertainty(x):
-            return None
-
         # FIXME: where did kwargs go?
         super().__init__(
             name=name,
@@ -751,17 +741,14 @@ class boolParameter(Parameter):
             description=description,
             frozen=True,
             aliases=aliases,
-            set_quantity=set_quantity,
-            get_value=get_value,
-            set_uncertainty=set_uncertainty,
         )
         self.value_type = bool
         self.paramType = "boolParameter"
 
-    def print_quantity(self, quan):
+    def _print_quantity(self, quan):
         return "Y" if quan else "N"
 
-    def set_quantity_bool(self, val):
+    def _set_quantity(self, val):
         """Get boolean value for boolParameter class"""
         # First try strings
         try:
@@ -810,13 +797,6 @@ class intParameter(Parameter):
         aliases=None,
         **kwargs,
     ):
-        set_quantity = self.set_quantity_int
-
-        def get_value(x):
-            return x
-
-        def set_uncertainty(x):
-            return None
 
         # FIXME: where did kwargs go?
         super().__init__(
@@ -825,14 +805,11 @@ class intParameter(Parameter):
             description=description,
             frozen=True,
             aliases=aliases,
-            set_quantity=set_quantity,
-            get_value=get_value,
-            set_uncertainty=set_uncertainty,
         )
         self.value_type = int
         self.paramType = "intParameter"
 
-    def set_quantity_int(self, val):
+    def _set_quantity(self, val):
         """Convert a string or other value to an integer."""
         if isinstance(val, str):
             try:
@@ -910,9 +887,6 @@ class MJDParameter(Parameter):
         **kwargs,
     ):
         self._time_scale = time_scale
-        set_quantity = self.set_quantity_mjd
-        get_value = time_to_longdouble
-        set_uncertainty = self.set_uncertainty_mjd
         # FIXME: where did kwargs go?
         super().__init__(
             name=name,
@@ -923,16 +897,16 @@ class MJDParameter(Parameter):
             frozen=frozen,
             continuous=continuous,
             aliases=aliases,
-            set_quantity=set_quantity,
-            get_value=get_value,
-            set_uncertainty=set_uncertainty,
         )
         self.value_type = time.Time
         self.paramType = "MJDParameter"
         self.special_arg += ["time_scale"]
 
-    def print_quantity(self, quan):
+    def _print_quantity(self, quan):
         return time_to_mjd_string(quan)
+
+    def _get_value(self, quan):
+        return time_to_longdouble(quan)
 
     @property
     def time_scale(self):
@@ -946,19 +920,17 @@ class MJDParameter(Parameter):
 
     @property
     def uncertainty_value(self):
-        """Return a pure value from .uncertainty. The unit will associate
-        with .units
+        """Return a pure value from .uncertainty.
+
+        The unit will associate with .units
         """
         if self._uncertainty is None:
             return None
         else:
-            return self._uncertainty.value
+            return self._uncertainty.to_value(self.units)
 
     @uncertainty_value.setter
     def uncertainty_value(self, val):
-        """Setter for uncertainty_value. Setting .uncertainty_value will only change
-        the .uncertainty attribute.
-        """
         if val is None:
             if (
                 not isinstance(self.uncertainty, (str, bool))
@@ -970,10 +942,11 @@ class MJDParameter(Parameter):
                 )
             else:
                 self.uncertainty_value = val
-        self._uncertainty = self.set_uncertainty(val)
+        self._uncertainty = self._set_uncertainty(val)
 
-    def set_quantity_mjd(self, val):
+    def _set_quantity(self, val):
         """Value setter for MJD parameter,
+
         Accepted format:
         Astropy time object
         mjd float
@@ -992,18 +965,18 @@ class MJDParameter(Parameter):
             )
         return result
 
-    def set_uncertainty_mjd(self, val):
+    def _set_uncertainty(self, val):
         # First try to use astropy unit conversion
         try:
             # If this fails, it will raise UnitConversionError
-            _ = val.to(self.units)
+            val.to(self.units)
             result = data2longdouble(val.value) * self.units
         except AttributeError:
             # This will happen if the input value did not have units
             result = data2longdouble(val) * self.units
         return result
 
-    def print_uncertainty(self, uncertainty):
+    def _print_uncertainty(self, uncertainty):
         return str(self.uncertainty_value)
 
 
@@ -1066,10 +1039,6 @@ class AngleParameter(Parameter):
             raise ValueError("Unidentified unit " + units)
 
         self.unitsuffix = self.unit_identifier[units.lower()][1]
-        set_quantity = self.set_quantity_angle
-        # get_value = lambda x: Angle(x * self.unit_identifier[units.lower()][0])
-        get_value = lambda x: x.value
-        set_uncertainty = self.set_uncertainty_angle
         self.value_type = Angle
         self.paramType = "AngleParameter"
 
@@ -1083,12 +1052,13 @@ class AngleParameter(Parameter):
             frozen=frozen,
             continuous=continuous,
             aliases=aliases,
-            set_quantity=set_quantity,
-            get_value=get_value,
-            set_uncertainty=set_uncertainty,
         )
 
-    def set_quantity_angle(self, val):
+    def _get_value(self, quan):
+        # return Angle(x * self.unit_identifier[units.lower()][0])
+        return quan.value
+
+    def _set_quantity(self, val):
         """This function is to set value to angle parameters.
 
         Accepted format:
@@ -1109,7 +1079,7 @@ class AngleParameter(Parameter):
             )
         return result
 
-    def set_uncertainty_angle(self, val):
+    def _set_uncertainty(self, val):
         """This function is to set the uncertainty for an angle parameter."""
         if isinstance(val, numbers.Number):
             result = Angle(val * self.unit_identifier[self._str_unit.lower()][2])
@@ -1125,14 +1095,14 @@ class AngleParameter(Parameter):
             )
         return result
 
-    def print_quantity(self, quan):
+    def _print_quantity(self, quan):
         """This is a function to print out the angle parameter."""
         if ":" in self._str_unit:
             return quan.to_string(sep=":", precision=8)
         else:
             return quan.to_string(decimal=True, precision=15)
 
-    def print_uncertainty(self, unc):
+    def _print_uncertainty(self, unc):
         """This is a function for printing out the uncertainty"""
         if ":" in self._str_unit:
             angle_arcsec = unc.to(u.arcsec)
@@ -1365,10 +1335,10 @@ class prefixParameter:
     def prior_pdf(self, value=None, logpdf=False):
         return self.param_comp.prior_pdf(value, logpdf)
 
-    def print_quantity(self, quan):
-        return self.param_comp.print_quantity(quan)
+    def _print_quantity(self, quan):
+        return self.param_comp._print_quantity(quan)
 
-    def print_uncertainty(self, uncertainty):
+    def _print_uncertainty(self, uncertainty):
         return str(uncertainty.to(self.units).value)
 
     def name_matches(self, name):
@@ -1548,8 +1518,6 @@ class maskParameter(floatParameter):
         # first mask parameter from parfile.
         if index == 1:
             self.aliases.append(name)
-        self.from_parfile_line = self.from_parfile_line_mask
-        self.as_parfile_line = self.as_parfile_line_mask
         self.is_prefix = True
 
     def __repr__(self):
@@ -1560,7 +1528,7 @@ class maskParameter(floatParameter):
             for kv in self.key_value:
                 out += " " + str(kv)
         if self.quantity is not None:
-            out += " " + self.print_quantity(self.quantity)
+            out += " " + self._print_quantity(self.quantity)
         else:
             out += " " + "UNSET"
             return out
@@ -1579,7 +1547,7 @@ class maskParameter(floatParameter):
             name_idx = name + str(self.index)
             return super().name_matches(name_idx)
 
-    def from_parfile_line_mask(self, line):
+    def from_parfile_line(self, line):
         """Read mask parameter line (e.g. JUMP).
 
         Returns
@@ -1639,7 +1607,7 @@ class maskParameter(floatParameter):
             else:
                 self.key_value[ii] = key_value_info[0](kval)
         if len(k) >= 3 + len_key_v:
-            self.set(k[2 + len_key_v])
+            self.value = k[2 + len_key_v]
         if len(k) >= 4 + len_key_v:
             try:
                 fit_flag = int(k[3 + len_key_v])
@@ -1662,10 +1630,10 @@ class maskParameter(floatParameter):
 
             if len(k) >= 5 + len_key_v:
                 ucty = k[4 + len_key_v]
-            self.uncertainty = self.set_uncertainty(ucty)
+            self.uncertainty = self._set_uncertainty(ucty)
         return True
 
-    def as_parfile_line_mask(self):
+    def as_parfile_line(self):
         if self.quantity is None:
             return ""
         if self.use_alias is None:
@@ -1680,7 +1648,7 @@ class maskParameter(floatParameter):
                 line += f"{kv.value} "
             else:
                 line += f"{kv} "
-        line += "%25s" % self.print_quantity(self.quantity)
+        line += "%25s" % self._print_quantity(self.quantity)
         if self.uncertainty is not None:
             line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty_value))
         elif not self.frozen:
@@ -1824,16 +1792,9 @@ class pairParameter(floatParameter):
             continuous=continuous,
             aliases=aliases,
             long_double=long_double,
-            set_quantity=self.set_quantity_pair,
-            set_uncertainty=self.set_quantity_pair,
             **kwargs,
         )
 
-        self.set_quantity = self.set_quantity_pair
-        self.set_uncertainty = self.set_quantity_pair
-
-        self.from_parfile_line = self.from_parfile_line_pair
-        self.as_parfile_line = self.as_parfile_line_pair
         self.is_prefix = True
 
     def name_matches(self, name):
@@ -1843,7 +1804,7 @@ class pairParameter(floatParameter):
             name_idx = name + str(self.index)
             return super().name_matches(name_idx)
 
-    def from_parfile_line_pair(self, line):
+    def from_parfile_line(self, line):
         """Read mask parameter line (e.g. JUMP).
 
         Notes
@@ -1861,7 +1822,7 @@ class pairParameter(floatParameter):
         if not self.name_matches(name):
             return False
         try:
-            self.set((k[1], k[2]))
+            self.value = (k[1], k[2])
         except IndexError:
             return False
         if name != self.name:
@@ -1870,7 +1831,7 @@ class pairParameter(floatParameter):
 
         return True
 
-    def as_parfile_line_pair(self):
+    def as_parfile_line(self):
         quantity = self.quantity
         if self.quantity is None:
             return ""
@@ -1879,8 +1840,8 @@ class pairParameter(floatParameter):
         else:
             name = self.use_alias
         line = "%-15s " % name
-        line += "%25s" % self.print_quantity(quantity[0])
-        line += " %25s" % self.print_quantity(quantity[1])
+        line += "%25s" % self._print_quantity(quantity[0])
+        line += " %25s" % self._print_quantity(quantity[1])
 
         return line + "\n"
 
@@ -1895,9 +1856,12 @@ class pairParameter(floatParameter):
         )
         return new_pair_param
 
-    def set_quantity_pair(self, vals):
-        vals = [self.set_quantity_float(val) for val in vals]
+    def _set_quantity(self, vals):
+        vals = [floatParameter._set_quantity(self, val) for val in vals]
         return vals
+
+    def _set_uncertainty(self, vals):
+        return self._set_quantity(vals)
 
     @property
     def value(self):
@@ -1908,7 +1872,7 @@ class pairParameter(floatParameter):
         if self._quantity is None:
             return None
         else:
-            return self.get_value(self._quantity)
+            return self._get_value(self._quantity)
 
     @value.setter
     def value(self, val):
@@ -1928,13 +1892,13 @@ class pairParameter(floatParameter):
                 )
             else:
                 self.value = val
-        self._quantity = self.set_quantity_pair(val)
+        self._quantity = self._set_quantity(val)
 
-    def print_quantity(self, quan):
+    def _print_quantity(self, quan):
         """Return quantity as a string."""
         try:
             # Maybe it's a singleton quantity
-            return floatParameter.print_quantity(self, quan)
+            return floatParameter._print_quantity(self, quan)
         except AttributeError:
             # Not a quantity, let's hope it's a list of length two?
             if len(quan) != 2:
