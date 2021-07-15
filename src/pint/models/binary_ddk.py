@@ -72,6 +72,7 @@ class BinaryDDK(BinaryDD):
                 " correction",
             )
         )
+        self.remove_param("SINI")
         self.internal_params += ["PMRA_DDK", "PMDEC_DDK"]
 
     @property
@@ -108,11 +109,6 @@ class BinaryDDK(BinaryDD):
                 raise MissingParameter(
                     "DDK", "DDK model needs proper motion parameters."
                 )
-        if self.SINI.quantity is not None:
-            raise TimingModelError(
-                "DDK model does not accept `SINI` as input. Please"
-                " use `KIN` instead."
-            )
 
         if hasattr(self._parent, "PX"):
             if self._parent.PX.value <= 0.0 or self._parent.PX.value is None:

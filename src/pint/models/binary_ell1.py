@@ -33,6 +33,10 @@ class BinaryELL1(PulsarBinary):
 
     .. paramtable::
         :class: pint.models.binary_ell1.BinaryELL1
+
+    Note
+    ----
+    The parameter T0 is permitted but only
     """
 
     register = True
@@ -83,6 +87,9 @@ class BinaryELL1(PulsarBinary):
                 long_double=True,
             )
         )
+        self.remove_param("ECC")
+        self.remove_param("OM")
+        self.remove_param("T0")
 
         self.warn_default_params = []
 
@@ -91,24 +98,11 @@ class BinaryELL1(PulsarBinary):
         super().validate()
 
         if self.TASC.value is None:
-            if self.ECC.value == 0.0:
-                warn("Since ECC is 0.0, using T0 as TASC.")
-                if self.T0.value is not None:
-                    self.TASC.value = self.T0.value
-                    self.EPS1.value = 0
-                    self.EPS2.value = 0
-                else:
-                    raise MissingParameter(
-                        "ELL1", "T0", "T0 or TASC is required for ELL1 model."
-                    )
-            else:
-                raise MissingParameter(
-                    "ELL1", "TASC", "TASC is required for ELL1 model."
-                )
-        # FIXME: make a fuss if T0 and TASC are set?
+            raise MissingParameter("ELL1", "TASC", "TASC is required for ELL1 model.")
         for p in ["EPS1", "EPS2"]:
-            if getattr(self, p).value is None:
-                raise MissingParameter("ELL1", p, p + " is required for ELL1 model.")
+            pm = getattr(self, p)
+            if pm.value is None:
+                pm.value = 0
 
     def change_binary_epoch(self, new_epoch):
         """Change the epoch for this binary model.
@@ -197,17 +191,6 @@ class BinaryELL1H(BinaryELL1):
     The actual calculations for this are done in
     :class:`pint.models.stand_alone_psr_binaries.ELL1_model.ELL1model`.
 
-    This class removes the parameters:
-
-        - M2
-        - SINI
-
-    It replaces them with:
-
-        - H3 - Amplitude of third harmonic (s)
-        - H4 - Amplitude of fourth harmonic (s)
-        - STIGMA (VARSIGMA) - Ratio H4/H3; alternative to H4 for strong Shapiro delay signals.
-
     Parameters supported:
 
     .. paramtable::
@@ -260,6 +243,8 @@ class BinaryELL1H(BinaryELL1):
                 description="Number of harmonics for ELL1H shapiro delay.",
             )
         )
+        self.remove_param("M2")
+        self.remove_param("SINI")
 
     @property
     def Shapiro_delay_funcs(self):
@@ -288,8 +273,3 @@ class BinaryELL1H(BinaryELL1):
         super().validate()
         # if self.H3.quantity is None:
         #     raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")
-        # FIXME: why not remove M2 and SINI as parameters? Optionally make them properties?
-        if self.SINI.quantity is not None:
-            raise TimingModelError("'SINI' will not be used in ELL1H model. ")
-        if self.M2.quantity is not None:
-            raise TimingModelError("'M2' will not be used in ELL1H model. ")

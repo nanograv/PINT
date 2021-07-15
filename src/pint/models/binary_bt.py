@@ -49,7 +49,6 @@ class BinaryBT(PulsarBinary):
                 description="Time dilation & gravitational redshift",
             )
         )
-        # remove unused parameter.
         self.remove_param("M2")
         self.remove_param("SINI")
 
