@@ -1532,7 +1532,7 @@ class TOAs:
             raise AttributeError("No DM error is provided.")
         return np.array(result)[valid] * pint.dmu
 
-    def get_groups(self, gap_limit=2 * u.h, add_column=True):
+    def get_groups(self, gap_limit=2 * u.h, add_column=False):
         """Flag toas within gap limit (default 2h = 0.0833d) of each other as the same group.
 
         Groups can be larger than the gap limit - if toas are separated by a gap larger than
@@ -1546,7 +1546,7 @@ class TOAs:
         gap_limit : :class:`astropy.units.Quantity`, optional
             The minimum size of gap to create a new group. Defaults to two hours.
         add_column : bool, optional
-            Whether or not to add a `groups` column to the TOA table
+            Whether or not to add a `groups` column to the TOA table (default: False)
 
         Returns
         -------
