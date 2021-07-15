@@ -1453,6 +1453,32 @@ class TOAs:
         """Return a numpy array of the TOA flags."""
         return self.table["flags"]
 
+    def add_flags(self, indices, flag, flag_values, overwrite=False):
+        """
+        Add/update specified flags to a TOA table.
+        
+        Parameters
+        ----------
+        indices : iterable or int
+            The TOA indices for which to add/update the flags
+        flag : str
+            The name of the flag to add (or update)
+        flag_values : iterable or single value
+            The values of the flags to add (one per index or a single value)
+        overwrite : bool, optional
+            Whether or not to overwrite existing values for a flag (default=False)
+            
+        """
+        if isinstance(indices, int):
+            indices = [indices]
+        if not isinstance(flag_values, (list, np.ndarray, set)):
+            # just a single value
+            flag_values = [flag_values] * len(indices)
+        for i, flag_value in zip(indices, flag_values):
+            if flag in self.table[i]["flags"] and not overwrite:
+                raise ValueError(f"Cannot overwrite TOA flag '{flag}'")
+            self.table[i]["flags"][flag] = flag_value
+
     def get_flag_value(self, flag, fill_value=None):
         """Get the requested TOA flag values.
 
