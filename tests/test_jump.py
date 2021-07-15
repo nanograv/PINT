@@ -193,6 +193,9 @@ def test_jump_by_group(setup_NGC6440E):
     # this should be the last group of any TOAs
     cp.add_param(par, setup=True)
 
+    # add groups to the TOAs
+    setup_NGC6440E.t.get_groups(2 * u.hr, add_column=True)
+
     m_copy.add_component(PhaseJump(), validate=False)
     cp_copy = m_copy.components["PhaseJump"]
     par_copy = p.maskParameter(
