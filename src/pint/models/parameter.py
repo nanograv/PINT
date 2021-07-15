@@ -1715,7 +1715,6 @@ class maskParameter(floatParameter):
             "mjd": "mjd_float",
             "freq": "freq",
             "tel": "obs",
-            "group": "groups",
         }
         if len(self.key_value) == 1:
             if not hasattr(self, "toa_selector"):
