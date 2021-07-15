@@ -1419,10 +1419,10 @@ class maskParameter(floatParameter):
         'JUMP2'
 
     The selection criterion can be one of the parameters ``mjd``, ``freq``,
-    ``name``, ``tel``, ``group`` representing the required columns of a ``.tim`` file, or
+    ``name``, ``tel`` representing the required columns of a ``.tim`` file, or
     the name of a flag, starting with ``-``. If the selection criterion is
     based on ``mjd`` or ``freq`` it is expected to be accompanied by a pair of
-    values that define a range; ``group`` matches integer groups; other criteria are expected to be accompanied
+    values that define a range; other criteria are expected to be accompanied
     by a string that is matched exactly.
 
     Parameters
@@ -1481,7 +1481,6 @@ class maskParameter(floatParameter):
             "freq": (lambda x: u.Quantity(x, u.MHz, copy=False), 2),
             "name": (str, 1),
             "tel": (lambda x: get_observatory(str(x)).name, 1),
-            "group": (int, 1),
         }
 
         if not isinstance(key_value, (list, tuple)):
@@ -1501,7 +1500,7 @@ class maskParameter(floatParameter):
                     raise ValueError(
                         "A key to a TOA flag requires a leading '-'."
                         " Legal keywords that don't require a leading '-' "
-                        "are MJD, FREQ, NAME, TEL, GROUP."
+                        "are MJD, FREQ, NAME, TEL."
                     )
         self.key = key
         self.key_value = [
@@ -1732,7 +1731,7 @@ class maskParameter(floatParameter):
                 "expected.(Expect 1 or 2 key values)" % self.name
             )
         # get the table columns
-        # TODO Right now it is only supports mjd, freq, tel, group, and flagkeys,
+        # TODO Right now it is only supports mjd, freq, tel, and flagkeys,
         # We need to consider some more complicated situation
         if self.key.startswith("-"):
             key = self.key[1::]
