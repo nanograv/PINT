@@ -10,6 +10,7 @@ import numpy as np
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
+from tkinter import ttk
 from astropy import log
 
 from pint.pintk.paredit import ParWidget
@@ -79,34 +80,6 @@ class PINTk:
         self.helpMenu.add_command(label="Plk Help", command=lambda: print(helpstring))
         self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
 
-        self.logMenu = tk.Menu(self.menuBar)
-        self.logMenu.add_checkbutton(
-            label="DEBUG",
-            command=lambda: self.changeLogLevel("DEBUG"),
-            variable=self.log_levels["DEBUG"],
-        )
-        self.logMenu.add_checkbutton(
-            label="INFO",
-            command=lambda: self.changeLogLevel("INFO"),
-            variable=self.log_levels["INFO"],
-        )
-        self.logMenu.add_checkbutton(
-            label="WARNING",
-            command=lambda: self.changeLogLevel("WARNING"),
-            variable=self.log_levels["WARNING"],
-        )
-        self.logMenu.add_checkbutton(
-            label="ERROR",
-            command=lambda: self.changeLogLevel("ERROR"),
-            variable=self.log_levels["ERROR"],
-        )
-        self.logMenu.add_checkbutton(
-            label="NOTSET",
-            command=lambda: self.changeLogLevel("NOTSET"),
-            variable=self.log_levels["NOTSET"],
-        )
-        self.menuBar.add_cascade(label="Log Levels", menu=self.logMenu)
-
         # Key bindings
         top.bind("<Control-p>", lambda e: self.toggle("plk"))
         top.bind("<Control-m>", lambda e: self.toggle("par"))
@@ -121,23 +94,6 @@ class PINTk:
         }
         self.active = {"plk": tk.IntVar(), "par": tk.IntVar(), "tim": tk.IntVar()}
         self.active["plk"].set(1)
-
-    def createLogLevels(self):
-        self.log_levels = {
-            "DEBUG": tk.IntVar(),
-            "INFO": tk.IntVar(),
-            "WARNING": tk.IntVar(),
-            "ERROR": tk.IntVar(),
-            "NOTSET": tk.IntVar(),
-        }
-        self.log_levels["WARNING"].set(1)
-
-    def changeLogLevel(self, newLevel):
-        log.setLevel(str(newLevel))
-        log.info("Log level changed to " + str(newLevel))
-        for key in self.log_levels.keys():
-            if self.log_levels[key].get() and key != newLevel:
-                self.log_levels[key].set(0)  # toggle old level off
 
     def updateLayout(self):
         for widget in self.mainFrame.winfo_children():
