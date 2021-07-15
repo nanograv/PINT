@@ -41,8 +41,6 @@ class PINTk:
         if parfile is not None and timfile is not None:
             self.openPulsar(parfile=parfile, timfile=timfile, ephem=ephem)
 
-        self.createLogLevels()
-
         self.initUI()
         self.updateLayout()
 
