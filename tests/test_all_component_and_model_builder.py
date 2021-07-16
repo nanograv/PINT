@@ -77,9 +77,8 @@ def test_model_builder_class():
     """
     mb = AllComponents()
     category = mb.category_component_map
-    assert len(mb.param_component_map["PX"]) == len(category["astrometry"])
-    assert len(mb.component_category_map) == len(mb.components)
-    assert len(mb._param_alias_map) == len(mb.param_component_map)
+    assert set(mb.param_component_map["PX"]) == set(category["astrometry"])
+    assert set(mb.component_category_map.keys()) == set(mb.components)
     # test for new components
     assert "SimpleModel" in mb.components
     simple_comp = mb.components["SimpleModel"]
@@ -93,7 +92,7 @@ def test_aliases_mapping():
     """
     mb = AllComponents()
     # all alases should be mapped to the components
-    assert len(mb._param_alias_map) == len(mb.param_component_map)
+    assert set(mb._param_alias_map.keys()) == set(mb.param_component_map.keys())
 
     # Test if the param_alias_map is passed by pointer
     # Testing the private function for building the aliases map
@@ -269,11 +268,22 @@ def test_model_from_par():
     """
     mb = ModelBuilder()
     param_inpar, repeat = mb.parse_parfile(io.StringIO(test_par1))
-    assert len(param_inpar) == 60
-    assert len(repeat) == 4
-    comps, conflict, unknown_param = mb.choose_model(param_inpar)
+    valid_param_inline = []
+    for l in test_par1.split("\n"):
+        l = l.strip()
+        if not (l.startswith("#") or l == ""):
+            valid_param_inline.append(l.split()[0])
+    assert set(param_inpar.keys()) == set(valid_param_inline)
+    assert set(repeat) == {'JUMP', 'ECORR', 'T2EQUAD', 'T2EFAC'}
+    comps, conflict, _ = mb.choose_model(param_inpar)
+    assert comps == {'Spindown', 'FD', 'AbsPhase', 'ScaleToaError',
+        'TroposphereDelay', 'PhaseJump', 'DispersionDMX', 'AstrometryEcliptic',
+        'BinaryDD', 'DispersionDM', 'EcorrNoise', 'SolarWindDispersion',
+        'PLRedNoise', 'SolarSystemShapiro'}
     tm = mb(io.StringIO(test_par1))
-    assert len(comps) == 14
+    assert len(tm.get_prefix_mapping('EQUAD')) == 2
+    assert len(tm.get_prefix_mapping('EFAC')) == 2
+    assert len(tm.get_prefix_mapping('JUMP')) == 1
 
 
 def test_model_from_par_hassubset():
