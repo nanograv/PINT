@@ -1,4 +1,4 @@
-"""Test model builder using variance of parfile input"""
+"""Test model builder using variance input"""
 
 from collections import defaultdict
 import pytest
@@ -172,12 +172,18 @@ def test_overlap_component(simple_model_overlap, simple_model_alias_overlap):
     # Since the _get_component_param_overlap returns non-overlap part,
     # we test if the non-overlap number makes sense.
     assert overlap["Spindown"][1] == len(simple_model_overlap.params) - 1
-    assert overlap["Spindown"][2] == len(mb.all_components.components["Spindown"].params) - 1
+    assert (
+        overlap["Spindown"][2]
+        == len(mb.all_components.components["Spindown"].params) - 1
+    )
 
     a_overlap = mb._get_component_param_overlap(simple_model_alias_overlap)
     assert a_overlap["Spindown"][0] == set(["F0"])
     assert a_overlap["Spindown"][1] == len(simple_model_alias_overlap.params) - 1
-    assert a_overlap["Spindown"][2] == len(mb.all_components.components["Spindown"].params) - 1
+    assert (
+        a_overlap["Spindown"][2]
+        == len(mb.all_components.components["Spindown"].params) - 1
+    )
     assert a_overlap["AstrometryEcliptic"][0] == set(["ELONG"])
     assert (
         a_overlap["AstrometryEcliptic"][1] == len(simple_model_alias_overlap.params) - 1
@@ -274,16 +280,28 @@ def test_model_from_par():
         if not (l.startswith("#") or l == ""):
             valid_param_inline.append(l.split()[0])
     assert set(param_inpar.keys()) == set(valid_param_inline)
-    assert set(repeat) == {'JUMP', 'ECORR', 'T2EQUAD', 'T2EFAC'}
+    assert set(repeat) == {"JUMP", "ECORR", "T2EQUAD", "T2EFAC"}
     comps, conflict, _ = mb.choose_model(param_inpar)
-    assert comps == {'Spindown', 'FD', 'AbsPhase', 'ScaleToaError',
-        'TroposphereDelay', 'PhaseJump', 'DispersionDMX', 'AstrometryEcliptic',
-        'BinaryDD', 'DispersionDM', 'EcorrNoise', 'SolarWindDispersion',
-        'PLRedNoise', 'SolarSystemShapiro'}
+    assert comps == {
+        "Spindown",
+        "FD",
+        "AbsPhase",
+        "ScaleToaError",
+        "TroposphereDelay",
+        "PhaseJump",
+        "DispersionDMX",
+        "AstrometryEcliptic",
+        "BinaryDD",
+        "DispersionDM",
+        "EcorrNoise",
+        "SolarWindDispersion",
+        "PLRedNoise",
+        "SolarSystemShapiro",
+    }
     tm = mb(io.StringIO(test_par1))
-    assert len(tm.get_prefix_mapping('EQUAD')) == 2
-    assert len(tm.get_prefix_mapping('EFAC')) == 2
-    assert len(tm.get_prefix_mapping('JUMP')) == 1
+    assert len(tm.get_prefix_mapping("EQUAD")) == 2
+    assert len(tm.get_prefix_mapping("EFAC")) == 2
+    assert len(tm.get_prefix_mapping("JUMP")) == 1
 
 
 def test_model_from_par_hassubset():

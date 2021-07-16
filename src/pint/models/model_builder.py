@@ -51,7 +51,6 @@ class ModelBuilder:
         self._validate_components()
         self.default_components = ["SolarSystemShapiro"]
 
-
     def __call__(self, parfile):
         param_inpar, repeat_par = self.parse_parfile(parfile)
         selected, conflict, param_not_in_pint = self.choose_model(param_inpar)

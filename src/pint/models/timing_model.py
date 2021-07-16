@@ -2623,7 +2623,7 @@ class Component(object, metaclass=ModelMeta):
         # Split the alias prefix, see if it is a perfix alias
         try:
             prefix, idx_str, idx = split_prefixed_name(alias)
-        except PrefixError: # Not a prefixed name
+        except PrefixError:  # Not a prefixed name
             if pname is not None:
                 par = getattr(self, pname)
                 if par.is_prefix:
