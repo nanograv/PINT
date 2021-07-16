@@ -13,6 +13,7 @@ import pickle
 import re
 import warnings
 from collections import OrderedDict
+from collections.abc import MutableMapping
 
 import astropy.table as table
 import astropy.time as time
@@ -466,9 +467,9 @@ def _parse_TOA_line(line, fmt="Unknown"):
         ii, ff = line[24:44].split(".")
         MJD = (int(ii), float("0." + ff))
         try:
-            d["ddm"] = float(line[68:78])
+            d["ddm"] = str(float(line[68:78]))
         except ValueError:
-            d["ddm"] = 0.0
+            d["ddm"] = str(0.0)
     elif fmt == "Tempo2":
         # This could use more error catching...
         fields = line.split()
@@ -487,13 +488,9 @@ def _parse_TOA_line(line, fmt="Unknown"):
             k, v = flags[i].lstrip("-"), flags[i + 1]
             if k in ["error", "freq", "scale", "MJD", "flags", "obs", "name"]:
                 raise ValueError(f"TOA flag ({k}) will overwrite TOA parameter!")
-            try:  # Convert what we can to floats and ints
-                d[k] = int(v)
-            except ValueError:
-                try:
-                    d[k] = float(v)
-                except ValueError:
-                    d[k] = v
+            if not k:
+                raise ValueError(f"The string {repr(flags[i])} is not a valid flag")
+            d[k] = v
     elif fmt == "Command":
         d[fmt] = line.split()
     elif fmt == "Parkes":
@@ -781,9 +778,9 @@ def read_toa_file(filename, process_includes=True, cdict=None):
                 if cdict["JUMP"][0]:
                     newtoa.flags["jump"] = str(cdict["JUMP"][1] + 1)
                 if cdict["PHASE"] != 0:
-                    newtoa.flags["phase"] = cdict["PHASE"]
+                    newtoa.flags["phase"] = str(cdict["PHASE"])
                 if cdict["TIME"] != 0.0:
-                    newtoa.flags["to"] = cdict["TIME"]
+                    newtoa.flags["to"] = str(cdict["TIME"])
                 toas.append(newtoa)
                 ntoas += 1
 
@@ -804,16 +801,20 @@ def build_table(toas, filename=None):
             for t in toas
         ]
     )
+    # np.array guesses the shape wrong for object arrays
+    flags_array = np.empty(len(mjds), dtype=object)
+    for i, f in enumerate(flags):
+        flags_array[i] = f
     return table.Table(
         [
             np.arange(len(mjds)),
             table.Column(mjds),
-            np.array(mjd_floats) * u.d,
-            np.array(errors) * u.us,
-            np.array(freqs) * u.MHz,
+            np.array(mjd_floats, dtype=float) * u.d,
+            np.array(errors, dtype=float) * u.us,
+            np.array(freqs, dtype=float) * u.MHz,
             np.array(obss),
-            np.array(flags),
-            np.zeros(len(mjds)),
+            flags_array,
+            np.zeros(len(mjds), dtype=float),
         ],
         names=(
             "index",
@@ -934,8 +935,8 @@ def make_fake_toas(
     ts.table["error"] = error
     if dm is not None:
         for f in ts.table["flags"]:
-            f["pp_dm"] = dm.to_value(pint.dmu)
-            f["pp_dme"] = dm_error.to_value(pint.dmu)
+            f["pp_dm"] = str(dm.to_value(pint.dmu))
+            f["pp_dme"] = str(dm_error.to_value(pint.dmu))
     ts.compute_TDBs()
     ts.compute_posvels()
     ts.compute_pulse_numbers(model)
@@ -982,6 +983,60 @@ def _cluster_by_gaps(t, gap):
     clusters[ix] = clusters_sorted
     return clusters
 
+class FlagDict(MutableMapping):
+    def __init__(self, *args, **kwargs):
+        self.store = dict()
+        self.update(dict(*args, **kwargs))
+
+    @staticmethod
+    def from_dict(d):
+        r = FlagDict()
+        r.update(d)
+        return r
+
+    _key_re = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
+
+    @staticmethod
+    def check_allowed_key(k):
+        if not isinstance(k, str):
+            raise ValueError(f"flag {k} must be a string")
+        if k.startswith("-"):
+            raise ValueError(f"flags should be stored without their leading -")
+        if not FlagDict._key_re.match(k):
+            raise ValueError(f"flag {k} is not a valid flag")
+
+    @staticmethod
+    def check_allowed_value(k, v):
+        if not isinstance(v, str):
+            raise ValueError(f"value {v} for key {k} must be a string")
+        if not v or len(v.split()) != 1:
+            raise ValueError(f"value {repr(v)} for key {k} cannot contain whitespace")
+
+    def __setitem__(self, key, val):
+        self.__class__.check_allowed_key(key)
+        self.__class__.check_allowed_value(key, val)
+        self.store[key.lower()] = val
+
+    def __delitem__(self, key):
+        del self.store[key.lower()]
+
+    def __getitem__(self, key):
+        return self.store[key.lower()]
+
+    def __iter__(self):
+        return iter(self.store)
+
+    def __len__(self):
+        return len(self.store)
+
+    def __repr__(self):
+        return f"FlagDict({repr(self.store)})"
+
+    def __str__(self):
+        return str(self.store)
+
+    def copy(self):
+        return FlagDict.from_dict(self.store)
 
 class TOA:
     """A time of arrival (TOA) class.
@@ -1142,9 +1197,9 @@ class TOA:
         if self.freq == 0.0 * u.MHz:
             self.freq = np.inf * u.MHz
         if flags is None:
-            self.flags = kwargs
+            self.flags = FlagDict.from_dict(kwargs)
         else:
-            self.flags = flags
+            self.flags = FlagDict.from_dict(flags)
             if kwargs:
                 raise TypeError(
                     f"TOA constructor does not accept keyword arguments {kwargs} when flags are specified."
@@ -1447,7 +1502,7 @@ class TOAs:
         if "pn" in self.table["flags"][0]:
             if "pulse_number" in self.table.colnames:
                 raise ValueError("Pulse number cannot be both a column and a TOA flag")
-            return np.array(flags.get("pn", np.nan) for flags in self.table["flags"])
+            return np.array(float(flags.get("pn", np.nan)) for flags in self.table["flags"])
         elif "pulse_number" in self.table.colnames:
             return self.table["pulse_number"]
         else:
@@ -1458,13 +1513,19 @@ class TOAs:
         """Return a numpy array of the TOA flags."""
         return self.table["flags"]
 
-    def get_flag_value(self, flag, fill_value=None):
+    def get_flag_value(self, flag, fill_value=None, as_type=None):
         """Get the requested TOA flag values.
 
         Parameters
         ----------
         flag_name : str
             The request flag name.
+        fill_value
+            The value to include for missing flags.
+        as_type : callable or None
+            If provided, this is called on each value to convert them
+            from to the desired type. All flag values are stored as
+            strings internally.
 
         Returns
         -------
@@ -1482,6 +1543,9 @@ class TOAs:
                 valid_index.append(ii)
             except KeyError:
                 val = fill_value
+            else:
+                if as_type is not None:
+                    val = as_type(val)
             result.append(val)
         return result, valid_index
 
@@ -1493,7 +1557,7 @@ class TOAs:
         This does not handle situations where some but not all TOAs have
         DM information.
         """
-        result, valid = self.get_flag_value("pp_dm")
+        result, valid = self.get_flag_value("pp_dm", as_type=float)
         if valid == []:
             raise AttributeError("No DM is provided.")
         return np.array(result)[valid] * pint.dmu
@@ -1506,7 +1570,7 @@ class TOAs:
         This does not handle situations where some but not all TOAs have
         DM information.
         """
-        result, valid = self.get_flag_value("pp_dme")
+        result, valid = self.get_flag_value("pp_dme", as_type=float)
         if valid == []:
             raise AttributeError("No DM error is provided.")
         return np.array(result)[valid] * pint.dmu
@@ -1682,13 +1746,13 @@ class TOAs:
         # First get any PHASE commands
         dphs = np.asarray(
             [
-                flags["phase"] if "phase" in flags else 0.0
+                float(flags["phase"]) if "phase" in flags else 0.0
                 for flags in self.table["flags"]
             ]
         )
         # Then add any -padd flag values
         dphs += np.asarray(
-            [flags["padd"] if "padd" in flags else 0.0 for flags in self.table["flags"]]
+            [float(flags["padd"]) if "padd" in flags else 0.0 for flags in self.table["flags"]]
         )
         self.table["delta_pulse_number"] += dphs
 
@@ -1841,7 +1905,7 @@ class TOAs:
             for i in range(len(self.table["flags"])):
                 pn = self.table["pulse_number"][i]
                 if not np.isnan(pn):
-                    self.table["flags"][i]["pn"] = pn
+                    self.table["flags"][i]["pn"] = str(pn)
 
         if order_by_index:
             ix = np.argsort(self.table["index"])
@@ -1859,7 +1923,7 @@ class TOAs:
             flags = flags.copy()
             toatime_out = toatime
             if "clkcorr" in flags:
-                toatime_out -= time.TimeDelta(flags["clkcorr"])
+                toatime_out -= time.TimeDelta(float(flags["clkcorr"])*u.s)
             out_str = (
                 "C " if isinstance(commentflag, str) and (commentflag in flags) else ""
             )
@@ -1942,7 +2006,8 @@ class TOAs:
                     # SUGGESTION(@paulray): These time correction units should
                     # be applied in the parser, not here. In the table the time
                     # correction should have units.
-                    corr[jj] = flags[jj]["to"] * u.s
+                    # @aarchiba: flags should store strings only
+                    corr[jj] = float(flags[jj]["to"])*u.s
                     times[jj] += time.TimeDelta(corr[jj])
 
             gcorr = site.clock_corrections(time.Time(grp["mjd"]))
@@ -1952,7 +2017,7 @@ class TOAs:
             # Now update the flags with the clock correction used
             for jj in range(loind, hiind):
                 if corr[jj] != 0:
-                    flags[jj]["clkcorr"] = corr[jj]
+                    flags[jj]["clkcorr"] = str(corr[jj].to_value(u.s))
         # Update clock correction info
         self.clock_corr_info.update(
             {

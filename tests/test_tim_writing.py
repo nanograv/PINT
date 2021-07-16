@@ -114,7 +114,7 @@ some_barycentered 999999.999 56403.000000000000000   1.000  @  -some argument -a
     lists(
         tuples(
             from_regex(re.compile(r"[ \t]+", re.ASCII), fullmatch=True),
-            from_regex(re.compile(r"-\w*", re.ASCII), fullmatch=True).filter(
+            from_regex(re.compile(r"-[a-zA-Z_]\w+", re.ASCII), fullmatch=True).filter(
                 lambda t: t
                 not in {
                     "-error",

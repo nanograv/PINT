@@ -43,7 +43,7 @@ class TestTOA(unittest.TestCase):
         self.assertEqual(t.mjd.precision, 9)
 
     def test_typo(self):
-        TOA(self.MJD, errror=1)
+        TOA(self.MJD, errror="1")
         with self.assertRaises(TypeError):
             TOA(self.MJD, errror=1, flags={})
 

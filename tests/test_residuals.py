@@ -44,7 +44,7 @@ def wideband_fake():
     np.random.seed(0)
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     for f in toas.table["flags"]:
-        f["pp_dm"] += np.random.randn() * f["pp_dme"]
+        f["pp_dm"] = str(float(f["pp_dm"]) +  np.random.randn() * float(f["pp_dme"]))
     return toas, model
 
 
